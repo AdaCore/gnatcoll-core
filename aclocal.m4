@@ -106,6 +106,9 @@ AC_DEFUN(AM_PATH_PYTHON,
           *-darwin* )
              PYTHON_LIBS="-ldl ${PYTHON_LIBS}"
              ;;
+          *-freebsd* )
+             PYTHON_LIBS="-lm -lutil ${PYTHON_LIBS}"
+             ;;
       esac
 
       PYTHON_LIBS="-L${PYTHON_DIR} -lpython${PYTHON_VERSION} ${PYTHON_LIBS}"
