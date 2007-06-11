@@ -24,11 +24,11 @@ with Ada.Strings.Hash;
 with Ada.Unchecked_Conversion;
 with Ada.Unchecked_Deallocation;
 with GNAT.OS_Lib;             use GNAT.OS_Lib;
-with Scripts.Impl;            use Scripts.Impl;
+with GNAT.Scripts.Impl;       use GNAT.Scripts.Impl;
 with System;                  use System;
 with System.Address_Image;
 
-package body Scripts is
+package body GNAT.Scripts is
 
    Timeout_Threshold : constant Duration := 0.2;   --  in seconds
    --  Timeout between two checks of the gtk+ event queue
@@ -1113,4 +1113,4 @@ package body Scripts is
       end if;
    end Process_Pending_Events;
 
-end Scripts;
+end GNAT.Scripts;

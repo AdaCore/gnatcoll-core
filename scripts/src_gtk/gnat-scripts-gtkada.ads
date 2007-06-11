@@ -27,7 +27,7 @@ with Glib.Object;
 with Gtk.Handlers;
 with Gtk.Widget;
 
-package Scripts.Gtkada is
+package GNAT.Scripts.Gtkada is
 
    package Subprogram_Callback is new Gtk.Handlers.User_Callback
      (Widget_Type => Gtk.Widget.Gtk_Widget_Record,
@@ -95,4 +95,4 @@ package Scripts.Gtkada is
       Name     : String := GUI_Data_Name) return Glib.Object.GObject;
    --  Return the object associated with Instance.
 
-end Scripts.Gtkada;
+end GNAT.Scripts.Gtkada;

@@ -17,7 +17,7 @@
 -- Place - Suite 330, Boston, MA 02111-1307, USA.                    --
 -----------------------------------------------------------------------
 
-package body Scripts.Impl is
+package body GNAT.Scripts.Impl is
 
    procedure Console_Command_Handler
      (Data : in out Callback_Data'Class; Command : String);
@@ -214,4 +214,4 @@ package body Scripts.Impl is
          Handler      => Console_Command_Handler'Access);
    end Register_Console_Class;
 
-end Scripts.Impl;
+end GNAT.Scripts.Impl;

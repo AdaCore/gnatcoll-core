@@ -24,7 +24,7 @@ with Ada.Unchecked_Conversion;
 with Interfaces.C.Strings;
 with System;
 
-package Python is
+package GNAT.Python is
 
    procedure Py_Initialize;
    --  Initialize the python interpreter. You must call Py_SetProgramName first
@@ -943,4 +943,4 @@ private
    pragma Import (C, PyClass_Name, "ada_pyclass_name");
    pragma Import (C, PyMethod_Self, "PyMethod_Self");
 
-end Python;
+end GNAT.Python;

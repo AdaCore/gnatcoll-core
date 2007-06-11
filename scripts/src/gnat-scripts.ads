@@ -30,7 +30,7 @@ with Ada.Finalization;
 with GNAT.OS_Lib;
 with GNAT.Strings;
 
-package Scripts is
+package GNAT.Scripts is
 
    type Scripts_Repository is private;
 
@@ -959,4 +959,4 @@ private
    end record;
    type Scripts_Repository is access all Scripts_Repository_Record'Class;
 
-end Scripts;
+end GNAT.Scripts;

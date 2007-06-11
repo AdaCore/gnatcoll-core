@@ -17,11 +17,11 @@
 -- Place - Suite 330, Boston, MA 02111-1307, USA.                    --
 -----------------------------------------------------------------------
 
-with Glib.Object;  use Glib.Object;
-with Gtkada.Types; use Gtkada.Types;
-with Scripts.Impl; use Scripts.Impl;
+with Glib.Object;       use Glib.Object;
+with Gtkada.Types;      use Gtkada.Types;
+with GNAT.Scripts.Impl; use GNAT.Scripts.Impl;
 
-package body Scripts.Gtkada is
+package body GNAT.Scripts.Gtkada is
 
    type GObject_Properties_Record is new Instance_Property_Record with record
       Obj : Glib.Object.GObject;
@@ -142,4 +142,4 @@ package body Scripts.Gtkada is
       return GObject_Properties_Record (Prop).Obj;
    end Get_Data;
 
-end Scripts.Gtkada;
+end GNAT.Scripts.Gtkada;

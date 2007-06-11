@@ -21,7 +21,7 @@
 --  new scripting languages. Applications should not typically have a need for
 --  these types or subprograms.
 
-package Scripts.Impl is
+package GNAT.Scripts.Impl is
 
    function From_Instance
      (Script : access Scripting_Language_Record'Class;
@@ -57,4 +57,4 @@ package Scripts.Impl is
    --  Register the console class, which is used to redirect output of script
    --  languages to a specific Virtual_Console
 
-end Scripts.Impl;
+end GNAT.Scripts.Impl;

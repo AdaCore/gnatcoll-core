@@ -25,10 +25,10 @@ with Ada.Strings.Unbounded;      use Ada.Strings.Unbounded;
 with Interfaces.C.Strings;       use Interfaces.C, Interfaces.C.Strings;
 with GNAT.IO;                    use GNAT.IO;
 with GNAT.Strings;               use GNAT.Strings;
-with Scripts.Impl;               use Scripts, Scripts.Impl;
+with GNAT.Scripts.Impl;          use GNAT.Scripts, GNAT.Scripts.Impl;
 with System;                     use System;
 
-package body Scripts.Python is
+package body GNAT.Scripts.Python is
 
    ------------------------
    -- Python_Subprograms --
@@ -2202,4 +2202,4 @@ package body Scripts.Python is
       return 0;
    end Trace;
 
-end Scripts.Python;
+end GNAT.Scripts.Python;

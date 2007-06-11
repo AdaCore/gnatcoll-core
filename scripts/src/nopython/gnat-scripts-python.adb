@@ -17,13 +17,20 @@
 -- Place - Suite 330, Boston, MA 02111-1307, USA.                    --
 -----------------------------------------------------------------------
 
-package Scripts.Python is
+package body GNAT.Scripts.Python is
 
-   Python_Name : constant String := "python";
+   -------------------------------
+   -- Register_Python_Scripting --
+   -------------------------------
 
    procedure Register_Python_Scripting
      (Repo          : Scripts.Scripts_Repository;
-      Module        : String);
-   --  Does nothing, since python was not compiled in.
+      Module        : String)
+   is
+      pragma Unreferenced (Repo, Module);
+   begin
+      null;
+   end Register_Python_Scripting;
 
-end Scripts.Python;
+end GNAT.Scripts.Python;
+

@@ -18,9 +18,9 @@
 -----------------------------------------------------------------------
 
 with Ada.Strings.Unbounded;
-with Python;  use Python;
+with GNAT.Python;  use GNAT.Python;
 
-package Scripts.Python is
+package GNAT.Scripts.Python is
 
    Python_Name : constant String := "python";
 
@@ -235,4 +235,4 @@ private
      (Data : Python_Callback_Data; N : Positive; Value : Subprogram_Type);
    --  See doc from inherited subprogram
 
-end Scripts.Python;
+end GNAT.Scripts.Python;

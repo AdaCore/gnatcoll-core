@@ -21,7 +21,7 @@
 with System;               use System;
 with Interfaces.C.Strings; use Interfaces.C.Strings;
 
-package body Python is
+package body GNAT.Python is
 
    No_Method_Def : constant PyMethodDef := (Null_Ptr, null, 0, Null_Ptr);
 
@@ -774,4 +774,4 @@ package body Python is
       return Internal (Class, Base) /= 0;
    end PyClass_IsSubclass;
 
-end Python;
+end GNAT.Python;

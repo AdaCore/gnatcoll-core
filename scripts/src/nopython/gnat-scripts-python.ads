@@ -17,13 +17,13 @@
 -- Place - Suite 330, Boston, MA 02111-1307, USA.                    --
 -----------------------------------------------------------------------
 
---  This package contains the implementation for a simple scripting language,
+package GNAT.Scripts.Python is
 
-package Scripts.Shell is
+   Python_Name : constant String := "python";
 
-   Shell_Name : constant String := "shell";
+   procedure Register_Python_Scripting
+     (Repo          : Scripts.Scripts_Repository;
+      Module        : String);
+   --  Does nothing, since python was not compiled in.
 
-   procedure Register_Shell_Scripting (Repo : Scripts.Scripts_Repository);
-   --  Register the scripting language
-
-end Scripts.Shell;
+end GNAT.Scripts.Python;

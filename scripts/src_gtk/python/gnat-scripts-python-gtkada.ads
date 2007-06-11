@@ -17,35 +17,34 @@
 -- Place - Suite 330, Boston, MA 02111-1307, USA.                    --
 -----------------------------------------------------------------------
 
-with GNAT.Scripts;
+--  Addition subprograms to support python scripting in graphical mode.
+--  In particular, these provide additional support for pygtk
 
-package TestConsole is
+with Glib.Object;
 
-   type Test_Console is new GNAT.Scripts.Virtual_Console_Record with private;
-   overriding procedure Insert_Text
-     (Console : access Test_Console; Txt : String);
-   overriding procedure Insert_Prompt
-     (Console : access Test_Console; Txt : String);
-   overriding procedure Insert_Error
-     (Console : access Test_Console; Txt : String);
-   overriding procedure Insert_Log
-     (Console : access Test_Console; Txt : String);
-   overriding procedure Set_Data_Primitive
-     (Instance : GNAT.Scripts.Class_Instance; Console : access Test_Console);
-   overriding function Get_Instance
-     (Script  : access GNAT.Scripts.Scripting_Language_Record'Class;
-      Console : access Test_Console) return GNAT.Scripts.Class_Instance;
-   overriding function Read
-     (Console    : access Test_Console;
-      Size       : Integer;
-      Whole_Line : Boolean) return String;
+package GNAT.Scripts.Python.Gtkada is
 
-   procedure Free (Console : in out Test_Console);
-   --  Free memory associated with Console
+   procedure Init_PyGtk_Support
+     (Script : access Scripting_Language_Record'Class);
+   --  Initialize the support for pygtk.
+   --  If this fails, the calls to the subprograms below will have no effect.
+   --  This suprogram only succeeds when the scripts package was compiled with
+   --  pygtk, and the latter is found in the python installation when the
+   --  application is run.
 
-private
-   type Test_Console is new GNAT.Scripts.Virtual_Console_Record with record
-      Instances : GNAT.Scripts.Instance_List;
-   end record;
+   procedure Add_PyWidget_Method
+     (Script : access Scripting_Language_Record'Class;
+      Class  : Class_Type);
+   --  Adds a new method to Class:
+   --     Class.pywidget
+   --         Returns the pywidget corresponding to the GtkAda widget stored
+   --         in Class. It is assumed that Scripts.Gtkada.Get_Data will
+   --         return a valid GObject (or null) when called on this instance
 
-end TestConsole;
+   function From_PyGtk
+     (Data : Callback_Data'Class;
+      N    : Positive) return Glib.Object.GObject;
+   --  Return the Gtk object encapsulated inside the pygtk object given in the
+   --  N-th argument
+
+end GNAT.Scripts.Python.Gtkada;

@@ -27,13 +27,13 @@ with Ada.Unchecked_Deallocation;
 with GNAT.Debug_Utilities;      use GNAT.Debug_Utilities;
 with GNAT.OS_Lib;               use GNAT.OS_Lib;
 with GNAT.Strings;
-with Scripts;                   use Scripts;
-with Scripts.Impl;              use Scripts.Impl;
-with Scripts.Utils;             use Scripts.Utils;
+with GNAT.Scripts;              use GNAT.Scripts;
+with GNAT.Scripts.Impl;         use GNAT.Scripts.Impl;
+with GNAT.Scripts.Utils;        use GNAT.Scripts.Utils;
 with System.Address_Image;
 with System;                    use System;
 
-package body Scripts.Shell is
+package body GNAT.Scripts.Shell is
 
    Num_Previous_Returns : constant := 9;
    --  Number of parameters %1, %2,... which are used to memorize the result of
@@ -1547,4 +1547,4 @@ package body Scripts.Shell is
       return Scripting_Language (Subprogram.Script);
    end Get_Script;
 
-end Scripts.Shell;
+end GNAT.Scripts.Shell;

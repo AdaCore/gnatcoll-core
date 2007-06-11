@@ -1,3 +1,21 @@
+-----------------------------------------------------------------------
+--                               G P S                               --
+--                                                                   --
+--                      Copyright (C) 2003-2007, AdaCore             --
+--                                                                   --
+-- GPS is free  software;  you can redistribute it and/or modify  it --
+-- under the terms of the GNU General Public License as published by --
+-- the Free Software Foundation; either version 2 of the License, or --
+-- (at your option) any later version.                               --
+--                                                                   --
+-- This program is  distributed in the hope that it will be  useful, --
+-- but  WITHOUT ANY WARRANTY;  without even the  implied warranty of --
+-- MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU --
+-- General Public License for more details. You should have received --
+-- a copy of the GNU General Public License along with this program; --
+-- if not,  write to the  Free Software Foundation, Inc.,  59 Temple --
+-- Place - Suite 330, Boston, MA 02111-1307, USA.                    --
+-----------------------------------------------------------------------
 
 --  This package provides an example of a graphical textual window that
 --  can be used as a console for a programming language
@@ -7,7 +25,7 @@ with Gtk.Scrolled_Window;
 with Gtk.Text_Mark;
 with Gtk.Text_View;
 with Gtk.Widget;
-with Scripts;             use Scripts;
+with GNAT.Scripts;             use GNAT.Scripts;
 
 package GtkConsole is
 
@@ -29,7 +47,7 @@ package GtkConsole is
    overriding procedure Set_As_Default_Console
      (Console     : access Gtk_Console_Record;
       Old_Console : Virtual_Console;
-      Script      : access Scripts.Scripting_Language_Record'Class);
+      Script      : access GNAT.Scripts.Scripting_Language_Record'Class);
    overriding procedure Set_Data_Primitive
      (Instance : Class_Instance;
       Console  : access Gtk_Console_Record);
@@ -60,7 +78,7 @@ package GtkConsole is
 private
    type Gtk_Console_Record is new Virtual_Console_Record with record
       View     : Gtk.Text_View.Gtk_Text_View;
-      Script   : Scripts.Scripting_Language;
+      Script   : GNAT.Scripts.Scripting_Language;
 
       Prompt_Mark : Gtk.Text_Mark.Gtk_Text_Mark;
       --  The position after which the user can insert text.

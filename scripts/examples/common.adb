@@ -1,6 +1,25 @@
-with Scripts;        use Scripts;
-with Scripts.Python; use Scripts.Python;
-with Scripts.Shell;  use Scripts.Shell;
+-----------------------------------------------------------------------
+--                               G P S                               --
+--                                                                   --
+--                      Copyright (C) 2003-2007, AdaCore             --
+--                                                                   --
+-- GPS is free  software;  you can redistribute it and/or modify  it --
+-- under the terms of the GNU General Public License as published by --
+-- the Free Software Foundation; either version 2 of the License, or --
+-- (at your option) any later version.                               --
+--                                                                   --
+-- This program is  distributed in the hope that it will be  useful, --
+-- but  WITHOUT ANY WARRANTY;  without even the  implied warranty of --
+-- MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU --
+-- General Public License for more details. You should have received --
+-- a copy of the GNU General Public License along with this program; --
+-- if not,  write to the  Free Software Foundation, Inc.,  59 Temple --
+-- Place - Suite 330, Boston, MA 02111-1307, USA.                    --
+-----------------------------------------------------------------------
+
+with GNAT.Scripts;        use GNAT.Scripts;
+with GNAT.Scripts.Python; use GNAT.Scripts.Python;
+with GNAT.Scripts.Shell;  use GNAT.Scripts.Shell;
 
 package body Common is
 
@@ -16,7 +35,7 @@ package body Common is
    -- Register_Scripts_And_Functions --
    ------------------------------------
 
-   function Register_Scripts_And_Functions return Scripts.Scripts_Repository is
+   function Register_Scripts_And_Functions return Scripts_Repository is
       Repo : Scripts_Repository;
    begin
       --  Register all scripting languages. In practice, you only need to

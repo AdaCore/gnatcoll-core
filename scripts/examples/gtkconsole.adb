@@ -1,3 +1,21 @@
+-----------------------------------------------------------------------
+--                               G P S                               --
+--                                                                   --
+--                      Copyright (C) 2003-2007, AdaCore             --
+--                                                                   --
+-- GPS is free  software;  you can redistribute it and/or modify  it --
+-- under the terms of the GNU General Public License as published by --
+-- the Free Software Foundation; either version 2 of the License, or --
+-- (at your option) any later version.                               --
+--                                                                   --
+-- This program is  distributed in the hope that it will be  useful, --
+-- but  WITHOUT ANY WARRANTY;  without even the  implied warranty of --
+-- MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU --
+-- General Public License for more details. You should have received --
+-- a copy of the GNU General Public License along with this program; --
+-- if not,  write to the  Free Software Foundation, Inc.,  59 Temple --
+-- Place - Suite 330, Boston, MA 02111-1307, USA.                    --
+-----------------------------------------------------------------------
 
 with Gdk;                 use Gdk;
 with Gdk.Event;           use Gdk.Event;
@@ -8,6 +26,8 @@ with Glib.Convert;        use Glib.Convert;
 with Glib.Main;           use Glib.Main;
 with Glib.Object;         use Glib.Object;
 with GNAT.IO;             use GNAT.IO;
+with GNAT.Scripts;        use GNAT.Scripts;
+with GNAT.Scripts.Gtkada; use GNAT.Scripts.Gtkada;
 with Gtk.Enums;           use Gtk.Enums;
 with Gtk.Handlers;        use Gtk.Handlers;
 with Gtk.Main;            use Gtk.Main;
@@ -19,8 +39,6 @@ with Gtk.Text_Mark;       use Gtk.Text_Mark;
 with Gtk.Text_View;       use Gtk.Text_View;
 with Gtk.Widget;          use Gtk.Widget;
 with Gtkada.Handlers;     use Gtkada.Handlers;
-with Scripts;             use Scripts;
-with Scripts.Gtkada;      use Scripts.Gtkada;
 
 package body GtkConsole is
 
@@ -251,7 +269,7 @@ package body GtkConsole is
    procedure Set_As_Default_Console
      (Console     : access Gtk_Console_Record;
       Old_Console : Virtual_Console;
-      Script      : access Scripts.Scripting_Language_Record'Class)
+      Script      : access Scripting_Language_Record'Class)
    is
    begin
       if Virtual_Console (Console) = Old_Console then
@@ -399,7 +417,7 @@ package body GtkConsole is
       Console  : access Gtk_Console_Record)
    is
    begin
-      Scripts.Gtkada.Set_Data (Instance, GObject (Console.View));
+      GNAT.Scripts.Gtkada.Set_Data (Instance, GObject (Console.View));
    end Set_Data_Primitive;
 
    ------------------
@@ -412,7 +430,7 @@ package body GtkConsole is
       return Class_Instance
    is
    begin
-      return Scripts.Gtkada.Get_Instance (Script, GObject (Console.View));
+      return GNAT.Scripts.Gtkada.Get_Instance (Script, GObject (Console.View));
    end Get_Instance;
 
    --------------------------------------
