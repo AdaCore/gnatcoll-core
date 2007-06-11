@@ -7,6 +7,6 @@ project Shared is
    Pygtk_Include  := (@PYGTK_INCLUDE_GPR@);
    Python_Dir     := "@PYTHON_DIR@";
    Python_Libs    := (@PYTHON_LIBS_GPR@);
-   Gtk_Include    := (@GTK_CFLAGS_GPR@);
+   Gtk_Include    := (@GTK_GCC_FLAGS_GPR@);
    Python_Src_Dir := "@PYTHON_ADA_SRC@";
 end Shared;

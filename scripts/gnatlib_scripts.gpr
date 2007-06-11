@@ -1,6 +1,6 @@
 with "../shared";
 
-project CoreLib_Scripts is
+project GnatLib_Scripts is
    for Source_Dirs use ("src", "src/" & Shared.Python_Src_Dir);
    for Object_Dir use "obj";
    for Languages use ("Ada", "C");
@@ -15,4 +15,4 @@ project CoreLib_Scripts is
       for Default_Switches ("Ada") use Shared.Python_Libs;
    end Linker;
 
-end CoreLib_Scripts;
+end GnatLib_Scripts;

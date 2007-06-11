@@ -1,7 +1,7 @@
 \input texinfo  @c -*-texinfo-*-
 
 @set Version 0.1
-@set Title   CoreLib: Library for Ada applications
+@set Title   GnatLib: Library for Ada applications
 
 @settitle @value{Title}
 @syncodeindex fn cp
@@ -58,7 +58,7 @@ Introduction
 @c -----------------------------------------------------------------------
 
 @noindent
-The CoreLib library 
+The GnatLib library 
 
 @bye
 

@@ -210,8 +210,7 @@ AC_DEFUN(AM_TO_GPR,
    result=""
    for v in $value; do
       if test "$result" != ""; then
-         result="$result,
-                      "
+         result="$result, "
       fi
       result="$result\"$v\""
    done
@@ -224,7 +223,8 @@ AC_DEFUN(AM_TO_GPR,
 ## Detects GTK
 ## This exports the following variables
 ##     @PKG_CONFIG@: path to pkg-config, or "no" if not found
-##     @GTK_CFLAGS@: cflags to pass to the compiler
+##     @GTK_GCC_FLAGS@: cflags to pass to the compiler. It isn't call
+##                      GTK_CFLAGS for compatibility reasons with GPS
 ##########################################################################
 
 AC_DEFUN(AM_PATH_GTK,
@@ -236,9 +236,9 @@ AC_DEFUN(AM_PATH_GTK,
    else
       GTK_PREFIX=`$PKG_CONFIG gtk+-2.0 --variable=prefix`
       AC_MSG_RESULT($GTK_PREFIX)
-      GTK_CFLAGS=`$PKG_CONFIG gtk+-2.0 --cflags`
+      GTK_GCC_FLAGS=`$PKG_CONFIG gtk+-2.0 --cflags`
    fi
    AC_SUBST(PKG_CONFIG)
-   AC_SUBST(GTK_CFLAGS)
+   AC_SUBST(GTK_GCC_FLAGS)
 
 ])

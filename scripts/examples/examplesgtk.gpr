@@ -1,4 +1,4 @@
-with "../corelib_scripts_gtk";
+with "../gnatlib_scripts_gtk";
 with "examples";
 
 project ExamplesGtk is
@@ -9,7 +9,7 @@ project ExamplesGtk is
                          "gtkconsole.ads", "gtkconsole.adb",
                          "newclassgtk.adb");
 
-   package Compiler renames CoreLib_Scripts_Gtk.Compiler;
-   package Linker   renames CoreLib_Scripts_Gtk.Linker;
+   package Compiler renames GnatLib_Scripts_Gtk.Compiler;
+   package Linker   renames GnatLib_Scripts_Gtk.Linker;
 
 end ExamplesGtk;
