@@ -1,4 +1,4 @@
-project Shared is
+project GnatLib_Shared is
    for Source_Dirs use ();
 
    Python_Version := "@PYTHON_VERSION@";
@@ -9,4 +9,4 @@ project Shared is
    Python_Libs    := (@PYTHON_LIBS_GPR@);
    Gtk_Include    := (@GTK_GCC_FLAGS_GPR@);
    Python_Src_Dir := "@PYTHON_ADA_SRC@";
-end Shared;
+end GnatLib_Shared;

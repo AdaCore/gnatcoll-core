@@ -1,9 +1,9 @@
 with "gtkada";
 with "gnatlib_scripts";
-with "../shared";
+with "../gnatlib_shared";
 
 project GnatLib_Scripts_Gtk is
-   for Source_Dirs use ("src_gtk", "src_gtk/" & Shared.Python_Src_Dir);
+   for Source_Dirs use ("src_gtk", "src_gtk/" & GnatLib_Shared.Python_Src_Dir);
    for Object_Dir use "obj";
    for Languages use ("Ada", "C");
 
@@ -11,7 +11,7 @@ project GnatLib_Scripts_Gtk is
       for Default_Switches ("Ada") use ("-gnat05");
       for Default_Switches ("C") use
          GnatLib_Scripts.Compiler'Default_Switches ("C")
-         & Shared.Pygtk_Include & Shared.Gtk_Include;
+         & GnatLib_Shared.Pygtk_Include & GnatLib_Shared.Gtk_Include;
    end Compiler;
 
    package Linker is
