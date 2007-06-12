@@ -138,9 +138,8 @@ package body GNAT.Scripts.Impl is
          end if;
 
       elsif Command = "clear" then
-         null;
-         --  Do nothing, only needed for compatibility with Python's stdout
          Console := Get_Data (Inst);
+         Clear (Console);
 
       elsif Command = "flush" then
          null;
