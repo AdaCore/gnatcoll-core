@@ -93,9 +93,6 @@ package body GNAT.Scripts.Gtkada is
       Widget   : Glib.Object.GObject;
       Name     : String := GUI_Data_Name) is
    begin
-      Set_Data
-        (Instance, Name, GObject_Properties_Record'(Obj => Widget));
-
       --  The widget will hold a reference to the Instance, so that the
       --  instance is not destroyed while the widget is in use
       Incref (Get_CIR (Instance));
@@ -109,6 +106,11 @@ package body GNAT.Scripts.Gtkada is
             Property_Name => Name),
          "GPS-Instance-" & Get_Name (Instance.Data.Data.Script),
          On_Destroyed => On_Widget_Data_Destroyed'Access);
+
+      --  Do this after we have called CIR_User_Data.Set above, since the
+      --  latter will remove existing user_data associated with Name
+      Set_Data
+        (Instance, Name, GObject_Properties_Record'(Obj => Widget));
    end Set_Data;
 
    ------------------
@@ -136,10 +138,13 @@ package body GNAT.Scripts.Gtkada is
      (Instance : Class_Instance;
       Name     : String := GUI_Data_Name) return Glib.Object.GObject
    is
-      Prop : constant Instance_Property_Record'Class :=
-        Get_Data (Instance, Name);
+      Prop : constant Instance_Property := Get_Data (Instance, Name);
    begin
-      return GObject_Properties_Record (Prop).Obj;
+      if Prop = null then
+         return null;
+      else
+         return GObject_Properties_Record (Prop.all).Obj;
+      end if;
    end Get_Data;
 
 end GNAT.Scripts.Gtkada;
