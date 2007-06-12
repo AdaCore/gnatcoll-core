@@ -74,7 +74,7 @@ AC_DEFUN(AM_PATH_PYTHON,
              PYTHON_LIBS="-Wl,-E -lm ${PYTHON_LIBS}"
              ;;
           powerpc-ibm-aix5.* ) 
-             PYTHON_LIBS="-ldl -lm ${PYTHON_LIBS}"
+             PYTHON_LIBS="-lld -lm ${PYTHON_LIBS}"
              ;;
           powerpc-*-darwin* )
              PYTHON_LIBS="-ldl -lm ${PYTHON_LIBS}"
