@@ -67,23 +67,23 @@ AC_DEFUN(AM_PATH_PYTHON,
       fi
    fi
 
-   PYTHON_LIBS=""
+   PYTHON_LIBS="-lm"
    if test x"$PYTHON_BASE" != xno; then
       case "${host}" in
-          hppa*-hp-hpux1[[0-9]]* )
+          hppa*-hp-hpux1* )
              PYTHON_LIBS="-Wl,-E ${PYTHON_LIBS}"
              ;;
           powerpc-ibm-aix5.* ) 
-             PYTHON_LIBS="-lld ${PYTHON_LIBS}"
+             PYTHON_LIBS="-ldl ${PYTHON_LIBS}"
              ;;
           powerpc-*-darwin* )
              PYTHON_LIBS="-ldl ${PYTHON_LIBS}"
              ;;
           *-sunos5.5* | *-solaris2.5* )
-             PYTHON_LIBS="-lresolv -lsocket -lnsl -ldl -lm ${PYTHON_LIBS}"
+             PYTHON_LIBS="-lresolv -lsocket -lnsl -ldl ${PYTHON_LIBS}"
              ;;
           *-sunos5* | *-solaris* )
-             PYTHON_LIBS="-lresolv -lsocket -lnsl -ldl -lm ${PYTHON_LIBS}"
+             PYTHON_LIBS="-lresolv -lsocket -lnsl -ldl ${PYTHON_LIBS}"
              ;;
           ia64-*-* )
              case "${host}" in
@@ -93,13 +93,16 @@ AC_DEFUN(AM_PATH_PYTHON,
                *-hp-hpux11* )
                   PYTHON_LIBS="-ldld -ldl -Wl,-E ${PYTHON_LIBS}"
                   ;;
+               *-sgi* )
+                  PYTHON_LIBS="${PYTHON_LIBS}"
+                  ;;
              esac
              ;;
           x86_64-*-* )
-             PYTHON_LIBS="-Wl,-export-dynamic -ldl -lm ${PYTHON_LIBS}"
+             PYTHON_LIBS="-Wl,-export-dynamic -ldl ${PYTHON_LIBS}"
              ;;
           i[[3456]]86-*linux-gnu* )
-             PYTHON_LIBS="-Wl,-export-dynamic -ldl -lm ${PYTHON_LIBS}"
+             PYTHON_LIBS="-Wl,-export-dynamic -ldl ${PYTHON_LIBS}"
              ;;
           i[[3456]]86-*win32* | i[[3456]]86-*mingw32* | i[[3456]]86-*cygwin* )
              ;;
@@ -107,7 +110,7 @@ AC_DEFUN(AM_PATH_PYTHON,
              PYTHON_LIBS="-ldl ${PYTHON_LIBS}"
              ;;
           *-freebsd* )
-             PYTHON_LIBS="-lm -lutil ${PYTHON_LIBS}"
+             PYTHON_LIBS="-lutil ${PYTHON_LIBS}"
              ;;
       esac
 
