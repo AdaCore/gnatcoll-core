@@ -612,7 +612,7 @@ target_cpu
 target_vendor
 target_os
 PKG_CONFIG
-GTK_CFLAGS
+GTK_GCC_FLAGS
 PYTHON
 CC
 CFLAGS
@@ -1865,7 +1865,7 @@ echo "${ECHO_T}not found" >&6; }
       GTK_PREFIX=`$PKG_CONFIG gtk+-2.0 --variable=prefix`
       { echo "$as_me:$LINENO: result: $GTK_PREFIX" >&5
 echo "${ECHO_T}$GTK_PREFIX" >&6; }
-      GTK_CFLAGS=`$PKG_CONFIG gtk+-2.0 --cflags`
+      GTK_GCC_FLAGS=`$PKG_CONFIG gtk+-2.0 --cflags`
    fi
 
 
@@ -2964,14 +2964,14 @@ echo "${ECHO_T}yes (version $PYTHON_VERSION)" >&6; }
    PYTHON_LIBS=""
    if test x"$PYTHON_BASE" != xno; then
       case "${host}" in
-          hppa*-hp-hpux1[0-9]* )
-             PYTHON_LIBS="-Wl,-E ${PYTHON_LIBS}"
+          hppa*-hp-hpux1* )
+             PYTHON_LIBS="-Wl,-E -lm ${PYTHON_LIBS}"
              ;;
           powerpc-ibm-aix5.* )
-             PYTHON_LIBS="-lld ${PYTHON_LIBS}"
+             PYTHON_LIBS="-lld -lm ${PYTHON_LIBS}"
              ;;
           powerpc-*-darwin* )
-             PYTHON_LIBS="-ldl ${PYTHON_LIBS}"
+             PYTHON_LIBS="-ldl -lm ${PYTHON_LIBS}"
              ;;
           *-sunos5.5* | *-solaris2.5* )
              PYTHON_LIBS="-lresolv -lsocket -lnsl -ldl -lm ${PYTHON_LIBS}"
@@ -2982,40 +2982,45 @@ echo "${ECHO_T}yes (version $PYTHON_VERSION)" >&6; }
           ia64-*-* )
              case "${host}" in
                *-linux-gnu* )
-                  PYTHON_LIBS="-Wl,-export-dynamic -ldl ${PYTHON_LIBS}"
+                  PYTHON_LIBS="-Wl,-export-dynamic -ldl -lm ${PYTHON_LIBS}"
                   ;;
                *-hp-hpux11* )
-                  PYTHON_LIBS="-ldld -ldl -Wl,-E ${PYTHON_LIBS}"
+                  PYTHON_LIBS="-ldld -ldl -lm -Wl,-E ${PYTHON_LIBS}"
+                  ;;
+               *-sgi* )
+                  PYTHON_LIBS="-lm ${PYTHON_LIBS}"
                   ;;
              esac
              ;;
-          x86-64-*-* )
-             PYTHON_LIBS="-Wl,-export-dynamic -ldl -lm ${PYTHON_LIBS}"
+          x86_64-*-* )
+             PYTHON_LIBS="-Wl,-export-dynamic -lm -ldl ${PYTHON_LIBS}"
              ;;
           i[3456]86-*linux-gnu* )
-             PYTHON_LIBS="-Wl,-export-dynamic -ldl -lm ${PYTHON_LIBS}"
+             PYTHON_LIBS="-Wl,-export-dynamic -lm -ldl ${PYTHON_LIBS}"
              ;;
           i[3456]86-*win32* | i[3456]86-*mingw32* | i[3456]86-*cygwin* )
              ;;
           *-darwin* )
-             PYTHON_LIBS="-ldl ${PYTHON_LIBS}"
+             PYTHON_LIBS="-ldl -lm ${PYTHON_LIBS}"
+             ;;
+          *-freebsd* )
+             PYTHON_LIBS="-lm -lutil ${PYTHON_LIBS}"
              ;;
       esac
 
       PYTHON_LIBS="-L${PYTHON_DIR} -lpython${PYTHON_VERSION} ${PYTHON_LIBS}"
       PYTHON_CFLAGS="-I${PYTHON_BASE}/include/python${PYTHON_VERSION}"
-   fi
 
-   # Automatically check whether some libraries are needed to link with
-   # the python libraries. If you are using the default system library, it is
-   # generally the case that at least -lpthread will be needed. But you might
-   # also have recompiled your own version, and if it doesn't depend on
-   # pthreads, we shouldn't bring that in, since that also impacts the choice
-   # of the GNAT runtime
+      # Automatically check whether some libraries are needed to link with
+      # the python libraries. If you are using the default system library, it is
+      # generally the case that at least -lpthread will be needed. But you might
+      # also have recompiled your own version, and if it doesn't depend on
+      # pthreads, we shouldn't bring that in, since that also impacts the choice
+      # of the GNAT runtime
 
-   CFLAGS="${CFLAGS} ${PYTHON_CFLAGS}"
-   LIBS="${LIBS} ${PYTHON_LIBS}"
-   cat >conftest.$ac_ext <<_ACEOF
+      CFLAGS="${CFLAGS} ${PYTHON_CFLAGS}"
+      LIBS="${LIBS} ${PYTHON_LIBS}"
+      cat >conftest.$ac_ext <<_ACEOF
 /* confdefs.h.  */
 _ACEOF
 cat confdefs.h >>conftest.$ac_ext
@@ -3070,7 +3075,7 @@ else
 sed 's/^/| /' conftest.$ac_ext >&5
 
 	LIBS="${LIBS} -lpthread -lutil"
-      cat >conftest.$ac_ext <<_ACEOF
+         cat >conftest.$ac_ext <<_ACEOF
 /* confdefs.h.  */
 _ACEOF
 cat confdefs.h >>conftest.$ac_ext
@@ -3137,6 +3142,7 @@ fi
 
 rm -f core conftest.err conftest.$ac_objext \
       conftest$ac_exeext conftest.$ac_ext
+   fi
 
 
 
@@ -3204,8 +3210,7 @@ echo "${ECHO_T}no since python not found" >&6; }
    result=""
    for v in $value; do
       if test "$result" != ""; then
-         result="$result,
-                      "
+         result="$result, "
       fi
       result="$result\"$v\""
    done
@@ -3219,8 +3224,7 @@ echo "${ECHO_T}no since python not found" >&6; }
    result=""
    for v in $value; do
       if test "$result" != ""; then
-         result="$result,
-                      "
+         result="$result, "
       fi
       result="$result\"$v\""
    done
@@ -3234,8 +3238,7 @@ echo "${ECHO_T}no since python not found" >&6; }
    result=""
    for v in $value; do
       if test "$result" != ""; then
-         result="$result,
-                      "
+         result="$result, "
       fi
       result="$result\"$v\""
    done
@@ -3249,8 +3252,7 @@ echo "${ECHO_T}no since python not found" >&6; }
    result=""
    for v in $value; do
       if test "$result" != ""; then
-         result="$result,
-                      "
+         result="$result, "
       fi
       result="$result\"$v\""
    done
@@ -3346,7 +3348,7 @@ done
 
 
 
-ac_config_files="$ac_config_files shared.gpr docs/Makefile Makefile.conf"
+ac_config_files="$ac_config_files gnatlib_shared.gpr docs/Makefile Makefile.conf"
 
 cat >confcache <<\_ACEOF
 # This file is a shell script that caches the results of configure
@@ -3902,7 +3904,7 @@ cat >>$CONFIG_STATUS <<\_ACEOF
 for ac_config_target in $ac_config_targets
 do
   case $ac_config_target in
-    "shared.gpr") CONFIG_FILES="$CONFIG_FILES shared.gpr" ;;
+    "gnatlib_shared.gpr") CONFIG_FILES="$CONFIG_FILES gnatlib_shared.gpr" ;;
     "docs/Makefile") CONFIG_FILES="$CONFIG_FILES docs/Makefile" ;;
     "Makefile.conf") CONFIG_FILES="$CONFIG_FILES Makefile.conf" ;;
 
@@ -4015,7 +4017,7 @@ target_cpu!$target_cpu$ac_delim
 target_vendor!$target_vendor$ac_delim
 target_os!$target_os$ac_delim
 PKG_CONFIG!$PKG_CONFIG$ac_delim
-GTK_CFLAGS!$GTK_CFLAGS$ac_delim
+GTK_GCC_FLAGS!$GTK_GCC_FLAGS$ac_delim
 PYTHON!$PYTHON$ac_delim
 CC!$CC$ac_delim
 CFLAGS!$CFLAGS$ac_delim

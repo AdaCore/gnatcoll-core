@@ -15,4 +15,4 @@ AC_CHECK_PROGS(TEXI2DVI, texi2dvi)
 AC_SUBST(MAKEINFO)
 AC_SUBST(TEXI2DVI)
 
-AC_OUTPUT(shared.gpr docs/Makefile Makefile.conf)
+AC_OUTPUT(gnatlib_shared.gpr docs/Makefile Makefile.conf)
