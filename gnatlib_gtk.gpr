@@ -1,0 +1,4 @@
+with "scripts/gnatlib_scripts_gtk";
+project GnatLib_Gtk is
+   for Source_Dirs use ();
+end GnatLib_Gtk;
