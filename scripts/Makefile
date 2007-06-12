@@ -5,10 +5,10 @@ include ../Makefile.conf
 ## directly. or we could do a "gnatmake -u", followed by "gprmake"
 
 all_text:
-	gnatmake -u -Pgnatlib_scripts
+	gnatmake -q -u -Pgnatlib_scripts
 	gprmake -Pgnatlib_scripts
 all_gtk:
-	gnatmake -u -Pgnatlib_scripts_gtk
+	gnatmake -q -u -Pgnatlib_scripts_gtk
 	gprmake -Pgnatlib_scripts_gtk
 examples_text:
 	gprmake -q -Pexamples/examples
