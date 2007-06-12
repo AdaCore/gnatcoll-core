@@ -95,7 +95,7 @@ AC_DEFUN(AM_PATH_PYTHON,
                   ;;
              esac
              ;;
-          x86-64-*-* )
+          x86_64-*-* )
              PYTHON_LIBS="-Wl,-export-dynamic -ldl -lm ${PYTHON_LIBS}"
              ;;
           i[[3456]]86-*linux-gnu* )
