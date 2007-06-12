@@ -632,7 +632,7 @@ PYGTK_INCLUDE
 PYTHON_LIBS_GPR
 PYTHON_CFLAGS_GPR
 PYGTK_INCLUDE_GPR
-GTK_CFLAGS_GPR
+GTK_GCC_FLAGS_GPR
 MAKEINFO
 TEXI2DVI
 LIBOBJS
@@ -3247,8 +3247,8 @@ echo "${ECHO_T}no since python not found" >&6; }
 
 
 
-   value=$GTK_CFLAGS
-   output=GTK_CFLAGS_GPR
+   value=$GTK_GCC_FLAGS
+   output=GTK_GCC_FLAGS_GPR
    result=""
    for v in $value; do
       if test "$result" != ""; then
@@ -3256,7 +3256,7 @@ echo "${ECHO_T}no since python not found" >&6; }
       fi
       result="$result\"$v\""
    done
-   GTK_CFLAGS_GPR=$result
+   GTK_GCC_FLAGS_GPR=$result
 
 
 
@@ -4037,7 +4037,7 @@ PYGTK_INCLUDE!$PYGTK_INCLUDE$ac_delim
 PYTHON_LIBS_GPR!$PYTHON_LIBS_GPR$ac_delim
 PYTHON_CFLAGS_GPR!$PYTHON_CFLAGS_GPR$ac_delim
 PYGTK_INCLUDE_GPR!$PYGTK_INCLUDE_GPR$ac_delim
-GTK_CFLAGS_GPR!$GTK_CFLAGS_GPR$ac_delim
+GTK_GCC_FLAGS_GPR!$GTK_GCC_FLAGS_GPR$ac_delim
 MAKEINFO!$MAKEINFO$ac_delim
 TEXI2DVI!$TEXI2DVI$ac_delim
 LIBOBJS!$LIBOBJS$ac_delim
