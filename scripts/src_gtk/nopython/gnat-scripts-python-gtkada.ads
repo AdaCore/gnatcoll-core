@@ -1,7 +1,7 @@
 -----------------------------------------------------------------------
 --                               G P S                               --
 --                                                                   --
---                     Copyright (C) 2003-2007, AdaCore              --
+--                      Copyright (C) 2003-2007, AdaCore             --
 --                                                                   --
 -- GPS is free  software;  you can redistribute it and/or modify  it --
 -- under the terms of the GNU General Public License as published by --
@@ -17,29 +17,17 @@
 -- Place - Suite 330, Boston, MA 02111-1307, USA.                    --
 -----------------------------------------------------------------------
 
-package body GNAT.Scripts.Python is
+with Glib.Object;
 
-   -------------------------------
-   -- Register_Python_Scripting --
-   -------------------------------
+package GNAT.Scripts.Python.Gtkada is
+   procedure Init_PyGtk_Support
+     (Script : access Scripting_Language_Record'Class);
+   procedure Add_PyWidget_Method
+     (Script : access Scripting_Language_Record'Class;
+      Class  : Class_Type);
+   function From_PyGtk
+     (Data : Callback_Data'Class;
+      N    : Positive) return Glib.Object.GObject;
+   --  Does nothing, since python support was not compiled in
 
-   procedure Register_Python_Scripting
-     (Repo          : Scripts.Scripts_Repository;
-      Module        : String)
-   is
-      pragma Unreferenced (Repo, Module);
-   begin
-      null;
-   end Register_Python_Scripting;
-
-   procedure Unregister_Python_Scripting
-     (Repo : Scripts.Scripts_Repository)
-   is
-      pragma Unreferenced (Repo);
-   begin
-      null;
-   end Unregister_Python_Scripting;
-
-
-end GNAT.Scripts.Python;
-
+end GNAT.Scripts.Python.Gtkada;

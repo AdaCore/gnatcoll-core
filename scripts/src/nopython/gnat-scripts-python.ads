@@ -24,6 +24,8 @@ package GNAT.Scripts.Python is
    procedure Register_Python_Scripting
      (Repo          : Scripts.Scripts_Repository;
       Module        : String);
+   procedure Unregister_Python_Scripting
+     (Repo : Scripts.Scripts_Repository);
    --  Does nothing, since python was not compiled in.
 
 end GNAT.Scripts.Python;
