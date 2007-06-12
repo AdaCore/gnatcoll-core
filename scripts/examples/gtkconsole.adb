@@ -268,15 +268,10 @@ package body GtkConsole is
 
    procedure Set_As_Default_Console
      (Console     : access Gtk_Console_Record;
-      Old_Console : Virtual_Console;
-      Script      : access Scripting_Language_Record'Class)
+      Script      : Scripting_Language)
    is
    begin
-      if Virtual_Console (Console) = Old_Console then
-         return;
-      end if;
-
-      Console.Script := Scripting_Language (Script);
+      Console.Script := Script;
    end Set_As_Default_Console;
 
    ---------

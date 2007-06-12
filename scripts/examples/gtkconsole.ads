@@ -46,8 +46,7 @@ package GtkConsole is
      (Console : access Gtk_Console_Record; Grab : Boolean);
    overriding procedure Set_As_Default_Console
      (Console     : access Gtk_Console_Record;
-      Old_Console : Virtual_Console;
-      Script      : access GNAT.Scripts.Scripting_Language_Record'Class);
+      Script      : GNAT.Scripts.Scripting_Language);
    overriding procedure Set_Data_Primitive
      (Instance : Class_Instance;
       Console  : access Gtk_Console_Record);

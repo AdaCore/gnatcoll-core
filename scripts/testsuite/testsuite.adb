@@ -26,14 +26,12 @@ with Testsuite_Export;      use Testsuite_Export;
 with TestConsole;           use TestConsole;
 
 procedure Testsuite is
-   Repo    : Scripts_Repository;
+   Repo    : Scripts_Repository := new Scripts_Repository_Record;
    Errors  : Boolean;
    Console : aliased Test_Console;
    Lang    : constant String := Argument (1);
    File    : constant String := Argument (2);
 begin
-   Initialize (Repo);
-
    --  Register a single language, so that we can more easily detect
    --  memory leaks in each case
 

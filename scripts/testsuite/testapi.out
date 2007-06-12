@@ -1,7 +1,7 @@
 Completions for No (python):
 
 Completions for M (python):
-M.C1, M.Console, M.__doc__, M.__name__, M.hello, 
+M.C1, M.Console, M.__doc__, M.__name__, M.exec_in_console, M.hello, 
 Completions for M.C (python):
 M.C1, M.Console, 
 Completions for M.C1. (python):

@@ -26,7 +26,7 @@ with TestConsole;           use TestConsole;
 
 procedure TestAPI is
    use String_Lists;
-   Repo    : Scripts_Repository;
+   Repo    : Scripts_Repository := new Scripts_Repository_Record;
    Console : aliased Test_Console;
 
    procedure Completions (Input : String; Lang : Scripting_Language);
@@ -48,7 +48,6 @@ procedure TestAPI is
    Sh : Scripting_Language;
 
 begin
-   Initialize (Repo);
    Register_Shell_Scripting (Repo);
    Register_Python_Scripting (Repo, "M");
    Register_Standard_Classes (Repo, "Console");

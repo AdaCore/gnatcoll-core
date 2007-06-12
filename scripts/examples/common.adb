@@ -41,7 +41,7 @@ package body Common is
       --  Register all scripting languages. In practice, you only need to
       --  register those you intend to support
 
-      Initialize (Repo);
+      Repo := new Scripts_Repository_Record;
       Register_Shell_Scripting  (Repo);
       Register_Python_Scripting (Repo, "Hello");
       Register_Standard_Classes (Repo, "Console");
