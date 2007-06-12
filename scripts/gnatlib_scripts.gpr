@@ -15,4 +15,26 @@ project GnatLib_Scripts is
       for Default_Switches ("Ada") use GnatLib_Shared.Python_Libs;
    end Linker;
 
+   package Naming is
+      --  Needs to be specified, since GNAT currently expected krunched
+      --  names. Not specifying this would still allow gnatlib to be build,
+      --  but apparently not projects depending on it
+
+      for Specification ("GNAT.Scripts") use "gnat-scripts.ads";
+      for Implementation ("GNAT.Scripts") use "gnat-scripts.adb";
+      for Specification ("GNAT.Scripts.Impl") use "gnat-scripts-impl.ads";
+      for Implementation ("GNAT.Scripts.Impl") use "gnat-scripts-impl.adb";
+      for Specification ("GNAT.Scripts.Shell") use "gnat-scripts-shell.ads";
+      for Implementation ("GNAT.Scripts.Shell") use "gnat-scripts-shell.adb";
+      for Specification ("GNAT.Scripts.Utils") use "gnat-scripts-utils.ads";
+      for Implementation ("GNAT.Scripts.Utils") use "gnat-scripts-utils.adb";
+      for Specification ("GNAT.Scripts.Python") use "gnat-scripts-python.ads";
+      for Implementation ("GNAT.Scripts.Python") use "gnat-scripts-python.adb";
+
+      --  Only when python is supported, otherwise this unit is not
+      --  available
+      for Specification ("GNAT.Python") use "gnat-python.ads";
+      for Implementation ("GNAT.Python") use "gnat-python.adb";
+   end Naming;
+
 end GnatLib_Scripts;

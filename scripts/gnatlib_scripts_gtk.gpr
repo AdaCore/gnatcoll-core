@@ -1,4 +1,8 @@
-with "gtkada";
+-- In the context of GPS, we must point to the local gtkada file.
+-- We should really modify GPS to point to the system's gtkada.gpr file
+with "../../gtkada/gtkada";
+--  with "gtkada";
+
 with "gnatlib_scripts";
 with "../gnatlib_shared";
 
@@ -18,5 +22,14 @@ project GnatLib_Scripts_Gtk is
       for Default_Switches ("Ada") use
         GnatLib_Scripts.Linker'Default_Switches ("Ada");
    end Linker;
+
+   package Naming is
+      for Specification ("GNAT.Scripts.Gtkada") use "gnat-scripts-gtkada.ads";
+      for Implementation ("GNAT.Scripts.Gtkada") use "gnat-scripts-gtkada.adb";
+      for Specification ("GNAT.Scripts.Python.Gtkada")
+          use "gnat-scripts-python-gtkada.ads";
+      for Implementation ("GNAT.Scripts.Python.Gtkada")
+          use "gnat-scripts-python-gtkada.adb";
+   end Naming;
 
 end GnatLib_Scripts_Gtk;
