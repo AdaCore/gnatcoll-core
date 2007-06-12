@@ -26,13 +26,16 @@
 
 with Ada.Calendar;
 with Ada.Containers.Indefinite_Doubly_Linked_Lists;
+with Ada.Containers.Indefinite_Hashed_Maps;
 with Ada.Finalization;
+with Ada.Strings.Hash;
 with GNAT.OS_Lib;
 with GNAT.Strings;
 
 package GNAT.Scripts is
 
-   type Scripts_Repository is private;
+   type Scripts_Repository_Record is tagged private;
+   type Scripts_Repository is access all Scripts_Repository_Record'Class;
 
    type Scripting_Language_Record is abstract tagged private;
    type Scripting_Language is access all Scripting_Language_Record'Class;
@@ -330,6 +333,8 @@ package GNAT.Scripts is
 
    function Is_Subclass
      (Instance : Class_Instance; Base : Class_Type) return Boolean;
+   function Is_Subclass
+     (Instance : Class_Instance; Base : String) return Boolean;
    --  Whether Instance is a Base or from a subclass of Base
 
    function Get_Script (Instance : Class_Instance) return Scripting_Language;
@@ -376,7 +381,7 @@ package GNAT.Scripts is
 
    function Is_Subclass
      (Instance : access Class_Instance_Record;
-      Base     : Class_Type) return Boolean is abstract;
+      Base     : String) return Boolean is abstract;
    --  Whether Instance is a Base or from a subclass of Base. Do not use
    --  directly, use the version that takes a Class_Instance instead
 
@@ -486,8 +491,9 @@ package GNAT.Scripts is
 
    function Get_Data
      (Instance : Class_Instance;
-      Name     : String) return Instance_Property_Record'Class;
-   --  Return a general property associated with the widget
+      Name     : String) return Instance_Property;
+   --  Return a general property associated with the widget.
+   --  Return null if there is no such property.
 
    -------------------------
    -- Callback_Data lists --
@@ -574,11 +580,11 @@ package GNAT.Scripts is
 
    procedure Set_As_Default_Console
      (Console        : access Virtual_Console_Record;
-      Old_Console    : Virtual_Console := null;
-      Script         : access Scripting_Language_Record'Class) is null;
+      Script         : Scripting_Language := null) is null;
    --  Called when Console becomes the default console for the scripting
    --  language Script.
-   --  If Display_Prompt is true, then a prompt should be displayed.
+   --  Script might be null when the Console is no longer the default console
+   --  for that script.
 
    procedure Set_Data_Primitive
      (Instance : Class_Instance;
@@ -604,6 +610,10 @@ package GNAT.Scripts is
    --  properly refreshed while a script is running.
    --  This package will properly make sure this function is not called too
    --  often, so you don't need to do additional work for that
+
+   procedure Clear
+     (Console    : access Virtual_Console_Record) is null;
+   --  Clear the contents of the console
 
    function Read
      (Console    : access Virtual_Console_Record;
@@ -781,10 +791,6 @@ package GNAT.Scripts is
    Comparison_Method   : constant String;
    Destructor_Method   : constant String;
 
-   procedure Initialize (Repo : in out Scripts_Repository);
-   --  Initialize this module. After registering all the scripting languages,
-   --  you must then call Register_Standard_Classes below
-
    procedure Destroy (Repo : in out Scripts_Repository);
    --  Free all memory associated with the repository
 
@@ -954,9 +960,19 @@ private
      array (Natural range <>) of Callback_Data_Access;
    type Callback_Data_List  is access Callback_Data_Array;
 
-   type Scripts_Repository_Record is abstract tagged record
+   type Scripting_Language_List is access Scripting_Language_Array;
+
+   package Classes_Hash is new Ada.Containers.Indefinite_Hashed_Maps
+     (Key_Type        => String,
+      Element_Type    => Class_Type,
+      Hash            => Ada.Strings.Hash,
+      Equivalent_Keys => "=");
+
+   type Scripts_Repository_Record is tagged record
+      Scripting_Languages  : Scripting_Language_List :=
+        new Scripting_Language_Array'(1 .. 0 => null);
+      Classes              : Classes_Hash.Map;
       Console_Class : Class_Type := No_Class;
    end record;
-   type Scripts_Repository is access all Scripts_Repository_Record'Class;
 
 end GNAT.Scripts;

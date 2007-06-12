@@ -19,8 +19,6 @@
 
 with Ada.Calendar;            use Ada.Calendar;
 with Ada.Characters.Handling; use Ada.Characters.Handling;
-with Ada.Containers.Indefinite_Hashed_Maps;
-with Ada.Strings.Hash;
 with Ada.Unchecked_Conversion;
 with Ada.Unchecked_Deallocation;
 with GNAT.OS_Lib;             use GNAT.OS_Lib;
@@ -29,6 +27,7 @@ with System;                  use System;
 with System.Address_Image;
 
 package body GNAT.Scripts is
+   use Classes_Hash;
 
    Timeout_Threshold : constant Duration := 0.2;   --  in seconds
    --  Timeout between two checks of the gtk+ event queue
@@ -71,24 +70,8 @@ package body GNAT.Scripts is
    procedure Unchecked_Free is new Ada.Unchecked_Deallocation
      (Class_Instance_Record'Class, Class_Instance_Record_Access);
 
-   type Scripting_Language_List is access Scripting_Language_Array;
    procedure Unchecked_Free is new Ada.Unchecked_Deallocation
      (Scripting_Language_Array, Scripting_Language_List);
-
-   package Classes_Hash is new Ada.Containers.Indefinite_Hashed_Maps
-     (Key_Type        => String,
-      Element_Type    => Class_Type,
-      Hash            => Ada.Strings.Hash,
-      Equivalent_Keys => "=");
-   use Classes_Hash;
-
-   type Scripting_Data_Record is new Scripts_Repository_Record with
-      record
-         Scripting_Languages  : Scripting_Language_List :=
-           new Scripting_Language_Array'(1 .. 0 => null);
-         Classes              : Classes_Hash.Map;
-      end record;
-   type Scripting_Data is access all Scripting_Data_Record'Class;
 
    procedure Free_User_Data (Data : in out User_Data_List);
    --  Free the memory used by Data. Data is reset to null, and this doesn't
@@ -113,20 +96,19 @@ package body GNAT.Scripts is
         (Scripts_Repository_Record'Class, Scripts_Repository);
       procedure Unchecked_Free is new Ada.Unchecked_Deallocation
         (Scripting_Language_Record'Class, Scripting_Language);
-      Data : constant Scripting_Data := Scripting_Data (Repo);
       C    : Classes_Hash.Cursor;
       Class : Class_Type;
    begin
       if Repo /= null then
-         if Data.Scripting_Languages /= null then
-            for L in Data.Scripting_Languages'Range loop
-               Destroy (Data.Scripting_Languages (L));
-               Unchecked_Free (Data.Scripting_Languages (L));
+         if Repo.Scripting_Languages /= null then
+            for L in Repo.Scripting_Languages'Range loop
+               Destroy (Repo.Scripting_Languages (L));
+               Unchecked_Free (Repo.Scripting_Languages (L));
             end loop;
-            Unchecked_Free (Data.Scripting_Languages);
+            Unchecked_Free (Repo.Scripting_Languages);
          end if;
 
-         C := First (Data.Classes);
+         C := First (Repo.Classes);
          while Has_Element (C) loop
             Class := Element (C);
             Free (Class.Name);
@@ -157,7 +139,7 @@ package body GNAT.Scripts is
      (List   : Instance_List;
       Script : access Scripting_Language_Record'Class) return Class_Instance
    is
-      Tmp : constant Scripting_Language_Array := Scripting_Data
+      Tmp : constant Scripting_Language_Array := Scripts_Repository
         (Get_Repository (Script)).Scripting_Languages.all;
    begin
       if List.List /= null then
@@ -179,7 +161,7 @@ package body GNAT.Scripts is
       Script : access Scripting_Language_Record'Class;
       Inst   : Class_Instance)
    is
-      Tmp : constant Scripting_Language_Array := Scripting_Data
+      Tmp : constant Scripting_Language_Array := Scripts_Repository
         (Get_Repository (Script)).Scripting_Languages.all;
    begin
       if List.List = null then
@@ -251,8 +233,7 @@ package body GNAT.Scripts is
       Script : access Scripting_Language_Record'Class)
       return Callback_Data_Access
    is
-      Tmp : constant Scripting_Language_Array :=
-              Scripting_Data (Repo).Scripting_Languages.all;
+      Tmp : constant Scripting_Language_Array := Repo.Scripting_Languages.all;
    begin
       if List /= null then
          for T in Tmp'Range loop
@@ -274,8 +255,7 @@ package body GNAT.Scripts is
       Script : access Scripting_Language_Record'Class;
       Data   : Callback_Data_Access)
    is
-      Tmp : constant Scripting_Language_Array :=
-              Scripting_Data (Repo).Scripting_Languages.all;
+      Tmp : constant Scripting_Language_Array := Repo.Scripting_Languages.all;
    begin
       if List = null then
          List := new Callback_Data_Array (Tmp'Range);
@@ -317,11 +297,10 @@ package body GNAT.Scripts is
      (Repo   : Scripts_Repository;
       Script : access Scripting_Language_Record'Class)
    is
-      Tmp : constant Scripting_Language_Array :=
-              Scripting_Data (Repo).Scripting_Languages.all;
+      Tmp : constant Scripting_Language_Array := Repo.Scripting_Languages.all;
    begin
-      Unchecked_Free (Scripting_Data (Repo).Scripting_Languages);
-      Scripting_Data (Repo).Scripting_Languages :=
+      Unchecked_Free (Repo.Scripting_Languages);
+      Repo.Scripting_Languages :=
         new Scripting_Language_Array'(Tmp & Scripting_Language (Script));
    end Register_Scripting_Language;
 
@@ -333,8 +312,7 @@ package body GNAT.Scripts is
      (Repo   : Scripts_Repository;
       Name   : String) return Scripting_Language
    is
-      Tmp : constant Scripting_Language_List :=
-        Scripting_Data (Repo).Scripting_Languages;
+      Tmp : constant Scripting_Language_List := Repo.Scripting_Languages;
       N   : constant String := To_Lower (Name);
    begin
       for T in Tmp'Range loop
@@ -354,7 +332,7 @@ package body GNAT.Scripts is
      (Repo : Scripts_Repository)
       return Scripting_Language_Array is
    begin
-      return Scripting_Data (Repo).Scripting_Languages.all;
+      return Repo.Scripting_Languages.all;
    end Get_Scripting_Languages;
 
    --------------------
@@ -365,8 +343,7 @@ package body GNAT.Scripts is
      (Repo   : Scripts_Repository;
       Block  : Boolean)
    is
-      Tmp : constant Scripting_Language_List :=
-              Scripting_Data (Repo).Scripting_Languages;
+      Tmp : constant Scripting_Language_List := Repo.Scripting_Languages;
    begin
       for T in Tmp'Range loop
          Block_Commands (Tmp (T), Block);
@@ -386,8 +363,7 @@ package body GNAT.Scripts is
       Class         : Class_Type := No_Class;
       Static_Method : Boolean := False)
    is
-      Tmp : constant Scripting_Language_List :=
-              Scripting_Data (Repo).Scripting_Languages;
+      Tmp : constant Scripting_Language_List := Repo.Scripting_Languages;
    begin
       if Command = Constructor_Method and then Class = No_Class then
          raise Program_Error
@@ -415,8 +391,7 @@ package body GNAT.Scripts is
       Name   : String;
       Base   : Class_Type := No_Class) return Class_Type
    is
-      Tmp   : constant Scripting_Language_List :=
-                Scripting_Data (Repo).Scripting_Languages;
+      Tmp   : constant Scripting_Language_List := Repo.Scripting_Languages;
       Class : Class_Type;
       C     : Classes_Hash.Cursor;
 
@@ -425,7 +400,7 @@ package body GNAT.Scripts is
          return No_Class;
 
       else
-         C := Find (Scripting_Data (Repo).Classes, Name);
+         C := Find (Repo.Classes, Name);
          if Has_Element (C) then
             Class := Element (C);
          else
@@ -435,7 +410,7 @@ package body GNAT.Scripts is
                end loop;
 
                Class := Class_Type'(Name => new String'(Name));
-               Include (Scripting_Data (Repo).Classes, Name, Class);
+               Include (Repo.Classes, Name, Class);
             end if;
          end if;
       end if;
@@ -455,15 +430,6 @@ package body GNAT.Scripts is
          return Class.Name.all;
       end if;
    end Get_Name;
-
-   ----------------
-   -- Initialize --
-   ----------------
-
-   procedure Initialize (Repo : in out Scripts_Repository) is
-   begin
-      Repo := new Scripting_Data_Record;
-   end Initialize;
 
    -------------------------------
    -- Register_Standard_Classes --
@@ -944,14 +910,14 @@ package body GNAT.Scripts is
 
    function Get_Data
      (Instance : Class_Instance;
-      Name     : String) return Instance_Property_Record'Class
+      Name     : String) return Instance_Property
    is
       D : constant User_Data_List := Get_Data (Instance, Name);
    begin
       if D = null then
-         raise Invalid_Data;
+         return null;
       else
-         return D.Prop.all;
+         return D.Prop;
       end if;
    end Get_Data;
 
@@ -962,10 +928,10 @@ package body GNAT.Scripts is
    function Get_Data
      (Instance : Class_Instance; Name : Class_Type) return Integer
    is
-      Prop : constant Instance_Property_Record'Class :=
+      Prop : constant Instance_Property :=
         Get_Data (Instance, Get_Name (Name));
    begin
-      return Scalar_Properties_Record (Prop).Int;
+      return Scalar_Properties (Prop).Int;
    end Get_Data;
 
    --------------
@@ -975,10 +941,10 @@ package body GNAT.Scripts is
    function Get_Data
      (Instance : Class_Instance; Name : Class_Type) return String
    is
-      Prop : constant Instance_Property_Record'Class :=
+      Prop : constant Instance_Property :=
         Get_Data (Instance, Get_Name (Name));
    begin
-      return Scalar_Properties_Record (Prop).Str.all;
+      return Scalar_Properties (Prop).Str.all;
    end Get_Data;
 
    ----------------
@@ -996,6 +962,12 @@ package body GNAT.Scripts is
 
    function Is_Subclass
      (Instance : Class_Instance; Base : Class_Type) return Boolean is
+   begin
+      return Is_Subclass (Get_CIR (Instance), Get_Name (Base));
+   end Is_Subclass;
+
+   function Is_Subclass
+     (Instance : Class_Instance; Base : String) return Boolean is
    begin
       return Is_Subclass (Get_CIR (Instance), Base);
    end Is_Subclass;
@@ -1019,9 +991,14 @@ package body GNAT.Scripts is
      (Script       : access Scripting_Language_Record;
       Console      : Virtual_Console) is
    begin
-      if Console /= null then
-         Set_As_Default_Console (Console, Script.Console, Script);
+      if Script.Console /= null then
+         Set_As_Default_Console (Script.Console, null);
       end if;
+
+      if Console /= null then
+         Set_As_Default_Console (Console, Scripting_Language (Script));
+      end if;
+
       Script.Console := Console;
       Display_Prompt (Scripting_Language (Script));
    end Set_Default_Console;
