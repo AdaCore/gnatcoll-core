@@ -1,6 +1,8 @@
 MAKEINFO=@MAKEINFO@
 TEXI2DVI=@TEXI2DVI@
 
+all: gnatlib.html gnatlib.pdf gnatlib.txt
+
 gnatlib.html: gnatlib.texi
 	${MAKEINFO} --html --css-include=gnatlib.css --number-sections $<
 
