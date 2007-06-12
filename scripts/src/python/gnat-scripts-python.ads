@@ -29,6 +29,12 @@ package GNAT.Scripts.Python is
       Module        : String);
    --  All commands and classes will be added in the specified module.
 
+   procedure Unregister_Python_Scripting
+     (Repo : Scripts.Scripts_Repository);
+   --  Mark the python scripting language as no longer valid. This should be
+   --  called before your application exits, to prevent unwanted storage_error
+   --  in the finalization of the application (since some class_instances might
+   --  be automatically finalized after python itself was destroyed, otherwise)
 
    type Python_Scripting_Record is new Scripting_Language_Record with private;
    type Python_Scripting is access all Python_Scripting_Record'Class;
@@ -49,6 +55,7 @@ private
 
    type Python_Scripting_Record is new Scripting_Language_Record with record
       Repo                     : Scripts_Repository;
+      Finalized                : Boolean := False;
       Blocked                  : Boolean := False;
       Module                   : PyObject;
       Builtin                  : PyObject;

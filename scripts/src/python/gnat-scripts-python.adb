@@ -84,7 +84,7 @@ package body GNAT.Scripts.Python is
    overriding procedure Decref (Inst : access Python_Class_Instance_Record);
    overriding function Is_Subclass
      (Instance : access Python_Class_Instance_Record;
-      Base     : Class_Type) return Boolean;
+      Base     : String) return Boolean;
    --  See doc from inherited subprogram
 
    procedure Set_CI (CI : Class_Instance);
@@ -180,6 +180,10 @@ package body GNAT.Scripts.Python is
    pragma Convention (C, Trace);
    --  Suprogram called for each python instruction execution. It periodically
    --  checks the event queue, so that the interpreter can be interrupted.
+
+   procedure Python_Global_Command_Handler
+     (Data : in out Callback_Data'Class; Command : String);
+   --  Handles all commands pre-defined in this module
 
    function Convert is new Standard.Ada.Unchecked_Conversion
      (System.Address, Python_Scripting);
@@ -352,11 +356,45 @@ package body GNAT.Scripts.Python is
 
       --  PyGTK prints its error messages using sys.argv, which doesn't
       --  exist in non-interactive mode. We therefore define it here
+
       Result := Run_Command
         (Script,
          "sys.argv=['GPS']", Hide_Output => True,
          Errors         => Errors'Unchecked_Access);
+
+      --  This function is required for support of the Python menu (F120-025),
+      --  so that we can execute python commands in the context of the global
+      --  interpreter instead of the current context (for the menu, that would
+      --  be python_support.py, and thus would have no impact on the
+      --  interpreter itself)
+
+      Register_Command
+        (Script,
+         Command       => "exec_in_console",
+         Handler       => Python_Global_Command_Handler'Access,
+         Minimum_Args  => 1,
+         Maximum_Args  => 1);
    end Register_Python_Scripting;
+
+   -----------------------------------
+   -- Python_Global_Command_Handler --
+   -----------------------------------
+
+   procedure Python_Global_Command_Handler
+     (Data : in out Callback_Data'Class; Command : String)
+   is
+      Result   : PyObject;
+      pragma Unreferenced (Result);
+      Errors   : aliased Boolean;
+   begin
+      if Command = "exec_in_console" then
+         Result := Run_Command
+           (Python_Scripting (Get_Script (Data)),
+            Command      => Nth_Arg (Data, 1),
+            Show_Command => True,
+            Errors       => Errors'Unchecked_Access);
+      end if;
+   end Python_Global_Command_Handler;
 
    --------------------------
    -- Destroy_Handler_Data --
@@ -567,12 +605,14 @@ package body GNAT.Scripts.Python is
          Free (Callback);
          return null;
 
-      when others =>
+      when E : others =>
          if not Callback.Has_Return_Value
            or else  Callback.Return_Value /= null
          then
-            PyErr_SetString (Handler.Script.Exception_Unexpected,
-                             "unexpected internal exception");
+            PyErr_SetString
+              (Handler.Script.Exception_Unexpected,
+               "unexpected internal exception "
+               & Exception_Information (E));
          end if;
 
          Free (Callback);
@@ -1691,7 +1731,6 @@ package body GNAT.Scripts.Python is
       --  a call to Finalize for D, this takes care of the refcounting.
 
       D.Data := null;
-      --  Decref (D);
    end On_PyObject_Data_Destroy;
 
    ------------
@@ -1710,6 +1749,21 @@ package body GNAT.Scripts.Python is
         (Python_Class_Instance (Get_CIR (CI)).Data, "__gps_data", Data);
       Py_DECREF (Data);
    end Set_CI;
+
+   ---------------------------------
+   -- Unregister_Python_Scripting --
+   ---------------------------------
+
+   procedure Unregister_Python_Scripting
+     (Repo : Scripts.Scripts_Repository)
+   is
+      Script  : constant Scripting_Language := Lookup_Scripting_Language
+        (Repo, Python_Name);
+   begin
+      if Script /= null then
+         Python_Scripting (Script).Finalized := True;
+      end if;
+   end Unregister_Python_Scripting;
 
    ------------
    -- Get_CI --
@@ -1744,7 +1798,9 @@ package body GNAT.Scripts.Python is
          CIR := PyCObject_AsVoidPtr (Item);
          Py_DECREF (Item);
 
-         Result := From_Instance (Script, Convert (CIR));
+         if not Script.Finalized then
+            Result := From_Instance (Script, Convert (CIR));
+         end if;
          return Result;
       end if;
    end Get_CI;
@@ -1755,12 +1811,12 @@ package body GNAT.Scripts.Python is
 
    function Is_Subclass
      (Instance : access Python_Class_Instance_Record;
-      Base     : Class_Type) return Boolean
+      Base     : String) return Boolean
    is
       C : constant PyObject := PyObject_GetAttrString
         (Instance.Data, "__class__");
       B : constant PyObject := Lookup_Class_Object
-        (Python_Scripting (Instance.Script).Module, Get_Name (Base));
+        (Python_Scripting (Instance.Script).Module, Base);
    begin
       return PyClass_IsSubclass (C, Base => B);
    end Is_Subclass;
