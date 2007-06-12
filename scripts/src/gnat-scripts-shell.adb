@@ -18,15 +18,11 @@
 -----------------------------------------------------------------------
 
 with Ada.Characters.Handling;   use Ada.Characters.Handling;
-with Ada.Containers.Indefinite_Doubly_Linked_Lists;
-with Ada.Containers.Indefinite_Hashed_Maps;
 with Ada.Exceptions;            use Ada.Exceptions;
 with Ada.Strings.Fixed;         use Ada.Strings.Fixed;
-with Ada.Strings.Hash;
 with Ada.Unchecked_Deallocation;
 with GNAT.Debug_Utilities;      use GNAT.Debug_Utilities;
 with GNAT.OS_Lib;               use GNAT.OS_Lib;
-with GNAT.Strings;
 with GNAT.Scripts;              use GNAT.Scripts;
 with GNAT.Scripts.Impl;         use GNAT.Scripts.Impl;
 with GNAT.Scripts.Utils;        use GNAT.Scripts.Utils;
@@ -34,250 +30,11 @@ with System.Address_Image;
 with System;                    use System;
 
 package body GNAT.Scripts.Shell is
-
-   Num_Previous_Returns : constant := 9;
-   --  Number of parameters %1, %2,... which are used to memorize the result of
-   --  previous commands.
-
-   --------------------------
-   -- Shell_Class_Instance --
-   --------------------------
-
-   type Shell_Class_Instance_Record is new Class_Instance_Record with record
-      Class : Class_Type;
-   end record;
-   type Shell_Class_Instance is access all Shell_Class_Instance_Record'Class;
-
-   overriding function Print_Refcount
-     (Instance : access Shell_Class_Instance_Record) return String;
-   overriding function Is_Subclass
-     (Instance : access Shell_Class_Instance_Record;
-      Base     : Class_Type) return Boolean;
-   --  See doc from inherited subprogram
-
-   package Instances_List is new Ada.Containers.Indefinite_Doubly_Linked_Lists
-     (Shell_Class_Instance);
-   use Instances_List;
-   --  ??? Would be faster to use a hash-table...
-
-   -------------------------
-   -- Command_Information --
-   -------------------------
-
-   type Command_Information is record
-      Command         : GNAT.Strings.String_Access;
-      Short_Command   : GNAT.Strings.String_Access;
-      Minimum_Args    : Natural;
-      Maximum_Args    : Natural;
-      Command_Handler : Module_Command_Function;
-      Class           : Class_Type;
-   end record;
-   type Command_Information_Access is access Command_Information;
-   --  Description for each of the registered commands.
-   --  Command is the name that must be typed by the user in the console.
-   --  Short_Command is the name under which the command was registered. It is
-   --  the same as Command, except when the command is a method of a class. In
-   --  this case, Command is equal to "Class.Short_Command"
-   --  The command was set as a constructor if Short_Command is
-   --  Constructor_Method.
-
-   procedure Free (Com : in out Command_Information_Access);
-   --  Free memory associated with Com
-
-   package Command_Hash is new Ada.Containers.Indefinite_Hashed_Maps
-     (String, Command_Information_Access, Ada.Strings.Hash, "=");
-   use Command_Hash;
-
-   ---------------------
-   -- Shell_scripting --
-   ---------------------
-
-   type Shell_Scripting_Record is new Scripting_Language_Record with record
-      Repo      : Scripts_Repository;
-      Blocked   : Boolean := False;
-      Instances : Instances_List.List;
-      --  All the instances that were created
-
-      Commands_List : Command_Hash.Map;
-      --  The list of all registered commands
-
-      Returns   : Argument_List (1 .. Num_Previous_Returns);
-      --  The result of the Num_Previous_Returns previous commands
-   end record;
-   type Shell_Scripting is access all Shell_Scripting_Record'Class;
-
-   overriding procedure Destroy (Script : access Shell_Scripting_Record);
-   overriding procedure Register_Command
-     (Script        : access Shell_Scripting_Record;
-      Command       : String;
-      Minimum_Args  : Natural := 0;
-      Maximum_Args  : Natural := 0;
-      Handler       : Module_Command_Function;
-      Class         : Class_Type := No_Class;
-      Static_Method : Boolean := False);
-   overriding procedure Register_Class
-     (Script        : access Shell_Scripting_Record;
-      Name          : String;
-      Base          : Class_Type := No_Class);
-   overriding procedure Block_Commands
-     (Script : access Shell_Scripting_Record; Block : Boolean);
-   overriding procedure Execute_Command
-     (Script        : access Shell_Scripting_Record;
-      Command       : String;
-      Console       : Virtual_Console := null;
-      Hide_Output   : Boolean := False;
-      Show_Command  : Boolean := True;
-      Errors        : out Boolean);
-   overriding function Execute_Command
-     (Script        : access Shell_Scripting_Record;
-      Command       : String;
-      Console       : Virtual_Console := null;
-      Hide_Output   : Boolean := False;
-      Show_Command  : Boolean := True;
-      Errors        : access Boolean) return String;
-   overriding function Execute_Command
-     (Script        : access Shell_Scripting_Record;
-      Command       : String;
-      Console       : Virtual_Console := null;
-      Hide_Output   : Boolean := False;
-      Errors        : access Boolean) return Boolean;
-   overriding function Execute_Command
-     (Script  : access Shell_Scripting_Record;
-      Command : String;
-      Args    : Callback_Data'Class) return Boolean;
-   overriding function Execute_Command_With_Args
-     (Script        : access Shell_Scripting_Record;
-      Command       : String;
-      Args          : GNAT.OS_Lib.Argument_List) return String;
-   overriding procedure Execute_File
-     (Script        : access Shell_Scripting_Record;
-      Filename      : String;
-      Console       : Virtual_Console := null;
-      Hide_Output   : Boolean := False;
-      Show_Command  : Boolean := True;
-      Errors        : out Boolean);
-   overriding function Get_Name
-     (Script : access Shell_Scripting_Record) return String;
-   overriding function Get_Repository
-     (Script : access Shell_Scripting_Record)
-      return Scripts_Repository;
-   overriding function Current_Script
-     (Script : access Shell_Scripting_Record) return String;
-   overriding procedure Display_Prompt
-     (Script  : access Shell_Scripting_Record;
-      Console : Virtual_Console := null);
-   overriding procedure Complete
-     (Script      : access Shell_Scripting_Record;
-      Input       : String;
-      Completions : out String_Lists.List);
-   --  See doc from inherited subprograms
-
-   overriding function New_Instance
-     (Script : access Shell_Scripting_Record; Class : Class_Type)
-      return Class_Instance;
+   use Instances_List, Command_Hash;
 
    procedure Free_Internal_Data (Script : access Shell_Scripting_Record'Class);
    --  Free the internal memory used to store the results of previous commands
    --  and class instances
-
-   ----------------------
-   -- Shell_Subprogram --
-   ----------------------
-
-   type Shell_Subprogram_Record is new Subprogram_Record with record
-      Script  : Scripting_Language;
-      Command : GNAT.Strings.String_Access;
-   end record;
-   --  subprograms in GPS shell are just GPS actions
-
-   overriding function Execute
-     (Subprogram : access Shell_Subprogram_Record;
-      Args       : Callback_Data'Class) return Boolean;
-   overriding function Execute
-     (Subprogram : access Shell_Subprogram_Record;
-      Args       : Callback_Data'Class) return String;
-   overriding function Execute
-     (Subprogram : access Shell_Subprogram_Record;
-      Args       : Callback_Data'Class) return GNAT.Strings.String_List;
-   overriding procedure Free (Subprogram : in out Shell_Subprogram_Record);
-   overriding function Get_Name
-     (Subprogram : access Shell_Subprogram_Record) return String;
-   overriding function Get_Script
-     (Subprogram : Shell_Subprogram_Record) return Scripting_Language;
-   --  See doc from inherited subprograms
-
-   -------------------------
-   -- Shell_Callback_Data --
-   -------------------------
-
-   type Shell_Callback_Data is new Callback_Data with record
-      Script          : Shell_Scripting;
-      Args            : GNAT.OS_Lib.Argument_List_Access;
-      Return_Value    : GNAT.Strings.String_Access;
-      Return_Dict     : GNAT.Strings.String_Access;
-      Return_As_List  : Boolean := False;
-      Return_As_Error : Boolean := False;
-   end record;
-
-   overriding function Clone
-     (Data : Shell_Callback_Data) return Callback_Data'Class;
-   overriding function Get_Script
-     (Data : Shell_Callback_Data) return Scripting_Language;
-   overriding function Number_Of_Arguments
-     (Data : Shell_Callback_Data) return Natural;
-   overriding procedure Name_Parameters
-     (Data  : in out Shell_Callback_Data; Names : Cst_Argument_List);
-   overriding function Nth_Arg
-     (Data : Shell_Callback_Data; N : Positive) return String;
-   overriding function Nth_Arg
-     (Data : Shell_Callback_Data; N : Positive) return Integer;
-   overriding function Nth_Arg
-     (Data : Shell_Callback_Data; N : Positive) return Boolean;
-   overriding function Nth_Arg
-     (Data : Shell_Callback_Data; N : Positive) return Subprogram_Type;
-   overriding function Nth_Arg
-     (Data : Shell_Callback_Data; N : Positive; Class : Class_Type;
-      Allow_Null : Boolean := False)
-      return Class_Instance;
-   overriding procedure Set_Error_Msg
-     (Data : in out Shell_Callback_Data; Msg : String);
-   overriding procedure Set_Return_Value_As_List
-     (Data : in out Shell_Callback_Data; Size : Natural := 0);
-   overriding procedure Set_Return_Value
-     (Data   : in out Shell_Callback_Data; Value : Integer);
-   overriding procedure Set_Return_Value
-     (Data   : in out Shell_Callback_Data; Value : Boolean);
-   overriding procedure Set_Return_Value
-     (Data   : in out Shell_Callback_Data; Value : String);
-   overriding procedure Set_Return_Value
-     (Data   : in out Shell_Callback_Data; Value : Class_Instance);
-   overriding procedure Set_Return_Value_Key
-     (Data   : in out Shell_Callback_Data;
-      Key    : String;
-      Append : Boolean := False);
-   overriding procedure Set_Return_Value_Key
-     (Data   : in out Shell_Callback_Data;
-      Key    : Integer;
-      Append : Boolean := False);
-   overriding procedure Set_Return_Value_Key
-     (Data   : in out Shell_Callback_Data;
-      Key    : Class_Instance;
-      Append : Boolean := False);
-   overriding procedure Free (Data : in out Shell_Callback_Data);
-   overriding function Create
-     (Script          : access Shell_Scripting_Record;
-      Arguments_Count : Natural) return Callback_Data'Class;
-   overriding procedure Set_Nth_Arg
-     (Data : Shell_Callback_Data; N : Positive; Value : String);
-   overriding procedure Set_Nth_Arg
-     (Data : Shell_Callback_Data; N : Positive; Value : Integer);
-   overriding procedure Set_Nth_Arg
-     (Data : Shell_Callback_Data; N : Positive; Value : Boolean);
-   overriding procedure Set_Nth_Arg
-     (Data : Shell_Callback_Data; N : Positive; Value : Class_Instance);
-   overriding procedure Set_Nth_Arg
-     (Data : Shell_Callback_Data; N : Positive; Value : Subprogram_Type);
-   --  See doc from inherited subprogram
 
    ----------
    -- Misc --
@@ -394,7 +151,7 @@ package body GNAT.Scripts.Shell is
 
    function Is_Subclass
      (Instance : access Shell_Class_Instance_Record;
-      Base     : Class_Type) return Boolean
+      Base     : String) return Boolean
    is
       pragma Unreferenced (Instance, Base);
    begin
@@ -451,36 +208,77 @@ package body GNAT.Scripts.Shell is
 
       elsif Command = "clear_cache" then
          Free_Internal_Data (Shell_Scripting (Get_Script (Data)));
+
       end if;
    end Module_Command_Handler;
+
+   ----------------
+   -- Initialize --
+   ----------------
+
+   procedure Initialize
+     (Data            : in out Shell_Callback_Data'Class;
+      Script          : access Shell_Scripting_Record'Class;
+      Arguments_Count : Natural)
+   is
+   begin
+      Data.Script          := Shell_Scripting (Script);
+      Data.Args            := new Argument_List (1 .. Arguments_Count);
+      Data.Return_Value    := null;
+      Data.Return_Dict     := null;
+      Data.Return_As_List  := False;
+      Data.Return_As_Error := False;
+   end Initialize;
 
    ------------------------------
    -- Register_Shell_Scripting --
    ------------------------------
 
    procedure Register_Shell_Scripting
-     (Repo : Scripts_Repository)
+     (Repo   : Scripts_Repository;
+      Script : Shell_Scripting := null)
    is
-      Script : Shell_Scripting;
+      S : Shell_Scripting;
    begin
-      Script := new Shell_Scripting_Record;
-      Script.Repo := Repo;
-      Register_Scripting_Language (Repo, Script);
+      if Script /= null then
+         S := Script;
+      else
+         S := new Shell_Scripting_Record;
+      end if;
+
+      S.Repo := Repo;
+      Register_Scripting_Language (Repo, S);
 
       Register_Command
-        (Script, "load",
+        (S, "load",
          Minimum_Args => 1,
          Maximum_Args => 1,
          Handler      => Module_Command_Handler'Access);
       Register_Command
-        (Script, "echo",
+        (S, "echo",
          Minimum_Args => 0,
          Maximum_Args => Natural'Last,
          Handler      => Module_Command_Handler'Access);
       Register_Command
-        (Script, "clear_cache",
+        (S, "clear_cache",
          Handler => Module_Command_Handler'Access);
    end Register_Shell_Scripting;
+
+   -------------------
+   -- List_Commands --
+   -------------------
+
+   procedure List_Commands
+     (Script  : access Shell_Scripting_Record'Class;
+      Console : Virtual_Console := null)
+   is
+      C : Command_Hash.Cursor := First (Script.Commands_List);
+   begin
+      while Has_Element (C) loop
+         Insert_Text (Script, Console, Element (C).Command.all & " ");
+         Next (C);
+      end loop;
+   end List_Commands;
 
    ----------------------
    -- Register_Command --
@@ -571,7 +369,7 @@ package body GNAT.Scripts.Shell is
      (Script  : access Shell_Scripting_Record;
       Console : Virtual_Console := null) is
    begin
-      Insert_Prompt (Script, Console, "[Shell]>");
+      Insert_Prompt (Script, Console, Script.Prompt.all);
    end Display_Prompt;
 
    --------------
@@ -736,6 +534,7 @@ package body GNAT.Scripts.Shell is
       Com  : Command_Information_Access;
    begin
       Free_Internal_Data (Script);
+      Free (Script.Prompt);
 
       C := First (Script.Commands_List);
       while Has_Element (C) loop
@@ -744,6 +543,18 @@ package body GNAT.Scripts.Shell is
          Next (C);
       end loop;
    end Destroy;
+
+   ----------------
+   -- Set_Prompt --
+   ----------------
+
+   procedure Set_Prompt
+     (Script : access Shell_Scripting_Record'Class;
+      Prompt : String) is
+   begin
+      Free (Script.Prompt);
+      Script.Prompt := new String'(Prompt);
+   end Set_Prompt;
 
    ---------------------
    -- Execute_Command --
@@ -810,9 +621,9 @@ package body GNAT.Scripts.Shell is
    is
       Data_C   : Command_Hash.Cursor;
       Data     : Command_Information_Access;
-      Callback : Shell_Callback_Data;
       Instance : Class_Instance;
       Start    : Natural;
+      Count    : Natural;
 
    begin
       if Script.Blocked then
@@ -831,89 +642,99 @@ package body GNAT.Scripts.Shell is
          if Data.Minimum_Args <= Args'Length
            and then Args'Length <= Data.Maximum_Args
          then
-            Callback.Script := Shell_Scripting (Script);
-
+            Count := Args'Length;
             if Data.Short_Command.all = Constructor_Method then
-               Instance := New_Instance (Callback.Script, Data.Class);
-               Callback.Args := new Argument_List (1 .. Args'Length + 1);
-               Callback.Args (1) :=
-                 new String'(Name_From_Instance (Instance));
-               Start := 2;
-            else
-               Callback.Args := new Argument_List (1 .. Args'Length);
-               Start := 1;
+               Count := Count + 1;
             end if;
 
-            for A in Args'Range loop
-               if Args (A)'Length > 0
-                 and then Args (A) (Args (A)'First) = '%'
-               then
-                  declare
-                     Num : Integer;
-                  begin
-                     Num := Integer'Value
-                       (Args (A) (Args (A)'First + 1 .. Args (A)'Last));
-                     Callback.Args (A - Args'First + Start) :=
-                       new String'(Script.Returns
-                                     (Num + Script.Returns'First - 1).all);
+            declare
+               Callback : Shell_Callback_Data'Class :=
+                 Shell_Callback_Data'Class (Create (Script, Count));
+            begin
+               Callback.Script := Shell_Scripting (Script);
 
-                  exception
-                     when Constraint_Error =>
-                        Callback.Args (A - Args'First + Start) :=
-                          new String'(Args (A).all);
-                  end;
-
+               if Data.Short_Command.all = Constructor_Method then
+                  Instance := New_Instance (Callback.Script, Data.Class);
+                  Callback.Args := new Argument_List (1 .. Args'Length + 1);
+                  Callback.Args (1) :=
+                    new String'(Name_From_Instance (Instance));
+                  Start := 2;
                else
-                  Callback.Args (A - Args'First + Start) :=
-                    new String'(Args (A).all);
+                  Callback.Args := new Argument_List (1 .. Args'Length);
+                  Start := 1;
                end if;
-            end loop;
 
-            Data.Command_Handler (Callback, Data.Short_Command.all);
-            Free (Callback.Args);
+               for A in Args'Range loop
+                  if Args (A)'Length > 0
+                    and then Args (A) (Args (A)'First) = '%'
+                  then
+                     declare
+                        Num : Integer;
+                     begin
+                        Num := Integer'Value
+                          (Args (A) (Args (A)'First + 1 .. Args (A)'Last));
+                        Callback.Args (A - Args'First + Start) :=
+                          new String'(Script.Returns
+                                      (Num + Script.Returns'First - 1).all);
 
-            if Callback.Return_As_Error then
-               Errors.all := True;
-               Free (Callback.Return_Dict);
-               declare
-                  R : constant String := Callback.Return_Value.all;
-               begin
+                     exception
+                        when Constraint_Error =>
+                           Callback.Args (A - Args'First + Start) :=
+                             new String'(Args (A).all);
+                     end;
+
+                  else
+                     Callback.Args (A - Args'First + Start) :=
+                       new String'(Args (A).all);
+                  end if;
+               end loop;
+
+               Data.Command_Handler (Callback, Data.Short_Command.all);
+               Free (Callback.Args);
+
+               if Callback.Return_As_Error then
+                  Errors.all := True;
+                  Free (Callback.Return_Dict);
+                  declare
+                     R : constant String := Callback.Return_Value.all;
+                  begin
+                     Free (Callback.Return_Value);
+                     return R;
+                  end;
+               end if;
+
+               if Data.Short_Command.all = Constructor_Method then
+                  Set_Return_Value (Callback, Instance);
+               end if;
+
+               if Callback.Return_Dict /= null then
                   Free (Callback.Return_Value);
-                  return R;
-               end;
-            end if;
+                  Callback.Return_Value := Callback.Return_Dict;
+                  Callback.Return_Dict  := null;
+               end if;
 
-            if Data.Short_Command.all = Constructor_Method then
-               Set_Return_Value (Callback, Instance);
-            end if;
+               --  Save the return value for the future
+               Free (Script.Returns (Script.Returns'Last));
+               Script.Returns
+                 (Script.Returns'First + 1 .. Script.Returns'Last) :=
+                 Script.Returns
+                   (Script.Returns'First .. Script.Returns'Last - 1);
 
-            if Callback.Return_Dict /= null then
-               Free (Callback.Return_Value);
-               Callback.Return_Value := Callback.Return_Dict;
-               Callback.Return_Dict  := null;
-            end if;
+               if Callback.Return_Value = null then
+                  Script.Returns (Script.Returns'First) := new String'("");
+               else
+                  Script.Returns (Script.Returns'First) :=
+                    Callback.Return_Value;
+               end if;
 
-            --  Save the return value for the future
-            Free (Script.Returns (Script.Returns'Last));
-            Script.Returns
-              (Script.Returns'First + 1 .. Script.Returns'Last) :=
-              Script.Returns
-                (Script.Returns'First .. Script.Returns'Last - 1);
-
-            if Callback.Return_Value = null then
-               Script.Returns (Script.Returns'First) := new String'("");
-            else
-               Script.Returns (Script.Returns'First) :=
-                 Callback.Return_Value;
-            end if;
-
-            if Callback.Return_Value = null then
-               return "";
-            else
-               --  Do not free Callback.Return_Value, it is stored in the
-               --  list of previous commands
-               return Callback.Return_Value.all;
-            end if;
+               if Callback.Return_Value = null then
+                  return "";
+               else
+                  --  Do not free Callback.Return_Value, it is stored in the
+                  --  list of previous commands
+                  return Callback.Return_Value.all;
+               end if;
+            end;
 
          else
             Errors.all := True;
@@ -1247,7 +1068,8 @@ package body GNAT.Scripts.Shell is
       end if;
 
       if Ins = null
-        or else (Class /= Any_Class and then not Is_Subclass (Ins, Class))
+        or else (Class /= Any_Class
+                 and then not Is_Subclass (Ins, Get_Name (Class)))
       then
          raise Invalid_Parameter;
       else
@@ -1462,7 +1284,8 @@ package body GNAT.Scripts.Shell is
       Args       : Callback_Data'Class) return Boolean
    is
    begin
-      return To_Lower (Execute (Subprogram, Args)) = "true";
+      return To_Lower
+        (Execute (Shell_Subprogram (Subprogram), Args)) = "true";
    end Execute;
 
    -------------
@@ -1546,5 +1369,39 @@ package body GNAT.Scripts.Shell is
    begin
       return Scripting_Language (Subprogram.Script);
    end Get_Script;
+
+   -----------------
+   -- Get_Command --
+   -----------------
+
+   function Get_Command
+     (Subprogram : access Shell_Subprogram_Record) return String is
+   begin
+      return Subprogram.Command.all;
+   end Get_Command;
+
+   ----------------
+   -- Initialize --
+   ----------------
+
+   procedure Initialize
+     (Subprogram : in out Shell_Subprogram_Record'Class;
+      Script     : access Scripting_Language_Record'Class;
+      Command    : String) is
+   begin
+      Free (Subprogram.Command);
+      Subprogram.Command := new String'(Command);
+      Subprogram.Script  := Scripting_Language (Script);
+   end Initialize;
+
+   --------------
+   -- Get_Args --
+   --------------
+
+   function Get_Args
+     (Data : Shell_Callback_Data) return GNAT.OS_Lib.Argument_List is
+   begin
+      return Data.Args.all;
+   end Get_Args;
 
 end GNAT.Scripts.Shell;
