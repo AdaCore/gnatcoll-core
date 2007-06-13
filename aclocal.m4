@@ -21,10 +21,8 @@
 #                      your own libpython and avoid dragging the tasking
 #                      Ada runtime in your application if you do not use it
 #                      otherwise
-#    @PYTHON_ADA_SRC@: either "python" or "nopython" depending on whether
-#                      python support is available. This can be used when you
-#                      need to provide an interface even when python is not
-#                      compiled in, but this interface does nothing.
+#    @WITH_PYTHON@: either "yes" or "no" depending on whether
+#                      python support is available.
 #############################################################
 
 AC_DEFUN(AM_PATH_PYTHON,
@@ -34,18 +32,18 @@ AC_DEFUN(AM_PATH_PYTHON,
                PYTHON_PATH_WITH=$withval,
                PYTHON_PATH_WITH=yes)
 
-   PYTHON_ADA_SRC=python
+   WITH_PYTHON=yes
    if test x"$PYTHON_PATH_WITH" = xno ; then
       AC_MSG_CHECKING(for python)
       AC_MSG_RESULT(no, use --with-python if needed)
       PYTHON_BASE=no
-      PYTHON_ADA_SRC=nopython
+      WITH_PYTHON=no
 
    else
       AC_PATH_PROG(PYTHON, python, no, $PYTHON_PATH_WITH/bin:$PATH)
       if test x"$PYTHON" = xno ; then
          PYTHON_BASE=no
-         PYTHON_ADA_SRC=nopython
+         WITH_PYTHON=no
       else
         AC_MSG_CHECKING(for python >= 2.0)
         if test x"$PYTHON_PATH_WITH" != xyes ; then
@@ -58,7 +56,7 @@ AC_DEFUN(AM_PATH_PYTHON,
         if test x$PYTHON_MAJOR_VERSION != x2 ; then
            AC_MSG_RESULT(no, need at least version 2.0)
            PYTHON_BASE=no
-           PYTHON_ADA_SRC=nopython
+           WITH_PYTHON=no
         else
            PYTHON_VERSION=`$PYTHON -c 'import sys; print \`sys.version_info[[0]]\`+"."+\`sys.version_info[[1]]\`'`
            PYTHON_DIR=${PYTHON_BASE}/lib/python${PYTHON_VERSION}/config
@@ -141,7 +139,7 @@ AC_DEFUN(AM_PATH_PYTHON,
    AC_SUBST(PYTHON_DIR)
    AC_SUBST(PYTHON_LIBS)
    AC_SUBST(PYTHON_CFLAGS)
-   AC_SUBST(PYTHON_ADA_SRC)
+   AC_SUBST(WITH_PYTHON)
 ])
 
 ###########################################################################
@@ -231,6 +229,7 @@ AC_DEFUN(AM_TO_GPR,
 ##     @PKG_CONFIG@: path to pkg-config, or "no" if not found
 ##     @GTK_GCC_FLAGS@: cflags to pass to the compiler. It isn't call
 ##                      GTK_CFLAGS for compatibility reasons with GPS
+##     @WITH_GTK@: Either "yes" or "no", depending on whether gtk+ was found
 ##########################################################################
 
 AC_DEFUN(AM_PATH_GTK,
@@ -239,12 +238,19 @@ AC_DEFUN(AM_PATH_GTK,
    AC_MSG_CHECKING(gtk+)
    if test "$PKG_CONFIG" = "no" ; then
       AC_MSG_RESULT(not found)
+      WITH_GTK=no
    else
       GTK_PREFIX=`$PKG_CONFIG gtk+-2.0 --variable=prefix`
       AC_MSG_RESULT($GTK_PREFIX)
       GTK_GCC_FLAGS=`$PKG_CONFIG gtk+-2.0 --cflags`
+      if test x"$GTK_GCC_FLAGS" != x ; then
+         WITH_GTK=yes
+      else
+         WITH_GTK=no
+      fi
    fi
    AC_SUBST(PKG_CONFIG)
    AC_SUBST(GTK_GCC_FLAGS)
+   AC_SUBST(WITH_GTK)
 
 ])

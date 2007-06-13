@@ -4,6 +4,10 @@ project GnatLib_Shared is
    type Build_Type is ("Debug", "Production");
    Build : Build_Type := External ("Build", "Debug");
 
+   type Yes_No is ("yes", "no");
+   Gtk    : Yes_No := External ("GTK", "@WITH_GTK@");
+   Python : Yes_No := External ("PYTHON", "@WITH_PYTHON@");
+
    Python_Version := "@PYTHON_VERSION@";
    Python_Base    := "@PYTHON_BASE@";
    Python_Cflags  := (@PYTHON_CFLAGS_GPR@);
@@ -11,7 +15,6 @@ project GnatLib_Shared is
    Python_Dir     := "@PYTHON_DIR@";
    Python_Libs    := (@PYTHON_LIBS_GPR@);
    Gtk_Include    := (@GTK_GCC_FLAGS_GPR@);
-   Python_Src_Dir := "@PYTHON_ADA_SRC@";
 
    package Compiler is
       case Build is
