@@ -7,7 +7,6 @@
 @set Title   @value{gnatlib}: Library for Ada applications
 
 @c --------------------------- macros
-
 @macro CODESAMPLE{TXT}
 @ifhtml
 @smallexample
@@ -80,8 +79,6 @@
 @end quotation
 @end ifnothtml
 @end macro
-
-
 @c ---------------------------
 
 @settitle @value{Title}
@@ -89,7 +86,9 @@
 @syncodeindex fn cp
 
 @titlepage
+@flushleft
 @title @value{Title}
+@end flushleft
 @subtitle Version @value{Version}
 @author AdaCore
 @page
@@ -105,9 +104,7 @@ unmodified in any copy.
 
 @ifnottex
 @node Top,, (dir), (dir)
-@top @value{Version}
-
-@value{Version}
+@top @value{Title}
 
 Version @value{Version}
 
@@ -120,6 +117,7 @@ unmodified in any copy.
 
 @menu
 * Introduction::
+* Building GnatLib::
 * Embedding script languages:: The scripting module.
 * Index::
 
@@ -128,6 +126,8 @@ unmodified in any copy.
 
 Introduction
 
+Building @value{gnatlib}
+
 Embedding script languages
 * Supported languages::
 * Scripts API::
@@ -135,6 +135,7 @@ Embedding script languages
 Supported languages
 * The Shell language::
 * The Python language::
+* Classes exported to all languages::
 
 Scripts API
 
@@ -163,6 +164,114 @@ application, thus providing extensibility to users (@pxref{Embedding script
 languages})
 
 @end table
+
+@c -----------------------------------------------------------------------
+@node Building GnatLib
+@chapter Building @value{gnatlib}
+@c -----------------------------------------------------------------------
+
+@noindent
+If you didn't get a pre-compiled version of @value{gnatlib}, you will need
+to compile and install it on your system yourself.
+
+The compilation process tries to be as flexible as possible. You can choose
+what modules to build, what features they should have,@dots{} This
+flexibility comes at the cost of a certain complexity in the build
+architecture, but that should be mostly transparent to you.
+
+@IMPORTANT{@value{gnatlib} requires a fairly recent Ada05 compatible compiler.
+If you do not have such a compiler, please contact @email{sales@@adacore.com}}
+
+@noindent
+Since you are reading this documentation, it is assumed you have been able
+to unpack the package in a temporary directory. In the following instructions,
+we will assume the following: @var{prefix} is the directory in which you
+would like to install @value{gnatlib}.
+
+@subsubsection Configuring the build environment
+
+The first step is to configure the build environment. This is done by
+running the @code{configure} command in the root directory of the
+@value{gnatlib} tree. This command accepts lots of arguments, among which
+the following ones are most useful:
+
+@table @code
+@item --prefix=@var{prefix}
+This specifies the directory in which @value{gnatlib} should be installed.
+
+@item --with-python=@var{directory}
+@itemx --without-python
+This specifies where @value{gnatlib} should find python. If for instance
+the python executable is in @file{/usr/bin}, the @var{directory} to
+specify is @file{/usr}. In most cases, however, @code{configure} will be
+able to detect this automatically, so this is only useful if python is
+installed in unusual directories. If you specify the second option,
+support for python will not be build in.
+
+@item --disable-pygtk
+If this switch is specified, then support for pygtk (@pxref{The Python
+language}) will not be build. The support for this python module will also
+be automatically disabled if python was not found or if you configured with
+@code{--without-python}.
+
+@end table
+
+Special support exists in @value{gnatlib} for the gtk+ graphical toolkit.
+@code{configure} will attempt to find the installation directory for this
+toolkit by using the @code{pkg-config} command, which must therefore be
+available through your @var{PATH} environment variable.
+
+@smallexample
+./configure --prefix=/usr/local/gnatlib --without-python
+@end smallexample
+
+If all goes well (ie all required dependencies are found on the system),
+configure will generate a number of files, including @file{Makefile},
+@file{Makefile.conf} and @file{gnatlib_shared.gpr}.
+
+@subsubsection Building @value{gnatlib}
+
+If @code{configure} has run successfully, it generates a @code{Makefile}
+to allow you to build the rest of @value{gnatlib}.
+This is done by simply typing the following command:
+
+@smallexample
+make
+@end smallexample
+
+Optionally, you can also build the examples and/or the automatic testsuite,
+with the following commands:
+
+@smallexample
+make examples
+make tests
+@end smallexample
+
+@subsubsection Installing @value{gnatlib}
+
+For now, you will need to manually copy the files from @file{scripts/obj}
+into the installation directory.
+
+Your application can now use the @value{gnatlib} code in several ways:
+
+@itemize @bullet
+@item If you are using the GNAT project files, you can add a with clause
+to either @file{gnatlib.gpr} or @file{gnatlib_gtk.gpr}. The latter will also
+force your application to be linked with the gtk+ libraries, but provides
+additional capabilities as documented in each of the modules.
+
+You can also add a dependency on @file{gnatlib_shared.gpr}, and use the
+variables defined in that project that specify the additional libraries to
+use when linking your application (in particular the python libraries if
+support for python was build in).
+
+@item If you are using a @file{Makefile}, you should include the file
+@file{Makefile.conf} which was generated by configure. This defines a
+number of variables that can then be used to compile source files or
+link your application. Look at the @value{gnatlib} examples for examples
+on how to compile an application.
+
+@end itemize
 
 @c ------------------------------------------------------------------------
 @node Embedding script languages
@@ -197,6 +306,32 @@ even distributed with future versions of your application.
 
 The module in @value{gnatlib} helps you implement the third solution. It was
 used extensively in the GPS programming environment for its python interface.
+
+This module can be compiled with any of these languages as an optional
+dependency (except for the shell language, which is always built-in, but is
+extremely minimal, and doesn't have to be loaded at run time anyway).
+If the necessary libraries are found on the system, @value{gnatlib} will
+be build with support for the corresponding language, but your application
+can chose at run time whether or not to activate the support for a specific
+language.
+
+Likewise, extensions are provided if the gtk+ libraries were found on your
+system. These provide a number of Ada subprograms that help interface with
+code using this library, and help export the corresponding classes.
+This support for gtk+ is also optional, and you can still build
+@value{gnatlib} even if gtk+ wasn't installed on your system (or if your
+application is text-only, in which case you likely do not want to depend
+at link time on graphical libraries).
+
+@cindex test driver
+@cindex testing your application
+@TIP{Embedding a scripting language is often useful if you want to write
+@emph{automatic tests} for an application or a library. Your Ada code can then
+export the minimum set of classes and methods to the scripting language,
+and advanced tests can quickly be written using these exported methods.
+For instance, this has been used for the GPS environment, which is a
+graphical application, to write such tests that simulate the click on
+a button, the selection of a menu,@dots{}}
 
 @menu
 * Supported languages::
@@ -234,6 +369,7 @@ that comes with an extensive library. It is fully object-oriented
 @menu
 * The Shell language::
 * The Python language::
+* Classes exported to all languages::
 @end menu
 
 @c ----------------------------------------------------------------------
@@ -388,6 +524,89 @@ exec_in_console ("sys.ps1 = 'foo'")
 @end example
 @end deffn
 
+@cindex pygtk
+PyGtk is a python extension that provides an interface to the popular
+gtk+ library. It gives access to a host of functions for writing graphical
+interfaces from python. @value{gnatlib} interfaces nicely with this extension
+if it is found.
+
+@NOTE{PyGtk support is also optional. It will be activated in your application
+if the four following conditions are met: Python was detected on your system,
+PyGtk was also detected when @value{gnatlib} is built, PyGtk is detected
+dynamically when your application is launched and your code is calling the
+@code{Init_PyGtk_Support} function
+@c @end itemize
+}
+
+When PyGtk is detected, you can add the following method to any of the
+classes you export to python:
+
+@defmethod AnyClass pywidget
+This function returns an instance of a PyGtk class corresponding to the
+graphical object represented by @var{AnyClass}. In general, it makes sense when
+@var{AnyClass} is bound, in your Ada code, to a GtkAda object. As a result, the
+same graphical element visible to the user on the screen is available from
+three different programming languages: C, Ada and Python. All three can
+manipulate it in the same way
+@end defmethod
+
+@c ----------------------------------------------------------------------
+@node Classes exported to all languages
+@subsection Classes exported to all languages
+@c ----------------------------------------------------------------------
+
+@noindent
+In addition to the functions exported by each specific scripting language,
+as described above, @value{gnatlib} exports the following to all the
+scripting languages. These are exported when your Ada code calls the
+Ada procedure @code{GNAT.Scripts.Register_Standard_Classes}, which should
+done after you have loaded all the scripting languages.
+
+@deftp Class Console
+@code{Console} is a name that you can chose yourself when you call the
+above Ada procedure. It will be assumed to be @code{Console} in the rest
+of this document.
+
+This class provides an interface to consoles. A console is an input/output
+area in your application (whether it is a text area in a graphical
+application, or simply standard text I/O in text mode). In particular,
+the python standard output streams @code{sys.stdin}, @code{sys.stdout}
+and @code{sys.stderr} are redirected to an instance of that class. If you
+want to see python's error messages or usual output in your application,
+you must register that class, and define a default console for your
+scripting language through calls to @code{GNAT.Scripts.Set_Default_Console}.
+@end deftp
+
+@defmethod Console write text
+This method writes @var{text} to the console associated with the class
+instance. See the examples delivered with @value{gnatlib} for examples on
+how to create a graphical window and make it into a @code{Console}.
+@end defmethod
+
+@defmethod Console clear
+Clears the contents of the console.
+@end defmethod
+
+@defmethod Console flush
+Does nothing currently, but is needed for compatibility with python.
+Output through @code{Console} instances is not buffered anyway.
+@end defmethod
+
+@deftypemethod Console boolean isatty
+Whether the console is a pseudo-terminal. This is always wrong in the
+case of @value{gnatlib}.
+@end deftypemethod
+
+@deftypemethod Console string read [size]
+Reads at most @var{size} bytes from the console, and returns the resulting
+string.
+@end deftypemethod
+
+@deftypemethod Consonle string readline [size]
+Reads at most @var{size} lines from the console, and returns them as a single
+string.
+@end deftypemethod
+
 @c -----------------------------------------------------------------------
 @node Scripts API
 @section Scripts API
@@ -396,7 +615,7 @@ exec_in_console ("sys.ps1 = 'foo'")
 @noindent
 This section will give an overview of the API used in the scripts module.
 The reference documentation for this API is in the source files themselves. In
-particular, each @file{.ads} file fully document all its public API.
+particular, each @file{.ads} file fully documents all its public API.
 
 @c -----------------------------------------------------------------------
 @node Index
@@ -404,11 +623,8 @@ particular, each @file{.ads} file fully document all its public API.
 @printindex cp
 @bye
 
-
 @c To be documented:
 @c - using factories to make sure the same instance is always returned for
 @c   the same Ada type. This is good practice not enforced by gnatlib
-@c - compiling gnatlib
-@c - python pygtk extensions and commands
 @c - API documentation
 

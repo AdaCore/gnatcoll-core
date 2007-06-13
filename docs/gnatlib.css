@@ -23,6 +23,18 @@
    div.tip          {background-image: url(tip.png); }
    div.note         {background-image: url(note.png); }
    div.important    {background-image: url(important.png); }
+   h1.settitle      {background:#003580;
+                     font-size: huge;
+                     text-align: center;
+                     padding: 30px 10px 30px 10px;
+                     color: white }
+   h2.unnumbered,
+   h2.chapter       { background:#098ABA;
+                      padding: 5px 5px 5px 15px }
+   h3.section       { border-bottom: solid black; }
+   h4.subsection    { border-bottom: solid black; }
+   dt               { text-decoration: underline;
+                      font-style: italic }
    code             {color:black;
                      font-family: courier new,courier,fixed;
                      font-size: 14px;}
