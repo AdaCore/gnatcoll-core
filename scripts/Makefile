@@ -1,5 +1,16 @@
 include ../Makefile.conf
 
+
+ifeq (${WITH_GTK},yes)
+all:      all_text all_gtk
+examples: examples_text examples_gtk
+clean:    clean_text    clean_gtk
+else
+all:      all_text
+examples: examples_text
+clean:    clean_text
+endif
+
 ## Current versions of gprmake have no way to build all sources of a
 ## given project. It doesn't really matter, we just build the examples
 ## directly. or we could do a "gnatmake -u", followed by "gprmake"

@@ -12,13 +12,3 @@ WITH_GTK=@WITH_GTK@
 
 all:
 
-ifeq (${WITH_GTK},yes)
-all:      all_text all_gtk
-examples: examples_text examples_gtk
-clean:    clean_text    clean_gtk
-else
-all:      all_text
-examples: examples_text
-clean:    clean_text
-endif
-
