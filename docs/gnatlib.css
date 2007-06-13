@@ -1,13 +1,25 @@
-   pre.smallexample {background-color:rgb(240,240,240);
-                     font-family: courier new,courier,fixed;
-                     font-size: 14px;
+   pre.smallexample,
+   div.important,
+   div.tip          {background-color:rgb(240,240,240);
                      margin: 0px 40px 0px 40px;
+                     padding: 0px;
                      border-width: 1px 2px 2px 1px;
                      border-top-style: dotted;
                      border-left-style: dotted;
                      border-right-style: solid;
                      border-bottom-style: solid;
                      border-color: black;}
+   pre.smallexample {font-size: 14px;
+                     font-family: courier new,courier,fixed;
+                    }
+   div.important,
+   div.tip          {font-size: 14px;
+                     background-repeat: no-repeat;
+                     background-position: center left;
+                     padding: 10px 10px 0px 40px;
+                    }
+   div.tip          {background-image: url(tip.png); }
+   div.important    {background-image: url(important.png); }
    code             {color:black;
                      font-family: courier new,courier,fixed;
                      font-size: 14px;}

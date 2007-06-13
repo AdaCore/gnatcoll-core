@@ -1,10 +1,12 @@
 MAKEINFO=@MAKEINFO@
 TEXI2DVI=@TEXI2DVI@
+CP=cp
 
-all: gnatlib.html gnatlib.pdf gnatlib.txt
+all: gnatlib/index.html gnatlib.pdf gnatlib.txt
 
-gnatlib.html: gnatlib.texi
+gnatlib/index.html: gnatlib.texi gnatlib.css
 	${MAKEINFO} --html --css-include=gnatlib.css --number-sections $<
+	${CP} tip.png important.png gnatlib/
 
 gnatlib.pdf: gnatlib.texi
 	echo x | ${TEXI2DVI} -p $<
