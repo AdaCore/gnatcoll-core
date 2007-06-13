@@ -226,24 +226,31 @@ package body GNAT.Scripts.Utils is
    function Unprotect (Str : String) return String is
       Result : String (Str'Range);
       Index  : Natural := Result'First;
-      S      : Natural := Str'First;
+      N      : Natural := Str'First;
    begin
-      while S <= Str'Last loop
-         if Str (S) = '\' then
-            if S < Str'Last then
-               Result (Index) := Str (S + 1);
+      while N <= Str'Last loop
+         if Str (N) = '\' then
+            if N < Str'Last then
+               Result (Index) := Str (N + 1);
             end if;
 
-            S := S + 2;
+            N := N + 2;
          else
-            Result (Index) := Str (S);
-            S := S + 1;
+            Result (Index) := Str (N);
+            N := N + 1;
          end if;
 
          Index := Index + 1;
       end loop;
 
-      return Result (Result'First .. Index - 1);
+      if Result'Length > 1
+        and then Result (Result'First) = '"'
+        and then Result (Index - 1) = '"'
+      then
+         return Result (Result'First + 1 .. Index - 2);
+      else
+         return Result (Result'First .. Index - 1);
+      end if;
    end Unprotect;
 
    ---------------
