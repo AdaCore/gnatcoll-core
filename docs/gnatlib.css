@@ -1,5 +1,6 @@
    pre.smallexample,
    div.important,
+   div.note,
    div.tip          {background-color:rgb(240,240,240);
                      margin: 0px 40px 0px 40px;
                      padding: 0px;
@@ -13,12 +14,14 @@
                      font-family: courier new,courier,fixed;
                     }
    div.important,
+   div.note,
    div.tip          {font-size: 14px;
                      background-repeat: no-repeat;
                      background-position: center left;
                      padding: 10px 10px 0px 40px;
                     }
    div.tip          {background-image: url(tip.png); }
+   div.note         {background-image: url(note.png); }
    div.important    {background-image: url(important.png); }
    code             {color:black;
                      font-family: courier new,courier,fixed;

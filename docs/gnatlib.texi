@@ -63,6 +63,25 @@
 @end ifnothtml
 @end macro
 
+@macro NOTE{TXT}
+@ifhtml
+@html
+<div class="note">
+@end html
+\TXT\
+@html
+</div>
+@end html
+@end ifhtml
+@ifnothtml
+@quotation
+@noindent
+@image{note,15pt}  \TXT\
+@end quotation
+@end ifnothtml
+@end macro
+
+
 @c ---------------------------
 
 @settitle @value{Title}
@@ -306,7 +325,7 @@ Python is an interpreted, object-oriented language. See
 @url{http://www.python.org} for more information, including tutorials, on
 this language.
 
-@TIP{
+@NOTE{
 Python support is optional in @value{gnatlib}. If it hasn't been installed
 on your system, @value{gnatlib} will be compiled without it, but that
 will not impact applications using @value{gnatlib}, since the same packages
