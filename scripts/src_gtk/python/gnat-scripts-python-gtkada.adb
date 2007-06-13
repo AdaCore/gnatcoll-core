@@ -18,8 +18,6 @@
 -----------------------------------------------------------------------
 
 with Glib.Object;    use Glib.Object;
-with Gtkada.MDI;     use Gtkada.MDI;
-with Gtk.Container;  use Gtk.Container;
 with Gtk.Widget;     use Gtk.Widget;
 with GNAT.Scripts.Gtkada; use GNAT.Scripts.Gtkada;
 with GNAT.Scripts.Impl;   use GNAT.Scripts.Impl;
@@ -53,6 +51,7 @@ package body GNAT.Scripts.Python.Gtkada is
    procedure On_PyWidget
      (Data : in out Callback_Data'Class; Command : String)
    is
+      pragma Unreferenced (Command);
       Object : GObject;
       Instance : Class_Instance;
    begin
@@ -79,7 +78,7 @@ package body GNAT.Scripts.Python.Gtkada is
       Stub : Glib.Object.GObject_Record;
    begin
       return Get_User_Data
-        (Widget_From_PyObject (Get_Param (Python_Callback_Data (Data), 2)),
+        (Widget_From_PyObject (Get_Param (Python_Callback_Data (Data), N)),
          Stub);
    end From_PyGtk;
 
