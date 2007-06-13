@@ -27,6 +27,9 @@ with Gtk.Window;                 use Gtk.Window;
 package body Common_Gtk is
 
    procedure Window_Handler
+      (Data : in out Callback_Data'Class; Command : String);
+
+   procedure Window_Handler
       (Data : in out Callback_Data'Class; Command : String)
    is
       Inst : Class_Instance := Nth_Arg (Data, 1);
