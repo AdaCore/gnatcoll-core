@@ -7,7 +7,7 @@ project GnatLib_Scripts is
 
    package Compiler is
       for Default_Switches ("Ada") use
-         ("-gnat05", "-gnaty", "-gnatQ", "-g", "-gnatwaCJe", "-Wall");
+         GnatLib_Shared.Compiler'Default_Switches ("Ada");
       for Default_Switches ("C") use GnatLib_Shared.Python_Cflags;
    end Compiler;
 
