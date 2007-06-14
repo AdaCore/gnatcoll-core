@@ -18,7 +18,7 @@ endif
 all_text: obj/python_support.o
 	gnatmake -q -u -Pgnatlib_scripts
 all_gtk: obj/python_support_gtk.o
-	gprmake -Pgnatlib_scripts_gtk
+	gnatmake -q -u -Pgnatlib_scripts_gtk
 
 ifeq ($(WITH_PYTHON),yes)
 obj/python_support.o: src/python/python_support.c
