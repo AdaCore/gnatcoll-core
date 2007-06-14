@@ -21,7 +21,7 @@ GNATLIB_BASE_DIR := $(BASE_DIR)
 GNATLIB_OBJ := $(GNATLIB_BASE_DIR)/scripts/obj
 
 ifneq ($(PYTHON_BASE),no)
-LIBS := $(GNATLIB_OBJ)/libgnatlib_scripts${AR_EXT} $(GNATLIB_OBJ)/libgnatlib_scripts_gtk${AR_EXT} ${LIBS}
+LIBS := $(GNATLIB_OBJ)/python_support.o $(GNATLIB_OBJ)/python_support_gtk.o ${LIBS}
 endif
 
 ifneq ($(GNATLIB_ROOT),True)
