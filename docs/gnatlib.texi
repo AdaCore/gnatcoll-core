@@ -37,7 +37,9 @@
 @c This macro can be used to insert a "Tip" or "Did you know" box. In HTML,
 @c this box is displayed in the right margin of the text, and thus doesn't
 @c disturbs the normal reading flow, but provides additional useful
-@c information. A small icon is displayed on the left of the box
+@c information. A small icon is displayed on the left of the box.
+@c Calls to this macro should be followed by @noindent for proper rendering
+@c in pdf
 @macro TIP{TXT}
 @ifhtml
 @html
@@ -60,6 +62,8 @@
 @c This macro can be used to insert an "Important" box in the text.
 @c This box is displayed inline in the main body of the text, but is
 @c surrounded by a frame, and has a small icon on the left.
+@c Calls to this macro should be followed by @noindent for proper rendering
+@c in pdf
 @macro IMPORTANT{TXT}
 @ifhtml
 @html
@@ -82,6 +86,8 @@
 @c This macro can be used to insert a "Note" box in the text. It is
 @c displayed inline in the main body of the text, but has a different
 @c icon that the "Important" box
+@c Calls to this macro should be followed by @noindent for proper rendering
+@c in pdf
 @macro NOTE{TXT}
 @ifhtml
 @html
@@ -161,6 +167,9 @@ Supported languages
 
 Scripts API
 * Initializing the scripting module::
+* Creating interactive consoles::
+* Exporting classes and methods::
+* Executing startup scripts::
 
 @end detailmenu
 @end ifnothtml
@@ -709,6 +718,9 @@ process:
 
 @menu
 * Initializing the scripting module::
+* Creating interactive consoles::
+* Exporting classes and methods::
+* Executing startup scripts::
 @end menu
 
 @c -----------------------------------------------------------------------
@@ -822,14 +834,619 @@ your application.
 @end deffn
 
 @c -----------------------------------------------------------------------
+@node Creating interactive consoles
+@subsection Creating interactive consoles
+@c -----------------------------------------------------------------------
+@noindent
+The goal of the scripting module in @value{gnatlib} is to work both in
+text-only applications and graphical applications that use the gtk+ toolkit.
+However, in both cases applications will need a way to capture the output
+of scripting languages and display them to the user (at least for errors, to
+help debugging scripts), and possibly emulate input when a script is waiting
+for such input.
+
+@value{gnatlib} solved this problem by using an abstract class
+@code{GNAT.Scripts.Virtual_Console_Record} that defines an API for these
+consoles. This API is used throughout @code{GNAT.Scripts} whenever input or
+output has to be performed.
+
+@TIP{The @file{scripts/examples} directory in the @value{gnatlib} package
+shows how to implement a console in text mode and in graphical mode.}
+@noindent
+If you want to provide feedback or interact with users, you will need to
+provide an actual implementation for these @code{Virtual_Console}, specific
+to your application. This could be a graphical text window, or based on
+@code{Ada.Text_IO}. The full API is fully documented in
+@file{gnat-scripts.ads}, but here is a list of the main subprograms that
+need to be overriden.
+
+@defmethod Virtual_Console  Insert_Text Txt
+@defmethodx Virtual_Console Insert_Log Txt
+@defmethodx Virtual_Console Insert_Error Txt
+These are the various methods for doing output. Error messages could for
+instance be printed in a different color. Log messages should in general
+be directed elsewhere, and not be made visible to users unless in special
+debugging modes.
+@end defmethod
+
+@defmethod Virtual_Console Insert_Prompt Txt
+This method must display a prompt so that the user knows input is expected.
+Graphical consoles will in general need to remember where the prompt ended
+so that they also know where the user input starts
+@end defmethod
+
+@defmethod Virtual_Console Set_As_Default_Console Script
+This method is called when the console becomes the default console for
+a scripting language. They should in general keep a pointer on that
+language, so that when the user presses @key{enter} they know which language
+must execute the command
+@end defmethod
+
+@deftypemethod Virtual_Console String Read Size Whole_Line
+Read either several characters or whole lines from the console. This is
+called when the user scripts read from their stdin.
+@end deftypemethod
+
+@defmethod Virtual_Console Set_Data_Primitive Instance
+@defmethodx Virtual_Console Get_Instance Console
+These two methods are responsible for storing an instance of @var{Console}
+into a @code{GNAT.Scripts.Class_Instance}. Such an instance is what the user
+manipulates from his scripting language. But when he executes a method, the
+Ada callback must know how to get the associated @code{Virtual_Console}
+back to perform actual operations on it.
+
+These methods are implemented using one of the @code{GNAT.Scripts.Set_Data}
+and @code{GNAT.Scripts.Get_Data} operations when in text mode, or possibly
+@code{GNAT.Scripts.Gtkada.Set_Data} and @code{GNAT.Scripts.Gtkada.Get_Data}
+when manipulating graphical GtkAda objects.
+@end defmethod
+
+There are lots of small details to take into account when writing a
+graphical console. The example in @file{scripts/examples/gtkconsole.ads}
+should provide a good starting point. However, it doesn't handle things
+like history of commands, preventing the user from moving the cursor
+to previous lines,@dots{} which are all small details that need to be right
+for the user to feel comfortable with the console.
+
+Once you have created one or more of these console, you can set them as
+the default console for each of the scripting languages. This way, any
+input/output done by scripts in this language will interact with that
+console, instead of being discarded. This is done through code similar
+to:
+
+@CODESAMPLE{Console := GtkConsole.Create (...);@NL{}
+Set_Default_Console@NL{}
+  (Lookup_Scripting_Language (Repo, "python"),@NL{}
+   Console);} 
+
+@c -----------------------------------------------------------------------
+@node Exporting classes and methods
+@subsection Exporting classes and methods
+@c -----------------------------------------------------------------------
+@noindent
+Once all scripting languages have been loaded, you can start exporting
+new classes and functions to all the scripting languages. It is important
+to realize that through a single Ada call, they are exported to all loaded
+scripting languages, without further work required on your part.
+
+@subsubsection Classes diagram
+@noindent
+
+The following diagram shows the dependencies between the major data types
+defined in @file{GNAT.Scripts}. Most of these are abstract classes that
+are implemented by the various scripting languages. Here is a brief description
+of the role of each type:
+
+@cindex class diagram, script module
+@image{classes,15cm}
+
+@deftp Class Scripts_Repository
+As we have seen before, this is a type of which there is a single instance
+in your whole application, and whose main role is to give access to each
+of the scripting languages (@code{Lookup_Scripting_Language} function), and
+to make it possible to register each exported function only once (it then
+takes care of exporting it to each scripting language).
+@end deftp
+
+@deftp Class Scripting_Language
+Instances of this type represent a specific language. It provides various
+operations to export subprograms, execute commands, create the other types
+described below,... There should exists a single instance of this class per
+supported language.
+
+This class interacts with the script interpreter (for instance python), and
+all code executed in python goes through this type, which then executes your
+Ada callbacks to perform the actual operation.
+
+It is also associated with a default console, as described above, so that
+all input and output of the scripts can be made visible to the user.
+@end deftp
+
+@deftp Class Callback_Data
+This type is an opaque tagged type that provides a language-independent
+interface to the scripting language. It gives for instance access to the
+various parameters passed to your subprogram (@code{Nth_Arg} functions),
+allows you to set the return value (@code{Set_Return_Value} procedure),
+or raise exceptions (@code{Set_Error_Msg} procedure),@dots{}
+@end deftp
+
+@deftp Record Class_Type
+This type is not tagged, and cannot be extended. It basically represents a
+class in any of the scripting languages, and is used to create new instances
+of that class from Ada.
+@end deftp
+
+@deftp Class Class_Instance
+A class instance represents a specific instance of a class. In general,
+such an instance is strongly bound to an instance of an Ada type. For
+instance, if you have a @code{Foo} type in your application that you wish
+to export, you would create a @code{Class_Type} called "Foo", and then the
+user can create as many instances as he wants of that class, each of which
+is associated with different values of @code{Foo} in Ada.
+
+Another more specific example is the predefined @code{Console} class. As
+we have seen before, this is a @code{Virtual_Console} in Ada. You could
+for instance have two graphical windows in your application, each of which
+is a @code{Virtual_Console}. In the scripting language, this is exported
+as a class named @code{Console}. The user can create two
+instances of those, each of which is associated with one of your graphical
+windows. This way, executing @code{Console.write} on these instances would
+print the string on their respective graphical window.
+
+Some scripting languages, in particular python, allow you to store any
+data within the class instances. In the example above, the user could for
+instance store the timestamp of the last output in each of the instances.
+It is therefore important that, as much as possible, you always return the
+same @code{Class_Instance} for a given Ada object. See the following
+python example:
+
+@CODESAMPLE{myconsole = Console ("title") # Create new console@NL{}
+myconsole.mydata = "20060619"  # Any data, really@NL{}
+myconsole = Console ("title2")  # Create another window@NL{}
+myconsole = Console ("title") # Must be same as first, @NL{}
+print myconsole.mydata  # so that this prints "20060619"}
+@end deftp
+
+@deftp Class Instance_Property
+As we have seen above, a @code{Class_Instance} is associated in general with
+an Ada object. This @code{Instance_Property} tagged type should be extended
+for each Ada type you want to be able to store in a @code{Class_Instance}.
+You can then use the @code{Set_Data} and @code{Get_Data} methods of the
+@code{Class_Instance} to get and retrieve that associated Ada object.
+@end deftp
+
+@deftp Class Subprogram_Record
+This class represents a callback in the scripting language, that is some
+code that can be executed when some conditions are met.
+
+The exact semantic here depends on each of the programming languages. For
+instance, if you are programming in python, this is the name of a python
+method to execute. If you are programming in shell, this is any shell code.
+
+The idea here is to blend in as smoothly as possible with the usual constructs
+of each language. For instance, in python one would prefer to write the
+second line rather than the third:
+
+@CODESAMPLE{def on_exit(): pass@NL{}
+set_on_exit_callback (on_exit)   # Yes, python style@NL{}
+set_on_exit_callback ("on_exit") # No}
+
+The last line (using a string as a parameter) would be extremely unusual
+in python, and would for instance force you to qualify the subprogram name
+with the name of its namespace (there would be no implicit namespace
+resolution).
+
+To support this special type of parameters, the @code{Subprogram_Record}
+type was created in Ada.
+@end deftp
+
+@noindent
+Although the exact way they are all these types are created is largely
+rrelevant to your specific application in general, it might be useful for you
+to override part of the types to provide more advanced features. For instance,
+GPS redefines its own Shell language, that has basically the same behavior as
+the Shell language described above but whose @code{Subprogram_Record} in fact
+execute internal GPS actions rather than any shell code.
+
+@subsubsection Exporting functions
+@noindent
+All functions that you export to the scripting languages will result in a
+call to an Ada subprogram from your own application. This subprogram must
+have the following profile:
+
+@CODESAMPLE{@b{procedure} Handler@NL{}
+   (Data    : @b{in out} Callback_Data'@b{Class};@NL{}
+    Command : String);}
+
+The first parameter @var{Data} gives you access to the parameters of the
+subprogram as passed from the scripting language, and the second parameter
+@var{Command} is the name of the command to execute. The idea behind this
+second parameter is that a single Ada procedure might handle several
+different script function (for instance because they require common actions
+to be performed).
+
+@defun Register_Command Repo Command Min_Args Max_Args Handler
+Each of the shell functions is then exported through a call to
+@code{Register_Command}. In its simplest form, this procedure takes the
+following arguments. @var{Repo} is the scripts repository, so that the
+command is exported to all the scripting languages. @var{Command} is the
+name of the command. @var{Min_Args} and @var{Max_Args} are the minimum and
+maximum number of arguments. Most language allow option parameters, and
+this is how you specify them. @var{Handler} is the Ada procedure to call
+to execute the command.
+@end defun
+
+Here is a simple example. It implements a function called @code{Add}, which
+takes two integers in parameter, and returns their sum.
+
+@CODESAMPLE{Arg1_C : @b{aliased constant} String := "arg1";@NL{}
+Arg2_C : @b{aliased constant} String := "arg2";@NL{}
+@b{procedure} Sum@NL{}
+   (Data : @b{in out} Callback_Data'@b{Class};@NL{}
+    Command : String)@NL{}
+@b{is}@NL{}
+   Arg1, Arg2 : Integer;@NL{}
+@b{begin}@NL{}
+   Name_Parameters ((1 => Arg1_C'Access, 2 => Arg2_C'Access));@NL{}
+   Arg1 := Nth_Arg (Data, 1);@NL{}
+   Arg2 := Nth_Arg (Data, 2);@NL{}
+   Set_Return_Value (Data, Arg1 + Arg2);@NL{}
+@b{end} Sum;@NL{}
+@NL{}
+Register_Command (Repo, "sum", 2, 2, Sum'@b{Access});}
+
+Not the most useful function to export! Still, it illustrates a number of
+important concepts.
+
+@TIP{Automatic parameters types}
+@noindent
+When the command is registered, the number of arguments is specified.
+This means that @value{gnatlib} will check on its own whether the right
+number of arguments is provided. But the type of these arguments is not
+specified. Instead, your callback should proceed as if they were correct,
+and try to retrieve them through one of the numerous @code{Nth_Arg}
+functions. In the example above, we assume they are integer. But if one of
+them was passed as a string, an exception would be raised and sent back to
+the scripting language to display a proper error message to the user. You
+have nothing special to do here.
+
+@TIP{Support for named parameters}
+@noindent
+Some languages (especially python) support named parameters, ie parameters
+can be specified in any order on the command line, as long as they are
+properly identified (very similar to Ada's own capabilies). In the example
+above, the call to @code{Name_Parameters} is really optional, but adds this
+support for your own functions as well. You just have to specify the name
+of the parameters, and @value{gnatlib} will then ensure that when you
+call @code{Nth_Arg} the parameter number 1 is really "arg1".
+For scripting languages that do not support named parameters, this has no
+effect.
+
+Your code can then perform as complex a code as needed, and finally
+return a value (or not) to the scripting language, through a call to
+@code{Set_Return_Value}.
+
+After the above code has been executed, your users can go to the python
+console and type for instance
+
+@example
+from MyModule import *    # MyModule is the name we declared above
+print sum (1,2)
+	@result{} 3
+print sum ()
+	@error{} Wrong number of parameters
+print sum ("1", 2)
+	@error{} Parameter 1 should be an integer
+print sum (arg2=2, arg1=1)
+	@result{} 3
+@end example
+
+
+@subsubsection Exporting classes
+@noindent
+Whenever you want to make an Ada type accessible through the scripting
+languages, you should export it as a class. For object-oriented languages,
+this would map to the appropriate concept. For other languages, this provides
+a namespace, so that each method of the class now takes an additional first
+parameter which is the instance of the class, and the name of the method is
+prefixed by the class name.
+
+Creating a new class is done through a call to @code{New_Class}, as shown
+in the example below.
+
+@CODESAMPLE{MyClass : Class_Type;@NL{}
+MyClass := GNAT.Scripts.New_Class (Repo, "MyClass");}
+
+At this stage, nothing is visible in the scripting language, but all the
+required setup has been done internally so that you can now add methods to
+this class.
+
+You can then register the class methods in the same way that you registered
+functions. An additional parameter @var{Class} exists for
+@code{Register_Command}. A method is really just a standard function that
+has an implicit first parameter which is a @code{Class_Instance}. This
+extra parameter should not be taken into account in @var{Min_Args} and
+@var{Max_Args}. You can also declare the method as a static method, ie
+one that doesn't take this extra implicit parameter, and basically just
+uses the class as a namespace.
+
+Some special method names are available. In particular,
+@code{Constructor_Method} should be used for the constructor of a class.
+It is a method that receives, as its first argument, a class instance that
+has just been created. It should associate that instance with the Ada
+object it represents.
+
+Here is a simple example that exports a class. Each instance of this class
+is associated with a string, passed in parameter to the constructor. The
+class has a single method @code{print}, which prints its string parameter
+prefixed by the instance's string. To start with, here is a python example
+on what we want to achieve:
+
+@example
+c1 = MyClass ("prefix1")
+c1.print ("foo")
+	@result{} "prefix1 foo"
+c2 = MyClass ()  # Using a default prefix
+c2.print ("foo")
+	@result{} "default foo"
+@end example
+
+Here is the corresponding Ada code.
+
+@CODESAMPLE{@b{with} GNAT.Scripts.Impl;@NL{}
+@b{procedure} Handler@NL{}
+   (Data : @b{in out} Callback_Data'Class; Command : String)@NL{}
+@b{is}@NL{}
+   Inst : Class_Instance := Nth_Arg (Data, 1, MyClass);@NL{}
+@b{begin}@NL{}
+   @b{if} Command = Constructor_Method @b{then}@NL{}
+     Set_Data (Inst, MyClass, Nth_Arg (Data, 2, "default"));@NL{}
+   @b{elsif} Command = "print" @b{then}@NL{}
+     Insert_Text@NL{}
+        (Get_Script (Data), null,@NL{}
+         String'(Get_Data (Inst)) & " " & Nth_Arg (Data, 2));@NL{}
+   @b{end if};@NL{}
+@b{end} Handler;@NL{}
+@NL{}
+Register_Command@NL{}
+  (Repo, Constructor_Method, 0, 1, Handler'@b{Access}, MyClass);@NL{}
+Register_Command@NL{}
+  (Repo, "print", 1, 1, Handler'@b{Access}, MyClass);@NL{}}
+
+This example also demonstrates a few concepts: the constructor is declared
+as a method that takes one optional argument. The default value is in
+fact passed in the call to @code{Nth_Arg} and is set to "default".
+In the handler, we know there is always a first argument which is the
+instance on which the method applies. The implementation for the
+constructor stores the prefix in the instance itself, so that several
+instances can have different prefixes (we can't use global variables,
+of course, since we don't know in advance how many instances will exist).
+The implementation for @code{print} inserts code in the default console
+for the script (we could of course use @code{Put_Line} or any other way
+to output data), and computes the string to output by concatenating the
+instance's prefix and the parameter to @code{print}.
+
+Note that @code{Set_Data} and @code{Get_Data} take the class in parameter,
+in addition to the class instance. This is needed for proper handling of
+multiple inheritance: say we have a class @code{C} that extends two classes
+@code{A} and @code{B}. The Ada code that deals with @code{A} associates an
+integer with the class instance, whereas the code that deals with @code{B}
+associates a string. Now, if you have an instance of @code{C} but call a
+method inherited from @code{A}, and if @code{Get_Data} didn't specify the
+class, there would be a risk that a string would be returned instead of the
+expected integer. In fact, the proper solution here is that both @code{A}
+and @code{B} store their preferred data at the same time in the instances,
+but only fetch the one they actually need. Therefore instances of @code{C}
+are associated with two datas.
+
+Here is a more advanced example that shows how to export an Ada object. Let's
+assume we have the following Ada type that we want to make available to
+scripts:
+
+@CODESAMPLE{@b{type} MyType @b{is record}@NL{}
+  Field : Integer;@NL{}
+@b{end record};}
+
+As you can see, this is not a tagged type, but could certainly be. There is
+of course no procedure @code{Set_Data} in @file{GNAT.Scripts} that enables
+us to store @code{MyType} in a @code{Class_Instance}. This example shows how
+to write such a procedure. The rest of the code would be similar to the
+first example, with a constructor that calls @code{Set_Data}, and methods
+that call @code{Get_Data}.
+
+@CODESAMPLE{@b{type} MyPropsR @b{is new} Instance_Property_Record @b{with record}@NL{}
+   Val : MyType;@NL{}
+@b{end record};@NL{}
+@b{type} MyProps @b{is access all} MyPropsR'@b{Class};@NL{}
+@NL{}
+@b{procedure} Set_Data@NL{}
+  (Inst : Class_Instance; Val : MyType)@NL{}
+@b{is}@NL{}
+@b{begin}@NL{}
+  Set_Data (Inst, Get_Name (MyClass), MyPropsR'(Val => Val));@NL{}
+@b{end} Set_Data;@NL{}
+@NL{}
+@b{function} Get_Data (Inst : Class_Instance) @b{return} MyType @b{is}@NL{}
+   Data : MyProps := MyProps (Instance_Property'@NL{}
+      (Get_Data (Inst, Get_Name (MyClass))));@NL{}
+@b{begin}@NL{}
+   @b{return} Data.Val;@NL{}
+@b{end} Get_Data;}
+
+Several aspects worth noting in this example. Each data is associated with
+a name, not a class as in the previous example. That's in fact the same
+thing, and mostly for historical reasons. We have to create our own
+instance of @code{Instance_Property_Record} to store the data, but the
+implementation presents no special difficulty. In fact, we don't absolutely
+need to create @code{Set_Data} and @code{Get_Data} and could do everything
+inline in the method implementation, but it is cleaner this way and easier
+to reuse.
+
+@value{gnatlib} is fully responsible for managing the lifetime of the
+data associated with the class instances and you can override the procedure
+@code{Destroy} if you need special memory management.
+
+
+@subsubsection Reusing class instances
+@noindent
+We mentioned above that it is more convenient for users of your exported
+classes if you always return the same class instance for the same Ada
+object (for instance a graphical window should always be associated with
+the same class instance), so that users can associate their own internal
+data with them.
+
+@value{gnatlib} provides a few types to facilitate this. In passing, it
+is worth noting that in fact the Ada objects will be associated with a
+single instance @emph{per scripting language}, but each language has its
+own instance. Data is not magically transfered from python to shell!
+
+There are two cases to distinguish here:
+
+@itemize @bullet
+@item The Ada object derives from a GtkAda object
+
+In such a case, the package @file{GNAT.Scripts.GtkAda} provides three
+procedures that automatically associate the instance with the object,
+and can return the class instance associated with any given GtkAda
+object, or can return the GtkAda object stored in the instance. There is
+nothing else to do that to call @code{Set_Data} as we have seen above.
+See below for a brief discussion on the Factory design pattern. The internal
+handling is complex, since python
+for instance has ref-counted types, and so does gtk+. For the memory to
+be correctly freed when no longer needed, @value{gnatlib} must properly
+takes care of these reference counting. The result is that the class
+instance will never be detroyed while the gtk+ object exists, but the
+gtk+ object might be destroyed while the class instance still exists (in
+which case no further operation on that instance is possible).
+
+@item The Ada object does not derive from a GtkAda object
+
+In such a case, you should store the list of associated instances with
+your object. The type @code{GNAT.Scripts.Instance_List_Access} is meant for
+that purpose, and provides two @code{Set} and @code{Get} primitives
+to retrieve existing instances.
+
+There is one catch however, related to memory management. The instances
+must continue to exist as long as the Ada object exist (and not be
+destroyed for instance when the python variables goes out of scope).
+@value{gnatlib} mostly takes care of that for you, but requires a little
+bit of help still: when you implement a new @code{Instance_Property_Record}
+as in the example above, you must also override its primitive
+@code{Get_Instances} to return the @code{Instance_List_Access}. That's it.
+@end itemize
+
+The final aspect to consider here is how to return existing instances.
+This cannot be done from the constructor method, since when it is called
+it has already received the created instance (this is forced by python, and
+was done the same for other languages for compability reasons).
+There are two ways to work around that limitation:
+
+@itemize @bullet
+@item Static @code{get} methods
+
+With each of your classes, you can export a static method generally called
+@code{get} that takes in parameter a way to identify an existing instance,
+and either return it or create a new one. It is also recommended to disable
+the constructor, ie force it to raise an error. Let's examine the python
+code as it would be used:
+
+@example
+ed = Editor ("file.adb")  # constructor
+	@result{} Error, cannot construct instances
+ed = Editor.get ("file.adb")
+	@result{} Create a new instance
+ed2 = Editor.get ("file.adb")
+	@result{} Return existing instance
+ed == ed2
+	@result{} True	
+@end example
+
+The corresponding Ada code would be something like:
+
+@CODESAMPLE{
+@b{type} MyType @b{is record}@NL{}
+   Val : Integer;@NL{}
+   Inst : Instance_List_Access;@NL{}
+@b{end record};@NL{}
+@b{type} MyTypeAccess @b{is access all} MyType;@NL{}
+@b{procedure} Handler@NL{}
+  (Data : @b{in out} Callback_Data'Class; Cmd : String)@NL{}
+@b{is}@NL{}
+   Inst : Class_Instance;@NL{}
+   Tmp  : MyTypeAccess;@NL{}
+@b{begin}@NL{}
+   @b{if} Cmd = Constructor_Method @b{then}@NL{}
+     Set_Error_Msg (Data, "cannot construct instances");@NL{}
+   @b{elsif} Cmd = "get" @b{then}@NL{}
+     Tmp := check_if_exists (Nth_Arg (Data, 1));@NL{}
+     @b{if} Tmp = null @b{then}@NL{}
+        Tmp := create_new_mytype (Nth_Arg (Data, 1));@NL{}
+        Tmp.Inst := @b{new} Instance_List;@NL{}
+     @b{end if};@NL{}
+     Inst := Get (Tmp.Inst.all, Get_Script (Data));@NL{}
+     @b{if} Inst = null @b{then}@NL{}
+        Inst := New_Instance (Get_Script (Data), MyClass);@NL{}
+        Set (Tmp.Inst.all, Get_Script (Data), Inst);@NL{}
+        Set_Data (Inst, Tmp);@NL{}
+     @b{end if};
+     @b{return} Inst;@NL{}
+   @b{end if};@NL{}
+@b{end} Handler;}
+
+
+@item Factory classes
+
+The standard way to do this in python, which applies to other languages
+as well, is to use the Factory design pattern. For this, we need to
+create one class (@code{MyClassImpl}) and one factory
+function (@code{MyClass}).
+
+The python code now looks like
+
+@example
+ed = MyClass ("file.adb")  # Create new instance
+	@result{} ed is of type MyClassImpl
+ed = MyClass ("file.adb")  # return same instance
+ed.do_something() 
+@end example
+
+It is important to realize that in the call above, we are not calling
+the constructor of a class, but a function. At the Ada level, the function
+has basically the same implementation as the one we gave for @code{get}
+above. But the python code looks nicer because we do not have these
+additional @code{.get()} calls. The name of the class @code{MyClassImpl}
+doesn't appear anywhere in the python code, so this is mostly transparent.
+
+However, if you have more than one scripting language, in particular for
+the shell, the code looks less nice in this case:
+
+@example
+MyClass "file.adb"
+	@result{}  <MyClassImpl_Instance_0x12345>
+MyClassImpl.do_something %1
+@end example
+
+and the new name of the class is visible in the method call.
+
+
+@end itemize
+
+
+@c -----------------------------------------------------------------------
+@node Executing startup scripts
+@subsection Executing startup scripts
+@c -----------------------------------------------------------------------
+@noindent
+The final step in starting up your application is to load extensions or
+plug-ins written in one of the scripting languages.
+
+There is not much to be said here, except that you should use the
+@code{GNAT.Scripts.Execute_File} procedure to do so.
+
+@c -----------------------------------------------------------------------
 @node Index
 @unnumbered Index
 @c -----------------------------------------------------------------------
 @printindex cp
 @bye
-
-@c To be documented:
-@c - using factories to make sure the same instance is always returned for
-@c   the same Ada type. This is good practice not enforced by gnatlib
-@c - API documentation
 
