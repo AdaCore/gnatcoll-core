@@ -54,14 +54,14 @@
                      text-align: justify}
    samp             {font-family: courier new,courier,fixed;
                      font-size: 14px}
-/* table of contents to the left, tip notes in the right margin */
+/* table of contents and tips in the right margin */
    body             {width: 800px;
-                     margin-left: 330px }
-   div.contents     {width: 330px;
-                     left: 0px;
+                     margin-left: 20px }
+   div.contents     {left: 840px;
                      top: 0px;
                      position: absolute; }
    div.tip          {position: absolute;
+                     text-align: left; /* don't align when width is small */
                      width: 200px;
-                     left: 1130px; }
+                     left: 840px; }
                     
