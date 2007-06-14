@@ -359,7 +359,7 @@ package body GNAT.Scripts.Python is
 
       Result := Run_Command
         (Script,
-         "sys.argv=['GPS']", Hide_Output => True,
+         "sys.argv=['" & Module & "']", Hide_Output => True,
          Errors         => Errors'Unchecked_Access);
 
       --  This function is required for support of the Python menu (F120-025),
