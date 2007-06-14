@@ -6,7 +6,10 @@
 @set gnatlib GnatLib
 @set Title   @value{gnatlib}: Library for Ada applications
 
-@c --------------------------- macros
+@c --------------------------- macro
+@c This macro can be used to insert code sample. Each line should end with
+@c @NL{}, since otherwise texinfo doesn't guarantee that newlines will be
+@c preserved
 @macro CODESAMPLE{TXT}
 @ifhtml
 @smallexample
@@ -17,15 +20,24 @@
 @end ifhtml
 @ifnothtml
 @cartouche
-@smallexample
+@example
 @group
 \TXT\
 @end group
-@end smallexample
+@end example
 @end cartouche
 @end ifnothtml
 @end macro
 
+@c simulates a newline when in a @CODESAMPLE
+@macro NL{}
+@end macro
+
+@c --------------------------- macro
+@c This macro can be used to insert a "Tip" or "Did you know" box. In HTML,
+@c this box is displayed in the right margin of the text, and thus doesn't
+@c disturbs the normal reading flow, but provides additional useful
+@c information. A small icon is displayed on the left of the box
 @macro TIP{TXT}
 @ifhtml
 @html
@@ -44,6 +56,10 @@
 @end ifnothtml
 @end macro
 
+@c -------------------------- macro
+@c This macro can be used to insert an "Important" box in the text.
+@c This box is displayed inline in the main body of the text, but is
+@c surrounded by a frame, and has a small icon on the left.
 @macro IMPORTANT{TXT}
 @ifhtml
 @html
@@ -62,6 +78,10 @@
 @end ifnothtml
 @end macro
 
+@c ------------------------- macro
+@c This macro can be used to insert a "Note" box in the text. It is
+@c displayed inline in the main body of the text, but has a different
+@c icon that the "Important" box
 @macro NOTE{TXT}
 @ifhtml
 @html
@@ -84,6 +104,7 @@
 @settitle @value{Title}
 @setchapternewpage odd
 @syncodeindex fn cp
+@syncodeindex vr cp
 
 @titlepage
 @flushleft
@@ -121,12 +142,13 @@ unmodified in any copy.
 * Embedding script languages:: The scripting module.
 * Index::
 
+@ifnothtml
 @detailmenu
  --- The Detailed Node Listing ---
 
 Introduction
 
-Building @value{gnatlib}
+Building GnatLib
 
 Embedding script languages
 * Supported languages::
@@ -138,14 +160,19 @@ Supported languages
 * Classes exported to all languages::
 
 Scripts API
+* Initializing the scripting module::
 
 @end detailmenu
+@end ifnothtml
 @end menu
 @end ifnottex
 
 @iftex
 @contents
 @end iftex
+@ifhtml
+@contents
+@end ifhtml
 
 @c -----------------------------------------------------------------------
 @node Introduction
@@ -188,7 +215,7 @@ to unpack the package in a temporary directory. In the following instructions,
 we will assume the following: @var{prefix} is the directory in which you
 would like to install @value{gnatlib}.
 
-@subsubsection Configuring the build environment
+@section Configuring the build environment
 
 The first step is to configure the build environment. This is done by
 running the @code{configure} command in the root directory of the
@@ -225,11 +252,11 @@ available through your @var{PATH} environment variable.
 ./configure --prefix=/usr/local/gnatlib --without-python
 @end smallexample
 
-If all goes well (ie all required dependencies are found on the system),
+If all goes well (i.e. all required dependencies are found on the system),
 configure will generate a number of files, including @file{Makefile},
 @file{Makefile.conf} and @file{gnatlib_shared.gpr}.
 
-@subsubsection Building @value{gnatlib}
+@section Building @value{gnatlib}
 
 If @code{configure} has run successfully, it generates a @code{Makefile}
 to allow you to build the rest of @value{gnatlib}.
@@ -239,7 +266,7 @@ This is done by simply typing the following command:
 make
 @end smallexample
 
-Optionally, you can also build the examples and/or the automatic testsuite,
+Optionally, you can also build the examples and/or the automatic test suite,
 with the following commands:
 
 @smallexample
@@ -247,7 +274,7 @@ make examples
 make tests
 @end smallexample
 
-@subsubsection Installing @value{gnatlib}
+@section Installing @value{gnatlib}
 
 For now, you will need to manually copy the files from @file{scripts/obj}
 into the installation directory.
@@ -289,7 +316,7 @@ Dynamically loadable modules can be loaded on demand, as their name indicate.
 However, they generally require a relatively complex environment to build,
 and are somewhat less portable. But when your users are familiar with Ada,
 they provide a programming environment in which they are comfortable.
-As usual, changing the module requires recompilation, reinstallation,...
+As usual, changing the module requires recompilation, re-installation,...
 
 Providing the source code to your application is generally even more
 complex for users. This requires an even more complex setup, your application
@@ -307,6 +334,7 @@ even distributed with future versions of your application.
 The module in @value{gnatlib} helps you implement the third solution. It was
 used extensively in the GPS programming environment for its python interface.
 
+@TIP{Each of the scripting language is optional}
 This module can be compiled with any of these languages as an optional
 dependency (except for the shell language, which is always built-in, but is
 extremely minimal, and doesn't have to be loaded at run time anyway).
@@ -315,6 +343,7 @@ be build with support for the corresponding language, but your application
 can chose at run time whether or not to activate the support for a specific
 language.
 
+@TIP{Optional support is provided for the @emph{gtk+} library}.
 Likewise, extensions are provided if the gtk+ libraries were found on your
 system. These provide a number of Ada subprograms that help interface with
 code using this library, and help export the corresponding classes.
@@ -325,13 +354,12 @@ at link time on graphical libraries).
 
 @cindex test driver
 @cindex testing your application
-@TIP{Embedding a scripting language is often useful if you want to write
-@emph{automatic tests} for an application or a library. Your Ada code can then
-export the minimum set of classes and methods to the scripting language,
-and advanced tests can quickly be written using these exported methods.
-For instance, this has been used for the GPS environment, which is a
-graphical application, to write such tests that simulate the click on
-a button, the selection of a menu,@dots{}}
+@TIP{Use a scripting language to provide an automatic testing framework for
+your application.}
+@noindent
+The GPS environment uses python command for its @emph{automatic test suite},
+including graphical tests such as pressing on a button, selecting a
+menu,@dots{}
 
 @menu
 * Supported languages::
@@ -378,7 +406,7 @@ that comes with an extensive library. It is fully object-oriented
 @c ----------------------------------------------------------------------
 
 @noindent
-The shell language was initially developped in the context of the GPS
+The shell language was initially developed in the context of the GPS
 programming environment, as a way to embed scripting commands in XML
 configuration files.
 
@@ -388,7 +416,7 @@ calls can, but need not, be quoted. Quoting is only mandatory when they
 contain spaces, newline characters, or double-quotes ('"'). To quote an
 argument, surround it by double-quotes, and precede each double-quote it
 contains by a backslash character. Another way of quoting is similar to
-what python provides, which is to triple-quote the argument, ie surround it
+what python provides, which is to triple-quote the argument, i.e. surround it
 by '"""' on each side. In such a case, any special character (in particular
 other double-quotes or backslashes) lose their special meaning and are just
 taken as part of the argument. This is in particular useful when you do not
@@ -415,7 +443,7 @@ Shell> function2_name %1
 
 In particular, the @var{%1} syntax is used when emulating object-oriented
 programming in the shell. A method of a class is just a particular function
-that contains a '.' in its name, and whose first implict argument is the
+that contains a '.' in its name, and whose first implicit argument is the
 instance on which it applies. This instance is generally the result of
 calling a constructor in an earlier call. Assuming, for instance, that we
 have exported a class "Base" to the shell from our Ada core, we could use
@@ -479,6 +507,8 @@ In general, it is much simpler to use the common API rather than this
 specialized one, though, since otherwise you will need to take care of lots
 of details like memory management, conversion to and from python types,@dots{}
 
+@TIP{All functions exported to python are available in a specific namespace}
+@noindent
 All functions exported to python through @value{gnatlib} are available in
 a single python module, whose name you must specify when adding support
 for python. This is done to avoid namespace pollution. You can further
@@ -575,6 +605,10 @@ and @code{sys.stderr} are redirected to an instance of that class. If you
 want to see python's error messages or usual output in your application,
 you must register that class, and define a default console for your
 scripting language through calls to @code{GNAT.Scripts.Set_Default_Console}.
+
+You can later add new methods to this class, which would be specific to your
+application. Or you can derive this class into a new class to achieve a similar
+goal.
 @end deftp
 
 @defmethod Console write text
@@ -592,7 +626,7 @@ Does nothing currently, but is needed for compatibility with python.
 Output through @code{Console} instances is not buffered anyway.
 @end defmethod
 
-@deftypemethod Console boolean isatty
+@deftypemethod Console Boolean isatty
 Whether the console is a pseudo-terminal. This is always wrong in the
 case of @value{gnatlib}.
 @end deftypemethod
@@ -602,7 +636,7 @@ Reads at most @var{size} bytes from the console, and returns the resulting
 string.
 @end deftypemethod
 
-@deftypemethod Consonle string readline [size]
+@deftypemethod Console string readline [size]
 Reads at most @var{size} lines from the console, and returns them as a single
 string.
 @end deftypemethod
@@ -617,9 +651,180 @@ This section will give an overview of the API used in the scripts module.
 The reference documentation for this API is in the source files themselves. In
 particular, each @file{.ads} file fully documents all its public API.
 
+As described above, @value{gnatlib} contains several levels of API. In
+particular, it provides a low-level interface to python, in the packages
+@code{GNAT.Python}. This interface is used by the rest of @value{gnatlib},
+but is likely too low-level to really be convenient in your applications,
+since you need to take care of memory management and type conversions by
+yourself.
+
+Instead, @value{gnatlib} provides a language-neutral Ada API. Using this
+API, it is transparent for your application whether you are talking to the
+Shell, to python, or to another language integrated in @value{gnatlib}.
+The code remains exactly the same, and new scripting languages can be added
+in later releases of @value{gnatlib} without requiring a change in your
+application. This flexibility is central to the design of @value{gnatlib}.
+
+In exchange for that flexibility, however, there are language-specific
+features that cannot be performed through the @value{gnatlib} API. At
+present, this includes for instance exporting functions that return hash
+tables. But @value{gnatlib} doesn't try to export the greatest set of
+features common to all languages. On the contrary, it tries to fully
+support all the languages, and provide reasonable fallback for languages
+that do not support that feature. For instance, named parameters (which
+are a part of the python language) are fully supported, although the
+shell language doesn't support them. But that's an implementation detail
+transparent to your own application.
+
+Likewise, your application might decide to always load the python
+scripting language. If @value{gnatlib} wasn't compiled with python support,
+the corresponding Ada function still exists (and thus your code still
+compiles), although of course it does nothing. But since the rest of the
+code is independent of python, this is totally transparent for your
+application.
+
+@TIP{@value{gnatlib} comes with some examples, which you can use
+  as a reference when building your own application.
+  See the @file{scripts/examples} directory.}
+
+@noindent
+Interfacing your application with the scripting module is a multistep
+process:
+
+@itemize @bullet
+@item You @emph{must} @b{initialize} @value{gnatlib} and decide which features
+  to load
+@item You @emph{can} create an @b{interactive console} for the various
+  languages, so that users can perform experiments interactively. This
+  is optional, and you could decide to keep the scripting language has a
+  hidden implementation detail (or just for automatic testing purposes
+  for instance)
+@item You @emph{can} @b{export} some classes and methods.
+  This is optional, but it doesn't really make sense to just embed a
+  scripting language and export nothing to it. In such a case, you might
+  as well spawn a separate executable.
+@item You @emph{can} load @b{start up scripts} or plug-ins that users have
+  written to extend your application.
+@end itemize
+
+@menu
+* Initializing the scripting module::
+@end menu
+
+@c -----------------------------------------------------------------------
+@node Initializing the scripting module
+@subsection Initializing the scripting module
+@c -----------------------------------------------------------------------
+
+@noindent
+@value{gnatlib} must be initialized properly in order to provide added
+value to your application. This cannot be done automatically simply by
+depending on the library, since this initialization requires multiple-step
+that must be done at specific moments in the initialization of your whole
+application.
+
+This initialization does not depend on whether you have build support
+for python or for gtk+ in @value{gnatlib}. The same packages and subprograms
+are available in all cases, and therefore you do not need conditional
+compilation in your application to support the various cases.
+
+@c -----------------------------------------------------------------------
+@subsubsection Create the scripts repository
+@c -----------------------------------------------------------------------
+@noindent
+The type @code{GNAT.Scripts.Scripts_Repository} will contain various
+variables common to all the scripting languages, as well as a list of the
+languages that were activated. This is the starting point for all other
+types, since from there you have access to everything. You will have only
+one variable of this type in your application, but it should generally be
+available from all the code that interfaces with the scripting language.
+
+Like the rest of @value{gnatlib}, this is a tagged type, which you can
+extend in your own code. For instance, the GPS programming environment is
+organized as a kernel and several option modules. The kernel provides
+the core functionality of GPS, and should be available from most functions
+that interface with the scripting languages. Since these functions have
+very specific profiles, we cannot pass additional arguments to them. One
+way to work around this limitation is to store the additional arguments
+(in this case a pointer to the kernel) in a class derived from
+@code{Scripts_Repository_Data}.
+
+As a result, the code would look like
+
+@CODESAMPLE{@b{with} GNAT.Scripts;@NL{}
+Repo : Scripts_Repository := @b{new} Scripts_Repository_Data;}
+
+@noindent
+or, in the more complex case of GPS described above:
+
+@CODESAMPLE{@b{type} Kernel_Scripts_Repository @b{is new}@NL{}
+   Scripts_Repository_Data @b{with record}@NL{}
+      Kernel : ...;@NL{}
+@b{end record;}@NL{}
+Repo : Scripts_Repository := new Kernel_Scripts_Repository'@NL{}
+   (Scripts_Repository_Data @b{with} Kernel => ...);}
+
+@c -----------------------------------------------------------------------
+@subsubsection Loading the scripting language
+@c -----------------------------------------------------------------------
+@noindent
+The next step is to decide which scripting languages should be made
+available to users. This must be done before any function is exported,
+since only functions exported after a language has been loaded will be
+made available in that language.
+
+@NOTE{If for instance python support was build into @value{gnatlib}, and
+if you decide not to make it available to users, your application will
+still be linked with @file{libpython}. It is therefore recommended although
+not mandatory to only build those languages that you will use}
+
+This is done through a simple call to one or more subprograms. The following
+example registers both the shell and python languages
+
+@CODESAMPLE{@b{with} GNAT.Scripts.Python;@NL{}
+@b{with} GNAT.Scripts.Shell;@NL{}
+Register_Shell_Scripting (Repo);@NL{}
+Register_Python_Scripting (Repo, "MyModule");}
+
+
+@deffn Procedure Register_Shell_Scripting Repo
+This adds support for the shell language. Any class or function that is
+now exported through @value{gnatlib} will be made available in the shell
+@end deffn
+
+@deffn Procedure Register_Python_Scripting Repo Module_Name
+This adds support for the python language. Any class or function exported
+from now on will be made available in python, in the module specified
+by @var{Module_Name}
+@end deffn
+
+@c -----------------------------------------------------------------------
+@subsubsection Exporting standard classes
+@c -----------------------------------------------------------------------
+@noindent
+To be fully functional, @value{gnatlib} requires some predefined classes
+to be exported to all languages (@pxref{Classes exported to all languages}).
+For instance, the @code{Console} class is needed for proper interactive with
+the consoles associated with each language.
+
+These classes are created with the following code:
+@CODESAMPLE{Register_Standard_Classes (Repo, "Console");}
+
+This must be done only after all the scripting languages were loaded in the
+previous step, since otherwise the new classes would not be visible in the
+other languages.
+
+@deffn Procedure Register_Standard_Classes Repo Console_Class
+The second parameter @var{Console_Class} is the name of the class that
+is bound to a console, and thus provides input/output support. You can chose
+this name so that it matches the classes you intend to export later on from
+your application.
+@end deffn
+
 @c -----------------------------------------------------------------------
 @node Index
 @unnumbered Index
+@c -----------------------------------------------------------------------
 @printindex cp
 @bye
 
