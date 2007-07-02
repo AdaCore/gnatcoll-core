@@ -3,6 +3,30 @@
 ## In your own aclocal.m4 file, you can use syntax like
 ##   include(gnatlib/aclocal.m4)
 
+#############################################################
+# Checking for syslog
+# This checks whether syslog exists on this system.
+# This module can be disabled with
+#    --without-syslog
+# The following variables are exported by configure:
+#    @WITH_SYSLOG@: either "yes" or "no"
+############################################################
+
+AC_DEFUN(AM_PATH_SYSLOG,
+[
+   AC_ARG_ENABLE(syslog,
+               [  --enable-syslog	  Include support for syslog],
+               [if test x"$enableval" = xno ; then
+                   WITH_SYSLOG=no
+                else
+                   AC_CHECK_HEADER([syslog.h],
+                                   [WITH_SYSLOG=yes],
+                                   [WITH_SYSLOG=no])
+                fi],
+               [WITH_SYSLOG=no])
+    AC_SUBST(WITH_SYSLOG)
+])
+
 
 #############################################################
 # Checking for python
@@ -28,7 +52,7 @@
 AC_DEFUN(AM_PATH_PYTHON,
 [
    AC_ARG_WITH(python,
-               [ --with-python=<path>     Specify the full path to the Python installation],
+               [  --with-python=<path>    Specify the full path to the Python installation],
                PYTHON_PATH_WITH=$withval,
                PYTHON_PATH_WITH=yes)
 
@@ -158,8 +182,7 @@ AC_DEFUN(AM_PATH_PYTHON,
 AC_DEFUN(AM_PATH_PYGTK,
 [
     AC_ARG_ENABLE(pygtk,
-                  [  --disable-pygtk    do not try to build the special support
-for PyGTK],
+                  [  --disable-pygtk         do not try to build the special support for PyGTK],
                   ,
                   enable_pygtk=yes)
 

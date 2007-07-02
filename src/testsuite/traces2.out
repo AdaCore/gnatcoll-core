@@ -1,0 +1,21 @@
+mod1--[MODULE1] --
+mod1--Message 1--
+mod1--------------------
+mod2--[MODULE2] --
+mod2--Message 2--
+mod2--------------------
+mod3--[MODULE3] --
+mod3--Message 3--
+mod3--------------------
+default--[MODULE4] --
+default--Message 4--
+default--------------------
+mod1--[MODULE1] --
+mod1--Message to overridden stream--
+mod1--------------------
+overridden--[MODULE4] --
+overridden--Message to overridden stream--
+overridden--------------------
+default--[MODULE6] --
+default--Message 1 to invalid stream--
+default--------------------

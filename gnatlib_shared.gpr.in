@@ -7,6 +7,7 @@ project GnatLib_Shared is
    type Yes_No is ("yes", "no");
    Gtk    : Yes_No := External ("GTK", "@WITH_GTK@");
    Python : Yes_No := External ("PYTHON", "@WITH_PYTHON@");
+   Syslog : Yes_No := External ("SYSLOG", "@WITH_SYSLOG@");
 
    Python_Version := "@PYTHON_VERSION@";
    Python_Base    := "@PYTHON_BASE@";
@@ -27,5 +28,11 @@ project GnatLib_Shared is
               ("-O2", "-gnatn", "-gnatws", "-gnat05");
       end case;
    end Compiler;
+
+   package Linker is
+   end Linker;
+
+   package Builder is
+   end Builder;
 
 end GnatLib_Shared;

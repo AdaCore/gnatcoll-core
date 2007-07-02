@@ -1,0 +1,31 @@
+with "../gnatlib_shared";
+
+project GnatLib_Src is
+   for Object_Dir use "obj";
+
+   case GnatLib_Shared.Syslog is
+     when "no" =>
+        for Locally_Removed_Files use
+          ("gnat-traces-syslog.ads",
+           "gnat-traces-syslog.adb");
+     when "yes" =>
+        null;
+   end case;
+
+   package Compiler renames GnatLib_Shared.Compiler;
+   package Linker   renames GnatLib_Shared.Linker;
+   package Naming is
+      for Specification ("GNAT.Traces") use "gnat-traces.ads";
+      for Implementation ("GNAT.Traces") use "gnat-traces.adb";
+
+      case GnatLib_Shared.Syslog is
+         when "no" => null;
+         when "yes" =>
+            for Specification ("GNAT.Traces.Syslog")
+               use "gnat-traces-syslog.ads";
+            for Implementation ("GNAT.Traces.Syslog")
+               use "gnat-traces-syslog.adb";
+      end case;
+   end Naming;
+
+end GnatLib_Src;
