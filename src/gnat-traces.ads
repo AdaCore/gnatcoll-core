@@ -353,8 +353,6 @@ package GNAT.Traces is
    --  will never be freed when the program is finalized by the compiler. This
    --  is mostly for debugging purposes only.
 
-   Exception_Handle : Trace_Handle;
-
 private
    type Trace_Stream_Record is abstract tagged record
       Name          : GNAT.Strings.String_Access;

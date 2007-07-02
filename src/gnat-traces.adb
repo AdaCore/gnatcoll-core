@@ -1150,6 +1150,4 @@ begin
    begin
       null;
    end;
-
-   Exception_Handle := Create ("UNEXPECTED_EXCEPTION", Default => On);
 end GNAT.Traces;
