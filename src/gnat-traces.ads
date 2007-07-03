@@ -351,11 +351,6 @@ package GNAT.Traces is
    --  conditional breakpoints for a specific trace (break on traces.Log or
    --  traces.Trace, and check the value of Handle.Count
 
-   --  "UNEXPECTED_EXCEPTION"
-   --  All unexpected exceptions should be logged to this handle. This log is
-   --  always activated by default (although you can of course disable it in
-   --  a configuration file).
-
    --  "DEBUG.FINALIZE_TRACES"
    --  This handle is activated by default. If deactivated, the trace handles
    --  will never be freed when the program is finalized by the compiler. This
