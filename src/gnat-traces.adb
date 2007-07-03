@@ -665,14 +665,7 @@ package body GNAT.Traces is
          Put (Stream.all, Brown_Fg & Default_Bg);
       end if;
 
-      if (Absolute_Time.Active and then Supports_Time (Stream.all))
-        or else Elapsed_Time.Active
-        or else Traces.Location.Active
-        or else Enclosing_Entity.Active
-        or else Stack_Trace.Active
-      then
-         Put (Stream.all, " ");
-      end if;
+      Put (Stream.all, " ");
 
       if Absolute_Time.Active and then Supports_Time (Stream.all) then
          Put_Absolute_Time (Stream);
