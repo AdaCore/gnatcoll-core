@@ -7,7 +7,7 @@
 # Checking for syslog
 # This checks whether syslog exists on this system.
 # This module can be disabled with
-#    --without-syslog
+#    --disable-syslog
 # The following variables are exported by configure:
 #    @WITH_SYSLOG@: either "yes" or "no"
 ############################################################
@@ -15,16 +15,19 @@
 AC_DEFUN(AM_PATH_SYSLOG,
 [
    AC_ARG_ENABLE(syslog,
-               [  --enable-syslog	  Include support for syslog],
-               [if test x"$enableval" = xno ; then
-                   WITH_SYSLOG=no
-                else
-                   AC_CHECK_HEADER([syslog.h],
-                                   [WITH_SYSLOG=yes],
-                                   [WITH_SYSLOG=no])
-                fi],
-               [WITH_SYSLOG=no])
-    AC_SUBST(WITH_SYSLOG)
+     AC_HELP_STRING(
+        [--disable-syslog],
+        [Disable support for syslog [[default=enabled]]]),
+     [WITH_SYSLOG=$enableval],
+     [WITH_SYSLOG=yes])
+
+   if test x$WITH_SYSLOG = xyes ; then
+     AC_CHECK_HEADER([syslog.h],
+                     [WITH_SYSLOG=yes],
+                     [WITH_SYSLOG=no])
+   fi
+
+   AC_SUBST(WITH_SYSLOG)
 ])
 
 
@@ -52,9 +55,11 @@ AC_DEFUN(AM_PATH_SYSLOG,
 AC_DEFUN(AM_PATH_PYTHON,
 [
    AC_ARG_WITH(python,
-               [  --with-python=<path>    Specify the full path to the Python installation],
-               PYTHON_PATH_WITH=$withval,
-               PYTHON_PATH_WITH=yes)
+     AC_HELP_STRING(
+       [--with-python=<path>],
+       [Specify the full path to the Python installation]),
+     PYTHON_PATH_WITH=$withval,
+     PYTHON_PATH_WITH=yes)
 
    WITH_PYTHON=yes
    if test x"$PYTHON_PATH_WITH" = xno ; then
@@ -171,7 +176,8 @@ AC_DEFUN(AM_PATH_PYTHON,
 ##   $1=minimum pygtk version required
 ## This function checks whether pygtk exists on the system, and has a recent
 ## enough version. It exports the following variables:
-##    @PYGTK_PREFIX@: installation directory of pygtk
+##    @WITH_PYGTK@:    "yes" or "no"
+##    @PYGTK_PREFIX@:  installation directory of pygtk
 ##    @PYGTK_INCLUDE@: cflags to use when compiling a pygtk application
 ## This function must be called after the variable PKG_CONFIG has been set,
 ## ie probably after gtk+ itself has been detected. Python must also have been
@@ -182,22 +188,26 @@ AC_DEFUN(AM_PATH_PYTHON,
 AC_DEFUN(AM_PATH_PYGTK,
 [
     AC_ARG_ENABLE(pygtk,
-                  [  --disable-pygtk         do not try to build the special support for PyGTK],
-                  ,
-                  enable_pygtk=yes)
+      AC_HELP_STRING(
+        [--disable-pygtk],
+        [Disable support for PyGTK [[default=enabled]]]),
+      [WITH_PYGTK=$enableval],
+      [WITH_PYGTK=$WITH_PYTHON])
 
     if test "$PKG_CONFIG" = "" -o "$PKG_CONFIG" = "no" ; then
        AC_MSG_CHECKING(for pygtk)
        AC_MSG_RESULT(no (pkg-config not found))
+       WITH_PYGTK=no
     else
        min_pygtk_version=ifelse([$1], ,2.8,$1)
        module=pygtk-2.0
        AC_MSG_CHECKING(for pygtk - version >= $min_pygtk_version)
 
-       if test x"$enable_pygtk" = x -o x"$enable_pygtk" = xno ; then
+       if test x"$WITH_PYGTK" = x -o x"$WITH_PYGTK" = xno ; then
           AC_MSG_RESULT(no)
           PYGTK_PREFIX=""
           PYGTK_INCLUDE=""
+          WITH_PYGTK=no
 
        elif test "$PYTHON_BASE" != "no" ; then
           pygtk_version=`$PKG_CONFIG $module --modversion`
@@ -206,21 +216,25 @@ AC_DEFUN(AM_PATH_PYGTK,
              PYGTK_INCLUDE="`$PKG_CONFIG $module --cflags` -DPYGTK"
              PYGTK_PREFIX=`$PKG_CONFIG $module --variable=prefix`
              AC_MSG_RESULT(yes (version $pygtk_version))
+             WITH_PYGTK=yes
           else
              AC_MSG_RESULT(no (found $pygtk_version))
              PYGTK_PREFIX=""
              PYGTK_INCLUDE=""
+             WITH_PYGTK=no
           fi
 
        else
           AC_MSG_RESULT(no since python not found)
           PYGTK_PREFIX=""
           PYGTK_INCLUDE=""
+          WITH_PYGTK=no
        fi
     fi
 
     AC_SUBST(PYGTK_PREFIX)
     AC_SUBST(PYGTK_INCLUDE)
+    AC_SUBST(WITH_PYGTK)
 ])
 
 ##########################################################################
