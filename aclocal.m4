@@ -60,6 +60,12 @@ AC_DEFUN(AM_PATH_PYTHON,
        [Specify the full path to the Python installation]),
      PYTHON_PATH_WITH=$withval,
      PYTHON_PATH_WITH=yes)
+   AC_ARG_ENABLE(shared-python,
+     AC_HELP_STRING(
+       [--enable-shared-python],
+       [Link with shared python library instead of static]),
+     PYTHON_SHARED=$enableval,
+     PYTHON_SHARED=no)
 
    WITH_PYTHON=yes
    if test x"$PYTHON_PATH_WITH" = xno ; then
@@ -88,7 +94,12 @@ AC_DEFUN(AM_PATH_PYTHON,
            WITH_PYTHON=no
         else
            PYTHON_VERSION=`$PYTHON -c 'import sys; print \`sys.version_info[[0]]\`+"."+\`sys.version_info[[1]]\`'`
-           PYTHON_DIR=${PYTHON_BASE}/lib/python${PYTHON_VERSION}/config
+
+           if test x$PYTHON_SHARED = xyes; then
+              PYTHON_DIR=${PYTHON_BASE}/lib
+           else
+              PYTHON_DIR=${PYTHON_BASE}/lib/python${PYTHON_VERSION}/config
+           fi
            AC_MSG_RESULT(yes (version $PYTHON_VERSION))
         fi
       fi

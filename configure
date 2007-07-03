@@ -844,6 +844,7 @@ if test -n "$ac_init_help"; then
 Optional Features:
   --disable-FEATURE       do not include FEATURE (same as --enable-FEATURE=no)
   --enable-FEATURE[=ARG]  include FEATURE [ARG=yes]
+  --enable-shared-python  Link with shared python library instead of static
   --disable-pygtk         Disable support for PyGTK [default=enabled]
   --disable-syslog        Disable support for syslog [default=enabled]
 
@@ -2316,6 +2317,13 @@ if test "${with_python+set}" = set; then
 else
   PYTHON_PATH_WITH=yes
 fi;
+   # Check whether --enable-shared-python or --disable-shared-python was given.
+if test "${enable_shared_python+set}" = set; then
+  enableval="$enable_shared_python"
+  PYTHON_SHARED=$enableval
+else
+  PYTHON_SHARED=no
+fi;
 
    WITH_PYTHON=yes
    if test x"$PYTHON_PATH_WITH" = xno ; then
@@ -2388,7 +2396,12 @@ echo "${ECHO_T}no" >&6
            WITH_PYTHON=no
         else
            PYTHON_VERSION=`$PYTHON -c 'import sys; print \`sys.version_info[0]\`+"."+\`sys.version_info[1]\`'`
-           PYTHON_DIR=${PYTHON_BASE}/lib/python${PYTHON_VERSION}/config
+
+           if test x$PYTHON_SHARED = xyes; then
+              PYTHON_DIR=${PYTHON_BASE}/lib
+           else
+              PYTHON_DIR=${PYTHON_BASE}/lib/python${PYTHON_VERSION}/config
+           fi
            echo "$as_me:$LINENO: result: yes (version $PYTHON_VERSION)" >&5
 echo "${ECHO_T}yes (version $PYTHON_VERSION)" >&6
         fi
