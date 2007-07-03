@@ -253,6 +253,15 @@ able to detect this automatically, so this is only useful if python is
 installed in unusual directories. If you specify the second option,
 support for python will not be build in.
 
+@item --enable-shared-python
+This specifies that the python library should be searched directly
+in @var{directory}/lib, and thus will in general by the shared library.
+By default, configure will search in a different directory of the python
+installation, and is more likely to find the static library instead (which
+makes distributing your application easier). There is no guarantee though
+that either the shared or the static will be used, since it depends on how
+python was installed on your system.
+
 @item --disable-pygtk
 If this switch is specified, then support for pygtk (@pxref{The Python
 language}) will not be build. The support for this python module will also
