@@ -1,19 +1,18 @@
-[MODULE2] Message 2
-[MODULE1] Message 1
-[MODULE2] Message 2
-[MODULE3] Always False
-[MODULE3] Assert succeeded
-[MODULE1] Increase indent
-   [MODULE2] Standard trace
-      [MODULE3] Another trace
-   [MODULE2] Standard trace
-[MODULE4] To stderr ?
+[MODULE2] Message 2 
+[MODULE1] Message 1 
+[MODULE2] Message 2 
+[MODULE3] Always False 
+[MODULE3] Assert succeeded 
+[MODULE1] Increase indent 
+   [MODULE2] Standard trace 
+      [MODULE3] Another trace 
+   [MODULE2] Standard trace 
+[MODULE4] To stderr ? 
 
 MODULE4=yes >&2
 MODULE3=yes
 MODULE2=yes
 MODULE1=yes
-UNEXPECTED_EXCEPTION=yes
 DEBUG.FINALIZE_TRACES=yes
 DEBUG.COUNT=no
 DEBUG.LOCATION=no

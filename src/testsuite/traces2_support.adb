@@ -42,4 +42,30 @@ package body Traces2_Support is
          (Trace_Stream_Record with Args => new String'(Args));
    end Factory;
 
+   procedure Pre_Decorator
+     (Handle  : in out My_Handle;
+      Stream  : in out Trace_Stream_Record'Class;
+      Message : String) is
+   begin
+      Put (Stream, "[PREDECORATOR]");
+      Pre_Decorator (Trace_Handle_Record (Handle), Stream, Message);
+   end Pre_Decorator;
+
+   procedure Post_Decorator
+     (Handle   : in out My_Handle;
+      Stream   : in out Trace_Stream_Record'Class;
+      Location : String;
+      Entity   : String;
+      Message  : String) is
+   begin
+      Put (Stream, "[POSTDECORATOR]");
+      Post_Decorator
+        (Trace_Handle_Record (Handle), Stream, Location, Entity, Message);
+   end Post_Decorator;
+
+   function My_Handle_Factory return Trace_Handle is
+   begin
+      return new My_Handle;
+   end My_Handle_Factory;
+
 end Traces2_Support;

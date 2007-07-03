@@ -67,6 +67,15 @@ begin
    Me1 := Create ("MODULE6", Stream => "&invalid");
    Trace (Me1, "Message 1 to invalid stream");
 
+   --  Custom handles
+
+   Set_Active (Create ("DEBUG.COUNT"), True);
+   Set_Active (Create ("DEBUG.ENCLOSING_ENTITY"), True);
+   Me1 := Create ("CUSTOM",
+                  Stream => "&1",
+                  Factory => My_Handle_Factory'Access);
+   Trace (Me1, "Message on custom");
+
    Finalize;
 
 end Traces2;

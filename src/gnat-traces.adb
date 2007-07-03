@@ -65,7 +65,7 @@ package body GNAT.Traces is
    Default_Bg : constant String := ASCII.ESC & "[49m";
 
    procedure Unchecked_Free is new Ada.Unchecked_Deallocation
-     (Trace_Handle_Record, Trace_Handle);
+     (Trace_Handle_Record'Class, Trace_Handle);
    procedure Unchecked_Free is new Ada.Unchecked_Deallocation
      (Trace_Stream_Record'Class, Trace_Stream);
 
@@ -126,15 +126,17 @@ package body GNAT.Traces is
       Message_Color : String := Default_Fg);
    --  Log a message to Handle unconditionally.
 
-   procedure Put_Absolute_Time (Stream : Trace_Stream);
+   procedure Put_Absolute_Time (Stream : in out Trace_Stream_Record'Class);
    --  Print the absolute time in Handle. No locking is done, this is the
    --  responsability of the caller. No colors is modified either.
 
-   procedure Put_Elapsed_Time (Handle : Trace_Handle; Stream : Trace_Stream);
+   procedure Put_Elapsed_Time
+     (Handle : in out Trace_Handle_Record'Class;
+      Stream : in out Trace_Stream_Record'Class);
    --  Print the elapsed time the last call to Trace for this Handle. No
    --  locking done.
 
-   procedure Put_Stack_Trace (Stream : Trace_Stream);
+   procedure Put_Stack_Trace (Stream : in out Trace_Stream_Record'Class);
    --  Print the stack trace for this handle. No locking done.
 
    function Config_File
@@ -339,6 +341,7 @@ package body GNAT.Traces is
      (Unit_Name : String;
       Default   : Default_Activation_Status := From_Config;
       Stream    : String := "";
+      Factory   : Handle_Factory := null;
       Finalize  : Boolean := True) return Trace_Handle
    is
       Tmp        : Trace_Handle    := null;
@@ -349,15 +352,22 @@ package body GNAT.Traces is
 
          Tmp := Find_Handle (Upper_Case);
          if Tmp = null then
-            Tmp := new Trace_Handle_Record'
-              (Name          => new String'(Upper_Case),
-               Active        => Default_Activation,
-               Forced_Active => False,
-               Stream        => null,
-               Timer         => Ada.Calendar.Clock,
-               Count         => 1,
-               Next          => Handles_List,
-               Finalize      => Finalize);
+            if Factory /= null then
+               Tmp := Factory.all;
+            end if;
+
+            if Tmp = null then
+               Tmp := new Trace_Handle_Record;
+            end if;
+
+            Tmp.Name          := new String'(Upper_Case);
+            Tmp.Active        := Default_Activation;
+            Tmp.Forced_Active := False;
+            Tmp.Stream        := null;
+            Tmp.Timer         := Ada.Calendar.Clock;
+            Tmp.Count         := 1;
+            Tmp.Next          := Handles_List;
+            Tmp.Finalize      := Finalize;
             Handles_List := Tmp;
          end if;
 
@@ -539,11 +549,11 @@ package body GNAT.Traces is
    -- Put_Absolute_Time --
    -----------------------
 
-   procedure Put_Absolute_Time (Stream : Trace_Stream) is
+   procedure Put_Absolute_Time (Stream : in out Trace_Stream_Record'Class) is
       T  : constant Ada.Calendar.Time := Ada.Calendar.Clock;
       Ms : constant String := Integer'Image (Integer (Sub_Second (T) * 1000));
    begin
-      Put (Stream.all, "(" & Image (T, ISO_Date & " %T.")
+      Put (Stream, "(" & Image (T, ISO_Date & " %T.")
            & Ms (Ms'First + 1 .. Ms'Last) & ')');
    end Put_Absolute_Time;
 
@@ -551,12 +561,15 @@ package body GNAT.Traces is
    -- Put_Elapsed_Time --
    ----------------------
 
-   procedure Put_Elapsed_Time (Handle : Trace_Handle; Stream : Trace_Stream) is
+   procedure Put_Elapsed_Time
+     (Handle : in out Trace_Handle_Record'Class;
+      Stream : in out Trace_Stream_Record'Class)
+   is
       T   : constant Ada.Calendar.Time := Ada.Calendar.Clock;
       Dur : Integer;
    begin
       Dur := Integer ((T - Handle.Timer) * 1000);
-      Put (Stream.all, "(elapsed:" & Integer'Image (Dur) & "ms)");
+      Put (Stream, "(elapsed:" & Integer'Image (Dur) & "ms)");
       Handle.Timer := T;
    end Put_Elapsed_Time;
 
@@ -564,17 +577,75 @@ package body GNAT.Traces is
    -- Put_Stack_Trace --
    ---------------------
 
-   procedure Put_Stack_Trace (Stream : Trace_Stream) is
+   procedure Put_Stack_Trace (Stream : in out Trace_Stream_Record'Class) is
       Tracebacks : Tracebacks_Array (1 .. 50);
       Len        : Natural;
    begin
       Call_Chain (Tracebacks, Len);
-      Put (Stream.all, "(callstack: ");
+      Put (Stream, "(callstack: ");
       for J in Tracebacks'First .. Len loop
-         Put (Stream.all, System.Address_Image (Tracebacks (J)) & ' ');
+         Put (Stream, System.Address_Image (Tracebacks (J)) & ' ');
       end loop;
-      Put (Stream.all, ")");
+      Put (Stream, ")");
    end Put_Stack_Trace;
+
+   -------------------
+   -- Pre_Decorator --
+   -------------------
+
+   procedure Pre_Decorator
+     (Handle  : in out Trace_Handle_Record;
+      Stream  : in out Trace_Stream_Record'Class;
+      Message : String)
+   is
+      pragma Unreferenced (Message);
+   begin
+      if Count.Active then
+         declare
+            C : constant String := Integer'Image (Count.Count);
+            H : constant String := Integer'Image (Handle.Count);
+         begin
+            Put (Stream, H (H'First + 1 .. H'Last)
+                 & '/' & C (C'First + 1 .. C'Last) & ' ');
+         end;
+         Count.Count := Count.Count + 1;
+         Handle.Count := Handle.Count + 1;
+      end if;
+   end Pre_Decorator;
+
+   --------------------
+   -- Post_Decorator --
+   --------------------
+
+   procedure Post_Decorator
+     (Handle   : in out Trace_Handle_Record;
+      Stream   : in out Trace_Stream_Record'Class;
+      Location : String;
+      Entity   : String;
+      Message  : String)
+   is
+      pragma Unreferenced (Message);
+   begin
+      if Absolute_Time.Active and then Supports_Time (Stream) then
+         Put_Absolute_Time (Stream);
+      end if;
+
+      if Elapsed_Time.Active then
+         Put_Elapsed_Time (Handle, Stream);
+      end if;
+
+      if Traces.Location.Active then
+         Put (Stream, "(loc: " & Location & ')');
+      end if;
+
+      if Enclosing_Entity.Active then
+         Put (Stream, "(entity:" & Entity & ')');
+      end if;
+
+      if Stack_Trace.Active then
+         Put_Stack_Trace (Stream);
+      end if;
+   end Post_Decorator;
 
    ---------
    -- Log --
@@ -619,18 +690,7 @@ package body GNAT.Traces is
       end if;
 
       Put (Stream.all, '[' & Handle.Name.all & "] ");
-
-      if Count.Active then
-         declare
-            C : constant String := Integer'Image (Count.Count);
-            H : constant String := Integer'Image (Handle.Count);
-         begin
-            Put (Stream.all, H (H'First + 1 .. H'Last)
-                 & '/' & C (C'First + 1 .. C'Last) & ' ');
-         end;
-         Count.Count := Count.Count + 1;
-         Handle.Count := Handle.Count + 1;
-      end if;
+      Pre_Decorator (Handle.all, Stream.all, Message);
 
       if Color then
          Put (Stream.all, Message_Color);
@@ -667,25 +727,7 @@ package body GNAT.Traces is
 
       Put (Stream.all, " ");
 
-      if Absolute_Time.Active and then Supports_Time (Stream.all) then
-         Put_Absolute_Time (Stream);
-      end if;
-
-      if Elapsed_Time.Active then
-         Put_Elapsed_Time (Handle, Stream);
-      end if;
-
-      if Traces.Location.Active then
-         Put (Stream.all, "(loc: " & Location & ')');
-      end if;
-
-      if Enclosing_Entity.Active then
-         Put (Stream.all, "(entity:" & Entity & ')');
-      end if;
-
-      if Stack_Trace.Active then
-         Put_Stack_Trace (Stream);
-      end if;
+      Post_Decorator (Handle.all, Stream.all, Message, Location, Entity);
 
       if Color then
          Put (Stream.all, Default_Fg);

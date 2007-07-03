@@ -32,6 +32,21 @@ package Traces2_Support is
    end record;
    overriding procedure Put (Stream : in out My_Stream; Str : String);
    overriding procedure Newline (Stream : in out My_Stream);
+
    function Factory (Args : String) return Trace_Stream;
+
+   type My_Handle is new GNAT.Traces.Trace_Handle_Record with null record;
+   overriding procedure Pre_Decorator
+     (Handle  : in out My_Handle;
+      Stream  : in out Trace_Stream_Record'Class;
+      Message : String);
+   overriding procedure Post_Decorator
+     (Handle   : in out My_Handle;
+      Stream   : in out Trace_Stream_Record'Class;
+      Location : String;
+      Entity   : String;
+      Message  : String);
+
+   function My_Handle_Factory return Trace_Handle;
 
 end Traces2_Support;

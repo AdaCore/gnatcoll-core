@@ -26,8 +26,8 @@ with Ada.Exceptions;
 
 package GNAT.Traces is
 
-   type Trace_Handle_Record is private;
-   type Trace_Handle is access Trace_Handle_Record;
+   type Trace_Handle_Record is tagged private;
+   type Trace_Handle is access all Trace_Handle_Record'Class;
    --  A handle for a trace stream.
    --  One such handle should be created for each module/unit/package where it
    --  is relevant. They are associated with a specific name and output stream,
@@ -108,11 +108,14 @@ package GNAT.Traces is
    --  specially useful when testing memory leaks in your application. This
    --  also ensures that output streams are correctly closed.
 
+   type Handle_Factory is access function return Trace_Handle;
+
    type Default_Activation_Status is (From_Config, On, Off);
    function Create
      (Unit_Name : String;
       Default   : Default_Activation_Status := From_Config;
       Stream    : String := "";
+      Factory   : Handle_Factory := null;
       Finalize  : Boolean := True)
       return Trace_Handle;
    --  Create a new handle
@@ -136,6 +139,12 @@ package GNAT.Traces is
    --       instance, see gnat-traces-syslog.ads)
    --  If no such stream is found, defaults on the default stream declared in
    --  the config file.
+   --
+   --  If the handle has not been created yet in some other part of the code,
+   --  a new one will be allocated. Factory can be used in this case to do the
+   --  actual allocation, so that you can return your own Trace_Handle_Record,
+   --  which might override some of primitive operations like the decorators.
+   --  If Factory is unspecified, a standard Trace_Handle_Record is allocated.
    --
    --  If Finalize is True, the handle will be freed when Finalize is called,
    --  otherwise it won't be. The only reason to set this to False is so that
@@ -302,13 +311,12 @@ package GNAT.Traces is
    --  or for each specific stream:
    --     STREAM=yes >stream_name
 
-   ------------------------
-   -- Predefined handles --
-   ------------------------
-   --  The following handles are predefined. They shouldn't be used to
-   --  actually output a message. However, they can be activated through
-   --  the configuration file as usual, and will output additional
-   --  information for each call to Trace by other handles.
+   ----------------
+   -- Decorators --
+   ----------------
+   --  The following decorators are predefined.
+   --  They are used to output additional information with each log message,
+   --  and can be activated through the configuration file as usual.
    --
    --  "DEBUG.ABSOLUTE_TIME"
    --  If this handle is activated, then the absolute time Trace is called
@@ -353,6 +361,21 @@ package GNAT.Traces is
    --  will never be freed when the program is finalized by the compiler. This
    --  is mostly for debugging purposes only.
 
+   procedure Pre_Decorator
+     (Handle  : in out Trace_Handle_Record;
+      Stream  : in out Trace_Stream_Record'Class;
+      Message : String);
+   procedure Post_Decorator
+     (Handle   : in out Trace_Handle_Record;
+      Stream   : in out Trace_Stream_Record'Class;
+      Location : String;
+      Entity   : String;
+      Message  : String);
+   --  You can override either of these two procedures to add your own
+   --  decorators (ie additional information) each time some message is logged.
+   --  It is recommended that you call the inherited procedure to get access to
+   --  the standard decorators.
+
 private
    type Trace_Stream_Record is abstract tagged record
       Name          : GNAT.Strings.String_Access;
@@ -361,7 +384,7 @@ private
    --  Name is the full name including the arguments, for instance "file:foo"
    --  if the user has defined a stream called "file" with a parameter "foo"
 
-   type Trace_Handle_Record is record
+   type Trace_Handle_Record is tagged record
       Name          : GNAT.Strings.String_Access;
       Active        : Boolean;
       Forced_Active : Boolean := False;
