@@ -6,17 +6,19 @@ all:     buildcfiles buildall
 clean:   cleanall
 install: libinstall
 
-## for static library, need to add manually the C files to the archive:
-##  ar t src/lib/python/static/libgnatlib_python.a
-##  ar r src/lib/python/static/libgnatlib_python.a src/obj/python/static/python_support.o
-
 .PHONY: buildcfiles addcobjects
+
+ifeq (${GNATLIB_LIBRARY_TYPE},static)
+FPIC=
+else
+FPIC=-fPIC
+endif
 
 ifeq ($(WITH_PYTHON),yes)
 C_OBJ=obj/python/${GNATLIB_LIBRARY_TYPE}/python_support.o
 buildcfiles: ${C_OBJ}
 ${C_OBJ}: python/python_support.c
-	gcc -c ${PYTHON_CFLAGS} $< -o $@
+	gcc -c ${FPIC} ${PYTHON_CFLAGS} $< -o $@
 clean:
 	${RM} obj/python/${GNATLIB_LIBRARY_TYPE}/python_support.o
 else
