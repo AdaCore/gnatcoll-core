@@ -1,0 +1,33 @@
+with "../gnatlib_shared";
+with "gnatlib";
+
+project GnatLib_Python is
+   for Library_Kind    use GnatLib_Shared.Library_Type;
+   for Object_Dir      use "obj/python/" & Project'Library_Kind;
+   for Library_Dir     use "lib/python/" & Project'Library_Kind;
+   for Library_Name    use GnatLib_Shared.Name & "_python";
+   for Library_Version use
+      "lib" & Project'Library_Name & ".so." & GnatLib_Shared.Version;
+
+   for Languages use ("Ada", "C");
+
+   case GnatLib_Shared.Python is
+      when "yes" =>
+         for Source_Dirs use Project'Source_Dirs & ("python");
+         --  for Library_Options use ("python_support.o");
+      when "no"  =>
+         for Source_Dirs use Project'Source_Dirs & ("nopython");
+   end case;
+
+   package Compiler renames GnatLib_Shared.Compiler;
+   package Linker is
+      for Linker_Options use (@PYTHON_LIBS_GPR@);
+   end Linker;
+   package Naming is
+      for Specification  ("GNAT.Scripts.Python") use "gnat-scripts-python.ads";
+      for Implementation ("GNAT.Scripts.Python") use "gnat-scripts-python.adb";
+      for Specification  ("GNAT.Python")         use "gnat-python.ads";
+      for Implementation ("GNAT.Python")         use "gnat-python.adb";
+   end Naming;
+
+end GnatLib_Python;

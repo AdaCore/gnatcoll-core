@@ -1,4 +1,4 @@
-with "../gnatlib_scripts";
+with "gnatlib_python";
 project Examples is
    for Object_Dir use "obj";
    for Exec_Dir use ".";
@@ -7,7 +7,8 @@ project Examples is
                          "textconsole.ads", "textconsole.adb",
                          "newclass.adb");
 
-   package Compiler renames GnatLib_Scripts.Compiler;
-   package Linker   renames GnatLib_Scripts.Linker;
+   package Compiler is
+      for Default_Switches ("Ada") use ("-gnat05");
+   end Compiler;
 
 end Examples;

@@ -1,4 +1,5 @@
-with "../gnatlib_scripts_gtk";
+with "gnatlib_gtk";
+with "gnatlib_python";
 with "examples";
 
 project ExamplesGtk is
@@ -9,7 +10,7 @@ project ExamplesGtk is
                          "gtkconsole.ads", "gtkconsole.adb",
                          "newclassgtk.adb");
 
-   package Compiler renames GnatLib_Scripts_Gtk.Compiler;
-   package Linker   renames GnatLib_Scripts_Gtk.Linker;
-
+   package Compiler is
+      for Default_SWitches ("Ada") use ("-gnat05");
+   end Compiler;
 end ExamplesGtk;

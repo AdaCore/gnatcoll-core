@@ -10,22 +10,17 @@ ifeq ($(BASE_DIR),)
   internal-clean:
 	${MAKE} clean
   internal-build:
-	${MAKE}
+	${MAKE} static
   internal-compile: internal-build
   internal-c:
   internal-link:
-  interna-ada: 
+  internal-ada: 
+else
+  internal-compile: gnatlib-internal-compile
+  gnatlib-internal-compile:
+	${MAKE} -C ${BASE_DIR}/../gnatlib ${GNATLIB_LIBRARY_TYPE}
 endif
 
 GNATLIB_BASE_DIR := $(BASE_DIR)
-GNATLIB_OBJ := $(GNATLIB_BASE_DIR)/scripts/obj
-
-ifneq ($(PYTHON_BASE),no)
-LIBS := $(GNATLIB_OBJ)/python_support.o $(GNATLIB_OBJ)/python_support_gtk.o ${LIBS}
-endif
-
-ifneq ($(GNATLIB_ROOT),True)
-  DEPS_PROJECTS += $(GNATLIB_BASE_DIR)/gnatlib_gtk
-endif
 
 endif

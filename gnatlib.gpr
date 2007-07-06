@@ -1,5 +1,0 @@
-with "scripts/gnatlib_scripts";
-with "src/gnatlib_src";
-project GnatLib is
-   for Source_Dirs use ();
-end GnatLib;

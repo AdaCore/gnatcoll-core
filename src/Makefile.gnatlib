@@ -1,0 +1,8 @@
+MODULE=gnatlib
+PROJECT=gnatlib
+LIBNAME=lib${TARNAME}
+include ../Makefile.conf
+all:     buildall
+clean:   cleanall
+install: libinstall
+

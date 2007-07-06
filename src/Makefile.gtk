@@ -1,0 +1,25 @@
+MODULE=gtk
+PROJECT=gnatlib_${MODULE}
+LIBNAME=lib${TARNAME}_${MODULE}
+include ../Makefile.conf
+all:     buildcfiles buildall
+clean:   cleanall
+install: libinstall
+
+## Need to manually add C files to the archive
+##   ar r src/lib/gtk/static/libgnatlib_gtk.a src/obj/gtk/static/python_support_gtk.o
+
+
+.PHONY: buildcfiles addcobjects
+buildcfiles:
+
+ifeq (${WITH_GTK},yes)
+ifeq ($(WITH_PYTHON),yes)
+C_OBJ=obj/gtk/${GNATLIB_LIBRARY_TYPE}/python_support_gtk.o
+buildcfiles: ${C_OBJ}
+${C_OBJ}: gtk/python/python_support_gtk.c
+	gcc -c ${PYTHON_CFLAGS} ${PYGTK_INCLUDE} ${GTK_INCLUDE} $< -o $@
+clean:
+	${RM} ${C_OBJ}
+endif
+endif
