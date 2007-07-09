@@ -5,6 +5,7 @@ ifeq ($(GNATLIB_PROJECT),)
 GNATLIB_PROJECT=True
 
 ifeq ($(BASE_DIR),)
+  include ../Makefile.common
   BASE_DIR=${shell pwd}
   GNATLIB_ROOT=True
   internal-clean:
