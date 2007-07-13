@@ -924,7 +924,9 @@ package body GNAT.Scripts.Python is
       Insert_Log
         (Script, Console, "executing: " & Script.Buffer.all & Command);
 
-      Insert_Text (Script, Console, Command & ASCII.LF, not Show_Command);
+      Insert_Text
+        (Script, Console, Command & ASCII.LF,
+         Hide => not Show_Command or else Hide_Output);
 
       Errors.all := False;
 
