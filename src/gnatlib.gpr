@@ -36,4 +36,6 @@ project GnatLib is
       for Implementation ("GNAT.Scripts.Utils")  use "gnat-scripts-utils.adb";
    end Naming;
 
+   package Ide renames GnatLib_Shared.Ide;
+
 end GnatLib;

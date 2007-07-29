@@ -4,6 +4,7 @@ with "gnatlib";
 with "gnatlib_python";
 
 project GnatLib_Gtk is
+
    for Library_Kind    use GnatLib_Shared.Library_Type;
    for Object_Dir      use "obj/gtk/" & Project'Library_Kind;
    for Library_Dir     use "lib/gtk/" & Project'Library_Kind;
@@ -28,7 +29,9 @@ project GnatLib_Gtk is
    end case;
 
    package Compiler renames GnatLib_Shared.Compiler;
+
    package Linker   renames GnatLib_Shared.Linker;
+
    package Naming is
       for Specification  ("GNAT.Scripts.Gtkada") use "gnat-scripts-gtkada.ads";
       for Implementation ("GNAT.Scripts.Gtkada") use "gnat-scripts-gtkada.adb";
@@ -37,5 +40,7 @@ project GnatLib_Gtk is
       for Implementation ("GNAT.Scripts.Python.Gtkada")
           use "gnat-scripts-python-gtkada.adb";
    end Naming;
+
+   package Ide renames GnatLib_Shared.Ide;
 
 end GnatLib_Gtk;

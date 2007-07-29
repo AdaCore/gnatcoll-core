@@ -41,4 +41,8 @@ project GnatLib_Shared is
    package Builder is
    end Builder;
 
+   package Ide is
+      for VCS_Kind use "Subversion";
+   end Ide;
+
 end GnatLib_Shared;

@@ -20,14 +20,18 @@ project GnatLib_Python is
    end case;
 
    package Compiler renames GnatLib_Shared.Compiler;
+
    package Linker is
       for Linker_Options use (@PYTHON_LIBS_GPR@);
    end Linker;
+
    package Naming is
       for Specification  ("GNAT.Scripts.Python") use "gnat-scripts-python.ads";
       for Implementation ("GNAT.Scripts.Python") use "gnat-scripts-python.adb";
       for Specification  ("GNAT.Python")         use "gnat-python.ads";
       for Implementation ("GNAT.Python")         use "gnat-python.adb";
    end Naming;
+
+   package Ide renames GnatLib_Shared.Ide;
 
 end GnatLib_Python;
