@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------
 --                               G P S                               --
 --                                                                   --
---                     Copyright (C) 2003-2007, AdaCore              --
+--                 Copyright (C) 2003-2007, AdaCore                  --
 --                                                                   --
 -- GPS is free  software;  you can redistribute it and/or modify  it --
 -- under the terms of the GNU General Public License as published by --
@@ -20,16 +20,20 @@
 with Ada.Characters.Handling;   use Ada.Characters.Handling;
 with Ada.Exceptions;            use Ada.Exceptions;
 with Ada.Strings.Fixed;         use Ada.Strings.Fixed;
+with Ada.Strings.Unbounded;     use Ada.Strings.Unbounded;
 with Ada.Unchecked_Deallocation;
+
+with System.Address_Image;
+with System;                    use System;
+
 with GNAT.Debug_Utilities;      use GNAT.Debug_Utilities;
 with GNAT.OS_Lib;               use GNAT.OS_Lib;
 with GNAT.Scripts;              use GNAT.Scripts;
 with GNAT.Scripts.Impl;         use GNAT.Scripts.Impl;
 with GNAT.Scripts.Utils;        use GNAT.Scripts.Utils;
-with System.Address_Image;
-with System;                    use System;
 
 package body GNAT.Scripts.Shell is
+
    use Instances_List, Command_Hash;
 
    procedure Free_Internal_Data (Script : access Shell_Scripting_Record'Class);
@@ -197,14 +201,17 @@ package body GNAT.Scripts.Shell is
          end;
 
       elsif Command = "echo" then
-         for A in 1 .. Number_Of_Arguments (Data) loop
-            if A = Number_Of_Arguments (Data) then
-               Insert_Text (Get_Script (Data), null, Nth_Arg (Data, A));
-            else
-               Insert_Text (Get_Script (Data), null, Nth_Arg (Data, A) & ' ');
-            end if;
-         end loop;
-         Insert_Text (Get_Script (Data), null, "" & ASCII.LF);
+         declare
+            Result : Unbounded_String;
+         begin
+            for A in 1 .. Number_Of_Arguments (Data) loop
+               Append (Result, Nth_Arg (Data, A));
+               if A /= Number_Of_Arguments (Data) then
+                  Append (Result, ' ');
+               end if;
+            end loop;
+            Set_Return_Value (Data, To_String (Result));
+         end;
 
       elsif Command = "clear_cache" then
          Free_Internal_Data (Shell_Scripting (Get_Script (Data)));
@@ -412,20 +419,22 @@ package body GNAT.Scripts.Shell is
    procedure Execute_Command
      (Script       : access Shell_Scripting_Record;
       Command      : String;
-      Console     : Virtual_Console := null;
+      Console      : Virtual_Console := null;
       Hide_Output  : Boolean := False;
       Show_Command : Boolean := True;
       Errors       : out Boolean)
    is
       pragma Unreferenced (Show_Command);
       Err : aliased Boolean;
-      S   : constant String := Execute_GPS_Shell_Command
-        (Script, Command, Err'Unchecked_Access);
+      S   : constant String :=
+              Execute_GPS_Shell_Command
+                (Script, Command, Err'Unchecked_Access);
    begin
       Errors := Err;
       if S /= "" then
          Insert_Text (Script, Console, S & ASCII.LF, Hide_Output);
       end if;
+
       if not Hide_Output then
          Display_Prompt (Script, Console);
       end if;
@@ -649,7 +658,7 @@ package body GNAT.Scripts.Shell is
 
             declare
                Callback : Shell_Callback_Data'Class :=
-                 Shell_Callback_Data'Class (Create (Script, Count));
+                            Shell_Callback_Data'Class (Create (Script, Count));
             begin
                Callback.Script := Shell_Scripting (Script);
 
@@ -826,6 +835,7 @@ package body GNAT.Scripts.Shell is
                   Errors.all := True;
                   return "Couldn't parse argument string for "
                     & Command (First .. Last - 1);
+
                else
                   --  Cleanup the arguments to remove unnecessary quoting
                   for J in Args'Range loop
@@ -942,13 +952,13 @@ package body GNAT.Scripts.Shell is
       Arguments_Count : Natural) return Callback_Data'Class
    is
       Data : constant Shell_Callback_Data :=
-        (Callback_Data with
-         Script          => Shell_Scripting (Script),
-         Args            => new Argument_List (1 .. Arguments_Count),
-         Return_Value    => null,
-         Return_Dict     => null,
-         Return_As_List  => False,
-         Return_As_Error => False);
+               (Callback_Data with
+                Script          => Shell_Scripting (Script),
+                Args            => new Argument_List (1 .. Arguments_Count),
+                Return_Value    => null,
+                Return_Dict     => null,
+                Return_As_List  => False,
+                Return_As_Error => False);
    begin
       return Data;
    end Create;
