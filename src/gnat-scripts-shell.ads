@@ -1,7 +1,7 @@
 -----------------------------------------------------------------------
 --                               G P S                               --
 --                                                                   --
---                     Copyright (C) 2003-2007, AdaCore              --
+--                 Copyright (C) 2003-2007, AdaCore                  --
 --                                                                   --
 -- GPS is free  software;  you can redistribute it and/or modify  it --
 -- under the terms of the GNU General Public License as published by --
@@ -17,7 +17,7 @@
 -- Place - Suite 330, Boston, MA 02111-1307, USA.                    --
 -----------------------------------------------------------------------
 
---  This package contains the implementation for a simple scripting language,
+--  This package contains the implementation for a simple scripting language
 
 private with Ada.Containers.Indefinite_Doubly_Linked_Lists;
 private with Ada.Containers.Indefinite_Hashed_Maps;
@@ -143,6 +143,7 @@ private
    end record;
 
    overriding procedure Destroy (Script : access Shell_Scripting_Record);
+
    overriding procedure Register_Command
      (Script        : access Shell_Scripting_Record;
       Command       : String;
@@ -151,12 +152,15 @@ private
       Handler       : Module_Command_Function;
       Class         : Class_Type := No_Class;
       Static_Method : Boolean := False);
+
    overriding procedure Register_Class
      (Script        : access Shell_Scripting_Record;
       Name          : String;
       Base          : Class_Type := No_Class);
+
    overriding procedure Block_Commands
      (Script : access Shell_Scripting_Record; Block : Boolean);
+
    overriding procedure Execute_Command
      (Script        : access Shell_Scripting_Record;
       Command       : String;
@@ -164,6 +168,7 @@ private
       Hide_Output   : Boolean := False;
       Show_Command  : Boolean := True;
       Errors        : out Boolean);
+
    overriding function Execute_Command
      (Script        : access Shell_Scripting_Record;
       Command       : String;
@@ -171,20 +176,24 @@ private
       Hide_Output   : Boolean := False;
       Show_Command  : Boolean := True;
       Errors        : access Boolean) return String;
+
    overriding function Execute_Command
      (Script        : access Shell_Scripting_Record;
       Command       : String;
       Console       : Virtual_Console := null;
       Hide_Output   : Boolean := False;
       Errors        : access Boolean) return Boolean;
+
    overriding function Execute_Command
      (Script  : access Shell_Scripting_Record;
       Command : String;
       Args    : Callback_Data'Class) return Boolean;
+
    overriding function Execute_Command_With_Args
      (Script        : access Shell_Scripting_Record;
       Command       : String;
       Args          : GNAT.OS_Lib.Argument_List) return String;
+
    overriding procedure Execute_File
      (Script        : access Shell_Scripting_Record;
       Filename      : String;
@@ -192,20 +201,26 @@ private
       Hide_Output   : Boolean := False;
       Show_Command  : Boolean := True;
       Errors        : out Boolean);
+
    overriding function Get_Name
      (Script : access Shell_Scripting_Record) return String;
+
    overriding function Get_Repository
      (Script : access Shell_Scripting_Record)
       return Scripts_Repository;
+
    overriding function Current_Script
      (Script : access Shell_Scripting_Record) return String;
+
    overriding procedure Display_Prompt
      (Script  : access Shell_Scripting_Record;
       Console : Virtual_Console := null);
+
    overriding procedure Complete
      (Script      : access Shell_Scripting_Record;
       Input       : String;
       Completions : out String_Lists.List);
+
    overriding function New_Instance
      (Script : access Shell_Scripting_Record; Class : Class_Type)
       return Class_Instance;
@@ -222,60 +237,83 @@ private
 
    overriding function Clone
      (Data : Shell_Callback_Data) return Callback_Data'Class;
+
    overriding function Get_Script
      (Data : Shell_Callback_Data) return Scripting_Language;
+
    overriding function Number_Of_Arguments
      (Data : Shell_Callback_Data) return Natural;
+
    overriding procedure Name_Parameters
      (Data  : in out Shell_Callback_Data; Names : Cst_Argument_List);
+
    overriding function Nth_Arg
      (Data : Shell_Callback_Data; N : Positive) return String;
+
    overriding function Nth_Arg
      (Data : Shell_Callback_Data; N : Positive) return Integer;
+
    overriding function Nth_Arg
      (Data : Shell_Callback_Data; N : Positive) return Boolean;
+
    overriding function Nth_Arg
      (Data : Shell_Callback_Data; N : Positive) return Subprogram_Type;
+
    overriding function Nth_Arg
      (Data : Shell_Callback_Data; N : Positive; Class : Class_Type;
-      Allow_Null : Boolean := False)
-      return Class_Instance;
+      Allow_Null : Boolean := False) return Class_Instance;
+
    overriding procedure Set_Error_Msg
      (Data : in out Shell_Callback_Data; Msg : String);
+
    overriding procedure Set_Return_Value_As_List
      (Data : in out Shell_Callback_Data; Size : Natural := 0);
+
    overriding procedure Set_Return_Value
      (Data   : in out Shell_Callback_Data; Value : Integer);
+
    overriding procedure Set_Return_Value
      (Data   : in out Shell_Callback_Data; Value : Boolean);
+
    overriding procedure Set_Return_Value
      (Data   : in out Shell_Callback_Data; Value : String);
+
    overriding procedure Set_Return_Value
      (Data   : in out Shell_Callback_Data; Value : Class_Instance);
+
    overriding procedure Set_Return_Value_Key
      (Data   : in out Shell_Callback_Data;
       Key    : String;
       Append : Boolean := False);
+
    overriding procedure Set_Return_Value_Key
      (Data   : in out Shell_Callback_Data;
       Key    : Integer;
       Append : Boolean := False);
+
    overriding procedure Set_Return_Value_Key
      (Data   : in out Shell_Callback_Data;
       Key    : Class_Instance;
       Append : Boolean := False);
+
    overriding procedure Free (Data : in out Shell_Callback_Data);
+
    overriding function Create
      (Script          : access Shell_Scripting_Record;
       Arguments_Count : Natural) return Callback_Data'Class;
+
    overriding procedure Set_Nth_Arg
      (Data : Shell_Callback_Data; N : Positive; Value : String);
+
    overriding procedure Set_Nth_Arg
      (Data : Shell_Callback_Data; N : Positive; Value : Integer);
+
    overriding procedure Set_Nth_Arg
      (Data : Shell_Callback_Data; N : Positive; Value : Boolean);
+
    overriding procedure Set_Nth_Arg
      (Data : Shell_Callback_Data; N : Positive; Value : Class_Instance);
+
    overriding procedure Set_Nth_Arg
      (Data : Shell_Callback_Data; N : Positive; Value : Subprogram_Type);
    --  See doc from inherited subprogram
@@ -293,15 +331,20 @@ private
    overriding function Execute
      (Subprogram : access Shell_Subprogram_Record;
       Args       : Callback_Data'Class) return Boolean;
+
    overriding function Execute
      (Subprogram : access Shell_Subprogram_Record;
       Args       : Callback_Data'Class) return String;
+
    overriding function Execute
      (Subprogram : access Shell_Subprogram_Record;
       Args       : Callback_Data'Class) return GNAT.Strings.String_List;
+
    overriding procedure Free (Subprogram : in out Shell_Subprogram_Record);
+
    overriding function Get_Name
      (Subprogram : access Shell_Subprogram_Record) return String;
+
    overriding function Get_Script
      (Subprogram : Shell_Subprogram_Record) return Scripting_Language;
    --  See doc from inherited subprograms

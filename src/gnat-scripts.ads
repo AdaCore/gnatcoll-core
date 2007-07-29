@@ -1,7 +1,7 @@
 -----------------------------------------------------------------------
 --                               G P S                               --
 --                                                                   --
---                      Copyright (C) 2003-2007, AdaCore             --
+--                 Copyright (C) 2003-2007, AdaCore                  --
 --                                                                   --
 -- GPS is free  software;  you can redistribute it and/or modify  it --
 -- under the terms of the GNU General Public License as published by --
@@ -119,9 +119,9 @@ package GNAT.Scripts is
    --  issues.
 
    function New_Class
-     (Repo   : Scripts_Repository;
-      Name   : String;
-      Base   : Class_Type := No_Class) return Class_Type;
+     (Repo : Scripts_Repository;
+      Name : String;
+      Base : Class_Type := No_Class) return Class_Type;
    --  For some languages, this notion is not supported, and the class will not
    --  be visible by the user in the shell. Methods created for the class will
    --  then simply be made available directly in the shell.

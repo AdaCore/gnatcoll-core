@@ -60,8 +60,10 @@ package body GNAT.Scripts.Impl is
       then
          null;
          --  Insert_Log (Script, Console, Txt);
+
       elsif Console /= null then
          Insert_Text (Console, Txt);
+
       elsif Script.Console /= null then
          Insert_Text (Script.Console, Txt);
       end if;
