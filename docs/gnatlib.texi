@@ -264,7 +264,7 @@ python was installed on your system.
 
 @item --disable-gtk
 If this switch is specified, then no package depending on the gtk+ graphical
-toolkit will be build.
+toolkit will be built.
 
 @item --disable-pygtk
 If this switch is specified, then support for pygtk (@pxref{The Python
