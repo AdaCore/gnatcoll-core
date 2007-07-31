@@ -71,7 +71,7 @@ AC_DEFUN(AM_PATH_PYTHON,
    if test x"$PYTHON_PATH_WITH" = xno ; then
       AC_MSG_CHECKING(for python)
       AC_MSG_RESULT(no, use --with-python if needed)
-      PYTHON_BASE=
+      PYTHON_BASE=no
       WITH_PYTHON=no
 
    else
