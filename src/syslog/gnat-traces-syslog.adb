@@ -45,7 +45,7 @@ package body GNAT.Traces.Syslog is
       Mail      => 2  * 8,
       Daemon    => 3  * 8,
       Auth      => 4  * 8,
-      Syslog    => 5  * 8,
+      Sys_Log   => 5  * 8,
       Printer   => 6  * 8,
       News      => 7  * 8,
       UUCP      => 8  * 8,

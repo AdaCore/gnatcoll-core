@@ -81,7 +81,7 @@ package GNAT.Traces.Syslog is
       Mail,      -- mail system
       Daemon,    -- system daemons
       Auth,      -- security/authorization messages
-      Syslog,    -- messages generated internally
+      Sys_Log,   -- messages generated internally
       Printer,   -- line printer subsystem
       News,      -- network news subsystem
       UUCP,      -- UUCP subsystem
