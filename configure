@@ -847,6 +847,7 @@ if test -n "$ac_init_help"; then
 Optional Features:
   --disable-FEATURE       do not include FEATURE (same as --enable-FEATURE=no)
   --enable-FEATURE[=ARG]  include FEATURE [ARG=yes]
+  --disable-gtk           Disable support for GTK [default=enabled]
   --enable-shared-python  Link with shared python library instead of static
   --disable-pygtk         Disable support for PyGTK [default=enabled]
   --disable-syslog        Disable support for syslog [default=enabled]
@@ -1481,7 +1482,17 @@ test -z "$INSTALL_DATA" && INSTALL_DATA='${INSTALL} -m 644'
 
 
 
-   # Extract the first word of "pkg-config", so it can be a program name with args.
+   # Check whether --enable-gtk or --disable-gtk was given.
+if test "${enable_gtk+set}" = set; then
+  enableval="$enable_gtk"
+  WITH_GTK=$enableval
+else
+  WITH_GTK=yes
+fi;
+
+
+   if test $WITH_GTK = yes; then
+     # Extract the first word of "pkg-config", so it can be a program name with args.
 set dummy pkg-config; ac_word=$2
 echo "$as_me:$LINENO: checking for $ac_word" >&5
 echo $ECHO_N "checking for $ac_word... $ECHO_C" >&6
@@ -1521,23 +1532,30 @@ else
 echo "${ECHO_T}no" >&6
 fi
 
-   echo "$as_me:$LINENO: checking gtk+" >&5
-echo $ECHO_N "checking gtk+... $ECHO_C" >&6
-   if test "$PKG_CONFIG" = "no" ; then
-      echo "$as_me:$LINENO: result: not found" >&5
+     echo "$as_me:$LINENO: checking for gtk+" >&5
+echo $ECHO_N "checking for gtk+... $ECHO_C" >&6
+     if test "$PKG_CONFIG" = "no" ; then
+        echo "$as_me:$LINENO: result: not found" >&5
 echo "${ECHO_T}not found" >&6
-      WITH_GTK=no
-   else
-      GTK_PREFIX=`$PKG_CONFIG gtk+-2.0 --variable=prefix`
-      echo "$as_me:$LINENO: result: $GTK_PREFIX" >&5
+        WITH_GTK=no
+     else
+        GTK_PREFIX=`$PKG_CONFIG gtk+-2.0 --variable=prefix`
+        echo "$as_me:$LINENO: result: $GTK_PREFIX" >&5
 echo "${ECHO_T}$GTK_PREFIX" >&6
-      GTK_GCC_FLAGS=`$PKG_CONFIG gtk+-2.0 --cflags`
-      if test x"$GTK_GCC_FLAGS" != x ; then
-         WITH_GTK=yes
-      else
-         WITH_GTK=no
-      fi
+        GTK_GCC_FLAGS=`$PKG_CONFIG gtk+-2.0 --cflags`
+        if test x"$GTK_GCC_FLAGS" != x ; then
+           WITH_GTK=yes
+        else
+           WITH_GTK=no
+        fi
+     fi
+   else
+     echo "$as_me:$LINENO: checking for gtk+" >&5
+echo $ECHO_N "checking for gtk+... $ECHO_C" >&6
+     echo "$as_me:$LINENO: result: $WITH_GTK (from switch)" >&5
+echo "${ECHO_T}$WITH_GTK (from switch)" >&6
    fi
+
 
 
 
@@ -2435,7 +2453,7 @@ fi;
 echo $ECHO_N "checking for python... $ECHO_C" >&6
       echo "$as_me:$LINENO: result: no" >&5
 echo "${ECHO_T}no" >&6
-      PYTHON_BASE=no
+      PYTHON_BASE=
       WITH_PYTHON=no
 
    else
@@ -3499,7 +3517,7 @@ echo "$as_me:     use --enable-syslog to override" >&6;}
 { echo "$as_me:$LINENO: --------------------------------------------" >&5
 echo "$as_me: --------------------------------------------" >&6;}
 
-                                                            ac_config_files="$ac_config_files gnatlib_shared.gpr docs/Makefile Makefile.conf src/gnatlib_python.gpr distrib/relocatable/gnatlib.gpr distrib/gnatlib_python.gpr distrib/static/gnatlib.gpr"
+                                                                      ac_config_files="$ac_config_files gnatlib_shared.gpr docs/Makefile Makefile.conf src/gnatlib_python.gpr distrib/relocatable/gnatlib.gpr distrib/gnatlib_python.gpr distrib/static/gnatlib.gpr"
 cat >confcache <<\_ACEOF
 # This file is a shell script that caches the results of configure
 # tests run on this system so they can be shared between configure
@@ -4053,6 +4071,7 @@ do
   "gnatlib_shared.gpr" ) CONFIG_FILES="$CONFIG_FILES gnatlib_shared.gpr" ;;
   "docs/Makefile" ) CONFIG_FILES="$CONFIG_FILES docs/Makefile" ;;
   "Makefile.conf" ) CONFIG_FILES="$CONFIG_FILES Makefile.conf" ;;
+  "src/gnatlib_python.gpr" ) CONFIG_FILES="$CONFIG_FILES src/gnatlib_python.gpr" ;;
   "distrib/relocatable/gnatlib.gpr" ) CONFIG_FILES="$CONFIG_FILES distrib/relocatable/gnatlib.gpr" ;;
   "distrib/gnatlib_python.gpr" ) CONFIG_FILES="$CONFIG_FILES distrib/gnatlib_python.gpr" ;;
   "distrib/static/gnatlib.gpr" ) CONFIG_FILES="$CONFIG_FILES distrib/static/gnatlib.gpr" ;;

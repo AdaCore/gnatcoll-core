@@ -71,7 +71,7 @@ AC_DEFUN(AM_PATH_PYTHON,
    if test x"$PYTHON_PATH_WITH" = xno ; then
       AC_MSG_CHECKING(for python)
       AC_MSG_RESULT(no, use --with-python if needed)
-      PYTHON_BASE=no
+      PYTHON_BASE=
       WITH_PYTHON=no
 
    else
@@ -282,21 +282,35 @@ AC_DEFUN(AM_TO_GPR,
 
 AC_DEFUN(AM_PATH_GTK,
 [
-   AC_PATH_PROG(PKG_CONFIG, pkg-config, no)
-   AC_MSG_CHECKING(gtk+)
-   if test "$PKG_CONFIG" = "no" ; then
-      AC_MSG_RESULT(not found)
-      WITH_GTK=no
+   AC_ARG_ENABLE(gtk,
+     AC_HELP_STRING(
+       [--disable-gtk],
+       [Disable support for GTK [[default=enabled]]]),
+     [WITH_GTK=$enableval],
+     [WITH_GTK=yes])
+
+
+   if test $WITH_GTK = yes; then
+     AC_PATH_PROG(PKG_CONFIG, pkg-config, no)
+     AC_MSG_CHECKING(for gtk+)
+     if test "$PKG_CONFIG" = "no" ; then
+        AC_MSG_RESULT(not found)
+        WITH_GTK=no
+     else
+        GTK_PREFIX=`$PKG_CONFIG gtk+-2.0 --variable=prefix`
+        AC_MSG_RESULT($GTK_PREFIX)
+        GTK_GCC_FLAGS=`$PKG_CONFIG gtk+-2.0 --cflags`
+        if test x"$GTK_GCC_FLAGS" != x ; then
+           WITH_GTK=yes
+        else
+           WITH_GTK=no
+        fi
+     fi
    else
-      GTK_PREFIX=`$PKG_CONFIG gtk+-2.0 --variable=prefix`
-      AC_MSG_RESULT($GTK_PREFIX)
-      GTK_GCC_FLAGS=`$PKG_CONFIG gtk+-2.0 --cflags`
-      if test x"$GTK_GCC_FLAGS" != x ; then
-         WITH_GTK=yes
-      else
-         WITH_GTK=no
-      fi
+     AC_MSG_CHECKING(for gtk+)
+     AC_MSG_RESULT($WITH_GTK (from switch))
    fi
+
    AC_SUBST(PKG_CONFIG)
    AC_SUBST(GTK_GCC_FLAGS)
    AC_SUBST(WITH_GTK)
