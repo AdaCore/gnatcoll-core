@@ -282,7 +282,7 @@ package body GNAT.Scripts.Shell is
       C : Command_Hash.Cursor := First (Script.Commands_List);
    begin
       while Has_Element (C) loop
-         Insert_Text (Script, Console, Element (C).Command.all & " ");
+         Insert_Text (Script, Console, Element (C).Command.all & ASCII.LF);
          Next (C);
       end loop;
    end List_Commands;
