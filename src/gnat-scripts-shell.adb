@@ -17,20 +17,21 @@
 -- Place - Suite 330, Boston, MA 02111-1307, USA.                    --
 -----------------------------------------------------------------------
 
-with Ada.Characters.Handling;   use Ada.Characters.Handling;
-with Ada.Exceptions;            use Ada.Exceptions;
-with Ada.Strings.Fixed;         use Ada.Strings.Fixed;
-with Ada.Strings.Unbounded;     use Ada.Strings.Unbounded;
+with Ada.Characters.Handling;           use Ada.Characters.Handling;
+with Ada.Containers.Indefinite_Vectors;
+with Ada.Exceptions;                    use Ada.Exceptions;
+with Ada.Strings.Fixed;                 use Ada.Strings.Fixed;
+with Ada.Strings.Unbounded;             use Ada.Strings.Unbounded;
 with Ada.Unchecked_Deallocation;
 
 with System.Address_Image;
-with System;                    use System;
+with System;                            use System;
 
-with GNAT.Debug_Utilities;      use GNAT.Debug_Utilities;
-with GNAT.OS_Lib;               use GNAT.OS_Lib;
-with GNAT.Scripts;              use GNAT.Scripts;
-with GNAT.Scripts.Impl;         use GNAT.Scripts.Impl;
-with GNAT.Scripts.Utils;        use GNAT.Scripts.Utils;
+with GNAT.Debug_Utilities;              use GNAT.Debug_Utilities;
+with GNAT.OS_Lib;                       use GNAT.OS_Lib;
+with GNAT.Scripts;                      use GNAT.Scripts;
+with GNAT.Scripts.Impl;                 use GNAT.Scripts.Impl;
+with GNAT.Scripts.Utils;                use GNAT.Scripts.Utils;
 
 package body GNAT.Scripts.Shell is
 
@@ -38,7 +39,7 @@ package body GNAT.Scripts.Shell is
 
    procedure Free_Internal_Data (Script : access Shell_Scripting_Record'Class);
    --  Free the internal memory used to store the results of previous commands
-   --  and class instances
+   --  and class instances.
 
    ----------
    -- Misc --
@@ -279,12 +280,39 @@ package body GNAT.Scripts.Shell is
      (Script  : access Shell_Scripting_Record'Class;
       Console : Virtual_Console := null)
    is
-      C : Command_Hash.Cursor := First (Script.Commands_List);
+      package Command_List is
+        new Ada.Containers.Indefinite_Vectors (Positive, String);
+
+      package Ascending is new Command_List.Generic_Sorting ("<");
+
+      V : Command_List.Vector;
    begin
-      while Has_Element (C) loop
-         Insert_Text (Script, Console, Element (C).Command.all & ASCII.LF);
-         Next (C);
-      end loop;
+      --  Put all commands into V
+
+      declare
+         C : Command_Hash.Cursor := Script.Commands_List.First;
+      begin
+         while Has_Element (C) loop
+            V.Append (Element (C).Command.all);
+            Next (C);
+         end loop;
+      end;
+
+      --  Sort commands
+
+      Ascending.Sort (V);
+
+      --  Output them
+
+      declare
+         C : Command_List.Cursor := V.First;
+      begin
+         while Command_List.Has_Element (C) loop
+            Insert_Text
+              (Script, Console, Command_List.Element (C) & ASCII.LF);
+            Command_List.Next (C);
+         end loop;
+      end;
    end List_Commands;
 
    ----------------------
@@ -300,11 +328,11 @@ package body GNAT.Scripts.Shell is
       Class         : Class_Type := No_Class;
       Static_Method : Boolean := False)
    is
-      Cmd  : GNAT.Strings.String_Access;
-      Min  : Natural := Minimum_Args;
-      Max  : Natural := Maximum_Args;
+      Cmd    : GNAT.Strings.String_Access;
+      Min    : Natural := Minimum_Args;
+      Max    : Natural := Maximum_Args;
       Info_C : Command_Hash.Cursor;
-      Info : Command_Information_Access;
+      Info   : Command_Information_Access;
    begin
       if Command = "" then
          return;
@@ -334,11 +362,10 @@ package body GNAT.Scripts.Shell is
 
       Info_C := Find (Script.Commands_List, Cmd.all);
 
-      --  Check that the command is not already registered.
+      --  Check that the command is not already registered
 
       if Has_Element (Info_C) then
-         raise Program_Error with
-         "Command already registered " & Cmd.all;
+         raise Program_Error with "Command already registered " & Cmd.all;
 
       else
          Info := new Command_Information'
@@ -612,9 +639,11 @@ package body GNAT.Scripts.Shell is
    begin
       Errors.all := Err;
       Insert_Text (Script, Console, Result & ASCII.LF, Hide_Output);
+
       if not Hide_Output then
          Display_Prompt (Script, Console);
       end if;
+
       return Result = "1" or else To_Lower (Result) = "true";
    end Execute_Command;
 
@@ -623,10 +652,10 @@ package body GNAT.Scripts.Shell is
    -------------------------------
 
    function Execute_GPS_Shell_Command
-     (Script    : access Shell_Scripting_Record'Class;
-      Command   : String;
-      Args      : GNAT.OS_Lib.Argument_List;
-      Errors    : access Boolean) return String
+     (Script  : access Shell_Scripting_Record'Class;
+      Command : String;
+      Args    : GNAT.OS_Lib.Argument_List;
+      Errors  : access Boolean) return String
    is
       Data_C   : Command_Hash.Cursor;
       Data     : Command_Information_Access;
@@ -645,6 +674,7 @@ package body GNAT.Scripts.Shell is
       Errors.all := False;
 
       Data_C := Find (Script.Commands_List, Command);
+
       if Has_Element (Data_C) then
          Data := Element (Data_C);
 
@@ -876,8 +906,8 @@ package body GNAT.Scripts.Shell is
    -- Get_Script --
    ----------------
 
-   function Get_Script (Data : Shell_Callback_Data)
-      return Scripting_Language is
+   function Get_Script
+     (Data : Shell_Callback_Data) return Scripting_Language is
    begin
       return Scripting_Language (Data.Script);
    end Get_Script;
@@ -886,8 +916,8 @@ package body GNAT.Scripts.Shell is
    -- Get_Repository --
    --------------------
 
-   function Get_Repository (Script : access Shell_Scripting_Record)
-      return Scripts_Repository is
+   function Get_Repository
+     (Script : access Shell_Scripting_Record) return Scripts_Repository is
    begin
       return Script.Repo;
    end Get_Repository;
@@ -1033,8 +1063,8 @@ package body GNAT.Scripts.Shell is
    -- Nth_Arg --
    -------------
 
-   function Nth_Arg (Data : Shell_Callback_Data; N : Positive)
-      return Boolean
+   function Nth_Arg
+     (Data : Shell_Callback_Data; N : Positive) return Boolean
    is
       S : constant String := Nth_Arg (Data, N);
    begin
@@ -1067,11 +1097,10 @@ package body GNAT.Scripts.Shell is
      (Data       : Shell_Callback_Data;
       N          : Positive;
       Class      : Class_Type;
-      Allow_Null : Boolean := False)
-      return Class_Instance
+      Allow_Null : Boolean := False) return Class_Instance
    is
-      Ins : constant Shell_Class_Instance := Instance_From_Name
-        (Data.Script, Nth_Arg (Data, N));
+      Ins : constant Shell_Class_Instance :=
+              Instance_From_Name (Data.Script, Nth_Arg (Data, N));
    begin
       if Ins = null and then Allow_Null then
          return No_Class_Instance;
@@ -1306,8 +1335,8 @@ package body GNAT.Scripts.Shell is
      (Subprogram : access Shell_Subprogram_Record;
       Args       : Callback_Data'Class) return String
    is
-      D : constant Shell_Callback_Data := Shell_Callback_Data (Args);
-      C : Argument_List (D.Args'Range);
+      D      : constant Shell_Callback_Data := Shell_Callback_Data (Args);
+      C      : Argument_List (D.Args'Range);
       Errors : aliased Boolean;
    begin
       for A in D.Args'Range loop
