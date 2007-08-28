@@ -17,13 +17,13 @@
 -- Place - Suite 330, Boston, MA 02111-1307, USA.                    --
 -----------------------------------------------------------------------
 
-with Ada.Calendar;            use Ada.Calendar;
-with Ada.Characters.Handling; use Ada.Characters.Handling;
+with Ada.Calendar;               use Ada.Calendar;
+with Ada.Characters.Handling;    use Ada.Characters.Handling;
 with Ada.Unchecked_Conversion;
 with Ada.Unchecked_Deallocation;
-with GNAT.OS_Lib;             use GNAT.OS_Lib;
-with GNAT.Scripts.Impl;       use GNAT.Scripts.Impl;
-with System;                  use System;
+with GNAT.OS_Lib;                use GNAT.OS_Lib;
+with GNAT.Scripts.Impl;          use GNAT.Scripts.Impl;
+with System;                     use System;
 with System.Address_Image;
 
 package body GNAT.Scripts is
@@ -39,10 +39,7 @@ package body GNAT.Scripts is
    -- Data stored in class_instance --
    -----------------------------------
 
-   type User_Data_Type is
-     (Strings,
-      Integers,
-      Consoles);
+   type User_Data_Type is (Strings, Integers, Consoles);
 
    type Scalar_Properties_Record (Typ : User_Data_Type) is
      new Instance_Property_Record
@@ -96,7 +93,7 @@ package body GNAT.Scripts is
         (Scripts_Repository_Record'Class, Scripts_Repository);
       procedure Unchecked_Free is new Ada.Unchecked_Deallocation
         (Scripting_Language_Record'Class, Scripting_Language);
-      C    : Classes_Hash.Cursor;
+      C     : Classes_Hash.Cursor;
       Class : Class_Type;
    begin
       if Repo /= null then
@@ -309,8 +306,8 @@ package body GNAT.Scripts is
    -------------------------------
 
    function Lookup_Scripting_Language
-     (Repo   : Scripts_Repository;
-      Name   : String) return Scripting_Language
+     (Repo : Scripts_Repository;
+      Name : String) return Scripting_Language
    is
       Tmp : constant Scripting_Language_List := Repo.Scripting_Languages;
       N   : constant String := To_Lower (Name);
@@ -329,8 +326,7 @@ package body GNAT.Scripts is
    -----------------------------
 
    function Get_Scripting_Languages
-     (Repo : Scripts_Repository)
-      return Scripting_Language_Array is
+     (Repo : Scripts_Repository) return Scripting_Language_Array is
    begin
       return Repo.Scripting_Languages.all;
    end Get_Scripting_Languages;
@@ -340,8 +336,8 @@ package body GNAT.Scripts is
    --------------------
 
    procedure Block_Commands
-     (Repo   : Scripts_Repository;
-      Block  : Boolean)
+     (Repo  : Scripts_Repository;
+      Block : Boolean)
    is
       Tmp : constant Scripting_Language_List := Repo.Scripting_Languages;
    begin
@@ -387,9 +383,9 @@ package body GNAT.Scripts is
    ---------------
 
    function New_Class
-     (Repo   : Scripts_Repository;
-      Name   : String;
-      Base   : Class_Type := No_Class) return Class_Type
+     (Repo : Scripts_Repository;
+      Name : String;
+      Base : Class_Type := No_Class) return Class_Type
    is
       Tmp   : constant Scripting_Language_List := Repo.Scripting_Languages;
       Class : Class_Type;
@@ -522,8 +518,7 @@ package body GNAT.Scripts is
    -------------
 
    function Nth_Arg
-     (Data : Callback_Data; N : Positive; Default : String)
-      return String is
+     (Data : Callback_Data; N : Positive; Default : String) return String is
    begin
       return Nth_Arg (Callback_Data'Class (Data), N);
    exception
@@ -536,8 +531,7 @@ package body GNAT.Scripts is
    -------------
 
    function Nth_Arg
-     (Data : Callback_Data; N : Positive; Default : Integer)
-      return Integer is
+     (Data : Callback_Data; N : Positive; Default : Integer) return Integer is
    begin
       return Nth_Arg (Callback_Data'Class (Data), N);
    exception
@@ -550,8 +544,7 @@ package body GNAT.Scripts is
    -------------
 
    function Nth_Arg
-     (Data : Callback_Data; N : Positive; Default : Boolean)
-      return Boolean is
+     (Data : Callback_Data; N : Positive; Default : Boolean) return Boolean is
    begin
       return Nth_Arg (Callback_Data'Class (Data), N);
    exception
@@ -580,8 +573,7 @@ package body GNAT.Scripts is
    -- Get_Repository --
    --------------------
 
-   function Get_Repository (Data : Callback_Data)
-      return Scripts_Repository is
+   function Get_Repository (Data : Callback_Data) return Scripts_Repository is
    begin
       return Get_Repository (Get_Script (Callback_Data'Class (Data)));
    end Get_Repository;
@@ -651,8 +643,7 @@ package body GNAT.Scripts is
    -------------------
 
    function Get_Instances
-     (Prop : Scalar_Properties_Record) return Instance_List_Access
-   is
+     (Prop : Scalar_Properties_Record) return Instance_List_Access is
    begin
       case Prop.Typ is
          when Strings | Integers | Consoles =>
@@ -667,10 +658,10 @@ package body GNAT.Scripts is
    ------------
 
    procedure Decref (Inst : access Class_Instance_Record) is
-      Data : User_Data_List;
-      Ptr  : Class_Instance_Record_Access;
-      L    : Instance_Array_Access;
-      Instances : Instance_List_Access;
+      Data              : User_Data_List;
+      Ptr               : Class_Instance_Record_Access;
+      L                 : Instance_Array_Access;
+      Instances         : Instance_List_Access;
       Refs_In_User_Data : Natural := 0;
    begin
       --  We are already in the process of destroying the class instance, so
@@ -883,8 +874,7 @@ package body GNAT.Scripts is
    --------------
 
    procedure Set_Data
-     (Instance : Class_Instance; Name : Class_Type; Value : String)
-   is
+     (Instance : Class_Instance; Name : Class_Type; Value : String) is
    begin
       Set_Data
         (Instance, Get_Name (Name),
@@ -896,8 +886,7 @@ package body GNAT.Scripts is
    --------------
 
    procedure Set_Data
-     (Instance : Class_Instance; Name : Class_Type; Value : Integer)
-   is
+     (Instance : Class_Instance; Name : Class_Type; Value : Integer) is
    begin
       Set_Data
         (Instance, Get_Name (Name),
@@ -929,7 +918,7 @@ package body GNAT.Scripts is
      (Instance : Class_Instance; Name : Class_Type) return Integer
    is
       Prop : constant Instance_Property :=
-        Get_Data (Instance, Get_Name (Name));
+               Get_Data (Instance, Get_Name (Name));
    begin
       return Scalar_Properties (Prop).Int;
    end Get_Data;
@@ -942,7 +931,7 @@ package body GNAT.Scripts is
      (Instance : Class_Instance; Name : Class_Type) return String
    is
       Prop : constant Instance_Property :=
-        Get_Data (Instance, Get_Name (Name));
+               Get_Data (Instance, Get_Name (Name));
    begin
       return Scalar_Properties (Prop).Str.all;
    end Get_Data;
@@ -988,8 +977,8 @@ package body GNAT.Scripts is
    -------------------------
 
    procedure Set_Default_Console
-     (Script       : access Scripting_Language_Record;
-      Console      : Virtual_Console) is
+     (Script  : access Scripting_Language_Record;
+      Console : Virtual_Console) is
    begin
       if Script.Console /= null then
          Set_As_Default_Console (Script.Console, null);
