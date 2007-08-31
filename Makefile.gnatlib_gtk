@@ -22,7 +22,7 @@ else
   gnatlib-internal-compile:
 	${MAKE} -C ${BASE_DIR}/../gnatlib ${GNATLIB_LIBRARY_TYPE}
   gnatlib-internal-clean:
-	${MAKE} -C ${BASE_DIR}/../gnatlib ${GNATLIB_LIBRARY_TYPE} clean
+	${MAKE} -C ${BASE_DIR}/../gnatlib GNATLIB_LIBRARY_TYPE=${GNATLIB_LIBRARY_TYPE} clean
 endif
 
 GNATLIB_BASE_DIR := $(BASE_DIR)
