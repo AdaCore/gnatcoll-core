@@ -41,8 +41,14 @@ package GNAT.Scripts.Python is
 
    type Python_Callback_Data is new Callback_Data with private;
 
-   function Get_Param (Data : Python_Callback_Data'Class; N : Positive)
+   function Get_Param
+     (Data : Python_Callback_Data'Class; N : Positive)
       return PyObject;
+   procedure Get_Param
+     (Data    : Python_Callback_Data'Class;
+      N       : Positive;
+      Result  : out PyObject;
+      Success : out Boolean);
    --  Return the N-th command line parameter, taking into account the keywords
    --  if any.
    --  The returned value is a borrowed reference and must not be DECREF'd
@@ -205,6 +211,25 @@ private
      (Data : Python_Callback_Data; N : Positive; Class : Class_Type;
       Allow_Null : Boolean := False)
       return Class_Instance;
+   overriding function Nth_Arg
+     (Data : Python_Callback_Data; N : Positive; Default : String)
+      return String;
+   overriding function Nth_Arg
+     (Data : Python_Callback_Data; N : Positive; Default : Integer)
+      return Integer;
+   overriding function Nth_Arg
+     (Data : Python_Callback_Data; N : Positive; Default : Boolean)
+      return Boolean;
+   overriding function Nth_Arg
+     (Data    : Python_Callback_Data;
+      N       : Positive;
+      Class   : Class_Type := Any_Class;
+      Default : Class_Instance;
+      Allow_Null : Boolean := False) return Class_Instance;
+   overriding function Nth_Arg
+     (Data    : Python_Callback_Data;
+      N       : Positive;
+      Default : Subprogram_Type) return Subprogram_Type;
    overriding procedure Set_Error_Msg
      (Data : in out Python_Callback_Data; Msg : String);
    overriding procedure Set_Return_Value_As_List

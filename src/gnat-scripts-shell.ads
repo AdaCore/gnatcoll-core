@@ -263,6 +263,26 @@ private
      (Data : Shell_Callback_Data; N : Positive; Class : Class_Type;
       Allow_Null : Boolean := False) return Class_Instance;
 
+   overriding function Nth_Arg
+     (Data : Shell_Callback_Data; N : Positive; Default : String)
+      return String;
+   overriding function Nth_Arg
+     (Data : Shell_Callback_Data; N : Positive; Default : Integer)
+      return Integer;
+   overriding function Nth_Arg
+     (Data : Shell_Callback_Data; N : Positive; Default : Boolean)
+      return Boolean;
+   overriding function Nth_Arg
+     (Data    : Shell_Callback_Data;
+      N       : Positive;
+      Class   : Class_Type := Any_Class;
+      Default : Class_Instance;
+      Allow_Null : Boolean := False) return Class_Instance;
+   overriding function Nth_Arg
+     (Data    : Shell_Callback_Data;
+      N       : Positive;
+      Default : Subprogram_Type) return Subprogram_Type;
+
    overriding procedure Set_Error_Msg
      (Data : in out Shell_Callback_Data; Msg : String);
 

@@ -80,6 +80,24 @@ package body GNAT.Scripts.Shell is
       Command : String);
    --  Handles functions specific to the shell language
 
+   ------------------------
+   --  Internals Nth_Arg --
+   ------------------------
+
+   function Nth_Arg
+     (Data    : Shell_Callback_Data;
+      N       : Positive;
+      Success : access Boolean) return String;
+
+   function Nth_Arg
+     (Data    : Shell_Callback_Data;
+      N       : Positive;
+      Success : access Boolean) return Subprogram_Type;
+
+   function Nth_Arg
+     (Data : Shell_Callback_Data; N : Positive; Class : Class_Type;
+      Allow_Null : Boolean; Success : access Boolean) return Class_Instance;
+
    --------------------
    -- Block_Commands --
    --------------------
@@ -1050,12 +1068,72 @@ package body GNAT.Scripts.Shell is
    -- Nth_Arg --
    -------------
 
-   function Nth_Arg (Data : Shell_Callback_Data; N : Positive) return String is
+   function Nth_Arg
+     (Data : Shell_Callback_Data; N : Positive; Success : access Boolean)
+      return String
+   is
    begin
       if N > Data.Args'Last then
-         raise No_Such_Parameter;
+         Success.all := False;
+         return "";
       else
+         Success.all := True;
          return Data.Args (N).all;
+      end if;
+   end Nth_Arg;
+
+   -------------
+   -- Nth_Arg --
+   -------------
+
+   function Nth_Arg
+     (Data       : Shell_Callback_Data;
+      N          : Positive;
+      Class      : Class_Type;
+      Allow_Null : Boolean;
+      Success    : access Boolean) return Class_Instance
+   is
+      Class_Name : constant String := Nth_Arg (Data, N, Success);
+      Ins        : Shell_Class_Instance;
+   begin
+      if not Success.all then
+         return No_Class_Instance;
+      end if;
+
+      Ins := Instance_From_Name (Data.Script, Class_Name);
+
+      if Ins = null and then Allow_Null then
+         return No_Class_Instance;
+      end if;
+
+      if Ins = null
+        or else (Class /= Any_Class
+                 and then not Is_Subclass (Ins, Get_Name (Class)))
+      then
+         raise Invalid_Parameter;
+      else
+         return From_Instance (Data.Script, Ins);
+      end if;
+   end Nth_Arg;
+
+   -------------
+   -- Nth_Arg --
+   -------------
+
+   function Nth_Arg
+     (Data    : Shell_Callback_Data;
+      N       : Positive;
+      Success : access Boolean) return Subprogram_Type
+   is
+      Name : constant String := Nth_Arg (Data, N, Success);
+   begin
+      if not Success.all then
+         return null;
+      else
+         return new Shell_Subprogram_Record'
+           (Subprogram_Record with
+            Script  => Get_Script (Data),
+            Command => new String'(Name));
       end if;
    end Nth_Arg;
 
@@ -1066,9 +1144,14 @@ package body GNAT.Scripts.Shell is
    function Nth_Arg
      (Data : Shell_Callback_Data; N : Positive) return Boolean
    is
-      S : constant String := Nth_Arg (Data, N);
+      Success : aliased Boolean;
+      S       : constant String := Nth_Arg (Data, N, Success'Access);
    begin
-      return Boolean'Value (S);
+      if Success then
+         return Boolean'Value (S);
+      else
+         raise No_Such_Parameter;
+      end if;
    exception
       when Constraint_Error =>
          raise Invalid_Parameter;
@@ -1081,9 +1164,14 @@ package body GNAT.Scripts.Shell is
    function Nth_Arg
      (Data : Shell_Callback_Data; N : Positive) return Integer
    is
-      S : constant String := Nth_Arg (Data, N);
+      Success : aliased Boolean;
+      S       : constant String := Nth_Arg (Data, N, Success'Access);
    begin
-      return Integer'Value (S);
+      if Success then
+         return Integer'Value (S);
+      else
+         raise No_Such_Parameter;
+      end if;
    exception
       when Constraint_Error =>
          raise Invalid_Parameter;
@@ -1094,25 +1182,146 @@ package body GNAT.Scripts.Shell is
    -------------
 
    function Nth_Arg
-     (Data       : Shell_Callback_Data;
-      N          : Positive;
-      Class      : Class_Type;
+     (Data : Shell_Callback_Data; N : Positive) return String
+   is
+      Success : aliased Boolean;
+      Result  : constant String := Nth_Arg (Data, N, Success'Access);
+   begin
+      if not Success then
+         raise No_Such_Parameter;
+      else
+         return Result;
+      end if;
+   end Nth_Arg;
+
+   -------------
+   -- Nth_Arg --
+   -------------
+
+   function Nth_Arg
+     (Data : Shell_Callback_Data; N : Positive) return Subprogram_Type
+   is
+      Success : aliased Boolean;
+      Result  : constant Subprogram_Type := Nth_Arg (Data, N, Success'Access);
+   begin
+      if not Success then
+         raise No_Such_Parameter;
+      else
+         return Result;
+      end if;
+   end Nth_Arg;
+
+   -------------
+   -- Nth_Arg --
+   -------------
+
+   function Nth_Arg
+     (Data : Shell_Callback_Data; N : Positive; Class : Class_Type;
       Allow_Null : Boolean := False) return Class_Instance
    is
-      Ins : constant Shell_Class_Instance :=
-              Instance_From_Name (Data.Script, Nth_Arg (Data, N));
+      Success : aliased Boolean;
+      Result  : constant Class_Instance := Nth_Arg
+        (Data, N, Class, Allow_Null, Success'Access);
    begin
-      if Ins = null and then Allow_Null then
-         return No_Class_Instance;
-      end if;
-
-      if Ins = null
-        or else (Class /= Any_Class
-                 and then not Is_Subclass (Ins, Get_Name (Class)))
-      then
-         raise Invalid_Parameter;
+      if not Success then
+         raise No_Such_Parameter;
       else
-         return From_Instance (Data.Script, Ins);
+         return Result;
+      end if;
+   end Nth_Arg;
+
+   -------------
+   -- Nth_Arg --
+   -------------
+
+   function Nth_Arg
+     (Data : Shell_Callback_Data; N : Positive; Default : String)
+      return String
+   is
+      Success : aliased Boolean;
+      Result  : constant String := Nth_Arg (Data, N, Success'Access);
+   begin
+      if not Success then
+         return Default;
+      else
+         return Result;
+      end if;
+   end Nth_Arg;
+
+   -------------
+   -- Nth_Arg --
+   -------------
+
+   function Nth_Arg
+     (Data : Shell_Callback_Data; N : Positive; Default : Integer)
+      return Integer
+   is
+      Success : aliased Boolean;
+      Result  : constant String := Nth_Arg (Data, N, Success'Access);
+   begin
+      if not Success then
+         return Default;
+      else
+         return Integer'Value (Result);
+      end if;
+   end Nth_Arg;
+
+   -------------
+   -- Nth_Arg --
+   -------------
+
+   function Nth_Arg
+     (Data : Shell_Callback_Data; N : Positive; Default : Boolean)
+      return Boolean
+   is
+      Success : aliased Boolean;
+      Result  : constant String := Nth_Arg (Data, N, Success'Access);
+   begin
+      if not Success then
+         return Default;
+      else
+         return Boolean'Value (Result);
+      end if;
+   end Nth_Arg;
+
+   -------------
+   -- Nth_Arg --
+   -------------
+
+   function Nth_Arg
+     (Data    : Shell_Callback_Data;
+      N       : Positive;
+      Class   : Class_Type := Any_Class;
+      Default : Class_Instance;
+      Allow_Null : Boolean := False) return Class_Instance
+   is
+      Success : aliased Boolean;
+      Result  : constant Class_Instance := Nth_Arg
+        (Data, N, Class, Allow_Null, Success'Access);
+   begin
+      if not Success then
+         return Default;
+      else
+         return Result;
+      end if;
+   end Nth_Arg;
+
+   -------------
+   -- Nth_Arg --
+   -------------
+
+   function Nth_Arg
+     (Data    : Shell_Callback_Data;
+      N       : Positive;
+      Default : Subprogram_Type) return Subprogram_Type
+   is
+      Success : aliased Boolean;
+      Result  : constant Subprogram_Type := Nth_Arg (Data, N, Success'Access);
+   begin
+      if not Success then
+         return Default;
+      else
+         return Result;
       end if;
    end Nth_Arg;
 
@@ -1382,21 +1591,6 @@ package body GNAT.Scripts.Shell is
    begin
       Free (Subprogram.Command);
    end Free;
-
-   -------------
-   -- Nth_Arg --
-   -------------
-
-   function Nth_Arg
-     (Data : Shell_Callback_Data; N : Positive) return Subprogram_Type
-   is
-      Name : constant String := Nth_Arg (Data, N);
-   begin
-      return new Shell_Subprogram_Record'
-        (Subprogram_Record with
-         Script  => Get_Script (Data),
-         Command => new String'(Name));
-   end Nth_Arg;
 
    ----------------
    -- Get_Script --

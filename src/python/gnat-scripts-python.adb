@@ -190,6 +190,31 @@ package body GNAT.Scripts.Python is
    function Convert is new Standard.Ada.Unchecked_Conversion
      (Python_Scripting, System.Address);
 
+   ------------------------
+   --  Internals Nth_Arg --
+   ------------------------
+
+   function Nth_Arg
+     (Data    : Python_Callback_Data;
+      N       : Positive;
+      Success : access Boolean) return String;
+   function Nth_Arg
+     (Data    : Python_Callback_Data;
+      N       : Positive;
+      Success : access Boolean) return Integer;
+   function Nth_Arg
+     (Data    : Python_Callback_Data;
+      N       : Positive;
+      Success : access Boolean) return Boolean;
+   function Nth_Arg
+     (Data    : Python_Callback_Data;
+      N       : Positive;
+      Success : access Boolean) return Subprogram_Type;
+   function Nth_Arg
+     (Data : Python_Callback_Data; N : Positive; Class : Class_Type;
+      Allow_Null : Boolean; Success : access Boolean)
+      return Class_Instance;
+
    --------------------
    -- Block_Commands --
    --------------------
@@ -1530,7 +1555,8 @@ package body GNAT.Scripts.Python is
    -- Get_Param --
    ---------------
 
-   function Get_Param (Data : Python_Callback_Data'Class; N : Positive)
+   function Get_Param
+     (Data : Python_Callback_Data'Class; N : Positive)
       return PyObject
    is
       Obj : PyObject := null;
@@ -1561,14 +1587,56 @@ package body GNAT.Scripts.Python is
       return Obj;
    end Get_Param;
 
+   procedure Get_Param
+     (Data    : Python_Callback_Data'Class;
+      N       : Positive;
+      Result  : out PyObject;
+      Success : out Boolean)
+   is
+   begin
+      --  Check keywords parameters. As a special case, we do not check when
+      --  getting the first parameter of a method, which is always the
+      --  instance, since the callback will generally want to do this in the
+      --  common part, before the command-specific parts.
+      if (N /= 1 or else not Data.Is_Method)
+        and then Data.Kw_Params = null
+        and then Data.Kw /= null
+      then
+         PyErr_SetString
+           (Data.Script.Exception_Misc,
+            "Keyword parameters not supported");
+         raise Invalid_Parameter;
+      elsif Data.Args /= null and then N <= PyTuple_Size (Data.Args) then
+         Result := PyTuple_GetItem (Data.Args, N - 1);
+      elsif Data.Kw_Params /= null and then N <= Data.Kw_Params'Last then
+         Result := Data.Kw_Params (N);
+      end if;
+
+      if Result = null then
+         Success := False;
+      elsif Result = Py_None then
+         Success := False;
+      else
+         Success := True;
+      end if;
+   end Get_Param;
+
    -------------
    -- Nth_Arg --
    -------------
 
-   function Nth_Arg (Data : Python_Callback_Data; N : Positive) return String
+   function Nth_Arg
+     (Data : Python_Callback_Data; N : Positive; Success : access Boolean)
+      return String
    is
-      Item : constant PyObject := Get_Param (Data, N);
+      Item : PyObject;
    begin
+      Get_Param (Data, N, Item, Success.all);
+
+      if not Success.all then
+         return "";
+      end if;
+
       if not PyString_Check (Item) then
          Raise_Exception
            (Invalid_Parameter'Identity,
@@ -1582,11 +1650,19 @@ package body GNAT.Scripts.Python is
    -- Nth_Arg --
    -------------
 
-   function Nth_Arg (Data : Python_Callback_Data; N : Positive)
+   function Nth_Arg
+     (Data : Python_Callback_Data; N : Positive; Success : access Boolean)
       return Integer
    is
-      Item : constant PyObject := Get_Param (Data, N);
+      Item : PyObject;
    begin
+      Get_Param
+        (Data, N, Item, Success.all);
+
+      if not Success.all then
+         return 0;
+      end if;
+
       if not PyInt_Check (Item) then
          Raise_Exception
            (Invalid_Parameter'Identity,
@@ -1601,10 +1677,18 @@ package body GNAT.Scripts.Python is
    -------------
 
    function Nth_Arg
-     (Data : Python_Callback_Data; N : Positive) return Boolean
+     (Data    : Python_Callback_Data;
+      N       : Positive;
+      Success : access Boolean) return Boolean
    is
-      Item : constant PyObject := Get_Param (Data, N);
+      Item : PyObject;
    begin
+      Get_Param (Data, N, Item, Success.all);
+
+      if not Success.all then
+         return False;
+      end if;
+
       --  ??? Could add more cases of automatic conversion: strings containing
       --  "true" or "false", or add support for booleans for newer versions of
       --  python (>= 2.3)
@@ -1625,8 +1709,38 @@ package body GNAT.Scripts.Python is
    -------------
 
    function Nth_Arg
+     (Data    : Python_Callback_Data;
+      N       : Positive;
+      Success : access Boolean) return Subprogram_Type
+   is
+      Item : PyObject;
+   begin
+      Get_Param (Data, N, Item, Success.all);
+
+      if not Success.all then
+         return null;
+      end if;
+
+      if Item /= null
+        and then (PyFunction_Check (Item) or else PyMethod_Check (Item))
+      then
+         Py_INCREF (Item);
+         return new Python_Subprogram_Record'
+           (Subprogram_Record with
+            Script     => Python_Scripting (Get_Script (Data)),
+            Subprogram => Item);
+      else
+         raise Invalid_Parameter;
+      end if;
+   end Nth_Arg;
+
+   -------------
+   -- Nth_Arg --
+   -------------
+
+   function Nth_Arg
      (Data       : Python_Callback_Data; N : Positive; Class : Class_Type;
-      Allow_Null : Boolean := False)
+      Allow_Null : Boolean; Success : access Boolean)
       return Class_Instance
    is
       Item       : PyObject;
@@ -1638,7 +1752,11 @@ package body GNAT.Scripts.Python is
          C := Lookup_Class_Object (Data.Script.Module, Get_Name (Class));
       end if;
 
-      Item := Get_Param (Data, N);  --  Item is a borrowed reference
+      Get_Param (Data, N, Item, Success.all); --  Item is a borrowed reference
+
+      if not Success.all then
+         return No_Class_Instance;
+      end if;
 
       if not PyInstance_Check (Item) then
          if Class /= Any_Class then
@@ -1685,6 +1803,193 @@ package body GNAT.Scripts.Python is
          else
             raise;
          end if;
+   end Nth_Arg;
+
+   -------------
+   -- Nth_Arg --
+   -------------
+
+   function Nth_Arg
+     (Data : Python_Callback_Data; N : Positive) return String
+   is
+      Success : aliased Boolean;
+      Result  : constant String := Nth_Arg (Data, N, Success'Access);
+   begin
+      if not Success then
+         raise No_Such_Parameter;
+      else
+         return Result;
+      end if;
+   end Nth_Arg;
+
+   -------------
+   -- Nth_Arg --
+   -------------
+
+   function Nth_Arg
+     (Data : Python_Callback_Data; N : Positive) return Integer
+   is
+      Success : aliased Boolean;
+      Result  : constant Integer := Nth_Arg (Data, N, Success'Access);
+   begin
+      if not Success then
+         raise No_Such_Parameter;
+      else
+         return Result;
+      end if;
+   end Nth_Arg;
+
+   -------------
+   -- Nth_Arg --
+   -------------
+
+   function Nth_Arg
+     (Data : Python_Callback_Data; N : Positive) return Boolean
+   is
+      Success : aliased Boolean;
+      Result : constant Boolean := Nth_Arg (Data, N, Success'Access);
+   begin
+      if not Success then
+         raise No_Such_Parameter;
+      else
+         return Result;
+      end if;
+   end Nth_Arg;
+
+   -------------
+   -- Nth_Arg --
+   -------------
+
+   function Nth_Arg
+     (Data : Python_Callback_Data; N : Positive) return Subprogram_Type
+   is
+      Success : aliased Boolean;
+      Result  : constant Subprogram_Type := Nth_Arg (Data, N, Success'Access);
+   begin
+      if not Success then
+         raise No_Such_Parameter;
+      else
+         return Result;
+      end if;
+   end Nth_Arg;
+
+   -------------
+   -- Nth_Arg --
+   -------------
+
+   function Nth_Arg
+     (Data : Python_Callback_Data; N : Positive; Class : Class_Type;
+      Allow_Null : Boolean := False)
+      return Class_Instance
+   is
+      Success : aliased Boolean;
+      Result  : constant Class_Instance :=
+        Nth_Arg (Data, N, Class, Allow_Null, Success'Access);
+   begin
+      if not Success then
+         if Allow_Null then
+            return No_Class_Instance;
+         else
+            raise No_Such_Parameter;
+         end if;
+      else
+         return Result;
+      end if;
+   end Nth_Arg;
+
+   -------------
+   -- Nth_Arg --
+   -------------
+
+   function Nth_Arg
+     (Data : Python_Callback_Data; N : Positive; Default : String)
+      return String
+   is
+      Success : aliased Boolean;
+      Result  : constant String := Nth_Arg (Data, N, Success'Access);
+   begin
+      if not Success then
+         return Default;
+      else
+         return Result;
+      end if;
+   end Nth_Arg;
+
+   -------------
+   -- Nth_Arg --
+   -------------
+
+   function Nth_Arg
+     (Data : Python_Callback_Data; N : Positive; Default : Integer)
+      return Integer
+   is
+      Success : aliased Boolean;
+      Result  : constant Integer := Nth_Arg (Data, N, Success'Access);
+   begin
+      if not Success then
+         return Default;
+      else
+         return Result;
+      end if;
+   end Nth_Arg;
+
+   -------------
+   -- Nth_Arg --
+   -------------
+
+   function Nth_Arg
+     (Data : Python_Callback_Data; N : Positive; Default : Boolean)
+      return Boolean
+   is
+      Success : aliased Boolean;
+      Result : constant Boolean := Nth_Arg (Data, N, Success'Access);
+   begin
+      if not Success then
+         return Default;
+      else
+         return Result;
+      end if;
+   end Nth_Arg;
+
+   -------------
+   -- Nth_Arg --
+   -------------
+
+   function Nth_Arg
+     (Data    : Python_Callback_Data;
+      N       : Positive;
+      Class   : Class_Type := Any_Class;
+      Default : Class_Instance;
+      Allow_Null : Boolean := False) return Class_Instance
+   is
+      Success : aliased Boolean;
+      Result  : constant Class_Instance :=
+        Nth_Arg (Data, N, Class, Allow_Null, Success'Access);
+   begin
+      if not Success then
+         return Default;
+      else
+         return Result;
+      end if;
+   end Nth_Arg;
+
+   -------------
+   -- Nth_Arg --
+   -------------
+
+   function Nth_Arg
+     (Data    : Python_Callback_Data;
+      N       : Positive;
+      Default : Subprogram_Type) return Subprogram_Type
+   is
+      Success : aliased Boolean;
+      Result  : constant Subprogram_Type := Nth_Arg (Data, N, Success'Access);
+   begin
+      if not Success then
+         return Default;
+      else
+         return Result;
+      end if;
    end Nth_Arg;
 
    ------------
@@ -2072,28 +2377,6 @@ package body GNAT.Scripts.Python is
            & " Py=<None>";
       end if;
    end Print_Refcount;
-
-   -------------
-   -- Nth_Arg --
-   -------------
-
-   function Nth_Arg
-     (Data : Python_Callback_Data; N : Positive) return Subprogram_Type
-   is
-      Item : constant PyObject := Get_Param (Data, N);
-   begin
-      if Item /= null
-        and then (PyFunction_Check (Item) or else PyMethod_Check (Item))
-      then
-         Py_INCREF (Item);
-         return new Python_Subprogram_Record'
-           (Subprogram_Record with
-            Script     => Python_Scripting (Get_Script (Data)),
-            Subprogram => Item);
-      else
-         raise Invalid_Parameter;
-      end if;
-   end Nth_Arg;
 
    -------------
    -- Execute --
