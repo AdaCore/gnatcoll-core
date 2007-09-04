@@ -214,6 +214,11 @@ package body GNAT.Scripts.Python is
      (Data : Python_Callback_Data; N : Positive; Class : Class_Type;
       Allow_Null : Boolean; Success : access Boolean)
       return Class_Instance;
+   --  These functions are called by the overriden Nth_Arg functions. They try
+   --  to return the parameter at the location N. If no parameter is found,
+   --  Success is false, true otherwise. It's the responsibility of the
+   --  enclosing Nth_Arg to either raise a No_Such_Parameter exception or to
+   --  return a default value.
 
    --------------------
    -- Block_Commands --
