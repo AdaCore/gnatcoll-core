@@ -40,8 +40,8 @@ all:
 
 # Compute the list of source directories. Would be nicer if gnatls could
 # output that info. We are assuming here there are only two of these.
-DIRS=${shell gnat ls -P${PROJECT} -v | grep ${MODULE}}
-SRCDIRS=${wordlist 1,2,${DIRS}}
+#DIRS=${shell gnat ls -P${PROJECT} -v | grep ${MODULE}}
+#SRCDIRS=${wordlist 1,2,${DIRS}}
 
 ifeq (${GNATLIB_LIBRARY_TYPE},relocatable)
 LIBNAME:=${LIBNAME}.so

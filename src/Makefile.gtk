@@ -1,6 +1,13 @@
 MODULE=gtk
 PROJECT=gnatlib_${MODULE}
 LIBNAME=lib${TARNAME}_${MODULE}
+
+ifeq (${WITH_PYTHON},yes)
+SRCDIRS=./gtk/ ./gtk/python/
+else
+SRCDIRS=./gtk/ ./gtk/nopython/
+endif
+
 include ../Makefile.conf
 all:     buildcfiles buildall
 clean:   cleanall
