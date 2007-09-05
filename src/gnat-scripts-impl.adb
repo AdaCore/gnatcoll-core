@@ -1,7 +1,7 @@
 -----------------------------------------------------------------------
 --                               G P S                               --
 --                                                                   --
---                      Copyright (C) 2003-2007, AdaCore             --
+--                  Copyright (C) 2003-2007, AdaCore                 --
 --                                                                   --
 -- GPS is free  software;  you can redistribute it and/or modify  it --
 -- under the terms of the GNU General Public License as published by --
@@ -125,10 +125,10 @@ package body GNAT.Scripts.Impl is
    procedure Console_Command_Handler
      (Data : in out Callback_Data'Class; Command : String)
    is
-      Text_Cst   : aliased constant String := "text";
-      Size_Cst   : aliased constant String := "size";
-      Inst       : constant Class_Instance := Nth_Arg (Data, 1, Any_Class);
-      Console    : Virtual_Console;
+      Text_Cst : aliased constant String := "text";
+      Size_Cst : aliased constant String := "size";
+      Inst     : constant Class_Instance := Nth_Arg (Data, 1, Any_Class);
+      Console  : Virtual_Console;
    begin
       if Command = "write" then
          Name_Parameters (Data, (1 => Text_Cst'Unchecked_Access));
