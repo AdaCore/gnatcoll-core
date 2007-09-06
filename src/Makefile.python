@@ -2,13 +2,14 @@ MODULE=python
 PROJECT=gnatlib_${MODULE}
 LIBNAME=lib${TARNAME}_${MODULE}
 
+include ../Makefile.conf
+
 ifeq ($(WITH_PYTHON),yes)
 SRCDIRS=./python/
 else
 SRCDIRS=./nopython/
 endif
 
-include ../Makefile.conf
 all:     buildcfiles buildall
 clean:   cleanall
 install: libinstall

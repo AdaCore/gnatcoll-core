@@ -2,13 +2,14 @@ MODULE=gnatlib
 PROJECT=gnatlib
 LIBNAME=lib${TARNAME}
 
+include ../Makefile.conf
+
 ifeq ($(WITH_SYSLOG),yes)
 SRCDIRS=./ ./syslog/
 else
 SRCDIRS=./ ./nosyslog/
 endif
 
-include ../Makefile.conf
 all:     buildall
 clean:   cleanall
 install: libinstall
