@@ -83,6 +83,7 @@ ifeq (${GNATLIB_LIBRARY_TYPE},relocatable)
 	${RM} ${libdir}/${LIBNAME}*
 	${RM} ${libdir}/${TARNAME}/${GNATLIB_LIBRARY_TYPE}/${LIBNAME}
 	cd ${libdir}/${TARNAME}/${GNATLIB_LIBRARY_TYPE}; ${LN_S} ${LIBFULL} ${LIBNAME}
+	cd ${libdir}/${TARNAME}/${GNATLIB_LIBRARY_TYPE}; ${LN_S} ${LIBFULL} ${LIBNAME}.${basename ${VERSION}}
 	cd ${libdir}; ${LN_S} ${TARNAME}/${GNATLIB_LIBRARY_TYPE}/${LIBFULL} ${LIBNAME}
 	cd ${libdir}; ${LN_S} ${TARNAME}/${GNATLIB_LIBRARY_TYPE}/${LIBFULL} ${LIBNAME}.${basename ${VERSION}}
 	cd ${libdir}; ${LN_S} ${TARNAME}/${GNATLIB_LIBRARY_TYPE}/${LIBFULL} ${LIBNAME}.${VERSION}
