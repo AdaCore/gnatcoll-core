@@ -232,7 +232,8 @@ package body GNAT.Scripts.Shell is
                   Append (Result, ' ');
                end if;
             end loop;
-            Set_Return_Value (Data, To_String (Result));
+            Insert_Text
+              (Get_Script (Data), Txt => To_String (Result) & ASCII.LF);
          end;
 
       elsif Command = "clear_cache" then
