@@ -147,6 +147,7 @@ unmodified in any copy.
 * Building GnatLib::
 * Embedding script languages:: The scripting module.
 * Logging information:: The traces module.
+* Reading and Writing Files:: The mmap module.
 * Index::
 
 @ifnothtml
@@ -179,6 +180,8 @@ Logging information
 * Defining custom trace streams::
 * Logging to syslog::
 * Dynamically disabling features::
+
+Reading and Writing Files
 
 @end detailmenu
 @end ifnothtml
@@ -2011,6 +2014,142 @@ and in the Ada code:
 
 In particular, this can be used if you write your own decorators, as
 explained above.
+
+@c -----------------------------------------------------------------------
+@node Reading and Writing Files
+@chapter Reading and Writing Files
+@cindex mmap
+@c -----------------------------------------------------------------------
+@noindent
+
+Most applications need to efficiently read files from the disk. Some also
+need in addition to modify them and write them back. The Ada runtime
+profiles several high-level functions to do so, most notably in the
+@file{Ada.Text_IO} package. However, these subprograms require a lot of
+additional housekeeping in the run-time, and therefore tend to be slow.
+
+GNAT provides a number of low-level functions in its @file{GNAT.OS_Lib}
+package. These are direct import of the usual C system calls @code{read()},
+@code{write()} and @code{open()}. These are much faster, and suitable for
+most applications.
+
+However, if you happen to manipulate big files (several megabytes and much
+more), these functions are still slow. The reason is that to use @code{read}
+you basically need a few other system calls: allocate some memory to
+temporarily store the contents of the file, then read the whole contents of
+the file (even if you are only going to read a small part of it, although
+presumably you would use @code{lseek} in such a case).
+
+On most Unix systems, there exists an additional system call @code{mmap()}
+which basically replaces @code{open}, and makes the contents of the file
+immediately accessible, in the order of a few micro-seconds. You do not
+need to allocate memory specifically for that purpose. When you access
+part of the file, the actual contents is temporarily mapped in memory
+by the system. To modify the file, you just modify the contents of the
+memory, and do not worry about writing the file back to the disk.
+
+When your application does not need to read the whole contents of the file,
+the speed up can be several orders of magnitude faster than @code{read()}.
+Even when you need to read the whole contents, using @code{mmap()} is
+still two or three times faster, which is especially interesting on big
+files.
+
+@value{gnatlib}'s @code{GNAT.Mmap} package provides a high-level abstraction
+on top of the @code{mmap} system call. As for most other packages in
+@value{gnatlib}, it also nicely handles the case where your system does not
+actually support @code{mmap}, and will in that case fallback on using
+@code{read} and @code{write} transparently. In such a case, your application
+will perform a little slower, but you do not have to modify your code to
+adapt it to the new system.
+
+Due to the low-level C API that is needed underneath, the various subprograms
+in this package do not directly manipulate Ada strings with valid bounds.
+Instead, a new type @code{Str_Access} was defined. It does not contain the
+bounds of the string, and therefore you cannot use the usual
+@code{'First} and @code{'Last} attributes on that string. But there are other
+subprograms that provide those values.
+
+Here is how to read a whole file at once. This is what your code will use
+in most cases, unless you expect to read files bigger than @code{Integer'Last}
+bytes long. In such cases you need to read chunks of the file separately.
+The @code{mmap} system call is such that its performance does not depend on
+the size of the file your are mapping. Of course, this could be a problem if
+@code{GNAT.Mmap} falls back on calling @code{read}, since in that case it
+needs to allocate as much memory as your file. Therefore in some cases you
+will also want to only read chunks of the file at once.
+
+@CODESAMPLE{
+@b{declare}@NL{}
+   File : Mapped_File;@NL{}
+   Str  : Str_Access;@NL{}
+@b{begin}@NL{}
+   File := Open_Read ("/tmp/file_on_disk");@NL{}
+   Read (File);  @i{--  read the whole file}@NL{}
+   Str := Data (File);@NL{}
+   @b{for} S @b{in} 1 .. Last (File) @b{loop}@NL{}
+       Put (Str (S));@NL{}
+   @b{end loop};@NL{}
+   Close (File);@NL{}
+@b{end};@NL{}
+}
+
+To read only a chunk of the file, your code would look like the following.
+At the low-level, the system call will always read chunks multiple of a
+size called the page_size. Although @code{GNAT.Mmap} takes care of rounding
+the numbers appropriately, it is recommanded that you pass parameters that
+are multiples of that size. That optimizes the number of system calls you
+will need to do, and therefore speeds up your application somewhat.
+
+@CODESAMPLE{
+@b{declare}@NL{}
+   File   : Mapped_File;@NL{}
+   Str    : Str_Access;@NL{}
+   Offs   : Long_Integer := 0;@NL{}
+   Page   : @b{constant} Integer := Get_Page_Size;@NL{}
+@b{begin}@NL{}
+   File := Open_Read ("/tmp/file_on_disk");@NL{}
+   @b{while} Offs < Length (File) @b{loop}@NL{}
+       Read (File, Offs, Length => Long_Integer (Page) * 4);@NL{}
+       Str := Data (File);@NL{}
+@NL{}
+       @i{--  Print characters for this chunk:}@NL{}
+       @b{for} S @b{in} Integer (Offs - Offset (File)) + 1 .. Last (File) @b{loop}@NL{}
+          Put (Str (S));@NL{}
+       @b{end loop};@NL{}
+@NL{}
+       Offs := Offs + Long_Integer (Last (File));@NL{}
+   @b{end loop};@NL{}
+   Close (File);@NL{}
+}
+
+There are a number of subtle details in the code above. Since the system call
+only manipulates chunk of the file on boundaries multiple of the code size,
+there is no guarantee that the part of the file we actually read really starts
+exactly at @var{Offs}. If could in fact start before, for rounding issues.
+Therefore when we loop over the contents of the buffer, we make sure to
+actually start at the @var{Offs}-th character in the file.
+
+In the particular case of this code, we make sure we only manipulate multiples
+of the page_size, so we could in fact replace the loop with the simpler
+
+@CODESAMPLE{
+ @b{for} S @b{in} 1 .. Last (File) @b{loop} @NL{}
+}
+
+If you intend to modify the contents of the file, not that @code{GNAT.Mmap}
+currently gives you no way to change the size of the file. The only difference
+compared to the code used for reading the file is the call to open the file,
+which should be
+
+@CODESAMPLE{
+    File := Open_Write ("/tmp/file_on_disk");
+}
+
+Modifications to Str are automatically reflected in the file. However, there
+is no guarantee this saving is done immediately. It could be done only when
+you call @code{Close}. This is in particular always the case when your system
+does not support @code{mmap} and @code{GNAT.Mmap} had to fallback on calls to
+@code{read}.
 
 @c -----------------------------------------------------------------------
 @node Index

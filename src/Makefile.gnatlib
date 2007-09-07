@@ -10,7 +10,12 @@ else
 SRCDIRS=./ ./nosyslog/
 endif
 
-all:     buildall
+all:     c_files buildall
 clean:   cleanall
 install: libinstall
+
+c_files: obj/gnatlib/${GNATLIB_LIBRARY_TYPE}/gnatlib_support.o
+obj/gnatlib/${GNATLIB_LIBRARY_TYPE}/gnatlib_support.o: gnatlib_support.c
+	gcc -c ${FPIC} ${DEFS} $< -o $@
+
 

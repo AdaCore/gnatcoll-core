@@ -16,12 +16,6 @@ install: libinstall
 
 .PHONY: buildcfiles addcobjects
 
-ifeq (${GNATLIB_LIBRARY_TYPE},static)
-FPIC=
-else
-FPIC=-fPIC
-endif
-
 ifeq ($(WITH_PYTHON),yes)
 C_OBJ=obj/python/${GNATLIB_LIBRARY_TYPE}/python_support.o
 buildcfiles: ${C_OBJ}

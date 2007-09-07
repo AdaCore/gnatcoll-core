@@ -309,7 +309,7 @@ ac_includes_default="\
 # include <unistd.h>
 #endif"
 
-ac_subst_vars='SHELL PATH_SEPARATOR PACKAGE_NAME PACKAGE_TARNAME PACKAGE_VERSION PACKAGE_STRING PACKAGE_BUGREPORT exec_prefix prefix program_transform_name bindir sbindir libexecdir datadir sysconfdir sharedstatedir localstatedir libdir includedir oldincludedir infodir mandir build_alias host_alias target_alias DEFS ECHO_C ECHO_N ECHO_T LIBS build build_cpu build_vendor build_os host host_cpu host_vendor host_os target target_cpu target_vendor target_os LN_S INSTALL_PROGRAM INSTALL_SCRIPT INSTALL_DATA PKG_CONFIG GTK_GCC_FLAGS WITH_GTK PYTHON CC CFLAGS LDFLAGS CPPFLAGS ac_ct_CC EXEEXT OBJEXT PYTHON_BASE PYTHON_VERSION PYTHON_DIR PYTHON_LIBS PYTHON_CFLAGS WITH_PYTHON PYGTK_PREFIX PYGTK_INCLUDE WITH_PYGTK PYTHON_LIBS_GPR PYTHON_CFLAGS_GPR PYGTK_INCLUDE_GPR GTK_GCC_FLAGS_GPR CPP EGREP WITH_SYSLOG MAKEINFO TEXI2DVI LIBOBJS LTLIBOBJS'
+ac_subst_vars='SHELL PATH_SEPARATOR PACKAGE_NAME PACKAGE_TARNAME PACKAGE_VERSION PACKAGE_STRING PACKAGE_BUGREPORT exec_prefix prefix program_transform_name bindir sbindir libexecdir datadir sysconfdir sharedstatedir localstatedir libdir includedir oldincludedir infodir mandir build_alias host_alias target_alias DEFS ECHO_C ECHO_N ECHO_T LIBS build build_cpu build_vendor build_os host host_cpu host_vendor host_os target target_cpu target_vendor target_os LN_S INSTALL_PROGRAM INSTALL_SCRIPT INSTALL_DATA CC CFLAGS LDFLAGS CPPFLAGS ac_ct_CC EXEEXT OBJEXT CPP EGREP PKG_CONFIG GTK_GCC_FLAGS WITH_GTK PYTHON PYTHON_BASE PYTHON_VERSION PYTHON_DIR PYTHON_LIBS PYTHON_CFLAGS WITH_PYTHON PYGTK_PREFIX PYGTK_INCLUDE WITH_PYGTK PYTHON_LIBS_GPR PYTHON_CFLAGS_GPR PYGTK_INCLUDE_GPR GTK_GCC_FLAGS_GPR WITH_SYSLOG MAKEINFO TEXI2DVI LIBOBJS LTLIBOBJS'
 ac_subst_files=''
 
 # Initialize some variables set by options.
@@ -1480,87 +1480,6 @@ test -z "$INSTALL_SCRIPT" && INSTALL_SCRIPT='${INSTALL}'
 
 test -z "$INSTALL_DATA" && INSTALL_DATA='${INSTALL} -m 644'
 
-
-
-   # Check whether --enable-gtk or --disable-gtk was given.
-if test "${enable_gtk+set}" = set; then
-  enableval="$enable_gtk"
-  WITH_GTK=$enableval
-else
-  WITH_GTK=yes
-fi;
-
-
-   if test $WITH_GTK = yes; then
-     # Extract the first word of "pkg-config", so it can be a program name with args.
-set dummy pkg-config; ac_word=$2
-echo "$as_me:$LINENO: checking for $ac_word" >&5
-echo $ECHO_N "checking for $ac_word... $ECHO_C" >&6
-if test "${ac_cv_path_PKG_CONFIG+set}" = set; then
-  echo $ECHO_N "(cached) $ECHO_C" >&6
-else
-  case $PKG_CONFIG in
-  [\\/]* | ?:[\\/]*)
-  ac_cv_path_PKG_CONFIG="$PKG_CONFIG" # Let the user override the test with a path.
-  ;;
-  *)
-  as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
-for as_dir in $PATH
-do
-  IFS=$as_save_IFS
-  test -z "$as_dir" && as_dir=.
-  for ac_exec_ext in '' $ac_executable_extensions; do
-  if $as_executable_p "$as_dir/$ac_word$ac_exec_ext"; then
-    ac_cv_path_PKG_CONFIG="$as_dir/$ac_word$ac_exec_ext"
-    echo "$as_me:$LINENO: found $as_dir/$ac_word$ac_exec_ext" >&5
-    break 2
-  fi
-done
-done
-
-  test -z "$ac_cv_path_PKG_CONFIG" && ac_cv_path_PKG_CONFIG="no"
-  ;;
-esac
-fi
-PKG_CONFIG=$ac_cv_path_PKG_CONFIG
-
-if test -n "$PKG_CONFIG"; then
-  echo "$as_me:$LINENO: result: $PKG_CONFIG" >&5
-echo "${ECHO_T}$PKG_CONFIG" >&6
-else
-  echo "$as_me:$LINENO: result: no" >&5
-echo "${ECHO_T}no" >&6
-fi
-
-     echo "$as_me:$LINENO: checking for gtk+" >&5
-echo $ECHO_N "checking for gtk+... $ECHO_C" >&6
-     if test "$PKG_CONFIG" = "no" ; then
-        echo "$as_me:$LINENO: result: not found" >&5
-echo "${ECHO_T}not found" >&6
-        WITH_GTK=no
-     else
-        GTK_PREFIX=`$PKG_CONFIG gtk+-2.0 --variable=prefix`
-        echo "$as_me:$LINENO: result: $GTK_PREFIX" >&5
-echo "${ECHO_T}$GTK_PREFIX" >&6
-        GTK_GCC_FLAGS=`$PKG_CONFIG gtk+-2.0 --cflags`
-        if test x"$GTK_GCC_FLAGS" != x ; then
-           WITH_GTK=yes
-        else
-           WITH_GTK=no
-        fi
-     fi
-   else
-     echo "$as_me:$LINENO: checking for gtk+" >&5
-echo $ECHO_N "checking for gtk+... $ECHO_C" >&6
-     echo "$as_me:$LINENO: result: $WITH_GTK (from switch)" >&5
-echo "${ECHO_T}$WITH_GTK (from switch)" >&6
-   fi
-
-
-
-
-
-
 ac_ext=c
 ac_cpp='$CPP $CPPFLAGS'
 ac_compile='$CC -c $CFLAGS $CPPFLAGS conftest.$ac_ext >&5'
@@ -2430,365 +2349,6 @@ ac_link='$CC -o conftest$ac_exeext $CFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $
 ac_compiler_gnu=$ac_cv_c_compiler_gnu
 
 
-
-
-# Check whether --with-python or --without-python was given.
-if test "${with_python+set}" = set; then
-  withval="$with_python"
-  PYTHON_PATH_WITH=$withval
-else
-  PYTHON_PATH_WITH=yes
-fi;
-   # Check whether --enable-shared-python or --disable-shared-python was given.
-if test "${enable_shared_python+set}" = set; then
-  enableval="$enable_shared_python"
-  PYTHON_SHARED=$enableval
-else
-  PYTHON_SHARED=no
-fi;
-
-   WITH_PYTHON=yes
-   if test x"$PYTHON_PATH_WITH" = xno ; then
-      echo "$as_me:$LINENO: checking for python" >&5
-echo $ECHO_N "checking for python... $ECHO_C" >&6
-      echo "$as_me:$LINENO: result: no" >&5
-echo "${ECHO_T}no" >&6
-      PYTHON_BASE=no
-      WITH_PYTHON=no
-
-   else
-      # Extract the first word of "python", so it can be a program name with args.
-set dummy python; ac_word=$2
-echo "$as_me:$LINENO: checking for $ac_word" >&5
-echo $ECHO_N "checking for $ac_word... $ECHO_C" >&6
-if test "${ac_cv_path_PYTHON+set}" = set; then
-  echo $ECHO_N "(cached) $ECHO_C" >&6
-else
-  case $PYTHON in
-  [\\/]* | ?:[\\/]*)
-  ac_cv_path_PYTHON="$PYTHON" # Let the user override the test with a path.
-  ;;
-  *)
-  as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
-as_dummy="$PYTHON_PATH_WITH/bin:$PATH"
-for as_dir in $as_dummy
-do
-  IFS=$as_save_IFS
-  test -z "$as_dir" && as_dir=.
-  for ac_exec_ext in '' $ac_executable_extensions; do
-  if $as_executable_p "$as_dir/$ac_word$ac_exec_ext"; then
-    ac_cv_path_PYTHON="$as_dir/$ac_word$ac_exec_ext"
-    echo "$as_me:$LINENO: found $as_dir/$ac_word$ac_exec_ext" >&5
-    break 2
-  fi
-done
-done
-
-  test -z "$ac_cv_path_PYTHON" && ac_cv_path_PYTHON="no"
-  ;;
-esac
-fi
-PYTHON=$ac_cv_path_PYTHON
-
-if test -n "$PYTHON"; then
-  echo "$as_me:$LINENO: result: $PYTHON" >&5
-echo "${ECHO_T}$PYTHON" >&6
-else
-  echo "$as_me:$LINENO: result: no" >&5
-echo "${ECHO_T}no" >&6
-fi
-
-      if test x"$PYTHON" = xno ; then
-         PYTHON_BASE=no
-         WITH_PYTHON=no
-      else
-        echo "$as_me:$LINENO: checking for python >= 2.0" >&5
-echo $ECHO_N "checking for python >= 2.0... $ECHO_C" >&6
-        if test x"$PYTHON_PATH_WITH" != xyes ; then
-           PYTHON_BASE=$PYTHON_PATH_WITH
-        else
-           PYTHON_BASE=`$PYTHON -c 'import sys; print sys.prefix' `
-        fi
-
-        PYTHON_MAJOR_VERSION=`$PYTHON -c 'import sys; print sys.version_info[0]' 2>/dev/null`
-        if test x$PYTHON_MAJOR_VERSION != x2 ; then
-           echo "$as_me:$LINENO: result: no" >&5
-echo "${ECHO_T}no" >&6
-           PYTHON_BASE=no
-           WITH_PYTHON=no
-        else
-           PYTHON_VERSION=`$PYTHON -c 'import sys; print \`sys.version_info[0]\`+"."+\`sys.version_info[1]\`'`
-
-           if test x$PYTHON_SHARED = xyes; then
-              PYTHON_DIR=${PYTHON_BASE}/lib
-           else
-              PYTHON_DIR=${PYTHON_BASE}/lib/python${PYTHON_VERSION}/config
-           fi
-           echo "$as_me:$LINENO: result: yes (version $PYTHON_VERSION)" >&5
-echo "${ECHO_T}yes (version $PYTHON_VERSION)" >&6
-        fi
-      fi
-   fi
-
-   PYTHON_LIBS=""
-   if test x"$PYTHON_BASE" != xno; then
-      case "${host}" in
-          hppa*-hp-hpux1* )
-             PYTHON_LIBS="-Wl,-E -lm ${PYTHON_LIBS}"
-             ;;
-          powerpc-ibm-aix5.* )
-             PYTHON_LIBS="-lld -lm ${PYTHON_LIBS}"
-             ;;
-          powerpc-*-darwin* )
-             PYTHON_LIBS="-ldl -lm ${PYTHON_LIBS}"
-             ;;
-          *-sunos5.5* | *-solaris2.5* )
-             PYTHON_LIBS="-lresolv -lsocket -lnsl -ldl -lm ${PYTHON_LIBS}"
-             ;;
-          *-sunos5* | *-solaris* )
-             PYTHON_LIBS="-lresolv -lsocket -lnsl -ldl -lm ${PYTHON_LIBS}"
-             ;;
-          ia64-*-* )
-             case "${host}" in
-               *-linux-gnu* )
-                  PYTHON_LIBS="-Wl,-export-dynamic -ldl -lm ${PYTHON_LIBS}"
-                  ;;
-               *-hp-hpux11* )
-                  PYTHON_LIBS="-ldld -ldl -lm -Wl,-E ${PYTHON_LIBS}"
-                  ;;
-               *-sgi* )
-                  PYTHON_LIBS="-lm ${PYTHON_LIBS}"
-                  ;;
-             esac
-             ;;
-          x86_64-*-* )
-             PYTHON_LIBS="-Wl,-export-dynamic -lm -ldl ${PYTHON_LIBS}"
-             ;;
-          i[3456]86-*linux-gnu* )
-             PYTHON_LIBS="-Wl,-export-dynamic -lm -ldl ${PYTHON_LIBS}"
-             ;;
-          i[3456]86-*win32* | i[3456]86-*mingw32* | i[3456]86-*cygwin* )
-             ;;
-          *-darwin* )
-             PYTHON_LIBS="-ldl -lm ${PYTHON_LIBS}"
-             ;;
-          *-freebsd* )
-             PYTHON_LIBS="-lm -lutil ${PYTHON_LIBS}"
-             ;;
-      esac
-
-      PYTHON_LIBS="-L${PYTHON_DIR} -lpython${PYTHON_VERSION} ${PYTHON_LIBS}"
-      PYTHON_CFLAGS="-I${PYTHON_BASE}/include/python${PYTHON_VERSION}"
-
-      # Automatically check whether some libraries are needed to link with
-      # the python libraries. If you are using the default system library, it is
-      # generally the case that at least -lpthread will be needed. But you might
-      # also have recompiled your own version, and if it doesn't depend on
-      # pthreads, we shouldn't bring that in, since that also impacts the choice
-      # of the GNAT runtime
-
-      CFLAGS="${CFLAGS} ${PYTHON_CFLAGS}"
-      LIBS="${LIBS} ${PYTHON_LIBS}"
-      cat >conftest.$ac_ext <<_ACEOF
-#line $LINENO "configure"
-/* confdefs.h.  */
-_ACEOF
-cat confdefs.h >>conftest.$ac_ext
-cat >>conftest.$ac_ext <<_ACEOF
-/* end confdefs.h.  */
-#include <Python.h>
-int
-main ()
-{
-Py_Initialize();
-  ;
-  return 0;
-}
-_ACEOF
-rm -f conftest.$ac_objext conftest$ac_exeext
-if { (eval echo "$as_me:$LINENO: \"$ac_link\"") >&5
-  (eval $ac_link) 2>&5
-  ac_status=$?
-  echo "$as_me:$LINENO: \$? = $ac_status" >&5
-  (exit $ac_status); } &&
-         { ac_try='test -s conftest$ac_exeext'
-  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
-  (eval $ac_try) 2>&5
-  ac_status=$?
-  echo "$as_me:$LINENO: \$? = $ac_status" >&5
-  (exit $ac_status); }; }; then
-  :
-else
-  echo "$as_me: failed program was:" >&5
-sed 's/^/| /' conftest.$ac_ext >&5
-
-LIBS="${LIBS} -lpthread -lutil"
-         cat >conftest.$ac_ext <<_ACEOF
-#line $LINENO "configure"
-/* confdefs.h.  */
-_ACEOF
-cat confdefs.h >>conftest.$ac_ext
-cat >>conftest.$ac_ext <<_ACEOF
-/* end confdefs.h.  */
-#include <Python.h>
-int
-main ()
-{
-Py_Initialize();
-  ;
-  return 0;
-}
-_ACEOF
-rm -f conftest.$ac_objext conftest$ac_exeext
-if { (eval echo "$as_me:$LINENO: \"$ac_link\"") >&5
-  (eval $ac_link) 2>&5
-  ac_status=$?
-  echo "$as_me:$LINENO: \$? = $ac_status" >&5
-  (exit $ac_status); } &&
-         { ac_try='test -s conftest$ac_exeext'
-  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
-  (eval $ac_try) 2>&5
-  ac_status=$?
-  echo "$as_me:$LINENO: \$? = $ac_status" >&5
-  (exit $ac_status); }; }; then
-  PYTHON_LIBS="${PYTHON_LIBS} -lpthread -lutil"
-else
-  echo "$as_me: failed program was:" >&5
-sed 's/^/| /' conftest.$ac_ext >&5
-
-{ { echo "$as_me:$LINENO: error: Can't compile and link python example
-See \`config.log' for more details." >&5
-echo "$as_me: error: Can't compile and link python example
-See \`config.log' for more details." >&2;}
-   { (exit 1); exit 1; }; }
-fi
-rm -f conftest.$ac_objext conftest$ac_exeext conftest.$ac_ext
-fi
-rm -f conftest.$ac_objext conftest$ac_exeext conftest.$ac_ext
-   fi
-
-
-
-
-
-
-
-
-
-    # Check whether --enable-pygtk or --disable-pygtk was given.
-if test "${enable_pygtk+set}" = set; then
-  enableval="$enable_pygtk"
-  WITH_PYGTK=$enableval
-else
-  WITH_PYGTK=$WITH_PYTHON
-fi;
-
-    if test "$PKG_CONFIG" = "" -o "$PKG_CONFIG" = "no" ; then
-       echo "$as_me:$LINENO: checking for pygtk" >&5
-echo $ECHO_N "checking for pygtk... $ECHO_C" >&6
-       echo "$as_me:$LINENO: result: no (pkg-config not found)" >&5
-echo "${ECHO_T}no (pkg-config not found)" >&6
-       WITH_PYGTK=no
-    else
-       min_pygtk_version=2.8
-       module=pygtk-2.0
-       echo "$as_me:$LINENO: checking for pygtk - version >= $min_pygtk_version" >&5
-echo $ECHO_N "checking for pygtk - version >= $min_pygtk_version... $ECHO_C" >&6
-
-       if test x"$WITH_PYGTK" = x -o x"$WITH_PYGTK" = xno ; then
-          echo "$as_me:$LINENO: result: no" >&5
-echo "${ECHO_T}no" >&6
-          PYGTK_PREFIX=""
-          PYGTK_INCLUDE=""
-          WITH_PYGTK=no
-
-       elif test "$PYTHON_BASE" != "no" ; then
-          pygtk_version=`$PKG_CONFIG $module --modversion`
-          $PKG_CONFIG $module --atleast-version=$min_pygtk_version
-          if test $? = 0 ; then
-             PYGTK_INCLUDE="`$PKG_CONFIG $module --cflags` -DPYGTK"
-             PYGTK_PREFIX=`$PKG_CONFIG $module --variable=prefix`
-             echo "$as_me:$LINENO: result: yes (version $pygtk_version)" >&5
-echo "${ECHO_T}yes (version $pygtk_version)" >&6
-             WITH_PYGTK=yes
-          else
-             echo "$as_me:$LINENO: result: no (found $pygtk_version)" >&5
-echo "${ECHO_T}no (found $pygtk_version)" >&6
-             PYGTK_PREFIX=""
-             PYGTK_INCLUDE=""
-             WITH_PYGTK=no
-          fi
-
-       else
-          echo "$as_me:$LINENO: result: no since python not found" >&5
-echo "${ECHO_T}no since python not found" >&6
-          PYGTK_PREFIX=""
-          PYGTK_INCLUDE=""
-          WITH_PYGTK=no
-       fi
-    fi
-
-
-
-
-
-
-   value=$PYTHON_LIBS
-   output=PYTHON_LIBS_GPR
-   result=""
-   for v in $value; do
-      if test "$result" != ""; then
-         result="$result, "
-      fi
-      result="$result\"$v\""
-   done
-   PYTHON_LIBS_GPR=$result
-
-
-
-
-   value=$PYTHON_CFLAGS
-   output=PYTHON_CFLAGS_GPR
-   result=""
-   for v in $value; do
-      if test "$result" != ""; then
-         result="$result, "
-      fi
-      result="$result\"$v\""
-   done
-   PYTHON_CFLAGS_GPR=$result
-
-
-
-
-   value=$PYGTK_INCLUDE
-   output=PYGTK_INCLUDE_GPR
-   result=""
-   for v in $value; do
-      if test "$result" != ""; then
-         result="$result, "
-      fi
-      result="$result\"$v\""
-   done
-   PYGTK_INCLUDE_GPR=$result
-
-
-
-
-   value=$GTK_GCC_FLAGS
-   output=GTK_GCC_FLAGS_GPR
-   result=""
-   for v in $value; do
-      if test "$result" != ""; then
-         result="$result, "
-      fi
-      result="$result\"$v\""
-   done
-   GTK_GCC_FLAGS_GPR=$result
-
-
-
-
 ac_ext=c
 ac_cpp='$CPP $CPPFLAGS'
 ac_compile='$CC -c $CFLAGS $CPPFLAGS conftest.$ac_ext >&5'
@@ -3260,6 +2820,849 @@ _ACEOF
 fi
 
 done
+
+
+
+
+for ac_header in stdlib.h unistd.h
+do
+as_ac_Header=`echo "ac_cv_header_$ac_header" | $as_tr_sh`
+if eval "test \"\${$as_ac_Header+set}\" = set"; then
+  echo "$as_me:$LINENO: checking for $ac_header" >&5
+echo $ECHO_N "checking for $ac_header... $ECHO_C" >&6
+if eval "test \"\${$as_ac_Header+set}\" = set"; then
+  echo $ECHO_N "(cached) $ECHO_C" >&6
+fi
+echo "$as_me:$LINENO: result: `eval echo '${'$as_ac_Header'}'`" >&5
+echo "${ECHO_T}`eval echo '${'$as_ac_Header'}'`" >&6
+else
+  # Is the header compilable?
+echo "$as_me:$LINENO: checking $ac_header usability" >&5
+echo $ECHO_N "checking $ac_header usability... $ECHO_C" >&6
+cat >conftest.$ac_ext <<_ACEOF
+#line $LINENO "configure"
+/* confdefs.h.  */
+_ACEOF
+cat confdefs.h >>conftest.$ac_ext
+cat >>conftest.$ac_ext <<_ACEOF
+/* end confdefs.h.  */
+$ac_includes_default
+#include <$ac_header>
+_ACEOF
+rm -f conftest.$ac_objext
+if { (eval echo "$as_me:$LINENO: \"$ac_compile\"") >&5
+  (eval $ac_compile) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); } &&
+         { ac_try='test -s conftest.$ac_objext'
+  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); }; }; then
+  ac_header_compiler=yes
+else
+  echo "$as_me: failed program was:" >&5
+sed 's/^/| /' conftest.$ac_ext >&5
+
+ac_header_compiler=no
+fi
+rm -f conftest.$ac_objext conftest.$ac_ext
+echo "$as_me:$LINENO: result: $ac_header_compiler" >&5
+echo "${ECHO_T}$ac_header_compiler" >&6
+
+# Is the header present?
+echo "$as_me:$LINENO: checking $ac_header presence" >&5
+echo $ECHO_N "checking $ac_header presence... $ECHO_C" >&6
+cat >conftest.$ac_ext <<_ACEOF
+#line $LINENO "configure"
+/* confdefs.h.  */
+_ACEOF
+cat confdefs.h >>conftest.$ac_ext
+cat >>conftest.$ac_ext <<_ACEOF
+/* end confdefs.h.  */
+#include <$ac_header>
+_ACEOF
+if { (eval echo "$as_me:$LINENO: \"$ac_cpp conftest.$ac_ext\"") >&5
+  (eval $ac_cpp conftest.$ac_ext) 2>conftest.er1
+  ac_status=$?
+  grep -v '^ *+' conftest.er1 >conftest.err
+  rm -f conftest.er1
+  cat conftest.err >&5
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); } >/dev/null; then
+  if test -s conftest.err; then
+    ac_cpp_err=$ac_c_preproc_warn_flag
+  else
+    ac_cpp_err=
+  fi
+else
+  ac_cpp_err=yes
+fi
+if test -z "$ac_cpp_err"; then
+  ac_header_preproc=yes
+else
+  echo "$as_me: failed program was:" >&5
+sed 's/^/| /' conftest.$ac_ext >&5
+
+  ac_header_preproc=no
+fi
+rm -f conftest.err conftest.$ac_ext
+echo "$as_me:$LINENO: result: $ac_header_preproc" >&5
+echo "${ECHO_T}$ac_header_preproc" >&6
+
+# So?  What about this header?
+case $ac_header_compiler:$ac_header_preproc in
+  yes:no )
+    { echo "$as_me:$LINENO: WARNING: $ac_header: accepted by the compiler, rejected by the preprocessor!" >&5
+echo "$as_me: WARNING: $ac_header: accepted by the compiler, rejected by the preprocessor!" >&2;}
+    { echo "$as_me:$LINENO: WARNING: $ac_header: proceeding with the preprocessor's result" >&5
+echo "$as_me: WARNING: $ac_header: proceeding with the preprocessor's result" >&2;}
+    (
+      cat <<\_ASBOX
+## ------------------------------------ ##
+## Report this to bug-autoconf@gnu.org. ##
+## ------------------------------------ ##
+_ASBOX
+    ) |
+      sed "s/^/$as_me: WARNING:     /" >&2
+    ;;
+  no:yes )
+    { echo "$as_me:$LINENO: WARNING: $ac_header: present but cannot be compiled" >&5
+echo "$as_me: WARNING: $ac_header: present but cannot be compiled" >&2;}
+    { echo "$as_me:$LINENO: WARNING: $ac_header: check for missing prerequisite headers?" >&5
+echo "$as_me: WARNING: $ac_header: check for missing prerequisite headers?" >&2;}
+    { echo "$as_me:$LINENO: WARNING: $ac_header: proceeding with the preprocessor's result" >&5
+echo "$as_me: WARNING: $ac_header: proceeding with the preprocessor's result" >&2;}
+    (
+      cat <<\_ASBOX
+## ------------------------------------ ##
+## Report this to bug-autoconf@gnu.org. ##
+## ------------------------------------ ##
+_ASBOX
+    ) |
+      sed "s/^/$as_me: WARNING:     /" >&2
+    ;;
+esac
+echo "$as_me:$LINENO: checking for $ac_header" >&5
+echo $ECHO_N "checking for $ac_header... $ECHO_C" >&6
+if eval "test \"\${$as_ac_Header+set}\" = set"; then
+  echo $ECHO_N "(cached) $ECHO_C" >&6
+else
+  eval "$as_ac_Header=$ac_header_preproc"
+fi
+echo "$as_me:$LINENO: result: `eval echo '${'$as_ac_Header'}'`" >&5
+echo "${ECHO_T}`eval echo '${'$as_ac_Header'}'`" >&6
+
+fi
+if test `eval echo '${'$as_ac_Header'}'` = yes; then
+  cat >>confdefs.h <<_ACEOF
+#define `echo "HAVE_$ac_header" | $as_tr_cpp` 1
+_ACEOF
+
+fi
+
+done
+
+
+for ac_func in getpagesize
+do
+as_ac_var=`echo "ac_cv_func_$ac_func" | $as_tr_sh`
+echo "$as_me:$LINENO: checking for $ac_func" >&5
+echo $ECHO_N "checking for $ac_func... $ECHO_C" >&6
+if eval "test \"\${$as_ac_var+set}\" = set"; then
+  echo $ECHO_N "(cached) $ECHO_C" >&6
+else
+  cat >conftest.$ac_ext <<_ACEOF
+#line $LINENO "configure"
+/* confdefs.h.  */
+_ACEOF
+cat confdefs.h >>conftest.$ac_ext
+cat >>conftest.$ac_ext <<_ACEOF
+/* end confdefs.h.  */
+/* System header to define __stub macros and hopefully few prototypes,
+    which can conflict with char $ac_func (); below.
+    Prefer <limits.h> to <assert.h> if __STDC__ is defined, since
+    <limits.h> exists even on freestanding compilers.  */
+#ifdef __STDC__
+# include <limits.h>
+#else
+# include <assert.h>
+#endif
+/* Override any gcc2 internal prototype to avoid an error.  */
+#ifdef __cplusplus
+extern "C"
+{
+#endif
+/* We use char because int might match the return type of a gcc2
+   builtin and then its argument prototype would still apply.  */
+char $ac_func ();
+/* The GNU C library defines this for functions which it implements
+    to always fail with ENOSYS.  Some functions are actually named
+    something starting with __ and the normal name is an alias.  */
+#if defined (__stub_$ac_func) || defined (__stub___$ac_func)
+choke me
+#else
+char (*f) () = $ac_func;
+#endif
+#ifdef __cplusplus
+}
+#endif
+
+int
+main ()
+{
+return f != $ac_func;
+  ;
+  return 0;
+}
+_ACEOF
+rm -f conftest.$ac_objext conftest$ac_exeext
+if { (eval echo "$as_me:$LINENO: \"$ac_link\"") >&5
+  (eval $ac_link) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); } &&
+         { ac_try='test -s conftest$ac_exeext'
+  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); }; }; then
+  eval "$as_ac_var=yes"
+else
+  echo "$as_me: failed program was:" >&5
+sed 's/^/| /' conftest.$ac_ext >&5
+
+eval "$as_ac_var=no"
+fi
+rm -f conftest.$ac_objext conftest$ac_exeext conftest.$ac_ext
+fi
+echo "$as_me:$LINENO: result: `eval echo '${'$as_ac_var'}'`" >&5
+echo "${ECHO_T}`eval echo '${'$as_ac_var'}'`" >&6
+if test `eval echo '${'$as_ac_var'}'` = yes; then
+  cat >>confdefs.h <<_ACEOF
+#define `echo "HAVE_$ac_func" | $as_tr_cpp` 1
+_ACEOF
+
+fi
+done
+
+echo "$as_me:$LINENO: checking for working mmap" >&5
+echo $ECHO_N "checking for working mmap... $ECHO_C" >&6
+if test "${ac_cv_func_mmap_fixed_mapped+set}" = set; then
+  echo $ECHO_N "(cached) $ECHO_C" >&6
+else
+  if test "$cross_compiling" = yes; then
+  ac_cv_func_mmap_fixed_mapped=no
+else
+  cat >conftest.$ac_ext <<_ACEOF
+#line $LINENO "configure"
+/* confdefs.h.  */
+_ACEOF
+cat confdefs.h >>conftest.$ac_ext
+cat >>conftest.$ac_ext <<_ACEOF
+/* end confdefs.h.  */
+$ac_includes_default
+/* malloc might have been renamed as rpl_malloc. */
+#undef malloc
+
+/* Thanks to Mike Haertel and Jim Avera for this test.
+   Here is a matrix of mmap possibilities:
+	mmap private not fixed
+	mmap private fixed at somewhere currently unmapped
+	mmap private fixed at somewhere already mapped
+	mmap shared not fixed
+	mmap shared fixed at somewhere currently unmapped
+	mmap shared fixed at somewhere already mapped
+   For private mappings, we should verify that changes cannot be read()
+   back from the file, nor mmap's back from the file at a different
+   address.  (There have been systems where private was not correctly
+   implemented like the infamous i386 svr4.0, and systems where the
+   VM page cache was not coherent with the file system buffer cache
+   like early versions of FreeBSD and possibly contemporary NetBSD.)
+   For shared mappings, we should conversely verify that changes get
+   propagated back to all the places they're supposed to be.
+
+   Grep wants private fixed already mapped.
+   The main things grep needs to know about mmap are:
+   * does it exist and is it safe to write into the mmap'd area
+   * how to use it (BSD variants)  */
+
+#include <fcntl.h>
+#include <sys/mman.h>
+
+#if !STDC_HEADERS && !HAVE_STDLIB_H
+char *malloc ();
+#endif
+
+/* This mess was copied from the GNU getpagesize.h.  */
+#if !HAVE_GETPAGESIZE
+/* Assume that all systems that can run configure have sys/param.h.  */
+# if !HAVE_SYS_PARAM_H
+#  define HAVE_SYS_PARAM_H 1
+# endif
+
+# ifdef _SC_PAGESIZE
+#  define getpagesize() sysconf(_SC_PAGESIZE)
+# else /* no _SC_PAGESIZE */
+#  if HAVE_SYS_PARAM_H
+#   include <sys/param.h>
+#   ifdef EXEC_PAGESIZE
+#    define getpagesize() EXEC_PAGESIZE
+#   else /* no EXEC_PAGESIZE */
+#    ifdef NBPG
+#     define getpagesize() NBPG * CLSIZE
+#     ifndef CLSIZE
+#      define CLSIZE 1
+#     endif /* no CLSIZE */
+#    else /* no NBPG */
+#     ifdef NBPC
+#      define getpagesize() NBPC
+#     else /* no NBPC */
+#      ifdef PAGESIZE
+#       define getpagesize() PAGESIZE
+#      endif /* PAGESIZE */
+#     endif /* no NBPC */
+#    endif /* no NBPG */
+#   endif /* no EXEC_PAGESIZE */
+#  else /* no HAVE_SYS_PARAM_H */
+#   define getpagesize() 8192	/* punt totally */
+#  endif /* no HAVE_SYS_PARAM_H */
+# endif /* no _SC_PAGESIZE */
+
+#endif /* no HAVE_GETPAGESIZE */
+
+int
+main ()
+{
+  char *data, *data2, *data3;
+  int i, pagesize;
+  int fd;
+
+  pagesize = getpagesize ();
+
+  /* First, make a file with some known garbage in it. */
+  data = (char *) malloc (pagesize);
+  if (!data)
+    exit (1);
+  for (i = 0; i < pagesize; ++i)
+    *(data + i) = rand ();
+  umask (0);
+  fd = creat ("conftest.mmap", 0600);
+  if (fd < 0)
+    exit (1);
+  if (write (fd, data, pagesize) != pagesize)
+    exit (1);
+  close (fd);
+
+  /* Next, try to mmap the file at a fixed address which already has
+     something else allocated at it.  If we can, also make sure that
+     we see the same garbage.  */
+  fd = open ("conftest.mmap", O_RDWR);
+  if (fd < 0)
+    exit (1);
+  data2 = (char *) malloc (2 * pagesize);
+  if (!data2)
+    exit (1);
+  data2 += (pagesize - ((int) data2 & (pagesize - 1))) & (pagesize - 1);
+  if (data2 != mmap (data2, pagesize, PROT_READ | PROT_WRITE,
+                     MAP_PRIVATE | MAP_FIXED, fd, 0L))
+    exit (1);
+  for (i = 0; i < pagesize; ++i)
+    if (*(data + i) != *(data2 + i))
+      exit (1);
+
+  /* Finally, make sure that changes to the mapped area do not
+     percolate back to the file as seen by read().  (This is a bug on
+     some variants of i386 svr4.0.)  */
+  for (i = 0; i < pagesize; ++i)
+    *(data2 + i) = *(data2 + i) + 1;
+  data3 = (char *) malloc (pagesize);
+  if (!data3)
+    exit (1);
+  if (read (fd, data3, pagesize) != pagesize)
+    exit (1);
+  for (i = 0; i < pagesize; ++i)
+    if (*(data + i) != *(data3 + i))
+      exit (1);
+  close (fd);
+  exit (0);
+}
+_ACEOF
+rm -f conftest$ac_exeext
+if { (eval echo "$as_me:$LINENO: \"$ac_link\"") >&5
+  (eval $ac_link) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); } && { ac_try='./conftest$ac_exeext'
+  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); }; }; then
+  ac_cv_func_mmap_fixed_mapped=yes
+else
+  echo "$as_me: program exited with status $ac_status" >&5
+echo "$as_me: failed program was:" >&5
+sed 's/^/| /' conftest.$ac_ext >&5
+
+( exit $ac_status )
+ac_cv_func_mmap_fixed_mapped=no
+fi
+rm -f core core.* *.core gmon.out bb.out conftest$ac_exeext conftest.$ac_objext conftest.$ac_ext
+fi
+fi
+echo "$as_me:$LINENO: result: $ac_cv_func_mmap_fixed_mapped" >&5
+echo "${ECHO_T}$ac_cv_func_mmap_fixed_mapped" >&6
+if test $ac_cv_func_mmap_fixed_mapped = yes; then
+
+cat >>confdefs.h <<\_ACEOF
+#define HAVE_MMAP 1
+_ACEOF
+
+fi
+rm -f conftest.mmap
+
+
+
+   # Check whether --enable-gtk or --disable-gtk was given.
+if test "${enable_gtk+set}" = set; then
+  enableval="$enable_gtk"
+  WITH_GTK=$enableval
+else
+  WITH_GTK=yes
+fi;
+
+
+   if test $WITH_GTK = yes; then
+     # Extract the first word of "pkg-config", so it can be a program name with args.
+set dummy pkg-config; ac_word=$2
+echo "$as_me:$LINENO: checking for $ac_word" >&5
+echo $ECHO_N "checking for $ac_word... $ECHO_C" >&6
+if test "${ac_cv_path_PKG_CONFIG+set}" = set; then
+  echo $ECHO_N "(cached) $ECHO_C" >&6
+else
+  case $PKG_CONFIG in
+  [\\/]* | ?:[\\/]*)
+  ac_cv_path_PKG_CONFIG="$PKG_CONFIG" # Let the user override the test with a path.
+  ;;
+  *)
+  as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
+for as_dir in $PATH
+do
+  IFS=$as_save_IFS
+  test -z "$as_dir" && as_dir=.
+  for ac_exec_ext in '' $ac_executable_extensions; do
+  if $as_executable_p "$as_dir/$ac_word$ac_exec_ext"; then
+    ac_cv_path_PKG_CONFIG="$as_dir/$ac_word$ac_exec_ext"
+    echo "$as_me:$LINENO: found $as_dir/$ac_word$ac_exec_ext" >&5
+    break 2
+  fi
+done
+done
+
+  test -z "$ac_cv_path_PKG_CONFIG" && ac_cv_path_PKG_CONFIG="no"
+  ;;
+esac
+fi
+PKG_CONFIG=$ac_cv_path_PKG_CONFIG
+
+if test -n "$PKG_CONFIG"; then
+  echo "$as_me:$LINENO: result: $PKG_CONFIG" >&5
+echo "${ECHO_T}$PKG_CONFIG" >&6
+else
+  echo "$as_me:$LINENO: result: no" >&5
+echo "${ECHO_T}no" >&6
+fi
+
+     echo "$as_me:$LINENO: checking for gtk+" >&5
+echo $ECHO_N "checking for gtk+... $ECHO_C" >&6
+     if test "$PKG_CONFIG" = "no" ; then
+        echo "$as_me:$LINENO: result: not found" >&5
+echo "${ECHO_T}not found" >&6
+        WITH_GTK=no
+     else
+        GTK_PREFIX=`$PKG_CONFIG gtk+-2.0 --variable=prefix`
+        echo "$as_me:$LINENO: result: $GTK_PREFIX" >&5
+echo "${ECHO_T}$GTK_PREFIX" >&6
+        GTK_GCC_FLAGS=`$PKG_CONFIG gtk+-2.0 --cflags`
+        if test x"$GTK_GCC_FLAGS" != x ; then
+           WITH_GTK=yes
+        else
+           WITH_GTK=no
+        fi
+     fi
+   else
+     echo "$as_me:$LINENO: checking for gtk+" >&5
+echo $ECHO_N "checking for gtk+... $ECHO_C" >&6
+     echo "$as_me:$LINENO: result: $WITH_GTK (from switch)" >&5
+echo "${ECHO_T}$WITH_GTK (from switch)" >&6
+   fi
+
+
+
+
+
+
+
+
+# Check whether --with-python or --without-python was given.
+if test "${with_python+set}" = set; then
+  withval="$with_python"
+  PYTHON_PATH_WITH=$withval
+else
+  PYTHON_PATH_WITH=yes
+fi;
+   # Check whether --enable-shared-python or --disable-shared-python was given.
+if test "${enable_shared_python+set}" = set; then
+  enableval="$enable_shared_python"
+  PYTHON_SHARED=$enableval
+else
+  PYTHON_SHARED=no
+fi;
+
+   WITH_PYTHON=yes
+   if test x"$PYTHON_PATH_WITH" = xno ; then
+      echo "$as_me:$LINENO: checking for python" >&5
+echo $ECHO_N "checking for python... $ECHO_C" >&6
+      echo "$as_me:$LINENO: result: no" >&5
+echo "${ECHO_T}no" >&6
+      PYTHON_BASE=no
+      WITH_PYTHON=no
+
+   else
+      # Extract the first word of "python", so it can be a program name with args.
+set dummy python; ac_word=$2
+echo "$as_me:$LINENO: checking for $ac_word" >&5
+echo $ECHO_N "checking for $ac_word... $ECHO_C" >&6
+if test "${ac_cv_path_PYTHON+set}" = set; then
+  echo $ECHO_N "(cached) $ECHO_C" >&6
+else
+  case $PYTHON in
+  [\\/]* | ?:[\\/]*)
+  ac_cv_path_PYTHON="$PYTHON" # Let the user override the test with a path.
+  ;;
+  *)
+  as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
+as_dummy="$PYTHON_PATH_WITH/bin:$PATH"
+for as_dir in $as_dummy
+do
+  IFS=$as_save_IFS
+  test -z "$as_dir" && as_dir=.
+  for ac_exec_ext in '' $ac_executable_extensions; do
+  if $as_executable_p "$as_dir/$ac_word$ac_exec_ext"; then
+    ac_cv_path_PYTHON="$as_dir/$ac_word$ac_exec_ext"
+    echo "$as_me:$LINENO: found $as_dir/$ac_word$ac_exec_ext" >&5
+    break 2
+  fi
+done
+done
+
+  test -z "$ac_cv_path_PYTHON" && ac_cv_path_PYTHON="no"
+  ;;
+esac
+fi
+PYTHON=$ac_cv_path_PYTHON
+
+if test -n "$PYTHON"; then
+  echo "$as_me:$LINENO: result: $PYTHON" >&5
+echo "${ECHO_T}$PYTHON" >&6
+else
+  echo "$as_me:$LINENO: result: no" >&5
+echo "${ECHO_T}no" >&6
+fi
+
+      if test x"$PYTHON" = xno ; then
+         PYTHON_BASE=no
+         WITH_PYTHON=no
+      else
+        echo "$as_me:$LINENO: checking for python >= 2.0" >&5
+echo $ECHO_N "checking for python >= 2.0... $ECHO_C" >&6
+        if test x"$PYTHON_PATH_WITH" != xyes ; then
+           PYTHON_BASE=$PYTHON_PATH_WITH
+        else
+           PYTHON_BASE=`$PYTHON -c 'import sys; print sys.prefix' `
+        fi
+
+        PYTHON_MAJOR_VERSION=`$PYTHON -c 'import sys; print sys.version_info[0]' 2>/dev/null`
+        if test x$PYTHON_MAJOR_VERSION != x2 ; then
+           echo "$as_me:$LINENO: result: no" >&5
+echo "${ECHO_T}no" >&6
+           PYTHON_BASE=no
+           WITH_PYTHON=no
+        else
+           PYTHON_VERSION=`$PYTHON -c 'import sys; print \`sys.version_info[0]\`+"."+\`sys.version_info[1]\`'`
+
+           if test x$PYTHON_SHARED = xyes; then
+              PYTHON_DIR=${PYTHON_BASE}/lib
+           else
+              PYTHON_DIR=${PYTHON_BASE}/lib/python${PYTHON_VERSION}/config
+           fi
+           echo "$as_me:$LINENO: result: yes (version $PYTHON_VERSION)" >&5
+echo "${ECHO_T}yes (version $PYTHON_VERSION)" >&6
+        fi
+      fi
+   fi
+
+   PYTHON_LIBS=""
+   if test x"$PYTHON_BASE" != xno; then
+      case "${host}" in
+          hppa*-hp-hpux1* )
+             PYTHON_LIBS="-Wl,-E -lm ${PYTHON_LIBS}"
+             ;;
+          powerpc-ibm-aix5.* )
+             PYTHON_LIBS="-lld -lm ${PYTHON_LIBS}"
+             ;;
+          powerpc-*-darwin* )
+             PYTHON_LIBS="-ldl -lm ${PYTHON_LIBS}"
+             ;;
+          *-sunos5.5* | *-solaris2.5* )
+             PYTHON_LIBS="-lresolv -lsocket -lnsl -ldl -lm ${PYTHON_LIBS}"
+             ;;
+          *-sunos5* | *-solaris* )
+             PYTHON_LIBS="-lresolv -lsocket -lnsl -ldl -lm ${PYTHON_LIBS}"
+             ;;
+          ia64-*-* )
+             case "${host}" in
+               *-linux-gnu* )
+                  PYTHON_LIBS="-Wl,-export-dynamic -ldl -lm ${PYTHON_LIBS}"
+                  ;;
+               *-hp-hpux11* )
+                  PYTHON_LIBS="-ldld -ldl -lm -Wl,-E ${PYTHON_LIBS}"
+                  ;;
+               *-sgi* )
+                  PYTHON_LIBS="-lm ${PYTHON_LIBS}"
+                  ;;
+             esac
+             ;;
+          x86_64-*-* )
+             PYTHON_LIBS="-Wl,-export-dynamic -lm -ldl ${PYTHON_LIBS}"
+             ;;
+          i[3456]86-*linux-gnu* )
+             PYTHON_LIBS="-Wl,-export-dynamic -lm -ldl ${PYTHON_LIBS}"
+             ;;
+          i[3456]86-*win32* | i[3456]86-*mingw32* | i[3456]86-*cygwin* )
+             ;;
+          *-darwin* )
+             PYTHON_LIBS="-ldl -lm ${PYTHON_LIBS}"
+             ;;
+          *-freebsd* )
+             PYTHON_LIBS="-lm -lutil ${PYTHON_LIBS}"
+             ;;
+      esac
+
+      PYTHON_LIBS="-L${PYTHON_DIR} -lpython${PYTHON_VERSION} ${PYTHON_LIBS}"
+      PYTHON_CFLAGS="-I${PYTHON_BASE}/include/python${PYTHON_VERSION}"
+
+      # Automatically check whether some libraries are needed to link with
+      # the python libraries. If you are using the default system library, it is
+      # generally the case that at least -lpthread will be needed. But you might
+      # also have recompiled your own version, and if it doesn't depend on
+      # pthreads, we shouldn't bring that in, since that also impacts the choice
+      # of the GNAT runtime
+
+      CFLAGS="${CFLAGS} ${PYTHON_CFLAGS}"
+      LIBS="${LIBS} ${PYTHON_LIBS}"
+      cat >conftest.$ac_ext <<_ACEOF
+#line $LINENO "configure"
+/* confdefs.h.  */
+_ACEOF
+cat confdefs.h >>conftest.$ac_ext
+cat >>conftest.$ac_ext <<_ACEOF
+/* end confdefs.h.  */
+#include <Python.h>
+int
+main ()
+{
+Py_Initialize();
+  ;
+  return 0;
+}
+_ACEOF
+rm -f conftest.$ac_objext conftest$ac_exeext
+if { (eval echo "$as_me:$LINENO: \"$ac_link\"") >&5
+  (eval $ac_link) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); } &&
+         { ac_try='test -s conftest$ac_exeext'
+  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); }; }; then
+  :
+else
+  echo "$as_me: failed program was:" >&5
+sed 's/^/| /' conftest.$ac_ext >&5
+
+LIBS="${LIBS} -lpthread -lutil"
+         cat >conftest.$ac_ext <<_ACEOF
+#line $LINENO "configure"
+/* confdefs.h.  */
+_ACEOF
+cat confdefs.h >>conftest.$ac_ext
+cat >>conftest.$ac_ext <<_ACEOF
+/* end confdefs.h.  */
+#include <Python.h>
+int
+main ()
+{
+Py_Initialize();
+  ;
+  return 0;
+}
+_ACEOF
+rm -f conftest.$ac_objext conftest$ac_exeext
+if { (eval echo "$as_me:$LINENO: \"$ac_link\"") >&5
+  (eval $ac_link) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); } &&
+         { ac_try='test -s conftest$ac_exeext'
+  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); }; }; then
+  PYTHON_LIBS="${PYTHON_LIBS} -lpthread -lutil"
+else
+  echo "$as_me: failed program was:" >&5
+sed 's/^/| /' conftest.$ac_ext >&5
+
+{ { echo "$as_me:$LINENO: error: Can't compile and link python example
+See \`config.log' for more details." >&5
+echo "$as_me: error: Can't compile and link python example
+See \`config.log' for more details." >&2;}
+   { (exit 1); exit 1; }; }
+fi
+rm -f conftest.$ac_objext conftest$ac_exeext conftest.$ac_ext
+fi
+rm -f conftest.$ac_objext conftest$ac_exeext conftest.$ac_ext
+   fi
+
+
+
+
+
+
+
+
+
+    # Check whether --enable-pygtk or --disable-pygtk was given.
+if test "${enable_pygtk+set}" = set; then
+  enableval="$enable_pygtk"
+  WITH_PYGTK=$enableval
+else
+  WITH_PYGTK=$WITH_PYTHON
+fi;
+
+    if test "$PKG_CONFIG" = "" -o "$PKG_CONFIG" = "no" ; then
+       echo "$as_me:$LINENO: checking for pygtk" >&5
+echo $ECHO_N "checking for pygtk... $ECHO_C" >&6
+       echo "$as_me:$LINENO: result: no (pkg-config not found)" >&5
+echo "${ECHO_T}no (pkg-config not found)" >&6
+       WITH_PYGTK=no
+    else
+       min_pygtk_version=2.8
+       module=pygtk-2.0
+       echo "$as_me:$LINENO: checking for pygtk - version >= $min_pygtk_version" >&5
+echo $ECHO_N "checking for pygtk - version >= $min_pygtk_version... $ECHO_C" >&6
+
+       if test x"$WITH_PYGTK" = x -o x"$WITH_PYGTK" = xno ; then
+          echo "$as_me:$LINENO: result: no" >&5
+echo "${ECHO_T}no" >&6
+          PYGTK_PREFIX=""
+          PYGTK_INCLUDE=""
+          WITH_PYGTK=no
+
+       elif test "$PYTHON_BASE" != "no" ; then
+          pygtk_version=`$PKG_CONFIG $module --modversion`
+          $PKG_CONFIG $module --atleast-version=$min_pygtk_version
+          if test $? = 0 ; then
+             PYGTK_INCLUDE="`$PKG_CONFIG $module --cflags` -DPYGTK"
+             PYGTK_PREFIX=`$PKG_CONFIG $module --variable=prefix`
+             echo "$as_me:$LINENO: result: yes (version $pygtk_version)" >&5
+echo "${ECHO_T}yes (version $pygtk_version)" >&6
+             WITH_PYGTK=yes
+          else
+             echo "$as_me:$LINENO: result: no (found $pygtk_version)" >&5
+echo "${ECHO_T}no (found $pygtk_version)" >&6
+             PYGTK_PREFIX=""
+             PYGTK_INCLUDE=""
+             WITH_PYGTK=no
+          fi
+
+       else
+          echo "$as_me:$LINENO: result: no since python not found" >&5
+echo "${ECHO_T}no since python not found" >&6
+          PYGTK_PREFIX=""
+          PYGTK_INCLUDE=""
+          WITH_PYGTK=no
+       fi
+    fi
+
+
+
+
+
+
+   value=$PYTHON_LIBS
+   output=PYTHON_LIBS_GPR
+   result=""
+   for v in $value; do
+      if test "$result" != ""; then
+         result="$result, "
+      fi
+      result="$result\"$v\""
+   done
+   PYTHON_LIBS_GPR=$result
+
+
+
+
+   value=$PYTHON_CFLAGS
+   output=PYTHON_CFLAGS_GPR
+   result=""
+   for v in $value; do
+      if test "$result" != ""; then
+         result="$result, "
+      fi
+      result="$result\"$v\""
+   done
+   PYTHON_CFLAGS_GPR=$result
+
+
+
+
+   value=$PYGTK_INCLUDE
+   output=PYGTK_INCLUDE_GPR
+   result=""
+   for v in $value; do
+      if test "$result" != ""; then
+         result="$result, "
+      fi
+      result="$result\"$v\""
+   done
+   PYGTK_INCLUDE_GPR=$result
+
+
+
+
+   value=$GTK_GCC_FLAGS
+   output=GTK_GCC_FLAGS_GPR
+   result=""
+   for v in $value; do
+      if test "$result" != ""; then
+         result="$result, "
+      fi
+      result="$result\"$v\""
+   done
+   GTK_GCC_FLAGS_GPR=$result
+
+
 
 
 
@@ -4174,10 +4577,6 @@ s,@LN_S@,$LN_S,;t t
 s,@INSTALL_PROGRAM@,$INSTALL_PROGRAM,;t t
 s,@INSTALL_SCRIPT@,$INSTALL_SCRIPT,;t t
 s,@INSTALL_DATA@,$INSTALL_DATA,;t t
-s,@PKG_CONFIG@,$PKG_CONFIG,;t t
-s,@GTK_GCC_FLAGS@,$GTK_GCC_FLAGS,;t t
-s,@WITH_GTK@,$WITH_GTK,;t t
-s,@PYTHON@,$PYTHON,;t t
 s,@CC@,$CC,;t t
 s,@CFLAGS@,$CFLAGS,;t t
 s,@LDFLAGS@,$LDFLAGS,;t t
@@ -4185,6 +4584,12 @@ s,@CPPFLAGS@,$CPPFLAGS,;t t
 s,@ac_ct_CC@,$ac_ct_CC,;t t
 s,@EXEEXT@,$EXEEXT,;t t
 s,@OBJEXT@,$OBJEXT,;t t
+s,@CPP@,$CPP,;t t
+s,@EGREP@,$EGREP,;t t
+s,@PKG_CONFIG@,$PKG_CONFIG,;t t
+s,@GTK_GCC_FLAGS@,$GTK_GCC_FLAGS,;t t
+s,@WITH_GTK@,$WITH_GTK,;t t
+s,@PYTHON@,$PYTHON,;t t
 s,@PYTHON_BASE@,$PYTHON_BASE,;t t
 s,@PYTHON_VERSION@,$PYTHON_VERSION,;t t
 s,@PYTHON_DIR@,$PYTHON_DIR,;t t
@@ -4198,8 +4603,6 @@ s,@PYTHON_LIBS_GPR@,$PYTHON_LIBS_GPR,;t t
 s,@PYTHON_CFLAGS_GPR@,$PYTHON_CFLAGS_GPR,;t t
 s,@PYGTK_INCLUDE_GPR@,$PYGTK_INCLUDE_GPR,;t t
 s,@GTK_GCC_FLAGS_GPR@,$GTK_GCC_FLAGS_GPR,;t t
-s,@CPP@,$CPP,;t t
-s,@EGREP@,$EGREP,;t t
 s,@WITH_SYSLOG@,$WITH_SYSLOG,;t t
 s,@MAKEINFO@,$MAKEINFO,;t t
 s,@TEXI2DVI@,$TEXI2DVI,;t t

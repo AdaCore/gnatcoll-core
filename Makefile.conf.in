@@ -9,6 +9,8 @@ WITH_PYTHON=@WITH_PYTHON@
 WITH_GTK=@WITH_GTK@
 WITH_SYSLOG=@WITH_SYSLOG@
 
+DEFS=@DEFS@
+
 TARNAME=@PACKAGE_TARNAME@
 VERSION=@PACKAGE_VERSION@
 prefix=@prefix@
@@ -52,6 +54,12 @@ LIBFULL=${LIBNAME}
 endif
 
 LIBDIR=lib/${MODULE}/${GNATLIB_LIBRARY_TYPE}/
+
+ifeq (${GNATLIB_LIBRARY_TYPE},static)
+FPIC=
+else
+FPIC=-fPIC
+endif
 
 .PHONY: buildall cleanall libinstall
 buildall:
