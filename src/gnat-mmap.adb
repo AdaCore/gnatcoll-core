@@ -45,7 +45,7 @@ package body GNAT.Mmap is
      (Str_Access, System.Address);
 
    function Mmap (Start  : System.Address := System.Null_Address;
-                  Length : Interfaces.C.size_t;
+                  Length : Long_Integer;
                   Prot   : Mmap_Prot := PROT_READ;
                   Flags  : Mmap_Flags := MAP_PRIVATE;
                   Fd     : GNAT.OS_Lib.File_Descriptor;
@@ -53,7 +53,7 @@ package body GNAT.Mmap is
    pragma Import (C, Mmap, "gnatlib_mmap");
 
    function Munmap (Start : System.Address;
-                     Length : Interfaces.C.size_t) return Integer;
+                    Length : Long_Integer) return Integer;
    pragma Import (C, Munmap, "gnatlib_munmap");
 
    function Has_Mmap return Integer;
