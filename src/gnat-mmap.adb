@@ -227,10 +227,10 @@ package body GNAT.Mmap is
 
          if File.Write then
             Prot  := PROT_WRITE;
-            Flags := MAP_SHARED;
+            Flags := MAP_PRIVATE;
          else
             Prot  := PROT_READ;
-            Flags := MAP_SHARED;
+            Flags := MAP_PRIVATE;
          end if;
 
          Tmp := Len + Extra;
