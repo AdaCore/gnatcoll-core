@@ -50,11 +50,11 @@ package body GNAT.Mmap is
                   Flags  : Mmap_Flags := MAP_PRIVATE;
                   Fd     : GNAT.OS_Lib.File_Descriptor;
                   Offset : Long_Integer := 0) return System.Address;
-   pragma Import (C, Mmap, "mmap");
+   pragma Import (C, Mmap, "gnatlib_mmap");
 
    function Munmap (Start : System.Address;
                      Length : Interfaces.C.size_t) return Integer;
-   pragma Import (C, Munmap, "munmap");
+   pragma Import (C, Munmap, "gnatlib_munmap");
 
    function Has_Mmap return Integer;
    pragma Import (C, Has_Mmap, "gnatlib_has_mmap");
