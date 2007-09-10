@@ -958,7 +958,7 @@ package body GNAT.Traces is
 
       procedure Skip_Spaces (Skip_Newline : Boolean := True) is
       begin
-         while Index <= Buffer'Last
+         while Index <= Last (File)
            and then (Buffer (Index) = ' '
                      or else (Buffer (Index) = ASCII.LF
                               and then Skip_Newline)
@@ -974,7 +974,7 @@ package body GNAT.Traces is
 
       procedure Skip_To_Newline (Stop_At_First_Blank : Boolean := False) is
       begin
-         while Index <= Buffer'Last
+         while Index <= Last (File)
            and then Buffer (Index) /= ASCII.LF
            and then (not Stop_At_First_Blank
                      or else (Buffer (Index) /= ' '
@@ -1003,7 +1003,7 @@ package body GNAT.Traces is
             Skip_Spaces;
             exit when Index > Last (File);
 
-            if Index + 1 <= Buffer'Last
+            if Index + 1 <= Last (File)
               and then String (Buffer (Index .. Index + 1)) = "--"
             then
                Skip_To_Newline;
@@ -1059,7 +1059,7 @@ package body GNAT.Traces is
 
                   when others =>
                      First := Index;
-                     while Index <= Buffer'Last
+                     while Index <= Last (File)
                        and then Buffer (Index) /= '='
                        and then Buffer (Index) /= '>'
                        and then Buffer (Index) /= '-'
