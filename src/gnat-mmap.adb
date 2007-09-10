@@ -169,7 +169,7 @@ package body GNAT.Mmap is
       pragma Unreferenced (Ignored);
    begin
       if File.Mapped then
-         Ignored := Munmap (Convert (File.Data), size_t (File.Last));
+         Ignored := Munmap (Convert (File.Data), Long_Integer (File.Last));
       else
          To_Disk (File);
       end if;
@@ -219,7 +219,7 @@ package body GNAT.Mmap is
       if File.Mapped then
          --  Unmap previous memory if necessary
          if File.Data /= null then
-            Ignored := Munmap (Convert (File.Data), size_t (File.Last));
+            Ignored := Munmap (Convert (File.Data), Long_Integer (File.Last));
             File.Data := null;
          end if;
 
@@ -250,7 +250,7 @@ package body GNAT.Mmap is
             File.Last   := Integer (Tmp);
             File.Data := Convert
               (Mmap (Offset => File.Offset,
-                     Length => size_t (File.Last),
+                     Length => Long_Integer (File.Last),
                      Prot   => Prot,
                      Flags  => Flags,
                      Fd     => File.Fd));
