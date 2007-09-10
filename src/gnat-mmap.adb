@@ -36,7 +36,7 @@ package body GNAT.Mmap is
    for Mmap_Flags'Size use Interfaces.C.int'Size;
 --     MAP_NONE    : constant Mmap_Flags := 16#00#;
 --     MAP_FIXED   : constant Mmap_Flags := 16#10#;
---     MAP_SHARED  : constant Mmap_Flags := 16#01#;
+   MAP_SHARED  : constant Mmap_Flags := 16#01#;
    MAP_PRIVATE : constant Mmap_Flags := 16#02#;
 
    function Convert is new Ada.Unchecked_Conversion
@@ -227,7 +227,7 @@ package body GNAT.Mmap is
 
          if File.Write then
             Prot  := PROT_WRITE;
-            Flags := MAP_PRIVATE;
+            Flags := MAP_SHARED;
          else
             Prot  := PROT_READ;
             Flags := MAP_PRIVATE;
