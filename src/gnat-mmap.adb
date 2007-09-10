@@ -333,4 +333,37 @@ package body GNAT.Mmap is
       return File.Mapped;
    end Is_Mmapped;
 
+   ---------------------
+   -- Read_Whole_File --
+   ---------------------
+
+   function Read_Whole_File
+     (Filename           : String;
+      Empty_If_Not_Found : Boolean := False) return GNAT.Strings.String_Access
+   is
+      File   : Mapped_File;
+      Result : String_Access;
+   begin
+      File := Open_Read (Filename);
+      Read (File);
+
+      if File.Data /= null then
+         Result := new String'(String (File.Data (1 .. File.Last)));
+      else
+         Result := File.Buffer;
+         File.Buffer := null;  --  So that it is not deallocated
+      end if;
+
+      Close (File);
+      return Result;
+
+   exception
+      when Name_Error =>
+         if Empty_If_Not_Found then
+            return new String'("");
+         else
+            return null;
+         end if;
+   end Read_Whole_File;
+
 end GNAT.Mmap;

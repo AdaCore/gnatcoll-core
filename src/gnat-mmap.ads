@@ -163,6 +163,17 @@ package GNAT.Mmap is
    --  you to map as much memory as possible at once, thus potentially reducing
    --  the number of system calls to read the file by chunks.
 
+   function Read_Whole_File
+     (Filename           : String;
+      Empty_If_Not_Found : Boolean := False) return GNAT.Strings.String_Access;
+   --  Returns the whole contents of the file.
+   --  The returned string must be freed by the user.
+   --  This is a convenience function, which is of course slower than the ones
+   --  above since we also need to allocate some memory, actually read the file
+   --  and copy the bytes.
+   --  If the file does not exist, null is returned. However, if
+   --  Empty_If_Not_Found is True, then the empty string is returned instead.
+
 private
    pragma Inline (Data, Length, Last, Offset, Is_Mmapped, To_Str_Access);
 
