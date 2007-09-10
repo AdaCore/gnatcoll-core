@@ -20,6 +20,7 @@
 with Ada.Characters.Handling;           use Ada.Characters.Handling;
 with Ada.Containers.Indefinite_Vectors;
 with Ada.Exceptions;                    use Ada.Exceptions;
+with Ada.IO_Exceptions;                 use Ada.IO_Exceptions;
 with Ada.Strings.Fixed;                 use Ada.Strings.Fixed;
 with Ada.Strings.Unbounded;             use Ada.Strings.Unbounded;
 with Ada.Unchecked_Deallocation;
@@ -28,6 +29,7 @@ with System.Address_Image;
 with System;                            use System;
 
 with GNAT.Debug_Utilities;              use GNAT.Debug_Utilities;
+with GNAT.Mmap;                         use GNAT.Mmap;
 with GNAT.OS_Lib;                       use GNAT.OS_Lib;
 with GNAT.Scripts;                      use GNAT.Scripts;
 with GNAT.Scripts.Impl;                 use GNAT.Scripts.Impl;
@@ -209,17 +211,19 @@ package body GNAT.Scripts.Shell is
       if Command = "load" then
          declare
             Filename : constant String := Nth_Arg (Data, 1);
-            Buffer   : GNAT.Strings.String_Access := Read_File (Filename);
+            File     : Mapped_File;
             Errors   : Boolean;
          begin
-            if Buffer /= null then
-               Execute_Command
-                 (Get_Script (Data), Buffer.all,
-                  Errors => Errors);
-               Free (Buffer);
-            else
+            File := Open_Read (Filename);
+            Read (File);
+            Execute_Command
+              (Get_Script (Data),
+               String (GNAT.Mmap.Data (File)(1 .. Last (File))),
+               Errors => Errors);
+            Close (File);
+         exception
+            when Name_Error =>
                Set_Error_Msg (Data, "File not found: """ & Filename & '"');
-            end if;
          end;
 
       elsif Command = "echo" then

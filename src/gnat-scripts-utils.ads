@@ -49,10 +49,4 @@ package GNAT.Scripts.Utils is
    function Unprotect (Str : String) return String;
    --  Remove the \ protections in Str
 
-   function Read_File (File : String) return GNAT.Strings.String_Access;
-   --  Return the contents of an entire file.
-   --  If the file cannot be found, return null.
-   --  The caller is responsible for freeing the returned memory.
-   --  File is a UTF8-encoded string
-
 end GNAT.Scripts.Utils;

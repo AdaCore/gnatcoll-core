@@ -19,7 +19,6 @@
 
 with Ada.Strings.Fixed; use Ada.Strings.Fixed;
 with Ada.Unchecked_Deallocation;
-with GNAT.OS_Lib;
 with GNAT.Strings;      use GNAT.Strings;
 
 package body GNAT.Scripts.Utils is
@@ -252,31 +251,5 @@ package body GNAT.Scripts.Utils is
          return Result (Result'First .. Index - 1);
       end if;
    end Unprotect;
-
-   ---------------
-   -- Read_File --
-   ---------------
-
-   function Read_File (File : String) return String_Access is
-      use GNAT.OS_Lib;
-      FD           : File_Descriptor := Invalid_FD;
-      Buffer       : GNAT.Strings.String_Access;
-      Length       : Integer;
-      Dummy_Length : Integer;
-      pragma Unreferenced (Dummy_Length);
-
-   begin
-      FD := Open_Read (File, Fmode => Binary);
-
-      if FD = Invalid_FD then
-         return null;
-      end if;
-
-      Length := Integer (File_Length (FD));
-      Buffer := new String (1 .. Length);
-      Dummy_Length := Read (FD, Buffer.all'Address, Length);
-      Close (FD);
-      return Buffer;
-   end Read_File;
 
 end GNAT.Scripts.Utils;
