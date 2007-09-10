@@ -300,6 +300,17 @@ package body GNAT.Mmap is
       return File.Length;
    end Length;
 
+   -------------------
+   -- To_Str_Access --
+   -------------------
+
+   function To_Str_Access
+     (Str : GNAT.Strings.String_Access) return Str_Access
+   is
+   begin
+      return Convert (Str (Str'First)'Address);
+   end To_Str_Access;
+
    ----------
    -- Data --
    ----------
@@ -309,7 +320,7 @@ package body GNAT.Mmap is
       if File.Mapped then
          return File.Data;
       else
-         return Convert (File.Buffer (File.Buffer'First)'Address);
+         return To_Str_Access (File.Buffer);
       end if;
    end Data;
 

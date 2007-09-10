@@ -78,10 +78,15 @@ package GNAT.Mmap is
    --  memory through calls to read(), and written back with write() when you
    --  close it. This is of course much slower
 
-   No_Mapped_File : constant Mapped_File;
+   Invalid_Mapped_File : constant Mapped_File;
 
    type Unconstrained_String is new String (Positive);
    type Str_Access is access Unconstrained_String;
+
+   function To_Str_Access
+     (Str : GNAT.Strings.String_Access) return Str_Access;
+   --  Convert Str. The returned value points to the same memory block, but no
+   --  longer includes the bounds, which you need to manage yourself
 
    function Open_Read
      (Filename              : String;
@@ -159,7 +164,7 @@ package GNAT.Mmap is
    --  the number of system calls to read the file by chunks.
 
 private
-   pragma Inline (Data, Length, Last, Offset, Is_Mmapped);
+   pragma Inline (Data, Length, Last, Offset, Is_Mmapped, To_Str_Access);
 
    type Mapped_File is record
       Data      : Str_Access;
@@ -175,7 +180,7 @@ private
    end record;
    --  Fd is either a file descriptor on Unix systems or a Handle on Windows.
 
-   No_Mapped_File : constant Mapped_File :=
+   Invalid_Mapped_File : constant Mapped_File :=
      (null, null, 0, 0, 0, False, False,
       GNAT.OS_Lib.Invalid_FD, System.Null_Address, 0);
 
