@@ -27,6 +27,7 @@ with GNAT.Calendar;             use GNAT.Calendar;
 with GNAT.Calendar.Time_IO;     use GNAT.Calendar.Time_IO;
 with GNAT.Directory_Operations; use GNAT.Directory_Operations;
 with GNAT.IO_Aux;               use GNAT.IO_Aux;
+with GNAT.Mmap;                 use GNAT.Mmap;
 with GNAT.OS_Lib;               use GNAT.OS_Lib;
 with GNAT.Task_Lock;            use GNAT.Task_Lock;
 with GNAT.Traceback;            use GNAT.Traceback;
@@ -938,10 +939,9 @@ package body GNAT.Traces is
       Default  : String := "")
    is
       File_Name  : aliased constant String := Config_File (Filename, Default);
-      Buffer     : GNAT.Strings.String_Access;
-      F          : File_Descriptor;
-      Length     : Long_Integer;
-      Index, First, Last : Natural;
+      Buffer     : Str_Access;
+      File       : Mapped_File;
+      Index, First, Max : Natural;
       Handle     : Trace_Handle;
 
       procedure Skip_Spaces (Skip_Newline : Boolean := True);
@@ -986,28 +986,25 @@ package body GNAT.Traces is
 
    begin
       if File_Name /= "" then
-         F := Open_Read (File_Name, Text);
-
-         if F = Invalid_FD then
-            return;
-         end if;
+         begin
+            File := Open_Read (File_Name);
+         exception
+            when Name_Error =>
+               return;
+         end;
 
          Lock;
+         Read (File);
+         Buffer := Data (File);
 
-         Length := File_Length (F);
-         Buffer := new String (1 .. Positive (Length));
-         Length := Long_Integer
-           (Read (F, Buffer.all'Address, Integer (Length)));
-         Close (F);
-
-         Index := Buffer'First;
+         Index := 1;
 
          loop
             Skip_Spaces;
-            exit when Index > Buffer'Last;
+            exit when Index > Last (File);
 
             if Index + 1 <= Buffer'Last
-              and then Buffer (Index .. Index + 1) = "--"
+              and then String (Buffer (Index .. Index + 1)) = "--"
             then
                Skip_To_Newline;
 
@@ -1021,7 +1018,7 @@ package body GNAT.Traces is
                      begin
                         Skip_To_Newline;
                         Stream := Find_Stream
-                          (Buffer (Save .. Index - 1), File_Name);
+                          (String (Buffer (Save .. Index - 1)), File_Name);
                         if Stream /= null then
                            --  Put this first in the list, since that's the
                            --  default
@@ -1071,17 +1068,17 @@ package body GNAT.Traces is
                         Index := Index + 1;
                      end loop;
 
-                     Last := Index - 1;
-                     while Last >= Buffer'First
-                       and then (Buffer (Last) = ' '
-                                 or else Buffer (Last) = ASCII.HT)
+                     Max := Index - 1;
+                     while Max >= 1
+                       and then (Buffer (Max) = ' '
+                                 or else Buffer (Max) = ASCII.HT)
                      loop
-                        Last := Last - 1;
+                        Max := Max - 1;
                      end loop;
 
-                     Handle := Create (Buffer (First .. Last));
+                     Handle := Create (String (Buffer (First .. Max)));
 
-                     if Index > Buffer'Last
+                     if Index > Last (File)
                        or else Buffer (Index) /= '='
                      then
                         Handle.Active := True;
@@ -1089,18 +1086,18 @@ package body GNAT.Traces is
                         Index := Index + 1;
                         Skip_Spaces;
                         Handle.Active :=
-                          Index + 1 > Buffer'Last
-                          or else Buffer (Index .. Index + 1) /= "no";
+                          Index + 1 > Last (File)
+                          or else String (Buffer (Index .. Index + 1)) /= "no";
                      end if;
 
-                     while Index <= Buffer'Last
+                     while Index <= Last (File)
                        and then Buffer (Index) /= '>'
                        and then Buffer (Index) /= ASCII.LF
                      loop
                         Index := Index + 1;
                      end loop;
 
-                     if Index <= Buffer'Last
+                     if Index <= Last (File)
                        and then Buffer (Index) = '>'
                      then
                         declare
@@ -1108,7 +1105,7 @@ package body GNAT.Traces is
                         begin
                            Skip_To_Newline;
                            Handle.Stream := Find_Stream
-                             (Buffer (Save .. Index - 1), File_Name);
+                             (String (Buffer (Save .. Index - 1)), File_Name);
                         end;
                      else
                         Skip_To_Newline;
@@ -1118,7 +1115,7 @@ package body GNAT.Traces is
             end if;
          end loop;
 
-         Free (Buffer);
+         Close (File);
          Unlock;
       end if;
 
