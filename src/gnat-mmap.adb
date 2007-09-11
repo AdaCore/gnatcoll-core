@@ -210,8 +210,10 @@ package body GNAT.Mmap is
          Len := File.Length - Offset;
       end if;
 
+      --  If the requested block is already in memory, do nothing
       if Offset >= File.Offset
         and then Offset + Len <= File.Offset + Long_Integer (File.Last)
+        and then (File.Data /= null or else File.Buffer /= null)
       then
          return;
       end if;
@@ -349,12 +351,13 @@ package body GNAT.Mmap is
 
       if File.Data /= null then
          Result := new String'(String (File.Data (1 .. File.Last)));
-      else
+      elsif File.Buffer /= null then
          Result := File.Buffer;
          File.Buffer := null;  --  So that it is not deallocated
       end if;
 
       Close (File);
+
       return Result;
 
    exception
