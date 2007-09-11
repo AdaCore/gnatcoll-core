@@ -73,7 +73,6 @@ package body GNAT.Mmap is
    begin
       File.Buffer   := new String (1 .. File.Last);
       Lseek (File.Fd, File.Offset, Seek_Set);
-
       if Read (File.Fd, File.Buffer.all'Address, File.Last) /= File.Last then
          GNAT.Strings.Free (File.Buffer);
          Close (File.Fd);
@@ -310,7 +309,11 @@ package body GNAT.Mmap is
      (Str : GNAT.Strings.String_Access) return Str_Access
    is
    begin
-      return Convert (Str (Str'First)'Address);
+      if Str = null then
+         return null;
+      else
+         return Convert (Str.all'Address);
+      end if;
    end To_Str_Access;
 
    ----------
