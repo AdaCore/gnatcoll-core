@@ -217,7 +217,10 @@ package body GNAT.Mmap is
          return;
       end if;
 
-      if File.Mapped then
+      --  mmap() will sometimes return NULL when the file exists but is empty,
+      --  which is not what we want. In such a case we default on read()
+
+      if File.Length > 0 and then File.Mapped then
          --  Unmap previous memory if necessary
          if File.Data /= null then
             Ignored := Munmap (Convert (File.Data), Long_Integer (File.Last));
