@@ -55,9 +55,12 @@ AC_DEFUN(AM_PATH_SYSLOG,
 AC_DEFUN(AM_PATH_PYTHON,
 [
    AC_ARG_WITH(python,
-     AC_HELP_STRING(
+     [AC_HELP_STRING(
        [--with-python=<path>],
-       [Specify the full path to the Python installation]),
+       [Specify the full path to the Python installation])
+AC_HELP_STRING(
+       [--without-python],
+       [Disable python support])],
      PYTHON_PATH_WITH=$withval,
      PYTHON_PATH_WITH=yes)
    AC_ARG_ENABLE(shared-python,
