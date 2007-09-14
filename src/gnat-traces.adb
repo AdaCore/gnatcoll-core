@@ -626,27 +626,45 @@ package body GNAT.Traces is
       Message  : String)
    is
       pragma Unreferenced (Message);
+
+      Space_Inserted : Boolean := False;
+      --  True when a space has been inserted after the main trace text, before
+      --  the Post_Decorator information.
+
+      procedure Ensure_Space;
+      --  Insert a space if not done already
+
+      procedure Ensure_Space is
+      begin
+         if not Space_Inserted then
+            Put (Stream, " ");
+            Space_Inserted := True;
+         end if;
+      end Ensure_Space;
+
    begin
       if Absolute_Time.Active and then Supports_Time (Stream) then
-         Put (Stream, " ");
+         Ensure_Space;
          Put_Absolute_Time (Stream);
       end if;
 
       if Elapsed_Time.Active then
-         Put (Stream, " ");
+         Ensure_Space;
          Put_Elapsed_Time (Handle, Stream);
       end if;
 
       if Traces.Location.Active then
-         Put (Stream, " (loc: " & Location & ')');
+         Ensure_Space;
+         Put (Stream, "(loc: " & Location & ')');
       end if;
 
       if Enclosing_Entity.Active then
-         Put (Stream, " (entity:" & Entity & ')');
+         Ensure_Space;
+         Put (Stream, "(entity:" & Entity & ')');
       end if;
 
       if Stack_Trace.Active then
-         Put (Stream, " ");
+         Ensure_Space;
          Put_Stack_Trace (Stream);
       end if;
    end Post_Decorator;
