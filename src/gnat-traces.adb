@@ -628,22 +628,25 @@ package body GNAT.Traces is
       pragma Unreferenced (Message);
    begin
       if Absolute_Time.Active and then Supports_Time (Stream) then
+         Put (Stream, " ");
          Put_Absolute_Time (Stream);
       end if;
 
       if Elapsed_Time.Active then
+         Put (Stream, " ");
          Put_Elapsed_Time (Handle, Stream);
       end if;
 
       if Traces.Location.Active then
-         Put (Stream, "(loc: " & Location & ')');
+         Put (Stream, " (loc: " & Location & ')');
       end if;
 
       if Enclosing_Entity.Active then
-         Put (Stream, "(entity:" & Entity & ')');
+         Put (Stream, " (entity:" & Entity & ')');
       end if;
 
       if Stack_Trace.Active then
+         Put (Stream, " ");
          Put_Stack_Trace (Stream);
       end if;
    end Post_Decorator;
@@ -725,8 +728,6 @@ package body GNAT.Traces is
       if Color then
          Put (Stream.all, Brown_Fg & Default_Bg);
       end if;
-
-      Put (Stream.all, " ");
 
       Post_Decorator (Handle.all, Stream.all, Message, Location, Entity);
 
