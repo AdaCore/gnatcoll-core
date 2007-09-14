@@ -479,18 +479,30 @@ package body GNAT.Scripts.Shell is
    is
       pragma Unreferenced (Show_Command);
       Err : aliased Boolean;
-      S   : constant String :=
-              Execute_GPS_Shell_Command
-                (Script, Command, Err'Unchecked_Access);
+      Old_Console : constant Virtual_Console := Script.Console;
    begin
-      Errors := Err;
-      if S /= "" then
-         Insert_Text (Script, Console, S & ASCII.LF, Hide_Output);
+      if Console /= null then
+         Script.Console := Console;
       end if;
 
-      if not Hide_Output then
-         Display_Prompt (Script, Console);
-      end if;
+      declare
+         S   : constant String :=
+           Execute_GPS_Shell_Command
+             (Script, Command, Err'Unchecked_Access);
+      begin
+         Errors := Err;
+         if S /= "" then
+            Insert_Text (Script, Console, S & ASCII.LF, Hide_Output);
+         end if;
+
+         Script.Console := Old_Console;
+
+         --  Do not display the prompt in the shell console if we did not
+         --  output to it
+         if not Hide_Output and then Console = Old_Console then
+            Display_Prompt (Script, Script.Console);
+         end if;
+      end;
    end Execute_Command;
 
    -------------------------------
@@ -522,7 +534,12 @@ package body GNAT.Scripts.Shell is
    is
       Err  : aliased Boolean;
       Args : Argument_List := (1 => new String'(Filename));
+      Old_Console : constant Virtual_Console := Script.Console;
    begin
+      if Console /= null then
+         Script.Console := Console;
+      end if;
+
       Insert_Text (Script, Console, "load " & Filename, not Show_Command);
       declare
          S : constant String := Execute_GPS_Shell_Command
@@ -532,8 +549,11 @@ package body GNAT.Scripts.Shell is
          if S /= "" then
             Insert_Text (Script, Console, S & ASCII.LF, Hide_Output);
          end if;
-         if not Hide_Output then
-            Display_Prompt (Script, Console);
+
+         Script.Console := Old_Console;
+
+         if not Hide_Output and then Old_Console = Console then
+            Display_Prompt (Script, Script.Console);
          end if;
 
          for F in Args'Range loop
@@ -632,18 +652,27 @@ package body GNAT.Scripts.Shell is
    is
       pragma Unreferenced (Show_Command);
       Err    : aliased Boolean;
-      Result : constant String := Execute_GPS_Shell_Command
-        (Script, Command, Err'Unchecked_Access);
-
+      Old_Console : constant Virtual_Console := Script.Console;
    begin
-      Errors.all := Err;
-      if Result /= "" then
-         Insert_Text (Script, Console, Result & ASCII.LF, Hide_Output);
+      if Console /= null then
+         Script.Console := Console;
       end if;
-      if not Hide_Output then
-         Display_Prompt (Script, Console);
-      end if;
-      return Result;
+      declare
+         Result : constant String := Execute_GPS_Shell_Command
+           (Script, Command, Err'Unchecked_Access);
+      begin
+         Errors.all := Err;
+         if Result /= "" then
+            Insert_Text (Script, Console, Result & ASCII.LF, Hide_Output);
+         end if;
+
+         Script.Console := Old_Console;
+
+         if not Hide_Output and then Console = Old_Console then
+            Display_Prompt (Script, Script.Console);
+         end if;
+         return Result;
+      end;
    end Execute_Command;
 
    ---------------------
@@ -658,19 +687,28 @@ package body GNAT.Scripts.Shell is
       Errors      : access Boolean) return Boolean
    is
       Err    : aliased Boolean;
-      Result : constant String := Trim
-        (Execute_GPS_Shell_Command (Script, Command, Err'Unchecked_Access),
-         Ada.Strings.Both);
-
+      Old_Console : constant Virtual_Console := Script.Console;
    begin
-      Errors.all := Err;
-      Insert_Text (Script, Console, Result & ASCII.LF, Hide_Output);
-
-      if not Hide_Output then
-         Display_Prompt (Script, Console);
+      if Console /= null then
+         Script.Console := Console;
       end if;
 
-      return Result = "1" or else To_Lower (Result) = "true";
+      declare
+         Result : constant String := Trim
+           (Execute_GPS_Shell_Command (Script, Command, Err'Unchecked_Access),
+            Ada.Strings.Both);
+      begin
+         Errors.all := Err;
+         Insert_Text (Script, Console, Result & ASCII.LF, Hide_Output);
+
+         Script.Console := Old_Console;
+
+         if not Hide_Output and then Console = Old_Console then
+            Display_Prompt (Script, Script.Console);
+         end if;
+
+         return Result = "1" or else To_Lower (Result) = "true";
+      end;
    end Execute_Command;
 
    -------------------------------
