@@ -54,6 +54,7 @@ package GNAT.Scripts is
 
    type Subprogram_Record is abstract tagged private;
    type Subprogram_Type is access all Subprogram_Record'Class;
+   pragma No_Strict_Aliasing (Subprogram_Type);
    --  This type represents a subprogram for the language. In Python, this
    --  is a python object which is a function or method.
    --  Do not confuse this with a shell command, it has a more general meaning.
