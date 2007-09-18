@@ -552,7 +552,7 @@ package body GNAT.Scripts.Shell is
 
          Script.Console := Old_Console;
 
-         if not Hide_Output and then Old_Console = Console then
+         if not Hide_Output then
             Display_Prompt (Script, Script.Console);
          end if;
 
@@ -668,7 +668,7 @@ package body GNAT.Scripts.Shell is
 
          Script.Console := Old_Console;
 
-         if not Hide_Output and then Console = Old_Console then
+         if not Hide_Output then
             Display_Prompt (Script, Script.Console);
          end if;
          return Result;
@@ -703,7 +703,7 @@ package body GNAT.Scripts.Shell is
 
          Script.Console := Old_Console;
 
-         if not Hide_Output and then Console = Old_Console then
+         if not Hide_Output then
             Display_Prompt (Script, Script.Console);
          end if;
 
