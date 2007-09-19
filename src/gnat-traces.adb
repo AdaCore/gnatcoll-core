@@ -981,6 +981,7 @@ package body GNAT.Traces is
            and then (Buffer (Index) = ' '
                      or else (Buffer (Index) = ASCII.LF
                               and then Skip_Newline)
+                     or else Buffer (Index) = ASCII.CR
                      or else Buffer (Index) = ASCII.HT)
          loop
             Index := Index + 1;
@@ -1036,8 +1037,13 @@ package body GNAT.Traces is
                         Tmp    : Trace_Stream;
                      begin
                         Skip_To_Newline;
-                        Stream := Find_Stream
-                          (String (Buffer (Save .. Index - 1)), File_Name);
+                        if Buffer (Index - 1) = ASCII.CR then
+                           Stream := Find_Stream
+                             (String (Buffer (Save .. Index - 2)), File_Name);
+                        else
+                           Stream := Find_Stream
+                             (String (Buffer (Save .. Index - 1)), File_Name);
+                        end if;
                         if Stream /= null then
                            --  Put this first in the list, since that's the
                            --  default
@@ -1083,6 +1089,7 @@ package body GNAT.Traces is
                        and then Buffer (Index) /= '>'
                        and then Buffer (Index) /= '-'
                        and then Buffer (Index) /= ASCII.LF
+                       and then Buffer (Index) /= ASCII.CR
                      loop
                         Index := Index + 1;
                      end loop;
@@ -1112,6 +1119,7 @@ package body GNAT.Traces is
                      while Index <= Last (File)
                        and then Buffer (Index) /= '>'
                        and then Buffer (Index) /= ASCII.LF
+                       and then Buffer (Index) /= ASCII.CR
                      loop
                         Index := Index + 1;
                      end loop;
@@ -1123,8 +1131,15 @@ package body GNAT.Traces is
                            Save : constant Integer := Index + 1;
                         begin
                            Skip_To_Newline;
-                           Handle.Stream := Find_Stream
-                             (String (Buffer (Save .. Index - 1)), File_Name);
+                           if Buffer (Index - 1) = ASCII.CR then
+                              Handle.Stream := Find_Stream
+                                (String (Buffer (Save .. Index - 2)),
+                                 File_Name);
+                           else
+                              Handle.Stream := Find_Stream
+                                (String (Buffer (Save .. Index - 1)),
+                                 File_Name);
+                           end if;
                         end;
                      else
                         Skip_To_Newline;
