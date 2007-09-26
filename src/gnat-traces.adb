@@ -869,9 +869,8 @@ package body GNAT.Traces is
    -----------
 
    procedure Close (Stream : in out Trace_Stream_Record) is
-      pragma Unreferenced (Stream);
    begin
-      null;
+      Free (Stream.Name);
    end Close;
 
    ---------
