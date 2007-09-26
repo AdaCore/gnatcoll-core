@@ -2030,19 +2030,11 @@ package body GNAT.Scripts.Python is
    begin
       --  When this function is called, the pyObject D.Data is being destroyed,
       --  so we make sure that we will not try in the future to access it.
-      --
-      --  We do not need to decrease the refcounting for D, since python owns
-      --  a reference to that type through a user data, and that refs is
-      --  automatically releases when the user data is freed (through
-      --  controlled typed).
-      --  ??? Is the above really true: in Set_CI, we did an explicit
-      --  Incref, so it seems we should have an explicit Decref here. However,
-      --  when we put it we get a Storage_Error in the automatic testsuite.
-      --  More likely, since we did an unchecked_conversion, we didn't
-      --  increase the refcount once more in this procedure, and since there is
-      --  a call to Finalize for D, this takes care of the refcounting.
+      --  We can also remove the reference that the python object had on the
+      --  Class_Instance, so that memory is freed ultimately.
 
       D.Data := null;
+      Decref (D);
    end On_PyObject_Data_Destroy;
 
    ------------
@@ -2172,6 +2164,7 @@ package body GNAT.Scripts.Python is
       Obj, List : PyObject;
       Tmp : Integer;
       pragma Unreferenced (Tmp);
+      Created_List : Boolean := False;
 
    begin
       if Data.Return_Dict = null then
@@ -2187,6 +2180,7 @@ package body GNAT.Scripts.Python is
             else
                List := PyList_New;
                Tmp := PyList_Append (List, Obj);
+               Created_List := True;
             end if;
 
             Tmp := PyList_Append (List, Data.Return_Value);
@@ -2200,6 +2194,14 @@ package body GNAT.Scripts.Python is
       end if;
 
       Tmp := PyDict_SetItem (Data.Return_Dict, Key, List);
+
+      if Created_List then
+         Py_DECREF (List);
+         --  The only reference is now owned by the dictionary
+      end if;
+
+      --  Return_Value was either added to the value or directly to the
+      --  dictionary. In both cases, its refcount was increased by one.
 
       Py_DECREF (Data.Return_Value);
 
@@ -2249,6 +2251,13 @@ package body GNAT.Scripts.Python is
    begin
       Prepare_Value_Key
         (Data, Python_Class_Instance (Get_CIR (Key)).Data, Append);
+
+      --  Do not decrease the reference counting here (even though the key has
+      --  now one more reference owned by Data.Return_Dict), since a
+      --  Class_Instance is refcounted as well, and will automatically decrease
+      --  the reference counting when no longer in use
+
+      --  Py_DECREF (Python_Class_Instance (Get_CIR (Key)).Data);
    end Set_Return_Value_Key;
 
    ------------------------------
