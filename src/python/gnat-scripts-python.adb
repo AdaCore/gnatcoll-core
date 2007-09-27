@@ -2034,6 +2034,8 @@ package body GNAT.Scripts.Python is
       --  Class_Instance, so that memory is freed ultimately.
 
       D.Data := null;
+
+      --  This decref mirrors the Incref in Set_CI below
       Decref (D);
    end On_PyObject_Data_Destroy;
 
