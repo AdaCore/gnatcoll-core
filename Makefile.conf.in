@@ -31,6 +31,12 @@ GNATLIB_LIBRARY_TYPE=relocatable
 
 .PHONY: all examples tests valgrind clean docs install
 
+ifeq (${OS},Windows_NT)
+DIRSEP=;
+else
+DIRSEP=:
+endif
+
 ## Put this first so that it is the default make target
 all:
 

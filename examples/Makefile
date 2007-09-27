@@ -1,6 +1,6 @@
 include ../Makefile.conf
 
-ADA_PROJECT_PATH:=${prefix}/lib/gnat:${ADA_PROJECT_PATH}
+ADA_PROJECT_PATH:=${prefix}/lib/gnat${DIRSEP}${ADA_PROJECT_PATH}${DIRSEP}../src
 LD_LIBRARY_PATH:=${prefix}/lib:${LD_LIBRARY_PATH}
 export ADA_PROJECT_PATH
 export LD_LIBRARY_PATH
