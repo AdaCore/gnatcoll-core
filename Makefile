@@ -57,9 +57,9 @@ ifeq (${WITH_GTK},yes)
 	${MAKE} GNATLIB_LIBRARY_TYPE=relocatable -C src -f Makefile.gtk $@
 	${MAKE} GNATLIB_LIBRARY_TYPE=static     -C src -f Makefile.gtk $@
 endif
-	${MAKE} -C testsuite $@
+	# ${MAKE} -C testsuite $@
 	${MAKE} -C docs $@
-	${MAKE} -C examples $@
+	# ${MAKE} -C examples $@
 
 docs:
 	${MAKE} -C docs
