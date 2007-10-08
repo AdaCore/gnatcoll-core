@@ -2036,7 +2036,12 @@ package body GNAT.Scripts.Python is
       D.Data := null;
 
       --  This decref mirrors the Incref in Set_CI below
-      Decref (D);
+      --  ??? disable this code under Windows for now, since this is apparently
+      --  causing SEGVs under this platform.
+
+      if GNAT.OS_Lib.Directory_Separator /= '\' then
+         Decref (D);
+      end if;
    end On_PyObject_Data_Destroy;
 
    ------------
