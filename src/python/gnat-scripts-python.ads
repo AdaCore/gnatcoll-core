@@ -38,6 +38,7 @@ package GNAT.Scripts.Python is
 
    type Python_Scripting_Record is new Scripting_Language_Record with private;
    type Python_Scripting is access all Python_Scripting_Record'Class;
+   pragma No_Strict_Aliasing (Python_Scripting);
 
    type Python_Callback_Data is new Callback_Data with private;
 
