@@ -20,7 +20,7 @@ ifeq ($(WITH_PYTHON),yes)
 C_OBJ=obj/python/${GNATLIB_LIBRARY_TYPE}/python_support.o
 buildcfiles: ${C_OBJ}
 ${C_OBJ}: python/python_support.c
-	gcc -c ${FPIC} ${PYTHON_CFLAGS} $< -o $@
+	$(CC) -c ${FPIC} ${PYTHON_CFLAGS} $< -o $@
 clean:
 	${RM} obj/python/${GNATLIB_LIBRARY_TYPE}/python_support.o
 else
