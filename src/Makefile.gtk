@@ -28,7 +28,7 @@ ifeq ($(WITH_PYTHON),yes)
 C_OBJ=obj/gtk/${GNATLIB_LIBRARY_TYPE}/python_support_gtk.o
 buildcfiles: ${C_OBJ}
 ${C_OBJ}: gtk/python/python_support_gtk.c
-	gcc -c ${FPIC} ${PYTHON_CFLAGS} ${PYGTK_INCLUDE} ${GTK_INCLUDE} $< -o $@
+	$(CC) -c ${FPIC} ${PYTHON_CFLAGS} ${PYGTK_INCLUDE} ${GTK_INCLUDE} $< -o $@
 clean:
 	${RM} ${C_OBJ}
 endif
