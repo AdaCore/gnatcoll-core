@@ -27,6 +27,7 @@ INSTALL=@INSTALL@
 INSTALL_DATA=@INSTALL_DATA@
 LN_S=@LN_S@
 
+CC=gcc
 GNATLIB_LIBRARY_TYPE=relocatable
 
 .PHONY: all examples tests valgrind clean docs install
