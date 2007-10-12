@@ -31,8 +31,7 @@ project GnatLib_Shared is
                "-gnatwaCJe", "-Wall", "-gnat05");
          when "Production" =>
             for Default_Switches ("Ada") use
-              --  ("-g", "-O2", "-gnatn", "-gnatws", "-gnat05");
-              ("-g", "-O1", "-gnatws", "-gnat05");
+              ("-g", "-O2", "-gnatn", "-gnatws", "-gnat05");
       end case;
    end Compiler;
 
