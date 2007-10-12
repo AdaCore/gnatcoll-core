@@ -81,7 +81,8 @@ package GNAT.Mmap is
    Invalid_Mapped_File : constant Mapped_File;
 
    type Unconstrained_String is new String (Positive);
-   type Str_Access is access Unconstrained_String;
+   type Str_Access is access all Unconstrained_String;
+   pragma No_Strict_Aliasing (Str_Access);
 
    function To_Str_Access
      (Str : GNAT.Strings.String_Access) return Str_Access;
