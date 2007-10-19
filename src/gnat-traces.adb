@@ -74,12 +74,15 @@ package body GNAT.Traces is
    type Stream_Factories_List is access Stream_Factories;
    type Stream_Factories is record
       Name          : GNAT.Strings.String_Access;
-      Factory       : Stream_Factory;
+      Factory       : Stream_Factory_Access;
       Next          : Stream_Factories_List;
    end record;
 
    procedure Unchecked_Free is new Ada.Unchecked_Deallocation
      (Stream_Factories, Stream_Factories_List);
+
+   procedure Unchecked_Free is new Ada.Unchecked_Deallocation
+     (Stream_Factory'Class, Stream_Factory_Access);
 
    Handles_List : Trace_Handle := null;
    --  The global list of all defined handles.
@@ -289,9 +292,10 @@ package body GNAT.Traces is
          while TmpF /= null loop
             if TmpF.Name.all = Name (Name'First .. Colon - 1) then
                if Colon < Name'Last then
-                  Tmp := TmpF.Factory (Name (Colon + 1 .. Name'Last));
+                  Tmp := TmpF.Factory.New_Stream
+                    (Name (Colon + 1 .. Name'Last));
                else
-                  Tmp := TmpF.Factory ("");
+                  Tmp := TmpF.Factory.New_Stream ("");
                end if;
 
                Tmp.Name := new String'(Name);
@@ -833,7 +837,7 @@ package body GNAT.Traces is
    -----------------------------
 
    procedure Register_Stream_Factory
-     (Name : String; Factory : Stream_Factory)
+     (Name : String; Factory : Stream_Factory_Access)
    is
    begin
       Lock;
@@ -1198,6 +1202,7 @@ package body GNAT.Traces is
          while TmpF /= null loop
             NextF := TmpF.Next;
             Free (TmpF.Name);
+            Unchecked_Free (TmpF.Factory);
             Unchecked_Free (TmpF);
             TmpF := NextF;
          end loop;

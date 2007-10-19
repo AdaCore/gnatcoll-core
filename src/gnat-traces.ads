@@ -284,7 +284,12 @@ package GNAT.Traces is
    --  it isn't necessary to output the time, since that's already done
    --  automatically
 
-   type Stream_Factory is access function (Args : String) return Trace_Stream;
+   type Stream_Factory is abstract tagged null record;
+
+   type Stream_Factory_Access is access all Stream_Factory'Class;
+
+   function New_Stream
+     (Factory : Stream_Factory; Args : String) return Trace_Stream is abstract;
    --  Return a newly allocated stream.
    --  Args is part of the string provided by the user in the configuration
    --  file (see below Register_Stream_Factory).
@@ -292,7 +297,7 @@ package GNAT.Traces is
    --  package will reuse existing streams whenever possible.
 
    procedure Register_Stream_Factory
-     (Name : String; Factory : Stream_Factory);
+     (Name : String; Factory : Stream_Factory_Access);
    --  Add Factory as one of the supported streams, available to Create or in
    --  the configuration files. This must be called before parsing the
    --  configuration file, of course.
