@@ -96,7 +96,9 @@ package body GNAT.Traces.Syslog is
      (Stream : Syslog_Stream_Record) return Boolean;
    --  See inherited documentation
 
-   function Factory (Args : String) return Trace_Stream;
+   type Factory is new Stream_Factory with null record;
+   overriding function New_Stream
+      (Fact : Factory; Args : String) return Trace_Stream;
    --  Create a syslog stream
 
    ---------
@@ -138,11 +140,14 @@ package body GNAT.Traces.Syslog is
       return False;
    end Supports_Time;
 
-   -------------
-   -- Factory --
-   -------------
+   ----------------
+   -- New_Stream --
+   ----------------
 
-   function Factory (Args : String) return Trace_Stream is
+   function New_Stream
+      (Fact : Factory; Args : String) return Trace_Stream
+   is
+      pragma Unreferenced (Fact);
       Colon    : constant Integer := Index (Args, ":");
       Facility : Facilities := User;
       Level    : Levels     := Info;
@@ -161,18 +166,19 @@ package body GNAT.Traces.Syslog is
          Buffer   => Null_Unbounded_String,
          Facility => Facility,
          Level    => Level);
-   end Factory;
+   end New_Stream;
 
    ----------------------------
    -- Register_Syslog_Stream --
    ----------------------------
 
    procedure Register_Syslog_Stream is
+      Fact : constant Stream_Factory_Access := new Factory;
    begin
       Openlog (Base_Name (Ada.Command_Line.Command_Name),
                Customization    => PID,
                Default_Facility => User);
-      Register_Stream_Factory (Stream_Syslog, Factory'Access);
+      Register_Stream_Factory (Stream_Syslog, Fact);
    end Register_Syslog_Stream;
 
    -------------
