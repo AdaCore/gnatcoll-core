@@ -315,6 +315,8 @@ package GNAT.Traces is
    --      >stream_name
    --  or for each specific stream:
    --     STREAM=yes >stream_name
+   --  The object pointed by Factory will be freed by automatically when the
+   --  factory container is freed.
 
    ----------------
    -- Decorators --
