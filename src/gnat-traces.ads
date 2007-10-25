@@ -326,8 +326,12 @@ package GNAT.Traces is
    --  and can be activated through the configuration file as usual.
    --
    --  "DEBUG.ABSOLUTE_TIME"
-   --  If this handle is activated, then the absolute time Trace is called
-   --  will be added to the output, if the stream supports it
+   --  If this handle is activated, then the absolute time will be added to the
+   --  output, if the stream supports it (syslog does not)
+
+   --  "DEBUG.ABSOLUTE_DATE"
+   --  If this handle is activated, then the absolute date will be added to the
+   --  output, if the stream supports it (syslog does not)
 
    --  "DEBUG.ELAPSED_TIME"
    --  If this handle is activated, then the elapsed time since the last

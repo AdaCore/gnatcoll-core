@@ -405,6 +405,7 @@ package body GNAT.Traces is
    --  This must be done after the body of Create has been seen
 
    Absolute_Time    : constant Trace_Handle := Create ("DEBUG.ABSOLUTE_TIME");
+   Absolute_Date    : constant Trace_Handle := Create ("DEBUG.ABSOLUTE_DATE");
    Elapsed_Time     : constant Trace_Handle := Create ("DEBUG.ELAPSED_TIME");
    Stack_Trace      : constant Trace_Handle := Create ("DEBUG.STACK_TRACE");
    Colors           : constant Trace_Handle := Create ("DEBUG.COLORS");
@@ -558,8 +559,17 @@ package body GNAT.Traces is
       T  : constant Ada.Calendar.Time := Ada.Calendar.Clock;
       Ms : constant String := Integer'Image (Integer (Sub_Second (T) * 1000));
    begin
-      Put (Stream, "(" & Image (T, ISO_Date & " %T.")
-           & Ms (Ms'First + 1 .. Ms'Last) & ')');
+      if Absolute_Date.Active then
+         if Absolute_Time.Active then
+            Put (Stream, "(" & Image (T, ISO_Date & " %T.")
+                 & Ms (Ms'First + 1 .. Ms'Last) & ')');
+         else
+            Put (Stream, "(" & Image (T, ISO_Date) & ')');
+         end if;
+      else
+         Put (Stream, "(" & Image (T, "%T.")
+              & Ms (Ms'First + 1 .. Ms'Last) & ')');
+      end if;
    end Put_Absolute_Time;
 
    ----------------------
@@ -647,7 +657,9 @@ package body GNAT.Traces is
       end Ensure_Space;
 
    begin
-      if Absolute_Time.Active and then Supports_Time (Stream) then
+      if (Absolute_Time.Active or else Absolute_Date.Active)
+        and then Supports_Time (Stream)
+      then
          Ensure_Space;
          Put_Absolute_Time (Stream);
       end if;
