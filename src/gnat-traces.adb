@@ -405,7 +405,8 @@ package body GNAT.Traces is
    --  This must be done after the body of Create has been seen
 
    Absolute_Time    : constant Trace_Handle := Create ("DEBUG.ABSOLUTE_TIME");
-   Absolute_Date    : constant Trace_Handle := Create ("DEBUG.ABSOLUTE_DATE");
+   Absolute_Date    : constant Trace_Handle :=
+     Create ("DEBUG.ABSOLUTE_DATE", Off);
    Elapsed_Time     : constant Trace_Handle := Create ("DEBUG.ELAPSED_TIME");
    Stack_Trace      : constant Trace_Handle := Create ("DEBUG.STACK_TRACE");
    Colors           : constant Trace_Handle := Create ("DEBUG.COLORS");
