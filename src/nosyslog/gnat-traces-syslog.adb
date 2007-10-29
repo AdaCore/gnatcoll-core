@@ -32,4 +32,5 @@ package body GNAT.Traces.Syslog is
    begin
       null;
    end Register_Syslog_Stream;
+
 end GNAT.Traces.Syslog;
