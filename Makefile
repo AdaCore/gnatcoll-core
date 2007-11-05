@@ -37,9 +37,11 @@ install:
 	${MKDIR} ${datadir}/gps/plug-ins
 	${MAKE} -C src -f Makefile.gnatlib $@
 	${MAKE} -C src -f Makefile.python $@
+	${MAKE} -C docs $@
 ifeq (${WITH_GTK},yes)
 	${MAKE} -C src -f Makefile.gtk $@
 endif
+	${INSTALL} distrib/gnatlib_gps.xml ${datadir}/gps/plug-ins
 	${INSTALL} distrib/*.gpr ${libdir}/gnat
 	${INSTALL} distrib/${GNATLIB_LIBRARY_TYPE}/*.gpr ${libdir}/gnat
 
