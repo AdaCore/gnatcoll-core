@@ -148,7 +148,7 @@ unmodified in any copy.
 * Embedding script languages:: The scripting module.
 * Logging information:: The traces module.
 * Reading and Writing Files:: The mmap module.
-* Searching strings:: the Boyer-Moore module.
+* Searching strings:: The Boyer-Moore module.
 * Index::
 
 @ifnothtml
@@ -2155,8 +2155,8 @@ does not support @code{mmap} and @code{GNAT.Mmap} had to fallback on calls to
 @code{read}.
 
 @c -----------------------------------------------------------------------
-@node Searching Strings
-@chapter Searching Strings
+@node Searching strings
+@chapter Searching strings
 @cindex Boyer-Moore
 @cindex search
 @c -----------------------------------------------------------------------
@@ -2202,7 +2202,7 @@ Using this package is extremely easy, and it has only a limited API.
 
 @CODESAMPLE{
 @b{declare}@NL{}
-  Str : @b{constant} String := "ABDEABCFGABC";NL{}
+  Str : @b{constant} String := "ABDEABCFGABC";@NL{}
   Key : Pattern;@NL{}
   Index : Integer;@NL{}
 @b{begin}@NL{}
