@@ -22,8 +22,8 @@ gnatlib.txt: gnatlib.texi
 .PHONY: install
 install:
 	${MKDIR} ${datadir}/doc/gnatlib
-	${INSTALL} gnatlib.html ${datadir}/doc/gnatlib/
-	${INSTALL} gnatlib.pdf ${datadir}/doc/gnatlib/
+	-${INSTALL} gnatlib.html ${datadir}/doc/gnatlib/
+	-${INSTALL} gnatlib.pdf ${datadir}/doc/gnatlib/
 
 .PHONY: clean-temp-files
 clean-temp-files:
