@@ -312,24 +312,63 @@ package body GNAT.Traces is
             Next => null,
             File => new File_Type);
 
-         if Name (Name'Last - 1 .. Name'Last) = "$$" then
-            declare
-               Pid : constant String := Integer'Image (Get_Process_Id);
-            begin
-               Create
-                 (File_Stream_Record (Tmp.all).File.all, Out_File,
-                  Normalize_Pathname
-                    (Name (Name'First .. Name'Last - 2)
-                     & Pid (Pid'First + 1 .. Pid'Last),
-                     Dir_Name (Config_File_Name)));
-            end;
-         else
+         declare
+            Max_Date_Width : constant Natural := 10; --  "yyyy-mm-dd"
+            Max_PID_Width  : constant Natural := 12;
+            Max_Name_Last : constant Natural :=
+              Name'Last + Max_Date_Width + Max_PID_Width;
+            Name_Tmp : String (Name'First .. Max_Name_Last);
+            Index : Integer := Name_Tmp'First;
+            N     : Integer := Name'First;
+         begin
+            while N <= Name'Last loop
+               if Name (N) = '$' then
+                  if N < Name'Last
+                    and then Name (N + 1) = '$'
+                  then
+                     declare
+                        Pid : constant String :=
+                          Integer'Image (Get_Process_Id);
+                     begin
+                        Name_Tmp (Index .. Index + Pid'Length - 2) :=
+                          Pid (Pid'First + 1 .. Pid'Last);
+                        Index := Index + Pid'Length - 1;
+                        N     := N + 1;
+                     end;
+
+                  elsif N < Name'Last
+                    and then Name (N + 1) = 'D'
+                  then
+                     declare
+                        Date : constant String := Image
+                          (Clock, "%Y-%m-%d");
+                     begin
+                        Name_Tmp (Index .. Index + Date'Length - 1) := Date;
+                        Index := Index + Date'Length;
+                        N     := N + 1;
+                     end;
+
+                  else
+                     Name_Tmp (Index) := Name (N);
+                     Index := Index + 1;
+                  end if;
+
+               else
+                  Name_Tmp (Index) := Name (N);
+                  Index := Index + 1;
+               end if;
+
+               N := N + 1;
+            end loop;
+
             Create
               (File_Stream_Record (Tmp.all).File.all, Out_File,
-               Normalize_Pathname (Name, Dir_Name (Config_File_Name)));
-         end if;
+               Normalize_Pathname
+                 (Name_Tmp (Name_Tmp'First .. Index - 1),
+                  Dir_Name (Config_File_Name)));
 
-         Add_To_Streams (Tmp);
+            Add_To_Streams (Tmp);
+         end;
       end if;
 
       --  Else use the default stream

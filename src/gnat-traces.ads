@@ -55,7 +55,7 @@ package GNAT.Traces is
    --        >filename
    --        If filename is a relative path, it is relative to the location of
    --        the configuration file. $$ is automatically replaced by the
-   --        process number when the filename ends with $$.
+   --        process number. $D is automatically replaced by the current date.
    --      - to standard output
    --        >&1
    --      - to standard error
