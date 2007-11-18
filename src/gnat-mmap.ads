@@ -158,9 +158,9 @@ package GNAT.Mmap is
    --  overwrite what other processes have done.
 
    function Get_Page_Size return Integer;
-   --  Returns the number of bytes in a page. One a file is mapped from the
+   --  Returns the number of bytes in a page. Once a file is mapped from the
    --  disk, its offset and Length should be multiples of this page size (which
-   --  is ensures by this package in any case). Knowing this page size allows
+   --  is ensured by this package in any case). Knowing this page size allows
    --  you to map as much memory as possible at once, thus potentially reducing
    --  the number of system calls to read the file by chunks.
 
