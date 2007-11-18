@@ -253,8 +253,7 @@ package body GNAT.Scripts.Shell is
    procedure Initialize
      (Data            : in out Shell_Callback_Data'Class;
       Script          : access Shell_Scripting_Record'Class;
-      Arguments_Count : Natural)
-   is
+      Arguments_Count : Natural) is
    begin
       Data.Script          := Shell_Scripting (Script);
       Data.Args            := new Argument_List (1 .. Arguments_Count);
@@ -478,8 +477,8 @@ package body GNAT.Scripts.Shell is
       Errors       : out Boolean)
    is
       pragma Unreferenced (Show_Command);
-      Err : aliased Boolean;
       Old_Console : constant Virtual_Console := Script.Console;
+      Err         : aliased Boolean;
    begin
       if Console /= null then
          Script.Console := Console;
@@ -487,8 +486,8 @@ package body GNAT.Scripts.Shell is
 
       declare
          S   : constant String :=
-           Execute_GPS_Shell_Command
-             (Script, Command, Err'Unchecked_Access);
+                 Execute_GPS_Shell_Command
+                   (Script, Command, Err'Unchecked_Access);
       begin
          Errors := Err;
          if S /= "" then
