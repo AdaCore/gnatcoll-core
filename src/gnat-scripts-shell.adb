@@ -226,7 +226,7 @@ package body GNAT.Scripts.Shell is
                Set_Error_Msg (Data, "File not found: """ & Filename & '"');
          end;
 
-      elsif Command = "echo" then
+      elsif Command = "echo" or else Command = "echo_error" then
          declare
             Result : Unbounded_String;
          begin
@@ -236,13 +236,20 @@ package body GNAT.Scripts.Shell is
                   Append (Result, ' ');
                end if;
             end loop;
-            Insert_Text
-              (Get_Script (Data), Txt => To_String (Result) & ASCII.LF);
+
+            if Command = "echo" then
+               Insert_Text
+                 (Get_Script (Data),
+                  Txt => To_String (Result) & ASCII.LF);
+            else
+               Insert_Error
+                 (Get_Script (Data),
+                  Txt => To_String (Result) & ASCII.LF);
+            end if;
          end;
 
       elsif Command = "clear_cache" then
          Free_Internal_Data (Shell_Scripting (Get_Script (Data)));
-
       end if;
    end Module_Command_Handler;
 
@@ -289,6 +296,11 @@ package body GNAT.Scripts.Shell is
          Handler      => Module_Command_Handler'Access);
       Register_Command
         (S, "echo",
+         Minimum_Args => 0,
+         Maximum_Args => Natural'Last,
+         Handler      => Module_Command_Handler'Access);
+      Register_Command
+        (S, "echo_error",
          Minimum_Args => 0,
          Maximum_Args => Natural'Last,
          Handler      => Module_Command_Handler'Access);
