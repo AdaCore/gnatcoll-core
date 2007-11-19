@@ -10,7 +10,7 @@ else
 SRCDIRS=./gtk/ ./gtk/nopython/
 endif
 
-all:     buildcfiles buildall
+all:     dirs buildcfiles buildall
 clean:   cleanall
 install: libinstall
 
@@ -20,8 +20,12 @@ else
 FPIC=-fPIC
 endif
 
-.PHONY: buildcfiles addcobjects
+.PHONY: buildcfiles addcobjects dirs
 buildcfiles:
+
+dirs:
+	${MKDIR} obj/gtk/${GNATLIB_LIBRARY_TYPE}
+	${MKDIR} lib/gtk/${GNATLIB_LIBRARY_TYPE}
 
 ifeq (${WITH_GTK},yes)
 ifeq ($(WITH_PYTHON),yes)

@@ -10,9 +10,14 @@ else
 SRCDIRS=./ ./nosyslog/
 endif
 
-all:     c_files buildall
+all:     dirs c_files buildall
 clean:   cleanall
 install: libinstall
+
+.PHONY: dirs
+dirs: 
+	${MKDIR} obj/gnatlib/${GNATLIB_LIBRARY_TYPE}
+	${MKDIR} lib/gnatlib/${GNATLIB_LIBRARY_TYPE}
 
 c_files: obj/gnatlib/${GNATLIB_LIBRARY_TYPE}/gnatlib_support.o
 obj/gnatlib/${GNATLIB_LIBRARY_TYPE}/gnatlib_support.o: gnatlib_support.c

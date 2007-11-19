@@ -10,11 +10,15 @@ else
 SRCDIRS=./nopython/
 endif
 
-all:     buildcfiles buildall
+all:     dirs buildcfiles buildall
 clean:   cleanall
 install: libinstall
 
-.PHONY: buildcfiles addcobjects
+.PHONY: buildcfiles addcobjects dirs
+
+dirs:
+	${MKDIR} obj/python/${GNATLIB_LIBRARY_TYPE}
+	${MKDIR} lib/python/${GNATLIB_LIBRARY_TYPE}
 
 ifeq ($(WITH_PYTHON),yes)
 C_OBJ=obj/python/${GNATLIB_LIBRARY_TYPE}/python_support.o
