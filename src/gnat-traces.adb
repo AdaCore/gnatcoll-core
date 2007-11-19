@@ -408,7 +408,7 @@ package body GNAT.Traces is
             Tmp.Active        := Default_Activation;
             Tmp.Forced_Active := False;
             Tmp.Stream        := null;
-            Tmp.Timer         := Ada.Calendar.Clock;
+            Tmp.Timer         := No_Time;
             Tmp.Count         := 1;
             Tmp.Next          := Handles_List;
             Tmp.Finalize      := Finalize;
@@ -623,8 +623,10 @@ package body GNAT.Traces is
       T   : constant Ada.Calendar.Time := Ada.Calendar.Clock;
       Dur : Integer;
    begin
-      Dur := Integer ((T - Handle.Timer) * 1000);
-      Put (Stream, "(elapsed:" & Integer'Image (Dur) & "ms)");
+      if Handle.Timer /= No_Time then
+         Dur := Integer ((T - Handle.Timer) * 1000);
+         Put (Stream, "(elapsed:" & Integer'Image (Dur) & "ms)");
+      end if;
       Handle.Timer := T;
    end Put_Elapsed_Time;
 
