@@ -75,8 +75,11 @@ package body GNAT.Scripts.Python.Gtkada is
      (Data : Callback_Data'Class;
       N    : Positive) return Glib.Object.GObject
    is
-      Stub : Glib.Object.GObject_Record;
+      Stub : Gtk.Widget.Gtk_Widget_Record;
    begin
+      --  ??? Should check wether we have a widget or an object.
+      --  Since the main goal here is to get a widget to be inserted in a GUI,
+      --  in particular the MDI, let's assume we do have a widget.
       return Get_User_Data
         (Widget_From_PyObject (Get_Param (Python_Callback_Data (Data), N)),
          Stub);
