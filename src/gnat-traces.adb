@@ -37,6 +37,14 @@ with System.Assertions;         use System.Assertions;
 
 package body GNAT.Traces is
 
+   No_Time : constant Ada.Calendar.Time :=
+               Ada.Calendar.Time_Of
+                 (Ada.Calendar.Year_Number'First,
+                  Ada.Calendar.Month_Number'First,
+                  Ada.Calendar.Day_Number'First);
+   --  Note: we can remove this constant once we require GNAT 6.1 to build
+   --  GPS.
+
    --  Note: rev 1.5 of this file has a (disabled) support for symbolic
    --  tracebacks.
 
