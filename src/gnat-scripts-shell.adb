@@ -944,7 +944,8 @@ package body GNAT.Scripts.Shell is
                else
                   --  Cleanup the arguments to remove unnecessary quoting
                   for J in Args'Range loop
-                     if Args (J) (Args (J)'First) = '"'
+                     if Args (J).all /= ""
+                       and then Args (J) (Args (J)'First) = '"'
                        and then Args (J) (Args (J)'Last) = '"'
                      then
                         Tmp := Args (J);
