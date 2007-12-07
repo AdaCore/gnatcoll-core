@@ -697,8 +697,8 @@ package body GNAT.Scripts.Shell is
       Hide_Output : Boolean := False;
       Errors      : access Boolean) return Boolean
    is
-      Err    : aliased Boolean;
       Old_Console : constant Virtual_Console := Script.Console;
+      Err         : aliased Boolean;
    begin
       if Console /= null then
          Script.Console := Console;
