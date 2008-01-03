@@ -30,6 +30,8 @@ project GnatLib is
       for Implementation ("GNAT.Boyer_Moore")    use "gnat-boyer_moore.adb";
       for Specification  ("GNAT.Traces")         use "gnat-traces.ads";
       for Implementation ("GNAT.Traces")         use "gnat-traces.adb";
+      for Specification  ("GNAT.Templates")      use "gnat-templates.ads";
+      for Implementation ("GNAT.Templates")      use "gnat-templates.adb";
       for Specification  ("GNAT.Traces.Syslog")  use "gnat-traces-syslog.ads";
       for Implementation ("GNAT.Traces.Syslog")  use "gnat-traces-syslog.adb";
       for Specification  ("GNAT.Scripts")        use "gnat-scripts.ads";
