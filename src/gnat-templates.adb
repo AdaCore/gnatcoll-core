@@ -123,12 +123,13 @@ package body GNAT.Templates is
       Substrings   : Substitution_Array := No_Substitution;
       Callback     : Substitute_Callback := null;
       Delimiter    : Character := Default_Delimiter;
-      Recursive    : Boolean := False) return String
+      Recursive    : Boolean := False;
+      Errors       : Error_Handling := Keep_As_Is) return String
    is
       Result      : Unbounded_String;
       First, Last : Natural := Str'First;
       Found       : Boolean;
-      Identifier_First, First_After : Natural;
+      Identifier_First, Identifier_Last, First_After : Natural;
       Quoted      : Boolean := False;
    begin
       while First <= Str'Last loop
@@ -158,10 +159,23 @@ package body GNAT.Templates is
          Identifier_First := First;
          Find_Identifier (Str, Delimiter, Identifier_First, Last, First_After);
 
+         --  Does the identifier contain a default value ?
+
+         Identifier_Last := Last;
+
+         for D in Identifier_First .. Identifier_Last loop
+            if Str (D) = ':' and then Str (D + 1) = '-' then
+               Identifier_Last := D - 1;
+               exit;
+            end if;
+         end loop;
+
          Found := False;
 
          for S in Substrings'Range loop
-            if Substrings (S).Name.all = Str (Identifier_First .. Last) then
+            if Substrings (S).Name.all =
+              Str (Identifier_First .. Identifier_Last)
+            then
                if Recursive then
                   Append
                     (Result, Substitute
@@ -182,8 +196,8 @@ package body GNAT.Templates is
          if not Found and then Callback /= null then
             begin
                declare
-                  Sub : constant String :=
-                    Callback (Str (Identifier_First .. Last), Quoted);
+                  Sub : constant String := Callback
+                    (Str (Identifier_First .. Identifier_Last), Quoted);
                begin
                   if Recursive then
                      Append
@@ -205,6 +219,9 @@ package body GNAT.Templates is
             end;
          end if;
 
+         --  When doubled, the delimiter is always replaced with itself by
+         --  default
+
          if not Found
            and then Last = Identifier_First
            and then Str (Identifier_First) = Delimiter
@@ -214,9 +231,26 @@ package body GNAT.Templates is
             Found := True;
          end if;
 
+         --  If still not found, try the default value if it was specified
+
+         if not Found
+           and then Identifier_Last < Last
+         then
+            Append (Result, Str (Identifier_Last + 3 .. Last));
+            Found := True;
+         end if;
 
          if not Found then
-            Append (Result, Str (First - 1 .. First_After - 1));
+            case Errors is
+               when Keep_As_Is =>
+                  Append (Result, Str (First - 1 .. First_After - 1));
+
+               when Replace_With_Empty =>
+                  null;
+
+               when Report_Error =>
+                  raise Invalid_Substitution;
+            end case;
          end if;
 
          First := First_After;

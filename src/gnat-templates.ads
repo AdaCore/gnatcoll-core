@@ -40,7 +40,8 @@ package GNAT.Templates is
    No_Substitution : constant Substitution_Array;
 
    type Substitute_Callback is access
-     function (Name : String; Quoted : Boolean) return String;
+     function (Name   : String;
+               Quoted : Boolean) return String;
    --  A callback for Substitute below. It is called once for each '%...'
    --  parameter found in the string. Name doesn't include the delimiter.
    --  Quoted indicate whether the parameter was quoted, ie the '%...' was
@@ -81,23 +82,42 @@ package GNAT.Templates is
    --  single instance of the delimiter (unless you have specified another
    --  explicit replacement for it). For instance, if the string contains
    --    "a%%b" it will be replaced with "a%b".
+   --
+   --  When an identifier is specified within curly braces or parenthesis, a
+   --  default value can be specified for it, which will be used if no other
+   --  substitution is available. The syntax is similar to that of the Unix
+   --  shell:
+   --     %{var:-default}
+   --  where "default" is the default value to use.
+
+   type Error_Handling is (Keep_As_Is,
+                           Replace_With_Empty,
+                           Report_Error);
+   --  What to do when no substitution value was found:
+   --    If Keep_As_Is, the text is unaltered. "%invalid" remains as is
+   --    If Replace_With_Empty, the text is replaced with the empty string.
+   --        "%invalid" becomes "".
+   --    If Report_Error, an exception Invalid_Substitution is raised
 
    function Substitute
      (Str          : String;
       Substrings   : Substitution_Array := No_Substitution;
       Callback     : Substitute_Callback := null;
       Delimiter    : Character := Default_Delimiter;
-      Recursive    : Boolean := False) return String;
+      Recursive    : Boolean := False;
+      Errors       : Error_Handling := Keep_As_Is) return String;
    --  Replace all substrings in Str that start with Delimiter (see the
    --  declaration of Default_Delimiter for more information on identifier
    --  names).
    --  If an identifier found in Str matches no entry from Substrings,
    --  Callback is called to try and find the appropriate substitution. If
-   --  that raises Invalid_Substitution, no substitution is done. No error is
-   --  raised either.
+   --  that raises Invalid_Substitution, and the identifier contains a default
+   --  value, it is used.
+   --  If no substitution value was found, the behavior depends on the
+   --  Error parameter.
    --
    --  If Recursive is true, then this function will also substitute substrings
-   --  in the values specified in Substrings (for instance:
+   --  in the values specified in Substrings, for instance:
    --      Delimiter := %
    --      Substrings (1) := (Name => "a", Value => "c%b")
    --      Substrings (2) := (Name => "b", Value => "d")
