@@ -71,6 +71,15 @@ package body GNAT.Templates is
          First_After := Last + 1;
          Last        := Last - 1;
 
+      elsif Str (First) = '(' then
+         First := First + 1;
+         Last := First;
+         while Last <= Str'Last and then Str (Last) /= ')' loop
+            Last := Last + 1;
+         end loop;
+         First_After := Last + 1;
+         Last        := Last - 1;
+
       elsif Is_Digit (Str (First)) then
          Last := First + 1;
          while Last <= Str'Last
@@ -149,63 +158,65 @@ package body GNAT.Templates is
          Identifier_First := First;
          Find_Identifier (Str, Delimiter, Identifier_First, Last, First_After);
 
-         if Last = Identifier_First
-           and then Str (Identifier_First) = Delimiter
-         then
-            --  We are escaping the Substitution_Char by doubling it.
-            Append (Result, Delimiter);
+         Found := False;
 
-         else
-            Found := False;
+         for S in Substrings'Range loop
+            if Substrings (S).Name.all = Str (Identifier_First .. Last) then
+               if Recursive then
+                  Append
+                    (Result, Substitute
+                       (Str        => Substrings (S).Value.all,
+                        Substrings => Substrings,
+                        Callback   => Callback,
+                        Delimiter  => Delimiter,
+                        Recursive  => Recursive));
+               else
+                  Append (Result, Substrings (S).Value.all);
+               end if;
 
-            for S in Substrings'Range loop
-               if Substrings (S).Name.all = Str (Identifier_First .. Last) then
+               Found := True;
+               exit;
+            end if;
+         end loop;
+
+         if not Found and then Callback /= null then
+            begin
+               declare
+                  Sub : constant String :=
+                    Callback (Str (Identifier_First .. Last), Quoted);
+               begin
                   if Recursive then
                      Append
                        (Result, Substitute
-                          (Str        => Substrings (S).Value.all,
+                          (Str        => Sub,
                            Substrings => Substrings,
                            Callback   => Callback,
                            Delimiter  => Delimiter,
                            Recursive  => Recursive));
                   else
-                     Append (Result, Substrings (S).Value.all);
+                     Append (Result, Sub);
                   end if;
 
                   Found := True;
-                  exit;
-               end if;
-            end loop;
-
-            if not Found and then Callback /= null then
-               begin
-                  declare
-                     Sub : constant String :=
-                       Callback (Str (Identifier_First .. Last), Quoted);
-                  begin
-                     if Recursive then
-                        Append
-                          (Result, Substitute
-                             (Str        => Sub,
-                              Substrings => Substrings,
-                              Callback   => Callback,
-                              Delimiter  => Delimiter,
-                              Recursive  => Recursive));
-                     else
-                        Append (Result, Sub);
-                     end if;
-
-                     Found := True;
-                  end;
-               exception
-                  when Invalid_Substitution =>
-                     Found := False;
                end;
-            end if;
+            exception
+               when Invalid_Substitution =>
+                  Found := False;
+            end;
+         end if;
 
-            if not Found then
-               Append (Result, Str (First - 1 .. First_After - 1));
-            end if;
+         if not Found
+           and then Last = Identifier_First
+           and then Str (Identifier_First) = Delimiter
+         then
+            --  We are escaping the Substitution_Char by doubling it.
+            Append (Result, Delimiter);
+            Found := True;
+         end if;
+
+
+         if not Found then
+            Append (Result, Str (First - 1 .. First_After - 1));
          end if;
 
          First := First_After;
