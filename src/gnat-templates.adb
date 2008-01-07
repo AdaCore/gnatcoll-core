@@ -22,7 +22,6 @@ with Ada.Strings.Unbounded;   use Ada.Strings.Unbounded;
 with GNAT.Strings;            use GNAT.Strings;
 
 package body GNAT.Templates is
-
    procedure Find_Identifier
      (Str         : String;
       Delimiter   : Character;
@@ -223,7 +222,7 @@ package body GNAT.Templates is
          --  default
 
          if not Found
-           and then Last = Identifier_First
+           and then Identifier_Last = Identifier_First
            and then Str (Identifier_First) = Delimiter
          then
             --  We are escaping the Substitution_Char by doubling it.
