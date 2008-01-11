@@ -42,6 +42,16 @@ project GnatLib is
       for Implementation ("GNAT.Scripts.Shell")  use "gnat-scripts-shell.adb";
       for Specification  ("GNAT.Scripts.Utils")  use "gnat-scripts-utils.ads";
       for Implementation ("GNAT.Scripts.Utils")  use "gnat-scripts-utils.adb";
+      for Implementation ("GNAT.Email")          use "gnat-email.adb";
+      for Implementation ("GNAT.Email.Parser")   use "gnat-email-parser.adb";
+      for Implementation ("GNAT.Email.Utils")    use "gnat-email-utils.adb";
+      for Implementation ("GNAT.Email.Mailboxes")
+         use "gnat-email-mailboxes.adb";
+      for Specification ("GNAT.Email")          use "gnat-email.ads";
+      for Specification ("GNAT.Email.Parser")   use "gnat-email-parser.ads";
+      for Specification ("GNAT.Email.Utils")    use "gnat-email-utils.ads";
+      for Specification ("GNAT.Email.Mailboxes")
+         use "gnat-email-mailboxes.ads";
    end Naming;
 
    package Ide renames GnatLib_Shared.Ide;
