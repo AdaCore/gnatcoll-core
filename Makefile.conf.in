@@ -34,8 +34,10 @@ GNATLIB_LIBRARY_TYPE=relocatable
 
 ifeq (${OS},Windows_NT)
 DIRSEP=;
+LIBEXT=dll
 else
 DIRSEP=:
+LIBEXT=so
 endif
 
 ## Put this first so that it is the default make target
@@ -54,7 +56,13 @@ all:
 
 ifeq (${GNATLIB_LIBRARY_TYPE},relocatable)
 LIBNAME:=${LIBNAME}.so
+ifeq (${OS},Windows_NT)
+# On windows, gnatmake does not generate libraries with version numbers
+LIBFULL=${LIBNAME}
+else
 LIBFULL=${LIBNAME}.${VERSION}
+endif
+
 else
 LIBNAME:=${LIBNAME}.a
 LIBFULL=${LIBNAME}
@@ -96,13 +104,17 @@ installobj:
 installlinks:
 ifeq (${GNATLIB_LIBRARY_TYPE},relocatable)
 	${RM} ${libdir}/${LIBNAME}*
+
+ifneq (${OS},Windows_NT)
 	${RM} ${libdir}/${TARNAME}/${GNATLIB_LIBRARY_TYPE}/${LIBNAME}
 	${RM} ${libdir}/${TARNAME}/${GNATLIB_LIBRARY_TYPE}/${LIBNAME}.${basename ${VERSION}}
 	cd ${libdir}/${TARNAME}/${GNATLIB_LIBRARY_TYPE}; ${LN_S} ${LIBFULL} ${LIBNAME}
 	cd ${libdir}/${TARNAME}/${GNATLIB_LIBRARY_TYPE}; ${LN_S} ${LIBFULL} ${LIBNAME}.${basename ${VERSION}}
-	cd ${libdir}; ${LN_S} ${TARNAME}/${GNATLIB_LIBRARY_TYPE}/${LIBFULL} ${LIBNAME}
 	cd ${libdir}; ${LN_S} ${TARNAME}/${GNATLIB_LIBRARY_TYPE}/${LIBFULL} ${LIBNAME}.${basename ${VERSION}}
 	cd ${libdir}; ${LN_S} ${TARNAME}/${GNATLIB_LIBRARY_TYPE}/${LIBFULL} ${LIBNAME}.${VERSION}
+endif
+	cd ${libdir}; ${LN_S} ${TARNAME}/${GNATLIB_LIBRARY_TYPE}/${LIBFULL} ${LIBNAME}
+
 endif
 
 # Install the sources of the library. These can be in multiple source
