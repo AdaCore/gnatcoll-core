@@ -1,7 +1,7 @@
 -----------------------------------------------------------------------
 --                               G P S                               --
 --                                                                   --
---                     Copyright (C) 2001-2007, AdaCore              --
+--                     Copyright (C) 2001-2008, AdaCore              --
 --                                                                   --
 -- GPS is free  software;  you can redistribute it and/or modify  it --
 -- under the terms of the GNU General Public License as published by --
@@ -746,7 +746,7 @@ package body GNAT.Traces is
       Entity        : String := GNAT.Source_Info.Enclosing_Entity;
       Message_Color : String := Default_Fg)
    is
-      Start, Last  : Positive;
+      Start, Last  : Natural;
       Continuation : constant String := '_' & Handle.Name.all & "_ ";
       Stream       : Trace_Stream;
       Color        : Boolean;
