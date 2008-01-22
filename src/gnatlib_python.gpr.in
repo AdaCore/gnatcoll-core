@@ -9,6 +9,9 @@ project GnatLib_Python is
    for Library_Version use
       "lib" & Project'Library_Name & ".so." & GnatLib_Shared.Version;
 
+   --  When linking a shared library (see Linker_Options below in addition)
+   for Library_Options use (@PYTHON_LIBS_GPR@);
+
    for Languages use ("Ada", "C");
 
    case GnatLib_Shared.Python is
@@ -22,6 +25,7 @@ project GnatLib_Python is
    package Compiler renames GnatLib_Shared.Compiler;
 
    package Linker is
+      --  When linking an executable
       for Linker_Options use (@PYTHON_LIBS_GPR@);
    end Linker;
 

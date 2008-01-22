@@ -25,7 +25,12 @@ docdir=@docdir@
 MKDIR=mkdir -p
 INSTALL=@INSTALL@
 INSTALL_DATA=@INSTALL_DATA@
+
+ifeq (${OS},Windows_NT)
+LN_S=cp -p
+else
 LN_S=@LN_S@
+endif
 
 CC=gcc
 GNATLIB_LIBRARY_TYPE=relocatable
