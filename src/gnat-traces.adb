@@ -124,7 +124,8 @@ package body GNAT.Traces is
 
    function Find_Stream
      (Stream_Name      : String;
-      Config_File_Name : String) return Trace_Stream;
+      Config_File_Name : String;
+      Append           : Boolean) return Trace_Stream;
    --  Return the stream associated with that name (either an existing one or
    --  one created by a factory), or null if the default stream should be
    --  applied. This program doesn't do any locking, and must be called from
@@ -234,7 +235,8 @@ package body GNAT.Traces is
 
    function Find_Stream
      (Stream_Name      : String;
-      Config_File_Name : String) return Trace_Stream
+      Config_File_Name : String;
+      Append           : Boolean) return Trace_Stream
    is
       procedure Add_To_Streams (Tmp : Trace_Stream);
 
@@ -369,11 +371,19 @@ package body GNAT.Traces is
                N := N + 1;
             end loop;
 
-            Create
-              (File_Stream_Record (Tmp.all).File.all, Out_File,
-               Normalize_Pathname
-                 (Name_Tmp (Name_Tmp'First .. Index - 1),
-                  Dir_Name (Config_File_Name)));
+            if Append then
+               Open
+                 (File_Stream_Record (Tmp.all).File.all, Append_File,
+                  Normalize_Pathname
+                    (Name_Tmp (Name_Tmp'First .. Index - 1),
+                     Dir_Name (Config_File_Name)));
+            else
+               Create
+                 (File_Stream_Record (Tmp.all).File.all, Out_File,
+                  Normalize_Pathname
+                    (Name_Tmp (Name_Tmp'First .. Index - 1),
+                     Dir_Name (Config_File_Name)));
+            end if;
 
             Add_To_Streams (Tmp);
          end;
@@ -424,7 +434,7 @@ package body GNAT.Traces is
          end if;
 
          if Tmp.Stream = null then
-            Tmp.Stream := Find_Stream (Stream, "");
+            Tmp.Stream := Find_Stream (Stream, "", Append => False);
          end if;
 
          if not Tmp.Forced_Active then
@@ -1097,17 +1107,24 @@ package body GNAT.Traces is
                case Buffer (Index) is
                   when '>' =>
                      declare
-                        Save   : constant Integer := Index + 1;
+                        Save   : Integer := Index + 1;
                         Stream : Trace_Stream;
                         Tmp    : Trace_Stream;
+                        Append : constant Boolean := Buffer (Index + 1) = '>';
                      begin
+                        if Append then
+                           Save := Index + 2;
+                        end if;
+
                         Skip_To_Newline;
                         if Buffer (Index - 1) = ASCII.CR then
                            Stream := Find_Stream
-                             (String (Buffer (Save .. Index - 2)), File_Name);
+                             (String (Buffer (Save .. Index - 2)), File_Name,
+                              Append);
                         else
                            Stream := Find_Stream
-                             (String (Buffer (Save .. Index - 1)), File_Name);
+                             (String (Buffer (Save .. Index - 1)), File_Name,
+                              Append);
                         end if;
                         if Stream /= null then
                            --  Put this first in the list, since that's the
@@ -1193,17 +1210,23 @@ package body GNAT.Traces is
                        and then Buffer (Index) = '>'
                      then
                         declare
-                           Save : constant Integer := Index + 1;
+                           Save : Integer := Index + 1;
+                           Append : constant Boolean :=
+                             Buffer (Index + 1) = '>';
                         begin
+                           if Append then
+                              Save := Index + 2;
+                           end if;
+
                            Skip_To_Newline;
                            if Buffer (Index - 1) = ASCII.CR then
                               Handle.Stream := Find_Stream
                                 (String (Buffer (Save .. Index - 2)),
-                                 File_Name);
+                                 File_Name, Append);
                            else
                               Handle.Stream := Find_Stream
                                 (String (Buffer (Save .. Index - 1)),
-                                 File_Name);
+                                 File_Name, Append);
                            end if;
                         end;
                      else
@@ -1277,7 +1300,7 @@ package body GNAT.Traces is
 begin
    --  This is the default stream, always register it
    declare
-      S : constant Trace_Stream := Find_Stream ("&1", "");
+      S : constant Trace_Stream := Find_Stream ("&1", "", Append => False);
       pragma Unreferenced (S);
    begin
       null;
