@@ -371,19 +371,19 @@ package body GNAT.Traces is
                N := N + 1;
             end loop;
 
-            if Append then
-               Open
-                 (File_Stream_Record (Tmp.all).File.all, Append_File,
-                  Normalize_Pathname
-                    (Name_Tmp (Name_Tmp'First .. Index - 1),
-                     Dir_Name (Config_File_Name)));
-            else
-               Create
-                 (File_Stream_Record (Tmp.all).File.all, Out_File,
-                  Normalize_Pathname
-                    (Name_Tmp (Name_Tmp'First .. Index - 1),
-                     Dir_Name (Config_File_Name)));
-            end if;
+            declare
+               N : constant String := Normalize_Pathname
+                 (Name_Tmp (Name_Tmp'First .. Index - 1),
+                  Dir_Name (Config_File_Name));
+            begin
+               if Append
+                 and then Is_Regular_File (N)
+               then
+                  Open (File_Stream_Record (Tmp.all).File.all, Append_File, N);
+               else
+                  Create (File_Stream_Record (Tmp.all).File.all, Out_File, N);
+               end if;
+            end;
 
             Add_To_Streams (Tmp);
          end;
