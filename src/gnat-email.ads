@@ -216,7 +216,7 @@ package GNAT.Email is
    --  other attachments, the filter will not be applied for these).
 
    procedure To_String
-     (Msg                  : in out Message'Class;
+     (Msg                  : Message'Class;
       Envelope             : Boolean  := False;
       Header_Max_Line_Len  : Positive := Default_Max_Header_Line_Length;
       Subject_Max_Line_Len : Positive := Default_Max_Header_Line_Length;
@@ -260,12 +260,12 @@ package GNAT.Email is
    --  If there is already a header with the same name, it isn't overridden.
    --  Instead, two headers with the same name will exist for the message.
 
-   procedure Delete_Headers (Msg : in out Message'Class; Name : String);
-   procedure Delete_Header  (Msg : in out Message'Class; H : Header'Class);
+   procedure Delete_Headers (Msg : Message'Class; Name : String);
+   procedure Delete_Header  (Msg : Message'Class; H : Header'Class);
    --  Delete either all headers with the given name (all if Name is the empty
    --  string), or a specific header.
 
-   procedure Replace_Header (Msg : in out Message'Class; H : Header'Class);
+   procedure Replace_Header (Msg : Message'Class; H : Header'Class);
    --  Replace the first header with the same name by H, and delete all other
    --  headers with the same name. This is different from doing a
    --     Delete_Headers (Msg, Name);
@@ -358,7 +358,7 @@ package GNAT.Email is
    --------------------------
 
    procedure Set_Text_Payload
-     (Msg       : in out Message'Class;
+     (Msg       : Message'Class;
       Payload   : String;
       Mime_Type : String := Text_Plain;
       Charset   : String := Charset_US_ASCII;
@@ -416,7 +416,7 @@ package GNAT.Email is
      (Msg : in out Message'Class; Iter : in out Payload_Iterator);
    --  Remove the corresponding payload from the message
 
-   procedure Convert_To_Multipart (Msg : in out Message'Class);
+   procedure Convert_To_Multipart (Msg : Message'Class);
    --  Convert the message to a multi-part message if it is a single part one
    --  (does nothing otherwise).
    --  The current textual content is set to be the first part of the converted
@@ -447,7 +447,15 @@ package GNAT.Email is
    procedure Add_Payload (Msg : in out Message'Class; Payload : Message);
    --  Add a new part to a multipart message. Msg is first converted to
    --  multipart if necessary. Payload itself is stored in Msg, ie modifying
-   --  Payload later on will impact Msg.
+   --  Payload later on will impact Msg. This procedure cannot be used when
+   --  attaching a real mail message, see Attach_Msg instead.
+
+   procedure Attach_Msg
+     (Msg         : in out Message'Class;
+      Attach      : Message'Class;
+      Description : String := "");
+   --  Attach an existing mail message to another one (for instance when
+   --  forwarding as attachment).
 
    type Disposition_Type is (Disposition_Attachment, Disposition_Inline);
 
@@ -470,7 +478,7 @@ package GNAT.Email is
    --  The empty string is returned if this isn't a multipart message.
 
    procedure Set_Boundary
-     (Msg : in out Message'Class; Boundary : String := "");
+     (Msg : Message'Class; Boundary : String := "");
    --  Set the boundary to use between parts of the message. If the empty
    --  string is passed, a boundary will be added if none already exists, or
    --  if the current one can not be used because some part of the message

@@ -38,7 +38,7 @@ package body GNAT.Email is
      (Payload             : Message_Payload;
       Header_Max_Line_Len : Positive;
       Content_Filter      : Payload_Filter := null;
-      Msg                 : in out Message'Class;
+      Msg                 : Message'Class;
       Append_To           : in out Unbounded_String);
    --  Encode the payload in a form suitable to send the message.
    --  If necessary, this creates the "boundary" for the message
@@ -62,7 +62,7 @@ package body GNAT.Email is
    --  Find the occurrence of a parameter in the value of H
 
    procedure Replace_Header_Internal
-     (Msg : in out Message'Class; H : Header'Class; Append : Boolean);
+     (Msg : Message'Class; H : Header'Class; Append : Boolean);
    --  Same as Replace_Header, but Append can be used to specify whether the
    --  header should be appended or prepended to the list if it didn't exist
    --  yet.
@@ -574,7 +574,7 @@ package body GNAT.Email is
      (Payload             : Message_Payload;
       Header_Max_Line_Len : Positive;
       Content_Filter      : Payload_Filter := null;
-      Msg                 : in out Message'Class;
+      Msg                 : Message'Class;
       Append_To           : in out Unbounded_String)
    is
       C : Message_List.Cursor;
@@ -717,7 +717,7 @@ package body GNAT.Email is
    ---------------
 
    procedure To_String
-     (Msg                  : in out Message'Class;
+     (Msg                  : Message'Class;
       Envelope             : Boolean  := False;
       Header_Max_Line_Len  : Positive := Default_Max_Header_Line_Length;
       Subject_Max_Line_Len : Positive := Default_Max_Header_Line_Length;
@@ -885,7 +885,7 @@ package body GNAT.Email is
    -- Delete_Headers --
    --------------------
 
-   procedure Delete_Headers (Msg : in out Message'Class; Name : String) is
+   procedure Delete_Headers (Msg : Message'Class; Name : String) is
       Iter  : Header_List.Cursor := First (Msg.Contents.Headers);
       Iter2 : Header_List.Cursor;
       N     : constant String := To_Lower (Name);
@@ -905,7 +905,7 @@ package body GNAT.Email is
    -- Delete_Header --
    -------------------
 
-   procedure Delete_Header (Msg : in out Message'Class; H : Header'Class) is
+   procedure Delete_Header (Msg : Message'Class; H : Header'Class) is
       Iter : Header_List.Cursor := First (Msg.Contents.Headers);
    begin
       while Has_Element (Iter) loop
@@ -921,7 +921,7 @@ package body GNAT.Email is
    -- Replace_Header --
    --------------------
 
-   procedure Replace_Header (Msg : in out Message'Class; H : Header'Class) is
+   procedure Replace_Header (Msg : Message'Class; H : Header'Class) is
    begin
       Replace_Header_Internal (Msg, H, Append => True);
    end Replace_Header;
@@ -931,7 +931,7 @@ package body GNAT.Email is
    -----------------------------
 
    procedure Replace_Header_Internal
-     (Msg : in out Message'Class; H : Header'Class; Append : Boolean)
+     (Msg : Message'Class; H : Header'Class; Append : Boolean)
    is
       Iter     : Header_List.Cursor := First (Msg.Contents.Headers);
       Iter2    : Header_List.Cursor;
@@ -1009,7 +1009,7 @@ package body GNAT.Email is
    ----------------------
 
    procedure Set_Text_Payload
-     (Msg       : in out Message'Class;
+     (Msg       : Message'Class;
       Payload   : String;
       Mime_Type : String := Text_Plain;
       Charset   : String := Charset_US_ASCII;
@@ -1021,7 +1021,9 @@ package body GNAT.Email is
       if Msg.Contents.Payload.Multipart then
          Msg2 := New_Message (MIME_Type => "");
          H := Create (Content_Type, Mime_Type);
-         Set_Param (H, "charset", Charset);
+         if Charset /= "" then
+            Set_Param (H, "charset", Charset);
+         end if;
          Replace_Header (Msg2, H);
          Replace_Header (Msg2, Create (Content_Transfer_Encoding, "7bit"));
          Set_Unbounded_String (Msg2.Contents.Payload.Text, Payload);
@@ -1034,7 +1036,9 @@ package body GNAT.Email is
       else
          if Mime_Type /= "" and not Prepend then
             H := Create (Content_Type, Mime_Type);
-            Set_Param (H, "charset", Charset);
+            if Charset /= "" then
+               Set_Param (H, "charset", Charset);
+            end if;
             Replace_Header (Msg, H);
             Delete_Headers (Msg, Content_Transfer_Encoding);
             Delete_Headers (Msg, Content_Disposition);
@@ -1282,7 +1286,7 @@ package body GNAT.Email is
    -- Convert_To_Multipart --
    --------------------------
 
-   procedure Convert_To_Multipart (Msg : in out Message'Class) is
+   procedure Convert_To_Multipart (Msg : Message'Class) is
       Part : constant Message_List.List := Message_List.Empty_List;
    begin
       if not Msg.Contents.Payload.Multipart then
@@ -1330,6 +1334,33 @@ package body GNAT.Email is
       Payload.Contents.Is_Nested := True;
       Append (Msg.Contents.Payload.Parts, Payload);
    end Add_Payload;
+
+   ----------------
+   -- Attach_Msg --
+   ----------------
+
+   procedure Attach_Msg
+     (Msg         : in out Message'Class;
+      Attach      : Message'Class;
+      Description : String := "")
+   is
+      Attachment : constant Message :=
+        New_Message (MIME_Type => Message_RFC822);
+      Tmp        : Unbounded_String;
+   begin
+      if Description /= "" then
+         Replace_Header
+           (Attachment, Create (Content_Description, Description));
+      end if;
+
+      To_String (Attach, Result => Tmp);
+      Set_Text_Payload (Attachment, To_String (Tmp),
+                        Charset   => "",
+                        Mime_Type => Message_RFC822);
+      Replace_Header (Attachment, Create (Content_Disposition, "inline"));
+
+      Add_Payload (Msg, Attachment);
+   end Attach_Msg;
 
    ------------
    -- Attach --
@@ -1722,9 +1753,7 @@ package body GNAT.Email is
    -- Set_Boundary --
    ------------------
 
-   procedure Set_Boundary
-     (Msg : in out Message'Class; Boundary : String := "")
-   is
+   procedure Set_Boundary (Msg : Message'Class; Boundary : String := "") is
       Candidate : Unbounded_String;
       Valid     : Boolean := False;
       Content_T : Header;
