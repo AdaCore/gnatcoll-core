@@ -22,6 +22,12 @@ project GnatLib_Gtk is
          case GnatLib_Shared.Python is
             when "yes" =>
                for Source_Dirs use Project'Source_Dirs & ("gtk/python");
+
+               --  Seems this line is sometimes needed when compiling GPS
+               --  (but not always). However, it fails when building gnatlib
+               --  standalone, because of duplicate symbols in such a case.
+               --  Not clear what is happening, though.
+               --
                --  for Library_Options use ("python_support_gtk.o");
             when "no"  =>
                for Source_Dirs use Project'Source_Dirs & ("gtk/nopython");
