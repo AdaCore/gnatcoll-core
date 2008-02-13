@@ -28,7 +28,12 @@ project GnatLib is
       --  but apparently not projects depending on it.
 
       for Specification  ("GNAT.Mmap")           use "gnat-mmap.ads";
-      for Implementation ("GNAT.Mmap")           use "gnat-mmap.adb";
+      case GnatLib_Shared.OS is
+         when "UNIX" =>
+            for Implementation ("GNAT.Mmap")     use "gnat-mmap__unix.adb";
+         when "Windows_NT" =>
+            for Implementation ("GNAT.Mmap")     use "gnat-mmap__win32.adb";
+      end case;
       for Specification  ("GNAT.Boyer_Moore")    use "gnat-boyer_moore.ads";
       for Implementation ("GNAT.Boyer_Moore")    use "gnat-boyer_moore.adb";
       for Specification  ("GNAT.Traces")         use "gnat-traces.ads";

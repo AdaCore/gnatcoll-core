@@ -1,7 +1,7 @@
 -----------------------------------------------------------------------
 --                               G P S                               --
 --                                                                   --
---                      Copyright (C) 2007, AdaCore                  --
+--                 Copyright (C) 2007-2008, AdaCore                  --
 --                                                                   --
 -- GPS is free  software;  you can redistribute it and/or modify  it --
 -- under the terms of the GNU General Public License as published by --
@@ -179,22 +179,23 @@ private
    pragma Inline (Data, Length, Last, Offset, Is_Mmapped, To_Str_Access);
 
    type Mapped_File is record
-      Data      : Str_Access;
-      Buffer    : GNAT.Strings.String_Access;
-      Offset    : Long_Integer;
-      Last      : Integer;
-      Length    : Long_Integer;
-      Write     : Boolean;
-      Mapped    : Boolean;
-      Fd        : GNAT.OS_Lib.File_Descriptor;
-      Handle    : System.Address;
-      Page_Size : Long_Integer;
+      Data               : Str_Access;
+      Buffer             : GNAT.Strings.String_Access;
+      Offset             : Long_Integer;
+      Last               : Integer;
+      Length             : Long_Integer;
+      Write              : Boolean;
+      Mapped             : Boolean;
+      Fd                 : GNAT.OS_Lib.File_Descriptor;
+      Page_Size          : Long_Integer;
+      --  Win32 specific handle below
+      Handle, Map_Handle : System.Address;
    end record;
    --  Fd is either a file descriptor on Unix systems or a Handle on Windows.
 
    Invalid_Mapped_File : constant Mapped_File :=
      (null, null, 0, 0, 0, False, False,
-      GNAT.OS_Lib.Invalid_FD, System.Null_Address, 0);
+      GNAT.OS_Lib.Invalid_FD, 0, System.Null_Address, System.Null_Address);
 
    pragma Import (C, Get_Page_Size, "getpagesize");
 end GNAT.Mmap;
