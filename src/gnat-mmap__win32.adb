@@ -54,6 +54,9 @@ package body GNAT.Mmap is
       FILE_BEGIN            : constant := 0;
       FILE_SHARE_READ       : constant := 16#00000001#;
       FILE_ATTRIBUTE_NORMAL : constant := 16#00000080#;
+      FILE_MAP_READ         : constant := 4;
+      FILE_MAP_WRITE        : constant := 2;
+      PAGE_READONLY         : constant := 16#0002#;
 
       function GetFileSize
         (HFile : HANDLE; LpFileSizeHigh : access DWORD) return BOOL;
@@ -279,9 +282,9 @@ package body GNAT.Mmap is
          Extra := Offset mod File.Page_Size;
 
          if File.Write then
-            Flags := FILE_MAP_WRITE;
+            Flags := Win.FILE_MAP_WRITE;
          else
-            Flags := FILE_MAP_READ;
+            Flags := Win.FILE_MAP_READ;
          end if;
 
          Tmp := Len + Extra;
@@ -305,7 +308,7 @@ package body GNAT.Mmap is
 
             File.Map_Handle := To_Address
               (Win.CreateFileMapping
-                 (To_Handle (File.Handle), null, PAGE_READONLY,
+                 (To_Handle (File.Handle), null, Win.PAGE_READONLY,
                   0, DWORD (File.Length), System.Null_Address));
 
             File.Data := Convert
