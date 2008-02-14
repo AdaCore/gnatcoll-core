@@ -47,8 +47,10 @@ package body GNAT.Mmap is
 
       type HANDLE is new Interfaces.C.long;
 
+      type WORD   is new Interfaces.C.unsigned_short;
       type DWORD  is new Interfaces.C.unsigned_long;
       type LONG   is new Interfaces.C.long;
+      type SIZE_T is new Interfaces.C.size_t;
 
       type BOOL   is new Interfaces.C.int;
       for BOOL'Size use Interfaces.C.int'Size;
@@ -73,6 +75,20 @@ package body GNAT.Mmap is
          bInheritHandle      : BOOL;
       end record;
 
+      type SYSTEM_INFO is record
+         dwOemId : DWORD;
+         dwPageSize : DWORD;
+         lpMinimumApplicationAddress : PVOID;
+         lpMaximumApplicationAddress : PVOID;
+         dwActiveProcessorMask       : PVOID;
+         dwNumberOfProcessors        : DWORD;
+         dwProcessorType             : DWORD;
+         dwAllocationGranularity     : DWORD;
+         wProcessorLevel             : WORD;
+         wProcessorRevision          : WORD;
+      end record;
+      type LP_SYSTEM_INFO is access all SYSTEM_INFO;
+
       INVALID_HANDLE_VALUE  : constant HANDLE := -1;
       FILE_BEGIN            : constant := 0;
       FILE_SHARE_READ       : constant := 16#00000001#;
@@ -80,6 +96,7 @@ package body GNAT.Mmap is
       FILE_MAP_READ         : constant := 4;
       FILE_MAP_WRITE        : constant := 2;
       PAGE_READONLY         : constant := 16#0002#;
+      PAGE_READWRITE        : constant := 16#0004#;
       INVALID_FILE_SIZE     : constant := 16#FFFFFFFF#;
 
       function CreateFile
@@ -136,11 +153,14 @@ package body GNAT.Mmap is
          DwDesiredAccess      : DWORD;
          DwFileOffsetHigh     : DWORD;
          DwFileOffsetLow      : DWORD;
-         DwNumberOfBytesToMap : DWORD) return System.Address;
+         DwNumberOfBytesToMap : SIZE_T) return System.Address;
       pragma Import (Stdcall, MapViewOfFile, "MapViewOfFile");
 
       function UnmapViewOfFile (LpBaseAddress : System.Address) return BOOL;
       pragma Import (Stdcall, UnmapViewOfFile, "UnmapViewOfFile");
+
+      procedure GetSystemInfo (LpSystemInfo : LP_SYSTEM_INFO);
+      pragma Import (Stdcall, GetSystemInfo, "GetSystemInfo");
 
    end Win;
 
@@ -151,15 +171,31 @@ package body GNAT.Mmap is
    function To_Address is
      new Ada.Unchecked_Conversion (HANDLE, System.Address);
 
+   -------------------
+   -- Get_Page_Size --
+   -------------------
+
+   function Get_Page_Size return Integer is
+      SystemInfo : aliased SYSTEM_INFO;
+   begin
+      GetSystemInfo (SystemInfo'Unchecked_Access);
+      return Integer (SystemInfo.dwAllocationGranularity);
+   end Get_Page_Size;
+
    ---------------
    -- From_Disk --
    ---------------
 
    procedure From_Disk (File : in out Mapped_File) is
-      Pos : DWORD;
-      Res : BOOL;
+      Pos    : DWORD;
+      Res    : BOOL;
+      NbRead : aliased DWORD;
       pragma Unreferenced (Pos, Res);
    begin
+      if File.Buffer /= null then
+         GNAT.Strings.Free (File.Buffer);
+      end if;
+
       File.Buffer := new String (1 .. File.Last);
 
       Pos := Win.SetFilePointer
@@ -169,8 +205,8 @@ package body GNAT.Mmap is
       --  causes a SEGV in call to ReadFile.
       if File.Last > 0
         and then ReadFile
-          (To_Handle (File.Handle), File.Buffer.all'Address,
-           DWORD (File.Last), null, null) = Win.FALSE
+          (To_Handle (File.Handle), File.Buffer (1)'Address,
+           DWORD (File.Last), NbRead'Unchecked_Access, null) = Win.FALSE
       then
          GNAT.Strings.Free (File.Buffer);
          Res := CloseHandle (To_Handle (File.Handle));
@@ -185,8 +221,9 @@ package body GNAT.Mmap is
    -------------
 
    procedure To_Disk (File : in out Mapped_File) is
-      Pos : DWORD;
-      Res : BOOL;
+      Pos     : DWORD;
+      Res     : BOOL;
+      Written : aliased DWORD;
       pragma Unreferenced (Pos, Res);
    begin
       if File.Write and then File.Buffer /= null then
@@ -196,7 +233,7 @@ package body GNAT.Mmap is
 
          if WriteFile
            (To_Handle (File.Handle), File.Buffer.all'Address,
-            DWORD (File.Last), null, null) = Win.FALSE
+            DWORD (File.Last), Written'Unchecked_Access, null) = Win.FALSE
          then
             GNAT.Strings.Free (File.Buffer);
             Res := CloseHandle (To_Handle (File.Handle));
@@ -264,7 +301,7 @@ package body GNAT.Mmap is
       C_File : constant String := Filename & ASCII.NUL;
       H      : constant HANDLE :=
                  CreateFile
-                   (C_File'Address, GENERIC_WRITE, 0,
+                   (C_File'Address, GENERIC_READ + GENERIC_WRITE, 0,
                     null, OPEN_EXISTING, Win.FILE_ATTRIBUTE_NORMAL, 0);
       SizeH  : aliased DWORD;
       Size   : File_Size;
@@ -289,7 +326,7 @@ package body GNAT.Mmap is
          Offset     => 0,
          Last       => 0,
          Length     => Size,
-         Write      => False,
+         Write      => True,
          Mapped     => Use_Mmap_If_Available,
          Page_Size  => File_Size (Get_Page_Size),
          Fd         => Invalid_FD,
@@ -328,12 +365,14 @@ package body GNAT.Mmap is
       Offset : File_Size := 0;
       Length : File_Size := 0)
    is
-      Len   : File_Size := Length;
-      Extra : File_Size;
-      Flags : DWORD;
-      Res   : BOOL;
-      Tmp   : File_Size;
+      Len       : File_Size := Length;
+      Extra     : File_Size;
+      Flags     : DWORD;
+      PageFlags : DWORD;
+      Res       : BOOL;
+      Tmp       : File_Size;
       pragma Unreferenced (Res);
+      use type System.Address;
    begin
       --  If that part of the file is already readable, don't do anything
 
@@ -363,8 +402,10 @@ package body GNAT.Mmap is
 
          if File.Write then
             Flags := Win.FILE_MAP_WRITE;
+            PageFlags := Win.PAGE_READWRITE;
          else
             Flags := Win.FILE_MAP_READ;
+            PageFlags := Win.PAGE_READONLY;
          end if;
 
          Tmp := Len + Extra;
@@ -386,14 +427,17 @@ package body GNAT.Mmap is
 
             File.Last := Integer (Tmp);
 
-            File.Map_Handle := To_Address
-              (Win.CreateFileMapping
-                 (To_Handle (File.Handle), null, Win.PAGE_READONLY,
-                  0, DWORD (File.Length), System.Null_Address));
+            if File.Map_Handle = System.Null_Address then
+               File.Map_Handle := To_Address
+                 (Win.CreateFileMapping
+                    (To_Handle (File.Handle), null, PageFlags,
+                     0, DWORD (File.Length), System.Null_Address));
+            end if;
 
             File.Data := Convert
               (Win.MapViewOfFile
-                 (To_Handle (File.Map_Handle), Flags, 0, 0, 0));
+                 (To_Handle (File.Map_Handle), Flags,
+                  0, DWORD (File.Offset), SIZE_T (File.Last)));
          end if;
 
       else
@@ -403,6 +447,7 @@ package body GNAT.Mmap is
 
          File.Offset := Offset;
          Tmp         := Len;
+
          if File.Offset + Tmp - 1 > File.Length then
             Tmp  := File.Length - File.Offset;
          end if;

@@ -106,6 +106,17 @@ package body GNAT.Mmap is
       File.Buffer := null;
    end To_Disk;
 
+   -------------------
+   -- Get_Page_Size --
+   -------------------
+
+   function Get_Page_Size return Integer is
+      function Internal return Integer;
+      pragma Import (C, Internal, "getpagesize");
+   begin
+      return Internal;
+   end Get_Page_Size;
+
    ---------------
    -- Open_Read --
    ---------------

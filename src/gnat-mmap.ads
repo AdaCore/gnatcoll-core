@@ -200,5 +200,4 @@ private
      (null, null, 0, 0, 0, False, False,
       GNAT.OS_Lib.Invalid_FD, 0, System.Null_Address, System.Null_Address);
 
-   pragma Import (C, Get_Page_Size, "getpagesize");
 end GNAT.Mmap;
