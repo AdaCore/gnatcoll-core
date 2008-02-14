@@ -72,7 +72,8 @@ package body GNAT.Mmap is
    procedure From_Disk (File : in out Mapped_File) is
    begin
       File.Buffer := new String (1 .. File.Last);
-      Lseek (File.Fd, File.Offset, Seek_Set);
+      --  ??? Lseek offset should be a size_t instead of a Long_Integer.
+      Lseek (File.Fd, Long_Integer (File.Offset), Seek_Set);
 
       if Read (File.Fd, File.Buffer.all'Address, File.Last) /= File.Last then
          GNAT.Strings.Free (File.Buffer);
@@ -90,7 +91,7 @@ package body GNAT.Mmap is
    procedure To_Disk (File : in out Mapped_File) is
    begin
       if File.Write and then File.Buffer /= null then
-         Lseek (File.Fd, File.Offset, Seek_Set);
+         Lseek (File.Fd, Long_Integer (File.Offset), Seek_Set);
 
          if Write (File.Fd, File.Buffer.all'Address, File.Last) /=
            File.Last
@@ -125,7 +126,8 @@ package body GNAT.Mmap is
          Buffer     => null,
          Offset     => 0,
          Last       => 0,
-         Length     => File_Length (Fd),
+         --  ??? File_Length should return a size_t instead of a Long_Integer.
+         Length     => File_Size (File_Length (Fd)),
          Write      => False,
          Mapped     => Use_Mmap_If_Available and (Has_Mmap = 1),
          Page_Size  => File_Size (Get_Page_Size),
@@ -154,7 +156,7 @@ package body GNAT.Mmap is
          Buffer     => null,
          Offset     => 0,
          Last       => 0,
-         Length     => File_Length (Fd),
+         Length     => File_Size (File_Length (Fd)),
          Write      => True,
          Mapped     => Use_Mmap_If_Available and (Has_Mmap = 1),
          Page_Size  => File_Size (Get_Page_Size),
