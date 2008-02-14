@@ -41,7 +41,7 @@
 --  declare
 --     File   : Mapped_File;
 --     Str    : Str_Access;
---     Offs   : Long_Integer := 0;
+--     Offs   : File_Size := 0;
 --     Page   : constant Integer := Get_Page_Size;
 --  begin
 --     File := Open_Read ("/tmp/file_on_disk");
@@ -64,6 +64,7 @@
 with GNAT.OS_Lib;
 with GNAT.Strings;
 with System;
+with Interfaces.C;
 
 package GNAT.Mmap is
 
@@ -83,6 +84,8 @@ package GNAT.Mmap is
    type Unconstrained_String is new String (Positive);
    type Str_Access is access all Unconstrained_String;
    pragma No_Strict_Aliasing (Str_Access);
+
+   type File_Size is new Interfaces.C.size_t;
 
    function To_Str_Access
      (Str : GNAT.Strings.String_Access) return Str_Access;
@@ -113,8 +116,8 @@ package GNAT.Mmap is
 
    procedure Read
      (File   : in out Mapped_File;
-      Offset : Long_Integer := 0;
-      Length : Long_Integer := 0);
+      Offset : File_Size := 0;
+      Length : File_Size := 0);
    --  Read a specific part of the file in memory. Offset is the number of
    --  bytes since tbe beginning of the file at which we should start reading.
    --  Length is the number of bytes that should be read. If set to 0, as much
@@ -131,7 +134,7 @@ package GNAT.Mmap is
    --  must be multiples of the page_size on your system. So you should always
    --  use the functions below to get information on what exactly what mapped.
 
-   function Offset (File : Mapped_File) return Long_Integer;
+   function Offset (File : Mapped_File) return File_Size;
    --  Return the offset, in the physical file on disk, corresponding to the
    --  region mapped in File.
 
@@ -140,7 +143,7 @@ package GNAT.Mmap is
    --  In Data, you can only access bytes 1 .. Last (File), otherwise
    --  storage_errors will occur.
 
-   function Length (File : Mapped_File) return Long_Integer;
+   function Length (File : Mapped_File) return File_Size;
    --  Size of the file on the disk
 
    function Data (File : Mapped_File) return Str_Access;
@@ -181,13 +184,13 @@ private
    type Mapped_File is record
       Data               : Str_Access;
       Buffer             : GNAT.Strings.String_Access;
-      Offset             : Long_Integer;
+      Offset             : File_Size;
       Last               : Integer;
-      Length             : Long_Integer;
+      Length             : File_Size;
       Write              : Boolean;
       Mapped             : Boolean;
       Fd                 : GNAT.OS_Lib.File_Descriptor;
-      Page_Size          : Long_Integer;
+      Page_Size          : File_Size;
       --  Win32 specific handle below
       Handle, Map_Handle : System.Address;
    end record;

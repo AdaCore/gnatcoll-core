@@ -45,15 +45,15 @@ package body GNAT.Mmap is
      (Str_Access, System.Address);
 
    function Mmap (Start  : System.Address := System.Null_Address;
-                  Length : Long_Integer;
+                  Length : File_Size;
                   Prot   : Mmap_Prot := PROT_READ;
                   Flags  : Mmap_Flags := MAP_PRIVATE;
                   Fd     : GNAT.OS_Lib.File_Descriptor;
-                  Offset : Long_Integer := 0) return System.Address;
+                  Offset : File_Size := 0) return System.Address;
    pragma Import (C, Mmap, "gnatlib_mmap");
 
    function Munmap (Start : System.Address;
-                    Length : Long_Integer) return Integer;
+                    Length : File_Size) return Integer;
    pragma Import (C, Munmap, "gnatlib_munmap");
 
    function Has_Mmap return Integer;
@@ -128,7 +128,7 @@ package body GNAT.Mmap is
          Length     => File_Length (Fd),
          Write      => False,
          Mapped     => Use_Mmap_If_Available and (Has_Mmap = 1),
-         Page_Size  => Long_Integer (Get_Page_Size),
+         Page_Size  => File_Size (Get_Page_Size),
          Fd         => Fd,
          Handle     => System.Null_Address,
          Map_Handle => System.Null_Address);
@@ -157,7 +157,7 @@ package body GNAT.Mmap is
          Length     => File_Length (Fd),
          Write      => True,
          Mapped     => Use_Mmap_If_Available and (Has_Mmap = 1),
-         Page_Size  => Long_Integer (Get_Page_Size),
+         Page_Size  => File_Size (Get_Page_Size),
          Fd         => Fd,
          Handle     => System.Null_Address,
          Map_Handle => System.Null_Address);
@@ -172,7 +172,7 @@ package body GNAT.Mmap is
       pragma Unreferenced (Ignored);
    begin
       if File.Mapped then
-         Ignored := Munmap (Convert (File.Data), Long_Integer (File.Last));
+         Ignored := Munmap (Convert (File.Data), File_Size (File.Last));
       else
          To_Disk (File);
       end if;
@@ -190,15 +190,15 @@ package body GNAT.Mmap is
 
    procedure Read
      (File   : in out Mapped_File;
-      Offset : Long_Integer := 0;
-      Length : Long_Integer := 0)
+      Offset : File_Size := 0;
+      Length : File_Size := 0)
    is
-      Len     : Long_Integer := Length;
-      Extra   : Long_Integer;
+      Len     : File_Size := Length;
+      Extra   : File_Size;
       Prot    : Mmap_Prot;
       Flags   : Mmap_Flags;
       Ignored : Integer;
-      Tmp     : Long_Integer;
+      Tmp     : File_Size;
       pragma Unreferenced (Ignored);
    begin
       --  If that part of the file is already readable, don't do anything
@@ -209,7 +209,7 @@ package body GNAT.Mmap is
 
       --  If the requested block is already in memory, do nothing
       if Offset >= File.Offset
-        and then Offset + Len <= File.Offset + Long_Integer (File.Last)
+        and then Offset + Len <= File.Offset + File_Size (File.Last)
         and then (File.Data /= null or else File.Buffer /= null)
       then
          return;
@@ -223,7 +223,7 @@ package body GNAT.Mmap is
          --  Unmap previous memory if necessary
 
          if File.Data /= null then
-            Ignored := Munmap (Convert (File.Data), Long_Integer (File.Last));
+            Ignored := Munmap (Convert (File.Data), File_Size (File.Last));
             File.Data := null;
          end if;
 
@@ -244,7 +244,7 @@ package body GNAT.Mmap is
               (Len + Extra + File.Page_Size) / File.Page_Size * File.Page_Size;
          end if;
 
-         if Tmp > Long_Integer (Integer'Last) then
+         if Tmp > File_Size (Integer'Last) then
             raise Device_Error;
 
          else
@@ -257,7 +257,7 @@ package body GNAT.Mmap is
             File.Last := Integer (Tmp);
             File.Data := Convert
               (Mmap (Offset => File.Offset,
-                     Length => Long_Integer (File.Last),
+                     Length => File_Size (File.Last),
                      Prot   => Prot,
                      Flags  => Flags,
                      Fd     => File.Fd));
@@ -284,7 +284,7 @@ package body GNAT.Mmap is
    -- Offset --
    ------------
 
-   function Offset (File : Mapped_File) return Long_Integer is
+   function Offset (File : Mapped_File) return File_Size is
    begin
       return File.Offset;
    end Offset;
@@ -302,7 +302,7 @@ package body GNAT.Mmap is
    -- Length --
    ------------
 
-   function Length (File : Mapped_File) return Long_Integer is
+   function Length (File : Mapped_File) return File_Size is
    begin
       return File.Length;
    end Length;

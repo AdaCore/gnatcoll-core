@@ -19,7 +19,6 @@
 
 with Ada.IO_Exceptions;        use Ada.IO_Exceptions;
 with Ada.Unchecked_Conversion;
-with Interfaces.C;
 
 with GNAT.OS_Lib;              use GNAT.OS_Lib;
 
@@ -81,6 +80,7 @@ package body GNAT.Mmap is
       FILE_MAP_READ         : constant := 4;
       FILE_MAP_WRITE        : constant := 2;
       PAGE_READONLY         : constant := 16#0002#;
+      INVALID_FILE_SIZE     : constant := 16#FFFFFFFF#;
 
       function CreateFile
         (lpFileName            : System.Address;
@@ -112,7 +112,7 @@ package body GNAT.Mmap is
       pragma Import (Stdcall, CloseHandle, "CloseHandle");
 
       function GetFileSize
-        (HFile : HANDLE; LpFileSizeHigh : access DWORD) return BOOL;
+        (HFile : HANDLE; LpFileSizeHigh : access DWORD) return DWORD;
       pragma Import (Stdcall, GetFileSize, "GetFileSize");
 
       function SetFilePointer
@@ -165,9 +165,12 @@ package body GNAT.Mmap is
       Pos := Win.SetFilePointer
         (To_Handle (File.Handle), LONG (File.Offset), null, Win.FILE_BEGIN);
 
-      if ReadFile
-        (To_Handle (File.Handle), File.Buffer.all'Address,
-         DWORD (File.Last), null, null) = Win.FALSE
+      --  Take care of the case where File.Last is 0, as this
+      --  causes a SEGV in call to ReadFile.
+      if File.Last > 0
+        and then ReadFile
+          (To_Handle (File.Handle), File.Buffer.all'Address,
+           DWORD (File.Last), null, null) = Win.FALSE
       then
          GNAT.Strings.Free (File.Buffer);
          Res := CloseHandle (To_Handle (File.Handle));
@@ -218,13 +221,22 @@ package body GNAT.Mmap is
                  CreateFile
                    (C_File'Address, GENERIC_READ, Win.FILE_SHARE_READ,
                     null, OPEN_EXISTING, Win.FILE_ATTRIBUTE_NORMAL, 0);
-      Size   : aliased DWORD;
+      SizeH  : aliased DWORD;
+      Size   : File_Size;
+
    begin
       if H = Win.INVALID_HANDLE_VALUE then
          raise Name_Error;
+      end if;
 
-      elsif Win.GetFileSize (H, Size'Access) = Win.FALSE then
+      Size := File_Size (Win.GetFileSize (H, SizeH'Access));
+
+      if Size = Win.INVALID_FILE_SIZE then
          raise Use_Error;
+      end if;
+
+      if SizeH /= 0 and then File_Size'Size > 32 then
+         Size := Size + (File_Size (SizeH) * 16#FFFF_FFFF#);
       end if;
 
       return Mapped_File'
@@ -232,10 +244,10 @@ package body GNAT.Mmap is
          Buffer     => null,
          Offset     => 0,
          Last       => 0,
-         Length     => Long_Integer (Size),
+         Length     => Size,
          Write      => False,
          Mapped     => Use_Mmap_If_Available,
-         Page_Size  => Long_Integer (Get_Page_Size),
+         Page_Size  => File_Size (Get_Page_Size),
          Fd         => Invalid_FD,
          Handle     => To_Address (H),
          Map_Handle => System.Null_Address);
@@ -254,13 +266,21 @@ package body GNAT.Mmap is
                  CreateFile
                    (C_File'Address, GENERIC_WRITE, 0,
                     null, OPEN_EXISTING, Win.FILE_ATTRIBUTE_NORMAL, 0);
-      Size   : aliased DWORD;
+      SizeH  : aliased DWORD;
+      Size   : File_Size;
    begin
       if H = Win.INVALID_HANDLE_VALUE then
          raise Name_Error;
+      end if;
 
-      elsif Win.GetFileSize (H, Size'Access) = Win.FALSE then
+      Size := File_Size (Win.GetFileSize (H, SizeH'Access));
+
+      if Size = INVALID_FILE_SIZE then
          raise Use_Error;
+      end if;
+
+      if SizeH /= 0 and then File_Size'Size > 32 then
+         Size := Size + (File_Size (SizeH) * 16#FFFF_FFFF#);
       end if;
 
       return Mapped_File'
@@ -268,10 +288,10 @@ package body GNAT.Mmap is
          Buffer     => null,
          Offset     => 0,
          Last       => 0,
-         Length     => Long_Integer (Size),
+         Length     => Size,
          Write      => False,
          Mapped     => Use_Mmap_If_Available,
-         Page_Size  => Long_Integer (Get_Page_Size),
+         Page_Size  => File_Size (Get_Page_Size),
          Fd         => Invalid_FD,
          Handle     => To_Address (H),
          Map_Handle => System.Null_Address);
@@ -305,14 +325,14 @@ package body GNAT.Mmap is
 
    procedure Read
      (File   : in out Mapped_File;
-      Offset : Long_Integer := 0;
-      Length : Long_Integer := 0)
+      Offset : File_Size := 0;
+      Length : File_Size := 0)
    is
-      Len   : Long_Integer := Length;
-      Extra : Long_Integer;
+      Len   : File_Size := Length;
+      Extra : File_Size;
       Flags : DWORD;
       Res   : BOOL;
-      Tmp   : Long_Integer;
+      Tmp   : File_Size;
       pragma Unreferenced (Res);
    begin
       --  If that part of the file is already readable, don't do anything
@@ -324,7 +344,7 @@ package body GNAT.Mmap is
       --  If the requested block is already in memory, do nothing
 
       if Offset >= File.Offset
-        and then Offset + Len <= File.Offset + Long_Integer (File.Last)
+        and then Offset + Len <= File.Offset + File_Size (File.Last)
         and then (File.Data /= null or else File.Buffer /= null)
       then
          return;
@@ -354,7 +374,7 @@ package body GNAT.Mmap is
               (Len + Extra + File.Page_Size) / File.Page_Size * File.Page_Size;
          end if;
 
-         if Tmp > Long_Integer (Integer'Last) then
+         if Tmp > File_Size (Integer'Last) then
             raise Device_Error;
 
          else
@@ -397,7 +417,7 @@ package body GNAT.Mmap is
    -- Offset --
    ------------
 
-   function Offset (File : Mapped_File) return Long_Integer is
+   function Offset (File : Mapped_File) return File_Size is
    begin
       return File.Offset;
    end Offset;
@@ -415,7 +435,7 @@ package body GNAT.Mmap is
    -- Length --
    ------------
 
-   function Length (File : Mapped_File) return Long_Integer is
+   function Length (File : Mapped_File) return File_Size is
    begin
       return File.Length;
    end Length;
