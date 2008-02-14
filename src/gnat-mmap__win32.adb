@@ -60,11 +60,6 @@ package body GNAT.Mmap is
       GENERIC_WRITE : constant := 16#40000000#;
       OPEN_EXISTING : constant := 3;
 
-      PAGE_READONLY  : constant := 16#0002#;
-
-      FILE_MAP_READ  : constant := 4;
-      FILE_MAP_WRITE : constant := 2;
-
       type OVERLAPPED is record
          Internal     : DWORD;
          InternalHigh : DWORD;
