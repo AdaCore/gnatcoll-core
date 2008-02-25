@@ -1,7 +1,7 @@
 -----------------------------------------------------------------------
 --                               G P S                               --
 --                                                                   --
---                      Copyright (C) 2003-2007, AdaCore             --
+--                      Copyright (C) 2003-2008, AdaCore             --
 --                                                                   --
 -- GPS is free  software;  you can redistribute it and/or modify  it --
 -- under the terms of the GNU General Public License as published by --
@@ -377,12 +377,26 @@ package body GNAT.Scripts.Python is
 
       Script.Exception_Unexpected := PyErr_NewException
         (Module & ".Unexpected_Exception", null, null);
+      Ignored := PyModule_AddObject
+        (Script.Module, "Unexpected_Exception" & ASCII.NUL,
+         Script.Exception_Unexpected);
+
       Script.Exception_Misc := PyErr_NewException
         (Module & ".Exception", null, null);
+      Ignored := PyModule_AddObject
+        (Script.Module, "Exception" & ASCII.NUL, Script.Exception_Misc);
+
       Script.Exception_Missing_Args := PyErr_NewException
         (Module & ".Missing_Arguments", null, null);
+      Ignored := PyModule_AddObject
+        (Script.Module, "Missing_Arguments" & ASCII.NUL,
+         Script.Exception_Missing_Args);
+
       Script.Exception_Invalid_Arg := PyErr_NewException
         (Module & ".Invalid_Argument", null, null);
+      Ignored := PyModule_AddObject
+        (Script.Module, "Invalid_Argument" & ASCII.NUL,
+         Script.Exception_Invalid_Arg);
 
       --  PyGTK prints its error messages using sys.argv, which doesn't
       --  exist in non-interactive mode. We therefore define it here
