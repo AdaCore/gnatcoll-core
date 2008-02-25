@@ -1258,7 +1258,14 @@ package body GNAT.Email is
 
          elsif Length (Msg.Contents.Payload.Parts) = 1 then
             Attach := Element (First (Msg.Contents.Payload.Parts));
-            if Get_Content_Type (Attach) = Text_Plain then
+            if Is_Multipart (Attach) then
+               Msg.Contents.Payload :=
+                 (Multipart => True,
+                  Parts     => Attach.Contents.Payload.Parts,
+                  Preamble  => Attach.Contents.Payload.Preamble,
+                  Epilogue  => Attach.Contents.Payload.Epilogue);
+               Replace_Header (Msg, Get_Header (Attach, Content_Type));
+            else
                Msg.Contents.Payload :=
                  (Multipart => False,
                   Text      => Attach.Contents.Payload.Text);
@@ -1270,13 +1277,6 @@ package body GNAT.Email is
                   Replace_Header
                     (Msg, Get_Header (Attach, Content_Transfer_Encoding));
                end if;
-            else
-               Msg.Contents.Payload :=
-                 (Multipart => True,
-                  Parts     => Attach.Contents.Payload.Parts,
-                  Preamble  => Attach.Contents.Payload.Preamble,
-                  Epilogue  => Attach.Contents.Payload.Epilogue);
-               Replace_Header (Msg, Get_Header (Attach, Content_Type));
             end if;
          end if;
       end if;
