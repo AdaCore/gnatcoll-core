@@ -29,7 +29,7 @@ project GnatLib is
 
       for Specification  ("GNAT.Mmap")           use "gnat-mmap.ads";
       case GnatLib_Shared.OS is
-         when "UNIX" =>
+         when "unix" =>
             for Implementation ("GNAT.Mmap")     use "gnat-mmap__unix.adb";
          when "Windows_NT" =>
             for Implementation ("GNAT.Mmap")     use "gnat-mmap__win32.adb";

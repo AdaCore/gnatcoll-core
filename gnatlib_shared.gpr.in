@@ -16,8 +16,8 @@ project GnatLib_Shared is
    Library_Type : Library_Type_Type :=
       external ("GNATLIB_LIBRARY_TYPE", "relocatable");
 
-   type OS_Kind is ("Windows_NT", "UNIX");
-   OS : OS_Kind := external ("OS", "UNIX");
+   type OS_Kind is ("Windows_NT", "unix");
+   OS : OS_Kind := external ("OS", "unix");
 
    Python_Version := "@PYTHON_VERSION@";
    Python_Base    := "@PYTHON_BASE@";
