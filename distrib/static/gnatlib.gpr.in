@@ -12,8 +12,8 @@ project GnatLib is
    GnatLib_Kind : GnatLib_Kind_Type :=
      external ("GNATLIB_KIND", "static");
 
-   type OS_Kind is ("Windows_NT", "UNIX");
-   OS : OS_Kind := external ("OS", "UNIX");
+   type OS_Kind is ("Windows_NT", "unix");
+   OS : OS_Kind := external ("OS", "unix");
 
    for Library_Name use "gnatlib";
    for Source_Dirs use ("../../include/gnatlib");
@@ -26,7 +26,7 @@ project GnatLib is
 
    package Naming is
       case OS is
-         when "UNIX" =>
+         when "unix" =>
             for Implementation ("GNAT.Mmap") use "gnat-mmap__unix.adb";
          when "Windows_NT" =>
             for Implementation ("GNAT.Mmap") use "gnat-mmap__win32.adb";
