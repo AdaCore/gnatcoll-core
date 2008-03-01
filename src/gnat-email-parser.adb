@@ -233,9 +233,9 @@ package body GNAT.Email.Parser is
    -------------------
 
    procedure Parse_Payload (Msg : in out Message; Unparsed : String) is
-      Boundary : constant String := Get_Boundary (Msg);
-      Length   : constant Natural := Boundary'Length;
-      Index    : Integer := Unparsed'First;
+      Boundary         : constant String := Get_Boundary (Msg);
+      Length           : constant Natural := Boundary'Length;
+      Index            : Integer := Unparsed'First;
       Tmp              : Integer;
       Is_Last_Boundary : Boolean := False;
       Is_Boundary      : Boolean;
@@ -251,8 +251,7 @@ package body GNAT.Email.Parser is
          loop
             if Unparsed (Index) = '-'
               and then Unparsed (Index + 1) = '-'
-              and then Unparsed (Index + 2 .. Index + 1 + Length) =
-                Boundary
+              and then Unparsed (Index + 2 .. Index + 1 + Length) = Boundary
             then
                Tmp := Index + 2 + Length;
 

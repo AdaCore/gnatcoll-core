@@ -1,7 +1,7 @@
 -----------------------------------------------------------------------
---                               G N A T L I B                       --
+--                            G N A T L I B                          --
 --                                                                   --
---                         Copyright (C) 2006-2008, AdaCore          --
+--                  Copyright (C) 2006-2008, AdaCore                 --
 --                                                                   --
 -- GPS is free  software;  you can redistribute it and/or modify  it --
 -- under the terms of the GNU General Public License as published by --
@@ -41,7 +41,7 @@ package body GNAT.Email is
       Msg                 : Message'Class;
       Append_To           : in out Unbounded_String);
    --  Encode the payload in a form suitable to send the message.
-   --  If necessary, this creates the "boundary" for the message
+   --  If necessary, this creates the "boundary" for the message.
 
    procedure To_String
      (Headers              : Header_List.List;
@@ -69,11 +69,11 @@ package body GNAT.Email is
 
    function Check_Boundary
      (Msg : Message'Class; Boundary : String) return Boolean;
-   --  Whether Boundary can be used for this message.
+   --  Whether Boundary can be used for this message
 
    function Has_Line_Starting_With
      (Text : Unbounded_String; Starts_With : String) return Boolean;
-   --  Whether Text has a line that starts with Starts_With.
+   --  Whether Text has a line that starts with Starts_With
 
    ---------------------
    -- Next_Occurrence --
@@ -154,18 +154,19 @@ package body GNAT.Email is
       Reply_All      : Boolean := True;
       Local_Date     : Ada.Calendar.Time := Ada.Calendar.Clock) return Message
    is
-      Reply : Message := New_Message;
-      H, H2 : Header;
-      Iter  : Header_Iterator;
-      Is_First : Boolean;
-      To_Quote : Unbounded_String;
-      Part_Iter : Payload_Iterator;
-      Payload   : Message;
+      Reply      : Message := New_Message;
+      H, H2      : Header;
+      Iter       : Header_Iterator;
+      Is_First   : Boolean;
+      To_Quote   : Unbounded_String;
+      Part_Iter  : Payload_Iterator;
+      Payload    : Message;
       Who_Quoted : Unbounded_String;
    begin
       Set_Envelope_From (Reply, From_Email, Local_Date);
 
       H := Get_Header (Msg, "Subject");
+
       if H /= Null_Header then
          H2 := Create ("Subject", "Re:");
          Append (H2, Get_Value (H));
@@ -180,6 +181,7 @@ package body GNAT.Email is
 
       H := Get_Header (Msg, "From");
       H2 := Create ("To", "");
+
       if H /= Null_Header then
          Append (H2, Get_Value (H));
          Flatten (H.Contents.Value, Result => Who_Quoted);
@@ -193,6 +195,7 @@ package body GNAT.Email is
          Is_First := True;
 
          Iter := Get_Headers (Msg, "To");
+
          loop
             Next (Iter, H);
             exit when H = Null_Header;
@@ -207,6 +210,7 @@ package body GNAT.Email is
 
          if Get_Header (Msg, "CC") /= Null_Header then
             Iter := Get_Headers (Msg, "CC");
+
             loop
                Next (Iter, H);
                exit when H = Null_Header;
@@ -223,6 +227,7 @@ package body GNAT.Email is
       end if;
 
       H := Get_Header (Msg, "Message-Id");
+
       if H /= Null_Header then
          H2 := Create ("In-Reply-To", "");
          Append (H2, Get_Value (H));
@@ -231,6 +236,7 @@ package body GNAT.Email is
          H2 := Create ("References", "");
          Append (H2, Get_Value (H));
          H := Get_Header (Msg, "References");
+
          if H /= Null_Header then
             Append (H2, Get_Value (H));
          end if;
@@ -242,6 +248,7 @@ package body GNAT.Email is
          if Is_Multipart (Msg) then
             To_Quote := Null_Unbounded_String;
             Part_Iter := Get_Payload (Msg);
+
             loop
                Next (Part_Iter, Item => Payload);
                exit when Payload = Null_Message;
@@ -251,8 +258,10 @@ package body GNAT.Email is
                   exit;
                end if;
             end loop;
+
          elsif Get_Main_Type (Get_Content_Type (Msg)) = "text" then
             Get_Single_Part_Payload (Msg, To_Quote, Decode => True);
+
          else
             To_Quote := Null_Unbounded_String;
          end if;
@@ -269,6 +278,7 @@ package body GNAT.Email is
             begin
                Ada.Strings.Unbounded.Aux.Get_String (To_Quote, StrA, Last);
                Start := StrA'First;
+
                while Start <= Last loop
                   Eol := Integer'Min
                     (Last,
@@ -349,9 +359,9 @@ package body GNAT.Email is
    -----------------------
 
    procedure Set_Envelope_From
-     (Msg   : in out Message'Class;
-      Email : String;
-      Local_Date  : Ada.Calendar.Time)
+     (Msg        : in out Message'Class;
+      Email      : String;
+      Local_Date : Ada.Calendar.Time)
    is
    begin
       Msg.Contents.Envelope_From := To_Unbounded_String
@@ -383,6 +393,7 @@ package body GNAT.Email is
 
       Index := Index + 5;  --  Skips "From "
       Skip_Whitespaces (Str, Index);
+
       while Index <= Str'Last
         and then not Is_Whitespace (Str (Index))
       loop
@@ -397,17 +408,19 @@ package body GNAT.Email is
    --------------------------
 
    function Sender_From_Envelope (Msg : Message'Class) return String is
-      Str : constant String := To_String (Msg.Contents.Envelope_From);
+      Str   : constant String := To_String (Msg.Contents.Envelope_From);
       Index : Natural := Str'First + 5; --  Skips "From"
       Stop  : Natural;
    begin
       Skip_Whitespaces (Str, Index);
       Stop := Index;
+
       while Stop <= Str'Last
         and then not Is_Whitespace (Str (Stop))
       loop
          Stop := Stop + 1;
       end loop;
+
       return Str (Index .. Stop - 1);
    end Sender_From_Envelope;
 
@@ -418,8 +431,7 @@ package body GNAT.Email is
    function Create
      (Name    : String;
       Value   : String;
-      Charset : String := Charset_US_ASCII)
-      return Header
+      Charset : String := Charset_US_ASCII) return Header
    is
       H : Header;
    begin
@@ -499,9 +511,10 @@ package body GNAT.Email is
       end if;
 
       --  Replaces newlines with spaces, since the former is illegal anyway.
-      --  We are changing the unbounded string in place
+      --  We are changing the unbounded string in place.
 
       Ada.Strings.Unbounded.Aux.Get_String (Encoded, Str, Last);
+
       for S in Str'First .. Last loop
          if Str (S) = ASCII.LF then
             Str (S) := ' ';
@@ -544,7 +557,7 @@ package body GNAT.Email is
             end loop;
 
             --  Do not print a last line containing only white spaces, this
-            --  might confuse mailers
+            --  might confuse mailers.
 
             Append (Result, Str (Index .. Index2));
 
@@ -577,7 +590,7 @@ package body GNAT.Email is
       Msg                 : Message'Class;
       Append_To           : in out Unbounded_String)
    is
-      C : Message_List.Cursor;
+      C          : Message_List.Cursor;
       Attachment : Message;
    begin
       case Payload.Multipart is
@@ -591,6 +604,7 @@ package body GNAT.Email is
                if Content_Filter /= null then
                   C := First (Payload.Parts);
                   Payload_Count := 0;
+
                   for P in Parts'Range loop
                      Parts (P) := Content_Filter (Element (C));
                      if Parts (P) then
@@ -674,8 +688,10 @@ package body GNAT.Email is
                Append (Append_To, ASCII.LF);
             end if;
          end if;
+
          Next (H);
       end loop;
+
       Append (Append_To, ASCII.LF);
    end To_String;
 
@@ -694,6 +710,7 @@ package body GNAT.Email is
          Total := Total + Long_Integer (Length (Msg.Contents.Payload.Preamble))
            + Long_Integer (Length (Msg.Contents.Payload.Epilogue));
          C := First (Msg.Contents.Payload.Parts);
+
          while Has_Element (C) loop
             if Include_Attachments then
                Total := Total + Size (Element (C), True);
@@ -779,6 +796,7 @@ package body GNAT.Email is
             when others =>
                Payload := Encoded_Payload;
          end case;
+
       else
          Payload := Encoded_Payload;
       end if;
@@ -870,6 +888,7 @@ package body GNAT.Email is
    begin
       if Msg.Contents /= null then
          Iter := First (Msg.Contents.Headers);
+
          while Has_Element (Iter) loop
             if Element (Iter).Contents.Name = N then
                return Element (Iter);
@@ -892,11 +911,13 @@ package body GNAT.Email is
    begin
       while Has_Element (Iter) loop
          Iter2 := Next (Iter);
+
          if Name = ""
            or else Element (Iter).Contents.Name = N
          then
             Delete (Msg.Contents.Headers, Iter);
          end if;
+
          Iter := Iter2;
       end loop;
    end Delete_Headers;
@@ -913,6 +934,7 @@ package body GNAT.Email is
             Delete (Msg.Contents.Headers, Iter);
             return;
          end if;
+
          Next (Iter);
       end loop;
    end Delete_Header;
@@ -992,6 +1014,7 @@ package body GNAT.Email is
          H := Element (Iter.Cursor);
 
          Next (Iter.Cursor);
+
          if Length (Iter.Name) /= 0 then
             while Has_Element (Iter.Cursor)
               and then Element (Iter.Cursor).Contents.Name /= Iter.Name
@@ -999,6 +1022,7 @@ package body GNAT.Email is
                Next (Iter.Cursor);
             end loop;
          end if;
+
       else
          H := Null_Header;
       end if;
@@ -1025,9 +1049,11 @@ package body GNAT.Email is
          if Charset /= "" then
             Set_Param (H, "charset", Charset);
          end if;
+
          Replace_Header (Msg2, H);
          Replace_Header (Msg2, Create (Content_Transfer_Encoding, "7bit"));
          Set_Unbounded_String (Msg2.Contents.Payload.Text, Payload);
+
          if Prepend then
             Message_List.Prepend (Msg.Contents.Payload.Parts, Msg2);
          else
@@ -1041,6 +1067,7 @@ package body GNAT.Email is
             if Charset /= "" then
                Set_Param (H, "charset", Charset);
             end if;
+
             Replace_Header (Msg, H);
             Delete_Headers (Msg, Content_Transfer_Encoding);
             Delete_Headers (Msg, Content_Disposition);
@@ -1065,16 +1092,19 @@ package body GNAT.Email is
       Payload : out Unbounded_String;
       Decode  : Boolean := False)
    is
-      H        : Header;
-      Encoding : Encoding_Type;
+      H            : Header;
+      Encoding     : Encoding_Type;
       Encoding_Str : Unbounded_String;
    begin
       if Msg.Contents.Payload.Multipart then
          raise Multipart_Error;
+
       elsif Decode then
          H := Get_Header (Msg, Content_Transfer_Encoding);
+
          if H.Contents = null then
             Encoding := Encoding_7bit;
+
          else
             Flatten (H.Contents.Value, Result => Encoding_Str);
             declare
@@ -1204,7 +1234,7 @@ package body GNAT.Email is
    ----------------------
 
    function Get_Content_Type (Msg : Message'Class) return String is
-      H : constant Header := Get_Header (Msg, Content_Type);
+      H   : constant Header := Get_Header (Msg, Content_Type);
       ASC : Unbounded_String;
    begin
       if H /= Null_Header then
@@ -1379,8 +1409,8 @@ package body GNAT.Email is
       Encoding             : Encoding_Type    := Encoding_Base64)
    is
       Attachment : Message := New_Message (MIME_Type => "");
-      File : Mapped_File;
-      Str  : Str_Access;
+      File       : Mapped_File;
+      Str        : Str_Access;
    begin
       File := Open_Read (Path);
       Read (File);
@@ -1506,6 +1536,7 @@ package body GNAT.Email is
       Value_End  : out Integer) is
    begin
       C := First (H.Contents.Value);
+
       while Has_Element (C) loop
          declare
             Str      : constant String := To_String (Element (C).Contents);
@@ -1515,6 +1546,7 @@ package body GNAT.Email is
          begin
             while Index <= Str'Last loop
                Index := Next_Occurrence (Str (Index .. Str'Last), ';');
+
                if Index <= Str'Last then
                   Semicolon := Index;
                   Index := Index + 1;
@@ -1535,6 +1567,7 @@ package body GNAT.Email is
                      end if;
 
                      Index := Val_Stop;
+
                   else
                      Index := Stop;
                   end if;
@@ -1559,6 +1592,7 @@ package body GNAT.Email is
    begin
       Get_Param_Index
         (H, Param_Name, C, Semicolon, Name_Start, Name_End, Val_End);
+
       if Has_Element (C) then
          Replace_Element
            (H.Contents.Value,
@@ -1618,6 +1652,7 @@ package body GNAT.Email is
    begin
       Get_Param_Index
         (H, Param_Name, C, Semicolon, Name_Start, Name_End, Val_End);
+
       if Has_Element (C) then
          Replace_Element
            (H.Contents.Value,
@@ -1711,9 +1746,9 @@ package body GNAT.Email is
    function Check_Boundary
      (Msg : Message'Class; Boundary : String) return Boolean
    is
-      Iter      : Payload_Iterator;
-      Msg2      : Message;
-      Bound     : constant String := "--" & Boundary;
+      Iter  : Payload_Iterator;
+      Msg2  : Message;
+      Bound : constant String := "--" & Boundary;
    begin
       if Is_Multipart (Msg) then
          if Has_Line_Starting_With (Msg.Contents.Payload.Preamble, Bound)
@@ -1827,10 +1862,10 @@ package body GNAT.Email is
    --------------------
 
    function Get_Message_Id (Msg : Message) return String is
-      H   : constant Header := Get_Header (Msg, "Message-ID");
-      Tmp : Unbounded_String;
-      StrA : Ada.Strings.Unbounded.String_Access;
-      Last : Natural;
+      H           : constant Header := Get_Header (Msg, "Message-ID");
+      Tmp         : Unbounded_String;
+      StrA        : Ada.Strings.Unbounded.String_Access;
+      Last        : Natural;
       Index, Stop : Integer;
    begin
       if H /= Null_Header then
