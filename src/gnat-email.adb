@@ -1011,7 +1011,7 @@ package body GNAT.Email is
    procedure Set_Text_Payload
      (Msg       : Message'Class;
       Payload   : String;
-      Mime_Type : String := Text_Plain;
+      MIME_Type : String := Text_Plain;
       Charset   : String := Charset_US_ASCII;
       Prepend   : Boolean := False)
    is
@@ -1020,7 +1020,8 @@ package body GNAT.Email is
    begin
       if Msg.Contents.Payload.Multipart then
          Msg2 := New_Message (MIME_Type => "");
-         H := Create (Content_Type, Mime_Type);
+         H := Create (Content_Type, MIME_Type);
+
          if Charset /= "" then
             Set_Param (H, "charset", Charset);
          end if;
@@ -1034,8 +1035,9 @@ package body GNAT.Email is
          end if;
 
       else
-         if Mime_Type /= "" and not Prepend then
-            H := Create (Content_Type, Mime_Type);
+         if MIME_Type /= "" and not Prepend then
+            H := Create (Content_Type, MIME_Type);
+
             if Charset /= "" then
                Set_Param (H, "charset", Charset);
             end if;
@@ -1318,7 +1320,7 @@ package body GNAT.Email is
             end if;
 
             if Old /= "" then
-               Set_Text_Payload (Msg, Old, Mime_Type => Text_Plain);
+               Set_Text_Payload (Msg, Old, MIME_Type => Text_Plain);
             end if;
          end;
       end if;
@@ -1345,7 +1347,7 @@ package body GNAT.Email is
       Description : String := "")
    is
       Attachment : constant Message :=
-        New_Message (MIME_Type => Message_RFC822);
+                     New_Message (MIME_Type => Message_RFC822);
       Tmp        : Unbounded_String;
    begin
       if Description /= "" then
@@ -1356,7 +1358,7 @@ package body GNAT.Email is
       To_String (Attach, Result => Tmp);
       Set_Text_Payload (Attachment, To_String (Tmp),
                         Charset   => "",
-                        Mime_Type => Message_RFC822);
+                        MIME_Type => Message_RFC822);
       Replace_Header (Attachment, Create (Content_Disposition, "inline"));
 
       Add_Payload (Msg, Attachment);
@@ -1369,7 +1371,7 @@ package body GNAT.Email is
    procedure Attach
      (Msg                  : in out Message'Class;
       Path                 : String;
-      Mime_Type            : String := Application_Octet_Stream;
+      MIME_Type            : String := Application_Octet_Stream;
       Recommended_Filename : String := "";
       Description          : String := "";
       Charset              : String := Charset_US_ASCII;
@@ -1388,14 +1390,14 @@ package body GNAT.Email is
       begin
          Convert_To_Multipart (Msg);
 
-         if Get_Main_Type (Mime_Type) = "text" then
+         if Get_Main_Type (MIME_Type) = "text" then
             Replace_Header
               (Attachment,
                Create
                  (Content_Type,
-                  Mime_Type & "; charset=""" & Charset & '"'));
+                  MIME_Type & "; charset=""" & Charset & '"'));
          else
-            Replace_Header (Attachment, Create (Content_Type, Mime_Type));
+            Replace_Header (Attachment, Create (Content_Type, MIME_Type));
          end if;
 
          if Description /= "" then

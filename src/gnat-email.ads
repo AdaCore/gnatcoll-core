@@ -360,7 +360,7 @@ package GNAT.Email is
    procedure Set_Text_Payload
      (Msg       : Message'Class;
       Payload   : String;
-      Mime_Type : String := Text_Plain;
+      MIME_Type : String := Text_Plain;
       Charset   : String := Charset_US_ASCII;
       Prepend   : Boolean := False);
    --  Set the payload of the message, as text. No parsing is done.
@@ -369,7 +369,7 @@ package GNAT.Email is
    --  the parts, with the given MIME type. As a result, it can be called
    --  several times in such a case, each time will create a new part.
    --  The MIME type will changes the Content-Type header.
-   --  If Mime_Type is set to the empty string, it is not updated in the
+   --  If MIME_Type is set to the empty string, it is not updated in the
    --  message. This is mostly useful when Msg was parsed through one of the
    --  functions in Email.Parser.
    --  When Msg is a multi-part message, the new part is either appended after
@@ -462,7 +462,7 @@ package GNAT.Email is
    procedure Attach
      (Msg                  : in out Message'Class;
       Path                 : String;
-      Mime_Type            : String           := Application_Octet_Stream;
+      MIME_Type            : String           := Application_Octet_Stream;
       Recommended_Filename : String           := "";
       Description          : String           := "";
       Charset              : String           := Charset_US_ASCII;
