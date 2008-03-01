@@ -243,7 +243,7 @@ package body GNAT.Email.Parser is
       Attachment       : Message;
    begin
       if Boundary = "" then
-         Set_Text_Payload (Msg, Unparsed, MIME_Type => "");
+         Set_Text_Payload (Msg, Unparsed, Mime_Type => "");
       else
          while not Is_Last_Boundary
            and then Index + Length < Unparsed'Last
