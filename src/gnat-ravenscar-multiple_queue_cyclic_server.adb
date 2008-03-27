@@ -40,7 +40,6 @@ package body GNAT.Ravenscar.Multiple_Queue_Cyclic_Server is
       Protocol.Put (Req, Kind);
    end Put_Request;
 
-
    protected body Protocol is
 
       procedure Put (Req : Request; Kind : Request_Kind) is
