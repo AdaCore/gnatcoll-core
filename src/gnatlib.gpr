@@ -60,6 +60,27 @@ project GnatLib is
       for Specification ("GNAT.Email.Utils")    use "gnat-email-utils.ads";
       for Specification ("GNAT.Email.Mailboxes")
          use "gnat-email-mailboxes.ads";
+      for Implementation ("gnat.ravenscar.simple_cyclic_task") use "gnat-ravenscar-simple_cyclic_task.adb";
+      for Implementation ("gnat.ravenscar.multiple_queue_cyclic_server") use "gnat-ravenscar-multiple_queue_cyclic_server.adb";
+      for Implementation ("gnat.ravenscar.utils") use "gnat-ravenscar-utils.adb";
+      for Implementation ("gnat.ravenscar.sporadic_server") use "gnat-ravenscar-sporadic_server.adb";
+      for Implementation ("gnat.ravenscar.sporadic_server_with_callback") use "gnat-ravenscar-sporadic_server_with_callback.adb";
+      for Implementation ("gnat.ravenscar.simple_sporadic_task") use "gnat-ravenscar-simple_sporadic_task.adb";
+      for Implementation ("gnat.ravenscar.timed_out_sporadic_server") use "gnat-ravenscar-timed_out_sporadic_server.adb";
+      for Implementation ("gnat.ravenscar.multiple_queue_sporadic_server") use "gnat-ravenscar-multiple_queue_sporadic_server.adb";
+      for Implementation ("gnat.ravenscar.timers.one_shot_timer") use "gnat-ravenscar-timers-one_shot_timer.adb";
+      for Specification ("gnat.ravenscar.simple_cyclic_task") use "gnat-ravenscar-simple_cyclic_task.ads";
+      for Specification ("gnat.ravenscar.multiple_queue_cyclic_server") use "gnat-ravenscar-multiple_queue_cyclic_server.ads";
+      for Specification ("gnat.ravenscar.utils") use "gnat-ravenscar-utils.ads";
+      for Specification ("gnat.ravenscar.sporadic_server") use "gnat-ravenscar-sporadic_server.ads";
+      for Specification ("gnat.ravenscar.sporadic_server_with_callback") use "gnat-ravenscar-sporadic_server_with_callback.ads";
+      for Specification ("gnat.ravenscar.simple_sporadic_task") use "gnat-ravenscar-simple_sporadic_task.ads";
+      for Specification ("gnat.ravenscar") use "gnat-ravenscar.ads";
+      for Specification ("gnat.ravenscar.timed_out_sporadic_server") use "gnat-ravenscar-timed_out_sporadic_server.ads";
+      for Specification ("gnat.ravenscar.multiple_queue_sporadic_server") use "gnat-ravenscar-multiple_queue_sporadic_server.ads";
+      for Specification ("gnat.ravenscar.timers.one_shot_timer") use "gnat-ravenscar-timers-one_shot_timer.ads";
+      for Specification ("gnat.ravenscar.timers") use "gnat-ravenscar-timers.ads";
+
    end Naming;
 
    package Ide renames GnatLib_Shared.Ide;
