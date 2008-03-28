@@ -151,6 +151,7 @@ unmodified in any copy.
 * Searching strings:: The Boyer-Moore module.
 * The templates module::
 * Managing Email:: The email module.
+* Managing Memory:: The storage pools.
 * Index::
 
 @ifnothtml
@@ -195,6 +196,8 @@ Managing Email
 * Parsing messages::
 * Parsing mailboxes::
 * Creating messages::
+
+Managing Memory
 
 @end detailmenu
 @end ifnothtml
@@ -2492,6 +2495,54 @@ from scratch. Alternatively, if you have already parsed a message, you
 can alter it, or easily generate a reply to it (using the @code{Reply_To}
 subprogram. The latter will preset some headers, so that message threading
 is preserved in the user's mailers.
+
+@c -----------------------------------------------------------------------
+@node Managing Memory
+@chapter Managing Memory: The storage pools
+@c -----------------------------------------------------------------------
+@noindent
+
+Ada gives full control to the user for memory management. That allows for
+a number of optimization in your application. For instance, if you need to
+allocate a lot of small chunks of memory, it is generally more efficient
+to allocate a single large chunk, which is later divided into smaller
+chunks. That results in a single system call, which speeds up your
+application.
+
+This can of course be done in most languages. However, that generally
+means you have to remember not to use the standard memory allocations
+like @code{malloc} or @code{new}, and instead call one of your
+subprograms. If you ever decide to change the allocation strategy, or
+want to experiment with several strategies, that means updating your
+code in several places.
+
+In Ada, when you declare the type of your data, you also specify through
+a @code{'Storage_Pool} attribute how the memory for instances of that
+type should be allocated. And that's it. You then use the usual
+@code{new} keyword to allocate memory.
+
+@value{gnatlib} provides a number of examples for such storage pools,
+with various goals. There is also one advanced such pool in the GNAT
+runtime itself, called @code{GNAT.Debug_Pools}, which allows you to
+control memory leaks and whether all accesses do reference valid memory
+location (and not memory that has already been deallocated).
+
+In @value{gnatlib}, you will find the following storage pools:
+
+@table @bullet
+@item @code{GNAT.Storage_Pools.Alignment}
+
+This pool gives you full control over the alignment of your data. In
+general, Ada will only allow you to specify alignments up to a limited
+number of bytes, because the compiler must only accept alignments
+that can be satisfied in all contexts, in particular on the stack.
+
+This package overcomes that limitation, by allocating larger chunks
+of memory than needed, and returning an address within that chunk which
+is properly aligned.
+
+@end table
+
 
 @c -----------------------------------------------------------------------
 @node Index
