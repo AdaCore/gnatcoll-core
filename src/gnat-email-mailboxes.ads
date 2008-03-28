@@ -151,11 +151,15 @@ package GNAT.Email.Mailboxes is
      (Self    : out Stored_Mailbox;
       Box     : in out Mailbox'Class;
       Factory : Message_Factory := Email.Parser.Parse'Access);
+   procedure Store
+     (Self    : out Stored_Mailbox;
+      Box     : in out Mailbox'Class;
+      Factory : Message_Factory := Email.Parser.Parse'Access;
+      From    : Cursor'Class);
    --  Parse a mailbox and store all its messages in memory.
    --  All messages previously in Self are kept.
-   --  Box must already have been Open'ed. If you have called Next one or more
-   --  times, the corresponding messages will be skipped.
-   --  On exit, calling Next on Box will always return Null_Message.
+   --  Box must already have been Open'ed.
+   --  The second version allows you to skip messages if needed
 
    procedure Append (Self : in out Stored_Mailbox; Msg : Message);
    --  Appends a new message to Self. The current sorting order is not

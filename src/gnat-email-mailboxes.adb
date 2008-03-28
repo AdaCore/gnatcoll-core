@@ -381,8 +381,22 @@ package body GNAT.Email.Mailboxes is
       Box     : in out Mailbox'Class;
       Factory : Message_Factory := Email.Parser.Parse'Access)
    is
+   begin
+      Store (Self, Box, Factory, First (Box));
+   end Store;
+
+   -----------
+   -- Store --
+   -----------
+
+   procedure Store
+     (Self    : out Stored_Mailbox;
+      Box     : in out Mailbox'Class;
+      Factory : Message_Factory := Email.Parser.Parse'Access;
+      From    : Cursor'Class)
+   is
       Msg : Message;
-      Curs : Cursor'Class := First (Box);
+      Curs : Cursor'Class := From;
    begin
       Set_Parser (Curs, Factory);
       while Has_Element (Curs) loop
