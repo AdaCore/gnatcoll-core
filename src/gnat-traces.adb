@@ -1022,6 +1022,7 @@ package body GNAT.Traces is
    begin
       Close (Stream.File.all);
       Unchecked_Free (Stream.File);
+      Close (Trace_Stream_Record (Stream));
    end Close;
 
    -----------------------
