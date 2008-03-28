@@ -1536,6 +1536,10 @@ package body GNAT.Email is
       Value_End  : out Integer) is
    begin
       C := First (H.Contents.Value);
+      Semicolon  := 0;  --  Initialize variables to avoid GNAT warnings
+      Name_Start := 0;
+      Name_End   := 0;
+      Value_End  := 0;
 
       while Has_Element (C) loop
          declare
