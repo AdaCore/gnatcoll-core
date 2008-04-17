@@ -19,12 +19,12 @@
 
 --  Shell registration for the examples
 
-with GNAT.Scripts;
+with GNATCOLL.Scripts;
 
 package Common is
 
    function Register_Scripts_And_Functions
-      return GNAT.Scripts.Scripts_Repository;
+      return GNATCOLL.Scripts.Scripts_Repository;
    --  Register the various scripting languages and the functions we export
    --  to them
 

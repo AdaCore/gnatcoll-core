@@ -17,11 +17,11 @@
 -- Place - Suite 330, Boston, MA 02111-1307, USA.                    --
 -----------------------------------------------------------------------
 
-with GNAT.Scripts;
+with GNATCOLL.Scripts;
 
 package Common_Gtk is
 
-   procedure Add_GUI_Subprograms (Repo : GNAT.Scripts.Scripts_Repository);
+   procedure Add_GUI_Subprograms (Repo : GNATCOLL.Scripts.Scripts_Repository);
    --  Creates Gtk-related classes
 
 end Common_Gtk;

@@ -18,7 +18,7 @@
 -----------------------------------------------------------------------
 
 with Common;              use Common;
-with GNAT.Scripts;        use GNAT.Scripts;
+with GNATCOLL.Scripts;        use GNATCOLL.Scripts;
 with Gtk.Box;             use Gtk.Box;
 with Gtk.Label;           use Gtk.Label;
 with Gtk.Main;            use Gtk.Main;

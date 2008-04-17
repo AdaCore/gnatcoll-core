@@ -1,7 +1,7 @@
 ## This file contains various m4 macros that can be included in your
 ## own projects to enable proper detection of the scripting languages
 ## In your own aclocal.m4 file, you can use syntax like
-##   include(gnatlib/aclocal.m4)
+##   include(gnatcoll/aclocal.m4)
 
 #############################################################
 # Checking for syslog

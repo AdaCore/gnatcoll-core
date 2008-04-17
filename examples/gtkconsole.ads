@@ -25,7 +25,7 @@ with Gtk.Scrolled_Window;
 with Gtk.Text_Mark;
 with Gtk.Text_View;
 with Gtk.Widget;
-with GNAT.Scripts;             use GNAT.Scripts;
+with GNATCOLL.Scripts;             use GNATCOLL.Scripts;
 
 package GtkConsole is
 
@@ -46,7 +46,7 @@ package GtkConsole is
      (Console : access Gtk_Console_Record; Grab : Boolean);
    overriding procedure Set_As_Default_Console
      (Console     : access Gtk_Console_Record;
-      Script      : GNAT.Scripts.Scripting_Language);
+      Script      : GNATCOLL.Scripts.Scripting_Language);
    overriding procedure Set_Data_Primitive
      (Instance : Class_Instance;
       Console  : access Gtk_Console_Record);
@@ -77,7 +77,7 @@ package GtkConsole is
 private
    type Gtk_Console_Record is new Virtual_Console_Record with record
       View     : Gtk.Text_View.Gtk_Text_View;
-      Script   : GNAT.Scripts.Scripting_Language;
+      Script   : GNATCOLL.Scripts.Scripting_Language;
 
       Prompt_Mark : Gtk.Text_Mark.Gtk_Text_Mark;
       --  The position after which the user can insert text.

@@ -1,7 +1,0 @@
---  This project file is only meant for edition in GPS
-with "src/gnatlib";
-with "src/gnatlib_gtk";
-with "src/gnatlib_python";
-project Gnatlib_GPS is
-   for Source_Dirs use ();
-end Gnatlib_GPS;

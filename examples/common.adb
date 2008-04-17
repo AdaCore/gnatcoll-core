@@ -17,9 +17,9 @@
 -- Place - Suite 330, Boston, MA 02111-1307, USA.                    --
 -----------------------------------------------------------------------
 
-with GNAT.Scripts;        use GNAT.Scripts;
-with GNAT.Scripts.Python; use GNAT.Scripts.Python;
-with GNAT.Scripts.Shell;  use GNAT.Scripts.Shell;
+with GNATCOLL.Scripts;        use GNATCOLL.Scripts;
+with GNATCOLL.Scripts.Python; use GNATCOLL.Scripts.Python;
+with GNATCOLL.Scripts.Shell;  use GNATCOLL.Scripts.Shell;
 
 package body Common is
 

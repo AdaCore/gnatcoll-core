@@ -19,7 +19,7 @@
 
 with Ada.Text_IO;    use Ada.Text_IO;
 with Common;         use Common;
-with GNAT.Scripts;   use GNAT.Scripts;
+with GNATCOLL.Scripts;   use GNATCOLL.Scripts;
 with TextConsole;    use TextConsole;
 
 procedure NewClass is

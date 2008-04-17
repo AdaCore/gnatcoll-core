@@ -4,26 +4,26 @@ CP=cp
 
 include ../Makefile.conf
 
-all: gnatlib/index.html gnatlib.html gnatlib.pdf gnatlib.txt
+all: gnatcoll/index.html gnatcoll.html gnatcoll.pdf gnatcoll.txt
 
-gnatlib/index.html: gnatlib.texi gnatlib.css
-	${MAKEINFO} --html --css-include=gnatlib.css --number-sections $<
-	${CP} tip.png important.png note.png gnatlib/
+gnatcoll/index.html: gnatcoll.texi gnatcoll.css
+	${MAKEINFO} --html --css-include=gnatcoll.css --number-sections $<
+	${CP} tip.png important.png note.png gnatcoll/
 
-gnatlib.html: gnatlib.texi gnatlib.css
-	${MAKEINFO} --html --css-include=gnatlib.css --no-split --no-headers -o $@ $<
+gnatcoll.html: gnatcoll.texi gnatcoll.css
+	${MAKEINFO} --html --css-include=gnatcoll.css --no-split --no-headers -o $@ $<
 
-gnatlib.pdf: gnatlib.texi
+gnatcoll.pdf: gnatcoll.texi
 	echo x | ${TEXI2DVI} -p $<
 
-gnatlib.txt: gnatlib.texi
+gnatcoll.txt: gnatcoll.texi
 	${MAKEINFO} --force --no-headers --no-split -o $@ $<
 
 .PHONY: install
 install:
-	${MKDIR} ${datadir}/doc/gnatlib
-	-${INSTALL} gnatlib.html ${datadir}/doc/gnatlib/
-	-${INSTALL} gnatlib.pdf ${datadir}/doc/gnatlib/
+	${MKDIR} ${datadir}/doc/gnatcoll
+	-${INSTALL} gnatcoll.html ${datadir}/doc/gnatcoll/
+	-${INSTALL} gnatcoll.pdf ${datadir}/doc/gnatcoll/
 
 .PHONY: clean-temp-files
 clean-temp-files:
@@ -40,7 +40,7 @@ clean-temp-files:
 
 .PHONY: clean
 clean: clean-temp-files
-	-${RM} gnatlib.pdf gnatlib.txt gnatlib.html
-	-${RM} -rf gnatlib/
+	-${RM} gnatcoll.pdf gnatcoll.txt gnatcoll.html
+	-${RM} -rf gnatcoll/
 
 

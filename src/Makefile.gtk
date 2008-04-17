@@ -1,5 +1,5 @@
 MODULE=gtk
-PROJECT=gnatlib_${MODULE}
+PROJECT=gnatcoll_${MODULE}
 LIBNAME=lib${TARNAME}_${MODULE}
 
 include ../Makefile.conf
@@ -14,7 +14,7 @@ all:     dirs buildcfiles buildall
 clean:   cleanall
 install: libinstall
 
-ifeq (${GNATLIB_LIBRARY_TYPE},static)
+ifeq (${GNATCOLL_LIBRARY_TYPE},static)
 FPIC=
 else
 FPIC=-fPIC
@@ -24,12 +24,12 @@ endif
 buildcfiles:
 
 dirs:
-	${MKDIR} obj/gtk/${GNATLIB_LIBRARY_TYPE}
-	${MKDIR} lib/gtk/${GNATLIB_LIBRARY_TYPE}
+	${MKDIR} obj/gtk/${GNATCOLL_LIBRARY_TYPE}
+	${MKDIR} lib/gtk/${GNATCOLL_LIBRARY_TYPE}
 
 ifeq (${WITH_GTK},yes)
 ifeq ($(WITH_PYTHON),yes)
-C_OBJ=obj/gtk/${GNATLIB_LIBRARY_TYPE}/python_support_gtk.o
+C_OBJ=obj/gtk/${GNATCOLL_LIBRARY_TYPE}/python_support_gtk.o
 buildcfiles: ${C_OBJ}
 ${C_OBJ}: gtk/python/python_support_gtk.c
 	$(CC) -c ${FPIC} ${PYTHON_CFLAGS} ${PYGTK_INCLUDE} ${GTK_INCLUDE} $< -o $@

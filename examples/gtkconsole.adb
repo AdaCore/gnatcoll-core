@@ -26,8 +26,8 @@ with Glib.Convert;        use Glib.Convert;
 with Glib.Main;           use Glib.Main;
 with Glib.Object;         use Glib.Object;
 with GNAT.IO;             use GNAT.IO;
-with GNAT.Scripts;        use GNAT.Scripts;
-with GNAT.Scripts.Gtkada; use GNAT.Scripts.Gtkada;
+with GNATCOLL.Scripts;        use GNATCOLL.Scripts;
+with GNATCOLL.Scripts.Gtkada; use GNATCOLL.Scripts.Gtkada;
 with Gtk.Enums;           use Gtk.Enums;
 with Gtk.Handlers;        use Gtk.Handlers;
 with Gtk.Main;            use Gtk.Main;
@@ -412,7 +412,7 @@ package body GtkConsole is
       Console  : access Gtk_Console_Record)
    is
    begin
-      GNAT.Scripts.Gtkada.Set_Data (Instance, GObject (Console.View));
+      GNATCOLL.Scripts.Gtkada.Set_Data (Instance, GObject (Console.View));
    end Set_Data_Primitive;
 
    ------------------
@@ -425,7 +425,7 @@ package body GtkConsole is
       return Class_Instance
    is
    begin
-      return GNAT.Scripts.Gtkada.Get_Instance (Script, GObject (Console.View));
+      return GNATCOLL.Scripts.Gtkada.Get_Instance (Script, GObject (Console.View));
    end Get_Instance;
 
    --------------------------------------

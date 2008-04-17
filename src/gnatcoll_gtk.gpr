@@ -1,0 +1,43 @@
+with "gtkada";
+with "../gnatcoll_shared";
+with "gnatcoll";
+with "gnatcoll_python";
+
+project GnatColl_Gtk is
+
+   for Library_Kind    use GnatColl_Shared.Library_Type;
+   for Object_Dir      use "obj/gtk/" & Project'Library_Kind;
+   for Library_Dir     use "lib/gtk/" & Project'Library_Kind;
+   for Library_Name    use GnatColl_Shared.Name & "_gtk";
+   for Library_Version use
+      "lib" & Project'Library_Name & ".so." & GnatColl_Shared.Version;
+
+   for Languages use ("Ada", "C");
+
+   case GnatColl_Shared.Gtk is
+      when "no" =>
+         for Source_Dirs use ();
+      when "yes" =>
+         for Source_Dirs use ("gtk");
+         case GnatColl_Shared.Python is
+            when "yes" =>
+               for Source_Dirs use Project'Source_Dirs & ("gtk/python");
+
+               --  Seems this line is sometimes needed when compiling GPS
+               --  (but not always). However, it fails when building gnatcoll
+               --  standalone, because of duplicate symbols in such a case.
+               --  Not clear what is happening, though.
+               --
+               --  for Library_Options use ("python_support_gtk.o");
+            when "no"  =>
+               for Source_Dirs use Project'Source_Dirs & ("gtk/nopython");
+          end case;
+   end case;
+
+   package Compiler renames GnatColl_Shared.Compiler;
+
+   package Linker   renames GnatColl_Shared.Linker;
+
+   package Ide renames GnatColl_Shared.Ide;
+
+end GnatColl_Gtk;

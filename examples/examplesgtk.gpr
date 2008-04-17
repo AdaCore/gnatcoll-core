@@ -1,5 +1,5 @@
-with "gnatlib_gtk";
-with "gnatlib_python";
+with "gnatcoll_gtk";
+with "gnatcoll_python";
 with "examples";
 
 project ExamplesGtk is

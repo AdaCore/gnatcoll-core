@@ -1,4 +1,4 @@
-AC_INIT(gnatlib,1.0,report@adacore.com,gnatlib)
+AC_INIT(gnatcoll,1.0,report@adacore.com,gnatcoll)
 AC_CANONICAL_SYSTEM
 
 #AC_PROG_MKDIR_P   # Requires recent autoconf
@@ -21,7 +21,7 @@ AC_CHECK_PROGS(TEXI2DVI, texi2dvi)
 AC_SUBST(MAKEINFO)
 AC_SUBST(TEXI2DVI)
 
-AC_MSG_NOTICE([--------- Summary for GnatLib --------------])
+AC_MSG_NOTICE([--------- Summary for GNAT Components --------------])
 AC_MSG_NOTICE([ Gtk+:   $WITH_GTK])
 AC_MSG_NOTICE([    Make sure pkg-config is in your PATH])
 AC_MSG_NOTICE([ Python: $WITH_PYTHON $PYTHON_BASE])
@@ -32,4 +32,4 @@ AC_MSG_NOTICE([ Syslog: $WITH_SYSLOG])
 AC_MSG_NOTICE([    use --enable-syslog to override])
 AC_MSG_NOTICE([--------------------------------------------])
 
-AC_OUTPUT(gnatlib_shared.gpr docs/Makefile Makefile.conf src/gnatlib_python.gpr distrib/relocatable/gnatlib.gpr distrib/gnatlib_python.gpr distrib/static/gnatlib.gpr)
+AC_OUTPUT(gnatcoll_shared.gpr docs/Makefile Makefile.conf src/gnatcoll_python.gpr distrib/relocatable/gnatcoll.gpr distrib/gnatcoll_python.gpr distrib/static/gnatcoll.gpr)

@@ -33,7 +33,7 @@ LN_S=@LN_S@
 endif
 
 CC=gcc
-GNATLIB_LIBRARY_TYPE=relocatable
+GNATCOLL_LIBRARY_TYPE=relocatable
 
 .PHONY: all examples tests valgrind clean docs install
 
@@ -51,7 +51,7 @@ all:
 ## This target installs a library project. It needs the following
 ## variables:
 ##   ${PROJECT}: name of the project file
-##   ${LIBNAME}: name of the library to install (e.g. libgnatlib.so)
+##   ${LIBNAME}: name of the library to install (e.g. libgnatcoll.so)
 ##   ${MODULE}:  subdirectory in $libdir that contain the files
 
 # Compute the list of source directories. Would be nicer if gnatls could
@@ -59,7 +59,7 @@ all:
 #DIRS=${shell gnat ls -P${PROJECT} -v | grep ${MODULE}}
 #SRCDIRS=${wordlist 1,2,${DIRS}}
 
-ifeq (${GNATLIB_LIBRARY_TYPE},relocatable)
+ifeq (${GNATCOLL_LIBRARY_TYPE},relocatable)
 LIBNAME:=${LIBNAME}.${LIBEXT}
 ifeq (${OS},Windows_NT)
 # On windows, gnatmake does not generate libraries with version numbers
@@ -73,9 +73,9 @@ LIBNAME:=${LIBNAME}.a
 LIBFULL=${LIBNAME}
 endif
 
-LIBDIR=lib/${MODULE}/${GNATLIB_LIBRARY_TYPE}/
+LIBDIR=lib/${MODULE}/${GNATCOLL_LIBRARY_TYPE}/
 
-ifeq (${GNATLIB_LIBRARY_TYPE},static)
+ifeq (${GNATCOLL_LIBRARY_TYPE},static)
 FPIC=
 else
 FPIC=-fPIC
@@ -84,7 +84,7 @@ endif
 .PHONY: buildall cleanall libinstall
 buildall:
 	@echo Building project ${PROJECT}
-	gnatmake -XGNATLIB_LIBRARY_TYPE=${GNATLIB_LIBRARY_TYPE} -P${PROJECT}
+	gnatmake -XGNATCOLL_LIBRARY_TYPE=${GNATCOLL_LIBRARY_TYPE} -P${PROJECT}
 cleanall:
 	gnatclean -r -q -P${PROJECT}
 
@@ -97,8 +97,8 @@ libinstall: installsources installobj installlinks
 # the dynamic library
 
 installobj:
-	${INSTALL} -p ${LIBDIR}*.ali ${libdir}/${TARNAME}/${GNATLIB_LIBRARY_TYPE}
-	${INSTALL} -p ${LIBDIR}${LIBFULL} ${libdir}/${TARNAME}/${GNATLIB_LIBRARY_TYPE}
+	${INSTALL} -p ${LIBDIR}*.ali ${libdir}/${TARNAME}/${GNATCOLL_LIBRARY_TYPE}
+	${INSTALL} -p ${LIBDIR}${LIBFULL} ${libdir}/${TARNAME}/${GNATCOLL_LIBRARY_TYPE}
 
 # Create symbolic links with version numbers for the libraries, in
 # ${prefix}/lib/. The library itself is not duplicated and is found in the
@@ -107,18 +107,18 @@ installobj:
 # will complain
 
 installlinks:
-ifeq (${GNATLIB_LIBRARY_TYPE},relocatable)
+ifeq (${GNATCOLL_LIBRARY_TYPE},relocatable)
 	${RM} ${libdir}/${LIBNAME}*
 
 ifneq (${OS},Windows_NT)
-	${RM} ${libdir}/${TARNAME}/${GNATLIB_LIBRARY_TYPE}/${LIBNAME}
-	${RM} ${libdir}/${TARNAME}/${GNATLIB_LIBRARY_TYPE}/${LIBNAME}.${basename ${VERSION}}
-	cd ${libdir}/${TARNAME}/${GNATLIB_LIBRARY_TYPE}; ${LN_S} ${LIBFULL} ${LIBNAME}
-	cd ${libdir}/${TARNAME}/${GNATLIB_LIBRARY_TYPE}; ${LN_S} ${LIBFULL} ${LIBNAME}.${basename ${VERSION}}
-	cd ${libdir}; ${LN_S} ${TARNAME}/${GNATLIB_LIBRARY_TYPE}/${LIBFULL} ${LIBNAME}.${basename ${VERSION}}
-	cd ${libdir}; ${LN_S} ${TARNAME}/${GNATLIB_LIBRARY_TYPE}/${LIBFULL} ${LIBNAME}.${VERSION}
+	${RM} ${libdir}/${TARNAME}/${GNATCOLL_LIBRARY_TYPE}/${LIBNAME}
+	${RM} ${libdir}/${TARNAME}/${GNATCOLL_LIBRARY_TYPE}/${LIBNAME}.${basename ${VERSION}}
+	cd ${libdir}/${TARNAME}/${GNATCOLL_LIBRARY_TYPE}; ${LN_S} ${LIBFULL} ${LIBNAME}
+	cd ${libdir}/${TARNAME}/${GNATCOLL_LIBRARY_TYPE}; ${LN_S} ${LIBFULL} ${LIBNAME}.${basename ${VERSION}}
+	cd ${libdir}; ${LN_S} ${TARNAME}/${GNATCOLL_LIBRARY_TYPE}/${LIBFULL} ${LIBNAME}.${basename ${VERSION}}
+	cd ${libdir}; ${LN_S} ${TARNAME}/${GNATCOLL_LIBRARY_TYPE}/${LIBFULL} ${LIBNAME}.${VERSION}
 endif
-	cd ${libdir}; ${LN_S} ${TARNAME}/${GNATLIB_LIBRARY_TYPE}/${LIBFULL} ${LIBNAME}
+	cd ${libdir}; ${LN_S} ${TARNAME}/${GNATCOLL_LIBRARY_TYPE}/${LIBFULL} ${LIBNAME}
 
 endif
 

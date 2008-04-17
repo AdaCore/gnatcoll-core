@@ -17,11 +17,11 @@
 -- Place - Suite 330, Boston, MA 02111-1307, USA.                    --
 -----------------------------------------------------------------------
 
-with GNAT.Scripts;
+with GNATCOLL.Scripts;
 
 package TextConsole is
 
-   type Text_Console is new GNAT.Scripts.Virtual_Console_Record with private;
+   type Text_Console is new GNATCOLL.Scripts.Virtual_Console_Record with private;
    overriding procedure Insert_Text
      (Console : access Text_Console; Txt : String);
    overriding procedure Insert_Prompt
@@ -31,14 +31,14 @@ package TextConsole is
    overriding procedure Insert_Log
      (Console : access Text_Console; Txt : String);
    overriding procedure Set_Data_Primitive
-     (Instance : GNAT.Scripts.Class_Instance; Console : access Text_Console);
+     (Instance : GNATCOLL.Scripts.Class_Instance; Console : access Text_Console);
    overriding function Get_Instance
-     (Script  : access GNAT.Scripts.Scripting_Language_Record'Class;
-      Console : access Text_Console) return GNAT.Scripts.Class_Instance;
+     (Script  : access GNATCOLL.Scripts.Scripting_Language_Record'Class;
+      Console : access Text_Console) return GNATCOLL.Scripts.Class_Instance;
 
 private
-   type Text_Console is new GNAT.Scripts.Virtual_Console_Record with record
-      Instances : GNAT.Scripts.Instance_List;
+   type Text_Console is new GNATCOLL.Scripts.Virtual_Console_Record with record
+      Instances : GNATCOLL.Scripts.Instance_List;
    end record;
 
 end TextConsole;

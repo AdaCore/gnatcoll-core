@@ -17,9 +17,9 @@
 -- Place - Suite 330, Boston, MA 02111-1307, USA.                    --
 -----------------------------------------------------------------------
 
-with GNAT.Scripts;               use GNAT.Scripts;
-with GNAT.Scripts.Python.Gtkada; use GNAT.Scripts.Python.Gtkada;
-with GNAT.Scripts.Gtkada;        use GNAT.Scripts.Gtkada;
+with GNATCOLL.Scripts;               use GNATCOLL.Scripts;
+with GNATCOLL.Scripts.Python.Gtkada; use GNATCOLL.Scripts.Python.Gtkada;
+with GNATCOLL.Scripts.Gtkada;        use GNATCOLL.Scripts.Gtkada;
 with Glib.Object;                use Glib.Object;
 with Gtk.Enums;                  use Gtk.Enums;
 with Gtk.Window;                 use Gtk.Window;

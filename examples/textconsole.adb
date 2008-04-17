@@ -18,7 +18,7 @@
 -----------------------------------------------------------------------
 
 with GNAT.IO;       use GNAT.IO;
-with GNAT.Scripts;  use GNAT.Scripts;
+with GNATCOLL.Scripts;  use GNATCOLL.Scripts;
 
 package body TextConsole is
 

@@ -1,5 +1,5 @@
 MODULE=python
-PROJECT=gnatlib_${MODULE}
+PROJECT=gnatcoll_${MODULE}
 LIBNAME=lib${TARNAME}_${MODULE}
 
 include ../Makefile.conf
@@ -17,16 +17,16 @@ install: libinstall
 .PHONY: buildcfiles addcobjects dirs
 
 dirs:
-	${MKDIR} obj/python/${GNATLIB_LIBRARY_TYPE}
-	${MKDIR} lib/python/${GNATLIB_LIBRARY_TYPE}
+	${MKDIR} obj/python/${GNATCOLL_LIBRARY_TYPE}
+	${MKDIR} lib/python/${GNATCOLL_LIBRARY_TYPE}
 
 ifeq ($(WITH_PYTHON),yes)
-C_OBJ=obj/python/${GNATLIB_LIBRARY_TYPE}/python_support.o
+C_OBJ=obj/python/${GNATCOLL_LIBRARY_TYPE}/python_support.o
 buildcfiles: ${C_OBJ}
 ${C_OBJ}: python/python_support.c
 	$(CC) -c ${FPIC} ${PYTHON_CFLAGS} $< -o $@
 clean:
-	${RM} obj/python/${GNATLIB_LIBRARY_TYPE}/python_support.o
+	${RM} obj/python/${GNATCOLL_LIBRARY_TYPE}/python_support.o
 else
 buildcfiles:
 endif
