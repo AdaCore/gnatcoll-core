@@ -60,7 +60,7 @@ all:
 #SRCDIRS=${wordlist 1,2,${DIRS}}
 
 ifeq (${GNATLIB_LIBRARY_TYPE},relocatable)
-LIBNAME:=${LIBNAME}.so
+LIBNAME:=${LIBNAME}.${LIBEXT}
 ifeq (${OS},Windows_NT)
 # On windows, gnatmake does not generate libraries with version numbers
 LIBFULL=${LIBNAME}
