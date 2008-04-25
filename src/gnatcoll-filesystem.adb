@@ -35,8 +35,10 @@ package body GNATCOLL.Filesystem is
       procedure Unchecked_Free is new Ada.Unchecked_Deallocation
         (Filesystem_Record'Class, Filesystem_Access);
    begin
-      Free (FS.all);
-      Unchecked_Free (FS);
+      if FS /= null then
+         Free (FS.all);
+         Unchecked_Free (FS);
+      end if;
    end Free;
 
    ----------------
