@@ -337,11 +337,11 @@ package body GNATCOLL.Filesystem is
       Minute : Minute_Type;
       Second : Second_Type;
    begin
-      GM_Split (T, Year, Month, Day, Hour, Minute, Second);
-
       if T = Invalid_Time then
          return GNAT.Calendar.No_Time;
       end if;
+
+      GM_Split (T, Year, Month, Day, Hour, Minute, Second);
 
       return GNAT.Calendar.Time_Of
         (Year   => Year,
