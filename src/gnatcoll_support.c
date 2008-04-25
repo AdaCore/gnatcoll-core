@@ -1,3 +1,8 @@
+#include <sys/stat.h>
+
+#ifdef _WIN32
+#include <windows.h>
+#endif
 
 #ifdef HAVE_MMAP
 #include <sys/mman.h>
@@ -35,3 +40,28 @@ int gnatcoll_munmap(void *start, long length) {
 }
 
 #endif
+
+int
+__gnatcoll_get_logical_drive_strings (char *buffer, int len)
+{
+#ifdef _WIN32
+  return GetLogicalDriveStringsA ((DWORD)len, (LPSTR)buffer);
+#else
+  return 0;
+#endif
+}
+
+void
+__gnatcoll_set_readable (char *file, int set)
+{
+  struct stat statbuf;
+
+  if (!__gnat_stat (file, &statbuf))
+    {
+      if (set)
+        chmod (file, statbuf.st_mode | S_IREAD);
+      else
+        chmod (file, statbuf.st_mode & (~S_IREAD));
+    }
+}
+
