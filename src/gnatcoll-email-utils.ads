@@ -127,6 +127,10 @@ package GNATCOLL.Email.Utils is
    --  In the first case, Include_From indicates whether the sender of the
    --  message should also be returned.
 
+   --  ??? The 2nd function should be renamed to Get_Addresses since it applies
+   --  to all headers containing addresses, not only those designating
+   --  message recipients.
+
    function Format_Address (Addr : Email_Address) return String;
    function Format_Address (Real : String; Address : String) return String;
    --  Format an email address into a proper format for RFC2822
