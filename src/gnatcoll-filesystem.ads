@@ -74,7 +74,8 @@ package GNATCOLL.Filesystem is
       Root : String;
       Sub  : String) return String;
    --  Concatenate a root direectory and a subdirectory
-   --  by default, equivalent to 'Root & Sub'.
+   --  by default, equivalent to 'Root & Sub', after ensuring that Root does
+   --  end with a directory separator
 
    function Base_Name
      (FS     : Filesystem_Record;
@@ -96,6 +97,12 @@ package GNATCOLL.Filesystem is
      (FS   : Filesystem_Record;
       Path : String) return String is abstract;
    --  Return the root directory of the path
+
+   function Get_Tmp_Directory
+     (FS   : Filesystem_Record) return String;
+   --  Return the name of a directory that can be used to store temporary
+   --  directory on the filesystem. That directory always ends with a directory
+   --  separator (when appropriate for the file system)
 
    function Get_Parent
      (FS   : Filesystem_Record;

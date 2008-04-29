@@ -1,4 +1,6 @@
 #include <sys/stat.h>
+#include <stdlib.h>
+#include <string.h>
 
 #ifdef _WIN32
 #include <windows.h>
@@ -63,5 +65,60 @@ __gnatcoll_set_readable (char *file, int set)
       else
         chmod (file, statbuf.st_mode & (~S_IREAD));
     }
+}
+
+/**********************************************************
+ ** __gnatcoll_get_tmp_dir ()
+ ** Return the tmp directory.
+ ** Return value must be freed by caller
+ **********************************************************/
+
+char*
+__gnatcoll_get_tmp_dir (void)
+{
+  static char *result = NULL;
+
+  /* test static result to see if result has already been found */
+  if (result != NULL)
+    return strdup (result);
+
+/* ??? we should use windows interface to retrieve the tmp directory
+ * However, we're too close to the release to change the current behavior. As
+ * soon as we are ready to do so, replace the following #if 0 by #ifdef WIN32
+ */
+#if 0
+  DWORD dwRet;
+
+  result = malloc ((MAX_PATH + 1) * sizeof (char));
+  dwRet = GetTempPath (MAX_PATH, result);
+  if (dwRet > 0) {
+    result[dwRet] = '\0';
+    if (__gnat_is_directory (result))
+      return strdup (result);
+  }
+  free (result);
+#endif
+
+  result = getenv ("TMPDIR");
+  if (result)
+    if (__gnat_is_directory (result))
+      return strdup (result);
+
+  result = getenv ("TMP");
+  if (result)
+    if (__gnat_is_directory (result))
+      return strdup (result);
+
+  /* On Windows systems, this is the documented way of retrieving the tmp dir.
+   * However, the TMP env variable should also be defined */
+  result = getenv ("TEMP");
+  if (result)
+    if (__gnat_is_directory (result))
+      return strdup (result);
+
+  /* need to duplicate twice: one is for caching, the second one will be freed
+   * by user */
+  result = strdup ("/tmp");
+  return strdup (result);
 }
 

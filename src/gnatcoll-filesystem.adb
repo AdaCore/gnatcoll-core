@@ -24,6 +24,7 @@ with GNATCOLL.Utils;            use GNATCOLL.Utils;
 with GNAT.Calendar;
 with GNAT.Directory_Operations; use GNAT.Directory_Operations;
 with GNAT.OS_Lib;               use GNAT.OS_Lib;
+with Interfaces.C.Strings;      use Interfaces.C, Interfaces.C.Strings;
 
 package body GNATCOLL.Filesystem is
 
@@ -90,9 +91,8 @@ package body GNATCOLL.Filesystem is
       Root : String;
       Sub  : String) return String
    is
-      pragma Unreferenced (FS);
    begin
-      return Root & Sub;
+      return Ensure_Directory (Filesystem_Record'Class (FS), Root) & Sub;
    end Concat;
 
    ---------------------------
@@ -648,5 +648,23 @@ package body GNATCOLL.Filesystem is
       when others =>
          return False;
    end Change_Dir;
+
+   -----------------------
+   -- Get_Tmp_Directory --
+   -----------------------
+
+   function Get_Tmp_Directory
+     (FS   : Filesystem_Record) return String
+   is
+      function Internal return chars_ptr;
+      pragma Import (C, Internal, "__gnatcoll_get_tmp_dir");
+
+      C_Str : chars_ptr := Internal;
+      Str   : constant String :=
+        GNAT.Directory_Operations.Format_Pathname (To_Ada (Value (C_Str)));
+   begin
+      Free (C_Str);
+      return Ensure_Directory (Filesystem_Record'Class (FS), Str);
+   end Get_Tmp_Directory;
 
 end GNATCOLL.Filesystem;

@@ -17,7 +17,7 @@
 -- Place - Suite 330, Boston, MA 02111-1307, USA.                    --
 -----------------------------------------------------------------------
 
-with GNAT.Case_Util;         use GNAT.Case_Util;
+with Ada.Characters.Handling; use Ada.Characters.Handling;
 with System;
 
 package body GNATCOLL.Filesystem.Windows is
@@ -66,6 +66,7 @@ package body GNATCOLL.Filesystem.Windows is
       Path : String) return String
    is
       pragma Unreferenced (FS);
+      Cygdrive : constant String := "/cygdrive/";
       The_Path : String := Path;
    begin
       for J in The_Path'Range loop
@@ -73,6 +74,18 @@ package body GNATCOLL.Filesystem.Windows is
             The_Path (J) := '\';
          end if;
       end loop;
+
+      --  If we have a cygwin drive letter, convert it to native windows
+      if The_Path'Length > Cygdrive'Length + 1
+        and then The_Path
+          (The_Path'First .. The_Path'First + Cygdrive'Length - 1) = Cygdrive
+        and then Is_Letter (The_Path (The_Path'First + Cygdrive'Length))
+        and then The_Path (The_Path'First + Cygdrive'Length + 1) = '/'
+      then
+         return To_Upper (The_Path (The_Path'First + Cygdrive'Length))
+           & ':'
+           & The_Path (The_Path'First + Cygdrive'Length + 1 .. The_Path'Last);
+      end if;
 
       return The_Path;
    end From_Unix;
