@@ -421,7 +421,7 @@ package body GNATCOLL.Mmap is
          else
             File.Offset := Offset - Extra;
 
-            if File.Offset + Tmp - 1 > File.Length then
+            if File.Offset + Tmp > File.Length then
                Tmp := File.Length - File.Offset;
             end if;
 
