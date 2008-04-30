@@ -1,7 +1,7 @@
 -----------------------------------------------------------------------
---                               G N A T C O L L                     --
+--                          G N A T C O L L                          --
 --                                                                   --
---                        Copyright (C) 2006-2008, AdaCore           --
+--                 Copyright (C) 2006-2008, AdaCore                  --
 --                                                                   --
 -- GPS is free  software;  you can redistribute it and/or modify  it --
 -- under the terms of the GNU General Public License as published by --
@@ -160,7 +160,7 @@ package body GNATCOLL.Filesystem is
    -------------------
 
    function Base_Dir_Name
-     (FS  : Filesystem_Record;
+     (FS   : Filesystem_Record;
       Path : String) return String is
    begin
       if Path'Length > 1 and then Path (Path'Last) = Directory_Separator then
@@ -261,7 +261,7 @@ package body GNATCOLL.Filesystem is
    -- Home_Dir --
    --------------
 
-   function Home_Dir (FS   : Filesystem_Record) return String is
+   function Home_Dir (FS : Filesystem_Record) return String is
       HOME : GNAT.Strings.String_Access := Getenv ("HOME");
    begin
       if HOME = null then
@@ -349,8 +349,7 @@ package body GNATCOLL.Filesystem is
 
    function File_Time_Stamp
      (FS              : Filesystem_Record;
-      Local_Full_Name : String)
-      return Ada.Calendar.Time
+      Local_Full_Name : String) return Ada.Calendar.Time
    is
       pragma Unreferenced (FS);
       T      : constant OS_Time := File_Time_Stamp (Local_Full_Name);
@@ -467,12 +466,12 @@ package body GNATCOLL.Filesystem is
       procedure Unchecked_Free is new Ada.Unchecked_Deallocation
         (GNAT.Strings.String_List, String_List_Access);
 
-      Nb_Files  : Natural := 0;
-      Tmp       : String_List_Access;
-      F_Array   : String_List_Access;
-      Search    : Search_Type;
-      Ent       : Directory_Entry_Type;
-      Filter    : Filter_Type := (others => True);
+      Nb_Files : Natural := 0;
+      Tmp      : String_List_Access;
+      F_Array  : String_List_Access;
+      Search   : Search_Type;
+      Ent      : Directory_Entry_Type;
+      Filter   : Filter_Type := (others => True);
 
    begin
       if not Is_Directory (Local_Dir_Name) then
@@ -598,13 +597,15 @@ package body GNATCOLL.Filesystem is
       From_Local_Name : String;
       To_Local_Name   : String) return Boolean
    is
-      From   : constant String :=
-        Ensure_Directory (Filesystem_Record'Class (FS), From_Local_Name);
+      From        : constant String :=
+                      Ensure_Directory
+                        (Filesystem_Record'Class (FS), From_Local_Name);
+      Target      : constant String :=
+                      Ensure_Directory
+                        (Filesystem_Record'Class (FS), To_Local_Name);
       Files_Array : String_List  :=
-        Read_Dir (Filesystem_Record'Class (FS), From);
-      Target : constant String :=
-        Ensure_Directory (Filesystem_Record'Class (FS), To_Local_Name);
-      Success : Boolean;
+                      Read_Dir (Filesystem_Record'Class (FS), From);
+      Success     : Boolean;
    begin
       Success := Is_Directory (Filesystem_Record'Class (FS), Target)
         or else Make_Dir (Filesystem_Record'Class (FS), Target);

@@ -1,5 +1,5 @@
 -----------------------------------------------------------------------
---                               G N A T C O L L                     --
+--                          G N A T C O L L                          --
 --                                                                   --
 --                 Copyright (C) 2003-2008, AdaCore                  --
 --                                                                   --
@@ -66,7 +66,7 @@ package GNATCOLL.Scripts.Shell is
 
    function Get_Command
      (Subprogram : access Shell_Subprogram_Record) return String;
-   --  Return the command that will be executed by Subprogram.
+   --  Return the command that will be executed by Subprogram
 
    function Get_Args
      (Data : Shell_Callback_Data) return GNAT.OS_Lib.Argument_List;
@@ -76,7 +76,7 @@ package GNATCOLL.Scripts.Shell is
    procedure Set_Prompt
      (Script : access Shell_Scripting_Record'Class;
       Prompt : String);
-   --  The prompt to use for consoles associated with this language.
+   --  The prompt to use for consoles associated with this language
 
 private
    Num_Previous_Returns : constant := 9;

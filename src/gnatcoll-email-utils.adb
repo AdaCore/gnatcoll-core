@@ -1,7 +1,7 @@
 -----------------------------------------------------------------------
---                               G N A T C O L L                     --
+--                          G N A T C O L L                          --
 --                                                                   --
---                         Copyright (C) 2006-2008, AdaCore          --
+--                 Copyright (C) 2006-2008, AdaCore                  --
 --                                                                   --
 -- GPS is free  software;  you can redistribute it and/or modify  it --
 -- under the terms of the GNU General Public License as published by --
@@ -1101,7 +1101,7 @@ package body GNATCOLL.Email.Utils is
                             Block_Suffix'Length;
 
       function Needs_Quoting (Char : Character) return Boolean;
-      --  Return True if C needs to be quoted, False otherwise.
+      --  Return True if C needs to be quoted, False otherwise
 
       function Quote (Char : Character) return String;
       --  Encode a single character

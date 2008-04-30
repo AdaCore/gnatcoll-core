@@ -1,7 +1,7 @@
 -----------------------------------------------------------------------
---                               G N A T C O L L                     --
+--                          G N A T C O L L                          --
 --                                                                   --
---                         Copyright (C) 2008, AdaCore               --
+--                    Copyright (C) 2008, AdaCore                    --
 --                                                                   --
 -- GPS is free  software;  you can redistribute it and/or modify  it --
 -- under the terms of the GNU General Public License as published by --
@@ -22,6 +22,7 @@ with Ada.Strings.Unbounded;   use Ada.Strings.Unbounded;
 with GNAT.Strings;            use GNAT.Strings;
 
 package body GNATCOLL.Templates is
+
    procedure Find_Identifier
      (Str         : String;
       Delimiter   : Character;
@@ -57,7 +58,7 @@ package body GNATCOLL.Templates is
    is
    begin
       if Str (First) = Delimiter then
-         --  We are escaping the delimiter by doubling it.
+         --  We are escaping the delimiter by doubling it
          Last := First;
          First_After := First + 1;
 
@@ -225,7 +226,7 @@ package body GNATCOLL.Templates is
            and then Identifier_Last = Identifier_First
            and then Str (Identifier_First) = Delimiter
          then
-            --  We are escaping the Substitution_Char by doubling it.
+            --  We are escaping the Substitution_Char by doubling it
             Append (Result, Delimiter);
             Found := True;
          end if;

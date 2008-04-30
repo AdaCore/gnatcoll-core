@@ -1,7 +1,7 @@
 -----------------------------------------------------------------------
---                               G N A T C O L L                     --
+--                          G N A T C O L L                          --
 --                                                                   --
---                      Copyright (C) 2003-2008, AdaCore             --
+--                 Copyright (C) 2003-2008, AdaCore                  --
 --                                                                   --
 -- GPS is free  software;  you can redistribute it and/or modify  it --
 -- under the terms of the GNU General Public License as published by --
@@ -34,7 +34,7 @@ package body GNATCOLL.Scripts.Utils is
    is
       Len : Natural := 1;
    begin
-      --  Compute the maximum length of the output.
+      --  Compute the maximum length of the output
 
       for J in Args'Range loop
          --  For each argument we append at most 3 characters, two quotes

@@ -1,7 +1,7 @@
 -----------------------------------------------------------------------
---                               G N A T C O L L                     --
+--                          G N A T C O L L                          --
 --                                                                   --
---                      Copyright (C) 2006-2008, AdaCore             --
+--                 Copyright (C) 2006-2008, AdaCore                  --
 --                                                                   --
 -- GPS is free  software;  you can redistribute it and/or modify  it --
 -- under the terms of the GNU General Public License as published by --
@@ -156,19 +156,19 @@ package GNATCOLL.Filesystem is
    function Device_Name
      (FS   : Filesystem_Record;
       Path : String) return String is abstract;
-   --  Return the device of the path (if applicable). Empty string otherwise.
+   --  Return the device of the path (if applicable). Empty string otherwise
 
    function Normalize
      (FS   : Filesystem_Record;
       Path : String) return String;
-   --  Replace every ./ or ../ items of the path.
+   --  Replace every ./ or ../ items of the path
 
    function Path
      (FS     : Filesystem_Record;
       Device : String;
       Dir    : String;
       File   : String) return String is abstract;
-   --  Return a path composed of Device, Dir, and File.
+   --  Return a path composed of Device, Dir, and File
 
    function Is_Case_Sensitive
      (FS : Filesystem_Record) return Boolean is abstract;
@@ -195,7 +195,7 @@ package GNATCOLL.Filesystem is
    function Is_Regular_File
      (FS              : Filesystem_Record;
       Local_Full_Name : String) return Boolean;
-   --  Return True if Local_Full_Name exists on the remote host.
+   --  Return True if Local_Full_Name exists on the remote host
 
    function Is_Symbolic_Link
      (FS              : Filesystem_Record;
@@ -213,14 +213,14 @@ package GNATCOLL.Filesystem is
    function Delete
      (FS              : Filesystem_Record;
       Local_Full_Name : String) return Boolean;
-   --  Sends host a delete command for file.
+   --  Sends host a delete command for file
 
    function Rename
      (FS              : Filesystem_Record;
       From_Local_Name : String;
       To_Local_Name   : String) return Boolean;
    --  Rename From_Local_Name on the host to To_Local_Name on the same host.
-   --  Return False if the renaming could not be performed
+   --  Return False if the renaming could not be performed.
 
    function Copy
      (FS              : Filesystem_Record;
@@ -228,7 +228,7 @@ package GNATCOLL.Filesystem is
       To_Local_Name   : String) return Boolean;
    --  Copy a file into another one.
    --  To_Local_Name can be the name of the directory in which to copy the
-   --  file, or the name of a file to be created
+   --  file, or the name of a file to be created.
 
    function Copy_Dir
      (FS              : Filesystem_Record;
@@ -264,7 +264,7 @@ package GNATCOLL.Filesystem is
       Append          : Boolean := False);
    --  Overwrite the contents of Local_Full_Name with the contents of the
    --  Temporary_File.
-   --  Raise Use_Error if the file could not be written
+   --  Raise Use_Error if the file could not be written.
 
    procedure Set_Writable
      (FS              : Filesystem_Record;
@@ -296,7 +296,7 @@ package GNATCOLL.Filesystem is
      (FS             : Filesystem_Record;
       Local_Dir_Name : String) return Boolean;
    --  Create a new directory on remote named Local_Dir_Name.
-   --  Return the creation status
+   --  Return the creation status.
 
    function Change_Dir
      (FS             : Filesystem_Record;
@@ -311,7 +311,7 @@ package GNATCOLL.Filesystem is
       Local_Dir_Name : String;
       Recursive      : Boolean) return Boolean;
    --  Delete an empty directory on remote named Local_Dir_Name.
-   --  Return the deletion status
+   --  Return the deletion status.
 
    function Read_Dir
      (FS             : Filesystem_Record;

@@ -1,5 +1,5 @@
 ------------------------------------------------------------------------
---                               G N A T C O L L                     --
+--                          G N A T C O L L                          --
 --                                                                   --
 --                 Copyright (C) 2003-2008, AdaCore                  --
 --                                                                   --
@@ -1627,7 +1627,7 @@ package body GNATCOLL.Scripts.Shell is
    is
       pragma Unreferenced (Subprogram, Args);
    begin
-      --  ??? We are in asynchronous mode, see Execute for String above.
+      --  ??? We are in asynchronous mode, see Execute for String above
       return (1 .. 0 => null);
    end Execute;
 

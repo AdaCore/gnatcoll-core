@@ -1,7 +1,7 @@
 -----------------------------------------------------------------------
---                               G N A T C O L L                     --
+--                          G N A T C O L L                          --
 --                                                                   --
---                         Copyright (C) 2006-2008, AdaCore          --
+--                 Copyright (C) 2006-2008, AdaCore                  --
 --                                                                   --
 -- GPS is free  software;  you can redistribute it and/or modify  it --
 -- under the terms of the GNU General Public License as published by --
@@ -874,7 +874,7 @@ package body GNATCOLL.Email.Mailboxes is
                return;
             end if;
 
-            --  Promote the children one level up.
+            --  Promote the children one level up
 
             C := Root.Child;
             while C /= null loop

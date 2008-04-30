@@ -1,5 +1,5 @@
 -----------------------------------------------------------------------
---                               G N A T C O L L                     --
+--                          G N A T C O L L                          --
 --                                                                   --
 --                 Copyright (C) 2007-2008, AdaCore                  --
 --                                                                   --
@@ -194,7 +194,7 @@ private
       --  Win32 specific handle below
       Handle, Map_Handle : System.Address;
    end record;
-   --  Fd is either a file descriptor on Unix systems or a Handle on Windows.
+   --  Fd is either a file descriptor on Unix systems or a Handle on Windows
 
    Invalid_Mapped_File : constant Mapped_File :=
      (null, null, 0, 0, 0, False, False,

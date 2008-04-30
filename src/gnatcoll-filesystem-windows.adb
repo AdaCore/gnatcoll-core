@@ -1,7 +1,7 @@
 -----------------------------------------------------------------------
---                               G N A T C O L L                     --
+--                          G N A T C O L L                          --
 --                                                                   --
---                      Copyright (C) 2006-2008, AdaCore             --
+--                 Copyright (C) 2006-2008, AdaCore                  --
 --                                                                   --
 -- GPS is free  software;  you can redistribute it and/or modify  it --
 -- under the terms of the GNU General Public License as published by --
@@ -36,7 +36,7 @@ package body GNATCOLL.Filesystem.Windows is
    begin
       if The_Path'Length > 3 and then
         The_Path (The_Path'First .. The_Path'First + 1) = "\\" then
-         --  UNC path. Don't touch it.
+         --  UNC path. Don't touch it
          return The_Path;
       end if;
 

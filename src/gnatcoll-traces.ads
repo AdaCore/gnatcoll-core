@@ -1,7 +1,7 @@
 -----------------------------------------------------------------------
---                               G N A T C O L L                     --
+--                          G N A T C O L L                          --
 --                                                                   --
---                      Copyright (C) 2001-2008, AdaCore             --
+--                 Copyright (C) 2001-2008, AdaCore                  --
 --                                                                   --
 -- GPS is free  software;  you can redistribute it and/or modify  it --
 -- under the terms of the GNU General Public License as published by --
@@ -273,7 +273,7 @@ package GNATCOLL.Traces is
    --  every trace, which is inefficient in most cases.
 
    procedure Newline (Stream : in out Trace_Stream_Record) is abstract;
-   --  Terminates the current line of output.
+   --  Terminates the current line of output
 
    procedure Close (Stream : in out Trace_Stream_Record);
    --  Close the stream

@@ -1,6 +1,7 @@
 -----------------------------------------------------------------------
+--                          G N A T C O L L                          --
 --                                                                   --
---                      Copyright (C) 2001-2008, AdaCore             --
+--                 Copyright (C) 2001-2008, AdaCore                  --
 --                                                                   --
 -- GPS is free  software;  you can redistribute it and/or modify  it --
 -- under the terms of the GNU General Public License as published by --
@@ -43,7 +44,7 @@ package GNATCOLL.Boyer_Moore is
    --  be used if you don't specifically need a case insensitive search.
 
    procedure Free (Motif : in out Pattern);
-   --  Free the memory occupied by the motif.
+   --  Free the memory occupied by the motif
 
    function Search (Motif : Pattern; In_String : String) return Integer;
    --  Return the location of the match for Motif in In_String, or -1 if there

@@ -1,7 +1,7 @@
 -----------------------------------------------------------------------
---                               G N A T C O L L                     --
+--                          G N A T C O L L                          --
 --                                                                   --
---                         Copyright (C) 2006-2008, AdaCore          --
+--                 Copyright (C) 2006-2008, AdaCore                  --
 --                                                                   --
 -- GPS is free  software;  you can redistribute it and/or modify  it --
 -- under the terms of the GNU General Public License as published by --
@@ -65,7 +65,7 @@ package GNATCOLL.Email.Mailboxes is
    --  An iterator over the contents of a mailbox
 
    function First (Self : Mailbox) return Cursor'Class is abstract;
-   --  Return a cursor to iterator over all messages of the mailbox.
+   --  Return a cursor to iterator over all messages of the mailbox
 
    procedure Set_Parser
      (Self     : in out Cursor;
@@ -89,7 +89,7 @@ package GNATCOLL.Email.Mailboxes is
    --  calling the factory.
 
    procedure Next (Self : in out Cursor; Box : Mailbox'Class) is abstract;
-   --  Moves to the next message in Self.
+   --  Moves to the next message in Self
 
    --------------------
    -- Unix mailboxes --
@@ -104,7 +104,7 @@ package GNATCOLL.Email.Mailboxes is
    --  Return an instance of Mbox_Cursor
 
    type Destructor is access procedure (S : in out GNAT.Strings.String_Access);
-   --  Free the memory associated with the "Fp" parameter given to Open.
+   --  Free the memory associated with the "Fp" parameter given to Open
 
    procedure Free_String (Str : in out GNAT.Strings.String_Access);
 

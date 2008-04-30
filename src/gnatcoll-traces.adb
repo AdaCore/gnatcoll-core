@@ -1,7 +1,7 @@
 -----------------------------------------------------------------------
---                               G N A T C O L L                     --
+--                          G N A T C O L L                          --
 --                                                                   --
---                     Copyright (C) 2001-2008, AdaCore              --
+--                 Copyright (C) 2001-2008, AdaCore                  --
 --                                                                   --
 -- GPS is free  software;  you can redistribute it and/or modify  it --
 -- under the terms of the GNU General Public License as published by --
@@ -137,7 +137,7 @@ package body GNATCOLL.Traces is
       Location      : String := GNAT.Source_Info.Source_Location;
       Entity        : String := GNAT.Source_Info.Enclosing_Entity;
       Message_Color : String := Default_Fg);
-   --  Log a message to Handle unconditionally.
+   --  Log a message to Handle unconditionally
 
    procedure Put_Absolute_Time (Stream : in out Trace_Stream_Record'Class);
    --  Print the absolute time in Handle. No locking is done, this is the
@@ -150,7 +150,7 @@ package body GNATCOLL.Traces is
    --  locking done.
 
    procedure Put_Stack_Trace (Stream : in out Trace_Stream_Record'Class);
-   --  Print the stack trace for this handle. No locking done.
+   --  Print the stack trace for this handle. No locking done
 
    function Config_File
      (Filename : String;
@@ -162,7 +162,7 @@ package body GNATCOLL.Traces is
    --  The empty string is returned if no such file was found.
 
    function Get_Process_Id return Integer;
-   --  Return the process ID of the current process.
+   --  Return the process ID of the current process
    pragma Import (C, Get_Process_Id, "getpid");
 
    type File_Type_Access is access all File_Type;

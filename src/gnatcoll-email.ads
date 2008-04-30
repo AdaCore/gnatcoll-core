@@ -1,7 +1,7 @@
 -----------------------------------------------------------------------
---                               G N A T C O L L                     --
+--                          G N A T C O L L                          --
 --                                                                   --
---                         Copyright (C) 2006-2008, AdaCore          --
+--                 Copyright (C) 2006-2008, AdaCore                  --
 --                                                                   --
 -- GPS is free  software;  you can redistribute it and/or modify  it --
 -- under the terms of the GNU General Public License as published by --
@@ -140,7 +140,7 @@ package GNATCOLL.Email is
    --  Return the name of the header, lower cased
 
    function Get_Value (H : Header'Class) return Charset_String_List.List;
-   --  Return the value of the header.
+   --  Return the value of the header
 
    procedure To_String
      (H                : Header'Class;
