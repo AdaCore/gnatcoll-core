@@ -14,6 +14,8 @@ static:
 shared relocatable: all
 	${MAKE} GNATCOLL_LIBRARY_TYPE=relocatable
 
+both: static shared install_static install_shared
+
 examples:
 	${MAKE} -C examples
 
