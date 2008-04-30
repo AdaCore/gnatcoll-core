@@ -438,7 +438,11 @@ package body GNATCOLL.VFS is
 
    function Is_Absolute_Path (File : Virtual_File) return Boolean is
    begin
-      return File.Value.FS.Is_Absolute_Path (File.Full_Name.all);
+      if File.Value = null then
+         return False;
+      else
+         return File.Value.FS.Is_Absolute_Path (File.Full_Name.all);
+      end if;
    end Is_Absolute_Path;
 
    --------------------
@@ -447,7 +451,11 @@ package body GNATCOLL.VFS is
 
    function File_Extension (File : Virtual_File) return String is
    begin
-      return File.Value.FS.File_Extension (File.Full_Name.all);
+      if File.Value = null then
+         return "";
+      else
+         return File.Value.FS.File_Extension (File.Full_Name.all);
+      end if;
    end File_Extension;
 
    ---------------
