@@ -36,6 +36,9 @@ package GNATCOLL.Filesystem.Unix.Remote is
    --  and the way to communicate with that system.
    --  This function _must_ be called before any use of the filesystem
 
+   function Get_Host (FS : Remote_Unix_Filesystem_Record) return String;
+   --  Return the host on which the filesystem is running
+
    overriding function Home_Dir
      (FS   : Remote_Unix_Filesystem_Record) return String;
    overriding function Is_Regular_File

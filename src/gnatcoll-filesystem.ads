@@ -30,8 +30,16 @@ with GNAT.Strings;
 
 package GNATCOLL.Filesystem is
 
-   type Filesystem_Record is abstract tagged null record;
+   type Filesystem_Record is abstract tagged private;
    type Filesystem_Access is access all Filesystem_Record'Class;
+
+   function Get_Local_Filesystem return Filesystem_Access;
+   --  Return an instance of the local filesystem running on the current host.
+   --  This notion is slightly ambiguous when one involves NFS mounts (for
+   --  instance a Unix machine might be mounting a windows filesystem), but
+   --  the value returned is the one for native filesystems on that machine (in
+   --  the example above that would be an instance of Unix_Filesystem).
+   --  The returned value must not be freed by the caller.
 
    procedure Free (FS : in out Filesystem_Record) is null;
    procedure Free (FS : in out Filesystem_Access);
@@ -92,6 +100,35 @@ package GNATCOLL.Filesystem is
      (FS   : Filesystem_Record;
       Path : String) return String;
    --  Return the directory path
+
+   function Locale_To_Display
+     (FS   : Filesystem_Record; Name : String) return String;
+   --  Convert a file name (ie an unspecified set of bytes) to a specific
+   --  encoding (application specific). In general, this encoding will be
+   --  UTF-8, so that you can display the name in a graphical interface, but
+   --  you could chose to override this function and use another encoding
+   --  instead.
+   --  The default is to call the function registered through
+   --  Set_Locale_To_Display_Encoder (or return Name as is if not set). This is
+   --  suitable only if files on that FS are encoded in UTF-8 by default (true
+   --  only on windows platforms), but is suitable even on other platforms if
+   --  you do not support accented file names for instance.
+   --  This function is only called implicitly from GNATCOLL.VFS.Display_*, but
+   --  if you are using the GNATCOLL.Filesystem API directly, you should
+   --  convert file names appropriately before you display them on the screen.
+
+   procedure Set_Locale_To_Display_Encoder
+     (FS      : in out Filesystem_Record;
+      Encoder : access function (Name : String) return String);
+   --  Set the function used to convert locale file names (a series of bytes)
+   --  into a properly encoded string (the specific encoding to use depends on
+   --  your application, but will generally be utf-8).
+   --  Filesystems use both a primitive operation (Locale_To_Display) and
+   --  a callback for this operation to give the most flexibility to the
+   --  application (having only the primitive op would mean overriding all the
+   --  predefined types of filesystems in the application's code -- having only
+   --  the callback means it is somewhat more work to convert file names since
+   --  the application would have to check whether the encoder has been set).
 
    function Get_Root
      (FS   : Filesystem_Record;
@@ -286,5 +323,11 @@ package GNATCOLL.Filesystem is
    --  (base names). If Dirs_Only is set, then the files returned are directory
    --  only. Same for Files_Only, concerning regular files.
    --  This does not return the two special directories "." and ".."
+
+private
+   type Filesystem_Record is abstract tagged record
+      Locale_To_Display_Encoder :
+         access function (Name : String) return String;
+   end record;
 
 end GNATCOLL.Filesystem;

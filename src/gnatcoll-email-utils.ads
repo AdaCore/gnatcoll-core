@@ -29,8 +29,6 @@ package GNATCOLL.Email.Utils is
    -- Dates --
    -----------
 
-   No_Time : constant Ada.Calendar.Time;
-
    type Time_Format is (Time_RFC2822, Time_Envelope);
    --  The time formats supported by this package.
    --  Time_RFC2822 is the one used in the Date: header.
@@ -258,9 +256,4 @@ package GNATCOLL.Email.Utils is
 private
    Null_Address : constant Email_Address :=
      (Null_Unbounded_String, Null_Unbounded_String);
-
-   No_Time : constant Ada.Calendar.Time := Ada.Calendar.Time_Of
-     (Ada.Calendar.Year_Number'First,
-      Ada.Calendar.Month_Number'First,
-      Ada.Calendar.Day_Number'First);
 end GNATCOLL.Email.Utils;

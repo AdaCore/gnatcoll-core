@@ -20,9 +20,17 @@
 --  Various utility subprograms used in GNATCOLL, and that can easily be reused
 --  elsewhere
 
+with Ada.Calendar;
 with GNAT.Strings;
 
 package GNATCOLL.Utils is
+
+   No_Time : constant Ada.Calendar.Time;
+   --  A constant to indicate uninitialized time. Recent versions of GNAT
+   --  provide this constant in the GNAT.Calendar package, but the constant is
+   --  still defined here for compatibility with older compilers.
+   --  Both constants must have the same value, though, because the user's code
+   --  might be using one or the other indiscriminately.
 
    procedure Free (List : in out GNAT.Strings.String_List);
    --  Free the memory used by List.
@@ -31,5 +39,12 @@ package GNATCOLL.Utils is
    function Equal (S1, S2 : String; Case_Sensitive : Boolean) return Boolean;
    pragma Inline (Equal);
    --  Compare two strings
+
+private
+
+   No_Time : constant Ada.Calendar.Time := Ada.Calendar.Time_Of
+     (Ada.Calendar.Year_Number'First,
+      Ada.Calendar.Month_Number'First,
+      Ada.Calendar.Day_Number'First);
 
 end GNATCOLL.Utils;

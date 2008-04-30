@@ -36,6 +36,15 @@ package body GNATCOLL.Filesystem.Unix.Remote is
       Free (FS.Host);
    end Free;
 
+   --------------
+   -- Get_Host --
+   --------------
+
+   function Get_Host (FS : Remote_Unix_Filesystem_Record) return String is
+   begin
+      return FS.Host.all;
+   end Get_Host;
+
    -----------
    -- Setup --
    -----------

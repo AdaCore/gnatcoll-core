@@ -25,6 +25,7 @@ with Ada.Strings.Hash_Case_Insensitive;
 pragma Warnings (Off);
 with Ada.Strings.Unbounded.Aux;
 pragma Warnings (On);
+with GNATCOLL.Utils;          use GNATCOLL.Utils;
 with Interfaces;              use Interfaces;
 
 package body GNATCOLL.Email.Utils is

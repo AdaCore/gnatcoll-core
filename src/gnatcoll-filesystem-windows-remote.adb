@@ -25,6 +25,15 @@ with GNAT.Regpat;                   use GNAT.Regpat;
 
 package body GNATCOLL.Filesystem.Windows.Remote is
 
+   --------------
+   -- Get_Host --
+   --------------
+
+   function Get_Host (FS : Remote_Windows_Filesystem_Record) return String is
+   begin
+      return FS.Host.all;
+   end Get_Host;
+
    -----------
    -- Setup --
    -----------

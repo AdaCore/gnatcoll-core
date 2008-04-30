@@ -19,6 +19,8 @@
 
 with Ada.Directories;           use Ada.Directories;
 with Ada.Unchecked_Deallocation;
+with GNATCOLL.Filesystem.Windows;
+with GNATCOLL.Filesystem.Unix;
 with GNATCOLL.Mmap;             use GNATCOLL.Mmap;
 with GNATCOLL.Utils;            use GNATCOLL.Utils;
 with GNAT.Calendar;
@@ -27,6 +29,28 @@ with GNAT.OS_Lib;               use GNAT.OS_Lib;
 with Interfaces.C.Strings;      use Interfaces.C, Interfaces.C.Strings;
 
 package body GNATCOLL.Filesystem is
+
+   Windows_FS : aliased GNATCOLL.Filesystem.Windows.Windows_Filesystem_Record;
+   Unix_FS    : aliased GNATCOLL.Filesystem.Unix.Unix_Filesystem_Record;
+   --  The two global variables are used to return the local filesystem.
+   --  Rather than allocate memory explicitly when the user queries the local
+   --  filesystem, we return an access to one of those two variables. Obviously
+   --  there are issues when used in a multitasking application, but this is
+   --  general for the API in this package, and all users of Filesystem_Record
+   --  must be duly protected anyway.
+
+   --------------------------
+   -- Get_Local_Filesystem --
+   --------------------------
+
+   function Get_Local_Filesystem return Filesystem_Access is
+   begin
+      if Directory_Separator = '\' then
+         return Windows_FS'Access;
+      else
+         return Unix_FS'Access;
+      end if;
+   end Get_Local_Filesystem;
 
    ----------
    -- Free --
@@ -666,5 +690,31 @@ package body GNATCOLL.Filesystem is
       Free (C_Str);
       return Ensure_Directory (Filesystem_Record'Class (FS), Str);
    end Get_Tmp_Directory;
+
+   -----------------------
+   -- Locale_To_Display --
+   -----------------------
+
+   function Locale_To_Display
+     (FS   : Filesystem_Record; Name : String) return String
+   is
+   begin
+      if FS.Locale_To_Display_Encoder /= null then
+         return FS.Locale_To_Display_Encoder (Name);
+      else
+         return Name;
+      end if;
+   end Locale_To_Display;
+
+   -----------------------------------
+   -- Set_Locale_To_Display_Encoder --
+   -----------------------------------
+
+   procedure Set_Locale_To_Display_Encoder
+     (FS      : in out Filesystem_Record;
+      Encoder : access function (Name : String) return String) is
+   begin
+      FS.Locale_To_Display_Encoder := Encoder;
+   end Set_Locale_To_Display_Encoder;
 
 end GNATCOLL.Filesystem;
