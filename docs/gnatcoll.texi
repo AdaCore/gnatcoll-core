@@ -154,6 +154,7 @@ unmodified in any copy.
 * Ravenscar Patterns::
 * Managing Memory:: The storage pools.
 * Manipulating Files::
+* Three state logic:: The tribooleans.
 * Index::
 
 @ifnothtml
@@ -211,6 +212,8 @@ Manipulating Files
 * Remote filesystems::
 * Virtual files::
 * GtkAda support for virtual files::
+
+Three state logic
 
 @end detailmenu
 @end ifnothtml
@@ -2879,6 +2882,31 @@ Thus, @value{gnatcoll} provides the @code{GNATCOLL.VFS.GtkAda} package,
 which is only build if @code{GtkAda} was detected when @value{gnatcoll}
 was compiled, which allows you to encapsulate a @code{Virtual_File}
 into a @code{GValue}, and therefore to store it in a tree model.
+
+@c -----------------------------------------------------------------------
+@node Three state logic
+@chapter Three state logic
+@c -----------------------------------------------------------------------
+@noindent
+
+Through the package @code{GNATCOLL.Tribooleans}, @value{gnatcoll} provides
+a type that extends the classical @code{Boolean} type with an
+@code{Indeterminate} value.
+
+There are various cases where such a type is useful. One example we have
+is when a user is doing a search (on a database or any set of data), and
+can specify some optional boolean criteria ("must the contact be french?").
+He can choose to only see french people ("True"), to see no french people
+at all ("False"), or to get all contacts ("Indeterminate"). With a classical
+boolean, there is no way to cover all these cases.
+
+Of course, there are more advanced use cases for such a type. To support
+these cases, the @code{Tribooleans} package overrides the usual logical
+operations @code{"and"}, @code{"or"}, @code{"xor"}, @code{"not"} and
+provides an @code{Equal} function.
+
+See the specs of the package to see the truth tables associated with those
+operators.
 
 @c -----------------------------------------------------------------------
 @node Index
