@@ -40,6 +40,15 @@ package GNATCOLL.Utils is
    pragma Inline (Equal);
    --  Compare two strings
 
+   function Image
+     (Value : Integer;
+      Width : Integer := 1;
+      Force_Sign : Boolean := False) return String;
+   --  Return Value as a string, using at least Width digits (padded with
+   --  leading zeros if necessary); negative values will always have a leading
+   --  minus sign; positive values will have a leading plus sign if Force_Sign
+   --  is True
+
 private
 
    No_Time : constant Ada.Calendar.Time := Ada.Calendar.Time_Of
