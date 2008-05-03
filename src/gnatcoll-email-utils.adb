@@ -64,6 +64,15 @@ package body GNATCOLL.Email.Utils is
    --  In_Quote indicates whether we are initially within an open quote ("),
    --  and on exit whether we are still processing a quoted string.
 
+   function Image
+     (Value : Integer;
+      Width : Integer := 2;
+      Force_Sign : Boolean := False) return String;
+   --  Return Value as a string, using at least Width digits (padded with
+   --  leading zeros if necessary); negative values will always have a leading
+   --  minus sign; positive values will have a leading plus sign if Force_Sign
+   --  is True
+
    procedure Post_Process_Address
      (Address         : in out Email_Address;
       Buffer, Comment : Unbounded_String;
@@ -117,6 +126,29 @@ package body GNATCOLL.Email.Utils is
       60 => '8', 61 => '9', 62 => '+', 63 => '/');
 
    Hex_Chars : constant array (0 .. 15) of Character := "0123456789ABCDEF";
+
+   -----------
+   -- Image --
+   -----------
+
+   function Image
+     (Value : Integer;
+      Width : Integer := 2;
+      Force_Sign : Boolean := False) return String is
+      S : constant String := Integer'Image (Value);
+      Buf : String (1 .. Integer'Max (S'Length, Width + 1)) := (others => '0');
+      First : Integer := 2;
+   begin
+      Buf (Buf'Last - S'Length + 2 .. Buf'Last) := S (2 .. S'Last);
+      if Value < 0 then
+         First := 1;
+         Buf (1) := '-';
+      elsif Force_Sign then
+         First := 1;
+         Buf (1) := '+';
+      end if;
+      return Buf (First .. Buf'Last);
+   end Image;
 
    ------------------------
    -- Skip_Quoted_String --
@@ -398,9 +430,9 @@ package body GNATCOLL.Email.Utils is
    begin
       Split (Date, Y, M, D, H, Min, S, SS);
 
-      Result := To_Unbounded_String (Image (Integer (H), Width => 2) & ":");
-      Append (Result, Image (Integer (Min), Width => 2) & ":");
-      Append (Result, Image (Integer (S), Width => 2));
+      Result := To_Unbounded_String (Image (Integer (H)) & ":");
+      Append (Result, Image (Integer (Min)) & ":");
+      Append (Result, Image (Integer (S)));
       return To_String (Result);
    end Format_Time;
 
@@ -468,7 +500,7 @@ package body GNATCOLL.Email.Utils is
 
       Split (Adjusted_Date, Y, M, D, H, Min, S, SS);
       if not From_Line then
-         Append (Result, Image (Integer (D), Width => 2) & " ");
+         Append (Result, Image (Integer (D)) & " ");
       end if;
 
       case M is
@@ -487,21 +519,21 @@ package body GNATCOLL.Email.Utils is
       end case;
 
       if From_Line then
-         Append (Result, Image (Integer (D), Width => 2) & " ");
+         Append (Result, Image (Integer (D)) & " ");
       else
-         Append (Result, Image (Integer (Y), Width => 2) & " ");
+         Append (Result, Image (Integer (Y)) & " ");
       end if;
 
       if Show_Time then
-         Append (Result, Image (Integer (H), Width => 2) & ":");
-         Append (Result, Image (Integer (Min), Width => 2));
+         Append (Result, Image (Integer (H)) & ":");
+         Append (Result, Image (Integer (Min)));
          if Show_Seconds then
-            Append (Result, ":" & Image (Integer (S), Width => 2));
+            Append (Result, ":" & Image (Integer (S)));
          end if;
       end if;
 
       if From_Line then
-         Append (Result, " " & Image (Integer (Y), Width => 2));
+         Append (Result, " " & Image (Integer (Y)));
       end if;
 
       if not No_TZ then
