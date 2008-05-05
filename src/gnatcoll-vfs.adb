@@ -597,7 +597,7 @@ package body GNATCOLL.VFS is
       Full    : String_Access;
    begin
       if Dir.Value /= null
-        and then Dir.Value.Full_Name = null
+        and then Dir.Value.Full_Name /= null
       then
          declare
             Dir_Path : constant String :=
