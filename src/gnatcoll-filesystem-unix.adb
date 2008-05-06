@@ -19,6 +19,17 @@
 
 package body GNATCOLL.Filesystem.Unix is
 
+   -------------------------
+   -- Directory_Separator --
+   -------------------------
+
+   function Dir_Sep (FS : Unix_Filesystem_Record) return Character
+   is
+      pragma Unreferenced (FS);
+   begin
+      return '/';
+   end Dir_Sep;
+
    -------------
    -- To_Unix --
    -------------

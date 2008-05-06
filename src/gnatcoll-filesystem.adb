@@ -141,7 +141,7 @@ package body GNATCOLL.Filesystem is
       Suffix : String := "") return String is
    begin
       for J in reverse Path'Range loop
-         if Path (J) = GNAT.OS_Lib.Directory_Separator then
+         if Path (J) = Dir_Sep (Filesystem_Record'Class (FS)) then
             if Equal (Path (Path'Last - Suffix'Length + 1 .. Path'Last),
                       Suffix,
                       Is_Case_Sensitive (Filesystem_Record'Class (FS))) then
@@ -163,7 +163,9 @@ package body GNATCOLL.Filesystem is
      (FS   : Filesystem_Record;
       Path : String) return String is
    begin
-      if Path'Length > 1 and then Path (Path'Last) = Directory_Separator then
+      if Path'Length > 1
+        and then Path (Path'Last) = Dir_Sep (Filesystem_Record'Class (FS))
+      then
          return Base_Name (FS, Path (Path'First .. Path'Last - 1));
       else
          return Base_Name (FS, Path);
@@ -176,12 +178,10 @@ package body GNATCOLL.Filesystem is
 
    function Dir_Name
      (FS   : Filesystem_Record;
-      Path : String) return String
-   is
-      pragma Unreferenced (FS);
+      Path : String) return String is
    begin
       for J in reverse Path'Range loop
-         if Path (J) = Directory_Separator then
+         if Path (J) = Dir_Sep (Filesystem_Record'Class (FS)) then
             return Path (Path'First .. J);
          end if;
       end loop;
@@ -197,7 +197,7 @@ package body GNATCOLL.Filesystem is
      (FS   : Filesystem_Record;
       Path : String) return String is
    begin
-      if Path (Path'Last) = Directory_Separator then
+      if Path (Path'Last) = Dir_Sep (Filesystem_Record'Class (FS)) then
          return Dir_Name (FS, Path (Path'First .. Path'Last - 1));
       else
          return Dir_Name (FS, Path);
@@ -210,12 +210,12 @@ package body GNATCOLL.Filesystem is
 
    function Ensure_Directory
      (FS   : Filesystem_Record;
-      Path : String) return String
-   is
-      pragma Unreferenced (FS);
+      Path : String) return String is
    begin
-      if Path'Length = 0 or else Path (Path'Last) /= Directory_Separator then
-         return Path & Directory_Separator;
+      if Path'Length = 0
+        or else Path (Path'Last) /= Dir_Sep (Filesystem_Record'Class (FS))
+      then
+         return Path & Dir_Sep (Filesystem_Record'Class (FS));
       else
          return Path;
       end if;
@@ -229,25 +229,25 @@ package body GNATCOLL.Filesystem is
      (FS   : Filesystem_Record;
       Path : String) return String
    is
-      Last_Dir : Natural;
+      Last_Dir      : Natural;
+      Dir_Separator : constant Character :=
+                        Dir_Sep (Filesystem_Record'Class (FS));
    begin
       Last_Dir := Path'First;
 
       for J in Path'Range loop
-         if Path (J) = Directory_Separator then
+         if Path (J) = Dir_Separator then
             if J < Path'Last - 3
-              and then Path (J .. J + 3) =
-                 Directory_Separator & ".." & Directory_Separator
+              and then Path (J .. J + 3) = Dir_Separator & ".." & Dir_Separator
             then
                return Normalize (FS, Path (Path'First .. Last_Dir) &
-                                     Path (J + 3 .. Path'Last));
+                                     Path (J + 4 .. Path'Last));
 
             elsif J < Path'Last - 2
-              and then Path (J .. J + 2) =
-                 Directory_Separator & '.' & Directory_Separator
+              and then Path (J .. J + 2) = Dir_Separator & '.' & Dir_Separator
             then
                return Normalize (FS, Path (Path'First .. J) &
-                                     Path (J + 2 .. Path'Last));
+                                     Path (J + 3 .. Path'Last));
             end if;
 
             Last_Dir := J;

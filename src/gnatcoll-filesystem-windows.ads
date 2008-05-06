@@ -24,6 +24,8 @@ package GNATCOLL.Filesystem.Windows is
 
    type Windows_Filesystem_Record is new Filesystem_Record with null record;
 
+   overriding function Dir_Sep
+     (FS : Windows_Filesystem_Record) return Character;
    overriding function To_Unix
      (FS         : Windows_Filesystem_Record;
       Path       : String;

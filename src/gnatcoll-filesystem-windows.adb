@@ -22,6 +22,17 @@ with System;
 
 package body GNATCOLL.Filesystem.Windows is
 
+   -------------------------
+   -- Directory_Separator --
+   -------------------------
+
+   function Dir_Sep (FS : Windows_Filesystem_Record) return Character
+   is
+      pragma Unreferenced (FS);
+   begin
+      return '\';
+   end Dir_Sep;
+
    -------------
    -- To_Unix --
    -------------

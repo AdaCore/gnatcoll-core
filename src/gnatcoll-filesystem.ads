@@ -45,6 +45,9 @@ package GNATCOLL.Filesystem is
    procedure Free (FS : in out Filesystem_Access);
    --  Free the memory allocated for FS
 
+   function Dir_Sep (FS : Filesystem_Record) return Character is abstract;
+   --  Return the filesystem's directory separator
+
    function To_Unix
      (FS         : Filesystem_Record;
       Path       : String;
