@@ -1,0 +1,18 @@
+with "gnatcoll";
+project GnatColl_Postgres is
+   for Library_Name use "gnatcoll_postgres";
+   for Source_Dirs use ("../../include/gnatcoll");
+   for Externally_Built use "true";
+
+   for Source_List_File use "gnatcoll/" & Project'Library_Name & ".lgpr";
+   for Library_Kind use GnatColl.GnatColl_Kind;
+   for Library_Dir  use "../gnatcoll/" & Project'Library_Kind;
+   for Library_Version use
+     "lib" & Project'Library_Name & ".so." & Gnatcoll.Version;
+
+   package Linker is
+     for Linker_Options use (GnatColl.Postgres_Path, "-lpq");
+   end Linker;
+
+end GnatColl_Postgres;
+

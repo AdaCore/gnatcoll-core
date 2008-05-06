@@ -16,10 +16,6 @@ install: libinstall
 
 .PHONY: buildcfiles addcobjects dirs
 
-dirs:
-	${MKDIR} obj/python/${GNATCOLL_LIBRARY_TYPE}
-	${MKDIR} lib/python/${GNATCOLL_LIBRARY_TYPE}
-
 ifeq ($(WITH_PYTHON),yes)
 C_OBJ=obj/python/${GNATCOLL_LIBRARY_TYPE}/python_support.o
 buildcfiles: ${C_OBJ}

@@ -23,10 +23,6 @@ endif
 .PHONY: buildcfiles addcobjects dirs
 buildcfiles:
 
-dirs:
-	${MKDIR} obj/gtk/${GNATCOLL_LIBRARY_TYPE}
-	${MKDIR} lib/gtk/${GNATCOLL_LIBRARY_TYPE}
-
 ifeq (${WITH_GTK},yes)
 ifeq ($(WITH_PYTHON),yes)
 C_OBJ=obj/gtk/${GNATCOLL_LIBRARY_TYPE}/python_support_gtk.o

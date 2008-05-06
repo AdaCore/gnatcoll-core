@@ -30,6 +30,46 @@ AC_DEFUN(AM_PATH_SYSLOG,
    AC_SUBST(WITH_SYSLOG)
 ])
 
+#############################################################
+# Checking for postgreSQL
+# This checks whether the libpq exists on this system
+# This module can be disabled with
+#    --with-postgresql=path
+# The following variables are exported by configure:
+#   @WITH_POSTGRES@: whether postgres was detected
+#   @LIBPQ@: path to libpq, or "" if not found
+#############################################################
+
+AC_DEFUN(AM_PATH_POSTGRES,
+[
+   AC_ARG_WITH(postgresql,
+     [AC_HELP_STRING(
+       [--with-postgresql=<path>],
+       [Specify the full path to the PostgreSQL installation])
+AC_HELP_STRING(
+       [--without-postgresql],
+       [Disable PostgreSQL support])],
+     POSTGRESQL_PATH_WITH=$withval,
+     POSTGRESQL_PATH_WITH=yes)
+
+   PATH_LIBPQ=""
+   if test x"$POSTGRESQL_PATH_WITH" = xno ; then
+      AC_MSG_CHECKING(for PostgreSQL)
+      AC_MSG_RESULT(no, use --with-postgresql if needed)
+      WITH_POSTGRES=no
+
+   else
+     if test x"$POSTGRESQL_PATH_WITH" = xyes ; then
+       AC_CHECK_LIB(pq,PQreset,WITH_POSTGRES=yes,PATH_LIBPQ="")
+     else
+       PATH_LIBPQ="$POSTGRESQL_PATH_WITH"
+       WITH_POSTGRES=yes
+     fi
+   fi
+
+   AC_SUBST(WITH_POSTGRES)
+   AC_SUBST(PATH_LIBPQ)
+])
 
 #############################################################
 # Checking for python

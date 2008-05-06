@@ -1,0 +1,18 @@
+MODULE=postgres
+PROJECT=gnatcoll_${MODULE}
+LIBNAME=lib${TARNAME}_${MODULE}
+
+include ../Makefile.conf
+
+SRCDIRS=./postgres/
+
+all:     dirs buildall
+clean:   cleanall
+install: libinstall
+
+ifeq (${GNATCOLL_LIBRARY_TYPE},static)
+FPIC=
+else
+FPIC=-fPIC
+endif
+

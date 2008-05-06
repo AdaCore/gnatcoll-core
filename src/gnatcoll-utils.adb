@@ -65,4 +65,30 @@ package body GNATCOLL.Utils is
       end if;
    end Equal;
 
+   -----------
+   -- Image --
+   -----------
+
+   function Image
+     (Value      : Integer;
+      Min_Width  : Integer;
+      Force_Sign : Boolean := False;
+      Padding    : Character := '0') return String
+   is
+      S : constant String := Integer'Image (Value);
+      Buf : String (1 .. Integer'Max (S'Length, Min_Width + 1)) :=
+        (others => Padding);
+      First : Integer := 2;
+   begin
+      Buf (Buf'Last - S'Length + 2 .. Buf'Last) := S (2 .. S'Last);
+      if Value < 0 then
+         First := 1;
+         Buf (1) := '-';
+      elsif Force_Sign then
+         First := 1;
+         Buf (1) := '+';
+      end if;
+      return Buf (First .. Buf'Last);
+   end Image;
+
 end GNATCOLL.Utils;

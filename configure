@@ -309,7 +309,7 @@ ac_includes_default="\
 # include <unistd.h>
 #endif"
 
-ac_subst_vars='SHELL PATH_SEPARATOR PACKAGE_NAME PACKAGE_TARNAME PACKAGE_VERSION PACKAGE_STRING PACKAGE_BUGREPORT exec_prefix prefix program_transform_name bindir sbindir libexecdir datadir sysconfdir sharedstatedir localstatedir libdir includedir oldincludedir infodir mandir build_alias host_alias target_alias DEFS ECHO_C ECHO_N ECHO_T LIBS build build_cpu build_vendor build_os host host_cpu host_vendor host_os target target_cpu target_vendor target_os LN_S INSTALL_PROGRAM INSTALL_SCRIPT INSTALL_DATA CC CFLAGS LDFLAGS CPPFLAGS ac_ct_CC EXEEXT OBJEXT CPP EGREP PKG_CONFIG GTK_GCC_FLAGS WITH_GTK PYTHON PYTHON_BASE PYTHON_VERSION PYTHON_DIR PYTHON_LIBS PYTHON_CFLAGS WITH_PYTHON PYGTK_PREFIX PYGTK_INCLUDE WITH_PYGTK PYTHON_LIBS_GPR PYTHON_CFLAGS_GPR PYGTK_INCLUDE_GPR GTK_GCC_FLAGS_GPR WITH_SYSLOG MAKEINFO TEXI2DVI LIBOBJS LTLIBOBJS'
+ac_subst_vars='SHELL PATH_SEPARATOR PACKAGE_NAME PACKAGE_TARNAME PACKAGE_VERSION PACKAGE_STRING PACKAGE_BUGREPORT exec_prefix prefix program_transform_name bindir sbindir libexecdir datadir sysconfdir sharedstatedir localstatedir libdir includedir oldincludedir infodir mandir build_alias host_alias target_alias DEFS ECHO_C ECHO_N ECHO_T LIBS build build_cpu build_vendor build_os host host_cpu host_vendor host_os target target_cpu target_vendor target_os LN_S INSTALL_PROGRAM INSTALL_SCRIPT INSTALL_DATA CC CFLAGS LDFLAGS CPPFLAGS ac_ct_CC EXEEXT OBJEXT CPP EGREP PKG_CONFIG GTK_GCC_FLAGS WITH_GTK PYTHON PYTHON_BASE PYTHON_VERSION PYTHON_DIR PYTHON_LIBS PYTHON_CFLAGS WITH_PYTHON WITH_POSTGRES PATH_LIBPQ PYGTK_PREFIX PYGTK_INCLUDE WITH_PYGTK PYTHON_LIBS_GPR PYTHON_CFLAGS_GPR PYGTK_INCLUDE_GPR GTK_GCC_FLAGS_GPR WITH_SYSLOG MAKEINFO TEXI2DVI LIBOBJS LTLIBOBJS'
 ac_subst_files=''
 
 # Initialize some variables set by options.
@@ -857,6 +857,9 @@ Optional Packages:
   --without-PACKAGE       do not use PACKAGE (same as --with-PACKAGE=no)
   --with-python=<path>    Specify the full path to the Python installation
   --without-python        Disable python support
+  --with-postgresql=<path>
+                          Specify the full path to the PostgreSQL installation
+  --without-postgresql    Disable PostgreSQL support
 
 Some influential environment variables:
   CC          C compiler command
@@ -3552,6 +3555,95 @@ rm -f conftest.$ac_objext conftest$ac_exeext conftest.$ac_ext
 
 
 
+
+# Check whether --with-postgresql or --without-postgresql was given.
+if test "${with_postgresql+set}" = set; then
+  withval="$with_postgresql"
+  POSTGRESQL_PATH_WITH=$withval
+else
+  POSTGRESQL_PATH_WITH=yes
+fi;
+
+   PATH_LIBPQ=""
+   if test x"$POSTGRESQL_PATH_WITH" = xno ; then
+      echo "$as_me:$LINENO: checking for PostgreSQL" >&5
+echo $ECHO_N "checking for PostgreSQL... $ECHO_C" >&6
+      echo "$as_me:$LINENO: result: no" >&5
+echo "${ECHO_T}no" >&6
+      WITH_POSTGRES=no
+
+   else
+     if test x"$POSTGRESQL_PATH_WITH" = xyes ; then
+       echo "$as_me:$LINENO: checking for PQreset in -lpq" >&5
+echo $ECHO_N "checking for PQreset in -lpq... $ECHO_C" >&6
+if test "${ac_cv_lib_pq_PQreset+set}" = set; then
+  echo $ECHO_N "(cached) $ECHO_C" >&6
+else
+  ac_check_lib_save_LIBS=$LIBS
+LIBS="-lpq  $LIBS"
+cat >conftest.$ac_ext <<_ACEOF
+#line $LINENO "configure"
+/* confdefs.h.  */
+_ACEOF
+cat confdefs.h >>conftest.$ac_ext
+cat >>conftest.$ac_ext <<_ACEOF
+/* end confdefs.h.  */
+
+/* Override any gcc2 internal prototype to avoid an error.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+/* We use char because int might match the return type of a gcc2
+   builtin and then its argument prototype would still apply.  */
+char PQreset ();
+int
+main ()
+{
+PQreset ();
+  ;
+  return 0;
+}
+_ACEOF
+rm -f conftest.$ac_objext conftest$ac_exeext
+if { (eval echo "$as_me:$LINENO: \"$ac_link\"") >&5
+  (eval $ac_link) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); } &&
+         { ac_try='test -s conftest$ac_exeext'
+  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); }; }; then
+  ac_cv_lib_pq_PQreset=yes
+else
+  echo "$as_me: failed program was:" >&5
+sed 's/^/| /' conftest.$ac_ext >&5
+
+ac_cv_lib_pq_PQreset=no
+fi
+rm -f conftest.$ac_objext conftest$ac_exeext conftest.$ac_ext
+LIBS=$ac_check_lib_save_LIBS
+fi
+echo "$as_me:$LINENO: result: $ac_cv_lib_pq_PQreset" >&5
+echo "${ECHO_T}$ac_cv_lib_pq_PQreset" >&6
+if test $ac_cv_lib_pq_PQreset = yes; then
+  WITH_POSTGRES=yes
+else
+  PATH_LIBPQ=""
+fi
+
+     else
+       PATH_LIBPQ="$POSTGRESQL_PATH_WITH"
+       WITH_POSTGRES=yes
+     fi
+   fi
+
+
+
+
+
     # Check whether --enable-pygtk or --disable-pygtk was given.
 if test "${enable_pygtk+set}" = set; then
   enableval="$enable_pygtk"
@@ -3918,6 +4010,10 @@ echo "$as_me:     use --enable-pygtk to override" >&6;}
 echo "$as_me:  Syslog: $WITH_SYSLOG" >&6;}
 { echo "$as_me:$LINENO:     use --enable-syslog to override" >&5
 echo "$as_me:     use --enable-syslog to override" >&6;}
+{ echo "$as_me:$LINENO:  PostgreSQL: $WITH_POSTGRES $PATH_LIBPQ" >&5
+echo "$as_me:  PostgreSQL: $WITH_POSTGRES $PATH_LIBPQ" >&6;}
+{ echo "$as_me:$LINENO:     use --with-postgres to override" >&5
+echo "$as_me:     use --with-postgres to override" >&6;}
 { echo "$as_me:$LINENO: --------------------------------------------" >&5
 echo "$as_me: --------------------------------------------" >&6;}
 
@@ -4597,6 +4693,8 @@ s,@PYTHON_DIR@,$PYTHON_DIR,;t t
 s,@PYTHON_LIBS@,$PYTHON_LIBS,;t t
 s,@PYTHON_CFLAGS@,$PYTHON_CFLAGS,;t t
 s,@WITH_PYTHON@,$WITH_PYTHON,;t t
+s,@WITH_POSTGRES@,$WITH_POSTGRES,;t t
+s,@PATH_LIBPQ@,$PATH_LIBPQ,;t t
 s,@PYGTK_PREFIX@,$PYGTK_PREFIX,;t t
 s,@PYGTK_INCLUDE@,$PYGTK_INCLUDE,;t t
 s,@WITH_PYGTK@,$WITH_PYGTK,;t t

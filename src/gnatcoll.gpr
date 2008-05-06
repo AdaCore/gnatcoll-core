@@ -18,6 +18,12 @@ project GnatColl is
          for Source_Dirs use Project'Source_Dirs & ("syslog");
    end case;
 
+--   case GnatColl_Shared.Postgres is
+--      when "no" => null;
+--      when "yes" =>
+--         for Source_Dirs use Project'Source_Dirs & ("postgres");
+--   end case;
+
    package Compiler renames GnatColl_Shared.Compiler;
    package Linker   renames GnatColl_Shared.Linker;
    package Ide renames GnatColl_Shared.Ide;

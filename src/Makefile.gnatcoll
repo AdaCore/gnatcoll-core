@@ -14,11 +14,6 @@ all:     dirs c_files buildall
 clean:   cleanall
 install: libinstall
 
-.PHONY: dirs
-dirs:
-	${MKDIR} obj/gnatcoll/${GNATCOLL_LIBRARY_TYPE}
-	${MKDIR} lib/gnatcoll/${GNATCOLL_LIBRARY_TYPE}
-
 c_files: obj/gnatcoll/${GNATCOLL_LIBRARY_TYPE}/gnatcoll_support.o
 obj/gnatcoll/${GNATCOLL_LIBRARY_TYPE}/gnatcoll_support.o: gnatcoll_support.c
 	$(CC) -c ${FPIC} ${DEFS} $< -o $@

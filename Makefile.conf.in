@@ -8,6 +8,8 @@ GTK_INCLUDE=@GTK_GCC_FLAGS@
 WITH_PYTHON=@WITH_PYTHON@
 WITH_GTK=@WITH_GTK@
 WITH_SYSLOG=@WITH_SYSLOG@
+WITH_POSTGRES=@WITH_POSTGRES@
+POSTGRES_PATH=@PATH_LIBPQ@
 
 DEFS=@DEFS@
 
@@ -89,6 +91,13 @@ cleanall:
 	gnatclean -r -q -P${PROJECT}
 
 libinstall: installsources installobj installlinks
+
+# Build the object directories for a specific module
+
+.PHONY: dirs
+dirs:
+	${MKDIR} obj/${MODULE}/${GNATCOLL_LIBRARY_TYPE}
+	${MKDIR} lib/${MODULE}/${GNATCOLL_LIBRARY_TYPE}
 
 # Install the ali files and libraries. The library itself is only copied once
 # as ${prefix}/lib/${TARNAME}/${TYPE}/lib*.so.${VERSION}, so that it is visible

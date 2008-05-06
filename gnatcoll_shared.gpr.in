@@ -11,6 +11,7 @@ project GnatColl_Shared is
    Gtk    : Yes_No := External ("GTK", "@WITH_GTK@");
    Python : Yes_No := External ("PYTHON", "@WITH_PYTHON@");
    Syslog : Yes_No := External ("SYSLOG", "@WITH_SYSLOG@");
+   Postgres : Yes_No := External ("POSTGRES", "@WITH_POSTGRES@");
 
    type Library_Type_Type is ("relocatable", "static");
    Library_Type : Library_Type_Type :=
@@ -25,6 +26,7 @@ project GnatColl_Shared is
    Pygtk_Include  := (@PYGTK_INCLUDE_GPR@);
    Python_Dir     := "@PYTHON_DIR@";
    Gtk_Include    := (@GTK_GCC_FLAGS_GPR@);
+   Postgres_Dir   := "-L@PATH_LIBPQ@";
 
    package Compiler is
       case Build is

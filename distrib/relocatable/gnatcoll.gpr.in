@@ -22,6 +22,7 @@ project GnatColl is
    for Library_Dir  use "../gnatcoll/" & Project'Library_Kind;
    for Library_Version use
       "lib" & Project'Library_Name & ".so." & Version;
+   Postgres_Path := "-L@PATH_LIBPQ";
    for Externally_Built use "true";
 
    package Naming is
@@ -31,6 +32,6 @@ project GnatColl is
          when "Windows_NT" =>
             for Implementation ("GNATCOLL.Mmap") use "gnatcoll-mmap__win32.adb";
       end case;
-  end Naming;
+   end Naming;
 
 end GnatColl;

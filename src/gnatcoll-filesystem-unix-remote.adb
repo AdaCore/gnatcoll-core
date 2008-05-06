@@ -78,7 +78,8 @@ package body GNATCOLL.Filesystem.Unix.Remote is
 
       if Status then
          declare
-            Result : constant String := Output.all;
+            Result : constant String :=
+              Ensure_Directory (FS, Output.all);
          begin
             Free (Output);
             return Result;

@@ -8,6 +8,7 @@ AC_FUNC_MMAP
 
 AM_PATH_GTK
 AM_PATH_PYTHON
+AM_PATH_POSTGRES
 AM_PATH_PYGTK(2.8)
 AM_TO_GPR($PYTHON_LIBS,   PYTHON_LIBS_GPR)
 AM_TO_GPR($PYTHON_CFLAGS, PYTHON_CFLAGS_GPR)
@@ -30,6 +31,8 @@ AC_MSG_NOTICE([ PyGtk:  $WITH_PYGTK $PYGTK_PREFIX])
 AC_MSG_NOTICE([    use --enable-pygtk to override])
 AC_MSG_NOTICE([ Syslog: $WITH_SYSLOG])
 AC_MSG_NOTICE([    use --enable-syslog to override])
+AC_MSG_NOTICE([ PostgreSQL: $WITH_POSTGRES $PATH_LIBPQ])
+AC_MSG_NOTICE([    use --with-postgres to override])
 AC_MSG_NOTICE([--------------------------------------------])
 
 AC_OUTPUT(gnatcoll_shared.gpr docs/Makefile Makefile.conf src/gnatcoll_python.gpr distrib/relocatable/gnatcoll.gpr distrib/gnatcoll_python.gpr distrib/static/gnatcoll.gpr)
