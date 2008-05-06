@@ -864,7 +864,6 @@ package body GNATCOLL.SQL.Postgres_Low is
    -- Integer_Value --
    -------------------
 
-
    function Integer_Value (Res     : Result;
                            Tuple   : Tuple_Index := 0;
                            Field   : Field_Index := 0;

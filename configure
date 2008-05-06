@@ -3631,7 +3631,7 @@ echo "${ECHO_T}$ac_cv_lib_pq_PQreset" >&6
 if test $ac_cv_lib_pq_PQreset = yes; then
   WITH_POSTGRES=yes
 else
-  PATH_LIBPQ=""
+  WITH_POSTGRES=no
 fi
 
      else
