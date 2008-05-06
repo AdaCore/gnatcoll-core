@@ -99,5 +99,24 @@ private
       Is_Select   : Boolean);
    overriding function Error
      (Connection : access Postgresql_Connection_Record) return String;
+   overriding procedure Foreach_Table
+     (Connection : access Postgresql_Connection_Record;
+      Callback   : access procedure (Name, Description : String));
+   overriding procedure Foreach_Field
+     (Connection : access Postgresql_Connection_Record;
+      Table_Name : String;
+      Callback   : access procedure
+        (Name        : String;
+         Typ         : String;
+         Index       : Natural;
+         Description : String));
+   overriding procedure Foreach_Foreign_Key
+     (Connection : access Postgresql_Connection_Record;
+      Table_Name : String;
+      Callback   : access procedure
+        (Index             : Positive;
+         Local_Attribute   : Integer;
+         Foreign_Table     : String;
+         Foreign_Attribute : Integer));
 
 end GNATCOLL.SQL.Postgres;

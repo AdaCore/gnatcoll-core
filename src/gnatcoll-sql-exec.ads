@@ -294,6 +294,50 @@ package GNATCOLL.SQL.Exec is
    function Field_Name (Res : Query_Result; Field : Field_Index) return String;
    --  The name of a specific field in a row of Res
 
+   --------------------------------------------
+   -- Getting info about the database schema --
+   --------------------------------------------
+   --  The following subprograms will provide a view of the database schema (ie
+   --  the set of tables and their fields, and the relationships between the
+   --  tables).
+
+   procedure Foreach_Table
+     (Connection : access Database_Connection_Record;
+      Callback   : access procedure (Name, Description : String)) is abstract;
+   --  Find all tables in the database.
+   --  For each, call Callback. Description is the comment that was optionally
+   --  stored in the database to describe the role of the table (generally
+   --  through a COMMENT command, which depends on the type of database you are
+   --  using).
+
+   procedure Foreach_Field
+     (Connection : access Database_Connection_Record;
+      Table_Name : String;
+      Callback   : access procedure
+        (Name        : String;
+         Typ         : String;
+         Index       : Natural;
+         Description : String)) is abstract;
+   --  For each attribute of the table, call Callback. Index is the attribute
+   --  index in the table (column number). Description is the comment that was
+   --  set when the attribute was created (for DBMS systems that support it),
+   --  and can be the empty string
+
+   procedure Foreach_Foreign_Key
+     (Connection : access Database_Connection_Record;
+      Table_Name : String;
+      Callback   : access procedure
+        (Index             : Positive;
+         Local_Attribute   : Integer;
+         Foreign_Table     : String;
+         Foreign_Attribute : Integer)) is abstract;
+   --  For each foreign key in Table_Name: calls the Callback for each
+   --  attribute part of that key. For instance, if the key is a tuple of
+   --  attributes pointing into a foreign table, the callback will be called
+   --  twice, once for each attribute in the tuple. The index will be the same
+   --  in the two calls to help identify foreign keys that are made of multiple
+   --  attributes
+
    -----------------------------------
    -- Specializing for various DBMS --
    -----------------------------------

@@ -398,4 +398,133 @@ package body GNATCOLL.SQL.Postgres is
          (Res.Res, GNATCOLL.SQL.Postgres_Low.Field_Index (Field));
    end Field_Name;
 
+   -------------------
+   -- Foreach_Table --
+   -------------------
+
+   procedure Foreach_Table
+     (Connection : access Postgresql_Connection_Record;
+      Callback   : access procedure (Name, Description : String))
+   is
+      R     : Query_Result;
+   begin
+      Execute
+        (Connection, R,
+         "SELECT pg_class.relname, pg_description.description"
+         & " FROM (pg_class left join pg_description"
+         & "         on  pg_description.objoid = pg_class.oid"
+         & "         and pg_description.objsubid = 0),"
+         & "      pg_namespace"
+         & " WHERE relnamespace=pg_namespace.oid"
+         & "   AND pg_namespace.nspname='public'"
+         & "   AND pg_class.relkind ~ '[rv]'"
+         & " ORDER BY pg_class.relname");
+
+      for T in 0 .. Tuple_Count (R) - 1 loop
+         Callback (Name        => Value (R, T, 0),
+                   Description => Value (R, T, 1));
+      end loop;
+   end Foreach_Table;
+
+   -------------------
+   -- Foreach_Field --
+   -------------------
+
+   procedure Foreach_Field
+     (Connection : access Postgresql_Connection_Record;
+      Table_Name : String;
+      Callback   : access procedure
+        (Name        : String;
+         Typ         : String;
+         Index       : Natural;
+         Description : String))
+   is
+      R : Query_Result;
+   begin
+      Execute
+        (Connection, R,
+         "SELECT pg_attribute.attname,"       --  0 att name
+         & "     pg_catalog.format_type(atttypid, atttypmod),"  --  1 att type
+         & "     pg_attribute.attnum,"        --  2 attribute index in table
+         & "     pg_description.description"  --  3 field doc
+         & " FROM (pg_attribute left join pg_description"
+         & "          on pg_description.objoid   = pg_attribute.attrelid"
+         & "         and pg_description.objsubid = pg_attribute.attnum),"
+         & "      pg_type, pg_class"
+         & " WHERE atttypid = pg_type.OID"
+         & "   AND pg_attribute.attnum > 0"
+         & "   AND pg_class.relname='" & Table_Name & "'"
+         & "   AND pg_class.oid = pg_attribute.attrelid"
+         & "   AND not pg_attribute.attisdropped"
+         & " ORDER BY pg_attribute.attname");
+
+      for T in 0 .. Tuple_Count (R) - 1 loop
+         Callback
+           (Name        => Value (R, T, 0),
+            Typ         => Value (R, T, 1),
+            Index       => Integer_Value (R, T, 2),
+            Description => Value (R, T, 3));
+      end loop;
+   end Foreach_Field;
+
+   -------------------------
+   -- Foreach_Foreign_Key --
+   -------------------------
+
+   procedure Foreach_Foreign_Key
+     (Connection : access Postgresql_Connection_Record;
+      Table_Name : String;
+      Callback   : access procedure
+        (Index             : Positive;
+         Local_Attribute   : Integer;
+         Foreign_Table     : String;
+         Foreign_Attribute : Integer))
+   is
+      R : Query_Result;
+   begin
+      Execute
+        (Connection, R,
+         "SELECT  pg_constraint.contype,"  --  0 constraint type ('f', 'p',...)
+         & " pg_constraint.conname,"       --  1 constraint name
+         & " pg_class.relname,"            --  2 class name
+         & " pg_constraint.conkey,"        --  3 attribute tuple
+         & " pg_class2.relname,"           --  4 foreign table if any
+         & " pg_constraint.confkey"        --  5 foreign attribute tuple
+         & " from (pg_constraint left join pg_class pg_class2"
+         & "   on pg_constraint.confrelid=pg_class2.oid),"
+         & "   pg_class"
+         & " where conrelid=pg_class.oid"
+         & "   and pg_class.relname='" & Table_Name & "'"
+         & "   and pg_constraint.contype='f'"
+         & " order by pg_constraint.conkey");
+
+      for T in 0 .. Tuple_Count (R) - 1 loop
+         declare
+            Attr_Array   : constant String := Value (R, T, 3);
+            Foreign      : constant String := Value (R, T, 4);
+            Foreign_Attr : constant String := Value (R, T, 5);
+            Key1, Key2   : Integer;
+            Field        : Positive := 1;
+         begin
+            loop
+               Key1 := Integer'Value (Array_Field (Attr_Array, Field));
+               Key2 := Integer'Value (Array_Field (Foreign_Attr, Field));
+
+               Callback
+                 (Index             => Integer (T) + 1,
+                  Local_Attribute   => Key1,
+                  Foreign_Table     => Foreign,
+                  Foreign_Attribute => Key2);
+
+               Field := Field + 1;
+            end loop;
+
+         exception
+            when Constraint_Error =>
+               --  no more fields in key tuples
+               null;
+         end;
+      end loop;
+   end Foreach_Foreign_Key;
+
 end GNATCOLL.SQL.Postgres;
