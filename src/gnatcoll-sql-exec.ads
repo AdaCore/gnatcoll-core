@@ -55,6 +55,15 @@ package GNATCOLL.SQL.Exec is
    --  are logged as if the operation took place. This is only intended for
    --  automatic testsuites.
 
+   DBMS_Postgresql : constant String := "postgresql";
+   --  The various database backends that are supported.
+   --  GNATCOLL does not use these constants itself, but they are provided to
+   --  serve as a common vocabulary for applications to describe the backend
+   --  they want to use. These contents should be passed to Setup_Database (see
+   --  below), and then on to the factory for Get_Task_Connection.
+   --  You can create your own backends if needed, and thus create your own
+   --  string constants for your application, if you want.
+
    -------------------------
    -- Database_Connection --
    -------------------------
@@ -181,6 +190,7 @@ package GNATCOLL.SQL.Exec is
       User          : String := "";
       Host          : String := "";
       Password      : String := "";
+      DBMS          : String := DBMS_Postgresql;
       Cache_Support : Boolean := False);
    --  Register the address of the database, for use by all other subprograms
    --  in this package.
@@ -192,23 +202,22 @@ package GNATCOLL.SQL.Exec is
    function Get_User     (Description : Database_Description) return String;
    function Get_Database (Description : Database_Description) return String;
    function Get_Password (Description : Database_Description) return String;
+   function Get_DBMS     (Description : Database_Description) return String;
    --  Return the connection components for the database
 
    function Get_Task_Connection
      (Description : Database_Description;
-      Factory     : Database_Connection_Record'Class;
+      Factory     : access function
+        (Desc : Database_Description) return Database_Connection;
       Username    : String := "")
       return Database_Connection;
    --  Return the database connection specific to the current task. A new one
    --  is created if none existed yet, and the connection to the database is
-   --  done automatically. Factory is used as a "template" when this function
-   --  needs to create a new connection, and will create the same class of
-   --  object. This is so that you can store your own data within the
-   --  connection, in particular the user name.
-   --  After calling this function, you should initialize the user name fields
-   --  within the returned connection.
-   --  If Username is unspecified, it is unchanged and left to the previous
-   --  value it had.
+   --  done automatically.
+   --  If the thread is not connected yet, a new connection is created through
+   --  Factory.
+   --  The newly created connection and Username are then passed to
+   --  Reset_Connection (see below).
 
    procedure Reset_Connection
      (Description : Database_Description;
@@ -219,8 +228,12 @@ package GNATCOLL.SQL.Exec is
    --  necessary things, but when not in a multi-tasking application it is
    --  more efficient to have one "global" variable representing the single
    --  connection, and initialize it with this procedure
-   --  If Username is unspecified, it is unchanged and left to the previous
-   --  value it had.
+   --
+   --  Username is used when tracing calls to the database. It is not the same
+   --  as the user used to log in the database (typically, the username would
+   --  be set to a unique identifier for the current application user, for
+   --  instance the login name, whereas the application would always use a
+   --  common user/password to log in the database)
 
    function Get_Description
      (Connection : access Database_Connection_Record'Class)
@@ -445,6 +458,7 @@ private
       Dbname   : GNAT.Strings.String_Access;
       User     : GNAT.Strings.String_Access;
       Password : GNAT.Strings.String_Access;
+      DBMS     : GNAT.Strings.String_Access;
 
       Caching : Boolean := False;
    end record;

@@ -15,6 +15,8 @@ project GnatColl is
    type OS_Kind is ("Windows_NT", "unix");
    OS : OS_Kind := external ("OS", "unix");
 
+   type Yes_No is ("yes", "no");
+
    for Library_Name use "gnatcoll";
    for Source_Dirs use ("../../include/gnatcoll");
    for Source_List_File use "gnatcoll/" & Project'Library_Name & ".lgpr";
@@ -22,6 +24,7 @@ project GnatColl is
    for Library_Dir  use "../gnatcoll/" & Project'Library_Kind;
    for Library_Version use
       "lib" & Project'Library_Name & ".so." & Version;
+   With_Postgres : Yes_No := "@WITH_POSTGRES@";
    Postgres_Path := "-L@PATH_LIBPQ";
    for Externally_Built use "true";
 

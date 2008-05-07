@@ -17,30 +17,15 @@
 -- Place - Suite 330, Boston, MA 02111-1307, USA.                    --
 -----------------------------------------------------------------------
 
---  This package instantiates the GNATCOLL.SQL hierarchy for the PostgreSQL
---  DBMS
+package body GNATCOLL.SQL.Postgres.Builder is
 
-with GNATCOLL.SQL.Exec;   use GNATCOLL.SQL.Exec;
+   -------------------------------
+   -- Build_Postgres_Connection --
+   -------------------------------
 
-package GNATCOLL.SQL.Postgres is
+   function Build_Postgres_Connection return Database_Connection is
+   begin
+      return null;
+   end Build_Postgres_Connection;
 
-   function Build_Postgres_Connection return Database_Connection;
-   --  Return a database connection for PostgreSQL.
-   --  If postgres was not detected at installation time, this function will
-   --  return null. The type is hidden in the body so that the spec can always
-   --  be imported in an application, even if postgres is not installed on the
-   --  machine. Combined with similar behavior for other DBMS, this allows you
-   --  to have a connection factory in your application so that your
-   --  application can potentially support multiple DBMS.
-
-   -------------------------
-   -- Postgres extensions --
-   -------------------------
-   --  Postgres-specific extensions for GNATCOLL.SQL
-
-   function OID_Field (Table : SQL_Table'Class) return SQL_Field_Integer;
-   --  The object identifier field, available in each table. This is postgres
-   --  specific. It can be used for instance to retrieve the newly inserted
-   --  row in a table, by retrieving the OID of the previous result.
-
-end GNATCOLL.SQL.Postgres;
+end GNATCOLL.SQL.Postgres.Builder;

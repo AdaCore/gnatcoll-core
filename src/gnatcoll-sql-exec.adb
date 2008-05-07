@@ -163,6 +163,7 @@ package body GNATCOLL.SQL.Exec is
       User          : String := "";
       Host          : String := "";
       Password      : String := "";
+      DBMS          : String := DBMS_Postgresql;
       Cache_Support : Boolean := False)
    is
    begin
@@ -174,10 +175,12 @@ package body GNATCOLL.SQL.Exec is
       GNAT.Strings.Free (Description.User);
       GNAT.Strings.Free (Description.Dbname);
       GNAT.Strings.Free (Description.Password);
+      GNAT.Strings.Free (Description.DBMS);
 
       Description.Dbname   := new String'(Database);
       Description.User     := new String'(User);
       Description.Password := new String'(Password);
+      Description.DBMS     := new String'(DBMS);
 
       if Host /= ""
         and then Host /= "localhost"
@@ -225,6 +228,15 @@ package body GNATCOLL.SQL.Exec is
    begin
       return Description.Password.all;
    end Get_Password;
+
+   --------------
+   -- Get_DBMS --
+   --------------
+
+   function Get_DBMS (Description : Database_Description) return String is
+   begin
+      return Description.DBMS.all;
+   end Get_DBMS;
 
    ----------------------
    -- Check_Connection --
@@ -571,7 +583,8 @@ package body GNATCOLL.SQL.Exec is
 
    function Get_Task_Connection
      (Description : Database_Description;
-      Factory     : Database_Connection_Record'Class;
+      Factory     : access function
+        (Desc : Database_Description) return Database_Connection;
       Username    : String := "")
       return Database_Connection
    is
@@ -579,8 +592,10 @@ package body GNATCOLL.SQL.Exec is
    begin
       Connection := DB_Attributes.Value;
       if Connection = null then
-         Connection := new Database_Connection_Record'Class'(Factory);
-         DB_Attributes.Set_Value (Connection);
+         Connection := Factory (Description);
+         if Connection /= null then
+            DB_Attributes.Set_Value (Connection);
+         end if;
       end if;
 
       Reset_Connection (Description, Connection, Username);

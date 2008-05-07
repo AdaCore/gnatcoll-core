@@ -45,7 +45,7 @@ with Interfaces.C; use Interfaces.C;
 with Interfaces.C.Strings;
 with System;
 
-package body GNATCOLL.SQL.Postgres_Low is
+package body GNATCOLL.SQL.Postgres.Gnade is
    pragma Linker_Options ("-lpq");
 
    package C  renames Interfaces.C;
@@ -1083,4 +1083,4 @@ package body GNATCOLL.SQL.Postgres_Low is
       raise Constraint_Error;
    end Array_Field;
 
-end GNATCOLL.SQL.Postgres_Low;
+end GNATCOLL.SQL.Postgres.Gnade;

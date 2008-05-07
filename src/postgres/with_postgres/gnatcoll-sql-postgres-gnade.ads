@@ -46,7 +46,7 @@ with System.Storage_Elements;
 with Ada.Finalization;
 with Interfaces.C;
 
-package GNATCOLL.SQL.Postgres_Low is
+private package GNATCOLL.SQL.Postgres.Gnade is
    PostgreSQL_Error : exception;
 
    NAMEDATALEN : constant := 32;
@@ -683,4 +683,4 @@ private
 
    type TypeInfo is new Result with null record;
 
-end GNATCOLL.SQL.Postgres_Low;
+end GNATCOLL.SQL.Postgres.Gnade;

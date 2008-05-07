@@ -8,9 +8,7 @@ all:
 ifeq (${WITH_GTK},yes)
 	${MAKE} -C src -f Makefile.gtk $@
 endif
-ifeq (${WITH_POSTGRES},yes)
 	${MAKE} -C src -f Makefile.postgres $@
-endif
 
 static:
 	${MAKE} GNATCOLL_LIBRARY_TYPE=static
@@ -46,9 +44,7 @@ install:
 ifeq (${WITH_GTK},yes)
 	${MAKE} -C src -f Makefile.gtk $@
 endif
-ifeq (${WITH_POSTGRES},yes)
 	${MAKE} -C src -f Makefile.postgres $@
-endif
 	${INSTALL} distrib/gnatcoll_gps.xml ${datadir}/gps/plug-ins
 	${INSTALL} distrib/*.gpr ${libdir}/gnat
 	${INSTALL} distrib/${GNATCOLL_LIBRARY_TYPE}/*.gpr ${libdir}/gnat
@@ -67,10 +63,8 @@ ifeq (${WITH_GTK},yes)
 	${MAKE} GNATCOLL_LIBRARY_TYPE=relocatable -C src -f Makefile.gtk $@
 	${MAKE} GNATCOLL_LIBRARY_TYPE=static     -C src -f Makefile.gtk $@
 endif
-ifeq (${WITH_POSTGRES},yes)
 	${MAKE} GNATCOLL_LIBRARY_TYPE=relocatable -C src -f Makefile.postgres $@
 	${MAKE} GNATCOLL_LIBRARY_TYPE=static     -C src -f Makefile.postgres $@
-endif
 	${MAKE} -C testsuite $@
 	${MAKE} -C docs $@
 	${MAKE} -C examples $@

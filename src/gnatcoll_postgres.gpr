@@ -12,9 +12,12 @@ project GnatColl_Postgres is
       "lib" & Project'Library_Name & ".so." & GnatColl_Shared.Version;
 
    for Languages use ("Ada");
+
    case GnatColl_Shared.Postgres is
-      when "no" => for Source_Dirs use ();
-      when "yes" => for Source_Dirs use ("postgres");
+      when "no" =>
+        for Source_Dirs use ("postgres", "postgres/no_postgres");
+      when "yes" =>
+        for Source_Dirs use ("postgres", "postgres/with_postgres");
    end case;
 
    package Compiler renames GnatColl_Shared.Compiler;
