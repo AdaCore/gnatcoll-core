@@ -105,7 +105,7 @@ package GNATCOLL.Filesystem is
    --  Return the directory path
 
    function Locale_To_Display
-     (FS   : Filesystem_Record; Name : String) return String;
+     (FS : Filesystem_Record; Name : String) return String;
    --  Convert a file name (ie an unspecified set of bytes) to a specific
    --  encoding (application specific). In general, this encoding will be
    --  UTF-8, so that you can display the name in a graphical interface, but
@@ -138,8 +138,7 @@ package GNATCOLL.Filesystem is
       Path : String) return String is abstract;
    --  Return the root directory of the path
 
-   function Get_Tmp_Directory
-     (FS   : Filesystem_Record) return String;
+   function Get_Tmp_Directory (FS : Filesystem_Record) return String;
    --  Return the name of a directory that can be used to store temporary
    --  directory on the filesystem. That directory always ends with a directory
    --  separator (when appropriate for the file system)

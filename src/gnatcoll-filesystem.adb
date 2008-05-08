@@ -113,8 +113,7 @@ package body GNATCOLL.Filesystem is
    function Concat
      (FS   : Filesystem_Record;
       Root : String;
-      Sub  : String) return String
-   is
+      Sub  : String) return String is
    begin
       return Ensure_Directory (Filesystem_Record'Class (FS), Root) & Sub;
    end Concat;
@@ -679,7 +678,7 @@ package body GNATCOLL.Filesystem is
    -----------------------
 
    function Get_Tmp_Directory
-     (FS   : Filesystem_Record) return String
+     (FS : Filesystem_Record) return String
    is
       function Internal return chars_ptr;
       pragma Import (C, Internal, "__gnatcoll_get_tmp_dir");
@@ -697,8 +696,7 @@ package body GNATCOLL.Filesystem is
    -----------------------
 
    function Locale_To_Display
-     (FS   : Filesystem_Record; Name : String) return String
-   is
+     (FS : Filesystem_Record; Name : String) return String is
    begin
       if FS.Locale_To_Display_Encoder /= null then
          return FS.Locale_To_Display_Encoder (Name);
