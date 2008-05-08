@@ -22,6 +22,26 @@ with System;
 
 package body GNATCOLL.Filesystem.Windows is
 
+   Cygdrive : constant String := "/cygdrive/";
+   --  Default Cygwin full path specification
+
+   function Is_Cygdrive (Path : String) return Boolean;
+   pragma Inline (Is_Cygdrive);
+   --  Returns True if Path is a starting with /cygdrive/<drive>/
+
+   -----------------
+   -- Is_Cygdrive --
+   -----------------
+
+   function Is_Cygdrive (Path : String) return Boolean is
+   begin
+      return Path'Length > Cygdrive'Length + 1
+        and then Path
+          (Path'First .. Path'First + Cygdrive'Length - 1) = Cygdrive
+        and then Is_Letter (Path (Path'First + Cygdrive'Length))
+        and then Path (Path'First + Cygdrive'Length + 1) = '/';
+   end Is_Cygdrive;
+
    -------------------------
    -- Directory_Separator --
    -------------------------
@@ -60,7 +80,7 @@ package body GNATCOLL.Filesystem.Windows is
         and then The_Path'Length > 3
         and then The_Path (The_Path'First + 1 .. The_Path'First + 2) = ":/"
       then
-         return "/cygdrive/" & To_Upper (The_Path (The_Path'First)) &
+         return Cygdrive & To_Upper (The_Path (The_Path'First)) &
             The_Path (The_Path'First + 2 .. The_Path'Last);
       end if;
 
@@ -76,22 +96,21 @@ package body GNATCOLL.Filesystem.Windows is
       Path : String) return String
    is
       pragma Unreferenced (FS);
-      Cygdrive : constant String := "/cygdrive/";
       The_Path : String := Path;
    begin
+      --  Convert directory separator to native ones
+
       for J in The_Path'Range loop
          if The_Path (J) = '/' then
             The_Path (J) := '\';
          end if;
       end loop;
 
-      --  If we have a cygwin drive letter, convert it to native windows
-      if The_Path'Length > Cygdrive'Length + 1
-        and then The_Path
-          (The_Path'First .. The_Path'First + Cygdrive'Length - 1) = Cygdrive
-        and then Is_Letter (The_Path (The_Path'First + Cygdrive'Length))
-        and then The_Path (The_Path'First + Cygdrive'Length + 1) = '/'
-      then
+      --  If we have a cygwin drive letter, convert it to native windows, note
+      --  that the check below is done using the untranslated Path to properly
+      --  match Cygdrive.
+
+      if Is_Cygdrive (Path) then
          return To_Upper (The_Path (The_Path'First + Cygdrive'Length))
            & ':'
            & The_Path (The_Path'First + Cygdrive'Length + 1 .. The_Path'Last);
@@ -110,10 +129,10 @@ package body GNATCOLL.Filesystem.Windows is
    is
       pragma Unreferenced (FS);
    begin
-      return (Path'Length >= 1
-              and then Path (Path'First) = '\')
+      return (Path'Length >= 1 and then Path (Path'First) = '\')
         or else (Path'Length >= 3
-                 and then Path (Path'First + 1 .. Path'First + 2) = ":\");
+                 and then Path (Path'First + 1 .. Path'First + 2) = ":\")
+        or else Is_Cygdrive (Path);
    end Is_Absolute_Path;
 
    --------------
