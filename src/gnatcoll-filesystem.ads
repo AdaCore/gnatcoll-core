@@ -120,9 +120,11 @@ package GNATCOLL.Filesystem is
    --  if you are using the GNATCOLL.Filesystem API directly, you should
    --  convert file names appropriately before you display them on the screen.
 
+   type Encoder_Function is access function (Name : String) return String;
+
    procedure Set_Locale_To_Display_Encoder
      (FS      : in out Filesystem_Record;
-      Encoder : access function (Name : String) return String);
+      Encoder : Encoder_Function);
    --  Set the function used to convert locale file names (a series of bytes)
    --  into a properly encoded string (the specific encoding to use depends on
    --  your application, but will generally be utf-8).
@@ -328,8 +330,7 @@ package GNATCOLL.Filesystem is
 
 private
    type Filesystem_Record is abstract tagged record
-      Locale_To_Display_Encoder :
-         access function (Name : String) return String;
+      Locale_To_Display_Encoder : Encoder_Function;
    end record;
 
 end GNATCOLL.Filesystem;

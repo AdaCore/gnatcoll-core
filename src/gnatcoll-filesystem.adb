@@ -711,7 +711,7 @@ package body GNATCOLL.Filesystem is
 
    procedure Set_Locale_To_Display_Encoder
      (FS      : in out Filesystem_Record;
-      Encoder : access function (Name : String) return String) is
+      Encoder : Encoder_Function) is
    begin
       FS.Locale_To_Display_Encoder := Encoder;
    end Set_Locale_To_Display_Encoder;
