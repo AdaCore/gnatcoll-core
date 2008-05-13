@@ -615,7 +615,7 @@ package body GNATCOLL.Filesystem is
                if not Copy_Dir
                  (Filesystem_Record'Class (FS),
                   From & Files_Array (F).all,
-                  Target)
+                  Target & Files_Array (F).all)
                then
                   Success := False;
                   exit;
