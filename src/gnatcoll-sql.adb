@@ -24,16 +24,21 @@ with Ada.Strings.Fixed;          use Ada.Strings.Fixed;
 with Ada.Strings.Hash;
 with Ada.Unchecked_Deallocation;
 with GNAT.Calendar.Time_IO;      use GNAT.Calendar.Time_IO;
+with GNATCOLL.Utils;             use GNATCOLL.Utils;
 
 package body GNATCOLL.SQL is
 
    use Table_List, Field_List, Criteria_List, Table_Sets, Assignment_Lists;
    use When_Lists;
 
-   No_Time : constant Ada.Calendar.Time := Ada.Calendar.Time_Of
-     (Ada.Calendar.Year_Number'First,
-      Ada.Calendar.Month_Number'First,
-      Ada.Calendar.Day_Number'First);
+   Separator_Comma  : aliased constant String := ", ";
+   Separator_Concat : aliased constant String := " || ";
+   Separator_Space  : aliased constant String := " ";
+
+   Func_None     : aliased constant String := "";
+   Func_Coalesce : aliased constant String := "COALESCE";
+   Func_To_Char  : aliased constant String := "TO_CHAR";
+   Func_Extract  : aliased constant String := "EXTRACT";
 
    procedure Unchecked_Free is new Ada.Unchecked_Deallocation
      (SQL_Table'Class, SQL_Table_Access);
@@ -58,13 +63,6 @@ package body GNATCOLL.SQL is
      (From : SQL_Field_List; To : in out Table_Sets.Set);
    --  Append all tables referenced in From to To.
 
-   procedure Append_If_Not_Aggregrate
-     (Self         : SQL_Field_List;
-      To           : in out SQL_Field_List'Class;
-      Is_Aggregate : in out Boolean);
-   --  Append all fields referenced in Self to To, if Self is not the result of
-   --  an aggregate function
-
    procedure Assign
      (R     : out SQL_Assignment;
       Field : SQL_Field'Class;
@@ -73,7 +71,8 @@ package body GNATCOLL.SQL is
 
    function Create_Multiple_Args
      (Fields : SQL_Field_List;
-      Func_Name, Separator : String;
+      Func_Name : Cst_String_Access;
+      Separator : Cst_String_Access;
       In_Parenthesis : Boolean := False)
       return Multiple_Args_Field_Internal_Access;
    --  Create a multiple_args field from Fields
@@ -283,23 +282,28 @@ package body GNATCOLL.SQL is
       Result : Unbounded_String;
       C      : Field_List.Cursor;
    begin
-      if Self.Table = No_Names then
-         Result := To_Unbounded_String (Self.Value.all);
+      if Self.Value /= null then
+         if Self.Table = No_Names then
+            Result := To_Unbounded_String (Self.Value.all);
 
-      elsif Long then
-         if Self.Table.Instance = null then
-            Result := To_Unbounded_String
-              (Self.Table.Name.all & '.' & Self.Value.all);
+         elsif Long then
+            if Self.Table.Instance = null then
+               Result := To_Unbounded_String
+                 (Self.Table.Name.all & '.' & Self.Value.all);
+            else
+               Result := To_Unbounded_String
+                 (Self.Table.Instance.all & '.' & Self.Value.all);
+            end if;
          else
-            Result := To_Unbounded_String
-              (Self.Table.Instance.all & '.' & Self.Value.all);
+            Result := To_Unbounded_String (Self.Value.all);
          end if;
-      else
-         Result := To_Unbounded_String (Self.Value.all);
       end if;
 
       if Self.Operator /= null then
          C := First (Self.List.List);
+         Result := To_Unbounded_String (To_String (Element (C)));
+         Next (C);
+
          while Has_Element (C) loop
             Result := Result & " " & Self.Operator.all & " "
               & To_String (Element (C));
@@ -384,13 +388,16 @@ package body GNATCOLL.SQL is
    begin
       if not Long then
          return Self.Name.all;
-      elsif Self.Instance = null then
-         --  Self.Table should not be null, otherwise we have a special type of
-         --  field and dispatching should be executing some other code than
-         --  this function
-         return Self.Table.all & "." & Self.Name.all;
-      else
+      elsif Self.Instance /= null then
          return Self.Instance.all & "." & Self.Name.all;
+
+      elsif Self.Table /= null then
+         return Self.Table.all & "." & Self.Name.all;
+
+      else
+         --  Self.Table could be null in the case of the Null_Field_*
+         --  constants
+         return Self.Name.all;
       end if;
    end To_String;
 
@@ -444,7 +451,7 @@ package body GNATCOLL.SQL is
       C      : Field_List.Cursor := First (Self.List);
       Result : Unbounded_String;
    begin
-      if Self.Func_Name /= null then
+      if Self.Func_Name /= Func_None'Access then
          Append (Result, Self.Func_Name.all & " (");
       elsif Self.In_Parenthesis then
          Append (Result, "(");
@@ -456,14 +463,12 @@ package body GNATCOLL.SQL is
       end if;
 
       while Has_Element (C) loop
-         if Self.Separator /= null then
-            Append (Result, Self.Separator.all);
-         end if;
+         Append (Result, Self.Separator.all);
          Append (Result, To_String (Element (C), Long));
          Next (C);
       end loop;
 
-      if Self.Func_Name /= null or else Self.In_Parenthesis then
+      if Self.Func_Name /= Func_None'Access or else Self.In_Parenthesis then
          Append (Result, ")");
       end if;
 
@@ -1020,7 +1025,8 @@ package body GNATCOLL.SQL is
 
    function Create_Multiple_Args
      (Fields : SQL_Field_List;
-      Func_Name, Separator : String;
+      Func_Name : Cst_String_Access;
+      Separator : Cst_String_Access;
       In_Parenthesis : Boolean := False)
       return Multiple_Args_Field_Internal_Access
    is
@@ -1028,14 +1034,8 @@ package body GNATCOLL.SQL is
         new Multiple_Args_Field_Internal;
       C : Field_List.Cursor := First (Fields.List);
    begin
-      if Func_Name /= "" then
-         Data.Func_Name := new String'(Func_Name);
-      end if;
-
-      if Separator /= "" then
-         Data.Separator := new String'(Separator);
-      end if;
-
+      Data.Func_Name      := Func_Name;
+      Data.Separator      := Separator;
       Data.In_Parenthesis := In_Parenthesis;
 
       while Has_Element (C) loop
@@ -1050,16 +1050,20 @@ package body GNATCOLL.SQL is
                if Internal.all in Multiple_Args_Field_Internal'Class then
                   D := Multiple_Args_Field_Internal_Access (Internal);
 
-                  --  Avoid nested concatenations, put them all at the same
-                  --  level. This simplifies the query. Due to this, we are
-                  --  also sure the concatenation itself doesn't have
-                  --  sub-expressions
+                  if D.Separator = Separator then
+                     --  Avoid nested concatenations, put them all at the same
+                     --  level. This simplifies the query. Due to this, we are
+                     --  also sure the concatenation itself doesn't have
+                     --  sub-expressions
 
-                  C2 := First (D.List);
-                  while Has_Element (C2) loop
-                     Append (Data.List, Element (C2));
-                     Next (C2);
-                  end loop;
+                     C2 := First (D.List);
+                     while Has_Element (C2) loop
+                        Append (Data.List, Element (C2));
+                        Next (C2);
+                     end loop;
+                  else
+                     Append (Data.List, Field);
+                  end if;
                else
                   Append (Data.List, Field);
                end if;
@@ -1078,7 +1082,8 @@ package body GNATCOLL.SQL is
 
    function Concat (Fields : SQL_Field_List) return SQL_Field'Class is
       Data : constant Multiple_Args_Field_Internal_Access :=
-        Create_Multiple_Args (Fields, "", " || ");
+        Create_Multiple_Args
+          (Fields, Func_None'Access, Separator_Concat'Access);
    begin
       return SQL_Field_Any'
         (Table => null, Instance => null, Name => null,
@@ -1092,7 +1097,8 @@ package body GNATCOLL.SQL is
 
    function Tuple (Fields : SQL_Field_List) return SQL_Field'Class is
       Data : constant Multiple_Args_Field_Internal_Access :=
-        Create_Multiple_Args (Fields, "", ", ", In_Parenthesis => True);
+        Create_Multiple_Args (Fields, Func_None'Access, Separator_Comma'Access,
+                              In_Parenthesis => True);
    begin
       return SQL_Field_Any'
         (Table => null, Instance => null, Name => null,
@@ -1106,7 +1112,8 @@ package body GNATCOLL.SQL is
 
    function Coalesce (Fields : SQL_Field_List) return SQL_Field'Class is
       Data : constant Multiple_Args_Field_Internal_Access :=
-        Create_Multiple_Args (Fields, "COALESCE", ", ");
+        Create_Multiple_Args
+          (Fields, Func_Coalesce'Access, Separator_Comma'Access);
    begin
       return SQL_Field_Any'
         (Table => null, Instance => null, Name => null,
@@ -1172,7 +1179,9 @@ package body GNATCOLL.SQL is
      (Field : SQL_Field_Time; Format : String) return SQL_Field'Class
    is
       Data : constant Multiple_Args_Field_Internal_Access :=
-        Create_Multiple_Args (Field & Expression (Format),  "TO_CHAR", ", ");
+        Create_Multiple_Args (Field & Expression (Format),
+                              Func_To_Char'Access,
+                              Separator_Comma'Access);
    begin
       return SQL_Field_Any'
         (Table => null, Instance => null, Name => null,
@@ -1189,7 +1198,9 @@ package body GNATCOLL.SQL is
    is
       Data : constant Multiple_Args_Field_Internal_Access :=
         Create_Multiple_Args
-          (From_String (Attribute & " from") & Field, "EXTRACT", " ");
+          (From_String (Attribute & " from") & Field,
+           Func_Extract'Access,
+           Separator_Space'Access);
    begin
       return SQL_Field_Any'
         (Table => null, Instance => null, Name => null,
@@ -1261,7 +1272,7 @@ package body GNATCOLL.SQL is
    ---------
 
    function "-"
-     (Field1, Field2 : SQL_Field_Time) return SQL_Field_Time'Class
+     (Field1, Field2 : SQL_Field_Time'Class) return SQL_Field_Time'Class
    is
       Data : constant Named_Field_Internal_Access := new Named_Field_Internal;
    begin
@@ -1278,7 +1289,8 @@ package body GNATCOLL.SQL is
    ---------
 
    function "-"
-     (Field1 : SQL_Field_Time; Days : Integer) return SQL_Field_Time'Class
+     (Field1 : SQL_Field_Time'Class;
+      Days   : Integer) return SQL_Field_Time'Class
    is
       Data : constant Named_Field_Internal_Access := new Named_Field_Internal;
    begin
@@ -2285,10 +2297,10 @@ package body GNATCOLL.SQL is
          Data.Fields := SQL_Field_List (Fields);
       end if;
 
-      if From in SQL_Table'Class then
-         Data.Tables := +SQL_Table'Class (From);
-      else
+      if From in SQL_Table_List'Class then
          Data.Tables   := SQL_Table_List (From);
+      else
+         Data.Tables := +SQL_Single_Table'Class (From);
       end if;
 
       Data.Criteria := Where;
@@ -2406,16 +2418,6 @@ package body GNATCOLL.SQL is
    -- Free --
    ----------
 
-   procedure Free (Self : in out Multiple_Args_Field_Internal) is
-   begin
-      Free (Self.Separator);
-      Free (Self.Func_Name);
-   end Free;
-
-   ----------
-   -- Free --
-   ----------
-
    procedure Free (Self : in out Aggregate_Field_Internal) is
    begin
       Free (Self.Func);
@@ -2526,8 +2528,10 @@ package body GNATCOLL.SQL is
 
    procedure Append_Tables (Self : SQL_Table; To : in out Table_Sets.Set) is
    begin
-      Include (To, (Name     => Self.Table_Name,
-                    Instance => Self.Instance));
+      if Self.Table_Name /= null then
+         Include (To, (Name     => Self.Table_Name,
+                       Instance => Self.Instance));
+      end if;
    end Append_Tables;
 
    -------------------
@@ -2554,7 +2558,9 @@ package body GNATCOLL.SQL is
 
    procedure Append_Tables (Self : SQL_Field; To : in out Table_Sets.Set) is
    begin
-      Include (To, (Name => Self.Table, Instance => Self.Instance));
+      if Self.Table /= null then
+         Include (To, (Name => Self.Table, Instance => Self.Instance));
+      end if;
    end Append_Tables;
 
    -------------------
@@ -2759,10 +2765,11 @@ package body GNATCOLL.SQL is
    procedure Append_If_Not_Aggregrate
      (Self         : SQL_Field;
       To           : in out SQL_Field_List'Class;
-      Is_Aggregate : in out Boolean) is
+      Is_Aggregate : in out Boolean)
+   is
+      pragma Unreferenced (Is_Aggregate);
    begin
       Append (To.List, Self);
-      Is_Aggregate := False;
    end Append_If_Not_Aggregrate;
 
    ------------------------------
@@ -3331,7 +3338,9 @@ package body GNATCOLL.SQL is
 
             Clear (List);
             Append_Tables (Self.Values, List);
-            Table_Sets.Include (List2, Self.Into);
+            if Self.Into /= No_Names then
+               Table_Sets.Include (List2, Self.Into);
+            end if;
 
             Difference (List, List2);  --  Remove tables already in the list
             if Length (List) > 0 then
@@ -3400,7 +3409,9 @@ package body GNATCOLL.SQL is
       Append (Result, " SET ");
       Append (Result, To_String (Self.Set, With_Field => True));
 
-      if Self.From /= Empty_Table_List then
+      if Self.From /= Empty_Table_List
+        or else not Is_Empty (Self.Extra_From)
+      then
          Append (Result, " FROM ");
          if Self.From.Data.Data = null
            or else Is_Empty (Self.From.Data.Data.List)

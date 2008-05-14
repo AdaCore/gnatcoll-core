@@ -167,9 +167,15 @@ package GNATCOLL.SQL is
    Empty_Field_List : constant SQL_Field_List;
    --  A list of fields, as used in a SELECT query ("field1, field2");
 
+   function To_String
+     (Self : SQL_Field_List; Long : Boolean := True)  return String;
+
    type SQL_Field (Table, Instance, Name : Cst_String_Access)
       is abstract new SQL_Field_Or_List with private;
    --  A single field
+
+   function To_String
+     (Self : SQL_Field; Long : Boolean := True)  return String;
 
    function As
      (Field : SQL_Field'Class; Name : String) return SQL_Field'Class;
@@ -290,9 +296,11 @@ package GNATCOLL.SQL is
    function Now return SQL_Field_Time'Class;
    --  Return the current date
 
-   function "-" (Field1, Field2 : SQL_Field_Time) return SQL_Field_Time'Class;
    function "-"
-     (Field1 : SQL_Field_Time; Days : Integer) return SQL_Field_Time'Class;
+     (Field1, Field2 : SQL_Field_Time'Class) return SQL_Field_Time'Class;
+   function "-"
+     (Field1 : SQL_Field_Time'Class; Days : Integer)
+      return SQL_Field_Time'Class;
    --  Return the different between two dates
 
    type Aggregate_Function is new String;
@@ -703,10 +711,6 @@ package GNATCOLL.SQL is
    ---------------------------
 
    function To_String
-     (Self : SQL_Field_List; Long : Boolean := True)  return String;
-   function To_String
-     (Self : SQL_Field; Long : Boolean := True)  return String;
-   function To_String
      (Self : SQL_Criteria; Long : Boolean := True) return Unbounded_String;
    function To_String (Self : SQL_Query)       return Unbounded_String;
    function To_String
@@ -960,6 +964,12 @@ private
    type SQL_Field_List is new SQL_Field_Or_List with record
       List : Field_List.List;
    end record;
+   procedure Append_If_Not_Aggregrate
+     (Self         : SQL_Field_List;
+      To           : in out SQL_Field_List'Class;
+      Is_Aggregate : in out Boolean);
+   --  Append all fields referenced in Self to To, if Self is not the result of
+   --  an aggregate function
 
    --------------------------
    --  Named field data --
@@ -1017,14 +1027,13 @@ private
    --  fields are not typed ("field1 operator field2 operator field3 ...")
 
    type Multiple_Args_Field_Internal is new SQL_Field_Internal with record
-      Func_Name : GNAT.Strings.String_Access;
-      Separator : GNAT.Strings.String_Access;
+      Func_Name      : Cst_String_Access;
+      Separator      : Cst_String_Access;
       In_Parenthesis : Boolean := False;
-      List    : Field_List.List;
+      List           : Field_List.List;
    end record;
    type Multiple_Args_Field_Internal_Access is access all
      Multiple_Args_Field_Internal'Class;
-   overriding procedure Free (Self : in out Multiple_Args_Field_Internal);
    overriding function To_String
      (Self : Multiple_Args_Field_Internal; Long : Boolean) return String;
    overriding procedure Append_Tables
