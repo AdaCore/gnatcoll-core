@@ -130,7 +130,7 @@ package GNATCOLL.SQL is
    procedure Free (A : in out SQL_Table_Access);
    --  Needs to be freed explicitely
 
-   function Table_Name (Self : SQL_Table) return String is abstract;
+   function Table_Name (Self : SQL_Table) return Cst_String_Access is abstract;
    --  Name of the table in the database schema.
 
    function Rename
@@ -588,8 +588,11 @@ package GNATCOLL.SQL is
    --  Performs a left join between the two tables. It behaves like a standard
    --  join, but if a row from Full doesn't match any row in Partial, a virtual
    --  row full of NULL is added to Partial, and returned in the join.
-   --  If On is not specified, it is automatically completed based on the
-   --  foreign keys joining the two tables.
+   --  If On is not specified and the two tables are simple tables (ie not the
+   --  result of another join), it is automatically completed based on the
+   --  foreign keys joining the two tables. This completion relies on the FK
+   --  primitive operations for the tables, so if you have not implemented them
+   --  the auto-completion will not work.
 
    function Join
      (Table1 : SQL_Table'Class;
@@ -733,9 +736,24 @@ private
       --  instance name, might be null when this is the same name as the table
    end record;
 
-   function Hash (Self : SQL_Table'Class) return Ada.Containers.Hash_Type;
+   type Table_Names is record
+      Name     : Cst_String_Access;
+      Instance : Cst_String_Access;
+   end record;
+   No_Names : constant Table_Names := (null, null);
+   --  Describes a table (by its name), and the name of its instance. This is
+   --  used to find all tables involved in a query, for the auto-completion. We
+   --  do not store instances of SQL_Table'Class directly, since that would
+   --  involve several things:
+   --     - extra Initialize/Adjust/Finalize calls
+   --     - Named_Field_Internal would need to embed a pointer to a table, as
+   --       opposed to just its names, and therefore must be a controlled type.
+   --       This makes the automatic package more complex, and makes the field
+   --       type controlled, which is also a lot more costly.
+
+   function Hash (Self : Table_Names) return Ada.Containers.Hash_Type;
    package Table_Sets is new Ada.Containers.Indefinite_Hashed_Sets
-     (SQL_Table'Class, Hash, "=", "=");
+     (Table_Names, Hash, "=", "=");
 
    procedure Append_Tables
      (Self : SQL_Table'Class; To : in out Table_Sets.Set);
@@ -1058,7 +1076,8 @@ private
       Data   : Join_Table_Data;
    end record;
 
-   overriding function Table_Name (Self : SQL_Left_Join_Table) return String;
+   overriding function Table_Name
+     (Self : SQL_Left_Join_Table) return Cst_String_Access;
    --  See inherited doc
 
    -----------------
@@ -1124,6 +1143,7 @@ private
    type Query_Select_Contents is new Query_Contents with record
       Fields   : SQL_Field_List;
       Tables   : SQL_Table_List;
+      Extra_Tables : Table_Sets.Set;  --  auto completed tables
       Criteria : SQL_Criteria;
       Group_By : SQL_Field_List;
       Having   : SQL_Criteria;
@@ -1141,7 +1161,7 @@ private
       Auto_Complete_Group_By : Boolean := True);
 
    type Query_Insert_Contents is new Query_Contents with record
-      Into     : SQL_Table_List;
+      Into     : Table_Names := No_Names;
       Default_Values : Boolean := False;
       Fields   : SQL_Field_List;
       Values   : SQL_Assignment;
@@ -1161,6 +1181,7 @@ private
       Set     : SQL_Assignment;
       Where   : SQL_Criteria;
       From    : SQL_Table_List;
+      Extra_From : Table_Sets.Set; --  from auto complete
    end record;
    type Query_Update_Contents_Access is access all Query_Update_Contents'Class;
    procedure Free (Self : in out Query_Update_Contents);
@@ -1201,7 +1222,8 @@ private
       Query : SQL_Query;
    end record;
 
-   overriding function Table_Name (Self : Subquery_Table) return String;
+   overriding function Table_Name
+     (Self : Subquery_Table) return Cst_String_Access;
 
    ------------------------------------
    --  Null field deferred constants --

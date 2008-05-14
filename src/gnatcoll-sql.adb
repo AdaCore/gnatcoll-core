@@ -22,7 +22,6 @@ with Ada.Calendar.Time_Zones;    use Ada.Calendar.Time_Zones;
 with Ada.Containers;             use Ada.Containers;
 with Ada.Strings.Fixed;          use Ada.Strings.Fixed;
 with Ada.Strings.Hash;
-with Ada.Text_IO;                use Ada.Text_IO;
 with Ada.Unchecked_Deallocation;
 with GNAT.Calendar.Time_IO;      use GNAT.Calendar.Time_IO;
 
@@ -36,8 +35,6 @@ package body GNATCOLL.SQL is
       Ada.Calendar.Month_Number'First,
       Ada.Calendar.Day_Number'First);
 
-   Debug : constant Boolean := False;
-
    procedure Unchecked_Free is new Ada.Unchecked_Deallocation
      (SQL_Table'Class, SQL_Table_Access);
    procedure Unchecked_Free is new Ada.Unchecked_Deallocation
@@ -47,7 +44,6 @@ package body GNATCOLL.SQL is
    --  Escape every apostrophe character "'" and backslash "\".
    --  Useful for strings in SQL commands where "'" means the end
    --  of the current string.
-   --  ??? We should consider binding PQescapeString and or PQescapeStringConn
 
    function Compare
      (Left, Right : SQL_Field'Class; Op : SQL_Criteria_Type)
@@ -78,19 +74,19 @@ package body GNATCOLL.SQL is
       Value : GNAT.Strings.String_Access);
    --  Assign Value to Field (or set field to NULL if Value is null)
 
-   procedure Add_All_Foreign_Keys
-     (From                  : Table_Sets.Set;
-      Tables_With_Left_Join : SQL_Table_List;
-      Criteria              : in out SQL_Criteria);
-   --  Add to Criteria all the foreign keys for the tables in From.
-   --  Criteria are not added if two tables are already in a common left_join.
-
    function Create_Multiple_Args
      (Fields : SQL_Field_List;
       Func_Name, Separator : String;
       In_Parenthesis : Boolean := False)
       return Multiple_Args_Field_Internal_Access;
    --  Create a multiple_args field from Fields
+
+   function To_String_Left_Join
+     (Self : SQL_Left_Join_Table'Class) return String;
+   function To_String_Subquery (Self : Subquery_Table'Class) return String;
+   function To_String (Names : Table_Names) return String;
+   function To_String (Self : Table_Sets.Set) return Unbounded_String;
+   --  Various implementations for To_String, for different types
 
    No_Field_Pointer : constant SQL_Field_Pointer :=
                         (Ada.Finalization.Controlled with null);
@@ -179,16 +175,67 @@ package body GNATCOLL.SQL is
       Self.Data := SQL_Field_Internal_Access (D);
    end Initialize;
 
+   -------------------------
+   -- To_String_Left_Join --
+   -------------------------
+
+   function To_String_Left_Join
+     (Self : SQL_Left_Join_Table'Class) return String
+   is
+      Result : Unbounded_String;
+      C      : Table_List.Cursor := First (Self.Data.Data.Tables.List);
+   begin
+      Append (Result, "(");
+      Append (Result, To_String (Element (C)));
+      if Self.Data.Data.Is_Left_Join then
+         Append (Result, " LEFT JOIN ");
+      else
+         Append (Result, " JOIN ");
+      end if;
+      Next (C);
+      Append (Result, To_String (Element (C)));
+      if Self.Data.Data.On /= No_Criteria then
+         Append (Result, " ON ");
+         Append (Result, To_String (Self.Data.Data.On, Long => True));
+      end if;
+      Append (Result, ")");
+
+      if Self.Instance /= null then
+         Append (Result, " " & Self.Instance.all);
+      end if;
+      return To_String (Result);
+   end To_String_Left_Join;
+
+   ------------------------
+   -- To_String_Subquery --
+   ------------------------
+
+   function To_String_Subquery (Self : Subquery_Table'Class) return String is
+   begin
+      if Self.Instance /= null then
+         return "(" & To_String (To_String (Self.Query)) & ") "
+           & Self.Instance.all;
+      else
+         return "(" & To_String (To_String (Self.Query)) & ")";
+      end if;
+   end To_String_Subquery;
+
    ---------------
    -- To_String --
    ---------------
 
    function To_String (Self : SQL_Table'Class) return String is
    begin
-      if Self.Instance = null then
-         return Table_Name (Self);
+      if Self in SQL_Left_Join_Table'Class then
+         return To_String_Left_Join (SQL_Left_Join_Table'Class (Self));
+      elsif Self in Subquery_Table'Class then
+         return To_String_Subquery (Subquery_Table'Class (Self));
       else
-         return Table_Name (Self) & " " & Self.Instance.all;
+         if Self.Instance = null then
+            return Table_Name (Self).all;
+         else
+            return Table_Name (Self).all & " " & Self.Instance.all;
+         end if;
       end if;
    end To_String;
 
@@ -196,10 +243,10 @@ package body GNATCOLL.SQL is
    -- Hash --
    ----------
 
-   function Hash (Self : SQL_Table'Class) return Ada.Containers.Hash_Type is
+   function Hash (Self : Table_Names) return Ada.Containers.Hash_Type is
    begin
       if Self.Instance = null then
-         return Ada.Strings.Hash (Table_Name (Self));
+         return Ada.Strings.Hash (Self.Name.all);
       else
          return Ada.Strings.Hash (Self.Instance.all);
       end if;
@@ -212,6 +259,41 @@ package body GNATCOLL.SQL is
    function To_String (Self : SQL_Table_List) return Unbounded_String is
       C      : Table_List.Cursor := First (Self.List);
       Result : Unbounded_String;
+   begin
+      if Has_Element (C) then
+         Append (Result, To_String (Element (C)));
+         Next (C);
+      end if;
+
+      while Has_Element (C) loop
+         Append (Result, ", ");
+         Append (Result, To_String (Element (C)));
+         Next (C);
+      end loop;
+
+      return Result;
+   end To_String;
+
+   ---------------
+   -- To_String --
+   ---------------
+
+   function To_String (Names : Table_Names) return String is
+   begin
+      if Names.Instance = null then
+         return Names.Name.all;
+      else
+         return Names.Name.all & " " & Names.Instance.all;
+      end if;
+   end To_String;
+
+   ---------------
+   -- To_String --
+   ---------------
+
+   function To_String (Self : Table_Sets.Set) return Unbounded_String is
+      Result : Unbounded_String;
+      C      : Table_Sets.Cursor := First (Self);
    begin
       if Has_Element (C) then
          Append (Result, To_String (Element (C)));
@@ -250,7 +332,7 @@ package body GNATCOLL.SQL is
       elsif Long then
          if Self.Table.Instance = null then
             Result := To_Unbounded_String
-              (Table_Name (Self.Table.all) & '.' & N.all);
+              (Table_Name (Self.Table.all).all & '.' & N.all);
          else
             Result := To_Unbounded_String
               (Self.Table.Instance.all & '.' & N.all);
@@ -2142,9 +2224,19 @@ package body GNATCOLL.SQL is
          Append (Result, "DISTINCT ");
       end if;
       Append (Result, To_String (Self.Fields, Long => True));
-      if Self.Tables /= Empty_Table_List then
+      if Self.Tables /= Empty_Table_List
+        or else not Is_Empty (Self.Extra_Tables)
+      then
          Append (Result, " FROM ");
-         Append (Result, To_String (Self.Tables));
+         if Is_Empty (Self.Tables.List) then
+            Append (Result, To_String (Self.Extra_Tables));
+         elsif Is_Empty (Self.Extra_Tables) then
+            Append (Result, To_String (Self.Tables));
+         else
+            Append (Result, To_String (Self.Tables));
+            Append (Result, ", ");
+            Append (Result, To_String (Self.Extra_Tables));
+         end if;
       end if;
       if Self.Criteria /= No_Criteria then
          Append (Result, " WHERE ");
@@ -2244,72 +2336,6 @@ package body GNATCOLL.SQL is
       Free (Self.Func);
    end Free;
 
-   --------------------------
-   -- Add_All_Foreign_Keys --
-   --------------------------
-
-   procedure Add_All_Foreign_Keys
-     (From                  : Table_Sets.Set;
-      Tables_With_Left_Join : SQL_Table_List;
-      Criteria              : in out SQL_Criteria)
-   is
-      Table  : Table_Sets.Cursor := First (From);
-      Table2 : Table_Sets.Cursor;
-      L    : constant Natural := Natural (Length (Tables_With_Left_Join.List));
-      Groups : array (1 .. L) of Table_Sets.Set;
-      C    : Table_List.Cursor := First (Tables_With_Left_Join.List);
-      Index : Natural := Groups'First;
-      Group1 : Integer;
-
-      function Group_From_Table (Table : SQL_Table'Class) return Integer;
-      --  Return the group to which table belongs
-
-      function Group_From_Table (Table : SQL_Table'Class) return Integer is
-      begin
-         for G in Groups'Range loop
-            if Contains (Groups (G), Table) then
-               return G;
-            end if;
-         end loop;
-         return 0;
-      end Group_From_Table;
-
-   begin
-      --  We do not want to add extra foreign key criterias when the two tables
-      --  are already in a common left_join. For maximum efficiency, we
-      --  preprocess the list of tables.
-      while Has_Element (C) loop
-         Append_Tables (Element (C), Groups (Index));
-         Index := Index + 1;
-         Next (C);
-      end loop;
-
-      while Has_Element (Table) loop
-         Group1 := Group_From_Table (Element (Table));
-
-         Table2 := Next (Table);
-         while Has_Element (Table2) loop
-            if Is_Empty (Tables_With_Left_Join.List)
-              or else Group1 /= Group_From_Table (Element (Table2))
-            then
-               --  Put the foreign key criterias first, since it is easier
-               --  when manually checking a query to find the specific
-               --  criterias at the end.
-               if Debug then
-                  Put_Line ("Adding FK between "
-                            & To_String (Element (Table))
-                            & " and " & To_String (Element (Table2)));
-               end if;
-               Criteria := FK (Element (Table), Element (Table2))
-                 and FK (Element (Table2), Element (Table))
-                 and Criteria;
-            end if;
-            Next (Table2);
-         end loop;
-         Next (Table);
-      end loop;
-   end Add_All_Foreign_Keys;
-
    -------------------
    -- Auto_Complete --
    -------------------
@@ -2319,28 +2345,20 @@ package body GNATCOLL.SQL is
       Auto_Complete_From     : Boolean := True;
       Auto_Complete_Group_By : Boolean := True)
    is
-      List   : Table_Sets.Set;
       List2  : Table_Sets.Set;
-      C      : Table_Sets.Cursor;
       Group_By : SQL_Field_List;
       Has_Aggregate : Boolean := False;
    begin
       if Auto_Complete_From then
          --  For each field, make sure the table is in the list
-         Append_Tables (Self.Fields, List);
-         Append_Tables (Self.Group_By, List);
-         Append_Tables (Self.Order_By, List);
-         Append_Tables (Self.Criteria, List);
-         Append_Tables (Self.Having, List);
+         Append_Tables (Self.Fields, Self.Extra_Tables);
+         Append_Tables (Self.Group_By, Self.Extra_Tables);
+         Append_Tables (Self.Order_By, Self.Extra_Tables);
+         Append_Tables (Self.Criteria, Self.Extra_Tables);
+         Append_Tables (Self.Having, Self.Extra_Tables);
 
          Append_Tables (Self.Tables, List2);
-         Difference (List, List2);  --  Remove tables already in the list
-
-         C := First (List);
-         while Has_Element (C) loop
-            Self.Tables := Self.Tables & Element (C);
-            Next (C);
-         end loop;
+         Difference (Self.Extra_Tables, List2);
       end if;
 
       if Auto_Complete_Group_By then
@@ -2416,7 +2434,8 @@ package body GNATCOLL.SQL is
          end loop;
 
       else
-         Include (To, Self);
+         Include (To, (Name => Table_Name (Self),
+                       Instance => Self.Instance));
       end if;
    end Append_Tables;
 
@@ -2469,7 +2488,8 @@ package body GNATCOLL.SQL is
      (Self : Named_Field_Internal; To : in out Table_Sets.Set) is
    begin
       if Self.Table /= null then
-         Include (To, Self.Table.all);
+         Include (To, (Name => Table_Name (Self.Table.all),
+                       Instance => Self.Table.Instance));
       end if;
    end Append_Tables;
 
@@ -2974,7 +2994,8 @@ package body GNATCOLL.SQL is
       Data : constant Query_Insert_Contents_Access :=
         new Query_Insert_Contents;
    begin
-      Data.Into := +Table;
+      Data.Into := (Name     => Table_Name (Table),
+                    Instance => Table.Instance);
       Data.Default_Values := True;
       return (Contents =>
               (Ada.Finalization.Controlled
@@ -2999,6 +3020,7 @@ package body GNATCOLL.SQL is
          Data.Fields := SQL_Field_List (Fields);
       end if;
 
+      Data.Into   := No_Names;
       Data.Subquery := Values;
       Q := (Contents =>
               (Ada.Finalization.Controlled
@@ -3019,6 +3041,7 @@ package body GNATCOLL.SQL is
         new Query_Insert_Contents;
       Q    : SQL_Query;
    begin
+      Data.Into   := No_Names;
       Data.Values := Values;
       Data.Where  := Where;
       Q := (Contents =>
@@ -3046,7 +3069,7 @@ package body GNATCOLL.SQL is
       Result : Unbounded_String;
    begin
       Result := To_Unbounded_String ("INSERT INTO ");
-      Append (Result, To_String (Element (First (Self.Into.List))));
+      Append (Result, To_String (Self.Into));
 
       if Self.Default_Values then
          Append (Result, " DEFAULT VALUES");
@@ -3107,7 +3130,6 @@ package body GNATCOLL.SQL is
       pragma Unreferenced (Auto_Complete_Group_By);
       List, List2 : Table_Sets.Set;
       Subfields   : SQL_Field_List;
---      C           : Table_Sets.Cursor;
       C2          : Assignment_Lists.Cursor;
    begin
       if Auto_Complete_From then
@@ -3124,7 +3146,7 @@ package body GNATCOLL.SQL is
             end loop;
          end if;
 
-         if Self.Into = Empty_Table_List then
+         if Self.Into = No_Names then
             --  For each field, make sure the table is in the list
             Append_Tables (Self.Fields, List);
 
@@ -3135,7 +3157,8 @@ package body GNATCOLL.SQL is
                    & " the same table";
             end if;
 
-            Self.Into := Self.Into & Element (First (List));
+            --  Grab the table from the first field
+            Self.Into := Element (First (List));
          end if;
 
          if Self.Subquery = No_Query then
@@ -3145,9 +3168,9 @@ package body GNATCOLL.SQL is
 
             Clear (List);
             Append_Tables (Self.Values, List);
-            Append_Tables (Self.Into,   List2);
-            Difference (List, List2);  --  Remove tables already in the list
+            Table_Sets.Include (List2, Self.Into);
 
+            Difference (List, List2);  --  Remove tables already in the list
             if Length (List) > 0 then
                C2 := First (Self.Values.List);
                while Has_Element (C2) loop
@@ -3226,7 +3249,15 @@ package body GNATCOLL.SQL is
 
       if Self.From /= Empty_Table_List then
          Append (Result, " FROM ");
-         Append (Result, To_String (Self.From));
+         if Is_Empty (Self.From.List) then
+            Append (Result, To_String (Self.Extra_From));
+         elsif Is_Empty (Self.Extra_From) then
+            Append (Result, To_String (Self.From));
+         else
+            Append (Result, To_String (Self.From));
+            Append (Result, ", ");
+            Append (Result, To_String (Self.Extra_From));
+         end if;
       end if;
 
       if Self.Where /= No_Criteria then
@@ -3246,22 +3277,17 @@ package body GNATCOLL.SQL is
       Auto_Complete_Group_By : Boolean := True)
    is
       pragma Unreferenced (Auto_Complete_Group_By);
-      List   : Table_Sets.Set;
       List2  : Table_Sets.Set;
-      C      : Table_Sets.Cursor;
    begin
       if Auto_Complete_From then
          --  For each field, make sure the table is in the list
-         Append_Tables (Self.Set,   List);
-         Append_Tables (Self.Where, List);
+         Append_Tables (Self.Set,   Self.Extra_From);
+         Append_Tables (Self.Where, Self.Extra_From);
+
+         --  Remove tables already in the list
          Append_Tables (Self.From,  List2);
          Append_Tables (Self.Table, List2);
-         Difference (List, List2);  --  Remove tables already in the list
-         C := First (List);
-         while Has_Element (C) loop
-            Self.From := Self.From & Element (C);
-            Next (C);
-         end loop;
+         Difference (Self.Extra_From, List2);
       end if;
    end Auto_Complete;
 
@@ -3303,15 +3329,23 @@ package body GNATCOLL.SQL is
       On      : SQL_Criteria := No_Criteria) return SQL_Table'Class
    is
       Criteria : SQL_Criteria := On;
-      Set    : Table_Sets.Set;
    begin
       if Criteria = No_Criteria then
-         --  Since both Full and Partial might also be results of Join, we
-         --  can't simply get foreign keys between them, and need to go
-         --  through Add_All_Foreign_Keys instead.
-         Append_Tables (Full, Set);
-         Append_Tables (Partial, Set);
-         Add_All_Foreign_Keys (Set, Empty_Table_List, Criteria);
+         --  We only provide auto-completion if both Full and Partial are
+         --  simple tables (not the result of joins), otherwise it is almost
+         --  impossible to get things right automatically (which tables should
+         --  be involved ? In case of multiple paths between two tables, which
+         --  path should we use ? ...)
+
+         if Full in SQL_Left_Join_Table'Class
+           or else Full in Subquery_Table'Class
+           or else Partial in SQL_Left_Join_Table'Class
+           or else Partial in Subquery_Table'Class
+         then
+            raise Program_Error with "Can only auto-complete simple tables";
+         end if;
+
+         Criteria := FK (Full, Partial) and FK (Partial, Full) and Criteria;
       end if;
 
       return SQL_Left_Join_Table'
@@ -3345,25 +3379,11 @@ package body GNATCOLL.SQL is
    -- Table_Name --
    ----------------
 
-   function Table_Name (Self : SQL_Left_Join_Table) return String is
-      Result : Unbounded_String;
-      C      : Table_List.Cursor := First (Self.Data.Data.Tables.List);
+   function Table_Name (Self : SQL_Left_Join_Table) return Cst_String_Access is
+      pragma Unreferenced (Self);
    begin
-      Append (Result, "(");
-      Append (Result, To_String (Element (C)));
-      if Self.Data.Data.Is_Left_Join then
-         Append (Result, " LEFT JOIN ");
-      else
-         Append (Result, " JOIN ");
-      end if;
-      Next (C);
-      Append (Result, To_String (Element (C)));
-      if Self.Data.Data.On /= No_Criteria then
-         Append (Result, " ON ");
-         Append (Result, To_String (Self.Data.Data.On, Long => True));
-      end if;
-      Append (Result, ")");
-      return To_String (Result);
+      --  No specific name associated with this table
+      return null;
    end Table_Name;
 
    ------------
@@ -3529,9 +3549,10 @@ package body GNATCOLL.SQL is
    -- Table_Name --
    ----------------
 
-   function Table_Name (Self : Subquery_Table) return String is
+   function Table_Name (Self : Subquery_Table) return Cst_String_Access is
+      pragma Unreferenced (Self);
    begin
-      return "(" & To_String (To_String (Self.Query)) & ")";
+      return null;
    end Table_Name;
 
    ----------
