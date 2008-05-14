@@ -153,6 +153,9 @@ package GNATCOLL.SQL is
    function "+" (Left : SQL_Single_Table'Class) return SQL_Table_List;
    --  Create a list of tables, suitable for use in a SELECT query.
    --  Note the operator "+" to create a list with a single element
+   --  For efficiency reasons, these operators try to reuse one of the lists
+   --  passed in parameter, append to it, and return it. That limits the number
+   --  of copies to be done, and thus the number of system calls to malloc.
 
    ------------
    -- Fields --
@@ -758,8 +761,25 @@ private
    package Table_List is new Ada.Containers.Indefinite_Doubly_Linked_Lists
      (SQL_Single_Table'Class);
 
+   type Table_List_Internal is record
+      Refcount : Natural := 1;
+      List     : Table_List.List;
+   end record;
+   type Table_List_Internal_Access is access all Table_List_Internal;
+   --  Store the actual data for a SQL_Table_List in a different block (using
+   --  a smart pointer for reference counting), since otherwise all the calls
+   --  to "&" result in a copy of the list (per design of the Ada05 containers)
+   --  which shows up as up to 20% of the number of calls to malloc on the
+   --  testsuite).
+
+   type Table_List_Data is new Ada.Finalization.Controlled with record
+      Data : Table_List_Internal_Access;
+   end record;
+   overriding procedure Adjust (Self : in out Table_List_Data);
+   overriding procedure Finalize (Self : in out Table_List_Data);
+
    type SQL_Table_List is new SQL_Table_Or_List with record
-      List : Table_List.List;
+      Data : Table_List_Data;
    end record;
    overriding function To_String (Self : SQL_Table_List)  return String;
    overriding procedure Append_Tables
@@ -768,7 +788,7 @@ private
 
    Empty_Table_List : constant SQL_Table_List :=
      (SQL_Table_Or_List
-      with List => Table_List.Empty_List);
+      with Data => (Ada.Finalization.Controlled with null));
 
    --------------------
    -- Field pointers --
