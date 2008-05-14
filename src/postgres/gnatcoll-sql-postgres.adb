@@ -39,7 +39,7 @@ package body GNATCOLL.SQL.Postgres is
    function OID_Field (Table : SQL_Table'Class) return SQL_Field_Integer is
       D : constant Named_Field_Internal_Access := new Named_Field_Internal;
    begin
-      D.Table := (Name => Table_Name (Table),
+      D.Table := (Name     => Table.Table_Name,
                   Instance => Table.Instance);
       D.Name  := N_OID'Access;
       return SQL_Field_Integer'

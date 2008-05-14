@@ -117,12 +117,18 @@ package GNATCOLL.SQL is
    ------------
 
    type SQL_Table_Or_List is abstract tagged private;
+   --  Either a single table or a group of tables
+
+   type SQL_Single_Table is abstract new SQL_Table_Or_List with private;
+   --  Any type of table, or result of join between several tables. Such a
+   --  table can have fields
 
    type SQL_Table_List is new SQL_Table_Or_List with private;
    Empty_Table_List : constant SQL_Table_List;
    --  A list of tables, as used in a SELECT query ("a, b")
 
-   type SQL_Table is abstract new SQL_Table_Or_List with private;
+   type SQL_Table (Table_Name : Cst_String_Access)
+      is abstract new SQL_Single_Table with private;
    type SQL_Unchecked_Table_Access is access constant SQL_Table'Class;
    --  A smart pointer to a table instance
 
@@ -130,11 +136,9 @@ package GNATCOLL.SQL is
    procedure Free (A : in out SQL_Table_Access);
    --  Needs to be freed explicitely
 
-   function Table_Name (Self : SQL_Table) return Cst_String_Access is abstract;
-   --  Name of the table in the database schema.
-
    function Rename
-     (Self : SQL_Table'Class; Name : Cst_String_Access) return SQL_Table'Class;
+     (Self : SQL_Single_Table'Class; Name : Cst_String_Access)
+      return SQL_Single_Table'Class;
    --  Returns a new instance of Self, with a different name.
    --  Example of use:
    --     T : constant T_Wavefront_Tn.Table :=
@@ -146,10 +150,10 @@ package GNATCOLL.SQL is
    --  Criteria to use when joining the two instances.
 
    function "&" (Left, Right : SQL_Table_List) return SQL_Table_List;
-   function "&" (Left, Right : SQL_Table'Class) return SQL_Table_List;
-   function "&"
-     (Left : SQL_Table_List; Right : SQL_Table'Class) return SQL_Table_List;
-   function "+" (Left : SQL_Table'Class) return SQL_Table_List;
+   function "&" (Left, Right : SQL_Single_Table'Class) return SQL_Table_List;
+   function "&" (Left : SQL_Table_List; Right : SQL_Single_Table'Class)
+                 return SQL_Table_List;
+   function "+" (Left : SQL_Single_Table'Class) return SQL_Table_List;
    --  Create a list of tables, suitable for use in a SELECT query.
    --  Note the operator "+" to create a list with a single element
 
@@ -184,19 +188,19 @@ package GNATCOLL.SQL is
    type SQL_Field_Float   is new SQL_Field with private;
 
    function Field
-     (Table : SQL_Table'Class;
+     (Table : SQL_Single_Table'Class;
       Field : SQL_Field_Integer) return SQL_Field_Integer;
    function Field
-     (Table : SQL_Table'Class;
+     (Table : SQL_Single_Table'Class;
       Field : SQL_Field_Text) return SQL_Field_Text;
    function Field
-     (Table : SQL_Table'Class;
+     (Table : SQL_Single_Table'Class;
       Field : SQL_Field_Time) return SQL_Field_Time;
    function Field
-     (Table : SQL_Table'Class;
+     (Table : SQL_Single_Table'Class;
       Field : SQL_Field_Boolean) return SQL_Field_Boolean;
    function Field
-     (Table : SQL_Table'Class;
+     (Table : SQL_Single_Table'Class;
       Field : SQL_Field_Float) return SQL_Field_Float;
    --  Returns field applied to the table, as in Table.Field.
    --  In general, this is not needed, except when Table is the result of a
@@ -581,10 +585,13 @@ package GNATCOLL.SQL is
    -- Queries --
    -------------
 
+   type SQL_Left_Join_Table is new SQL_Single_Table with private;
+   --  A special kind of table that represents a join between two tables
+
    function Left_Join
-     (Full    : SQL_Table'Class;
-      Partial : SQL_Table'Class;
-      On      : SQL_Criteria := No_Criteria) return SQL_Table'Class;
+     (Full    : SQL_Single_Table'Class;
+      Partial : SQL_Single_Table'Class;
+      On      : SQL_Criteria := No_Criteria) return SQL_Left_Join_Table;
    --  Performs a left join between the two tables. It behaves like a standard
    --  join, but if a row from Full doesn't match any row in Partial, a virtual
    --  row full of NULL is added to Partial, and returned in the join.
@@ -595,9 +602,9 @@ package GNATCOLL.SQL is
    --  the auto-completion will not work.
 
    function Join
-     (Table1 : SQL_Table'Class;
-      Table2 : SQL_Table'Class;
-      On     : SQL_Criteria := No_Criteria) return SQL_Table'Class;
+     (Table1 : SQL_Single_Table'Class;
+      Table2 : SQL_Single_Table'Class;
+      On     : SQL_Criteria := No_Criteria) return SQL_Left_Join_Table;
    --  Join the two tables.
 
    function SQL_Select
@@ -670,7 +677,7 @@ package GNATCOLL.SQL is
    -----------------------
    --  These tables represent subqueries
 
-   type Subquery_Table is new SQL_Table with private;
+   type Subquery_Table is new SQL_Single_Table with private;
 
    function Subquery
      (Query : SQL_Query; Table_Name : Cst_String_Access) return Subquery_Table;
@@ -679,24 +686,18 @@ package GNATCOLL.SQL is
    --    A := Subquery ("select ...", "a");
    --  Table_Name is never freed, and should therefore point to a "aliased
    --  constant String" in your code
-
-   function Field_As_Time
-     (Table : Subquery_Table'Class; Field : Cst_String_Access)
-      return SQL_Field_Time;
-   function Field_As_Text
-     (Table : Subquery_Table'Class; Field : Cst_String_Access)
-      return SQL_Field_Text;
-   function Field_As_Integer
-     (Table : Subquery_Table'Class; Field : Cst_String_Access)
-      return SQL_Field_Integer;
-   --  Return a specific field from the table
+   --  See the various inherited Field subprograms to reference specific fields
+   --  from the result of the query.
 
    ---------------------------
    -- Conversion to strings --
    ---------------------------
 
-   function To_String (Self : SQL_Table_List)  return Unbounded_String;
-   function To_String (Self : SQL_Table'Class) return String;
+   function To_String (Self : SQL_Table_Or_List) return String is abstract;
+   function To_String (Self : SQL_Single_Table) return String is abstract;
+   function To_String (Self : SQL_Table_List)  return String;
+   function To_String (Self : SQL_Table) return String;
+   function To_String (Self : Subquery_Table) return String;
    function To_String
      (Self : SQL_Field_List; Long : Boolean := True)  return String;
    function To_String
@@ -723,13 +724,6 @@ private
    -- Table and instances --
    -------------------------
 
-   type SQL_Table_Or_List is abstract tagged null record;
-
-   type SQL_Table is abstract new SQL_Table_Or_List with record
-      Instance : Cst_String_Access;
-      --  instance name, might be null when this is the same name as the table
-   end record;
-
    type Table_Names is record
       Name     : Cst_String_Access;
       Instance : Cst_String_Access;
@@ -749,8 +743,22 @@ private
    package Table_Sets is new Ada.Containers.Indefinite_Hashed_Sets
      (Table_Names, Hash, "=", "=");
 
+   type SQL_Table_Or_List is abstract tagged null record;
    procedure Append_Tables
-     (Self : SQL_Table'Class; To : in out Table_Sets.Set);
+     (Self : SQL_Table_Or_List; To : in out Table_Sets.Set) is null;
+   --  Append all the tables referenced in Self to To
+
+   type SQL_Single_Table is abstract new SQL_Table_Or_List with record
+      Instance : Cst_String_Access;
+      --  instance name, might be null when this is the same name as the table.
+      --  This isn't used for lists, but is used for all other types of tables
+      --  (simple, left join, subqueries) so is put here for better sharing.
+   end record;
+
+   type SQL_Table (Table_Name : Cst_String_Access)
+      is abstract new SQL_Single_Table with null record;
+
+   procedure Append_Tables (Self : SQL_Table; To : in out Table_Sets.Set);
    --  Append all the tables referenced in Self to To.
    --  Unfortunately, this cannot be a primitive operation, since SQL_Table is
    --  frozen when Table_Sets is declared
@@ -760,13 +768,13 @@ private
    ------------------
 
    package Table_List is new Ada.Containers.Indefinite_Doubly_Linked_Lists
-     (SQL_Table'Class);
+     (SQL_Single_Table'Class);
 
    type SQL_Table_List is new SQL_Table_Or_List with record
       List : Table_List.List;
    end record;
 
-   procedure Append_Tables
+   overriding procedure Append_Tables
      (Self : SQL_Table_List; To : in out Table_Sets.Set);
    --  Append all the tables referenced in Self to To
 
@@ -1065,13 +1073,13 @@ private
    --  "Adjust" a SQL_Left_Join_Table, which saves a number of system calls to
    --  malloc() and free()
 
-   type SQL_Left_Join_Table is new SQL_Table with record
+   type SQL_Left_Join_Table is new SQL_Single_Table with record
       Data   : Join_Table_Data;
    end record;
 
-   overriding function Table_Name
-     (Self : SQL_Left_Join_Table) return Cst_String_Access;
-   --  See inherited doc
+   function To_String (Self : SQL_Left_Join_Table) return String;
+   overriding procedure Append_Tables
+     (Self : SQL_Left_Join_Table; To : in out Table_Sets.Set);
 
    -----------------
    -- Assignments --
@@ -1211,12 +1219,9 @@ private
    -- Subquery tables --
    ---------------------
 
-   type Subquery_Table is new SQL_Table with record
+   type Subquery_Table is new SQL_Single_Table with record
       Query : SQL_Query;
    end record;
-
-   overriding function Table_Name
-     (Self : Subquery_Table) return Cst_String_Access;
 
    ------------------------------------
    --  Null field deferred constants --

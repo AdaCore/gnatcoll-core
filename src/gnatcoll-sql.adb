@@ -81,9 +81,6 @@ package body GNATCOLL.SQL is
       return Multiple_Args_Field_Internal_Access;
    --  Create a multiple_args field from Fields
 
-   function To_String_Left_Join
-     (Self : SQL_Left_Join_Table'Class) return String;
-   function To_String_Subquery (Self : Subquery_Table'Class) return String;
    function To_String (Names : Table_Names) return String;
    function To_String (Self : Table_Sets.Set) return Unbounded_String;
    --  Various implementations for To_String, for different types
@@ -157,20 +154,18 @@ package body GNATCOLL.SQL is
       D : Named_Field_Internal_Access;
    begin
       D := new Named_Field_Internal;
-      D.Table := (Name     => Table_Name (From),
+      D.Table := (Name     => From.Table_Name,
                   Instance => From.Instance);
       D.Name  := Field;
       Finalize (Self);
       Self.Data := SQL_Field_Internal_Access (D);
    end Initialize;
 
-   -------------------------
-   -- To_String_Left_Join --
-   -------------------------
+   ---------------
+   -- To_String --
+   ---------------
 
-   function To_String_Left_Join
-     (Self : SQL_Left_Join_Table'Class) return String
-   is
+   function To_String (Self : SQL_Left_Join_Table) return String is
       Result : Unbounded_String;
       C      : Table_List.Cursor := First (Self.Data.Data.Tables.List);
    begin
@@ -193,13 +188,13 @@ package body GNATCOLL.SQL is
          Append (Result, " " & Self.Instance.all);
       end if;
       return To_String (Result);
-   end To_String_Left_Join;
+   end To_String;
 
-   ------------------------
-   -- To_String_Subquery --
-   ------------------------
+   ---------------
+   -- To_String --
+   ---------------
 
-   function To_String_Subquery (Self : Subquery_Table'Class) return String is
+   function To_String (Self : Subquery_Table) return String is
    begin
       if Self.Instance /= null then
          return "(" & To_String (To_String (Self.Query)) & ") "
@@ -207,24 +202,18 @@ package body GNATCOLL.SQL is
       else
          return "(" & To_String (To_String (Self.Query)) & ")";
       end if;
-   end To_String_Subquery;
+   end To_String;
 
    ---------------
    -- To_String --
    ---------------
 
-   function To_String (Self : SQL_Table'Class) return String is
+   function To_String (Self : SQL_Table) return String is
    begin
-      if Self in SQL_Left_Join_Table'Class then
-         return To_String_Left_Join (SQL_Left_Join_Table'Class (Self));
-      elsif Self in Subquery_Table'Class then
-         return To_String_Subquery (Subquery_Table'Class (Self));
+      if Self.Instance = null then
+         return Self.Table_Name.all;
       else
-         if Self.Instance = null then
-            return Table_Name (Self).all;
-         else
-            return Table_Name (Self).all & " " & Self.Instance.all;
-         end if;
+         return Self.Table_Name.all & " " & Self.Instance.all;
       end if;
    end To_String;
 
@@ -245,7 +234,7 @@ package body GNATCOLL.SQL is
    -- To_String --
    ---------------
 
-   function To_String (Self : SQL_Table_List) return Unbounded_String is
+   function To_String (Self : SQL_Table_List) return String is
       C      : Table_List.Cursor := First (Self.List);
       Result : Unbounded_String;
    begin
@@ -260,7 +249,7 @@ package body GNATCOLL.SQL is
          Next (C);
       end loop;
 
-      return Result;
+      return To_String (Result);
    end To_String;
 
    ---------------
@@ -502,7 +491,8 @@ package body GNATCOLL.SQL is
    ---------
 
    function "&"
-     (Left : SQL_Table_List; Right : SQL_Table'Class) return SQL_Table_List
+     (Left : SQL_Table_List; Right : SQL_Single_Table'Class)
+      return SQL_Table_List
    is
       Result : SQL_Table_List;
    begin
@@ -515,7 +505,7 @@ package body GNATCOLL.SQL is
    -- "&" --
    ---------
 
-   function "&" (Left, Right : SQL_Table'Class) return SQL_Table_List is
+   function "&" (Left, Right : SQL_Single_Table'Class) return SQL_Table_List is
       Result : SQL_Table_List;
    begin
       Append (Result.List, Left);
@@ -527,7 +517,7 @@ package body GNATCOLL.SQL is
    -- "+" --
    ---------
 
-   function "+" (Left : SQL_Table'Class) return SQL_Table_List is
+   function "+" (Left : SQL_Single_Table'Class) return SQL_Table_List is
       Result : SQL_Table_List;
    begin
       Append (Result.List, Left);
@@ -623,12 +613,16 @@ package body GNATCOLL.SQL is
    -----------
 
    function Field
-     (Table : SQL_Table'Class;
+     (Table : SQL_Single_Table'Class;
       Field : SQL_Field_Integer) return SQL_Field_Integer
    is
       F : SQL_Field_Integer;
+      D : constant Named_Field_Internal_Access := new Named_Field_Internal;
    begin
-      Initialize (F, Table, Named_Field_Internal (Field.Data.all).Name);
+      D.Table := (Name => null,
+                  Instance => Table.Instance);
+      D.Name := Named_Field_Internal (Field.Data.all).Name;
+      F.Data := SQL_Field_Internal_Access (D);
       return F;
    end Field;
 
@@ -637,12 +631,16 @@ package body GNATCOLL.SQL is
    -----------
 
    function Field
-     (Table : SQL_Table'Class;
+     (Table : SQL_Single_Table'Class;
       Field : SQL_Field_Text) return SQL_Field_Text
    is
       F : SQL_Field_Text;
+      D : constant Named_Field_Internal_Access := new Named_Field_Internal;
    begin
-      Initialize (F, Table, Named_Field_Internal (Field.Data.all).Name);
+      D.Table := (Name => null,
+                  Instance => Table.Instance);
+      D.Name := Named_Field_Internal (Field.Data.all).Name;
+      F.Data := SQL_Field_Internal_Access (D);
       return F;
    end Field;
 
@@ -651,12 +649,16 @@ package body GNATCOLL.SQL is
    -----------
 
    function Field
-     (Table : SQL_Table'Class;
+     (Table : SQL_Single_Table'Class;
       Field : SQL_Field_Time) return SQL_Field_Time
    is
       F : SQL_Field_Time;
+      D : constant Named_Field_Internal_Access := new Named_Field_Internal;
    begin
-      Initialize (F, Table, Named_Field_Internal (Field.Data.all).Name);
+      D.Table := (Name => null,
+                  Instance => Table.Instance);
+      D.Name := Named_Field_Internal (Field.Data.all).Name;
+      F.Data := SQL_Field_Internal_Access (D);
       return F;
    end Field;
 
@@ -665,12 +667,16 @@ package body GNATCOLL.SQL is
    -----------
 
    function Field
-     (Table : SQL_Table'Class;
+     (Table : SQL_Single_Table'Class;
       Field : SQL_Field_Boolean) return SQL_Field_Boolean
    is
       F : SQL_Field_Boolean;
+      D : constant Named_Field_Internal_Access := new Named_Field_Internal;
    begin
-      Initialize (F, Table, Named_Field_Internal (Field.Data.all).Name);
+      D.Table := (Name => null,
+                  Instance => Table.Instance);
+      D.Name := Named_Field_Internal (Field.Data.all).Name;
+      F.Data := SQL_Field_Internal_Access (D);
       return F;
    end Field;
 
@@ -679,12 +685,16 @@ package body GNATCOLL.SQL is
    -----------
 
    function Field
-     (Table : SQL_Table'Class;
+     (Table : SQL_Single_Table'Class;
       Field : SQL_Field_Float) return SQL_Field_Float
    is
       F : SQL_Field_Float;
+      D : constant Named_Field_Internal_Access := new Named_Field_Internal;
    begin
-      Initialize (F, Table, Named_Field_Internal (Field.Data.all).Name);
+      D.Table := (Name => null,
+                  Instance => Table.Instance);
+      D.Name := Named_Field_Internal (Field.Data.all).Name;
+      F.Data := SQL_Field_Internal_Access (D);
       return F;
    end Field;
 
@@ -2410,21 +2420,24 @@ package body GNATCOLL.SQL is
    -------------------
 
    procedure Append_Tables
-     (Self : SQL_Table'Class; To : in out Table_Sets.Set)
+     (Self : SQL_Left_Join_Table; To : in out Table_Sets.Set)
    is
-      C : Table_List.Cursor;
+      C : Table_List.Cursor := First (Self.Data.Data.Tables.List);
    begin
-      if Self in SQL_Left_Join_Table'Class then
-         C := First (SQL_Left_Join_Table (Self).Data.Data.Tables.List);
-         while Has_Element (C) loop
-            Append_Tables (Element (C), To);
-            Next (C);
-         end loop;
+      while Has_Element (C) loop
+         Append_Tables (Element (C), To);
+         Next (C);
+      end loop;
+   end Append_Tables;
 
-      else
-         Include (To, (Name => Table_Name (Self),
-                       Instance => Self.Instance));
-      end if;
+   -------------------
+   -- Append_Tables --
+   -------------------
+
+   procedure Append_Tables (Self : SQL_Table; To : in out Table_Sets.Set) is
+   begin
+      Include (To, (Name     => Self.Table_Name,
+                    Instance => Self.Instance));
    end Append_Tables;
 
    -------------------
@@ -2981,7 +2994,7 @@ package body GNATCOLL.SQL is
       Data : constant Query_Insert_Contents_Access :=
         new Query_Insert_Contents;
    begin
-      Data.Into := (Name     => Table_Name (Table),
+      Data.Into := (Name     => Table.Table_Name,
                     Instance => Table.Instance);
       Data.Default_Values := True;
       return (Contents =>
@@ -3311,9 +3324,9 @@ package body GNATCOLL.SQL is
    ---------------
 
    function Left_Join
-     (Full    : SQL_Table'Class;
-      Partial : SQL_Table'Class;
-      On      : SQL_Criteria := No_Criteria) return SQL_Table'Class
+     (Full    : SQL_Single_Table'Class;
+      Partial : SQL_Single_Table'Class;
+      On      : SQL_Criteria := No_Criteria) return SQL_Left_Join_Table
    is
       Criteria : SQL_Criteria := On;
    begin
@@ -3324,20 +3337,19 @@ package body GNATCOLL.SQL is
          --  be involved ? In case of multiple paths between two tables, which
          --  path should we use ? ...)
 
-         if Full in SQL_Left_Join_Table'Class
-           or else Full in Subquery_Table'Class
-           or else Partial in SQL_Left_Join_Table'Class
-           or else Partial in Subquery_Table'Class
+         if Full not in SQL_Table'Class
+           or else Partial in SQL_Table'Class
          then
             raise Program_Error with "Can only auto-complete simple tables";
          end if;
 
-         Criteria := FK (Full, Partial) and FK (Partial, Full) and Criteria;
+         Criteria :=
+           FK (SQL_Table (Full), SQL_Table (Partial))
+           and FK (SQL_Table (Partial), SQL_Table (Full)) and Criteria;
       end if;
 
       return SQL_Left_Join_Table'
-        (SQL_Table_Or_List with
-         Instance     => null,
+        (Instance     => null,
          Data => (Join_Table_Data'
                     (Ada.Finalization.Controlled with
                      Data => new Join_Table_Internal'
@@ -3352,35 +3364,25 @@ package body GNATCOLL.SQL is
    ----------
 
    function Join
-     (Table1 : SQL_Table'Class;
-      Table2 : SQL_Table'Class;
-      On     : SQL_Criteria := No_Criteria) return SQL_Table'Class
+     (Table1 : SQL_Single_Table'Class;
+      Table2 : SQL_Single_Table'Class;
+      On     : SQL_Criteria := No_Criteria) return SQL_Left_Join_Table
    is
-      R : constant SQL_Table'Class := Left_Join (Table1, Table2, On);
+      R : constant SQL_Left_Join_Table := Left_Join (Table1, Table2, On);
    begin
-      SQL_Left_Join_Table (R).Data.Data.Is_Left_Join := False;
+      R.Data.Data.Is_Left_Join := False;
       return R;
    end Join;
-
-   ----------------
-   -- Table_Name --
-   ----------------
-
-   function Table_Name (Self : SQL_Left_Join_Table) return Cst_String_Access is
-      pragma Unreferenced (Self);
-   begin
-      --  No specific name associated with this table
-      return null;
-   end Table_Name;
 
    ------------
    -- Rename --
    ------------
 
    function Rename
-     (Self : SQL_Table'Class; Name : Cst_String_Access) return SQL_Table'Class
+     (Self : SQL_Single_Table'Class; Name : Cst_String_Access)
+      return SQL_Single_Table'Class
    is
-      Result : SQL_Table'Class := Self;
+      Result : SQL_Single_Table'Class := Self;
    begin
       Result.Instance := Name;
       return Result;
@@ -3485,62 +3487,9 @@ package body GNATCOLL.SQL is
    is
    begin
       return Subquery_Table'
-        (SQL_Table_Or_List with
-         Instance => Table_Name,
+        (Instance => Table_Name,
          Query    => Query);
    end Subquery;
-
-   -------------------
-   -- Field_As_Time --
-   -------------------
-
-   function Field_As_Time
-     (Table : Subquery_Table'Class; Field : Cst_String_Access)
-      return SQL_Field_Time
-   is
-      F : SQL_Field_Time;
-   begin
-      Initialize (F, Table, Field);
-      return F;
-   end Field_As_Time;
-
-   -------------------
-   -- Field_As_Text --
-   -------------------
-
-   function Field_As_Text
-     (Table : Subquery_Table'Class; Field : Cst_String_Access)
-      return SQL_Field_Text
-   is
-      F : SQL_Field_Text;
-   begin
-      Initialize (F, Table, Field);
-      return F;
-   end Field_As_Text;
-
-   ----------------------
-   -- Field_As_Integer --
-   ----------------------
-
-   function Field_As_Integer
-     (Table : Subquery_Table'Class; Field : Cst_String_Access)
-      return SQL_Field_Integer
-   is
-      F : SQL_Field_Integer;
-   begin
-      Initialize (F, Table, Field);
-      return F;
-   end Field_As_Integer;
-
-   ----------------
-   -- Table_Name --
-   ----------------
-
-   function Table_Name (Self : Subquery_Table) return Cst_String_Access is
-      pragma Unreferenced (Self);
-   begin
-      return null;
-   end Table_Name;
 
    ----------
    -- Free --
