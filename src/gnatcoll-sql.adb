@@ -137,34 +137,6 @@ package body GNATCOLL.SQL is
       end if;
    end Normalize_String;
 
-   ------------
-   -- Adjust --
-   ------------
-
-   procedure Adjust (Self : in out SQL_Table) is
-   begin
-      if Self.Data /= null then
-         Self.Data.Refcount := Self.Data.Refcount + 1;
-      end if;
-   end Adjust;
-
-   --------------
-   -- Finalize --
-   --------------
-
-   procedure Finalize (Self : in out SQL_Table) is
-      procedure Unchecked_Free is new Ada.Unchecked_Deallocation
-        (SQL_Table_Internal'Class, SQL_Table_Internal_Access);
-   begin
-      if Self.Data /= null then
-         Self.Data.Refcount := Self.Data.Refcount - 1;
-         if Self.Data.Refcount = 0 then
-            Free (Self.Data.Instance);
-            Unchecked_Free (Self.Data);
-         end if;
-      end if;
-   end Finalize;
-
    --------
    -- FK --
    --------
@@ -183,12 +155,10 @@ package body GNATCOLL.SQL is
 
    procedure Initialize
      (From     : in out SQL_Table'Class;
-      Instance : String)
+      Instance : Cst_String_Access)
    is
    begin
-      Finalize (From);
-      From.Data := new SQL_Table_Internal;
-      From.Data.Instance := new String'(Instance);
+      From.Instance := Instance;
    end Initialize;
 
    ----------------
@@ -198,13 +168,13 @@ package body GNATCOLL.SQL is
    procedure Initialize
      (Self  : in out SQL_Field'Class;
       From  : SQL_Table'Class;
-      Field : String)
+      Field : Cst_String_Access)
    is
       D : Named_Field_Internal_Access;
    begin
       D := new Named_Field_Internal;
       D.Table := new SQL_Table'Class'(From);
-      D.Name  := new String'(Field);
+      D.Name  := Field;
       Finalize (Self);
       Self.Data := SQL_Field_Internal_Access (D);
    end Initialize;
@@ -215,10 +185,10 @@ package body GNATCOLL.SQL is
 
    function To_String (Self : SQL_Table'Class) return String is
    begin
-      if Self.Data = null or else Self.Data.Instance = null then
+      if Self.Instance = null then
          return Table_Name (Self);
       else
-         return Table_Name (Self) & " " & Self.Data.Instance.all;
+         return Table_Name (Self) & " " & Self.Instance.all;
       end if;
    end To_String;
 
@@ -228,10 +198,10 @@ package body GNATCOLL.SQL is
 
    function Hash (Self : SQL_Table'Class) return Ada.Containers.Hash_Type is
    begin
-      if Self.Data = null or else Self.Data.Instance = null then
+      if Self.Instance = null then
          return Ada.Strings.Hash (Table_Name (Self));
       else
-         return Ada.Strings.Hash (Self.Data.Instance.all);
+         return Ada.Strings.Hash (Self.Instance.all);
       end if;
    end Hash;
 
@@ -266,20 +236,27 @@ package body GNATCOLL.SQL is
    is
       Result : Unbounded_String;
       C      : Field_List.Cursor;
+      N      : Cst_String_Access;
    begin
+      if Self.Name /= null then
+         N := Self.Name;
+      else
+         N := Cst_String_Access (Self.Visible_Name);
+      end if;
+
       if Self.Table = null then
-         Result := To_Unbounded_String (Self.Name.all);
+         Result := To_Unbounded_String (N.all);
 
       elsif Long then
-         if Self.Table.Data = null or else Self.Table.Data.Instance = null then
+         if Self.Table.Instance = null then
             Result := To_Unbounded_String
-              (Table_Name (Self.Table.all) & '.' & Self.Name.all);
+              (Table_Name (Self.Table.all) & '.' & N.all);
          else
             Result := To_Unbounded_String
-              (Self.Table.Data.Instance.all & '.' & Self.Name.all);
+              (Self.Table.Instance.all & '.' & N.all);
          end if;
       else
-         Result := To_Unbounded_String (Self.Name.all);
+         Result := To_Unbounded_String (N.all);
       end if;
 
       if Self.Operator /= null then
@@ -580,7 +557,7 @@ package body GNATCOLL.SQL is
    is
       F : SQL_Field_Integer;
    begin
-      Initialize (F, Table, Named_Field_Internal (Field.Data.all).Name.all);
+      Initialize (F, Table, Named_Field_Internal (Field.Data.all).Name);
       return F;
    end Field;
 
@@ -594,7 +571,7 @@ package body GNATCOLL.SQL is
    is
       F : SQL_Field_Text;
    begin
-      Initialize (F, Table, Named_Field_Internal (Field.Data.all).Name.all);
+      Initialize (F, Table, Named_Field_Internal (Field.Data.all).Name);
       return F;
    end Field;
 
@@ -608,7 +585,7 @@ package body GNATCOLL.SQL is
    is
       F : SQL_Field_Time;
    begin
-      Initialize (F, Table, Named_Field_Internal (Field.Data.all).Name.all);
+      Initialize (F, Table, Named_Field_Internal (Field.Data.all).Name);
       return F;
    end Field;
 
@@ -622,7 +599,7 @@ package body GNATCOLL.SQL is
    is
       F : SQL_Field_Boolean;
    begin
-      Initialize (F, Table, Named_Field_Internal (Field.Data.all).Name.all);
+      Initialize (F, Table, Named_Field_Internal (Field.Data.all).Name);
       return F;
    end Field;
 
@@ -636,7 +613,7 @@ package body GNATCOLL.SQL is
    is
       F : SQL_Field_Float;
    begin
-      Initialize (F, Table, Named_Field_Internal (Field.Data.all).Name.all);
+      Initialize (F, Table, Named_Field_Internal (Field.Data.all).Name);
       return F;
    end Field;
 
@@ -759,7 +736,7 @@ package body GNATCOLL.SQL is
    function Expression (Value : String)  return SQL_Field_Text is
       Data : constant Named_Field_Internal_Access := new Named_Field_Internal;
    begin
-      Data.Name := new String'(Normalize_String (Value));
+      Data.Visible_Name := new String'(Normalize_String (Value));
       return SQL_Field_Text'
         (Ada.Finalization.Controlled with SQL_Field_Internal_Access (Data));
    end Expression;
@@ -771,7 +748,7 @@ package body GNATCOLL.SQL is
    function From_String (Expression : String) return SQL_Field_Text is
       Data : constant Named_Field_Internal_Access := new Named_Field_Internal;
    begin
-      Data.Name := new String'(Expression);
+      Data.Visible_Name := new String'(Expression);
       return SQL_Field_Text'
         (Ada.Finalization.Controlled with SQL_Field_Internal_Access (Data));
    end From_String;
@@ -783,7 +760,7 @@ package body GNATCOLL.SQL is
    function From_Integer (Expression : String) return SQL_Field_Integer is
       Data : constant Named_Field_Internal_Access := new Named_Field_Internal;
    begin
-      Data.Name := new String'(Expression);
+      Data.Visible_Name := new String'(Expression);
       return SQL_Field_Integer'
         (Ada.Finalization.Controlled with SQL_Field_Internal_Access (Data));
    end From_Integer;
@@ -796,9 +773,9 @@ package body GNATCOLL.SQL is
       Data : constant Named_Field_Internal_Access := new Named_Field_Internal;
    begin
       if Value = Null_String then
-         Data.Name := new String'(Null_String);
+         Data.Visible_Name := new String'(Null_String);
       else
-         Data.Name := new String'(Normalize_String (Value));
+         Data.Visible_Name := new String'(Normalize_String (Value));
       end if;
       return SQL_Field_Text'
         (Ada.Finalization.Controlled with SQL_Field_Internal_Access (Data));
@@ -813,9 +790,9 @@ package body GNATCOLL.SQL is
       Data : constant Named_Field_Internal_Access := new Named_Field_Internal;
    begin
       if Img (Img'First) = ' ' then
-         Data.Name := new String'(Img (Img'First + 1 .. Img'Last));
+         Data.Visible_Name := new String'(Img (Img'First + 1 .. Img'Last));
       else
-         Data.Name := new String'(Img);
+         Data.Visible_Name := new String'(Img);
       end if;
       return SQL_Field_Integer'
         (Ada.Finalization.Controlled with SQL_Field_Internal_Access (Data));
@@ -830,9 +807,9 @@ package body GNATCOLL.SQL is
       Data : constant Named_Field_Internal_Access := new Named_Field_Internal;
    begin
       if Img (Img'First) = ' ' then
-         Data.Name := new String'(Img (Img'First + 1 .. Img'Last));
+         Data.Visible_Name := new String'(Img (Img'First + 1 .. Img'Last));
       else
-         Data.Name := new String'(Img);
+         Data.Visible_Name := new String'(Img);
       end if;
       return SQL_Field_Float'
         (Ada.Finalization.Controlled with SQL_Field_Internal_Access (Data));
@@ -856,12 +833,13 @@ package body GNATCOLL.SQL is
       if Value /= No_Time then
          Adjusted := Value - Duration (UTC_Time_Offset (Value)) * 60.0;
          if Date_Only then
-            Data.Name := new String'(Image (Adjusted, "'%Y-%m-%d'"));
+            Data.Visible_Name := new String'(Image (Adjusted, "'%Y-%m-%d'"));
          else
-            Data.Name := new String'(Image (Adjusted, "'%Y-%m-%d %H:%M:%S'"));
+            Data.Visible_Name :=
+              new String'(Image (Adjusted, "'%Y-%m-%d %H:%M:%S'"));
          end if;
       else
-         Data.Name := new String'("NULL");
+         Data.Visible_Name := new String'("NULL");
       end if;
       return SQL_Field_Time'
         (Ada.Finalization.Controlled with SQL_Field_Internal_Access (Data));
@@ -874,7 +852,7 @@ package body GNATCOLL.SQL is
    function As_Days (Count : Natural) return SQL_Field_Time is
       Data : constant Named_Field_Internal_Access := new Named_Field_Internal;
    begin
-      Data.Name := new String'("'" & Integer'Image (Count) & "days'");
+      Data.Visible_Name := new String'("'" & Integer'Image (Count) & "days'");
       return SQL_Field_Time'
         (Ada.Finalization.Controlled with SQL_Field_Internal_Access (Data));
    end As_Days;
@@ -886,7 +864,7 @@ package body GNATCOLL.SQL is
    function Expression (Value : Boolean) return SQL_Field_Boolean is
       Data : constant Named_Field_Internal_Access := new Named_Field_Internal;
    begin
-      Data.Name := new String'(Boolean'Image (Value));
+      Data.Visible_Name := new String'(Boolean'Image (Value));
       return SQL_Field_Boolean'
         (Ada.Finalization.Controlled with SQL_Field_Internal_Access (Data));
    end Expression;
@@ -1940,6 +1918,7 @@ package body GNATCOLL.SQL is
       C      : Criteria_List.Cursor;
       C2     : Field_List.Cursor;
       Is_First : Boolean;
+      N      : Cst_String_Access;
    begin
       if Self.Criteria.Data /= null then
          case Self.Criteria.Data.Op is
@@ -1948,7 +1927,13 @@ package body GNATCOLL.SQL is
                  and then -(Self.Criteria.Data.Arg2) in SQL_Field_Boolean'Class
                  and then Named2.Table = null
                then
-                  if Named2.Name.all = "FALSE" then
+                  if Named2.Name /= null then
+                     N := Named2.Name;
+                  else
+                     N := Cst_String_Access (Named2.Visible_Name);
+                  end if;
+
+                  if N.all = "FALSE" then
                      Result := To_Unbounded_String ("not ");
                   end if;
                   Append (Result, To_String (Any1.all, Long));
@@ -1957,7 +1942,13 @@ package body GNATCOLL.SQL is
                  and then -(Self.Criteria.Data.Arg2) in SQL_Field_Boolean'Class
                  and then Named2.Table = null
                then
-                  if Named2.Name.all = "TRUE" then
+                  if Named2.Name /= null then
+                     N := Named2.Name;
+                  else
+                     N := Cst_String_Access (Named2.Visible_Name);
+                  end if;
+
+                  if N.all = "TRUE" then
                      Result := To_Unbounded_String ("not ");
                   end if;
                   Append (Result, To_String (Named1.all, Long));
@@ -2199,8 +2190,8 @@ package body GNATCOLL.SQL is
 
    procedure Free (Self : in out Named_Field_Internal) is
    begin
-      Free (Self.Name);
       Free (Self.Operator);
+      Free (Self.Visible_Name);
       Unchecked_Free (Self.Table);
    end Free;
 
@@ -2418,8 +2409,7 @@ package body GNATCOLL.SQL is
       C : Table_List.Cursor;
    begin
       if Self in SQL_Left_Join_Table'Class then
-         C := First
-           (SQL_Left_Join_Table_Internal_Access (Self.Data).Tables.List);
+         C := First (SQL_Left_Join_Table (Self).Data.Data.Tables.List);
          while Has_Element (C) loop
             Append_Tables (Element (C), To);
             Next (C);
@@ -3275,6 +3265,34 @@ package body GNATCOLL.SQL is
       end if;
    end Auto_Complete;
 
+   ------------
+   -- Adjust --
+   ------------
+
+   procedure Adjust (Self : in out Join_Table_Data) is
+   begin
+      if Self.Data /= null then
+         Self.Data.Refcount := Self.Data.Refcount + 1;
+      end if;
+   end Adjust;
+
+   --------------
+   -- Finalize --
+   --------------
+
+   procedure Unchecked_Free is new Ada.Unchecked_Deallocation
+     (Join_Table_Internal, Join_Table_Internal_Access);
+
+   procedure Finalize (Self : in out Join_Table_Data) is
+   begin
+      if Self.Data /= null then
+         Self.Data.Refcount := Self.Data.Refcount - 1;
+         if Self.Data.Refcount = 0 then
+            Unchecked_Free (Self.Data);
+         end if;
+      end if;
+   end Finalize;
+
    ---------------
    -- Left_Join --
    ---------------
@@ -3284,7 +3302,6 @@ package body GNATCOLL.SQL is
       Partial : SQL_Table'Class;
       On      : SQL_Criteria := No_Criteria) return SQL_Table'Class
    is
-      Result : SQL_Left_Join_Table;
       Criteria : SQL_Criteria := On;
       Set    : Table_Sets.Set;
    begin
@@ -3297,13 +3314,16 @@ package body GNATCOLL.SQL is
          Add_All_Foreign_Keys (Set, Empty_Table_List, Criteria);
       end if;
 
-      Result.Data := new SQL_Left_Join_Table_Internal'
-        (Refcount => 1,
-         Instance => null,
-         Tables   => Full & Partial,
-         Is_Left_Join => True,
-         On       => Criteria);
-      return Result;
+      return SQL_Left_Join_Table'
+        (SQL_Table_Or_List with
+         Instance     => null,
+         Data => (Join_Table_Data'
+                    (Ada.Finalization.Controlled with
+                     Data => new Join_Table_Internal'
+                       (Refcount     => 1,
+                        Tables       => Full & Partial,
+                        Is_Left_Join => True,
+                        On           => Criteria))));
    end Left_Join;
 
    ----------
@@ -3317,7 +3337,7 @@ package body GNATCOLL.SQL is
    is
       R : constant SQL_Table'Class := Left_Join (Table1, Table2, On);
    begin
-      SQL_Left_Join_Table_Internal (R.Data.all).Is_Left_Join := False;
+      SQL_Left_Join_Table (R).Data.Data.Is_Left_Join := False;
       return R;
    end Join;
 
@@ -3327,22 +3347,20 @@ package body GNATCOLL.SQL is
 
    function Table_Name (Self : SQL_Left_Join_Table) return String is
       Result : Unbounded_String;
-      Data   : constant SQL_Left_Join_Table_Internal_Access :=
-        SQL_Left_Join_Table_Internal_Access (Self.Data);
-      C      : Table_List.Cursor := First (Data.Tables.List);
+      C      : Table_List.Cursor := First (Self.Data.Data.Tables.List);
    begin
       Append (Result, "(");
       Append (Result, To_String (Element (C)));
-      if Data.Is_Left_Join then
+      if Self.Data.Data.Is_Left_Join then
          Append (Result, " LEFT JOIN ");
       else
          Append (Result, " JOIN ");
       end if;
       Next (C);
       Append (Result, To_String (Element (C)));
-      if Data.On /= No_Criteria then
+      if Self.Data.Data.On /= No_Criteria then
          Append (Result, " ON ");
-         Append (Result, To_String (Data.On, Long => True));
+         Append (Result, To_String (Self.Data.Data.On, Long => True));
       end if;
       Append (Result, ")");
       return To_String (Result);
@@ -3353,17 +3371,11 @@ package body GNATCOLL.SQL is
    ------------
 
    function Rename
-     (Self : SQL_Left_Join_Table; Name : String) return SQL_Left_Join_Table
+     (Self : SQL_Table'Class; Name : Cst_String_Access) return SQL_Table'Class
    is
-      Result : SQL_Left_Join_Table;
+      Result : SQL_Table'Class := Self;
    begin
-      Result.Data := new SQL_Left_Join_Table_Internal'
-        (Refcount => 1,
-         Instance => new String'(Name),
-         Tables   => SQL_Left_Join_Table_Internal (Self.Data.all).Tables,
-         On       => SQL_Left_Join_Table_Internal (Self.Data.all).On,
-         Is_Left_Join =>
-           SQL_Left_Join_Table_Internal (Self.Data.all).Is_Left_Join);
+      Result.Instance := Name;
       return Result;
    end Rename;
 
@@ -3462,14 +3474,13 @@ package body GNATCOLL.SQL is
    --------------
 
    function Subquery
-     (Query : SQL_Query; Table_Name : String) return Subquery_Table
+     (Query : SQL_Query; Table_Name : Cst_String_Access) return Subquery_Table
    is
-      Data : constant SQL_Table_Internal_Access := new SQL_Table_Internal'
-        (Refcount => 1,
-         Instance => new String'(Table_Name));
    begin
       return Subquery_Table'
-        (Ada.Finalization.Controlled with Data => Data, Query => Query);
+        (SQL_Table_Or_List with
+         Instance => Table_Name,
+         Query    => Query);
    end Subquery;
 
    -------------------
@@ -3477,7 +3488,8 @@ package body GNATCOLL.SQL is
    -------------------
 
    function Field_As_Time
-     (Table : Subquery_Table'Class; Field : String) return SQL_Field_Time
+     (Table : Subquery_Table'Class; Field : Cst_String_Access)
+      return SQL_Field_Time
    is
       F : SQL_Field_Time;
    begin
@@ -3490,7 +3502,8 @@ package body GNATCOLL.SQL is
    -------------------
 
    function Field_As_Text
-     (Table : Subquery_Table'Class; Field : String) return SQL_Field_Text
+     (Table : Subquery_Table'Class; Field : Cst_String_Access)
+      return SQL_Field_Text
    is
       F : SQL_Field_Text;
    begin
@@ -3503,7 +3516,7 @@ package body GNATCOLL.SQL is
    ----------------------
 
    function Field_As_Integer
-     (Table : Subquery_Table'Class; Field : String)
+     (Table : Subquery_Table'Class; Field : Cst_String_Access)
       return SQL_Field_Integer
    is
       F : SQL_Field_Integer;
@@ -3520,19 +3533,6 @@ package body GNATCOLL.SQL is
    begin
       return "(" & To_String (To_String (Self.Query)) & ")";
    end Table_Name;
-
-   ------------
-   -- Rename --
-   ------------
-
-   function Rename
-     (Self : Subquery_Table; Name : String) return Subquery_Table
-   is
-      pragma Unreferenced (Name);
-   begin
-      raise Program_Error;
-      return Self;
-   end Rename;
 
    ----------
    -- Free --

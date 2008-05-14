@@ -79,7 +79,8 @@
 --  This way, a user might write a query with two instances of the table with
 --  the following code (which uses the Ada2005 dotted notation, although this
 --  isn't mandatory):
---      AI : T_Sales_Entity.Table := Rename (Sales_Entity, "foo");
+--      AI : T_Sales_Entity.Table := T_Sales_Entity.Table
+--        (Rename (Sales_Entity, "foo"));
 --      SQL_Select
 --        (Fields => AI.Field1 & Action_Item.Field1,
 --         From   => AI & Action_Item,
@@ -94,6 +95,19 @@ with Ada.Strings.Unbounded;  use Ada.Strings.Unbounded;
 with GNAT.Strings;           use GNAT.Strings;
 
 package GNATCOLL.SQL is
+
+   type Cst_String_Access is access constant String;
+   --  Various aspects of a database description (table names, field names,...)
+   --  are represented as string. To limit the number of memory allocation and
+   --  deallocation (and therefore increase speed), this package uses such
+   --  strings as Cst_String_Access. These strings are never deallocation, and
+   --  should therefore be pointed to "aliased constant String" in your
+   --  code, as in:
+   --       Name : aliased constant String := "mysubquery";
+   --       Q : SQL_Query := SQL_Select
+   --          (Fields => ...,
+   --           From   => Subquery (SQL_Select (...),
+   --                               Name => Name'Access));
 
    type SQL_Criteria is private;
    type SQL_Query is private;
@@ -120,11 +134,12 @@ package GNATCOLL.SQL is
    --  Name of the table in the database schema.
 
    function Rename
-     (Self : SQL_Table; Name : String) return SQL_Table is abstract;
+     (Self : SQL_Table'Class; Name : Cst_String_Access) return SQL_Table'Class;
    --  Returns a new instance of Self, with a different name.
    --  Example of use:
    --     T : constant T_Wavefront_Tn.Table :=
    --        T_Wavefront_Tn.Rename (Wavefront_Tn, "t");
+   --  No deallocation is ever done for Name, see Cst_String_Access
 
    function FK
      (Self : SQL_Table; Foreign : SQL_Table'Class) return SQL_Criteria;
@@ -655,19 +670,21 @@ package GNATCOLL.SQL is
    type Subquery_Table is new SQL_Table with private;
 
    function Subquery
-     (Query : SQL_Query; Table_Name : String) return Subquery_Table;
+     (Query : SQL_Query; Table_Name : Cst_String_Access) return Subquery_Table;
    --  Create a temporary subquery table, as in:
    --    select * from b, (select ...) a where ...
    --    A := Subquery ("select ...", "a");
+   --  Table_Name is never freed, and should therefore point to a "aliased
+   --  constant String" in your code
 
    function Field_As_Time
-     (Table : Subquery_Table'Class; Field : String)
+     (Table : Subquery_Table'Class; Field : Cst_String_Access)
       return SQL_Field_Time;
    function Field_As_Text
-     (Table : Subquery_Table'Class; Field : String)
+     (Table : Subquery_Table'Class; Field : Cst_String_Access)
       return SQL_Field_Text;
    function Field_As_Integer
-     (Table : Subquery_Table'Class; Field : String)
+     (Table : Subquery_Table'Class; Field : Cst_String_Access)
       return SQL_Field_Integer;
    --  Return a specific field from the table
 
@@ -690,16 +707,18 @@ package GNATCOLL.SQL is
 
    procedure Initialize
      (From     : in out SQL_Table'Class;
-      Instance : String);
-   --  Change the instance name for From.
+      Instance : Cst_String_Access);
+   --  Change the instance name for From. Instance is never freed, so should
+   --  point to a "aliased constant String" in your code.
 
    procedure Initialize
      (Self  : in out SQL_Field'Class;
       From  : SQL_Table'Class;
-      Field : String);
+      Field : Cst_String_Access);
    --  Create new fields from a table instance. These should only be used in
    --  the automatic package described in the general comment for this package
-   --  if you want to ensure you only use valid fields
+   --  if you want to ensure you only use valid fields.
+   --  Field is never freed, see description of Cst_String_Access
 
 private
 
@@ -707,21 +726,12 @@ private
    -- Table and instances --
    -------------------------
 
-   type SQL_Table_Or_List is abstract new Ada.Finalization.Controlled with
-      null record;
-
-   type SQL_Table_Internal is tagged record
-      Refcount : Natural := 1;
-      Instance : GNAT.Strings.String_Access;
-      --  instance name, might be null when this is the same name as the table
-   end record;
-   type SQL_Table_Internal_Access is access all SQL_Table_Internal'Class;
+   type SQL_Table_Or_List is abstract tagged null record;
 
    type SQL_Table is abstract new SQL_Table_Or_List with record
-      Data : SQL_Table_Internal_Access;
+      Instance : Cst_String_Access;
+      --  instance name, might be null when this is the same name as the table
    end record;
-   procedure Adjust   (Self : in out SQL_Table);
-   procedure Finalize (Self : in out SQL_Table);
 
    function Hash (Self : SQL_Table'Class) return Ada.Containers.Hash_Type;
    package Table_Sets is new Ada.Containers.Indefinite_Hashed_Sets
@@ -749,8 +759,8 @@ private
    --  Append all the tables referenced in Self to To
 
    Empty_Table_List : constant SQL_Table_List :=
-     (SQL_Table_Or_List with
-      List => Table_List.Empty_List);
+     (SQL_Table_Or_List
+      with List => Table_List.Empty_List);
 
    --------------------
    -- Field pointers --
@@ -811,7 +821,12 @@ private
 
    type Named_Field_Internal is new SQL_Field_Internal with record
       Table    : SQL_Table_Access := null;   --  Null for a constant
-      Name     : GNAT.Strings.String_Access;
+
+      Name     : Cst_String_Access;
+      Visible_Name : GNAT.Strings.String_Access;
+      --  Only one of the two is set. Name will never be freed, whereas
+      --  Visible_Name will
+
       Operator : GNAT.Strings.String_Access;
       --  null unless we have an operator on several fields
       List     : SQL_Field_List;
@@ -1022,19 +1037,28 @@ private
    -- Left join --
    ---------------
 
-   type SQL_Left_Join_Table_Internal is new SQL_Table_Internal with record
+   type Join_Table_Internal is record
+      Refcount : Natural := 1;
       Tables : SQL_Table_List;
       On     : SQL_Criteria;
       Is_Left_Join : Boolean;
    end record;
-   type SQL_Left_Join_Table_Internal_Access is access all
-     SQL_Left_Join_Table_Internal'Class;
+   type Join_Table_Internal_Access is access all Join_Table_Internal;
+   type Join_Table_Data is new Ada.Finalization.Controlled with record
+      Data : Join_Table_Internal_Access;
+   end record;
+   overriding procedure Adjust (Self : in out Join_Table_Data);
+   overriding procedure Finalize (Self : in out Join_Table_Data);
+   --  The contents of a join table is in a smart pointer. That way, we avoid
+   --  duplicating the data (especially the Ada2005 containers) whenever we
+   --  "Adjust" a SQL_Left_Join_Table, which saves a number of system calls to
+   --  malloc() and free()
 
-   type SQL_Left_Join_Table is new SQL_Table with null record;
+   type SQL_Left_Join_Table is new SQL_Table with record
+      Data   : Join_Table_Data;
+   end record;
 
-   function Table_Name (Self : SQL_Left_Join_Table) return String;
-   function Rename
-     (Self : SQL_Left_Join_Table; Name : String) return SQL_Left_Join_Table;
+   overriding function Table_Name (Self : SQL_Left_Join_Table) return String;
    --  See inherited doc
 
    -----------------
@@ -1178,8 +1202,6 @@ private
    end record;
 
    overriding function Table_Name (Self : Subquery_Table) return String;
-   overriding function Rename
-     (Self : Subquery_Table; Name : String) return Subquery_Table;
 
    ------------------------------------
    --  Null field deferred constants --
@@ -1191,6 +1213,7 @@ private
         (SQL_Field_Internal with
          Table    => null,
          Name     => new String'(Null_String),
+         Visible_Name => null,
          Operator => null,
          List     => <>));
    Null_Field_Text : constant SQL_Field_Text :=
@@ -1199,6 +1222,7 @@ private
         (SQL_Field_Internal with
          Table    => null,
          Name     => new String'(Null_String),
+         Visible_Name => null,
          Operator => null,
          List     => <>));
    Null_Field_Boolean : constant SQL_Field_Boolean :=
@@ -1207,6 +1231,7 @@ private
         (SQL_Field_Internal with
          Table    => null,
          Name     => new String'(Null_String),
+         Visible_Name => null,
          Operator => null,
          List     => <>));
 
