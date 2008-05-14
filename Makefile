@@ -2,20 +2,31 @@
 
 include Makefile.conf
 
-all:
-	${MAKE} -C src -f Makefile.gnatcoll $@
-	${MAKE} -C src -f Makefile.python $@
-ifeq (${WITH_GTK},yes)
-	${MAKE} -C src -f Makefile.gtk $@
+ifeq (${BUILDS_SHARED},yes)
+all: static relocatable
+install: install_relocatable install_static
+else
+all: static
+install: install_static
 endif
-	${MAKE} -C src -f Makefile.postgres $@
+
+## Builds explicitly the shared or the static libraries
 
 static:
-	${MAKE} GNATCOLL_LIBRARY_TYPE=static
-shared relocatable: all
-	${MAKE} GNATCOLL_LIBRARY_TYPE=relocatable
+	${MAKE} GNATCOLL_LIBRARY_TYPE=static build_library_type
+shared relocatable:
+	${MAKE} GNATCOLL_LIBRARY_TYPE=relocatable build_library_type
 
-both: static shared install_static install_shared
+## Builds either the static or the shared version, based on the
+## GNATCOLL_LIBRARY_TYPE variable
+
+build_library_type:
+	${MAKE} -C src -f Makefile.gnatcoll
+	${MAKE} -C src -f Makefile.python
+ifeq (${WITH_GTK},yes)
+	${MAKE} -C src -f Makefile.gtk
+endif
+	${MAKE} -C src -f Makefile.postgres
 
 examples:
 	${MAKE} -C examples
@@ -31,28 +42,29 @@ test:
 	${MAKE} prefix=${shell pwd}/local_install -C testsuite $@
 
 ## GNU standards say we must not recompile in such a case
-install:
+## Install either the static or the shared lib, based on the value of
+## GNATCOLL_LIBRARY_TYPE
+install_library_type:
 	${MKDIR} ${bindir}
 	${MKDIR} ${libdir}/${TARNAME}/${GNATCOLL_LIBRARY_TYPE}
 	${MKDIR} ${libdir}/gnat/${TARNAME}
 	${MKDIR} ${datadir}/examples
 	${MKDIR} ${includedir}/${TARNAME}
 	${MKDIR} ${datadir}/gps/plug-ins
-	${MAKE} -C src -f Makefile.gnatcoll $@
-	${MAKE} -C src -f Makefile.python $@
-	${MAKE} -C docs $@
+	${MAKE} -C src -f Makefile.gnatcoll install
+	${MAKE} -C src -f Makefile.python install
+	${MAKE} -C docs install
 ifeq (${WITH_GTK},yes)
-	${MAKE} -C src -f Makefile.gtk $@
+	${MAKE} -C src -f Makefile.gtk install
 endif
-	${MAKE} -C src -f Makefile.postgres $@
+	${MAKE} -C src -f Makefile.postgres install
 	${INSTALL} distrib/gnatcoll_gps.xml ${datadir}/gps/plug-ins
 	${INSTALL} distrib/*.gpr ${libdir}/gnat
-	${INSTALL} distrib/${GNATCOLL_LIBRARY_TYPE}/*.gpr ${libdir}/gnat
 
 install_static:
-	${MAKE} GNATCOLL_LIBRARY_TYPE=static install
+	${MAKE} GNATCOLL_LIBRARY_TYPE=static install_library_type
 install_relocatable install_shared:
-	${MAKE} GNATCOLL_LIBRARY_TYPE=relocatable install
+	${MAKE} GNATCOLL_LIBRARY_TYPE=relocatable install_library_type
 
 clean:
 	${MAKE} GNATCOLL_LIBRARY_TYPE=relocatable -C src -f Makefile.gnatcoll $@

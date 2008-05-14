@@ -1,16 +1,17 @@
---  This is the Gnatcolproject file. It can be used both for static and
+--  This is the Gnatcoll project file. It can be used both for static and
 --  relocatable libraries, although the two might not be available on
---  your system depending on how GnatColl was compiled.
+--  your system depending on how GnatColl was compiled and installed.
 --  You can select either of the two libraries by changing the environment
---  variable GNATCOLL_KIND. The default is the last one you installed from
---  GnatColl
+--  variable LIBRARY_KIND.
+--  The default depends on how gnatcoll was configured and compiled (although
+--  in general it will be static since this works better in most cases)
 
 project GnatColl is
    Version := "@PACKAGE_VERSION@";
 
    type GnatColl_Kind_Type is ("static", "relocatable");
    GnatColl_Kind : GnatColl_Kind_Type :=
-     external ("GNATCOLL_KIND", "static");
+     external ("LIBRARY_TYPE", "@DEFAULT_LIBRARY_TYPE@");
 
    type OS_Kind is ("Windows_NT", "unix");
    OS : OS_Kind := external ("OS", "unix");
@@ -35,7 +36,6 @@ project GnatColl is
          when "Windows_NT" =>
             for Implementation ("GNATCOLL.Mmap") use "gnatcoll-mmap__win32.adb";
       end case;
-  end Naming;
+   end Naming;
 
 end GnatColl;
-

@@ -279,6 +279,22 @@ the following ones are most useful:
 @item --prefix=@var{prefix}
 This specifies the directory in which @value{gnatcoll} should be installed.
 
+@item --enable-shared
+@itemx --disable-shared
+If none of these switches is specified, @value{gnatcoll} will try to build
+both static and shared libraries (if the latter are supported on your
+system). The compilation needs to be done twice, since the compilation options
+might not be the same in both cases.
+
+If you only intend to ever use static libraries, you can use
+@code{--disable-shared} to only build static libraries.
+
+When you link @value{gnatcoll} with your own application, the default is
+to link with the static libraries. You can change this default, which becomes
+the shared libraries if you explicitly specify @code{--enable-shared}.
+However, even if the default are the static libraries, you can still override
+that (see below the @code{LIBRARY_TYPE} variable).
+
 @item --with-python=@var{directory}
 @itemx --without-python
 This specifies where @value{gnatcoll} should find python. If for instance
@@ -337,12 +353,9 @@ This is done by simply typing the following command:
 make
 @end smallexample
 
-By default, this builds the shared library for @value{gnatcoll}. You can
-build both shared and static libraries with:
-
-@smallexample
-make static relocatable
-@end smallexample
+Depending on the switches passed to @code{configure}, this will either
+build both static and shared libraries, or static only (see the
+@code{--disable-shared} configure switch).
 
 Optionally, you can also build the examples and/or the automatic test suite,
 with the following commands:
@@ -365,20 +378,17 @@ make install
 @end smallexample
 
 Note that this makefile target does not try to recompile @value{gnatcoll},
-so you must build it first. If you have also build the static library, you
-can install both shared and static libraries with:
+so you must build it first.
+This will install both the shared and the static libraries if both were
+build.
 
-@smallexample
-make install_static install_relocatable
-@end smallexample
+As mentioned in the description of the @code{configure} switches, your
+application will by default be linked with the static library, unless
+you specified the @code{--enable-shared} switch.
 
-Putting the targets in that order will ensure that applications using
-@value{gnatcoll} will be default use the shared libraries. If you would
-prefer the static libraries by default, swap the two arguments. In any
-case, you can always choose later on which kind of library to use for
-@value{gnatcoll} by setting the environment variable @code{GNATCOLL_KIND}
+However, you can always choose later on which kind of library to use for
+@value{gnatcoll} by setting the environment variable @code{LIBRARY_TYPE}
 to either @code{"relocatable"} or @code{"static"}.
-
 
 Your application can now use the @value{gnatcoll} code through a project
 file, by adding a with clause

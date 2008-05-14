@@ -309,7 +309,7 @@ ac_includes_default="\
 # include <unistd.h>
 #endif"
 
-ac_subst_vars='SHELL PATH_SEPARATOR PACKAGE_NAME PACKAGE_TARNAME PACKAGE_VERSION PACKAGE_STRING PACKAGE_BUGREPORT exec_prefix prefix program_transform_name bindir sbindir libexecdir datadir sysconfdir sharedstatedir localstatedir libdir includedir oldincludedir infodir mandir build_alias host_alias target_alias DEFS ECHO_C ECHO_N ECHO_T LIBS build build_cpu build_vendor build_os host host_cpu host_vendor host_os target target_cpu target_vendor target_os LN_S INSTALL_PROGRAM INSTALL_SCRIPT INSTALL_DATA CC CFLAGS LDFLAGS CPPFLAGS ac_ct_CC EXEEXT OBJEXT CPP EGREP PKG_CONFIG GTK_GCC_FLAGS WITH_GTK PYTHON PYTHON_BASE PYTHON_VERSION PYTHON_DIR PYTHON_LIBS PYTHON_CFLAGS WITH_PYTHON WITH_POSTGRES PATH_LIBPQ PYGTK_PREFIX PYGTK_INCLUDE WITH_PYGTK PYTHON_LIBS_GPR PYTHON_CFLAGS_GPR PYGTK_INCLUDE_GPR GTK_GCC_FLAGS_GPR WITH_SYSLOG MAKEINFO TEXI2DVI LIBOBJS LTLIBOBJS'
+ac_subst_vars='SHELL PATH_SEPARATOR PACKAGE_NAME PACKAGE_TARNAME PACKAGE_VERSION PACKAGE_STRING PACKAGE_BUGREPORT exec_prefix prefix program_transform_name bindir sbindir libexecdir datadir sysconfdir sharedstatedir localstatedir libdir includedir oldincludedir infodir mandir build_alias host_alias target_alias DEFS ECHO_C ECHO_N ECHO_T LIBS build build_cpu build_vendor build_os host host_cpu host_vendor host_os target target_cpu target_vendor target_os LN_S INSTALL_PROGRAM INSTALL_SCRIPT INSTALL_DATA CC CFLAGS LDFLAGS CPPFLAGS ac_ct_CC EXEEXT OBJEXT CPP EGREP GNAT_BUILDS_SHARED DEFAULT_LIBRARY_TYPE PKG_CONFIG GTK_GCC_FLAGS WITH_GTK PYTHON PYTHON_BASE PYTHON_VERSION PYTHON_DIR PYTHON_LIBS PYTHON_CFLAGS WITH_PYTHON WITH_POSTGRES PATH_LIBPQ PYGTK_PREFIX PYGTK_INCLUDE WITH_PYGTK PYTHON_LIBS_GPR PYTHON_CFLAGS_GPR PYGTK_INCLUDE_GPR GTK_GCC_FLAGS_GPR WITH_SYSLOG MAKEINFO TEXI2DVI LIBOBJS LTLIBOBJS'
 ac_subst_files=''
 
 # Initialize some variables set by options.
@@ -847,6 +847,9 @@ if test -n "$ac_init_help"; then
 Optional Features:
   --disable-FEATURE       do not include FEATURE (same as --enable-FEATURE=no)
   --enable-FEATURE[=ARG]  include FEATURE [ARG=yes]
+  --disable-shared        Disable building of shared libraries
+  --enable-shared         Build shared libraries if supported on the target
+                          Make them the installation default
   --disable-gtk           Disable support for GTK [default=enabled]
   --enable-shared-python  Link with shared python library instead of static
   --disable-pygtk         Disable support for PyGTK [default=enabled]
@@ -3231,6 +3234,63 @@ rm -f conftest.mmap
 
 
 
+   echo "$as_me:$LINENO: checking whether gnat can build shared libs" >&5
+echo $ECHO_N "checking whether gnat can build shared libs... $ECHO_C" >&6
+
+   DEFAULT_LIBRARY_TYPE=static
+
+   # Check whether --enable-shared or --disable-shared was given.
+if test "${enable_shared+set}" = set; then
+  enableval="$enable_shared"
+  GNAT_BUILDS_SHARED=$enableval
+      if test $enableval = yes; then
+         DEFAULT_LIBRARY_TYPE=relocatable
+      fi
+else
+  GNAT_BUILDS_SHARED=yes
+fi;
+
+   if test x$GNAT_BUILDS_SHARED = xyes; then
+      # Create a temporary directory (from "info autoconf")
+      : ${TMPDIR=/tmp}
+      {
+        tmp=`(umask 077 && mktemp -d "$TMPDIR/fooXXXXXX") 2>/dev/null` \
+           && test -n "$tmp" && test -d "$tmp"
+      } || {
+        tmp=$TMPDIR/foo$$-$RANDOM
+        (umask 077 && mkdir -p "$tmp")
+      } || exit $?
+
+      mkdir $tmp/lib
+      echo "package Foo is end Foo;" > $tmp/foo.ads
+      cat > $tmp/lib.gpr <<EOF
+project Lib is
+   for Source_Dirs use (".");
+   for Library_Dir use "lib";
+   for Library_Name use "lib";
+   for Library_Kind use "relocatable";
+end Lib;
+EOF
+
+      gnatmake -c -q -P$tmp/lib 2>/dev/null
+      if test $? = 0 ; then
+         GNAT_BUILDS_SHARED=yes
+      else
+         GNAT_BUILDS_SHARED=no
+         DEFAULT_LIBRARY_TYPE=static
+      fi
+      rm -rf $tmp
+      echo "$as_me:$LINENO: result: $GNAT_BUILDS_SHARED" >&5
+echo "${ECHO_T}$GNAT_BUILDS_SHARED" >&6
+   else
+      echo "$as_me:$LINENO: result: no (--disabled-shared)" >&5
+echo "${ECHO_T}no (--disabled-shared)" >&6
+   fi
+
+
+
+
+
    # Check whether --enable-gtk or --disable-gtk was given.
 if test "${enable_gtk+set}" = set; then
   enableval="$enable_gtk"
@@ -3994,6 +4054,8 @@ done
 
 { echo "$as_me:$LINENO: --------- Summary for GNAT Components --------------" >&5
 echo "$as_me: --------- Summary for GNAT Components --------------" >&6;}
+{ echo "$as_me:$LINENO:  Shared libraries: $GNAT_BUILDS_SHARED (default: $DEFAULT_LIBRARY_TYPE)" >&5
+echo "$as_me:  Shared libraries: $GNAT_BUILDS_SHARED (default: $DEFAULT_LIBRARY_TYPE)" >&6;}
 { echo "$as_me:$LINENO:  Gtk+:   $WITH_GTK" >&5
 echo "$as_me:  Gtk+:   $WITH_GTK" >&6;}
 { echo "$as_me:$LINENO:     Make sure pkg-config is in your PATH" >&5
@@ -4017,7 +4079,7 @@ echo "$as_me:     use --with-postgres to override" >&6;}
 { echo "$as_me:$LINENO: --------------------------------------------" >&5
 echo "$as_me: --------------------------------------------" >&6;}
 
-                                                                      ac_config_files="$ac_config_files gnatcoll_shared.gpr docs/Makefile Makefile.conf src/gnatcoll_python.gpr distrib/relocatable/gnatcoll.gpr distrib/gnatcoll_python.gpr distrib/static/gnatcoll.gpr"
+                                                            ac_config_files="$ac_config_files gnatcoll_shared.gpr docs/Makefile Makefile.conf src/gnatcoll_python.gpr distrib/gnatcoll.gpr distrib/gnatcoll_python.gpr"
 cat >confcache <<\_ACEOF
 # This file is a shell script that caches the results of configure
 # tests run on this system so they can be shared between configure
@@ -4572,9 +4634,8 @@ do
   "docs/Makefile" ) CONFIG_FILES="$CONFIG_FILES docs/Makefile" ;;
   "Makefile.conf" ) CONFIG_FILES="$CONFIG_FILES Makefile.conf" ;;
   "src/gnatcoll_python.gpr" ) CONFIG_FILES="$CONFIG_FILES src/gnatcoll_python.gpr" ;;
-  "distrib/relocatable/gnatcoll.gpr" ) CONFIG_FILES="$CONFIG_FILES distrib/relocatable/gnatcoll.gpr" ;;
+  "distrib/gnatcoll.gpr" ) CONFIG_FILES="$CONFIG_FILES distrib/gnatcoll.gpr" ;;
   "distrib/gnatcoll_python.gpr" ) CONFIG_FILES="$CONFIG_FILES distrib/gnatcoll_python.gpr" ;;
-  "distrib/static/gnatcoll.gpr" ) CONFIG_FILES="$CONFIG_FILES distrib/static/gnatcoll.gpr" ;;
   *) { { echo "$as_me:$LINENO: error: invalid argument: $ac_config_target" >&5
 echo "$as_me: error: invalid argument: $ac_config_target" >&2;}
    { (exit 1); exit 1; }; };;
@@ -4683,6 +4744,8 @@ s,@EXEEXT@,$EXEEXT,;t t
 s,@OBJEXT@,$OBJEXT,;t t
 s,@CPP@,$CPP,;t t
 s,@EGREP@,$EGREP,;t t
+s,@GNAT_BUILDS_SHARED@,$GNAT_BUILDS_SHARED,;t t
+s,@DEFAULT_LIBRARY_TYPE@,$DEFAULT_LIBRARY_TYPE,;t t
 s,@PKG_CONFIG@,$PKG_CONFIG,;t t
 s,@GTK_GCC_FLAGS@,$GTK_GCC_FLAGS,;t t
 s,@WITH_GTK@,$WITH_GTK,;t t

@@ -6,6 +6,7 @@ AC_PROG_LN_S
 AC_PROG_INSTALL
 AC_FUNC_MMAP
 
+AM_GNAT_BUILDS_SHARED
 AM_PATH_GTK
 AM_PATH_PYTHON
 AM_PATH_POSTGRES
@@ -23,6 +24,7 @@ AC_SUBST(MAKEINFO)
 AC_SUBST(TEXI2DVI)
 
 AC_MSG_NOTICE([--------- Summary for GNAT Components --------------])
+AC_MSG_NOTICE([ Shared libraries: $GNAT_BUILDS_SHARED (default: $DEFAULT_LIBRARY_TYPE)])
 AC_MSG_NOTICE([ Gtk+:   $WITH_GTK])
 AC_MSG_NOTICE([    Make sure pkg-config is in your PATH])
 AC_MSG_NOTICE([ Python: $WITH_PYTHON $PYTHON_BASE])
@@ -35,4 +37,4 @@ AC_MSG_NOTICE([ PostgreSQL: $WITH_POSTGRES $PATH_LIBPQ])
 AC_MSG_NOTICE([    use --with-postgres to override])
 AC_MSG_NOTICE([--------------------------------------------])
 
-AC_OUTPUT(gnatcoll_shared.gpr docs/Makefile Makefile.conf src/gnatcoll_python.gpr distrib/relocatable/gnatcoll.gpr distrib/gnatcoll_python.gpr distrib/static/gnatcoll.gpr)
+AC_OUTPUT(gnatcoll_shared.gpr docs/Makefile Makefile.conf src/gnatcoll_python.gpr distrib/gnatcoll.gpr distrib/gnatcoll_python.gpr)
