@@ -709,12 +709,6 @@ package GNATCOLL.SQL is
    --  Transform Self into a valid SQL string
 
    procedure Initialize
-     (From     : in out SQL_Table'Class;
-      Instance : Cst_String_Access);
-   --  Change the instance name for From. Instance is never freed, so should
-   --  point to a "aliased constant String" in your code.
-
-   procedure Initialize
      (Self  : in out SQL_Field'Class;
       From  : SQL_Table'Class;
       Field : Cst_String_Access);
@@ -838,8 +832,7 @@ private
    end record;
 
    type Named_Field_Internal is new SQL_Field_Internal with record
-      Table    : SQL_Table_Access := null;   --  Null for a constant
-
+      Table    : Table_Names;
       Name     : Cst_String_Access;
       Visible_Name : GNAT.Strings.String_Access;
       --  Only one of the two is set. Name will never be freed, whereas
@@ -1233,7 +1226,7 @@ private
      (Ada.Finalization.Controlled with
       new Named_Field_Internal'
         (SQL_Field_Internal with
-         Table    => null,
+         Table    => No_Names,
          Name     => new String'(Null_String),
          Visible_Name => null,
          Operator => null,
@@ -1242,7 +1235,7 @@ private
      (Ada.Finalization.Controlled with
       new Named_Field_Internal'
         (SQL_Field_Internal with
-         Table    => null,
+         Table    => No_Names,
          Name     => new String'(Null_String),
          Visible_Name => null,
          Operator => null,
@@ -1251,7 +1244,7 @@ private
      (Ada.Finalization.Controlled with
       new Named_Field_Internal'
         (SQL_Field_Internal with
-         Table    => null,
+         Table    => No_Names,
          Name     => new String'(Null_String),
          Visible_Name => null,
          Operator => null,

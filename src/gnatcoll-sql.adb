@@ -150,18 +150,6 @@ package body GNATCOLL.SQL is
    ----------------
 
    procedure Initialize
-     (From     : in out SQL_Table'Class;
-      Instance : Cst_String_Access)
-   is
-   begin
-      From.Instance := Instance;
-   end Initialize;
-
-   ----------------
-   -- Initialize --
-   ----------------
-
-   procedure Initialize
      (Self  : in out SQL_Field'Class;
       From  : SQL_Table'Class;
       Field : Cst_String_Access)
@@ -169,7 +157,8 @@ package body GNATCOLL.SQL is
       D : Named_Field_Internal_Access;
    begin
       D := new Named_Field_Internal;
-      D.Table := new SQL_Table'Class'(From);
+      D.Table := (Name     => Table_Name (From),
+                  Instance => From.Instance);
       D.Name  := Field;
       Finalize (Self);
       Self.Data := SQL_Field_Internal_Access (D);
@@ -326,13 +315,13 @@ package body GNATCOLL.SQL is
          N := Cst_String_Access (Self.Visible_Name);
       end if;
 
-      if Self.Table = null then
+      if Self.Table = No_Names then
          Result := To_Unbounded_String (N.all);
 
       elsif Long then
          if Self.Table.Instance = null then
             Result := To_Unbounded_String
-              (Table_Name (Self.Table.all).all & '.' & N.all);
+              (Self.Table.Name.all & '.' & N.all);
          else
             Result := To_Unbounded_String
               (Self.Table.Instance.all & '.' & N.all);
@@ -2007,7 +1996,7 @@ package body GNATCOLL.SQL is
             when Field_Criteria | Like_Criteria | Criteria_Overlaps =>
                if Self.Criteria.Data.Op = Criteria_Equal
                  and then -(Self.Criteria.Data.Arg2) in SQL_Field_Boolean'Class
-                 and then Named2.Table = null
+                 and then Named2.Table = No_Names
                then
                   if Named2.Name /= null then
                      N := Named2.Name;
@@ -2022,7 +2011,7 @@ package body GNATCOLL.SQL is
 
                elsif Self.Criteria.Data.Op = Criteria_Not_Equal
                  and then -(Self.Criteria.Data.Arg2) in SQL_Field_Boolean'Class
-                 and then Named2.Table = null
+                 and then Named2.Table = No_Names
                then
                   if Named2.Name /= null then
                      N := Named2.Name;
@@ -2284,7 +2273,6 @@ package body GNATCOLL.SQL is
    begin
       Free (Self.Operator);
       Free (Self.Visible_Name);
-      Unchecked_Free (Self.Table);
    end Free;
 
    ----------
@@ -2487,9 +2475,8 @@ package body GNATCOLL.SQL is
    procedure Append_Tables
      (Self : Named_Field_Internal; To : in out Table_Sets.Set) is
    begin
-      if Self.Table /= null then
-         Include (To, (Name => Table_Name (Self.Table.all),
-                       Instance => Self.Table.Instance));
+      if Self.Table /= No_Names then
+         Include (To, Self.Table);
       end if;
    end Append_Tables;
 
@@ -2608,7 +2595,7 @@ package body GNATCOLL.SQL is
       --  ??? We create a SQL_Field_Text, but it might be any other type.
       --  This isn't really relevant, however, since the exact type is not used
       --  later on.
-      if Self.Table /= null then
+      if Self.Table /= No_Names then
          Adjust (SQL_Field_Internal_Access (Self));
          Append
            (To.List, SQL_Field_Text'
