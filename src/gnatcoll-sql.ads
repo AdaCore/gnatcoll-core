@@ -17,26 +17,27 @@
 -- Place - Suite 330, Boston, MA 02111-1307, USA.                    --
 -----------------------------------------------------------------------
 
---  This package provides an object-oriented, higher-level interface to SQL
+--  This package provides an object-oriented, high-level interface to SQL
 --  queries.
 --  Instead of using static strings to write queries, this package allows you
---  to write queries using Ada function calls. It help to ensure the syntactic
---  validity of the resulting queries, and, some package can automatically be
+--  to write queries using Ada function calls. It helps to ensure the syntactic
+--  validity of the resulting queries, and, some packages can automatically be
 --  generated from your database (see below), ensures type-safety and that the
 --  query only references existing fields of the database. An example of such a
 --  query is:
 --
---     Q : SQL_Query := SQL_Select
---        (Fields => Table1.Field1 & Table2.Field2,
---         From   => Table1 & Table2,
---         Where  => Table1.Field3 = Table2.Field4);
+--     Q : SQL_Query :=
+--           SQL_Select
+--             (Fields => Table1.Field1 & Table2.Field2,
+--              From   => Table1 & Table2,
+--              Where  => Table1.Field3 = Table2.Field4);
 --
 --  This checks, among other things, that Field3 and Field4 are of the same
 --  type.
 --  This package itself does not provide a way to execute a query on a given
 --  database. See GNATCOLL.SQL.Exec for such facilities.
---  As a result, this package is independent of any DBMS system, and in fact
---  does not even require one to be installed on your system.
+--  As a result, this package is independent of any DBMS, and in fact does not
+--  even require one to be installed on your system.
 --
 --  Automatic generation of database description
 --  =============================================
@@ -45,11 +46,11 @@
 --  structure of the database. Writting such packages manually is tedious and
 --  error prone. Instead, you should use the gnatcoll_db_image tool to
 --  automatically generate this description before each compilation. This
---  ensures that any sql query in your application only references fields that
+--  ensures that any SQL query in your application only references fields that
 --  do exist in the database, and therefore helps detect at compilation time a
 --  lot of possible errors that would otherwise only be detected at run time.
 --
---  This generated packages should contain the following, for each table in
+--  These generated packages should contain the following, for each table in
 --  your database:
 --
 --      package T_<My_Table> is
@@ -61,8 +62,8 @@
 --
 --  and for each field in the table:
 --
---         function Field1 (Self : Action_Item_Table) return SQL_Field_Integer;
---         function Field2 (Self : Action_Item_Table) return SQL_Field_Text;
+--         function Field1 (Self : Table) return SQL_Field_Integer;
+--         function Field2 (Self : Table) return SQL_Field_Text;
 --      end T_<My_Table>;
 --
 --  Finally, a default instance of the table that can be used in the queries:
@@ -72,9 +73,9 @@
 --  between the functions generated for the fields, and the name of the
 --  instances (in the example above, if another table was called Field1, and we
 --  weren't using a package, we would have a naming conflict).
---  Using a package is easy with Ada05 dotted notation, although it is a little
---  heavier to use with Ada95, where an explicit "use" must be done on each of
---  the package.
+--  Using a package is easy with Ada05 dotted notation. Although it is a little
+--  heavier it is possible to use with Ada95, where an explicit "use" must be
+--  done for each package.
 --
 --  This way, a user might write a query with two instances of the table with
 --  the following code (which uses the Ada2005 dotted notation, although this
