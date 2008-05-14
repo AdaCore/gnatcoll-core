@@ -5,4 +5,8 @@ with "src/gnatcoll_python";
 with "src/gnatcoll_postgres";
 project Gnatcoll_GPS is
    for Source_Dirs use ();
+
+   package IDE is
+      for VCS_Kind use "Subversion";
+   end IDE;
 end Gnatcoll_GPS;
