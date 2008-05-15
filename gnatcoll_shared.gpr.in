@@ -15,7 +15,7 @@ project GnatColl_Shared is
 
    type Library_Type_Type is ("relocatable", "static");
    Library_Type : Library_Type_Type :=
-      external ("GNATCOLL_LIBRARY_TYPE", "relocatable");
+     external ("LIBRARY_TYPE", @DEFAULT_LIBRARY_TYPE@);
 
    type OS_Kind is ("Windows_NT", "unix");
    OS : OS_Kind := external ("OS", "unix");
