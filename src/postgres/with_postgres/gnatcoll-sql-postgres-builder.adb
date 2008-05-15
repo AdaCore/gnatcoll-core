@@ -429,21 +429,22 @@ package body GNATCOLL.SQL.Postgres.Builder is
       Res        : Postgresql_Result_Content;
       Field      : SQL_Field_Integer) return Integer
    is
-      Last_OID : OID;
+      pragma Unreferenced (Res);
       Q        : SQL_Query;
       Res2     : Query_Result;
    begin
-      Last_OID := OID_Value (Res.Res);
-      if Last_OID /= InvalidOID then
-         Q := SQL_Select
-           (Fields => Field,
-            Where  => From_Integer ("OID") = Integer (Last_OID));
-         Auto_Complete (Q);
+      --  Do not depend on OIDs, since the table might not have them (by
+      --  default, recent versions of postgreSQL disable them. Instead, we use
+      --  the currval() function which returns the last value set for a
+      --  sequence within the current connection.
 
-         Execute (Connection, Res2, Q);
-         if Tuple_Count (Res2) = 1 then
-            return Integer_Value (Res2, 0, 0);
-         end if;
+      Q := SQL_Select
+        (Fields => From_String ("currval('" & Field.Table.all
+                                & "_" & Field.Name.all & "_seq')"));
+
+      Execute (Connection, Res2, Q);
+      if Tuple_Count (Res2) = 1 then
+         return Integer_Value (Res2, 0, 0);
       end if;
       return -1;
    end Last_Id;

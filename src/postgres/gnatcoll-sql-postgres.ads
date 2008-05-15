@@ -42,5 +42,9 @@ package GNATCOLL.SQL.Postgres is
    --  The object identifier field, available in each table. This is postgres
    --  specific. It can be used for instance to retrieve the newly inserted
    --  row in a table, by retrieving the OID of the previous result.
+   --  With recent versions of PostgreSQL, you must explicitly create the table
+   --  with support for oids ("CREATE TABLE (...) WITH OIDS"), otherwise the
+   --  oid will always be null. For this reason, and since oids slow things
+   --  done a little, and take space, it is not recommended to depend on them.
 
 end GNATCOLL.SQL.Postgres;
