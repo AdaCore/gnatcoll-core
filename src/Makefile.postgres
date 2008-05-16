@@ -14,7 +14,7 @@ all:     dirs buildall
 clean:   cleanall
 install: libinstall
 
-ifeq (${GNATCOLL_LIBRARY_TYPE},static)
+ifeq (${LIBRARY_TYPE},static)
 FPIC=
 else
 FPIC=-fPIC

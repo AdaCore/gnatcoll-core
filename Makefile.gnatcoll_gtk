@@ -20,9 +20,9 @@ else
   internal-compile: gnatcoll-internal-compile
   internal-clean:   gnatcoll-internal-clean
   gnatcoll-internal-compile:
-	${MAKE} -C ${BASE_DIR}/../gnatlib ${GNATCOLL_LIBRARY_TYPE}
+	${MAKE} -C ${BASE_DIR}/../gnatlib ${LIBRARY_TYPE}
   gnatcoll-internal-clean:
-	${MAKE} -C ${BASE_DIR}/../gnatlib GNATCOLL_LIBRARY_TYPE=${GNATCOLL_LIBRARY_TYPE} clean
+	${MAKE} -C ${BASE_DIR}/../gnatlib LIBRARY_TYPE=${LIBRARY_TYPE} clean
 endif
 
 GNATCOLL_BASE_DIR := $(BASE_DIR)

@@ -37,7 +37,7 @@ endif
 
 CC=gcc
 
-GNATCOLL_LIBRARY_TYPE=static
+LIBRARY_TYPE=static
 
 .PHONY: all examples tests valgrind clean docs install
 
@@ -63,7 +63,7 @@ all:
 #DIRS=${shell gnat ls -P${PROJECT} -v | grep ${MODULE}}
 #SRCDIRS=${wordlist 1,2,${DIRS}}
 
-ifeq (${GNATCOLL_LIBRARY_TYPE},relocatable)
+ifeq (${LIBRARY_TYPE},relocatable)
 LIBNAME:=${LIBNAME}.${LIBEXT}
 ifeq (${OS},Windows_NT)
 # On windows, gnatmake does not generate libraries with version numbers
@@ -77,9 +77,9 @@ LIBNAME:=${LIBNAME}.a
 LIBFULL=${LIBNAME}
 endif
 
-LIBDIR=lib/${MODULE}/${GNATCOLL_LIBRARY_TYPE}/
+LIBDIR=lib/${MODULE}/${LIBRARY_TYPE}/
 
-ifeq (${GNATCOLL_LIBRARY_TYPE},static)
+ifeq (${LIBRARY_TYPE},static)
 FPIC=
 else
 FPIC=-fPIC
@@ -88,7 +88,7 @@ endif
 .PHONY: buildall cleanall libinstall
 buildall:
 	@echo Building project ${PROJECT}
-	gnatmake -XGNATCOLL_LIBRARY_TYPE=${GNATCOLL_LIBRARY_TYPE} -P${PROJECT}
+	gnatmake -XLIBRARY_TYPE=${LIBRARY_TYPE} -P${PROJECT}
 cleanall:
 	gnatclean -r -q -P${PROJECT}
 
@@ -98,8 +98,8 @@ libinstall: installsources installobj installlinks
 
 .PHONY: dirs
 dirs:
-	${MKDIR} obj/${MODULE}/${GNATCOLL_LIBRARY_TYPE}
-	${MKDIR} lib/${MODULE}/${GNATCOLL_LIBRARY_TYPE}
+	${MKDIR} obj/${MODULE}/${LIBRARY_TYPE}
+	${MKDIR} lib/${MODULE}/${LIBRARY_TYPE}
 
 # Install the ali files and libraries. The library itself is only copied once
 # as ${prefix}/lib/${TARNAME}/${TYPE}/lib*.so.${VERSION}, so that it is visible
@@ -108,8 +108,8 @@ dirs:
 # the dynamic library
 
 installobj:
-	${INSTALL} -p ${LIBDIR}*.ali ${libdir}/${TARNAME}/${GNATCOLL_LIBRARY_TYPE}
-	${INSTALL} -p ${LIBDIR}${LIBFULL} ${libdir}/${TARNAME}/${GNATCOLL_LIBRARY_TYPE}
+	${INSTALL} -p ${LIBDIR}*.ali ${libdir}/${TARNAME}/${LIBRARY_TYPE}
+	${INSTALL} -p ${LIBDIR}${LIBFULL} ${libdir}/${TARNAME}/${LIBRARY_TYPE}
 
 # Create symbolic links with version numbers for the libraries, in
 # ${prefix}/lib/. The library itself is not duplicated and is found in the
@@ -118,18 +118,18 @@ installobj:
 # will complain
 
 installlinks:
-ifeq (${GNATCOLL_LIBRARY_TYPE},relocatable)
+ifeq (${LIBRARY_TYPE},relocatable)
 	${RM} ${libdir}/${LIBNAME}*
 
 ifneq (${OS},Windows_NT)
-	${RM} ${libdir}/${TARNAME}/${GNATCOLL_LIBRARY_TYPE}/${LIBNAME}
-	${RM} ${libdir}/${TARNAME}/${GNATCOLL_LIBRARY_TYPE}/${LIBNAME}.${basename ${VERSION}}
-	cd ${libdir}/${TARNAME}/${GNATCOLL_LIBRARY_TYPE}; ${LN_S} ${LIBFULL} ${LIBNAME}
-	cd ${libdir}/${TARNAME}/${GNATCOLL_LIBRARY_TYPE}; ${LN_S} ${LIBFULL} ${LIBNAME}.${basename ${VERSION}}
-	cd ${libdir}; ${LN_S} ${TARNAME}/${GNATCOLL_LIBRARY_TYPE}/${LIBFULL} ${LIBNAME}.${basename ${VERSION}}
-	cd ${libdir}; ${LN_S} ${TARNAME}/${GNATCOLL_LIBRARY_TYPE}/${LIBFULL} ${LIBNAME}.${VERSION}
+	${RM} ${libdir}/${TARNAME}/${LIBRARY_TYPE}/${LIBNAME}
+	${RM} ${libdir}/${TARNAME}/${LIBRARY_TYPE}/${LIBNAME}.${basename ${VERSION}}
+	cd ${libdir}/${TARNAME}/${LIBRARY_TYPE}; ${LN_S} ${LIBFULL} ${LIBNAME}
+	cd ${libdir}/${TARNAME}/${LIBRARY_TYPE}; ${LN_S} ${LIBFULL} ${LIBNAME}.${basename ${VERSION}}
+	cd ${libdir}; ${LN_S} ${TARNAME}/${LIBRARY_TYPE}/${LIBFULL} ${LIBNAME}.${basename ${VERSION}}
+	cd ${libdir}; ${LN_S} ${TARNAME}/${LIBRARY_TYPE}/${LIBFULL} ${LIBNAME}.${VERSION}
 endif
-	cd ${libdir}; ${LN_S} ${TARNAME}/${GNATCOLL_LIBRARY_TYPE}/${LIBFULL} ${LIBNAME}
+	cd ${libdir}; ${LN_S} ${TARNAME}/${LIBRARY_TYPE}/${LIBFULL} ${LIBNAME}
 
 endif
 

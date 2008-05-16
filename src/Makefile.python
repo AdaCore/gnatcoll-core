@@ -17,12 +17,12 @@ install: libinstall
 .PHONY: buildcfiles addcobjects dirs
 
 ifeq ($(WITH_PYTHON),yes)
-C_OBJ=obj/python/${GNATCOLL_LIBRARY_TYPE}/python_support.o
+C_OBJ=obj/python/${LIBRARY_TYPE}/python_support.o
 buildcfiles: ${C_OBJ}
 ${C_OBJ}: python/python_support.c
 	$(CC) -c ${FPIC} ${PYTHON_CFLAGS} $< -o $@
 clean:
-	${RM} obj/python/${GNATCOLL_LIBRARY_TYPE}/python_support.o
+	${RM} obj/python/${LIBRARY_TYPE}/python_support.o
 else
 buildcfiles:
 endif

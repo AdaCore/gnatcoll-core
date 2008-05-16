@@ -14,7 +14,7 @@ all:     dirs buildcfiles buildall
 clean:   cleanall
 install: libinstall
 
-ifeq (${GNATCOLL_LIBRARY_TYPE},static)
+ifeq (${LIBRARY_TYPE},static)
 FPIC=
 else
 FPIC=-fPIC
@@ -25,7 +25,7 @@ buildcfiles:
 
 ifeq (${WITH_GTK},yes)
 ifeq ($(WITH_PYTHON),yes)
-C_OBJ=obj/gtk/${GNATCOLL_LIBRARY_TYPE}/python_support_gtk.o
+C_OBJ=obj/gtk/${LIBRARY_TYPE}/python_support_gtk.o
 buildcfiles: ${C_OBJ}
 ${C_OBJ}: gtk/python/python_support_gtk.c
 	$(CC) -c ${FPIC} ${PYTHON_CFLAGS} ${PYGTK_INCLUDE} ${GTK_INCLUDE} $< -o $@
