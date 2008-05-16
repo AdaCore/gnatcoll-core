@@ -44,7 +44,7 @@
 --
 --  This package depends on having types and subprograms that describe the
 --  structure of the database. Writting such packages manually is tedious and
---  error prone. Instead, you should use the gnatcoll_db_image tool to
+--  error prone. Instead, you should use the gnatcoll_db2ada tool to
 --  automatically generate this description before each compilation. This
 --  ensures that any SQL query in your application only references fields that
 --  do exist in the database, and therefore helps detect at compilation time a
@@ -53,29 +53,35 @@
 --  These generated packages should contain the following, for each table in
 --  your database:
 --
---      package T_<My_Table> is
---         type Table is new SQL_Table with null record;
---         function Table_Name (Self : Table) return String;
+--     Ta_Table_Name : aliased constant String := "table_name";
+--     package T_Table is
+--        N_Field1 : aliased constant String := "field1";
+--        N_Field2 : aliased constant String := "field2";
+--        type Table (Instance : Cst_String_Access)
+--           is new SQL_Table (Ta_Table_Name'Access, Instance) with
+--        record
+--           Field1 : SQL_Field_Integer
+--              (Ta_Table_Name'Access, Instance, N_Field1'Access);
+--           Field2 : SQL_Field_Integer
+--              (Ta_Table_Name'Access, Instance, N_Field2'Access);
+--        end record;
+--
 --         function FK (Self : Table; Foreign : SQL_Table'Class)
 --            return SQL_Criteria;
---         function Rename (Self : Table; Name : String) return Table;
 --
---  and for each field in the table:
---
---         function Field1 (Self : Table) return SQL_Field_Integer;
---         function Field2 (Self : Table) return SQL_Field_Text;
---      end T_<My_Table>;
+--     end T_Table;
 --
 --  Finally, a default instance of the table that can be used in the queries:
---      <My_Table> : T_<My_Table>.Table;
+--      Table : T_Table.Table (null);
+--
+--  FK is a subprogram to retrieve the foreign keys between two tables, to
+--  simplify the writting of the sql queries. This is optional, and if you are
+--  maintaining this package by hand you might not want to generate these.
 --
 --  The reason to use a package like the above is to avoid naming conflicts
 --  between the functions generated for the fields, and the name of the
 --  instances (in the example above, if another table was called Field1, and we
 --  weren't using a package, we would have a naming conflict).
---  Using a package is easy with Ada05 dotted notation. Although it is a little
---  heavier it is possible to use with Ada95, where an explicit "use" must be
---  done for each package.
 --
 --  This way, a user might write a query with two instances of the table with
 --  the following code (which uses the Ada2005 dotted notation, although this
