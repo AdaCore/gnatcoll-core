@@ -3695,7 +3695,7 @@ else
 fi
 
      else
-       PATH_LIBPQ="$POSTGRESQL_PATH_WITH"
+       PATH_LIBPQ="-L$POSTGRESQL_PATH_WITH"
        WITH_POSTGRES=yes
      fi
    fi

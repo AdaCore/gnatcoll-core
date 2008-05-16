@@ -26,7 +26,7 @@ project GnatColl is
    for Library_Version use
       "lib" & Project'Library_Name & ".so." & Version;
    With_Postgres : Yes_No := "@WITH_POSTGRES@";
-   Postgres_Path := "-L@PATH_LIBPQ";
+   Postgres_Path := "@PATH_LIBPQ@";
    for Externally_Built use "true";
 
    package Naming is
