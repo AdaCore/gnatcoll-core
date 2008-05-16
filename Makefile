@@ -1,5 +1,7 @@
 .PHONY: all examples test valgrind clean docs install
 
+include Makefile.conf
+
 ifeq (${BUILDS_SHARED},yes)
 all: static relocatable
 install: install_relocatable install_static
@@ -7,8 +9,6 @@ else
 all: static
 install: install_static
 endif
-
-include Makefile.conf
 
 ## Builds explicitly the shared or the static libraries
 
