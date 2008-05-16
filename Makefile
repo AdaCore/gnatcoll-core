@@ -13,12 +13,12 @@ endif
 ## Builds explicitly the shared or the static libraries
 
 static:
-	${MAKE} GNATCOLL_LIBRARY_TYPE=static build_library_type
+	${MAKE} LIBRARY_TYPE=static build_library_type
 shared relocatable:
-	${MAKE} GNATCOLL_LIBRARY_TYPE=relocatable build_library_type
+	${MAKE} LIBRARY_TYPE=relocatable build_library_type
 
 ## Builds either the static or the shared version, based on the
-## GNATCOLL_LIBRARY_TYPE variable
+## LIBRARY_TYPE variable
 
 build_library_type:
 	${MAKE} -C src -f Makefile.gnatcoll
@@ -43,10 +43,10 @@ test:
 
 ## GNU standards say we must not recompile in such a case
 ## Install either the static or the shared lib, based on the value of
-## GNATCOLL_LIBRARY_TYPE
+## LIBRARY_TYPE
 install_library_type:
 	${MKDIR} ${bindir}
-	${MKDIR} ${libdir}/${TARNAME}/${GNATCOLL_LIBRARY_TYPE}
+	${MKDIR} ${libdir}/${TARNAME}/${LIBRARY_TYPE}
 	${MKDIR} ${libdir}/gnat/${TARNAME}
 	${MKDIR} ${datadir}/examples
 	${MKDIR} ${includedir}/${TARNAME}
@@ -62,21 +62,21 @@ endif
 	${INSTALL} distrib/*.gpr ${libdir}/gnat
 
 install_static:
-	${MAKE} GNATCOLL_LIBRARY_TYPE=static install_library_type
+	${MAKE} LIBRARY_TYPE=static install_library_type
 install_relocatable install_shared:
-	${MAKE} GNATCOLL_LIBRARY_TYPE=relocatable install_library_type
+	${MAKE} LIBRARY_TYPE=relocatable install_library_type
 
 clean:
-	${MAKE} GNATCOLL_LIBRARY_TYPE=relocatable -C src -f Makefile.gnatcoll $@
-	${MAKE} GNATCOLL_LIBRARY_TYPE=static      -C src -f Makefile.gnatcoll $@
-	${MAKE} GNATCOLL_LIBRARY_TYPE=relocatable -C src -f Makefile.python $@
-	${MAKE} GNATCOLL_LIBRARY_TYPE=static      -C src -f Makefile.python $@
+	${MAKE} LIBRARY_TYPE=relocatable -C src -f Makefile.gnatcoll $@
+	${MAKE} LIBRARY_TYPE=static      -C src -f Makefile.gnatcoll $@
+	${MAKE} LIBRARY_TYPE=relocatable -C src -f Makefile.python $@
+	${MAKE} LIBRARY_TYPE=static      -C src -f Makefile.python $@
 ifeq (${WITH_GTK},yes)
-	${MAKE} GNATCOLL_LIBRARY_TYPE=relocatable -C src -f Makefile.gtk $@
-	${MAKE} GNATCOLL_LIBRARY_TYPE=static     -C src -f Makefile.gtk $@
+	${MAKE} LIBRARY_TYPE=relocatable -C src -f Makefile.gtk $@
+	${MAKE} LIBRARY_TYPE=static     -C src -f Makefile.gtk $@
 endif
-	${MAKE} GNATCOLL_LIBRARY_TYPE=relocatable -C src -f Makefile.postgres $@
-	${MAKE} GNATCOLL_LIBRARY_TYPE=static     -C src -f Makefile.postgres $@
+	${MAKE} LIBRARY_TYPE=relocatable -C src -f Makefile.postgres $@
+	${MAKE} LIBRARY_TYPE=static     -C src -f Makefile.postgres $@
 	${MAKE} -C testsuite $@
 	${MAKE} -C docs $@
 	${MAKE} -C examples $@
