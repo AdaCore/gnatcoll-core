@@ -56,6 +56,14 @@ __gnatcoll_get_logical_drive_strings (char *buffer, int len)
 void
 __gnatcoll_set_readable (char *file, int set)
 {
+#ifdef _WIN32
+  /* ??? NOT CURRENTLY SUPPORTED.
+     There is no support for setting a file as unreadable using the
+     standard chmod routine on Windows. With this routine it is only
+     possible to set a file as read-only. To set a file as unreadable it is
+     required to use the more complex [Get|Set]FileSecurity Win32 API by
+     setting the proper ACL. */
+#else
   struct stat statbuf;
 
   if (!__gnat_stat (file, &statbuf))
@@ -65,6 +73,7 @@ __gnatcoll_set_readable (char *file, int set)
       else
         chmod (file, statbuf.st_mode & (~S_IREAD));
     }
+#endif
 }
 
 /**********************************************************
