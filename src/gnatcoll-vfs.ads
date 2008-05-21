@@ -193,7 +193,8 @@ package GNATCOLL.VFS is
    --  If Writable is True, make File writable, otherwise make File unwritable
 
    procedure Set_Readable (File : VFS.Virtual_File; Readable : Boolean);
-   --  If Readable is True, make File readable, otherwise make File unreadable
+   --  If Readable is True, make File readable, otherwise make File unreadable.
+   --  Note that this is not supported on Windows.
 
    function File_Time_Stamp (File : Virtual_File) return Ada.Calendar.Time;
    --  Return the timestamp for this file. This is GMT time, not local time.
