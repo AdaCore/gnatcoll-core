@@ -172,23 +172,9 @@ package body GNATCOLL.Scripts.Python is
       Errors          : access Boolean) return String;
    --  Same as above, but also return the output of the command
 
-   function Trace
-     (User_Arg : PyObject;
-      Frame    : System.Address;
-      Why      : Why_Trace_Func;
-      Obj      : PyObject) return Integer;
-   pragma Convention (C, Trace);
-   --  Suprogram called for each python instruction execution. It periodically
-   --  checks the event queue, so that the interpreter can be interrupted.
-
    procedure Python_Global_Command_Handler
      (Data : in out Callback_Data'Class; Command : String);
    --  Handles all commands pre-defined in this module
-
-   function Convert is new Standard.Ada.Unchecked_Conversion
-     (System.Address, Python_Scripting);
-   function Convert is new Standard.Ada.Unchecked_Conversion
-     (Python_Scripting, System.Address);
 
    ------------------------
    --  Internals Nth_Arg --
@@ -1005,12 +991,6 @@ package body GNATCOLL.Scripts.Python is
             Grab_Events (Get_Default_Console (Script), True);
          end if;
 
-         --  ??? The trace function is only called when moving to the next line
-         --  of the script, so a line that takes a long time to execute blocks
-         --  the interface. The only solution here seems to use threads...
-         PyEval_SetTrace
-           (Trace'Access,
-            PyCObject_FromVoidPtr (Convert (Python_Scripting (Script))));
          Obj := PyEval_EvalCode (Code, Script.Globals, Script.Globals);
          Py_DECREF (PyObject (Code));
          PyEval_SetTrace (null, null);
@@ -2552,26 +2532,5 @@ package body GNATCOLL.Scripts.Python is
            (PyModule_GetDict (PyImport_ImportModule ("sys")), "stdin", Cons);
       end if;
    end Set_Default_Console;
-
-   -----------
-   -- Trace --
-   -----------
-
-   function Trace
-     (User_Arg : PyObject;
-      Frame    : System.Address;
-      Why      : Why_Trace_Func;
-      Obj      : PyObject) return Integer
-   is
-      pragma Unreferenced (Obj, Frame, Why);
-      Script : constant Python_Scripting := Convert
-        (PyCObject_AsVoidPtr (User_Arg));
-      C : constant Virtual_Console := Get_Default_Console (Script);
-   begin
-      if C /= null then
-         Process_Pending_Events (C);
-      end if;
-      return 0;
-   end Trace;
 
 end GNATCOLL.Scripts.Python;
