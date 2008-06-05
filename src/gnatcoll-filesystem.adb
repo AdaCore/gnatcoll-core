@@ -388,13 +388,17 @@ package body GNATCOLL.Filesystem is
       pragma Unreferenced (FS, Success);
    begin
       if Append then
-         Copy_File (Temporary_File, Pathname => Local_Full_Name,
-                    Success => Success,
-                    Mode => GNAT.OS_Lib.Append);
+         Copy_File
+           (Temporary_File,
+            Pathname => Local_Full_Name,
+            Success  => Success,
+            Mode     => GNAT.OS_Lib.Append);
       else
-         Copy_File (Temporary_File, Pathname => Local_Full_Name,
-                    Success => Success,
-                    Mode => Overwrite);
+         Copy_File
+           (Temporary_File,
+            Pathname => Local_Full_Name,
+            Success  => Success,
+            Mode     => Overwrite);
       end if;
    end Write;
 

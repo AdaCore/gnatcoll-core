@@ -492,9 +492,9 @@ package body GNATCOLL.VFS is
       else
          declare
             Temporary_Dir : constant String :=
-              File.Value.FS.Get_Tmp_Directory;
-            Current_Dir : constant String := Get_Current_Dir;
-            Base        : String_Access;
+                              File.Value.FS.Get_Tmp_Directory;
+            Current_Dir   : constant String := Get_Current_Dir;
+            Base          : String_Access;
          begin
             --  ??? Append is now handled
 

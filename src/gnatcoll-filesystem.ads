@@ -66,7 +66,7 @@ package GNATCOLL.Filesystem is
    --  Tell if Full_Path is in the subtree of Directory
    --  By default, it compares the two strings, and return true if the first
    --  part of Full_Path is equal to directory, taking into account the
-   --  case sensitivity
+   --  case sensitivity.
 
    function Is_Absolute_Path
      (FS   : Filesystem_Record;
@@ -84,9 +84,9 @@ package GNATCOLL.Filesystem is
      (FS   : Filesystem_Record;
       Root : String;
       Sub  : String) return String;
-   --  Concatenate a root direectory and a subdirectory
+   --  Concatenate a root directory and a subdirectory
    --  by default, equivalent to 'Root & Sub', after ensuring that Root does
-   --  end with a directory separator
+   --  end with a directory separator.
 
    function Base_Name
      (FS     : Filesystem_Record;
