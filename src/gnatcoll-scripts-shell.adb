@@ -944,13 +944,16 @@ package body GNATCOLL.Scripts.Shell is
                else
                   --  Cleanup the arguments to remove unnecessary quoting
                   for J in Args'Range loop
-                     if Args (J).all /= ""
-                       and then Args (J) (Args (J)'First) = '"'
-                       and then Args (J) (Args (J)'Last) = '"'
-                     then
+                     if Args (J).all /= "" then
                         Tmp := Args (J);
-                        Args (J) := new String'
-                          (Unprotect (Tmp (Tmp'First + 1 .. Tmp'Last - 1)));
+                        if Args (J) (Args (J)'First) = '"'
+                          and then Args (J) (Args (J)'Last) = '"'
+                        then
+                           Args (J) := new String'
+                             (Unprotect (Tmp (Tmp'First + 1 .. Tmp'Last - 1)));
+                        else
+                           Args (J) := new String'(Unprotect (Tmp.all));
+                        end if;
                         Free (Tmp);
                      end if;
                   end loop;
