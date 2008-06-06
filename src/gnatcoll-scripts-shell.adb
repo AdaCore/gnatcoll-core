@@ -497,9 +497,9 @@ package body GNATCOLL.Scripts.Shell is
       end if;
 
       declare
-         S   : constant String :=
-                 Execute_GPS_Shell_Command
-                   (Script, Command, Err'Unchecked_Access);
+         S : constant String :=
+               Execute_GPS_Shell_Command
+                 (Script, Command, Err'Unchecked_Access);
       begin
          Errors := Err;
          if S /= "" then
@@ -543,9 +543,9 @@ package body GNATCOLL.Scripts.Shell is
       Show_Command : Boolean := True;
       Errors       : out Boolean)
    is
-      Err  : aliased Boolean;
-      Args : Argument_List := (1 => new String'(Filename));
       Old_Console : constant Virtual_Console := Script.Console;
+      Err         : aliased Boolean;
+      Args        : Argument_List := (1 => new String'(Filename));
    begin
       if Console /= null then
          Script.Console := Console;
