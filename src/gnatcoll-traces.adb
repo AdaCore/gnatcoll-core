@@ -34,6 +34,9 @@ with GNAT.Traceback;            use GNAT.Traceback;
 
 with System.Address_Image;
 with System.Assertions;         use System.Assertions;
+pragma Warnings (Off);
+with System.Traceback_Entries;  use System.Traceback_Entries;
+pragma Warnings (On);
 
 package body GNATCOLL.Traces is
 
@@ -659,7 +662,7 @@ package body GNATCOLL.Traces is
       Call_Chain (Tracebacks, Len);
       Put (Stream, "(callstack: ");
       for J in Tracebacks'First .. Len loop
-         Put (Stream, System.Address_Image (Tracebacks (J)) & ' ');
+         Put (Stream, System.Address_Image (PC_For (Tracebacks (J))) & ' ');
       end loop;
       Put (Stream, ")");
    end Put_Stack_Trace;
