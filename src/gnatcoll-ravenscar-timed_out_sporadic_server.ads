@@ -112,4 +112,8 @@ private
 
    package My_Timer is new GNATCOLL.Ravenscar.Timers.One_Shot_Timer;
 
+   procedure Handler;
+
+   Handler_Access : constant My_Timer.Timer_Action := Handler'Access;
+
 end GNATCOLL.Ravenscar.Timed_Out_Sporadic_Server;

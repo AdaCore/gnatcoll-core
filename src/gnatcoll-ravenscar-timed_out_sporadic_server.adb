@@ -32,8 +32,6 @@ package body GNATCOLL.Ravenscar.Timed_Out_Sporadic_Server is
    procedure Put_Request (Par : Param) renames
      Timed_Out_Sporadic_Server.Put_Request;
 
-   procedure Handler;
-
    procedure Handler is
       use Ada.Real_Time;
    begin
@@ -50,7 +48,7 @@ package body GNATCOLL.Ravenscar.Timed_Out_Sporadic_Server is
          Time_Out_Handler;
          My_Timer.Set
            (Clock + Milliseconds (Maximum_Interelease_Time),
-            Handler'Access);
+            Handler_Access);
       end loop;
    end Timer_Server;
 
@@ -59,7 +57,7 @@ package body GNATCOLL.Ravenscar.Timed_Out_Sporadic_Server is
       Next_Time_Out_Instant : constant Ada.Real_Time.Time :=
          Clock + Milliseconds (Maximum_Interelease_Time);
    begin
-      My_Timer.Set (Next_Time_Out_Instant, Handler'Access);
+      My_Timer.Set (Next_Time_Out_Instant, Handler_Access);
       Sporadic_Operation (Par);
    end Timed_Out_Sporadic_Operation;
 
