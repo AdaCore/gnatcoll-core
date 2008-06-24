@@ -114,6 +114,7 @@ private
 
    procedure Handler;
 
-   Handler_Access : constant My_Timer.Timer_Action := Handler'Access;
+   Handler_Access : constant GNATCOLL.Ravenscar.Timers.Timer_Action :=
+                      Handler'Access;
 
 end GNATCOLL.Ravenscar.Timed_Out_Sporadic_Server;
