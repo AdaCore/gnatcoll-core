@@ -31,7 +31,7 @@ package body GNATCOLL.Ravenscar.Timers.One_Shot_Timer is
 
    procedure Set
      (Instant      : Ada.Real_Time.Time;
-      Action       : access procedure)
+      Action       : Timer_Action)
    is
       use type Ada.Real_Time.Timing_Events.Timing_Event_Handler;
    begin

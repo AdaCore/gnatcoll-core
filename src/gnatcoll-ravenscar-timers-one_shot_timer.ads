@@ -52,7 +52,7 @@ private
         (Event : in out Ada.Real_Time.Timing_Events.Timing_Event);
       procedure Set_Action
         (Instant      : Ada.Real_Time.Time;
-         Action       : access procedure);
+         Action       : Timer_Action);
    private
       The_Action : GNATCOLL.Ravenscar.Timers.Timer_Action;
    end Events;
