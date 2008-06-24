@@ -54,9 +54,8 @@ package body GNATCOLL.Ravenscar.Timers.One_Shot_Timer is
       end Handler;
 
       procedure Set_Action
-        (Instant      : Ada.Real_Time.Time;
-         Action       : access procedure)
-      is
+        (Instant : Ada.Real_Time.Time;
+         Action  : Timer_Action) is
       begin
          The_Action := Action;
          Ada.Real_Time.Timing_Events.Set_Handler
