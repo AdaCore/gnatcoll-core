@@ -1,7 +1,7 @@
+# Set the version number below
 AC_INIT(gnatcoll,1.0,report@adacore.com,gnatcoll)
 AC_CANONICAL_SYSTEM
 
-#AC_PROG_MKDIR_P   # Requires recent autoconf
 AC_PROG_LN_S
 AC_PROG_INSTALL
 AC_FUNC_MMAP
@@ -37,4 +37,4 @@ AC_MSG_NOTICE([ PostgreSQL: $WITH_POSTGRES $PATH_LIBPQ])
 AC_MSG_NOTICE([    use --with-postgres to override])
 AC_MSG_NOTICE([--------------------------------------------])
 
-AC_OUTPUT(gnatcoll_shared.gpr docs/Makefile Makefile.conf src/gnatcoll_python.gpr distrib/gnatcoll.gpr distrib/gnatcoll_python.gpr)
+AC_OUTPUT(gnatcoll_shared.gpr docs/Makefile Makefile.conf src/gnatcoll_python.gpr distrib/gnatcoll.gpr distrib/gnatcoll_python.gpr docs/gnatcoll_include.texi)

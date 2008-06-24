@@ -1398,7 +1398,6 @@ test -n "$target_alias" &&
     NONENONEs,x,x, &&
   program_prefix=${target_alias}-
 
-#AC_PROG_MKDIR_P   # Requires recent autoconf
 echo "$as_me:$LINENO: checking whether ln -s works" >&5
 echo $ECHO_N "checking whether ln -s works... $ECHO_C" >&6
 LN_S=$as_ln_s
@@ -4079,7 +4078,7 @@ echo "$as_me:     use --with-postgres to override" >&6;}
 { echo "$as_me:$LINENO: --------------------------------------------" >&5
 echo "$as_me: --------------------------------------------" >&6;}
 
-                                                            ac_config_files="$ac_config_files gnatcoll_shared.gpr docs/Makefile Makefile.conf src/gnatcoll_python.gpr distrib/gnatcoll.gpr distrib/gnatcoll_python.gpr"
+                                                                      ac_config_files="$ac_config_files gnatcoll_shared.gpr docs/Makefile Makefile.conf src/gnatcoll_python.gpr distrib/gnatcoll.gpr distrib/gnatcoll_python.gpr docs/gnatcoll_include.texi"
 cat >confcache <<\_ACEOF
 # This file is a shell script that caches the results of configure
 # tests run on this system so they can be shared between configure
@@ -4636,6 +4635,7 @@ do
   "src/gnatcoll_python.gpr" ) CONFIG_FILES="$CONFIG_FILES src/gnatcoll_python.gpr" ;;
   "distrib/gnatcoll.gpr" ) CONFIG_FILES="$CONFIG_FILES distrib/gnatcoll.gpr" ;;
   "distrib/gnatcoll_python.gpr" ) CONFIG_FILES="$CONFIG_FILES distrib/gnatcoll_python.gpr" ;;
+  "docs/gnatcoll_include.texi" ) CONFIG_FILES="$CONFIG_FILES docs/gnatcoll_include.texi" ;;
   *) { { echo "$as_me:$LINENO: error: invalid argument: $ac_config_target" >&5
 echo "$as_me: error: invalid argument: $ac_config_target" >&2;}
    { (exit 1); exit 1; }; };;

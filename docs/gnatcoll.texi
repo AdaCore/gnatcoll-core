@@ -2,7 +2,7 @@
 @input texiplus
 
 @setfilename gnatcoll.info
-@set Version 0.1
+@include gnatcoll_include.texi
 @set gnatcoll GnatColl
 @set Title   @value{gnatcoll}: GNAT Reusable Components
 
