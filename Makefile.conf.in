@@ -28,6 +28,7 @@ docdir=@docdir@
 MKDIR=mkdir -p
 INSTALL=@INSTALL@
 INSTALL_DATA=@INSTALL_DATA@
+CP=cp
 
 ifeq (${OS},Windows_NT)
 LN_S=cp -p
@@ -108,7 +109,7 @@ dirs:
 # the dynamic library
 
 installobj:
-	${INSTALL} -p ${LIBDIR}*.ali ${libdir}/${TARNAME}/${LIBRARY_TYPE}
+	${CP} -p ${LIBDIR}*.ali ${libdir}/${TARNAME}/${LIBRARY_TYPE}
 	${INSTALL} -p ${LIBDIR}${LIBFULL} ${libdir}/${TARNAME}/${LIBRARY_TYPE}
 
 # Create symbolic links with version numbers for the libraries, in
@@ -143,6 +144,6 @@ endif
 # we in fact have the library dir as well, which doesn't contain any source, and
 # install would complain.
 installsources:
-	${INSTALL} -p ${wildcard ${addsuffix *.ad?, ${SRCDIRS}}} ${includedir}/${TARNAME}
+	${CP} -p ${wildcard ${addsuffix *.ad?, ${SRCDIRS}}} ${includedir}/${TARNAME}
 	cd ${includedir}/${TARNAME}; ls ${notdir ${wildcard ${addsuffix *.ad?, ${SRCDIRS}}}} > ${libdir}/gnat/${TARNAME}/${basename ${PROJECT}}.lgpr
 
