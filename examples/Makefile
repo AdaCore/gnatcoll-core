@@ -8,11 +8,15 @@ export LD_LIBRARY_PATH
 all:
 	@${MKDIR} obj
 	gnatmake -Pexamples
+ifeq ($(WITH_GTK),yes)
 	gnatmake -Pexamplesgtk
+endif
 	@echo "==================================================="
 	@echo "== To run, set the environment variable LD_LIBRARY_PATH"
 	@echo "==   LD_LIBRARY_PATH=${prefix}/lib/gnat:\$$LD_LIBRARY_PATH"
 
 clean:
 	gnatclean -q -Pexamples
+ifeq ($(WITH_GTK),yes)
 	gnatclean -q -Pexamplesgtk
+endif
