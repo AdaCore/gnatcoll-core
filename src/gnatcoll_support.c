@@ -9,17 +9,20 @@
 #ifdef HAVE_MMAP
 #include <sys/mman.h>
 
-int gnatcoll_has_mmap() {
+int
+gnatcoll_has_mmap() {
   return 1;
 }
 
-void *gnatcoll_mmap(void *start, long length, int prot, int flags,
-                  int fd, long offset)
+void *
+gnatcoll_mmap (void *start, long length, int prot, int flags,
+               int fd, long offset)
 {
   return mmap (start, (size_t)length, prot, flags, fd, (off_t)offset);
 }
 
-int gnatcoll_munmap(void *start, long length) {
+int gnatcoll_munmap (void *start, long length)
+{
   return munmap (start, (size_t)length);
 }
 
@@ -27,17 +30,21 @@ int gnatcoll_munmap(void *start, long length) {
 
 #else
 
-int gnatcoll_has_mmap() {
+int
+gnatcoll_has_mmap ()
+{
   return 0;
 }
 
-void *gnatcoll_mmap(void *start, long length, int prot, int flags,
-                  int fd, long offset)
+void
+*gnatcoll_mmap (void *start, long length, int prot, int flags,
+		int fd, long offset)
 {
   return (void*)0;
 }
 
-int gnatcoll_munmap(void *start, long length) {
+int gnatcoll_munmap (void *start, long length)
+{
   return 0;
 }
 
@@ -91,21 +98,19 @@ __gnatcoll_get_tmp_dir (void)
   if (result != NULL)
     return strdup (result);
 
-/* ??? we should use windows interface to retrieve the tmp directory
- * However, we're too close to the release to change the current behavior. As
- * soon as we are ready to do so, replace the following #if 0 by #ifdef WIN32
- */
-#if 0
-  DWORD dwRet;
+#ifdef _WIN32
+  {
+    DWORD dwRet;
 
-  result = malloc ((MAX_PATH + 1) * sizeof (char));
-  dwRet = GetTempPath (MAX_PATH, result);
-  if (dwRet > 0) {
-    result[dwRet] = '\0';
-    if (__gnat_is_directory (result))
-      return strdup (result);
+    result = malloc ((MAX_PATH + 1) * sizeof (char));
+    dwRet = GetTempPath (MAX_PATH, result);
+    if (dwRet > 0) {
+      result[dwRet] = '\0';
+      if (__gnat_is_directory (result))
+        return strdup (result);
+    }
+    free (result);
   }
-  free (result);
 #endif
 
   result = getenv ("TMPDIR");
