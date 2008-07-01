@@ -60,19 +60,26 @@
 --  object managing the suspension/release mechanism of the task: the protected
 --  object is accessed by both the clients (via Release) and the sporadic task
 --  itself. Protocol_Ceiling must be equal to the priority of the client with
---  the highest priority, including the task itself (Tsk_Priority).
+--  the highest priority, including the task itself (Task_Priority).
 
 with Ada.Real_Time;
 with System;
 
 generic
+   --  The priority of the task
    Task_Priority : System.Priority;
+   --  The minimum time between two consecutive releases
    Minimum_Interelease_Time : Millisecond;
+   --  the system-wide relase time
    System_Start_Time : Ada.Real_Time.Time := Ada.Real_Time.Clock;
+   --  the ceiling priority of the protected object used to post and fetch
+   --  requests
    Protocol_Ceiling : System.Any_Priority;
+   --  the nominal operation
    with procedure Sporadic_Operation;
 package GNATCOLL.Ravenscar.Simple_Sporadic_Task is
 
+   --  used by client to trigger the task
    procedure Release;
 
 private

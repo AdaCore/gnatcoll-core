@@ -32,6 +32,7 @@ with GNATCOLL.Ravenscar.Utils;
 package body GNATCOLL.Ravenscar.Multiple_Queue_Sporadic_Server is
    use GNATCOLL.Ravenscar.Utils;
 
+   --  Simply delegates to Protocol.Put
    procedure Put_Request
      (Req      : Request;
       Kind : Request_Kind)
@@ -67,11 +68,17 @@ package body GNATCOLL.Ravenscar.Multiple_Queue_Sporadic_Server is
          Increase_Counter
            (Pointer_Queue_Insert_Index,
             Pointer_Queue_Range_Max);
+         --  if there has been an overflow, increase also the Extract index.
+         --  This is because the insert index has surpassed the extract index,
+         --  overwriting older request. It is thus necessary to increase the
+         --  extract index to avoid to fetch a newly posted request instead
+         --  of older ones.
          if Pointer_Queue_Overflow then
             Increase_Counter
               (Pointer_Queue_Extract_Index,
                Pointer_Queue_Range_Max);
          end if;
+         --  Check if the Insert_Index is going to surpass the extract index
          if Pointer_Queue_Insert_Index = Pointer_Queue_Extract_Index then
             Pointer_Queue_Overflow := True;
          end if;

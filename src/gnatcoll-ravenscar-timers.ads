@@ -27,6 +27,7 @@
 --                                                                          --
 ------------------------------------------------------------------------------
 
+--  Contains types for Ravenscar timers
 package GNATCOLL.Ravenscar.Timers is
 
    type Timer_Action is access procedure;

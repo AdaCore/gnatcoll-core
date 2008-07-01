@@ -36,16 +36,22 @@ with Ada.Real_Time.Timing_Events;
 generic
 package GNATCOLL.Ravenscar.Timers.One_Shot_Timer is
 
+   --  Set the timer to an absolute instant in time to execute a specific
+   --  action
    procedure Set
      (Instant : Ada.Real_Time.Time;
       Action  : Timer_Action);
 
+   --  cancel the timer
    procedure Cancel (Success : out Boolean);
 
 private
 
+   --  the timing event
    The_Event : Ada.Real_Time.Timing_Events.Timing_Event;
 
+   --  the handler used to invoke the user-provided action (see procedure
+   --  Set).
    protected Events is
       pragma Priority (System.Any_Priority'Last);
       procedure Handler

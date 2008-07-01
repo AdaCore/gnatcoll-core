@@ -35,11 +35,13 @@ package body GNATCOLL.Ravenscar.Timers.One_Shot_Timer is
    is
       use type Ada.Real_Time.Timing_Events.Timing_Event_Handler;
    begin
+      --  Set the timer
       Events.Set_Action (Instant, Action);
    end Set;
 
    procedure Cancel (Success : out Boolean) is
    begin
+      --  cancel the timer
       Ada.Real_Time.Timing_Events.Cancel_Handler (The_Event, Success);
    end Cancel;
 

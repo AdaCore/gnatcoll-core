@@ -32,6 +32,7 @@ with GNATCOLL.Ravenscar.Utils;
 package body GNATCOLL.Ravenscar.Multiple_Queue_Cyclic_Server is
    use GNATCOLL.Ravenscar.Utils;
 
+   --  Simply delegates to Protocol.Put
    procedure Put_Request
      (Req      : Request;
       Kind : Request_Kind)
@@ -58,11 +59,17 @@ package body GNATCOLL.Ravenscar.Multiple_Queue_Cyclic_Server is
          Increase_Counter
            (Pointer_Queue_Insert_Index,
             Pointer_Queue_Range_Max);
+         --  if there has been an overflow, increase also the Extract index.
+         --  This is because the insert index has surpassed the extract index,
+         --  overwriting older request. It is thus necessary to increase the
+         --  extract index to avoid to fetch a newly posted request instead
+         --  of older ones.
          if Pointer_Queue_Overflow then
             Increase_Counter
               (Pointer_Queue_Extract_Index,
                Pointer_Queue_Range_Max);
          end if;
+         --  Check if the Insert_Index is going to surpass the extract index
          if Pointer_Queue_Insert_Index = Pointer_Queue_Extract_Index then
             Pointer_Queue_Overflow := True;
          end if;
@@ -71,6 +78,9 @@ package body GNATCOLL.Ravenscar.Multiple_Queue_Cyclic_Server is
       procedure Get_Next_Request (Req : out Request) is
          Ref : Pointer_Queue_Item_Ref := null;
       begin
+         --  If the insert and extract index have the same value, it is
+         --  possible to avoid overflow if a request is fetched before a new
+         --  one is posted: this case addresses exactly this.
          if Pointer_Queue_Insert_Index = Pointer_Queue_Extract_Index then
             Pointer_Queue_Overflow := False;
          end if;
@@ -80,12 +90,14 @@ package body GNATCOLL.Ravenscar.Multiple_Queue_Cyclic_Server is
            (Pointer_Queue_Extract_Index,
             Pointer_Queue_Range_Max);
          Req     := Ref.Req.all;
+         --  decrease number of pending requests
          Pending := Pending - 1;
       end Get_Next_Request;
       pragma Inline (Get_Next_Request);
 
       procedure Get (Req : out Request; Has_Pending : out Boolean) is
       begin
+         --  check if there are pending requests
          Has_Pending := Pending > 0;
          if Pending > 0 then
             Get_Next_Request (Req);
