@@ -1,0 +1,27 @@
+MODULE=tools
+PROJECT=gnatcoll_${MODULE}
+
+include ../Makefile.conf
+
+ifeq (${WITH_TEMPLATES},yes)
+SRCDIRS=./tools/ ./tools/templates/
+else
+SRCDIRS=./tools/ ./toosl/notemplates/
+endif
+
+all:     dirs buildall gnatcoll_db2ada
+clean:   cleanall
+install: bininstall
+
+gnatcoll_db2ada: force
+	gnatmake -P$(PROJECT) $@
+
+bininstall: force
+	$(CP) obj/gnatcoll_db2ada $(bindir)
+
+ifeq (${LIBRARY_TYPE},static)
+FPIC=
+else
+FPIC=-fPIC
+endif
+

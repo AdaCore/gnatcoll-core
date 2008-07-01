@@ -1,0 +1,19 @@
+with "../gnatcoll_shared";
+with "gnatcoll_postgres";
+
+project GnatColl_Tools is
+   for Object_Dir use "obj";
+   for Source_Dirs use ("tools");
+
+   case GnatColl_Shared.Templates is
+      when "no" =>
+         for Source_Dirs use Project'Source_Dirs & ("tools/notemplates");
+      when "yes" =>
+         for Source_Dirs use Project'Source_Dirs & ("tools/templates");
+   end case;
+
+   package Compiler renames GnatColl_Shared.Compiler;
+   package Linker   renames GnatColl_Shared.Linker;
+   package Ide renames GnatColl_Shared.Ide;
+
+end GnatColl_Tools;

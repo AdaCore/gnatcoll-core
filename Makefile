@@ -27,6 +27,7 @@ ifeq (${WITH_GTK},yes)
 	${MAKE} -C src -f Makefile.gtk
 endif
 	${MAKE} -C src -f Makefile.postgres
+	$(MAKE) -C src -f Makefile.tools
 
 examples:
 	${MAKE} -C examples
@@ -58,6 +59,7 @@ ifeq (${WITH_GTK},yes)
 	${MAKE} -C src -f Makefile.gtk install
 endif
 	${MAKE} -C src -f Makefile.postgres install
+	${MAKE} -C src -f Makefile.tools install
 	${INSTALL} distrib/gnatcoll_gps.xml ${datadir}/gps/plug-ins
 	${CP} distrib/*.gpr ${libdir}/gnat
 
@@ -77,6 +79,8 @@ ifeq (${WITH_GTK},yes)
 endif
 	${MAKE} LIBRARY_TYPE=relocatable -C src -f Makefile.postgres $@
 	${MAKE} LIBRARY_TYPE=static     -C src -f Makefile.postgres $@
+	${MAKE} LIBRARY_TYPE=relocatable -C src -f Makefile.tools $@
+	${MAKE} LIBRARY_TYPE=static     -C src -f Makefile.tools $@
 	${MAKE} -C testsuite $@
 	${MAKE} -C docs $@
 	${MAKE} -C examples $@

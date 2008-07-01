@@ -3,6 +3,7 @@ with "src/gnatcoll";
 with "src/gnatcoll_gtk";
 with "src/gnatcoll_python";
 with "src/gnatcoll_postgres";
+with "src/gnatcoll_tools";
 project Gnatcoll_GPS is
    for Source_Dirs use ();
 
