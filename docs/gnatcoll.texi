@@ -155,6 +155,7 @@ unmodified in any copy.
 * Managing Memory:: The storage pools.
 * Manipulating Files::
 * Three state logic:: The tribooleans.
+* Database interface::
 * Index::
 
 @ifnothtml
@@ -214,6 +215,15 @@ Manipulating Files
 * GtkAda support for virtual files::
 
 Three state logic
+
+Database interface
+* Supported database systems::
+* Database schema monitoring::
+* Writing queries::
+* Executing queries::
+* Getting results::
+* Query logs::
+* Tasks and databases::
 
 @end detailmenu
 @end ifnothtml
@@ -328,6 +338,12 @@ If this switch is specified, then support for syslog (@pxref{Logging to syslog})
 will not be build. This support allows sending the traces from all or part of
 your application to the system logger, rather than to files or stdout.
 
+@item --with-postgresql=<dir>
+@itemx --without-postgresql
+@value{gnatcoll} embeds a set of packages to query a database engine.
+@code{configure} attempts to find which systems are installed on your
+system, and build support for those. But you can also explicitly disable
+for those if you need.
 @end table
 
 Special support exists in @value{gnatcoll} for the gtk+ graphical toolkit.
@@ -1083,7 +1099,7 @@ print the string on their respective graphical window.
 
 Some scripting languages, in particular python, allow you to store any
 data within the class instances. In the example above, the user could for
-instance store the timestamp of the last output in each of the instances.
+instance store the time stamp of the last output in each of the instances.
 It is therefore important that, as much as possible, you always return the
 same @code{Class_Instance} for a given Ada object. See the following
 python example:
@@ -1130,7 +1146,7 @@ type was created in Ada.
 
 @noindent
 Although the exact way they are all these types are created is largely
-rrelevant to your specific application in general, it might be useful for you
+irrelevant to your specific application in general, it might be useful for you
 to override part of the types to provide more advanced features. For instance,
 GPS redefines its own Shell language, that has basically the same behavior as
 the Shell language described above but whose @code{Subprogram_Record} in fact
@@ -1202,7 +1218,7 @@ have nothing special to do here.
 @noindent
 Some languages (especially python) support named parameters, ie parameters
 can be specified in any order on the command line, as long as they are
-properly identified (very similar to Ada's own capabilies). In the example
+properly identified (very similar to Ada's own capabilities). In the example
 above, the call to @code{Name_Parameters} is really optional, but adds this
 support for your own functions as well. You just have to specify the name
 of the parameters, and @value{gnatcoll} will then ensure that when you
@@ -1386,7 +1402,7 @@ data with them.
 @value{gnatcoll} provides a few types to facilitate this. In passing, it
 is worth noting that in fact the Ada objects will be associated with a
 single instance @emph{per scripting language}, but each language has its
-own instance. Data is not magically transfered from python to shell!
+own instance. Data is not magically transferred from python to shell!
 
 There are two cases to distinguish here:
 
@@ -1403,7 +1419,7 @@ handling is complex, since python
 for instance has ref-counted types, and so does gtk+. For the memory to
 be correctly freed when no longer needed, @value{gnatcoll} must properly
 takes care of these reference counting. The result is that the class
-instance will never be detroyed while the gtk+ object exists, but the
+instance will never be destroyed while the gtk+ object exists, but the
 gtk+ object might be destroyed while the class instance still exists (in
 which case no further operation on that instance is possible).
 
@@ -1426,7 +1442,7 @@ as in the example above, you must also override its primitive
 The final aspect to consider here is how to return existing instances.
 This cannot be done from the constructor method, since when it is called
 it has already received the created instance (this is forced by python, and
-was done the same for other languages for compability reasons).
+was done the same for other languages for compatibility reasons).
 There are two ways to work around that limitation:
 
 @itemize @bullet
@@ -1609,7 +1625,7 @@ The configuration file is found in one of three places, in the following
 order:
 
 @itemize @bullet
-@item The file name is specified in the souce code in the call to
+@item The file name is specified in the source code in the call to
 @code{Parse_Config_File}.
 
 @cindex ADA_DEBUG_FILE
@@ -1796,12 +1812,12 @@ displayed with a red background to make it more obvious.
 @noindent
 
 Speaking of color, a number of decorators are defined by
-@code{GNAT.Traces}. Their goal is not to be used for outputing information,
+@code{GNAT.Traces}. Their goal is not to be used for outputting information,
 but to configure what extra information should be output with all log
 messages. They are activated through the same configuration file as the
 traces, with the same syntax (i.e either @code{"=yes"} or @code{"=no"}).
 
-Here is an exaustive list:
+Here is an exhaustive list:
 
 @table @code
 @item DEBUG.ABSOLUTE_TIME
@@ -1822,7 +1838,7 @@ automatically for each message.
 
 @item DEBUG.LOCATION
 If this decorator is activated, the location of the call to Trace is
-automatically dipslayed. This is a file:line:column information. This
+automatically displayed. This is a file:line:column information. This
 works even when the executable wasn't compiled with debug information
 
 @item DEBUG.ENCLOSING_ENTITY
@@ -1915,7 +1931,7 @@ write to a socket (or even a CORBA ORB) to communicate with another
 application which is charge of monitoring your application.
 
 @code{GNAT.Traces} provides the type @code{Trace_Stream_Record}, which can
-be overriden to redirect the traces to your own streams.
+be overridden to redirect the traces to your own streams.
 
 Let's assume for now that you have defined a new type of stream (called
 @code{"mystream"}). To keep the example simple, we will assume this stream
@@ -1924,7 +1940,7 @@ configure the file name from the traces configuration file. Here is an
 example of a configuration file that sets the default stream to a file
 called @file{foo}, and redirects a specific handle to another file called
 @file{bar}. Note how the same syntax that was used for standard output and
-sntadard error is also reused (ie the stream name starts with the @code{"&"}
+standard error is also reused (ie the stream name starts with the @code{"&"}
 symbol, to avoid confusion with standard file names).
 
 @CODESAMPLE{
@@ -1935,7 +1951,7 @@ You need of course to do a bit of coding in Ada to create the stream. This
 is done by creating a new child of @code{Trace_Stream_Record}, and override
 the two primitive operations @code{Put} and @code{Newline} (at least).
 In this implementation, and because @code{GNAT.Traces.Trace} takes care of
-not outputing two messages at the same time, we can just output to the
+not outputting two messages at the same time, we can just output to the
 file as characters are made available. In some other cases, however,
 the implementation will need to buffer the characters until the end of
 line is seen, and output the line with a single call. See for instance
@@ -2012,10 +2028,10 @@ The package @code{GNAT.Traces.Syslog} also contains a low-level interface
 to syslog, which, although fully functional, you should probably not use,
 since that would make your code system-dependent.
 
-Syslog itself dispatches its output based on two criterias: the
+Syslog itself dispatches its output based on two criteria: the
 @code{facility}, which indicates what application emitted the message,
 and where it should be filed, and the @code{level} which indicates the
-urgency level of the message. Both of these criterias can be specified in
+urgency level of the message. Both of these criteria can be specified in
 the @code{GNAT.Traces} configuration file, as follows:
 
 @CODESAMPLE{
@@ -2033,7 +2049,7 @@ and levels.
 @c ------------------------------------------------------------------------
 @noindent
 
-Although the trace handles are primarily meant for outputing messages,
+Although the trace handles are primarily meant for outputting messages,
 they can be used in another context. The goal is to take advantage of
 the external configuration file, without reimplementing a similar
 feature in your application. Since the configuration file can be used to
@@ -2067,7 +2083,7 @@ explained above.
 @noindent
 
 Most applications need to efficiently read files from the disk. Some also
-need in addition to modify them and write them back. The Ada runtime
+need in addition to modify them and write them back. The Ada run-time
 profiles several high-level functions to do so, most notably in the
 @file{Ada.Text_IO} package. However, these subprograms require a lot of
 additional housekeeping in the run-time, and therefore tend to be slow.
@@ -2140,7 +2156,7 @@ will also want to only read chunks of the file at once.
 To read only a chunk of the file, your code would look like the following.
 At the low-level, the system call will always read chunks multiple of a
 size called the page_size. Although @code{GNAT.Mmap} takes care of rounding
-the numbers appropriately, it is recommanded that you pass parameters that
+the numbers appropriately, it is recommended that you pass parameters that
 are multiples of that size. That optimizes the number of system calls you
 will need to do, and therefore speeds up your application somewhat.
 
@@ -2220,7 +2236,7 @@ This algorithm needs to preprocess its key (the searched string), but does
 not need to perform any specific analysis of the string to be searched.
 Its execution time can be sub-linear: it doesn't need to actually check
 every character of the string to be searched, and will skip over some of
-them. The worst case for this algorithm has been proven to need approximately
+them. The worst case for this algorithm has been proved to need approximately
 3 * N comparisons, hence the algorithm has a complexity of O(n).
 
 The longer the key, the faster the algorithm in general, since that provides
@@ -2275,7 +2291,7 @@ like "%@{version@}" in a longer string with the actual version, at run time.
 
 This module is not the same as the templates parser provided in the context
 of AWS, the Ada web server, where external files are parsed and processed
-to generate other files. The latter povides advanced features like filters,
+to generate other files. The latter provides advanced features like filters,
 loops,@dots{}
 
 The substrings to be replaced always start with a specific delimiter, which
@@ -2300,7 +2316,7 @@ delimiter, with the following rules:
  character is the symbol @code{-}, it is added as part of the name of the
  identifier, as in @code{"%1-"}. One use for this feature is to indicate
  you want to replace it with all the positional parameters %1%2%3%4. For
- instance, if you are writting the command line to spawn an external tool,
+ instance, if you are writing the command line to spawn an external tool,
  to which the user can pass any number of parameter, you could specify that
  command line as @code{"tool -o %1 %2-"} to indicate that all parameters
  should be concatenated on the command line.
@@ -2383,7 +2399,7 @@ or made of one or more attachments in various formats. These attachments can
 be HTML text, images, or any binary file. Since email transfer is done through
 various servers, the set of bytes that can be sent is generally limited to
 7 bit characters. Therefore, the attachments are generally encoded through one
-of the encodings defined in the various MIME RFCs, and they need to be decoded
+of the encoding defined in the various MIME RFCs, and they need to be decoded
 before the original file can be manipulated again.
 
 @end table
@@ -2466,7 +2482,7 @@ The documentation for these subprograms is found in the file
 @noindent
 
 Most often, a message is not found on its own (unless you are for instance
-writting a filter for incoming messages). Instead, the messages are stored
+writing a filter for incoming messages). Instead, the messages are stored
 in what is called a mailbox. The latter can contain thousands of such
 messages.
 
@@ -2532,9 +2548,9 @@ is preserved in the user's mailers.
 @value{gnatcoll} provides a set of patterns for concurrent programming using
 Ravenscar-compliant semantics only. The core goal of the GNAT.Ravenscar (sub)
 packages is to ease the development of high-integrity multitasking applications
-by factorizing common behaviour into instantiable, Ravenscar-compliant, generic 
+by factorizing common behavior into instantiable, Ravenscar-compliant, generic 
 packages. Instances of such generic packages guarantee predictable
-timing behaviour and thus permit the application of most common timing analysis
+timing behavior and thus permit the application of most common timing analysis
 techniques.  
 
 @menu
@@ -2548,7 +2564,7 @@ techniques.
 The @code{GNAT.Ravenscar.Simple_Cyclic_Task} generic package lets instantiate a 
 cyclic tasks executing the same operation at regular time intervals; on the other
 side, the @code{GNAT.Ravenscar.Simple_Sporadic_Task} task lets instantiate
-sporadic tasks enforcing a minimum interrelease time.
+sporadic tasks enforcing a minimum inter-release time.
 
 
 @node Servers
@@ -2560,7 +2576,7 @@ can fulfill different kind of requests (see multiple queues servers).
 how synchronous inter-task communication can be faked in Ravenscar (the only form of communication
 permitted by the profile is through shared resources): the server receives a request to fulfill, 
 computes the result and returns it by invoking a call-back. The latter enforces both a minimum 
-and a maximum interrelease time: the server automatically releases itself and invokes an appropriate
+and a maximum inter-release time: the server automatically releases itself and invokes an appropriate
 handler if a request is not posted within a given period of time. 
 
 
@@ -2597,7 +2613,7 @@ type should be allocated. And that's it. You then use the usual
 
 @value{gnatcoll} provides a number of examples for such storage pools,
 with various goals. There is also one advanced such pool in the GNAT
-runtime itself, called @code{GNAT.Debug_Pools}, which allows you to
+run-time itself, called @code{GNAT.Debug_Pools}, which allows you to
 control memory leaks and whether all accesses do reference valid memory
 location (and not memory that has already been deallocated).
 
@@ -2626,16 +2642,16 @@ is properly aligned.
 Ada was meant from the beginning to be a very portable language, across
 architectures. As a result, most of the code you write on one machine has
 good chances of working as is on other machines. There remains, however,
-some areas that are somewhat system specific. The Ada runtime, the GNAT
-specific runtime and @value{gnatcoll} all try to abstract some of those
+some areas that are somewhat system specific. The Ada run-time, the GNAT
+specific run-time and @value{gnatcoll} all try to abstract some of those
 operations to help you make your code more portable.
 
 One of these areas is related to the way files are represented and
-manipulated. Reading or writting to a file is system independent, and taken
-care of by the standard runtime. Other differences between systems include
+manipulated. Reading or writing to a file is system independent, and taken
+care of by the standard run-time. Other differences between systems include
 the way file names are represented (can a given file be accessed through
 various casing or not, are directories separated with a backslash or a
-forward slash, or some other mean, and a few others). The GNAT runtime does
+forward slash, or some other mean, and a few others). The GNAT run-time does
 a good job at providing subprograms that work on most types of filesystems,
 but the relevant subprograms are split between several packages and not always
 easy to locate. @value{gnatcoll} groups all these functions into a single
@@ -2650,7 +2666,7 @@ conversion from full name to base name, and sometimes reverse (which, of
 course, might be an expansive computation). To make this easier,
 @value{gnatcoll} provides a type that encapsulates the notion of a file,
 and removes the need for the application to indicate whether it needs a
-full name, a base name, or any other part of the filename.
+full name, a base name, or any other part of the file name.
 
 @menu
 Manipulating Files
@@ -2675,7 +2691,7 @@ be grouped into three families of filesystems:
 
 On such filesystems, the full name of a file is split into three parts: the
 name of the drive (c:, d:,@dots{}), the directories which are separated by
-a backslash, and the basename. Such filesystems are sometimes inaccurately
+a backslash, and the base name. Such filesystems are sometimes inaccurately
 said to be case insensitive: by that, one means that the same file can be
 accessed through various casing. However, a user is generally expecting a
 specific casing when a file name is displayed, and the application should
@@ -2714,7 +2730,7 @@ children. Such a type has primitive operations to manipulate the names of
 files (retrieving the base name from a full name for instance), to check
 various attributes of the file (is this a directory, a symbolic link, is the
 file readable or writable), or to
-manipulate the file itself (copying, deleting, reading and writting).
+manipulate the file itself (copying, deleting, reading and writing).
 It provides similar operations for directories (creating or deleting paths,
 reading the list of files in a directory,@dots{}).
 
@@ -2839,7 +2855,7 @@ different machines.
 performs all its remote operations through a tagged type defined in
 @code{GNATCOLL.Filesystem.Transport}. This type is abstract, and must be
 overridden in your application. For instance, GPS has a full support for
-chosing which protocol to use on which host, what kind of filesystem is
+choosing which protocol to use on which host, what kind of filesystem is
 running on that host, to recognize password queries from the transport
 protocol,@dots{}. All these can be encapsulated in the transport
 protocol.
@@ -2917,6 +2933,599 @@ provides an @code{Equal} function.
 
 See the specs of the package to see the truth tables associated with those
 operators.
+
+@c -----------------------------------------------------------------------
+@node Database interface
+@chapter Database interface
+@c -----------------------------------------------------------------------
+@noindent
+
+@value{gnatcoll} provides an interface to various database systems.
+Currently, only PostgreSQL and MySQL are supported, but adding a new
+back-end is a matter of extending a tagged type and overriding the
+appropriate subprograms.
+
+This interface is based on top of the GNADE package (available on
+Internet), although it hides that layer.
+
+This interface was designed with several goals in mind: type-safety,
+integrity with regards to changes to the database schema, ease of
+writing queries and performance. A paper was published at the
+Ada-Europe conference in 2008 which describes the various steps
+we went through in the design of this library. The rest of this
+chapter describes the current status of the library, not its
+history.
+
+@menu
+* Supported database systems::
+* Database schema monitoring::
+* Writing queries::
+* Executing queries::
+* Getting results::
+* Query logs::
+* Tasks and databases::
+@end menu
+
+@c -----------------------------------------------------------------------
+@node Supported database systems
+@section Supported database systems
+@c -----------------------------------------------------------------------
+@noindent
+
+This library abstracts the specifics of the various database engines
+it supports. Ideally, a goal written for one database could be ported
+almost transparently to another engine. This is not completely doable
+in practice, since each system has its own SQL specifics, and unless
+you are writing things very carefully, the interpretation of your queries
+might be different from one system to the next.
+
+However, the Ada code should remain untouched if you change the engine.
+Various engines are supported out of the box (PostgreSQL and MySQL),
+although new ones can be added by overriding the appropriate SQL type
+(@code{Database_Connection}). When you compile @value{gnatcoll}, the
+build scripts will try and detect what systems are installed on your
+machine, and only build support for those. It is possible, if no
+database was installed on your machine at that time, that the database
+interface API is available (and your application compiles), but no
+connection can be done to database at run time.
+
+In your code, you will need to create a connection to the database
+system that you wish to interact with. One possible implementation
+is
+
+@CODESAMPLE{
+@b{function} Connection_Factory@NL{}
+  (Desc : GNATCOLL.SQL.Exec.Database_Description)@NL{}
+  @b{return} GNATCOLL.SQL.Exec.Database_Connection@NL{}
+@b{is}@NL{}
+   DBMS : @b{constant} String := Get_DBMS (Desc);@NL{}
+@b{begin}@NL{}
+   @b{if} DBMS = DBMS_Postgresql @b{then}@NL{}
+      @b{return} GNATCOLL.SQL.Postgres.Build_Postgres_Connection;@NL{}
+   @b{else}@NL{}
+      @b{return null};@NL{}
+   @b{end if};@NL{}
+@b{end} Connection_Factory;@NL{}
+@NL{}
+@b{declare}@NL{}
+   DB_Descr : GNATCOLL.SQL.Exec.Database_Description;@NL{}
+   DB : GNATCOLL.SQL.Exec.Database_Connection;@NL{}
+@b{begin}@NL{}@NL{}
+   GNATCOLL.SQL.Exec.Setup_Database@NL{}
+     (Description => DB_Descr,@NL{}
+      Database    => "dbname");@NL{}
+      
+   DB := GNATCOLL.SQL.Exec.Get_Task_Connection@NL{}
+        (Description  => DB_Descr,@NL{}
+         Factory      => Connection_Factory'Access,@NL{}
+         Username     => "myself");@NL{}
+@b{end}@NL{}
+}
+
+The code acts in three steps:
+@itemize @bullet
+@item Describe connection parameters
+   The call to @code{Setup_Database} provides the required parameters to
+   establish a connection to a database server which might possibly be
+   running on a remote host. In this call, one specifies the name of
+   the database, the user login and password, and the type of database.
+   At this point, no connection or exchange of information has been
+   done, the @code{Database_Description} type stores this information
+   for later.
+
+@item Connect to the database
+   The call to @code{Get_Task_Connection} establishes the actual
+   connection. As will be seen later, the recommended practice when
+   the database backend supports it is to establish one connection
+   per thread in your application, and keep it alive even if the
+   thread is reused for another reason later on. An example is a
+   web server which has a pool of tasks, and uses the first
+   available one to reply to a request. The function
+   @code{Get_Task_Connection} will reuse the connection to the
+   database that was already established in this thread, or create
+   a new one through the @code{Factory} callback if none was
+   created yet.
+
+   This call is the only one that is needed in the various tasks
+   of your application, you obviously do not need to repeat the
+   call to @code{Setup_Database}.
+
+@item Create the connection
+   If the current task is not associated with a connection, one
+   needs to be created. @value{gnatcoll} does this through a
+   factory callback, instead of just doing it on its own, so that
+   your application can create its own child types for a
+   @code{Database_Connection}, and thus store additional data in
+   that child type. This is also a convenient way to support
+   multiple database backends without @code{with}-ing all the
+   corresponding code in your application (in the example above,
+   the application only ever supports PostgreSQL, and therefore
+   does not need to elaborate the MySQL packages for instance).
+
+@end itemize
+
+@c -----------------------------------------------------------------------
+@node Database schema monitoring
+@section Database schema monitoring
+@c -----------------------------------------------------------------------
+@noindent
+
+As stated in the introduction, one of the goals of this library is to
+make sure the application's code follows changes in the schema of your
+database. The schema is the list of tables and fields in your database,
+and the relationship between those tables.
+
+To reach this goal, an external tool, @file{gnatcoll_db2ada} is provided
+with @value{gnatcoll}, and should be spawned as the first step of the
+build process, or at least whenever the database schema changes. It
+generates an Ada package (@code{Database}) which reflects the current
+schema of the database.
+
+This tool supports a number of command line parameters (the complete list
+of which is available through the @file{-h} switch). The most important of
+those switches are:
+
+@table @code
+@item -dbhost host
+@itemx -dbname name
+@itemx -dbuser user
+@itemx -dbpasswd passwd
+@itemx -dbtype type
+These parameters specify the connection parameters for the database. To
+find out the schema, @file{gnatcoll_db2ada} needs to connect to that
+database and do a number of read-only queries. The user does not need to
+have write permission on the database
+
+@item -enum table,id,name,prefix,base
+This parameter can be repeated several times if needed. It identifies
+one of the special tables of the database that acts as an enumeration
+type. It is indeed often the case that one or more tables in the
+database have a role similar to Ada's enumeration types, ie contains
+a list of values for information like the list of possible priorities,
+a list of countries,... Such lists are only manipulated by the
+maintainer of the database, not interactively, and some of their
+values have impact on the application's code (for instance, if a
+ticket has an urgent priority, we need to send a reminder every day --
+but the application needs to know what an urgent priority is).
+In such a case, it is convenient to generate these values as
+constants in the generated package. The output will be similar to:
+
+@CODESAMPLE{
+@b{subtype} Priority_Id is @b{Integer};@NL{}
+Priority_High   : @b{constant} Priority_Id := 3;@NL{}
+Priority_Medium : @b{constant} Priority_Id := 2;@NL{}
+Priority_Low    : @b{constant} Priority_Id := 1;@NL{}
+Priority_High_Internal : @b{constant} Priority_Id := 4;}
+
+This code would be extracted from a database table called, for
+instance, @code{ticket_priorities}, which contains the following:
+
+@CODESAMPLE{
+table ticket_priorities:@NL{}
+name		| priority	| category@NL{}
+high		| 3		| customer@NL{}
+medium	| 2		| customer@NL{}
+low		| 1		| customer@NL{}
+high_internal	| 4		| internal@NL{}}
+
+To generate the above Ada code, you need to pass the following
+parameter to @file{gnatcoll_db2ada}:
+
+@CODESAMPLE{-enum ticket_priorities,Priority,Priority,Integer}
+
+where the second parameter is the name of the field in the table, and
+the first is the prefix to add in front of the name to generate the
+Ada constant's name. The last parameter should be either @code{Integer}
+or @code{String}, which influences the way the value of the Ada constant
+is generated (surrounded or not by quotes).
+
+@item -var name,table,field,criteria,comment
+This is similar to the @code{-enum} switch, but extracts a single value
+from the database. Although applications should try and depend as little
+as possible on such specific values, it is sometimes unavoidable.
+
+For instance, if we have a table in the table with the following
+contents:
+
+@CODESAMPLE{
+table staff@NL{}
+staff_id	| login@NL{}
+0		| unassigned@NL{}
+1		| user1@NL{}}
+
+We could extract the id that helps detect unassigned tickets with the
+following command line:
+
+@CODESAMPLE{-var no_assign_id,staff,staff_id,"login='unassigned'","help"}
+
+which generates
+
+@CODESAMPLE{No_Assigne_Id : @b{constant} := 0;@NL{}
+@i{--  help}}
+
+The application should use this constant rather than some hard-coded
+string @code{"unassigned"} or a named constant with the same value.
+The reason is that presumably the login will be made visible somewhere
+to the user, and we could decide to change it (or translate it to
+another language). In such a case, the application would break. On the
+other hand, using the constant @code{0} which we just extracted will
+remain valid, whatever the actual text we display for the user.
+
+@end table
+
+From the command line arguments, @code{gnatcoll_db2ada} will generate
+an Ada package, which contains one package per table in the database.
+Each of these packages has a similar structure. The implementation
+details are not shown here, since they are mostly irrelevant and might
+change. Currently, a lot of this code are types with discriminants. The
+latter are @code{access-to-string}, to avoid duplicating strings in
+memory and allocating and freeing memory for these. This provides a
+better performance.
+
+@CODESAMPLE{
+@b{package} Database @b{is}@NL{}
+   @b{package} T_Ticket_Priorities @b{is}@NL{}
+      @b{type} Table (...) @b{is new} SQL_Table (...) @b{with record}@NL{}
+          Priority : SQL_Field_Integer;@NL{}
+          Name     : SQL_Field_Text;@NL{}
+      @b{end record};@NL{}
+      @NL{}
+      @b{overriding function} FK (Self : Table; Foreign : SQL_Table'Class)@NL{}
+         @b{return} SQL_Criteria;@NL{}
+   @b{end} T_Ticket_Priorities;@NL{}
+   @NL{}
+   Ticket_Priorities : T_Ticket_Priorities.Table (...);@NL{}
+@b{end} Database;}
+
+Thus, each package defines a type to represent the corresponding table.
+It also provides a default instance of that type, which can be used to
+write queries (see the next section). This type overrides one primitive
+operation which is used to compute the foreign keys between that table
+and any other table in the database (@pxref{Writing queries}).
+
+Note that the fields which are generated for the table (our example reuses
+the previously seen table @code{ticket_priorities}) are typed, which as we
+will see provides a simple additional type safety for our SQL queries.
+
+@c -----------------------------------------------------------------------
+@node Writing queries
+@section Writing queries
+@c -----------------------------------------------------------------------
+@noindent
+
+The second part of the database support in @value{gnatcoll} is a set
+of Ada subprograms which help write SQL queries. Traditional ways to
+write such queries have been through embedded SQL (which requires a
+pre-processing phase and complicate the editing of source files in
+Ada-aware editors), or through simple strings that are passed as is
+to the server. In the latter case, the compiler can not do any
+verification on the string, and errors such a missing parenthesis or
+misspelled table or field names will not be detected until the code
+executes the query.
+
+@value{gnatcoll} tries to make sure that code that compiles contains
+syntactically correct SQL queries and only reference existing tables
+and fields. This of course does not ensure that the query is
+semantically correct, but helps detect trivial errors as early as
+possible.
+
+Such queries are thus written via calls to Ada subprograms, as in the
+following example.
+
+@CODESAMPLE{
+@b{with} GNATCOLL.SQL;  @b{use} GNATCOLL.SQL;@NL{}
+@b{with} Database; @b{use} Database;@NL{}
+@b{declare}@NL{}
+   Q : SQL_Query;@NL{}
+@b{begin}@NL{}
+   Q := SQL_Select@NL{}
+     (Fields => Max (Ticket_Priorities.Priority)@NL{}
+         & Ticket_Priorities.Category,@NL{}
+      From   => Ticket_Priorities,@NL{}
+      Where  => Ticket_Priorities.Name /= @i{"low"},@NL{}
+      Group_By => Ticket_Priorities.Category);@NL{}
+@b{end}}
+
+The above example will return, for each type of priority (internal or
+customer) the highest possible value. The interest of this query is
+left to the user...
+
+This is very similar to an actual SQL query. Field and table names come
+from the package that was automatically generated by the
+@code{gnatcoll_db2ada} tool, and therefore we know that our query is
+only referencing existing fields. The syntactic correctness is ensured by
+standard Ada rules. The @code{SQL_Select} accepts several parameters
+corresponding to the usual SQL attributes like @code{GROUP BY},
+@code{HAVING}, @code{ORDER BY} and @code{LIMIT}.
+
+The @code{From} parameter could be a list of tables if we need to join
+them in some ways. Such a list is created with the overridden @code{"&"}
+operator, just as for fields which you can see in the above example.
+@value{gnatcoll} also provides a @code{Left_Join} function to join two
+tables when the second might have no matching field (see the SQL
+documentation).
+
+Similar functions exist for @code{SQL_Insert}, @code{SQL_Update} and
+@code{SQL_Delete}. Each of those is extensively documented in the
+@file{gnatcoll-sql.ads} file.
+
+It is worth noting that we do not have to write the query all at once.
+In fact, we could build it depending on some other criteria. For
+instance, imagine we have a procedure that does the query above, and
+omits the priority specified as a parameter, or shows all priorities
+if the empty string is passed. Such a procedure could be written as
+
+@CODESAMPLE{
+@b{procedure} List_Priorities (Omit : String := "") @b{is}@NL{}
+  Q : SQL_Query;@NL{}
+  C : SQL_Criteria := No_Criteria;@NL{}
+@b{begin}@NL{}
+  @b{if} Omit /= "" @b{then}@NL{}
+     C := Ticket_Priorities.Name /= Omit;@NL{}
+  @b{end if};@NL{}
+  Q := SQL_Select@NL{}
+    (Fields => ..., @i{-- as before}@NL{}
+     Where  => C);@NL{}
+@b{end};}
+
+With such a code, it becomes easier to create queries on the fly
+than it would be with directly writing strings.
+
+The above call has not sent anything to the database yet, only created
+a data structure in memory (more precisely a tree). In fact, we could
+be somewhat lazy when writing the query and rely on auto-completion,
+as in the following example:
+
+@CODESAMPLE{
+Q := SQL_Select@NL{}
+ (Fields => Max (Ticket_Priorities.Priority)@NL{}
+     & Ticket_Priorities.Category,@NL{}
+  Where  => Ticket_Priorities.Name /= @i{"low"});@NL{}
+@NL{}
+Auto_Complete (Q);}
+
+This query is exactly the same as before. However, we did not have to
+specify the list of tables (which @value{gnatcoll} can compute on its
+own by looking at all the fields referenced in the query), nor the list
+of fields in the @code{GROUP BY} clause, which once again can be computed
+automatically by looking at those fields that are not used in a SQL
+aggregate function. This auto-completion helps the maintenance of those
+queries.
+
+There is another case where @value{gnatcoll} makes it somewhat easier
+to write the queries, and that is to handle joins between tables. If your
+schema was build with foreign keys, @value{gnatcoll} can take advantage
+of those.
+
+For instance, imagine we have a table @code{ticket}. These tickets have
+a priority, which is an integer id pointing to the @code{ticket_priorities}
+table we saw previously. In SQL, this means that the @code{ticket} table
+has a foreign key on the @code{ticket_priorities} table, which implies
+that any priority set for a ticket must exist in the second table. Using
+an id instead of the actual name of the priority in the @code{ticket}
+table means that it is easy to change the name of the priority, without
+impacting the rest of the database.
+
+Imagine, now, that a query needs to list all tickets with their priorities.
+Since we want to show the output to the user, we do not want to show the
+internal id, but the actual name of the priority. This would be done with
+a query similar to:
+
+@CODESAMPLE{
+   Q := SQL_Select@NL{}
+     (Fields => Ticket.Number & Ticket_Priorities.Name,@NL{}
+      From   => Ticket & Ticket_Priorities,@NL{}
+      Where  => Ticket.Priority = Ticket_Priorities.Priority);}
+
+In fact, with the auto-completion, we could write it as
+
+@CODESAMPLE{
+   Q := SQL_Select@NL{}
+     (Fields => Ticket.Number & Ticket_Priorities.Name,@NL{}
+      Where  => Ticket.Priority = Ticket_Priorities.Priority);}
+
+The @code{WHERE} clause comes straight from the definition of the
+foreign key. It can be shorten using the @code{FK} primitive operation
+that we saw was generated in the @code{Database} package. The following
+example uses the Ada05 dotted notation for the call to FK, but that is
+not mandatory, of course.
+
+@CODESAMPLE{
+   Q := SQL_Select@NL{}
+     (Fields => Ticket.Number & Ticket_Priorities.Name,@NL{}
+      Where  => Ticket.FK (Ticket_Priorities));}
+
+One advantage is that we avoid possible errors in writing the join,
+and if at some point the foreign key between the two tables involves
+more fields, for instance, the query remains valid and we do not have
+to change our code.
+
+@c -----------------------------------------------------------------------
+@node Executing queries
+@section Executing queries
+@c -----------------------------------------------------------------------
+@noindent
+
+Once we have our query in memory, we need to pass it on to the database
+server itself, and retrieve the results.
+
+Executing is done through the @code{GNATCOLL.SQL.Exec} package, as in the
+following example:
+
+@CODESAMPLE{
+@b{declare}@NL{}
+   R : Query_Result;@NL{}
+@b{begin}@NL{}
+   Execute (Connection => DB, R => R, Query => Q);
+@b{end};}
+
+This reuses the connection we have established previously (@code{DB}),
+and sends it the query. The result of that query is then stored in
+@code{R}, to be used later.
+
+There are several versions of @code{Execute}. In particular, there are
+versions which do not have the @code{R} parameter. Some queries do not
+return anything useful to our application (for instance a @code{INSERT}
+query), and thus we can simplify the call.
+
+@code{Execute} has an extra parameter @code{Use_Cache}, set to
+@code{False} by default. If this parameter is true, and the exact same
+query has already been executed before, its result will be reused
+without even contacting the database server. The cache is automatically
+invalidated every hour in any case. This cache is mostly useful for
+tables that act like enumeration types, as we have seen before when
+discussing the @code{-enum} parameter to @file{gnatcoll_db2ada}. In this
+case, the contents of the table changes very rarely, and the cache can
+provide important speedups, whether the server is local or distant.
+However, we recommend that you do actual measurements to know whether
+this is indeed beneficial for you. You can always invalidated the
+current cache with a call to @code{Invalidate_Cache} to force the
+query to be done on the database server.
+
+If for some reason the connection to the database is no longer valid
+(a transient network problem for instance), @value{gnatcoll} will
+attempt to reconnect and re-execute your query transparently, so that
+your application does not need to handle this case.
+
+If your query produces an error (whether it is invalid, or any other
+reason), a flag is toggled in the @code{Connection} parameter, which
+you can query through the @code{Success} subprogram. As a result,
+a possible continuation of the above code is:
+
+@CODESAMPLE{
+@b{if} Success (DB) @b{then}@NL{}
+   ...@NL{}
+@b{else}@NL{}
+   ...  @i{an error occurred}@NL{}
+@b{end if}@NL{}}
+
+@value{gnatcoll} also tries to be helpful in the way it handles SQL
+transactions. Such transactions are a way to execute your query in a
+sandbox, ie without affecting the database itself until you decide to
+@code{COMMIT} the query. Should you decide to abort it (or
+@code{ROLLBACK} as they say for SQL), then it is just as if nothing
+happened. As a result, it is in general recommended to do all your changes
+to the database from within a transaction. If one of the queries fail
+because of invalid parameters, you just rollback and report the error
+to the user. The database is still left in a consistent state. As an
+additional benefit, executing within a transaction is sometimes faster,
+as is the case for PostgreSQL for instance.
+
+To help with this, @value{gnatcoll} will automatically start a
+transaction the first time you edit the database. It is then your
+responsibility to either commit or rollback the transaction when you
+are done modifying. A lot of database engines (among which PostgreSQL)
+will not accept any further change to the database if one command in
+the transaction has failed. To take advantage of this, @value{gnatcoll}
+will therefore not even send the command to the server if it is in a
+failure state.
+
+Here is code sample that modifies the database:
+
+@CODESAMPLE{
+Execute (DB, SQL_Insert (...));@NL{}
+@i{--  The code above starts a transaction and inserts a new row}@NL{}
+@NL{}
+Execute (DB, SQL_Insert (...));@NL{}
+@i{--  Executed in the same transaction}@NL{}
+@NL{}
+Commit_Or_Rollback (DB);@NL{}
+@i{--  Commit if both insertion succeeded, rollback otherwise}@NL{}
+@i{--  You can still check Success(DB) afterward if needed}}
+
+@c -----------------------------------------------------------------------
+@node Getting results
+@section Getting results
+@c -----------------------------------------------------------------------
+@noindent
+
+One you have executed a @code{SELECT} query, you generally need to
+examine the rows that were returned by the database server. This is done
+in a loop, as in
+
+@CODESAMPLE{
+@b{for} T @b{in} 0 .. Tuple_Count (R) - 1 @b{loop}@NL{}
+    Put_Line (@i{"Max priority="} & Integer_Value (R, T, 0)'Img@NL{}
+             & @i{" for category="} & Value (R, T, 1));
+@b{end loop};}
+
+This interface is strongly inspired by the C API that PostgreSQL provides
+and the corresponding Ada binding proposed by the GNADE library.
+
+In this example, we see that @code{Tuple_Count} returns the number of
+rows in the result. Such rows are counted from 0 (can't ignore the C
+language...). We then call one of the @code{Value} or @code{*Value}
+functions which return the value in a specific row and a specific
+column.
+
+@c -----------------------------------------------------------------------
+@node Query logs
+@section Query logs
+@c -----------------------------------------------------------------------
+@noindent
+
+In @ref{Logging information} we discovered the logging module of
+@value{gnatcoll}. The database interface uses this module to log the
+queries that are sent to the server.
+
+If you activate traces in your application, the user can then activate
+one of the following trace handles to get more information on the
+exchange that exists between the database and the application. As we saw
+before, the output of these traces can be sent to the standard output, a
+file, the system logs,...
+
+The following handles are provided:
+
+@itemize @bullet
+@item SQL.ERROR
+This stream is activated by default. Any error returned by the database
+(connection issues, failed transactions,...) will be logged on this stream
+
+@item SQL
+This stream logs all queries that are not SELECT queries, ie mostly all
+queries that actually modify the database
+
+@item SQL.SELECT
+This stream logs all select queries. It is separated from SQL because
+very often you will be mostly interested in the queries that impact the
+database, and logging all selects can generate a lot of output.
+@end itemize
+
+@c -----------------------------------------------------------------------
+@node Tasks and databases
+@section Tasks and databases
+@c -----------------------------------------------------------------------
+@noindent
+
+As we saw before, the database interface can be used in multi-tasking
+applications. In such a case, it is recommended that each thread has its
+own connection to the database, since that is more efficient and you do
+not have to handle locking.
+
+However, this assumes that the database server itself is thread safe,
+which most often is the case, but not for @code{sqlite} for instance.
+In such a case, you can only connect one per application to the database,
+and you will have to manage a queue of queries somehow.
 
 @c -----------------------------------------------------------------------
 @node Index
