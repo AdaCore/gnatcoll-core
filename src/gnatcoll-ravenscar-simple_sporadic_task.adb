@@ -50,8 +50,10 @@ package body GNATCOLL.Ravenscar.Simple_Sporadic_Task is
 
       entry Wait (Release_Time : out Ada.Real_Time.Time) when Barrier is
       begin
+
          --  keep track of the release instant to guarantee a faithful
          --  interelease time
+
          Release_Time := Ada.Real_Time.Clock;
          Pending      := Pending - 1;
          Update_Barrier;

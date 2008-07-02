@@ -30,10 +30,10 @@
 --  A collection of untilities used in GNATCOLL.Ravenscar
 package GNATCOLL.Ravenscar.Utils is
 
-   --  A procedure to increase a counter up to a maximum limit
    procedure Increase_Counter
      (Counter : in out Integer;
       Max     : Integer;
       Min     : Integer := 1);
+   --  A procedure to increase a counter up to a maximum limit
 
 end GNATCOLL.Ravenscar.Utils;

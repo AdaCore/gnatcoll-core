@@ -94,68 +94,78 @@ with System;
 with Ada.Real_Time;
 
 generic
-   --  the priority of the server
+
    Task_Priority : System.Priority;
-   --  the constant perios of the server
+   --  the priority of the server
+
    Period : Millisecond;
-   --  the absolute instant in time for the release of the systems as a whole
+   --  the constant perios of the server
+
    System_Start_Time : Ada.Real_Time.Time := Ada.Real_Time.Clock;
-   --  the phase of the server
+   --  the absolute instant in time for the release of the systems as a whole
+
    Phase : Millisecond;
+   --  the phase of the server
+
+   with procedure Cyclic_Operation;
    --  the nominal operation which is executed if no requestests have been
    --  posted within the previous cycle
-   with procedure Cyclic_Operation;
+
+   Protocol_Ceiling : System.Any_Priority;
    --  the ceiling priority of the protected object used to post and fetch
    --  requests
-   Protocol_Ceiling : System.Any_Priority;
-   --  the size of accepted requests
+
    QS : Queue_Size;
-   --  an enumeration type identificng the possible kinds of request
+   --  the size of accepted requests
+
    type Request_Kind is (<>);
-   --  the reified request type
+   --  an enumeration type identificng the possible kinds of request
+
    type Request is private;
-   --  the procedure invoked by the server to dispatch the fetched request
+   --  the reified request type
+
    with procedure Dispatch (Req : Request);
+   --  the procedure invoked by the server to dispatch the fetched request
+
 package GNATCOLL.Ravenscar.Multiple_Queue_Cyclic_Server is
 
-   --  Invoked by clients to post reified requests to be fetched and executed
-   --  by the server
    procedure Put_Request
      (Req      : Request;
       Kind : Request_Kind);
+   --  Invoked by clients to post reified requests to be fetched and executed
+   --  by the server
 
 private
 
-   --  pointer type for request
    type Request_Type_Ref is access all Request;
+   --  pointer type for request
 
-   --  physical queue for posted requests
    type Request_Queue is array (1 .. QS) of aliased Request;
+   --  physical queue for posted requests
 
-   --  the entire set of queues (one for each possible request)
    type All_Queue is array (Request_Kind'Range) of Request_Queue;
+   --  the entire set of queues (one for each possible request)
 
-   --  type to collect all indexes to access requests
    type All_Queue_Index is array (Request_Kind'Range) of Queue_Range;
+   --  type to collect all indexes to access requests
 
-   --  maximum index value
    Pointer_Queue_Range_Max : constant Integer := QS;
+   --  maximum index value
 
-   --  reified request descriptor saved in a queue
    type Pointer_Queue_Item is record
       Kind    : Request_Kind;
       Req : Request_Type_Ref;
    end record;
+   --  reified request descriptor saved in a queue
 
-   --  pointer type to reified request descriptors
    type Pointer_Queue_Item_Ref is access all Pointer_Queue_Item;
+   --  pointer type to reified request descriptors
 
-   --  logical queue of posted requests
    type Pointer_Queue is
      array (Integer range 1 .. Pointer_Queue_Range_Max)
             of aliased Pointer_Queue_Item;
+   --  logical queue of posted requests
 
-   --  the protected object used to post/fetch requests
    protected Protocol is
       pragma Priority (Protocol_Ceiling);
 
@@ -173,10 +183,11 @@ private
       Pointer_Queue_Extract_Index : Integer           := 1;
       Pointer_Queue_Overflow      : Boolean           := False;
    end Protocol;
+   --  the protected object used to post/fetch requests
 
-   --  the cyclic server
    task Cyclic_Task is
       pragma Priority (Task_Priority);
    end Cyclic_Task;
+   --  the cyclic server
 
 end GNATCOLL.Ravenscar.Multiple_Queue_Cyclic_Server;

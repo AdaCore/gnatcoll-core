@@ -54,16 +54,22 @@ with System;
 with Ada.Real_Time;
 
 generic
-   --  the task priority
+
    Task_Priority : System.Priority;
-   --  the task phse
+   --  the task priority
+
    Phase : Millisecond;
-   --  te task period
+   --  the task phse
+
    Period : Millisecond;
-   --  system-wide release instant
+   --  the task period
+
    System_Start_Time : Ada.Real_Time.Time := Ada.Real_Time.Clock;
-   --  the nominal operation
+   --  system-wide release instant
+
    with procedure Cyclic_Operation;
+   --  the nominal operation
+
 package GNATCOLL.Ravenscar.Simple_Cyclic_Task is
 
 private

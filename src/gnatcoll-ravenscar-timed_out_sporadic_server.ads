@@ -78,39 +78,69 @@ with GNATCOLL.Ravenscar.Sporadic_Server;
 with GNATCOLL.Ravenscar.Timers.One_Shot_Timer;
 
 generic
+
    Task_Priority : System.Priority;
+   --  The priority of the task
+
    Minimum_Interelease_Time : Millisecond;
+   --  The minimum time between two consecutive releases
+
    Maximum_Interelease_Time : Millisecond;
+   --  the maximum interrelease time which trigger the automatic release
+   --  of the server
+
    System_Start_Time : Ada.Real_Time.Time := Ada.Real_Time.Clock;
+   --  the system-wide relase time
+
    Protocol_Ceiling : System.Any_Priority;
+   --  the ceiling priority of the protected object used to post and fetch
+   --  requests
+
    QS : Queue_Size;
+   --  the maximum number of saved requests
+
    type Param is private;
+   --  the request descriptor
+
    with procedure Sporadic_Operation (Par : Param);
+   --  the procedure invoked when the server is released by the client
+
    with procedure Time_Out_Handler;
+   --  the handler executed by the server when non released the maximum
+   --  interrelease time
+
 package GNATCOLL.Ravenscar.Timed_Out_Sporadic_Server is
 
    procedure Put_Request (Par : Param);
+   --  invoked by the clients
 
 private
 
    procedure Timed_Out_Sporadic_Operation (Par : Param);
 
-   package Timed_Out_Sporadic_Server is new Sporadic_Server (
-      Task_Priority,
+   package Timed_Out_Sporadic_Server is new Sporadic_Server
+     (Task_Priority,
       Minimum_Interelease_Time,
       System_Start_Time,
       Protocol_Ceiling,
       QS,
       Param,
       Timed_Out_Sporadic_Operation);
+   --  The sporadic server
 
    Timer_Server_Suspender : Ada.Synchronous_Task_Control.Suspension_Object;
+   --  A suspension object for the timer server (see below)
 
    task Timer_Server is
       pragma Priority (Task_Priority);
    end Timer_Server;
+   --  The task which is triggered by the timer. We have an additional task
+   --  to avoid having the timer itself to execute (it runs at interrupt
+   --  priority).
 
    package My_Timer is new GNATCOLL.Ravenscar.Timers.One_Shot_Timer;
+   --  the timer triggering the task if no request is posted within
+   --  the maximum interrelease time
 
    procedure Handler;
 

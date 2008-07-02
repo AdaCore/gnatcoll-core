@@ -29,22 +29,30 @@
 
 package body GNATCOLL.Ravenscar.Sporadic_Server_With_Callback is
 
-   --  a simple delegation
    procedure Put_Request
      (In_Par : In_Param;
       CB       : Callback)
    is
    begin
+
+      --  a simple delegation
+
       My_Sporadic_Task.Put_Request ((In_Par, CB));
+
    end Put_Request;
 
    procedure Dispatch (Req : Queue_Item) is
       Out_Par : Out_Param;
    begin
+
       --  first execute the nominal operation
+
       Sporadic_Operation (Req.In_Par, Out_Par);
+
       --  then the callback
+
       Req.CB.all (Out_Par);
+
    end Dispatch;
 
 end GNATCOLL.Ravenscar.Sporadic_Server_With_Callback;

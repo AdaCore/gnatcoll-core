@@ -34,6 +34,7 @@ package body GNATCOLL.Ravenscar.Sporadic_Server is
 
    procedure Put_Request (Par : Param) is
    begin
+      --  just a delegation
       Protocol.Put_Request (Par);
    end Put_Request;
 
@@ -47,18 +48,35 @@ package body GNATCOLL.Ravenscar.Sporadic_Server is
 
       procedure Put_Request (Par : Param) is
       begin
+
          Buffer (Insert_Index) := Par;
          Increase_Counter (Insert_Index, QS);
+
+         --  Check if with the posting of this message, the Insert_Index is
+         --  greater of the extract index: if so, increase also the extract
+         --  index to avoid fetching a newer request when older ones are
+         --  pending
+
          if Buffer_Overflow then
             Increase_Counter (Extract_Index, QS);
          end if;
+
+         --  increase the number of pending request but do not overcome the
+         --  maximum
+
          if Pending < QS then
             Pending := Pending + 1;
          end if;
+
+         --  If Insert_Index = Extract_Index, then at the next posting an
+         --  overflow may occour
+
          if Insert_Index = Extract_Index then
             Buffer_Overflow := True;
          end if;
+
          Update_Barrier;
+
       end Put_Request;
 
       entry Get_Request
@@ -66,14 +84,25 @@ package body GNATCOLL.Ravenscar.Sporadic_Server is
          Par        : out Param) when Barrier
       is
       begin
+
+         --  get the real release time
+
+         Release_Time := Ada.Real_Time.Clock;
+
+         --  cancel the overflow if fetching request
+
          if Extract_Index = Insert_Index then
             Buffer_Overflow := False;
          end if;
-         Release_Time := Ada.Real_Time.Clock;
+
          Par        := Buffer (Extract_Index);
+
          Increase_Counter (Extract_Index, QS);
+
          Pending := Pending - 1;
+
          Update_Barrier;
+
       end Get_Request;
 
    end Protocol;

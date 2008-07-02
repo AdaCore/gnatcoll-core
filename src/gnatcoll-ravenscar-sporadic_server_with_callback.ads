@@ -71,55 +71,64 @@ with Ada.Real_Time;
 with GNATCOLL.Ravenscar.Sporadic_Server;
 
 generic
-   --  the task priority
+
    Task_Priority : System.Priority;
-   --  the minimum time between two consecutive releases
+   --  the task priority
+
    Minimum_Interelease_Time : Millisecond;
-   --  the system-wide release instant
+   --  the minimum time between two consecutive releases
+
    System_Start_Time : Ada.Real_Time.Time := Ada.Real_Time.Clock;
+   --  the system-wide release instant
+
+   Protocol_Ceiling : System.Any_Priority;
    --  the ceiling priority of the protected object used to post and fetch
    --  requests
-   Protocol_Ceiling : System.Any_Priority;
-   --  the maximum amount of saved requests
+
    QS : Queue_Size;
-   --  the descriptor of IN parameters
+   --  the maximum amount of saved requests
+
    type In_Param is private;
-   --  the descriptor of OUT parameters
+   --  the descriptor of IN parameters
+
    type Out_Param is private;
-   --  the nominal operation
+   --  the descriptor of OUT parameters
+
    with procedure Sporadic_Operation
      (In_Par  : In_Param;
       Out_par : out Out_Param);
+   --  the nominal operation
+
 package GNATCOLL.Ravenscar.Sporadic_Server_With_Callback is
 
-   --  the type of the callback
    type Callback is access procedure (Out_Par : Out_Param);
+   --  the type of the callback
 
-   --  invoked by clients to put requests (and corresponding callback)
    procedure Put_Request
      (In_Par : In_Param;
       CB       : Callback);
+   --  invoked by clients to put requests (and corresponding callback)
 
 private
 
-   --  a reifed request descriptor containing IN parameters and callback
    type Queue_Item is record
       In_Par : In_Param;
       CB : Callback;
    end record;
+   --  a reifed request descriptor containing IN parameters and callback
 
+   procedure Dispatch (Req : Queue_Item);
    --  the dispatch procedure first executes the posted request and then
    --  the callback
-   procedure Dispatch (Req : Queue_Item);
 
-   --  a sporadic server to execute reqeusts
-   package My_Sporadic_Task is new GNATCOLL.Ravenscar.Sporadic_Server (
-      Task_Priority,
+   package My_Sporadic_Task is new GNATCOLL.Ravenscar.Sporadic_Server
+     (Task_Priority,
       Minimum_Interelease_Time,
       System_Start_Time,
       Protocol_Ceiling,
       QS,
       Queue_Item,
       Dispatch);
+   --  a sporadic server to execute reqeusts
 
 end GNATCOLL.Ravenscar.Sporadic_Server_With_Callback;

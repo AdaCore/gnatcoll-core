@@ -62,22 +62,42 @@ with System;
 with Ada.Real_Time;
 
 generic
+
    Task_Priority : System.Priority;
+   --  The priority of the task
+
    Minimum_Interelease_Time : Millisecond;
+   --  The minimum time between two consecutive releases
+
    System_Start_Time : Ada.Real_Time.Time := Ada.Real_Time.Clock;
+   --  the system-wide relase time
+
    Protocol_Ceiling : System.Any_Priority;
+   --  the ceiling priority of the protected object used to post and fetch
+   --  requests
+
    QS : Queue_Size;
+   --  the maximum number of buffered requests
+
    type Param is private;
+   --  the descriptor of the request to be fulfilled by the server
+
    with procedure Sporadic_Operation (Par : Param);
+   --  the procedure to be executed by the server
+
 package GNATCOLL.Ravenscar.Sporadic_Server is
 
    procedure Put_Request (Par : Param);
+   --  Invoked by the client to post as request and trigger the server
 
 private
 
    type Queue is array (1 .. QS) of Param;
+   --  the queue containing reified requests
 
    protected Protocol is
+      --  the protected object containing the request queue
+
       pragma Priority (Protocol_Ceiling);
 
       procedure Put_Request (Par : Param);
@@ -98,5 +118,6 @@ private
    task Sporadic_Task is
       pragma Priority (Task_Priority);
    end Sporadic_Task;
+   --  the sporadic server
 
 end GNATCOLL.Ravenscar.Sporadic_Server;
