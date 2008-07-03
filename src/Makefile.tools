@@ -14,7 +14,7 @@ clean:   cleanall
 install: bininstall
 
 gnatcoll_db2ada: force
-	gnatmake -P$(PROJECT) $@
+	gnatmake -P$(PROJECT) $@ -largs $(POSTGRES_PATH)
 
 bininstall: force
 	$(CP) obj/gnatcoll_db2ada $(bindir)
