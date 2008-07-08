@@ -3014,7 +3014,7 @@ is
    GNATCOLL.SQL.Exec.Setup_Database@NL{}
      (Description => DB_Descr,@NL{}
       Database    => "dbname");@NL{}
-      
+@NL{}
    DB := GNATCOLL.SQL.Exec.Get_Task_Connection@NL{}
         (Description  => DB_Descr,@NL{}
          Factory      => Connection_Factory'Access,@NL{}
