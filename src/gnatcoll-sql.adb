@@ -81,6 +81,12 @@ package body GNATCOLL.SQL is
    function To_String (Self : Table_Sets.Set) return Unbounded_String;
    --  Various implementations for To_String, for different types
 
+   procedure Append_If_Not_Aggregate
+     (Self         : SQL_Criteria;
+      To           : in out SQL_Field_List'Class;
+      Is_Aggregate : in out Boolean);
+   --  Same as Append_If_Not_Aggregate for fields
+
    No_Field_Pointer : constant SQL_Field_Pointer :=
                         (Ada.Finalization.Controlled with null);
 
@@ -2463,8 +2469,8 @@ package body GNATCOLL.SQL is
       end if;
 
       if Auto_Complete_Group_By then
-         Append_If_Not_Aggregrate (Self.Fields,   Group_By, Has_Aggregate);
-         Append_If_Not_Aggregrate (Self.Order_By, Group_By, Has_Aggregate);
+         Append_If_Not_Aggregate (Self.Fields,   Group_By, Has_Aggregate);
+         Append_If_Not_Aggregate (Self.Order_By, Group_By, Has_Aggregate);
          if Has_Aggregate then
             Self.Group_By := Group_By;
          end if;
@@ -2714,69 +2720,69 @@ package body GNATCOLL.SQL is
       Append_Tables (Self.Criteria, To);
    end Append_Tables;
 
-   ------------------------------
-   -- Append_If_Not_Aggregrate --
-   ------------------------------
+   -----------------------------
+   -- Append_If_Not_Aggregate --
+   -----------------------------
 
-   procedure Append_If_Not_Aggregrate
+   procedure Append_If_Not_Aggregate
      (Self         : SQL_Field_Integer_Build;
       To           : in out SQL_Field_List'Class;
       Is_Aggregate : in out Boolean)
    is
    begin
-      Append_If_Not_Aggregrate (Self.Data.Data, To, Is_Aggregate);
-   end Append_If_Not_Aggregrate;
+      Append_If_Not_Aggregate (Self.Data.Data, To, Is_Aggregate);
+   end Append_If_Not_Aggregate;
 
-   procedure Append_If_Not_Aggregrate
+   procedure Append_If_Not_Aggregate
      (Self         : SQL_Field_Text_Build;
       To           : in out SQL_Field_List'Class;
       Is_Aggregate : in out Boolean)
    is
    begin
-      Append_If_Not_Aggregrate (Self.Data.Data, To, Is_Aggregate);
-   end Append_If_Not_Aggregrate;
+      Append_If_Not_Aggregate (Self.Data.Data, To, Is_Aggregate);
+   end Append_If_Not_Aggregate;
 
-   procedure Append_If_Not_Aggregrate
+   procedure Append_If_Not_Aggregate
      (Self         : SQL_Field_Float_Build;
       To           : in out SQL_Field_List'Class;
       Is_Aggregate : in out Boolean)
    is
    begin
-      Append_If_Not_Aggregrate (Self.Data.Data, To, Is_Aggregate);
-   end Append_If_Not_Aggregrate;
+      Append_If_Not_Aggregate (Self.Data.Data, To, Is_Aggregate);
+   end Append_If_Not_Aggregate;
 
-   procedure Append_If_Not_Aggregrate
+   procedure Append_If_Not_Aggregate
      (Self         : SQL_Field_Boolean_Build;
       To           : in out SQL_Field_List'Class;
       Is_Aggregate : in out Boolean)
    is
    begin
-      Append_If_Not_Aggregrate (Self.Data.Data, To, Is_Aggregate);
-   end Append_If_Not_Aggregrate;
+      Append_If_Not_Aggregate (Self.Data.Data, To, Is_Aggregate);
+   end Append_If_Not_Aggregate;
 
-   procedure Append_If_Not_Aggregrate
+   procedure Append_If_Not_Aggregate
      (Self         : SQL_Field_Time_Build;
       To           : in out SQL_Field_List'Class;
       Is_Aggregate : in out Boolean)
    is
    begin
-      Append_If_Not_Aggregrate (Self.Data.Data, To, Is_Aggregate);
-   end Append_If_Not_Aggregrate;
+      Append_If_Not_Aggregate (Self.Data.Data, To, Is_Aggregate);
+   end Append_If_Not_Aggregate;
 
-   procedure Append_If_Not_Aggregrate
+   procedure Append_If_Not_Aggregate
      (Self         : SQL_Field_Any;
       To           : in out SQL_Field_List'Class;
       Is_Aggregate : in out Boolean)
    is
    begin
-      Append_If_Not_Aggregrate (Self.Data.Data, To, Is_Aggregate);
-   end Append_If_Not_Aggregrate;
+      Append_If_Not_Aggregate (Self.Data.Data, To, Is_Aggregate);
+   end Append_If_Not_Aggregate;
 
-   ------------------------------
-   -- Append_If_Not_Aggregrate --
-   ------------------------------
+   -----------------------------
+   -- Append_If_Not_Aggregate --
+   -----------------------------
 
-   procedure Append_If_Not_Aggregrate
+   procedure Append_If_Not_Aggregate
      (Self         : SQL_Field;
       To           : in out SQL_Field_List'Class;
       Is_Aggregate : in out Boolean)
@@ -2787,13 +2793,13 @@ package body GNATCOLL.SQL is
       if Self.Table /= null then
          Append (To.List, Self);
       end if;
-   end Append_If_Not_Aggregrate;
+   end Append_If_Not_Aggregate;
 
-   ------------------------------
-   -- Append_If_Not_Aggregrate --
-   ------------------------------
+   -----------------------------
+   -- Append_If_Not_Aggregate --
+   -----------------------------
 
-   procedure Append_If_Not_Aggregrate
+   procedure Append_If_Not_Aggregate
      (Self         : SQL_Field_List;
       To           : in out SQL_Field_List'Class;
       Is_Aggregate : in out Boolean)
@@ -2801,16 +2807,16 @@ package body GNATCOLL.SQL is
       C : Field_List.Cursor := First (Self.List);
    begin
       while Has_Element (C) loop
-         Append_If_Not_Aggregrate (Element (C), To, Is_Aggregate);
+         Append_If_Not_Aggregate (Element (C), To, Is_Aggregate);
          Next (C);
       end loop;
-   end Append_If_Not_Aggregrate;
+   end Append_If_Not_Aggregate;
 
-   ------------------------------
-   -- Append_If_Not_Aggregrate --
-   ------------------------------
+   -----------------------------
+   -- Append_If_Not_Aggregate --
+   -----------------------------
 
-   procedure Append_If_Not_Aggregrate
+   procedure Append_If_Not_Aggregate
      (Self         : access Named_Field_Internal;
       To           : in out SQL_Field_List'Class;
       Is_Aggregate : in out Boolean)
@@ -2818,7 +2824,7 @@ package body GNATCOLL.SQL is
       C : Field_List.Cursor := First (Self.List.List);
    begin
       while Has_Element (C) loop
-         Append_If_Not_Aggregrate (Element (C), To, Is_Aggregate);
+         Append_If_Not_Aggregate (Element (C), To, Is_Aggregate);
          Next (C);
       end loop;
 
@@ -2836,38 +2842,38 @@ package body GNATCOLL.SQL is
                Data     => (Ada.Finalization.Controlled with
                             SQL_Field_Internal_Access (Self))));
       end if;
-   end Append_If_Not_Aggregrate;
+   end Append_If_Not_Aggregate;
 
-   ------------------------------
-   -- Append_If_Not_Aggregrate --
-   ------------------------------
+   -----------------------------
+   -- Append_If_Not_Aggregate --
+   -----------------------------
 
-   procedure Append_If_Not_Aggregrate
+   procedure Append_If_Not_Aggregate
      (Self         : access As_Field_Internal;
       To           : in out SQL_Field_List'Class;
       Is_Aggregate : in out Boolean) is
    begin
-      Append_If_Not_Aggregrate (Self.Renamed.Data.Field.all, To, Is_Aggregate);
-   end Append_If_Not_Aggregrate;
+      Append_If_Not_Aggregate (Self.Renamed.Data.Field.all, To, Is_Aggregate);
+   end Append_If_Not_Aggregate;
 
-   ------------------------------
-   -- Append_If_Not_Aggregrate --
-   ------------------------------
+   -----------------------------
+   -- Append_If_Not_Aggregate --
+   -----------------------------
 
-   procedure Append_If_Not_Aggregrate
+   procedure Append_If_Not_Aggregate
      (Self         : access Sorted_Field_Internal;
       To           : in out SQL_Field_List'Class;
       Is_Aggregate : in out Boolean) is
    begin
-      Append_If_Not_Aggregrate
+      Append_If_Not_Aggregate
         (Self.Sorted.Data.Field.all, To, Is_Aggregate);
-   end Append_If_Not_Aggregrate;
+   end Append_If_Not_Aggregate;
 
-   ------------------------------
-   -- Append_If_Not_Aggregrate --
-   ------------------------------
+   -----------------------------
+   -- Append_If_Not_Aggregate --
+   -----------------------------
 
-   procedure Append_If_Not_Aggregrate
+   procedure Append_If_Not_Aggregate
      (Self         : access Multiple_Args_Field_Internal;
       To           : in out SQL_Field_List'Class;
       Is_Aggregate : in out Boolean)
@@ -2875,16 +2881,16 @@ package body GNATCOLL.SQL is
       C : Field_List.Cursor := First (Self.List);
    begin
       while Has_Element (C) loop
-         Append_If_Not_Aggregrate (Element (C), To, Is_Aggregate);
+         Append_If_Not_Aggregate (Element (C), To, Is_Aggregate);
          Next (C);
       end loop;
-   end Append_If_Not_Aggregrate;
+   end Append_If_Not_Aggregate;
 
-   ------------------------------
-   -- Append_If_Not_Aggregrate --
-   ------------------------------
+   -----------------------------
+   -- Append_If_Not_Aggregate --
+   -----------------------------
 
-   procedure Append_If_Not_Aggregrate
+   procedure Append_If_Not_Aggregate
      (Self         : access Case_Stmt_Internal;
       To           : in out SQL_Field_List'Class;
       Is_Aggregate : in out Boolean)
@@ -2892,22 +2898,59 @@ package body GNATCOLL.SQL is
       C : When_Lists.Cursor := First (Self.Criteria.List);
    begin
       while Has_Element (C) loop
-         Append_If_Not_Aggregrate
+         Append_If_Not_Aggregate (Element (C).Criteria, To, Is_Aggregate);
+         Append_If_Not_Aggregate
            (Element (C).Field.Data.Field.all, To, Is_Aggregate);
          Next (C);
       end loop;
 
       if Self.Else_Clause /= No_Field_Pointer then
-         Append_If_Not_Aggregrate
+         Append_If_Not_Aggregate
            (Self.Else_Clause.Data.Field.all, To, Is_Aggregate);
       end if;
-   end Append_If_Not_Aggregrate;
+   end Append_If_Not_Aggregate;
 
-   ------------------------------
-   -- Append_If_Not_Aggregrate --
-   ------------------------------
+   -----------------------------
+   -- Append_If_Not_Aggregate --
+   -----------------------------
 
-   procedure Append_If_Not_Aggregrate
+   procedure Append_If_Not_Aggregate
+     (Self         : SQL_Criteria;
+      To           : in out SQL_Field_List'Class;
+      Is_Aggregate : in out Boolean)
+   is
+      Data : constant SQL_Criteria_Data_Access := Self.Criteria.Data;
+      C    : Criteria_List.Cursor;
+   begin
+      case Data.Op is
+         when Field_Criteria | Like_Criteria | Criteria_Overlaps =>
+            Append_If_Not_Aggregate
+              (Data.Arg1.Data.Field.all, To, Is_Aggregate);
+            Append_If_Not_Aggregate
+              (Data.Arg2.Data.Field.all, To, Is_Aggregate);
+
+         when Criteria_Criteria =>
+            C := First (Data.Criterias);
+            while Has_Element (C) loop
+               Append_If_Not_Aggregate (Element (C), To, Is_Aggregate);
+               Next (C);
+            end loop;
+
+         when Criteria_In | Criteria_Not_In =>
+            Append_If_Not_Aggregate
+              (Data.Arg.Data.Field.all, To, Is_Aggregate);
+
+         when Null_Criteria =>
+            Append_If_Not_Aggregate
+              (Data.Arg3.Data.Field.all, To, Is_Aggregate);
+      end case;
+   end Append_If_Not_Aggregate;
+
+   -----------------------------
+   -- Append_If_Not_Aggregate --
+   -----------------------------
+
+   procedure Append_If_Not_Aggregate
      (Self         : access Aggregate_Field_Internal;
       To           : in out SQL_Field_List'Class;
       Is_Aggregate : in out Boolean)
@@ -2915,7 +2958,7 @@ package body GNATCOLL.SQL is
       pragma Unreferenced (Self, To);
    begin
       Is_Aggregate := True;
-   end Append_If_Not_Aggregrate;
+   end Append_If_Not_Aggregate;
 
    ------------
    -- Adjust --

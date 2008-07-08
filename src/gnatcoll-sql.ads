@@ -855,7 +855,7 @@ private
      (Self : SQL_Field_Internal; To : in out Table_Sets.Set) is null;
    --  Append all tables referenced by Self to To if they are not already there
 
-   procedure Append_If_Not_Aggregrate
+   procedure Append_If_Not_Aggregate
      (Self         : access SQL_Field_Internal;
       To           : in out SQL_Field_List'Class;
       Is_Aggregate : in out Boolean) is null;
@@ -890,7 +890,7 @@ private
    procedure Append_Tables (Self : SQL_Field; To : in out Table_Sets.Set);
    --  Append the table(s) referenced by Self to To
 
-   procedure Append_If_Not_Aggregrate
+   procedure Append_If_Not_Aggregate
      (Self         : SQL_Field;
       To           : in out SQL_Field_List'Class;
       Is_Aggregate : in out Boolean);
@@ -912,7 +912,7 @@ private
      (Self : SQL_Field_Integer_Build; Long : Boolean := True)  return String;
    overriding procedure Append_Tables
      (Self : SQL_Field_Integer_Build; To : in out Table_Sets.Set);
-   overriding procedure Append_If_Not_Aggregrate
+   overriding procedure Append_If_Not_Aggregate
      (Self         : SQL_Field_Integer_Build;
       To           : in out SQL_Field_List'Class;
       Is_Aggregate : in out Boolean);
@@ -924,7 +924,7 @@ private
      (Self : SQL_Field_Text_Build; Long : Boolean := True)  return String;
    overriding procedure Append_Tables
      (Self : SQL_Field_Text_Build; To : in out Table_Sets.Set);
-   overriding procedure Append_If_Not_Aggregrate
+   overriding procedure Append_If_Not_Aggregate
      (Self         : SQL_Field_Text_Build;
       To           : in out SQL_Field_List'Class;
       Is_Aggregate : in out Boolean);
@@ -936,7 +936,7 @@ private
      (Self : SQL_Field_Time_Build; Long : Boolean := True)  return String;
    overriding procedure Append_Tables
      (Self : SQL_Field_Time_Build; To : in out Table_Sets.Set);
-   overriding procedure Append_If_Not_Aggregrate
+   overriding procedure Append_If_Not_Aggregate
      (Self         : SQL_Field_Time_Build;
       To           : in out SQL_Field_List'Class;
       Is_Aggregate : in out Boolean);
@@ -948,7 +948,7 @@ private
      (Self : SQL_Field_Boolean_Build; Long : Boolean := True)  return String;
    overriding procedure Append_Tables
      (Self : SQL_Field_Boolean_Build; To : in out Table_Sets.Set);
-   overriding procedure Append_If_Not_Aggregrate
+   overriding procedure Append_If_Not_Aggregate
      (Self         : SQL_Field_Boolean_Build;
       To           : in out SQL_Field_List'Class;
       Is_Aggregate : in out Boolean);
@@ -960,7 +960,7 @@ private
      (Self : SQL_Field_Float_Build; Long : Boolean := True)  return String;
    overriding procedure Append_Tables
      (Self : SQL_Field_Float_Build; To : in out Table_Sets.Set);
-   overriding procedure Append_If_Not_Aggregrate
+   overriding procedure Append_If_Not_Aggregate
      (Self         : SQL_Field_Float_Build;
       To           : in out SQL_Field_List'Class;
       Is_Aggregate : in out Boolean);
@@ -974,7 +974,7 @@ private
      (Self : SQL_Field_Any; Long : Boolean := True)  return String;
    overriding procedure Append_Tables
      (Self : SQL_Field_Any; To : in out Table_Sets.Set);
-   overriding procedure Append_If_Not_Aggregrate
+   overriding procedure Append_If_Not_Aggregate
      (Self         : SQL_Field_Any;
       To           : in out SQL_Field_List'Class;
       Is_Aggregate : in out Boolean);
@@ -984,7 +984,7 @@ private
    type SQL_Field_List is new SQL_Field_Or_List with record
       List : Field_List.List;
    end record;
-   procedure Append_If_Not_Aggregrate
+   procedure Append_If_Not_Aggregate
      (Self         : SQL_Field_List;
       To           : in out SQL_Field_List'Class;
       Is_Aggregate : in out Boolean);
@@ -1015,7 +1015,7 @@ private
      (Self : Named_Field_Internal; Long : Boolean) return String;
    overriding procedure Append_Tables
      (Self : Named_Field_Internal; To : in out Table_Sets.Set);
-   overriding procedure Append_If_Not_Aggregrate
+   overriding procedure Append_If_Not_Aggregate
      (Self         : access Named_Field_Internal;
       To           : in out SQL_Field_List'Class;
       Is_Aggregate : in out Boolean);
@@ -1035,7 +1035,7 @@ private
      (Self : As_Field_Internal; Long : Boolean) return String;
    overriding procedure Append_Tables
      (Self : As_Field_Internal; To : in out Table_Sets.Set);
-   overriding procedure Append_If_Not_Aggregrate
+   overriding procedure Append_If_Not_Aggregate
      (Self         : access As_Field_Internal;
       To           : in out SQL_Field_List'Class;
       Is_Aggregate : in out Boolean);
@@ -1058,7 +1058,7 @@ private
      (Self : Multiple_Args_Field_Internal; Long : Boolean) return String;
    overriding procedure Append_Tables
      (Self : Multiple_Args_Field_Internal; To : in out Table_Sets.Set);
-   overriding procedure Append_If_Not_Aggregrate
+   overriding procedure Append_If_Not_Aggregate
      (Self         : access Multiple_Args_Field_Internal;
       To           : in out SQL_Field_List'Class;
       Is_Aggregate : in out Boolean);
@@ -1080,7 +1080,7 @@ private
      (Self : Aggregate_Field_Internal; Long : Boolean) return String;
    overriding procedure Append_Tables
      (Self : Aggregate_Field_Internal; To : in out Table_Sets.Set);
-   overriding procedure Append_If_Not_Aggregrate
+   overriding procedure Append_If_Not_Aggregate
      (Self         : access Aggregate_Field_Internal;
       To           : in out SQL_Field_List'Class;
       Is_Aggregate : in out Boolean);
@@ -1099,7 +1099,7 @@ private
      (Self : Sorted_Field_Internal; Long : Boolean) return String;
    overriding procedure Append_Tables
      (Self : Sorted_Field_Internal; To : in out Table_Sets.Set);
-   overriding procedure Append_If_Not_Aggregrate
+   overriding procedure Append_If_Not_Aggregate
      (Self         : access Sorted_Field_Internal;
       To           : in out SQL_Field_List'Class;
       Is_Aggregate : in out Boolean);
@@ -1202,7 +1202,7 @@ private
      (Self : Case_Stmt_Internal; Long : Boolean) return String;
    overriding procedure Append_Tables
      (Self : Case_Stmt_Internal; To : in out Table_Sets.Set);
-   overriding procedure Append_If_Not_Aggregrate
+   overriding procedure Append_If_Not_Aggregate
      (Self         : access Case_Stmt_Internal;
       To           : in out SQL_Field_List'Class;
       Is_Aggregate : in out Boolean);
