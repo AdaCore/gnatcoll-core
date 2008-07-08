@@ -19,6 +19,7 @@
 ---------------------------------------------------------------------*/
 
 #include <Python.h>
+#include <code.h>  /* PyCodeObject definition */
 
 #undef DEBUG
 /* #define DEBUG */
