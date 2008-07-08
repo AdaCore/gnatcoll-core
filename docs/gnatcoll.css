@@ -32,7 +32,10 @@
    div.contents a:visited,
    div.contents a:active            { text-decoration: none; color:blue }
    div.contents a:hover             { text-decoration: underline; color:red}
-   div.contents>ul>li               { padding-top: 20px; }
+
+   /* IE7 still does not support the > selectors... workaround */
+   div.contents ul li               { padding-top: 20px; }
+   div.contents ul li ul li         { padding-top: 0px; }
 
    h1.settitle      {background:#003580;
                      font-size: huge;
@@ -51,17 +54,14 @@
                      font-size: 14px;}
    body             {font-family: arial,helvetica,sans-serif;
                      font-size: 16px;
+                     margin-left:20px; margin-right:305px;
                      text-align: justify}
    samp             {font-family: courier new,courier,fixed;
                      font-size: 14px}
 /* table of contents and tips in the right margin */
-   body             {width: 800px;
-                     margin-left: 20px }
-   div.contents     {left: 840px;
-                     top: 0px;
+   div.contents     {width:300px; top:0px; right:0px; font-size:smaller;
                      position: absolute; }
+   div.contents ul  {padding-left:10px; margin:0}
    div.tip          {position: absolute;
                      text-align: left; /* don't align when width is small */
-                     width: 200px;
-                     left: 840px; }
-                    
+                     width: 200px; right:0px}
