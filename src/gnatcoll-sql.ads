@@ -339,7 +339,11 @@ package GNATCOLL.SQL is
       Field  : SQL_Field'Class) return SQL_Field'Class;
    --  Apply an aggregate function to a field. Other fields in the result of
    --  the query should be grouped. Each element of Fields is taken as one of
-   --  the arguments to Func
+   --  the arguments to Func.
+   --  The result of this function is an untyped field. If you need to compare
+   --  this result with some other field or value, you should use the
+   --  functions Greater_Than, Less_Than, ... below, rather than the usual
+   --  operators.
 
    ---------------------
    -- Case statements --
@@ -482,6 +486,15 @@ package GNATCOLL.SQL is
      (Left : SQL_Field_Time;    Right : Ada.Calendar.Time) return SQL_Criteria;
    --  The first one also compares times, whereas the second only compares
    --  dates
+
+   function Greater_Than
+     (Left  : SQL_Field'Class;
+      Right : SQL_Field_Time'Class) return SQL_Criteria;
+   function Less_Than
+     (Left  : SQL_Field'Class;
+      Right : SQL_Field_Time'Class) return SQL_Criteria;
+   --  Same as ">" but usable for instance for aggregate fields
+   --  resulting from the use of Apply
 
    function "<="  (Left, Right : SQL_Field_Integer'Class) return SQL_Criteria;
    function "<="  (Left, Right : SQL_Field_Text'Class)    return SQL_Criteria;

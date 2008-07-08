@@ -1718,6 +1718,20 @@ package body GNATCOLL.SQL is
       return Compare (Left, Expression (Right), Criteria_Greater_Than);
    end Greater_Than;
 
+   function Greater_Than
+     (Left : SQL_Field'Class; Right : SQL_Field_Time'Class)
+     return SQL_Criteria is
+   begin
+      return Compare (Left, Right, Criteria_Greater_Than);
+   end Greater_Than;
+
+   function Less_Than
+     (Left : SQL_Field'Class; Right : SQL_Field_Time'Class)
+     return SQL_Criteria is
+   begin
+      return Compare (Left, Right, Criteria_Less_Than);
+   end Less_Than;
+
    function Greater_Or_Equal
      (Left : SQL_Field'Class; Right : Integer) return SQL_Criteria is
    begin
@@ -2769,7 +2783,10 @@ package body GNATCOLL.SQL is
    is
       pragma Unreferenced (Is_Aggregate);
    begin
-      Append (To.List, Self);
+      --  Ignore constant fields (NULL,...)
+      if Self.Table /= null then
+         Append (To.List, Self);
+      end if;
    end Append_If_Not_Aggregrate;
 
    ------------------------------
