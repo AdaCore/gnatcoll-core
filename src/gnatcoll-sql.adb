@@ -2471,6 +2471,7 @@ package body GNATCOLL.SQL is
       if Auto_Complete_Group_By then
          Append_If_Not_Aggregate (Self.Fields,   Group_By, Has_Aggregate);
          Append_If_Not_Aggregate (Self.Order_By, Group_By, Has_Aggregate);
+         Append_If_Not_Aggregate (Self.Having,   Group_By, Has_Aggregate);
          if Has_Aggregate then
             Self.Group_By := Group_By;
          end if;
@@ -2922,28 +2923,30 @@ package body GNATCOLL.SQL is
       Data : constant SQL_Criteria_Data_Access := Self.Criteria.Data;
       C    : Criteria_List.Cursor;
    begin
-      case Data.Op is
-         when Field_Criteria | Like_Criteria | Criteria_Overlaps =>
-            Append_If_Not_Aggregate
-              (Data.Arg1.Data.Field.all, To, Is_Aggregate);
-            Append_If_Not_Aggregate
-              (Data.Arg2.Data.Field.all, To, Is_Aggregate);
+      if Data /= null then
+         case Data.Op is
+            when Field_Criteria | Like_Criteria | Criteria_Overlaps =>
+               Append_If_Not_Aggregate
+                 (Data.Arg1.Data.Field.all, To, Is_Aggregate);
+               Append_If_Not_Aggregate
+                 (Data.Arg2.Data.Field.all, To, Is_Aggregate);
 
-         when Criteria_Criteria =>
-            C := First (Data.Criterias);
-            while Has_Element (C) loop
-               Append_If_Not_Aggregate (Element (C), To, Is_Aggregate);
-               Next (C);
-            end loop;
+            when Criteria_Criteria =>
+               C := First (Data.Criterias);
+               while Has_Element (C) loop
+                  Append_If_Not_Aggregate (Element (C), To, Is_Aggregate);
+                  Next (C);
+               end loop;
 
-         when Criteria_In | Criteria_Not_In =>
-            Append_If_Not_Aggregate
-              (Data.Arg.Data.Field.all, To, Is_Aggregate);
+            when Criteria_In | Criteria_Not_In =>
+               Append_If_Not_Aggregate
+                 (Data.Arg.Data.Field.all, To, Is_Aggregate);
 
-         when Null_Criteria =>
-            Append_If_Not_Aggregate
-              (Data.Arg3.Data.Field.all, To, Is_Aggregate);
-      end case;
+            when Null_Criteria =>
+               Append_If_Not_Aggregate
+                 (Data.Arg3.Data.Field.all, To, Is_Aggregate);
+         end case;
+      end if;
    end Append_If_Not_Aggregate;
 
    -----------------------------
