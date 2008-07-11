@@ -95,7 +95,7 @@ buildall:
 	@echo Building project ${PROJECT}
 	gnatmake -XLIBRARY_TYPE=${LIBRARY_TYPE} -P${PROJECT}
 cleanall:
-	gnatclean -r -q -P${PROJECT}
+	-gnatclean -r -q -P${PROJECT}
 
 libinstall: installsources installobj installlinks
 
