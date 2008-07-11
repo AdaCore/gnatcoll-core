@@ -3,6 +3,7 @@ TEXI2DVI=@TEXI2DVI@
 CP=cp
 MKDIR=mkdir -p
 INSTALL=@INSTALL@
+datadir=@datadir@
 
 all: gnatcoll/index.html gnatcoll.html gnatcoll.pdf gnatcoll.txt
 
