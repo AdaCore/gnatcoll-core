@@ -166,6 +166,7 @@ package body GNATCOLL.SQL.Postgres.Builder is
    --------------
 
    procedure Finalize (Result : in out Postgresql_Result_Content) is
+      pragma Unreferenced (Result);
    begin
       null;
       --  PQclear (To_Addr (Object.Res));
