@@ -41,6 +41,9 @@ CC=gcc
 
 LIBRARY_TYPE=static
 
+Build=Production
+export Build
+
 .PHONY: all examples tests valgrind clean docs install
 
 ifeq (${OS},Windows_NT)
