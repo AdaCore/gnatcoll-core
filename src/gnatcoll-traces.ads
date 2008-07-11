@@ -86,9 +86,19 @@ package GNATCOLL.Traces is
    --  generated to support debug traces. Otherwise, if Debug_Mode is True,
    --  then the debug traces can be activated selectively for each module.
 
+   type On_Exception_Mode is (Propagate, Ignore, Deactivate);
+   --  Behavor when an exception is raised while writing to the log stream e.g
+   --  because of NFS error when writing to a file.
+   --    Propagate:  the exception is propagated
+   --    Ignore:     the exception is silently ignored
+   --    Deactivate: when an exception is raised when manipulating a handle
+   --                deactivate it; no logging will happen on this handle
+   --                anymore.
+
    procedure Parse_Config_File
-     (Filename : String := "";
-      Default  : String := "");
+     (Filename     : String := "";
+      Default      : String := "";
+      On_Exception : On_Exception_Mode := Propagate);
    --  Initializes this package, and parse the configuration file. The
    --  algorithm is the following:
    --    - If filename is specified and exists on the disk, parse this file
@@ -98,6 +108,8 @@ package GNATCOLL.Traces is
    --    - If not found, search in the user's home directory for a file
    --      Default_Config_File
    --    - If still not found, parses Default
+   --  On_Exception is used to define the behavior should something unexpected
+   --  prevent the log stream to be written.
 
    type Output_Proc is access procedure (Str : String);
    procedure Show_Configuration (Output : Output_Proc);

@@ -40,6 +40,10 @@ pragma Warnings (On);
 
 package body GNATCOLL.Traces is
 
+   On_Exception : On_Exception_Mode := Propagate;
+   --  The behavior that should be adopted when something unexpected prevent
+   --  the log stream to be written.
+
    No_Time : constant Ada.Calendar.Time :=
                Ada.Calendar.Time_Of
                  (Ada.Calendar.Year_Number'First,
@@ -839,7 +843,22 @@ package body GNATCOLL.Traces is
    exception
       when others =>
          Unlock;
-         raise;
+
+         case On_Exception is
+            when Propagate =>
+               raise;
+            when Ignore =>
+               null;
+            when Deactivate =>
+               if Stream /= null then
+                  begin
+                     Close (Stream.all);
+                  exception
+                     when others =>
+                        null;
+                  end;
+               end if;
+         end case;
    end Log;
 
    -----------------
@@ -1033,8 +1052,9 @@ package body GNATCOLL.Traces is
    -----------------------
 
    procedure Parse_Config_File
-     (Filename : String := "";
-      Default  : String := "")
+     (Filename     : String := "";
+      Default      : String := "";
+      On_Exception : On_Exception_Mode := Propagate)
    is
       File_Name  : aliased constant String := Config_File (Filename, Default);
       Buffer     : Str_Access;
@@ -1084,6 +1104,8 @@ package body GNATCOLL.Traces is
       end Skip_To_Newline;
 
    begin
+      GNATCOLL.Traces.On_Exception := On_Exception;
+
       if File_Name /= "" then
          begin
             File := Open_Read (File_Name);
