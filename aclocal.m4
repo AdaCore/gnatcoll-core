@@ -281,7 +281,8 @@ AC_HELP_STRING(
          AC_LINK_IFELSE(
            [AC_LANG_PROGRAM([#include <Python.h>],[Py_Initialize();])],
            [PYTHON_LIBS="${PYTHON_LIBS} -lpthread -lutil"],
-           [AC_MSG_FAILURE([Can't compile and link python example])])])
+           [AC_MSG_RESULT([Can't compile and link python example])
+            WITH_PYTHON=no])])
    fi
 
    AC_SUBST(PYTHON_BASE)
