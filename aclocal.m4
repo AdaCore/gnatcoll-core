@@ -382,7 +382,41 @@ AC_DEFUN(AM_TO_GPR,
 ])
 
 ##########################################################################
-## Detects GTK
+## Check the availability of a project file
+## The file is searched on the predefined PATH and (ADA|GPR)_PROJECT_PATH
+##   $1=project to test
+##   $2=exported name
+##########################################################################
+
+AC_DEFUN(AM_PATH_PROJECT,
+[
+   project=[$1]
+   output=$2
+
+   # Create a temporary directory (from "info autoconf")
+   : ${TMPDIR=/tmp}
+   {
+     tmp=`(umask 077 && mktemp -d "$TMPDIR/fooXXXXXX") 2>/dev/null` \
+        && test -n "$tmp" && test -d "$tmp"
+   } || {
+     tmp=$TMPDIR/foo$$-$RANDOM
+     (umask 077 && mkdir -p "$tmp")
+   } || exit $?
+
+   mkdir $tmp/lib
+   echo "with \"$project\"; project default is for Source_Dirs use (); end default;" > $tmp/default.gpr
+
+   gnat make -P$tmp/default.gpr >/dev/null 2>/dev/null
+   if test $? = 0 ; then
+     $2=yes
+   else
+     $2=no
+   fi
+   AC_SUBST($2)
+])
+
+##########################################################################
+## Detects GTK and GtkAda
 ## This exports the following variables
 ##     @PKG_CONFIG@: path to pkg-config, or "no" if not found
 ##     @GTK_GCC_FLAGS@: cflags to pass to the compiler. It isn't call
@@ -411,7 +445,15 @@ AC_DEFUN(AM_PATH_GTK,
         AC_MSG_RESULT($GTK_PREFIX)
         GTK_GCC_FLAGS=`$PKG_CONFIG gtk+-2.0 --cflags`
         if test x"$GTK_GCC_FLAGS" != x ; then
-           WITH_GTK=yes
+           AC_MSG_CHECKING(for gtkada)
+           AM_PATH_PROJECT(gtkada, HAVE_GTKADA)
+           if test "$HAVE_GTKADA" = "yes"; then
+              AC_MSG_RESULT(found);
+              WITH_GTK=yes
+           else
+              AC_MSG_RESULT(not found)
+              WITH_GTK=no
+           fi
         else
            WITH_GTK=no
         fi
