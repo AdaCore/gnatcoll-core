@@ -1,8 +1,8 @@
 MAKEINFO=@MAKEINFO@
 TEXI2DVI=@TEXI2DVI@
 CP=cp
-
-include ../Makefile.conf
+MKDIR=mkdir -p
+INSTALL=@INSTALL@
 
 all: gnatcoll/index.html gnatcoll.html gnatcoll.pdf gnatcoll.txt
 
