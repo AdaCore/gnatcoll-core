@@ -246,7 +246,7 @@ package body GNATCOLL.Filesystem.Unix.Remote is
       if Status and then Output /= null then
          Match (Regexp, Output.all, Matched);
          if Matched (0) = No_Match then
-            return GNAT.Calendar.No_Time;
+            return GNATCOLL.Utils.No_Time;
          end if;
          Year := Natural'Value
            (Output (Matched (1).First .. Matched (1).First + 3));
@@ -266,7 +266,7 @@ package body GNATCOLL.Filesystem.Unix.Remote is
          return Ada.Calendar.Time_Of (Year, Month, Day, Second);
       end if;
 
-      return GNAT.Calendar.No_Time;
+      return GNATCOLL.Utils.No_Time;
    end File_Time_Stamp;
 
    -----------

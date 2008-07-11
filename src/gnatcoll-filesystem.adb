@@ -360,7 +360,7 @@ package body GNATCOLL.Filesystem is
       Second : Second_Type;
    begin
       if T = Invalid_Time then
-         return GNAT.Calendar.No_Time;
+         return GNATCOLL.Utils.No_Time;
       end if;
 
       GM_Split (T, Year, Month, Day, Hour, Minute, Second);
