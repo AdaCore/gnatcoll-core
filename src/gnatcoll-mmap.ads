@@ -119,7 +119,7 @@ package GNATCOLL.Mmap is
       Offset : File_Size := 0;
       Length : File_Size := 0);
    --  Read a specific part of the file in memory. Offset is the number of
-   --  bytes since tbe beginning of the file at which we should start reading.
+   --  bytes since the beginning of the file at which we should start reading.
    --  Length is the number of bytes that should be read. If set to 0, as much
    --  of the file as possible is read (presumably the whole file unless you
    --  are reading a _huge_ file).
@@ -130,9 +130,10 @@ package GNATCOLL.Mmap is
    --  is opened through a mmap() system call, or when the file is closed
    --  otherwise).
    --  There is no guarantee that the data read will actually start at Offset,
-   --  or be only Length characters in length, since at the system level these
-   --  must be multiples of the page_size on your system. So you should always
-   --  use the functions below to get information on what exactly what mapped.
+   --  or be only Length characters in length, since at the system level the
+   --  offset must be a multiple of the page size on your system. So you should
+   --  always use the functions below to get information on what exactly was
+   --  mapped.
 
    function Offset (File : Mapped_File) return File_Size;
    --  Return the offset, in the physical file on disk, corresponding to the
