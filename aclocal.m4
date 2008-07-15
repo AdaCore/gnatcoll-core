@@ -274,15 +274,20 @@ AC_HELP_STRING(
 
       CFLAGS="${CFLAGS} ${PYTHON_CFLAGS}"
       LIBS="${LIBS} ${PYTHON_LIBS}"
+
+      AC_MSG_CHECKING(if we can link with python)
       AC_LINK_IFELSE(
         [AC_LANG_PROGRAM([#include <Python.h>],[Py_Initialize();])],
-        [],
+        [AC_MSG_RESULT(yes)],
         [LIBS="${LIBS} -lpthread -lutil"
          AC_LINK_IFELSE(
            [AC_LANG_PROGRAM([#include <Python.h>],[Py_Initialize();])],
-           [PYTHON_LIBS="${PYTHON_LIBS} -lpthread -lutil"],
-           [AC_MSG_RESULT([Can't compile and link python example])
-            WITH_PYTHON=no])])
+           [PYTHON_LIBS="${PYTHON_LIBS} -lpthread -lutil"
+            AC_MSG_RESULT(yes)],
+           [AC_MSG_RESULT(no, [can't compile and link python example])
+            WITH_PYTHON=no
+            PYTHON_BASE=[]
+            PYTHON_LIBS=[]])])
    fi
 
    AC_SUBST(PYTHON_BASE)
