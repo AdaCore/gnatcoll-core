@@ -349,7 +349,12 @@ for those if you need.
 Special support exists in @value{gnatcoll} for the gtk+ graphical toolkit.
 @code{configure} will attempt to find the installation directory for this
 toolkit by using the @code{pkg-config} command, which must therefore be
-available through your @var{PATH} environment variable.
+available through your @var{PATH} environment variable. It also needs to
+find the @file{gtkada.gpr} project file either because it is part of the
+implicit search path for project files, or because you have put the
+corresponding directory in the environment variable @code{GPR_PROJECT_PATH}.
+If either of these two requirements fail, the modules of @value{gnatcoll}
+that depend on GtkAda will not be built.
 
 @smallexample
 ./configure --prefix=/usr/local/gnatcoll --without-python
