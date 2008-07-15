@@ -206,41 +206,51 @@ package body GNATCOLL.Mmap is
       Offset : File_Size := 0;
       Length : File_Size := 0)
    is
-      Len     : File_Size := Length;
-      Extra   : File_Size;
       Prot    : Mmap_Prot;
       Flags   : Mmap_Flags;
       Ignored : Integer;
-      Tmp     : File_Size;
+
+      Previous_Last : constant Integer := File.Last;
+
+      Map_Length : File_Size;
+      --  When using mmap(2), the offset and mapping length must be multiples
+      --  of the page size, so they may be different from the requested Offset
+      --  and Length.
+
       pragma Unreferenced (Ignored);
    begin
-      --  If that part of the file is already readable, don't do anything
+      --  If Length is 0 or goes beyoned file size, map till end of file
 
-      if Len = 0 then
-         Len := File.Length - Offset;
+      if Length = 0 or else Length > File.Length - Offset then
+         Map_Length := File.Length - Offset;
+      else
+         Map_Length := Length;
       end if;
 
-      --  If the requested block is already in memory, do nothing
+      --  If the requested section is already mapped, nothing to do
+
       if Offset >= File.Offset
-        and then Offset + Len <= File.Offset + File_Size (File.Last)
+        and then Offset + Map_Length <= File.Offset + File_Size (File.Last)
         and then (File.Data /= null or else File.Buffer /= null)
       then
          return;
       end if;
 
+      File.Last   := Integer (Map_Length);
+      File.Offset := Offset;
+
       --  mmap() will sometimes return NULL when the file exists but is empty,
-      --  which is not what we want. In such a case we default on read()
+      --  which is not what we want, so in the case of a zero length file we
+      --  fall back to read(2)/write(2)-based mode.
 
       if File.Length > 0 and then File.Mapped then
 
          --  Unmap previous memory if necessary
 
          if File.Data /= null then
-            Ignored := Munmap (Convert (File.Data), File_Size (File.Last));
+            Ignored := Munmap (Convert (File.Data), File_Size (Previous_Last));
             File.Data := null;
          end if;
-
-         Extra := Offset mod File.Page_Size;
 
          if File.Write then
             Prot  := PROT_WRITE;
@@ -250,30 +260,23 @@ package body GNATCOLL.Mmap is
             Flags := MAP_PRIVATE;
          end if;
 
-         Tmp := Len + Extra;
+         --  Adjust offset and mapping length to account for required alignment
+         --  of offset on page boundary. Note that there is no requirement for
+         --  File.Last to be rounded up to a multiple of page size.
 
-         if Tmp mod File.Page_Size /= 0 then
-            Tmp :=
-              (Len + Extra + File.Page_Size) / File.Page_Size * File.Page_Size;
-         end if;
+         File.Offset := File.Offset - File.Offset mod File.Page_Size;
+         File.Last   := File.Last + Integer (Offset - File.Offset);
 
-         if Tmp > File_Size (Integer'Last) then
+         if Map_Length > File_Size (Integer'Last) then
             raise Device_Error;
 
          else
-            File.Offset := Offset - Extra;
-
-            if File.Offset + Tmp - 1 > File.Length then
-               Tmp := File.Length - File.Offset;
-            end if;
-
-            File.Last := Integer (Tmp);
             File.Data := Convert
-              (Mmap (Offset => File.Offset,
-                     Length => File_Size (File.Last),
-                     Prot   => Prot,
-                     Flags  => Flags,
-                     Fd     => File.Fd));
+                           (Mmap (Offset => File.Offset,
+                                  Length => File_Size (File.Last),
+                                  Prot   => Prot,
+                                  Flags  => Flags,
+                                  Fd     => File.Fd));
          end if;
 
       else
@@ -281,16 +284,9 @@ package body GNATCOLL.Mmap is
             To_Disk (File);
          end if;
 
-         File.Offset := Offset;
-         Tmp         := Len;
-         if File.Offset + Tmp - 1 > File.Length then
-            Tmp  := File.Length - File.Offset;
-         end if;
-
-         File.Last   := Integer (Tmp);
-
          From_Disk (File);
       end if;
+
    end Read;
 
    ------------
