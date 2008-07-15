@@ -104,7 +104,7 @@ package GNATCOLL.Mmap is
    function Open_Write
      (Filename              : String;
       Use_Mmap_If_Available : Boolean := True) return Mapped_File;
-   --  Open a file for writting.
+   --  Open a file for writing.
    --  You cannot change the length of the file.
    --  Name_Error is raised if the file does not exist
 
@@ -112,7 +112,7 @@ package GNATCOLL.Mmap is
    --  Close the file, and unmap the memory that is used.
    --  If the system does not support the unmmap() system call or equivalent,
    --  or these were not available for the file itself, then the file is
-   --  written back to the disk if it was opened for writting.
+   --  written back to the disk if it was opened for writing.
 
    procedure Read
      (File   : in out Mapped_File;
@@ -125,7 +125,7 @@ package GNATCOLL.Mmap is
    --  are reading a _huge_ file).
    --  Nothing is done if that part of the file is already available through
    --  File.
-   --  If the file was opened for writting, any modification you do to the data
+   --  If the file was opened for writing, any modification you do to the data
    --  stored in File will be stored on disk (either immediately when the file
    --  is opened through a mmap() system call, or when the file is closed
    --  otherwise).
@@ -140,8 +140,8 @@ package GNATCOLL.Mmap is
 
    function Last (File : Mapped_File) return Integer;
    --  Return the number of bytes mapped in File.
-   --  In Data, you can only access bytes 1 .. Last (File), otherwise
-   --  storage_errors will occur.
+   --  It is erroneous to access Data for indices outside of 1 .. Last (File);
+   --  such accesses may cause Storage_Error to be raised.
 
    function Length (File : Mapped_File) return File_Size;
    --  Size of the file on the disk
@@ -180,6 +180,8 @@ package GNATCOLL.Mmap is
 
 private
    pragma Inline (Data, Length, Last, Offset, Is_Mmapped, To_Str_Access);
+
+   --  ??? The components of the record below must be documented!
 
    type Mapped_File is record
       Data               : Str_Access;
