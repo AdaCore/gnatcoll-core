@@ -3563,6 +3563,9 @@ echo "${ECHO_T}yes (version $PYTHON_VERSION)" >&6
 
       CFLAGS="${CFLAGS} ${PYTHON_CFLAGS}"
       LIBS="${LIBS} ${PYTHON_LIBS}"
+
+      echo "$as_me:$LINENO: checking if we can link with python" >&5
+echo $ECHO_N "checking if we can link with python... $ECHO_C" >&6
       cat >conftest.$ac_ext <<_ACEOF
 #line $LINENO "configure"
 /* confdefs.h.  */
@@ -3591,7 +3594,8 @@ if { (eval echo "$as_me:$LINENO: \"$ac_link\"") >&5
   ac_status=$?
   echo "$as_me:$LINENO: \$? = $ac_status" >&5
   (exit $ac_status); }; }; then
-  :
+  echo "$as_me:$LINENO: result: yes" >&5
+echo "${ECHO_T}yes" >&6
 else
   echo "$as_me: failed program was:" >&5
 sed 's/^/| /' conftest.$ac_ext >&5
@@ -3626,13 +3630,17 @@ if { (eval echo "$as_me:$LINENO: \"$ac_link\"") >&5
   echo "$as_me:$LINENO: \$? = $ac_status" >&5
   (exit $ac_status); }; }; then
   PYTHON_LIBS="${PYTHON_LIBS} -lpthread -lutil"
+            echo "$as_me:$LINENO: result: yes" >&5
+echo "${ECHO_T}yes" >&6
 else
   echo "$as_me: failed program was:" >&5
 sed 's/^/| /' conftest.$ac_ext >&5
 
-echo "$as_me:$LINENO: result: Can't compile and link python example" >&5
-echo "${ECHO_T}Can't compile and link python example" >&6
+echo "$as_me:$LINENO: result: no" >&5
+echo "${ECHO_T}no" >&6
             WITH_PYTHON=no
+            PYTHON_BASE=
+            PYTHON_LIBS=
 fi
 rm -f conftest.$ac_objext conftest$ac_exeext conftest.$ac_ext
 fi
