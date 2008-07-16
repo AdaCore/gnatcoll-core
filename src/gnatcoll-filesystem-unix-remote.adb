@@ -17,7 +17,6 @@
 -- Place - Suite 330, Boston, MA 02111-1307, USA.                    --
 -----------------------------------------------------------------------
 
-with GNAT.Calendar;                 use GNAT.Calendar;
 with GNAT.Expect;                   use GNAT.Expect;
 with GNATCOLL.Filesystem.Transport; use GNATCOLL.Filesystem.Transport;
 with GNATCOLL.Mmap;                 use GNATCOLL.Mmap;

@@ -19,7 +19,6 @@
 
 with GNATCOLL.Filesystem.Transport; use GNATCOLL.Filesystem.Transport;
 with GNATCOLL.Utils;                use GNATCOLL.Utils;
-with GNAT.Calendar;                 use GNAT.Calendar;
 with GNAT.OS_Lib;                   use GNAT.OS_Lib;
 with GNAT.Regpat;                   use GNAT.Regpat;
 
