@@ -115,6 +115,7 @@ package body GNATCOLL.Scripts.Utils is
 
       procedure Unchecked_Free is new Ada.Unchecked_Deallocation
         (String_List, String_List_Access);
+
       Backslashed       : Boolean;
       Quoted            : Boolean;
       Triple_Quoted     : Boolean;

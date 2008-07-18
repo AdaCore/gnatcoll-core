@@ -154,35 +154,35 @@ private
       Static_Method : Boolean := False);
 
    overriding procedure Register_Class
-     (Script        : access Shell_Scripting_Record;
-      Name          : String;
-      Base          : Class_Type := No_Class);
+     (Script : access Shell_Scripting_Record;
+      Name   : String;
+      Base   : Class_Type := No_Class);
 
    overriding procedure Block_Commands
      (Script : access Shell_Scripting_Record; Block : Boolean);
 
    overriding procedure Execute_Command
-     (Script        : access Shell_Scripting_Record;
-      Command       : String;
-      Console       : Virtual_Console := null;
-      Hide_Output   : Boolean := False;
-      Show_Command  : Boolean := True;
-      Errors        : out Boolean);
+     (Script       : access Shell_Scripting_Record;
+      Command      : String;
+      Console      : Virtual_Console := null;
+      Hide_Output  : Boolean := False;
+      Show_Command : Boolean := True;
+      Errors       : out Boolean);
 
    overriding function Execute_Command
-     (Script        : access Shell_Scripting_Record;
-      Command       : String;
-      Console       : Virtual_Console := null;
-      Hide_Output   : Boolean := False;
-      Show_Command  : Boolean := True;
-      Errors        : access Boolean) return String;
+     (Script       : access Shell_Scripting_Record;
+      Command      : String;
+      Console      : Virtual_Console := null;
+      Hide_Output  : Boolean := False;
+      Show_Command : Boolean := True;
+      Errors       : access Boolean) return String;
 
    overriding function Execute_Command
-     (Script        : access Shell_Scripting_Record;
-      Command       : String;
-      Console       : Virtual_Console := null;
-      Hide_Output   : Boolean := False;
-      Errors        : access Boolean) return Boolean;
+     (Script      : access Shell_Scripting_Record;
+      Command     : String;
+      Console     : Virtual_Console := null;
+      Hide_Output : Boolean := False;
+      Errors      : access Boolean) return Boolean;
 
    overriding function Execute_Command
      (Script  : access Shell_Scripting_Record;
@@ -190,17 +190,17 @@ private
       Args    : Callback_Data'Class) return Boolean;
 
    overriding function Execute_Command_With_Args
-     (Script        : access Shell_Scripting_Record;
-      Command       : String;
-      Args          : GNAT.OS_Lib.Argument_List) return String;
+     (Script  : access Shell_Scripting_Record;
+      Command : String;
+      Args    : GNAT.OS_Lib.Argument_List) return String;
 
    overriding procedure Execute_File
-     (Script        : access Shell_Scripting_Record;
-      Filename      : String;
-      Console       : Virtual_Console := null;
-      Hide_Output   : Boolean := False;
-      Show_Command  : Boolean := True;
-      Errors        : out Boolean);
+     (Script       : access Shell_Scripting_Record;
+      Filename     : String;
+      Console      : Virtual_Console := null;
+      Hide_Output  : Boolean := False;
+      Show_Command : Boolean := True;
+      Errors       : out Boolean);
 
    overriding function Get_Name
      (Script : access Shell_Scripting_Record) return String;
@@ -273,10 +273,10 @@ private
      (Data : Shell_Callback_Data; N : Positive; Default : Boolean)
       return Boolean;
    overriding function Nth_Arg
-     (Data    : Shell_Callback_Data;
-      N       : Positive;
-      Class   : Class_Type := Any_Class;
-      Default : Class_Instance;
+     (Data       : Shell_Callback_Data;
+      N          : Positive;
+      Class      : Class_Type := Any_Class;
+      Default    : Class_Instance;
       Allow_Null : Boolean := False) return Class_Instance;
    overriding function Nth_Arg
      (Data    : Shell_Callback_Data;
