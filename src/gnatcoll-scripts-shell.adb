@@ -950,7 +950,7 @@ package body GNATCOLL.Scripts.Shell is
                           and then Args (J) (Args (J)'Last) = '"'
                         then
                            Args (J) := new String'
-                             (Tmp (Tmp'First + 1 .. Tmp'Last - 1));
+                             (Unprotect (Tmp (Tmp'First + 1 .. Tmp'Last - 1)));
                         else
                            Args (J) := new String'(Unprotect (Tmp.all));
                         end if;

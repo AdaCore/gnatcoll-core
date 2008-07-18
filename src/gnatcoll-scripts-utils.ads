@@ -33,6 +33,12 @@ package GNATCOLL.Scripts.Utils is
    --  is:     Quote_Backslash =>   "A simple\\ \"string\""
    --      not Quote_Backslash =>   "A simple\ \"string\""
 
+   function Argument_To_Quoted_String
+     (Arg             : String;
+      Quote           : Character := '"';
+      Quote_Backslash : Boolean := True) return String;
+   --  As above but for a single argument
+
    function Argument_String_To_List_With_Triple_Quotes
      (Arg_String : String) return GNAT.Strings.String_List_Access;
    --  This is similar to GNAT.OS_Lib.Argument_String_To_List, except that

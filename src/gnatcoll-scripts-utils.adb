@@ -101,6 +101,21 @@ package body GNATCOLL.Scripts.Utils is
       end;
    end Argument_List_To_Quoted_String;
 
+   -------------------------------
+   -- Argument_To_Quoted_String --
+   -------------------------------
+
+   function Argument_To_Quoted_String
+     (Arg             : String;
+      Quote           : Character := '"';
+      Quote_Backslash : Boolean := True) return String
+   is
+      A : aliased String := Arg;
+      L : constant String_List (1 .. 1) := (1 => A'Unchecked_Access);
+   begin
+      return Argument_List_To_Quoted_String (L, Quote, Quote_Backslash);
+   end Argument_To_Quoted_String;
+
    ------------------------------------------------
    -- Argument_String_To_List_With_Triple_Quotes --
    ------------------------------------------------
