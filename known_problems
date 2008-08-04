@@ -1,4 +1,4 @@
-Known Problems fixed in Gnatcoll
+Known Problems fixed in Gnatcoll 1.1
 
 - H730-018: Environment variable Build interfers with builds
   Problem:    If you have set the environment variable Build to some
