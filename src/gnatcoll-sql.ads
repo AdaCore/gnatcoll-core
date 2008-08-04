@@ -299,6 +299,10 @@ package GNATCOLL.SQL is
      (Field : SQL_Field_Time; Format : String) return SQL_Field'Class;
    --  Format a date field, as in "to_char (field, "format")"
 
+   function Lower
+     (Field : SQL_Field_Text'Class) return SQL_Field_Text'Class;
+   --  Returns "lower (field)"
+
    function Current_Date return SQL_Field_Time'Class;
    function Now return SQL_Field_Time'Class;
    --  Return the current date
@@ -316,7 +320,6 @@ package GNATCOLL.SQL is
    Func_Min      : constant Aggregate_Function := "min";
    Func_Max      : constant Aggregate_Function := "max";
    Func_Concat   : constant Aggregate_Function := "concat";
-   Func_Lower    : constant Aggregate_Function := "lower";
    Func_Bool_And : constant Aggregate_Function := "bool_and";
    Func_Bool_Or  : constant Aggregate_Function := "bool_or";
    --  Func_Distinct is not useful in general, since the various calls to

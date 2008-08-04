@@ -39,6 +39,7 @@ package body GNATCOLL.SQL is
    Func_Coalesce : aliased constant String := "COALESCE";
    Func_To_Char  : aliased constant String := "TO_CHAR";
    Func_Extract  : aliased constant String := "EXTRACT";
+   Func_Lower    : aliased constant String := "lower";
 
    procedure Unchecked_Free is new Ada.Unchecked_Deallocation
      (SQL_Table'Class, SQL_Table_Access);
@@ -1213,6 +1214,22 @@ package body GNATCOLL.SQL is
          Data => (Ada.Finalization.Controlled
                   with SQL_Field_Internal_Access (Data)));
    end Extract;
+
+   -----------
+   -- Lower --
+   -----------
+
+   function Lower
+     (Field : SQL_Field_Text'Class) return SQL_Field_Text'Class
+   is
+      F : SQL_Field_Text_Build
+        (Table => null, Instance => null, Name => null);
+      D : constant Named_Field_Internal_Access := new Named_Field_Internal;
+   begin
+      D.Value := new String'(Func_Lower & "(" & Field.Name.all & ")");
+      F.Data.Data := SQL_Field_Internal_Access (D);
+      return F;
+   end Lower;
 
    ---------------
    -- To_String --
