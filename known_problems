@@ -1,0 +1,9 @@
+Known Problems fixed in Gnatcoll
+
+- H730-018: Environment variable Build interfers with builds
+  Problem:    If you have set the environment variable Build to some
+              value other than "Production" or "Debug", the compilation
+              of Gnatcoll will fail. This is because this variable is used
+              as a scenario variable in Gnatcoll's project files.
+  Workaround: unset the variable before compiling Gnatcoll. This variable
+              was now renamed to Gnatcoll_Build to avoid conflicts
