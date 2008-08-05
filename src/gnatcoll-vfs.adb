@@ -938,7 +938,11 @@ package body GNATCOLL.VFS is
 
    function Get_Filesystem (File : Virtual_File) return Filesystem_Access is
    begin
-      return File.Value.FS;
+      if File.Value = null then
+         return null;
+      else
+         return File.Value.FS;
+      end if;
    end Get_Filesystem;
 
    ---------------
