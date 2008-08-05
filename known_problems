@@ -7,3 +7,7 @@ Known Problems fixed in Gnatcoll 1.1
               as a scenario variable in Gnatcoll's project files.
   Workaround: unset the variable before compiling Gnatcoll. This variable
               was now renamed to Gnatcoll_Build to avoid conflicts
+
+- H711-008:   gnatcoll-traces-syslog.ad[bs] not installed on Windows
+  Problem:    The Windows installer doesn't properly install the above files.
+  Workaround: The missing files can be found in the src subdirectory.
