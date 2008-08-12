@@ -1695,7 +1695,7 @@ package body GNATCOLL.Scripts.Python is
       if PyInt_Check (Item) then
          return PyInt_AsLong (Item) = 1;
       elsif PyString_Check (Item) then
-         return To_Lower (PyString_AsString (Item)) = "True";
+         return To_Lower (PyString_AsString (Item)) = "true";
       else
          Raise_Exception
            (Invalid_Parameter'Identity,
