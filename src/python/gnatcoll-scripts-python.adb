@@ -301,9 +301,11 @@ package body GNATCOLL.Scripts.Python is
       Register_Scripting_Language (Repo, Script);
 
       --  We need to set the program name, or some import commands will raise
-      --  errors
+      --  errors. Choosing "python" as program name will ensure that by
+      --  default our program will look for python modules and library in a
+      --  directory relative to the location of the python executable.
 
-      Py_SetProgramName ("Python_Interpreter");
+      Py_SetProgramName ("python");
 
       --  Prevent python's standard Ctrl-C handling, to leave it to the calling
       --  application.

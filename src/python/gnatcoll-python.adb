@@ -19,6 +19,7 @@
 
 with System;               use System;
 with Interfaces.C.Strings; use Interfaces.C.Strings;
+with GNAT.OS_Lib;          use GNAT.OS_Lib;
 
 package body GNATCOLL.Python is
 
@@ -309,8 +310,13 @@ package body GNATCOLL.Python is
    procedure Py_SetProgramName (Name : String) is
       procedure Internal (Name : String);
       pragma Import (C, Internal, "Py_SetProgramName");
+
+      Program_Name : constant String_Access := new String'(NAME & ASCII.NUL);
+      --  As stated by the Python documentation the string passed to
+      --  Py_SetProgramName should be in "static storage whose contents will
+      --  not change for the duration of the program's execution"
    begin
-      Internal (Name & ASCII.NUL);
+      Internal (Program_Name.all);
    end Py_SetProgramName;
 
    ----------------------

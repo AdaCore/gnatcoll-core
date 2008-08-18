@@ -34,6 +34,15 @@ package GNATCOLL.Python is
 
    procedure Py_SetProgramName (Name : String);
    --  Set the program name. This must be called before Py_Initialize
+   --  Python also uses the argument to locate its standard library:
+   --   1- If PYTHONHOME environment variable is set then it points to the
+   --      library location prefix,
+   --   2- Otherwise, set library prefix to a location relative to program
+   --      called Name.
+   --   3- If the prefix cannot be found using the previous methods, use
+   --      the value of prefix set by configure during Python build.
+   --  Name should therefore point to the current executable so that if you
+   --  provide your own python installation it gets detected by default.
 
    -------------
    -- Objects --
@@ -305,7 +314,6 @@ package GNATCOLL.Python is
    ----------------------------------
    -- Creating modules and methods --
    ----------------------------------
-
 
    type Argument_Methods is mod 2 ** Integer'Size;
    METH_VARGS    : constant Argument_Methods := 16#0001#;
@@ -586,7 +594,6 @@ package GNATCOLL.Python is
    --  instance by using
    --     PySys_GetObject ("stdout")
    --  Return False if the string couldn't be written
-
 
    -----------------
    -- Class types --
