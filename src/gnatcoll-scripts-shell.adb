@@ -34,8 +34,10 @@ with GNAT.OS_Lib;                       use GNAT.OS_Lib;
 with GNATCOLL.Scripts;                  use GNATCOLL.Scripts;
 with GNATCOLL.Scripts.Impl;             use GNATCOLL.Scripts.Impl;
 with GNATCOLL.Scripts.Utils;            use GNATCOLL.Scripts.Utils;
+with GNATCOLL.Traces;                   use GNATCOLL.Traces;
 
 package body GNATCOLL.Scripts.Shell is
+   Me : constant Trace_Handle := Create ("SHELL_SCRIPT", Off);
 
    use Instances_List, Command_Hash;
 
@@ -739,6 +741,10 @@ package body GNATCOLL.Scripts.Shell is
       Count    : Natural;
 
    begin
+      Trace (Me, "Executing " & Command
+             & Argument_List_To_Quoted_String (Args)
+             & " blocked=" & Script.Blocked'Img);
+
       if Script.Blocked then
          Errors.all := True;
          return "A command is already executing";
