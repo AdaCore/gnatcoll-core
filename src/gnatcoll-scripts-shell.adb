@@ -741,9 +741,11 @@ package body GNATCOLL.Scripts.Shell is
       Count    : Natural;
 
    begin
-      Trace (Me, "Executing " & Command
-             & Argument_List_To_Quoted_String (Args)
-             & " blocked=" & Script.Blocked'Img);
+      if Active (Me) then
+         Trace (Me, "Executing " & Command
+                & Argument_List_To_Quoted_String (Args)
+                & " blocked=" & Script.Blocked'Img);
+      end if;
 
       if Script.Blocked then
          Errors.all := True;
