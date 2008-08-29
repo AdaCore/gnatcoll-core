@@ -288,8 +288,6 @@ package body GNATCOLL.Scripts.Python is
         & "         sys.stderr.write = __gps_saved_stderr" & ASCII.LF
         & "      except: pass" & ASCII.LF
         & ASCII.LF;
-      Disable_GC     : constant String := "import gc" & ASCII.LF
-        & "gc.disable()" & ASCII.LF;
 
       Main_Module    : PyObject;
       Sigint         : constant Integer := 2;
@@ -355,7 +353,6 @@ package body GNATCOLL.Scripts.Python is
       --  of commands
 
       Tmp := PyRun_SimpleString (Init_Output);
-      Tmp := PyRun_SimpleString (Disable_GC);
 
       Result := Run_Command
         (Script,
