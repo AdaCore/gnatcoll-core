@@ -176,14 +176,14 @@ PyObject* ada_PyEval_EvalCodeEx
   }
 
   if (kwds != NULL && PyDict_Check(kwds)) {
-     int pos, i;
+     int i = 0;
+     Py_ssize_t pos = 0;
      nk = PyDict_Size(kwds);
      k  = PyMem_NEW(PyObject *, 2*nk);
      if (k == NULL) {
         PyErr_NoMemory();
         return NULL;
      }
-     pos = i = 0;
      while (PyDict_Next(kwds, &pos, &k[i], &k[i+1]))
         i += 2;
       nk = i/2;
@@ -195,7 +195,9 @@ PyObject* ada_PyEval_EvalCodeEx
 
   result = (PyObject*) PyEval_EvalCodeEx
     (co, globals, locals,
-    &PyTuple_GET_ITEM (args, 0), PyTuple_Size (args), k, nk, d, nd, closure);
+     &PyTuple_GET_ITEM (args, 0) /* args */,
+     PyTuple_Size (args) /* argcount */,
+     k /* kws */, nk /* kwcount */, d /* defs */, nd /* defcount */, closure);
 
   if (k != NULL) {
     PyMem_DEL (k);
@@ -203,24 +205,6 @@ PyObject* ada_PyEval_EvalCodeEx
 
   return result;
 }
-
-/*
-PyObject*
-ada_py_object_new (PyObject* base)
-{
-   if (PyClass_Check (base)) {
-      return PyInstance_NewRaw (base, NULL);
-   } else {
-      if (base->ob_type->tp_new != NULL) {
-           Py_INCREF (Py_None);
-           Py_INCREF (Py_None);
-           return base->ob_type->tp_new (base->ob_type, Py_None, Py_None);
-      } else {
-           return NULL;
-      }
-   }
-}
-*/
 
 int
 ada_pycobject_check (PyObject* obj)
