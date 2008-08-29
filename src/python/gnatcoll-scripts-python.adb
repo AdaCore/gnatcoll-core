@@ -27,10 +27,8 @@ with GNAT.IO;                    use GNAT.IO;
 with GNAT.Strings;               use GNAT.Strings;
 with GNATCOLL.Scripts.Impl;      use GNATCOLL.Scripts, GNATCOLL.Scripts.Impl;
 with System;                     use System;
-with GNATCOLL.Traces; use GNATCOLL.Traces;
 
 package body GNATCOLL.Scripts.Python is
-   Testsuite_Handle : constant Trace_Handle := Create ("TESTSUITE");
 
    ------------------------
    -- Python_Subprograms --
@@ -475,12 +473,8 @@ package body GNATCOLL.Scripts.Python is
             Py_INCREF (Item);
             PyTuple_SetItem (D.Args, T, Item);
          end loop;
-         Trace (Testsuite_Handle, "MANU Clone: args.size="
-                & PyTuple_Size (D.Args)'Img);
       end if;
       if D.Kw /= null then
-         Trace (Testsuite_Handle, "MANU Clone: kw.size="
-                & PyDict_Size (D.Kw)'Img);
          Py_INCREF (D.Kw);
       end if;
       D.Return_Value := null;
