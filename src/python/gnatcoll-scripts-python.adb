@@ -27,8 +27,10 @@ with GNAT.IO;                    use GNAT.IO;
 with GNAT.Strings;               use GNAT.Strings;
 with GNATCOLL.Scripts.Impl;      use GNATCOLL.Scripts, GNATCOLL.Scripts.Impl;
 with System;                     use System;
+with GNATCOLL.Traces; use GNATCOLL.Traces;
 
 package body GNATCOLL.Scripts.Python is
+   Testsuite_Handle : constant Trace_Handle := Create ("TESTSUITE");
 
    ------------------------
    -- Python_Subprograms --
@@ -475,6 +477,8 @@ package body GNATCOLL.Scripts.Python is
          end loop;
       end if;
       if D.Kw /= null then
+         Trace (Testsuite_Handle, "MANU cloning kw of size "
+                & PyDict_Size (D.Kw)'Img);
          Py_INCREF (D.Kw);
       end if;
       D.Return_Value := null;
@@ -568,11 +572,17 @@ package body GNATCOLL.Scripts.Python is
    -----------------
 
    function First_Level (Self, Args, Kw : PyObject) return PyObject is
+      --  Args and Kw could both be null, as called from PyCFunction_Call
+
       Handler  : constant Handler_Data_Access :=
                    Convert (PyCObject_AsVoidPtr (Self));
-      Size     : Integer := PyTuple_Size (Args);
+      Size     : Integer := 0;
       Callback : Python_Callback_Data;
    begin
+      if Args /= null then
+         Size := PyTuple_Size (Args);
+      end if;
+
       if Kw /= null then
          Size := PyDict_Size (Kw) + Size;
       end if;
@@ -604,9 +614,14 @@ package body GNATCOLL.Scripts.Python is
       Callback.Script       := Handler.Script;
       Callback.Is_Method    := Handler.Is_Method;
       Py_INCREF (Callback.Return_Value);
-      Py_INCREF (Callback.Args);
+
+      if Callback.Args /= null then
+         Py_INCREF (Callback.Args);
+      end if;
 
       if Callback.Kw /= null then
+         Trace (Testsuite_Handle, "MANU Callback has kw arguments: "
+                & PyDict_Size (Callback.Kw)'Img);
          Py_INCREF (Callback.Kw);
       end if;
 
@@ -639,7 +654,7 @@ package body GNATCOLL.Scripts.Python is
 
       when E : others =>
          if not Callback.Has_Return_Value
-           or else  Callback.Return_Value /= null
+           or else Callback.Return_Value /= null
          then
             PyErr_SetString
               (Handler.Script.Exception_Unexpected,
