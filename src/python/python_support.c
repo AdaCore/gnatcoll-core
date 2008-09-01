@@ -177,7 +177,11 @@ PyObject* ada_PyEval_EvalCodeEx
 
   if (kwds != NULL && PyDict_Check(kwds)) {
      int i = 0;
+#if PY_MAJOR_VERSION > 2 || (PY_MAJOR_VERSION==2 && PY_MINOR_VERSION>=5)
      Py_ssize_t pos = 0;
+#else
+     int pos = 0;
+#endif
      nk = PyDict_Size(kwds);
      k  = PyMem_NEW(PyObject *, 2*nk);
      if (k == NULL) {
