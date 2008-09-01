@@ -1,5 +1,5 @@
 -----------------------------------------------------------------------
---                               G N A T C O L L                     --
+--                           G N A T C O L L                         --
 --                                                                   --
 --                 Copyright (C) 2005-2008, AdaCore                  --
 --                                                                   --
@@ -99,6 +99,7 @@ with Ada.Containers.Indefinite_Doubly_Linked_Lists;
 with Ada.Containers.Indefinite_Hashed_Sets;
 with Ada.Finalization;
 with Ada.Strings.Unbounded;  use Ada.Strings.Unbounded;
+
 with GNAT.Strings;           use GNAT.Strings;
 
 package GNATCOLL.SQL is
@@ -151,7 +152,7 @@ package GNATCOLL.SQL is
 
    function FK
      (Self : SQL_Table; Foreign : SQL_Table'Class) return SQL_Criteria;
-   --  Criteria to use when joining the two instances.
+   --  Criteria to use when joining the two instances
 
    function "&" (Left, Right : SQL_Table_List) return SQL_Table_List;
    function "&" (Left, Right : SQL_Single_Table'Class) return SQL_Table_List;
@@ -338,8 +339,8 @@ package GNATCOLL.SQL is
      (Func     : Aggregate_Function;
       Criteria : SQL_Criteria) return SQL_Field'Class;
    function Apply
-     (Func   : Aggregate_Function;
-      Field  : SQL_Field'Class) return SQL_Field'Class;
+     (Func  : Aggregate_Function;
+      Field : SQL_Field'Class) return SQL_Field'Class;
    --  Apply an aggregate function to a field. Other fields in the result of
    --  the query should be grouped. Each element of Fields is taken as one of
    --  the arguments to Func.
@@ -404,50 +405,50 @@ package GNATCOLL.SQL is
 
    No_Criteria : constant SQL_Criteria;
 
-   function "="   (Left, Right : SQL_Field_Integer'Class) return SQL_Criteria;
-   function "="   (Left, Right : SQL_Field_Text'Class)    return SQL_Criteria;
-   function "="   (Left, Right : SQL_Field_Boolean'Class) return SQL_Criteria;
-   function "="   (Left, Right : SQL_Field_Float'Class)   return SQL_Criteria;
-   function "="   (Left, Right : SQL_Field_Time'Class)    return SQL_Criteria;
+   function "=" (Left, Right : SQL_Field_Integer'Class) return SQL_Criteria;
+   function "=" (Left, Right : SQL_Field_Text'Class)    return SQL_Criteria;
+   function "=" (Left, Right : SQL_Field_Boolean'Class) return SQL_Criteria;
+   function "=" (Left, Right : SQL_Field_Float'Class)   return SQL_Criteria;
+   function "=" (Left, Right : SQL_Field_Time'Class)    return SQL_Criteria;
 
    function "="
      (Left : SQL_Field_Integer; Right : Integer) return SQL_Criteria;
    function "="
-     (Left : SQL_Field_Text;    Right : String)  return SQL_Criteria;
+     (Left : SQL_Field_Text; Right : String)  return SQL_Criteria;
    function "="
      (Left : SQL_Field_Boolean; Right : Boolean) return SQL_Criteria;
    function "="
-     (Left : SQL_Field_Float;   Right : Float)   return SQL_Criteria;
+     (Left : SQL_Field_Float; Right : Float)   return SQL_Criteria;
 
    function "="
-     (Left : SQL_Field_Time;    Right : Ada.Calendar.Time) return SQL_Criteria;
+     (Left : SQL_Field_Time; Right : Ada.Calendar.Time) return SQL_Criteria;
    function Date_Equal
-     (Left : SQL_Field_Time;    Right : Ada.Calendar.Time) return SQL_Criteria;
+     (Left : SQL_Field_Time; Right : Ada.Calendar.Time) return SQL_Criteria;
    --  The first one also compares times, whereas the second only compares
    --  dates
 
-   function "/="  (Left, Right : SQL_Field_Integer'Class) return SQL_Criteria;
-   function "/="  (Left, Right : SQL_Field_Text'Class)    return SQL_Criteria;
-   function "/="  (Left, Right : SQL_Field_Boolean'Class) return SQL_Criteria;
-   function "/="  (Left, Right : SQL_Field_Float'Class)   return SQL_Criteria;
-   function "/="  (Left, Right : SQL_Field_Time'Class)    return SQL_Criteria;
+   function "/=" (Left, Right : SQL_Field_Integer'Class) return SQL_Criteria;
+   function "/=" (Left, Right : SQL_Field_Text'Class)    return SQL_Criteria;
+   function "/=" (Left, Right : SQL_Field_Boolean'Class) return SQL_Criteria;
+   function "/=" (Left, Right : SQL_Field_Float'Class)   return SQL_Criteria;
+   function "/=" (Left, Right : SQL_Field_Time'Class)    return SQL_Criteria;
 
    function "/="
      (Left : SQL_Field_Integer; Right : Integer) return SQL_Criteria;
    function "/="
-     (Left : SQL_Field_Text;    Right : String)  return SQL_Criteria;
+     (Left : SQL_Field_Text; Right : String)  return SQL_Criteria;
    function "/="
      (Left : SQL_Field_Boolean; Right : Boolean) return SQL_Criteria;
    function "/="
-     (Left : SQL_Field_Float;   Right : Float)   return SQL_Criteria;
+     (Left : SQL_Field_Float; Right : Float)   return SQL_Criteria;
    function "/="
-     (Left : SQL_Field_Time;    Right : Ada.Calendar.Time) return SQL_Criteria;
+     (Left : SQL_Field_Time; Right : Ada.Calendar.Time) return SQL_Criteria;
 
-   function "<"   (Left, Right : SQL_Field_Integer'Class) return SQL_Criteria;
-   function "<"   (Left, Right : SQL_Field_Text'Class)    return SQL_Criteria;
-   function "<"   (Left, Right : SQL_Field_Boolean'Class) return SQL_Criteria;
-   function "<"   (Left, Right : SQL_Field_Float'Class)   return SQL_Criteria;
-   function "<"   (Left, Right : SQL_Field_Time'Class)    return SQL_Criteria;
+   function "<" (Left, Right : SQL_Field_Integer'Class) return SQL_Criteria;
+   function "<" (Left, Right : SQL_Field_Text'Class)    return SQL_Criteria;
+   function "<" (Left, Right : SQL_Field_Boolean'Class) return SQL_Criteria;
+   function "<" (Left, Right : SQL_Field_Float'Class)   return SQL_Criteria;
+   function "<" (Left, Right : SQL_Field_Time'Class)    return SQL_Criteria;
 
    function "<"
      (Left : SQL_Field_Integer; Right : Integer) return SQL_Criteria;
@@ -461,32 +462,32 @@ package GNATCOLL.SQL is
    --  The first one also compares times, whereas the second only compares
    --  dates
 
-   function ">"   (Left, Right : SQL_Field_Integer'Class) return SQL_Criteria;
-   function ">"   (Left, Right : SQL_Field_Text'Class)    return SQL_Criteria;
-   function ">"   (Left, Right : SQL_Field_Boolean'Class) return SQL_Criteria;
-   function ">"   (Left, Right : SQL_Field_Float'Class)   return SQL_Criteria;
-   function ">"   (Left, Right : SQL_Field_Time'Class)    return SQL_Criteria;
+   function ">" (Left, Right : SQL_Field_Integer'Class) return SQL_Criteria;
+   function ">" (Left, Right : SQL_Field_Text'Class)    return SQL_Criteria;
+   function ">" (Left, Right : SQL_Field_Boolean'Class) return SQL_Criteria;
+   function ">" (Left, Right : SQL_Field_Float'Class)   return SQL_Criteria;
+   function ">" (Left, Right : SQL_Field_Time'Class)    return SQL_Criteria;
 
    function ">"
      (Left : SQL_Field_Integer; Right : Integer) return SQL_Criteria;
    function ">"
-     (Left : SQL_Field_Float;   Right : Float)   return SQL_Criteria;
+     (Left : SQL_Field_Float; Right : Float)   return SQL_Criteria;
    function ">"
-     (Left : SQL_Field_Text;    Right : String)   return SQL_Criteria;
+     (Left : SQL_Field_Text; Right : String)   return SQL_Criteria;
 
    function Greater_Than
-     (Left : SQL_Field'Class;   Right : Integer) return SQL_Criteria;
+     (Left : SQL_Field'Class; Right : Integer) return SQL_Criteria;
    function Greater_Or_Equal
-     (Left : SQL_Field'Class;   Right : Integer) return SQL_Criteria;
+     (Left : SQL_Field'Class; Right : Integer) return SQL_Criteria;
    function Equal
-     (Left : SQL_Field'Class;   Right : Boolean) return SQL_Criteria;
+     (Left : SQL_Field'Class; Right : Boolean) return SQL_Criteria;
    --  Same as ">" and ">=", but usable for instance for aggregate fields
    --  resulting from the use of Apply
 
    function ">"
-     (Left : SQL_Field_Time;    Right : Ada.Calendar.Time) return SQL_Criteria;
+     (Left : SQL_Field_Time; Right : Ada.Calendar.Time) return SQL_Criteria;
    function Date_Greater_Than
-     (Left : SQL_Field_Time;    Right : Ada.Calendar.Time) return SQL_Criteria;
+     (Left : SQL_Field_Time; Right : Ada.Calendar.Time) return SQL_Criteria;
    --  The first one also compares times, whereas the second only compares
    --  dates
 
@@ -499,11 +500,11 @@ package GNATCOLL.SQL is
    --  Same as ">" but usable for instance for aggregate fields
    --  resulting from the use of Apply
 
-   function "<="  (Left, Right : SQL_Field_Integer'Class) return SQL_Criteria;
-   function "<="  (Left, Right : SQL_Field_Text'Class)    return SQL_Criteria;
-   function "<="  (Left, Right : SQL_Field_Boolean'Class) return SQL_Criteria;
-   function "<="  (Left, Right : SQL_Field_Float'Class)   return SQL_Criteria;
-   function "<="  (Left, Right : SQL_Field_Time'Class)    return SQL_Criteria;
+   function "<=" (Left, Right : SQL_Field_Integer'Class) return SQL_Criteria;
+   function "<=" (Left, Right : SQL_Field_Text'Class)    return SQL_Criteria;
+   function "<=" (Left, Right : SQL_Field_Boolean'Class) return SQL_Criteria;
+   function "<=" (Left, Right : SQL_Field_Float'Class)   return SQL_Criteria;
+   function "<=" (Left, Right : SQL_Field_Time'Class)    return SQL_Criteria;
 
    function "<="
      (Left : SQL_Field_Integer; Right : Integer) return SQL_Criteria;
@@ -517,11 +518,11 @@ package GNATCOLL.SQL is
    --  The first one also compares times, whereas the second only compares
    --  dates
 
-   function ">="  (Left, Right : SQL_Field_Integer'Class) return SQL_Criteria;
-   function ">="  (Left, Right : SQL_Field_Text'Class)    return SQL_Criteria;
-   function ">="  (Left, Right : SQL_Field_Boolean'Class) return SQL_Criteria;
-   function ">="  (Left, Right : SQL_Field_Float'Class)   return SQL_Criteria;
-   function ">="  (Left, Right : SQL_Field_Time'Class)    return SQL_Criteria;
+   function ">=" (Left, Right : SQL_Field_Integer'Class) return SQL_Criteria;
+   function ">=" (Left, Right : SQL_Field_Text'Class)    return SQL_Criteria;
+   function ">=" (Left, Right : SQL_Field_Boolean'Class) return SQL_Criteria;
+   function ">=" (Left, Right : SQL_Field_Float'Class)   return SQL_Criteria;
+   function ">=" (Left, Right : SQL_Field_Time'Class)    return SQL_Criteria;
 
    function ">="
      (Left : SQL_Field_Integer; Right : Integer) return SQL_Criteria;
@@ -533,10 +534,10 @@ package GNATCOLL.SQL is
    function Date_Greater_Or_Equal
      (Left : SQL_Field_Time;    Right : Ada.Calendar.Time) return SQL_Criteria;
    --  The first one also compares times, whereas the second only compares
-   --  dates
+   --  dates.
 
-   function "and" (Left, Right : SQL_Criteria)      return SQL_Criteria;
-   function "or"  (Left, Right : SQL_Criteria)      return SQL_Criteria;
+   function "and" (Left, Right : SQL_Criteria) return SQL_Criteria;
+   function "or"  (Left, Right : SQL_Criteria) return SQL_Criteria;
    --  Combine two criterias
 
    function "and"
@@ -580,7 +581,7 @@ package GNATCOLL.SQL is
 
    function Overlaps (Left, Right : SQL_Field'Class) return SQL_Criteria;
    --  Whether the range specified in Left overlaps the range specified in
-   --  Right
+   --  Right.
 
    -----------------
    -- Assignments --
@@ -643,7 +644,7 @@ package GNATCOLL.SQL is
      (Table1 : SQL_Single_Table'Class;
       Table2 : SQL_Single_Table'Class;
       On     : SQL_Criteria := No_Criteria) return SQL_Left_Join_Table;
-   --  Join the two tables.
+   --  Join the two tables
 
    function SQL_Select
      (Fields   : SQL_Field_Or_List'Class;
@@ -669,27 +670,27 @@ package GNATCOLL.SQL is
    --  below), and WHERE is used as the WHERE claused for that subquery.
 
    function SQL_Insert
-     (Fields   : SQL_Field_Or_List'Class;
-      Values   : SQL_Query) return SQL_Query;
-   --  Insert a new row in the table. The list of values come from a subquery.
+     (Fields : SQL_Field_Or_List'Class;
+      Values : SQL_Query) return SQL_Query;
+   --  Insert a new row in the table. The list of values come from a subquery
 
    function SQL_Insert_Default_Values
      (Table : SQL_Table'Class) return SQL_Query;
    --  Insert a new row in the table using default values for all fields
 
    function SQL_Update
-     (Table    : SQL_Table'Class;
-      Set      : SQL_Assignment;
-      Where    : SQL_Criteria := No_Criteria;
-      From     : SQL_Table_Or_List'Class := Empty_Table_List) return SQL_Query;
+     (Table : SQL_Table'Class;
+      Set   : SQL_Assignment;
+      Where : SQL_Criteria := No_Criteria;
+      From  : SQL_Table_Or_List'Class := Empty_Table_List) return SQL_Query;
    --  Update the contents of a table.
    --  Where specifies which rows of the table are affected by the change.
    --  From should be used if Where references other tables. It can be
    --  auto-completed
 
    function SQL_Delete
-     (From     : SQL_Table'Class;
-      Where    : SQL_Criteria := No_Criteria) return SQL_Query;
+     (From  : SQL_Table'Class;
+      Where : SQL_Criteria := No_Criteria) return SQL_Query;
    --  Deletes all fields matching WHERE in the table FROM
 
    function SQL_Begin    return SQL_Query;
@@ -1005,7 +1006,7 @@ private
       Table : Table_Names := No_Names;
 
       Value : GNAT.Strings.String_Access;
-      --  The expression representing the field in SQL.
+      --  The expression representing the field in SQL
 
       Operator : GNAT.Strings.String_Access;
       --  null unless we have an operator on several fields ("-" for instance)
@@ -1170,7 +1171,7 @@ private
             Criterias : Criteria_List.List;
 
          when Criteria_In | Criteria_Not_In =>
-            Arg     : SQL_Field_Pointer;
+            Arg      : SQL_Field_Pointer;
             List     : SQL_Field_List;
             Subquery : SQL_Query;
 
@@ -1216,9 +1217,9 @@ private
    ---------------
 
    type Join_Table_Internal is record
-      Refcount : Natural := 1;
-      Tables : SQL_Table_List;
-      On     : SQL_Criteria;
+      Refcount     : Natural := 1;
+      Tables       : SQL_Table_List;
+      On           : SQL_Criteria;
       Is_Left_Join : Boolean;
    end record;
    type Join_Table_Internal_Access is access all Join_Table_Internal;
@@ -1301,16 +1302,16 @@ private
      (Contents => (Ada.Finalization.Controlled with null));
 
    type Query_Select_Contents is new Query_Contents with record
-      Fields   : SQL_Field_List;
-      Tables   : SQL_Table_List;
+      Fields       : SQL_Field_List;
+      Tables       : SQL_Table_List;
       Extra_Tables : Table_Sets.Set;  --  auto completed tables
-      Criteria : SQL_Criteria;
-      Group_By : SQL_Field_List;
-      Having   : SQL_Criteria;
-      Order_By : SQL_Field_List;
-      Limit    : Integer;
-      Offset   : Integer;
-      Distinct : Boolean;
+      Criteria     : SQL_Criteria;
+      Group_By     : SQL_Field_List;
+      Having       : SQL_Criteria;
+      Order_By     : SQL_Field_List;
+      Limit        : Integer;
+      Offset       : Integer;
+      Distinct     : Boolean;
    end record;
    type Query_Select_Contents_Access is access all Query_Select_Contents'Class;
    overriding function To_String
@@ -1321,12 +1322,12 @@ private
       Auto_Complete_Group_By : Boolean := True);
 
    type Query_Insert_Contents is new Query_Contents with record
-      Into     : Table_Names := No_Names;
+      Into           : Table_Names := No_Names;
       Default_Values : Boolean := False;
-      Fields   : SQL_Field_List;
-      Values   : SQL_Assignment;
-      Where    : SQL_Criteria;
-      Subquery : SQL_Query := No_Query;
+      Fields         : SQL_Field_List;
+      Values         : SQL_Assignment;
+      Where          : SQL_Criteria;
+      Subquery       : SQL_Query := No_Query;
    end record;
    type Query_Insert_Contents_Access is access all Query_Insert_Contents'Class;
    overriding function To_String
@@ -1337,10 +1338,10 @@ private
       Auto_Complete_Group_By : Boolean := True);
 
    type Query_Update_Contents is new Query_Contents with record
-      Table   : SQL_Table_List;
-      Set     : SQL_Assignment;
-      Where   : SQL_Criteria;
-      From    : SQL_Table_List;
+      Table      : SQL_Table_List;
+      Set        : SQL_Assignment;
+      Where      : SQL_Criteria;
+      From       : SQL_Table_List;
       Extra_From : Table_Sets.Set; --  from auto complete
    end record;
    type Query_Update_Contents_Access is access all Query_Update_Contents'Class;
@@ -1352,8 +1353,8 @@ private
       Auto_Complete_Group_By : Boolean := True);
 
    type Query_Delete_Contents is new Query_Contents with record
-      Table   : SQL_Table_List;
-      Where   : SQL_Criteria;
+      Table : SQL_Table_List;
+      Where : SQL_Criteria;
    end record;
    type Query_Delete_Contents_Access is access all Query_Delete_Contents'Class;
    overriding function To_String
@@ -1394,7 +1395,6 @@ private
       Name     => Null_String'Access);
 
    Empty_Field_List : constant SQL_Field_List :=
-     (SQL_Field_Or_List with
-      List => Field_List.Empty_List);
+     (SQL_Field_Or_List with List => Field_List.Empty_List);
 
 end GNATCOLL.SQL;
