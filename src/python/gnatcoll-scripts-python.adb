@@ -756,6 +756,11 @@ package body GNATCOLL.Scripts.Python is
          --     GPS.EditorBuffer (file)
          --  return an existing instance if the file is already associated with
          --  a python instance... This isn't doable through __init__
+         --
+         --  Another good reason is that these so-called new-style python
+         --  classes support multiple inheritance better, as well as the
+         --  concept of metaclasses (that's really where __new__ above comes
+         --  from.
 
 --           declare
 --              Module : constant PyObject :=
@@ -1305,10 +1310,25 @@ package body GNATCOLL.Scripts.Python is
          return null;
       end if;
 
-      --  Bound methods: we need to explicitly pass the instance as the first
-      --  argument.
       if PyMethod_Check (Command) then
-         if PyMethod_Self (Command) /= null then
+
+         --  Bound methods: we need to explicitly pass the instance as the
+         --  first argument. However, in case this instance is the same as the
+         --  first parameter in Args, we do not duplicate it. This makes for
+         --  nicer python code, as in:
+         --    class MyProcess (GPS.Process):
+         --      def on_match (self, matched, unmatched): pass
+         --      def __init__ (self):
+         --           GPS.Process.__init__ (self, on_match=self.on_match)
+         --  If we did not clean up the duplicates, the callback would have
+         --   been:
+         --     class on_match (self, process, matched, unmatched): pass
+
+         if PyMethod_Self (Command) /= null
+           and then PyMethod_Self (Command) /=
+             PyTuple_GetItem (Python_Callback_Data (Args).Args, 0)
+         then
+
             --  See code in classobject.c::instancemethod_call()
             Size  := PyTuple_Size (Python_Callback_Data (Args).Args);
             Args2 := PyTuple_New (Size => Size + 1);
