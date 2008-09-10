@@ -77,8 +77,9 @@ package body GNATCOLL.Filesystem.Unix.Remote is
 
       if Status then
          declare
-            Result : constant String :=
-              Ensure_Directory (FS, Output.all);
+            --  Don't try to translate the string into a directory, as this
+            --  is all handled later at VFS level.
+            Result : constant String := Output.all;
          begin
             Free (Output);
             return Result;
