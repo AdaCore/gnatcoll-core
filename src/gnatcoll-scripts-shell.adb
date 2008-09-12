@@ -742,7 +742,7 @@ package body GNATCOLL.Scripts.Shell is
 
    begin
       if Active (Me) then
-         Trace (Me, "Executing " & Command
+         Trace (Me, "Executing " & Command & " "
                 & Argument_List_To_Quoted_String (Args)
                 & " blocked=" & Script.Blocked'Img);
       end if;
