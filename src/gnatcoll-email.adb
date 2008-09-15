@@ -549,20 +549,22 @@ package body GNATCOLL.Email is
          while Index <= Last loop
             --  Only split on spaces. To keep Content-Type headers as much as
             --  possible on a single line, we split on the first blank space
-            --  after the theoritical split point.
+            --  after the theoretical split point.
+
             Index2 := Integer'Min (Index + Max - 1, Last);
-            while Index2 < Last
-              and then Str (Index2) /= ' '
             loop
                Index2 := Index2 + 1;
+               exit when Index2 > Last or else Str (Index2) = ' ';
             end loop;
+
+            --  Index2 points right after last non-blank character
+
+            Append (Result, Str (Index .. Index2 - 1));
 
             --  Do not print a last line containing only white spaces, this
             --  might confuse mailers.
 
-            Append (Result, Str (Index .. Index2));
-
-            if Index2 /= Last then
+            if Index2 < Last then
                Append (Result, ASCII.LF & ' ');
             end if;
 
