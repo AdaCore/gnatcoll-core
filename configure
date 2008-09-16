@@ -3485,21 +3485,40 @@ echo $ECHO_N "checking for python >= 2.0... $ECHO_C" >&6
         fi
 
         PYTHON_MAJOR_VERSION=`$PYTHON -c 'import sys; print sys.version_info[0]' 2>/dev/null`
+        PYTHON_MINOR_VERSION=`$PYTHON -c 'import sys; print sys.version_info[1]' 2>/dev/null`
         if test x$PYTHON_MAJOR_VERSION != x2 ; then
            echo "$as_me:$LINENO: result: no" >&5
 echo "${ECHO_T}no" >&6
            PYTHON_BASE=no
            WITH_PYTHON=no
         else
-           PYTHON_VERSION=`$PYTHON -c 'import sys; print \`sys.version_info[0]\`+"."+\`sys.version_info[1]\`'`
+           case "${host}" in
+             *-*mingw32* )
+               if test -d ${PYTHON_BASE}/lib/python${PYTHON_MAJOR_VERSION}.${PYTHON_MINOR_VERSION}/config; then
+                 PYTHON_WIN32=no
+               else
+                 PYTHON_WIN32=yes
+               fi
+               ;;
+             *)
+               PYTHON_WIN32=no
+               ;;
+           esac
 
-           if test x$PYTHON_SHARED = xyes; then
-              PYTHON_DIR=${PYTHON_BASE}/lib
+           if test x$PYTHON_WIN32 == xyes; then
+             PYTHON_VERSION=$PYTHON_MAJOR_VERSION$PYTHON_MINOR_VERSION
+             PYTHON_DIR=${PYTHON_BASE}/libs
            else
-              PYTHON_DIR=${PYTHON_BASE}/lib/python${PYTHON_VERSION}/config
+             PYTHON_VERSION=$PYTHON_MAJOR_VERSION.$PYTHON_MINOR_VERSION
+             if test x$PYTHON_SHARED = xyes; then
+                PYTHON_DIR=${PYTHON_BASE}/lib
+             else
+                PYTHON_DIR=${PYTHON_BASE}/lib/python${PYTHON_VERSION}/config
+             fi
            fi
-           echo "$as_me:$LINENO: result: yes (version $PYTHON_VERSION)" >&5
-echo "${ECHO_T}yes (version $PYTHON_VERSION)" >&6
+
+           echo "$as_me:$LINENO: result: yes (version $PYTHON_MAJOR_VERSION.$PYTHON_MINOR_VERSION)" >&5
+echo "${ECHO_T}yes (version $PYTHON_MAJOR_VERSION.$PYTHON_MINOR_VERSION)" >&6
         fi
       fi
    fi
@@ -3552,7 +3571,11 @@ echo "${ECHO_T}yes (version $PYTHON_VERSION)" >&6
       esac
 
       PYTHON_LIBS="-L${PYTHON_DIR} -lpython${PYTHON_VERSION} ${PYTHON_LIBS}"
-      PYTHON_CFLAGS="-I${PYTHON_BASE}/include/python${PYTHON_VERSION}"
+      if test x$PYTHON_WIN32 == xyes; then
+         PYTHON_CFLAGS="-I${PYTHON_BASE}/include"
+      else
+         PYTHON_CFLAGS="-I${PYTHON_BASE}/include/python${PYTHON_VERSION}"
+      fi
 
       # Automatically check whether some libraries are needed to link with
       # the python libraries. If you are using the default system library, it is

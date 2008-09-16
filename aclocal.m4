@@ -65,7 +65,7 @@ EOF
    else
       AC_MSG_RESULT([no (--disabled-shared)])
    fi
-   
+
    AC_SUBST(GNAT_BUILDS_SHARED)
    AC_SUBST(DEFAULT_LIBRARY_TYPE)
 ])
@@ -198,19 +198,38 @@ AC_HELP_STRING(
         fi
 
         PYTHON_MAJOR_VERSION=`$PYTHON -c 'import sys; print sys.version_info[[0]]' 2>/dev/null`
+        PYTHON_MINOR_VERSION=`$PYTHON -c 'import sys; print sys.version_info[[1]]' 2>/dev/null`
         if test x$PYTHON_MAJOR_VERSION != x2 ; then
            AC_MSG_RESULT(no, need at least version 2.0)
            PYTHON_BASE=no
            WITH_PYTHON=no
         else
-           PYTHON_VERSION=`$PYTHON -c 'import sys; print \`sys.version_info[[0]]\`+"."+\`sys.version_info[[1]]\`'`
+           case "${host}" in
+             *-*mingw32* )
+               if test -d ${PYTHON_BASE}/lib/python${PYTHON_MAJOR_VERSION}.${PYTHON_MINOR_VERSION}/config; then
+                 PYTHON_WIN32=no
+               else
+                 PYTHON_WIN32=yes
+               fi
+               ;;
+             *)
+               PYTHON_WIN32=no
+               ;;
+           esac
 
-           if test x$PYTHON_SHARED = xyes; then
-              PYTHON_DIR=${PYTHON_BASE}/lib
+           if test x$PYTHON_WIN32 == xyes; then
+             PYTHON_VERSION=$PYTHON_MAJOR_VERSION$PYTHON_MINOR_VERSION
+             PYTHON_DIR=${PYTHON_BASE}/libs
            else
-              PYTHON_DIR=${PYTHON_BASE}/lib/python${PYTHON_VERSION}/config
+             PYTHON_VERSION=$PYTHON_MAJOR_VERSION.$PYTHON_MINOR_VERSION
+             if test x$PYTHON_SHARED = xyes; then
+                PYTHON_DIR=${PYTHON_BASE}/lib
+             else
+                PYTHON_DIR=${PYTHON_BASE}/lib/python${PYTHON_VERSION}/config
+             fi
            fi
-           AC_MSG_RESULT(yes (version $PYTHON_VERSION))
+
+           AC_MSG_RESULT(yes (version $PYTHON_MAJOR_VERSION.$PYTHON_MINOR_VERSION))
         fi
       fi
    fi
@@ -221,7 +240,7 @@ AC_HELP_STRING(
           hppa*-hp-hpux1* )
              PYTHON_LIBS="-Wl,-E -lm ${PYTHON_LIBS}"
              ;;
-          powerpc-ibm-aix5.* ) 
+          powerpc-ibm-aix5.* )
              PYTHON_LIBS="-lld -lm ${PYTHON_LIBS}"
              ;;
           powerpc-*-darwin* )
@@ -263,7 +282,11 @@ AC_HELP_STRING(
       esac
 
       PYTHON_LIBS="-L${PYTHON_DIR} -lpython${PYTHON_VERSION} ${PYTHON_LIBS}"
-      PYTHON_CFLAGS="-I${PYTHON_BASE}/include/python${PYTHON_VERSION}"
+      if test x$PYTHON_WIN32 == xyes; then
+         PYTHON_CFLAGS="-I${PYTHON_BASE}/include"
+      else
+         PYTHON_CFLAGS="-I${PYTHON_BASE}/include/python${PYTHON_VERSION}"
+      fi
 
       # Automatically check whether some libraries are needed to link with
       # the python libraries. If you are using the default system library, it is
