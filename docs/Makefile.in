@@ -2,8 +2,8 @@ MAKEINFO=@MAKEINFO@
 TEXI2DVI=@TEXI2DVI@
 CP=cp
 MKDIR=mkdir -p
-INSTALL=@INSTALL@
 prefix=@prefix@
+datarootdir=@datarootdir@
 datadir=@datadir@
 
 all: gnatcoll/index.html gnatcoll.html gnatcoll.pdf gnatcoll.txt
@@ -24,8 +24,8 @@ gnatcoll.txt: gnatcoll.texi
 .PHONY: install
 install:
 	${MKDIR} ${datadir}/doc/gnatcoll
-	-${INSTALL} gnatcoll.html ${datadir}/doc/gnatcoll/
-	-${INSTALL} gnatcoll.pdf ${datadir}/doc/gnatcoll/
+	-${CP} gnatcoll.html ${datadir}/doc/gnatcoll/
+	-${CP} gnatcoll.pdf ${datadir}/doc/gnatcoll/
 
 .PHONY: clean-temp-files
 clean-temp-files:

@@ -27,8 +27,6 @@ includedir=@includedir@
 docdir=@docdir@
 
 MKDIR=mkdir -p
-INSTALL=@INSTALL@
-INSTALL_DATA=@INSTALL_DATA@
 CP=cp
 
 ifeq (${OS},Windows_NT)
@@ -114,7 +112,7 @@ dirs:
 
 installobj:
 	${CP} -p ${LIBDIR}*.ali ${libdir}/${TARNAME}/${LIBRARY_TYPE}
-	${INSTALL} -p ${LIBDIR}${LIBFULL} ${libdir}/${TARNAME}/${LIBRARY_TYPE}
+	${CP} -p ${LIBDIR}${LIBFULL} ${libdir}/${TARNAME}/${LIBRARY_TYPE}
 
 # Create symbolic links with version numbers for the libraries, in
 # ${prefix}/lib/. The library itself is not duplicated and is found in the

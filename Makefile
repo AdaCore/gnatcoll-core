@@ -60,7 +60,7 @@ ifeq (${WITH_GTK},yes)
 endif
 	${MAKE} -C src -f Makefile.postgres install
 	${MAKE} -C src -f Makefile.tools install
-	${INSTALL} distrib/gnatcoll_gps.xml ${datadir}/gps/plug-ins
+	${CP} distrib/gnatcoll_gps.xml ${datadir}/gps/plug-ins
 	${CP} distrib/*.gpr ${libdir}/gnat
 
 install_static:

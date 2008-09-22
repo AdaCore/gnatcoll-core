@@ -3,7 +3,6 @@ AC_INIT(gnatcoll,1.1w,report@adacore.com,gnatcoll)
 AC_CANONICAL_SYSTEM
 
 AC_PROG_LN_S
-AC_PROG_INSTALL
 AC_FUNC_MMAP
 
 AM_GNAT_BUILDS_SHARED
