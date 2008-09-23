@@ -169,7 +169,7 @@ package body GNATCOLL.Email is
       H := Get_Header (Msg, "Subject");
 
       if H /= Null_Header then
-         H2 := Create ("Subject", "Re:");
+         H2 := Create ("Subject", "Re: ");
          Append (H2, Get_Value (H));
          Replace_Header_Internal (Reply, H2, Append => False);
       end if;
@@ -511,16 +511,23 @@ package body GNATCOLL.Email is
          end if;
       end if;
 
-      --  Replaces newlines with spaces, since the former is illegal anyway.
-      --  We are changing the unbounded string in place.
+      --  Fold continuation lines
 
       Ada.Strings.Unbounded.Aux.Get_String (Encoded, Str, Last);
-
-      for S in Str'First .. Last loop
-         if Str (S) = ASCII.LF then
-            Str (S) := ' ';
-         end if;
-      end loop;
+      declare
+         Offset : Integer := 0;
+         --  Count of LF characters skipped so far
+      begin
+         for J in Str'First .. Last loop
+            if Str (J) = ASCII.LF then
+               Offset := Offset + 1;
+            elsif Offset > 0 then
+               Str (J - Offset) := Str (J);
+            end if;
+         end loop;
+         Delete (Encoded, From => Last - Offset + 1, Through => Last);
+         Last := Last - Offset;
+      end;
 
       if Show_Header_Name and then Last <= Max then
          if Encoded = Null_Unbounded_String then
@@ -573,7 +580,7 @@ package body GNATCOLL.Email is
          end loop;
 
          if Show_Header_Name then
-            if Element (Result, 1) = ' ' then
+            if Length (Result) = 0 or else Element (Result, 1) = ' ' then
                Result := N & ':' & Result;
             else
                Result := N & ": " & Result;

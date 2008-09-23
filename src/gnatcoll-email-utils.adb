@@ -1005,11 +1005,6 @@ package body GNATCOLL.Email.Utils is
 
          Append (Result, Tmp);
          Next (C);
-         if Has_Element (C)
-           and then Element (Tmp, Length (Tmp)) /= ' '
-         then
-            Append (Result, " ");
-         end if;
       end loop;
    end To_String;
 

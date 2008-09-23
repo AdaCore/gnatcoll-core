@@ -251,7 +251,7 @@ package GNATCOLL.Email.Utils is
      (List   : Charset_String_List.List;
       Result : out Unbounded_String);
    --  Return a single string representing list, where all sections is
-   --  properly encoded and surrounded by =?charset markers
+   --  properly encoded and surrounded by =?charset? markers.
 
 private
    Null_Address : constant Email_Address :=
