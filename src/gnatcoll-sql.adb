@@ -71,9 +71,10 @@ package body GNATCOLL.SQL is
    --  Assign Value to Field (or set field to NULL if Value is null)
 
    function Create_Multiple_Args
-     (Fields : SQL_Field_List;
-      Func_Name : Cst_String_Access;
-      Separator : Cst_String_Access;
+     (Fields         : SQL_Field_List;
+      Func_Name      : Cst_String_Access;
+      Separator      : Cst_String_Access;
+      Suffix         : String := "";
       In_Parenthesis : Boolean := False)
       return Multiple_Args_Field_Internal_Access;
    --  Create a multiple_args field from Fields
@@ -477,6 +478,10 @@ package body GNATCOLL.SQL is
 
       if Self.Func_Name /= Func_None'Access or else Self.In_Parenthesis then
          Append (Result, ")");
+      end if;
+
+      if Self.Suffix /= null then
+         Append (Result, Self.Suffix.all);
       end if;
 
       return To_String (Result);
@@ -1012,6 +1017,25 @@ package body GNATCOLL.SQL is
                   Data => SQL_Field_Internal_Access (Data)));
    end As_Days;
 
+   ------------------
+   -- At_Time_Zone --
+   ------------------
+
+   function At_Time_Zone
+     (Field : SQL_Field_Time'Class; TZ : String) return SQL_Field_Time'Class
+   is
+      Data : constant Multiple_Args_Field_Internal_Access :=
+        Create_Multiple_Args
+          (+Field,
+           Func_None'Access, Func_None'Access,
+           Suffix => " at time zone '" & TZ & "'");
+   begin
+      return SQL_Field_Time_Build'
+        (Table => null, Instance => null, Name => null,
+         Data => (Ada.Finalization.Controlled
+                  with SQL_Field_Internal_Access (Data)));
+   end At_Time_Zone;
+
    ----------------
    -- Expression --
    ----------------
@@ -1026,6 +1050,15 @@ package body GNATCOLL.SQL is
                   Data => SQL_Field_Internal_Access (Data)));
    end Expression;
 
+   ----------
+   -- Free --
+   ----------
+
+   overriding procedure Free (Self : in out Multiple_Args_Field_Internal) is
+   begin
+      Free (Self.Suffix);
+   end Free;
+
    --------------------------
    -- Create_Multiple_Args --
    --------------------------
@@ -1034,6 +1067,7 @@ package body GNATCOLL.SQL is
      (Fields : SQL_Field_List;
       Func_Name : Cst_String_Access;
       Separator : Cst_String_Access;
+      Suffix    : String := "";
       In_Parenthesis : Boolean := False)
       return Multiple_Args_Field_Internal_Access
    is
@@ -1044,6 +1078,10 @@ package body GNATCOLL.SQL is
       Data.Func_Name      := Func_Name;
       Data.Separator      := Separator;
       Data.In_Parenthesis := In_Parenthesis;
+
+      if Suffix /= "" then
+         Data.Suffix         := new String'(Suffix);
+      end if;
 
       while Has_Element (C) loop
          declare

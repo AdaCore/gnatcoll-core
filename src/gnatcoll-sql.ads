@@ -250,6 +250,10 @@ package GNATCOLL.SQL is
    function As_Days (Count : Natural) return SQL_Field_Time'Class;
    --  An expression representing a number of days
 
+   function At_Time_Zone
+     (Field : SQL_Field_Time'Class; TZ : String) return SQL_Field_Time'Class;
+   --  Convert a 'timestamp with time zone' expression to another time zone
+
    function Expression_Or_Null (Value : String) return SQL_Field_Text'Class;
    --  Same as above but if the Value is "NULL", returns NULL instead of 'NULL'
 
@@ -1053,6 +1057,7 @@ private
    type Multiple_Args_Field_Internal is new SQL_Field_Internal with record
       Func_Name      : Cst_String_Access;
       Separator      : Cst_String_Access;
+      Suffix         : GNAT.Strings.String_Access;
       In_Parenthesis : Boolean := False;
       List           : Field_List.List;
    end record;
@@ -1066,6 +1071,7 @@ private
      (Self         : access Multiple_Args_Field_Internal;
       To           : in out SQL_Field_List'Class;
       Is_Aggregate : in out Boolean);
+   overriding procedure Free (Self : in out Multiple_Args_Field_Internal);
 
    -----------------------
    -- Aggregrate fields --
