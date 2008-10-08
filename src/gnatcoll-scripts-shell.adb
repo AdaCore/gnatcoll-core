@@ -35,6 +35,7 @@ with GNATCOLL.Scripts;                  use GNATCOLL.Scripts;
 with GNATCOLL.Scripts.Impl;             use GNATCOLL.Scripts.Impl;
 with GNATCOLL.Scripts.Utils;            use GNATCOLL.Scripts.Utils;
 with GNATCOLL.Traces;                   use GNATCOLL.Traces;
+with GNATCOLL.Utils;                    use GNATCOLL.Utils;
 
 package body GNATCOLL.Scripts.Shell is
    Me : constant Trace_Handle := Create ("SHELL_SCRIPT", Off);
@@ -630,6 +631,7 @@ package body GNATCOLL.Scripts.Shell is
    begin
       Free_Internal_Data (Script);
       Free (Script.Prompt);
+      Free (Script.Returns);
 
       C := First (Script.Commands_List);
       while Has_Element (C) loop
@@ -771,18 +773,18 @@ package body GNATCOLL.Scripts.Shell is
 
             declare
                Callback : Shell_Callback_Data'Class :=
-                            Shell_Callback_Data'Class (Create (Script, Count));
+                 Shell_Callback_Data'Class (Create (Script, Count));
+               --  The call above allocats Callback.Args, no need to do that
+               --  below
             begin
                Callback.Script := Shell_Scripting (Script);
 
                if Data.Short_Command.all = Constructor_Method then
                   Instance := New_Instance (Callback.Script, Data.Class);
-                  Callback.Args := new Argument_List (1 .. Args'Length + 1);
                   Callback.Args (1) :=
                     new String'(Name_From_Instance (Instance));
                   Start := 2;
                else
-                  Callback.Args := new Argument_List (1 .. Args'Length);
                   Start := 1;
                end if;
 
