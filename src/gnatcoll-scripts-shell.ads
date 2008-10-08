@@ -128,6 +128,7 @@ private
 
    type Shell_Scripting_Record is new Scripting_Language_Record with record
       Repo      : Scripts_Repository;
+      Finalized : Boolean := False;
       Blocked   : Boolean := False;
       Instances : Instances_List.List;
       --  All the instances that were created

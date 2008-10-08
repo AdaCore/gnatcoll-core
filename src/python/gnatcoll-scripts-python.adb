@@ -245,6 +245,8 @@ package body GNATCOLL.Scripts.Python is
       --  when the program exit, and would try to call Py_DECREF on their
       --  associated PyObject, which no longer exists
       --  Py_Finalize;
+
+      Script.Finalized := True;
    end Destroy;
 
    -------------------------------
@@ -585,6 +587,10 @@ package body GNATCOLL.Scripts.Python is
 
       if Handler.Is_Method then
          Size := Size - 1;  --  First param is always the instance
+      end if;
+
+      if Handler.Script.Finalized then
+         return null;
       end if;
 
       --  Check number of arguments

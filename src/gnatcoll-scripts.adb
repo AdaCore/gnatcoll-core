@@ -100,8 +100,13 @@ package body GNATCOLL.Scripts is
          if Repo.Scripting_Languages /= null then
             for L in Repo.Scripting_Languages'Range loop
                Destroy (Repo.Scripting_Languages (L));
-               Unchecked_Free (Repo.Scripting_Languages (L));
+               --  Do not free the language itself, though. Since scripts are
+               --  full of controlled types, it might happen that some of them
+               --  will be freed later on, and they might still have pointers
+               --  to the script itself.
+               --  Unchecked_Free (Repo.Scripting_Languages (L));
             end loop;
+
             Unchecked_Free (Repo.Scripting_Languages);
          end if;
 

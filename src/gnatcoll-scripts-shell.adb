@@ -639,6 +639,8 @@ package body GNATCOLL.Scripts.Shell is
          Free (Com);
          Next (C);
       end loop;
+
+      Script.Finalized := True;
    end Destroy;
 
    ----------------
@@ -743,6 +745,10 @@ package body GNATCOLL.Scripts.Shell is
       Count    : Natural;
 
    begin
+      if Script.Finalized then
+         return "";
+      end if;
+
       if Active (Me) then
          Trace (Me, "Executing " & Command & " "
                 & Argument_List_To_Quoted_String (Args)
