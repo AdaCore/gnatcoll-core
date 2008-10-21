@@ -246,7 +246,8 @@ package body GNATCOLL.Scripts.Python is
       --  Cannot call Py_Finalize, since some class_instance might be finalized
       --  when the program exit, and would try to call Py_DECREF on their
       --  associated PyObject, which no longer exists
-      --  Py_Finalize;
+
+      Py_Finalize;
 
       Script.Finalized := True;
    end Destroy;
@@ -2043,9 +2044,15 @@ package body GNATCOLL.Scripts.Python is
 
    procedure Decref (Inst : access Python_Class_Instance_Record) is
    begin
-      if Inst.Data /= null then
-         Py_DECREF (Inst.Data);
+      if Python_Scripting (Inst.Script).Finalized then
+         --  During global finalization of the program, Python itself has been
+         --  terminated, so we do not need to do anything
+
+         if Inst.Data /= null then
+            Py_DECREF (Inst.Data);
+         end if;
       end if;
+
       Decref (Class_Instance_Record (Inst.all)'Access);
    end Decref;
 
