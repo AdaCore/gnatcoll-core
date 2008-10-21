@@ -239,6 +239,8 @@ package body GNATCOLL.Scripts.Python is
 
    procedure Destroy (Script : access Python_Scripting_Record) is
    begin
+      Set_Default_Console (Script, null);
+
       Free (Script.Buffer);
 
       --  Cannot call Py_Finalize, since some class_instance might be finalized
@@ -957,6 +959,7 @@ package body GNATCOLL.Scripts.Python is
            or else Command (Command'First) = ' ');
       Cmd          : constant String := Script.Buffer.all & Command & ASCII.LF;
 
+      Default_Console_Refed : Boolean := False;
       Ignored : Boolean;
       pragma Unreferenced (Ignored);
       Default_Console : constant Virtual_Console :=
@@ -991,6 +994,7 @@ package body GNATCOLL.Scripts.Python is
 
       if Console /= null then
          if Default_Console /= null then
+            Default_Console_Refed := True;
             Ref (Default_Console);
          end if;
          Set_Default_Console (Script, Console);
@@ -1145,9 +1149,10 @@ package body GNATCOLL.Scripts.Python is
 
       if Console /= null then
          Set_Default_Console (Script, Default_Console);
-         if Default_Console /= null then
-            Unref (Default_Console);
-         end if;
+      end if;
+
+      if Default_Console_Refed then
+         Unref (Default_Console);
       end if;
 
       if Hide_Output then
@@ -1167,6 +1172,10 @@ package body GNATCOLL.Scripts.Python is
 
          if Hide_Output then
             Ignored := PyRun_SimpleString ("__gps_restore_output()");
+         end if;
+
+         if Default_Console_Refed then
+            Unref (Default_Console);
          end if;
 
          return Result;
@@ -2546,6 +2555,7 @@ package body GNATCOLL.Scripts.Python is
    is
       Inst         : Class_Instance;
       Cons         : PyObject := Py_None;
+      Errors       : aliased Boolean;
    begin
       Set_Default_Console
         (Scripting_Language_Record (Script.all)'Access, Console);
@@ -2567,6 +2577,17 @@ package body GNATCOLL.Scripts.Python is
            (PyModule_GetDict (PyImport_ImportModule ("sys")), "stderr", Cons);
          PyDict_SetItemString
            (PyModule_GetDict (PyImport_ImportModule ("sys")), "stdin", Cons);
+
+      else
+         Cons := Run_Command
+           (Script,
+            "sys.stdout = sys.__stdout__" & ASCII.LF
+            & "sys.stdin  = sys.__stdin__" & ASCII.LF
+            & "sys.stderr = sys.__stderr__",
+            Errors => Errors'Access);
+         if Cons /= null then
+            Py_DECREF (Cons);
+         end if;
       end if;
    end Set_Default_Console;
 
