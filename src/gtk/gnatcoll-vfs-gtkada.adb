@@ -18,7 +18,6 @@
 -----------------------------------------------------------------------
 
 with Ada.Unchecked_Conversion;
-
 with Glib.Values;               use Glib, Glib.Values;
 with System;
 
@@ -52,6 +51,9 @@ package body GNATCOLL.VFS.GtkAda is
       if File.Value = null then
          Set_Boxed (Value, System.Null_Address);
       else
+         --  This results in a call to Virtual_File_Boxed_Copy, so increases
+         --  the refcount of File.Value (which is expected since we now own
+         --  one).
          Set_Boxed (Value, File.Value.all'Address);
       end if;
    end Set_File;
@@ -64,7 +66,6 @@ package body GNATCOLL.VFS.GtkAda is
       File : Virtual_File;
    begin
       File.Value := To_Contents_Access (Get_Boxed (Value));
-
       if File.Value /= null then
          File.Value.Ref_Count := File.Value.Ref_Count + 1;
       end if;
@@ -110,6 +111,7 @@ package body GNATCOLL.VFS.GtkAda is
    procedure Virtual_File_Boxed_Free (Boxed : System.Address) is
       Value : Contents_Access := To_Contents_Access (Boxed);
    begin
+      --  Release the reference we owned
       Finalize (Value);
    end Virtual_File_Boxed_Free;
 
