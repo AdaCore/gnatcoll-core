@@ -134,37 +134,37 @@ package body GNATCOLL.Mmap is
       pragma Import (Stdcall, CloseHandle, "CloseHandle");
 
       function GetFileSize
-        (HFile : HANDLE; LpFileSizeHigh : access DWORD) return DWORD;
+        (hFile : HANDLE; lpFileSizeHigh : access DWORD) return DWORD;
       pragma Import (Stdcall, GetFileSize, "GetFileSize");
 
       function SetFilePointer
-        (HFile                : HANDLE;
-         LDistanceToMove      : LONG;
-         LpDistanceToMoveHigh : access LONG;
-         DwMoveMethod         : DWORD) return DWORD;
+        (hFile                : HANDLE;
+         lDistanceToMove      : LONG;
+         lpDistanceToMoveHigh : access LONG;
+         dwMoveMethod         : DWORD) return DWORD;
       pragma Import (Stdcall, SetFilePointer, "SetFilePointer");
 
       function CreateFileMapping
-        (HFile                : HANDLE;
-         LpSecurityAttributes : access SECURITY_ATTRIBUTES;
-         FlProtect            : DWORD;
-         DwMaximumSizeHigh    : DWORD;
-         DwMaximumSizeLow     : DWORD;
-         LpName               : System.Address) return HANDLE;
+        (hFile                : HANDLE;
+         lpSecurityAttributes : access SECURITY_ATTRIBUTES;
+         flProtect            : DWORD;
+         dwMaximumSizeHigh    : DWORD;
+         dwMaximumSizeLow     : DWORD;
+         lpName               : System.Address) return HANDLE;
       pragma Import (Stdcall, CreateFileMapping, "CreateFileMappingW");
 
       function MapViewOfFile
-        (HFileMappingObject   : HANDLE;
-         DwDesiredAccess      : DWORD;
-         DwFileOffsetHigh     : DWORD;
-         DwFileOffsetLow      : DWORD;
-         DwNumberOfBytesToMap : SIZE_T) return System.Address;
+        (hFileMappingObject   : HANDLE;
+         dwDesiredAccess      : DWORD;
+         dwFileOffsetHigh     : DWORD;
+         dwFileOffsetLow      : DWORD;
+         dwNumberOfBytesToMap : SIZE_T) return System.Address;
       pragma Import (Stdcall, MapViewOfFile, "MapViewOfFile");
 
-      function UnmapViewOfFile (LpBaseAddress : System.Address) return BOOL;
+      function UnmapViewOfFile (lpBaseAddress : System.Address) return BOOL;
       pragma Import (Stdcall, UnmapViewOfFile, "UnmapViewOfFile");
 
-      procedure GetSystemInfo (LpSystemInfo : LP_SYSTEM_INFO);
+      procedure GetSystemInfo (lpSystemInfo : LP_SYSTEM_INFO);
       pragma Import (Stdcall, GetSystemInfo, "GetSystemInfo");
 
       function MultiByteToWideChar

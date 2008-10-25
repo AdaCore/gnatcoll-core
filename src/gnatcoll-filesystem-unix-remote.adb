@@ -64,7 +64,7 @@ package body GNATCOLL.Filesystem.Unix.Remote is
    -- Home_Dir --
    --------------
 
-   function Home_Dir (FS   : Remote_Unix_Filesystem_Record) return String is
+   function Home_Dir (FS : Remote_Unix_Filesystem_Record) return String is
       Args : GNAT.OS_Lib.Argument_List :=
                (new String'("echo"),
                 new String'("$HOME"));
