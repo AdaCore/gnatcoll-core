@@ -253,7 +253,7 @@ package body GNATCOLL.Filesystem is
          end if;
       end loop;
 
-      return Path;
+      return Normalize_Pathname (Path, Case_Sensitive => False);
    end Normalize;
 
    --------------
