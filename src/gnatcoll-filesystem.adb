@@ -239,14 +239,15 @@ package body GNATCOLL.Filesystem is
             if J < Path'Last - 3
               and then Path (J .. J + 3) = Dir_Separator & ".." & Dir_Separator
             then
-               return Normalize (FS, Path (Path'First .. Last_Dir) &
-                                     Path (J + 4 .. Path'Last));
+               return Normalize
+                 (FS,
+                  Path (Path'First .. Last_Dir) & Path (J + 4 .. Path'Last));
 
             elsif J < Path'Last - 2
               and then Path (J .. J + 2) = Dir_Separator & '.' & Dir_Separator
             then
-               return Normalize (FS, Path (Path'First .. J) &
-                                     Path (J + 3 .. Path'Last));
+               return Normalize
+                 (FS, Path (Path'First .. J) & Path (J + 3 .. Path'Last));
             end if;
 
             Last_Dir := J;
