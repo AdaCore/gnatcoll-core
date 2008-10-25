@@ -35,6 +35,9 @@ package body GNATCOLL.Mmap is
    procedure To_Disk (File : in out Mapped_File);
    --  Write the file back to disk if necessary, and free memory
 
+   function From_Utf8 (Filename : in String) return String;
+   --  Convert an UTF-8 filename to a Win32 native UTF-16
+
    --  The Win package contains copy of definition found in recent System.Win32
    --  unit provided with the GNAT compiler. The copy is needed to be able to
    --  compile this unit with older compilers. Note that this internal Win
@@ -60,6 +63,8 @@ package body GNATCOLL.Mmap is
       GENERIC_READ  : constant := 16#80000000#;
       GENERIC_WRITE : constant := 16#40000000#;
       OPEN_EXISTING : constant := 3;
+
+      CP_UTF8       : constant := 65001;
 
       type OVERLAPPED is record
          Internal     : DWORD;
@@ -107,7 +112,7 @@ package body GNATCOLL.Mmap is
          dwCreationDisposition : DWORD;
          dwFlagsAndAttributes  : DWORD;
          hTemplateFile         : HANDLE) return HANDLE;
-      pragma Import (Stdcall, CreateFile, "CreateFileA");
+      pragma Import (Stdcall, CreateFile, "CreateFileW");
 
       function WriteFile
         (hFile                  : HANDLE;
@@ -146,7 +151,7 @@ package body GNATCOLL.Mmap is
          DwMaximumSizeHigh    : DWORD;
          DwMaximumSizeLow     : DWORD;
          LpName               : System.Address) return HANDLE;
-      pragma Import (Stdcall, CreateFileMapping, "CreateFileMappingA");
+      pragma Import (Stdcall, CreateFileMapping, "CreateFileMappingW");
 
       function MapViewOfFile
         (HFileMappingObject   : HANDLE;
@@ -162,6 +167,15 @@ package body GNATCOLL.Mmap is
       procedure GetSystemInfo (LpSystemInfo : LP_SYSTEM_INFO);
       pragma Import (Stdcall, GetSystemInfo, "GetSystemInfo");
 
+      function MultiByteToWideChar
+        (CodePage       : WORD;
+         dwFlags        : DWORD;
+         lpMultiByteStr : System.Address;
+         cchMultiByte   : WORD;
+         lpWideCharStr  : System.Address;
+         cchWideChar    : WORD) return BOOL;
+      pragma Import (Stdcall, MultiByteToWideChar, "MultiByteToWideChar");
+
    end Win;
 
    use Win;
@@ -170,6 +184,22 @@ package body GNATCOLL.Mmap is
      new Ada.Unchecked_Conversion (System.Address, HANDLE);
    function To_Address is
      new Ada.Unchecked_Conversion (HANDLE, System.Address);
+
+   ---------------
+   -- From_Utf8 --
+   ---------------
+
+   function From_Utf8 (Filename : in String) return String is
+      C_Filename : constant String := Filename & ASCII.Nul;
+      W_Filename : String (1 .. C_Filename'Length * 2);
+      Res        : Win.BOOL;
+      pragma Unreferenced (Res);
+   begin
+      Res := Win.MultiByteToWideChar
+        (Win.CP_UTF8, 0,
+         C_Filename'Address, -1, W_Filename'Address, C_Filename'Length);
+      return W_Filename;
+   end From_Utf8;
 
    -------------------
    -- Get_Page_Size --
@@ -253,10 +283,10 @@ package body GNATCOLL.Mmap is
      (Filename              : String;
       Use_Mmap_If_Available : Boolean := True) return Mapped_File
    is
-      C_File : constant String := Filename & ASCII.NUL;
+      W_File : constant String := From_Utf8 (Filename);
       H      : constant HANDLE :=
                  CreateFile
-                   (C_File'Address, GENERIC_READ, Win.FILE_SHARE_READ,
+                   (W_File'Address, GENERIC_READ, Win.FILE_SHARE_READ,
                     null, OPEN_EXISTING, Win.FILE_ATTRIBUTE_NORMAL, 0);
       SizeH  : aliased DWORD;
       Size   : File_Size;
@@ -298,10 +328,10 @@ package body GNATCOLL.Mmap is
      (Filename              : String;
       Use_Mmap_If_Available : Boolean := True) return Mapped_File
    is
-      C_File : constant String := Filename & ASCII.NUL;
+      W_File : constant String := From_Utf8 (Filename);
       H      : constant HANDLE :=
                  CreateFile
-                   (C_File'Address, GENERIC_READ + GENERIC_WRITE, 0,
+                   (W_File'Address, GENERIC_READ + GENERIC_WRITE, 0,
                     null, OPEN_EXISTING, Win.FILE_ATTRIBUTE_NORMAL, 0);
       SizeH  : aliased DWORD;
       Size   : File_Size;
