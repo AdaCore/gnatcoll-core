@@ -3477,6 +3477,9 @@ echo "${ECHO_T}yes (version $PYTHON_MAJOR_VERSION.$PYTHON_MINOR_VERSION)" >&6
                   ;;
              esac
              ;;
+          *-darwin* )
+             PYTHON_LIBS="-ldl -lm ${PYTHON_LIBS}"
+             ;;
           x86_64-*-* )
              PYTHON_LIBS="-Wl,-export-dynamic -lm -ldl ${PYTHON_LIBS}"
              ;;
@@ -3484,9 +3487,6 @@ echo "${ECHO_T}yes (version $PYTHON_MAJOR_VERSION.$PYTHON_MINOR_VERSION)" >&6
              PYTHON_LIBS="-Wl,-export-dynamic -lm -ldl ${PYTHON_LIBS}"
              ;;
           i[3456]86-*win32* | i[3456]86-*mingw32* | i[3456]86-*cygwin* )
-             ;;
-          *-darwin* )
-             PYTHON_LIBS="-ldl -lm ${PYTHON_LIBS}"
              ;;
           *-freebsd* )
              PYTHON_LIBS="-lm -lutil ${PYTHON_LIBS}"

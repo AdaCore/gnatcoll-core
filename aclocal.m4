@@ -265,6 +265,9 @@ AC_HELP_STRING(
                   ;;
              esac
              ;;
+          *-darwin* )
+             PYTHON_LIBS="-ldl -lm ${PYTHON_LIBS}"
+             ;;
           x86_64-*-* )
              PYTHON_LIBS="-Wl,-export-dynamic -lm -ldl ${PYTHON_LIBS}"
              ;;
@@ -272,9 +275,6 @@ AC_HELP_STRING(
              PYTHON_LIBS="-Wl,-export-dynamic -lm -ldl ${PYTHON_LIBS}"
              ;;
           i[[3456]]86-*win32* | i[[3456]]86-*mingw32* | i[[3456]]86-*cygwin* )
-             ;;
-          *-darwin* )
-             PYTHON_LIBS="-ldl -lm ${PYTHON_LIBS}"
              ;;
           *-freebsd* )
              PYTHON_LIBS="-lm -lutil ${PYTHON_LIBS}"
