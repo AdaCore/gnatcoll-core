@@ -125,16 +125,41 @@ package body GNATCOLL.Scripts.Impl is
    procedure Console_Command_Handler
      (Data : in out Callback_Data'Class; Command : String)
    is
+      type Mode_Kinds is (Text, Log, Error);
+
       Text_Cst : aliased constant String := "text";
       Size_Cst : aliased constant String := "size";
+      Mode_Cst : aliased constant String := "mode";
       Inst     : constant Class_Instance := Nth_Arg (Data, 1, Any_Class);
       Console  : Virtual_Console;
+      Mode     : Mode_Kinds := Text;
    begin
       if Command = "write" then
-         Name_Parameters (Data, (1 => Text_Cst'Unchecked_Access));
+         Name_Parameters (Data, (1 => Text_Cst'Unchecked_Access,
+                                 2 => Mode_Cst'Unchecked_Access));
+
+         if Number_Of_Arguments (Data) = 3 then
+            begin
+               Mode := Mode_Kinds'Value (Nth_Arg (Data, 3));
+            exception
+               when Constraint_Error =>
+                  Set_Error_Msg (Data, "Wrong value for ""mode"" parameter");
+                  return;
+            end;
+         end if;
+
          Console := Get_Data (Inst);
          if Console /= null then
-            Insert_Text (Console, Nth_Arg (Data, 2));
+            case Mode is
+               when Text =>
+                  Insert_Text (Console, Nth_Arg (Data, 2));
+
+               when Log =>
+                  Insert_Log (Console, Nth_Arg (Data, 2));
+
+               when Error =>
+                  Insert_Error (Console, Nth_Arg (Data, 2));
+            end case;
          else
             Set_Error_Msg (Data, "Console was closed by user");
          end if;
@@ -190,7 +215,7 @@ package body GNATCOLL.Scripts.Impl is
       Register_Command
         (Repo, "write",
          Minimum_Args => 1,
-         Maximum_Args => 1,
+         Maximum_Args => 2,
          Class        => Class,
          Handler      => Console_Command_Handler'Access);
       Register_Command
