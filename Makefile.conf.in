@@ -146,6 +146,10 @@ endif
 # install would complain.
 installsources:
 	${CP} -p ${wildcard ${addsuffix *.ad?, ${SRCDIRS}}} ${includedir}/${TARNAME}
-	cd ${includedir}/${TARNAME}; ls ${notdir ${wildcard ${addsuffix *.ad?, ${SRCDIRS}}}} > ${libdir}/gnat/${TARNAME}/${basename ${PROJECT}}.lgpr
+ifeq (${OS},Windows_NT)
+	cd ${includedir}/${TARNAME}; ls ${notdir ${wildcard ${addsuffix *.ad?, ${SRCDIRS}}}} | grep -v unix > ${libdir}/gnat/${TARNAME}/${basename ${PROJECT}}.lgpr
+else
+	cd ${includedir}/${TARNAME}; ls ${notdir ${wildcard ${addsuffix *.ad?, ${SRCDIRS}}}} | grep -v win32 > ${libdir}/gnat/${TARNAME}/${basename ${PROJECT}}.lgpr
+endif
 
 force:
