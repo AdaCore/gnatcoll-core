@@ -281,7 +281,12 @@ AC_HELP_STRING(
              ;;
       esac
 
-      PYTHON_LIBS="-L${PYTHON_DIR} -lpython${PYTHON_VERSION} ${PYTHON_LIBS}"
+      if [ -f ${PYTHON_DIR}/libpython${PYTHON_VERSION} ]; then
+         PYTHON_LIBS="${PYTHON_DIR}/libpython${PYTHON_VERSION} ${PYTHON_LIBS}"
+      else
+         PYTHON_LIBS="-L${PYTHON_DIR} -lpython${PYTHON_VERSION} ${PYTHON_LIBS}"
+      fi
+
       if test x$PYTHON_WIN32 == xyes; then
          PYTHON_CFLAGS="-I${PYTHON_BASE}/include"
       else
