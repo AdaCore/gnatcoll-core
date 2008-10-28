@@ -281,8 +281,8 @@ AC_HELP_STRING(
              ;;
       esac
 
-      if [ -f ${PYTHON_DIR}/libpython${PYTHON_VERSION} ]; then
-         PYTHON_LIBS="${PYTHON_DIR}/libpython${PYTHON_VERSION} ${PYTHON_LIBS}"
+      if [ -f ${PYTHON_DIR}/libpython${PYTHON_VERSION}.a ]; then
+         PYTHON_LIBS="${PYTHON_DIR}/libpython${PYTHON_VERSION}.a ${PYTHON_LIBS}"
       else
          PYTHON_LIBS="-L${PYTHON_DIR} -lpython${PYTHON_VERSION} ${PYTHON_LIBS}"
       fi
