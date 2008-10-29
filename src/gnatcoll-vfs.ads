@@ -256,13 +256,13 @@ package GNATCOLL.VFS is
    --  needed.
 
    function Get_Root (File : Virtual_File) return Virtual_File;
-   --  returns root directory of the file
+   --  Return root directory of the file
 
    function Get_Parent (Dir : Virtual_File) return Virtual_File;
-   --  return the parent directory if it exists, else No_File is returned
+   --  Return the parent directory if it exists, else No_File is returned
 
    function Sub_Dir (Dir : Virtual_File; Name : String) return Virtual_File;
-   --  returns sub directory Name if it exists, else No_File is returned
+   --  Return sub directory Name if it exists, else No_File is returned
 
    procedure Change_Dir (Dir : Virtual_File);
    --  Changes working directory. Raises Directory_Error if Dir_Name does not
