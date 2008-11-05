@@ -19,14 +19,16 @@
 
 with Ada.Directories;           use Ada.Directories;
 with Ada.Unchecked_Deallocation;
+with Interfaces.C.Strings;      use Interfaces.C, Interfaces.C.Strings;
+
+with GNAT.Calendar;
+with GNAT.Directory_Operations; use GNAT.Directory_Operations;
+with GNAT.OS_Lib;               use GNAT.OS_Lib;
+
 with GNATCOLL.Filesystem.Windows;
 with GNATCOLL.Filesystem.Unix;
 with GNATCOLL.Mmap;             use GNATCOLL.Mmap;
 with GNATCOLL.Utils;            use GNATCOLL.Utils;
-with GNAT.Calendar;
-with GNAT.Directory_Operations; use GNAT.Directory_Operations;
-with GNAT.OS_Lib;               use GNAT.OS_Lib;
-with Interfaces.C.Strings;      use Interfaces.C, Interfaces.C.Strings;
 
 package body GNATCOLL.Filesystem is
 
@@ -690,7 +692,8 @@ package body GNATCOLL.Filesystem is
 
       C_Str : chars_ptr := Internal;
       Str   : constant String :=
-        GNAT.Directory_Operations.Format_Pathname (To_Ada (Value (C_Str)));
+                GNAT.Directory_Operations.Format_Pathname
+                  (To_Ada (Value (C_Str)));
    begin
       Free (C_Str);
       return Ensure_Directory (Filesystem_Record'Class (FS), Str);

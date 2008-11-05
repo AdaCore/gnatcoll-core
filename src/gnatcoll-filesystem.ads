@@ -322,14 +322,14 @@ package GNATCOLL.Filesystem is
      (FS             : Filesystem_Record;
       Local_Dir_Name : String;
       Dirs_Only      : Boolean := False;
-      Files_Only     : Boolean := False)
-      return GNAT.Strings.String_List;
+      Files_Only     : Boolean := False) return GNAT.Strings.String_List;
    --  Read the specified directory and returns a list of filenames
    --  (base names). If Dirs_Only is set, then the files returned are directory
    --  only. Same for Files_Only, concerning regular files.
    --  This does not return the two special directories "." and ".."
 
 private
+
    type Filesystem_Record is abstract tagged record
       Locale_To_Display_Encoder : Encoder_Function;
    end record;
