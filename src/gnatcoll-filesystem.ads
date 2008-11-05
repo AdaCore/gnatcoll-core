@@ -34,6 +34,7 @@ package GNATCOLL.Filesystem is
    type Filesystem_Access is access all Filesystem_Record'Class;
 
    function Get_Local_Filesystem return Filesystem_Access;
+   pragma Inline (Get_Local_Filesystem);
    --  Return an instance of the local filesystem running on the current host.
    --  This notion is slightly ambiguous when one involves NFS mounts (for
    --  instance a Unix machine might be mounting a windows filesystem), but
