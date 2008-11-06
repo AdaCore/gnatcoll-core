@@ -2048,6 +2048,17 @@ package body GNATCOLL.SQL is
       return Result;
    end SQL_In;
 
+   function SQL_In
+     (Self : SQL_Field'Class; List : String) return SQL_Criteria
+   is
+      Result : SQL_Criteria;
+   begin
+      Result.Criteria.Data      := new SQL_Criteria_Data (Criteria_In);
+      Result.Criteria.Data.Arg  := +Self;
+      Result.Criteria.Data.In_String := To_Unbounded_String (List);
+      return Result;
+   end SQL_In;
+
    ----------------
    -- SQL_Not_In --
    ----------------
@@ -2181,31 +2192,6 @@ package body GNATCOLL.SQL is
          return Data.Value.all = "TRUE";
       end Is_True2;
 
---        function Any1 return SQL_Field_Internal_Access;
---        function Named1 return Named_Field_Internal_Access;
---        function Any2 return SQL_Field_Internal_Access;
---        function Named2 return Named_Field_Internal_Access;
---
---        function Any1 return SQL_Field_Internal_Access is
---        begin
---           return Self.Criteria.Data.Arg1.Data.Field.Data;
---        end Any1;
---
---        function Named1 return Named_Field_Internal_Access is
---        begin
---           return Named_Field_Internal_Access (Any1);
---        end Named1;
---
---        function Any2 return SQL_Field_Internal_Access is
---        begin
---           return Self.Criteria.Data.Arg2.Data.Field.Data;
---        end Any2;
---
---        function Named2 return Named_Field_Internal_Access is
---        begin
---           return Named_Field_Internal_Access (Any2);
---        end Named2;
-
       Result : Unbounded_String;
       C      : Criteria_List.Cursor;
       C2     : Field_List.Cursor;
@@ -2301,7 +2287,7 @@ package body GNATCOLL.SQL is
                end loop;
 
                Append (Result, To_String (Self.Criteria.Data.Subquery));
-
+               Append (Result, To_String (Self.Criteria.Data.In_String));
                Append (Result, ")");
 
             when Null_Criteria =>

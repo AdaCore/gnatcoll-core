@@ -558,6 +558,8 @@ package GNATCOLL.SQL is
    function SQL_In
      (Self : SQL_Field'Class; List : SQL_Field_List) return SQL_Criteria;
    function SQL_In
+     (Self : SQL_Field'Class; List : String) return SQL_Criteria;
+   function SQL_In
      (Self : SQL_Field'Class; Subquery : SQL_Query) return SQL_Criteria;
    function SQL_Not_In
      (Self : SQL_Field'Class; List : SQL_Field_List) return SQL_Criteria;
@@ -1177,9 +1179,10 @@ private
             Criterias : Criteria_List.List;
 
          when Criteria_In | Criteria_Not_In =>
-            Arg      : SQL_Field_Pointer;
-            List     : SQL_Field_List;
-            Subquery : SQL_Query;
+            Arg       : SQL_Field_Pointer;
+            List      : SQL_Field_List;
+            Subquery  : SQL_Query;
+            In_String : Ada.Strings.Unbounded.Unbounded_String;
 
          when Null_Criteria =>
             Arg3 : SQL_Field_Pointer;
