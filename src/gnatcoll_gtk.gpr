@@ -22,13 +22,6 @@ project GnatColl_Gtk is
          case GnatColl_Shared.Python is
             when "yes" =>
                for Source_Dirs use Project'Source_Dirs & ("gtk/python");
-
-               --  Seems this line is sometimes needed when compiling GPS
-               --  (but not always). However, it fails when building gnatcoll
-               --  standalone, because of duplicate symbols in such a case.
-               --  Not clear what is happening, though.
-               --
-               --  for Library_Options use ("python_support_gtk.o");
             when "no"  =>
                for Source_Dirs use Project'Source_Dirs & ("gtk/nopython");
           end case;
@@ -41,6 +34,7 @@ project GnatColl_Gtk is
       for Default_Switches ("C") use
         ("-g", "-O2")
         & GnatColl_Shared.Python_Cflags
+        & GnatColl_Shared.Pygtk_Include
         & GnatColl_Shared.Gtk_Include;
    end Compiler;
 
