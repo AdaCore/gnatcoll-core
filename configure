@@ -3493,7 +3493,7 @@ echo "${ECHO_T}yes (version $PYTHON_MAJOR_VERSION.$PYTHON_MINOR_VERSION)" >&6
              ;;
       esac
 
-      if [ -f ${PYTHON_DIR}/libpython${PYTHON_VERSION}.a ]; then
+      if  -f ${PYTHON_DIR}/libpython${PYTHON_VERSION}.a ; then
          PYTHON_LIBS="${PYTHON_DIR}/libpython${PYTHON_VERSION}.a ${PYTHON_LIBS}"
       else
          PYTHON_LIBS="-L${PYTHON_DIR} -lpython${PYTHON_VERSION} ${PYTHON_LIBS}"
@@ -3506,11 +3506,7 @@ echo "${ECHO_T}yes (version $PYTHON_MAJOR_VERSION.$PYTHON_MINOR_VERSION)" >&6
       fi
 
       # Automatically check whether some libraries are needed to link with
-      # the python libraries. If you are using the default system library, it is
-      # generally the case that at least -lpthread will be needed. But you might
-      # also have recompiled your own version, and if it doesn't depend on
-      # pthreads, we shouldn't bring that in, since that also impacts the choice
-      # of the GNAT runtime
+      # the python libraries.
 
       CFLAGS="${CFLAGS} ${PYTHON_CFLAGS}"
       LIBS="${LIBS} ${PYTHON_LIBS}"
@@ -3551,7 +3547,7 @@ else
   echo "$as_me: failed program was:" >&5
 sed 's/^/| /' conftest.$ac_ext >&5
 
-LIBS="${LIBS} -lpthread -lutil"
+LIBS="${LIBS} -lutil"
          cat >conftest.$ac_ext <<_ACEOF
 #line $LINENO "configure"
 /* confdefs.h.  */
@@ -3580,8 +3576,44 @@ if { (eval echo "$as_me:$LINENO: \"$ac_link\"") >&5
   ac_status=$?
   echo "$as_me:$LINENO: \$? = $ac_status" >&5
   (exit $ac_status); }; }; then
-  PYTHON_LIBS="${PYTHON_LIBS} -lpthread -lutil"
+  PYTHON_LIBS="${PYTHON_LIBS} -lutil"
             echo "$as_me:$LINENO: result: yes" >&5
+echo "${ECHO_T}yes" >&6
+else
+  echo "$as_me: failed program was:" >&5
+sed 's/^/| /' conftest.$ac_ext >&5
+
+LIBS="${LIBS} -lpthread"
+             cat >conftest.$ac_ext <<_ACEOF
+#line $LINENO "configure"
+/* confdefs.h.  */
+_ACEOF
+cat confdefs.h >>conftest.$ac_ext
+cat >>conftest.$ac_ext <<_ACEOF
+/* end confdefs.h.  */
+#include <Python.h>
+int
+main ()
+{
+Py_Initialize();
+  ;
+  return 0;
+}
+_ACEOF
+rm -f conftest.$ac_objext conftest$ac_exeext
+if { (eval echo "$as_me:$LINENO: \"$ac_link\"") >&5
+  (eval $ac_link) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); } &&
+         { ac_try='test -s conftest$ac_exeext'
+  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); }; }; then
+  PYTHON_LIBS="${PYTHON_LIBS} -lpthread -lutil"
+                echo "$as_me:$LINENO: result: yes" >&5
 echo "${ECHO_T}yes" >&6
 else
   echo "$as_me: failed program was:" >&5
@@ -3589,9 +3621,11 @@ sed 's/^/| /' conftest.$ac_ext >&5
 
 echo "$as_me:$LINENO: result: no" >&5
 echo "${ECHO_T}no" >&6
-            WITH_PYTHON=no
-            PYTHON_BASE=
-            PYTHON_LIBS=
+                WITH_PYTHON=no
+                PYTHON_BASE=
+                PYTHON_LIBS=
+fi
+rm -f conftest.$ac_objext conftest$ac_exeext conftest.$ac_ext
 fi
 rm -f conftest.$ac_objext conftest$ac_exeext conftest.$ac_ext
 fi

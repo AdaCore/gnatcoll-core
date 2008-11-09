@@ -149,12 +149,7 @@ AC_HELP_STRING(
 #    @PYTHON_VERSION@: Version of python detected
 #    @PYTHON_CFLAGS@:  Compiler flags to use for python code
 #    @PYTHON_DIR@:     Directory for libpython.so
-#    @PYTHON_LIBS@:    extra command line switches to pass to the linker
-#                      In some cases, -lpthread should be added. We do not
-#                      add this systematically, to allow you to recompile
-#                      your own libpython and avoid dragging the tasking
-#                      Ada runtime in your application if you do not use it
-#                      otherwise
+#    @PYTHON_LIBS@:    extra command line switches to pass to the linker.
 #    @WITH_PYTHON@: either "yes" or "no" depending on whether
 #                      python support is available.
 #############################################################
@@ -294,11 +289,7 @@ AC_HELP_STRING(
       fi
 
       # Automatically check whether some libraries are needed to link with
-      # the python libraries. If you are using the default system library, it is
-      # generally the case that at least -lpthread will be needed. But you might
-      # also have recompiled your own version, and if it doesn't depend on
-      # pthreads, we shouldn't bring that in, since that also impacts the choice
-      # of the GNAT runtime
+      # the python libraries.
 
       CFLAGS="${CFLAGS} ${PYTHON_CFLAGS}"
       LIBS="${LIBS} ${PYTHON_LIBS}"
@@ -307,15 +298,20 @@ AC_HELP_STRING(
       AC_LINK_IFELSE(
         [AC_LANG_PROGRAM([#include <Python.h>],[Py_Initialize();])],
         [AC_MSG_RESULT(yes)],
-        [LIBS="${LIBS} -lpthread -lutil"
+        [LIBS="${LIBS} -lutil"
          AC_LINK_IFELSE(
            [AC_LANG_PROGRAM([#include <Python.h>],[Py_Initialize();])],
-           [PYTHON_LIBS="${PYTHON_LIBS} -lpthread -lutil"
+           [PYTHON_LIBS="${PYTHON_LIBS} -lutil"
             AC_MSG_RESULT(yes)],
-           [AC_MSG_RESULT(no, [can't compile and link python example])
-            WITH_PYTHON=no
-            PYTHON_BASE=[]
-            PYTHON_LIBS=[]])])
+            [LIBS="${LIBS} -lpthread"
+             AC_LINK_IFELSE(
+               [AC_LANG_PROGRAM([#include <Python.h>],[Py_Initialize();])],
+               [PYTHON_LIBS="${PYTHON_LIBS} -lpthread -lutil"
+                AC_MSG_RESULT(yes)],
+               [AC_MSG_RESULT(no, [can't compile and link python example])
+                WITH_PYTHON=no
+                PYTHON_BASE=[]
+                PYTHON_LIBS=[]])])])
    fi
 
    AC_SUBST(PYTHON_BASE)
