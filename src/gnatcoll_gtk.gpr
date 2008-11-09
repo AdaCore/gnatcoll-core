@@ -34,9 +34,17 @@ project GnatColl_Gtk is
           end case;
    end case;
 
-   package Compiler renames GnatColl_Shared.Compiler;
+   package Compiler is
+      for Default_Switches ("Ada") use
+        GnatColl_Shared.Compiler'Default_Switches ("Ada");
 
-   package Linker   renames GnatColl_Shared.Linker;
+      for Default_Switches ("C") use
+        ("-g", "-O2")
+        & GnatColl_Shared.Python_Cflags
+        & GnatColl_Shared.Gtk_Include;
+   end Compiler;
+
+   package Linker renames GnatColl_Shared.Linker;
 
    package Ide renames GnatColl_Shared.Ide;
 
