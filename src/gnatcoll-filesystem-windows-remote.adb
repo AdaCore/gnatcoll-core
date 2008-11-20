@@ -25,6 +25,16 @@ with GNAT.Regpat;                   use GNAT.Regpat;
 package body GNATCOLL.Filesystem.Windows.Remote is
 
    --------------
+   -- Is_Local --
+   --------------
+
+   function Is_Local (FS : Remote_Windows_Filesystem_Record) return Boolean is
+      pragma Unreferenced (FS);
+   begin
+      return False;
+   end Is_Local;
+
+   --------------
    -- Get_Host --
    --------------
 

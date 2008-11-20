@@ -38,6 +38,8 @@ package GNATCOLL.Filesystem.Windows.Remote is
    function Get_Host (FS : Remote_Windows_Filesystem_Record) return String;
    --  Return the host on which the filesystem is running
 
+   overriding function Is_Local
+     (FS : Remote_Windows_Filesystem_Record) return Boolean;
    overriding function Home_Dir
      (FS   : Remote_Windows_Filesystem_Record) return String;
    overriding function Is_Regular_File

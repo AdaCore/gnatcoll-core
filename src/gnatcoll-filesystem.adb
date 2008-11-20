@@ -234,29 +234,36 @@ package body GNATCOLL.Filesystem is
       Dir_Separator : constant Character :=
                         Dir_Sep (Filesystem_Record'Class (FS));
    begin
-      Last_Dir := Path'First;
+      if Is_Local (Filesystem_Record'Class (FS)) then
+         return Normalize_Pathname (Path, Case_Sensitive => False);
+      else
+         Last_Dir := Path'First;
 
-      for J in Path'Range loop
-         if Path (J) = Dir_Separator then
-            if J < Path'Last - 3
-              and then Path (J .. J + 3) = Dir_Separator & ".." & Dir_Separator
-            then
-               return Normalize
-                 (FS,
-                  Path (Path'First .. Last_Dir) & Path (J + 4 .. Path'Last));
+         for J in Path'Range loop
+            if Path (J) = Dir_Separator then
+               if J < Path'Last - 3
+                 and then Path (J .. J + 3) =
+                           Dir_Separator & ".." & Dir_Separator
+               then
+                  return Normalize
+                    (FS,
+                     Path
+                       (Path'First .. Last_Dir) & Path (J + 4 .. Path'Last));
 
-            elsif J < Path'Last - 2
-              and then Path (J .. J + 2) = Dir_Separator & '.' & Dir_Separator
-            then
-               return Normalize
-                 (FS, Path (Path'First .. J) & Path (J + 3 .. Path'Last));
+               elsif J < Path'Last - 2
+                 and then Path (J .. J + 2) =
+                           Dir_Separator & '.' & Dir_Separator
+               then
+                  return Normalize
+                    (FS, Path (Path'First .. J) & Path (J + 3 .. Path'Last));
+               end if;
+
+               Last_Dir := J;
             end if;
+         end loop;
 
-            Last_Dir := J;
-         end if;
-      end loop;
-
-      return Normalize_Pathname (Path, Case_Sensitive => False);
+         return Path;
+      end if;
    end Normalize;
 
    --------------

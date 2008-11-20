@@ -39,6 +39,8 @@ package GNATCOLL.Filesystem.Unix.Remote is
    function Get_Host (FS : Remote_Unix_Filesystem_Record) return String;
    --  Return the host on which the filesystem is running
 
+   overriding function Is_Local
+     (FS : Remote_Unix_Filesystem_Record) return Boolean;
    overriding function Home_Dir
      (FS   : Remote_Unix_Filesystem_Record) return String;
    overriding function Is_Regular_File

@@ -61,6 +61,15 @@ package body GNATCOLL.Filesystem.Unix.Remote is
    end Setup;
 
    --------------
+   -- Is_Local --
+   --------------
+
+   function Is_Local (FS : Remote_Unix_Filesystem_Record) return Boolean is
+   begin
+      return False;
+   end Is_Local;
+
+   --------------
    -- Home_Dir --
    --------------
 

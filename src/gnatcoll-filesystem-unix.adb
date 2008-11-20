@@ -19,6 +19,16 @@
 
 package body GNATCOLL.Filesystem.Unix is
 
+   --------------
+   -- Is_Local --
+   --------------
+
+   function Is_Local (FS : Unix_Filesystem_Record) return Boolean is
+      pragma Unreferenced (FS);
+   begin
+      return True;
+   end Is_Local;
+
    -------------------------
    -- Directory_Separator --
    -------------------------

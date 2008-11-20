@@ -42,6 +42,16 @@ package body GNATCOLL.Filesystem.Windows is
         and then Path (Path'First + Cygdrive'Length + 1) = '/';
    end Is_Cygdrive;
 
+   --------------
+   -- Is_Local --
+   --------------
+
+   function Is_Local (FS : Windows_Filesystem_Record) return Boolean is
+      pragma Unreferenced (FS);
+   begin
+      return True;
+   end Is_Local;
+
    -------------------------
    -- Directory_Separator --
    -------------------------

@@ -46,6 +46,9 @@ package GNATCOLL.Filesystem is
    procedure Free (FS : in out Filesystem_Access);
    --  Free the memory allocated for FS
 
+   function Is_Local (FS : Filesystem_Record) return Boolean is abstract;
+   --  Tell if FS is a local or remote filesystem.
+
    function Dir_Sep (FS : Filesystem_Record) return Character is abstract;
    --  Return the filesystem's directory separator
 

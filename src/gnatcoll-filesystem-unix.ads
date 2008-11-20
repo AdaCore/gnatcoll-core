@@ -24,6 +24,7 @@ package GNATCOLL.Filesystem.Unix is
 
    type Unix_Filesystem_Record is new Filesystem_Record with null record;
 
+   overriding function Is_Local (FS : Unix_Filesystem_Record) return Boolean;
    overriding function Dir_Sep (FS : Unix_Filesystem_Record) return Character;
    overriding function To_Unix
      (FS         : Unix_Filesystem_Record;
