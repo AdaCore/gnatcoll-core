@@ -22,12 +22,16 @@ shared relocatable:
 
 build_library_type:
 	${MAKE} -C src -f Makefile.gnatcoll
+ifeq (${WITH_PYTHON},yes)
 	${MAKE} -C src -f Makefile.python
+endif
 ifeq (${WITH_GTK},yes)
 	${MAKE} -C src -f Makefile.gtk
 endif
+ifeq (${WITH_POSTGRES},yes)
 	${MAKE} -C src -f Makefile.postgres
 	$(MAKE) -C src -f Makefile.tools
+endif
 
 examples:
 	${MAKE} -C examples
