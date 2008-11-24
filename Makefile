@@ -57,13 +57,17 @@ install_library_type:
 	${MKDIR} ${includedir}/${TARNAME}
 	${MKDIR} ${datadir}/gps/plug-ins
 	${MAKE} -C src -f Makefile.gnatcoll install
+ifeq (${WITH_PYTHON},yes)
 	${MAKE} -C src -f Makefile.python install
+endif
 	${MAKE} -C docs install
 ifeq (${WITH_GTK},yes)
 	${MAKE} -C src -f Makefile.gtk install
 endif
+ifeq (${WITH_POSTGRES},yes)
 	${MAKE} -C src -f Makefile.postgres install
 	${MAKE} -C src -f Makefile.tools install
+endif
 	${CP} distrib/gnatcoll_gps.xml ${datadir}/gps/plug-ins
 	${CP} distrib/*.gpr ${libdir}/gnat
 
