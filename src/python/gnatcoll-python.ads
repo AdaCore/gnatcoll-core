@@ -167,6 +167,16 @@ package GNATCOLL.Python is
    --  Returns true if the Obj is an integer object.
 
    ------------
+   -- Floats --
+   ------------
+
+   function PyFloat_AsDouble (Float : PyObject) return Interfaces.C.Double;
+   --  Return the value of Float.
+
+   function PyFloat_Check (Obj : PyObject) return Boolean;
+   --  Returns true if the Obj is a float object.
+
+   ------------
    -- Tuples --
    ------------
    --  The following subprograms are in fact simple examples of importing the C
@@ -779,6 +789,9 @@ package GNATCOLL.Python is
    --  function (get its code with PyFunction_Get_Code), specifying some of
    --  the parameters
 
+   function Py_Main return Integer;
+   --  Run the python interpreter main program
+
    --------------------------------------
    -- Evaluating and Tracing execution --
    --------------------------------------
@@ -896,6 +909,7 @@ private
    pragma Inline (PyArg_ParseTuple);
    pragma Inline (PyString_Check);
    pragma Inline (PyInt_Check);
+   pragma Inline (PyFloat_Check);
    pragma Import (C, Py_Initialize, "Py_Initialize");
    pragma Import (C, Py_Finalize, "Py_Finalize");
    pragma Import (C, PyModule_GetDict, "PyModule_GetDict");
@@ -918,6 +932,7 @@ private
    pragma Import (C, PyTuple_Size, "PyTuple_Size");
    pragma Import (C, PyInt_FromLong, "PyInt_FromLong");
    pragma Import (C, PyInt_AsLong, "PyInt_AsLong");
+   pragma Import (C, PyFloat_AsDouble, "PyFloat_AsDouble");
    pragma Import (C, PyInt_GetMax, "PyInt_GetMax");
    pragma Import (C, PyErr_Occurred, "PyErr_Occurred");
    pragma Import (C, PyList_New, "PyList_New");

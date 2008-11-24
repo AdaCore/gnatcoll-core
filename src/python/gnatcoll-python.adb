@@ -218,6 +218,17 @@ package body GNATCOLL.Python is
    end PyInt_Check;
 
    -------------------
+   -- PyFloat_Check --
+   -------------------
+
+   function PyFloat_Check (Obj : PyObject) return Boolean is
+      function Internal (Obj : PyObject) return Integer;
+      pragma Import (C, Internal, "ada_pyfloat_check");
+   begin
+      return Internal (Obj) = 1;
+   end PyFloat_Check;
+
+   -------------------
    -- PyTuple_Check --
    -------------------
 
@@ -732,6 +743,17 @@ package body GNATCOLL.Python is
       Dict := PyModule_GetDict (Module);
       return PyDict_GetItemString (Dict, Name);
    end Lookup_Class_Object;
+
+   -------------
+   -- Py_Main --
+   -------------
+
+   function Py_Main return Integer is
+      function Internal return Integer;
+      pragma Import (C, Internal, "ada_py_main");
+   begin
+      return Internal;
+   end Py_Main;
 
    ---------------------
    -- PyCObject_Check --

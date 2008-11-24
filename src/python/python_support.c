@@ -123,6 +123,12 @@ ada_pyint_check (PyObject* obj)
 }
 
 int
+ada_pyfloat_check (PyObject* obj)
+{
+  return PyFloat_Check (obj);
+}
+
+int
 ada_pyfunction_check (PyObject* obj)
 {
   return PyFunction_Check (obj);
@@ -341,5 +347,14 @@ ada_py_arg_parsetuple_ptr5
    void *arg1, void * arg2, void *arg3, void *arg4, void *arg5)
 {
   PyArg_ParseTuple (o, fmt, arg1, arg2, arg3, arg4, arg5);
+}
+
+extern int gnat_argc;
+extern char **gnat_argv;
+
+int
+ada_py_main ()
+{
+   return Py_Main (gnat_argc, gnat_argv);
 }
 
