@@ -616,11 +616,11 @@ support wasn't compiled in, these packages will do nothing.
 }
 
 @noindent
-@cindex GNAT.Python 
-@cindex gnat-python.ads 
+@cindex GNATCOLL.Python
+@cindex gnatcoll-python.ads
 In addition to the API common to all languages (@pxref{Scripts API}),
 @value{gnatcoll} also comes with a low-level interface to the python
-library. This interface is available in the @file{GNAT.Python} package.
+library. This interface is available in the @file{GNATCOLL.Python} package.
 In general, it is much simpler to use the common API rather than this
 specialized one, though, since otherwise you will need to take care of lots
 of details like memory management, conversion to and from python types,@dots{}
@@ -707,7 +707,7 @@ manipulate it in the same way
 In addition to the functions exported by each specific scripting language,
 as described above, @value{gnatcoll} exports the following to all the
 scripting languages. These are exported when your Ada code calls the
-Ada procedure @code{GNAT.Scripts.Register_Standard_Classes}, which should
+Ada procedure @code{GNATCOLL.Scripts.Register_Standard_Classes}, which should
 done after you have loaded all the scripting languages.
 
 @deftp Class Console
@@ -722,7 +722,8 @@ the python standard output streams @code{sys.stdin}, @code{sys.stdout}
 and @code{sys.stderr} are redirected to an instance of that class. If you
 want to see python's error messages or usual output in your application,
 you must register that class, and define a default console for your
-scripting language through calls to @code{GNAT.Scripts.Set_Default_Console}.
+scripting language through calls to
+@code{GNATCOLL.Scripts.Set_Default_Console}.
 
 You can later add new methods to this class, which would be specific to your
 application. Or you can derive this class into a new class to achieve a similar
@@ -771,7 +772,7 @@ particular, each @file{.ads} file fully documents all its public API.
 
 As described above, @value{gnatcoll} contains several levels of API. In
 particular, it provides a low-level interface to python, in the packages
-@code{GNAT.Python}. This interface is used by the rest of @value{gnatcoll},
+@code{GNATCOLL.Python}. This interface is used by the rest of @value{gnatcoll},
 but is likely too low-level to really be convenient in your applications,
 since you need to take care of memory management and type conversions by
 yourself.
@@ -853,7 +854,7 @@ compilation in your application to support the various cases.
 @subsubsection Create the scripts repository
 @c -----------------------------------------------------------------------
 @noindent
-The type @code{GNAT.Scripts.Scripts_Repository} will contain various
+The type @code{GNATCOLL.Scripts.Scripts_Repository} will contain various
 variables common to all the scripting languages, as well as a list of the
 languages that were activated. This is the starting point for all other
 types, since from there you have access to everything. You will have only
@@ -872,7 +873,7 @@ way to work around this limitation is to store the additional arguments
 
 As a result, the code would look like
 
-@CODESAMPLE{@b{with} GNAT.Scripts;@NL{}
+@CODESAMPLE{@b{with} GNATCOLL.Scripts;@NL{}
 Repo : Scripts_Repository := @b{new} Scripts_Repository_Data;}
 
 @noindent
@@ -902,8 +903,8 @@ not mandatory to only build those languages that you will use}
 This is done through a simple call to one or more subprograms. The following
 example registers both the shell and python languages
 
-@CODESAMPLE{@b{with} GNAT.Scripts.Python;@NL{}
-@b{with} GNAT.Scripts.Shell;@NL{}
+@CODESAMPLE{@b{with} GNATCOLL.Scripts.Python;@NL{}
+@b{with} GNATCOLL.Scripts.Shell;@NL{}
 Register_Shell_Scripting (Repo);@NL{}
 Register_Python_Scripting (Repo, "MyModule");}
 
@@ -955,8 +956,8 @@ help debugging scripts), and possibly emulate input when a script is waiting
 for such input.
 
 @value{gnatcoll} solved this problem by using an abstract class
-@code{GNAT.Scripts.Virtual_Console_Record} that defines an API for these
-consoles. This API is used throughout @code{GNAT.Scripts} whenever input or
+@code{GNATCOLL.Scripts.Virtual_Console_Record} that defines an API for these
+consoles. This API is used throughout @code{GNATCOLL.Scripts} whenever input or
 output has to be performed.
 
 @TIP{The @file{scripts/examples} directory in the @value{gnatcoll} package
@@ -966,7 +967,7 @@ If you want to provide feedback or interact with users, you will need to
 provide an actual implementation for these @code{Virtual_Console}, specific
 to your application. This could be a graphical text window, or based on
 @code{Ada.Text_IO}. The full API is fully documented in
-@file{gnat-scripts.ads}, but here is a list of the main subprograms that
+@file{gnatcoll-scripts.ads}, but here is a list of the main subprograms that
 need to be overriden.
 
 @defmethod Virtual_Console  Insert_Text Txt
@@ -999,14 +1000,16 @@ called when the user scripts read from their stdin.
 @defmethod Virtual_Console Set_Data_Primitive Instance
 @defmethodx Virtual_Console Get_Instance Console
 These two methods are responsible for storing an instance of @var{Console}
-into a @code{GNAT.Scripts.Class_Instance}. Such an instance is what the user
+into a @code{GNATCOLL.Scripts.Class_Instance}. Such an instance is
+what the user
 manipulates from his scripting language. But when he executes a method, the
 Ada callback must know how to get the associated @code{Virtual_Console}
 back to perform actual operations on it.
 
-These methods are implemented using one of the @code{GNAT.Scripts.Set_Data}
-and @code{GNAT.Scripts.Get_Data} operations when in text mode, or possibly
-@code{GNAT.Scripts.Gtkada.Set_Data} and @code{GNAT.Scripts.Gtkada.Get_Data}
+These methods are implemented using one of the @code{GNATCOLL.Scripts.Set_Data}
+and @code{GNATCOLL.Scripts.Get_Data} operations when in text mode, or possibly
+@code{GNATCOLL.Scripts.Gtkada.Set_Data} and
+@code{GNATCOLL.Scripts.Gtkada.Get_Data}
 when manipulating graphical GtkAda objects.
 @end defmethod
 
@@ -1042,7 +1045,7 @@ scripting languages, without further work required on your part.
 @noindent
 
 The following diagram shows the dependencies between the major data types
-defined in @file{GNAT.Scripts}. Most of these are abstract classes that
+defined in @file{GNATCOLL.Scripts}. Most of these are abstract classes that
 are implemented by the various scripting languages. Here is a brief description
 of the role of each type:
 
@@ -1264,7 +1267,7 @@ Creating a new class is done through a call to @code{New_Class}, as shown
 in the example below.
 
 @CODESAMPLE{MyClass : Class_Type;@NL{}
-MyClass := GNAT.Scripts.New_Class (Repo, "MyClass");}
+MyClass := GNATCOLL.Scripts.New_Class (Repo, "MyClass");}
 
 At this stage, nothing is visible in the scripting language, but all the
 required setup has been done internally so that you can now add methods to
@@ -1302,7 +1305,7 @@ c2.print ("foo")
 
 Here is the corresponding Ada code.
 
-@CODESAMPLE{@b{with} GNAT.Scripts.Impl;@NL{}
+@CODESAMPLE{@b{with} GNATCOLL.Scripts.Impl;@NL{}
 @b{procedure} Handler@NL{}
    (Data : @b{in out} Callback_Data'Class; Command : String)@NL{}
 @b{is}@NL{}
@@ -1357,7 +1360,7 @@ scripts:
 @b{end record};}
 
 As you can see, this is not a tagged type, but could certainly be. There is
-of course no procedure @code{Set_Data} in @file{GNAT.Scripts} that enables
+of course no procedure @code{Set_Data} in @file{GNATCOLL.Scripts} that enables
 us to store @code{MyType} in a @code{Class_Instance}. This example shows how
 to write such a procedure. The rest of the code would be similar to the
 first example, with a constructor that calls @code{Set_Data}, and methods
@@ -1414,7 +1417,7 @@ There are two cases to distinguish here:
 @itemize @bullet
 @item The Ada object derives from a GtkAda object
 
-In such a case, the package @file{GNAT.Scripts.GtkAda} provides three
+In such a case, the package @file{GNATCOLL.Scripts.GtkAda} provides three
 procedures that automatically associate the instance with the object,
 and can return the class instance associated with any given GtkAda
 object, or can return the GtkAda object stored in the instance. There is
@@ -1431,7 +1434,7 @@ which case no further operation on that instance is possible).
 @item The Ada object does not derive from a GtkAda object
 
 In such a case, you should store the list of associated instances with
-your object. The type @code{GNAT.Scripts.Instance_List_Access} is meant for
+your object. The type @code{GNATCOLL.Scripts.Instance_List_Access} is meant for
 that purpose, and provides two @code{Set} and @code{Get} primitives
 to retrieve existing instances.
 
@@ -1549,7 +1552,7 @@ The final step in starting up your application is to load extensions or
 plug-ins written in one of the scripting languages.
 
 There is not much to be said here, except that you should use the
-@code{GNAT.Scripts.Execute_File} procedure to do so.
+@code{GNATCOLL.Scripts.Execute_File} procedure to do so.
 
 
 
@@ -1564,7 +1567,7 @@ information messages or debug messages among others. These logs can be
 displayed and stored in a number of places: standard output, a file, the
 system logger, an application-specific database table,@dots{}
 
-The package @file{GNAT.Traces} addresses the various needs, except for the
+The package @file{GNATCOLL.Traces} addresses the various needs, except for the
 application-specific database, which of course is specific to your business
 and needs various custom fields in any case, which cannot be easily provided
 through a general interface.
@@ -1610,7 +1613,7 @@ is installed at a customer's site. The problem here is that each module
 might output a lot of information, thus confusing the logs; this also does
 not help debugging.
 
-The @code{GNAT.Traces} package allows the user to configure which handles
+The @code{GNATCOLL.Traces} package allows the user to configure which handles
 should actually generate logs, and which should just be silent and not
 generate anything. Depending on the part of the application that needs to
 be investigated, one can therefore enable a set of handles or another, to
@@ -1729,12 +1732,12 @@ DEBUG.COLORS=yes}
 
 If you need or want to parse an external configuration file as described
 in the first section, the code that initializes your application should
-contain a call to @code{GNAT.Traces.Parse_Config_File}. As documented,
+contain a call to @code{GNATCOLL.Traces.Parse_Config_File}. As documented,
 this takes in parameter the name of the configuration file to parse. When
 none is specified, the algorithm specified in the previous section will be
 used to find an appropriate configuration.
 
-@CODESAMPLE{GNAT.Traces.Parse_Config_File;}
+@CODESAMPLE{GNATCOLL.Traces.Parse_Config_File;}
 
 The code, as written, will end up looking for a file @file{.gnatdebug} in
 the current directory.
@@ -1778,7 +1781,7 @@ which are later used for output.
 @b{end} Pkg2;@NL{}}
 
 Once the handles have been declared, output is a matter of calling the
-@code{GNAT.Traces.Trace} procedure, as in the following sample:
+@code{GNATCOLL.Traces.Trace} procedure, as in the following sample:
 
 @CODESAMPLE{
    Trace (Me, "I am here");
@@ -1817,7 +1820,7 @@ displayed with a red background to make it more obvious.
 @noindent
 
 Speaking of color, a number of decorators are defined by
-@code{GNAT.Traces}. Their goal is not to be used for outputting information,
+@code{GNATCOLL.Traces}. Their goal is not to be used for outputting information,
 but to configure what extra information should be output with all log
 messages. They are activated through the same configuration file as the
 traces, with the same syntax (i.e either @code{"=yes"} or @code{"=no"}).
@@ -1865,7 +1868,7 @@ comment file.
 
 @item DEBUG.FINALIZE_TRACES
 This handle is activated by default, and indicates whether
-@code{GNAT.Traces.Finalize} should have any effect. This can be set to False
+@code{GNATCOLL.Traces.Finalize} should have any effect. This can be set to False
 when debugging, to ensure that traces are available during the finalization
 of your application.
 @end table
@@ -1876,19 +1879,19 @@ output on a single line.
 
 @CODESAMPLE{
  [MODULE] 6/247 User Message (2007-07-03 13:12:53.46)@NL{}
-    (elapsed: 2ms)(loc: gnat-traces.adb:224)@NL{}
-    (entity:GNAT.Traces.Log)@NL{}
+    (elapsed: 2ms)(loc: gnatcoll-traces.adb:224)@NL{}
+    (entity:GNATCOLL.Traces.Log)@NL{}
     (callstack: 40FD9902 082FCFDD 082FE8DF )
 }
 
 Depending on your application, there are lots of other possible decorators
 that could be useful (for instance the current thread, or the name of the
-executable when you have several of them,@dots{}). Since @code{GNAT.Traces}
+executable when you have several of them,@dots{}). Since @code{GNATCOLL.Traces}
 cannot provide all possible decorators, it provides support, through tagged
 types, so that you can create your own decorators.
 
 This needs you to override the @code{Trace_Handle_Record} tagged type. Since
-this type is created through calls to @code{GNAT.Traces.Create}. This is done
+this type is created through calls to @code{GNATCOLL.Traces.Create}. This is done
 by providing an additional @var{Factory} parameter to @code{Create}; this is
 a function that allocates and returns the new handle.
 
@@ -1935,7 +1938,7 @@ disappear along with its contents if the application crashes); or you could
 write to a socket (or even a CORBA ORB) to communicate with another
 application which is charge of monitoring your application.
 
-@code{GNAT.Traces} provides the type @code{Trace_Stream_Record}, which can
+@code{GNATCOLL.Traces} provides the type @code{Trace_Stream_Record}, which can
 be overridden to redirect the traces to your own streams.
 
 Let's assume for now that you have defined a new type of stream (called
@@ -1955,12 +1958,12 @@ MODULE=yes >&mystream:bar}
 You need of course to do a bit of coding in Ada to create the stream. This
 is done by creating a new child of @code{Trace_Stream_Record}, and override
 the two primitive operations @code{Put} and @code{Newline} (at least).
-In this implementation, and because @code{GNAT.Traces.Trace} takes care of
+In this implementation, and because @code{GNATCOLL.Traces.Trace} takes care of
 not outputting two messages at the same time, we can just output to the
 file as characters are made available. In some other cases, however,
 the implementation will need to buffer the characters until the end of
 line is seen, and output the line with a single call. See for instance
-the implementation of @code{GNAT.Traces.Syslog}, which needs to do
+the implementation of @code{GNATCOLL.Traces.Syslog}, which needs to do
 exactly that.
 
 @CODESAMPLE{
@@ -1984,7 +1987,7 @@ function in charge of creating the new stream. This function receives
 in parameter the argument specified by the user in the configuration file
 (after the @code{":"} character, if any), and must return a newly
 allocated stream. This function is also never called twice with the
-same argument, since @code{GNAT.Traces} automatically reuses an existing
+same argument, since @code{GNATCOLL.Traces} automatically reuses an existing
 stream when one with the same name and arguments already exists.
 
 @CODESAMPLE{
@@ -2012,14 +2015,14 @@ not available on other systems. When you compile @value{gnatcoll}, you should
 specify the switch @code{--enable-syslog} to configure to activate the
 support. If either this switch wasn't specified, or configure could not find
 the relevant header files anyway, then support for @code{syslog} will not
-be available. In this case, the package @code{GNAT.Traces.Syslog} is still
+be available. In this case, the package @code{GNATCOLL.Traces.Syslog} is still
 available, but contains a single function that does nothing. If your
 configuration files redirect some trace handles to @code{"syslog"}, they will
 instead be redirect to the default stream or to standard output.
 
 Activating support for syslog requires the following call in your application:
 
-@CODESAMPLE{GNAT.Traces.Syslog.Register_Syslog_Stream;}
+@CODESAMPLE{GNATCOLL.Traces.Syslog.Register_Syslog_Stream;}
 
 This procedure is always available, whether your system supports or not
 syslog, and will simply do nothing if it doesn't support syslog. This means
@@ -2029,7 +2032,7 @@ that, and you can let @value{gnatcoll} take care of this.
 After the above call, trace handles can be redirected to a stream named
 @code{"syslog"}.
 
-The package @code{GNAT.Traces.Syslog} also contains a low-level interface
+The package @code{GNATCOLL.Traces.Syslog} also contains a low-level interface
 to syslog, which, although fully functional, you should probably not use,
 since that would make your code system-dependent.
 
@@ -2037,7 +2040,7 @@ Syslog itself dispatches its output based on two criteria: the
 @code{facility}, which indicates what application emitted the message,
 and where it should be filed, and the @code{level} which indicates the
 urgency level of the message. Both of these criteria can be specified in
-the @code{GNAT.Traces} configuration file, as follows:
+the @code{GNATCOLL.Traces} configuration file, as follows:
 
 @CODESAMPLE{
   MODULE=yes >&syslog:user:error
@@ -2045,7 +2048,7 @@ the @code{GNAT.Traces} configuration file, as follows:
 
 The above configuration will redirect to a facility called @code{user},
 with an urgency level @code{error}. See the enumeration types in
-@file{gnat-traces-syslog.ads} for more information on valid facilities
+@file{gnatcoll-traces-syslog.ads} for more information on valid facilities
 and levels.
 
 @c ------------------------------------------------------------------------
@@ -2119,7 +2122,7 @@ Even when you need to read the whole contents, using @code{mmap()} is
 still two or three times faster, which is especially interesting on big
 files.
 
-@value{gnatcoll}'s @code{GNAT.Mmap} package provides a high-level abstraction
+@value{gnatcoll}'s @code{GNATCOLL.Mmap} package provides a high-level abstraction
 on top of the @code{mmap} system call. As for most other packages in
 @value{gnatcoll}, it also nicely handles the case where your system does not
 actually support @code{mmap}, and will in that case fallback on using
@@ -2139,7 +2142,7 @@ in most cases, unless you expect to read files bigger than @code{Integer'Last}
 bytes long. In such cases you need to read chunks of the file separately.
 The @code{mmap} system call is such that its performance does not depend on
 the size of the file your are mapping. Of course, this could be a problem if
-@code{GNAT.Mmap} falls back on calling @code{read}, since in that case it
+@code{GNATCOLL.Mmap} falls back on calling @code{read}, since in that case it
 needs to allocate as much memory as your file. Therefore in some cases you
 will also want to only read chunks of the file at once.
 
@@ -2160,7 +2163,7 @@ will also want to only read chunks of the file at once.
 
 To read only a chunk of the file, your code would look like the following.
 At the low-level, the system call will always read chunks multiple of a
-size called the page_size. Although @code{GNAT.Mmap} takes care of rounding
+size called the page_size. Although @code{GNATCOLL.Mmap} takes care of rounding
 the numbers appropriately, it is recommended that you pass parameters that
 are multiples of that size. That optimizes the number of system calls you
 will need to do, and therefore speeds up your application somewhat.
@@ -2201,7 +2204,7 @@ of the page_size, so we could in fact replace the loop with the simpler
  @b{for} S @b{in} 1 .. Last (File) @b{loop} @NL{}
 }
 
-If you intend to modify the contents of the file, not that @code{GNAT.Mmap}
+If you intend to modify the contents of the file, not that @code{GNATCOLL.Mmap}
 currently gives you no way to change the size of the file. The only difference
 compared to the code used for reading the file is the call to open the file,
 which should be
@@ -2213,7 +2216,7 @@ which should be
 Modifications to Str are automatically reflected in the file. However, there
 is no guarantee this saving is done immediately. It could be done only when
 you call @code{Close}. This is in particular always the case when your system
-does not support @code{mmap} and @code{GNAT.Mmap} had to fallback on calls to
+does not support @code{mmap} and @code{GNATCOLL.Mmap} had to fallback on calls to
 @code{read}.
 
 @c -----------------------------------------------------------------------
@@ -2230,7 +2233,7 @@ and @code{Ada.Strings.Bounded} packages through the @code{Index} functions),
 these subprograms do not in general provide the most efficient algorithms
 for searching strings.
 
-The package @code{GNAT.Boyer_Moore} provides one such optimize algorithm,
+The package @code{GNATCOLL.Boyer_Moore} provides one such optimize algorithm,
 although there exists several others which might be more efficient depending
 on the pattern.
 
@@ -2385,7 +2388,7 @@ which contains the necessary subprograms to connect with an SMTP server.
 @c -----------------------------------------------------------------------
 @node Message formats
 @section Message formats
-@cindex GNAT.Email.Utils
+@cindex GNATCOLL.Email.Utils
 @c -----------------------------------------------------------------------
 @noindent
 
@@ -2414,7 +2417,7 @@ seen in the section @pxref{Parsing messages}.
 
 @cindex MIME
 @cindex encoding
-The package @file{GNAT.Email.Utils} contains various subprograms to decode
+The package @file{GNATCOLL.Email.Utils} contains various subprograms to decode
 MIME-encoded streams, which you can use independently from the rest of the
 packages in the email module.
 
@@ -2429,14 +2432,14 @@ contain various pieces of information:
 The @code{From}, @code{TO} or @code{CC} fields, among others, contain
 list of recipients. These recipients are the usual email addresses. However,
 the format is quite complex, because the full name of the recipient can also
-be specified, along with comments. The package @file{GNAT.Email.Utils}
+be specified, along with comments. The package @file{GNATCOLL.Email.Utils}
 provides various subprograms for parsing email addresses and list of
 recipients.
 
 @item Dates
 The @code{Date} header indicates when the message was sent. The format of the
 date is also precisely defined in the RFC, and the package
-@file{GNAT.Email.Utils} provides subprograms for parsing this date (or,
+@file{GNATCOLL.Email.Utils} provides subprograms for parsing this date (or,
 on the contrary, to create a string from an existing time).
 
 @item Text
@@ -2444,7 +2447,7 @@ The @code{Subject} header provides a brief overview of the message. It is
 a simple text header. However, one complication comes from the fact that the
 user might want to use extended characters not in the ASCII subset. In such
 cases, the Subject (or part of it) will be MIME-encoded. The package
-@file{GNAT.Email.Utils} provides subprograms to decode MIME-encoded strings,
+@file{GNATCOLL.Email.Utils} provides subprograms to decode MIME-encoded strings,
 with the various charsets.
 
 @end table
@@ -2464,8 +2467,8 @@ message. For this, the message must first be parsed into an instance of the
 This type is controlled, which means that the memory will be freed
 automatically when the message is no longer needed.
 
-@cindex GNAT.Email.Parser
-The package @file{GNAT.Email.Parser} provides various subprograms that
+@cindex GNATCOLL.Email.Parser
+The package @file{GNATCOLL.Email.Parser} provides various subprograms that
 parse a message (passed as a string), and create a @code{Message} out of it.
 Parsing a message might be costly in some cases, for instance if a big
 attachment needs to be decoded first. In some cases, your application will
@@ -2474,11 +2477,12 @@ of the headers of the message, and not need any information from the body).
 This efficiency concern is why there are multiple parsers. Some of them will
 ignore parts of the message, and thus be more efficient if you can use them.
 
-@cindex GNAT.Email
-Once a @code{Message} has been created, the subprograms in @code{GNAT.Email}
+@cindex GNATCOLL.Email
+Once a @code{Message} has been created, the subprograms in
+@code{GNATCOLL.Email}
 can be used to access its various parts.
 The documentation for these subprograms is found in the file
-@code{gnat-email.ads} directly, and is not duplicated here.
+@code{gnatcoll-email.ads} directly, and is not duplicated here.
 
 @c -----------------------------------------------------------------------
 @node Parsing mailboxes
@@ -2496,8 +2500,9 @@ At this stage, @value{gnatcoll} only supports one of them, the @code{mbox}
 format. In this format, the messages are concatenated in a single file,
 and separated by a newline.
 
-@cindex GNAT.Email.Mailboxes
-The package @code{GNAT.Email.Mailboxes} provides all the types and subprograms
+@cindex GNATCOLL.Email.Mailboxes
+The package @code{GNATCOLL.Email.Mailboxes} provides all the types and
+subprograms
 to manipulate mailboxes.
 Tagged types are used, so that new formats of mailboxes can relatively easily
 be added later on, or in your own application.
@@ -2537,7 +2542,7 @@ be ignored.
 @c -----------------------------------------------------------------------
 @noindent
 
-The subprograms in @code{GNAT.Email} can also be used to create a message
+The subprograms in @code{GNATCOLL.Email} can also be used to create a message
 from scratch. Alternatively, if you have already parsed a message, you
 can alter it, or easily generate a reply to it (using the @code{Reply_To}
 subprogram. The latter will preset some headers, so that message threading
@@ -2551,12 +2556,12 @@ is preserved in the user's mailers.
 @noindent
 
 @value{gnatcoll} provides a set of patterns for concurrent programming using
-Ravenscar-compliant semantics only. The core goal of the GNAT.Ravenscar (sub)
-packages is to ease the development of high-integrity multitasking applications
-by factorizing common behavior into instantiable, Ravenscar-compliant, generic 
-packages. Instances of such generic packages guarantee predictable
-timing behavior and thus permit the application of most common timing analysis
-techniques.  
+Ravenscar-compliant semantics only. The core goal of the GNATCOLL.Ravenscar
+(sub) packages is to ease the development of high-integrity multitasking
+applications by factorizing common behavior into instantiable,
+Ravenscar-compliant, generic packages. Instances of such generic packages
+guarantee predictable timing behavior and thus permit the application of most
+common timing analysis techniques.  
 
 @menu
 * Tasks::
@@ -2566,10 +2571,11 @@ techniques.
 
 @node Tasks
 @section Tasks
-The @code{GNAT.Ravenscar.Simple_Cyclic_Task} generic package lets instantiate a 
-cyclic tasks executing the same operation at regular time intervals; on the other
-side, the @code{GNAT.Ravenscar.Simple_Sporadic_Task} task lets instantiate
-sporadic tasks enforcing a minimum inter-release time.
+The @code{GNATCOLL.Ravenscar.Simple_Cyclic_Task} generic package lets
+instantiate a cyclic tasks executing the same operation at regular time
+intervals; on the other side, the
+@code{GNATCOLL.Ravenscar.Simple_Sporadic_Task} task lets instantiate sporadic
+tasks enforcing a minimum inter-release time.
 
 
 @node Servers
@@ -2625,7 +2631,7 @@ location (and not memory that has already been deallocated).
 In @value{gnatcoll}, you will find the following storage pools:
 
 @table @bullet
-@item @code{GNAT.Storage_Pools.Alignment}
+@item @code{GNATCOLL.Storage_Pools.Alignment}
 
 This pool gives you full control over the alignment of your data. In
 general, Ada will only allow you to specify alignments up to a limited
