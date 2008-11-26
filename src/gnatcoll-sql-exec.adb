@@ -313,6 +313,7 @@ package body GNATCOLL.SQL.Exec is
          --  slave will return the newly inserted values ?
          Connection.Success := Is_Success (R.all);
          if not Connection.Success then
+            Set_Failure (Connection);
             Trace
               (Me_Query,
                Query & " (" & Status (R.all) & " " & Error_Msg (R.all)
