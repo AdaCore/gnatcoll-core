@@ -2956,9 +2956,6 @@ Currently, only PostgreSQL and MySQL are supported, but adding a new
 back-end is a matter of extending a tagged type and overriding the
 appropriate subprograms.
 
-This interface is based on top of the GNADE package (available on
-Internet), although it hides that layer.
-
 This interface was designed with several goals in mind: type-safety,
 integrity with regards to changes to the database schema, ease of
 writing queries and performance. A paper was published at the
