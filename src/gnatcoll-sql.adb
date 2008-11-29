@@ -1269,6 +1269,22 @@ package body GNATCOLL.SQL is
       return F;
    end Lower;
 
+   --------------------
+   -- Cast_To_String --
+   --------------------
+
+   function Cast_To_String
+     (Field : SQL_Field'Class) return SQL_Field_Text'Class
+   is
+      F : SQL_Field_Text_Build
+        (Table => null, Instance => null, Name => null);
+      D : constant Named_Field_Internal_Access := new Named_Field_Internal;
+   begin
+      D.Value := new String'("CAST (" & Field.Name.all & " AS TEXT)");
+      F.Data.Data := SQL_Field_Internal_Access (D);
+      return F;
+   end Cast_To_String;
+
    ---------------
    -- To_String --
    ---------------
@@ -2109,6 +2125,16 @@ package body GNATCOLL.SQL is
       return Result;
    end Is_Not_Null;
 
+   ---------
+   -- Any --
+   ---------
+
+   function Any
+     (Self : SQL_Field_Text; Str : SQL_Field_Text) return SQL_Criteria is
+   begin
+      return Compare (Self, Str, Criteria_Any);
+   end Any;
+
    -----------
    -- Ilike --
    -----------
@@ -2230,6 +2256,8 @@ package body GNATCOLL.SQL is
                      when Criteria_Less_Or_Equal    => Append (Result, "<=");
                      when Criteria_Greater_Than     => Append (Result, ">");
                      when Criteria_Greater_Or_Equal => Append (Result, ">=");
+                     when Criteria_Any       =>
+                        Append (Result, " = ANY (");
                      when Criteria_Like      => Append (Result, " LIKE ");
                      when Criteria_Ilike     => Append (Result, " ILIKE ");
                      when Criteria_Not_Like  => Append (Result, " NOT LIKE ");
@@ -2240,6 +2268,13 @@ package body GNATCOLL.SQL is
                   Append (Result,
                           To_String
                             (Self.Criteria.Data.Arg2.Data.Field.all, Long));
+
+                  case Self.Criteria.Data.Op is
+                     when Criteria_Any       =>
+                        Append (Result, ")");
+                     when others =>
+                        null;
+                  end case;
                end if;
 
             when Criteria_Criteria =>

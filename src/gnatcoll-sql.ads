@@ -319,6 +319,10 @@ package GNATCOLL.SQL is
       return SQL_Field_Time'Class;
    --  Return the different between two dates
 
+   function Cast_To_String
+     (Field : SQL_Field'Class) return SQL_Field_Text'Class;
+   --  Convert any field type to a text field
+
    type Aggregate_Function is new String;
    Func_Count    : constant Aggregate_Function := "count";
    Func_Distinct : constant Aggregate_Function := "distinct";
@@ -566,6 +570,10 @@ package GNATCOLL.SQL is
    function SQL_Not_In
      (Self : SQL_Field'Class; Subquery : SQL_Query) return SQL_Criteria;
    --  Whether Self is equal to any of the values in List
+
+   function Any
+     (Self : SQL_Field_Text; Str : SQL_Field_Text) return SQL_Criteria;
+   --  "Self = ANY (Str)"
 
    function Ilike
      (Self : SQL_Field_Text; Str : String) return SQL_Criteria;
@@ -1130,6 +1138,7 @@ private
                               Criteria_Or,
                               Criteria_Like,
                               Criteria_Ilike,
+                              Criteria_Any,
                               Criteria_Not_Like,
                               Criteria_Not_Ilike,
                               Criteria_Overlaps,
