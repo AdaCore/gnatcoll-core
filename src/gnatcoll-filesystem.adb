@@ -117,7 +117,14 @@ package body GNATCOLL.Filesystem is
       Root : String;
       Sub  : String) return String is
    begin
-      return Ensure_Directory (Filesystem_Record'Class (FS), Root) & Sub;
+      --  If Root is empty, return Sub. Else, a double slash will be used,
+      --  which can be badly interpreted (on windows, this may furnish a
+      --  \\machine\service kind of path).
+      if Root = "" then
+         return Sub;
+      else
+         return Ensure_Directory (Filesystem_Record'Class (FS), Root) & Sub;
+      end if;
    end Concat;
 
    ---------------------------
