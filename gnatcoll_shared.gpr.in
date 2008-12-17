@@ -7,6 +7,8 @@ project GnatColl_Shared is
    type Build_Type is ("Debug", "Production");
    Build : Build_Type := External ("Gnatcoll_Build", "Production");
 
+   Processors := External ("PROCESSORS", "1");
+
    type Yes_No is ("yes", "no");
    Gtk    : Yes_No := External ("GTK", "@WITH_GTK@");
    Python : Yes_No := External ("PYTHON", "@WITH_PYTHON@");
@@ -45,7 +47,7 @@ project GnatColl_Shared is
    end Linker;
 
    package Builder is
-      for Default_Switches ("Ada") use ("-m");
+      for Default_Switches ("Ada") use ("-m", "-j" & Processors);
    end Builder;
 
    package Ide is
