@@ -104,7 +104,7 @@ AC_DEFUN(AM_PATH_SYSLOG,
 #    --with-postgresql=path
 # The following variables are exported by configure:
 #   @WITH_POSTGRES@: whether postgres was detected
-#   @LIBPQ@: path to libpq, or "" if not found
+#   @PATH_LIBPQ@: path to libpq, or "" if not found
 #############################################################
 
 AC_DEFUN(AM_PATH_POSTGRES,
@@ -136,6 +136,53 @@ AC_HELP_STRING(
 
    AC_SUBST(WITH_POSTGRES)
    AC_SUBST(PATH_LIBPQ)
+])
+
+#############################################################
+# Checking for gmp
+# This checks whether the gnu multiprecision library is available.
+# The result can be forced by using the
+#    --with-gmp=path
+# The following variables are exported on exit:
+#   @GMP_CFLAGS@:  Compiler flags
+#   @GMP_LIBS@:    Extra command line switches for the linker
+#   @WITH_GMP@:    "yes" or "no" depending on whether gmp is available
+#############################################################
+
+AC_DEFUN(AM_PATH_GMP,
+[
+   AC_ARG_WITH(gmp,
+     [AC_HELP_STRING(
+       [--with-gmp=<path>],
+       [Specify the full path of the gmp installation])
+AC_HELP_STRING(
+       [--without-gmp],
+       [Disable support for gmp])],
+     GMP_PATH_WITH=$withval,
+     GMP_PATH_WITH=yes)
+
+   GMP_CFLAGS=""
+   GMP_LIBS=""
+   if test x"$GMP_PATH_WITH" = xno ; then
+      AC_MSG_CHECKING(for gmp)
+      AC_MSG_RESULT(no, use --with-gmp if needed)
+      WITH_GMP=no
+
+   else
+     if test x"$GMP_PATH_WITH" = xyes ; then
+       AC_CHECK_LIB(gmp,__gmpz_init,WITH_GMP=yes,WITH_GMP=no)
+       AC_CHECK_HEADER(gmp.h)
+       GMP_LIBS="-lgmp"
+     else
+       GMP_LIBS="-L$GMP_PATH_WITH -lgmp"
+       GMP_CFLAGS="-I$GMP_PATH_WITH"
+       WITH_GMP=yes
+     fi
+   fi
+
+   AC_SUBST(WITH_GMP)
+   AC_SUBST(GMP_CFLAGS)
+   AC_SUBST(GMP_LIBS)
 ])
 
 #############################################################
@@ -276,7 +323,7 @@ AC_HELP_STRING(
              ;;
       esac
 
-      if [ -f ${PYTHON_DIR}/libpython${PYTHON_VERSION}.a ]; then
+      if test -f ${PYTHON_DIR}/libpython${PYTHON_VERSION}.a ; then
          PYTHON_LIBS="${PYTHON_DIR}/libpython${PYTHON_VERSION}.a ${PYTHON_LIBS}"
       else
          PYTHON_LIBS="-L${PYTHON_DIR} -lpython${PYTHON_VERSION} ${PYTHON_LIBS}"

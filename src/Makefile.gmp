@@ -1,0 +1,32 @@
+MODULE=gmp
+PROJECT=gnatcoll_${MODULE}
+LIBNAME=lib${TARNAME}_${MODULE}
+
+include ../Makefile.conf
+
+ifeq (${WITH_GMP},yes)
+SRCDIRS=./gmp/
+endif
+
+all:     dirs buildcfiles buildall
+clean:   cleanall
+install: libinstall
+
+ifeq (${LIBRARY_TYPE},static)
+FPIC=
+else
+FPIC=-fPIC
+endif
+
+.PHONY: buildcfiles
+buildcfiles:
+
+ifeq (${WITH_GMP},yes)
+C_OBJ=obj/gmp/${LIBRARY_TYPE}/gmp_support.o
+buildcfiles: ${C_OBJ}
+${C_OBJ}: gmp/gmp_support.c
+	${CC} -c ${FPIC} ${GMP_CFLAGS} $< -o $@
+clean:
+	${RM} ${C_OBJ}
+endif
+

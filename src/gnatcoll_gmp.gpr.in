@@ -1,0 +1,26 @@
+with "../gnatcoll_shared";
+with "gnatcoll";
+
+project GnatColl_Gmp is
+   for Library_Kind    use GnatColl_Shared.Library_Type;
+   for Object_Dir      use "obj/gmp/" & Project'Library_Kind;
+   for Library_Dir     use "lib/gmp/" & Project'Library_Kind;
+   for Library_Name    use GnatColl_Shared.Name & "_gmp";
+   for Library_Version use
+      "lib" & Project'Library_Name & ".so." & GnatColl_Shared.Version;
+
+   --  When linking a shared library (see Linker_Options below in addition)
+   for Library_Options use (@GMP_LIBS_GPR@);
+
+   for Languages use ("Ada", "C");
+   for Source_Dirs use ("gmp");
+
+   package Compiler renames Gnatcoll_Shared.Compiler;
+   package Linker is
+      --  When linking an executable
+      for Linker_Options use (@GMP_LIBS_GPR@);
+   end Linker;
+
+   package Ide renames GnatColl_Shared.Ide;
+
+end GnatColl_Gmp;

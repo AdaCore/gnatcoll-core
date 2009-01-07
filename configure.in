@@ -10,6 +10,8 @@ AM_PATH_GTK
 AM_PATH_PYTHON
 AM_PATH_POSTGRES
 AM_PATH_PYGTK(2.8)
+AM_PATH_GMP
+AM_TO_GPR($GMP_LIBS,      GMP_LIBS_GPR)
 AM_TO_GPR($PYTHON_LIBS,   PYTHON_LIBS_GPR)
 AM_TO_GPR($PYTHON_CFLAGS, PYTHON_CFLAGS_GPR)
 AM_TO_GPR($PYGTK_INCLUDE, PYGTK_INCLUDE_GPR)
@@ -35,6 +37,8 @@ AC_MSG_NOTICE([ Syslog: $WITH_SYSLOG])
 AC_MSG_NOTICE([    use --enable-syslog to override])
 AC_MSG_NOTICE([ PostgreSQL: $WITH_POSTGRES $PATH_LIBPQ])
 AC_MSG_NOTICE([    use --with-postgres to override])
+AC_MSG_NOTICE([ gmp: $WITH_GMP])
+AC_MSG_NOTICE([    use --with-gmp to override])
 AC_MSG_NOTICE([--------------------------------------------])
 
-AC_OUTPUT(gnatcoll_shared.gpr docs/Makefile Makefile.conf src/gnatcoll_python.gpr distrib/gnatcoll.gpr distrib/gnatcoll_python.gpr docs/gnatcoll_include.texi)
+AC_OUTPUT(gnatcoll_shared.gpr docs/Makefile Makefile.conf src/gnatcoll_gmp.gpr src/gnatcoll_python.gpr distrib/gnatcoll.gpr distrib/gnatcoll_python.gpr distrib/gnatcoll_gmp.gpr docs/gnatcoll_include.texi)
