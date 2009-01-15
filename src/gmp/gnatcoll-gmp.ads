@@ -1,9 +1,9 @@
 -----------------------------------------------------------------------
---                               G N A T C O L L                     --
+--                          G N A T C O L L                          --
 --                                                                   --
---                     Copyright (C) 2009, AdaCore                   --
+--                      Copyright (C) 2009, AdaCore                  --
 --                                                                   --
--- GPS is free  software; you can  redistribute it and/or modify  it --
+-- GPS is free  software;  you can redistribute it and/or modify  it --
 -- under the terms of the GNU General Public License as published by --
 -- the Free Software Foundation; either version 2 of the License, or --
 -- (at your option) any later version.                               --
@@ -17,6 +17,24 @@
 -- Place - Suite 330, Boston, MA 02111-1307, USA.                    --
 -----------------------------------------------------------------------
 
+--  An Ada interface to the GNU Multiple Precision (GMP) arithmentic library.
+--  See child packages for specific types, such as package GMP.Integers.
+
+with Interfaces.C;
+
 package GNATCOLL.GMP is
+
+   pragma Pure;
+
+   --  We define these numeric types here so that clients of the Ada binding
+   --  do not also have to import package Interfaces.C themselves.
+   --  These types correspond to those used by the underlying C implementation
+   --  of the GMP library itself.
+
+   type Int is new Interfaces.C.int;
+
+   type Long is new Interfaces.C.long;
+
+   type Unsigned_Long is new Interfaces.C.unsigned_long;
 
 end GNATCOLL.GMP;
