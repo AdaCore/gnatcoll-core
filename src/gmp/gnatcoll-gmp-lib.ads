@@ -50,7 +50,6 @@
 --  library documentation and more easily find the required C binding (if they
 --  must program at this level).
 
-
 with Interfaces.C.Strings; use Interfaces.C.Strings;
 with Interfaces.C_Streams;
 
@@ -74,7 +73,6 @@ package GNATCOLL.GMP.Lib is
    --  predefined equality. We use a limited private type to enforce those
    --  expectations.
 
-
 --  Integer Functions ---------------------------------------------------------
 
    --  Initialization
@@ -84,7 +82,6 @@ package GNATCOLL.GMP.Lib is
 
    procedure mpz_clear (this : access mpz_t);
    pragma Import (C, mpz_clear, "__gmpz_clear");
-
 
    --  Assignment
 
@@ -104,7 +101,6 @@ package GNATCOLL.GMP.Lib is
    procedure mpz_swap (ROP1, ROP2 : access mpz_t);
    pragma Import (C, mpz_swap, "__gmpz_swap");
 
-
    --  Combined initialization and assignment
 
    procedure mpz_init_set (ROP : access mpz_t;  OP : access constant mpz_t);
@@ -117,7 +113,6 @@ package GNATCOLL.GMP.Lib is
       return Int;
    pragma Import (C, mpz_init_set_str, "__gmpz_init_set_str");
 
-
    --  Conversion
 
    function mpz_get_str (STR  : System.Address;
@@ -128,7 +123,6 @@ package GNATCOLL.GMP.Lib is
 
    function mpz_get_si (OP : access constant mpz_t) return Long;
    pragma Import (C, mpz_get_si, "__gmpz_get_si");
-
 
    --  Arithmetic
 
@@ -162,7 +156,6 @@ package GNATCOLL.GMP.Lib is
    procedure mpz_abs (ROP : access mpz_t;  OP : access constant mpz_t);
    pragma Import (C, mpz_abs, "__gmpz_abs");
 
-
    --  Division
 
    procedure mpz_tdiv_q (Q : access mpz_t;  N, D : access constant mpz_t);
@@ -188,14 +181,12 @@ package GNATCOLL.GMP.Lib is
    pragma Import (C, mpz_mod, "__gmpz_mod");
    --  result is always non-negative
 
-
    --  Exponentiation
 
    procedure mpz_pow_ui (ROP : access mpz_t;
                          BASE : access constant mpz_t;
                          EXP : Unsigned_Long);
    pragma Import (C, mpz_pow_ui, "__gmpz_pow_ui");
-
 
    --  Root Extraction
 
@@ -220,12 +211,10 @@ package GNATCOLL.GMP.Lib is
       N          : in Unsigned_Long);
    pragma Import (C, mpz_rootrem, "__gmpz_rootrem");
 
-
    --  Number Theoretic
 
    procedure mpz_gcd (ROP : access mpz_t;  Op1, Op2 : access constant mpz_t);
    pragma Import (C, mpz_gcd, "__gmpz_gcd");
-
 
    --  Comparison
 
@@ -243,9 +232,7 @@ package GNATCOLL.GMP.Lib is
    pragma Import (C, mpz_sgn, "gmp_mpz_sgn");
    --  our wrapper for their macro
 
-
    --  Logical and Bit Manipulation
-
 
    --  Input / Output
 
@@ -254,7 +241,6 @@ package GNATCOLL.GMP.Lib is
                          this : access constant mpz_t)
       return Interfaces.C.size_t;
    pragma Import (C, mpz_out_str, "__gmpz_out_str");
-
 
    --  Random
 
@@ -272,9 +258,7 @@ package GNATCOLL.GMP.Lib is
       N     : access constant mpz_t);
    pragma Import (C, mpz_urandomm, "__gmpz_urandomm");
 
-
    --  Import and Export
-
 
    --  Miscellaneous
 
@@ -292,7 +276,6 @@ package GNATCOLL.GMP.Lib is
    function mpz_even_p (OP : access constant mpz_t) return Int;
    pragma Import (C, mpz_even_p, "gmp_mpz_even_p");
    --  our wrapper for their macro
-
 
 --  Random Number Functions ---------------------------------------------------
 
@@ -312,7 +295,6 @@ package GNATCOLL.GMP.Lib is
    procedure gmp_randclear (STATE : access gmp_randstate_t);
    pragma Import (C, gmp_randclear, "__gmp_randclear");
 
-
    --  State Seeding
 
    procedure gmp_randseed
@@ -325,7 +307,6 @@ package GNATCOLL.GMP.Lib is
       SEED  : in Unsigned_Long);
    pragma Import (C, gmp_randseed_ui, "__gmp_randseed_ui");
 
-
    --  Misc
 
    function gmp_urandomb_ui (STATE : access gmp_randstate_t; N : Unsigned_Long)
@@ -336,40 +317,20 @@ package GNATCOLL.GMP.Lib is
       return Long;
    pragma Import (C, gmp_urandomm_ui, "__gmp_urandomm_ui");
 
-
 private
 
-   type mpz_t is
-      record
-         mp_alloc : Int;
-         mp_size  : Int;
-         mp_d     : System.Address;
-      end record;
+   type mpz_t is record
+      mp_alloc : Int;
+      mp_size  : Int;
+      mp_d     : System.Address;
+   end record;
+   pragma Convention (C, mpz_t);
 
-   for mpz_t use
-      record
-         mp_alloc at 0 range 0 .. 31;
-         mp_size  at 4 range 0 .. 31;
-         mp_d     at 8 range 0 .. 31;
-      end record;
-
-   for mpz_t'Alignment use 4;
-
-
-   type gmp_randstate_t is limited
-      record
-         mp_seed : mpz_t;
-         mp_alg  : Int;
-         mp_lc   : System.Address;
-      end record;
-
-   for gmp_randstate_t use
-      record
-         mp_seed at  0 range 0 .. 95;
-         mp_alg  at 12 range 0 .. 31;
-         mp_lc   at 16 range 0 .. 31;
-      end record;
-
-    for gmp_randstate_t'Alignment use 4;
+   type gmp_randstate_t is limited record
+      mp_seed : mpz_t;
+      mp_alg  : Int;
+      mp_lc   : System.Address;
+   end record;
+   pragma Convention (C, gmp_randstate_t);
 
 end GNATCOLL.GMP.Lib;
