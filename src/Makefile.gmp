@@ -22,10 +22,17 @@ endif
 buildcfiles:
 
 ifeq (${WITH_GMP},yes)
-C_OBJ=obj/gmp/${LIBRARY_TYPE}/gmp_support.o
+C_OBJ=obj/gmp/${LIBRARY_TYPE}/gmp_support.o  \
+       obj/gmp/${LIBRARY_TYPE}/gnatcoll-gmp-mpz_even_p.o  \
+       obj/gmp/${LIBRARY_TYPE}/gnatcoll-gmp-mpz_odd_p.o  \
+       obj/gmp/${LIBRARY_TYPE}/gnatcoll-gmp-mpz_sign.o
 buildcfiles: ${C_OBJ}
-${C_OBJ}: gmp/gmp_support.c
+%.o: 
 	${CC} -c ${FPIC} ${GMP_CFLAGS} $< -o $@
+obj/gmp/${LIBRARY_TYPE}/gmp_support.o: gmp/gmp_support.c
+obj/gmp/${LIBRARY_TYPE}/gnatcoll-gmp-mpz_even_p.o: gmp/gnatcoll-gmp-mpz_even_p.c
+obj/gmp/${LIBRARY_TYPE}/gnatcoll-gmp-mpz_odd_p.o: gmp/gnatcoll-gmp-mpz_odd_p.c
+obj/gmp/${LIBRARY_TYPE}/gnatcoll-gmp-mpz_sign.o: gmp/gnatcoll-gmp-mpz_sign.c
 clean:
 	${RM} ${C_OBJ}
 endif
