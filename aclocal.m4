@@ -174,8 +174,8 @@ AC_HELP_STRING(
        AC_CHECK_HEADER(gmp.h)
        GMP_LIBS="-lgmp"
      else
-       GMP_LIBS="-L$GMP_PATH_WITH -lgmp"
-       GMP_CFLAGS="-I$GMP_PATH_WITH"
+       GMP_LIBS="-L$GMP_PATH_WITH/lib -lgmp"
+       GMP_CFLAGS="-I$GMP_PATH_WITH/include"
        WITH_GMP=yes
      fi
    fi
