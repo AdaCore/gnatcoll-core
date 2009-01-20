@@ -123,6 +123,7 @@ installobj:
 # project files. We need to also install a link in lib/${TARNAME} or the linker
 # will complain
 
+.PHONY: installlinks
 installlinks:
 ifeq (${LIBRARY_TYPE},relocatable)
 	${RM} ${libdir}/${LIBNAME}*
