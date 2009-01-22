@@ -750,7 +750,10 @@ package body GNATCOLL.GMP.Integers is
                   end if;
                else  -- N is not negative
                   if Sign (D) = -1 then  -- D is negative
-                     Set (Result, Temp_Result - Temp_Right);
+                     --  Set (Result, Temp_Result - Temp_Right);
+                     mpz_sub (Result.Value'Access,
+                              Temp_Result.Value'Access,
+                              Temp_Right.Value'Access);
                   else -- neither is negative
                      Set (Result, To => Temp_Result);
                   end if;
@@ -770,19 +773,14 @@ package body GNATCOLL.GMP.Integers is
       Number_Digits : constant size_t := mpz_sizeinbase
          (This.Value'Access, Int (Base));
 
-      Result : String (1 .. Integer (Number_Digits) + 2);
+      Buffer : String (1 .. Integer (Number_Digits) + 2);
       --  The correct number to allocate is 2 more than Number_Digits in order
       --  to handle a possible minus sign and the null-terminator.
 
-      Dummy : chars_ptr;
-      pragma Unreferenced (Dummy);
+      Result : chars_ptr;
    begin
-      Dummy := mpz_get_str (Result'Address, Int (Base), This.Value'Access);
-      if Result (1) = '-' then
-         return Result (1 .. Result'Length - 1);  -- skip null
-      else
-         return Result (1 .. Result'Length - 2);  -- skip blank and null
-      end if;
+      Result := mpz_get_str (Buffer'Address, Int (Base), This.Value'Access);
+      return Value (Result);
    end Image;
 
    --------------
