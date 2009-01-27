@@ -1,7 +1,7 @@
 -----------------------------------------------------------------------
 --                               G N A T C O L L                     --
 --                                                                   --
---                      Copyright (C) 2003-2008, AdaCore             --
+--                      Copyright (C) 2003-2009, AdaCore             --
 --                                                                   --
 -- GPS is free  software;  you can redistribute it and/or modify  it --
 -- under the terms of the GNU General Public License as published by --
@@ -2301,13 +2301,7 @@ package body GNATCOLL.Scripts.Python is
    begin
       Prepare_Value_Key
         (Data, Python_Class_Instance (Get_CIR (Key)).Data, Append);
-
-      --  Do not decrease the reference counting here (even though the key has
-      --  now one more reference owned by Data.Return_Dict), since a
-      --  Class_Instance is refcounted as well, and will automatically decrease
-      --  the reference counting when no longer in use
-
-      --  Py_DECREF (Python_Class_Instance (Get_CIR (Key)).Data);
+      Py_DECREF (Python_Class_Instance (Get_CIR (Key)).Data);
    end Set_Return_Value_Key;
 
    ------------------------------
