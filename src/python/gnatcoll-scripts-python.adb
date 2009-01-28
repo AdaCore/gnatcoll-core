@@ -2044,7 +2044,7 @@ package body GNATCOLL.Scripts.Python is
 
    procedure Decref (Inst : access Python_Class_Instance_Record) is
    begin
-      if Python_Scripting (Inst.Script).Finalized then
+      if not Python_Scripting (Inst.Script).Finalized then
          --  During global finalization of the program, Python itself has been
          --  terminated, so we do not need to do anything
 
@@ -2297,11 +2297,17 @@ package body GNATCOLL.Scripts.Python is
    procedure Set_Return_Value_Key
      (Data   : in out Python_Callback_Data;
       Key    : Class_Instance;
-      Append : Boolean := False) is
+      Append : Boolean := False)
+   is
+      K : constant PyObject := Python_Class_Instance (Get_CIR (Key)).Data;
    begin
-      Prepare_Value_Key
-        (Data, Python_Class_Instance (Get_CIR (Key)).Data, Append);
-      Py_DECREF (Python_Class_Instance (Get_CIR (Key)).Data);
+      Prepare_Value_Key (Data, K, Append);
+
+      --  Do not decrease the reference counting here (even though the key has
+      --  now one more reference owned by Data.Return_Dict), since a
+      --  Class_Instance is refcounted as well, and will automatically decrease
+      --  the reference counting when no longer in use
+      --  Py_DECREF (K);
    end Set_Return_Value_Key;
 
    ------------------------------
@@ -2405,18 +2411,21 @@ package body GNATCOLL.Scripts.Python is
       Klass : constant PyObject := Lookup_Class_Object
         (Script.Module, Get_Name (Class));
       Inst : Class_Instance;
+      Obj  : PyObject;
    begin
       if Klass = null then
          return No_Class_Instance;
       end if;
 
-      Inst := Get_CI
-        (Python_Scripting (Script), PyInstance_NewRaw (Klass, null));
+      Obj := PyInstance_NewRaw (Klass, null);
+--        Put_Line ("MANU PyInstance_Raw=" & Value (Refcount_Msg (Obj)));
+      Inst := Get_CI (Python_Scripting (Script), Obj);
 
       --  The PyObject should have a single reference in the end, owned by
       --  the class instance itself.
 
       Py_DECREF (Python_Class_Instance (Get_CIR (Inst)).Data);
+--        Put_Line ("MANU New_Instance: " & Print_Refcount (Get_CIR (Inst)));
       return Inst;
    end New_Instance;
 
