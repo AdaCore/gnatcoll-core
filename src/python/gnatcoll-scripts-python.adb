@@ -592,7 +592,11 @@ package body GNATCOLL.Scripts.Python is
          Size := Size - 1;  --  First param is always the instance
       end if;
 
-      if Handler.Script.Finalized then
+      if Handler.Script.Finalized
+        and then Handler.Command /= Destructor_Method
+      then
+         PyErr_SetString (Handler.Script.Exception_Unexpected,
+                          "GPS was already finalized");
          return null;
       end if;
 
