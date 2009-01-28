@@ -2422,14 +2422,12 @@ package body GNATCOLL.Scripts.Python is
       end if;
 
       Obj := PyInstance_NewRaw (Klass, null);
---        Put_Line ("MANU PyInstance_Raw=" & Value (Refcount_Msg (Obj)));
       Inst := Get_CI (Python_Scripting (Script), Obj);
 
       --  The PyObject should have a single reference in the end, owned by
       --  the class instance itself.
 
       Py_DECREF (Python_Class_Instance (Get_CIR (Inst)).Data);
---        Put_Line ("MANU New_Instance: " & Print_Refcount (Get_CIR (Inst)));
       return Inst;
    end New_Instance;
 
