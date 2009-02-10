@@ -1,7 +1,7 @@
 -----------------------------------------------------------------------
 --                          G N A T C O L L                          --
 --                                                                   --
---                    Copyright (C) 2008, AdaCore                    --
+--                    Copyright (C) 2008-2009, AdaCore               --
 --                                                                   --
 -- GPS is free  software;  you can redistribute it and/or modify  it --
 -- under the terms of the GNU General Public License as published by --
@@ -90,5 +90,37 @@ package body GNATCOLL.Utils is
       end if;
       return Buf (First .. Buf'Last);
    end Image;
+
+   -----------
+   -- Split --
+   -----------
+
+   function Split
+     (Str : String; On : Character) return GNAT.Strings.String_List_Access
+   is
+      First : Integer := Str'First;
+      Count : Natural := 1;
+      Result : GNAT.Strings.String_List_Access;
+   begin
+      for C in Str'Range loop
+         if Str (C) = On then
+            Count := Count + 1;
+         end if;
+      end loop;
+
+      Result := new GNAT.Strings.String_List (1 .. Count);
+      Count := 1;
+
+      for C in Str'Range loop
+         if Str (C) = On then
+            Result (Count) := new String'(Str (First .. C - 1));
+            First := C + 1;
+            Count := Count + 1;
+         end if;
+      end loop;
+
+      Result (Count) := new String'(Str (First .. Str'Last));
+      return Result;
+   end Split;
 
 end GNATCOLL.Utils;

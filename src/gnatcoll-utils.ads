@@ -1,7 +1,7 @@
 -----------------------------------------------------------------------
 --                          G N A T C O L L                          --
 --                                                                   --
---                    Copyright (C) 2008, AdaCore                    --
+--                    Copyright (C) 2008-2009, AdaCore               --
 --                                                                   --
 -- GPS is free  software;  you can redistribute it and/or modify  it --
 -- under the terms of the GNU General Public License as published by --
@@ -51,6 +51,11 @@ package GNATCOLL.Utils is
    --  if Force_Sign is True.
    --  If you set Min_Width to 1, the result is similar to 'Image, without the
    --  leading space for positive numbers.
+
+   function Split
+     (Str : String; On : Character) return GNAT.Strings.String_List_Access;
+   --  Split the string on the given character.
+   --  Result must be freed by caller
 
 private
 
