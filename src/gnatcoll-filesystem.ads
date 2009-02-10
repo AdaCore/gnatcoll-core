@@ -1,7 +1,7 @@
 -----------------------------------------------------------------------
 --                          G N A T C O L L                          --
 --                                                                   --
---                 Copyright (C) 2006-2008, AdaCore                  --
+--                 Copyright (C) 2006-2009, AdaCore                  --
 --                                                                   --
 -- GPS is free  software;  you can redistribute it and/or modify  it --
 -- under the terms of the GNU General Public License as published by --
@@ -25,10 +25,35 @@
 --  further derive this type to implement remote file systems, ie access to
 --  files on remote hosts.
 
+with Ada.Unchecked_Conversion;
+with Ada.Unchecked_Deallocation;
 with Ada.Calendar;
 with GNAT.Strings;
 
 package GNATCOLL.Filesystem is
+
+   ------------------------
+   -- Filesystem strings --
+   ------------------------
+
+   type Filesystem_String is new String;
+   --  A Filesystem_String represents an array of characters as they are
+   --  represented on the filesystem, without any encoding consideration.
+
+   type Filesystem_String_Access is access all Filesystem_String;
+   procedure Free is new Ada.Unchecked_Deallocation
+     (Filesystem_String, Filesystem_String_Access);
+
+   function Convert is new Ada.Unchecked_Conversion
+     (GNAT.Strings.String_Access, Filesystem_String_Access);
+   function Convert is new Ada.Unchecked_Conversion
+     (Filesystem_String_Access, GNAT.Strings.String_Access);
+
+   function "+" (S : Filesystem_String) return String;
+   pragma Inline ("+");
+   function "+" (S : String) return Filesystem_String;
+   pragma Inline ("+");
+   --  Conversion functions
 
    type Filesystem_Record is abstract tagged private;
    type Filesystem_Access is access all Filesystem_Record'Class;
@@ -54,19 +79,19 @@ package GNATCOLL.Filesystem is
 
    function To_Unix
      (FS         : Filesystem_Record;
-      Path       : String;
-      Use_Cygwin : Boolean := False) return String is abstract;
+      Path       : Filesystem_String;
+      Use_Cygwin : Boolean := False) return Filesystem_String is abstract;
    --  Translate a Path to unix style
 
    function From_Unix
      (FS   : Filesystem_Record;
-      Path : String) return String is abstract;
+      Path : Filesystem_String) return Filesystem_String is abstract;
    --  Translate a Path from unix style
 
    function Is_Subtree
      (FS        : Filesystem_Record;
-      Directory : String;
-      Full_Path : String) return Boolean;
+      Directory : Filesystem_String;
+      Full_Path : Filesystem_String) return Boolean;
    --  Tell if Full_Path is in the subtree of Directory
    --  By default, it compares the two strings, and return true if the first
    --  part of Full_Path is equal to directory, taking into account the
@@ -74,42 +99,43 @@ package GNATCOLL.Filesystem is
 
    function Is_Absolute_Path
      (FS   : Filesystem_Record;
-      Path : String) return Boolean is abstract;
+      Path : Filesystem_String) return Boolean is abstract;
    --  Tell wether the path is absolute
 
    function File_Extension
      (FS   : Filesystem_Record;
-      Path : String) return String;
+      Path : Filesystem_String) return Filesystem_String;
    --  Return the file extension
    --  By default, return the characters from the last dot (included) to the
    --  end of the Path.
 
    function Concat
      (FS   : Filesystem_Record;
-      Root : String;
-      Sub  : String) return String;
+      Root : Filesystem_String;
+      Sub  : Filesystem_String) return Filesystem_String;
    --  Concatenate a root directory and a subdirectory
    --  by default, equivalent to 'Root & Sub', after ensuring that Root does
    --  end with a directory separator.
 
    function Base_Name
      (FS     : Filesystem_Record;
-      Path   : String;
-      Suffix : String := "") return String;
+      Path   : Filesystem_String;
+      Suffix : Filesystem_String := "") return Filesystem_String;
    --  Return the base file name
 
    function Base_Dir_Name
      (FS   : Filesystem_Record;
-      Path : String) return String;
+      Path : Filesystem_String) return Filesystem_String;
    --  Return the directory base name
 
    function Dir_Name
      (FS   : Filesystem_Record;
-      Path : String) return String;
+      Path : Filesystem_String) return Filesystem_String;
    --  Return the directory path
 
    function Locale_To_Display
-     (FS : Filesystem_Record; Name : String) return String;
+     (FS   : Filesystem_Record;
+      Name : Filesystem_String) return String;
    --  Convert a file name (ie an unspecified set of bytes) to a specific
    --  encoding (application specific). In general, this encoding will be
    --  UTF-8, so that you can display the name in a graphical interface, but
@@ -124,7 +150,8 @@ package GNATCOLL.Filesystem is
    --  if you are using the GNATCOLL.Filesystem API directly, you should
    --  convert file names appropriately before you display them on the screen.
 
-   type Encoder_Function is access function (Name : String) return String;
+   type Encoder_Function is access function
+     (Name : Filesystem_String) return String;
 
    procedure Set_Locale_To_Display_Encoder
      (FS      : in out Filesystem_Record;
@@ -141,41 +168,42 @@ package GNATCOLL.Filesystem is
 
    function Get_Root
      (FS   : Filesystem_Record;
-      Path : String) return String is abstract;
+      Path : Filesystem_String) return Filesystem_String is abstract;
    --  Return the root directory of the path
 
-   function Get_Tmp_Directory (FS : Filesystem_Record) return String;
+   function Get_Tmp_Directory
+     (FS : Filesystem_Record) return Filesystem_String;
    --  Return the name of a directory that can be used to store temporary
    --  directory on the filesystem. That directory always ends with a directory
    --  separator (when appropriate for the file system)
 
    function Get_Parent
      (FS   : Filesystem_Record;
-      Path : String) return String;
+      Path : Filesystem_String) return Filesystem_String;
    --  Return the parent directory of the path
 
    function Ensure_Directory
      (FS   : Filesystem_Record;
-      Path : String) return String;
+      Path : Filesystem_String) return Filesystem_String;
    --  Return a directory path from furnished path.
    --  On Windows, for a path C:\path\to, this will return C:\path\to\
    --  On VMS, for a path disk:[path]to.dir, this will return disk:[path.to]
 
    function Device_Name
      (FS   : Filesystem_Record;
-      Path : String) return String is abstract;
+      Path : Filesystem_String) return Filesystem_String is abstract;
    --  Return the device of the path (if applicable). Empty string otherwise
 
    function Normalize
      (FS   : Filesystem_Record;
-      Path : String) return String;
+      Path : Filesystem_String) return Filesystem_String;
    --  Replace every ./ or ../ items of the path
 
    function Path
      (FS     : Filesystem_Record;
-      Device : String;
-      Dir    : String;
-      File   : String) return String is abstract;
+      Device : Filesystem_String;
+      Dir    : Filesystem_String;
+      File   : Filesystem_String) return Filesystem_String is abstract;
    --  Return a path composed of Device, Dir, and File
 
    function Is_Case_Sensitive
@@ -196,23 +224,23 @@ package GNATCOLL.Filesystem is
    -- Operations on files --
    -------------------------
 
-   function Home_Dir (FS   : Filesystem_Record) return String;
+   function Home_Dir (FS   : Filesystem_Record) return Filesystem_String;
    --  Return the home directory on the specified host.
    --  If home dir cannot be determined, return root directory
 
    function Is_Regular_File
      (FS              : Filesystem_Record;
-      Local_Full_Name : String) return Boolean;
+      Local_Full_Name : Filesystem_String) return Boolean;
    --  Return True if Local_Full_Name exists on the remote host
 
    function Is_Symbolic_Link
      (FS              : Filesystem_Record;
-      Local_Full_Name : String) return Boolean;
+      Local_Full_Name : Filesystem_String) return Boolean;
    --  Whether the file is a symbolic link
 
    function Read_File
      (FS              : Filesystem_Record;
-      Local_Full_Name : String) return GNAT.Strings.String_Access;
+      Local_Full_Name : Filesystem_String) return GNAT.Strings.String_Access;
    --  Return the contents of an entire file.
    --  If the file cannot be found, return null.
    --  The caller is responsible for freeing the returned memory.
@@ -220,46 +248,46 @@ package GNATCOLL.Filesystem is
 
    function Delete
      (FS              : Filesystem_Record;
-      Local_Full_Name : String) return Boolean;
+      Local_Full_Name : Filesystem_String) return Boolean;
    --  Sends host a delete command for file
 
    function Rename
      (FS              : Filesystem_Record;
-      From_Local_Name : String;
-      To_Local_Name   : String) return Boolean;
+      From_Local_Name : Filesystem_String;
+      To_Local_Name   : Filesystem_String) return Boolean;
    --  Rename From_Local_Name on the host to To_Local_Name on the same host.
    --  Return False if the renaming could not be performed.
 
    function Copy
      (FS              : Filesystem_Record;
-      From_Local_Name : String;
-      To_Local_Name   : String) return Boolean;
+      From_Local_Name : Filesystem_String;
+      To_Local_Name   : Filesystem_String) return Boolean;
    --  Copy a file into another one.
    --  To_Local_Name can be the name of the directory in which to copy the
    --  file, or the name of a file to be created.
 
    function Copy_Dir
      (FS              : Filesystem_Record;
-      From_Local_Name : String;
-      To_Local_Name   : String) return Boolean;
+      From_Local_Name : Filesystem_String;
+      To_Local_Name   : Filesystem_String) return Boolean;
    --  From_Local_Name is the name of a directory. All its files are copied
    --  into the directory To_Local_Name. The target directory is created if
    --  needed.
 
    function Is_Writable
      (FS              : Filesystem_Record;
-      Local_Full_Name : String) return Boolean;
+      Local_Full_Name : Filesystem_String) return Boolean;
    --  Return True if File is writable.
    --  Some protocols are read-only (HTTP), and will always return False.
 
    function Is_Directory
      (FS              : Filesystem_Record;
-      Local_Full_Name : String) return Boolean;
+      Local_Full_Name : Filesystem_String) return Boolean;
    --  Return True if File is in fact a directory
 
    function File_Time_Stamp
      (FS              : Filesystem_Record;
-      Local_Full_Name : String) return Ada.Calendar.Time;
+      Local_Full_Name : Filesystem_String) return Ada.Calendar.Time;
    --  Return the timestamp for this file.
    --  If the Connection doesn't support this operation, or the file
    --  doesn't exists, it should return a date of No_Time, so as to force, when
@@ -267,8 +295,8 @@ package GNATCOLL.Filesystem is
 
    procedure Write
      (FS              : Filesystem_Record;
-      Local_Full_Name : String;
-      Temporary_File  : String;
+      Local_Full_Name : Filesystem_String;
+      Temporary_File  : Filesystem_String;
       Append          : Boolean := False);
    --  Overwrite the contents of Local_Full_Name with the contents of the
    --  Temporary_File.
@@ -276,14 +304,14 @@ package GNATCOLL.Filesystem is
 
    procedure Set_Writable
      (FS              : Filesystem_Record;
-      Local_Full_Name : String;
+      Local_Full_Name : Filesystem_String;
       Writable        : Boolean);
    --  If Writable is True, make the file writable, otherwise make the file
    --  unwritable.
 
    procedure Set_Readable
      (FS              : Filesystem_Record;
-      Local_Full_Name : String;
+      Local_Full_Name : Filesystem_String;
       Readable        : Boolean);
    --  If Readable is True, make the file readable, otherwise make the file
    --  unreadable.
@@ -294,7 +322,7 @@ package GNATCOLL.Filesystem is
 
    procedure Get_Logical_Drives
      (FS     : Filesystem_Record;
-      Buffer : in out String;
+      Buffer : in out Filesystem_String;
       Len    : out Integer) is abstract;
    --  Store in Buffer (Buffer'First .. Buffer'First + Len) a ASCII.NUL
    --  separated string containing the names of the drives, e.g
@@ -302,13 +330,13 @@ package GNATCOLL.Filesystem is
 
    function Make_Dir
      (FS             : Filesystem_Record;
-      Local_Dir_Name : String) return Boolean;
+      Local_Dir_Name : Filesystem_String) return Boolean;
    --  Create a new directory on remote named Local_Dir_Name.
    --  Return the creation status.
 
    function Change_Dir
      (FS             : Filesystem_Record;
-      Local_Dir_Name : String) return Boolean;
+      Local_Dir_Name : Filesystem_String) return Boolean;
    --  Change the current directory.
    --  This operation might not make sense for some remote file systems if a
    --  new connection is opened for every operation, since the context would
@@ -316,14 +344,14 @@ package GNATCOLL.Filesystem is
 
    function Remove_Dir
      (FS             : Filesystem_Record;
-      Local_Dir_Name : String;
+      Local_Dir_Name : Filesystem_String;
       Recursive      : Boolean) return Boolean;
    --  Delete an empty directory on remote named Local_Dir_Name.
    --  Return the deletion status.
 
    function Read_Dir
      (FS             : Filesystem_Record;
-      Local_Dir_Name : String;
+      Local_Dir_Name : Filesystem_String;
       Dirs_Only      : Boolean := False;
       Files_Only     : Boolean := False) return GNAT.Strings.String_List;
    --  Read the specified directory and returns a list of filenames

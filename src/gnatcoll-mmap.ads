@@ -1,7 +1,7 @@
 -----------------------------------------------------------------------
 --                          G N A T C O L L                          --
 --                                                                   --
---                 Copyright (C) 2007-2008, AdaCore                  --
+--                 Copyright (C) 2007-2009, AdaCore                  --
 --                                                                   --
 -- GPS is free  software;  you can redistribute it and/or modify  it --
 -- under the terms of the GNU General Public License as published by --
@@ -65,6 +65,7 @@ with GNAT.OS_Lib;
 with GNAT.Strings;
 with System;
 with Interfaces.C;
+with GNATCOLL.Filesystem;
 
 package GNATCOLL.Mmap is
 
@@ -93,7 +94,7 @@ package GNATCOLL.Mmap is
    --  longer includes the bounds, which you need to manage yourself
 
    function Open_Read
-     (Filename              : String;
+     (Filename              : GNATCOLL.Filesystem.Filesystem_String;
       Use_Mmap_If_Available : Boolean := True) return Mapped_File;
    --  Open a file for reading. The same file can be shared by multiple
    --  processes, that will see each others's changes as they occur.
@@ -102,7 +103,7 @@ package GNATCOLL.Mmap is
    --  Name_Error is raised if the file does not exist
 
    function Open_Write
-     (Filename              : String;
+     (Filename              : GNATCOLL.Filesystem.Filesystem_String;
       Use_Mmap_If_Available : Boolean := True) return Mapped_File;
    --  Open a file for writing.
    --  You cannot change the length of the file.
@@ -169,7 +170,7 @@ package GNATCOLL.Mmap is
    --  the number of system calls to read the file by chunks.
 
    function Read_Whole_File
-     (Filename           : String;
+     (Filename           : GNATCOLL.Filesystem.Filesystem_String;
       Empty_If_Not_Found : Boolean := False) return GNAT.Strings.String_Access;
    --  Returns the whole contents of the file.
    --  The returned string must be freed by the user.

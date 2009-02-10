@@ -1,7 +1,7 @@
 -----------------------------------------------------------------------
 --                          G N A T C O L L                          --
 --                                                                   --
---                 Copyright (C) 2006-2008, AdaCore                  --
+--                 Copyright (C) 2006-2009, AdaCore                  --
 --                                                                   --
 -- GPS is free  software;  you can redistribute it and/or modify  it --
 -- under the terms of the GNU General Public License as published by --
@@ -29,6 +29,7 @@ with GNATCOLL.Filesystem.Windows;
 with GNATCOLL.Filesystem.Unix;
 with GNATCOLL.Mmap;             use GNATCOLL.Mmap;
 with GNATCOLL.Utils;            use GNATCOLL.Utils;
+with GNATCOLL.VFS_Utils;        use GNATCOLL.VFS_Utils;
 
 package body GNATCOLL.Filesystem is
 
@@ -74,8 +75,8 @@ package body GNATCOLL.Filesystem is
 
    function Is_Subtree
      (FS        : Filesystem_Record;
-      Directory : String;
-      Full_Path : String) return Boolean is
+      Directory : Filesystem_String;
+      Full_Path : Filesystem_String) return Boolean is
    begin
       --  Path length shall be greater or equal to directory length
       if Directory'Length > Full_Path'Length then
@@ -85,8 +86,9 @@ package body GNATCOLL.Filesystem is
       --  Do not try to compare last character: on VMS, you will compare
       --  a closing bracket with a dot (disk:[path] with disk:[path.subpath])
       return Equal
-        (Full_Path (Full_Path'First .. Full_Path'First + Directory'Length - 1),
-         Directory,
+        (+Full_Path
+           (Full_Path'First .. Full_Path'First + Directory'Length - 1),
+         +Directory,
          Is_Case_Sensitive (Filesystem_Record'Class (FS)));
    end Is_Subtree;
 
@@ -96,7 +98,7 @@ package body GNATCOLL.Filesystem is
 
    function File_Extension
      (FS   : Filesystem_Record;
-      Path : String) return String
+      Path : Filesystem_String) return Filesystem_String
    is
       pragma Unreferenced (FS);
    begin
@@ -114,8 +116,8 @@ package body GNATCOLL.Filesystem is
 
    function Concat
      (FS   : Filesystem_Record;
-      Root : String;
-      Sub  : String) return String is
+      Root : Filesystem_String;
+      Sub  : Filesystem_String) return Filesystem_String is
    begin
       --  If Root is empty, return Sub. Else, a double slash will be used,
       --  which can be badly interpreted (on windows, this may furnish a
@@ -145,13 +147,13 @@ package body GNATCOLL.Filesystem is
 
    function Base_Name
      (FS     : Filesystem_Record;
-      Path   : String;
-      Suffix : String := "") return String is
+      Path   : Filesystem_String;
+      Suffix : Filesystem_String := "") return Filesystem_String is
    begin
       for J in reverse Path'Range loop
          if Path (J) = Dir_Sep (Filesystem_Record'Class (FS)) then
-            if Equal (Path (Path'Last - Suffix'Length + 1 .. Path'Last),
-                      Suffix,
+            if Equal (+Path (Path'Last - Suffix'Length + 1 .. Path'Last),
+                      +Suffix,
                       Is_Case_Sensitive (Filesystem_Record'Class (FS))) then
                return Path (J + 1 .. Path'Last - Suffix'Length);
             else
@@ -169,7 +171,7 @@ package body GNATCOLL.Filesystem is
 
    function Base_Dir_Name
      (FS   : Filesystem_Record;
-      Path : String) return String is
+      Path : Filesystem_String) return Filesystem_String is
    begin
       if Path'Length > 1
         and then Path (Path'Last) = Dir_Sep (Filesystem_Record'Class (FS))
@@ -186,7 +188,7 @@ package body GNATCOLL.Filesystem is
 
    function Dir_Name
      (FS   : Filesystem_Record;
-      Path : String) return String is
+      Path : Filesystem_String) return Filesystem_String is
    begin
       for J in reverse Path'Range loop
          if Path (J) = Dir_Sep (Filesystem_Record'Class (FS)) then
@@ -203,7 +205,7 @@ package body GNATCOLL.Filesystem is
 
    function Get_Parent
      (FS   : Filesystem_Record;
-      Path : String) return String is
+      Path : Filesystem_String) return Filesystem_String is
    begin
       if Path (Path'Last) = Dir_Sep (Filesystem_Record'Class (FS)) then
          return Dir_Name (FS, Path (Path'First .. Path'Last - 1));
@@ -218,7 +220,7 @@ package body GNATCOLL.Filesystem is
 
    function Ensure_Directory
      (FS   : Filesystem_Record;
-      Path : String) return String is
+      Path : Filesystem_String) return Filesystem_String is
    begin
       if Path'Length = 0
         or else Path (Path'Last) /= Dir_Sep (Filesystem_Record'Class (FS))
@@ -235,7 +237,7 @@ package body GNATCOLL.Filesystem is
 
    function Normalize
      (FS   : Filesystem_Record;
-      Path : String) return String
+      Path : Filesystem_String) return Filesystem_String
    is
       Last_Dir      : Natural;
       Dir_Separator : constant Character :=
@@ -277,14 +279,14 @@ package body GNATCOLL.Filesystem is
    -- Home_Dir --
    --------------
 
-   function Home_Dir (FS : Filesystem_Record) return String is
+   function Home_Dir (FS : Filesystem_Record) return Filesystem_String is
       HOME : GNAT.Strings.String_Access := Getenv ("HOME");
    begin
       if HOME = null then
          return Get_Root (Filesystem_Record'Class (FS), "");
       else
          declare
-            Result : constant String := HOME.all;
+            Result : constant Filesystem_String := +HOME.all;
          begin
             Free (HOME);
             return Result;
@@ -298,7 +300,7 @@ package body GNATCOLL.Filesystem is
 
    function Is_Regular_File
      (FS              : Filesystem_Record;
-      Local_Full_Name : String) return Boolean
+      Local_Full_Name : Filesystem_String) return Boolean
    is
       pragma Unreferenced (FS);
    begin
@@ -311,7 +313,7 @@ package body GNATCOLL.Filesystem is
 
    function Read_File
      (FS              : Filesystem_Record;
-      Local_Full_Name : String) return GNAT.Strings.String_Access
+      Local_Full_Name : Filesystem_String) return GNAT.Strings.String_Access
    is
       pragma Unreferenced (FS);
    begin
@@ -324,12 +326,12 @@ package body GNATCOLL.Filesystem is
 
    function Delete
      (FS              : Filesystem_Record;
-      Local_Full_Name : String) return Boolean
+      Local_Full_Name : Filesystem_String) return Boolean
    is
       pragma Unreferenced (FS);
       Success : Boolean;
    begin
-      Delete_File (Local_Full_Name, Success);
+      Delete_File (+Local_Full_Name, Success);
       return Success;
    end Delete;
 
@@ -339,11 +341,11 @@ package body GNATCOLL.Filesystem is
 
    function Is_Writable
      (FS              : Filesystem_Record;
-      Local_Full_Name : String) return Boolean
+      Local_Full_Name : Filesystem_String) return Boolean
    is
       pragma Unreferenced (FS);
    begin
-      return Is_Writable_File (Local_Full_Name);
+      return Is_Writable_File (+Local_Full_Name);
    end Is_Writable;
 
    ------------------
@@ -352,11 +354,11 @@ package body GNATCOLL.Filesystem is
 
    function Is_Directory
      (FS              : Filesystem_Record;
-      Local_Full_Name : String) return Boolean
+      Local_Full_Name : Filesystem_String) return Boolean
    is
       pragma Unreferenced (FS);
    begin
-      return Is_Directory (Local_Full_Name);
+      return Is_Directory (+Local_Full_Name);
    end Is_Directory;
 
    ---------------------
@@ -365,10 +367,10 @@ package body GNATCOLL.Filesystem is
 
    function File_Time_Stamp
      (FS              : Filesystem_Record;
-      Local_Full_Name : String) return Ada.Calendar.Time
+      Local_Full_Name : Filesystem_String) return Ada.Calendar.Time
    is
       pragma Unreferenced (FS);
-      T      : constant OS_Time := File_Time_Stamp (Local_Full_Name);
+      T      : constant OS_Time := File_Time_Stamp (+Local_Full_Name);
       Year   : Year_Type;
       Month  : Month_Type;
       Day    : Day_Type;
@@ -397,8 +399,8 @@ package body GNATCOLL.Filesystem is
 
    procedure Write
      (FS              : Filesystem_Record;
-      Local_Full_Name : String;
-      Temporary_File  : String;
+      Local_Full_Name : Filesystem_String;
+      Temporary_File  : Filesystem_String;
       Append          : Boolean := False)
    is
       Success : Boolean;
@@ -425,7 +427,7 @@ package body GNATCOLL.Filesystem is
 
    procedure Set_Writable
      (FS              : Filesystem_Record;
-      Local_Full_Name : String;
+      Local_Full_Name : Filesystem_String;
       Writable        : Boolean)
    is
       pragma Unreferenced (FS);
@@ -443,11 +445,11 @@ package body GNATCOLL.Filesystem is
 
    procedure Set_Readable
      (FS              : Filesystem_Record;
-      Local_Full_Name : String;
+      Local_Full_Name : Filesystem_String;
       Readable        : Boolean)
    is
       pragma Unreferenced (FS);
-      procedure Internal (File : String; Set : Integer);
+      procedure Internal (File : Filesystem_String; Set : Integer);
       pragma Import (C, Internal, "__gnatcoll_set_readable");
 
    begin
@@ -460,12 +462,12 @@ package body GNATCOLL.Filesystem is
 
    function Remove_Dir
      (FS             : Filesystem_Record;
-      Local_Dir_Name : String;
+      Local_Dir_Name : Filesystem_String;
       Recursive      : Boolean) return Boolean
    is
       pragma Unreferenced (FS);
    begin
-      Remove_Dir (Local_Dir_Name, Recursive);
+      Remove_Dir (+Local_Dir_Name, Recursive);
       return True;
    exception
       when Directory_Error =>
@@ -478,7 +480,7 @@ package body GNATCOLL.Filesystem is
 
    function Read_Dir
      (FS             : Filesystem_Record;
-      Local_Dir_Name : String;
+      Local_Dir_Name : Filesystem_String;
       Dirs_Only      : Boolean := False;
       Files_Only     : Boolean := False) return GNAT.Strings.String_List
    is
@@ -506,7 +508,7 @@ package body GNATCOLL.Filesystem is
 
       Start_Search
         (Search,
-         Directory => Local_Dir_Name,
+         Directory => +Local_Dir_Name,
          Pattern   => "",
          Filter    => Filter);
 
@@ -561,11 +563,11 @@ package body GNATCOLL.Filesystem is
 
    function Make_Dir
      (FS             : Filesystem_Record;
-      Local_Dir_Name : String) return Boolean
+      Local_Dir_Name : Filesystem_String) return Boolean
    is
       pragma Unreferenced (FS);
    begin
-      Create_Path (Local_Dir_Name);
+      Create_Path (+Local_Dir_Name);
       return True;
    exception
       when others =>
@@ -578,13 +580,13 @@ package body GNATCOLL.Filesystem is
 
    function Rename
      (FS              : Filesystem_Record;
-      From_Local_Name : String;
-      To_Local_Name   : String) return Boolean
+      From_Local_Name : Filesystem_String;
+      To_Local_Name   : Filesystem_String) return Boolean
    is
       pragma Unreferenced (FS);
       Success : Boolean;
    begin
-      Rename_File (From_Local_Name, To_Local_Name, Success);
+      Rename_File (+From_Local_Name, +To_Local_Name, Success);
       return Success;
    end Rename;
 
@@ -594,14 +596,14 @@ package body GNATCOLL.Filesystem is
 
    function Copy
      (FS              : Filesystem_Record;
-      From_Local_Name : String;
-      To_Local_Name   : String) return Boolean
+      From_Local_Name : Filesystem_String;
+      To_Local_Name   : Filesystem_String) return Boolean
    is
       pragma Unreferenced (FS);
       Success : Boolean;
    begin
-      GNAT.OS_Lib.Copy_File (From_Local_Name, To_Local_Name, Success,
-                             Mode => Overwrite, Preserve => Full);
+      Copy_File (From_Local_Name, To_Local_Name, Success,
+                 Mode => Overwrite, Preserve => Full);
       return Success;
    exception
       when others =>
@@ -614,13 +616,13 @@ package body GNATCOLL.Filesystem is
 
    function Copy_Dir
      (FS              : Filesystem_Record;
-      From_Local_Name : String;
-      To_Local_Name   : String) return Boolean
+      From_Local_Name : Filesystem_String;
+      To_Local_Name   : Filesystem_String) return Boolean
    is
-      From        : constant String :=
+      From        : constant Filesystem_String :=
                       Ensure_Directory
                         (Filesystem_Record'Class (FS), From_Local_Name);
-      Target      : constant String :=
+      Target      : constant Filesystem_String :=
                       Ensure_Directory
                         (Filesystem_Record'Class (FS), To_Local_Name);
       Files_Array : String_List  :=
@@ -632,11 +634,11 @@ package body GNATCOLL.Filesystem is
 
       if Success then
          for F in Files_Array'Range loop
-            if Is_Directory (From & Files_Array (F).all) then
+            if Is_Directory (From & (+Files_Array (F).all)) then
                if not Copy_Dir
                  (Filesystem_Record'Class (FS),
-                  From & Files_Array (F).all,
-                  Target & Files_Array (F).all)
+                  From & (+Files_Array (F).all),
+                  Target & (+Files_Array (F).all))
                then
                   Success := False;
                   exit;
@@ -645,7 +647,7 @@ package body GNATCOLL.Filesystem is
             else
                if not Copy
                  (Filesystem_Record'Class (FS),
-                  From & Files_Array (F).all,
+                  From & (+Files_Array (F).all),
                   Target)
                then
                   Success := False;
@@ -670,11 +672,11 @@ package body GNATCOLL.Filesystem is
 
    function Is_Symbolic_Link
      (FS              : Filesystem_Record;
-      Local_Full_Name : String) return Boolean
+      Local_Full_Name : Filesystem_String) return Boolean
    is
       pragma Unreferenced (FS);
    begin
-      return Is_Symbolic_Link (Local_Full_Name);
+      return Is_Symbolic_Link (+Local_Full_Name);
    end Is_Symbolic_Link;
 
    ----------------
@@ -683,11 +685,11 @@ package body GNATCOLL.Filesystem is
 
    function Change_Dir
      (FS             : Filesystem_Record;
-      Local_Dir_Name : String) return Boolean
+      Local_Dir_Name : Filesystem_String) return Boolean
    is
       pragma Unreferenced (FS);
    begin
-      GNAT.Directory_Operations.Change_Dir (Local_Dir_Name);
+      Change_Dir (Local_Dir_Name);
       return True;
    exception
       when others =>
@@ -699,14 +701,14 @@ package body GNATCOLL.Filesystem is
    -----------------------
 
    function Get_Tmp_Directory
-     (FS : Filesystem_Record) return String
+     (FS : Filesystem_Record) return Filesystem_String
    is
       function Internal return chars_ptr;
       pragma Import (C, Internal, "__gnatcoll_get_tmp_dir");
 
       C_Str : chars_ptr := Internal;
-      Str   : constant String :=
-                GNAT.Directory_Operations.Format_Pathname
+      Str   : constant Filesystem_String :=
+                +GNAT.Directory_Operations.Format_Pathname
                   (To_Ada (Value (C_Str)));
    begin
       Free (C_Str);
@@ -718,12 +720,12 @@ package body GNATCOLL.Filesystem is
    -----------------------
 
    function Locale_To_Display
-     (FS : Filesystem_Record; Name : String) return String is
+     (FS : Filesystem_Record; Name : Filesystem_String) return String is
    begin
       if FS.Locale_To_Display_Encoder /= null then
          return FS.Locale_To_Display_Encoder (Name);
       else
-         return Name;
+         return +Name;
       end if;
    end Locale_To_Display;
 
@@ -737,5 +739,19 @@ package body GNATCOLL.Filesystem is
    begin
       FS.Locale_To_Display_Encoder := Encoder;
    end Set_Locale_To_Display_Encoder;
+
+   ---------
+   -- "+" --
+   ---------
+
+   function "+" (S : Filesystem_String) return String is
+   begin
+      return String (S);
+   end "+";
+
+   function "+" (S : String) return Filesystem_String is
+   begin
+      return Filesystem_String (S);
+   end "+";
 
 end GNATCOLL.Filesystem;

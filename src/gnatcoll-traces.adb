@@ -1,7 +1,7 @@
 -----------------------------------------------------------------------
 --                          G N A T C O L L                          --
 --                                                                   --
---                 Copyright (C) 2001-2008, AdaCore                  --
+--                 Copyright (C) 2001-2009, AdaCore                  --
 --                                                                   --
 -- GPS is free  software;  you can redistribute it and/or modify  it --
 -- under the terms of the GNU General Public License as published by --
@@ -36,6 +36,10 @@ with System.Address_Image;
 with System.Assertions;         use System.Assertions;
 pragma Warnings (Off);
 with System.Traceback_Entries;  use System.Traceback_Entries;
+
+with GNATCOLL.Filesystem;       use GNATCOLL.Filesystem;
+with GNATCOLL.VFS_Utils;        use GNATCOLL.VFS_Utils;
+
 pragma Warnings (On);
 
 package body GNATCOLL.Traces is
@@ -130,8 +134,8 @@ package body GNATCOLL.Traces is
    --  can access it at the same time.
 
    function Find_Stream
-     (Stream_Name      : String;
-      Config_File_Name : String;
+     (Stream_Name      : GNATCOLL.Filesystem.Filesystem_String;
+      Config_File_Name : GNATCOLL.Filesystem.Filesystem_String;
       Append           : Boolean) return Trace_Stream;
    --  Return the stream associated with that name (either an existing one or
    --  one created by a factory), or null if the default stream should be
@@ -160,8 +164,9 @@ package body GNATCOLL.Traces is
    --  Print the stack trace for this handle. No locking done
 
    function Config_File
-     (Filename : String;
-      Default  : String) return String;
+     (Filename : GNATCOLL.Filesystem.Filesystem_String;
+      Default  : GNATCOLL.Filesystem.Filesystem_String)
+      return GNATCOLL.Filesystem.Filesystem_String;
    --  Return the name of the config file to use.
    --  If Filename is specified, this is the file to use, providing it exists.
    --  Otherwise, we use a .gnatdebug in the current directory, and if there is
@@ -241,8 +246,8 @@ package body GNATCOLL.Traces is
    -----------------
 
    function Find_Stream
-     (Stream_Name      : String;
-      Config_File_Name : String;
+     (Stream_Name      : GNATCOLL.Filesystem.Filesystem_String;
+      Config_File_Name : GNATCOLL.Filesystem.Filesystem_String;
       Append           : Boolean) return Trace_Stream
    is
       procedure Add_To_Streams (Tmp : Trace_Stream);
@@ -260,7 +265,7 @@ package body GNATCOLL.Traces is
          end if;
       end Add_To_Streams;
 
-      Name  : constant String := Trim (Stream_Name, Ada.Strings.Both);
+      Name  : constant String := Trim (+Stream_Name, Ada.Strings.Both);
 
       Tmp   : Trace_Stream;
       Colon : Natural;
@@ -381,7 +386,7 @@ package body GNATCOLL.Traces is
             declare
                N : constant String := Normalize_Pathname
                  (Name_Tmp (Name_Tmp'First .. Index - 1),
-                  Dir_Name (Config_File_Name));
+                  Dir_Name (+Config_File_Name));
             begin
                if Append
                  and then Is_Regular_File (N)
@@ -409,7 +414,7 @@ package body GNATCOLL.Traces is
    function Create
      (Unit_Name : String;
       Default   : Default_Activation_Status := From_Config;
-      Stream    : String := "";
+      Stream    : Filesystem_String := "";
       Factory   : Handle_Factory := null;
       Finalize  : Boolean := True) return Trace_Handle
    is
@@ -866,13 +871,14 @@ package body GNATCOLL.Traces is
    -----------------
 
    function Config_File
-     (Filename : String;
-      Default  : String) return String
+     (Filename : GNATCOLL.Filesystem.Filesystem_String;
+      Default  : GNATCOLL.Filesystem.Filesystem_String)
+      return GNATCOLL.Filesystem.Filesystem_String
    is
       Env  : GNAT.Strings.String_Access := Getenv (Config_File_Environment);
       Home : GNAT.Strings.String_Access;
    begin
-      if Filename /= "" and then File_Exists (Filename) then
+      if Filename /= "" and then File_Exists (+Filename) then
          GNAT.Strings.Free (Env);
          return Filename;
       end if;
@@ -881,7 +887,7 @@ package body GNATCOLL.Traces is
       if Env /= null and then Env.all /= "" then
          if File_Exists (Env.all) then
             declare
-               N : constant String := Env.all;
+               N : constant GNATCOLL.Filesystem.Filesystem_String := +Env.all;
             begin
                Free (Env);
                return N;
@@ -896,7 +902,7 @@ package body GNATCOLL.Traces is
 
       --  Then the file in the current directory
 
-      if File_Exists (Default_Config_File) then
+      if File_Exists (+Default_Config_File) then
          return Default_Config_File;
       end if;
 
@@ -906,12 +912,12 @@ package body GNATCOLL.Traces is
       if Home /= null and then Home.all /= "" then
          declare
             N : constant String :=
-              Format_Pathname (Home.all & '/' & Default_Config_File);
+              Format_Pathname (Home.all & '/' & (+Default_Config_File));
          begin
             Free (Home);
 
             if File_Exists (N) then
-               return N;
+               return +N;
             end if;
          end;
       end if;
@@ -919,7 +925,7 @@ package body GNATCOLL.Traces is
       Free (Home);
 
       --  Finally the default file
-      if Default /= "" and then File_Exists (Default) then
+      if Default /= "" and then File_Exists (+Default) then
          return Default;
       end if;
 
@@ -1052,11 +1058,12 @@ package body GNATCOLL.Traces is
    -----------------------
 
    procedure Parse_Config_File
-     (Filename     : String := "";
-      Default      : String := "";
+     (Filename     : GNATCOLL.Filesystem.Filesystem_String := "";
+      Default      : GNATCOLL.Filesystem.Filesystem_String := "";
       On_Exception : On_Exception_Mode := Propagate)
    is
-      File_Name  : aliased constant String := Config_File (Filename, Default);
+      File_Name  : aliased constant GNATCOLL.Filesystem.Filesystem_String
+        := Config_File (Filename, Default);
       Buffer     : Str_Access;
       File       : Mapped_File;
       Index, First, Max : Natural;
@@ -1145,11 +1152,13 @@ package body GNATCOLL.Traces is
                         Skip_To_Newline;
                         if Buffer (Index - 1) = ASCII.CR then
                            Stream := Find_Stream
-                             (String (Buffer (Save .. Index - 2)), File_Name,
+                             (Filesystem_String (Buffer (Save .. Index - 2)),
+                              File_Name,
                               Append);
                         else
                            Stream := Find_Stream
-                             (String (Buffer (Save .. Index - 1)), File_Name,
+                             (Filesystem_String (Buffer (Save .. Index - 1)),
+                              File_Name,
                               Append);
                         end if;
                         if Stream /= null then
@@ -1247,11 +1256,13 @@ package body GNATCOLL.Traces is
                            Skip_To_Newline;
                            if Buffer (Index - 1) = ASCII.CR then
                               Handle.Stream := Find_Stream
-                                (String (Buffer (Save .. Index - 2)),
+                                (Filesystem_String
+                                   (Buffer (Save .. Index - 2)),
                                  File_Name, Append);
                            else
                               Handle.Stream := Find_Stream
-                                (String (Buffer (Save .. Index - 1)),
+                                (Filesystem_String
+                                   (Buffer (Save .. Index - 1)),
                                  File_Name, Append);
                            end if;
                         end;

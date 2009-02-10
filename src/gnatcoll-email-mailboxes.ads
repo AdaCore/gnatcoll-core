@@ -1,7 +1,7 @@
 -----------------------------------------------------------------------
 --                          G N A T C O L L                          --
 --                                                                   --
---                 Copyright (C) 2006-2008, AdaCore                  --
+--                 Copyright (C) 2006-2009, AdaCore                  --
 --                                                                   --
 -- GPS is free  software;  you can redistribute it and/or modify  it --
 -- under the terms of the GNU General Public License as published by --
@@ -25,6 +25,7 @@ with Ada.Finalization;
 with GNATCOLL.Email.Parser;
 with GNATCOLL.Mmap;
 with GNAT.Strings;
+with GNATCOLL.Filesystem;
 
 package GNATCOLL.Email.Mailboxes is
    --  ??? Would be nice to have a function to write back a message in a
@@ -120,7 +121,9 @@ package GNATCOLL.Email.Mailboxes is
    --  Fp to the mailbox (and leave the default value for On_Close), or keep
    --  control of the string, and pass null to On_Close.
 
-   procedure Open (Self : in out Mbox; Filename : String);
+   procedure Open
+     (Self     : in out Mbox;
+      Filename : GNATCOLL.Filesystem.Filesystem_String);
    --  Same as Open, but takes care of opening the file.
    --  If the file could not be open, Name_Error is raised.
 

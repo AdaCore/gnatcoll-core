@@ -1,7 +1,7 @@
 -----------------------------------------------------------------------
 --                               G P S                               --
 --                                                                   --
---                 Copyright (C) 2003-2008, AdaCore                  --
+--                 Copyright (C) 2003-2009, AdaCore                  --
 --                                                                   --
 -- GPS is free  software;  you can redistribute it and/or modify  it --
 -- under the terms of the GNU General Public License as published by --
@@ -30,10 +30,11 @@ with GNAT.OS_Lib;               use GNAT.OS_Lib;
 
 with GNATCOLL.Filesystem;       use GNATCOLL.Filesystem;
 with GNATCOLL.Utils;            use GNATCOLL.Utils;
+with GNATCOLL.VFS_Utils;        use GNATCOLL.VFS_Utils;
 
 package body GNATCOLL.VFS is
 
-   Empty_String : constant Cst_String_Access := new String'("");
+   Empty_String : constant Cst_String_Access := new Filesystem_String'("");
 
    procedure Ensure_Normalized (File : Virtual_File);
    --  Ensure that the information for the normalized file have been correctly
@@ -64,8 +65,8 @@ package body GNATCOLL.VFS is
          Ensure_Normalized (File1);
          Ensure_Normalized (File2);
          return Equal
-           (File2.Value.Normalized_Full.all,
-            File1.Value.Normalized_Full.all,
+           (+File2.Value.Normalized_Full.all,
+            +File1.Value.Normalized_Full.all,
             File1.Value.FS.Is_Case_Sensitive);
       end if;
    end "=";
@@ -74,7 +75,7 @@ package body GNATCOLL.VFS is
    -- Create --
    ------------
 
-   function Create (Full_Filename : String) return Virtual_File is
+   function Create (Full_Filename : Filesystem_String) return Virtual_File is
    begin
       return Create
         (FS => Get_Local_Filesystem, Full_Filename => Full_Filename);
@@ -86,7 +87,7 @@ package body GNATCOLL.VFS is
 
    function Create
      (FS            : Filesystem_Access;
-      Full_Filename : String) return Virtual_File
+      Full_Filename : Filesystem_String) return Virtual_File
    is
       Last        : Natural := Full_Filename'Last;
       File        : Virtual_File;
@@ -102,7 +103,7 @@ package body GNATCOLL.VFS is
          Value => new Contents_Record'
            (FS              => FS,
             Ref_Count       => 1,
-            Full_Name       => new String'
+            Full_Name       => new Filesystem_String'
               (FS.From_Unix (Full_Filename (Full_Filename'First .. Last))),
             Normalized_Full => null,
             Dir_Name        => null,
@@ -121,7 +122,7 @@ package body GNATCOLL.VFS is
 
    function Create_From_Dir
      (Dir       : Virtual_File;
-      Base_Name : String) return Virtual_File is
+      Base_Name : Filesystem_String) return Virtual_File is
    begin
       Ensure_Directory (Dir);
       return Create
@@ -133,14 +134,15 @@ package body GNATCOLL.VFS is
    -- Create_From_Base --
    ----------------------
 
-   function Create_From_Base (Base_Name : String) return Virtual_File is
+   function Create_From_Base
+     (Base_Name : Filesystem_String) return Virtual_File is
    begin
       if Base_Name /= "" then
          return (Ada.Finalization.Controlled with
                  Value => new Contents_Record'
                  (FS              => Get_Local_Filesystem,
                   Ref_Count       => 1,
-                  Full_Name       => new String'(Base_Name),
+                  Full_Name       => new Filesystem_String'(Base_Name),
                   Normalized_Full => null,
                   Dir_Name        => null,
                   Kind            => Unknown));
@@ -163,7 +165,7 @@ package body GNATCOLL.VFS is
            (File.Value.Full_Name.all)
          then
             File.Value.Normalized_Full :=
-              new String'(File.Value.Full_Name.all);
+              new Filesystem_String'(File.Value.Full_Name.all);
 
          else
             --  Normalize_Pathname with link resolution is not needed, since
@@ -171,7 +173,7 @@ package body GNATCOLL.VFS is
             --     the application's source files, and do not matter for other
             --     files on the system).
 
-            File.Value.Normalized_Full := new String'
+            File.Value.Normalized_Full := new Filesystem_String'
               (File.Value.FS.Normalize (File.Value.Full_Name.all));
          end if;
       end if;
@@ -182,7 +184,8 @@ package body GNATCOLL.VFS is
    ---------------
 
    function Base_Name
-     (File : Virtual_File; Suffix : String := "") return String is
+     (File : Virtual_File; Suffix : Filesystem_String := "")
+      return Filesystem_String is
    begin
       if File.Value = null
         or else File.Value.Full_Name = null
@@ -198,7 +201,7 @@ package body GNATCOLL.VFS is
    -- Base_Dir_Name --
    -------------------
 
-   function Base_Dir_Name (File : Virtual_File) return String is
+   function Base_Dir_Name (File : Virtual_File) return Filesystem_String is
    begin
       if File.Value = null
         or else File.Value.Full_Name = null
@@ -237,10 +240,10 @@ package body GNATCOLL.VFS is
      (Key : Virtual_File) return Ada.Containers.Hash_Type is
    begin
       if Is_Case_Sensitive (Key.Value.FS.all) then
-         return Ada.Strings.Hash (Full_Name (Key, True).all);
+         return Ada.Strings.Hash (+Full_Name (Key, True).all);
       else
          return Ada.Strings.Hash
-           (Ada.Characters.Handling.To_Lower (Full_Name (Key, True).all));
+           (Ada.Characters.Handling.To_Lower (+Full_Name (Key, True).all));
       end if;
    end Full_Name_Hash;
 
@@ -256,7 +259,8 @@ package body GNATCOLL.VFS is
       else
          if File.Value.Dir_Name = null then
             File.Value.Dir_Name :=
-              new String'(File.Value.FS.Dir_Name (File.Full_Name.all));
+              new Filesystem_String'
+                (File.Value.FS.Dir_Name (File.Full_Name.all));
          end if;
          return Cst_String_Access (File.Value.Dir_Name);
       end if;
@@ -268,7 +272,7 @@ package body GNATCOLL.VFS is
 
    function Dir (File : Virtual_File) return Virtual_File is
       The_Dir      : Virtual_File;
-      The_Dir_Name : constant String := File.Dir_Name.all;
+      The_Dir_Name : constant Filesystem_String := File.Dir_Name.all;
    begin
       if The_Dir_Name = "" then
          return VFS.No_File;
@@ -282,10 +286,17 @@ package body GNATCOLL.VFS is
    -- Display_Full_Name --
    -----------------------
 
-   function Display_Full_Name (File : Virtual_File) return String is
+   function Display_Full_Name
+     (File      : Virtual_File;
+      Normalize : Boolean := False) return String is
    begin
       if File.Value = null then
          return "";
+
+      elsif Normalize then
+         Ensure_Normalized (File);
+         return File.Value.FS.Locale_To_Display
+           (File.Value.Normalized_Full.all);
       else
          return File.Value.FS.Locale_To_Display (File.Full_Name.all);
       end if;
@@ -344,7 +355,7 @@ package body GNATCOLL.VFS is
 
    procedure Rename
      (File      : Virtual_File;
-      Full_Name : String;
+      Full_Name : Filesystem_String;
       Success   : out Boolean) is
    begin
       Success := File.Value.FS.Rename (File.Full_Name.all, Full_Name);
@@ -356,7 +367,7 @@ package body GNATCOLL.VFS is
 
    procedure Copy
      (File        : Virtual_File;
-      Target_Name : String;
+      Target_Name : Filesystem_String;
       Success     : out Boolean) is
    begin
       if Is_Directory (File) then
@@ -451,7 +462,7 @@ package body GNATCOLL.VFS is
    -- File_Extension --
    --------------------
 
-   function File_Extension (File : Virtual_File) return String is
+   function File_Extension (File : Virtual_File) return Filesystem_String is
    begin
       if File.Value = null then
          return "";
@@ -485,7 +496,7 @@ package body GNATCOLL.VFS is
      (File   : Virtual_File;
       Append : Boolean := False) return Writable_File
    is
-      Tmp : GNAT.Strings.String_Access := null;
+      Tmp : Filesystem_String_Access := null;
       Fd  : File_Descriptor;
    begin
       if File.Value = null then
@@ -493,16 +504,16 @@ package body GNATCOLL.VFS is
 
       else
          declare
-            Temporary_Dir : constant String :=
+            Temporary_Dir : constant Filesystem_String :=
                               File.Value.FS.Get_Tmp_Directory;
             Current_Dir   : constant String := Get_Current_Dir;
-            Base          : String_Access;
+            Base          : Filesystem_String_Access;
          begin
             --  ??? Append is now handled
 
             Change_Dir (Temporary_Dir);
             Create_Temp_File (Fd, Base);
-            Tmp := new String'
+            Tmp := new Filesystem_String'
               (File.Value.FS.Concat (Temporary_Dir, Base.all));
             Free (Base);
             Change_Dir (Current_Dir);
@@ -545,7 +556,7 @@ package body GNATCOLL.VFS is
         (File.File.Value.Full_Name.all,
          File.Filename.all,
          Append => File.Append);
-      Delete_File (File.Filename.all, Success);
+      Delete_File (+File.Filename.all, Success);
       Free (File.Filename);
 
       Close (File.FD);
@@ -586,7 +597,7 @@ package body GNATCOLL.VFS is
    function Get_Current_Dir return Virtual_File is
       File : Virtual_File;
    begin
-      File := Create (GNAT.Directory_Operations.Get_Current_Dir);
+      File := Create (Get_Current_Dir);
       File.Value.Kind := Directory;
       return File;
    end Get_Current_Dir;
@@ -596,17 +607,17 @@ package body GNATCOLL.VFS is
    ----------------------
 
    procedure Ensure_Directory (Dir : Virtual_File) is
-      Full    : String_Access;
+      Full    : Filesystem_String_Access;
    begin
       if Dir.Value /= null
         and then Dir.Value.Full_Name /= null
       then
          declare
-            Dir_Path : constant String :=
+            Dir_Path : constant Filesystem_String :=
               Dir.Value.FS.Ensure_Directory (Dir.Full_Name.all);
          begin
             if Dir_Path /= Dir.Value.Full_Name.all then
-               Full := new String'(Dir_Path);
+               Full := new Filesystem_String'(Dir_Path);
                Free (Dir.Value.Full_Name);
                Dir.Value.Full_Name := Full;
 
@@ -617,7 +628,7 @@ package body GNATCOLL.VFS is
 
                if Dir.Value.Dir_Name /= null then
                   Free (Dir.Value.Dir_Name);
-                  Dir.Value.Dir_Name := new String'(Full.all);
+                  Dir.Value.Dir_Name := new Filesystem_String'(Full.all);
                end if;
             end if;
          end;
@@ -657,7 +668,7 @@ package body GNATCOLL.VFS is
    -------------
 
    function Sub_Dir
-     (Dir : Virtual_File; Name : String) return Virtual_File
+     (Dir : Virtual_File; Name : Filesystem_String) return Virtual_File
    is
       New_Dir : Virtual_File;
    begin
@@ -753,7 +764,7 @@ package body GNATCOLL.VFS is
          F_Array := new File_Array (1 .. List'Length);
 
          for J in List'Range loop
-            Tmp_File := Dir.Create_From_Dir (List (J).all);
+            Tmp_File := Dir.Create_From_Dir (+List (J).all);
             Free (List (J));
 
             case Filter is

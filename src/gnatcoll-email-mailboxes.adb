@@ -1,7 +1,7 @@
 -----------------------------------------------------------------------
 --                          G N A T C O L L                          --
 --                                                                   --
---                 Copyright (C) 2006-2008, AdaCore                  --
+--                 Copyright (C) 2006-2009, AdaCore                  --
 --                                                                   --
 -- GPS is free  software;  you can redistribute it and/or modify  it --
 -- under the terms of the GNU General Public License as published by --
@@ -125,7 +125,7 @@ package body GNATCOLL.Email.Mailboxes is
 
    procedure Open
      (Self     : in out Mbox;
-      Filename : String) is
+      Filename : GNATCOLL.Filesystem.Filesystem_String) is
    begin
       Self.File       := Open_Read (Filename);
       Read (Self.File);

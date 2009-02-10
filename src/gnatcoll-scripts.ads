@@ -1,7 +1,7 @@
 -----------------------------------------------------------------------
 --                               G N A T C O L L                     --
 --                                                                   --
---                 Copyright (C) 2003-2008, AdaCore                  --
+--                 Copyright (C) 2003-2009, AdaCore                  --
 --                                                                   --
 -- GPS is free  software;  you can redistribute it and/or modify  it --
 -- under the terms of the GNU General Public License as published by --
@@ -31,6 +31,8 @@ with Ada.Finalization;
 with Ada.Strings.Hash;
 with GNAT.OS_Lib;
 with GNAT.Strings;
+
+with GNATCOLL.Filesystem;     use GNATCOLL.Filesystem;
 
 package GNATCOLL.Scripts is
 
@@ -170,6 +172,8 @@ package GNATCOLL.Scripts is
      (Data : Callback_Data; N : Positive; Value : Class_Instance) is abstract;
    procedure Set_Nth_Arg
      (Data : Callback_Data; N : Positive; Value : Subprogram_Type) is abstract;
+   procedure Set_Nth_Arg
+     (Data : Callback_Data'Class; N : Positive; Value : Filesystem_String);
    --  Set the nth argument of Data
 
    function Number_Of_Arguments
@@ -212,6 +216,8 @@ package GNATCOLL.Scripts is
    function Nth_Arg
      (Data : Callback_Data; N : Positive) return String is abstract;
    function Nth_Arg
+     (Data : Callback_Data'Class; N : Positive) return Filesystem_String;
+   function Nth_Arg
      (Data : Callback_Data; N : Positive) return Integer is abstract;
    function Nth_Arg
      (Data : Callback_Data; N : Positive) return Boolean is abstract;
@@ -241,6 +247,9 @@ package GNATCOLL.Scripts is
    function Nth_Arg
      (Data : Callback_Data; N : Positive; Default : String)
       return String;
+   function Nth_Arg
+     (Data : Callback_Data; N : Positive; Default : Filesystem_String)
+      return Filesystem_String;
    function Nth_Arg
      (Data : Callback_Data; N : Positive; Default : Integer)
       return Integer;
@@ -282,6 +291,8 @@ package GNATCOLL.Scripts is
      (Data : in out Callback_Data; Value : Boolean) is abstract;
    procedure Set_Return_Value
      (Data : in out Callback_Data; Value : Class_Instance) is abstract;
+   procedure Set_Return_Value
+     (Data : in out Callback_Data'Class; Value : Filesystem_String);
    --  Set the return value of Data.
    --  If the return value was set as a list, Value is appended to the
    --  list. For languages that do not support lists, the append is only

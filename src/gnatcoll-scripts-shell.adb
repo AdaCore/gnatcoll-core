@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------
 --                          G N A T C O L L                          --
 --                                                                   --
---                 Copyright (C) 2003-2008, AdaCore                  --
+--                 Copyright (C) 2003-2009, AdaCore                  --
 --                                                                   --
 -- GPS is free  software;  you can redistribute it and/or modify  it --
 -- under the terms of the GNU General Public License as published by --
@@ -36,6 +36,8 @@ with GNATCOLL.Scripts.Impl;             use GNATCOLL.Scripts.Impl;
 with GNATCOLL.Scripts.Utils;            use GNATCOLL.Scripts.Utils;
 with GNATCOLL.Traces;                   use GNATCOLL.Traces;
 with GNATCOLL.Utils;                    use GNATCOLL.Utils;
+with GNATCOLL.Filesystem;               use GNATCOLL.Filesystem;
+with GNATCOLL.VFS_Utils;                use GNATCOLL.VFS_Utils;
 
 package body GNATCOLL.Scripts.Shell is
    Me : constant Trace_Handle := Create ("SHELL_SCRIPT", Off);
@@ -213,7 +215,8 @@ package body GNATCOLL.Scripts.Shell is
    begin
       if Command = "load" then
          declare
-            Filename : constant String := Nth_Arg (Data, 1);
+            Filename : constant GNATCOLL.Filesystem.Filesystem_String
+              := (+Nth_Arg (Data, 1));
             File     : Mapped_File;
             Errors   : Boolean;
          begin
@@ -226,7 +229,9 @@ package body GNATCOLL.Scripts.Shell is
             Close (File);
          exception
             when Name_Error =>
-               Set_Error_Msg (Data, "File not found: """ & Filename & '"');
+               Set_Error_Msg
+                 (Data, "File not found: """ &
+                  (+Filename) & '"');
          end;
 
       elsif Command = "echo" or else Command = "echo_error" then
@@ -1546,7 +1551,7 @@ package body GNATCOLL.Scripts.Shell is
      (Data : in out Shell_Callback_Data; Value : Class_Instance) is
    begin
       if Value = No_Class_Instance then
-         Set_Return_Value (Data, "null");
+         Set_Return_Value (Data, String'("null"));
       else
          Set_Return_Value (Data, Name_From_Instance (Value));
       end if;

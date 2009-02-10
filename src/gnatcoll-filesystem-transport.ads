@@ -1,7 +1,7 @@
 -----------------------------------------------------------------------
 --                          G N A T C O L L                          --
 --                                                                   --
---                    Copyright (C) 2008, AdaCore                    --
+--                  Copyright (C) 2008-2009, AdaCore                 --
 --                                                                   --
 -- GPS is free  software;  you can redistribute it and/or modify  it --
 -- under the terms of the GNU General Public License as published by --
@@ -40,14 +40,14 @@ package GNATCOLL.Filesystem.Transport is
       Host                : String;
       Args                : GNAT.Strings.String_List;
       Status              : out Boolean;
-      Execution_Directory : String := "") is abstract;
+      Execution_Directory : Filesystem_String := "") is abstract;
    procedure Execute_Remotely
      (Transport           : access Filesystem_Transport_Record;
       Host                : String;
       Args                : GNAT.Strings.String_List;
       Result              : out GNAT.Strings.String_Access;
       Status              : out Boolean;
-      Execution_Directory : String := "") is abstract;
+      Execution_Directory : Filesystem_String := "") is abstract;
    --  You must override this subprogram to do the actual spawn of a command on
    --  the specified remote host.
 

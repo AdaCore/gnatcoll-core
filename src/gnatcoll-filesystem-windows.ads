@@ -1,7 +1,7 @@
 -----------------------------------------------------------------------
 --                          G N A T C O L L                          --
 --                                                                   --
---                 Copyright (C) 2006-2008, AdaCore                  --
+--                 Copyright (C) 2006-2009, AdaCore                  --
 --                                                                   --
 -- GPS is free  software;  you can redistribute it and/or modify  it --
 -- under the terms of the GNU General Public License as published by --
@@ -30,32 +30,32 @@ package GNATCOLL.Filesystem.Windows is
      (FS : Windows_Filesystem_Record) return Character;
    overriding function To_Unix
      (FS         : Windows_Filesystem_Record;
-      Path       : String;
-      Use_Cygwin : Boolean := False) return String;
+      Path       : Filesystem_String;
+      Use_Cygwin : Boolean := False) return Filesystem_String;
    overriding function From_Unix
      (FS   : Windows_Filesystem_Record;
-      Path : String) return String;
+      Path : Filesystem_String) return Filesystem_String;
    overriding function Is_Absolute_Path
      (FS   : Windows_Filesystem_Record;
-      Path : String) return Boolean;
+      Path : Filesystem_String) return Boolean;
    overriding function Get_Root
      (FS   : Windows_Filesystem_Record;
-      Path : String) return String;
+      Path : Filesystem_String) return Filesystem_String;
    overriding function Device_Name
      (FS   : Windows_Filesystem_Record;
-      Path : String) return String;
+      Path : Filesystem_String) return Filesystem_String;
    overriding function Path
      (FS : Windows_Filesystem_Record;
-      Device : String;
-      Dir    : String;
-      File   : String) return String;
+      Device : Filesystem_String;
+      Dir    : Filesystem_String;
+      File   : Filesystem_String) return Filesystem_String;
    overriding function Is_Case_Sensitive
      (FS : Windows_Filesystem_Record) return Boolean;
    overriding function Has_Devices
      (FS : Windows_Filesystem_Record) return Boolean;
    overriding procedure Get_Logical_Drives
      (FS     : Windows_Filesystem_Record;
-      Buffer : in out String;
+      Buffer : in out Filesystem_String;
       Len    :    out Integer);
 
 end GNATCOLL.Filesystem.Windows;

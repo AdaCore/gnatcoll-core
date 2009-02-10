@@ -1,7 +1,7 @@
 -----------------------------------------------------------------------
 --                          G N A T C O L L                          --
 --                                                                   --
---                 Copyright (C) 2006-2008, AdaCore                  --
+--                 Copyright (C) 2006-2009, AdaCore                  --
 --                                                                   --
 -- GPS is free  software;  you can redistribute it and/or modify  it --
 -- under the terms of the GNU General Public License as published by --
@@ -24,6 +24,8 @@ with Ada.Calendar;
 with Ada.Containers.Doubly_Linked_Lists;
 with Ada.Finalization;
 with Ada.Strings.Unbounded;  use Ada.Strings.Unbounded;
+
+with GNATCOLL.Filesystem;
 
 package GNATCOLL.Email is
 
@@ -461,9 +463,9 @@ package GNATCOLL.Email is
 
    procedure Attach
      (Msg                  : in out Message'Class;
-      Path                 : String;
+      Path                 : GNATCOLL.Filesystem.Filesystem_String;
       MIME_Type            : String           := Application_Octet_Stream;
-      Recommended_Filename : String           := "";
+      Recommended_Filename : GNATCOLL.Filesystem.Filesystem_String := "";
       Description          : String           := "";
       Charset              : String           := Charset_US_ASCII;
       Disposition          : Disposition_Type := Disposition_Attachment;

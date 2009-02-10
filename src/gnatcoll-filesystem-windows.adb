@@ -1,7 +1,7 @@
 -----------------------------------------------------------------------
 --                          G N A T C O L L                          --
 --                                                                   --
---                 Copyright (C) 2006-2008, AdaCore                  --
+--                 Copyright (C) 2006-2009, AdaCore                  --
 --                                                                   --
 -- GPS is free  software;  you can redistribute it and/or modify  it --
 -- under the terms of the GNU General Public License as published by --
@@ -20,12 +20,14 @@
 with Ada.Characters.Handling; use Ada.Characters.Handling;
 with System;
 
+with GNATCOLL.VFS_Utils; use GNATCOLL.VFS_Utils;
+
 package body GNATCOLL.Filesystem.Windows is
 
-   Cygdrive : constant String := "/cygdrive/";
+   Cygdrive : constant Filesystem_String := "/cygdrive/";
    --  Default Cygwin full path specification
 
-   function Is_Cygdrive (Path : String) return Boolean;
+   function Is_Cygdrive (Path : Filesystem_String) return Boolean;
    pragma Inline (Is_Cygdrive);
    --  Returns True if Path is a starting with /cygdrive/<drive>/
 
@@ -33,7 +35,7 @@ package body GNATCOLL.Filesystem.Windows is
    -- Is_Cygdrive --
    -----------------
 
-   function Is_Cygdrive (Path : String) return Boolean is
+   function Is_Cygdrive (Path : Filesystem_String) return Boolean is
    begin
       return Path'Length > Cygdrive'Length + 1
         and then Path
@@ -68,11 +70,11 @@ package body GNATCOLL.Filesystem.Windows is
 
    function To_Unix
      (FS         : Windows_Filesystem_Record;
-      Path       : String;
-      Use_Cygwin : Boolean := False) return String
+      Path       : Filesystem_String;
+      Use_Cygwin : Boolean := False) return Filesystem_String
    is
       pragma Unreferenced (FS);
-      The_Path : String := Path;
+      The_Path : Filesystem_String := Path;
    begin
       if The_Path'Length > 3 and then
         The_Path (The_Path'First .. The_Path'First + 1) = "\\" then
@@ -90,7 +92,7 @@ package body GNATCOLL.Filesystem.Windows is
         and then The_Path'Length > 3
         and then The_Path (The_Path'First + 1 .. The_Path'First + 2) = ":/"
       then
-         return Cygdrive & To_Upper (The_Path (The_Path'First)) &
+         return Cygdrive & (To_Upper (The_Path (The_Path'First))) &
             The_Path (The_Path'First + 2 .. The_Path'Last);
       end if;
 
@@ -103,10 +105,10 @@ package body GNATCOLL.Filesystem.Windows is
 
    function From_Unix
      (FS   : Windows_Filesystem_Record;
-      Path : String) return String
+      Path : Filesystem_String) return Filesystem_String
    is
       pragma Unreferenced (FS);
-      The_Path : String := Path;
+      The_Path : Filesystem_String := Path;
    begin
       --  Convert directory separator to native ones
 
@@ -135,7 +137,7 @@ package body GNATCOLL.Filesystem.Windows is
 
    function Is_Absolute_Path
      (FS   : Windows_Filesystem_Record;
-      Path : String) return Boolean
+      Path : Filesystem_String) return Boolean
    is
       pragma Unreferenced (FS);
    begin
@@ -151,7 +153,7 @@ package body GNATCOLL.Filesystem.Windows is
 
    function Get_Root
      (FS   : Windows_Filesystem_Record;
-      Path : String) return String
+      Path : Filesystem_String) return Filesystem_String
    is
       pragma Unreferenced (FS);
    begin
@@ -168,7 +170,7 @@ package body GNATCOLL.Filesystem.Windows is
 
    function Device_Name
      (FS   : Windows_Filesystem_Record;
-      Path : String) return String
+      Path : Filesystem_String) return Filesystem_String
    is
       pragma Unreferenced (FS);
    begin
@@ -185,9 +187,9 @@ package body GNATCOLL.Filesystem.Windows is
 
    function Path
      (FS     : Windows_Filesystem_Record;
-      Device : String;
-      Dir    : String;
-      File   : String) return String
+      Device : Filesystem_String;
+      Dir    : Filesystem_String;
+      File   : Filesystem_String) return Filesystem_String
    is
       pragma Unreferenced (FS);
    begin
@@ -231,7 +233,7 @@ package body GNATCOLL.Filesystem.Windows is
 
    procedure Get_Logical_Drives
      (FS     : Windows_Filesystem_Record;
-      Buffer : in out String;
+      Buffer : in out Filesystem_String;
       Len    :    out Integer)
    is
       pragma Unreferenced (FS);

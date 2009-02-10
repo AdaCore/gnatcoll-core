@@ -1,7 +1,7 @@
 -----------------------------------------------------------------------
 --                               G N A T C O L L                     --
 --                                                                   --
---                      Copyright (C) 2003-2008, AdaCore             --
+--                      Copyright (C) 2003-2009, AdaCore             --
 --                                                                   --
 -- GPS is free  software;  you can redistribute it and/or modify  it --
 -- under the terms of the GNU General Public License as published by --
@@ -531,6 +531,19 @@ package body GNATCOLL.Scripts is
          return Default;
    end Nth_Arg;
 
+   -------------
+   -- Nth_Arg --
+   -------------
+
+   function Nth_Arg
+     (Data : Callback_Data; N : Positive; Default : Filesystem_String)
+      return Filesystem_String is
+   begin
+      return Nth_Arg (Callback_Data'Class (Data), N);
+   exception
+      when No_Such_Parameter =>
+         return Default;
+   end Nth_Arg;
    -------------
    -- Nth_Arg --
    -------------
@@ -1083,5 +1096,35 @@ package body GNATCOLL.Scripts is
          end if;
       end if;
    end Process_Pending_Events;
+
+   -----------------
+   -- Set_Nth_Arg --
+   -----------------
+
+   procedure Set_Nth_Arg
+     (Data : Callback_Data'Class; N : Positive; Value : Filesystem_String) is
+   begin
+      Set_Nth_Arg (Data, N, +Value);
+   end Set_Nth_Arg;
+
+   -------------
+   -- Nth_Arg --
+   -------------
+
+   function Nth_Arg
+     (Data : Callback_Data'Class; N : Positive) return Filesystem_String is
+   begin
+      return +Nth_Arg (Data, N);
+   end Nth_Arg;
+
+   ----------------------
+   -- Set_Return_Value --
+   ----------------------
+
+   procedure Set_Return_Value
+     (Data : in out Callback_Data'Class; Value : Filesystem_String) is
+   begin
+      Set_Return_Value (Data, +Value);
+   end Set_Return_Value;
 
 end GNATCOLL.Scripts;

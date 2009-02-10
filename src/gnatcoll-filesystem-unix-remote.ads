@@ -1,7 +1,7 @@
 -----------------------------------------------------------------------
 --                          G N A T C O L L                          --
 --                                                                   --
---                    Copyright (C) 2008, AdaCore                    --
+--                  Copyright (C) 2008-2009, AdaCore                 --
 --                                                                   --
 -- GPS is free  software;  you can redistribute it and/or modify  it --
 -- under the terms of the GNU General Public License as published by --
@@ -42,69 +42,69 @@ package GNATCOLL.Filesystem.Unix.Remote is
    overriding function Is_Local
      (FS : Remote_Unix_Filesystem_Record) return Boolean;
    overriding function Home_Dir
-     (FS   : Remote_Unix_Filesystem_Record) return String;
+     (FS   : Remote_Unix_Filesystem_Record) return Filesystem_String;
    overriding function Is_Regular_File
      (FS              : Remote_Unix_Filesystem_Record;
-      Local_Full_Name : String) return Boolean;
+      Local_Full_Name : Filesystem_String) return Boolean;
    overriding function Read_File
      (FS              : Remote_Unix_Filesystem_Record;
-      Local_Full_Name : String) return GNAT.Strings.String_Access;
+      Local_Full_Name : Filesystem_String) return GNAT.Strings.String_Access;
    overriding function Delete
      (FS              : Remote_Unix_Filesystem_Record;
-      Local_Full_Name : String) return Boolean;
+      Local_Full_Name : Filesystem_String) return Boolean;
    overriding function Is_Writable
      (FS              : Remote_Unix_Filesystem_Record;
-      Local_Full_Name : String) return Boolean;
+      Local_Full_Name : Filesystem_String) return Boolean;
    overriding function Is_Symbolic_Link
      (FS              : Remote_Unix_Filesystem_Record;
-      Local_Full_Name : String) return Boolean;
+      Local_Full_Name : Filesystem_String) return Boolean;
    overriding function Is_Directory
      (FS              : Remote_Unix_Filesystem_Record;
-      Local_Full_Name : String) return Boolean;
+      Local_Full_Name : Filesystem_String) return Boolean;
    overriding function File_Time_Stamp
      (FS              : Remote_Unix_Filesystem_Record;
-      Local_Full_Name : String)
+      Local_Full_Name : Filesystem_String)
       return Ada.Calendar.Time;
    overriding procedure Write
      (FS              : Remote_Unix_Filesystem_Record;
-      Local_Full_Name : String;
-      Temporary_File  : String;
+      Local_Full_Name : Filesystem_String;
+      Temporary_File  : Filesystem_String;
       Append          : Boolean := False);
    overriding procedure Set_Writable
      (FS              : Remote_Unix_Filesystem_Record;
-      Local_Full_Name : String;
+      Local_Full_Name : Filesystem_String;
       Writable        : Boolean);
    overriding procedure Set_Readable
      (FS              : Remote_Unix_Filesystem_Record;
-      Local_Full_Name : String;
+      Local_Full_Name : Filesystem_String;
       Readable        : Boolean);
    overriding function Make_Dir
      (FS             : Remote_Unix_Filesystem_Record;
-      Local_Dir_Name : String) return Boolean;
+      Local_Dir_Name : Filesystem_String) return Boolean;
    overriding function Remove_Dir
      (FS             : Remote_Unix_Filesystem_Record;
-      Local_Dir_Name : String;
+      Local_Dir_Name : Filesystem_String;
       Recursive      : Boolean) return Boolean;
    overriding function Read_Dir
      (FS             : Remote_Unix_Filesystem_Record;
-      Local_Dir_Name : String;
+      Local_Dir_Name : Filesystem_String;
       Dirs_Only      : Boolean := False;
       Files_Only     : Boolean := False) return GNAT.Strings.String_List;
    overriding function Rename
      (FS              : Remote_Unix_Filesystem_Record;
-      From_Local_Name : String;
-      To_Local_Name   : String) return Boolean;
+      From_Local_Name : Filesystem_String;
+      To_Local_Name   : Filesystem_String) return Boolean;
    overriding function Copy
      (FS              : Remote_Unix_Filesystem_Record;
-      From_Local_Name : String;
-      To_Local_Name   : String) return Boolean;
+      From_Local_Name : Filesystem_String;
+      To_Local_Name   : Filesystem_String) return Boolean;
    overriding function Copy_Dir
      (FS              : Remote_Unix_Filesystem_Record;
-      From_Local_Name : String;
-      To_Local_Name   : String) return Boolean;
+      From_Local_Name : Filesystem_String;
+      To_Local_Name   : Filesystem_String) return Boolean;
    overriding function Change_Dir
      (FS             : Remote_Unix_Filesystem_Record;
-      Local_Dir_Name : String) return Boolean;
+      Local_Dir_Name : Filesystem_String) return Boolean;
    overriding procedure Free (FS : in out Remote_Unix_Filesystem_Record);
    --  See inherited documentation in parent package
 

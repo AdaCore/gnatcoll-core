@@ -1,7 +1,7 @@
 -----------------------------------------------------------------------
 --                          G N A T C O L L                          --
 --                                                                   --
---                 Copyright (C) 2006-2008, AdaCore                  --
+--                 Copyright (C) 2006-2009, AdaCore                  --
 --                                                                   --
 -- GPS is free  software;  you can redistribute it and/or modify  it --
 -- under the terms of the GNU General Public License as published by --
@@ -30,6 +30,7 @@ with Ada.Unchecked_Deallocation;
 with GNATCOLL.Email.Utils;      use GNATCOLL.Email.Utils;
 with GNATCOLL.Mmap;             use GNATCOLL.Mmap;
 with GNATCOLL.Utils;            use GNATCOLL.Utils;
+with GNATCOLL.VFS_Utils;        use GNATCOLL.VFS_Utils;
 with GNAT.Directory_Operations; use GNAT.Directory_Operations;
 
 package body GNATCOLL.Email is
@@ -1410,9 +1411,9 @@ package body GNATCOLL.Email is
 
    procedure Attach
      (Msg                  : in out Message'Class;
-      Path                 : String;
+      Path                 : GNATCOLL.Filesystem.Filesystem_String;
       MIME_Type            : String := Application_Octet_Stream;
-      Recommended_Filename : String := "";
+      Recommended_Filename : GNATCOLL.Filesystem.Filesystem_String := "";
       Description          : String := "";
       Charset              : String := Charset_US_ASCII;
       Disposition          : Disposition_Type := Disposition_Attachment;
@@ -1421,6 +1422,8 @@ package body GNATCOLL.Email is
       Attachment : Message := New_Message (MIME_Type => "");
       File       : Mapped_File;
       Str        : Str_Access;
+
+      use type GNATCOLL.Filesystem.Filesystem_String;
    begin
       File := Open_Read (Path);
       Read (File);
@@ -1453,14 +1456,14 @@ package body GNATCOLL.Email is
                      Create
                        (Content_Disposition,
                         "attachment; filename="""
-                        & Base_Name (Path) & '"'));
+                        & (+Base_Name (Path)) & '"'));
                else
                   Replace_Header
                     (Attachment,
                      Create
                        (Content_Disposition,
                         "attachment; filename="""
-                        & Recommended_Filename & '"'));
+                        & (+Recommended_Filename) & '"'));
                end if;
 
             when Disposition_Inline =>
@@ -1470,14 +1473,14 @@ package body GNATCOLL.Email is
                      Create
                        (Content_Disposition,
                         "inline; filename="""
-                        & Base_Name (Path) & '"'));
+                        & (+Base_Name (Path)) & '"'));
                else
                   Replace_Header
                     (Attachment,
                      Create
                        (Content_Disposition,
                         "inline; filename="""
-                        & Recommended_Filename & '"'));
+                        & (+Recommended_Filename) & '"'));
                end if;
          end case;
 

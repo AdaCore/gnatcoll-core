@@ -1,7 +1,7 @@
 -----------------------------------------------------------------------
 --                               G N A T C O L L                     --
 --                                                                   --
---                 Copyright (C) 2007-2008, AdaCore                  --
+--                 Copyright (C) 2007-2009, AdaCore                  --
 --                                                                   --
 -- GPS is free  software;  you can redistribute it and/or modify  it --
 -- under the terms of the GNU General Public License as published by --
@@ -22,6 +22,8 @@ with Ada.Unchecked_Conversion;
 with GNAT.OS_Lib;              use GNAT.OS_Lib;
 with Interfaces.C;             use Interfaces.C;
 with System;                   use System;
+
+with GNATCOLL.Filesystem;      use GNATCOLL.Filesystem;
 
 package body GNATCOLL.Mmap is
 
@@ -122,12 +124,12 @@ package body GNATCOLL.Mmap is
    ---------------
 
    function Open_Read
-     (Filename              : String;
+     (Filename              : GNATCOLL.Filesystem.Filesystem_String;
       Use_Mmap_If_Available : Boolean := True) return Mapped_File
    is
       Fd : File_Descriptor;
    begin
-      Fd := Open_Read (Filename, Binary);
+      Fd := Open_Read (+Filename, Binary);
       if Fd = Invalid_FD then
          raise Name_Error;
       end if;
@@ -152,12 +154,12 @@ package body GNATCOLL.Mmap is
    ----------------
 
    function Open_Write
-     (Filename              : String;
+     (Filename              : GNATCOLL.Filesystem.Filesystem_String;
       Use_Mmap_If_Available : Boolean := True) return Mapped_File
    is
       Fd : File_Descriptor;
    begin
-      Fd := Open_Read_Write (Filename, Binary);
+      Fd := Open_Read_Write (+Filename, Binary);
       if Fd = Invalid_FD then
          raise Name_Error;
       end if;
@@ -357,7 +359,7 @@ package body GNATCOLL.Mmap is
    ---------------------
 
    function Read_Whole_File
-     (Filename           : String;
+     (Filename           : GNATCOLL.Filesystem.Filesystem_String;
       Empty_If_Not_Found : Boolean := False) return GNAT.Strings.String_Access
    is
       File   : Mapped_File;

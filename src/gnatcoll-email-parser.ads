@@ -1,7 +1,7 @@
 -----------------------------------------------------------------------
 --                          G N A T C O L L                          --
 --                                                                   --
---                 Copyright (C) 2006-2008, AdaCore                  --
+--                 Copyright (C) 2006-2009, AdaCore                  --
 --                                                                   --
 -- GPS is free  software;  you can redistribute it and/or modify  it --
 -- under the terms of the GNU General Public License as published by --
@@ -19,6 +19,8 @@
 
 --  This package provides a parser that creates an email message from a textual
 --  representation of it.
+
+with GNATCOLL.Filesystem;
 
 package GNATCOLL.Email.Parser is
 
@@ -69,7 +71,7 @@ package GNATCOLL.Email.Parser is
    --  extracted separately. To save time, they are not MIME-decoded though.
 
    procedure Full_Parse_From_File
-     (Filename      : String;
+     (Filename      : GNATCOLL.Filesystem.Filesystem_String;
       Msg           : out Message;
       Store_Headers : Boolean := True;
       Store_Payload : Boolean := True;

@@ -1,7 +1,7 @@
 -----------------------------------------------------------------------
 --                          G N A T C O L L                          --
 --                                                                   --
---                    Copyright (C) 2008, AdaCore                    --
+--                  Copyright (C) 2008-2009, AdaCore                 --
 --                                                                   --
 -- GPS is free  software;  you can redistribute it and/or modify  it --
 -- under the terms of the GNU General Public License as published by --
@@ -73,7 +73,9 @@ package body GNATCOLL.Filesystem.Unix.Remote is
    -- Home_Dir --
    --------------
 
-   function Home_Dir (FS : Remote_Unix_Filesystem_Record) return String is
+   function Home_Dir
+     (FS : Remote_Unix_Filesystem_Record) return Filesystem_String
+   is
       Args : GNAT.OS_Lib.Argument_List :=
                (new String'("echo"),
                 new String'("$HOME"));
@@ -88,7 +90,7 @@ package body GNATCOLL.Filesystem.Unix.Remote is
          declare
             --  Don't try to translate the string into a directory, as this
             --  is all handled later at VFS level.
-            Result : constant String := Output.all;
+            Result : constant Filesystem_String := +(Output.all);
          begin
             Free (Output);
             return Result;
@@ -105,12 +107,12 @@ package body GNATCOLL.Filesystem.Unix.Remote is
 
    function Is_Regular_File
      (FS              : Remote_Unix_Filesystem_Record;
-      Local_Full_Name : String) return Boolean
+      Local_Full_Name : Filesystem_String) return Boolean
    is
       Args : GNAT.OS_Lib.Argument_List :=
                          (new String'("test"),
                           new String'("-r"),
-                          new String'(Local_Full_Name));
+                          new String'(+Local_Full_Name));
       Status : Boolean;
 
    begin
@@ -125,11 +127,11 @@ package body GNATCOLL.Filesystem.Unix.Remote is
 
    function Read_File
      (FS              : Remote_Unix_Filesystem_Record;
-      Local_Full_Name : String) return GNAT.Strings.String_Access
+      Local_Full_Name : Filesystem_String) return GNAT.Strings.String_Access
    is
       Args : GNAT.OS_Lib.Argument_List :=
         (new String'("cat"),
-         new String'(Local_Full_Name));
+         new String'(+Local_Full_Name));
       Status : Boolean;
       Output : String_Access;
 
@@ -145,12 +147,12 @@ package body GNATCOLL.Filesystem.Unix.Remote is
 
    function Delete
      (FS              : Remote_Unix_Filesystem_Record;
-      Local_Full_Name : String) return Boolean
+      Local_Full_Name : Filesystem_String) return Boolean
    is
       Args : GNAT.OS_Lib.Argument_List :=
         (new String'("rm"),
          new String'("-f"),
-         new String'(Local_Full_Name));
+         new String'(+Local_Full_Name));
       Status : Boolean;
 
    begin
@@ -165,12 +167,12 @@ package body GNATCOLL.Filesystem.Unix.Remote is
 
    function Is_Writable
      (FS              : Remote_Unix_Filesystem_Record;
-      Local_Full_Name : String) return Boolean
+      Local_Full_Name : Filesystem_String) return Boolean
    is
       Args : GNAT.OS_Lib.Argument_List :=
         (new String'("test"),
          new String'("-w"),
-         new String'(Local_Full_Name));
+         new String'(+Local_Full_Name));
       Status : Boolean;
 
    begin
@@ -185,12 +187,12 @@ package body GNATCOLL.Filesystem.Unix.Remote is
 
    function Is_Symbolic_Link
      (FS              : Remote_Unix_Filesystem_Record;
-      Local_Full_Name : String) return Boolean
+      Local_Full_Name : Filesystem_String) return Boolean
    is
       Args : GNAT.OS_Lib.Argument_List :=
         (new String'("test"),
          new String'("-L"),
-         new String'(Local_Full_Name));
+         new String'(+Local_Full_Name));
       Status : Boolean;
 
    begin
@@ -205,12 +207,12 @@ package body GNATCOLL.Filesystem.Unix.Remote is
 
    function Is_Directory
      (FS              : Remote_Unix_Filesystem_Record;
-      Local_Full_Name : String) return Boolean
+      Local_Full_Name : Filesystem_String) return Boolean
    is
       Args : GNAT.OS_Lib.Argument_List :=
         (new String'("test"),
          new String'("-d"),
-         new String'(Local_Full_Name));
+         new String'(+Local_Full_Name));
       Status : Boolean;
 
    begin
@@ -225,14 +227,14 @@ package body GNATCOLL.Filesystem.Unix.Remote is
 
    function File_Time_Stamp
      (FS              : Remote_Unix_Filesystem_Record;
-      Local_Full_Name : String)
+      Local_Full_Name : Filesystem_String)
       return Ada.Calendar.Time
    is
       Args : GNAT.OS_Lib.Argument_List :=
         (new String'("ls"),
          new String'("-l"),
          new String'("--time-style=full-iso"),
-         new String'(Local_Full_Name),
+         new String'(+Local_Full_Name),
          new String'("2>"),
          new String'("/dev/null"));
       Status  : Boolean;
@@ -284,15 +286,15 @@ package body GNATCOLL.Filesystem.Unix.Remote is
 
    procedure Write
      (FS              : Remote_Unix_Filesystem_Record;
-      Local_Full_Name : String;
-      Temporary_File  : String;
+      Local_Full_Name : Filesystem_String;
+      Temporary_File  : Filesystem_String;
       Append          : Boolean := False)
    is
       Pd : Process_Descriptor_Access;
       Args : GNAT.OS_Lib.Argument_List :=
         (1 => new String'("cat"),
          2 => new String'(">"),
-         3 => new String'(Local_Full_Name),
+         3 => new String'(+Local_Full_Name),
          4 => new String'("<<"),
          5 => new String'("GPSEOF"));
       Regexp       : constant Pattern_Matcher
@@ -342,13 +344,13 @@ package body GNATCOLL.Filesystem.Unix.Remote is
 
    procedure Set_Writable
      (FS              : Remote_Unix_Filesystem_Record;
-      Local_Full_Name : String;
+      Local_Full_Name : Filesystem_String;
       Writable        : Boolean)
    is
       Args : GNAT.OS_Lib.Argument_List :=
         (1 => new String'("chmod"),
          2 => new String'("u+w"),
-         3 => new String'(Local_Full_Name));
+         3 => new String'(+Local_Full_Name));
       Status : Boolean;
       pragma Unreferenced (Status);
 
@@ -367,13 +369,13 @@ package body GNATCOLL.Filesystem.Unix.Remote is
 
    procedure Set_Readable
      (FS              : Remote_Unix_Filesystem_Record;
-      Local_Full_Name : String;
+      Local_Full_Name : Filesystem_String;
       Readable        : Boolean)
    is
       Args : GNAT.OS_Lib.Argument_List :=
         (1 => new String'("chmod"),
          2 => new String'("u+r"),
-         3 => new String'(Local_Full_Name));
+         3 => new String'(+Local_Full_Name));
       Status : Boolean;
       pragma Unreferenced (Status);
 
@@ -392,11 +394,11 @@ package body GNATCOLL.Filesystem.Unix.Remote is
 
    function Make_Dir
      (FS             : Remote_Unix_Filesystem_Record;
-      Local_Dir_Name : String) return Boolean
+      Local_Dir_Name : Filesystem_String) return Boolean
    is
       Args : GNAT.OS_Lib.Argument_List :=
         (new String'("mkdir"),
-         new String'(Local_Dir_Name));
+         new String'(+Local_Dir_Name));
       Status : Boolean;
 
    begin
@@ -411,13 +413,13 @@ package body GNATCOLL.Filesystem.Unix.Remote is
 
    function Remove_Dir
      (FS             : Remote_Unix_Filesystem_Record;
-      Local_Dir_Name : String;
+      Local_Dir_Name : Filesystem_String;
       Recursive      : Boolean) return Boolean
    is
       Args : GNAT.OS_Lib.Argument_List :=
         (1 => new String'("rm"),
          2 => new String'("-r"),
-         3 => new String'(Local_Dir_Name));
+         3 => new String'(+Local_Dir_Name));
       Status : Boolean;
 
    begin
@@ -437,7 +439,7 @@ package body GNATCOLL.Filesystem.Unix.Remote is
 
    function Read_Dir
      (FS             : Remote_Unix_Filesystem_Record;
-      Local_Dir_Name : String;
+      Local_Dir_Name : Filesystem_String;
       Dirs_Only      : Boolean := False;
       Files_Only     : Boolean := False) return GNAT.Strings.String_List
    is
@@ -457,7 +459,7 @@ package body GNATCOLL.Filesystem.Unix.Remote is
                  (new String'("sh"),
                   new String'("-c"),
                   new String'("ls -AL1F '" &
-                              Local_Dir_Name &
+                              (+Local_Dir_Name) &
                               "' 2> /dev/null | grep /$"));
 
          elsif Files_Only then
@@ -465,14 +467,14 @@ package body GNATCOLL.Filesystem.Unix.Remote is
                  (new String'("sh"),
                   new String'("-c"),
                   new String'("ls -AL1F '" &
-                              Local_Dir_Name &
+                              (+Local_Dir_Name) &
                               "' 2> /dev/null | grep -v /$ | " &
                               "sed -e 's/[*=@\|]$//'"));
 
          else
             return (new String'("ls"),
                     new String'("-A1"),
-                    new String'(Local_Dir_Name));
+                    new String'(+Local_Dir_Name));
          end if;
       end Create_Args;
 
@@ -542,13 +544,13 @@ package body GNATCOLL.Filesystem.Unix.Remote is
 
    function Rename
      (FS              : Remote_Unix_Filesystem_Record;
-      From_Local_Name : String;
-      To_Local_Name   : String) return Boolean
+      From_Local_Name : Filesystem_String;
+      To_Local_Name   : Filesystem_String) return Boolean
    is
       Args : GNAT.OS_Lib.Argument_List :=
         (new String'("mv"),
-         new String'(From_Local_Name),
-         new String'(To_Local_Name));
+         new String'(+From_Local_Name),
+         new String'(+To_Local_Name));
       Status : Boolean;
 
    begin
@@ -563,14 +565,14 @@ package body GNATCOLL.Filesystem.Unix.Remote is
 
    function Copy
      (FS              : Remote_Unix_Filesystem_Record;
-      From_Local_Name : String;
-      To_Local_Name   : String) return Boolean
+      From_Local_Name : Filesystem_String;
+      To_Local_Name   : Filesystem_String) return Boolean
    is
       Args : GNAT.OS_Lib.Argument_List :=
         (new String'("cp"),
          new String'("-f"),
-         new String'(From_Local_Name),
-         new String'(To_Local_Name));
+         new String'(+From_Local_Name),
+         new String'(+To_Local_Name));
       Status : Boolean;
    begin
       Execute_Remotely (FS.Transport, FS.Host.all, Args, Status);
@@ -584,14 +586,14 @@ package body GNATCOLL.Filesystem.Unix.Remote is
 
    function Copy_Dir
      (FS              : Remote_Unix_Filesystem_Record;
-      From_Local_Name : String;
-      To_Local_Name   : String) return Boolean
+      From_Local_Name : Filesystem_String;
+      To_Local_Name   : Filesystem_String) return Boolean
    is
       Args : GNAT.OS_Lib.Argument_List :=
         (new String'("cp"),
          new String'("-rf"),
-         new String'(From_Local_Name),
-         new String'(To_Local_Name));
+         new String'(+From_Local_Name),
+         new String'(+To_Local_Name));
       Status : Boolean;
    begin
       Execute_Remotely (FS.Transport, FS.Host.all, Args, Status);
@@ -605,11 +607,11 @@ package body GNATCOLL.Filesystem.Unix.Remote is
 
    function Change_Dir
      (FS             : Remote_Unix_Filesystem_Record;
-      Local_Dir_Name : String) return Boolean
+      Local_Dir_Name : Filesystem_String) return Boolean
    is
       Args : GNAT.OS_Lib.Argument_List :=
         (new String'("cd"),
-         new String'(Local_Dir_Name));
+         new String'(+Local_Dir_Name));
       Status : Boolean;
    begin
       Execute_Remotely (FS.Transport, FS.Host.all, Args, Status);

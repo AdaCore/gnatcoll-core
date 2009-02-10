@@ -1,7 +1,7 @@
 -----------------------------------------------------------------------
 --                          G N A T C O L L                          --
 --                                                                   --
---                 Copyright (C) 2006-2008, AdaCore                  --
+--                 Copyright (C) 2006-2009, AdaCore                  --
 --                                                                   --
 -- GPS is free  software;  you can redistribute it and/or modify  it --
 -- under the terms of the GNU General Public License as published by --
@@ -45,8 +45,8 @@ package body GNATCOLL.Filesystem.Unix is
 
    function To_Unix
      (FS         : Unix_Filesystem_Record;
-      Path       : String;
-      Use_Cygwin : Boolean := False) return String
+      Path       : Filesystem_String;
+      Use_Cygwin : Boolean := False) return Filesystem_String
    is
       pragma Unreferenced (FS, Use_Cygwin);
    begin
@@ -59,7 +59,7 @@ package body GNATCOLL.Filesystem.Unix is
 
    function From_Unix
      (FS   : Unix_Filesystem_Record;
-      Path : String) return String
+      Path : Filesystem_String) return Filesystem_String
    is
       pragma Unreferenced (FS);
    begin
@@ -72,7 +72,7 @@ package body GNATCOLL.Filesystem.Unix is
 
    function Is_Absolute_Path
      (FS   : Unix_Filesystem_Record;
-      Path : String) return Boolean
+      Path : Filesystem_String) return Boolean
    is
       pragma Unreferenced (FS);
    begin
@@ -85,7 +85,7 @@ package body GNATCOLL.Filesystem.Unix is
 
    function Get_Root
      (FS   : Unix_Filesystem_Record;
-      Path : String) return String
+      Path : Filesystem_String) return Filesystem_String
    is
       pragma Unreferenced (FS, Path);
    begin
@@ -98,7 +98,7 @@ package body GNATCOLL.Filesystem.Unix is
 
    function Device_Name
      (FS   : Unix_Filesystem_Record;
-      Path : String) return String
+      Path : Filesystem_String) return Filesystem_String
    is
       pragma Unreferenced (Path, FS);
    begin
@@ -111,9 +111,9 @@ package body GNATCOLL.Filesystem.Unix is
 
    function Path
      (FS : Unix_Filesystem_Record;
-      Device : String;
-      Dir    : String;
-      File   : String) return String
+      Device : Filesystem_String;
+      Dir    : Filesystem_String;
+      File   : Filesystem_String) return Filesystem_String
    is
       pragma Unreferenced (FS, Device);
    begin
@@ -146,7 +146,7 @@ package body GNATCOLL.Filesystem.Unix is
 
    procedure Get_Logical_Drives
      (FS     : Unix_Filesystem_Record;
-      Buffer : in out String;
+      Buffer : in out Filesystem_String;
       Len    : out Integer)
    is
       pragma Unreferenced (FS);

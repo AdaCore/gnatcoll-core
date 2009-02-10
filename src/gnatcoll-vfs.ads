@@ -1,7 +1,7 @@
 -----------------------------------------------------------------------
 --                          G N A T C O L L                          --
 --                                                                   --
---                 Copyright (C) 2003-2008, AdaCore                  --
+--                 Copyright (C) 2003-2009, AdaCore                  --
 --                                                                   --
 -- GPS is free  software;  you can redistribute it and/or modify  it --
 -- under the terms of the GNU General Public License as published by --
@@ -43,9 +43,10 @@
 with Ada.Calendar;
 with Ada.Finalization;
 with Ada.Containers;
+
 with GNAT.OS_Lib;
 with GNAT.Strings;
-with GNATCOLL.Filesystem;
+with GNATCOLL.Filesystem; use GNATCOLL.Filesystem;
 
 package GNATCOLL.VFS is
 
@@ -70,14 +71,14 @@ package GNATCOLL.VFS is
    --  filename needs to be converted to a known encoding, generally utf8.
    --  See the "Retrieving names" section below.
 
-   function Create (Full_Filename : String) return Virtual_File;
+   function Create (Full_Filename : Filesystem_String) return Virtual_File;
    --  Return a file, given its full filename.
    --  The latter can be found, for source files, through the functions in
    --  projects-registry.ads.
 
    function Create
      (FS            : GNATCOLL.Filesystem.Filesystem_Access;
-      Full_Filename : String) return Virtual_File;
+      Full_Filename : Filesystem_String) return Virtual_File;
    --  Return a file, given its full filename and an instance of a file
    --  system. The filesystem can possibly be running on a remote host, in
    --  which case the file will also be hosted on that machine.
@@ -85,10 +86,11 @@ package GNATCOLL.VFS is
 
    function Create_From_Dir
      (Dir       : Virtual_File;
-      Base_Name : String) return Virtual_File;
+      Base_Name : Filesystem_String) return Virtual_File;
    --  Creates a file from its directory and base name
 
-   function Create_From_Base (Base_Name : String) return Virtual_File;
+   function Create_From_Base
+     (Base_Name : Filesystem_String) return Virtual_File;
    --  Return a file, given its base name.
    --  The full name will never be computable. Consider using Projects.Create
    --  if you know to which project the file belongs. Also consider using
@@ -110,13 +112,14 @@ package GNATCOLL.VFS is
    --  functions above, and therefore make no guarantee on the encoding of the
    --  file name.
 
-   type Cst_String_Access is access constant String;
+   type Cst_String_Access is access constant Filesystem_String;
 
    function Base_Name
-     (File : Virtual_File; Suffix : String := "") return String;
+     (File : Virtual_File; Suffix : Filesystem_String := "")
+      return Filesystem_String;
    --  Return the base name of the file
 
-   function Base_Dir_Name (File : Virtual_File) return String;
+   function Base_Dir_Name (File : Virtual_File) return Filesystem_String;
    --  Return the base name of the directory or the file
 
    function Full_Name
@@ -135,7 +138,7 @@ package GNATCOLL.VFS is
    --  Could be used to instantiate an Ada 2005 container that uses a VFS as
    --  key and requires a hash function.
 
-   function File_Extension (File : Virtual_File) return String;
+   function File_Extension (File : Virtual_File) return Filesystem_String;
    --  Return the extension of the file, or the empty string if there is no
    --  extension. This extension includes the last dot and all the following
    --  characters.
@@ -144,7 +147,9 @@ package GNATCOLL.VFS is
    --  Return the directory name for File. This includes any available
    --  on the protocol, so that relative files names are properly found.
 
-   function Display_Full_Name (File : Virtual_File) return String;
+   function Display_Full_Name
+     (File      : Virtual_File;
+      Normalize : Boolean := False) return String;
    --  Same as Full_Name
 
    function Display_Base_Name (File : Virtual_File) return String;
@@ -221,13 +226,13 @@ package GNATCOLL.VFS is
 
    procedure Rename
      (File      : Virtual_File;
-      Full_Name : String;
+      Full_Name : Filesystem_String;
       Success   : out Boolean);
    --  Rename a file or directory. This does not work for remote files
 
    procedure Copy
      (File        : Virtual_File;
-      Target_Name : String;
+      Target_Name : Filesystem_String;
       Success     : out Boolean);
    --  Copy a file or directory. This does not work for remote files
 
@@ -261,7 +266,8 @@ package GNATCOLL.VFS is
    function Get_Parent (Dir : Virtual_File) return Virtual_File;
    --  Return the parent directory if it exists, else No_File is returned
 
-   function Sub_Dir (Dir : Virtual_File; Name : String) return Virtual_File;
+   function Sub_Dir
+     (Dir : Virtual_File; Name : Filesystem_String) return Virtual_File;
    --  Return sub directory Name if it exists, else No_File is returned
 
    procedure Change_Dir (Dir : Virtual_File);
@@ -349,9 +355,9 @@ private
    type Contents_Record is record
       FS              : GNATCOLL.Filesystem.Filesystem_Access;
       Ref_Count       : Natural := 1;
-      Full_Name       : GNAT.Strings.String_Access;
-      Normalized_Full : GNAT.Strings.String_Access;
-      Dir_Name        : GNAT.Strings.String_Access;
+      Full_Name       : Filesystem_String_Access;
+      Normalized_Full : Filesystem_String_Access;
+      Dir_Name        : Filesystem_String_Access;
       Kind            : File_Type := Unknown;
    end record;
    type Contents_Access is access Contents_Record;
@@ -367,7 +373,7 @@ private
    type Writable_File is record
       File     : Virtual_File;
       FD       : GNAT.OS_Lib.File_Descriptor := GNAT.OS_Lib.Invalid_FD;
-      Filename : GNAT.Strings.String_Access;
+      Filename : Filesystem_String_Access;
       Append   : Boolean;
    end record;
 
@@ -383,12 +389,15 @@ private
 
    Local_Root_Dir : constant Virtual_File :=
      (Ada.Finalization.Controlled with Value => new Contents_Record'(
-        FS              => GNATCOLL.Filesystem.Get_Local_Filesystem,
-        Ref_Count       => 1,
-        Full_Name       => new String'(1 => GNAT.OS_Lib.Directory_Separator),
-        Normalized_Full => new String'(1 => GNAT.OS_Lib.Directory_Separator),
-        Dir_Name        => new String'(1 => GNAT.OS_Lib.Directory_Separator),
-        Kind            => Directory));
+      FS              => GNATCOLL.Filesystem.Get_Local_Filesystem,
+      Ref_Count       => 1,
+      Full_Name       => new Filesystem_String'
+        (1 => GNAT.OS_Lib.Directory_Separator),
+      Normalized_Full => new Filesystem_String'
+        (1 => GNAT.OS_Lib.Directory_Separator),
+      Dir_Name        => new Filesystem_String'
+        (1 => GNAT.OS_Lib.Directory_Separator),
+      Kind            => Directory));
 
    No_File : constant Virtual_File :=
      (Ada.Finalization.Controlled with Value => null);
