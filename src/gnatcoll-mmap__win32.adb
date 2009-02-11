@@ -24,8 +24,6 @@ with GNAT.OS_Lib;              use GNAT.OS_Lib;
 
 package body GNATCOLL.Mmap is
 
-   use GNATCOLL.Filesystem;
-
    function Convert is new Ada.Unchecked_Conversion
      (System.Address, Str_Access);
    function Convert is new Ada.Unchecked_Conversion
@@ -37,7 +35,7 @@ package body GNATCOLL.Mmap is
    procedure To_Disk (File : in out Mapped_File);
    --  Write the file back to disk if necessary, and free memory
 
-   function From_Utf8 (Filename : in String) return Wide_String;
+   function From_Utf8 (Filename : String) return Wide_String;
    --  Convert an UTF-8 filename to a Win32 native Unicode-16
 
    --  The Win package contains copy of definition found in recent System.Win32
@@ -191,7 +189,7 @@ package body GNATCOLL.Mmap is
    -- From_Utf8 --
    ---------------
 
-   function From_Utf8 (Filename : in String) return Wide_String is
+   function From_Utf8 (Filename : String) return Wide_String is
       C_Filename : constant String := Filename & ASCII.NUL;
       W_Filename : Wide_String (1 .. C_Filename'Length + 1);
       Res        : Win.BOOL;
@@ -282,10 +280,10 @@ package body GNATCOLL.Mmap is
    ---------------
 
    function Open_Read
-     (Filename              : GNATCOLL.Filesystem.Filesystem_String;
+     (Filename              : String;
       Use_Mmap_If_Available : Boolean := True) return Mapped_File
    is
-      W_File : constant Wide_String := From_Utf8 (+Filename);
+      W_File : constant Wide_String := From_Utf8 (Filename);
       H      : constant HANDLE :=
                  CreateFile
                    (W_File'Address, GENERIC_READ, Win.FILE_SHARE_READ,
@@ -327,10 +325,10 @@ package body GNATCOLL.Mmap is
    ----------------
 
    function Open_Write
-     (Filename              : GNATCOLL.Filesystem.Filesystem_String;
+     (Filename              : String;
       Use_Mmap_If_Available : Boolean := True) return Mapped_File
    is
-      W_File : constant Wide_String := From_Utf8 (+Filename);
+      W_File : constant Wide_String := From_Utf8 (Filename);
       H      : constant HANDLE :=
                  CreateFile
                    (W_File'Address, GENERIC_READ + GENERIC_WRITE, 0,
@@ -558,7 +556,7 @@ package body GNATCOLL.Mmap is
    ---------------------
 
    function Read_Whole_File
-     (Filename           : GNATCOLL.Filesystem.Filesystem_String;
+     (Filename           : String;
       Empty_If_Not_Found : Boolean := False) return GNAT.Strings.String_Access
    is
       File   : Mapped_File;

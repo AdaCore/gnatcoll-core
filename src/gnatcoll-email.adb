@@ -28,10 +28,13 @@ pragma Warnings (On);
 
 with Ada.Unchecked_Deallocation;
 with GNATCOLL.Email.Utils;      use GNATCOLL.Email.Utils;
+with GNATCOLL.Filesystem;       use GNATCOLL.Filesystem;
 with GNATCOLL.Mmap;             use GNATCOLL.Mmap;
 with GNATCOLL.Utils;            use GNATCOLL.Utils;
+with GNATCOLL.VFS;              use GNATCOLL.VFS;
 with GNATCOLL.VFS_Utils;        use GNATCOLL.VFS_Utils;
 with GNAT.Directory_Operations; use GNAT.Directory_Operations;
+with GNAT.Strings;              use GNAT.Strings;
 
 package body GNATCOLL.Email is
    use Header_List, Charset_String_List, Message_List;
@@ -274,7 +277,7 @@ package body GNATCOLL.Email is
             end if;
 
             declare
-               StrA  : String_Access;
+               StrA  : Ada.Strings.Unbounded.String_Access;
                Last  : Natural;
                Start, Eol : Integer;
             begin
@@ -488,7 +491,7 @@ package body GNATCOLL.Email is
       N       : String (1 .. Length (H.Contents.Name));
       Value   : constant Charset_String_List.List := Get_Value (H);
       Encoded : Unbounded_String;
-      Str     : String_Access;
+      Str     : Ada.Strings.Unbounded.String_Access;
       Last    : Natural;
 
    begin
@@ -865,7 +868,7 @@ package body GNATCOLL.Email is
    -------------
 
    function To_Time (H : Header'Class) return Ada.Calendar.Time is
-      Str  : String_Access;
+      Str  : Ada.Strings.Unbounded.String_Access;
       Last : Natural;
       Tmp  : Unbounded_String;
    begin
@@ -1251,7 +1254,7 @@ package body GNATCOLL.Email is
       if H /= Null_Header then
          Flatten (H.Contents.Value, Result => ASC);
          declare
-            StrA  : String_Access;
+            StrA  : Ada.Strings.Unbounded.String_Access;
             Last  : Natural;
             Start : Integer;
             Stop  : Integer;
@@ -1411,23 +1414,18 @@ package body GNATCOLL.Email is
 
    procedure Attach
      (Msg                  : in out Message'Class;
-      Path                 : GNATCOLL.Filesystem.Filesystem_String;
+      Path                 : Virtual_File;
       MIME_Type            : String := Application_Octet_Stream;
-      Recommended_Filename : GNATCOLL.Filesystem.Filesystem_String := "";
+      Recommended_Filename : Virtual_File := No_File;
       Description          : String := "";
       Charset              : String := Charset_US_ASCII;
       Disposition          : Disposition_Type := Disposition_Attachment;
       Encoding             : Encoding_Type    := Encoding_Base64)
    is
       Attachment : Message := New_Message (MIME_Type => "");
-      File       : Mapped_File;
-      Str        : Str_Access;
+      Str        : GNAT.Strings.String_Access;
 
-      use type GNATCOLL.Filesystem.Filesystem_String;
    begin
-      File := Open_Read (Path);
-      Read (File);
-
       declare
          F : Unbounded_String;
       begin
@@ -1450,7 +1448,7 @@ package body GNATCOLL.Email is
 
          case Disposition is
             when Disposition_Attachment =>
-               if Recommended_Filename = "" then
+               if Recommended_Filename = No_File then
                   Replace_Header
                     (Attachment,
                      Create
@@ -1463,11 +1461,11 @@ package body GNATCOLL.Email is
                      Create
                        (Content_Disposition,
                         "attachment; filename="""
-                        & (+Recommended_Filename) & '"'));
+                        & (+Base_Name (Recommended_Filename)) & '"'));
                end if;
 
             when Disposition_Inline =>
-               if Recommended_Filename = "" then
+               if Recommended_Filename = No_File then
                   Replace_Header
                     (Attachment,
                      Create
@@ -1480,16 +1478,15 @@ package body GNATCOLL.Email is
                      Create
                        (Content_Disposition,
                         "inline; filename="""
-                        & (+Recommended_Filename) & '"'));
+                        & (+Base_Name (Recommended_Filename)) & '"'));
                end if;
          end case;
 
-         Str := Data (File);
+         Str := Read_File (Path);
 
          case Encoding is
             when Encoding_Base64 =>
-               Base64_Encode
-                 (Str => String (Str (1 .. Last (File))), Result => F);
+               Base64_Encode (Str => Str.all, Result => F);
                Add_Header (Attachment,
                            Create (Content_Transfer_Encoding, "base64"));
                Set_Unbounded_String
@@ -1497,8 +1494,7 @@ package body GNATCOLL.Email is
 
             when Encoding_QP =>
                Quoted_Printable_Encode
-                 (Str                =>
-                     String (Str (1 .. Last (File))),
+                 (Str                => Str.all,
                   Quote_White_Spaces => False,
                   Header             => False,
                   Result             => F);
@@ -1512,26 +1508,23 @@ package body GNATCOLL.Email is
                Add_Header
                  (Attachment, Create (Content_Transfer_Encoding, "7bit"));
                Set_Unbounded_String
-                 (Attachment.Contents.Payload.Text,
-                  String (Str (1 .. Last (File))));
+                 (Attachment.Contents.Payload.Text, Str.all);
 
             when Encoding_8bit =>
                Add_Header
                  (Attachment, Create (Content_Transfer_Encoding, "8bit"));
                Set_Unbounded_String
-                 (Attachment.Contents.Payload.Text,
-                  String (Str (1 .. Last (File))));
+                 (Attachment.Contents.Payload.Text, Str.all);
 
             when Encoding_Binary =>
                Add_Header
                  (Attachment, Create (Content_Transfer_Encoding, "binary"));
                Set_Unbounded_String
-                 (Attachment.Contents.Payload.Text,
-                  String (Str (1 .. Last (File))));
+                 (Attachment.Contents.Payload.Text, Str.all);
          end case;
       end;
 
-      Close (File);
+      Free (Str);
       Append (Msg.Contents.Payload.Parts, Attachment);
    end Attach;
 
@@ -1734,7 +1727,7 @@ package body GNATCOLL.Email is
    function Has_Line_Starting_With
      (Text : Unbounded_String; Starts_With : String) return Boolean
    is
-      StrA  : String_Access;
+      StrA  : Ada.Strings.Unbounded.String_Access;
       Last  : Natural;
       Index : Natural;
       Eol   : Natural;

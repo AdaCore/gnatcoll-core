@@ -25,7 +25,7 @@ with Ada.Containers.Doubly_Linked_Lists;
 with Ada.Finalization;
 with Ada.Strings.Unbounded;  use Ada.Strings.Unbounded;
 
-with GNATCOLL.Filesystem;
+with GNATCOLL.VFS;
 
 package GNATCOLL.Email is
 
@@ -463,9 +463,9 @@ package GNATCOLL.Email is
 
    procedure Attach
      (Msg                  : in out Message'Class;
-      Path                 : GNATCOLL.Filesystem.Filesystem_String;
+      Path                 : GNATCOLL.VFS.Virtual_File;
       MIME_Type            : String           := Application_Octet_Stream;
-      Recommended_Filename : GNATCOLL.Filesystem.Filesystem_String := "";
+      Recommended_Filename : GNATCOLL.VFS.Virtual_File := GNATCOLL.VFS.No_File;
       Description          : String           := "";
       Charset              : String           := Charset_US_ASCII;
       Disposition          : Disposition_Type := Disposition_Attachment;

@@ -28,6 +28,7 @@ with GNATCOLL.Boyer_Moore;  use GNATCOLL.Boyer_Moore;
 with GNATCOLL.Email.Parser; use GNATCOLL.Email.Parser;
 with GNATCOLL.Email.Utils;  use GNATCOLL.Email.Utils;
 with GNATCOLL.Mmap;         use GNATCOLL.Mmap;
+with GNATCOLL.VFS;          use GNATCOLL.VFS;
 with GNAT.Strings;          use GNAT.Strings;
 
 package body GNATCOLL.Email.Mailboxes is
@@ -115,7 +116,6 @@ package body GNATCOLL.Email.Mailboxes is
       On_Close : Destructor      := Free_String'Access) is
    begin
       Self.Fp       := GNAT.Strings.String_Access (Fp);
-      Self.File     := Invalid_Mapped_File;
       Self.On_Close := On_Close;
    end Open;
 
@@ -125,12 +125,10 @@ package body GNATCOLL.Email.Mailboxes is
 
    procedure Open
      (Self     : in out Mbox;
-      Filename : GNATCOLL.Filesystem.Filesystem_String) is
+      Filename : Virtual_File) is
    begin
-      Self.File       := Open_Read (Filename);
-      Read (Self.File);
-      Self.Fp         := null;
-      Self.On_Close   := null;
+      Self.Fp         := Read_File (Filename);
+      Self.On_Close   := Free_String'Access;
    end Open;
 
    -----------
@@ -139,33 +137,17 @@ package body GNATCOLL.Email.Mailboxes is
 
    function First (Self : Mbox) return Cursor'Class is
    begin
-      if Self.Fp = null then
-         declare
-            Cur : Cursor'Class := Mbox_Cursor'
-              (Cursor with
-               Max     => Last (Self.File),
-               Start   => 1,
-               Stop    => 0,
-               Current => Null_Message);
-         begin
-            --  Find first message
-            Next (Cur, Self);
-            return Cur;
-         end;
-
-      else
-         declare
-            Cur : Cursor'Class := Mbox_Cursor'
-              (Cursor with
-               Max     => Self.Fp'Last,
-               Start   => Self.Fp'First,
-               Stop    => 0,
-               Current => Null_Message);
-         begin
-            Next (Cur, Self);
-            return Cur;
-         end;
-      end if;
+      declare
+         Cur : Cursor'Class := Mbox_Cursor'
+           (Cursor with
+            Max     => Self.Fp'Last,
+            Start   => Self.Fp'First,
+            Stop    => 0,
+            Current => Null_Message);
+      begin
+         Next (Cur, Self);
+         return Cur;
+      end;
    end First;
 
    -----------------
@@ -203,8 +185,6 @@ package body GNATCOLL.Email.Mailboxes is
       else
          if Mbox (Box).Fp /= null then
             Buffer := To_Str_Access (Mbox (Box).Fp);
-         else
-            Buffer := Data (Mbox (Box).File);
          end if;
 
          Self.Factory
@@ -242,9 +222,6 @@ package body GNATCOLL.Email.Mailboxes is
       if Mbox (Box).Fp /= null then
          Buffer := To_Str_Access (Mbox (Box).Fp);
          First := Mbox (Box).Fp'First;
-      else
-         Buffer := Data (Mbox (Box).File);
-         First := 1;
       end if;
 
       --  Find start of first message if needed. If we are past this first
@@ -367,8 +344,6 @@ package body GNATCOLL.Email.Mailboxes is
       if Self.On_Close /= null and then Self.Fp /= null then
          Self.On_Close (Self.Fp);
          Self.Fp := null;
-      elsif Self.File /= Invalid_Mapped_File then
-         Close (Self.File);
       end if;
    end Finalize;
 

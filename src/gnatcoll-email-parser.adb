@@ -19,6 +19,8 @@
 
 with GNAT.Case_Util;             use GNAT.Case_Util;
 with GNATCOLL.Mmap;              use GNATCOLL.Mmap;
+with GNATCOLL.VFS;               use GNATCOLL.VFS;
+with GNAT.Strings;               use GNAT.Strings;
 pragma Warnings (Off);
 with Ada.Strings.Unbounded.Aux;
 pragma Warnings (On);
@@ -320,21 +322,20 @@ package body GNATCOLL.Email.Parser is
    --------------------------
 
    procedure Full_Parse_From_File
-     (Filename      : GNATCOLL.Filesystem.Filesystem_String;
+     (Filename      : Virtual_File;
       Msg           : out Message;
       Store_Headers : Boolean := True;
       Store_Payload : Boolean := True;
       Parse_Payload : Boolean := True;
       Filter        : Header_Filter := null)
    is
-      File : Mapped_File;
+      Str  : GNAT.Strings.String_Access;
    begin
-      File := Open_Read (Filename);
-      Read (File);
-      Full_Parse (String (Data (File)(1 .. Last (File))),
+      Str := Read_File (Filename);
+      Full_Parse (Str.all,
                   Msg, Store_Headers,
                   Store_Payload, Parse_Payload, Filter);
-      Close (File);
+      Free (Str);
    end Full_Parse_From_File;
 
 end GNATCOLL.Email.Parser;

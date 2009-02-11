@@ -317,7 +317,7 @@ package body GNATCOLL.Filesystem is
    is
       pragma Unreferenced (FS);
    begin
-      return Read_Whole_File (Local_Full_Name);
+      return Read_Whole_File (+Local_Full_Name);
    end Read_File;
 
    ------------

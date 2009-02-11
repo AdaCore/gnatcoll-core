@@ -65,7 +65,6 @@ with GNAT.OS_Lib;
 with GNAT.Strings;
 with System;
 with Interfaces.C;
-with GNATCOLL.Filesystem;
 
 package GNATCOLL.Mmap is
 
@@ -94,20 +93,22 @@ package GNATCOLL.Mmap is
    --  longer includes the bounds, which you need to manage yourself
 
    function Open_Read
-     (Filename              : GNATCOLL.Filesystem.Filesystem_String;
+     (Filename              : String;
       Use_Mmap_If_Available : Boolean := True) return Mapped_File;
    --  Open a file for reading. The same file can be shared by multiple
    --  processes, that will see each others's changes as they occur.
    --  Any attempt to write the data might result in a segmentation fault,
    --  depending on how the file is open.
-   --  Name_Error is raised if the file does not exist
+   --  Name_Error is raised if the file does not exist.
+   --  Filename should be compatible with the filesystem.
 
    function Open_Write
-     (Filename              : GNATCOLL.Filesystem.Filesystem_String;
+     (Filename              : String;
       Use_Mmap_If_Available : Boolean := True) return Mapped_File;
    --  Open a file for writing.
    --  You cannot change the length of the file.
    --  Name_Error is raised if the file does not exist
+   --  Filename should be compatible with the filesystem.
 
    procedure Close (File : in out Mapped_File);
    --  Close the file, and unmap the memory that is used.
@@ -170,7 +171,7 @@ package GNATCOLL.Mmap is
    --  the number of system calls to read the file by chunks.
 
    function Read_Whole_File
-     (Filename           : GNATCOLL.Filesystem.Filesystem_String;
+     (Filename           : String;
       Empty_If_Not_Found : Boolean := False) return GNAT.Strings.String_Access;
    --  Returns the whole contents of the file.
    --  The returned string must be freed by the user.
@@ -179,6 +180,7 @@ package GNATCOLL.Mmap is
    --  and copy the bytes.
    --  If the file does not exist, null is returned. However, if
    --  Empty_If_Not_Found is True, then the empty string is returned instead.
+   --  Filename should be compatible with the filesystem.
 
 private
    pragma Inline (Data, Length, Last, Offset, Is_Mmapped, To_Str_Access);

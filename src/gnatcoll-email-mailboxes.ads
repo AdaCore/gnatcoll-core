@@ -25,7 +25,7 @@ with Ada.Finalization;
 with GNATCOLL.Email.Parser;
 with GNATCOLL.Mmap;
 with GNAT.Strings;
-with GNATCOLL.Filesystem;
+with GNATCOLL.VFS;
 
 package GNATCOLL.Email.Mailboxes is
    --  ??? Would be nice to have a function to write back a message in a
@@ -123,7 +123,7 @@ package GNATCOLL.Email.Mailboxes is
 
    procedure Open
      (Self     : in out Mbox;
-      Filename : GNATCOLL.Filesystem.Filesystem_String);
+      Filename : GNATCOLL.VFS.Virtual_File);
    --  Same as Open, but takes care of opening the file.
    --  If the file could not be open, Name_Error is raised.
 
@@ -256,9 +256,7 @@ private
    pragma Finalize_Storage_Only (Mailbox);
 
    type Mbox is new Mailbox with record
-      File     : GNATCOLL.Mmap.Mapped_File :=
-         GNATCOLL.Mmap.Invalid_Mapped_File;
-      Fp       : GNAT.Strings.String_Access;
+      Fp                  : GNAT.Strings.String_Access;
       On_Close            : Destructor;
       Previous_Line_Empty : Boolean := True;
    end record;

@@ -20,7 +20,7 @@
 --  This package provides a parser that creates an email message from a textual
 --  representation of it.
 
-with GNATCOLL.Filesystem;
+with GNATCOLL.VFS;
 
 package GNATCOLL.Email.Parser is
 
@@ -71,7 +71,7 @@ package GNATCOLL.Email.Parser is
    --  extracted separately. To save time, they are not MIME-decoded though.
 
    procedure Full_Parse_From_File
-     (Filename      : GNATCOLL.Filesystem.Filesystem_String;
+     (Filename      : GNATCOLL.VFS.Virtual_File;
       Msg           : out Message;
       Store_Headers : Boolean := True;
       Store_Payload : Boolean := True;

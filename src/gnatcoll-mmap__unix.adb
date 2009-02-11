@@ -23,8 +23,6 @@ with GNAT.OS_Lib;              use GNAT.OS_Lib;
 with Interfaces.C;             use Interfaces.C;
 with System;                   use System;
 
-with GNATCOLL.Filesystem;      use GNATCOLL.Filesystem;
-
 package body GNATCOLL.Mmap is
 
    type Mmap_Prot is mod Interfaces.C.int'Last;
@@ -124,12 +122,12 @@ package body GNATCOLL.Mmap is
    ---------------
 
    function Open_Read
-     (Filename              : GNATCOLL.Filesystem.Filesystem_String;
+     (Filename              : String;
       Use_Mmap_If_Available : Boolean := True) return Mapped_File
    is
       Fd : File_Descriptor;
    begin
-      Fd := Open_Read (+Filename, Binary);
+      Fd := Open_Read (Filename, Binary);
       if Fd = Invalid_FD then
          raise Name_Error;
       end if;
@@ -154,12 +152,12 @@ package body GNATCOLL.Mmap is
    ----------------
 
    function Open_Write
-     (Filename              : GNATCOLL.Filesystem.Filesystem_String;
+     (Filename              : String;
       Use_Mmap_If_Available : Boolean := True) return Mapped_File
    is
       Fd : File_Descriptor;
    begin
-      Fd := Open_Read_Write (+Filename, Binary);
+      Fd := Open_Read_Write (Filename, Binary);
       if Fd = Invalid_FD then
          raise Name_Error;
       end if;
@@ -359,7 +357,7 @@ package body GNATCOLL.Mmap is
    ---------------------
 
    function Read_Whole_File
-     (Filename           : GNATCOLL.Filesystem.Filesystem_String;
+     (Filename           : String;
       Empty_If_Not_Found : Boolean := False) return GNAT.Strings.String_Access
    is
       File   : Mapped_File;

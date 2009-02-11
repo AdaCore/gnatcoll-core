@@ -24,8 +24,6 @@ with GNAT.Strings;
 with Ada.Calendar;
 with Ada.Exceptions;
 
-with GNATCOLL.Filesystem;
-
 package GNATCOLL.Traces is
 
    type Trace_Handle_Record is tagged private;
@@ -38,8 +36,7 @@ package GNATCOLL.Traces is
    --  attributes.
 
    Config_File_Environment : constant String := "ADA_DEBUG_FILE";
-   Default_Config_File     : constant GNATCOLL.Filesystem.Filesystem_String
-     := ".gnatdebug";
+   Default_Config_File     : constant String := ".gnatdebug";
    --  Name of the default configuration file. This file is looked for first in
    --  the current directory, then in the user's home directory.  If no file is
    --  found, then no handle will be activated.  The name of this file can be
@@ -99,8 +96,8 @@ package GNATCOLL.Traces is
    --                anymore.
 
    procedure Parse_Config_File
-     (Filename     : GNATCOLL.Filesystem.Filesystem_String := "";
-      Default      : GNATCOLL.Filesystem.Filesystem_String := "";
+     (Filename     : String := "";
+      Default      : String := "";
       On_Exception : On_Exception_Mode := Propagate);
    --  Initializes this package, and parse the configuration file. The
    --  algorithm is the following:
@@ -130,7 +127,7 @@ package GNATCOLL.Traces is
    function Create
      (Unit_Name : String;
       Default   : Default_Activation_Status := From_Config;
-      Stream    : GNATCOLL.Filesystem.Filesystem_String := "";
+      Stream    : String := "";
       Factory   : Handle_Factory := null;
       Finalize  : Boolean := True)
       return Trace_Handle;

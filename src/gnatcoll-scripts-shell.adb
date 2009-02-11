@@ -215,8 +215,7 @@ package body GNATCOLL.Scripts.Shell is
    begin
       if Command = "load" then
          declare
-            Filename : constant GNATCOLL.Filesystem.Filesystem_String
-              := (+Nth_Arg (Data, 1));
+            Filename : constant String := Nth_Arg (Data, 1);
             File     : Mapped_File;
             Errors   : Boolean;
          begin
@@ -230,8 +229,7 @@ package body GNATCOLL.Scripts.Shell is
          exception
             when Name_Error =>
                Set_Error_Msg
-                 (Data, "File not found: """ &
-                  (+Filename) & '"');
+                 (Data, "File not found: """ & Filename & '"');
          end;
 
       elsif Command = "echo" or else Command = "echo_error" then

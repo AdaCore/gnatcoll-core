@@ -315,7 +315,7 @@ package body GNATCOLL.Filesystem.Unix.Remote is
       declare
          Content : String_Access :=
            GNATCOLL.Mmap.Read_Whole_File
-             (Temporary_File, Empty_If_Not_Found => True);
+             (+Temporary_File, Empty_If_Not_Found => True);
       begin
          Send (Pd.all, Content.all);
          Free (Content);
