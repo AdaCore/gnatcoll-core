@@ -192,7 +192,7 @@ package body GNATCOLL.Mmap is
    ---------------
 
    function From_Utf8 (Filename : in String) return Wide_String is
-      C_Filename : constant String := Filename & ASCII.Nul;
+      C_Filename : constant String := Filename & ASCII.NUL;
       W_Filename : Wide_String (1 .. C_Filename'Length + 1);
       Res        : Win.BOOL;
       pragma Unreferenced (Res);
