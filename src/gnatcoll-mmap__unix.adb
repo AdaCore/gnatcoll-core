@@ -186,9 +186,9 @@ package body GNATCOLL.Mmap is
    begin
       if File.Mapped then
          Ignored := Munmap (Convert (File.Data), File_Size (File.Last));
-      else
-         To_Disk (File);
       end if;
+
+      To_Disk (File);
 
       if File.Fd /= Invalid_FD then
          Close (File.Fd);
@@ -286,7 +286,6 @@ package body GNATCOLL.Mmap is
 
          From_Disk (File);
       end if;
-
    end Read;
 
    ------------
@@ -385,6 +384,10 @@ package body GNATCOLL.Mmap is
          else
             return null;
          end if;
+
+      when others =>
+         Close (File);
+         return null;
    end Read_Whole_File;
 
 end GNATCOLL.Mmap;
