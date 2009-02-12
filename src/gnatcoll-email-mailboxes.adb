@@ -19,6 +19,7 @@
 
 with Ada.Calendar;          use Ada.Calendar;
 with Ada.Containers.Indefinite_Hashed_Maps;
+with Ada.IO_Exceptions;
 with Ada.Strings.Hash;
 pragma Warnings (Off); --  Internal GNAT unit
 with Ada.Strings.Unbounded.Aux;
@@ -129,6 +130,9 @@ package body GNATCOLL.Email.Mailboxes is
    begin
       Self.Fp         := Read_File (Filename);
       Self.On_Close   := Free_String'Access;
+      if Self.Fp = null then
+         raise Ada.IO_Exceptions.Name_Error;
+      end if;
    end Open;
 
    -----------
