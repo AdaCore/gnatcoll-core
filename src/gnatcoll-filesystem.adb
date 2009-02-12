@@ -706,12 +706,19 @@ package body GNATCOLL.Filesystem is
       function Internal return chars_ptr;
       pragma Import (C, Internal, "__gnatcoll_get_tmp_dir");
 
+      procedure c_free (C : chars_ptr);
+      pragma Import (C, c_free, "free");
+
       C_Str : chars_ptr := Internal;
       Str   : constant Filesystem_String :=
                 +GNAT.Directory_Operations.Format_Pathname
                   (To_Ada (Value (C_Str)));
    begin
-      Free (C_Str);
+      --  Since the allocation was done in C (strdup), we use directly the
+      --  C version of free. This is probably more reliable, and more
+      --  importantly, this works correctly with our own version of
+      --  s-memory.adb (when GPS_MEMORY_MONITOR=1)
+      c_free (C_Str);
       return Ensure_Directory (Filesystem_Record'Class (FS), Str);
    end Get_Tmp_Directory;
 
