@@ -15,7 +15,10 @@ project GnatColl_Gmp is
    for Languages use ("Ada", "C");
    for Source_Dirs use ("gmp");
 
+   package Builder renames GnatColl_Shared.Builder;
+
    package Compiler renames Gnatcoll_Shared.Compiler;
+
    package Linker is
       --  When linking an executable
       for Linker_Options use (@GMP_LIBS_GPR@);

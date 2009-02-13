@@ -27,6 +27,8 @@ project GnatColl_Gtk is
           end case;
    end case;
 
+   package Builder renames GnatColl_Shared.Builder;
+
    package Compiler is
       for Default_Switches ("Ada") use
         GnatColl_Shared.Compiler'Default_Switches ("Ada");

@@ -22,6 +22,8 @@ project GnatColl_Python is
          for Source_Dirs use Project'Source_Dirs & ("nopython");
    end case;
 
+   package Builder renames GnatColl_Shared.Builder;
+
    package Compiler is
       for Default_Switches ("Ada") use
         GnatColl_Shared.Compiler'Default_Switches ("Ada");

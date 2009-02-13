@@ -24,8 +24,12 @@ project GnatColl is
 --         for Source_Dirs use Project'Source_Dirs & ("postgres");
 --   end case;
 
+   package Builder renames GnatColl_Shared.Builder;
+
    package Compiler renames GnatColl_Shared.Compiler;
+
    package Linker   renames GnatColl_Shared.Linker;
+
    package Ide renames GnatColl_Shared.Ide;
 
    package Naming is

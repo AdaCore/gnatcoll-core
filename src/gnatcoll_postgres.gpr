@@ -19,8 +19,12 @@ project GnatColl_Postgres is
         for Source_Dirs use ("postgres", "postgres/with_postgres");
    end case;
 
+   package Builder  renames GnatColl_Shared.Builder;
+
    package Compiler renames GnatColl_Shared.Compiler;
+
    package Linker   renames GnatColl_Shared.Linker;
-   package Ide renames GnatColl_Shared.Ide;
+
+   package Ide      renames GnatColl_Shared.Ide;
 
 end GnatColl_Postgres;
