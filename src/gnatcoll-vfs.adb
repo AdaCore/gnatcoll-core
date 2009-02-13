@@ -31,7 +31,6 @@ with GNAT.OS_Lib;               use GNAT.OS_Lib;
 with GNATCOLL.Filesystem;       use GNATCOLL.Filesystem;
 with GNATCOLL.Utils;            use GNATCOLL.Utils;
 with GNATCOLL.VFS_Utils;        use GNATCOLL.VFS_Utils;
---  with GNAT.IO; use GNAT.IO;
 
 package body GNATCOLL.VFS is
 
@@ -76,12 +75,8 @@ package body GNATCOLL.VFS is
    -- Create --
    ------------
 
-   Count : Natural := 0;
-
    function Create (Full_Filename : Filesystem_String) return Virtual_File is
    begin
-      Count := Count + 1;
---      Put_Line (Count'Img);
       return Create
         (FS => Get_Local_Filesystem, Full_Filename => Full_Filename);
    end Create;
