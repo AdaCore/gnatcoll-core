@@ -40,6 +40,10 @@ package body GNATCOLL.Memory is
    Memory_Monitor : Boolean := False;
    Memory_Check   : Boolean := False;
 
+   Disable        : Boolean := False;
+   --  This variable is used to avoid infinite loops, where this package would
+   --  itself allocate memory and then calls itself recursively, forever.
+
    type Byte_Count is mod System.Max_Binary_Modulus;
 
    Total_Allocs   : Byte_Count := 0;
@@ -198,8 +202,6 @@ package body GNATCOLL.Memory is
       return Header (1 + To_Integer (F) mod Integer_Address (Header'Last));
    end Hash;
 
-   Disable : Boolean := False;
-
    ------------------------------
    -- Find_Or_Create_Traceback --
    ------------------------------
@@ -334,12 +336,12 @@ package body GNATCOLL.Memory is
    begin
       if not Memory_Check then
          System.CRTL.free (Ptr);
+      end if;
 
-         if Memory_Monitor then
-            Size_Was := Find_Or_Create_Traceback (Deallocation, Ptr, 0);
-            Total_Free := Total_Free + Size_Was;
-            Free_Count := Free_Count + 1;
-         end if;
+      if Memory_Monitor then
+         Size_Was   := Find_Or_Create_Traceback (Deallocation, Ptr, 0);
+         Total_Free := Total_Free + Size_Was;
+         Free_Count := Free_Count + 1;
       end if;
    end Free;
 
@@ -367,8 +369,8 @@ package body GNATCOLL.Memory is
       end if;
 
       if Memory_Monitor then
-         Size_Was := Find_Or_Create_Traceback (Deallocation, Ptr, 0);
-         Total_Free   := Total_Free + Size_Was;
+         Size_Was   := Find_Or_Create_Traceback (Deallocation, Ptr, 0);
+         Total_Free := Total_Free + Size_Was;
 
          Size_Was := Find_Or_Create_Traceback
            (Allocation, Result, Storage_Count (Actual_Size));
