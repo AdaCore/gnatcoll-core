@@ -45,17 +45,39 @@ procedure Generate (Generated : String) is
    procedure Print_Comment
      (File : File_Type; Indent : String; Comment : String)
    is
-      Start : Integer := Comment'First;
+      Reflow : constant Boolean := True;
+      --  If True, ASCII.LF are ignored in the initial comment, and the text is
+      --  reflowed.
+
+      Str   : String := Comment;
+      Start : Integer := Str'First;
+      Last_Space : Natural := Str'First;
    begin
-      for C in Comment'Range loop
-         if Comment (C) = ASCII.LF then
-            Put_Line (File, Indent & "--  " & Comment (Start .. C - 1));
+      for C in Str'Range loop
+         if not Reflow and then Str (C) = ASCII.LF then
+            Put_Line (File, Indent & "--  " & Str (Start .. C - 1));
             Start := C + 1;
+            Last_Space := Start;
+
+         else
+            if Str (C) = ASCII.LF or else Str (C) = ' ' then
+               Str (C) := ' ';
+               Last_Space := C;
+               if C = Start then
+                  Start := C + 1;
+               end if;
+            end if;
+
+            if C - Start >= 78 - 4 - Indent'Length then
+               Put_Line
+                 (File, Indent & "--  " & Str (Start .. Last_Space - 1));
+               Start := Last_Space + 1;
+            end if;
          end if;
       end loop;
 
-      if Comment'Length /= 0 then
-         Put_Line (File, Indent & "--  " & Comment (Start .. Comment'Last));
+      if Start < Str'Last then
+         Put_Line (File, Indent & "--  " & Str (Start .. Str'Last));
       end if;
    end Print_Comment;
 
@@ -224,7 +246,8 @@ begin
 
       if Length (T_Descr.Foreign) /= 0 then
          New_Line (Spec_File);
-         Put_Line (Spec_File, "   overriding function FK (Self : T_"
+         Put_Line (Spec_File, "   overriding function FK");
+         Put_Line (Spec_File, "      (Self : T_"
                    & Capitalize (Key (C))
                    & "; Foreign : SQL_Table'Class) return SQL_Criteria;");
       end if;
