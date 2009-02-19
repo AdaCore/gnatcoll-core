@@ -123,4 +123,41 @@ package body GNATCOLL.Utils is
       return Result;
    end Split;
 
+   ----------------
+   -- Capitalize --
+   ----------------
+
+   function Capitalize (Name : String) return String is
+      Result : String (Name'Range);
+      J : Integer := Result'First;
+   begin
+      for N in Name'Range loop
+         if Name (N) = '+' then
+            Result (J) := 'p';
+            J := J + 1;
+         elsif Name (N) = '?' then
+            Result (J) := 'U';
+            J := J + 1;
+         elsif Name (N) = '_'
+           and then N > Name'First
+           and then Name (N - 1) = '_'
+         then
+            null;
+         elsif Name (N) >= ' ' and then Name (N) <= '/' then
+            Result (J) := '_';
+            J := J + 1;
+         elsif J = Result'First
+           or else Result (J - 1) = '_'
+         then
+            Result (J) := To_Upper (Name (N));
+            J := J + 1;
+
+         else
+            Result (J) := To_Lower (Name (N));
+            J := J + 1;
+         end if;
+      end loop;
+      return Result (Result'First .. J - 1);
+   end Capitalize;
+
 end GNATCOLL.Utils;

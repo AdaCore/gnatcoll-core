@@ -1,7 +1,7 @@
 -----------------------------------------------------------------------
 --                          G N A T C O L L                          --
 --                                                                   --
---                 Copyright (C) 2005-2008, AdaCore                  --
+--                 Copyright (C) 2005-2009, AdaCore                  --
 --                                                                   --
 -- GPS is free  software;  you can redistribute it and/or modify  it --
 -- under the terms of the GNU General Public License as published by --
@@ -17,8 +17,9 @@
 -- Place - Suite 330, Boston, MA 02111-1307, USA.                    --
 -----------------------------------------------------------------------
 
+with Ada.Characters.Handling;    use Ada.Characters.Handling;
 with Ada.Command_Line;           use Ada.Command_Line;
-with Ada.Containers.Indefinite_Ordered_Maps;
+with Ada.Containers.Indefinite_Ordered_Maps;  use Ada.Containers;
 with Ada.Containers.Doubly_Linked_Lists;
 with Ada.Containers.Indefinite_Doubly_Linked_Lists;
 with Ada.Exceptions;             use Ada.Exceptions;
@@ -29,14 +30,19 @@ with GNAT.Command_Line;          use GNAT.Command_Line;
 with GNAT.OS_Lib;                use GNAT.OS_Lib;
 with GNATCOLL.SQL.Exec;          use GNATCOLL.SQL, GNATCOLL.SQL.Exec;
 with GNATCOLL.SQL.Postgres;      use GNATCOLL.SQL.Postgres;
+with GNATCOLL.Utils;             use GNATCOLL.Utils;
 
 procedure GNATCOLL_Db2Ada is
+
+   Generated : constant String := "Database";
 
    package String_Lists is new Ada.Containers.Indefinite_Doubly_Linked_Lists
      (String);
    use String_Lists;
 
    type Dumped_Enums is record
+      Table     : Unbounded_String;
+      Id        : Unbounded_String;
       Base_Type : Unbounded_String;
       Type_Name : Unbounded_String;
       Names     : String_Lists.List;
@@ -79,7 +85,9 @@ procedure GNATCOLL_Db2Ada is
 
    type Attribute_Description is record
       Name        : Ada.Strings.Unbounded.Unbounded_String;
+      Field_Type  : Ada.Strings.Unbounded.Unbounded_String;
       Ada_Type    : Ada.Strings.Unbounded.Unbounded_String;
+      Value_Func  : Ada.Strings.Unbounded.Unbounded_String;
       Index       : Integer;  --  internal index in database
       Description : Ada.Strings.Unbounded.Unbounded_String;
    end record;
@@ -87,6 +95,15 @@ procedure GNATCOLL_Db2Ada is
    package Attribute_Lists is new Ada.Containers.Doubly_Linked_Lists
      (Attribute_Description);
    use Attribute_Lists;
+
+   type Query_Description is record
+      Table       : Ada.Strings.Unbounded.Unbounded_String;
+   end record;
+
+   package Query_Lists is new Ada.Containers.Doubly_Linked_Lists
+     (Query_Description);
+   use Query_Lists;
+   Queries : Query_Lists.List;
 
    type Foreign_Key_Description is record
       To_Table : Ada.Strings.Unbounded.Unbounded_String;
@@ -110,8 +127,13 @@ procedure GNATCOLL_Db2Ada is
      (String, Table_Description, "<", "=");
    use Tables_Maps;
 
-   function To_Ada_Type (SQL_Type : String) return String;
-   --  Return the Ada type matching a SQL type
+   procedure To_Ada_Type
+     (SQL_Type    : String;
+      Table, Attr : String;
+      Descr       : in out Attribute_Description);
+   --  Return the Ada type matching a SQL type.
+   --  Ada_Type could be a specific name based on a --enum if a matching one
+   --  was provided
 
    procedure Get_Foreign_Keys
      (Connection : access Database_Connection_Record'Class);
@@ -150,8 +172,8 @@ procedure GNATCOLL_Db2Ada is
      (Connection : access Database_Connection_Record'Class);
    --  Get the list of tables in the database
 
-   procedure Generate (Spec_File, Body_File : File_Type);
-   procedure Generate (Spec_File, Body_File : File_Type) is separate;
+   procedure Generate (Generated : String);
+   procedure Generate (Generated : String) is separate;
    --  Generate the actual output. This can be implemented either through
    --  Ada.Text_IO or using the templates parser
 
@@ -159,17 +181,27 @@ procedure GNATCOLL_Db2Ada is
    -- To_Ada_Type --
    -----------------
 
-   function To_Ada_Type (SQL_Type : String) return String is
+   procedure To_Ada_Type
+     (SQL_Type    : String;
+      Table, Attr : String;
+      Descr       : in out Attribute_Description)
+   is
+      C      : Enumeration_Lists.Cursor := First (Enumerations);
+      Enum   : Dumped_Enums;
    begin
       if SQL_Type = "boolean" then
-         return "Boolean";
+         Descr.Field_Type := To_Unbounded_String ("Boolean");
+         Descr.Ada_Type   := To_Unbounded_String ("Boolean");
+         Descr.Value_Func := To_Unbounded_String ("Boolean_Value");
 
       elsif SQL_Type = "text"
         or else (SQL_Type'Length >= 9
                  and then SQL_Type (SQL_Type'First .. SQL_Type'First + 8) =
                    "character")
       then
-         return "Text";
+         Descr.Field_Type := To_Unbounded_String ("Text");
+         Descr.Ada_Type   := To_Unbounded_String ("String");
+         Descr.Value_Func := To_Unbounded_String ("Value");
 
       elsif SQL_Type = "integer"
         or else SQL_Type = "smallint"
@@ -178,22 +210,45 @@ procedure GNATCOLL_Db2Ada is
                  and then SQL_Type (SQL_Type'First .. SQL_Type'First + 6) =
                    "numeric")
       then
-         return "Integer";
+         Descr.Field_Type := To_Unbounded_String ("Integer");
+         Descr.Ada_Type   := To_Unbounded_String ("Integer");
+         Descr.Value_Func := To_Unbounded_String ("Integer_Value");
 
       elsif SQL_Type = "date"
         or else SQL_Type = "timestamp without time zone"
         or else SQL_Type = "timestamp with time zone"
       then
-         return "Time";
+         Descr.Field_Type := To_Unbounded_String ("Time");
+         Descr.Ada_Type   := To_Unbounded_String ("Ada.Calendar.Time");
+         Descr.Value_Func := To_Unbounded_String ("Time_Value");
 
       elsif SQL_Type = "double precision" then
-         return "Float";
+         Descr.Field_Type := To_Unbounded_String ("Float");
+         Descr.Ada_Type   := To_Unbounded_String ("Float");
+         Descr.Value_Func := To_Unbounded_String ("Float_Value");
 
       else
          Put_Line (Standard_Error,
                    "Don't know how to convert type " & SQL_Type);
-         return "";
+         Descr.Field_Type := To_Unbounded_String ("");
+         Descr.Ada_Type   := To_Unbounded_String ("");
+         Descr.Value_Func := To_Unbounded_String ("");
       end if;
+
+      --  ??? Not efficient, since we are traversing the list for each field
+      --  However, we have a small number of tables in general anyway
+
+      while Has_Element (C) loop
+         Enum := Element (C);
+         if Enum.Table = Table and then Enum.Id = Attr then
+            Descr.Ada_Type := To_Unbounded_String
+              (Generated & '.' & Capitalize (To_String (Enum.Type_Name)));
+            Descr.Value_Func := Descr.Ada_Type & " (" & Descr.Value_Func;
+            exit;
+         end if;
+
+         Next (C);
+      end loop;
    end To_Ada_Type;
 
    --------------------
@@ -318,7 +373,7 @@ procedure GNATCOLL_Db2Ada is
          Descr : Attribute_Description;
       begin
          Descr.Name     := To_Unbounded_String (Name);
-         Descr.Ada_Type := To_Unbounded_String (To_Ada_Type (Typ));
+         To_Ada_Type (Typ, Table, Name, Descr);
          Descr.Index    := Index;
          Descr.Description := To_Unbounded_String (Description);
          Append (Attributes, Descr);
@@ -374,7 +429,7 @@ procedure GNATCOLL_Db2Ada is
    begin
       loop
          case Getopt ("dbhost: h dbname: dbuser: dbpasswd: enum: var:"
-                      & " dbtype:") is
+                      & " dbtype: query:") is
             when 'h' =>
                Put_Line
                  ("-dbhost <host>: host on which the database runs");
@@ -401,6 +456,9 @@ procedure GNATCOLL_Db2Ada is
                  ("    Similar to -enum, but dumps one specific value");
                Put_Line
                  ("    from a table, selected with criteria.");
+               Put_Line ("-query table");
+               Put_Line
+                 ("    Generate an entry for table in the queries package");
                GNAT.OS_Lib.OS_Exit (0);
             when 'd' =>
                if Full_Switch = "dbhost" then
@@ -419,6 +477,9 @@ procedure GNATCOLL_Db2Ada is
                   Free (DB_Type);
                   DB_Type := new String'(Parameter);
                end if;
+            when 'q' =>
+               Query_Lists.Append
+                 (Queries, (Table => To_Unbounded_String (Parameter)));
             when 'e' =>
                Append (Enums, Parameter);
             when 'v' =>
@@ -453,6 +514,9 @@ procedure GNATCOLL_Db2Ada is
       Enum : Dumped_Enums;
       R    : Query_Result;
    begin
+      Enum.Table := To_Unbounded_String (Table);
+      Enum.Id    := To_Unbounded_String (Id);
+
       if Base_Type = "" then
          Enum.Base_Type := To_Unbounded_String ("Integer");
       else
@@ -562,6 +626,131 @@ procedure GNATCOLL_Db2Ada is
       end loop;
    end Dump_Tables;
 
+   ----------------------
+   -- Generate_Queries --
+   ----------------------
+
+   procedure Generate_Queries is
+      function Is_Enum (Table, Id, Ada_Type : String) return String;
+      --  If Table.Id is a registered enumeration type, return the name of the
+      --  Ada type. If not, return Ada_Type
+
+      function Is_Enum (Table, Id, Ada_Type : String) return String is
+         C      : Enumeration_Lists.Cursor := First (Enumerations);
+         Enum   : Dumped_Enums;
+      begin
+         --  ??? Not efficient, since we are traversing the list for each field
+         --  However, we have a small number of tables in general anyway
+
+         while Has_Element (C) loop
+            Enum := Element (C);
+            if Enum.Table = Table and then Enum.Id = Id then
+               return To_String (Enum.Type_Name);
+            end if;
+
+            Next (C);
+         end loop;
+
+         return Ada_Type;
+      end Is_Enum;
+
+      Spec_File, Body_File : File_Type;
+      Q       : Query_Lists.Cursor;
+      T       : Tables_Maps.Cursor;
+      T_Descr : Table_Description;
+      A       : Attribute_Lists.Cursor;
+      Count   : Natural;
+
+   begin
+      Create (Spec_File, Name => To_Lower (Generated) & "-queries.ads");
+      Create (Body_File, Name => To_Lower (Generated) & "-queries.adb");
+
+      Put_Line (Spec_File, "with GNATCOLL.SQL; use GNATCOLL.SQL;");
+      Put_Line (Spec_File, "with GNATCOLL.SQL.Exec; use GNATCOLL.SQL.Exec;");
+      Put_Line (Spec_File, "package " & Generated & ".Queries is");
+      Put_Line (Spec_File, "   pragma Warnings (Off);");
+      New_Line (Spec_File);
+      Put_Line (Spec_File, "   type Base_Info is abstract tagged private;");
+
+      Put_Line (Body_File, "package body " & Generated & ".Queries is");
+      Put_Line (Body_File, "   pragma Warnings (Off);");
+
+      Q := First (Queries);
+      while Has_Element (Q) loop
+         T := Find (Tables, To_String (Element (Q).Table));
+         T_Descr := Element (T);
+
+         declare
+            Info : constant String :=
+              Capitalize (To_String (Element (Q).Table)) & "_Info";
+         begin
+            New_Line (Spec_File);
+            Put_Line (Spec_File, "   type " & Info & " is new Base_Info"
+                      & " with private;");
+
+            Count := 0;
+
+            A := First (T_Descr.Attributes);
+            while Has_Element (A) loop
+               Put_Line
+                 (Spec_File, "   function "
+                  & Capitalize (To_String (Element (A).Name))
+                  & " (Self : " & Info & ") return "
+                  & To_String (Element (A).Ada_Type) & ";");
+
+               New_Line (Body_File);
+               Put_Line
+                 (Body_File, "   function "
+                  & Capitalize (To_String (Element (A).Name))
+                  & " (Self : " & Info & ") return "
+                  & To_String (Element (A).Ada_Type) & " is");
+               Put_Line (Body_File, "   begin");
+               Put_Line (Body_File, "      return "
+                         & To_String (Element (A).Value_Func)
+                         & " (Self.Res,"
+                         & " Self.Idx, Self.Base +"
+                         & Count'Img & ");");
+               Put_Line
+                 (Body_File, "   end "
+                  & Capitalize (To_String (Element (A).Name)) & ";");
+
+               Count := Count + 1;
+               Next (A);
+            end loop;
+         end;
+
+         Next (Q);
+      end loop;
+
+      New_Line (Spec_File);
+      Put_Line (Spec_File, "private");
+      Put_Line (Spec_File, "   type Base_Info is abstract tagged record");
+      Put_Line (Spec_File, "      Res  : GNATCOLL.SQL.Exec.Query_Result;");
+      Put_Line (Spec_File, "      Idx  : GNATCOLL.SQL.Exec.Tuple_Index;");
+      Put_Line (Spec_File, "      Base : GNATCOLL.SQL.Exec.Field_Index;");
+      Put_Line (Spec_File, "   end record;");
+
+      Q := First (Queries);
+      while Has_Element (Q) loop
+         declare
+            Info : constant String :=
+              Capitalize (To_String (Element (Q).Table)) & "_Info";
+         begin
+            New_Line (Spec_File);
+            Put_Line (Spec_File, "   type " & Info & " is new Base_Info"
+                      & " with null record;");
+         end;
+
+         Next (Q);
+      end loop;
+
+      Put_Line (Spec_File, "end " & Generated & ".Queries;");
+      Put_Line (Body_File, "end " & Generated & ".Queries;");
+
+      Close (Spec_File);
+      Close (Body_File);
+   end Generate_Queries;
+
    DB_Descr          : Database_Description;
    Spec_File         : File_Type;
    Body_File         : File_Type;
@@ -586,11 +775,11 @@ begin
 
    --  Create the package Database_Typed_Entities
 
-   Create (File => Spec_File, Name => "database.ads");
-   Create (File => Body_File, Name => "database.adb");
-   Generate (Spec_File, Body_File);
-   Close (Spec_File);
-   Close (Body_File);
+   Generate (Generated);
+
+   if Length (Queries) /= 0 then
+      Generate_Queries;
+   end if;
 
 exception
    when E : others =>

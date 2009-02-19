@@ -57,6 +57,10 @@ package GNATCOLL.Utils is
    --  Split the string on the given character.
    --  Result must be freed by caller
 
+   function Capitalize (Name : String) return String;
+   --  Capitalize a string, ie put in upper case the first character and all
+   --  characters following '_'
+
 private
 
    No_Time : constant Ada.Calendar.Time := Ada.Calendar.Time_Of
