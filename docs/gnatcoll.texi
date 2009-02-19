@@ -3299,8 +3299,8 @@ remain valid, whatever the actual text we display for the user.
 @end table
 
 From the command line arguments, @code{gnatcoll_db2ada} will generate
-an Ada package, which contains one package per table in the database.
-Each of these packages has a similar structure. The implementation
+an Ada package, which contains one type per table in the database.
+Each of these types has a similar structure. The implementation
 details are not shown here, since they are mostly irrelevant and might
 change. Currently, a lot of this code are types with discriminants. The
 latter are @code{access-to-string}, to avoid duplicating strings in
@@ -3309,21 +3309,18 @@ better performance.
 
 @CODESAMPLE{
 @b{package} Database @b{is}@NL{}
-   @b{package} T_Ticket_Priorities @b{is}@NL{}
-      @b{type} Table (...) @b{is new} SQL_Table (...) @b{with record}@NL{}
-          Priority : SQL_Field_Integer;@NL{}
-          Name     : SQL_Field_Text;@NL{}
-      @b{end record};@NL{}
-      @NL{}
-      @b{overriding function} FK (Self : Table; Foreign : SQL_Table'Class)@NL{}
-         @b{return} SQL_Criteria;@NL{}
-   @b{end} T_Ticket_Priorities;@NL{}
+   @b{type} T_Ticket_Priorities (...) @b{is new} SQL_Table (...) @b{with record}@NL{}
+       Priority : SQL_Field_Integer;@NL{}
+       Name     : SQL_Field_Text;@NL{}
+   @b{end record};@NL{}
    @NL{}
-   Ticket_Priorities : T_Ticket_Priorities.Table (...);@NL{}
+   @b{overriding function} FK (Self : T_Ticket_Priorities; Foreign : SQL_Table'Class)@NL{}
+      @b{return} SQL_Criteria;@NL{}
+   @NL{}
+   Ticket_Priorities : T_Ticket_Priorities (...);@NL{}
 @b{end} Database;}
 
-Thus, each package defines a type to represent the corresponding table.
-It also provides a default instance of that type, which can be used to
+It provides a default instance of that type, which can be used to
 write queries (see the next section). This type overrides one primitive
 operation which is used to compute the foreign keys between that table
 and any other table in the database (@pxref{Writing queries}).
