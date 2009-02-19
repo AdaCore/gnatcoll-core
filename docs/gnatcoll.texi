@@ -3317,7 +3317,7 @@ better performance.
    @b{overriding function} FK (Self : T_Ticket_Priorities; Foreign : SQL_Table'Class)@NL{}
       @b{return} SQL_Criteria;@NL{}
    @NL{}
-   Ticket_Priorities : T_Ticket_Priorities (...);@NL{}
+   Ticket_Priorities : constant T_Ticket_Priorities (...);@NL{}
 @b{end} Database;}
 
 It provides a default instance of that type, which can be used to
