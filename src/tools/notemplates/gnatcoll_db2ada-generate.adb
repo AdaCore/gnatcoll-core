@@ -254,7 +254,7 @@ begin
 
       New_Line (Spec_File);
       Put_Line (Spec_File, "   " & Capitalize (Key (C))
-                & " : constant T_" & Capitalize (Key (C)) & ";");
+                & " : T_" & Capitalize (Key (C)) & " (null);");
 
       if Length (T_Descr.Foreign) /= 0 then
          New_Line (Body_File);
@@ -306,17 +306,16 @@ begin
       Next (C);
    end loop;
 
-   New_Line (Spec_File);
-   Put_Line (Spec_File, "private");
+   --  New_Line (Spec_File);
+   --  Put_Line (Spec_File, "private");
 
-   C := First (Tables);
-   while Has_Element (C) loop
-      Put_Line (Spec_File, "   " & Capitalize (Key (C))
-                & " : constant T_" & Capitalize (Key (C)) & " :=");
-      Put_Line (Spec_File,
-                "      (SQL_Table with Instance => null, others => <>);");
-      Next (C);
-   end loop;
+   --  C := First (Tables);
+   --  while Has_Element (C) loop
+   --     Put_Line (Spec_File, "   " & Capitalize (Key (C))
+   --               & " : constant T_" & Capitalize (Key (C))
+   --               & " (null) := (others => <>);");
+   --     Next (C);
+   --  end loop;
 
    --  Print footer
 
