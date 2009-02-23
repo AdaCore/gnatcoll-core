@@ -46,6 +46,15 @@ project GnatColl_Shared is
    package Linker is
    end Linker;
 
+   package Binder is
+      case Build is
+         when "Debug" =>
+            for Default_Switches ("Ada") use ("-E");
+         when "Production" =>
+            null;
+      end case;
+   end Binder;
+
    package Builder is
       for Default_Switches ("Ada") use ("-m", "-j" & Processors);
    end Builder;
