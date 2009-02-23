@@ -123,7 +123,7 @@ begin
       T_Descr := Element (C);
       A       := First (T_Descr.Attributes);
       while Has_Element (A) loop
-         Names.Include (Capitalize (To_String (Element (A).Name)));
+         Names.Include (To_String (Element (A).Name));
          Next (A);
       end loop;
 
@@ -134,10 +134,10 @@ begin
 
    N := First (Names);
    while Has_Element (N) loop
-      Put_Line (Spec_File, "   NC_" & Element (N)
+      Put_Line (Spec_File, "   NC_" & Capitalize (Element (N))
                 & " : aliased constant String := """
                 & Element (N) & """;");
-      Put_Line (Spec_File, "   N_" & Element (N)
+      Put_Line (Spec_File, "   N_" & Capitalize (Element (N))
                 & " : constant Cst_String_Access := NC_"
                 & Element (N) & "'Access;");
       Next (N);
