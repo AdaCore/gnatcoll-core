@@ -1,7 +1,7 @@
 -----------------------------------------------------------------------
 --                               G N A T C O L L                     --
 --                                                                   --
---                 Copyright (C) 2005-2008, AdaCore                  --
+--                 Copyright (C) 2005-2009, AdaCore                  --
 --                                                                   --
 -- GPS is free  software;  you can redistribute it and/or modify  it --
 -- under the terms of the GNU General Public License as published by --
@@ -1379,6 +1379,24 @@ package body GNATCOLL.SQL is
          Data => (Ada.Finalization.Controlled with
                   Data => SQL_Field_Internal_Access (Data)));
    end "-";
+
+   ---------
+   -- "+" --
+   ---------
+
+   function "+"
+     (Field : SQL_Field_Integer'Class; Add : Integer)
+      return SQL_Field_Integer'Class
+   is
+      Data : constant Named_Field_Internal_Access := new Named_Field_Internal;
+   begin
+      Data.Operator := new String'("+");
+      Data.List := Field & From_String (Integer'Image (Add));
+      return SQL_Field_Integer_Build'
+        (Table => null, Instance => null, Name => null,
+         Data => (Ada.Finalization.Controlled with
+                  Data => SQL_Field_Internal_Access (Data)));
+   end "+";
 
    -----------
    -- Apply --

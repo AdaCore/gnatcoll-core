@@ -1,7 +1,7 @@
 -----------------------------------------------------------------------
 --                           G N A T C O L L                         --
 --                                                                   --
---                 Copyright (C) 2005-2008, AdaCore                  --
+--                 Copyright (C) 2005-2009, AdaCore                  --
 --                                                                   --
 -- GPS is free  software;  you can redistribute it and/or modify  it --
 -- under the terms of the GNU General Public License as published by --
@@ -318,6 +318,11 @@ package GNATCOLL.SQL is
      (Field1 : SQL_Field_Time'Class; Days : Integer)
       return SQL_Field_Time'Class;
    --  Return the different between two dates
+
+   function "+"
+     (Field : SQL_Field_Integer'Class; Add : Integer)
+      return SQL_Field_Integer'Class;
+   --  Add  a specific offset to a field
 
    function Cast_To_String
      (Field : SQL_Field'Class) return SQL_Field_Text'Class;
