@@ -40,6 +40,7 @@ package body GNATCOLL.SQL is
    Func_To_Char  : aliased constant String := "TO_CHAR";
    Func_Extract  : aliased constant String := "EXTRACT";
    Func_Lower    : aliased constant String := "lower";
+   Func_InitCap  : aliased constant String := "initcap";
 
    procedure Unchecked_Free is new Ada.Unchecked_Deallocation
      (SQL_Table'Class, SQL_Table_Access);
@@ -1268,6 +1269,22 @@ package body GNATCOLL.SQL is
       F.Data.Data := SQL_Field_Internal_Access (D);
       return F;
    end Lower;
+
+   -------------
+   -- Initcap --
+   -------------
+
+   function Initcap
+     (Field : SQL_Field_Text'Class) return SQL_Field_Text'Class
+   is
+      F : SQL_Field_Text_Build
+        (Table => null, Instance => null, Name => null);
+      D : constant Named_Field_Internal_Access := new Named_Field_Internal;
+   begin
+      D.Value := new String'(Func_InitCap & "(" & Field.Name.all & ")");
+      F.Data.Data := SQL_Field_Internal_Access (D);
+      return F;
+   end Initcap;
 
    --------------------
    -- Cast_To_String --

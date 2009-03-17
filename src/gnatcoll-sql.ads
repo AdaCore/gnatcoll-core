@@ -308,6 +308,10 @@ package GNATCOLL.SQL is
      (Field : SQL_Field_Text'Class) return SQL_Field_Text'Class;
    --  Returns "lower (field)"
 
+   function Initcap
+     (Field : SQL_Field_Text'Class) return SQL_Field_Text'Class;
+   --  Returns "Initcap (field)"
+
    function Current_Date return SQL_Field_Time'Class;
    function Now return SQL_Field_Time'Class;
    --  Return the current date
