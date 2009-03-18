@@ -369,7 +369,7 @@ package body GNATCOLL.Filesystem is
       D : Dir_Type;
 
    begin
-      if Local_Full_Name (Local_Full_name'First .. Local_Full_name'First + 1)
+      if Local_Full_Name (Local_Full_Name'First .. Local_Full_Name'First + 1)
         = "\\"
       then
       --  ??? Strange enough, it appears that tentatively opening/closing a
@@ -544,7 +544,7 @@ package body GNATCOLL.Filesystem is
               and then (not Dirs_Only
                          or else FS.Is_Directory (Local_Dir_Name & Simple))
               and then (not Files_Only
-                         or else FS.Is_Regular_File (Local_Dir_name & Simple))
+                         or else FS.Is_Regular_File (Local_Dir_Name & Simple))
             then
 
                Nb_Files := Nb_Files + 1;
