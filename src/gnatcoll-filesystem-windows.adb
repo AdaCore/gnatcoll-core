@@ -157,16 +157,21 @@ package body GNATCOLL.Filesystem.Windows is
    is
       pragma Unreferenced (FS);
       Idx : Natural;
+      First : Natural := 0;
    begin
       if Path'Length >= 3 and then Path (Path'First + 1) = ':' then
          return Path (Path'First .. Path'First + 2);
       elsif Path'Length > 2
         and then Path (Path'First .. Path'First + 1) = "\\"
       then
-         --  Network path. We keep the machine name.
+         --  Network path. We keep the "\\machine\service\" name.
          for J in Path'First + 2 .. Path'Last loop
             if Path (J) = '\' then
-               return Path (Path'First .. J);
+               if First = 0 then
+                  First := J;
+               else
+                  return Path (Path'First .. J);
+               end if;
             end if;
          end loop;
 

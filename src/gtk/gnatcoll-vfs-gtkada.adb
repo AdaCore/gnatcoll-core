@@ -1,7 +1,7 @@
 -----------------------------------------------------------------------
 --                               G P S                               --
 --                                                                   --
---                        Copyright (C) 2007-2008, AdaCore           --
+--                        Copyright (C) 2007-2009, AdaCore           --
 --                                                                   --
 -- GPS is free  software;  you can redistribute it and/or modify  it --
 -- under the terms of the GNU General Public License as published by --
@@ -114,5 +114,37 @@ package body GNATCOLL.VFS.GtkAda is
       --  Release the reference we owned
       Finalize (Value);
    end Virtual_File_Boxed_Free;
+
+   --------------
+   -- Set_File --
+   --------------
+
+   procedure Set_File
+     (Tree_Store : access Gtk.Tree_Store.Gtk_Tree_Store_Record'Class;
+      Iter       : Gtk.Tree_Model.Gtk_Tree_Iter;
+      Column     : Glib.Gint;
+      File       : Virtual_File)
+   is
+      Value : GValue;
+   begin
+      Init (Value, Get_Virtual_File_Type);
+      Set_File (Value, File);
+      Gtk.Tree_Store.Set_Value (Tree_Store, Iter, Column, Value);
+   end Set_File;
+
+   --------------
+   -- Get_File --
+   --------------
+
+   function Get_File
+     (Tree_Model : access Gtk.Tree_Model.Gtk_Tree_Model_Record'Class;
+      Iter       : Gtk.Tree_Model.Gtk_Tree_Iter;
+      Column     : Glib.Gint) return Virtual_File
+   is
+      Value : GValue;
+   begin
+      Gtk.Tree_Model.Get_Value (Tree_Model, Iter, Column, Value);
+      return Get_File (Value);
+   end Get_File;
 
 end GNATCOLL.VFS.GtkAda;

@@ -156,6 +156,7 @@ package body GNATCOLL.Filesystem is
                       +Suffix,
                       Is_Case_Sensitive (Filesystem_Record'Class (FS))) then
                return Path (J + 1 .. Path'Last - Suffix'Length);
+
             else
                return Path (J + 1 .. Path'Last);
             end if;
@@ -171,12 +172,19 @@ package body GNATCOLL.Filesystem is
 
    function Base_Dir_Name
      (FS   : Filesystem_Record;
-      Path : Filesystem_String) return Filesystem_String is
+      Path : Filesystem_String) return Filesystem_String
+   is
+      First : Natural := 0;
+      Root  : constant Filesystem_String := FS.Get_Root (Path);
    begin
-      if Path'Length > 1
+      if Path = Root then
+         return Path;
+
+      elsif Path'Length > 1
         and then Path (Path'Last) = Dir_Sep (Filesystem_Record'Class (FS))
       then
-         return Base_Name (FS, Path (Path'First .. Path'Last - 1));
+         return FS.Base_Dir_Name (Path (Path'First .. Path'Last - 1));
+
       else
          return Base_Name (FS, Path);
       end if;
@@ -357,8 +365,30 @@ package body GNATCOLL.Filesystem is
       Local_Full_Name : Filesystem_String) return Boolean
    is
       pragma Unreferenced (FS);
+      D : Dir_Type;
+
    begin
+      if Local_Full_Name (Local_Full_name'First .. Local_Full_name'First + 1)
+        = "\\"
+      then
+      --  ??? Strange enough, it appears that tentatively opening/closing a
+      --  directory is more efficient and reliable than calling
+      --  System.OS_Lib.Is_Directory who in turn calls stat, buggy at least on
+      --  windows as far as network directories are concerned.
+
+      --  Of course, doing so, we take the risk of having a directory with
+      --  no proper read rights reported as regular file ...
+         GNAT.Directory_Operations.Open (D, +Local_Full_Name);
+         GNAT.Directory_Operations.Close (D);
+
+         return True;
+      end if;
+
       return Is_Directory (+Local_Full_Name);
+
+   exception
+      when GNAT.Directory_Operations.Directory_Error =>
+         return False;
    end Is_Directory;
 
    ---------------------
@@ -484,46 +514,38 @@ package body GNATCOLL.Filesystem is
       Dirs_Only      : Boolean := False;
       Files_Only     : Boolean := False) return GNAT.Strings.String_List
    is
-      pragma Unreferenced (FS);
       procedure Unchecked_Free is new Ada.Unchecked_Deallocation
         (GNAT.Strings.String_List, String_List_Access);
 
       Nb_Files : Natural := 0;
       Tmp      : String_List_Access;
       F_Array  : String_List_Access;
-      Search   : Search_Type;
-      Ent      : Directory_Entry_Type;
-      Filter   : Filter_Type := (others => True);
+      D        : Dir_Type;
+      F_Name   : String (1 .. 10000);
+      Last     : Natural;
 
    begin
-      if not Is_Directory (Local_Dir_Name) then
-         return (1 .. 0 => null);
-      end if;
-
-      if Dirs_Only then
-         Filter := (Directory => True, others => False);
-      elsif Files_Only then
-         Filter (Directory) := False;
-      end if;
-
-      Start_Search
-        (Search,
-         Directory => +Local_Dir_Name,
-         Pattern   => "",
-         Filter    => Filter);
-
       --  let's start with 128 items
       F_Array := new GNAT.Strings.String_List (1 .. 128);
 
-      while More_Entries (Search) loop
-         Get_Next_Entry (Search, Ent);
+      Open (D, +Local_Dir_Name);
+
+      loop
+         Read (D, F_Name, Last);
+
+         exit when Last = 0;
 
          declare
-            Simple : constant String := Simple_Name (Ent);
+            Simple : constant Filesystem_String := +F_Name (1 .. Last);
          begin
             if Simple /= "."
               and then Simple /= ".."
+              and then (not Dirs_Only
+                         or else FS.Is_Directory (Local_Dir_Name & Simple))
+              and then (not Files_Only
+                         or else FS.Is_Regular_File (Local_Dir_name & Simple))
             then
+
                Nb_Files := Nb_Files + 1;
 
                --  Array too small, let's double it
@@ -534,12 +556,12 @@ package body GNATCOLL.Filesystem is
                   Unchecked_Free (Tmp);
                end if;
 
-               F_Array (Nb_Files) := new String'(Simple);
+               F_Array (Nb_Files) := new String'(+Simple);
             end if;
          end;
       end loop;
 
-      End_Search (Search);
+      Close (D);
 
       Tmp := F_Array;
 
@@ -553,7 +575,7 @@ package body GNATCOLL.Filesystem is
 
    exception
       when others =>
-         End_Search (Search);
+         Close (D);
          return (1 .. 0 => null);
    end Read_Dir;
 

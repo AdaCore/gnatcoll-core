@@ -1,7 +1,7 @@
 -----------------------------------------------------------------------
 --                               G P S                               --
 --                                                                   --
---                        Copyright (C) 2007-2008, AdaCore           --
+--                        Copyright (C) 2007-2009, AdaCore           --
 --                                                                   --
 -- GPS is free  software;  you can redistribute it and/or modify  it --
 -- under the terms of the GNU General Public License as published by --
@@ -17,7 +17,10 @@
 -- Place - Suite 330, Boston, MA 02111-1307, USA.                    --
 -----------------------------------------------------------------------
 
+with Glib;
 with Glib.Values;
+with Gtk.Tree_Store;
+with Gtk.Tree_Model;
 
 --  This package provides utilities to encapsulate a virtual file
 --  in a GValue.
@@ -38,5 +41,20 @@ package GNATCOLL.VFS.GtkAda is
 
    function Get_Virtual_File_Type return Glib.GType;
    --  Return the gtype to use for virtual files
+
+   procedure Set_File
+     (Tree_Store : access Gtk.Tree_Store.Gtk_Tree_Store_Record'Class;
+      Iter       : Gtk.Tree_Model.Gtk_Tree_Iter;
+      Column     : Glib.Gint;
+      File       : Virtual_File);
+   --  Set a file into a tree store. The column should have been initialized
+   --  as GTYpe_Pointer
+
+   function Get_File
+     (Tree_Model : access Gtk.Tree_Model.Gtk_Tree_Model_Record'Class;
+      Iter       : Gtk.Tree_Model.Gtk_Tree_Iter;
+      Column     : Glib.Gint) return Virtual_File;
+   --  Get a file from a tree model. The column should have been initialized
+   --  as GType_Pointer
 
 end GNATCOLL.VFS.GtkAda;

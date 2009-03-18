@@ -158,6 +158,9 @@ package GNATCOLL.VFS is
    function Display_Dir_Name (File : Virtual_File) return String;
    --  Same as Dir_Name
 
+   function Display_Base_Dir_Name (File : Virtual_File) return String;
+   --  Same as Base_Dir_Name
+
    ------------------------
    -- Getting attributes --
    ------------------------

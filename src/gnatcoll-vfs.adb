@@ -328,6 +328,19 @@ package body GNATCOLL.VFS is
       end if;
    end Display_Dir_Name;
 
+   ---------------------------
+   -- Display_Base_Dir_Name --
+   ---------------------------
+
+   function Display_Base_Dir_Name (File : Virtual_File) return String is
+   begin
+      if File.Value = null then
+         return "";
+      else
+         return File.Value.FS.Locale_To_Display (File.Base_Dir_Name);
+      end if;
+   end Display_Base_Dir_Name;
+
    --------------------
    -- Unchecked_Free --
    --------------------
