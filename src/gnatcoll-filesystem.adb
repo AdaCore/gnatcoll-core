@@ -369,8 +369,10 @@ package body GNATCOLL.Filesystem is
       D : Dir_Type;
 
    begin
-      if Local_Full_Name (Local_Full_Name'First .. Local_Full_Name'First + 1)
-        = "\\"
+      if Local_Full_Name'Length > 2
+        and then
+          Local_Full_Name
+            (Local_Full_name'First .. Local_Full_name'First + 1)   = "\\"
       then
       --  ??? Strange enough, it appears that tentatively opening/closing a
       --  directory is more efficient and reliable than calling
