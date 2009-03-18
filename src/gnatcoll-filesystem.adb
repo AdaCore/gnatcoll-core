@@ -175,7 +175,8 @@ package body GNATCOLL.Filesystem is
       Path : Filesystem_String) return Filesystem_String
    is
       First : Natural := 0;
-      Root  : constant Filesystem_String := FS.Get_Root (Path);
+      Root  : constant Filesystem_String :=
+                Get_Root (Filesystem_Record'Class (FS), Path);
    begin
       if Path = Root then
          return Path;
