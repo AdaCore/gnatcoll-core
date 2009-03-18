@@ -156,9 +156,21 @@ package body GNATCOLL.Filesystem.Windows is
       Path : Filesystem_String) return Filesystem_String
    is
       pragma Unreferenced (FS);
+      Idx : Natural;
    begin
       if Path'Length >= 3 and then Path (Path'First + 1) = ':' then
          return Path (Path'First .. Path'First + 2);
+      elsif Path'Length > 2
+        and then Path (Path'First .. Path'First + 1) = "\\"
+      then
+         --  Network path. We keep the machine name.
+         for J in Path'First + 2 .. Path'Last loop
+            if Path (J) = '\' then
+               return Path (Path'First .. J);
+            end if;
+         end loop;
+
+         return Path;
       else
          return "C:\";
       end if;
