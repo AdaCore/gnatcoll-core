@@ -91,8 +91,6 @@ package body GNATCOLL.Scripts is
    procedure Destroy (Repo : in out Scripts_Repository) is
       procedure Unchecked_Free is new Ada.Unchecked_Deallocation
         (Scripts_Repository_Record'Class, Scripts_Repository);
-      procedure Unchecked_Free is new Ada.Unchecked_Deallocation
-        (Scripting_Language_Record'Class, Scripting_Language);
       C     : Classes_Hash.Cursor;
       Class : Class_Type;
    begin

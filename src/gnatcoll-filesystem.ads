@@ -126,7 +126,8 @@ package GNATCOLL.Filesystem is
    function Base_Dir_Name
      (FS   : Filesystem_Record;
       Path : Filesystem_String) return Filesystem_String;
-   --  Return the directory base name
+   --  Return the directory base name. Root directories will be returned
+   --  as-is ("/", "C:\", "\\machine\service\")
 
    function Dir_Name
      (FS   : Filesystem_Record;

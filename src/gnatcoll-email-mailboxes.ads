@@ -23,7 +23,6 @@ with Ada.Containers.Indefinite_Doubly_Linked_Lists;
 with Ada.Containers.Doubly_Linked_Lists;
 with Ada.Finalization;
 with GNATCOLL.Email.Parser;
-with GNATCOLL.Mmap;
 with GNAT.Strings;
 with GNATCOLL.VFS;
 

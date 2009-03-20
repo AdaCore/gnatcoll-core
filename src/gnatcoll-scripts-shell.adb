@@ -36,8 +36,6 @@ with GNATCOLL.Scripts.Impl;             use GNATCOLL.Scripts.Impl;
 with GNATCOLL.Scripts.Utils;            use GNATCOLL.Scripts.Utils;
 with GNATCOLL.Traces;                   use GNATCOLL.Traces;
 with GNATCOLL.Utils;                    use GNATCOLL.Utils;
-with GNATCOLL.Filesystem;               use GNATCOLL.Filesystem;
-with GNATCOLL.VFS_Utils;                use GNATCOLL.VFS_Utils;
 
 package body GNATCOLL.Scripts.Shell is
    Me : constant Trace_Handle := Create ("SHELL_SCRIPT", Off);

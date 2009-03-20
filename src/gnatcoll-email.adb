@@ -29,11 +29,8 @@ pragma Warnings (On);
 with Ada.Unchecked_Deallocation;
 with GNATCOLL.Email.Utils;      use GNATCOLL.Email.Utils;
 with GNATCOLL.Filesystem;       use GNATCOLL.Filesystem;
-with GNATCOLL.Mmap;             use GNATCOLL.Mmap;
 with GNATCOLL.Utils;            use GNATCOLL.Utils;
 with GNATCOLL.VFS;              use GNATCOLL.VFS;
-with GNATCOLL.VFS_Utils;        use GNATCOLL.VFS_Utils;
-with GNAT.Directory_Operations; use GNAT.Directory_Operations;
 with GNAT.Strings;              use GNAT.Strings;
 
 package body GNATCOLL.Email is

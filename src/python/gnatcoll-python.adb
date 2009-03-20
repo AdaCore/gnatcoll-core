@@ -1,7 +1,7 @@
 -----------------------------------------------------------------------
 --                               G N A T C O L L                     --
 --                                                                   --
---                     Copyright (C) 2003-2008, AdaCore              --
+--                     Copyright (C) 2003-2009, AdaCore              --
 --                                                                   --
 -- GPS is free  software; you can  redistribute it and/or modify  it --
 -- under the terms of the GNU General Public License as published by --
@@ -322,7 +322,7 @@ package body GNATCOLL.Python is
       procedure Internal (Name : String);
       pragma Import (C, Internal, "Py_SetProgramName");
 
-      Program_Name : constant String_Access := new String'(NAME & ASCII.NUL);
+      Program_Name : constant String_Access := new String'(Name & ASCII.NUL);
       --  As stated by the Python documentation the string passed to
       --  Py_SetProgramName should be in "static storage whose contents will
       --  not change for the duration of the program's execution"

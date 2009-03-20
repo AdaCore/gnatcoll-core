@@ -28,7 +28,6 @@ with GNAT.Directory_Operations; use GNAT.Directory_Operations;
 with GNAT.Heap_Sort;            use GNAT.Heap_Sort;
 with GNAT.OS_Lib;               use GNAT.OS_Lib;
 
-with GNATCOLL.Filesystem;       use GNATCOLL.Filesystem;
 with GNATCOLL.Utils;            use GNATCOLL.Utils;
 with GNATCOLL.VFS_Utils;        use GNATCOLL.VFS_Utils;
 

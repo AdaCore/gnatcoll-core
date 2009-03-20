@@ -18,7 +18,6 @@
 -----------------------------------------------------------------------
 
 with GNAT.Case_Util;             use GNAT.Case_Util;
-with GNATCOLL.Mmap;              use GNATCOLL.Mmap;
 with GNATCOLL.VFS;               use GNATCOLL.VFS;
 with GNAT.Strings;               use GNAT.Strings;
 pragma Warnings (Off);
