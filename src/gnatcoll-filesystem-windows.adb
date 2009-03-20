@@ -17,10 +17,9 @@
 -- Place - Suite 330, Boston, MA 02111-1307, USA.                    --
 -----------------------------------------------------------------------
 
-with Ada.Characters.Handling; use Ada.Characters.Handling;
 with System;
-
-with GNATCOLL.VFS_Utils; use GNATCOLL.VFS_Utils;
+with Ada.Characters.Handling;   use Ada.Characters.Handling;
+with GNAT.Directory_Operations; use GNAT.Directory_Operations;
 
 package body GNATCOLL.Filesystem.Windows is
 
@@ -156,8 +155,8 @@ package body GNATCOLL.Filesystem.Windows is
       Path : Filesystem_String) return Filesystem_String
    is
       pragma Unreferenced (FS);
-      Idx : Natural;
       First : Natural := 0;
+
    begin
       if Path'Length >= 3 and then Path (Path'First + 1) = ':' then
          return Path (Path'First .. Path'First + 2);
@@ -243,6 +242,36 @@ package body GNATCOLL.Filesystem.Windows is
    begin
       return True;
    end Has_Devices;
+
+   ------------------
+   -- Is_Directory --
+   ------------------
+
+   function Is_Directory
+     (FS              : Windows_Filesystem_Record;
+      Local_Full_Name : Filesystem_String) return Boolean
+   is
+      pragma Unreferenced (FS);
+      D : Dir_Type;
+
+   begin
+      --  ??? Strange enough, it appears that tentatively opening/closing a
+      --  directory is more efficient and reliable than calling
+      --  System.OS_Lib.Is_Directory who in turn calls stat, buggy at least on
+      --  windows as far as network directories are concerned.
+
+      --  Of course, doing so, we take the risk of having a directory with
+      --  no proper read rights being reported as regular file ... But do we
+      --  really need to handle this case ?
+      GNAT.Directory_Operations.Open (D, +Local_Full_Name);
+      GNAT.Directory_Operations.Close (D);
+
+      return True;
+
+   exception
+      when GNAT.Directory_Operations.Directory_Error =>
+         return False;
+   end Is_Directory;
 
    ------------------------
    -- Get_Logical_Drives --

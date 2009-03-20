@@ -53,6 +53,9 @@ package GNATCOLL.Filesystem.Windows is
      (FS : Windows_Filesystem_Record) return Boolean;
    overriding function Has_Devices
      (FS : Windows_Filesystem_Record) return Boolean;
+   overriding function Is_Directory
+     (FS              : Windows_Filesystem_Record;
+      Local_Full_Name : Filesystem_String) return Boolean;
    overriding procedure Get_Logical_Drives
      (FS     : Windows_Filesystem_Record;
       Buffer : in out Filesystem_String;

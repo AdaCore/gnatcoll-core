@@ -18,7 +18,6 @@
 -----------------------------------------------------------------------
 
 with Ada.Directories;           use Ada.Directories;
-with Ada.Unchecked_Deallocation;
 with Interfaces.C.Strings;      use Interfaces.C, Interfaces.C.Strings;
 
 with GNAT.Calendar;
@@ -174,7 +173,6 @@ package body GNATCOLL.Filesystem is
      (FS   : Filesystem_Record;
       Path : Filesystem_String) return Filesystem_String
    is
-      First : Natural := 0;
       Root  : constant Filesystem_String :=
                 Get_Root (Filesystem_Record'Class (FS), Path);
    begin
@@ -366,32 +364,8 @@ package body GNATCOLL.Filesystem is
       Local_Full_Name : Filesystem_String) return Boolean
    is
       pragma Unreferenced (FS);
-      D : Dir_Type;
-
    begin
-      if Local_Full_Name'Length > 2
-        and then
-          Local_Full_Name
-            (Local_Full_Name'First .. Local_Full_Name'First + 1)   = "\\"
-      then
-      --  ??? Strange enough, it appears that tentatively opening/closing a
-      --  directory is more efficient and reliable than calling
-      --  System.OS_Lib.Is_Directory who in turn calls stat, buggy at least on
-      --  windows as far as network directories are concerned.
-
-      --  Of course, doing so, we take the risk of having a directory with
-      --  no proper read rights reported as regular file ...
-         GNAT.Directory_Operations.Open (D, +Local_Full_Name);
-         GNAT.Directory_Operations.Close (D);
-
-         return True;
-      end if;
-
       return Is_Directory (+Local_Full_Name);
-
-   exception
-      when GNAT.Directory_Operations.Directory_Error =>
-         return False;
    end Is_Directory;
 
    ---------------------
@@ -734,7 +708,7 @@ package body GNATCOLL.Filesystem is
       procedure c_free (C : chars_ptr);
       pragma Import (C, c_free, "free");
 
-      C_Str : chars_ptr := Internal;
+      C_Str : constant chars_ptr := Internal;
       Str   : constant Filesystem_String :=
                 +GNAT.Directory_Operations.Format_Pathname
                   (To_Ada (Value (C_Str)));
