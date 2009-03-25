@@ -73,7 +73,7 @@ __gnatcoll_set_readable (char *file, int set)
 #else
   struct stat statbuf;
 
-  if (!__gnat_stat (file, &statbuf))
+  if (!stat (file, &statbuf))
     {
       if (set)
         chmod (file, statbuf.st_mode | S_IREAD);
