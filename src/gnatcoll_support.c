@@ -26,8 +26,6 @@ int gnatcoll_munmap (void *start, long length)
   return munmap (start, (size_t)length);
 }
 
-
-
 #else
 
 int
@@ -135,4 +133,3 @@ __gnatcoll_get_tmp_dir (void)
   result = strdup ("/tmp");
   return strdup (result);
 }
-
