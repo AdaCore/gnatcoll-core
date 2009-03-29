@@ -1,7 +1,7 @@
 -----------------------------------------------------------------------
 --                          G N A T C O L L                          --
 --                                                                   --
---                    Copyright (C) 2008, AdaCore                    --
+--                 Copyright (C) 2008-2009, AdaCore                  --
 --                                                                   --
 -- GPS is free  software;  you can redistribute it and/or modify  it --
 -- under the terms of the GNU General Public License as published by --
@@ -220,7 +220,7 @@ package body GNATCOLL.Templates is
          end if;
 
          --  When doubled, the delimiter is always replaced with itself by
-         --  default
+         --  default.
 
          if not Found
            and then Identifier_Last = Identifier_First
