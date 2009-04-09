@@ -18,6 +18,7 @@
 -----------------------------------------------------------------------
 
 with Ada.Unchecked_Conversion;
+with GNATCOLL.IO;               use GNATCOLL.IO;
 with Glib.Values;               use Glib, Glib.Values;
 with System;
 
@@ -38,7 +39,7 @@ package body GNATCOLL.VFS.GtkAda is
    pragma Warnings (Off);
    --  This UC is safe aliasing-wise, so kill warning
    function To_Contents_Access is new Ada.Unchecked_Conversion
-     (System.Address, Contents_Access);
+     (System.Address, GNATCOLL.IO.File_Access);
    pragma Warnings (On);
 
    --------------
@@ -95,10 +96,10 @@ package body GNATCOLL.VFS.GtkAda is
    function Virtual_File_Boxed_Copy
      (Boxed : System.Address) return System.Address
    is
-      Value : constant Contents_Access := To_Contents_Access (Boxed);
+      Value : constant File_Access := To_Contents_Access (Boxed);
    begin
       if Value /= null then
-         Value.Ref_Count := Value.Ref_Count + 1;
+         Ref (Value);
       end if;
 
       return Boxed;
@@ -109,10 +110,12 @@ package body GNATCOLL.VFS.GtkAda is
    -----------------------------
 
    procedure Virtual_File_Boxed_Free (Boxed : System.Address) is
-      Value : Contents_Access := To_Contents_Access (Boxed);
+      Value : File_Access := To_Contents_Access (Boxed);
    begin
       --  Release the reference we owned
-      Finalize (Value);
+      if Value /= null then
+         Unref (Value);
+      end if;
    end Virtual_File_Boxed_Free;
 
    --------------
@@ -130,6 +133,7 @@ package body GNATCOLL.VFS.GtkAda is
       Init (Value, Get_Virtual_File_Type);
       Set_File (Value, File);
       Gtk.Tree_Store.Set_Value (Tree_Store, Iter, Column, Value);
+      Unset (Value);
    end Set_File;
 
    --------------

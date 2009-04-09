@@ -1,5 +1,29 @@
+-----------------------------------------------------------------------
+--                          G N A T C O L L                          --
+--                                                                   --
+--                    Copyright (C) 2009, AdaCore                    --
+--                                                                   --
+-- GPS is free  software;  you can redistribute it and/or modify  it --
+-- under the terms of the GNU General Public License as published by --
+-- the Free Software Foundation; either version 2 of the License, or --
+-- (at your option) any later version.                               --
+--                                                                   --
+-- This program is  distributed in the hope that it will be  useful, --
+-- but  WITHOUT ANY WARRANTY;  without even the  implied warranty of --
+-- MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU --
+-- General Public License for more details. You should have received --
+-- a copy of the GNU General Public License along with this program; --
+-- if not,  write to the  Free Software Foundation, Inc.,  59 Temple --
+-- Place - Suite 330, Boston, MA 02111-1307, USA.                    --
+-----------------------------------------------------------------------
+
 with Ada.Unchecked_Conversion;
 with Ada.Directories; use Ada.Directories;
+
+with GNATCOLL.Remote;    use GNATCOLL.Remote;
+with GNATCOLL.Remote.Db; use GNATCOLL.Remote.Db;
+with GNATCOLL.Utils;
+with GNATCOLL.VFS_Types;
 
 package body GNATCOLL.VFS_Utils is
 
@@ -118,6 +142,21 @@ package body GNATCOLL.VFS_Utils is
       return +Get_Current_Dir;
    end Get_Current_Dir;
 
+   -----------------------
+   -- Name_As_Directory --
+   -----------------------
+
+   function Name_As_Directory
+     (Name : Filesystem_String) return Filesystem_String is
+   begin
+      if +Name = "" then
+         return "";
+      end if;
+
+      return GNATCOLL.Path.Ensure_Directory
+        (GNATCOLL.Path.Local_FS, Name);
+   end Name_As_Directory;
+
    --------------
    -- Dir_Name --
    --------------
@@ -177,8 +216,19 @@ package body GNATCOLL.VFS_Utils is
    function Locate_Exec_On_Path
      (Exec_Name : Filesystem_String) return Filesystem_String_Access
    is
+      Val : String_Access := Locate_Exec_On_Path (+Exec_Name);
    begin
-      return Convert (Locate_Exec_On_Path (+Exec_Name));
+      if Val /= null then
+         declare
+            Ret : constant Filesystem_String_Access :=
+                    new Filesystem_String'(+Val.all);
+         begin
+            Free (Val);
+            return Ret;
+         end;
+      end if;
+
+      return null;
    end Locate_Exec_On_Path;
 
    -------------------------
@@ -187,9 +237,18 @@ package body GNATCOLL.VFS_Utils is
 
    function Locate_Regular_File
      (File_Name : Filesystem_String;
-      Path      : Filesystem_String) return Filesystem_String_Access is
+      Path      : Filesystem_String) return Filesystem_String_Access
+   is
+      Val : String_Access := Locate_Regular_File (+File_Name, +Path);
+      Ret : Filesystem_String_Access;
    begin
-      return Convert (Locate_Regular_File (+File_Name, +Path));
+      if Val /= null then
+         Ret := new Filesystem_String'(+Val.all);
+         Free (Val);
+         return Ret;
+      else
+         return null;
+      end if;
    end Locate_Regular_File;
 
    -------------
@@ -204,5 +263,31 @@ package body GNATCOLL.VFS_Utils is
    begin
       return +Compose (+Containing_Directory, +Name, +Extension);
    end Compose;
+
+   -----------------------
+   -- Is_Case_Sensitive --
+   -----------------------
+
+   function Is_Case_Sensitive (Host : String) return Boolean is
+      FS : GNATCOLL.VFS_Types.FS_Type;
+   begin
+      if Host = Local_Host then
+         FS := GNATCOLL.Path.Local_FS;
+      else
+         FS := Get_Server (Host).Shell_FS;
+      end if;
+
+      return GNATCOLL.Path.Is_Case_Sensitive (FS);
+   end Is_Case_Sensitive;
+
+   ----------------
+   -- File_Equal --
+   ----------------
+
+   function File_Equal (F1, F2 : Filesystem_String; Host : String)
+                        return Boolean is
+   begin
+      return GNATCOLL.Utils.Equal (+F1, +F2, Is_Case_Sensitive (Host));
+   end File_Equal;
 
 end GNATCOLL.VFS_Utils;

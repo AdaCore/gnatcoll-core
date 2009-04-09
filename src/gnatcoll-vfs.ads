@@ -41,21 +41,61 @@
 --  one memory allocation when the file is created to store the name.
 
 with Ada.Calendar;
-with Ada.Finalization;
 with Ada.Containers;
+with Ada.Finalization;
 
 with GNAT.OS_Lib;
 with GNAT.Strings;
-with GNATCOLL.Filesystem; use GNATCOLL.Filesystem;
+
+with GNATCOLL.VFS_Types;
+private with GNATCOLL.IO;
+private with GNATCOLL.IO.Native;
 
 package GNATCOLL.VFS is
 
-   VFS_Directory_Error : exception;
+   ------------------------
+   -- Filesystem strings --
+   ------------------------
+
+   subtype Filesystem_String is GNATCOLL.VFS_Types.FS_String;
+   subtype Filesystem_String_Access is
+     GNATCOLL.VFS_Types.FS_String_Access;
+   --  A Filesystem_String represents an array of characters as they are
+   --  represented on the filesystem, without any encoding consideration.
+
+   function "+" (S : Filesystem_String) return String;
+   pragma Inline ("+");
+   function "+" (S : String) return Filesystem_String;
+   pragma Inline ("+");
+   function Equal (S1, S2 : Filesystem_String) return Boolean;
+   pragma Inline (Equal);
+   procedure Free (S : in out Filesystem_String_Access)
+                   renames VFS_Types.Free;
+   function "&" (S1, S2 : Filesystem_String) return Filesystem_String
+                 renames VFS_Types."&";
+   function "<" (S1, S2 : Filesystem_String) return Boolean
+                 renames VFS_Types."<";
+   --  Conversion/Comparison/Concatenation functions
+
+   ----------------
+   -- Exceptions --
+   ----------------
+
+   VFS_Directory_Error    : exception;
+   VFS_Invalid_File_Error : exception;
+
+   ------------------------------
+   --  Virtual File definition --
+   ------------------------------
 
    type Virtual_File is tagged private;
    No_File        : constant Virtual_File;
 
-   type Virtual_File_Access is access constant Virtual_File;
+   ---------------
+   -- Constants --
+   ---------------
+
+   Local_Host : constant String;
 
    ----------------------------
    --  Creating Virtual_File --
@@ -71,18 +111,11 @@ package GNATCOLL.VFS is
    --  filename needs to be converted to a known encoding, generally utf8.
    --  See the "Retrieving names" section below.
 
-   function Create (Full_Filename : Filesystem_String) return Virtual_File;
+   function Create (Full_Filename : Filesystem_String;
+                    Host          : String := Local_Host) return Virtual_File;
    --  Return a file, given its full filename.
    --  The latter can be found, for source files, through the functions in
    --  projects-registry.ads.
-
-   function Create
-     (FS            : GNATCOLL.Filesystem.Filesystem_Access;
-      Full_Filename : Filesystem_String) return Virtual_File;
-   --  Return a file, given its full filename and an instance of a file
-   --  system. The filesystem can possibly be running on a remote host, in
-   --  which case the file will also be hosted on that machine.
-   --  FS must not be freed while the file exists, since no copy is made
 
    function Create_From_Dir
      (Dir       : Virtual_File;
@@ -90,13 +123,22 @@ package GNATCOLL.VFS is
    --  Creates a file from its directory and base name
 
    function Create_From_Base
+     (Base_Name : Filesystem_String;
+      Base_Dir  : Filesystem_String := "";
+      Host      : String := Local_Host) return Virtual_File;
+   --  Create a file from its base name.
+   --  if Base_Name is an absolute path, then the file is created as is
+   --  else the file is created relative to Base_Dir or the Current Directory
+   --  if furnished.
+
+   function Create_From_UTF8
+     (Full_Filename : String;
+      Host          : String := Local_Host) return Virtual_File;
+   --  Creates a file from its display name
+
+   function Locate_On_Path
      (Base_Name : Filesystem_String) return Virtual_File;
-   --  Return a file, given its base name.
-   --  The full name will never be computable. Consider using Projects.Create
-   --  if you know to which project the file belongs. Also consider using
-   --  GPS.Kernel.Create
-   --  ??? Currently, this does the same thing as create, but it is
-   --  preferable to distinguish both cases just in case.
+   --  Locate the file from its base name and the PATH environment variable.
 
    ----------------------
    -- Retrieving names --
@@ -112,8 +154,6 @@ package GNATCOLL.VFS is
    --  functions above, and therefore make no guarantee on the encoding of the
    --  file name.
 
-   type Cst_String_Access is access constant Filesystem_String;
-
    function Base_Name
      (File : Virtual_File; Suffix : Filesystem_String := "")
       return Filesystem_String;
@@ -123,8 +163,9 @@ package GNATCOLL.VFS is
    --  Return the base name of the directory or the file
 
    function Full_Name
-     (File : Virtual_File; Normalize : Boolean := False)
-      return Cst_String_Access;
+     (File      : Virtual_File;
+      Normalize : Boolean := False)
+      return Filesystem_String;
    --  Return the full path to File.
    --  If Normalize is True, the file name is first normalized, note that links
    --  are not resolved there.
@@ -143,7 +184,7 @@ package GNATCOLL.VFS is
    --  extension. This extension includes the last dot and all the following
    --  characters.
 
-   function Dir_Name (File : Virtual_File) return Cst_String_Access;
+   function Dir_Name (File : Virtual_File) return Filesystem_String;
    --  Return the directory name for File. This includes any available
    --  on the protocol, so that relative files names are properly found.
 
@@ -152,7 +193,9 @@ package GNATCOLL.VFS is
       Normalize : Boolean := False) return String;
    --  Same as Full_Name
 
-   function Display_Base_Name (File : Virtual_File) return String;
+   function Display_Base_Name
+     (File   : Virtual_File;
+      Suffix : Filesystem_String := "") return String;
    --  Same as Base_Name
 
    function Display_Dir_Name (File : Virtual_File) return String;
@@ -161,13 +204,42 @@ package GNATCOLL.VFS is
    function Display_Base_Dir_Name (File : Virtual_File) return String;
    --  Same as Base_Dir_Name
 
+   function Unix_Style_Full_Name
+     (File         : Virtual_File;
+      Cygwin_Style : Boolean := False) return Filesystem_String;
+   --  Returns the file path using a unix-style path
+
+   function Relative_Path
+     (File : Virtual_File;
+      From : Virtual_File) return Filesystem_String;
+   --  Return the path of File relative to From. Return the full_name in case
+   --  From and File are not on the same drive.
+
+   function Has_Suffix
+     (File : Virtual_File; Suffix : Filesystem_String) return Boolean;
+   --  Tell if File has suffix Suffix
+
+   function To_Remote
+     (File : Virtual_File; To_Host : String) return Virtual_File;
+   --  Convert the file format of File to the convention used on To_Host,
+   --  using all available mount points defined for To_Host.
+
+   function To_Local
+     (File : Virtual_File) return Virtual_File;
+   --  Convert the file format of File to the local filesystem's convention,
+   --  potentially using mount points defined between File's host and local
+   --  host.
+
    ------------------------
    -- Getting attributes --
    ------------------------
 
-   function Get_Filesystem
-     (File : Virtual_File) return GNATCOLL.Filesystem.Filesystem_Access;
-   --  Return the filesystem for File
+   function Is_Local (File : Virtual_File) return Boolean;
+   --  Whether File is local to the host or is a remote file.
+
+   function Get_Host (File : Virtual_File) return String;
+   --  Retrieve the host of the file, or Local_Host if the file is local to the
+   --  host.
 
    function Is_Regular_File (File : Virtual_File) return Boolean;
    --  Whether File corresponds to an actual file on the disk.
@@ -216,6 +288,7 @@ package GNATCOLL.VFS is
 
    type File_Array is array (Positive range <>) of Virtual_File;
    type File_Array_Access is access all File_Array;
+
    procedure Unchecked_Free (Arr : in out File_Array_Access);
 
    Empty_File_Array : constant File_Array;
@@ -223,13 +296,43 @@ package GNATCOLL.VFS is
    procedure Sort (Files : in out File_Array);
    --  Sort the array of files, in the order given by the full names
 
+   procedure Append (Files : in out File_Array_Access; F : Virtual_File);
+   --  Appends a file to Files. Files can be null, in which case a new
+   --  File_Array is created.
+
+   procedure Remove (Files : in out File_Array_Access; F : Virtual_File);
+   --  Remove F from Files.
+
+   function To_Path (Paths : File_Array) return Filesystem_String;
+   --  Translates a list of Paths into a path string (e.g. the same format as
+   --  $PATH)
+
+   function From_Path (Path : Filesystem_String) return File_Array;
+   --  Translate a PATH string into a list of Virtual_File
+
+   function Locate_On_Path
+     (Base_Name : Filesystem_String;
+      Path      : File_Array) return Virtual_File;
+   --  Locate the file from its base name and the furnished list of
+   --  directories.
+
+   function Greatest_Common_Path
+     (L : GNATCOLL.VFS.File_Array) return Virtual_File;
+   --  Return the greatest common path to a list of files or directories
+   --  No_File is returned if some files do not have the same root directory.
+
+   function Locate_Regular_File
+     (File_Name : Filesystem_String;
+      Path      : File_Array) return Virtual_File;
+   --  Locate a regular file from its base name and a list of paths.
+
    -------------------------
    --  Manipulating files --
    -------------------------
 
    procedure Rename
      (File      : Virtual_File;
-      Full_Name : Filesystem_String;
+      Full_Name : Virtual_File;
       Success   : out Boolean);
    --  Rename a file or directory. This does not work for remote files
 
@@ -257,7 +360,21 @@ package GNATCOLL.VFS is
    function Dir (File : Virtual_File) return Virtual_File;
    --  Return the virtual file corresponding to the directory of the file
 
-   function Get_Current_Dir return Virtual_File;
+   function Get_Current_Dir (Host : String := Local_Host) return Virtual_File;
+   --  Current dir on host
+
+   function Get_Tmp_Directory
+     (Host : String := Local_Host) return Virtual_File;
+   --  Tmp dir on host
+
+   function Get_Home_Directory
+     (Host : String := Local_Host) return Virtual_File;
+   --  Home dir on host
+
+   function Get_Logical_Drives
+     (Host : String := Local_Host) return File_Array_Access;
+   --  List of all logical drives on host, or null if none. The list needs to
+   --  be freed by the caller.
 
    procedure Ensure_Directory (Dir : Virtual_File);
    --  Ensures that the file is a directory: add directory separator if
@@ -291,6 +408,17 @@ package GNATCOLL.VFS is
    --  includes directories in systems providing a hierarchical directory
    --  structure, including . (the current directory) and .. (the parent
    --  directory) in systems providing these entries.
+
+   procedure Remove_Dir
+     (Dir       : Virtual_File;
+      Recursive : Boolean := False;
+      Success   : out Boolean);
+   --  Delete the directory Dir. If recursive is True, this also removes all
+   --  files or subdirectories contained in it.
+
+   function Read_Files_From_Dirs
+     (Dirs : File_Array) return File_Array_Access;
+   --  Read all files from the list of directories Dirs.
 
    type Virtual_Dir is private;
 
@@ -338,6 +466,19 @@ package GNATCOLL.VFS is
    --  Closes File, and write the file to disk.
    --  Use_Error is raised if the file could not be saved.
 
+   ----------------------------------
+   -- Some internally used methods --
+   ----------------------------------
+
+   function Convert
+     (File : Virtual_File; To_Host : String) return Virtual_File;
+   function Convert
+     (File     : Virtual_File;
+      From_Dir : Virtual_File;
+      To_Dir   : Virtual_File) return Virtual_File;
+   --  Used in mount path conversions. These should be private, but can't
+   --  as of RM 3.9.3(10)
+
 private
    --  This type is implemented as a controlled type, to ease the memory
    --  management (so that we can have gtk+ callbacks that take a Virtual
@@ -346,27 +487,8 @@ private
    --  not work properly, since the functions above cannot modify File
    --  itself, although they do compute some information lazily).
 
-   type File_Type is
-     (Unknown,
-      --  File is not determined
-      File,
-      --  Regular file
-      Directory
-      --  Directory
-      );
-
-   type Contents_Record is record
-      FS              : GNATCOLL.Filesystem.Filesystem_Access;
-      Ref_Count       : Natural := 1;
-      Full_Name       : Filesystem_String_Access;
-      Normalized_Full : Filesystem_String_Access;
-      Dir_Name        : Filesystem_String_Access;
-      Kind            : File_Type := Unknown;
-   end record;
-   type Contents_Access is access Contents_Record;
-
    type Virtual_File is new Ada.Finalization.Controlled with record
-      Value : Contents_Access;
+      Value : GNATCOLL.IO.File_Access;
    end record;
 
    pragma Finalize_Storage_Only (Virtual_File);
@@ -376,13 +498,12 @@ private
    type Writable_File is record
       File     : Virtual_File;
       FD       : GNAT.OS_Lib.File_Descriptor := GNAT.OS_Lib.Invalid_FD;
-      Filename : Filesystem_String_Access;
       Append   : Boolean;
    end record;
 
    Invalid_File : constant Writable_File :=
      ((Ada.Finalization.Controlled with Value => null),
-      GNAT.OS_Lib.Invalid_FD, null, False);
+      GNAT.OS_Lib.Invalid_FD, False);
 
    type Virtual_Dir is record
       File       : Virtual_File;
@@ -390,17 +511,11 @@ private
       Current    : Natural;
    end record;
 
+   Local_Host : constant String := "";
+
    Local_Root_Dir : constant Virtual_File :=
-     (Ada.Finalization.Controlled with Value => new Contents_Record'(
-      FS              => GNATCOLL.Filesystem.Get_Local_Filesystem,
-      Ref_Count       => 1,
-      Full_Name       => new Filesystem_String'
-        (1 => GNAT.OS_Lib.Directory_Separator),
-      Normalized_Full => new Filesystem_String'
-        (1 => GNAT.OS_Lib.Directory_Separator),
-      Dir_Name        => new Filesystem_String'
-        (1 => GNAT.OS_Lib.Directory_Separator),
-      Kind            => Directory));
+                      (Ada.Finalization.Controlled with
+                       Value => GNATCOLL.IO.Native.Local_Root_Dir);
 
    No_File : constant Virtual_File :=
      (Ada.Finalization.Controlled with Value => null);
@@ -412,8 +527,5 @@ private
      ((Ada.Finalization.Controlled with Value => null),
       null,
       0);
-
-   procedure Finalize (Value : in out Contents_Access);
-   --  Internal version of Finalize
 
 end GNATCOLL.VFS;

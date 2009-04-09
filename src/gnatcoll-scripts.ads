@@ -32,7 +32,7 @@ with Ada.Strings.Hash;
 with GNAT.OS_Lib;
 with GNAT.Strings;
 
-with GNATCOLL.Filesystem;     use GNATCOLL.Filesystem;
+with GNATCOLL.VFS;     use GNATCOLL.VFS;
 
 package GNATCOLL.Scripts is
 

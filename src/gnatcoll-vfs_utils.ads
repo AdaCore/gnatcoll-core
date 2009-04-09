@@ -1,14 +1,35 @@
-with GNATCOLL.Filesystem; use GNATCOLL.Filesystem;
+-----------------------------------------------------------------------
+--                          G N A T C O L L                          --
+--                                                                   --
+--                    Copyright (C) 2009, AdaCore                    --
+--                                                                   --
+-- GPS is free  software;  you can redistribute it and/or modify  it --
+-- under the terms of the GNU General Public License as published by --
+-- the Free Software Foundation; either version 2 of the License, or --
+-- (at your option) any later version.                               --
+--                                                                   --
+-- This program is  distributed in the hope that it will be  useful, --
+-- but  WITHOUT ANY WARRANTY;  without even the  implied warranty of --
+-- MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU --
+-- General Public License for more details. You should have received --
+-- a copy of the GNU General Public License along with this program; --
+-- if not,  write to the  Free Software Foundation, Inc.,  59 Temple --
+-- Place - Suite 330, Boston, MA 02111-1307, USA.                    --
+-----------------------------------------------------------------------
 
 with GNAT.Directory_Operations; use GNAT.Directory_Operations;
+with GNAT.OS_Lib;               use GNAT.OS_Lib;
 
-with GNAT.OS_Lib; use GNAT.OS_Lib;
+with GNATCOLL.VFS;              use GNATCOLL.VFS;
+private with GNATCOLL.Path;
 
 package GNATCOLL.VFS_Utils is
 
    --------------
    -- Wrappers --
    --------------
+
+   Local_Host_Is_Case_Sensitive : constant Boolean;
 
    --  These subprograms wrap around their equivalents in System.OS_Lib, and
    --  use Filesystem_String for better type safety.
@@ -69,6 +90,9 @@ package GNATCOLL.VFS_Utils is
      (Path  : Filesystem_String;
       Style : Path_Style := System_Default) return Filesystem_String;
 
+   function Name_As_Directory
+     (Name : Filesystem_String) return Filesystem_String;
+
    procedure Open (Dir : out Dir_Type; Dir_Name : Filesystem_String);
 
    --  These subprograms wrap around their equivalents in Ada.Directories, and
@@ -78,5 +102,21 @@ package GNATCOLL.VFS_Utils is
      (Containing_Directory : Filesystem_String := "";
       Name                 : Filesystem_String;
       Extension            : Filesystem_String := "") return Filesystem_String;
+
+   ------------------------------------
+   -- Remote hosts handling of Files --
+   ------------------------------------
+
+   function Is_Case_Sensitive (Host : String) return Boolean;
+   --  Tell if host's filesystem is case sensitive
+
+   function File_Equal (F1, F2 : Filesystem_String; Host : String)
+                        return Boolean;
+
+private
+
+   Local_Host_Is_Case_Sensitive : constant Boolean :=
+                                    GNATCOLL.Path.Is_Case_Sensitive
+                                      (GNATCOLL.Path.Local_FS);
 
 end GNATCOLL.VFS_Utils;

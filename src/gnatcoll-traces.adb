@@ -26,7 +26,6 @@ with Ada.Unchecked_Deallocation;
 with GNAT.Calendar;             use GNAT.Calendar;
 with GNAT.Calendar.Time_IO;     use GNAT.Calendar.Time_IO;
 with GNAT.Directory_Operations; use GNAT.Directory_Operations;
-with GNAT.IO_Aux;               use GNAT.IO_Aux;
 with GNATCOLL.Mmap;             use GNATCOLL.Mmap;
 with GNAT.OS_Lib;               use GNAT.OS_Lib;
 with GNAT.Task_Lock;            use GNAT.Task_Lock;
@@ -37,7 +36,6 @@ with System.Assertions;         use System.Assertions;
 pragma Warnings (Off);
 with System.Traceback_Entries;  use System.Traceback_Entries;
 
-with GNATCOLL.Filesystem;       use GNATCOLL.Filesystem;
 with GNATCOLL.VFS_Utils;        use GNATCOLL.VFS_Utils;
 
 pragma Warnings (On);
@@ -164,9 +162,9 @@ package body GNATCOLL.Traces is
    --  Print the stack trace for this handle. No locking done
 
    function Config_File
-     (Filename : String;
-      Default  : String)
-      return String;
+     (Filename : Virtual_File;
+      Default  : Virtual_File)
+      return Virtual_File;
    --  Return the name of the config file to use.
    --  If Filename is specified, this is the file to use, providing it exists.
    --  Otherwise, we use a .gnatdebug in the current directory, and if there is
@@ -871,65 +869,52 @@ package body GNATCOLL.Traces is
    -----------------
 
    function Config_File
-     (Filename : String;
-      Default  : String)
-      return String
+     (Filename : Virtual_File;
+      Default  : Virtual_File)
+      return Virtual_File
    is
-      Env  : GNAT.Strings.String_Access := Getenv (Config_File_Environment);
-      Home : GNAT.Strings.String_Access;
+      Env  : GNAT.Strings.String_Access;
+      Ret  : Virtual_File;
    begin
-      if Filename /= "" and then File_Exists (Filename) then
-         GNAT.Strings.Free (Env);
+      if Filename /= No_File and then Filename.Is_Regular_File then
          return Filename;
       end if;
 
+      Env := Getenv (Config_File_Environment);
+
       --  First test the file described in the environment variable
       if Env /= null and then Env.all /= "" then
-         if File_Exists (Env.all) then
-            declare
-               N : constant String := Env.all;
-            begin
-               Free (Env);
-               return N;
-            end;
+         Ret := Create (+Env.all);
+         Free (Env);
+
+         if Ret.Is_Regular_File then
+            return Ret;
          end if;
 
-         Free (Env);
-         return "";
+         return No_File;
       end if;
 
       Free (Env);
 
       --  Then the file in the current directory
 
-      if File_Exists (Default_Config_File) then
-         return Default_Config_File;
+      Ret := Create_From_Dir (Get_Current_Dir, Default_Config_File);
+      if Ret.Is_Regular_File then
+         return Ret;
       end if;
 
       --  Then the file in the user's home directory
-      Home := Getenv ("HOME");
-
-      if Home /= null and then Home.all /= "" then
-         declare
-            N : constant String :=
-              Format_Pathname (Home.all & '/' & (Default_Config_File));
-         begin
-            Free (Home);
-
-            if File_Exists (N) then
-               return N;
-            end if;
-         end;
+      Ret := Create_From_Dir (Get_Home_Directory, Default_Config_File);
+      if Ret.Is_Regular_File then
+         return Ret;
       end if;
 
-      Free (Home);
-
       --  Finally the default file
-      if Default /= "" and then File_Exists (Default) then
+      if Default /= No_File and then Is_Regular_File (Default) then
          return Default;
       end if;
 
-      return "";
+      return No_File;
    end Config_File;
 
    -----------------------------
@@ -1058,11 +1043,11 @@ package body GNATCOLL.Traces is
    -----------------------
 
    procedure Parse_Config_File
-     (Filename     : String := "";
-      Default      : String := "";
+     (Filename     : Virtual_File := No_File;
+      Default      : Virtual_File := No_File;
       On_Exception : On_Exception_Mode := Propagate)
    is
-      File_Name  : aliased constant String := Config_File (Filename, Default);
+      File_Name  : constant Virtual_File := Config_File (Filename, Default);
       Buffer     : Str_Access;
       File       : Mapped_File;
       Index, First, Max : Natural;
@@ -1112,9 +1097,9 @@ package body GNATCOLL.Traces is
    begin
       GNATCOLL.Traces.On_Exception := On_Exception;
 
-      if File_Name /= "" then
+      if File_Name /= No_File then
          begin
-            File := Open_Read (File_Name);
+            File := Open_Read (+File_Name.Full_Name);
          exception
             when Name_Error =>
                return;
@@ -1152,12 +1137,12 @@ package body GNATCOLL.Traces is
                         if Buffer (Index - 1) = ASCII.CR then
                            Stream := Find_Stream
                              (String (Buffer (Save .. Index - 2)),
-                              File_Name,
+                              +File_Name.Full_Name,
                               Append);
                         else
                            Stream := Find_Stream
                              (String (Buffer (Save .. Index - 1)),
-                              File_Name,
+                              +File_Name.Full_Name,
                               Append);
                         end if;
                         if Stream /= null then
@@ -1256,11 +1241,11 @@ package body GNATCOLL.Traces is
                            if Buffer (Index - 1) = ASCII.CR then
                               Handle.Stream := Find_Stream
                                 (String (Buffer (Save .. Index - 2)),
-                                 File_Name, Append);
+                                 +File_Name.Full_Name, Append);
                            else
                               Handle.Stream := Find_Stream
                                 (String (Buffer (Save .. Index - 1)),
-                                 File_Name, Append);
+                                 +File_Name.Full_Name, Append);
                            end if;
                         end;
                      else

@@ -510,7 +510,7 @@ package body GNATCOLL.Scripts is
       N       : Positive;
       Default : Subprogram_Type) return Subprogram_Type is
    begin
-      return Nth_Arg (Callback_Data'Class (Data), N);
+      return Subprogram_Type'(Nth_Arg (Callback_Data'Class (Data), N));
    exception
       when No_Such_Parameter =>
          return Default;
@@ -542,6 +542,7 @@ package body GNATCOLL.Scripts is
       when No_Such_Parameter =>
          return Default;
    end Nth_Arg;
+
    -------------
    -- Nth_Arg --
    -------------
@@ -1102,7 +1103,7 @@ package body GNATCOLL.Scripts is
    procedure Set_Nth_Arg
      (Data : Callback_Data'Class; N : Positive; Value : Filesystem_String) is
    begin
-      Set_Nth_Arg (Data, N, +Value);
+      Set_Nth_Arg (Data, N, +(Value));
    end Set_Nth_Arg;
 
    -------------
