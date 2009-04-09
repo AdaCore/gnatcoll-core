@@ -28,7 +28,6 @@ pragma Warnings (On);
 
 with Ada.Unchecked_Deallocation;
 with GNATCOLL.Email.Utils;      use GNATCOLL.Email.Utils;
-with GNATCOLL.Filesystem;       use GNATCOLL.Filesystem;
 with GNATCOLL.Utils;            use GNATCOLL.Utils;
 with GNATCOLL.VFS;              use GNATCOLL.VFS;
 with GNAT.Strings;              use GNAT.Strings;
