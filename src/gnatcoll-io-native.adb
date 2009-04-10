@@ -207,7 +207,7 @@ package body GNATCOLL.IO.Native is
             if Buffer (J) = ASCII.NUL then
                Ret (N) := Create
                  (GNATCOLL.Path.Path
-                    (Local_FS, Buffer (Last .. J - 1), "", ""));
+                    (Local_FS, Buffer (Last .. Last), "", ""));
                Ret (N).Kind := Directory;
                N := N + 1;
                Last := J + 1;
