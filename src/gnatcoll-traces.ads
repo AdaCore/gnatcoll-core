@@ -114,10 +114,10 @@ package GNATCOLL.Traces is
    --  prevent the log stream to be written.
 
    procedure Parse_Config_File
-     (Filename     : Filesystem_String := "";
-      Default      : Filesystem_String := "";
+     (Filename     : String := "";
+      Default      : String := "";
       On_Exception : On_Exception_Mode := Propagate);
-   --  Same as above, using filesystem strings.
+   --  Same as above, using regular strings for file names.
 
    type Output_Proc is access procedure (Str : String);
    procedure Show_Configuration (Output : Output_Proc);

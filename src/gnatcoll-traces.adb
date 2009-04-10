@@ -1271,23 +1271,23 @@ package body GNATCOLL.Traces is
    -----------------------
 
    procedure Parse_Config_File
-     (Filename     : Filesystem_String := "";
-      Default      : Filesystem_String := "";
+     (Filename     : String := "";
+      Default      : String := "";
       On_Exception : On_Exception_Mode := Propagate)
    is
       F_Filename : Virtual_File;
       F_Default  : Virtual_File;
    begin
-      if Filename'Length = 0 then
+      if Filename = "" then
          F_Filename := No_File;
       else
-         F_Filename := Create_From_Base (Filename);
+         F_Filename := Create_From_Base (+Filename);
       end if;
 
-      if Default'Length = 0 then
+      if Default = "" then
          F_Default := No_File;
       else
-         F_Default := Create_From_Base (Default);
+         F_Default := Create_From_Base (+Default);
       end if;
 
       Parse_Config_File (F_Filename, F_Default, On_Exception);
