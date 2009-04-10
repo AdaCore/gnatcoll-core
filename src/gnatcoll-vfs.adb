@@ -208,7 +208,7 @@ package body GNATCOLL.VFS is
    begin
       if Host = Local_Host then
          FS := Local_FS;
-      elsif Is_Configured (Host) then
+      else
          FS := Shell_FS (Get_Server (Host).all);
       end if;
 
@@ -344,6 +344,7 @@ package body GNATCOLL.VFS is
          Ret (J - List'First + 1) :=
            (Ada.Finalization.Controlled with
             List (J));
+         Ret (J - List'First + 1).Value.Kind := Directory;
       end loop;
 
       return Ret;
@@ -356,14 +357,18 @@ package body GNATCOLL.VFS is
    function Get_Current_Dir
      (Host : String := Local_Host) return Virtual_File
    is
+      Ret : Virtual_File;
    begin
       if Host = Local_Host then
-         return (Ada.Finalization.Controlled with
+         Ret := (Ada.Finalization.Controlled with
                  GNATCOLL.IO.Native.Current_Dir);
       else
-         return (Ada.Finalization.Controlled with
+         Ret := (Ada.Finalization.Controlled with
                  GNATCOLL.IO.Remote.Current_Dir (Host));
       end if;
+
+      Ret.Value.Kind := Directory;
+      return Ret;
    end Get_Current_Dir;
 
    ---------------
@@ -814,6 +819,12 @@ package body GNATCOLL.VFS is
          Success := False;
       else
          Rename (File.Value, Full_Name.Value, Success);
+
+         if Success then
+            Full_Name.Value.Kind := File.Value.Kind;
+            File.Value.Kind := Unknown;
+         end if;
+
       end if;
    end Rename;
 
@@ -960,6 +971,8 @@ package body GNATCOLL.VFS is
       if Fd = GNAT.OS_Lib.Invalid_FD then
          return Invalid_File;
       else
+         File.Value.Kind := GNATCOLL.IO.File;
+
          return (File => File, FD => Fd, Append => Append);
       end if;
    end Write_File;
@@ -1157,8 +1170,11 @@ package body GNATCOLL.VFS is
       Result := Dir.Value.Make_Dir;
 
       if not Result then
+         Dir.Value.Kind := Unknown;
          Raise_Exception
            (VFS_Directory_Error'Identity, "Dir cannot be created");
+      else
+         Dir.Value.Kind := Directory;
       end if;
 
    exception
@@ -1181,6 +1197,9 @@ package body GNATCOLL.VFS is
       end if;
 
       Dir.Value.Remove_Dir (Recursive, Success);
+      if Success then
+         Dir.Value.Kind := Unknown;
+      end if;
    end Remove_Dir;
 
    ----------

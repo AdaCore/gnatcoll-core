@@ -99,7 +99,6 @@ package body GNATCOLL.IO.Native is
       Ret : File_Access;
    begin
       Ret := Create (FS_String (D));
-      Ret.Kind := Directory;
       return Ret;
    end Current_Dir;
 
@@ -208,7 +207,6 @@ package body GNATCOLL.IO.Native is
                Ret (N) := Create
                  (GNATCOLL.Path.Path
                     (Local_FS, Buffer (Last .. Last), "", ""));
-               Ret (N).Kind := Directory;
                N := N + 1;
                Last := J + 1;
             end if;
@@ -396,11 +394,6 @@ package body GNATCOLL.IO.Native is
       GNAT.OS_Lib.Rename_File
         (String (From.Full.all), String (Dest.Full.all), Success);
 
-      if Success then
-         Dest.Kind := From.Kind;
-         From.Kind := Unknown;
-      end if;
-
    exception
       when others =>
          Success := False;
@@ -474,10 +467,6 @@ package body GNATCOLL.IO.Native is
          FD := GNAT.OS_Lib.Create_File
            (String (File.Full.all),
             Fmode => GNAT.OS_Lib.Binary);
-      end if;
-
-      if FD /= GNAT.OS_Lib.Invalid_FD then
-         File.Kind := GNATCOLL.IO.File;
       end if;
 
    exception
@@ -600,13 +589,11 @@ package body GNATCOLL.IO.Native is
    is
    begin
       GNAT.Directory_Operations.Make_Dir (String (Dir.Full.all));
-      Dir.Kind := Directory;
 
       return True;
 
    exception
       when GNAT.Directory_Operations.Directory_Error =>
-         Dir.Kind := Unknown;
          return False;
    end Make_Dir;
 
@@ -622,7 +609,6 @@ package body GNATCOLL.IO.Native is
    begin
       GNAT.Directory_Operations.Remove_Dir (String (Dir.Full.all), Recursive);
       Success := True;
-      Dir.Kind := Unknown;
 
    exception
       when GNAT.Directory_Operations.Directory_Error =>
