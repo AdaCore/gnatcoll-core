@@ -113,6 +113,12 @@ package GNATCOLL.Traces is
    --  On_Exception is used to define the behavior should something unexpected
    --  prevent the log stream to be written.
 
+   procedure Parse_Config_File
+     (Filename     : Filesystem_String := "";
+      Default      : Filesystem_String := "";
+      On_Exception : On_Exception_Mode := Propagate);
+   --  Same as above, using filesystem strings.
+
    type Output_Proc is access procedure (Str : String);
    procedure Show_Configuration (Output : Output_Proc);
    --  Output on Output the current configuration for all traces. The resulting
