@@ -153,8 +153,9 @@ package body GNATCOLL.VFS_Utils is
          return "";
       end if;
 
-      return GNATCOLL.Path.Ensure_Directory
-        (GNATCOLL.Path.Local_FS, Name);
+      return Filesystem_String
+        (GNATCOLL.Path.Ensure_Directory
+           (GNATCOLL.Path.Local_FS, GNATCOLL.VFS_Types.FS_String (Name)));
    end Name_As_Directory;
 
    --------------

@@ -17,9 +17,6 @@
 -- Place - Suite 330, Boston, MA 02111-1307, USA.                    --
 -----------------------------------------------------------------------
 
-with Ada.Containers.Indefinite_Hashed_Maps;
-with Ada.Strings.Hash;
-
 package body GNATCOLL.Remote.Db is
 
    Global_Conf : access Remote_Db_Interface'Class := null;

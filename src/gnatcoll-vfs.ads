@@ -42,12 +42,12 @@
 
 with Ada.Calendar;
 with Ada.Containers;
+with Ada.Unchecked_Deallocation;
 with Ada.Finalization;
 
 with GNAT.OS_Lib;
 with GNAT.Strings;
 
-with GNATCOLL.VFS_Types;
 private with GNATCOLL.IO;
 private with GNATCOLL.IO.Native;
 
@@ -57,9 +57,8 @@ package GNATCOLL.VFS is
    -- Filesystem strings --
    ------------------------
 
-   subtype Filesystem_String is GNATCOLL.VFS_Types.FS_String;
-   subtype Filesystem_String_Access is
-     GNATCOLL.VFS_Types.FS_String_Access;
+   type Filesystem_String is new String;
+   type Filesystem_String_Access is access all Filesystem_String;
    --  A Filesystem_String represents an array of characters as they are
    --  represented on the filesystem, without any encoding consideration.
 
@@ -69,13 +68,11 @@ package GNATCOLL.VFS is
    pragma Inline ("+");
    function Equal (S1, S2 : Filesystem_String) return Boolean;
    pragma Inline (Equal);
-   procedure Free (S : in out Filesystem_String_Access)
-                   renames VFS_Types.Free;
-   function "&" (S1, S2 : Filesystem_String) return Filesystem_String
-                 renames VFS_Types."&";
-   function "<" (S1, S2 : Filesystem_String) return Boolean
-                 renames VFS_Types."<";
+   procedure Free is new Ada.Unchecked_Deallocation
+     (Filesystem_String, Filesystem_String_Access);
    --  Conversion/Comparison/Concatenation functions
+
+   type Cst_String_Access is access constant Filesystem_String;
 
    ----------------
    -- Exceptions --
@@ -165,13 +162,19 @@ package GNATCOLL.VFS is
    function Full_Name
      (File      : Virtual_File;
       Normalize : Boolean := False)
-      return Filesystem_String;
+      return Cst_String_Access;
    --  Return the full path to File.
    --  If Normalize is True, the file name is first normalized, note that links
    --  are not resolved there.
    --  The returned value can be used to recreate a Virtual_File instance.
    --  If file names are case insensitive, the normalized name will always
    --  be all lower cases.
+
+   function Full_Name
+     (File      : Virtual_File;
+      Normalize : Boolean := False)
+      return Filesystem_String;
+   --  Same as above, returning a filesystem_string.
 
    function Full_Name_Hash
      (Key : Virtual_File) return Ada.Containers.Hash_Type;
