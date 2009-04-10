@@ -1043,7 +1043,7 @@ package body GNATCOLL.Traces is
    -----------------------
 
    procedure Parse_Config_File
-     (Filename     : Virtual_File := No_File;
+     (Filename     : Virtual_File;
       Default      : Virtual_File := No_File;
       On_Exception : On_Exception_Mode := Propagate)
    is

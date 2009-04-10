@@ -98,7 +98,7 @@ package GNATCOLL.Traces is
    --                anymore.
 
    procedure Parse_Config_File
-     (Filename     : Virtual_File := No_File;
+     (Filename     : Virtual_File;
       Default      : Virtual_File := No_File;
       On_Exception : On_Exception_Mode := Propagate);
    --  Initializes this package, and parse the configuration file. The
