@@ -331,8 +331,7 @@ package body GNATCOLL.Path is
 
    function From_Unix
      (FS          : FS_Type;
-      Path        : FS_String;
-      Cygwin_Path : Boolean := False) return FS_String is
+      Path        : FS_String) return FS_String is
    begin
       case FS is
          when FS_Unix =>
@@ -348,9 +347,8 @@ package body GNATCOLL.Path is
                   end if;
                end loop;
 
-               if Cygwin_Path
-                 and then Ret'Length >= 11 --  "/cygdrive/X"'Length
-                 and then Ret (Ret'First .. Ret'First + 9) = "/cygdrive/"
+               if Ret'Length >= 11 --  "/cygdrive/X"'Length
+                 and then Ret (Ret'First .. Ret'First + 9) = "\cygdrive\"
                then
                   return Ret (Ret'First + 10) & ":" &
                     Ret (Ret'First + 11 .. Ret'Last);
