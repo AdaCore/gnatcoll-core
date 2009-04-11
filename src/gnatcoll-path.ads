@@ -84,8 +84,7 @@ private package GNATCOLL.Path is
 
    function From_Unix
      (FS          : FS_Type;
-      Path        : FS_String;
-      Cygwin_Path : Boolean := False) return FS_String;
+      Path        : FS_String) return FS_String;
    --  Translate a Path from unix style
 
    function File_Extension
