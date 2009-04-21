@@ -531,7 +531,8 @@ package body GNATCOLL.VFS is
          return "";
 
       else
-         return File.Value.To_UTF8 (+File.Full_Name (Normalize));
+         return File.Value.To_UTF8
+           (FS_String (File.Full_Name (Normalize).all));
       end if;
    end Display_Full_Name;
 
@@ -617,10 +618,10 @@ package body GNATCOLL.VFS is
          return File.Full_Name;
       end if;
 
-      return +Relative_Path
+      return Filesystem_String (Relative_Path
         (File.Value.Get_FS,
-         Ref  => +From.Full_Name,
-         Path => +File.Full_Name);
+         Ref  => FS_String (From.Full_Name.all),
+         Path => FS_String (File.Full_Name.all)));
    end Relative_Path;
 
    ----------------
@@ -749,7 +750,9 @@ package body GNATCOLL.VFS is
       --  form. So we first translate the path to unix (possible whatever the
       --  current path format is), then it's up to Create to correctly format
       --  the path.
-      return Create (+To_Unix (File.Value.Get_FS, +File.Full_Name), To_Host);
+      return Create
+        (+To_Unix
+           (File.Value.Get_FS, FS_String (File.Full_Name.all)), To_Host);
    end Convert;
 
    -------------
@@ -965,7 +968,9 @@ package body GNATCOLL.VFS is
       if File.Value = null then
          return "";
       else
-         return +File_Extension (File.Value.Get_FS, +File.Full_Name);
+         return Filesystem_String
+           (File_Extension
+              (File.Value.Get_FS, FS_String (File.Full_Name.all)));
       end if;
    end File_Extension;
 
@@ -1164,10 +1169,12 @@ package body GNATCOLL.VFS is
         (Ada.Finalization.Controlled with
          Dispatching_Create
            (Dir.Value,
-            GNATCOLL.Path.Path (Dir.Value.Get_FS, "", +Dir.Full_Name, +Name)));
+            GNATCOLL.Path.Path
+              (Dir.Value.Get_FS, "",
+               FS_String (Dir.Full_Name.all), FS_String (Name))));
       Ensure_Directory (New_Dir);
 
-      if Is_Directory (New_Dir) then
+      if Is_Directory (New_Dir) and then True then
          return New_Dir;
       else
          return No_File;
@@ -1554,7 +1561,7 @@ package body GNATCOLL.VFS is
       begin
          for J in Paths'Range loop
             Ret (Idx .. Idx + Paths (J).Full_Name.all'Length - 1) :=
-              Paths (J).Full_Name;
+              Paths (J).Full_Name.all;
             Idx := Idx + Paths (J).Full_Name.all'Length;
 
             if J /= Paths'Last then
