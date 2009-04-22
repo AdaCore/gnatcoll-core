@@ -1,7 +1,7 @@
 -----------------------------------------------------------------------
 --                               G N A T C O L L                     --
 --                                                                   --
---                     Copyright (C) 2003-2008, AdaCore              --
+--                     Copyright (C) 2003-2009, AdaCore              --
 --                                                                   --
 -- GPS is free  software;  you can redistribute it and/or modify  it --
 -- under the terms of the GNU General Public License as published by --
@@ -138,7 +138,10 @@ private
      (Script  : access Python_Scripting_Record'Class;
       Command : PyObject;
       Args    : Callback_Data'Class) return String;
-
+   function Execute_Command
+     (Script  : access Python_Scripting_Record'Class;
+      Command : PyObject;
+      Args    : Callback_Data'Class) return Any_Type;
    function Execute_Command
      (Script  : access Python_Scripting_Record'Class;
       Command : PyObject;

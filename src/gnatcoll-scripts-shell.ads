@@ -1,7 +1,7 @@
 -----------------------------------------------------------------------
 --                          G N A T C O L L                          --
 --                                                                   --
---                 Copyright (C) 2003-2008, AdaCore                  --
+--                 Copyright (C) 2003-2009, AdaCore                  --
 --                                                                   --
 -- GPS is free  software;  you can redistribute it and/or modify  it --
 -- under the terms of the GNU General Public License as published by --
@@ -360,6 +360,10 @@ private
    overriding function Execute
      (Subprogram : access Shell_Subprogram_Record;
       Args       : Callback_Data'Class) return GNAT.Strings.String_List;
+
+   overriding function Execute
+     (Subprogram : access Shell_Subprogram_Record;
+      Args       : Callback_Data'Class) return Any_Type;
 
    overriding procedure Free (Subprogram : in out Shell_Subprogram_Record);
 

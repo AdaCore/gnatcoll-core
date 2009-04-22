@@ -1651,6 +1651,19 @@ package body GNATCOLL.Scripts.Shell is
       return (1 .. 0 => null);
    end Execute;
 
+   -------------
+   -- Execute --
+   -------------
+
+   overriding function Execute
+     (Subprogram : access Shell_Subprogram_Record;
+      Args       : Callback_Data'Class) return Any_Type is
+   begin
+      --  Any_Type is not supported for shell scripts
+      raise Program_Error;
+      return Empty_Any_Type;
+   end Execute;
+
    --------------
    -- Get_Name --
    --------------

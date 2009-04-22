@@ -29,10 +29,12 @@ with Ada.Containers.Indefinite_Doubly_Linked_Lists;
 with Ada.Containers.Indefinite_Hashed_Maps;
 with Ada.Finalization;
 with Ada.Strings.Hash;
+with Ada.Strings.Unbounded; use Ada.Strings.Unbounded;
 with GNAT.OS_Lib;
 with GNAT.Strings;
 
 with GNATCOLL.VFS;     use GNATCOLL.VFS;
+with GNATCOLL.Any_Types; use GNATCOLL.Any_Types;
 
 package GNATCOLL.Scripts is
 
@@ -84,6 +86,12 @@ package GNATCOLL.Scripts is
       Args       : Callback_Data'Class) return String is abstract;
    --  Execute the subprogram with the given arguments, and evaluate its output
    --  as a string
+
+   function Execute
+     (Subprogram : access Subprogram_Record;
+      Args       : Callback_Data'Class) return Any_Type is abstract;
+   --  Execute the subprogram with the given arguments, and evaluate its output
+   --  as an Any_Type.
 
    function Execute
      (Subprogram : access Subprogram_Record;

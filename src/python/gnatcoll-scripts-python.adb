@@ -28,6 +28,8 @@ with GNAT.Strings;               use GNAT.Strings;
 with GNATCOLL.Scripts.Impl;      use GNATCOLL.Scripts, GNATCOLL.Scripts.Impl;
 with System;                     use System;
 
+with GNATCOLL.Any_Types.Python;
+
 package body GNATCOLL.Scripts.Python is
 
    ------------------------
@@ -45,6 +47,9 @@ package body GNATCOLL.Scripts.Python is
    overriding function Execute
      (Subprogram : access Python_Subprogram_Record;
       Args       : Callback_Data'Class) return String;
+   overriding function Execute
+     (Subprogram : access Python_Subprogram_Record;
+      Args       : Callback_Data'Class) return Any_Type;
    overriding function Execute
      (Subprogram : access Python_Subprogram_Record;
       Args       : Callback_Data'Class)
@@ -1424,6 +1429,32 @@ package body GNATCOLL.Scripts.Python is
    function Execute_Command
      (Script  : access Python_Scripting_Record'Class;
       Command : PyObject;
+      Args    : Callback_Data'Class) return Any_Type
+   is
+      Obj : constant PyObject := Execute_Command (Script, Command, Args);
+   begin
+      if Obj /= null then
+         declare
+            Any : Any_Type := GNATCOLL.Any_Types.Python.From_PyObject (Obj);
+         begin
+            Py_DECREF (Obj);
+            return Any;
+         end;
+      else
+         if Obj /= null then
+            Py_DECREF (Obj);
+         end if;
+         return Empty_Any_Type;
+      end if;
+   end Execute_Command;
+
+   ---------------------
+   -- Execute_Command --
+   ---------------------
+
+   function Execute_Command
+     (Script  : access Python_Scripting_Record'Class;
+      Command : PyObject;
       Args    : Callback_Data'Class) return Boolean
    is
       Obj    : constant PyObject := Execute_Command (Script, Command, Args);
@@ -2468,6 +2499,21 @@ package body GNATCOLL.Scripts.Python is
    function Execute
      (Subprogram : access Python_Subprogram_Record;
       Args       : Callback_Data'Class) return String is
+   begin
+      return Execute_Command
+        (Script  => Subprogram.Script,
+         Command => Subprogram.Subprogram,
+         Args    => Args);
+   end Execute;
+
+   -------------
+   -- Execute --
+   -------------
+
+   overriding function Execute
+     (Subprogram : access Python_Subprogram_Record;
+      Args       : Callback_Data'Class) return Any_Type
+   is
    begin
       return Execute_Command
         (Script  => Subprogram.Script,
