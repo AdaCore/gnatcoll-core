@@ -254,32 +254,31 @@ package body GNATCOLL.IO.Native is
       if not File.Resolved then
          Is_Dir_Path := Path.Is_Dir_Name (File.Get_FS, File.Full.all);
 
+         --  File has been normalized, but symlinks not resolved. We remove the
+         --  old value.
+         if File.Normalized /= null then
+            Free (File.Normalized);
+         end if;
+
          declare
             Norm : constant String :=
                      GNAT.OS_Lib.Normalize_Pathname
                        (String (File.Full.all),
                         Resolve_Links => True);
          begin
-            Free (File.Full);
-
             --  Normalize_Pathname sometimes removes the trailing dir separator
             --  We need to take care of it then.
             if not Is_Dir_Path
               or else Norm (Norm'Last) = GNAT.OS_Lib.Directory_Separator
             then
-               File.Full := new FS_String'(FS_String (Norm));
+               File.Normalized := new FS_String'(FS_String (Norm));
             else
-               File.Full := new FS_String'
+               File.Normalized := new FS_String'
                  (FS_String (Norm) & GNAT.OS_Lib.Directory_Separator);
             end if;
          end;
 
          File.Resolved := True;
-
-         --  No need to keep normalized.
-         if File.Normalized /= null then
-            Free (File.Normalized);
-         end if;
       end if;
    end Resolve_Symlinks;
 

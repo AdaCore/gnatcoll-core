@@ -292,8 +292,12 @@ package GNATCOLL.VFS is
    --  created by anyone, and is just a private type.
    --  If the file doesn't exist, No_Time is returned.
 
-   procedure Resolve_Symlinks (File : Virtual_File);
-   --  Resolves the potential symlinks contained in the path of File
+   procedure Normalize_Path
+     (File             : Virtual_File;
+      Resolve_Symlinks : Boolean := False);
+   --  Resolve '..' and '.' directories in path.
+   --  If Resolve_Symlinks is set, then also resolve the symbolic links in
+   --  path.
 
    --------------------
    -- Array of files --

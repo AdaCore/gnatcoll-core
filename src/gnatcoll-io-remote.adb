@@ -352,9 +352,6 @@ package body GNATCOLL.IO.Remote is
               (GNATCOLL.Path.Normalize (Get_FS (File), File.Full.all));
          end if;
 
-         Free (File.Full);
-         File.Full       := File.Normalized;
-         File.Normalized := null;
          File.Resolved   := True;
       end if;
    end Resolve_Symlinks;

@@ -50,6 +50,11 @@ package body GNATCOLL.VFS is
    function "+" is new Ada.Unchecked_Conversion
      (FS_String_Access, Filesystem_String_Access);
 
+   procedure Ensure_Normalized
+     (File             : Virtual_File'Class;
+      Resolve_Symlinks : Boolean);
+   --  Make sure that File.Value.Normalized is filled.
+
    ---------
    -- "+" --
    ---------
@@ -106,16 +111,16 @@ package body GNATCOLL.VFS is
 
       --  Finally, we test the normalized paths.
       else
-         File1.Resolve_Symlinks;
-         File2.Resolve_Symlinks;
+         Ensure_Normalized (File1, True);
+         Ensure_Normalized (File2, True);
 
          --  We also take care of potential trailing dir separator by enforcing
          --  them
 
          return Equal
            (File1.Value.Get_FS,
-            Ensure_Directory (File1.Value.Get_FS, File1.Value.Full.all),
-            Ensure_Directory (File1.Value.Get_FS, File2.Value.Full.all));
+            Ensure_Directory (File1.Value.Get_FS, File1.Value.Normalized.all),
+            Ensure_Directory (File1.Value.Get_FS, File2.Value.Normalized.all));
       end if;
    end "=";
 
@@ -149,22 +154,22 @@ package body GNATCOLL.VFS is
          Case_Sensitive := Is_Case_Sensitive (File1.Value.Get_FS)
            and then Is_Case_Sensitive (File2.Value.Get_FS);
 
-         Resolve_Symlinks (File1);
-         Resolve_Symlinks (File2);
+         Ensure_Normalized (File1, True);
+         Ensure_Normalized (File2, True);
 
          if Case_Sensitive then
-            return File1.Value.Full.all < File2.Value.Full.all;
+            return File1.Value.Normalized.all < File2.Value.Normalized.all;
          else
-            Ind1 := File1.Value.Full'First;
-            Ind2 := File2.Value.Full'First;
+            Ind1 := File1.Value.Normalized'First;
+            Ind2 := File2.Value.Normalized'First;
 
-            for C in 1 .. File1.Value.Full'Length loop
-               if Ind2 > File2.Value.Full'Last then
+            for C in 1 .. File1.Value.Normalized'Length loop
+               if Ind2 > File2.Value.Normalized'Last then
                   return False;
                end if;
 
-               C1 := To_Lower (File1.Value.Full (Ind1));
-               C2 := To_Lower (File2.Value.Full (Ind2));
+               C1 := To_Lower (File1.Value.Normalized (Ind1));
+               C2 := To_Lower (File2.Value.Normalized (Ind2));
 
                if C1 < C2 then
                   return True;
@@ -447,17 +452,7 @@ package body GNATCOLL.VFS is
 
       elsif File.Value.Full /= null and then Normalize then
 
-         if File.Value.Resolved then
-            --  No need to normalize: a fully resolved path is already
-            --  normalized
-            return Cst_String_Access (+File.Value.Full.all'Access);
-
-         elsif File.Value.Normalized = null then
-
-            --  Use the path version for normalisation
-            File.Value.Normalized := new FS_String'
-              (Path.Normalize (File.Value.Get_FS, File.Value.Full.all));
-         end if;
+         Ensure_Normalized (File, False);
 
          return Cst_String_Access (+File.Value.Normalized.all'Access);
 
@@ -484,8 +479,8 @@ package body GNATCOLL.VFS is
          return 0;
       end if;
 
-      Resolve_Symlinks (Key);
-      return Ada.Strings.Hash (+Key.Value.Full.all);
+      Ensure_Normalized (Key, True);
+      return Ada.Strings.Hash (+Key.Value.Normalized.all);
    end Full_Name_Hash;
 
    --------------
@@ -1145,20 +1140,47 @@ package body GNATCOLL.VFS is
       end if;
    end Ensure_Directory;
 
-   ----------------------
-   -- Resolve_Symlinks --
-   ----------------------
+   -----------------------
+   -- Ensure_Normalized --
+   -----------------------
 
-   procedure Resolve_Symlinks (File : Virtual_File) is
+   procedure Ensure_Normalized
+     (File             : Virtual_File'Class;
+      Resolve_Symlinks : Boolean) is
    begin
       if File.Value = null then
          return;
       end if;
 
-      if not File.Value.Resolved then
-         Resolve_Symlinks (File.Value);
+      if not File.Value.Resolved
+        and then Resolve_Symlinks
+      then
+         GNATCOLL.IO.Resolve_Symlinks (File.Value);
+      elsif File.Value.Normalized = null then
+         File.Value.Normalized := new FS_String'
+           (Path.Normalize (File.Value.Get_FS, File.Value.Full.all));
       end if;
-   end Resolve_Symlinks;
+   end Ensure_Normalized;
+
+   --------------------
+   -- Normalize_Path --
+   --------------------
+
+   procedure Normalize_Path
+     (File             : Virtual_File;
+      Resolve_Symlinks : Boolean := False)
+   is
+      Norm : FS_String_Access;
+   begin
+      if File.Value = null then
+         return;
+      end if;
+
+      Ensure_Normalized (File, Resolve_Symlinks);
+
+      Free (File.Value.Full);
+      File.Value.Full := new FS_String'(File.Value.Normalized.all);
+   end Normalize_Path;
 
    --------------
    -- Get_Root --
@@ -1492,19 +1514,20 @@ package body GNATCOLL.VFS is
          return False;
       end if;
 
-      Resolve_Symlinks (Parent);
-      Resolve_Symlinks (Child);
+      Ensure_Normalized (Parent, True);
+      Ensure_Normalized (Child, True);
 
-      if Parent.Value.Full'Length > Child.Value.Full'Length then
+      if Parent.Value.Normalized'Length > Child.Value.Normalized'Length then
          return False;
       end if;
 
       return Equal
         (Parent.Value.Get_FS,
-         Parent.Value.Full.all,
-         Child.Value.Full
-           (Child.Value.Full'First ..
-              Child.Value.Full'First + Parent.Value.Full'Length - 1));
+         Parent.Value.Normalized.all,
+         Child.Value.Normalized
+           (Child.Value.Normalized'First ..
+              Child.Value.Normalized'First +
+                Parent.Value.Normalized'Length - 1));
    end Is_Parent;
 
    ----------
