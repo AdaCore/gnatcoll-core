@@ -46,6 +46,7 @@ package body GNATCOLL.IO.Native is
         (Ref_Count  => 1,
          Full       => new FS_String'(From_Unix (Local_FS, Path)),
          Normalized => null,
+         Resolved   => False,
          Kind       => Unknown);
    end Create;
 
@@ -248,19 +249,38 @@ package body GNATCOLL.IO.Native is
    procedure Resolve_Symlinks
      (File : not null access Native_File_Record)
    is
+      Is_Dir_Path : Boolean;
    begin
-      if File.Normalized /= null then
-         return;
+      if not File.Resolved then
+         Is_Dir_Path := Path.Is_Dir_Name (File.Get_FS, File.Full.all);
+
+         declare
+            Norm : constant String :=
+                     GNAT.OS_Lib.Normalize_Pathname
+                       (String (File.Full.all),
+                        Resolve_Links => True);
+         begin
+            Free (File.Full);
+
+            --  Normalize_Pathname sometimes removes the trailing dir separator
+            --  We need to take care of it then.
+            if not Is_Dir_Path
+              or else Norm (Norm'Last) = GNAT.OS_Lib.Directory_Separator
+            then
+               File.Full := new FS_String'(FS_String (Norm));
+            else
+               File.Full := new FS_String'
+                 (FS_String (Norm) & GNAT.OS_Lib.Directory_Separator);
+            end if;
+         end;
+
+         File.Resolved := True;
+
+         --  No need to keep normalized.
+         if File.Normalized /= null then
+            Free (File.Normalized);
+         end if;
       end if;
-
-      declare
-         Norm : constant FS_String :=
-                  Normalize (Local_FS, File.Full.all);
-      begin
-
-         --  ??? Need to also resolve symlinks !!!
-         File.Normalized := new FS_String'(Norm);
-      end;
    end Resolve_Symlinks;
 
    ---------------------
@@ -284,7 +304,28 @@ package body GNATCOLL.IO.Native is
       return Boolean
    is
    begin
-      return GNAT.OS_Lib.Is_Directory (String (File.Full.all));
+      if GNAT.OS_Lib.Directory_Separator = '\'
+        and then File.Full (File.Full'First .. File.Full'First + 1) = "\\"
+      then
+         --  There is an issue with (at least) GNAT 6.2 when Is_Directory
+         --  returns False for Windows network paths (e.g. \\host\shared\).
+         --  In this case, we try to open the directory and see if it works.
+
+         declare
+            Dir : GNAT.Directory_Operations.Dir_Type;
+         begin
+            GNAT.Directory_Operations.Open (Dir, String (File.Full.all));
+            GNAT.Directory_Operations.Close (Dir);
+
+            return True;
+
+         exception
+            when GNAT.Directory_Operations.Directory_Error =>
+               return False;
+         end;
+      else
+         return GNAT.OS_Lib.Is_Directory (String (File.Full.all));
+      end if;
    end Is_Directory;
 
    ----------------------

@@ -38,8 +38,17 @@ private package GNATCOLL.IO is
    type File_Record is abstract tagged record
       Ref_Count  : Natural := 0;
       Full       : FS_String_Access;
+      --  The file's full path
+
       Normalized : FS_String_Access;
+      --  The file's normalized form ('..' and '.' directories removed)
+
+      Resolved   : Boolean;
+      --  Tell if Full has been fully resolved (e.g. normalized, and symlinks
+      --  resolved)
+
       Kind       : Item_Type := Unknown;
+      --  The kind of file represented by this object.
    end record;
 
    type File_Access is access all File_Record'Class;

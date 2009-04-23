@@ -131,8 +131,8 @@ private
      (Ref_Count  => 1,
       Full       => new FS_String'
         (GNATCOLL.Path.Path (GNATCOLL.Path.Local_FS, "", "", "")),
-      Normalized => new FS_String'
-        (GNATCOLL.Path.Path (GNATCOLL.Path.Local_FS, "", "", "")),
+      Normalized => null,
+      Resolved   => True,
       Kind       => Directory);
 
 end GNATCOLL.IO.Native;

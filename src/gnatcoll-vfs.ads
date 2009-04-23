@@ -233,6 +233,13 @@ package GNATCOLL.VFS is
    --  potentially using mount points defined between File's host and local
    --  host.
 
+   function To_Arg
+     (File : Virtual_File;
+      Host : String := Local_Host) return GNAT.Strings.String_Access;
+   --  Convert the File to a String Access that can be used as argument for
+   --  spawning a process on "Host". The returned value needs to be freeed by
+   --  the caller.
+
    ------------------------
    -- Getting attributes --
    ------------------------
@@ -284,6 +291,9 @@ package GNATCOLL.VFS is
    --  Note: we do not return GNAT.OS_Lib.OS_Time, since the latter cannot be
    --  created by anyone, and is just a private type.
    --  If the file doesn't exist, No_Time is returned.
+
+   procedure Resolve_Symlinks (File : Virtual_File);
+   --  Resolves the potential symlinks contained in the path of File
 
    --------------------
    -- Array of files --
@@ -362,6 +372,9 @@ package GNATCOLL.VFS is
 
    function Dir (File : Virtual_File) return Virtual_File;
    --  Return the virtual file corresponding to the directory of the file
+   --  If File denotes a directory, then it is returned.
+   --  To retrieve the container of File (e.g. get the parent of File, even if
+   --  it is a directory), use Get_Parent instead.
 
    function Get_Current_Dir (Host : String := Local_Host) return Virtual_File;
    --  Current dir on host
