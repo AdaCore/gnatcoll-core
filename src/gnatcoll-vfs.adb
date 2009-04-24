@@ -1039,8 +1039,6 @@ package body GNATCOLL.VFS is
       if Fd = GNAT.OS_Lib.Invalid_FD then
          return Invalid_File;
       else
-         File.Value.Kind := GNATCOLL.IO.File;
-
          return (File => File, FD => Fd, Append => Append);
       end if;
    end Write_File;
@@ -1058,6 +1056,9 @@ package body GNATCOLL.VFS is
    begin
       Written := GNAT.OS_Lib.Write (File.FD, Str'Address, Str'Length);
 
+      if Written > 0 then
+         File.File.Value.Kind := GNATCOLL.IO.File;
+      end if;
       --  ??? Should raise an exception if we couldn't write all the bytes
    end Write;
 
