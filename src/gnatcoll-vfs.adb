@@ -53,7 +53,7 @@ package body GNATCOLL.VFS is
    procedure Ensure_Normalized
      (File             : Virtual_File'Class;
       Resolve_Symlinks : Boolean);
-   --  Make sure that File.Value.Normalized is filled.
+   --  Make sure that File.Value.Normalized is filled
 
    ---------
    -- "+" --
@@ -109,7 +109,7 @@ package body GNATCOLL.VFS is
       then
          return False;
 
-      --  Finally, we test the normalized paths.
+      --  Finally, we test the normalized paths
       else
          Ensure_Normalized (File1, True);
          Ensure_Normalized (File2, True);
@@ -854,10 +854,13 @@ package body GNATCOLL.VFS is
    begin
       if File.Value = null then
          return False;
+
       elsif File.Value.Kind = Directory then
          return False;
+
       elsif File.Value.Kind = GNATCOLL.IO.File then
          return True;
+
       else
          Ret := File.Value /= null and then File.Value.Is_Regular_File;
 
@@ -936,8 +939,7 @@ package body GNATCOLL.VFS is
 
    function Is_Writable (File : Virtual_File) return Boolean is
    begin
-      return File.Value /= null
-        and then File.Value.Is_Writable;
+      return File.Value /= null and then File.Value.Is_Writable;
    end Is_Writable;
 
    ------------------
@@ -1324,8 +1326,8 @@ package body GNATCOLL.VFS is
      (Dir    : Virtual_File;
       Filter : Read_Dir_Filter := All_Files) return File_Array_Access
    is
-      F_Array   : File_Array_Access;
-      Tmp_File  : Virtual_File;
+      F_Array  : File_Array_Access;
+      Tmp_File : Virtual_File;
 
    begin
       if Dir.Value = null then
@@ -1724,7 +1726,7 @@ package body GNATCOLL.VFS is
          Root            : constant Virtual_File := Get_Root (Greatest_Prefix);
       begin
          for J in L'First + 1 .. L'Last loop
-            --  Loop until GP is a parent of the current File.
+            --  Loop until GP is a parent of the current File
             while not Greatest_Prefix.Is_Parent (L (J)) loop
                --  If not a parent, and already at root, then there is no
                --  greatest prefix.

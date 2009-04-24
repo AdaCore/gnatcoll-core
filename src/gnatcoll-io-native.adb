@@ -34,7 +34,7 @@ with GNATCOLL.Utils;            use GNATCOLL.Utils;
 package body GNATCOLL.IO.Native is
 
    package body Codec is separate;
-   --  Separate implementation for Windows and Unix.
+   --  Separate implementation for Windows and Unix
 
    ------------
    -- Create --
@@ -68,7 +68,7 @@ package body GNATCOLL.IO.Native is
    -------------
 
    function To_UTF8
-     (Ref : not null access Native_File_Record;
+     (Ref  : not null access Native_File_Record;
       Path : FS_String) return String
    is
       pragma Unreferenced (Ref);
@@ -81,7 +81,7 @@ package body GNATCOLL.IO.Native is
    ---------------
 
    function From_UTF8
-     (Ref : not null access Native_File_Record;
+     (Ref  : not null access Native_File_Record;
       Path : String) return FS_String
    is
       pragma Unreferenced (Ref);
@@ -93,8 +93,7 @@ package body GNATCOLL.IO.Native is
    -- Current_Dir --
    -----------------
 
-   function Current_Dir return File_Access
-   is
+   function Current_Dir return File_Access is
       D   : constant GNAT.Directory_Operations.Dir_Name_Str :=
               GNAT.Directory_Operations.Get_Current_Dir;
       Ret : File_Access;
@@ -107,8 +106,7 @@ package body GNATCOLL.IO.Native is
    -- Home_Dir --
    --------------
 
-   function Home_Dir return File_Access
-   is
+   function Home_Dir return File_Access is
       HOME : GNAT.Strings.String_Access := GNAT.OS_Lib.Getenv ("HOME");
       Tmp  : GNAT.Strings.String_Access;
    begin
@@ -146,8 +144,8 @@ package body GNATCOLL.IO.Native is
    -- Get_Tmp_Directory --
    -----------------------
 
-   function Get_Tmp_Directory return File_Access
-   is
+   function Get_Tmp_Directory return File_Access is
+
       function Internal return chars_ptr;
       pragma Import (C, Internal, "__gnatcoll_get_tmp_dir");
 
@@ -173,6 +171,7 @@ package body GNATCOLL.IO.Native is
    ------------------------
 
    function Get_Logical_Drives return File_Array is
+
       function Internal
         (Buffer : System.Address;
          Length : Integer) return Integer;
@@ -221,10 +220,7 @@ package body GNATCOLL.IO.Native is
    -- Is_Local --
    --------------
 
-   function Is_Local
-     (File : Native_File_Record)
-      return Boolean
-   is
+   function Is_Local (File : Native_File_Record) return Boolean is
       pragma Unreferenced (File);
    begin
       return True;
@@ -287,9 +283,7 @@ package body GNATCOLL.IO.Native is
    ---------------------
 
    function Is_Regular_File
-     (File : not null access Native_File_Record)
-      return Boolean
-   is
+     (File : not null access Native_File_Record) return Boolean is
    begin
       return GNAT.OS_Lib.Is_Regular_File (String (File.Full.all));
    end Is_Regular_File;
@@ -299,9 +293,7 @@ package body GNATCOLL.IO.Native is
    ------------------
 
    function Is_Directory
-     (File : not null access Native_File_Record)
-      return Boolean
-   is
+     (File : not null access Native_File_Record) return Boolean is
    begin
       if GNAT.OS_Lib.Directory_Separator = '\'
         and then File.Full (File.Full'First .. File.Full'First + 1) = "\\"
@@ -332,9 +324,7 @@ package body GNATCOLL.IO.Native is
    ----------------------
 
    function Is_Symbolic_Link
-     (File : not null access Native_File_Record)
-      return Boolean
-   is
+     (File : not null access Native_File_Record) return Boolean is
    begin
       return GNAT.OS_Lib.Is_Symbolic_Link (String (File.Full.all));
    end Is_Symbolic_Link;
@@ -344,8 +334,7 @@ package body GNATCOLL.IO.Native is
    ---------------------
 
    function File_Time_Stamp
-     (File : not null access Native_File_Record)
-      return Ada.Calendar.Time
+     (File : not null access Native_File_Record) return Ada.Calendar.Time
    is
       T      : constant GNAT.OS_Lib.OS_Time :=
                  GNAT.OS_Lib.File_Time_Stamp (String (File.Full.all));
@@ -378,9 +367,7 @@ package body GNATCOLL.IO.Native is
    -----------------
 
    function Is_Writable
-     (File : not null access Native_File_Record)
-      return Boolean
-   is
+     (File : not null access Native_File_Record) return Boolean is
    begin
       return GNAT.OS_Lib.Is_Writable_File (String (File.Full.all));
    end Is_Writable;
@@ -491,9 +478,9 @@ package body GNATCOLL.IO.Native is
    ----------------
 
    procedure Open_Write
-     (File    : not null access Native_File_Record;
-      Append  : Boolean := False;
-      FD      : out GNAT.OS_Lib.File_Descriptor)
+     (File   : not null access Native_File_Record;
+      Append : Boolean := False;
+      FD     : out GNAT.OS_Lib.File_Descriptor)
    is
       use type GNAT.OS_Lib.File_Descriptor;
    begin
@@ -556,10 +543,9 @@ package body GNATCOLL.IO.Native is
    --------------
 
    function Read_Dir
-     (Dir            : not null access Native_File_Record;
-      Dirs_Only      : Boolean := False;
-      Files_Only     : Boolean := False)
-      return GNAT.Strings.String_List
+     (Dir        : not null access Native_File_Record;
+      Dirs_Only  : Boolean := False;
+      Files_Only : Boolean := False) return GNAT.Strings.String_List
    is
       Name : constant String :=
                String (Ensure_Directory (Local_FS, Dir.Full.all));
@@ -624,8 +610,7 @@ package body GNATCOLL.IO.Native is
    --------------
 
    function Make_Dir
-     (Dir : not null access Native_File_Record)
-      return Boolean
+     (Dir : not null access Native_File_Record) return Boolean
    is
    begin
       GNAT.Directory_Operations.Make_Dir (String (Dir.Full.all));
@@ -681,7 +666,7 @@ package body GNATCOLL.IO.Native is
       end if;
 
       declare
-         Files    : GNAT.Strings.String_List := Read_Dir (From);
+         Files : GNAT.Strings.String_List := Read_Dir (From);
 
       begin
          Success := True;
