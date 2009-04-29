@@ -22,7 +22,7 @@ with GNATCOLL.VFS_Types; use GNATCOLL.VFS_Types;
 private package GNATCOLL.Path is
 
    Invalid_Filesystem : exception;
-   --  Raised when calling any of the below methods with FS_Unknown.
+   --  Raised when calling any of the below methods with FS_Unknown
 
    -------------------
    -- FS Properties --
@@ -44,7 +44,7 @@ private package GNATCOLL.Path is
    --  set to '$').
 
    function Exe_Extension (FS : FS_Type) return FS_String;
-   --  .exe on Windows, nothing on Unix.
+   --  .exe on Windows, nothing on Unix
 
    ------------------
    -- Path queries --
@@ -74,7 +74,7 @@ private package GNATCOLL.Path is
    function Equal
      (FS           : FS_Type;
       Path1, Path2 : FS_String) return Boolean;
-   --  Tell if Path1 and Path2 are equivalent.
+   --  Tell if Path1 and Path2 are equivalent
 
    function To_Unix
      (FS          : FS_Type;
@@ -83,8 +83,8 @@ private package GNATCOLL.Path is
    --  Translate a Path to unix style
 
    function From_Unix
-     (FS          : FS_Type;
-      Path        : FS_String) return FS_String;
+     (FS   : FS_Type;
+      Path : FS_String) return FS_String;
    --  Translate a Path from unix style
 
    function File_Extension
@@ -137,12 +137,12 @@ private package GNATCOLL.Path is
    function Normalize
      (FS   : FS_Type;
       Path : FS_String) return FS_String;
-   --  Replace every ./ or ../ items of the path.
+   --  Replace every ./ or ../ items of the path
 
    function Relative_Path
      (FS : FS_Type;
       Ref : FS_String;
       Path : FS_String) return FS_String;
-   --  Return the path of Path relative to Ref.
+   --  Return the path of Path relative to Ref
 
 end GNATCOLL.Path;

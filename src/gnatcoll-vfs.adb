@@ -98,7 +98,8 @@ package body GNATCOLL.VFS is
    ---------
 
    function "=" (File1, File2 : Virtual_File) return Boolean is
-   begin      --  Test for the same pointer to actual value (or both null)
+   begin
+      --  Test for the same pointer to actual value (or both null)
       if File1.Value = File2.Value then
          return True;
 
