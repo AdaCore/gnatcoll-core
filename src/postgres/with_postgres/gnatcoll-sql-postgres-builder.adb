@@ -1,7 +1,7 @@
 -----------------------------------------------------------------------
 --                               G N A T C O L L                     --
 --                                                                   --
---                 Copyright (C) 2005-2008, AdaCore                  --
+--                 Copyright (C) 2005-2009, AdaCore                  --
 --                                                                   --
 -- GPS is free  software;  you can redistribute it and/or modify  it --
 -- under the terms of the GNU General Public License as published by --
@@ -21,49 +21,48 @@ with Ada.Strings.Unbounded;        use Ada.Strings.Unbounded;
 with Ada.Unchecked_Deallocation;
 with GNATCOLL.SQL.Postgres.Gnade;  use GNATCOLL.SQL.Postgres.Gnade;
 with System;
+with GNATCOLL.SQL.Exec_Private;    use GNATCOLL.SQL.Exec_Private;
 
 package body GNATCOLL.SQL.Postgres.Builder is
 
-   type Postgresql_Result_Content is new Query_Result_Content with record
-      Res  : GNATCOLL.SQL.Postgres.Gnade.Result;
-      Rows : GNATCOLL.SQL.Exec.Tuple_Index := 0;
+   type Postgresql_Cursor is new DBMS_Cursor with record
+      Res     : GNATCOLL.SQL.Postgres.Gnade.Result;
+      Rows    : Natural := 0;
+      Current : GNATCOLL.SQL.Postgres.Gnade.Tuple_Index := 0;
    end record;
-   type Postgresql_Result_Content_Access
-     is access all Postgresql_Result_Content'Class;
+   type Postgresql_Cursor_Access is access all Postgresql_Cursor'Class;
+
    overriding function Error_Msg
-     (Result : Postgresql_Result_Content) return String;
+     (Self : Postgresql_Cursor) return String;
    overriding function Status
-     (Result : Postgresql_Result_Content) return String;
+     (Self : Postgresql_Cursor) return String;
    overriding function Is_Success
-     (Result : Postgresql_Result_Content) return Boolean;
-   overriding procedure Finalize (Result : in out Postgresql_Result_Content);
-   overriding function Tuple_Count
-     (Res : Postgresql_Result_Content) return GNATCOLL.SQL.Exec.Tuple_Index;
+     (Self : Postgresql_Cursor) return Boolean;
+   overriding procedure Finalize (Result : in out Postgresql_Cursor);
+   overriding function Rows_Count (Self : Postgresql_Cursor) return Natural;
    overriding function Value
-     (Res   : Postgresql_Result_Content;
-      Tuple : GNATCOLL.SQL.Exec.Tuple_Index;
+     (Self  : Postgresql_Cursor;
       Field : GNATCOLL.SQL.Exec.Field_Index) return String;
    overriding function Address_Value
-     (Res   : Postgresql_Result_Content;
-      Tuple : GNATCOLL.SQL.Exec.Tuple_Index;
+     (Self  : Postgresql_Cursor;
       Field : GNATCOLL.SQL.Exec.Field_Index) return System.Address;
    overriding function Boolean_Value
-     (Res   : Postgresql_Result_Content;
-      Tuple : GNATCOLL.SQL.Exec.Tuple_Index;
+     (Self  : Postgresql_Cursor;
       Field : GNATCOLL.SQL.Exec.Field_Index) return Boolean;
    overriding function Is_Null
-     (Res   : Postgresql_Result_Content;
-      Tuple : GNATCOLL.SQL.Exec.Tuple_Index;
+     (Self  : Postgresql_Cursor;
       Field : GNATCOLL.SQL.Exec.Field_Index) return Boolean;
    overriding function Last_Id
-     (Connection : access Database_Connection_Record'Class;
-      Res        : Postgresql_Result_Content;
+     (Self       : Postgresql_Cursor;
+      Connection : access Database_Connection_Record'Class;
       Field      : SQL_Field_Integer) return Integer;
    overriding function Field_Count
-     (Res : Postgresql_Result_Content) return GNATCOLL.SQL.Exec.Field_Index;
+     (Self : Postgresql_Cursor) return GNATCOLL.SQL.Exec.Field_Index;
    overriding function Field_Name
-     (Res : Postgresql_Result_Content;
+     (Self : Postgresql_Cursor;
       Field : GNATCOLL.SQL.Exec.Field_Index) return String;
+   overriding function Has_Row (Self : Postgresql_Cursor) return Boolean;
+   overriding procedure Next   (Self : in out Postgresql_Cursor);
 
    type Database_Access is access GNATCOLL.SQL.Postgres.Gnade.Database;
 
@@ -73,11 +72,10 @@ package body GNATCOLL.SQL.Postgres.Builder is
          Connection_String : GNAT.Strings.String_Access;
          Postgres          : Database_Access;
       end record;
-   overriding procedure Connect_And_Execute
+   overriding function Connect_And_Execute
      (Connection  : access Postgresql_Connection_Record;
       Query       : String;
-      R           : out Query_Result_Content_Access;
-      Is_Select   : Boolean);
+      Is_Select   : Boolean) return Abstract_Cursor_Access;
    overriding function Error
      (Connection : access Postgresql_Connection_Record) return String;
    overriding procedure Foreach_Table
@@ -103,7 +101,7 @@ package body GNATCOLL.SQL.Postgres.Builder is
    procedure Unchecked_Free is new Ada.Unchecked_Deallocation
      (GNATCOLL.SQL.Postgres.Gnade.Database, Database_Access);
    procedure Unchecked_Free is new Ada.Unchecked_Deallocation
-     (Postgresql_Result_Content'Class, Postgresql_Result_Content_Access);
+     (Postgresql_Cursor'Class, Postgresql_Cursor_Access);
 
    function Get_Connection_String
      (Description   : Database_Description;
@@ -123,28 +121,28 @@ package body GNATCOLL.SQL.Postgres.Builder is
    -- Error_Msg --
    ---------------
 
-   function Error_Msg (Result : Postgresql_Result_Content) return String is
+   function Error_Msg (Self : Postgresql_Cursor) return String is
    begin
-      return Error (Result.Res);
+      return Error (Self.Res);
    end Error_Msg;
 
    ------------
    -- Status --
    ------------
 
-   function Status (Result : Postgresql_Result_Content) return String is
+   function Status (Self : Postgresql_Cursor) return String is
    begin
-      return Status (Result.Res);
+      return Status (Self.Res);
    end Status;
 
    ----------------
    -- Is_Success --
    ----------------
 
-   function Is_Success (Result : Postgresql_Result_Content) return Boolean is
+   function Is_Success (Self : Postgresql_Cursor) return Boolean is
    begin
-      return Status (Result.Res) = PGRES_TUPLES_OK
-        or else Status (Result.Res) = PGRES_COMMAND_OK;
+      return Status (Self.Res) = PGRES_TUPLES_OK
+        or else Status (Self.Res) = PGRES_COMMAND_OK;
    end Is_Success;
 
    -----------
@@ -165,7 +163,7 @@ package body GNATCOLL.SQL.Postgres.Builder is
    -- Finalize --
    --------------
 
-   procedure Finalize (Result : in out Postgresql_Result_Content) is
+   procedure Finalize (Result : in out Postgresql_Cursor) is
       pragma Unreferenced (Result);
    begin
       null;
@@ -208,20 +206,18 @@ package body GNATCOLL.SQL.Postgres.Builder is
    -- Connect_And_Execute --
    -------------------------
 
-   procedure Connect_And_Execute
+   function Connect_And_Execute
      (Connection  : access Postgresql_Connection_Record;
       Query       : String;
-      R           : out Query_Result_Content_Access;
-      Is_Select   : Boolean)
+      Is_Select   : Boolean) return Abstract_Cursor_Access
    is
-      Res : Postgresql_Result_Content_Access;
+      Res : Postgresql_Cursor_Access;
    begin
       --  If we already have a connection, immediately try the query on it.
 
       if Connection.Postgres /= null then
          begin
-            Res := new Postgresql_Result_Content;
-            R := Query_Result_Content_Access (Res);
+            Res := new Postgresql_Cursor;
 
             if Query = "" then
                Execute (Res.Res, Connection.Postgres.all, "ROLLBACK");
@@ -230,11 +226,9 @@ package body GNATCOLL.SQL.Postgres.Builder is
             end if;
 
             if Is_Select then
-               Res.Rows := GNATCOLL.SQL.Exec.Tuple_Index
-                 (Tuple_Count (Res.Res));
+               Res.Rows := Natural (Tuple_Count (Res.Res));
             else
-               Res.Rows := GNATCOLL.SQL.Exec.Tuple_Index
-                 (Natural'(Command_Tuples (Res.Res)));
+               Res.Rows := Natural'(Command_Tuples (Res.Res));
             end if;
 
             case ExecStatus'(Status (Res.Res)) is
@@ -244,7 +238,7 @@ package body GNATCOLL.SQL.Postgres.Builder is
                   Print_Warning
                     (Connection, "Database warning: " & Error (Res.Res));
                when others =>
-                  return;
+                  return Abstract_Cursor_Access (Res);
             end case;
          exception
             when PostgreSQL_Error =>
@@ -262,7 +256,7 @@ package body GNATCOLL.SQL.Postgres.Builder is
 
       if Connection.Postgres /= null then
          if Status (Connection.Postgres.all) = CONNECTION_OK then
-            return;
+            return Abstract_Cursor_Access (Res);
          else
             Print_Warning
               (Connection,
@@ -302,25 +296,28 @@ package body GNATCOLL.SQL.Postgres.Builder is
             & " Connection string is """
             & Get_Connection_String (Get_Description (Connection), False)
             & """. Aborting...");
-         return;
+
+         if Res /= null then
+            Finalize (Res.all);
+            Unchecked_Free (Res);
+         end if;
+
+         return null;
       end if;
 
       --  Now that we have (re)connected, try to execute the query again
 
       begin
          if Res = null then
-            Res := new Postgresql_Result_Content;
-            R := Query_Result_Content_Access (Res);
+            Res := new Postgresql_Cursor;
          end if;
 
          if Query /= "" then
             Execute (Res.Res, Connection.Postgres.all, Query);
             if Is_Select then
-               Res.Rows := GNATCOLL.SQL.Exec.Tuple_Index
-                 (Tuple_Count (Res.Res));
+               Res.Rows := Natural (Tuple_Count (Res.Res));
             else
-               Res.Rows := GNATCOLL.SQL.Exec.Tuple_Index
-                 (Natural'(Command_Tuples (Res.Res)));
+               Res.Rows := Natural'(Command_Tuples (Res.Res));
             end if;
 
             case ExecStatus'(Status (Res.Res)) is
@@ -328,10 +325,13 @@ package body GNATCOLL.SQL.Postgres.Builder is
                | PGRES_FATAL_ERROR
                | PGRES_EMPTY_QUERY =>
                Print_Error (Connection, "Database error: " & Error (Res.Res));
-               Unchecked_Free (Res);
+
             when others =>
-               null;
+               return Abstract_Cursor_Access (Res);
             end case;
+
+         else
+            return Abstract_Cursor_Access (Res);
          end if;
 
       exception
@@ -345,30 +345,29 @@ package body GNATCOLL.SQL.Postgres.Builder is
                  (Connection, ExecStatus'Image (Status (Res.Res))
                   & " " & Error (Res.Res) & "while executing: " & Query);
             end if;
-            Unchecked_Free (Res);
       end;
+
+      return Abstract_Cursor_Access (Res);
    end Connect_And_Execute;
 
-   -----------------
-   -- Tuple_Count --
-   -----------------
+   ----------------
+   -- Rows_Count --
+   ----------------
 
-   function Tuple_Count
-     (Res : Postgresql_Result_Content) return GNATCOLL.SQL.Exec.Tuple_Index is
+   function Rows_Count (Self : Postgresql_Cursor) return Natural is
    begin
-      return Res.Rows;
-   end Tuple_Count;
+      return Self.Rows;
+   end Rows_Count;
 
    -----------
    -- Value --
    -----------
 
    function Value
-     (Res   : Postgresql_Result_Content;
-      Tuple : GNATCOLL.SQL.Exec.Tuple_Index;
+     (Self  : Postgresql_Cursor;
       Field : GNATCOLL.SQL.Exec.Field_Index) return String is
    begin
-      return Value (Res.Res, GNATCOLL.SQL.Postgres.Gnade.Tuple_Index (Tuple),
+      return Value (Self.Res, Self.Current,
                     GNATCOLL.SQL.Postgres.Gnade.Field_Index (Field));
    end Value;
 
@@ -377,13 +376,11 @@ package body GNATCOLL.SQL.Postgres.Builder is
    -------------------
 
    function Boolean_Value
-     (Res   : Postgresql_Result_Content;
-      Tuple : GNATCOLL.SQL.Exec.Tuple_Index;
+     (Self  : Postgresql_Cursor;
       Field : GNATCOLL.SQL.Exec.Field_Index) return Boolean is
    begin
       return Boolean_Value
-        (Res.Res,
-         GNATCOLL.SQL.Postgres.Gnade.Tuple_Index (Tuple),
+        (Self.Res, Self.Current,
          GNATCOLL.SQL.Postgres.Gnade.Field_Index (Field));
    end Boolean_Value;
 
@@ -392,15 +389,13 @@ package body GNATCOLL.SQL.Postgres.Builder is
    -------------------
 
    function Address_Value
-     (Res   : Postgresql_Result_Content;
-      Tuple : GNATCOLL.SQL.Exec.Tuple_Index;
+     (Self  : Postgresql_Cursor;
       Field : GNATCOLL.SQL.Exec.Field_Index) return System.Address
    is
       S : System.Address;
    begin
       Value
-        (Res.Res,
-         GNATCOLL.SQL.Postgres.Gnade.Tuple_Index (Tuple),
+        (Self.Res, Self.Current,
          GNATCOLL.SQL.Postgres.Gnade.Field_Index (Field),
          S);
       return S;
@@ -411,13 +406,12 @@ package body GNATCOLL.SQL.Postgres.Builder is
    -------------
 
    function Is_Null
-     (Res   : Postgresql_Result_Content;
-      Tuple : GNATCOLL.SQL.Exec.Tuple_Index;
+     (Self  : Postgresql_Cursor;
       Field : GNATCOLL.SQL.Exec.Field_Index) return Boolean is
    begin
       return Is_Null
-        (Res.Res,
-         GNATCOLL.SQL.Postgres.Gnade.Tuple_Index (Tuple),
+        (Self.Res,
+         Self.Current,
          GNATCOLL.SQL.Postgres.Gnade.Field_Index (Field));
    end Is_Null;
 
@@ -426,13 +420,13 @@ package body GNATCOLL.SQL.Postgres.Builder is
    -------------
 
    function Last_Id
-     (Connection : access Database_Connection_Record'Class;
-      Res        : Postgresql_Result_Content;
+     (Self       : Postgresql_Cursor;
+      Connection : access Database_Connection_Record'Class;
       Field      : SQL_Field_Integer) return Integer
    is
-      pragma Unreferenced (Res);
+      pragma Unreferenced (Self);
       Q        : SQL_Query;
-      Res2     : Query_Result;
+      Res2     : Cursor;
    begin
       --  Do not depend on OIDs, since the table might not have them (by
       --  default, recent versions of postgreSQL disable them. Instead, we use
@@ -444,8 +438,8 @@ package body GNATCOLL.SQL.Postgres.Builder is
                                 & "_" & Field.Name.all & "_seq')"));
 
       Execute (Connection, Res2, Q);
-      if Tuple_Count (Res2) = 1 then
-         return Integer_Value (Res2, 0, 0);
+      if Rows_Count (Res2) = 1 then
+         return Integer_Value (Res2, 0);
       end if;
       return -1;
    end Last_Id;
@@ -455,9 +449,9 @@ package body GNATCOLL.SQL.Postgres.Builder is
    -----------------
 
    function Field_Count
-     (Res : Postgresql_Result_Content) return GNATCOLL.SQL.Exec.Field_Index is
+     (Self : Postgresql_Cursor) return GNATCOLL.SQL.Exec.Field_Index is
    begin
-      return GNATCOLL.SQL.Exec.Field_Index (Field_Count (Res.Res));
+      return GNATCOLL.SQL.Exec.Field_Index (Field_Count (Self.Res));
    end Field_Count;
 
    ----------------
@@ -465,11 +459,11 @@ package body GNATCOLL.SQL.Postgres.Builder is
    ----------------
 
    function Field_Name
-     (Res   : Postgresql_Result_Content;
+     (Self  : Postgresql_Cursor;
       Field : GNATCOLL.SQL.Exec.Field_Index) return String is
    begin
       return Field_Name
-         (Res.Res, GNATCOLL.SQL.Postgres.Gnade.Field_Index (Field));
+         (Self.Res, GNATCOLL.SQL.Postgres.Gnade.Field_Index (Field));
    end Field_Name;
 
    -------------------
@@ -480,7 +474,7 @@ package body GNATCOLL.SQL.Postgres.Builder is
      (Connection : access Postgresql_Connection_Record;
       Callback   : access procedure (Name, Description : String))
    is
-      R     : Query_Result;
+      R     : Cursor;
    begin
       Execute
         (Connection, R,
@@ -494,9 +488,10 @@ package body GNATCOLL.SQL.Postgres.Builder is
          & "   AND pg_class.relkind ~ '[rv]'"
          & " ORDER BY pg_class.relname");
 
-      for T in 0 .. Tuple_Count (R) - 1 loop
-         Callback (Name        => Value (R, T, 0),
-                   Description => Value (R, T, 1));
+      while Has_Row (R) loop
+         Callback (Name        => Value (R, 0),
+                   Description => Value (R, 1));
+         Next (R);
       end loop;
    end Foreach_Table;
 
@@ -513,7 +508,7 @@ package body GNATCOLL.SQL.Postgres.Builder is
          Index       : Natural;
          Description : String))
    is
-      R : Query_Result;
+      R : Cursor;
    begin
       Execute
         (Connection, R,
@@ -532,12 +527,13 @@ package body GNATCOLL.SQL.Postgres.Builder is
          & "   AND not pg_attribute.attisdropped"
          & " ORDER BY pg_attribute.attname");
 
-      for T in 0 .. Tuple_Count (R) - 1 loop
+      while Has_Row (R) loop
          Callback
-           (Name        => Value (R, T, 0),
-            Typ         => Value (R, T, 1),
-            Index       => Integer_Value (R, T, 2),
-            Description => Value (R, T, 3));
+           (Name        => Value (R, 0),
+            Typ         => Value (R, 1),
+            Index       => Integer_Value (R, 2),
+            Description => Value (R, 3));
+         Next (R);
       end loop;
    end Foreach_Field;
 
@@ -554,7 +550,8 @@ package body GNATCOLL.SQL.Postgres.Builder is
          Foreign_Table     : String;
          Foreign_Attribute : Integer))
    is
-      R : Query_Result;
+      R     : Cursor;
+      Index : Natural := 1;
    begin
       Execute
         (Connection, R,
@@ -572,11 +569,11 @@ package body GNATCOLL.SQL.Postgres.Builder is
          & "   and pg_constraint.contype='f'"
          & " order by pg_constraint.conkey");
 
-      for T in 0 .. Tuple_Count (R) - 1 loop
+      while Has_Row (R) loop
          declare
-            Attr_Array   : constant String := Value (R, T, 3);
-            Foreign      : constant String := Value (R, T, 4);
-            Foreign_Attr : constant String := Value (R, T, 5);
+            Attr_Array   : constant String := Value (R, 3);
+            Foreign      : constant String := Value (R, 4);
+            Foreign_Attr : constant String := Value (R, 5);
             Key1, Key2   : Integer;
             Field        : Positive := 1;
          begin
@@ -585,7 +582,7 @@ package body GNATCOLL.SQL.Postgres.Builder is
                Key2 := Integer'Value (Array_Field (Foreign_Attr, Field));
 
                Callback
-                 (Index             => Integer (T) + 1,
+                 (Index             => Index,
                   Local_Attribute   => Key1,
                   Foreign_Table     => Foreign,
                   Foreign_Attribute => Key2);
@@ -598,7 +595,28 @@ package body GNATCOLL.SQL.Postgres.Builder is
                --  no more fields in key tuples
                null;
          end;
+
+         Index := Index + 1;
+         Next (R);
       end loop;
    end Foreach_Foreign_Key;
+
+   -------------
+   -- Has_Row --
+   -------------
+
+   overriding function Has_Row (Self : Postgresql_Cursor) return Boolean is
+   begin
+      return Self.Current < Tuple_Count (Self.Res);
+   end Has_Row;
+
+   ----------
+   -- Next --
+   ----------
+
+   overriding procedure Next (Self : in out Postgresql_Cursor) is
+   begin
+      Self.Current := Self.Current + 1;
+   end Next;
 
 end GNATCOLL.SQL.Postgres.Builder;

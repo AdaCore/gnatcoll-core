@@ -512,7 +512,7 @@ procedure GNATCOLL_Db2Ada is
       Table, Id, Name, Prefix, Base_Type : String)
    is
       Enum : Dumped_Enums;
-      R    : Query_Result;
+      R    : GNATCOLL.SQL.Exec.Cursor;
    begin
       Enum.Table := To_Unbounded_String (Table);
       Enum.Id    := To_Unbounded_String (Id);
@@ -530,9 +530,10 @@ procedure GNATCOLL_Db2Ada is
            (DB, R,
             "SELECT " & Id & ", " & Name & " FROM " & Table
             & " ORDER BY " & Name);
-         for T in 0 .. Tuple_Count (R) - 1 loop
-            Append (Enum.Values, Value (R, T, 0));
-            Append (Enum.Names,  Prefix & "_" & Value (R, T, 1));
+         while Has_Row (R) loop
+            Append (Enum.Values, Value (R, 0));
+            Append (Enum.Names,  Prefix & "_" & Value (R, 1));
+            Next (R);
          end loop;
       end if;
 
@@ -547,15 +548,14 @@ procedure GNATCOLL_Db2Ada is
      (DB : access Database_Connection_Record'Class;
       Name, Table, Field, Where, Comment : String)
    is
-      R   : Query_Result;
+      R   : GNATCOLL.SQL.Exec.Cursor;
       Var : Dumped_Vars;
    begin
       Execute
-        (DB, R,
-         "SELECT " & Field & " FROM " & Table & " WHERE " & Where);
+        (DB, R, "SELECT " & Field & " FROM " & Table & " WHERE " & Where);
 
       Var.Name    := To_Unbounded_String (Name);
-      Var.Value   := To_Unbounded_String (Value (R, 0, 0));
+      Var.Value   := To_Unbounded_String (Value (R, 0));
       Var.Comment := To_Unbounded_String (Comment);
       Append (Variables, Var);
    end Add_Variable;

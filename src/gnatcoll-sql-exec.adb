@@ -1,7 +1,7 @@
 -----------------------------------------------------------------------
 --                               G N A T C O L L                     --
 --                                                                   --
---                 Copyright (C) 2005-2008, AdaCore                  --
+--                 Copyright (C) 2005-2009, AdaCore                  --
 --                                                                   --
 -- GPS is free  software;  you can redistribute it and/or modify  it --
 -- under the terms of the GNU General Public License as published by --
@@ -29,6 +29,7 @@ with GNAT.Calendar.Time_IO;
 with GNAT.Strings;            use GNAT.Strings;
 with GNATCOLL.Traces;         use GNATCOLL.Traces;
 with GNATCOLL.Utils;          use GNATCOLL.Utils;
+with GNATCOLL.SQL.Exec_Private; use GNATCOLL.SQL.Exec_Private;
 
 package body GNATCOLL.SQL.Exec is
 
@@ -40,7 +41,7 @@ package body GNATCOLL.SQL.Exec is
    --  Delay after which the SQL cache expires and must be reset
 
    procedure Unchecked_Free is new Ada.Unchecked_Deallocation
-     (Query_Result_Content'Class, Query_Result_Content_Access);
+     (Abstract_DBMS_Cursor'Class, Abstract_Cursor_Access);
 
    package DB_Attributes is new Ada.Task_Attributes
      (Database_Connection, null);
@@ -48,27 +49,26 @@ package body GNATCOLL.SQL.Exec is
    function Is_Select_Query (Query : String) return Boolean;
    --  Return true if Query is a select query
 
-   procedure Execute_And_Log
+   function Execute_And_Log
      (Connection : access Database_Connection_Record'Class;
-      R          : out Query_Result_Content_Access;
       Query      : String;
-      Is_Select  : Boolean);
+      Is_Select  : Boolean) return Abstract_Cursor_Access;
    --  Low-level call to perform a query on the database
 
    package String_Maps is new Ada.Containers.Indefinite_Hashed_Maps
      (Key_Type        => String,
-      Element_Type    => Query_Result,
+      Element_Type    => Cursor,
       Hash            => Ada.Strings.Hash,
       Equivalent_Keys => "=");
 
    protected Query_Cache is
       procedure Get_Result
         (Query  : String;
-         Cached : out Query_Result;
+         Cached : out Cursor;
          Found  : out Boolean);
       --  Return null or the cached value for Query
 
-      procedure Set_Cache (Query : String; Cached : Query_Result);
+      procedure Set_Cache (Query : String; Cached : Cursor);
       --  Add a new value in the cache
 
       procedure Reset;
@@ -91,7 +91,7 @@ package body GNATCOLL.SQL.Exec is
 
       procedure Get_Result
         (Query  : String;
-         Cached : out Query_Result;
+         Cached : out Cursor;
          Found  : out Boolean)
       is
          use String_Maps;
@@ -115,7 +115,7 @@ package body GNATCOLL.SQL.Exec is
       -- Set_Cache --
       ---------------
 
-      procedure Set_Cache (Query : String; Cached : Query_Result) is
+      procedure Set_Cache (Query : String; Cached : Cursor) is
          use String_Maps;
       begin
          Include (Cache, Query, Cached);
@@ -246,12 +246,11 @@ package body GNATCOLL.SQL.Exec is
      (Connection : access Database_Connection_Record'Class) return Boolean
    is
       Success    : Boolean;
-      R          : Query_Result_Content_Access;
+      R          : Abstract_Cursor_Access;
    begin
-      Connect_And_Execute
+      R := Connect_And_Execute
         (Connection,
          Query     => "",
-         R         => R,
          Is_Select => False);
       Success := R /= null;
       Unchecked_Free (R);
@@ -289,17 +288,17 @@ package body GNATCOLL.SQL.Exec is
    -- Execute_And_Log --
    ---------------------
 
-   procedure Execute_And_Log
+   function Execute_And_Log
      (Connection : access Database_Connection_Record'Class;
-      R          : out Query_Result_Content_Access;
       Query      : String;
-      Is_Select  : Boolean) is
+      Is_Select  : Boolean) return Abstract_Cursor_Access
+   is
+      R : Abstract_Cursor_Access;
    begin
       if Perform_Queries then
-         Connect_And_Execute
+         R := Connect_And_Execute
            (Connection => Connection,
             Query      => Query,
-            R          => R,
             Is_Select  => Is_Select);
       end if;
 
@@ -311,39 +310,47 @@ package body GNATCOLL.SQL.Exec is
          --  to speed up queries. Are we garanteed, with the mirror, that
          --  doing a INSERT on the master, and immediately a SELECT on the
          --  slave will return the newly inserted values ?
-         Connection.Success := Is_Success (R.all);
+         Connection.Success := Is_Success (DBMS_Cursor'Class (R.all));
+
          if not Connection.Success then
             Set_Failure (Connection);
             Trace
               (Me_Query,
-               Query & " (" & Status (R.all) & " " & Error_Msg (R.all)
+               Query & " (" & Status (DBMS_Cursor'Class (R.all))
+               & " " & Error_Msg (DBMS_Cursor'Class (R.all))
                & " (" & Connection.Username.all & ")");
          else
             Trace
               (Me_Select,
                Query & " ("
-               & Image (Natural (Tuple_Count (R.all)), Min_Width => 1)
+               & Image (Natural (Rows_Count (DBMS_Cursor'Class (R.all))),
+                        Min_Width => 1)
                & " tuples) "
-               & Status (R.all) & " (" & Connection.Username.all & ")");
+               & Status (DBMS_Cursor'Class (R.all))
+               & " (" & Connection.Username.all & ")");
          end if;
 
       else
-         Connection.Success := Is_Success (R.all);
+         Connection.Success := Is_Success (DBMS_Cursor'Class (R.all));
          if not Connection.Success then
             Set_Failure (Connection);
             Trace
               (Me_Query,
-               Query & " (" & Status (R.all) & " " & Error_Msg (R.all)
+               Query & " (" & Status (DBMS_Cursor'Class (R.all))
+               & " " & Error_Msg (DBMS_Cursor'Class (R.all))
                & " (" & Connection.Username.all & ")");
          else
             Trace
               (Me_Query,
                Query & " ("
-               & Image (Natural (Tuple_Count (R.all)), Min_Width => 1)
-               & " tuples) " & Status (R.all)
+               & Image (Natural (Rows_Count (DBMS_Cursor'Class (R.all))),
+                        Min_Width => 1)
+               & " tuples) " & Status (DBMS_Cursor'Class (R.all))
                & " (" & Connection.Username.all & ")");
          end if;
       end if;
+
+      return R;
    end Execute_And_Log;
 
    -------------
@@ -352,7 +359,7 @@ package body GNATCOLL.SQL.Exec is
 
    procedure Execute
      (Connection : access Database_Connection_Record'Class;
-      R          : out Query_Result;
+      Result     : out Cursor;
       Query      : String;
       Use_Cache  : Boolean := False)
    is
@@ -362,6 +369,8 @@ package body GNATCOLL.SQL.Exec is
       Is_Rollback : constant Boolean := To_Lower (Query) = "rollback";
       Found       : Boolean;
    begin
+      Result := No_Element;
+
       if Connection.In_Transaction
         and then not Connection.Success
       then
@@ -395,8 +404,9 @@ package body GNATCOLL.SQL.Exec is
          end if;
       end if;
 
-      if Use_Cache and then Connection.DB.Caching then
-         Query_Cache.Get_Result (Query, R, Found);
+      --  ??? Should reimplement caching for cursor
+      if False and then Use_Cache and then Connection.DB.Caching then
+         Query_Cache.Get_Result (Query, Result, Found);
          if Found then
             if Is_Select then
                Trace (Me_Select, "Use cache for " & Query);
@@ -407,10 +417,11 @@ package body GNATCOLL.SQL.Exec is
          end if;
       end if;
 
-      Execute_And_Log (Connection, R.Res, Query, Is_Select);
+      Result.Res := Execute_And_Log (Connection, Query, Is_Select);
 
-      if Use_Cache and then Connection.DB.Caching then
-         Query_Cache.Set_Cache (Query, R);
+      --  ??? Should reimplement caching for cursor
+      if False and then Use_Cache and then Connection.DB.Caching then
+         Query_Cache.Set_Cache (Query, Result);
       end if;
 
       if Connection.In_Transaction
@@ -426,11 +437,11 @@ package body GNATCOLL.SQL.Exec is
 
    procedure Execute
      (Connection : access Database_Connection_Record'Class;
-      R          : out Query_Result;
+      Result     : out Cursor;
       Query      : SQL_Query;
       Use_Cache  : Boolean := False) is
    begin
-      Execute (Connection, R, To_String (To_String (Query)), Use_Cache);
+      Execute (Connection, Result, To_String (To_String (Query)), Use_Cache);
    end Execute;
 
    -------------
@@ -442,7 +453,7 @@ package body GNATCOLL.SQL.Exec is
       Query      : SQL_Query;
       Use_Cache  : Boolean := False)
    is
-      R : Query_Result;
+      R : Cursor;
       pragma Unreferenced (R);
    begin
       Execute (Connection, R, Query, Use_Cache);
@@ -457,7 +468,7 @@ package body GNATCOLL.SQL.Exec is
       Query      : String;
       Use_Cache  : Boolean := False)
    is
-      R : Query_Result;
+      R : Cursor;
       pragma Unreferenced (R);
    begin
       Execute (Connection, R, Query, Use_Cache);
@@ -622,7 +633,7 @@ package body GNATCOLL.SQL.Exec is
    -- Adjust --
    ------------
 
-   procedure Adjust (Self : in out Query_Result) is
+   overriding procedure Adjust (Self : in out Cursor) is
    begin
       if Self.Res /= null then
          Self.Res.Refcount := Self.Res.Refcount + 1;
@@ -633,105 +644,63 @@ package body GNATCOLL.SQL.Exec is
    -- Finalize --
    --------------
 
-   procedure Finalize (Self : in out Query_Result) is
+   procedure Finalize (Self : in out Cursor) is
    begin
       if Self.Res /= null then
          Self.Res.Refcount := Self.Res.Refcount - 1;
          if Self.Res.Refcount = 0 then
-            Finalize (Self.Res.all);
+            Finalize (DBMS_Cursor'Class (Self.Res.all));
             Unchecked_Free (Self.Res);
          end if;
       end if;
    end Finalize;
 
-   -----------
-   -- Value --
-   -----------
+   ----------------
+   -- Rows_Count --
+   ----------------
 
-   function Boolean_Value
-     (Res   : Query_Result_Content;
-      Tuple : Tuple_Index;
-      Field : Field_Index) return Boolean is
+   function Rows_Count (Self : Cursor) return Natural is
    begin
-      return Boolean'Value
-        (Value (Query_Result_Content'Class (Res), Tuple, Field));
-   end Boolean_Value;
-
-   -----------
-   -- Value --
-   -----------
-
-   function Integer_Value
-     (Res   : Query_Result_Content;
-      Tuple : Tuple_Index;
-      Field : Field_Index) return Integer is
-   begin
-      return Integer'Value
-        (Value (Query_Result_Content'Class (Res), Tuple, Field));
-   end Integer_Value;
-
-   -----------
-   -- Value --
-   -----------
-
-   function Float_Value
-     (Res   : Query_Result_Content;
-      Tuple : Tuple_Index;
-      Field : Field_Index) return Float is
-   begin
-      return Float'Value
-        (Value (Query_Result_Content'Class (Res), Tuple, Field));
-   end Float_Value;
-
-   -----------
-   -- Value --
-   -----------
-
-   function Time_Value
-     (Res   : Query_Result_Content;
-      Tuple : Tuple_Index;
-      Field : Field_Index) return Ada.Calendar.Time
-   is
-      Val : constant String :=
-        Value (Query_Result_Content'Class (Res), Tuple, Field);
-   begin
-      if Val = "" then
-         return No_Time;
-      else
-         --  Workaround bug(?) in GNAT.Calendar.Time_IO: if there is no time,
-         --  set one to avoid daylight saving time issues
-
-         if Ada.Strings.Fixed.Index (Val, ":") < Val'First then
-            return GNAT.Calendar.Time_IO.Value (Val & " 12:00:00");
-         else
-            return GNAT.Calendar.Time_IO.Value (Val);
-         end if;
-      end if;
-   end Time_Value;
-
-   -----------------
-   -- Tuple_Count --
-   -----------------
-
-   function Tuple_Count (Res : Query_Result) return Tuple_Index is
-   begin
-      if Res.Res = null then
+      if Self.Res = null then
          return 0;
       else
-         return Tuple_Count (Res.Res.all);
+         return Rows_Count (DBMS_Cursor'Class (Self.Res.all));
       end if;
-   end Tuple_Count;
+   end Rows_Count;
+
+   -------------
+   -- Has_Row --
+   -------------
+
+   function Has_Row (Self : Cursor) return Boolean is
+   begin
+      if Self.Res = null then
+         return False;
+      else
+         return Has_Row (DBMS_Cursor'Class (Self.Res.all));
+      end if;
+   end Has_Row;
+
+   ----------
+   -- Next --
+   ----------
+
+   procedure Next (Self : in out Cursor) is
+   begin
+      if Self.Res /= null then
+         Next (DBMS_Cursor'Class (Self.Res.all));
+      end if;
+   end Next;
 
    -----------
    -- Value --
    -----------
 
    function Value
-     (Res   : Query_Result;
-      Tuple : Tuple_Index;
+     (Self  : Cursor;
       Field : Field_Index) return String is
    begin
-      return Value (Res.Res.all, Tuple, Field);
+      return Value (DBMS_Cursor'Class (Self.Res.all), Field);
    end Value;
 
    -------------------
@@ -739,12 +708,11 @@ package body GNATCOLL.SQL.Exec is
    -------------------
 
    function Address_Value
-     (Res   : Query_Result;
-      Tuple : Tuple_Index;
+     (Self  : Cursor;
       Field : Field_Index) return System.Address
    is
    begin
-      return Address_Value (Res.Res.all, Tuple, Field);
+      return Address_Value (DBMS_Cursor'Class (Self.Res.all), Field);
    end Address_Value;
 
    -----------
@@ -752,11 +720,10 @@ package body GNATCOLL.SQL.Exec is
    -----------
 
    function Boolean_Value
-     (Res   : Query_Result;
-      Tuple : Tuple_Index;
+     (Self  : Cursor;
       Field : Field_Index) return Boolean is
    begin
-      return Boolean_Value (Res.Res.all, Tuple, Field);
+      return Boolean_Value (DBMS_Cursor'Class (Self.Res.all), Field);
    end Boolean_Value;
 
    -----------
@@ -764,13 +731,12 @@ package body GNATCOLL.SQL.Exec is
    -----------
 
    function Integer_Value
-     (Res   : Query_Result;
-      Tuple : Tuple_Index;
-      Field : Field_Index;
+     (Self   : Cursor;
+      Field  : Field_Index;
       Default : Integer := Integer'First) return Integer
    is
    begin
-      return Integer_Value (Res.Res.all, Tuple, Field);
+      return Integer_Value (DBMS_Cursor'Class (Self.Res.all), Field);
    exception
       when Constraint_Error =>
          return Default;
@@ -781,11 +747,10 @@ package body GNATCOLL.SQL.Exec is
    -----------
 
    function Float_Value
-     (Res   : Query_Result;
-      Tuple : Tuple_Index;
+     (Self  : Cursor;
       Field : Field_Index) return Float is
    begin
-      return Float_Value (Res.Res.all, Tuple, Field);
+      return Float_Value (DBMS_Cursor'Class (Self.Res.all), Field);
    end Float_Value;
 
    -----------
@@ -793,11 +758,10 @@ package body GNATCOLL.SQL.Exec is
    -----------
 
    function Time_Value
-     (Res   : Query_Result;
-      Tuple : Tuple_Index;
+     (Self  : Cursor;
       Field : Field_Index) return Ada.Calendar.Time is
    begin
-      return Time_Value (Res.Res.all, Tuple, Field);
+      return Time_Value (DBMS_Cursor'Class (Self.Res.all), Field);
    end Time_Value;
 
    -------------
@@ -805,11 +769,10 @@ package body GNATCOLL.SQL.Exec is
    -------------
 
    function Is_Null
-     (Res   : Query_Result;
-      Tuple : Tuple_Index;
+     (Self  : Cursor;
       Field : Field_Index) return Boolean is
    begin
-      return Is_Null (Res.Res.all, Tuple, Field);
+      return Is_Null (DBMS_Cursor'Class (Self.Res.all), Field);
    end Is_Null;
 
    -------------
@@ -818,10 +781,10 @@ package body GNATCOLL.SQL.Exec is
 
    function Last_Id
      (Connection : access Database_Connection_Record'Class;
-      Res        : Query_Result;
+      Self       : Cursor;
       Field      : SQL_Field_Integer) return Integer is
    begin
-      return Last_Id (Connection, Res.Res.all, Field);
+      return Last_Id (DBMS_Cursor'Class (Self.Res.all), Connection, Field);
    end Last_Id;
 
    ---------------------
@@ -840,9 +803,9 @@ package body GNATCOLL.SQL.Exec is
    -- Field_Count --
    -----------------
 
-   function Field_Count (Res : Query_Result) return Field_Index is
+   function Field_Count (Self : Cursor) return Field_Index is
    begin
-      return Field_Count (Res.Res.all);
+      return Field_Count (DBMS_Cursor'Class (Self.Res.all));
    end Field_Count;
 
    ----------------
@@ -850,9 +813,9 @@ package body GNATCOLL.SQL.Exec is
    ----------------
 
    function Field_Name
-     (Res : Query_Result; Field : Field_Index) return String is
+     (Self : Cursor; Field : Field_Index) return String is
    begin
-      return Field_Name (Res.Res.all, Field);
+      return Field_Name (DBMS_Cursor'Class (Self.Res.all), Field);
    end Field_Name;
 
 end GNATCOLL.SQL.Exec;

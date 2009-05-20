@@ -1,7 +1,7 @@
 -----------------------------------------------------------------------
 --                               G N A T C O L L                     --
 --                                                                   --
---                 Copyright (C) 2005-2008, AdaCore                  --
+--                 Copyright (C) 2005-2009, AdaCore                  --
 --                                                                   --
 -- GPS is free  software;  you can redistribute it and/or modify  it --
 -- under the terms of the GNU General Public License as published by --
@@ -19,7 +19,7 @@
 
 --  This package provides subprograms to interact with a database. It provides
 --  a DBMS-agnostic API, which is further specialized in children packages for
---  each support DBMS system.
+--  each supported DBMS system.
 --  There are various reasons to use this package preferrably to the low-level
 --  package specific to each DBMS:
 --    - your code is not specialized for a specific system, and can therefore
@@ -46,6 +46,7 @@
 with Ada.Calendar;
 private with Ada.Finalization;
 private with GNAT.Strings;
+--  private with GNATCOLL.SQL.Exec_Private;
 with System;
 
 package GNATCOLL.SQL.Exec is
@@ -88,14 +89,41 @@ package GNATCOLL.SQL.Exec is
    --  done automatically when calling Execute (see below). This can however be
    --  used to ensure that the database works properly.
 
-   type Query_Result is tagged private;
-   --  The result of a query, as returned by a DBMS. This type automatically
-   --  takes care of memory management, and frees its memory when no longer in
-   --  use.
+   type Cursor is tagged private;
+   No_Element : constant Cursor;
+   --  A cursor that iterates over all rows of the result of an SQL query. A
+   --  single row can be queried at a time, and there is no possibility to go
+   --  back to a previous row (since not all DBMS backends support this).
+   --  This type automatically takes care of memory management and frees its
+   --  memory when no longer in use.
+   --  This type is tagged only so that you can override it in your own
+   --  applications (an example is to add an Element primitive operation which
+   --  converts the current row into a specific Ada record for ease of use)
+
+   type Abstract_DBMS_Cursor is abstract tagged private;
+   type Abstract_Cursor_Access is access all Abstract_DBMS_Cursor'Class;
+   --  Internal contents of a cursor.
+   --  Instead of overriding Cursor directly, the support packages for
+   --  the DBMS must override this type, so that Cursor is not visibly
+   --  tagged and users do not have to use unconstrained types in their code,
+   --  thus allowing "Result : Cursor" declarations.
 
    procedure Execute
      (Connection : access Database_Connection_Record'Class;
-      R          : out Query_Result;
+      Result     : out Cursor;
+      Query      : String;
+      Use_Cache  : Boolean := False);
+   procedure Execute
+     (Connection : access Database_Connection_Record'Class;
+      Result     : out Cursor;
+      Query      : GNATCOLL.SQL.SQL_Query;
+      Use_Cache  : Boolean := False);
+   procedure Execute
+     (Connection : access Database_Connection_Record'Class;
+      Query      : GNATCOLL.SQL.SQL_Query;
+      Use_Cache  : Boolean := False);
+   procedure Execute
+     (Connection : access Database_Connection_Record'Class;
       Query      : String;
       Use_Cache  : Boolean := False);
    --  Submit a query to the database, log it and wait for the result.
@@ -106,21 +134,40 @@ package GNATCOLL.SQL.Exec is
    --  Use_Cache is False). This should mostly be used for queries to table
    --  that almost never changes, ie that store "enumeration types". The cache
    --  must be specifically invalidated (see Invalidate_Cache) to reset it.
+   --  In some cases the result of the query is simply discarded, which is
+   --  mostly useful for write queries (INSERT, UPDATE,...)
+   --  The query can either be written directly as a string, or through a
+   --  SQL_Query (which is encouraged, since it provides additional safety).
+   --
+   --  We used procedures instead of functions here for several reasons: that
+   --  allows you to extend the Cursor type without overridding these
+   --  procedures, this is slightly more efficient (since Cursor is a
+   --  controlled type), and that forces the user to declare a local variable,
+   --  rather than use Value (Execute (...), ...), which might have
+   --  unpredictable results depending on when the controlled type is
+   --  finalized. This also makes it easier to have your own specialized
+   --  Execute functions in your application that result specific types of
+   --  cursor, without requiring possibly costly copies of the result to
+   --  convert from one type to another.
+   --  Result is always first reset to No_Element, so any custom field you
+   --  might have will also be reset
 
-   procedure Execute
-     (Connection : access Database_Connection_Record'Class;
-      R          : out Query_Result;
-      Query      : GNATCOLL.SQL.SQL_Query;
-      Use_Cache  : Boolean := False);
-   procedure Execute
-     (Connection : access Database_Connection_Record'Class;
-      Query      : GNATCOLL.SQL.SQL_Query;
-      Use_Cache  : Boolean := False);
-   procedure Execute
-     (Connection : access Database_Connection_Record'Class;
-      Query      : String;
-      Use_Cache  : Boolean := False);
-   --  Same as above
+   function Connect_And_Execute
+     (Connection  : access Database_Connection_Record;
+      Query       : String;
+      Is_Select   : Boolean) return Abstract_Cursor_Access is abstract;
+   --  This is mostly an internal subprogram, overridden by all DBMS-specific
+   --  backends.
+   --  If the connection to the database has not been made yet, connect to it.
+   --  Then perform the query, reconnecting once if the connection failed.
+   --  Will return null if the connection to the database is bad.
+   --  If the query is the empty string, this procedure only connects to
+   --  the database and checks the connection.
+
+   function Error
+     (Connection : access Database_Connection_Record)
+      return String is abstract;
+   --  Return the last error message set by the database
 
    function Success
      (Connection : access Database_Connection_Record) return Boolean;
@@ -243,54 +290,56 @@ package GNATCOLL.SQL.Exec is
    ------------------------
    -- Retrieving results --
    ------------------------
-   --  The following subprograms represent a way to access the various rows and
-   --  columns returned by a query. They do not provide the same generality
-   --  that DBMS-specific functions would, but represent with the most frequent
-   --  use done with a result.
+   --  The following subprograms represent a way to access the various
+   --  columns returned by a query. A single row can be accessed at a time,
+   --  since not all DBMS systems provide ways to query all results in memory
+   --  at once (which might also not be efficient in the case of big tables).
+   --
+   --  These subprograms do not provide the same generality that DBMS-specific
+   --  functions would, but represent with the most frequent use done with a
+   --  result.
 
-   type Tuple_Index is new Natural;
    type Field_Index is new Natural;
 
-   function Tuple_Count (Res : Query_Result) return Tuple_Index;
+   function Rows_Count (Self : Cursor) return Natural;
    --  The number of rows in the result, or that were impacted by a database
    --  modification
 
-   function Value
-     (Res   : Query_Result;
-      Tuple : Tuple_Index;
-      Field : Field_Index) return String;
-   function Address_Value
-     (Res   : Query_Result;
-      Tuple : Tuple_Index;
-      Field : Field_Index) return System.Address;  --  A C string
-   function Boolean_Value
-     (Res   : Query_Result;
-      Tuple : Tuple_Index;
-      Field : Field_Index) return Boolean;
+   function Has_Row (Self : Cursor) return Boolean;
+   --  Whether there is a row to process. Fetching all the results from a query
+   --  is done in a loop similar to:
+   --      Cursor := Execute (...)
+   --      while Has_Row (Cursor) loop
+   --         ...
+   --         Next (Cursor);
+   --      end loop;
+
+   procedure Next (Self : in out Cursor);
+   --  Moves to the next row of results. This is not implemented as a function,
+   --  since once the cursor was moved to the next field, there is no way to
+   --  move back to the previous row.
+
+   function Value (Self : Cursor; Field : Field_Index) return String;
+   function Address_Value  --  A C string
+     (Self  : Cursor; Field : Field_Index) return System.Address;
+   function Boolean_Value (Self : Cursor; Field : Field_Index) return Boolean;
    function Integer_Value
-     (Res   : Query_Result;
-      Tuple : Tuple_Index;
-      Field : Field_Index;
+     (Self    : Cursor;
+      Field   : Field_Index;
       Default : Integer := Integer'First) return Integer;
-   function Float_Value
-     (Res   : Query_Result;
-      Tuple : Tuple_Index;
-      Field : Field_Index) return Float;
+   function Float_Value (Self : Cursor; Field : Field_Index) return Float;
    function Time_Value
-     (Res   : Query_Result;
-      Tuple : Tuple_Index;
-      Field : Field_Index) return Ada.Calendar.Time;
+     (Self  : Cursor; Field : Field_Index) return Ada.Calendar.Time;
    --  Return a specific cell, converted to the appropriate format
 
    function Is_Null
-     (Res   : Query_Result;
-      Tuple : Tuple_Index;
+     (Self  : Cursor;
       Field : Field_Index) return Boolean;
    --  True if the corresponding cell is not set
 
    function Last_Id
      (Connection : access Database_Connection_Record'Class;
-      Res        : Query_Result;
+      Self       : Cursor;
       Field      : SQL_Field_Integer) return Integer;
    --  Return the value set for field in the last INSERT command on that
    --  connection.
@@ -301,10 +350,10 @@ package GNATCOLL.SQL.Exec is
    --  Depending on the backend, this id might be computed through a sql query,
    --  so it is better to cache it if you need to reuse it several times.
 
-   function Field_Count (Res : Query_Result) return Field_Index;
+   function Field_Count (Self : Cursor) return Field_Index;
    --  The number of fields per row in Res
 
-   function Field_Name (Res : Query_Result; Field : Field_Index) return String;
+   function Field_Name (Self : Cursor; Field : Field_Index) return String;
    --  The name of a specific field in a row of Res
 
    --------------------------------------------
@@ -351,99 +400,9 @@ package GNATCOLL.SQL.Exec is
    --  in the two calls to help identify foreign keys that are made of multiple
    --  attributes
 
-   -----------------------------------
-   -- Specializing for various DBMS --
-   -----------------------------------
-   --  The following types and subprograms need to be overridden to specialize
-   --  this API for various DBMS
-
-   type Query_Result_Content is abstract tagged private;
-   type Query_Result_Content_Access is access all Query_Result_Content'Class;
-   --  Internal contents of a query_result.
-   --  Instead of overriding Query_Result directly, the support packages for
-   --  the DBMS must override this type, so that Query_Result is not visibly
-   --  tagged and users do not have to use unconstrained types in their code,
-   --  thus allowing "Result : Query_Result" declarations.
-
-   procedure Connect_And_Execute
-     (Connection  : access Database_Connection_Record;
-      Query       : String;
-      R           : out Query_Result_Content_Access;
-      Is_Select   : Boolean) is abstract;
-   --  If the connection to the database has not been made yet, connect to it.
-   --  Then perform the query, reconnecting once if the connection failed.
-   --  R should be left to null if the connection to the database is bad.
-   --  If the query is the empty string, this procedure should only connect to
-   --  the database and check the connection.
-
-   function Error
-     (Connection : access Database_Connection_Record)
-      return String is abstract;
-   --  Return the last error message set by the database
-
-   function Is_Success
-     (Result : Query_Result_Content) return Boolean is abstract;
-   --  Whether the corresponding query succeeded
-
-   function Error_Msg
-     (Result : Query_Result_Content) return String is abstract;
-   --  Return the error message associated with the query
-
-   function Status
-     (Result : Query_Result_Content) return String is abstract;
-   --  Return a string describing the status of the query. This is used for
-   --  logging purposes.
-
-   procedure Finalize (Result : in out Query_Result_Content) is abstract;
-   --  Free the memory used by Result
-
-   function Tuple_Count
-     (Res : Query_Result_Content) return Tuple_Index is abstract;
-   --  Return the number of rows impacted (ie modified or returned) by the
-   --  query. Is_Select indicates whether the query was a "SELECT" (ie rows are
-   --  returned) or other (ie rows are modified)
-
-   function Value
-     (Res   : Query_Result_Content;
-      Tuple : Tuple_Index;
-      Field : Field_Index) return String is abstract;
-   function Address_Value
-     (Res   : Query_Result_Content;
-      Tuple : Tuple_Index;
-      Field : Field_Index) return System.Address is abstract;
-   function Boolean_Value
-     (Res   : Query_Result_Content;
-      Tuple : Tuple_Index;
-      Field : Field_Index) return Boolean;
-   function Integer_Value
-     (Res   : Query_Result_Content;
-      Tuple : Tuple_Index;
-      Field : Field_Index) return Integer;
-   function Float_Value
-     (Res   : Query_Result_Content;
-      Tuple : Tuple_Index;
-      Field : Field_Index) return Float;
-   function Time_Value
-     (Res   : Query_Result_Content;
-      Tuple : Tuple_Index;
-      Field : Field_Index) return Ada.Calendar.Time;
-   function Is_Null
-     (Res   : Query_Result_Content;
-      Tuple : Tuple_Index;
-      Field : Field_Index) return Boolean is abstract;
-   function Last_Id
-     (Connection : access Database_Connection_Record'Class;
-      Res        : Query_Result_Content;
-      Field      : SQL_Field_Integer) return Integer is abstract;
-   function Field_Count
-     (Res : Query_Result_Content) return Field_Index is abstract;
-   function Field_Name
-     (Res : Query_Result_Content; Field : Field_Index) return String
-     is abstract;
-   --  See matching subprograms for Query_Result. The default implementation of
-   --  the subprograms converts from a string to the appropriate type.
-   --  Constraint_Error is raised if the field does not contain an appropriate
-   --  value.
+   -------------------------
+   -- Errors and Warnings --
+   -------------------------
 
    procedure Print_Warning
      (Connection : access Database_Connection_Record'Class; Str : String);
@@ -472,14 +431,17 @@ private
       Error_Msg      : GNAT.Strings.String_Access;
    end record;
 
-   type Query_Result_Content is abstract tagged record
+   type Abstract_DBMS_Cursor is abstract tagged record
       Refcount : Natural := 1;
    end record;
 
-   type Query_Result is new Ada.Finalization.Controlled with record
-      Res : Query_Result_Content_Access;
+   type Cursor is new Ada.Finalization.Controlled with record
+      Res : Abstract_Cursor_Access;
    end record;
-   overriding procedure Adjust   (Self : in out Query_Result);
-   overriding procedure Finalize (Self : in out Query_Result);
+   overriding procedure Adjust   (Self : in out Cursor);
+   overriding procedure Finalize (Self : in out Cursor);
+
+   No_Element : constant Cursor :=
+     (Ada.Finalization.Controlled with null);
 
 end GNATCOLL.SQL.Exec;
