@@ -167,6 +167,7 @@ package GNATCOLL.SQL.Exec is
 
    procedure Close
      (Connection : access Database_Connection_Record) is abstract;
+   procedure Free (Connection : in out Database_Connection);
    --  Close the connection to the database, if needed
 
    function Error
@@ -249,6 +250,11 @@ package GNATCOLL.SQL.Exec is
    --  If Cache_Support is True, then some SQL queries can be cached locally,
    --  and reused by Execute above when its Use_Cache parameter is True. If
    --  Cache_Support is False, then no caching is ever done.
+
+   procedure Free (Description : in out Database_Description);
+   --  Free memory associated with description.
+   --  This should only be called when the last database connection was closed,
+   --  since each connection keeps a handle on the description
 
    function Get_Host     (Description : Database_Description) return String;
    function Get_User     (Description : Database_Description) return String;

@@ -153,6 +153,24 @@ package body GNATCOLL.SQL.Exec is
       Trace (Me_Error, Str & " (" & Connection.Username.all & ")");
    end Print_Error;
 
+   ----------
+   -- Free --
+   ----------
+
+   procedure Free (Description : in out Database_Description) is
+      procedure Unchecked_Free is new Ada.Unchecked_Deallocation
+        (Database_Description_Record, Database_Description);
+   begin
+      if Description /= null then
+         GNAT.Strings.Free (Description.Host);
+         GNAT.Strings.Free (Description.User);
+         GNAT.Strings.Free (Description.Dbname);
+         GNAT.Strings.Free (Description.Password);
+         GNAT.Strings.Free (Description.DBMS);
+         Unchecked_Free (Description);
+      end if;
+   end Free;
+
    --------------------
    -- Setup_Database --
    --------------------
@@ -817,5 +835,21 @@ package body GNATCOLL.SQL.Exec is
    begin
       return Field_Name (DBMS_Cursor'Class (Self.Res.all), Field);
    end Field_Name;
+
+   -----------
+   -- Close --
+   -----------
+
+   procedure Free (Connection : in out Database_Connection) is
+      procedure Unchecked_Free is new Ada.Unchecked_Deallocation
+        (Database_Connection_Record'Class, Database_Connection);
+   begin
+      if Connection /= null then
+         Close (Database_Connection_Record'Class (Connection.all)'Access);
+         Free (Connection.Username);
+         Free (Connection.Error_Msg);
+         Unchecked_Free (Connection);
+      end if;
+   end Free;
 
 end GNATCOLL.SQL.Exec;

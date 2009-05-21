@@ -166,10 +166,8 @@ package body GNATCOLL.SQL.Postgres.Builder is
    --------------
 
    procedure Finalize (Result : in out Postgresql_Cursor) is
-      pragma Unreferenced (Result);
    begin
-      null;
-      --  PQclear (To_Addr (Object.Res));
+      Clear (Result.Res);
    end Finalize;
 
    ---------------------------
@@ -211,8 +209,12 @@ package body GNATCOLL.SQL.Postgres.Builder is
    overriding procedure Close
      (Connection : access Postgresql_Connection_Record) is
    begin
-      --  Since we have a controlled type, we just have to deallocate memory
-      Unchecked_Free (Connection.Postgres);
+      --  Since we have a controlled type, we just have to deallocate memory to
+      --  deallocate memory allocated by postgres
+      if Connection /= null then
+         Free (Connection.Connection_String);
+         Unchecked_Free (Connection.Postgres);
+      end if;
    end Close;
 
    -------------------------
@@ -300,7 +302,6 @@ package body GNATCOLL.SQL.Postgres.Builder is
 
       if Status (Connection.Postgres.all) /= CONNECTION_OK then
          Close (Connection);
-         Unchecked_Free (Res);
          Connection.Postgres := null;
          Print_Error
            (Connection,
