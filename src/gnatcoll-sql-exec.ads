@@ -103,10 +103,11 @@ package GNATCOLL.SQL.Exec is
    type Abstract_DBMS_Cursor is abstract tagged private;
    type Abstract_Cursor_Access is access all Abstract_DBMS_Cursor'Class;
    --  Internal contents of a cursor.
-   --  Instead of overriding Cursor directly, the support packages for
-   --  the DBMS must override this type, so that Cursor is not visibly
-   --  tagged and users do not have to use unconstrained types in their code,
-   --  thus allowing "Result : Cursor" declarations.
+   --  Instead of overriding Cursor directly, the support packages for the DBMS
+   --  must override this type, so users do not have to use unconstrained types
+   --  in their code, thus allowing "Result : Cursor" declarations.
+   --  In practice, DBMS-specific backends will derive from
+   --  gnatcoll-sql-exec-dbms_cursor, which defines the required primitive ops
 
    procedure Execute
      (Connection : access Database_Connection_Record'Class;
@@ -163,6 +164,10 @@ package GNATCOLL.SQL.Exec is
    --  Will return null if the connection to the database is bad.
    --  If the query is the empty string, this procedure only connects to
    --  the database and checks the connection.
+
+   procedure Close
+     (Connection : access Database_Connection_Record) is abstract;
+   --  Close the connection to the database, if needed
 
    function Error
      (Connection : access Database_Connection_Record)

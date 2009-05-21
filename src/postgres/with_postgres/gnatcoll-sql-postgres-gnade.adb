@@ -9,7 +9,7 @@
 --  Status          : $State$
 --
 --  Copyright (C) 2000-2003 Juergen Pfeifer
---  Copyright (C) 2004-2008, AdaCore                                         --
+--  Copyright (C) 2004-2009, AdaCore                                         --
 --                                                                           --
 --  GNADE is free software;  you can redistribute it  and/or modify it under --
 --  terms of the  GNU General Public License as published  by the Free Soft- --
@@ -116,8 +116,10 @@ package body GNATCOLL.SQL.Postgres.Gnade is
          return To_PID (PQpid (To_Addr (C_Connection)));
       end PID;
 
-      procedure Execute (Res   : out Result;
-                         Query : in  String) is
+      procedure Execute (Res     : in out Result;
+                         Success : out Boolean;
+                         Query   : String)
+      is
          function PQexec (Conn : System.Address;
                           Qry  : chars_ptr) return System.Address;
          pragma Import (C, PQexec, "PQexec");
@@ -129,32 +131,19 @@ package body GNATCOLL.SQL.Postgres.Gnade is
 
       begin
          CS.Free (P);
-
-         --  One less reference to the previous Result. If some other variable
-         --  was assigned Res, the refcount is in fact 2, and nothing is free.
-         --  The other variable keeps its result, with a refcount of 1.
-         --  If Result was not assigned to anything else, it is freed.
-
-         Finalize (Res);
-
-         --  The new result is only referenced once
-         Res.Refcount := new Natural'(1);
+         Clear (Res); --  Free previous results
 
          if R = Null_Result then
             Res.Res := Null_Result;
-            raise PostgreSQL_Error;
+            Success := False;
          else
             Res.Res := R;
             Stat    := Status (Res);
-            if Stat = PGRES_FATAL_ERROR then
-               raise PostgreSQL_Error;
-            end if;
+            Success := Stat /= PGRES_FATAL_ERROR;
          end if;
       end Execute;
 
-      --  --------------------------------------------------------------------
-
-      function BLOB_Create (Mode : in File_Mode) return OID
+      function BLOB_Create (Mode : File_Mode) return OID
       is
          function LO_Creat (Conn : System.Address;
                             Mode : C.int) return OID;
@@ -163,7 +152,7 @@ package body GNATCOLL.SQL.Postgres.Gnade is
          return LO_Creat (To_Addr (C_Connection), C.int (Mode));
       end BLOB_Create;
 
-      function BLOB_Import (In_File_Name : in String) return OID
+      function BLOB_Import (In_File_Name : String) return OID
       is
          function LO_Import (Conn : System.Address;
                              File : chars_ptr) return OID;
@@ -175,8 +164,8 @@ package body GNATCOLL.SQL.Postgres.Gnade is
          return Obj_Id;
       end BLOB_Import;
 
-      function BLOB_Export (Object_Id     : in OID;
-                            Out_File_Name : in String) return Boolean
+      function BLOB_Export (Object_Id     : OID;
+                            Out_File_Name : String) return Boolean
       is
          function LO_Export (Conn   : System.Address;
                              Obj_Id : OID;
@@ -190,8 +179,8 @@ package body GNATCOLL.SQL.Postgres.Gnade is
          return B;
       end BLOB_Export;
 
-      function BLOB_Open (Object_Id : in OID;
-                          Mode      : in File_Mode)
+      function BLOB_Open (Object_Id : OID;
+                          Mode      : File_Mode)
                           return File_Descriptor
       is
          function LO_Open (Conn   : System.Address;
@@ -203,9 +192,9 @@ package body GNATCOLL.SQL.Postgres.Gnade is
            (LO_Open (To_Addr (C_Connection), Object_Id, C.int (Mode)));
       end BLOB_Open;
 
-      function BLOB_Write (FD : in File_Descriptor;
-                           A  : in System.Address;
-                           N  : in Integer)
+      function BLOB_Write (FD : File_Descriptor;
+                           A  : System.Address;
+                           N  : Integer)
                            return Integer
       is
          function LO_Write (Conn : System.Address;
@@ -217,9 +206,9 @@ package body GNATCOLL.SQL.Postgres.Gnade is
          return LO_Write (To_Addr (C_Connection), C.int (FD), A, C.int (N));
       end BLOB_Write;
 
-      function BLOB_Read (FD : in File_Descriptor;
-                          A  : in System.Address;
-                          N  : in Integer)
+      function BLOB_Read (FD : File_Descriptor;
+                          A  : System.Address;
+                          N  : Integer)
                        return Integer
       is
          function LO_Read (Conn : System.Address;
@@ -231,9 +220,9 @@ package body GNATCOLL.SQL.Postgres.Gnade is
          return LO_Read (To_Addr (C_Connection), C.int (FD), A, C.int (N));
       end BLOB_Read;
 
-      function BLOB_Lseek (FD     : in File_Descriptor;
-                           Offset : in Integer;
-                           Origin : in Integer)
+      function BLOB_Lseek (FD     : File_Descriptor;
+                           Offset : Integer;
+                           Origin : Integer)
                            return Integer
       is
          function LO_Lseek (Conn   : System.Address;
@@ -247,7 +236,7 @@ package body GNATCOLL.SQL.Postgres.Gnade is
                       C.int (Offset), C.int (Origin)));
       end BLOB_Lseek;
 
-      function BLOB_Tell (FD : in File_Descriptor)
+      function BLOB_Tell (FD : File_Descriptor)
                           return Integer
       is
          function LO_Tell (Conn : System.Address;
@@ -257,7 +246,7 @@ package body GNATCOLL.SQL.Postgres.Gnade is
          return Integer (LO_Tell (To_Addr (C_Connection), C.int (FD)));
       end BLOB_Tell;
 
-      function BLOB_Close (FD : in File_Descriptor)
+      function BLOB_Close (FD : File_Descriptor)
                         return Boolean
       is
          function LO_Close (Conn : System.Address;
@@ -267,10 +256,10 @@ package body GNATCOLL.SQL.Postgres.Gnade is
          return LO_Close (To_Addr (C_Connection), C.int (FD)) >= 0;
       end BLOB_Close;
 
-      function BLOB_Unlink (Object_Id : in OID) return Boolean
+      function BLOB_Unlink (Object_Id : OID) return Boolean
       is
          function LO_Unlink (Conn          : System.Address;
-                             Object_Id     : in OID) return C.int;
+                             Object_Id     : OID) return C.int;
          pragma Import (C, LO_Unlink, "lo_unlink");
       begin
          return LO_Unlink (To_Addr (C_Connection), Object_Id) >= 0;
@@ -279,7 +268,7 @@ package body GNATCOLL.SQL.Postgres.Gnade is
       --  --------------------------------------------------------------------
 
       procedure Empty_Result (Res    : out Result;
-                              Status : in  ExecStatus) is
+                              Status : ExecStatus) is
          function PQemptyRes (Conn   : System.Address;
                               Status : C.int) return System.Address;
          pragma Import (C, PQemptyRes, "PQmakeEmptyPGresult");
@@ -318,7 +307,7 @@ package body GNATCOLL.SQL.Postgres.Gnade is
          end if;
       end IsNonBlocking;
 
-      function SendQuery (Query : in String) return Boolean
+      function SendQuery (Query : String) return Boolean
       is
          function PQsendQuery (Conn : System.Address;
                                Qry  : chars_ptr) return Interfaces.C.int;
@@ -467,7 +456,7 @@ package body GNATCOLL.SQL.Postgres.Gnade is
       end if;
    end Connect;
 
-   procedure Reset (DB : in Database'Class) is
+   procedure Reset (DB : Database'Class) is
    begin
       DB.Connection.Reset;
    end Reset;
@@ -477,9 +466,9 @@ package body GNATCOLL.SQL.Postgres.Gnade is
 
    generic
       Accessor : C_Accessor;
-   function Connection_Accessor (DB : in Database'Class) return String;
+   function Connection_Accessor (DB : Database'Class) return String;
 
-   function  Connection_Accessor (DB : in Database'Class) return String is
+   function  Connection_Accessor (DB : Database'Class) return String is
    begin
       return CS.Value (Accessor.all (To_Addr (DB.Connection.Handle)));
    end Connection_Accessor;
@@ -512,119 +501,122 @@ package body GNATCOLL.SQL.Postgres.Gnade is
    pragma Import (C, PQopt, "PQoptions");
    function Get_Options is new Connection_Accessor (Accessor => PQopt'Access);
 
-   function Name     (DB : in Database'Class) return String renames Get_Name;
-   function User     (DB : in Database'Class) return String renames Get_User;
-   function Password (DB : in Database'Class) return String renames Get_Pass;
-   function Host     (DB : in Database'Class) return String renames Get_Host;
-   function Port     (DB : in Database'Class) return String renames Get_Port;
-   function TTY      (DB : in Database'Class) return String renames Get_TTY;
-   function Options  (DB : in Database'Class) return String
+   function Name     (DB : Database'Class) return String renames Get_Name;
+   function User     (DB : Database'Class) return String renames Get_User;
+   function Password (DB : Database'Class) return String renames Get_Pass;
+   function Host     (DB : Database'Class) return String renames Get_Host;
+   function Port     (DB : Database'Class) return String renames Get_Port;
+   function TTY      (DB : Database'Class) return String renames Get_TTY;
+   function Options  (DB : Database'Class) return String
      renames Get_Options;
 
-   function Error    (DB : in Database'Class) return String is
+   function Error    (DB : Database'Class) return String is
    begin
       return DB.Connection.Error;
    end Error;
 
-   function Status (DB : in Database'Class) return ConnStatus is
+   function Status (DB : Database'Class) return ConnStatus is
    begin
       return DB.Connection.Status;
    end Status;
 
-   function Server_PID (DB : in Database'Class) return Backend_PID is
+   function Server_PID (DB : Database'Class) return Backend_PID is
    begin
       return DB.Connection.PID;
    end Server_PID;
 
-   procedure Execute (Res   : out Result;
-                      DB    : in  Database'Class;
-                      Query : String) is
+   procedure Execute (Res   : in out Result;
+                      DB    : Database'Class;
+                      Query : String)
+   is
+      Success : Boolean;
    begin
-      DB.Connection.Execute (Res, Query);
+      --  Error status is in fact available through Result already
+      DB.Connection.Execute (Res, Success, Query);
    end Execute;
 
    --  -----------------------------------------------------------------------
 
-   function BLOB_Create (DB   : in Database'Class;
-                         Mode : in File_Mode)
+   function BLOB_Create (DB   : Database'Class;
+                         Mode : File_Mode)
                           return OID
    is
    begin
       return DB.Connection.BLOB_Create (Mode);
    end BLOB_Create;
 
-   function BLOB_Import (DB           : in Database'Class;
-                         In_File_Name : in String) return OID
+   function BLOB_Import (DB           : Database'Class;
+                         In_File_Name : String) return OID
    is
    begin
       return DB.Connection.BLOB_Import (In_File_Name);
    end BLOB_Import;
 
-   function BLOB_Export (DB            : in Database'Class;
-                         Object_Id     : in OID;
-                         Out_File_Name : in String) return Boolean
+   function BLOB_Export (DB            : Database'Class;
+                         Object_Id     : OID;
+                         Out_File_Name : String) return Boolean
    is
    begin
       return DB.Connection.BLOB_Export (Object_Id, Out_File_Name);
    end BLOB_Export;
 
-   function BLOB_Open (DB        : in Database'Class;
-                       Object_Id : in OID;
-                       Mode      : in File_Mode)
+   function BLOB_Open (DB        : Database'Class;
+                       Object_Id : OID;
+                       Mode      : File_Mode)
                        return File_Descriptor
    is
    begin
       return DB.Connection.BLOB_Open (Object_Id, Mode);
    end BLOB_Open;
 
-   function BLOB_Write (DB : in Database'Class;
-                        FD : in File_Descriptor;
-                        A  : in System.Address;
-                        N  : in Integer)
+   function BLOB_Write (DB : Database'Class;
+                        FD : File_Descriptor;
+                        A  : System.Address;
+                        N  : Integer)
                         return Integer
    is
    begin
       return DB.Connection.BLOB_Write (FD, A, N);
    end BLOB_Write;
 
-   function BLOB_Read (DB : in Database'Class;
-                       FD : in File_Descriptor;
-                       A  : in System.Address;
-                       N  : in Integer)
+   function BLOB_Read (DB : Database'Class;
+                       FD : File_Descriptor;
+                       A  : System.Address;
+                       N  : Integer)
                        return Integer
    is
    begin
       return DB.Connection.BLOB_Read (FD, A, N);
    end BLOB_Read;
 
-   function BLOB_Lseek (DB     : in Database'Class;
-                        FD     : in File_Descriptor;
-                        Offset : in Integer;
-                        Origin : in Integer)
+   function BLOB_Lseek (DB     : Database'Class;
+                        FD     : File_Descriptor;
+                        Offset : Integer;
+                        Origin : Integer)
                         return Integer
    is
    begin
       return DB.Connection.BLOB_Lseek (FD, Offset, Origin);
    end BLOB_Lseek;
 
-   function BLOB_Tell (DB : in Database'Class;
-                       FD : in File_Descriptor)
+   function BLOB_Tell (DB : Database'Class;
+                       FD : File_Descriptor)
                        return Integer
    is
    begin
       return DB.Connection.BLOB_Tell (FD);
    end BLOB_Tell;
 
-   function BLOB_Close (DB : in Database'Class;
-                        FD : in File_Descriptor)
+   function BLOB_Close (DB : Database'Class;
+                        FD : File_Descriptor)
                         return Boolean
    is
    begin
       return DB.Connection.BLOB_Close (FD);
    end BLOB_Close;
 
-   function BLOB_Unlink (DB        : in Database'Class;
-                         Object_Id : in OID) return Boolean
+   function BLOB_Unlink (DB        : Database'Class;
+                         Object_Id : OID) return Boolean
    is
    begin
       return DB.Connection.BLOB_Unlink (Object_Id);
@@ -633,65 +625,48 @@ package body GNATCOLL.SQL.Postgres.Gnade is
    --  -----------------------------------------------------------------------
 
    procedure Make_Empty_Result (Res    : out Result;
-                                DB     : in  Database'Class;
-                                Status : in  ExecStatus := PGRES_EMPTY_QUERY)
+                                DB     : Database'Class;
+                                Status : ExecStatus := PGRES_EMPTY_QUERY)
    is
    begin
       DB.Connection .Empty_Result (Res, Status);
    end Make_Empty_Result;
 
-   ------------
-   -- Adjust --
-   ------------
+   -----------
+   -- Clear --
+   -----------
 
-   procedure Adjust (Object : in out Result) is
-   begin
-      if Object.Refcount /= null then
-         Object.Refcount.all := Object.Refcount.all + 1;
-      end if;
-   end Adjust;
-
-   --------------
-   -- Finalize --
-   --------------
-
-   procedure Finalize (Object : in out Result) is
-      procedure PQclear (Res : in System.Address);
+   procedure Clear (Res : in out Result) is
+      procedure PQclear (Res : System.Address);
       pragma Import (C, PQclear, "PQclear");
    begin
-      if Object.Refcount /= null then
-         Object.Refcount.all := Object.Refcount.all - 1;
-         if Object.Refcount.all = 0 then
-            if Object.Res /= Null_Result then
-               PQclear (To_Addr (Object.Res));
-               Object.Res := Null_Result;
-            end if;
-            Unchecked_Free (Object.Refcount);
-         end if;
+      if Res.Res /= Null_Result then
+         PQclear (To_Addr (Res.Res));
+         Res.Res := Null_Result;
       end if;
-   end Finalize;
+   end Clear;
 
-   function Status (Res : in Result) return ExecStatus is
+   function Status (Res : Result) return ExecStatus is
       function PQresStatus (Conn : System.Address) return Interfaces.C.int;
       pragma Import (C, PQresStatus, "PQresultStatus");
    begin
       return ExecStatus'Val (PQresStatus (To_Addr (Res.Res)));
    end Status;
 
-   function Status (Status : in ExecStatus) return String is
+   function Status (Status : ExecStatus) return String is
       function PQresStat (stat : Interfaces.C.int) return chars_ptr;
       pragma Import (C, PQresStat, "PQresStatus");
    begin
       return CS.Value (PQresStat (ExecStatus'Pos (Status)));
    end Status;
 
-   function Status (Res : in Result) return String is
+   function Status (Res : Result) return String is
       Stat :  constant ExecStatus := Status (Res);
    begin
       return Status (Stat);
    end Status;
 
-   function Error (Res : in Result) return String is
+   function Error (Res : Result) return String is
       function PQresErr (Res : System.Address) return chars_ptr;
       pragma Import (C, PQresErr, "PQresultErrorMessage");
    begin
@@ -708,9 +683,9 @@ package body GNATCOLL.SQL.Postgres.Gnade is
 
    generic
       Accessor : C_Info;
-   function Info_Accessor (Res : in Result) return Integer;
+   function Info_Accessor (Res : Result) return Integer;
 
-   function  Info_Accessor (Res : in Result) return Integer is
+   function  Info_Accessor (Res : Result) return Integer is
    begin
       return Integer (Accessor.all (To_Addr (Res.Res)));
    end Info_Accessor;
@@ -748,8 +723,8 @@ package body GNATCOLL.SQL.Postgres.Gnade is
                                 C.int (Index)));
    end Field_Name;
 
-   procedure Field_Lookup (Res   : in Result;
-                           Name  : in String;
+   procedure Field_Lookup (Res   : Result;
+                           Name  : String;
                            Index : out Field_Index;
                            Found : out Boolean) is
       function PQfnumber (Res  : System.Address;
@@ -789,9 +764,9 @@ package body GNATCOLL.SQL.Postgres.Gnade is
       return PQftype (To_Addr (Res.Res), C.int (Index));
    end Field_Type;
 
-   procedure Value (Res     : in  Result;
-                    Tuple   : in  Tuple_Index;
-                    Field   : in  Field_Index;
+   procedure Value (Res     : Result;
+                    Tuple   : Tuple_Index;
+                    Field   : Field_Index;
                     Pointer : out System.Address)
    is
       function Cvt is new Ada.Unchecked_Conversion (chars_ptr,
@@ -934,21 +909,21 @@ package body GNATCOLL.SQL.Postgres.Gnade is
       end if;
    end Is_Null;
 
-   function Command_Status (Res : in Result) return String is
+   function Command_Status (Res : Result) return String is
       function PQcmdStatus (Res : System.Address) return chars_ptr;
       pragma Import (C, PQcmdStatus, "PQcmdStatus");
    begin
       return CS.Value (PQcmdStatus (To_Addr (Res.Res)));
    end Command_Status;
 
-   function Command_Tuples (Res : in Result) return String is
+   function Command_Tuples (Res : Result) return String is
       function PQcmdTuples (Res : System.Address) return chars_ptr;
       pragma Import (C, PQcmdTuples, "PQcmdTuples");
    begin
       return CS.Value (PQcmdTuples (To_Addr (Res.Res)));
    end Command_Tuples;
 
-   function Command_Tuples (Res : in Result) return Natural is
+   function Command_Tuples (Res : Result) return Natural is
       S : constant String := Command_Tuples (Res);
    begin
       if S = "" then
@@ -958,56 +933,32 @@ package body GNATCOLL.SQL.Postgres.Gnade is
       end if;
    end Command_Tuples;
 
-   function OID_Value (Res : in Result) return OID is
+   function OID_Value (Res : Result) return OID is
       function PQoidValue (Res : System.Address) return OID;
       pragma Import (C, PQoidValue, "PQoidValue");
    begin
       return PQoidValue (To_Addr (Res.Res));
    end OID_Value;
 
-   --  -----------------------------------------------------------------------
-
-   procedure Load_TypeInfo (DB  : in  Database'Class;
-                            Typ : in  TypeID := InvalidTypeID;
-                            R   : out TypeInfo)
-   is
-   begin
-      if Typ = InvalidTypeID then
-         Execute (R,
-                  DB, "SELECT * FROM pg_type");
-      else
-         Execute (R,
-                  DB, "SELECT * FROM pg_type WHERE OID=" & TypeID'Image (Typ));
-      end if;
-   end Load_TypeInfo;
-
-   function Value (Res        : TypeInfo;
-                   Tuple      : Tuple_Index := 0;
-                   Field_Name : String) return String
-   is
-   begin
-      return Value (Result (Res), Tuple, Field_Name);
-   end Value;
-
-   procedure Set_Non_Blocking (DB : in Database'Class) is
+   procedure Set_Non_Blocking (DB : Database'Class) is
    begin
       DB.Connection.SetNonBlocking;
    end Set_Non_Blocking;
 
-   function Is_Non_Blocking (DB : in Database'Class) return Boolean
+   function Is_Non_Blocking (DB : Database'Class) return Boolean
    is
    begin
       return DB.Connection.IsNonBlocking;
    end Is_Non_Blocking;
 
-   function Send_Query (DB    : in Database'Class;
-                        Query : in String) return Boolean
+   function Send_Query (DB    : Database'Class;
+                        Query : String) return Boolean
    is
    begin
       return DB.Connection.SendQuery (Query);
    end Send_Query;
 
-   procedure Get_Result (DB  :  in  Database'Class;
+   procedure Get_Result (DB  :  Database'Class;
                          Res :  out Result;
                          Done : out Boolean)
    is
@@ -1015,37 +966,37 @@ package body GNATCOLL.SQL.Postgres.Gnade is
       DB.Connection.GetResult (Res, Done);
    end Get_Result;
 
-   function Consume_Input (DB : in Database'Class) return Boolean
+   function Consume_Input (DB : Database'Class) return Boolean
    is
    begin
       return DB.Connection.ConsumeInput;
    end Consume_Input;
 
-   function Flush (DB : in Database'Class) return Boolean
+   function Flush (DB : Database'Class) return Boolean
    is
    begin
       return DB.Connection.Flush;
    end Flush;
 
-   function  Is_Busy (DB : in Database'Class) return Boolean
+   function  Is_Busy (DB : Database'Class) return Boolean
    is
    begin
       return DB.Connection.IsBusy;
    end Is_Busy;
 
-   function  Request_Cancel (DB : in Database'Class) return Boolean
+   function  Request_Cancel (DB : Database'Class) return Boolean
    is
    begin
       return DB.Connection.RequestCancel;
    end Request_Cancel;
 
-   function  Socket (DB : in Database'Class) return Interfaces.C.int
+   function  Socket (DB : Database'Class) return Interfaces.C.int
    is
    begin
       return DB.Connection.Socket;
    end Socket;
 
-   procedure Notifies (DB      : in  Database'Class;
+   procedure Notifies (DB      : Database'Class;
                        Message : out Notification;
                        Done    : out Boolean)
    is

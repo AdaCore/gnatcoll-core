@@ -35,6 +35,9 @@ private package GNATCOLL.SQL.Exec_Private is
    --  the DBMS must override this type, so that Cursor is not visibly
    --  tagged and users do not have to use unconstrained types in their code,
    --  thus allowing "Result : Cursor" declarations.
+   --  This type is wrapped by a refcounting record, so that the various
+   --  backends do not have to redo it themselves. They can just override
+   --  Finalize for the proper finalization of the cursor.
 
    function Is_Success (Self : DBMS_Cursor) return Boolean is abstract;
    --  Whether the corresponding query succeeded

@@ -72,6 +72,8 @@ package body GNATCOLL.SQL.Postgres.Builder is
          Connection_String : GNAT.Strings.String_Access;
          Postgres          : Database_Access;
       end record;
+   overriding procedure Close
+     (Connection : access Postgresql_Connection_Record);
    overriding function Connect_And_Execute
      (Connection  : access Postgresql_Connection_Record;
       Query       : String;
@@ -202,6 +204,17 @@ package body GNATCOLL.SQL.Postgres.Builder is
       return To_String (Str);
    end Get_Connection_String;
 
+   -----------
+   -- Close --
+   -----------
+
+   overriding procedure Close
+     (Connection : access Postgresql_Connection_Record) is
+   begin
+      --  Since we have a controlled type, we just have to deallocate memory
+      Unchecked_Free (Connection.Postgres);
+   end Close;
+
    -------------------------
    -- Connect_And_Execute --
    -------------------------
@@ -235,8 +248,7 @@ package body GNATCOLL.SQL.Postgres.Builder is
                when PGRES_NONFATAL_ERROR
                   | PGRES_FATAL_ERROR
                   | PGRES_EMPTY_QUERY =>
-                  Print_Warning
-                    (Connection, "Database warning: " & Error (Res.Res));
+                  null;
                when others =>
                   return Abstract_Cursor_Access (Res);
             end case;
@@ -287,7 +299,7 @@ package body GNATCOLL.SQL.Postgres.Builder is
       --  but with password obscured.
 
       if Status (Connection.Postgres.all) /= CONNECTION_OK then
-         Unchecked_Free (Connection.Postgres);
+         Close (Connection);
          Unchecked_Free (Res);
          Connection.Postgres := null;
          Print_Error
