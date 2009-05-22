@@ -686,6 +686,19 @@ package body GNATCOLL.SQL.Exec is
       end if;
    end Rows_Count;
 
+   --------------------
+   -- Processed_Rows --
+   --------------------
+
+   function Processed_Rows (Self : Cursor) return Natural is
+   begin
+      if Self.Res = null then
+         return 0;
+      else
+         return Processed_Rows (DBMS_Cursor'Class (Self.Res.all));
+      end if;
+   end Processed_Rows;
+
    -------------
    -- Has_Row --
    -------------

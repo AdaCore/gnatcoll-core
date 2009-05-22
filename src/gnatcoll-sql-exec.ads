@@ -312,9 +312,18 @@ package GNATCOLL.SQL.Exec is
 
    type Field_Index is new Natural;
 
+   function Processed_Rows (Self : Cursor) return Natural;
+   --  The number of rows that were returned so far by the cursor. Every time
+   --  you call Next, this is incremented by 1. If you looped until Has_Row
+   --  returned False, this gives you the total number of rows in the result
+   --  (which can not be computed without traversing all the results).
+   --  If the query you executed is a DELETE, INSERT or UPDATE, this returns
+   --  the number of rows modified by the query.
+
    function Rows_Count (Self : Cursor) return Natural;
-   --  The number of rows in the result, or that were impacted by a database
-   --  modification
+   --  Return total number of rows in result.
+   --  This might not be supported by all DBMS
+   --  ??? Should not be a primitive of Cursor, but of Random_Access_Cursor
 
    function Has_Row (Self : Cursor) return Boolean;
    --  Whether there is a row to process. Fetching all the results from a query

@@ -60,6 +60,12 @@ private package GNATCOLL.SQL.Exec_Private is
    --  Return the number of rows impacted (ie modified or returned) by the
    --  query.
 
+   function Processed_Rows (Self : DBMS_Cursor) return Natural is abstract;
+   --  Return the number of rows modified by a INSERT, DELETE or UPDATE.
+   --  Return the number of rows returned so far by calls to Next for a SELECT.
+   --  This isn't the same as Rows_Count, unless we have already iterated over
+   --  all results
+
    function Value
      (Self  : DBMS_Cursor;
       Field : Field_Index) return String is abstract;

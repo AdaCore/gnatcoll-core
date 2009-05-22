@@ -40,6 +40,8 @@ package body GNATCOLL.SQL.Postgres.Builder is
      (Self : Postgresql_Cursor) return Boolean;
    overriding procedure Finalize (Result : in out Postgresql_Cursor);
    overriding function Rows_Count (Self : Postgresql_Cursor) return Natural;
+   overriding function Processed_Rows
+     (Self : Postgresql_Cursor) return Natural;
    overriding function Value
      (Self  : Postgresql_Cursor;
       Field : GNATCOLL.SQL.Exec.Field_Index) return String;
@@ -367,10 +369,20 @@ package body GNATCOLL.SQL.Postgres.Builder is
    -- Rows_Count --
    ----------------
 
-   function Rows_Count (Self : Postgresql_Cursor) return Natural is
+   overriding function Rows_Count (Self : Postgresql_Cursor) return Natural is
    begin
       return Self.Rows;
    end Rows_Count;
+
+   --------------------
+   -- Processed_Rows --
+   --------------------
+
+   overriding function Processed_Rows
+     (Self : Postgresql_Cursor) return Natural is
+   begin
+      return Self.Rows;
+   end Processed_Rows;
 
    -----------
    -- Value --
