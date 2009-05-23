@@ -25,7 +25,7 @@ with System;
 
 package body GNATCOLL.SQL.Sqlite.Builder is
 
-   type Sqlite_Cursor is new DBMS_Cursor with record
+   type Sqlite_Cursor is new DBMS_Forward_Cursor with record
       Stmt           : Statement;
       Processed_Rows : Natural := 0;
       Last_Status    : Result_Codes;  --  Last status of Step
@@ -289,7 +289,7 @@ package body GNATCOLL.SQL.Sqlite.Builder is
    is
       pragma Unreferenced (Self);
       Q        : SQL_Query;
-      Res2     : Cursor;
+      Res2     : Forward_Cursor;
    begin
       --  Do not depend on OIDs, since the table might not have them (by
       --  default, recent versions of Sqlite disable them. Instead, we use
@@ -336,7 +336,7 @@ package body GNATCOLL.SQL.Sqlite.Builder is
      (Connection : access Sqlite_Connection_Record;
       Callback   : access procedure (Name, Description : String))
    is
-      R     : Cursor;
+      R     : Forward_Cursor;
    begin
       Execute (Connection, R, "SELECT name FROM sqlite_master ORDER BY name");
       while Has_Row (R) loop
@@ -381,7 +381,7 @@ package body GNATCOLL.SQL.Sqlite.Builder is
          Index       : Natural;
          Description : String))
    is
-      R           : Cursor;
+      R           : Forward_Cursor;
       Index       : Natural := 0;
       Paren_Count : Natural;
    begin

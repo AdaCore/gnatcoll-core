@@ -90,8 +90,8 @@ package GNATCOLL.SQL.Exec is
    --  done automatically when calling Execute (see below). This can however be
    --  used to ensure that the database works properly.
 
-   type Cursor is tagged private;
-   No_Element : constant Cursor;
+   type Forward_Cursor is tagged private;
+   No_Element : constant Forward_Cursor;
    --  A cursor that iterates over all rows of the result of an SQL query. A
    --  single row can be queried at a time, and there is no possibility to go
    --  back to a previous row (since not all DBMS backends support this).
@@ -101,8 +101,9 @@ package GNATCOLL.SQL.Exec is
    --  applications (an example is to add an Element primitive operation which
    --  converts the current row into a specific Ada record for ease of use)
 
-   type Abstract_DBMS_Cursor is abstract tagged private;
-   type Abstract_Cursor_Access is access all Abstract_DBMS_Cursor'Class;
+   type Abstract_DBMS_Forward_Cursor is abstract tagged private;
+   type Abstract_Cursor_Access is
+     access all Abstract_DBMS_Forward_Cursor'Class;
    --  Internal contents of a cursor.
    --  Instead of overriding Cursor directly, the support packages for the DBMS
    --  must override this type, so users do not have to use unconstrained types
@@ -112,12 +113,12 @@ package GNATCOLL.SQL.Exec is
 
    procedure Execute
      (Connection : access Database_Connection_Record'Class;
-      Result     : out Cursor;
+      Result     : out Forward_Cursor;
       Query      : String;
       Use_Cache  : Boolean := False);
    procedure Execute
      (Connection : access Database_Connection_Record'Class;
-      Result     : out Cursor;
+      Result     : out Forward_Cursor;
       Query      : GNATCOLL.SQL.SQL_Query;
       Use_Cache  : Boolean := False);
    procedure Execute
@@ -314,7 +315,7 @@ package GNATCOLL.SQL.Exec is
 
    type Field_Index is new Natural;
 
-   function Processed_Rows (Self : Cursor) return Natural;
+   function Processed_Rows (Self : Forward_Cursor) return Natural;
    --  The number of rows that were returned so far by the cursor. Every time
    --  you call Next, this is incremented by 1. If you looped until Has_Row
    --  returned False, this gives you the total number of rows in the result
@@ -322,12 +323,12 @@ package GNATCOLL.SQL.Exec is
    --  If the query you executed is a DELETE, INSERT or UPDATE, this returns
    --  the number of rows modified by the query.
 
-   function Rows_Count (Self : Cursor) return Natural;
+   function Rows_Count (Self : Forward_Cursor) return Natural;
    --  Return total number of rows in result.
    --  This might not be supported by all DBMS
    --  ??? Should not be a primitive of Cursor, but of Random_Access_Cursor
 
-   function Has_Row (Self : Cursor) return Boolean;
+   function Has_Row (Self : Forward_Cursor) return Boolean;
    --  Whether there is a row to process. Fetching all the results from a query
    --  is done in a loop similar to:
    --      Cursor := Execute (...)
@@ -336,30 +337,32 @@ package GNATCOLL.SQL.Exec is
    --         Next (Cursor);
    --      end loop;
 
-   procedure Next (Self : in out Cursor);
+   procedure Next (Self : in out Forward_Cursor);
    --  Moves to the next row of results. This is not implemented as a function,
    --  since once the cursor was moved to the next field, there is no way to
    --  move back to the previous row.
 
-   function Value (Self : Cursor; Field : Field_Index) return String;
-   function Boolean_Value (Self : Cursor; Field : Field_Index) return Boolean;
+   function Value (Self : Forward_Cursor; Field : Field_Index) return String;
+   function Boolean_Value
+     (Self : Forward_Cursor; Field : Field_Index) return Boolean;
    function Integer_Value
-     (Self    : Cursor;
+     (Self    : Forward_Cursor;
       Field   : Field_Index;
       Default : Integer := Integer'First) return Integer;
-   function Float_Value (Self : Cursor; Field : Field_Index) return Float;
+   function Float_Value
+     (Self : Forward_Cursor; Field : Field_Index) return Float;
    function Time_Value
-     (Self  : Cursor; Field : Field_Index) return Ada.Calendar.Time;
+     (Self  : Forward_Cursor; Field : Field_Index) return Ada.Calendar.Time;
    --  Return a specific cell, converted to the appropriate format
 
    function Is_Null
-     (Self  : Cursor;
+     (Self  : Forward_Cursor;
       Field : Field_Index) return Boolean;
    --  True if the corresponding cell is not set
 
    function Last_Id
      (Connection : access Database_Connection_Record'Class;
-      Self       : Cursor;
+      Self       : Forward_Cursor;
       Field      : SQL_Field_Integer) return Integer;
    --  Return the value set for field in the last INSERT command on that
    --  connection.
@@ -370,10 +373,11 @@ package GNATCOLL.SQL.Exec is
    --  Depending on the backend, this id might be computed through a sql query,
    --  so it is better to cache it if you need to reuse it several times.
 
-   function Field_Count (Self : Cursor) return Field_Index;
+   function Field_Count (Self : Forward_Cursor) return Field_Index;
    --  The number of fields per row in Res
 
-   function Field_Name (Self : Cursor; Field : Field_Index) return String;
+   function Field_Name
+     (Self : Forward_Cursor; Field : Field_Index) return String;
    --  The name of a specific field in a row of Res
 
    --------------------------------------------
@@ -451,17 +455,17 @@ private
       Error_Msg      : GNAT.Strings.String_Access;
    end record;
 
-   type Abstract_DBMS_Cursor is abstract tagged record
+   type Abstract_DBMS_Forward_Cursor is abstract tagged record
       Refcount : Natural := 1;
    end record;
 
-   type Cursor is new Ada.Finalization.Controlled with record
+   type Forward_Cursor is new Ada.Finalization.Controlled with record
       Res : Abstract_Cursor_Access;
    end record;
-   overriding procedure Adjust   (Self : in out Cursor);
-   overriding procedure Finalize (Self : in out Cursor);
+   overriding procedure Adjust   (Self : in out Forward_Cursor);
+   overriding procedure Finalize (Self : in out Forward_Cursor);
 
-   No_Element : constant Cursor :=
+   No_Element : constant Forward_Cursor :=
      (Ada.Finalization.Controlled with null);
 
 end GNATCOLL.SQL.Exec;

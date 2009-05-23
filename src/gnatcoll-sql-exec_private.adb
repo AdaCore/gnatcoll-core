@@ -36,10 +36,10 @@ package body GNATCOLL.SQL.Exec_Private is
    -------------------
 
    function Boolean_Value
-     (Self  : DBMS_Cursor;
+     (Self  : DBMS_Forward_Cursor;
       Field : Field_Index) return Boolean is
    begin
-      return Boolean'Value (Value (DBMS_Cursor'Class (Self), Field));
+      return Boolean'Value (Value (DBMS_Forward_Cursor'Class (Self), Field));
    end Boolean_Value;
 
    -------------------
@@ -47,10 +47,10 @@ package body GNATCOLL.SQL.Exec_Private is
    -------------------
 
    function Integer_Value
-     (Self  : DBMS_Cursor;
+     (Self  : DBMS_Forward_Cursor;
       Field : Field_Index) return Integer is
    begin
-      return Integer'Value (Value (DBMS_Cursor'Class (Self), Field));
+      return Integer'Value (Value (DBMS_Forward_Cursor'Class (Self), Field));
    end Integer_Value;
 
    -----------------
@@ -58,10 +58,10 @@ package body GNATCOLL.SQL.Exec_Private is
    -----------------
 
    function Float_Value
-     (Self  : DBMS_Cursor;
+     (Self  : DBMS_Forward_Cursor;
       Field : Field_Index) return Float is
    begin
-      return Float'Value (Value (DBMS_Cursor'Class (Self), Field));
+      return Float'Value (Value (DBMS_Forward_Cursor'Class (Self), Field));
    end Float_Value;
 
    ----------------
@@ -69,10 +69,10 @@ package body GNATCOLL.SQL.Exec_Private is
    ----------------
 
    function Time_Value
-     (Self  : DBMS_Cursor;
+     (Self  : DBMS_Forward_Cursor;
       Field : Field_Index) return Ada.Calendar.Time
    is
-      Val : constant String := Value (DBMS_Cursor'Class (Self), Field);
+      Val : constant String := Value (DBMS_Forward_Cursor'Class (Self), Field);
    begin
       if Val = "" then
          return No_Time;

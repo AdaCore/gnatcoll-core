@@ -25,7 +25,7 @@ with GNATCOLL.SQL.Exec_Private;    use GNATCOLL.SQL.Exec_Private;
 
 package body GNATCOLL.SQL.Postgres.Builder is
 
-   type Postgresql_Cursor is new DBMS_Cursor with record
+   type Postgresql_Cursor is new DBMS_Forward_Cursor with record
       Res     : GNATCOLL.SQL.Postgres.Gnade.Result;
       Rows    : Natural := 0;
       Current : GNATCOLL.SQL.Postgres.Gnade.Tuple_Index := 0;
@@ -431,7 +431,7 @@ package body GNATCOLL.SQL.Postgres.Builder is
    is
       pragma Unreferenced (Self);
       Q        : SQL_Query;
-      Res2     : Cursor;
+      Res2     : Forward_Cursor;
    begin
       --  Do not depend on OIDs, since the table might not have them (by
       --  default, recent versions of postgreSQL disable them. Instead, we use
@@ -479,7 +479,7 @@ package body GNATCOLL.SQL.Postgres.Builder is
      (Connection : access Postgresql_Connection_Record;
       Callback   : access procedure (Name, Description : String))
    is
-      R     : Cursor;
+      R     : Forward_Cursor;
    begin
       Execute
         (Connection, R,
@@ -513,7 +513,7 @@ package body GNATCOLL.SQL.Postgres.Builder is
          Index       : Natural;
          Description : String))
    is
-      R : Cursor;
+      R : Forward_Cursor;
    begin
       Execute
         (Connection, R,
@@ -555,7 +555,7 @@ package body GNATCOLL.SQL.Postgres.Builder is
          Foreign_Table     : String;
          Foreign_Attribute : Integer))
    is
-      R     : Cursor;
+      R     : Forward_Cursor;
       Index : Natural := 1;
    begin
       Execute

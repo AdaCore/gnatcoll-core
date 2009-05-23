@@ -3498,7 +3498,7 @@ following example:
 
 @CODESAMPLE{
 @b{declare}@NL{}
-   R : Cursor;@NL{}
+   R : Forward_Cursor;@NL{}
 @b{begin}@NL{}
    Execute (Connection => DB, Result => R, Query => Q);
 @b{end};}

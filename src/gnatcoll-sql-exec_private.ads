@@ -29,7 +29,8 @@ with System;
 
 private package GNATCOLL.SQL.Exec_Private is
 
-   type DBMS_Cursor is abstract new Abstract_DBMS_Cursor with private;
+   type DBMS_Forward_Cursor is
+      abstract new Abstract_DBMS_Forward_Cursor with private;
    --  Internal contents of a cursor.
    --  Instead of overriding Cursor directly, the support packages for
    --  the DBMS must override this type, so that Cursor is not visibly
@@ -39,61 +40,62 @@ private package GNATCOLL.SQL.Exec_Private is
    --  backends do not have to redo it themselves. They can just override
    --  Finalize for the proper finalization of the cursor.
 
-   function Is_Success (Self : DBMS_Cursor) return Boolean is abstract;
+   function Is_Success (Self : DBMS_Forward_Cursor) return Boolean is abstract;
    --  Whether the corresponding query succeeded
 
-   function Has_Row (Self : DBMS_Cursor) return Boolean is abstract;
-   procedure Next   (Self : in out DBMS_Cursor) is abstract;
+   function Has_Row (Self : DBMS_Forward_Cursor) return Boolean is abstract;
+   procedure Next   (Self : in out DBMS_Forward_Cursor) is abstract;
    --  See similar subprograms in gnatcoll-sql-exec.ads
 
-   function Error_Msg (Self : DBMS_Cursor) return String is abstract;
+   function Error_Msg (Self : DBMS_Forward_Cursor) return String is abstract;
    --  Return the error message associated with the query
 
-   function Status (Self : DBMS_Cursor) return String is abstract;
+   function Status (Self : DBMS_Forward_Cursor) return String is abstract;
    --  Return a string describing the status of the query. This is used for
    --  logging purposes.
 
-   procedure Finalize (Self : in out DBMS_Cursor) is abstract;
+   procedure Finalize (Self : in out DBMS_Forward_Cursor) is abstract;
    --  Free the memory used by Self
 
-   function Rows_Count (Self : DBMS_Cursor) return Natural is abstract;
+   function Rows_Count (Self : DBMS_Forward_Cursor) return Natural is abstract;
    --  Return the number of rows impacted (ie modified or returned) by the
    --  query.
 
-   function Processed_Rows (Self : DBMS_Cursor) return Natural is abstract;
+   function Processed_Rows
+     (Self : DBMS_Forward_Cursor) return Natural is abstract;
    --  Return the number of rows modified by a INSERT, DELETE or UPDATE.
    --  Return the number of rows returned so far by calls to Next for a SELECT.
    --  This isn't the same as Rows_Count, unless we have already iterated over
    --  all results
 
    function Value
-     (Self  : DBMS_Cursor;
+     (Self  : DBMS_Forward_Cursor;
       Field : Field_Index) return String is abstract;
    function Boolean_Value
-     (Self  : DBMS_Cursor;
+     (Self  : DBMS_Forward_Cursor;
       Field : Field_Index) return Boolean;
    function Integer_Value
-     (Self  : DBMS_Cursor;
+     (Self  : DBMS_Forward_Cursor;
       Field : Field_Index) return Integer;
    function Float_Value
-     (Self  : DBMS_Cursor;
+     (Self  : DBMS_Forward_Cursor;
       Field : Field_Index) return Float;
    function Time_Value
-     (Self  : DBMS_Cursor;
+     (Self  : DBMS_Forward_Cursor;
       Field : Field_Index) return Ada.Calendar.Time;
    --  Default implementation is to assume the DBMS only returns strings, and
    --  we convert them to the appropriate Ada type.
 
    function Is_Null
-     (Self  : DBMS_Cursor;
+     (Self  : DBMS_Forward_Cursor;
       Field : Field_Index) return Boolean is abstract;
    function Last_Id
-     (Self       : DBMS_Cursor;
+     (Self       : DBMS_Forward_Cursor;
       Connection : access Database_Connection_Record'Class;
       Field      : SQL_Field_Integer) return Integer is abstract;
-   function Field_Count (Self : DBMS_Cursor) return Field_Index is abstract;
+   function Field_Count (Self : DBMS_Forward_Cursor) return Field_Index is abstract;
    function Field_Name
-     (Self : DBMS_Cursor; Field : Exec.Field_Index) return String
+     (Self : DBMS_Forward_Cursor; Field : Exec.Field_Index) return String
      is abstract;
    --  See matching subprograms for Query_Result. The default implementation of
    --  the subprograms converts from a string to the appropriate type.
@@ -105,7 +107,7 @@ private
    type DBMS_Connection is
       abstract new Database_Connection_Record with null record;
 
-   type DBMS_Cursor is abstract
-      new GNATCOLL.SQL.Exec.Abstract_DBMS_Cursor with null record;
+   type DBMS_Forward_Cursor is abstract
+      new GNATCOLL.SQL.Exec.Abstract_DBMS_Forward_Cursor with null record;
 
 end GNATCOLL.SQL.Exec_Private;

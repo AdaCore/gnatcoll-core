@@ -511,7 +511,7 @@ procedure GNATCOLL_Db2Ada is
       Table, Id, Name, Prefix, Base_Type : String)
    is
       Enum : Dumped_Enums;
-      R    : GNATCOLL.SQL.Exec.Cursor;
+      R    : GNATCOLL.SQL.Exec.Forward_Cursor;
    begin
       Enum.Table := To_Unbounded_String (Table);
       Enum.Id    := To_Unbounded_String (Id);
@@ -547,7 +547,7 @@ procedure GNATCOLL_Db2Ada is
      (DB : access Database_Connection_Record'Class;
       Name, Table, Field, Where, Comment : String)
    is
-      R   : GNATCOLL.SQL.Exec.Cursor;
+      R   : GNATCOLL.SQL.Exec.Forward_Cursor;
       Var : Dumped_Vars;
    begin
       Execute
