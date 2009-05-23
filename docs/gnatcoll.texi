@@ -225,6 +225,7 @@ Database interface
 * Writing queries::
 * Executing queries::
 * Getting results::
+* Writing your own cursors::
 * Query logs::
 * Tasks and databases::
 
@@ -3087,6 +3088,7 @@ history.
 * Writing queries::
 * Executing queries::
 * Getting results::
+* Writing your own cursors::
 * Query logs::
 * Tasks and databases::
 @end menu
@@ -3603,6 +3605,122 @@ memory at any point in time.
 For each row, we then call one of the @code{Value} or @code{*Value}
 functions which return the value in a specific row and a specific
 column.
+
+@c -----------------------------------------------------------------------
+@node Writing your own cursors
+@section Writing your own cursors
+@c -----------------------------------------------------------------------
+@noindent
+
+The cursor interface we just saw is low-level, in that you get access to
+each of the fields one by one. Often, when you design your own application,
+it is better to abstract the database interface layer as much as possible.
+As a result, it is often better to create record or other Ada types to
+represent the contents of a row.
+
+Fortunately, this can be done very easily based on the low-level interface
+provided by GNATCOLL. Here is a code example that shows how this can be
+done.
+
+@CODESAMPLE{
+  @b{type} My_Row @b{is record}@NL{}
+     Id   : Integer;@NL{}
+     Name : Unbounded_String;@NL{}
+  @b{end record;}@NL{}
+@NL{}
+  @b{type} My_Cursor @b{is new} Forward_Cursor @b{with null record};@NL{}
+  @b{function} Element (Self : My_Cursor) @b{return} My_Row;@NL{}
+  @b{function} Do_Query @b{return} My_Cursor;@NL{}
+}
+
+The idea is that you create a function that does the query for you (based
+on some parameters that are not show here), and then returns a cursor over
+the resulting set of rows. For each row, you can use the @code{Element}
+function to get an Ada record for easier manipulation.
+
+Let's first see how these types would be used in practice:
+
+@CODESAMPLE{
+  @b{declare}@NL{}
+    C : My_Cursor := Do_Query (...);@NL{}
+  @b{begin}@NL{}
+    @b{while} Has_Row (C) @b{loop}@NL{}
+       Put_Line ("Id = " & Element (C).Id);@NL{}
+       Next (C);@NL{}
+    @b{end loop};@NL{}
+  @b{end};}
+
+So the loop itself is the same as before, except we no longer access each of
+the individual fields directly. This means that if the query changes to
+return more fields (or the same fields in a differente order for instance),
+the code in your application does not need to change.
+
+The specific implementation of the subprograms could be similar to the
+following subprograms (we do not detail the writing of the SQL query itself,
+which of course is specific to your application)
+
+@CODESAMPLE{
+  @b{function} Do_Query @b{return} My_Cursor @b{is}@NL{}
+     Q : constant SQL_Query := ....;@NL{}
+     R : My_Cursor;@NL{}
+  @b{begin}@NL{}
+     Execute (DB, R, Q);@NL{}
+     return R;@NL{}
+  @b{end} Do_Query;@NL{}
+@NL{}
+  @b{function} Element (Self : My_Cursor) @b{return} My_Row @b{is}@NL{}
+  @b{begin}@NL{}
+    @b{return} My_Row'@NL{}
+       (Id => Integer_Value (Self, 0),@NL{}
+        Name => To_Unbounded_String (Value (Self, 1)));@NL{}
+  @b{end} Element;
+}
+
+There is one more complex case though. It might happen that an element
+needs access to several rows to fill the Ada record. For instance, if we
+are writing a CRM application and query the contacts and the companies they
+work for, it is possible that a contact works for several companies. The
+result of the SQL query would then look like this:
+
+@CODESAMPLE{
+   contact_id | company_id@NL{}
+       1      |    100    @NL{}
+       1      |    101    @NL{}
+       2      |    100    @NL{}
+}
+
+The sample code shown above will not work in this case, since Element is
+not allowed to modify the cursor. In such a case, we need to take a slightly
+different approach.
+
+@CODESAMPLE{
+    @b{type} My_Cursor @b{is new} Forward_Cursor @b{with null record};@NL{}
+    @b{function} Do_Query @b{return} My_Cursor; @i{--  as before}@NL{}
+    @b{procedure} Element_And_Next@NL{}
+       (Self : @b{in out} My_Cursor; Value : @b{out} My_Row);@NL{}
+}
+
+where @code{Element_And_Next} will fill Value and call Next as many times
+as needed. On exit, the cursor is left on the next row to be processed. The
+usage then becomes
+
+@CODESAMPLE{
+   @b{while} Has_Row (R) @b{loop}@NL{}
+      Element_And_Next (R, Value);@NL{}
+   @b{end loop};@NL{}
+}
+
+To prevent the user from using Next incorrectly, you should probably override
+@code{Next} with a procedure that does nothing (or raises a Program_Error
+maybe). Make sure that in @code{Element_And_Next} you are calling the
+inherited function, not the one you have overridden, though.
+
+There is still one more catch. The user might depend on the two subprograms
+@code{Rows_Count} and @code{Processed_Rows} to find out how many rows there
+were in the query. In practice, he will likely be interested in the number
+of distinct contacts in the tables (2 in our example) rather than the number
+of rows in the result (3 in the example). You thus need to also override
+those two subprograms to return correct values.
 
 @c -----------------------------------------------------------------------
 @node Query logs
