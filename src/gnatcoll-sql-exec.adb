@@ -734,18 +734,6 @@ package body GNATCOLL.SQL.Exec is
       return Value (DBMS_Cursor'Class (Self.Res.all), Field);
    end Value;
 
-   -------------------
-   -- Address_Value --
-   -------------------
-
-   function Address_Value
-     (Self  : Cursor;
-      Field : Field_Index) return System.Address
-   is
-   begin
-      return Address_Value (DBMS_Cursor'Class (Self.Res.all), Field);
-   end Address_Value;
-
    -----------
    -- Value --
    -----------

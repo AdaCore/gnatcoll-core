@@ -28,8 +28,9 @@ endif
 ifeq (${WITH_GTK},yes)
 	${MAKE} -C src -f Makefile.gtk
 endif
-ifeq (${WITH_POSTGRES},yes)
 	${MAKE} -C src -f Makefile.postgres
+	${MAKE} -C src -f Makefile.sqlite
+ifneq ($(subst no,,${WITH_SQLITE}${WITH_POSTGRES}),)
 	${MAKE} -C src -f Makefile.tools
 endif
 ifeq (${WITH_GMP},yes)
@@ -67,8 +68,9 @@ endif
 ifeq (${WITH_GTK},yes)
 	${MAKE} -C src -f Makefile.gtk install
 endif
-ifeq (${WITH_POSTGRES},yes)
 	${MAKE} -C src -f Makefile.postgres install
+	${MAKE} -C src -f Makefile.sqlite install
+ifneq ($(subst no,,${WITH_SQLITE}${WITH_POSTGRES}),)
 	${MAKE} -C src -f Makefile.tools install
 endif
 ifeq (${WITH_GMP},yes)
@@ -93,6 +95,8 @@ ifeq (${WITH_GTK},yes)
 endif
 	${MAKE} LIBRARY_TYPE=relocatable -C src -f Makefile.postgres $@
 	${MAKE} LIBRARY_TYPE=static     -C src -f Makefile.postgres $@
+	${MAKE} LIBRARY_TYPE=relocatable -C src -f Makefile.sqlite $@
+	${MAKE} LIBRARY_TYPE=static     -C src -f Makefile.sqlite $@
 	${MAKE} LIBRARY_TYPE=relocatable -C src -f Makefile.gmp $@
 	${MAKE} LIBRARY_TYPE=static     -C src -f Makefile.gmp $@
 	${MAKE} LIBRARY_TYPE=relocatable -C src -f Makefile.tools $@

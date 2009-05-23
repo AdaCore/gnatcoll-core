@@ -139,6 +139,51 @@ AC_HELP_STRING(
 ])
 
 #############################################################
+# Checking for sqlite
+# This checks whether sqlite is installed on the system. It can
+# be disabled with
+#    -with-sqlite=no
+# The following variables are exported by configure:
+#    @WITH_SQLITE#: whether sqlite was detected
+#    @PATH_LIBSQLITE@: path to libsqlite3
+#############################################################
+
+AC_DEFUN(AM_PATH_SQLITE,
+[
+   AC_ARG_WITH(sqlite,
+     [AC_HELP_STRING(
+        [--with-sqlite=<path>],
+        [Specify the full path to the sqlite installation])
+AC_HELP_STRING(
+        [--without-sqlite],
+        [Disable sqlite support])],
+     SQLITE_PATH_WITH=$withval,
+     SQLITE_PATH_WITH=yes)
+
+   PATH_LIBSQLITE=""
+   if test x"$SQLITE_PATH_WITH" = xno ; then
+      AC_MSG_CHECKING(for sqlite)
+      AC_MSG_RESULT(no, use --with-sqlite if needed)
+      WITH_SQLITE=no
+
+   else
+     if test x"$SQLITE_PATH_WITH" = xyes ; then
+       AC_CHECK_LIB(sqlite3, sqlite3_open,
+                    [WITH_SQLITE=yes],
+                    [WITH_SQLITE=no],
+                    $SQLITE_CFLAGS $SQLITE_LIBS)
+     else
+       PATH_LIBSQLITE="-L$SQLITE_PATH_WITH"
+       WITH_SQLITE=yes
+     fi
+   fi
+   
+   AC_SUBST(WITH_SQLITE)
+   AC_SUBST(PATH_LIBSQLITE)
+
+])
+
+#############################################################
 # Checking for gmp
 # This checks whether the gnu multiprecision library is available.
 # The result can be forced by using the

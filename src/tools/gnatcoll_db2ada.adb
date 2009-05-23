@@ -30,6 +30,7 @@ with GNAT.Command_Line;          use GNAT.Command_Line;
 with GNAT.OS_Lib;                use GNAT.OS_Lib;
 with GNATCOLL.SQL.Exec;          use GNATCOLL.SQL, GNATCOLL.SQL.Exec;
 with GNATCOLL.SQL.Postgres;      use GNATCOLL.SQL.Postgres;
+with GNATCOLL.SQL.Sqlite;        use GNATCOLL.SQL.Sqlite;
 with GNATCOLL.Utils;             use GNATCOLL.Utils;
 
 procedure GNATCOLL_Db2Ada is
@@ -186,50 +187,48 @@ procedure GNATCOLL_Db2Ada is
       Table, Attr : String;
       Descr       : in out Attribute_Description)
    is
+      Typ    : constant String := To_Lower (SQL_Type);
       C      : Enumeration_Lists.Cursor := First (Enumerations);
       Enum   : Dumped_Enums;
    begin
-      if SQL_Type = "boolean" then
+      if Typ = "boolean" then
          Descr.Field_Type := To_Unbounded_String ("Boolean");
          Descr.Ada_Type   := To_Unbounded_String ("Boolean");
          Descr.Value_Func := To_Unbounded_String ("Boolean_Value");
 
-      elsif SQL_Type = "text"
-        or else (SQL_Type'Length >= 9
-                 and then SQL_Type (SQL_Type'First .. SQL_Type'First + 8) =
-                   "character")
+      elsif Typ = "text"
+        or else (Typ'Length >= 9
+                 and then Typ (Typ'First .. Typ'First + 8) = "character")
       then
          Descr.Field_Type := To_Unbounded_String ("Text");
          Descr.Ada_Type   := To_Unbounded_String ("String");
          Descr.Value_Func := To_Unbounded_String ("Value");
 
-      elsif SQL_Type = "integer"
-        or else SQL_Type = "smallint"
-        or else SQL_Type = "oid"
-        or else (SQL_Type'Length >= 7
-                 and then SQL_Type (SQL_Type'First .. SQL_Type'First + 6) =
-                   "numeric")
+      elsif Typ = "integer"
+        or else Typ = "smallint"
+        or else Typ = "oid"
+        or else (Typ'Length >= 7
+                 and then Typ (Typ'First .. Typ'First + 6) = "numeric")
       then
          Descr.Field_Type := To_Unbounded_String ("Integer");
          Descr.Ada_Type   := To_Unbounded_String ("Integer");
          Descr.Value_Func := To_Unbounded_String ("Integer_Value");
 
-      elsif SQL_Type = "date"
-        or else SQL_Type = "timestamp without time zone"
-        or else SQL_Type = "timestamp with time zone"
+      elsif Typ = "date"
+        or else Typ = "timestamp without time zone"
+        or else Typ = "timestamp with time zone"
       then
          Descr.Field_Type := To_Unbounded_String ("Time");
          Descr.Ada_Type   := To_Unbounded_String ("Ada.Calendar.Time");
          Descr.Value_Func := To_Unbounded_String ("Time_Value");
 
-      elsif SQL_Type = "double precision" then
+      elsif Typ = "double precision" then
          Descr.Field_Type := To_Unbounded_String ("Float");
          Descr.Ada_Type   := To_Unbounded_String ("Float");
          Descr.Value_Func := To_Unbounded_String ("Float_Value");
 
       else
-         Put_Line (Standard_Error,
-                   "Don't know how to convert type " & SQL_Type);
+         Put_Line (Standard_Error, "Don't know how to convert type " & Typ);
          Descr.Field_Type := To_Unbounded_String ("");
          Descr.Ada_Type   := To_Unbounded_String ("");
          Descr.Value_Func := To_Unbounded_String ("");
@@ -428,9 +427,9 @@ procedure GNATCOLL_Db2Ada is
       DB_Type   : GNAT.OS_Lib.String_Access := new String'(DBMS_Postgresql);
    begin
       loop
-         case Getopt ("dbhost: h dbname: dbuser: dbpasswd: enum: var:"
-                      & " dbtype: query:") is
-            when 'h' =>
+         case Getopt ("dbhost= h -help dbname= dbuser= dbpasswd= enum= var="
+                      & " dbtype= query=") is
+            when 'h' | '-' =>
                Put_Line
                  ("-dbhost <host>: host on which the database runs");
                Put_Line ("-dbname <name>: name of the database");
@@ -762,7 +761,16 @@ procedure GNATCOLL_Db2Ada is
 
 begin
    Get_Database_Connection (DB_Descr, Enums, Vars);
-   Connection := Build_Postgres_Connection;
+
+   if Get_DBMS (DB_Descr) = DBMS_Postgresql then
+      Connection := Build_Postgres_Connection;
+   elsif Get_DBMS (DB_Descr) = DBMS_Sqlite then
+      Connection := Build_Sqlite_Connection;
+   else
+      Put_Line ("Unknown dbtype: " & Get_DBMS (DB_Descr));
+      return;
+   end if;
+
    Reset_Connection (DB_Descr, Connection);
 
    Dump_Tables (Connection, Enums, Vars);

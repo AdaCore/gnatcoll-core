@@ -3105,7 +3105,7 @@ you are writing things very carefully, the interpretation of your queries
 might be different from one system to the next.
 
 However, the Ada code should remain untouched if you change the engine.
-Various engines are supported out of the box (PostgreSQL and MySQL),
+Various engines are supported out of the box (PostgreSQL and Sqlite),
 although new ones can be added by overriding the appropriate SQL type
 (@code{Database_Connection}). When you compile @value{gnatcoll}, the
 build scripts will try and detect what systems are installed on your
@@ -3127,6 +3127,8 @@ is
 @b{begin}@NL{}
    @b{if} DBMS = DBMS_Postgresql @b{then}@NL{}
       @b{return} GNATCOLL.SQL.Postgres.Build_Postgres_Connection;@NL{}
+   @b{elsif} DBMS = DBMS_Sqlite @b{then}@NL{}
+      @b{return} GNATCOLL.SQL.Sqlite.Build_Sqlite;@NL{}
    @b{else}@NL{}
       @b{return null};@NL{}
    @b{end if};@NL{}
@@ -3496,9 +3498,9 @@ following example:
 
 @CODESAMPLE{
 @b{declare}@NL{}
-   R : Query_Result;@NL{}
+   R : Cursor;@NL{}
 @b{begin}@NL{}
-   Execute (Connection => DB, R => R, Query => Q);
+   Execute (Connection => DB, Result => R, Query => Q);
 @b{end};}
 
 This reuses the connection we have established previously (@code{DB}),
@@ -3586,17 +3588,19 @@ examine the rows that were returned by the database server. This is done
 in a loop, as in
 
 @CODESAMPLE{
-@b{for} T @b{in} 0 .. Tuple_Count (R) - 1 @b{loop}@NL{}
-    Put_Line (@i{"Max priority="} & Integer_Value (R, T, 0)'Img@NL{}
-             & @i{" for category="} & Value (R, T, 1));
+@b{while} Has_Row (R) @b{loop}@NL{}
+    Put_Line (@i{"Max priority="} & Integer_Value (R, 0)'Img@NL{}
+             & @i{" for category="} & Value (R, 1));@NL{}
+    Next (R);@NL{}
 @b{end loop};}
 
-This interface is strongly inspired by the C API that PostgreSQL provides
-and the corresponding Ada binding proposed by the GNADE library.
+You can only read one row at a time, and as soon as you have moved to the
+next row, there is no way to access a previously fetched row. This is the
+greatest common denominator between the various database systems. In
+particular, it proves efficient, since only one row needs to be kept in
+memory at any point in time.
 
-In this example, we see that @code{Tuple_Count} returns the number of
-rows in the result. Such rows are counted from 0 (can't ignore the C
-language...). We then call one of the @code{Value} or @code{*Value}
+For each row, we then call one of the @code{Value} or @code{*Value}
 functions which return the value in a specific row and a specific
 column.
 

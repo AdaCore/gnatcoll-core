@@ -45,9 +45,6 @@ package body GNATCOLL.SQL.Postgres.Builder is
    overriding function Value
      (Self  : Postgresql_Cursor;
       Field : GNATCOLL.SQL.Exec.Field_Index) return String;
-   overriding function Address_Value
-     (Self  : Postgresql_Cursor;
-      Field : GNATCOLL.SQL.Exec.Field_Index) return System.Address;
    overriding function Boolean_Value
      (Self  : Postgresql_Cursor;
       Field : GNATCOLL.SQL.Exec.Field_Index) return Boolean;
@@ -408,23 +405,6 @@ package body GNATCOLL.SQL.Postgres.Builder is
         (Self.Res, Self.Current,
          GNATCOLL.SQL.Postgres.Gnade.Field_Index (Field));
    end Boolean_Value;
-
-   -------------------
-   -- Address_Value --
-   -------------------
-
-   function Address_Value
-     (Self  : Postgresql_Cursor;
-      Field : GNATCOLL.SQL.Exec.Field_Index) return System.Address
-   is
-      S : System.Address;
-   begin
-      Value
-        (Self.Res, Self.Current,
-         GNATCOLL.SQL.Postgres.Gnade.Field_Index (Field),
-         S);
-      return S;
-   end Address_Value;
 
    -------------
    -- Is_Null --

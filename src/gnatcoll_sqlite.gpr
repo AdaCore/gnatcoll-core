@@ -1,0 +1,30 @@
+with "../gnatcoll_shared";
+with "gnatcoll";
+
+project GnatColl_Sqlite is
+
+   for Library_Kind    use GnatColl_Shared.Library_Type;
+   for Object_Dir      use "obj/sqlite/" & Project'Library_Kind;
+   for Library_Dir     use "lib/sqlite/" & Project'Library_Kind;
+   for Library_Name    use GnatColl_Shared.Name & "_sqlite";
+   for Library_Version use
+      "lib" & Project'Library_Name & ".so." & GnatColl_Shared.Version;
+
+   for Languages use ("Ada");
+
+   case GnatColl_Shared.Sqlite is
+      when "no" =>
+        for Source_Dirs use ("sqlite", "sqlite/no_sqlite");
+      when "yes" =>
+        for Source_Dirs use ("sqlite", "sqlite/with_sqlite");
+   end case;
+
+   package Builder  renames GnatColl_Shared.Builder;
+
+   package Compiler renames GnatColl_Shared.Compiler;
+
+   package Linker   renames GnatColl_Shared.Linker;
+
+   package Ide      renames GnatColl_Shared.Ide;
+
+end GnatColl_Sqlite;

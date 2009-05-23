@@ -69,9 +69,6 @@ private package GNATCOLL.SQL.Exec_Private is
    function Value
      (Self  : DBMS_Cursor;
       Field : Field_Index) return String is abstract;
-   function Address_Value
-     (Self  : DBMS_Cursor;
-      Field : Field_Index) return System.Address is abstract;
    function Boolean_Value
      (Self  : DBMS_Cursor;
       Field : Field_Index) return Boolean;

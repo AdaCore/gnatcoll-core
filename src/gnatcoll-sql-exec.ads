@@ -57,6 +57,7 @@ package GNATCOLL.SQL.Exec is
    --  automatic testsuites.
 
    DBMS_Postgresql : constant String := "postgresql";
+   DBMS_Sqlite : constant String := "sqlite";
    --  The various database backends that are supported.
    --  GNATCOLL does not use these constants itself, but they are provided to
    --  serve as a common vocabulary for applications to describe the backend
@@ -163,7 +164,8 @@ package GNATCOLL.SQL.Exec is
    --  Then perform the query, reconnecting once if the connection failed.
    --  Will return null if the connection to the database is bad.
    --  If the query is the empty string, this procedure only connects to
-   --  the database and checks the connection.
+   --  the database and checks the connection. It returns null if the
+   --  connection is no longer valid.
 
    procedure Close
      (Connection : access Database_Connection_Record) is abstract;
@@ -340,8 +342,6 @@ package GNATCOLL.SQL.Exec is
    --  move back to the previous row.
 
    function Value (Self : Cursor; Field : Field_Index) return String;
-   function Address_Value  --  A C string
-     (Self  : Cursor; Field : Field_Index) return System.Address;
    function Boolean_Value (Self : Cursor; Field : Field_Index) return Boolean;
    function Integer_Value
      (Self    : Cursor;

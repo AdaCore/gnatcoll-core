@@ -309,7 +309,7 @@ ac_includes_default="\
 # include <unistd.h>
 #endif"
 
-ac_subst_vars='SHELL PATH_SEPARATOR PACKAGE_NAME PACKAGE_TARNAME PACKAGE_VERSION PACKAGE_STRING PACKAGE_BUGREPORT exec_prefix prefix program_transform_name bindir sbindir libexecdir datadir sysconfdir sharedstatedir localstatedir libdir includedir oldincludedir infodir mandir build_alias host_alias target_alias DEFS ECHO_C ECHO_N ECHO_T LIBS build build_cpu build_vendor build_os host host_cpu host_vendor host_os target target_cpu target_vendor target_os LN_S CC CFLAGS LDFLAGS CPPFLAGS ac_ct_CC EXEEXT OBJEXT CPP EGREP GNAT_BUILDS_SHARED DEFAULT_LIBRARY_TYPE PKG_CONFIG HAVE_GTKADA GTK_GCC_FLAGS WITH_GTK PYTHON PYTHON_BASE PYTHON_VERSION PYTHON_DIR PYTHON_LIBS PYTHON_CFLAGS WITH_PYTHON WITH_POSTGRES PATH_LIBPQ PYGTK_PREFIX PYGTK_INCLUDE WITH_PYGTK WITH_GMP GMP_CFLAGS GMP_LIBS GMP_LIBS_GPR PYTHON_LIBS_GPR PYTHON_CFLAGS_GPR PYGTK_INCLUDE_GPR GTK_GCC_FLAGS_GPR WITH_SYSLOG MAKEINFO TEXI2DVI LIBOBJS LTLIBOBJS'
+ac_subst_vars='SHELL PATH_SEPARATOR PACKAGE_NAME PACKAGE_TARNAME PACKAGE_VERSION PACKAGE_STRING PACKAGE_BUGREPORT exec_prefix prefix program_transform_name bindir sbindir libexecdir datadir sysconfdir sharedstatedir localstatedir libdir includedir oldincludedir infodir mandir build_alias host_alias target_alias DEFS ECHO_C ECHO_N ECHO_T LIBS build build_cpu build_vendor build_os host host_cpu host_vendor host_os target target_cpu target_vendor target_os LN_S CC CFLAGS LDFLAGS CPPFLAGS ac_ct_CC EXEEXT OBJEXT CPP EGREP GNAT_BUILDS_SHARED DEFAULT_LIBRARY_TYPE PKG_CONFIG HAVE_GTKADA GTK_GCC_FLAGS WITH_GTK PYTHON PYTHON_BASE PYTHON_VERSION PYTHON_DIR PYTHON_LIBS PYTHON_CFLAGS WITH_PYTHON WITH_POSTGRES PATH_LIBPQ WITH_SQLITE PATH_LIBSQLITE PYGTK_PREFIX PYGTK_INCLUDE WITH_PYGTK WITH_GMP GMP_CFLAGS GMP_LIBS GMP_LIBS_GPR PYTHON_LIBS_GPR PYTHON_CFLAGS_GPR PYGTK_INCLUDE_GPR GTK_GCC_FLAGS_GPR WITH_SYSLOG MAKEINFO TEXI2DVI LIBOBJS LTLIBOBJS'
 ac_subst_files=''
 
 # Initialize some variables set by options.
@@ -863,6 +863,8 @@ Optional Packages:
   --with-postgresql=<path>
                           Specify the full path to the PostgreSQL installation
   --without-postgresql    Disable PostgreSQL support
+  --with-sqlite=<path>    Specify the full path to the sqlite installation
+  --without-sqlite        Disable sqlite support
   --with-gmp=<path>       Specify the full path of the gmp installation
   --without-gmp           Disable support for gmp
 
@@ -3731,6 +3733,96 @@ fi
 
 
 
+
+# Check whether --with-sqlite or --without-sqlite was given.
+if test "${with_sqlite+set}" = set; then
+  withval="$with_sqlite"
+  SQLITE_PATH_WITH=$withval
+else
+  SQLITE_PATH_WITH=yes
+fi;
+
+   PATH_LIBSQLITE=""
+   if test x"$SQLITE_PATH_WITH" = xno ; then
+      echo "$as_me:$LINENO: checking for sqlite" >&5
+echo $ECHO_N "checking for sqlite... $ECHO_C" >&6
+      echo "$as_me:$LINENO: result: no" >&5
+echo "${ECHO_T}no" >&6
+      WITH_SQLITE=no
+
+   else
+     if test x"$SQLITE_PATH_WITH" = xyes ; then
+       echo "$as_me:$LINENO: checking for sqlite3_open in -lsqlite3" >&5
+echo $ECHO_N "checking for sqlite3_open in -lsqlite3... $ECHO_C" >&6
+if test "${ac_cv_lib_sqlite3_sqlite3_open+set}" = set; then
+  echo $ECHO_N "(cached) $ECHO_C" >&6
+else
+  ac_check_lib_save_LIBS=$LIBS
+LIBS="-lsqlite3 $SQLITE_CFLAGS $SQLITE_LIBS $LIBS"
+cat >conftest.$ac_ext <<_ACEOF
+#line $LINENO "configure"
+/* confdefs.h.  */
+_ACEOF
+cat confdefs.h >>conftest.$ac_ext
+cat >>conftest.$ac_ext <<_ACEOF
+/* end confdefs.h.  */
+
+/* Override any gcc2 internal prototype to avoid an error.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+/* We use char because int might match the return type of a gcc2
+   builtin and then its argument prototype would still apply.  */
+char sqlite3_open ();
+int
+main ()
+{
+sqlite3_open ();
+  ;
+  return 0;
+}
+_ACEOF
+rm -f conftest.$ac_objext conftest$ac_exeext
+if { (eval echo "$as_me:$LINENO: \"$ac_link\"") >&5
+  (eval $ac_link) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); } &&
+         { ac_try='test -s conftest$ac_exeext'
+  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); }; }; then
+  ac_cv_lib_sqlite3_sqlite3_open=yes
+else
+  echo "$as_me: failed program was:" >&5
+sed 's/^/| /' conftest.$ac_ext >&5
+
+ac_cv_lib_sqlite3_sqlite3_open=no
+fi
+rm -f conftest.$ac_objext conftest$ac_exeext conftest.$ac_ext
+LIBS=$ac_check_lib_save_LIBS
+fi
+echo "$as_me:$LINENO: result: $ac_cv_lib_sqlite3_sqlite3_open" >&5
+echo "${ECHO_T}$ac_cv_lib_sqlite3_sqlite3_open" >&6
+if test $ac_cv_lib_sqlite3_sqlite3_open = yes; then
+  WITH_SQLITE=yes
+else
+  WITH_SQLITE=no
+fi
+
+     else
+       PATH_LIBSQLITE="-L$SQLITE_PATH_WITH"
+       WITH_SQLITE=yes
+     fi
+   fi
+
+
+
+
+
+
     # Check whether --enable-pygtk or --disable-pygtk was given.
 if test "${enable_pygtk+set}" = set; then
   enableval="$enable_pygtk"
@@ -4341,8 +4433,12 @@ echo "$as_me:  Syslog: $WITH_SYSLOG" >&6;}
 echo "$as_me:     use --enable-syslog to override" >&6;}
 { echo "$as_me:$LINENO:  PostgreSQL: $WITH_POSTGRES $PATH_LIBPQ" >&5
 echo "$as_me:  PostgreSQL: $WITH_POSTGRES $PATH_LIBPQ" >&6;}
-{ echo "$as_me:$LINENO:     use --with-postgres to override" >&5
-echo "$as_me:     use --with-postgres to override" >&6;}
+{ echo "$as_me:$LINENO:     use --with-postgresql to override" >&5
+echo "$as_me:     use --with-postgresql to override" >&6;}
+{ echo "$as_me:$LINENO:  Sqlite: $WITH_SQLITE $PATH_LIBSQLITE" >&5
+echo "$as_me:  Sqlite: $WITH_SQLITE $PATH_LIBSQLITE" >&6;}
+{ echo "$as_me:$LINENO:     use --with-sqlite to override" >&5
+echo "$as_me:     use --with-sqlite to override" >&6;}
 { echo "$as_me:$LINENO:  gmp: $WITH_GMP" >&5
 echo "$as_me:  gmp: $WITH_GMP" >&6;}
 { echo "$as_me:$LINENO:     use --with-gmp to override" >&5
@@ -5029,6 +5125,8 @@ s,@PYTHON_CFLAGS@,$PYTHON_CFLAGS,;t t
 s,@WITH_PYTHON@,$WITH_PYTHON,;t t
 s,@WITH_POSTGRES@,$WITH_POSTGRES,;t t
 s,@PATH_LIBPQ@,$PATH_LIBPQ,;t t
+s,@WITH_SQLITE@,$WITH_SQLITE,;t t
+s,@PATH_LIBSQLITE@,$PATH_LIBSQLITE,;t t
 s,@PYGTK_PREFIX@,$PYGTK_PREFIX,;t t
 s,@PYGTK_INCLUDE@,$PYGTK_INCLUDE,;t t
 s,@WITH_PYGTK@,$WITH_PYGTK,;t t
