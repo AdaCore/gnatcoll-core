@@ -46,8 +46,6 @@
 with Ada.Calendar;
 private with Ada.Finalization;
 private with GNAT.Strings;
---  private with GNATCOLL.SQL.Exec_Private;
-with System;
 
 package GNATCOLL.SQL.Exec is
 

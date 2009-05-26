@@ -173,6 +173,9 @@ procedure GNATCOLL_Db2Ada is
      (Connection : access Database_Connection_Record'Class);
    --  Get the list of tables in the database
 
+   procedure Generate_Queries;
+   --  Experimental support for automatic generation of queries
+
    procedure Generate (Generated : String);
    procedure Generate (Generated : String) is separate;
    --  Generate the actual output. This can be implemented either through
@@ -630,29 +633,6 @@ procedure GNATCOLL_Db2Ada is
    ----------------------
 
    procedure Generate_Queries is
-      function Is_Enum (Table, Id, Ada_Type : String) return String;
-      --  If Table.Id is a registered enumeration type, return the name of the
-      --  Ada type. If not, return Ada_Type
-
-      function Is_Enum (Table, Id, Ada_Type : String) return String is
-         C      : Enumeration_Lists.Cursor := First (Enumerations);
-         Enum   : Dumped_Enums;
-      begin
-         --  ??? Not efficient, since we are traversing the list for each field
-         --  However, we have a small number of tables in general anyway
-
-         while Has_Element (C) loop
-            Enum := Element (C);
-            if Enum.Table = Table and then Enum.Id = Id then
-               return To_String (Enum.Type_Name);
-            end if;
-
-            Next (C);
-         end loop;
-
-         return Ada_Type;
-      end Is_Enum;
-
       Spec_File, Body_File : File_Type;
       Q       : Query_Lists.Cursor;
       T       : Tables_Maps.Cursor;
@@ -751,8 +731,6 @@ procedure GNATCOLL_Db2Ada is
    end Generate_Queries;
 
    DB_Descr          : Database_Description;
-   Spec_File         : File_Type;
-   Body_File         : File_Type;
    Connection        : Database_Connection;
    Enums, Vars       : String_Lists.List;
    --  The internal index corresponding to each table. This is used to create

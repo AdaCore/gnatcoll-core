@@ -17,11 +17,9 @@
 -- Place - Suite 330, Boston, MA 02111-1307, USA.                    --
 -----------------------------------------------------------------------
 
-with Ada.Strings.Unbounded;        use Ada.Strings.Unbounded;
 with Ada.Unchecked_Deallocation;
-with GNATCOLL.SQL.Sqlite.Gnade;    use GNATCOLL.SQL.SQlite.Gnade;
+with GNATCOLL.SQL.Sqlite.Gnade;    use GNATCOLL.SQL.Sqlite.Gnade;
 with GNATCOLL.SQL.Exec_Private;    use GNATCOLL.SQL.Exec_Private;
-with System;
 
 package body GNATCOLL.SQL.Sqlite.Builder is
 
@@ -92,17 +90,16 @@ package body GNATCOLL.SQL.Sqlite.Builder is
          Foreign_Table     : String;
          Foreign_Attribute : Integer));
 
+   function Is_Whitespace (C : Character) return Boolean;
+   --  Whether C is a white space character
+
+   procedure Skip_Whitespace (S : String; Pos : in out Integer);
+   procedure Skip_To_Whitespace (S : String; Pos : in out Integer);
+   --  Skip to or until the next whitespace character. Pos is left on the
+   --  first whitespace character or on the first character after the spaces
+
    procedure Unchecked_Free is new Ada.Unchecked_Deallocation
      (Sqlite_Cursor'Class, Sqlite_Cursor_Access);
-
-   -------------------------------
-   -- Build_Postgres_Connection --
-   -------------------------------
-
-   function Build_Postgres_Connection return Database_Connection is
-   begin
-      return new Sqlite_Connection_Record;
-   end Build_Postgres_Connection;
 
    ---------------
    -- Error_Msg --
@@ -243,6 +240,7 @@ package body GNATCOLL.SQL.Sqlite.Builder is
    ----------------
 
    function Rows_Count (Self : Sqlite_Cursor) return Natural is
+      pragma Unreferenced (Self);
    begin
       return 0;  --  Unsupported for now
    end Rows_Count;

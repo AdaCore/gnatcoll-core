@@ -25,7 +25,6 @@
 --  API.
 
 with GNATCOLL.SQL.Exec;  use GNATCOLL.SQL.Exec;
-with System;
 
 private package GNATCOLL.SQL.Exec_Private is
 
@@ -93,7 +92,8 @@ private package GNATCOLL.SQL.Exec_Private is
      (Self       : DBMS_Forward_Cursor;
       Connection : access Database_Connection_Record'Class;
       Field      : SQL_Field_Integer) return Integer is abstract;
-   function Field_Count (Self : DBMS_Forward_Cursor) return Field_Index is abstract;
+   function Field_Count
+     (Self : DBMS_Forward_Cursor) return Field_Index is abstract;
    function Field_Name
      (Self : DBMS_Forward_Cursor; Field : Exec.Field_Index) return String
      is abstract;

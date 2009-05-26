@@ -1174,7 +1174,6 @@ package body GNATCOLL.VFS is
      (File             : Virtual_File;
       Resolve_Symlinks : Boolean := False)
    is
-      Norm : FS_String_Access;
    begin
       if File.Value = null then
          return;

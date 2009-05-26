@@ -4,6 +4,23 @@
 ##   include(gnatcoll/aclocal.m4)
 
 #############################################################
+# Checking for build type
+# The following variable is exported by configure:
+#   @BUILD_TYPE@: either "Production" or "Debug"
+##############################################################
+
+AC_DEFUN(CHECK_BUILD_TYPE,
+[
+  AC_ARG_ENABLE(build,
+    [AC_HELP_STRING(
+       [--enable-build=<type>],
+       [Default build type for the library (Debug, Production)])],
+    BUILD_TYPE=$enableval,
+    BUILD_TYPE=Production)
+  AC_SUBST(BUILD_TYPE)
+])
+
+#############################################################
 # Check whether GNAT on that target supports building shared
 # libraries
 # The following variables is exported by configure:

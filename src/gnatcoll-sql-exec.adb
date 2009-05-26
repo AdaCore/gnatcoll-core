@@ -20,12 +20,10 @@
 with Ada.Calendar;            use Ada.Calendar;
 with Ada.Characters.Handling; use Ada.Characters.Handling;
 with Ada.Containers.Indefinite_Hashed_Maps;
-with Ada.Strings.Fixed;
 with Ada.Strings.Hash;
 with Ada.Strings.Unbounded;   use Ada.Strings.Unbounded;
 with Ada.Task_Attributes;
 with Ada.Unchecked_Deallocation;
-with GNAT.Calendar.Time_IO;
 with GNAT.Strings;            use GNAT.Strings;
 with GNATCOLL.Traces;         use GNATCOLL.Traces;
 with GNATCOLL.Utils;          use GNATCOLL.Utils;
@@ -341,8 +339,9 @@ package body GNATCOLL.SQL.Exec is
             Trace
               (Me_Select,
                Query & " ("
-               & Image (Natural (Rows_Count (DBMS_Forward_Cursor'Class (R.all))),
-                        Min_Width => 1)
+               & Image
+                  (Natural (Rows_Count (DBMS_Forward_Cursor'Class (R.all))),
+                   Min_Width => 1)
                & " tuples) "
                & Status (DBMS_Forward_Cursor'Class (R.all))
                & " (" & Connection.Username.all & ")");
@@ -361,8 +360,10 @@ package body GNATCOLL.SQL.Exec is
             Trace
               (Me_Query,
                Query & " ("
-               & Image (Natural (Rows_Count (DBMS_Forward_Cursor'Class (R.all))),
-                        Min_Width => 1)
+               & Image
+                  (Natural
+                     (Rows_Count (DBMS_Forward_Cursor'Class (R.all))),
+                   Min_Width => 1)
                & " tuples) " & Status (DBMS_Forward_Cursor'Class (R.all))
                & " (" & Connection.Username.all & ")");
          end if;
@@ -803,7 +804,8 @@ package body GNATCOLL.SQL.Exec is
       Self       : Forward_Cursor;
       Field      : SQL_Field_Integer) return Integer is
    begin
-      return Last_Id (DBMS_Forward_Cursor'Class (Self.Res.all), Connection, Field);
+      return Last_Id
+         (DBMS_Forward_Cursor'Class (Self.Res.all), Connection, Field);
    end Last_Id;
 
    ---------------------

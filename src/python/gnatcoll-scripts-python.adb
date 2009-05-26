@@ -1435,7 +1435,8 @@ package body GNATCOLL.Scripts.Python is
    begin
       if Obj /= null then
          declare
-            Any : Any_Type := GNATCOLL.Any_Types.Python.From_PyObject (Obj);
+            Any : constant Any_Type :=
+               GNATCOLL.Any_Types.Python.From_PyObject (Obj);
          begin
             Py_DECREF (Obj);
             return Any;

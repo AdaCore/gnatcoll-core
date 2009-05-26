@@ -2286,7 +2286,7 @@ package body GNATCOLL.SQL is
                     (To_String (Self.Criteria.Data.Arg1.Data.Field.all, Long));
                   case Self.Criteria.Data.Op is
                      when Criteria_Equal            => Append (Result, "=");
-                     when Criteria_Not_Equal        => Append (Result, "!=");
+                     when Criteria_Not_Equal        => Append (Result, "<>");
                      when Criteria_Less_Than        => Append (Result, "<");
                      when Criteria_Less_Or_Equal    => Append (Result, "<=");
                      when Criteria_Greater_Than     => Append (Result, ">");

@@ -25,9 +25,7 @@
 --  API.
 
 with Ada.Strings.Fixed;     use Ada.Strings.Fixed;
-with GNATCOLL.SQL.Exec;     use GNATCOLL.SQL.Exec;
 with GNAT.Calendar.Time_IO; use GNAT.Calendar, GNAT.Calendar.Time_IO;
-with System;
 
 package body GNATCOLL.SQL.Exec_Private is
 

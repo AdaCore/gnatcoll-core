@@ -226,6 +226,8 @@ package body GNATCOLL.Email.Mailboxes is
       if Mbox (Box).Fp /= null then
          Buffer := To_Str_Access (Mbox (Box).Fp);
          First := Mbox (Box).Fp'First;
+      else
+         return;  --  Nothing to parse
       end if;
 
       --  Find start of first message if needed. If we are past this first

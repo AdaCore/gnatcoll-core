@@ -45,7 +45,7 @@ CC=gcc
 
 LIBRARY_TYPE=static
 
-Gnatcoll_Build=Production
+Gnatcoll_Build=@BUILD_TYPE@
 export Gnatcoll_Build
 
 .PHONY: all examples tests valgrind clean docs install

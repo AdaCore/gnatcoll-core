@@ -17,9 +17,6 @@
 -- Place - Suite 330, Boston, MA 02111-1307, USA.                    --
 -------------------------------------------------------------------------------
 
-with System.Address_To_Access_Conversions;
-with Ada.Unchecked_Conversion;
-with Ada.Unchecked_Deallocation;
 with Interfaces.C;          use Interfaces.C;
 with Interfaces.C.Strings;  use Interfaces.C.Strings;
 with System;
@@ -49,7 +46,7 @@ package body GNATCOLL.SQL.Sqlite.Gnade is
       Status := Internal
         (Filename & ASCII.NUL, DB2'Unchecked_Access, Integer (Flags));
 
-      if Status = SQLITE_OK then
+      if Status = Sqlite_OK then
          DB := DB2;
       else
          DB := No_Database;

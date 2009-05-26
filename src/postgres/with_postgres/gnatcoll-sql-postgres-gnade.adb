@@ -65,8 +65,6 @@ package body GNATCOLL.SQL.Postgres.Gnade is
                                                      System.Address);
 
    procedure Unchecked_Free is new Ada.Unchecked_Deallocation
-     (Natural, Natural_Access);
-   procedure Unchecked_Free is new Ada.Unchecked_Deallocation
      (PGConn, Connection_Pointer);
 
    protected body PGConn is

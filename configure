@@ -309,7 +309,7 @@ ac_includes_default="\
 # include <unistd.h>
 #endif"
 
-ac_subst_vars='SHELL PATH_SEPARATOR PACKAGE_NAME PACKAGE_TARNAME PACKAGE_VERSION PACKAGE_STRING PACKAGE_BUGREPORT exec_prefix prefix program_transform_name bindir sbindir libexecdir datadir sysconfdir sharedstatedir localstatedir libdir includedir oldincludedir infodir mandir build_alias host_alias target_alias DEFS ECHO_C ECHO_N ECHO_T LIBS build build_cpu build_vendor build_os host host_cpu host_vendor host_os target target_cpu target_vendor target_os LN_S CC CFLAGS LDFLAGS CPPFLAGS ac_ct_CC EXEEXT OBJEXT CPP EGREP GNAT_BUILDS_SHARED DEFAULT_LIBRARY_TYPE PKG_CONFIG HAVE_GTKADA GTK_GCC_FLAGS WITH_GTK PYTHON PYTHON_BASE PYTHON_VERSION PYTHON_DIR PYTHON_LIBS PYTHON_CFLAGS WITH_PYTHON WITH_POSTGRES PATH_LIBPQ WITH_SQLITE PATH_LIBSQLITE PYGTK_PREFIX PYGTK_INCLUDE WITH_PYGTK WITH_GMP GMP_CFLAGS GMP_LIBS GMP_LIBS_GPR PYTHON_LIBS_GPR PYTHON_CFLAGS_GPR PYGTK_INCLUDE_GPR GTK_GCC_FLAGS_GPR WITH_SYSLOG MAKEINFO TEXI2DVI LIBOBJS LTLIBOBJS'
+ac_subst_vars='SHELL PATH_SEPARATOR PACKAGE_NAME PACKAGE_TARNAME PACKAGE_VERSION PACKAGE_STRING PACKAGE_BUGREPORT exec_prefix prefix program_transform_name bindir sbindir libexecdir datadir sysconfdir sharedstatedir localstatedir libdir includedir oldincludedir infodir mandir build_alias host_alias target_alias DEFS ECHO_C ECHO_N ECHO_T LIBS build build_cpu build_vendor build_os host host_cpu host_vendor host_os target target_cpu target_vendor target_os LN_S CC CFLAGS LDFLAGS CPPFLAGS ac_ct_CC EXEEXT OBJEXT CPP EGREP BUILD_TYPE GNAT_BUILDS_SHARED DEFAULT_LIBRARY_TYPE PKG_CONFIG HAVE_GTKADA GTK_GCC_FLAGS WITH_GTK PYTHON PYTHON_BASE PYTHON_VERSION PYTHON_DIR PYTHON_LIBS PYTHON_CFLAGS WITH_PYTHON WITH_POSTGRES PATH_LIBPQ WITH_SQLITE PATH_LIBSQLITE PYGTK_PREFIX PYGTK_INCLUDE WITH_PYGTK WITH_GMP GMP_CFLAGS GMP_LIBS GMP_LIBS_GPR PYTHON_LIBS_GPR PYTHON_CFLAGS_GPR PYGTK_INCLUDE_GPR GTK_GCC_FLAGS_GPR WITH_SYSLOG MAKEINFO TEXI2DVI LIBOBJS LTLIBOBJS'
 ac_subst_files=''
 
 # Initialize some variables set by options.
@@ -847,6 +847,8 @@ if test -n "$ac_init_help"; then
 Optional Features:
   --disable-FEATURE       do not include FEATURE (same as --enable-FEATURE=no)
   --enable-FEATURE[=ARG]  include FEATURE [ARG=yes]
+  --enable-build=<type>   Default build type for the library (Debug,
+                          Production)
   --disable-shared        Disable building of shared libraries
   --enable-shared         Build shared libraries if supported on the target
                           Make them the installation default
@@ -3160,6 +3162,16 @@ rm -f conftest.mmap
 
 
 
+  # Check whether --enable-build or --disable-build was given.
+if test "${enable_build+set}" = set; then
+  enableval="$enable_build"
+  BUILD_TYPE=$enableval
+else
+  BUILD_TYPE=Production
+fi;
+
+
+
    echo "$as_me:$LINENO: checking whether gnat can build shared libs" >&5
 echo $ECHO_N "checking whether gnat can build shared libs... $ECHO_C" >&6
 
@@ -5110,6 +5122,7 @@ s,@EXEEXT@,$EXEEXT,;t t
 s,@OBJEXT@,$OBJEXT,;t t
 s,@CPP@,$CPP,;t t
 s,@EGREP@,$EGREP,;t t
+s,@BUILD_TYPE@,$BUILD_TYPE,;t t
 s,@GNAT_BUILDS_SHARED@,$GNAT_BUILDS_SHARED,;t t
 s,@DEFAULT_LIBRARY_TYPE@,$DEFAULT_LIBRARY_TYPE,;t t
 s,@PKG_CONFIG@,$PKG_CONFIG,;t t
