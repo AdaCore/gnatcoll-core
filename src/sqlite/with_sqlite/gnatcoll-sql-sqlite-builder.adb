@@ -27,6 +27,7 @@ package body GNATCOLL.SQL.Sqlite.Builder is
       Stmt           : Statement;
       Processed_Rows : Natural := 0;
       Last_Status    : Result_Codes;  --  Last status of Step
+      Last_Rowid     : Long_Integer := -1;
    end record;
    type Sqlite_Cursor_Access is access all Sqlite_Cursor'Class;
 
@@ -223,6 +224,7 @@ package body GNATCOLL.SQL.Sqlite.Builder is
                   Res.Processed_Rows := 0;
                else
                   Res.Processed_Rows := Changes (Connection.DB);
+                  Res.Last_Rowid := Last_Insert_Rowid (Connection.DB);
                end if;
 
             when others =>
@@ -285,8 +287,6 @@ package body GNATCOLL.SQL.Sqlite.Builder is
       Connection : access Database_Connection_Record'Class;
       Field      : SQL_Field_Integer) return Integer
    is
-      pragma Unreferenced (Self);
-      Q        : SQL_Query;
       Res2     : Forward_Cursor;
    begin
       --  Do not depend on OIDs, since the table might not have them (by
@@ -294,12 +294,11 @@ package body GNATCOLL.SQL.Sqlite.Builder is
       --  the currval() function which returns the last value set for a
       --  sequence within the current connection.
 
-      Q := SQL_Select
-        (Fields => From_String ("currval('" & Field.Table.all
-                                & "_" & Field.Name.all & "_seq')"));
-
-      Execute (Connection, Res2, Q);
-      if Rows_Count (Res2) = 1 then
+      Execute (Connection, Res2,
+               "SELECT " & To_String (Field) & " FROM " & Field.Table.all
+               & " WHERE ROWID="
+               & Long_Integer'Image (Self.Last_Rowid));
+      if Has_Row (Res2) then
          return Integer_Value (Res2, 0);
       end if;
       return -1;

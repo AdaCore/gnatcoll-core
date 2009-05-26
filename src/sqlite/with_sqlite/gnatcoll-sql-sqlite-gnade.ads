@@ -186,6 +186,17 @@ private package GNATCOLL.SQL.Sqlite.Gnade is
    procedure Finalize (Stmt : in out Statement);
    --  Finalize and free the memory occupied by stmt
 
+   function Last_Insert_Rowid (DB : Database) return Long_Integer;
+   --  This routine returns the rowid of the most recent successful INSERT into
+   --  the database from the database connection in the first argument. If no
+   --  successful INSERTs have ever occurred on that database connection, zero
+   --  is returned.
+   --  If a separate thread performs a new INSERT on the same database
+   --  connection while the last_insert_rowid function is running and thus
+   --  changes the last insert rowid, then the value returned by
+   --  last_insert_rowid is unpredictable and might not equal either the old or
+   --  the new last insert rowid.
+
    function Changes (DB : Database) return Natural;
    --  Returns the number of database rows that were changed or inserted or
    --  deleted by the most recently completed SQL statement on the database.
@@ -262,14 +273,15 @@ private
       Sqlite_Ioerr_Dir_Close          => 10 + 17 * 256);
    pragma Convention (C, Result_Codes);
 
-   pragma Import (C, Column_Double, "sqlite3_column_double");
-   pragma Import (C, Column_Int,    "sqlite3_column_int");
-   pragma Import (C, Column_C_Text, "sqlite3_column_text");
-   pragma Import (C, Column_Bytes,  "sqlite3_column_bytes");
-   pragma Import (C, Finalize,      "sqlite3_finalize");
-   pragma Import (C, Changes,       "sqlite3_changes");
-   pragma Import (C, Column_Type,   "sqlite3_column_type");
-   pragma Import (C, Column_Count,  "sqlite3_column_count");
-   pragma Import (C, DB_Handle,     "sqlite3_db_handle");
+   pragma Import (C, Column_Double,     "sqlite3_column_double");
+   pragma Import (C, Column_Int,        "sqlite3_column_int");
+   pragma Import (C, Column_C_Text,     "sqlite3_column_text");
+   pragma Import (C, Column_Bytes,      "sqlite3_column_bytes");
+   pragma Import (C, Finalize,          "sqlite3_finalize");
+   pragma Import (C, Changes,           "sqlite3_changes");
+   pragma Import (C, Column_Type,       "sqlite3_column_type");
+   pragma Import (C, Column_Count,      "sqlite3_column_count");
+   pragma Import (C, DB_Handle,         "sqlite3_db_handle");
+   pragma Import (C, Last_Insert_Rowid, "sqlite3_last_insert_rowid");
 
 end GNATCOLL.SQL.Sqlite.Gnade;
