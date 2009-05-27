@@ -184,6 +184,8 @@ package GNATCOLL.SQL is
 
    function To_String
      (Self : SQL_Field; Long : Boolean := True)  return String;
+   --  Convert the field to a string. If Long is true, a fully qualified
+   --  name is used (table.name), otherwise just the field name is used
 
    function As
      (Field : SQL_Field'Class; Name : String) return SQL_Field'Class;
@@ -250,10 +252,6 @@ package GNATCOLL.SQL is
    function As_Days (Count : Natural) return SQL_Field_Time'Class;
    --  An expression representing a number of days
 
-   function At_Time_Zone
-     (Field : SQL_Field_Time'Class; TZ : String) return SQL_Field_Time'Class;
-   --  Convert a 'timestamp with time zone' expression to another time zone
-
    function Expression_Or_Null (Value : String) return SQL_Field_Text'Class;
    --  Same as above but if the Value is "NULL", returns NULL instead of 'NULL'
 
@@ -285,52 +283,9 @@ package GNATCOLL.SQL is
      (Value : Boolean; List : SQL_Field'Class) return SQL_Field_List;
    --  Create a list of fields, suitable for use in a SELECT query
 
-   function Concat (Fields : SQL_Field_List) return SQL_Field'Class;
-   --  Converts the list into a concatenation of fields, as in:
-   --     "prefix " || foo.bar || "suffix"
-
-   function Tuple (Fields : SQL_Field_List) return SQL_Field'Class;
-   --  Return the list of fields as a tuple, ie (field1, field2)
-
-   function Coalesce (Fields : SQL_Field_List) return SQL_Field'Class;
-   --  Returns the first of its arguments that is not null
-   --     Coalesce (value1, value2, ...)
-
-   function Extract
-     (Field : SQL_Field'Class; Attribute : String) return SQL_Field'Class;
-   --  Return the result of "extract (attribute from field)"
-
-   function To_Char
-     (Field : SQL_Field_Time; Format : String) return SQL_Field'Class;
-   --  Format a date field, as in "to_char (field, "format")"
-
-   function Lower
-     (Field : SQL_Field_Text'Class) return SQL_Field_Text'Class;
-   --  Returns "lower (field)"
-
-   function Initcap
-     (Field : SQL_Field_Text'Class) return SQL_Field_Text'Class;
-   --  Returns "Initcap (field)"
-
-   function Current_Date return SQL_Field_Time'Class;
-   function Now return SQL_Field_Time'Class;
-   --  Return the current date
-
-   function "-"
-     (Field1, Field2 : SQL_Field_Time'Class) return SQL_Field_Time'Class;
-   function "-"
-     (Field1 : SQL_Field_Time'Class; Days : Integer)
-      return SQL_Field_Time'Class;
-   --  Return the different between two dates
-
-   function "+"
-     (Field : SQL_Field_Integer'Class; Add : Integer)
-      return SQL_Field_Integer'Class;
-   --  Add  a specific offset to a field
-
-   function Cast_To_String
-     (Field : SQL_Field'Class) return SQL_Field_Text'Class;
-   --  Convert any field type to a text field
+   -------------------------
+   -- Aggregate functions --
+   -------------------------
 
    type Aggregate_Function is new String;
    Func_Count    : constant Aggregate_Function := "count";
@@ -365,6 +320,154 @@ package GNATCOLL.SQL is
    --  this result with some other field or value, you should use the
    --  functions Greater_Than, Less_Than, ... below, rather than the usual
    --  operators.
+
+   ---------------
+   -- Operators --
+   ---------------
+   --  The following operators apply between two fields, or between one field
+   --  and a constant value. A generic version is provided so that you can add
+   --  your own operators.
+
+   generic
+      type Field_Type is abstract new SQL_Field with private;
+      Name : String;
+   function Time_Operator
+     (Field1, Field2 : Field_Type'Class) return SQL_Field_Time'Class;
+   --  Return an operator that applies to two fields, as in
+   --      field1 operator field2
+   --  for instance "field1 + field2"
+
+   generic
+      type Field_Type is abstract new SQL_Field with private;
+      type Scalar is (<>);
+      Name   : String;
+      Prefix : String := "";
+      Suffix : String := "";
+   function Time_Scalar_Operator
+     (Field : Field_Type'Class; Operand : Scalar) return SQL_Field_Time'Class;
+   --  Return an operator that applies between a field and a constant value,
+   --  as in "field1 + 1"
+   --  Prefix and Suffix are output around the operand, in general to do
+   --  appropriate casing, as in  "field1 + interval '1 days'"
+
+   generic
+      type Field_Type is abstract new SQL_Field with private;
+      type Scalar is (<>);
+      Name   : String;
+      Prefix : String := "";
+      Suffix : String := "";
+   function Integer_Scalar_Operator
+     (Field : Field_Type'Class; Operand : Scalar)
+      return SQL_Field_Integer'Class;
+   --  Return an operator that applies between a field and a constant value,
+   --  as in "field1 + 1"
+   --  Prefix and Suffix are output around the operand, in general to do
+   --  appropriate casing, as in  "field1 + interval '1 days'"
+
+   function "-"
+     (Field1, Field2 : SQL_Field_Time'Class) return SQL_Field_Time'Class;
+   function "-"
+     (Field1 : SQL_Field_Time'Class; Days : Integer)
+      return SQL_Field_Time'Class;
+   --  Return the different between two dates
+
+   function "+"
+     (Field : SQL_Field_Integer'Class; Add : Integer)
+      return SQL_Field_Integer'Class;
+   --  Add a specific offset to a field
+
+   ---------------
+   -- Functions --
+   ---------------
+   --  The value of a field might come directly from a SQL function. This
+   --  section provides support for writing such an interface
+
+   generic
+      Name : String;
+   function Time_Function return SQL_Field_Time'Class;
+   --  Return a sql function, such as "current_date" or "now()";
+   --  Name should include the parenthesis and constant parameters when needed.
+
+   function Current_Date      return SQL_Field_Time'Class;
+   function Current_Timestamp return SQL_Field_Time'Class;
+   --  Return the current date or timestamp
+
+   -------------------------
+   -- Functions on fields --
+   -------------------------
+   --  This section contains various functions that can be applied to fields.
+   --  A generic version is provided so that you can easily add support for
+   --  your own functions, if need be.
+
+   generic
+      type Field_Type is abstract new SQL_Field with private;
+      Name   : String;
+      Suffix : String := ")";
+   function Apply_Function
+     (Field : Field_Type'Class) return SQL_Field_Text'Class;
+   --  Generates a function that applies to a single field, as in:
+   --     Name (Field Suffix)
+   --  For instance, "Initcap (field)".
+   --  The Suffix is provided if you need further qualification for the field,
+   --  as in "cast (field as string)".
+   --  Parenthesis must be provided as part of Name and Suffix
+
+   generic
+      type Field_Type is abstract new SQL_Field with private;
+      Name   : String;
+      Suffix : String := ")";
+   function Time_Apply_Function
+     (Field : Field_Type'Class) return SQL_Field_Time'Class;
+   --  Same but return a time field
+
+   function Lower (Field : SQL_Field_Text'Class) return SQL_Field_Text'Class;
+   function Initcap (Field : SQL_Field_Text'Class) return SQL_Field_Text'Class;
+   --  Return the corresponding SQL function applied on Field
+
+   function Cast_To_String
+     (Field : SQL_Field'Class) return SQL_Field_Text'Class;
+   --  Convert any field type to a text field
+
+   function At_Time_Zone
+     (Field : SQL_Field_Time'Class; TZ : String) return SQL_Field_Time'Class;
+   --  Convert a 'timestamp with time zone' expression to another time zone
+
+   function To_Char
+     (Field : SQL_Field_Time; Format : String) return SQL_Field_Text'Class;
+   --  Format a date field, as in "to_char (field, "format")"
+
+   function Extract
+     (Field : SQL_Field_Time'Class; Attribute : String)
+      return SQL_Field_Time'Class;
+   --  Return the result of "extract (attribute from field)"
+
+   ---------------------------------
+   -- Functions on list of fields --
+   ---------------------------------
+   --  The following functions apply to lists of fields, and return a single
+   --  field. A generic version is provided so that you can implement your own.
+
+   generic
+      Func_Name : String := "";
+      Separator : String := ",";
+      Suffix    : String := "";
+   function Field_List_Function
+     (Fields : SQL_Field_List) return SQL_Field'Class;
+   --  A function that applies to multiple fields, as in
+   --     Func_Name [Separator Field1]* Suffix
+   --  For instance, "coalesce (a, b, c)"
+   --  The parenthesis must be part of Func_Name and Suffix if they are needed.
+
+   function Concat (Fields : SQL_Field_List) return SQL_Field'Class;
+   --  Converts the list into a concatenation of fields, as in:
+   --     "prefix " || foo.bar || "suffix"
+
+   function Tuple (Fields : SQL_Field_List) return SQL_Field'Class;
+   --  Return the list of fields as a tuple, ie (field1, field2)
+
+   function Coalesce (Fields : SQL_Field_List) return SQL_Field'Class;
+   --  Returns the first of its arguments that is not null
+   --     Coalesce (value1, value2, ...)
 
    ---------------------
    -- Case statements --
@@ -932,80 +1035,6 @@ private
    type SQL_Field_Float   is new SQL_Field with null record;
    --  A field coming straight from the database
 
-   type SQL_Field_Integer_Build is new SQL_Field_Integer with record
-      Data : Field_Data;
-   end record;
-   overriding function To_String
-     (Self : SQL_Field_Integer_Build; Long : Boolean := True)  return String;
-   overriding procedure Append_Tables
-     (Self : SQL_Field_Integer_Build; To : in out Table_Sets.Set);
-   overriding procedure Append_If_Not_Aggregate
-     (Self         : SQL_Field_Integer_Build;
-      To           : in out SQL_Field_List'Class;
-      Is_Aggregate : in out Boolean);
-
-   type SQL_Field_Text_Build is new SQL_Field_Text with record
-      Data : Field_Data;
-   end record;
-   overriding function To_String
-     (Self : SQL_Field_Text_Build; Long : Boolean := True)  return String;
-   overriding procedure Append_Tables
-     (Self : SQL_Field_Text_Build; To : in out Table_Sets.Set);
-   overriding procedure Append_If_Not_Aggregate
-     (Self         : SQL_Field_Text_Build;
-      To           : in out SQL_Field_List'Class;
-      Is_Aggregate : in out Boolean);
-
-   type SQL_Field_Time_Build is new SQL_Field_Time with record
-      Data : Field_Data;
-   end record;
-   overriding function To_String
-     (Self : SQL_Field_Time_Build; Long : Boolean := True)  return String;
-   overriding procedure Append_Tables
-     (Self : SQL_Field_Time_Build; To : in out Table_Sets.Set);
-   overriding procedure Append_If_Not_Aggregate
-     (Self         : SQL_Field_Time_Build;
-      To           : in out SQL_Field_List'Class;
-      Is_Aggregate : in out Boolean);
-
-   type SQL_Field_Boolean_Build is new SQL_Field_Boolean with record
-      Data : Field_Data;
-   end record;
-   overriding function To_String
-     (Self : SQL_Field_Boolean_Build; Long : Boolean := True)  return String;
-   overriding procedure Append_Tables
-     (Self : SQL_Field_Boolean_Build; To : in out Table_Sets.Set);
-   overriding procedure Append_If_Not_Aggregate
-     (Self         : SQL_Field_Boolean_Build;
-      To           : in out SQL_Field_List'Class;
-      Is_Aggregate : in out Boolean);
-
-   type SQL_Field_Float_Build is new SQL_Field_Float with record
-      Data : Field_Data;
-   end record;
-   overriding function To_String
-     (Self : SQL_Field_Float_Build; Long : Boolean := True)  return String;
-   overriding procedure Append_Tables
-     (Self : SQL_Field_Float_Build; To : in out Table_Sets.Set);
-   overriding procedure Append_If_Not_Aggregate
-     (Self         : SQL_Field_Float_Build;
-      To           : in out SQL_Field_List'Class;
-      Is_Aggregate : in out Boolean);
-   --  A field, constructed in the application (for instance a field
-   --  within a join table, see also Expression)
-
-   type SQL_Field_Any is new SQL_Field with record
-      Data : Field_Data;
-   end record;
-   overriding function To_String
-     (Self : SQL_Field_Any; Long : Boolean := True)  return String;
-   overriding procedure Append_Tables
-     (Self : SQL_Field_Any; To : in out Table_Sets.Set);
-   overriding procedure Append_If_Not_Aggregate
-     (Self         : SQL_Field_Any;
-      To           : in out SQL_Field_List'Class;
-      Is_Aggregate : in out Boolean);
-
    package Field_List is new Ada.Containers.Indefinite_Doubly_Linked_Lists
      (SQL_Field'Class);
    type SQL_Field_List is new SQL_Field_Or_List with record
@@ -1074,10 +1103,9 @@ private
    --  fields are not typed ("field1 operator field2 operator field3 ...")
 
    type Multiple_Args_Field_Internal is new SQL_Field_Internal with record
-      Func_Name      : Cst_String_Access;
-      Separator      : Cst_String_Access;
-      Suffix         : GNAT.Strings.String_Access;
-      In_Parenthesis : Boolean := False;
+      Func_Name      : GNAT.Strings.String_Access; --  can be null
+      Separator      : GNAT.Strings.String_Access;
+      Suffix         : GNAT.Strings.String_Access; --  can be null
       List           : Field_List.List;
    end record;
    type Multiple_Args_Field_Internal_Access is access all

@@ -1,7 +1,7 @@
 -----------------------------------------------------------------------
 --                               G N A T C O L L                     --
 --                                                                   --
---                 Copyright (C) 2005-2008, AdaCore                  --
+--                 Copyright (C) 2005-2009, AdaCore                  --
 --                                                                   --
 -- GPS is free  software;  you can redistribute it and/or modify  it --
 -- under the terms of the GNU General Public License as published by --
@@ -46,5 +46,8 @@ package GNATCOLL.SQL.Postgres is
    --  with support for oids ("CREATE TABLE (...) WITH OIDS"), otherwise the
    --  oid will always be null. For this reason, and since oids slow things
    --  done a little, and take space, it is not recommended to depend on them.
+
+   function Now is new Time_Function ("now()");
+   --  Return the current timestamp, same as Current_Timestamp
 
 end GNATCOLL.SQL.Postgres;

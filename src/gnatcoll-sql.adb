@@ -31,17 +31,6 @@ package body GNATCOLL.SQL is
    use Table_List, Field_List, Criteria_List, Table_Sets, Assignment_Lists;
    use When_Lists;
 
-   Separator_Comma  : aliased constant String := ", ";
-   Separator_Concat : aliased constant String := " || ";
-   Separator_Space  : aliased constant String := " ";
-
-   Func_None     : aliased constant String := "";
-   Func_Coalesce : aliased constant String := "COALESCE";
-   Func_To_Char  : aliased constant String := "TO_CHAR";
-   Func_Extract  : aliased constant String := "EXTRACT";
-   Func_Lower    : aliased constant String := "lower";
-   Func_InitCap  : aliased constant String := "initcap";
-
    procedure Unchecked_Free is new Ada.Unchecked_Deallocation
      (SQL_Table'Class, SQL_Table_Access);
    procedure Unchecked_Free is new Ada.Unchecked_Deallocation
@@ -71,15 +60,6 @@ package body GNATCOLL.SQL is
       Value : GNAT.Strings.String_Access);
    --  Assign Value to Field (or set field to NULL if Value is null)
 
-   function Create_Multiple_Args
-     (Fields         : SQL_Field_List;
-      Func_Name      : Cst_String_Access;
-      Separator      : Cst_String_Access;
-      Suffix         : String := "";
-      In_Parenthesis : Boolean := False)
-      return Multiple_Args_Field_Internal_Access;
-   --  Create a multiple_args field from Fields
-
    function To_String (Names : Table_Names) return String;
    function To_String (Self : Table_Sets.Set) return Unbounded_String;
    --  Various implementations for To_String, for different types
@@ -92,6 +72,237 @@ package body GNATCOLL.SQL is
 
    No_Field_Pointer : constant SQL_Field_Pointer :=
                         (Ada.Finalization.Controlled with null);
+
+   generic
+      type Base_Field is abstract new SQL_Field with private;
+   package Data_Field is
+      type Field is new Base_Field with record
+         Data : Field_Data;
+      end record;
+
+      overriding function To_String
+        (Self : Field; Long : Boolean := True)  return String;
+      overriding procedure Append_Tables
+        (Self : Field; To : in out Table_Sets.Set);
+      overriding procedure Append_If_Not_Aggregate
+        (Self         : Field;
+         To           : in out SQL_Field_List'Class;
+         Is_Aggregate : in out Boolean);
+   end Data_Field;
+
+   ----------------
+   -- Data_Field --
+   ----------------
+
+   package body Data_Field is
+      overriding function To_String
+        (Self : Field; Long : Boolean := True) return String is
+      begin
+         return To_String (Self.Data.Data.all, Long);
+      end To_String;
+
+      overriding procedure Append_Tables
+        (Self : Field; To : in out Table_Sets.Set) is
+      begin
+         Append_Tables (Self.Data.Data.all, To);
+      end Append_Tables;
+
+      overriding procedure Append_If_Not_Aggregate
+        (Self         : Field;
+         To           : in out SQL_Field_List'Class;
+         Is_Aggregate : in out Boolean)
+      is
+      begin
+         Append_If_Not_Aggregate (Self.Data.Data, To, Is_Aggregate);
+      end Append_If_Not_Aggregate;
+   end Data_Field;
+
+   package Integer_Fields is new Data_Field (SQL_Field_Integer);
+   type SQL_Field_Integer_Build is new Integer_Fields.Field with null record;
+
+   package Text_Fields is new Data_Field (SQL_Field_Text);
+   type SQL_Field_Text_Build is new Text_Fields.Field with null record;
+
+   package Time_Fields is new Data_Field (SQL_Field_Time);
+   type SQL_Field_Time_Build is new Time_Fields.Field with null record;
+
+   package Boolean_Fields is new Data_Field (SQL_Field_Boolean);
+   type SQL_Field_Boolean_Build is new Boolean_Fields.Field with null record;
+
+   package Float_Fields is new Data_Field (SQL_Field_Float);
+   type SQL_Field_Float_Build is new Float_Fields.Field with null record;
+
+   package Any_Fields is new Data_Field (SQL_Field);
+   type SQL_Field_Any is new Any_Fields.Field with null record;
+
+   --------------------
+   -- Apply_Function --
+   --------------------
+
+   function Apply_Function
+     (Field : Field_Type'Class) return SQL_Field_Text'Class
+   is
+      F : SQL_Field_Text_Build
+        (Table => null, Instance => null, Name => null);
+      D : constant Named_Field_Internal_Access := new Named_Field_Internal;
+   begin
+      if Suffix /= ")" and then Suffix /= "" then
+         D.Value := new String'
+           (Name & To_String (Field, Long => True) & " " & Suffix);
+      else
+         D.Value := new String'
+           (Name & To_String (Field, Long => True) & Suffix);
+      end if;
+      F.Data.Data := SQL_Field_Internal_Access (D);
+      return F;
+   end Apply_Function;
+
+   -------------------------
+   -- Time_Apply_Function --
+   -------------------------
+
+   function Time_Apply_Function
+     (Field : Field_Type'Class) return SQL_Field_Time'Class
+   is
+      F : SQL_Field_Time_Build
+        (Table => null, Instance => null, Name => null);
+      D : constant Named_Field_Internal_Access := new Named_Field_Internal;
+   begin
+      if Suffix /= ")" and then Suffix /= "" then
+         D.Value := new String'
+           (Name & To_String (Field, Long => True) & " " & Suffix);
+      else
+         D.Value := new String'
+           (Name & To_String (Field, Long => True) & Suffix);
+      end if;
+      F.Data.Data := SQL_Field_Internal_Access (D);
+      return F;
+   end Time_Apply_Function;
+
+   -------------------
+   -- Time_Function --
+   -------------------
+
+   function Time_Function return SQL_Field_Time'Class is
+      F : SQL_Field_Time_Build (Table => null, Instance => null, Name => null);
+      D : constant Named_Field_Internal_Access := new Named_Field_Internal;
+   begin
+      D.Value := new String'(Name);
+      F.Data.Data := SQL_Field_Internal_Access (D);
+      return F;
+   end Time_Function;
+
+   -------------------
+   -- Time_Operator --
+   -------------------
+
+   function Time_Operator
+     (Field1, Field2 : Field_Type'Class) return SQL_Field_Time'Class
+   is
+      F : SQL_Field_Time_Build (Table => null, Instance => null, Name => null);
+      D : constant Named_Field_Internal_Access := new Named_Field_Internal;
+   begin
+      D.Operator := new String'(Name);
+      D.List := Field1 & Field2;
+      F.Data.Data := SQL_Field_Internal_Access (D);
+      return F;
+   end Time_Operator;
+
+   --------------------------
+   -- Time_Scalar_Operator --
+   --------------------------
+
+   function Time_Scalar_Operator
+     (Field : Field_Type'Class; Operand : Scalar) return SQL_Field_Time'Class
+   is
+      F : SQL_Field_Time_Build (Table => null, Instance => null, Name => null);
+      D : constant Named_Field_Internal_Access := new Named_Field_Internal;
+   begin
+      D.Operator := new String'(Name);
+      D.List := Field & From_String (Prefix & Scalar'Image (Operand) & Suffix);
+      F.Data.Data := SQL_Field_Internal_Access (D);
+      return F;
+   end Time_Scalar_Operator;
+
+   -----------------------------
+   -- Integer_Scalar_Operator --
+   -----------------------------
+
+   function Integer_Scalar_Operator
+     (Field : Field_Type'Class; Operand : Scalar)
+      return SQL_Field_Integer'Class
+   is
+      F : SQL_Field_Integer_Build
+        (Table => null, Instance => null, Name => null);
+      D : constant Named_Field_Internal_Access := new Named_Field_Internal;
+   begin
+      D.Operator := new String'(Name);
+      D.List := Field & From_String (Prefix & Scalar'Image (Operand) & Suffix);
+      F.Data.Data := SQL_Field_Internal_Access (D);
+      return F;
+   end Integer_Scalar_Operator;
+
+   -------------------------
+   -- Field_List_Function --
+   -------------------------
+
+   function Field_List_Function
+     (Fields : SQL_Field_List) return SQL_Field'Class
+   is
+      Data   : constant Multiple_Args_Field_Internal_Access :=
+        new Multiple_Args_Field_Internal;
+      F : SQL_Field_Any (Table => null, Instance => null, Name => null);
+      C : Field_List.Cursor := First (Fields.List);
+   begin
+      if Func_Name /= "" then
+         Data.Func_Name := new String'(Func_Name);
+      end if;
+
+      Data.Separator := new String'(Separator);
+
+      if Suffix /= "" then
+         Data.Suffix := new String'(Suffix);
+      end if;
+
+      while Has_Element (C) loop
+         declare
+            Field    : constant SQL_Field'Class := Element (C);
+            Internal : SQL_Field_Internal_Access;
+            D        : Multiple_Args_Field_Internal_Access;
+            C2       : Field_List.Cursor;
+         begin
+            if Field in SQL_Field_Any'Class then
+               Internal := SQL_Field_Any (Field).Data.Data;
+               if Internal.all in Multiple_Args_Field_Internal'Class then
+                  D := Multiple_Args_Field_Internal_Access (Internal);
+
+                  if D.Separator.all = Separator then
+                     --  Avoid nested concatenations, put them all at the same
+                     --  level. This simplifies the query. Due to this, we are
+                     --  also sure the concatenation itself doesn't have
+                     --  sub-expressions
+
+                     C2 := First (D.List);
+                     while Has_Element (C2) loop
+                        Append (Data.List, Element (C2));
+                        Next (C2);
+                     end loop;
+                  else
+                     Append (Data.List, Field);
+                  end if;
+               else
+                  Append (Data.List, Field);
+               end if;
+            else
+               Append (Data.List, Field);
+            end if;
+         end;
+         Next (C);
+      end loop;
+
+      F.Data.Data := SQL_Field_Internal_Access (Data);
+      return F;
+   end Field_List_Function;
 
    ----------------------
    -- Normalize_String --
@@ -415,55 +626,13 @@ package body GNATCOLL.SQL is
    ---------------
 
    function To_String
-     (Self : SQL_Field_Integer_Build; Long : Boolean := True)  return String is
-   begin
-      return To_String (Self.Data.Data.all, Long);
-   end To_String;
-
-   function To_String
-     (Self : SQL_Field_Text_Build; Long : Boolean := True)  return String is
-   begin
-      return To_String (Self.Data.Data.all, Long);
-   end To_String;
-
-   function To_String
-     (Self : SQL_Field_Float_Build; Long : Boolean := True)  return String is
-   begin
-      return To_String (Self.Data.Data.all, Long);
-   end To_String;
-
-   function To_String
-     (Self : SQL_Field_Boolean_Build; Long : Boolean := True)  return String is
-   begin
-      return To_String (Self.Data.Data.all, Long);
-   end To_String;
-
-   function To_String
-     (Self : SQL_Field_Time_Build; Long : Boolean := True)  return String is
-   begin
-      return To_String (Self.Data.Data.all, Long);
-   end To_String;
-
-   function To_String
-     (Self : SQL_Field_Any; Long : Boolean := True) return String is
-   begin
-      return To_String (Self.Data.Data.all, Long);
-   end To_String;
-
-   ---------------
-   -- To_String --
-   ---------------
-
-   function To_String
      (Self : Multiple_Args_Field_Internal; Long : Boolean) return String
    is
       C      : Field_List.Cursor := First (Self.List);
       Result : Unbounded_String;
    begin
-      if Self.Func_Name /= Func_None'Access then
-         Append (Result, Self.Func_Name.all & " (");
-      elsif Self.In_Parenthesis then
-         Append (Result, "(");
+      if Self.Func_Name /= null then
+         Append (Result, Self.Func_Name.all);
       end if;
 
       if Has_Element (C) then
@@ -476,10 +645,6 @@ package body GNATCOLL.SQL is
          Append (Result, To_String (Element (C), Long));
          Next (C);
       end loop;
-
-      if Self.Func_Name /= Func_None'Access or else Self.In_Parenthesis then
-         Append (Result, ")");
-      end if;
 
       if Self.Suffix /= null then
          Append (Result, Self.Suffix.all);
@@ -1025,16 +1190,10 @@ package body GNATCOLL.SQL is
    function At_Time_Zone
      (Field : SQL_Field_Time'Class; TZ : String) return SQL_Field_Time'Class
    is
-      Data : constant Multiple_Args_Field_Internal_Access :=
-        Create_Multiple_Args
-          (+Field,
-           Func_None'Access, Func_None'Access,
-           Suffix => " at time zone '" & TZ & "'");
+      function Internal is new Time_Apply_Function
+        (SQL_Field_Time, "", " at time zone '" & TZ & "'");
    begin
-      return SQL_Field_Time_Build'
-        (Table => null, Instance => null, Name => null,
-         Data => (Ada.Finalization.Controlled
-                  with SQL_Field_Internal_Access (Data)));
+      return Internal (Field);
    end At_Time_Zone;
 
    ----------------
@@ -1058,83 +1217,18 @@ package body GNATCOLL.SQL is
    overriding procedure Free (Self : in out Multiple_Args_Field_Internal) is
    begin
       Free (Self.Suffix);
+      Free (Self.Func_Name);
+      Free (Self.Separator);
    end Free;
-
-   --------------------------
-   -- Create_Multiple_Args --
-   --------------------------
-
-   function Create_Multiple_Args
-     (Fields : SQL_Field_List;
-      Func_Name : Cst_String_Access;
-      Separator : Cst_String_Access;
-      Suffix    : String := "";
-      In_Parenthesis : Boolean := False)
-      return Multiple_Args_Field_Internal_Access
-   is
-      Data   : constant Multiple_Args_Field_Internal_Access :=
-        new Multiple_Args_Field_Internal;
-      C : Field_List.Cursor := First (Fields.List);
-   begin
-      Data.Func_Name      := Func_Name;
-      Data.Separator      := Separator;
-      Data.In_Parenthesis := In_Parenthesis;
-
-      if Suffix /= "" then
-         Data.Suffix         := new String'(Suffix);
-      end if;
-
-      while Has_Element (C) loop
-         declare
-            Field    : constant SQL_Field'Class := Element (C);
-            Internal : SQL_Field_Internal_Access;
-            D        : Multiple_Args_Field_Internal_Access;
-            C2       : Field_List.Cursor;
-         begin
-            if Field in SQL_Field_Any'Class then
-               Internal := SQL_Field_Any (Field).Data.Data;
-               if Internal.all in Multiple_Args_Field_Internal'Class then
-                  D := Multiple_Args_Field_Internal_Access (Internal);
-
-                  if D.Separator = Separator then
-                     --  Avoid nested concatenations, put them all at the same
-                     --  level. This simplifies the query. Due to this, we are
-                     --  also sure the concatenation itself doesn't have
-                     --  sub-expressions
-
-                     C2 := First (D.List);
-                     while Has_Element (C2) loop
-                        Append (Data.List, Element (C2));
-                        Next (C2);
-                     end loop;
-                  else
-                     Append (Data.List, Field);
-                  end if;
-               else
-                  Append (Data.List, Field);
-               end if;
-            else
-               Append (Data.List, Field);
-            end if;
-         end;
-         Next (C);
-      end loop;
-      return Data;
-   end Create_Multiple_Args;
 
    ------------
    -- Concat --
    ------------
 
    function Concat (Fields : SQL_Field_List) return SQL_Field'Class is
-      Data : constant Multiple_Args_Field_Internal_Access :=
-        Create_Multiple_Args
-          (Fields, Func_None'Access, Separator_Concat'Access);
+      function Internal is new Field_List_Function ("", " || ", "");
    begin
-      return SQL_Field_Any'
-        (Table => null, Instance => null, Name => null,
-         Data => (Ada.Finalization.Controlled
-                  with SQL_Field_Internal_Access (Data)));
+      return Internal (Fields);
    end Concat;
 
    -----------
@@ -1142,14 +1236,9 @@ package body GNATCOLL.SQL is
    -----------
 
    function Tuple (Fields : SQL_Field_List) return SQL_Field'Class is
-      Data : constant Multiple_Args_Field_Internal_Access :=
-        Create_Multiple_Args (Fields, Func_None'Access, Separator_Comma'Access,
-                              In_Parenthesis => True);
+      function Internal is new Field_List_Function ("(", ", ", ")");
    begin
-      return SQL_Field_Any'
-        (Table => null, Instance => null, Name => null,
-         Data => (Ada.Finalization.Controlled
-                  with SQL_Field_Internal_Access (Data)));
+      return Internal (Fields);
    end Tuple;
 
    --------------
@@ -1157,14 +1246,9 @@ package body GNATCOLL.SQL is
    --------------
 
    function Coalesce (Fields : SQL_Field_List) return SQL_Field'Class is
-      Data : constant Multiple_Args_Field_Internal_Access :=
-        Create_Multiple_Args
-          (Fields, Func_Coalesce'Access, Separator_Comma'Access);
+      function Internal is new Field_List_Function ("COALESCE (", ", ", ")");
    begin
-      return SQL_Field_Any'
-        (Table => null, Instance => null, Name => null,
-         Data => (Ada.Finalization.Controlled
-                  with SQL_Field_Internal_Access (Data)));
+      return Internal (Fields);
    end Coalesce;
 
    ---------
@@ -1222,17 +1306,12 @@ package body GNATCOLL.SQL is
    -------------
 
    function To_Char
-     (Field : SQL_Field_Time; Format : String) return SQL_Field'Class
+     (Field : SQL_Field_Time; Format : String) return SQL_Field_Text'Class
    is
-      Data : constant Multiple_Args_Field_Internal_Access :=
-        Create_Multiple_Args (Field & Expression (Format),
-                              Func_To_Char'Access,
-                              Separator_Comma'Access);
+      function Internal is new Apply_Function
+        (SQL_Field_Time, "TO_CHAR (", ", '" & Format & "')");
    begin
-      return SQL_Field_Any'
-        (Table => null, Instance => null, Name => null,
-         Data => (Ada.Finalization.Controlled
-                  with SQL_Field_Internal_Access (Data)));
+      return Internal (Field);
    end To_Char;
 
    -------------
@@ -1240,18 +1319,13 @@ package body GNATCOLL.SQL is
    -------------
 
    function Extract
-     (Field : SQL_Field'Class; Attribute : String) return SQL_Field'Class
+     (Field : SQL_Field_Time'Class; Attribute : String)
+      return SQL_Field_Time'Class
    is
-      Data : constant Multiple_Args_Field_Internal_Access :=
-        Create_Multiple_Args
-          (From_String (Attribute & " from") & Field,
-           Func_Extract'Access,
-           Separator_Space'Access);
+      function Internal is new Time_Apply_Function
+        (SQL_Field_Time, "EXTRACT (" & Attribute & " from ");
    begin
-      return SQL_Field_Any'
-        (Table => null, Instance => null, Name => null,
-         Data => (Ada.Finalization.Controlled
-                  with SQL_Field_Internal_Access (Data)));
+      return Internal (Field);
    end Extract;
 
    -----------
@@ -1261,13 +1335,9 @@ package body GNATCOLL.SQL is
    function Lower
      (Field : SQL_Field_Text'Class) return SQL_Field_Text'Class
    is
-      F : SQL_Field_Text_Build
-        (Table => null, Instance => null, Name => null);
-      D : constant Named_Field_Internal_Access := new Named_Field_Internal;
+      function Internal is new Apply_Function (SQL_Field_Text, "LOWER (");
    begin
-      D.Value := new String'(Func_Lower & "(" & Field.Name.all & ")");
-      F.Data.Data := SQL_Field_Internal_Access (D);
-      return F;
+      return Internal (Field);
    end Lower;
 
    -------------
@@ -1277,13 +1347,9 @@ package body GNATCOLL.SQL is
    function Initcap
      (Field : SQL_Field_Text'Class) return SQL_Field_Text'Class
    is
-      F : SQL_Field_Text_Build
-        (Table => null, Instance => null, Name => null);
-      D : constant Named_Field_Internal_Access := new Named_Field_Internal;
+      function Internal is new Apply_Function (SQL_Field_Text, "INITCAP (");
    begin
-      D.Value := new String'(Func_InitCap & "(" & Field.Name.all & ")");
-      F.Data.Data := SQL_Field_Internal_Access (D);
-      return F;
+      return Internal (Field);
    end Initcap;
 
    --------------------
@@ -1293,13 +1359,10 @@ package body GNATCOLL.SQL is
    function Cast_To_String
      (Field : SQL_Field'Class) return SQL_Field_Text'Class
    is
-      F : SQL_Field_Text_Build
-        (Table => null, Instance => null, Name => null);
-      D : constant Named_Field_Internal_Access := new Named_Field_Internal;
+      function Internal is new Apply_Function
+        (SQL_Field, "CAST (", "AS TEXT)");
    begin
-      D.Value := new String'("CAST (" & Field.Name.all & " AS TEXT)");
-      F.Data.Data := SQL_Field_Internal_Access (D);
-      return F;
+      return Internal (Field);
    end Cast_To_String;
 
    ---------------
@@ -1338,28 +1401,20 @@ package body GNATCOLL.SQL is
    ------------------
 
    function Current_Date return SQL_Field_Time'Class is
-      Data : constant Named_Field_Internal_Access := new Named_Field_Internal;
+      function Internal is new Time_Function ("current_date");
    begin
-      Data.Value := new String'("current_date");
-      return SQL_Field_Time_Build'
-        (Table => null, Instance => null, Name => null,
-         Data => (Ada.Finalization.Controlled with
-                  Data => SQL_Field_Internal_Access (Data)));
+      return Internal;
    end Current_Date;
 
-   ---------
-   -- Now --
-   ---------
+   -----------------------
+   -- Current_Timestamp --
+   -----------------------
 
-   function Now return SQL_Field_Time'Class is
-      Data : constant Named_Field_Internal_Access := new Named_Field_Internal;
+   function Current_Timestamp return SQL_Field_Time'Class is
+      function Internal is new Time_Function ("current_timestamp");
    begin
-      Data.Value := new String'("now()");
-      return SQL_Field_Time_Build'
-        (Table => null, Instance => null, Name => null,
-         Data => (Ada.Finalization.Controlled with
-                  Data => SQL_Field_Internal_Access (Data)));
-   end Now;
+      return Internal;
+   end Current_Timestamp;
 
    ---------
    -- "-" --
@@ -1368,14 +1423,9 @@ package body GNATCOLL.SQL is
    function "-"
      (Field1, Field2 : SQL_Field_Time'Class) return SQL_Field_Time'Class
    is
-      Data : constant Named_Field_Internal_Access := new Named_Field_Internal;
+      function Internal is new Time_Operator (SQL_Field_Time, "-");
    begin
-      Data.Operator := new String'("-");
-      Data.List := Field1 & Field2;
-      return SQL_Field_Time_Build'
-        (Table => null, Instance => null, Name => null,
-         Data => (Ada.Finalization.Controlled with
-                  Data => SQL_Field_Internal_Access (Data)));
+      return Internal (Field1, Field2);
    end "-";
 
    ---------
@@ -1386,15 +1436,10 @@ package body GNATCOLL.SQL is
      (Field1 : SQL_Field_Time'Class;
       Days   : Integer) return SQL_Field_Time'Class
    is
-      Data : constant Named_Field_Internal_Access := new Named_Field_Internal;
+      function Internal is new Time_Scalar_Operator
+        (SQL_Field_Time, Integer, "-", "interval '", "days'");
    begin
-      Data.Operator := new String'("-");
-      Data.List := Field1 & From_String
-        ("interval '" & Integer'Image (Days) & "days'");
-      return SQL_Field_Time_Build'
-        (Table => null, Instance => null, Name => null,
-         Data => (Ada.Finalization.Controlled with
-                  Data => SQL_Field_Internal_Access (Data)));
+      return Internal (Field1, Days);
    end "-";
 
    ---------
@@ -1405,14 +1450,10 @@ package body GNATCOLL.SQL is
      (Field : SQL_Field_Integer'Class; Add : Integer)
       return SQL_Field_Integer'Class
    is
-      Data : constant Named_Field_Internal_Access := new Named_Field_Internal;
+      function Internal is new Integer_Scalar_Operator
+        (SQL_Field_Integer, Integer, "+");
    begin
-      Data.Operator := new String'("+");
-      Data.List := Field & From_String (Integer'Image (Add));
-      return SQL_Field_Integer_Build'
-        (Table => null, Instance => null, Name => null,
-         Data => (Ada.Finalization.Controlled with
-                  Data => SQL_Field_Internal_Access (Data)));
+      return Internal (Field, Add);
    end "+";
 
    -----------
@@ -2700,46 +2741,6 @@ package body GNATCOLL.SQL is
    -------------------
 
    procedure Append_Tables
-     (Self : SQL_Field_Integer_Build; To : in out Table_Sets.Set) is
-   begin
-      Append_Tables (Self.Data.Data.all, To);
-   end Append_Tables;
-
-   procedure Append_Tables
-     (Self : SQL_Field_Text_Build; To : in out Table_Sets.Set) is
-   begin
-      Append_Tables (Self.Data.Data.all, To);
-   end Append_Tables;
-
-   procedure Append_Tables
-     (Self : SQL_Field_Boolean_Build; To : in out Table_Sets.Set) is
-   begin
-      Append_Tables (Self.Data.Data.all, To);
-   end Append_Tables;
-
-   procedure Append_Tables
-     (Self : SQL_Field_Float_Build; To : in out Table_Sets.Set) is
-   begin
-      Append_Tables (Self.Data.Data.all, To);
-   end Append_Tables;
-
-   procedure Append_Tables
-     (Self : SQL_Field_Time_Build; To : in out Table_Sets.Set) is
-   begin
-      Append_Tables (Self.Data.Data.all, To);
-   end Append_Tables;
-
-   procedure Append_Tables
-     (Self : SQL_Field_Any; To : in out Table_Sets.Set) is
-   begin
-      Append_Tables (Self.Data.Data.all, To);
-   end Append_Tables;
-
-   -------------------
-   -- Append_Tables --
-   -------------------
-
-   procedure Append_Tables
      (From : SQL_Field_List; To : in out Table_Sets.Set)
    is
       C : Field_List.Cursor := First (From.List);
@@ -2831,64 +2832,6 @@ package body GNATCOLL.SQL is
       end loop;
       Append_Tables (Self.Criteria, To);
    end Append_Tables;
-
-   -----------------------------
-   -- Append_If_Not_Aggregate --
-   -----------------------------
-
-   procedure Append_If_Not_Aggregate
-     (Self         : SQL_Field_Integer_Build;
-      To           : in out SQL_Field_List'Class;
-      Is_Aggregate : in out Boolean)
-   is
-   begin
-      Append_If_Not_Aggregate (Self.Data.Data, To, Is_Aggregate);
-   end Append_If_Not_Aggregate;
-
-   procedure Append_If_Not_Aggregate
-     (Self         : SQL_Field_Text_Build;
-      To           : in out SQL_Field_List'Class;
-      Is_Aggregate : in out Boolean)
-   is
-   begin
-      Append_If_Not_Aggregate (Self.Data.Data, To, Is_Aggregate);
-   end Append_If_Not_Aggregate;
-
-   procedure Append_If_Not_Aggregate
-     (Self         : SQL_Field_Float_Build;
-      To           : in out SQL_Field_List'Class;
-      Is_Aggregate : in out Boolean)
-   is
-   begin
-      Append_If_Not_Aggregate (Self.Data.Data, To, Is_Aggregate);
-   end Append_If_Not_Aggregate;
-
-   procedure Append_If_Not_Aggregate
-     (Self         : SQL_Field_Boolean_Build;
-      To           : in out SQL_Field_List'Class;
-      Is_Aggregate : in out Boolean)
-   is
-   begin
-      Append_If_Not_Aggregate (Self.Data.Data, To, Is_Aggregate);
-   end Append_If_Not_Aggregate;
-
-   procedure Append_If_Not_Aggregate
-     (Self         : SQL_Field_Time_Build;
-      To           : in out SQL_Field_List'Class;
-      Is_Aggregate : in out Boolean)
-   is
-   begin
-      Append_If_Not_Aggregate (Self.Data.Data, To, Is_Aggregate);
-   end Append_If_Not_Aggregate;
-
-   procedure Append_If_Not_Aggregate
-     (Self         : SQL_Field_Any;
-      To           : in out SQL_Field_List'Class;
-      Is_Aggregate : in out Boolean)
-   is
-   begin
-      Append_If_Not_Aggregate (Self.Data.Data, To, Is_Aggregate);
-   end Append_If_Not_Aggregate;
 
    -----------------------------
    -- Append_If_Not_Aggregate --
