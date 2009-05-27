@@ -1,7 +1,7 @@
 -----------------------------------------------------------------------
 --                          G N A T C O L L                          --
 --                                                                   --
---                 Copyright (C) 2006-2008, AdaCore                  --
+--                 Copyright (C) 2006-2009, AdaCore                  --
 --                                                                   --
 -- GPS is free  software;  you can redistribute it and/or modify  it --
 -- under the terms of the GNU General Public License as published by --
@@ -102,7 +102,7 @@ package body GNATCOLL.Email.Utils is
       'q' => 42, 'r' => 43, 's' => 44, 't' => 45, 'u' => 46, 'v' => 47,
       'w' => 48, 'x' => 49, 'y' => 50, 'z' => 51, others => -1);
 
-   type Mod64 is mod 64;
+   type Mod64 is mod 2 ** 6;
    To_Base64 : constant array (Mod64) of Character :=
      (00 => 'A',  1 => 'B',  2 => 'C',  3 => 'D',  4 => 'E',  5 => 'F',
        6 => 'G',  7 => 'H',  8 => 'I',  9 => 'J', 10 => 'K', 11 => 'L',
