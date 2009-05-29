@@ -314,7 +314,20 @@ package GNATCOLL.SQL_Impl is
       type Ada_Type (<>) is private;
       with function To_SQL (Value : Ada_Type) return String;
       --  Converts Ada_Type to a value suitable to pass to SQL. This should
-      --  protect special characters if need be
+      --  protect special characters if need be.
+      --  This function can also be used to add constraints on the types
+      --  supported by these fields.
+      --  You can often rely on Ada's builtin checks (for instance an integer
+      --  field that accepts values from 1 to 10 would be instantiated with an
+      --  Ada type
+      --       type My_Type is new Integer range 1 .. 10;
+      --  and that would work. However, this isn't always doable. For instance,
+      --  to represent a string field with a _maximum_ length of 10, we cannot
+      --  instantiate it with String (1 .. 10), since that would only allow
+      --  strings of _exactly_ 10 character. In such a case, we should
+      --  implement Check_Value to ensure the max length of the string.
+      --  This procedure should raise Constraint_Error in case of error.
+
    package Field_Types is
       type Field is new SQL_Field with null record;
 
