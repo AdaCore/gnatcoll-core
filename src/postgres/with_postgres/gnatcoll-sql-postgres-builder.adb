@@ -21,6 +21,7 @@ with Ada.Strings.Unbounded;        use Ada.Strings.Unbounded;
 with Ada.Unchecked_Deallocation;
 with GNATCOLL.SQL.Postgres.Gnade;  use GNATCOLL.SQL.Postgres.Gnade;
 with GNATCOLL.SQL.Exec_Private;    use GNATCOLL.SQL.Exec_Private;
+with GNAT.Strings;                 use GNAT.Strings;
 
 package body GNATCOLL.SQL.Postgres.Builder is
 

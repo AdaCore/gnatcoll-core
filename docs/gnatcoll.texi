@@ -226,6 +226,7 @@ Database interface
 * Executing queries::
 * Getting results::
 * Writing your own cursors::
+* Creating your own SQL types::
 * Query logs::
 * Tasks and databases::
 
@@ -3089,6 +3090,7 @@ history.
 * Executing queries::
 * Getting results::
 * Writing your own cursors::
+* Creating your own SQL types::
 * Query logs::
 * Tasks and databases::
 @end menu
@@ -3721,6 +3723,63 @@ were in the query. In practice, he will likely be interested in the number
 of distinct contacts in the tables (2 in our example) rather than the number
 of rows in the result (3 in the example). You thus need to also override
 those two subprograms to return correct values.
+
+@c -----------------------------------------------------------------------
+@node Creating your own SQL types
+@section Creating your own SQL types
+@c -----------------------------------------------------------------------
+@noindent
+
+@value{gnatcoll} comes with a number of predefined types that you can use in
+your queries. @file{gnatcoll_db2ada} will generate a file using any of these
+predefined types, based on what is defined in your actual database.
+
+But sometimes, it is convenient to define your own SQL types to better
+represent the logic of your application. For instance, you might want to
+define a type that would be for a @code{Character} field, rather than use
+the general @code{SQL_Field_Text}, just so that you can write statements
+like:
+
+@CODESAMPLE{
+  @b{declare}@NL{}
+     C : Character := 'A';@NL{}
+     Q : SQL_Query;@NL{}
+  @b{begin}@NL{}
+     Q := SQL_Select (.., Where => Table.Field = C);@NL{}
+  @b{end}@NL{}
+}
+
+This is fortunately easily achieved by instantiating one generic package,
+as such
+
+@CODESAMPLE{
+  @b{with} GNATCOLL.SQL_Impl; @b{use} GNATCOLL.SQL_Impl;@NL{}
+@NL{}
+  @b{function} To_SQL (C : Character) @b{return} String @b{is}@NL{}
+  @b{begin}@NL{}
+     @b{return} "'" & C & "'";@NL{}
+  @b{end} To_SQL;@NL{}
+@NL{}
+  @b{package} Character_Fields @b{is new} Field_Types (Character, To_SQL);@NL{}
+  @b{type} SQL_Field_Character @b{is new} Character_Fields.Field@NL{}
+     @b{with null record};@NL{}
+}
+
+This automatically makes available both the field type (which you can use in
+your database description, as @file{gnatcoll_db2ada} would do, but also
+all comparison operators like @code{<}, @code{>}, @code{=}, and so on, both
+to compare with another character field, or with @code{Character} Ada
+variable. Likewise, this makes available the assignment operator @code{=}
+so that you can create @code{INSERT} statements in the database.
+
+Finally, the package @code{Character_Fields} contain other generic
+packages which you can instantiate to bind SQL operators and functions that
+are either predefined in SQL and have no equivalent in @value{gnatcoll} yet,
+or that are functions that you have created yourself on your DBMS server.
+
+See the specs of @code{GNATCOLL.SQL_Impl} for more details. This package
+is only really useful when writing your own types, since otherwise you
+just have to use @code{GNATCOLL.SQL} to write the actual queries.
 
 @c -----------------------------------------------------------------------
 @node Query logs

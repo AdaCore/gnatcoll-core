@@ -21,30 +21,27 @@ with Ada.Calendar;               use Ada.Calendar;
 with Ada.Calendar.Time_Zones;    use Ada.Calendar.Time_Zones;
 with Ada.Containers;             use Ada.Containers;
 with Ada.Strings.Fixed;          use Ada.Strings.Fixed;
-with Ada.Strings.Hash;
 with Ada.Unchecked_Deallocation;
 with GNAT.Calendar.Time_IO;      use GNAT.Calendar.Time_IO;
+with GNAT.Strings;               use GNAT.Strings;
 with GNATCOLL.Utils;             use GNATCOLL.Utils;
 
 package body GNATCOLL.SQL is
 
-   use Table_List, Field_List, Criteria_List, Table_Sets, Assignment_Lists;
+   use Table_List, Field_List, Criteria_List, Table_Sets;
    use When_Lists;
+   use type Boolean_Fields.Field;
+
+   Comparison_Like        : aliased constant String := " LIKE ";
+   Comparison_ILike       : aliased constant String := " ILIKE ";
+   Comparison_Not_Like    : aliased constant String := " NOT LIKE ";
+   Comparison_Not_ILike   : aliased constant String := " NOT ILIKE ";
+   Comparison_Overlaps    : aliased constant String := " OVERLAPS ";
+   Comparison_Any         : aliased constant String := " = ANY (";
+   Comparison_Parenthesis : aliased constant String := ")";
 
    procedure Unchecked_Free is new Ada.Unchecked_Deallocation
      (SQL_Table'Class, SQL_Table_Access);
-   procedure Unchecked_Free is new Ada.Unchecked_Deallocation
-     (SQL_Field'Class, Field_Access);
-
-   function Normalize_String (Str : String) return String;
-   --  Escape every apostrophe character "'" and backslash "\".
-   --  Useful for strings in SQL commands where "'" means the end
-   --  of the current string.
-
-   function Compare
-     (Left, Right : SQL_Field'Class; Op : SQL_Criteria_Type)
-      return SQL_Criteria;
-   --  Internal shared code for all "=", "<", ">", "<=" and ">=" operators
 
    function Combine
      (Left, Right : SQL_Criteria; Op : SQL_Criteria_Type) return SQL_Criteria;
@@ -54,193 +51,97 @@ package body GNATCOLL.SQL is
      (From : SQL_Field_List; To : in out Table_Sets.Set);
    --  Append all tables referenced in From to To.
 
-   procedure Assign
-     (R     : out SQL_Assignment;
-      Field : SQL_Field'Class;
-      Value : GNAT.Strings.String_Access);
-   --  Assign Value to Field (or set field to NULL if Value is null)
-
    function To_String (Names : Table_Names) return String;
    function To_String (Self : Table_Sets.Set) return Unbounded_String;
    --  Various implementations for To_String, for different types
 
-   procedure Append_If_Not_Aggregate
-     (Self         : SQL_Criteria;
-      To           : in out SQL_Field_List'Class;
-      Is_Aggregate : in out Boolean);
-   --  Same as Append_If_Not_Aggregate for fields
-
-   No_Field_Pointer : constant SQL_Field_Pointer :=
-                        (Ada.Finalization.Controlled with null);
-
-   generic
-      type Base_Field is abstract new SQL_Field with private;
-   package Data_Field is
-      type Field is new Base_Field with record
-         Data : Field_Data;
-      end record;
-
-      overriding function To_String
-        (Self : Field; Long : Boolean := True)  return String;
-      overriding procedure Append_Tables
-        (Self : Field; To : in out Table_Sets.Set);
-      overriding procedure Append_If_Not_Aggregate
-        (Self         : Field;
-         To           : in out SQL_Field_List'Class;
-         Is_Aggregate : in out Boolean);
-   end Data_Field;
-
-   ----------------
-   -- Data_Field --
-   ----------------
-
-   package body Data_Field is
-      overriding function To_String
-        (Self : Field; Long : Boolean := True) return String is
-      begin
-         return To_String (Self.Data.Data.all, Long);
-      end To_String;
-
-      overriding procedure Append_Tables
-        (Self : Field; To : in out Table_Sets.Set) is
-      begin
-         Append_Tables (Self.Data.Data.all, To);
-      end Append_Tables;
-
-      overriding procedure Append_If_Not_Aggregate
-        (Self         : Field;
-         To           : in out SQL_Field_List'Class;
-         Is_Aggregate : in out Boolean)
-      is
-      begin
-         Append_If_Not_Aggregate (Self.Data.Data, To, Is_Aggregate);
-      end Append_If_Not_Aggregate;
-   end Data_Field;
-
-   package Integer_Fields is new Data_Field (SQL_Field_Integer);
-   type SQL_Field_Integer_Build is new Integer_Fields.Field with null record;
-
-   package Text_Fields is new Data_Field (SQL_Field_Text);
-   type SQL_Field_Text_Build is new Text_Fields.Field with null record;
-
-   package Time_Fields is new Data_Field (SQL_Field_Time);
-   type SQL_Field_Time_Build is new Time_Fields.Field with null record;
-
-   package Boolean_Fields is new Data_Field (SQL_Field_Boolean);
-   type SQL_Field_Boolean_Build is new Boolean_Fields.Field with null record;
-
-   package Float_Fields is new Data_Field (SQL_Field_Float);
-   type SQL_Field_Float_Build is new Float_Fields.Field with null record;
-
-   package Any_Fields is new Data_Field (SQL_Field);
+   package Any_Fields is new Data_Fields (SQL_Field);
    type SQL_Field_Any is new Any_Fields.Field with null record;
 
-   --------------------
-   -- Apply_Function --
-   --------------------
-
-   function Apply_Function
-     (Field : Field_Type'Class) return SQL_Field_Text'Class
-   is
-      F : SQL_Field_Text_Build
-        (Table => null, Instance => null, Name => null);
-      D : constant Named_Field_Internal_Access := new Named_Field_Internal;
-   begin
-      if Suffix /= ")" and then Suffix /= "" then
-         D.Value := new String'
-           (Name & To_String (Field, Long => True) & " " & Suffix);
-      else
-         D.Value := new String'
-           (Name & To_String (Field, Long => True) & Suffix);
-      end if;
-      F.Data.Data := SQL_Field_Internal_Access (D);
-      return F;
-   end Apply_Function;
-
-   -------------------------
-   -- Time_Apply_Function --
-   -------------------------
-
-   function Time_Apply_Function
-     (Field : Field_Type'Class) return SQL_Field_Time'Class
-   is
-      F : SQL_Field_Time_Build
-        (Table => null, Instance => null, Name => null);
-      D : constant Named_Field_Internal_Access := new Named_Field_Internal;
-   begin
-      if Suffix /= ")" and then Suffix /= "" then
-         D.Value := new String'
-           (Name & To_String (Field, Long => True) & " " & Suffix);
-      else
-         D.Value := new String'
-           (Name & To_String (Field, Long => True) & Suffix);
-      end if;
-      F.Data.Data := SQL_Field_Internal_Access (D);
-      return F;
-   end Time_Apply_Function;
-
    -------------------
-   -- Time_Function --
+   -- As field data --
    -------------------
+   --  Used when a field is renamed via "anything AS name"
 
-   function Time_Function return SQL_Field_Time'Class is
-      F : SQL_Field_Time_Build (Table => null, Instance => null, Name => null);
-      D : constant Named_Field_Internal_Access := new Named_Field_Internal;
-   begin
-      D.Value := new String'(Name);
-      F.Data.Data := SQL_Field_Internal_Access (D);
-      return F;
-   end Time_Function;
-
-   -------------------
-   -- Time_Operator --
-   -------------------
-
-   function Time_Operator
-     (Field1, Field2 : Field_Type'Class) return SQL_Field_Time'Class
-   is
-      F : SQL_Field_Time_Build (Table => null, Instance => null, Name => null);
-      D : constant Named_Field_Internal_Access := new Named_Field_Internal;
-   begin
-      D.Operator := new String'(Name);
-      D.List := Field1 & Field2;
-      F.Data.Data := SQL_Field_Internal_Access (D);
-      return F;
-   end Time_Operator;
+   type As_Field_Internal is new SQL_Field_Internal with record
+      As      : GNAT.Strings.String_Access;
+      Renamed : SQL_Field_Pointer;
+   end record;
+   type As_Field_Internal_Access is access all As_Field_Internal'Class;
+   overriding procedure Free (Self : in out As_Field_Internal);
+   overriding function To_String
+     (Self : As_Field_Internal; Long : Boolean) return String;
+   overriding procedure Append_Tables
+     (Self : As_Field_Internal; To : in out Table_Sets.Set);
+   overriding procedure Append_If_Not_Aggregate
+     (Self         : access As_Field_Internal;
+      To           : in out SQL_Field_List'Class;
+      Is_Aggregate : in out Boolean);
 
    --------------------------
-   -- Time_Scalar_Operator --
+   -- Multiple args fields --
    --------------------------
+   --  Several fields grouped into one via functions, operators or other. Such
+   --  fields are not typed ("field1 operator field2 operator field3 ...")
 
-   function Time_Scalar_Operator
-     (Field : Field_Type'Class; Operand : Scalar) return SQL_Field_Time'Class
-   is
-      F : SQL_Field_Time_Build (Table => null, Instance => null, Name => null);
-      D : constant Named_Field_Internal_Access := new Named_Field_Internal;
-   begin
-      D.Operator := new String'(Name);
-      D.List := Field & From_String (Prefix & Scalar'Image (Operand) & Suffix);
-      F.Data.Data := SQL_Field_Internal_Access (D);
-      return F;
-   end Time_Scalar_Operator;
+   type Multiple_Args_Field_Internal is new SQL_Field_Internal with record
+      Func_Name      : GNAT.Strings.String_Access; --  can be null
+      Separator      : GNAT.Strings.String_Access;
+      Suffix         : GNAT.Strings.String_Access; --  can be null
+      List           : Field_List.List;
+   end record;
+   type Multiple_Args_Field_Internal_Access is access all
+     Multiple_Args_Field_Internal'Class;
+   overriding function To_String
+     (Self : Multiple_Args_Field_Internal; Long : Boolean) return String;
+   overriding procedure Append_Tables
+     (Self : Multiple_Args_Field_Internal; To : in out Table_Sets.Set);
+   overriding procedure Append_If_Not_Aggregate
+     (Self         : access Multiple_Args_Field_Internal;
+      To           : in out SQL_Field_List'Class;
+      Is_Aggregate : in out Boolean);
+   overriding procedure Free (Self : in out Multiple_Args_Field_Internal);
 
-   -----------------------------
-   -- Integer_Scalar_Operator --
-   -----------------------------
+   -----------------------
+   -- Aggregrate fields --
+   -----------------------
+   --  Representing an sql aggregate function
 
-   function Integer_Scalar_Operator
-     (Field : Field_Type'Class; Operand : Scalar)
-      return SQL_Field_Integer'Class
-   is
-      F : SQL_Field_Integer_Build
-        (Table => null, Instance => null, Name => null);
-      D : constant Named_Field_Internal_Access := new Named_Field_Internal;
-   begin
-      D.Operator := new String'(Name);
-      D.List := Field & From_String (Prefix & Scalar'Image (Operand) & Suffix);
-      F.Data.Data := SQL_Field_Internal_Access (D);
-      return F;
-   end Integer_Scalar_Operator;
+   type Aggregate_Field_Internal is new SQL_Field_Internal with record
+      Func     : GNAT.Strings.String_Access;
+      Params   : SQL_Field_List;
+      Criteria : SQL_Criteria;
+   end record;
+   type Aggregate_Field_Internal_Access
+     is access all Aggregate_Field_Internal'Class;
+   overriding procedure Free (Self : in out Aggregate_Field_Internal);
+   overriding function To_String
+     (Self : Aggregate_Field_Internal; Long : Boolean) return String;
+   overriding procedure Append_Tables
+     (Self : Aggregate_Field_Internal; To : in out Table_Sets.Set);
+   overriding procedure Append_If_Not_Aggregate
+     (Self         : access Aggregate_Field_Internal;
+      To           : in out SQL_Field_List'Class;
+      Is_Aggregate : in out Boolean);
+
+   -----------------
+   -- Sort fields --
+   -----------------
+   --  Fields used in the "ORDER BY" clauses
+
+   type Sorted_Field_Internal is new SQL_Field_Internal with record
+      Ascending : Boolean;
+      Sorted    : SQL_Field_Pointer;
+   end record;
+   type Sorted_Field_Internal_Access is access all Sorted_Field_Internal'Class;
+   overriding function To_String
+     (Self : Sorted_Field_Internal; Long : Boolean) return String;
+   overriding procedure Append_Tables
+     (Self : Sorted_Field_Internal; To : in out Table_Sets.Set);
+   overriding procedure Append_If_Not_Aggregate
+     (Self         : access Sorted_Field_Internal;
+      To           : in out SQL_Field_List'Class;
+      Is_Aggregate : in out Boolean);
 
    -------------------------
    -- Field_List_Function --
@@ -252,7 +153,7 @@ package body GNATCOLL.SQL is
       Data   : constant Multiple_Args_Field_Internal_Access :=
         new Multiple_Args_Field_Internal;
       F : SQL_Field_Any (Table => null, Instance => null, Name => null);
-      C : Field_List.Cursor := First (Fields.List);
+      C : Field_List.Cursor := First (Fields);
    begin
       if Func_Name /= "" then
          Data.Func_Name := new String'(Func_Name);
@@ -381,7 +282,9 @@ package body GNATCOLL.SQL is
       Append (Result, To_String (Element (C)));
       if Self.Data.Data.On /= No_Criteria then
          Append (Result, " ON ");
-         Append (Result, To_String (Self.Data.Data.On, Long => True));
+         Append
+           (Result,
+            GNATCOLL.SQL_Impl.To_String (Self.Data.Data.On, Long => True));
       end if;
       Append (Result, ")");
 
@@ -417,19 +320,6 @@ package body GNATCOLL.SQL is
          return Self.Table_Name.all & " " & Self.Instance.all;
       end if;
    end To_String;
-
-   ----------
-   -- Hash --
-   ----------
-
-   function Hash (Self : Table_Names) return Ada.Containers.Hash_Type is
-   begin
-      if Self.Instance = null then
-         return Ada.Strings.Hash (Self.Name.all);
-      else
-         return Ada.Strings.Hash (Self.Instance.all);
-      end if;
-   end Hash;
 
    ---------------
    -- To_String --
@@ -497,48 +387,6 @@ package body GNATCOLL.SQL is
    ---------------
 
    function To_String
-     (Self : Named_Field_Internal; Long : Boolean) return String
-   is
-      Result : Unbounded_String;
-      C      : Field_List.Cursor;
-   begin
-      if Self.Value /= null then
-         if Self.Table = No_Names then
-            Result := To_Unbounded_String (Self.Value.all);
-
-         elsif Long then
-            if Self.Table.Instance = null then
-               Result := To_Unbounded_String
-                 (Self.Table.Name.all & '.' & Self.Value.all);
-            else
-               Result := To_Unbounded_String
-                 (Self.Table.Instance.all & '.' & Self.Value.all);
-            end if;
-         else
-            Result := To_Unbounded_String (Self.Value.all);
-         end if;
-      end if;
-
-      if Self.Operator /= null then
-         C := First (Self.List.List);
-         Result := To_Unbounded_String (To_String (Element (C)));
-         Next (C);
-
-         while Has_Element (C) loop
-            Result := Result & " " & Self.Operator.all & " "
-              & To_String (Element (C));
-            Next (C);
-         end loop;
-      end if;
-
-      return To_String (Result);
-   end To_String;
-
-   ---------------
-   -- To_String --
-   ---------------
-
-   function To_String
      (Self : As_Field_Internal; Long : Boolean) return String
    is
       Has_Blank : Boolean := False;
@@ -554,10 +402,10 @@ package body GNATCOLL.SQL is
         and then (Self.As (Self.As'First) /= '"'
                   or else Self.As (Self.As'Last) /= '"')
       then
-         return To_String (Self.Renamed.Data.Field.all, Long)
+         return To_String (Self.Renamed, Long)
            & " AS """ & Self.As.all & """";
       else
-         return To_String (Self.Renamed.Data.Field.all, Long)
+         return To_String (Self.Renamed, Long)
            & " AS " & Self.As.all;
       end if;
    end To_String;
@@ -570,54 +418,9 @@ package body GNATCOLL.SQL is
      (Self : Sorted_Field_Internal; Long : Boolean) return String is
    begin
       if Self.Ascending then
-         return To_String (Self.Sorted.Data.Field.all, Long => Long) & " ASC";
+         return To_String (Self.Sorted, Long => Long) & " ASC";
       else
-         return To_String (Self.Sorted.Data.Field.all, Long => Long) & " DESC";
-      end if;
-   end To_String;
-
-   ---------------
-   -- To_String --
-   ---------------
-
-   function To_String
-     (Self : SQL_Field_List; Long : Boolean := True) return String
-   is
-      C      : Field_List.Cursor := First (Self.List);
-      Result : Unbounded_String;
-   begin
-      if Has_Element (C) then
-         Append (Result, To_String (Element (C), Long));
-         Next (C);
-      end if;
-
-      while Has_Element (C) loop
-         Append (Result, ", ");
-         Append (Result, To_String (Element (C), Long));
-         Next (C);
-      end loop;
-      return To_String (Result);
-   end To_String;
-
-   ---------------
-   -- To_String --
-   ---------------
-
-   function To_String
-     (Self : SQL_Field; Long : Boolean := True)  return String is
-   begin
-      if not Long then
-         return Self.Name.all;
-      elsif Self.Instance /= null then
-         return Self.Instance.all & "." & Self.Name.all;
-
-      elsif Self.Table /= null then
-         return Self.Table.all & "." & Self.Name.all;
-
-      else
-         --  Self.Table could be null in the case of the Null_Field_*
-         --  constants
-         return Self.Name.all;
+         return To_String (Self.Sorted, Long => Long) & " DESC";
       end if;
    end To_String;
 
@@ -665,16 +468,17 @@ package body GNATCOLL.SQL is
    begin
       Append (Result, "CASE");
       while Has_Element (C) loop
-         Append (Result, " WHEN " & To_String (Element (C).Criteria)
+         Append (Result, " WHEN "
+                 & GNATCOLL.SQL_Impl.To_String (Element (C).Criteria)
                  & " THEN "
-                 & To_String (Element (C).Field.Data.Field.all, Long));
+                 & To_String (Element (C).Field, Long));
          Next (C);
       end loop;
 
       if Self.Else_Clause /= No_Field_Pointer then
          Append
            (Result,
-            " ELSE " & To_String (Self.Else_Clause.Data.Field.all, Long));
+            " ELSE " & To_String (Self.Else_Clause, Long));
       end if;
 
       Append (Result, " END");
@@ -745,75 +549,6 @@ package body GNATCOLL.SQL is
       return Result;
    end "+";
 
-   ---------
-   -- "&" --
-   ---------
-
-   function "&"
-     (Left, Right : SQL_Field_List) return SQL_Field_List
-   is
-      Result : SQL_Field_List;
-      C      : Field_List.Cursor := First (Right.List);
-   begin
-      Result.List := Left.List;
-      while Has_Element (C) loop
-         Append (Result.List, Element (C));
-         Next (C);
-      end loop;
-      return Result;
-   end "&";
-
-   ---------
-   -- "&" --
-   ---------
-
-   function "&" (Left, Right : SQL_Field'Class) return SQL_Field_List is
-      Result : SQL_Field_List;
-   begin
-      Append (Result.List, Left);
-      Append (Result.List, Right);
-      return Result;
-   end "&";
-
-   ---------
-   -- "&" --
-   ---------
-
-   function "&"
-     (Left : SQL_Field_List; Right : SQL_Field'Class) return SQL_Field_List
-   is
-      Result : SQL_Field_List;
-   begin
-      Result.List := Left.List;
-      Append (Result.List, Right);
-      return Result;
-   end "&";
-
-   ---------
-   -- "&" --
-   ---------
-
-   function "&"
-     (Left : SQL_Field'Class; Right : SQL_Field_List) return SQL_Field_List
-   is
-      Result : SQL_Field_List;
-   begin
-      Result.List := Right.List;
-      Prepend (Result.List, Left);
-      return Result;
-   end "&";
-
-   ---------
-   -- "+" --
-   ---------
-
-   function "+" (Left : SQL_Field'Class) return SQL_Field_List is
-      Result : SQL_Field_List;
-   begin
-      Append (Result.List, Left);
-      return Result;
-   end "+";
-
    --------
    -- As --
    --------
@@ -830,96 +565,6 @@ package body GNATCOLL.SQL is
          Data => (Ada.Finalization.Controlled with
                   Data => SQL_Field_Internal_Access (Data)));
    end As;
-
-   -----------
-   -- Field --
-   -----------
-
-   function Field
-     (Table : SQL_Single_Table'Class;
-      Field : SQL_Field_Integer) return SQL_Field_Integer'Class
-   is
-      F : SQL_Field_Integer_Build
-        (Table => null, Instance => Table.Instance, Name => null);
-      D : constant Named_Field_Internal_Access := new Named_Field_Internal;
-   begin
-      D.Table := (Name => null, Instance => Table.Instance);
-      D.Value := new String'(Field.Name.all);
-      F.Data.Data := SQL_Field_Internal_Access (D);
-      return F;
-   end Field;
-
-   -----------
-   -- Field --
-   -----------
-
-   function Field
-     (Table : SQL_Single_Table'Class;
-      Field : SQL_Field_Text) return SQL_Field_Text'Class
-   is
-      F : SQL_Field_Text_Build
-        (Table => null, Instance => Table.Instance, Name => null);
-      D : constant Named_Field_Internal_Access := new Named_Field_Internal;
-   begin
-      D.Table := (Name => null, Instance => Table.Instance);
-      D.Value := new String'(Field.Name.all);
-      F.Data.Data := SQL_Field_Internal_Access (D);
-      return F;
-   end Field;
-
-   -----------
-   -- Field --
-   -----------
-
-   function Field
-     (Table : SQL_Single_Table'Class;
-      Field : SQL_Field_Time) return SQL_Field_Time'Class
-   is
-      F : SQL_Field_Time_Build
-        (Table => null, Instance => Table.Instance, Name => null);
-      D : constant Named_Field_Internal_Access := new Named_Field_Internal;
-   begin
-      D.Table := (Name => null, Instance => Table.Instance);
-      D.Value := new String'(Field.Name.all);
-      F.Data.Data := SQL_Field_Internal_Access (D);
-      return F;
-   end Field;
-
-   -----------
-   -- Field --
-   -----------
-
-   function Field
-     (Table : SQL_Single_Table'Class;
-      Field : SQL_Field_Boolean) return SQL_Field_Boolean'Class
-   is
-      F : SQL_Field_Boolean_Build
-        (Table => null, Instance => Table.Instance, Name => null);
-      D : constant Named_Field_Internal_Access := new Named_Field_Internal;
-   begin
-      D.Table := (Name => null, Instance => Table.Instance);
-      D.Value := new String'(Field.Name.all);
-      F.Data.Data := SQL_Field_Internal_Access (D);
-      return F;
-   end Field;
-
-   -----------
-   -- Field --
-   -----------
-
-   function Field
-     (Table : SQL_Single_Table'Class;
-      Field : SQL_Field_Float) return SQL_Field_Float'Class
-   is
-      F : SQL_Field_Float_Build
-        (Table => null, Instance => Table.Instance, Name => null);
-      D : constant Named_Field_Internal_Access := new Named_Field_Internal;
-   begin
-      D.Table := (Name => null, Instance => Table.Instance);
-      D.Value := new String'(Field.Name.all);
-      F.Data.Data := SQL_Field_Internal_Access (D);
-      return F;
-   end Field;
 
    ----------
    -- Desc --
@@ -953,199 +598,53 @@ package body GNATCOLL.SQL is
                   Data => SQL_Field_Internal_Access (Data)));
    end Asc;
 
-   ---------
-   -- "&" --
-   ---------
-
-   function "&"
-     (List : SQL_Field_List; Value : String) return SQL_Field_List is
-   begin
-      return List & Expression (Value);
-   end "&";
-
-   function "&"
-     (List : SQL_Field'Class; Value : String) return SQL_Field_List is
-   begin
-      return List & Expression (Value);
-   end "&";
-
-   function "&"
-     (Value : String; List : SQL_Field_List) return SQL_Field_List is
-   begin
-      return Expression (Value) & List;
-   end "&";
-
-   function "&"
-     (Value : String; List : SQL_Field'Class) return SQL_Field_List is
-   begin
-      return Expression (Value) & List;
-   end "&";
-
-   ---------
-   -- "&" --
-   ---------
-
-   function "&"
-     (List : SQL_Field_List; Value : Integer) return SQL_Field_List is
-   begin
-      return List & Expression (Value);
-   end "&";
-
-   function "&"
-     (List : SQL_Field'Class; Value : Integer) return SQL_Field_List is
-   begin
-      return List & Expression (Value);
-   end "&";
-
-   function "&"
-     (Value : Integer; List  : SQL_Field_List) return SQL_Field_List is
-   begin
-      return Expression (Value) & List;
-   end "&";
-
-   function "&"
-     (Value : Integer; List  : SQL_Field'Class) return SQL_Field_List is
-   begin
-      return Expression (Value) & List;
-   end "&";
-
-   ---------
-   -- "&" --
-   ---------
-
-   function "&"
-     (List  : SQL_Field_List; Value : Boolean) return SQL_Field_List is
-   begin
-      return List & Expression (Value);
-   end "&";
-
-   function "&"
-     (List  : SQL_Field'Class; Value : Boolean) return SQL_Field_List is
-   begin
-      return List & Expression (Value);
-   end "&";
-
-   function "&"
-     (Value : Boolean; List : SQL_Field_List) return SQL_Field_List is
-   begin
-      return Expression (Value) & List;
-   end "&";
-
-   function "&"
-     (Value : Boolean; List : SQL_Field'Class) return SQL_Field_List is
-   begin
-      return Expression (Value) & List;
-   end "&";
-
-   ----------------
-   -- Expression --
-   ----------------
-
-   function Expression (Value : String)  return SQL_Field_Text'Class is
-      Data : constant Named_Field_Internal_Access := new Named_Field_Internal;
-   begin
-      Data.Value := new String'(Normalize_String (Value));
-      return SQL_Field_Text_Build'
-        (Table => null, Instance => null, Name => null,
-         Data => (Ada.Finalization.Controlled with
-                  Data => SQL_Field_Internal_Access (Data)));
-   end Expression;
-
-   -----------------
-   -- From_String --
-   -----------------
-
-   function From_String (Expression : String) return SQL_Field_Text'Class is
-      Data : constant Named_Field_Internal_Access := new Named_Field_Internal;
-   begin
-      Data.Value := new String'(Expression);
-      return SQL_Field_Text_Build'
-        (Table => null, Instance => null, Name => null,
-         Data => (Ada.Finalization.Controlled with
-                  Data => SQL_Field_Internal_Access (Data)));
-   end From_String;
-
-   ------------------
-   -- From_Integer --
-   ------------------
-
-   function From_Integer
-     (Expression : String) return SQL_Field_Integer'Class
-   is
-      Data : constant Named_Field_Internal_Access := new Named_Field_Internal;
-   begin
-      Data.Value := new String'(Expression);
-      return SQL_Field_Integer_Build'
-        (Table => null, Instance => null, Name => null,
-         Data => (Ada.Finalization.Controlled with
-                  Data => SQL_Field_Internal_Access (Data)));
-   end From_Integer;
-
    ------------------------
    -- Expression_Or_Null --
    ------------------------
 
-   function Expression_Or_Null (Value : String) return SQL_Field_Text'Class is
-      Data : constant Named_Field_Internal_Access := new Named_Field_Internal;
+   function Expression_Or_Null
+     (Value : String) return Text_Fields.Field'Class is
    begin
       if Value = Null_String then
-         Data.Value := new String'(Null_String);
+         return Text_Fields.From_String (Null_String);
       else
-         Data.Value := new String'(Normalize_String (Value));
+         return Text_Fields.Expression (Value);
       end if;
-      return SQL_Field_Text_Build'
-        (Table => null, Instance => null, Name => null,
-         Data => (Ada.Finalization.Controlled with
-                  Data => SQL_Field_Internal_Access (Data)));
    end Expression_Or_Null;
 
-   ----------------
-   -- Expression --
-   ----------------
+   ------------------
+   -- Float_To_SQL --
+   ------------------
 
-   function Expression (Value : Integer) return SQL_Field_Integer'Class is
-      Img  : constant String := Integer'Image (Value);
-      Data : constant Named_Field_Internal_Access := new Named_Field_Internal;
-   begin
-      if Img (Img'First) = ' ' then
-         Data.Value := new String'(Img (Img'First + 1 .. Img'Last));
-      else
-         Data.Value := new String'(Img);
-      end if;
-      return SQL_Field_Integer_Build'
-        (Table => null, Instance => null, Name => null,
-         Data => (Ada.Finalization.Controlled with
-                  Data => SQL_Field_Internal_Access (Data)));
-   end Expression;
-
-   ----------------
-   -- Expression --
-   ----------------
-
-   function Expression (Value : Float) return SQL_Field_Float'Class is
+   function Float_To_SQL (Value : Float) return String is
       Img : constant String := Float'Image (Value);
-      Data : constant Named_Field_Internal_Access := new Named_Field_Internal;
    begin
       if Img (Img'First) = ' ' then
-         Data.Value := new String'(Img (Img'First + 1 .. Img'Last));
+         return Img (Img'First + 1 .. Img'Last);
       else
-         Data.Value := new String'(Img);
+         return Img;
       end if;
-      return SQL_Field_Float_Build'
-        (Table => null, Instance => null, Name => null,
-         Data => (Ada.Finalization.Controlled with
-                  Data => SQL_Field_Internal_Access (Data)));
-   end Expression;
+   end Float_To_SQL;
 
-   ----------------
-   -- Expression --
-   ----------------
+   --------------------
+   -- Integer_To_SQL --
+   --------------------
 
-   function Expression
-     (Value : Ada.Calendar.Time; Date_Only : Boolean := False)
-      return SQL_Field_Time'Class
-   is
-      Data : constant Named_Field_Internal_Access := new Named_Field_Internal;
+   function Integer_To_SQL (Value : Integer) return String is
+      Img : constant String := Integer'Image (Value);
+   begin
+      if Img (Img'First) = ' ' then
+         return Img (Img'First + 1 .. Img'Last);
+      else
+         return Img;
+      end if;
+   end Integer_To_SQL;
+
+   -----------------
+   -- Time_To_SQL --
+   -----------------
+
+   function Time_To_SQL (Value : Ada.Calendar.Time) return String is
       Adjusted : Time;
    begin
       --  Value is always considered as GMT, which is what we store in the
@@ -1154,33 +653,45 @@ package body GNATCOLL.SQL is
 
       if Value /= No_Time then
          Adjusted := Value - Duration (UTC_Time_Offset (Value)) * 60.0;
-         if Date_Only then
-            Data.Value := new String'(Image (Adjusted, "'%Y-%m-%d'"));
-         else
-            Data.Value :=
-              new String'(Image (Adjusted, "'%Y-%m-%d %H:%M:%S'"));
-         end if;
+         return Image (Adjusted, "'%Y-%m-%d %H:%M:%S'");
       else
-         Data.Value := new String'("NULL");
+         return "NULL";
       end if;
-      return SQL_Field_Time_Build'
-        (Table => null, Instance => null, Name => null,
-         Data => (Ada.Finalization.Controlled with
-                  Data => SQL_Field_Internal_Access (Data)));
-   end Expression;
+   end Time_To_SQL;
+
+   -----------------
+   -- Date_To_SQL --
+   -----------------
+
+   function Date_To_SQL (Value : Ada.Calendar.Time) return String is
+      Adjusted : Time;
+   begin
+      --  Value is always considered as GMT, which is what we store in the
+      --  database. Unfortunately, GNAT.Calendar.Time_IO converts that back to
+      --  local time.
+
+      if Value /= No_Time then
+         Adjusted := Value - Duration (UTC_Time_Offset (Value)) * 60.0;
+         return Image (Adjusted, "'%Y-%m-%d'");
+      else
+         return "NULL";
+      end if;
+   end Date_To_SQL;
 
    -------------
    -- As_Days --
    -------------
 
-   function As_Days (Count : Natural) return SQL_Field_Time'Class is
-      Data : constant Named_Field_Internal_Access := new Named_Field_Internal;
+   function As_Days (Count : Natural) return Time_Fields.Field'Class is
    begin
-      Data.Value := new String'("'" & Integer'Image (Count) & "days'");
-      return SQL_Field_Time_Build'
-        (Table => null, Instance => null, Name => null,
-         Data => (Ada.Finalization.Controlled with
-                  Data => SQL_Field_Internal_Access (Data)));
+      return Time_Fields.From_String
+        ("interval '" & Integer'Image (Count) & "days'");
+   end As_Days;
+
+   function As_Days (Count : Natural) return Date_Fields.Field'Class is
+   begin
+      return Date_Fields.From_String
+        ("interval '" & Integer'Image (Count) & "days'");
    end As_Days;
 
    ------------------
@@ -1188,27 +699,14 @@ package body GNATCOLL.SQL is
    ------------------
 
    function At_Time_Zone
-     (Field : SQL_Field_Time'Class; TZ : String) return SQL_Field_Time'Class
+     (Field : Time_Fields.Field'Class; TZ : String)
+      return Time_Fields.Field'Class
    is
-      function Internal is new Time_Apply_Function
-        (SQL_Field_Time, "", " at time zone '" & TZ & "'");
+      function Internal is new Time_Fields.Apply_Function
+        (Time_Fields.Field, "", " at time zone '" & TZ & "'");
    begin
       return Internal (Field);
    end At_Time_Zone;
-
-   ----------------
-   -- Expression --
-   ----------------
-
-   function Expression (Value : Boolean) return SQL_Field_Boolean'Class is
-      Data : constant Named_Field_Internal_Access := new Named_Field_Internal;
-   begin
-      Data.Value := new String'(Boolean'Image (Value));
-      return SQL_Field_Boolean_Build'
-        (Table => null, Instance => null, Name => null,
-         Data => (Ada.Finalization.Controlled with
-                  Data => SQL_Field_Internal_Access (Data)));
-   end Expression;
 
    ----------
    -- Free --
@@ -1306,10 +804,11 @@ package body GNATCOLL.SQL is
    -------------
 
    function To_Char
-     (Field : SQL_Field_Time; Format : String) return SQL_Field_Text'Class
+     (Field : Time_Fields.Field'Class; Format : String)
+      return Text_Fields.Field'Class
    is
-      function Internal is new Apply_Function
-        (SQL_Field_Time, "TO_CHAR (", ", '" & Format & "')");
+      function Internal is new Text_Fields.Apply_Function
+        (Time_Fields.Field, "TO_CHAR (", ", '" & Format & "')");
    begin
       return Internal (Field);
    end To_Char;
@@ -1319,11 +818,11 @@ package body GNATCOLL.SQL is
    -------------
 
    function Extract
-     (Field : SQL_Field_Time'Class; Attribute : String)
-      return SQL_Field_Time'Class
+     (Field : Time_Fields.Field'Class; Attribute : String)
+      return Time_Fields.Field'Class
    is
-      function Internal is new Time_Apply_Function
-        (SQL_Field_Time, "EXTRACT (" & Attribute & " from ");
+      function Internal is new Time_Fields.Apply_Function
+        (Time_Fields.Field, "EXTRACT (" & Attribute & " from ");
    begin
       return Internal (Field);
    end Extract;
@@ -1333,9 +832,10 @@ package body GNATCOLL.SQL is
    -----------
 
    function Lower
-     (Field : SQL_Field_Text'Class) return SQL_Field_Text'Class
+     (Field : Text_Fields.Field'Class) return Text_Fields.Field'Class
    is
-      function Internal is new Apply_Function (SQL_Field_Text, "LOWER (");
+      function Internal is new Text_Fields.Apply_Function
+        (Text_Fields.Field, "LOWER (");
    begin
       return Internal (Field);
    end Lower;
@@ -1345,9 +845,10 @@ package body GNATCOLL.SQL is
    -------------
 
    function Initcap
-     (Field : SQL_Field_Text'Class) return SQL_Field_Text'Class
+     (Field : Text_Fields.Field'Class) return Text_Fields.Field'Class
    is
-      function Internal is new Apply_Function (SQL_Field_Text, "INITCAP (");
+      function Internal is new Text_Fields.Apply_Function
+        (Text_Fields.Field, "INITCAP (");
    begin
       return Internal (Field);
    end Initcap;
@@ -1357,9 +858,9 @@ package body GNATCOLL.SQL is
    --------------------
 
    function Cast_To_String
-     (Field : SQL_Field'Class) return SQL_Field_Text'Class
+     (Field : SQL_Field'Class) return Text_Fields.Field'Class
    is
-      function Internal is new Apply_Function
+      function Internal is new Text_Fields.Apply_Function
         (SQL_Field, "CAST (", "AS TEXT)");
    begin
       return Internal (Field);
@@ -1389,72 +890,12 @@ package body GNATCOLL.SQL is
       end loop;
 
       if Self.Criteria /= No_Criteria then
-         Append (Result, To_String (Self.Criteria));
+         Append (Result, GNATCOLL.SQL_Impl.To_String (Self.Criteria));
       end if;
 
       Append (Result, ")");
       return To_String (Result);
    end To_String;
-
-   ------------------
-   -- Current_Date --
-   ------------------
-
-   function Current_Date return SQL_Field_Time'Class is
-      function Internal is new Time_Function ("current_date");
-   begin
-      return Internal;
-   end Current_Date;
-
-   -----------------------
-   -- Current_Timestamp --
-   -----------------------
-
-   function Current_Timestamp return SQL_Field_Time'Class is
-      function Internal is new Time_Function ("current_timestamp");
-   begin
-      return Internal;
-   end Current_Timestamp;
-
-   ---------
-   -- "-" --
-   ---------
-
-   function "-"
-     (Field1, Field2 : SQL_Field_Time'Class) return SQL_Field_Time'Class
-   is
-      function Internal is new Time_Operator (SQL_Field_Time, "-");
-   begin
-      return Internal (Field1, Field2);
-   end "-";
-
-   ---------
-   -- "-" --
-   ---------
-
-   function "-"
-     (Field1 : SQL_Field_Time'Class;
-      Days   : Integer) return SQL_Field_Time'Class
-   is
-      function Internal is new Time_Scalar_Operator
-        (SQL_Field_Time, Integer, "-", "interval '", "days'");
-   begin
-      return Internal (Field1, Days);
-   end "-";
-
-   ---------
-   -- "+" --
-   ---------
-
-   function "+"
-     (Field : SQL_Field_Integer'Class; Add : Integer)
-      return SQL_Field_Integer'Class
-   is
-      function Internal is new Integer_Scalar_Operator
-        (SQL_Field_Integer, Integer, "+");
-   begin
-      return Internal (Field, Add);
-   end "+";
 
    -----------
    -- Apply --
@@ -1486,7 +927,7 @@ package body GNATCOLL.SQL is
       Data : constant Aggregate_Field_Internal_Access :=
         new Aggregate_Field_Internal;
    begin
-      Data.Params := Fields.List;
+      Data.Params := Fields;
       Data.Func   := new String'(String (Func));
       return SQL_Field_Any'
         (Table => null, Instance => null, Name => null,
@@ -1505,30 +946,13 @@ package body GNATCOLL.SQL is
       Data : constant Aggregate_Field_Internal_Access :=
         new Aggregate_Field_Internal;
    begin
-      Append (Data.Params, Field);
+      Data.Params := +Field;
       Data.Func   := new String'(String (Func));
       return SQL_Field_Any'
         (Table => null, Instance => null, Name => null,
          Data => (Ada.Finalization.Controlled with
                   Data => SQL_Field_Internal_Access (Data)));
    end Apply;
-
-   --------------
-   -- Finalize --
-   --------------
-
-   procedure Finalize (Self : in out Field_Data) is
-      procedure Unchecked_Free is new Ada.Unchecked_Deallocation
-        (SQL_Field_Internal'Class, SQL_Field_Internal_Access);
-   begin
-      if Self.Data /= null then
-         Self.Data.Refcount := Self.Data.Refcount - 1;
-         if Self.Data.Refcount = 0 then
-            Free (Self.Data.all);
-            Unchecked_Free (Self.Data);
-         end if;
-      end if;
-   end Finalize;
 
    ------------
    -- Adjust --
@@ -1557,85 +981,6 @@ package body GNATCOLL.SQL is
       end if;
    end Finalize;
 
-   ------------
-   -- Adjust --
-   ------------
-
-   procedure Adjust (Self : in out Field_Data) is
-   begin
-      if Self.Data /= null then
-         Self.Data.Refcount := Self.Data.Refcount + 1;
-      end if;
-   end Adjust;
-
-   ------------
-   -- Adjust --
-   ------------
-
-   procedure Adjust (Self : in out SQL_Field_Pointer) is
-   begin
-      if Self.Data /= null then
-         Self.Data.Refcount := Self.Data.Refcount + 1;
-      end if;
-   end Adjust;
-
-   ------------
-   -- Adjust --
-   ------------
-
-   procedure Adjust (Self : in out Controlled_SQL_Criteria) is
-   begin
-      if Self.Data /= null then
-         Self.Data.Refcount := Self.Data.Refcount + 1;
-      end if;
-   end Adjust;
-
-   --------------
-   -- Finalize --
-   --------------
-
-   procedure Finalize (Self : in out Controlled_SQL_Criteria) is
-      procedure Unchecked_Free is new Ada.Unchecked_Deallocation
-        (SQL_Criteria_Data, SQL_Criteria_Data_Access);
-   begin
-      if Self.Data /= null then
-         Self.Data.Refcount := Self.Data.Refcount - 1;
-         if Self.Data.Refcount = 0 then
-            Unchecked_Free (Self.Data);
-         end if;
-      end if;
-   end Finalize;
-
-   --------------
-   -- Finalize --
-   --------------
-
-   procedure Finalize (Self : in out SQL_Field_Pointer) is
-      procedure Unchecked_Free is new Ada.Unchecked_Deallocation
-        (Field_Pointer_Data, Field_Pointer_Data_Access);
-   begin
-      if Self.Data /= null then
-         Self.Data.Refcount := Self.Data.Refcount - 1;
-         if Self.Data.Refcount = 0 then
-            Unchecked_Free (Self.Data.Field);
-            Unchecked_Free (Self.Data);
-         end if;
-      end if;
-   end Finalize;
-
-   ---------
-   -- "+" --
-   ---------
-
-   function "+" (Field : SQL_Field'Class) return SQL_Field_Pointer is
-   begin
-      return SQL_Field_Pointer'
-        (Ada.Finalization.Controlled with
-         Data => new Field_Pointer_Data'
-           (Refcount => 1,
-            Field    => new SQL_Field'Class'(Field)));
-   end "+";
-
    -------------
    -- To_List --
    -------------
@@ -1644,380 +989,10 @@ package body GNATCOLL.SQL is
       S : SQL_Field_List;
    begin
       for A in Fields'Range loop
-         Append (S.List, Fields (A).Data.Field.all);
+         Append (S, Fields (A));
       end loop;
       return S;
    end To_List;
-
-   -------------
-   -- Compare --
-   -------------
-
-   function Compare
-     (Left, Right : SQL_Field'Class; Op : SQL_Criteria_Type)
-      return SQL_Criteria
-   is
-      Result : SQL_Criteria;
-   begin
-      Result.Criteria.Data := new SQL_Criteria_Data (Op);
-      Result.Criteria.Data.Arg1 := +Left;
-      Result.Criteria.Data.Arg2 := +Right;
-      return Result;
-   end Compare;
-
-   ---------
-   -- "=" --
-   ---------
-
-   function "=" (Left, Right : SQL_Field_Integer'Class) return SQL_Criteria is
-   begin
-      return Compare (Left, Right, Criteria_Equal);
-   end "=";
-
-   function "=" (Left, Right : SQL_Field_Text'Class) return SQL_Criteria is
-   begin
-      return Compare (Left, Right, Criteria_Equal);
-   end "=";
-
-   function "=" (Left, Right : SQL_Field_Boolean'Class) return SQL_Criteria is
-   begin
-      return Compare (Left, Right, Criteria_Equal);
-   end "=";
-
-   function "=" (Left, Right : SQL_Field_Float'Class) return SQL_Criteria is
-   begin
-      return Compare (Left, Right, Criteria_Equal);
-   end "=";
-
-   function "=" (Left, Right : SQL_Field_Time'Class) return SQL_Criteria is
-   begin
-      return Compare (Left, Right, Criteria_Equal);
-   end "=";
-
-   function "="
-     (Left : SQL_Field_Integer; Right : Integer) return SQL_Criteria is
-   begin
-      return Left = Expression (Right);
-   end "=";
-
-   function "="
-     (Left : SQL_Field_Text;    Right : String)  return SQL_Criteria is
-   begin
-      return Left = Expression (Right);
-   end "=";
-
-   function "="
-     (Left : SQL_Field_Boolean; Right : Boolean) return SQL_Criteria is
-   begin
-      return Left = Expression (Right);
-   end "=";
-
-   function "="
-     (Left : SQL_Field_Float;   Right : Float)   return SQL_Criteria is
-   begin
-      return Left = Expression (Right);
-   end "=";
-
-   function "="
-     (Left : SQL_Field_Time; Right : Ada.Calendar.Time) return SQL_Criteria is
-   begin
-      return Left = Expression (Right);
-   end "=";
-
-   function Date_Equal
-     (Left : SQL_Field_Time; Right : Ada.Calendar.Time) return SQL_Criteria is
-   begin
-      return Left = Expression (Right, Date_Only => True);
-   end Date_Equal;
-
-   function "/=" (Left, Right : SQL_Field_Integer'Class) return SQL_Criteria is
-   begin
-      return Compare (Left, Right, Criteria_Not_Equal);
-   end "/=";
-
-   function "/=" (Left, Right : SQL_Field_Text'Class) return SQL_Criteria is
-   begin
-      return Compare (Left, Right, Criteria_Not_Equal);
-   end "/=";
-
-   function "/=" (Left, Right : SQL_Field_Boolean'Class) return SQL_Criteria is
-   begin
-      return Compare (Left, Right, Criteria_Not_Equal);
-   end "/=";
-
-   function "/=" (Left, Right : SQL_Field_Float'Class) return SQL_Criteria is
-   begin
-      return Compare (Left, Right, Criteria_Not_Equal);
-   end "/=";
-
-   function "/=" (Left, Right : SQL_Field_Time'Class) return SQL_Criteria is
-   begin
-      return Compare (Left, Right, Criteria_Not_Equal);
-   end "/=";
-
-   function "/="
-     (Left : SQL_Field_Integer; Right : Integer) return SQL_Criteria is
-   begin
-      return Left /= Expression (Right);
-   end "/=";
-
-   function "/="
-     (Left : SQL_Field_Text;    Right : String)  return SQL_Criteria is
-   begin
-      return Left /= Expression (Right);
-   end "/=";
-
-   function "/="
-     (Left : SQL_Field_Boolean; Right : Boolean) return SQL_Criteria is
-   begin
-      return Left /= Expression (Right);
-   end "/=";
-
-   function "/="
-     (Left : SQL_Field_Float;   Right : Float)   return SQL_Criteria is
-   begin
-      return Left /= Expression (Right);
-   end "/=";
-
-   function "/="
-     (Left : SQL_Field_Time; Right : Ada.Calendar.Time) return SQL_Criteria is
-   begin
-      return Left /= Expression (Right);
-   end "/=";
-
-   function "<" (Left, Right : SQL_Field_Integer'Class) return SQL_Criteria is
-   begin
-      return Compare (Left, Right, Criteria_Less_Than);
-   end "<";
-
-   function "<" (Left, Right : SQL_Field_Text'Class) return SQL_Criteria is
-   begin
-      return Compare (Left, Right, Criteria_Less_Than);
-   end "<";
-
-   function "<" (Left, Right : SQL_Field_Boolean'Class) return SQL_Criteria is
-   begin
-      return Compare (Left, Right, Criteria_Less_Than);
-   end "<";
-
-   function "<" (Left, Right : SQL_Field_Float'Class) return SQL_Criteria is
-   begin
-      return Compare (Left, Right, Criteria_Less_Than);
-   end "<";
-
-   function "<" (Left, Right : SQL_Field_Time'Class) return SQL_Criteria is
-   begin
-      return Compare (Left, Right, Criteria_Less_Than);
-   end "<";
-
-   function "<"
-     (Left : SQL_Field_Integer; Right : Integer) return SQL_Criteria is
-   begin
-      return Left < Expression (Right);
-   end "<";
-
-   function "<"
-     (Left : SQL_Field_Float;   Right : Float)   return SQL_Criteria is
-   begin
-      return Left < Expression (Right);
-   end "<";
-
-   function "<"
-     (Left : SQL_Field_Time; Right : Ada.Calendar.Time) return SQL_Criteria is
-   begin
-      return Left < Expression (Right);
-   end "<";
-
-   function Date_Less_Than
-     (Left : SQL_Field_Time; Right : Ada.Calendar.Time) return SQL_Criteria is
-   begin
-      return Left < Expression (Right, Date_Only => True);
-   end Date_Less_Than;
-
-   function ">" (Left, Right : SQL_Field_Integer'Class) return SQL_Criteria is
-   begin
-      return Compare (Left, Right, Criteria_Greater_Than);
-   end ">";
-
-   function ">" (Left, Right : SQL_Field_Text'Class) return SQL_Criteria is
-   begin
-      return Compare (Left, Right, Criteria_Greater_Than);
-   end ">";
-
-   function ">" (Left, Right : SQL_Field_Boolean'Class) return SQL_Criteria is
-   begin
-      return Compare (Left, Right, Criteria_Greater_Than);
-   end ">";
-
-   function ">" (Left, Right : SQL_Field_Float'Class) return SQL_Criteria is
-   begin
-      return Compare (Left, Right, Criteria_Greater_Than);
-   end ">";
-
-   function ">" (Left, Right : SQL_Field_Time'Class) return SQL_Criteria is
-   begin
-      return Compare (Left, Right, Criteria_Greater_Than);
-   end ">";
-
-   function ">"
-     (Left : SQL_Field_Integer; Right : Integer) return SQL_Criteria is
-   begin
-      return Left > Expression (Right);
-   end ">";
-
-   function Greater_Than
-     (Left : SQL_Field'Class; Right : Integer) return SQL_Criteria is
-   begin
-      return Compare (Left, Expression (Right), Criteria_Greater_Than);
-   end Greater_Than;
-
-   function Greater_Than
-     (Left : SQL_Field'Class; Right : SQL_Field_Time'Class)
-     return SQL_Criteria is
-   begin
-      return Compare (Left, Right, Criteria_Greater_Than);
-   end Greater_Than;
-
-   function Less_Than
-     (Left : SQL_Field'Class; Right : SQL_Field_Time'Class)
-     return SQL_Criteria is
-   begin
-      return Compare (Left, Right, Criteria_Less_Than);
-   end Less_Than;
-
-   function Greater_Or_Equal
-     (Left : SQL_Field'Class; Right : Integer) return SQL_Criteria is
-   begin
-      return Compare (Left, Expression (Right), Criteria_Greater_Or_Equal);
-   end Greater_Or_Equal;
-
-   function Equal
-     (Left : SQL_Field'Class; Right : Boolean) return SQL_Criteria is
-   begin
-      return Compare (Left, Expression (Right), Criteria_Equal);
-   end Equal;
-
-   function ">"
-     (Left : SQL_Field_Float;   Right : Float)   return SQL_Criteria is
-   begin
-      return Left > Expression (Right);
-   end ">";
-
-   function ">"
-     (Left : SQL_Field_Text;    Right : String)   return SQL_Criteria is
-   begin
-      return Left > Expression (Right);
-   end ">";
-
-   function ">"
-     (Left : SQL_Field_Time; Right : Ada.Calendar.Time) return SQL_Criteria is
-   begin
-      return Left > Expression (Right);
-   end ">";
-
-   function Date_Greater_Than
-     (Left : SQL_Field_Time; Right : Ada.Calendar.Time) return SQL_Criteria is
-   begin
-      return Left > Expression (Right, Date_Only => True);
-   end Date_Greater_Than;
-
-   function "<=" (Left, Right : SQL_Field_Integer'Class) return SQL_Criteria is
-   begin
-      return Compare (Left, Right, Criteria_Less_Or_Equal);
-   end "<=";
-
-   function "<=" (Left, Right : SQL_Field_Text'Class) return SQL_Criteria is
-   begin
-      return Compare (Left, Right, Criteria_Less_Or_Equal);
-   end "<=";
-
-   function "<=" (Left, Right : SQL_Field_Boolean'Class) return SQL_Criteria is
-   begin
-      return Compare (Left, Right, Criteria_Less_Or_Equal);
-   end "<=";
-
-   function "<=" (Left, Right : SQL_Field_Float'Class) return SQL_Criteria is
-   begin
-      return Compare (Left, Right, Criteria_Less_Or_Equal);
-   end "<=";
-
-   function "<=" (Left, Right : SQL_Field_Time'Class) return SQL_Criteria is
-   begin
-      return Compare (Left, Right, Criteria_Less_Or_Equal);
-   end "<=";
-
-   function "<="
-     (Left : SQL_Field_Integer; Right : Integer) return SQL_Criteria is
-   begin
-      return Left <= Expression (Right);
-   end "<=";
-
-   function "<="
-     (Left : SQL_Field_Float;   Right : Float)   return SQL_Criteria is
-   begin
-      return Left <= Expression (Right);
-   end "<=";
-
-   function "<="
-     (Left : SQL_Field_Time; Right : Ada.Calendar.Time) return SQL_Criteria is
-   begin
-      return Left <= Expression (Right);
-   end "<=";
-
-   function Date_Less_Or_Equal
-     (Left : SQL_Field_Time; Right : Ada.Calendar.Time) return SQL_Criteria is
-   begin
-      return Left <= Expression (Right, Date_Only => True);
-   end Date_Less_Or_Equal;
-
-   function ">=" (Left, Right : SQL_Field_Integer'Class) return SQL_Criteria is
-   begin
-      return Compare (Left, Right, Criteria_Greater_Or_Equal);
-   end ">=";
-
-   function ">=" (Left, Right : SQL_Field_Text'Class) return SQL_Criteria is
-   begin
-      return Compare (Left, Right, Criteria_Greater_Or_Equal);
-   end ">=";
-
-   function ">=" (Left, Right : SQL_Field_Boolean'Class) return SQL_Criteria is
-   begin
-      return Compare (Left, Right, Criteria_Greater_Or_Equal);
-   end ">=";
-
-   function ">=" (Left, Right : SQL_Field_Float'Class) return SQL_Criteria is
-   begin
-      return Compare (Left, Right, Criteria_Greater_Or_Equal);
-   end ">=";
-
-   function ">=" (Left, Right : SQL_Field_Time'Class) return SQL_Criteria is
-   begin
-      return Compare (Left, Right, Criteria_Greater_Or_Equal);
-   end ">=";
-
-   function ">="
-     (Left : SQL_Field_Integer; Right : Integer) return SQL_Criteria is
-   begin
-      return Left >= Expression (Right);
-   end ">=";
-
-   function ">="
-     (Left : SQL_Field_Float;   Right : Float)   return SQL_Criteria is
-   begin
-      return Left >= Expression (Right);
-   end ">=";
-
-   function ">="
-     (Left : SQL_Field_Time; Right : Ada.Calendar.Time) return SQL_Criteria is
-   begin
-      return Left >= Expression (Right);
-   end ">=";
-
-   function Date_Greater_Or_Equal
-     (Left : SQL_Field_Time; Right : Ada.Calendar.Time) return SQL_Criteria is
-   begin
-      return Left >= Expression (Right, Date_Only => True);
-   end Date_Greater_Or_Equal;
 
    -------------
    -- Combine --
@@ -2029,15 +1004,21 @@ package body GNATCOLL.SQL is
       List : Criteria_List.List;
       C    : Criteria_List.Cursor;
       Result : SQL_Criteria;
+      Data   : SQL_Criteria_Data_Access;
    begin
       if Left = No_Criteria then
          return Right;
       elsif Right = No_Criteria then
          return Left;
-      elsif Left.Criteria.Data.Op = Op then
-         List := Left.Criteria.Data.Criterias;
-         if Right.Criteria.Data.Op = Op then
-            C := First (Right.Criteria.Data.Criterias);
+      elsif Get_Data (Left).all in SQL_Criteria_Data'Class
+        and then SQL_Criteria_Data (Get_Data (Left).all).Op = Op
+      then
+         List := SQL_Criteria_Data (Get_Data (Left).all).Criterias;
+
+         if Get_Data (Right).all in SQL_Criteria_Data'Class
+           and then SQL_Criteria_Data (Get_Data (Right).all).Op = Op
+         then
+            C := First (SQL_Criteria_Data (Get_Data (Right).all).Criterias);
             while Has_Element (C) loop
                Append (List, Element (C));
                Next (C);
@@ -2045,16 +1026,19 @@ package body GNATCOLL.SQL is
          else
             Append (List, Right);
          end if;
-      elsif Right.Criteria.Data.Op = Op then
-         List := Right.Criteria.Data.Criterias;
+      elsif Get_Data (Right).all in SQL_Criteria_Data'Class
+        and then SQL_Criteria_Data (Get_Data (Right).all).Op = Op
+      then
+         List := SQL_Criteria_Data (Get_Data (Right).all).Criterias;
          Prepend (List, Left);
       else
          Append (List, Left);
          Append (List, Right);
       end if;
 
-      Result.Criteria.Data := new SQL_Criteria_Data (Op);
-      Result.Criteria.Data.Criterias := List;
+      Data := new SQL_Criteria_Data (Op);
+      SQL_Criteria_Data (Data.all).Criterias := List;
+      Set_Data (Result, Data);
       return Result;
    end Combine;
 
@@ -2064,7 +1048,7 @@ package body GNATCOLL.SQL is
 
    function Overlaps (Left, Right : SQL_Field'Class) return SQL_Criteria is
    begin
-      return Compare (Left, Right, Criteria_Overlaps);
+      return Compare (Left, Right, Comparison_Overlaps'Access);
    end Overlaps;
 
    -----------
@@ -2090,7 +1074,8 @@ package body GNATCOLL.SQL is
    -----------
 
    function "and"
-     (Left : SQL_Criteria; Right : SQL_Field_Boolean) return SQL_Criteria is
+     (Left : SQL_Criteria; Right : Boolean_Fields.Field'Class)
+      return SQL_Criteria is
    begin
       return Left and (Right = True);
    end "and";
@@ -2100,7 +1085,8 @@ package body GNATCOLL.SQL is
    ----------
 
    function "or"
-     (Left : SQL_Criteria; Right : SQL_Field_Boolean) return SQL_Criteria is
+     (Left : SQL_Criteria; Right : Boolean_Fields.Field'Class)
+      return SQL_Criteria is
    begin
       return Left or (Right = True);
    end "or";
@@ -2109,7 +1095,7 @@ package body GNATCOLL.SQL is
    -- "not" --
    -----------
 
-   function "not" (Left : SQL_Field_Boolean) return SQL_Criteria is
+   function "not" (Left : Boolean_Fields.Field'Class) return SQL_Criteria is
    begin
       return Left = False;
    end "not";
@@ -2121,33 +1107,38 @@ package body GNATCOLL.SQL is
    function SQL_In
      (Self : SQL_Field'Class; List : SQL_Field_List) return SQL_Criteria
    is
+      Data : constant SQL_Criteria_Data_Access := new SQL_Criteria_Data'
+        (GNATCOLL.SQL_Impl.SQL_Criteria_Data with
+         Op => Criteria_In, Arg => +Self, List => List, others => <>);
       Result : SQL_Criteria;
    begin
-      Result.Criteria.Data      := new SQL_Criteria_Data (Criteria_In);
-      Result.Criteria.Data.Arg  := +Self;
-      Result.Criteria.Data.List := List;
+      Set_Data (Result, Data);
       return Result;
    end SQL_In;
 
    function SQL_In
      (Self : SQL_Field'Class; Subquery : SQL_Query) return SQL_Criteria
    is
+      Data : constant SQL_Criteria_Data_Access := new SQL_Criteria_Data'
+        (GNATCOLL.SQL_Impl.SQL_Criteria_Data with
+         Op => Criteria_In,
+         Arg => +Self, Subquery => Subquery, others => <>);
       Result : SQL_Criteria;
    begin
-      Result.Criteria.Data      := new SQL_Criteria_Data (Criteria_In);
-      Result.Criteria.Data.Arg  := +Self;
-      Result.Criteria.Data.Subquery := Subquery;
+      Set_Data (Result, Data);
       return Result;
    end SQL_In;
 
    function SQL_In
      (Self : SQL_Field'Class; List : String) return SQL_Criteria
    is
+      Data : constant SQL_Criteria_Data_Access := new SQL_Criteria_Data'
+        (GNATCOLL.SQL_Impl.SQL_Criteria_Data with
+         Op => Criteria_In,
+         Arg => +Self, In_String => To_Unbounded_String (List), others => <>);
       Result : SQL_Criteria;
    begin
-      Result.Criteria.Data      := new SQL_Criteria_Data (Criteria_In);
-      Result.Criteria.Data.Arg  := +Self;
-      Result.Criteria.Data.In_String := To_Unbounded_String (List);
+      Set_Data (Result, Data);
       return Result;
    end SQL_In;
 
@@ -2158,22 +1149,25 @@ package body GNATCOLL.SQL is
    function SQL_Not_In
      (Self : SQL_Field'Class; List : SQL_Field_List) return SQL_Criteria
    is
+      Data : constant SQL_Criteria_Data_Access := new SQL_Criteria_Data'
+        (GNATCOLL.SQL_Impl.SQL_Criteria_Data with
+         Op => Criteria_Not_In, Arg => +Self, List => List, others => <>);
       Result : SQL_Criteria;
    begin
-      Result.Criteria.Data      := new SQL_Criteria_Data (Criteria_Not_In);
-      Result.Criteria.Data.Arg  := +Self;
-      Result.Criteria.Data.List := List;
+      Set_Data (Result, Data);
       return Result;
    end SQL_Not_In;
 
    function SQL_Not_In
      (Self : SQL_Field'Class; Subquery : SQL_Query) return SQL_Criteria
    is
+      Data : constant SQL_Criteria_Data_Access := new SQL_Criteria_Data'
+        (GNATCOLL.SQL_Impl.SQL_Criteria_Data with
+         Op => Criteria_Not_In,
+         Arg => +Self, Subquery => Subquery, others => <>);
       Result : SQL_Criteria;
    begin
-      Result.Criteria.Data      := new SQL_Criteria_Data (Criteria_Not_In);
-      Result.Criteria.Data.Arg  := +Self;
-      Result.Criteria.Data.Subquery := Subquery;
+      Set_Data (Result, Data);
       return Result;
    end SQL_Not_In;
 
@@ -2182,10 +1176,12 @@ package body GNATCOLL.SQL is
    -------------
 
    function Is_Null (Self : SQL_Field'Class) return SQL_Criteria is
+      Data : constant SQL_Criteria_Data_Access := new SQL_Criteria_Data'
+          (GNATCOLL.SQL_Impl.SQL_Criteria_Data
+           with Op => Criteria_Null, Arg3 => +Self);
       Result : SQL_Criteria;
    begin
-      Result.Criteria.Data := new SQL_Criteria_Data (Criteria_Null);
-      Result.Criteria.Data.Arg3 := +Self;
+      Set_Data (Result, Data);
       return Result;
    end Is_Null;
 
@@ -2194,10 +1190,12 @@ package body GNATCOLL.SQL is
    -----------------
 
    function Is_Not_Null (Self : SQL_Field'Class) return SQL_Criteria is
+      Data : constant SQL_Criteria_Data_Access := new SQL_Criteria_Data'
+          (GNATCOLL.SQL_Impl.SQL_Criteria_Data
+           with Op => Criteria_Not_Null, Arg3 => +Self);
       Result : SQL_Criteria;
    begin
-      Result.Criteria.Data := new SQL_Criteria_Data (Criteria_Not_Null);
-      Result.Criteria.Data.Arg3 := +Self;
+      Set_Data (Result, Data);
       return Result;
    end Is_Not_Null;
 
@@ -2205,10 +1203,10 @@ package body GNATCOLL.SQL is
    -- Any --
    ---------
 
-   function Any
-     (Self : SQL_Field_Text; Str : SQL_Field_Text) return SQL_Criteria is
+   function Any (Self, Str : Text_Fields.Field'Class) return SQL_Criteria is
    begin
-      return Compare (Self, Str, Criteria_Any);
+      return Compare
+        (Self, Str, Comparison_Any'Access, Comparison_Parenthesis'Access);
    end Any;
 
    -----------
@@ -2216,9 +1214,9 @@ package body GNATCOLL.SQL is
    -----------
 
    function Ilike
-     (Self : SQL_Field_Text; Str : String) return SQL_Criteria is
+     (Self : Text_Fields.Field'Class; Str : String) return SQL_Criteria is
    begin
-      return Compare (Self, Expression (Str), Criteria_Ilike);
+      return Compare (Self, Expression (Str), Comparison_ILike'Access);
    end Ilike;
 
    ----------
@@ -2226,9 +1224,9 @@ package body GNATCOLL.SQL is
    ----------
 
    function Like
-     (Self : SQL_Field_Text; Str : String) return SQL_Criteria is
+     (Self : Text_Fields.Field'Class; Str : String) return SQL_Criteria is
    begin
-      return Compare (Self, Expression (Str), Criteria_Like);
+      return Compare (Self, Expression (Str), Comparison_Like'Access);
    end Like;
 
    -----------
@@ -2236,9 +1234,10 @@ package body GNATCOLL.SQL is
    -----------
 
    function Ilike
-     (Self : SQL_Field_Text; Field : SQL_Field'Class) return SQL_Criteria is
+     (Self : Text_Fields.Field'Class; Field : SQL_Field'Class)
+      return SQL_Criteria is
    begin
-      return Compare (Self, Field, Criteria_Like);
+      return Compare (Self, Field, Comparison_Like'Access);
    end Ilike;
 
    ---------------
@@ -2246,9 +1245,9 @@ package body GNATCOLL.SQL is
    ---------------
 
    function Not_Ilike
-     (Self : SQL_Field_Text; Str : String) return SQL_Criteria is
+     (Self : Text_Fields.Field'Class; Str : String) return SQL_Criteria is
    begin
-      return Compare (Self, Expression (Str), Criteria_Not_Ilike);
+      return Compare (Self, Expression (Str), Comparison_Not_ILike'Access);
    end Not_Ilike;
 
    --------------
@@ -2256,9 +1255,9 @@ package body GNATCOLL.SQL is
    --------------
 
    function Not_Like
-     (Self : SQL_Field_Text; Str : String) return SQL_Criteria is
+     (Self : Text_Fields.Field'Class; Str : String) return SQL_Criteria is
    begin
-      return Compare (Self, Expression (Str), Criteria_Not_Like);
+      return Compare (Self, Expression (Str), Comparison_Not_Like'Access);
    end Not_Like;
 
    ---------------
@@ -2266,155 +1265,76 @@ package body GNATCOLL.SQL is
    ---------------
 
    function To_String
-     (Self : SQL_Criteria; Long : Boolean := True) return Unbounded_String
+     (Self : SQL_Criteria_Data; Long : Boolean := True) return String
    is
-      function Is_Constant_Boolean2 return Boolean;
-      --  Whether the second argument is a constant boolean (False or True)
-
-      function Is_True2 return Boolean;
-      --  Whether the second argument (a constant boolean) is "TRUE"
-
-      function Is_Constant_Boolean2 return Boolean is
-      begin
-         --  No table specified
-         return
-           Self.Criteria.Data.Arg2.Data.Field.all
-             in SQL_Field_Boolean_Build'Class
-           and then
-             (Self.Criteria.Data.Arg2.Data.Field.Table = null
-              and then Self.Criteria.Data.Arg2.Data.Field.Instance = null);
-      end Is_Constant_Boolean2;
-
-      function Is_True2 return Boolean is
-         Data : constant Named_Field_Internal_Access :=
-           Named_Field_Internal_Access
-             (SQL_Field_Boolean_Build (Self.Criteria.Data.Arg2.Data.Field.all)
-                .Data.Data);
-      begin
-         return Data.Value.all = "TRUE";
-      end Is_True2;
-
       Result : Unbounded_String;
       C      : Criteria_List.Cursor;
       C2     : Field_List.Cursor;
       Is_First : Boolean;
+      Criteria : SQL_Criteria;
    begin
-      if Self.Criteria.Data /= null then
-         case Self.Criteria.Data.Op is
-            when Field_Criteria | Like_Criteria | Criteria_Overlaps =>
-               if Self.Criteria.Data.Op = Criteria_Equal
-                 and then Is_Constant_Boolean2
-               then
-                  if not Is_True2 then
-                     Result := To_Unbounded_String ("not ");
-                  end if;
-                  Append (Result,
-                          To_String
-                            (Self.Criteria.Data.Arg1.Data.Field.all, Long));
-
-               elsif Self.Criteria.Data.Op = Criteria_Not_Equal
-                 and then Is_Constant_Boolean2
-               then
-                  if Is_True2 then
-                     Result := To_Unbounded_String ("not ");
-                  end if;
-                  Append (Result,
-                          To_String
-                            (Self.Criteria.Data.Arg1.Data.Field.all, Long));
-
-               else
-                  Result := To_Unbounded_String
-                    (To_String (Self.Criteria.Data.Arg1.Data.Field.all, Long));
-                  case Self.Criteria.Data.Op is
-                     when Criteria_Equal            => Append (Result, "=");
-                     when Criteria_Not_Equal        => Append (Result, "<>");
-                     when Criteria_Less_Than        => Append (Result, "<");
-                     when Criteria_Less_Or_Equal    => Append (Result, "<=");
-                     when Criteria_Greater_Than     => Append (Result, ">");
-                     when Criteria_Greater_Or_Equal => Append (Result, ">=");
-                     when Criteria_Any       =>
-                        Append (Result, " = ANY (");
-                     when Criteria_Like      => Append (Result, " LIKE ");
-                     when Criteria_Ilike     => Append (Result, " ILIKE ");
-                     when Criteria_Not_Like  => Append (Result, " NOT LIKE ");
-                     when Criteria_Not_Ilike => Append (Result, " NOT ILIKE ");
-                     when Criteria_Overlaps  => Append (Result, " OVERLAPS ");
-                     when others => null;
-                  end case;
-                  Append (Result,
-                          To_String
-                            (Self.Criteria.Data.Arg2.Data.Field.all, Long));
-
-                  case Self.Criteria.Data.Op is
-                     when Criteria_Any       =>
-                        Append (Result, ")");
-                     when others =>
-                        null;
+      case Self.Op is
+         when Criteria_Criteria =>
+            C := First (Self.Criterias);
+            while Has_Element (C) loop
+               if C /= First (Self.Criterias) then
+                  case Self.Op is
+                     when Criteria_And => Append (Result, " AND ");
+                     when Criteria_Or  => Append (Result, " OR ");
+                     when others       => null;
                   end case;
                end if;
 
-            when Criteria_Criteria =>
-               C := First (Self.Criteria.Data.Criterias);
-               while Has_Element (C) loop
-                  if C /= First (Self.Criteria.Data.Criterias) then
-                     case Self.Criteria.Data.Op is
-                        when Criteria_And => Append (Result, " AND ");
-                        when Criteria_Or  => Append (Result, " OR ");
-                        when others       => null;
-                     end case;
-                  end if;
-
-                  if Element (C).Criteria.Data.Op in Criteria_Criteria then
-                     Append (Result, "(");
-                     Append (Result, To_String (Element (C)));
-                     Append (Result, ")");
-                  else
-                     Append (Result, To_String (Element (C)));
-                  end if;
-                  Next (C);
-               end loop;
-
-            when Criteria_In | Criteria_Not_In =>
-               Result := To_Unbounded_String
-                 (To_String (Self.Criteria.Data.Arg.Data.Field.all,
-                  Long));
-
-               if Self.Criteria.Data.Op = Criteria_In then
-                  Append (Result, " IN (");
+               Criteria := Element (C);
+               if Get_Data (Criteria).all in SQL_Criteria_Data'Class
+                 and then SQL_Criteria_Data (Get_Data (Criteria).all).Op
+                    in Criteria_Criteria
+               then
+                  Append (Result, "(");
+                  Append (Result, GNATCOLL.SQL_Impl.To_String (Element (C)));
+                  Append (Result, ")");
                else
-                  Append (Result, " NOT IN (");
+                  Append (Result, GNATCOLL.SQL_Impl.To_String (Element (C)));
+               end if;
+               Next (C);
+            end loop;
+
+         when Criteria_In | Criteria_Not_In =>
+            Result := To_Unbounded_String (To_String (Self.Arg, Long));
+
+            if Self.Op = Criteria_In then
+               Append (Result, " IN (");
+            else
+               Append (Result, " NOT IN (");
+            end if;
+
+            Is_First := True;
+            C2 := First (Self.List);
+            while Has_Element (C2) loop
+               if not Is_First then
+                  Append (Result, ",");
                end if;
 
-               Is_First := True;
-               C2 := First (Self.Criteria.Data.List.List);
-               while Has_Element (C2) loop
-                  if not Is_First then
-                     Append (Result, ",");
-                  end if;
+               Is_First := False;
+               Append (Result, To_String (Element (C2), Long));
+               Next (C2);
+            end loop;
 
-                  Is_First := False;
-                  Append (Result, To_String (Element (C2), Long));
-                  Next (C2);
-               end loop;
+            Append (Result, To_String (Self.Subquery));
+            Append (Result, To_String (Self.In_String));
+            Append (Result, ")");
 
-               Append (Result, To_String (Self.Criteria.Data.Subquery));
-               Append (Result, To_String (Self.Criteria.Data.In_String));
-               Append (Result, ")");
+         when Null_Criteria =>
+            Result := To_Unbounded_String (To_String (Self.Arg3, Long));
 
-            when Null_Criteria =>
-               Result := To_Unbounded_String
-                 (To_String (Self.Criteria.Data.Arg3.Data.Field.all,
-                  Long));
+            case Self.Op is
+               when Criteria_Null     => Append (Result, " IS NULL");
+               when Criteria_Not_Null => Append (Result, " IS NOT NULL");
+               when others            => null;
+            end case;
 
-               case Self.Criteria.Data.Op is
-                  when Criteria_Null     => Append (Result, " IS NULL");
-                  when Criteria_Not_Null => Append (Result, " IS NOT NULL");
-                  when others            => null;
-               end case;
-
-         end case;
-      end if;
-      return Result;
+      end case;
+      return To_String (Result);
    end To_String;
 
    --------------
@@ -2531,14 +1451,14 @@ package body GNATCOLL.SQL is
       end if;
       if Self.Criteria /= No_Criteria then
          Append (Result, " WHERE ");
-         Append (Result, To_String (Self.Criteria));
+         Append (Result, GNATCOLL.SQL_Impl.To_String (Self.Criteria));
       end if;
       if Self.Group_By /= Empty_Field_List then
          Append (Result, " GROUP BY ");
          Append (Result, To_String (Self.Group_By, Long => True));
          if Self.Having /= No_Criteria then
             Append (Result, " HAVING ");
-            Append (Result, To_String (Self.Having));
+            Append (Result, GNATCOLL.SQL_Impl.To_String (Self.Having));
          end if;
       end if;
       if Self.Order_By /= Empty_Field_List then
@@ -2566,16 +1486,6 @@ package body GNATCOLL.SQL is
          return To_String (Self.Contents.Data.all);
       end if;
    end To_String;
-
-   ----------
-   -- Free --
-   ----------
-
-   procedure Free (Self : in out Named_Field_Internal) is
-   begin
-      Free (Self.Operator);
-      Free (Self.Value);
-   end Free;
 
    ----------
    -- Free --
@@ -2648,32 +1558,23 @@ package body GNATCOLL.SQL is
    -------------------
 
    procedure Append_Tables
-     (Self : SQL_Criteria; To : in out Table_Sets.Set)
+     (Self : SQL_Criteria_Data; To : in out Table_Sets.Set)
    is
-      Data : constant SQL_Criteria_Data_Access := Self.Criteria.Data;
       C    : Criteria_List.Cursor;
    begin
-      if Data = null then
-         return;
-      end if;
-
-      case Data.Op is
-         when Field_Criteria | Like_Criteria | Criteria_Overlaps =>
-            Append_Tables (Data.Arg1.Data.Field.all, To);
-            Append_Tables (Data.Arg2.Data.Field.all, To);
-
+      case Self.Op is
          when Criteria_Criteria =>
-            C := First (Data.Criterias);
+            C := First (Self.Criterias);
             while Has_Element (C) loop
                Append_Tables (Element (C), To);
                Next (C);
             end loop;
 
          when Criteria_In | Criteria_Not_In =>
-            Append_Tables (Data.Arg.Data.Field.all, To);
+            Append_Tables (Self.Arg, To);
 
          when Null_Criteria =>
-            Append_Tables (Data.Arg3.Data.Field.all, To);
+            Append_Tables (Self.Arg3, To);
       end case;
    end Append_Tables;
 
@@ -2729,21 +1630,10 @@ package body GNATCOLL.SQL is
    -- Append_Tables --
    -------------------
 
-   procedure Append_Tables (Self : SQL_Field; To : in out Table_Sets.Set) is
-   begin
-      if Self.Table /= null then
-         Include (To, (Name => Self.Table, Instance => Self.Instance));
-      end if;
-   end Append_Tables;
-
-   -------------------
-   -- Append_Tables --
-   -------------------
-
    procedure Append_Tables
      (From : SQL_Field_List; To : in out Table_Sets.Set)
    is
-      C : Field_List.Cursor := First (From.List);
+      C : Field_List.Cursor := First (From);
    begin
       while Has_Element (C) loop
          Append_Tables (Element (C), To);
@@ -2756,21 +1646,9 @@ package body GNATCOLL.SQL is
    -------------------
 
    procedure Append_Tables
-     (Self : Named_Field_Internal; To : in out Table_Sets.Set) is
-   begin
-      if Self.Table /= No_Names then
-         Include (To, Self.Table);
-      end if;
-   end Append_Tables;
-
-   -------------------
-   -- Append_Tables --
-   -------------------
-
-   procedure Append_Tables
      (Self : As_Field_Internal; To : in out Table_Sets.Set) is
    begin
-      Append_Tables (Self.Renamed.Data.Field.all, To);
+      Append_Tables (Self.Renamed, To);
    end Append_Tables;
 
    -------------------
@@ -2780,7 +1658,7 @@ package body GNATCOLL.SQL is
    procedure Append_Tables
      (Self : Sorted_Field_Internal; To : in out Table_Sets.Set) is
    begin
-      Append_Tables (Self.Sorted.Data.Field.all, To);
+      Append_Tables (Self.Sorted, To);
    end Append_Tables;
 
    -------------------
@@ -2808,12 +1686,12 @@ package body GNATCOLL.SQL is
       C : When_Lists.Cursor := First (Self.Criteria.List);
    begin
       while Has_Element (C) loop
-         Append_Tables (Element (C).Field.Data.Field.all, To);
+         Append_Tables (Element (C).Field, To);
          Next (C);
       end loop;
 
       if Self.Else_Clause /= No_Field_Pointer then
-         Append_Tables (Self.Else_Clause.Data.Field.all, To);
+         Append_Tables (Self.Else_Clause, To);
       end if;
    end Append_Tables;
 
@@ -2838,65 +1716,16 @@ package body GNATCOLL.SQL is
    -----------------------------
 
    procedure Append_If_Not_Aggregate
-     (Self         : SQL_Field;
-      To           : in out SQL_Field_List'Class;
-      Is_Aggregate : in out Boolean)
-   is
-      pragma Unreferenced (Is_Aggregate);
-   begin
-      --  Ignore constant fields (NULL,...)
-      if Self.Table /= null then
-         Append (To.List, Self);
-      end if;
-   end Append_If_Not_Aggregate;
-
-   -----------------------------
-   -- Append_If_Not_Aggregate --
-   -----------------------------
-
-   procedure Append_If_Not_Aggregate
      (Self         : SQL_Field_List;
       To           : in out SQL_Field_List'Class;
       Is_Aggregate : in out Boolean)
    is
-      C : Field_List.Cursor := First (Self.List);
+      C : Field_List.Cursor := First (Self);
    begin
       while Has_Element (C) loop
          Append_If_Not_Aggregate (Element (C), To, Is_Aggregate);
          Next (C);
       end loop;
-   end Append_If_Not_Aggregate;
-
-   -----------------------------
-   -- Append_If_Not_Aggregate --
-   -----------------------------
-
-   procedure Append_If_Not_Aggregate
-     (Self         : access Named_Field_Internal;
-      To           : in out SQL_Field_List'Class;
-      Is_Aggregate : in out Boolean)
-   is
-      C : Field_List.Cursor := First (Self.List.List);
-   begin
-      while Has_Element (C) loop
-         Append_If_Not_Aggregate (Element (C), To, Is_Aggregate);
-         Next (C);
-      end loop;
-
-      --  We create a SQL_Field_Text, but it might be any other type.
-      --  This isn't really relevant, however, since the exact type is not used
-      --  later on.
-
-      if Self.Table /= No_Names then
-         Self.Refcount := Self.Refcount + 1;
-         Append
-           (To.List, SQL_Field_Text_Build'
-              (Table    => Self.Table.Name,
-               Instance => Self.Table.Instance,
-               Name     => null,
-               Data     => (Ada.Finalization.Controlled with
-                            SQL_Field_Internal_Access (Self))));
-      end if;
    end Append_If_Not_Aggregate;
 
    -----------------------------
@@ -2908,7 +1737,7 @@ package body GNATCOLL.SQL is
       To           : in out SQL_Field_List'Class;
       Is_Aggregate : in out Boolean) is
    begin
-      Append_If_Not_Aggregate (Self.Renamed.Data.Field.all, To, Is_Aggregate);
+      Append_If_Not_Aggregate (Self.Renamed, To, Is_Aggregate);
    end Append_If_Not_Aggregate;
 
    -----------------------------
@@ -2920,8 +1749,7 @@ package body GNATCOLL.SQL is
       To           : in out SQL_Field_List'Class;
       Is_Aggregate : in out Boolean) is
    begin
-      Append_If_Not_Aggregate
-        (Self.Sorted.Data.Field.all, To, Is_Aggregate);
+      Append_If_Not_Aggregate (Self.Sorted, To, Is_Aggregate);
    end Append_If_Not_Aggregate;
 
    -----------------------------
@@ -2954,14 +1782,12 @@ package body GNATCOLL.SQL is
    begin
       while Has_Element (C) loop
          Append_If_Not_Aggregate (Element (C).Criteria, To, Is_Aggregate);
-         Append_If_Not_Aggregate
-           (Element (C).Field.Data.Field.all, To, Is_Aggregate);
+         Append_If_Not_Aggregate (Element (C).Field, To, Is_Aggregate);
          Next (C);
       end loop;
 
       if Self.Else_Clause /= No_Field_Pointer then
-         Append_If_Not_Aggregate
-           (Self.Else_Clause.Data.Field.all, To, Is_Aggregate);
+         Append_If_Not_Aggregate (Self.Else_Clause, To, Is_Aggregate);
       end if;
    end Append_If_Not_Aggregate;
 
@@ -2970,37 +1796,26 @@ package body GNATCOLL.SQL is
    -----------------------------
 
    procedure Append_If_Not_Aggregate
-     (Self         : SQL_Criteria;
+     (Self         : SQL_Criteria_Data;
       To           : in out SQL_Field_List'Class;
       Is_Aggregate : in out Boolean)
    is
-      Data : constant SQL_Criteria_Data_Access := Self.Criteria.Data;
       C    : Criteria_List.Cursor;
    begin
-      if Data /= null then
-         case Data.Op is
-            when Field_Criteria | Like_Criteria | Criteria_Overlaps =>
-               Append_If_Not_Aggregate
-                 (Data.Arg1.Data.Field.all, To, Is_Aggregate);
-               Append_If_Not_Aggregate
-                 (Data.Arg2.Data.Field.all, To, Is_Aggregate);
+      case Self.Op is
+         when Criteria_Criteria =>
+            C := First (Self.Criterias);
+            while Has_Element (C) loop
+               Append_If_Not_Aggregate (Element (C), To, Is_Aggregate);
+               Next (C);
+            end loop;
 
-            when Criteria_Criteria =>
-               C := First (Data.Criterias);
-               while Has_Element (C) loop
-                  Append_If_Not_Aggregate (Element (C), To, Is_Aggregate);
-                  Next (C);
-               end loop;
+         when Criteria_In | Criteria_Not_In =>
+            Append_If_Not_Aggregate (Self.Arg, To, Is_Aggregate);
 
-            when Criteria_In | Criteria_Not_In =>
-               Append_If_Not_Aggregate
-                 (Data.Arg.Data.Field.all, To, Is_Aggregate);
-
-            when Null_Criteria =>
-               Append_If_Not_Aggregate
-                 (Data.Arg3.Data.Field.all, To, Is_Aggregate);
-         end case;
-      end if;
+         when Null_Criteria =>
+            Append_If_Not_Aggregate (Self.Arg3, To, Is_Aggregate);
+      end case;
    end Append_If_Not_Aggregate;
 
    -----------------------------
@@ -3016,234 +1831,6 @@ package body GNATCOLL.SQL is
    begin
       Is_Aggregate := True;
    end Append_If_Not_Aggregate;
-
-   ------------
-   -- Adjust --
-   ------------
-
-   procedure Adjust (Self : in out Assignment_Controlled) is
-   begin
-      if Self.Data /= null then
-         Self.Data.Refcount := Self.Data.Refcount + 1;
-      end if;
-   end Adjust;
-
-   --------------
-   -- Finalize --
-   --------------
-
-   procedure Finalize (Self : in out Assignment_Controlled) is
-      procedure Unchecked_Free is new Ada.Unchecked_Deallocation
-        (Assignment_Item, Assignment_Item_Access);
-   begin
-      if Self.Data /= null then
-         Self.Data.Refcount := Self.Data.Refcount - 1;
-         if Self.Data.Refcount = 0 then
-            Free (Self.Data.Value);
-            Unchecked_Free (Self.Data);
-         end if;
-      end if;
-   end Finalize;
-
-   ------------
-   -- Assign --
-   ------------
-
-   procedure Assign
-     (R     : out SQL_Assignment;
-      Field : SQL_Field'Class;
-      Value : GNAT.Strings.String_Access)
-   is
-      A : constant Assignment_Controlled :=
-        (Ada.Finalization.Controlled with
-         Data => new Assignment_Item'
-           (Refcount => 1,
-            Field    => +Field,
-            Value    => Value,
-            To_Field => No_Field_Pointer));
-   begin
-      Append (R.List, A);
-   end Assign;
-
-   ---------
-   -- "=" --
-   ---------
-
-   function "="
-     (Field : SQL_Field_Text'Class; Value : String) return SQL_Assignment
-   is
-      Result : SQL_Assignment;
-   begin
-      Assign
-        (Result, Field, new String'(Normalize_String (Value)));
-      return Result;
-   end "=";
-
-   ---------
-   -- "=" --
-   ---------
-
-   function "="
-     (Field : SQL_Field_Integer'Class; Value : Integer) return SQL_Assignment
-   is
-      Result : SQL_Assignment;
-   begin
-      Assign (Result, Field, new String'(Integer'Image (Value)));
-      return Result;
-   end "=";
-
-   ---------
-   -- "=" --
-   ---------
-
-   function "="
-     (Field : SQL_Field_Boolean'Class; Value : Boolean) return SQL_Assignment
-   is
-      Result : SQL_Assignment;
-   begin
-      Assign (Result, Field, new String'(Boolean'Image (Value)));
-      return Result;
-   end "=";
-
-   ---------
-   -- "=" --
-   ---------
-
-   function "="
-     (Field : SQL_Field_Time'Class;
-      Value : Ada.Calendar.Time) return SQL_Assignment
-   is
-      Result   : SQL_Assignment;
-      Adjusted : Ada.Calendar.Time;
-   begin
-      if Ada.Calendar.Year (Value) = Ada.Calendar.Year_Number'First then
-         return To_Null (Field);
-      else
-         --  Value is GMT, but Image insists on converting it to
-         --  local time, so we cheat a little
-         if Value /= No_Time then
-            Adjusted := Value - Duration (UTC_Time_Offset (Value)) * 60.0;
-            Assign
-              (Result,
-               Field, new String'(Image (Adjusted, "'%Y-%m-%d %H:%M:%S'")));
-         else
-            Assign (Result, Field, new String'("NULL"));
-         end if;
-         return Result;
-      end if;
-   end "=";
-
-   ---------
-   -- "=" --
-   ---------
-
-   function "="
-     (Field : SQL_Field_Float'Class; Value : Float) return SQL_Assignment
-   is
-      Result : SQL_Assignment;
-   begin
-      Assign (Result, Field, new String'(Float'Image (Value)));
-      return Result;
-   end "=";
-
-   ---------
-   -- "=" --
-   ---------
-
-   function "="
-     (Field : SQL_Field'Class; To : SQL_Field'Class) return SQL_Assignment
-   is
-      Result : SQL_Assignment;
-      A : constant Assignment_Controlled :=
-        (Ada.Finalization.Controlled with
-         Data => new Assignment_Item'
-           (Refcount => 1,
-            Field    => +Field,
-            Value    => null,
-            To_Field => +To));
-   begin
-      Append (Result.List, A);
-      return Result;
-   end "=";
-
-   -------------
-   -- To_Null --
-   -------------
-
-   function To_Null (Field : SQL_Field'Class) return SQL_Assignment is
-      Result : SQL_Assignment;
-   begin
-      Assign (Result, Field, null);
-      return Result;
-   end To_Null;
-
-   ---------
-   -- "&" --
-   ---------
-
-   function "&" (Left, Right : SQL_Assignment) return SQL_Assignment is
-      Result : SQL_Assignment;
-      C      : Assignment_Lists.Cursor := First (Right.List);
-   begin
-      Result.List := Left.List;
-      while Has_Element (C) loop
-         Append (Result.List, Element (C));
-         Next (C);
-      end loop;
-      return Result;
-   end "&";
-
-   ---------------
-   -- To_String --
-   ---------------
-
-   function To_String
-     (Self : SQL_Assignment; With_Field : Boolean) return String
-   is
-      Result : Unbounded_String;
-      C      : Assignment_Lists.Cursor := First (Self.List);
-      Data   : Assignment_Item_Access;
-   begin
-      while Has_Element (C) loop
-         Data := Element (C).Data;
-         if Result /= Null_Unbounded_String then
-            Append (Result, ", ");
-         end if;
-
-         if Data.Value = null then
-            if Data.To_Field.Data /= null then
-               if With_Field then
-                  Append
-                    (Result,
-                     To_String (Data.Field.Data.Field.all, Long => False)
-                     & "="
-                     & To_String (Data.To_Field.Data.Field.all, Long => True));
-               else
-                  Append
-                    (Result,
-                     To_String (Data.To_Field.Data.Field.all, Long => True));
-               end if;
-
-            elsif With_Field then
-               Append
-                 (Result, To_String (Data.Field.Data.Field.all, Long => False)
-                  & "=" & Null_String);
-            else
-               Append (Result, Null_String);
-            end if;
-         else
-            if With_Field then
-               Append
-                 (Result, To_String (Data.Field.Data.Field.all, Long => False)
-                  & "=" & Data.Value.all);
-            else
-               Append (Result, Data.Value.all);
-            end if;
-         end if;
-         Next (C);
-      end loop;
-      return To_String (Result);
-   end To_String;
 
    ----------------
    -- SQL_Delete --
@@ -3275,7 +1862,8 @@ package body GNATCOLL.SQL is
 
       if Self.Where /= No_Criteria then
          Append (Result, " WHERE ");
-         Append (Result, To_String (Self.Where, Long => False));
+         Append
+           (Result, GNATCOLL.SQL_Impl.To_String (Self.Where, Long => False));
       end if;
 
       return Result;
@@ -3367,11 +1955,14 @@ package body GNATCOLL.SQL is
             Append (Result, ")");
          end if;
 
-         if not Is_Empty (Self.Values.List) then
-            Append (Result, " VALUES (");
-            Append (Result, To_String (Self.Values, With_Field => False));
-            Append (Result, ")");
-         end if;
+         declare
+            Assign : constant String :=
+              To_String (Self.Values, With_Field => False);
+         begin
+            if Assign /= "" then
+               Append (Result, " VALUES (" & Assign & ")");
+            end if;
+         end;
 
          if Self.Subquery /= No_Query then
             Append (Result, " ");
@@ -3381,29 +1972,6 @@ package body GNATCOLL.SQL is
 
       return Result;
    end To_String;
-
-   -------------------
-   -- Append_Tables --
-   -------------------
-
-   procedure Append_Tables
-     (Self : SQL_Assignment; To : in out Table_Sets.Set)
-   is
-      C : Assignment_Lists.Cursor := First (Self.List);
-      D : Field_Pointer_Data_Access;
-   begin
-      while Has_Element (C) loop
-         D := Element (C).Data.Field.Data;
-         Append_Tables (D.Field.all, To);
-
-         D := Element (C).Data.To_Field.Data;
-         if D /= null then
-            Append_Tables (D.Field.all, To);
-         end if;
-
-         Next (C);
-      end loop;
-   end Append_Tables;
 
    -------------------
    -- Auto_Complete --
@@ -3417,7 +1985,6 @@ package body GNATCOLL.SQL is
       pragma Unreferenced (Auto_Complete_Group_By);
       List, List2 : Table_Sets.Set;
       Subfields   : SQL_Field_List;
-      C2          : Assignment_Lists.Cursor;
    begin
       if Auto_Complete_From then
 
@@ -3425,12 +1992,7 @@ package body GNATCOLL.SQL is
          --  is being updated
 
          if Self.Fields = Empty_Field_List then
-            C2 := First (Self.Values.List);
-            while Has_Element (C2) loop
-               Append
-                 (Self.Fields.List, Element (C2).Data.Field.Data.Field.all);
-               Next (C2);
-            end loop;
+            Get_Fields (Self.Values, Self.Fields);
          end if;
 
          if Self.Into = No_Names then
@@ -3461,21 +2023,7 @@ package body GNATCOLL.SQL is
 
             Difference (List, List2);  --  Remove tables already in the list
             if Length (List) > 0 then
-               C2 := First (Self.Values.List);
-               while Has_Element (C2) loop
-                  if Element (C2).Data.Value /= null then
-                     Subfields := Subfields
-                       & From_String (Element (C2).Data.Value.all);
-                  elsif Element (C2).Data.To_Field.Data /= null then
-                     Subfields := Subfields
-                       & Element (C2).Data.To_Field.Data.Field.all;
-                  else
-                     --  Setting a field to null ?
-                     Subfields := Subfields & Null_Field_Text;
-                  end if;
-                  Next (C2);
-               end loop;
-
+               To_List (Self.Values, Subfields);
                Self.Subquery := SQL_Select
                  (Fields => Subfields, Where => Self.Where);
                Auto_Complete (Self.Subquery);
@@ -3545,7 +2093,8 @@ package body GNATCOLL.SQL is
 
       if Self.Where /= No_Criteria then
          Append (Result, " WHERE ");
-         Append (Result, To_String (Self.Where, Long => True));
+         Append
+           (Result, GNATCOLL.SQL_Impl.To_String (Self.Where, Long => True));
       end if;
       return Result;
    end To_String;
@@ -3631,15 +2180,15 @@ package body GNATCOLL.SQL is
            and FK (SQL_Table (Partial), SQL_Table (Full)) and Criteria;
       end if;
 
-      return SQL_Left_Join_Table'
-        (Instance     => null,
-         Data => (Join_Table_Data'
-                    (Ada.Finalization.Controlled with
-                     Data => new Join_Table_Internal'
-                       (Refcount     => 1,
-                        Tables       => Full & Partial,
-                        Is_Left_Join => True,
-                        On           => Criteria))));
+      return Result : SQL_Left_Join_Table (Instance => null) do
+         Result.Data := Join_Table_Data'
+           (Ada.Finalization.Controlled with
+            Data => new Join_Table_Internal'
+              (Refcount     => 1,
+               Tables       => Full & Partial,
+               Is_Left_Join => True,
+               On           => Criteria));
+      end return;
    end Left_Join;
 
    ----------
@@ -3665,13 +2214,10 @@ package body GNATCOLL.SQL is
      (Self : SQL_Left_Join_Table; Name : Cst_String_Access)
       return SQL_Left_Join_Table'Class
    is
-      Result : constant SQL_Left_Join_Table :=
-        (SQL_Table_Or_List with
-         Instance   => Name,
-         Data       => Self.Data);
+      R : SQL_Left_Join_Table (Instance => Name);
    begin
---      Result.Instance := Name;
-      return Result;
+      R.Data := Self.Data;
+      return R;
    end Rename;
 
    ---------------
@@ -3747,9 +2293,9 @@ package body GNATCOLL.SQL is
      (Query : SQL_Query; Table_Name : Cst_String_Access) return Subquery_Table
    is
    begin
-      return Subquery_Table'
-        (Instance => Table_Name,
-         Query    => Query);
+      return R : Subquery_Table (Instance => Table_Name) do
+         R.Query := Query;
+      end return;
    end Subquery;
 
    ----------

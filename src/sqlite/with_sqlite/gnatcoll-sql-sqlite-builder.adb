@@ -295,7 +295,8 @@ package body GNATCOLL.SQL.Sqlite.Builder is
       --  sequence within the current connection.
 
       Execute (Connection, Res2,
-               "SELECT " & To_String (Field) & " FROM " & Field.Table.all
+               "SELECT " & Field.To_String (Long => True)
+               & " FROM " & Field.Table.all
                & " WHERE ROWID="
                & Long_Integer'Image (Self.Last_Rowid));
       if Has_Row (Res2) then

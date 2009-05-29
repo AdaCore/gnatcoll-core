@@ -47,7 +47,7 @@ package GNATCOLL.SQL.Postgres is
    --  oid will always be null. For this reason, and since oids slow things
    --  done a little, and take space, it is not recommended to depend on them.
 
-   function Now is new Time_Function ("now()");
+   function Now is new Time_Fields.SQL_Function ("now()");
    --  Return the current timestamp, same as Current_Timestamp
 
 end GNATCOLL.SQL.Postgres;
