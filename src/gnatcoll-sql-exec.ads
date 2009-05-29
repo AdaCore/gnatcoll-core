@@ -109,14 +109,14 @@ package GNATCOLL.SQL.Exec is
    --  In practice, DBMS-specific backends will derive from
    --  gnatcoll-sql-exec-dbms_cursor, which defines the required primitive ops
 
-   procedure Execute
-     (Connection : access Database_Connection_Record'Class;
-      Result     : out Forward_Cursor;
+   procedure Fetch
+     (Result     : out Forward_Cursor;
+      Connection : access Database_Connection_Record'Class;
       Query      : String;
       Use_Cache  : Boolean := False);
-   procedure Execute
-     (Connection : access Database_Connection_Record'Class;
-      Result     : out Forward_Cursor;
+   procedure Fetch
+     (Result     : out Forward_Cursor;
+      Connection : access Database_Connection_Record'Class;
       Query      : GNATCOLL.SQL.SQL_Query;
       Use_Cache  : Boolean := False);
    procedure Execute
@@ -147,9 +147,16 @@ package GNATCOLL.SQL.Exec is
    --  rather than use Value (Execute (...), ...), which might have
    --  unpredictable results depending on when the controlled type is
    --  finalized. This also makes it easier to have your own specialized
-   --  Execute functions in your application that result specific types of
+   --  Execute functions in your application that return specific types of
    --  cursor, without requiring possibly costly copies of the result to
    --  convert from one type to another.
+   --
+   --  The names differ (Fetch and Execute) depending on whether the result is
+   --  read or not. This is so that you can use dotted notation, as in:
+   --       Curs.Fetch (Connection, Query)
+   --  which reads better than Curs.Execute (Connection, Query), since we
+   --  execute the query, not the cursor.
+   --
    --  Result is always first reset to No_Element, so any custom field you
    --  might have will also be reset
 

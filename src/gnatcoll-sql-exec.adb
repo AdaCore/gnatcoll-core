@@ -372,13 +372,13 @@ package body GNATCOLL.SQL.Exec is
       return R;
    end Execute_And_Log;
 
-   -------------
-   -- Execute --
-   -------------
+   -----------
+   -- Fetch --
+   -----------
 
-   procedure Execute
-     (Connection : access Database_Connection_Record'Class;
-      Result     : out Forward_Cursor;
+   procedure Fetch
+     (Result     : out Forward_Cursor;
+      Connection : access Database_Connection_Record'Class;
       Query      : String;
       Use_Cache  : Boolean := False)
    is
@@ -448,20 +448,20 @@ package body GNATCOLL.SQL.Exec is
       then
          Connection.In_Transaction := False;
       end if;
-   end Execute;
+   end Fetch;
 
-   -------------
-   -- Execute --
-   -------------
+   -----------
+   -- Fetch --
+   -----------
 
-   procedure Execute
-     (Connection : access Database_Connection_Record'Class;
-      Result     : out Forward_Cursor;
+   procedure Fetch
+     (Result     : out Forward_Cursor;
+      Connection : access Database_Connection_Record'Class;
       Query      : SQL_Query;
       Use_Cache  : Boolean := False) is
    begin
-      Execute (Connection, Result, To_String (To_String (Query)), Use_Cache);
-   end Execute;
+      Fetch (Result, Connection, To_String (To_String (Query)), Use_Cache);
+   end Fetch;
 
    -------------
    -- Execute --
@@ -475,7 +475,7 @@ package body GNATCOLL.SQL.Exec is
       R : Forward_Cursor;
       pragma Unreferenced (R);
    begin
-      Execute (Connection, R, Query, Use_Cache);
+      Fetch (R, Connection, Query, Use_Cache);
    end Execute;
 
    -------------
@@ -490,7 +490,7 @@ package body GNATCOLL.SQL.Exec is
       R : Forward_Cursor;
       pragma Unreferenced (R);
    begin
-      Execute (Connection, R, Query, Use_Cache);
+      Fetch (R, Connection, Query, Use_Cache);
    end Execute;
 
    -------------

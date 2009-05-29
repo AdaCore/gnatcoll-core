@@ -532,8 +532,8 @@ procedure GNATCOLL_Db2Ada is
       Enum.Type_Name := To_Unbounded_String (Prefix & "_Id");
 
       if Name /=  "" then
-         Execute
-           (DB, R,
+         R.Fetch
+           (DB,
             "SELECT " & Id & ", " & Name & " FROM " & Table
             & " ORDER BY " & Name);
          while Has_Row (R) loop
@@ -557,8 +557,7 @@ procedure GNATCOLL_Db2Ada is
       R   : GNATCOLL.SQL.Exec.Forward_Cursor;
       Var : Dumped_Vars;
    begin
-      Execute
-        (DB, R, "SELECT " & Field & " FROM " & Table & " WHERE " & Where);
+      R.Fetch (DB, "SELECT " & Field & " FROM " & Table & " WHERE " & Where);
 
       Var.Name    := To_Unbounded_String (Name);
       Var.Value   := To_Unbounded_String (Value (R, 0));

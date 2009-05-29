@@ -442,7 +442,7 @@ package body GNATCOLL.SQL.Postgres.Builder is
         (Fields => From_String ("currval('" & Field.Table.all
                                 & "_" & Field.Name.all & "_seq')"));
 
-      Execute (Connection, Res2, Q);
+      Res2.Fetch (Connection, Q);
       if Rows_Count (Res2) = 1 then
          return Integer_Value (Res2, 0);
       end if;
@@ -481,8 +481,8 @@ package body GNATCOLL.SQL.Postgres.Builder is
    is
       R     : Forward_Cursor;
    begin
-      Execute
-        (Connection, R,
+      R.Fetch
+        (Connection,
          "SELECT pg_class.relname, pg_description.description"
          & " FROM (pg_class left join pg_description"
          & "         on  pg_description.objoid = pg_class.oid"
@@ -515,8 +515,8 @@ package body GNATCOLL.SQL.Postgres.Builder is
    is
       R : Forward_Cursor;
    begin
-      Execute
-        (Connection, R,
+      R.Fetch
+        (Connection,
          "SELECT pg_attribute.attname,"       --  0 att name
          & "     pg_catalog.format_type(atttypid, atttypmod),"  --  1 att type
          & "     pg_attribute.attnum,"        --  2 attribute index in table
@@ -558,8 +558,8 @@ package body GNATCOLL.SQL.Postgres.Builder is
       R     : Forward_Cursor;
       Index : Natural := 1;
    begin
-      Execute
-        (Connection, R,
+      R.Fetch
+        (Connection,
          "SELECT  pg_constraint.contype,"  --  0 constraint type ('f', 'p',...)
          & " pg_constraint.conname,"       --  1 constraint name
          & " pg_class.relname,"            --  2 class name

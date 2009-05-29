@@ -294,11 +294,12 @@ package body GNATCOLL.SQL.Sqlite.Builder is
       --  the currval() function which returns the last value set for a
       --  sequence within the current connection.
 
-      Execute (Connection, Res2,
-               "SELECT " & Field.To_String (Long => True)
-               & " FROM " & Field.Table.all
-               & " WHERE ROWID="
-               & Long_Integer'Image (Self.Last_Rowid));
+      Res2.Fetch
+        (Connection,
+         "SELECT " & Field.To_String (Long => True)
+         & " FROM " & Field.Table.all
+         & " WHERE ROWID="
+         & Long_Integer'Image (Self.Last_Rowid));
       if Has_Row (Res2) then
          return Integer_Value (Res2, 0);
       end if;
@@ -336,7 +337,7 @@ package body GNATCOLL.SQL.Sqlite.Builder is
    is
       R     : Forward_Cursor;
    begin
-      Execute (Connection, R, "SELECT name FROM sqlite_master ORDER BY name");
+      R.Fetch (Connection, "SELECT name FROM sqlite_master ORDER BY name");
       while Has_Row (R) loop
          Callback (Name => Value (R, 0), Description => "");
          Next (R);
@@ -383,8 +384,8 @@ package body GNATCOLL.SQL.Sqlite.Builder is
       Index       : Natural := 0;
       Paren_Count : Natural;
    begin
-      Execute
-        (Connection, R,
+      R.Fetch
+        (Connection,
          "SELECT sql FROM sqlite_master WHERE name='" & Table_Name & "'");
 
       while Has_Row (R) loop
