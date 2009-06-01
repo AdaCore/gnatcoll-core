@@ -17,12 +17,18 @@
 -- Place - Suite 330, Boston, MA 02111-1307, USA.                    --
 -------------------------------------------------------------------------------
 
-with Interfaces.C;          use Interfaces.C;
-with Interfaces.C.Strings;  use Interfaces.C.Strings;
-with System;
+with Ada.Unchecked_Conversion;
+with Interfaces.C;             use Interfaces.C;
+with Interfaces.C.Strings;     use Interfaces.C.Strings;
 
 package body GNATCOLL.SQL.Sqlite.Gnade is
    pragma Linker_Options ("-lsqlite3");
+
+   type Address_Array is array (Natural) of System.Address;
+   pragma Convention (C, Address_Array);
+
+   function To_Chars_Ptr is new Ada.Unchecked_Conversion
+     (System.Address, chars_ptr);
 
    ----------
    -- Open --
@@ -143,5 +149,92 @@ package body GNATCOLL.SQL.Sqlite.Gnade is
    begin
       return Value (Internal (Stmt, Col));
    end Column_Name;
+
+   ---------------
+   -- Get_Table --
+   ---------------
+
+   procedure Get_Table
+     (DB     : Database;
+      SQL    : String;
+      Result : out Result_Table;
+      Status : out Result_Codes;
+      Error  : out chars_ptr)
+   is
+      function Internal
+        (DB      : Database;
+         SQL     : String;
+         Result  : access System.Address;
+         Rows    : access Natural;
+         Columns : access Natural;
+         Error   : access Interfaces.C.Strings.chars_ptr) return Result_Codes;
+      pragma Import (C, Internal, "sqlite3_get_table");
+
+   begin
+      Status := Internal
+        (DB, SQL & ASCII.NUL, Result.Values'Unrestricted_Access,
+         Result.Rows'Unrestricted_Access,
+         Result.Columns'Unrestricted_Access,
+         Error'Unrestricted_Access);
+   end Get_Table;
+
+   ----------------
+   -- Free_Table --
+   ----------------
+
+   procedure Free_Table (Result : in out Result_Table) is
+      procedure Internal (Result : System.Address);
+      pragma Import (C, Internal, "sqlite3_free_table");
+   begin
+      Internal (Result.Values);
+   end Free_Table;
+
+   ---------------
+   -- Get_Value --
+   ---------------
+
+   function Get_Value
+     (Result : Result_Table;
+      Row, Column : Natural) return Interfaces.C.Strings.chars_ptr
+   is
+      Val : Address_Array;
+      for Val'Address use Result.Values;
+      Index : constant Natural :=
+        (Row + 1) * Result.Columns + Column;
+   begin
+      --  First row is for column names, so skip it
+      return To_Chars_Ptr (Val (Index));
+   end Get_Value;
+
+   --------------
+   -- Get_Rows --
+   --------------
+
+   function Get_Rows (Result : Result_Table) return Natural is
+   begin
+      return Result.Rows;
+   end Get_Rows;
+
+   -----------------
+   -- Get_Columns --
+   -----------------
+
+   function Get_Columns (Result : Result_Table) return Natural is
+   begin
+      return Result.Columns;
+   end Get_Columns;
+
+   ---------------------
+   -- Get_Column_Name --
+   ---------------------
+
+   function Get_Column_Name
+     (Result : Result_Table; Column : Natural) return String
+   is
+      Val : Address_Array;
+      for Val'Address use Result.Values;
+   begin
+      return Interfaces.C.Strings.Value (To_Chars_Ptr (Val (Column)));
+   end Get_Column_Name;
 
 end GNATCOLL.SQL.Sqlite.Gnade;

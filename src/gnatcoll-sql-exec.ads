@@ -64,6 +64,66 @@ package GNATCOLL.SQL.Exec is
    --  You can create your own backends if needed, and thus create your own
    --  string constants for your application, if you want.
 
+   -------------
+   -- Cursors --
+   -------------
+
+   type Forward_Cursor is tagged private;
+   No_Element : constant Forward_Cursor;
+   --  A cursor that iterates over all rows of the result of an SQL query. A
+   --  single row can be queried at a time, and there is no possibility to go
+   --  back to a previous row (since not all DBMS backends support this).
+   --  This type automatically takes care of memory management and frees its
+   --  memory when no longer in use.
+   --  This type is tagged only so that you can override it in your own
+   --  applications (an example is to add an Element primitive operation which
+   --  converts the current row into a specific Ada record for ease of use)
+
+   type Abstract_DBMS_Forward_Cursor is abstract tagged private;
+   type Abstract_Cursor_Access is
+     access all Abstract_DBMS_Forward_Cursor'Class;
+   --  Internal contents of a cursor.
+   --  Instead of overriding Cursor directly, the support packages for the DBMS
+   --  must override this type, so users do not have to use unconstrained types
+   --  in their code, thus allowing "Result : Cursor" declarations.
+   --  In practice, DBMS-specific backends will derive from
+   --  gnatcoll-sql-exec-dbms_cursor, which defines the required primitive ops
+
+   --------------------------
+   -- Database_Description --
+   --------------------------
+   --  Data common to all the concurrent connections to the database.
+
+   type Database_Description is private;
+   --  Describes how to access a database, and stores global caches associated
+   --  with that database.
+
+   procedure Setup_Database
+     (Description   : out Database_Description;
+      Database      : String;
+      User          : String := "";
+      Host          : String := "";
+      Password      : String := "";
+      DBMS          : String := DBMS_Postgresql;
+      Cache_Support : Boolean := False);
+   --  Register the address of the database, for use by all other subprograms
+   --  in this package.
+   --  If Cache_Support is True, then some SQL queries can be cached locally,
+   --  and reused by Execute above when its Use_Cache parameter is True. If
+   --  Cache_Support is False, then no caching is ever done.
+
+   procedure Free (Description : in out Database_Description);
+   --  Free memory associated with description.
+   --  This should only be called when the last database connection was closed,
+   --  since each connection keeps a handle on the description
+
+   function Get_Host     (Description : Database_Description) return String;
+   function Get_User     (Description : Database_Description) return String;
+   function Get_Database (Description : Database_Description) return String;
+   function Get_Password (Description : Database_Description) return String;
+   function Get_DBMS     (Description : Database_Description) return String;
+   --  Return the connection components for the database
+
    -------------------------
    -- Database_Connection --
    -------------------------
@@ -88,55 +148,22 @@ package GNATCOLL.SQL.Exec is
    --  done automatically when calling Execute (see below). This can however be
    --  used to ensure that the database works properly.
 
-   type Forward_Cursor is tagged private;
-   No_Element : constant Forward_Cursor;
-   --  A cursor that iterates over all rows of the result of an SQL query. A
-   --  single row can be queried at a time, and there is no possibility to go
-   --  back to a previous row (since not all DBMS backends support this).
-   --  This type automatically takes care of memory management and frees its
-   --  memory when no longer in use.
-   --  This type is tagged only so that you can override it in your own
-   --  applications (an example is to add an Element primitive operation which
-   --  converts the current row into a specific Ada record for ease of use)
-
-   type Abstract_DBMS_Forward_Cursor is abstract tagged private;
-   type Abstract_Cursor_Access is
-     access all Abstract_DBMS_Forward_Cursor'Class;
-   --  Internal contents of a cursor.
-   --  Instead of overriding Cursor directly, the support packages for the DBMS
-   --  must override this type, so users do not have to use unconstrained types
-   --  in their code, thus allowing "Result : Cursor" declarations.
-   --  In practice, DBMS-specific backends will derive from
-   --  gnatcoll-sql-exec-dbms_cursor, which defines the required primitive ops
-
    procedure Fetch
      (Result     : out Forward_Cursor;
       Connection : access Database_Connection_Record'Class;
-      Query      : String;
-      Use_Cache  : Boolean := False);
+      Query      : String);
    procedure Fetch
      (Result     : out Forward_Cursor;
       Connection : access Database_Connection_Record'Class;
-      Query      : GNATCOLL.SQL.SQL_Query;
-      Use_Cache  : Boolean := False);
+      Query      : GNATCOLL.SQL.SQL_Query);
    procedure Execute
      (Connection : access Database_Connection_Record'Class;
-      Query      : GNATCOLL.SQL.SQL_Query;
-      Use_Cache  : Boolean := False);
+      Query      : GNATCOLL.SQL.SQL_Query);
    procedure Execute
      (Connection : access Database_Connection_Record'Class;
-      Query      : String;
-      Use_Cache  : Boolean := False);
+      Query      : String);
    --  Submit a query to the database, log it and wait for the result.
    --  Logs the query, as needed.
-   --  If Use_Cache is True, and the same query was executed before, its
-   --  result will be reused rather than executed again. If it was never
-   --  executed, it will be cached for later use (no caching takes place if
-   --  Use_Cache is False). This should mostly be used for queries to table
-   --  that almost never changes, ie that store "enumeration types". The cache
-   --  must be specifically invalidated (see Invalidate_Cache) to reset it.
-   --  In some cases the result of the query is simply discarded, which is
-   --  mostly useful for write queries (INSERT, UPDATE,...)
    --  The query can either be written directly as a string, or through a
    --  SQL_Query (which is encouraged, since it provides additional safety).
    --
@@ -163,7 +190,8 @@ package GNATCOLL.SQL.Exec is
    function Connect_And_Execute
      (Connection  : access Database_Connection_Record;
       Query       : String;
-      Is_Select   : Boolean) return Abstract_Cursor_Access is abstract;
+      Is_Select   : Boolean;
+      Direct      : Boolean) return Abstract_Cursor_Access is abstract;
    --  This is mostly an internal subprogram, overridden by all DBMS-specific
    --  backends.
    --  If the connection to the database has not been made yet, connect to it.
@@ -172,6 +200,10 @@ package GNATCOLL.SQL.Exec is
    --  If the query is the empty string, this procedure only connects to
    --  the database and checks the connection. It returns null if the
    --  connection is no longer valid.
+   --  If Direct is true, a direct_cursor is created, otherwise a
+   --  Forward_Cursor. The connection is allowed to return a direct cursor even
+   --  if the user only wanted a forward_cursor, but the opposite is not
+   --  allowed.
 
    procedure Close
      (Connection : access Database_Connection_Record) is abstract;
@@ -236,41 +268,6 @@ package GNATCOLL.SQL.Exec is
    --  Invalid all caches associated with the database (for all connections).
    --  Some queries can be cached (see Execute below) for  more efficiency.
 
-   --------------------------
-   -- Database_Description --
-   --------------------------
-   --  Data common to all the concurrent connections to the database.
-
-   type Database_Description is private;
-   --  Describes how to access a database, and stores global caches associated
-   --  with that database.
-
-   procedure Setup_Database
-     (Description   : out Database_Description;
-      Database      : String;
-      User          : String := "";
-      Host          : String := "";
-      Password      : String := "";
-      DBMS          : String := DBMS_Postgresql;
-      Cache_Support : Boolean := False);
-   --  Register the address of the database, for use by all other subprograms
-   --  in this package.
-   --  If Cache_Support is True, then some SQL queries can be cached locally,
-   --  and reused by Execute above when its Use_Cache parameter is True. If
-   --  Cache_Support is False, then no caching is ever done.
-
-   procedure Free (Description : in out Database_Description);
-   --  Free memory associated with description.
-   --  This should only be called when the last database connection was closed,
-   --  since each connection keeps a handle on the description
-
-   function Get_Host     (Description : Database_Description) return String;
-   function Get_User     (Description : Database_Description) return String;
-   function Get_Database (Description : Database_Description) return String;
-   function Get_Password (Description : Database_Description) return String;
-   function Get_DBMS     (Description : Database_Description) return String;
-   --  Return the connection components for the database
-
    function Get_Task_Connection
      (Description : Database_Description;
       Factory     : access function
@@ -306,9 +303,9 @@ package GNATCOLL.SQL.Exec is
       return Database_Description;
    --  Return the description of the database to which we are connected
 
-   ------------------------
-   -- Retrieving results --
-   ------------------------
+   ------------------------------------------
+   -- Retrieving results - Forward cursors --
+   ------------------------------------------
    --  The following subprograms represent a way to access the various
    --  columns returned by a query. A single row can be accessed at a time,
    --  since not all DBMS systems provide ways to query all results in memory
@@ -327,11 +324,6 @@ package GNATCOLL.SQL.Exec is
    --  (which can not be computed without traversing all the results).
    --  If the query you executed is a DELETE, INSERT or UPDATE, this returns
    --  the number of rows modified by the query.
-
-   function Rows_Count (Self : Forward_Cursor) return Natural;
-   --  Return total number of rows in result.
-   --  This might not be supported by all DBMS
-   --  ??? Should not be a primitive of Cursor, but of Random_Access_Cursor
 
    function Has_Row (Self : Forward_Cursor) return Boolean;
    --  Whether there is a row to process. Fetching all the results from a query
@@ -361,8 +353,7 @@ package GNATCOLL.SQL.Exec is
    --  Return a specific cell, converted to the appropriate format
 
    function Is_Null
-     (Self  : Forward_Cursor;
-      Field : Field_Index) return Boolean;
+     (Self  : Forward_Cursor; Field : Field_Index) return Boolean;
    --  True if the corresponding cell is not set
 
    function Last_Id
@@ -384,6 +375,63 @@ package GNATCOLL.SQL.Exec is
    function Field_Name
      (Self : Forward_Cursor; Field : Field_Index) return String;
    --  The name of a specific field in a row of Res
+
+   -----------------------------------------
+   -- Retrieving results - Direct cursors --
+   -----------------------------------------
+
+   type Direct_Cursor is new Forward_Cursor with private;
+   No_Direct_Element : constant Direct_Cursor;
+   --  A direct cursor is a cursor that keeps all its results in memory, and
+   --  gives access to any of the rows in any order.
+   --  As opposed to a Forward_Cursor, you can iterate several times over the
+   --  results. On the other hand, a direct_cursor uses more memory locally, so
+   --  might not be the best choice systematically.
+
+   function Rows_Count
+     (Self : Direct_Cursor) return Natural renames Processed_Rows;
+   --  Return total number of rows in result.
+   --  Processed_Rows will always return the number read from the database
+
+   procedure First (Self : in out Direct_Cursor);
+   procedure Last  (Self : in out Direct_Cursor);
+   --  Moves the cursor on the first or last row of results;
+
+   procedure Absolute (Self : in out Direct_Cursor; Row : Positive);
+   --  Moves the cursor on the specific row of results.
+   --  The first row is numbered 1
+
+   procedure Relative (Self : in out Direct_Cursor; Step : Integer);
+   --  Moves the cursor by a specified number of rows. Step can be negative to
+   --  move backward. Using Step=1 is the same as using Next
+
+   procedure Fetch
+     (Result     : out Direct_Cursor;
+      Connection : access Database_Connection_Record'Class;
+      Query      : String;
+      Use_Cache  : Boolean);
+   procedure Fetch
+     (Result     : out Direct_Cursor;
+      Connection : access Database_Connection_Record'Class;
+      Query      : GNATCOLL.SQL.SQL_Query;
+      Use_Cache  : Boolean);
+   overriding procedure Fetch
+     (Result     : out Direct_Cursor;
+      Connection : access Database_Connection_Record'Class;
+      Query      : String);
+   overriding procedure Fetch
+     (Result     : out Direct_Cursor;
+      Connection : access Database_Connection_Record'Class;
+      Query      : GNATCOLL.SQL.SQL_Query);
+   --  Execute the query, and get all results in memory.
+   --  If Use_Cache is True, and you are executing a SELECT query, the result
+   --  of a previous execution of that query will be reused rather than
+   --  executed again. If it was never executed, it will be cached for later
+   --  use (no caching takes place if Use_Cache is False). This should mostly
+   --  be used for queries to table that almost never changes, ie that store
+   --  "enumeration types". The cache must be specifically invalidated (see
+   --  Invalidate_Cache) to reset it, although it will also expire
+   --  automatically and be refreshed after a while.
 
    --------------------------------------------
    -- Getting info about the database schema --
@@ -470,7 +518,14 @@ private
    overriding procedure Adjust   (Self : in out Forward_Cursor);
    overriding procedure Finalize (Self : in out Forward_Cursor);
 
+   type Direct_Cursor is new Forward_Cursor with null record;
+   --  The contents is of type Abstract_DBMS_Direct_Cursor, defined in
+   --  GNATCOLL.SQL.Exec_Private, and implemented by each backend. All
+   --  primitive ops forward to this contents
+
    No_Element : constant Forward_Cursor :=
+     (Ada.Finalization.Controlled with null);
+   No_Direct_Element : constant Direct_Cursor :=
      (Ada.Finalization.Controlled with null);
 
 end GNATCOLL.SQL.Exec;

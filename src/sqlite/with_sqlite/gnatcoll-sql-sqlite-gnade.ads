@@ -21,6 +21,7 @@
 --  It is not intented for end users
 
 with Interfaces.C.Strings;
+with System;
 
 private package GNATCOLL.SQL.Sqlite.Gnade is
 
@@ -206,6 +207,35 @@ private package GNATCOLL.SQL.Sqlite.Gnade is
    function DB_Handle (Stmt : Statement) return Database;
    --  Return the database connection on which the statement was prepared
 
+   type Result_Table is private;
+   No_Table : constant Result_Table;
+
+   procedure Get_Table
+     (DB     : Database;
+      SQL    : String;
+      Result : out Result_Table;
+      Status : out Result_Codes;
+      Error  : out Interfaces.C.Strings.chars_ptr);
+   --  Execute a query on the server, and get all the rows at the once.
+   --  Error must be freed by the caller
+
+   procedure Free_Table (Result : in out Result_Table);
+   --  Free the table
+
+   function Get_Value
+     (Result : Result_Table;
+      Row, Column : Natural) return Interfaces.C.Strings.chars_ptr;
+   --  Return the value at a specific row/column (or Null_Ptr)
+   --  Column and Row start at 0
+
+   function Get_Rows (Result : Result_Table) return Natural;
+   function Get_Columns (Result : Result_Table) return Natural;
+   --  Return the number of rows and columns in the table
+
+   function Get_Column_Name
+     (Result : Result_Table; Column : Natural) return String;
+   --  Return the name of a specific column. Column starts at 0
+
 private
    type Database_Record is null record;
    type Database is access Database_Record;
@@ -216,6 +246,14 @@ private
    type Statement is access Statement_Record;
    pragma Convention (C, Statement);
    No_Statement : constant Statement := null;
+
+   type Result_Table is record
+      Values  : System.Address;
+      Rows    : Natural;
+      Columns : Natural;
+   end record;
+
+   No_Table : constant Result_Table := (System.Null_Address, 0, 0);
 
    for Sqlite_Types use (Sqlite_Integer => 1,
                          Sqlite_Float   => 2,

@@ -25,7 +25,7 @@ with GNAT.Strings;                 use GNAT.Strings;
 
 package body GNATCOLL.SQL.Postgres.Builder is
 
-   type Postgresql_Cursor is new DBMS_Forward_Cursor with record
+   type Postgresql_Cursor is new DBMS_Direct_Cursor with record
       Res     : GNATCOLL.SQL.Postgres.Gnade.Result;
       Rows    : Natural := 0;
       Current : GNATCOLL.SQL.Postgres.Gnade.Tuple_Index := 0;
@@ -39,7 +39,6 @@ package body GNATCOLL.SQL.Postgres.Builder is
    overriding function Is_Success
      (Self : Postgresql_Cursor) return Boolean;
    overriding procedure Finalize (Result : in out Postgresql_Cursor);
-   overriding function Rows_Count (Self : Postgresql_Cursor) return Natural;
    overriding function Processed_Rows
      (Self : Postgresql_Cursor) return Natural;
    overriding function Value
@@ -62,6 +61,12 @@ package body GNATCOLL.SQL.Postgres.Builder is
       Field : GNATCOLL.SQL.Exec.Field_Index) return String;
    overriding function Has_Row (Self : Postgresql_Cursor) return Boolean;
    overriding procedure Next   (Self : in out Postgresql_Cursor);
+   overriding procedure First (Self : in out Postgresql_Cursor);
+   overriding procedure Last  (Self : in out Postgresql_Cursor);
+   overriding procedure Absolute
+     (Self : in out Postgresql_Cursor; Row : Positive);
+   overriding procedure Relative
+     (Self : in out Postgresql_Cursor; Step : Integer);
 
    type Database_Access is access GNATCOLL.SQL.Postgres.Gnade.Database;
 
@@ -76,7 +81,8 @@ package body GNATCOLL.SQL.Postgres.Builder is
    overriding function Connect_And_Execute
      (Connection  : access Postgresql_Connection_Record;
       Query       : String;
-      Is_Select   : Boolean) return Abstract_Cursor_Access;
+      Is_Select   : Boolean;
+      Direct      : Boolean) return Abstract_Cursor_Access;
    overriding function Error
      (Connection : access Postgresql_Connection_Record) return String;
    overriding procedure Foreach_Table
@@ -223,8 +229,10 @@ package body GNATCOLL.SQL.Postgres.Builder is
    function Connect_And_Execute
      (Connection  : access Postgresql_Connection_Record;
       Query       : String;
-      Is_Select   : Boolean) return Abstract_Cursor_Access
+      Is_Select   : Boolean;
+      Direct      : Boolean) return Abstract_Cursor_Access
    is
+      pragma Unreferenced (Direct);  --  Always return a direct cursor for now
       Res : Postgresql_Cursor_Access;
    begin
       --  If we already have a connection, immediately try the query on it.
@@ -362,15 +370,6 @@ package body GNATCOLL.SQL.Postgres.Builder is
       return Abstract_Cursor_Access (Res);
    end Connect_And_Execute;
 
-   ----------------
-   -- Rows_Count --
-   ----------------
-
-   overriding function Rows_Count (Self : Postgresql_Cursor) return Natural is
-   begin
-      return Self.Rows;
-   end Rows_Count;
-
    --------------------
    -- Processed_Rows --
    --------------------
@@ -443,7 +442,7 @@ package body GNATCOLL.SQL.Postgres.Builder is
                                 & "_" & Field.Name.all & "_seq')"));
 
       Res2.Fetch (Connection, Q);
-      if Rows_Count (Res2) = 1 then
+      if Has_Row (Res2) then
          return Integer_Value (Res2, 0);
       end if;
       return -1;
@@ -623,5 +622,45 @@ package body GNATCOLL.SQL.Postgres.Builder is
    begin
       Self.Current := Self.Current + 1;
    end Next;
+
+   -----------
+   -- First --
+   -----------
+
+   overriding procedure First (Self : in out Postgresql_Cursor) is
+   begin
+      Self.Current := 0;
+   end First;
+
+   ----------
+   -- Last --
+   ----------
+
+   overriding procedure Last  (Self : in out Postgresql_Cursor) is
+   begin
+      Self.Current := Tuple_Index (Self.Rows - 1);
+   end Last;
+
+   --------------
+   -- Absolute --
+   --------------
+
+   overriding procedure Absolute
+     (Self : in out Postgresql_Cursor; Row : Positive) is
+   begin
+      Self.Current := Tuple_Index (Row - 1);
+   end Absolute;
+
+   --------------
+   -- Relative --
+   --------------
+
+   overriding procedure Relative
+     (Self : in out Postgresql_Cursor; Step : Integer) is
+   begin
+      Self.Current := Tuple_Index
+        (Integer'Min
+           (Integer'Max (Integer (Self.Current) + Step, 0), Self.Rows - 1));
+   end Relative;
 
 end GNATCOLL.SQL.Postgres.Builder;

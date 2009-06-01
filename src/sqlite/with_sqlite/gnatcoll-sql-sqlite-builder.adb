@@ -17,9 +17,11 @@
 -- Place - Suite 330, Boston, MA 02111-1307, USA.                    --
 -----------------------------------------------------------------------
 
+with Ada.Characters.Handling;      use Ada.Characters.Handling;
 with Ada.Unchecked_Deallocation;
 with GNATCOLL.SQL.Sqlite.Gnade;    use GNATCOLL.SQL.Sqlite.Gnade;
 with GNATCOLL.SQL.Exec_Private;    use GNATCOLL.SQL.Exec_Private;
+with Interfaces.C.Strings;         use Interfaces.C.Strings;
 
 package body GNATCOLL.SQL.Sqlite.Builder is
 
@@ -31,14 +33,9 @@ package body GNATCOLL.SQL.Sqlite.Builder is
    end record;
    type Sqlite_Cursor_Access is access all Sqlite_Cursor'Class;
 
-   overriding function Error_Msg
-     (Self : Sqlite_Cursor) return String;
-   overriding function Status
-     (Self : Sqlite_Cursor) return String;
-   overriding function Is_Success
-     (Self : Sqlite_Cursor) return Boolean;
-   overriding procedure Finalize (Result : in out Sqlite_Cursor);
-   overriding function Rows_Count (Self : Sqlite_Cursor) return Natural;
+   overriding function Error_Msg  (Self : Sqlite_Cursor) return String;
+   overriding function Status     (Self : Sqlite_Cursor) return String;
+   overriding function Is_Success (Self : Sqlite_Cursor) return Boolean;
    overriding function Processed_Rows (Self : Sqlite_Cursor) return Natural;
    overriding function Value
      (Self  : Sqlite_Cursor;
@@ -58,6 +55,45 @@ package body GNATCOLL.SQL.Sqlite.Builder is
    overriding function Has_Row (Self : Sqlite_Cursor) return Boolean;
    overriding procedure Next   (Self : in out Sqlite_Cursor);
 
+   type Sqlite_Direct_Cursor is new DBMS_Direct_Cursor with record
+      Table          : Result_Table := No_Table;
+      Error          : chars_ptr;
+      Last_Status    : Result_Codes;  --  Last status of Step
+      Last_Rowid     : Long_Integer := -1;
+      Current        : Natural := 0;  --  Current row
+   end record;
+   type Sqlite_Direct_Cursor_Access is access all Sqlite_Direct_Cursor'Class;
+
+   overriding function Error_Msg (Self : Sqlite_Direct_Cursor) return String;
+   overriding function Status (Self : Sqlite_Direct_Cursor) return String;
+   overriding function Is_Success (Self : Sqlite_Direct_Cursor) return Boolean;
+   overriding procedure Finalize (Result : in out Sqlite_Direct_Cursor);
+   overriding function Processed_Rows
+     (Self : Sqlite_Direct_Cursor) return Natural;
+   overriding function Value
+     (Self  : Sqlite_Direct_Cursor;
+      Field : GNATCOLL.SQL.Exec.Field_Index) return String;
+   overriding function Is_Null
+     (Self  : Sqlite_Direct_Cursor;
+      Field : GNATCOLL.SQL.Exec.Field_Index) return Boolean;
+   overriding function Last_Id
+     (Self       : Sqlite_Direct_Cursor;
+      Connection : access Database_Connection_Record'Class;
+      Field      : SQL_Field_Integer) return Integer;
+   overriding function Field_Count
+     (Self : Sqlite_Direct_Cursor) return GNATCOLL.SQL.Exec.Field_Index;
+   overriding function Field_Name
+     (Self : Sqlite_Direct_Cursor;
+      Field : GNATCOLL.SQL.Exec.Field_Index) return String;
+   overriding function Has_Row (Self : Sqlite_Direct_Cursor) return Boolean;
+   overriding procedure Next   (Self : in out Sqlite_Direct_Cursor);
+   overriding procedure First (Self : in out Sqlite_Direct_Cursor);
+   overriding procedure Last  (Self : in out Sqlite_Direct_Cursor);
+   overriding procedure Absolute
+     (Self : in out Sqlite_Direct_Cursor; Row : Positive);
+   overriding procedure Relative
+     (Self : in out Sqlite_Direct_Cursor; Step : Integer);
+
    type Sqlite_Connection_Record is
      new GNATCOLL.SQL.Exec.Database_Connection_Record with
       record
@@ -68,7 +104,8 @@ package body GNATCOLL.SQL.Sqlite.Builder is
    overriding function Connect_And_Execute
      (Connection  : access Sqlite_Connection_Record;
       Query       : String;
-      Is_Select   : Boolean) return Abstract_Cursor_Access;
+      Is_Select   : Boolean;
+      Direct      : Boolean) return Abstract_Cursor_Access;
    overriding function Error
      (Connection : access Sqlite_Connection_Record) return String;
    overriding procedure Foreach_Table
@@ -106,16 +143,33 @@ package body GNATCOLL.SQL.Sqlite.Builder is
    -- Error_Msg --
    ---------------
 
-   function Error_Msg (Self : Sqlite_Cursor) return String is
+   overriding function Error_Msg (Self : Sqlite_Cursor) return String is
    begin
       return Error_Msg (DB_Handle (Self.Stmt));
+   end Error_Msg;
+
+   overriding function Error_Msg (Self : Sqlite_Direct_Cursor) return String is
+   begin
+      if Self.Error /= Null_Ptr then
+         return Value (Self.Error);
+      else
+         return "";
+      end if;
    end Error_Msg;
 
    ------------
    -- Status --
    ------------
 
-   function Status (Self : Sqlite_Cursor) return String is
+   overriding function Status (Self : Sqlite_Cursor) return String is
+   begin
+      return Result_Codes'Image (Self.Last_Status);
+   exception
+      when others =>
+         return "ERROR";
+   end Status;
+
+   overriding function Status (Self : Sqlite_Direct_Cursor) return String is
    begin
       return Result_Codes'Image (Self.Last_Status);
    exception
@@ -127,7 +181,16 @@ package body GNATCOLL.SQL.Sqlite.Builder is
    -- Is_Success --
    ----------------
 
-   function Is_Success (Self : Sqlite_Cursor) return Boolean is
+   overriding function Is_Success
+     (Self : Sqlite_Cursor) return Boolean is
+   begin
+      return Self.Last_Status = Sqlite_OK
+        or else Self.Last_Status = Sqlite_Row
+        or else Self.Last_Status = Sqlite_Done;
+   end Is_Success;
+
+   overriding function Is_Success
+     (Self : Sqlite_Direct_Cursor) return Boolean is
    begin
       return Self.Last_Status = Sqlite_OK
         or else Self.Last_Status = Sqlite_Row
@@ -152,11 +215,16 @@ package body GNATCOLL.SQL.Sqlite.Builder is
    -- Finalize --
    --------------
 
-   procedure Finalize (Result : in out Sqlite_Cursor) is
-      pragma Unreferenced (Result);
+   overriding procedure Finalize (Result : in out Sqlite_Direct_Cursor) is
    begin
-      null;
-      --  PQclear (To_Addr (Object.Res));
+      if Result.Error /= Null_Ptr then
+         Free (Result.Error);
+      end if;
+
+      if Result.Table /= No_Table then
+         Free_Table (Result.Table);
+         Result.Table := No_Table;
+      end if;
    end Finalize;
 
    -----------
@@ -173,12 +241,14 @@ package body GNATCOLL.SQL.Sqlite.Builder is
    -- Connect_And_Execute --
    -------------------------
 
-   function Connect_And_Execute
+   overriding function Connect_And_Execute
      (Connection  : access Sqlite_Connection_Record;
       Query       : String;
-      Is_Select   : Boolean) return Abstract_Cursor_Access
+      Is_Select   : Boolean;
+      Direct      : Boolean) return Abstract_Cursor_Access
    is
       Res    : Sqlite_Cursor_Access;
+      Res2   : Sqlite_Direct_Cursor_Access;
       Status : Result_Codes;
    begin
       --  With sqlite, we do not need to try and reconnect, since there is no
@@ -205,20 +275,37 @@ package body GNATCOLL.SQL.Sqlite.Builder is
          end if;
       end if;
 
-      Res := new Sqlite_Cursor;
+      if Direct then
+         Res2 := new Sqlite_Direct_Cursor;
 
-      if Query /= "" then
-         Prepare (Connection.DB, Query, Res.Stmt, Res.Last_Status);
+         Get_Table
+           (DB     => Connection.DB,
+            SQL    => Query,
+            Result => Res2.Table,
+            Status => Res2.Last_Status,
+            Error  => Res2.Error);
 
-         if Res.Last_Status /= Sqlite_OK then
-            Finalize (Res.all);
-            Unchecked_Free (Res);
-            return null;
+         if Res2.Last_Status = Sqlite_OK and then not Is_Select then
+            Res2.Last_Rowid := Last_Insert_Rowid (Connection.DB);
          end if;
 
-         Step (Res.Stmt, Res.Last_Status);
+         return Abstract_Cursor_Access (Res2);
 
-         case Res.Last_Status is
+      else
+         Res := new Sqlite_Cursor;
+
+         if Query /= "" then
+            Prepare (Connection.DB, Query, Res.Stmt, Res.Last_Status);
+
+            if Res.Last_Status /= Sqlite_OK then
+               Finalize (Res.all);
+               Unchecked_Free (Res);
+               return null;
+            end if;
+
+            Step (Res.Stmt, Res.Last_Status);
+
+            case Res.Last_Status is
             when Sqlite_OK =>
                if Is_Select then
                   Res.Processed_Rows := 0;
@@ -232,68 +319,107 @@ package body GNATCOLL.SQL.Sqlite.Builder is
                  (Connection,
                   "Error while executing query, status="
                   & Res.Last_Status'Img);
-         end case;
+            end case;
+         end if;
+         return Abstract_Cursor_Access (Res);
       end if;
-      return Abstract_Cursor_Access (Res);
    end Connect_And_Execute;
-
-   ----------------
-   -- Rows_Count --
-   ----------------
-
-   function Rows_Count (Self : Sqlite_Cursor) return Natural is
-      pragma Unreferenced (Self);
-   begin
-      return 0;  --  Unsupported for now
-   end Rows_Count;
 
    --------------------
    -- Processed_Rows --
    --------------------
 
-   function Processed_Rows (Self : Sqlite_Cursor) return Natural is
+   overriding function Processed_Rows (Self : Sqlite_Cursor) return Natural is
    begin
       return Self.Processed_Rows;
+   end Processed_Rows;
+
+   overriding function Processed_Rows
+     (Self : Sqlite_Direct_Cursor) return Natural is
+   begin
+      return Get_Rows (Self.Table);
    end Processed_Rows;
 
    -----------
    -- Value --
    -----------
 
-   function Value
+   overriding function Value
      (Self  : Sqlite_Cursor;
       Field : GNATCOLL.SQL.Exec.Field_Index) return String is
    begin
       return Column_Text (Self.Stmt, Natural (Field));
    end Value;
 
+   overriding function Value
+     (Self  : Sqlite_Direct_Cursor;
+      Field : GNATCOLL.SQL.Exec.Field_Index) return String
+   is
+      Val : constant chars_ptr := Get_Value
+        (Result => Self.Table,
+         Row    => Self.Current,
+         Column => Natural (Field));
+   begin
+      if Val = Null_Ptr then
+         return "";
+      else
+         return Value (Val);
+      end if;
+   end Value;
+
    -------------
    -- Is_Null --
    -------------
 
-   function Is_Null
+   overriding function Is_Null
      (Self  : Sqlite_Cursor;
       Field : GNATCOLL.SQL.Exec.Field_Index) return Boolean is
    begin
       return Column_Type (Self.Stmt, Natural (Field)) = Sqlite_Null;
    end Is_Null;
 
+   overriding function Is_Null
+     (Self  : Sqlite_Direct_Cursor;
+      Field : GNATCOLL.SQL.Exec.Field_Index) return Boolean
+   is
+      Val : constant chars_ptr := Get_Value
+        (Result => Self.Table,
+         Row    => Self.Current,
+         Column => Natural (Field));
+   begin
+      return Val = Null_Ptr;
+   end Is_Null;
+
    -------------
    -- Last_Id --
    -------------
 
-   function Last_Id
+   overriding function Last_Id
      (Self       : Sqlite_Cursor;
       Connection : access Database_Connection_Record'Class;
       Field      : SQL_Field_Integer) return Integer
    is
       Res2     : Forward_Cursor;
    begin
-      --  Do not depend on OIDs, since the table might not have them (by
-      --  default, recent versions of Sqlite disable them. Instead, we use
-      --  the currval() function which returns the last value set for a
-      --  sequence within the current connection.
+      Res2.Fetch
+        (Connection,
+         "SELECT " & Field.To_String (Long => True)
+         & " FROM " & Field.Table.all
+         & " WHERE ROWID="
+         & Long_Integer'Image (Self.Last_Rowid));
+      if Has_Row (Res2) then
+         return Integer_Value (Res2, 0);
+      end if;
+      return -1;
+   end Last_Id;
 
+   overriding function Last_Id
+     (Self       : Sqlite_Direct_Cursor;
+      Connection : access Database_Connection_Record'Class;
+      Field      : SQL_Field_Integer) return Integer
+   is
+      Res2     : Forward_Cursor;
+   begin
       Res2.Fetch
         (Connection,
          "SELECT " & Field.To_String (Long => True)
@@ -310,21 +436,34 @@ package body GNATCOLL.SQL.Sqlite.Builder is
    -- Field_Count --
    -----------------
 
-   function Field_Count
+   overriding function Field_Count
      (Self : Sqlite_Cursor) return GNATCOLL.SQL.Exec.Field_Index is
    begin
       return Field_Index (Column_Count (Self.Stmt));
+   end Field_Count;
+
+   overriding function Field_Count
+     (Self : Sqlite_Direct_Cursor) return GNATCOLL.SQL.Exec.Field_Index is
+   begin
+      return Field_Index (Get_Columns (Self.Table));
    end Field_Count;
 
    ----------------
    -- Field_Name --
    ----------------
 
-   function Field_Name
+   overriding function Field_Name
      (Self  : Sqlite_Cursor;
       Field : GNATCOLL.SQL.Exec.Field_Index) return String is
    begin
       return Column_Name (Self.Stmt, Natural (Field));
+   end Field_Name;
+
+   overriding function Field_Name
+     (Self  : Sqlite_Direct_Cursor;
+      Field : GNATCOLL.SQL.Exec.Field_Index) return String is
+   begin
+      return Get_Column_Name (Self.Table, Natural (Field));
    end Field_Name;
 
    -------------------
@@ -350,7 +489,10 @@ package body GNATCOLL.SQL.Sqlite.Builder is
 
    function Is_Whitespace (C : Character) return Boolean is
    begin
-      return C = ' ' or else C = ASCII.HT;
+      return C = ' '
+        or else C = ASCII.HT
+        or else C = ASCII.LF
+        or else C = ASCII.CR;
    end Is_Whitespace;
 
    procedure Skip_Whitespace (S : String; Pos : in out Integer) is
@@ -410,21 +552,32 @@ package body GNATCOLL.SQL.Sqlite.Builder is
                Skip_Whitespace (Sql, Pos);
                Pos4 := Pos; --  First char of type
 
+               Paren_Count := 0;
+
                while Pos <= Sql'Last
                  and then not Is_Whitespace (Sql (Pos))
                  and then Sql (Pos) /= ','
-                 and then Sql (Pos) /= ')'
+                 and then (Sql (Pos) /= ')'
+                           or else Paren_Count /= 0)
                loop
+                  if Sql (Pos) = '(' then
+                     Paren_Count := Paren_Count + 1;
+                  elsif Sql (Pos) = ')' then
+                     Paren_Count := Paren_Count - 1;
+                  end if;
+
                   Pos := Pos + 1;
                end loop;
 
-               Callback
-                 (Name        => Sql (Pos2 .. Pos3),
-                  Typ         => Sql (Pos4 .. Pos - 1),
-                  Index       => Index,
-                  Description => "");
+               --  Ignore constraints declarations
 
-               Paren_Count := 0;
+               if To_Lower (Sql (Pos2 .. Pos3)) /= "constraint" then
+                  Callback
+                    (Name        => Sql (Pos2 .. Pos3),
+                     Typ         => Sql (Pos4 .. Pos - 1),
+                     Index       => Index,
+                     Description => "");
+               end if;
 
                while Pos <= Sql'Last
                  and then
@@ -476,6 +629,11 @@ package body GNATCOLL.SQL.Sqlite.Builder is
       return Self.Last_Status = Sqlite_Row;
    end Has_Row;
 
+   overriding function Has_Row (Self : Sqlite_Direct_Cursor) return Boolean is
+   begin
+      return Self.Current < Get_Rows (Self.Table);
+   end Has_Row;
+
    ----------
    -- Next --
    ----------
@@ -483,6 +641,11 @@ package body GNATCOLL.SQL.Sqlite.Builder is
    overriding procedure Next (Self : in out Sqlite_Cursor) is
    begin
       Step (Self.Stmt, Self.Last_Status);
+   end Next;
+
+   overriding procedure Next (Self : in out Sqlite_Direct_Cursor) is
+   begin
+      Self.Current := Self.Current + 1;
    end Next;
 
    -----------------------------
@@ -493,5 +656,45 @@ package body GNATCOLL.SQL.Sqlite.Builder is
    begin
       return new Sqlite_Connection_Record;
    end Build_Sqlite_Connection;
+
+   -----------
+   -- First --
+   -----------
+
+   overriding procedure First (Self : in out Sqlite_Direct_Cursor) is
+   begin
+      Self.Current := 0;
+   end First;
+
+   ----------
+   -- Last --
+   ----------
+
+   overriding procedure Last (Self : in out Sqlite_Direct_Cursor) is
+   begin
+      Self.Current := Get_Rows (Self.Table) - 1;
+   end Last;
+
+   --------------
+   -- Absolute --
+   --------------
+
+   overriding procedure Absolute
+     (Self : in out Sqlite_Direct_Cursor; Row : Positive) is
+   begin
+      Self.Current := Row - 1;
+   end Absolute;
+
+   --------------
+   -- Relative --
+   --------------
+
+   overriding procedure Relative
+     (Self : in out Sqlite_Direct_Cursor; Step : Integer) is
+   begin
+      Self.Current := Integer'Min
+        (Integer'Max (0, Self.Current + Step),
+         Get_Rows (Self.Table) - 1);
+   end Relative;
 
 end GNATCOLL.SQL.Sqlite.Builder;

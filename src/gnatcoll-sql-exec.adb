@@ -47,26 +47,36 @@ package body GNATCOLL.SQL.Exec is
    function Is_Select_Query (Query : String) return Boolean;
    --  Return true if Query is a select query
 
-   function Execute_And_Log
-     (Connection : access Database_Connection_Record'Class;
+   procedure Execute_And_Log
+     (Result     : in out Forward_Cursor'Class;
+      Connection : access Database_Connection_Record'Class;
       Query      : String;
-      Is_Select  : Boolean) return Abstract_Cursor_Access;
-   --  Low-level call to perform a query on the database
+      Is_Select  : Boolean;
+      Direct     : Boolean);
+   --  Low-level call to perform a query on the database and log results
+
+   procedure Post_Execute_And_Log
+     (R          : Abstract_Cursor_Access;
+      Connection : access Database_Connection_Record'Class;
+      Query      : String;
+      Is_Select  : Boolean);
+   --  Mark the connection as success or failure depending on R.
+   --  Logs the query
 
    package String_Maps is new Ada.Containers.Indefinite_Hashed_Maps
      (Key_Type        => String,
-      Element_Type    => Forward_Cursor,
+      Element_Type    => Direct_Cursor,
       Hash            => Ada.Strings.Hash,
       Equivalent_Keys => "=");
 
    protected Query_Cache is
       procedure Get_Result
         (Query  : String;
-         Cached : out Forward_Cursor;
+         Cached : out Direct_Cursor;
          Found  : out Boolean);
       --  Return null or the cached value for Query
 
-      procedure Set_Cache (Query : String; Cached : Forward_Cursor);
+      procedure Set_Cache (Query : String; Cached : Direct_Cursor);
       --  Add a new value in the cache
 
       procedure Reset;
@@ -89,7 +99,7 @@ package body GNATCOLL.SQL.Exec is
 
       procedure Get_Result
         (Query  : String;
-         Cached : out Forward_Cursor;
+         Cached : out Direct_Cursor;
          Found  : out Boolean)
       is
          use String_Maps;
@@ -113,7 +123,7 @@ package body GNATCOLL.SQL.Exec is
       -- Set_Cache --
       ---------------
 
-      procedure Set_Cache (Query : String; Cached : Forward_Cursor) is
+      procedure Set_Cache (Query : String; Cached : Direct_Cursor) is
          use String_Maps;
       begin
          Include (Cache, Query, Cached);
@@ -267,7 +277,8 @@ package body GNATCOLL.SQL.Exec is
       R := Connect_And_Execute
         (Connection,
          Query     => "",
-         Is_Select => False);
+         Is_Select => False,
+         Direct    => False);
       Success := R /= null;
       Unchecked_Free (R);
 
@@ -300,24 +311,32 @@ package body GNATCOLL.SQL.Exec is
              Cst_Select);
    end Is_Select_Query;
 
-   ---------------------
-   -- Execute_And_Log --
-   ---------------------
+   --------------------------
+   -- Post_Execute_And_Log --
+   --------------------------
 
-   function Execute_And_Log
-     (Connection : access Database_Connection_Record'Class;
+   procedure Post_Execute_And_Log
+     (R          : Abstract_Cursor_Access;
+      Connection : access Database_Connection_Record'Class;
       Query      : String;
-      Is_Select  : Boolean) return Abstract_Cursor_Access
+      Is_Select  : Boolean)
    is
-      R : Abstract_Cursor_Access;
-   begin
-      if Perform_Queries then
-         R := Connect_And_Execute
-           (Connection => Connection,
-            Query      => Query,
-            Is_Select  => Is_Select);
-      end if;
+      function Get_Rows return String;
+      --  The number of rows downloaded. If we only have a forward cursor, we
+      --  can't display them
 
+      function Get_Rows return String is
+      begin
+         if R.all in DBMS_Direct_Cursor'Class then
+            return Image
+              (Natural (Processed_Rows (DBMS_Forward_Cursor'Class (R.all))),
+               Min_Width => 1);
+         else
+            return "??";
+         end if;
+      end Get_Rows;
+
+   begin
       if R = null then
          Set_Failure (Connection);
 
@@ -338,11 +357,7 @@ package body GNATCOLL.SQL.Exec is
          else
             Trace
               (Me_Select,
-               Query & " ("
-               & Image
-                  (Natural (Rows_Count (DBMS_Forward_Cursor'Class (R.all))),
-                   Min_Width => 1)
-               & " tuples) "
+               Query & " (" & Get_Rows & " tuples) "
                & Status (DBMS_Forward_Cursor'Class (R.all))
                & " (" & Connection.Username.all & ")");
          end if;
@@ -359,36 +374,30 @@ package body GNATCOLL.SQL.Exec is
          else
             Trace
               (Me_Query,
-               Query & " ("
-               & Image
-                  (Natural
-                     (Rows_Count (DBMS_Forward_Cursor'Class (R.all))),
-                   Min_Width => 1)
-               & " tuples) " & Status (DBMS_Forward_Cursor'Class (R.all))
+               Query & " (" & Get_Rows & " tuples) "
+               & Status (DBMS_Forward_Cursor'Class (R.all))
                & " (" & Connection.Username.all & ")");
          end if;
       end if;
+   end Post_Execute_And_Log;
 
-      return R;
-   end Execute_And_Log;
+   ---------------------
+   -- Execute_And_Log --
+   ---------------------
 
-   -----------
-   -- Fetch --
-   -----------
-
-   procedure Fetch
-     (Result     : out Forward_Cursor;
+   procedure Execute_And_Log
+     (Result     : in out Forward_Cursor'Class;
       Connection : access Database_Connection_Record'Class;
       Query      : String;
-      Use_Cache  : Boolean := False)
+      Is_Select  : Boolean;
+      Direct     : Boolean)
    is
-      Is_Select   : constant Boolean := Is_Select_Query (Query);
       Is_Begin    : constant Boolean := To_Lower (Query) = "begin";
       Is_Commit   : constant Boolean := To_Lower (Query) = "commit";
       Is_Rollback : constant Boolean := To_Lower (Query) = "rollback";
-      Found       : Boolean;
+      R : Abstract_Cursor_Access;
    begin
-      Result := No_Element;
+      --  Transaction management: do we need to start a transaction ?
 
       if Connection.In_Transaction
         and then not Connection.Success
@@ -416,38 +425,45 @@ package body GNATCOLL.SQL.Exec is
         and then not Is_Select   --  INSERT, UPDATE, LOCK, DELETE,...
       then
          --  Start a transaction automatically
-         Execute (Connection, "BEGIN", Use_Cache  => False);
+         Execute (Connection, "BEGIN");
          Connection.In_Transaction := True;
          if not Connection.Success then
             return;
          end if;
       end if;
 
-      --  ??? Should reimplement caching for cursor
-      if False and then Use_Cache and then Connection.DB.Caching then
-         Query_Cache.Get_Result (Query, Result, Found);
-         if Found then
-            if Is_Select then
-               Trace (Me_Select, "Use cache for " & Query);
-            else
-               Trace (Me_Query, "Use cache for " & Query);
-            end if;
-            return;
-         end if;
+      if Perform_Queries then
+         R := Connect_And_Execute
+           (Connection => Connection,
+            Query      => Query,
+            Is_Select  => Is_Select,
+            Direct     => Direct);
       end if;
 
-      Result.Res := Execute_And_Log (Connection, Query, Is_Select);
+      Post_Execute_And_Log (R, Connection, Query, Is_Select);
 
-      --  ??? Should reimplement caching for cursor
-      if False and then Use_Cache and then Connection.DB.Caching then
-         Query_Cache.Set_Cache (Query, Result);
-      end if;
+      Result.Res := R;
 
       if Connection.In_Transaction
         and then (Is_Commit or Is_Rollback)
       then
          Connection.In_Transaction := False;
       end if;
+   end Execute_And_Log;
+
+   -----------
+   -- Fetch --
+   -----------
+
+   procedure Fetch
+     (Result     : out Forward_Cursor;
+      Connection : access Database_Connection_Record'Class;
+      Query      : String)
+   is
+      Is_Select   : constant Boolean := Is_Select_Query (Query);
+   begin
+      Result := No_Element;
+      Execute_And_Log (Result, Connection, Query, Is_Select, Direct => False);
    end Fetch;
 
    -----------
@@ -457,10 +473,85 @@ package body GNATCOLL.SQL.Exec is
    procedure Fetch
      (Result     : out Forward_Cursor;
       Connection : access Database_Connection_Record'Class;
-      Query      : SQL_Query;
-      Use_Cache  : Boolean := False) is
+      Query      : SQL_Query) is
+   begin
+      Fetch (Result, Connection, To_String (To_String (Query)));
+   end Fetch;
+
+   -----------
+   -- Fetch --
+   -----------
+
+   procedure Fetch
+     (Result     : out Direct_Cursor;
+      Connection : access Database_Connection_Record'Class;
+      Query      : String;
+      Use_Cache  : Boolean)
+   is
+      Is_Select   : constant Boolean := Is_Select_Query (Query);
+      Found       : Boolean;
+   begin
+      if Use_Cache
+        and then Is_Select
+        and then Connection.DB.Caching
+      then
+         Query_Cache.Get_Result (Query, Result, Found);
+         if Found then
+            Result.First; --  Move to first element
+            Trace (Me_Select, "Use cache for " & Query);
+            return;
+         end if;
+      end if;
+
+      Result := No_Direct_Element;
+      Execute_And_Log (Result, Connection, Query, Is_Select, Direct => True);
+
+      if Use_Cache
+        and then Is_Select
+        and then Connection.DB.Caching
+      then
+         Query_Cache.Set_Cache (Query, Result);
+      end if;
+   end Fetch;
+
+   -----------
+   -- Fetch --
+   -----------
+
+   overriding procedure Fetch
+     (Result     : out Direct_Cursor;
+      Connection : access Database_Connection_Record'Class;
+      Query      : String)
+   is
+   begin
+      Fetch (Result, Connection, Query, Use_Cache => False);
+   end Fetch;
+
+   -----------
+   -- Fetch --
+   -----------
+
+   procedure Fetch
+     (Result     : out Direct_Cursor;
+      Connection : access Database_Connection_Record'Class;
+      Query      : GNATCOLL.SQL.SQL_Query;
+      Use_Cache  : Boolean)
+   is
    begin
       Fetch (Result, Connection, To_String (To_String (Query)), Use_Cache);
+   end Fetch;
+
+   -----------
+   -- Fetch --
+   -----------
+
+   overriding procedure Fetch
+     (Result     : out Direct_Cursor;
+      Connection : access Database_Connection_Record'Class;
+      Query      : GNATCOLL.SQL.SQL_Query) is
+   begin
+      Fetch (Result, Connection, To_String (To_String (Query)),
+             Use_Cache => False);
    end Fetch;
 
    -------------
@@ -469,13 +560,12 @@ package body GNATCOLL.SQL.Exec is
 
    procedure Execute
      (Connection : access Database_Connection_Record'Class;
-      Query      : SQL_Query;
-      Use_Cache  : Boolean := False)
+      Query      : SQL_Query)
    is
       R : Forward_Cursor;
       pragma Unreferenced (R);
    begin
-      Fetch (R, Connection, Query, Use_Cache);
+      Fetch (R, Connection, Query);
    end Execute;
 
    -------------
@@ -484,13 +574,12 @@ package body GNATCOLL.SQL.Exec is
 
    procedure Execute
      (Connection : access Database_Connection_Record'Class;
-      Query      : String;
-      Use_Cache  : Boolean := False)
+      Query      : String)
    is
       R : Forward_Cursor;
       pragma Unreferenced (R);
    begin
-      Fetch (R, Connection, Query, Use_Cache);
+      Fetch (R, Connection, Query);
    end Execute;
 
    -------------
@@ -674,19 +763,6 @@ package body GNATCOLL.SQL.Exec is
       end if;
    end Finalize;
 
-   ----------------
-   -- Rows_Count --
-   ----------------
-
-   function Rows_Count (Self : Forward_Cursor) return Natural is
-   begin
-      if Self.Res = null then
-         return 0;
-      else
-         return Rows_Count (DBMS_Forward_Cursor'Class (Self.Res.all));
-      end if;
-   end Rows_Count;
-
    --------------------
    -- Processed_Rows --
    --------------------
@@ -838,6 +914,42 @@ package body GNATCOLL.SQL.Exec is
    begin
       return Field_Name (DBMS_Forward_Cursor'Class (Self.Res.all), Field);
    end Field_Name;
+
+   -----------
+   -- First --
+   -----------
+
+   procedure First (Self : in out Direct_Cursor) is
+   begin
+      First (DBMS_Direct_Cursor'Class (Self.Res.all));
+   end First;
+
+   ----------
+   -- Last --
+   ----------
+
+   procedure Last  (Self : in out Direct_Cursor) is
+   begin
+      Last (DBMS_Direct_Cursor'Class (Self.Res.all));
+   end Last;
+
+   --------------
+   -- Absolute --
+   --------------
+
+   procedure Absolute (Self : in out Direct_Cursor; Row : Positive) is
+   begin
+      Absolute (DBMS_Direct_Cursor'Class (Self.Res.all), Row);
+   end Absolute;
+
+   --------------
+   -- Relative --
+   --------------
+
+   procedure Relative (Self : in out Direct_Cursor; Step : Integer) is
+   begin
+      Relative (DBMS_Direct_Cursor'Class (Self.Res.all), Step);
+   end Relative;
 
    -----------
    -- Close --

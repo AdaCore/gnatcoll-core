@@ -28,6 +28,10 @@ with GNATCOLL.SQL.Exec;  use GNATCOLL.SQL.Exec;
 
 private package GNATCOLL.SQL.Exec_Private is
 
+   --------------------
+   -- Forward_Cursor --
+   --------------------
+
    type DBMS_Forward_Cursor is
       abstract new Abstract_DBMS_Forward_Cursor with private;
    --  Internal contents of a cursor.
@@ -53,12 +57,8 @@ private package GNATCOLL.SQL.Exec_Private is
    --  Return a string describing the status of the query. This is used for
    --  logging purposes.
 
-   procedure Finalize (Self : in out DBMS_Forward_Cursor) is abstract;
+   procedure Finalize (Self : in out DBMS_Forward_Cursor) is null;
    --  Free the memory used by Self
-
-   function Rows_Count (Self : DBMS_Forward_Cursor) return Natural is abstract;
-   --  Return the number of rows impacted (ie modified or returned) by the
-   --  query.
 
    function Processed_Rows
      (Self : DBMS_Forward_Cursor) return Natural is abstract;
@@ -102,6 +102,20 @@ private package GNATCOLL.SQL.Exec_Private is
    --  Constraint_Error is raised if the field does not contain an appropriate
    --  value.
 
+   -------------------
+   -- Direct_Cursor --
+   -------------------
+
+   type DBMS_Direct_Cursor is abstract new DBMS_Forward_Cursor with private;
+
+   procedure First (Self : in out DBMS_Direct_Cursor) is abstract;
+   procedure Last  (Self : in out DBMS_Direct_Cursor) is abstract;
+   procedure Absolute
+     (Self : in out DBMS_Direct_Cursor; Row : Positive) is abstract;
+   procedure Relative
+     (Self : in out DBMS_Direct_Cursor; Step : Integer) is abstract;
+   --  See documentation for GNATCOLL.SQL.Exec.Direct_Cursor
+
 private
 
    type DBMS_Connection is
@@ -109,5 +123,8 @@ private
 
    type DBMS_Forward_Cursor is abstract
       new GNATCOLL.SQL.Exec.Abstract_DBMS_Forward_Cursor with null record;
+
+   type DBMS_Direct_Cursor is abstract
+      new DBMS_Forward_Cursor with null record;
 
 end GNATCOLL.SQL.Exec_Private;

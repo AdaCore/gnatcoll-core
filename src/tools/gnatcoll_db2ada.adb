@@ -224,6 +224,7 @@ procedure GNATCOLL_Db2Ada is
 
       elsif Typ = "timestamp without time zone"
         or else Typ = "timestamp with time zone"
+        or else Typ = "timestamp"
       then
          Descr.Field_Type := To_Unbounded_String ("Time");
          Descr.Ada_Type   := To_Unbounded_String ("Ada.Calendar.Time");
