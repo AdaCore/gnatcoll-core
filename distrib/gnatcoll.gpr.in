@@ -25,8 +25,13 @@ project GnatColl is
    for Library_Dir  use "../gnatcoll/" & Project'Library_Kind;
    for Library_Version use
       "lib" & Project'Library_Name & ".so." & Version;
+
    With_Postgres : Yes_No := "@WITH_POSTGRES@";
    Postgres_Path := "@PATH_LIBPQ@";
+
+   With_Sqlite : Yes_No := "@WITH_SQLITE@";
+   Sqlite_Path := "@PATH_LIBSQLITE@";
+
    for Externally_Built use "true";
 
    package Naming is
