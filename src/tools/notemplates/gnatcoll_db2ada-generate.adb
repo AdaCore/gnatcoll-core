@@ -158,6 +158,7 @@ begin
              & " use " & Generated & "_Names;");
    Put_Line (Spec_File, "package " & Generated & " is");
    Put_Line (Spec_File, "   pragma Style_Checks (Off);");
+   Put_Line (Spec_File, "   pragma Elaborate_Body;");
 
    Put_Line (Body_File, "package body " & Generated & " is");
    Put_Line (Body_File, "   pragma Style_Checks (Off);");

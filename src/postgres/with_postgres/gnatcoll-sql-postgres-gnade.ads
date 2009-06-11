@@ -44,7 +44,7 @@
 
 with System.Storage_Elements;
 with Ada.Finalization;
-with Interfaces.C;
+with Interfaces.C.Strings;
 
 private package GNATCOLL.SQL.Postgres.Gnade is
    PostgreSQL_Error : exception;
@@ -280,6 +280,21 @@ private package GNATCOLL.SQL.Postgres.Gnade is
    --  Submit a query to Postgres and wait for the result
    pragma Inline (Execute);
 
+   procedure Prepare
+     (Res       : out Result;
+      DB        : Database'Class;
+      Stmt_Name : String;
+      Query     : String);
+   pragma Inline (Prepare);
+   --  Prepare the statement for execution
+
+   procedure Exec_Prepared
+     (Res       : out Result;
+      DB        : Database'Class;
+      Stmt_Name : String);
+   pragma Inline (Exec_Prepared);
+   --  Execute a prepared statement
+
    function Status (Res    : Result)     return ExecStatus;
    --  Returns the result status of the query
    --  If the result status is PGRES_TUPLES_OK, then the routines described
@@ -362,6 +377,12 @@ private package GNATCOLL.SQL.Postgres.Gnade is
    --  is part of the Result object. One should not modify it, and one
    --  must explicitly copy the value into other storage if it is to be
    --  used past the lifetime of the Result object itself.
+
+   function C_Value
+     (Res   : Result;
+      Tuple : Tuple_Index := 0;
+      Field : Field_Index := 0) return Interfaces.C.Strings.chars_ptr;
+   --  Returns the C string
 
    function Value (Res   : Result;
                    Tuple : Tuple_Index := 0;
@@ -609,6 +630,13 @@ private
       procedure Execute (Res     : in out Result;
                          Success : out Boolean;
                          Query   : String);
+      procedure Prepare
+        (Res       : out Result;
+         Stmt_Name : String;
+         Query     : String);
+      procedure Exec_Prepared
+        (Res       : out Result;
+         Stmt_Name : String);
       function BLOB_Create (Mode : File_Mode) return OID;
       function BLOB_Import (In_File_Name : String) return OID;
       function BLOB_Export (Object_Id     : OID;

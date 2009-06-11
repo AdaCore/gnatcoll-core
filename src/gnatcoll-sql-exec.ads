@@ -42,8 +42,62 @@
 --      system.
 --    - logging support.
 --      All sql queries that are executed are traced through GNATCOLL.Traces
+--
+--  There are various ways to execute queries and get their results:
+--    - two types of cursors (forward_cursor or direct_cursor) dependeing on
+--      whether you want to keep all results in memory or not. Using direct
+--      cursors is more flexible, but slower since there is a need for a lot
+--      more memory allocations. Examples of timing (executing 10_000 times a
+--      query joining two tables, returning 400 rows).
+--         sqlite:
+--           FORWARD_CURSOR, getting first row     => 0.707530000 s
+--           FORWARD_CURSOR, iterating on all rows => 3.193714000 s
+--           DIRECT_CURSOR, getting first row      => 5.541400000 s
+--           DIRECT_CURSOR, iterating on all rows  => 5.600546000 s
+--
+--    - Prepared statements on the client
+--      Statements are generally written with GNATCOLL.SQL. They then need to
+--      be converted to String to be sent to the DBMS server. This conversion
+--      (along with possible auto-completion of the query) takes some non
+--      negligible amount of time. You can thus prepare such queries once and
+--      for all. Here is an example on the same query as above, but the query
+--      is prepared once, and then executed 10_000 times. This is only looking
+--      at the first row in the result, so should be compared with the first
+--      line above.
+--         sqlite:
+--           FORWARD_CURSOR => 0.413184000 s
+--           DIRECT_CURSOR  => 5.398043000 s
+--
+--    - Prepared statements on the server
+--      In addition to the above client-side preparation, most DBMS systems
+--      support the notion of analyzing the query on the server, and optimize
+--      it there. Such a preparation is valid for a specific connection (so
+--      several preparations will be needed if you have multiple concurrent
+--      connections to the database (but this API takes care of that
+--      automatically for you). This can provide significant speed up. When
+--      using direct_cursor, we still need to perform a lot of memory
+--      allocations to store the results in memory
+--      (400 rows * 2 columns * 10_000 iterations allocations in the example)
+--         sqlite:
+--           FORWARD_CURSOR =>  0.047700000 s
+--           DIRECT_CURSOR  =>  5.014961000 s
+--
+--    - Caching on the client side
+--      Last, this API is able to cache the result of a query locally on the
+--      client, and thus save any round-trip to the server. At the cost of some
+--      memory, it provides the fastest possible access to the data. This is
+--      only usable with prepared statements, and only makes sense for direct
+--      cursors, since by definition the cache should be iterable several
+--      times). Note also that using server-side preparation does not
+--      significantly speed things up, since the statement is executed only
+--      once anyway. Here, we are only doing 400 * 2 allocations to store
+--      results in memory.
+--         sqlite:
+--             DIRECT_CURSOR =>  0.015502000 s
 
 with Ada.Calendar;
+with System;
+private with Ada.Containers.Vectors;
 private with Ada.Finalization;
 private with GNAT.Strings;
 
@@ -105,7 +159,7 @@ package GNATCOLL.SQL.Exec is
       Host          : String := "";
       Password      : String := "";
       DBMS          : String := DBMS_Postgresql;
-      Cache_Support : Boolean := False);
+      Cache_Support : Boolean := True);
    --  Register the address of the database, for use by all other subprograms
    --  in this package.
    --  If Cache_Support is True, then some SQL queries can be cached locally,
@@ -187,28 +241,10 @@ package GNATCOLL.SQL.Exec is
    --  Result is always first reset to No_Element, so any custom field you
    --  might have will also be reset
 
-   function Connect_And_Execute
-     (Connection  : access Database_Connection_Record;
-      Query       : String;
-      Is_Select   : Boolean;
-      Direct      : Boolean) return Abstract_Cursor_Access is abstract;
-   --  This is mostly an internal subprogram, overridden by all DBMS-specific
-   --  backends.
-   --  If the connection to the database has not been made yet, connect to it.
-   --  Then perform the query, reconnecting once if the connection failed.
-   --  Will return null if the connection to the database is bad.
-   --  If the query is the empty string, this procedure only connects to
-   --  the database and checks the connection. It returns null if the
-   --  connection is no longer valid.
-   --  If Direct is true, a direct_cursor is created, otherwise a
-   --  Forward_Cursor. The connection is allowed to return a direct cursor even
-   --  if the user only wanted a forward_cursor, but the opposite is not
-   --  allowed.
-
    procedure Close
      (Connection : access Database_Connection_Record) is abstract;
    procedure Free (Connection : in out Database_Connection);
-   --  Close the connection to the database, if needed
+   --  Close the connection to the database, if needed.
 
    function Error
      (Connection : access Database_Connection_Record)
@@ -405,16 +441,6 @@ package GNATCOLL.SQL.Exec is
    --  Moves the cursor by a specified number of rows. Step can be negative to
    --  move backward. Using Step=1 is the same as using Next
 
-   procedure Fetch
-     (Result     : out Direct_Cursor;
-      Connection : access Database_Connection_Record'Class;
-      Query      : String;
-      Use_Cache  : Boolean);
-   procedure Fetch
-     (Result     : out Direct_Cursor;
-      Connection : access Database_Connection_Record'Class;
-      Query      : GNATCOLL.SQL.SQL_Query;
-      Use_Cache  : Boolean);
    overriding procedure Fetch
      (Result     : out Direct_Cursor;
       Connection : access Database_Connection_Record'Class;
@@ -424,14 +450,112 @@ package GNATCOLL.SQL.Exec is
       Connection : access Database_Connection_Record'Class;
       Query      : GNATCOLL.SQL.SQL_Query);
    --  Execute the query, and get all results in memory.
+
+   -------------------------
+   -- Prepared statements --
+   -------------------------
+   --  Prepared statements are a way to optimize your application and its
+   --  queries. There are several levels of preparation:
+   --    * Create parts of queries in advance, for instance a SQL_Field_List.
+   --      This does not save a lot of CPU time, but saves a few system calls
+   --      to malloc. This does not need any of the following subprograms.
+   --    * Precompute (and auto-complete) sql queries generated from
+   --      GNATCOLL.SQL. That API is rather heavy, and computing
+   --      auto-completion might be time consuming. This preparation is only
+   --      client side and does not involve the DBMS.
+   --    * DBMS systems all have a way to prepare statements (on the server
+   --      this time). This involves optimizing the query and how it should be
+   --      executed. Such prepared statements, however, are only valid while
+   --      the connection to the database lasts (or until you explicitly close
+   --      the prepared statement.
+   --    * GNATCOLL.SQL.Exec is also able to cache (on the client) the result
+   --      of some queries. This way, you avoid communication with the DBMS
+   --      altogether, which provides significant speed up for often executed
+   --      queries (like tables of valid values for fields, aka enumerations).
+   --  When combined, both of these will significantly speed up execution of
+   --  queries. However, there is often little point in running exactly the
+   --  same query several times. For this reason, queries can be parameterized,
+   --  where the parameters can be changed before each execution. Most DBMS
+   --  support this efficiently
+
+   type Prepared_Statement is private;
+
+   function Prepare
+     (Query         : SQL_Query;
+      Auto_Complete : Boolean := True;
+      Use_Cache     : Boolean := False;
+      On_Server     : Boolean := True)
+      return Prepared_Statement;
+   function Prepare
+     (Query      : String;
+      Use_Cache  : Boolean := False;
+      On_Server  : Boolean := True)
+      return Prepared_Statement;
+   --  Prepare the statement for multiple executions.
+   --  If Auto_Complete is true, the query is first auto-completed.
+   --
    --  If Use_Cache is True, and you are executing a SELECT query, the result
    --  of a previous execution of that query will be reused rather than
    --  executed again. If it was never executed, it will be cached for later
    --  use (no caching takes place if Use_Cache is False). This should mostly
-   --  be used for queries to table that almost never changes, ie that store
+   --  be used for queries to tables that almost never change, ie that store
    --  "enumeration types". The cache must be specifically invalidated (see
    --  Invalidate_Cache) to reset it, although it will also expire
    --  automatically and be refreshed after a while.
+   --
+   --  Usage is:
+   --      Q : constant SQL_Query := SQL_Select (...);
+   --      P : constant Prepared_Statement := Prepare (Q);
+   --      R : Forward_Cursor;
+   --
+   --      R.Fetch (Connection, P);
+   --
+   --  In practice, little work in done in Prepare. The actual preparation work
+   --  is done the first time you try to execute the query, since there are
+   --  some DBMS-specific aspects involved, notably the way to encode params in
+   --  the SQL command. Not requiring the connection in this call means that
+   --  you can actually call this at elaboration.
+   --
+   --  If On_Server is true, then a connection-specific preparation is also
+   --  done on the server, for further optimization. Otherwise, the
+   --  result of this call is to generate the string representation (and auto
+   --  completion) of the query only once, and reuse that later on (that still
+   --  provides a significant speed up). This also provides a way to cache the
+   --  result of the query locally on the client.
+   --  Note that if the query contains any parameter, On_Server should always
+   --  be True.
+   --
+   --  There is little gain in having both Use_Cache and On_Server be true: the
+   --  query is executed only once (until the cache expires) on the server
+   --  anyway.
+   --
+   --  The idea is that Prepared_Statement should be global variables prepared
+   --  during the elaboration. Internally, they are accessed from within a
+   --  protected record, so it is safe to have them as global variables even in
+   --  a multi-threaded application. It is however possible to only use these
+   --  as local variables, if a little inefficient since the conversion from
+   --  SQL structures to a string has to be done each time.
+
+   procedure Fetch
+     (Result     : out Direct_Cursor;
+      Connection : access Database_Connection_Record'Class;
+      Stmt       : in out Prepared_Statement);
+   procedure Fetch
+     (Result     : out Forward_Cursor;
+      Connection : access Database_Connection_Record'Class;
+      Stmt       : in out Prepared_Statement);
+   --  Execute a prepared statement on the connection.
+
+   procedure Finalize
+     (Connection : access Database_Connection_Record'Class;
+      Stmt       : in out Prepared_Statement);
+   --  Release memory used by Stmt on the server
+
+   procedure Finalize_Prepared_Statements;
+   --  Release memory occupied by all prepared statement. None of these
+   --  prepared statements should be used afterward. The intent of this
+   --  subprogram is so that you can run memory-checking tools (like valgrind)
+   --  on your application. Calling this is not mandatory.
 
    --------------------------------------------
    -- Getting info about the database schema --
@@ -487,6 +611,71 @@ package GNATCOLL.SQL.Exec is
      (Connection : access Database_Connection_Record'Class; Str : String);
    --  Print a warning or message to the appropriate GNATCOLL.Traces stream.
 
+   -------------------------
+   -- Private subprograms --
+   -------------------------
+   --  These subprograms are meant to be overridden by specific implementations
+   --  for each DBMS. You should not use them directly in your applications,
+   --  since the subprograms above wrap them better.
+
+   function Connect_And_Execute
+     (Connection  : access Database_Connection_Record;
+      Query       : String;
+      Is_Select   : Boolean;
+      Direct      : Boolean) return Abstract_Cursor_Access is abstract;
+   --  This is mostly an internal subprogram, overridden by all DBMS-specific
+   --  backends.
+   --  If the connection to the database has not been made yet, connect to it.
+   --  Then perform the query, reconnecting once if the connection failed.
+   --  Will return null if the connection to the database is bad.
+   --  If the query is the empty string, this procedure only connects to
+   --  the database and checks the connection. It returns null if the
+   --  connection is no longer valid.
+   --  If Direct is true, a direct_cursor is created, otherwise a
+   --  Forward_Cursor. The connection is allowed to return a direct cursor even
+   --  if the user only wanted a forward_cursor, but the opposite is not
+   --  allowed.
+
+   type Stmt_Id is new Natural;
+   No_Stmt_Id : constant Stmt_Id := 0;
+   --  Ids for prepared statements. They need to have unique ids (based on the
+   --  query to be executed) so that we can store general data associated with
+   --  the statement and avoid duplicates in memory.
+
+   type DBMS_Stmt is new System.Address;
+   No_DBMS_Stmt : constant DBMS_Stmt;
+   --  A statement prepared on the server. This is only valid for a specific
+   --  connection.
+
+   function Connect_And_Prepare
+     (Connection : access Database_Connection_Record;
+      Query      : String;
+      Id         : Stmt_Id;
+      Direct     : Boolean)
+      return DBMS_Stmt;
+   --  Prepare a statement on the server, and return a handle to it. This is
+   --  only valid for the specific Connection. This function can return null
+   --  if prepared statements are not supported on that DBMS.
+   --  Connection to the database is first done if needed
+
+   function Execute
+     (Connection  : access Database_Connection_Record;
+      Prepared    : DBMS_Stmt;
+      Is_Select   : Boolean;
+      Direct      : Boolean) return Abstract_Cursor_Access;
+   --  Execute a prepared statement on the server
+
+   procedure Finalize
+     (Connection : access Database_Connection_Record;
+      Prepared   : DBMS_Stmt) is null;
+   --  Free memory used by Prepared on the server
+
+   procedure Reset
+     (Connection : access Database_Connection_Record;
+      Prepared   : DBMS_Stmt) is null;
+   --  Reset the prepared statement so that the next call to Element returns
+   --  the first row
+
 private
 
    type Database_Description_Record is record
@@ -496,9 +685,16 @@ private
       Password : GNAT.Strings.String_Access;
       DBMS     : GNAT.Strings.String_Access;
 
-      Caching : Boolean := False;
+      Caching : Boolean := True;
    end record;
    type Database_Description is access all Database_Description_Record;
+
+   No_DBMS_Stmt : constant DBMS_Stmt :=
+     DBMS_Stmt (System.Null_Address);
+   package DBMS_Stmt_Vectors
+      is new Ada.Containers.Vectors (Stmt_Id, DBMS_Stmt);
+   --  A statement prepared on the server. This is only valid for a specific
+   --  connection.
 
    type Database_Connection_Record is abstract tagged record
       DB             : Database_Description;
@@ -506,6 +702,8 @@ private
       In_Transaction : Boolean := False;
       Username       : GNAT.Strings.String_Access;
       Error_Msg      : GNAT.Strings.String_Access;
+
+      Stmts          : DBMS_Stmt_Vectors.Vector;
    end record;
 
    type Abstract_DBMS_Forward_Cursor is abstract tagged record
@@ -522,6 +720,22 @@ private
    --  The contents is of type Abstract_DBMS_Direct_Cursor, defined in
    --  GNATCOLL.SQL.Exec_Private, and implemented by each backend. All
    --  primitive ops forward to this contents
+
+   type Cached_Statement is record
+      Id        : Stmt_Id  := No_Stmt_Id; --  Unique id in the application
+      Str       : GNAT.Strings.String_Access;
+      Is_Select : Boolean;
+      Query     : SQL_Query;   --  Reset to null once prepared
+   end record;
+   type Cached_Statement_Access is access all Cached_Statement;
+
+   type Prepared_Statement is record
+      Use_Cache : Boolean;
+      On_Server : Boolean;
+      Cached    : Cached_Statement_Access;
+      --  Pointer into a hash table. This makes a statement lighter than if we
+      --  were using controlled types
+   end record;
 
    No_Element : constant Forward_Cursor :=
      (Ada.Finalization.Controlled with null);

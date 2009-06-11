@@ -55,6 +55,7 @@ package body GNATCOLL.SQL.Sqlite.Gnade is
       if Status = Sqlite_OK then
          DB := DB2;
       else
+         Close (DB);
          DB := No_Database;
       end if;
    end Open;
@@ -78,14 +79,22 @@ package body GNATCOLL.SQL.Sqlite.Gnade is
    procedure Close (DB : Database) is
       function Internal (DB : Database) return Result_Codes;
       pragma Import (C, Internal, "sqlite3_close");
+
+      function Next_Stmt
+        (DB : Database; After : Statement := No_Statement)
+         return Statement;
+      pragma Import (C, Next_Stmt, "sqlite3_next_stmt");
+
+      Stmt    : Statement;
       Ignored : Result_Codes;
       pragma Unreferenced (Ignored);
    begin
       --  Finalize prepared statements
---            sqlite3_stmt *pStmt;
---      while( (pStmt = sqlite3_next_stmt(db, 0))!=0 ){
---          sqlite3_finalize(pStmt);
---      }
+      loop
+         Stmt := Next_Stmt (DB);
+         exit when Stmt = No_Statement;
+         Finalize (Stmt);
+      end loop;
 
       Ignored := Internal (DB);
    end Close;

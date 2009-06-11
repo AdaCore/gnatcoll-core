@@ -184,8 +184,11 @@ private package GNATCOLL.SQL.Sqlite.Gnade is
    --  Return the name of the specific column (or the value of the "AS" if one
    --  was specified.
 
-   procedure Finalize (Stmt : in out Statement);
+   procedure Finalize (Stmt : Statement);
    --  Finalize and free the memory occupied by stmt
+
+   function Reset (Stmt : Statement) return Result_Codes;
+   --  Reset the statement, so that next call to step() returns the first row
 
    function Last_Insert_Rowid (DB : Database) return Long_Integer;
    --  This routine returns the rowid of the most recent successful INSERT into
@@ -321,5 +324,6 @@ private
    pragma Import (C, Column_Count,      "sqlite3_column_count");
    pragma Import (C, DB_Handle,         "sqlite3_db_handle");
    pragma Import (C, Last_Insert_Rowid, "sqlite3_last_insert_rowid");
+   pragma Import (C, Reset,             "sqlite3_reset");
 
 end GNATCOLL.SQL.Sqlite.Gnade;

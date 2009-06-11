@@ -17,9 +17,9 @@
 -- Place - Suite 330, Boston, MA 02111-1307, USA.                    --
 -----------------------------------------------------------------------
 
-with Ada.Calendar;            use Ada.Calendar;
-with Ada.Characters.Handling; use Ada.Characters.Handling;
-with Ada.Containers.Indefinite_Hashed_Maps;
+with Ada.Calendar;               use Ada.Calendar;
+with Ada.Characters.Handling;    use Ada.Characters.Handling;
+with Ada.Containers.Hashed_Maps; use Ada.Containers;
 with Ada.Strings.Hash;
 with Ada.Strings.Unbounded;   use Ada.Strings.Unbounded;
 with Ada.Task_Attributes;
@@ -51,6 +51,7 @@ package body GNATCOLL.SQL.Exec is
      (Result     : in out Forward_Cursor'Class;
       Connection : access Database_Connection_Record'Class;
       Query      : String;
+      Prepared   : DBMS_Stmt;
       Is_Select  : Boolean;
       Direct     : Boolean);
    --  Low-level call to perform a query on the database and log results
@@ -63,29 +64,75 @@ package body GNATCOLL.SQL.Exec is
    --  Mark the connection as success or failure depending on R.
    --  Logs the query
 
-   package String_Maps is new Ada.Containers.Indefinite_Hashed_Maps
-     (Key_Type        => String,
-      Element_Type    => Direct_Cursor,
-      Hash            => Ada.Strings.Hash,
+   function Hash
+     (Str : GNAT.Strings.String_Access) return Ada.Containers.Hash_Type;
+
+   package String_Maps is new Ada.Containers.Hashed_Maps
+     (Key_Type        => GNAT.Strings.String_Access,
+      Element_Type    => Cached_Statement_Access,
+      Hash            => Hash,
       Equivalent_Keys => "=");
 
-   protected Query_Cache is
-      procedure Get_Result
-        (Query  : String;
-         Cached : out Direct_Cursor;
-         Found  : out Boolean);
-      --  Return null or the cached value for Query
+   type Cached_Result is record
+      Cursor : Direct_Cursor := No_Direct_Element;
+      Found  : Boolean := False;
+   end record;
+   package Stmt_Vectors is new Ada.Containers.Vectors (Stmt_Id, Cached_Result);
 
-      procedure Set_Cache (Query : String; Cached : Direct_Cursor);
+   procedure Free (Cached : in out Cached_Statement_Access);
+   --  Free memory occupied by Cached
+
+   protected Query_Cache is
+      procedure Prepare_Statement (Stmt : in out Prepared_Statement);
+      --  Do the actual preparation of the statement. This needs to be done
+      --  inside a locked region, since the prepared statement is shared
+
+      procedure Finalize_Prepared_Statements;
+      --  Free all memory related to prepared statements.
+
+      procedure Get_Result
+        (Stmt    : Prepared_Statement;
+         Cached  : out Direct_Cursor;
+         Found   : out Boolean);
+      --  Return null or the cached value for the statement
+
+      procedure Set_Cache (Stmt : Prepared_Statement; Cached : Direct_Cursor);
       --  Add a new value in the cache
 
       procedure Reset;
       --  Reset the cache
 
    private
-      Cache     : String_Maps.Map;
-      Timestamp : Ada.Calendar.Time := Ada.Calendar.Clock;
+      Current_Prepared_Id : Stmt_Id := 1;
+      --  First unassigned id for prepared statements
+
+      Query_To_Id  : String_Maps.Map;
+      Cache        : Stmt_Vectors.Vector;
+
+      Timestamp    : Ada.Calendar.Time := Ada.Calendar.Clock;
    end Query_Cache;
+
+   ----------
+   -- Hash --
+   ----------
+
+   function Hash
+     (Str : GNAT.Strings.String_Access) return Ada.Containers.Hash_Type is
+   begin
+      return Ada.Strings.Hash (Str.all);
+   end Hash;
+
+   ----------
+   -- Free --
+   ----------
+
+   procedure Free (Cached : in out Cached_Statement_Access) is
+      procedure Unchecked_Free is new Ada.Unchecked_Deallocation
+        (Cached_Statement, Cached_Statement_Access);
+   begin
+      Free (Cached.Str);
+      Unchecked_Free (Cached);
+   end Free;
 
    -----------------
    -- Query_Cache --
@@ -93,28 +140,78 @@ package body GNATCOLL.SQL.Exec is
 
    protected body Query_Cache is
 
+      -----------------------
+      -- Prepare_Statement --
+      -----------------------
+
+      procedure Prepare_Statement (Stmt : in out Prepared_Statement) is
+         Cached : Cached_Statement_Access renames Stmt.Cached;
+      begin
+         if Cached.Id = No_Stmt_Id then
+            --  Check if we already have this statement in the cache. If yes,
+            --  reuse the cache instead of the local version in the statement
+
+            if Cached.Query /= No_Query then
+               Cached.Str := new String'(To_String (To_String (Cached.Query)));
+               Cached.Query := No_Query;   --  release memory
+            end if;
+
+            --  Parameters substitution depends on the DBMS
+            --     sqlite:  ?  ?NNN :VVV  @VVV $VVV
+            --     psql:    $1::bigint
+            --     mysql:   ?
+
+            declare
+               C : String_Maps.Cursor;
+            begin
+               C := String_Maps.Find (Query_To_Id, Cached.Str);
+
+               if String_Maps.Has_Element (C) then
+                  Free (Stmt.Cached);  --  No longer needed
+                  Stmt.Cached := String_Maps.Element (C);
+
+               else
+                  Cached.Id        := Current_Prepared_Id;
+                  Cached.Is_Select := Is_Select_Query (Cached.Str.all);
+
+                  Current_Prepared_Id := Current_Prepared_Id + 1;
+
+                  String_Maps.Include (Query_To_Id, Cached.Str, Cached);
+               end if;
+
+               --  We can't use the cache for a statement other than SELECT,
+               --  since there is nothing to cache in that case.
+               if not Cached.Is_Select then
+                  Stmt.Use_Cache := False;
+               end if;
+            end;
+         end if;
+      end Prepare_Statement;
+
       ----------------
       -- Get_Result --
       ----------------
 
       procedure Get_Result
-        (Query  : String;
-         Cached : out Direct_Cursor;
-         Found  : out Boolean)
+        (Stmt    : Prepared_Statement;
+         Cached  : out Direct_Cursor;
+         Found   : out Boolean)
       is
-         use String_Maps;
-         C : String_Maps.Cursor;
+         Tmp : Cached_Result;
       begin
          if Clock - Timestamp > Cache_Expiration_Delay then
             Reset;
             Found := False;
          else
-            C := Find (Cache, Query);
-            if Has_Element (C) then
-               Cached := Element (C);
-               Found  := True;
+            if Stmt.Cached.Id <= Cache.Last_Index then
+               Tmp := Cache.Element (Stmt.Cached.Id);
+               Found := Tmp.Found;
+               if Found then
+                  Cached := Tmp.Cursor;
+               end if;
+
             else
-               Found  := False;
+               Found := False;
             end if;
          end if;
       end Get_Result;
@@ -123,11 +220,37 @@ package body GNATCOLL.SQL.Exec is
       -- Set_Cache --
       ---------------
 
-      procedure Set_Cache (Query : String; Cached : Direct_Cursor) is
-         use String_Maps;
+      procedure Set_Cache
+        (Stmt : Prepared_Statement; Cached : Direct_Cursor) is
       begin
-         Include (Cache, Query, Cached);
+         --  Reserve capacity up to the current assigned id, since we are
+         --  likely to need it anyway, and it is bound to be at least as big
+         --  as Stmt.Cached.Id
+         if Cache.Last_Index < Stmt.Cached.Id then
+            Cache.Set_Length
+              (Ada.Containers.Count_Type
+                 (Current_Prepared_Id - Stmt_Id'First + 1));
+         end if;
+         Cache.Replace_Element (Stmt.Cached.Id, (Cached, True));
       end Set_Cache;
+
+      ----------------------------------
+      -- Finalize_Prepared_Statements --
+      ----------------------------------
+
+      procedure Finalize_Prepared_Statements is
+         C    : String_Maps.Cursor := Query_To_Id.First;
+         Stmt : Cached_Statement_Access;
+      begin
+         while String_Maps.Has_Element (C) loop
+            Stmt := String_Maps.Element (C);
+            String_Maps.Next (C);
+            Free (Stmt);
+         end loop;
+
+         Query_To_Id.Clear;
+         Cache.Clear;
+      end Finalize_Prepared_Statements;
 
       -----------
       -- Reset --
@@ -135,7 +258,11 @@ package body GNATCOLL.SQL.Exec is
 
       procedure Reset is
       begin
-         String_Maps.Clear (Cache);
+         --  Do not clear Query_To_Id though, since all already prepared
+         --  statements would become invalid (and since they point to the
+         --  string_access we would have invalid memory).
+
+         Cache.Clear;
          Timestamp := Clock;
       end Reset;
 
@@ -190,7 +317,7 @@ package body GNATCOLL.SQL.Exec is
       Host          : String := "";
       Password      : String := "";
       DBMS          : String := DBMS_Postgresql;
-      Cache_Support : Boolean := False)
+      Cache_Support : Boolean := True)
    is
    begin
       if Description = null then
@@ -389,6 +516,7 @@ package body GNATCOLL.SQL.Exec is
      (Result     : in out Forward_Cursor'Class;
       Connection : access Database_Connection_Record'Class;
       Query      : String;
+      Prepared   : DBMS_Stmt;
       Is_Select  : Boolean;
       Direct     : Boolean)
    is
@@ -433,11 +561,20 @@ package body GNATCOLL.SQL.Exec is
       end if;
 
       if Perform_Queries then
-         R := Connect_And_Execute
-           (Connection => Connection,
-            Query      => Query,
-            Is_Select  => Is_Select,
-            Direct     => Direct);
+         if Prepared /= No_DBMS_Stmt then
+            R := Execute
+              (Connection => Connection,
+               Prepared   => Prepared,
+               Is_Select  => Is_Select,
+               Direct     => Direct);
+
+         else
+            R := Connect_And_Execute
+              (Connection => Connection,
+               Query      => Query,
+               Is_Select  => Is_Select,
+               Direct     => Direct);
+         end if;
       end if;
 
       Post_Execute_And_Log (R, Connection, Query, Is_Select);
@@ -463,7 +600,8 @@ package body GNATCOLL.SQL.Exec is
       Is_Select   : constant Boolean := Is_Select_Query (Query);
    begin
       Result := No_Element;
-      Execute_And_Log (Result, Connection, Query, Is_Select, Direct => False);
+      Execute_And_Log
+        (Result, Connection, Query, No_DBMS_Stmt, Is_Select, Direct => False);
    end Fetch;
 
    -----------
@@ -485,60 +623,13 @@ package body GNATCOLL.SQL.Exec is
    procedure Fetch
      (Result     : out Direct_Cursor;
       Connection : access Database_Connection_Record'Class;
-      Query      : String;
-      Use_Cache  : Boolean)
-   is
-      Is_Select   : constant Boolean := Is_Select_Query (Query);
-      Found       : Boolean;
-   begin
-      if Use_Cache
-        and then Is_Select
-        and then Connection.DB.Caching
-      then
-         Query_Cache.Get_Result (Query, Result, Found);
-         if Found then
-            Result.First; --  Move to first element
-            Trace (Me_Select, "Use cache for " & Query);
-            return;
-         end if;
-      end if;
-
-      Result := No_Direct_Element;
-      Execute_And_Log (Result, Connection, Query, Is_Select, Direct => True);
-
-      if Use_Cache
-        and then Is_Select
-        and then Connection.DB.Caching
-      then
-         Query_Cache.Set_Cache (Query, Result);
-      end if;
-   end Fetch;
-
-   -----------
-   -- Fetch --
-   -----------
-
-   overriding procedure Fetch
-     (Result     : out Direct_Cursor;
-      Connection : access Database_Connection_Record'Class;
       Query      : String)
    is
+      Is_Select   : constant Boolean := Is_Select_Query (Query);
    begin
-      Fetch (Result, Connection, Query, Use_Cache => False);
-   end Fetch;
-
-   -----------
-   -- Fetch --
-   -----------
-
-   procedure Fetch
-     (Result     : out Direct_Cursor;
-      Connection : access Database_Connection_Record'Class;
-      Query      : GNATCOLL.SQL.SQL_Query;
-      Use_Cache  : Boolean)
-   is
-   begin
-      Fetch (Result, Connection, To_String (To_String (Query)), Use_Cache);
+      Result := No_Direct_Element;
+      Execute_And_Log
+        (Result, Connection, Query, No_DBMS_Stmt, Is_Select, Direct => True);
    end Fetch;
 
    -----------
@@ -550,8 +641,7 @@ package body GNATCOLL.SQL.Exec is
       Connection : access Database_Connection_Record'Class;
       Query      : GNATCOLL.SQL.SQL_Query) is
    begin
-      Fetch (Result, Connection, To_String (To_String (Query)),
-             Use_Cache => False);
+      Fetch (Result, Connection, To_String (To_String (Query)));
    end Fetch;
 
    -------------
@@ -966,5 +1056,250 @@ package body GNATCOLL.SQL.Exec is
          Unchecked_Free (Connection);
       end if;
    end Free;
+
+   -------------
+   -- Prepare --
+   -------------
+
+   function Prepare
+     (Query         : SQL_Query;
+      Auto_Complete : Boolean := True;
+      Use_Cache     : Boolean := False;
+      On_Server     : Boolean := True)
+      return Prepared_Statement
+   is
+      Stmt : Prepared_Statement;
+   begin
+      Stmt :=
+        (Cached    => new Cached_Statement'
+           (Id        => No_Stmt_Id,
+            Str       => null,
+            Is_Select => False,
+            Query     => Query),
+         Use_Cache => Use_Cache,
+         On_Server => On_Server);
+
+      if Auto_Complete then
+         GNATCOLL.SQL.Auto_Complete (Stmt.Cached.Query);
+      end if;
+
+      return Stmt;
+   end Prepare;
+
+   -------------
+   -- Prepare --
+   -------------
+
+   function Prepare
+     (Query      : String;
+      Use_Cache  : Boolean := False;
+      On_Server  : Boolean := True)
+      return Prepared_Statement is
+   begin
+      return
+        (Cached    => new Cached_Statement'
+           (Id        => No_Stmt_Id,
+            Str       => new String'(Query),
+            Is_Select => False,
+            Query     => No_Query),
+         Use_Cache => Use_Cache,
+         On_Server => On_Server);
+   end Prepare;
+
+   --------------
+   -- Finalize --
+   --------------
+
+   procedure Finalize
+     (Connection : access Database_Connection_Record'Class;
+      Stmt       : in out Prepared_Statement)
+   is
+      DStmt : DBMS_Stmt;
+   begin
+      --  The intent is not to free Stmt.Cached itself, which might still be
+      --  used by other connections. We just want to release memory on the
+      --  DBMS server itself.
+
+      if Stmt.Cached.Id <= Connection.Stmts.Last_Index then
+         DStmt := Connection.Stmts.Element (Stmt.Cached.Id);
+
+         if DStmt /= No_DBMS_Stmt then
+            Finalize (Connection, DStmt);
+            Connection.Stmts.Replace_Element (Stmt.Cached.Id, No_DBMS_Stmt);
+         end if;
+      end if;
+   end Finalize;
+
+   -----------
+   -- Fetch --
+   -----------
+
+   procedure Fetch
+     (Result     : out Direct_Cursor;
+      Connection : access Database_Connection_Record'Class;
+      Stmt       : in out Prepared_Statement)
+   is
+      Found : Boolean;
+      DStmt  : DBMS_Stmt := No_DBMS_Stmt;
+   begin
+      Result := No_Direct_Element;   --  Free memory used by previous use
+
+      --  Once set, the id is never reset, so it is safe to do the test outside
+      --  of the protected area. This even saves some locking
+
+      if Stmt.Cached.Id = 0 then
+         Query_Cache.Prepare_Statement (Stmt);
+      end if;
+
+      if Stmt.Use_Cache
+        and then Connection.DB.Caching
+      then
+         Query_Cache.Get_Result (Stmt, Result, Found);
+         if Found then
+            Result.First; --  Move to first element
+            if Active (Me_Select) then
+               Trace (Me_Select, "Use cache for " & Stmt.Cached.Str.all);
+            end if;
+            return;
+         end if;
+      end if;
+
+      if Stmt.On_Server then
+         if Stmt.Cached.Id <= Connection.Stmts.Last_Index then
+            DStmt := Connection.Stmts.Element (Stmt.Cached.Id);
+         end if;
+
+         if DStmt = No_DBMS_Stmt then
+            DStmt := Connect_And_Prepare
+              (Connection, Stmt.Cached.Str.all,
+               Stmt.Cached.Id, Direct => True);
+
+            --  DBMS might not support prepared statements
+            if DStmt /= No_DBMS_Stmt then
+               if Connection.Stmts.Last_Index < Stmt.Cached.Id then
+                  Connection.Stmts.Append
+                    (New_Item => No_DBMS_Stmt,
+                     Count    => Count_Type (Stmt.Cached.Id)
+                        - Connection.Stmts.Length + 1);
+               end if;
+               Connection.Stmts.Replace_Element (Stmt.Cached.Id, DStmt);
+            end if;
+         else
+            Reset (Connection, DStmt);
+         end if;
+      end if;
+
+      --  If we successfully retrieved or created the prepared statement
+
+      Execute_And_Log
+        (Result, Connection,
+         Stmt.Cached.Str.all, DStmt, Stmt.Cached.Is_Select, Direct => True);
+
+      if Stmt.Use_Cache
+        and then Connection.DB.Caching
+      then
+         Query_Cache.Set_Cache (Stmt, Result);
+      end if;
+   end Fetch;
+
+   -----------
+   -- Fetch --
+   -----------
+
+   procedure Fetch
+     (Result     : out Forward_Cursor;
+      Connection : access Database_Connection_Record'Class;
+      Stmt       : in out Prepared_Statement)
+   is
+      DStmt  : DBMS_Stmt := No_DBMS_Stmt;
+   begin
+      if Stmt.Cached.Id = 0 then
+         Query_Cache.Prepare_Statement (Stmt);
+      end if;
+
+      if Stmt.Use_Cache then
+         --  When using a cache, we have to use a Direct_Cursor for the cache
+         --  to work
+         declare
+            R : Direct_Cursor;
+         begin
+            Fetch (R, Connection, Stmt);
+            Result := Forward_Cursor (R);
+         end;
+
+      else
+         if Stmt.On_Server then
+            if Stmt.Cached.Id <= Connection.Stmts.Last_Index then
+               DStmt := Connection.Stmts.Element (Stmt.Cached.Id);
+            end if;
+
+            if DStmt = No_DBMS_Stmt then
+               DStmt := Connect_And_Prepare
+                 (Connection, Stmt.Cached.Str.all,
+                  Stmt.Cached.Id, Direct => False);
+
+               --  DBMS might not support prepared statements
+               if DStmt /= No_DBMS_Stmt then
+                  if Connection.Stmts.Last_Index < Stmt.Cached.Id then
+                     Connection.Stmts.Append
+                       (New_Item => No_DBMS_Stmt,
+                        Count    => Count_Type (Stmt.Cached.Id)
+                        - Connection.Stmts.Length + 1);
+                  end if;
+                  Connection.Stmts.Replace_Element (Stmt.Cached.Id, DStmt);
+               end if;
+            else
+               Reset (Connection, DStmt);
+            end if;
+         end if;
+
+         --  If we successfully retrieved or created the prepared statement
+
+         Execute_And_Log
+           (Result, Connection,
+            Stmt.Cached.Str.all, DStmt, Stmt.Cached.Is_Select,
+            Direct => False);
+      end if;
+   end Fetch;
+
+   ----------------------------------
+   -- Finalize_Prepared_Statements --
+   ----------------------------------
+
+   procedure Finalize_Prepared_Statements is
+   begin
+      Query_Cache.Finalize_Prepared_Statements;
+   end Finalize_Prepared_Statements;
+
+   -------------------------
+   -- Connect_And_Prepare --
+   -------------------------
+
+   function Connect_And_Prepare
+     (Connection : access Database_Connection_Record;
+      Query      : String;
+      Id         : Stmt_Id;
+      Direct     : Boolean)
+      return DBMS_Stmt
+   is
+      pragma Unreferenced (Connection, Query, Direct, Id);
+   begin
+      return No_DBMS_Stmt;
+   end Connect_And_Prepare;
+
+   -------------
+   -- Execute --
+   -------------
+
+   function Execute
+     (Connection  : access Database_Connection_Record;
+      Prepared    : DBMS_Stmt;
+      Is_Select   : Boolean;
+      Direct      : Boolean) return Abstract_Cursor_Access
+   is
+      pragma Unreferenced (Connection, Prepared, Is_Select, Direct);
+   begin
+      return null;
+   end Execute;
 
 end GNATCOLL.SQL.Exec;

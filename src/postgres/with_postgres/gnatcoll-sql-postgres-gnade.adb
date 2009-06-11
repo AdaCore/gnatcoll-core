@@ -141,6 +141,73 @@ package body GNATCOLL.SQL.Postgres.Gnade is
          end if;
       end Execute;
 
+      -------------
+      -- Prepare --
+      -------------
+
+      procedure Prepare
+        (Res       : out Result;
+         Stmt_Name : String;
+         Query     : String)
+      is
+         function PQprepare
+           (Conn    : System.Address;
+            Name    : String;
+            Qry     : String;
+            nParams : Natural := 0;
+            Types   : System.Address := System.Null_Address)
+            return System.Address;
+         pragma Import (C, PQprepare, "PQprepare");
+
+         R : constant PGresult :=
+           To_Result
+             (PQprepare
+                  (To_Addr (C_Connection),
+                   Stmt_Name & ASCII.NUL, Query & ASCII.NUL));
+
+      begin
+         Clear (Res); --  Free previous results
+
+         if R = Null_Result then
+            Res.Res := Null_Result;
+         else
+            Res.Res := R;
+         end if;
+      end Prepare;
+
+      -------------------
+      -- Exec_Prepared --
+      -------------------
+
+      procedure Exec_Prepared
+        (Res       : out Result;
+         Stmt_Name : String)
+      is
+         function PQexecPrepared
+           (Conn : System.Address;
+            Name : String;
+            Nparams : Natural := 0;
+            Values  : System.Address := System.Null_Address;
+            Lengths : System.Address := System.Null_Address;
+            Formats : System.Address := System.Null_Address;
+            Format  : Natural := 1) return System.Address;
+         pragma Import (C, PQexecPrepared, "PQexecPrepared");
+
+         R : constant PGresult :=
+           To_Result
+             (PQexecPrepared
+                  (To_Addr (C_Connection), Stmt_Name & ASCII.NUL));
+
+      begin
+         Clear (Res); --  Free previous results
+
+         if R = Null_Result then
+            Res.Res := Null_Result;
+         else
+            Res.Res := R;
+         end if;
+      end Exec_Prepared;
+
       function BLOB_Create (Mode : File_Mode) return OID
       is
          function LO_Creat (Conn : System.Address;
@@ -533,7 +600,36 @@ package body GNATCOLL.SQL.Postgres.Gnade is
       DB.Connection.Execute (Res, Success, Query);
    end Execute;
 
-   --  -----------------------------------------------------------------------
+   -------------
+   -- Prepare --
+   -------------
+
+   procedure Prepare
+     (Res       : out Result;
+      DB        : Database'Class;
+      Stmt_Name : String;
+      Query     : String)
+   is
+   begin
+      DB.Connection.Prepare (Res, Stmt_Name, Query);
+   end Prepare;
+
+   -------------------
+   -- Exec_Prepared --
+   -------------------
+
+   procedure Exec_Prepared
+     (Res       : out Result;
+      DB        : Database'Class;
+      Stmt_Name : String)
+   is
+   begin
+      DB.Connection.Exec_Prepared (Res, Stmt_Name);
+   end Exec_Prepared;
+
+   -----------------
+   -- BLOB_Create --
+   -----------------
 
    function BLOB_Create (DB   : Database'Class;
                          Mode : File_Mode)
@@ -779,6 +875,29 @@ package body GNATCOLL.SQL.Postgres.Gnade is
    begin
       Pointer := Cvt (P);
    end Value;
+
+   -------------
+   -- C_Value --
+   -------------
+
+   function C_Value
+     (Res   : Result;
+      Tuple : Tuple_Index := 0;
+      Field : Field_Index := 0) return Interfaces.C.Strings.chars_ptr
+   is
+      function PQgetvalue (Res   : System.Address;
+                           Tuple : C.int;
+                           Field : C.int) return chars_ptr;
+      pragma Import (C, PQgetvalue, "PQgetvalue");
+   begin
+      return PQgetvalue (To_Addr (Res.Res),
+                         C.int (Tuple),
+                         C.int (Field));
+   end C_Value;
+
+   -----------
+   -- Value --
+   -----------
 
    function Value (Res   : Result;
                    Tuple : Tuple_Index := 0;

@@ -24,7 +24,9 @@
 --  wrapped up in other types in GNATCOLL.SQL.Exec, which is the actual user
 --  API.
 
-with GNATCOLL.SQL.Exec;  use GNATCOLL.SQL.Exec;
+with GNATCOLL.SQL.Exec;    use GNATCOLL.SQL.Exec;
+with GNAT.Strings;         use GNAT.Strings;
+with Interfaces.C.Strings; use Interfaces.C.Strings;
 
 private package GNATCOLL.SQL.Exec_Private is
 
@@ -33,7 +35,7 @@ private package GNATCOLL.SQL.Exec_Private is
    --------------------
 
    type DBMS_Forward_Cursor is
-      abstract new Abstract_DBMS_Forward_Cursor with private;
+      abstract new Abstract_DBMS_Forward_Cursor with null record;
    --  Internal contents of a cursor.
    --  Instead of overriding Cursor directly, the support packages for
    --  the DBMS must override this type, so that Cursor is not visibly
@@ -69,7 +71,10 @@ private package GNATCOLL.SQL.Exec_Private is
 
    function Value
      (Self  : DBMS_Forward_Cursor;
-      Field : Field_Index) return String is abstract;
+      Field : Field_Index) return String;
+   function C_Value
+     (Self  : DBMS_Forward_Cursor;
+      Field : Field_Index) return Interfaces.C.Strings.chars_ptr is abstract;
    function Boolean_Value
      (Self  : DBMS_Forward_Cursor;
       Field : Field_Index) return Boolean;
@@ -106,7 +111,8 @@ private package GNATCOLL.SQL.Exec_Private is
    -- Direct_Cursor --
    -------------------
 
-   type DBMS_Direct_Cursor is abstract new DBMS_Forward_Cursor with private;
+   type DBMS_Direct_Cursor is
+      abstract new DBMS_Forward_Cursor with null record;
 
    procedure First (Self : in out DBMS_Direct_Cursor) is abstract;
    procedure Last  (Self : in out DBMS_Direct_Cursor) is abstract;
@@ -116,15 +122,75 @@ private package GNATCOLL.SQL.Exec_Private is
      (Self : in out DBMS_Direct_Cursor; Step : Integer) is abstract;
    --  See documentation for GNATCOLL.SQL.Exec.Direct_Cursor
 
+   generic
+      type Forward is new DBMS_Forward_Cursor with private;
+   package Generic_Direct_Cursors is
+      type Direct is new DBMS_Direct_Cursor with private;
+      --  A direct cursor based on Forward. It caches locally the values
+      --  returned for each row of Forward, and should be used for systems that
+      --  do not have special support for direct cursors.
+
+      type Forward_Access is access all Forward;
+      --  Not "access 'Class" to avoid some dynamic dispatching calls, for
+      --  efficiency
+
+      procedure Initialize (Self : access Direct; From : access Forward);
+      --  Initialize in-memory data for Self, by reading all rows of From
+
+      function Get_Cursor (Self : Direct) return Forward_Access;
+      --  Return a pointer to the underlying forward cursor
+
+      overriding function Error_Msg (Self : Direct) return String;
+      overriding function Status (Self : Direct) return String;
+      overriding function Is_Success (Self : Direct) return Boolean;
+      overriding procedure Finalize (Result : in out Direct);
+      overriding function Processed_Rows (Self : Direct) return Natural;
+      overriding function C_Value
+        (Self  : Direct; Field : Field_Index) return chars_ptr;
+      overriding function Value
+        (Self  : Direct; Field : Field_Index) return String;
+      overriding function Is_Null
+        (Self  : Direct; Field : Field_Index) return Boolean;
+      overriding function Last_Id
+        (Self       : Direct;
+         Connection : access Database_Connection_Record'Class;
+         Field      : SQL_Field_Integer) return Integer;
+      overriding function Field_Count (Self : Direct) return Field_Index;
+      overriding function Field_Name
+        (Self : Direct; Field : Field_Index) return String;
+      overriding function Has_Row   (Self : Direct) return Boolean;
+      overriding procedure Next     (Self : in out Direct);
+      overriding procedure First    (Self : in out Direct);
+      overriding procedure Last     (Self : in out Direct);
+      overriding procedure Absolute (Self : in out Direct; Row : Positive);
+      overriding procedure Relative (Self : in out Direct; Step : Integer);
+
+   private
+      type Result_Table is
+        array (Natural range <>) of GNAT.Strings.String_Access;
+      type Result_Table_Access is access all Result_Table;
+      --  The results of a SQL query (all the columns of first row, then all
+      --  columns of second row,...)
+
+      type Direct is new DBMS_Direct_Cursor with record
+         Cursor : Forward_Access;
+         --  The cursor that was used to read the results. It has already been
+         --  iterated, but provides a handle on the number of rows, the
+         --  Statement, and other information.
+
+         Table   : Result_Table_Access := null;
+         Columns : Natural := 0;
+         --  The cached result. We do not use sqlite3's builtin
+         --  sqlite3_get_table since we want to be able to use prepared
+         --  statements to query this data.
+
+         Current        : Natural := 0;  --  Current row
+      end record;
+   end Generic_Direct_Cursors;
+
 private
 
    type DBMS_Connection is
       abstract new Database_Connection_Record with null record;
-
-   type DBMS_Forward_Cursor is abstract
-      new GNATCOLL.SQL.Exec.Abstract_DBMS_Forward_Cursor with null record;
-
-   type DBMS_Direct_Cursor is abstract
-      new DBMS_Forward_Cursor with null record;
 
 end GNATCOLL.SQL.Exec_Private;

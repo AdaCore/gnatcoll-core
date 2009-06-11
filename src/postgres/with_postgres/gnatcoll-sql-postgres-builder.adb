@@ -22,6 +22,8 @@ with Ada.Unchecked_Deallocation;
 with GNATCOLL.SQL.Postgres.Gnade;  use GNATCOLL.SQL.Postgres.Gnade;
 with GNATCOLL.SQL.Exec_Private;    use GNATCOLL.SQL.Exec_Private;
 with GNAT.Strings;                 use GNAT.Strings;
+with Interfaces.C.Strings;         use Interfaces.C.Strings;
+with System.Storage_Elements;      use System.Storage_Elements;
 
 package body GNATCOLL.SQL.Postgres.Builder is
 
@@ -44,6 +46,9 @@ package body GNATCOLL.SQL.Postgres.Builder is
    overriding function Value
      (Self  : Postgresql_Cursor;
       Field : GNATCOLL.SQL.Exec.Field_Index) return String;
+   overriding function C_Value
+     (Self  : Postgresql_Cursor;
+      Field : GNATCOLL.SQL.Exec.Field_Index) return chars_ptr;
    overriding function Boolean_Value
      (Self  : Postgresql_Cursor;
       Field : GNATCOLL.SQL.Exec.Field_Index) return Boolean;
@@ -83,6 +88,17 @@ package body GNATCOLL.SQL.Postgres.Builder is
       Query       : String;
       Is_Select   : Boolean;
       Direct      : Boolean) return Abstract_Cursor_Access;
+   overriding function Connect_And_Prepare
+     (Connection : access Postgresql_Connection_Record;
+      Query      : String;
+      Id         : Stmt_Id;
+      Direct     : Boolean)
+      return DBMS_Stmt;
+   overriding function Execute
+     (Connection  : access Postgresql_Connection_Record;
+      Prepared    : DBMS_Stmt;
+      Is_Select   : Boolean;
+      Direct      : Boolean) return Abstract_Cursor_Access;
    overriding function Error
      (Connection : access Postgresql_Connection_Record) return String;
    overriding procedure Foreach_Table
@@ -107,13 +123,23 @@ package body GNATCOLL.SQL.Postgres.Builder is
 
    procedure Unchecked_Free is new Ada.Unchecked_Deallocation
      (GNATCOLL.SQL.Postgres.Gnade.Database, Database_Access);
-   procedure Unchecked_Free is new Ada.Unchecked_Deallocation
-     (Postgresql_Cursor'Class, Postgresql_Cursor_Access);
 
    function Get_Connection_String
      (Description   : Database_Description;
       With_Password : Boolean) return String;
    --  Create a connection string from the database description
+
+   generic
+      with procedure Perform (Res : out Result; Query : String);
+   procedure Connect_And_Do
+     (Connection : access Postgresql_Connection_Record;
+      Query      : String;
+      Res        : out Result;
+      Success    : out Boolean);
+   --  (Re)connect to the database if needed, and perform the action. If the
+   --  result of the action is successfull (as per exec status in Res), Success
+   --  is set to True and Res to the last result. Otherwise, Success is set to
+   --  False.
 
    -------------------------------
    -- Build_Postgres_Connection --
@@ -222,68 +248,46 @@ package body GNATCOLL.SQL.Postgres.Builder is
       end if;
    end Close;
 
-   -------------------------
-   -- Connect_And_Execute --
-   -------------------------
+   --------------------
+   -- Connect_And_Do --
+   --------------------
 
-   function Connect_And_Execute
-     (Connection  : access Postgresql_Connection_Record;
-      Query       : String;
-      Is_Select   : Boolean;
-      Direct      : Boolean) return Abstract_Cursor_Access
+   procedure Connect_And_Do
+     (Connection : access Postgresql_Connection_Record;
+      Query      : String;
+      Res        : out Result;
+      Success    : out Boolean)
    is
-      pragma Unreferenced (Direct);  --  Always return a direct cursor for now
-      Res : Postgresql_Cursor_Access;
    begin
-      --  If we already have a connection, immediately try the query on it.
-
       if Connection.Postgres /= null then
-         begin
-            Res := new Postgresql_Cursor;
+         Perform (Res, Query);
 
-            if Query = "" then
-               Execute (Res.Res, Connection.Postgres.all, "ROLLBACK");
-            else
-               Execute (Res.Res, Connection.Postgres.all, Query);
-            end if;
+         case ExecStatus'(Status (Res)) is
+            when PGRES_NONFATAL_ERROR
+               | PGRES_FATAL_ERROR
+               | PGRES_EMPTY_QUERY =>
 
-            if Is_Select then
-               Res.Rows := Natural (Tuple_Count (Res.Res));
-            else
-               Res.Rows := Natural'(Command_Tuples (Res.Res));
-            end if;
+               --  If the connection is still good, that just means the request
+               --  was invalid. Do not try to reconnect in this case, since
+               --  that would kill any transaction BEGIN..COMMIT we are in the
+               --  process of doing.
 
-            case ExecStatus'(Status (Res.Res)) is
-               when PGRES_NONFATAL_ERROR
-                  | PGRES_FATAL_ERROR
-                  | PGRES_EMPTY_QUERY =>
-                  null;
-               when others =>
-                  return Abstract_Cursor_Access (Res);
-            end case;
-         exception
-            when PostgreSQL_Error =>
-               null;
+               if Status (Connection.Postgres.all) = CONNECTION_OK then
+                  Success := False;
+                  return;
+               else
+                  Print_Warning
+                    (Connection,
+                     "DB status is " & Status (Connection.Postgres.all)'Img);
+               end if;
+
             when others =>
-               Print_Warning
-                 (Connection,
-                  "Exception raised when executing SQL query: " & Query);
-         end;
+               Success := True;
+               return;
+         end case;
       end if;
 
-      --  If the connection is still good, that just means the request was
-      --  invalid. Do not try to reconnect in this case, since that would
-      --  kill any transaction BEGIN..COMMIT we are in the process of doing.
-
-      if Connection.Postgres /= null then
-         if Status (Connection.Postgres.all) = CONNECTION_OK then
-            return Abstract_Cursor_Access (Res);
-         else
-            Print_Warning
-              (Connection,
-               "DB status is " & Status (Connection.Postgres.all)'Img);
-         end if;
-      end if;
+      Clear (Res);
 
       --  Attempt to reconnect, in case we lost the connection
 
@@ -317,42 +321,25 @@ package body GNATCOLL.SQL.Postgres.Builder is
             & Get_Connection_String (Get_Description (Connection), False)
             & """. Aborting...");
 
-         if Res /= null then
-            Finalize (Res.all);
-            Unchecked_Free (Res);
-         end if;
-
-         return null;
+         Success := False;
+         return;
       end if;
 
       --  Now that we have (re)connected, try to execute the query again
 
       begin
-         if Res = null then
-            Res := new Postgresql_Cursor;
-         end if;
+         Perform (Res, Query);
 
-         if Query /= "" then
-            Execute (Res.Res, Connection.Postgres.all, Query);
-            if Is_Select then
-               Res.Rows := Natural (Tuple_Count (Res.Res));
-            else
-               Res.Rows := Natural'(Command_Tuples (Res.Res));
-            end if;
-
-            case ExecStatus'(Status (Res.Res)) is
+         case ExecStatus'(Status (Res)) is
             when PGRES_NONFATAL_ERROR
                | PGRES_FATAL_ERROR
                | PGRES_EMPTY_QUERY =>
-               Print_Error (Connection, "Database error: " & Error (Res.Res));
+               Print_Error (Connection, "Database error: " & Error (Res));
 
             when others =>
-               return Abstract_Cursor_Access (Res);
-            end case;
-
-         else
-            return Abstract_Cursor_Access (Res);
-         end if;
+               Success := True;
+               return;
+         end case;
 
       exception
          when PostgreSQL_Error =>
@@ -362,10 +349,111 @@ package body GNATCOLL.SQL.Postgres.Builder is
                   & ConnStatus'Image (Status (Connection.Postgres.all)));
             else
                Print_Error
-                 (Connection, ExecStatus'Image (Status (Res.Res))
-                  & " " & Error (Res.Res) & "while executing: " & Query);
+                 (Connection, ExecStatus'Image (Status (Res))
+                  & " " & Error (Res) & "while executing: " & Query);
             end if;
       end;
+
+      Success := False;
+   end Connect_And_Do;
+
+   -------------------------
+   -- Connect_And_Prepare --
+   -------------------------
+
+   overriding function Connect_And_Prepare
+     (Connection : access Postgresql_Connection_Record;
+      Query      : String;
+      Id         : Stmt_Id;
+      Direct     : Boolean)
+      return DBMS_Stmt
+   is
+      procedure Perform (Res : out Result; Query : String);
+      procedure Perform (Res : out Result; Query : String) is
+      begin
+         Prepare (Res, Connection.Postgres.all, "stmt" & Id'Img, Query);
+      end Perform;
+
+      procedure Do_Perform is new Connect_And_Do (Perform);
+
+      pragma Unreferenced (Direct);
+      Res : Result;
+      Success : Boolean;
+   begin
+      Do_Perform (Connection, Query, Res, Success);
+      if Success then
+         Clear (Res);
+         return DBMS_Stmt (To_Address (Integer_Address (Id)));
+      else
+         return No_DBMS_Stmt;
+      end if;
+   end Connect_And_Prepare;
+
+   -------------
+   -- Execute --
+   -------------
+
+   overriding function Execute
+     (Connection  : access Postgresql_Connection_Record;
+      Prepared    : DBMS_Stmt;
+      Is_Select   : Boolean;
+      Direct      : Boolean) return Abstract_Cursor_Access
+   is
+      pragma Unreferenced (Direct);
+      R   : Postgresql_Cursor_Access;
+      Id  : constant Stmt_Id := Stmt_Id
+        (To_Integer (System.Address (Prepared)));
+   begin
+      R := new Postgresql_Cursor;
+
+      Exec_Prepared
+        (R.Res, Connection.Postgres.all, "stmt" & Id'Img);
+      if Is_Select then
+         R.Rows := Natural (Tuple_Count (R.Res));
+      else
+         R.Rows := Natural'(Command_Tuples (R.Res));
+      end if;
+
+      return Abstract_Cursor_Access (R);
+   end Execute;
+
+   -------------------------
+   -- Connect_And_Execute --
+   -------------------------
+
+   function Connect_And_Execute
+     (Connection  : access Postgresql_Connection_Record;
+      Query       : String;
+      Is_Select   : Boolean;
+      Direct      : Boolean) return Abstract_Cursor_Access
+   is
+      procedure Perform (Res : out Result; Query : String);
+      procedure Perform (Res : out Result; Query : String) is
+      begin
+         Execute (Res, Connection.Postgres.all, Query);
+      end Perform;
+
+      procedure Do_Perform is new Connect_And_Do (Perform);
+
+      pragma Unreferenced (Direct);  --  Always return a direct cursor for now
+      Res : Postgresql_Cursor_Access;
+      Success : Boolean;
+   begin
+      Res := new Postgresql_Cursor;
+
+      if Query = "" then
+         Do_Perform (Connection, "ROLLBACK", Res.Res, Success);
+      else
+         Do_Perform (Connection, Query, Res.Res, Success);
+      end if;
+
+      if Success then
+         if Is_Select then
+            Res.Rows := Natural (Tuple_Count (Res.Res));
+         else
+            Res.Rows := Natural'(Command_Tuples (Res.Res));
+         end if;
+      end if;
 
       return Abstract_Cursor_Access (Res);
    end Connect_And_Execute;
@@ -391,6 +479,19 @@ package body GNATCOLL.SQL.Postgres.Builder is
       return Value (Self.Res, Self.Current,
                     GNATCOLL.SQL.Postgres.Gnade.Field_Index (Field));
    end Value;
+
+   -------------
+   -- C_Value --
+   -------------
+
+   overriding function C_Value
+     (Self  : Postgresql_Cursor;
+      Field : GNATCOLL.SQL.Exec.Field_Index) return chars_ptr is
+   begin
+      return C_Value
+        (Self.Res, Self.Current,
+         GNATCOLL.SQL.Postgres.Gnade.Field_Index (Field));
+   end C_Value;
 
    -------------------
    -- Boolean_Value --
