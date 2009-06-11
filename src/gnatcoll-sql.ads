@@ -103,7 +103,11 @@ with GNATCOLL.SQL_Impl;      use GNATCOLL.SQL_Impl;
 package GNATCOLL.SQL is
 
    subtype SQL_Criteria is GNATCOLL.SQL_Impl.SQL_Criteria;
-   type SQL_Query is private;
+
+   type SQL_Query is tagged private;
+   --  A tagged type representing a query. This is a tagged type so that you
+   --  can use the dotted notation of Ada05 to call its primitive operations,
+   --  but you should not extend it
 
    subtype Cst_String_Access is GNATCOLL.SQL_Impl.Cst_String_Access;
 
@@ -644,6 +648,41 @@ package GNATCOLL.SQL is
    --  Auto_Complete_Group_By is true.
 
    -----------------------
+   -- Extending queries --
+   -----------------------
+   --  It is often convenient to have slightly similar versions of queries, but
+   --  with a few differences. For instance, you might want to prepare a
+   --  first version of the query, and then have a second version with
+   --  additional criteria.
+   --     Q : SQL_Query := SQL_Select (...);
+   --     P : Prepared_Statement := Prepare (Q);
+   --     Q2 : SQL_Query := Q.Where_And (...);
+
+   function Where_And
+     (Query : SQL_Query; Where : SQL_Criteria) return SQL_Query;
+   function Where_Or
+     (Query : SQL_Query; Where : SQL_Criteria) return SQL_Query;
+   --  Add a new "and" or "or" clause to the query (which must be a SELECT
+   --  query). The result is a separate query which can be modified
+   --  independently of Query.
+   --  This does not auto-complete the result query, even if the original
+   --  query had been auto-completed.
+
+   function Order_By
+     (Query : SQL_Query; Order_By : SQL_Field_Or_List'Class)
+      return SQL_Query;
+   --  Adds extra field in the order_by part of the query. These are added
+   --  *before* the order_by clause of Query, so that they take priority
+
+   function Distinct (Query : SQL_Query) return SQL_Query;
+   --  Remove duplicate rows in the result of query
+
+   function Offset (Query : SQL_Query; Offset : Natural) return SQL_Query;
+   function Limit (Query : SQL_Query; Limit : Natural) return SQL_Query;
+   --  Modifies the "limit" and "offset" in the query. This is useful if you
+   --  need to repeat the query several times to get various pages of results
+
+   -----------------------
    -- subqueries tables --
    -----------------------
    --  These tables represent subqueries
@@ -651,7 +690,8 @@ package GNATCOLL.SQL is
    type Subquery_Table is new SQL_Single_Table with private;
 
    function Subquery
-     (Query : SQL_Query; Table_Name : Cst_String_Access) return Subquery_Table;
+     (Query : SQL_Query'Class; Table_Name : Cst_String_Access)
+      return Subquery_Table;
    --  Create a temporary subquery table, as in:
    --    select * from b, (select ...) a where ...
    --    A := Subquery ("select ...", "a");
@@ -863,7 +903,7 @@ private
    procedure Finalize (Self : in out Controlled_SQL_Query);
    procedure Adjust   (Self : in out Controlled_SQL_Query);
 
-   type SQL_Query is record
+   type SQL_Query is tagged record
       Contents : Controlled_SQL_Query;
    end record;
    No_Query : constant SQL_Query :=

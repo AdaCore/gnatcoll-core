@@ -55,6 +55,10 @@ package body GNATCOLL.SQL is
    function To_String (Self : Table_Sets.Set) return Unbounded_String;
    --  Various implementations for To_String, for different types
 
+   function Clone_Select_Contents
+     (Query : SQL_Query) return Query_Select_Contents_Access;
+   --  Clone the contents of the query (assuming it is a SELECT query)
+
    package Any_Fields is new Data_Fields (SQL_Field);
    type SQL_Field_Any is new Any_Fields.Field with null record;
 
@@ -2290,11 +2294,12 @@ package body GNATCOLL.SQL is
    --------------
 
    function Subquery
-     (Query : SQL_Query; Table_Name : Cst_String_Access) return Subquery_Table
+     (Query : SQL_Query'Class; Table_Name : Cst_String_Access)
+      return Subquery_Table
    is
    begin
       return R : Subquery_Table (Instance => Table_Name) do
-         R.Query := Query;
+         R.Query := SQL_Query (Query);
       end return;
    end Subquery;
 
@@ -2306,5 +2311,116 @@ package body GNATCOLL.SQL is
    begin
       Unchecked_Free (A);
    end Free;
+
+   ---------------------------
+   -- Clone_Select_Contents --
+   ---------------------------
+
+   function Clone_Select_Contents
+     (Query : SQL_Query) return Query_Select_Contents_Access is
+   begin
+      if Query.Contents.Data.all not in Query_Select_Contents'Class then
+         raise Program_Error with "not a SELECT query";
+      end if;
+
+      return new Query_Select_Contents'Class'
+        (Query_Select_Contents_Access (Query.Contents.Data).all);
+   end Clone_Select_Contents;
+
+   ---------------
+   -- Where_And --
+   ---------------
+
+   function Where_And
+     (Query : SQL_Query; Where : SQL_Criteria) return SQL_Query
+   is
+      Q2       : SQL_Query;
+      Contents : constant Query_Select_Contents_Access :=
+        Clone_Select_Contents (Query);
+   begin
+      Contents.Criteria := Contents.Criteria and Where;
+      Q2.Contents.Data := SQL_Query_Contents_Access (Contents);
+      return Q2;
+   end Where_And;
+
+   --------------
+   -- Where_Or --
+   --------------
+
+   function Where_Or
+     (Query : SQL_Query; Where : SQL_Criteria) return SQL_Query
+   is
+      Q2       : SQL_Query;
+      Contents : constant Query_Select_Contents_Access :=
+        Clone_Select_Contents (Query);
+   begin
+      Contents.Criteria := Contents.Criteria or Where;
+      Q2.Contents.Data := SQL_Query_Contents_Access (Contents);
+      return Q2;
+   end Where_Or;
+
+   --------------
+   -- Order_By --
+   --------------
+
+   function Order_By
+     (Query : SQL_Query; Order_By : SQL_Field_Or_List'Class)
+      return SQL_Query
+   is
+      Q2       : SQL_Query;
+      Contents : constant Query_Select_Contents_Access :=
+        Clone_Select_Contents (Query);
+   begin
+      if Order_By in SQL_Field'Class then
+         Contents.Order_By := SQL_Field'Class (Order_By) & Contents.Order_By;
+      else
+         Contents.Order_By := SQL_Field_List (Order_By) & Contents.Order_By;
+      end if;
+
+      Q2.Contents.Data := SQL_Query_Contents_Access (Contents);
+      return Q2;
+   end Order_By;
+
+   --------------
+   -- Distinct --
+   --------------
+
+   function Distinct (Query : SQL_Query) return SQL_Query is
+      Q2       : SQL_Query;
+      Contents : constant Query_Select_Contents_Access :=
+        Clone_Select_Contents (Query);
+   begin
+      Contents.Distinct := True;
+      Q2.Contents.Data := SQL_Query_Contents_Access (Contents);
+      return Q2;
+   end Distinct;
+
+   -----------
+   -- Limit --
+   -----------
+
+   function Limit (Query : SQL_Query; Limit : Natural) return SQL_Query is
+      Q2       : SQL_Query;
+      Contents : constant Query_Select_Contents_Access :=
+        Clone_Select_Contents (Query);
+   begin
+      Contents.Limit := Limit;
+      Q2.Contents.Data := SQL_Query_Contents_Access (Contents);
+      return Q2;
+   end Limit;
+
+   ------------
+   -- Offset --
+   ------------
+
+   function Offset (Query : SQL_Query; Offset : Natural) return SQL_Query is
+      Q2       : SQL_Query;
+      Contents : constant Query_Select_Contents_Access :=
+        Clone_Select_Contents (Query);
+   begin
+      Contents.Offset := Offset;
+      Q2.Contents.Data := SQL_Query_Contents_Access (Contents);
+      return Q2;
+   end Offset;
 
 end GNATCOLL.SQL;
