@@ -56,14 +56,6 @@ package body GNATCOLL.SQL.Exec is
       Direct     : Boolean);
    --  Low-level call to perform a query on the database and log results
 
-   procedure Post_Execute_And_Log
-     (R          : Abstract_Cursor_Access;
-      Connection : access Database_Connection_Record'Class;
-      Query      : String;
-      Is_Select  : Boolean);
-   --  Mark the connection as success or failure depending on R.
-   --  Logs the query
-
    function Hash
      (Str : GNAT.Strings.String_Access) return Ada.Containers.Hash_Type;
 
@@ -443,7 +435,7 @@ package body GNATCOLL.SQL.Exec is
    --------------------------
 
    procedure Post_Execute_And_Log
-     (R          : Abstract_Cursor_Access;
+     (R          : access Abstract_DBMS_Forward_Cursor'Class;
       Connection : access Database_Connection_Record'Class;
       Query      : String;
       Is_Select  : Boolean)
@@ -508,6 +500,22 @@ package body GNATCOLL.SQL.Exec is
       end if;
    end Post_Execute_And_Log;
 
+   -----------------------
+   -- Start_Transaction --
+   -----------------------
+
+   function Start_Transaction
+     (Connection : access Database_Connection_Record'Class)
+      return Natural is
+   begin
+      if Connection.Nested_Transactions = 0 then
+         Trace (Me_Query, "BEGIN");
+         Execute (Connection, "BEGIN");
+      end if;
+      Connection.Nested_Transactions := Connection.Nested_Transactions + 1;
+      return Connection.Nested_Transactions;
+   end Start_Transaction;
+
    ---------------------
    -- Execute_And_Log --
    ---------------------
@@ -524,6 +532,8 @@ package body GNATCOLL.SQL.Exec is
       Is_Commit   : constant Boolean := To_Lower (Query) = "commit";
       Is_Rollback : constant Boolean := To_Lower (Query) = "rollback";
       R : Abstract_Cursor_Access;
+      Was_Started : Natural;
+      pragma Unreferenced (Was_Started);
    begin
       --  Transaction management: do we need to start a transaction ?
 
@@ -536,25 +546,24 @@ package body GNATCOLL.SQL.Exec is
             & " (" & Connection.Username.all & ")");
          return;
 
-      elsif not Connection.In_Transaction
+      elsif Connection.Nested_Transactions = 0
         and then Is_Begin
       then
-         Connection.In_Transaction := True;
+         Connection.Nested_Transactions := Connection.Nested_Transactions + 1;
 
-      elsif Connection.In_Transaction
+      elsif Connection.Nested_Transactions > 0
         and then Is_Begin
       then
          --  ??? Could be ignored silently in fact, but this helps debugging
          raise Program_Error;
 
-      elsif not Connection.In_Transaction
+      elsif Connection.Nested_Transactions = 0
         and then not Is_Commit
         and then not Is_Rollback
         and then not Is_Select   --  INSERT, UPDATE, LOCK, DELETE,...
       then
          --  Start a transaction automatically
-         Execute (Connection, "BEGIN");
-         Connection.In_Transaction := True;
+         Was_Started := Start_Transaction (Connection);
          if not Connection.Success then
             return;
          end if;
@@ -584,7 +593,7 @@ package body GNATCOLL.SQL.Exec is
       if Connection.In_Transaction
         and then (Is_Commit or Is_Rollback)
       then
-         Connection.In_Transaction := False;
+         Connection.Nested_Transactions := 0;
       end if;
    end Execute_And_Log;
 
@@ -713,7 +722,7 @@ package body GNATCOLL.SQL.Exec is
    function In_Transaction
      (Connection : access Database_Connection_Record'Class) return Boolean is
    begin
-      return Connection.In_Transaction;
+      return Connection.Nested_Transactions /= 0;
    end In_Transaction;
 
    --------------
@@ -1195,6 +1204,7 @@ package body GNATCOLL.SQL.Exec is
         (Result, Connection,
          Stmt.Cached.Str.all, DStmt, Stmt.Cached.Is_Select, Direct => True);
 
+      --  ??? Should only cache if the query was successful
       if Stmt.Use_Cache
         and then Connection.DB.Caching
       then
@@ -1213,6 +1223,8 @@ package body GNATCOLL.SQL.Exec is
    is
       DStmt  : DBMS_Stmt := No_DBMS_Stmt;
    begin
+      Result := No_Element;
+
       if Stmt.Cached.Id = 0 then
          Query_Cache.Prepare_Statement (Stmt);
       end if;

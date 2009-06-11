@@ -21,58 +21,24 @@ with Ada.Strings.Unbounded;        use Ada.Strings.Unbounded;
 with Ada.Unchecked_Deallocation;
 with GNATCOLL.SQL.Postgres.Gnade;  use GNATCOLL.SQL.Postgres.Gnade;
 with GNATCOLL.SQL.Exec_Private;    use GNATCOLL.SQL.Exec_Private;
+with GNATCOLL.Traces;              use GNATCOLL.Traces;
+with GNATCOLL.Utils;               use GNATCOLL.Utils;
 with GNAT.Strings;                 use GNAT.Strings;
 with Interfaces.C.Strings;         use Interfaces.C.Strings;
 with System.Storage_Elements;      use System.Storage_Elements;
 
 package body GNATCOLL.SQL.Postgres.Builder is
+   Me_Query  : constant Trace_Handle := Create ("SQL");
 
-   type Postgresql_Cursor is new DBMS_Direct_Cursor with record
-      Res     : GNATCOLL.SQL.Postgres.Gnade.Result;
-      Rows    : Natural := 0;
-      Current : GNATCOLL.SQL.Postgres.Gnade.Tuple_Index := 0;
-   end record;
-   type Postgresql_Cursor_Access is access all Postgresql_Cursor'Class;
+   Use_Cursors : constant Boolean := False;
+   --  Whether to use "DECLARE name CURSOR ..." to use cursors for Forward
+   --  cursors. Although this might save some memory since we do not have to
+   --  have all results in memory, this is in fact *much* slower, so is
+   --  disabled for now. Possible improvements would be to fetch several rows
+   --  at once in the cursor, but even that does not seem to improve things too
+   --  much.
 
-   overriding function Error_Msg
-     (Self : Postgresql_Cursor) return String;
-   overriding function Status
-     (Self : Postgresql_Cursor) return String;
-   overriding function Is_Success
-     (Self : Postgresql_Cursor) return Boolean;
-   overriding procedure Finalize (Result : in out Postgresql_Cursor);
-   overriding function Processed_Rows
-     (Self : Postgresql_Cursor) return Natural;
-   overriding function Value
-     (Self  : Postgresql_Cursor;
-      Field : GNATCOLL.SQL.Exec.Field_Index) return String;
-   overriding function C_Value
-     (Self  : Postgresql_Cursor;
-      Field : GNATCOLL.SQL.Exec.Field_Index) return chars_ptr;
-   overriding function Boolean_Value
-     (Self  : Postgresql_Cursor;
-      Field : GNATCOLL.SQL.Exec.Field_Index) return Boolean;
-   overriding function Is_Null
-     (Self  : Postgresql_Cursor;
-      Field : GNATCOLL.SQL.Exec.Field_Index) return Boolean;
-   overriding function Last_Id
-     (Self       : Postgresql_Cursor;
-      Connection : access Database_Connection_Record'Class;
-      Field      : SQL_Field_Integer) return Integer;
-   overriding function Field_Count
-     (Self : Postgresql_Cursor) return GNATCOLL.SQL.Exec.Field_Index;
-   overriding function Field_Name
-     (Self : Postgresql_Cursor;
-      Field : GNATCOLL.SQL.Exec.Field_Index) return String;
-   overriding function Has_Row (Self : Postgresql_Cursor) return Boolean;
-   overriding procedure Next   (Self : in out Postgresql_Cursor);
-   overriding procedure First (Self : in out Postgresql_Cursor);
-   overriding procedure Last  (Self : in out Postgresql_Cursor);
-   overriding procedure Absolute
-     (Self : in out Postgresql_Cursor; Row : Positive);
-   overriding procedure Relative
-     (Self : in out Postgresql_Cursor; Step : Integer);
-
+   type Cursor_Id is new Natural;
    type Database_Access is access GNATCOLL.SQL.Postgres.Gnade.Database;
 
    type Postgresql_Connection_Record is
@@ -80,7 +46,9 @@ package body GNATCOLL.SQL.Postgres.Builder is
       record
          Connection_String : GNAT.Strings.String_Access;
          Postgres          : Database_Access;
+         Cursor            : Cursor_Id := 0;  --  Id for the current cursor
       end record;
+   type Postgresql_Connection is access all Postgresql_Connection_Record'Class;
    overriding procedure Close
      (Connection : access Postgresql_Connection_Record);
    overriding function Connect_And_Execute
@@ -120,6 +88,192 @@ package body GNATCOLL.SQL.Postgres.Builder is
          Local_Attribute   : Integer;
          Foreign_Table     : String;
          Foreign_Attribute : Integer));
+   overriding procedure Finalize
+     (Connection : access Postgresql_Connection_Record;
+      Prepared   : DBMS_Stmt);
+   --  Reset:
+   --  The prepared statement is "DECLARE ... CURSOR" so there is nothing to
+   --  reset. The cursor itself is created as part of the iteration
+
+   generic
+      type Base is abstract new DBMS_Forward_Cursor with private;
+   package Postgresql_Cursors is
+      type Cursor is abstract new Base with record
+         Res     : GNATCOLL.SQL.Postgres.Gnade.Result;
+
+         Current : GNATCOLL.SQL.Postgres.Gnade.Tuple_Index := 0;
+         --  Always 0 for Forward_Cursor
+      end record;
+
+      overriding function Error_Msg (Self : Cursor) return String;
+      overriding function Status (Self : Cursor) return String;
+      overriding function Is_Success (Self : Cursor) return Boolean;
+      overriding procedure Finalize (Self : in out Cursor);
+      overriding function Value
+        (Self  : Cursor; Field : GNATCOLL.SQL.Exec.Field_Index) return String;
+      overriding function C_Value
+        (Self  : Cursor; Field : GNATCOLL.SQL.Exec.Field_Index)
+         return chars_ptr;
+      overriding function Boolean_Value
+        (Self  : Cursor; Field : GNATCOLL.SQL.Exec.Field_Index) return Boolean;
+      overriding function Is_Null
+        (Self  : Cursor; Field : GNATCOLL.SQL.Exec.Field_Index) return Boolean;
+      overriding function Last_Id
+        (Self       : Cursor;
+         Connection : access Database_Connection_Record'Class;
+         Field      : SQL_Field_Integer) return Integer;
+      overriding function Field_Count
+        (Self : Cursor) return GNATCOLL.SQL.Exec.Field_Index;
+      overriding function Field_Name
+        (Self  : Cursor; Field : GNATCOLL.SQL.Exec.Field_Index) return String;
+   end Postgresql_Cursors;
+   --  Build cursors using a Result internally for various information
+
+   ------------------------
+   -- Postgresql_Cursors --
+   ------------------------
+
+   package body Postgresql_Cursors is
+      overriding function Error_Msg (Self : Cursor) return String is
+      begin
+         return Error (Self.Res);
+      end Error_Msg;
+
+      overriding function Status (Self : Cursor) return String is
+      begin
+         return Status (Self.Res);
+      end Status;
+
+      overriding function Is_Success (Self : Cursor) return Boolean is
+      begin
+         return Status (Self.Res) = PGRES_TUPLES_OK
+           or else Status (Self.Res) = PGRES_COMMAND_OK;
+      end Is_Success;
+
+      overriding procedure Finalize (Self : in out Cursor) is
+      begin
+         Clear (Self.Res);
+      end Finalize;
+
+      overriding function Value
+        (Self  : Cursor;
+         Field : GNATCOLL.SQL.Exec.Field_Index) return String is
+      begin
+         return Value (Self.Res, Self.Current,
+                       GNATCOLL.SQL.Postgres.Gnade.Field_Index (Field));
+      end Value;
+
+      overriding function C_Value
+        (Self  : Cursor;
+         Field : GNATCOLL.SQL.Exec.Field_Index) return chars_ptr is
+      begin
+         return C_Value
+           (Self.Res, Self.Current,
+            GNATCOLL.SQL.Postgres.Gnade.Field_Index (Field));
+      end C_Value;
+
+      overriding function Boolean_Value
+        (Self  : Cursor;
+         Field : GNATCOLL.SQL.Exec.Field_Index) return Boolean is
+      begin
+         return Boolean_Value
+           (Self.Res, Self.Current,
+            GNATCOLL.SQL.Postgres.Gnade.Field_Index (Field));
+      end Boolean_Value;
+
+      overriding function Is_Null
+        (Self  : Cursor;
+         Field : GNATCOLL.SQL.Exec.Field_Index) return Boolean is
+      begin
+         return Is_Null
+           (Self.Res,
+            Self.Current,
+            GNATCOLL.SQL.Postgres.Gnade.Field_Index (Field));
+      end Is_Null;
+
+      overriding function Last_Id
+        (Self       : Cursor;
+         Connection : access Database_Connection_Record'Class;
+         Field      : SQL_Field_Integer) return Integer
+      is
+         pragma Unreferenced (Self);
+         Q        : SQL_Query;
+         Res2     : Forward_Cursor;
+      begin
+         --  Do not depend on OIDs, since the table might not have them (by
+         --  default, recent versions of postgreSQL disable them. Instead, we
+         --  use the currval() function which returns the last value set for a
+         --  sequence within the current connection.
+
+         Q := SQL_Select
+           (Fields => From_String ("currval('" & Field.Table.all
+            & "_" & Field.Name.all & "_seq')"));
+
+         Res2.Fetch (Connection, Q);
+         if Has_Row (Res2) then
+            return Integer_Value (Res2, 0);
+         end if;
+         return -1;
+      end Last_Id;
+
+      overriding function Field_Count
+        (Self : Cursor) return GNATCOLL.SQL.Exec.Field_Index is
+      begin
+         return GNATCOLL.SQL.Exec.Field_Index (Field_Count (Self.Res));
+      end Field_Count;
+
+      overriding function Field_Name
+        (Self  : Cursor;
+         Field : GNATCOLL.SQL.Exec.Field_Index) return String is
+      begin
+         return Field_Name
+           (Self.Res, GNATCOLL.SQL.Postgres.Gnade.Field_Index (Field));
+      end Field_Name;
+   end Postgresql_Cursors;
+
+   package Forward_Cursors is new Postgresql_Cursors (DBMS_Forward_Cursor);
+   type Postgresql_Cursor is new Forward_Cursors.Cursor with record
+      Stmt       : Stmt_Id := No_Stmt_Id;  --  Prepared statement, if any
+      Cursor     : Cursor_Id := 0;  --  the associated DBMS cursor
+      Processed_Rows : Natural := 0;
+      Connection : Postgresql_Connection;
+      Nested_Transactions : Natural := 0;
+      Has_Row    : Boolean := True;
+   end record;
+   type Postgresql_Cursor_Access is access all Postgresql_Cursor'Class;
+
+   overriding procedure Finalize (Self : in out Postgresql_Cursor);
+   overriding function Processed_Rows
+     (Self : Postgresql_Cursor) return Natural;
+   overriding function Has_Row
+     (Self : Postgresql_Cursor) return Boolean;
+   overriding procedure Next (Self : in out Postgresql_Cursor);
+
+   function Cursor_Name (Stmt : Stmt_Id; Cursor : Cursor_Id) return String;
+   --  Name of cursor on DBMS for Self
+
+   function Declare_Cursor
+     (Query : String; Stmt : Stmt_Id; Cursor : Cursor_Id) return String;
+   --  SQL command to declare a cursor
+
+   package Direct_Cursors is new Postgresql_Cursors (DBMS_Direct_Cursor);
+   type Postgresql_Direct_Cursor is new Direct_Cursors.Cursor with record
+      Rows    : Natural := 0;
+   end record;
+   type Postgresql_Direct_Cursor_Access
+     is access all Postgresql_Direct_Cursor'Class;
+
+   overriding function Processed_Rows
+     (Self : Postgresql_Direct_Cursor) return Natural;
+   overriding function Has_Row
+     (Self : Postgresql_Direct_Cursor) return Boolean;
+   overriding procedure Next   (Self : in out Postgresql_Direct_Cursor);
+   overriding procedure First (Self : in out Postgresql_Direct_Cursor);
+   overriding procedure Last  (Self : in out Postgresql_Direct_Cursor);
+   overriding procedure Absolute
+     (Self : in out Postgresql_Direct_Cursor; Row : Positive);
+   overriding procedure Relative
+     (Self : in out Postgresql_Direct_Cursor; Step : Integer);
 
    procedure Unchecked_Free is new Ada.Unchecked_Deallocation
      (GNATCOLL.SQL.Postgres.Gnade.Database, Database_Access);
@@ -150,34 +304,6 @@ package body GNATCOLL.SQL.Postgres.Builder is
       return new Postgresql_Connection_Record;
    end Build_Postgres_Connection;
 
-   ---------------
-   -- Error_Msg --
-   ---------------
-
-   function Error_Msg (Self : Postgresql_Cursor) return String is
-   begin
-      return Error (Self.Res);
-   end Error_Msg;
-
-   ------------
-   -- Status --
-   ------------
-
-   function Status (Self : Postgresql_Cursor) return String is
-   begin
-      return Status (Self.Res);
-   end Status;
-
-   ----------------
-   -- Is_Success --
-   ----------------
-
-   function Is_Success (Self : Postgresql_Cursor) return Boolean is
-   begin
-      return Status (Self.Res) = PGRES_TUPLES_OK
-        or else Status (Self.Res) = PGRES_COMMAND_OK;
-   end Is_Success;
-
    -----------
    -- Error --
    -----------
@@ -191,15 +317,6 @@ package body GNATCOLL.SQL.Postgres.Builder is
          return Error (Connection.Postgres.all);
       end if;
    end Error;
-
-   --------------
-   -- Finalize --
-   --------------
-
-   procedure Finalize (Result : in out Postgresql_Cursor) is
-   begin
-      Clear (Result.Res);
-   end Finalize;
 
    ---------------------------
    -- Get_Connection_String --
@@ -260,6 +377,7 @@ package body GNATCOLL.SQL.Postgres.Builder is
    is
    begin
       if Connection.Postgres /= null then
+         Clear (Res);
          Perform (Res, Query);
 
          case ExecStatus'(Status (Res)) is
@@ -357,6 +475,30 @@ package body GNATCOLL.SQL.Postgres.Builder is
       Success := False;
    end Connect_And_Do;
 
+   -----------------
+   -- Cursor_Name --
+   -----------------
+
+   function Cursor_Name (Stmt : Stmt_Id; Cursor : Cursor_Id) return String is
+   begin
+      if Stmt /= No_Stmt_Id then
+         return "pcursor" & Image (Integer (Stmt), Min_Width => 0);
+      else
+         return "cursor" & Image (Integer (Cursor), Min_Width => 0);
+      end if;
+   end Cursor_Name;
+
+   --------------------
+   -- Declare_Cursor --
+   --------------------
+
+   function Declare_Cursor
+     (Query : String; Stmt : Stmt_Id; Cursor : Cursor_Id) return String is
+   begin
+      return "DECLARE " & Cursor_Name (Stmt, Cursor)
+        & " SCROLL CURSOR FOR " & Query;
+   end Declare_Cursor;
+
    -------------------------
    -- Connect_And_Prepare --
    -------------------------
@@ -370,17 +512,32 @@ package body GNATCOLL.SQL.Postgres.Builder is
    is
       procedure Perform (Res : out Result; Query : String);
       procedure Perform (Res : out Result; Query : String) is
+         Name : constant String :=
+           "stmt" & Image (Integer (Id), Min_Width => 0);
       begin
-         Prepare (Res, Connection.Postgres.all, "stmt" & Id'Img, Query);
+         if Active (Me_Query) then
+            Trace (Me_Query, "Prepare " & Name & ": " & Query);
+         end if;
+
+         Prepare (Res, Connection.Postgres.all, Name, Query);
       end Perform;
 
       procedure Do_Perform is new Connect_And_Do (Perform);
 
-      pragma Unreferenced (Direct);
       Res : Result;
       Success : Boolean;
+      Was_Started : Natural;
+      pragma Unreferenced (Was_Started);
    begin
-      Do_Perform (Connection, Query, Res, Success);
+      if Direct or else not Use_Cursors then
+         Do_Perform (Connection, Query, Res, Success);
+      else
+         Was_Started := Start_Transaction (Connection);
+         Do_Perform
+           (Connection,
+            Declare_Cursor (Query, Id, Connection.Cursor), Res, Success);
+      end if;
+
       if Success then
          Clear (Res);
          return DBMS_Stmt (To_Address (Integer_Address (Id)));
@@ -399,22 +556,40 @@ package body GNATCOLL.SQL.Postgres.Builder is
       Is_Select   : Boolean;
       Direct      : Boolean) return Abstract_Cursor_Access
    is
-      pragma Unreferenced (Direct);
       R   : Postgresql_Cursor_Access;
+      DR  : Postgresql_Direct_Cursor_Access;
+      Res : Result;
       Id  : constant Stmt_Id := Stmt_Id
         (To_Integer (System.Address (Prepared)));
+      Name : constant String := "stmt" & Image (Integer (Id), Min_Width => 0);
    begin
-      R := new Postgresql_Cursor;
+      --  For a direct_cursor, this will execute the query. For a
+      --  forward_cursor this will declare the cursor on the DBMS
 
-      Exec_Prepared
-        (R.Res, Connection.Postgres.all, "stmt" & Id'Img);
-      if Is_Select then
-         R.Rows := Natural (Tuple_Count (R.Res));
+      Exec_Prepared (Res, Connection.Postgres.all, Name);
+
+      if Direct or not Use_Cursors then
+         DR := new Postgresql_Direct_Cursor;
+         DR.Res := Res;
+         Post_Execute_And_Log (DR, Connection, "Exec prepared " & Name, False);
+
+         if Is_Select then
+            DR.Rows := Natural (Tuple_Count (Res));
+         else
+            DR.Rows := Natural'(Command_Tuples (Res));
+         end if;
+
+         return Abstract_Cursor_Access (DR);
+
       else
-         R.Rows := Natural'(Command_Tuples (R.Res));
+         R            := new Postgresql_Cursor;
+         R.Connection := Postgresql_Connection (Connection);
+         R.Res        := Res;
+         R.Stmt       := Id;
+         Post_Execute_And_Log (R, Connection, "Exec prepared " & Name, False);
+         Next (R.all);  --  Read first row
+         return Abstract_Cursor_Access (R);
       end if;
-
-      return Abstract_Cursor_Access (R);
    end Execute;
 
    -------------------------
@@ -431,32 +606,74 @@ package body GNATCOLL.SQL.Postgres.Builder is
       procedure Perform (Res : out Result; Query : String) is
       begin
          Execute (Res, Connection.Postgres.all, Query);
+
+--           if Is_Select then
+--              Trace (Me_Select, Query & " => " & Status (Res));
+--           else
+--              Trace (Me_Query, Query & " => " & Status (Res));
+--           end if;
       end Perform;
 
       procedure Do_Perform is new Connect_And_Do (Perform);
 
-      pragma Unreferenced (Direct);  --  Always return a direct cursor for now
-      Res : Postgresql_Cursor_Access;
+      DR : Postgresql_Direct_Cursor_Access;
+      R  : Postgresql_Cursor_Access;
       Success : Boolean;
+      Res : Result;
+      Create_Direct : constant Boolean :=
+        Direct or else not Is_Select or else not Use_Cursors;
    begin
-      Res := new Postgresql_Cursor;
-
-      if Query = "" then
-         Do_Perform (Connection, "ROLLBACK", Res.Res, Success);
+      if Create_Direct then
+         DR := new Postgresql_Direct_Cursor;
       else
-         Do_Perform (Connection, Query, Res.Res, Success);
+         R            := new Postgresql_Cursor;
+         R.Connection := Postgresql_Connection (Connection);
       end if;
 
-      if Success then
-         if Is_Select then
-            Res.Rows := Natural (Tuple_Count (Res.Res));
+      if Query = "" then
+         Do_Perform (Connection, "ROLLBACK", Res, Success);
+      else
+         if Create_Direct then
+            Do_Perform (Connection, Query, Res, Success);
          else
-            Res.Rows := Natural'(Command_Tuples (Res.Res));
+            R.Nested_Transactions := Start_Transaction (Connection);
+            R.Cursor   := Connection.Cursor;
+            Connection.Cursor := Connection.Cursor + 1;  --  ??? Concurrency ?
+            Do_Perform
+              (Connection,
+               Declare_Cursor (Query, No_Stmt_Id, R.Cursor),
+               Res, Success);
          end if;
       end if;
 
-      return Abstract_Cursor_Access (Res);
+      if Create_Direct then
+         DR.Res := Res;
+
+         if Success then
+            if Is_Select then
+               DR.Rows := Natural (Tuple_Count (Res));
+            else
+               DR.Rows := Natural'(Command_Tuples (Res));
+            end if;
+         end if;
+
+         return Abstract_Cursor_Access (DR);
+
+      else
+         Next (R.all);
+         return Abstract_Cursor_Access (R);
+      end if;
    end Connect_And_Execute;
+
+   --------------------
+   -- Processed_Rows --
+   --------------------
+
+   overriding function Processed_Rows
+     (Self : Postgresql_Direct_Cursor) return Natural is
+   begin
+      return Self.Rows;
+   end Processed_Rows;
 
    --------------------
    -- Processed_Rows --
@@ -465,111 +682,8 @@ package body GNATCOLL.SQL.Postgres.Builder is
    overriding function Processed_Rows
      (Self : Postgresql_Cursor) return Natural is
    begin
-      return Self.Rows;
+      return Self.Processed_Rows;
    end Processed_Rows;
-
-   -----------
-   -- Value --
-   -----------
-
-   function Value
-     (Self  : Postgresql_Cursor;
-      Field : GNATCOLL.SQL.Exec.Field_Index) return String is
-   begin
-      return Value (Self.Res, Self.Current,
-                    GNATCOLL.SQL.Postgres.Gnade.Field_Index (Field));
-   end Value;
-
-   -------------
-   -- C_Value --
-   -------------
-
-   overriding function C_Value
-     (Self  : Postgresql_Cursor;
-      Field : GNATCOLL.SQL.Exec.Field_Index) return chars_ptr is
-   begin
-      return C_Value
-        (Self.Res, Self.Current,
-         GNATCOLL.SQL.Postgres.Gnade.Field_Index (Field));
-   end C_Value;
-
-   -------------------
-   -- Boolean_Value --
-   -------------------
-
-   function Boolean_Value
-     (Self  : Postgresql_Cursor;
-      Field : GNATCOLL.SQL.Exec.Field_Index) return Boolean is
-   begin
-      return Boolean_Value
-        (Self.Res, Self.Current,
-         GNATCOLL.SQL.Postgres.Gnade.Field_Index (Field));
-   end Boolean_Value;
-
-   -------------
-   -- Is_Null --
-   -------------
-
-   function Is_Null
-     (Self  : Postgresql_Cursor;
-      Field : GNATCOLL.SQL.Exec.Field_Index) return Boolean is
-   begin
-      return Is_Null
-        (Self.Res,
-         Self.Current,
-         GNATCOLL.SQL.Postgres.Gnade.Field_Index (Field));
-   end Is_Null;
-
-   -------------
-   -- Last_Id --
-   -------------
-
-   function Last_Id
-     (Self       : Postgresql_Cursor;
-      Connection : access Database_Connection_Record'Class;
-      Field      : SQL_Field_Integer) return Integer
-   is
-      pragma Unreferenced (Self);
-      Q        : SQL_Query;
-      Res2     : Forward_Cursor;
-   begin
-      --  Do not depend on OIDs, since the table might not have them (by
-      --  default, recent versions of postgreSQL disable them. Instead, we use
-      --  the currval() function which returns the last value set for a
-      --  sequence within the current connection.
-
-      Q := SQL_Select
-        (Fields => From_String ("currval('" & Field.Table.all
-                                & "_" & Field.Name.all & "_seq')"));
-
-      Res2.Fetch (Connection, Q);
-      if Has_Row (Res2) then
-         return Integer_Value (Res2, 0);
-      end if;
-      return -1;
-   end Last_Id;
-
-   -----------------
-   -- Field_Count --
-   -----------------
-
-   function Field_Count
-     (Self : Postgresql_Cursor) return GNATCOLL.SQL.Exec.Field_Index is
-   begin
-      return GNATCOLL.SQL.Exec.Field_Index (Field_Count (Self.Res));
-   end Field_Count;
-
-   ----------------
-   -- Field_Name --
-   ----------------
-
-   function Field_Name
-     (Self  : Postgresql_Cursor;
-      Field : GNATCOLL.SQL.Exec.Field_Index) return String is
-   begin
-      return Field_Name
-         (Self.Res, GNATCOLL.SQL.Postgres.Gnade.Field_Index (Field));
-   end Field_Name;
 
    -------------------
    -- Foreach_Table --
@@ -710,9 +824,21 @@ package body GNATCOLL.SQL.Postgres.Builder is
    -- Has_Row --
    -------------
 
-   overriding function Has_Row (Self : Postgresql_Cursor) return Boolean is
+   overriding function Has_Row
+     (Self : Postgresql_Direct_Cursor) return Boolean is
    begin
       return Self.Current < Tuple_Count (Self.Res);
+   end Has_Row;
+
+   -------------
+   -- Has_Row --
+   -------------
+
+   overriding function Has_Row
+     (Self : Postgresql_Cursor) return Boolean
+   is
+   begin
+      return Self.Has_Row;
    end Has_Row;
 
    ----------
@@ -720,6 +846,29 @@ package body GNATCOLL.SQL.Postgres.Builder is
    ----------
 
    overriding procedure Next (Self : in out Postgresql_Cursor) is
+      Count : constant Natural := 1;
+      Str : constant String :=
+        "FETCH" & Count'Img & " FROM " & Cursor_Name (Self.Stmt, Self.Cursor);
+   begin
+      Execute (Self.Res, Self.Connection.Postgres.all, Str);
+      if Status (Self.Res) /= PGRES_TUPLES_OK then
+         Post_Execute_And_Log
+           (Self'Unrestricted_Access, Self.Connection, Str, Is_Select => True);
+      end if;
+
+      Self.Has_Row := Tuple_Count (Self.Res) /= 0;
+
+      if Self.Has_Row then
+         Self.Processed_Rows := Self.Processed_Rows + Count;
+      end if;
+
+   end Next;
+
+   ----------
+   -- Next --
+   ----------
+
+   overriding procedure Next (Self : in out Postgresql_Direct_Cursor) is
    begin
       Self.Current := Self.Current + 1;
    end Next;
@@ -728,7 +877,7 @@ package body GNATCOLL.SQL.Postgres.Builder is
    -- First --
    -----------
 
-   overriding procedure First (Self : in out Postgresql_Cursor) is
+   overriding procedure First (Self : in out Postgresql_Direct_Cursor) is
    begin
       Self.Current := 0;
    end First;
@@ -737,7 +886,7 @@ package body GNATCOLL.SQL.Postgres.Builder is
    -- Last --
    ----------
 
-   overriding procedure Last  (Self : in out Postgresql_Cursor) is
+   overriding procedure Last  (Self : in out Postgresql_Direct_Cursor) is
    begin
       Self.Current := Tuple_Index (Self.Rows - 1);
    end Last;
@@ -747,7 +896,7 @@ package body GNATCOLL.SQL.Postgres.Builder is
    --------------
 
    overriding procedure Absolute
-     (Self : in out Postgresql_Cursor; Row : Positive) is
+     (Self : in out Postgresql_Direct_Cursor; Row : Positive) is
    begin
       Self.Current := Tuple_Index (Row - 1);
    end Absolute;
@@ -757,11 +906,59 @@ package body GNATCOLL.SQL.Postgres.Builder is
    --------------
 
    overriding procedure Relative
-     (Self : in out Postgresql_Cursor; Step : Integer) is
+     (Self : in out Postgresql_Direct_Cursor; Step : Integer) is
    begin
       Self.Current := Tuple_Index
         (Integer'Min
            (Integer'Max (Integer (Self.Current) + Step, 0), Self.Rows - 1));
    end Relative;
+
+   --------------
+   -- Finalize --
+   --------------
+
+   overriding procedure Finalize (Self : in out Postgresql_Cursor) is
+      Close : constant String :=
+        "CLOSE " & Cursor_Name (Self.Stmt, Self.Cursor);
+   begin
+      Execute (Self.Res, Self.Connection.Postgres.all, Close);
+      Post_Execute_And_Log (Self'Access, Self.Connection, Close, False);
+
+      --  Avoid having opened too many cursors
+      if Self.Connection.Cursor = Self.Cursor + 1 then
+         --  ??? Concurrency issues, we currently assume there is one
+         --  connection per thread
+
+         Self.Connection.Cursor := Self.Connection.Cursor - 1;
+      end if;
+
+      if Self.Nested_Transactions = 1 then
+         --  ??? What if something has started a transaction in between ?
+         Commit_Or_Rollback (Self.Connection);
+      end if;
+
+      Forward_Cursors.Finalize (Forward_Cursors.Cursor (Self));
+   end Finalize;
+
+   --------------
+   -- Finalize --
+   --------------
+
+   overriding procedure Finalize
+     (Connection : access Postgresql_Connection_Record;
+      Prepared   : DBMS_Stmt)
+   is
+      Id  : constant Stmt_Id := Stmt_Id
+        (To_Integer (System.Address (Prepared)));
+      Str : constant String :=
+        "DEALLOCATE stmt" & Image (Integer (Id), Min_Width => 0);
+      Res : Result;
+   begin
+      Execute (Res, Connection.Postgres.all, Str);
+      if Active (Me_Query) then
+         Trace (Me_Query, Str & " (" & Status (Res) & ")");
+      end if;
+      Clear (Res);
+   end Finalize;
 
 end GNATCOLL.SQL.Postgres.Builder;

@@ -286,6 +286,17 @@ package GNATCOLL.SQL.Exec is
    --  Reports the last error message on this connection (ie the one that
    --  made the transaction fail)
 
+   function Start_Transaction
+     (Connection : access Database_Connection_Record'Class)
+      return Natural;
+   --  Start a new transaction, if not already in one. This does not need to be
+   --  called in general, since transactions are automatically started when you
+   --  modify the contents of the database, but you might need to start one
+   --  manually in some cases (declaring a cursor with "DECLARE .. CURSOR" for
+   --  instance).
+   --  Returns the number of calls to Start_Transaction that were nested after
+   --  this call (minimum 1)
+
    function In_Transaction
      (Connection : access Database_Connection_Record'Class) return Boolean;
    --  Return True if a transaction is taking place (ie at least one
@@ -676,6 +687,14 @@ package GNATCOLL.SQL.Exec is
    --  Reset the prepared statement so that the next call to Element returns
    --  the first row
 
+   procedure Post_Execute_And_Log
+     (R          : access Abstract_DBMS_Forward_Cursor'Class;
+      Connection : access Database_Connection_Record'Class;
+      Query      : String;
+      Is_Select  : Boolean);
+   --  Mark the connection as success or failure depending on R.
+   --  Logs the query
+
 private
 
    type Database_Description_Record is record
@@ -699,7 +718,10 @@ private
    type Database_Connection_Record is abstract tagged record
       DB             : Database_Description;
       Success        : Boolean := True;
-      In_Transaction : Boolean := False;
+
+      Nested_Transactions : Natural := 0;
+      --  0 if not in a transaction, or number of calls to Start_Transaction
+
       Username       : GNAT.Strings.String_Access;
       Error_Msg      : GNAT.Strings.String_Access;
 
