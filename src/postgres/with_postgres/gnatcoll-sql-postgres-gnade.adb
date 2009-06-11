@@ -42,7 +42,6 @@ with System.Address_To_Access_Conversions;
 with Ada.Unchecked_Conversion;
 with Ada.Unchecked_Deallocation;
 with Interfaces.C; use Interfaces.C;
-with Interfaces.C.Strings;
 with System;
 
 package body GNATCOLL.SQL.Postgres.Gnade is
