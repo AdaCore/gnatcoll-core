@@ -237,7 +237,7 @@ package body GNATCOLL.SQL.Postgres.Builder is
       Cursor     : Cursor_Id := 0;  --  the associated DBMS cursor
       Processed_Rows : Natural := 0;
       Connection : Postgresql_Connection;
-      Nested_Transactions : Natural := 0;
+      Nested_Transactions : Boolean := False;
       Has_Row    : Boolean := True;
    end record;
    type Postgresql_Cursor_Access is access all Postgresql_Cursor'Class;
@@ -378,7 +378,10 @@ package body GNATCOLL.SQL.Postgres.Builder is
    begin
       if Connection.Postgres /= null then
          Clear (Res);
-         Perform (Res, Query);
+
+         if Query /= "" then
+            Perform (Res, Query);
+         end if;
 
          case ExecStatus'(Status (Res)) is
             when PGRES_NONFATAL_ERROR
@@ -446,18 +449,23 @@ package body GNATCOLL.SQL.Postgres.Builder is
       --  Now that we have (re)connected, try to execute the query again
 
       begin
-         Perform (Res, Query);
+         if Query = "" then
+            Success := True;
+            return;
+         else
+            Perform (Res, Query);
 
-         case ExecStatus'(Status (Res)) is
-            when PGRES_NONFATAL_ERROR
-               | PGRES_FATAL_ERROR
-               | PGRES_EMPTY_QUERY =>
-               Print_Error (Connection, "Database error: " & Error (Res));
+            case ExecStatus'(Status (Res)) is
+               when PGRES_NONFATAL_ERROR
+                  | PGRES_FATAL_ERROR
+                  | PGRES_EMPTY_QUERY =>
+                  Print_Error (Connection, "Database error: " & Error (Res));
 
-            when others =>
-               Success := True;
-               return;
-         end case;
+               when others =>
+                  Success := True;
+                  return;
+            end case;
+         end if;
 
       exception
          when PostgreSQL_Error =>
@@ -526,7 +534,7 @@ package body GNATCOLL.SQL.Postgres.Builder is
 
       Res : Result;
       Success : Boolean;
-      Was_Started : Natural;
+      Was_Started : Boolean;
       pragma Unreferenced (Was_Started);
    begin
       if Direct or else not Use_Cursors then
@@ -621,7 +629,10 @@ package body GNATCOLL.SQL.Postgres.Builder is
       Success : Boolean;
       Res : Result;
       Create_Direct : constant Boolean :=
-        Direct or else not Is_Select or else not Use_Cursors;
+        Direct
+        or else not Is_Select
+        or else not Use_Cursors
+        or else Query = "";
    begin
       if Create_Direct then
          DR := new Postgresql_Direct_Cursor;
@@ -630,26 +641,26 @@ package body GNATCOLL.SQL.Postgres.Builder is
          R.Connection := Postgresql_Connection (Connection);
       end if;
 
-      if Query = "" then
-         Do_Perform (Connection, "ROLLBACK", Res, Success);
+      if Create_Direct then
+         Do_Perform (Connection, Query, Res, Success);
       else
-         if Create_Direct then
-            Do_Perform (Connection, Query, Res, Success);
-         else
-            R.Nested_Transactions := Start_Transaction (Connection);
-            R.Cursor   := Connection.Cursor;
-            Connection.Cursor := Connection.Cursor + 1;  --  ??? Concurrency ?
-            Do_Perform
-              (Connection,
-               Declare_Cursor (Query, No_Stmt_Id, R.Cursor),
-               Res, Success);
-         end if;
+         R.Nested_Transactions := Start_Transaction (Connection);
+         R.Cursor   := Connection.Cursor;
+         Connection.Cursor := Connection.Cursor + 1;  --  ??? Concurrency ?
+         Do_Perform
+           (Connection,
+            Declare_Cursor (Query, No_Stmt_Id, R.Cursor),
+            Res, Success);
+      end if;
+
+      if Connection.Postgres = null then
+         return null;
       end if;
 
       if Create_Direct then
          DR.Res := Res;
 
-         if Success then
+         if Success and then Query /= "" then
             if Is_Select then
                DR.Rows := Natural (Tuple_Count (Res));
             else
@@ -932,7 +943,7 @@ package body GNATCOLL.SQL.Postgres.Builder is
          Self.Connection.Cursor := Self.Connection.Cursor - 1;
       end if;
 
-      if Self.Nested_Transactions = 1 then
+      if Self.Nested_Transactions then
          --  ??? What if something has started a transaction in between ?
          Commit_Or_Rollback (Self.Connection);
       end if;

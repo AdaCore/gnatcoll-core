@@ -288,14 +288,14 @@ package GNATCOLL.SQL.Exec is
 
    function Start_Transaction
      (Connection : access Database_Connection_Record'Class)
-      return Natural;
+      return Boolean;
    --  Start a new transaction, if not already in one. This does not need to be
    --  called in general, since transactions are automatically started when you
    --  modify the contents of the database, but you might need to start one
    --  manually in some cases (declaring a cursor with "DECLARE .. CURSOR" for
    --  instance).
-   --  Returns the number of calls to Start_Transaction that were nested after
-   --  this call (minimum 1)
+   --  Return True if a transaction was started, False if one was already in
+   --  progress.
 
    function In_Transaction
      (Connection : access Database_Connection_Record'Class) return Boolean;
@@ -493,14 +493,14 @@ package GNATCOLL.SQL.Exec is
 
    function Prepare
      (Query         : SQL_Query;
-      Auto_Complete : Boolean := True;
+      Auto_Complete : Boolean := False;
       Use_Cache     : Boolean := False;
-      On_Server     : Boolean := True)
+      On_Server     : Boolean := False)
       return Prepared_Statement;
    function Prepare
      (Query      : String;
       Use_Cache  : Boolean := False;
-      On_Server  : Boolean := True)
+      On_Server  : Boolean := False)
       return Prepared_Statement;
    --  Prepare the statement for multiple executions.
    --  If Auto_Complete is true, the query is first auto-completed.
@@ -550,6 +550,17 @@ package GNATCOLL.SQL.Exec is
    procedure Fetch
      (Result     : out Direct_Cursor;
       Connection : access Database_Connection_Record'Class;
+      Stmt       : SQL_Query;
+      Use_Cache  : Boolean);
+   --  Temporary procedure, do not use.
+   --  This is for backward compatibility only (it creates a prepared statement
+   --  on the fly and executes it, which is not as efficient as having the
+   --  preparation done once for a global variable).
+   --  This will be removed when we have parameterized statements
+
+   procedure Fetch
+     (Result     : out Direct_Cursor;
+      Connection : access Database_Connection_Record'Class;
       Stmt       : in out Prepared_Statement);
    procedure Fetch
      (Result     : out Forward_Cursor;
@@ -560,7 +571,9 @@ package GNATCOLL.SQL.Exec is
    procedure Finalize
      (Connection : access Database_Connection_Record'Class;
       Stmt       : in out Prepared_Statement);
-   --  Release memory used by Stmt on the server
+   --  Release memory used by Stmt on the server. This is not needed if the
+   --  statement was never prepared on the server (On_Server set to False in
+   --  the call to Prepare).
 
    procedure Finalize_Prepared_Statements;
    --  Release memory occupied by all prepared statement. None of these
@@ -718,10 +731,7 @@ private
    type Database_Connection_Record is abstract tagged record
       DB             : Database_Description;
       Success        : Boolean := True;
-
-      Nested_Transactions : Natural := 0;
-      --  0 if not in a transaction, or number of calls to Start_Transaction
-
+      In_Transaction : Boolean := False;
       Username       : GNAT.Strings.String_Access;
       Error_Msg      : GNAT.Strings.String_Access;
 

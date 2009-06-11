@@ -1382,10 +1382,12 @@ package body GNATCOLL.SQL is
       Order_By : SQL_Field_Or_List'Class := Empty_Field_List;
       Limit    : Integer := -1;
       Offset   : Integer := -1;
-      Distinct : Boolean := False) return SQL_Query
+      Distinct : Boolean := False;
+      Auto_Complete : Boolean := False) return SQL_Query
    is
       Data : constant Query_Select_Contents_Access :=
         new Query_Select_Contents;
+      Q    : SQL_Query;
    begin
       if Fields in SQL_Field'Class then
          Data.Fields := +SQL_Field'Class (Fields);
@@ -1418,9 +1420,15 @@ package body GNATCOLL.SQL is
       Data.Limit    := Limit;
       Data.Offset   := Offset;
       Data.Distinct := Distinct;
-      return (Contents =>
-                (Ada.Finalization.Controlled
-                 with SQL_Query_Contents_Access (Data)));
+      Q := (Contents =>
+              (Ada.Finalization.Controlled
+               with SQL_Query_Contents_Access (Data)));
+
+      if Auto_Complete then
+         GNATCOLL.SQL.Auto_Complete (Q);
+      end if;
+
+      return Q;
    end SQL_Select;
 
    ---------------

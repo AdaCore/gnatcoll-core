@@ -591,8 +591,12 @@ package GNATCOLL.SQL is
       Order_By : SQL_Field_Or_List'Class := Empty_Field_List;
       Limit    : Integer := -1;
       Offset   : Integer := -1;
-      Distinct : Boolean := False) return SQL_Query;
+      Distinct : Boolean := False;
+      Auto_Complete : Boolean := False) return SQL_Query;
    --  Select one or more fields from one or more tables
+   --  If Auto_Complete is true, the resulting query is auto-completed just as
+   --  if you had called the Auto_Complete subprogram. This is put here so that
+   --  you can have global SQL_Query constants, pre-completed
 
    function SQL_Insert
      (Values : SQL_Assignment;

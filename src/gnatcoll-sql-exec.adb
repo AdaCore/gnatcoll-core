@@ -506,14 +506,14 @@ package body GNATCOLL.SQL.Exec is
 
    function Start_Transaction
      (Connection : access Database_Connection_Record'Class)
-      return Natural is
+      return Boolean is
    begin
-      if Connection.Nested_Transactions = 0 then
-         Trace (Me_Query, "BEGIN");
+      if not Connection.In_Transaction then
          Execute (Connection, "BEGIN");
+         Connection.In_Transaction := True;
+         return True;
       end if;
-      Connection.Nested_Transactions := Connection.Nested_Transactions + 1;
-      return Connection.Nested_Transactions;
+      return False;
    end Start_Transaction;
 
    ---------------------
@@ -532,7 +532,7 @@ package body GNATCOLL.SQL.Exec is
       Is_Commit   : constant Boolean := To_Lower (Query) = "commit";
       Is_Rollback : constant Boolean := To_Lower (Query) = "rollback";
       R : Abstract_Cursor_Access;
-      Was_Started : Natural;
+      Was_Started : Boolean;
       pragma Unreferenced (Was_Started);
    begin
       --  Transaction management: do we need to start a transaction ?
@@ -546,18 +546,18 @@ package body GNATCOLL.SQL.Exec is
             & " (" & Connection.Username.all & ")");
          return;
 
-      elsif Connection.Nested_Transactions = 0
+      elsif not Connection.In_Transaction
         and then Is_Begin
       then
-         Connection.Nested_Transactions := Connection.Nested_Transactions + 1;
+         Connection.In_Transaction := True;
 
-      elsif Connection.Nested_Transactions > 0
+      elsif Connection.In_Transaction
         and then Is_Begin
       then
          --  ??? Could be ignored silently in fact, but this helps debugging
          raise Program_Error;
 
-      elsif Connection.Nested_Transactions = 0
+      elsif not Connection.In_Transaction
         and then not Is_Commit
         and then not Is_Rollback
         and then not Is_Select   --  INSERT, UPDATE, LOCK, DELETE,...
@@ -593,7 +593,7 @@ package body GNATCOLL.SQL.Exec is
       if Connection.In_Transaction
         and then (Is_Commit or Is_Rollback)
       then
-         Connection.Nested_Transactions := 0;
+         Connection.In_Transaction := False;
       end if;
    end Execute_And_Log;
 
@@ -722,7 +722,7 @@ package body GNATCOLL.SQL.Exec is
    function In_Transaction
      (Connection : access Database_Connection_Record'Class) return Boolean is
    begin
-      return Connection.Nested_Transactions /= 0;
+      return Connection.In_Transaction;
    end In_Transaction;
 
    --------------
@@ -736,6 +736,7 @@ package body GNATCOLL.SQL.Exec is
       if Connection.In_Transaction then
          Connection.Success := True; --  we are allowed to perform this
          Execute (Connection, "ROLLBACK");
+         Connection.In_Transaction := False;
          if Connection.Error_Msg = null and then Error_Msg /= "" then
             Connection.Error_Msg := new String'(Error_Msg);
          end if;
@@ -759,6 +760,7 @@ package body GNATCOLL.SQL.Exec is
             --  performed.
             Connection.Success := False;
          end if;
+         Connection.In_Transaction := False;
       end if;
    end Commit_Or_Rollback;
 
@@ -1072,9 +1074,9 @@ package body GNATCOLL.SQL.Exec is
 
    function Prepare
      (Query         : SQL_Query;
-      Auto_Complete : Boolean := True;
+      Auto_Complete : Boolean := False;
       Use_Cache     : Boolean := False;
-      On_Server     : Boolean := True)
+      On_Server     : Boolean := False)
       return Prepared_Statement
    is
       Stmt : Prepared_Statement;
@@ -1102,7 +1104,7 @@ package body GNATCOLL.SQL.Exec is
    function Prepare
      (Query      : String;
       Use_Cache  : Boolean := False;
-      On_Server  : Boolean := True)
+      On_Server  : Boolean := False)
       return Prepared_Statement is
    begin
       return
@@ -1313,5 +1315,20 @@ package body GNATCOLL.SQL.Exec is
    begin
       return null;
    end Execute;
+
+   -----------
+   -- Fetch --
+   -----------
+
+   procedure Fetch
+     (Result     : out Direct_Cursor;
+      Connection : access Database_Connection_Record'Class;
+      Stmt       : SQL_Query;
+      Use_Cache  : Boolean)
+   is
+      P : Prepared_Statement := Prepare (Stmt, Use_Cache => Use_Cache);
+   begin
+      Result.Fetch (Connection, P);
+   end Fetch;
 
 end GNATCOLL.SQL.Exec;
