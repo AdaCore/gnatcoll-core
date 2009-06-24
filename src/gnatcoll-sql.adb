@@ -694,8 +694,7 @@ package body GNATCOLL.SQL is
 
    function As_Days (Count : Natural) return Date_Fields.Field'Class is
    begin
-      return Date_Fields.From_String
-        ("interval '" & Integer'Image (Count) & "days'");
+      return Date_Fields.From_String (Integer'Image (Count));
    end As_Days;
 
    ------------------
