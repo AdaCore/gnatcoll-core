@@ -181,6 +181,13 @@ package GNATCOLL.Email is
    --  the payload you set for the message. If MIME_Type is the empty string,
    --  no Content-Type header is set.
 
+   function Clone_Message (Msg : Message) return Message;
+   --  Return a copy of the given message.
+   --  ??? In the case of a multipart message, the contents of each
+   --  part of the message is not duplicated.  In other words, modifying
+   --  the contents of any part of the payload will affect both the
+   --  copy and the original.
+
    function Reply_To
      (Msg            : Message'Class;
       From_Email     : String;
@@ -189,8 +196,8 @@ package GNATCOLL.Email is
       Reply_All      : Boolean := True;
       Local_Date     : Ada.Calendar.Time := Ada.Calendar.Clock) return Message;
    --  Create a new message as a reply to Msg. This impacts subjects,
-   --  recpients,... If Quote is True, then Msg is quoted in the payload of the
-   --  new message.
+   --  recipients,... If Quote is True, then Msg is quoted in the payload of
+   --  the new message.
    --  Headers are set so that the reply will appear in the same thread as Msg
    --  in mailers that support threads.
 
@@ -446,11 +453,15 @@ package GNATCOLL.Email is
    --  If the message was single-part message, it is automatically converted to
    --  a multi-part message
 
-   procedure Add_Payload (Msg : in out Message'Class; Payload : Message);
+   procedure Add_Payload (Msg : in out Message'Class;
+                          Payload : Message;
+                          First : Boolean := False);
    --  Add a new part to a multipart message. Msg is first converted to
    --  multipart if necessary. Payload itself is stored in Msg, ie modifying
    --  Payload later on will impact Msg. This procedure cannot be used when
    --  attaching a real mail message, see Attach_Msg instead.
+   --  If First is True, then add the new part at the begining.  Otherwise,
+   --  add it at the end.
 
    procedure Attach_Msg
      (Msg         : in out Message'Class;

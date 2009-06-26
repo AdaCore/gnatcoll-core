@@ -76,6 +76,12 @@ package body GNATCOLL.Email is
      (Text : Unbounded_String; Starts_With : String) return Boolean;
    --  Whether Text has a line that starts with Starts_With
 
+   function Clone_Header (Ref : Header) return Header;
+   --  Return a deep copy of the given Header.
+
+   function Clone_Headers (Ref : Header_List.List) return Header_List.List;
+   --  Return a deep copy of the given list of headers.
+
    ---------------------
    -- Next_Occurrence --
    ---------------------
@@ -142,6 +148,52 @@ package body GNATCOLL.Email is
 
       return Msg;
    end New_Message;
+
+   ------------------
+   -- Clone_Header --
+   ------------------
+
+   function Clone_Header (Ref : Header) return Header is
+      Copy : Header := (Ada.Finalization.Controlled
+         with Contents => new Header_Record);
+   begin
+      Copy.Contents.all := (Name => Ref.Contents.Name,
+                            Value => Ref.Contents.Value,
+                            Ref_Count => 1);
+      return Copy;
+   end Clone_Header;
+
+   -------------------
+   -- Clone_Headers --
+   -------------------
+
+   function Clone_Headers (Ref : Header_List.List) return Header_List.List is
+      Copy : Header_List.List;
+      Cursor : Header_List.Cursor := First (Ref);
+   begin
+      while Cursor /= Header_List.No_Element loop
+         Append (Copy, Clone_Header (Element (Cursor)));
+         Next (Cursor);
+      end loop;
+      return Copy;
+   end Clone_Headers;
+
+   -------------------
+   -- Clone_Message --
+   -------------------
+
+   function Clone_Message (Msg : Message) return Message is
+      New_Msg : Message;
+   begin
+      New_Msg := (Ada.Finalization.Controlled
+         with Contents => new Message_Record);
+      New_Msg.Contents.all := (Ref_Count => 1,
+                               Envelope_From => Msg.Contents.Envelope_From,
+                               Headers => Clone_Headers (Msg.Contents.Headers),
+                               Payload => Msg.Contents.Payload,
+                               Is_Nested => Msg.Contents.Is_Nested);
+      return New_Msg;
+   end Clone_Message;
 
    --------------
    -- Reply_To --
@@ -1370,11 +1422,18 @@ package body GNATCOLL.Email is
    -- Add_Payload --
    -----------------
 
-   procedure Add_Payload (Msg : in out Message'Class; Payload : Message) is
+   procedure Add_Payload (Msg : in out Message'Class;
+                          Payload : Message;
+                          First : Boolean := False) is
    begin
       Convert_To_Multipart (Msg);
       Payload.Contents.Is_Nested := True;
-      Append (Msg.Contents.Payload.Parts, Payload);
+      if First then
+         Prepend (Msg.Contents.Payload.Parts, Payload);
+      else
+         Append (Msg.Contents.Payload.Parts, Payload);
+      end if;
+
    end Add_Payload;
 
    ----------------
