@@ -154,7 +154,7 @@ package body GNATCOLL.Email is
    ------------------
 
    function Clone_Header (Ref : Header) return Header is
-      Copy : Header := (Ada.Finalization.Controlled
+      Copy : constant Header := (Ada.Finalization.Controlled
          with Contents => new Header_Record);
    begin
       Copy.Contents.all := (Name => Ref.Contents.Name,
