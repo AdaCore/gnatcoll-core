@@ -3302,6 +3302,32 @@ another language). In such a case, the application would break. On the
 other hand, using the constant @code{0} which we just extracted will
 remain valid, whatever the actual text we display for the user.
 
+@item -text
+
+Instead of creating Ada files to represent the database schema, this switch
+will ask @code{gnatcoll_db2ada} to dump the schema as text. This is in a
+form hopefully easy to parse automatically, in case you have tools that
+need the schema information from your database in a DBMS-independent
+manner.
+The format (which might change in some future release to include more
+information) is currently as such
+
+@CODESAMPLE{
+  table ::= "table" <name> [fields]* [FK]*
+      a table description starts with "table" followed by the name of the
+      table, and then one line per field or foreign key
+
+  fields ::= ASCII.LF ASCII.HT <field_name> ASCII.HF <field_type>
+      Each field is on a line that starts with a tab, and include the field's
+      name and type, separated by a tab
+
+  FK ::= ASCII.LF ASCII.HT "FK:" ASCII.HT <field_names>* "->" <field_names>*
+     Each foreign key is on a line of its own, starting with a tab and "FK:".
+     It then includes the name of the fields in the current table, an arrow,
+     and the qualified (table.name) name of the fields in the referenced
+     table
+}
+
 @end table
 
 From the command line arguments, @code{gnatcoll_db2ada} will generate

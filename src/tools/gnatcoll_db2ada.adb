@@ -37,6 +37,10 @@ procedure GNATCOLL_Db2Ada is
 
    Generated : constant String := "Database";
 
+   type Output_Kind is (Output_Ada_Specs, Output_Text);
+   Output : Output_Kind := Output_Ada_Specs;
+   --  The type of output for this utility
+
    package String_Lists is new Ada.Containers.Indefinite_Doubly_Linked_Lists
      (String);
    use String_Lists;
@@ -175,6 +179,9 @@ procedure GNATCOLL_Db2Ada is
 
    procedure Generate_Queries;
    --  Experimental support for automatic generation of queries
+
+   procedure Generate_Text;
+   --  Generate a .dot file
 
    procedure Generate (Generated : String);
    procedure Generate (Generated : String) is separate;
@@ -436,7 +443,7 @@ procedure GNATCOLL_Db2Ada is
    begin
       loop
          case Getopt ("dbhost= h -help dbname= dbuser= dbpasswd= enum= var="
-                      & " dbtype= query=") is
+                      & " dbtype= query= text") is
             when 'h' | '-' =>
                Put_Line
                  ("-dbhost <host>: host on which the database runs");
@@ -446,7 +453,6 @@ procedure GNATCOLL_Db2Ada is
                Put_Line ("-dbpasswd <passwd>: password for the database");
                Put_Line ("-dbtype <type>: database backend to use"
                          & " (current is " & DB_Type.all & ")");
-               New_Line;
                Put_Line ("-enum table,id,name,prefix,base");
                Put_Line
                  ("    Name of a table to dump. This is generally used");
@@ -466,7 +472,10 @@ procedure GNATCOLL_Db2Ada is
                Put_Line ("-query table");
                Put_Line
                  ("    Generate an entry for table in the queries package");
+               Put_Line ("-text: generate a textual description of the"
+                         & " database");
                GNAT.OS_Lib.OS_Exit (0);
+
             when 'd' =>
                if Full_Switch = "dbhost" then
                   Free (DB_Host);
@@ -484,13 +493,20 @@ procedure GNATCOLL_Db2Ada is
                   Free (DB_Type);
                   DB_Type := new String'(Parameter);
                end if;
+
             when 'q' =>
                Query_Lists.Append
                  (Queries, (Table => To_Unbounded_String (Parameter)));
+
             when 'e' =>
                Append (Enums, Parameter);
+
             when 'v' =>
                Append (Vars, Parameter);
+
+            when 't' =>
+               Output := Output_Text;
+
             when others =>
                exit;
          end case;
@@ -734,6 +750,60 @@ procedure GNATCOLL_Db2Ada is
       Close (Body_File);
    end Generate_Queries;
 
+   -------------------
+   -- Generate_Text --
+   -------------------
+
+   procedure Generate_Text is
+      C : Tables_Maps.Cursor := First (Tables);
+      T_Descr : Table_Description;
+      A  : Attribute_Lists.Cursor;
+      K  : Foreign_Keys.Cursor;
+      FK : Foreign_Key_Description;
+      S  : String_Lists.Cursor;
+   begin
+      --  All tables and their attributes
+
+      while Has_Element (C) loop
+         T_Descr := Element (C);
+         Put_Line ("table " & Key (C));
+
+         A := First (T_Descr.Attributes);
+         while Has_Element (A) loop
+            Put_Line (ASCII.HT & To_String (Element (A).Name)
+                      & ASCII.HT & To_String (Element (A).Field_Type));
+            Next (A);
+         end loop;
+
+         K := First (T_Descr.Foreign);
+         while Has_Element (K) loop
+            FK := Element (K);
+
+            Put (ASCII.HT & "FK:" & ASCII.HT);
+
+            S  := First (FK.From_Attributes);
+            while Has_Element (S) loop
+               Put (Element (S) & " ");
+               Next (S);
+            end loop;
+
+            Put ("->");
+
+            S  := First (FK.To_Attributes);
+            while Has_Element (S) loop
+               Put (To_String (FK.To_Table) & "." & Element (S) & " ");
+               Next (S);
+            end loop;
+
+            New_Line;
+            Next (K);
+         end loop;
+
+         New_Line;
+         Next (C);
+      end loop;
+   end Generate_Text;
+
    DB_Descr          : Database_Description;
    Connection        : Database_Connection;
    Enums, Vars       : String_Lists.List;
@@ -765,7 +835,12 @@ begin
 
    --  Create the package Database_Typed_Entities
 
-   Generate (Generated);
+   case Output is
+      when Output_Ada_Specs =>
+         Generate (Generated);
+      when Output_Text =>
+         Generate_Text;
+   end case;
 
    if Length (Queries) /= 0 then
       Generate_Queries;
