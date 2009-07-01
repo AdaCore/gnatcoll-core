@@ -55,7 +55,7 @@ package body GNATCOLL.IO.Native is
    ------------------------
 
    function Dispatching_Create
-     (Ref : not null access Native_File_Record;
+     (Ref       : not null access Native_File_Record;
       Full_Path : FS_String) return File_Access
    is
       pragma Unreferenced (Ref);

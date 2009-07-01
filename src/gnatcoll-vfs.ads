@@ -86,7 +86,7 @@ package GNATCOLL.VFS is
    ------------------------------
 
    type Virtual_File is tagged private;
-   No_File        : constant Virtual_File;
+   No_File : constant Virtual_File;
 
    ---------------
    -- Constants --
@@ -108,8 +108,9 @@ package GNATCOLL.VFS is
    --  filename needs to be converted to a known encoding, generally utf8.
    --  See the "Retrieving names" section below.
 
-   function Create (Full_Filename : Filesystem_String;
-                    Host          : String := Local_Host) return Virtual_File;
+   function Create
+     (Full_Filename : Filesystem_String;
+      Host          : String := Local_Host) return Virtual_File;
    --  Return a file, given its full filename.
    --  The latter can be found, for source files, through the functions in
    --  projects-registry.ads.
