@@ -1343,12 +1343,39 @@ package body GNATCOLL.Traces is
       end if;
    end Finalize;
 
+   ------------------------
+   -- Set_Default_Stream --
+   ------------------------
+
+   procedure Set_Default_Stream (Name : String) is
+      S : Trace_Stream;
+      T : Trace_Stream;
+
+   begin
+      if Name'Length > 2
+        and then Name (Name'First .. Name'First + 1) = ">>"
+      then
+         S := Find_Stream
+           (Name (Name'First + 2 .. Name'Last), "", Append => True);
+      else
+         S := Find_Stream (Name, "", Append => False);
+      end if;
+
+      --  Put it first in the list
+
+      if Streams_List /= S then
+         T := Streams_List;
+         while T.Next /= S loop
+            T := T.Next;
+         end loop;
+
+         T.Next := S.Next;
+         S.Next := Streams_List;
+         Streams_List := S;
+      end if;
+   end Set_Default_Stream;
+
 begin
    --  This is the default stream, always register it
-   declare
-      S : constant Trace_Stream := Find_Stream ("&1", "", Append => False);
-      pragma Unreferenced (S);
-   begin
-      null;
-   end;
+   Set_Default_Stream ("&1");
 end GNATCOLL.Traces;

@@ -339,6 +339,11 @@ package GNATCOLL.Traces is
    --  The object pointed by Factory will be freed by automatically when the
    --  factory container is freed.
 
+   procedure Set_Default_Stream (Name : String);
+   --  Set Name as the default string.
+   --  See Register_Stream_Factory for a list of valid names. The name can be
+   --  prefixed with ">>" to append to that stream.
+
    ----------------
    -- Decorators --
    ----------------
