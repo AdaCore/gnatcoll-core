@@ -3656,11 +3656,12 @@ rm -f conftest.$ac_objext conftest$ac_exeext conftest.$ac_ext
 
 
 
+   NEED_PSQL=no
 
 # Check whether --with-postgresql or --without-postgresql was given.
 if test "${with_postgresql+set}" = set; then
   withval="$with_postgresql"
-  POSTGRESQL_PATH_WITH=$withval
+  POSTGRESQL_PATH_WITH=$withval; NEED_PSQL=yes
 else
   POSTGRESQL_PATH_WITH=yes
 fi;
@@ -3739,17 +3740,24 @@ fi
        PATH_LIBPQ="-L$POSTGRESQL_PATH_WITH"
        WITH_POSTGRES=yes
      fi
+
+     if test x"$WITH_POSTGRES" = xno -a x"$NEED_PSQL" = xyes ; then
+       { { echo "$as_me:$LINENO: error: PostgreSQL not found" >&5
+echo "$as_me: error: PostgreSQL not found" >&2;}
+   { (exit 1); exit 1; }; }
+     fi
    fi
 
 
 
 
 
+   NEED_SQLITE=no
 
 # Check whether --with-sqlite or --without-sqlite was given.
 if test "${with_sqlite+set}" = set; then
   withval="$with_sqlite"
-  SQLITE_PATH_WITH=$withval
+  SQLITE_PATH_WITH=$withval; NEED_SQLITE=yes
 else
   SQLITE_PATH_WITH=yes
 fi;
@@ -3827,6 +3835,12 @@ fi
      else
        PATH_LIBSQLITE="-L$SQLITE_PATH_WITH"
        WITH_SQLITE=yes
+     fi
+
+     if test x"$WITH_SQLITE" = xno -a x"$NEED_SQLITE" = xyes ; then
+       { { echo "$as_me:$LINENO: error: PostgreSQL not found" >&5
+echo "$as_me: error: PostgreSQL not found" >&2;}
+   { (exit 1); exit 1; }; }
      fi
    fi
 

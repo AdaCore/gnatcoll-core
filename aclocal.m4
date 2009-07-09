@@ -126,6 +126,7 @@ AC_DEFUN(AM_PATH_SYSLOG,
 
 AC_DEFUN(AM_PATH_POSTGRES,
 [
+   NEED_PSQL=no
    AC_ARG_WITH(postgresql,
      [AC_HELP_STRING(
        [--with-postgresql=<path>],
@@ -133,7 +134,7 @@ AC_DEFUN(AM_PATH_POSTGRES,
 AC_HELP_STRING(
        [--without-postgresql],
        [Disable PostgreSQL support])],
-     POSTGRESQL_PATH_WITH=$withval,
+     [POSTGRESQL_PATH_WITH=$withval; NEED_PSQL=yes],
      POSTGRESQL_PATH_WITH=yes)
 
    PATH_LIBPQ=""
@@ -148,6 +149,10 @@ AC_HELP_STRING(
      else
        PATH_LIBPQ="-L$POSTGRESQL_PATH_WITH"
        WITH_POSTGRES=yes
+     fi
+
+     if test x"$WITH_POSTGRES" = xno -a x"$NEED_PSQL" = xyes ; then
+       AC_MSG_ERROR([PostgreSQL not found])
      fi
    fi
 
@@ -167,6 +172,7 @@ AC_HELP_STRING(
 
 AC_DEFUN(AM_PATH_SQLITE,
 [
+   NEED_SQLITE=no
    AC_ARG_WITH(sqlite,
      [AC_HELP_STRING(
         [--with-sqlite=<path>],
@@ -174,7 +180,7 @@ AC_DEFUN(AM_PATH_SQLITE,
 AC_HELP_STRING(
         [--without-sqlite],
         [Disable sqlite support])],
-     SQLITE_PATH_WITH=$withval,
+     [SQLITE_PATH_WITH=$withval; NEED_SQLITE=yes],
      SQLITE_PATH_WITH=yes)
 
    PATH_LIBSQLITE=""
@@ -192,6 +198,10 @@ AC_HELP_STRING(
      else
        PATH_LIBSQLITE="-L$SQLITE_PATH_WITH"
        WITH_SQLITE=yes
+     fi
+
+     if test x"$WITH_SQLITE" = xno -a x"$NEED_SQLITE" = xyes ; then
+       AC_MSG_ERROR([PostgreSQL not found])
      fi
    fi
    
