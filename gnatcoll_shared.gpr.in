@@ -31,7 +31,7 @@ project GnatColl_Shared is
    Python_Dir     := "@PYTHON_DIR@";
    Gtk_Include    := (@GTK_GCC_FLAGS_GPR@);
    Postgres_Dir   := "-L@PATH_LIBPQ@";
-   Sqlite_Dir     := "-L@PATH_SQLITE@";
+   Sqlite_Dir     := "-L@PATH_LIBSQLITE@";
 
    package Compiler is
       case Build is

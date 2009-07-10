@@ -115,6 +115,33 @@ AC_DEFUN(AM_PATH_SYSLOG,
 ])
 
 #############################################################
+# Search for a library anywhere on LD_LIBRARY_PATH
+# This will return the empty string if not found, and the directory
+# otherwise.
+# This can be used to add -Ldir parameters on the command line: if
+# the library was found with AC_CHECK_LIB but not this macro, this
+# means it is in the standard search path and no command line switch
+# is required.
+#    AM_LIB_PATH(libname)
+# Sets am_path_<libname> to the path
+#############################################################
+
+AC_DEFUN(AM_LIB_PATH,
+[
+   am_path_$1=""
+   as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
+   for lib_dir in $LD_LIBRARY_PATH
+   do
+      IFS=$as_save_IFS
+      if test -f "$lib_dir/lib$1.so"; then
+         am_path_$1=$lib_dir
+         break
+      fi
+   done
+   IFS=$as_save_IFS
+])
+
+#############################################################
 # Checking for postgreSQL
 # This checks whether the libpq exists on this system
 # This module can be disabled with
@@ -146,6 +173,10 @@ AC_HELP_STRING(
    else
      if test x"$POSTGRESQL_PATH_WITH" = xyes ; then
        AC_CHECK_LIB(pq,PQreset,WITH_POSTGRES=yes,WITH_POSTGRES=no)
+       AM_LIB_PATH(pq)
+       if test x"$am_path_pq" != x ; then
+          PATH_LIBPQ="-L$am_path_pq"
+       fi
      else
        PATH_LIBPQ="-L$POSTGRESQL_PATH_WITH"
        WITH_POSTGRES=yes
