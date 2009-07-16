@@ -110,10 +110,12 @@ package body GNATCOLL.IO.Native is
       HOME : GNAT.Strings.String_Access := GNAT.OS_Lib.Getenv ("HOME");
       Tmp  : GNAT.Strings.String_Access;
    begin
-      if HOME = null then
+      if HOME.all = "" then
+         Free (HOME);
          HOME := GNAT.OS_Lib.Getenv ("USERPROFILE");
 
-         if HOME = null then
+         if HOME.all = "" then
+            Free (HOME);
             return Create (Get_Root (Local_FS, ""));
          end if;
       end if;
