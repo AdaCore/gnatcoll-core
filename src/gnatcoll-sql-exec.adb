@@ -393,6 +393,11 @@ package body GNATCOLL.SQL.Exec is
       Success    : Boolean;
       R          : Abstract_Cursor_Access;
    begin
+      if Connection = null then
+         Trace (Me_Error, "DBMS backend not supported");
+         return False;
+      end if;
+
       R := Connect_And_Execute
         (Connection,
          Query     => "",
@@ -816,10 +821,16 @@ package body GNATCOLL.SQL.Exec is
          Connection := Factory (Description);
          if Connection /= null then
             DB_Attributes.Set_Value (Connection);
+         else
+            Trace
+              (Me_Error, "Could not create connection object for database");
          end if;
       end if;
 
-      Reset_Connection (Description, Connection, Username);
+      if Connection /= null then
+         Reset_Connection (Description, Connection, Username);
+      end if;
+
       return Connection;
    end Get_Task_Connection;
 
