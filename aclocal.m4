@@ -172,11 +172,11 @@ AC_HELP_STRING(
 
    else
      if test x"$POSTGRESQL_PATH_WITH" = xyes ; then
-       AC_CHECK_LIB(pq,PQreset,WITH_POSTGRES=yes,WITH_POSTGRES=no)
        AM_LIB_PATH(pq)
        if test x"$am_path_pq" != x ; then
           PATH_LIBPQ="-L$am_path_pq"
        fi
+       AC_CHECK_LIB(pq,PQreset,WITH_POSTGRES=yes,WITH_POSTGRES=no,[$PATH_LIBPQ])
      else
        PATH_LIBPQ="-L$POSTGRESQL_PATH_WITH"
        WITH_POSTGRES=yes

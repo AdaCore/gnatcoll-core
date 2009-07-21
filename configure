@@ -3841,13 +3841,29 @@ echo "${ECHO_T}no" >&6
 
    else
      if test x"$POSTGRESQL_PATH_WITH" = xyes ; then
+
+   am_path_pq=""
+   as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
+   for lib_dir in $LD_LIBRARY_PATH
+   do
+      IFS=$as_save_IFS
+      if test -f "$lib_dir/libpq.so"; then
+         am_path_pq=$lib_dir
+         break
+      fi
+   done
+   IFS=$as_save_IFS
+
+       if test x"$am_path_pq" != x ; then
+          PATH_LIBPQ="-L$am_path_pq"
+       fi
        echo "$as_me:$LINENO: checking for PQreset in -lpq" >&5
 echo $ECHO_N "checking for PQreset in -lpq... $ECHO_C" >&6
 if test "${ac_cv_lib_pq_PQreset+set}" = set; then
   echo $ECHO_N "(cached) $ECHO_C" >&6
 else
   ac_check_lib_save_LIBS=$LIBS
-LIBS="-lpq  $LIBS"
+LIBS="-lpq $PATH_LIBPQ $LIBS"
 cat >conftest.$ac_ext <<_ACEOF
 /* confdefs.h.  */
 _ACEOF
@@ -3911,22 +3927,6 @@ else
   WITH_POSTGRES=no
 fi
 
-
-   am_path_pq=""
-   as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
-   for lib_dir in $LD_LIBRARY_PATH
-   do
-      IFS=$as_save_IFS
-      if test -f "$lib_dir/libpq.so"; then
-         am_path_pq=$lib_dir
-         break
-      fi
-   done
-   IFS=$as_save_IFS
-
-       if test x"$am_path_pq" != x ; then
-          PATH_LIBPQ="-L$am_path_pq"
-       fi
      else
        PATH_LIBPQ="-L$POSTGRESQL_PATH_WITH"
        WITH_POSTGRES=yes
