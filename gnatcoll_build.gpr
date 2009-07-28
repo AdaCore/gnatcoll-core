@@ -1,0 +1,16 @@
+--  This project file is used to build all modules that have no external
+--  dependencies on external project files
+with "src/gnatcoll";
+with "src/gnatcoll_python";
+with "src/gnatcoll_postgres";
+with "src/gnatcoll_sqlite";
+with "src/gnatcoll_tools";
+with "src/gnatcoll_gmp";
+project Gnatcoll_Build is
+   for Source_Dirs use ();
+   for Object_Dir use "src/obj";  --  for auto.cgpr
+
+   package IDE is
+      for VCS_Kind use "Subversion";
+   end IDE;
+end Gnatcoll_Build;

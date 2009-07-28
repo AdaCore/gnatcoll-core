@@ -10,26 +10,3 @@ else
 SRCDIRS=./gtk/ ./gtk/nopython/
 endif
 
-all:     dirs buildcfiles buildall
-clean:   cleanall
-install: libinstall
-
-ifeq (${LIBRARY_TYPE},static)
-FPIC=
-else
-FPIC=-fPIC
-endif
-
-.PHONY: buildcfiles addcobjects dirs
-buildcfiles:
-
-ifeq (${WITH_GTK},yes)
-ifeq ($(WITH_PYTHON),yes)
-C_OBJ=obj/gtk/${LIBRARY_TYPE}/python_support_gtk.o
-buildcfiles: ${C_OBJ}
-${C_OBJ}: gtk/python/python_support_gtk.c
-	$(CC) -c ${FPIC} ${PYTHON_CFLAGS} ${PYGTK_INCLUDE} ${GTK_INCLUDE} $< -o $@
-clean:
-	${RM} ${C_OBJ}
-endif
-endif

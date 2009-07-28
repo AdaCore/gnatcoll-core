@@ -6,21 +6,8 @@ include ../Makefile.conf
 
 ifeq (${WITH_POSTGRES},yes)
 SRCDIRS=./postgres/ ./postgres/with_postgres/
-C_OBJ=obj/postgres/${LIBRARY_TYPE}/postgres_support.o
-all: dirs buildcfiles buildall
-
-buildcfiles: ${C_OBJ}
-${C_OBJ}: postgres/with_postgres/postgres_support.c
-	${CC} -c ${FPIC} ${POSTGRES_CFLAGS} $< -o $@
-clean:
-	${RM} ${C_OBJ}
-
 else
 SRCDIRS=./postgres/ ./postgres/no_postgres/
 endif
-
-all:     dirs buildall
-clean:   cleanall
-install: libinstall
 
 

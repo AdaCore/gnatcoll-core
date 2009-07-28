@@ -1,5 +1,4 @@
 PYTHON_VERSION=@PYTHON_VERSION@
-PYTHON_CFLAGS=@PYTHON_CFLAGS@
 PYTHON_BASE=@PYTHON_BASE@
 PYGTK_INCLUDE=@PYGTK_INCLUDE@
 PYTHON_DIR=@PYTHON_DIR@
@@ -15,14 +14,6 @@ GMP_CFLAGS=@GMP_CFLAGS@
 GMP_LIBS=@GMP_LIBS@
 POSTGRES_PATH=@PATH_LIBPQ@
 BUILDS_SHARED=@GNAT_BUILDS_SHARED@
-HAS_PQPREPARE=@HAS_PQPREPARE@
-
-ifeq (${HAS_PQPREPARE},yes)
-POSTGRES_CFLAGS=-DHAS_PQPREPARE
-else
-POSTGRES_CFLAGS=
-endif
-
 WITH_SQLITE=@WITH_SQLITE@
 SQLITE_PATH=@PATH_LIBSQLITE@
 
@@ -48,8 +39,6 @@ else
 LN_S=@LN_S@
 endif
 
-CC=gcc
-
 LIBRARY_TYPE=static
 
 Gnatcoll_Build=@BUILD_TYPE@
@@ -74,11 +63,6 @@ all:
 ##   ${LIBNAME}: name of the library to install (e.g. libgnatcoll.so)
 ##   ${MODULE}:  subdirectory in $libdir that contain the files
 
-# Compute the list of source directories. Would be nicer if gnatls could
-# output that info. We are assuming here there are only two of these.
-#DIRS=${shell gnat ls -P${PROJECT} -v | grep ${MODULE}}
-#SRCDIRS=${wordlist 1,2,${DIRS}}
-
 ifeq (${LIBRARY_TYPE},relocatable)
 LIBNAME:=${LIBNAME}.${LIBEXT}
 ifeq (${OS},Windows_NT)
@@ -95,27 +79,12 @@ endif
 
 LIBDIR=lib/${MODULE}/${LIBRARY_TYPE}/
 
-ifeq (${LIBRARY_TYPE},static)
-FPIC=
-else
-FPIC=-fPIC
-endif
-
-.PHONY: buildall cleanall libinstall
+.PHONY: buildall libinstall
 buildall:
 	@echo Building project ${PROJECT}
-	gnatmake -XLIBRARY_TYPE=${LIBRARY_TYPE} -P${PROJECT}
-cleanall:
-	-gnatclean -r -q -P${PROJECT}
+	gprbuild -XLIBRARY_TYPE=${LIBRARY_TYPE} -P${PROJECT}
 
 libinstall: installsources installobj installlinks
-
-# Build the object directories for a specific module
-
-.PHONY: dirs
-dirs:
-	${MKDIR} obj/${MODULE}/${LIBRARY_TYPE}
-	${MKDIR} lib/${MODULE}/${LIBRARY_TYPE}
 
 # Install the ali files and libraries. The library itself is only copied once
 # as ${prefix}/lib/${TARNAME}/${TYPE}/lib*.so.${VERSION}, so that it is visible
@@ -155,7 +124,7 @@ endif
 # the installation directory, but the list of names is computed from the actual
 # source dirs). Of course, it would be more convenient if "gnatls" could output
 # that info directly.
-# We do the expansion of *.ad? directly in the Makefile, since amoung the SRCDIRS
+# We do the expansion of *.ad? directly in the Makefile, since among the SRCDIRS
 # we in fact have the library dir as well, which doesn't contain any source, and
 # install would complain.
 installsources:

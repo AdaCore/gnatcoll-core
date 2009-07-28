@@ -9,11 +9,3 @@ SRCDIRS=./ ./syslog/
 else
 SRCDIRS=./ ./nosyslog/
 endif
-
-all:     dirs c_files buildall
-clean:   cleanall
-install: libinstall
-
-c_files: obj/gnatcoll/${LIBRARY_TYPE}/gnatcoll_support.o
-obj/gnatcoll/${LIBRARY_TYPE}/gnatcoll_support.o: gnatcoll_support.c
-	$(CC) -c ${FPIC} ${DEFS} $< -o $@

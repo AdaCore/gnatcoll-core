@@ -10,13 +10,3 @@ else
 SRCDIRS=./sqlite/ ./sqlite/no_sqlite/
 endif
 
-all:     dirs buildall
-clean:   cleanall
-install: libinstall
-
-ifeq (${LIBRARY_TYPE},static)
-FPIC=
-else
-FPIC=-fPIC
-endif
-

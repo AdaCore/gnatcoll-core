@@ -21,20 +21,12 @@ shared relocatable:
 ## LIBRARY_TYPE variable
 
 build_library_type:
-	${MAKE} -C src -f Makefile.gnatcoll
-ifeq (${WITH_PYTHON},yes)
-	${MAKE} -C src -f Makefile.python
-endif
+	gprbuild -Pgnatcoll_build
 ifeq (${WITH_GTK},yes)
-	${MAKE} -C src -f Makefile.gtk
+	${MAKE} -C src -f Makefile.gtk buildall
 endif
-	${MAKE} -C src -f Makefile.postgres
-	${MAKE} -C src -f Makefile.sqlite
 ifneq ($(subst no,,${WITH_SQLITE}${WITH_POSTGRES}),)
-	${MAKE} -C src -f Makefile.tools
-endif
-ifeq (${WITH_GMP},yes)
-	${MAKE} -C src -f Makefile.gmp
+	${MAKE} -C src -f Makefile.tools buildall
 endif
 
 examples:
@@ -60,21 +52,21 @@ install_library_type:
 	${MKDIR} ${datadir}/examples
 	${MKDIR} ${includedir}/${TARNAME}
 	${MKDIR} ${datadir}/gps/plug-ins
-	${MAKE} -C src -f Makefile.gnatcoll install
+	${MAKE} -C src -f Makefile.gnatcoll libinstall
 ifeq (${WITH_PYTHON},yes)
-	${MAKE} -C src -f Makefile.python install
+	${MAKE} -C src -f Makefile.python libinstall
 endif
 	${MAKE} -C docs install
 ifeq (${WITH_GTK},yes)
-	${MAKE} -C src -f Makefile.gtk install
+	${MAKE} -C src -f Makefile.gtk libinstall
 endif
-	${MAKE} -C src -f Makefile.postgres install
-	${MAKE} -C src -f Makefile.sqlite install
+	${MAKE} -C src -f Makefile.postgres libinstall
+	${MAKE} -C src -f Makefile.sqlite libinstall
 ifneq ($(subst no,,${WITH_SQLITE}${WITH_POSTGRES}),)
-	${MAKE} -C src -f Makefile.tools install
+	${MAKE} -C src -f Makefile.tools installbin
 endif
 ifeq (${WITH_GMP},yes)
-	${MAKE} -C src -f Makefile.gmp install
+	${MAKE} -C src -f Makefile.gmp libinstall
 endif
 	${CP} distrib/gnatcoll_gps.xml ${datadir}/gps/plug-ins
 	${CP} distrib/*.gpr ${libdir}/gnat
@@ -85,25 +77,15 @@ install_relocatable install_shared:
 	${MAKE} LIBRARY_TYPE=relocatable install_library_type
 
 clean:
-	${MAKE} LIBRARY_TYPE=relocatable -C src -f Makefile.gnatcoll $@
-	${MAKE} LIBRARY_TYPE=static      -C src -f Makefile.gnatcoll $@
-	${MAKE} LIBRARY_TYPE=relocatable -C src -f Makefile.python $@
-	${MAKE} LIBRARY_TYPE=static      -C src -f Makefile.python $@
+	-gprclean -r -q -Pgnatcoll_build -XLIBRARY_TYPE=relocatable
+	-gprclean -r -q -Pgnatcoll_build -XLIBRARY_TYPE=static
 ifeq (${WITH_GTK},yes)
-	${MAKE} LIBRARY_TYPE=relocatable -C src -f Makefile.gtk $@
-	${MAKE} LIBRARY_TYPE=static     -C src -f Makefile.gtk $@
+	-gprclean -r -q -Psrc/gnatcoll_gtk -XLIBRARY_TYPE=relocatable
+	-gprclean -r -q -Psrc/gnatcoll_gtk -XLIBRARY_TYPE=static
 endif
-	${MAKE} LIBRARY_TYPE=relocatable -C src -f Makefile.postgres $@
-	${MAKE} LIBRARY_TYPE=static     -C src -f Makefile.postgres $@
-	${MAKE} LIBRARY_TYPE=relocatable -C src -f Makefile.sqlite $@
-	${MAKE} LIBRARY_TYPE=static     -C src -f Makefile.sqlite $@
-	${MAKE} LIBRARY_TYPE=relocatable -C src -f Makefile.gmp $@
-	${MAKE} LIBRARY_TYPE=static     -C src -f Makefile.gmp $@
-	${MAKE} LIBRARY_TYPE=relocatable -C src -f Makefile.tools $@
-	${MAKE} LIBRARY_TYPE=static     -C src -f Makefile.tools $@
-	${MAKE} -C testsuite $@
-	${MAKE} -C docs $@
-	${MAKE} -C examples $@
+	-${MAKE} -C testsuite $@
+	-${MAKE} -C docs $@
+	-${MAKE} -C examples $@
 
 docs:
 	${MAKE} -C docs

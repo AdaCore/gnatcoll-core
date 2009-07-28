@@ -1,13 +1,8 @@
 --  This project file is only meant for edition in GPS
-with "src/gnatcoll";
+with "src/gnatcoll_build";
 with "src/gnatcoll_gtk";
-with "src/gnatcoll_python";
-with "src/gnatcoll_postgres";
-with "src/gnatcoll_sqlite";
-with "src/gnatcoll_tools";
 project Gnatcoll_GPS is
    for Source_Dirs use ();
-
    package IDE is
       for VCS_Kind use "Subversion";
    end IDE;
