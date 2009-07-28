@@ -149,6 +149,7 @@ AC_DEFUN(AM_LIB_PATH,
 # The following variables are exported by configure:
 #   @WITH_POSTGRES@: whether postgres was detected
 #   @PATH_LIBPQ@: path to libpq, or "" if not found
+#   @HAS_PQPREPARE@: whether the version of postgreSQL has PQprepare ()
 #############################################################
 
 AC_DEFUN(AM_PATH_POSTGRES,
@@ -187,8 +188,13 @@ AC_HELP_STRING(
      fi
    fi
 
+   if test x"$WITH_POSTGRES" = xyes ; then
+     AC_CHECK_LIB(pq,PQprepare,HAS_PQPREPARE=yes,HAS_PQPREPARE=no,[$PATH_LIBPQ])
+   fi
+
    AC_SUBST(WITH_POSTGRES)
    AC_SUBST(PATH_LIBPQ)
+   AC_SUBST(HAS_PQPREPARE)
 ])
 
 #############################################################

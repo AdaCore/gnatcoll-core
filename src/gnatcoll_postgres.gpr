@@ -10,7 +10,7 @@ project GnatColl_Postgres is
    for Library_Version use
       "lib" & Project'Library_Name & ".so." & GnatColl_Shared.Version;
 
-   for Languages use ("Ada");
+   for Languages use ("Ada", "C");
 
    case GnatColl_Shared.Postgres is
       when "no" =>
@@ -21,7 +21,20 @@ project GnatColl_Postgres is
 
    package Builder  renames GnatColl_Shared.Builder;
 
-   package Compiler renames GnatColl_Shared.Compiler;
+   package Compiler is
+      for Default_Switches ("Ada") use
+        GnatColl_Shared.Compiler'Default_Switches ("Ada");
+
+      case GnatColl_Shared.Postgres_Has_PQprepare is
+         when "yes" =>
+           for Default_Switches ("C") use
+              GnatColl_Shared.Compiler'Default_Switches ("C")
+              & ("-DHAS_PQPREPARE");
+         when "no" =>
+           for Default_Switches ("C") use
+              GnatColl_Shared.Compiler'Default_Switches ("C");
+      end case;
+   end Compiler;
 
    package Linker   renames GnatColl_Shared.Linker;
 

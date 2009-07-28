@@ -16,6 +16,8 @@ project GnatColl_Shared is
    Postgres : Yes_No := External ("POSTGRES", "@WITH_POSTGRES@");
    Sqlite   : Yes_No := External ("SQLITE", "@WITH_SQLITE@");
    Templates : Yes_No := "no";  --  Hard-coded for now
+   Postgres_Has_PQprepare : Yes_No :=
+      External ("HAS_PQPREPARE", "@HAS_PQPREPARE@");
 
    type Library_Type_Type is ("relocatable", "static");
    Library_Type : Library_Type_Type :=
@@ -39,9 +41,11 @@ project GnatColl_Shared is
             for Default_Switches ("Ada") use
               ("-g", "-O1", "-gnata", "-gnatVa", "-gnatQ", "-gnaty",
                "-gnatwaCJe", "-Wall", "-gnat05");
+            for Default_Switches ("C") use ("-g");
          when "Production" =>
             for Default_Switches ("Ada") use
-              ("-g", "-O2", "-gnatn", "-gnatws", "-gnat05");
+              ("-O2", "-gnatn", "-gnatws", "-gnat05");
+            for Default_Switches ("C") use ("-O2");
       end case;
    end Compiler;
 

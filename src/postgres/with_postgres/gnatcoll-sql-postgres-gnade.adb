@@ -156,7 +156,7 @@ package body GNATCOLL.SQL.Postgres.Gnade is
             nParams : Natural := 0;
             Types   : System.Address := System.Null_Address)
             return System.Address;
-         pragma Import (C, PQprepare, "PQprepare");
+         pragma Import (C, PQprepare, "gnatcoll_pqprepare");
 
          R : constant PGresult :=
            To_Result
