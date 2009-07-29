@@ -190,6 +190,8 @@ AC_HELP_STRING(
 
    if test x"$WITH_POSTGRES" = xyes ; then
      AC_CHECK_LIB(pq,PQprepare,HAS_PQPREPARE=yes,HAS_PQPREPARE=no,[$PATH_LIBPQ])
+   else
+     HAS_PQPREPARE=no
    fi
 
    AC_SUBST(WITH_POSTGRES)
