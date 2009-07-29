@@ -12,7 +12,7 @@ endif
 all:     gnatcoll_db2ada
 
 gnatcoll_db2ada: force
-	gprbuild -P$(PROJECT) $@ -largs $(POSTGRES_PATH)
+	gprbuild -P$(PROJECT) $@ -largs $(POSTGRES_PATH) -p
 
 installbin: force
 	$(CP) obj/gnatcoll_db2ada $(bindir)

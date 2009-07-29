@@ -9,10 +9,10 @@ all:
 	@${MKDIR} obj
 	gnatmake -Pexamples
 ifeq ($(WITH_GTK),yes)
-	gprbuild -Pexamplesgtk
+	gprbuild -Pexamplesgtk -p
 endif
 ifeq ($(WITH_GMP),yes)
-	gprbuild -Pgmp/gmp_examples.gpr
+	gprbuild -Pgmp/gmp_examples.gpr -p
 endif
 	@echo "==================================================="
 	@echo "== To run, set the environment variable LD_LIBRARY_PATH"
