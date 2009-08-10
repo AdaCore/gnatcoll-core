@@ -1684,6 +1684,21 @@ package body GNATCOLL.Email is
    function Get_Param (H : Header'Class; Param_Name : String) return String is
       C : Charset_String_List.Cursor;
       Semicolon, Name_Start, Name_End, Val_End : Integer;
+
+      function Get_Val return String;
+      --  Return the value, omitting surrounding quotes if any
+
+      function Get_Val return String is
+         Str : constant String :=
+           Slice (Element (C).Contents, Name_End + 2, Val_End);
+      begin
+         if Str (Str'First) = '"' then
+            return Str (Str'First + 1 .. Str'Last - 1);
+         else
+            return Str;
+         end if;
+      end Get_Val;
+
    begin
       if H.Contents /= null then
          C := First (H.Contents.Value);
@@ -1691,15 +1706,30 @@ package body GNATCOLL.Email is
            (H, Param_Name, C, Semicolon, Name_Start, Name_End,
             Val_End);
          if Has_Element (C) then
+            return Get_Val;
+
+         else
+            --  Support for continuation headers
+            --  http://greenbytes.de/tech/webdav/rfc2231.html#rfc.section.3
+            --  where a header can be split onto several lines
+
             declare
-               Str : constant String :=
-                 Slice (Element (C).Contents, Name_End + 2, Val_End);
+               Current : Natural := 0;
+               Val     : Unbounded_String;
             begin
-               if Str (Str'First) = '"' then
-                  return Str (Str'First + 1 .. Str'Last - 1);
-               else
-                  return Str;
-               end if;
+               loop
+                  Get_Param_Index
+                    (H, Param_Name & "*" & Image (Current, Min_Width => 1),
+                     C, Semicolon, Name_Start, Name_End,
+                     Val_End);
+                  exit when not Has_Element (C);
+
+                  Append (Val, Get_Val);
+
+                  Current := Current + 1;
+               end loop;
+
+               return To_String (Val);
             end;
          end if;
       end if;

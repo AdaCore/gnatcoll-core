@@ -133,6 +133,10 @@ package GNATCOLL.Email is
    function Get_Param (H : Header'Class; Param_Name : String) return String;
    --  Get the value for one of H's parameters, or "" if there is no such
    --  param.
+   --  This automatically handles continuation headers, ie cases where the
+   --  value of the parameter was split onto several lines, as in:
+   --     filename*0="value1";
+   --     filename*1="value2"
 
    procedure Delete_Param (H : in out Header'Class; Param_Name : String);
    --  Remove in place one of H's parameters.
