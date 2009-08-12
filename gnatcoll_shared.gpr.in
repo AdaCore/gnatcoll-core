@@ -15,6 +15,7 @@ project GnatColl_Shared is
    Syslog : Yes_No := External ("SYSLOG", "@WITH_SYSLOG@");
    Postgres : Yes_No := External ("POSTGRES", "@WITH_POSTGRES@");
    Sqlite   : Yes_No := External ("SQLITE", "@WITH_SQLITE@");
+   Gmp      : Yes_No := External ("GMP", "@WITH_GMP@");
    Templates : Yes_No := "no";  --  Hard-coded for now
    Postgres_Has_PQprepare : Yes_No :=
       External ("HAS_PQPREPARE", "@HAS_PQPREPARE@");
