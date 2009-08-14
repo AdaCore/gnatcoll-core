@@ -574,7 +574,6 @@ package body GNATCOLL.VFS is
    begin
       if File.Value = null then
          return "";
-
       else
          return File.Value.To_UTF8 (+File.Base_Dir_Name);
       end if;
