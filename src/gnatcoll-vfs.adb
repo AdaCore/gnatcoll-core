@@ -182,7 +182,7 @@ package body GNATCOLL.VFS is
                Ind2 := Ind2 + 1;
             end loop;
 
-            return False;
+            return True;
          end if;
       end if;
    end "<";
