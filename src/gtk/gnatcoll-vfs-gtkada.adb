@@ -148,7 +148,12 @@ package body GNATCOLL.VFS.GtkAda is
       Value : GValue;
    begin
       Gtk.Tree_Model.Get_Value (Tree_Model, Iter, Column, Value);
-      return Get_File (Value);
+      declare
+         Result : constant Virtual_File := Get_File (Value);
+      begin
+         Unset (Value);
+         return Result;
+      end;
    end Get_File;
 
 end GNATCOLL.VFS.GtkAda;

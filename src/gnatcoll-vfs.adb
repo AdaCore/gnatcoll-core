@@ -1368,14 +1368,11 @@ package body GNATCOLL.VFS is
          end loop;
       end;
 
-      if F_Array /= null then
-         return F_Array;
-      else
-         return null;
-      end if;
+      return F_Array;
 
    exception
       when E : others =>
+         Unchecked_Free (F_Array);
          Raise_Exception
            (VFS_Directory_Error'Identity,
             Exception_Message (E));
