@@ -412,12 +412,12 @@ package body GNATCOLL.SQL.Postgres.Builder is
 
       --  Attempt to reconnect, in case we lost the connection
 
-      Print_Warning
-        (Connection,
-         "Reconnecting to the database "
-         & Get_Connection_String (Get_Description (Connection), False));
-
       if Connection.Postgres = null then
+         Print_Warning
+           (Connection,
+            "Connecting to the database "
+            & Get_Connection_String (Get_Description (Connection), False));
+
          if Connection.Connection_String = null then
             Connection.Connection_String := new String'
               (Get_Connection_String (Get_Description (Connection), True));
@@ -426,24 +426,11 @@ package body GNATCOLL.SQL.Postgres.Builder is
          Connection.Postgres := new GNATCOLL.SQL.Postgres.Gnade.Database
            (Connection.Connection_String);
       else
-         Reset (Connection.Postgres.all);
-      end if;
-
-      --  Output error message, including PostgreSQL connection string,
-      --  but with password obscured.
-
-      if Status (Connection.Postgres.all) /= CONNECTION_OK then
-         Close (Connection);
-         Connection.Postgres := null;
-         Print_Error
+         Print_Warning
            (Connection,
-            "Cannot connect to Postgres database."
-            & " Connection string is """
-            & Get_Connection_String (Get_Description (Connection), False)
-            & """. Aborting...");
-
-         Success := False;
-         return;
+            "Reconnecting to the database "
+            & Get_Connection_String (Get_Description (Connection), False));
+         Reset (Connection.Postgres.all);
       end if;
 
       --  Now that we have (re)connected, try to execute the query again
@@ -459,7 +446,7 @@ package body GNATCOLL.SQL.Postgres.Builder is
                when PGRES_NONFATAL_ERROR
                   | PGRES_FATAL_ERROR
                   | PGRES_EMPTY_QUERY =>
-                  Print_Error (Connection, "Database error: " & Error (Res));
+                  null;
 
                when others =>
                   Success := True;
@@ -469,16 +456,24 @@ package body GNATCOLL.SQL.Postgres.Builder is
 
       exception
          when PostgreSQL_Error =>
-            if Status (Connection.Postgres.all) /= CONNECTION_OK then
-               Print_Error
-                 (Connection, "Error with the connection to the database: "
-                  & ConnStatus'Image (Status (Connection.Postgres.all)));
-            else
-               Print_Error
-                 (Connection, ExecStatus'Image (Status (Res))
-                  & " " & Error (Res) & "while executing: " & Query);
-            end if;
+            null;
       end;
+
+      if Status (Connection.Postgres.all) /= CONNECTION_OK then
+         Close (Connection);
+         Connection.Postgres := null;
+         Print_Error
+           (Connection, "Cannot connect to PostgreSQL database "
+            & ConnStatus'Image (Status (Connection.Postgres.all))
+            & " Connection String is """
+            & Get_Connection_String
+              (Get_Description (Connection), False)
+            & """. Aborting...");
+      else
+         Print_Error
+           (Connection, ExecStatus'Image (Status (Res))
+            & " " & Error (Res) & "while executing: " & Query);
+      end if;
 
       Success := False;
    end Connect_And_Do;
