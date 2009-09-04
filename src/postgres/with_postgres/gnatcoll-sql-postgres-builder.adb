@@ -460,8 +460,6 @@ package body GNATCOLL.SQL.Postgres.Builder is
       end;
 
       if Status (Connection.Postgres.all) /= CONNECTION_OK then
-         Close (Connection);
-         Connection.Postgres := null;
          Print_Error
            (Connection, "Cannot connect to PostgreSQL database "
             & ConnStatus'Image (Status (Connection.Postgres.all))
@@ -469,6 +467,8 @@ package body GNATCOLL.SQL.Postgres.Builder is
             & Get_Connection_String
               (Get_Description (Connection), False)
             & """. Aborting...");
+         Close (Connection);
+         Connection.Postgres := null;
       else
          Print_Error
            (Connection, ExecStatus'Image (Status (Res))
