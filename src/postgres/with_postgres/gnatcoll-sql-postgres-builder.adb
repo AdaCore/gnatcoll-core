@@ -437,7 +437,18 @@ package body GNATCOLL.SQL.Postgres.Builder is
 
       begin
          if Query = "" then
-            Success := True;
+            Success :=  Status (Connection.Postgres.all) = CONNECTION_OK;
+            if not Success then
+               Print_Error
+                 (Connection, "Cannot connect to PostgreSQL database "
+                  & ConnStatus'Image (Status (Connection.Postgres.all))
+                  & " Connection String is """
+                  & Get_Connection_String
+                    (Get_Description (Connection), False)
+                  & """. Aborting...");
+               Close (Connection);
+               Connection.Postgres := null;
+            end if;
             return;
          else
             Perform (Res, Query);
