@@ -161,12 +161,14 @@ package GNATCOLL.VFS is
    --  Return the base name of the directory or the file
 
    function Full_Name
-     (File      : Virtual_File;
-      Normalize : Boolean := False)
+     (File          : Virtual_File;
+      Normalize     : Boolean := False;
+      Resolve_Links : Boolean := False)
       return Cst_String_Access;
    --  Return the full path to File.
    --  If Normalize is True, the file name is first normalized, note that links
-   --  are not resolved there.
+   --  are not resolved there by default, unless you specify Resolve_Links to
+   --  True.
    --  The returned value can be used to recreate a Virtual_File instance.
    --  If file names are case insensitive, the normalized name will always
    --  be all lower cases.

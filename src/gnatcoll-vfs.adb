@@ -445,7 +445,9 @@ package body GNATCOLL.VFS is
    ---------------
 
    function Full_Name
-     (File : Virtual_File; Normalize : Boolean := False)
+     (File          : Virtual_File;
+      Normalize     : Boolean := False;
+      Resolve_Links : Boolean := False)
       return Cst_String_Access is
    begin
       if File.Value = null then
@@ -453,7 +455,7 @@ package body GNATCOLL.VFS is
 
       elsif File.Value.Full /= null and then Normalize then
 
-         Ensure_Normalized (File, False);
+         Ensure_Normalized (File, Resolve_Links);
 
          return Cst_String_Access (+File.Value.Normalized.all'Access);
 
