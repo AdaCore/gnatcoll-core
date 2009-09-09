@@ -435,58 +435,39 @@ package body GNATCOLL.SQL.Postgres.Builder is
 
       --  Now that we have (re)connected, try to execute the query again
 
-      begin
-         if Query = "" then
-            Success :=  Status (Connection.Postgres.all) = CONNECTION_OK;
-            if not Success then
-               Print_Error
-                 (Connection, "Cannot connect to PostgreSQL database "
-                  & ConnStatus'Image (Status (Connection.Postgres.all))
-                  & " Connection String is """
-                  & Get_Connection_String
-                    (Get_Description (Connection), False)
-                  & """. Aborting...");
-               Close (Connection);
-               Connection.Postgres := null;
-            end if;
-            return;
-         else
-            Perform (Res, Query);
-
-            case ExecStatus'(Status (Res)) is
-               when PGRES_NONFATAL_ERROR
-                  | PGRES_FATAL_ERROR
-                  | PGRES_EMPTY_QUERY =>
-                  null;
-
-               when others =>
-                  Success := True;
-                  return;
-            end case;
+      if Query = "" then
+         Success := Status (Connection.Postgres.all) = CONNECTION_OK;
+         if not Success then
+            Print_Error
+              (Connection, "Cannot connect to PostgreSQL database "
+               & " Connection String is """
+               & Get_Connection_String
+                 (Get_Description (Connection), False)
+               & """");
+            Close (Connection);
+            Connection.Postgres := null;
          end if;
+         return;
 
-      exception
-         when PostgreSQL_Error =>
-            null;
-      end;
-
-      if Status (Connection.Postgres.all) /= CONNECTION_OK then
-         Print_Error
-           (Connection, "Cannot connect to PostgreSQL database "
-            & ConnStatus'Image (Status (Connection.Postgres.all))
-            & " Connection String is """
-            & Get_Connection_String
-              (Get_Description (Connection), False)
-            & """. Aborting...");
-         Close (Connection);
-         Connection.Postgres := null;
       else
-         Print_Error
-           (Connection, ExecStatus'Image (Status (Res))
-            & " " & Error (Res) & "while executing: " & Query);
-      end if;
+         Perform (Res, Query);
 
-      Success := False;
+         case ExecStatus'(Status (Res)) is
+            when PGRES_NONFATAL_ERROR
+               | PGRES_FATAL_ERROR
+               | PGRES_EMPTY_QUERY =>
+
+               Success := False;
+
+               --  We do not check the connection status here. Ideally, we
+               --  should check whether Res.Res (private) is a Null_Result,
+               --  which postgreSQL uses to indicate fatal errors like
+               --  connection issues.
+
+            when others =>
+               Success := True;
+         end case;
+      end if;
    end Connect_And_Do;
 
    -----------------
