@@ -1,7 +1,7 @@
 -----------------------------------------------------------------------
 --                          G N A T C O L L                          --
 --                                                                   --
---                 Copyright (C) 2006-2008, AdaCore                  --
+--                 Copyright (C) 2006-2009, AdaCore                  --
 --                                                                   --
 -- GPS is free  software;  you can redistribute it and/or modify  it --
 -- under the terms of the GNU General Public License as published by --
@@ -68,7 +68,7 @@ package GNATCOLL.Email.Utils is
    --  also not compatible with RFC 2822.
 
    function Format_Time
-     (Date      : Ada.Calendar.Time)return String;
+     (Date      : Ada.Calendar.Time) return String;
    --  Format the time in Date as a RFC2822 string, eg:
    --       01:08:47 -0000
 
