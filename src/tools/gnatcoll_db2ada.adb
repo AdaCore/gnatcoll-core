@@ -111,11 +111,17 @@ procedure GNATCOLL_Db2Ada is
    Queries : Query_Lists.List;
 
    type Foreign_Key_Description is record
-      To_Table : Ada.Strings.Unbounded.Unbounded_String;
-      From_Attributes, To_Attributes : String_Lists.List;
+      To_Table        : Ada.Strings.Unbounded.Unbounded_String;
+      From_Attributes : String_Lists.List;
+      To_Attributes   : String_Lists.List;
+      Ambiguous       : Boolean;
    end record;
    --  A foreign key from one table to another
    --      From_Table (From_Attributes) REFERENCES To_Table (To_Attributes)
+   --  Ambiguous is set to True when a To_Table (To_Attribute) tuple appear in
+   --  several foreign keys e.g.
+   --     (who_contact) REFERENCES contact(id)
+   --     (contact)     REFERENCES contact(id)
 
    package Foreign_Keys is new Ada.Containers.Doubly_Linked_Lists
      (Foreign_Key_Description);
@@ -318,22 +324,23 @@ procedure GNATCOLL_Db2Ada is
            (Index             : Positive;
             Local_Attribute   : Integer;
             Foreign_Table     : String;
-            Foreign_Attribute : Integer)
-         is
+            Foreign_Attribute : Integer) is
          begin
             if Prev_Index /= Index then
-               --  a new foreign key, as opposed to a new attribute in the same
+               --  A new foreign key, as opposed to a new attribute in the same
                --  key
 
                if Prev_Index /= -1 then
                   Append (Table.Foreign, Descr);
                end if;
 
-               Prev_Index  := Index;
-               Descr       :=
+               Prev_Index := Index;
+
+               Descr :=
                  (To_Table        => To_Unbounded_String (Foreign_Table),
                   From_Attributes => String_Lists.Empty_List,
-                  To_Attributes   => String_Lists.Empty_List);
+                  To_Attributes   => String_Lists.Empty_List,
+                  Ambiguous       => False);
             end if;
 
             Append
@@ -344,14 +351,50 @@ procedure GNATCOLL_Db2Ada is
                  (Element (Find (Tables, Foreign_Table)), Foreign_Attribute));
          end On_Key;
 
+         Foreign_Cursor1 : Foreign_Keys.Cursor;
+         Foreign_Cursor2 : Foreign_Keys.Cursor;
+
+         Foreign1, Foreign2 : Foreign_Key_Description;
       begin
          Foreach_Foreign_Key
            (Connection,
             Table_Name => Name,
             Callback   => On_Key'Access);
+
          if Prev_Index /= -1 then
             Append (Table.Foreign, Descr);
          end if;
+
+         --  Check for ambiguities
+
+         Foreign_Cursor1 := First (Table.Foreign);
+
+         while Has_Element (Foreign_Cursor1) loop
+            Foreign1 := Element (Foreign_Cursor1);
+
+            if not Foreign1.Ambiguous then
+               Foreign_Cursor2 := First (Table.Foreign);
+
+               while Has_Element (Foreign_Cursor2) loop
+                  Foreign2 := Element (Foreign_Cursor2);
+
+                  if To_String (Foreign1.To_Table) =
+                    To_String (Foreign2.To_Table)
+                    and then Foreign_Cursor1 /= Foreign_Cursor2
+                  then
+                     Foreign1.Ambiguous := True;
+
+                     Replace_Element
+                       (Table.Foreign, Foreign_Cursor1, Foreign1);
+                     Delete (Table.Foreign, Foreign_Cursor2);
+                  end if;
+
+                  Next (Foreign_Cursor2);
+               end loop;
+            end if;
+
+            Next (Foreign_Cursor1);
+         end loop;
       end Compute_Foreign_Keys;
 
       T : Tables_Maps.Cursor := First (Tables);
@@ -804,9 +847,9 @@ procedure GNATCOLL_Db2Ada is
       end loop;
    end Generate_Text;
 
-   DB_Descr          : Database_Description;
-   Connection        : Database_Connection;
-   Enums, Vars       : String_Lists.List;
+   DB_Descr    : Database_Description;
+   Connection  : Database_Connection;
+   Enums, Vars : String_Lists.List;
    --  The internal index corresponding to each table. This is used to create
    --  the adjacency matrix, that indicates whether there is a known
    --  relationship between two tables.

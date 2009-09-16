@@ -218,7 +218,7 @@ begin
 
    C := First (Tables);
    while Has_Element (C) loop
-      T_Descr      := Element (C);
+      T_Descr := Element (C);
 
       New_Line (Spec_File);
       Put_Line (Spec_File, "   type T_" & Capitalize (Key (C))
@@ -246,45 +246,57 @@ begin
       Put_Line (Spec_File, "   end record;");
       Print_Comment (Spec_File, "   ", To_String (T_Descr.Description));
 
-      if Length (T_Descr.Foreign) /= 0 then
-         New_Line (Spec_File);
-         Put_Line (Spec_File, "   overriding function FK");
-         Put_Line (Spec_File, "      (Self : T_"
-                   & Capitalize (Key (C))
-                   & "; Foreign : SQL_Table'Class) return SQL_Criteria;");
-      end if;
+      Next (C);
+   end loop;
 
-      New_Line (Spec_File);
-      Put_Line (Spec_File, "   " & Capitalize (Key (C))
-                & " : T_" & Capitalize (Key (C)) & " (null);");
+   New_Line (Spec_File);
 
-      if Length (T_Descr.Foreign) /= 0 then
-         New_Line (Body_File);
-         Put_Line (Body_File, "   function FK");
-         Put_Line (Body_File,
-                   "     (Self : T_" & Capitalize (Key (C))
-                   & "; Foreign : SQL_Table'Class) return SQL_Criteria is");
-         Put_Line (Body_File, "   begin");
+   C := First (Tables);
+   while Has_Element (C) loop
+      T_Descr := Element (C);
 
-         K := First (T_Descr.Foreign);
-         while Has_Element (K) loop
-            FK := Element (K);
-            Put_Line (Body_File, "      if Foreign.Table_Name = Ta_"
-                      & Capitalize (FK.To_Table) & " then");
+      K := First (T_Descr.Foreign);
+
+      while Has_Element (K) loop
+         FK := Element (K);
+
+         if not FK.Ambiguous then
+            Put_Line (Spec_File, "   function FK (Self : T_" &
+                      Capitalize (Key (C)) &
+                      "; Foreign : T_" & Capitalize (FK.To_Table) &
+                      "'Class) return SQL_Criteria;");
+         end if;
+
+         Next (K);
+      end loop;
+
+      K := First (T_Descr.Foreign);
+
+      while Has_Element (K) loop
+         FK := Element (K);
+
+         if not FK.Ambiguous then
+            New_Line (Body_File);
+            Put_Line (Body_File, "   function FK (Self : T_" &
+                      Capitalize (Key (C)) &
+                      "; Foreign : T_" & Capitalize (FK.To_Table) &
+                      "'Class) return SQL_Criteria is");
+
+            Put_Line (Body_File, "   begin");
 
             S1 := First (FK.From_Attributes);
             S2 := First (FK.To_Attributes);
+
             while Has_Element (S1) loop
                if S1 = First (FK.From_Attributes) then
-                  Put (Body_File, "         return Self.");
+                  Put (Body_File, "      return Self.");
                else
-                  Put (Body_File, "            and Self.");
+                  Put (Body_File, "         and Self.");
                end if;
 
                Put (Body_File,
                     Capitalize (Element (S1))
-                    & " = T_" & Capitalize (FK.To_Table)
-                    & " (Foreign)."
+                    & " = Foreign."
                     & Capitalize (Element (S2)));
 
                if S1 = Last (FK.From_Attributes) then
@@ -297,29 +309,26 @@ begin
                Next (S2);
             end loop;
 
-            Put_Line (Body_File, "      end if;");
-            Next (K);
-         end loop;
+            Put_Line (Body_File, "   end FK;");
+         end if;
 
-         Put_Line (Body_File, "      return No_Criteria;");
-         Put_Line (Body_File, "   end FK;");
-      end if;
+         Next (K);
+      end loop;
 
       Next (C);
    end loop;
 
-   --  New_Line (Spec_File);
-   --  Put_Line (Spec_File, "private");
+   New_Line (Spec_File);
 
-   --  C := First (Tables);
-   --  while Has_Element (C) loop
-   --     Put_Line (Spec_File, "   " & Capitalize (Key (C))
-   --               & " : constant T_" & Capitalize (Key (C))
-   --               & " (null) := (others => <>);");
-   --     Next (C);
-   --  end loop;
+   C := First (Tables);
+   while Has_Element (C) loop
+      T_Descr := Element (C);
 
-   --  Print footer
+      Put_Line (Spec_File, "   " & Capitalize (Key (C))
+                & " : T_" & Capitalize (Key (C)) & " (null);");
+
+      Next (C);
+   end loop;
 
    Put_Line (Spec_File, "end Database;");
    Put_Line (Body_File, "end Database;");

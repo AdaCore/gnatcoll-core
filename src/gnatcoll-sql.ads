@@ -137,10 +137,6 @@ package GNATCOLL.SQL is
    procedure Free (A : in out SQL_Table_Access);
    --  Needs to be freed explicitely
 
-   function FK
-     (Self : SQL_Table; Foreign : SQL_Table'Class) return SQL_Criteria;
-   --  Criteria to use when joining the two instances
-
    function "&" (Left, Right : SQL_Table_List) return SQL_Table_List;
    function "&" (Left, Right : SQL_Single_Table'Class) return SQL_Table_List;
    function "&" (Left : SQL_Table_List; Right : SQL_Single_Table'Class)
@@ -566,15 +562,10 @@ package GNATCOLL.SQL is
    function Left_Join
      (Full    : SQL_Single_Table'Class;
       Partial : SQL_Single_Table'Class;
-      On      : SQL_Criteria := No_Criteria) return SQL_Left_Join_Table;
+      On      : SQL_Criteria) return SQL_Left_Join_Table;
    --  Performs a left join between the two tables. It behaves like a standard
    --  join, but if a row from Full doesn't match any row in Partial, a virtual
    --  row full of NULL is added to Partial, and returned in the join.
-   --  If On is not specified and the two tables are simple tables (ie not the
-   --  result of another join), it is automatically completed based on the
-   --  foreign keys joining the two tables. This completion relies on the FK
-   --  primitive operations for the tables, so if you have not implemented them
-   --  the auto-completion will not work.
 
    function Join
      (Table1 : SQL_Single_Table'Class;

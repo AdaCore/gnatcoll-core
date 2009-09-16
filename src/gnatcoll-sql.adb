@@ -251,18 +251,6 @@ package body GNATCOLL.SQL is
       end if;
    end Normalize_String;
 
-   --------
-   -- FK --
-   --------
-
-   function FK
-     (Self : SQL_Table; Foreign : SQL_Table'Class) return SQL_Criteria
-   is
-      pragma Unreferenced (Self, Foreign);
-   begin
-      return No_Criteria;
-   end FK;
-
    ---------------
    -- To_String --
    ---------------
@@ -2169,28 +2157,9 @@ package body GNATCOLL.SQL is
    function Left_Join
      (Full    : SQL_Single_Table'Class;
       Partial : SQL_Single_Table'Class;
-      On      : SQL_Criteria := No_Criteria) return SQL_Left_Join_Table
+      On      : SQL_Criteria) return SQL_Left_Join_Table
    is
-      Criteria : SQL_Criteria := On;
    begin
-      if Criteria = No_Criteria then
-         --  We only provide auto-completion if both Full and Partial are
-         --  simple tables (not the result of joins), otherwise it is almost
-         --  impossible to get things right automatically (which tables should
-         --  be involved ? In case of multiple paths between two tables, which
-         --  path should we use ? ...)
-
-         if Full not in SQL_Table'Class
-           or else Partial in SQL_Table'Class
-         then
-            raise Program_Error with "Can only auto-complete simple tables";
-         end if;
-
-         Criteria :=
-           FK (SQL_Table (Full), SQL_Table (Partial))
-           and FK (SQL_Table (Partial), SQL_Table (Full)) and Criteria;
-      end if;
-
       return Result : SQL_Left_Join_Table (Instance => null) do
          Result.Data := Join_Table_Data'
            (Ada.Finalization.Controlled with
@@ -2198,7 +2167,7 @@ package body GNATCOLL.SQL is
               (Refcount     => 1,
                Tables       => Full & Partial,
                Is_Left_Join => True,
-               On           => Criteria));
+               On           => On));
       end return;
    end Left_Join;
 
