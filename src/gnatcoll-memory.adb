@@ -549,7 +549,7 @@ package body GNATCOLL.Memory is
    -----------
 
    procedure Reset is
-      Elem : Traceback_Htable_Elem_Ptr;
+      Elem, Tmp : Traceback_Htable_Elem_Ptr;
    begin
       if Disable then
          return;
@@ -561,9 +561,10 @@ package body GNATCOLL.Memory is
 
       Elem := Backtrace_Htable.Get_First;
       while Elem /= null loop
-         Unchecked_Free (Elem.Traceback);
-         Unchecked_Free (Elem);
+         Tmp := Elem;
          Elem := Backtrace_Htable.Get_Next;
+         Unchecked_Free (Tmp.Traceback);
+         Unchecked_Free (Tmp);
       end loop;
 
       Backtrace_Htable.Reset;
