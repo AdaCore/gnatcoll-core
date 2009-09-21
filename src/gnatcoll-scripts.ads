@@ -469,6 +469,9 @@ package GNATCOLL.Scripts is
    function Get_Instances (List : Instance_List) return Instance_Array;
    --  Return the instance array contained in the given list
 
+   function Length (List : Instance_List_Access) return Natural;
+   --  Return the number of instances that are stored in the list
+
    -------------------------
    -- Instance properties --
    -------------------------

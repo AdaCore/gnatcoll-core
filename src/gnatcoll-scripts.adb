@@ -191,6 +191,23 @@ package body GNATCOLL.Scripts is
       end if;
    end Get_Instances;
 
+   ------------
+   -- Length --
+   ------------
+
+   function Length (List : Instance_List_Access) return Natural is
+      Count : Natural := 0;
+   begin
+      if List /= null and then List.List /= null then
+         for L in List.List'Range loop
+            if List.List (L).Initialized then
+               Count := Count + 1;
+            end if;
+         end loop;
+      end if;
+      return Count;
+   end Length;
+
    ----------
    -- Free --
    ----------
