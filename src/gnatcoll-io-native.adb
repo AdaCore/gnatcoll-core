@@ -262,6 +262,7 @@ package body GNATCOLL.IO.Native is
             Norm : constant String :=
                      GNAT.OS_Lib.Normalize_Pathname
                        (String (File.Full.all),
+                        Directory => String (File.Full.all), --  irrelevant
                         Resolve_Links => True);
          begin
             --  Normalize_Pathname sometimes removes the trailing dir separator

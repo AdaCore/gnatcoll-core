@@ -94,6 +94,26 @@ package GNATCOLL.VFS is
 
    Local_Host : constant String;
 
+   -------------------
+   -- Configuration --
+   -------------------
+
+   procedure Symbolic_Links_Support (Active : Boolean);
+   --  Whether this package should do extra system calls to handle symbolic
+   --  links.
+   --  This is automatically False on platforms like Windows where this notion
+   --  does not exist, but when you know you have no symbolic links manipulated
+   --  by your application you can significantly reduce the number of system
+   --  calls (which in turns speeds things up). If you set it to False, two
+   --  symbolic links that point to the same physical file will be considered
+   --  different by the "=" operator. If you set it to True they will be
+   --  considered equal.
+   --  Changing this is not thread safe. In fact, you should call this before
+   --  manipulating any of the Virtual_File, because GNATCOLL.VFS caches the
+   --  normalization of file names, and would not redo it for existing files
+   --  after you call this function, so the results of "=" in particular might
+   --  be unexpected.
+
    ----------------------------
    --  Creating Virtual_File --
    ----------------------------

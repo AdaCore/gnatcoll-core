@@ -25,7 +25,6 @@ with Ada.Strings.Hash;
 with Ada.Unchecked_Conversion;
 
 with GNAT.Heap_Sort;            use GNAT.Heap_Sort;
-
 with GNATCOLL.Utils;            use GNATCOLL.Utils;
 with GNATCOLL.IO;               use GNATCOLL.IO;
 with GNATCOLL.IO.Remote;        use GNATCOLL.IO.Remote;
@@ -37,6 +36,10 @@ with GNATCOLL.VFS_Types;        use GNATCOLL.VFS_Types;
 package body GNATCOLL.VFS is
 
    Empty_String : aliased Filesystem_String := "";
+
+   Handle_Symbolic_Links : Boolean := GNAT.OS_Lib.Directory_Separator /= '\';
+   --  If this variable is False, we assume there is never any symbolic link,
+   --  and thus we do not spend time resolving them.
 
    function "+" (S : Filesystem_String) return FS_String;
    function "+" (S : FS_String) return Filesystem_String;
@@ -1159,8 +1162,10 @@ package body GNATCOLL.VFS is
 
       if not File.Value.Resolved
         and then Resolve_Symlinks
+        and then Handle_Symbolic_Links
       then
          GNATCOLL.IO.Resolve_Symlinks (File.Value);
+
       elsif File.Value.Normalized = null then
          File.Value.Normalized := new FS_String'
            (Path.Normalize (File.Value.Get_FS, File.Value.Full.all));
@@ -1760,5 +1765,14 @@ package body GNATCOLL.VFS is
 
       return No_File;
    end Locate_Regular_File;
+
+   ----------------------------
+   -- Symbolic_Links_Support --
+   ----------------------------
+
+   procedure Symbolic_Links_Support (Active : Boolean) is
+   begin
+      Handle_Symbolic_Links := Active;
+   end Symbolic_Links_Support;
 
 end GNATCOLL.VFS;
