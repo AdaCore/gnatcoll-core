@@ -337,8 +337,9 @@ package GNATCOLL.VFS is
    --  Sort the array of files, in the order given by the full names
 
    procedure Append (Files : in out File_Array_Access; F : Virtual_File);
-   --  Appends a file to Files. Files can be null, in which case a new
-   --  File_Array is created.
+   procedure Append (Files : in out File_Array_Access; F : File_Array);
+   --  Appends one or more files to Files. Files can be null, in which case a
+   --  new File_Array is created.
 
    procedure Remove (Files : in out File_Array_Access; F : Virtual_File);
    --  Remove F from Files.

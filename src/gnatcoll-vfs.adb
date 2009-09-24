@@ -1581,12 +1581,23 @@ package body GNATCOLL.VFS is
    ------------
 
    procedure Append (Files : in out File_Array_Access; F : Virtual_File) is
+   begin
+      Append (Files, File_Array'(1 => F));
+   end Append;
+
+   ------------
+   -- Append --
+   ------------
+
+   procedure Append (Files : in out File_Array_Access; F : File_Array) is
       Tmp : File_Array_Access;
    begin
       if Files = null then
-         Files := new File_Array'((1 => F));
+         Files := new File_Array'(F);
       else
-         Tmp := new File_Array'(Files.all & File_Array'(1 => F));
+         Tmp := new File_Array (1 .. Files'Length + F'Length);
+         Tmp (1 .. Files'Length) := Files.all;
+         Tmp (Files'Length + 1 .. Tmp'Last) := F;
          Unchecked_Free (Files);
          Files := Tmp;
       end if;
