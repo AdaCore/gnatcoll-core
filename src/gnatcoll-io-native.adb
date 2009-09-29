@@ -178,43 +178,50 @@ package body GNATCOLL.IO.Native is
         (Buffer : System.Address;
          Length : Integer) return Integer;
       pragma Import (C, Internal, "__gnatcoll_get_logical_drive_strings");
-      --  Buffer can contain all letters * 2
-      Buffer : aliased FS_String (1 .. 52);
       Len    : Integer;
       Last   : Natural;
       N      : Natural;
 
    begin
-      Len := Internal (Buffer'Address, Buffer'Length);
+      --  First get the size of the buffer needed to contain the drives.
+      Len := Internal (System.Null_Address, 0);
 
       if Len = 0 then
          return (1 .. 0 => <>);
       end if;
 
-      N := 0;
-      for J in 1 .. Len loop
-         if Buffer (J) = ASCII.NUL then
-            N := N + 1;
-         end if;
-      end loop;
-
       declare
-         Ret : File_Array (1 .. N);
+         --  Use the returned length for creating the buffer. Do not forget
+         --  to add room for the trailing \n
+         Buffer : aliased FS_String (1 .. Len + 1);
       begin
-         N := 1;
-         Last := Buffer'First;
+         Len := Internal (Buffer'Address, Len);
 
+         N := 0;
          for J in 1 .. Len loop
             if Buffer (J) = ASCII.NUL then
-               Ret (N) := Create
-                 (GNATCOLL.Path.Path
-                    (Local_FS, Buffer (Last .. Last), "", ""));
                N := N + 1;
-               Last := J + 1;
             end if;
          end loop;
 
-         return Ret;
+         declare
+            Ret : File_Array (1 .. N);
+         begin
+            N := 1;
+            Last := Buffer'First;
+
+            for J in 1 .. Len loop
+               if Buffer (J) = ASCII.NUL then
+                  Ret (N) := Create
+                    (GNATCOLL.Path.Path
+                       (Local_FS, Buffer (Last .. Last), "", ""));
+                  N := N + 1;
+                  Last := J + 1;
+               end if;
+            end loop;
+
+            return Ret;
+         end;
       end;
    end Get_Logical_Drives;
 
