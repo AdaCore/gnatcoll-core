@@ -266,10 +266,14 @@ package body GNATCOLL.IO.Native is
          end if;
 
          declare
+            --  We have to pass "" for the directory, in case File.Full is a
+            --  relative path name. That might be surprising to the application
+            --  since the current directory might have changed since File was
+            --  created.
             Norm : constant String :=
                      GNAT.OS_Lib.Normalize_Pathname
                        (String (File.Full.all),
-                        Directory => String (File.Full.all), --  irrelevant
+                        Directory => "",
                         Resolve_Links => True);
          begin
             --  Normalize_Pathname sometimes removes the trailing dir separator
