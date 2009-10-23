@@ -26,13 +26,13 @@ package GNATCOLL.GMP.Integers.Root_Extraction is
 
    pragma Inline (SQRT);
 
-   procedure Get_SQRT (This : in Big_Integer;  Into : out Big_Integer);
+   procedure Get_SQRT (This : Big_Integer;  Into : out Big_Integer);
    --  Set Into to the truncated integer part of the square root of This
 
    pragma Inline (Get_SQRT);
 
    procedure Get_SQRT_Remainder
-     (This      : in Big_Integer;
+     (This      : Big_Integer;
       Root      : out Big_Integer;
       Remainder : out Big_Integer);
    --  Set Root to the truncated integer part of the square root of This. Set
@@ -49,8 +49,8 @@ package GNATCOLL.GMP.Integers.Root_Extraction is
    pragma Inline (Nth_Root);
 
    procedure Get_Nth_Root
-     (This  : in Big_Integer;
-      N     : in Unsigned_Long;
+     (This  : Big_Integer;
+      N     : Unsigned_Long;
       Into  : out Big_Integer;
       Exact : out Boolean);
    --  Set Into to the truncated integer part of the Nth root of This. On
@@ -60,8 +60,8 @@ package GNATCOLL.GMP.Integers.Root_Extraction is
    pragma Inline (Get_Nth_Root);
 
    procedure Get_Nth_Root_Remainder
-     (This      : in Big_Integer;
-      N         : in Unsigned_Long;
+     (This      : Big_Integer;
+      N         : Unsigned_Long;
       Root      : out Big_Integer;
       Remainder : out Big_Integer);
    --  Set Root to the truncated integer part of the Nth root of This.  Set

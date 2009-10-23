@@ -36,7 +36,7 @@ package body GNATCOLL.GMP.Integers.Root_Extraction is
    -- Get_SQRT --
    --------------
 
-   procedure Get_SQRT (This : in Big_Integer; Into : out Big_Integer) is
+   procedure Get_SQRT (This : Big_Integer; Into : out Big_Integer) is
    begin
       mpz_sqrt (Into.Value'Access, This.Value'Access);
    end Get_SQRT;
@@ -46,7 +46,7 @@ package body GNATCOLL.GMP.Integers.Root_Extraction is
    ------------------------
 
    procedure Get_SQRT_Remainder
-     (This      : in Big_Integer;
+     (This      : Big_Integer;
       Root      : out Big_Integer;
       Remainder : out Big_Integer)
    is
@@ -76,8 +76,8 @@ package body GNATCOLL.GMP.Integers.Root_Extraction is
    ------------------
 
    procedure Get_Nth_Root
-     (This  : in Big_Integer;
-      N     : in Unsigned_Long;
+     (This  : Big_Integer;
+      N     : Unsigned_Long;
       Into  : out Big_Integer;
       Exact : out Boolean)
    is
@@ -92,8 +92,8 @@ package body GNATCOLL.GMP.Integers.Root_Extraction is
    ----------------------------
 
    procedure Get_Nth_Root_Remainder
-     (This      : in Big_Integer;
-      N         : in Unsigned_Long;
+     (This      : Big_Integer;
+      N         : Unsigned_Long;
       Root      : out Big_Integer;
       Remainder : out Big_Integer)
    is

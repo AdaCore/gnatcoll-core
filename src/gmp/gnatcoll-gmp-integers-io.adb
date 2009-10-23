@@ -26,9 +26,9 @@ package body GNATCOLL.GMP.Integers.IO is
    ---------
 
    procedure Put
-     (This   : in Big_Integer;
-      Base   : in Positive := 10;
-      Stream : in Interfaces.C_Streams.FILEs := Interfaces.C_Streams.stdout)
+     (This   : Big_Integer;
+      Base   : Positive := 10;
+      Stream : Interfaces.C_Streams.FILEs := Interfaces.C_Streams.stdout)
    is
       use Interfaces.C;
       Written : size_t;

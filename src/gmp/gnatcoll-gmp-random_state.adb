@@ -45,7 +45,7 @@ package body GNATCOLL.GMP.Random_State is
 
    procedure Set
      (This : out Generator;
-      To   : in Generator)
+      To   : Generator)
    is
    begin
       gmp_randinit_set (This.G'Access, To.G'Access);
@@ -66,7 +66,7 @@ package body GNATCOLL.GMP.Random_State is
 
    procedure Set_Seed
      (This : in out Generator;
-      Seed : in Big_Integer)
+      Seed : Big_Integer)
    is
    begin
       gmp_randseed (This.G'Access, As_mpz_t (Seed));
@@ -78,7 +78,7 @@ package body GNATCOLL.GMP.Random_State is
 
    procedure Set_Seed
      (This : in out Generator;
-      Seed : in Unsigned_Long)
+      Seed : Unsigned_Long)
    is
    begin
       gmp_randseed_ui (This.G'Access, Seed);

@@ -22,8 +22,8 @@ package GNATCOLL.GMP.Integers.Number_Theoretic is
    pragma Preelaborate;
 
    procedure Get_GCD
-     (Input1 : in Big_Integer;
-      Input2 : in Big_Integer;
+     (Input1 : Big_Integer;
+      Input2 : Big_Integer;
       Output : out Big_Integer);
    --  Set Output to the greatest common divisor of Input1 and Input2. The
    --  result is always positive even if one or both input operands are
@@ -32,4 +32,3 @@ package GNATCOLL.GMP.Integers.Number_Theoretic is
    pragma Inline (Get_GCD);
 
 end GNATCOLL.GMP.Integers.Number_Theoretic;
-

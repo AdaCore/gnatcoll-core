@@ -24,9 +24,9 @@ package GNATCOLL.GMP.Integers.IO is
    pragma Preelaborate;
 
    procedure Put
-     (This   : in Big_Integer;
-      Base   : in Positive := 10;
-      Stream : in Interfaces.C_Streams.FILEs := Interfaces.C_Streams.stdout);
+     (This   : Big_Integer;
+      Base   : Positive := 10;
+      Stream : Interfaces.C_Streams.FILEs := Interfaces.C_Streams.stdout);
    --  Output This on Stream, as a string of digits in base Base. The base
    --  argument may vary from 2 to 62 or from -2 to -36.
    --

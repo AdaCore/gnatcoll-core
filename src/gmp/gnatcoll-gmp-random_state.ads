@@ -40,7 +40,7 @@ package GNATCOLL.GMP.Random_State is
 
    procedure Set
      (This : out Generator;
-      To   : in Generator);
+      To   : Generator);
    --  Initialize This with a copy of the algorithm and state from To.
 
    procedure Clear (This : in out Generator);
@@ -50,12 +50,12 @@ package GNATCOLL.GMP.Random_State is
 
    procedure Set_Seed
      (This : in out Generator;
-      Seed : in Big_Integer);
+      Seed : Big_Integer);
    --  Set an initial seed value into This.
 
    procedure Set_Seed
      (This : in out Generator;
-      Seed : in Unsigned_Long);
+      Seed : Unsigned_Long);
    --  Set an initial seed value into This.
 
    --  Misc

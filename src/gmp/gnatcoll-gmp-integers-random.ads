@@ -29,7 +29,7 @@ package GNATCOLL.GMP.Integers.Random is
    procedure Generate_Number
      (State : in out Generator;
       Into  : out Big_Integer;
-      N     : in Big_Integer);
+      N     : Big_Integer);
    --  Generate a uniform random integer in the range 0 to N-1, inclusive
 
    function Number_Bits (State : Generator; N : Unsigned_Long)
@@ -40,7 +40,7 @@ package GNATCOLL.GMP.Integers.Random is
    procedure Generate_Number_Bits
      (State : in out Generator;
       Into  : out Big_Integer;
-      N     : in Unsigned_Long);
+      N     : Unsigned_Long);
    --  Generate a uniformly distributed random integer in the range 0 to
    --  2^N-1, inclusive
 

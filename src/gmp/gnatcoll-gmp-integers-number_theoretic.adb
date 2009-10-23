@@ -26,8 +26,8 @@ package body GNATCOLL.GMP.Integers.Number_Theoretic is
    -------------
 
    procedure Get_GCD
-     (Input1 : in Big_Integer;
-      Input2 : in Big_Integer;
+     (Input1 : Big_Integer;
+      Input2 : Big_Integer;
       Output : out Big_Integer)
    is
    begin

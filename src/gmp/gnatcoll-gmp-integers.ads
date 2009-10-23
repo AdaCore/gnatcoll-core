@@ -64,8 +64,8 @@ package GNATCOLL.GMP.Integers is
 
    procedure Set
      (This : out Big_Integer;
-      To   : in String;
-      Base : in Int := 10);
+      To   : String;
+      Base : Int := 10);
    --  Set the value of This from To, a string containing a number expressed in
    --  base Base. White space is allowed in the string and is simply ignored.
    --
@@ -81,13 +81,13 @@ package GNATCOLL.GMP.Integers is
    --  Constructs a Big_Integer from This, using the same rules as procedure
    --  Set above.
 
-   procedure Set (This : out Big_Integer;  To : in Big_Integer);
+   procedure Set (This : out Big_Integer;  To : Big_Integer);
    --  Set the value of This from To.
 
-   procedure Set (This : out Big_Integer;  To : in Long);
+   procedure Set (This : out Big_Integer;  To : Long);
    --  Set the value of This from To.
 
-   procedure Set_UL (This : out Big_Integer;  To : in Unsigned_Long);
+   procedure Set_UL (This : out Big_Integer;  To : Unsigned_Long);
    --  Set the value of This from To.
 
    pragma Inline (Set);
@@ -123,10 +123,10 @@ package GNATCOLL.GMP.Integers is
 
    --  Addition
 
-   procedure Add (To : in out Big_Integer;  This : in Unsigned_Long);
-   procedure Add (To : in out Big_Integer;  This : in Big_Integer);
+   procedure Add (To : in out Big_Integer;  This : Unsigned_Long);
+   procedure Add (To : in out Big_Integer;  This : Big_Integer);
 
-   procedure Add (Result : out Big_Integer;  Op1, Op2 : in Big_Integer);
+   procedure Add (Result : out Big_Integer;  Op1, Op2 : Big_Integer);
    --  Result := Op1 + Op2;
    --  No temporaries required.
 
@@ -144,10 +144,10 @@ package GNATCOLL.GMP.Integers is
 
    --  Subtraction
 
-   procedure Subtract (From : in out Big_Integer;  This : in Unsigned_Long);
-   procedure Subtract (From : in out Big_Integer;  This : in Big_Integer);
+   procedure Subtract (From : in out Big_Integer;  This : Unsigned_Long);
+   procedure Subtract (From : in out Big_Integer;  This : Big_Integer);
 
-   procedure Subtract (Result : out Big_Integer;  Op1, Op2 : in Big_Integer);
+   procedure Subtract (Result : out Big_Integer;  Op1, Op2 : Big_Integer);
    --  Result := Op1 - Op2;
    --  No temporaries required.
 
@@ -174,10 +174,10 @@ package GNATCOLL.GMP.Integers is
 
    --  Multiplication
 
-   procedure Multiply (This : in out Big_Integer;  By : in Long);
-   procedure Multiply (This : in out Big_Integer;  By : in Big_Integer);
+   procedure Multiply (This : in out Big_Integer;  By : Long);
+   procedure Multiply (This : in out Big_Integer;  By : Big_Integer);
 
-   procedure Multiply (Result : out Big_Integer;  Op1, Op2 : in Big_Integer);
+   procedure Multiply (Result : out Big_Integer;  Op1, Op2 : Big_Integer);
    --  Result := Op1 * Op2;
    --  No temporaries required.
 
@@ -196,12 +196,12 @@ package GNATCOLL.GMP.Integers is
    --  Division
 
    procedure Divide (Q : in out Big_Integer;
-                     N : in Big_Integer;
-                     D : in Unsigned_Long);
+                     N : Big_Integer;
+                     D : Unsigned_Long);
 
    procedure Divide (Q : in out Big_Integer;
-                     N : in Big_Integer;
-                     D : in Big_Integer);
+                     N : Big_Integer;
+                     D : Big_Integer);
 
    function "/" (Left, Right : Big_Integer) return Big_Integer;
 
@@ -217,7 +217,7 @@ package GNATCOLL.GMP.Integers is
    function "mod" (Left : Big_Integer; Right : Long)
       return Big_Integer;
 
-   procedure Get_Mod (Result : out Big_Integer;  N, D : in Big_Integer);
+   procedure Get_Mod (Result : out Big_Integer;  N, D : Big_Integer);
 
    pragma Inline ("mod");
    pragma Inline (Get_Mod);
@@ -228,7 +228,7 @@ package GNATCOLL.GMP.Integers is
    function "rem" (Left : Big_Integer; Right : Unsigned_Long)
       return Big_Integer;
 
-   procedure Get_Rem (Result : out Big_Integer;  N, D : in Big_Integer);
+   procedure Get_Rem (Result : out Big_Integer;  N, D : Big_Integer);
 
    pragma Inline ("rem");
    pragma Inline (Get_Rem);
@@ -238,11 +238,11 @@ package GNATCOLL.GMP.Integers is
    function "**"(Left : Big_Integer; Right : Unsigned_Long)
       return Big_Integer;
 
-   procedure Raise_To_N (This : in out Big_Integer; N : in Unsigned_Long);
+   procedure Raise_To_N (This : in out Big_Integer; N : Unsigned_Long);
 
    function "abs" (Left : Big_Integer) return Big_Integer;
 
-   procedure Get_Abs (Result : out Big_Integer;  From : in Big_Integer);
+   procedure Get_Abs (Result : out Big_Integer;  From : Big_Integer);
 
    pragma Inline ("**");
    pragma Inline (Raise_To_N);

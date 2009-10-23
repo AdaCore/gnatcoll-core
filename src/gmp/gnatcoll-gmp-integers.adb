@@ -47,8 +47,8 @@ package body GNATCOLL.GMP.Integers is
 
    procedure Set
      (This : out Big_Integer;
-      To   : in String;
-      Base : in Int := 10)
+      To   : String;
+      Base : Int := 10)
    is
       use Interfaces.C.Strings;
 
@@ -77,7 +77,7 @@ package body GNATCOLL.GMP.Integers is
    -- Set --
    ---------
 
-   procedure Set (This : out Big_Integer;  To : in Big_Integer) is
+   procedure Set (This : out Big_Integer;  To : Big_Integer) is
    begin
       mpz_set (This.Value'Access, To.Value'Access);
    end Set;
@@ -86,7 +86,7 @@ package body GNATCOLL.GMP.Integers is
    -- Set --
    ---------
 
-   procedure Set (This : out Big_Integer;  To : in Long) is
+   procedure Set (This : out Big_Integer;  To : Long) is
    begin
       mpz_set_si (This.Value'Access, To);
    end Set;
@@ -95,7 +95,7 @@ package body GNATCOLL.GMP.Integers is
    -- Set --
    ---------
 
-   procedure Set_UL (This : out Big_Integer;  To : in Unsigned_Long) is
+   procedure Set_UL (This : out Big_Integer;  To : Unsigned_Long) is
    begin
       mpz_set_ui (This.Value'Access, To);
    end Set_UL;
@@ -269,7 +269,7 @@ package body GNATCOLL.GMP.Integers is
    -- Add --
    ---------
 
-   procedure Add (To : in out Big_Integer;  This : in Unsigned_Long) is
+   procedure Add (To : in out Big_Integer;  This : Unsigned_Long) is
    begin
       mpz_add_ui (To.Value'Access, To.Value'Access, This);
    end Add;
@@ -278,7 +278,7 @@ package body GNATCOLL.GMP.Integers is
    -- Add --
    ---------
 
-   procedure Add (To : in out Big_Integer;  This : in Big_Integer) is
+   procedure Add (To : in out Big_Integer;  This : Big_Integer) is
    begin
       mpz_add (To.Value'Access, To.Value'Access, This.Value'Access);
    end Add;
@@ -287,7 +287,7 @@ package body GNATCOLL.GMP.Integers is
    -- Add --
    ---------
 
-   procedure Add (Result : out Big_Integer;  Op1, Op2 : in Big_Integer) is
+   procedure Add (Result : out Big_Integer;  Op1, Op2 : Big_Integer) is
    begin
       mpz_add (Result.Value'Access, Op1.Value'Access, Op2.Value'Access);
    end Add;
@@ -339,7 +339,7 @@ package body GNATCOLL.GMP.Integers is
    -- Subtract --
    --------------
 
-   procedure Subtract (From : in out Big_Integer;  This : in Unsigned_Long) is
+   procedure Subtract (From : in out Big_Integer;  This : Unsigned_Long) is
    begin
       mpz_sub_ui (From.Value'Access, From.Value'Access, This);
    end Subtract;
@@ -348,7 +348,7 @@ package body GNATCOLL.GMP.Integers is
    -- Subtract --
    --------------
 
-   procedure Subtract (From : in out Big_Integer;  This : in Big_Integer) is
+   procedure Subtract (From : in out Big_Integer;  This : Big_Integer) is
    begin
       mpz_sub (From.Value'Access, From.Value'Access, This.Value'Access);
    end Subtract;
@@ -357,7 +357,7 @@ package body GNATCOLL.GMP.Integers is
    -- Subtract --
    --------------
 
-   procedure Subtract (Result : out Big_Integer; Op1, Op2 : in Big_Integer) is
+   procedure Subtract (Result : out Big_Integer; Op1, Op2 : Big_Integer) is
    begin
       mpz_sub (Result.Value'Access, Op1.Value'Access, Op2.Value'Access);
    end Subtract;
@@ -409,7 +409,7 @@ package body GNATCOLL.GMP.Integers is
    -- Multiply --
    --------------
 
-   procedure Multiply (This : in out Big_Integer;  By : in Long) is
+   procedure Multiply (This : in out Big_Integer;  By : Long) is
    begin
       mpz_mul_si (This.Value'Access, This.Value'Access, By);
    end Multiply;
@@ -418,7 +418,7 @@ package body GNATCOLL.GMP.Integers is
    -- Multiply --
    --------------
 
-   procedure Multiply (This : in out Big_Integer;  By : in Big_Integer) is
+   procedure Multiply (This : in out Big_Integer;  By : Big_Integer) is
    begin
       mpz_mul (This.Value'Access, This.Value'Access, By.Value'Access);
    end Multiply;
@@ -427,7 +427,7 @@ package body GNATCOLL.GMP.Integers is
    -- Multiply --
    --------------
 
-   procedure Multiply (Result : out Big_Integer;  Op1, Op2 : in Big_Integer) is
+   procedure Multiply (Result : out Big_Integer;  Op1, Op2 : Big_Integer) is
    begin
       mpz_mul (Result.Value'Access, Op1.Value'Access, Op2.Value'Access);
    end Multiply;
@@ -476,8 +476,8 @@ package body GNATCOLL.GMP.Integers is
    ------------
 
    procedure Divide (Q : in out Big_Integer;
-                     N : in Big_Integer;
-                     D : in Unsigned_Long)
+                     N : Big_Integer;
+                     D : Unsigned_Long)
    is
       Dummy : Long;
       pragma Unreferenced (Dummy);
@@ -493,8 +493,8 @@ package body GNATCOLL.GMP.Integers is
    ------------
 
    procedure Divide (Q : in out Big_Integer;
-                     N : in Big_Integer;
-                     D : in Big_Integer)
+                     N : Big_Integer;
+                     D : Big_Integer)
    is
    begin
       if mpz_cmp_ui (D.Value'Access, 0) = 0 then
@@ -589,7 +589,7 @@ package body GNATCOLL.GMP.Integers is
    -- Get_Rem --
    -------------
 
-   procedure Get_Rem (Result : out Big_Integer;  N, D : in Big_Integer) is
+   procedure Get_Rem (Result : out Big_Integer;  N, D : Big_Integer) is
    begin
       if mpz_cmp_ui (D.Value'Access, 0) = 0 then
          raise Constraint_Error;
@@ -659,7 +659,7 @@ package body GNATCOLL.GMP.Integers is
    -- Get_Abs --
    -------------
 
-   procedure Get_Abs (Result : out Big_Integer;  From : in Big_Integer) is
+   procedure Get_Abs (Result : out Big_Integer;  From : Big_Integer) is
    begin
       mpz_abs (Result.Value'Access, From.Value'Access);
    end Get_Abs;
@@ -705,7 +705,7 @@ package body GNATCOLL.GMP.Integers is
    -- Get_Mod --
    -------------
 
-   procedure Get_Mod (Result : out Big_Integer;  N, D : in Big_Integer) is
+   procedure Get_Mod (Result : out Big_Integer;  N, D : Big_Integer) is
    begin
       if mpz_cmp_ui (D.Value'Access, 0) = 0 then
          raise Constraint_Error;

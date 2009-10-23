@@ -41,7 +41,7 @@ package body GNATCOLL.GMP.Integers.Random is
    procedure Generate_Number
      (State : in out Generator;
       Into  : out Big_Integer;
-      N     : in Big_Integer)
+      N     : Big_Integer)
    is
    begin
       mpz_urandomm (Into.Value'Access,
@@ -69,7 +69,7 @@ package body GNATCOLL.GMP.Integers.Random is
    procedure Generate_Number_Bits
      (State : in out Generator;
       Into  : out Big_Integer;
-      N     : in Unsigned_Long)
+      N     : Unsigned_Long)
    is
    begin
       mpz_urandomb (Into.Value'Access,

@@ -208,7 +208,7 @@ package GNATCOLL.GMP.Lib is
      (ROOT       : access mpz_t;
       REMAINDER  : access mpz_t;
       U          : access constant mpz_t;
-      N          : in Unsigned_Long);
+      N          : Unsigned_Long);
    pragma Import (C, mpz_rootrem, "__gmpz_rootrem");
 
    --  Number Theoretic
@@ -248,7 +248,7 @@ package GNATCOLL.GMP.Lib is
      (ROP   : access mpz_t;
       STATE : access constant gmp_randstate_t;
       --  should really be access-to-variable to match semantics
-      N     : in Unsigned_Long);
+      N     : Unsigned_Long);
    pragma Import (C, mpz_urandomb, "__gmpz_urandomb");
 
    procedure mpz_urandomm
@@ -304,7 +304,7 @@ package GNATCOLL.GMP.Lib is
 
    procedure gmp_randseed_ui
      (STATE : access gmp_randstate_t;
-      SEED  : in Unsigned_Long);
+      SEED  : Unsigned_Long);
    pragma Import (C, gmp_randseed_ui, "__gmp_randseed_ui");
 
    --  Misc
