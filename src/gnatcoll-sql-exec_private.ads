@@ -116,6 +116,7 @@ private package GNATCOLL.SQL.Exec_Private is
 
    procedure First (Self : in out DBMS_Direct_Cursor) is abstract;
    procedure Last  (Self : in out DBMS_Direct_Cursor) is abstract;
+   function Current (Self : DBMS_Direct_Cursor) return Positive is abstract;
    procedure Absolute
      (Self : in out DBMS_Direct_Cursor; Row : Positive) is abstract;
    procedure Relative
@@ -162,6 +163,7 @@ private package GNATCOLL.SQL.Exec_Private is
       overriding procedure Next     (Self : in out Direct);
       overriding procedure First    (Self : in out Direct);
       overriding procedure Last     (Self : in out Direct);
+      overriding function Current (Self : Direct) return Positive;
       overriding procedure Absolute (Self : in out Direct; Row : Positive);
       overriding procedure Relative (Self : in out Direct; Step : Integer);
 

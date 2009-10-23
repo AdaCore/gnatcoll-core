@@ -270,6 +270,8 @@ package body GNATCOLL.SQL.Postgres.Builder is
    overriding procedure Next   (Self : in out Postgresql_Direct_Cursor);
    overriding procedure First (Self : in out Postgresql_Direct_Cursor);
    overriding procedure Last  (Self : in out Postgresql_Direct_Cursor);
+   overriding function Current
+     (Self : Postgresql_Direct_Cursor) return Positive;
    overriding procedure Absolute
      (Self : in out Postgresql_Direct_Cursor; Row : Positive);
    overriding procedure Relative
@@ -898,6 +900,16 @@ package body GNATCOLL.SQL.Postgres.Builder is
    begin
       Self.Current := Tuple_Index (Row - 1);
    end Absolute;
+
+   -------------
+   -- Current --
+   -------------
+
+   overriding function Current
+     (Self : Postgresql_Direct_Cursor) return Positive is
+   begin
+      return Integer (Self.Current) + 1;
+   end Current;
 
    --------------
    -- Relative --

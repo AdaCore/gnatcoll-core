@@ -1036,6 +1036,15 @@ package body GNATCOLL.SQL.Exec is
       First (DBMS_Direct_Cursor'Class (Self.Res.all));
    end First;
 
+   -------------
+   -- Current --
+   -------------
+
+   function Current (Self : Direct_Cursor) return Positive is
+   begin
+      return Current (DBMS_Direct_Cursor'Class (Self.Res.all));
+   end Current;
+
    ----------
    -- Last --
    ----------

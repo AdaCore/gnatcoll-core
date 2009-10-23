@@ -284,6 +284,15 @@ package body GNATCOLL.SQL.Exec_Private is
          Self.Current := Row - 1;
       end Absolute;
 
+      -------------
+      -- Current --
+      -------------
+
+      overriding function Current (Self : Direct) return Positive is
+      begin
+         return Self.Current + 1;
+      end Current;
+
       --------------
       -- Relative --
       --------------

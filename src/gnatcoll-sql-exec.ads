@@ -440,6 +440,9 @@ package GNATCOLL.SQL.Exec is
    --  Return total number of rows in result.
    --  Processed_Rows will always return the number read from the database
 
+   function Current (Self : Direct_Cursor) return Positive;
+   --  Index of the current row. The first row is always numbered 1
+
    procedure First (Self : in out Direct_Cursor);
    procedure Last  (Self : in out Direct_Cursor);
    --  Moves the cursor on the first or last row of results;
