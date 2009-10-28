@@ -21,7 +21,7 @@ shared relocatable:
 ## LIBRARY_TYPE variable
 
 build_library_type:
-	gprbuild -Pgnatcoll_build -p
+	gprbuild -XLIBRARY_TYPE=${LIBRARY_TYPE} -Pgnatcoll_build -p
 ifeq (${WITH_GTK},yes)
 	${MAKE} -C src -f Makefile.gtk buildall
 endif
