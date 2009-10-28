@@ -99,7 +99,7 @@ with Ada.Calendar;
 with System;
 private with Ada.Containers.Vectors;
 private with Ada.Finalization;
-private with GNAT.Strings;
+with GNAT.Strings;
 
 package GNATCOLL.SQL.Exec is
 
@@ -398,6 +398,11 @@ package GNATCOLL.SQL.Exec is
    function Time_Value
      (Self  : Forward_Cursor; Field : Field_Index) return Ada.Calendar.Time;
    --  Return a specific cell, converted to the appropriate format
+
+   function Str_Value
+     (Self : Forward_Cursor; Field : Field_Index)
+      return GNAT.Strings.String_Access;
+   --  Return a specific cell, caller must free value
 
    function Is_Null
      (Self  : Forward_Cursor; Field : Field_Index) return Boolean;

@@ -72,6 +72,9 @@ private package GNATCOLL.SQL.Exec_Private is
    function Value
      (Self  : DBMS_Forward_Cursor;
       Field : Field_Index) return String;
+   function Str_Value
+     (Self  : DBMS_Forward_Cursor;
+      Field : Field_Index) return GNAT.Strings.String_Access;
    function C_Value
      (Self  : DBMS_Forward_Cursor;
       Field : Field_Index) return Interfaces.C.Strings.chars_ptr is abstract;

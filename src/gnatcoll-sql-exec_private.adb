@@ -53,6 +53,19 @@ package body GNATCOLL.SQL.Exec_Private is
       return Boolean'Value (Value (DBMS_Forward_Cursor'Class (Self), Field));
    end Boolean_Value;
 
+   ---------------
+   -- Str_Value --
+   ---------------
+
+   function Str_Value
+     (Self  : DBMS_Forward_Cursor;
+      Field : Field_Index) return GNAT.Strings.String_Access is
+   begin
+      return new String'
+        (Interfaces.C.Strings.Value
+           (C_Value (DBMS_Forward_Cursor'Class (Self), Field)));
+   end Str_Value;
+
    -------------------
    -- Integer_Value --
    -------------------

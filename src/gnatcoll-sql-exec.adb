@@ -923,9 +923,20 @@ package body GNATCOLL.SQL.Exec is
       return Value (DBMS_Forward_Cursor'Class (Self.Res.all), Field);
    end Value;
 
-   -----------
-   -- Value --
-   -----------
+   ---------------
+   -- Str_Value --
+   ---------------
+
+   function Str_Value
+     (Self  : Forward_Cursor;
+      Field : Field_Index) return GNAT.Strings.String_Access is
+   begin
+      return Str_Value (DBMS_Forward_Cursor'Class (Self.Res.all), Field);
+   end Str_Value;
+
+   -------------------
+   -- Boolean_Value --
+   -------------------
 
    function Boolean_Value
      (Self  : Forward_Cursor;
@@ -934,9 +945,9 @@ package body GNATCOLL.SQL.Exec is
       return Boolean_Value (DBMS_Forward_Cursor'Class (Self.Res.all), Field);
    end Boolean_Value;
 
-   -----------
-   -- Value --
-   -----------
+   -------------------
+   -- Integer_Value --
+   -------------------
 
    function Integer_Value
      (Self   : Forward_Cursor;
