@@ -2,14 +2,13 @@ with "../gnatcoll_shared";
 with "gnatcoll";
 
 project GnatColl_Gmp is
-   for Object_Dir      use "obj/gmp/" & Project'Library_Kind;
-
    case Gnatcoll_Shared.Gmp is
       when "yes" =>
          for Languages use ("Ada", "C");
          for Source_Dirs use ("gmp");
          for Library_Kind    use GnatColl_Shared.Library_Type;
          for Library_Dir     use "lib/gmp/" & Project'Library_Kind;
+         for Object_Dir      use "obj/gmp/" & Project'Library_Kind;
          for Library_Name    use GnatColl_Shared.Name & "_gmp";
          for Library_Version use
             "lib" & Project'Library_Name & ".so." & GnatColl_Shared.Version;
