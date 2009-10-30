@@ -817,7 +817,7 @@ package body GNATCOLL.Email.Mailboxes is
          H           : Header)
       is
          Flat  : Unbounded_String;
-         StrA  : Ada.Strings.Unbounded.String_Access;
+         StrA  : Ada.Strings.Unbounded.Aux.Big_String_Access;
          Last  : Natural;
          Index : Natural;
          Stop  : Natural;

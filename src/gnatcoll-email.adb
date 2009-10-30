@@ -325,7 +325,7 @@ package body GNATCOLL.Email is
             end if;
 
             declare
-               StrA  : Ada.Strings.Unbounded.String_Access;
+               StrA  : Ada.Strings.Unbounded.Aux.Big_String_Access;
                Last  : Natural;
                Start, Eol : Integer;
             begin
@@ -539,7 +539,7 @@ package body GNATCOLL.Email is
       N       : String (1 .. Length (H.Contents.Name));
       Value   : constant Charset_String_List.List := Get_Value (H);
       Encoded : Unbounded_String;
-      Str     : Ada.Strings.Unbounded.String_Access;
+      Str     : Ada.Strings.Unbounded.Aux.Big_String_Access;
       Last    : Natural;
 
    begin
@@ -916,7 +916,7 @@ package body GNATCOLL.Email is
    -------------
 
    function To_Time (H : Header'Class) return Ada.Calendar.Time is
-      Str  : Ada.Strings.Unbounded.String_Access;
+      Str  : Ada.Strings.Unbounded.Aux.Big_String_Access;
       Last : Natural;
       Tmp  : Unbounded_String;
    begin
@@ -1302,7 +1302,7 @@ package body GNATCOLL.Email is
       if H /= Null_Header then
          Flatten (H.Contents.Value, Result => ASC);
          declare
-            StrA  : Ada.Strings.Unbounded.String_Access;
+            StrA  : Ada.Strings.Unbounded.Aux.Big_String_Access;
             Last  : Natural;
             Start : Integer;
             Stop  : Integer;
@@ -1812,7 +1812,7 @@ package body GNATCOLL.Email is
    function Has_Line_Starting_With
      (Text : Unbounded_String; Starts_With : String) return Boolean
    is
-      StrA  : Ada.Strings.Unbounded.String_Access;
+      StrA  : Ada.Strings.Unbounded.Aux.Big_String_Access;
       Last  : Natural;
       Index : Natural;
       Eol   : Natural;
@@ -1959,7 +1959,7 @@ package body GNATCOLL.Email is
    function Get_Message_Id (Msg : Message) return String is
       H           : constant Header := Get_Header (Msg, "Message-ID");
       Tmp         : Unbounded_String;
-      StrA        : Ada.Strings.Unbounded.String_Access;
+      StrA        : Ada.Strings.Unbounded.Aux.Big_String_Access;
       Last        : Natural;
       Index, Stop : Integer;
    begin

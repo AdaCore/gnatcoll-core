@@ -143,7 +143,7 @@ package body GNATCOLL.Email.Parser is
       Next, Eol2 : Integer;
       Is_Continuation : Boolean;
       Value : Unbounded_String;
-      Value_Ptr : Ada.Strings.Unbounded.String_Access;
+      Value_Ptr : Ada.Strings.Unbounded.Aux.Big_String_Access;
       Value_Last : Integer;
    begin
       Msg := New_Message (MIME_Type => "");

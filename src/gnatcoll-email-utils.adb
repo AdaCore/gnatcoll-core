@@ -688,7 +688,7 @@ package body GNATCOLL.Email.Utils is
       procedure Analyze (CS : Charset_String) is
          Tmp     : Unbounded_String;
          Found   : Boolean := False;
-         StrA    : String_Access;
+         StrA    : Ada.Strings.Unbounded.Aux.Big_String_Access;
          Last    : Integer;
       begin
          --  Only parse the contents of us-ascii strings. The rest cannot
@@ -904,7 +904,7 @@ package body GNATCOLL.Email.Utils is
    ---------
 
    function "=" (Addr1, Addr2 : Email_Address) return Boolean is
-      Str1, Str2   : String_Access;
+      Str1, Str2   : Ada.Strings.Unbounded.Aux.Big_String_Access;
       Last1, Last2 : Integer;
    begin
       Ada.Strings.Unbounded.Aux.Get_String (Addr1.Address, Str1, Last1);
