@@ -21,10 +21,6 @@ with Ada.Calendar;              use Ada.Calendar;
 with Ada.Characters.Handling;   use Ada.Characters.Handling;
 with Ada.Containers;            use Ada.Containers;
 with Ada.Strings.Fixed;         use Ada.Strings.Fixed;
-pragma Warnings (Off);
---  Internal GNAT unit
-with Ada.Strings.Unbounded.Aux;
-pragma Warnings (On);
 
 with Ada.Unchecked_Deallocation;
 with GNATCOLL.Email.Utils;      use GNATCOLL.Email.Utils;
@@ -325,17 +321,15 @@ package body GNATCOLL.Email is
             end if;
 
             declare
-               StrA  : Ada.Strings.Unbounded.Aux.Big_String_Access;
-               Last  : Natural;
+               StrA : constant String := To_String (To_Quote);
                Start, Eol : Integer;
             begin
-               Ada.Strings.Unbounded.Aux.Get_String (To_Quote, StrA, Last);
                Start := StrA'First;
 
-               while Start <= Last loop
+               while Start <= StrA'Last loop
                   Eol := Integer'Min
-                    (Last,
-                     Next_Occurrence (StrA (Start .. Last), ASCII.LF));
+                    (StrA'Last,
+                     Next_Occurrence (StrA (Start .. StrA'Last), ASCII.LF));
                   Append (Who_Quoted, "> " & StrA (Start .. Eol));
                   Start := Eol + 1;
                end loop;
@@ -539,8 +533,6 @@ package body GNATCOLL.Email is
       N       : String (1 .. Length (H.Contents.Name));
       Value   : constant Charset_String_List.List := Get_Value (H);
       Encoded : Unbounded_String;
-      Str     : Ada.Strings.Unbounded.Aux.Big_String_Access;
-      Last    : Natural;
 
    begin
       To_String (Value, Encoded);
@@ -565,10 +557,14 @@ package body GNATCOLL.Email is
 
       --  Fold continuation lines
 
-      Ada.Strings.Unbounded.Aux.Get_String (Encoded, Str, Last);
       declare
+         Str    : String := To_String (Encoded);
+         Last   : Natural := Str'Last;
+         Index, Index2 : Integer;
+
          Offset : Integer := 0;
          --  Count of LF characters skipped so far
+
       begin
          for J in Str'First .. Last loop
             if Str (J) = ASCII.LF then
@@ -579,26 +575,22 @@ package body GNATCOLL.Email is
          end loop;
          Delete (Encoded, From => Last - Offset + 1, Through => Last);
          Last := Last - Offset;
-      end;
 
-      if Show_Header_Name and then Last <= Max then
-         if Encoded = Null_Unbounded_String then
-            Result := To_Unbounded_String (N & ": ");
-         elsif Element (Encoded, 1) = ' ' then
-            Result := N & ':' & Encoded;
-         else
-            Result := N & ": " & Encoded;
+         if Show_Header_Name and then Last <= Max then
+            if Encoded = Null_Unbounded_String then
+               Result := To_Unbounded_String (N & ": ");
+            elsif Element (Encoded, 1) = ' ' then
+               Result := N & ':' & Encoded;
+            else
+               Result := N & ": " & Encoded;
+            end if;
+            return;
+
+         elsif not Show_Header_Name and then Last <= Max_Line_Len then
+            Result := Encoded;
+            return;
          end if;
-         return;
 
-      elsif not Show_Header_Name and then Last <= Max_Line_Len then
-         Result := Encoded;
-         return;
-      end if;
-
-      declare
-         Index, Index2 : Integer;
-      begin
          Result := Null_Unbounded_String;
 
          --  For portability, we could use To_String (H.Value), but that is
@@ -916,8 +908,6 @@ package body GNATCOLL.Email is
    -------------
 
    function To_Time (H : Header'Class) return Ada.Calendar.Time is
-      Str  : Ada.Strings.Unbounded.Aux.Big_String_Access;
-      Last : Natural;
       Tmp  : Unbounded_String;
    begin
       --  For portability, we could use To_String (H.Value), but that is
@@ -926,8 +916,7 @@ package body GNATCOLL.Email is
          return No_Time;
       else
          Flatten (H.Contents.Value, Result => Tmp);
-         Ada.Strings.Unbounded.Aux.Get_String (Tmp, Str, Last);
-         return To_Time (Str (Str'First .. Last));
+         return To_Time (To_String (Tmp));
       end if;
    end To_Time;
 
@@ -1302,22 +1291,20 @@ package body GNATCOLL.Email is
       if H /= Null_Header then
          Flatten (H.Contents.Value, Result => ASC);
          declare
-            StrA  : Ada.Strings.Unbounded.Aux.Big_String_Access;
-            Last  : Natural;
+            StrA  : constant String := To_String (ASC);
             Start : Integer;
             Stop  : Integer;
          begin
-            Ada.Strings.Unbounded.Aux.Get_String (ASC, StrA, Last);
             Start := StrA'First;
-            while Start <= Last
+            while Start <= StrA'Last
               and then Is_Whitespace (StrA (Start))
             loop
                Start := Start + 1;
             end loop;
 
-            if Start < Last then
+            if Start < StrA'Last then
                Stop := Start + 1;
-               while Stop <= Last
+               while Stop <= StrA'Last
                  and then not Is_Whitespace (StrA (Stop))
                  and then StrA (Stop) /= ';'
                loop
@@ -1812,17 +1799,15 @@ package body GNATCOLL.Email is
    function Has_Line_Starting_With
      (Text : Unbounded_String; Starts_With : String) return Boolean
    is
-      StrA  : Ada.Strings.Unbounded.Aux.Big_String_Access;
-      Last  : Natural;
+      StrA  : constant String := To_String (Text);
       Index : Natural;
       Eol   : Natural;
    begin
-      Ada.Strings.Unbounded.Aux.Get_String (Text, StrA, Last);
       Index := StrA'First;
 
-      while Index <= Last loop
-         Eol := Next_Occurrence (StrA (Index .. Last), ASCII.LF);
-         if Index + Starts_With'Length - 1 <= Last
+      while Index <= StrA'Last loop
+         Eol := Next_Occurrence (StrA (Index .. StrA'Last), ASCII.LF);
+         if Index + Starts_With'Length - 1 <= StrA'Last
            and then StrA (Index .. Index + Starts_With'Length - 1) =
              Starts_With
          then
@@ -1959,20 +1944,22 @@ package body GNATCOLL.Email is
    function Get_Message_Id (Msg : Message) return String is
       H           : constant Header := Get_Header (Msg, "Message-ID");
       Tmp         : Unbounded_String;
-      StrA        : Ada.Strings.Unbounded.Aux.Big_String_Access;
-      Last        : Natural;
       Index, Stop : Integer;
    begin
       if H /= Null_Header then
          Flatten (Get_Value (H), Tmp);
-         Ada.Strings.Unbounded.Aux.Get_String (Tmp, StrA, Last);
-         Index := Next_Occurrence (StrA (StrA'First .. Last), '<');
-         if Index > Last then
-            return StrA (StrA'First .. Last);
-         else
-            Stop  := Next_Occurrence (StrA (Index .. Last), '>');
-            return StrA (Index + 1 .. Stop - 1);
-         end if;
+
+         declare
+            StrA : constant String := To_String (Tmp);
+         begin
+            Index := Next_Occurrence (StrA, '<');
+            if Index > StrA'Last then
+               return StrA;
+            else
+               Stop := Next_Occurrence (StrA (Index .. StrA'Last), '>');
+               return StrA (Index + 1 .. Stop - 1);
+            end if;
+         end;
       else
          return "";
       end if;

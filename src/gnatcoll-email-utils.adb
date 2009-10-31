@@ -22,9 +22,6 @@ with Ada.Calendar.Time_Zones; use Ada.Calendar.Time_Zones;
 with Ada.Calendar.Formatting; use Ada.Calendar.Formatting;
 with Ada.Characters.Handling; use Ada.Characters.Handling;
 with Ada.Strings.Hash_Case_Insensitive;
-pragma Warnings (Off);
-with Ada.Strings.Unbounded.Aux;
-pragma Warnings (On);
 with GNATCOLL.Utils;          use GNATCOLL.Utils;
 with Interfaces;              use Interfaces;
 
@@ -688,17 +685,13 @@ package body GNATCOLL.Email.Utils is
       procedure Analyze (CS : Charset_String) is
          Tmp     : Unbounded_String;
          Found   : Boolean := False;
-         StrA    : Ada.Strings.Unbounded.Aux.Big_String_Access;
-         Last    : Integer;
       begin
          --  Only parse the contents of us-ascii strings. The rest cannot
          --  contain email addresses nor comments anyway
 
          if CS.Charset = Charset_US_ASCII then
-            Ada.Strings.Unbounded.Aux.Get_String (CS.Contents, StrA, Last);
-
             Parse_And_Skip_Address
-              (Str           => StrA (StrA'First .. Last),
+              (Str           => To_String (CS.Contents),
                From          => From,
                Buffer        => Buffer,
                Buffer_Has_At => Buffer_Has_At,
@@ -904,13 +897,9 @@ package body GNATCOLL.Email.Utils is
    ---------
 
    function "=" (Addr1, Addr2 : Email_Address) return Boolean is
-      Str1, Str2   : Ada.Strings.Unbounded.Aux.Big_String_Access;
-      Last1, Last2 : Integer;
    begin
-      Ada.Strings.Unbounded.Aux.Get_String (Addr1.Address, Str1, Last1);
-      Ada.Strings.Unbounded.Aux.Get_String (Addr2.Address, Str2, Last2);
-      return To_Lower (Str1 (Str1'First .. Last1)) =
-        To_Lower (Str2 (Str2'First .. Last2));
+      return To_Lower (To_String (Addr1.Address))
+        = To_Lower (To_String (Addr2.Address));
    end "=";
 
    ----------
@@ -1376,12 +1365,12 @@ package body GNATCOLL.Email.Utils is
       end if;
 
       if Output'Last /= Index - 1 then
-         Ada.Strings.Unbounded.Aux.Set_String
-           (Result, Output (1 .. Index - 1));
-         Free (Output);
+         Set_Unbounded_String (Result, Output (1 .. Index - 1));
       else
-         Ada.Strings.Unbounded.Aux.Set_String (Result, Output);
+         Set_Unbounded_String (Result, Output.all);
       end if;
+
+      Free (Output);
    end Base64_Encode;
 
    -------------------
@@ -1440,12 +1429,12 @@ package body GNATCOLL.Email.Utils is
       end loop;
 
       if Index - 1 = Output'Last then
-         Ada.Strings.Unbounded.Aux.Set_String (Result, Output);
+         Set_Unbounded_String (Result, Output.all);
       else
-         Ada.Strings.Unbounded.Aux.Set_String
-            (Result, Output (Output'First .. Index - 1));
-         Ada.Strings.Unbounded.Free (Output);
+         Set_Unbounded_String (Result, Output (Output'First .. Index - 1));
       end if;
+
+      Free (Output);
    end Base64_Decode;
 
    ------------

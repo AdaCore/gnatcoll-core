@@ -21,9 +21,6 @@ with Ada.Calendar;          use Ada.Calendar;
 with Ada.Containers.Indefinite_Hashed_Maps;
 with Ada.IO_Exceptions;
 with Ada.Strings.Hash;
-pragma Warnings (Off); --  Internal GNAT unit
-with Ada.Strings.Unbounded.Aux;
-pragma Warnings (On);
 with Ada.Unchecked_Deallocation;
 with GNATCOLL.Boyer_Moore;  use GNATCOLL.Boyer_Moore;
 with GNATCOLL.Email.Parser; use GNATCOLL.Email.Parser;
@@ -817,22 +814,24 @@ package body GNATCOLL.Email.Mailboxes is
          H           : Header)
       is
          Flat  : Unbounded_String;
-         StrA  : Ada.Strings.Unbounded.Aux.Big_String_Access;
-         Last  : Natural;
          Index : Natural;
          Stop  : Natural;
       begin
          if H /= Null_Header then
             Flatten (Get_Value (H), Flat);
-            Ada.Strings.Unbounded.Aux.Get_String (Flat, StrA, Last);
-            Index := StrA'First;
-            while Index <= Last loop
-               Index := Next_Occurrence (StrA (Index .. Last), '<');
-               Stop := Next_Occurrence (StrA (Index + 1 .. Last), '>');
-               Store_Parent_Of (Parent_Cont => Parent_Cont,
-                                Id => StrA (Index + 1 .. Stop - 1));
-               Index := Stop + 1;
-            end loop;
+
+            declare
+               StrA : constant String := To_String (Flat);
+            begin
+               Index := StrA'First;
+               while Index <= StrA'Last loop
+                  Index := Next_Occurrence (StrA (Index .. StrA'Last), '<');
+                  Stop := Next_Occurrence (StrA (Index + 1 .. StrA'Last), '>');
+                  Store_Parent_Of (Parent_Cont => Parent_Cont,
+                                   Id => StrA (Index + 1 .. Stop - 1));
+                  Index := Stop + 1;
+               end loop;
+            end;
          end if;
       end Set_Parent_For_All_Ids;
 

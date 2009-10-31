@@ -20,9 +20,6 @@
 with GNAT.Case_Util;             use GNAT.Case_Util;
 with GNATCOLL.VFS;               use GNATCOLL.VFS;
 with GNAT.Strings;               use GNAT.Strings;
-pragma Warnings (Off);
-with Ada.Strings.Unbounded.Aux;
-pragma Warnings (On);
 
 package body GNATCOLL.Email.Parser is
 
@@ -143,8 +140,6 @@ package body GNATCOLL.Email.Parser is
       Next, Eol2 : Integer;
       Is_Continuation : Boolean;
       Value : Unbounded_String;
-      Value_Ptr : Ada.Strings.Unbounded.Aux.Big_String_Access;
-      Value_Last : Integer;
    begin
       Msg := New_Message (MIME_Type => "");
 
@@ -199,13 +194,14 @@ package body GNATCOLL.Email.Parser is
          if Store_Headers
            and then (Filter = null or else Filter (Str (Index .. Colon - 1)))
          then
-            Ada.Strings.Unbounded.Aux.Get_String
-              (Value, Value_Ptr, Value_Last);
-
-            Add_Header
-              (Msg,
-               Create (Name  => Str (Index .. Colon - 1),
-                       Value => Value_Ptr (Value_Ptr'First .. Value_Last)));
+            declare
+               Value_Ptr : constant String := To_String (Value);
+            begin
+               Add_Header
+                 (Msg,
+                  Create (Name  => Str (Index .. Colon - 1),
+                          Value => Value_Ptr));
+            end;
          end if;
 
          Index := Eol + 1;
