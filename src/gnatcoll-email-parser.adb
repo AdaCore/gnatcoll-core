@@ -194,14 +194,10 @@ package body GNATCOLL.Email.Parser is
          if Store_Headers
            and then (Filter = null or else Filter (Str (Index .. Colon - 1)))
          then
-            declare
-               Value_Ptr : constant String := To_String (Value);
-            begin
-               Add_Header
-                 (Msg,
-                  Create (Name  => Str (Index .. Colon - 1),
-                          Value => Value_Ptr));
-            end;
+            Add_Header
+              (Msg,
+               Create (Name  => Str (Index .. Colon - 1),
+                       Value => To_String (Value)));
          end if;
 
          Index := Eol + 1;
