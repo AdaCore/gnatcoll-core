@@ -140,8 +140,8 @@ private package GNATCOLL.Path is
    --  Replace every ./ or ../ items of the path
 
    function Relative_Path
-     (FS : FS_Type;
-      Ref : FS_String;
+     (FS   : FS_Type;
+      Ref  : FS_String;
       Path : FS_String) return FS_String;
    --  Return the path of Path relative to Ref
 

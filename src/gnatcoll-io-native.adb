@@ -183,7 +183,7 @@ package body GNATCOLL.IO.Native is
       N      : Natural;
 
    begin
-      --  First get the size of the buffer needed to contain the drives.
+      --  First get the size of the buffer needed to contain the drives
       Len := Internal (System.Null_Address, 0);
 
       if Len = 0 then
@@ -273,7 +273,7 @@ package body GNATCOLL.IO.Native is
             Norm : constant String :=
                      GNAT.OS_Lib.Normalize_Pathname
                        (String (File.Full.all),
-                        Directory => "",
+                        Directory     => "",
                         Resolve_Links => True);
          begin
             --  Normalize_Pathname sometimes removes the trailing dir separator
@@ -569,6 +569,7 @@ package body GNATCOLL.IO.Native is
       Ret  : GNAT.Strings.String_List_Access;
       Tmp  : GNAT.Strings.String_List_Access;
       N    : Natural := 0;
+
       procedure Unchecked_Free is new Ada.Unchecked_Deallocation
         (GNAT.Strings.String_List, GNAT.Strings.String_List_Access);
 
@@ -592,6 +593,7 @@ package body GNATCOLL.IO.Native is
          then
             if Ret = null then
                Ret := new GNAT.Strings.String_List (1 .. 10);
+
             elsif N = Ret'Last then
                Tmp := new GNAT.Strings.String_List (1 .. Ret'Length * 2);
                Tmp (Ret'Range) := Ret.all;
@@ -611,8 +613,7 @@ package body GNATCOLL.IO.Native is
       end if;
 
       declare
-         List : constant GNAT.Strings.String_List :=
-                  Ret (1 .. N);
+         List : constant GNAT.Strings.String_List := Ret (1 .. N);
       begin
          Unchecked_Free (Ret);
          return List;

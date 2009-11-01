@@ -30,10 +30,10 @@ package GNATCOLL.IO.Native is
    ------------------------------
 
    function Current_Dir return File_Access;
-   --  Return the current directory.
+   --  Return the current directory
 
    function Home_Dir return File_Access;
-   --  Return the home directory.
+   --  Return the home directory
 
    function Get_Tmp_Directory return File_Access;
    --  Return the directory that can be used to store temporary
@@ -51,7 +51,7 @@ package GNATCOLL.IO.Native is
      (Ref : not null access Native_File_Record;
       Full_Path : FS_String) return File_Access;
    overriding function To_UTF8
-     (Ref : not null access Native_File_Record;
+     (Ref  : not null access Native_File_Record;
       Path : FS_String) return String;
    overriding function From_UTF8
      (Ref : not null access Native_File_Record;
@@ -117,13 +117,14 @@ package GNATCOLL.IO.Native is
      (From    : not null access Native_File_Record;
       Dest    : FS_String;
       Success : out Boolean);
+
    package Codec is
       function To_UTF8 (Path : FS_String) return String;
       function To_UTF8 (Path : Wide_String) return String;
       function From_UTF8 (Path : String) return FS_String;
       function From_UTF8 (Path : String) return Wide_String;
    end Codec;
-   --  Codec to translate a path to/from utf-8.
+   --  Codec to translate a path to/from utf-8
 
 private
 

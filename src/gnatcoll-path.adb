@@ -266,6 +266,10 @@ package body GNATCOLL.Path is
       function Internal (S1, S2 : FS_String) return Boolean;
       --  Compare, taking care of trailing dir separators
 
+      --------------
+      -- Internal --
+      --------------
+
       function Internal (S1, S2 : FS_String) return Boolean is
       begin
          return S1 = S2
@@ -330,8 +334,8 @@ package body GNATCOLL.Path is
    ---------------
 
    function From_Unix
-     (FS          : FS_Type;
-      Path        : FS_String) return FS_String is
+     (FS   : FS_Type;
+      Path : FS_String) return FS_String is
    begin
       case FS is
          when FS_Unix =>
@@ -356,6 +360,7 @@ package body GNATCOLL.Path is
                   return Ret;
                end if;
             end;
+
          when FS_Unknown =>
             raise Invalid_Filesystem;
       end case;
@@ -575,9 +580,9 @@ package body GNATCOLL.Path is
       Ref  : FS_String;
       Path : FS_String) return FS_String
    is
-      Depth  : Natural := 0;
-      Last   : Natural := Ref'Last;
-      Old    : Natural;
+      Depth : Natural := 0;
+      Last  : Natural := Ref'Last;
+      Old   : Natural;
 
       function Depth_Image return FS_String;
       --  Return "../" * Depth
@@ -588,8 +593,7 @@ package body GNATCOLL.Path is
 
       function Depth_Image return FS_String is
          Ret : FS_String (1 .. 3 * Depth);
-         Sep : constant FS_String :=
-                 ".." & Dir_Separator (FS);
+         Sep : constant FS_String := ".." & Dir_Separator (FS);
       begin
          for J in 1 .. Depth loop
             Ret (J * 3 - 2 .. J * 3) := Sep;
