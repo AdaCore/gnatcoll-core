@@ -19,6 +19,7 @@
 
 with Ada.IO_Exceptions;        use Ada.IO_Exceptions;
 with Ada.Unchecked_Conversion;
+with System.Win32;             use System; use System.Win32;
 
 with GNAT.OS_Lib;              use GNAT.OS_Lib;
 with GNATCOLL.IO.Native;       use GNATCOLL.IO.Native;
@@ -36,153 +37,19 @@ package body GNATCOLL.Mmap is
    procedure To_Disk (File : in out Mapped_File);
    --  Write the file back to disk if necessary, and free memory
 
-   --  The Win package contains copy of definition found in recent System.Win32
-   --  unit provided with the GNAT compiler. The copy is needed to be able to
-   --  compile this unit with older compilers. Note that this internal Win
-   --  package can be removed when GNAT 6.2.0 and GNAT GPL 2009 will be out.
-   --  ??? TO BE REMOVED
-
-   package Win is
-
-      subtype PVOID is System.Address;
-
-      type HANDLE is new Interfaces.C.long;
-
-      type WORD   is new Interfaces.C.unsigned_short;
-      type DWORD  is new Interfaces.C.unsigned_long;
-      type LONG   is new Interfaces.C.long;
-      type SIZE_T is new Interfaces.C.size_t;
-
-      type BOOL   is new Interfaces.C.int;
-      for BOOL'Size use Interfaces.C.int'Size;
-
-      FALSE : constant := 0;
-
-      GENERIC_READ  : constant := 16#80000000#;
-      GENERIC_WRITE : constant := 16#40000000#;
-      OPEN_EXISTING : constant := 3;
-
-      CP_UTF8       : constant := 65001;
-
-      type OVERLAPPED is record
-         Internal     : DWORD;
-         InternalHigh : DWORD;
-         Offset       : DWORD;
-         OffsetHigh   : DWORD;
-         hEvent       : HANDLE;
-      end record;
-
-      type SECURITY_ATTRIBUTES is record
-         nLength             : DWORD;
-         pSecurityDescriptor : PVOID;
-         bInheritHandle      : BOOL;
-      end record;
-
-      type SYSTEM_INFO is record
-         dwOemId : DWORD;
-         dwPageSize : DWORD;
-         lpMinimumApplicationAddress : PVOID;
-         lpMaximumApplicationAddress : PVOID;
-         dwActiveProcessorMask       : PVOID;
-         dwNumberOfProcessors        : DWORD;
-         dwProcessorType             : DWORD;
-         dwAllocationGranularity     : DWORD;
-         wProcessorLevel             : WORD;
-         wProcessorRevision          : WORD;
-      end record;
-      type LP_SYSTEM_INFO is access all SYSTEM_INFO;
-
-      INVALID_HANDLE_VALUE  : constant HANDLE := -1;
-      FILE_BEGIN            : constant := 0;
-      FILE_SHARE_READ       : constant := 16#00000001#;
-      FILE_ATTRIBUTE_NORMAL : constant := 16#00000080#;
-      FILE_MAP_READ         : constant := 4;
-      FILE_MAP_WRITE        : constant := 2;
-      PAGE_READONLY         : constant := 16#0002#;
-      PAGE_READWRITE        : constant := 16#0004#;
-      INVALID_FILE_SIZE     : constant := 16#FFFFFFFF#;
-
-      function CreateFile
-        (lpFileName            : System.Address;
-         dwDesiredAccess       : DWORD;
-         dwShareMode           : DWORD;
-         lpSecurityAttributes  : access SECURITY_ATTRIBUTES;
-         dwCreationDisposition : DWORD;
-         dwFlagsAndAttributes  : DWORD;
-         hTemplateFile         : HANDLE) return HANDLE;
-      pragma Import (Stdcall, CreateFile, "CreateFileW");
-
-      function WriteFile
-        (hFile                  : HANDLE;
-         lpBuffer               : System.Address;
-         nNumberOfBytesToWrite  : DWORD;
-         lpNumberOfBytesWritten : access DWORD;
-         lpOverlapped           : access OVERLAPPED) return BOOL;
-      pragma Import (Stdcall, WriteFile, "WriteFile");
-
-      function ReadFile
-        (hFile                : HANDLE;
-         lpBuffer             : System.Address;
-         nNumberOfBytesToRead : DWORD;
-         lpNumberOfBytesRead  : access DWORD;
-         lpOverlapped         : access OVERLAPPED) return BOOL;
-      pragma Import (Stdcall, ReadFile, "ReadFile");
-
-      function CloseHandle (hObject : HANDLE) return BOOL;
-      pragma Import (Stdcall, CloseHandle, "CloseHandle");
-
-      function GetFileSize
-        (hFile : HANDLE; lpFileSizeHigh : access DWORD) return DWORD;
-      pragma Import (Stdcall, GetFileSize, "GetFileSize");
-
-      function SetFilePointer
-        (hFile                : HANDLE;
-         lDistanceToMove      : LONG;
-         lpDistanceToMoveHigh : access LONG;
-         dwMoveMethod         : DWORD) return DWORD;
-      pragma Import (Stdcall, SetFilePointer, "SetFilePointer");
-
-      function CreateFileMapping
-        (hFile                : HANDLE;
-         lpSecurityAttributes : access SECURITY_ATTRIBUTES;
-         flProtect            : DWORD;
-         dwMaximumSizeHigh    : DWORD;
-         dwMaximumSizeLow     : DWORD;
-         lpName               : System.Address) return HANDLE;
-      pragma Import (Stdcall, CreateFileMapping, "CreateFileMappingW");
-
-      function MapViewOfFile
-        (hFileMappingObject   : HANDLE;
-         dwDesiredAccess      : DWORD;
-         dwFileOffsetHigh     : DWORD;
-         dwFileOffsetLow      : DWORD;
-         dwNumberOfBytesToMap : SIZE_T) return System.Address;
-      pragma Import (Stdcall, MapViewOfFile, "MapViewOfFile");
-
-      function UnmapViewOfFile (lpBaseAddress : System.Address) return BOOL;
-      pragma Import (Stdcall, UnmapViewOfFile, "UnmapViewOfFile");
-
-      procedure GetSystemInfo (lpSystemInfo : LP_SYSTEM_INFO);
-      pragma Import (Stdcall, GetSystemInfo, "GetSystemInfo");
-
-      function MultiByteToWideChar
-        (CodePage       : WORD;
-         dwFlags        : DWORD;
-         lpMultiByteStr : System.Address;
-         cchMultiByte   : WORD;
-         lpWideCharStr  : System.Address;
-         cchWideChar    : WORD) return BOOL;
-      pragma Import (Stdcall, MultiByteToWideChar, "MultiByteToWideChar");
-
-   end Win;
-
-   use Win;
-
    function To_Handle is
      new Ada.Unchecked_Conversion (System.Address, HANDLE);
    function To_Address is
      new Ada.Unchecked_Conversion (HANDLE, System.Address);
 
+   --  ??? This package should be removed when GNAT 6.3 and GNAT GPL 2010
+   --  are out. Definitions from System.Win32 are to be used instead. Make
+   --  sure that any Windows definitions added here are also copied into
+   --  System.Win32.
+
+   package Win is
+      INVALID_FILE_SIZE : constant := 16#FFFFFFFF#;
+   end Win;
 
    -------------------
    -- Get_Page_Size --
@@ -211,15 +78,15 @@ package body GNATCOLL.Mmap is
 
       File.Buffer := new String (1 .. File.Last);
 
-      Pos := Win.SetFilePointer
-        (To_Handle (File.Handle), LONG (File.Offset), null, Win.FILE_BEGIN);
+      Pos := SetFilePointer
+        (To_Handle (File.Handle), LONG (File.Offset), null, FILE_BEGIN);
 
       --  Take care of the case where File.Last is 0, as this
       --  causes a SEGV in call to ReadFile.
       if File.Last > 0
         and then ReadFile
           (To_Handle (File.Handle), File.Buffer (1)'Address,
-           DWORD (File.Last), NbRead'Unchecked_Access, null) = Win.FALSE
+           DWORD (File.Last), NbRead'Unchecked_Access, null) = Win32.FALSE
       then
          GNAT.Strings.Free (File.Buffer);
          Res := CloseHandle (To_Handle (File.Handle));
@@ -241,12 +108,12 @@ package body GNATCOLL.Mmap is
    begin
       if File.Write and then File.Buffer /= null then
 
-         Pos := Win.SetFilePointer
-           (To_Handle (File.Handle), LONG (File.Offset), null, Win.FILE_BEGIN);
+         Pos := SetFilePointer
+           (To_Handle (File.Handle), LONG (File.Offset), null, FILE_BEGIN);
 
          if WriteFile
            (To_Handle (File.Handle), File.Buffer.all'Address,
-            DWORD (File.Last), Written'Unchecked_Access, null) = Win.FALSE
+            DWORD (File.Last), Written'Unchecked_Access, null) = Win32.FALSE
          then
             GNAT.Strings.Free (File.Buffer);
             Res := CloseHandle (To_Handle (File.Handle));
@@ -270,17 +137,17 @@ package body GNATCOLL.Mmap is
                  Codec.From_Utf8 (Filename) & Wide_Character'Val (0);
       H      : constant HANDLE :=
                  CreateFile
-                   (W_File'Address, GENERIC_READ, Win.FILE_SHARE_READ,
-                    null, OPEN_EXISTING, Win.FILE_ATTRIBUTE_NORMAL, 0);
+                   (W_File'Address, GENERIC_READ, FILE_SHARE_READ,
+                    null, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0);
       SizeH  : aliased DWORD;
       Size   : File_Size;
 
    begin
-      if H = Win.INVALID_HANDLE_VALUE then
+      if H = INVALID_HANDLE_VALUE then
          raise Name_Error;
       end if;
 
-      Size := File_Size (Win.GetFileSize (H, SizeH'Access));
+      Size := File_Size (GetFileSize (H, SizeH'Access));
 
       if Size = Win.INVALID_FILE_SIZE then
          raise Use_Error;
@@ -317,17 +184,17 @@ package body GNATCOLL.Mmap is
       H      : constant HANDLE :=
                  CreateFile
                    (W_File'Address, GENERIC_READ + GENERIC_WRITE, 0,
-                    null, OPEN_EXISTING, Win.FILE_ATTRIBUTE_NORMAL, 0);
+                    null, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0);
       SizeH  : aliased DWORD;
       Size   : File_Size;
    begin
-      if H = Win.INVALID_HANDLE_VALUE then
+      if H = INVALID_HANDLE_VALUE then
          raise Name_Error;
       end if;
 
-      Size := File_Size (Win.GetFileSize (H, SizeH'Access));
+      Size := File_Size (GetFileSize (H, SizeH'Access));
 
-      if Size = INVALID_FILE_SIZE then
+      if Size = Win.INVALID_FILE_SIZE then
          raise Use_Error;
       end if;
 
@@ -358,12 +225,12 @@ package body GNATCOLL.Mmap is
       pragma Unreferenced (Res);
    begin
       if File.Mapped then
-         Res := Win.UnmapViewOfFile (Convert (File.Data));
+         Res := UnmapViewOfFile (Convert (File.Data));
       else
          To_Disk (File);
       end if;
 
-      if To_Handle (File.Handle) /= Win.INVALID_HANDLE_VALUE then
+      if To_Handle (File.Handle) /= INVALID_HANDLE_VALUE then
          Res := CloseHandle (To_Handle (File.Map_Handle));
          Res := CloseHandle (To_Handle (File.Handle));
       end if;
@@ -409,18 +276,18 @@ package body GNATCOLL.Mmap is
          --  Unmap previous memory if necessary
 
          if File.Data /= null then
-            Res := Win.UnmapViewOfFile (Convert (File.Data));
+            Res := UnmapViewOfFile (Convert (File.Data));
             File.Data := null;
          end if;
 
          Extra := Offset mod File.Page_Size;
 
          if File.Write then
-            Flags := Win.FILE_MAP_WRITE;
-            PageFlags := Win.PAGE_READWRITE;
+            Flags := FILE_MAP_WRITE;
+            PageFlags := PAGE_READWRITE;
          else
-            Flags := Win.FILE_MAP_READ;
-            PageFlags := Win.PAGE_READONLY;
+            Flags := FILE_MAP_READ;
+            PageFlags := PAGE_READONLY;
          end if;
 
          Tmp := Len + Extra;
@@ -444,15 +311,15 @@ package body GNATCOLL.Mmap is
 
             if File.Map_Handle = System.Null_Address then
                File.Map_Handle := To_Address
-                 (Win.CreateFileMapping
+                 (CreateFileMapping
                     (To_Handle (File.Handle), null, PageFlags,
                      0, DWORD (File.Length), System.Null_Address));
             end if;
 
             File.Data := Convert
-              (Win.MapViewOfFile
+              (MapViewOfFile
                  (To_Handle (File.Map_Handle), Flags,
-                  0, DWORD (File.Offset), SIZE_T (File.Last)));
+                  0, DWORD (File.Offset), DWORD (File.Last)));
          end if;
 
       else
