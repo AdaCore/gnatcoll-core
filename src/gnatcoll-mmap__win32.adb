@@ -21,6 +21,7 @@ with Ada.IO_Exceptions;        use Ada.IO_Exceptions;
 with Ada.Unchecked_Conversion;
 
 with GNAT.OS_Lib;              use GNAT.OS_Lib;
+with GNATCOLL.IO.Native;       use GNATCOLL.IO.Native;
 
 package body GNATCOLL.Mmap is
 
@@ -34,9 +35,6 @@ package body GNATCOLL.Mmap is
 
    procedure To_Disk (File : in out Mapped_File);
    --  Write the file back to disk if necessary, and free memory
-
-   function From_Utf8 (Filename : String) return Wide_String;
-   --  Convert an UTF-8 filename to a Win32 native Unicode-16
 
    --  The Win package contains copy of definition found in recent System.Win32
    --  unit provided with the GNAT compiler. The copy is needed to be able to
@@ -185,21 +183,6 @@ package body GNATCOLL.Mmap is
    function To_Address is
      new Ada.Unchecked_Conversion (HANDLE, System.Address);
 
-   ---------------
-   -- From_Utf8 --
-   ---------------
-
-   function From_Utf8 (Filename : String) return Wide_String is
-      C_Filename : constant String := Filename & ASCII.NUL;
-      W_Filename : Wide_String (1 .. C_Filename'Length + 1);
-      Res        : Win.BOOL;
-      pragma Unreferenced (Res);
-   begin
-      Res := Win.MultiByteToWideChar
-        (Win.CP_UTF8, 0,
-         C_Filename'Address, -1, W_Filename'Address, C_Filename'Length);
-      return W_Filename;
-   end From_Utf8;
 
    -------------------
    -- Get_Page_Size --
@@ -283,7 +266,8 @@ package body GNATCOLL.Mmap is
      (Filename              : String;
       Use_Mmap_If_Available : Boolean := True) return Mapped_File
    is
-      W_File : constant Wide_String := From_Utf8 (Filename);
+      W_File : constant Wide_String :=
+                 Codec.From_Utf8 (Filename) & Wide_Character'Val (0);
       H      : constant HANDLE :=
                  CreateFile
                    (W_File'Address, GENERIC_READ, Win.FILE_SHARE_READ,
@@ -328,7 +312,8 @@ package body GNATCOLL.Mmap is
      (Filename              : String;
       Use_Mmap_If_Available : Boolean := True) return Mapped_File
    is
-      W_File : constant Wide_String := From_Utf8 (Filename);
+      W_File : constant Wide_String :=
+                 Codec.From_Utf8 (Filename) & Wide_Character'Val (0);
       H      : constant HANDLE :=
                  CreateFile
                    (W_File'Address, GENERIC_READ + GENERIC_WRITE, 0,
