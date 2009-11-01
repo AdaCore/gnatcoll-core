@@ -119,7 +119,9 @@ package GNATCOLL.IO.Native is
       Success : out Boolean);
    package Codec is
       function To_UTF8 (Path : FS_String) return String;
+      function To_UTF8 (Path : Wide_String) return String;
       function From_UTF8 (Path : String) return FS_String;
+      function From_UTF8 (Path : String) return Wide_String;
    end Codec;
    --  Codec to translate a path to/from utf-8.
 
