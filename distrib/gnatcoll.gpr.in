@@ -38,8 +38,12 @@ project GnatColl is
       case OS is
          when "unix" =>
             for Implementation ("GNATCOLL.Mmap") use "gnatcoll-mmap__unix.adb";
+            for Implementation ("GNATCOLL.IO.Native.Codec")
+	      use "gnatcoll-io-native-codec__unix.adb";
          when "Windows_NT" =>
             for Implementation ("GNATCOLL.Mmap") use "gnatcoll-mmap__win32.adb";
+            for Implementation ("GNATCOLL.IO.Native.Codec")
+	      use "gnatcoll-io-native-codec__win32.adb";
       end case;
    end Naming;
 
