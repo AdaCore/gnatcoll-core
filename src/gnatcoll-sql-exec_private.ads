@@ -72,9 +72,6 @@ private package GNATCOLL.SQL.Exec_Private is
    function Value
      (Self  : DBMS_Forward_Cursor;
       Field : Field_Index) return String;
-   function Str_Value
-     (Self  : DBMS_Forward_Cursor;
-      Field : Field_Index) return GNAT.Strings.String_Access;
    function C_Value
      (Self  : DBMS_Forward_Cursor;
       Field : Field_Index) return Interfaces.C.Strings.chars_ptr is abstract;
@@ -92,6 +89,9 @@ private package GNATCOLL.SQL.Exec_Private is
       Field : Field_Index) return Ada.Calendar.Time;
    --  Default implementation is to assume the DBMS only returns strings, and
    --  we convert them to the appropriate Ada type.
+
+   function Current (Self : DBMS_Forward_Cursor) return Positive is abstract;
+   --  Return the index of the current column (the first one is at index 1)
 
    function Is_Null
      (Self  : DBMS_Forward_Cursor;
@@ -119,7 +119,6 @@ private package GNATCOLL.SQL.Exec_Private is
 
    procedure First (Self : in out DBMS_Direct_Cursor) is abstract;
    procedure Last  (Self : in out DBMS_Direct_Cursor) is abstract;
-   function Current (Self : DBMS_Direct_Cursor) return Positive is abstract;
    procedure Absolute
      (Self : in out DBMS_Direct_Cursor; Row : Positive) is abstract;
    procedure Relative

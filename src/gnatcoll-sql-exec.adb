@@ -58,12 +58,14 @@ package body GNATCOLL.SQL.Exec is
 
    function Hash
      (Str : GNAT.Strings.String_Access) return Ada.Containers.Hash_Type;
+   function Equal
+     (Str1, Str2 : GNAT.Strings.String_Access) return Boolean;
 
    package String_Maps is new Ada.Containers.Hashed_Maps
      (Key_Type        => GNAT.Strings.String_Access,
       Element_Type    => Cached_Statement_Access,
       Hash            => Hash,
-      Equivalent_Keys => "=");
+      Equivalent_Keys => Equal);
 
    type Cached_Result is record
       Cursor : Direct_Cursor := No_Direct_Element;
@@ -114,6 +116,16 @@ package body GNATCOLL.SQL.Exec is
       return Ada.Strings.Hash (Str.all);
    end Hash;
 
+   -----------
+   -- Equal --
+   -----------
+
+   function Equal
+     (Str1, Str2 : GNAT.Strings.String_Access) return Boolean is
+   begin
+      return Str1.all = Str2.all;
+   end Equal;
+
    ----------
    -- Free --
    ----------
@@ -157,7 +169,6 @@ package body GNATCOLL.SQL.Exec is
                C : String_Maps.Cursor;
             begin
                C := String_Maps.Find (Query_To_Id, Cached.Str);
-
                if String_Maps.Has_Element (C) then
                   Free (Stmt.Cached);  --  No longer needed
                   Stmt.Cached := String_Maps.Element (C);
@@ -923,17 +934,6 @@ package body GNATCOLL.SQL.Exec is
       return Value (DBMS_Forward_Cursor'Class (Self.Res.all), Field);
    end Value;
 
-   ---------------
-   -- Str_Value --
-   ---------------
-
-   function Str_Value
-     (Self  : Forward_Cursor;
-      Field : Field_Index) return GNAT.Strings.String_Access is
-   begin
-      return Str_Value (DBMS_Forward_Cursor'Class (Self.Res.all), Field);
-   end Str_Value;
-
    -------------------
    -- Boolean_Value --
    -------------------
@@ -1051,9 +1051,9 @@ package body GNATCOLL.SQL.Exec is
    -- Current --
    -------------
 
-   function Current (Self : Direct_Cursor) return Positive is
+   function Current (Self : Forward_Cursor) return Positive is
    begin
-      return Current (DBMS_Direct_Cursor'Class (Self.Res.all));
+      return Current (DBMS_Forward_Cursor'Class (Self.Res.all));
    end Current;
 
    ----------
@@ -1112,6 +1112,8 @@ package body GNATCOLL.SQL.Exec is
    is
       Stmt : Prepared_Statement;
    begin
+      --  Memory will be freed by Query_Cache.Prepared_Statement when
+      --  appropriate
       Stmt :=
         (Cached    => new Cached_Statement'
            (Id        => No_Stmt_Id,

@@ -1,7 +1,7 @@
 -----------------------------------------------------------------------
 --                               G N A T C O L L                     --
 --                                                                   --
---                 Copyright (C) 2005-2008, AdaCore                  --
+--                 Copyright (C) 2005-2009, AdaCore                  --
 --                                                                   --
 -- GPS is free  software;  you can redistribute it and/or modify  it --
 -- under the terms of the GNU General Public License as published by --
@@ -27,9 +27,15 @@ package body GNATCOLL.SQL.Postgres is
    -- Build_Postgres_Connection --
    -------------------------------
 
-   function Build_Postgres_Connection return Database_Connection is
+   function Build_Postgres_Connection
+     (Descr : GNATCOLL.SQL.Exec.Database_Description)
+      return Database_Connection is
    begin
-      return GNATCOLL.SQL.Postgres.Builder.Build_Postgres_Connection;
+      if Get_DBMS (Descr) = DBMS_Postgresql then
+         return GNATCOLL.SQL.Postgres.Builder.Build_Postgres_Connection;
+      else
+         return null;
+      end if;
    end Build_Postgres_Connection;
 
    ---------------

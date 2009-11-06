@@ -858,9 +858,9 @@ begin
    Get_Database_Connection (DB_Descr, Enums, Vars);
 
    if Get_DBMS (DB_Descr) = DBMS_Postgresql then
-      Connection := Build_Postgres_Connection;
+      Connection := Build_Postgres_Connection (DB_Descr);
    elsif Get_DBMS (DB_Descr) = DBMS_Sqlite then
-      Connection := Build_Sqlite_Connection;
+      Connection := Build_Sqlite_Connection (DB_Descr);
    else
       Put_Line ("Unknown dbtype: " & Get_DBMS (DB_Descr));
       return;

@@ -105,6 +105,7 @@ package body GNATCOLL.SQL.Postgres.Builder is
          --  Always 0 for Forward_Cursor
       end record;
 
+      overriding function Current (Self : Cursor) return Positive;
       overriding function Error_Msg (Self : Cursor) return String;
       overriding function Status (Self : Cursor) return String;
       overriding function Is_Success (Self : Cursor) return Boolean;
@@ -154,6 +155,11 @@ package body GNATCOLL.SQL.Postgres.Builder is
       begin
          Clear (Self.Res);
       end Finalize;
+
+      overriding function Current (Self : Cursor) return Positive is
+      begin
+         return Integer (Self.Current) + 1;
+      end Current;
 
       overriding function Value
         (Self  : Cursor;
@@ -270,8 +276,6 @@ package body GNATCOLL.SQL.Postgres.Builder is
    overriding procedure Next   (Self : in out Postgresql_Direct_Cursor);
    overriding procedure First (Self : in out Postgresql_Direct_Cursor);
    overriding procedure Last  (Self : in out Postgresql_Direct_Cursor);
-   overriding function Current
-     (Self : Postgresql_Direct_Cursor) return Positive;
    overriding procedure Absolute
      (Self : in out Postgresql_Direct_Cursor; Row : Positive);
    overriding procedure Relative
@@ -900,16 +904,6 @@ package body GNATCOLL.SQL.Postgres.Builder is
    begin
       Self.Current := Tuple_Index (Row - 1);
    end Absolute;
-
-   -------------
-   -- Current --
-   -------------
-
-   overriding function Current
-     (Self : Postgresql_Direct_Cursor) return Positive is
-   begin
-      return Integer (Self.Current) + 1;
-   end Current;
 
    --------------
    -- Relative --

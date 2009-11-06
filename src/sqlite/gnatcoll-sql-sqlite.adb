@@ -25,9 +25,15 @@ package body GNATCOLL.SQL.Sqlite is
    -- Build_Sqlite_Connection --
    -----------------------------
 
-   function Build_Sqlite_Connection return Database_Connection is
+   function Build_Sqlite_Connection
+     (Descr : GNATCOLL.SQL.Exec.Database_Description)
+      return Database_Connection is
    begin
-      return GNATCOLL.SQL.Sqlite.Builder.Build_Sqlite_Connection;
+      if Get_DBMS (Descr) = DBMS_Sqlite then
+         return GNATCOLL.SQL.Sqlite.Builder.Build_Sqlite_Connection;
+      else
+         return null;
+      end if;
    end Build_Sqlite_Connection;
 
 end GNATCOLL.SQL.Sqlite;

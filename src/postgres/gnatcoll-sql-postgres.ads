@@ -24,7 +24,9 @@ with GNATCOLL.SQL.Exec;   use GNATCOLL.SQL.Exec;
 
 package GNATCOLL.SQL.Postgres is
 
-   function Build_Postgres_Connection return Database_Connection;
+   function Build_Postgres_Connection
+     (Descr : GNATCOLL.SQL.Exec.Database_Description)
+      return Database_Connection;
    --  Return a database connection for PostgreSQL.
    --  If postgres was not detected at installation time, this function will
    --  return null. The type is hidden in the body so that the spec can always
@@ -32,6 +34,8 @@ package GNATCOLL.SQL.Postgres is
    --  machine. Combined with similar behavior for other DBMS, this allows you
    --  to have a connection factory in your application so that your
    --  application can potentially support multiple DBMS.
+   --  This function is compatible with the factory expected for
+   --  Get_Task_Connection, but will only work if Descr is for postgreSQL
 
    -------------------------
    -- Postgres extensions --

@@ -386,6 +386,9 @@ package GNATCOLL.SQL.Exec is
    --  since once the cursor was moved to the next field, there is no way to
    --  move back to the previous row.
 
+   function Current (Self : Forward_Cursor) return Positive;
+   --  Index of the current row. The first row is always numbered 1
+
    function Value (Self : Forward_Cursor; Field : Field_Index) return String;
    function Boolean_Value
      (Self : Forward_Cursor; Field : Field_Index) return Boolean;
@@ -398,11 +401,6 @@ package GNATCOLL.SQL.Exec is
    function Time_Value
      (Self  : Forward_Cursor; Field : Field_Index) return Ada.Calendar.Time;
    --  Return a specific cell, converted to the appropriate format
-
-   function Str_Value
-     (Self : Forward_Cursor; Field : Field_Index)
-      return GNAT.Strings.String_Access;
-   --  Return a specific cell, caller must free value
 
    function Is_Null
      (Self  : Forward_Cursor; Field : Field_Index) return Boolean;
@@ -444,9 +442,6 @@ package GNATCOLL.SQL.Exec is
      (Self : Direct_Cursor) return Natural renames Processed_Rows;
    --  Return total number of rows in result.
    --  Processed_Rows will always return the number read from the database
-
-   function Current (Self : Direct_Cursor) return Positive;
-   --  Index of the current row. The first row is always numbered 1
 
    procedure First (Self : in out Direct_Cursor);
    procedure Last  (Self : in out Direct_Cursor);
@@ -529,7 +524,7 @@ package GNATCOLL.SQL.Exec is
    --
    --      R.Fetch (Connection, P);
    --
-   --  In practice, little work in done in Prepare. The actual preparation work
+   --  In practice, little work is done in Prepare. The actual preparation work
    --  is done the first time you try to execute the query, since there are
    --  some DBMS-specific aspects involved, notably the way to encode params in
    --  the SQL command. Not requiring the connection in this call means that

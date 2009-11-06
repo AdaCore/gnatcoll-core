@@ -38,6 +38,7 @@ package body GNATCOLL.SQL.Sqlite.Builder is
    end record;
    type Sqlite_Cursor_Access is access all Sqlite_Cursor'Class;
 
+   overriding function Current (Self : Sqlite_Cursor) return Positive;
    overriding function Error_Msg  (Self : Sqlite_Cursor) return String;
    overriding function Status     (Self : Sqlite_Cursor) return String;
    overriding function Is_Success (Self : Sqlite_Cursor) return Boolean;
@@ -647,6 +648,15 @@ package body GNATCOLL.SQL.Sqlite.Builder is
       Step (Self.Stmt, Self.Last_Status);
       Self.Processed_Rows := Self.Processed_Rows + 1;
    end Next;
+
+   -------------
+   -- Current --
+   -------------
+
+   overriding function Current (Self : Sqlite_Cursor) return Positive is
+   begin
+      return Self.Processed_Rows + 1;
+   end Current;
 
    -----------------------------
    -- Build_Sqlite_Connection --
