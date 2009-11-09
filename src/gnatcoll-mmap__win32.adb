@@ -61,8 +61,6 @@ package body GNATCOLL.Mmap is
       GENERIC_WRITE : constant := 16#40000000#;
       OPEN_EXISTING : constant := 3;
 
-      CP_UTF8       : constant := 65001;
-
       type OVERLAPPED is record
          Internal     : DWORD;
          InternalHigh : DWORD;
@@ -163,15 +161,6 @@ package body GNATCOLL.Mmap is
 
       procedure GetSystemInfo (lpSystemInfo : LP_SYSTEM_INFO);
       pragma Import (Stdcall, GetSystemInfo, "GetSystemInfo");
-
-      function MultiByteToWideChar
-        (CodePage       : WORD;
-         dwFlags        : DWORD;
-         lpMultiByteStr : System.Address;
-         cchMultiByte   : WORD;
-         lpWideCharStr  : System.Address;
-         cchWideChar    : WORD) return BOOL;
-      pragma Import (Stdcall, MultiByteToWideChar, "MultiByteToWideChar");
 
    end Win;
 
