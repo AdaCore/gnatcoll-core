@@ -45,7 +45,7 @@ package body GNATCOLL.Mmap is
 
       subtype PVOID is System.Address;
 
-      type HANDLE is new Interfaces.C.long;
+      type HANDLE is new Interfaces.C.ptrdiff_t;
 
       type WORD   is new Interfaces.C.unsigned_short;
       type DWORD  is new Interfaces.C.unsigned_long;
