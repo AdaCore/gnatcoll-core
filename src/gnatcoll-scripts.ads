@@ -32,8 +32,9 @@ with Ada.Strings.Hash;
 with GNAT.OS_Lib;
 with GNAT.Strings;
 
-with GNATCOLL.VFS;     use GNATCOLL.VFS;
-with GNATCOLL.Any_Types; use GNATCOLL.Any_Types;
+with GNATCOLL.Command_Lines; use GNATCOLL.Command_Lines;
+with GNATCOLL.VFS;           use GNATCOLL.VFS;
+with GNATCOLL.Any_Types;     use GNATCOLL.Any_Types;
 
 package GNATCOLL.Scripts is
 
@@ -160,6 +161,14 @@ package GNATCOLL.Scripts is
    --  Create a new empty list of arguments. You must call Set_Nth_Arg for
    --  each of these arguments before using the return value
 
+   function Command_Line_Treatment
+     (Script : access Scripting_Language_Record)
+      return Command_Line_Mode is abstract;
+   --  Indicates how command lines should be treated by GPS.
+   --  If the returned type is Separate_Args, then GPS should handle the
+   --  parsing and separating of arguments.
+   --  Otherwise GPS should just manipulate the command lines as raw strings.
+
    procedure Free (Data : in out Callback_Data) is abstract;
    procedure Free (Data : in out Callback_Data_Access);
    --  Free the memory occupied by Data. This needs to be called only if Data
@@ -170,17 +179,20 @@ package GNATCOLL.Scripts is
    --  Clone Data. The result value must be freed by the caller
 
    procedure Set_Nth_Arg
-     (Data : Callback_Data; N : Positive; Value : String) is abstract;
+     (Data : in out Callback_Data; N : Positive; Value : String) is abstract;
    procedure Set_Nth_Arg
-     (Data : Callback_Data; N : Positive; Value : Integer) is abstract;
+     (Data : in out Callback_Data; N : Positive; Value : Integer) is abstract;
    procedure Set_Nth_Arg
-     (Data : Callback_Data; N : Positive; Value : Boolean) is abstract;
+     (Data : in out Callback_Data; N : Positive; Value : Boolean) is abstract;
    procedure Set_Nth_Arg
-     (Data : Callback_Data; N : Positive; Value : Class_Instance) is abstract;
+     (Data : in out Callback_Data;
+      N : Positive; Value : Class_Instance) is abstract;
    procedure Set_Nth_Arg
-     (Data : Callback_Data; N : Positive; Value : Subprogram_Type) is abstract;
+     (Data : in out Callback_Data;
+      N : Positive; Value : Subprogram_Type) is abstract;
    procedure Set_Nth_Arg
-     (Data : Callback_Data'Class; N : Positive; Value : Filesystem_String);
+     (Data : in out Callback_Data'Class;
+      N : Positive; Value : Filesystem_String);
    --  Set the nth argument of Data
 
    function Number_Of_Arguments
@@ -700,7 +712,7 @@ package GNATCOLL.Scripts is
 
    procedure Execute_Command
      (Script       : access Scripting_Language_Record;
-      Command      : String;
+      CL           : Command_Line;
       Console      : Virtual_Console := null;
       Hide_Output  : Boolean := False;
       Show_Command : Boolean := True;
@@ -719,7 +731,7 @@ package GNATCOLL.Scripts is
 
    function Execute_Command
      (Script       : access Scripting_Language_Record;
-      Command      : String;
+      CL           : Command_Line;
       Console      : Virtual_Console := null;
       Hide_Output  : Boolean := False;
       Show_Command : Boolean := True;
@@ -733,8 +745,8 @@ package GNATCOLL.Scripts is
 
    function Execute_Command
      (Script      : access Scripting_Language_Record;
-      Command     : String;
-      Console      : Virtual_Console := null;
+      CL          : Command_Line;
+      Console     : Virtual_Console := null;
       Hide_Output : Boolean := False;
       Errors      : access Boolean) return Boolean is abstract;
    --  Execute a command and evaluate its return value (*not* its output) as a
@@ -751,10 +763,8 @@ package GNATCOLL.Scripts is
 
    function Execute_Command_With_Args
      (Script  : access Scripting_Language_Record;
-      Command : String;
-      Args    : GNAT.OS_Lib.Argument_List) return String;
-   --  Execute a command, the arguments of which are already splitted and
-   --  unquoted.
+      CL      : Command_Line) return String;
+   --  Execute a command.
    --  This procedure needs only be implemented for the GPS shell, in all other
    --  language you should keep the default which raises Program_Error, since
    --  this function is not used anywhere but for shell commands.

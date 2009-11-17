@@ -24,6 +24,8 @@ private with Ada.Containers.Indefinite_Hashed_Maps;
 private with Ada.Strings.Hash;
 private with GNAT.Strings;
 
+with GNATCOLL.Command_Lines;    use GNATCOLL.Command_Lines;
+
 package GNATCOLL.Scripts.Shell is
 
    Shell_Name : constant String := "shell";
@@ -48,8 +50,7 @@ package GNATCOLL.Scripts.Shell is
 
    procedure Initialize
      (Data            : in out Shell_Callback_Data'Class;
-      Script          : access Shell_Scripting_Record'Class;
-      Arguments_Count : Natural);
+      Script          : access Shell_Scripting_Record'Class);
    --  Initialize Data to pass Arguments_Count to a callback
 
    procedure List_Commands
@@ -143,6 +144,9 @@ private
       --  Prompt to use in consoles for this language
    end record;
 
+   overriding function Command_Line_Treatment
+     (Script : access Shell_Scripting_Record) return Command_Line_Mode;
+
    overriding procedure Destroy (Script : access Shell_Scripting_Record);
 
    overriding procedure Register_Command
@@ -164,7 +168,7 @@ private
 
    overriding procedure Execute_Command
      (Script       : access Shell_Scripting_Record;
-      Command      : String;
+      CL           : Command_Line;
       Console      : Virtual_Console := null;
       Hide_Output  : Boolean := False;
       Show_Command : Boolean := True;
@@ -172,7 +176,7 @@ private
 
    overriding function Execute_Command
      (Script       : access Shell_Scripting_Record;
-      Command      : String;
+      CL           : Command_Line;
       Console      : Virtual_Console := null;
       Hide_Output  : Boolean := False;
       Show_Command : Boolean := True;
@@ -180,7 +184,7 @@ private
 
    overriding function Execute_Command
      (Script      : access Shell_Scripting_Record;
-      Command     : String;
+      CL          : Command_Line;
       Console     : Virtual_Console := null;
       Hide_Output : Boolean := False;
       Errors      : access Boolean) return Boolean;
@@ -192,8 +196,7 @@ private
 
    overriding function Execute_Command_With_Args
      (Script  : access Shell_Scripting_Record;
-      Command : String;
-      Args    : GNAT.OS_Lib.Argument_List) return String;
+      CL      : Command_Line) return String;
 
    overriding procedure Execute_File
      (Script       : access Shell_Scripting_Record;
@@ -229,7 +232,7 @@ private
 
    type Shell_Callback_Data is new Callback_Data with record
       Script          : Shell_Scripting;
-      Args            : GNAT.OS_Lib.Argument_List_Access;
+      CL              : Command_Line;
       Return_Value    : GNAT.Strings.String_Access;
       Return_Dict     : GNAT.Strings.String_Access;
       Return_As_List  : Boolean := False;
@@ -324,19 +327,23 @@ private
       Arguments_Count : Natural) return Callback_Data'Class;
 
    overriding procedure Set_Nth_Arg
-     (Data : Shell_Callback_Data; N : Positive; Value : String);
+     (Data : in out Shell_Callback_Data; N : Positive; Value : String);
 
    overriding procedure Set_Nth_Arg
-     (Data : Shell_Callback_Data; N : Positive; Value : Integer);
+     (Data : in out Shell_Callback_Data; N : Positive; Value : Integer);
 
    overriding procedure Set_Nth_Arg
-     (Data : Shell_Callback_Data; N : Positive; Value : Boolean);
+     (Data : in out Shell_Callback_Data; N : Positive; Value : Boolean);
 
    overriding procedure Set_Nth_Arg
-     (Data : Shell_Callback_Data; N : Positive; Value : Class_Instance);
+     (Data  : in out Shell_Callback_Data;
+      N     : Positive;
+      Value : Class_Instance);
 
    overriding procedure Set_Nth_Arg
-     (Data : Shell_Callback_Data; N : Positive; Value : Subprogram_Type);
+     (Data  : in out Shell_Callback_Data;
+      N     : Positive;
+      Value : Subprogram_Type);
    --  See doc from inherited subprogram
 
    ----------------------

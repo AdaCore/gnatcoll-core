@@ -1,7 +1,7 @@
 -----------------------------------------------------------------------
 --                               G N A T C O L L                     --
 --                                                                   --
---                      Copyright (C) 2003-2008, AdaCore             --
+--                      Copyright (C) 2003-2009, AdaCore             --
 --                                                                   --
 -- GPS is free  software;  you can redistribute it and/or modify  it --
 -- under the terms of the GNU General Public License as published by --
@@ -97,7 +97,7 @@ package body GNATCOLL.Scripts.Python.Gtkada is
       if Build_With_PyGtk = 1 then
          Execute_Command
            (Script          => Script,
-            Command         => "import pygtk",
+            CL              => Create ("import pygtk"),
             Hide_Output     => True,
             Errors          => Errors);
       else
@@ -110,7 +110,7 @@ package body GNATCOLL.Scripts.Python.Gtkada is
          Insert_Log (Script, null, "Loading support for pygtk");
          Execute_Command
            (Script      => Script,
-            Command     => "pygtk.require('2.0'); import gtk",
+            CL          => Create ("pygtk.require('2.0'); import gtk"),
             Hide_Output => True,
             Errors      => Errors);
          if Errors then

@@ -257,6 +257,17 @@ package body GNATCOLL.Scripts.Python is
       Script.Finalized := True;
    end Destroy;
 
+   ----------------------------
+   -- Command_Line_Treatment --
+   ----------------------------
+
+   overriding function Command_Line_Treatment
+     (Script : access Python_Scripting_Record) return Command_Line_Mode is
+      pragma Unreferenced (Script);
+   begin
+      return Raw_String;
+   end Command_Line_Treatment;
+
    -------------------------------
    -- Register_Python_Scripting --
    -------------------------------
@@ -522,7 +533,8 @@ package body GNATCOLL.Scripts.Python is
    -----------------
 
    procedure Set_Nth_Arg
-     (Data : Python_Callback_Data; N : Positive; Value : Subprogram_Type) is
+     (Data : in out Python_Callback_Data;
+      N : Positive; Value : Subprogram_Type) is
    begin
       PyTuple_SetItem (Data.Args, N - 1,
                        Python_Subprogram_Record (Value.all).Subprogram);
@@ -534,7 +546,7 @@ package body GNATCOLL.Scripts.Python is
    -----------------
 
    procedure Set_Nth_Arg
-     (Data : Python_Callback_Data; N : Positive; Value : String) is
+     (Data : in out Python_Callback_Data; N : Positive; Value : String) is
    begin
       PyTuple_SetItem (Data.Args, N - 1, PyString_FromString (Value));
    end Set_Nth_Arg;
@@ -544,7 +556,7 @@ package body GNATCOLL.Scripts.Python is
    -----------------
 
    procedure Set_Nth_Arg
-     (Data : Python_Callback_Data; N : Positive; Value : Integer) is
+     (Data : in out Python_Callback_Data; N : Positive; Value : Integer) is
    begin
       PyTuple_SetItem
         (Data.Args, N - 1, PyInt_FromLong (Interfaces.C.long (Value)));
@@ -555,7 +567,7 @@ package body GNATCOLL.Scripts.Python is
    -----------------
 
    procedure Set_Nth_Arg
-     (Data : Python_Callback_Data; N : Positive; Value : Boolean) is
+     (Data : in out Python_Callback_Data; N : Positive; Value : Boolean) is
    begin
       PyTuple_SetItem (Data.Args, N - 1, PyInt_FromLong (Boolean'Pos (Value)));
    end Set_Nth_Arg;
@@ -565,7 +577,7 @@ package body GNATCOLL.Scripts.Python is
    -----------------
 
    procedure Set_Nth_Arg
-     (Data : Python_Callback_Data; N : Positive; Value : Class_Instance)
+     (Data : in out Python_Callback_Data; N : Positive; Value : Class_Instance)
    is
       Inst : constant PyObject := Python_Class_Instance (Get_CIR (Value)).Data;
    begin
@@ -1197,7 +1209,7 @@ package body GNATCOLL.Scripts.Python is
 
    procedure Execute_Command
      (Script       : access Python_Scripting_Record;
-      Command      : String;
+      CL           : Command_Line;
       Console      : Virtual_Console := null;
       Hide_Output  : Boolean := False;
       Show_Command : Boolean := True;
@@ -1211,7 +1223,7 @@ package body GNATCOLL.Scripts.Python is
          Insert_Error (Script, Console, "A command is already executing");
       else
          Result := Run_Command
-           (Script, Command,
+           (Script, Get_Command (CL),
             Console      => Console,
             Hide_Output  => Hide_Output,
             Show_Command => Show_Command,
@@ -1227,7 +1239,7 @@ package body GNATCOLL.Scripts.Python is
 
    function Execute_Command
      (Script       : access Python_Scripting_Record;
-      Command      : String;
+      CL           : Command_Line;
       Console      : Virtual_Console := null;
       Hide_Output  : Boolean := False;
       Show_Command : Boolean := True;
@@ -1241,7 +1253,7 @@ package body GNATCOLL.Scripts.Python is
          return "";
       else
          return Run_Command
-           (Script, Command,
+           (Script, Get_Command (CL),
             Console     => Console,
             Hide_Output => Hide_Output,
             Errors      => Errors);
@@ -1254,8 +1266,8 @@ package body GNATCOLL.Scripts.Python is
 
    function Execute_Command
      (Script      : access Python_Scripting_Record;
-      Command     : String;
-      Console      : Virtual_Console := null;
+      CL          : Command_Line;
+      Console     : Virtual_Console := null;
       Hide_Output : Boolean := False;
       Errors      : access Boolean) return Boolean
    is
@@ -1268,7 +1280,7 @@ package body GNATCOLL.Scripts.Python is
          return False;
       else
          Obj := Run_Command
-           (Script, Command, Console,
+           (Script, Get_Command (CL), Console,
             False, Hide_Output, False, Errors);
          Result := Obj /= null
            and then ((PyInt_Check (Obj) and then PyInt_AsLong (Obj) = 1)
@@ -1480,14 +1492,14 @@ package body GNATCOLL.Scripts.Python is
    procedure Execute_File
      (Script      : access Python_Scripting_Record;
       Filename    : String;
-      Console      : Virtual_Console := null;
+      Console     : Virtual_Console := null;
       Hide_Output : Boolean := False;
       Show_Command : Boolean := True;
       Errors      : out Boolean) is
    begin
       Script.Current_File := To_Unbounded_String (Filename);
       Execute_Command
-        (Script, "execfile (r'" & Filename & "')",
+        (Script, Create ("execfile (r'" & Filename & "')"),
          Console, Hide_Output, Show_Command, Errors);
       Script.Current_File := Null_Unbounded_String;
    end Execute_File;

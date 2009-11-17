@@ -464,11 +464,10 @@ package body GNATCOLL.Scripts is
    -------------------------------
 
    function Execute_Command_With_Args
-     (Script  : access Scripting_Language_Record;
-      Command : String;
-      Args    : GNAT.OS_Lib.Argument_List) return String
+     (Script : access Scripting_Language_Record;
+      CL     : Command_Line) return String
    is
-      pragma Unreferenced (Script, Command, Args);
+      pragma Unreferenced (Script, CL);
    begin
       raise Program_Error;
       return "";
@@ -480,7 +479,7 @@ package body GNATCOLL.Scripts is
 
    function Execute_Command
      (Script       : access Scripting_Language_Record;
-      Command      : String;
+      CL           : Command_Line;
       Console      : Virtual_Console := null;
       Hide_Output  : Boolean := False;
       Show_Command : Boolean := True;
@@ -488,7 +487,7 @@ package body GNATCOLL.Scripts is
    begin
       Execute_Command
         (Scripting_Language (Script),
-         Command, Console, Hide_Output, Show_Command, Errors.all);
+         CL, Console, Hide_Output, Show_Command, Errors.all);
       return "";
    end Execute_Command;
 
@@ -1118,7 +1117,9 @@ package body GNATCOLL.Scripts is
    -----------------
 
    procedure Set_Nth_Arg
-     (Data : Callback_Data'Class; N : Positive; Value : Filesystem_String) is
+     (Data  : in out Callback_Data'Class;
+      N     : Positive;
+      Value : Filesystem_String) is
    begin
       Set_Nth_Arg (Data, N, +(Value));
    end Set_Nth_Arg;

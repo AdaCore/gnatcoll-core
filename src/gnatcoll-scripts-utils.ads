@@ -1,7 +1,7 @@
 -----------------------------------------------------------------------
 --                          G N A T C O L L                          --
 --                                                                   --
---                 Copyright (C) 2003-2008, AdaCore                  --
+--                 Copyright (C) 2003-2009, AdaCore                  --
 --                                                                   --
 -- GPS is free  software;  you can redistribute it and/or modify  it --
 -- under the terms of the GNU General Public License as published by --
@@ -54,5 +54,6 @@ package GNATCOLL.Scripts.Utils is
 
    function Unprotect (Str : String) return String;
    --  Remove the \ protections in Str
+   --  ??? This seems to also remove the quotes around an argument
 
 end GNATCOLL.Scripts.Utils;

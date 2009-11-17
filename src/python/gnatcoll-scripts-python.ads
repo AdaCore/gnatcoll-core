@@ -89,6 +89,8 @@ private
       --  The script we are currently executing
    end record;
 
+   overriding function Command_Line_Treatment
+     (Script : access Python_Scripting_Record) return Command_Line_Mode;
    overriding procedure Destroy (Script : access Python_Scripting_Record);
    overriding procedure Block_Commands
      (Script : access Python_Scripting_Record; Block  : Boolean);
@@ -112,21 +114,21 @@ private
       Class : Class_Type) return Class_Instance;
    overriding procedure Execute_Command
      (Script       : access Python_Scripting_Record;
-      Command      : String;
+      CL           : Command_Line;
       Console      : Virtual_Console := null;
       Hide_Output  : Boolean := False;
       Show_Command : Boolean := True;
       Errors       : out Boolean);
    overriding function Execute_Command
      (Script       : access Python_Scripting_Record;
-      Command      : String;
+      CL           : Command_Line;
       Console      : Virtual_Console := null;
       Hide_Output  : Boolean := False;
       Show_Command : Boolean := True;
       Errors       : access Boolean) return String;
    overriding function Execute_Command
      (Script      : access Python_Scripting_Record;
-      Command     : String;
+      CL          : Command_Line;
       Console     : Virtual_Console := null;
       Hide_Output : Boolean := False;
       Errors      : access Boolean) return Boolean;
@@ -260,15 +262,17 @@ private
       Append : Boolean := False);
    overriding procedure Free (Data : in out Python_Callback_Data);
    overriding procedure Set_Nth_Arg
-     (Data : Python_Callback_Data; N : Positive; Value : String);
+     (Data : in out Python_Callback_Data; N : Positive; Value : String);
    overriding procedure Set_Nth_Arg
-     (Data : Python_Callback_Data; N : Positive; Value : Integer);
+     (Data : in out Python_Callback_Data; N : Positive; Value : Integer);
    overriding procedure Set_Nth_Arg
-     (Data : Python_Callback_Data; N : Positive; Value : Boolean);
+     (Data : in out Python_Callback_Data; N : Positive; Value : Boolean);
    overriding procedure Set_Nth_Arg
-     (Data : Python_Callback_Data; N : Positive; Value : Class_Instance);
+     (Data : in out Python_Callback_Data;
+      N : Positive; Value : Class_Instance);
    overriding procedure Set_Nth_Arg
-     (Data : Python_Callback_Data; N : Positive; Value : Subprogram_Type);
+     (Data : in out Python_Callback_Data;
+      N : Positive; Value : Subprogram_Type);
    --  See doc from inherited subprogram
 
 end GNATCOLL.Scripts.Python;

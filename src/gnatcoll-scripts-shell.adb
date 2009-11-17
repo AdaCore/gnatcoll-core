@@ -74,8 +74,7 @@ package body GNATCOLL.Scripts.Shell is
 
    function Execute_GPS_Shell_Command
      (Script  : access Shell_Scripting_Record'Class;
-      Command : String;
-      Args    : GNAT.OS_Lib.Argument_List;
+      CL      : Command_Line;
       Errors  : access Boolean) return String;
    --  Execute a command in the GPS shell and returns its result.
    --  Command must be a single command (no semicolon-separated list).
@@ -221,7 +220,9 @@ package body GNATCOLL.Scripts.Shell is
             Read (File);
             Execute_Command
               (Get_Script (Data),
-               String (GNATCOLL.Mmap.Data (File)(1 .. Last (File))),
+               Parse_String
+                 (String (GNATCOLL.Mmap.Data (File)(1 .. Last (File))),
+                  Separate_Args),
                Errors => Errors);
             Close (File);
          exception
@@ -263,11 +264,9 @@ package body GNATCOLL.Scripts.Shell is
 
    procedure Initialize
      (Data            : in out Shell_Callback_Data'Class;
-      Script          : access Shell_Scripting_Record'Class;
-      Arguments_Count : Natural) is
+      Script          : access Shell_Scripting_Record'Class) is
    begin
       Data.Script          := Shell_Scripting (Script);
-      Data.Args            := new Argument_List (1 .. Arguments_Count);
       Data.Return_Value    := null;
       Data.Return_Dict     := null;
       Data.Return_As_List  := False;
@@ -486,7 +485,7 @@ package body GNATCOLL.Scripts.Shell is
 
    procedure Execute_Command
      (Script       : access Shell_Scripting_Record;
-      Command      : String;
+      CL           : Command_Line;
       Console      : Virtual_Console := null;
       Hide_Output  : Boolean := False;
       Show_Command : Boolean := True;
@@ -503,7 +502,7 @@ package body GNATCOLL.Scripts.Shell is
       declare
          S : constant String :=
                Execute_GPS_Shell_Command
-                 (Script, Command, Err'Unchecked_Access);
+                 (Script, CL, Err'Unchecked_Access);
       begin
          Errors := Err;
          if S /= "" then
@@ -526,13 +525,12 @@ package body GNATCOLL.Scripts.Shell is
 
    function Execute_Command_With_Args
      (Script  : access Shell_Scripting_Record;
-      Command : String;
-      Args    : GNAT.OS_Lib.Argument_List) return String
+      CL      : Command_Line) return String
    is
       Errors : aliased Boolean;
    begin
       return Execute_GPS_Shell_Command
-        (Script, Command, Args, Errors'Unchecked_Access);
+        (Script, CL, Errors'Unchecked_Access);
    end Execute_Command_With_Args;
 
    ------------------
@@ -549,16 +547,20 @@ package body GNATCOLL.Scripts.Shell is
    is
       Old_Console : constant Virtual_Console := Script.Console;
       Err         : aliased Boolean;
-      Args        : Argument_List := (1 => new String'(Filename));
+      CL          : Command_Line;
    begin
       if Console /= null then
          Script.Console := Console;
       end if;
 
-      Insert_Text (Script, Console, "load " & Filename, not Show_Command);
+      CL := Create ("load");
+      Append_Argument (CL, Filename, One_Arg);
+
+      Insert_Text (Script, Console, To_Display_String (CL), not Show_Command);
+
       declare
          S : constant String := Execute_GPS_Shell_Command
-           (Script, "load", Args, Err'Unchecked_Access);
+           (Script, CL, Err'Unchecked_Access);
       begin
          Errors := Err;
          if S /= "" then
@@ -570,10 +572,6 @@ package body GNATCOLL.Scripts.Shell is
          if not Hide_Output then
             Display_Prompt (Script, Script.Console);
          end if;
-
-         for F in Args'Range loop
-            Free (Args (F));
-         end loop;
       end;
    end Execute_File;
 
@@ -662,7 +660,7 @@ package body GNATCOLL.Scripts.Shell is
 
    function Execute_Command
      (Script       : access Shell_Scripting_Record;
-      Command      : String;
+      CL           : Command_Line;
       Console      : Virtual_Console := null;
       Hide_Output  : Boolean := False;
       Show_Command : Boolean := True;
@@ -677,7 +675,7 @@ package body GNATCOLL.Scripts.Shell is
       end if;
       declare
          Result : constant String := Execute_GPS_Shell_Command
-           (Script, Command, Err'Unchecked_Access);
+           (Script, CL, Err'Unchecked_Access);
       begin
          Errors.all := Err;
          if Result /= "" then
@@ -699,7 +697,7 @@ package body GNATCOLL.Scripts.Shell is
 
    function Execute_Command
      (Script      : access Shell_Scripting_Record;
-      Command     : String;
+      CL          : Command_Line;
       Console     : Virtual_Console := null;
       Hide_Output : Boolean := False;
       Errors      : access Boolean) return Boolean
@@ -713,7 +711,7 @@ package body GNATCOLL.Scripts.Shell is
 
       declare
          Result : constant String := Trim
-           (Execute_GPS_Shell_Command (Script, Command, Err'Unchecked_Access),
+           (Execute_GPS_Shell_Command (Script, CL, Err'Unchecked_Access),
             Ada.Strings.Both);
       begin
          Errors.all := Err;
@@ -735,24 +733,26 @@ package body GNATCOLL.Scripts.Shell is
 
    function Execute_GPS_Shell_Command
      (Script  : access Shell_Scripting_Record'Class;
-      Command : String;
-      Args    : GNAT.OS_Lib.Argument_List;
+      CL      : Command_Line;
       Errors  : access Boolean) return String
    is
       Data_C   : Command_Hash.Cursor;
       Data     : Command_Information_Access;
       Instance : Class_Instance;
-      Start    : Natural;
+      Start    : Natural := 0;
       Count    : Natural;
-
+      Command  : constant String := Get_Command (CL);
    begin
       if Script.Finalized then
          return "";
       end if;
 
+      if Command = "" then
+         return "";
+      end if;
+
       if Active (Me) then
-         Trace (Me, "Executing " & Command & " "
-                & Argument_List_To_Quoted_String (Args)
+         Trace (Me, "Executing " & To_Display_String (CL)
                 & " blocked=" & Script.Blocked'Img);
       end if;
 
@@ -761,7 +761,7 @@ package body GNATCOLL.Scripts.Shell is
          return "A command is already executing";
       end if;
 
-      Insert_Log (Script, null, "Executing " & Command);
+      Insert_Log (Script, null, "Executing " & To_Display_String (CL));
 
       Errors.all := False;
 
@@ -770,10 +770,10 @@ package body GNATCOLL.Scripts.Shell is
       if Has_Element (Data_C) then
          Data := Element (Data_C);
 
-         if Data.Minimum_Args <= Args'Length
-           and then Args'Length <= Data.Maximum_Args
+         if Data.Minimum_Args <= Args_Length (CL)
+           and then Args_Length (CL) <= Data.Maximum_Args
          then
-            Count := Args'Length;
+            Count := Args_Length (CL);
             if Data.Short_Command.all = Constructor_Method then
                Count := Count + 1;
             end if;
@@ -786,42 +786,46 @@ package body GNATCOLL.Scripts.Shell is
             begin
                Callback.Script := Shell_Scripting (Script);
 
+               Callback.CL := Create ("");
+
                if Data.Short_Command.all = Constructor_Method then
                   Instance := New_Instance (Callback.Script, Data.Class);
-                  Callback.Args (1) :=
-                    new String'(Name_From_Instance (Instance));
-                  Start := 2;
-               else
-                  Start := 1;
+                  Append_Argument
+                    (Callback.CL,
+                     Name_From_Instance (Instance),
+                     One_Arg);
                end if;
 
-               for A in Args'Range loop
-                  if Args (A)'Length > 0
-                    and then Args (A) (Args (A)'First) = '%'
-                  then
-                     declare
-                        Num : Integer;
-                     begin
-                        Num := Integer'Value
-                          (Args (A) (Args (A)'First + 1 .. Args (A)'Last));
-                        Callback.Args (A - Args'First + Start) :=
-                          new String'(Script.Returns
-                                      (Num + Script.Returns'First - 1).all);
+               for A in 1 .. Args_Length (CL) loop
+                  declare
+                     Args_A : constant String := Nth_Arg (CL, A);
+                  begin
+                     if Args_A'Length > 0
+                       and then Args_A (Args_A'First) = '%'
+                     then
+                        declare
+                           Num : Integer;
+                        begin
+                           Num := Integer'Value
+                             (Args_A (Args_A'First + 1 .. Args_A'Last));
+                           Append_Argument
+                             (Callback.CL,
+                              Script.Returns
+                                (Num + Script.Returns'First - 1).all,
+                              One_Arg);
 
-                     exception
-                        when Constraint_Error =>
-                           Callback.Args (A - Args'First + Start) :=
-                             new String'(Args (A).all);
-                     end;
+                        exception
+                           when Constraint_Error =>
+                              Append_Argument (Callback.CL, Args_A, One_Arg);
+                        end;
 
-                  else
-                     Callback.Args (A - Args'First + Start) :=
-                       new String'(Args (A).all);
-                  end if;
+                     else
+                        Append_Argument (Callback.CL, Args_A, One_Arg);
+                     end if;
+                  end;
                end loop;
 
                Data.Command_Handler (Callback, Data.Short_Command.all);
-               Free (Callback.Args);
 
                if Callback.Return_As_Error then
                   Errors.all := True;
@@ -895,7 +899,7 @@ package body GNATCOLL.Scripts.Shell is
       Command : String;
       Errors  : access Boolean) return String
    is
-      Args          : Argument_List_Access;
+      CL            : Command_Line;
       First, Last   : Integer;
       Tmp           : GNAT.Strings.String_Access;
       Quoted        : Boolean;
@@ -950,40 +954,21 @@ package body GNATCOLL.Scripts.Shell is
             end loop;
 
             if Last - 1 >= First then
-               Args := Argument_String_To_List_With_Triple_Quotes
-                 (Command (First .. Last - 1));
+               CL := Parse_String (Command (First .. Last - 1),
+                                   Command_Line_Treatment (Script));
 
-               if Args = null or else Args'Length = 0 then
+               if CL = Empty_Command_Line then
                   Errors.all := True;
                   return "Couldn't parse argument string for "
                     & Command (First .. Last - 1);
 
                else
-                  --  Cleanup the arguments to remove unnecessary quoting
-                  for J in Args'Range loop
-                     if Args (J).all /= "" then
-                        Tmp := Args (J);
-                        if Args (J) (Args (J)'First) = '"'
-                          and then Args (J) (Args (J)'Last) = '"'
-                        then
-                           Args (J) := new String'
-                             (Unprotect (Tmp (Tmp'First + 1 .. Tmp'Last - 1)));
-                        else
-                           Args (J) := new String'(Unprotect (Tmp.all));
-                        end if;
-                        Free (Tmp);
-                     end if;
-                  end loop;
-
                   declare
                      R : constant String := Execute_GPS_Shell_Command
                        (Script,
-                        Command => Args (Args'First).all,
-                        Args    => Args (Args'First + 1 .. Args'Last),
+                        CL      => CL,
                         Errors  => Errors);
                   begin
-                     Free (Args);
-
                      if Last > Command'Last then
                         return R;
                      end if;
@@ -1036,7 +1021,7 @@ package body GNATCOLL.Scripts.Shell is
 
    function Number_Of_Arguments (Data : Shell_Callback_Data) return Natural is
    begin
-      return Data.Args'Length;
+      return Args_Length (Data.CL);
    end Number_Of_Arguments;
 
    ----------
@@ -1044,8 +1029,9 @@ package body GNATCOLL.Scripts.Shell is
    ----------
 
    procedure Free (Data : in out Shell_Callback_Data) is
+      pragma Unreferenced (Data);
    begin
-      Free (Data.Args);
+      null;
    end Free;
 
    -----------
@@ -1053,15 +1039,15 @@ package body GNATCOLL.Scripts.Shell is
    -----------
 
    function Clone (Data : Shell_Callback_Data) return Callback_Data'Class is
-      C : constant Argument_List_Access := new Argument_List (Data.Args'Range);
+      New_CL : Command_Line := Create (Get_Command (Data.CL));
    begin
-      for A in Data.Args'Range loop
-         C (A) := new String'(Data.Args (A).all);
+      for A in 1 .. Args_Length (Data.CL) loop
+         Append_Argument (New_CL, Nth_Arg (Data.CL, A), One_Arg);
       end loop;
 
       return Shell_Callback_Data'
         (Callback_Data with
-         Args            => C,
+         CL              => New_CL,
          Script          => Data.Script,
          Return_Value    => null,
          Return_Dict     => null,
@@ -1080,7 +1066,7 @@ package body GNATCOLL.Scripts.Shell is
       Data : constant Shell_Callback_Data :=
                (Callback_Data with
                 Script          => Shell_Scripting (Script),
-                Args            => new Argument_List (1 .. Arguments_Count),
+                CL              => Empty_Command_Line,
                 Return_Value    => null,
                 Return_Dict     => null,
                 Return_As_List  => False,
@@ -1094,11 +1080,12 @@ package body GNATCOLL.Scripts.Shell is
    -----------------
 
    procedure Set_Nth_Arg
-     (Data : Shell_Callback_Data; N : Positive; Value : Subprogram_Type) is
+     (Data : in out Shell_Callback_Data; N : Positive; Value : Subprogram_Type)
+   is
    begin
-      Free (Data.Args (N - 1 + Data.Args'First));
-      Data.Args (N - 1 + Data.Args'First) :=
-        new String'(Shell_Subprogram_Record (Value.all).Command.all);
+      Set_Nth_Arg
+        (Data.CL, N,
+         Shell_Subprogram_Record (Value.all).Command.all);
    end Set_Nth_Arg;
 
    -----------------
@@ -1106,10 +1093,9 @@ package body GNATCOLL.Scripts.Shell is
    -----------------
 
    procedure Set_Nth_Arg
-     (Data : Shell_Callback_Data; N : Positive; Value : String) is
+     (Data : in out Shell_Callback_Data; N : Positive; Value : String) is
    begin
-      Free (Data.Args (N - 1 + Data.Args'First));
-      Data.Args (N - 1 + Data.Args'First) := new String'(Value);
+      Set_Nth_Arg (Data.CL, N, Value);
    end Set_Nth_Arg;
 
    -----------------
@@ -1117,9 +1103,9 @@ package body GNATCOLL.Scripts.Shell is
    -----------------
 
    procedure Set_Nth_Arg
-     (Data : Shell_Callback_Data; N : Positive; Value : Integer) is
+     (Data : in out Shell_Callback_Data; N : Positive; Value : Integer) is
    begin
-      Set_Nth_Arg (Data, N, Integer'Image (Value));
+      Set_Nth_Arg (Data.CL, N, Integer'Image (Value));
    end Set_Nth_Arg;
 
    -----------------
@@ -1127,9 +1113,9 @@ package body GNATCOLL.Scripts.Shell is
    -----------------
 
    procedure Set_Nth_Arg
-     (Data : Shell_Callback_Data; N : Positive; Value : Boolean) is
+     (Data : in out Shell_Callback_Data; N : Positive; Value : Boolean) is
    begin
-      Set_Nth_Arg (Data, N, Boolean'Image (Value));
+      Set_Nth_Arg (Data.CL, N, Boolean'Image (Value));
    end Set_Nth_Arg;
 
    -----------------
@@ -1137,9 +1123,10 @@ package body GNATCOLL.Scripts.Shell is
    -----------------
 
    procedure Set_Nth_Arg
-     (Data : Shell_Callback_Data; N : Positive; Value : Class_Instance) is
+     (Data : in out Shell_Callback_Data;
+      N : Positive; Value : Class_Instance) is
    begin
-      Set_Nth_Arg (Data, N, Name_From_Instance (Value));
+      Set_Nth_Arg (Data.CL, N, Name_From_Instance (Value));
    end Set_Nth_Arg;
 
    -------------
@@ -1151,12 +1138,12 @@ package body GNATCOLL.Scripts.Shell is
       return String
    is
    begin
-      if N > Data.Args'Last then
+      if N > Args_Length (Data.CL) then
          Success.all := False;
          return "";
       else
          Success.all := True;
-         return Data.Args (N).all;
+         return Nth_Arg (Data.CL, N);
       end if;
    end Nth_Arg;
 
@@ -1591,14 +1578,20 @@ package body GNATCOLL.Scripts.Shell is
       Args    : Callback_Data'Class) return Boolean
    is
       Errors : aliased Boolean;
-      Result : constant String := Trim
-        (Execute_GPS_Shell_Command
-           (Script, Command & ' ' & Argument_List_To_Quoted_String
-              (Shell_Callback_Data (Args).Args.all),
-            Errors'Unchecked_Access),
-         Ada.Strings.Both);
+      CL : Command_Line := Create (Command);
    begin
-      return Result = "1" or else To_Lower (Result) = "true";
+      for J in 1 .. Args_Length (Shell_Callback_Data (Args).CL) loop
+         Append_Argument
+           (CL, Nth_Arg (Shell_Callback_Data (Args).CL, J), One_Arg);
+      end loop;
+
+      declare
+         Result : constant String := Trim
+           (Execute_GPS_Shell_Command (Script, CL, Errors'Unchecked_Access),
+            Ada.Strings.Both);
+      begin
+         return Result = "1" or else To_Lower (Result) = "true";
+      end;
    end Execute_Command;
 
    -------------
@@ -1623,17 +1616,18 @@ package body GNATCOLL.Scripts.Shell is
       Args       : Callback_Data'Class) return String
    is
       D      : constant Shell_Callback_Data := Shell_Callback_Data (Args);
-      C      : Argument_List (D.Args'Range);
+--        C      : Argument_List (D.Args'Range);
       Errors : aliased Boolean;
    begin
-      for A in D.Args'Range loop
-         C (A) := new String'(D.Args (A).all);
-      end loop;
+      --  ??? what was this for? to copy the strings to avoid a double
+      --  deallocation?
+--        for A in D.Args'Range loop
+--           C (A) := new String'(D.Args (A).all);
+--        end loop;
 
       return Execute_GPS_Shell_Command
         (Script  => Shell_Scripting (Subprogram.Script),
          Command => Subprogram.Command.all,
-         Args    => C,
          Errors  => Errors'Unchecked_Access);
    end Execute;
 
@@ -1725,7 +1719,21 @@ package body GNATCOLL.Scripts.Shell is
    function Get_Args
      (Data : Shell_Callback_Data) return GNAT.OS_Lib.Argument_List is
    begin
-      return Data.Args.all;
+      return To_List (Data.CL, False);
+      --  ??? There is a memory leak here. Maybe we can get rid of this
+      --  subprogram?
    end Get_Args;
+
+   ----------------------------
+   -- Command_Line_Treatment --
+   ----------------------------
+
+   overriding function Command_Line_Treatment
+     (Script : access Shell_Scripting_Record) return Command_Line_Mode
+   is
+      pragma Unreferenced (Script);
+   begin
+      return Separate_Args;
+   end Command_Line_Treatment;
 
 end GNATCOLL.Scripts.Shell;
