@@ -176,6 +176,20 @@ package GNATCOLL.Python is
    function PyFloat_Check (Obj : PyObject) return Boolean;
    --  Returns true if the Obj is a float object.
 
+   --------------
+   -- Booleans --
+   --------------
+   --  Support for the "bool" type. However, older versions of python do not
+   --  support this type, so you should also always check for PyInt_Check at
+   --  the same time
+
+   function PyBool_Check (Obj : PyObject) return Boolean;
+   --  Returns true if Obj is a boolean object
+
+   function PyBool_Is_True (Obj : PyObject) return Boolean;
+   --  Obj must return True for PyBool_Check. This function returns True if
+   --  obj is True.
+
    ------------
    -- Tuples --
    ------------

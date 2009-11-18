@@ -129,6 +129,26 @@ ada_pyfloat_check (PyObject* obj)
 }
 
 int
+ada_pybool_check (PyObject* obj)
+{
+#ifdef PyBool_Check
+  return PyBool_Check (obj);
+#else
+  return 0;
+#endif
+}
+
+int
+ada_pybool_is_true (PyObject* obj)
+{
+#ifdef Py_True
+  return obj == Py_True;
+#else
+  return 0;
+#endif
+}
+
+int
 ada_pyfunction_check (PyObject* obj)
 {
   return PyFunction_Check (obj);

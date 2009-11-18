@@ -228,6 +228,28 @@ package body GNATCOLL.Python is
       return Internal (Obj) = 1;
    end PyFloat_Check;
 
+   ------------------
+   -- PyBool_Check --
+   ------------------
+
+   function PyBool_Check (Obj : PyObject) return Boolean is
+      function Internal (Obj : PyObject) return Integer;
+      pragma Import (C, Internal, "ada_pybool_check");
+   begin
+      return Internal (Obj) = 1;
+   end PyBool_Check;
+
+   --------------------
+   -- PyBool_Is_True --
+   --------------------
+
+   function PyBool_Is_True (Obj : PyObject) return Boolean is
+      function Internal (Obj : PyObject) return Integer;
+      pragma Import (C, Internal, "ada_pybool_is_true");
+   begin
+      return Internal (Obj) = 1;
+   end PyBool_Is_True;
+
    -------------------
    -- PyTuple_Check --
    -------------------
