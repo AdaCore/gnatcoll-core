@@ -90,7 +90,7 @@ package body GNATCOLL.Command_Lines is
          return;
       end if;
 
-      for J in Local_Args'First .. Local_Args'Last loop
+      for J in Local_Args'Range loop
          CL.V.Append (Process (Local_Args (J).all));
          Free (Local_Args (J));
       end loop;
