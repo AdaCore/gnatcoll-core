@@ -24,8 +24,6 @@ private with Ada.Containers.Indefinite_Hashed_Maps;
 private with Ada.Strings.Hash;
 private with GNAT.Strings;
 
-with GNATCOLL.Command_Lines;    use GNATCOLL.Command_Lines;
-
 package GNATCOLL.Scripts.Shell is
 
    Shell_Name : constant String := "shell";
