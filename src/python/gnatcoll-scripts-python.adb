@@ -287,26 +287,41 @@ package body GNATCOLL.Scripts.Python is
         (Num : Integer; Handler : System.Address) return System.Address;
       pragma Import (C, Signal, "signal");
 
-      Setup_Cmd      : constant String := "import sys" & ASCII.LF;
+      Setup_Cmd      : constant String := "import sys" & ASCII.LF
+        & "import __builtin__" & ASCII.LF;
+
+      --  To hide the output, we also need to rewrite displayhook.
+      --  Otherwise, calling a python function from Ada will print its
+      --  output to stdout (even though we have redirected sys.stdout ?)
+      --  So we make sure that nothing is ever printed. We cannot do this
+      --  systematically though, since in interactive mode (consoles...)
+      --  we still want the usual python behavior.
       Init_Output    : constant String :=
-        "def __gps_no_write (*args): pass" & ASCII.LF
-        & "__gps_saved_stdout=None" & ASCII.LF
+          "__gps_saved_stdout=None" & ASCII.LF
         & "__gps_saved_stderr=None" & ASCII.LF
+        & "__gps_saved_displayhook=None" & ASCII.LF
+        & "def __gps_no_write (*args): pass" & ASCII.LF
+        & "def __gps_no_displayhook (arg):" & ASCII.LF
+        & "   __builtin__._ = arg" & ASCII.LF
         & "def __gps_hide_output ():" & ASCII.LF
         & "   global __gps_saved_stdout" & ASCII.LF
         & "   global __gps_saved_stderr" & ASCII.LF
-        & "   __gps_saved_stdout=sys.stdout.write" & ASCII.LF
-        & "   __gps_saved_stderr=sys.stderr.write" & ASCII.LF
-        & "   try:" & ASCII.LF
-        & "     sys.stdout.write=__gps_no_write" & ASCII.LF
-        & "     sys.stderr.write=__gps_no_write" & ASCII.LF
-        & "   except: pass" & ASCII.LF
-        & ASCII.LF
+        & "   global __gps_saved_displayhook" & ASCII.LF
+        & "   if sys.stdout.write != __gps_no_write:" & ASCII.LF
+        & "      __gps_saved_stdout=sys.stdout.write" & ASCII.LF
+        & "      __gps_saved_stderr=sys.stderr.write" & ASCII.LF
+        & "      __gps_saved_displayhook=sys.displayhook" & ASCII.LF
+        & "      try:" & ASCII.LF
+        & "        sys.displayhook=__gps_no_displayhook" & ASCII.LF
+        & "        sys.stdout.write=__gps_no_write" & ASCII.LF
+        & "        sys.stderr.write=__gps_no_write" & ASCII.LF
+        & "      except: pass" & ASCII.LF
         & "def __gps_restore_output():" & ASCII.LF
         & "   if sys.stdout.write == __gps_no_write:" & ASCII.LF
         & "      try:" & ASCII.LF
         & "         sys.stdout.write = __gps_saved_stdout" & ASCII.LF
         & "         sys.stderr.write = __gps_saved_stderr" & ASCII.LF
+        & "         sys.displayhook  = __gps_saved_displayhook" & ASCII.LF
         & "      except: pass" & ASCII.LF
         & ASCII.LF;
 
@@ -1039,7 +1054,12 @@ package body GNATCOLL.Scripts.Python is
             Grab_Events (Get_Default_Console (Script), True);
          end if;
 
+         --  The following line outputs some text on the console via
+         --  sys.displayhook. The latter is redirected when we are hiding
+         --  output. This output is done when calling a function, via the
+         --  PRINT_EXPR instruction in the python virtual machine.
          Obj := PyEval_EvalCode (Code, Script.Globals, Script.Globals);
+
          Py_DECREF (PyObject (Code));
          PyEval_SetTrace (null, null);
          if Get_Default_Console (Script) /= null then
@@ -1284,6 +1304,7 @@ package body GNATCOLL.Scripts.Python is
             False, Hide_Output, False, Errors);
          Result := Obj /= null
            and then ((PyInt_Check (Obj) and then PyInt_AsLong (Obj) = 1)
+                     or else (PyBool_Check (Obj) and then PyBool_Is_True (Obj))
                      or else
                        (PyString_Check (Obj)
                         and then PyString_AsString (Obj) = "true"));
@@ -1477,6 +1498,7 @@ package body GNATCOLL.Scripts.Python is
          return False;
       else
          Result := ((PyInt_Check (Obj) and then PyInt_AsLong (Obj) = 1)
+                    or else (PyBool_Check (Obj) and then PyBool_Is_True (Obj))
                     or else
              (PyString_Check (Obj)
               and then PyString_AsString (Obj) = "true"));
@@ -1789,6 +1811,8 @@ package body GNATCOLL.Scripts.Python is
 
       if PyInt_Check (Item) then
          return PyInt_AsLong (Item) = 1;
+      elsif PyBool_Check (Item) then
+         return PyBool_Is_True (Item);
       elsif PyString_Check (Item) then
          return To_Lower (PyString_AsString (Item)) = "true";
       else
