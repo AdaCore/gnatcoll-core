@@ -33,7 +33,6 @@ with GNATCOLL.Mmap;                     use GNATCOLL.Mmap;
 with GNAT.OS_Lib;                       use GNAT.OS_Lib;
 with GNATCOLL.Scripts;                  use GNATCOLL.Scripts;
 with GNATCOLL.Scripts.Impl;             use GNATCOLL.Scripts.Impl;
-with GNATCOLL.Scripts.Utils;            use GNATCOLL.Scripts.Utils;
 with GNATCOLL.Traces;                   use GNATCOLL.Traces;
 with GNATCOLL.Utils;                    use GNATCOLL.Utils;
 
@@ -225,6 +224,7 @@ package body GNATCOLL.Scripts.Shell is
                    (Shell_Scripting (Get_Script (Data)),
                     String (GNATCOLL.Mmap.Data (File)(1 .. Last (File))),
                     Errors'Access);
+               pragma Unreferenced (Ignored);
             begin
                null;
             end;
@@ -742,7 +742,7 @@ package body GNATCOLL.Scripts.Shell is
       Data_C   : Command_Hash.Cursor;
       Data     : Command_Information_Access;
       Instance : Class_Instance;
-      Start    : Natural := 0;
+
       Count    : Natural;
       Command  : constant String := Get_Command (CL);
    begin
@@ -904,7 +904,7 @@ package body GNATCOLL.Scripts.Shell is
    is
       CL            : Command_Line;
       First, Last   : Integer;
-      Tmp           : GNAT.Strings.String_Access;
+
       Quoted        : Boolean;
       Triple_Quoted : Boolean;
    begin
@@ -1074,6 +1074,7 @@ package body GNATCOLL.Scripts.Shell is
                 Return_Dict     => null,
                 Return_As_List  => False,
                 Return_As_Error => False);
+      pragma Unreferenced (Arguments_Count);
    begin
       return Data;
    end Create;
@@ -1619,18 +1620,18 @@ package body GNATCOLL.Scripts.Shell is
       Args       : Callback_Data'Class) return String
    is
       D      : constant Shell_Callback_Data := Shell_Callback_Data (Args);
---        C      : Argument_List (D.Args'Range);
       Errors : aliased Boolean;
+      CL     : Command_Line;
    begin
-      --  ??? what was this for? to copy the strings to avoid a double
-      --  deallocation?
---        for A in D.Args'Range loop
---           C (A) := new String'(D.Args (A).all);
---        end loop;
+      CL := Create (Subprogram.Command.all);
+
+      for Arg in 1 .. Args_Length (D.CL) loop
+         Append_Argument (CL, Nth_Arg (D.CL, Arg), One_Arg);
+      end loop;
 
       return Execute_GPS_Shell_Command
         (Script  => Shell_Scripting (Subprogram.Script),
-         Command => Subprogram.Command.all,
+         CL      => CL,
          Errors  => Errors'Unchecked_Access);
    end Execute;
 
