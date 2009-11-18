@@ -214,17 +214,20 @@ package body GNATCOLL.Scripts.Shell is
          declare
             Filename : constant String := Nth_Arg (Data, 1);
             File     : Mapped_File;
-            Errors   : Boolean;
+            Errors   : aliased Boolean;
          begin
             File := Open_Read (Filename);
             Read (File);
-            Execute_Command
-              (Get_Script (Data),
-               Parse_String
-                 (String (GNATCOLL.Mmap.Data (File)(1 .. Last (File))),
-                  Separate_Args),
-               Errors => Errors);
-            Close (File);
+
+            declare
+               Ignored : constant String :=
+                 Execute_GPS_Shell_Command
+                   (Shell_Scripting (Get_Script (Data)),
+                    String (GNATCOLL.Mmap.Data (File)(1 .. Last (File))),
+                    Errors'Access);
+            begin
+               null;
+            end;
          exception
             when Name_Error =>
                Set_Error_Msg
