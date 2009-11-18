@@ -18,9 +18,12 @@
 -----------------------------------------------------------------------
 
 with GNAT.OS_Lib; use GNAT.OS_Lib;
+
 with Ada.Unchecked_Deallocation;
 with Ada.Containers; use Ada.Containers;
 with Ada.Characters.Handling; use Ada.Characters.Handling;
+with Ada.Strings.Fixed;       use Ada.Strings.Fixed;
+with Ada.Strings.Maps;        use Ada.Strings.Maps;
 
 with GNATCOLL.Scripts.Utils; use GNATCOLL.Scripts.Utils;
 
@@ -69,7 +72,19 @@ package body GNATCOLL.Command_Lines is
         (Argument_List, Argument_List_Access);
    begin
 
-      Local_Args := Argument_String_To_List_With_Triple_Quotes (Text);
+      --  If we are parsing an argument in Separate_Args mode, get rid of the
+      --  leading spaces, as this would result in multiple arguments in
+      --  the call to Argument_String_To_List_With_Triple_Quotes
+
+      if CL.Mode = Separate_Args then
+         Local_Args := Argument_String_To_List_With_Triple_Quotes
+           (Trim
+              (Text,
+               Left  => To_Set (' ' & ASCII.LF & ASCII.HT),
+               Right => Ada.Strings.Maps.Null_Set));
+      else
+         Local_Args := Argument_String_To_List_With_Triple_Quotes (Text);
+      end if;
 
       if Local_Args = null then
          return;
