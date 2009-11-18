@@ -92,6 +92,7 @@ package body GNATCOLL.Command_Lines is
 
       for J in Local_Args'First .. Local_Args'Last loop
          CL.V.Append (Process (Local_Args (J).all));
+         Free (Local_Args (J));
       end loop;
 
       Unchecked_Free (Local_Args);
