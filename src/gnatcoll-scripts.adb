@@ -491,6 +491,27 @@ package body GNATCOLL.Scripts is
       return "";
    end Execute_Command;
 
+   ---------------------
+   -- Execute_Command --
+   ---------------------
+
+   function Execute_Command
+     (Script       : Scripting_Language;
+      Command      : String;
+      Console      : Virtual_Console := null;
+      Hide_Output  : Boolean := False;
+      Show_Command : Boolean := True;
+      Errors       : access Boolean) return String is
+   begin
+      return Execute_Command
+        (Script,
+         Parse_String (Command, Command_Line_Treatment (Script)),
+         Console,
+         Hide_Output,
+         Show_Command,
+         Errors);
+   end Execute_Command;
+
    ---------------
    -- Interrupt --
    ---------------

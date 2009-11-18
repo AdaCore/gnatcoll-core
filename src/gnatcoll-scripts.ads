@@ -744,6 +744,17 @@ package GNATCOLL.Scripts is
    --  separated).
 
    function Execute_Command
+     (Script       : Scripting_Language;
+      Command      : String;
+      Console      : Virtual_Console := null;
+      Hide_Output  : Boolean := False;
+      Show_Command : Boolean := True;
+      Errors       : access Boolean) return String;
+   --  Same as above, working direcly on a String. This String is interpreted
+   --  as a command line using the mechanism described in
+   --  GNATCOLL.Command_Lines.
+
+   function Execute_Command
      (Script      : access Scripting_Language_Record;
       CL          : Command_Line;
       Console     : Virtual_Console := null;
