@@ -257,7 +257,7 @@ package GNATCOLL.Traces is
    --  result from other subprograms be slightly indented, so as to make the
    --  output more readable. The output would for instance look like:
    --       [HANDLE1] Procedure 1
-   --       [HANDLE2]    Procedure 2
+   --          [HANDLE2] Procedure 2
    --       [HANDLE1] End of Procedure 1
    --  If Handle and Msg are specified, a message is output on that handle to
    --  explain the change of indentation. The message is only displayed if the
