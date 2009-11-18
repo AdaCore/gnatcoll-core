@@ -22,6 +22,8 @@ with Ada.Unchecked_Deallocation;
 with Ada.Containers; use Ada.Containers;
 with Ada.Characters.Handling; use Ada.Characters.Handling;
 
+with GNATCOLL.Scripts.Utils; use GNATCOLL.Scripts.Utils;
+
 package body GNATCOLL.Command_Lines is
 
    procedure Parse_Command_Line_String
@@ -67,9 +69,7 @@ package body GNATCOLL.Command_Lines is
         (Argument_List, Argument_List_Access);
    begin
 
-      --  ??? ADD SUPPORT FOR TRIPLE QUOTES HERE
-
-      Local_Args := Argument_String_To_List (Text);
+      Local_Args := Argument_String_To_List_With_Triple_Quotes (Text);
 
       if Local_Args = null then
          return;
