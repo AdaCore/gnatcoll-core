@@ -495,6 +495,43 @@ package body GNATCOLL.Scripts is
    -- Execute_Command --
    ---------------------
 
+   procedure Execute_Command
+     (Script       : access Scripting_Language_Record;
+      Command      : String;
+      Console      : Virtual_Console := null;
+      Hide_Output  : Boolean := False;
+      Show_Command : Boolean := True;
+      Errors       : out Boolean) is
+   begin
+      Execute_Command
+        (Scripting_Language (Script),
+         Parse_String
+            (Command, Command_Line_Treatment (Scripting_Language (Script))),
+         Console, Hide_Output, Show_Command, Errors);
+   end Execute_Command;
+
+   ---------------------
+   -- Execute_Command --
+   ---------------------
+
+   function Execute_Command
+     (Script      : access Scripting_Language_Record;
+      Command     : String;
+      Console     : Virtual_Console := null;
+      Hide_Output : Boolean := False;
+      Errors      : access Boolean) return Boolean is
+   begin
+      return Execute_Command
+         (Scripting_Language (Script),
+          Parse_String
+             (Command, Command_Line_Treatment (Scripting_Language (Script))),
+          Console, Hide_Output, Errors);
+   end Execute_Command;
+
+   ---------------------
+   -- Execute_Command --
+   ---------------------
+
    function Execute_Command
      (Script       : Scripting_Language;
       Command      : String;

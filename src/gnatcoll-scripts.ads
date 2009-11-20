@@ -744,6 +744,29 @@ package GNATCOLL.Scripts is
    --  separated).
 
    function Execute_Command
+     (Script      : access Scripting_Language_Record;
+      CL          : Command_Line;
+      Console     : Virtual_Console := null;
+      Hide_Output : Boolean := False;
+      Errors      : access Boolean) return Boolean is abstract;
+   --  Execute a command and evaluate its return value (*not* its output) as a
+   --  boolean. This is different from the version returning a string, in that
+   --  only the return value is considered, not the full output.
+
+   procedure Execute_Command
+     (Script       : access Scripting_Language_Record;
+      Command      : String;
+      Console      : Virtual_Console := null;
+      Hide_Output  : Boolean := False;
+      Show_Command : Boolean := True;
+      Errors       : out Boolean);
+   function Execute_Command
+     (Script      : access Scripting_Language_Record;
+      Command     : String;
+      Console     : Virtual_Console := null;
+      Hide_Output : Boolean := False;
+      Errors      : access Boolean) return Boolean;
+   function Execute_Command
      (Script       : Scripting_Language;
       Command      : String;
       Console      : Virtual_Console := null;
@@ -753,16 +776,8 @@ package GNATCOLL.Scripts is
    --  Same as above, working direcly on a String. This String is interpreted
    --  as a command line using the mechanism described in
    --  GNATCOLL.Command_Lines.
-
-   function Execute_Command
-     (Script      : access Scripting_Language_Record;
-      CL          : Command_Line;
-      Console     : Virtual_Console := null;
-      Hide_Output : Boolean := False;
-      Errors      : access Boolean) return Boolean is abstract;
-   --  Execute a command and evaluate its return value (*not* its output) as a
-   --  boolean. This is different from the version returning a string, in that
-   --  only the return value is considered, not the full output.
+   --  These are only provided for backward compatibility and you should use
+   --  directly the version that takes a Command_Line whenever possible.
 
    function Execute_Command
      (Script  : access Scripting_Language_Record;
