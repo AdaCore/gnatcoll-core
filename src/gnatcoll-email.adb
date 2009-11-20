@@ -559,43 +559,47 @@ package body GNATCOLL.Email is
 
       declare
          Str    : String := To_String (Encoded);
-         Last   : Natural := Str'Last;
+         Last   : Natural;
          Index, Index2 : Integer;
 
          Offset : Integer := 0;
          --  Count of LF characters skipped so far
 
       begin
-         for J in Str'First .. Last loop
+         --  Flatten the header on a single line, eliminating newline
+         --  characters.
+
+         for J in Str'Range loop
             if Str (J) = ASCII.LF then
                Offset := Offset + 1;
             elsif Offset > 0 then
                Str (J - Offset) := Str (J);
             end if;
          end loop;
-         Delete (Encoded, From => Last - Offset + 1, Through => Last);
-         Last := Last - Offset;
+
+         Last := Str'Last - Offset;
 
          if Show_Header_Name and then Last <= Max then
-            if Encoded = Null_Unbounded_String then
+            if Last = 0 then  --  Empty header
                Result := To_Unbounded_String (N & ": ");
             elsif Element (Encoded, 1) = ' ' then
-               Result := N & ':' & Encoded;
+               Result := To_Unbounded_String (N & ':' & Str (1 .. Last));
             else
-               Result := N & ": " & Encoded;
+               Result := To_Unbounded_String (N & ": " & Str (1 .. Last));
             end if;
             return;
 
          elsif not Show_Header_Name and then Last <= Max_Line_Len then
-            Result := Encoded;
+            if Offset = 0 then
+               Result := Encoded;  --  Save a string copy
+            else
+               Result := To_Unbounded_String (Str (1 .. Last));
+            end if;
             return;
          end if;
 
          Result := Null_Unbounded_String;
-
-         --  For portability, we could use To_String (H.Value), but that is
-         --  slower.
-         Index := Str'First;
+         Index  := Str'First;
 
          while Index <= Last loop
             --  Only split on spaces. To keep Content-Type headers as much as
