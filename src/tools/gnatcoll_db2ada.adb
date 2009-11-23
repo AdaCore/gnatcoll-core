@@ -101,15 +101,6 @@ procedure GNATCOLL_Db2Ada is
      (Attribute_Description);
    use Attribute_Lists;
 
-   type Query_Description is record
-      Table       : Ada.Strings.Unbounded.Unbounded_String;
-   end record;
-
-   package Query_Lists is new Ada.Containers.Doubly_Linked_Lists
-     (Query_Description);
-   use Query_Lists;
-   Queries : Query_Lists.List;
-
    type Foreign_Key_Description is record
       To_Table        : Ada.Strings.Unbounded.Unbounded_String;
       From_Attributes : String_Lists.List;
@@ -182,9 +173,6 @@ procedure GNATCOLL_Db2Ada is
    procedure Get_Tables
      (Connection : access Database_Connection_Record'Class);
    --  Get the list of tables in the database
-
-   procedure Generate_Queries;
-   --  Experimental support for automatic generation of queries
 
    procedure Generate_Text;
    --  Generate a .dot file
@@ -324,7 +312,10 @@ procedure GNATCOLL_Db2Ada is
            (Index             : Positive;
             Local_Attribute   : Integer;
             Foreign_Table     : String;
-            Foreign_Attribute : Integer) is
+            Foreign_Attribute : Integer)
+         is
+            Ambiguous : Boolean := False;
+            C         : Foreign_Keys.Cursor;
          begin
             if Prev_Index /= Index then
                --  A new foreign key, as opposed to a new attribute in the same
@@ -336,11 +327,31 @@ procedure GNATCOLL_Db2Ada is
 
                Prev_Index := Index;
 
+               --  Do we already have another foreign key for the same table ?
+
+               Ambiguous := False;
+
+               C := First (Table.Foreign);
+
+               while Has_Element (C) loop
+                  Descr := Element (C);
+                  if Descr.To_Table = Foreign_Table then
+                     if not Descr.Ambiguous then
+                        Descr.Ambiguous := True;
+                        Replace_Element (Table.Foreign, C, Descr);
+                     end if;
+
+                     Ambiguous := True;
+                     exit;
+                  end if;
+                  Next (C);
+               end loop;
+
                Descr :=
                  (To_Table        => To_Unbounded_String (Foreign_Table),
                   From_Attributes => String_Lists.Empty_List,
                   To_Attributes   => String_Lists.Empty_List,
-                  Ambiguous       => False);
+                  Ambiguous       => Ambiguous);
             end if;
 
             Append
@@ -351,10 +362,6 @@ procedure GNATCOLL_Db2Ada is
                  (Element (Find (Tables, Foreign_Table)), Foreign_Attribute));
          end On_Key;
 
-         Foreign_Cursor1 : Foreign_Keys.Cursor;
-         Foreign_Cursor2 : Foreign_Keys.Cursor;
-
-         Foreign1, Foreign2 : Foreign_Key_Description;
       begin
          Foreach_Foreign_Key
            (Connection,
@@ -364,37 +371,6 @@ procedure GNATCOLL_Db2Ada is
          if Prev_Index /= -1 then
             Append (Table.Foreign, Descr);
          end if;
-
-         --  Check for ambiguities
-
-         Foreign_Cursor1 := First (Table.Foreign);
-
-         while Has_Element (Foreign_Cursor1) loop
-            Foreign1 := Element (Foreign_Cursor1);
-
-            if not Foreign1.Ambiguous then
-               Foreign_Cursor2 := First (Table.Foreign);
-
-               while Has_Element (Foreign_Cursor2) loop
-                  Foreign2 := Element (Foreign_Cursor2);
-
-                  if To_String (Foreign1.To_Table) =
-                    To_String (Foreign2.To_Table)
-                    and then Foreign_Cursor1 /= Foreign_Cursor2
-                  then
-                     Foreign1.Ambiguous := True;
-
-                     Replace_Element
-                       (Table.Foreign, Foreign_Cursor1, Foreign1);
-                     Delete (Table.Foreign, Foreign_Cursor2);
-                  end if;
-
-                  Next (Foreign_Cursor2);
-               end loop;
-            end if;
-
-            Next (Foreign_Cursor1);
-         end loop;
       end Compute_Foreign_Keys;
 
       T : Tables_Maps.Cursor := First (Tables);
@@ -486,7 +462,7 @@ procedure GNATCOLL_Db2Ada is
    begin
       loop
          case Getopt ("dbhost= h -help dbname= dbuser= dbpasswd= enum= var="
-                      & " dbtype= query= text") is
+                      & " dbtype= text") is
             when 'h' | '-' =>
                Put_Line
                  ("-dbhost <host>: host on which the database runs");
@@ -512,9 +488,6 @@ procedure GNATCOLL_Db2Ada is
                  ("    Similar to -enum, but dumps one specific value");
                Put_Line
                  ("    from a table, selected with criteria.");
-               Put_Line ("-query table");
-               Put_Line
-                 ("    Generate an entry for table in the queries package");
                Put_Line ("-text: generate a textual description of the"
                          & " database");
                GNAT.OS_Lib.OS_Exit (0);
@@ -536,10 +509,6 @@ procedure GNATCOLL_Db2Ada is
                   Free (DB_Type);
                   DB_Type := new String'(Parameter);
                end if;
-
-            when 'q' =>
-               Query_Lists.Append
-                 (Queries, (Table => To_Unbounded_String (Parameter)));
 
             when 'e' =>
                Append (Enums, Parameter);
@@ -691,108 +660,6 @@ procedure GNATCOLL_Db2Ada is
       end loop;
    end Dump_Tables;
 
-   ----------------------
-   -- Generate_Queries --
-   ----------------------
-
-   procedure Generate_Queries is
-      Spec_File, Body_File : File_Type;
-      Q       : Query_Lists.Cursor;
-      T       : Tables_Maps.Cursor;
-      T_Descr : Table_Description;
-      A       : Attribute_Lists.Cursor;
-      Count   : Natural;
-
-   begin
-      Create (Spec_File, Name => To_Lower (Generated) & "-queries.ads");
-      Create (Body_File, Name => To_Lower (Generated) & "-queries.adb");
-
-      Put_Line (Spec_File, "with GNATCOLL.SQL; use GNATCOLL.SQL;");
-      Put_Line (Spec_File, "with GNATCOLL.SQL.Exec; use GNATCOLL.SQL.Exec;");
-      Put_Line (Spec_File, "package " & Generated & ".Queries is");
-      Put_Line (Spec_File, "   pragma Warnings (Off);");
-      New_Line (Spec_File);
-      Put_Line (Spec_File, "   type Base_Info is abstract tagged private;");
-
-      Put_Line (Body_File, "package body " & Generated & ".Queries is");
-      Put_Line (Body_File, "   pragma Warnings (Off);");
-
-      Q := First (Queries);
-      while Has_Element (Q) loop
-         T := Find (Tables, To_String (Element (Q).Table));
-         T_Descr := Element (T);
-
-         declare
-            Info : constant String :=
-              Capitalize (To_String (Element (Q).Table)) & "_Info";
-         begin
-            New_Line (Spec_File);
-            Put_Line (Spec_File, "   type " & Info & " is new Base_Info"
-                      & " with private;");
-
-            Count := 0;
-
-            A := First (T_Descr.Attributes);
-            while Has_Element (A) loop
-               Put_Line
-                 (Spec_File, "   function "
-                  & Capitalize (To_String (Element (A).Name))
-                  & " (Self : " & Info & ") return "
-                  & To_String (Element (A).Ada_Type) & ";");
-
-               New_Line (Body_File);
-               Put_Line
-                 (Body_File, "   function "
-                  & Capitalize (To_String (Element (A).Name))
-                  & " (Self : " & Info & ") return "
-                  & To_String (Element (A).Ada_Type) & " is");
-               Put_Line (Body_File, "   begin");
-               Put_Line (Body_File, "      return "
-                         & To_String (Element (A).Value_Func)
-                         & " (Self.Res,"
-                         & " Self.Idx, Self.Base +"
-                         & Count'Img & ");");
-               Put_Line
-                 (Body_File, "   end "
-                  & Capitalize (To_String (Element (A).Name)) & ";");
-
-               Count := Count + 1;
-               Next (A);
-            end loop;
-         end;
-
-         Next (Q);
-      end loop;
-
-      New_Line (Spec_File);
-      Put_Line (Spec_File, "private");
-      Put_Line (Spec_File, "   type Base_Info is abstract tagged record");
-      Put_Line (Spec_File, "      Res  : GNATCOLL.SQL.Exec.Query_Result;");
-      Put_Line (Spec_File, "      Idx  : GNATCOLL.SQL.Exec.Tuple_Index;");
-      Put_Line (Spec_File, "      Base : GNATCOLL.SQL.Exec.Field_Index;");
-      Put_Line (Spec_File, "   end record;");
-
-      Q := First (Queries);
-      while Has_Element (Q) loop
-         declare
-            Info : constant String :=
-              Capitalize (To_String (Element (Q).Table)) & "_Info";
-         begin
-            New_Line (Spec_File);
-            Put_Line (Spec_File, "   type " & Info & " is new Base_Info"
-                      & " with null record;");
-         end;
-
-         Next (Q);
-      end loop;
-
-      Put_Line (Spec_File, "end " & Generated & ".Queries;");
-      Put_Line (Body_File, "end " & Generated & ".Queries;");
-
-      Close (Spec_File);
-      Close (Body_File);
-   end Generate_Queries;
-
    -------------------
    -- Generate_Text --
    -------------------
@@ -830,7 +697,7 @@ procedure GNATCOLL_Db2Ada is
                Next (S);
             end loop;
 
-            Put ("->");
+            Put ("-> ");
 
             S  := First (FK.To_Attributes);
             while Has_Element (S) loop
@@ -884,10 +751,6 @@ begin
       when Output_Text =>
          Generate_Text;
    end case;
-
-   if Length (Queries) /= 0 then
-      Generate_Queries;
-   end if;
 
 exception
    when E : others =>
