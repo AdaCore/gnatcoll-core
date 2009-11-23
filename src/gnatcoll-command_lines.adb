@@ -328,7 +328,7 @@ package body GNATCOLL.Command_Lines is
                   Append (U, Char);
                   J := J + 1;
                else
-                  New_CL := Callback (S (Beg .. J - 1), Raw_String);
+                  New_CL := Callback (S (Beg .. J - 1), CL.Mode);
                   for K in 0 .. Natural (New_CL.V.Length) - 1 loop
                      Append (U, New_CL.V.Element (K).Text);
                      if K < Natural (New_CL.V.Length) - 1 then
