@@ -32,7 +32,7 @@ with Ada.Strings.Hash;
 with GNAT.OS_Lib;
 with GNAT.Strings;
 
-with GNATCOLL.Command_Lines; use GNATCOLL.Command_Lines;
+with GNATCOLL.Arg_Lists;     use GNATCOLL.Arg_Lists;
 with GNATCOLL.VFS;           use GNATCOLL.VFS;
 with GNATCOLL.Any_Types;     use GNATCOLL.Any_Types;
 
@@ -712,7 +712,7 @@ package GNATCOLL.Scripts is
 
    procedure Execute_Command
      (Script       : access Scripting_Language_Record;
-      CL           : Command_Line;
+      CL           : Arg_List;
       Console      : Virtual_Console := null;
       Hide_Output  : Boolean := False;
       Show_Command : Boolean := True;
@@ -731,7 +731,7 @@ package GNATCOLL.Scripts is
 
    function Execute_Command
      (Script       : access Scripting_Language_Record;
-      CL           : Command_Line;
+      CL           : Arg_List;
       Console      : Virtual_Console := null;
       Hide_Output  : Boolean := False;
       Show_Command : Boolean := True;
@@ -745,7 +745,7 @@ package GNATCOLL.Scripts is
 
    function Execute_Command
      (Script      : access Scripting_Language_Record;
-      CL          : Command_Line;
+      CL          : Arg_List;
       Console     : Virtual_Console := null;
       Hide_Output : Boolean := False;
       Errors      : access Boolean) return Boolean is abstract;
@@ -789,7 +789,7 @@ package GNATCOLL.Scripts is
 
    function Execute_Command_With_Args
      (Script  : access Scripting_Language_Record;
-      CL      : Command_Line) return String;
+      CL      : Arg_List) return String;
    --  Execute a command.
    --  This procedure needs only be implemented for the GPS shell, in all other
    --  language you should keep the default which raises Program_Error, since

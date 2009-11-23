@@ -73,7 +73,7 @@ package body GNATCOLL.Scripts.Shell is
 
    function Execute_GPS_Shell_Command
      (Script  : access Shell_Scripting_Record'Class;
-      CL      : Command_Line;
+      CL      : Arg_List;
       Errors  : access Boolean) return String;
    --  Execute a command in the GPS shell and returns its result.
    --  Command must be a single command (no semicolon-separated list).
@@ -488,7 +488,7 @@ package body GNATCOLL.Scripts.Shell is
 
    procedure Execute_Command
      (Script       : access Shell_Scripting_Record;
-      CL           : Command_Line;
+      CL           : Arg_List;
       Console      : Virtual_Console := null;
       Hide_Output  : Boolean := False;
       Show_Command : Boolean := True;
@@ -528,7 +528,7 @@ package body GNATCOLL.Scripts.Shell is
 
    function Execute_Command_With_Args
      (Script  : access Shell_Scripting_Record;
-      CL      : Command_Line) return String
+      CL      : Arg_List) return String
    is
       Errors : aliased Boolean;
    begin
@@ -550,7 +550,7 @@ package body GNATCOLL.Scripts.Shell is
    is
       Old_Console : constant Virtual_Console := Script.Console;
       Err         : aliased Boolean;
-      CL          : Command_Line;
+      CL          : Arg_List;
    begin
       if Console /= null then
          Script.Console := Console;
@@ -663,7 +663,7 @@ package body GNATCOLL.Scripts.Shell is
 
    function Execute_Command
      (Script       : access Shell_Scripting_Record;
-      CL           : Command_Line;
+      CL           : Arg_List;
       Console      : Virtual_Console := null;
       Hide_Output  : Boolean := False;
       Show_Command : Boolean := True;
@@ -700,7 +700,7 @@ package body GNATCOLL.Scripts.Shell is
 
    function Execute_Command
      (Script      : access Shell_Scripting_Record;
-      CL          : Command_Line;
+      CL          : Arg_List;
       Console     : Virtual_Console := null;
       Hide_Output : Boolean := False;
       Errors      : access Boolean) return Boolean
@@ -736,7 +736,7 @@ package body GNATCOLL.Scripts.Shell is
 
    function Execute_GPS_Shell_Command
      (Script  : access Shell_Scripting_Record'Class;
-      CL      : Command_Line;
+      CL      : Arg_List;
       Errors  : access Boolean) return String
    is
       Data_C   : Command_Hash.Cursor;
@@ -902,7 +902,7 @@ package body GNATCOLL.Scripts.Shell is
       Command : String;
       Errors  : access Boolean) return String
    is
-      CL            : Command_Line;
+      CL            : Arg_List;
       First, Last   : Integer;
 
       Quoted        : Boolean;
@@ -1042,7 +1042,7 @@ package body GNATCOLL.Scripts.Shell is
    -----------
 
    function Clone (Data : Shell_Callback_Data) return Callback_Data'Class is
-      New_CL : Command_Line := Create (Get_Command (Data.CL));
+      New_CL : Arg_List := Create (Get_Command (Data.CL));
    begin
       for A in 1 .. Args_Length (Data.CL) loop
          Append_Argument (New_CL, Nth_Arg (Data.CL, A), One_Arg);
@@ -1582,7 +1582,7 @@ package body GNATCOLL.Scripts.Shell is
       Args    : Callback_Data'Class) return Boolean
    is
       Errors : aliased Boolean;
-      CL : Command_Line := Create (Command);
+      CL : Arg_List := Create (Command);
    begin
       for J in 1 .. Args_Length (Shell_Callback_Data (Args).CL) loop
          Append_Argument
@@ -1621,7 +1621,7 @@ package body GNATCOLL.Scripts.Shell is
    is
       D      : constant Shell_Callback_Data := Shell_Callback_Data (Args);
       Errors : aliased Boolean;
-      CL     : Command_Line;
+      CL     : Arg_List;
    begin
       CL := Create (Subprogram.Command.all);
 

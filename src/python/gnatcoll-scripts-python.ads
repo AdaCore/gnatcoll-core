@@ -114,21 +114,21 @@ private
       Class : Class_Type) return Class_Instance;
    overriding procedure Execute_Command
      (Script       : access Python_Scripting_Record;
-      CL           : Command_Line;
+      CL           : Arg_List;
       Console      : Virtual_Console := null;
       Hide_Output  : Boolean := False;
       Show_Command : Boolean := True;
       Errors       : out Boolean);
    overriding function Execute_Command
      (Script       : access Python_Scripting_Record;
-      CL           : Command_Line;
+      CL           : Arg_List;
       Console      : Virtual_Console := null;
       Hide_Output  : Boolean := False;
       Show_Command : Boolean := True;
       Errors       : access Boolean) return String;
    overriding function Execute_Command
      (Script      : access Python_Scripting_Record;
-      CL          : Command_Line;
+      CL          : Arg_List;
       Console     : Virtual_Console := null;
       Hide_Output : Boolean := False;
       Errors      : access Boolean) return Boolean;

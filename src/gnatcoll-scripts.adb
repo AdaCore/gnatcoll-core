@@ -465,7 +465,7 @@ package body GNATCOLL.Scripts is
 
    function Execute_Command_With_Args
      (Script : access Scripting_Language_Record;
-      CL     : Command_Line) return String
+      CL     : Arg_List) return String
    is
       pragma Unreferenced (Script, CL);
    begin
@@ -479,7 +479,7 @@ package body GNATCOLL.Scripts is
 
    function Execute_Command
      (Script       : access Scripting_Language_Record;
-      CL           : Command_Line;
+      CL           : Arg_List;
       Console      : Virtual_Console := null;
       Hide_Output  : Boolean := False;
       Show_Command : Boolean := True;

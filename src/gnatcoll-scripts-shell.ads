@@ -166,7 +166,7 @@ private
 
    overriding procedure Execute_Command
      (Script       : access Shell_Scripting_Record;
-      CL           : Command_Line;
+      CL           : Arg_List;
       Console      : Virtual_Console := null;
       Hide_Output  : Boolean := False;
       Show_Command : Boolean := True;
@@ -174,7 +174,7 @@ private
 
    overriding function Execute_Command
      (Script       : access Shell_Scripting_Record;
-      CL           : Command_Line;
+      CL           : Arg_List;
       Console      : Virtual_Console := null;
       Hide_Output  : Boolean := False;
       Show_Command : Boolean := True;
@@ -182,7 +182,7 @@ private
 
    overriding function Execute_Command
      (Script      : access Shell_Scripting_Record;
-      CL          : Command_Line;
+      CL          : Arg_List;
       Console     : Virtual_Console := null;
       Hide_Output : Boolean := False;
       Errors      : access Boolean) return Boolean;
@@ -194,7 +194,7 @@ private
 
    overriding function Execute_Command_With_Args
      (Script  : access Shell_Scripting_Record;
-      CL      : Command_Line) return String;
+      CL      : Arg_List) return String;
 
    overriding procedure Execute_File
      (Script       : access Shell_Scripting_Record;
@@ -230,7 +230,7 @@ private
 
    type Shell_Callback_Data is new Callback_Data with record
       Script          : Shell_Scripting;
-      CL              : Command_Line;
+      CL              : Arg_List;
       Return_Value    : GNAT.Strings.String_Access;
       Return_Dict     : GNAT.Strings.String_Access;
       Return_As_List  : Boolean := False;

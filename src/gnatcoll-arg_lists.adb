@@ -27,10 +27,10 @@ with Ada.Strings.Maps;        use Ada.Strings.Maps;
 
 with GNATCOLL.Scripts.Utils; use GNATCOLL.Scripts.Utils;
 
-package body GNATCOLL.Command_Lines is
+package body GNATCOLL.Arg_Lists is
 
    procedure Parse_Command_Line_String
-     (CL   : in out Command_Line;
+     (CL   : in out Arg_List;
       Text : String);
    --  Factor code between variants of Parse_String.
    --  This processes Text as if it were passed on a command line (for instance
@@ -64,7 +64,7 @@ package body GNATCOLL.Command_Lines is
    -------------------------------
 
    procedure Parse_Command_Line_String
-     (CL   : in out Command_Line;
+     (CL   : in out Arg_List;
       Text : String)
    is
       function Process (A : String) return Argument_Type;
@@ -127,9 +127,9 @@ package body GNATCOLL.Command_Lines is
 
    function Parse_String
      (Text : String;
-      Mode : Command_Line_Mode) return Command_Line
+      Mode : Command_Line_Mode) return Arg_List
    is
-      CL : Command_Line;
+      CL : Arg_List;
 
    begin
       CL.Mode := Mode;
@@ -148,9 +148,9 @@ package body GNATCOLL.Command_Lines is
    ------------------
 
    function Parse_String
-     (Command : String; Text : String) return Command_Line
+     (Command : String; Text : String) return Arg_List
    is
-      CL : Command_Line := Create (Command);
+      CL : Arg_List := Create (Command);
    begin
       Parse_Command_Line_String (CL, Text);
       return CL;
@@ -160,7 +160,7 @@ package body GNATCOLL.Command_Lines is
    -- Get_Command --
    -----------------
 
-   function Get_Command (C : Command_Line) return String is
+   function Get_Command (C : Arg_List) return String is
    begin
       if C.V.Is_Empty then
          return "";
@@ -173,8 +173,8 @@ package body GNATCOLL.Command_Lines is
    -- Create --
    ------------
 
-   function Create (Command : String) return Command_Line is
-      C : Command_Line;
+   function Create (Command : String) return Arg_List is
+      C : Arg_List;
    begin
       C.V.Append ((One_Arg, To_Unbounded_String (Command)));
       return C;
@@ -185,7 +185,7 @@ package body GNATCOLL.Command_Lines is
    ---------------------
 
    procedure Append_Argument
-     (C        : in out Command_Line;
+     (C        : in out Arg_List;
       Argument : String;
       Mode     : Argument_Mode) is
    begin
@@ -197,7 +197,7 @@ package body GNATCOLL.Command_Lines is
    -------------
 
    function To_List
-     (C               : Command_Line;
+     (C               : Arg_List;
       Include_Command : Boolean)
       return GNAT.OS_Lib.Argument_List
    is
@@ -224,7 +224,7 @@ package body GNATCOLL.Command_Lines is
    -- To_Display_String --
    -----------------------
 
-   function To_Display_String (C : Command_Line) return String is
+   function To_Display_String (C : Arg_List) return String is
       Result : Unbounded_String := To_Unbounded_String ("");
    begin
       for Index in 1 .. Natural (C.V.Length) loop
@@ -240,7 +240,7 @@ package body GNATCOLL.Command_Lines is
    -- To_Debug_String --
    ---------------------
 
-   function To_Debug_String (C : Command_Line) return String is
+   function To_Debug_String (C : Arg_List) return String is
       Result : Unbounded_String := To_Unbounded_String ("Command: ");
    begin
       Append (Result, C.V.Element (0).Text);
@@ -255,7 +255,7 @@ package body GNATCOLL.Command_Lines is
    -- To_Script_String --
    ----------------------
 
-   function To_Script_String (C : Command_Line) return String is
+   function To_Script_String (C : Arg_List) return String is
       function Arg (A : Unbounded_String) return Unbounded_String;
       --  Auxiliary function to process one arg
 
@@ -307,11 +307,11 @@ package body GNATCOLL.Command_Lines is
    ----------------
 
    procedure Substitute
-     (CL       : in out Command_Line;
+     (CL       : in out Arg_List;
       Char     : Character;
       Callback : Substitution_Function)
    is
-      New_CL  : Command_Line;
+      New_CL  : Arg_List;
 
       function Expand_In_String (A : Unbounded_String) return Unbounded_String;
       --  Expand the argument in place in S and return the result
@@ -323,7 +323,7 @@ package body GNATCOLL.Command_Lines is
          U   : Unbounded_String;
          J   : Natural;
          Beg : Natural;
-         New_CL  : Command_Line;
+         New_CL  : Arg_List;
       begin
          if S = "" then
             return Null_Unbounded_String;
@@ -432,7 +432,7 @@ package body GNATCOLL.Command_Lines is
    -- Args_Length --
    -----------------
 
-   function Args_Length (C : Command_Line) return Integer is
+   function Args_Length (C : Arg_List) return Integer is
    begin
       return Natural (C.V.Length) - 1;
    end Args_Length;
@@ -441,7 +441,7 @@ package body GNATCOLL.Command_Lines is
    -- Nth_Arg --
    -------------
 
-   function Nth_Arg (C : Command_Line; N : Natural) return String is
+   function Nth_Arg (C : Arg_List; N : Natural) return String is
    begin
       return To_String (C.V.Element (N).Text);
    end Nth_Arg;
@@ -450,7 +450,7 @@ package body GNATCOLL.Command_Lines is
    -- Set_Nth_Arg --
    -----------------
 
-   procedure Set_Nth_Arg (C : in out Command_Line; N : Positive; Arg : String)
+   procedure Set_Nth_Arg (C : in out Arg_List; N : Positive; Arg : String)
    is
    begin
       --  If there are not enough arguments, create them
@@ -462,4 +462,4 @@ package body GNATCOLL.Command_Lines is
         (N, (C.V.Element (N).Mode, To_Unbounded_String (Arg)));
    end Set_Nth_Arg;
 
-end GNATCOLL.Command_Lines;
+end GNATCOLL.Arg_Lists;
