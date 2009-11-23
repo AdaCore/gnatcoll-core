@@ -36,6 +36,29 @@ package body GNATCOLL.Command_Lines is
    --  This processes Text as if it were passed on a command line (for instance
    --  the bash command line) and adds the arguments to CL.
 
+   function Escape_Backslashes (A : Unbounded_String) return Unbounded_String;
+   --  Escape backslashes in A
+
+   ------------------------
+   -- Escape_Backslashes --
+   ------------------------
+
+   function Escape_Backslashes
+     (A : Unbounded_String) return Unbounded_String is
+      S : constant String := To_String (A);
+      R : Unbounded_String;
+   begin
+      for J in S'Range loop
+         case S (J) is
+            when '\' =>
+               Append (R, "\\");
+            when others =>
+               Append (R, S (J));
+         end case;
+      end loop;
+      return R;
+   end Escape_Backslashes;
+
    -------------------------------
    -- Parse_Command_Line_String --
    -------------------------------
@@ -328,9 +351,18 @@ package body GNATCOLL.Command_Lines is
                   Append (U, Char);
                   J := J + 1;
                else
-                  New_CL := Callback (S (Beg .. J - 1), CL.Mode);
+                  New_CL := Callback (S (Beg .. J - 1), Raw_String);
+
                   for K in 0 .. Natural (New_CL.V.Length) - 1 loop
-                     Append (U, New_CL.V.Element (K).Text);
+
+                     if CL.Mode = Raw_String then
+                        Append
+                          (U,
+                           Escape_Backslashes (New_CL.V.Element (K).Text));
+                     else
+                        Append (U, New_CL.V.Element (K).Text);
+                     end if;
+
                      if K < Natural (New_CL.V.Length) - 1 then
                         Append (U, ' ');
                      end if;
