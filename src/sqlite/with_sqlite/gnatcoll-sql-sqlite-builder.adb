@@ -18,6 +18,7 @@
 -----------------------------------------------------------------------
 
 with Ada.Characters.Handling;      use Ada.Characters.Handling;
+with Ada.Strings.Fixed;
 with Ada.Unchecked_Conversion;
 with GNATCOLL.SQL.Sqlite.Gnade;    use GNATCOLL.SQL.Sqlite.Gnade;
 with GNATCOLL.SQL.Exec_Private;    use GNATCOLL.SQL.Exec_Private;
@@ -109,7 +110,8 @@ package body GNATCOLL.SQL.Sqlite.Builder is
         (Name        : String;
          Typ         : String;
          Index       : Natural;
-         Description : String));
+         Description : String;
+        Is_Primary_Key : Boolean));
    overriding procedure Foreach_Foreign_Key
      (Connection : access Sqlite_Connection_Record;
       Table_Name : String;
@@ -530,11 +532,13 @@ package body GNATCOLL.SQL.Sqlite.Builder is
         (Name        : String;
          Typ         : String;
          Index       : Natural;
-         Description : String))
+         Description : String;
+         Is_Primary_Key : Boolean))
    is
       R           : Forward_Cursor;
       Index       : Natural := 0;
       Paren_Count : Natural;
+      Is_PK       : Boolean;
    begin
       R.Fetch
         (Connection,
@@ -545,7 +549,7 @@ package body GNATCOLL.SQL.Sqlite.Builder is
 
          declare
             Sql : constant String := Value (R, 0);
-            Pos, Pos2, Pos3, Pos4 : Integer := Sql'First;
+            Pos, Pos2, Pos3, Pos4, Pos5 : Integer := Sql'First;
          begin
             while Pos <= Sql'Last and then Sql (Pos) /= '(' loop
                Pos := Pos + 1;
@@ -579,15 +583,7 @@ package body GNATCOLL.SQL.Sqlite.Builder is
                   Pos := Pos + 1;
                end loop;
 
-               --  Ignore constraints declarations
-
-               if To_Lower (Sql (Pos2 .. Pos3)) /= "constraint" then
-                  Callback
-                    (Name        => Sql (Pos2 .. Pos3),
-                     Typ         => Sql (Pos4 .. Pos - 1),
-                     Index       => Index,
-                     Description => "");
-               end if;
+               Pos5 := Pos;
 
                while Pos <= Sql'Last
                  and then
@@ -601,6 +597,22 @@ package body GNATCOLL.SQL.Sqlite.Builder is
                   end if;
                   Pos := Pos + 1;
                end loop;
+
+               Is_PK := Ada.Strings.Fixed.Index
+                 (To_Lower (Sql (Pos2 .. Pos)), "primary key") >= 1;
+
+               --  Ignore constraints declarations
+
+               if To_Lower (Sql (Pos2 .. Pos3)) /= "constraint" then
+                  Callback
+                    (Name        => Sql (Pos2 .. Pos3),
+                     Typ         => Sql (Pos4 .. Pos5 - 1),
+                     Index       => Index,
+                     Description => "",
+                     Is_Primary_Key => Is_PK);
+               end if;
+
+
                Pos := Pos + 1;
             end loop;
          end;

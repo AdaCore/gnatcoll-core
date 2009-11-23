@@ -95,6 +95,7 @@ procedure GNATCOLL_Db2Ada is
       Value_Func  : Ada.Strings.Unbounded.Unbounded_String;
       Index       : Integer;  --  internal index in database
       Description : Ada.Strings.Unbounded.Unbounded_String;
+      PK          : Boolean;  --  Part of the primary key ?
    end record;
 
    package Attribute_Lists is new Ada.Containers.Doubly_Linked_Lists
@@ -394,14 +395,16 @@ procedure GNATCOLL_Db2Ada is
         (Name        : String;
          Typ         : String;
          Index       : Natural;
-         Description : String);
+         Description : String;
+         Is_Primary_Key : Boolean);
       --  Called when a new field is discovered
 
       procedure On_Field
         (Name        : String;
          Typ         : String;
          Index       : Natural;
-         Description : String)
+         Description : String;
+         Is_Primary_Key : Boolean)
       is
          Descr : Attribute_Description;
       begin
@@ -409,6 +412,7 @@ procedure GNATCOLL_Db2Ada is
          To_Ada_Type (Typ, Table, Name, Descr);
          Descr.Index    := Index;
          Descr.Description := To_Unbounded_String (Description);
+         Descr.PK       := Is_Primary_Key;
          Append (Attributes, Descr);
       end On_Field;
 
@@ -680,8 +684,15 @@ procedure GNATCOLL_Db2Ada is
 
          A := First (T_Descr.Attributes);
          while Has_Element (A) loop
-            Put_Line (ASCII.HT & To_String (Element (A).Name)
-                      & ASCII.HT & To_String (Element (A).Field_Type));
+            Put (ASCII.HT & To_String (Element (A).Name)
+                 & ASCII.HT & To_String (Element (A).Field_Type));
+
+            if Element (A).PK then
+               Put_Line (ASCII.HT & "PK");
+            else
+               New_Line;
+            end if;
+
             Next (A);
          end loop;
 

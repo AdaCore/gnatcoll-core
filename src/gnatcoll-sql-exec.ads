@@ -607,11 +607,14 @@ package GNATCOLL.SQL.Exec is
         (Name        : String;
          Typ         : String;
          Index       : Natural;
-         Description : String)) is abstract;
+         Description : String;
+         Is_Primary_Key : Boolean)) is abstract;
    --  For each attribute of the table, call Callback. Index is the attribute
    --  index in the table (column number). Description is the comment that was
    --  set when the attribute was created (for DBMS systems that support it),
-   --  and can be the empty string
+   --  and can be the empty string.
+   --  Is_Primary_Key is set to True if the field is part of the primary key
+   --  for this table
 
    procedure Foreach_Foreign_Key
      (Connection : access Database_Connection_Record;

@@ -3317,11 +3317,12 @@ information) is currently as such
       a table description starts with "table" followed by the name of the
       table, and then one line per field or foreign key
 
-  fields ::= ASCII.LF ASCII.HT <field_name> ASCII.HF <field_type>
+  fields ::= ASCII.LF ASCII.HT <field_name> ASCII.HF <field_type> [ASCII.LF 'PK']
       Each field is on a line that starts with a tab, and include the field's
-      name and type, separated by a tab
+      name and type, separated by a tab. The third column is optional and only
+      there if the field is a primary key
 
-  FK ::= ASCII.LF ASCII.HT "FK:" ASCII.HT <field_names>* "->" <field_names>*
+  FK ::= ASCII.LF ASCII.HT "FK:" ASCII.HT <field_names>* "-> " <field_names>*
      Each foreign key is on a line of its own, starting with a tab and "FK:".
      It then includes the name of the fields in the current table, an arrow,
      and the qualified (table.name) name of the fields in the referenced

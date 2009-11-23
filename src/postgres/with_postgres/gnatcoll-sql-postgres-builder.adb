@@ -79,7 +79,8 @@ package body GNATCOLL.SQL.Postgres.Builder is
         (Name        : String;
          Typ         : String;
          Index       : Natural;
-         Description : String));
+         Description : String;
+         Is_Primary_Key : Boolean));
    overriding procedure Foreach_Foreign_Key
      (Connection : access Postgresql_Connection_Record;
       Table_Name : String;
@@ -729,10 +730,62 @@ package body GNATCOLL.SQL.Postgres.Builder is
         (Name        : String;
          Typ         : String;
          Index       : Natural;
-         Description : String))
+         Description : String;
+         Is_Primary_Key : Boolean))
    is
-      R : Forward_Cursor;
+      R, R2 : Forward_Cursor;
+
+      procedure Process_Fields (PK : String);
+      --  Process all the strings. PK is a postgreSQL array representing the
+      --  list of primary keys
+
+      procedure Process_Fields (PK : String) is
+         Is_PK : Boolean;
+         Current : Integer;
+         Field : Positive;
+         Key   : Integer;
+      begin
+         while Has_Row (R) loop
+            Field := 1;
+            Current := Integer_Value (R, 2);
+
+            begin
+               loop
+                  Key := Integer'Value (Array_Field (PK, Field));
+
+                  if Key = Current then
+                     Is_PK := True;
+                     exit;
+                  end if;
+
+                  Field := Field + 1;
+               end loop;
+
+            exception
+               when Constraint_Error =>
+                  Is_PK := False; --  no more fields in primary key
+            end;
+
+            Callback
+              (Name        => Value (R, 0),
+               Typ         => Value (R, 1),
+               Index       => Current,
+               Description => Value (R, 3),
+               Is_Primary_Key => Is_PK);
+            Next (R);
+         end loop;
+      end Process_Fields;
+
    begin
+      R2.Fetch
+        (Connection,
+         "SELECT  pg_constraint.conkey"   --  1 attribute tuple
+         & " from pg_constraint,"
+         & "   pg_class"
+         & " where conrelid=pg_class.oid"
+         & "   and pg_class.relname='" & Table_Name & "'"
+         & "   and pg_constraint.contype='p'");
+
       R.Fetch
         (Connection,
          "SELECT pg_attribute.attname,"       --  0 att name
@@ -750,14 +803,11 @@ package body GNATCOLL.SQL.Postgres.Builder is
          & "   AND not pg_attribute.attisdropped"
          & " ORDER BY pg_attribute.attname");
 
-      while Has_Row (R) loop
-         Callback
-           (Name        => Value (R, 0),
-            Typ         => Value (R, 1),
-            Index       => Integer_Value (R, 2),
-            Description => Value (R, 3));
-         Next (R);
-      end loop;
+      if R2.Has_Row then
+         Process_Fields (Value (R2, 0));
+      else
+         Process_Fields ("");
+      end if;
    end Foreach_Field;
 
    -------------------------
