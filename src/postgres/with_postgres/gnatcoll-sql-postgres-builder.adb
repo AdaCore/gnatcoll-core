@@ -71,7 +71,8 @@ package body GNATCOLL.SQL.Postgres.Builder is
      (Connection : access Postgresql_Connection_Record) return String;
    overriding procedure Foreach_Table
      (Connection : access Postgresql_Connection_Record;
-      Callback   : access procedure (Name, Description : String));
+      Callback   : access procedure
+        (Name, Description : String; Kind : Relation_Kind));
    overriding procedure Foreach_Field
      (Connection : access Postgresql_Connection_Record;
       Table_Name : String;
@@ -696,15 +697,18 @@ package body GNATCOLL.SQL.Postgres.Builder is
    -- Foreach_Table --
    -------------------
 
-   procedure Foreach_Table
+   overriding procedure Foreach_Table
      (Connection : access Postgresql_Connection_Record;
-      Callback   : access procedure (Name, Description : String))
+      Callback   : access procedure
+        (Name, Description : String; Kind : Relation_Kind))
    is
       R     : Forward_Cursor;
+      Kind  : Relation_Kind;
    begin
       R.Fetch
         (Connection,
-         "SELECT pg_class.relname, pg_description.description"
+         "SELECT pg_class.relname, pg_description.description,"
+         & " pg_class.relkind"
          & " FROM (pg_class left join pg_description"
          & "         on  pg_description.objoid = pg_class.oid"
          & "         and pg_description.objsubid = 0),"
@@ -715,8 +719,15 @@ package body GNATCOLL.SQL.Postgres.Builder is
          & " ORDER BY pg_class.relname");
 
       while Has_Row (R) loop
+         if Value (R, 2) = "r" then
+            Kind := Kind_Table;
+         else
+            Kind := Kind_View;
+         end if;
+
          Callback (Name        => Value (R, 0),
-                   Description => Value (R, 1));
+                   Description => Value (R, 1),
+                   Kind        => Kind);
          Next (R);
       end loop;
    end Foreach_Table;

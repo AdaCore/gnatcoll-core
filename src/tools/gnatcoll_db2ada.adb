@@ -122,6 +122,7 @@ procedure GNATCOLL_Db2Ada is
    use Foreign_Keys;
 
    type Table_Description is record
+      Kind        : Relation_Kind;
       Index       : Integer;
       Description : Ada.Strings.Unbounded.Unbounded_String;
       Attributes  : Attribute_Lists.List;
@@ -440,13 +441,14 @@ procedure GNATCOLL_Db2Ada is
    is
       T : Natural := 0;
 
-      procedure On_Table (Name, Description : String);
+      procedure On_Table (Name, Description : String; Kind : Relation_Kind);
       --  Called when a new table is discovered
 
-      procedure On_Table (Name, Description : String) is
+      procedure On_Table (Name, Description : String; Kind : Relation_Kind) is
          Descr : Table_Description;
       begin
          T := T + 1;
+         Descr.Kind        := Kind;
          Descr.Index       := T;
          Descr.Description := To_Unbounded_String (Description);
          Parse_Table (Connection, Name, Descr.Attributes);
@@ -688,7 +690,10 @@ procedure GNATCOLL_Db2Ada is
 
       while Has_Element (C) loop
          T_Descr := Element (C);
-         Put_Line ("table " & Key (C));
+         case T_Descr.Kind is
+            when Kind_Table => Put_Line ("table " & Key (C));
+            when Kind_View  => Put_Line ("view " & Key (C));
+         end case;
 
          A := First (T_Descr.Attributes);
          while Has_Element (A) loop

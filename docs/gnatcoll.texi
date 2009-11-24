@@ -3313,9 +3313,10 @@ The format (which might change in some future release to include more
 information) is currently as such
 
 @CODESAMPLE{
-  table ::= "table" <name> [fields|docs]* [FK]*
-      a table description starts with "table" followed by the name of the
-      table, and then one line per field or foreign key
+  table ::= ("table"|"view") <name> [fields|docs]* [FK]*
+      A table description starts with "table" followed by the name of the
+      table, and then one line per field or foreign key. A view description
+      starts with the keyword "view".
 
   fields ::= ASCII.HT <field_name> ASCII.HF <field_type>
       ASCII.LF ('PK'|'') ASCII.LF ('NOT NULL'|'NULL') ASCII.LF [default]

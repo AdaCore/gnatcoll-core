@@ -102,7 +102,8 @@ package body GNATCOLL.SQL.Sqlite.Builder is
      (Connection : access Sqlite_Connection_Record) return String;
    overriding procedure Foreach_Table
      (Connection : access Sqlite_Connection_Record;
-      Callback   : access procedure (Name, Description : String));
+      Callback   : access procedure
+        (Name, Description : String; Kind : Relation_Kind));
    overriding procedure Foreach_Field
      (Connection : access Sqlite_Connection_Record;
       Table_Name : String;
@@ -484,15 +485,24 @@ package body GNATCOLL.SQL.Sqlite.Builder is
    -- Foreach_Table --
    -------------------
 
-   procedure Foreach_Table
+   overriding procedure Foreach_Table
      (Connection : access Sqlite_Connection_Record;
-      Callback   : access procedure (Name, Description : String))
+      Callback   : access procedure
+        (Name, Description : String; Kind : Relation_Kind))
    is
       R     : Forward_Cursor;
+      Kind  : Relation_Kind;
    begin
-      R.Fetch (Connection, "SELECT name FROM sqlite_master ORDER BY name");
+      R.Fetch
+        (Connection, "SELECT name, type FROM sqlite_master ORDER BY name");
       while Has_Row (R) loop
-         Callback (Name => Value (R, 0), Description => "");
+         if Value (R, 1) = "table" then
+            Kind := Kind_Table;
+         else
+            Kind := Kind_View;
+         end if;
+
+         Callback (Name => Value (R, 0), Description => "", Kind => Kind);
          Next (R);
       end loop;
    end Foreach_Table;

@@ -591,9 +591,12 @@ package GNATCOLL.SQL.Exec is
    --  the set of tables and their fields, and the relationships between the
    --  tables).
 
+   type Relation_Kind is (Kind_Table, Kind_View);
+
    procedure Foreach_Table
      (Connection : access Database_Connection_Record;
-      Callback   : access procedure (Name, Description : String)) is abstract;
+      Callback   : access procedure
+        (Name, Description : String; Kind : Relation_Kind)) is abstract;
    --  Find all tables in the database.
    --  For each, call Callback. Description is the comment that was optionally
    --  stored in the database to describe the role of the table (generally
