@@ -25,6 +25,7 @@ with Ada.Containers.Indefinite_Doubly_Linked_Lists;
 with Ada.Exceptions;             use Ada.Exceptions;
 with Ada.Strings.Fixed;          use Ada.Strings.Fixed;
 with Ada.Text_IO;                use Ada.Text_IO;
+with Ada.Strings.Maps;           use Ada.Strings.Maps;
 with Ada.Strings.Unbounded;      use Ada.Strings.Unbounded;
 with GNAT.Command_Line;          use GNAT.Command_Line;
 with GNAT.OS_Lib;                use GNAT.OS_Lib;
@@ -715,8 +716,11 @@ procedure GNATCOLL_Db2Ada is
             Put_Line (ASCII.HT & To_String (Element (A).Default));
 
             if Element (A).Description /= "" then
-               Put_Line (ASCII.HT & "DOC:" & ASCII.HT
-                         & To_String (Element (A).Description));
+               Put_Line
+                 (ASCII.HT & "DOC:" & ASCII.HT
+                  & To_String
+                    (Translate (Element (A).Description,
+                     Mapping => To_Mapping ("" & ASCII.LF, " "))));
             end if;
 
             Next (A);
