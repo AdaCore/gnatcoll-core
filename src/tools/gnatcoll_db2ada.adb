@@ -95,7 +95,9 @@ procedure GNATCOLL_Db2Ada is
       Value_Func  : Ada.Strings.Unbounded.Unbounded_String;
       Index       : Integer;  --  internal index in database
       Description : Ada.Strings.Unbounded.Unbounded_String;
+      Default     : Ada.Strings.Unbounded.Unbounded_String;
       PK          : Boolean;  --  Part of the primary key ?
+      Not_Null    : Boolean;
    end record;
 
    package Attribute_Lists is new Ada.Containers.Doubly_Linked_Lists
@@ -392,19 +394,23 @@ procedure GNATCOLL_Db2Ada is
       Attributes  : in out Attribute_Lists.List)
    is
       procedure On_Field
-        (Name        : String;
-         Typ         : String;
-         Index       : Natural;
-         Description : String;
-         Is_Primary_Key : Boolean);
+        (Name           : String;
+         Typ            : String;
+         Index          : Natural;
+         Description    : String;
+         Default_Value  : String;
+         Is_Primary_Key : Boolean;
+         Not_Null       : Boolean);
       --  Called when a new field is discovered
 
       procedure On_Field
-        (Name        : String;
-         Typ         : String;
-         Index       : Natural;
-         Description : String;
-         Is_Primary_Key : Boolean)
+        (Name           : String;
+         Typ            : String;
+         Index          : Natural;
+         Description    : String;
+         Default_Value  : String;
+         Is_Primary_Key : Boolean;
+         Not_Null       : Boolean)
       is
          Descr : Attribute_Description;
       begin
@@ -413,6 +419,8 @@ procedure GNATCOLL_Db2Ada is
          Descr.Index    := Index;
          Descr.Description := To_Unbounded_String (Description);
          Descr.PK       := Is_Primary_Key;
+         Descr.Not_Null := Not_Null;
+         Descr.Default  := To_Unbounded_String (Default_Value);
          Append (Attributes, Descr);
       end On_Field;
 
@@ -688,9 +696,22 @@ procedure GNATCOLL_Db2Ada is
                  & ASCII.HT & To_String (Element (A).Field_Type));
 
             if Element (A).PK then
-               Put_Line (ASCII.HT & "PK");
+               Put (ASCII.HT & "PK");
             else
-               New_Line;
+               Put (ASCII.HT);
+            end if;
+
+            if Element (A).Not_Null then
+               Put (ASCII.HT & "NOT NULL");
+            else
+               Put (ASCII.HT & "NULL");
+            end if;
+
+            Put_Line (ASCII.HT & To_String (Element (A).Default));
+
+            if Element (A).Description /= "" then
+               Put_Line (ASCII.HT & "DOC:" & ASCII.HT
+                         & To_String (Element (A).Description));
             end if;
 
             Next (A);
@@ -700,7 +721,9 @@ procedure GNATCOLL_Db2Ada is
          while Has_Element (K) loop
             FK := Element (K);
 
-            Put (ASCII.HT & "FK:" & ASCII.HT);
+            Put (ASCII.HT & "FK:"
+                 & ASCII.HT & To_String (FK.To_Table)
+                 & ASCII.HT);
 
             S  := First (FK.From_Attributes);
             while Has_Element (S) loop
@@ -712,7 +735,7 @@ procedure GNATCOLL_Db2Ada is
 
             S  := First (FK.To_Attributes);
             while Has_Element (S) loop
-               Put (To_String (FK.To_Table) & "." & Element (S) & " ");
+               Put (Element (S) & " ");
                Next (S);
             end loop;
 

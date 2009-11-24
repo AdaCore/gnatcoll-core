@@ -76,11 +76,13 @@ package body GNATCOLL.SQL.Postgres.Builder is
      (Connection : access Postgresql_Connection_Record;
       Table_Name : String;
       Callback   : access procedure
-        (Name        : String;
-         Typ         : String;
-         Index       : Natural;
-         Description : String;
-         Is_Primary_Key : Boolean));
+        (Name           : String;
+         Typ            : String;
+         Index          : Natural;
+         Description    : String;
+         Default_Value  : String;
+         Is_Primary_Key : Boolean;
+         Not_Null       : Boolean));
    overriding procedure Foreach_Foreign_Key
      (Connection : access Postgresql_Connection_Record;
       Table_Name : String;
@@ -723,15 +725,17 @@ package body GNATCOLL.SQL.Postgres.Builder is
    -- Foreach_Field --
    -------------------
 
-   procedure Foreach_Field
+   overriding procedure Foreach_Field
      (Connection : access Postgresql_Connection_Record;
       Table_Name : String;
       Callback   : access procedure
-        (Name        : String;
-         Typ         : String;
-         Index       : Natural;
-         Description : String;
-         Is_Primary_Key : Boolean))
+        (Name           : String;
+         Typ            : String;
+         Index          : Natural;
+         Description    : String;
+         Default_Value  : String;
+         Is_Primary_Key : Boolean;
+         Not_Null       : Boolean))
    is
       R, R2 : Forward_Cursor;
 
@@ -767,10 +771,12 @@ package body GNATCOLL.SQL.Postgres.Builder is
             end;
 
             Callback
-              (Name        => Value (R, 0),
-               Typ         => Value (R, 1),
-               Index       => Current,
-               Description => Value (R, 3),
+              (Name           => Value (R, 0),
+               Typ            => Value (R, 1),
+               Index          => Current,
+               Description    => Value (R, 3),
+               Not_Null       => Boolean_Value (R, 4),
+               Default_Value  => Value (R, 5),
                Is_Primary_Key => Is_PK);
             Next (R);
          end loop;
@@ -791,7 +797,14 @@ package body GNATCOLL.SQL.Postgres.Builder is
          "SELECT pg_attribute.attname,"       --  0 att name
          & "     pg_catalog.format_type(atttypid, atttypmod),"  --  1 att type
          & "     pg_attribute.attnum,"        --  2 attribute index in table
-         & "     pg_description.description"  --  3 field doc
+         & "     pg_description.description," --  3 field doc
+         & "     pg_attribute.attnotnull,"    --  4 not null ?
+         & "     (SELECT substring"
+         & "        (pg_catalog.pg_get_expr(d.adbin, d.adrelid) for 128)"
+         & "         FROM pg_catalog.pg_attrdef d"
+         & "      WHERE d.adrelid = pg_attribute.attrelid"
+         & "      AND d.adnum = pg_attribute.attnum"
+         & "      AND pg_attribute.atthasdef)"  --  5 default
          & " FROM (pg_attribute left join pg_description"
          & "          on pg_description.objoid   = pg_attribute.attrelid"
          & "         and pg_description.objsubid = pg_attribute.attnum),"

@@ -604,17 +604,22 @@ package GNATCOLL.SQL.Exec is
      (Connection : access Database_Connection_Record;
       Table_Name : String;
       Callback   : access procedure
-        (Name        : String;
-         Typ         : String;
-         Index       : Natural;
-         Description : String;
-         Is_Primary_Key : Boolean)) is abstract;
+        (Name           : String;
+         Typ            : String;
+         Index          : Natural;
+         Description    : String;
+         Default_Value  : String;
+         Is_Primary_Key : Boolean;
+         Not_Null       : Boolean)) is abstract;
    --  For each attribute of the table, call Callback. Index is the attribute
    --  index in the table (column number). Description is the comment that was
    --  set when the attribute was created (for DBMS systems that support it),
    --  and can be the empty string.
+   --  Default_Value is the default value for the attribute (the empty string
+   --  is used if there is no default)
    --  Is_Primary_Key is set to True if the field is part of the primary key
-   --  for this table
+   --  for this table.
+   --  Not_Null is set to true if the attribute cannot be null
 
    procedure Foreach_Foreign_Key
      (Connection : access Database_Connection_Record;

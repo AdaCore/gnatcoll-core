@@ -107,11 +107,13 @@ package body GNATCOLL.SQL.Sqlite.Builder is
      (Connection : access Sqlite_Connection_Record;
       Table_Name : String;
       Callback   : access procedure
-        (Name        : String;
-         Typ         : String;
-         Index       : Natural;
-         Description : String;
-        Is_Primary_Key : Boolean));
+        (Name           : String;
+         Typ            : String;
+         Index          : Natural;
+         Description    : String;
+         Default_Value  : String;
+         Is_Primary_Key : Boolean;
+         Not_Null       : Boolean));
    overriding procedure Foreach_Foreign_Key
      (Connection : access Sqlite_Connection_Record;
       Table_Name : String;
@@ -525,20 +527,23 @@ package body GNATCOLL.SQL.Sqlite.Builder is
    -- Foreach_Field --
    -------------------
 
-   procedure Foreach_Field
+   overriding procedure Foreach_Field
      (Connection : access Sqlite_Connection_Record;
       Table_Name : String;
       Callback   : access procedure
-        (Name        : String;
-         Typ         : String;
-         Index       : Natural;
-         Description : String;
-         Is_Primary_Key : Boolean))
+        (Name           : String;
+         Typ            : String;
+         Index          : Natural;
+         Description    : String;
+         Default_Value  : String;
+         Is_Primary_Key : Boolean;
+         Not_Null       : Boolean))
    is
       R           : Forward_Cursor;
       Index       : Natural := 0;
       Paren_Count : Natural;
       Is_PK       : Boolean;
+      Is_Not_Null : Boolean;
    begin
       R.Fetch
         (Connection,
@@ -601,14 +606,19 @@ package body GNATCOLL.SQL.Sqlite.Builder is
                Is_PK := Ada.Strings.Fixed.Index
                  (To_Lower (Sql (Pos2 .. Pos)), "primary key") >= 1;
 
+               Is_Not_Null := Ada.Strings.Fixed.Index
+                 (To_Lower (Sql (Pos2 .. Pos)), "not null") >= 1;
+
                --  Ignore constraints declarations
 
                if To_Lower (Sql (Pos2 .. Pos3)) /= "constraint" then
                   Callback
-                    (Name        => Sql (Pos2 .. Pos3),
-                     Typ         => Sql (Pos4 .. Pos5 - 1),
-                     Index       => Index,
-                     Description => "",
+                    (Name           => Sql (Pos2 .. Pos3),
+                     Typ            => Sql (Pos4 .. Pos5 - 1),
+                     Index          => Index,
+                     Description    => "",
+                     Default_Value  => "",  --  ??? Should be specified
+                     Not_Null       => Is_Not_Null,
                      Is_Primary_Key => Is_PK);
                end if;
 

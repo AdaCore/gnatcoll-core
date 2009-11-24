@@ -3313,20 +3313,26 @@ The format (which might change in some future release to include more
 information) is currently as such
 
 @CODESAMPLE{
-  table ::= "table" <name> [fields]* [FK]*
+  table ::= "table" <name> [fields|docs]* [FK]*
       a table description starts with "table" followed by the name of the
       table, and then one line per field or foreign key
 
-  fields ::= ASCII.LF ASCII.HT <field_name> ASCII.HF <field_type> [ASCII.LF 'PK']
+  fields ::= ASCII.HT <field_name> ASCII.HF <field_type>
+      ASCII.LF ('PK'|'') ASCII.LF ('NOT NULL'|'NULL') ASCII.LF [default]
       Each field is on a line that starts with a tab, and include the field's
-      name and type, separated by a tab. The third column is optional and only
-      there if the field is a primary key
+      name and type, separated by a tab. The third column is set to "PK"
+      if the field is a primary key. The fourth column is set to "NOT NULL" if
+      the field can never have the null value. The column is either the empty
+      string or the default value for the field
 
-  FK ::= ASCII.LF ASCII.HT "FK:" ASCII.HT <field_names>* "-> " <field_names>*
+  docs ::= ASCII.LF 'DOC:' ASCII.HT <documentation>
+      If available, the comment associated with the field on the previous
+      line. This line will be omitted if there is no comment
+
+  FK ::= ASCII.HT "FK:" ASCII.HT <table> ASCII.HF <field_names>* "-> " <field_names>*
      Each foreign key is on a line of its own, starting with a tab and "FK:".
      It then includes the name of the fields in the current table, an arrow,
-     and the qualified (table.name) name of the fields in the referenced
-     table
+     and the name of the fields in the referenced table
 }
 
 @end table
