@@ -244,17 +244,12 @@ package body GNATCOLL.Scripts.Python is
 
    procedure Destroy (Script : access Python_Scripting_Record) is
    begin
-      Set_Default_Console (Script, null);
-
-      Free (Script.Buffer);
-
-      --  Cannot call Py_Finalize, since some class_instance might be finalized
-      --  when the program exit, and would try to call Py_DECREF on their
-      --  associated PyObject, which no longer exists
-
-      Py_Finalize;
-
-      Script.Finalized := True;
+      if not Script.Finalized then
+         Set_Default_Console (Script, null);
+         Free (Script.Buffer);
+         Py_Finalize;
+         Script.Finalized := True;
+      end if;
    end Destroy;
 
    ----------------------------
@@ -2187,7 +2182,8 @@ package body GNATCOLL.Scripts.Python is
         (Repo, Python_Name);
    begin
       if Script /= null then
-         Python_Scripting (Script).Finalized := True;
+         Destroy (Script);
+         --  Python_Scripting (Script).Finalized := True;
       end if;
    end Unregister_Python_Scripting;
 
@@ -2612,7 +2608,9 @@ package body GNATCOLL.Scripts.Python is
 
    procedure Free (Subprogram : in out Python_Subprogram_Record) is
    begin
-      Py_DECREF (Subprogram.Subprogram);
+      if not Subprogram.Script.Finalized then
+         Py_DECREF (Subprogram.Subprogram);
+      end if;
    end Free;
 
    --------------
