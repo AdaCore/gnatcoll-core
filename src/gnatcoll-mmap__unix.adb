@@ -1,7 +1,7 @@
 -----------------------------------------------------------------------
 --                               G N A T C O L L                     --
 --                                                                   --
---                 Copyright (C) 2007-2009, AdaCore                  --
+--                 Copyright (C) 2007-2010, AdaCore                  --
 --                                                                   --
 -- GPS is free  software;  you can redistribute it and/or modify  it --
 -- under the terms of the GNU General Public License as published by --
@@ -129,7 +129,7 @@ package body GNATCOLL.Mmap is
    begin
       Fd := Open_Read (Filename, Binary);
       if Fd = Invalid_FD then
-         raise Name_Error;
+         raise Name_Error with "Cannot open " & Filename;
       end if;
 
       return Mapped_File'
