@@ -69,6 +69,7 @@ ifeq (${WITH_GMP},yes)
 	${MAKE} -C src -f Makefile.gmp libinstall
 endif
 	${CP} distrib/gnatcoll_gps.xml ${datadir}/gps/plug-ins
+	${CP} distrib/gnatcoll_runtime.xml ${datadir}/gps/plug-ins
 	${CP} distrib/*.gpr ${libdir}/gnat
 
 install_static:

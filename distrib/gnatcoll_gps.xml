@@ -2,7 +2,7 @@
 <!--  This file makes the gnatcoll documentation available from GPS -->
 <GPS>
   <doc_path>share/doc/gnatcoll</doc_path>
-  <submenu after="GNAT Runtime">
+  <submenu after="GNAT">
     <title>/Help/Gnat Components</title>
   </submenu>
   <documentation_file>
@@ -10,5 +10,12 @@
      <descr>Gnat Reusable Components User's Guide</descr>
      <category>GNAT</category>
      <menu>/Help/Gnat Components/Gnat Components User's Guide</menu>
+  </documentation_file>
+
+  <documentation_file>
+     <shell>Editor.edit "gnatcoll-any_types.ads"</shell>
+     <descr>GNATCOLL.Any_Types</descr>
+     <menu>/Help/Gnat Components/API/Any_Types</menu>
+     <category>Gnat Reusable Components</category>
   </documentation_file>
 </GPS>
