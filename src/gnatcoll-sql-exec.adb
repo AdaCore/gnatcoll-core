@@ -1,7 +1,7 @@
 -----------------------------------------------------------------------
 --                               G N A T C O L L                     --
 --                                                                   --
---                 Copyright (C) 2005-2009, AdaCore                  --
+--                 Copyright (C) 2005-2010, AdaCore                  --
 --                                                                   --
 -- GPS is free  software;  you can redistribute it and/or modify  it --
 -- under the terms of the GNU General Public License as published by --
@@ -266,6 +266,7 @@ package body GNATCOLL.SQL.Exec is
          --  string_access we would have invalid memory).
 
          Cache.Clear;
+         Cache.Set_Length (0);
          Timestamp := Clock;
       end Reset;
 
