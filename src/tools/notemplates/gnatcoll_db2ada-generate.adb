@@ -1,7 +1,7 @@
 -----------------------------------------------------------------------
 --                          G N A T C O L L                          --
 --                                                                   --
---                 Copyright (C) 2008-2009, AdaCore                  --
+--                 Copyright (C) 2008-2010, AdaCore                  --
 --                                                                   --
 -- GPS is free  software;  you can redistribute it and/or modify  it --
 -- under the terms of the GNU General Public License as published by --
@@ -22,7 +22,7 @@ with Ada.Containers.Indefinite_Ordered_Sets;
 with Ada.Text_IO;             use Ada.Text_IO;
 with GNATCOLL.Utils;          use GNATCOLL.Utils;
 
-separate (Gnatcoll_Db2Ada)
+separate (GNATCOLL_Db2Ada)
 procedure Generate (Generated : String) is
 
    package String_Sets is new Ada.Containers.Indefinite_Ordered_Sets
