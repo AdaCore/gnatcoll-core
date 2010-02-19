@@ -1,7 +1,7 @@
 -----------------------------------------------------------------------
 --                           G N A T C O L L                         --
 --                                                                   --
---                 Copyright (C) 2005-2009, AdaCore                  --
+--                 Copyright (C) 2005-2010, AdaCore                  --
 --                                                                   --
 -- GPS is free  software;  you can redistribute it and/or modify  it --
 -- under the terms of the GNU General Public License as published by --
@@ -310,6 +310,10 @@ package GNATCOLL.SQL is
    function Cast_To_String
      (Field : SQL_Field'Class) return Text_Fields.Field'Class;
    --  Convert any field type to a text field
+
+   function Cast_To_Date
+     (Field : SQL_Field_Time'Class) return Date_Fields.Field'Class;
+   --  Convert a time to a date
 
    function At_Time_Zone
      (Field : Time_Fields.Field'Class; TZ : String)
