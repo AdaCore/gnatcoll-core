@@ -1,7 +1,7 @@
 -----------------------------------------------------------------------
 --                           G N A T C O L L                         --
 --                                                                   --
---                      Copyright (C) 2009, AdaCore                  --
+--                   Copyright (C) 2009-2010, AdaCore                --
 --                                                                   --
 -- GPS is free  software;  you can redistribute it and/or modify  it --
 -- under the terms of the GNU General Public License as published by --
@@ -224,10 +224,18 @@ package body GNATCOLL.Arg_Lists is
    -- To_Display_String --
    -----------------------
 
-   function To_Display_String (C : Arg_List) return String is
+   function To_Display_String
+     (C               : Arg_List;
+      Include_Command : Boolean := True) return String
+   is
       Result : Unbounded_String := To_Unbounded_String ("");
+      Start  : Natural := 1;
    begin
-      for Index in 1 .. Natural (C.V.Length) loop
+      if not Include_Command then
+         Start := 2;
+      end if;
+
+      for Index in Start .. Natural (C.V.Length) loop
          Append (Result, C.V.Element (Index - 1).Text);
          if Index < Natural (C.V.Length) then
             Append (Result, " ");
