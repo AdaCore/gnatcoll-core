@@ -1,7 +1,7 @@
 -----------------------------------------------------------------------
 --                           G N A T C O L L                         --
 --                                                                   --
---                      Copyright (C) 2009, AdaCore                  --
+--                   Copyright (C) 2009-2010, AdaCore                --
 --                                                                   --
 -- GPS is free  software;  you can redistribute it and/or modify  it --
 -- under the terms of the GNU General Public License as published by --
@@ -108,10 +108,13 @@ package GNATCOLL.Arg_Lists is
    -- Conversions to string --
    ---------------------------
 
-   function To_Display_String (C : Arg_List) return String;
+   function To_Display_String
+     (C               : Arg_List;
+      Include_Command : Boolean := True) return String;
    --  Return a string that represents C, for display purposes.
    --  For instance
    --       cmd /c make LIBRARY_TYPE=static
+   --  If Include_Command is False, display only the arguments.
 
    function To_Debug_String (C : Arg_List) return String;
    --  Return a string that represents C, for display purposes.
