@@ -1,7 +1,7 @@
 -----------------------------------------------------------------------
 --                              G P S                                --
 --                                                                   --
---                   Copyright (C) 2009, AdaCore                     --
+--                Copyright (C) 2009-2010, AdaCore                   --
 --                                                                   --
 -- GPS is free  software;  you can redistribute it and/or modify  it --
 -- under the terms of the GNU General Public License as published by --
@@ -131,7 +131,7 @@ package body GNATCOLL.IO.Remote is
       end if;
 
       case Server.Shell_FS is
-         when FS_Unix =>
+         when FS_Unix | FS_Unix_Case_Insensitive =>
             return Create
               (Host,
                GNATCOLL.IO.Remote.Unix.Current_Dir (Server));
@@ -160,7 +160,7 @@ package body GNATCOLL.IO.Remote is
       end if;
 
       case Server.Shell_FS is
-         when FS_Unix =>
+         when FS_Unix | FS_Unix_Case_Insensitive =>
             return Create
               (Host,
                GNATCOLL.IO.Remote.Unix.Home_Dir (Server));
@@ -189,7 +189,7 @@ package body GNATCOLL.IO.Remote is
       end if;
 
       case Server.Shell_FS is
-         when FS_Unix =>
+         when FS_Unix | FS_Unix_Case_Insensitive =>
             return Create
               (Host, GNATCOLL.IO.Remote.Unix.Tmp_Dir (Server));
          when FS_Windows =>
@@ -218,7 +218,7 @@ package body GNATCOLL.IO.Remote is
       end if;
 
       case Server.Shell_FS is
-         when FS_Unix =>
+         when FS_Unix | FS_Unix_Case_Insensitive =>
             List := GNATCOLL.IO.Remote.Unix.Get_Logical_Drives (Server);
          when FS_Windows =>
             List := GNATCOLL.IO.Remote.Windows.Get_Logical_Drives (Server);
@@ -368,7 +368,7 @@ package body GNATCOLL.IO.Remote is
       Ensure_Initialized (File);
 
       case File.Server.Shell_FS is
-         when FS_Unix =>
+         when FS_Unix | FS_Unix_Case_Insensitive =>
             return GNATCOLL.IO.Remote.Unix.Is_Regular_File
               (File.Server, File.Full.all);
          when FS_Windows =>
@@ -392,7 +392,7 @@ package body GNATCOLL.IO.Remote is
       Ensure_Initialized (File);
 
       case File.Server.Shell_FS is
-         when FS_Unix =>
+         when FS_Unix | FS_Unix_Case_Insensitive =>
             return GNATCOLL.IO.Remote.Unix.Is_Directory
               (File.Server, File.Full.all);
          when FS_Windows =>
@@ -416,7 +416,7 @@ package body GNATCOLL.IO.Remote is
       Ensure_Initialized (File);
 
       case File.Server.Shell_FS is
-         when FS_Unix =>
+         when FS_Unix | FS_Unix_Case_Insensitive =>
             return GNATCOLL.IO.Remote.Unix.Is_Symbolic_Link
               (File.Server, File.Full.all);
          when FS_Windows =>
@@ -440,7 +440,7 @@ package body GNATCOLL.IO.Remote is
       Ensure_Initialized (File);
 
       case File.Server.Shell_FS is
-         when FS_Unix =>
+         when FS_Unix | FS_Unix_Case_Insensitive =>
             return GNATCOLL.IO.Remote.Unix.File_Time_Stamp
               (File.Server, File.Full.all);
          when FS_Windows =>
@@ -464,7 +464,7 @@ package body GNATCOLL.IO.Remote is
       Ensure_Initialized (File);
 
       case File.Server.Shell_FS is
-         when FS_Unix =>
+         when FS_Unix | FS_Unix_Case_Insensitive =>
             return GNATCOLL.IO.Remote.Unix.Is_Writable
               (File.Server, File.Full.all);
          when FS_Windows =>
@@ -488,7 +488,7 @@ package body GNATCOLL.IO.Remote is
       Ensure_Initialized (File);
 
       case File.Server.Shell_FS is
-         when FS_Unix =>
+         when FS_Unix | FS_Unix_Case_Insensitive =>
             GNATCOLL.IO.Remote.Unix.Set_Writable
               (File.Server, File.Full.all,
                State);
@@ -514,7 +514,7 @@ package body GNATCOLL.IO.Remote is
       Ensure_Initialized (File);
 
       case File.Server.Shell_FS is
-         when FS_Unix =>
+         when FS_Unix | FS_Unix_Case_Insensitive =>
             GNATCOLL.IO.Remote.Unix.Set_Readable
               (File.Server, File.Full.all,
                State);
@@ -547,7 +547,7 @@ package body GNATCOLL.IO.Remote is
       end if;
 
       case From.Server.Shell_FS is
-         when FS_Unix =>
+         when FS_Unix | FS_Unix_Case_Insensitive =>
             GNATCOLL.IO.Remote.Unix.Rename
               (From.Server, From.Full.all, Dest.Full.all, Success);
          when FS_Windows =>
@@ -572,7 +572,7 @@ package body GNATCOLL.IO.Remote is
       Ensure_Initialized (From);
 
       case From.Server.Shell_FS is
-         when FS_Unix =>
+         when FS_Unix | FS_Unix_Case_Insensitive =>
             GNATCOLL.IO.Remote.Unix.Copy
               (From.Server, From.Full.all, Dest, Success);
          when FS_Windows =>
@@ -596,7 +596,7 @@ package body GNATCOLL.IO.Remote is
       Ensure_Initialized (File);
 
       case File.Server.Shell_FS is
-         when FS_Unix =>
+         when FS_Unix | FS_Unix_Case_Insensitive =>
             GNATCOLL.IO.Remote.Unix.Delete
               (File.Server, File.Full.all,
                Success);
@@ -622,7 +622,7 @@ package body GNATCOLL.IO.Remote is
       Ensure_Initialized (File);
 
       case File.Server.Shell_FS is
-         when FS_Unix =>
+         when FS_Unix | FS_Unix_Case_Insensitive =>
             return GNATCOLL.IO.Remote.Unix.Read_Whole_File
               (File.Server, File.Full.all);
          when FS_Windows =>
@@ -669,7 +669,7 @@ package body GNATCOLL.IO.Remote is
 
       if Append then
          case File.Server.Shell_FS is
-            when FS_Unix =>
+            when FS_Unix | FS_Unix_Case_Insensitive =>
                Content := GNATCOLL.IO.Remote.Unix.Read_Whole_File
                  (File.Server, File.Full.all);
             when FS_Windows =>
@@ -714,7 +714,7 @@ package body GNATCOLL.IO.Remote is
         (String (Tmp) & File.Tmp_Name, Empty_If_Not_Found => True);
 
       case File.Server.Shell_FS is
-         when FS_Unix =>
+         when FS_Unix | FS_Unix_Case_Insensitive =>
             Success := GNATCOLL.IO.Remote.Unix.Write_File
               (File.Server, File.Full.all, Content.all);
          when FS_Windows =>
@@ -740,7 +740,7 @@ package body GNATCOLL.IO.Remote is
       Ensure_Initialized (Dir);
 
       case Dir.Server.Shell_FS is
-         when FS_Unix =>
+         when FS_Unix | FS_Unix_Case_Insensitive =>
             return GNATCOLL.IO.Remote.Unix.Change_Dir
               (Dir.Server, Dir.Full.all);
          when FS_Windows =>
@@ -766,7 +766,7 @@ package body GNATCOLL.IO.Remote is
       Ensure_Initialized (Dir);
 
       case Dir.Server.Shell_FS is
-         when FS_Unix =>
+         when FS_Unix | FS_Unix_Case_Insensitive =>
             return GNATCOLL.IO.Remote.Unix.Read_Dir
               (Dir.Server, Dir.Full.all,
                Dirs_Only, Files_Only);
@@ -792,7 +792,7 @@ package body GNATCOLL.IO.Remote is
       Ensure_Initialized (Dir);
 
       case Dir.Server.Shell_FS is
-         when FS_Unix =>
+         when FS_Unix | FS_Unix_Case_Insensitive =>
             return GNATCOLL.IO.Remote.Unix.Make_Dir
               (Dir.Server, Dir.Full.all);
          when FS_Windows =>
@@ -817,7 +817,7 @@ package body GNATCOLL.IO.Remote is
       Ensure_Initialized (Dir);
 
       case Dir.Server.Shell_FS is
-         when FS_Unix =>
+         when FS_Unix | FS_Unix_Case_Insensitive =>
             GNATCOLL.IO.Remote.Unix.Delete_Dir
               (Dir.Server, Dir.Full.all, Recursive, Success);
          when FS_Windows =>
@@ -842,7 +842,7 @@ package body GNATCOLL.IO.Remote is
       Ensure_Initialized (From);
 
       case From.Server.Shell_FS is
-         when FS_Unix =>
+         when FS_Unix | FS_Unix_Case_Insensitive =>
             GNATCOLL.IO.Remote.Unix.Copy_Dir
               (From.Server, From.Full.all, Dest, Success);
          when FS_Windows =>

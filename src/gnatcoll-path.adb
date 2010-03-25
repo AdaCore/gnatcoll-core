@@ -1,7 +1,7 @@
 -----------------------------------------------------------------------
 --                              G P S                                --
 --                                                                   --
---                   Copyright (C) 2009, AdaCore                     --
+--                Copyright (C) 2009-2010, AdaCore                   --
 --                                                                   --
 -- GPS is free  software;  you can redistribute it and/or modify  it --
 -- under the terms of the GNU General Public License as published by --
@@ -18,7 +18,7 @@
 -----------------------------------------------------------------------
 
 with Ada.Characters.Handling;     use Ada.Characters.Handling;
-with GNAT.OS_Lib;
+with GNAT.OS_Lib;                 use GNAT.OS_Lib;
 
 package body GNATCOLL.Path is
 
@@ -32,7 +32,7 @@ package body GNATCOLL.Path is
    function Dir_Separator (FS : FS_Type) return Character is
    begin
       case FS is
-         when FS_Unix =>
+         when FS_Unix | FS_Unix_Case_Insensitive =>
             return '/';
          when FS_Windows =>
             return '\';
@@ -50,11 +50,19 @@ package body GNATCOLL.Path is
    -----------------------
 
    function Internal_Local_FS return FS_Type is
+      function Get_File_Names_Case_Sensitive return Integer;
+      pragma Import
+        (C, Get_File_Names_Case_Sensitive,
+         "__gnat_get_file_names_case_sensitive");
    begin
       if GNAT.OS_Lib.Directory_Separator = '\' then
          return FS_Windows;
       else
-         return FS_Unix;
+         if Get_File_Names_Case_Sensitive = 0 then
+            return FS_Unix_Case_Insensitive;
+         else
+            return FS_Unix;
+         end if;
       end if;
    end Internal_Local_FS;
 
@@ -78,7 +86,7 @@ package body GNATCOLL.Path is
       case FS is
          when FS_Unix =>
             return True;
-         when FS_Windows =>
+         when FS_Windows | FS_Unix_Case_Insensitive =>
             return False;
          when FS_Unknown =>
             raise Invalid_Filesystem;
@@ -92,7 +100,7 @@ package body GNATCOLL.Path is
    function Has_Devices (FS : FS_Type) return Boolean is
    begin
       case FS is
-         when FS_Unix =>
+         when FS_Unix | FS_Unix_Case_Insensitive =>
             return False;
          when FS_Windows =>
             return True;
@@ -118,7 +126,7 @@ package body GNATCOLL.Path is
    function Exe_Extension (FS : FS_Type) return FS_String is
    begin
       case FS is
-         when FS_Unix =>
+         when FS_Unix | FS_Unix_Case_Insensitive =>
             return "";
          when FS_Windows =>
             return ".exe";
@@ -138,7 +146,7 @@ package body GNATCOLL.Path is
       Found_One : Boolean;
    begin
       case FS is
-         when FS_Unix =>
+         when FS_Unix | FS_Unix_Case_Insensitive =>
             return "/";
 
          when FS_Windows =>
@@ -197,7 +205,7 @@ package body GNATCOLL.Path is
       end if;
 
       case FS is
-         when FS_Unix =>
+         when FS_Unix | FS_Unix_Case_Insensitive =>
             return Path (Path'First) = '/';
          when FS_Windows =>
             if Path'Length >= 3
@@ -237,7 +245,7 @@ package body GNATCOLL.Path is
          raise Invalid_Filesystem;
       end if;
 
-      if FS = FS_Unix or else Device = "" then
+      if FS in FS_Unix .. FS_Unix_Case_Insensitive or else Device = "" then
          if Has_Dirsep then
             return Dir & From_Unix (FS, File);
          else
@@ -301,7 +309,7 @@ package body GNATCOLL.Path is
    is
    begin
       case FS is
-         when FS_Unix =>
+         when FS_Unix | FS_Unix_Case_Insensitive =>
             return Path;
 
          when FS_Windows =>
@@ -338,7 +346,7 @@ package body GNATCOLL.Path is
       Path : FS_String) return FS_String is
    begin
       case FS is
-         when FS_Unix =>
+         when FS_Unix | FS_Unix_Case_Insensitive =>
             return Path;
 
          when FS_Windows =>
@@ -377,7 +385,7 @@ package body GNATCOLL.Path is
       for J in reverse Path'Range loop
          if Path (J) = '.' then
             case FS is
-               when FS_Unix =>
+               when FS_Unix | FS_Unix_Case_Insensitive =>
                   return Path (J .. Path'Last);
                when FS_Windows =>
                   return FS_String

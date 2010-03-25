@@ -1,7 +1,7 @@
 -----------------------------------------------------------------------
 --                              G P S                                --
 --                                                                   --
---                   Copyright (C) 2009, AdaCore                     --
+--                Copyright (C) 2009-2010, AdaCore                   --
 --                                                                   --
 -- GPS is free  software;  you can redistribute it and/or modify  it --
 -- under the terms of the GNU General Public License as published by --
@@ -27,6 +27,6 @@ package GNATCOLL.VFS_Types is
    procedure Free is new Ada.Unchecked_Deallocation
      (FS_String, FS_String_Access);
 
-   type FS_Type is (FS_Unknown, FS_Unix, FS_Windows);
+   type FS_Type is (FS_Unknown, FS_Unix, FS_Unix_Case_Insensitive, FS_Windows);
 
 end GNATCOLL.VFS_Types;
