@@ -127,6 +127,12 @@ private package GNATCOLL.Projects.Normalize is
    --  The same limitation exists for N_Variable_Reference and
    --  N_Attribute_Reference and the package they are referencing
 
+   function Is_Virtual_Extending
+     (Tree : Prj.Tree.Project_Node_Tree_Ref;
+      Node : Prj.Tree.Project_Node_Id) return Boolean;
+   --  Return True if Node is a virtual extending project created
+   --  automatically by GNAT's project manager
+
    function Find_Type_Declaration
      (Tree    : Prj.Tree.Project_Node_Tree_Ref;
       Project : Prj.Tree.Project_Node_Id;

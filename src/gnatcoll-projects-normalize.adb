@@ -3497,4 +3497,19 @@ package body GNATCOLL.Projects.Normalize is
       return Empty_Node;
    end Find_Scenario_Variable;
 
+   --------------------------
+   -- Is_Virtual_Extending --
+   --------------------------
+
+   function Is_Virtual_Extending
+     (Tree : Project_Node_Tree_Ref;
+      Node : Prj.Tree.Project_Node_Id) return Boolean
+   is
+      Name : constant String :=
+        Get_String (Prj.Tree.Name_Of (Node, Tree));
+   begin
+      return Name'Length > Virtual_Prefix'Length
+        and then Name (1 .. Virtual_Prefix'Length) = Virtual_Prefix;
+   end Is_Virtual_Extending;
+
 end GNATCOLL.Projects.Normalize;

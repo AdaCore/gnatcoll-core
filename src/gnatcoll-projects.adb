@@ -20,6 +20,7 @@
 with Ada.Calendar;               use Ada.Calendar;
 with Ada.Characters.Handling;    use Ada.Characters.Handling;
 with Ada.Containers.Doubly_Linked_Lists;
+with Ada.Containers.Hashed_Sets;
 with Ada.Directories;
 with Ada.Strings;                use Ada.Strings;
 with Ada.Strings.Fixed;          use Ada.Strings.Fixed;
@@ -114,6 +115,14 @@ package body GNATCOLL.Projects is
       Equivalent_Keys => Equal);
    --  maps for file base names to info about the file
 
+   function Hash (Node : Project_Node_Id) return Ada.Containers.Hash_Type;
+   pragma Inline (Hash);
+
+   package Project_Sets is new Ada.Containers.Hashed_Sets
+     (Element_Type        => Project_Node_Id,
+      Hash                => Hash,
+      Equivalent_Elements => "=");
+
    type Directory_Dependency is (Direct, As_Parent);
    --  The way a directory belongs to the project: either as a direct
    --  dependency, or because one of its subdirs belong to the project, or
@@ -183,6 +192,18 @@ package body GNATCOLL.Projects is
    --  Called for a typed variable declaration that references an external
    --  variable in Prj.
    --  Stops iterating if this subprogram returns False.
+
+   procedure For_Each_Project_Node
+     (Tree     : Project_Node_Tree_Ref;
+      Root     : Project_Node_Id;
+      Callback : access procedure
+        (Tree : Project_Node_Tree_Ref; Node : Project_Node_Id));
+   --  Iterate over all projects in the tree.
+   --  They are each returned once, the root project first and then all its
+   --  imported projects.
+   --  As opposed to For_Every_Project_Imported, this iteration in based on the
+   --  project tree, and therefore can be used before the project view has been
+   --  computed.
 
    procedure For_Each_External_Variable_Declaration
      (Project   : Project_Type;
@@ -299,7 +320,8 @@ package body GNATCOLL.Projects is
       File : GNATCOLL.VFS.Virtual_File) return File_Info;
    --  Internal version of Info
 
-   procedure Create_Project_Instances (Self : in out Project_Tree'Class);
+   procedure Create_Project_Instances
+     (Self : in out Project_Tree'Class; With_View : Boolean);
    function Instance_From_Node
      (Self : Project_Tree'Class;
       Name : String;
@@ -1804,6 +1826,61 @@ package body GNATCOLL.Projects is
       end if;
    end Executables_Directory;
 
+   ---------------------------
+   -- For_Each_Project_Node --
+   ---------------------------
+
+   procedure For_Each_Project_Node
+     (Tree     : Project_Node_Tree_Ref;
+      Root     : Project_Node_Id;
+      Callback : access procedure
+        (Tree : Project_Node_Tree_Ref; Node : Project_Node_Id))
+   is
+      use Project_Sets;
+      Seen : Project_Sets.Set;
+
+      procedure Process_Project (Proj : Project_Node_Id);
+
+      procedure Process_Project (Proj : Project_Node_Id) is
+         With_Clause : Project_Node_Id := First_With_Clause_Of (Proj, Tree);
+         Extended    : Project_Node_Id;
+      begin
+         if Seen.Find (Proj) = Project_Sets.No_Element then
+            Seen.Include (Proj);
+
+            Callback (Tree, Proj);
+
+            while With_Clause /= Empty_Node loop
+               --  We have to ignore links back to the root project,
+               --  which could only happen with "limited with", since
+               --  otherwise the root project would not appear first in
+               --  the topological sort, and then Start returns invalid
+               --  results at least when its Recursive parameters is set
+               --  to False.
+               if Project_Node_Of (With_Clause, Tree) /= Root
+                 and then not Is_Virtual_Extending
+                   (Tree, Project_Node_Of (With_Clause, Tree))
+               then
+                  Process_Project (Project_Node_Of (With_Clause, Tree));
+               end if;
+               With_Clause := Next_With_Clause_Of (With_Clause, Tree);
+            end loop;
+
+            --  Is this an extending project ?
+
+            Extended := Extended_Project_Of
+              (Project_Declaration_Of (Proj, Tree), Tree);
+            if Extended /= Empty_Node then
+               Process_Project (Extended);
+            end if;
+
+         end if;
+      end Process_Project;
+
+   begin
+      Process_Project (Root);
+   end For_Each_Project_Node;
+
    -------------------------------
    -- Compute_Imported_Projects --
    -------------------------------
@@ -1812,25 +1889,27 @@ package body GNATCOLL.Projects is
    begin
       if Project.Data.Imported_Projects = null then
          declare
-            Max_Projects : constant Integer :=
-              Integer (Project.Data.Tree.Projects.Length);
+            --  ??? We are allocating way too much space here
+            Max_Projects : constant Natural :=
+              Natural
+                (Tree_Private_Part.Project_Node_Table.Last
+                     (Project.Data.Tree.Tree.Project_Nodes));
+
             Imports : Name_Id_Array (1 .. Max_Projects);
             Index   : Integer := Imports'First;
-            Dummy   : Integer := 0;
 
-            procedure Add_To_Imports (Proj : Project_Id; S : in out Integer);
-            procedure Add_To_Imports (Proj : Project_Id; S : in out Integer) is
-               pragma Unreferenced (S);
+            procedure Do_Add (T : Project_Node_Tree_Ref; P : Project_Node_Id);
+            procedure Do_Add
+              (T : Project_Node_Tree_Ref; P : Project_Node_Id) is
             begin
-               Imports (Index) := Proj.Name;
+               Imports (Index) := Prj.Tree.Name_Of (P, T);
                Index := Index + 1;
-            end Add_To_Imports;
+            end Do_Add;
 
-            procedure All_Imported is new For_Every_Project_Imported
-              (Integer, Add_To_Imports);
          begin
-            All_Imported
-              (Project.Data.View, Dummy, Imported_First => False);
+            For_Each_Project_Node
+              (Project.Data.Tree.Tree, Project.Data.Node,
+               Do_Add'Unrestricted_Access);
             Project.Data.Imported_Projects := new Name_Id_Array'
               (Imports (Imports'First .. Index - 1));
          end;
@@ -2979,7 +3058,8 @@ package body GNATCOLL.Projects is
             Require_Sources_Other_Lang => True,
             Compiler_Driver_Mandatory  => False,
             Allow_Duplicate_Basenames  => True,
-            Allow_Invalid_External     => Warning);
+            Allow_Invalid_External     => Warning,
+            Missing_Source_Files       => Warning);
       else
          return Create_Flags
            (Report_Error               => On_Error,
@@ -2987,7 +3067,8 @@ package body GNATCOLL.Projects is
             Require_Sources_Other_Lang => False,
             Compiler_Driver_Mandatory  => False,
             Allow_Duplicate_Basenames  => True,
-            Allow_Invalid_External     => Silent);
+            Allow_Invalid_External     => Silent,
+            Missing_Source_Files       => Warning);
       end if;
    end Create_Flags;
 
@@ -3396,6 +3477,11 @@ package body GNATCOLL.Projects is
       end if;
    end Hash;
 
+   function Hash (Node : Project_Node_Id) return Ada.Containers.Hash_Type is
+   begin
+      return Ada.Containers.Hash_Type (Prj.Tree.Hash (Node));
+   end Hash;
+
    -----------
    -- Equal --
    -----------
@@ -3623,15 +3709,6 @@ package body GNATCOLL.Projects is
          Output.Cancel_Special_Output;
 
          if Recompute_View then
-
-            --  Compute the list of scenario variables. This also ensures that
-            --  the variables do exist in the environment, and therefore that
-            --  we can correctly load the project.
-            --  If we are not computing the view, this list will be computed
-            --  lazily when it is needed, so nothing to do
-
-            Compute_Scenario_Variables (Tree.Data);
-
             Tree.Recompute_View (Errors => Errors);
          end if;
       end if;
@@ -3749,6 +3826,18 @@ package body GNATCOLL.Projects is
       Trace (Me, "Recomputing project view");
       Output.Set_Special_Output (Output.Output_Proc (Errors));
 
+      --  Create the project instances, so that we can use the project_iterator
+      --  (otherwise Current cannot return a project_type). These instances,
+      --  for now, will have now view associated
+
+      Create_Project_Instances (Self, With_View => False);
+
+      --  Compute the list of scenario variables. This also ensures that
+      --  the variables do exist in the environment, and therefore that
+      --  we can correctly load the project.
+
+      Compute_Scenario_Variables (Self.Data);
+
       begin
          Flags := Create_Flags
            (On_Error'Unrestricted_Access, Require_Sources => False);
@@ -3786,7 +3875,7 @@ package body GNATCOLL.Projects is
       --  Now that we have the view, we can create the project instances
 
       Self.Data.Root.Data.View := View;
-      Create_Project_Instances (Self);
+      Create_Project_Instances (Self, With_View => True);
 
       Parse_Source_Files (Self);
 
@@ -3858,7 +3947,9 @@ package body GNATCOLL.Projects is
    -- Create_Project_Instances --
    ------------------------------
 
-   procedure Create_Project_Instances (Self : in out Project_Tree'Class) is
+   procedure Create_Project_Instances
+     (Self : in out Project_Tree'Class; With_View : Boolean)
+   is
       procedure Do_Project (Proj : Project_Id; S : in out Integer);
       procedure Do_Project (Proj : Project_Id; S : in out Integer) is
          pragma Unreferenced (S);
@@ -3867,28 +3958,45 @@ package body GNATCOLL.Projects is
          P    : Project_Type;
 
       begin
+         --  The project will always exist, since we have already called
+         --  Create_Project_Instances once before to create them
          Iter := Self.Data.Projects.Find (Name);
-         if Has_Element (Iter) then
-            P := Element (Iter);
-            Reset_View (P.Data.all);
-         else
-            P := Self.Instance_From_Node
-              (Name,
-               Prj.Tree.Tree_Private_Part.Projects_Htable.Get
-                 (Self.Data.Tree.Projects_HT, Proj.Name).Node);
-         end if;
-
+         Assert (Me, Has_Element (Iter),
+                 "Create_Project_Instances must be called"
+                 & " to create project_type");
+         P := Element (Iter);
+         Reset_View (P.Data.all);
          P.Data.View := Proj;
       end Do_Project;
+
+      procedure Do_Project2 (T : Project_Node_Tree_Ref; P : Project_Node_Id);
+      procedure Do_Project2 (T : Project_Node_Tree_Ref; P : Project_Node_Id) is
+         Name : constant String := Get_String (Prj.Tree.Name_Of (P, T));
+         Proj : Project_Type;
+         Iter : Project_Htables.Cursor;
+         pragma Unreferenced (Proj);
+      begin
+         Iter := Self.Data.Projects.Find (Name);
+         if not Has_Element (Iter) then
+            Proj := Self.Instance_From_Node (Name, P);
+         end if;
+      end Do_Project2;
 
       procedure For_All_Projects is new For_Every_Project_Imported
         (Integer, Do_Project);
 
       S : Integer := 0;
    begin
-      Assert (Me, Self.Data.Root.Data.View /= null,
-              "Create_Project_Instances: Project not parsed");
-      For_All_Projects (Self.Data.Root.Data.View, S);
+      if With_View then
+         Assert (Me, Self.Data.Root.Data.View /= null,
+                 "Create_Project_Instances: Project not parsed");
+         For_All_Projects (Self.Data.Root.Data.View, S);
+
+      else
+         For_Each_Project_Node
+           (Self.Data.Tree, Self.Data.Root.Data.Node,
+            Do_Project2'Unrestricted_Access);
+      end if;
    end Create_Project_Instances;
 
    ------------------------
@@ -3914,8 +4022,6 @@ package body GNATCOLL.Projects is
          Name           => Get_String (Name),
          Full_Path      => Path_Name_Type (Get_String (+D)),
          Is_Config_File => False);
-
-      Unchecked_Free (Self.Data.Scenario_Variables);
 
       Self.Data.Root := Self.Instance_From_Node (Name, Node);
 
@@ -4190,8 +4296,7 @@ package body GNATCOLL.Projects is
      (Self                 : in out Pretty_Printer;
       Project              : Project_Type'Class;
       Increment            : Positive              := 3;
-      Minimize_Empty_Lines : Boolean               := True;
-      Eliminate_Empty_Case_Constructions : Boolean := True)
+      Eliminate_Empty_Case_Constructions : Boolean := False)
    is
       procedure W_Char (C : Character);
       procedure W_Eol;
@@ -4219,7 +4324,7 @@ package body GNATCOLL.Projects is
          Increment                          => Increment,
          Eliminate_Empty_Case_Constructions =>
            Eliminate_Empty_Case_Constructions,
-         Minimize_Empty_Lines               => Minimize_Empty_Lines,
+         Minimize_Empty_Lines               => False,
          W_Char                             => W_Char'Unrestricted_Access,
          W_Eol                              => W_Eol'Unrestricted_Access,
          W_Str                              => W_Str'Unrestricted_Access,
@@ -5217,6 +5322,24 @@ package body GNATCOLL.Projects is
          Next (Iter);
       end loop;
    end Add_Values;
+
+   ----------
+   -- Free --
+   ----------
+
+   procedure Free (Self : in out Project_Environment_Access) is
+      procedure Internal is new Ada.Unchecked_Deallocation
+        (Project_Environment'Class, Project_Environment_Access);
+   begin
+      Internal (Self);
+   end Free;
+
+   procedure Free (Self : in out Project_Tree_Access) is
+      procedure Internal is new Ada.Unchecked_Deallocation
+        (Project_Tree'Class, Project_Tree_Access);
+   begin
+      Internal (Self);
+   end Free;
 
 begin
    Namet.Initialize;

@@ -82,7 +82,7 @@
 private with Ada.Containers.Indefinite_Hashed_Maps;
 private with Ada.Strings.Hash;
 private with Ada.Finalization;
-private with Ada.Unchecked_Deallocation;
+with Ada.Unchecked_Deallocation;
 with GNAT.Strings;
 with GNATCOLL.VFS;
 private with Prj.Tree;
@@ -108,6 +108,10 @@ package GNATCOLL.Projects is
    --  In practice, this is not necessarily a "tree" in the data structure
    --  sense, more like a graph, but the term Tree makes it more obvious that
    --  one of the projects plays a special role, the root project.
+
+   procedure Free (Self : in out Project_Environment_Access);
+   procedure Free (Self : in out Project_Tree_Access);
+   --  Free memory allocated for the pointer. You should first unload the tree.
 
    type Project_Type is tagged private;
    No_Project : constant Project_Type;
@@ -934,8 +938,7 @@ package GNATCOLL.Projects is
      (Self                 : in out Pretty_Printer;
       Project              : Project_Type'Class;
       Increment            : Positive              := 3;
-      Minimize_Empty_Lines : Boolean               := True;
-      Eliminate_Empty_Case_Constructions : Boolean := True);
+      Eliminate_Empty_Case_Constructions : Boolean := False);
    --  Output a project file, properly formatted.
    --  By default, all output is done on stdout, although you can change this
    --  behavior by modifying the primitive operations of the pretty printer.
