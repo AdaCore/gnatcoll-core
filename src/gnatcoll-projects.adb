@@ -3805,6 +3805,12 @@ package body GNATCOLL.Projects is
       if Project /= Empty_Node then
          Tree.Data.Root := Tree.Instance_From_Node (Project);
 
+         --  Create the project instances, so that we can use the
+         --  project_iterator (otherwise Current cannot return a project_type).
+         --  These instances, for now, will have now view associated
+
+         Create_Project_Instances (Tree, With_View => False);
+
          Tree.Data.Status := From_File;
 
          Prj.Com.Fail := null;
@@ -3927,12 +3933,6 @@ package body GNATCOLL.Projects is
    begin
       Trace (Me, "Recomputing project view");
       Output.Set_Special_Output (Output.Output_Proc (Errors));
-
-      --  Create the project instances, so that we can use the project_iterator
-      --  (otherwise Current cannot return a project_type). These instances,
-      --  for now, will have now view associated
-
-      Create_Project_Instances (Self, With_View => False);
 
       --  Compute the list of scenario variables. This also ensures that
       --  the variables do exist in the environment, and therefore that
@@ -4133,6 +4133,8 @@ package body GNATCOLL.Projects is
       Self.Data.Root.Set_Attribute (Languages_Attribute, (1 .. 0 => null));
 
       Self.Data.Root.Data.Modified := False;
+
+      Create_Project_Instances (Self, With_View => False);
 
       if Recompute_View then
          Project_Tree'Class (Self).Recompute_View;
