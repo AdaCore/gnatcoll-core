@@ -74,7 +74,7 @@ list-sources:
 
 list-sources-regexp:
 	@echo -n "("
-	@for f in $(GNAT_SOURCES_FOR_GNATCOLL); do \
+	@for f in $(GNAT_SOURCES_FOR_GNATCOLL) $(shell $(MAKE) -f ../Makefile.gnat list-sources); do \
 	  if [ "$$f" = "gnat_style.css" ]; then \
 	    echo "$$f)"; \
 	  else \
