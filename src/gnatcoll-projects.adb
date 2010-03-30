@@ -3320,8 +3320,8 @@ package body GNATCOLL.Projects is
      (Self   : in out Project_Environment;
       Subdir : GNATCOLL.VFS.Filesystem_String) is
    begin
-      Free (Self.Object_Subdir);
-      Self.Object_Subdir := new String'(+Subdir);
+      Free (Prj.Subdirs);
+      Prj.Subdirs := new String'(+Subdir);
    end Set_Object_Subdir;
 
    -------------------
@@ -3331,10 +3331,10 @@ package body GNATCOLL.Projects is
    function Object_Subdir
      (Self   : Project_Environment) return GNATCOLL.VFS.Filesystem_String is
    begin
-      if Self.Object_Subdir = null then
+      if Prj.Subdirs = null then
          return "";
       else
-         return +Self.Object_Subdir.all;
+         return +Prj.Subdirs.all;
       end if;
    end Object_Subdir;
 

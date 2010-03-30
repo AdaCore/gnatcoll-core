@@ -1267,9 +1267,6 @@ private
       --  := new GNATCOLL.VFS.File_Array (1 .. 0);
       --  The list of source files in Predefined_Source_Path
 
-      Object_Subdir : GNAT.Strings.String_Access;
-      --  Subdir of the object dirs in which the object files are put
-
       Xrefs_Subdir : GNAT.Strings.String_Access;
       --  Object dirs subdirectory containing the cross-refs
 
