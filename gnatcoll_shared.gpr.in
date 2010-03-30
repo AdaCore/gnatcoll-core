@@ -41,7 +41,7 @@ project GnatColl_Shared is
          when "Debug" =>
             for Default_Switches ("Ada") use
               ("-g", "-O1", "-gnata", "-gnatVa", "-gnatQ", "-gnaty",
-               "-gnatwaCJe", "-Wall", "-gnat05");
+               "-gnatwaCJe", "-gnat05");
             for Default_Switches ("C") use ("-g");
          when "Production" =>
             for Default_Switches ("Ada") use
