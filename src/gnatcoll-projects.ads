@@ -1289,8 +1289,10 @@ private
       Tree : Project_Tree_Data_Access;
       --  Needed so that we can return other projects like imported projects
 
-      View_Is_Complete : Boolean := False;
-      --  True if the view for the project was correctly computed
+      View_Is_Complete : Boolean := True;
+      --  True if the view for the project was correctly computed.
+      --  Set to True by default, so that a project just created with
+      --  Create_Project can be immediately edited.
 
       Files : GNATCOLL.VFS.File_Array_Access;
       --  The list of source files for this project
