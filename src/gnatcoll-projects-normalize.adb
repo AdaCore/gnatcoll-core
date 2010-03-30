@@ -17,6 +17,7 @@
 -- Place - Suite 330, Boston, MA 02111-1307, USA.                    --
 -----------------------------------------------------------------------
 
+with Ada.Characters.Handling;   use Ada.Characters.Handling;
 with Ada.Exceptions;            use Ada.Exceptions;
 with Ada.Strings.Fixed;         use Ada.Strings.Fixed;
 with Ada.Strings.Maps;          use Ada.Strings.Maps;
@@ -2862,7 +2863,8 @@ package body GNATCOLL.Projects.Normalize is
 
       D           : constant Filesystem_String :=
                       Name_As_Directory (Full_Name (New_Path))
-                      & (+Translate (New_Name, To_Mapping (".", "-")))
+                      & (+Translate (To_Lower (New_Name),
+                                     To_Mapping (".", "-")))
                       & GNATCOLL.Projects.Project_File_Extension;
       Full_Path   : constant Name_Id := Get_String (+D);
       Name        : constant Name_Id := Get_String (New_Name);

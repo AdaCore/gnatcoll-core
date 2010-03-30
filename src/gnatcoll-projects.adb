@@ -1554,11 +1554,8 @@ package body GNATCOLL.Projects is
       Pkg_Name       : constant String :=
                          String (Attribute (Attribute'First .. Sep - 1));
       Project_View   : constant Project_Id := Get_View (Project);
-      Packages       : constant Prj.Package_Table.Table_Ptr :=
-        Project.Data.Tree.View.Packages.Table;
-      Array_Elements : constant Prj.Array_Element_Table.Table_Ptr :=
-        Project.Data.Tree.View.Array_Elements.Table;
-
+      Packages       : Prj.Package_Table.Table_Ptr;
+      Array_Elements : Prj.Array_Element_Table.Table_Ptr;
       Pkg            : Package_Id := No_Package;
       Arr            : Array_Id;
       Elem, Elem2    : Array_Element_Id;
@@ -1569,6 +1566,9 @@ package body GNATCOLL.Projects is
       if Project_View = Prj.No_Project then
          return (1 .. 0 => null);
       end if;
+
+      Packages       := Project.Data.Tree.View.Packages.Table;
+      Array_Elements := Project.Data.Tree.View.Array_Elements.Table;
 
       if Pkg_Name /= "" then
          Pkg := Value_Of
@@ -2632,7 +2632,7 @@ package body GNATCOLL.Projects is
 
    function Get_View (Project : Project_Type) return Prj.Project_Id is
    begin
-      if Project.Data.Node = Empty_Node then
+      if Project.Data = null or else Project.Data.Node = Empty_Node then
          return Prj.No_Project;
 
       elsif Project.Data.View = Prj.No_Project then
@@ -4960,7 +4960,7 @@ package body GNATCOLL.Projects is
    is
       D : constant Filesystem_String :=
             Name_As_Directory (Path.Full_Name)
-            & (+Translate (Name, To_Mapping (".", "-")))
+            & (+Translate (To_Lower (Name), To_Mapping (".", "-")))
             & GNATCOLL.Projects.Project_File_Extension;
       Project   : constant Project_Node_Id :=
         Prj.Tree.Create_Project
