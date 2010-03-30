@@ -1233,9 +1233,10 @@ private
 
    package Extensions_Languages is new Ada.Containers.Indefinite_Hashed_Maps
      (Key_Type        => String,   --  file extension
-      Element_Type    => String,
+      Element_Type    => Namet.Name_Id,
       Hash            => Ada.Strings.Hash,
-      Equivalent_Keys => "=");
+      Equivalent_Keys => "=",
+      "="             => Namet."=");
    --  maps extensions with a language
 
    type Naming_Scheme_Record;

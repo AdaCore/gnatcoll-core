@@ -961,11 +961,11 @@ package body GNATCOLL.Projects is
       Part : Unit_Parts;
       Id   : Source_Id;
       Full : String := String
-        (Full_Name
-           (File,
-            Normalize     => True,
+        (File.Full_Name
+           (Normalize     => True,
             Resolve_Links => Opt.Follow_Links_For_Files).all);
       Path : Path_Name_Type;
+      Lang : Name_Id;
 
    begin
       --  Lookup in the project's Source_Paths_HT, rather than in
@@ -1012,12 +1012,12 @@ package body GNATCOLL.Projects is
       --  Either the file was not cached, or there is no Source info. In both
       --  cases, that means the file is not a source file (although it might be
       --  a predefined source file), so we just use the default naming scheme.
-      --
-      --  ??? Should we be using the registered extensions here ?
 
       declare
-         Ext : constant Filesystem_String :=
+         Ext    : constant Filesystem_String :=
            File.File_Extension (Normalize => True);
+         Cursor : Extensions_Languages.Cursor;
+         NS     : Naming_Scheme_Access;
       begin
          if Ext = ".ads" then
             --  Do not compute the unit names, which requires parsing the file
@@ -1028,6 +1028,7 @@ package body GNATCOLL.Projects is
                Part         => Unit_Spec,
                Name         => Namet.No_Name,
                Lang         => Name_Ada);
+
          elsif Ext = ".adb" then
             return File_Info'
               (Project      => No_Project,
@@ -1036,10 +1037,40 @@ package body GNATCOLL.Projects is
                Name         => Namet.No_Name,
                Lang         => Name_Ada);
          end if;
+
+         --  Try and guess the language from the registered extensions
+
+         if Ext = "" then
+            --  This is a file without extension like Makefile or
+            --  ChangeLog for example. Use the filename to get the proper
+            --  language for this file.
+
+            Cursor := Tree.Env.Extensions.Find (Base_Name (Full));
+
+         else
+            Cursor := Tree.Env.Extensions.Find (+Ext);
+         end if;
+
+         if Has_Element (Cursor) then
+            Lang := Extensions_Languages.Element (Cursor);
+         else
+            Lang := Namet.No_Name;
+            NS := Tree.Env.Naming_Schemes;
+            while NS /= null loop
+               if +Ext = NS.Default_Spec_Suffix.all
+                 or else +Ext = NS.Default_Body_Suffix.all
+               then
+                  Lang := Get_String (NS.Language.all);
+                  exit;
+               end if;
+
+               NS := NS.Next;
+            end loop;
+         end if;
       end;
 
       return
-        (No_Project, Tree.Root, Unit_Separate, Namet.No_Name, Namet.No_Name);
+        (No_Project, Tree.Root, Unit_Separate, Namet.No_Name, Lang => Lang);
    end Info;
 
    ----------
@@ -3452,7 +3483,7 @@ package body GNATCOLL.Projects is
       Ext  : String := Extension;
    begin
       Osint.Canonical_Case_File_Name (Ext);
-      Self.Extensions.Include (Ext, To_Lower (Language_Name));
+      Self.Extensions.Include (Ext, Get_String (To_Lower (Language_Name)));
    end Add_Language_Extension;
 
    -----------------------------------------
@@ -3502,12 +3533,13 @@ package body GNATCOLL.Projects is
      (Self          : Project_Environment;
       Language_Name : String) return GNAT.Strings.String_List
    is
-      Lang  : constant String := To_Lower (Language_Name);
-      Iter  : Extensions_Languages.Cursor := Self.Extensions.First;
-      Count : Natural := 0;
+      Lang    : constant String := To_Lower (Language_Name);
+      Lang_Id : constant Name_Id := Get_String (Lang);
+      Iter    : Extensions_Languages.Cursor := Self.Extensions.First;
+      Count   : Natural := 0;
    begin
       while Has_Element (Iter) loop
-         if Element (Iter) = Lang then
+         if Element (Iter) = Lang_Id then
             Count := Count + 1;
          end if;
 
@@ -3520,7 +3552,7 @@ package body GNATCOLL.Projects is
          Count := Args'First;
          Iter := Self.Extensions.First;
          while Has_Element (Iter) loop
-            if Element (Iter) = Lang then
+            if Element (Iter) = Lang_Id then
                Args (Count) := new String'(Key (Iter));
                Count := Count + 1;
             end if;
