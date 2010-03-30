@@ -1237,17 +1237,32 @@ private
       Equivalent_Keys => "=");
    --  maps extensions with a language
 
+   type Naming_Scheme_Record;
+   type Naming_Scheme_Access is access Naming_Scheme_Record;
+   type Naming_Scheme_Record is record
+      Language            : GNAT.Strings.String_Access;
+      Default_Spec_Suffix : GNAT.Strings.String_Access;
+      Default_Body_Suffix : GNAT.Strings.String_Access;
+      Next                : Naming_Scheme_Access;
+   end record;
+
    type Project_Environment is tagged record
       Predefined_Object_Path : GNATCOLL.VFS.File_Array_Access;
+      --  := new GNATCOLL.VFS.File_Array (1 .. 0);
       --  Predefined object path for the runtime library
 
       Predefined_Source_Path : GNATCOLL.VFS.File_Array_Access;
+      --  := new GNATCOLL.VFS.File_Array (1 .. 0);
       --  Predefined source paths for the runtime library
 
       Predefined_Project_Path : GNATCOLL.VFS.File_Array_Access;
-      --  Predefined project path
+      --  := new GNATCOLL.VFS.File_Array'
+      --  ((1 .. 1 => GNATCOLL.VFS.Create (".")));
+      --  Predefined project path.
+      --  prj-ext.ads does not expect an empty path, ever
 
       Predefined_Source_Files : GNATCOLL.VFS.File_Array_Access;
+      --  := new GNATCOLL.VFS.File_Array (1 .. 0);
       --  The list of source files in Predefined_Source_Path
 
       Object_Subdir : GNAT.Strings.String_Access;
@@ -1260,7 +1275,10 @@ private
       --  Whether we are in trusted mode when recomputing the project view
 
       Extensions : Extensions_Languages.Map;
-      --  The extensions registered for each language
+      --  The additional extensions registered for each language
+
+      Naming_Schemes : Naming_Scheme_Access;
+      --  The list of default naming schemes for the languages known to GPS
    end record;
 
    type Name_Id_Array        is array (Positive range <>) of Namet.Name_Id;

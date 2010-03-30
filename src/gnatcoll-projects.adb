@@ -74,15 +74,6 @@ package body GNATCOLL.Projects is
    procedure Unchecked_Free is new Ada.Unchecked_Deallocation
      (Scenario_Variable_Array, Scenario_Variable_Array_Access);
 
-   type Naming_Scheme_Record;
-   type Naming_Scheme_Access is access Naming_Scheme_Record;
-   type Naming_Scheme_Record is record
-      Language            : GNAT.Strings.String_Access;
-      Default_Spec_Suffix : GNAT.Strings.String_Access;
-      Default_Body_Suffix : GNAT.Strings.String_Access;
-      Next                : Naming_Scheme_Access;
-   end record;
-
    package Project_Htables is new Ada.Containers.Indefinite_Hashed_Maps
      (Key_Type        => String,   --  project name
       Element_Type    => Project_Type,
@@ -169,9 +160,6 @@ package body GNATCOLL.Projects is
       Projects : Project_Htables.Map;
       --  Index on project names. This table is filled when the project is
       --  loaded.
-
-      Naming_Schemes : Naming_Scheme_Access;
-      --  The list of default naming schemes for the languages known to GPS
 
       Scenario_Variables : Scenario_Variable_Array_Access;
       --  Cached value of the scenario variables. This should be accessed only
@@ -984,12 +972,21 @@ package body GNATCOLL.Projects is
                when Sep  => Part := Unit_Separate;
             end case;
 
-            return File_Info'
-              (Project      => Info.Project,
-               Root_Project => Tree.Root,
-               Part         => Part,
-               Name         => Info.Source.Unit.Name,
-               Lang         => Info.Source.Language.Name);
+            if Info.Source.Unit /= null then
+               return File_Info'
+                 (Project      => Info.Project,
+                  Root_Project => Tree.Root,
+                  Part         => Part,
+                  Name         => Info.Source.Unit.Name,
+                  Lang         => Info.Source.Language.Name);
+            else
+               return File_Info'
+                 (Project      => Info.Project,
+                  Root_Project => Tree.Root,
+                  Part         => Part,
+                  Name         => No_Name,
+                  Lang         => Info.Source.Language.Name);
+            end if;
          end if;
       end if;
 
@@ -3427,8 +3424,33 @@ package body GNATCOLL.Projects is
       Default_Spec_Suffix : String;
       Default_Body_Suffix : String)
    is
+      Spec, Impl : String_Access;
+      Spec_Suff  : String := Default_Spec_Suffix;
+      Impl_Suff  : String := Default_Body_Suffix;
    begin
-      null;
+      --  GNAT doesn't allow empty suffixes, and will display an error when
+      --  the view is recomputed, in that case. Therefore we substitute dummy
+      --  empty suffixes instead
+
+      if Default_Spec_Suffix = "" then
+         Spec := new String'(Dummy_Suffix);
+      else
+         Osint.Canonical_Case_File_Name (Spec_Suff);
+         Spec := new String'(Spec_Suff);
+      end if;
+
+      if Default_Body_Suffix = "" then
+         Impl := new String'(Dummy_Suffix);
+      else
+         Osint.Canonical_Case_File_Name (Impl_Suff);
+         Impl := new String'(Impl_Suff);
+      end if;
+
+      Self.Naming_Schemes := new Naming_Scheme_Record'
+        (Language            => new String'(To_Lower (Language_Name)),
+         Default_Spec_Suffix => Spec,
+         Default_Body_Suffix => Impl,
+         Next                => Self.Naming_Schemes);
    end Register_Default_Language_Extension;
 
    ---------------------------
@@ -3789,7 +3811,7 @@ package body GNATCOLL.Projects is
         (Config_File  : in out Project_Node_Id;
          Project_Tree : Project_Node_Tree_Ref)
       is
-         NS   : Naming_Scheme_Access := Self.Data.Naming_Schemes;
+         NS   : Naming_Scheme_Access := Self.Data.Env.Naming_Schemes;
          Attr : Project_Node_Id;
          pragma Unreferenced (Attr);
       begin
