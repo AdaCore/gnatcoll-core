@@ -1514,6 +1514,8 @@ package body GNATCOLL.Projects is
       N := Get_String (Attribute_Name);
 
       if Index /= "" then
+         --  ??? That seems incorrect, we are not testing for the specific
+         --  index
          return Value_Of (N, In_Arrays => Arr,
                           In_Tree => Project.Tree_View)
            /= No_Array_Element;
@@ -2508,6 +2510,13 @@ package body GNATCOLL.Projects is
       if Tree.Scenario_Variables = null then
          Compute_Scenario_Variables (Tree);
       end if;
+
+      for V in Tree.Scenario_Variables'Range loop
+         Tree.Scenario_Variables (V).Value :=
+           Prj.Ext.Value_Of
+             (Tree.Tree, Tree.Scenario_Variables (V).Name,
+              With_Default => Tree.Scenario_Variables (V).Default);
+      end loop;
 
       return Tree.Scenario_Variables.all;
    end Scenario_Variables;
@@ -4707,9 +4716,6 @@ package body GNATCOLL.Projects is
          exit when P = GNATCOLL.Projects.No_Project;
 
          if P.Data.Modified then
-            Trace (Me, "The project "
-                   & Project.Project_Path.Display_Full_Name
-                   & " has been modified");
             return True;
          end if;
          Next (Iter);
