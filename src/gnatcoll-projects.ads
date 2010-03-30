@@ -141,7 +141,8 @@ package GNATCOLL.Projects is
      (Self               : in out Project_Tree;
       Root_Project_Path  : GNATCOLL.VFS.Virtual_File;
       Env                : Project_Environment_Access := null;
-      Errors             : Error_Report := null);
+      Errors             : Error_Report := null;
+      Recompute_View     : Boolean := True);
    --  Load a new set of project files, starting from a root project.
    --  Root_Project_Path is either an absolute path, or relative to the current
    --  directory. It should point to a readable existing file.
@@ -163,6 +164,11 @@ package GNATCOLL.Projects is
    --
    --  The previous project is automatically unloaded, and existing instances
    --  of Project_Type become invalid and should not be used anymore.
+   --
+   --  If Recompute_View is False, the subprogram Recompute_View will not be
+   --  called automatically. This gives you a chance to do some dynamic
+   --  changes on the project (changing attributes for instance), even though
+   --  you will need to call Recompute_View yourself.
 
    procedure Set_Trusted_Mode
      (Self : in out Project_Environment; Trusted : Boolean := True);
@@ -183,7 +189,8 @@ package GNATCOLL.Projects is
 
    procedure Load_Empty_Project
      (Self : in out Project_Tree;
-      Env  : Project_Environment_Access := null);
+      Env  : Project_Environment_Access := null;
+      Recompute_View : Boolean := True);
    --  Load an empty project.
    --  There is no source .gpr file corresponding to that project, which is
    --  created in memory. It has no source file. In general this procedure is

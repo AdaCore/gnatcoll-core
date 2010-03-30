@@ -144,7 +144,7 @@ package body GNATCOLL.Projects is
       View      : Prj.Project_Tree_Ref;
       --  The description of the trees
 
-      Status  : Project_Status;
+      Status  : Project_Status := From_File;
 
       Root    : Project_Type := No_Project;
       --  The root of the project hierarchy.
@@ -275,7 +275,8 @@ package body GNATCOLL.Projects is
      (Tree              : in out Project_Tree'Class;
       Root_Project_Path : GNATCOLL.VFS.Virtual_File;
       Errors            : Projects.Error_Report;
-      Project           : out Project_Node_Id);
+      Project           : out Project_Node_Id;
+      Recompute_View    : Boolean := True);
    --  Internal implementation of load. This doesn't reset the tree at all,
    --  but will properly setup the GNAT project manager so that error messages
    --  are redirected and fatal errors do not kill GPS
@@ -1832,12 +1833,6 @@ package body GNATCOLL.Projects is
               (Project.Data.View, Dummy, Imported_First => False);
             Project.Data.Imported_Projects := new Name_Id_Array'
               (Imports (Imports'First .. Index - 1));
-
-            if Active (Me) then
-               Trace (Me, "Start: recomputing dependencies for " & Project.Name
-                      & " imported count:"
-                      & Project.Data.Imported_Projects'Length'Img);
-            end if;
          end;
       end if;
    end Compute_Imported_Projects;
@@ -2576,8 +2571,8 @@ package body GNATCOLL.Projects is
                    (Kind_Of (Var, Tree) = N_Typed_Variable_Declaration
                     and then not Is_External_Variable (Var, Tree))
                then
-                  Trace (Me, "Uses variable in " & P.Name);
                   if Active (Debug) then
+                     Trace (Me, "Uses variable in " & P.Name);
                      Pretty_Print
                        (Var, Tree, Backward_Compatibility => False);
                   end if;
@@ -3458,12 +3453,11 @@ package body GNATCOLL.Projects is
      (Self               : in out Project_Tree;
       Root_Project_Path  : GNATCOLL.VFS.Virtual_File;
       Env                : Project_Environment_Access := null;
-      Errors             : Error_Report := null)
+      Errors             : Error_Report := null;
+      Recompute_View     : Boolean := True)
    is
       Previous_Project : Virtual_File;
       Previous_Status  : Project_Status;
-      Iter             : Project_Iterator;
-      Timestamp        : Time;
       Success          : Boolean;
       Project          : Project_Node_Id;
 
@@ -3505,7 +3499,11 @@ package body GNATCOLL.Projects is
          Self.Data.Env := Env;
       end if;
 
-      Internal_Load (Self, Root_Project_Path, Errors, Project);
+      --  Force a recomputation of the timestamp the next time Recompute_View
+      --  is called.
+      Self.Data.Timestamp := GNATCOLL.Utils.No_Time;
+
+      Internal_Load (Self, Root_Project_Path, Errors, Project, Recompute_View);
 
       if Project = Empty_Node then
          --  Reset the list of error messages
@@ -3513,23 +3511,6 @@ package body GNATCOLL.Projects is
          Self.Load_Empty_Project (Env => Self.Data.Env);
          raise Invalid_Project;
       end if;
-
-      --  We cannot simply use Clock here, since this returns local time,
-      --  and the file timestamps will be returned in GMT, therefore we
-      --  won't be able to compare.
-
-      Self.Data.Timestamp := GNATCOLL.Utils.No_Time;
-      Iter := Start (Self.Root_Project);
-
-      while Current (Iter) /= No_Project loop
-         Timestamp := File_Time_Stamp (Project_Path (Current (Iter)));
-
-         if Timestamp > Self.Data.Timestamp then
-            Self.Data.Timestamp := Timestamp;
-         end if;
-
-         Next (Iter);
-      end loop;
 
       if Previous_Status = Default then
          Trace (Me, "Remove default project on disk, no longer used");
@@ -3578,7 +3559,8 @@ package body GNATCOLL.Projects is
      (Tree              : in out Project_Tree'Class;
       Root_Project_Path : GNATCOLL.VFS.Virtual_File;
       Errors            : Projects.Error_Report;
-      Project           : out Project_Node_Id)
+      Project           : out Project_Node_Id;
+      Recompute_View    : Boolean := True)
    is
       procedure On_Error is new Mark_Project_Error (Tree);
       --  Any error while parsing the project marks it as incomplete, and
@@ -3627,16 +3609,20 @@ package body GNATCOLL.Projects is
          Flags             => Create_Flags (On_Error'Unrestricted_Access),
          Current_Directory => Get_Current_Dir);
 
-      Tree.Data.Root := Tree.Instance_From_Node
-        (Get_String (Tree.Data.Tree.Project_Nodes.Table (Project).Name),
-         Project);
+      if Project /= Empty_Node then
+         Tree.Data.Root := Tree.Instance_From_Node
+           (Get_String (Tree.Data.Tree.Project_Nodes.Table (Project).Name),
+            Project);
 
-      Tree.Data.Status := From_File;
+         Tree.Data.Status := From_File;
 
-      Prj.Com.Fail := null;
-      Output.Cancel_Special_Output;
+         Prj.Com.Fail := null;
+         Output.Cancel_Special_Output;
 
-      Recompute_View (Tree, Errors => Errors);
+         if Recompute_View then
+            Tree.Recompute_View (Errors => Errors);
+         end if;
+      end if;
 
    exception
       when Invalid_Project =>
@@ -3744,8 +3730,11 @@ package body GNATCOLL.Projects is
       Automatically_Generated : Boolean;
       Config_File_Path        : String_Access;
       Flags                   : Processing_Flags;
+      Iter                    : Project_Iterator;
+      Timestamp               : Time;
 
    begin
+      Trace (Me, "Recomputing project view");
       Output.Set_Special_Output (Output.Output_Proc (Errors));
 
       begin
@@ -3788,6 +3777,28 @@ package body GNATCOLL.Projects is
       Create_Project_Instances (Self);
       Compute_Scenario_Variables (Self.Data);
       Parse_Source_Files (Self);
+
+      --  If the timestamp have not been computed yet (ie we are loading a new
+      --  project), do it now.
+      --  We cannot simply use Clock here, since this returns local time,
+      --  and the file timestamps will be returned in GMT, therefore we
+      --  won't be able to compare.
+
+      if Self.Data.Timestamp = GNATCOLL.Utils.No_Time
+        and then Self.Data.Status = From_File
+      then
+         Iter := Start (Self.Root_Project);
+
+         while Current (Iter) /= No_Project loop
+            Timestamp := File_Time_Stamp (Project_Path (Current (Iter)));
+
+            if Timestamp > Self.Data.Timestamp then
+               Self.Data.Timestamp := Timestamp;
+            end if;
+
+            Next (Iter);
+         end loop;
+      end if;
 
       --  ??? Should not be needed since all errors are reported through the
       --  callback already. This avoids duplicate error messages in the console
@@ -3844,7 +3855,6 @@ package body GNATCOLL.Projects is
          P    : Project_Type;
 
       begin
-         Trace (Me, "Create project instances for " & Name);
          Iter := Self.Data.Projects.Find (Name);
          if Has_Element (Iter) then
             P := Element (Iter);
@@ -3875,14 +3885,14 @@ package body GNATCOLL.Projects is
 
    procedure Load_Empty_Project
      (Self : in out Project_Tree;
-      Env  : Project_Environment_Access := null)
+      Env  : Project_Environment_Access := null;
+      Recompute_View : Boolean := True)
    is
       Name : constant String := "empty";
       D : constant Filesystem_String :=
             Name_As_Directory (Get_Current_Dir)
             & (+Name) & Project_File_Extension;
-      Node, Attr : Project_Node_Id;
-      pragma Unreferenced (Attr);
+      Node : Project_Node_Id;
    begin
       Self.Unload;
       Reset (Self, Env);
@@ -3897,14 +3907,11 @@ package body GNATCOLL.Projects is
 
       --  No language known for empty project
 
-      Attr := Create_Attribute
-        (Tree               => Self.Data.Tree,
-         Prj_Or_Pkg         => Self.Data.Root.Data.Node,
-         Name               => Get_String ("languages"),
-         Kind               => List,
-         Value              => Empty_Node);
+      Self.Data.Root.Set_Attribute (Languages_Attribute, (1 .. 0 => null));
 
-      Recompute_View (Project_Tree'Class (Self));
+      if Recompute_View then
+         Project_Tree'Class (Self).Recompute_View;
+      end if;
    end Load_Empty_Project;
 
    ------------------------
