@@ -1096,7 +1096,8 @@ package GNATCOLL.Projects is
                                  );
 
    function Add_Imported_Project
-     (Project                   : Project_Type;
+     (Tree                      : Project_Tree;
+      Project                   : Project_Type'Class;
       Imported_Project_Location : GNATCOLL.VFS.Virtual_File;
       Errors                    : Error_Report := null;
       Use_Relative_Path         : Boolean := True;

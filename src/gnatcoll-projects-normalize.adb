@@ -3108,9 +3108,8 @@ package body GNATCOLL.Projects.Normalize is
 
    function Add_Imported_Project
      (Tree                      : Project_Tree_Data_Access;
-      Project                   : Project_Type;
-      Imported_Project          : Prj.Tree.Project_Node_Id;
-      Imported_Project_Location : GNATCOLL.VFS.Virtual_File;
+      Project                   : Project_Type'Class;
+      Imported_Project          : Project_Type'Class;
       Errors                    : Error_Report := null;
       Use_Relative_Path         : Boolean;
       Use_Base_Name             : Boolean;
@@ -3136,6 +3135,8 @@ package body GNATCOLL.Projects.Normalize is
       end Fail;
 
       With_Clause : Project_Node_Id;
+      Imported_Name : constant Name_Id :=
+        Prj.Tree.Name_Of (Imported_Project.Node, Tree_Node);
 
    begin
       Output.Set_Special_Output (Output.Output_Proc (Errors));
@@ -3145,7 +3146,7 @@ package body GNATCOLL.Projects.Normalize is
       --  would result in an infinite loop when manipulating the project.
 
       if Prj.Tree.Name_Of (Project.Data.Node, Tree_Node) =
-        Prj.Tree.Name_Of (Imported_Project, Tree_Node)
+        Imported_Name
       then
          Fail ("Cannot add dependency to self");
          Output.Cancel_Special_Output;
@@ -3161,11 +3162,10 @@ package body GNATCOLL.Projects.Normalize is
       while With_Clause /= Empty_Node loop
          if Prj.Tree.Name_Of
            (Project_Node_Of (With_Clause, Tree_Node), Tree_Node) =
-           Prj.Tree.Name_Of (Imported_Project, Tree_Node)
+           Imported_Name
          then
             Fail ("There is already a dependency on "
-                  & Get_String
-                    (Prj.Tree.Name_Of (Imported_Project, Tree_Node)));
+                  & Imported_Project.Name);
             Output.Cancel_Special_Output;
             Prj.Com.Fail := null;
             return Dependency_Already_Exists;
@@ -3177,9 +3177,7 @@ package body GNATCOLL.Projects.Normalize is
 
       if Project.Data.Imported_Projects /= null then
          for P in Project.Data.Imported_Projects'Range loop
-            if Project.Data.Imported_Projects (P) =
-              Prj.Tree.Name_Of (Imported_Project, Tree_Node)
-            then
+            if Project.Data.Imported_Projects (P) = Imported_Name then
                Fail ("Circular dependency detected in the project hierarchy");
                Output.Cancel_Special_Output;
                Prj.Com.Fail := null;
@@ -3191,9 +3189,7 @@ package body GNATCOLL.Projects.Normalize is
       --  Edit the project
 
       With_Clause := Default_Project_Node (Tree_Node, N_With_Clause);
-      Set_Name_Of
-        (With_Clause, Tree_Node,
-         Prj.Tree.Name_Of (Imported_Project, Tree_Node));
+      Set_Name_Of (With_Clause, Tree_Node, Imported_Name);
 
       Set_Next_With_Clause_Of
         (With_Clause, Tree_Node,
@@ -3202,8 +3198,8 @@ package body GNATCOLL.Projects.Normalize is
 
       Set_With_Clause_Path
         (Tree_Node, With_Clause,
-         Imported_Project_Location,
-         Imported_Project, Project.Node,
+         Imported_Project.Project_Path,
+         Imported_Project.Node, Project.Node,
          Use_Relative_Path => Use_Relative_Path,
          Use_Base_Name     => Use_Base_Name,
          Limited_With      => Limited_With);

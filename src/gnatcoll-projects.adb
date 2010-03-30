@@ -280,7 +280,7 @@ package body GNATCOLL.Projects is
    --  project tree.
    --  This also ensures that each external reference actually exists
 
-   procedure Compute_Imported_Projects (Project : Project_Type);
+   procedure Compute_Imported_Projects (Project : Project_Type'Class);
    --  Compute and cache the list of projects imported by Project.
    --  Nothing is done if this is already known.
 
@@ -324,7 +324,6 @@ package body GNATCOLL.Projects is
      (Self : in out Project_Tree'Class; With_View : Boolean);
    function Instance_From_Node
      (Self : Project_Tree'Class;
-      Name : String;
       Node : Project_Node_Id) return Project_Type;
    --  Create all instances of Project_Type for the loaded projects.
    --  This also resets the internal data for the view.
@@ -1885,7 +1884,7 @@ package body GNATCOLL.Projects is
    -- Compute_Imported_Projects --
    -------------------------------
 
-   procedure Compute_Imported_Projects (Project : Project_Type) is
+   procedure Compute_Imported_Projects (Project : Project_Type'Class) is
    begin
       if Project.Data.Imported_Projects = null then
          declare
@@ -3752,9 +3751,7 @@ package body GNATCOLL.Projects is
          Current_Directory => Get_Current_Dir);
 
       if Project /= Empty_Node then
-         Tree.Data.Root := Tree.Instance_From_Node
-           (Get_String (Tree.Data.Tree.Project_Nodes.Table (Project).Name),
-            Project);
+         Tree.Data.Root := Tree.Instance_From_Node (Project);
 
          Tree.Data.Status := From_File;
 
@@ -3983,9 +3980,10 @@ package body GNATCOLL.Projects is
 
    function Instance_From_Node
      (Self : Project_Tree'Class;
-      Name : String;
       Node : Project_Node_Id) return Project_Type
    is
+      Name : constant String :=
+        Get_String (Prj.Tree.Name_Of (Node, Self.Data.Tree));
       Data : constant Project_Data_Access := Self.Data_Factory;
       P    : Project_Type;
    begin
@@ -4031,7 +4029,7 @@ package body GNATCOLL.Projects is
       begin
          Iter := Self.Data.Projects.Find (Name);
          if not Has_Element (Iter) then
-            Proj := Self.Instance_From_Node (Name, P);
+            Proj := Self.Instance_From_Node (P);
          end if;
       end Do_Project2;
 
@@ -4076,7 +4074,7 @@ package body GNATCOLL.Projects is
          Full_Path      => Path_Name_Type (Get_String (+D)),
          Is_Config_File => False);
 
-      Self.Data.Root := Self.Instance_From_Node (Name, Node);
+      Self.Data.Root := Self.Instance_From_Node (Node);
 
       --  No language known for empty project
 
@@ -4770,7 +4768,8 @@ package body GNATCOLL.Projects is
    --------------------------
 
    function Add_Imported_Project
-     (Project                   : Project_Type;
+     (Tree                      : Project_Tree;
+      Project                   : Project_Type'Class;
       Imported_Project_Location : GNATCOLL.VFS.Virtual_File;
       Errors                    : Error_Report := null;
       Use_Relative_Path         : Boolean := True;
@@ -4848,8 +4847,8 @@ package body GNATCOLL.Projects is
       return Add_Imported_Project
         (Tree                      => Project.Data.Tree,
          Project                   => Project,
-         Imported_Project          => Imported_Project,
-         Imported_Project_Location => Imported_Project_Location,
+         Imported_Project          =>
+           Tree.Instance_From_Node (Imported_Project),
          Errors                    => Errors,
          Use_Relative_Path         => Use_Relative_Path,
          Use_Base_Name             => Use_Base_Name,
@@ -4872,8 +4871,7 @@ package body GNATCOLL.Projects is
       return GNATCOLL.Projects.Normalize.Add_Imported_Project
         (Tree                      => Project.Data.Tree,
          Project                   => Project,
-         Imported_Project          => Imported_Project.Node,
-         Imported_Project_Location => Imported_Project.Project_Path,
+         Imported_Project          => Imported_Project,
          Errors                    => Errors,
          Use_Relative_Path         => Use_Relative_Path,
          Use_Base_Name             => Use_Base_Name,
@@ -4949,7 +4947,7 @@ package body GNATCOLL.Projects is
 
       P       : Project_Type;
    begin
-      P := Tree.Instance_From_Node (Name, Project);
+      P := Tree.Instance_From_Node (Project);
       P.Set_Modified (True);
       return P;
    end Create_Project;

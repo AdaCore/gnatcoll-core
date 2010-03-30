@@ -169,9 +169,8 @@ private package GNATCOLL.Projects.Normalize is
 
    function Add_Imported_Project
      (Tree                      : Project_Tree_Data_Access;
-      Project                   : Project_Type;
-      Imported_Project          : Prj.Tree.Project_Node_Id;
-      Imported_Project_Location : GNATCOLL.VFS.Virtual_File;
+      Project                   : Project_Type'Class;
+      Imported_Project          : Project_Type'Class;
       Errors                    : Error_Report := null;
       Use_Relative_Path         : Boolean;
       Use_Base_Name             : Boolean;
