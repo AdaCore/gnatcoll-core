@@ -223,8 +223,7 @@ package body GNATCOLL.Projects is
      (Unit_Name : String; Dot_Replacement : String) return String;
    --  Replace the '.' in unit_name with Dot_Replacement
 
-   procedure Compute_Importing_Projects
-     (Root_Project : Project_Type; Project : Project_Type);
+   procedure Compute_Importing_Projects (Project : Project_Type'Class);
    --  Compute the list of all projects that import, possibly indirectly,
    --  Project.
 
@@ -2011,31 +2010,31 @@ package body GNATCOLL.Projects is
    -- Compute_Importing_Projects --
    --------------------------------
 
-   procedure Compute_Importing_Projects
-     (Root_Project : Project_Type;
-      Project      : Project_Type)
-   is
+   procedure Compute_Importing_Projects (Project : Project_Type'Class) is
       type Boolean_Array is array (Positive range <>) of Boolean;
-      Imported  : Name_Id_Array_Access renames
-        Root_Project.Data.Imported_Projects;
+
+      Root_Project : constant Project_Type := Project.Data.Tree.Root;
+      Tree : constant Prj.Tree.Project_Node_Tree_Ref :=
+        Root_Project.Tree_Tree;
+      Imported  : Name_Id_Array_Access := Root_Project.Data.Imported_Projects;
+      Importing : Name_Id_Array_Access;
       Current   : Project_Type;
       Start     : Project_Type;
-      Include   : Boolean_Array (Imported'Range) := (others => False);
-      Name      : Name_Id;
       Index     : Integer;
       Parent    : Project_Type;
       Decl, N   : Project_Node_Id;
-      Importing : Name_Id_Array_Access;
       Imports, Is_Limited_With : Boolean;
 
-      procedure Merge_Project (P : Project_Type);
+      procedure Merge_Project (P : Project_Type; Inc : in out Boolean_Array);
       --  Merge the imported projects of P with the ones for Project
 
       -------------------
       -- Merge_Project --
       -------------------
 
-      procedure Merge_Project (P : Project_Type) is
+      procedure Merge_Project
+        (P : Project_Type; Inc : in out Boolean_Array)
+      is
          Index2 : Integer := Imported'First;
       begin
          for J in P.Data.Importing_Projects'Range loop
@@ -2043,15 +2042,18 @@ package body GNATCOLL.Projects is
                Index2 := Index2 + 1;
             end loop;
 
-            Include (Index2) := True;
+            Inc (Index2) := True;
          end loop;
       end Merge_Project;
 
-      Tree : constant Prj.Tree.Project_Node_Tree_Ref :=
-        Root_Project.Tree_Tree;
    begin
       if Project.Data.Importing_Projects /= null then
          return;
+      end if;
+
+      if Imported = null then
+         Compute_Imported_Projects (Root_Project);
+         Imported := Root_Project.Data.Imported_Projects;
       end if;
 
       --  Process all extending and extended projects as a single one: they
@@ -2064,96 +2066,79 @@ package body GNATCOLL.Projects is
          N := Extending_Project_Of (Decl, Tree);
       end loop;
 
-      Current := Project_Type (Project_From_Name
-        (Project.Data.Tree, Prj.Tree.Name_Of (N, Tree)));
+      Current := Project_Type
+        (Project_From_Name (Project.Data.Tree, Prj.Tree.Name_Of (N, Tree)));
       Start := Current;
 
-      loop
-         Index := Imported'Last;
+      declare
+         Include   : Boolean_Array (Imported'Range) := (others => False);
 
-         --  We first start by the lowest possible project, then go up to the
-         --  root project. Note that no project that appears before Project can
-         --  import it, so we can save some time.
+      begin
+         while Current /= No_Project loop
+            for Index in Imported'Range loop
+               Parent := Project_Type
+                 (Project_From_Name (Project.Data.Tree, Imported (Index)));
 
-         Name := Prj.Tree.Name_Of (Current.Data.Node, Tree);
-         while Index >= Imported'First loop
-            exit when Name = Imported (Index);
-            Index := Index - 1;
-         end loop;
+               --  Avoid processing a project twice
 
-         --  We must check that Index is different from 0 which is the case
-         --  when name is not in the list of imported anymore. This can happen
-         --  when playing with project dependencies and the dependency
-         --  graph.
+               if not Include (Index) then
+                  if Parent /= Current then
+                     Project_Imports
+                       (Parent, Child => Current, Include_Extended => False,
+                        Imports         => Imports,
+                        Is_Limited_With => Is_Limited_With);
 
-         if Index >= Imported'First then
-            Include (Index) := True;
-            Index := Index - 1;
-         end if;
-
-         while Index >= Imported'First loop
-            Parent := Project_Type
-              (Project_From_Name (Project.Data.Tree, Imported (Index)));
-
-            --  Avoid processing a project twice
-            --  ??? We still process twice the projects that do not
-            --  import Project
-            if not Include (Index) then
-               Project_Imports
-                 (Parent, Child => Current, Include_Extended => False,
-                  Imports         => Imports,
-                  Is_Limited_With => Is_Limited_With);
-
-               if Imports then
-                  Compute_Importing_Projects (Root_Project, Parent);
-                  Merge_Project (Parent);
+                     if Imports then
+                        Include (Index) := True;
+                        Compute_Importing_Projects (Parent);
+                        Merge_Project (Parent, Include);
+                     end if;
+                  end if;
                end if;
+            end loop;
+
+            Current := Extended_Project (Current);
+         end loop;
+
+         --  Done processing everything
+
+         Index := 0;
+         for Inc in Include'Range loop
+            if Include (Inc) then
+               Index := Index + 1;
             end if;
-
-            Index := Index - 1;
          end loop;
 
-         Current := Extended_Project (Current);
-         exit when Current = No_Project;
-      end loop;
+         --  Keep the last place for the project itself
 
-      --  Done processing everything
+         Importing := new Name_Id_Array (1 .. Index + 1);
 
-      Index := 0;
-      for Inc in Include'Range loop
-         if Include (Inc) then
-            Index := Index + 1;
-         end if;
-      end loop;
-
-      Importing := new Name_Id_Array (1 .. Index);
-
-      Index := Include'First;
-      for Imp in Importing'Range loop
-         while not Include (Index) loop
-            Index := Index + 1;
+         Index := Importing'First;
+         for Inc in Include'Range loop
+            if Include (Inc) then
+               Importing (Index) := Imported (Inc);
+               Index := Index + 1;
+            end if;
          end loop;
+      end;
 
-         Importing (Imp) := Imported (Index);
-         Index := Index + 1;
-      end loop;
+      Importing (Importing'Last) := Prj.Tree.Name_Of
+        (Project.Data.Node, Project.Data.Tree.Tree);
 
-      loop
-         if Start = Project then
+      while Start /= No_Project loop
+         if Start.Data = Project.Data then
             Start.Data.Importing_Projects := Importing;
          else
             Start.Data.Importing_Projects := new Name_Id_Array'(Importing.all);
          end if;
 
          Start := Extended_Project (Start);
-         exit when Start = No_Project;
       end loop;
 
       --  The code below is used for debugging sessions
 
       if Active (Debug) then
-         Trace (Debug, "Find_All_Projects_Importing: "
-                & Get_String (Name));
+         Trace (Debug, "Find_All_Projects_Importing: " & Project.Name);
          for J in Project.Data.Importing_Projects'Range loop
             Trace (Debug, Get_String (Project.Data.Importing_Projects (J)));
          end loop;
@@ -2182,7 +2167,7 @@ package body GNATCOLL.Projects is
 
       if Project.Data.Importing_Projects = null then
          Compute_Imported_Projects (Root_Project);
-         Compute_Importing_Projects (Root_Project, Project);
+         Compute_Importing_Projects (Project);
       end if;
 
       Iter := Project_Iterator'
@@ -3108,6 +3093,7 @@ package body GNATCOLL.Projects is
             Require_Sources_Other_Lang => True,
             Compiler_Driver_Mandatory  => False,
             Allow_Duplicate_Basenames  => True,
+            Require_Obj_Dirs           => Warning,
             Allow_Invalid_External     => Warning,
             Missing_Source_Files       => Warning);
       else
@@ -3117,6 +3103,7 @@ package body GNATCOLL.Projects is
             Require_Sources_Other_Lang => False,
             Compiler_Driver_Mandatory  => False,
             Allow_Duplicate_Basenames  => True,
+            Require_Obj_Dirs           => Warning,
             Allow_Invalid_External     => Silent,
             Missing_Source_Files       => Warning);
       end if;
@@ -3601,7 +3588,7 @@ package body GNATCOLL.Projects is
       Project          : Project_Node_Id;
 
    begin
-      Trace (Me, "Load project");
+      Trace (Me, "Load project " & Root_Project_Path.Display_Full_Name);
 
       if Active (Me_Gnat) then
          Prj.Current_Verbosity := Prj.High;
@@ -4464,18 +4451,23 @@ package body GNATCOLL.Projects is
       Directory : GNATCOLL.VFS.Virtual_File;
       Errors    : Error_Report := null) is
    begin
-      Self.Data.Tree.Projects.Delete  (Self.Name);
-
       GNATCOLL.Projects.Normalize.Rename_And_Move
         (Self.Data.Tree, Self, New_Name, Directory, Errors);
 
+      Self.Data.Tree.Projects.Delete  (Self.Name);
       Self.Data.Tree.Projects.Include (New_Name, Self);
+
+      if Self.Data.View /= Prj.No_Project then
+         Self.Data.View.Display_Name := Get_String (New_Name);
+      end if;
 
       --  This is no longer the default project, since it was
       --  renamed. Otherwise, Project_Path would still return "" when saving
       --  the default project.
 
       Self.Data.Tree.Status := From_File;
+
+      Reset_All_Caches (Self.Data.Tree);
    end Rename_And_Move;
 
    ----------------------------
@@ -4843,7 +4835,7 @@ package body GNATCOLL.Projects is
          return Imported_Project_Not_Found;
       end if;
 
-      Compute_Imported_Projects (Project);
+      Compute_Importing_Projects (Project);
       return Add_Imported_Project
         (Tree                      => Project.Data.Tree,
          Project                   => Project,
@@ -4867,7 +4859,7 @@ package body GNATCOLL.Projects is
       Use_Base_Name     : Boolean := False;
       Limited_With      : Boolean := False) return Import_Project_Error is
    begin
-      Compute_Imported_Projects (Project);
+      Compute_Importing_Projects (Project);
       return GNATCOLL.Projects.Normalize.Add_Imported_Project
         (Tree                      => Project.Data.Tree,
          Project                   => Project,

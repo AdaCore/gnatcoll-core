@@ -1279,7 +1279,9 @@ private
 
       Imported_Projects  : Name_Id_Array_Access;
       Importing_Projects : Name_Id_Array_Access;
-      --  Sorted list of imported projects (Cache for Project_Iterator)
+      --  Sorted list of imported projects (Cache for Project_Iterator).
+      --  Importing_Project always contains the project itself in last
+      --  position.
 
       Non_Recursive_Include_Path : GNATCOLL.VFS.File_Array_Access;
       --  The include path for this project

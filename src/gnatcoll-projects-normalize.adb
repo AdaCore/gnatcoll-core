@@ -2864,20 +2864,23 @@ package body GNATCOLL.Projects.Normalize is
                       Name_As_Directory (Full_Name (New_Path))
                       & (+Translate (New_Name, To_Mapping (".", "-")))
                       & GNATCOLL.Projects.Project_File_Extension;
-      Full_Path   : Name_Id := No_Name;
+      Full_Path   : constant Name_Id := Get_String (+D);
       Name        : constant Name_Id := Get_String (New_Name);
       Old_Name    : constant Name_Id := Get_String (Project.Name);
-      Old         : constant Project_Node_Id :=
-                      Project_From_Name (Tree, Name).Node;
+      Old         : constant Project_Type :=
+        Project_Type (Project_From_Name (Tree, Name));
       Imported    : Project_Type;
       Iterator    : Project_Iterator;
       With_Clause : Project_Node_Id;
       Modified    : Boolean;
 
    begin
-      if Old /= Empty_Node
-        and then Old /= Project.Node
-      then
+      if Project = No_Project then
+         Trace (Me, "Unspecified project to remove");
+         return;
+      end if;
+
+      if Old /= No_Project then
          Trace (Me, "Rename_And_Move: project " & New_Name
                 & " already exists in the hierarchy");
          if Errors /= null then
@@ -2903,14 +2906,8 @@ package body GNATCOLL.Projects.Normalize is
          while With_Clause /= Empty_Node loop
             if Project_Node_Of (With_Clause, Tree_Node) = Project.Node then
                Set_Name_Of (With_Clause, Tree_Node, Name);
-
                Set_Path_Name_Of (With_Clause, Tree_Node,
                                  Path_Name_Of (Project.Node, Tree_Node));
-
-               if Full_Path = No_Name then
-                  Full_Path := Get_String (+D);
-               end if;
-
                Set_String_Value_Of (With_Clause, Tree_Node, Full_Path);
                Modified := True;
             end if;
@@ -2920,8 +2917,6 @@ package body GNATCOLL.Projects.Normalize is
 
          if Modified then
             Imported.Data.Modified := True;
-            Unchecked_Free (Imported.Data.Imported_Projects);
-            Unchecked_Free (Imported.Data.Importing_Projects);
          end if;
 
          Next (Iterator);
@@ -3175,9 +3170,9 @@ package body GNATCOLL.Projects.Normalize is
 
       --  Would we introduce a circular reference by adding this project ?
 
-      if Project.Data.Imported_Projects /= null then
-         for P in Project.Data.Imported_Projects'Range loop
-            if Project.Data.Imported_Projects (P) = Imported_Name then
+      if Project.Data.Importing_Projects /= null then
+         for P in Project.Data.Importing_Projects'Range loop
+            if Project.Data.Importing_Projects (P) = Imported_Name then
                Fail ("Circular dependency detected in the project hierarchy");
                Output.Cancel_Special_Output;
                Prj.Com.Fail := null;

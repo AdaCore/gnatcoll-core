@@ -177,7 +177,7 @@ private package GNATCOLL.Projects.Normalize is
       Limited_With              : Boolean := False)
       return Import_Project_Error;
    --  Internal version of Add_Imported_Project.
-   --  You must have computed the list of imported projects for Project.
+   --  You must have computed the list of importing projects for Project.
 
    ---------------
    -- Variables --
