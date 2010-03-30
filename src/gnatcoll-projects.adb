@@ -1883,16 +1883,27 @@ package body GNATCOLL.Projects is
    -------------------------------
 
    procedure Compute_Imported_Projects (Project : Project_Type'Class) is
+      Count : Natural := 0;
+
+      procedure Do_Count (Tree : Project_Node_Tree_Ref;
+                          Node : Project_Node_Id);
+
+      procedure Do_Count (Tree : Project_Node_Tree_Ref;
+                          Node : Project_Node_Id)
+      is
+         pragma Unreferenced (Tree, Node);
+      begin
+         Count := Count + 1;
+      end Do_Count;
+
    begin
       if Project.Data.Imported_Projects = null then
-         declare
-            --  ??? We are allocating way too much space here
-            Max_Projects : constant Natural :=
-              Natural
-                (Tree_Private_Part.Project_Node_Table.Last
-                     (Project.Data.Tree.Tree.Project_Nodes));
+         For_Each_Project_Node
+           (Project.Data.Tree.Tree, Project.Data.Node,
+            Do_Count'Unrestricted_Access);
 
-            Imports : Name_Id_Array (1 .. Max_Projects);
+         declare
+            Imports : Name_Id_Array (1 .. Count);
             Index   : Integer := Imports'First;
 
             procedure Do_Add (T : Project_Node_Tree_Ref; P : Project_Node_Id);
@@ -2015,7 +2026,7 @@ package body GNATCOLL.Projects is
       Root_Project : constant Project_Type := Project.Data.Tree.Root;
       Tree : constant Prj.Tree.Project_Node_Tree_Ref :=
         Root_Project.Tree_Tree;
-      Imported  : Name_Id_Array_Access := Root_Project.Data.Imported_Projects;
+      All_Prj   : Name_Id_Array_Access := Root_Project.Data.Imported_Projects;
       Importing : Name_Id_Array_Access;
       Current   : Project_Type;
       Start     : Project_Type;
@@ -2034,10 +2045,11 @@ package body GNATCOLL.Projects is
       procedure Merge_Project
         (P : Project_Type; Inc : in out Boolean_Array)
       is
-         Index2 : Integer := Imported'First;
+         Index2 : Integer;
       begin
          for J in P.Data.Importing_Projects'Range loop
-            while Imported (Index2) /= P.Data.Importing_Projects (J) loop
+            Index2 := All_Prj'First;
+            while All_Prj (Index2) /= P.Data.Importing_Projects (J) loop
                Index2 := Index2 + 1;
             end loop;
 
@@ -2050,9 +2062,9 @@ package body GNATCOLL.Projects is
          return;
       end if;
 
-      if Imported = null then
+      if All_Prj = null then
          Compute_Imported_Projects (Root_Project);
-         Imported := Root_Project.Data.Imported_Projects;
+         All_Prj := Root_Project.Data.Imported_Projects;
       end if;
 
       --  Process all extending and extended projects as a single one: they
@@ -2070,13 +2082,13 @@ package body GNATCOLL.Projects is
       Start := Current;
 
       declare
-         Include   : Boolean_Array (Imported'Range) := (others => False);
+         Include   : Boolean_Array (All_Prj'Range) := (others => False);
 
       begin
          while Current /= No_Project loop
-            for Index in Imported'Range loop
+            for Index in All_Prj'Range loop
                Parent := Project_Type
-                 (Project_From_Name (Project.Data.Tree, Imported (Index)));
+                 (Project_From_Name (Project.Data.Tree, All_Prj (Index)));
 
                --  Avoid processing a project twice
 
@@ -2115,7 +2127,7 @@ package body GNATCOLL.Projects is
          Index := Importing'First;
          for Inc in Include'Range loop
             if Include (Inc) then
-               Importing (Index) := Imported (Inc);
+               Importing (Index) := All_Prj (Inc);
                Index := Index + 1;
             end if;
          end loop;
@@ -2124,6 +2136,7 @@ package body GNATCOLL.Projects is
       Importing (Importing'Last) := Prj.Tree.Name_Of
         (Project.Data.Node, Project.Data.Tree.Tree);
 
+      Start := Project_Type (Project);
       while Start /= No_Project loop
          if Start.Data = Project.Data then
             Start.Data.Importing_Projects := Importing;
@@ -2131,7 +2144,7 @@ package body GNATCOLL.Projects is
             Start.Data.Importing_Projects := new Name_Id_Array'(Importing.all);
          end if;
 
-         Start := Extended_Project (Start);
+         Start := Start.Extending_Project;
       end loop;
 
       --  The code below is used for debugging sessions
