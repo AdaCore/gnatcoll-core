@@ -958,35 +958,54 @@ package body GNATCOLL.Projects is
      (Tree : Project_Tree_Data_Access;
       File : GNATCOLL.VFS.Virtual_File) return File_Info
    is
-      Curs : constant Names_Files.Cursor :=
-        Tree.Sources.Find (File.Base_Name);
-      Info : Source_File_Data;
       Part : Unit_Parts;
-   begin
-      if Has_Element (Curs) then
-         Info := Element (Curs);
-         if Info.Source /= null then
-            case Info.Source.Kind is
-               when Spec => Part := Unit_Spec;
-               when Impl => Part := Unit_Body;
-               when Sep  => Part := Unit_Separate;
-            end case;
+      Id   : Source_Id;
+      Full : String := String
+        (Full_Name
+           (File,
+            Normalize     => True,
+            Resolve_Links => Opt.Follow_Links_For_Files).all);
+      Path : Path_Name_Type;
 
-            if Info.Source.Unit /= null then
-               return File_Info'
-                 (Project      => Info.Project,
-                  Root_Project => Tree.Root,
-                  Part         => Part,
-                  Name         => Info.Source.Unit.Name,
-                  Lang         => Info.Source.Language.Name);
-            else
-               return File_Info'
-                 (Project      => Info.Project,
-                  Root_Project => Tree.Root,
-                  Part         => Part,
-                  Name         => No_Name,
-                  Lang         => Info.Source.Language.Name);
-            end if;
+   begin
+      --  Lookup in the project's Source_Paths_HT, rather than in
+      --  Registry.Data.Sources, since the latter does not support duplicate
+      --  base names. In Prj.Nmsc, names have been converted to lower case on
+      --  case-insensitive file systems, so we need to do the same here.
+      --  (Insertion is done in Check_File, where the Path passed in parameter
+      --  comes from a call to Normalize_Pathname with the following args:
+      --      Resolve_Links  => Opt.Follow_Links_For_Files
+      --      Case_Sensitive => True
+      --  So we use the normalized name in the above call to Full_Name for
+      --  full compatibility between GPS and the project manager
+
+      Osint.Canonical_Case_File_Name (Full);
+      Path := Path_Name_Type (Name_Id'(Get_String (Full)));
+      Id := Source_Paths_Htable.Get (Tree.View.Source_Paths_HT, Path);
+
+      if Id /= No_Source then
+         case Id.Kind is
+            when Spec => Part := Unit_Spec;
+            when Impl => Part := Unit_Body;
+            when Sep  => Part := Unit_Separate;
+         end case;
+
+         if Id.Unit /= null then
+            return File_Info'
+              (Project      => Project_Type
+                 (Project_From_Name (Tree, Id.Project.Name)),
+               Root_Project => Tree.Root,
+               Part         => Part,
+               Name         => Id.Unit.Name,
+               Lang         => Id.Language.Name);
+         else
+            return File_Info'
+              (Project      => Project_Type
+                 (Project_From_Name (Tree, Id.Project.Name)),
+               Root_Project => Tree.Root,
+               Part         => Part,
+               Name         => No_Name,
+               Lang         => Id.Language.Name);
          end if;
       end if;
 
