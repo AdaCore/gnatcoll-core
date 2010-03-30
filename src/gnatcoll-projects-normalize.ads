@@ -283,14 +283,14 @@ private package GNATCOLL.Projects.Normalize is
       Project   : Project_Type;
       Attribute : Attribute_Pkg_String;
       Value     : String;
-      Scenario  : Scenario_Variable_Array := No_Scenario;
+      Scenario  : Scenario_Variable_Array := All_Scenarios;
       Index     : String := "");
    procedure Set_Attribute
      (Tree      : Project_Tree_Data_Access;
       Project   : Project_Type;
       Attribute : Attribute_Pkg_List;
       Values    : GNAT.Strings.String_List;
-      Scenario  : Scenario_Variable_Array := No_Scenario;
+      Scenario  : Scenario_Variable_Array := All_Scenarios;
       Index     : String := "";
       Prepend   : Boolean := False);
    --  Edit the value of an attribute
@@ -299,7 +299,7 @@ private package GNATCOLL.Projects.Normalize is
      (Tree      : Project_Tree_Data_Access;
       Project   : Project_Type;
       Attribute : String;
-      Scenario  : Scenario_Variable_Array := No_Scenario;
+      Scenario  : Scenario_Variable_Array := All_Scenarios;
       Index     : String := "");
    --  Delete an attribute from the project
 

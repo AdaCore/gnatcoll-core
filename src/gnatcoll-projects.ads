@@ -710,8 +710,8 @@ package GNATCOLL.Projects is
      of Scenario_Variable;
    type Scenario_Variable_Array_Access is access Scenario_Variable_Array;
 
-   No_Variable : constant Scenario_Variable;
-   No_Scenario : constant Scenario_Variable_Array;
+   No_Variable   : constant Scenario_Variable;
+   All_Scenarios : constant Scenario_Variable_Array;
 
    function Scenario_Variables
      (Self : Project_Tree) return Scenario_Variable_Array;
@@ -721,6 +721,17 @@ package GNATCOLL.Projects is
    --  environment variable. The reason is that they might not have the same
    --  name internally in imported projects, however, they will always have the
    --  same value.
+   --  The variables stored in the result have the value they had when the
+   --  project was loaded.
+
+   function Scenario_Variables
+     (Self : Project_Tree; External_Name : String) return Scenario_Variable;
+   --  Return the scenario variable associated with External_Name.
+   --  If you call Value on the result, you get the current value it had when
+   --  the project was loaded.
+   --  If the project does not contain such a variable (for instance because
+   --  you call this function before loading the project), a new variable is
+   --  created.
 
    function External_Name (Var : Scenario_Variable) return String;
    --  Returns the name of the external variable referenced by Var.
@@ -738,16 +749,34 @@ package GNATCOLL.Projects is
    --  current view of the project.
 
    procedure Set_Value
-     (Self          : Project_Tree;
-      External_Name : String;
-      Value         : String);
-   --  Set the value of the external variable. You need to call Recompute_View
-   --  to refresh the project.
+     (Var   : in out Scenario_Variable;
+      Value : String);
+   --  Change the value stored in Var.
+   --  This does not affect the environment or the loaded project. In general,
+   --  you would use it as:
+   --      Vars : Scenario_Variable_Array := Tree.Scenario_Variables;
+   --      Tree.Set_Value (Vars (Vars'First), "new_value");
+   --      Tree.Set_Value (Vars (Vars'First + 1), "new_value2");
+   --      Tree.Change_Environment (Vars);
+   --      Tree.Recompute_View;
+   --  Instead of calling Change_Environment, you could also use Vars in calls
+   --  to Set_Attribute_Value for instance.
+   --  This procedure does not check that the value is valid for this
+   --  variable.
 
-   function Value
-     (Self : Project_Tree;
-      Var  : Scenario_Variable) return String;
-   --  Return the current value of the external variable
+   procedure Change_Environment
+     (Self  : Project_Tree;
+      Vars  : Scenario_Variable_Array);
+   --  Change the environment value for all the variables in Vars (you do not
+   --  need to have all the scenario variables from the project, only those
+   --  you are interested to change). These values will be used when
+   --  Recompute_View is called (which you should do).
+
+   function Value (Var : Scenario_Variable) return String;
+   --  Return the values set for Var.
+   --  This value is not necessary that when the project was loaded, if you
+   --  have used Set_Value. However, it will be if the variable comes straight
+   --  from the result of Tree.Scenario_Variables.
 
    ---------------
    -- Languages --
@@ -964,14 +993,14 @@ package GNATCOLL.Projects is
      (Self      : Project_Type;
       Attribute : Attribute_Pkg_List;
       Values    : GNAT.Strings.String_List;
-      Scenario  : Scenario_Variable_Array := No_Scenario;
+      Scenario  : Scenario_Variable_Array := All_Scenarios;
       Index     : String := "";
       Prepend   : Boolean := False);
    procedure Set_Attribute
      (Self      : Project_Type;
       Attribute : Attribute_Pkg_String;
       Value     : String;
-      Scenario  : Scenario_Variable_Array := No_Scenario;
+      Scenario  : Scenario_Variable_Array := All_Scenarios;
       Index     : String := "");
    --  Update the value of the attribute in the project.
    --  Values is the list of new values for the attribute. The caller is still
@@ -983,7 +1012,7 @@ package GNATCOLL.Projects is
    --  necessarily Project itself).
    --  The change only occurs for the specified scenario, without affecting
    --  over scenarios. The project might need to be normalized in this case
-   --  (see above). If Scenario is set to No_Scenario, the change impacts all
+   --  (see above). If Scenario is set to All_Scenarios, the change impacts all
    --  scenarios.
    --  If Prepend is False, these values are the only values for the
    --  variable, and they override any other value that was there before. If
@@ -998,12 +1027,12 @@ package GNATCOLL.Projects is
    procedure Delete_Attribute
      (Self      : Project_Type;
       Attribute : Attribute_Pkg_String;
-      Scenario  : Scenario_Variable_Array := No_Scenario;
+      Scenario  : Scenario_Variable_Array := All_Scenarios;
       Index     : String := "");
    procedure Delete_Attribute
      (Self      : Project_Type;
       Attribute : Attribute_Pkg_List;
-      Scenario  : Scenario_Variable_Array := No_Scenario;
+      Scenario  : Scenario_Variable_Array := All_Scenarios;
       Index     : String := "");
    --  Remove all declarations for the attribute in the specified
    --  scenario. This effectively reverses to the default behavior for the
@@ -1298,12 +1327,14 @@ private
       Name        : Namet.Name_Id;
       Default     : Namet.Name_Id;
       String_Type : Prj.Tree.Project_Node_Id;
+      Value       : Namet.Name_Id;
    end record;
 
-   No_Variable : constant Scenario_Variable :=
-                   (Namet.No_Name, Namet.No_Name, Prj.Tree.Empty_Node);
+   No_Variable   : constant Scenario_Variable :=
+     (Namet.No_Name, Namet.No_Name, Prj.Tree.Empty_Node,
+      Namet.No_Name);
 
-   No_Scenario : constant Scenario_Variable_Array (1 .. 0) :=
+   All_Scenarios : constant Scenario_Variable_Array (1 .. 0) :=
                    (others => No_Variable);
 
    type Project_Iterator is record

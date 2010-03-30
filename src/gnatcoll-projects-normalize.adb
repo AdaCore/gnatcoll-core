@@ -339,7 +339,7 @@ package body GNATCOLL.Projects.Normalize is
      (Tree      : Project_Tree_Data_Access;
       Project   : Project_Type;
       Attribute : String;
-      Scenario  : Scenario_Variable_Array := No_Scenario;
+      Scenario  : Scenario_Variable_Array := All_Scenarios;
       Index     : String := "";
       Callback  : Set_Attribute_Callback);
    --  Internal version of Set_Attribute
@@ -2407,7 +2407,7 @@ package body GNATCOLL.Projects.Normalize is
      (Tree      : Project_Tree_Data_Access;
       Project   : Project_Type;
       Attribute : String;
-      Scenario  : Scenario_Variable_Array := No_Scenario;
+      Scenario  : Scenario_Variable_Array := All_Scenarios;
       Index     : String := "";
       Callback  : Set_Attribute_Callback)
    is
@@ -2481,7 +2481,7 @@ package body GNATCOLL.Projects.Normalize is
       Project   : Project_Type;
       Attribute : Attribute_Pkg_String;
       Value     : String;
-      Scenario  : Scenario_Variable_Array := No_Scenario;
+      Scenario  : Scenario_Variable_Array := All_Scenarios;
       Index     : String := "")
    is
       procedure Add_Or_Replace
@@ -2536,7 +2536,7 @@ package body GNATCOLL.Projects.Normalize is
       Project   : Project_Type;
       Attribute : Attribute_Pkg_List;
       Values    : GNAT.Strings.String_List;
-      Scenario  : Scenario_Variable_Array := No_Scenario;
+      Scenario  : Scenario_Variable_Array := All_Scenarios;
       Index     : String := "";
       Prepend   : Boolean := False)
    is
@@ -2648,7 +2648,7 @@ package body GNATCOLL.Projects.Normalize is
      (Tree      : Project_Tree_Data_Access;
       Project   : Project_Type;
       Attribute : String;
-      Scenario  : Scenario_Variable_Array := No_Scenario;
+      Scenario  : Scenario_Variable_Array := All_Scenarios;
       Index     : String := "")
    is
       Tree_Node      : constant Project_Node_Tree_Ref :=
@@ -3181,8 +3181,6 @@ package body GNATCOLL.Projects.Normalize is
               Prj.Tree.Name_Of (Imported_Project, Tree_Node)
             then
                Fail ("Circular dependency detected in the project hierarchy");
-               Trace
-                 (Me, "Circular dependency detected in the project hierarchy");
                Output.Cancel_Special_Output;
                Prj.Com.Fail := null;
                return Circular_Dependency;

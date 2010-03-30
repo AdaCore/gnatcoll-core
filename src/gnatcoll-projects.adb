@@ -2463,7 +2463,9 @@ package body GNATCOLL.Projects is
          Var := Scenario_Variable'
            (Name        => V,
             Default     => External_Default (Variable),
-            String_Type => String_Type_Of (Variable, T));
+            String_Type => String_Type_Of (Variable, T),
+            Value       => Prj.Ext.Value_Of
+              (Tree.Tree, V, With_Default => External_Default (Variable)));
 
          List (Curr) := Var;
 
@@ -2529,6 +2531,43 @@ package body GNATCOLL.Projects is
       return Tree.Scenario_Variables.all;
    end Scenario_Variables;
 
+   ------------------------
+   -- Scenario_Variables --
+   ------------------------
+
+   function Scenario_Variables
+     (Self : Project_Tree; External_Name : String)
+      return Scenario_Variable
+   is
+      Ext  : constant Name_Id := Get_String (External_Name);
+      List : Scenario_Variable_Array_Access;
+      Var  : Scenario_Variable;
+   begin
+      if Self.Data.Scenario_Variables = null then
+         Compute_Scenario_Variables (Self.Data);
+      end if;
+
+      for V in Self.Data.Scenario_Variables'Range loop
+         if Self.Data.Scenario_Variables (V).Name = Ext then
+            return Self.Data.Scenario_Variables (V);
+         end if;
+      end loop;
+
+      Var := Scenario_Variable'
+        (Name        => Ext,
+         Default     => No_Name,
+         String_Type => Empty_Node,
+         Value       => No_Name);
+
+      List := Self.Data.Scenario_Variables;
+      Self.Data.Scenario_Variables :=
+        new Scenario_Variable_Array'
+          (Self.Data.Scenario_Variables.all & Var);
+      Unchecked_Free (List);
+
+      return Var;
+   end Scenario_Variables;
+
    -------------------
    -- External_Name --
    -------------------
@@ -2552,24 +2591,36 @@ package body GNATCOLL.Projects is
    ---------------
 
    procedure Set_Value
-     (Self          : Project_Tree;
-      External_Name : String;
-      Value         : String) is
+     (Var   : in out Scenario_Variable;
+      Value : String)
+   is
    begin
-      Prj.Ext.Add (Self.Data.Tree, External_Name, Value);
+      Var.Value := Get_String (Value);
    end Set_Value;
+
+   ------------------------
+   -- Change_Environment --
+   ------------------------
+
+   procedure Change_Environment
+     (Self  : Project_Tree;
+      Vars  : Scenario_Variable_Array) is
+   begin
+      for V in Vars'Range loop
+         Prj.Ext.Add
+           (Self.Data.Tree,
+            Get_String (Vars (V).Name),
+            Get_String (Vars (V).Value));
+      end loop;
+   end Change_Environment;
 
    -----------
    -- Value --
    -----------
 
-   function Value
-     (Self : Project_Tree;
-      Var  : Scenario_Variable) return String is
+   function Value (Var : Scenario_Variable) return String is
    begin
-      return Get_String
-        (Prj.Ext.Value_Of
-           (Self.Data.Tree, Var.Name, With_Default => Var.Default));
+      return Get_String (Var.Value);
    end Value;
 
    --------------
@@ -3580,12 +3631,14 @@ package body GNATCOLL.Projects is
 
       Self.Unload;
 
-      Self.Data := new Project_Tree_Data;
+      if Self.Data = null then
+         Self.Data := new Project_Tree_Data;
 
-      if Env = null then
-         Self.Data.Env := new Project_Environment;
-      else
-         Self.Data.Env := Env;
+         if Env = null then
+            Self.Data.Env := new Project_Environment;
+         else
+            Self.Data.Env := Env;
+         end if;
       end if;
 
       --  Force a recomputation of the timestamp the next time Recompute_View
@@ -4191,8 +4244,6 @@ package body GNATCOLL.Projects is
    ------------
 
    procedure Unload (Self : in out Project_Tree) is
-      procedure Unchecked_Free is new Ada.Unchecked_Deallocation
-        (Project_Tree_Data, Project_Tree_Data_Access);
       Iter : Project_Htables.Cursor;
       Data : Project_Data_Access;
 
@@ -4233,10 +4284,12 @@ package body GNATCOLL.Projects is
 
       Self.Data.Projects.Clear;
 
-      Free (Self.Data.Tree);
-      Free (Self.Data.View);
+      --  Do not reset the tree node, since it also contains the environment
+      --  variables, which we want to preserve in case the user has changed
+      --  them before loading the project.
 
-      Unchecked_Free (Self.Data);
+      Initialize (Self.Data.Tree);
+      Free (Self.Data.View);
    end Unload;
 
    -----------------
@@ -4360,7 +4413,7 @@ package body GNATCOLL.Projects is
      (Self      : Project_Type;
       Attribute : Attribute_Pkg_List;
       Values    : GNAT.Strings.String_List;
-      Scenario  : Scenario_Variable_Array := No_Scenario;
+      Scenario  : Scenario_Variable_Array := All_Scenarios;
       Index     : String := "";
       Prepend   : Boolean := False) is
    begin
@@ -4372,7 +4425,7 @@ package body GNATCOLL.Projects is
      (Self      : Project_Type;
       Attribute : Attribute_Pkg_String;
       Value     : String;
-      Scenario  : Scenario_Variable_Array := No_Scenario;
+      Scenario  : Scenario_Variable_Array := All_Scenarios;
       Index     : String := "") is
    begin
       GNATCOLL.Projects.Normalize.Set_Attribute
@@ -4386,7 +4439,7 @@ package body GNATCOLL.Projects is
    procedure Delete_Attribute
      (Self      : Project_Type;
       Attribute : Attribute_Pkg_String;
-      Scenario  : Scenario_Variable_Array := No_Scenario;
+      Scenario  : Scenario_Variable_Array := All_Scenarios;
       Index     : String := "") is
    begin
       GNATCOLL.Projects.Normalize.Delete_Attribute
@@ -4396,7 +4449,7 @@ package body GNATCOLL.Projects is
    procedure Delete_Attribute
      (Self      : Project_Type;
       Attribute : Attribute_Pkg_List;
-      Scenario  : Scenario_Variable_Array := No_Scenario;
+      Scenario  : Scenario_Variable_Array := All_Scenarios;
       Index     : String := "") is
    begin
       GNATCOLL.Projects.Normalize.Delete_Attribute
@@ -4777,7 +4830,7 @@ package body GNATCOLL.Projects is
             +Full_Name (Imported_Project_Location),
             Is_Config_File         => False,
             Current_Directory      => Get_Current_Dir,
-            Flags                  => Create_Flags (null),
+            Flags                  => Create_Flags (null, False),
             Always_Errout_Finalize => True);
 
          Prj.Err.Finalize;
@@ -4972,6 +5025,7 @@ package body GNATCOLL.Projects is
 
       return (Name        => Get_String (External_Name),
               Default     => No_Name,
+              Value       => No_Name,
               String_Type => Typ);
    end Create_Scenario_Variable;
 
@@ -5022,9 +5076,7 @@ package body GNATCOLL.Projects is
       --  the project.
       Variable.Name := Get_String (New_Name);
 
-      Tree.Set_Value
-        (External_Name (Variable),
-         Get_String (Prj.Ext.Value_Of (Tree_Node, Ext_Ref)));
+      Tree.Change_Environment ((1 => Variable));
    end Change_External_Name;
 
    -----------------------
