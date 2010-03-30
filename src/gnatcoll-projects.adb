@@ -169,7 +169,7 @@ package body GNATCOLL.Projects is
       --  through the function Scenario_Variables, since it needs to be
       --  initialized first.
 
-      Timestamp : Ada.Calendar.Time;
+      Timestamp : Ada.Calendar.Time := GNATCOLL.Utils.No_Time;
       --  Time when we last parsed the project from the disk
    end record;
 
@@ -2381,9 +2381,8 @@ package body GNATCOLL.Projects is
             end if;
          end loop;
 
-         Get_Name_String (V);
          Var := Scenario_Variable'
-           (Name        => Name_Find,
+           (Name        => V,
             Default     => External_Default (Variable),
             String_Type => String_Type_Of (Variable, T));
 
@@ -2444,6 +2443,10 @@ package body GNATCOLL.Projects is
    function Scenario_Variables
      (Tree : Project_Tree_Data_Access) return Scenario_Variable_Array is
    begin
+      if Tree.Scenario_Variables = null then
+         Compute_Scenario_Variables (Tree);
+      end if;
+
       return Tree.Scenario_Variables.all;
    end Scenario_Variables;
 
@@ -3012,7 +3015,7 @@ package body GNATCOLL.Projects is
       P_Cursor : Project_Htables.Cursor;
    begin
       if Tree.Tree = null then
-         Trace (Me, "Get_Project_From_Name: Registry not initialized");
+         Trace (Me, "Project_From_Name: Registry not initialized");
          return No_Project;
 
       else
@@ -3620,6 +3623,15 @@ package body GNATCOLL.Projects is
          Output.Cancel_Special_Output;
 
          if Recompute_View then
+
+            --  Compute the list of scenario variables. This also ensures that
+            --  the variables do exist in the environment, and therefore that
+            --  we can correctly load the project.
+            --  If we are not computing the view, this list will be computed
+            --  lazily when it is needed, so nothing to do
+
+            Compute_Scenario_Variables (Tree.Data);
+
             Tree.Recompute_View (Errors => Errors);
          end if;
       end if;
@@ -3775,7 +3787,7 @@ package body GNATCOLL.Projects is
 
       Self.Data.Root.Data.View := View;
       Create_Project_Instances (Self);
-      Compute_Scenario_Variables (Self.Data);
+
       Parse_Source_Files (Self);
 
       --  If the timestamp have not been computed yet (ie we are loading a new
@@ -3902,6 +3914,8 @@ package body GNATCOLL.Projects is
          Name           => Get_String (Name),
          Full_Path      => Path_Name_Type (Get_String (+D)),
          Is_Config_File => False);
+
+      Unchecked_Free (Self.Data.Scenario_Variables);
 
       Self.Data.Root := Self.Instance_From_Node (Name, Node);
 
@@ -4849,7 +4863,7 @@ package body GNATCOLL.Projects is
 
       Project.Set_Modified (True);
 
-      Compute_Scenario_Variables (Project.Data.Tree);
+      Unchecked_Free (Project.Data.Tree.Scenario_Variables);
 
       return (Name        => Get_String (External_Name),
               Default     => No_Name,
