@@ -82,7 +82,7 @@ LIBDIR=lib/${MODULE}/${LIBRARY_TYPE}/
 .PHONY: buildall libinstall
 buildall:
 	@echo Building project ${PROJECT}
-	gprbuild -XLIBRARY_TYPE=${LIBRARY_TYPE} -P${PROJECT} -p
+	gprbuild -m -XLIBRARY_TYPE=${LIBRARY_TYPE} -P${PROJECT} -p
 
 libinstall: installsources installobj installlinks
 

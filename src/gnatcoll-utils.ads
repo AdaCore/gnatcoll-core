@@ -37,7 +37,8 @@ package GNATCOLL.Utils is
    --  ??? This should be moved to GNAT.Strings itself in fact
 
    function Equal (S1, S2 : String; Case_Sensitive : Boolean) return Boolean;
-   pragma Inline (Equal);
+   function Case_Insensitive_Equal (S1, S2 : String) return Boolean;
+   pragma Inline (Equal, Case_Insensitive_Equal);
    --  Compare two strings
 
    function Image
@@ -60,6 +61,9 @@ package GNATCOLL.Utils is
    function Capitalize (Name : String) return String;
    --  Capitalize a string, ie put in upper case the first character and all
    --  characters following '_'
+
+   function Ends_With (Str : String; Suffix : String) return Boolean;
+   --  Return True if Str ends with Suffix
 
 private
 

@@ -65,6 +65,15 @@ package body GNATCOLL.Utils is
       end if;
    end Equal;
 
+   ----------------------------
+   -- Case_Insensitive_Equal --
+   ----------------------------
+
+   function Case_Insensitive_Equal (S1, S2 : String) return Boolean is
+   begin
+      return Equal (S1, S2, Case_Sensitive => False);
+   end Case_Insensitive_Equal;
+
    -----------
    -- Image --
    -----------
@@ -159,5 +168,32 @@ package body GNATCOLL.Utils is
       end loop;
       return Result (Result'First .. J - 1);
    end Capitalize;
+
+   ---------------
+   -- Ends_With --
+   ---------------
+
+   function Ends_With (Str : String; Suffix : String) return Boolean is
+      pragma Suppress (All_Checks);
+   begin
+      --  This version is slightly faster than checking
+      --     return Tail (File_Name, Suffix'Length) = Suffix;
+      --  which needs a function returning a string.
+
+      if Str'Length < Suffix'Length then
+         return False;
+      end if;
+
+      --  Do the loop in reverse, since it likely that Suffix starts with '.'
+      --  In the GPS case, it is also often the case that suffix starts with
+      --  '.ad' for Ada extensions
+      for J in reverse Suffix'Range loop
+         if Str (Str'Last + J - Suffix'Last) /= Suffix (J) then
+            return False;
+         end if;
+      end loop;
+
+      return True;
+   end Ends_With;
 
 end GNATCOLL.Utils;

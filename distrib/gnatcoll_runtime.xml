@@ -162,6 +162,13 @@
   </documentation_file>
 
   <documentation_file>
+     <shell>Editor.edit "gnatcoll-projects.ads"</shell>
+     <descr>GNATCOLL.Projects</descr>
+     <menu>/Help/Gnat Runtime/GNATCOLL/Projects</menu>
+     <category>Gnat Components Collection</category>
+  </documentation_file>
+
+  <documentation_file>
      <shell>Editor.edit "gnatcoll-python.ads"</shell>
      <descr>GNATCOLL.Python</descr>
      <menu>/Help/Gnat Runtime/GNATCOLL/Python</menu>

@@ -1,0 +1,4 @@
+gnat/*.ad?
+gnat/snames*
+gnat/xsnamest
+gnat/sdefault/sdefault.adb

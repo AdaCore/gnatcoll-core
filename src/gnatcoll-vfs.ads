@@ -205,10 +205,14 @@ package GNATCOLL.VFS is
    --  Could be used to instantiate an Ada 2005 container that uses a VFS as
    --  key and requires a hash function.
 
-   function File_Extension (File : Virtual_File) return Filesystem_String;
+   function File_Extension
+     (File      : Virtual_File;
+      Normalize : Boolean := False) return Filesystem_String;
    --  Return the extension of the file, or the empty string if there is no
    --  extension. This extension includes the last dot and all the following
    --  characters.
+   --  If Normalize is true, the casing is normalized (depending on whether the
+   --  platform uses case insensitive file names).
 
    function Dir_Name (File : Virtual_File) return Filesystem_String;
    --  Return the directory name for File. This includes any available

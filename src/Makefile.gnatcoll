@@ -5,7 +5,7 @@ LIBNAME=lib${TARNAME}
 include ../Makefile.conf
 
 ifeq ($(WITH_SYSLOG),yes)
-SRCDIRS=./ ./syslog/
+SRCDIRS=./ ../gnat/ ./syslog/
 else
-SRCDIRS=./ ./nosyslog/
+SRCDIRS=./ ../gnat/ ./nosyslog/
 endif

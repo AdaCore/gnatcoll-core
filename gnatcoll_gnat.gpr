@@ -1,0 +1,7 @@
+with "gnatcoll_shared";
+
+project GNATCOLL_Gnat is
+   for Source_Dirs use ("gnat", "gnat/sdefault");
+   for Object_Dir use 
+
+end GNATCOLL_Gnat;

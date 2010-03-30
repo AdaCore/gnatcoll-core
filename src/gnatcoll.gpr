@@ -1,7 +1,7 @@
 with "../gnatcoll_shared";
 
 project GnatColl is
-   for Source_Dirs     use (".");
+   for Source_Dirs     use (".", "../gnat", "../gnat/sdefault");
    for Library_Kind    use GnatColl_Shared.Library_Type;
    for Object_Dir      use "obj/gnatcoll/" & Project'Library_Kind;
    for Library_Dir     use "lib/gnatcoll/" & Project'Library_Kind;
@@ -17,12 +17,6 @@ project GnatColl is
       when "yes" =>
          for Source_Dirs use Project'Source_Dirs & ("syslog");
    end case;
-
---   case GnatColl_Shared.Postgres is
---      when "no" => null;
---      when "yes" =>
---         for Source_Dirs use Project'Source_Dirs & ("postgres");
---   end case;
 
    package Builder renames GnatColl_Shared.Builder;
 
@@ -43,6 +37,9 @@ project GnatColl is
             for Implementation ("GNATCOLL.IO.Native.Codec")
 	      use "gnatcoll-io-native-codec__win32.adb";
       end case;
+
+      for Implementation ("mlib.tgt.specific")
+          use "mlib-tgt-specific-linux.adb";
    end Naming;
 
 end GnatColl;

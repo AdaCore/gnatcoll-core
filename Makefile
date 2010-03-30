@@ -10,18 +10,20 @@ all: static
 install: install_static
 endif
 
+include Makefile.gnat
+
 ## Builds explicitly the shared or the static libraries
 
-static:
+static: do_links
 	${MAKE} LIBRARY_TYPE=static build_library_type
-shared relocatable:
+shared relocatable: do_links
 	${MAKE} LIBRARY_TYPE=relocatable build_library_type
 
 ## Builds either the static or the shared version, based on the
 ## LIBRARY_TYPE variable
 
 build_library_type:
-	gprbuild -XLIBRARY_TYPE=${LIBRARY_TYPE} -Pgnatcoll_build -p
+	gprbuild -m -XLIBRARY_TYPE=${LIBRARY_TYPE} -Pgnatcoll_build -p
 ifeq (${WITH_GTK},yes)
 	${MAKE} -C src -f Makefile.gtk buildall
 endif
@@ -31,6 +33,13 @@ endif
 
 examples:
 	${MAKE} -C examples
+
+## Create links for the gnat sources
+
+do_links:
+	-@$(foreach f,$(GNAT_SOURCES_FOR_GNATCOLL), \
+	   $(LN_S) ../gnat_src/$(f) gnat >/dev/null 2>&1 ;)
+	@(cd gnat && gnatmake -q xsnamest && ./xsnamest && mv snames.ns snames.ads && mv snames.nb snames.adb)
 
 ## Only works after installation, so we should install to a local directory
 ## first, so as not to break the users's environment, but still test the

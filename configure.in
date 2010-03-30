@@ -45,4 +45,4 @@ AC_MSG_NOTICE([ gmp: $WITH_GMP])
 AC_MSG_NOTICE([    use --with-gmp to override])
 AC_MSG_NOTICE([--------------------------------------------])
 
-AC_OUTPUT(gnatcoll_shared.gpr docs/Makefile Makefile.conf src/gnatcoll_gmp.gpr src/gnatcoll_python.gpr distrib/gnatcoll.gpr distrib/gnatcoll_python.gpr distrib/gnatcoll_gmp.gpr docs/gnatcoll_include.texi)
+AC_OUTPUT(gnatcoll_shared.gpr docs/Makefile Makefile.conf src/gnatcoll_gmp.gpr src/gnatcoll_python.gpr distrib/gnatcoll.gpr distrib/gnatcoll_python.gpr distrib/gnatcoll_gmp.gpr docs/gnatcoll_include.texi gnat/sdefault/sdefault.adb)

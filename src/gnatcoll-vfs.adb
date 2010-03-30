@@ -996,14 +996,16 @@ package body GNATCOLL.VFS is
    -- File_Extension --
    --------------------
 
-   function File_Extension (File : Virtual_File) return Filesystem_String is
+   function File_Extension
+     (File      : Virtual_File;
+      Normalize : Boolean := False) return Filesystem_String is
    begin
       if File.Value = null then
          return "";
       else
          return Filesystem_String
            (File_Extension
-              (File.Value.Get_FS, FS_String (File.Full_Name.all)));
+              (File.Value.Get_FS, FS_String (File.Full_Name (Normalize).all)));
       end if;
    end File_Extension;
 
@@ -1632,6 +1634,10 @@ package body GNATCOLL.VFS is
    function To_Path (Paths : File_Array) return Filesystem_String is
       Length : Natural := 0;
    begin
+      if Paths'Length = 0 then
+         return "";
+      end if;
+
       for J in Paths'Range loop
          Length := Length + Paths (J).Full_Name.all'Length;
       end loop;
