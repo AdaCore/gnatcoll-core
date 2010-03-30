@@ -44,7 +44,6 @@ GNAT_SOURCES_FOR_GNATCOLL= \
   prj-util.ads prj-util.adb \
   rident.ads \
   scans.ads scans.adb \
-  scil_ll.ads scil_ll.adb \
   scng.ads scng.adb \
   sdefault.ads \
   sinfo.ads sinfo.adb \
