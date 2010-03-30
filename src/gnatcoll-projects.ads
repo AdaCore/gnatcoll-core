@@ -194,6 +194,7 @@ package GNATCOLL.Projects is
    procedure Load_Empty_Project
      (Self : in out Project_Tree;
       Env  : Project_Environment_Access := null;
+      Name : String := "empty";
       Recompute_View : Boolean := True);
    --  Load an empty project.
    --  There is no source .gpr file corresponding to that project, which is

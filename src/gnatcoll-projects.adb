@@ -3129,7 +3129,7 @@ package body GNATCOLL.Projects is
    is
       P_Cursor : Project_Htables.Cursor;
    begin
-      if Tree.Tree = null then
+      if Tree = null or else Tree.Tree = null then
          Trace (Me, "Project_From_Name: Registry not initialized");
          return No_Project;
 
@@ -3748,6 +3748,8 @@ package body GNATCOLL.Projects is
       Output.Set_Special_Output (Output.Output_Proc (Errors));
       Prj.Com.Fail := Fail'Unrestricted_Access;
 
+      Tree.Data.Root := No_Project;
+
       Sinput.P.Clear_Source_File_Table;
       Sinput.P.Reset_First;
       Prj.Part.Parse
@@ -4066,9 +4068,9 @@ package body GNATCOLL.Projects is
    procedure Load_Empty_Project
      (Self : in out Project_Tree;
       Env  : Project_Environment_Access := null;
+      Name : String := "empty";
       Recompute_View : Boolean := True)
    is
-      Name : constant String := "empty";
       D : constant Filesystem_String :=
             Name_As_Directory (Get_Current_Dir)
             & (+Name) & Project_File_Extension;
@@ -4088,6 +4090,8 @@ package body GNATCOLL.Projects is
       --  No language known for empty project
 
       Self.Data.Root.Set_Attribute (Languages_Attribute, (1 .. 0 => null));
+
+      Self.Data.Root.Data.Modified := False;
 
       if Recompute_View then
          Project_Tree'Class (Self).Recompute_View;
@@ -4276,7 +4280,10 @@ package body GNATCOLL.Projects is
       --  been set by the user already.
       --  Prj.Ext.Reset (Registry.Data.Tree);
 
-      Reset (Self.Data.View);
+      if Self.Data.View /= null then
+         Reset (Self.Data.View);
+      end if;
+
       Prj.Tree.Tree_Private_Part.Projects_Htable.Reset
         (Self.Data.Tree.Projects_HT);
       Sinput.P.Clear_Source_File_Table;
@@ -4700,6 +4707,9 @@ package body GNATCOLL.Projects is
          exit when P = GNATCOLL.Projects.No_Project;
 
          if P.Data.Modified then
+            Trace (Me, "The project "
+                   & Project.Project_Path.Display_Full_Name
+                   & " has been modified");
             return True;
          end if;
          Next (Iter);
