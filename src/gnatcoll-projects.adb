@@ -3318,7 +3318,9 @@ package body GNATCOLL.Projects is
 
    procedure Set_Object_Subdir
      (Self   : in out Project_Environment;
-      Subdir : GNATCOLL.VFS.Filesystem_String) is
+      Subdir : GNATCOLL.VFS.Filesystem_String)
+   is
+      pragma Unreferenced (Self);
    begin
       Free (Prj.Subdirs);
       Prj.Subdirs := new String'(+Subdir);
@@ -3329,7 +3331,9 @@ package body GNATCOLL.Projects is
    -------------------
 
    function Object_Subdir
-     (Self   : Project_Environment) return GNATCOLL.VFS.Filesystem_String is
+     (Self   : Project_Environment) return GNATCOLL.VFS.Filesystem_String
+   is
+      pragma Unreferenced (Self);
    begin
       if Prj.Subdirs = null then
          return "";
