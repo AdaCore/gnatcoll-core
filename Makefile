@@ -37,8 +37,13 @@ examples:
 ## Create links for the gnat sources
 
 do_links:
+ifeq ($(OS),Windows_NT)
 	-@$(foreach f,$(GNAT_SOURCES_FOR_GNATCOLL), \
-	   $(LN_S) ../gnat_src/$(f) gnat >/dev/null 2>&1 ;)
+	   $(LN_S) gnat_src/$(f) gnat > /dev/null 2>&1 ;)
+else
+	-@$(foreach f,$(GNAT_SOURCES_FOR_GNATCOLL), \
+	   $(LN_S) ../gnat_src/$(f) gnat > /dev/null 2>&1 ;)
+endif
 	@(cd gnat && gnatmake -q xsnamest && ./xsnamest && mv snames.ns snames.ads && mv snames.nb snames.adb)
 
 ## Only works after installation, so we should install to a local directory
