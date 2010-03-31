@@ -39,7 +39,7 @@ examples:
 do_links:
 ifeq ($(OS),Windows_NT)
 	-@$(foreach f,$(GNAT_SOURCES_FOR_GNATCOLL), \
-	   $(LN_S) gnat_src/$(f) gnat > /dev/null 2>&1 ;)
+	   $(CP) gnat_src/$(f) gnat > /dev/null 2>&1 ;)
 else
 	-@$(foreach f,$(GNAT_SOURCES_FOR_GNATCOLL), \
 	   $(LN_S) ../gnat_src/$(f) gnat > /dev/null 2>&1 ;)

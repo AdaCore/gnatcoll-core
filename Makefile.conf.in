@@ -31,10 +31,10 @@ includedir=@includedir@
 docdir=@docdir@
 
 MKDIR=mkdir -p
-CP=cp
+CP=cp -p
 
 ifeq (${OS},Windows_NT)
-LN_S=cp -p
+LN_S=${CP}
 else
 LN_S=@LN_S@
 endif
