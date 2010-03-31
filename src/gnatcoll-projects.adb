@@ -1264,6 +1264,7 @@ package body GNATCOLL.Projects is
          when Unit_Body | Unit_Separate => Part := Unit_Spec;
       end case;
 
+      --  Is there such a file in the project ?
       declare
          Base : constant Filesystem_String := File_From_Unit
            (Project (Info), Unit_Name (Info), Part,
@@ -1271,23 +1272,36 @@ package body GNATCOLL.Projects is
       begin
          if Base'Length > 0 then
             return Self.Create (Base, Use_Object_Path => False);
-
-         elsif Case_Insensitive_Equal (Info.Language, "ada") then
-            --  Default to the GNAT naming scheme (for runtime files)
-            declare
-               Base2 : constant Filesystem_String := File_From_Unit
-                 (Project (Info), Unit_Name (Info), Part,
-                  Check_Predefined_Library => True,
-                  Language => Info.Language);
-            begin
-               if Base2'Length > 0 then
-                  return Self.Create (Base2, Use_Object_Path => False);
-               end if;
-            end;
          end if;
-
-         return File;
       end;
+
+      --  Else try to guess from naming scheme
+
+      declare
+         Base : constant Filesystem_String := File_From_Unit
+           (Project (Info), Unit_Name (Info), Part,
+            Language => Info.Language, File_Must_Exist => False);
+      begin
+         if Base'Length > 0 then
+            return GNATCOLL.VFS.Create_From_Base (Base);
+         end if;
+      end;
+
+      --  Else try the default GNAT naming scheme for runtime files
+
+      if Case_Insensitive_Equal (Info.Language, "ada") then
+         declare
+            Base : constant Filesystem_String := File_From_Unit
+              (Project (Info), Unit_Name (Info), Part,
+               Check_Predefined_Library => True, Language => Info.Language);
+         begin
+            if Base'Length > 0 then
+               return Self.Create (Base, Use_Object_Path => False);
+            end if;
+         end;
+      end if;
+
+      return File;
    end Other_File;
 
    ---------------------

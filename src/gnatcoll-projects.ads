@@ -540,7 +540,9 @@ package GNATCOLL.Projects is
       File : GNATCOLL.VFS.Virtual_File) return GNATCOLL.VFS.Virtual_File;
    --  If Info is a spec, returns the body of the same unit. If Info is a
    --  body, returns its spec.
-   --  Info's file itself is returned if no matching "other file" was found.
+   --  If there is no "other file" in the project, but we could compute the
+   --  name it should have, that name is returned (base name only is set).
+   --  Otherwise, File itself is returned.
 
    function Info
      (Self : Project_Tree'Class; File : GNATCOLL.VFS.Virtual_File)
