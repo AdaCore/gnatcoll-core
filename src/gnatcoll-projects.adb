@@ -129,14 +129,6 @@ package body GNATCOLL.Projects is
    use Project_Htables, Extensions_Languages, Names_Files;
    use Directory_Statuses;
 
-   type Project_Status is (From_File, Default);
-   --  How the project was created: either read from a file, automatically
-   --  created from a directory, automatically created from an executable
-   --  (debugger case), or default empty project. An actual project file exists
-   --  on disk only in the From_File or Default cases.
-   --  When loading a new project, and if the previous project had status
-   --  Default, it is removed from the disk.
-
    type Project_Tree_Data is record
       Env       : Project_Environment_Access;
 
@@ -3811,7 +3803,7 @@ package body GNATCOLL.Projects is
       end if;
 
       if Previous_Status = Default then
-         Trace (Me, "Remove default project on disk, no longer used");
+         Trace (Me, "Remove previous default project on disk, no longer used");
          Delete (Previous_Project, Success);
       end if;
 
@@ -5567,6 +5559,28 @@ package body GNATCOLL.Projects is
    begin
       Internal (Self);
    end Free;
+
+   ------------
+   -- Status --
+   ------------
+
+   function Status (Self : Project_Tree) return Project_Status is
+   begin
+      if Self.Data = null then
+         return Empty;
+      else
+         return Self.Data.Status;
+      end if;
+   end Status;
+
+   ----------------
+   -- Set_Status --
+   ----------------
+
+   procedure Set_Status (Self : Project_Tree; Status : Project_Status) is
+   begin
+      Self.Data.Status := Status;
+   end Set_Status;
 
 begin
    Namet.Initialize;

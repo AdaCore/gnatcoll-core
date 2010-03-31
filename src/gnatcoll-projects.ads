@@ -229,6 +229,14 @@ package GNATCOLL.Projects is
    --  This call is optional, but recommended if you want to monitor memory
    --  leaks in your application.
 
+   type Project_Status is (From_File, Default, From_Executable, Empty);
+   function Status (Self : Project_Tree) return Project_Status;
+   procedure Set_Status (Self : Project_Tree; Status : Project_Status);
+   --  How the project was created: either read from a file, automatically
+   --  created from a directory, automatically created from an executable
+   --  (debugger case), or default empty project. An actual project file exists
+   --  on disk only in the From_File or Default cases.
+
    ------------------
    -- Project data --
    ------------------
