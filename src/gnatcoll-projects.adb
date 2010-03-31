@@ -596,7 +596,7 @@ package body GNATCOLL.Projects is
            (Path (Path'First .. Path'Last - Prj.Subdirs.all'Length - 1) &
             Xrefs_Subdir (Env.all));
       else
-         return Name_As_Directory (Xrefs_Subdir (Env.all));
+         return Path & Name_As_Directory (Xrefs_Subdir (Env.all));
       end if;
    end Handle_Subdir;
 
