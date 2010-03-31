@@ -152,6 +152,10 @@ package GNATCOLL.Projects is
    --  directory. It should point to a readable existing file.
    --  The two steps of the loading (see general description of this package)
    --  are performed automatically.
+   --  If the project itself or some of its dependencies should be found on the
+   --  project path, the latter should be initialized properly (if you have
+   --  already loaded a project, you might want to reuse the environment by
+   --  passing a non-empty Env parameter).
    --
    --  Errors and warnings that occur during loading are reported through the
    --  Errors callback. If the project could not be loaded, the exception
