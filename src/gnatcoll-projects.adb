@@ -1257,17 +1257,58 @@ package body GNATCOLL.Projects is
       File : GNATCOLL.VFS.Virtual_File) return GNATCOLL.VFS.Virtual_File
    is
       Info : constant File_Info := Self.Info (File);
+      Unit : constant String := Unit_Name (Info);
       Part : Unit_Parts;
+
+      function Non_Unit_Based
+        (Old_Part, New_Part : Attribute_Pkg_String) return Virtual_File;
+      --  Handling of non-unit based languages
+
+      function Non_Unit_Based
+        (Old_Part, New_Part : Attribute_Pkg_String) return Virtual_File
+      is
+         Suffix : constant String :=
+           Info.Project.Attribute_Value (Old_Part, Index => Info.Language);
+         New_Suffix : constant String :=
+           Info.Project.Attribute_Value (New_Part, Index => Info.Language);
+         Other_F : constant Virtual_File := Self.Create
+           (File.Base_Name (+Suffix) & (+New_Suffix),
+            Use_Object_Path => False);
+      begin
+         if Other_F = GNATCOLL.VFS.No_File then
+            return File;
+         else
+            return Other_F;
+         end if;
+      end Non_Unit_Based;
+
    begin
       case Info.Part is
          when Unit_Spec                 => Part := Unit_Body;
          when Unit_Body | Unit_Separate => Part := Unit_Spec;
       end case;
 
+      --  For non-unit based languages, we only guess the "other file" if it
+      --  actually exists in the project. We never try to create one, since
+      --  there is no insurance the user needs one or its name will be
+      --  consistent.
+
+      if Unit = "" then
+         if Info.Project = No_Project then
+            return File;
+         elsif Info.Part = Unit_Spec then
+            return Non_Unit_Based
+              (Spec_Suffix_Attribute, Impl_Suffix_Attribute);
+         else
+            return Non_Unit_Based
+              (Impl_Suffix_Attribute, Spec_Suffix_Attribute);
+         end if;
+      end if;
+
       --  Is there such a file in the project ?
       declare
          Base : constant Filesystem_String := File_From_Unit
-           (Project (Info), Unit_Name (Info), Part,
+           (Project (Info), Unit, Part,
             Language => Info.Language);
       begin
          if Base'Length > 0 then
@@ -1279,7 +1320,7 @@ package body GNATCOLL.Projects is
 
       declare
          Base : constant Filesystem_String := File_From_Unit
-           (Project (Info), Unit_Name (Info), Part,
+           (Project (Info), Unit, Part,
             Language => Info.Language, File_Must_Exist => False);
       begin
          if Base'Length > 0 then
@@ -1292,7 +1333,7 @@ package body GNATCOLL.Projects is
       if Case_Insensitive_Equal (Info.Language, "ada") then
          declare
             Base : constant Filesystem_String := File_From_Unit
-              (Project (Info), Unit_Name (Info), Part,
+              (Project (Info), Unit, Part,
                Check_Predefined_Library => True, Language => Info.Language);
          begin
             if Base'Length > 0 then
