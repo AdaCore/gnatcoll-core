@@ -1374,8 +1374,8 @@ package body GNATCOLL.Projects is
    function Attribute_Value
      (Project      : Project_Type;
       Attribute    : Attribute_Pkg_String;
-      Default      : String := "";
       Index        : String := "";
+      Default      : String := "";
       Use_Extended : Boolean := False) return String
    is
       View  : constant Project_Id := Get_View (Project);
@@ -1444,7 +1444,12 @@ package body GNATCOLL.Projects is
          if Unit /= No_Unit_Index
            and then Unit.File_Names (Impl) /= null
          then
-            return Get_String (Unit.File_Names (Impl).Display_File);
+            if Unit.File_Names (Impl).Index /= 0 then
+               return Get_String (Unit.File_Names (Impl).Display_File)
+                 & " at" & Unit.File_Names (Impl).Index'Img;
+            else
+               return Get_String (Unit.File_Names (Impl).Display_File);
+            end if;
          else
             return "";
          end if;
@@ -1458,7 +1463,12 @@ package body GNATCOLL.Projects is
          if Unit /= No_Unit_Index
            and then Unit.File_Names (Spec) /= null
          then
-            return Get_String (Unit.File_Names (Spec).Display_File);
+            if Unit.File_Names (Spec).Index /= 0 then
+               return Get_String (Unit.File_Names (Spec).Display_File)
+                 & " at" & Unit.File_Names (Spec).Index'Img;
+            else
+               return Get_String (Unit.File_Names (Spec).Display_File);
+            end if;
          else
             return "";
          end if;
@@ -4519,10 +4529,12 @@ package body GNATCOLL.Projects is
       Attribute : Attribute_Pkg_String;
       Value     : String;
       Scenario  : Scenario_Variable_Array := All_Scenarios;
-      Index     : String := "") is
+      Index     : String := "";
+      At_Index  : Natural := 0) is
    begin
       GNATCOLL.Projects.Normalize.Set_Attribute
-        (Self.Data.Tree, Self, Attribute, Value, Scenario, Index);
+        (Self.Data.Tree, Self, Attribute, Value, Scenario, Index,
+         At_Index);
    end Set_Attribute;
 
    ----------------------

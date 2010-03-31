@@ -283,7 +283,8 @@ private package GNATCOLL.Projects.Normalize is
       Attribute : Attribute_Pkg_String;
       Value     : String;
       Scenario  : Scenario_Variable_Array := All_Scenarios;
-      Index     : String := "");
+      Index     : String := "";
+      At_Index  : Natural := 0);
    procedure Set_Attribute
      (Tree      : Project_Tree_Data_Access;
       Project   : Project_Type;

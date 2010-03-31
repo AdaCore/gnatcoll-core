@@ -2483,7 +2483,8 @@ package body GNATCOLL.Projects.Normalize is
       Attribute : Attribute_Pkg_String;
       Value     : String;
       Scenario  : Scenario_Variable_Array := All_Scenarios;
-      Index     : String := "")
+      Index     : String := "";
+      At_Index  : Natural := 0)
    is
       procedure Add_Or_Replace
         (Tree_Node      : Project_Node_Tree_Ref;
@@ -2509,12 +2510,14 @@ package body GNATCOLL.Projects.Normalize is
          Val := Create_Literal_String (Get_String (Value), Tree_Node);
 
          if Previous_Decl /= Empty_Node then
+            --  ??? Should we use At_Index here ?
             Set_Current_Term
               (First_Term (Previous_Decl, Tree_Node), Tree_Node, Val);
+            Set_Source_Index_Of (Val, Tree_Node, Int (At_Index));
          else
             Decl := Create_Attribute
               (Tree_Node, Case_Item, Attribute_Name,
-               Index_Id, Prj.Single, Value => Val);
+               Index_Id, Prj.Single, Value => Val, At_Index => At_Index);
          end if;
       end Add_Or_Replace;
 

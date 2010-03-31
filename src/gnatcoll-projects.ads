@@ -838,8 +838,8 @@ package GNATCOLL.Projects is
    function Attribute_Value
      (Project      : Project_Type;
       Attribute    : Attribute_Pkg_String;
-      Default      : String := "";
       Index        : String := "";
+      Default      : String := "";
       Use_Extended : Boolean := False) return String;
    --  Return the value for a string attribute.
    --  Default is returned if the attribute wasn't set by the user and
@@ -1002,7 +1002,8 @@ package GNATCOLL.Projects is
       Attribute : Attribute_Pkg_String;
       Value     : String;
       Scenario  : Scenario_Variable_Array := All_Scenarios;
-      Index     : String := "");
+      Index     : String := "";
+      At_Index  : Natural := 0);
    --  Update the value of the attribute in the project.
    --  Values is the list of new values for the attribute. The caller is still
    --  responsible for freeing the memory when this call finished.
@@ -1020,6 +1021,10 @@ package GNATCOLL.Projects is
    --  Prepend is True, the values in List are prepended to the current
    --  value of the attribute.
    --  You will need to call Recompute_View afterwards.
+   --
+   --  At_Index is used in some rare cases, and corresponds to the following
+   --  construct in the project file:
+   --     for Specification ("unit") use "file" at 1;
 
    Any_Attribute      : constant String := "@@";
    --  Special value for all the subprograms that take an Attribute_Index
