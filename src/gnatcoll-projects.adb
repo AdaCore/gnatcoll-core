@@ -3994,6 +3994,10 @@ package body GNATCOLL.Projects is
       Trace (Me, "Recomputing project view");
       Output.Set_Special_Output (Output.Output_Proc (Errors));
 
+      --  Reset the previous view, no longer relevant
+
+      Prj.Initialize (Self.Data.View);
+
       --  Compute the list of scenario variables. This also ensures that
       --  the variables do exist in the environment, and therefore that
       --  we can correctly load the project.
