@@ -1,7 +1,7 @@
 -----------------------------------------------------------------------
 --                          G N A T C O L L                          --
 --                                                                   --
---                 Copyright (C) 2003-2009, AdaCore                  --
+--                 Copyright (C) 2003-2010, AdaCore                  --
 --                                                                   --
 -- GPS is free  software;  you can redistribute it and/or modify  it --
 -- under the terms of the GNU General Public License as published by --
@@ -130,15 +130,21 @@ package GNATCOLL.VFS is
 
    function Create
      (Full_Filename : Filesystem_String;
-      Host          : String := Local_Host) return Virtual_File;
+      Host          : String := Local_Host;
+      Normalize     : Boolean := False) return Virtual_File;
    --  Return a file, given its full filename.
    --  The latter can be found, for source files, through the functions in
    --  projects-registry.ads.
+   --  If Normalize is set, then the VFS is created using the normalized
+   --  Full_Filename.
 
    function Create_From_Dir
      (Dir       : Virtual_File;
-      Base_Name : Filesystem_String) return Virtual_File;
+      Base_Name : Filesystem_String;
+      Normalize : Boolean := False) return Virtual_File;
    --  Creates a file from its directory and base name
+   --  If Normalize is set, then Create_From_Dir will make sure that the
+   --  path is normalized
 
    function Create_From_Base
      (Base_Name : Filesystem_String;
@@ -151,8 +157,11 @@ package GNATCOLL.VFS is
 
    function Create_From_UTF8
      (Full_Filename : String;
-      Host          : String := Local_Host) return Virtual_File;
+      Host          : String := Local_Host;
+      Normalize     : Boolean := False) return Virtual_File;
    --  Creates a file from its display name
+   --  If Normalize is set, then the VFS is created using the normalized
+   --  Full_Filename.
 
    function Locate_On_Path
      (Base_Name : Filesystem_String) return Virtual_File;

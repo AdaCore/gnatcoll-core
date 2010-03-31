@@ -1,7 +1,7 @@
 -----------------------------------------------------------------------
 --                              G P S                                --
 --                                                                   --
---                   Copyright (C) 2009, AdaCore                     --
+--                Copyright (C) 2009-2010, AdaCore                   --
 --                                                                   --
 -- GPS is free  software;  you can redistribute it and/or modify  it --
 -- under the terms of the GNU General Public License as published by --
@@ -27,8 +27,9 @@ package GNATCOLL.IO.Remote is
    type Remote_File_Access is access all Remote_File_Record'Class;
 
    function Create
-     (Host : String;
-      Path : FS_String) return File_Access;
+     (Host      : String;
+      Path      : FS_String;
+      Normalize : Boolean) return File_Access;
 
    function Current_Dir (Host : String) return File_Access;
    function Home_Dir (Host : String) return File_Access;
@@ -133,6 +134,9 @@ private
       Tmp_Path  : FS_String_Access;
       --  Path used at creation, saved in case the below server is not resolved
       --  immediately.
+
+      Tmp_Norm  : Boolean;
+      --  Value used at creation to determine if Tmp_Path should be normalized
 
       Server    : GNATCOLL.Remote.Server_Access;
       --  The server on which the file commands are executed.

@@ -1,7 +1,7 @@
 -----------------------------------------------------------------------
 --                               G P S                               --
 --                                                                   --
---                 Copyright (C) 2003-2009, AdaCore                  --
+--                 Copyright (C) 2003-2010, AdaCore                  --
 --                                                                   --
 -- GPS is free  software;  you can redistribute it and/or modify  it --
 -- under the terms of the GNU General Public License as published by --
@@ -196,7 +196,21 @@ package body GNATCOLL.VFS is
 
    function Create
      (Full_Filename : Filesystem_String;
-      Host          : String := Local_Host) return Virtual_File is
+      Host          : String := Local_Host;
+      Normalize     : Boolean := False) return Virtual_File
+   is
+      function Internal_Get_Path (FS : FS_Type) return FS_String;
+      --  Get Full_Filename according to Normalize setting
+
+      function Internal_Get_Path (FS : FS_Type) return FS_String is
+      begin
+         if not Normalize then
+            return +Full_Filename;
+         end if;
+
+         return GNATCOLL.Path.Normalize (FS, +Full_Filename);
+      end Internal_Get_Path;
+
    begin
       if Full_Filename = "" then
          return No_File;
@@ -204,10 +218,12 @@ package body GNATCOLL.VFS is
 
       if Host = Local_Host then
          return (Ada.Finalization.Controlled with
-                 Value => GNATCOLL.IO.Native.Create (+Full_Filename));
+                 Value => GNATCOLL.IO.Native.Create
+                   (Internal_Get_Path (GNATCOLL.Path.Local_FS)));
       else
          return (Ada.Finalization.Controlled with
-                 Value => GNATCOLL.IO.Remote.Create (Host, +Full_Filename));
+                 Value => GNATCOLL.IO.Remote.Create
+                   (Host, +Full_Filename, Normalize));
       end if;
    end Create;
 
@@ -217,14 +233,17 @@ package body GNATCOLL.VFS is
 
    function Create_From_UTF8
      (Full_Filename : String;
-      Host          : String := Local_Host) return Virtual_File is
+      Host          : String := Local_Host;
+      Normalize     : Boolean := False) return Virtual_File is
    begin
       if Host = Local_Host then
          return Create
-           (+GNATCOLL.IO.Native.Codec.From_UTF8 (Full_Filename));
+           (+GNATCOLL.IO.Native.Codec.From_UTF8 (Full_Filename),
+            Normalize => Normalize);
       else
          return Create
-           (+GNATCOLL.IO.Remote.Codec.From_UTF8 (Full_Filename), Host);
+           (+GNATCOLL.IO.Remote.Codec.From_UTF8 (Full_Filename), Host,
+            Normalize => Normalize);
       end if;
    end Create_From_UTF8;
 
@@ -269,7 +288,8 @@ package body GNATCOLL.VFS is
 
    function Create_From_Dir
      (Dir       : Virtual_File;
-      Base_Name : Filesystem_String) return Virtual_File
+      Base_Name : Filesystem_String;
+      Normalize : Boolean := False) return Virtual_File
    is
    begin
       if Dir.Value = null then
@@ -282,7 +302,10 @@ package body GNATCOLL.VFS is
         (Ada.Finalization.Controlled with
          Dispatching_Create
            (Dir.Value,
-            Dir.Value.Full.all & From_Unix (Dir.Value.Get_FS, +Base_Name)));
+            +Dir.Full_Name (Normalize) &
+            GNATCOLL.Path.Normalize
+              (Dir.Value.Get_FS,
+               From_Unix (Dir.Value.Get_FS, +Base_Name))));
    end Create_From_Dir;
 
    --------------------

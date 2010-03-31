@@ -55,8 +55,16 @@ package body GNATCOLL.IO.Remote is
       end loop;
 
       File.Server     := Server;
-      File.Full       := new FS_String'
-        (From_Unix (Server.Shell_FS, Path (Path'First .. Last)));
+      if File.Tmp_Norm then
+         File.Full       := new FS_String'
+           (GNATCOLL.Path.Normalize
+              (Server.Shell_FS,
+               From_Unix (Server.Shell_FS, Path (Path'First .. Last))));
+      else
+         File.Full       := new FS_String'
+           (From_Unix (Server.Shell_FS, Path (Path'First .. Last)));
+      end if;
+
       File.Resolved   := False;
    end Internal_Initialize;
 
@@ -87,8 +95,9 @@ package body GNATCOLL.IO.Remote is
    ------------
 
    function Create
-     (Host : String;
-      Path : FS_String)
+     (Host      : String;
+      Path      : FS_String;
+      Normalize : Boolean)
       return File_Access
    is
       Ret  : Remote_File_Access;
@@ -98,6 +107,7 @@ package body GNATCOLL.IO.Remote is
         (Ref_Count  => 1,
          Tmp_Host   => null,
          Tmp_Path   => null,
+         Tmp_Norm   => Normalize,
          Tmp_Name   => (others => ' '),
          Server     => null,
          Full       => null,
@@ -134,11 +144,13 @@ package body GNATCOLL.IO.Remote is
          when FS_Unix | FS_Unix_Case_Insensitive =>
             return Create
               (Host,
-               GNATCOLL.IO.Remote.Unix.Current_Dir (Server));
+               GNATCOLL.IO.Remote.Unix.Current_Dir (Server),
+               False);
          when FS_Windows =>
             return Create
               (Host,
-               GNATCOLL.IO.Remote.Windows.Current_Dir (Server));
+               GNATCOLL.IO.Remote.Windows.Current_Dir (Server),
+               False);
          when FS_Unknown =>
             raise Remote_Config_Error with
               "Invalid FS for host " & Host;
@@ -163,11 +175,13 @@ package body GNATCOLL.IO.Remote is
          when FS_Unix | FS_Unix_Case_Insensitive =>
             return Create
               (Host,
-               GNATCOLL.IO.Remote.Unix.Home_Dir (Server));
+               GNATCOLL.IO.Remote.Unix.Home_Dir (Server),
+               False);
          when FS_Windows =>
             return Create
               (Host,
-               GNATCOLL.IO.Remote.Windows.Home_Dir (Server));
+               GNATCOLL.IO.Remote.Windows.Home_Dir (Server),
+               False);
          when FS_Unknown =>
             raise Remote_Config_Error with
               "Invalid FS for host " & Host;
@@ -191,10 +205,10 @@ package body GNATCOLL.IO.Remote is
       case Server.Shell_FS is
          when FS_Unix | FS_Unix_Case_Insensitive =>
             return Create
-              (Host, GNATCOLL.IO.Remote.Unix.Tmp_Dir (Server));
+              (Host, GNATCOLL.IO.Remote.Unix.Tmp_Dir (Server), False);
          when FS_Windows =>
             return Create
-              (Host, GNATCOLL.IO.Remote.Windows.Tmp_Dir (Server));
+              (Host, GNATCOLL.IO.Remote.Windows.Tmp_Dir (Server), False);
          when FS_Unknown =>
             raise Remote_Config_Error with
               "Invalid FS for host " & Host;
@@ -236,7 +250,8 @@ package body GNATCOLL.IO.Remote is
       begin
          for J in Ret'Range loop
             Ret (J) :=
-              Create (Host, FS_String (List (List'First + J - Ret'First).all));
+              Create (Host, FS_String (List (List'First + J - Ret'First).all),
+                      False);
          end loop;
 
          GNAT.Strings.Free (List);
@@ -277,7 +292,7 @@ package body GNATCOLL.IO.Remote is
       return File_Access
    is
    begin
-      return Create (Ref.Get_Host, Full_Path);
+      return Create (Ref.Get_Host, Full_Path, False);
    end Dispatching_Create;
 
    -------------
