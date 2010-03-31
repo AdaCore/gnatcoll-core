@@ -968,6 +968,12 @@ package body GNATCOLL.Projects is
       Lang : Name_Id;
 
    begin
+      if File = GNATCOLL.VFS.No_File then
+         return
+           (No_Project, Tree.Root, Unit_Separate,
+            Namet.No_Name, Namet.No_Name);
+      end if;
+
       --  Lookup in the project's Source_Paths_HT, rather than in
       --  Registry.Data.Sources, since the latter does not support duplicate
       --  base names. In Prj.Nmsc, names have been converted to lower case on
