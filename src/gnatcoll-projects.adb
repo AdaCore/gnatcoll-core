@@ -709,7 +709,7 @@ package body GNATCOLL.Projects is
       --  loaded, so we know that all source files of the project are in the
       --  cache and will be returned efficiently
 
-      if Project.Data = null then
+      if Project.Data = null and then Use_Source_Path then
          Info_Cursor := Self.Data.Sources.Find (Base);
 
          if Has_Element (Info_Cursor) then
