@@ -3546,6 +3546,7 @@ package body GNATCOLL.Projects is
       Spec, Impl : String_Access;
       Spec_Suff  : String := Default_Spec_Suffix;
       Impl_Suff  : String := Default_Body_Suffix;
+      Tmp : Naming_Scheme_Access;
    begin
       --  GNAT doesn't allow empty suffixes, and will display an error when
       --  the view is recomputed, in that case. Therefore we substitute dummy
@@ -3565,11 +3566,12 @@ package body GNATCOLL.Projects is
          Impl := new String'(Impl_Suff);
       end if;
 
-      Self.Naming_Schemes := new Naming_Scheme_Record'
+      Tmp := new Naming_Scheme_Record'
         (Language            => new String'(To_Lower (Language_Name)),
          Default_Spec_Suffix => Spec,
          Default_Body_Suffix => Impl,
          Next                => Self.Naming_Schemes);
+      Self.Naming_Schemes := Tmp;
    end Register_Default_Language_Extension;
 
    ---------------------------
@@ -4449,7 +4451,6 @@ package body GNATCOLL.Projects is
       --  variables, which we want to preserve in case the user has changed
       --  them before loading the project.
 
-      Initialize (Self.Data.Tree);
       Free (Self.Data.View);
    end Unload;
 
@@ -5548,17 +5549,53 @@ package body GNATCOLL.Projects is
    ----------
 
    procedure Free (Self : in out Project_Environment_Access) is
-      procedure Internal is new Ada.Unchecked_Deallocation
+      procedure Unchecked_Free is new Ada.Unchecked_Deallocation
         (Project_Environment'Class, Project_Environment_Access);
+      procedure Unchecked_Free is new Ada.Unchecked_Deallocation
+        (Naming_Scheme_Record, Naming_Scheme_Access);
+      NS : Naming_Scheme_Access;
    begin
-      Internal (Self);
+      if Self /= null then
+         while Self.Naming_Schemes /= null loop
+            NS := Self.Naming_Schemes;
+            Self.Naming_Schemes := NS.Next;
+
+            Free (NS.Language);
+            Free (NS.Default_Spec_Suffix);
+            Free (NS.Default_Body_Suffix);
+            Unchecked_Free (NS);
+         end loop;
+
+         Unchecked_Free (Self.Predefined_Object_Path);
+         Unchecked_Free (Self.Predefined_Source_Path);
+         Unchecked_Free (Self.Predefined_Project_Path);
+         Unchecked_Free (Self.Predefined_Source_Files);
+         Free (Self.Xrefs_Subdir);
+         Self.Extensions.Clear;
+
+         Unchecked_Free (Self);
+      end if;
    end Free;
 
    procedure Free (Self : in out Project_Tree_Access) is
-      procedure Internal is new Ada.Unchecked_Deallocation
+      procedure Unchecked_Free is new Ada.Unchecked_Deallocation
         (Project_Tree'Class, Project_Tree_Access);
+      procedure Unchecked_Free is new Ada.Unchecked_Deallocation
+        (Project_Tree_Data, Project_Tree_Data_Access);
    begin
-      Internal (Self);
+      if Self /= null then
+         if Self.Data /= null then
+            if Self.Data.Tree /= null then
+               Prj.Tree.Tree_Private_Part.Project_Node_Table.Free
+                 (Self.Data.Tree.Project_Nodes);
+            end if;
+
+            Free (Self.Data.Tree);
+            Unchecked_Free (Self.Data);
+         end if;
+
+         Unchecked_Free (Self);
+      end if;
    end Free;
 
    ------------
