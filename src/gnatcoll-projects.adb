@@ -4220,6 +4220,7 @@ package body GNATCOLL.Projects is
             & (+Name) & Project_File_Extension;
       Node : Project_Node_Id;
    begin
+      Trace (Me, "Loading empty project");
       Self.Unload;
       Reset (Self, Env);
 
@@ -4230,6 +4231,7 @@ package body GNATCOLL.Projects is
          Is_Config_File => False);
 
       Self.Data.Root := Self.Instance_From_Node (Node);
+      Self.Data.Status := Empty;
 
       --  No language known for empty project
 
