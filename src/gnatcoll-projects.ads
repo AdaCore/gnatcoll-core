@@ -688,7 +688,7 @@ package GNATCOLL.Projects is
 
    procedure Project_Imports
      (Parent           : Project_Type;
-      Child            : Project_Type;
+      Child            : Project_Type'Class;
       Include_Extended : Boolean := False;
       Imports          : out Boolean;
       Is_Limited_With  : out Boolean);

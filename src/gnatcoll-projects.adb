@@ -2079,7 +2079,7 @@ package body GNATCOLL.Projects is
 
    procedure Project_Imports
      (Parent           : Project_Type;
-      Child            : Project_Type;
+      Child            : Project_Type'Class;
       Include_Extended : Boolean := False;
       Imports          : out Boolean;
       Is_Limited_With  : out Boolean)
@@ -2087,7 +2087,7 @@ package body GNATCOLL.Projects is
       With_Clause : Project_Node_Id;
       Extended    : Project_Node_Id;
    begin
-      Assert (Me, Child /= No_Project, "Project_Imports: no child provided");
+      Assert (Me, Child.Data /= null, "Project_Imports: no child provided");
 
       if Parent = No_Project then
          Imports := True;
@@ -2137,15 +2137,10 @@ package body GNATCOLL.Projects is
       type Boolean_Array is array (Positive range <>) of Boolean;
 
       Root_Project : constant Project_Type := Project.Data.Tree.Root;
-      Tree : constant Prj.Tree.Project_Node_Tree_Ref :=
-        Root_Project.Tree_Tree;
       All_Prj   : Name_Id_Array_Access := Root_Project.Data.Imported_Projects;
       Importing : Name_Id_Array_Access;
-      Current   : Project_Type;
-      Start     : Project_Type;
       Index     : Integer;
       Parent    : Project_Type;
-      Decl, N   : Project_Node_Id;
       Imports, Is_Limited_With : Boolean;
 
       procedure Merge_Project (P : Project_Type; Inc : in out Boolean_Array);
@@ -2180,48 +2175,34 @@ package body GNATCOLL.Projects is
          All_Prj := Root_Project.Data.Imported_Projects;
       end if;
 
-      --  Process all extending and extended projects as a single one: they
-      --  will all have the same list of importing projects.
-
-      N := Project.Data.Node;
-      loop
-         Decl := Project_Declaration_Of (N, Tree);
-         exit when Extending_Project_Of (Decl, Tree) = Empty_Node;
-         N := Extending_Project_Of (Decl, Tree);
-      end loop;
-
-      Current := Project_Type
-        (Project_From_Name (Project.Data.Tree, Prj.Tree.Name_Of (N, Tree)));
-      Start := Current;
+      --  We consider that an extending project is "importing" its
+      --  extended project, since it relies on it.
 
       declare
          Include   : Boolean_Array (All_Prj'Range) := (others => False);
 
       begin
-         while Current /= No_Project loop
-            for Index in All_Prj'Range loop
-               Parent := Project_Type
-                 (Project_From_Name (Project.Data.Tree, All_Prj (Index)));
+         for Index in All_Prj'Range loop
+            Parent := Project_Type
+              (Project_From_Name (Project.Data.Tree, All_Prj (Index)));
 
-               --  Avoid processing a project twice
+            --  Avoid processing a project twice
 
-               if not Include (Index) then
-                  if Parent /= Current then
-                     Project_Imports
-                       (Parent, Child => Current, Include_Extended => False,
-                        Imports         => Imports,
-                        Is_Limited_With => Is_Limited_With);
+            if not Include (Index)
+              and then Parent /= Project_Type (Project)
+            then
+               Project_Imports
+                 (Parent, Child => Project,
+                  Include_Extended => True,
+                  Imports         => Imports,
+                  Is_Limited_With => Is_Limited_With);
 
-                     if Imports then
-                        Include (Index) := True;
-                        Compute_Importing_Projects (Parent);
-                        Merge_Project (Parent, Include);
-                     end if;
-                  end if;
+               if Imports then
+                  Include (Index) := True;
+                  Compute_Importing_Projects (Parent);
+                  Merge_Project (Parent, Include);
                end if;
-            end loop;
-
-            Current := Extended_Project (Current);
+            end if;
          end loop;
 
          --  Done processing everything
@@ -2249,18 +2230,9 @@ package body GNATCOLL.Projects is
       Importing (Importing'Last) := Prj.Tree.Name_Of
         (Project.Data.Node, Project.Data.Tree.Tree);
 
-      Start := Project_Type (Project);
-      while Start /= No_Project loop
-         if Start.Data = Project.Data then
-            Start.Data.Importing_Projects := Importing;
-         else
-            Start.Data.Importing_Projects := new Name_Id_Array'(Importing.all);
-         end if;
+      Project.Data.Importing_Projects := Importing;
 
-         Start := Start.Extending_Project;
-      end loop;
-
-      --  The code below is used for debugging sessions
+      --  The code below is used for debugging
 
       if Active (Debug) then
          Trace (Debug, "Find_All_Projects_Importing: " & Project.Name);
