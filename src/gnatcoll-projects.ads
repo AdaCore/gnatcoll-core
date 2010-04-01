@@ -827,7 +827,7 @@ package GNATCOLL.Projects is
    --  Return the switches to use for a file in a given package (gnatmake,
    --  compiler, ...).
    --  Value is the list of switches to use for that variable. The result must
-   --  be freed by the caller.
+   --  be freed by the caller (never null).
    --  Is_Default_Value is set to true if file-specific switches were not
    --  specified, and Value is in fact the list of default switches defined
    --  at the package level.

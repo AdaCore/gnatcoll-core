@@ -2867,6 +2867,11 @@ package body GNATCOLL.Projects is
 
          Is_Default_Value := True;
       end if;
+
+      if Value = null then
+         --  No switches
+         Value := new String_List'(1 .. 0 => null);
+      end if;
    end Switches;
 
    --------------
