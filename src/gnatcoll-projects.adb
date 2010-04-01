@@ -4071,15 +4071,26 @@ package body GNATCOLL.Projects is
             null;
       end;
 
-      if View = null then
-         raise Invalid_Project;
-      end if;
+      --  Backward compatibility: load the project even if there was a fatal
+      --  error. However, the view might be partial...
+      --    if View = null then
+      --       raise Invalid_Project;
+      --    end if;
 
       Trace (Me, "View has been recomputed");
 
       --  Now that we have the view, we can create the project instances
 
-      Self.Data.Root.Data.View := View;
+      if View = Prj.No_Project then
+         --  There was an error, but we still want to manipulate that project
+         Self.Data.Root.Data.View :=
+           Get_View (Self.Data.View,
+                     Name => Prj.Tree.Name_Of
+                       (Self.Data.Root.Data.Node, Self.Data.Tree));
+      else
+         Self.Data.Root.Data.View := View;
+      end if;
+
       Create_Project_Instances (Self, With_View => True);
 
       Parse_Source_Files (Self);
