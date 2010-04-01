@@ -207,6 +207,9 @@ package body GNATCOLL.Projects is
    --  Compute the list of all projects that import, possibly indirectly,
    --  Project.
 
+   procedure Reset_View (Tree : Project_Tree'Class);
+   --  Clear internal tables for the view
+
    function String_Elements
      (Data : Project_Tree_Data_Access)
       return Prj.String_Element_Table.Table_Ptr;
@@ -3905,6 +3908,17 @@ package body GNATCOLL.Projects is
          raise;
    end Internal_Load;
 
+   ----------------
+   -- Reset_View --
+   ----------------
+
+   procedure Reset_View (Tree : Project_Tree'Class) is
+   begin
+      Tree.Data.Sources.Clear;
+      Tree.Data.Directories.Clear;
+      Unchecked_Free (Tree.Data.Scenario_Variables);
+   end Reset_View;
+
    --------------------
    -- Recompute_View --
    --------------------
@@ -4005,8 +4019,7 @@ package body GNATCOLL.Projects is
       Trace (Me, "Recomputing project view");
       Output.Set_Special_Output (Output.Output_Proc (Errors));
 
-      --  Reset the previous view, no longer relevant
-
+      Reset_View (Self);
       Prj.Initialize (Self.Data.View);
 
       --  Compute the list of scenario variables. This also ensures that
@@ -4420,9 +4433,7 @@ package body GNATCOLL.Projects is
       Sinput.P.Clear_Source_File_Table;
       Sinput.P.Reset_First;
 
-      Self.Data.Sources.Clear;
-      Self.Data.Directories.Clear;
-      Unchecked_Free (Self.Data.Scenario_Variables);
+      Reset_View (Self);
 
       --  Free all projects. This will decrease the refcounting for their data
       --  and possibly free the memory
