@@ -1,0 +1,21 @@
+==============================
+GNATCOLL 1.3 NEW FEATURES LIST
+==============================
+
+Copyright (C) 2010, AdaCore
+
+This file contains a list of new features introduced in GNATCOLL.
+A full description of all GNATCOLL features can be found in the GNATCOLL
+documentation and header files (*.ads).
+
+An ISO date (YYYY-MM-DD) appears in parentheses after the
+description line. This date shows the implementation date
+of the feature.
+
+New features on 1.3
+-------------------
+
+NF-13-I422-003 Projects: new API to manipulate project files
+
+   This API gives access to parse and manipulate project files (.gpr) and
+   their attributes, as well as edit project files
