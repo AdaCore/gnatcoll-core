@@ -27,6 +27,7 @@ with Ada.Strings.Fixed;          use Ada.Strings.Fixed;
 with Ada.Strings.Hash_Case_Insensitive;
 with Ada.Strings.Maps;           use Ada.Strings.Maps;
 with Ada.Text_IO;                use Ada.Text_IO;
+with Atree;
 with GNAT.Case_Util;             use GNAT.Case_Util;
 with GNAT.Directory_Operations;  use GNAT.Directory_Operations;
 with GNAT.OS_Lib;                use GNAT.OS_Lib;
@@ -4471,6 +4472,7 @@ package body GNATCOLL.Projects is
    procedure Finalize is
    begin
       Namet.Finalize;
+      Atree.Atree_Private_Part.Nodes.Free;
    end Finalize;
 
    ---------
