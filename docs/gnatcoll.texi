@@ -156,6 +156,7 @@ unmodified in any copy.
 * Managing Memory:: The storage pools.
 * Manipulating Files::
 * Three state logic:: The tribooleans.
+* Projects::
 * Database interface::
 * Index::
 
@@ -218,6 +219,8 @@ Manipulating Files
 * GtkAda support for virtual files::
 
 Three state logic
+
+Project
 
 Database interface
 * Supported database systems::
@@ -3063,6 +3066,40 @@ provides an @code{Equal} function.
 
 See the specs of the package to see the truth tables associated with those
 operators.
+
+@c -----------------------------------------------------------------------
+@node Projects
+@chapter Projects
+@c -----------------------------------------------------------------------
+@noindent
+
+The package @code{GNATCOLL.Projects} provides an extensive interface to
+parse, manipulate and edit project files (@file{.gpr} files).
+
+Although the interface is best used using the Ada05 notation, it is fully
+compatible with Ada95.
+
+Here is a quick example on how to use the interface, although the spec
+file itself contains much more detailed information on all the subprograms
+related to the manipulation of project files.
+
+
+@CODESAMPLE{
+@b{with} GNATCOLL.Projects; @b{use} GNATCOLL.Projects;@NL{}
+@b{with} GNATCOLL.VFS;      @b{use} GNATCOLL.VFS;@NL{}
+@NL{}
+Tree  : Project_Tree;@NL{}
+Files : File_Array_Access;@NL{}
+@NL{}
+Tree.Load (GNATCOLL.VFS.Create (+"path_to_project.gpr"));@NL{}
+@NL{}
+@i{--  List the source files for project and all imported projects}@NL{}
+@NL{}
+Files := Tree.Root_Project.Source_Files (Recursive => True);@NL{}
+@b{for} F @b{in} Files'Range @b{loop}@NL{}
+   Put_Line ("File is: " & Files (F).Display_Full_Name);@NL{}
+@b{end loop};@NL{}
+}
 
 @c -----------------------------------------------------------------------
 @node Database interface
