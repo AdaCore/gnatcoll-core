@@ -13,6 +13,7 @@ AM_PATH_POSTGRES
 AM_PATH_SQLITE
 AM_PATH_PYGTK(2.8)
 AM_PATH_GMP
+AM_GNAT_SOURCES
 AM_TO_GPR($GMP_LIBS,      GMP_LIBS_GPR)
 AM_TO_GPR($PYTHON_LIBS,   PYTHON_LIBS_GPR)
 AM_TO_GPR($PYTHON_CFLAGS, PYTHON_CFLAGS_GPR)
@@ -41,6 +42,10 @@ AC_MSG_NOTICE([ PostgreSQL: $WITH_POSTGRES $PATH_LIBPQ])
 AC_MSG_NOTICE([    use --with-postgresql to override])
 AC_MSG_NOTICE([ Sqlite: $WITH_SQLITE $PATH_LIBSQLITE])
 AC_MSG_NOTICE([    use --with-sqlite to override])
+AC_MSG_NOTICE([ Projects: $WITH_PROJECTS])
+if test $WITH_PROJECTS = no; then
+AC_MSG_NOTICE([    create gnat_src to override])
+fi
 AC_MSG_NOTICE([ gmp: $WITH_GMP])
 AC_MSG_NOTICE([    use --with-gmp to override])
 AC_MSG_NOTICE([--------------------------------------------])

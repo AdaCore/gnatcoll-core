@@ -21,9 +21,28 @@ AC_DEFUN(CHECK_BUILD_TYPE,
 ])
 
 #############################################################
+# Check whether we have the GNAT sources available
+# The following variables are exported by configure:
+#   @WITH_PROJECTS@:    either "yes" or "no"
+#############################################################
+
+AC_DEFUN(AM_GNAT_SOURCES,
+[
+  AC_MSG_CHECKING(whether gnat sources are found)
+  if test -d gnat_src; then
+     HAS_GNAT_SOURCES=yes
+  else
+     HAS_GNAT_SOURCES=no
+  fi
+
+  WITH_PROJECTS=$HAS_GNAT_SOURCES
+  AC_SUBST(WITH_PROJECTS)
+])
+
+#############################################################
 # Check whether GNAT on that target supports building shared
 # libraries
-# The following variables is exported by configure:
+# The following variables are exported by configure:
 #   @GNAT_BUILDS_SHARED@: either "yes" or "no"
 #   @DEFAULT_LIBRARY_TYPE@: either "static" or "relocatable"
 #############################################################

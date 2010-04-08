@@ -1,13 +1,24 @@
 with "../gnatcoll_shared";
 
 project GnatColl is
-   for Source_Dirs     use (".", "../gnat", "../gnat/sdefault");
+   for Source_Dirs     use (".");
    for Library_Kind    use GnatColl_Shared.Library_Type;
    for Object_Dir      use "obj/gnatcoll/" & Project'Library_Kind;
    for Library_Dir     use "lib/gnatcoll/" & Project'Library_Kind;
    for Library_Name    use GnatColl_Shared.Name;
    for Library_Version use
       "lib" & Project'Library_Name & ".so." & GnatColl_Shared.Version;
+
+   case Gnatcoll_Shared.Projects is
+      when "yes" =>
+         for Source_Dirs use
+            Project'Source_Dirs & ("../gnat", "../gnat/sdefault");
+      when "no" =>
+         for Excluded_Source_Files use ("gnatcoll-projects.ads",
+                                        "gnatcoll-projects.adb",
+                                        "gnatcoll-projects-normalize.ads",
+                                        "gnatcoll-projects-normalize.adb");
+   end case;
 
    for Languages use ("Ada", "C");
 
@@ -38,8 +49,12 @@ project GnatColl is
 	      use "gnatcoll-io-native-codec__win32.adb";
       end case;
 
-      for Implementation ("mlib.tgt.specific")
-          use "mlib-tgt-specific-linux.adb";
+      case GnatColl_Shared.Projects is
+         when "yes" => for Implementation ("mlib.tgt.specific")
+            use "mlib-tgt-specific-linux.adb";
+         when "no" =>
+            null;
+      end case;
    end Naming;
 
 end GnatColl;

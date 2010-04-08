@@ -16,6 +16,7 @@ project GnatColl_Shared is
    Postgres : Yes_No := External ("POSTGRES", "@WITH_POSTGRES@");
    Sqlite   : Yes_No := External ("SQLITE", "@WITH_SQLITE@");
    Gmp      : Yes_No := External ("GMP", "@WITH_GMP@");
+   Projects : Yes_No := External ("PROJECTS", "@WITH_PROJECTS@");
    Templates : Yes_No := "no";  --  Hard-coded for now
    Postgres_Has_PQprepare : Yes_No :=
       External ("HAS_PQPREPARE", "@HAS_PQPREPARE@");
@@ -63,7 +64,7 @@ project GnatColl_Shared is
    end Binder;
 
    package Builder is
-      for Switches ("Ada") use ("-m", "-j" & Processors, "-p");
+      for Switches ("Ada") use ("-m", "-j" & Processors);
    end Builder;
 
    package Ide is
