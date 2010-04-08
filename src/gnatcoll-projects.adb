@@ -140,7 +140,7 @@ package body GNATCOLL.Projects is
       Status  : Project_Status := From_File;
 
       Root    : Project_Type := No_Project;
-      --  The root of the project hierarchy.
+      --  The root of the project hierarchy
 
       Sources : Names_Files.Map;
       --  Index on base source file names, returns information about the file
@@ -198,7 +198,7 @@ package body GNATCOLL.Projects is
    procedure Reset
      (Tree : in out Project_Tree'Class;
       Env  : Project_Environment_Access);
-   --  Make sure the Tree data has been created and initialized.
+   --  Make sure the Tree data has been created and initialized
 
    function Substitute_Dot
      (Unit_Name : String; Dot_Replacement : String) return String;
@@ -256,7 +256,7 @@ package body GNATCOLL.Projects is
    --  Internal version of Attribute_Indexes
 
    procedure Reset_View (Self : in out Project_Data'Class);
-   --  Reset and free the internal data of the project view.
+   --  Reset and free the internal data of the project view
 
    procedure Compute_Scenario_Variables (Tree : Project_Tree_Data_Access);
    --  Compute (and cache) the whole list of scenario variables for the
@@ -315,7 +315,7 @@ package body GNATCOLL.Projects is
      (Project : Project_Type;
       Id      : Namet.Path_Name_Type;
       Xref_Dirs : Boolean) return Filesystem_String;
-   --  Adds the object subdirectory to Id if one is defined.
+   --  Adds the object subdirectory to Id if one is defined
 
    -----------
    -- Lists --

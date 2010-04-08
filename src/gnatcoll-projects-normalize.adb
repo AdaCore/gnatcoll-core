@@ -1700,7 +1700,7 @@ package body GNATCOLL.Projects.Normalize is
          Decl_Item2              : Project_Node_Id;
 
          procedure Add_Decl_Item (To_Case_Item : Project_Node_Id);
-         --  Add Decl_Item to To_Case_Item.
+         --  Add Decl_Item to To_Case_Item
 
          -------------------
          -- Add_Decl_Item --
@@ -2873,7 +2873,7 @@ package body GNATCOLL.Projects.Normalize is
       Name        : constant Name_Id := Get_String (New_Name);
       Old_Name    : constant Name_Id := Get_String (Project.Name);
       Old         : constant Project_Type :=
-        Project_Type (Project_From_Name (Tree, Name));
+                      Project_Type (Project_From_Name (Tree, Name));
       Imported    : Project_Type;
       Iterator    : Project_Iterator;
       With_Clause : Project_Node_Id;
