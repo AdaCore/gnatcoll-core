@@ -492,7 +492,7 @@ package body GNATCOLL.Projects is
    is
       View : constant Prj.Project_Id := Get_View (Project);
    begin
-      if Project.Data.Node = Empty_Node then
+      if Project.Data = null or else Project.Data.Node = Empty_Node then
          return GNATCOLL.VFS.No_File;
 
       elsif View = Prj.No_Project then
