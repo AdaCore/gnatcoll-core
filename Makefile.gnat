@@ -14,6 +14,7 @@ GNAT_SOURCES_FOR_GNATCOLL= \
   fname.ads fname.adb \
   gnatvsn.ads gnatvsn.adb \
   hostparm.ads \
+  lib.ads lib.adb \
   makeutl.ads makeutl.adb \
   mlib.ads mlib.adb \
   mlib-fil.ads mlib-fil.adb \
