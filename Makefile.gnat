@@ -65,6 +65,7 @@ GNAT_SOURCES_FOR_GNATCOLL= \
   tree_io.ads tree_io.adb \
   types.ads types.adb \
   uintp.ads uintp.adb \
+  uname.ads uname.adb \
   urealp.ads urealp.adb \
   widechar.ads widechar.adb \
   xsnamest.adb \
