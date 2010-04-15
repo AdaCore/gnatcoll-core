@@ -202,6 +202,10 @@ package body GNATCOLL.VFS is
       function Internal_Get_Path (FS : FS_Type) return FS_String;
       --  Get Full_Filename according to Normalize setting
 
+      -----------------------
+      -- Internal_Get_Path --
+      -----------------------
+
       function Internal_Get_Path (FS : FS_Type) return FS_String is
       begin
          if not Normalize then
