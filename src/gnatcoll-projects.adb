@@ -4036,6 +4036,9 @@ package body GNATCOLL.Projects is
 
       Compute_Scenario_Variables (Self.Data);
 
+      Opt.Follow_Links_For_Files := not Self.Data.Env.Trusted_Mode;
+      Opt.Follow_Links_For_Dirs  := not Self.Data.Env.Trusted_Mode;
+
       begin
          Flags := Create_Flags
            (On_Error'Unrestricted_Access, Require_Sources => False);
