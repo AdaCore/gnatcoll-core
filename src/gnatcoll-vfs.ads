@@ -165,7 +165,7 @@ package GNATCOLL.VFS is
 
    function Locate_On_Path
      (Base_Name : Filesystem_String) return Virtual_File;
-   --  Locate the file from its base name and the PATH environment variable.
+   --  Locate the file from its base name and the PATH environment variable
 
    ----------------------
    -- Retrieving names --
@@ -192,8 +192,7 @@ package GNATCOLL.VFS is
    function Full_Name
      (File          : Virtual_File;
       Normalize     : Boolean := False;
-      Resolve_Links : Boolean := False)
-      return Cst_String_Access;
+      Resolve_Links : Boolean := False) return Cst_String_Access;
    --  Return the full path to File.
    --  If Normalize is True, the file name is first normalized, note that links
    --  are not resolved there by default, unless you specify Resolve_Links to
@@ -204,9 +203,8 @@ package GNATCOLL.VFS is
 
    function Full_Name
      (File      : Virtual_File;
-      Normalize : Boolean := False)
-      return Filesystem_String;
-   --  Same as above, returning a filesystem_string.
+      Normalize : Boolean := False) return Filesystem_String;
+   --  Same as above, returning a filesystem_string
 
    function Full_Name_Hash
      (Key : Virtual_File) return Ada.Containers.Hash_Type;
@@ -281,7 +279,7 @@ package GNATCOLL.VFS is
    ------------------------
 
    function Is_Local (File : Virtual_File) return Boolean;
-   --  Whether File is local to the host or is a remote file.
+   --  Whether File is local to the host or is a remote file
 
    function Get_Host (File : Virtual_File) return String;
    --  Retrieve the host of the file, or Local_Host if the file is local to the
@@ -355,7 +353,7 @@ package GNATCOLL.VFS is
    --  new File_Array is created.
 
    procedure Remove (Files : in out File_Array_Access; F : Virtual_File);
-   --  Remove F from Files.
+   --  Remove F from Files
 
    function To_Path (Paths : File_Array) return Filesystem_String;
    --  Translates a list of Paths into a path string (e.g. the same format as
@@ -378,7 +376,7 @@ package GNATCOLL.VFS is
    function Locate_Regular_File
      (File_Name : Filesystem_String;
       Path      : File_Array) return Virtual_File;
-   --  Locate a regular file from its base name and a list of paths.
+   --  Locate a regular file from its base name and a list of paths
 
    -------------------------
    --  Manipulating files --
@@ -475,7 +473,7 @@ package GNATCOLL.VFS is
 
    function Read_Files_From_Dirs
      (Dirs : File_Array) return File_Array_Access;
-   --  Read all files from the list of directories Dirs.
+   --  Read all files from the list of directories Dirs
 
    type Virtual_Dir is private;
 
