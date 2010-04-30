@@ -884,11 +884,10 @@ package body GNATCOLL.VFS is
       if File.Value = null then
          return False;
 
-      elsif File.Value.Kind = Directory then
-         return False;
-
-      elsif File.Value.Kind = GNATCOLL.IO.File then
-         return True;
+      elsif File.Value.all not in GNATCOLL.IO.Native.Native_File_Record'Class
+        and then File.Value.Kind /= Unknown
+      then
+         return File.Value.Kind = GNATCOLL.IO.File;
 
       else
          Ret := File.Value.Is_Regular_File;
@@ -981,11 +980,10 @@ package body GNATCOLL.VFS is
       if VF.Value = null then
          return False;
 
-      elsif VF.Value.Kind = Directory then
-         return True;
-
-      elsif VF.Value.Kind = File then
-         return False;
+      elsif VF.Value.all not in GNATCOLL.IO.Native.Native_File_Record'Class
+        and then VF.Value.Kind /= Unknown
+      then
+         return VF.Value.Kind = Directory;
 
       else
          Ret := VF.Value.Is_Directory;
