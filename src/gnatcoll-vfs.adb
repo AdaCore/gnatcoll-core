@@ -722,9 +722,7 @@ package body GNATCOLL.VFS is
    -- To_Local --
    --------------
 
-   function To_Local
-     (File : Virtual_File) return Virtual_File
-   is
+   function To_Local (File : Virtual_File) return Virtual_File is
    begin
       if File.Value = null then
          return No_File;
@@ -820,8 +818,7 @@ package body GNATCOLL.VFS is
    function Convert
      (File     : Virtual_File;
       From_Dir : Virtual_File;
-      To_Dir   : Virtual_File)
-      return Virtual_File
+      To_Dir   : Virtual_File) return Virtual_File
    is
    begin
       if File.Value = null
@@ -983,10 +980,13 @@ package body GNATCOLL.VFS is
    begin
       if VF.Value = null then
          return False;
+
       elsif VF.Value.Kind = Directory then
          return True;
+
       elsif VF.Value.Kind = File then
          return False;
+
       else
          Ret := VF.Value.Is_Directory;
 
@@ -1040,7 +1040,8 @@ package body GNATCOLL.VFS is
    -- Read_File --
    ---------------
 
-   function Read_File (File : Virtual_File) return GNAT.Strings.String_Access
+   function Read_File
+     (File : Virtual_File) return GNAT.Strings.String_Access
    is
    begin
       if File.Value = null then
@@ -1062,15 +1063,14 @@ package body GNATCOLL.VFS is
      (File   : Virtual_File;
       Append : Boolean := False) return Writable_File
    is
-      Fd : GNAT.OS_Lib.File_Descriptor;
       use type GNAT.OS_Lib.File_Descriptor;
+      Fd : GNAT.OS_Lib.File_Descriptor;
    begin
       if File.Value = null then
          return Invalid_File;
       end if;
 
-      File.Value.Open_Write
-        (Append and then File.Is_Regular_File, Fd);
+      File.Value.Open_Write (Append and then File.Is_Regular_File, Fd);
 
       if Fd = GNAT.OS_Lib.Invalid_FD then
          return Invalid_File;

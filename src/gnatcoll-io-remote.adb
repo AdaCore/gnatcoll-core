@@ -97,8 +97,7 @@ package body GNATCOLL.IO.Remote is
    function Create
      (Host      : String;
       Path      : FS_String;
-      Normalize : Boolean)
-      return File_Access
+      Normalize : Boolean) return File_Access
    is
       Ret  : Remote_File_Access;
 
@@ -288,8 +287,7 @@ package body GNATCOLL.IO.Remote is
 
    function Dispatching_Create
      (Ref : not null access Remote_File_Record;
-      Full_Path : FS_String)
-      return File_Access
+      Full_Path : FS_String) return File_Access
    is
    begin
       return Create (Ref.Get_Host, Full_Path, False);
@@ -301,8 +299,7 @@ package body GNATCOLL.IO.Remote is
 
    function To_UTF8
      (Ref : not null access Remote_File_Record;
-      Path : FS_String)
-      return String
+      Path : FS_String) return String
    is
       pragma Unreferenced (Ref);
    begin
@@ -315,8 +312,7 @@ package body GNATCOLL.IO.Remote is
 
    function From_UTF8
      (Ref : not null access Remote_File_Record;
-      Path : String)
-      return FS_String
+      Path : String) return FS_String
    is
       pragma Unreferenced (Ref);
    begin
@@ -327,10 +323,7 @@ package body GNATCOLL.IO.Remote is
    -- Is_Local --
    --------------
 
-   function Is_Local
-     (File : Remote_File_Record)
-      return Boolean
-   is
+   function Is_Local (File : Remote_File_Record) return Boolean is
       pragma Unreferenced (File);
    begin
       return False;
@@ -341,8 +334,7 @@ package body GNATCOLL.IO.Remote is
    ------------
 
    function Get_FS
-     (File : not null access Remote_File_Record)
-      return FS_Type
+     (File : not null access Remote_File_Record) return FS_Type
    is
    begin
       Ensure_Initialized (File);
@@ -376,8 +368,7 @@ package body GNATCOLL.IO.Remote is
    ---------------------
 
    function Is_Regular_File
-     (File : not null access Remote_File_Record)
-      return Boolean
+     (File : not null access Remote_File_Record) return Boolean
    is
    begin
       Ensure_Initialized (File);
@@ -400,8 +391,7 @@ package body GNATCOLL.IO.Remote is
    ------------------
 
    function Is_Directory
-     (File : not null access Remote_File_Record)
-      return Boolean
+     (File : not null access Remote_File_Record) return Boolean
    is
    begin
       Ensure_Initialized (File);
@@ -424,8 +414,7 @@ package body GNATCOLL.IO.Remote is
    ----------------------
 
    function Is_Symbolic_Link
-     (File : not null access Remote_File_Record)
-      return Boolean
+     (File : not null access Remote_File_Record) return Boolean
    is
    begin
       Ensure_Initialized (File);
@@ -448,8 +437,7 @@ package body GNATCOLL.IO.Remote is
    ---------------------
 
    function File_Time_Stamp
-     (File : not null access Remote_File_Record)
-      return Ada.Calendar.Time
+     (File : not null access Remote_File_Record) return Ada.Calendar.Time
    is
    begin
       Ensure_Initialized (File);
@@ -472,8 +460,7 @@ package body GNATCOLL.IO.Remote is
    -----------------
 
    function Is_Writable
-     (File : not null access Remote_File_Record)
-      return Boolean
+     (File : not null access Remote_File_Record) return Boolean
    is
    begin
       Ensure_Initialized (File);
@@ -748,8 +735,7 @@ package body GNATCOLL.IO.Remote is
    ----------------
 
    function Change_Dir
-     (Dir : not null access Remote_File_Record)
-      return Boolean
+     (Dir : not null access Remote_File_Record) return Boolean
    is
    begin
       Ensure_Initialized (Dir);
@@ -774,8 +760,7 @@ package body GNATCOLL.IO.Remote is
    function Read_Dir
      (Dir            : not null access Remote_File_Record;
       Dirs_Only      : Boolean := False;
-      Files_Only     : Boolean := False)
-      return GNAT.Strings.String_List
+      Files_Only     : Boolean := False) return GNAT.Strings.String_List
    is
    begin
       Ensure_Initialized (Dir);
@@ -800,8 +785,7 @@ package body GNATCOLL.IO.Remote is
    --------------
 
    function Make_Dir
-     (Dir : not null access Remote_File_Record)
-      return Boolean
+     (Dir : not null access Remote_File_Record) return Boolean
    is
    begin
       Ensure_Initialized (Dir);
