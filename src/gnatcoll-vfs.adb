@@ -894,7 +894,7 @@ package body GNATCOLL.VFS is
          return True;
 
       else
-         Ret := File.Value /= null and then File.Value.Is_Regular_File;
+         Ret := File.Value.Is_Regular_File;
 
          if Ret then
             File.Value.Kind := GNATCOLL.IO.File;
@@ -988,7 +988,7 @@ package body GNATCOLL.VFS is
       elsif VF.Value.Kind = File then
          return False;
       else
-         Ret := VF.Value /= null and then VF.Value.Is_Directory;
+         Ret := VF.Value.Is_Directory;
 
          if Ret then
             VF.Ensure_Directory;
