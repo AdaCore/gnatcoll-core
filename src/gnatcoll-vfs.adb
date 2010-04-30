@@ -886,6 +886,7 @@ package body GNATCOLL.VFS is
 
       elsif File.Value.all not in GNATCOLL.IO.Native.Native_File_Record'Class
         and then File.Value.Kind /= Unknown
+      --  Only use cache for remote files
       then
          return File.Value.Kind = GNATCOLL.IO.File;
 
@@ -982,6 +983,7 @@ package body GNATCOLL.VFS is
 
       elsif VF.Value.all not in GNATCOLL.IO.Native.Native_File_Record'Class
         and then VF.Value.Kind /= Unknown
+      --  Only use cache for remote files
       then
          return VF.Value.Kind = Directory;
 
