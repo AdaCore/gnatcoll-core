@@ -465,7 +465,7 @@ package body GNATCOLL.SQL.Exec is
       begin
          if R.all in DBMS_Direct_Cursor'Class then
             return Image
-              (Natural (Processed_Rows (DBMS_Forward_Cursor'Class (R.all))),
+              (Processed_Rows (DBMS_Forward_Cursor'Class (R.all)),
                Min_Width => 1);
          else
             return "??";
@@ -1093,7 +1093,7 @@ package body GNATCOLL.SQL.Exec is
         (Database_Connection_Record'Class, Database_Connection);
    begin
       if Connection /= null then
-         Close (Database_Connection_Record'Class (Connection.all)'Access);
+         Close (Connection);
          Free (Connection.Username);
          Free (Connection.Error_Msg);
          Unchecked_Free (Connection);

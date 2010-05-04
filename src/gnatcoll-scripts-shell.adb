@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------
 --                          G N A T C O L L                          --
 --                                                                   --
---                 Copyright (C) 2003-2009, AdaCore                  --
+--                 Copyright (C) 2003-2010, AdaCore                  --
 --                                                                   --
 -- GPS is free  software;  you can redistribute it and/or modify  it --
 -- under the terms of the GNU General Public License as published by --
@@ -1689,7 +1689,7 @@ package body GNATCOLL.Scripts.Shell is
      (Subprogram : Shell_Subprogram_Record) return Scripting_Language
    is
    begin
-      return Scripting_Language (Subprogram.Script);
+      return Subprogram.Script;
    end Get_Script;
 
    -----------------

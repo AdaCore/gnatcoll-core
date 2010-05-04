@@ -1,7 +1,7 @@
 -----------------------------------------------------------------------
 --                               G N A T C O L L                     --
 --                                                                   --
---                      Copyright (C) 2003-2009, AdaCore             --
+--                      Copyright (C) 2003-2010, AdaCore             --
 --                                                                   --
 -- GPS is free  software;  you can redistribute it and/or modify  it --
 -- under the terms of the GNU General Public License as published by --
@@ -139,8 +139,8 @@ package body GNATCOLL.Scripts is
      (List   : Instance_List;
       Script : access Scripting_Language_Record'Class) return Class_Instance
    is
-      Tmp : constant Scripting_Language_Array := Scripts_Repository
-        (Get_Repository (Script)).Scripting_Languages.all;
+      Tmp : constant Scripting_Language_Array :=
+        Get_Repository (Script).Scripting_Languages.all;
    begin
       if List.List /= null then
          for T in Tmp'Range loop
@@ -161,8 +161,8 @@ package body GNATCOLL.Scripts is
       Script : access Scripting_Language_Record'Class;
       Inst   : Class_Instance)
    is
-      Tmp : constant Scripting_Language_Array := Scripts_Repository
-        (Get_Repository (Script)).Scripting_Languages.all;
+      Tmp : constant Scripting_Language_Array :=
+        Get_Repository (Script).Scripting_Languages.all;
    begin
       if List.List = null then
          List.List := new Instance_Array (Tmp'Range);
