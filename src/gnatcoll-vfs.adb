@@ -115,8 +115,8 @@ package body GNATCOLL.VFS is
 
       --  Finally, we test the normalized paths
       else
-         Ensure_Normalized (File1, True);
-         Ensure_Normalized (File2, True);
+         Ensure_Normalized (File1, Handle_Symbolic_Links);
+         Ensure_Normalized (File2, Handle_Symbolic_Links);
 
          --  We also take care of potential trailing dir separator by enforcing
          --  them

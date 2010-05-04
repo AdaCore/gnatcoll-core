@@ -959,7 +959,7 @@ package body GNATCOLL.Projects is
       Full : String := String
         (File.Full_Name
            (Normalize     => True,
-            Resolve_Links => Opt.Follow_Links_For_Files).all);
+            Resolve_Links => not Tree.Env.Trusted_Mode).all);
       Path : Path_Name_Type;
       Lang : Name_Id;
 
@@ -3274,10 +3274,12 @@ package body GNATCOLL.Projects is
    ----------------------
 
    procedure Set_Trusted_Mode
-     (Self : in out Project_Environment; Trusted : Boolean := True)
-   is
+     (Self : in out Project_Environment; Trusted : Boolean := True) is
    begin
       Self.Trusted_Mode := Trusted;
+      Opt.Follow_Links_For_Files := not Trusted;
+      Opt.Follow_Links_For_Dirs  := not Trusted;
+      GNATCOLL.VFS.Symbolic_Links_Support (Active => not Trusted);
    end Set_Trusted_Mode;
 
    ------------------
