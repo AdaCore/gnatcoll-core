@@ -3155,39 +3155,35 @@ package body GNATCOLL.Projects is
      (Project : Project_Type;
       File    : Filesystem_String) return Filesystem_String
    is
-      Base         : constant Filesystem_String := Base_Name (File);
-      Default_Exec : constant Filesystem_String := Base
-        (Base'First .. Delete_File_Suffix (Base, Project));
+      Base        : constant Filesystem_String := Base_Name (File);
+      Exec_Name   : File_Name_Type;
+      Main_Source : Source_Id;
 
    begin
       if Project = No_Project then
          --  Simply remove the current extension, since we don't have any
          --  information on the file itself.
-         return Default_Exec;
+         return Base
+           (Base'First .. Delete_File_Suffix (Base, Project));
 
       else
-         declare
-            From_Project : constant String := Project.Attribute_Value
-              (Executable_Attribute,
-               Index => String (Base), Default => "");
-            Result       : File_Info;
-         begin
-            if From_Project = "" then
-               --  Check whether the file is a special naming scheme for an
-               --  Ada unit. If this is the case, the name of the unit is the
-               --  name of the executable
+         Main_Source := Find_Source
+           (In_Tree   => Project.Data.Tree.View,
+            Project   => Project.Data.View,
+            Base_Name => File_Name_Type (Get_String (+Base)));
+         if Main_Source = No_Source then
+            return Base
+              (Base'First .. Delete_File_Suffix (Base, Project));
+         end if;
 
-               Result := Info (Project.Data.Tree, Create (File));
-               if Result.Name /= No_Name then
-                  return +Get_String (Result.Name);
-               end if;
-
-               --  Else use the default
-               return Default_Exec;
-            end if;
-
-            return +From_Project;
-         end;
+         Exec_Name := Executable_Of
+           (Project  => Project.Data.View,
+            In_Tree  => Project.Data.Tree.View,
+            Main     => Main_Source.File,
+            Index    => Main_Source.Index,
+            Ada_Main => False,
+            Language => Get_Name_String (Main_Source.Language.Name));
+         return +Get_String (Exec_Name);
       end if;
    end Executable_Name;
 
