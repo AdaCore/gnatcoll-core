@@ -502,7 +502,8 @@ package GNATCOLL.Projects is
       File    : GNATCOLL.VFS.Filesystem_String)
       return GNATCOLL.VFS.Filesystem_String;
    --  Return the name of the executable, either read from the project or
-   --  computed from File
+   --  computed from File. This name does not include executable suffixes (like
+   --  ".exe" for instance).
    --  If Project is No_Project, the default executable name for File is
    --  returned.
 

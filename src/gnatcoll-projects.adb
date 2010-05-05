@@ -3176,13 +3176,18 @@ package body GNATCOLL.Projects is
               (Base'First .. Delete_File_Suffix (Base, Project));
          end if;
 
+         --  Do not include the suffix: it might be incorrect if we user will
+         --  actually use a cross-compiler, since the suffix's default value
+         --  depends on the host.
+
          Exec_Name := Executable_Of
            (Project  => Project.Data.View,
             In_Tree  => Project.Data.Tree.View,
             Main     => Main_Source.File,
             Index    => Main_Source.Index,
             Ada_Main => False,
-            Language => Get_Name_String (Main_Source.Language.Name));
+            Language => Get_Name_String (Main_Source.Language.Name),
+            Include_Suffix => False);
          return +Get_String (Exec_Name);
       end if;
    end Executable_Name;
