@@ -513,7 +513,12 @@ package body GNATCOLL.VFS is
       end if;
 
       Ensure_Normalized (Key, True);
-      return Ada.Strings.Hash (+Key.Value.Normalized.all);
+
+      if Is_Case_Sensitive (Key.Value.Get_FS) then
+         return Ada.Strings.Hash (+Key.Value.Normalized.all);
+      else
+         return Ada.Strings.Hash (To_Lower (+Key.Value.Normalized.all));
+      end if;
    end Full_Name_Hash;
 
    --------------
