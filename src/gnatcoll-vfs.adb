@@ -32,6 +32,7 @@ with GNATCOLL.Path;             use GNATCOLL.Path;
 with GNATCOLL.Remote;           use GNATCOLL.Remote;
 with GNATCOLL.Remote.Db;        use GNATCOLL.Remote.Db;
 with GNATCOLL.VFS_Types;        use GNATCOLL.VFS_Types;
+with Ada.Strings.Hash_Case_Insensitive;
 
 package body GNATCOLL.VFS is
 
@@ -517,7 +518,7 @@ package body GNATCOLL.VFS is
       if Is_Case_Sensitive (Key.Value.Get_FS) then
          return Ada.Strings.Hash (+Key.Value.Normalized.all);
       else
-         return Ada.Strings.Hash (To_Lower (+Key.Value.Normalized.all));
+         return Ada.Strings.Hash_Case_Insensitive (+Key.Value.Normalized.all);
       end if;
    end Full_Name_Hash;
 
