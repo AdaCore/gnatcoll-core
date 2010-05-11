@@ -3,7 +3,7 @@
 
 @setfilename gnatcoll.info
 @include gnatcoll_include.texi
-@set gnatcoll GnatColl
+@set gnatcoll GNATColl
 @set Title   @value{gnatcoll}: GNAT Reusable Components
 
 @c --------------------------- macro
