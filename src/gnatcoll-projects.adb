@@ -4174,15 +4174,20 @@ package body GNATCOLL.Projects is
          P    : Project_Type;
 
       begin
-         --  The project will always exist, since we have already called
-         --  Create_Project_Instances once before to create them
-         Iter := Self.Data.Projects.Find (Name);
-         Assert (Me, Has_Element (Iter),
-                 "Create_Project_Instances must be called"
-                 & " to create project_type");
-         P := Element (Iter);
-         Reset_View (P.Data.all);
-         P.Data.View := Proj;
+         --  Ignore virtual extending projects
+         if Name'Length < Virtual_Prefix'Length
+           or else Name (1 .. Virtual_Prefix'Length) /= Virtual_Prefix
+         then
+            --  The project will always exist, since we have already called
+            --  Create_Project_Instances once before to create them
+            Iter := Self.Data.Projects.Find (Name);
+            Assert (Me, Has_Element (Iter),
+                    "Create_Project_Instances must be called"
+                    & " to create project_type");
+            P := Element (Iter);
+            Reset_View (P.Data.all);
+            P.Data.View := Proj;
+         end if;
       end Do_Project;
 
       procedure Do_Project2 (T : Project_Node_Tree_Ref; P : Project_Node_Id);
