@@ -458,7 +458,7 @@ package body GNATCOLL.Arg_Lists is
    -- Set_Nth_Arg --
    -----------------
 
-   procedure Set_Nth_Arg (C : in out Arg_List; N : Positive; Arg : String)
+   procedure Set_Nth_Arg (C : in out Arg_List; N : Natural; Arg : String)
    is
    begin
       --  If there are not enough arguments, create them

@@ -1,7 +1,7 @@
 -----------------------------------------------------------------------
 --                          G N A T C O L L                          --
 --                                                                   --
---                    Copyright (C) 2008-2009, AdaCore               --
+--                    Copyright (C) 2008-2010, AdaCore               --
 --                                                                   --
 -- GPS is free  software;  you can redistribute it and/or modify  it --
 -- under the terms of the GNU General Public License as published by --
@@ -62,8 +62,9 @@ package GNATCOLL.Utils is
    --  Capitalize a string, ie put in upper case the first character and all
    --  characters following '_'
 
+   function Starts_With (Str : String; Suffix : String) return Boolean;
    function Ends_With (Str : String; Suffix : String) return Boolean;
-   --  Return True if Str ends with Suffix
+   --  Return True if Str starts or ends with Suffix
 
 private
 

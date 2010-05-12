@@ -78,7 +78,7 @@ package GNATCOLL.Arg_Lists is
    function Nth_Arg (C : Arg_List; N : Natural) return String;
    --  Return the Nth argument. Nth_Arg (0) returns the command.
 
-   procedure Set_Nth_Arg (C : in out Arg_List; N : Positive; Arg : String);
+   procedure Set_Nth_Arg (C : in out Arg_List; N : Natural; Arg : String);
    --  Set the Nth arg.
    --  If there are not enough args, create them.
 

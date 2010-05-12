@@ -1,7 +1,7 @@
 -----------------------------------------------------------------------
 --                          G N A T C O L L                          --
 --                                                                   --
---                    Copyright (C) 2008-2009, AdaCore               --
+--                    Copyright (C) 2008-2010, AdaCore               --
 --                                                                   --
 -- GPS is free  software;  you can redistribute it and/or modify  it --
 -- under the terms of the GNU General Public License as published by --
@@ -195,5 +195,19 @@ package body GNATCOLL.Utils is
 
       return True;
    end Ends_With;
+
+   -----------------
+   -- Starts_With --
+   -----------------
+
+   function Starts_With (Str : String; Suffix : String) return Boolean is
+      pragma Suppress (All_Checks);
+   begin
+      if Str'Length < Suffix'Length then
+         return False;
+      end if;
+
+      return Str (Str'First .. Str'First + Suffix'Length - 1) = Suffix;
+   end Starts_With;
 
 end GNATCOLL.Utils;
