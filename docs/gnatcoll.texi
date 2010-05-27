@@ -182,6 +182,7 @@ Scripts API
 * Creating interactive consoles::
 * Exporting classes and methods::
 * Executing startup scripts::
+* Debugging scripts::
 
 Logging information
 * Configuring traces::
@@ -839,6 +840,7 @@ process:
 * Creating interactive consoles::
 * Exporting classes and methods::
 * Executing startup scripts::
+* Debugging scripts::
 @end menu
 
 @c -----------------------------------------------------------------------
@@ -1562,6 +1564,24 @@ plug-ins written in one of the scripting languages.
 There is not much to be said here, except that you should use the
 @code{GNATCOLL.Scripts.Execute_File} procedure to do so.
 
+@c -----------------------------------------------------------------------
+@node Debugging scripts
+@subsection Debugging scripts
+@c -----------------------------------------------------------------------
+@noindent
+
+@value{gnatcoll} provides a convenient hook to debug your script. By default,
+a script (python for instance) will call your Ada callback, which might
+raise errors. Most of the time, the error should indeed be reported to the
+user, and you can thus raise a standard exception, or call
+@code{Set_Error_Msg}.
+
+BUt if you wish to know which script was executing the command, it is
+generally not doable. You can however activate a trace (@pxref{Logging
+information}) called @code{"PYTHON.TB"} (for "traceback"), which will
+output the name of the command that is being executed, as well as the
+full traceback within the python scripts. This will help you locate which
+script is raising an exception.
 
 
 @c -----------------------------------------------------------------------

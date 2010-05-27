@@ -1,7 +1,7 @@
 -----------------------------------------------------------------------
 --                               G N A T C O L L                     --
 --                                                                   --
---                      Copyright (C) 2003-2009, AdaCore             --
+--                      Copyright (C) 2003-2010, AdaCore             --
 --                                                                   --
 -- GPS is free  software;  you can redistribute it and/or modify  it --
 -- under the terms of the GNU General Public License as published by --
@@ -26,11 +26,13 @@ with Interfaces.C.Strings;       use Interfaces.C, Interfaces.C.Strings;
 with GNAT.IO;                    use GNAT.IO;
 with GNAT.Strings;               use GNAT.Strings;
 with GNATCOLL.Scripts.Impl;      use GNATCOLL.Scripts, GNATCOLL.Scripts.Impl;
+with GNATCOLL.Traces;            use GNATCOLL.Traces;
 with System;                     use System;
 
 with GNATCOLL.Any_Types.Python;
 
 package body GNATCOLL.Scripts.Python is
+   Me_Stack : constant Trace_Handle := Create ("PYTHON.TB");
 
    ------------------------
    -- Python_Subprograms --
@@ -109,10 +111,14 @@ package body GNATCOLL.Scripts.Python is
       Minimum_Args, Maximum_Args : Natural;
       Is_Method                  : Boolean := False;
       Command                    : String (1 .. Length);
+      Class                      : Class_Type;
    end record;
    type Handler_Data_Access is access Handler_Data;
    --  Information stores with each python function to call the right Ada
    --  subprogram.
+
+   function Command_Name (Data : Handler_Data) return String;
+   --  Return the qualified name of the command "command" or "class.command"
 
    function Convert is new Ada.Unchecked_Conversion
      (System.Address, Handler_Data_Access);
@@ -238,6 +244,19 @@ package body GNATCOLL.Scripts.Python is
       end if;
    end Trace_Dump;
 
+   ------------------
+   -- Command_Name --
+   ------------------
+
+   function Command_Name (Data : Handler_Data) return String is
+   begin
+      if Data.Class = No_Class then
+         return Data.Command;
+      else
+         return Data.Class.Name.all & "." & Data.Command;
+      end if;
+   end Command_Name;
+
    -------------
    -- Destroy --
    -------------
@@ -347,6 +366,12 @@ package body GNATCOLL.Scripts.Python is
 
       if not PyRun_SimpleString (Setup_Cmd) then
          raise Program_Error with "Could not execute " & Setup_Cmd;
+      end if;
+
+      if Active (Me_Stack)
+        and then not PyRun_SimpleString ("import traceback")
+      then
+         raise Program_Error with "Could not import traceback.py";
       end if;
 
       Main_Module := PyImport_AddModule ("__main__");
@@ -606,7 +631,36 @@ package body GNATCOLL.Scripts.Python is
                    Convert (PyCObject_AsVoidPtr (Self));
       Size     : Integer := 0;
       Callback : Python_Callback_Data;
+      Tmp      : Boolean;
+      pragma Unreferenced (Tmp);
    begin
+      if Active (Me_Stack) then
+         declare
+            Module  : constant PyObject := PyImport_ImportModule ("traceback");
+            Newline, List, Join : PyObject;
+         begin
+            if Module /= null then
+               List := PyObject_CallMethod (Module, "format_stack");
+
+               if List /= null then
+                  Newline := PyString_FromString ("");
+                  Join := PyObject_CallMethod (Newline, "join", List);
+
+                  Trace (Me_Stack, "Executing " & Command_Name (Handler.all)
+                         & ASCII.LF & PyString_AsString (Join));
+                  Py_DECREF (Newline);
+                  Py_DECREF (List);
+                  Py_DECREF (Join);
+               end if;
+            end if;
+
+         exception
+            when E : others =>
+               Trace (Me_Stack, E);
+         end;
+
+      end if;
+
       if Args /= null then
          Size := PyTuple_Size (Args);
       end if;
@@ -717,6 +771,7 @@ package body GNATCOLL.Scripts.Python is
         (Length       => Command'Length,
          Command      => Command,
          Handler      => Handler,
+         Class        => Class,
          Script       => Python_Scripting (Script),
          Is_Method    => Class /= No_Class and then not Static_Method,
          Minimum_Args => Minimum_Args,
