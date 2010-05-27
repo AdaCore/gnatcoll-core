@@ -121,7 +121,7 @@
 @page
 @vskip 0pt plus 1filll
 
-Copyright @copyright{} 2007-2008, AdaCore
+Copyright @copyright{} 2007-2010, AdaCore
 
 This document may be copied, in whole or in part, in any form or by any
 means, as is or with alterations, provided that (1) alterations are clearly
@@ -135,7 +135,7 @@ unmodified in any copy.
 
 Version @value{Version}
 
-Copyright @copyright{} 2007-2008, AdaCore
+Copyright @copyright{} 2007-2010, AdaCore
 
 This document may be copied, in whole or in part, in any form or by any
 means, as is or with alterations, provided that (1) alterations are clearly
