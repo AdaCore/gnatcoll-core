@@ -32,7 +32,7 @@ with System;                     use System;
 with GNATCOLL.Any_Types.Python;
 
 package body GNATCOLL.Scripts.Python is
-   Me_Stack : constant Trace_Handle := Create ("PYTHON.TB");
+   Me_Stack : constant Trace_Handle := Create ("PYTHON.TB", Off);
 
    ------------------------
    -- Python_Subprograms --
