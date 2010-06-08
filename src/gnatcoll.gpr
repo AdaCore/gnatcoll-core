@@ -3,8 +3,10 @@ with "../gnatcoll_shared";
 project GnatColl is
    for Source_Dirs     use (".");
    for Library_Kind    use GnatColl_Shared.Library_Type;
-   for Object_Dir      use "obj/gnatcoll/" & Project'Library_Kind;
-   for Library_Dir     use "lib/gnatcoll/" & Project'Library_Kind;
+   for Object_Dir
+      use Gnatcoll_Shared'Object_Dir & "/gnatcoll/" & Project'Library_Kind;
+   for Library_Dir
+      use Gnatcoll_Shared'Library_Dir & "/gnatcoll/" & Project'Library_Kind;
    for Library_Name    use GnatColl_Shared.Name;
    for Library_Version use
       "lib" & Project'Library_Name & ".so." & GnatColl_Shared.Version;

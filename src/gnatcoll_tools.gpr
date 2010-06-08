@@ -3,7 +3,7 @@ with "gnatcoll_postgres";
 with "gnatcoll_sqlite";
 
 project GnatColl_Tools is
-   for Object_Dir use "obj";
+   for Object_Dir use Gnatcoll_Shared'Object_Dir;
    for Source_Dirs use ("tools");
 
    case GnatColl_Shared.Templates is
