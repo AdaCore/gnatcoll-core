@@ -4,6 +4,7 @@ project GnatColl_Shared is
 
    for Source_Dirs use ();
    for Object_Dir use "obj";
+   for Library_dir use "lib";
 
    type Build_Type is ("Debug", "Production");
    Build : Build_Type := External ("Gnatcoll_Build", "Production");
