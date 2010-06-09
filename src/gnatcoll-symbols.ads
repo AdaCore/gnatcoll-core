@@ -57,10 +57,14 @@ package GNATCOLL.Symbols is
    --  Comparing Symbol is the same as comparing the string itself, but much
    --  faster.
 
-   function Get (Sym : Symbol) return Cst_String_Access;
+   function Get
+      (Sym : Symbol; Empty_If_Null : Boolean := False)
+      return Cst_String_Access;
    pragma Inline_Always (Get);
    --  The string associated with the symbol.
-   --  The returned string must not be deallocated, it points to internal data
+   --  The returned string must not be deallocated, it points to internal data.
+   --  For No_Symbol, this returns null or the empty string, depending on
+   --  Empty_If_Null.
 
    procedure Free (Table : in out Symbol_Table_Record);
    procedure Free (Table : in out Symbol_Table_Access);
@@ -100,6 +104,8 @@ private
       Hash    : String_Htable.Set;
 
       Calls_To_Find : Natural := 0;
+      Total_Size    : Long_Long_Integer := 0;
+      Size_Saved    : Long_Long_Integer := 0;
    end record;
 
 end GNATCOLL.Symbols;

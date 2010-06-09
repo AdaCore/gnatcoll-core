@@ -105,9 +105,12 @@ package body GNATCOLL.Symbols is
          Result := Table.Hash.Find (Str'Unrestricted_Access);
 
          if not Has_Element (Result) then
+            Table.Total_Size := Table.Total_Size + Str'Length;
             Tmp := new String'(Str);
             Table.Hash.Include (Tmp);
             return Symbol (Tmp);
+         else
+            Table.Size_Saved := Table.Size_Saved + Str'Length;
          end if;
 
          return Symbol (Element (Result));
@@ -153,15 +156,29 @@ package body GNATCOLL.Symbols is
       Put_Line ("Number of buckets used:" & Bucket_Count'Img);
       Put_Line ("Mean entries per bucket:"
                 & Integer'Image (Integer (Self.Hash.Length) / Bucket_Count));
+      Put_Line ("Total size in strings:" & Self.Total_Size'Img);
+      Put_Line ("Size that would have been allocated for strings:"
+                & Self.Size_Saved'Img);
    end Display_Stats;
 
    ---------
    -- Get --
    ---------
 
-   function Get (Sym : Symbol) return Cst_String_Access is
+   function Get
+      (Sym : Symbol; Empty_If_Null : Boolean := False)
+      return Cst_String_Access
+   is
    begin
-      return Cst_String_Access (Sym);
+      if Sym = No_Symbol then
+         if Empty_If_Null then
+            return Cst_String_Access (Empty_String);
+         else
+            return null;
+         end if;
+      else
+         return Cst_String_Access (Sym);
+      end if;
    end Get;
 
    ----------
