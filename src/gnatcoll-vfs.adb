@@ -479,7 +479,7 @@ package body GNATCOLL.VFS is
      (File          : Virtual_File;
       Normalize     : Boolean := False;
       Resolve_Links : Boolean := False)
-      return Cst_String_Access is
+      return Cst_Filesystem_String_Access is
    begin
       if File.Value = null then
          return Empty_String'Access;
@@ -488,17 +488,18 @@ package body GNATCOLL.VFS is
 
          Ensure_Normalized (File, Resolve_Links);
 
-         return Cst_String_Access (+File.Value.Normalized.all'Access);
+         return Cst_Filesystem_String_Access
+           (+File.Value.Normalized.all'Access);
 
       elsif File.Value.Full = null
         and then Get_Host (File) /= Local_Host
       then
          GNATCOLL.IO.Remote.Ensure_Initialized
            (GNATCOLL.IO.Remote.Remote_File_Access (File.Value));
-         return Cst_String_Access (+File.Value.Full.all'Access);
+         return Cst_Filesystem_String_Access (+File.Value.Full.all'Access);
 
       else
-         return Cst_String_Access (+File.Value.Full.all'Access);
+         return Cst_Filesystem_String_Access (+File.Value.Full.all'Access);
       end if;
    end Full_Name;
 

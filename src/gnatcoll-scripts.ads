@@ -1,7 +1,7 @@
 -----------------------------------------------------------------------
 --                               G N A T C O L L                     --
 --                                                                   --
---                 Copyright (C) 2003-2009, AdaCore                  --
+--                 Copyright (C) 2003-2010, AdaCore                  --
 --                                                                   --
 -- GPS is free  software;  you can redistribute it and/or modify  it --
 -- under the terms of the GNU General Public License as published by --
@@ -33,6 +33,7 @@ with GNAT.OS_Lib;
 with GNAT.Strings;
 
 with GNATCOLL.Arg_Lists;     use GNATCOLL.Arg_Lists;
+with GNATCOLL.Utils;         use GNATCOLL.Utils;
 with GNATCOLL.VFS;           use GNATCOLL.VFS;
 with GNATCOLL.Any_Types;     use GNATCOLL.Any_Types;
 
@@ -44,7 +45,6 @@ package GNATCOLL.Scripts is
    type Scripting_Language_Record is abstract tagged private;
    type Scripting_Language is access all Scripting_Language_Record'Class;
 
-   type Cst_String_Access is access constant String;
    type Cst_Argument_List is array (Natural range <>) of Cst_String_Access;
 
    type Callback_Data is abstract tagged private;

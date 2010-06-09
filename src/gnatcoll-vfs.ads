@@ -72,7 +72,7 @@ package GNATCOLL.VFS is
      (Filesystem_String, Filesystem_String_Access);
    --  Conversion/Comparison/Concatenation functions
 
-   type Cst_String_Access is access constant Filesystem_String;
+   type Cst_Filesystem_String_Access is access constant Filesystem_String;
 
    ----------------
    -- Exceptions --
@@ -192,7 +192,7 @@ package GNATCOLL.VFS is
    function Full_Name
      (File          : Virtual_File;
       Normalize     : Boolean := False;
-      Resolve_Links : Boolean := False) return Cst_String_Access;
+      Resolve_Links : Boolean := False) return Cst_Filesystem_String_Access;
    --  Return the full path to File.
    --  If Normalize is True, the file name is first normalized, note that links
    --  are not resolved there by default, unless you specify Resolve_Links to

@@ -25,6 +25,8 @@ with GNAT.Strings;
 
 package GNATCOLL.Utils is
 
+   type Cst_String_Access is access constant String;
+
    No_Time : constant Ada.Calendar.Time;
    --  A constant to indicate uninitialized time. Recent versions of GNAT
    --  provide this constant in the GNAT.Calendar package, but the constant is
