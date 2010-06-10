@@ -166,7 +166,7 @@ package body GNATCOLL.Symbols is
    ---------
 
    function Get
-      (Sym : Symbol; Empty_If_Null : Boolean := False)
+      (Sym : Symbol; Empty_If_Null : Boolean := True)
       return Cst_String_Access
    is
    begin

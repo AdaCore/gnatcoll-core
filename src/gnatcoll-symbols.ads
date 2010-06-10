@@ -58,7 +58,7 @@ package GNATCOLL.Symbols is
    --  faster.
 
    function Get
-      (Sym : Symbol; Empty_If_Null : Boolean := False)
+      (Sym : Symbol; Empty_If_Null : Boolean := True)
       return Cst_String_Access;
    pragma Inline_Always (Get);
    --  The string associated with the symbol.
