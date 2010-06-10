@@ -69,6 +69,10 @@ package body GNATCOLL.Projects is
    --  A dummy suffixes that is used for languages that have either no spec or
    --  no implementation suffix defined.
 
+   Unknown_Importing_Projects : aliased constant Name_Id_Array (1 .. 0) :=
+     (others => <>);
+   --  A dummy array used while computing importing projects.
+
    package Virtual_File_List is new Ada.Containers.Doubly_Linked_Lists
      (Element_Type => Virtual_File);
 
@@ -163,7 +167,7 @@ package body GNATCOLL.Projects is
       --  Time when we last parsed the project from the disk
    end record;
 
-   function Get_View (Project : Project_Type) return Prj.Project_Id;
+   function Get_View (Project : Project_Type'Class) return Prj.Project_Id;
    function Get_View
      (Tree : Prj.Project_Tree_Ref; Name : Name_Id) return Prj.Project_Id;
    --  Return the project view for the project Name
@@ -2174,6 +2178,16 @@ package body GNATCOLL.Projects is
          return;
       end if;
 
+      --  Prevent a recursive call to this procedure: if the project has
+      --  a "limited with", we could end up calling Compute_Importing_Project
+      --  again for the same project, thus an infinite loop. To prevent this,
+      --  we set Dummy. That means however that we will not correctly compute
+      --  the list of imported project for imported projects below, so we
+      --  should not store them.
+
+      Project.Data.Importing_Projects :=
+        Unknown_Importing_Projects'Unrestricted_Access;
+
       if All_Prj = null then
          Compute_Imported_Projects (Root_Project);
          All_Prj := Root_Project.Data.Imported_Projects;
@@ -2184,6 +2198,7 @@ package body GNATCOLL.Projects is
 
       declare
          Include   : Boolean_Array (All_Prj'Range) := (others => False);
+         Was_Unknown : Boolean;
 
       begin
          for Index in All_Prj'Range loop
@@ -2203,8 +2218,35 @@ package body GNATCOLL.Projects is
 
                if Imports then
                   Include (Index) := True;
+
+                  --  The list computed for Parent might be incorrect is
+                  --  somewhere there is a "limited with" that goes back to
+                  --  Project (since we have set a Dummy above to prevent
+                  --  infinite recursion). So we will reset the list to
+                  --  null below, which means we might end up recomputing
+                  --  it later.
+
+                  Was_Unknown := Parent.Data.Importing_Projects = null
+                    or else Parent.Data.Importing_Projects =
+                      Unknown_Importing_Projects'Unrestricted_Access;
+
                   Compute_Importing_Projects (Parent);
                   Merge_Project (Parent, Include);
+
+                  if Was_Unknown then
+                     --  We cannot rely on the computed value if the parent
+                     --  was also importing Project, so we must reset the cache
+                     --  in that case. Otherwise keep the cache for maximum
+                     --  efficiency
+                     for J in Parent.Data.Importing_Projects'Range loop
+                        if Parent.Data.Importing_Projects (J) =
+                          Get_View (Project).Display_Name
+                        then
+                           Unchecked_Free (Parent.Data.Importing_Projects);
+                           exit;
+                        end if;
+                     end loop;
+                  end if;
                end if;
             end if;
          end loop;
@@ -2248,6 +2290,7 @@ package body GNATCOLL.Projects is
    exception
       when E : others =>
          Trace (Exception_Handle, E);
+         Project.Data.Importing_Projects := null;
    end Compute_Importing_Projects;
 
    ---------------------------------
@@ -2741,7 +2784,7 @@ package body GNATCOLL.Projects is
    -- Get_View --
    --------------
 
-   function Get_View (Project : Project_Type) return Prj.Project_Id is
+   function Get_View (Project : Project_Type'Class) return Prj.Project_Id is
    begin
       if Project.Data = null or else Project.Data.Node = Empty_Node then
          return Prj.No_Project;
