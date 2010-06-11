@@ -1,7 +1,7 @@
 -----------------------------------------------------------------------
 --                          G N A T C O L L                          --
 --                                                                   --
---                 Copyright (C) 2008-2009, AdaCore                  --
+--                 Copyright (C) 2008-2010, AdaCore                  --
 --                                                                   --
 -- GPS is free  software;  you can redistribute it and/or modify  it --
 -- under the terms of the GNU General Public License as published by --
@@ -193,7 +193,18 @@ package body GNATCOLL.Templates is
             end if;
          end loop;
 
-         if not Found and then Callback /= null then
+         --  When doubled, the delimiter is always replaced with itself by
+         --  default.
+
+         if not Found
+           and then Identifier_Last = Identifier_First
+           and then Str (Identifier_First) = Delimiter
+         then
+            --  We are escaping the Substitution_Char by doubling it
+            Append (Result, Delimiter);
+            Found := True;
+
+         elsif not Found and then Callback /= null then
             begin
                declare
                   Sub : constant String := Callback
@@ -217,18 +228,6 @@ package body GNATCOLL.Templates is
                when Invalid_Substitution =>
                   Found := False;
             end;
-         end if;
-
-         --  When doubled, the delimiter is always replaced with itself by
-         --  default.
-
-         if not Found
-           and then Identifier_Last = Identifier_First
-           and then Str (Identifier_First) = Delimiter
-         then
-            --  We are escaping the Substitution_Char by doubling it
-            Append (Result, Delimiter);
-            Found := True;
          end if;
 
          --  If still not found, try the default value if it was specified
