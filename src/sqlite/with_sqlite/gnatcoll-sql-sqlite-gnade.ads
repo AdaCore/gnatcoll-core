@@ -1,7 +1,7 @@
--------------------------------------------------------------------------------
+-----------------------------------------------------------------------
 --                               G N A T C O L L                     --
 --                                                                   --
---                 Copyright (C) 2009, AdaCore                       --
+--                    Copyright (C) 2009-2010, AdaCore               --
 --                                                                   --
 -- GPS is free  software;  you can redistribute it and/or modify  it --
 -- under the terms of the GNU General Public License as published by --
@@ -15,7 +15,7 @@
 -- a copy of the GNU General Public License along with this program; --
 -- if not,  write to the  Free Software Foundation, Inc.,  59 Temple --
 -- Place - Suite 330, Boston, MA 02111-1307, USA.                    --
--------------------------------------------------------------------------------
+-----------------------------------------------------------------------
 
 --  This file provides a very low-level interface to sqlite.
 --  It is not intented for end users

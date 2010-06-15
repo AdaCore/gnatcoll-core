@@ -2,7 +2,7 @@
 --                                                                          --
 --                              G N A T C O L L                             --
 --                                                                          --
---                      Copyright (C) 2008, AdaCore                         --
+--                    Copyright (C) 2008-2010, AdaCore                      --
 --                                                                          --
 -- GNAT is free software;  you can  redistribute it  and/or modify it under --
 -- terms of the  GNU General Public License as published  by the Free Soft- --
@@ -26,7 +26,7 @@
 -- Extensive contributions were provided by Ada Core Technologies Inc.      --
 --                                                                          --
 ------------------------------------------------------------------------------
---
+
 --   A Ravenscar-compliant one-shot timer.
 
 with System;
