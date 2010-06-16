@@ -37,7 +37,9 @@ with GNATCOLL.Utils;             use GNATCOLL.Utils;
 
 package GNATCOLL.Symbols is
 
-   type Symbol_Table_Record (<>) is tagged private;
+   --  type Symbol_Table_Record (<>) is tagged private;
+   --  workaround for J616-012
+   type Symbol_Table_Record is tagged private;
    type Symbol_Table_Access is access all Symbol_Table_Record'Class;
    --  A symbol table associating integers with strings.
    --  By default, this is not task safe, so you will need to extend this if
