@@ -3907,7 +3907,7 @@ package body GNATCOLL.Projects is
       Reset (Tree, Tree.Data.Env);
 
       Trace (Me, "Set project path to " & Predefined_Path);
-      Prj.Ext.Set_Project_Path (Tree.Data.Tree, Predefined_Path);
+      Prj.Env.Set_Path (Tree.Data.Tree.Project_Path, Predefined_Path);
 
       Project := Empty_Node;
 
