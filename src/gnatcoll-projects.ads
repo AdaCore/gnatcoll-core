@@ -114,7 +114,7 @@ package GNATCOLL.Projects is
    --  Free memory allocated for the pointer. You should first unload the tree.
 
    type Project_Type is tagged private;
-   No_Project : constant Project_Type;
+   No_Project : aliased constant Project_Type;
    --  This type represents a single .gpr project file, which is part of a
    --  Project_Tree.
    --  A Project_Type only makes sense in the context of a tree, so it contains
@@ -723,11 +723,11 @@ package GNATCOLL.Projects is
 
    type Scenario_Variable is private;
    type Scenario_Variable_Array is array (Natural range <>)
-     of Scenario_Variable;
+     of aliased Scenario_Variable;
    type Scenario_Variable_Array_Access is access Scenario_Variable_Array;
 
-   No_Variable   : constant Scenario_Variable;
-   All_Scenarios : constant Scenario_Variable_Array;
+   No_Variable   : aliased constant Scenario_Variable;
+   All_Scenarios : aliased constant Scenario_Variable_Array;
 
    function Scenario_Variables
      (Self : Project_Tree) return Scenario_Variable_Array;
@@ -1372,11 +1372,11 @@ private
       Value       : Namet.Name_Id;
    end record;
 
-   No_Variable   : constant Scenario_Variable :=
+   No_Variable   : aliased constant Scenario_Variable :=
      (Namet.No_Name, Namet.No_Name, Prj.Tree.Empty_Node,
       Namet.No_Name);
 
-   All_Scenarios : constant Scenario_Variable_Array (1 .. 0) :=
+   All_Scenarios : aliased constant Scenario_Variable_Array (1 .. 0) :=
                    (others => No_Variable);
 
    type Project_Iterator is record
@@ -1483,7 +1483,7 @@ private
    Languages_Attribute        : constant Attribute_Pkg_List := "languages";
    Exec_Dir_Attribute         : constant Attribute_Pkg_String := "exec_dir";
 
-   No_Project : constant Project_Type :=
+   No_Project : aliased constant Project_Type :=
      (Ada.Finalization.Controlled with Data => null);
 
    function Node

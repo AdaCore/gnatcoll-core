@@ -86,13 +86,13 @@ package GNATCOLL.VFS is
    ------------------------------
 
    type Virtual_File is tagged private;
-   No_File : constant Virtual_File;
+   No_File : aliased constant Virtual_File;
 
    ---------------
    -- Constants --
    ---------------
 
-   Local_Host : constant String;
+   Local_Host : aliased constant String;
 
    -------------------
    -- Configuration --
@@ -337,7 +337,7 @@ package GNATCOLL.VFS is
    -- Array of files --
    --------------------
 
-   type File_Array is array (Positive range <>) of Virtual_File;
+   type File_Array is array (Positive range <>) of aliased Virtual_File;
    type File_Array_Access is access all File_Array;
 
    procedure Unchecked_Free (Arr : in out File_Array_Access);
@@ -566,13 +566,13 @@ private
       Current    : Natural;
    end record;
 
-   Local_Host : constant String := "";
+   Local_Host : aliased constant String := "";
 
    Local_Root_Dir : constant Virtual_File :=
                       (Ada.Finalization.Controlled with
                        Value => GNATCOLL.IO.Native.Local_Root_Dir);
 
-   No_File : constant Virtual_File :=
+   No_File : aliased constant Virtual_File :=
      (Ada.Finalization.Controlled with Value => null);
 
    Empty_File_Array : constant File_Array :=
