@@ -3404,6 +3404,13 @@ information) is currently as such
      and the name of the fields in the referenced table@NL{}
 }
 
+@item -createdb
+
+Instead of the usual default output, @code{gnatcoll_db2ada} will output a
+set of SQL commands that can be used to re-create the set of all tables in
+your schema. This does not create the database itself (which might require
+special rights depending on your DBMS), only the tables.
+
 @end table
 
 From the command line arguments, @code{gnatcoll_db2ada} will generate
