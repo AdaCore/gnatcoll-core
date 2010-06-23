@@ -1,7 +1,7 @@
 -----------------------------------------------------------------------
 --                          G N A T C O L L                          --
 --                                                                   --
---                 Copyright (C) 2005-2009, AdaCore                  --
+--                 Copyright (C) 2005-2010, AdaCore                  --
 --                                                                   --
 -- GPS is free  software;  you can redistribute it and/or modify  it --
 -- under the terms of the GNU General Public License as published by --
@@ -29,6 +29,8 @@ with Ada.Strings.Maps;           use Ada.Strings.Maps;
 with Ada.Strings.Unbounded;      use Ada.Strings.Unbounded;
 with GNAT.Command_Line;          use GNAT.Command_Line;
 with GNAT.OS_Lib;                use GNAT.OS_Lib;
+with GNAT.Strings;
+with GNATCOLL.Mmap;              use GNATCOLL.Mmap;
 with GNATCOLL.SQL.Exec;          use GNATCOLL.SQL, GNATCOLL.SQL.Exec;
 with GNATCOLL.SQL.Postgres;      use GNATCOLL.SQL.Postgres;
 with GNATCOLL.SQL.Sqlite;        use GNATCOLL.SQL.Sqlite;
@@ -154,11 +156,17 @@ procedure GNATCOLL_Db2Ada is
    --  Return the attribute name given its index in the table. Information
    --  is extracted from All_Attrs
 
-   procedure Get_Database_Connection
-     (Descr : in out Database_Description;
-      Enums : out String_Lists.List;
-      Vars  : out String_Lists.List);
+   procedure Get_Database_Connection;
    --  Get the list of parameters to use to connect to the postgres database
+
+   procedure Mark_FK_As_Ambiguous
+     (Table     : in out Table_Description;
+      Foreign   : String;
+      Ambiguous : out Boolean);
+   --  Mark all foreign keys from Table to Foreign as ambiguous (ie there are
+   --  multiple references to the same foreign table, so we need special care
+   --  in code generation). Ambiguous is set to False if there was no such
+   --  FK yet.
 
    procedure Dump_Tables
      (Connection : access Database_Connection_Record'Class;
@@ -177,7 +185,9 @@ procedure GNATCOLL_Db2Ada is
 
    procedure Get_Tables
      (Connection : access Database_Connection_Record'Class);
-   --  Get the list of tables in the database
+   procedure Get_Tables_From_Txt (File : String);
+   --  Get the list of tables in the database. The first version gets it from
+   --  an existing database, the second from a text file description.
 
    procedure Generate_Text;
    --  Generate a .dot file
@@ -319,8 +329,6 @@ procedure GNATCOLL_Db2Ada is
             Foreign_Table     : String;
             Foreign_Attribute : Integer)
          is
-            Ambiguous : Boolean := False;
-            C         : Foreign_Keys.Cursor;
          begin
             if Prev_Index /= Index then
                --  A new foreign key, as opposed to a new attribute in the same
@@ -331,32 +339,13 @@ procedure GNATCOLL_Db2Ada is
                end if;
 
                Prev_Index := Index;
-
-               --  Do we already have another foreign key for the same table ?
-
-               Ambiguous := False;
-
-               C := First (Table.Foreign);
-
-               while Has_Element (C) loop
-                  Descr := Element (C);
-                  if Descr.To_Table = Foreign_Table then
-                     if not Descr.Ambiguous then
-                        Descr.Ambiguous := True;
-                        Replace_Element (Table.Foreign, C, Descr);
-                     end if;
-
-                     Ambiguous := True;
-                     exit;
-                  end if;
-                  Next (C);
-               end loop;
-
                Descr :=
                  (To_Table        => To_Unbounded_String (Foreign_Table),
                   From_Attributes => String_Lists.Empty_List,
                   To_Attributes   => String_Lists.Empty_List,
-                  Ambiguous       => Ambiguous);
+                  Ambiguous       => False);
+
+               Mark_FK_As_Ambiguous (Table, Foreign_Table, Descr.Ambiguous);
             end if;
 
             Append
@@ -385,6 +374,35 @@ procedure GNATCOLL_Db2Ada is
          Next (T);
       end loop;
    end Get_Foreign_Keys;
+
+   --------------------------
+   -- Mark_FK_As_Ambiguous --
+   --------------------------
+
+   procedure Mark_FK_As_Ambiguous
+     (Table     : in out Table_Description;
+      Foreign   : String;
+      Ambiguous : out Boolean)
+   is
+      C     : Foreign_Keys.Cursor := First (Table.Foreign);
+      Descr : Foreign_Key_Description;
+   begin
+      Ambiguous := False;
+
+      while Has_Element (C) loop
+         Descr := Element (C);
+         if Descr.To_Table = Foreign then
+            if not Descr.Ambiguous then
+               Descr.Ambiguous := True;
+               Replace_Element (Table.Foreign, C, Descr);
+            end if;
+
+            Ambiguous := True;
+            return;
+         end if;
+         Next (C);
+      end loop;
+   end Mark_FK_As_Ambiguous;
 
    -----------------
    -- Parse_Table --
@@ -460,25 +478,239 @@ procedure GNATCOLL_Db2Ada is
       Foreach_Table (Connection, On_Table'Access);
    end Get_Tables;
 
+   -------------------------
+   -- Get_Tables_From_Txt --
+   -------------------------
+
+   procedure Get_Tables_From_Txt (File : String) is
+      Str : GNAT.Strings.String_Access;
+      T   : Natural := 0;
+      First, Last : Natural;
+
+      function EOL return Natural;
+      --  Return the position of the next End-Of-Line character after First
+
+      function EOW return Natural;
+      --  Return the position of end-of-word starting at First
+
+      procedure Parse_Table (Name : String);
+      --  Parse a table description
+
+      procedure Parse_FK (Name : String);
+      --  Parse all foreign keys for table Name
+
+      function EOL return Natural is
+         Last : Natural := First;
+      begin
+         while Last <= Str'Last and then Str (Last) /= ASCII.LF loop
+            Last := Last + 1;
+         end loop;
+         return Last;
+      end EOL;
+
+      function EOW return Natural is
+         Last : Natural := First;
+      begin
+         while Last <= Str'Last
+           and then Str (Last) /= ASCII.HT
+           and then Str (Last) /= ' '
+         loop
+            Last := Last + 1;
+         end loop;
+         return Last;
+      end EOW;
+
+      procedure Parse_Table (Name : String) is
+         Descr : Table_Description;
+         Attr  : Attribute_Description;
+      begin
+         T := T + 1;
+         Descr.Kind        := Kind_Table;
+         Descr.Index       := T;
+         Descr.Description := Null_Unbounded_String;
+
+         Attr.Index := -1;
+
+         First := EOL + 1;
+         while First <= Str'Last
+           and then Str (First) = ASCII.HT
+         loop
+            First := First + 1;
+            Last := EOW;
+
+            if Str (First .. Last - 1) = "FK:" then
+               --  Skip foreign keys for now, we'll do a second pass once we
+               --  know all tables and fields
+               First := EOL + 1;
+
+            else
+               Attr.Name  := To_Unbounded_String (Str (First .. Last - 1));
+
+               First := Last + 1;
+               Last  := EOW;
+               To_Ada_Type
+                 (SQL_Type => Str (First .. Last - 1),
+                  Attr     => To_String (Attr.Name),
+                  Table    => Name,
+                  Descr    => Attr);
+
+               Attr.Index := Attr.Index + 1;
+               Attr.Description := Null_Unbounded_String;
+
+               First := Last + 1;
+               Attr.PK    := Str (First .. First + 1) = "PK";
+               First := EOW + 1;
+
+               Attr.Not_Null := First + 7 <= Str'Last
+                 and then Str (First .. First + 7) = "NOT NULL";
+               First := EOW + 1;
+
+               Last := EOL;
+               Attr.Default  := To_Unbounded_String (Str (First .. Last - 1));
+
+               Append (Descr.Attributes, Attr);
+
+               First := Last + 1;
+            end if;
+         end loop;
+
+         Insert (Tables, Name, Descr);
+      end Parse_Table;
+
+      procedure Parse_FK (Name : String) is
+         Descr   : Table_Description := Element (Tables.Find (Name));
+         FK    : Foreign_Key_Description;
+         Last_In_Line : Natural;
+      begin
+         First := EOL + 1;
+         while First <= Str'Last
+           and then Str (First) = ASCII.HT
+         loop
+            First := First + 1;
+            Last := EOW;
+
+            if Str (First .. Last - 1) = "FK:" then
+               First := Last + 1;
+               Last  := EOW;
+               FK :=
+                 (To_Table  => To_Unbounded_String (Str (First .. Last - 1)),
+                  Ambiguous => False,
+                  From_Attributes => String_Lists.Empty_List,
+                  To_Attributes   => String_Lists.Empty_List);
+
+               Mark_FK_As_Ambiguous
+                 (Descr, To_String (FK.To_Table), FK.Ambiguous);
+
+               First := Last + 1;
+               Last_In_Line := EOL;
+
+               while First < Last_In_Line
+                 and then Str (First) /= '-'
+               loop
+                  Last := First;
+                  while Last < Last_In_Line
+                    and then Str (Last) /= ' '
+                    and then Str (Last) /= '-'
+                  loop
+                     Last := Last + 1;
+                  end loop;
+
+                  Put_Line ("MANU FK=" & Str (First .. Last - 1));
+                  Append (FK.From_Attributes, Str (First .. Last - 1));
+
+                  First := Last;
+                  while Str (First) = ' ' loop
+                     First := First + 1;
+                  end loop;
+               end loop;
+
+               First := First + 2; --  skip '->'
+               while Str (First) = ' ' loop
+                  First := First + 1;
+               end loop;
+
+               while First < Last_In_Line loop
+                  Last := EOW;
+                  Append (FK.To_Attributes, Str (First .. Last - 1));
+                  First := Last + 1;
+               end loop;
+
+               First := Last_In_Line + 1;
+            else
+               First := EOL + 1; --  Already done
+            end if;
+         end loop;
+      end Parse_FK;
+
+   begin
+      Str := Read_Whole_File (File);
+      First := Str'First;
+
+      while First <= Str'Last loop
+         Last := EOL;
+
+         if First + 5 <= Last
+           and then Str (First .. First + 5) = "table "
+         then
+            Parse_Table (Name => Str (First + 6 .. Last - 1));
+         else
+            First := Last + 1;  --  Skip line
+         end if;
+      end loop;
+
+      --  Now a second pass to get all foreign keys
+
+      First := Str'First;
+      while First <= Str'Last loop
+         Last := EOL;
+
+         if First + 5 <= Last
+           and then Str (First .. First + 5) = "table "
+         then
+            Parse_FK (Name => Str (First + 6 .. Last - 1));
+         else
+            First := Last + 1;
+         end if;
+      end loop;
+
+      Free (Str);
+
+   exception
+      when Name_Error =>
+         Put_Line ("Could not open " & File);
+   end Get_Tables_From_Txt;
+
    -----------------------------
    -- Get_Database_Connection --
    -----------------------------
 
-   procedure Get_Database_Connection
-     (Descr : in out Database_Description;
-      Enums : out String_Lists.List;
-      Vars  : out String_Lists.List)
-   is
+   procedure Get_Database_Connection is
       DB_Name   : GNAT.OS_Lib.String_Access := new String'("");
       DB_Host   : GNAT.OS_Lib.String_Access := new String'("");
       DB_User   : GNAT.OS_Lib.String_Access := new String'("");
       DB_Passwd : GNAT.OS_Lib.String_Access := new String'("");
+      DB_Model  : GNAT.OS_Lib.String_Access := null;
       DB_Type   : GNAT.OS_Lib.String_Access := new String'(DBMS_Postgresql);
+
+      Enums, Vars : String_Lists.List;
+      --  The internal index corresponding to each table. This is used to
+      --  create the adjacency matrix, that indicates whether there is a known
+      --  relationship between two tables.
+
+      Connection : Database_Connection;
+      Descr      : Database_Description;
    begin
       loop
          case Getopt ("dbhost= h -help dbname= dbuser= dbpasswd= enum= var="
-                      & " dbtype= text") is
+                      & " dbtype= dbmodel= text") is
             when 'h' | '-' =>
+               Put_Line
+                 ("-dbmodel <file>: textual description of the database");
+               Put_Line
+                 ("        schema. This is the same format generated by -txt");
+               Put_Line
+                 ("        dbname is ignored if dbmodel is specified");
+               Put_Line ("        This is not compatible with -enum and -var");
                Put_Line
                  ("-dbhost <host>: host on which the database runs");
                Put_Line ("-dbname <name>: name of the database");
@@ -523,6 +755,9 @@ procedure GNATCOLL_Db2Ada is
                elsif Full_Switch = "dbtype" then
                   Free (DB_Type);
                   DB_Type := new String'(Parameter);
+               elsif Full_Switch = "dbmodel" then
+                  Free (DB_Model);
+                  DB_Model := new String'(Parameter);
                end if;
 
             when 'e' =>
@@ -539,18 +774,44 @@ procedure GNATCOLL_Db2Ada is
          end case;
       end loop;
 
-      Setup_Database
-        (Descr,
-         Database      => DB_Name.all,
-         User          => DB_User.all,
-         Host          => DB_Host.all,
-         Password      => DB_Passwd.all,
-         DBMS          => DB_Type.all,
-         Cache_Support => False);
+      if DB_Model = null then
+         Setup_Database
+           (Descr,
+            Database      => DB_Name.all,
+            User          => DB_User.all,
+            Host          => DB_Host.all,
+            Password      => DB_Passwd.all,
+            DBMS          => DB_Type.all,
+            Cache_Support => False);
+
+         if Get_DBMS (Descr) = DBMS_Postgresql then
+            Connection := Build_Postgres_Connection (Descr);
+         elsif Get_DBMS (Descr) = DBMS_Sqlite then
+            Connection := Build_Sqlite_Connection (Descr);
+         else
+            Put_Line ("Unknown dbtype: " & Get_DBMS (Descr));
+            return;
+         end if;
+
+         Reset_Connection (Descr, Connection);
+
+         Dump_Tables (Connection, Enums, Vars);
+         Get_Tables  (Connection);
+
+         --  Separate pass to get the foreign keys, since we first need the
+         --  list of all tables and their attributes to resolve the names
+
+         Get_Foreign_Keys (Connection);
+
+      else
+         Get_Tables_From_Txt (DB_Model.all);
+      end if;
+
       Free (DB_Name);
       Free (DB_Host);
       Free (DB_User);
       Free (DB_Passwd);
+      Free (DB_Model);
    end Get_Database_Connection;
 
    ---------------------
@@ -757,34 +1018,8 @@ procedure GNATCOLL_Db2Ada is
       end loop;
    end Generate_Text;
 
-   DB_Descr    : Database_Description;
-   Connection  : Database_Connection;
-   Enums, Vars : String_Lists.List;
-   --  The internal index corresponding to each table. This is used to create
-   --  the adjacency matrix, that indicates whether there is a known
-   --  relationship between two tables.
-
 begin
-   Get_Database_Connection (DB_Descr, Enums, Vars);
-
-   if Get_DBMS (DB_Descr) = DBMS_Postgresql then
-      Connection := Build_Postgres_Connection (DB_Descr);
-   elsif Get_DBMS (DB_Descr) = DBMS_Sqlite then
-      Connection := Build_Sqlite_Connection (DB_Descr);
-   else
-      Put_Line ("Unknown dbtype: " & Get_DBMS (DB_Descr));
-      return;
-   end if;
-
-   Reset_Connection (DB_Descr, Connection);
-
-   Dump_Tables (Connection, Enums, Vars);
-   Get_Tables  (Connection);
-
-   --  Separate pass to get the foreign keys, since we first need the list of
-   --  all tables and their attributes to resolve the names
-
-   Get_Foreign_Keys (Connection);
+   Get_Database_Connection;
 
    --  Create the package Database_Typed_Entities
 
