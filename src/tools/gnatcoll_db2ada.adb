@@ -543,6 +543,15 @@ procedure GNATCOLL_Db2Ada is
                --  know all tables and fields
                First := EOL + 1;
 
+            elsif Str (First .. Last - 1) = "DOC:" then
+               --  Applies to the previous attribute, still in Attr
+
+               First := EOL + 1;
+               Attr.Description := To_Unbounded_String
+                 (Str (Last + 1 .. First - 2));
+               Replace_Element
+                 (Descr.Attributes, Descr.Attributes.Last, Attr);
+
             else
                Attr.Name  := To_Unbounded_String (Str (First .. Last - 1));
 
@@ -615,7 +624,6 @@ procedure GNATCOLL_Db2Ada is
                      Last := Last + 1;
                   end loop;
 
-                  Put_Line ("MANU FK=" & Str (First .. Last - 1));
                   Append (FK.From_Attributes, Str (First .. Last - 1));
 
                   First := Last;
