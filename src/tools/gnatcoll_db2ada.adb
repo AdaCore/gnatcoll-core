@@ -25,7 +25,7 @@ with Ada.Containers.Indefinite_Doubly_Linked_Lists;
 with Ada.Exceptions;             use Ada.Exceptions;
 with Ada.Strings.Fixed;          use Ada.Strings.Fixed;
 with Ada.Text_IO;                use Ada.Text_IO;
-with Ada.Strings.Maps;           use Ada.Strings.Maps;
+with Ada.Strings.Maps;           use Ada.Strings, Ada.Strings.Maps;
 with Ada.Strings.Unbounded;      use Ada.Strings.Unbounded;
 with GNAT.Command_Line;          use GNAT.Command_Line;
 with GNAT.OS_Lib;                use GNAT.OS_Lib;
@@ -447,7 +447,15 @@ procedure GNATCOLL_Db2Ada is
          Descr.Description := To_Unbounded_String (Description);
          Descr.PK       := Is_Primary_Key;
          Descr.Not_Null := Not_Null;
-         Descr.Default  := To_Unbounded_String (Default_Value);
+
+         if Default_Value'Length < 8
+           or else Default_Value
+             (Default_Value'First .. Default_Value'First + 7)
+           /= "nextval("
+         then
+            Descr.Default  := To_Unbounded_String (Default_Value);
+         end if;
+
          Append (Attributes, Descr);
       end On_Field;
 
@@ -500,11 +508,21 @@ procedure GNATCOLL_Db2Ada is
       function EOW return Natural;
       --  Return the position of end-of-word starting at First
 
+      procedure Skip_Blanks;
+      --  Move First forward until it is no longer on a whitespace
+
       procedure Parse_Table (Name : String);
       --  Parse a table description
 
       procedure Parse_FK (Name : String);
       --  Parse all foreign keys for table Name
+
+      procedure Skip_Blanks is
+      begin
+         while First <= Str'Last and then Str (First) = ' ' loop
+            First := First + 1;
+         end loop;
+      end Skip_Blanks;
 
       function EOL return Natural is
          Last : Natural := First;
@@ -519,7 +537,7 @@ procedure GNATCOLL_Db2Ada is
          Last : Natural := First;
       begin
          while Last <= Str'Last
-           and then Str (Last) /= ASCII.HT
+           and then Str (Last) /= '|'
          loop
             Last := Last + 1;
          end loop;
@@ -539,7 +557,7 @@ procedure GNATCOLL_Db2Ada is
 
          First := EOL + 1;
          while First <= Str'Last
-           and then Str (First) = ASCII.HT
+           and then Str (First) = '|'
          loop
             First := First + 1;
             Last := EOW;
@@ -549,43 +567,38 @@ procedure GNATCOLL_Db2Ada is
                --  know all tables and fields
                First := EOL + 1;
 
-            elsif Str (First .. Last - 1) = "DOC:" then
-               --  Applies to the previous attribute, still in Attr
-
-               First := EOL + 1;
-               Attr.Description := To_Unbounded_String
-                 (Str (Last + 1 .. First - 2));
-               Replace_Element
-                 (Descr.Attributes, Descr.Attributes.Last, Attr);
-
             else
-               Attr.Name  := To_Unbounded_String (Str (First .. Last - 1));
+               Attr.Name  := To_Unbounded_String
+                 (Trim (Str (First .. Last - 1), Both));
 
                First := Last + 1;
                Last  := EOW;
                To_Ada_Type
-                 (SQL_Type => Str (First .. Last - 1),
+                 (SQL_Type => Trim (Str (First .. Last - 1), Both),
                   Attr     => To_String (Attr.Name),
                   Table    => Name,
                   Descr    => Attr);
 
                Attr.Index := Attr.Index + 1;
-               Attr.Description := Null_Unbounded_String;
 
                First := Last + 1;
-               Attr.PK    := Str (First .. First + 1) = "PK";
-               First := EOW + 1;
-
+               Attr.PK       := Str (First .. First + 1) = "PK";
                Attr.Not_Null := First + 7 <= Str'Last
                  and then Str (First .. First + 7) = "NOT NULL";
-               First := EOW + 1;
 
-               Last := EOL;
-               Attr.Default  := To_Unbounded_String (Str (First .. Last - 1));
+               First := EOW + 1;
+               Last := EOW;
+               Attr.Default  := To_Unbounded_String
+                 (Trim (Str (First .. Last - 1), Both));
+
+               First := EOW + 1;
+               Last := EOW;
+               Attr.Description := To_Unbounded_String
+                 (Trim (Str (First .. Last - 1), Both));
 
                Append (Descr.Attributes, Attr);
 
-               First := Last + 1;
+               First := EOL + 1;
             end if;
          end loop;
 
@@ -593,13 +606,13 @@ procedure GNATCOLL_Db2Ada is
       end Parse_Table;
 
       procedure Parse_FK (Name : String) is
-         Descr   : Table_Description := Element (Tables.Find (Name));
+         Descr : Table_Description := Element (Tables.Find (Name));
          FK    : Foreign_Key_Description;
-         Last_In_Line : Natural;
+         Tmp   : Natural;
       begin
          First := EOL + 1;
          while First <= Str'Last
-           and then Str (First) = ASCII.HT
+           and then Str (First) = '|'
          loop
             First := First + 1;
             Last := EOW;
@@ -608,7 +621,8 @@ procedure GNATCOLL_Db2Ada is
                First := Last + 1;
                Last  := EOW;
                FK :=
-                 (To_Table  => To_Unbounded_String (Str (First .. Last - 1)),
+                 (To_Table  => To_Unbounded_String
+                    (Trim (Str (First .. Last - 1), Both)),
                   Ambiguous => False,
                   From_Attributes => String_Lists.Empty_List,
                   To_Attributes   => String_Lists.Empty_List);
@@ -617,42 +631,40 @@ procedure GNATCOLL_Db2Ada is
                  (Descr, To_String (FK.To_Table), FK.Ambiguous);
 
                First := Last + 1;
-               Last_In_Line := EOL;
+               Skip_Blanks;
+               Last := EOW;
 
-               while First < Last_In_Line
-                 and then Str (First) /= '-'
-               loop
-                  Last := First;
-                  while Last < Last_In_Line
-                    and then Str (Last) /= ' '
-                    and then Str (Last) /= '-'
-                  loop
-                     Last := Last + 1;
+               while First < Last loop
+                  Tmp := First;
+                  while Tmp < Last and then Str (Tmp) /= ' ' loop
+                     Tmp := Tmp + 1;
                   end loop;
 
-                  Append (FK.From_Attributes, Str (First .. Last - 1));
+                  Append (FK.From_Attributes,
+                          Trim (Str (First .. Tmp - 1), Both));
 
-                  First := Last;
-                  while Str (First) = ' ' loop
-                     First := First + 1;
+                  First := Tmp;
+                  Skip_Blanks;
+               end loop;
+
+               First := Last + 1;
+               Skip_Blanks;
+               Last  := EOW;
+
+               while First < Last loop
+                  Tmp := First;
+                  while Tmp < Last and then Str (Tmp) /= ' ' loop
+                     Tmp := Tmp + 1;
                   end loop;
-               end loop;
 
-               First := First + 2; --  skip '->'
-               while Str (First) = ' ' loop
-                  First := First + 1;
+                  Append (FK.To_Attributes,
+                          Trim (Str (First .. Tmp - 1), Both));
+                  First := Tmp;
+                  Skip_Blanks;
                end loop;
-
-               while First < Last_In_Line loop
-                  Last := EOW;
-                  Append (FK.To_Attributes, Str (First .. Last - 1));
-                  First := Last + 1;
-               end loop;
-
-               First := Last_In_Line + 1;
-            else
-               First := EOL + 1; --  Already done
             end if;
+
+            First := EOL + 1;
          end loop;
       end Parse_FK;
 
@@ -966,6 +978,11 @@ procedure GNATCOLL_Db2Ada is
       K  : Foreign_Keys.Cursor;
       FK : Foreign_Key_Description;
       S  : String_Lists.Cursor;
+
+      Not_Null : constant String := "NOT NULL";
+      Column_Widths : array (1 .. 4) of Natural;
+      --  The maximum width of all columns
+
    begin
       --  All tables and their attributes
 
@@ -976,32 +993,45 @@ procedure GNATCOLL_Db2Ada is
             when Kind_View  => Put_Line ("view " & Key (C));
          end case;
 
+         --  Compute widths
+         Column_Widths := (1 => 0, 2 => 0, 3 => Not_Null'Length, 4 => 0);
          A := First (T_Descr.Attributes);
          while Has_Element (A) loop
-            Put (ASCII.HT & To_String (Element (A).Name)
-                 & ASCII.HT & To_String (Element (A).Field_Type));
+            Column_Widths (1) := Integer'Max
+              (Column_Widths (1), Length (Element (A).Name));
+            Column_Widths (2) := Integer'Max
+              (Column_Widths (2), Length (Element (A).Field_Type));
+            Column_Widths (4) := Integer'Max
+              (Column_Widths (4), Length (Element (A).Default));
+            Next (A);
+         end loop;
+
+
+         A := First (T_Descr.Attributes);
+         while Has_Element (A) loop
+            Put ("|" & To_String (Element (A).Name)
+                 & (1 .. Column_Widths (1) - Length (Element (A).Name) => ' ')
+                 & "|");
+            Put (To_String (Element (A).Field_Type)
+                 & (1 .. Column_Widths (2) -
+                    Length (Element (A).Field_Type) => ' ')
+                 & "|");
 
             if Element (A).PK then
-               Put (ASCII.HT & "PK");
+               Put (" PK     ");
+            elsif Element (A).Not_Null then
+               Put (Not_Null);
             else
-               Put (ASCII.HT);
+               Put ("        ");
             end if;
 
-            if Element (A).Not_Null then
-               Put (ASCII.HT & "NOT NULL");
-            else
-               Put (ASCII.HT & "NULL");
-            end if;
-
-            Put_Line (ASCII.HT & To_String (Element (A).Default));
-
-            if Element (A).Description /= "" then
-               Put_Line
-                 (ASCII.HT & "DOC:" & ASCII.HT
-                  & To_String
-                    (Translate (Element (A).Description,
-                     Mapping => To_Mapping ("" & ASCII.LF, " "))));
-            end if;
+            Put_Line
+              ("|" & To_String (Element (A).Default)
+               & (1 .. Column_Widths (4) - Length (Element (A).Default) => ' ')
+               & "|"
+               & To_String
+                 (Translate (Element (A).Description,
+                  Mapping => To_Mapping ("" & ASCII.LF, " "))) & "|");
 
             Next (A);
          end loop;
@@ -1010,9 +1040,7 @@ procedure GNATCOLL_Db2Ada is
          while Has_Element (K) loop
             FK := Element (K);
 
-            Put (ASCII.HT & "FK:"
-                 & ASCII.HT & To_String (FK.To_Table)
-                 & ASCII.HT);
+            Put ("| FK: | " & To_String (FK.To_Table) & " | ");
 
             S  := First (FK.From_Attributes);
             while Has_Element (S) loop
@@ -1020,7 +1048,7 @@ procedure GNATCOLL_Db2Ada is
                Next (S);
             end loop;
 
-            Put ("-> ");
+            Put (" | ");
 
             S  := First (FK.To_Attributes);
             while Has_Element (S) loop
@@ -1028,7 +1056,7 @@ procedure GNATCOLL_Db2Ada is
                Next (S);
             end loop;
 
-            New_Line;
+            Put_Line (" |");
             Next (K);
          end loop;
 

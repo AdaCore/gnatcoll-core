@@ -3386,21 +3386,19 @@ information) is currently as such
       table, and then one line per field or foreign key. A view description@NL{}
       starts with the keyword "view".@NL{}
 @NL{}
-  fields ::= ASCII.HT <field_name> ASCII.HF <field_type>@NL{}
-      ASCII.LF ('PK'|'') ASCII.LF ('NOT NULL'|'NULL') ASCII.LF [default]@NL{}
-      Each field is on a line that starts with a tab, and include the field's@NL{}
-      name and type, separated by a tab. The third column is set to "PK"@NL{}
-      if the field is a primary key. The fourth column is set to "NOT NULL" if@NL{}
-      the field can never have the null value. The column is either the empty@NL{}
-      string or the default value for the field@NL{}
+  fields ::= '|' <field_name> '|' <field_type>@NL{}
+      '|' ('PK'|''|'NULL'|'NOT NULL') '|' [default] '|' [documentation] '|'@NL{}
+      Each field is on a line that starts with a pipe, and include the field's@NL{}
+      name and type, separated by pipes. The third column is set to "PK"@NL{}
+      if the field is a primary key, "NOT NULL" if the field can never have@NL{}
+      the null value, or "NULL" or "" if the field can be null.@NL{}
+      The fourth column is either the empty string or the default value for@NL{}
+      the field@NL{}
+      The final column contains the comment associated with the filed@NL{}
 @NL{}
-  docs ::= ASCII.LF 'DOC:' ASCII.HT <documentation>@NL{}
-      If available, the comment associated with the field on the previous@NL{}
-      line. This line will be omitted if there is no comment@NL{}
-@NL{}
-  FK ::= ASCII.HT "FK:" ASCII.HT <table> ASCII.HF <field_names>* "-> " <field_names>*@NL{}
-     Each foreign key is on a line of its own, starting with a tab and "FK:".@NL{}
-     It then includes the name of the fields in the current table, an arrow,@NL{}
+  FK ::= '|' "FK:" '|' <table> '|' <field_names>* '|' <field_names>* '|'@NL{}
+     Each foreign key is on a line of its own, starting with a pipe and "FK:".@NL{}
+     It then includes the name of the fields in the current table, a pipe,@NL{}
      and the name of the fields in the referenced table@NL{}
 }
 
