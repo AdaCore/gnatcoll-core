@@ -102,6 +102,9 @@ procedure GNATCOLL_Db2Ada is
       PK          : Boolean;  --  Part of the primary key ?
       Not_Null    : Boolean;
    end record;
+   --  Field_Type could be Null_Unbounded_String when we have a foreign key
+   --  pointing to another table. In which case the type should be the same as
+   --  the PK of the other table.
 
    package Attribute_Lists is new Ada.Containers.Doubly_Linked_Lists
      (Attribute_Description);
@@ -110,7 +113,7 @@ procedure GNATCOLL_Db2Ada is
    type Foreign_Key_Description is record
       To_Table        : Ada.Strings.Unbounded.Unbounded_String;
       From_Attributes : String_Lists.List;
-      To_Attributes   : String_Lists.List;
+      To_Attributes   : String_Lists.List;  --  If empty, defaults to PK
       Ambiguous       : Boolean;
    end record;
    --  A foreign key from one table to another
@@ -179,6 +182,21 @@ procedure GNATCOLL_Db2Ada is
    --  hard-coded strings for some tables, and it is better to create Ada
    --  constants for those rather than hard-code them every where. At least
    --  when they are renamed we will be forced to change the Ada code.
+
+   function Get_PK (Table : String) return Attribute_Description;
+   --  Return the primary key of the table. This assumes there is a single
+   --  primary key, otherwise the result is unexpected
+
+   function Get_To_Attributes
+     (FK : Foreign_Key_Description) return String_Lists.List;
+   --  List of attributes referenced in the foreign table.
+   --  They might need to be looked up if the reference is to the primary key
+
+   function Get_Field_Type
+     (Table : Table_Description; Attr : Attribute_Description) return String;
+   --  return the field type of the attribute.
+   --  If the attribute is a foreign key, its type is looked up in the foreign
+   --  table as needed.
 
    procedure Parse_Table
      (Connection  : access Database_Connection_Record'Class;
@@ -547,6 +565,7 @@ procedure GNATCOLL_Db2Ada is
       procedure Parse_Table (Name : String) is
          Descr : Table_Description;
          Attr  : Attribute_Description;
+         FK    : Foreign_Key_Description;
       begin
          T := T + 1;
          Descr.Kind        := Kind_Table;
@@ -571,13 +590,34 @@ procedure GNATCOLL_Db2Ada is
                Attr.Name  := To_Unbounded_String
                  (Trim (Str (First .. Last - 1), Both));
 
+               Attr.Field_Type := Null_Unbounded_String;
+
                First := Last + 1;
+               Skip_Blanks;
                Last  := EOW;
-               To_Ada_Type
-                 (SQL_Type => Trim (Str (First .. Last - 1), Both),
-                  Attr     => To_String (Attr.Name),
-                  Table    => Name,
-                  Descr    => Attr);
+
+               if First + 3 < Last
+                 and then Str (First .. First + 2) = "FK "
+               then
+                  FK :=
+                    (To_Table  => To_Unbounded_String
+                       (Trim (Str (First + 3 .. Last - 1), Both)),
+                     Ambiguous => False,
+                     From_Attributes => String_Lists.Empty_List,
+                     To_Attributes   => String_Lists.Empty_List);
+                  Append (FK.From_Attributes, To_String (Attr.Name));
+
+                  Mark_FK_As_Ambiguous
+                    (Descr, To_String (FK.To_Table), FK.Ambiguous);
+                  Append (Descr.Foreign, FK);
+
+               else
+                  To_Ada_Type
+                    (SQL_Type => Trim (Str (First .. Last - 1), Both),
+                     Attr     => To_String (Attr.Name),
+                     Table    => Name,
+                     Descr    => Attr);
+               end if;
 
                Attr.Index := Attr.Index + 1;
 
@@ -992,6 +1032,29 @@ procedure GNATCOLL_Db2Ada is
       Column_Widths : array (1 .. 4) of Natural;
       --  The maximum width of all columns
 
+      function Get_Type (Attr : Attribute_Description) return String;
+      --  Return the type to use for Attr. This includes foreign keys when
+      --  appropriate
+
+      function Get_Type (Attr : Attribute_Description) return String is
+         K  : Foreign_Keys.Cursor := First (T_Descr.Foreign);
+         FK : Foreign_Key_Description;
+      begin
+         while Has_Element (K) loop
+            FK := Element (K);
+
+            if Length (FK.From_Attributes) = 1
+              and then Element (First (FK.From_Attributes)) = Attr.Name
+            then
+               return "FK " & To_String (FK.To_Table);
+            end if;
+
+            Next (K);
+         end loop;
+
+         return Get_Field_Type (T_Descr, Attr);
+      end Get_Type;
+
    begin
       --  All tables and their attributes
 
@@ -1009,7 +1072,7 @@ procedure GNATCOLL_Db2Ada is
             Column_Widths (1) := Integer'Max
               (Column_Widths (1), Length (Element (A).Name));
             Column_Widths (2) := Integer'Max
-              (Column_Widths (2), Length (Element (A).Field_Type));
+              (Column_Widths (2), Get_Type (Element (A))'Length);
             Column_Widths (4) := Integer'Max
               (Column_Widths (4), Length (Element (A).Default));
             Next (A);
@@ -1019,14 +1082,16 @@ procedure GNATCOLL_Db2Ada is
          while Has_Element (A) loop
             Put ("|" & To_String (Element (A).Name)
                  & (1 .. Column_Widths (1) - Length (Element (A).Name) => ' ')
-                 & "|");
-            Put (To_String (Element (A).Field_Type)
-                 & (1 .. Column_Widths (2) -
-                    Length (Element (A).Field_Type) => ' ')
-                 & "|");
+              & "|");
+
+            declare
+               Typ : constant String := Get_Type (Element (A));
+            begin
+               Put (Typ & (1 .. Column_Widths (2) - Typ'Length => ' ') & "|");
+            end;
 
             if Element (A).PK then
-               Put (" PK     ");
+               Put ("PK      ");
             elsif Element (A).Not_Null then
                Put (Not_Null);
             else
@@ -1048,23 +1113,26 @@ procedure GNATCOLL_Db2Ada is
          while Has_Element (K) loop
             FK := Element (K);
 
-            Put ("| FK: | " & To_String (FK.To_Table) & " | ");
+            if Length (FK.From_Attributes) > 1 then
+               Put ("| FK: | " & To_String (FK.To_Table) & " | ");
 
-            S  := First (FK.From_Attributes);
-            while Has_Element (S) loop
-               Put (Element (S) & " ");
-               Next (S);
-            end loop;
+               S  := First (FK.From_Attributes);
+               while Has_Element (S) loop
+                  Put (Element (S) & " ");
+                  Next (S);
+               end loop;
 
-            Put (" | ");
+               Put (" | ");
 
-            S  := First (FK.To_Attributes);
-            while Has_Element (S) loop
-               Put (Element (S) & " ");
-               Next (S);
-            end loop;
+               S  := First (FK.To_Attributes);
+               while Has_Element (S) loop
+                  Put (Element (S) & " ");
+                  Next (S);
+               end loop;
 
-            Put_Line (" |");
+               Put_Line (" |");
+            end if;
+
             Next (K);
          end loop;
 
@@ -1072,6 +1140,75 @@ procedure GNATCOLL_Db2Ada is
          Next (C);
       end loop;
    end Generate_Text;
+
+   ------------
+   -- Get_PK --
+   ------------
+
+   function Get_PK (Table : String) return Attribute_Description is
+      Curs  : constant Tables_Maps.Cursor := Tables.Find (Table);
+      Descr : Table_Description;
+      A     : Attribute_Lists.Cursor;
+   begin
+      if not Has_Element (Curs) then
+         raise Program_Error with "Invalid table name: " & Table;
+      end if;
+
+      Descr := Element (Curs);
+      A := First (Descr.Attributes);
+
+      while Has_Element (A) loop
+         if Element (A).PK then
+            return Element (A);
+         end if;
+         Next (A);
+      end loop;
+
+      raise Program_Error with "PK not found for " & Table;
+   end Get_PK;
+
+   --------------------
+   -- Get_Field_Type --
+   --------------------
+
+   function Get_Field_Type
+     (Table : Table_Description; Attr : Attribute_Description) return String
+   is
+      K     : Foreign_Keys.Cursor;
+      FK    : Foreign_Key_Description;
+   begin
+      if Attr.Field_Type = Null_Unbounded_String then
+         K := First (Table.Foreign);
+         while Has_Element (K) loop
+            FK := Element (K);
+
+            if Length (FK.From_Attributes) = 1
+              and then Element (First (FK.From_Attributes)) = Attr.Name
+            then
+               return To_String (Get_PK (To_String (FK.To_Table)).Field_Type);
+            end if;
+
+            Next (K);
+         end loop;
+      end if;
+      return To_String (Attr.Field_Type);
+   end Get_Field_Type;
+
+   -----------------------
+   -- Get_To_Attributes --
+   -----------------------
+
+   function Get_To_Attributes
+     (FK : Foreign_Key_Description) return String_Lists.List is
+   begin
+      if Length (FK.To_Attributes) = 0 then
+         return R : String_Lists.List do
+            Append (R, To_String (Get_PK (To_String (FK.To_Table)).Name));
+         end return;
+      else
+         return FK.To_Attributes;
+      end if;
+   end Get_To_Attributes;
 
    -----------------------
    -- Generate_Createdb --
@@ -1085,6 +1222,7 @@ procedure GNATCOLL_Db2Ada is
       FK : Foreign_Key_Description;
       S  : String_Lists.Cursor;
       First_Line : Boolean;
+
    begin
       --  All tables and their attributes
 
@@ -1103,8 +1241,9 @@ procedure GNATCOLL_Db2Ada is
                   end if;
                   First_Line := False;
 
-                  Put ("   " & To_String (Element (A).Name)
-                       & " " & To_String (Element (A).Field_Type));
+                  Put ("   " & To_String (Element (A).Name) & " ");
+
+                  Put (Get_Field_Type (T_Descr, Element (A)));
 
                   if Element (A).Not_Null then
                      Put (" NOT NULL");
@@ -1147,14 +1286,19 @@ procedure GNATCOLL_Db2Ada is
                   Put (To_String (FK.To_Table));
                   Put (" (");
 
-                  S  := First (FK.To_Attributes);
-                  while Has_Element (S) loop
-                     if S /= First (FK.To_Attributes) then
-                        Put (",");
-                     end if;
-                     Put (Element (S));
-                     Next (S);
-                  end loop;
+                  declare
+                     To : constant String_Lists.List :=
+                       Get_To_Attributes (FK);
+                  begin
+                     S  := First (To);
+                     while Has_Element (S) loop
+                        if S /= First (To) then
+                           Put (",");
+                        end if;
+                        Put (Element (S));
+                        Next (S);
+                     end loop;
+                  end;
 
                   Put (")");
                   Next (K);

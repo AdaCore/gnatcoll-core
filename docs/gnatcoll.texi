@@ -3395,6 +3395,9 @@ information) is currently as such
       The fourth column is either the empty string or the default value for@NL{}
       the field@NL{}
       The final column contains the comment associated with the filed@NL{}
+      The type of the field can be "FK <table_name>" if the field is a@NL{}
+      reference to the primary key of another table. It then automatically@NL{}
+      get its type from the other table's primary key@NL{}
 @NL{}
   FK ::= '|' "FK:" '|' <table> '|' <field_names>* '|' <field_names>* '|'@NL{}
      Each foreign key is on a line of its own, starting with a pipe and "FK:".@NL{}

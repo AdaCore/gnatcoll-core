@@ -99,6 +99,7 @@ procedure Generate (Generated : String) is
    K         : Foreign_Keys.Cursor;
    FK        : Foreign_Key_Description;
    S1, S2    : String_Lists.Cursor;
+   To_Attrs  : String_Lists.List;
 
 begin
    --  This version creates the output via a simple list of calls to Put_Line.
@@ -231,7 +232,8 @@ begin
       while Has_Element (A) loop
          Put_Line (Spec_File, "      "
                    & Capitalize (Element (A).Name)
-                   & " : SQL_Field_" & To_String (Element (A).Field_Type)
+                   & " : SQL_Field_"
+                   & Get_Field_Type (T_Descr, Element (A))
                    & " (Ta_" & Capitalize (Key (C)) & ", Instance, N_"
                    & Capitalize (Element (A).Name) & ");");
          if Element (A).Description /= "" then
@@ -285,7 +287,9 @@ begin
             Put_Line (Body_File, "   begin");
 
             S1 := First (FK.From_Attributes);
-            S2 := First (FK.To_Attributes);
+
+            To_Attrs := Get_To_Attributes (FK);
+            S2 := First (To_Attrs);
 
             while Has_Element (S1) loop
                if S1 = First (FK.From_Attributes) then
