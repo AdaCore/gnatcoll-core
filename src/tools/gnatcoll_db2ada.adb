@@ -562,7 +562,7 @@ procedure GNATCOLL_Db2Ada is
             First := First + 1;
             Last := EOW;
 
-            if Str (First .. Last - 1) = "FK:" then
+            if Trim (Str (First .. Last - 1), Both) = "FK:" then
                --  Skip foreign keys for now, we'll do a second pass once we
                --  know all tables and fields
                First := EOL + 1;
@@ -582,11 +582,15 @@ procedure GNATCOLL_Db2Ada is
                Attr.Index := Attr.Index + 1;
 
                First := Last + 1;
-               Attr.PK       := Str (First .. First + 1) = "PK";
-               Attr.Not_Null := First + 7 <= Str'Last
-                 and then Str (First .. First + 7) = "NOT NULL";
+               Last  := EOW;
+               declare
+                  V : constant String := Trim (Str (First .. Last - 1), Both);
+               begin
+                  Attr.PK       := V = "PK";
+                  Attr.Not_Null := V = "NOT NULL";
+               end;
 
-               First := EOW + 1;
+               First := Last + 1;
                Last := EOW;
                Attr.Default  := To_Unbounded_String
                  (Trim (Str (First .. Last - 1), Both));
@@ -606,7 +610,8 @@ procedure GNATCOLL_Db2Ada is
       end Parse_Table;
 
       procedure Parse_FK (Name : String) is
-         Descr : Table_Description := Element (Tables.Find (Name));
+         Curs  : constant Tables_Maps.Cursor := Tables.Find (Name);
+         Descr : Table_Description := Element (Curs);
          FK    : Foreign_Key_Description;
          Tmp   : Natural;
       begin
@@ -617,7 +622,7 @@ procedure GNATCOLL_Db2Ada is
             First := First + 1;
             Last := EOW;
 
-            if Str (First .. Last - 1) = "FK:" then
+            if Trim (Str (First .. Last - 1), Both) = "FK:" then
                First := Last + 1;
                Last  := EOW;
                FK :=
@@ -662,10 +667,14 @@ procedure GNATCOLL_Db2Ada is
                   First := Tmp;
                   Skip_Blanks;
                end loop;
+
+               Append (Descr.Foreign, FK);
             end if;
 
             First := EOL + 1;
          end loop;
+
+         Replace_Element (Tables, Curs, Descr);
       end Parse_FK;
 
    begin
@@ -1005,7 +1014,6 @@ procedure GNATCOLL_Db2Ada is
               (Column_Widths (4), Length (Element (A).Default));
             Next (A);
          end loop;
-
 
          A := First (T_Descr.Attributes);
          while Has_Element (A) loop
