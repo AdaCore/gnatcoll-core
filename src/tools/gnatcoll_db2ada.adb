@@ -1222,6 +1222,7 @@ procedure GNATCOLL_Db2Ada is
       FK : Foreign_Key_Description;
       S  : String_Lists.Cursor;
       First_Line : Boolean;
+      Indexes : Unbounded_String;
 
    begin
       --  All tables and their attributes
@@ -1301,6 +1302,20 @@ procedure GNATCOLL_Db2Ada is
                   end;
 
                   Put (")");
+
+                  if Length (FK.From_Attributes) = 1 then
+                     --  Create indexes for the reverse relationships, since it
+                     --  is likely the user will want to use them a lot anyway
+                     Append (Indexes,
+                             "CREATE INDEX """
+                             & Key (C) & "_"
+                             & Element (First (FK.From_Attributes))
+                             & """ ON """
+                             & Key (C) & """ ("""
+                             & Element (First (FK.From_Attributes))
+                             & """);" & ASCII.LF);
+                  end if;
+
                   Next (K);
                end loop;
 
@@ -1312,6 +1327,8 @@ procedure GNATCOLL_Db2Ada is
 
          Next (C);
       end loop;
+
+      Put (To_String (Indexes));
    end Generate_Createdb;
 
 begin
