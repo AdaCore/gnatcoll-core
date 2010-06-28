@@ -485,9 +485,7 @@ package body GNATCOLL.VFS is
          return Empty_String'Access;
 
       elsif File.Value.Full /= null and then Normalize then
-
          Ensure_Normalized (File, Resolve_Links);
-
          return Cst_Filesystem_String_Access
            (+File.Value.Normalized.all'Access);
 
