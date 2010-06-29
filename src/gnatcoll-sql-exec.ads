@@ -328,6 +328,9 @@ package GNATCOLL.SQL.Exec is
    --  Factory.
    --  The newly created connection and Username are then passed to
    --  Reset_Connection (see below).
+   --  Valid values for Factories can be found in
+   --  GNATCOLL.SQL.Postgres.Build_Postgres_Connection and in the other
+   --  back-end specific packages.
 
    procedure Reset_Connection
      (Description : Database_Description;

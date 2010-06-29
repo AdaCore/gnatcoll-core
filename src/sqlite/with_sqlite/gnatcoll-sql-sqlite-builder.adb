@@ -213,7 +213,7 @@ package body GNATCOLL.SQL.Sqlite.Builder is
       Status : Result_Codes;
       pragma Unreferenced (Connection, Status);
    begin
-      Status := Reset  (Unchecked_Convert (Prepared));
+      Status := Reset (Unchecked_Convert (Prepared));
    end Reset;
 
    --------------
@@ -268,6 +268,11 @@ package body GNATCOLL.SQL.Sqlite.Builder is
                "Could not connect to database: " & Error_Msg (Connection.DB));
             Connection.DB := No_Database;
          end if;
+
+         --  Make sure that with appropriate versions of sqlite (>= 3.6.19) we
+         --  do enforce foreign keys constraints
+
+         Execute (Connection, "PRAGMA foreign_keys=ON");
       end if;
    end Connect_If_Needed;
 
@@ -322,20 +327,25 @@ package body GNATCOLL.SQL.Sqlite.Builder is
    is
       Res    : Sqlite_Cursor_Access;
       Res2   : Sqlite_Direct_Cursor_Access;
+      Stmt   : Statement;
+      Last_Status : Result_Codes;
    begin
       --  Since we have a prepared statement, the connection already exists, no
       --  need to recreate.
       --  We always need to create a forward cursor, which will possibly be
       --  used to initialize the direct cursor.
 
-      Res := new Sqlite_Cursor;
-      Res.Stmt := Unchecked_Convert (Prepared);
-      Res.Free_Stmt := False;
+      Stmt := Unchecked_Convert (Prepared);
 
-      Step (Res.Stmt, Res.Last_Status);
+      Step (Stmt, Last_Status);
 
-      case Res.Last_Status is
+      case Last_Status is
          when Sqlite_OK | Sqlite_Row | Sqlite_Done =>
+            Res := new Sqlite_Cursor;
+            Res.Stmt := Stmt;
+            Res.Free_Stmt := False;
+            Res.Last_Status := Last_Status;
+
             if Is_Select then
                Res.Processed_Rows := 0;
             else
@@ -348,6 +358,7 @@ package body GNATCOLL.SQL.Sqlite.Builder is
               (Connection,
                "Error while executing query, status="
                & Res.Last_Status'Img);
+            return null;
       end case;
 
       if not Direct then
@@ -390,6 +401,8 @@ package body GNATCOLL.SQL.Sqlite.Builder is
          else
             Sqlite_Cursor_Access (Res).Free_Stmt := True;
          end if;
+      else
+         return null;
       end if;
 
       return Res;

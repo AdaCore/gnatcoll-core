@@ -474,6 +474,7 @@ package body GNATCOLL.SQL.Exec is
 
    begin
       if R = null then
+         Trace (Me_Query, Query & " (invalid syntax)");
          Set_Failure (Connection);
 
       elsif Is_Select then
@@ -601,6 +602,10 @@ package body GNATCOLL.SQL.Exec is
                Is_Select  => Is_Select,
                Direct     => Direct);
          end if;
+      end if;
+
+      if R = null then
+         Connection.Success := False;
       end if;
 
       Post_Execute_And_Log (R, Connection, Query, Is_Select);

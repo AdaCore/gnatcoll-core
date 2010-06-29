@@ -1477,11 +1477,15 @@ package body GNATCOLL.SQL is
          Append (Result, " ORDER BY ");
          Append (Result, To_String (Self.Order_By, Long => True));
       end if;
+
+      --  Need to output LIMIT before OFFSET for sqlite. This seems to be
+      --  compatible with other backends
+
+      if Self.Limit >= 0 or else Self.Offset >= 0 then
+         Append (Result, " LIMIT" & Integer'Image (Self.Limit));
+      end if;
       if Self.Offset >= 0 then
          Append (Result, " OFFSET" & Integer'Image (Self.Offset));
-      end if;
-      if Self.Limit >= 0 then
-         Append (Result, " LIMIT" & Integer'Image (Self.Limit));
       end if;
       return Result;
    end To_String;
