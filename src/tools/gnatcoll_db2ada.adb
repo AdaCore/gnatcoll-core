@@ -112,6 +112,7 @@ procedure GNATCOLL_Db2Ada is
 
    type Foreign_Key_Description is record
       To_Table        : Ada.Strings.Unbounded.Unbounded_String;
+      Revert_Name     : Ada.Strings.Unbounded.Unbounded_String;
       From_Attributes : String_Lists.List;
       To_Attributes   : String_Lists.List;  --  If empty, defaults to PK
       Ambiguous       : Boolean;
@@ -139,6 +140,8 @@ procedure GNATCOLL_Db2Ada is
      (String, Table_Description, "<", "=");
    use Tables_Maps;
 
+   Invalid_Type : exception;
+
    procedure To_Ada_Type
      (SQL_Type    : String;
       Table, Attr : String;
@@ -146,6 +149,7 @@ procedure GNATCOLL_Db2Ada is
    --  Return the Ada type matching a SQL type.
    --  Ada_Type could be a specific name based on a --enum if a matching one
    --  was provided
+   --  Raise Invalid_Type if the type is invalid
 
    procedure Get_Foreign_Keys
      (Connection : access Database_Connection_Record'Class);
@@ -277,10 +281,8 @@ procedure GNATCOLL_Db2Ada is
          Descr.Value_Func := To_Unbounded_String ("Float_Value");
 
       else
-         Put_Line (Standard_Error, "Don't know how to convert type " & Typ);
-         Descr.Field_Type := To_Unbounded_String ("");
-         Descr.Ada_Type   := To_Unbounded_String ("");
-         Descr.Value_Func := To_Unbounded_String ("");
+         raise Invalid_Type
+           with "Don't know how to convert type """ & Typ & '"';
       end if;
 
       --  ??? Not efficient, since we are traversing the list for each field
@@ -366,6 +368,7 @@ procedure GNATCOLL_Db2Ada is
                Prev_Index := Index;
                Descr :=
                  (To_Table        => To_Unbounded_String (Foreign_Table),
+                  Revert_Name     => Null_Unbounded_String,
                   From_Attributes => String_Lists.Empty_List,
                   To_Attributes   => String_Lists.Empty_List,
                   Ambiguous       => False);
@@ -516,9 +519,15 @@ procedure GNATCOLL_Db2Ada is
    -------------------------
 
    procedure Get_Tables_From_Txt (File : String) is
-      Str : GNAT.Strings.String_Access;
-      T   : Natural := 0;
-      First, Last : Natural;
+      Str   : GNAT.Strings.String_Access;
+      T     : Natural := 0;  --  Index of the table we are creating
+      First : Natural; --  Current index in Str
+      Line_Number : Natural := 0;
+
+      Fields_Per_Line : constant := 5;
+      --  Maximum number of fields per line (fields are separated with |)
+
+      type Line_Fields is new String_List (1 .. Fields_Per_Line);
 
       function EOL return Natural;
       --  Return the position of the next End-Of-Line character after First
@@ -529,11 +538,48 @@ procedure GNATCOLL_Db2Ada is
       procedure Skip_Blanks;
       --  Move First forward until it is no longer on a whitespace
 
+      procedure Parse_Line (Result : out Line_Fields);
+      --  Split the line that starts at First into its fields.
+      --  On exit, First points to the beginning of the next line
+
       procedure Parse_Table (Name : String);
       --  Parse a table description
 
       procedure Parse_FK (Name : String);
       --  Parse all foreign keys for table Name
+
+      procedure Parse_Line (Result : out Line_Fields) is
+         Index  : Natural := Result'First;
+         Last, Tmp : Natural;
+         Current_Line_End : constant Natural := EOL;
+      begin
+         pragma Assert (Str (First) = '|');
+         Line_Number := Line_Number + 1;
+
+         for R in Result'Range loop
+            Free (Result (R));
+         end loop;
+
+         First := First + 1;
+
+         while First <= Current_Line_End loop
+            Skip_Blanks;  --  First now points to first non-blank char
+            Last := EOW;
+            Tmp := Last - 1;
+
+            while Tmp >= First and then Str (Tmp) = ' ' loop
+               Tmp := Tmp - 1;
+            end loop;
+
+            Result (Index) := new String'(Str (First .. Tmp));
+            Index := Index + 1;
+            exit when Index > Fields_Per_Line;
+
+            First := Last + 1;
+         end loop;
+
+         First := Current_Line_End + 1;
+      end Parse_Line;
 
       procedure Skip_Blanks is
       begin
@@ -566,6 +612,7 @@ procedure GNATCOLL_Db2Ada is
          Descr : Table_Description;
          Attr  : Attribute_Description;
          FK    : Foreign_Key_Description;
+         Line : Line_Fields;
       begin
          T := T + 1;
          Descr.Kind        := Kind_Table;
@@ -574,75 +621,67 @@ procedure GNATCOLL_Db2Ada is
 
          Attr.Index := -1;
 
-         First := EOL + 1;
-         while First <= Str'Last
-           and then Str (First) = '|'
-         loop
-            First := First + 1;
-            Last := EOW;
+         while First <= Str'Last and then Str (First) = '|' loop
+            Parse_Line (Result => Line);
 
-            if Trim (Str (First .. Last - 1), Both) = "FK:" then
-               --  Skip foreign keys for now, we'll do a second pass once we
-               --  know all tables and fields
-               First := EOL + 1;
+            if Line (1).all = "FK:" then
+               null;   --  Skip for now, will do in second pass
 
             else
-               Attr.Name  := To_Unbounded_String
-                 (Trim (Str (First .. Last - 1), Both));
+               Attr.Name        := To_Unbounded_String (Line (1).all);
+               Attr.Index       := Attr.Index + 1;
+               Attr.PK          := Line (3).all = "PK";
+               Attr.Not_Null    := Attr.PK or else Line (3).all = "NOT NULL";
+               Attr.Default     := To_Unbounded_String (Line (4).all);
+               Attr.Description := To_Unbounded_String (Line (5).all);
 
-               Attr.Field_Type := Null_Unbounded_String;
-
-               First := Last + 1;
-               Skip_Blanks;
-               Last  := EOW;
-
-               if First + 3 < Last
-                 and then Str (First .. First + 2) = "FK "
-               then
-                  FK :=
-                    (To_Table  => To_Unbounded_String
-                       (Trim (Str (First + 3 .. Last - 1), Both)),
-                     Ambiguous => False,
-                     From_Attributes => String_Lists.Empty_List,
-                     To_Attributes   => String_Lists.Empty_List);
-                  Append (FK.From_Attributes, To_String (Attr.Name));
-
-                  Mark_FK_As_Ambiguous
-                    (Descr, To_String (FK.To_Table), FK.Ambiguous);
-                  Append (Descr.Foreign, FK);
-
-               else
-                  To_Ada_Type
-                    (SQL_Type => Trim (Str (First .. Last - 1), Both),
-                     Attr     => To_String (Attr.Name),
-                     Table    => Name,
-                     Descr    => Attr);
-               end if;
-
-               Attr.Index := Attr.Index + 1;
-
-               First := Last + 1;
-               Last  := EOW;
                declare
-                  V : constant String := Trim (Str (First .. Last - 1), Both);
+                  Typ       : String renames Line (2).all;
+                  Tmp, Tmp2 : Natural;
                begin
-                  Attr.PK       := V = "PK";
-                  Attr.Not_Null := V = "NOT NULL";
+                  if Typ'Length > 3
+                    and then Typ (Typ'First .. Typ'First + 2) = "FK "
+                  then
+                     Tmp := Typ'First + 3;
+                     while Tmp < Typ'Last and then Typ (Tmp) /= '(' loop
+                        Tmp := Tmp + 1;
+                     end loop;
+
+                     if Tmp < Typ'Last then
+                        Tmp2 := Tmp + 1;
+                        while Tmp2 < Typ'Last and then Typ (Tmp2) /= ')' loop
+                           Tmp2 := Tmp2 + 1;
+                        end loop;
+                     else
+                        Tmp2 := Typ'Last;
+                     end if;
+
+                     FK :=
+                       (To_Table  => To_Unbounded_String
+                          (Trim (Typ (Typ'First + 3 .. Tmp - 1), Both)),
+                        Ambiguous => False,
+                        Revert_Name  => To_Unbounded_String
+                          (Typ (Tmp + 1 .. Tmp2 - 1)),
+                        From_Attributes => String_Lists.Empty_List,
+                        To_Attributes   => String_Lists.Empty_List);
+                     Append (FK.From_Attributes, To_String (Attr.Name));
+
+                     Mark_FK_As_Ambiguous
+                       (Descr, To_String (FK.To_Table), FK.Ambiguous);
+                     Append (Descr.Foreign, FK);
+
+                     Attr.Field_Type  := Null_Unbounded_String;
+
+                  else
+                     To_Ada_Type
+                       (SQL_Type => Typ,
+                        Attr     => To_String (Attr.Name),
+                        Table    => Name,
+                        Descr    => Attr);
+                  end if;
                end;
 
-               First := Last + 1;
-               Last := EOW;
-               Attr.Default  := To_Unbounded_String
-                 (Trim (Str (First .. Last - 1), Both));
-
-               First := EOW + 1;
-               Last := EOW;
-               Attr.Description := To_Unbounded_String
-                 (Trim (Str (First .. Last - 1), Both));
-
                Append (Descr.Attributes, Attr);
-
-               First := EOL + 1;
             end if;
          end loop;
 
@@ -653,104 +692,92 @@ procedure GNATCOLL_Db2Ada is
          Curs  : constant Tables_Maps.Cursor := Tables.Find (Name);
          Descr : Table_Description := Element (Curs);
          FK    : Foreign_Key_Description;
-         Tmp   : Natural;
+         Line : Line_Fields;
       begin
-         First := EOL + 1;
-         while First <= Str'Last
-           and then Str (First) = '|'
-         loop
-            First := First + 1;
-            Last := EOW;
+         while First <= Str'Last and then Str (First) = '|' loop
+            Parse_Line (Result => Line);
 
-            if Trim (Str (First .. Last - 1), Both) = "FK:" then
-               First := Last + 1;
-               Last  := EOW;
+            if Line (1).all = "FK:" then
                FK :=
-                 (To_Table  => To_Unbounded_String
-                    (Trim (Str (First .. Last - 1), Both)),
-                  Ambiguous => False,
+                 (To_Table        => To_Unbounded_String (Line (2).all),
+                  Revert_Name     => Null_Unbounded_String,
+                  Ambiguous       => False,
                   From_Attributes => String_Lists.Empty_List,
                   To_Attributes   => String_Lists.Empty_List);
 
                Mark_FK_As_Ambiguous
                  (Descr, To_String (FK.To_Table), FK.Ambiguous);
 
-               First := Last + 1;
-               Skip_Blanks;
-               Last := EOW;
+               declare
+                  From : String renames Line (3).all;
+                  To   : String renames Line (4).all;
+                  First, Tmp : Natural;
+               begin
+                  First := From'First;
+                  while First <= From'Last loop
+                     Tmp := First + 1;
+                     while Tmp <= From'Last and then From (Tmp) /= ' ' loop
+                        Tmp := Tmp + 1;
+                     end loop;
 
-               while First < Last loop
-                  Tmp := First;
-                  while Tmp < Last and then Str (Tmp) /= ' ' loop
-                     Tmp := Tmp + 1;
+                     Append (FK.From_Attributes, From (First .. Tmp - 1));
+                     First := Tmp + 1;
+                     Skip_Blanks;
                   end loop;
 
-                  Append (FK.From_Attributes,
-                          Trim (Str (First .. Tmp - 1), Both));
+                  First := To'First;
+                  while First <= To'Last loop
+                     Tmp := First + 1;
+                     while Tmp <= To'Last and then To (Tmp) /= ' ' loop
+                        Tmp := Tmp + 1;
+                     end loop;
 
-                  First := Tmp;
-                  Skip_Blanks;
-               end loop;
-
-               First := Last + 1;
-               Skip_Blanks;
-               Last  := EOW;
-
-               while First < Last loop
-                  Tmp := First;
-                  while Tmp < Last and then Str (Tmp) /= ' ' loop
-                     Tmp := Tmp + 1;
+                     Append (FK.To_Attributes, To (First .. Tmp - 1));
+                     First := Tmp + 1;
+                     Skip_Blanks;
                   end loop;
-
-                  Append (FK.To_Attributes,
-                          Trim (Str (First .. Tmp - 1), Both));
-                  First := Tmp;
-                  Skip_Blanks;
-               end loop;
+               end;
 
                Append (Descr.Foreign, FK);
             end if;
-
-            First := EOL + 1;
          end loop;
 
          Replace_Element (Tables, Curs, Descr);
       end Parse_FK;
 
+      Line : Line_Fields;
+      type Parse_Mode is (Parsing_Table, Parsing_FK);
+
    begin
       Str := Read_Whole_File (File);
-      First := Str'First;
 
-      while First <= Str'Last loop
-         Last := EOL;
+      for Mode in Parse_Mode loop
+         First := Str'First;
+         Line_Number := 0;
 
-         if First + 5 <= Last
-           and then Str (First .. First + 5) = "table "
-         then
-            Parse_Table (Name => Str (First + 6 .. Last - 1));
-         else
-            First := Last + 1;  --  Skip line
-         end if;
-      end loop;
-
-      --  Now a second pass to get all foreign keys
-
-      First := Str'First;
-      while First <= Str'Last loop
-         Last := EOL;
-
-         if First + 5 <= Last
-           and then Str (First .. First + 5) = "table "
-         then
-            Parse_FK (Name => Str (First + 6 .. Last - 1));
-         else
-            First := Last + 1;
-         end if;
+         while First <= Str'Last loop
+            if Str (First) = '|' then
+               Parse_Line (Result => Line);
+               if Line (1).all = "TABLE" then
+                  case Mode is
+                     when Parsing_Table => Parse_Table (Line (2).all);
+                     when Parsing_FK    => Parse_FK (Line (2).all);
+                  end case;
+               end if;
+            else
+               First := EOL + 1;
+            end if;
+         end loop;
       end loop;
 
       Free (Str);
 
    exception
+      when E : Invalid_Type =>
+         Put_Line (Standard_Error,
+                   File & ":" & Image (Line_Number, Min_Width => 1) & " "
+                   & Exception_Message (E));
+
       when Name_Error =>
          Put_Line ("Could not open " & File);
    end Get_Tables_From_Txt;
@@ -1060,13 +1087,10 @@ procedure GNATCOLL_Db2Ada is
 
       while Has_Element (C) loop
          T_Descr := Element (C);
-         case T_Descr.Kind is
-            when Kind_Table => Put_Line ("table " & Key (C));
-            when Kind_View  => Put_Line ("view " & Key (C));
-         end case;
 
          --  Compute widths
-         Column_Widths := (1 => 0, 2 => 0, 3 => Not_Null'Length, 4 => 0);
+         --  Minimum size of column 1 is 5 (for "TABLE")
+         Column_Widths := (1 => 5, 2 => 0, 3 => Not_Null'Length, 4 => 0);
          A := First (T_Descr.Attributes);
          while Has_Element (A) loop
             Column_Widths (1) := Integer'Max
@@ -1077,6 +1101,17 @@ procedure GNATCOLL_Db2Ada is
               (Column_Widths (4), Length (Element (A).Default));
             Next (A);
          end loop;
+
+         case T_Descr.Kind is
+            when Kind_Table =>
+               Put_Line
+                 ("|TABLE" & (1 .. Column_Widths (1) - 5 => ' ')
+                  & "| " & Key (C));
+            when Kind_View  =>
+               Put_Line
+                 ("|VIEW" & (1 .. Column_Widths (1) - 4 => ' ')
+                  & "| " & Key (C));
+         end case;
 
          A := First (T_Descr.Attributes);
          while Has_Element (A) loop

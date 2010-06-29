@@ -3376,34 +3376,7 @@ Instead of creating Ada files to represent the database schema, this switch
 will ask @code{gnatcoll_db2ada} to dump the schema as text. This is in a
 form hopefully easy to parse automatically, in case you have tools that
 need the schema information from your database in a DBMS-independent
-manner.
-The format (which might change in some future release to include more
-information) is currently as such
-
-@CODESAMPLE{
-  table ::= ("table"|"view") <name> [fields|docs]* [FK]*@NL{}
-      A table description starts with "table" followed by the name of the@NL{}
-      table, and then one line per field or foreign key. A view description@NL{}
-      starts with the keyword "view".@NL{}
-@NL{}
-  fields ::= '|' <field_name> '|' <field_type>@NL{}
-      '|' ('PK'|''|'NULL'|'NOT NULL') '|' [default] '|' [documentation] '|'@NL{}
-      Each field is on a line that starts with a pipe, and include the field's@NL{}
-      name and type, separated by pipes. The third column is set to "PK"@NL{}
-      if the field is a primary key, "NOT NULL" if the field can never have@NL{}
-      the null value, or "NULL" or "" if the field can be null.@NL{}
-      The fourth column is either the empty string or the default value for@NL{}
-      the field@NL{}
-      The final column contains the comment associated with the filed@NL{}
-      The type of the field can be "FK <table_name>" if the field is a@NL{}
-      reference to the primary key of another table. It then automatically@NL{}
-      get its type from the other table's primary key@NL{}
-@NL{}
-  FK ::= '|' "FK:" '|' <table> '|' <field_names>* '|' <field_names>* '|'@NL{}
-     Each foreign key is on a line of its own, starting with a pipe and "FK:".@NL{}
-     It then includes the name of the fields in the current table, a pipe,@NL{}
-     and the name of the fields in the referenced table@NL{}
-}
+manner. See below for a description of the format.
 
 @item -createdb
 
@@ -3413,6 +3386,99 @@ your schema. This does not create the database itself (which might require
 special rights depending on your DBMS), only the tables.
 
 @end table
+
+@subsection Textual description of database schema
+
+@code{gnatcoll_db2ada} can either automatically extracts the database schema
+from a running instance of your DBMS (see @code{-dbname}), or get the schema
+from a text file (see @code{-dbmodel}). In the latter case, it can then create
+the database for you.
+
+This text file is better since you have more control over names (for instance
+for foreign keys) and is slightly higher level.
+
+This file is a collection of paragraphs, each of which relates to one table
+or one SQL view in your database. The paragraphs start with a line containing:
+
+@CODESAMPLE{
+  table ::= '|' ('TABLE'|'VIEW') '|' <name> '|' <name_row> @NL{}
+}
+
+"name" is the name of the table. The third pipe and third column are optional,
+and should be used to specify the name for the element represented by a single
+row. For instance, if the table is called "books", the third column could
+contain "book". This is mostly used when generating high-level Ada code, an
+upcoming feature not yet available in GNATCOLL.
+
+Each line must then start with a pipe character ("|"), and contain a number
+of pipe-separated fields. The order of the fields is always given by the
+following grammar:
+
+@CODESAMPLE{
+  fields ::= '|' <name> '|' <type>@NL{}
+      '|' ('PK'|''|'NULL'|'NOT NULL') '|' [default] '|' [doc] '|'@NL{}
+}
+
+The type of the fields is the SQL type ("INTEGER", "TEXT",...). The tool
+will automatically convert these to Ada when generating Ada code. If the
+field is a foreign key (that is a value that must correspond to a row in
+another table), you can use the special syntax
+
+@CODESAMPLE{
+  fk_type ::= 'FK' <table_name> (<revert_name>)
+}
+
+As you can see, the type of the field is not specified explicitly, but will
+always be that of the foreign table's primary key. With this syntax, the
+foreign table must have a single field for its primary key.
+
+In the future, gnatcoll will include a tool that generates an Ada API that
+completly hides the underlying SQL commands. The "revert_name" argument is
+used in the context of that tool. Although you are encouraged to provide one,
+this is currently optional and will have no impact on the output of the
+tool.
+
+"revert_name" is the name that will be generated in the Ada code for the
+reverse relationship. For instance: assume a book is always found in a library.
+If we have two tables "books" and "libraries", we would have one foreign key
+from "books" to "libraries", which, for each book, indicates to which library
+it belongs. As a result, in the generated code, it would be easy to use
+"mybook.Library" to get that library. But given a library, we also want to
+be able to retrieve all its books with code similar to "mylibrary.Books".
+The foreign key would be declared as such in the books table:
+
+@CODESAMPLE{
+table books
+| library | FK libraries(books) | NOT NULL | | where the book is |
+}
+
+If the "revert_name" is empty (the parenthesis are shown), no revert
+relationship is generated. If the parenthesis and the revert_name are both
+omitted, a default name is generated.
+
+The third column in the fields definition indicates whether we have a
+primary key ("PK"), which must
+never be null. In other cases, the column indicates whether the column can
+have null values (the default, or explicitly "NULL"), or not ("NOT NULL").
+These are similar to the corresponding SQL constraints.
+
+The fourth column gives the default value for the field, and is given in SQL.
+
+The fifth column contains documentation for the field (if any). This
+documentation will be included in the generated code, so that IDEs can
+provide useful tooltips when navigating your application's code.
+
+After all the fields have been defined, you can specify extract constraints
+on the table. In particular, if you have a foreign key to a table that uses
+a tuple as its primary key, you can define that foreign key as
+
+@CODESAMPLE{
+  FK ::= '|' "FK:" '|' <table> '|' <field_names>* '|' <field_names>* '|'@NL{}
+
+table tableA
+| FK: | tableB | fieldA1, fieldA2 | fieldB1, fieldB2 |
+}
+@subsection Default output of gnatcoll_db2ada
 
 From the command line arguments, @code{gnatcoll_db2ada} will generate
 an Ada package, which contains one type per table in the database.
