@@ -123,7 +123,10 @@ package GNATCOLL.Scripts is
    --  that the nth parameter is an instance, but its actual class is
    --  undefined
 
-   type Class_Instance is private;
+   type Class_Instance (Initialized : Boolean := False) is private;
+   --  ??? The discriminant declaration could be moved to the
+   --  private declaration but is moved here to work around a bug in
+   --  older versions of GNAT (J629-029)
    No_Class_Instance : constant Class_Instance;
    --  The instance of a class, which embeds some Ada data. This type is
    --  reference counted, and will automatically take care of memory management
