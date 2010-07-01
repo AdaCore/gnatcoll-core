@@ -23,7 +23,7 @@
 with Interfaces.C.Strings;
 with System;
 
-private package GNATCOLL.SQL.Sqlite.Gnade is
+package GNATCOLL.SQL.Sqlite.Gnade is
 
    type Database is private;
    No_Database : constant Database;
