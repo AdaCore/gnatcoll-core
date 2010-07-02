@@ -1,7 +1,7 @@
 -----------------------------------------------------------------------
 --                               G N A T C O L L                     --
 --                                                                   --
---                 Copyright (C) 2005-2009, AdaCore                  --
+--                 Copyright (C) 2005-2010, AdaCore                  --
 --                                                                   --
 -- GPS is free  software;  you can redistribute it and/or modify  it --
 -- under the terms of the GNU General Public License as published by --
@@ -357,7 +357,7 @@ package body GNATCOLL.SQL.Sqlite.Builder is
             Print_Warning
               (Connection,
                "Error while executing query, status="
-               & Res.Last_Status'Img);
+               & Last_Status'Img);
             return null;
       end case;
 
@@ -395,11 +395,13 @@ package body GNATCOLL.SQL.Sqlite.Builder is
                Is_Select   => Is_Select,
                Direct      => Direct);
 
-         if Res.all in Sqlite_Direct_Cursor'Class then
-            Get_Cursor (Sqlite_Direct_Cursor_Access (Res).all).Free_Stmt :=
-              True;
-         else
-            Sqlite_Cursor_Access (Res).Free_Stmt := True;
+         if Res /= null then
+            if Res.all in Sqlite_Direct_Cursor'Class then
+               Get_Cursor (Sqlite_Direct_Cursor_Access (Res).all).Free_Stmt :=
+                 True;
+            else
+               Sqlite_Cursor_Access (Res).Free_Stmt := True;
+            end if;
          end if;
       else
          return null;
@@ -644,7 +646,6 @@ package body GNATCOLL.SQL.Sqlite.Builder is
                      Not_Null       => Is_Not_Null,
                      Is_Primary_Key => Is_PK);
                end if;
-
 
                Pos := Pos + 1;
             end loop;
