@@ -73,6 +73,10 @@ package body GNATCOLL.SQL.Exec is
    end record;
    package Stmt_Vectors is new Ada.Containers.Vectors (Stmt_Id, Cached_Result);
 
+   function Is_Pragma (Query : String) return Boolean;
+   --  Return true if Query is a PRAGMA command (an sqlite extension).
+   --  We do not need to start a transaction for this type of commands
+
    procedure Free (Cached : in out Cached_Statement_Access);
    --  Free memory occupied by Cached
 
@@ -533,6 +537,16 @@ package body GNATCOLL.SQL.Exec is
       return False;
    end Start_Transaction;
 
+   ---------------
+   -- Is_Pragma --
+   ---------------
+
+   function Is_Pragma (Query : String) return Boolean is
+   begin
+      return Query'Length > 7
+        and then Query (Query'First .. Query'First + 6) = "PRAGMA ";
+   end Is_Pragma;
+
    ---------------------
    -- Execute_And_Log --
    ---------------------
@@ -578,6 +592,7 @@ package body GNATCOLL.SQL.Exec is
         and then not Is_Commit
         and then not Is_Rollback
         and then not Is_Select   --  INSERT, UPDATE, LOCK, DELETE,...
+        and then not Is_Pragma (Query) --  for sqlite
       then
          --  Start a transaction automatically
          Was_Started := Start_Transaction (Connection);
