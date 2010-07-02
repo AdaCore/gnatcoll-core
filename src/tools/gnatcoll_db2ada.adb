@@ -1286,7 +1286,8 @@ procedure GNATCOLL_Db2Ada is
                   end if;
 
                   if Element (A).Default /= "" then
-                     Put (" DEFAULT " & To_String (Element (A).Default));
+                     Put
+                       (" DEFAULT '" & To_String (Element (A).Default) & "'");
                   end if;
 
                   Next (A);
