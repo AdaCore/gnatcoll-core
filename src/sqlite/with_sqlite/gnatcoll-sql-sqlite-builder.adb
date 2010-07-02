@@ -22,9 +22,11 @@ with Ada.Strings.Fixed;
 with Ada.Unchecked_Conversion;
 with GNATCOLL.SQL.Sqlite.Gnade;    use GNATCOLL.SQL.Sqlite.Gnade;
 with GNATCOLL.SQL.Exec_Private;    use GNATCOLL.SQL.Exec_Private;
+with GNATCOLL.Traces;              use GNATCOLL.Traces;
 with Interfaces.C.Strings;         use Interfaces.C.Strings;
 
 package body GNATCOLL.SQL.Sqlite.Builder is
+   Me : constant Trace_Handle := Create ("SQLITE");
 
    type Sqlite_Cursor is new DBMS_Forward_Cursor with record
       Stmt           : Statement;
@@ -193,10 +195,19 @@ package body GNATCOLL.SQL.Sqlite.Builder is
    --------------
 
    overriding procedure Finalize (Self : in out Sqlite_Cursor) is
+      Status : Result_Codes;
    begin
       if Self.Stmt /= No_Statement then
          if Self.Free_Stmt then
             Finalize (Self.Stmt);
+         else
+            --  We need to reset the statement to free all exclusive LOCKS it
+            --  might hold
+            Status := Reset (Self.Stmt);
+            if Status /= Sqlite_OK then
+               Trace (Me, "Error when reseting cursor to free LOCKS: "
+                      & Status'Img);
+            end if;
          end if;
          Self.Stmt := No_Statement;
       end if;
@@ -236,6 +247,7 @@ package body GNATCOLL.SQL.Sqlite.Builder is
    overriding procedure Close
      (Connection : access Sqlite_Connection_Record) is
    begin
+      Trace (Me, "Closing connection to sqlite");
       Close (Connection.DB);
    end Close;
 
@@ -404,6 +416,8 @@ package body GNATCOLL.SQL.Sqlite.Builder is
             end if;
          end if;
       else
+         Trace (Me, "Connect_And_Execute failed to prepare statement for "
+                & Query);
          return null;
       end if;
 
