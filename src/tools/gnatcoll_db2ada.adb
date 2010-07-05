@@ -135,6 +135,9 @@ procedure GNATCOLL_Db2Ada is
       Attributes  : Attribute_Lists.List;
       Foreign     : Foreign_Keys.List;
       Is_Abstract : Boolean := False;
+
+      Super_Table : Ada.Strings.Unbounded.Unbounded_String;
+      --  The table from which we inherit fields
    end record;
 
    package Tables_Maps is new Ada.Containers.Indefinite_Ordered_Maps
@@ -214,6 +217,9 @@ procedure GNATCOLL_Db2Ada is
    procedure Get_Tables_From_Txt (File : String);
    --  Get the list of tables in the database. The first version gets it from
    --  an existing database, the second from a text file description.
+
+   function Starts_With (Str : String; Prefix : String) return Boolean;
+   --  True if Str starts with Prefix
 
    procedure Generate_Text;
    --  Generate a textual description of the database
@@ -543,8 +549,12 @@ procedure GNATCOLL_Db2Ada is
       --  Split the line that starts at First into its fields.
       --  On exit, First points to the beginning of the next line
 
-      procedure Parse_Table (Name : String; Is_Abstract : Boolean);
+      procedure Parse_Table (Table_Def, Name : String);
       --  Parse a table description
+
+      procedure Parse_Table_Inheritance
+        (Table_Def : String; Descr : in out Table_Description);
+      --  Parse the description of table inheritance
 
       procedure Parse_FK (Name : String);
       --  Parse all foreign keys for table Name
@@ -609,7 +619,30 @@ procedure GNATCOLL_Db2Ada is
          return Last;
       end EOW;
 
-      procedure Parse_Table (Name : String; Is_Abstract : Boolean) is
+      procedure Parse_Table_Inheritance
+        (Table_Def : String; Descr : in out Table_Description)
+      is
+         First : Natural := Table_Def'First;
+         Last  : Natural;
+      begin
+         while First <= Table_Def'Last loop
+            if Table_Def (First) = '(' then
+               Last := First + 1;
+               while Last <= Table_Def'Last loop
+                  if Table_Def (Last) = ')' then
+                     Descr.Super_Table := To_Unbounded_String
+                       (Table_Def (First + 1 .. Last - 1));
+                     return;
+                  end if;
+                  Last := Last + 1;
+               end loop;
+            end if;
+
+            First := First + 1;
+         end loop;
+      end Parse_Table_Inheritance;
+
+      procedure Parse_Table (Table_Def, Name : String) is
          Descr : Table_Description;
          Attr  : Attribute_Description;
          FK    : Foreign_Key_Description;
@@ -619,7 +652,8 @@ procedure GNATCOLL_Db2Ada is
          Descr.Kind        := Kind_Table;
          Descr.Index       := T;
          Descr.Description := Null_Unbounded_String;
-         Descr.Is_Abstract := Is_Abstract;
+         Descr.Is_Abstract := Starts_With (Table_Def, "ABSTRACT");
+         Parse_Table_Inheritance (Table_Def, Descr);
 
          Attr.Index := -1;
 
@@ -760,15 +794,15 @@ procedure GNATCOLL_Db2Ada is
          while First <= Str'Last loop
             if Str (First) = '|' then
                Parse_Line (Result => Line);
-               if Line (1).all = "ABSTRACT TABLE"
-                 or else Line (1).all = "TABLE"
+
+               if Starts_With (Line (1).all, "ABSTRACT TABLE")
+                 or else Starts_With (Line (1).all, "TABLE")
                then
                   case Mode is
                      when Parsing_Table =>
-                        Parse_Table
-                          (Line (2).all,
-                           Is_Abstract => Line (1).all = "ABSTRACT TABLE");
-                     when Parsing_FK    => Parse_FK (Line (2).all);
+                        Parse_Table (Line (1).all, Line (2).all);
+                     when Parsing_FK    =>
+                        Parse_FK (Line (2).all);
                   end case;
                end if;
             else
@@ -1252,19 +1286,66 @@ procedure GNATCOLL_Db2Ada is
       end if;
    end Get_To_Attributes;
 
+   -----------------
+   -- Starts_With --
+   -----------------
+
+   function Starts_With (Str : String; Prefix : String) return Boolean is
+   begin
+      return Str'Length >= Prefix'Length
+        and then Str (Str'First .. Str'First + Prefix'Length - 1) = Prefix;
+   end Starts_With;
+
    -----------------------
    -- Generate_Createdb --
    -----------------------
 
    procedure Generate_Createdb is
+      procedure Create_Attributes
+        (Descr : Table_Description; Is_First_Attribute : Boolean := True);
+      --  Print the SQL statement to create the attributes for the table
+
+      procedure Create_Attributes
+        (Descr : Table_Description; Is_First_Attribute : Boolean := True)
+      is
+         A  : Attribute_Lists.Cursor := First (Descr.Attributes);
+         First_Line : Boolean := Is_First_Attribute;
+      begin
+         while Has_Element (A) loop
+            if not First_Line then
+               Put_Line (",");
+            end if;
+            First_Line := False;
+
+            Put ("   " & To_String (Element (A).Name) & " ");
+            Put (Get_Field_Type (Descr, Element (A)));
+
+            if Element (A).Not_Null then
+               Put (" NOT NULL");
+            end if;
+
+            if Element (A).Default /= "" then
+               Put (" DEFAULT '" & To_String (Element (A).Default) & "'");
+            end if;
+
+            Next (A);
+         end loop;
+
+         if Descr.Super_Table /= Null_Unbounded_String then
+            Create_Attributes
+              (Element (Tables.Find (To_String (Descr.Super_Table))),
+               Is_First_Attribute => First_Line);
+         end if;
+      end Create_Attributes;
+
       C : Tables_Maps.Cursor := First (Tables);
       T_Descr : Table_Description;
       A  : Attribute_Lists.Cursor;
       K  : Foreign_Keys.Cursor;
       FK : Foreign_Key_Description;
       S  : String_Lists.Cursor;
-      First_Line : Boolean;
       Indexes : Unbounded_String;
+
 
    begin
       --  All tables and their attributes
@@ -1276,31 +1357,8 @@ procedure GNATCOLL_Db2Ada is
             case T_Descr.Kind is
                when Kind_Table =>
                   Put_Line ("CREATE TABLE " & Key (C) & " (");
-                  First_Line := True;
 
-                  A := First (T_Descr.Attributes);
-                  while Has_Element (A) loop
-                     if not First_Line then
-                        Put_Line (",");
-                     end if;
-                     First_Line := False;
-
-                     Put ("   " & To_String (Element (A).Name) & " ");
-
-                     Put (Get_Field_Type (T_Descr, Element (A)));
-
-                     if Element (A).Not_Null then
-                        Put (" NOT NULL");
-                     end if;
-
-                     if Element (A).Default /= "" then
-                        Put
-                          (" DEFAULT '"
-                           & To_String (Element (A).Default) & "'");
-                     end if;
-
-                     Next (A);
-                  end loop;
+                  Create_Attributes (T_Descr);
 
                   A := First (T_Descr.Attributes);
                   while Has_Element (A) loop

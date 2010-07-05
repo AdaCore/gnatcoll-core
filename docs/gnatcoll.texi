@@ -3401,7 +3401,8 @@ This file is a collection of paragraphs, each of which relates to one table
 or one SQL view in your database. The paragraphs start with a line containing:
 
 @CODESAMPLE{
-  table ::= '|' ('ABSTRACT')? ('TABLE'|'VIEW') '|' <name> '|' <name_row> @NL{}
+  table ::= '|' ('ABSTRACT')? ('TABLE'|'VIEW') ['(' supertable ')']@NL{}
+            '|' <name> '|' <name_row> @NL{}
 }
 
 "name" is the name of the table. The third pipe and third column are optional,
@@ -3413,6 +3414,21 @@ upcoming feature not yet available in GNATCOLL.
 If the first line starts with the keyword @code{ABSTRACT}, then no instance
 of that table actually exists in the database. This is used in the context
 of table inheritance, so define shared fields only once among multiple tables.
+
+The keyword @code{TABLE} can be followed by the name of a table from which it
+inherits the fields. Currently, that supertable must be abstract, and the
+fields declared in that table are simply duplicated in the new table. For
+instance:
+
+@CODESAMPLE{
+| ABSTRACT TABLE | parent  | | |@NL{}
+| field1         | INTEGER | | |@NL{}
+
+| TABLE mytable(parent) |         |    | | |@NL{}
+| id                    | INTEGER | PK | | |@NL{}
+}
+
+The table @code{mytable} in fact has two columns, @code{id} and @code{field1}.
 
 Each line must then start with a pipe character ("|"), and contain a number
 of pipe-separated fields. The order of the fields is always given by the

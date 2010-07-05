@@ -38,6 +38,9 @@ procedure Generate (Generated : String) is
      (File : File_Type; Indent : String; Comment : String);
    --  Print a multi-line comment to the File
 
+   procedure Print_Table_Spec (Name : String; T_Descr : Table_Description);
+   --  Print the specs for a table
+
    -------------------
    -- Print_Comment --
    -------------------
@@ -80,6 +83,77 @@ procedure Generate (Generated : String) is
          Put_Line (File, Indent & "--  " & Str (Start .. Str'Last));
       end if;
    end Print_Comment;
+
+   ----------------------
+   -- Print_Table_Spec --
+   ----------------------
+
+   procedure Print_Table_Spec (Name : String; T_Descr : Table_Description) is
+      A : Attribute_Lists.Cursor;
+   begin
+      New_Line (Spec_File);
+
+      if T_Descr.Is_Abstract then
+         Put_Line (Spec_File, "   type T_" & Capitalize (Name)
+                   & " (Table_Name, Instance : Cst_String_Access)");
+         Put (Spec_File, "      is abstract new ");
+
+         if T_Descr.Super_Table /= Null_Unbounded_String then
+            Put (Spec_File,
+                 "T_" & Capitalize (To_String (T_Descr.Super_Table)));
+         else
+            Put (Spec_File, "SQL_Table");
+         end if;
+
+         Put_Line (Spec_File,
+                   " (Table_Name, Instance) with");
+
+      else
+         Put_Line (Spec_File, "   type T_" & Capitalize (Name)
+                   & " (Instance : Cst_String_Access)");
+         Put (Spec_File, "      is new ");
+
+         if T_Descr.Super_Table /= Null_Unbounded_String then
+            Put (Spec_File,
+                 "T_" & Capitalize (To_String (T_Descr.Super_Table)));
+         else
+            Put (Spec_File, "SQL_Table");
+         end if;
+
+         Put_Line (Spec_File,
+                   " (Ta_" & Capitalize (Name) & ", Instance) with");
+      end if;
+
+      Put_Line (Spec_File, "   record");
+
+      A := First (T_Descr.Attributes);
+      while Has_Element (A) loop
+         Put (Spec_File, "      "
+              & Capitalize (Element (A).Name)
+              & " : SQL_Field_"
+              & Get_Field_Type (T_Descr, Element (A)));
+
+         if T_Descr.Is_Abstract then
+            Put (Spec_File, " (Table_Name");
+         else
+            Put (Spec_File, " (Ta_" & Capitalize (Name));
+         end if;
+
+         Put_Line (Spec_File,
+                   ", Instance, N_" & Capitalize (Element (A).Name) & ");");
+
+         if Element (A).Description /= "" then
+            Print_Comment (Spec_File,
+                           "      ", To_String (Element (A).Description));
+            New_Line (Spec_File);
+         end if;
+
+         Next (A);
+      end loop;
+
+      Put_Line (Spec_File, "   end record;");
+      Print_Comment (Spec_File, "   ", To_String (T_Descr.Description));
+   end Print_Table_Spec;
 
    ----------------
    -- Capitalize --
@@ -202,11 +276,13 @@ begin
 
    --  Process variables
 
-   New_Line (Spec_File);
-
    declare
       C4 : Variables_List.Cursor := First (Variables);
    begin
+      if Has_Element (C4) then
+         New_Line (Spec_File);
+      end if;
+
       while Has_Element (C4) loop
          Put_Line (Spec_File, "   " & Capitalize (Element (C4).Name)
                    & " : constant := " & To_String (Element (C4).Value) & ";");
@@ -215,47 +291,26 @@ begin
       end loop;
    end;
 
+   --  First print abstract tables, since others might derive from them
+
+   C := First (Tables);
+   while Has_Element (C) loop
+      T_Descr := Element (C);
+      if T_Descr.Is_Abstract then
+         Print_Table_Spec (Key (C), T_Descr);
+      end if;
+
+      Next (C);
+   end loop;
+
    --  Process tables
 
    C := First (Tables);
    while Has_Element (C) loop
       T_Descr := Element (C);
-
-      New_Line (Spec_File);
-
-      if T_Descr.Is_Abstract then
-         Put_Line (Spec_File, "   type T_" & Capitalize (Key (C))
-                   & " (Table_Name, Instance : Cst_String_Access)");
-         Put_Line (Spec_File, "      is abstract new SQL_Table (Table_Name,"
-                   & " Instance) with");
-      else
-         Put_Line (Spec_File, "   type T_" & Capitalize (Key (C))
-                   & " (Instance : Cst_String_Access)");
-         Put_Line (Spec_File, "      is new SQL_Table (Ta_"
-                   & Capitalize (Key (C)) & ", Instance) with");
+      if not T_Descr.Is_Abstract then
+         Print_Table_Spec (Key (C), T_Descr);
       end if;
-
-      Put_Line (Spec_File, "   record");
-
-      A := First (T_Descr.Attributes);
-      while Has_Element (A) loop
-         Put_Line (Spec_File, "      "
-                   & Capitalize (Element (A).Name)
-                   & " : SQL_Field_"
-                   & Get_Field_Type (T_Descr, Element (A))
-                   & " (Ta_" & Capitalize (Key (C)) & ", Instance, N_"
-                   & Capitalize (Element (A).Name) & ");");
-         if Element (A).Description /= "" then
-            Print_Comment (Spec_File,
-                           "      ", To_String (Element (A).Description));
-            New_Line (Spec_File);
-         end if;
-
-         Next (A);
-      end loop;
-
-      Put_Line (Spec_File, "   end record;");
-      Print_Comment (Spec_File, "   ", To_String (T_Descr.Description));
 
       Next (C);
    end loop;
