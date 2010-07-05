@@ -259,7 +259,7 @@ AC_HELP_STRING(
      fi
 
      if test x"$WITH_SQLITE" = xno -a x"$NEED_SQLITE" = xyes ; then
-       AC_MSG_ERROR([PostgreSQL not found])
+       AC_MSG_ERROR([Sqlite not found])
      fi
    fi
    

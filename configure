@@ -3928,8 +3928,8 @@ fi
      fi
 
      if test x"$WITH_SQLITE" = xno -a x"$NEED_SQLITE" = xyes ; then
-       { { echo "$as_me:$LINENO: error: PostgreSQL not found" >&5
-echo "$as_me: error: PostgreSQL not found" >&2;}
+       { { echo "$as_me:$LINENO: error: Sqlite not found" >&5
+echo "$as_me: error: Sqlite not found" >&2;}
    { (exit 1); exit 1; }; }
      fi
    fi
