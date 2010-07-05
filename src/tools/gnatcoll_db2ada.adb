@@ -134,6 +134,7 @@ procedure GNATCOLL_Db2Ada is
       Description : Ada.Strings.Unbounded.Unbounded_String;
       Attributes  : Attribute_Lists.List;
       Foreign     : Foreign_Keys.List;
+      Is_Abstract : Boolean := False;
    end record;
 
    package Tables_Maps is new Ada.Containers.Indefinite_Ordered_Maps
@@ -542,7 +543,7 @@ procedure GNATCOLL_Db2Ada is
       --  Split the line that starts at First into its fields.
       --  On exit, First points to the beginning of the next line
 
-      procedure Parse_Table (Name : String);
+      procedure Parse_Table (Name : String; Is_Abstract : Boolean);
       --  Parse a table description
 
       procedure Parse_FK (Name : String);
@@ -608,7 +609,7 @@ procedure GNATCOLL_Db2Ada is
          return Last;
       end EOW;
 
-      procedure Parse_Table (Name : String) is
+      procedure Parse_Table (Name : String; Is_Abstract : Boolean) is
          Descr : Table_Description;
          Attr  : Attribute_Description;
          FK    : Foreign_Key_Description;
@@ -618,6 +619,7 @@ procedure GNATCOLL_Db2Ada is
          Descr.Kind        := Kind_Table;
          Descr.Index       := T;
          Descr.Description := Null_Unbounded_String;
+         Descr.Is_Abstract := Is_Abstract;
 
          Attr.Index := -1;
 
@@ -758,9 +760,14 @@ procedure GNATCOLL_Db2Ada is
          while First <= Str'Last loop
             if Str (First) = '|' then
                Parse_Line (Result => Line);
-               if Line (1).all = "TABLE" then
+               if Line (1).all = "ABSTRACT TABLE"
+                 or else Line (1).all = "TABLE"
+               then
                   case Mode is
-                     when Parsing_Table => Parse_Table (Line (2).all);
+                     when Parsing_Table =>
+                        Parse_Table
+                          (Line (2).all,
+                           Is_Abstract => Line (1).all = "ABSTRACT TABLE");
                      when Parsing_FK    => Parse_FK (Line (2).all);
                   end case;
                end if;
@@ -1265,101 +1272,105 @@ procedure GNATCOLL_Db2Ada is
       while Has_Element (C) loop
          T_Descr := Element (C);
 
-         case T_Descr.Kind is
-            when Kind_Table =>
-               Put_Line ("CREATE TABLE " & Key (C) & " (");
-               First_Line := True;
+         if not T_Descr.Is_Abstract then
+            case T_Descr.Kind is
+               when Kind_Table =>
+                  Put_Line ("CREATE TABLE " & Key (C) & " (");
+                  First_Line := True;
 
-               A := First (T_Descr.Attributes);
-               while Has_Element (A) loop
-                  if not First_Line then
-                     Put_Line (",");
-                  end if;
-                  First_Line := False;
-
-                  Put ("   " & To_String (Element (A).Name) & " ");
-
-                  Put (Get_Field_Type (T_Descr, Element (A)));
-
-                  if Element (A).Not_Null then
-                     Put (" NOT NULL");
-                  end if;
-
-                  if Element (A).Default /= "" then
-                     Put
-                       (" DEFAULT '" & To_String (Element (A).Default) & "'");
-                  end if;
-
-                  Next (A);
-               end loop;
-
-               A := First (T_Descr.Attributes);
-               while Has_Element (A) loop
-                  if Element (A).PK then
-                     Put_Line (",");
-                     Put ("   PRIMARY KEY ("
-                          & To_String (Element (A).Name)
-                          & ")");
-                  end if;
-                  Next (A);
-               end loop;
-
-               K := First (T_Descr.Foreign);
-               while Has_Element (K) loop
-                  FK := Element (K);
-                  Put_Line (",");
-                  Put ("   FOREIGN KEY (");
-
-                  S  := First (FK.From_Attributes);
-                  while Has_Element (S) loop
-                     if S /= First (FK.From_Attributes) then
-                        Put (",");
+                  A := First (T_Descr.Attributes);
+                  while Has_Element (A) loop
+                     if not First_Line then
+                        Put_Line (",");
                      end if;
-                     Put (Element (S));
-                     Next (S);
+                     First_Line := False;
+
+                     Put ("   " & To_String (Element (A).Name) & " ");
+
+                     Put (Get_Field_Type (T_Descr, Element (A)));
+
+                     if Element (A).Not_Null then
+                        Put (" NOT NULL");
+                     end if;
+
+                     if Element (A).Default /= "" then
+                        Put
+                          (" DEFAULT '"
+                           & To_String (Element (A).Default) & "'");
+                     end if;
+
+                     Next (A);
                   end loop;
 
-                  Put (") REFERENCES ");
-                  Put (To_String (FK.To_Table));
-                  Put (" (");
+                  A := First (T_Descr.Attributes);
+                  while Has_Element (A) loop
+                     if Element (A).PK then
+                        Put_Line (",");
+                        Put ("   PRIMARY KEY ("
+                             & To_String (Element (A).Name)
+                             & ")");
+                     end if;
+                     Next (A);
+                  end loop;
 
-                  declare
-                     To : constant String_Lists.List :=
-                       Get_To_Attributes (FK);
-                  begin
-                     S  := First (To);
+                  K := First (T_Descr.Foreign);
+                  while Has_Element (K) loop
+                     FK := Element (K);
+                     Put_Line (",");
+                     Put ("   FOREIGN KEY (");
+
+                     S  := First (FK.From_Attributes);
                      while Has_Element (S) loop
-                        if S /= First (To) then
+                        if S /= First (FK.From_Attributes) then
                            Put (",");
                         end if;
                         Put (Element (S));
                         Next (S);
                      end loop;
-                  end;
 
-                  Put (")");
+                     Put (") REFERENCES ");
+                     Put (To_String (FK.To_Table));
+                     Put (" (");
 
-                  if Length (FK.From_Attributes) = 1 then
-                     --  Create indexes for the reverse relationships, since it
-                     --  is likely the user will want to use them a lot anyway
-                     Append (Indexes,
-                             "CREATE INDEX """
-                             & Key (C) & "_"
-                             & Element (First (FK.From_Attributes))
-                             & """ ON """
-                             & Key (C) & """ ("""
-                             & Element (First (FK.From_Attributes))
-                             & """);" & ASCII.LF);
-                  end if;
+                     declare
+                        To : constant String_Lists.List :=
+                          Get_To_Attributes (FK);
+                     begin
+                        S  := First (To);
+                        while Has_Element (S) loop
+                           if S /= First (To) then
+                              Put (",");
+                           end if;
+                           Put (Element (S));
+                           Next (S);
+                        end loop;
+                     end;
 
-                  Next (K);
-               end loop;
+                     Put (")");
 
-               Put_Line (");");
+                     if Length (FK.From_Attributes) = 1 then
+                        --  Create indexes for the reverse relationships, since
+                        --  it is likely the user will want to use them a lot
+                        --  anyway
+                        Append (Indexes,
+                                "CREATE INDEX """
+                                & Key (C) & "_"
+                                & Element (First (FK.From_Attributes))
+                                & """ ON """
+                                & Key (C) & """ ("""
+                                & Element (First (FK.From_Attributes))
+                                & """);" & ASCII.LF);
+                     end if;
 
-            when Kind_View  =>
-               Put_Line ("CREATE VIEW " & Key (C) & " AS <unsupported>;");
-         end case;
+                     Next (K);
+                  end loop;
+
+                  Put_Line (");");
+
+               when Kind_View  =>
+                  Put_Line ("CREATE VIEW " & Key (C) & " AS <unsupported>;");
+            end case;
+         end if;
 
          Next (C);
       end loop;

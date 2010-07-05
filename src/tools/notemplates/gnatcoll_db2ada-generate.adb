@@ -222,10 +222,19 @@ begin
       T_Descr := Element (C);
 
       New_Line (Spec_File);
-      Put_Line (Spec_File, "   type T_" & Capitalize (Key (C))
-                & " (Instance : Cst_String_Access)");
-      Put_Line (Spec_File, "      is new SQL_Table (Ta_"
-                & Capitalize (Key (C)) & ", Instance) with");
+
+      if T_Descr.Is_Abstract then
+         Put_Line (Spec_File, "   type T_" & Capitalize (Key (C))
+                   & " (Table_Name, Instance : Cst_String_Access)");
+         Put_Line (Spec_File, "      is abstract new SQL_Table (Table_Name,"
+                   & " Instance) with");
+      else
+         Put_Line (Spec_File, "   type T_" & Capitalize (Key (C))
+                   & " (Instance : Cst_String_Access)");
+         Put_Line (Spec_File, "      is new SQL_Table (Ta_"
+                   & Capitalize (Key (C)) & ", Instance) with");
+      end if;
+
       Put_Line (Spec_File, "   record");
 
       A := First (T_Descr.Attributes);
@@ -328,8 +337,10 @@ begin
    while Has_Element (C) loop
       T_Descr := Element (C);
 
-      Put_Line (Spec_File, "   " & Capitalize (Key (C))
-                & " : T_" & Capitalize (Key (C)) & " (null);");
+      if not T_Descr.Is_Abstract then
+         Put_Line (Spec_File, "   " & Capitalize (Key (C))
+                   & " : T_" & Capitalize (Key (C)) & " (null);");
+      end if;
 
       Next (C);
    end loop;

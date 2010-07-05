@@ -3401,7 +3401,7 @@ This file is a collection of paragraphs, each of which relates to one table
 or one SQL view in your database. The paragraphs start with a line containing:
 
 @CODESAMPLE{
-  table ::= '|' ('TABLE'|'VIEW') '|' <name> '|' <name_row> @NL{}
+  table ::= '|' ('ABSTRACT')? ('TABLE'|'VIEW') '|' <name> '|' <name_row> @NL{}
 }
 
 "name" is the name of the table. The third pipe and third column are optional,
@@ -3409,6 +3409,10 @@ and should be used to specify the name for the element represented by a single
 row. For instance, if the table is called "books", the third column could
 contain "book". This is mostly used when generating high-level Ada code, an
 upcoming feature not yet available in GNATCOLL.
+
+If the first line starts with the keyword @code{ABSTRACT}, then no instance
+of that table actually exists in the database. This is used in the context
+of table inheritance, so define shared fields only once among multiple tables.
 
 Each line must then start with a pipe character ("|"), and contain a number
 of pipe-separated fields. The order of the fields is always given by the
