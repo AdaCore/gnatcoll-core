@@ -468,6 +468,8 @@ AC_HELP_STRING(
       # Automatically check whether some libraries are needed to link with
       # the python libraries.
 
+      SAVE_CFLAGS="${CFLAGS}"
+      SAVE_LIBS="${LIBS}"
       CFLAGS="${CFLAGS} ${PYTHON_CFLAGS}"
       LIBS="${LIBS} ${PYTHON_LIBS}"
 
@@ -489,6 +491,12 @@ AC_HELP_STRING(
                 WITH_PYTHON=no
                 PYTHON_BASE=[]
                 PYTHON_LIBS=[]])])])
+
+      # Restore an environment python-free, so that further tests are not
+      # impacted in case we did not find python
+
+      CFLAGS="${SAVE_CFLAGS}"
+      LIBS="${SAVE_LIBS}"
    fi
 
    AC_SUBST(PYTHON_BASE)
