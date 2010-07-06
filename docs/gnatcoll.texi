@@ -3423,7 +3423,7 @@ instance:
 @CODESAMPLE{
 | ABSTRACT TABLE | parent  | | |@NL{}
 | field1         | INTEGER | | |@NL{}
-
+@NL{}
 | TABLE mytable(parent) |         |    | | |@NL{}
 | id                    | INTEGER | PK | | |@NL{}
 }
@@ -3494,7 +3494,7 @@ a tuple as its primary key, you can define that foreign key as
 
 @CODESAMPLE{
   FK ::= '|' "FK:" '|' <table> '|' <field_names>* '|' <field_names>* '|'@NL{}
-
+@NL{}
 table tableA
 | FK: | tableB | fieldA1, fieldA2 | fieldB1, fieldB2 |
 }
