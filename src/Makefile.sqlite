@@ -4,7 +4,7 @@ LIBNAME=lib${TARNAME}_${MODULE}
 
 include ../Makefile.conf
 
-ifeq (${WITH_POSTGRES},yes)
+ifeq (${WITH_SQLITE},yes)
 SRCDIRS=./sqlite/ ./sqlite/with_sqlite/
 else
 SRCDIRS=./sqlite/ ./sqlite/no_sqlite/
