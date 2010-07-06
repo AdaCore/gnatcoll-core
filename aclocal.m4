@@ -249,7 +249,7 @@ AC_HELP_STRING(
 
    else
      if test x"$SQLITE_PATH_WITH" != xyes ; then
-       PATH_LIBSQLITE="-L$SQLITE_PATH_WITH"
+       PATH_LIBSQLITE="-L$SQLITE_PATH_WITH/lib"
      fi
        
      AC_CHECK_LIB(sqlite3, sqlite3_open,

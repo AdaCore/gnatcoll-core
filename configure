@@ -3867,7 +3867,7 @@ echo "${ECHO_T}no" >&6
 
    else
      if test x"$SQLITE_PATH_WITH" != xyes ; then
-       PATH_LIBSQLITE="-L$SQLITE_PATH_WITH"
+       PATH_LIBSQLITE="-L$SQLITE_PATH_WITH/lib"
      fi
 
      echo "$as_me:$LINENO: checking for sqlite3_open in -lsqlite3" >&5
