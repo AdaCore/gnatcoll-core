@@ -25,6 +25,8 @@ endif
 
 DEFS=@DEFS@
 
+GPRBUILD=gprbuild
+
 TARNAME=@PACKAGE_TARNAME@
 VERSION=@PACKAGE_VERSION@
 prefix=@prefix@
@@ -88,7 +90,7 @@ LIBDIR=lib/${MODULE}/${LIBRARY_TYPE}/
 .PHONY: buildall libinstall
 buildall:
 	@echo Building project ${PROJECT}
-	gprbuild -m -j${PROCESSORS} -XLIBRARY_TYPE=${LIBRARY_TYPE} -P${PROJECT} -p
+	${GPRBUILD} -m -j${PROCESSORS} -XLIBRARY_TYPE=${LIBRARY_TYPE} -P${PROJECT} -p
 
 libinstall: installsources installobj installlinks
 
