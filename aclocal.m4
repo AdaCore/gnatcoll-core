@@ -248,15 +248,14 @@ AC_HELP_STRING(
       WITH_SQLITE=no
 
    else
-     if test x"$SQLITE_PATH_WITH" = xyes ; then
-       AC_CHECK_LIB(sqlite3, sqlite3_open,
-                    [WITH_SQLITE=yes],
-                    [WITH_SQLITE=no],
-                    $SQLITE_CFLAGS $SQLITE_LIBS)
-     else
+     if test x"$SQLITE_PATH_WITH" != xyes ; then
        PATH_LIBSQLITE="-L$SQLITE_PATH_WITH"
-       WITH_SQLITE=yes
      fi
+       
+     AC_CHECK_LIB(sqlite3, sqlite3_open,
+                  [WITH_SQLITE=yes],
+                  [WITH_SQLITE=no],
+                  $SQLITE_CFLAGS $PATH_LIBSQLITE)
 
      if test x"$WITH_SQLITE" = xno -a x"$NEED_SQLITE" = xyes ; then
        AC_MSG_ERROR([Sqlite not found])
