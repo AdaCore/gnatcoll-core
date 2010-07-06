@@ -3867,10 +3867,7 @@ echo "${ECHO_T}no" >&6
 
    else
      if test x"$SQLITE_PATH_WITH" != xyes ; then
-       PATH_LIBSQLITE="$SQLITE_PATH_WITH"
-       TMP_PATH="-L$PATH_LIBSQLITE"
-     else
-       TMP_PATH=""
+       PATH_LIBSQLITE="-L$SQLITE_PATH_WITH"
      fi
 
      echo "$as_me:$LINENO: checking for sqlite3_open in -lsqlite3" >&5
@@ -3879,7 +3876,7 @@ if test "${ac_cv_lib_sqlite3_sqlite3_open+set}" = set; then
   echo $ECHO_N "(cached) $ECHO_C" >&6
 else
   ac_check_lib_save_LIBS=$LIBS
-LIBS="-lsqlite3 $SQLITE_CFLAGS $TMP_PATH $LIBS"
+LIBS="-lsqlite3 $SQLITE_CFLAGS $PATH_LIBSQLITE $LIBS"
 cat >conftest.$ac_ext <<_ACEOF
 #line $LINENO "configure"
 /* confdefs.h.  */
