@@ -19,7 +19,14 @@ project GnatColl_Tools is
 
    package Binder   renames GnatColl_Shared.Binder;
 
-   package Linker   renames GnatColl_Shared.Linker;
+   package Linker is
+      case Gnatcoll_Shared.Sqlite is
+         when "yes" =>
+            for Switches ("Ada") use (Gnatcoll_Shared.Sqlite_Dir);
+         when "no" =>
+            null;
+      end case;
+   end Linker;
 
    package Ide      renames GnatColl_Shared.Ide;
 

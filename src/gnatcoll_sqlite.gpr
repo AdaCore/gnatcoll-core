@@ -12,13 +12,12 @@ project GnatColl_Sqlite is
    for Library_Version use
       "lib" & Project'Library_Name & ".so." & GnatColl_Shared.Version;
 
-   for Languages use ("Ada");
-
    case GnatColl_Shared.Sqlite is
       when "no" =>
         for Source_Dirs use ("sqlite", "sqlite/no_sqlite");
       when "yes" =>
         for Source_Dirs use ("sqlite", "sqlite/with_sqlite");
+        for Library_Options use (Gnatcoll_Shared.Sqlite_Dir);
    end case;
 
    package Builder  renames GnatColl_Shared.Builder;
