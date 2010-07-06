@@ -3432,7 +3432,12 @@ echo "${ECHO_T}no" >&6
            WITH_PYTHON=no
         else
            case "${host}" in
-             *-*mingw32* )
+             # On windows, there are two possible types of installation for
+             # python, where the layout of directories are different. Even when
+             # running cygwin, we might want to link with a mingwin version of
+             # python for easier redistribution of the application.
+
+             *-*mingw32* | *cygwin* )
                if test -d ${PYTHON_BASE}/lib/python${PYTHON_MAJOR_VERSION}.${PYTHON_MINOR_VERSION}/config; then
                  PYTHON_WIN32=no
                else
