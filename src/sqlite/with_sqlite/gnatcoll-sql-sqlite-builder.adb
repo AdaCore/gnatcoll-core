@@ -67,6 +67,8 @@ package body GNATCOLL.SQL.Sqlite.Builder is
       Field : GNATCOLL.SQL.Exec.Field_Index) return String;
    overriding function Has_Row (Self : Sqlite_Cursor) return Boolean;
    overriding procedure Next   (Self : in out Sqlite_Cursor);
+   overriding function Boolean_Value
+     (Self : Sqlite_Cursor; Field : Field_Index) return Boolean;
 
    package Direct_Cursors is new Generic_Direct_Cursors (Sqlite_Cursor);
    type Sqlite_Direct_Cursor is new Direct_Cursors.Direct with null record;
@@ -77,6 +79,8 @@ package body GNATCOLL.SQL.Sqlite.Builder is
       record
          DB       : GNATCOLL.SQL.Sqlite.Gnade.Database;
       end record;
+   overriding function Boolean_Image
+     (Self : Sqlite_Connection_Record; Value : Boolean) return String;
    overriding procedure Close
      (Connection : access Sqlite_Connection_Record);
    overriding function Connect_And_Execute
@@ -479,7 +483,7 @@ package body GNATCOLL.SQL.Sqlite.Builder is
    begin
       Res2.Fetch
         (Connection,
-         "SELECT " & Field.To_String (Long => True)
+         "SELECT " & Field.To_String (Connection.all, Long => True)
          & " FROM " & Field.Table.all
          & " WHERE ROWID="
          & Long_Integer'Image (Self.Last_Rowid));
@@ -726,5 +730,32 @@ package body GNATCOLL.SQL.Sqlite.Builder is
    begin
       return new Sqlite_Connection_Record;
    end Build_Sqlite_Connection;
+
+   -------------------
+   -- Boolean_Image --
+   -------------------
+
+   overriding function Boolean_Image
+     (Self : Sqlite_Connection_Record; Value : Boolean) return String
+   is
+      pragma Unreferenced (Self);
+   begin
+      if Value then
+         return "1";
+      else
+         return "0";
+      end if;
+   end Boolean_Image;
+
+   -------------------
+   -- Boolean_Value --
+   -------------------
+
+   overriding function Boolean_Value
+     (Self : Sqlite_Cursor; Field : Field_Index) return Boolean
+   is
+   begin
+      return Value (Self, Field) /= "0";
+   end Boolean_Value;
 
 end GNATCOLL.SQL.Sqlite.Builder;

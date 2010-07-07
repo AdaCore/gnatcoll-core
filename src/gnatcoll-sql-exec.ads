@@ -182,7 +182,7 @@ package GNATCOLL.SQL.Exec is
    -- Database_Connection --
    -------------------------
 
-   type Database_Connection_Record is abstract tagged private;
+   type Database_Connection_Record is abstract new Formatter with private;
    type Database_Connection is access all Database_Connection_Record'Class;
    --  A thread-specific access to a database. Each thread, in an application,
    --  should have its own access to the database, so that transactions really
@@ -745,7 +745,7 @@ private
    --  A statement prepared on the server. This is only valid for a specific
    --  connection.
 
-   type Database_Connection_Record is abstract tagged record
+   type Database_Connection_Record is abstract new Formatter with record
       DB             : Database_Description;
       Success        : Boolean := True;
       In_Transaction : Boolean := False;

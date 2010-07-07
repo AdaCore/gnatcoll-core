@@ -17,6 +17,7 @@
 -- Place - Suite 330, Boston, MA 02111-1307, USA.                    --
 -----------------------------------------------------------------------
 
+with Ada.Calendar;
 with Ada.Containers.Doubly_Linked_Lists;
 with Ada.Containers.Indefinite_Doubly_Linked_Lists;
 with Ada.Containers.Indefinite_Hashed_Sets;
@@ -38,6 +39,42 @@ package GNATCOLL.SQL_Impl is
    --                               Name => Name'Access));
 
    Null_String : aliased constant String := "NULL";
+
+   ---------------
+   -- Formatter --
+   ---------------
+
+   type Formatter is abstract tagged null record;
+   --  A formatter provides DBMS-specific formating for SQL statements.
+   --  Each backend has its peculiarities, and these are handled through
+   --  various instances of Formatter.
+
+   function Boolean_Image (Self : Formatter; Value : Boolean) return String;
+   --  Return an image of the various basic types suitable for the DBMS.
+   --  For instance, sqlite does not support boolean fields, which are thus
+   --  mapped to integers at the lowest level, even though the Ada layer still
+   --  manipulates Booleans.
+   --  If you override these, you will likely want to also override
+   --  Boolean_Value (DBMS_Forward_Cursor).
+
+   function Boolean_To_SQL
+     (Self : Formatter'Class; Value : Boolean) return String;
+   function Float_To_SQL
+     (Self : Formatter'Class; Value : Float) return String;
+   function Integer_To_SQL
+     (Self : Formatter'Class; Value : Integer) return String;
+   function Time_To_SQL
+     (Self : Formatter'Class; Value : Ada.Calendar.Time) return String;
+   function Date_To_SQL
+     (Self : Formatter'Class; Value : Ada.Calendar.Time) return String;
+   --  Calls the above formatting primitives (or provide default version, when
+   --  not overridable)
+
+   function String_To_SQL
+     (Self : Formatter'Class; Value : String) return String;
+   --  Escape every apostrophe character "'" and backslash "\".
+   --  Useful for strings in SQL commands where "'" means the end
+   --  of the current string.
 
    -------------------------------------
    -- General declarations for tables --
@@ -72,7 +109,9 @@ package GNATCOLL.SQL_Impl is
      (Self : SQL_Table_Or_List; To : in out Table_Sets.Set) is null;
    --  Append all the tables referenced in Self to To
 
-   function To_String (Self : SQL_Table_Or_List) return String is abstract;
+   function To_String
+     (Self : SQL_Table_Or_List; Format : Formatter'Class)
+      return String is abstract;
    --  Convert the table to a string
 
    type SQL_Single_Table (Instance : GNATCOLL.SQL_Impl.Cst_String_Access)
@@ -90,7 +129,9 @@ package GNATCOLL.SQL_Impl is
    --  Either a single field or a list of fields
 
    function To_String
-     (Self : SQL_Field_Or_List; Long : Boolean := True) return String
+     (Self   : SQL_Field_Or_List;
+      Format : Formatter'Class;
+      Long   : Boolean := True) return String
       is abstract;
    --  Convert the field to a string. If Long is true, a fully qualified
    --  name is used (table.name), otherwise just the field name is used
@@ -100,7 +141,9 @@ package GNATCOLL.SQL_Impl is
    --  A list of fields, as used in a SELECT query ("field1, field2");
 
    overriding function To_String
-     (Self : SQL_Field_List; Long : Boolean := True) return String;
+     (Self   : SQL_Field_List;
+      Format : Formatter'Class;
+      Long   : Boolean := True) return String;
    --  See inherited doc
 
    type SQL_Field (Table, Instance, Name : Cst_String_Access)
@@ -111,7 +154,9 @@ package GNATCOLL.SQL_Impl is
    --  (Table,Instance) might be null if the field is a constant
 
    overriding function To_String
-     (Self : SQL_Field; Long : Boolean := True)  return String;
+     (Self   : SQL_Field;
+      Format : Formatter'Class;
+      Long   : Boolean := True) return String;
    --  See inherited doc
 
    procedure Append_Tables (Self : SQL_Field; To : in out Table_Sets.Set);
@@ -159,7 +204,10 @@ package GNATCOLL.SQL_Impl is
      (List : in out SQL_Field_List'Class; Field : SQL_Field_Pointer);
    --  Append a new field to the list
 
-   function To_String (Self : SQL_Field_Pointer; Long : Boolean) return String;
+   function To_String
+     (Self   : SQL_Field_Pointer;
+      Format : Formatter'Class;
+      Long   : Boolean) return String;
    procedure Append_Tables
      (Self : SQL_Field_Pointer; To : in out Table_Sets.Set);
    procedure Append_If_Not_Aggregate
@@ -187,7 +235,9 @@ package GNATCOLL.SQL_Impl is
    --  Free memory associated with Data
 
    function To_String
-     (Self : SQL_Field_Internal; Long : Boolean) return String is abstract;
+     (Self   : SQL_Field_Internal;
+      Format : Formatter'Class;
+      Long   : Boolean) return String is abstract;
    procedure Append_Tables
      (Self : SQL_Field_Internal; To : in out Table_Sets.Set) is null;
    procedure Append_If_Not_Aggregate
@@ -216,7 +266,9 @@ package GNATCOLL.SQL_Impl is
       end record;
 
       overriding function To_String
-        (Self : Field; Long : Boolean := True)  return String;
+        (Self   : Field;
+         Format : Formatter'Class;
+         Long   : Boolean := True) return String;
       overriding procedure Append_Tables
         (Self : Field; To : in out Table_Sets.Set);
       overriding procedure Append_If_Not_Aggregate
@@ -236,7 +288,9 @@ package GNATCOLL.SQL_Impl is
    No_Criteria : constant SQL_Criteria;
 
    function To_String
-     (Self : SQL_Criteria; Long : Boolean := True) return String;
+     (Self   : SQL_Criteria;
+      Format : Formatter'Class;
+      Long   : Boolean := True) return String;
    procedure Append_Tables (Self : SQL_Criteria; To : in out Table_Sets.Set);
    procedure Append_If_Not_Aggregate
      (Self         : SQL_Criteria;
@@ -253,7 +307,9 @@ package GNATCOLL.SQL_Impl is
    --  Free memory associated with Self
 
    function To_String
-     (Self : SQL_Criteria_Data; Long : Boolean := True) return String
+     (Self   : SQL_Criteria_Data;
+      Format : Formatter'Class;
+      Long   : Boolean := True) return String
       is abstract;
    procedure Append_Tables
      (Self : SQL_Criteria_Data; To : in out Table_Sets.Set) is null;
@@ -292,7 +348,9 @@ package GNATCOLL.SQL_Impl is
 
    procedure Append_Tables (Self : SQL_Assignment; To : in out Table_Sets.Set);
    function To_String
-     (Self : SQL_Assignment; With_Field : Boolean)  return String;
+     (Self       : SQL_Assignment;
+      Format     : Formatter'Class;
+      With_Field : Boolean) return String;
    --  The usual semantics for these subprograms (see fields)
 
    procedure To_List (Self : SQL_Assignment; List : out SQL_Field_List);
@@ -312,7 +370,8 @@ package GNATCOLL.SQL_Impl is
 
    generic
       type Ada_Type (<>) is private;
-      with function To_SQL (Value : Ada_Type) return String;
+      with function To_SQL
+        (Format : Formatter'Class; Value : Ada_Type) return String;
       --  Converts Ada_Type to a value suitable to pass to SQL. This should
       --  protect special characters if need be.
       --  This function can also be used to add constraints on the types

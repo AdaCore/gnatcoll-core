@@ -37,9 +37,4 @@ package GNATCOLL.SQL.Sqlite is
    --  This function is compatible with the factory expected for
    --  Get_Task_Connection, but will only work if Descr is for Sqlite
 
-   -----------------------
-   -- Sqlite extensions --
-   -----------------------
-   --  Sqlite-specific extensions for GNATCOLL.SQL
-
 end GNATCOLL.SQL.Sqlite;

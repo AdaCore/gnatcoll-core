@@ -128,7 +128,9 @@ package GNATCOLL.SQL is
 
    type SQL_Table (Table_Name, Instance : GNATCOLL.SQL_Impl.Cst_String_Access)
       is abstract new SQL_Single_Table with private;
-   overriding function To_String (Self : SQL_Table) return String;
+   function To_String (Self : SQL_Table'Class) return String;
+   overriding function To_String
+     (Self : SQL_Table; Format : Formatter'Class) return String;
    --  A table representing a field of a specific table
 
    type SQL_Unchecked_Table_Access is access constant SQL_Table'Class;
@@ -171,26 +173,15 @@ package GNATCOLL.SQL is
    --  Specify a specific sort order. This is only used in the Order_By clause
    --  of a Select statement
 
-   function Normalize_String (Str : String) return String;
-   --  Escape every apostrophe character "'" and backslash "\".
-   --  Useful for strings in SQL commands where "'" means the end
-   --  of the current string.
-
-   function Float_To_SQL (Value : Float) return String;
-   function Integer_To_SQL (Value : Integer) return String;
-   function Time_To_SQL (Value : Ada.Calendar.Time) return String;
-   function Date_To_SQL (Value : Ada.Calendar.Time) return String;
-   --  Convert a value to SQL (without leading blank)
-
    package Integer_Fields is new Field_Types (Integer, Integer_To_SQL);
    type SQL_Field_Integer is new Integer_Fields.Field with null record;
    Null_Field_Integer : constant SQL_Field_Integer;
 
-   package Text_Fields is new Field_Types (String, Normalize_String);
+   package Text_Fields is new Field_Types (String, String_To_SQL);
    type SQL_Field_Text is new Text_Fields.Field with null record;
    Null_Field_Text : constant SQL_Field_Text;
 
-   package Boolean_Fields is new Field_Types (Boolean, Boolean'Image);
+   package Boolean_Fields is new Field_Types (Boolean, Boolean_To_SQL);
    type SQL_Field_Boolean is new Boolean_Fields.Field with null record;
    Null_Field_Boolean : constant SQL_Field_Boolean;
 
@@ -699,13 +690,15 @@ package GNATCOLL.SQL is
    --  See the various inherited Field subprograms to reference specific fields
    --  from the result of the query.
 
-   overriding function To_String (Self : Subquery_Table) return String;
+   overriding function To_String
+     (Self : Subquery_Table; Format : Formatter'Class) return String;
 
    ---------------------------
    -- Conversion to strings --
    ---------------------------
 
-   function To_String (Self : SQL_Query) return Unbounded_String;
+   function To_String
+     (Self : SQL_Query; Format : Formatter'Class) return Unbounded_String;
    --  Transform Self into a valid SQL string
 
 private
@@ -746,7 +739,8 @@ private
    type SQL_Table_List is new SQL_Table_Or_List with record
       Data : Table_List_Data;
    end record;
-   overriding function To_String (Self : SQL_Table_List)  return String;
+   overriding function To_String
+     (Self : SQL_Table_List; Format : Formatter'Class)  return String;
    overriding procedure Append_Tables
      (Self : SQL_Table_List; To : in out Table_Sets.Set);
    --  Append all the tables referenced in Self to To
@@ -806,7 +800,9 @@ private
    end record;
 
    overriding function To_String
-     (Self : SQL_Criteria_Data; Long : Boolean := True) return String;
+     (Self   : SQL_Criteria_Data;
+      Format : Formatter'Class;
+      Long   : Boolean := True) return String;
    overriding procedure Append_Tables
      (Self : SQL_Criteria_Data; To : in out Table_Sets.Set);
    overriding procedure Append_If_Not_Aggregate
@@ -835,7 +831,9 @@ private
    end record;
    type Case_Stmt_Internal_Access is access all Case_Stmt_Internal'Class;
    overriding function To_String
-     (Self : Case_Stmt_Internal; Long : Boolean) return String;
+     (Self   : Case_Stmt_Internal;
+      Format : Formatter'Class;
+      Long   : Boolean) return String;
    overriding procedure Append_Tables
      (Self : Case_Stmt_Internal; To : in out Table_Sets.Set);
    overriding procedure Append_If_Not_Aggregate
@@ -869,7 +867,8 @@ private
       Data   : Join_Table_Data;
    end record;
 
-   function To_String (Self : SQL_Left_Join_Table) return String;
+   overriding function To_String
+     (Self : SQL_Left_Join_Table; Format : Formatter'Class) return String;
    overriding procedure Append_Tables
      (Self : SQL_Left_Join_Table; To : in out Table_Sets.Set);
 
@@ -890,7 +889,8 @@ private
    type SQL_Query_Contents_Access is access all Query_Contents'Class;
    procedure Free (Self : in out Query_Contents) is null;
    function To_String
-     (Self : Query_Contents) return Unbounded_String is abstract;
+     (Self   : Query_Contents;
+      Format : Formatter'Class) return Unbounded_String is abstract;
    procedure Auto_Complete
      (Self                   : in out Query_Contents;
       Auto_Complete_From     : Boolean := True;
@@ -922,7 +922,8 @@ private
    end record;
    type Query_Select_Contents_Access is access all Query_Select_Contents'Class;
    overriding function To_String
-     (Self : Query_Select_Contents) return Unbounded_String;
+     (Self   : Query_Select_Contents;
+      Format : Formatter'Class) return Unbounded_String;
    overriding procedure Auto_Complete
      (Self                   : in out Query_Select_Contents;
       Auto_Complete_From     : Boolean := True;
@@ -938,7 +939,8 @@ private
    end record;
    type Query_Insert_Contents_Access is access all Query_Insert_Contents'Class;
    overriding function To_String
-     (Self : Query_Insert_Contents) return Unbounded_String;
+     (Self   : Query_Insert_Contents;
+      Format : Formatter'Class) return Unbounded_String;
    overriding procedure Auto_Complete
      (Self                   : in out Query_Insert_Contents;
       Auto_Complete_From     : Boolean := True;
@@ -953,7 +955,8 @@ private
    end record;
    type Query_Update_Contents_Access is access all Query_Update_Contents'Class;
    overriding function To_String
-     (Self : Query_Update_Contents) return Unbounded_String;
+     (Self   : Query_Update_Contents;
+      Format : Formatter'Class) return Unbounded_String;
    overriding procedure Auto_Complete
      (Self                   : in out Query_Update_Contents;
       Auto_Complete_From     : Boolean := True;
@@ -965,14 +968,16 @@ private
    end record;
    type Query_Delete_Contents_Access is access all Query_Delete_Contents'Class;
    overriding function To_String
-     (Self : Query_Delete_Contents) return Unbounded_String;
+     (Self   : Query_Delete_Contents;
+      Format : Formatter'Class) return Unbounded_String;
 
    type Simple_Query_Contents is new Query_Contents with record
       Command : Ada.Strings.Unbounded.Unbounded_String;
    end record;
    type Simple_Query_Contents_Access is access all Simple_Query_Contents'Class;
    overriding function To_String
-     (Self : Simple_Query_Contents) return Unbounded_String;
+     (Self   : Simple_Query_Contents;
+      Format : Formatter'Class) return Unbounded_String;
 
    ---------------------
    -- Subquery tables --

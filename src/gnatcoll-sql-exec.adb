@@ -81,7 +81,9 @@ package body GNATCOLL.SQL.Exec is
    --  Free memory occupied by Cached
 
    protected Query_Cache is
-      procedure Prepare_Statement (Stmt : in out Prepared_Statement);
+      procedure Prepare_Statement
+        (Stmt   : in out Prepared_Statement;
+         Format : Formatter'Class);
       --  Do the actual preparation of the statement. This needs to be done
       --  inside a locked region, since the prepared statement is shared
 
@@ -152,7 +154,10 @@ package body GNATCOLL.SQL.Exec is
       -- Prepare_Statement --
       -----------------------
 
-      procedure Prepare_Statement (Stmt : in out Prepared_Statement) is
+      procedure Prepare_Statement
+        (Stmt   : in out Prepared_Statement;
+         Format : Formatter'Class)
+      is
          Cached : Cached_Statement_Access renames Stmt.Cached;
       begin
          if Cached.Id = No_Stmt_Id then
@@ -160,7 +165,8 @@ package body GNATCOLL.SQL.Exec is
             --  reuse the cache instead of the local version in the statement
 
             if Cached.Query /= No_Query then
-               Cached.Str := new String'(To_String (To_String (Cached.Query)));
+               Cached.Str := new String'
+                 (To_String (To_String (Cached.Query, Format)));
                Cached.Query := No_Query;   --  release memory
             end if;
 
@@ -661,7 +667,8 @@ package body GNATCOLL.SQL.Exec is
       Connection : access Database_Connection_Record'Class;
       Query      : SQL_Query) is
    begin
-      Fetch (Result, Connection, To_String (To_String (Query)));
+      Fetch
+        (Result, Connection, To_String (To_String (Query, Connection.all)));
    end Fetch;
 
    -----------
@@ -689,7 +696,8 @@ package body GNATCOLL.SQL.Exec is
       Connection : access Database_Connection_Record'Class;
       Query      : GNATCOLL.SQL.SQL_Query) is
    begin
-      Fetch (Result, Connection, To_String (To_String (Query)));
+      Fetch
+        (Result, Connection, To_String (To_String (Query, Connection.all)));
    end Fetch;
 
    -------------
@@ -1215,7 +1223,7 @@ package body GNATCOLL.SQL.Exec is
       --  of the protected area. This even saves some locking
 
       if Stmt.Cached.Id = 0 then
-         Query_Cache.Prepare_Statement (Stmt);
+         Query_Cache.Prepare_Statement (Stmt, Connection.all);
       end if;
 
       if Stmt.Use_Cache
@@ -1284,7 +1292,7 @@ package body GNATCOLL.SQL.Exec is
       Result := No_Element;
 
       if Stmt.Cached.Id = 0 then
-         Query_Cache.Prepare_Statement (Stmt);
+         Query_Cache.Prepare_Statement (Stmt, Connection.all);
       end if;
 
       if Stmt.Use_Cache then

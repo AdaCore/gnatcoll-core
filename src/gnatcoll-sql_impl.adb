@@ -17,9 +17,13 @@
 -- Place - Suite 330, Boston, MA 02111-1307, USA.                    --
 -----------------------------------------------------------------------
 
+with Ada.Calendar;               use Ada.Calendar;
+with Ada.Calendar.Time_Zones;    use Ada.Calendar.Time_Zones;
+with Ada.Strings.Fixed;          use Ada.Strings.Fixed;
 with Ada.Strings.Hash;
 with Ada.Strings.Unbounded;      use Ada.Strings.Unbounded;
 with Ada.Unchecked_Deallocation;
+with GNAT.Calendar.Time_IO;      use GNAT.Calendar, GNAT.Calendar.Time_IO;
 with GNAT.Strings;               use GNAT.Strings;
 
 package body GNATCOLL.SQL_Impl is
@@ -33,12 +37,6 @@ package body GNATCOLL.SQL_Impl is
    Comparison_Greater       : aliased constant String := ">";
    Comparison_Greater_Equal : aliased constant String := ">=";
 
-   procedure Assign
-     (R     : out SQL_Assignment;
-      Field : SQL_Field'Class;
-      Value : GNAT.Strings.String_Access);
-   --  Assign Value to Field (or set field to NULL if Value is null)
-
    --------------------------
    --  Named field data --
    --------------------------
@@ -49,7 +47,7 @@ package body GNATCOLL.SQL_Impl is
    type Named_Field_Internal is new SQL_Field_Internal with record
       Table : Table_Names := No_Names;
 
-      Value : GNAT.Strings.String_Access;
+      Str_Value : GNAT.Strings.String_Access;
       --  The expression representing the field in SQL
 
       Operator : GNAT.Strings.String_Access;
@@ -60,13 +58,44 @@ package body GNATCOLL.SQL_Impl is
    type Named_Field_Internal_Access is access all Named_Field_Internal'Class;
    overriding procedure Free (Self : in out Named_Field_Internal);
    overriding function To_String
-     (Self : Named_Field_Internal; Long : Boolean) return String;
+     (Self   : Named_Field_Internal;
+      Format : Formatter'Class;
+      Long   : Boolean) return String;
    overriding procedure Append_Tables
      (Self : Named_Field_Internal; To : in out Table_Sets.Set);
    overriding procedure Append_If_Not_Aggregate
      (Self         : access Named_Field_Internal;
       To           : in out SQL_Field_List'Class;
       Is_Aggregate : in out Boolean);
+
+   procedure Assign
+     (R     : out SQL_Assignment;
+      Field : SQL_Field'Class;
+      Value : Named_Field_Internal_Access);
+   --  Assign Value to Field (or set field to NULL if Value is null).
+   --  On exit, Value belongs to R and should not be freed by the caller.
+
+   ---------------------
+   -- Function fields --
+   ---------------------
+
+   type Function_Field is new SQL_Field_Internal with record
+      Prefix, Suffix : GNAT.Strings.String_Access;
+      To_Field       : SQL_Field_Pointer;
+   end record;
+   type Function_Field_Access is access all Function_Field'Class;
+   overriding procedure Free (Self : in out Function_Field);
+   overriding function To_String
+     (Self   : Function_Field;
+      Format : Formatter'Class;
+      Long   : Boolean) return String;
+   overriding procedure Append_Tables
+     (Self : Function_Field; To : in out Table_Sets.Set);
+   overriding procedure Append_If_Not_Aggregate
+     (Self         : access Function_Field;
+      To           : in out SQL_Field_List'Class;
+      Is_Aggregate : in out Boolean);
+   --  A field that applies a function (via Prefix .. Suffix) to another field
 
    --------------
    -- Criteria --
@@ -77,7 +106,9 @@ package body GNATCOLL.SQL_Impl is
       Arg1, Arg2 : SQL_Field_Pointer;
    end record;
    overriding function To_String
-     (Self : Comparison_Criteria; Long : Boolean := True) return String;
+     (Self   : Comparison_Criteria;
+      Format : Formatter'Class;
+      Long   : Boolean := True) return String;
    overriding procedure Append_Tables
      (Self : Comparison_Criteria; To : in out Table_Sets.Set);
    overriding procedure Append_If_Not_Aggregate
@@ -91,10 +122,12 @@ package body GNATCOLL.SQL_Impl is
 
    package body Data_Fields is
       overriding function To_String
-        (Self : Field; Long : Boolean := True) return String is
+        (Self   : Field;
+         Format : Formatter'Class;
+         Long   : Boolean := True) return String is
       begin
          if Self.Data.Data /= null then
-            return To_String (Self.Data.Data.all, Long);
+            return To_String (Self.Data.Data.all, Format, Long);
          else
             return "";
          end if;
@@ -140,19 +173,21 @@ package body GNATCOLL.SQL_Impl is
    ---------------
 
    overriding function To_String
-     (Self : SQL_Field_List; Long : Boolean := True) return String
+     (Self   : SQL_Field_List;
+      Format : Formatter'Class;
+      Long   : Boolean := True) return String
    is
       C      : Field_List.Cursor := First (Self.List);
       Result : Unbounded_String;
    begin
       if Has_Element (C) then
-         Append (Result, To_String (Element (C), Long));
+         Append (Result, To_String (Element (C), Format, Long));
          Next (C);
       end if;
 
       while Has_Element (C) loop
          Append (Result, ", ");
-         Append (Result, To_String (Element (C), Long));
+         Append (Result, To_String (Element (C), Format, Long));
          Next (C);
       end loop;
       return To_String (Result);
@@ -163,7 +198,11 @@ package body GNATCOLL.SQL_Impl is
    ---------------
 
    overriding function To_String
-     (Self : SQL_Field; Long : Boolean := True) return String is
+     (Self   : SQL_Field;
+      Format : Formatter'Class;
+      Long   : Boolean := True) return String
+   is
+      pragma Unreferenced (Format);
    begin
       if not Long then
          return Self.Name.all;
@@ -187,7 +226,7 @@ package body GNATCOLL.SQL_Impl is
    procedure Free (Self : in out Named_Field_Internal) is
    begin
       Free (Self.Operator);
-      Free (Self.Value);
+      Free (Self.Str_Value);
    end Free;
 
    ---------------
@@ -195,36 +234,38 @@ package body GNATCOLL.SQL_Impl is
    ---------------
 
    function To_String
-     (Self : Named_Field_Internal; Long : Boolean) return String
+     (Self   : Named_Field_Internal;
+      Format : Formatter'Class;
+      Long   : Boolean) return String
    is
       Result : Unbounded_String;
       C      : Field_List.Cursor;
    begin
-      if Self.Value /= null then
+      if Self.Str_Value /= null then
          if Self.Table = No_Names then
-            Result := To_Unbounded_String (Self.Value.all);
+            Result := To_Unbounded_String (Self.Str_Value.all);
 
          elsif Long then
             if Self.Table.Instance = null then
                Result := To_Unbounded_String
-                 (Self.Table.Name.all & '.' & Self.Value.all);
+                 (Self.Table.Name.all & '.' & Self.Str_Value.all);
             else
                Result := To_Unbounded_String
-                 (Self.Table.Instance.all & '.' & Self.Value.all);
+                 (Self.Table.Instance.all & '.' & Self.Str_Value.all);
             end if;
          else
-            Result := To_Unbounded_String (Self.Value.all);
+            Result := To_Unbounded_String (Self.Str_Value.all);
          end if;
       end if;
 
       if Self.Operator /= null then
          C := First (Self.List.List);
-         Result := To_Unbounded_String (To_String (Element (C)));
+         Result := To_Unbounded_String (To_String (Element (C), Format));
          Next (C);
 
          while Has_Element (C) loop
             Result := Result & " " & Self.Operator.all & " "
-              & To_String (Element (C));
+              & To_String (Element (C), Format);
             Next (C);
          end loop;
       end if;
@@ -243,6 +284,29 @@ package body GNATCOLL.SQL_Impl is
          Include (To, Self.Table);
       end if;
    end Append_Tables;
+
+   -------------------
+   -- Append_Tables --
+   -------------------
+
+   overriding procedure Append_Tables
+     (Self : Function_Field; To : in out Table_Sets.Set) is
+   begin
+      Append_Tables (Self.To_Field.Data.Field.all, To);
+   end Append_Tables;
+
+   -----------------------------
+   -- Append_If_Not_Aggregate --
+   -----------------------------
+
+   overriding procedure Append_If_Not_Aggregate
+     (Self         : access Function_Field;
+      To           : in out SQL_Field_List'Class;
+      Is_Aggregate : in out Boolean)
+   is
+   begin
+      Append_If_Not_Aggregate (Self.To_Field.Data.Field.all, To, Is_Aggregate);
+   end Append_If_Not_Aggregate;
 
    -----------------------------
    -- Append_If_Not_Aggregate --
@@ -406,11 +470,13 @@ package body GNATCOLL.SQL_Impl is
    ---------------
 
    function To_String
-     (Self : SQL_Criteria; Long : Boolean := True) return String
+     (Self   : SQL_Criteria;
+      Format : Formatter'Class;
+      Long   : Boolean := True) return String
    is
    begin
       if Self.Criteria.Data /= null then
-         return To_String (Self.Criteria.Data.all, Long);
+         return To_String (Self.Criteria.Data.all, Format, Long);
       else
          return "";
       end if;
@@ -542,10 +608,12 @@ package body GNATCOLL.SQL_Impl is
    ---------------
 
    overriding function To_String
-     (Self : Comparison_Criteria; Long : Boolean := True) return String
+     (Self   : Comparison_Criteria;
+      Format : Formatter'Class;
+      Long   : Boolean := True) return String
    is
-      Arg1 : constant String := To_String (Self.Arg1, Long => Long);
-      Arg2 : constant String := To_String (Self.Arg2, Long => Long);
+      Arg1 : constant String := To_String (Self.Arg1, Format, Long => Long);
+      Arg2 : constant String := To_String (Self.Arg2, Format, Long => Long);
    begin
       if Self.Op.all = "="
         and then Arg2 = "TRUE"
@@ -613,9 +681,11 @@ package body GNATCOLL.SQL_Impl is
    ---------------
 
    function To_String
-     (Self : SQL_Field_Pointer; Long : Boolean) return String is
+     (Self   : SQL_Field_Pointer;
+      Format : Formatter'Class;
+      Long   : Boolean) return String is
    begin
-      return To_String (Self.Data.Field.all, Long);
+      return To_String (Self.Data.Field.all, Format, Long);
    end To_String;
 
    -------------------
@@ -686,7 +756,9 @@ package body GNATCOLL.SQL_Impl is
    ---------------
 
    function To_String
-     (Self : SQL_Assignment; With_Field : Boolean) return String
+     (Self       : SQL_Assignment;
+      Format     : Formatter'Class;
+      With_Field : Boolean) return String
    is
       Result : Unbounded_String;
       C      : Assignment_Lists.Cursor := First (Self.List);
@@ -701,15 +773,16 @@ package body GNATCOLL.SQL_Impl is
          if Data.To_Field /= No_Field_Pointer then
             if With_Field then
                Append
-                 (Result, To_String (Data.Field, Long => False)
-                  & "=" & To_String (Data.To_Field, Long => True));
+                 (Result, To_String (Data.Field, Format, Long => False)
+                  & "=" & To_String (Data.To_Field, Format, Long => True));
             else
-               Append (Result, To_String (Data.To_Field, Long => True));
+               Append
+                 (Result, To_String (Data.To_Field, Format, Long => True));
             end if;
 
          elsif With_Field then
             Append
-              (Result, To_String (Data.Field, Long => False)
+              (Result, To_String (Data.Field, Format, Long => False)
                & "=" & Null_String);
          else
             Append (Result, Null_String);
@@ -744,7 +817,7 @@ package body GNATCOLL.SQL_Impl is
                Instance => null,
                Name     => null,
                Data     => (Ada.Finalization.Controlled with N));
-            Named_Field_Internal (N.all).Value := new String'(Null_String);
+            Named_Field_Internal (N.all).Str_Value := new String'(Null_String);
          end if;
 
          Next (C);
@@ -787,27 +860,54 @@ package body GNATCOLL.SQL_Impl is
    procedure Assign
      (R     : out SQL_Assignment;
       Field : SQL_Field'Class;
-      Value : GNAT.Strings.String_Access)
+      Value : Named_Field_Internal_Access)
    is
    begin
       if Value = null then
          Append (R.List, Assignment_Item'(+Field, No_Field_Pointer));
+
       else
          declare
-            N : constant SQL_Field_Internal_Access := new Named_Field_Internal;
             A : constant Assignment_Item :=
               (Field    => +Field,
                To_Field => +Any_Fields.Field'
                  (Table    => null,
                   Instance => null,
                   Name     => null,
-                  Data     => (Ada.Finalization.Controlled with N)));
+                  Data     => (Ada.Finalization.Controlled
+                               with SQL_Field_Internal_Access (Value))));
          begin
-            Named_Field_Internal (N.all).Value := new String'(Value.all);
             Append (R.List, A);
          end;
       end if;
    end Assign;
+
+   ----------
+   -- Free --
+   ----------
+
+   overriding procedure Free (Self : in out Function_Field) is
+   begin
+      Free (Self.Prefix);
+      Free (Self.Suffix);
+      Free (SQL_Field_Internal (Self));
+   end Free;
+
+   ---------------
+   -- To_String --
+   ---------------
+
+   overriding function To_String
+     (Self   : Function_Field;
+      Format : Formatter'Class;
+      Long   : Boolean) return String
+   is
+      pragma Unreferenced (Long);
+   begin
+      return Self.Prefix.all
+        & To_String (Self.To_Field.Data.Field.all, Format, Long => True)
+        & Self.Suffix.all;
+   end To_String;
 
    -----------------
    -- Field_Types --
@@ -815,7 +915,51 @@ package body GNATCOLL.SQL_Impl is
 
    package body Field_Types is
 
+      type Ada_Type_Access is access Ada_Type;
+
       package Typed_Data_Fields is new Data_Fields (Field);
+      type Typed_Named_Field_Internal is new Named_Field_Internal with record
+         Data_Value : Ada_Type_Access;
+      end record;
+
+      overriding procedure Free (Self : in out Typed_Named_Field_Internal);
+      overriding function To_String
+        (Self   : Typed_Named_Field_Internal;
+         Format : Formatter'Class;
+         Long   : Boolean) return String;
+
+      procedure Unchecked_Free is new Ada.Unchecked_Deallocation
+        (Ada_Type, Ada_Type_Access);
+
+      ----------
+      -- Free --
+      ----------
+
+      overriding procedure Free (Self : in out Typed_Named_Field_Internal) is
+      begin
+         Unchecked_Free (Self.Data_Value);
+         Free (Named_Field_Internal (Self));
+      end Free;
+
+      ---------------
+      -- To_String --
+      ---------------
+
+      overriding function To_String
+        (Self   : Typed_Named_Field_Internal;
+         Format : Formatter'Class;
+         Long   : Boolean) return String is
+      begin
+         if Self.Data_Value /= null then
+            return To_SQL (Format, Self.Data_Value.all);
+         end if;
+
+         return To_String (Named_Field_Internal (Self), Format, Long);
+      end To_String;
+
+      ----------------
+      -- From_Table --
+      ----------------
 
       function From_Table
         (Table : SQL_Single_Table'Class;
@@ -826,7 +970,7 @@ package body GNATCOLL.SQL_Impl is
          D : constant Named_Field_Internal_Access := new Named_Field_Internal;
       begin
          D.Table := (Name => null, Instance => Table.Instance);
-         D.Value := new String'(Name.Name.all);
+         D.Str_Value  := new String'(Name.Name.all);
          F.Data.Data := SQL_Field_Internal_Access (D);
          return F;
       end From_Table;
@@ -837,9 +981,10 @@ package body GNATCOLL.SQL_Impl is
 
       function Expression (Value : Ada_Type) return Field'Class is
          Data : constant Named_Field_Internal_Access :=
-           new Named_Field_Internal;
+           new Typed_Named_Field_Internal;
       begin
-         Data.Value := new String'(To_SQL (Value));
+         Typed_Named_Field_Internal (Data.all).Data_Value :=
+           new Ada_Type'(Value);
          return Typed_Data_Fields.Field'
            (Table => null, Instance => null, Name => null,
             Data => (Ada.Finalization.Controlled with
@@ -854,7 +999,7 @@ package body GNATCOLL.SQL_Impl is
          Data : constant Named_Field_Internal_Access :=
            new Named_Field_Internal;
       begin
-         Data.Value := new String'(SQL);
+         Data.Str_Value := new String'(SQL);
          return Typed_Data_Fields.Field'
            (Table => null, Instance => null, Name => null,
             Data => (Ada.Finalization.Controlled with
@@ -923,7 +1068,7 @@ package body GNATCOLL.SQL_Impl is
       begin
          D.Operator := new String'(Name);
 
-         D2.Value := new String'(Prefix & Scalar'Image (Operand) & Suffix);
+         D2.Str_Value := new String'(Prefix & Scalar'Image (Operand) & Suffix);
          F2.Data.Data := SQL_Field_Internal_Access (D2);
 
          D.List := Self & F2;
@@ -940,7 +1085,7 @@ package body GNATCOLL.SQL_Impl is
            (Table => null, Instance => null, Name => null);
          D : constant Named_Field_Internal_Access := new Named_Field_Internal;
       begin
-         D.Value := new String'(Name);
+         D.Str_Value := new String'(Name);
          F.Data.Data := SQL_Field_Internal_Access (D);
          return F;
       end SQL_Function;
@@ -954,14 +1099,19 @@ package body GNATCOLL.SQL_Impl is
       is
          F : Typed_Data_Fields.Field
            (Table => null, Instance => null, Name => null);
-         D : constant Named_Field_Internal_Access := new Named_Field_Internal;
+         D : constant Function_Field_Access := new Function_Field;
       begin
          if Suffix /= ")" and then Suffix /= "" then
-            D.Value := new String'
-              (Name & To_String (Self, Long => True) & " " & Suffix);
+            D.Prefix := new String'(Name);
+            D.To_Field := +Self;
+            D.Suffix := new String'(" " & Suffix);
+
+--              D.Str_Value := new String'
+--             (Name & To_String (Self, Format, Long => True) & " " & Suffix);
          else
-            D.Value := new String'
-              (Name & To_String (Self, Long => True) & Suffix);
+            D.Prefix := new String'(Name);
+            D.To_Field := +Self;
+            D.Suffix := new String'(Suffix);
          end if;
          F.Data.Data := SQL_Field_Internal_Access (D);
          return F;
@@ -1109,8 +1259,11 @@ package body GNATCOLL.SQL_Impl is
 
       function "=" (Self : Field; Value : Ada_Type) return SQL_Assignment is
          Result : SQL_Assignment;
+         F   : constant Named_Field_Internal_Access :=
+           new Typed_Named_Field_Internal;
       begin
-         Assign (Result, Self, new String'(To_SQL (Value)));
+         Typed_Named_Field_Internal (F.all).Data_Value := new Ada_Type'(Value);
+         Assign (Result, Self, F);
          return Result;
       end "=";
 
@@ -1137,5 +1290,147 @@ package body GNATCOLL.SQL_Impl is
       end "=";
 
    end Field_Types;
+
+   -------------------
+   -- Boolean_Image --
+   -------------------
+
+   function Boolean_Image (Self : Formatter; Value : Boolean) return String is
+      pragma Unreferenced (Self);
+   begin
+      return Boolean'Image (Value);
+   end Boolean_Image;
+
+   --------------------
+   -- Boolean_To_SQL --
+   --------------------
+
+   function Boolean_To_SQL
+     (Self : Formatter'Class; Value : Boolean) return String is
+   begin
+      return Boolean_Image (Self, Value);
+   end Boolean_To_SQL;
+
+   ------------------
+   -- Float_To_SQL --
+   ------------------
+
+   function Float_To_SQL
+     (Self : Formatter'Class; Value : Float) return String
+   is
+      pragma Unreferenced (Self);
+      Img : constant String := Float'Image (Value);
+   begin
+      if Img (Img'First) = ' ' then
+         return Img (Img'First + 1 .. Img'Last);
+      else
+         return Img;
+      end if;
+   end Float_To_SQL;
+
+   --------------------
+   -- Integer_To_SQL --
+   --------------------
+
+   function Integer_To_SQL
+     (Self : Formatter'Class; Value : Integer) return String
+   is
+      pragma Unreferenced (Self);
+      Img : constant String := Integer'Image (Value);
+   begin
+      if Img (Img'First) = ' ' then
+         return Img (Img'First + 1 .. Img'Last);
+      else
+         return Img;
+      end if;
+   end Integer_To_SQL;
+
+   -----------------
+   -- Time_To_SQL --
+   -----------------
+
+   function Time_To_SQL
+     (Self : Formatter'Class; Value : Ada.Calendar.Time) return String
+   is
+      pragma Unreferenced (Self);
+      Adjusted : Time;
+   begin
+      --  Value is always considered as GMT, which is what we store in the
+      --  database. Unfortunately, GNAT.Calendar.Time_IO converts that back to
+      --  local time.
+
+      if Value /= No_Time then
+         Adjusted := Value - Duration (UTC_Time_Offset (Value)) * 60.0;
+         return Image (Adjusted, "'%Y-%m-%d %H:%M:%S'");
+      else
+         return "NULL";
+      end if;
+   end Time_To_SQL;
+
+   -----------------
+   -- Date_To_SQL --
+   -----------------
+
+   function Date_To_SQL
+     (Self : Formatter'Class; Value : Ada.Calendar.Time) return String
+   is
+      pragma Unreferenced (Self);
+      Adjusted : Time;
+   begin
+      --  Value is always considered as GMT, which is what we store in the
+      --  database. Unfortunately, GNAT.Calendar.Time_IO converts that back to
+      --  local time.
+
+      if Value /= No_Time then
+         Adjusted := Value - Duration (UTC_Time_Offset (Value)) * 60.0;
+         return Image (Adjusted, "'%Y-%m-%d'");
+      else
+         return "NULL";
+      end if;
+   end Date_To_SQL;
+
+   -------------------
+   -- String_To_SQL --
+   -------------------
+
+   function String_To_SQL
+     (Self : Formatter'Class; Value : String) return String
+   is
+      pragma Unreferenced (Self);
+      Num_Of_Apostrophes : constant Natural :=
+        Ada.Strings.Fixed.Count (Value, "'");
+      Num_Of_Backslashes : constant Natural :=
+        Ada.Strings.Fixed.Count (Value, "\");
+      New_Str            : String
+        (Value'First .. Value'Last + Num_Of_Apostrophes + Num_Of_Backslashes);
+      Index              : Natural := Value'First;
+      Prepend_E          : Boolean := False;
+   begin
+      if Num_Of_Apostrophes = 0
+        and then Num_Of_Backslashes = 0
+      then
+         return "'" & Value & "'";
+      end if;
+
+      for I in Value'Range loop
+         if Value (I) = ''' then
+            New_Str (Index .. Index + 1) := "''";
+            Index := Index + 1;
+         elsif Value (I) = '\' then
+            New_Str (Index .. Index + 1) := "\\";
+            Prepend_E := True;
+            Index := Index + 1;
+         else
+            New_Str (Index) := Value (I);
+         end if;
+         Index := Index + 1;
+      end loop;
+
+      if Prepend_E then
+         return "E'" & New_Str & "'";
+      else
+         return "'" & New_Str & "'";
+      end if;
+   end String_To_SQL;
 
 end GNATCOLL.SQL_Impl;
