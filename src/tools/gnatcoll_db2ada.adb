@@ -1261,7 +1261,11 @@ procedure GNATCOLL_Db2Ada is
             if Length (FK.From_Attributes) = 1
               and then Element (First (FK.From_Attributes)) = Attr.Name
             then
-               return To_String (Get_PK (To_String (FK.To_Table)).Field_Type);
+               --  The primary key of the foreign table could itself be a
+               --  reference to yet another table
+               return Get_Field_Type
+                 (Table => Element (Tables.Find (To_String (FK.To_Table))),
+                  Attr  => Get_PK (To_String (FK.To_Table)));
             end if;
 
             Next (K);
@@ -1345,7 +1349,6 @@ procedure GNATCOLL_Db2Ada is
       FK : Foreign_Key_Description;
       S  : String_Lists.Cursor;
       Indexes : Unbounded_String;
-
 
    begin
       --  All tables and their attributes
