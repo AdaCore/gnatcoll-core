@@ -1,0 +1,33 @@
+project Para_Fill is
+
+   for Source_Dirs use (".", "..");
+
+   for Main use ("fill_ada_comments.adb", "fill_text.adb");
+   for Object_Dir use "obj";
+   for Exec_Dir use ".";
+
+   package Compiler is
+      for Default_Switches ("ada") use
+        ("-gnatw.ge", -- GNAT-mode warnings, warnings as errors
+         "-gnatygOo",  -- GNAT style checks, require "overriding" keyword, alpha order
+         "-gnato",   -- overflow checks
+         "-fstack-check",
+         "-g",       -- debug
+         "-gnata",   -- assertions enabled
+         "-gnat2012");
+   end Compiler;
+
+   package Builder is
+      for Default_Switches ("ada") use
+        ("-p"); -- create directories automatically (e.g. Object_Dir)
+   end Builder;
+
+   package Pretty_Printer is
+   end Pretty_Printer;
+
+   package Make is
+      for Makefile use "Makefile";
+   end Make;
+
+end Para_Fill;
+
