@@ -96,8 +96,8 @@ package GNATCOLL.Para_Fill is
    --  algorithm.
 
    function No_Fill
-    (Paragraph      : String;
-      Max_Line_Length : Positive := Default_Max_Line_Length)
+    (Paragraph       : String;
+     Max_Line_Length : Positive := Default_Max_Line_Length)
       return            String;
    --  Return Paragraph unchanged
 

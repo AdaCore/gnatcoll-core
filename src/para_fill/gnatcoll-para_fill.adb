@@ -32,7 +32,7 @@ with Ada.Containers.Vectors;
 with Ada.Strings.Unbounded;  use Ada.Strings.Unbounded;
 with Ada.Strings.Fixed;      use Ada.Strings.Fixed;
 with Ada.Strings;            use Ada.Strings;
-with Text_IO; use Text_IO;
+with Text_IO;                use Text_IO;
 with GNATCOLL.Para_Fill.Words; use GNATCOLL.Para_Fill.Words;
 with GNATCOLL.Para_Fill.Badnesses;   use GNATCOLL.Para_Fill.Badnesses;
 
@@ -110,11 +110,11 @@ package body GNATCOLL.Para_Fill is
    --  plus a value at the end pointing past the last word in the paragraph.
 
    procedure Insert_New_Lines
-        (Paragraph   : in out GNATCOLL.Para_Fill.Words.Words;
-         First_Words : Word_Vector);
-      --  Inserts a new line before the first word of every line, skipping the
-      --  first word of the paragraph and adding an extra new line at the end
-      --  of the paragraph.
+     (Paragraph   : in out GNATCOLL.Para_Fill.Words.Words;
+      First_Words : Word_Vector);
+   --  Inserts a new line before the first word of every line, skipping the
+   --  first word of the paragraph and adding an extra new line at the end
+   --  of the paragraph.
 
    function Slow_Fill
      (Paragraph       : GNATCOLL.Para_Fill.Words.Words;
@@ -243,8 +243,8 @@ package body GNATCOLL.Para_Fill is
    ----------------------
 
    procedure Insert_New_Lines
-        (Paragraph   : in out GNATCOLL.Para_Fill.Words.Words;
-         First_Words : Word_Vector)
+     (Paragraph   : in out GNATCOLL.Para_Fill.Words.Words;
+      First_Words : Word_Vector)
    is
    begin
       for Count in 2 .. Word_Index (Length (First_Words)) - 1 loop
@@ -376,7 +376,7 @@ package body GNATCOLL.Para_Fill is
       --  only if Slow_Fill will not take too long. The limit of four lines was
       --  chosen based on experimenting with the speed of Slow_Fill.
 
-      if True and then Minimum_Lines (Para, Max_Line_Length) <= 4 then
+      if False and then Minimum_Lines (Para, Max_Line_Length) <= 4 then
          pragma Assert
            (Slow_Fill (Paragraph, Max_Line_Length) = To_String (Para));
          null;
@@ -406,7 +406,7 @@ package body GNATCOLL.Para_Fill is
    --------------------
 
    function No_Fill
-     (Paragraph      : String;
+     (Paragraph       : String;
       Max_Line_Length : Positive := Default_Max_Line_Length)
       return            String
    is
@@ -554,6 +554,64 @@ package body GNATCOLL.Para_Fill is
          exit when not Did_Something;
 
       end loop;
+
+      if Number_Of_Lines >= 4 then
+
+         declare
+            Index_0     : constant Natural  :=
+               Nth_Index (Result, "" & ASCII.LF, Number_Of_Lines - 3);
+            Index_1     : constant Natural  :=
+               Nth_Index (Result, "" & ASCII.LF, Number_Of_Lines - 2);
+            Index_2     : constant Natural  :=
+               Nth_Index (Result, "" & ASCII.LF, Number_Of_Lines - 1);
+            Index_3     : constant Natural  :=
+               Nth_Index (Result, "" & ASCII.LF, Number_Of_Lines);
+            Length_1    : constant Positive := Index_1 - Index_0 - 1;
+            Length_2    : constant Positive := Index_2 - Index_1 - 1;
+            Length_3    : constant Positive := Index_3 - Index_2 - 1;
+            Word_Start  : constant Natural  :=
+               Index (Result, " ", Index_2, Backward);
+            Word_Length : constant Positive := Index_2 - Word_Start;
+         begin
+            if Length_3 + Word_Length <= Max_Line_Length
+              and then abs (Length_2 - Length_1) >
+                       abs (Length_2 - Length_1 - Word_Length)
+            then
+               Result (Word_Start) := ASCII.LF;
+               Result (Index_2)    := ' ';
+               Did_Something       := True;
+            end if;
+         end;
+
+      elsif Number_Of_Lines = 3 then
+
+         declare
+            Index_0     : constant Natural  := 0;
+            Index_1     : constant Natural  :=
+               Nth_Index (Result, "" & ASCII.LF, Number_Of_Lines - 2);
+            Index_2     : constant Natural  :=
+               Nth_Index (Result, "" & ASCII.LF, Number_Of_Lines - 1);
+            Index_3     : constant Natural  :=
+               Nth_Index (Result, "" & ASCII.LF, Number_Of_Lines);
+            Length_1    : constant Positive := Index_1 - Index_0 - 1;
+            Length_2    : constant Positive := Index_2 - Index_1 - 1;
+            Length_3    : constant Positive := Index_3 - Index_2 - 1;
+            Word_Start  : constant Natural  :=
+               Index (Result, " ", Index_2, Backward);
+            Word_Length : constant Positive := Index_2 - Word_Start;
+         begin
+            if Length_3 + Word_Length <= Max_Line_Length
+              and then abs (Length_2 - Length_1) >
+                       abs (Length_2 - Length_1 - Word_Length)
+            then
+               Result (Word_Start) := ASCII.LF;
+               Result (Index_2)    := ' ';
+               Did_Something       := True;
+            end if;
+         end;
+
+      end if;
+
       return Result;
    end Pretty_Fill;
 
