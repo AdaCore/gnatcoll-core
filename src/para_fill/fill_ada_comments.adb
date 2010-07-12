@@ -1,7 +1,7 @@
 -----------------------------------------------------------------------
 --                          G N A T C O L L                          --
 --                                                                   --
---                       Copyright (C) 2010, AdaCore                 --
+--                    Copyright (C) 2010, AdaCore                    --
 --                                                                   --
 -- This library is free software; you can redistribute it and/or     --
 -- modify it under the terms of the GNU General Public               --
@@ -26,13 +26,13 @@
 -- executable file  might be covered by the  GNU Public License.     --
 -----------------------------------------------------------------------
 
---  This software was originally contributed by William A. Duff.
+--  This software was originally contributed by William A. Duff
 
 with GNATCOLL.Para_Fill;       use GNATCOLL.Para_Fill;
 with GNATCOLL.Para_Fill.Tests; use GNATCOLL.Para_Fill.Tests;
 
 procedure Fill_Ada_Comments is
-   --  Applies a filling algorithm to all the comments in an Ada program.
+   --  Applies a filling algorithm to all the comments in an Ada program
 begin
    Process_Command_Line (Command_Name => "fill_ada_comments");
 

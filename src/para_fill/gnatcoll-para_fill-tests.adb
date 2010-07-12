@@ -1,7 +1,7 @@
 -----------------------------------------------------------------------
 --                          G N A T C O L L                          --
 --                                                                   --
---                       Copyright (C) 2010, AdaCore                 --
+--                    Copyright (C) 2010, AdaCore                    --
 --                                                                   --
 -- This library is free software; you can redistribute it and/or     --
 -- modify it under the terms of the GNU General Public               --
@@ -26,7 +26,7 @@
 -- executable file  might be covered by the  GNU Public License.     --
 -----------------------------------------------------------------------
 
---  This software was originally contributed by William A. Duff.
+--  This software was originally contributed by William A. Duff
 
 with Ada.Command_Line;
 with Ada.Command_Line.Remove;
@@ -39,7 +39,7 @@ with GNAT.Regpat; use GNAT.Regpat;
 package body GNATCOLL.Para_Fill.Tests is
 
    procedure Command_Line_Error (Command_Name : String);
-   --  Print usage message and exit with bad status code.
+   --  Print usage message and exit with bad status code
 
    function Line_Is_Blank (Line : String) return Boolean;
    --  Returns True if all the cahractersin Line  are whitespace (as defined by
@@ -104,7 +104,7 @@ package body GNATCOLL.Para_Fill.Tests is
    end record;
 
    Cur_Line : Item;
-   --  Current item read by Get_Line. Used as a lookahead by Get_Item.
+   --  Current item read by Get_Line. Used as a lookahead by Get_Item
 
    procedure Put_Item (Output : Text_IO.File_Type; X : Item);
    --  Send X to the Output. Single_Lines are sent unchanged. For Comments, we
@@ -182,8 +182,7 @@ package body GNATCOLL.Para_Fill.Tests is
      (Input, Output : Text_IO.File_Type;
       Format        : not null access function
         (Paragraph       : String;
-         Max_Line_Length : Positive)
-         return            String;
+         Max_Line_Length : Positive) return String;
       Max_Line_Length : Positive)
    is
 
@@ -191,6 +190,10 @@ package body GNATCOLL.Para_Fill.Tests is
         (Text            : in out Unbounded_String;
          Max_Line_Length : Positive);
       --  Wrapper to call Format converting the types as necessary
+
+      ----------
+      -- Form --
+      ----------
 
       procedure Form
         (Text            : in out Unbounded_String;
@@ -233,8 +236,7 @@ package body GNATCOLL.Para_Fill.Tests is
      (Input_Name, Output_Name : String;
       Format                  : not null access function
         (Paragraph       : String;
-         Max_Line_Length : Positive)
-      return            String;
+         Max_Line_Length : Positive) return String;
       Max_Line_Length : Positive)
    is
 

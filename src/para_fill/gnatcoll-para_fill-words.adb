@@ -1,7 +1,7 @@
 -----------------------------------------------------------------------
 --                          G N A T C O L L                          --
 --                                                                   --
---                       Copyright (C) 2010, AdaCore                 --
+--                    Copyright (C) 2010, AdaCore                    --
 --                                                                   --
 -- This library is free software; you can redistribute it and/or     --
 -- modify it under the terms of the GNU General Public               --
@@ -26,7 +26,7 @@
 -- executable file  might be covered by the  GNU Public License.     --
 -----------------------------------------------------------------------
 
---  This software was originally contributed by William A. Duff.
+--  This software was originally contributed by William A. Duff
 
 with Ada.Containers.Vectors;
 with Ada.Strings.Unbounded; use Ada.Strings.Unbounded;
@@ -47,7 +47,7 @@ package body GNATCOLL.Para_Fill.Words is
    subtype Word_Vector is Word_Vectors.Vector;
 
    function To_Word_Starts (Vector : Word_Vector) return Word_Starts;
-   --  Takes a Word_Vector and returns the equivalent Word_Starts.
+   --  Takes a Word_Vector and returns the equivalent Word_Starts
 
    ------------------
    -- Add_New_Line --
@@ -63,8 +63,8 @@ package body GNATCOLL.Para_Fill.Words is
    ---------------------
 
    function Index_Paragraph (Paragraph : String) return Words is
-      Result : Word_Vector;
       Fixed_Para : constant String := Remove_Excess_Characters (Paragraph);
+      Result     : Word_Vector;
    begin
       Append (Result, Fixed_Para'First);
 

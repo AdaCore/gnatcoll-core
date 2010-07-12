@@ -1,7 +1,7 @@
 -----------------------------------------------------------------------
 --                          G N A T C O L L                          --
 --                                                                   --
---                       Copyright (C) 2010, AdaCore                 --
+--                    Copyright (C) 2010, AdaCore                    --
 --                                                                   --
 -- This library is free software; you can redistribute it and/or     --
 -- modify it under the terms of the GNU General Public               --
@@ -26,7 +26,7 @@
 -- executable file  might be covered by the  GNU Public License.     --
 -----------------------------------------------------------------------
 
---  This software was originally contributed by William A. Duff.
+--  This software was originally contributed by William A. Duff
 
 private package GNATCOLL.Para_Fill.Words is
 
@@ -45,24 +45,24 @@ private package GNATCOLL.Para_Fill.Words is
    --  Paragraph.
 
    function Nth_Word (W : Words; N : Word_Index) return String;
-   --  Returns the Nth word in W.PAragraph.
+   --  Returns the Nth word in W.PAragraph
 
    function Last_Word (W : Words) return Word_Count;
    --  Returns the word number of the last word (in other words the number of
    --  words) in W.Paragraph.
 
    function Word_Length (W : Words; N : Word_Index) return Positive;
-   --  Returns the length of the Nth word in W.Paragraph.
+   --  Returns the length of the Nth word in W.Paragraph
 
    function Line_Length (W : Words; X, Y : Word_Index) return Positive;
    --  Returns the length of a line beginning with the Xth word and ending with
    --  the Yth word.
 
    procedure Add_New_Line (W : in out Words; Before : Word_Index);
-   --  Replaces the space before a word in W.Paragraph with a new line.
+   --  Replaces the space before a word in W.Paragraph with a new line
 
    function To_String (W : Words) return String;
-   --  Returns W.Paragraph.
+   --  Returns W.Paragraph
 
 private
 
@@ -70,7 +70,7 @@ private
 
    type Words (Num_Chars : Natural; After_Last_Word : Word_Count) is record
       Paragraph : String (1 .. Num_Chars);
-      Starts : Word_Starts (1 .. After_Last_Word);
+      Starts    : Word_Starts (1 .. After_Last_Word);
    end record;
    --  Paragraph is the actual text of the Words. Starts contains indexes to
    --  the first character of each word in Paragraph. This facilitates the

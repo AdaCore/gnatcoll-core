@@ -1,7 +1,7 @@
 -----------------------------------------------------------------------
 --                          G N A T C O L L                          --
 --                                                                   --
---                       Copyright (C) 2010, AdaCore                 --
+--                    Copyright (C) 2010, AdaCore                    --
 --                                                                   --
 -- This library is free software; you can redistribute it and/or     --
 -- modify it under the terms of the GNU General Public               --
@@ -26,7 +26,7 @@
 -- executable file  might be covered by the  GNU Public License.     --
 -----------------------------------------------------------------------
 
---  This software was originally contributed by William A. Duff.
+--  This software was originally contributed by William A. Duff
 
 package GNATCOLL.Para_Fill is
 
@@ -44,15 +44,13 @@ package GNATCOLL.Para_Fill is
 
    function Greedy_Fill
      (Paragraph       : String;
-      Max_Line_Length : Positive := Default_Max_Line_Length)
-      return            String;
+      Max_Line_Length : Positive := Default_Max_Line_Length) return String;
    --  Formats a paragraph with the greedy algorithm (by putting as many words
    --  as possible on each line).
 
    function Pretty_Fill
      (Paragraph       : String;
-      Max_Line_Length : Positive := Default_Max_Line_Length)
-      return            String;
+      Max_Line_Length : Positive := Default_Max_Line_Length) return String;
    --  Formats a paragraph by first performing To_Greedy_Pragrap and then
    --  comparing adjacent lines and deciding whether a word should be moved to
    --  the next line to make the lines more even.
@@ -76,8 +74,7 @@ package GNATCOLL.Para_Fill is
 
    function Knuth_Fill
      (Paragraph       : String;
-      Max_Line_Length : Positive := Default_Max_Line_Length)
-      return            String;
+      Max_Line_Length : Positive := Default_Max_Line_Length) return String;
    --  Fill the paragraph in the best possible way, based on an algorithm
    --  invented by Knuth. This algorithm uses dynamic programming techniques in
    --  order to fill paragraphs so that they have the lowest possible badness
@@ -87,9 +84,8 @@ package GNATCOLL.Para_Fill is
    --  Software Practice and Experience, 11 (1981).
 
    function Slow_Fill
-    (Paragraph      : String;
-      Max_Line_Length : Positive)
-      return String;
+    (Paragraph        : String;
+      Max_Line_Length : Positive) return String;
    --  Fill the paragraph in the best possible way, using an extremely slow
    --  algorithm that tries all the possibilities. Used for testing the Knuth
    --  algorithm. This should produce the same result as the the Knuth
@@ -97,8 +93,7 @@ package GNATCOLL.Para_Fill is
 
    function No_Fill
     (Paragraph       : String;
-     Max_Line_Length : Positive := Default_Max_Line_Length)
-      return            String;
+     Max_Line_Length : Positive := Default_Max_Line_Length) return String;
    --  Return Paragraph unchanged
 
 private

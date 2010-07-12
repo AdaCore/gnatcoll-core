@@ -1,7 +1,7 @@
 -----------------------------------------------------------------------
 --                          G N A T C O L L                          --
 --                                                                   --
---                       Copyright (C) 2010, AdaCore                 --
+--                    Copyright (C) 2010, AdaCore                    --
 --                                                                   --
 -- This library is free software; you can redistribute it and/or     --
 -- modify it under the terms of the GNU General Public               --
@@ -26,7 +26,7 @@
 -- executable file  might be covered by the  GNU Public License.     --
 -----------------------------------------------------------------------
 
---  This software was originally contributed by William A. Duff.
+--  This software was originally contributed by William A. Duff
 
 with GNATCOLL.Para_Fill.Words; use GNATCOLL.Para_Fill.Words;
 
@@ -45,7 +45,7 @@ private package GNATCOLL.Para_Fill.Badnesses is
    --  infinity.
 
    function "<" (X, Y : Badness_Value) return Boolean;
-   --  Returns true if X is less than Y. Else returns False.
+   --  Returns true if X is less than Y. Else returns False
 
    function "**" (X : Natural; Y : Positive) return Badness_Value;
    --  Raise X to the Y power and returns the result as a Badness_Value. If the
@@ -57,8 +57,7 @@ private package GNATCOLL.Para_Fill.Badnesses is
      (W                : GNATCOLL.Para_Fill.Words.Words;
       X, Y             : Word_Index;
       Max_Line_Length  : Positive;
-      Format_Last_Line : Boolean := False)
-      return            Badness_Value;
+      Format_Last_Line : Boolean := False) return Badness_Value;
    --  Returns badness as determined by a formula invented by Knuth. This
    --  formula calculates the square of the difference between the Line_Length
    --  (calculated by the Line_Length function in GNATCOLL.Para_Fill.Words) and
@@ -71,8 +70,7 @@ private package GNATCOLL.Para_Fill.Badnesses is
 
    function Line_Badness
      (Line_Length     : Positive;
-      Max_Line_Length : Positive)
-      return            Badness_Value;
+      Max_Line_Length : Positive) return Badness_Value;
    --  Returns badness as determined by a formula invented by Knuth.
    --  This formula calculates the square of the difference between the
    --  Line_Length and the Max_Line_Length. If the line length is greater

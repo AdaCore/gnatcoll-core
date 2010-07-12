@@ -1,7 +1,7 @@
 -----------------------------------------------------------------------
 --                          G N A T C O L L                          --
 --                                                                   --
---                       Copyright (C) 2010, AdaCore                 --
+--                    Copyright (C) 2010, AdaCore                    --
 --                                                                   --
 -- This library is free software; you can redistribute it and/or     --
 -- modify it under the terms of the GNU General Public               --
@@ -26,15 +26,16 @@
 -- executable file  might be covered by the  GNU Public License.     --
 -----------------------------------------------------------------------
 
---  This software was originally contributed by William A. Duff.
+--  This software was originally contributed by William A. Duff
 
 with Ada.Containers.Vectors;
-with Ada.Strings.Unbounded;  use Ada.Strings.Unbounded;
-with Ada.Strings.Fixed;      use Ada.Strings.Fixed;
-with Ada.Strings;            use Ada.Strings;
-with Text_IO;                use Text_IO;
-with GNATCOLL.Para_Fill.Words; use GNATCOLL.Para_Fill.Words;
-with GNATCOLL.Para_Fill.Badnesses;   use GNATCOLL.Para_Fill.Badnesses;
+with Ada.Strings.Unbounded;        use Ada.Strings.Unbounded;
+with Ada.Strings.Fixed;            use Ada.Strings.Fixed;
+with Ada.Strings;                  use Ada.Strings;
+with Ada.Text_IO;                  use Ada.Text_IO;
+
+with GNATCOLL.Para_Fill.Words;     use GNATCOLL.Para_Fill.Words;
+with GNATCOLL.Para_Fill.Badnesses; use GNATCOLL.Para_Fill.Badnesses;
 
 package body GNATCOLL.Para_Fill is
 
@@ -133,8 +134,7 @@ package body GNATCOLL.Para_Fill is
      (Max_Line_Length       : Positive;
       Length_Of_First_Line  : Positive;
       Length_Of_Second_Line : Positive;
-      Length_Of_Last_Word   : Positive)
-      return                  Boolean
+      Length_Of_Last_Word   : Positive) return Boolean
    is
    begin
       if Length_Of_Second_Line + Length_Of_Last_Word <= Max_Line_Length
@@ -168,8 +168,7 @@ package body GNATCOLL.Para_Fill is
 
    function Count_Occurrences
      (Source  : String;
-      Pattern : String)
-      return    Natural
+      Pattern : String) return Natural
    is
       Result : Natural := 0;
       J      : Natural := 0;
@@ -189,8 +188,7 @@ package body GNATCOLL.Para_Fill is
 
    function Greedy_Fill
      (Paragraph       : GNATCOLL.Para_Fill.Words.Words;
-      Max_Line_Length : Positive)
-      return            String
+      Max_Line_Length : Positive) return String
    is
       Result              : Unbounded_String;
       Current_Line_Length : Natural;
@@ -208,7 +206,7 @@ package body GNATCOLL.Para_Fill is
             then
                Current_Line_Length := Current_Line_Length + 1;
                Append (Result, ' ');
-            --  It doesn't fit. Start a new line.
+            --  It doesn't fit. Start a new line
             else
                Current_Line_Length := 0;
                Append (Result, ASCII.LF);
@@ -230,8 +228,7 @@ package body GNATCOLL.Para_Fill is
 
    function Greedy_Fill
      (Paragraph       : String;
-      Max_Line_Length : Positive := Default_Max_Line_Length)
-      return            String
+      Max_Line_Length : Positive := Default_Max_Line_Length) return String
    is
       Para : String renames Paragraph;
    begin
@@ -276,22 +273,23 @@ package body GNATCOLL.Para_Fill is
 
       function Calculate_Best
         (Paragraph       : GNATCOLL.Para_Fill.Words.Words;
-         Max_Line_Length : Positive)
-         return            Word_Indexes;
+         Max_Line_Length : Positive) return Word_Indexes;
       --  Determines the best division of lines and returns the word that
       --  begins each line in this setup as an array.
 
       function Determine_First_Words
         (Last_Word  : Word_Count;
-         Best_Words : Word_Indexes)
-         return       Word_Vector;
+         Best_Words : Word_Indexes) return Word_Vector;
       --  Takes an array of the first words, reverses it, and stores it in a
       --  vector.
 
+      --------------------
+      -- Calculate_Best --
+      --------------------
+
       function Calculate_Best
         (Paragraph       : GNATCOLL.Para_Fill.Words.Words;
-         Max_Line_Length : Positive)
-         return            Word_Indexes
+         Max_Line_Length : Positive) return Word_Indexes
       is
          Minimum_Badnesses : Badness_Values (1 .. Last_Word (Paragraph) + 1);
          Result            : Word_Indexes (1 .. Last_Word (Paragraph));
@@ -329,10 +327,13 @@ package body GNATCOLL.Para_Fill is
 
       end Calculate_Best;
 
+      ---------------------------
+      -- Determine_First_Words --
+      ---------------------------
+
       function Determine_First_Words
         (Last_Word  : Word_Count;
-         Best_Words : Word_Indexes)
-         return       Word_Vector
+         Best_Words : Word_Indexes) return Word_Vector
       is
          X      : Word_Index;
          Y      : Word_Index := Last_Word;
@@ -365,8 +366,7 @@ package body GNATCOLL.Para_Fill is
 
    function Knuth_Fill
      (Paragraph       : String;
-      Max_Line_Length : Positive := Default_Max_Line_Length)
-      return            String
+      Max_Line_Length : Positive := Default_Max_Line_Length) return String
    is
       Para : GNATCOLL.Para_Fill.Words.Words := Index_Paragraph (Paragraph);
    begin
@@ -390,8 +390,7 @@ package body GNATCOLL.Para_Fill is
 
    function Minimum_Lines
      (Paragraph       : GNATCOLL.Para_Fill.Words.Words;
-      Max_Line_Length : Positive)
-      return            Natural
+      Max_Line_Length : Positive) return Natural
    is
    begin
       --  Calculate the minimum number of lines by applying the greedy
@@ -407,8 +406,7 @@ package body GNATCOLL.Para_Fill is
 
    function No_Fill
      (Paragraph       : String;
-      Max_Line_Length : Positive := Default_Max_Line_Length)
-      return            String
+      Max_Line_Length : Positive := Default_Max_Line_Length) return String
    is
       pragma Unreferenced (Max_Line_Length);
    begin
@@ -422,8 +420,7 @@ package body GNATCOLL.Para_Fill is
    function Nth_Index
      (Source  : String;
       Pattern : String;
-      N       : Natural)
-      return    Natural
+      N       : Natural) return Natural
    is
       Result : Natural := 0;
    begin
@@ -442,13 +439,12 @@ package body GNATCOLL.Para_Fill is
    -- Paragraph_Badness --
    -----------------------
 
-   package Word_IO is new Text_IO.Integer_IO (Word_Index);
+   package Word_IO is new Ada.Text_IO.Integer_IO (Word_Index);
 
    function Paragraph_Badness
      (Paragraph       : GNATCOLL.Para_Fill.Words.Words;
       First_Words     : Word_Indexes;
-      Max_Line_Length : Positive)
-      return            Badness_Value
+      Max_Line_Length : Positive) return Badness_Value
    is
       pragma Assert (First_Words (First_Words'First) = 1);
       pragma Assert
@@ -503,12 +499,12 @@ package body GNATCOLL.Para_Fill is
       Max_Line_Length : Positive := Default_Max_Line_Length)
       return            String
    is
-      Result          : String            :=
-         Greedy_Fill (Paragraph, Max_Line_Length);
+      Result          : String :=
+                          Greedy_Fill (Paragraph, Max_Line_Length);
+      Number_Of_Lines : constant Positive :=
+                          Ada.Strings.Fixed.Count (Result, "" & ASCII.LF);
       Did_Something   : Boolean;
       Count           : Natural           := 0;
-      Number_Of_Lines : constant Positive :=
-         Ada.Strings.Fixed.Count (Result, "" & ASCII.LF);
    begin
       --  Compares adjacent lines, starting with the first and second line
       --  and ending with the third to last and second to last lines. If
@@ -517,8 +513,8 @@ package body GNATCOLL.Para_Fill is
       --  then the word is moved. This is repeated through the whole paragraph
       --  (Max_Line_Length / 2) * Number_Of_Lines times or until nothing is
       --  changed in a loop of the paragraph.
-      loop
 
+      loop
          Count         := Count + 1;
          Did_Something := False;
          for Line_Number in 1 .. Number_Of_Lines - 2 loop
@@ -621,8 +617,7 @@ package body GNATCOLL.Para_Fill is
 
    function Slow_Fill
      (Paragraph       : GNATCOLL.Para_Fill.Words.Words;
-      Max_Line_Length : Positive)
-      return            String
+      Max_Line_Length : Positive) return String
    is
 
       --  If N = the number of words (Paragraph.After_Last_Word-1), then there
@@ -640,7 +635,7 @@ package body GNATCOLL.Para_Fill is
 
       Num_Lines : constant Word_Index :=
          Word_Index (Minimum_Lines (Para, Max_Line_Length));
-      --  Only try possibilities that have exactly this number of lines.
+      --  Only try possibilities that have exactly this number of lines
 
       --  Min_Badness is the minimum badness value for all the possibilities
       --  tried, and Min_Badness_First_Words is the first-words-in-lines
@@ -657,10 +652,19 @@ package body GNATCOLL.Para_Fill is
       --  possible first words for the second line, and so on, until we've got
       --  the right number of first words.
 
+      ---------------------
+      -- Recursive_Check --
+      ---------------------
+
       procedure Recursive_Check (First_Words : Word_Indexes) is
          pragma Assert (First_Words'Length in 1 .. Num_Lines + 1);
 
          function "<=" (X, Y : Badness_Value) return Boolean;
+
+         ----------
+         -- "<=" --
+         ----------
+
          function "<=" (X, Y : Badness_Value) return Boolean is
          begin
             return X = Y or else X < Y;
@@ -707,7 +711,7 @@ package body GNATCOLL.Para_Fill is
    begin
       Recursive_Check ((1 => 1));
 
-      --  ??? Mimics other code, should be split out into sub-program.
+      --  ??? Mimics other code, should be split out into sub-program
 
       for Count in 2 .. Min_Badness_First_Words'Last loop
          Add_New_Line (Para, Before => Min_Badness_First_Words (Count));
@@ -719,8 +723,7 @@ package body GNATCOLL.Para_Fill is
 
    function Slow_Fill
      (Paragraph       : String;
-      Max_Line_Length : Positive)
-      return            String
+      Max_Line_Length : Positive) return String
    is
    begin
       return Slow_Fill (Index_Paragraph (Paragraph), Max_Line_Length);

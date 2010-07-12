@@ -1,7 +1,7 @@
 -----------------------------------------------------------------------
 --                          G N A T C O L L                          --
 --                                                                   --
---                       Copyright (C) 2010, AdaCore                 --
+--                    Copyright (C) 2010, AdaCore                    --
 --                                                                   --
 -- This library is free software; you can redistribute it and/or     --
 -- modify it under the terms of the GNU General Public               --
@@ -26,7 +26,7 @@
 -- executable file  might be covered by the  GNU Public License.     --
 -----------------------------------------------------------------------
 
---  This software was originally contributed by William A. Duff.
+--  This software was originally contributed by William A. Duff
 
 with Ada.Text_IO; use Ada; use Ada.Text_IO;
 
@@ -57,7 +57,7 @@ package GNATCOLL.Para_Fill.Tests is
        Max_Line_Length : Positive)
        return            String;
       Max_Line_Length : Positive);
-   --  Same as above, except it takes open Input and Output files.
+   --  Same as above, except it takes open Input and Output files
 
    ----------------
 

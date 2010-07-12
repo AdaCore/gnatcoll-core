@@ -1,7 +1,7 @@
 -----------------------------------------------------------------------
 --                          G N A T C O L L                          --
 --                                                                   --
---                       Copyright (C) 2010, AdaCore                 --
+--                    Copyright (C) 2010, AdaCore                    --
 --                                                                   --
 -- This library is free software; you can redistribute it and/or     --
 -- modify it under the terms of the GNU General Public               --
@@ -26,9 +26,13 @@
 -- executable file  might be covered by the  GNU Public License.     --
 -----------------------------------------------------------------------
 
---  This software was originally contributed by William A. Duff.
+--  This software was originally contributed by William A. Duff
 
 package body GNATCOLL.Para_Fill.Badnesses is
+
+   ----------
+   -- "**" --
+   ----------
 
    function "**" (X : Natural; Y : Positive) return Badness_Value is
    begin
@@ -38,6 +42,10 @@ package body GNATCOLL.Para_Fill.Badnesses is
          return Infinity;
    end "**";
 
+   ---------
+   -- "+" --
+   ---------
+
    overriding function "+" (X, Y : Badness_Value) return Badness_Value is
    begin
       return Badness_Value (Integer (X) + Integer (Y));
@@ -46,45 +54,58 @@ package body GNATCOLL.Para_Fill.Badnesses is
          return Infinity;
    end "+";
 
+   ---------
+   -- "<" --
+   ---------
+
    overriding function "<" (X, Y : Badness_Value) return Boolean is
    begin
       return Integer (X) < Integer (Y);
    end "<";
+
+   -----------
+   -- Image --
+   -----------
 
    function Image (Badness : Badness_Value) return String is
    begin
       if Badness = Infinity then
          return "Inf";
       else
-         --  Slicing removes the superfluous space before Badness'Img.
+         --  Slicing removes the superfluous space before Badness'Img
          return Badness'Img (Badness'Img'First + 1 .. Badness'Img'Last);
       end if;
    end Image;
 
-   function Line_Badness (W                : GNATCOLL.Para_Fill.Words.Words;
-                          X, Y             : Word_Index;
-                          Max_Line_Length  : Positive;
-                          Format_Last_Line : Boolean := False)
-                          return Badness_Value is
+   ------------------
+   -- Line_Badness --
+   ------------------
+
+   function Line_Badness
+     (W                : GNATCOLL.Para_Fill.Words.Words;
+      X, Y             : Word_Index;
+      Max_Line_Length  : Positive;
+      Format_Last_Line : Boolean := False) return Badness_Value
+   is
       Distance : constant Integer := Max_Line_Length - Line_Length (W, X, Y);
 
    begin
-      --  Line is too long.
+      --  Line is too long
 
       if Distance < 0 then
 
-         --  One word line, meaning nothing can be done to shorten it.
+         --  One word line, meaning nothing can be done to shorten it
 
          if X = Y then
             return 0;
 
-         --  Not one word line, meaning it can be split into two pieces.
+         --  Not one word line, meaning it can be split into two pieces
 
          else
             return Infinity;
          end if;
 
-      --  Last line is not bad if unless Format_Last_Line = True.
+      --  Last line is not bad if unless Format_Last_Line = True
 
       elsif  Y = Last_Word (W)  and then not Format_Last_Line then
          return 0;
@@ -97,8 +118,13 @@ package body GNATCOLL.Para_Fill.Badnesses is
       end if;
    end Line_Badness;
 
-   function Line_Badness (Line_Length : Positive; Max_Line_Length : Positive)
-                          return Badness_Value is
+   ------------------
+   -- Line_Badness --
+   ------------------
+
+   function Line_Badness
+     (Line_Length : Positive; Max_Line_Length : Positive)
+      return Badness_Value is
    begin
       if Line_Length > Max_Line_Length then
          return Infinity;
