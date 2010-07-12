@@ -72,8 +72,12 @@ package body GNATCOLL.Para_Fill.Badnesses is
       if Badness = Infinity then
          return "Inf";
       else
-         --  Slicing removes the superfluous space before Badness'Img
-         return Badness'Img (Badness'Img'First + 1 .. Badness'Img'Last);
+         declare
+            Result : constant String := Badness_Value'Image (Badness);
+         begin
+            --  Slicing removes the superfluous space
+            return Result (Result'First + 1 .. Result'Last);
+         end;
       end if;
    end Image;
 
