@@ -350,6 +350,17 @@ your application to the system logger, rather than to files or stdout.
 @code{configure} attempts to find which systems are installed on your
 system, and build support for those. But you can also explicitly disable
 for those if you need.
+
+If the directory in which PostgreSQL is installed contains spaces, you
+should use a syntax like
+
+@smallexample
+./configure --with-postgres="/Program Files/PostgreSQL/8.4"
+@end smallexample
+
+Generally speaking, we do not recommend using paths with spaces since there
+are often more difficulties in such a setup.
+
 @end table
 
 Special support exists in @value{gnatcoll} for the gtk+ graphical toolkit.

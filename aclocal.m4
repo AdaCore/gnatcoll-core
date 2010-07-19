@@ -198,8 +198,16 @@ AC_HELP_STRING(
        fi
        AC_CHECK_LIB(pq,PQreset,WITH_POSTGRES=yes,WITH_POSTGRES=no,[$PATH_LIBPQ])
      else
-       PATH_LIBPQ="-L$POSTGRESQL_PATH_WITH"
        WITH_POSTGRES=yes
+       if test -f "$POSTGRESQL_PATH_WITH/libpq.so"; then
+          PATH_LIBPQ="-L$POSTGRESQL_PATH_WITH"
+       elif test -f "$POSTGRESQL_PATH_WITH/lib/libpq.so"; then
+          PATH_LIBPQ="-L$POSTGRESQL_PATH_WITH/lib"
+       else
+          AC_MSG_CHECKING(for PostgreSQL)
+          AC_MSG_RESULT(not found in $POSTGRESQL_PATH_WITH)
+          WITH_POSTGRES=no
+       fi
      fi
 
      if test x"$WITH_POSTGRES" = xno -a x"$NEED_PSQL" = xyes ; then
