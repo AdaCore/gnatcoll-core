@@ -34,10 +34,12 @@ with Ada.Strings.Fixed;            use Ada.Strings.Fixed;
 with Ada.Strings;                  use Ada.Strings;
 with Ada.Text_IO;                  use Ada.Text_IO;
 
-with GNATCOLL.Para_Fill.Words;     use GNATCOLL.Para_Fill.Words;
-with GNATCOLL.Para_Fill.Badnesses; use GNATCOLL.Para_Fill.Badnesses;
+with GNATCOLL.Paragraph_Filling.Words;
+use GNATCOLL.Paragraph_Filling.Words;
+with GNATCOLL.Paragraph_Filling.Badnesses;
+use GNATCOLL.Paragraph_Filling.Badnesses;
 
-package body GNATCOLL.Para_Fill is
+package body GNATCOLL.Paragraph_Filling is
 
    type Badness_Values is array (Word_Index range <>) of Badness_Value;
 
@@ -52,7 +54,7 @@ package body GNATCOLL.Para_Fill is
    subtype Word_Vector is Word_Vectors.Vector;
 
    function Greedy_Fill
-     (Paragraph       : GNATCOLL.Para_Fill.Words.Words;
+     (Paragraph       : Paragraph_Filling.Words.Words;
       Max_Line_Length : Positive)
       return            String;
    --  Formats a paragraph with the greedy algorithm (by putting as many words
@@ -76,13 +78,13 @@ package body GNATCOLL.Para_Fill is
    --  line and if so whether the badness is reduced by moving the word.
 
    procedure Knuth_Fill
-     (Paragraph       : in out GNATCOLL.Para_Fill.Words.Words;
+     (Paragraph       : in out Paragraph_Filling.Words.Words;
       Max_Line_Length : Positive := Default_Max_Line_Length);
    --  Fill the paragraph in the best possible way, based on an algorithm
    --  invented by Knuth. This algorithm uses dynamic programming techniques in
    --  order to fill paragraphs so that they have the lowest possible badness
    --  and line count. Badness is calculated by the Line_Badness function in
-   --  GNATCOLL.Para_Fill.Badnesses. For details see the paper, "Breaking
+   --  Paragraph_Filling.Badnesses. For details see the paper, "Breaking
    --  Paragraphs into Lines", by Donald E. Knuth and Michael F. Plass,
    --  Software Practice and Experience, 11 (1981).
 
@@ -96,13 +98,13 @@ package body GNATCOLL.Para_Fill is
    --  Number of lines in Source
 
    function Minimum_Lines
-     (Paragraph       : GNATCOLL.Para_Fill.Words.Words;
+     (Paragraph       : Paragraph_Filling.Words.Words;
       Max_Line_Length : Positive)
       return            Natural;
    --  Minimum number of lines needed to fill Paragraph
 
    function Paragraph_Badness
-     (Paragraph       : GNATCOLL.Para_Fill.Words.Words;
+     (Paragraph       : Paragraph_Filling.Words.Words;
       First_Words     : Word_Indexes;
       Max_Line_Length : Positive)
       return            Badness_Value;
@@ -111,14 +113,14 @@ package body GNATCOLL.Para_Fill is
    --  plus a value at the end pointing past the last word in the paragraph.
 
    procedure Insert_New_Lines
-     (Paragraph   : in out GNATCOLL.Para_Fill.Words.Words;
+     (Paragraph   : in out Paragraph_Filling.Words.Words;
       First_Words : Word_Vector);
    --  Inserts a new line before the first word of every line, skipping the
    --  first word of the paragraph and adding an extra new line at the end
    --  of the paragraph.
 
    function Slow_Fill
-     (Paragraph       : GNATCOLL.Para_Fill.Words.Words;
+     (Paragraph       : Paragraph_Filling.Words.Words;
       Max_Line_Length : Positive)
       return            String;
    --  Fill the paragraph in the best possible way, using an extremely slow
@@ -187,7 +189,7 @@ package body GNATCOLL.Para_Fill is
    -----------------
 
    function Greedy_Fill
-     (Paragraph       : GNATCOLL.Para_Fill.Words.Words;
+     (Paragraph       : Paragraph_Filling.Words.Words;
       Max_Line_Length : Positive) return String
    is
       Result              : Unbounded_String;
@@ -240,7 +242,7 @@ package body GNATCOLL.Para_Fill is
    ----------------------
 
    procedure Insert_New_Lines
-     (Paragraph   : in out GNATCOLL.Para_Fill.Words.Words;
+     (Paragraph   : in out Paragraph_Filling.Words.Words;
       First_Words : Word_Vector)
    is
    begin
@@ -267,12 +269,12 @@ package body GNATCOLL.Para_Fill is
    ----------------
 
    procedure Knuth_Fill
-     (Paragraph       : in out GNATCOLL.Para_Fill.Words.Words;
+     (Paragraph       : in out Paragraph_Filling.Words.Words;
       Max_Line_Length : Positive := Default_Max_Line_Length)
    is
 
       function Calculate_Best
-        (Paragraph       : GNATCOLL.Para_Fill.Words.Words;
+        (Paragraph       : Paragraph_Filling.Words.Words;
          Max_Line_Length : Positive) return Word_Indexes;
       --  Determines the best division of lines and returns the word that
       --  begins each line in this setup as an array.
@@ -288,7 +290,7 @@ package body GNATCOLL.Para_Fill is
       --------------------
 
       function Calculate_Best
-        (Paragraph       : GNATCOLL.Para_Fill.Words.Words;
+        (Paragraph       : Paragraph_Filling.Words.Words;
          Max_Line_Length : Positive) return Word_Indexes
       is
          Minimum_Badnesses : Badness_Values (1 .. Last_Word (Paragraph) + 1);
@@ -368,7 +370,7 @@ package body GNATCOLL.Para_Fill is
      (Paragraph       : String;
       Max_Line_Length : Positive := Default_Max_Line_Length) return String
    is
-      Para : GNATCOLL.Para_Fill.Words.Words := Index_Paragraph (Paragraph);
+      Para : Paragraph_Filling.Words.Words := Index_Paragraph (Paragraph);
    begin
       Knuth_Fill (Para, Max_Line_Length);
 
@@ -389,7 +391,7 @@ package body GNATCOLL.Para_Fill is
    -------------------
 
    function Minimum_Lines
-     (Paragraph       : GNATCOLL.Para_Fill.Words.Words;
+     (Paragraph       : Paragraph_Filling.Words.Words;
       Max_Line_Length : Positive) return Natural
    is
    begin
@@ -442,7 +444,7 @@ package body GNATCOLL.Para_Fill is
    package Word_IO is new Ada.Text_IO.Integer_IO (Word_Index);
 
    function Paragraph_Badness
-     (Paragraph       : GNATCOLL.Para_Fill.Words.Words;
+     (Paragraph       : Paragraph_Filling.Words.Words;
       First_Words     : Word_Indexes;
       Max_Line_Length : Positive) return Badness_Value
    is
@@ -616,7 +618,7 @@ package body GNATCOLL.Para_Fill is
    ---------------
 
    function Slow_Fill
-     (Paragraph       : GNATCOLL.Para_Fill.Words.Words;
+     (Paragraph       : Paragraph_Filling.Words.Words;
       Max_Line_Length : Positive) return String
    is
 
@@ -631,7 +633,7 @@ package body GNATCOLL.Para_Fill is
       --  Example: 50 words formatted into 5 lines --> 2,118,760 possibilities.
       --  That's a lot, but much better than 2**(50-1) = 562,949,953,421,312.
 
-      Para : GNATCOLL.Para_Fill.Words.Words := Paragraph;
+      Para : Paragraph_Filling.Words.Words := Paragraph;
 
       Num_Lines : constant Word_Index :=
          Word_Index (Minimum_Lines (Para, Max_Line_Length));
@@ -729,4 +731,4 @@ package body GNATCOLL.Para_Fill is
       return Slow_Fill (Index_Paragraph (Paragraph), Max_Line_Length);
    end Slow_Fill;
 
-end GNATCOLL.Para_Fill;
+end GNATCOLL.Paragraph_Filling;

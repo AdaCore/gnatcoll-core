@@ -28,17 +28,30 @@
 
 --  This software was originally contributed by William A. Duff
 
-with GNATCOLL.Para_Fill;       use GNATCOLL.Para_Fill;
-with GNATCOLL.Para_Fill.Tests; use GNATCOLL.Para_Fill.Tests;
+with Ada.Command_Line;         use Ada.Command_Line;
+with Ada.Text_IO;              use Ada.Text_IO;
 
-procedure Fill_Ada_Comments is
-   --  Applies a filling algorithm to all the comments in an Ada program
+with GNATCOLL.Paragraph_Filling;       use GNATCOLL.Paragraph_Filling;
+with GNATCOLL.Paragraph_Filling.Words; use GNATCOLL.Paragraph_Filling.Words;
+
+procedure GNATCOLL.Paragraph_Filling.Test_Words is
+   --  Test program for Paragraph_Filling.Words. Prints each word in a file and
+   --  then the length of that word.
+
+   Input  : File_Type;
 begin
-   Process_Command_Line (Command_Name => "fill_ada_comments");
-
-   Format_Ada_File
-     (Input_Name.all,
-      Output_Name.all,
-      Format,
-      Max_Line_Length);
-end Fill_Ada_Comments;
+   Open (Input, In_File, Argument (1));
+   while not End_Of_File (Input) loop
+      declare
+         Current_Paragraph : constant Paragraph_Filling.Words.Words :=
+            Index_Paragraph (Get_Paragraph (Input));
+      begin
+         for Word in 1 .. Current_Paragraph.Num_Words - 1 loop
+            Put (Word'Img);
+            Put ("""" & Nth_Word (Current_Paragraph, Word) & """");
+            Put_Line (Word_Length (Current_Paragraph, Word)'Img);
+         end loop;
+      end;
+   end loop;
+   Close (Input);
+end GNATCOLL.Paragraph_Filling.Test_Words;

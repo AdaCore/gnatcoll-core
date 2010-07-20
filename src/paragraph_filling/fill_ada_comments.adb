@@ -28,4 +28,17 @@
 
 --  This software was originally contributed by William A. Duff
 
-procedure GNATCOLL.Para_Fill.Test_Words;
+with GNATCOLL.Paragraph_Filling;       use GNATCOLL.Paragraph_Filling;
+with GNATCOLL.Paragraph_Filling.Tests; use GNATCOLL.Paragraph_Filling.Tests;
+
+procedure Fill_Ada_Comments is
+   --  Applies a filling algorithm to all the comments in an Ada program
+begin
+   Process_Command_Line (Command_Name => "fill_ada_comments");
+
+   Format_Ada_File
+     (Input_Name.all,
+      Output_Name.all,
+      Format,
+      Max_Line_Length);
+end Fill_Ada_Comments;

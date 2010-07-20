@@ -1,4 +1,4 @@
-project Para_Fill is
+project Paragraph_filling is
 
    for Source_Dirs use (".", "..");
 
@@ -29,5 +29,5 @@ project Para_Fill is
       for Makefile use "Makefile";
    end Make;
 
-end Para_Fill;
+end Paragraph_filling;
 

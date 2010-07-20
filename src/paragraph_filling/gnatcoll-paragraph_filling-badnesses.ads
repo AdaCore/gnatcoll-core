@@ -28,9 +28,9 @@
 
 --  This software was originally contributed by William A. Duff
 
-with GNATCOLL.Para_Fill.Words; use GNATCOLL.Para_Fill.Words;
+with GNATCOLL.Paragraph_Filling.Words; use GNATCOLL.Paragraph_Filling.Words;
 
-private package GNATCOLL.Para_Fill.Badnesses is
+private package GNATCOLL.Paragraph_Filling.Badnesses is
 
    type Badness_Value is private;
    Zero     : constant Badness_Value;
@@ -54,13 +54,13 @@ private package GNATCOLL.Para_Fill.Badnesses is
    function Image (Badness : Badness_Value) return String;
 
    function Line_Badness
-     (W                : GNATCOLL.Para_Fill.Words.Words;
+     (W                : Paragraph_Filling.Words.Words;
       X, Y             : Word_Index;
       Max_Line_Length  : Positive;
       Format_Last_Line : Boolean := False) return Badness_Value;
    --  Returns badness as determined by a formula invented by Knuth. This
    --  formula calculates the square of the difference between the Line_Length
-   --  (calculated by the Line_Length function in GNATCOLL.Para_Fill.Words) and
+   --  (calculated by the Line_Length function in Paragraph_Filling.Words) and
    --  the Max_Line_Length. If the line length is greater than the
    --  Max_Line_Length then the function returns Infinity.
    --
@@ -82,4 +82,4 @@ private
    Zero     : constant Badness_Value := 0;
    Infinity : constant Badness_Value := Badness_Value'Last;
 
-end GNATCOLL.Para_Fill.Badnesses;
+end GNATCOLL.Paragraph_Filling.Badnesses;

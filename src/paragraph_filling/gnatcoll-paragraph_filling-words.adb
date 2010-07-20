@@ -31,7 +31,7 @@
 with Ada.Containers.Vectors;
 with Ada.Strings.Unbounded; use Ada.Strings.Unbounded;
 
-package body GNATCOLL.Para_Fill.Words is
+package body GNATCOLL.Paragraph_Filling.Words is
 
    function Remove_Excess_Characters (Paragraph : String) return String;
    --  Takes out all spaces, tabs, and new line characsters and creates a
@@ -179,4 +179,4 @@ package body GNATCOLL.Para_Fill.Words is
       return W.Starts (N + 1) - W.Starts (N) - 1;
    end Word_Length;
 
-end GNATCOLL.Para_Fill.Words;
+end GNATCOLL.Paragraph_Filling.Words;

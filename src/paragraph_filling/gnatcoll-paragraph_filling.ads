@@ -28,7 +28,7 @@
 
 --  This software was originally contributed by William A. Duff
 
-package GNATCOLL.Para_Fill is
+package GNATCOLL.Paragraph_Filling is
 
    --  This purpose of this package is to format paragraphs to take up the
    --  minimal number of lines and to look better.
@@ -79,7 +79,7 @@ package GNATCOLL.Para_Fill is
    --  invented by Knuth. This algorithm uses dynamic programming techniques in
    --  order to fill paragraphs so that they have the lowest possible badness
    --  and line count. Badness is calculated by the Line_Badness function in
-   --  GNATCOLL.Para_Fill.Badnesses. For details see the paper, "Breaking
+   --  Paragraph_Filling.Badnesses. For details see the paper, "Breaking
    --  Paragraphs into Lines", by Donald E. Knuth and Michael F. Plass,
    --  Software Practice and Experience, 11 (1981).
 
@@ -102,4 +102,4 @@ private
    --  Returns True if Char is a space, new line, or tab; otherwise returns
    --  False.
 
-end GNATCOLL.Para_Fill;
+end GNATCOLL.Paragraph_Filling;

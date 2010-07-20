@@ -28,35 +28,55 @@
 
 --  This software was originally contributed by William A. Duff
 
-with Ada.Text_IO; use Ada.Text_IO;
+with Ada.Text_IO; use Ada; use Ada.Text_IO;
 
-with GNATCOLL.Para_Fill;       use GNATCOLL.Para_Fill;
-with GNATCOLL.Para_Fill.Tests; use GNATCOLL.Para_Fill.Tests;
+package GNATCOLL.Paragraph_Filling.Tests is
 
-procedure Fill_Text is
-   --  Test program that runs one of the formating algorithms in
-   --  GNATCOLL.Para_Fill on a text file.
+   function Get_Paragraph (File : File_Type) return String;
+   --  Takes a file and returns the next paragraph from the current position in
+   --  the file. Paragraphs are separated by blank lines. Considers extra
+   --  blank lines to be paragraphs.
 
-   Input  : File_Type;
-   Output : File_Type;
-begin
-   Process_Command_Line (Command_Name => "fill_text");
+   procedure Format_Ada_File
+     (Input_Name, Output_Name : String;
+      Format                  : not null access function
+        (Paragraph       : String;
+         Max_Line_Length : Positive)
+         return            String;
+      Max_Line_Length : Positive);
+   --  Reads Ada source code from the file named by Input_Name. Calls Format on
+   --  each block comment, and sends the output to the file named by
+   --  Output_Name. Text that is not part of a comment, and comments appearing
+   --  after other non-whitespace text on the same line, is sent to the output
+   --  unchanged.
 
-   Open (Input, In_File, Input_Name.all);
-   Create (Output, Out_File, Output_Name.all, Form => "Text_Translation=No");
-   while not End_Of_File (Input) loop
-      declare
-         Current_Paragraph : constant String := Get_Paragraph (Input);
-      begin
-         --  ??? Where do empty paragraphs come from, and should the Fill
-         --  subprograms work on empty paragraphs?
-         if Current_Paragraph = "" then
-            New_Line (Output);
-         else
-            Put_Line (Output, Format (Current_Paragraph, Max_Line_Length));
-         end if;
-      end;
-   end loop;
-   Close (Input);
-   Close (Output);
-end Fill_Text;
+   procedure Format_Ada_File
+     (Input, Output : Text_IO.File_Type;
+      Format        : not null access function
+      (Paragraph       : String;
+       Max_Line_Length : Positive)
+       return            String;
+      Max_Line_Length : Positive);
+   --  Same as above, except it takes open Input and Output files
+
+   ----------------
+
+   procedure Process_Command_Line (Command_Name : String);
+
+   --  Variables set from command-line arguments:
+
+   type Formatting_Methods is (None, Greedy, Pretty, Knuth, Slow);
+   Method : Formatting_Methods := Knuth;
+
+   Format : not null access function
+     (Paragraph       : String;
+      Max_Line_Length : Positive)
+      return            String
+     := Knuth_Fill'Access;
+
+   Max_Line_Length : Positive := Default_Max_Line_Length;
+
+   Input_Name : access String;
+   Output_Name : access String;
+
+end GNATCOLL.Paragraph_Filling.Tests;

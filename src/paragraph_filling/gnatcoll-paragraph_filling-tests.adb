@@ -36,7 +36,7 @@ with Ada.Text_IO.Unbounded_IO; use Ada.Text_IO.Unbounded_IO;
 with GNAT.OS_Lib;
 with GNAT.Regpat; use GNAT.Regpat;
 
-package body GNATCOLL.Para_Fill.Tests is
+package body GNATCOLL.Paragraph_Filling.Tests is
 
    procedure Command_Line_Error (Command_Name : String);
    --  Print usage message and exit with bad status code
@@ -461,4 +461,4 @@ package body GNATCOLL.Para_Fill.Tests is
       end case;
    end Put_Item;
 
-end GNATCOLL.Para_Fill.Tests;
+end GNATCOLL.Paragraph_Filling.Tests;

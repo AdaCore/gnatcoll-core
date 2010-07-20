@@ -28,30 +28,35 @@
 
 --  This software was originally contributed by William A. Duff
 
-with Ada.Command_Line;         use Ada.Command_Line;
-with Ada.Text_IO;              use Ada.Text_IO;
+with Ada.Text_IO; use Ada.Text_IO;
 
-with GNATCOLL.Para_Fill;       use GNATCOLL.Para_Fill;
-with GNATCOLL.Para_Fill.Words; use GNATCOLL.Para_Fill.Words;
+with GNATCOLL.Paragraph_Filling;       use GNATCOLL.Paragraph_Filling;
+with GNATCOLL.Paragraph_Filling.Tests; use GNATCOLL.Paragraph_Filling.Tests;
 
-procedure GNATCOLL.Para_Fill.Test_Words is
-   --  Test program for GNATCOLL.Para_Fill.Words. Prints each word in a file
-   --  and then the length of that word.
+procedure Fill_Text is
+   --  Test program that runs one of the formating algorithms in
+   --  Paragraph_Filling on a text file.
 
    Input  : File_Type;
+   Output : File_Type;
 begin
-   Open (Input, In_File, Argument (1));
+   Process_Command_Line (Command_Name => "fill_text");
+
+   Open (Input, In_File, Input_Name.all);
+   Create (Output, Out_File, Output_Name.all, Form => "Text_Translation=No");
    while not End_Of_File (Input) loop
       declare
-         Current_Paragraph : constant GNATCOLL.Para_Fill.Words.Words :=
-            Index_Paragraph (Get_Paragraph (Input));
+         Current_Paragraph : constant String := Get_Paragraph (Input);
       begin
-         for Word in 1 .. Current_Paragraph.Num_Words - 1 loop
-            Put (Word'Img);
-            Put ("""" & Nth_Word (Current_Paragraph, Word) & """");
-            Put_Line (Word_Length (Current_Paragraph, Word)'Img);
-         end loop;
+         --  ??? Where do empty paragraphs come from, and should the Fill
+         --  subprograms work on empty paragraphs?
+         if Current_Paragraph = "" then
+            New_Line (Output);
+         else
+            Put_Line (Output, Format (Current_Paragraph, Max_Line_Length));
+         end if;
       end;
    end loop;
    Close (Input);
-end GNATCOLL.Para_Fill.Test_Words;
+   Close (Output);
+end Fill_Text;

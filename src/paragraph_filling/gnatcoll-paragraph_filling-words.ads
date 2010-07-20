@@ -28,7 +28,7 @@
 
 --  This software was originally contributed by William A. Duff
 
-private package GNATCOLL.Para_Fill.Words is
+private package GNATCOLL.Paragraph_Filling.Words is
 
    --  Provides ways of differentiating words by reformatting a paragraph and
    --  pointing to the first character of each word in that paragraph.
@@ -74,11 +74,11 @@ private
    end record;
    --  Paragraph is the actual text of the Words. Starts contains indexes to
    --  the first character of each word in Paragraph. This facilitates the
-   --  formatting algorithms in GNATCOLL.Para_Fill because some only need to
+   --  formatting algorithms in Paragraph_Filling because some only need to
    --  know the word lengths and positions most of the time.
    --
    --  Num_Chars is always Positive and not 0 because the function which
    --  creates this type always adds an extra space at the end of the
    --  paragraph.
 
-end GNATCOLL.Para_Fill.Words;
+end GNATCOLL.Paragraph_Filling.Words;

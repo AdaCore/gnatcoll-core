@@ -28,7 +28,7 @@
 
 --  This software was originally contributed by William A. Duff
 
-package body GNATCOLL.Para_Fill.Badnesses is
+package body GNATCOLL.Paragraph_Filling.Badnesses is
 
    ----------
    -- "**" --
@@ -86,7 +86,7 @@ package body GNATCOLL.Para_Fill.Badnesses is
    ------------------
 
    function Line_Badness
-     (W                : GNATCOLL.Para_Fill.Words.Words;
+     (W                : Paragraph_Filling.Words.Words;
       X, Y             : Word_Index;
       Max_Line_Length  : Positive;
       Format_Last_Line : Boolean := False) return Badness_Value
@@ -138,4 +138,4 @@ package body GNATCOLL.Para_Fill.Badnesses is
       end if;
    end Line_Badness;
 
-end GNATCOLL.Para_Fill.Badnesses;
+end GNATCOLL.Paragraph_Filling.Badnesses;
