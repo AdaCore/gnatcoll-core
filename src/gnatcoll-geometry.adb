@@ -261,16 +261,6 @@ package body GNATCOLL.Geometry is
       end if;
    end Distance;
 
-   ---------------------------
-   -- Unnormalized_Distance --
-   ---------------------------
-
-   function Unnormalized_Distance
-     (From : Point; To : Line) return Coordinate is
-   begin
-      return abs (To.A * From.X + To.B * From.Y - To.C);
-   end Unnormalized_Distance;
-
    ---------------
    -- Intersect --
    ---------------

@@ -73,20 +73,21 @@ package GNATCOLL.Geometry is
 
    function To_Circle (P1, P2, P3 : Point) return Circle;
    --  Return the circle that passes through the 3 points. If the 3 points are
-   --  colinear,
+   --  colinear, No_Circle is returned.
 
    function "-" (P2, P1 : Point) return Vector;
-   --  Return the vector to go from P1 to P2
+   --  Return the vector to go from P1 to P2.
 
    function Dot (Vector1, Vector2 : Vector) return Coordinate;
-   --  return the dot product of Vector1 and Vector2. Mathematically, this is
+   --  Return the dot product of Vector1 and Vector2. Mathematically, this is
    --  also the value of |Vector1| * |Vector2| * cos (alpha), where alpha is
    --  the angle between the two vectors. When Dot is 0, the two vectors are
-   --  orthogonal.
+   --  orthogonal or null.
 
    function Cross (Vector1, Vector2 : Vector) return Coordinate;
-   --  Return the cross-product of the two vectors. Technically, this is also a
-   --  vector, but since we are in 2D, this is represented as a scalar.
+   --  Return the magnitude of the cross-product of the two vectors.
+   --  Technically, this is also a vector, but since we are in 2D, this is
+   --  represented as a scalar.
    --
    --  In 2D, this is also the value of  |Vector1| * |Vector2| * sin (alpha).
    --  This is positive if Vector1 is less than 180 degrees clockwise from B.
@@ -104,7 +105,7 @@ package GNATCOLL.Geometry is
 
    function Bisector (S : Segment) return Line;
    pragma Inline (Bisector);
-   --  Return the bisector to S, ie the line that is perpendicular to S and
+   --  Return the bisector to S, i.e. the line that is perpendicular to S and
    --  goes through its middle.
 
    function Intersection (S1, S2 : Segment) return Point;
@@ -132,12 +133,6 @@ package GNATCOLL.Geometry is
    --  Return the distance between P and the second parameter. This is not
    --  efficient for comparing distances, since this involves a square root
    --  computation (see Unnormalized_Distance)
-
-   function Unnormalized_Distance
-     (From : Point; To : Line) return Coordinate;
-   --  Same as Distance, but the returned value is not the absolute distance.
-   --  It can be used to compare distances for several points to the Line,
-   --  though, and is faster than Distance.
 
    function Centroid (Self : Polygon) return Point;
    --  Return the centroid of the polygon (aka center of gravity).
