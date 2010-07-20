@@ -9,11 +9,11 @@ all-exes: fill_ada_comments fill_text
 
 .PHONY: fill_ada_comments
 fill_ada_comments:
-	gnatmake -p -P paragraph_filling.gpr fill_ada_comments.adb
+	gnatmake -k -p -P paragraph_filling.gpr fill_ada_comments.adb
 
 .PHONY: fill_text
 fill_text:
-	gnatmake -p -P paragraph_filling.gpr fill_text.adb
+	gnatmake -k -p -P paragraph_filling.gpr fill_text.adb
 
 ################
 # Tests

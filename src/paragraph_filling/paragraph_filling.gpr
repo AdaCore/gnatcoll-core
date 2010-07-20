@@ -14,7 +14,7 @@ project Paragraph_filling is
          "-fstack-check",
          "-g",       -- debug
          "-gnata",   -- assertions enabled
-         "-gnat2012");
+         "-gnat05");
    end Compiler;
 
    package Builder is

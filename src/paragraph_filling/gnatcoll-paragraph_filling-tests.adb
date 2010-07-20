@@ -400,7 +400,7 @@ package body GNATCOLL.Paragraph_Filling.Tests is
             end if;
          end;
 
-         <<Continue>>
+         <<Continue>> null;
       end loop;
 
       if Command_Line.Argument_Count /= 2 then
