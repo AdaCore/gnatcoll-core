@@ -156,6 +156,7 @@ unmodified in any copy.
 * Managing Memory:: The storage pools.
 * Manipulating Files::
 * Three state logic:: The tribooleans.
+* Geometry::
 * Projects::
 * Database interface::
 * Index::
@@ -220,6 +221,8 @@ Manipulating Files
 * GtkAda support for virtual files::
 
 Three state logic
+
+Geometry
 
 Project
 
@@ -3094,6 +3097,46 @@ provides an @code{Equal} function.
 
 See the specs of the package to see the truth tables associated with those
 operators.
+
+@c -----------------------------------------------------------------------
+@node Geometry
+@chapter Geometry
+@c -----------------------------------------------------------------------
+@noindent
+
+@value{gnatcoll} provides the package @code{GNATCOLL.Geometry}. This
+package includes a number of primitive operations on geometric figures
+like points, segments, lines, circles, rectangles and polygons.
+In particular, you can compute their intersections, the distances,@dots{}
+
+This package is generic, so that you can specify the type of coordinates
+you wish to handle.
+
+@CODESAMPLE{
+ declare@NL{}
+    package Float_Geometry is new GNATCOLL.Geometry (Float);@NL{}
+    use Float_Geometry;@NL{}
+@NL{}
+    P1 : constant Point := (1.0, 1.0);@NL{}
+    P2 : constant Point := (2.0, 3.0);@NL{}
+ begin@NL{}
+    Put_Line ("Distance P1-P2 is" & Distance (P1, P2)'Img);@NL{}
+    --  Will print 2.23607@NL{}
+ end;@NL{}
+}
+
+Or some operations involving a polygon:
+
+@CODESAMPLE{
+   declare@NL{}
+      P3 : constant Point := (3.7, 2.0);@NL{}
+      P  : constant Polygon :=@NL{}
+         ((2.0, 1.3), (4.1, 3.0), (5.3, 2.6), (2.9, 0.7), (2.0, 1.3));@NL{}
+   begin@NL{}
+      Put_Line ("Area of polygon:" & Area (P));   --   3.015@NL{}
+      Put_Line ("P3 inside polygon ? " & Inside (P3, P)'Img);  --  True@NL{}
+   end;@NL{}
+}
 
 @c -----------------------------------------------------------------------
 @node Projects

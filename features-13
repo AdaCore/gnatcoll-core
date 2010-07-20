@@ -15,6 +15,10 @@ of the feature.
 New features on 1.3
 -------------------
 
+NF-13-J720-017 new package GNATCOLL.Geometry
+
+   This package provides primitive 2D operations on lines, segments,...
+
 NF-13-I602-029 new -dbmodel switch for gnatcoll_db2ada
 
    This reads the description of the database schema in a text file rather
