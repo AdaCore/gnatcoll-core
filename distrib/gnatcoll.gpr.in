@@ -2,7 +2,7 @@
 --  relocatable libraries, although the two might not be available on
 --  your system depending on how GnatColl was compiled and installed.
 --  You can select either of the two libraries by changing the environment
---  variable LIBRARY_KIND.
+--  variable LIBRARY_TYPE.
 --  The default depends on how gnatcoll was configured and compiled (although
 --  in general it will be static since this works better in most cases)
 
