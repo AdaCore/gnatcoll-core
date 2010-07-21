@@ -21,6 +21,7 @@
 --  elsewhere
 
 with Ada.Calendar;
+with Ada.Strings.Unbounded;
 with GNAT.Strings;
 
 package GNATCOLL.Utils is
@@ -58,7 +59,16 @@ package GNATCOLL.Utils is
    function Split
      (Str : String; On : Character) return GNAT.Strings.String_List_Access;
    --  Split the string on the given character.
-   --  Result must be freed by caller
+   --  Result must be freed by caller.
+   --  See also Split below
+
+   type Unbounded_String_Array is array (Natural range <>) of
+     Ada.Strings.Unbounded.Unbounded_String;
+
+   function Split
+     (Str : String; On : Character) return Unbounded_String_Array;
+   --  Same as Split above, returning an Unbounded_String_Array that does not
+   --  need to be freed.
 
    function Capitalize (Name : String) return String;
    --  Capitalize a string, ie put in upper case the first character and all

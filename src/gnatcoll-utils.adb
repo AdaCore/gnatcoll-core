@@ -132,6 +132,42 @@ package body GNATCOLL.Utils is
       return Result;
    end Split;
 
+   -----------
+   -- Split --
+   -----------
+
+   function Split
+     (Str : String; On : Character) return Unbounded_String_Array
+   is
+      First : Integer := Str'First;
+      Count : Natural := 1;
+
+      use Ada.Strings.Unbounded;
+   begin
+      for C in Str'Range loop
+         if Str (C) = On then
+            Count := Count + 1;
+         end if;
+      end loop;
+
+      declare
+         Result : Unbounded_String_Array (1 .. Count);
+      begin
+         Count := 1;
+
+         for C in Str'Range loop
+            if Str (C) = On then
+               Result (Count) := To_Unbounded_String (Str (First .. C - 1));
+               First := C + 1;
+               Count := Count + 1;
+            end if;
+         end loop;
+
+         Result (Count) := To_Unbounded_String (Str (First .. Str'Last));
+         return Result;
+      end;
+   end Split;
+
    ----------------
    -- Capitalize --
    ----------------
