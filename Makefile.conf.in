@@ -92,7 +92,11 @@ buildall:
 	@echo Building project ${PROJECT}
 	${GPRBUILD} -m -j${PROCESSORS} -XLIBRARY_TYPE=${LIBRARY_TYPE} -P${PROJECT} -p
 
-libinstall: installsources installobj installlinks
+libinstall: installprint installsources installobj installlinks
+
+installprint:
+	@echo ""
+	@echo "===== Installing ${MODULE} module (${LIBRARY_TYPE}) ======="
 
 # Install the ali files and libraries. The library itself is only copied once
 # as ${prefix}/lib/${TARNAME}/${TYPE}/lib*.so.${VERSION}, so that it is visible
@@ -136,11 +140,11 @@ endif
 # we in fact have the library dir as well, which doesn't contain any source, and
 # install would complain.
 installsources:
-	${CP} -p ${wildcard ${addsuffix *.ad?, ${SRCDIRS}}} ${includedir}/${TARNAME}
+	@${CP} -p ${wildcard ${addsuffix *.ad?, ${SRCDIRS}}} ${includedir}/${TARNAME}
 ifeq (${OS},Windows_NT)
-	cd ${includedir}/${TARNAME}; ls ${notdir ${wildcard ${addsuffix *.ad?, ${SRCDIRS}}}} | grep -v unix > ${libdir}/gnat/${TARNAME}/${basename ${PROJECT}}.lgpr
+	@cd ${includedir}/${TARNAME}; ls ${notdir ${wildcard ${addsuffix *.ad?, ${SRCDIRS}}}} | grep -v unix > ${libdir}/gnat/${TARNAME}/${basename ${PROJECT}}.lgpr
 else
-	cd ${includedir}/${TARNAME}; ls ${notdir ${wildcard ${addsuffix *.ad?, ${SRCDIRS}}}} | grep -v win32 > ${libdir}/gnat/${TARNAME}/${basename ${PROJECT}}.lgpr
+	@cd ${includedir}/${TARNAME}; ls ${notdir ${wildcard ${addsuffix *.ad?, ${SRCDIRS}}}} | grep -v win32 > ${libdir}/gnat/${TARNAME}/${basename ${PROJECT}}.lgpr
 endif
 
 force:

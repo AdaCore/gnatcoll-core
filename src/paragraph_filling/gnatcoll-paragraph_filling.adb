@@ -297,26 +297,24 @@ package body GNATCOLL.Paragraph_Filling is
          Result            : Word_Indexes (1 .. Last_Word (Paragraph));
 
       begin
-
          Minimum_Badnesses (1) := Zero;
 
          for Y in 1 .. Last_Word (Paragraph) loop
             Minimum_Badnesses (Y + 1) := Infinity;
 
             for X in reverse 1 .. Y loop
-
                declare
                   Badness : constant Badness_Value :=
                      Line_Badness (Paragraph, X, Y, Max_Line_Length) +
                      Minimum_Badnesses (X);
                begin
                   exit when Badness = Infinity;
+                  --  ??? Badness might be uninitialized here
                   if Badness < Minimum_Badnesses (Y + 1) then
                      Minimum_Badnesses (Y + 1) := Badness;
                      Result (Y)                := X;
                   end if;
                end;
-
             end loop;
 
          end loop;
