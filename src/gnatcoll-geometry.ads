@@ -130,6 +130,7 @@ package GNATCOLL.Geometry is
    function Distance (From : Point; To : Point)   return Coordinate;
    function Distance (From : Point; To : Segment) return Coordinate;
    function Distance (From : Point; To : Line)    return Coordinate;
+   function Distance (From : Point; To : Polygon) return Coordinate;
    --  Return the distance between P and the second parameter. This is not
    --  efficient for comparing distances, since this involves a square root
    --  computation (see Unnormalized_Distance)
