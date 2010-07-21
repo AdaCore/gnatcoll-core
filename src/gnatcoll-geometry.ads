@@ -23,12 +23,16 @@ with Ada.Numerics.Generic_Elementary_Functions;
 
 generic
    type Coordinate is digits <>;
-   --  The type used to represent coordinates and distances
+   --  The type used to represent coordinates and distances.
+   --  Distances are returned as a subtype including only the positive (or
+   --  null) range, so this type must include positive numbers.
 
 package GNATCOLL.Geometry is
 
    package Coordinate_Elementary_Functions is new
      Ada.Numerics.Generic_Elementary_Functions (Coordinate);
+
+   subtype Distance_Type is Coordinate'Base range 0.0 .. Coordinate'Base'Last;
 
    type Point is record
       X, Y : Coordinate;
@@ -100,7 +104,7 @@ package GNATCOLL.Geometry is
    --           \       \
    --            ---------
 
-   function Length (Vect : Vector) return Coordinate;
+   function Length (Vect : Vector) return Distance_Type;
    --  Return the magnitude of the vector
 
    function Bisector (S : Segment) return Line;
@@ -127,10 +131,10 @@ package GNATCOLL.Geometry is
    function Inside (P : Point; Poly : Polygon)  return Boolean;
    --  True if P is on the segment or line
 
-   function Distance (From : Point; To : Point)   return Coordinate;
-   function Distance (From : Point; To : Segment) return Coordinate;
-   function Distance (From : Point; To : Line)    return Coordinate;
-   function Distance (From : Point; To : Polygon) return Coordinate;
+   function Distance (From : Point; To : Point)   return Distance_Type;
+   function Distance (From : Point; To : Segment) return Distance_Type;
+   function Distance (From : Point; To : Line)    return Distance_Type;
+   function Distance (From : Point; To : Polygon) return Distance_Type;
    --  Return the distance between P and the second parameter. This is not
    --  efficient for comparing distances, since this involves a square root
    --  computation (see Unnormalized_Distance)
@@ -138,8 +142,8 @@ package GNATCOLL.Geometry is
    function Centroid (Self : Polygon) return Point;
    --  Return the centroid of the polygon (aka center of gravity).
 
-   function Area (Self : Triangle) return Coordinate;
-   function Area (Self : Polygon)  return Coordinate;
+   function Area (Self : Triangle) return Distance_Type;
+   function Area (Self : Polygon)  return Distance_Type;
    --  Return the area of the (possibly non-convex) polygon. For the triangle,
    --  the area will be negative if the vertices are oriented clockwise
 

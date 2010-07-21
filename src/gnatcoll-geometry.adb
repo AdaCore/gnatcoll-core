@@ -29,7 +29,7 @@
 --              triangle_triangle_intersection.html
 --   [PTTRI]  http://www.blackpawn.com/texts/pointinpoly/default.html
 --   [SEGSEG] http://astronomy.swin.edu.au/~pbourke/geometry/lineline2d/
---   [GEO]    http://geometryalgorithms.com/Archive/algorithm_Zero4
+--   [GEO]    http://geometryalgorithms.com/Archive/algorithm_0.04
 
 package body GNATCOLL.Geometry is
 
@@ -46,12 +46,7 @@ package body GNATCOLL.Geometry is
    function Intersection_Test_Vertex
      (P1, Q1, R1, P2, Q2, R2 : Point) return Boolean;  --  From [TRI]
    pragma Inline (Intersection_Test_Vertex);
-   --  Return whether the two triangles intersect. Points need to be sorted
-
-   Zero : constant Coordinate := Coordinate (0);
-   Two  : constant Coordinate := Coordinate (2);
-   --  ??? We should not compare with Zero. In the case of float coordinates,
-   --  we should compare if less than a small delta.
+   --  Return whether the 2.0 triangles intersect. Points need to be sorted
 
    -------------
    -- To_Line --
@@ -81,8 +76,8 @@ package body GNATCOLL.Geometry is
 
    function Bisector (S : Segment) return Line is
       L     : constant Line := To_Line (S);
-      X_Mid : constant Coordinate := (S (1).X + S (2).X) / Two;
-      Y_Mid : constant Coordinate := (S (1).Y + S (2).Y) / Two;
+      X_Mid : constant Coordinate := (S (1).X + S (2).X) / 2.0;
+      Y_Mid : constant Coordinate := (S (1).Y + S (2).Y) / 2.0;
    begin
       return
         (A => -L.B,
@@ -97,7 +92,7 @@ package body GNATCOLL.Geometry is
    function Intersection (L1, L2 : Line) return Point is
       Det : constant Coordinate := L1.A * L2.B - L2.A * L1.B;
    begin
-      if Det = Zero then
+      if Det = 0.0 then
          if L1.C = L2.C then
             return Infinity_Points;
          else
@@ -150,8 +145,8 @@ package body GNATCOLL.Geometry is
       --  Check signs of R3 and R4. If both points 3 and 4 lie on same side
       --  of line 1, the line segments do not intersect
 
-      if (R3 > Zero and then R4 > Zero)
-         or else (R3 < Zero and then R4 < Zero)
+      if (R3 > 0.0 and then R4 > 0.0)
+         or else (R3 < 0.0 and then R4 < 0.0)
       then
          return No_Point;
       end if;
@@ -159,15 +154,15 @@ package body GNATCOLL.Geometry is
       --  Check signs of r1 and r2. If both points lie on same side of
       --  second line segment, the line segments do not intersect
 
-      if (R1 > Zero and then R2 > Zero)
-         or else (R1 < Zero and then R2 < Zero)
+      if (R1 > 0.0 and then R2 > 0.0)
+         or else (R1 < 0.0 and then R2 < 0.0)
       then
          return No_Point;
       end if;
 
       --  Line segments intersect, compute intersection point
       Denom := L1.A * L2.B - L2.A * L1.B;
-      if Denom = Zero then
+      if Denom = 0.0 then
          --  colinears
          if Inside (S1 (1), S2)
            or else Inside (S1 (2), S2)
@@ -225,7 +220,7 @@ package body GNATCOLL.Geometry is
    -- Length --
    ------------
 
-   function Length (Vect : Vector) return Coordinate is
+   function Length (Vect : Vector) return Distance_Type is
    begin
       return Sqrt (Coordinate (Vect.X * Vect.X + Vect.Y * Vect.Y));
    end Length;
@@ -234,19 +229,19 @@ package body GNATCOLL.Geometry is
    -- Distance --
    --------------
 
-   function Distance (From : Point; To : Line) return Coordinate is
+   function Distance (From : Point; To : Line) return Distance_Type is
+      S : constant Coordinate'Base := To.A * To.A + To.B * To.B;
    begin
-      return abs (To.A * From.X + To.B * From.Y - To.C) /
-        Sqrt (To.A * To.A + To.B * To.B);
+      return abs (To.A * From.X + To.B * From.Y - To.C) / Sqrt (S);
    end Distance;
 
    --------------
    -- Distance --
    --------------
 
-   function Distance (From : Point; To : Point) return Coordinate is
-      X : constant Coordinate := To.X - From.X;
-      Y : constant Coordinate := To.Y - From.Y;
+   function Distance (From : Point; To : Point) return Distance_Type is
+      X : constant Coordinate'Base := To.X - From.X;
+      Y : constant Coordinate'Base := To.Y - From.Y;
    begin
       return Sqrt (X * X + Y * Y);
    end Distance;
@@ -255,13 +250,17 @@ package body GNATCOLL.Geometry is
    -- Distance --
    --------------
 
-   function Distance (From : Point; To : Segment) return Coordinate is
+   function Distance (From : Point; To : Segment) return Distance_Type is
    begin
-      if Dot (From - To (2), To (2) - To (1)) > Zero then
+      if To (1) = To (2) then
+         raise Program_Error with "Empty Segment";
+      end if;
+
+      if Dot (From - To (2), To (2) - To (1)) > 0.0 then
          --  Closest point is Segment (2)
          return Distance (From, To (2));
 
-      elsif Dot (From - To (1), To (1) - To (2)) > Zero then
+      elsif Dot (From - To (1), To (1) - To (2)) > 0.0 then
          --  Closest point is Segment (1)
          return Distance (From, To (1));
 
@@ -274,18 +273,16 @@ package body GNATCOLL.Geometry is
    -- Distance --
    --------------
 
-   function Distance (From : Point; To : Polygon) return Coordinate is
-      Min : Coordinate := Coordinate'Last;
+   function Distance (From : Point; To : Polygon) return Distance_Type is
+      Min : Distance_Type := Distance_Type'Last;
    begin
       for P in To'First .. To'Last - 1 loop
-         Min := Coordinate'Min
-            (Min,
-             Distance (From, Segment'(To (P), To (P + 1))));
+         Min := Distance_Type'Min
+            (Min, Distance (From, Segment'(To (P), To (P + 1))));
       end loop;
-      Min := Coordinate'Min
-         (Min,
-          Distance (From, Segment'(To (To'First), To (To'Last))));
-      return Min;
+
+      return Distance_Type'Min
+         (Min, Distance (From, Segment'(To (To'First), To (To'Last))));
    end Distance;
 
    ---------------
@@ -310,26 +307,26 @@ package body GNATCOLL.Geometry is
    -- Area --
    ----------
 
-   function Area (Self : Polygon) return Coordinate is
-      D : Coordinate := Zero;
+   function Area (Self : Polygon) return Distance_Type is
+      D : Coordinate'Base := 0.0;
    begin
       for P in Self'First + 1 .. Self'Last - 1 loop
          D := D + Cross (Self (P)     - Self (Self'First),
                          Self (P + 1) - Self (Self'First));
       end loop;
-      return abs (D / Two);
+      return abs (D / 2.0);
    end Area;
 
    ----------
    -- Area --
    ----------
 
-   function Area (Self : Triangle) return Coordinate is
+   function Area (Self : Triangle) return Distance_Type is
    begin
-      return ((Self (2).X - Self (1).X)
+      return abs ((Self (2).X - Self (1).X)
               * (Self (3).Y - Self (1).Y)
               - (Self (3).X - Self (1).X)
-              * (Self (2).Y - Self (1).Y)) / Two;
+              * (Self (2).Y - Self (1).Y)) / 2.0;
    end Area;
 
    ---------------
@@ -337,7 +334,7 @@ package body GNATCOLL.Geometry is
    ---------------
 
    function To_Circle (P1, P2, P3 : Point) return Circle is
-      --  Find the intersection of the two perpendicular bisectors of two of
+      --  Find the intersection of the 2.0 perpendicular bisectors of two of
       --  the segments.
       Bis1 : constant Line := Bisector (Segment'(1 => P1, 2 => P2));
       Bis2 : constant Line := Bisector (Segment'(1 => P2, 2 => P3));
@@ -368,8 +365,8 @@ package body GNATCOLL.Geometry is
          --  The divide below is mandatory: if you transform it into a
          --  multiplication on the other side, the sign of the denominator will
          --  flip the inequality, and thus make the code harder.
-         if ((Zero <= Deltay and then P.Y < Poly (J).Y)
-             or else (Poly (J).Y <= P.Y and then Deltay < Zero))
+         if ((0.0 <= Deltay and then P.Y < Poly (J).Y)
+             or else (Poly (J).Y <= P.Y and then Deltay < 0.0))
            and then
              (P.X - Poly (S).X < (Poly (J).X - Poly (S).X) * Deltay
               / (Poly (J).Y - Poly (S).Y))
@@ -385,9 +382,9 @@ package body GNATCOLL.Geometry is
    --------------
 
    function Centroid (Self : Polygon) return Point is
-      X, Y   : Coordinate := Zero;
-      Weight : Coordinate := Zero;
-      Local  : Coordinate;
+      X, Y   : Coordinate'Base := 0.0;
+      Weight : Coordinate'Base := 0.0;
+      Local  : Coordinate'Base;
    begin
       for P in Self'First + 1 .. Self'Last - 1 loop
          Local := Area
@@ -409,19 +406,19 @@ package body GNATCOLL.Geometry is
      (P1, P2 : Point; As : Segment) return Boolean
    is
       --  Direction of cross-product for (L2 - L1) x (P1 - L1)
-      Cross1_Z : constant Coordinate :=
+      Cross1_Z : constant Coordinate'Base :=
         (As (2).X - As (1).X) * (P1.Y - As (1).Y)
       - (As (2).Y - As (1).Y) * (P1.X - As (1).X);
 
       --  Direction of cross-product for (L2 - L1) x (P2 - L1)
-      Cross2_Z : constant Coordinate :=
+      Cross2_Z : constant Coordinate'Base :=
         (As (2).X - As (1).X) * (P2.Y - As (1).Y)
       - (As (2).Y - As (1).Y) * (P2.X - As (1).X);
    begin
-      if Cross1_Z <= Zero then
-         return Cross2_Z <= Zero;
+      if Cross1_Z <= 0.0 then
+         return Cross2_Z <= 0.0;
       else
-         return Cross2_Z > Zero;
+         return Cross2_Z > 0.0;
       end if;
    end Same_Side;
 
@@ -432,16 +429,16 @@ package body GNATCOLL.Geometry is
    function Same_Side (P1, P2 : Point; As : Line) return Boolean is
       S : Segment;
    begin
-      if As.B = Zero then
+      if As.B = 0.0 then
          --  Horizontal line
          S (1).X := As.C / As.A;
-         S (1).Y := Zero;
+         S (1).Y := Coordinate'First;
          S (2).X := S (1).X;
-         S (2).Y := Coordinate (100);
+         S (2).Y := Coordinate'Last;
       else
-         S (1).X := Zero;
+         S (1).X := Coordinate'First;
          S (1).Y := As.C / As.B;
-         S (2).X := Coordinate (100);
+         S (2).X := Coordinate'Last;
          S (2).Y := (As.C - As.A * S (2).X) / As.B;
       end if;
 
@@ -456,9 +453,9 @@ package body GNATCOLL.Geometry is
    function Inside (P : Point; T : Triangle) return Boolean is
    begin
       --  On boundary ?
-      if Distance (P, T (1)) = Zero
-        or else Distance (P, T (2)) = Zero
-        or else Distance (P, T (3)) = Zero
+      if Distance (P, T (1)) = 0.0
+        or else Distance (P, T (2)) = 0.0
+        or else Distance (P, T (3)) = 0.0
       then
          return True;
       end if;
@@ -484,21 +481,21 @@ package body GNATCOLL.Geometry is
    function Intersection_Test_Vertex
      (P1, Q1, R1, P2, Q2, R2 : Point) return Boolean is
    begin
-      if Orient (R2, P2, Q1) >= Zero then
-         if Orient (R2, Q2, Q1) <= Zero then
-            if Orient (P1, P2, Q1) > Zero then
-               return Orient (P1, Q2, Q1) <= Zero;
+      if Orient (R2, P2, Q1) >= 0.0 then
+         if Orient (R2, Q2, Q1) <= 0.0 then
+            if Orient (P1, P2, Q1) > 0.0 then
+               return Orient (P1, Q2, Q1) <= 0.0;
             else
-               if Orient (P1, P2, R1) >= Zero then
-                  return Orient (Q1, R1, P2) >= Zero;
+               if Orient (P1, P2, R1) >= 0.0 then
+                  return Orient (Q1, R1, P2) >= 0.0;
                else
                   return False;
                end if;
             end if;
          else
-            if Orient (P1, Q2, Q1) <= Zero then
-               if Orient (R2, Q2, R1) <= Zero then
-                  return Orient (Q1, R1, Q2) >= Zero;
+            if Orient (P1, Q2, Q1) <= 0.0 then
+               if Orient (R2, Q2, R1) <= 0.0 then
+                  return Orient (Q1, R1, Q2) >= 0.0;
                else
                   return False;
                end if;
@@ -507,12 +504,12 @@ package body GNATCOLL.Geometry is
             end if;
          end if;
       else
-         if Orient (R2, P2, R1) >= Zero then
-            if Orient (Q1, R1, R2) >= Zero then
-               return Orient (P1, P2, R1) >= Zero;
+         if Orient (R2, P2, R1) >= 0.0 then
+            if Orient (Q1, R1, R2) >= 0.0 then
+               return Orient (P1, P2, R1) >= 0.0;
             else
-               if Orient (Q1, R1, Q2) >= Zero then
-                  return Orient (R2, R1, Q2) >= Zero;
+               if Orient (Q1, R1, Q2) >= 0.0 then
+                  return Orient (R2, R1, Q2) >= 0.0;
                else
                   return False;
                end if;
@@ -532,18 +529,18 @@ package body GNATCOLL.Geometry is
    is
       pragma Unreferenced (Q2);
    begin
-      if Orient (R2, P2, Q1) >= Zero then
-         if Orient (P1, P2, Q1) >= Zero then
-            return Orient (P1, Q1, R2) >= Zero;
+      if Orient (R2, P2, Q1) >= 0.0 then
+         if Orient (P1, P2, Q1) >= 0.0 then
+            return Orient (P1, Q1, R2) >= 0.0;
          else
-            return Orient (Q1, R1, P2) >= Zero
-              and then Orient (R1, P1, P2) >= Zero;
+            return Orient (Q1, R1, P2) >= 0.0
+              and then Orient (R1, P1, P2) >= 0.0;
          end if;
       else
-         if Orient (R2, P2, R1) >= Zero then
-            if Orient (P1, P2, R1) >= Zero then
-               return Orient (P1, R1, R2) >= Zero
-                 or else Orient (Q1, R1, R2) >= Zero;
+         if Orient (R2, P2, R1) >= 0.0 then
+            if Orient (P1, P2, R1) >= 0.0 then
+               return Orient (P1, R1, R2) >= 0.0
+                 or else Orient (Q1, R1, R2) >= 0.0;
             else
                return False;
             end if;
@@ -562,23 +559,23 @@ package body GNATCOLL.Geometry is
    begin
       pragma Warnings
          (Off, "*actuals for this call may be in wrong order");
-      if Orient (P2, Q2, P1) >= Zero then
-         if Orient (Q2, R2, P1) >= Zero then
-            if Orient (R2, P2, P1) >= Zero then
+      if Orient (P2, Q2, P1) >= 0.0 then
+         if Orient (Q2, R2, P1) >= 0.0 then
+            if Orient (R2, P2, P1) >= 0.0 then
                return True;
             else
                return Intersection_Test_Edge (P1, Q1, R1, P2, Q2, R2);
             end if;
          else
-            if Orient (R2, P2, P1) >= Zero then
+            if Orient (R2, P2, P1) >= 0.0 then
                return Intersection_Test_Edge (P1, Q1, R1, R2, P2, Q2);
             else
                return Intersection_Test_Vertex (P1, Q1, R1, P2, Q2, R2);
             end if;
          end if;
       else
-         if Orient (Q2, R2, P1) >= Zero then
-            if Orient (R2, P2, P1) >= Zero then
+         if Orient (Q2, R2, P1) >= 0.0 then
+            if Orient (R2, P2, P1) >= 0.0 then
                return Intersection_Test_Edge (P1, Q1, R1, Q2, R2, P2);
             else
                return Intersection_Test_Vertex (P1, Q1, R1, Q2, R2, P2);
@@ -598,8 +595,8 @@ package body GNATCOLL.Geometry is
 
    function Intersect (T1, T2 : Triangle) return Boolean is
    begin
-      if Orient (T1 (1), T1 (2), T1 (3)) < Zero then
-         if Orient (T2 (1), T2 (2), T2 (3)) < Zero then
+      if Orient (T1 (1), T1 (2), T1 (3)) < 0.0 then
+         if Orient (T2 (1), T2 (2), T2 (3)) < 0.0 then
             return Tri_Intersection
               (T1 (1), T1 (3), T1 (2),
                T2 (1), T2 (3), T2 (2));
@@ -609,7 +606,7 @@ package body GNATCOLL.Geometry is
                T2 (1), T2 (2), T2 (3));
          end if;
       else
-         if Orient (T2 (1), T2 (2), T2 (3)) < Zero then
+         if Orient (T2 (1), T2 (2), T2 (3)) < 0.0 then
             return Tri_Intersection
               (T1 (1), T1 (2), T1 (3),
                T2 (1), T2 (3), T2 (2));
