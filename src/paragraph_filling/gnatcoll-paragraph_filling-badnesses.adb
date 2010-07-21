@@ -35,6 +35,7 @@ package body GNATCOLL.Paragraph_Filling.Badnesses is
    ----------
 
    function "**" (X : Natural; Y : Positive) return Badness_Value is
+      pragma Unsuppress (All_Checks);
    begin
       return Badness_Value (Integer'(X ** Y));
    exception
@@ -47,6 +48,7 @@ package body GNATCOLL.Paragraph_Filling.Badnesses is
    ---------
 
    overriding function "+" (X, Y : Badness_Value) return Badness_Value is
+      pragma Unsuppress (All_Checks);
    begin
       return Badness_Value (Integer (X) + Integer (Y));
    exception
