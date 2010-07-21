@@ -135,9 +135,7 @@ package GNATCOLL.Geometry is
    function Distance (From : Point; To : Segment) return Distance_Type;
    function Distance (From : Point; To : Line)    return Distance_Type;
    function Distance (From : Point; To : Polygon) return Distance_Type;
-   --  Return the distance between P and the second parameter. This is not
-   --  efficient for comparing distances, since this involves a square root
-   --  computation (see Unnormalized_Distance)
+   --  Return the distance between P and the second parameter.
 
    function Centroid (Self : Polygon) return Point;
    --  Return the centroid of the polygon (aka center of gravity).
