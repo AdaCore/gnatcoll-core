@@ -34,9 +34,11 @@ with Ada.Strings.Unbounded; use Ada.Strings.Unbounded;
 package body GNATCOLL.Paragraph_Filling.Words is
 
    function Remove_Excess_Characters (Paragraph : String) return String;
-   --  Takes out all spaces, tabs, and new line characsters and creates a
+   --  Takes out all spaces, tabs, and new line characters and creates a
    --  string with exactly one space between each word, plus one space at
    --  the end.
+   --  ??? Would be more efficient to directly return the unbounded_string to
+   --  avoid extra copies of the string.
 
    package Word_Vectors is new Ada.Containers.Vectors (
       Index_Type => Word_Index,
@@ -63,6 +65,8 @@ package body GNATCOLL.Paragraph_Filling.Words is
    ---------------------
 
    function Index_Paragraph (Paragraph : String) return Words is
+      --  ??? This is the only place where Remove_Excess_Characters is called,
+      --  it should be combined here to avoid traversing the string twice.
       Fixed_Para : constant String := Remove_Excess_Characters (Paragraph);
       Result     : Word_Vector;
    begin
@@ -74,11 +78,17 @@ package body GNATCOLL.Paragraph_Filling.Words is
          end if;
       end loop;
 
+      --  ??? We are doing one extra copy of the string to store it in the
+      --  record here, that's inefficient. Would be better to keep an
+      --  unbounded_string all the time (but in fact, why not keep the original
+      --  string but have a function that gets the next character, skipping
+      --  sequences of whitespaces -- the work done by Remove_Excess_Characters
+      --  without the extra copy of the string).
       return
-        (Num_Chars => Fixed_Para'Length,
+        (Num_Chars       => Fixed_Para'Length,
          After_Last_Word => Word_Index (Length (Result)),
-         Paragraph => Fixed_Para,
-         Starts    => To_Word_Starts (Result));
+         Paragraph       => Fixed_Para,
+         Starts          => To_Word_Starts (Result));
    end Index_Paragraph;
 
    ---------------
@@ -120,24 +130,33 @@ package body GNATCOLL.Paragraph_Filling.Words is
          return "";
       end if;
 
-      if not Is_Whitespace (Paragraph (Paragraph'First)) then
-         Append (Result, Paragraph (Paragraph'First));
-      end if;
+      --  Skip leading whitespaces
 
-      while Count < Paragraph'Last loop
+      while Is_Whitespace (Paragraph (Count)) loop
          Count := Count + 1;
+      end loop;
 
+      while Count <= Paragraph'Last loop
          if Is_Whitespace (Paragraph (Count)) then
-            while Count <= Paragraph'Length and then
-             Is_Whitespace (Paragraph (Count)) loop
+            loop
                Count := Count + 1;
+               exit when Count > Paragraph'Last
+                 or else not Is_Whitespace (Paragraph (Count));
             end loop;
+
             Append (Result, ' ');
-            Count := Count - 1;
+
+            if Count <= Paragraph'Last then
+               Append (Result, Paragraph (Count));
+            end if;
+
          else
+            --  ??? Would be more efficient to find the longuest substring with
+            --  no space, and append it at once.
             Append (Result, Paragraph (Count));
          end if;
 
+         Count := Count + 1;
       end loop;
 
       if Element (Result, Length (Result)) = ' ' then

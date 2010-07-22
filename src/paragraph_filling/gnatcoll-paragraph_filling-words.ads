@@ -52,6 +52,7 @@ private package GNATCOLL.Paragraph_Filling.Words is
    --  words) in W.Paragraph.
 
    function Word_Length (W : Words; N : Word_Index) return Positive;
+   pragma Inline (Word_Length);
    --  Returns the length of the Nth word in W.Paragraph
 
    function Line_Length (W : Words; X, Y : Word_Index) return Positive;
