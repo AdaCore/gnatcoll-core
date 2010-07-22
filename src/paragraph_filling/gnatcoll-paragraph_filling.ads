@@ -28,6 +28,8 @@
 
 --  This software was originally contributed by William A. Duff
 
+with Ada.Strings.Unbounded;
+
 package GNATCOLL.Paragraph_Filling is
 
    --  This purpose of this package is to format paragraphs to take up the
@@ -36,6 +38,8 @@ package GNATCOLL.Paragraph_Filling is
    --  Note: All subprograms in this package that take or return a String
    --  representing a paragraph represent multiple lines by using ASCII.LF
    --  as the line terminator.
+   --  They return an unbounded_string to avoid extra copies (since internally
+   --  they manipulate an unbounded_string).
 
    Default_Max_Line_Length : Positive := 79;
    --  This value is used as a default for the Max_Line_Length parameter of
@@ -44,13 +48,15 @@ package GNATCOLL.Paragraph_Filling is
 
    function Greedy_Fill
      (Paragraph       : String;
-      Max_Line_Length : Positive := Default_Max_Line_Length) return String;
+      Max_Line_Length : Positive := Default_Max_Line_Length)
+      return Ada.Strings.Unbounded.Unbounded_String;
    --  Formats a paragraph with the greedy algorithm (by putting as many words
    --  as possible on each line).
 
    function Pretty_Fill
      (Paragraph       : String;
-      Max_Line_Length : Positive := Default_Max_Line_Length) return String;
+      Max_Line_Length : Positive := Default_Max_Line_Length)
+      return Ada.Strings.Unbounded.Unbounded_String;
    --  Formats a paragraph by first performing To_Greedy_Pragrap and then
    --  comparing adjacent lines and deciding whether a word should be moved to
    --  the next line to make the lines more even.
@@ -74,7 +80,8 @@ package GNATCOLL.Paragraph_Filling is
 
    function Knuth_Fill
      (Paragraph       : String;
-      Max_Line_Length : Positive := Default_Max_Line_Length) return String;
+      Max_Line_Length : Positive := Default_Max_Line_Length)
+      return Ada.Strings.Unbounded.Unbounded_String;
    --  Fill the paragraph in the best possible way, based on an algorithm
    --  invented by Knuth. This algorithm uses dynamic programming techniques in
    --  order to fill paragraphs so that they have the lowest possible badness
@@ -85,7 +92,8 @@ package GNATCOLL.Paragraph_Filling is
 
    function Slow_Fill
     (Paragraph        : String;
-      Max_Line_Length : Positive) return String;
+     Max_Line_Length : Positive)
+     return Ada.Strings.Unbounded.Unbounded_String;
    --  Fill the paragraph in the best possible way, using an extremely slow
    --  algorithm that tries all the possibilities. Used for testing the Knuth
    --  algorithm. This should produce the same result as the the Knuth
@@ -93,7 +101,8 @@ package GNATCOLL.Paragraph_Filling is
 
    function No_Fill
     (Paragraph       : String;
-     Max_Line_Length : Positive := Default_Max_Line_Length) return String;
+     Max_Line_Length : Positive := Default_Max_Line_Length)
+     return Ada.Strings.Unbounded.Unbounded_String;
    --  Return Paragraph unchanged
 
 private

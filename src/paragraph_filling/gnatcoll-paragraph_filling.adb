@@ -30,7 +30,6 @@
 
 with Ada.Containers.Vectors;
 with Ada.Strings.Unbounded;        use Ada.Strings.Unbounded;
-with Ada.Strings.Fixed;            use Ada.Strings.Fixed;
 with Ada.Strings;                  use Ada.Strings;
 with Ada.Text_IO;                  use Ada.Text_IO;
 
@@ -56,12 +55,12 @@ package body GNATCOLL.Paragraph_Filling is
    function Greedy_Fill
      (Paragraph       : Paragraph_Filling.Words.Words;
       Max_Line_Length : Positive)
-      return            String;
+      return Unbounded_String;
    --  Formats a paragraph with the greedy algorithm (by putting as many words
    --  as possible on each line).
 
    function Nth_Index
-     (Source  : String;
+     (Source  : Unbounded_String;
       Pattern : String;
       N       : Natural)
       return    Natural;
@@ -88,13 +87,7 @@ package body GNATCOLL.Paragraph_Filling is
    --  Paragraphs into Lines", by Donald E. Knuth and Michael F. Plass,
    --  Software Practice and Experience, 11 (1981).
 
-   function Count_Occurrences
-     (Source  : String;
-      Pattern : String)
-      return    Natural;
-   --  Number of times Pattern occurs in Source
-
-   function Count_Lines (Source : String) return Natural;
+   function Count_Lines (Source : Unbounded_String) return Natural;
    --  Number of lines in Source
 
    function Minimum_Lines
@@ -119,10 +112,9 @@ package body GNATCOLL.Paragraph_Filling is
    --  first word of the paragraph and adding an extra new line at the end
    --  of the paragraph.
 
-   function Slow_Fill
-     (Paragraph       : Paragraph_Filling.Words.Words;
-      Max_Line_Length : Positive)
-      return            String;
+   procedure Slow_Fill
+     (Paragraph       : in out Paragraph_Filling.Words.Words;
+      Max_Line_Length : Positive);
    --  Fill the paragraph in the best possible way, using an extremely slow
    --  algorithm that tries all the possibilities. Used for testing the Knuth
    --  algorithm. This should produce the same result as the the Knuth
@@ -159,30 +151,16 @@ package body GNATCOLL.Paragraph_Filling is
    -- Count_Lines --
    -----------------
 
-   function Count_Lines (Source : String) return Natural is
-   begin
-      return Count_Occurrences (Source, Pattern => "" & ASCII.LF);
-   end Count_Lines;
-
-   -----------------------
-   -- Count_Occurrences --
-   -----------------------
-
-   function Count_Occurrences
-     (Source  : String;
-      Pattern : String) return Natural
-   is
+   function Count_Lines (Source : Unbounded_String) return Natural is
       Result : Natural := 0;
-      J      : Natural := 0;
    begin
-      loop
-         J := Index (Source, Pattern, J + 1);
-         if J = 0 then
-            return Result;
+      for J in 1 .. Length (Source) loop
+         if Element (Source, J) = ASCII.LF then
+            Result := Result + 1;
          end if;
-         Result := Result + 1;
       end loop;
-   end Count_Occurrences;
+      return Result;
+   end Count_Lines;
 
    -----------------
    -- Greedy_Fill --
@@ -190,12 +168,12 @@ package body GNATCOLL.Paragraph_Filling is
 
    function Greedy_Fill
      (Paragraph       : Paragraph_Filling.Words.Words;
-      Max_Line_Length : Positive) return String
+      Max_Line_Length : Positive) return Unbounded_String
    is
       Result              : Unbounded_String;
       Current_Line_Length : Natural;
    begin
-      if Paragraph.Num_Chars /= 0 then
+      if Paragraph.After_Last_Word /= 1 then
          Current_Line_Length := Word_Length (Paragraph, 1);
          Result              :=
             To_Unbounded_String (Nth_Word (Paragraph, 1));
@@ -221,7 +199,7 @@ package body GNATCOLL.Paragraph_Filling is
          end loop;
          Append (Result, ASCII.LF);
       end if;
-      return To_String (Result);
+      return Result;
    end Greedy_Fill;
 
    -----------------
@@ -230,7 +208,8 @@ package body GNATCOLL.Paragraph_Filling is
 
    function Greedy_Fill
      (Paragraph       : String;
-      Max_Line_Length : Positive := Default_Max_Line_Length) return String
+      Max_Line_Length : Positive := Default_Max_Line_Length)
+      return Unbounded_String
    is
       Para : String renames Paragraph;
    begin
@@ -366,7 +345,8 @@ package body GNATCOLL.Paragraph_Filling is
 
    function Knuth_Fill
      (Paragraph       : String;
-      Max_Line_Length : Positive := Default_Max_Line_Length) return String
+      Max_Line_Length : Positive := Default_Max_Line_Length)
+      return Unbounded_String
    is
       Para : Paragraph_Filling.Words.Words := Index_Paragraph (Paragraph);
    begin
@@ -406,11 +386,12 @@ package body GNATCOLL.Paragraph_Filling is
 
    function No_Fill
      (Paragraph       : String;
-      Max_Line_Length : Positive := Default_Max_Line_Length) return String
+      Max_Line_Length : Positive := Default_Max_Line_Length)
+      return Unbounded_String
    is
       pragma Unreferenced (Max_Line_Length);
    begin
-      return Paragraph;
+      return To_Unbounded_String (Paragraph);
    end No_Fill;
 
    ---------------
@@ -418,7 +399,7 @@ package body GNATCOLL.Paragraph_Filling is
    ---------------
 
    function Nth_Index
-     (Source  : String;
+     (Source  : Unbounded_String;
       Pattern : String;
       N       : Natural) return Natural
    is
@@ -497,12 +478,11 @@ package body GNATCOLL.Paragraph_Filling is
    function Pretty_Fill
      (Paragraph       : String;
       Max_Line_Length : Positive := Default_Max_Line_Length)
-      return            String
+      return Unbounded_String
    is
-      Result          : String :=
+      Result          : Unbounded_String :=
                           Greedy_Fill (Paragraph, Max_Line_Length);
-      Number_Of_Lines : constant Positive :=
-                          Ada.Strings.Fixed.Count (Result, "" & ASCII.LF);
+      Number_Of_Lines : constant Positive := Count_Lines (Result);
       Did_Something   : Boolean;
       Count           : Natural           := 0;
    begin
@@ -520,6 +500,8 @@ package body GNATCOLL.Paragraph_Filling is
          for Line_Number in 1 .. Number_Of_Lines - 2 loop
 
             declare
+               --  ??? Very inefficient, we keep searching the same pattern
+               --  over and over.
                Index_0     : constant Natural  :=
                   Nth_Index (Result, "" & ASCII.LF, Line_Number - 1);
                Index_1     : constant Natural  :=
@@ -539,8 +521,8 @@ package body GNATCOLL.Paragraph_Filling is
                      Length_2,
                      Word_Length)
                then
-                  Result (Word_Start) := ASCII.LF;
-                  Result (Index_1)    := ' ';
+                  Replace_Element (Result, Word_Start, ASCII.LF);
+                  Replace_Element (Result, Index_1, ' ');
                   Did_Something       := True;
                end if;
 
@@ -573,8 +555,8 @@ package body GNATCOLL.Paragraph_Filling is
               and then abs (Length_2 - Length_1) >
                        abs (Length_2 - Length_1 - Word_Length)
             then
-               Result (Word_Start) := ASCII.LF;
-               Result (Index_2)    := ' ';
+               Replace_Element (Result, Word_Start, ASCII.LF);
+               Replace_Element (Result, Index_2, ' ');
                Did_Something       := True;
             end if;
          end;
@@ -600,8 +582,8 @@ package body GNATCOLL.Paragraph_Filling is
               and then abs (Length_2 - Length_1) >
                        abs (Length_2 - Length_1 - Word_Length)
             then
-               Result (Word_Start) := ASCII.LF;
-               Result (Index_2)    := ' ';
+               Replace_Element (Result, Word_Start, ASCII.LF);
+               Replace_Element (Result, Index_2,    ' ');
                Did_Something       := True;
             end if;
          end;
@@ -615,11 +597,10 @@ package body GNATCOLL.Paragraph_Filling is
    -- Slow_Fill --
    ---------------
 
-   function Slow_Fill
-     (Paragraph       : Paragraph_Filling.Words.Words;
-      Max_Line_Length : Positive) return String
+   procedure Slow_Fill
+     (Paragraph       : in out Paragraph_Filling.Words.Words;
+      Max_Line_Length : Positive)
    is
-
       --  If N = the number of words (Paragraph.After_Last_Word-1), then there
       --  are N-1 spaces between words. Each space could be turned into a
       --  new-line, or not. We could try all those possibilities, which would
@@ -631,10 +612,8 @@ package body GNATCOLL.Paragraph_Filling is
       --  Example: 50 words formatted into 5 lines --> 2,118,760 possibilities.
       --  That's a lot, but much better than 2**(50-1) = 562,949,953,421,312.
 
-      Para : Paragraph_Filling.Words.Words := Paragraph;
-
       Num_Lines : constant Word_Index :=
-         Word_Index (Minimum_Lines (Para, Max_Line_Length));
+         Word_Index (Minimum_Lines (Paragraph, Max_Line_Length));
       --  Only try possibilities that have exactly this number of lines
 
       --  Min_Badness is the minimum badness value for all the possibilities
@@ -677,7 +656,8 @@ package body GNATCOLL.Paragraph_Filling is
          if First_Words'Length = Num_Lines + 1 then
             declare
                Badness : constant Badness_Value :=
-                  Paragraph_Badness (Para, First_Words, Max_Line_Length);
+                 Paragraph_Badness
+                   (Paragraph, First_Words, Max_Line_Length);
             begin
                if Badness <= Min_Badness then
                   Min_Badness             := Badness;
@@ -689,7 +669,7 @@ package body GNATCOLL.Paragraph_Filling is
          --  appending the past-last word
 
          elsif First_Words'Length = Num_Lines then
-            Recursive_Check (First_Words & Para.After_Last_Word);
+            Recursive_Check (First_Words & Paragraph.After_Last_Word);
 
          --  Not enough first words, yet. Go through all the words after the
          --  ones we have, leaving room for the rest, and recurse
@@ -699,7 +679,7 @@ package body GNATCOLL.Paragraph_Filling is
 
             for J in
                   First_Words (First_Words'Last) + 1 ..
-                  Para.After_Last_Word - (Num_Lines - First_Words'Length)
+                  Paragraph.After_Last_Word - (Num_Lines - First_Words'Length)
             loop
                Recursive_Check (First_Words & J);
             end loop;
@@ -714,19 +694,23 @@ package body GNATCOLL.Paragraph_Filling is
       --  ??? Mimics other code, should be split out into sub-program
 
       for Count in 2 .. Min_Badness_First_Words'Last loop
-         Add_New_Line (Para, Before => Min_Badness_First_Words (Count));
+         Add_New_Line (Paragraph, Before => Min_Badness_First_Words (Count));
       end loop;
-      Add_New_Line (Para, Before => Para.After_Last_Word);
-
-      return To_String (Para);
+      Add_New_Line (Paragraph, Before => Paragraph.After_Last_Word);
    end Slow_Fill;
+
+   ---------------
+   -- Slow_Fill --
+   ---------------
 
    function Slow_Fill
      (Paragraph       : String;
-      Max_Line_Length : Positive) return String
+      Max_Line_Length : Positive) return Unbounded_String
    is
+      Para : Paragraph_Filling.Words.Words := Index_Paragraph (Paragraph);
    begin
-      return Slow_Fill (Index_Paragraph (Paragraph), Max_Line_Length);
+      Slow_Fill (Para, Max_Line_Length);
+      return To_String (Para);
    end Slow_Fill;
 
 end GNATCOLL.Paragraph_Filling;

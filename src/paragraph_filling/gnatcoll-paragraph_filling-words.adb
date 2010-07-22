@@ -33,23 +33,12 @@ with Ada.Strings.Unbounded; use Ada.Strings.Unbounded;
 
 package body GNATCOLL.Paragraph_Filling.Words is
 
-   function Remove_Excess_Characters (Paragraph : String) return String;
-   --  Takes out all spaces, tabs, and new line characters and creates a
-   --  string with exactly one space between each word, plus one space at
-   --  the end.
-   --  ??? Would be more efficient to directly return the unbounded_string to
-   --  avoid extra copies of the string.
-
-   package Word_Vectors is new Ada.Containers.Vectors (
-      Index_Type => Word_Index,
+   package Word_Vectors is new Ada.Containers.Vectors
+     (Index_Type   => Word_Index,
       Element_Type => Positive);
-
    use Word_Vectors;
 
    subtype Word_Vector is Word_Vectors.Vector;
-
-   function To_Word_Starts (Vector : Word_Vector) return Word_Starts;
-   --  Takes a Word_Vector and returns the equivalent Word_Starts
 
    ------------------
    -- Add_New_Line --
@@ -57,7 +46,9 @@ package body GNATCOLL.Paragraph_Filling.Words is
 
    procedure Add_New_Line (W : in out Words; Before : Word_Index) is
    begin
-      W.Paragraph (W.Starts (Before) - 1) := ASCII.LF;
+      Replace_Element (W.Paragraph,
+                       W.Starts (Before) - 1,
+                       ASCII.LF);
    end Add_New_Line;
 
    ---------------------
@@ -65,30 +56,63 @@ package body GNATCOLL.Paragraph_Filling.Words is
    ---------------------
 
    function Index_Paragraph (Paragraph : String) return Words is
-      --  ??? This is the only place where Remove_Excess_Characters is called,
-      --  it should be combined here to avoid traversing the string twice.
-      Fixed_Para : constant String := Remove_Excess_Characters (Paragraph);
+      Fixed_Para : Unbounded_String;
+      Count      : Positive := Paragraph'First;
       Result     : Word_Vector;
    begin
-      Append (Result, Fixed_Para'First);
+      Append (Result, 1);  --  First word always starts on first character
 
-      for Count in Fixed_Para'Range loop
-         if Fixed_Para (Count) = ' ' then
-            Append (Result, Count + 1);
+      --  Takes out all spaces, tabs, and new line characters and creates a
+      --  string with exactly one space between each word, plus one space at
+      --  the end.
+
+      if Paragraph /= "" then
+         --  Skip leading whitespaces
+
+         while Is_Whitespace (Paragraph (Count)) loop
+            Count := Count + 1;
+         end loop;
+
+         while Count <= Paragraph'Last loop
+            if Is_Whitespace (Paragraph (Count)) then
+               loop
+                  Count := Count + 1;
+                  exit when Count > Paragraph'Last
+                    or else not Is_Whitespace (Paragraph (Count));
+               end loop;
+
+               Append (Fixed_Para, ' ');
+               Append (Result, Length (Fixed_Para) + 1);
+
+               if Count <= Paragraph'Last then
+                  Append (Fixed_Para, Paragraph (Count));
+               end if;
+
+            else
+               --  ??? Might be more efficient to find the longuest substring
+               --  with no multiple-space sequence, and append it at once. If
+               --  the paragraph is already correct, we avoid a whole copy.
+               Append (Fixed_Para, Paragraph (Count));
+            end if;
+
+            Count := Count + 1;
+         end loop;
+
+         if Element (Fixed_Para, Length (Fixed_Para)) /= ' ' then
+            Append (Fixed_Para, ' ');
          end if;
-      end loop;
+      end if;
 
-      --  ??? We are doing one extra copy of the string to store it in the
-      --  record here, that's inefficient. Would be better to keep an
-      --  unbounded_string all the time (but in fact, why not keep the original
-      --  string but have a function that gets the next character, skipping
-      --  sequences of whitespaces -- the work done by Remove_Excess_Characters
-      --  without the extra copy of the string).
-      return
-        (Num_Chars       => Fixed_Para'Length,
-         After_Last_Word => Word_Index (Length (Result)),
-         Paragraph       => Fixed_Para,
-         Starts          => To_Word_Starts (Result));
+      --  Avoid extra copies of Starts array by building the result in place
+
+      return W : Words (After_Last_Word => Word_Index (Length (Result))) do
+         W.Paragraph := Fixed_Para;
+
+         for Count in 1 .. Length (Result) loop
+            W.Starts (Word_Index (Count)) :=
+              Word_Vectors.Element (Result, Word_Index (Count));
+         end loop;
+      end return;
    end Index_Paragraph;
 
    ---------------
@@ -115,79 +139,19 @@ package body GNATCOLL.Paragraph_Filling.Words is
 
    function Nth_Word (W : Words; N : Word_Index) return String is
    begin
-      return W.Paragraph (W.Starts (N) ..  W.Starts (N + 1) - 2);
+      return Slice (W.Paragraph,
+                    Low  => W.Starts (N),
+                    High => W.Starts (N + 1) - 2);
    end Nth_Word;
-
-   ------------------------------
-   -- Remove_Excess_Characters --
-   ------------------------------
-
-   function Remove_Excess_Characters (Paragraph : String) return String is
-      Result : Unbounded_String;
-      Count  : Positive := Paragraph'First;
-   begin
-      if Paragraph = "" then
-         return "";
-      end if;
-
-      --  Skip leading whitespaces
-
-      while Is_Whitespace (Paragraph (Count)) loop
-         Count := Count + 1;
-      end loop;
-
-      while Count <= Paragraph'Last loop
-         if Is_Whitespace (Paragraph (Count)) then
-            loop
-               Count := Count + 1;
-               exit when Count > Paragraph'Last
-                 or else not Is_Whitespace (Paragraph (Count));
-            end loop;
-
-            Append (Result, ' ');
-
-            if Count <= Paragraph'Last then
-               Append (Result, Paragraph (Count));
-            end if;
-
-         else
-            --  ??? Would be more efficient to find the longuest substring with
-            --  no space, and append it at once.
-            Append (Result, Paragraph (Count));
-         end if;
-
-         Count := Count + 1;
-      end loop;
-
-      if Element (Result, Length (Result)) = ' ' then
-         return To_String (Result);
-      else
-         return To_String (Result) & ' ';
-      end if;
-   end Remove_Excess_Characters;
 
    ---------------
    -- To_String --
    ---------------
 
-   function To_String (W : Words) return String is
+   function To_String (W : Words) return Unbounded_String is
    begin
       return W.Paragraph;
    end To_String;
-
-   --------------------
-   -- To_Word_Starts --
-   --------------------
-
-   function To_Word_Starts (Vector : Word_Vector) return Word_Starts is
-      Result : Word_Starts (1 .. Word_Index (Length (Vector)));
-   begin
-      for Count in 1 .. Length (Vector) loop
-         Result (Word_Index (Count))  :=
-            Word_Vectors.Element (Vector, Word_Index (Count));
-      end loop;
-      return Result;
-   end To_Word_Starts;
 
    -----------------
    -- Word_Length --

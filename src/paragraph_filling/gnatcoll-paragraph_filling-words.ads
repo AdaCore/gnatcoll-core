@@ -28,6 +28,8 @@
 
 --  This software was originally contributed by William A. Duff
 
+with Ada.Strings.Unbounded;
+
 private package GNATCOLL.Paragraph_Filling.Words is
 
    --  Provides ways of differentiating words by reformatting a paragraph and
@@ -37,7 +39,7 @@ private package GNATCOLL.Paragraph_Filling.Words is
 
    subtype Word_Count is Word_Index'Base range 0 .. Word_Index'Last;
 
-   type Words (Num_Chars : Natural; After_Last_Word : Word_Count) is private;
+   type Words (After_Last_Word : Word_Count) is limited private;
 
    function Index_Paragraph (Paragraph : String) return Words;
    --  Creates a record with an array of the indexes to the first character of
@@ -62,24 +64,21 @@ private package GNATCOLL.Paragraph_Filling.Words is
    procedure Add_New_Line (W : in out Words; Before : Word_Index);
    --  Replaces the space before a word in W.Paragraph with a new line
 
-   function To_String (W : Words) return String;
+   function To_String
+     (W : Words) return Ada.Strings.Unbounded.Unbounded_String;
    --  Returns W.Paragraph
 
 private
 
    type Word_Starts is array (Word_Index range <>) of Positive;
 
-   type Words (Num_Chars : Natural; After_Last_Word : Word_Count) is record
-      Paragraph : String (1 .. Num_Chars);
+   type Words (After_Last_Word : Word_Count) is limited record
+      Paragraph : Ada.Strings.Unbounded.Unbounded_String;
       Starts    : Word_Starts (1 .. After_Last_Word);
    end record;
    --  Paragraph is the actual text of the Words. Starts contains indexes to
    --  the first character of each word in Paragraph. This facilitates the
    --  formatting algorithms in Paragraph_Filling because some only need to
    --  know the word lengths and positions most of the time.
-   --
-   --  Num_Chars is always Positive and not 0 because the function which
-   --  creates this type always adds an extra space at the end of the
-   --  paragraph.
 
 end GNATCOLL.Paragraph_Filling.Words;
