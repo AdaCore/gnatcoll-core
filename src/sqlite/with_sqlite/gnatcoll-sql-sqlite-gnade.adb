@@ -48,14 +48,16 @@ package body GNATCOLL.SQL.Sqlite.Gnade is
       pragma Import (C, Internal, "sqlite3_open_v2");
 
       DB2    : aliased Database;
+      Ignored : Result_Codes;
+      pragma Unreferenced (Ignored);
    begin
       Status := Internal
         (Filename & ASCII.NUL, DB2'Unchecked_Access, Integer (Flags));
 
       if Status = Sqlite_OK then
+         DB2.Initialized := True;
          DB := DB2;
       else
-         Close (DB2);
          DB := No_Database;
       end if;
    end Open;
@@ -77,8 +79,8 @@ package body GNATCOLL.SQL.Sqlite.Gnade is
    -----------
 
    procedure Close (DB : Database) is
-      function Internal (DB : Database) return Result_Codes;
-      pragma Import (C, Internal, "sqlite3_close");
+      function Internal_Close (DB : Database) return Result_Codes;
+      pragma Import (C, Internal_Close, "sqlite3_close");
 
       function Next_Stmt
         (DB : Database; After : Statement := No_Statement)
@@ -89,14 +91,17 @@ package body GNATCOLL.SQL.Sqlite.Gnade is
       Ignored : Result_Codes;
       pragma Unreferenced (Ignored);
    begin
-      --  Finalize prepared statements
-      loop
-         Stmt := Next_Stmt (DB);
-         exit when Stmt = No_Statement;
-         Finalize (Stmt);
-      end loop;
+      if DB /= null and then DB.Initialized then
+         --  Finalize prepared statements
+         loop
+            Stmt := Next_Stmt (DB);
+            exit when Stmt = No_Statement;
+            Finalize (Stmt);
+         end loop;
 
-      Ignored := Internal (DB);
+         Ignored := Internal_Close (DB);
+         DB.Initialized := False;
+      end if;
    end Close;
 
    -------------
