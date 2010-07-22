@@ -283,12 +283,12 @@ package body GNATCOLL.SQL.Sqlite.Builder is
               (Connection,
                "Could not connect to database: " & Error_Msg (Connection.DB));
             Connection.DB := No_Database;
+         else
+            --  Make sure that with appropriate versions of sqlite (>= 3.6.19)
+            --  we do enforce foreign keys constraints
+
+            Execute (Connection, "PRAGMA foreign_keys=ON");
          end if;
-
-         --  Make sure that with appropriate versions of sqlite (>= 3.6.19) we
-         --  do enforce foreign keys constraints
-
-         Execute (Connection, "PRAGMA foreign_keys=ON");
       end if;
    end Connect_If_Needed;
 

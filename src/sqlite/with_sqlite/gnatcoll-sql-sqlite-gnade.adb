@@ -55,7 +55,7 @@ package body GNATCOLL.SQL.Sqlite.Gnade is
       if Status = Sqlite_OK then
          DB := DB2;
       else
-         Close (DB);
+         Close (DB2);
          DB := No_Database;
       end if;
    end Open;
