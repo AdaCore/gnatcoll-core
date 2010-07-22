@@ -240,9 +240,7 @@ package GNATCOLL.SQL.Sqlite.Gnade is
    --  Return the name of a specific column. Column starts at 0
 
 private
-   type Database_Record is record
-      Initialized : Boolean := False;
-   end record;
+   type Database_Record is null record; --  Must be null, hides sqlite data
    type Database is access Database_Record;
    pragma Convention (C, Database);
    No_Database : constant Database := null;

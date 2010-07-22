@@ -55,7 +55,6 @@ package body GNATCOLL.SQL.Sqlite.Gnade is
         (Filename & ASCII.NUL, DB2'Unchecked_Access, Integer (Flags));
 
       if Status = Sqlite_OK then
-         DB2.Initialized := True;
          DB := DB2;
       else
          DB := No_Database;
@@ -91,7 +90,7 @@ package body GNATCOLL.SQL.Sqlite.Gnade is
       Ignored : Result_Codes;
       pragma Unreferenced (Ignored);
    begin
-      if DB /= null and then DB.Initialized then
+      if DB /= null then
          --  Finalize prepared statements
          loop
             Stmt := Next_Stmt (DB);
@@ -100,7 +99,6 @@ package body GNATCOLL.SQL.Sqlite.Gnade is
          end loop;
 
          Ignored := Internal_Close (DB);
-         DB.Initialized := False;
       end if;
    end Close;
 
