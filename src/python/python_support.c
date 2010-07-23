@@ -311,9 +311,9 @@ ada_pyclass_is_subclass (PyObject* class, PyObject* base)
   if (!class || !base) {
     return -1;
   } else if (PyClass_Check (class)) {
-      return PyClass_IsSubclass (class, base);
+    return PyClass_IsSubclass (class, base);
   } else {
-      return PyObject_TypeCheck (class, base->ob_type);
+    return PyObject_TypeCheck (class, base->ob_type);
   }
 }
 
@@ -375,6 +375,5 @@ extern char **gnat_argv;
 int
 ada_py_main ()
 {
-   return Py_Main (gnat_argc, gnat_argv);
+  return Py_Main (gnat_argc, gnat_argv);
 }
-
