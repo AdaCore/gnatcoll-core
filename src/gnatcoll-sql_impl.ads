@@ -1,7 +1,7 @@
 -----------------------------------------------------------------------
 --                           G N A T C O L L                         --
 --                                                                   --
---                 Copyright (C) 2005-2009, AdaCore                  --
+--                 Copyright (C) 2005-2010, AdaCore                  --
 --                                                                   --
 -- GPS is free  software;  you can redistribute it and/or modify  it --
 -- under the terms of the GNU General Public License as published by --
@@ -85,9 +85,14 @@ package GNATCOLL.SQL_Impl is
 
    type Table_Names is record
       Name     : Cst_String_Access;
+
       Instance : Cst_String_Access;
+      Instance_Index : Integer := -1;
+      --  The name of the instance is either Instance (if not null), or
+      --  computed from the index (see Numbered_Tables above) if not -1, or the
+      --  name of the table
    end record;
-   No_Names : constant Table_Names := (null, null);
+   No_Names : constant Table_Names := (null, null, -1);
    --  Describes a table (by its name), and the name of its instance. This is
    --  used to find all tables involved in a query, for the auto-completion. We
    --  do not store instances of SQL_Table'Class directly, since that would
@@ -97,6 +102,12 @@ package GNATCOLL.SQL_Impl is
    --       opposed to just its names, and therefore must be a controlled type.
    --       This makes the automatic package more complex, and makes the field
    --       type controlled, which is also a lot more costly.
+   --  The contents of this type is the same as the discriminants for SQL_Table
+   --  and SQL_Field (but unfortunately cannot be used directly as the
+   --  discriminant).
+
+   function Instance_Name (Names : Table_Names) return String;
+   --  Return the name of the instance for that table.
 
    function Hash (Self : Table_Names) return Ada.Containers.Hash_Type;
    package Table_Sets is new Ada.Containers.Indefinite_Hashed_Sets
@@ -146,12 +157,28 @@ package GNATCOLL.SQL_Impl is
       Long   : Boolean := True) return String;
    --  See inherited doc
 
-   type SQL_Field (Table, Instance, Name : Cst_String_Access)
+   type SQL_Field (Table, Instance, Name : Cst_String_Access;
+                   Instance_Index : Integer)
       is abstract new SQL_Field_Or_List with null record;
    --  A field that comes directly from the database. It can be within a
    --  specific table instance, but we still need to know the name of the table
    --  itself for the autocompletion.
-   --  (Table,Instance) might be null if the field is a constant
+   --  (Table,Instance) might be null if the field is a constant.
+   --  The discriminants are used to get the name of the table when displaying
+   --  the field, while permitting static constructs like:
+   --      Ta_Names : constant Cst_String_Access := ...;
+   --      type T_Names (Instance : Cst_String_Access)
+   --          is new SQL_Table (Ta_Names, Instance, -1)
+   --      with record
+   --         Id : SQL_Field_Integer (Ta_Names, Instance, -1);
+   --      end record;
+   --  so that one can define multiple representations of the Names table, as
+   --  in:
+   --     T1 : T_Names (null);       --  Default, name will be "names"
+   --     T2 : T_Names (Ta_Names2);  --  An alias
+   --  In both cases, the fields T1.Id and T2.Id automatically know how to
+   --  display themselves as "names.id" and "names2.id". This does not
+   --  require memory allocation and is thus more efficient.
 
    overriding function To_String
      (Self   : SQL_Field;
@@ -506,6 +533,7 @@ package GNATCOLL.SQL_Impl is
       Null_Field : constant Field :=
         (Table    => null,
          Instance => null,
+         Instance_Index => -1,
          Name     => Null_String'Access);
    end Field_Types;
 

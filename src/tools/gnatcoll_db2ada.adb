@@ -679,7 +679,7 @@ procedure GNATCOLL_Db2Ada is
                     and then Typ (Typ'First .. Typ'First + 2) = "FK "
                   then
                      Tmp := Typ'First + 3;
-                     while Tmp < Typ'Last and then Typ (Tmp) /= '(' loop
+                     while Tmp <= Typ'Last and then Typ (Tmp) /= '(' loop
                         Tmp := Tmp + 1;
                      end loop;
 
@@ -818,6 +818,7 @@ procedure GNATCOLL_Db2Ada is
          Put_Line (Standard_Error,
                    File & ":" & Image (Line_Number, Min_Width => 1) & " "
                    & Exception_Message (E));
+         raise;
 
       when Name_Error =>
          Put_Line ("Could not open " & File);
@@ -1240,7 +1241,7 @@ procedure GNATCOLL_Db2Ada is
          Next (A);
       end loop;
 
-      raise Program_Error with "PK not found for " & Table;
+      raise Program_Error with "PK undefined for " & Table;
    end Get_PK;
 
    --------------------
@@ -1263,9 +1264,17 @@ procedure GNATCOLL_Db2Ada is
             then
                --  The primary key of the foreign table could itself be a
                --  reference to yet another table
-               return Get_Field_Type
-                 (Table => Element (Tables.Find (To_String (FK.To_Table))),
-                  Attr  => Get_PK (To_String (FK.To_Table)));
+               begin
+                  return Get_Field_Type
+                    (Table => Element (Tables.Find (To_String (FK.To_Table))),
+                     Attr  => Get_PK (To_String (FK.To_Table)));
+               exception
+                  when Constraint_Error =>
+                     Put_Line (Standard_Error,
+                               "No such table """ & To_String (FK.To_Table)
+                               & """ referenced by foreign key");
+                     raise Invalid_Type;
+               end;
             end if;
 
             Next (K);
@@ -1454,6 +1463,9 @@ begin
    end case;
 
 exception
+   when Invalid_Type =>
+      Set_Exit_Status (Failure);
+
    when E : others =>
       Put_Line (Standard_Error,
                 "A database error occurred, please try again...");

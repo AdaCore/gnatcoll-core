@@ -94,8 +94,9 @@ procedure Generate (Generated : String) is
       New_Line (Spec_File);
 
       if T_Descr.Is_Abstract then
-         Put_Line (Spec_File, "   type T_" & Capitalize (Name)
-                   & " (Table_Name, Instance : Cst_String_Access)");
+         Put_Line (Spec_File, "   type T_" & Capitalize (Name));
+         Put (Spec_File, "      (Table_Name, Instance : Cst_String_Access;");
+         Put_Line (Spec_File, " Index : Integer)");
          Put (Spec_File, "      is abstract new ");
 
          if T_Descr.Super_Table /= Null_Unbounded_String then
@@ -106,12 +107,12 @@ procedure Generate (Generated : String) is
          end if;
 
          Put_Line (Spec_File,
-                   " (Table_Name, Instance) with");
+                   " (Table_Name, Instance, Index) with");
 
       else
-         Put_Line (Spec_File, "   type T_" & Capitalize (Name)
-                   & " (Instance : Cst_String_Access)");
-         Put (Spec_File, "      is new ");
+         Put_Line (Spec_File, "   type T_Abstract_" & Capitalize (Name)
+                   & " (Instance : Cst_String_Access; Index : Integer)");
+         Put (Spec_File, "      is abstract new ");
 
          if T_Descr.Super_Table /= Null_Unbounded_String then
             Put (Spec_File,
@@ -121,7 +122,7 @@ procedure Generate (Generated : String) is
          end if;
 
          Put_Line (Spec_File,
-                   " (Ta_" & Capitalize (Name) & ", Instance) with");
+                   " (Ta_" & Capitalize (Name) & ", Instance, Index) with");
       end if;
 
       Put_Line (Spec_File, "   record");
@@ -140,7 +141,8 @@ procedure Generate (Generated : String) is
          end if;
 
          Put_Line (Spec_File,
-                   ", Instance, N_" & Capitalize (Element (A).Name) & ");");
+                   ", Instance, N_" & Capitalize (Element (A).Name)
+                   & ", Index);");
 
          if Element (A).Description /= "" then
             Print_Comment (Spec_File,
@@ -153,6 +155,19 @@ procedure Generate (Generated : String) is
 
       Put_Line (Spec_File, "   end record;");
       Print_Comment (Spec_File, "   ", To_String (T_Descr.Description));
+
+      if not T_Descr.Is_Abstract then
+         New_Line (Spec_File);
+         Put_Line (Spec_File, "   type T_" & Capitalize (Name)
+                   & " (Instance : Cst_String_Access)");
+         Put (Spec_File, "      is new T_Abstract_" & Capitalize (Name));
+         Put_Line (Spec_File, " (Instance, -1) with null record;");
+
+         Put_Line (Spec_File, "   type T_Numbered_" & Capitalize (Name)
+                   & " (Index : Integer)");
+         Put (Spec_File, "      is new T_Abstract_" & Capitalize (Name));
+         Put_Line (Spec_File, " (null, Index) with null record;");
+      end if;
    end Print_Table_Spec;
 
    ----------------

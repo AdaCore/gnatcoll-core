@@ -1,7 +1,7 @@
 -----------------------------------------------------------------------
 --                           G N A T C O L L                         --
 --                                                                   --
---                 Copyright (C) 2005-2009, AdaCore                  --
+--                 Copyright (C) 2005-2010, AdaCore                  --
 --                                                                   --
 -- GPS is free  software;  you can redistribute it and/or modify  it --
 -- under the terms of the GNU General Public License as published by --
@@ -25,6 +25,7 @@ with Ada.Strings.Unbounded;      use Ada.Strings.Unbounded;
 with Ada.Unchecked_Deallocation;
 with GNAT.Calendar.Time_IO;      use GNAT.Calendar, GNAT.Calendar.Time_IO;
 with GNAT.Strings;               use GNAT.Strings;
+with GNATCOLL.Utils;             use GNATCOLL.Utils;
 
 package body GNATCOLL.SQL_Impl is
 
@@ -155,17 +156,34 @@ package body GNATCOLL.SQL_Impl is
 
    package Any_Fields is new Data_Fields (SQL_Field);
 
+   -------------------
+   -- Instance_Name --
+   -------------------
+
+   function Instance_Name (Names : Table_Names) return String is
+   begin
+      if Names.Instance = null then
+         if Names.Instance_Index = -1 then
+            if Names.Name = null then
+               return "";
+            else
+               return Names.Name.all;
+            end if;
+         else
+            return "T" & Image (Names.Instance_Index, Min_Width => 1);
+         end if;
+      else
+         return Names.Instance.all;
+      end if;
+   end Instance_Name;
+
    ----------
    -- Hash --
    ----------
 
    function Hash (Self : Table_Names) return Ada.Containers.Hash_Type is
    begin
-      if Self.Instance = null then
-         return Ada.Strings.Hash (Self.Name.all);
-      else
-         return Ada.Strings.Hash (Self.Instance.all);
-      end if;
+      return Ada.Strings.Hash (Instance_Name (Self));
    end Hash;
 
    ---------------
@@ -206,16 +224,21 @@ package body GNATCOLL.SQL_Impl is
    begin
       if not Long then
          return Self.Name.all;
-      elsif Self.Instance /= null then
-         return Self.Instance.all & "." & Self.Name.all;
-
-      elsif Self.Table /= null then
-         return Self.Table.all & "." & Self.Name.all;
-
       else
-         --  Self.Table could be null in the case of the Null_Field_*
-         --  constants
-         return Self.Name.all;
+         declare
+            N : constant String := Instance_Name
+              ((Name           => Self.Table,
+                Instance       => Self.Instance,
+                Instance_Index => Self.Instance_Index));
+         begin
+            if N /= "" then
+               return N & "." & Self.Name.all;
+            else
+               --  Self.Table could be null in the case of the Null_Field_*
+               --  constants
+               return Self.Name.all;
+            end if;
+         end;
       end if;
    end To_String;
 
@@ -334,6 +357,7 @@ package body GNATCOLL.SQL_Impl is
            (To.List, Any_Fields.Field'
               (Table    => Self.Table.Name,
                Instance => Self.Table.Instance,
+               Instance_Index => Self.Table.Instance_Index,
                Name     => null,
                Data     => (Ada.Finalization.Controlled with
                             SQL_Field_Internal_Access (Self))));
@@ -444,7 +468,8 @@ package body GNATCOLL.SQL_Impl is
    procedure Append_Tables (Self : SQL_Field; To : in out Table_Sets.Set) is
    begin
       if Self.Table /= null then
-         Include (To, (Name => Self.Table, Instance => Self.Instance));
+         Include (To, (Name => Self.Table, Instance => Self.Instance,
+                       Instance_Index => -1));
       end if;
    end Append_Tables;
 
@@ -815,6 +840,7 @@ package body GNATCOLL.SQL_Impl is
               & Any_Fields.Field'
               (Table    => null,
                Instance => null,
+               Instance_Index => -1,
                Name     => null,
                Data     => (Ada.Finalization.Controlled with N));
             Named_Field_Internal (N.all).Str_Value := new String'(Null_String);
@@ -873,6 +899,7 @@ package body GNATCOLL.SQL_Impl is
                To_Field => +Any_Fields.Field'
                  (Table    => null,
                   Instance => null,
+                  Instance_Index => -1,
                   Name     => null,
                   Data     => (Ada.Finalization.Controlled
                                with SQL_Field_Internal_Access (Value))));
@@ -966,10 +993,12 @@ package body GNATCOLL.SQL_Impl is
          Name  : Field) return Field'Class
       is
          F : Typed_Data_Fields.Field
-           (Table => null, Instance => Table.Instance, Name => null);
+           (Table => null, Instance => Table.Instance,
+            Instance_Index => -1, Name => null);
          D : constant Named_Field_Internal_Access := new Named_Field_Internal;
       begin
-         D.Table := (Name => null, Instance => Table.Instance);
+         D.Table := (Name => null, Instance => Table.Instance,
+                     Instance_Index => -1);
          D.Str_Value  := new String'(Name.Name.all);
          F.Data.Data := SQL_Field_Internal_Access (D);
          return F;
@@ -986,7 +1015,8 @@ package body GNATCOLL.SQL_Impl is
          Typed_Named_Field_Internal (Data.all).Data_Value :=
            new Ada_Type'(Value);
          return Typed_Data_Fields.Field'
-           (Table => null, Instance => null, Name => null,
+           (Table => null, Instance => null,
+            Instance_Index => -1, Name => null,
             Data => (Ada.Finalization.Controlled with
                      Data => SQL_Field_Internal_Access (Data)));
       end Expression;
@@ -1002,6 +1032,7 @@ package body GNATCOLL.SQL_Impl is
          Data.Str_Value := new String'(SQL);
          return Typed_Data_Fields.Field'
            (Table => null, Instance => null, Name => null,
+            Instance_Index => -1,
             Data => (Ada.Finalization.Controlled with
                      Data => SQL_Field_Internal_Access (Data)));
       end From_String;
@@ -1040,7 +1071,8 @@ package body GNATCOLL.SQL_Impl is
 
       function Operator (Field1, Field2 : Field'Class) return Field'Class is
          F : Typed_Data_Fields.Field
-           (Table => null, Instance => null, Name => null);
+           (Table => null, Instance => null,
+            Instance_Index => -1, Name => null);
          D : constant Named_Field_Internal_Access := new Named_Field_Internal;
       begin
          D.Operator := new String'(Name);
@@ -1057,11 +1089,13 @@ package body GNATCOLL.SQL_Impl is
         (Self : Field'Class; Operand : Scalar) return Field'Class
       is
          F : Typed_Data_Fields.Field
-           (Table => null, Instance => null, Name => null);
+           (Table => null, Instance => null, Name => null,
+            Instance_Index => -1);
          D : constant Named_Field_Internal_Access := new Named_Field_Internal;
 
          F2 : Typed_Data_Fields.Field
-           (Table => null, Instance => null, Name => null);
+           (Table => null, Instance => null, Name => null,
+            Instance_Index => -1);
          D2 : constant Named_Field_Internal_Access :=
            new Named_Field_Internal;
 
@@ -1082,7 +1116,8 @@ package body GNATCOLL.SQL_Impl is
 
       function SQL_Function return Field'Class is
          F : Typed_Data_Fields.Field
-           (Table => null, Instance => null, Name => null);
+           (Table => null, Instance => null, Name => null,
+            Instance_Index => -1);
          D : constant Named_Field_Internal_Access := new Named_Field_Internal;
       begin
          D.Str_Value := new String'(Name);
@@ -1098,7 +1133,8 @@ package body GNATCOLL.SQL_Impl is
         (Self : Argument_Type'Class) return Field'Class
       is
          F : Typed_Data_Fields.Field
-           (Table => null, Instance => null, Name => null);
+           (Table => null, Instance => null, Name => null,
+            Instance_Index => -1);
          D : constant Function_Field_Access := new Function_Field;
       begin
          if Suffix /= ")" and then Suffix /= "" then
@@ -1359,7 +1395,7 @@ package body GNATCOLL.SQL_Impl is
       --  database. Unfortunately, GNAT.Calendar.Time_IO converts that back to
       --  local time.
 
-      if Value /= No_Time then
+      if Value /= GNAT.Calendar.No_Time then
          Adjusted := Value - Duration (UTC_Time_Offset (Value)) * 60.0;
          return Image (Adjusted, "'%Y-%m-%d %H:%M:%S'");
       else
@@ -1381,7 +1417,7 @@ package body GNATCOLL.SQL_Impl is
       --  database. Unfortunately, GNAT.Calendar.Time_IO converts that back to
       --  local time.
 
-      if Value /= No_Time then
+      if Value /= GNAT.Calendar.No_Time then
          Adjusted := Value - Duration (UTC_Time_Offset (Value)) * 60.0;
          return Image (Adjusted, "'%Y-%m-%d'");
       else

@@ -126,12 +126,40 @@ package GNATCOLL.SQL is
    Empty_Table_List : constant SQL_Table_List;
    --  A list of tables, as used in a SELECT query ("a, b")
 
-   type SQL_Table (Table_Name, Instance : GNATCOLL.SQL_Impl.Cst_String_Access)
+   type SQL_Table (Table_Name, Instance : GNATCOLL.SQL_Impl.Cst_String_Access;
+                   Instance_Index : Integer)
       is abstract new SQL_Single_Table with private;
    function To_String (Self : SQL_Table'Class) return String;
    overriding function To_String
      (Self : SQL_Table; Format : Formatter'Class) return String;
-   --  A table representing a field of a specific table
+   --  A table representing a field of a specific table.
+   --  If Instance is specified (i.e. not null), the FROM clause will include:
+   --        SELECT ... FROM Table_Name Instance, ...
+   --  Otherwise, if Instance_Index is not -1, the FROM clause will include:
+   --        SELECT ... FROM Table_Name T<index>, ...
+   --        ie a generic name for the table.
+   --  Otherwise, the FROM clause will include:
+   --        SELECT ... FROM Table_Name, ...
+   --
+   --  The goal is to ensure unicity of the table in a query (for instance if a
+   --  table occurs several times in the FROM clause). So if you have a table
+   --  Names, which could occur several times in a query, you could either
+   --  provide explicit renaming of it, as in:
+   --      Aliased_Name : aliased constant String := "aliased_name";
+   --      Aliased_Table : T_Names (Instance => Aliased_Name'Access);
+   --
+   --      Q := SQL_Select (Fields => Aliased_Table.Name,
+   --                       From   => Aliased_Table, ...)
+   --
+   --  This will work fine in most cases. However, in some cases (automatically
+   --  generated queries for instance), you might not know in advance how many
+   --  of those renamings you will need, and therefore cannot create all the
+   --  "aliased constant String" in advance.
+   --  In such a case, using the Instance_Index might provide an easier way.
+   --
+   --      Aliased : T_Names (Instance => null, Instance_Index => 1); --  "t1"
+   --      Q := SQL_Select (Fields => Aliased.Name,
+   --                       From   => Aliased, ...)
 
    type SQL_Unchecked_Table_Access is access constant SQL_Table'Class;
 
@@ -707,7 +735,8 @@ private
    -- Table and instances --
    -------------------------
 
-   type SQL_Table (Table_Name, Instance : Cst_String_Access)
+   type SQL_Table (Table_Name, Instance : Cst_String_Access;
+                   Instance_Index : Integer)
       is abstract new SQL_Single_Table (Instance) with null record;
    overriding procedure Append_Tables
      (Self : SQL_Table; To : in out Table_Sets.Set);

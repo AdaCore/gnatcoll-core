@@ -1,7 +1,7 @@
 -----------------------------------------------------------------------
 --                               G N A T C O L L                     --
 --                                                                   --
---                 Copyright (C) 2005-2009, AdaCore                  --
+--                 Copyright (C) 2005-2010, AdaCore                  --
 --                                                                   --
 -- GPS is free  software;  you can redistribute it and/or modify  it --
 -- under the terms of the GNU General Public License as published by --
@@ -47,6 +47,7 @@ package body GNATCOLL.SQL.Postgres is
       return SQL_Field_Integer'
         (Table    => Table.Table_Name,
          Instance => Table.Instance,
+         Instance_Index => Table.Instance_Index,
          Name     => N_OID'Access);
    end OID_Field;
 

@@ -160,7 +160,8 @@ package body GNATCOLL.SQL is
    is
       Data   : constant Multiple_Args_Field_Internal_Access :=
         new Multiple_Args_Field_Internal;
-      F : SQL_Field_Any (Table => null, Instance => null, Name => null);
+      F : SQL_Field_Any
+        (Table => null, Instance => null, Instance_Index => -1, Name => null);
       C : Field_List.Cursor := First (Fields);
    begin
       if Func_Name /= "" then
@@ -271,13 +272,21 @@ package body GNATCOLL.SQL is
    ---------------
 
    function To_String (Self : SQL_Table'Class) return String is
+      Instance : constant String :=
+        Instance_Name
+          ((Name => Self.Table_Name, Instance => Self.Instance,
+            Instance_Index => Self.Instance_Index));
    begin
-      if Self.Instance = null then
-         return Self.Table_Name.all;
+      if Instance /= Self.Table_Name.all then
+         return Self.Table_Name.all & " " & Instance;
       else
-         return Self.Table_Name.all & " " & Self.Instance.all;
+         return Self.Table_Name.all;
       end if;
    end To_String;
+
+   ---------------
+   -- To_String --
+   ---------------
 
    function To_String
      (Self : SQL_Table; Format : Formatter'Class) return String
@@ -538,6 +547,7 @@ package body GNATCOLL.SQL is
       Data.Renamed := +Field;
       return SQL_Field_Any'
         (Table => null, Instance => null, Name => null,
+         Instance_Index => -1,
          Data => (Ada.Finalization.Controlled with
                   Data => SQL_Field_Internal_Access (Data)));
    end As;
@@ -554,6 +564,7 @@ package body GNATCOLL.SQL is
       Data.Sorted    := +Field;
       return SQL_Field_Any'
         (Table => null, Instance => null, Name => null,
+         Instance_Index => -1,
          Data => (Ada.Finalization.Controlled with
                   Data => SQL_Field_Internal_Access (Data)));
    end Desc;
@@ -570,6 +581,7 @@ package body GNATCOLL.SQL is
       Data.Sorted    := +Field;
       return SQL_Field_Any'
         (Table => null, Instance => null, Name => null,
+         Instance_Index => -1,
          Data => (Ada.Finalization.Controlled with
                   Data => SQL_Field_Internal_Access (Data)));
    end Asc;
@@ -704,6 +716,7 @@ package body GNATCOLL.SQL is
       end if;
       return SQL_Field_Any'
         (Table => null, Instance => null, Name => null,
+         Instance_Index => -1,
          Data => (Ada.Finalization.Controlled
                   with SQL_Field_Internal_Access (Data)));
    end SQL_Case;
@@ -836,6 +849,7 @@ package body GNATCOLL.SQL is
       Data.Func   := new String'(String (Func));
       return SQL_Field_Any'
         (Table => null, Instance => null, Name => null,
+         Instance_Index => -1,
          Data => (Ada.Finalization.Controlled with
                   Data => SQL_Field_Internal_Access (Data)));
    end Apply;
@@ -855,6 +869,7 @@ package body GNATCOLL.SQL is
       Data.Func   := new String'(String (Func));
       return SQL_Field_Any'
         (Table => null, Instance => null, Name => null,
+         Instance_Index => -1,
          Data => (Ada.Finalization.Controlled with
                   Data => SQL_Field_Internal_Access (Data)));
    end Apply;
@@ -874,6 +889,7 @@ package body GNATCOLL.SQL is
       Data.Func   := new String'(String (Func));
       return SQL_Field_Any'
         (Table => null, Instance => null, Name => null,
+         Instance_Index => -1,
          Data => (Ada.Finalization.Controlled with
                   Data => SQL_Field_Internal_Access (Data)));
    end Apply;
@@ -1547,7 +1563,8 @@ package body GNATCOLL.SQL is
    begin
       if Self.Table_Name /= null then
          Include (To, (Name     => Self.Table_Name,
-                       Instance => Self.Instance));
+                       Instance => Self.Instance,
+                       Instance_Index => Self.Instance_Index));
       end if;
    end Append_Tables;
 
@@ -1828,7 +1845,8 @@ package body GNATCOLL.SQL is
         new Query_Insert_Contents;
    begin
       Data.Into := (Name     => Table.Table_Name,
-                    Instance => Table.Instance);
+                    Instance => Table.Instance,
+                    Instance_Index => -1);
       Data.Default_Values := True;
       return (Contents =>
               (Ada.Finalization.Controlled
