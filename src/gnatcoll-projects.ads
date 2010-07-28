@@ -554,7 +554,8 @@ package GNATCOLL.Projects is
    --  If Info is a spec, returns the body of the same unit. If Info is a
    --  body, returns its spec.
    --  If there is no "other file" in the project, but we could compute the
-   --  name it should have, that name is returned (base name only is set).
+   --  name it should have, that name is returned (the file is created in the
+   --  same directory as File).
    --  Otherwise, File itself is returned.
 
    function Info

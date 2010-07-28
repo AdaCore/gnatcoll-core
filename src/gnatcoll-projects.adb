@@ -1330,7 +1330,9 @@ package body GNATCOLL.Projects is
             Language => Info.Language, File_Must_Exist => False);
       begin
          if Base'Length > 0 then
-            return GNATCOLL.VFS.Create_From_Base (Base);
+            return GNATCOLL.VFS.Create_From_Dir
+              (Dir       => Create (Dir_Name (File)),
+               Base_Name => Base);
          end if;
       end;
 
