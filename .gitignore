@@ -2,4 +2,3 @@ gnat/*.ad?
 gnat/snames*
 gnat/xsnamest
 gnat/sdefault/sdefault.adb
-testsuite/sql/database_names.ads
