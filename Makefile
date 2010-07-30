@@ -72,9 +72,7 @@ install_library_type:
 	${MKDIR} ${includedir}/${TARNAME}
 	${MKDIR} ${datadir}/gps/plug-ins
 	${MAKE} -C src -f Makefile.gnatcoll libinstall
-ifeq (${WITH_PYTHON},yes)
 	${MAKE} -C src -f Makefile.python libinstall
-endif
 	${MAKE} -C docs install
 ifeq (${WITH_GTK},yes)
 	${MAKE} -C src -f Makefile.gtk libinstall
