@@ -272,16 +272,11 @@ package body GNATCOLL.SQL is
    ---------------
 
    function To_String (Self : SQL_Table'Class) return String is
-      Instance : constant String :=
-        Instance_Name
-          ((Name => Self.Table_Name, Instance => Self.Instance,
-            Instance_Index => Self.Instance_Index));
    begin
-      if Instance /= Self.Table_Name.all then
-         return Self.Table_Name.all & " " & Instance;
-      else
-         return Self.Table_Name.all;
-      end if;
+      return To_String (Table_Names'
+                          (Name           => Self.Table_Name,
+                           Instance       => Self.Instance,
+                           Instance_Index => Self.Instance_Index));
    end To_String;
 
    ---------------
@@ -329,11 +324,12 @@ package body GNATCOLL.SQL is
    ---------------
 
    function To_String (Names : Table_Names) return String is
+      Instance : constant String := Instance_Name (Names);
    begin
-      if Names.Instance = null then
-         return Names.Name.all;
+      if Instance /= Names.Name.all then
+         return Names.Name.all & " " & Instance;
       else
-         return Names.Name.all & " " & Names.Instance.all;
+         return Names.Name.all;
       end if;
    end To_String;
 
@@ -1849,7 +1845,7 @@ package body GNATCOLL.SQL is
    begin
       Data.Into := (Name     => Table.Table_Name,
                     Instance => Table.Instance,
-                    Instance_Index => -1);
+                    Instance_Index => Table.Instance_Index);
       Data.Default_Values := True;
       return (Contents =>
               (Ada.Finalization.Controlled
@@ -2138,7 +2134,9 @@ package body GNATCOLL.SQL is
       On      : SQL_Criteria) return SQL_Left_Join_Table
    is
    begin
-      return Result : SQL_Left_Join_Table (Instance => null) do
+      return Result : SQL_Left_Join_Table
+        (Instance => null, Instance_Index => -1)
+      do
          Result.Data := Join_Table_Data'
            (Ada.Finalization.Controlled with
             Data => new Join_Table_Internal'
@@ -2172,7 +2170,7 @@ package body GNATCOLL.SQL is
      (Self : SQL_Left_Join_Table; Name : Cst_String_Access)
       return SQL_Left_Join_Table'Class
    is
-      R : SQL_Left_Join_Table (Instance => Name);
+      R : SQL_Left_Join_Table (Instance => Name, Instance_Index => -1);
    begin
       R.Data := Self.Data;
       return R;
@@ -2256,7 +2254,9 @@ package body GNATCOLL.SQL is
       return Subquery_Table
    is
    begin
-      return R : Subquery_Table (Instance => Table_Name) do
+      return R : Subquery_Table
+        (Instance => Table_Name, Instance_Index => -1)
+      do
          R.Query := SQL_Query (Query);
       end return;
    end Subquery;

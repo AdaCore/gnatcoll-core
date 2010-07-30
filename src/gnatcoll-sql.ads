@@ -737,7 +737,8 @@ private
 
    type SQL_Table (Table_Name, Instance : Cst_String_Access;
                    Instance_Index : Integer)
-      is abstract new SQL_Single_Table (Instance) with null record;
+   is abstract new
+     SQL_Single_Table (Instance, Instance_Index) with null record;
    overriding procedure Append_Tables
      (Self : SQL_Table; To : in out Table_Sets.Set);
 

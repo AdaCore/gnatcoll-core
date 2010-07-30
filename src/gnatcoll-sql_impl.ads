@@ -125,7 +125,8 @@ package GNATCOLL.SQL_Impl is
       return String is abstract;
    --  Convert the table to a string
 
-   type SQL_Single_Table (Instance : GNATCOLL.SQL_Impl.Cst_String_Access)
+   type SQL_Single_Table (Instance : GNATCOLL.SQL_Impl.Cst_String_Access;
+                          Instance_Index : Integer)
       is abstract new SQL_Table_Or_List with private;
    --  Any type of table, or result of join between several tables. Such a
    --  table can have fields
@@ -544,7 +545,8 @@ private
 
    type SQL_Table_Or_List is abstract tagged null record;
 
-   type SQL_Single_Table (Instance : Cst_String_Access)
+   type SQL_Single_Table (Instance : Cst_String_Access;
+                          Instance_Index : Integer)
       is abstract new SQL_Table_Or_List with null record;
    --  instance name, might be null when this is the same name as the table.
    --  This isn't used for lists, but is used for all other types of tables

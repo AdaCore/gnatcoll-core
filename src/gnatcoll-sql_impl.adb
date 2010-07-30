@@ -28,7 +28,6 @@ with GNAT.Strings;               use GNAT.Strings;
 with GNATCOLL.Utils;             use GNATCOLL.Utils;
 
 package body GNATCOLL.SQL_Impl is
-
    use Field_List, Table_Sets, Assignment_Lists;
 
    Comparison_Equal         : aliased constant String := "=";
@@ -170,7 +169,8 @@ package body GNATCOLL.SQL_Impl is
                return Names.Name.all;
             end if;
          else
-            return "T" & Image (Names.Instance_Index, Min_Width => 1);
+            return Names.Name (Names.Name'First)
+              & Image (Names.Instance_Index, Min_Width => 1);
          end if;
       else
          return Names.Instance.all;
@@ -469,7 +469,7 @@ package body GNATCOLL.SQL_Impl is
    begin
       if Self.Table /= null then
          Include (To, (Name => Self.Table, Instance => Self.Instance,
-                       Instance_Index => -1));
+                       Instance_Index => Self.Instance_Index));
       end if;
    end Append_Tables;
 
@@ -994,11 +994,11 @@ package body GNATCOLL.SQL_Impl is
       is
          F : Typed_Data_Fields.Field
            (Table => null, Instance => Table.Instance,
-            Instance_Index => -1, Name => null);
+            Instance_Index => Table.Instance_Index, Name => null);
          D : constant Named_Field_Internal_Access := new Named_Field_Internal;
       begin
          D.Table := (Name => null, Instance => Table.Instance,
-                     Instance_Index => -1);
+                     Instance_Index => Table.Instance_Index);
          D.Str_Value  := new String'(Name.Name.all);
          F.Data.Data := SQL_Field_Internal_Access (D);
          return F;
@@ -1141,9 +1141,6 @@ package body GNATCOLL.SQL_Impl is
             D.Prefix := new String'(Name);
             D.To_Field := +Self;
             D.Suffix := new String'(" " & Suffix);
-
---              D.Str_Value := new String'
---             (Name & To_String (Self, Format, Long => True) & " " & Suffix);
          else
             D.Prefix := new String'(Name);
             D.To_Field := +Self;
