@@ -982,8 +982,20 @@ package body GNATCOLL.SQL.Exec is
 
    function Integer_Value
      (Self   : Forward_Cursor;
+      Field  : Field_Index) return Integer
+   is
+   begin
+      return Integer_Value (DBMS_Forward_Cursor'Class (Self.Res.all), Field);
+   end Integer_Value;
+
+   -------------------
+   -- Integer_Value --
+   -------------------
+   --
+   function Integer_Value
+     (Self   : Forward_Cursor;
       Field  : Field_Index;
-      Default : Integer := Integer'First) return Integer
+      Default : Integer) return Integer
    is
    begin
       return Integer_Value (DBMS_Forward_Cursor'Class (Self.Res.all), Field);

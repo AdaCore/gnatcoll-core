@@ -1,7 +1,7 @@
 -----------------------------------------------------------------------
 --                               G N A T C O L L                     --
 --                                                                   --
---                 Copyright (C) 2005-2009, AdaCore                  --
+--                 Copyright (C) 2005-2010, AdaCore                  --
 --                                                                   --
 -- GPS is free  software;  you can redistribute it and/or modify  it --
 -- under the terms of the GNU General Public License as published by --
@@ -398,7 +398,10 @@ package GNATCOLL.SQL.Exec is
    function Integer_Value
      (Self    : Forward_Cursor;
       Field   : Field_Index;
-      Default : Integer := Integer'First) return Integer;
+      Default : Integer) return Integer;
+   function Integer_Value
+     (Self    : Forward_Cursor;
+      Field   : Field_Index) return Integer;
    function Float_Value
      (Self : Forward_Cursor; Field : Field_Index) return Float;
    function Time_Value

@@ -953,6 +953,9 @@ package body GNATCOLL.SQL is
       elsif Get_Data (Left).all in SQL_Criteria_Data'Class
         and then SQL_Criteria_Data (Get_Data (Left).all).Op = Op
       then
+         --  ??? We could optimize when Left.Refcount=1, since we are modifying
+         --  the last instance and thus do not need to copy the list
+
          List := SQL_Criteria_Data (Get_Data (Left).all).Criterias;
 
          if Get_Data (Right).all in SQL_Criteria_Data'Class
