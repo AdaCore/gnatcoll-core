@@ -989,8 +989,8 @@ package body GNATCOLL.SQL_Impl is
       ----------------
 
       function From_Table
-        (Table : SQL_Single_Table'Class;
-         Name  : Field) return Field'Class
+        (Self  : Field;
+         Table : SQL_Single_Table'Class) return Field'Class
       is
          F : Typed_Data_Fields.Field
            (Table => null, Instance => Table.Instance,
@@ -999,9 +999,9 @@ package body GNATCOLL.SQL_Impl is
       begin
          D.Table := (Name => null, Instance => Table.Instance,
                      Instance_Index => Table.Instance_Index);
-         D.Str_Value  := new String'(Name.Name.all);
+         D.Str_Value  := new String'(Self.Name.all);
          F.Data.Data := SQL_Field_Internal_Access (D);
-         return F;
+         return Field (F);
       end From_Table;
 
       ----------------

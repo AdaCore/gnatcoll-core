@@ -703,7 +703,18 @@ package GNATCOLL.SQL is
    -----------------------
    -- subqueries tables --
    -----------------------
-   --  These tables represent subqueries
+   --  These tables represent subqueries as used in a "FROM" list.
+   --  There is no support for using subqueries in the list of fields: it is
+   --  just more efficient to perform two separate queries in such a case.
+   --  Example of use:
+   --     N_Sorted : aliased constant String := "sorted";
+   --     Sorted : constant Subquery_Table :=
+   --       Subquery (SQL_Select (Config.Name, ...), N_Sorted'Access);
+   --     Sorted_Config   : constant SQL_Field_Text'Class :=
+   --       SQL_Field_Text (Config.Name.From_Table (Sorted));
+   --
+   --  You can then use the table Sorted in any SQL_Select query, and access
+   --  its fields via Sorted_Config.
 
    type Subquery_Table is new SQL_Single_Table with private;
 
