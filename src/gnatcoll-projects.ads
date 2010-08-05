@@ -935,6 +935,7 @@ package GNATCOLL.Projects is
    Global_Pragmas_Attribute        : constant Attribute_Pkg_String;
    Local_Pragmas_Attribute         : constant Attribute_Pkg_String;
    Locally_Removed_Files_Attribute : constant Attribute_Pkg_List;
+   Documentation_Dir_Attribute     : constant Attribute_Pkg_String;
 
    --  Naming package
    Casing_Attribute                : constant Attribute_Pkg_String;
@@ -1433,6 +1434,8 @@ private
                                  "ide#vcs_repository_root";
    VCS_Patch_Root            : constant Attribute_Pkg_String :=
                                  "ide#vcs_patch_root";
+   Documentation_Dir_Attribute : constant Attribute_Pkg_String :=
+                                   "ide#documentation_dir";
    Global_Pragmas_Attribute  : constant Attribute_Pkg_String :=
                                  "builder#global_configuration_pragmas";
    Local_Pragmas_Attribute   : constant Attribute_Pkg_String :=
