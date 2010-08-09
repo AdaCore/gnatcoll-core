@@ -32,8 +32,7 @@ project GnatColl_Gtk is
    package Builder renames GnatColl_Shared.Builder;
 
    package Compiler is
-      for Default_Switches ("Ada") use
-        GnatColl_Shared.Compiler'Default_Switches ("Ada");
+      for Switches ("Ada") use GnatColl_Shared.Compiler'Switches ("Ada");
 
       for Default_Switches ("C") use
         ("-g", "-O2")

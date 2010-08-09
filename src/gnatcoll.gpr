@@ -33,7 +33,10 @@ project GnatColl is
 
    package Builder renames GnatColl_Shared.Builder;
 
-   package Compiler renames GnatColl_Shared.Compiler;
+   package Compiler is
+      for Switches ("Ada") use GnatColl_Shared.Compiler'Switches ("Ada");
+      for Switches ("sinfo.adb") use ("-gnatg") & Compiler'Switches ("Ada");
+   end Compiler;
 
    package Linker   renames GnatColl_Shared.Linker;
 

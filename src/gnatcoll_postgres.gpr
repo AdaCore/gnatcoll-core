@@ -25,17 +25,16 @@ project GnatColl_Postgres is
    package Builder  renames GnatColl_Shared.Builder;
 
    package Compiler is
-      for Default_Switches ("Ada") use
-        GnatColl_Shared.Compiler'Default_Switches ("Ada");
+      for Switches ("Ada") use GnatColl_Shared.Compiler'Switches ("Ada");
 
       case GnatColl_Shared.Postgres_Has_PQprepare is
          when "yes" =>
            for Default_Switches ("C") use
-              GnatColl_Shared.Compiler'Default_Switches ("C")
+              GnatColl_Shared.Compiler'Switches ("C")
               & ("-DHAS_PQPREPARE");
          when "no" =>
            for Default_Switches ("C") use
-              GnatColl_Shared.Compiler'Default_Switches ("C");
+              GnatColl_Shared.Compiler'Switches ("C");
       end case;
    end Compiler;
 
