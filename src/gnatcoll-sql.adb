@@ -745,6 +745,20 @@ package body GNATCOLL.SQL is
       return Internal (Field);
    end Extract;
 
+   -------------
+   -- Extract --
+   -------------
+
+   function Extract
+     (Field : Date_Fields.Field'Class; Attribute : String)
+      return Date_Fields.Field'Class
+   is
+      function Internal is new Date_Fields.Apply_Function
+        (Date_Fields.Field, "EXTRACT (" & Attribute & " from ");
+   begin
+      return Internal (Field);
+   end Extract;
+
    -----------
    -- Lower --
    -----------

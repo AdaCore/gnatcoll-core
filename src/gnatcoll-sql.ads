@@ -347,6 +347,9 @@ package GNATCOLL.SQL is
    function Extract
      (Field : Time_Fields.Field'Class; Attribute : String)
       return Time_Fields.Field'Class;
+   function Extract
+     (Field : Date_Fields.Field'Class; Attribute : String)
+      return Date_Fields.Field'Class;
    --  Return the result of "extract (attribute from field)"
 
    -------------------------
