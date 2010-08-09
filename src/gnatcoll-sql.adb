@@ -930,6 +930,24 @@ package body GNATCOLL.SQL is
       return S;
    end To_List;
 
+   -----------
+   -- "not" --
+   -----------
+
+   function "not" (Self : SQL_Criteria) return SQL_Criteria is
+      Data   : SQL_Criteria_Data_Access;
+      Result : SQL_Criteria;
+   begin
+      if Self = No_Criteria then
+         return No_Criteria;
+      end if;
+
+      Data := new SQL_Criteria_Data (Criteria_Not);
+      SQL_Criteria_Data (Data.all).Criteria := Self;
+      Set_Data (Result, Data);
+      return Result;
+   end "not";
+
    -------------
    -- Combine --
    -------------
@@ -1277,6 +1295,10 @@ package body GNATCOLL.SQL is
                when others            => null;
             end case;
 
+         when Criteria_Not =>
+            Result := To_Unbounded_String
+              ("NOT (" & To_String (Self.Criteria, Format, Long) & ")");
+
       end case;
       return To_String (Result);
    end To_String;
@@ -1533,6 +1555,9 @@ package body GNATCOLL.SQL is
 
          when Null_Criteria =>
             Append_Tables (Self.Arg3, To);
+
+         when Criteria_Not =>
+            Append_Tables (Self.Criteria, To);
       end case;
    end Append_Tables;
 
@@ -1774,6 +1799,9 @@ package body GNATCOLL.SQL is
 
          when Null_Criteria =>
             Append_If_Not_Aggregate (Self.Arg3, To, Is_Aggregate);
+
+         when Criteria_Not =>
+            Append_If_Not_Aggregate (Self.Criteria, To, Is_Aggregate);
       end case;
    end Append_If_Not_Aggregate;
 

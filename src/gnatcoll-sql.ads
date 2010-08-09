@@ -512,6 +512,9 @@ package GNATCOLL.SQL is
    --  Test that Left is False. This can also be done with an explicit call to
    --  "=" above
 
+   function "not" (Self : SQL_Criteria) return SQL_Criteria;
+   --  Return the opposite of Self
+
    function SQL_In
      (Self : SQL_Field'Class; List : SQL_Field_List) return SQL_Criteria;
    function SQL_In
@@ -814,7 +817,8 @@ private
                               Criteria_In,
                               Criteria_Not_In,
                               Criteria_Null,
-                              Criteria_Not_Null);
+                              Criteria_Not_Null,
+                              Criteria_Not);
    subtype Criteria_Criteria
      is SQL_Criteria_Type range Criteria_And .. Criteria_Or;
    subtype Null_Criteria
@@ -837,6 +841,9 @@ private
 
          when Null_Criteria =>
             Arg3 : SQL_Field_Pointer;
+
+         when Criteria_Not =>
+            Criteria : SQL_Criteria;
       end case;
    end record;
 
