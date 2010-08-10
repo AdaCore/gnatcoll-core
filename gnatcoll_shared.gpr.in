@@ -59,7 +59,7 @@ project GnatColl_Shared is
    package Binder is
       case Build is
          when "Debug" =>
-            for Default_Switches ("Ada") use ("-E");
+            for Switches ("Ada") use ("-E");
          when "Production" =>
             null;
       end case;

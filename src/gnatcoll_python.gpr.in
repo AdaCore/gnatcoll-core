@@ -25,10 +25,10 @@ project GnatColl_Python is
    package Builder renames GnatColl_Shared.Builder;
 
    package Compiler is
-      for Default_Switches ("Ada") use
-        GnatColl_Shared.Compiler'Default_Switches ("Ada");
+      for Switches ("Ada") use
+        GnatColl_Shared.Compiler'Switches ("Ada");
 
-      for Default_Switches ("C") use
+      for Switches ("C") use
         ("-g", "-O2") & GnatColl_Shared.Python_Cflags;
    end Compiler;
 
