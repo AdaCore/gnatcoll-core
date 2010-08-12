@@ -5685,4 +5685,7 @@ begin
 
    --  Disable verbose messages from project manager, not useful in GPS
    Opt.Quiet_Output := True;
+
+   --  Unchecked_Shared_Lib_Imports is only relevant for builders
+   Opt.Unchecked_Shared_Lib_Imports := True;
 end GNATCOLL.Projects;
