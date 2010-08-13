@@ -1,6 +1,7 @@
 GNAT_SOURCES_FOR_GNATCOLL= \
   ali.ads  ali.adb \
   alloc.ads \
+  aspects.ads aspects.adb \
   atree.ads atree.adb \
   butil.ads butil.adb \
   casing.ads casing.adb \
