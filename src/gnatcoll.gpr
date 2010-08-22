@@ -35,6 +35,7 @@ project GnatColl is
 
    package Compiler is
       for Switches ("Ada") use GnatColl_Shared.Compiler'Switches ("Ada");
+      for Switches ("C") use GnatColl_Shared.Compiler'Switches ("C");
       for Switches ("sinfo.adb") use Compiler'Switches ("Ada") & ("-gnatg");
    end Compiler;
 
