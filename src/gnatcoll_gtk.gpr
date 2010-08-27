@@ -34,7 +34,7 @@ project GnatColl_Gtk is
    package Compiler is
       for Switches ("Ada") use GnatColl_Shared.Compiler'Switches ("Ada");
 
-      for Default_Switches ("C") use
+      for Switches ("C") use
         ("-g", "-O2")
         & GnatColl_Shared.Python_Cflags
         & GnatColl_Shared.Pygtk_Include

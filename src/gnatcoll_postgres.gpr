@@ -29,11 +29,11 @@ project GnatColl_Postgres is
 
       case GnatColl_Shared.Postgres_Has_PQprepare is
          when "yes" =>
-           for Default_Switches ("C") use
+           for Switches ("C") use
               GnatColl_Shared.Compiler'Switches ("C")
               & ("-DHAS_PQPREPARE");
          when "no" =>
-           for Default_Switches ("C") use
+           for Switches ("C") use
               GnatColl_Shared.Compiler'Switches ("C");
       end case;
    end Compiler;
