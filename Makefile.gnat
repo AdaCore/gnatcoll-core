@@ -59,7 +59,6 @@ GNAT_SOURCES_FOR_GNATCOLL= \
   stringt.ads stringt.adb \
   styleg.ads styleg.adb \
   stylesw.ads stylesw.adb \
-  switch.ads switch.adb \
   table.ads table.adb \
   targparm.ads targparm.adb \
   tempdir.ads tempdir.adb \
