@@ -967,6 +967,9 @@ package GNATCOLL.Projects is
    --  Configuration
    Compiler_Driver_Attribute           : constant Attribute_Pkg_String;
 
+   --  GNATStack
+   Stack_Switches_Attribute            : constant Attribute_Pkg_List;
+
    -----------------------
    -- Printing projects --
    -----------------------
@@ -1470,6 +1473,10 @@ private
    --  Configuration
    Compiler_Driver_Attribute  : constant Attribute_Pkg_String :=
                                   "compiler#driver";
+
+   --  GNATStack
+   Stack_Switches_Attribute   : constant Attribute_Pkg_List :=
+                                  "stack#switches";
 
    --  For backward compatiblity
    Old_Specification_Attribute  : constant Attribute_Pkg_String :=
