@@ -291,7 +291,18 @@ would like to install @value{gnatcoll}.
 
 The first step is to configure the build environment. This is done by
 running the @code{configure} command in the root directory of the
-@value{gnatcoll} tree. This command accepts lots of arguments, among which
+@value{gnatcoll} tree.
+
+@cindex GNATCOLL.Projects
+@cindex projects
+@cindex gnat sources
+If you have access to the sources of GNAT, you should create a link called
+@file{gnat_src} that points to the directory containing those sources. They
+are used to add support for @code{GNATCOLL.Projects}, which reuses the same
+parser as the GNAT tools. If the link @file{gnat_src} does not exist, the
+support for projects will not be compiled.
+
+@code{configure} accepts lots of arguments, among which
 the following ones are most useful:
 
 @table @code
