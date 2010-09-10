@@ -1,7 +1,7 @@
 -----------------------------------------------------------------------
 --                               G N A T C O L L                     --
 --                                                                   --
---                 Copyright (C) 2005-2009, AdaCore                  --
+--                 Copyright (C) 2005-2010, AdaCore                  --
 --                                                                   --
 -- GPS is free  software;  you can redistribute it and/or modify  it --
 -- under the terms of the GNU General Public License as published by --
@@ -176,8 +176,8 @@ package body GNATCOLL.SQL.Exec_Private is
       overriding function Value
         (Self  : Direct; Field : Field_Index) return String
       is
-         Str : constant GNAT.Strings.String_Access :=
-           Self.Table (Self.Current * Self.Columns + Natural (Field));
+         Str : constant GNAT.Strings.String_Access := Self.Table
+           (Self.Table'First + Self.Current * Self.Columns + Natural (Field));
       begin
          if Str = null then
             return "";
@@ -204,7 +204,8 @@ package body GNATCOLL.SQL.Exec_Private is
       overriding function Is_Null
         (Self  : Direct; Field : Field_Index) return Boolean is
       begin
-         return Self.Table (Self.Columns * Self.Current + Natural (Field)) =
+         return Self.Table
+           (Self.Table'First + Self.Columns * Self.Current + Natural (Field)) =
             null;
       end Is_Null;
 

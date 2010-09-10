@@ -33,6 +33,7 @@ package body GNATCOLL.SQL.Exec is
 
    Me_Error  : constant Trace_Handle := Create ("SQL.ERROR", On);
    Me_Select : constant Trace_Handle := Create ("SQL.SELECT");
+   Me_Cache  : constant Trace_Handle := Create ("SQL.CACHE");
    Me_Query  : constant Trace_Handle := Create ("SQL");
 
    Cache_Expiration_Delay : constant Duration := 3600.0;  --  1 hour
@@ -1244,8 +1245,8 @@ package body GNATCOLL.SQL.Exec is
          Query_Cache.Get_Result (Stmt, Result, Found);
          if Found then
             Result.First; --  Move to first element
-            if Active (Me_Select) then
-               Trace (Me_Select, "Use cache for " & Stmt.Cached.Str.all);
+            if Active (Me_Cache) then
+               Trace (Me_Cache, "Use cache for " & Stmt.Cached.Str.all);
             end if;
             return;
          end if;
