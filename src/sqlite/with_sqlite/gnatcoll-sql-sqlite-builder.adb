@@ -387,6 +387,15 @@ package body GNATCOLL.SQL.Sqlite.Builder is
       Res2 := new Sqlite_Direct_Cursor;
       Res2.Initialize (Sqlite_Cursor (Res.all)'Access);
 
+      --  Free the sqlite statement, no longer needed. It might have a shorter
+      --  lifetime (as long as the connection) than the Direct_Cursor (which
+      --  might be in a cache for instance). This would result in storage_error
+      --  later on since finalizing the statement would try to access the DB
+      --  connection
+
+      Finalize (Res.Stmt);
+      Res.Stmt := No_Statement;
+
       return Abstract_Cursor_Access (Res2);
    end Execute;
 
@@ -406,10 +415,10 @@ package body GNATCOLL.SQL.Sqlite.Builder is
       Stmt := Connect_And_Prepare (Connection, Query, No_Stmt_Id, Direct);
       if Stmt /= No_DBMS_Stmt then
          Res := Execute
-              (Connection  => Connection,
-               Prepared    => Stmt,
-               Is_Select   => Is_Select,
-               Direct      => Direct);
+           (Connection => Connection,
+            Prepared   => Stmt,
+            Is_Select  => Is_Select,
+            Direct     => Direct);
 
          if Res /= null then
             if Res.all in Sqlite_Direct_Cursor'Class then
