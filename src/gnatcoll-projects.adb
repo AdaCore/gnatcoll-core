@@ -4445,7 +4445,10 @@ package body GNATCOLL.Projects is
             J       : Natural := Files'First;
          begin
             while Has_Element (Current) loop
-               --   Create new virtual files to work around compiler bug
+               --  ??? Create new virtual files to work around compiler bug.
+               --  The ideal would have been to write:
+               --     Files (J) := Element (Current)
+               --  in order to avoid memory reallocations.
                Files (J) := Create (Element (Current).Full_Name);
                Next (Current);
                J := J + 1;
