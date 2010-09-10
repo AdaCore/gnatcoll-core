@@ -4445,7 +4445,8 @@ package body GNATCOLL.Projects is
             J       : Natural := Files'First;
          begin
             while Has_Element (Current) loop
-               Files (J) := Element (Current);
+               --   Create new virtual files to work around compiler bug
+               Files (J) := Create (Element (Current).Full_Name);
                Next (Current);
                J := J + 1;
             end loop;
