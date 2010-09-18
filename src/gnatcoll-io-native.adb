@@ -1,7 +1,7 @@
 -----------------------------------------------------------------------
 --                              G P S                                --
 --                                                                   --
---                   Copyright (C) 2009, AdaCore                     --
+--                 Copyright (C) 2009-2010, AdaCore                  --
 --                                                                   --
 -- GPS is free  software;  you can redistribute it and/or modify  it --
 -- under the terms of the GNU General Public License as published by --
@@ -328,6 +328,7 @@ package body GNATCOLL.IO.Native is
             when GNAT.Directory_Operations.Directory_Error =>
                return False;
          end;
+
       else
          return GNAT.OS_Lib.Is_Directory (String (File.Full.all));
       end if;
