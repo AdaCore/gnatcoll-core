@@ -2359,11 +2359,12 @@ package body GNATCOLL.Projects is
            (Project_From_Name
               (Iterator.Root.Data.Tree,
                Iterator.Root.Data.Imported_Projects (Iterator.Current)));
-         Assert (Me, P.Data /= null,
-                 "Current: project not found: "
-                 & Get_String (Iterator.Root.Data.Imported_Projects
-                               (Iterator.Current)));
-         return P;
+
+         if P.Data = null then
+            return No_Project;
+         else
+            return P;
+         end if;
       end if;
 
       return No_Project;
