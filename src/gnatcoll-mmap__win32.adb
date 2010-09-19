@@ -1,7 +1,7 @@
 -----------------------------------------------------------------------
 --                          G N A T C O L L                          --
 --                                                                   --
---                  Copyright (C) 2008-2009, AdaCore                 --
+--                  Copyright (C) 2008-2010, AdaCore                 --
 --                                                                   --
 -- GPS is free  software;  you can redistribute it and/or modify  it --
 -- under the terms of the GNU General Public License as published by --
@@ -254,7 +254,7 @@ package body GNATCOLL.Mmap is
       Use_Mmap_If_Available : Boolean := True) return Mapped_File
    is
       W_File : constant Wide_String :=
-                 Codec.From_Utf8 (Filename) & Wide_Character'Val (0);
+                 Codec.From_UTF8 (Filename) & Wide_Character'Val (0);
       H      : constant HANDLE :=
                  CreateFile
                    (W_File'Address, GENERIC_READ, Win.FILE_SHARE_READ,
@@ -300,7 +300,7 @@ package body GNATCOLL.Mmap is
       Use_Mmap_If_Available : Boolean := True) return Mapped_File
    is
       W_File : constant Wide_String :=
-                 Codec.From_Utf8 (Filename) & Wide_Character'Val (0);
+                 Codec.From_UTF8 (Filename) & Wide_Character'Val (0);
       H      : constant HANDLE :=
                  CreateFile
                    (W_File'Address, GENERIC_READ + GENERIC_WRITE, 0,
