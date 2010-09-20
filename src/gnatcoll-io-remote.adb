@@ -214,6 +214,57 @@ package body GNATCOLL.IO.Remote is
       end case;
    end Get_Tmp_Directory;
 
+   --------------------
+   -- Locate_On_Path --
+   --------------------
+
+   function Locate_On_Path (Host : String; Base : FS_String) return File_Access
+   is
+      Server : Server_Access;
+   begin
+      if not Is_Configured (Host) then
+         raise Remote_Config_Error with
+           "Invalid FS for host " & Host;
+      else
+         Server := Get_Server (Host);
+      end if;
+
+      if GNATCOLL.Path.Is_Absolute_Path (Server.Shell_FS, Base) then
+         return Create (Host, Base, False);
+      end if;
+
+      case Server.Shell_FS is
+         when FS_Unix | FS_Unix_Case_Insensitive =>
+            declare
+               Ret : constant FS_String :=
+                       GNATCOLL.IO.Remote.Unix.Locate_On_Path (Server, Base);
+            begin
+               if Ret = "" then
+                  return null;
+               else
+                  return Create (Host, Ret, False);
+               end if;
+            end;
+
+         when FS_Windows =>
+            declare
+               Ret : constant FS_String :=
+                       GNATCOLL.IO.Remote.Windows.Locate_On_Path
+                         (Server, Base);
+            begin
+               if Ret = "" then
+                  return null;
+               else
+                  return Create (Host, Ret, False);
+               end if;
+            end;
+
+         when FS_Unknown =>
+            raise Remote_Config_Error with
+              "Invalid FS for host " & Host;
+      end case;
+   end Locate_On_Path;
+
    ------------------------
    -- Get_Logical_Drives --
    ------------------------

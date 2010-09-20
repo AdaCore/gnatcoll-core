@@ -1,7 +1,7 @@
 -----------------------------------------------------------------------
 --                          G N A T C O L L                          --
 --                                                                   --
---                 Copyright (C) 2006-2009, AdaCore                  --
+--                 Copyright (C) 2006-2010, AdaCore                  --
 --                                                                   --
 -- GPS is free  software;  you can redistribute it and/or modify  it --
 -- under the terms of the GNU General Public License as published by --
@@ -168,6 +168,63 @@ package body GNATCOLL.IO.Remote.Windows is
 
       return new String_List'(Ret (1 .. Idx - 1));
    end Get_Logical_Drives;
+
+   --------------------
+   -- Locate_On_Path --
+   --------------------
+
+   function Locate_On_Path
+     (Exec : access Server_Record'Class;
+      Base : FS_String) return FS_String
+   is
+      function Get_Base return String;
+
+      function Get_Base return String is
+      begin
+         if Base'Length < 4
+           or else Base (Base'Last - 3 .. Base'Last) /= ".exe"
+         then
+            return String (Base) & ".exe";
+         else
+            return String (Base);
+         end if;
+      end Get_Base;
+
+      Args : GNAT.OS_Lib.Argument_List :=
+               (new String'("for"),
+                new String'("/f"),
+                new String'("""usebackq"""),
+                new String'("%i"),
+                new String'("in"),
+                new String'("('" & Get_Base & "')"),
+                new String'("do"),
+                new String'("@echo"),
+                new String'("%~dp$PATH:i%i"));
+      Output : String_Access;
+      Status : Boolean;
+
+   begin
+      Exec.Execute_Remotely (Args, Output, Status);
+      Free (Args);
+
+      if Status then
+         if Output.all /= Get_Base then
+            declare
+               --  Don't try to translate the string into a directory, as this
+               --  is all handled later at VFS level.
+               Result : constant FS_String := FS_String (Output.all);
+            begin
+               Free (Output);
+               return Result;
+            end;
+         else
+            Free (Output);
+            return "";
+         end if;
+      else
+         return "";
+      end if;
+   end Locate_On_Path;
 
    ---------------------
    -- Is_Regular_File --

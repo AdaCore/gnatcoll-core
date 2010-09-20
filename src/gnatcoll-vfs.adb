@@ -318,27 +318,41 @@ package body GNATCOLL.VFS is
    --------------------
 
    function Locate_On_Path
-     (Base_Name : Filesystem_String) return Virtual_File
+     (Base_Name : Filesystem_String;
+      Host      : String := Local_Host) return Virtual_File
    is
       Name : GNAT.OS_Lib.String_Access;
       Ret  : Virtual_File;
       use type GNAT.OS_Lib.String_Access;
 
    begin
-      if Is_Absolute_Path (Local_FS, +Base_Name) then
-         return Create (Base_Name);
-      end if;
+      if Host = Local_Host then
+         if Is_Absolute_Path (Local_FS, +Base_Name) then
+            return Create (Base_Name);
+         end if;
 
-      Name := GNAT.OS_Lib.Locate_Exec_On_Path (+Base_Name);
+         Name := GNAT.OS_Lib.Locate_Exec_On_Path (+Base_Name);
 
-      if Name = null then
-         return No_File;
+         if Name = null then
+            return No_File;
+         else
+            Ret := Create (+Name.all);
+            GNAT.OS_Lib.Free (Name);
+            return Ret;
+         end if;
+
       else
-         Ret := Create (+Name.all);
-         GNAT.OS_Lib.Free (Name);
-         return Ret;
+         declare
+            Int : constant GNATCOLL.IO.File_Access :=
+                    GNATCOLL.IO.Remote.Locate_On_Path (Host, +Base_Name);
+         begin
+            if Int = null then
+               return No_File;
+            else
+               return (Ada.Finalization.Controlled with Int);
+            end if;
+         end;
       end if;
-
    end Locate_On_Path;
 
    -----------------------

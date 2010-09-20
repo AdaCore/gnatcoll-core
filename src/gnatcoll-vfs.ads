@@ -164,7 +164,8 @@ package GNATCOLL.VFS is
    --  Full_Filename.
 
    function Locate_On_Path
-     (Base_Name : Filesystem_String) return Virtual_File;
+     (Base_Name : Filesystem_String;
+      Host      : String := Local_Host) return Virtual_File;
    --  Locate the file from its base name and the PATH environment variable
 
    ----------------------

@@ -1,7 +1,7 @@
 -----------------------------------------------------------------------
 --                              G P S                                --
 --                                                                   --
---                   Copyright (C) 2009, AdaCore                     --
+--                Copyright (C) 2009-2010, AdaCore                   --
 --                                                                   --
 -- GPS is free  software;  you can redistribute it and/or modify  it --
 -- under the terms of the GNU General Public License as published by --
@@ -33,6 +33,9 @@ package GNATCOLL.IO.Remote.Unix is
      (Exec : access Server_Record'Class) return FS_String;
    function Get_Logical_Drives
      (Exec : access Server_Record'Class) return String_List_Access;
+   function Locate_On_Path
+     (Exec : access Server_Record'Class;
+      Base : FS_String) return FS_String;
    function Is_Regular_File
      (Exec : access Server_Record'Class;
       File : FS_String) return Boolean;

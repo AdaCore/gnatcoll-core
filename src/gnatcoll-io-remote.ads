@@ -35,6 +35,8 @@ package GNATCOLL.IO.Remote is
    function Home_Dir (Host : String) return File_Access;
    function Get_Tmp_Directory (Host : String) return File_Access;
    function Get_Logical_Drives (Host : String) return File_Array;
+   function Locate_On_Path
+     (Host : String; Base : FS_String) return File_Access;
 
    procedure Ensure_Initialized
      (File : not null access Remote_File_Record'Class);
