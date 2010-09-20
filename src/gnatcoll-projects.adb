@@ -1266,9 +1266,35 @@ package body GNATCOLL.Projects is
       Unit : constant String := Unit_Name (Info);
       Part : Unit_Parts;
 
+      function Test_Suffixes
+        (Old_Suffix, New_Suffix : String) return Virtual_File;
+      --  Substitute prefixes and check whether the file exists
+
       function Non_Unit_Based
         (Old_Part, New_Part : Attribute_Pkg_String) return Virtual_File;
       --  Handling of non-unit based languages
+
+      -------------------
+      -- Test_Suffixes --
+      -------------------
+
+      function Test_Suffixes
+        (Old_Suffix, New_Suffix : String) return Virtual_File
+      is
+         Other_F : constant Virtual_File := Self.Create
+           (File.Base_Name (+Old_Suffix) & (+New_Suffix),
+            Use_Object_Path => False);
+      begin
+         if Other_F = GNATCOLL.VFS.No_File then
+            return File;
+         else
+            return Other_F;
+         end if;
+      end Test_Suffixes;
+
+      --------------------
+      -- Non_Unit_Based --
+      --------------------
 
       function Non_Unit_Based
         (Old_Part, New_Part : Attribute_Pkg_String) return Virtual_File
@@ -1277,15 +1303,8 @@ package body GNATCOLL.Projects is
            Info.Project.Attribute_Value (Old_Part, Index => Info.Language);
          New_Suffix : constant String :=
            Info.Project.Attribute_Value (New_Part, Index => Info.Language);
-         Other_F : constant Virtual_File := Self.Create
-           (File.Base_Name (+Suffix) & (+New_Suffix),
-            Use_Object_Path => False);
       begin
-         if Other_F = GNATCOLL.VFS.No_File then
-            return File;
-         else
-            return Other_F;
-         end if;
+         return Test_Suffixes (Suffix, New_Suffix);
       end Non_Unit_Based;
 
    begin
@@ -1294,63 +1313,75 @@ package body GNATCOLL.Projects is
          when Unit_Body | Unit_Separate => Part := Unit_Spec;
       end case;
 
-      --  For non-unit based languages, we only guess the "other file" if it
-      --  actually exists in the project. We never try to create one, since
-      --  there is no insurance the user needs one or its name will be
-      --  consistent.
+      --  Do we have a unit-based language ?
 
-      if Unit = "" then
-         if Info.Project = No_Project then
-            return File;
-         elsif Info.Part = Unit_Spec then
-            return Non_Unit_Based
-              (Spec_Suffix_Attribute, Impl_Suffix_Attribute);
-         else
-            return Non_Unit_Based
-              (Impl_Suffix_Attribute, Spec_Suffix_Attribute);
-         end if;
-      end if;
+      if Unit /= "" then
 
-      --  Is there such a file in the project ?
-      declare
-         Base : constant Filesystem_String := File_From_Unit
-           (Project (Info), Unit, Part,
-            Language => Info.Language);
-      begin
-         if Base'Length > 0 then
-            return Self.Create (Base, Use_Object_Path => False);
-         end if;
-      end;
-
-      --  Else try to guess from naming scheme
-
-      declare
-         Base : constant Filesystem_String := File_From_Unit
-           (Project (Info), Unit, Part,
-            Language => Info.Language, File_Must_Exist => False);
-      begin
-         if Base'Length > 0 then
-            return GNATCOLL.VFS.Create_From_Dir
-              (Dir       => Create (Dir_Name (File)),
-               Base_Name => Base);
-         end if;
-      end;
-
-      --  Else try the default GNAT naming scheme for runtime files
-
-      if Case_Insensitive_Equal (Info.Language, "ada") then
+         --  Is there such a file in the project ?
          declare
             Base : constant Filesystem_String := File_From_Unit
               (Project (Info), Unit, Part,
-               Check_Predefined_Library => True, Language => Info.Language);
+               Language => Info.Language);
          begin
             if Base'Length > 0 then
                return Self.Create (Base, Use_Object_Path => False);
             end if;
          end;
+
+         --  Else try to guess from naming scheme
+
+         declare
+            Base : constant Filesystem_String := File_From_Unit
+              (Project (Info), Unit, Part,
+               Language => Info.Language, File_Must_Exist => False);
+         begin
+            if Base'Length > 0 then
+               return GNATCOLL.VFS.Create_From_Dir
+                 (Dir       => Create (Dir_Name (File)),
+                  Base_Name => Base);
+            end if;
+         end;
+
+         --  Else try the default GNAT naming scheme for runtime files
+
+         if Case_Insensitive_Equal (Info.Language, "ada") then
+            declare
+               Base : constant Filesystem_String := File_From_Unit
+                 (Project (Info), Unit, Part,
+                  Check_Predefined_Library => True, Language => Info.Language);
+            begin
+               if Base'Length > 0 then
+                  return Self.Create (Base, Use_Object_Path => False);
+               end if;
+            end;
+         end if;
       end if;
 
-      return File;
+      --  Else simply try switching the extensions (useful for krunched names)
+      --  for unit-based languages.
+      --  For non-unit based languages, we only guess the "other file" if it
+      --  actually exists in the project. We never try to create one, since
+      --  there is no insurance the user needs one or its name will be
+      --  consistent.
+
+      if Info.Project = No_Project then
+         case Info.Part is
+            when Unit_Spec =>
+               return Test_Suffixes (".ads", ".adb");
+            when Unit_Body | Unit_Separate =>
+               return Test_Suffixes (".adb", ".ads");
+         end case;
+
+      else
+         case Info.Part is
+            when Unit_Spec =>
+               return Non_Unit_Based
+                 (Spec_Suffix_Attribute, Impl_Suffix_Attribute);
+            when Unit_Body | Unit_Separate =>
+               return Non_Unit_Based
+                 (Impl_Suffix_Attribute, Spec_Suffix_Attribute);
+         end case;
+      end if;
    end Other_File;
 
    ---------------------
