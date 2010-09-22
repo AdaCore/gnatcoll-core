@@ -31,7 +31,6 @@ with Namet;                     use Namet;
 with Output;                    use Output;
 with Prj.Com;                   use Prj.Com;
 with Prj.Tree;                  use Prj, Prj.Tree;
-with Prj.Ext;
 with Snames;
 with Types;                     use Types;
 
@@ -823,8 +822,7 @@ package body GNATCOLL.Projects.Normalize is
          Values (Last_Values) := External_Variable_Value'
            (Variable_Type  => Scenario_Variables (J).String_Type,
             Variable_Name  => Scenario_Variables (J).Name,
-            Variable_Value => Prj.Ext.Value_Of
-               (Tree, Scenario_Variables (J).Name),
+            Variable_Value => Scenario_Variables (J).Value,
             Negated        => False);
       end loop;
       For_Each_Matching_Case_Item
