@@ -2484,6 +2484,8 @@ package body GNATCOLL.Projects.Normalize is
       Index     : String := "";
       At_Index  : Natural := 0)
    is
+      V : Name_Id;
+
       procedure Add_Or_Replace
         (Tree_Node      : Project_Node_Tree_Ref;
          Project        : Project_Type;
@@ -2505,7 +2507,7 @@ package body GNATCOLL.Projects.Normalize is
          Decl, Val : Project_Node_Id;
          pragma Unreferenced (Decl, Project);
       begin
-         Val := Create_Literal_String (Get_String (Value), Tree_Node);
+         Val := Create_Literal_String (V, Tree_Node);
 
          if Previous_Decl /= Empty_Node then
             --  ??? Should we use At_Index here ?
@@ -2520,6 +2522,12 @@ package body GNATCOLL.Projects.Normalize is
       end Add_Or_Replace;
 
    begin
+      if Value = "" then
+         V := Empty_String;
+      else
+         V := Get_String (Value);
+      end if;
+
       Internal_Set_Attribute
         (Tree      => Tree,
          Project   => Project,
