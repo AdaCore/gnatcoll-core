@@ -117,8 +117,9 @@ package GNATCOLL.Memory is
    --      GPS.debug_memory_usage (count);
 
    procedure Configure
-     (Activate_Monitor : Boolean := False;
-      Disable_Free     : Boolean := False);
+     (Activate_Monitor  : Boolean := False;
+      Disable_Free      : Boolean := False;
+      Stack_Trace_Depth : Positive := 30);
    --  Configure this package (these are global settings, not task-specific).
    --  If Activate_Monitor is true, GPS will monitor all memory allocations and
    --  deallocations, and through the Dump procedure below be able to report

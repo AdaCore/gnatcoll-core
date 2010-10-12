@@ -1,7 +1,7 @@
 -----------------------------------------------------------------------
 --                          G N A T C O L L                          --
 --                                                                   --
---                 Copyright (C) 2005-2009, AdaCore                  --
+--                 Copyright (C) 2005-2010, AdaCore                  --
 --                                                                   --
 -- GPS is free  software;  you can redistribute it and/or modify  it --
 -- under the terms of the GNU General Public License as published by --
@@ -35,7 +35,7 @@ package body GNATCOLL.Memory is
 
    use Ada.Exceptions;
 
-   Stack_Trace_Depth : constant := 30;
+   Stack_Trace_Depth : Integer := 30;
 
    Memory_Monitor : Boolean := False;
    Memory_Check   : Boolean := False;
@@ -211,7 +211,7 @@ package body GNATCOLL.Memory is
       Ptr  : System.Address;
       Size : Storage_Count) return Byte_Count
    is
-      Trace : aliased Tracebacks_Array (1 .. Integer (Stack_Trace_Depth));
+      Trace : aliased Tracebacks_Array (1 .. Stack_Trace_Depth);
       Len   : Natural;
       Elem  : Traceback_Htable_Elem_Ptr;
       Chunk : Chunk_Data;
@@ -584,11 +584,13 @@ package body GNATCOLL.Memory is
    ---------------
 
    procedure Configure
-     (Activate_Monitor : Boolean := False;
-      Disable_Free     : Boolean := False) is
+     (Activate_Monitor  : Boolean := False;
+      Disable_Free      : Boolean := False;
+      Stack_Trace_Depth : Positive := 30) is
    begin
       Memory_Monitor := Activate_Monitor;
       Memory_Check   := Disable_Free;
+      GNATCOLL.Memory.Stack_Trace_Depth := Stack_Trace_Depth;
    end Configure;
 
    --------------------
