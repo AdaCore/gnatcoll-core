@@ -8,6 +8,14 @@
 -- the Free Software Foundation; either version 2 of the License, or --
 -- (at your option) any later version.                               --
 --                                                                   --
+-- As a special exception, if other files instantiate generics  from --
+-- this unit, or you link this  unit with other files to produce  an --
+-- executable, this unit does not by itself cause the resulting exe- --
+-- cutable  to be covered by  the  GNU General  Public License. This --
+-- exception does not however  invalidate any other reasons why  the --
+-- executable  file  might  be  covered  by  the  GNU General Public --
+-- License.                                                          --
+--                                                                   --
 -- This program is  distributed in the hope that it will be  useful, --
 -- but  WITHOUT ANY WARRANTY;  without even the  implied warranty of --
 -- MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU --
