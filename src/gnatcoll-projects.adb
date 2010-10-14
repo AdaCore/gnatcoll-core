@@ -316,7 +316,7 @@ package body GNATCOLL.Projects is
    --  Internal version of Info
 
    procedure Create_Project_Instances
-     (Self : in out Project_Tree'Class; With_View : Boolean);
+     (Self : Project_Tree'Class; With_View : Boolean);
    function Instance_From_Node
      (Self : Project_Tree'Class;
       Node : Project_Node_Id) return Project_Type;
@@ -4249,7 +4249,7 @@ package body GNATCOLL.Projects is
    ------------------------------
 
    procedure Create_Project_Instances
-     (Self : in out Project_Tree'Class; With_View : Boolean)
+     (Self : Project_Tree'Class; With_View : Boolean)
    is
       procedure Do_Project (Proj : Project_Id; S : in out Integer);
       procedure Do_Project (Proj : Project_Id; S : in out Integer) is
@@ -5066,6 +5066,7 @@ package body GNATCOLL.Projects is
       Imported_Project : Project_Node_Id := Empty_Node;
       Dep_ID           : Name_Id;
       Dep_Name         : Prj.Tree.Tree_Private_Part.Project_Name_And_Node;
+      Error            : Import_Project_Error;
 
    begin
       Output.Set_Special_Output (Fail'Unrestricted_Access);
@@ -5117,7 +5118,7 @@ package body GNATCOLL.Projects is
       end if;
 
       Compute_Importing_Projects (Project);
-      return Add_Imported_Project
+      Error := Add_Imported_Project
         (Tree                      => Project.Data.Tree,
          Project                   => Project,
          Imported_Project          =>
@@ -5126,6 +5127,12 @@ package body GNATCOLL.Projects is
          Use_Relative_Path         => Use_Relative_Path,
          Use_Base_Name             => Use_Base_Name,
          Limited_With              => Limited_With);
+
+      if Error = Success then
+         Create_Project_Instances (Tree, With_View => False);
+      end if;
+
+      return Error;
    end Add_Imported_Project;
 
    --------------------------
@@ -5141,6 +5148,7 @@ package body GNATCOLL.Projects is
       Limited_With      : Boolean := False) return Import_Project_Error is
    begin
       Compute_Importing_Projects (Project);
+
       return GNATCOLL.Projects.Normalize.Add_Imported_Project
         (Tree                      => Project.Data.Tree,
          Project                   => Project,
@@ -5149,6 +5157,9 @@ package body GNATCOLL.Projects is
          Use_Relative_Path         => Use_Relative_Path,
          Use_Base_Name             => Use_Base_Name,
          Limited_With              => Limited_With);
+
+      --  No need for Create_Project_Instances in this version, since the
+      --  imported_project was already in memory.
    end Add_Imported_Project;
 
    ------------------------------
