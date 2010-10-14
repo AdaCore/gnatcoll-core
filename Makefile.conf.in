@@ -49,7 +49,7 @@ endif
 
 LIBRARY_TYPE=static
 
-Gnatcoll_Build=@BUILD_TYPE@
+Gnatcoll_Build?=@BUILD_TYPE@
 export Gnatcoll_Build
 
 .PHONY: all examples tests valgrind clean docs install
