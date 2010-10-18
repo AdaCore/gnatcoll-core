@@ -198,6 +198,15 @@ package body GNATCOLL.Projects is
    --  project tree, and therefore can be used before the project view has been
    --  computed.
 
+   function Default_Spec_Suffix
+     (Self          : Project_Environment'Class;
+      Language_Name : String) return String;
+   function Default_Body_Suffix
+     (Self          : Project_Environment'Class;
+      Language_Name : String) return String;
+   --  Return the default extensions for a given language, as registered
+   --  through Register_Default_Language_Extension;
+
    procedure For_Each_External_Variable_Declaration
      (Project   : Project_Type;
       Recursive : Boolean;
@@ -1499,7 +1508,7 @@ package body GNATCOLL.Projects is
          if Lang /= null then
             return Get_String (Lang.Config.Naming_Data.Spec_Suffix);
          else
-            return "";
+            return Default_Spec_Suffix (Project.Data.Tree.Env.all, Index);
          end if;
 
       elsif Attribute = Impl_Suffix_Attribute
@@ -1509,7 +1518,7 @@ package body GNATCOLL.Projects is
          if Lang /= null then
             return Get_String (Lang.Config.Naming_Data.Body_Suffix);
          else
-            return "";
+            return Default_Body_Suffix (Project.Data.Tree.Env.all, Index);
          end if;
 
       elsif Attribute = Separate_Suffix_Attribute then
@@ -3635,7 +3644,6 @@ package body GNATCOLL.Projects is
       Spec, Impl : String_Access;
       Spec_Suff  : String := Default_Spec_Suffix;
       Impl_Suff  : String := Default_Body_Suffix;
-      Tmp : Naming_Scheme_Access;
    begin
       --  GNAT doesn't allow empty suffixes, and will display an error when
       --  the view is recomputed, in that case. Therefore we substitute dummy
@@ -3655,13 +3663,52 @@ package body GNATCOLL.Projects is
          Impl := new String'(Impl_Suff);
       end if;
 
-      Tmp := new Naming_Scheme_Record'
+      Self.Naming_Schemes := new Naming_Scheme_Record'
         (Language            => new String'(To_Lower (Language_Name)),
          Default_Spec_Suffix => Spec,
          Default_Body_Suffix => Impl,
          Next                => Self.Naming_Schemes);
-      Self.Naming_Schemes := Tmp;
    end Register_Default_Language_Extension;
+
+   -------------------------
+   -- Default_Spec_Suffix --
+   -------------------------
+
+   function Default_Spec_Suffix
+     (Self          : Project_Environment'Class;
+      Language_Name : String) return String
+   is
+      Tmp  : Naming_Scheme_Access := Self.Naming_Schemes;
+      Lang : constant String := To_Lower (Language_Name);
+   begin
+      while Tmp /= null loop
+         if Tmp.Language.all = Lang then
+            return Tmp.Default_Spec_Suffix.all;
+         end if;
+         Tmp := Tmp.Next;
+      end loop;
+      return "";
+   end Default_Spec_Suffix;
+
+   -------------------------
+   -- Default_Body_Suffix --
+   -------------------------
+
+   function Default_Body_Suffix
+     (Self          : Project_Environment'Class;
+      Language_Name : String) return String
+   is
+      Tmp  : Naming_Scheme_Access := Self.Naming_Schemes;
+      Lang : constant String := To_Lower (Language_Name);
+   begin
+      while Tmp /= null loop
+         if Tmp.Language.all = Lang then
+            return Tmp.Default_Body_Suffix.all;
+         end if;
+         Tmp := Tmp.Next;
+      end loop;
+      return "";
+   end Default_Body_Suffix;
 
    ---------------------------
    -- Registered_Extensions --
@@ -4046,7 +4093,7 @@ package body GNATCOLL.Projects is
          pragma Unreferenced (Attr);
       begin
          if Config_File = Empty_Node then
-            --  Create a dummy config file is none was found. In that case we
+            --  Create a dummy config file if none was found. In that case we
             --  need to provide the Ada naming scheme as well
 
             Trace (Me, "Creating dummy configuration file");

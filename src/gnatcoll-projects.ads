@@ -573,14 +573,6 @@ package GNATCOLL.Projects is
    --  The language is computed from the project's naming scheme and from the
    --  additional extensions registered through Add_Language_Extension.
 
-   procedure Add_Language_Extension
-     (Self          : in out Project_Environment;
-      Language_Name : String;
-      Extension     : String);
-   --  Register Extension (which should include '.') as a valid extension for
-   --  the language. This is used by Get_File_Info.
-   --  Language_Name is case-insensitive.
-
    procedure Register_Default_Language_Extension
      (Self                : in out Project_Environment;
       Language_Name       : String;
@@ -591,6 +583,20 @@ package GNATCOLL.Projects is
    --  projects (in particular the automatic search for source files in the
    --  source directories), so should be called before loading the project.
    --  Language_Name is case-insensitive.
+   --  The two suffixes also become the default value returned when you
+   --  query the value of the Spec_Suffix_Attribute or Impl_Suffix_Attribute
+   --  for a project that does not explicit define them.
+
+   procedure Add_Language_Extension
+     (Self          : in out Project_Environment;
+      Language_Name : String;
+      Extension     : String);
+   --  Register Extension (which should include '.') as a valid extension for
+   --  the language. This is used by Get_File_Info.
+   --  Language_Name is case-insensitive.
+   --  This procedure is meant to be called if you need more extensions than
+   --  the ones provided by Register_Default_Language_Extension, or if the
+   --  notion of spec/body does not apply to this specific language.
 
    function Registered_Extensions
      (Self          : Project_Environment;
