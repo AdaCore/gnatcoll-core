@@ -1508,7 +1508,16 @@ package body GNATCOLL.Projects is
          if Lang /= null then
             return Get_String (Lang.Config.Naming_Data.Spec_Suffix);
          else
-            return Default_Spec_Suffix (Project.Data.Tree.Env.all, Index);
+            declare
+               Default : constant String :=
+                 Default_Spec_Suffix (Project.Data.Tree.Env.all, Index);
+            begin
+               if Default = Dummy_Suffix then
+                  return "";
+               else
+                  return Default;
+               end if;
+            end;
          end if;
 
       elsif Attribute = Impl_Suffix_Attribute
@@ -1518,7 +1527,16 @@ package body GNATCOLL.Projects is
          if Lang /= null then
             return Get_String (Lang.Config.Naming_Data.Body_Suffix);
          else
-            return Default_Body_Suffix (Project.Data.Tree.Env.all, Index);
+            declare
+               Default : constant String :=
+                 Default_Body_Suffix (Project.Data.Tree.Env.all, Index);
+            begin
+               if Default = Dummy_Suffix then
+                  return "";
+               else
+                  return Default;
+               end if;
+            end;
          end if;
 
       elsif Attribute = Separate_Suffix_Attribute then
