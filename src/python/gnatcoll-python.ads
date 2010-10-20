@@ -1,7 +1,7 @@
 -----------------------------------------------------------------------
 --                               G N A T C O L L                     --
 --                                                                   --
---                     Copyright (C) 2003-2009, AdaCore              --
+--                     Copyright (C) 2003-2010, AdaCore              --
 --                                                                   --
 -- GPS is free  software; you can  redistribute it and/or modify  it --
 -- under the terms of the GNU General Public License as published by --
@@ -51,6 +51,10 @@ package GNATCOLL.Python is
    --      the value of prefix set by configure during Python build.
    --  Name should therefore point to the current executable so that if you
    --  provide your own python installation it gets detected by default.
+
+   procedure Py_SetPythonHome (Home : String);
+   --  Set the default "home" directory, that is, the location of the standard
+   --  Python libraries. The libraries are searched in Home/lib/pythonversion.
 
    -------------
    -- Objects --

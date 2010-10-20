@@ -1,7 +1,7 @@
 -----------------------------------------------------------------------
 --                               G N A T C O L L                     --
 --                                                                   --
---                     Copyright (C) 2003-2009, AdaCore              --
+--                     Copyright (C) 2003-2010, AdaCore              --
 --                                                                   --
 -- GPS is free  software;  you can redistribute it and/or modify  it --
 -- under the terms of the GNU General Public License as published by --
@@ -34,8 +34,17 @@ package GNATCOLL.Scripts.Python is
 
    procedure Register_Python_Scripting
      (Repo          : Scripts.Scripts_Repository;
-      Module        : String);
+      Module        : String;
+      Program_Name  : String := "python";
+      Python_Home   : String := "");
    --  All commands and classes will be added in the specified module.
+   --
+   --  Program_Name should be the name of the program registering Python
+   --  scripting. The interpreter will resove run-time libraries relative to
+   --  this executable.
+   --
+   --  If Python_Home is non-empty, it will be used as home, and libraries will
+   --  be searched for in <Python_Home>/lib/python<version>
 
    procedure Unregister_Python_Scripting
      (Repo : Scripts.Scripts_Repository);

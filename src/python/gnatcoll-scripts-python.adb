@@ -296,7 +296,9 @@ package body GNATCOLL.Scripts.Python is
 
    procedure Register_Python_Scripting
      (Repo          : Scripts_Repository;
-      Module        : String)
+      Module        : String;
+      Program_Name  : String := "python";
+      Python_Home   : String := "")
    is
       Script  : Python_Scripting;
       Ignored : Integer;
@@ -358,12 +360,13 @@ package body GNATCOLL.Scripts.Python is
       Script.Repo := Repo;
       Register_Scripting_Language (Repo, Script);
 
-      --  We need to set the program name, or some import commands will raise
-      --  errors. Choosing "python" as program name will ensure that by
-      --  default our program will look for python modules and library in a
-      --  directory relative to the location of the python executable.
+      --  Set the program name and python home
 
-      Py_SetProgramName ("python");
+      Py_SetProgramName (Program_Name);
+
+      if Python_Home /= "" then
+         Py_SetPythonHome (Python_Home);
+      end if;
 
       --  Prevent python's standard Ctrl-C handling, to leave it to the calling
       --  application.

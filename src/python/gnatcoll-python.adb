@@ -1,7 +1,7 @@
 -----------------------------------------------------------------------
 --                               G N A T C O L L                     --
 --                                                                   --
---                     Copyright (C) 2003-2009, AdaCore              --
+--                     Copyright (C) 2003-2010, AdaCore              --
 --                                                                   --
 -- GPS is free  software; you can  redistribute it and/or modify  it --
 -- under the terms of the GNU General Public License as published by --
@@ -359,6 +359,22 @@ package body GNATCOLL.Python is
    begin
       Internal (Program_Name.all);
    end Py_SetProgramName;
+
+   ----------------------
+   -- Py_SetPythonHome --
+   ----------------------
+
+   procedure Py_SetPythonHome (Home : String) is
+      procedure Internal (Name : String);
+      pragma Import (C, Internal, "Py_SetPythonHome");
+
+      C_Home : constant String_Access := new String'(Home & ASCII.NUL);
+      --  As stated by the Python documentation the string passed to
+      --  Py_SetPythonHome should be in "static storage whose contents will
+      --  not change for the duration of the program's execution"
+   begin
+      Internal (C_Home.all);
+   end Py_SetPythonHome;
 
    ----------------------
    -- Py_CompileString --
