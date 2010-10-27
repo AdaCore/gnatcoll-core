@@ -67,4 +67,7 @@ private
 
    end Events;
 
+   Events_Handler : constant Ada.Real_Time.Timing_Events.Timing_Event_Handler
+                      := Events.Handler'Access;
+
 end GNATCOLL.Ravenscar.Timers.One_Shot_Timer;

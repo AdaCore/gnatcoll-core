@@ -2,7 +2,7 @@
 --                                                                          --
 --                	        G N A T C O L L                             --
 --                                                                          --
---                      Copyright (C) 2008, AdaCore                         --
+--                      Copyright (C) 2008-2010, AdaCore                    --
 --                                                                          --
 -- GNAT is free software;  you can  redistribute it  and/or modify it under --
 -- terms of the  GNU General Public License as published  by the Free Soft- --
@@ -67,9 +67,7 @@ package body GNATCOLL.Ravenscar.Timers.One_Shot_Timer is
       begin
          The_Action := Action;
          Ada.Real_Time.Timing_Events.Set_Handler
-           (The_Event,
-            Instant,
-            Events.Handler'Access);
+           (The_Event, Instant, Events_Handler);
       end Set_Action;
 
    end Events;
