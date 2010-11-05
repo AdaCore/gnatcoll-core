@@ -390,12 +390,14 @@ package body GNATCOLL.SQL_Impl is
    procedure Finalize (Self : in out Field_Data) is
       procedure Unchecked_Free is new Ada.Unchecked_Deallocation
         (SQL_Field_Internal'Class, SQL_Field_Internal_Access);
+      Data : SQL_Field_Internal_Access := Self.Data;
    begin
-      if Self.Data /= null then
-         Self.Data.Refcount := Self.Data.Refcount - 1;
-         if Self.Data.Refcount = 0 then
-            Free (Self.Data.all);
-            Unchecked_Free (Self.Data);
+      Self.Data := null;  --  Make Finalize idempotent
+      if Data /= null then
+         Data.Refcount := Data.Refcount - 1;
+         if Data.Refcount = 0 then
+            Free (Data.all);
+            Unchecked_Free (Data);
          end if;
       end if;
    end Finalize;
@@ -583,12 +585,14 @@ package body GNATCOLL.SQL_Impl is
    procedure Finalize (Self : in out Controlled_SQL_Criteria) is
       procedure Unchecked_Free is new Ada.Unchecked_Deallocation
         (SQL_Criteria_Data'Class, SQL_Criteria_Data_Access);
+      Data : SQL_Criteria_Data_Access := Self.Data;
    begin
-      if Self.Data /= null then
-         Self.Data.Refcount := Self.Data.Refcount - 1;
-         if Self.Data.Refcount = 0 then
-            Free (Self.Data.all);
-            Unchecked_Free (Self.Data);
+      Self.Data := null;  --  Make Finalize idempotent
+      if Data /= null then
+         Data.Refcount := Data.Refcount - 1;
+         if Data.Refcount = 0 then
+            Free (Data.all);
+            Unchecked_Free (Data);
          end if;
       end if;
    end Finalize;
@@ -613,12 +617,14 @@ package body GNATCOLL.SQL_Impl is
         (Field_Pointer_Data, Field_Pointer_Data_Access);
       procedure Unchecked_Free is new Ada.Unchecked_Deallocation
         (SQL_Field'Class, Field_Access);
+      Data : Field_Pointer_Data_Access := Self.Data;
    begin
-      if Self.Data /= null then
-         Self.Data.Refcount := Self.Data.Refcount - 1;
-         if Self.Data.Refcount = 0 then
-            Unchecked_Free (Self.Data.Field);
-            Unchecked_Free (Self.Data);
+      Self.Data := null;  --  Make Finalize idempotent
+      if Data /= null then
+         Data.Refcount := Data.Refcount - 1;
+         if Data.Refcount = 0 then
+            Unchecked_Free (Data.Field);
+            Unchecked_Free (Data);
          end if;
       end if;
    end Finalize;

@@ -391,11 +391,13 @@ package body GNATCOLL.Email is
    procedure Finalize (Msg : in out Message) is
       procedure Unchecked_Free is new Ada.Unchecked_Deallocation
         (Message_Record, Message_Access);
+      Contents : Message_Access := Msg.Contents;
    begin
-      if Msg.Contents /= null then
-         Msg.Contents.Ref_Count := Msg.Contents.Ref_Count - 1;
-         if Msg.Contents.Ref_Count = 0 then
-            Unchecked_Free (Msg.Contents);
+      Msg.Contents := null;  --  Make Finalize idempotent
+      if Contents /= null then
+         Contents.Ref_Count := Contents.Ref_Count - 1;
+         if Contents.Ref_Count = 0 then
+            Unchecked_Free (Contents);
          end if;
       end if;
    end Finalize;

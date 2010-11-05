@@ -1547,9 +1547,11 @@ package body GNATCOLL.VFS is
    --------------
 
    procedure Finalize (File : in out Virtual_File) is
+      Value : GNATCOLL.IO.File_Access := File.Value;
    begin
-      if File.Value /= null then
-         Unref (File.Value);
+      File.Value := null;  --  Make Finalize idempotent
+      if Value /= null then
+         Unref (Value);
       end if;
    end Finalize;
 

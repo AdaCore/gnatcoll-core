@@ -930,11 +930,17 @@ package body GNATCOLL.SQL is
    procedure Finalize (Self : in out Table_List_Data) is
       procedure Unchecked_Free is new Ada.Unchecked_Deallocation
         (Table_List_Internal, Table_List_Internal_Access);
+      Data : Table_List_Internal_Access := Self.Data;
    begin
-      if Self.Data /= null then
-         Self.Data.Refcount := Self.Data.Refcount - 1;
-         if Self.Data.Refcount = 0 then
-            Unchecked_Free (Self.Data);
+      --  Make Finalize idempotent, it could be called several times
+      --  See RM 7.6.1 (24)
+
+      Self.Data := null;
+
+      if Data /= null then
+         Data.Refcount := Data.Refcount - 1;
+         if Data.Refcount = 0 then
+            Unchecked_Free (Data);
          end if;
       end if;
    end Finalize;
@@ -1332,12 +1338,14 @@ package body GNATCOLL.SQL is
    procedure Finalize (Self : in out Controlled_SQL_Query) is
       procedure Unchecked_Free is new Ada.Unchecked_Deallocation
         (Query_Contents'Class, SQL_Query_Contents_Access);
+      Data : SQL_Query_Contents_Access := Self.Data;
    begin
-      if Self.Data /= null then
-         Self.Data.Refcount := Self.Data.Refcount - 1;
-         if Self.Data.Refcount = 0 then
-            Free (Self.Data.all);
-            Unchecked_Free (Self.Data);
+      Self.Data := null;  --  Make Finalize idempotent
+      if Data /= null then
+         Data.Refcount := Data.Refcount - 1;
+         if Data.Refcount = 0 then
+            Free (Data.all);
+            Unchecked_Free (Data);
          end if;
       end if;
    end Finalize;
@@ -2165,11 +2173,13 @@ package body GNATCOLL.SQL is
      (Join_Table_Internal, Join_Table_Internal_Access);
 
    procedure Finalize (Self : in out Join_Table_Data) is
+      Data : Join_Table_Internal_Access := Self.Data;
    begin
-      if Self.Data /= null then
-         Self.Data.Refcount := Self.Data.Refcount - 1;
-         if Self.Data.Refcount = 0 then
-            Unchecked_Free (Self.Data);
+      Self.Data := null;
+      if Data /= null then
+         Data.Refcount := Data.Refcount - 1;
+         if Data.Refcount = 0 then
+            Unchecked_Free (Data);
          end if;
       end if;
    end Finalize;

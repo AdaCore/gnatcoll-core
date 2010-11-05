@@ -916,12 +916,14 @@ package body GNATCOLL.SQL.Exec is
    --------------
 
    procedure Finalize (Self : in out Forward_Cursor) is
+      Res : Abstract_Cursor_Access := Self.Res;
    begin
-      if Self.Res /= null then
-         Self.Res.Refcount := Self.Res.Refcount - 1;
-         if Self.Res.Refcount = 0 then
-            Finalize (DBMS_Forward_Cursor'Class (Self.Res.all));
-            Unchecked_Free (Self.Res);
+      Self.Res := null;  --  Make Finalize idempotent
+      if Res /= null then
+         Res.Refcount := Res.Refcount - 1;
+         if Res.Refcount = 0 then
+            Finalize (DBMS_Forward_Cursor'Class (Res.all));
+            Unchecked_Free (Res);
          end if;
       end if;
    end Finalize;

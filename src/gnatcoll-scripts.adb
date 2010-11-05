@@ -868,14 +868,19 @@ package body GNATCOLL.Scripts is
    --------------
 
    procedure Finalize (CI : in out Class_Instance_Data) is
+      Data : constant Class_Instance_Record_Access := CI.Data;
    begin
+      --  Make Finalize idempotent (RM 7.6.1 (24))
+
+      CI.Data := null;
+
       --  Data might be null in some rare cases. Most notably, it happens when
       --  GPS is being destroyed: the python module has already been destroyed,
       --  but we still have remaining CI finalized when GNAT finalizes
       --  everything before exit.
 
-      if CI.Data /= null then
-         Decref (CI.Data);
+      if Data /= null then
+         Decref (Data);
       end if;
    end Finalize;
 

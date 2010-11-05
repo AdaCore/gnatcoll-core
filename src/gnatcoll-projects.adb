@@ -3614,7 +3614,13 @@ package body GNATCOLL.Projects is
    overriding procedure Finalize (Self : in out Project_Type) is
       procedure Unchecked_Free is new Ada.Unchecked_Deallocation
         (Project_Data'Class, Project_Data_Access);
+      Data : Project_Data_Access := Self.Data;
    begin
+      --  Make Finalize idempotent, since it could be called several times.
+      --  See RM 7.6.1 (24)
+
+      Self.Data := null;
+
       --  We never finalize unless Tree is null: the tree is set to null when
       --  the project_tree is unloaded. That means user cares about memory
       --  management. If we try to finalize when unload hasn't been called, and
@@ -3623,13 +3629,13 @@ package body GNATCOLL.Projects is
       --  that case, it seems we always end up in a case where we access
       --  already deallocated memory.
 
-      if Self.Data /= null then
-         Self.Data.Refcount := Self.Data.Refcount - 1;
-         if Self.Data.Refcount = 0
-           and then Self.Data.Tree = null
+      if Data /= null then
+         Data.Refcount := Data.Refcount - 1;
+         if Data.Refcount = 0
+           and then Data.Tree = null
          then
-            On_Free (Self.Data.all);
-            Unchecked_Free (Self.Data);
+            On_Free (Data.all);
+            Unchecked_Free (Data);
          end if;
       end if;
    end Finalize;
