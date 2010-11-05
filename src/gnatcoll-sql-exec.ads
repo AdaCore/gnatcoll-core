@@ -160,6 +160,15 @@ package GNATCOLL.SQL.Exec is
    --  Describes how to access a database, and stores global caches associated
    --  with that database.
 
+   type SSL_Mode is (Disable, Allow, Prefer, Require);
+   --  Whether to use SSL to connect to the server. This might not be
+   --  applicable to all backends (for instance it doesn't apply to sqlite),
+   --  and even if the backend supports SSL, some of the modes might not exist.
+   --    Disable  => require a non-SSL connection
+   --    Allow    => first try a non-SSL connection, then SSL if failed
+   --    Prefer   => first try a SSL connection, then non-SSL if failed
+   --    Require  => require a SSL connection
+
    procedure Setup_Database
      (Description   : out Database_Description;
       Database      : String;
@@ -167,6 +176,7 @@ package GNATCOLL.SQL.Exec is
       Host          : String := "";
       Password      : String := "";
       DBMS          : String := DBMS_Postgresql;
+      SSL           : SSL_Mode := Prefer;
       Cache_Support : Boolean := True);
    --  Register the address of the database, for use by all other subprograms
    --  in this package.
@@ -184,6 +194,7 @@ package GNATCOLL.SQL.Exec is
    function Get_Database (Description : Database_Description) return String;
    function Get_Password (Description : Database_Description) return String;
    function Get_DBMS     (Description : Database_Description) return String;
+   function Get_SSL      (Description : Database_Description) return SSL_Mode;
    --  Return the connection components for the database
 
    -------------------------
@@ -744,6 +755,7 @@ private
       User     : GNAT.Strings.String_Access;
       Password : GNAT.Strings.String_Access;
       DBMS     : GNAT.Strings.String_Access;
+      SSL      : SSL_Mode := Prefer;
 
       Caching : Boolean := True;
    end record;

@@ -15,6 +15,11 @@ of the feature.
 New features in 1.3
 -------------------
 
+NF-13-JA25-011 SQL: connect to postgreSQL without SSL (2010-11-05)
+
+   It is now possible to specify the SSL mode when connecting to a
+   postgreSQL server
+
 NF-13-J727-015 SQL: numbered table aliases (2010-07-30)
 
    In addition to the history named aliased for tables, it is now

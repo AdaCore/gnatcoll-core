@@ -340,6 +340,7 @@ package body GNATCOLL.SQL.Exec is
       Host          : String := "";
       Password      : String := "";
       DBMS          : String := DBMS_Postgresql;
+      SSL           : SSL_Mode := Prefer;
       Cache_Support : Boolean := True)
    is
    begin
@@ -367,6 +368,7 @@ package body GNATCOLL.SQL.Exec is
       end if;
 
       Description.Caching   := Cache_Support;
+      Description.SSL       := SSL;
    end Setup_Database;
 
    --------------
@@ -395,6 +397,15 @@ package body GNATCOLL.SQL.Exec is
    begin
       return Description.Dbname.all;
    end Get_Database;
+
+   -------------
+   -- Get_SSL --
+   -------------
+
+   function Get_SSL (Description : Database_Description) return SSL_Mode is
+   begin
+      return Description.SSL;
+   end Get_SSL;
 
    ------------------
    -- Get_Password --

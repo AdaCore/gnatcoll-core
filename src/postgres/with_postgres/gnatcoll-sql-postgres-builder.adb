@@ -363,7 +363,12 @@ package body GNATCOLL.SQL.Postgres.Builder is
          Append (Str, " password=" & Passwd);
       end if;
 
-      Append (Str, " requiressl=0");
+      case Get_SSL (Description) is
+         when Disable => Append (Str, " sslmode=disable");
+         when Allow   => Append (Str, " sslmode=allow");
+         when Prefer  => Append (Str, " sslmode=prefer");
+         when Require => Append (Str, " sslmode=require");
+      end case;
 
       return To_String (Str);
    end Get_Connection_String;
