@@ -1,6 +1,6 @@
 ------------------------------------------------------------------------------
 --                                                                          --
---                	        G N A T C O L L                             --
+--                              G N A T C O L L                             --
 --                                                                          --
 --                      Copyright (C) 2008-2010, AdaCore                    --
 --                                                                          --
@@ -29,29 +29,35 @@
 
 package body GNATCOLL.Ravenscar.Timers.One_Shot_Timer is
 
-   procedure Set
-     (Instant      : Ada.Real_Time.Time;
-      Action       : Timer_Action)
-   is
-      use type Ada.Real_Time.Timing_Events.Timing_Event_Handler;
-   begin
+   ---------
+   -- Set --
+   ---------
 
+   procedure Set
+     (Instant : Ada.Real_Time.Time;
+      Action  : Timer_Action) is
+   begin
       --  Set the timer
 
       Events.Set_Action (Instant, Action);
-
    end Set;
+
+   ------------
+   -- Cancel --
+   ------------
 
    procedure Cancel (Success : out Boolean) is
    begin
-
       --  cancel the timer
 
       Ada.Real_Time.Timing_Events.Cancel_Handler (The_Event, Success);
-
    end Cancel;
 
    protected body Events is
+
+      -------------
+      -- Handler --
+      -------------
 
       procedure Handler
         (Event : in out Ada.Real_Time.Timing_Events.Timing_Event)
@@ -60,6 +66,10 @@ package body GNATCOLL.Ravenscar.Timers.One_Shot_Timer is
       begin
          The_Action.all;
       end Handler;
+
+      ----------------
+      -- Set_Action --
+      ----------------
 
       procedure Set_Action
         (Instant : Ada.Real_Time.Time;

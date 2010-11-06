@@ -27,7 +27,7 @@
 --                                                                          --
 ------------------------------------------------------------------------------
 
---   A Ravenscar-compliant one-shot timer.
+--   A Ravenscar-compliant one-shot timer
 
 with System;
 with Ada.Real_Time;
@@ -40,7 +40,7 @@ package GNATCOLL.Ravenscar.Timers.One_Shot_Timer is
      (Instant : Ada.Real_Time.Time;
       Action  : Timer_Action);
    --  Set the timer to an absolute instant in time to execute a specific
-   --  action
+   --  action.
 
    procedure Cancel (Success : out Boolean);
    --  cancel the timer
@@ -57,9 +57,10 @@ private
 
       procedure Handler
         (Event : in out Ada.Real_Time.Timing_Events.Timing_Event);
+
       procedure Set_Action
-        (Instant      : Ada.Real_Time.Time;
-         Action       : Timer_Action);
+        (Instant : Ada.Real_Time.Time;
+         Action  : Timer_Action);
 
    private
 
