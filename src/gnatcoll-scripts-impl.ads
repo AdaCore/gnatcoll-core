@@ -1,7 +1,7 @@
 -----------------------------------------------------------------------
 --                          G N A T C O L L                          --
 --                                                                   --
---                 Copyright (C) 2003-2008, AdaCore                  --
+--                 Copyright (C) 2003-2010, AdaCore                  --
 --                                                                   --
 -- GPS is free  software;  you can redistribute it and/or modify  it --
 -- under the terms of the GNU General Public License as published by --
@@ -60,7 +60,7 @@ package GNATCOLL.Scripts.Impl is
    --  all, although it will be displayed in the log instead.
 
    procedure Register_Console_Class
-     (Repo  : Scripts_Repository;
+     (Repo  : access Scripts_Repository_Record'Class;
       Class : Class_Type);
    --  Register the console class, which is used to redirect output of script
    --  languages to a specific Virtual_Console

@@ -295,7 +295,7 @@ package body GNATCOLL.Scripts.Python is
    -------------------------------
 
    procedure Register_Python_Scripting
-     (Repo          : Scripts_Repository;
+     (Repo          : access Scripts.Scripts_Repository_Record'Class;
       Module        : String;
       Program_Name  : String := "python";
       Python_Home   : String := "")
@@ -357,7 +357,7 @@ package body GNATCOLL.Scripts.Python is
 
    begin
       Script := new Python_Scripting_Record;
-      Script.Repo := Repo;
+      Script.Repo := Scripts_Repository (Repo);
       Register_Scripting_Language (Repo, Script);
 
       --  Set the program name and python home
@@ -2252,7 +2252,7 @@ package body GNATCOLL.Scripts.Python is
    ---------------------------------
 
    procedure Unregister_Python_Scripting
-     (Repo : Scripts.Scripts_Repository)
+     (Repo : access Scripts.Scripts_Repository_Record'Class)
    is
       Script  : constant Scripting_Language := Lookup_Scripting_Language
         (Repo, Python_Name);

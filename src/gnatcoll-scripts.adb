@@ -253,7 +253,7 @@ package body GNATCOLL.Scripts is
    ---------
 
    function Get
-     (Repo   : Scripts_Repository;
+     (Repo   : access Scripts_Repository_Record'Class;
       List   : Callback_Data_List;
       Script : access Scripting_Language_Record'Class)
       return Callback_Data_Access
@@ -275,7 +275,7 @@ package body GNATCOLL.Scripts is
    ---------
 
    procedure Set
-     (Repo   : Scripts_Repository;
+     (Repo   : access Scripts_Repository_Record'Class;
       List   : in out Callback_Data_List;
       Script : access Scripting_Language_Record'Class;
       Data   : Callback_Data_Access)
@@ -319,7 +319,7 @@ package body GNATCOLL.Scripts is
    ---------------------------------
 
    procedure Register_Scripting_Language
-     (Repo   : Scripts_Repository;
+     (Repo   : access Scripts_Repository_Record'Class;
       Script : access Scripting_Language_Record'Class)
    is
       Tmp : constant Scripting_Language_Array := Repo.Scripting_Languages.all;
@@ -334,7 +334,7 @@ package body GNATCOLL.Scripts is
    -------------------------------
 
    function Lookup_Scripting_Language
-     (Repo : Scripts_Repository;
+     (Repo : access Scripts_Repository_Record'Class;
       Name : String) return Scripting_Language
    is
       Tmp : constant Scripting_Language_List := Repo.Scripting_Languages;
@@ -354,7 +354,8 @@ package body GNATCOLL.Scripts is
    -----------------------------
 
    function Get_Scripting_Languages
-     (Repo : Scripts_Repository) return Scripting_Language_Array is
+     (Repo : access Scripts_Repository_Record'Class)
+      return Scripting_Language_Array is
    begin
       return Repo.Scripting_Languages.all;
    end Get_Scripting_Languages;
@@ -364,7 +365,7 @@ package body GNATCOLL.Scripts is
    --------------------
 
    procedure Block_Commands
-     (Repo  : Scripts_Repository;
+     (Repo  : access Scripts_Repository_Record'Class;
       Block : Boolean)
    is
       Tmp : constant Scripting_Language_List := Repo.Scripting_Languages;
@@ -379,7 +380,7 @@ package body GNATCOLL.Scripts is
    ----------------------
 
    procedure Register_Command
-     (Repo          : Scripts_Repository;
+     (Repo          : access Scripts_Repository_Record'Class;
       Command       : String;
       Minimum_Args  : Natural := 0;
       Maximum_Args  : Natural := 0;
@@ -411,7 +412,7 @@ package body GNATCOLL.Scripts is
    ---------------
 
    function New_Class
-     (Repo : Scripts_Repository;
+     (Repo : access Scripts_Repository_Record'Class;
       Name : String;
       Base : Class_Type := No_Class) return Class_Type
    is
@@ -460,7 +461,7 @@ package body GNATCOLL.Scripts is
    -------------------------------
 
    procedure Register_Standard_Classes
-     (Repo               : Scripts_Repository;
+     (Repo               : access Scripts_Repository_Record'Class;
       Console_Class_Name : String) is
    begin
       Repo.Console_Class := New_Class (Repo, Console_Class_Name);
@@ -1146,7 +1147,8 @@ package body GNATCOLL.Scripts is
    -- Get_Console_Class --
    -----------------------
 
-   function Get_Console_Class (Repo : Scripts_Repository) return Class_Type is
+   function Get_Console_Class
+     (Repo : access Scripts_Repository_Record'Class) return Class_Type is
    begin
       return Repo.Console_Class;
    end Get_Console_Class;

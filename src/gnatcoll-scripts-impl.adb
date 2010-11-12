@@ -221,7 +221,7 @@ package body GNATCOLL.Scripts.Impl is
    ----------------------------
 
    procedure Register_Console_Class
-     (Repo  : Scripts_Repository;
+     (Repo  : access Scripts_Repository_Record'Class;
       Class : Class_Type) is
    begin
       Register_Command

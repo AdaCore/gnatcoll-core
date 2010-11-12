@@ -141,7 +141,7 @@ package GNATCOLL.Scripts is
    --  issues.
 
    function New_Class
-     (Repo : Scripts_Repository;
+     (Repo : access Scripts_Repository_Record'Class;
       Name : String;
       Base : Class_Type := No_Class) return Class_Type;
    --  For some languages, this notion is not supported, and the class will not
@@ -555,7 +555,7 @@ package GNATCOLL.Scripts is
    --  Free the instances stored in the list
 
    function Get
-     (Repo   : Scripts_Repository;
+     (Repo   : access Scripts_Repository_Record'Class;
       List   : Callback_Data_List;
       Script : access Scripting_Language_Record'Class)
       return Callback_Data_Access;
@@ -564,7 +564,7 @@ package GNATCOLL.Scripts is
    --  responsability of the callback_data_list to do so.
 
    procedure Set
-     (Repo   : Scripts_Repository;
+     (Repo   : access Scripts_Repository_Record'Class;
       List   : in out Callback_Data_List;
       Script : access Scripting_Language_Record'Class;
       Data   : Callback_Data_Access);
@@ -878,16 +878,17 @@ package GNATCOLL.Scripts is
    --  Free all memory associated with the repository
 
    procedure Register_Standard_Classes
-     (Repo               : Scripts_Repository;
+     (Repo               : access Scripts_Repository_Record'Class;
       Console_Class_Name : String);
    --  Register predefined classes that are needed for support of consoles
 
-   function Get_Console_Class (Repo : Scripts_Repository) return Class_Type;
+   function Get_Console_Class
+     (Repo : access Scripts_Repository_Record'Class) return Class_Type;
    --  Return the class to use for Console input/output.
    --  This is only initialized when Register_Standard_Classes is called
 
    procedure Register_Command
-     (Repo          : Scripts_Repository;
+     (Repo          : access Scripts_Repository_Record'Class;
       Command       : String;
       Minimum_Args  : Natural    := 0;
       Maximum_Args  : Natural    := 0;
@@ -941,25 +942,26 @@ package GNATCOLL.Scripts is
    --  a separate main loop (Gtk.Main.Gtk_Main or modal dialogs).
 
    procedure Block_Commands
-     (Repo  : Scripts_Repository;
+     (Repo  : access Scripts_Repository_Record'Class;
       Block : Boolean);
    --  Block all execution of shell commands if Block is true
 
    procedure Register_Scripting_Language
-     (Repo   : Scripts_Repository;
+     (Repo   : access Scripts_Repository_Record'Class;
       Script : access Scripting_Language_Record'Class);
    --  Register a new scripting language in the kernel.
    --  Scripting languages are freed when the kernel is destroyed
 
    function Lookup_Scripting_Language
-     (Repo   : Scripts_Repository;
+     (Repo   : access Scripts_Repository_Record'Class;
       Name   : String) return Scripting_Language;
    --  Lookup one of the registered languages by name.
 
    type Scripting_Language_Array is
      array (Natural range <>) of Scripting_Language;
    function Get_Scripting_Languages
-     (Repo : Scripts_Repository) return Scripting_Language_Array;
+     (Repo : access Scripts_Repository_Record'Class)
+      return Scripting_Language_Array;
    --  Return the list of all registered languages.
 
    No_Args : constant GNAT.OS_Lib.Argument_List := (1 .. 0 => null);

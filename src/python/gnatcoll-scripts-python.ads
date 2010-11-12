@@ -33,7 +33,7 @@ package GNATCOLL.Scripts.Python is
    Python_Name : constant String := "python";
 
    procedure Register_Python_Scripting
-     (Repo          : Scripts.Scripts_Repository;
+     (Repo          : access Scripts.Scripts_Repository_Record'Class;
       Module        : String;
       Program_Name  : String := "python";
       Python_Home   : String := "");
@@ -47,7 +47,7 @@ package GNATCOLL.Scripts.Python is
    --  be searched for in <Python_Home>/lib/python<version>
 
    procedure Unregister_Python_Scripting
-     (Repo : Scripts.Scripts_Repository);
+     (Repo : access Scripts.Scripts_Repository_Record'Class);
    --  Mark the python scripting language as no longer valid. This should be
    --  called before your application exits, to prevent unwanted storage_error
    --  in the finalization of the application (since some class_instances might
