@@ -1242,6 +1242,16 @@ package body GNATCOLL.Scripts.Python is
       end if;
 
       if not Hide_Output then
+         if Result /= null and then Result /= Py_None then
+            declare
+               Str : constant PyObject := PyObject_Str (Result);
+            begin
+               Insert_Text
+                 (Script, Console, PyString_AsString (Str) & ASCII.LF);
+               Py_DECREF (Str);
+            end;
+         end if;
+
          Display_Prompt (Script);
       end if;
 

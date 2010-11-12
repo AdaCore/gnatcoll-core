@@ -906,7 +906,7 @@ way to work around this limitation is to store the additional arguments
 As a result, the code would look like
 
 @CODESAMPLE{@b{with} GNATCOLL.Scripts;@NL{}
-Repo : Scripts_Repository := @b{new} Scripts_Repository_Data;}
+Repo : Scripts_Repository := @b{new} Scripts_Repository_Record;}
 
 @noindent
 or, in the more complex case of GPS described above:
@@ -992,7 +992,7 @@ for such input.
 consoles. This API is used throughout @code{GNATCOLL.Scripts} whenever input or
 output has to be performed.
 
-@TIP{The @file{scripts/examples} directory in the @value{gnatcoll} package
+@TIP{The @file{examples/} directory in the @value{gnatcoll} package
 shows how to implement a console in text mode and in graphical mode.}
 @noindent
 If you want to provide feedback or interact with users, you will need to
@@ -1046,7 +1046,7 @@ when manipulating graphical GtkAda objects.
 @end defmethod
 
 There are lots of small details to take into account when writing a
-graphical console. The example in @file{scripts/examples/gtkconsole.ads}
+graphical console. The example in @file{examples/gtkconsole.ads}
 should provide a good starting point. However, it doesn't handle things
 like history of commands, preventing the user from moving the cursor
 to previous lines,@dots{} which are all small details that need to be right
@@ -1061,7 +1061,34 @@ to:
 @CODESAMPLE{Console := GtkConsole.Create (...);@NL{}
 Set_Default_Console@NL{}
   (Lookup_Scripting_Language (Repo, "python"),@NL{}
-   Console);} 
+   Virtual_Console (Console));} 
+
+Creating a new instance of @code{"Console"}, although allowed, will by
+default create an unusable console. Indeed, depending on your application,
+you might want to create a new window, reuse an existing one, or do many
+other things when the user does
+
+@CODESAMPLE{c = Console()}
+
+As a result, @value{gnatcoll} does not try to guess the correct behavior,
+and thus does not export a constructor for the console. So in the above
+python code, the default python constructor is used. But this constructor
+does not associate @code{c} with any actual @code{Virtual_Console}, and
+thus any call to a method of @code{c} will result in an error.
+
+To make it possible for users to create their own consoles, you need to
+export a @code{Constructor_Method} (see below) for the @code{Console}
+class. In addition to your own processing, this constructor needs also to
+call
+
+@CODESAMPLE{
+   @b{declare}@NL{}
+      Inst : constant Class_Instance := Nth_Arg (Data, 1);@NL{}
+   @b{begin}@NL{}
+      C := new My_Console_Record;  --  or your own type@NL{}
+      GNATCOLL.Scripts.Set_Data (Inst, C);
+   @b{end}@NL{}
+}
 
 @c -----------------------------------------------------------------------
 @node Exporting classes and methods

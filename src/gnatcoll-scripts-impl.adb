@@ -1,7 +1,7 @@
 -----------------------------------------------------------------------
 --                          G N A T C O L L                          --
 --                                                                   --
---                 Copyright (C) 2003-2008, AdaCore                  --
+--                 Copyright (C) 2003-2010, AdaCore                  --
 --                                                                   --
 -- GPS is free  software;  you can redistribute it and/or modify  it --
 -- under the terms of the GNU General Public License as published by --
@@ -174,7 +174,11 @@ package body GNATCOLL.Scripts.Impl is
 
       elsif Command = "clear" then
          Console := Get_Data (Inst);
-         Clear (Console);
+         if Console /= null then
+            Clear (Console);
+         else
+            Set_Error_Msg (Data, "Console was closed by user");
+         end if;
 
       elsif Command = "flush" then
          null;

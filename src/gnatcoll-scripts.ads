@@ -640,6 +640,20 @@ package GNATCOLL.Scripts is
       return Class_Instance is abstract;
    --  Associate a console and class instances, so that a given instance is
    --  always associated with the same class instance.
+   --  Typical example of implementation would be:
+   --      type My_Console is new Virtual_Console_Record with record
+   --          Instances : Instance_List;
+   --      end record;
+   --
+   --      procedure Set_Data_Primitive (...) is
+   --      begin
+   --         Set (Console.Instances, Get_Script (Instance), Instance);
+   --      end Set_Data_Primitive;
+   --
+   --      function Get_Instance (...) is
+   --      begin
+   --          return Get (Console.Instances, Script);
+   --      end Get_Instance;
 
    procedure Set_Data
      (Instance : Class_Instance;
