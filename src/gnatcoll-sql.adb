@@ -479,21 +479,42 @@ package body GNATCOLL.SQL is
    ---------
 
    function "&" (Left, Right : SQL_Table_List) return SQL_Table_List is
-      C      : Table_List.Cursor := Table_List.No_Element;
    begin
       if Left.Data.Data = null then
          return Right;
       end if;
 
-      if Right.Data.Data /= null then
-         C := First (Right.Data.Data.List);
+      if Right.Data.Data = null then
+         return Left;
       end if;
 
-      while Has_Element (C) loop
-         Append (Left.Data.Data.List, Element (C));
-         Next (C);
-      end loop;
-      return Left;
+      Copy_Operands : declare
+         Result : SQL_Table_List;
+
+         procedure Copy_Elements (L : SQL_Table_List);
+         --  Copy elements from L into Result
+
+         -------------------
+         -- Copy_Elements --
+         -------------------
+
+         procedure Copy_Elements (L : SQL_Table_List) is
+            C : Table_List.Cursor := L.Data.Data.List.First;
+         begin
+            while Has_Element (C) loop
+               Append (Result.Data.Data.List, Element (C));
+               Next (C);
+            end loop;
+         end Copy_Elements;
+
+      --  Start of processing for Copy_Operands
+
+      begin
+         Result.Data.Data := new Table_List_Internal;
+         Copy_Elements (Left);
+         Copy_Elements (Right);
+         return Result;
+      end Copy_Operands;
    end "&";
 
    ---------
@@ -501,16 +522,11 @@ package body GNATCOLL.SQL is
    ---------
 
    function "&"
-     (Left : SQL_Table_List; Right : SQL_Single_Table'Class)
-      return SQL_Table_List
+     (Left : SQL_Table_List;
+      Right : SQL_Single_Table'Class) return SQL_Table_List
    is
    begin
-      if Left.Data.Data = null then
-         return +Right;
-      end if;
-
-      Append (Left.Data.Data.List, Right);
-      return Left;
+      return Left & (+Right);
    end "&";
 
    ---------
@@ -550,10 +566,12 @@ package body GNATCOLL.SQL is
       Data.As      := new String'(Name);
       Data.Renamed := +Field;
       return SQL_Field_Any'
-        (Table => null, Instance => null, Name => null,
+        (Table          => null,
+         Instance       => null,
+         Name           => null,
          Instance_Index => -1,
-         Data => (Ada.Finalization.Controlled with
-                  Data => SQL_Field_Internal_Access (Data)));
+         Data           => (Ada.Finalization.Controlled with
+                            Data => SQL_Field_Internal_Access (Data)));
    end As;
 
    ----------
@@ -562,15 +580,17 @@ package body GNATCOLL.SQL is
 
    function Desc (Field : SQL_Field'Class) return SQL_Field'Class is
       Data : constant Sorted_Field_Internal_Access :=
-        new Sorted_Field_Internal;
+               new Sorted_Field_Internal;
    begin
       Data.Ascending := False;
       Data.Sorted    := +Field;
       return SQL_Field_Any'
-        (Table => null, Instance => null, Name => null,
+        (Table          => null,
+         Instance       => null,
+         Name           => null,
          Instance_Index => -1,
-         Data => (Ada.Finalization.Controlled with
-                  Data => SQL_Field_Internal_Access (Data)));
+         Data           => (Ada.Finalization.Controlled with
+                            Data => SQL_Field_Internal_Access (Data)));
    end Desc;
 
    ---------
@@ -579,7 +599,7 @@ package body GNATCOLL.SQL is
 
    function Asc  (Field : SQL_Field'Class) return SQL_Field'Class is
       Data : constant Sorted_Field_Internal_Access :=
-        new Sorted_Field_Internal;
+               new Sorted_Field_Internal;
    begin
       Data.Ascending := True;
       Data.Sorted    := +Field;
@@ -595,7 +615,8 @@ package body GNATCOLL.SQL is
    ------------------------
 
    function Expression_Or_Null
-     (Value : String) return Text_Fields.Field'Class is
+     (Value : String) return Text_Fields.Field'Class
+   is
    begin
       if Value = Null_String then
          return Text_Fields.From_String (Null_String);
@@ -680,13 +701,28 @@ package body GNATCOLL.SQL is
 
    function "&" (List1, List2 : When_List) return When_List is
       Result : When_List;
-      C      : When_Lists.Cursor := First (List2.List);
+
+      procedure Copy_Elements (L : When_List);
+      --  Copy elements from L into Result
+
+      -------------------
+      -- Copy_Elements --
+      -------------------
+
+      procedure Copy_Elements (L : When_List) is
+         C : When_Lists.Cursor := L.List.First;
+      begin
+         while Has_Element (C) loop
+            Append (Result.List, Element (C));
+            Next (C);
+         end loop;
+      end Copy_Elements;
+
+   --  Start of processing for "&"
+
    begin
-      Result := List1;
-      while Has_Element (C) loop
-         Append (Result.List, Element (C));
-         Next (C);
-      end loop;
+      Copy_Elements (List1);
+      Copy_Elements (List2);
       return Result;
    end "&";
 
@@ -719,10 +755,12 @@ package body GNATCOLL.SQL is
          Data.Else_Clause := +Else_Clause;
       end if;
       return SQL_Field_Any'
-        (Table => null, Instance => null, Name => null,
+        (Table          => null,
+         Instance       => null,
+         Name           => null,
          Instance_Index => -1,
-         Data => (Ada.Finalization.Controlled
-                  with SQL_Field_Internal_Access (Data)));
+         Data           => (Ada.Finalization.Controlled
+                            with SQL_Field_Internal_Access (Data)));
    end SQL_Case;
 
    -------------
@@ -886,10 +924,12 @@ package body GNATCOLL.SQL is
       Data.Params := Fields;
       Data.Func   := new String'(String (Func));
       return SQL_Field_Any'
-        (Table => null, Instance => null, Name => null,
+        (Table          => null,
+         Instance       => null,
+         Name           => null,
          Instance_Index => -1,
-         Data => (Ada.Finalization.Controlled with
-                  Data => SQL_Field_Internal_Access (Data)));
+         Data           => (Ada.Finalization.Controlled with
+                            Data => SQL_Field_Internal_Access (Data)));
    end Apply;
 
    -----------
@@ -906,10 +946,12 @@ package body GNATCOLL.SQL is
       Data.Params := +Field;
       Data.Func   := new String'(String (Func));
       return SQL_Field_Any'
-        (Table => null, Instance => null, Name => null,
+        (Table          => null,
+         Instance       => null,
+         Name           => null,
          Instance_Index => -1,
-         Data => (Ada.Finalization.Controlled with
-                  Data => SQL_Field_Internal_Access (Data)));
+         Data           => (Ada.Finalization.Controlled with
+                            Data => SQL_Field_Internal_Access (Data)));
    end Apply;
 
    ------------
