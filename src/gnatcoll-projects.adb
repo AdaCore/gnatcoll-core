@@ -4041,7 +4041,8 @@ package body GNATCOLL.Projects is
          Store_Comments    => True,
          Is_Config_File    => False,
          Flags             => Create_Flags (On_Error'Unrestricted_Access),
-         Current_Directory => Get_Current_Dir);
+         Current_Directory => Get_Current_Dir,
+         Target_Name       => "");
 
       if Project /= Empty_Node then
          Tree.Data.Root := Tree.Instance_From_Node (Project);
@@ -5175,7 +5176,8 @@ package body GNATCOLL.Projects is
             Is_Config_File         => False,
             Current_Directory      => Get_Current_Dir,
             Flags                  => Create_Flags (null, False),
-            Always_Errout_Finalize => True);
+            Always_Errout_Finalize => True,
+            Target_Name            => "");
 
          Prj.Err.Finalize;
       end if;
