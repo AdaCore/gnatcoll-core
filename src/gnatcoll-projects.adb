@@ -79,7 +79,7 @@ package body GNATCOLL.Projects is
 
    Unknown_Importing_Projects : aliased constant Name_Id_Array (1 .. 0) :=
      (others => <>);
-   --  A dummy array used while computing importing projects.
+   --  A dummy array used while computing importing projects
 
    package Virtual_File_List is new Ada.Containers.Doubly_Linked_Lists
      (Element_Type => Virtual_File);
