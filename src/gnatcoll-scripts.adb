@@ -426,15 +426,16 @@ package body GNATCOLL.Scripts is
 
       else
          C := Find (Repo.Classes, Name);
-         if Has_Element (C) then
+         if Has_Element (C) and then Element (C).Exists then
             Class := Element (C);
          else
-            if Class = No_Class and then Tmp /= null then
+            if Tmp /= null then
                for T in Tmp'Range loop
                   Register_Class (Tmp (T), Name, Base);
                end loop;
 
-               Class := Class_Type'(Name => new String'(Name));
+               Class := Class_Type'(Name   => new String'(Name),
+                                    Exists => True);
                Include (Repo.Classes, Name, Class);
             end if;
          end if;
@@ -442,6 +443,28 @@ package body GNATCOLL.Scripts is
 
       return Class;
    end New_Class;
+
+   ------------------
+   -- Lookup_Class --
+   ------------------
+
+   function Lookup_Class
+     (Repo   : access Scripts_Repository_Record;
+      Name   : String) return Class_Type
+   is
+      C     : Classes_Hash.Cursor;
+      Class : Class_Type;
+   begin
+      C := Find (Repo.Classes, Name);
+      if Has_Element (C) then
+         return Element (C);
+      else
+         Class := Class_Type'(Name   => new String'(Name),
+                              Exists => False);
+         Include (Repo.Classes, Name, Class);
+         return Class;
+      end if;
+   end Lookup_Class;
 
    --------------
    -- Get_Name --

@@ -140,6 +140,19 @@ package GNATCOLL.Scripts is
    --  reference counted, and will automatically take care of memory management
    --  issues.
 
+   function Lookup_Class
+     (Repo   : access Scripts_Repository_Record;
+      Name   : String) return Class_Type;
+   --  Return a Class_Type for Name.
+   --  If the given class does not exist, a dummy version is created (but is
+   --  not exported to the scripting languages). This is for instance
+   --  convenient to represent one of the builtin classes for the languages,
+   --  although it might be dangerous since not all languages have the same
+   --  builtins.
+   --  If you use a dummy version as a base class in New_Class, and it doesn't
+   --  exist in the language, then this is equivalent to not having a base
+   --  class.
+
    function New_Class
      (Repo : access Scripts_Repository_Record'Class;
       Name : String;
@@ -984,7 +997,12 @@ private
    end record;
 
    type Class_Type is record
-      Name : GNAT.Strings.String_Access;
+      Name   : GNAT.Strings.String_Access;
+
+      Exists : Boolean := True;
+      --  Set to False when the class is found using Lookup_Class. This is for
+      --  instance the case for builtin classes.
+
    end record;
    type User_Data;
    type User_Data_List is access User_Data;
@@ -1030,8 +1048,9 @@ private
    No_Class_Instance : constant Class_Instance :=
      (Initialized => False);
 
-   No_Class         : constant Class_Type := (Name => null);
-   Any_Class        : constant Class_Type := (Name => new String'("@#!-"));
+   No_Class         : constant Class_Type := (Name => null, Exists => False);
+   Any_Class        : constant Class_Type := (Name   => new String'("@#!-"),
+                                              Exists => False);
 
    type Subprogram_Record is abstract tagged null record;
    type Callback_Data is abstract tagged null record;

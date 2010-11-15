@@ -881,7 +881,7 @@ package body GNATCOLL.Scripts.Python is
             N : constant String := Get_Name (Base);
             B : PyObject := Lookup_Object (Script.Module, N);
          begin
-            if B = null then
+            if B = null and then not Base.Exists then
                B := Lookup_Object (Script.Builtin, N);
             end if;
             Bases := Create_Tuple ((1 => B));
