@@ -615,6 +615,17 @@ package body GNATCOLL.Python is
       end loop;
    end Free;
 
+   ----------------------
+   -- PyModule_Getname --
+   ----------------------
+
+   function PyModule_Getname (Module : PyObject) return String is
+      function Internal (M : PyObject) return Interfaces.C.Strings.chars_ptr;
+      pragma Import (C, Internal, "PyModule_GetName");
+   begin
+      return Value (Internal (Module));
+   end PyModule_Getname;
+
    ------------------
    -- Add_Function --
    ------------------
@@ -628,10 +639,12 @@ package body GNATCOLL.Python is
    begin
       if Self /= null then
          C_Func := PyCFunction_New
-           (new PyMethodDef'(Func), Self, PyString_FromString ("GPS"));
+           (new PyMethodDef'(Func), Self,
+            PyString_FromString (PyModule_Getname (Module)));
       else
          C_Func := PyCFunction_New
-           (new PyMethodDef'(Func), Module, PyString_FromString ("GPS"));
+           (new PyMethodDef'(Func), Module,
+            PyString_FromString (PyModule_Getname (Module)));
       end if;
 
       if C_Func /= null then
@@ -644,13 +657,14 @@ package body GNATCOLL.Python is
    ----------------
 
    procedure Add_Method
-     (Class : PyClassObject;
+     (Class : PyObject;
       Func  : PyMethodDef;
-      Self  : PyObject := null)
+      Self  : PyObject := null;
+      Module : PyObject)
    is
       C_Func  : constant PyObject :=
         PyCFunction_New (new PyMethodDef'(Func), Self,
-                         PyString_FromString ("GPS"));
+                         PyString_FromString (PyModule_Getname (Module)));
       C_Meth  : constant PyObject := PyMethod_New (C_Func, null, Class);
       Ignored : Integer;
       pragma Unreferenced (Ignored);
@@ -663,7 +677,8 @@ package body GNATCOLL.Python is
    -----------------------
 
    procedure Add_Static_Method
-     (Class : PyClassObject; Func : PyMethodDef; Self : PyObject := null)
+     (Class : PyObject; Func : PyMethodDef; Self : PyObject := null;
+      Module : PyObject)
    is
       function PyStaticMethod_New (Method : PyObject) return PyObject;
       pragma Import (C, PyStaticMethod_New, "PyStaticMethod_New");
@@ -686,7 +701,8 @@ package body GNATCOLL.Python is
             & "." & Value (Func.Name));
       end if;
 
-      C_Func := PyCFunction_New (Def, Self, PyString_FromString ("GPS"));
+      C_Func := PyCFunction_New
+        (Def, Self, PyString_FromString (PyModule_Getname (Module)));
       if C_Func /= null then
          Static := PyStaticMethod_New (C_Func);
          Result := PyObject_SetAttrString (Class, Func.Name, Static);
@@ -697,7 +713,9 @@ package body GNATCOLL.Python is
    -- Add_Class_Method --
    ----------------------
 
-   procedure Add_Class_Method (Class : PyClassObject; Func : PyMethodDef) is
+   procedure Add_Class_Method
+     (Class : PyObject; Func : PyMethodDef; Module : PyObject)
+   is
       function PyClassMethod_New (Method : PyObject) return PyObject;
       pragma Import (C, PyClassMethod_New, "PyClassMethod_New");
 
@@ -718,7 +736,8 @@ package body GNATCOLL.Python is
             & "." & Value (Func.Name));
       end if;
 
-      C_Func := PyCFunction_New (Def, null, PyString_FromString ("GPS"));
+      C_Func := PyCFunction_New
+        (Def, null, PyString_FromString (PyModule_Getname (Module)));
       if C_Func /= null then
          Result := PyObject_SetAttrString
            (Class, Func.Name, PyClassMethod_New (C_Func));
@@ -763,32 +782,31 @@ package body GNATCOLL.Python is
               Doc   => D);
    end Create_Method_Def;
 
-   -------------------------
-   -- Lookup_Class_Object --
-   -------------------------
+   -------------------
+   -- Lookup_Object --
+   -------------------
 
-   function Lookup_Class_Object
+   function Lookup_Object
      (Module : String; Name : String) return PyObject is
    begin
-      return Lookup_Class_Object (PyImport_AddModule (Module), Name);
-   end Lookup_Class_Object;
+      return Lookup_Object (PyImport_AddModule (Module), Name);
+   end Lookup_Object;
 
-   -------------------------
-   -- Lookup_Class_Object --
-   -------------------------
+   -------------------
+   -- Lookup_Object --
+   -------------------
 
-   function Lookup_Class_Object
+   function Lookup_Object
      (Module : PyObject; Name : String) return PyObject
    is
-      Dict : PyObject;
+      Dict   : PyObject;
    begin
-      if Module = null then
-         return null;
+      if Module /= null then
+         Dict := PyModule_GetDict (Module);
+         return PyDict_GetItemString (Dict, Name);
       end if;
-
-      Dict := PyModule_GetDict (Module);
-      return PyDict_GetItemString (Dict, Name);
-   end Lookup_Class_Object;
+      return null;
+   end Lookup_Object;
 
    -------------
    -- Py_Main --
@@ -846,5 +864,43 @@ package body GNATCOLL.Python is
    begin
       return Internal (Class, Base) /= 0;
    end PyClass_IsSubclass;
+
+   --------------
+   -- Type_New --
+   --------------
+
+   function Type_New
+     (Name     : String;
+      Bases    : PyTuple;
+      Dict     : PyObject;
+      Metatype : PyTypeObject := null) return PyObject
+   is
+      function Internal
+        (Meta  : PyTypeObject;
+         Name  : Interfaces.C.Strings.chars_ptr;
+         Bases : PyObject;
+         Dict  : PyObject) return PyObject;
+      pragma Import (C, Internal, "ada_type_new");
+
+      C : chars_ptr := New_String (Name);
+      Result : PyObject;
+   begin
+      Result := Internal (Metatype, C, Bases, Dict);
+      Free (C);
+      return Result;
+   end Type_New;
+
+   -------------------------
+   -- PyObject_IsInstance --
+   -------------------------
+
+   function PyObject_IsInstance
+     (Inst : PyObject; Cls : PyObject) return Boolean
+   is
+      function Internal (Inst, Cls : PyObject) return Integer;
+      pragma Import (C, Internal, "PyObject_IsInstance");
+   begin
+      return Internal (Inst, Cls) /= 0;
+   end PyObject_IsInstance;
 
 end GNATCOLL.Python;

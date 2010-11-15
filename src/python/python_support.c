@@ -377,3 +377,48 @@ ada_py_main ()
 {
   return Py_Main (gnat_argc, gnat_argv);
 }
+
+PyObject*
+ada_type_new (PyTypeObject* meta, char* name, PyObject* bases, PyObject* dict)
+{
+  PyTypeObject* m = meta;
+  PyObject *args, *kwargs, *b=NULL;
+  PyObject* result;
+  PyObject* str;
+
+  if (dict == NULL) {
+    printf ("ada_type_new requires a non-null dict\n");
+    return NULL;
+  }
+
+  if (meta == NULL) {
+    m = &PyType_Type;
+  }
+
+  /* Construct the parameter list. Do not use keyword arguments, since the
+     __init__ of the builtin types do not accept them, and tp_new will try to
+     call __init__, resulting in an error
+   */
+
+  args   = PyTuple_New (3);
+  kwargs = PyDict_New ();
+
+  str = PyString_FromString (name);
+  PyTuple_SET_ITEM (args, 0, str);    /* steal reference to str */
+
+  if (bases == NULL) {
+    b = PyTuple_New (0);
+    PyTuple_SET_ITEM (args, 1, b);  /* steal ref to b */
+  } else {
+    PyTuple_SetItem (args, 1, bases);  /* increase refcount for bases */
+  }
+
+  PyTuple_SetItem (args, 2, dict); /* increase refcount for dict */
+
+  result = PyType_Type.tp_new (m, args, kwargs);
+
+  Py_XDECREF (args);
+  Py_XDECREF (kwargs);
+
+  return result;
+}

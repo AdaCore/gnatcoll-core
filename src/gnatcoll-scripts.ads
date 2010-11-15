@@ -372,6 +372,11 @@ package GNATCOLL.Scripts is
    --  No data is stored in the object.
    --  This call should generally be the result of the user calling a
    --  function, which acts as a constructor for the class.
+   --  The instance is not fully initialized, in the sense that its
+   --  Constructor_Method (if any) was not called. You need to do it yourself
+   --  manually. This is for backward compatibility with previous versions of
+   --  GNATCOLL, and because otherwise we would have to pass the constructor
+   --  parameters to New_Instance.
 
    function Is_Subclass
      (Instance : Class_Instance; Base : Class_Type) return Boolean;

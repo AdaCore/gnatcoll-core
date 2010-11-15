@@ -40,6 +40,7 @@ with System;                     use System;
 with GNATCOLL.Any_Types.Python;
 
 package body GNATCOLL.Scripts.Python is
+   Me       : constant Trace_Handle := Create ("PYTHON");
    Me_Stack : constant Trace_Handle := Create ("PYTHON.TB", Off);
 
    ------------------------
@@ -677,7 +678,16 @@ package body GNATCOLL.Scripts.Python is
       end if;
 
       if Kw /= null then
-         Size := PyDict_Size (Kw) + Size;
+         declare
+            S : constant Integer := PyDict_Size (Kw);
+         begin
+            if S < 0 then
+               raise Program_Error with
+                 "Incorrect dictionary when calling function "
+                   & Handler.Command;
+            end if;
+            Size := S + Size;
+         end;
       end if;
 
       if Handler.Is_Method then
@@ -688,8 +698,26 @@ package body GNATCOLL.Scripts.Python is
         and then Handler.Command /= Destructor_Method
       then
          PyErr_SetString (Handler.Script.Exception_Unexpected,
-                          "GPS was already finalized");
+                          "Application was already finalized");
          return null;
+      end if;
+
+      --  Special case for constructors:
+      --  when we were using old-style classes, New_Instance was not calling
+      --  __init__. With new-style classes, however, __init__ is already called
+      --  when we call the metatype(). In particular, this means that the
+      --  profile of New_Instance should allow passing custom parameters,
+      --  otherwise the call to __init__ fails.
+      --  So for now we simply allow a call to the constructor with no
+      --  parameter, which does nothing.
+      --  This is not very elegant, since from python's point of view, this
+      --  relies on the user calling New_Instance and immediately initializing
+      --  the Class_Instance as done in the Constructor_Method handler.
+
+      if Handler.Script.In_New_Instance
+        and then Handler.Command = Constructor_Method
+      then
+         return Py_None;
       end if;
 
       --  Check number of arguments
@@ -699,11 +727,13 @@ package body GNATCOLL.Scripts.Python is
          if Handler.Minimum_Args > Size then
             PyErr_SetString (Handler.Script.Exception_Missing_Args,
                              "Wrong number of parameters, expecting at least"
-                             & Handler.Minimum_Args'Img);
+                             & Handler.Minimum_Args'Img & ", received"
+                             & Size'Img);
          else
             PyErr_SetString (Handler.Script.Exception_Missing_Args,
                              "Wrong number of parameters, expecting at most"
-                             & Handler.Maximum_Args'Img);
+                             & Handler.Maximum_Args'Img & ", received"
+                             & Size'Img);
          end if;
          return null;
       end if;
@@ -813,13 +843,15 @@ package body GNATCOLL.Scripts.Python is
             Def := Create_Method_Def (Command, First_Level'Access);
          end if;
 
-         Klass := Lookup_Class_Object (Script.Module, Get_Name (Class));
+         Klass := Lookup_Object (Script.Module, Get_Name (Class));
 
          if Static_Method then
             Add_Static_Method
-              (Class => Klass, Func => Def, Self => User_Data);
+              (Class => Klass, Func => Def, Self => User_Data,
+               Module => Script.Module);
          else
-            Add_Method (Class => Klass, Func => Def, Self => User_Data);
+            Add_Method (Class => Klass, Func => Def, Self => User_Data,
+                        Module => Script.Module);
          end if;
       end if;
    end Register_Command;
@@ -834,7 +866,7 @@ package body GNATCOLL.Scripts.Python is
       Base          : Class_Type := No_Class)
    is
       Dict    : constant PyDictObject := PyDict_New;
-      Class   : PyClassObject;
+      Class   : PyObject;
       Ignored : Integer;
       Bases   : PyObject := null;
       S       : Interfaces.C.Strings.chars_ptr;
@@ -845,60 +877,26 @@ package body GNATCOLL.Scripts.Python is
          PyObject_GetAttrString (Script.Module, "__name__"));
 
       if Base /= No_Class then
-         Bases := Create_Tuple
-           ((1 => Lookup_Class_Object (Script.Module, Get_Name (Base))));
-      else
-         --  Would be nice to derive from the object class, so that we can
-         --  override __new__. For some reason, this raises a Storage_Error
-         --  later on when we call PyClass_Name on such a class...
-         --  Since object is a <type> and not a class, it is likely that
-         --  PyClass_Name is no longer appropriate...
-         --  See http://www.cafepy.com/article/python_types_and_objects/
-         --     python_types_and_objects.html#id2514298
-         --  We also need to modify the implementation of Is_Subclass, so this
-         --  is quite an implementation effort.
-         --
-         --  The goal in overriding __new__ is so that we can have
-         --     GPS.EditorBuffer (file)
-         --  return an existing instance if the file is already associated with
-         --  a python instance... This isn't doable through __init__
-         --
-         --  Another good reason is that these so-called new-style python
-         --  classes support multiple inheritance better, as well as the
-         --  concept of metaclasses (that's really where __new__ above comes
-         --  from.
-
---           declare
---              Module : constant PyObject :=
---                PyImport_ImportModule ("__builtin__");
---              Dict, Obj : PyObject;
---           begin
---              if Module = null
---                or else Module = Py_None
---              then
---                 raise Constraint_Error;
---              end if;
---
---              Dict := PyModule_GetDict (Module);
---              if Dict = null or else Dict = Py_None then
---                 raise Constraint_Error;
---              end if;
---
---              Obj := PyDict_GetItemString (Dict, "object");
---              if Obj = null or else Obj = Py_None then
---                 raise Constraint_Error;
---              end if;
---
---              Py_XINCREF (Obj);
---              Bases := Create_Tuple ((1 => Obj));
---           end;
-         null;
+         declare
+            N : constant String := Get_Name (Base);
+            B : PyObject := Lookup_Object (Script.Module, N);
+         begin
+            if B = null then
+               B := Lookup_Object (Script.Builtin, N);
+            end if;
+            Bases := Create_Tuple ((1 => B));
+         end;
       end if;
 
-      Class := PyClass_New
-        (Bases => Bases,
-         Dict  => Dict,
-         Name  => PyString_FromString (Name));
+      Class := Type_New
+        (Name  => Name,
+         Bases => Bases,
+         Dict  => Dict);
+      if Class = null then
+         PyErr_Print;
+         raise Program_Error
+           with "Could not register class " & Name;
+      end if;
 
       S := New_String (Name);
       Ignored := PyModule_AddObject (Script.Module, S, Class);
@@ -1938,7 +1936,7 @@ package body GNATCOLL.Scripts.Python is
 
    begin
       if Class /= Any_Class then
-         C := Lookup_Class_Object (Data.Script.Module, Get_Name (Class));
+         C := Lookup_Object (Data.Script.Module, Get_Name (Class));
       end if;
 
       Get_Param (Data, N, Item, Success.all); --  Item is a borrowed reference
@@ -1947,18 +1945,13 @@ package body GNATCOLL.Scripts.Python is
          return No_Class_Instance;
       end if;
 
-      if not PyInstance_Check (Item) then
-         if Class /= Any_Class then
-            Raise_Exception
-              (Invalid_Parameter'Identity,
-               "Parameter" & Integer'Image (N) & " should be an instance of "
-               & Get_Name (Class));
-         else
-            Raise_Exception
-              (Invalid_Parameter'Identity,
-               "Parameter" & Integer'Image (N)
-               & " should be a class instance");
-         end if;
+      if Class /= Any_Class
+        and then not PyObject_IsInstance (Item, C)
+      then
+         Raise_Exception
+           (Invalid_Parameter'Identity,
+            "Parameter" & Integer'Image (N) & " should be an instance of "
+            & Get_Name (Class));
       end if;
 
       Item_Class := PyObject_GetAttrString (Item, "__class__");
@@ -2313,7 +2306,7 @@ package body GNATCOLL.Scripts.Python is
    is
       C : constant PyObject := PyObject_GetAttrString
         (Instance.Data, "__class__");
-      B : constant PyObject := Lookup_Class_Object
+      B : constant PyObject := Lookup_Object
         (Python_Scripting (Instance.Script).Module, Base);
    begin
       return PyClass_IsSubclass (C, Base => B);
@@ -2552,16 +2545,43 @@ package body GNATCOLL.Scripts.Python is
      (Script : access Python_Scripting_Record;
       Class  : Class_Type) return Class_Instance
    is
-      Klass : constant PyObject := Lookup_Class_Object
+      Klass : constant PyObject := Lookup_Object
         (Script.Module, Get_Name (Class));
       Inst : Class_Instance;
       Obj  : PyObject;
+      Args : PyObject;
    begin
       if Klass = null then
          return No_Class_Instance;
       end if;
 
-      Obj := PyInstance_NewRaw (Klass, null);
+      --  Creating a new instance is equivalent to calling its metaclass. This
+      --  is true for both new-style classes and old-style classes (for which
+      --  the tp_call slot is set to PyInstance_New.
+      --  Here, we are in fact calling  Class.__new__ (cls, *args, **kwargs).
+      --  After allocating memory, this in turns automatically tp_init in the
+      --  type definition, which in the case of GNATCOLL cases is often set to
+      --  slot_tp_init. The latter in turn calls __init__
+      --
+      --  ??? This API does not permit passing extra parameters to the call
+
+      Args := PyTuple_New (0);
+      Script.In_New_Instance := True;
+      Obj := PyObject_Call
+        (Object => Klass,
+         Args   => Args,
+         Kw     => null);   --  NOT: Py_None, which is not a valid dictionary
+      Script.In_New_Instance := False;
+      Py_DECREF (Args);
+
+      if Obj = null then
+         if Active (Me) then
+            Trace (Me, "Could not create instance");
+            PyErr_Print;    --  debugging only
+         end if;
+         return No_Class_Instance;
+      end if;
+
       Inst := Get_CI (Python_Scripting (Script), Obj);
 
       --  The PyObject should have a single reference in the end, owned by
@@ -2569,6 +2589,11 @@ package body GNATCOLL.Scripts.Python is
 
       Py_DECREF (Python_Class_Instance (Get_CIR (Inst)).Data);
       return Inst;
+
+   exception
+      when others =>
+         Script.In_New_Instance := False;
+         raise;
    end New_Instance;
 
    --------------------

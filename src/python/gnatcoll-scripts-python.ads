@@ -98,6 +98,12 @@ private
       --  Buffer for the command, to be added in front of any command before
       --  executing. This is used for multi-line input
 
+      In_New_Instance          : Boolean := False;
+      --  Whether we are creating a new instance of a class.
+      --  This is used to disable the call to __init__ (for backward
+      --  compatibility and because we wouldn't know how to pass extra
+      --  arguments to New_Instance).
+
       In_Process               : Boolean := False;
       --  True while we are processing a command. This is used to control the
       --  behavior of control-c: either interrupt, or copy

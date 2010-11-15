@@ -26,7 +26,7 @@
 -----------------------------------------------------------------------
 
 --  Standard interface to the python interpreter.
---  This requires at least python 2.0 to be installed on your system.
+--  This requires at least python 2.3 to be installed on your system.
 
 with Ada.Unchecked_Conversion;
 with Interfaces.C.Strings;
@@ -347,6 +347,9 @@ package GNATCOLL.Python is
      (Module : PyObject; Name : String;  Object : PyObject) return Integer;
    --  Same as above
 
+   function PyModule_Getname (Module : PyObject) return String;
+   --  Return the name of the module
+
    ----------------------------------
    -- Creating modules and methods --
    ----------------------------------
@@ -537,6 +540,46 @@ package GNATCOLL.Python is
    function GetTypeObject (Obj : PyObject) return PyTypeObject;
    --  Return the type object that describes the class Obj belongs to.
 
+   function Type_New
+     (Name     : String;
+      Bases    : PyTuple;
+      Dict     : PyObject;
+      Metatype : PyTypeObject := null) return PyObject;
+   --  Creates a so called new-style class in python.
+   --  Such classes have a metaclass (ie their type) that is "type" or one of
+   --  its ancestors. Their provide a number of advantages over older classes:
+   --    - it is possible to extend builtin types such as "list" or "tuple"
+   --    - support for the "super" function, to provide collaborative multiple
+   --      inheritance
+   --    - support for properties (ie fields manipulated through setters and
+   --      getters)
+   --    - better Method Resolution Order, more compatible with multiple
+   --      inheritance.
+   --  See the original paper at
+   --    http://www.python.org/download/releases/2.2.3/descrintro
+   --
+   --  This replaces the older PyClass_New.
+   --  This isn't a standard python function, but is specific to Ada. If the
+   --  Metatype is not specified, it will default to "type", although depending
+   --  on the list of base classes you provide, python might decide to use
+   --  another metaclass.
+   --  This function is similar to calling the "type()" function from within
+   --  python:
+   --     A = type ("Name", (list,), {});
+   --  which creates a new class Name deriving from "list".
+   --
+   --  Dict can contain any number of things (including for instance the list
+   --  of methods for the class, although you can add some later), just as if
+   --  you were defining the class in Python:
+   --     - "__slots__"
+   --     - "__module__"  (although that is set automatically otherwise)
+   --     - "__doc__"
+
+   function PyObject_IsInstance
+     (Inst : PyObject; Cls : PyObject) return Boolean;
+   --  Return if the metaclass of Inst is Cls (ie Inst was created with
+   --  something like "Inst = Cls (...)"
+
    ----------------
    -- Exceptions --
    ----------------
@@ -636,12 +679,16 @@ package GNATCOLL.Python is
    -----------------
 
    subtype PyClassObject is PyObject;
+   pragma Obsolescent (PyClassObject);
 
    function PyClass_New
      (Bases : PyObject;
       Dict  : PyObject;
       Name  : PyObject) return PyClassObject;
-   --  Create a new class.
+   pragma Obsolescent (PyClass_New,
+                       "use new-style classes through PyType_New");
+   --  Create a new class (these are the pre 2.2 classes, so this is not
+   --  recommended anymore)
    --  Bases should be either null or a tuple of PyClassObject (See
    --  Lookup_Class_Object below)
    --  Dict must be a dictionary, used to store the attributes of the class,
@@ -667,21 +714,21 @@ package GNATCOLL.Python is
    --     Add_Method (Dict, Create_Method_Def (...), Klass);
 
    function PyClass_Name (Class : PyClassObject) return PyObject;
+   pragma Obsolescent (PyClass_Name);
    --  Return the name of the class
 
-   function Lookup_Class_Object
-     (Module : String; Name : String) return PyObject;
-   function Lookup_Class_Object
-     (Module : PyObject; Name : String) return PyObject;
-   --  Lookup a class object.
+   function Lookup_Object (Module : String; Name : String) return PyObject;
+   function Lookup_Object (Module : PyObject; Name : String) return PyObject;
+   --  Lookup an object in the module.
    --  Typical use is
-   --     Klass := Lookup_Class_Object ("__builtin__", "file");
+   --     Obj := Lookup_Class_Object ("__builtin__", "file");
    --  null is returned if the class is not found.
    --  The second version is slightly faster and should be used when you
    --  already have a handle to the module
 
    procedure Add_Method
-     (Class : PyClassObject; Func : PyMethodDef; Self : PyObject := null);
+     (Class : PyObject; Func : PyMethodDef; Self : PyObject := null;
+      Module : PyObject);
    --  Add a new method to the class.
    --  The method is an instance method.
    --  When the method is called from the python interpreter, its Self argument
@@ -690,7 +737,8 @@ package GNATCOLL.Python is
    --  first character in the argument to PyArg_ParseTuple should be "O".
 
    procedure Add_Static_Method
-     (Class : PyClassObject; Func : PyMethodDef; Self : PyObject := null);
+     (Class : PyObject; Func : PyMethodDef; Self : PyObject := null;
+      Module : PyObject);
    --  Return a static version of Method. This method doesn't receive an
    --  instance or the class as its first parameter. This is similar to C++ or
    --  Java's static methods.
@@ -698,7 +746,8 @@ package GNATCOLL.Python is
    --  qualified name of the method, since otherwise there is no way from the
    --  GPS shell to get access to the class to which the method belongs.
 
-   procedure Add_Class_Method (Class : PyClassObject; Func : PyMethodDef);
+   procedure Add_Class_Method
+     (Class : PyObject; Func : PyMethodDef; Module : PyObject);
    --  Return a class version of Method.
    --  This is a method that receives the class as implicit first argument,
    --  just like an instance method receives the instance.
@@ -712,18 +761,22 @@ package GNATCOLL.Python is
    function PyInstance_New
      (Class : PyObject; Args : PyObject; Keywords : PyObject := null)
       return PyObject;
+   pragma Obsolescent (PyInstance_New);
    --  Create a new instance of Class, passing (Args, Keywords) as parameters
    --  to the constructor.
 
    function PyInstance_NewRaw
      (Class : PyObject; Dict : PyObject := null) return PyObject;
+   pragma Obsolescent (PyInstance_NewRaw);
    --  Create a new instance of Class, but doesn't call the constructor
 
    function PyClass_IsSubclass
      (Class : PyObject; Base : PyObject) return Boolean;
+   pragma Obsolescent (PyClass_IsSubclass);
    --  True if Class is a subclass of Base (or Base itself)
 
    function PyInstance_Check (Obj : PyObject) return Boolean;
+   pragma Obsolescent (PyInstance_Check, "Use PyObject_IsInstance");
    --  Whether Obj is an instance
 
    function PyMethod_Check (Obj : PyObject) return Boolean;
