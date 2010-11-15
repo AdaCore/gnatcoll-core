@@ -2453,14 +2453,29 @@ package body GNATCOLL.Scripts.Python is
    ------------------------------
 
    procedure Set_Return_Value_As_List
-     (Data : in out Python_Callback_Data; Size : Natural := 0)
+     (Data  : in out Python_Callback_Data;
+      Size  : Natural := 0;
+      Class : Class_Type := No_Class)
    is
       pragma Unreferenced (Size);
    begin
       Setup_Return_Value (Data);
       Data.Return_As_List := True;
       Data.Has_Return_Value := True;
-      Data.Return_Value := PyList_New;
+
+      if Class = No_Class then
+         Data.Return_Value := PyList_New;
+      else
+         declare
+            C : constant Class_Instance := New_Instance (Data.Script, Class);
+         begin
+            if C = No_Class_Instance then
+               raise Program_Error;
+            end if;
+            Data.Return_Value := Python_Class_Instance (Get_CIR (C)).Data;
+            Py_INCREF (Data.Return_Value);
+         end;
+      end if;
    end Set_Return_Value_As_List;
 
    ----------------------

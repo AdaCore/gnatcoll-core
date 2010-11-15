@@ -1,7 +1,7 @@
 -----------------------------------------------------------------------
 --                          G N A T C O L L                          --
 --                                                                   --
---                 Copyright (C) 2003-2009, AdaCore                  --
+--                 Copyright (C) 2003-2010, AdaCore                  --
 --                                                                   --
 -- GPS is free  software;  you can redistribute it and/or modify  it --
 -- under the terms of the GNU General Public License as published by --
@@ -297,7 +297,9 @@ private
      (Data : in out Shell_Callback_Data; Msg : String);
 
    overriding procedure Set_Return_Value_As_List
-     (Data : in out Shell_Callback_Data; Size : Natural := 0);
+     (Data  : in out Shell_Callback_Data;
+      Size  : Natural := 0;
+      Class : Class_Type := No_Class);
 
    overriding procedure Set_Return_Value
      (Data   : in out Shell_Callback_Data; Value : Integer);

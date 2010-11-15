@@ -1417,10 +1417,12 @@ package body GNATCOLL.Scripts.Shell is
    -- Set_Return_Value_As_List --
    ------------------------------
 
-   procedure Set_Return_Value_As_List
-     (Data : in out Shell_Callback_Data; Size : Natural := 0)
+   overriding procedure Set_Return_Value_As_List
+     (Data  : in out Shell_Callback_Data;
+      Size  : Natural := 0;
+      Class : Class_Type := No_Class)
    is
-      pragma Unreferenced (Size);
+      pragma Unreferenced (Size, Class);
    begin
       Data.Return_As_List := True;
    end Set_Return_Value_As_List;

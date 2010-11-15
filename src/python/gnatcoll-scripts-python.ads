@@ -262,7 +262,9 @@ private
    overriding procedure Set_Error_Msg
      (Data : in out Python_Callback_Data; Msg : String);
    overriding procedure Set_Return_Value_As_List
-     (Data : in out Python_Callback_Data; Size : Natural := 0);
+     (Data  : in out Python_Callback_Data;
+      Size  : Natural := 0;
+      Class : Class_Type := No_Class);
    overriding procedure Set_Return_Value
      (Data   : in out Python_Callback_Data; Value : Integer);
    overriding procedure Set_Return_Value

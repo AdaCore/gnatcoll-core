@@ -320,9 +320,15 @@ package GNATCOLL.Scripts is
    --  If Msg is set to the empty string, an exception will still be raised
 
    procedure Set_Return_Value_As_List
-     (Data : in out Callback_Data; Size : Natural := 0) is abstract;
+     (Data  : in out Callback_Data;
+      Size  : Natural := 0;
+      Class : Class_Type := No_Class) is abstract;
    --  Setup the return value as an empty list. New values can be appended to
    --  the list with Set_Return_Value.
+   --  It is possible to override the exact returned type by setting Class.
+   --  This should however be a subclass of the builtin "list" for language
+   --  in which it makes sense. This is often risky if one of the scripting
+   --  languages your application cannot create subclasses of lists.
    --  If Size is not 0, then the list has a fixed size. Depending on the
    --  language, this could be a different type, such as a tuple in python.
 
