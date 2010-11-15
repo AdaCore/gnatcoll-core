@@ -255,6 +255,12 @@ ada_pylist_check (PyObject* obj)
 }
 
 int
+ada_pyiter_check (PyObject* obj)
+{
+  return PyIter_Check (obj);
+}
+
+int
 ada_pyinstance_check (PyObject* obj)
 {
   return PyInstance_Check (obj);

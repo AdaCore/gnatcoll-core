@@ -209,7 +209,10 @@ private
 
    type Python_Callback_Data is new Callback_Data with record
       Script           : Python_Scripting;
+
       Args, Kw         : PyObject;
+      --  Args is a tuple, a list, or any iterable
+
       Return_Value     : PyObject;
       Return_Dict      : PyObject;
       Has_Return_Value : Boolean := False;
@@ -259,6 +262,9 @@ private
      (Data    : Python_Callback_Data;
       N       : Positive;
       Default : Subprogram_Type) return Subprogram_Type;
+   overriding function Nth_Arg
+     (Data : Python_Callback_Data; N : Positive)
+      return List_Instance'Class;
    overriding procedure Set_Error_Msg
      (Data : in out Python_Callback_Data; Msg : String);
    overriding procedure Set_Return_Value_As_List

@@ -1145,6 +1145,27 @@ package body GNATCOLL.Scripts.Shell is
    -- Nth_Arg --
    -------------
 
+   overriding function Nth_Arg
+     (Data : Shell_Callback_Data; N : Positive)
+      return List_Instance'Class
+   is
+      List : Shell_Callback_Data;
+   begin
+      List.Script := Data.Script;
+
+      if N > Args_Length (Data.CL) then
+         List.CL := Empty_Command_Line;  --  An empty list
+      else
+         List.CL := Parse_String (Nth_Arg (Data.CL, N), Separate_Args);
+      end if;
+
+      return List;
+   end Nth_Arg;
+
+   -------------
+   -- Nth_Arg --
+   -------------
+
    function Nth_Arg
      (Data : Shell_Callback_Data; N : Positive; Success : access Boolean)
       return String

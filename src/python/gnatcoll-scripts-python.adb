@@ -533,13 +533,15 @@ package body GNATCOLL.Scripts.Python is
    function Clone (Data : Python_Callback_Data) return Callback_Data'Class is
       D    : Python_Callback_Data := Data;
       Item : PyObject;
+      Size : Integer;
    begin
       if D.Args /= null then
-         D.Args := PyTuple_New (PyTuple_Size (D.Args));
-         for T in 0 .. PyTuple_Size (D.Args) - 1 loop
-            Item := PyTuple_GetItem (Data.Args, T);
+         Size := PyObject_Size (D.Args);
+         D.Args := PyTuple_New (Size);
+         for T in 0 .. Size - 1 loop
+            Item := PyObject_GetItem (Data.Args, T);
             Py_INCREF (Item);
-            PyTuple_SetItem (D.Args, T, Item);
+            PyObject_SetItem (D.Args, T, Item);
          end loop;
       end if;
       if D.Kw /= null then
@@ -583,8 +585,8 @@ package body GNATCOLL.Scripts.Python is
      (Data : in out Python_Callback_Data;
       N : Positive; Value : Subprogram_Type) is
    begin
-      PyTuple_SetItem (Data.Args, N - 1,
-                       Python_Subprogram_Record (Value.all).Subprogram);
+      PyObject_SetItem (Data.Args, N - 1,
+                        Python_Subprogram_Record (Value.all).Subprogram);
       Py_INCREF (Python_Subprogram_Record (Value.all).Subprogram);
    end Set_Nth_Arg;
 
@@ -595,7 +597,7 @@ package body GNATCOLL.Scripts.Python is
    procedure Set_Nth_Arg
      (Data : in out Python_Callback_Data; N : Positive; Value : String) is
    begin
-      PyTuple_SetItem (Data.Args, N - 1, PyString_FromString (Value));
+      PyObject_SetItem (Data.Args, N - 1, PyString_FromString (Value));
    end Set_Nth_Arg;
 
    -----------------
@@ -605,7 +607,7 @@ package body GNATCOLL.Scripts.Python is
    procedure Set_Nth_Arg
      (Data : in out Python_Callback_Data; N : Positive; Value : Integer) is
    begin
-      PyTuple_SetItem
+      PyObject_SetItem
         (Data.Args, N - 1, PyInt_FromLong (Interfaces.C.long (Value)));
    end Set_Nth_Arg;
 
@@ -616,7 +618,8 @@ package body GNATCOLL.Scripts.Python is
    procedure Set_Nth_Arg
      (Data : in out Python_Callback_Data; N : Positive; Value : Boolean) is
    begin
-      PyTuple_SetItem (Data.Args, N - 1, PyInt_FromLong (Boolean'Pos (Value)));
+      PyObject_SetItem
+        (Data.Args, N - 1, PyInt_FromLong (Boolean'Pos (Value)));
    end Set_Nth_Arg;
 
    -----------------
@@ -628,7 +631,7 @@ package body GNATCOLL.Scripts.Python is
    is
       Inst : constant PyObject := Python_Class_Instance (Get_CIR (Value)).Data;
    begin
-      PyTuple_SetItem (Data.Args, N - 1, Inst);
+      PyObject_SetItem (Data.Args, N - 1, Inst);
       Py_INCREF (Inst);
    end Set_Nth_Arg;
 
@@ -674,7 +677,7 @@ package body GNATCOLL.Scripts.Python is
       end if;
 
       if Args /= null then
-         Size := PyTuple_Size (Args);
+         Size := PyObject_Size (Args);
       end if;
 
       if Kw /= null then
@@ -1454,16 +1457,16 @@ package body GNATCOLL.Scripts.Python is
 
          if PyMethod_Self (Command) /= null
            and then PyMethod_Self (Command) /=
-             PyTuple_GetItem (Python_Callback_Data (Args).Args, 0)
+             PyObject_GetItem (Python_Callback_Data (Args).Args, 0)
          then
 
             --  See code in classobject.c::instancemethod_call()
-            Size  := PyTuple_Size (Python_Callback_Data (Args).Args);
+            Size  := PyObject_Size (Python_Callback_Data (Args).Args);
             Args2 := PyTuple_New (Size => Size + 1);
             Py_INCREF (PyMethod_Self (Command));
             PyTuple_SetItem (Args2, 0, PyMethod_Self (Command));
             for T in 0 .. Size - 1 loop
-               Item := PyTuple_GetItem (Python_Callback_Data (Args).Args, T);
+               Item := PyObject_GetItem (Python_Callback_Data (Args).Args, T);
                Py_INCREF (Item);
                PyTuple_SetItem (Args2, T  + 1, Item);
             end loop;
@@ -1649,9 +1652,9 @@ package body GNATCOLL.Scripts.Python is
    function Number_Of_Arguments (Data : Python_Callback_Data) return Natural is
    begin
       if Data.Kw /= null then
-         return PyDict_Size (Data.Kw) + PyTuple_Size (Data.Args);
+         return PyDict_Size (Data.Kw) + PyObject_Size (Data.Args);
       else
-         return PyTuple_Size (Data.Args);
+         return PyObject_Size (Data.Args);
       end if;
    end Number_Of_Arguments;
 
@@ -1670,7 +1673,7 @@ package body GNATCOLL.Scripts.Python is
       end if;
 
       if Data.Args /= null then
-         S := PyTuple_Size (Data.Args);
+         S := PyObject_Size (Data.Args);
       end if;
 
       if Data.Is_Method then
@@ -1727,7 +1730,7 @@ package body GNATCOLL.Scripts.Python is
 
       if Data.Is_Method then
          Data.Kw_Params (Data.Kw_Params'First) :=
-           PyTuple_GetItem (Data.Args, 0);
+           PyObject_GetItem (Data.Args, 0);
       end if;
 
       for P in Data.Kw_Params'First + First .. Data.Kw_Params'Last loop
@@ -1759,8 +1762,8 @@ package body GNATCOLL.Scripts.Python is
            (Data.Script.Exception_Misc,
             "Keyword parameters not supported");
          raise Invalid_Parameter;
-      elsif Data.Args /= null and then N <= PyTuple_Size (Data.Args) then
-         Obj := PyTuple_GetItem (Data.Args, N - 1);
+      elsif Data.Args /= null and then N <= PyObject_Size (Data.Args) then
+         Obj := PyObject_GetItem (Data.Args, N - 1);
       elsif Data.Kw_Params /= null and then N <= Data.Kw_Params'Last then
          Obj := Data.Kw_Params (N);
       end if;
@@ -1792,8 +1795,8 @@ package body GNATCOLL.Scripts.Python is
            (Data.Script.Exception_Misc,
             "Keyword parameters not supported");
          raise Invalid_Parameter;
-      elsif Data.Args /= null and then N <= PyTuple_Size (Data.Args) then
-         Result := PyTuple_GetItem (Data.Args, N - 1);
+      elsif Data.Args /= null and then N <= PyObject_Size (Data.Args) then
+         Result := PyObject_GetItem (Data.Args, N - 1);
       elsif Data.Kw_Params /= null and then N <= Data.Kw_Params'Last then
          Result := Data.Kw_Params (N);
       end if;
@@ -1806,6 +1809,43 @@ package body GNATCOLL.Scripts.Python is
          Success := True;
       end if;
    end Get_Param;
+
+   -------------
+   -- Nth_Arg --
+   -------------
+
+   overriding function Nth_Arg
+     (Data : Python_Callback_Data; N : Positive)
+      return List_Instance'Class
+   is
+      Item    : PyObject;
+      Success : Boolean;
+      List    : Python_Callback_Data;
+      Iter    : PyObject;
+   begin
+      List.Script    := Data.Script;
+      List.Is_Method := False;
+
+      Get_Param (Data, N, Item, Success);
+      if not Success then
+         List.Args := PyTuple_New (0);  --  An empty list
+      else
+         Iter := PyObject_GetIter (Item);
+         if Iter = null then
+            Raise_Exception
+              (Invalid_Parameter'Identity,
+               "Parameter" & Integer'Image (N) & " should be iterable");
+         end if;
+
+         Trace (Me, "MANU Param" & N'Img & " is "
+                & PyString_AsString (PyObject_Repr (Item))
+                & " Length=" & PyObject_Size (Item)'Img);
+
+         Py_DECREF (Iter);
+         List.Args := Item;
+      end if;
+      return List;
+   end Nth_Arg;
 
    -------------
    -- Nth_Arg --

@@ -246,15 +246,20 @@ package GNATCOLL.Python is
    --  Create a new tuple that contains Size elements.
 
    function PyTuple_GetItem (Tuple : PyTuple; Index : Integer) return PyObject;
+   pragma Obsolescent (PyTuple_GetItem, "See PyObject_GetItem instead");
    --  Get the item at a specific location in the tuple, starting at index 0.
    --  Do not decref returned value.
+   --  See also PyObject_GetItem
 
    procedure PyTuple_SetItem
      (Tuple : PyTuple; Index : Integer; Value : PyObject);
+   pragma Obsolescent (PyTuple_SetItem, "See PyObject_SetItem instead");
    --  Set an item in the tuple. The reference counting of Value is not
    --  increased
+   --  See also PyObject_SetItem
 
    function PyTuple_Size (Tuple : PyTuple) return Integer;
+   pragma Obsolescent (PyTuple_Size, "See PyObject_Size instead");
    --  Return the size of the tuple.
 
    function Create_Tuple (Objects : PyObject_Array) return PyObject;
@@ -275,14 +280,85 @@ package GNATCOLL.Python is
    --  inserted item
 
    function PyList_GetItem (List : PyObject; Index : Integer) return PyObject;
+   pragma Obsolescent (PyList_GetItem, "See PyObject_GetItem instead");
    --  Get the item at a specific location in the list, starting at index 0.
    --  Do not decref the returned value.
+   --  See also PyObject_GetItem
 
    function PyList_Size (List : PyObject) return Integer;
+   pragma Obsolescent (PyList_Size, "See PyObject_Size instead");
    --  Return the number of items in the list
 
    function PyList_Check (Obj : PyObject) return Boolean;
    --  True if Obj is a python list
+
+   ---------------
+   -- Iterators --
+   ---------------
+   --  Iterators are an extension to list and tuples, and encapsulate both, in
+   --  addition to user-defined types that have a __iter__ method.
+
+   function PyIter_Check (Obj : PyObject) return Boolean;
+   --  True if object is an iterator (as returned by PyObject_GetIter)
+
+   function PyObject_GetIter (Obj : PyObject) return PyObject;
+   pragma Import (C, PyObject_GetIter, "PyObject_GetIter");
+   --  This is equivalent to the Python expression iter(o). It returns a new
+   --  iterator for the object argument, or the object itself if the object is
+   --  already an iterator. Raises TypeError and returns NULL if the object
+   --  cannot be iterated.
+
+   function PyObject_Size (Obj : PyObject) return Integer;
+   pragma Import (C, PyObject_Size, "PyObject_Size");
+   --  Return the length of object o. If the object o provides either the
+   --  sequence and mapping protocols, the sequence length is returned. On
+   --  error, -1 is returned. This is the equivalent to the Python expression
+   --  len(o).
+
+   function PyObject_GetItem (Obj, Key : PyObject) return PyObject;
+   pragma Import (C, PyObject_GetItem, "PyObject_GetItem");
+   --  Returns a new reference
+   --  Return element of o corresponding to the object key or NULL on failure.
+   --  This is the equivalent of the Python expression o[key].
+
+   function PyObject_GetItem (Obj : PyObject; Key : Integer) return PyObject;
+   --  A special case where the key is an integer
+
+   function PyObject_SetItem (Obj, Key, Value : PyObject) return Integer;
+   pragma Import (C, PyObject_SetItem, "PyObject_SetItem");
+   --  Map the object key to the value v. Returns -1 on failure. This is the
+   --  equivalent of the Python statement o[key] = v.
+
+   procedure PyObject_SetItem
+     (Obj : PyObject; Key : Integer; Value : PyObject);
+   --  A special case where the key is an integer
+
+   function PyIter_Next (Obj : PyObject) return PyObject;
+   pragma Import (C, PyIter_Next, "PyIter_Next");
+   --  Return the next value from the iteration o. If the object is an
+   --  iterator, this retrieves the next value from the iteration, and returns
+   --  NULL with no exception set if there are no remaining items. If the
+   --  object is not an iterator, TypeError is raised, or if there is an error
+   --  in retrieving the item, returns NULL and passes along the exception.
+   --
+   --  To write a loop which iterates over an iterator, the code should look
+   --  something like this:
+   --
+   --     Iterator : PyObject := PyObject_GetIter (Obj);
+   --     Item     : PyObject;
+   --
+   --     if Iterator = null then
+   --         --  propagate error
+   --     else
+   --         loop
+   --            Item := PyIter_Next (Iterator);
+   --            exit when Item = null;
+   --
+   --            Py_DECREF (Item);
+   --         end loop;
+   --
+   --         Py_DECREF (Iterator);
+   --     end if;
 
    -------------
    -- Strings --

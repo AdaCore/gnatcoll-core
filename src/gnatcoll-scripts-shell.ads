@@ -272,7 +272,9 @@ private
    overriding function Nth_Arg
      (Data : Shell_Callback_Data; N : Positive; Class : Class_Type;
       Allow_Null : Boolean := False) return Class_Instance;
-
+   overriding function Nth_Arg
+     (Data : Shell_Callback_Data; N : Positive)
+      return List_Instance'Class;
    overriding function Nth_Arg
      (Data : Shell_Callback_Data; N : Positive; Default : String)
       return String;

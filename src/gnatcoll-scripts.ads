@@ -378,6 +378,23 @@ package GNATCOLL.Scripts is
    --  No provision is made for creating htables of htables, although htables
    --  of lists are supported, or for getting the currently set value for Key.
 
+   -----------
+   -- Lists --
+   -----------
+
+   subtype List_Instance is Callback_Data'Class;
+   --  Represents a list passed as parameter.
+
+   function Nth_Arg
+     (Data : Callback_Data; N : Positive)
+      return List_Instance'Class is abstract;
+   --  Get a list parameter. The default value is always the empty list, but
+   --  you can still get an Invalid_Parameter exception if the corresponding
+   --  parameter is not a list.
+   --  In the case of python, this function will accept any iterable type (a
+   --  list, a tuple, a user-defined type with a __iter__ method, even a
+   --  dictionary or a string).
+
    ---------------------
    -- Class instances --
    ---------------------

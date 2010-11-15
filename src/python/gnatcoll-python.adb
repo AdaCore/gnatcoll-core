@@ -214,6 +214,17 @@ package body GNATCOLL.Python is
       return Internal (Obj) = 1;
    end PyList_Check;
 
+   ------------------
+   -- PyIter_Check --
+   ------------------
+
+   function PyIter_Check (Obj : PyObject) return Boolean is
+      function Internal (Obj : PyObject) return Integer;
+      pragma Import (C, Internal, "ada_pyiter_check");
+   begin
+      return Internal (Obj) = 1;
+   end PyIter_Check;
+
    -----------------
    -- PyInt_Check --
    -----------------
@@ -268,6 +279,36 @@ package body GNATCOLL.Python is
    begin
       return Internal (Obj) = 1;
    end PyTuple_Check;
+
+   ----------------------
+   -- PyObject_GetItem --
+   ----------------------
+
+   function PyObject_GetItem (Obj : PyObject; Key : Integer) return PyObject is
+      K      : PyObject;
+      Result : PyObject;
+   begin
+      K := PyInt_FromLong (Interfaces.C.long (Key));
+      Result := PyObject_GetItem (Obj, K);
+      Py_DECREF (K);
+      return Result;
+   end PyObject_GetItem;
+
+   ----------------------
+   -- PyObject_SetItem --
+   ----------------------
+
+   procedure PyObject_SetItem
+     (Obj : PyObject; Key : Integer; Value : PyObject)
+   is
+      K      : PyObject;
+      Result : Integer;
+      pragma Unreferenced (Result);
+   begin
+      K := PyInt_FromLong (Interfaces.C.long (Key));
+      Result := PyObject_SetItem (Obj, K, Value);
+      Py_DECREF (K);
+   end PyObject_SetItem;
 
    -----------------------
    -- PyString_AsString --

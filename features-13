@@ -15,6 +15,11 @@ of the feature.
 New features in 1.3
 -------------------
 
+NF-13-JB15-028 Passing lists as parameters to scripts (2010-11-15)
+
+   GNATCOLL.Scripts.Nth_Arg can now accept list parameters, in addition
+   to the existing simple types.
+
 NF-13-JB15-010 Support for python new-style classes (2010-11-15)
 
    GNATCOLL.Scripts will now create so called new-style classes in python.
