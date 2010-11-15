@@ -717,6 +717,7 @@ package body GNATCOLL.Scripts.Python is
       if Handler.Script.In_New_Instance
         and then Handler.Command = Constructor_Method
       then
+         Py_INCREF (Py_None);
          return Py_None;
       end if;
 
