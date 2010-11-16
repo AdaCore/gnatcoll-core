@@ -43,6 +43,9 @@ package body GNATCOLL.Scripts.Python is
    Me       : constant Trace_Handle := Create ("PYTHON");
    Me_Stack : constant Trace_Handle := Create ("PYTHON.TB", Off);
 
+   procedure Set_Item (Args : PyObject; T : Integer; Item : PyObject);
+   --  Change the T-th item in Args
+
    ------------------------
    -- Python_Subprograms --
    ------------------------
@@ -526,6 +529,21 @@ package body GNATCOLL.Scripts.Python is
       Unchecked_Free (Data.Kw_Params);
    end Free;
 
+   --------------
+   -- Set_Item --
+   --------------
+
+   procedure Set_Item (Args : PyObject; T : Integer; Item : PyObject) is
+   begin
+      --  Special case tuples, since they are immutable through
+      --  PyObject_SetItem
+      if PyTuple_Check (Args) then
+         PyTuple_SetItem (Args, T, Item);
+      else
+         PyObject_SetItem (Args, T, Item);
+      end if;
+   end Set_Item;
+
    -----------
    -- Clone --
    -----------
@@ -541,7 +559,7 @@ package body GNATCOLL.Scripts.Python is
          for T in 0 .. Size - 1 loop
             Item := PyObject_GetItem (Data.Args, T);
             Py_INCREF (Item);
-            PyObject_SetItem (D.Args, T, Item);
+            Set_Item (D.Args, T, Item);
          end loop;
       end if;
       if D.Kw /= null then
@@ -585,8 +603,8 @@ package body GNATCOLL.Scripts.Python is
      (Data : in out Python_Callback_Data;
       N : Positive; Value : Subprogram_Type) is
    begin
-      PyObject_SetItem (Data.Args, N - 1,
-                        Python_Subprogram_Record (Value.all).Subprogram);
+      Set_Item (Data.Args, N - 1,
+                Python_Subprogram_Record (Value.all).Subprogram);
       Py_INCREF (Python_Subprogram_Record (Value.all).Subprogram);
    end Set_Nth_Arg;
 
@@ -597,7 +615,7 @@ package body GNATCOLL.Scripts.Python is
    procedure Set_Nth_Arg
      (Data : in out Python_Callback_Data; N : Positive; Value : String) is
    begin
-      PyObject_SetItem (Data.Args, N - 1, PyString_FromString (Value));
+      Set_Item (Data.Args, N - 1, PyString_FromString (Value));
    end Set_Nth_Arg;
 
    -----------------
@@ -607,8 +625,7 @@ package body GNATCOLL.Scripts.Python is
    procedure Set_Nth_Arg
      (Data : in out Python_Callback_Data; N : Positive; Value : Integer) is
    begin
-      PyObject_SetItem
-        (Data.Args, N - 1, PyInt_FromLong (Interfaces.C.long (Value)));
+      Set_Item (Data.Args, N - 1, PyInt_FromLong (Interfaces.C.long (Value)));
    end Set_Nth_Arg;
 
    -----------------
@@ -618,8 +635,7 @@ package body GNATCOLL.Scripts.Python is
    procedure Set_Nth_Arg
      (Data : in out Python_Callback_Data; N : Positive; Value : Boolean) is
    begin
-      PyObject_SetItem
-        (Data.Args, N - 1, PyInt_FromLong (Boolean'Pos (Value)));
+      Set_Item (Data.Args, N - 1, PyInt_FromLong (Boolean'Pos (Value)));
    end Set_Nth_Arg;
 
    -----------------
@@ -631,7 +647,7 @@ package body GNATCOLL.Scripts.Python is
    is
       Inst : constant PyObject := Python_Class_Instance (Get_CIR (Value)).Data;
    begin
-      PyObject_SetItem (Data.Args, N - 1, Inst);
+      Set_Item (Data.Args, N - 1, Inst);
       Py_INCREF (Inst);
    end Set_Nth_Arg;
 
