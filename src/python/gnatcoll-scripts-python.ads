@@ -202,6 +202,10 @@ private
      (Script      : access Python_Scripting_Record;
       Input       : String;
       Completions : out String_Lists.List);
+   overriding function New_List
+     (Script : access Python_Scripting_Record;
+      Class  : Class_Type := No_Class)
+      return List_Instance'Class;
    --  See doc from inherited subprograms
 
    type PyObject_Array is array (Natural range <>) of PyObject;
@@ -279,6 +283,8 @@ private
      (Data   : in out Python_Callback_Data; Value : Boolean);
    overriding procedure Set_Return_Value
      (Data   : in out Python_Callback_Data; Value : Class_Instance);
+   overriding procedure Set_Return_Value
+     (Data   : in out Python_Callback_Data; Value : List_Instance);
    overriding procedure Set_Return_Value_Key
      (Data   : in out Python_Callback_Data;
       Key    : String;
@@ -301,6 +307,9 @@ private
    overriding procedure Set_Nth_Arg
      (Data : in out Python_Callback_Data;
       N : Positive; Value : Class_Instance);
+   overriding procedure Set_Nth_Arg
+     (Data : in out Python_Callback_Data;
+      N : Positive; Value : List_Instance);
    overriding procedure Set_Nth_Arg
      (Data : in out Python_Callback_Data;
       N : Positive; Value : Subprogram_Type);

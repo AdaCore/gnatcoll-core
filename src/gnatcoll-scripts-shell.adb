@@ -1141,6 +1141,35 @@ package body GNATCOLL.Scripts.Shell is
       Set_Nth_Arg (Data.CL, N, Name_From_Instance (Value));
    end Set_Nth_Arg;
 
+   -----------------
+   -- Set_Nth_Arg --
+   -----------------
+
+   overriding procedure Set_Nth_Arg
+     (Data : in out Shell_Callback_Data;
+      N : Positive; Value : List_Instance) is
+   begin
+      Set_Nth_Arg
+        (Data.CL, N, '(' & Get_Command (Shell_Callback_Data (Value).CL) & ')');
+   end Set_Nth_Arg;
+
+   --------------
+   -- New_List --
+   --------------
+
+   overriding function New_List
+     (Script : access Shell_Scripting_Record;
+      Class  : Class_Type := No_Class)
+      return List_Instance'Class
+   is
+      pragma Unreferenced (Class);
+      List : Shell_Callback_Data;
+   begin
+      List.Script := Shell_Scripting (Script);
+      List.CL := Empty_Command_Line;
+      return List;
+   end New_List;
+
    -------------
    -- Nth_Arg --
    -------------
@@ -1573,6 +1602,17 @@ package body GNATCOLL.Scripts.Shell is
       else
          Set_Return_Value (Data, Name_From_Instance (Value));
       end if;
+   end Set_Return_Value;
+
+   ----------------------
+   -- Set_Return_Value --
+   ----------------------
+
+   overriding procedure Set_Return_Value
+     (Data   : in out Shell_Callback_Data; Value : List_Instance) is
+   begin
+      Set_Return_Value
+        (Data, '(' & Get_Command (Shell_Callback_Data (Value).CL) & ')');
    end Set_Return_Value;
 
    ------------------

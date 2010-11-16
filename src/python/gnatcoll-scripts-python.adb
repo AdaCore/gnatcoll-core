@@ -534,11 +534,24 @@ package body GNATCOLL.Scripts.Python is
    --------------
 
    procedure Set_Item (Args : PyObject; T : Integer; Item : PyObject) is
+      N : Integer;
+      pragma Unreferenced (N);
    begin
       --  Special case tuples, since they are immutable through
       --  PyObject_SetItem
       if PyTuple_Check (Args) then
          PyTuple_SetItem (Args, T, Item);
+
+      --  Also special case lists, since we want to append if the index is
+      --  too big
+
+      elsif PyList_Check (Args) then
+         if T < PyList_Size (Args) then
+            PyObject_SetItem (Args, T, Item);
+         else
+            N := PyList_Append (Args, Item);
+         end if;
+
       else
          PyObject_SetItem (Args, T, Item);
       end if;
@@ -649,6 +662,19 @@ package body GNATCOLL.Scripts.Python is
    begin
       Set_Item (Data.Args, N - 1, Inst);
       Py_INCREF (Inst);
+   end Set_Nth_Arg;
+
+   -----------------
+   -- Set_Nth_Arg --
+   -----------------
+
+   procedure Set_Nth_Arg
+     (Data : in out Python_Callback_Data; N : Positive; Value : List_Instance)
+   is
+      V : constant PyObject := Python_Callback_Data (Value).Args;
+   begin
+      Set_Item (Data.Args, N - 1, V);
+      Py_INCREF (V);
    end Set_Nth_Arg;
 
    -----------------
@@ -1853,10 +1879,6 @@ package body GNATCOLL.Scripts.Python is
                "Parameter" & Integer'Image (N) & " should be iterable");
          end if;
 
-         Trace (Me, "MANU Param" & N'Img & " is "
-                & PyString_AsString (PyObject_Repr (Item))
-                & " Length=" & PyObject_Size (Item)'Img);
-
          Py_DECREF (Iter);
          List.Args := Item;
       end if;
@@ -2608,6 +2630,57 @@ package body GNATCOLL.Scripts.Python is
          Data.Return_Value := Obj;
       end if;
    end Set_Return_Value;
+
+   ----------------------
+   -- Set_Return_Value --
+   ----------------------
+
+   procedure Set_Return_Value
+     (Data : in out Python_Callback_Data; Value : List_Instance)
+   is
+      V   : constant PyObject := Python_Callback_Data (Value).Args;
+      Num : Integer;
+      pragma Unreferenced (Num);
+   begin
+      if Data.Return_As_List then
+         Num := PyList_Append (Data.Return_Value, V);
+      else
+         Py_INCREF (V);
+         Setup_Return_Value (Data);
+         Data.Return_Value := V;
+      end if;
+   end Set_Return_Value;
+
+   --------------
+   -- New_List --
+   --------------
+
+   overriding function New_List
+     (Script : access Python_Scripting_Record;
+      Class  : Class_Type := No_Class)
+      return List_Instance'Class
+   is
+      List    : Python_Callback_Data;
+   begin
+      List.Script    := Python_Scripting (Script);
+      List.Is_Method := False;
+
+      if Class = No_Class then
+         List.Args      := PyList_New;
+      else
+         declare
+            C : constant Class_Instance := New_Instance (Script, Class);
+         begin
+            if C = No_Class_Instance then
+               raise Program_Error;
+            end if;
+            List.Args := Python_Class_Instance (Get_CIR (C)).Data;
+            Py_INCREF (List.Args);
+         end;
+      end if;
+
+      return List;
+   end New_List;
 
    ------------------
    -- New_Instance --

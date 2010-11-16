@@ -331,6 +331,9 @@ package GNATCOLL.Scripts is
    --  languages your application cannot create subclasses of lists.
    --  If Size is not 0, then the list has a fixed size. Depending on the
    --  language, this could be a different type, such as a tuple in python.
+   --
+   --  See also the documentation for List_Instance for a full example
+   --  returning a list to the scripting language.
 
    procedure Set_Return_Value
      (Data : in out Callback_Data; Value : Integer) is abstract;
@@ -384,6 +387,42 @@ package GNATCOLL.Scripts is
 
    subtype List_Instance is Callback_Data'Class;
    --  Represents a list passed as parameter.
+   --  In the context of a list, Set_Nth_Arg will always append to the list if
+   --  the given index is outside of the current range of the list.
+   --
+   --  To return a list to the scripting language, you can therefore do the
+   --  following:
+   --
+   --    procedure Handler (Data : in out Callback_Data'Class; Cmd : String) is
+   --       List : List_Instance := New_List (Get_Script (Data0);
+   --    begin
+   --       Set_Nth_Arg (List, Natural'Last, 12);
+   --       Set_Nth_Arg (List, Natural'Last, "value");
+   --       Set_Return_Value (Data, List);
+   --    end;
+   --
+   --  The handling of the list can be made transparent by using the following
+   --  construct:
+   --
+   --    procedure Handler (Data : in out Callback_Data'Class; Cmd : String) is
+   --    begin
+   --       Set_Return_Value_As_List (Data);
+   --       Set_Return_Value (Data, 12);
+   --       Set_Return_Value (Data, "value");
+   --    end;
+   --
+   --  However, this second approach does not let you return lists of list,
+   --  for instance, which is doable with the first approach.
+
+   function New_List
+     (Script : access Scripting_Language_Record;
+      Class  : Class_Type := No_Class)
+      return List_Instance'Class is abstract;
+   --  Creates a new empty list
+   --  It is possible to override the exact returned type by setting Class.
+   --  This should however be a subclass of the builtin "list" for language
+   --  in which it makes sense. This is often risky if one of the scripting
+   --  languages your application cannot create subclasses of lists.
 
    function Nth_Arg
      (Data : Callback_Data; N : Positive)
@@ -394,6 +433,15 @@ package GNATCOLL.Scripts is
    --  In the case of python, this function will accept any iterable type (a
    --  list, a tuple, a user-defined type with a __iter__ method, even a
    --  dictionary or a string).
+
+   procedure Set_Nth_Arg
+     (Data : in out Callback_Data;
+      N : Positive; Value : List_Instance) is abstract;
+   --  Override the nth arg in Data.
+
+   procedure Set_Return_Value
+     (Data : in out Callback_Data; Value : List_Instance) is abstract;
+   --  Set the value returned to the shell
 
    ---------------------
    -- Class instances --
