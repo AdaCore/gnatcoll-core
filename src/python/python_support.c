@@ -141,11 +141,7 @@ ada_pybool_check (PyObject* obj)
 int
 ada_pybool_is_true (PyObject* obj)
 {
-#ifdef Py_True
-  return obj == Py_True;
-#else
-  return 0;
-#endif
+  return PyObject_IsTrue (obj);
 }
 
 int
