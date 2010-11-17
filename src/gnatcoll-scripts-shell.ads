@@ -100,6 +100,15 @@ private
    overriding function Is_Subclass
      (Instance : access Shell_Class_Instance_Record;
       Base     : String) return Boolean;
+   overriding procedure Set_Property
+     (Instance : access Shell_Class_Instance_Record;
+      Name : String; Value : Integer);
+   overriding procedure Set_Property
+     (Instance : access Shell_Class_Instance_Record;
+      Name : String; Value : Boolean);
+   overriding procedure Set_Property
+     (Instance : access Shell_Class_Instance_Record;
+      Name : String; Value : String);
    --  See doc from inherited subprogram
 
    package Instances_List is new Ada.Containers.Indefinite_Doubly_Linked_Lists

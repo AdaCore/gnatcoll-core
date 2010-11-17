@@ -47,6 +47,9 @@ with GNATCOLL.Utils;                    use GNATCOLL.Utils;
 package body GNATCOLL.Scripts.Shell is
    Me : constant Trace_Handle := Create ("SHELL_SCRIPT", Off);
 
+   Cst_Prefix : constant String := "@cst@";
+   --  Prefix used to store the name of constants in class instances
+
    use Instances_List, Command_Hash;
 
    procedure Free_Internal_Data (Script : access Shell_Scripting_Record'Class);
@@ -195,6 +198,34 @@ package body GNATCOLL.Scripts.Shell is
       --  ??? Not checked
       return True;
    end Is_Subclass;
+
+   ------------------
+   -- Set_Property --
+   ------------------
+
+   overriding procedure Set_Property
+     (Instance : access Shell_Class_Instance_Record;
+      Name : String; Value : Integer) is
+   begin
+      --  We can only retrieve string constants later on, so convert here
+      Set_Data
+        (Instance, Cst_Prefix & Name, Create_Property (Image (Value, 0)));
+   end Set_Property;
+
+   overriding procedure Set_Property
+     (Instance : access Shell_Class_Instance_Record;
+      Name : String; Value : Boolean) is
+   begin
+      Set_Data
+        (Instance, Cst_Prefix & Name, Create_Property (Boolean'Image (Value)));
+   end Set_Property;
+
+   overriding procedure Set_Property
+     (Instance : access Shell_Class_Instance_Record;
+      Name : String; Value : String) is
+   begin
+      Set_Data (Instance, Cst_Prefix & Name, Create_Property (Value));
+   end Set_Property;
 
    ---------------------
    -- Name_Parameters --
@@ -736,6 +767,7 @@ package body GNATCOLL.Scripts.Shell is
       Data     : Command_Information_Access;
       Instance : Class_Instance;
       Min, Max : Natural;
+      Found    : Boolean;
 
       Count    : Natural;
       Command  : constant String := Get_Command (CL);
@@ -762,28 +794,38 @@ package body GNATCOLL.Scripts.Shell is
 
       Errors.all := False;
 
-      Data_C := Find (Script.Commands_List, Command);
+      --  Special case: access to instance constants
 
-      if Has_Element (Data_C) then
-         Data := Element (Data_C);
+      if Command (Command'First) = '@' then
+         Min := 1;
+         Max := 1;
+         Found := True;
+      else
+         Data_C := Find (Script.Commands_List, Command);
+         Found := Has_Element (Data_C);
+         if Found then
+            Data := Element (Data_C);
 
-         Min := Data.Cmd.Minimum_Args;
-         Max := Data.Cmd.Maximum_Args;
+            Min := Data.Cmd.Minimum_Args;
+            Max := Data.Cmd.Maximum_Args;
 
-         if Data.Cmd.Class /= No_Class
-           and then not Data.Cmd.Static_Method
-           and then Data.Cmd.Command /= Constructor_Method
-           and then Data.Cmd.Command /= Destructor_Method
-         then
-            Min := Min + 1;
-            if Max /= Natural'Last then
-               Max := Max + 1;
+            if Data.Cmd.Class /= No_Class
+              and then not Data.Cmd.Static_Method
+              and then Data.Cmd.Command /= Constructor_Method
+              and then Data.Cmd.Command /= Destructor_Method
+            then
+               Min := Min + 1;
+               if Max /= Natural'Last then
+                  Max := Max + 1;
+               end if;
             end if;
          end if;
+      end if;
 
+      if Found then
          if Min <= Args_Length (CL) and then Args_Length (CL) <= Max then
             Count := Args_Length (CL);
-            if Data.Cmd.Command = Constructor_Method then
+            if Data /= null and then Data.Cmd.Command = Constructor_Method then
                Count := Count + 1;
             end if;
 
@@ -797,7 +839,9 @@ package body GNATCOLL.Scripts.Shell is
 
                Callback.CL := Create ("");
 
-               if Data.Cmd.Command = Constructor_Method then
+               if Data /= null
+                 and then Data.Cmd.Command = Constructor_Method
+               then
                   Instance := New_Instance (Callback.Script, Data.Cmd.Class);
                   Append_Argument
                     (Callback.CL,
@@ -834,27 +878,41 @@ package body GNATCOLL.Scripts.Shell is
                   end;
                end loop;
 
-               Data.Cmd.Handler (Callback, Data.Cmd.Command);
-
-               if Callback.Return_As_Error then
-                  Errors.all := True;
-                  Free (Callback.Return_Dict);
+               if Data = null then
+                  --  Accessing a field
                   declare
-                     R : constant String := Callback.Return_Value.all;
+                     Prop : constant Instance_Property :=
+                       Get_Data
+                         (Nth_Arg (Callback, 1, Any_Class),
+                          Cst_Prefix
+                          & Command (Command'First + 1 .. Command'Last));
                   begin
-                     Free (Callback.Return_Value);
-                     return R;
+                     Set_Return_Value (Callback, As_String (Prop.all));
                   end;
-               end if;
 
-               if Data.Cmd.Command = Constructor_Method then
-                  Set_Return_Value (Callback, Instance);
-               end if;
+               else
+                  Data.Cmd.Handler (Callback, Data.Cmd.Command);
 
-               if Callback.Return_Dict /= null then
-                  Free (Callback.Return_Value);
-                  Callback.Return_Value := Callback.Return_Dict;
-                  Callback.Return_Dict  := null;
+                  if Callback.Return_As_Error then
+                     Errors.all := True;
+                     Free (Callback.Return_Dict);
+                     declare
+                        R : constant String := Callback.Return_Value.all;
+                     begin
+                        Free (Callback.Return_Value);
+                        return R;
+                     end;
+                  end if;
+
+                  if Data.Cmd.Command = Constructor_Method then
+                     Set_Return_Value (Callback, Instance);
+                  end if;
+
+                  if Callback.Return_Dict /= null then
+                     Free (Callback.Return_Value);
+                     Callback.Return_Value := Callback.Return_Dict;
+                     Callback.Return_Dict  := null;
+                  end if;
                end if;
 
                --  Save the return value for the future

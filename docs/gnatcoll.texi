@@ -605,6 +605,15 @@ to create an instance and call one of its methods.
 Of course, the shell is not the best language for object-oriented programming,
 and better languages should be used instead.
 
+When an instance has associated properties (which you can export from Ada
+using @code{Set_Property}), you access the properties by prefixing its name
+with "@":
+
+@CODESAMPLE{
+Shell> Base arg1 arg2   # Build new instance
+Shell> @id %1           # Access its "id" field
+}
+
 Some commands are automatically added to the shell when this scripting
 language is added to the application. These are
 

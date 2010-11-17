@@ -478,6 +478,8 @@ package GNATCOLL.Scripts is
      (Instance : Class_Instance; Name : Class_Type) return Integer;
    function Get_Data
      (Instance : Class_Instance; Name : Class_Type) return String;
+   function Get_Data
+     (Instance : Class_Instance; Name : Class_Type) return Boolean;
    --  Get the data embedded in the class.
    --  These are specialized cases of Get_Data below.
    --  Invalid_Data is raised if no such data was stored in the instance.
@@ -494,6 +496,8 @@ package GNATCOLL.Scripts is
      (Instance : Class_Instance; Name : Class_Type; Value : String);
    procedure Set_Data
      (Instance : Class_Instance; Name : Class_Type; Value : Integer);
+   procedure Set_Data
+     (Instance : Class_Instance; Name : Class_Type; Value : Boolean);
    --  Associate some data with the instance.
    --  These are specialized cases of Set_Data below.
    --  The class name is required to handle multiple inheritance: if we were
@@ -501,45 +505,27 @@ package GNATCOLL.Scripts is
    --  instance, then we couldn't have a class with multiple ancestors, each
    --  expecting its own user data set in the constructor.
 
-   ---------------------------
-   -- Class_Instance_Record --
-   ---------------------------
-
-   --  This type encapsulate some language specific data. It is overriden by
-   --  each of the scripting languages. Do not use directly unless you are
-   --  implementing a new scripting language
-
-   type Class_Instance_Record is abstract tagged limited private;
-   type Class_Instance_Record_Access is access all Class_Instance_Record'Class;
-   --  A type overriden by each of the scripting languages
-
-   function Is_Subclass
-     (Instance : access Class_Instance_Record;
-      Base     : String) return Boolean is abstract;
-   --  Whether Instance is a Base or from a subclass of Base. Do not use
-   --  directly, use the version that takes a Class_Instance instead
-
-   procedure Incref (Inst : access Class_Instance_Record);
-   procedure Decref (Inst : access Class_Instance_Record);
-   --  Change the reference counting of Inst.
-   --  These subprograms should only be called by Class_Instance itself, not
-   --  from your own code.
-   --  These subprogram should be overriden by each scripting language that
-   --  needs to manage low-level objects, like a PyObject in python for
-   --  instance.
-   --  They should always call the inherited operation as the last part of
-   --  their code (and not as the first call, since otherwise Decref cannot
-   --  properly free the allocated memory).
-
-   function Get_CIR
-     (Inst : Class_Instance) return Class_Instance_Record_Access;
-   --  For internal use only.
-
-   function Print_Refcount
-     (Instance : access Class_Instance_Record) return String;
-   --  Debug only: print the reference counting for this instance.
-   --  Implementations are encourage to concatenate with the inherited
-   --  method's result
+   procedure Set_Property
+     (Instance : Class_Instance; Name : String; Value : Integer);
+   procedure Set_Property
+     (Instance : Class_Instance; Name : String; Value : String);
+   procedure Set_Property
+     (Instance : Class_Instance; Name : String; Value : Boolean);
+   --  Export a field stored in the instance.
+   --  The way to access it depends on the language:
+   --    - in the GPS shell, you need to prefix its name with "@", as in:
+   --        > Console "foo"    # Create new instance
+   --        > @id %1           # Access its "id" property
+   --    - in Python, this is used with the usual python conventions:
+   --        > c = Console ("foo")
+   --        > c.id
+   --  The value of the field can be overridden in the scripting language, but
+   --  this change will not be reflected in Ada. For instance, in python:
+   --       c.id = 2
+   --  is valid, but will have no effect on the Ada side.
+   --
+   --  If you want true read-only properties, you need to use the other version
+   --  of Set_Property through getters and setters.
 
    --------------------
    -- Instance lists --
@@ -611,6 +597,19 @@ package GNATCOLL.Scripts is
    --  through its Instances field).
    --  The default is to return null.
 
+   function Create_Property
+     (Val : Boolean) return Instance_Property_Record'Class;
+   function Create_Property
+     (Val : Integer) return Instance_Property_Record'Class;
+   function Create_Property
+     (Val : String) return Instance_Property_Record'Class;
+   --  Return an instance of Instance_Property that wraps one of the basic
+   --  types. The returned value must be Destroyed, unless you store it
+   --  through Set_Data, in which case GNATCOLL will take care of that.
+
+   function As_String (Prop : Instance_Property_Record'Class) return String;
+   --  Assuming Prop was created with Create_Property, return its value
+
    procedure Set_Data
      (Instance : Class_Instance;
       Name     : String;
@@ -631,6 +630,67 @@ package GNATCOLL.Scripts is
       Name     : String) return Instance_Property;
    --  Return a general property associated with the widget.
    --  Return null if there is no such property.
+
+   ---------------------------
+   -- Class_Instance_Record --
+   ---------------------------
+
+   --  This type encapsulate some language specific data. It is overriden by
+   --  each of the scripting languages. Do not use directly unless you are
+   --  implementing a new scripting language
+
+   type Class_Instance_Record is abstract tagged limited private;
+   type Class_Instance_Record_Access is access all Class_Instance_Record'Class;
+   --  A type overriden by each of the scripting languages
+
+   function Is_Subclass
+     (Instance : access Class_Instance_Record;
+      Base     : String) return Boolean is abstract;
+   --  Whether Instance is a Base or from a subclass of Base. Do not use
+   --  directly, use the version that takes a Class_Instance instead
+
+   procedure Incref (Inst : access Class_Instance_Record);
+   procedure Decref (Inst : access Class_Instance_Record);
+   --  Change the reference counting of Inst.
+   --  These subprograms should only be called by Class_Instance itself, not
+   --  from your own code.
+   --  These subprogram should be overriden by each scripting language that
+   --  needs to manage low-level objects, like a PyObject in python for
+   --  instance.
+   --  They should always call the inherited operation as the last part of
+   --  their code (and not as the first call, since otherwise Decref cannot
+   --  properly free the allocated memory).
+
+   function Get_CIR
+     (Inst : Class_Instance) return Class_Instance_Record_Access;
+   --  For internal use only.
+
+   function Print_Refcount
+     (Instance : access Class_Instance_Record) return String;
+   --  Debug only: print the reference counting for this instance.
+   --  Implementations are encourage to concatenate with the inherited
+   --  method's result
+
+   procedure Set_Property
+     (Instance : access Class_Instance_Record;
+      Name     : String; Value : Integer) is abstract;
+   procedure Set_Property
+     (Instance : access Class_Instance_Record;
+      Name     : String; Value : Boolean) is abstract;
+   procedure Set_Property
+     (Instance : access Class_Instance_Record;
+      Name     : String; Value : String) is abstract;
+   --  See definition of Set_Constant (Class_Instance).
+
+   procedure Set_Data
+     (Instance : access Class_Instance_Record'Class;
+      Name     : String;
+      Property : Instance_Property_Record'Class);
+   function Get_Data
+     (Instance : access Class_Instance_Record'Class;
+      Name     : String) return Instance_Property;
+   --  Internal version of Set_Data/Get_Data.
+   --  For internal use only
 
    -------------------------
    -- Callback_Data lists --
@@ -1136,10 +1196,6 @@ private
    end record;
 
    No_Params : constant Param_Array := (1 .. 0 => <>);
-
-   function Get_Data
-     (Instance : Class_Instance; Name : String) return User_Data_List;
-   --  Return the user data with the given name, or null if there is none
 
    type Class_Instance_Record is abstract tagged limited record
       Refcount  : Natural := 1;

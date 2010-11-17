@@ -202,6 +202,9 @@ package GNATCOLL.Python is
    --  Obj must return True for PyBool_Check. This function returns True if
    --  obj is True.
 
+   function PyBool_FromBoolean (Value : Boolean) return PyObject;
+   --  Create a new boolean object
+
    ------------
    -- Tuples --
    ------------

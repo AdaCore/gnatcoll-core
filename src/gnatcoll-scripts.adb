@@ -55,11 +55,16 @@ package body GNATCOLL.Scripts is
       Language      : String := "");
    --  Internal version of Register_Command
 
+   function Get_Data
+     (Instance : access Class_Instance_Record'Class; Name : String)
+      return User_Data_List;
+   --  Return the user data with the given name, or null if there is none
+
    -----------------------------------
    -- Data stored in class_instance --
    -----------------------------------
 
-   type User_Data_Type is (Strings, Integers, Consoles);
+   type User_Data_Type is (Strings, Integers, Booleans, Consoles);
 
    type Scalar_Properties_Record (Typ : User_Data_Type) is
      new Instance_Property_Record
@@ -69,6 +74,8 @@ package body GNATCOLL.Scripts is
             Str : GNAT.Strings.String_Access;
          when Integers =>
             Int : Integer;
+         when Booleans =>
+            Bool : Boolean;
          when Consoles =>
             Console : Virtual_Console;
       end case;
@@ -76,8 +83,6 @@ package body GNATCOLL.Scripts is
 
    type Scalar_Properties is access all Scalar_Properties_Record'Class;
    overriding procedure Destroy (Prop : in out Scalar_Properties_Record);
-   overriding function Get_Instances
-     (Prop : Scalar_Properties_Record) return Instance_List_Access;
    --  See inherited documentation
 
    -----------------
@@ -859,7 +864,7 @@ package body GNATCOLL.Scripts is
          when Strings =>
             Free (Prop.Str);
 
-         when Integers | Consoles =>
+         when Integers | Consoles | Booleans =>
             null;
       end case;
    end Destroy;
@@ -873,21 +878,6 @@ package body GNATCOLL.Scripts is
    is
       pragma Unreferenced (Prop);
    begin
-      return null;
-   end Get_Instances;
-
-   -------------------
-   -- Get_Instances --
-   -------------------
-
-   function Get_Instances
-     (Prop : Scalar_Properties_Record) return Instance_List_Access is
-   begin
-      case Prop.Typ is
-         when Strings | Integers | Consoles =>
-            null;
-      end case;
-
       return null;
    end Get_Instances;
 
@@ -1063,19 +1053,18 @@ package body GNATCOLL.Scripts is
    --------------
 
    function Get_Data
-     (Instance : Class_Instance; Name : String) return User_Data_List
+     (Instance : access Class_Instance_Record'Class; Name : String)
+      return User_Data_List
    is
       D : User_Data_List;
    begin
-      if Instance.Initialized then
-         D := Instance.Data.Data.User_Data;
-         while D /= null loop
-            if D.Name = Name then
-               return D;
-            end if;
-            D := D.Next;
-         end loop;
-      end if;
+      D := Instance.User_Data;
+      while D /= null loop
+         if D.Name = Name then
+            return D;
+         end if;
+         D := D.Next;
+      end loop;
       return null;
    end Get_Data;
 
@@ -1086,15 +1075,27 @@ package body GNATCOLL.Scripts is
    procedure Set_Data
      (Instance : Class_Instance;
       Name     : String;
+      Property : Instance_Property_Record'Class) is
+   begin
+      Set_Data (Instance.Data.Data, Name, Property);
+   end Set_Data;
+
+   --------------
+   -- Set_Data --
+   --------------
+
+   procedure Set_Data
+     (Instance : access Class_Instance_Record'Class;
+      Name     : String;
       Property : Instance_Property_Record'Class)
    is
-      D        : User_Data_List := Instance.Data.Data.User_Data;
+      D        : User_Data_List := Instance.User_Data;
       Previous : User_Data_List;
    begin
       while D /= null loop
          if D.Name = Name then
             if Previous = null then
-               Instance.Data.Data.User_Data := D.Next;
+               Instance.User_Data := D.Next;
             else
                Previous.Next := D.Next;
             end if;
@@ -1105,10 +1106,10 @@ package body GNATCOLL.Scripts is
          D := D.Next;
       end loop;
 
-      Instance.Data.Data.User_Data := new User_Data'
+      Instance.User_Data := new User_Data'
         (Length => Name'Length,
          Name   => Name,
-         Next   => Instance.Data.Data.User_Data,
+         Next   => Instance.User_Data,
          Prop   => new Instance_Property_Record'Class'(Property));
    end Set_Data;
 
@@ -1119,9 +1120,7 @@ package body GNATCOLL.Scripts is
    procedure Set_Data
      (Instance : Class_Instance; Name : Class_Type; Value : String) is
    begin
-      Set_Data
-        (Instance, Get_Name (Name),
-         Scalar_Properties_Record'(Typ => Strings, Str => new String'(Value)));
+      Set_Data (Instance, Get_Name (Name), Create_Property (Value));
    end Set_Data;
 
    --------------
@@ -1131,10 +1130,75 @@ package body GNATCOLL.Scripts is
    procedure Set_Data
      (Instance : Class_Instance; Name : Class_Type; Value : Integer) is
    begin
-      Set_Data
-        (Instance, Get_Name (Name),
-         Scalar_Properties_Record'(Typ => Integers, Int => Value));
+      Set_Data (Instance, Get_Name (Name), Create_Property (Value));
    end Set_Data;
+
+   --------------
+   -- Set_Data --
+   --------------
+
+   procedure Set_Data
+     (Instance : Class_Instance; Name : Class_Type; Value : Boolean) is
+   begin
+      Set_Data (Instance, Get_Name (Name), Create_Property (Value));
+   end Set_Data;
+
+   ---------------------
+   -- Create_Property --
+   ---------------------
+
+   function Create_Property
+     (Val : Boolean) return Instance_Property_Record'Class is
+   begin
+      return Scalar_Properties_Record'(Typ => Booleans, Bool => Val);
+   end Create_Property;
+
+   ---------------------
+   -- Create_Property --
+   ---------------------
+
+   function Create_Property
+     (Val : Integer) return Instance_Property_Record'Class is
+   begin
+      return Scalar_Properties_Record'(Typ => Integers, Int => Val);
+   end Create_Property;
+
+   ---------------------
+   -- Create_Property --
+   ---------------------
+
+   function Create_Property
+     (Val : String) return Instance_Property_Record'Class is
+   begin
+      return Scalar_Properties_Record'
+        (Typ => Strings, Str => new String'(Val));
+   end Create_Property;
+
+   ---------------
+   -- As_String --
+   ---------------
+
+   function As_String (Prop : Instance_Property_Record'Class) return String is
+   begin
+      return Scalar_Properties_Record (Prop).Str.all;
+   end As_String;
+
+   --------------
+   -- Get_Data --
+   --------------
+
+   function Get_Data
+     (Instance : access Class_Instance_Record'Class;
+      Name     : String) return Instance_Property
+   is
+      D : constant User_Data_List := Get_Data (Instance, Name);
+   begin
+      if D = null then
+         return null;
+      else
+         return D.Prop;
+      end if;
+   end Get_Data;
 
    --------------
    -- Get_Data --
@@ -1144,12 +1208,11 @@ package body GNATCOLL.Scripts is
      (Instance : Class_Instance;
       Name     : String) return Instance_Property
    is
-      D : constant User_Data_List := Get_Data (Instance, Name);
    begin
-      if D = null then
-         return null;
+      if Instance.Initialized then
+         return Get_Data (Get_CIR (Instance), Name).Prop;
       else
-         return D.Prop;
+         return null;
       end if;
    end Get_Data;
 
@@ -1171,6 +1234,19 @@ package body GNATCOLL.Scripts is
    --------------
 
    function Get_Data
+     (Instance : Class_Instance; Name : Class_Type) return Boolean
+   is
+      Prop : constant Instance_Property :=
+               Get_Data (Instance, Get_Name (Name));
+   begin
+      return Scalar_Properties (Prop).Bool;
+   end Get_Data;
+
+   --------------
+   -- Get_Data --
+   --------------
+
+   function Get_Data
      (Instance : Class_Instance; Name : Class_Type) return String
    is
       Prop : constant Instance_Property :=
@@ -1178,6 +1254,48 @@ package body GNATCOLL.Scripts is
    begin
       return Scalar_Properties (Prop).Str.all;
    end Get_Data;
+
+   ------------------
+   -- Set_Property --
+   ------------------
+
+   procedure Set_Property
+     (Instance : Class_Instance; Name : String; Value : Integer)
+   is
+      CIR : constant Class_Instance_Record_Access := Get_CIR (Instance);
+   begin
+      if CIR /= null then
+         Set_Property (CIR, Name, Value);
+      end if;
+   end Set_Property;
+
+   ------------------
+   -- Set_Property --
+   ------------------
+
+   procedure Set_Property
+     (Instance : Class_Instance; Name : String; Value : Boolean)
+   is
+      CIR : constant Class_Instance_Record_Access := Get_CIR (Instance);
+   begin
+      if CIR /= null then
+         Set_Property (CIR, Name, Value);
+      end if;
+   end Set_Property;
+
+   ------------------
+   -- Set_Property --
+   ------------------
+
+   procedure Set_Property
+     (Instance : Class_Instance; Name : String; Value : String)
+   is
+      CIR : constant Class_Instance_Record_Access := Get_CIR (Instance);
+   begin
+      if CIR /= null then
+         Set_Property (CIR, Name, Value);
+      end if;
+   end Set_Property;
 
    ----------------
    -- Get_Script --
@@ -1269,15 +1387,15 @@ package body GNATCOLL.Scripts is
    --------------
 
    function Get_Data (Instance : Class_Instance) return Virtual_Console is
-      D : constant User_Data_List := Get_Data (Instance, "virtualconsole");
+      D : constant Instance_Property := Get_Data (Instance, "virtualconsole");
    begin
       if D = null
-        or else D.Prop.all not in Scalar_Properties_Record'Class
-        or else Scalar_Properties (D.Prop).Typ /= Consoles
+        or else D.all not in Scalar_Properties_Record'Class
+        or else Scalar_Properties (D).Typ /= Consoles
       then
          return null;
       else
-         return Scalar_Properties (D.Prop).Console;
+         return Scalar_Properties (D).Console;
       end if;
    end Get_Data;
 

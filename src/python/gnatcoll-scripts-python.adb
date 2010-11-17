@@ -105,6 +105,15 @@ package body GNATCOLL.Scripts.Python is
    overriding function Is_Subclass
      (Instance : access Python_Class_Instance_Record;
       Base     : String) return Boolean;
+   overriding procedure Set_Property
+     (Instance : access Python_Class_Instance_Record;
+      Name     : String; Value : Integer);
+   overriding procedure Set_Property
+     (Instance : access Python_Class_Instance_Record;
+      Name     : String; Value : Boolean);
+   overriding procedure Set_Property
+     (Instance : access Python_Class_Instance_Record;
+      Name     : String; Value : String);
    --  See doc from inherited subprogram
 
    procedure Set_CI (CI : Class_Instance);
@@ -2951,5 +2960,42 @@ package body GNATCOLL.Scripts.Python is
          end if;
       end if;
    end Set_Default_Console;
+
+   ------------------
+   -- Set_Property --
+   ------------------
+
+   overriding procedure Set_Property
+     (Instance : access Python_Class_Instance_Record;
+      Name     : String; Value : Integer)
+   is
+      Val : PyObject;
+   begin
+      Val := PyInt_FromLong (long (Value));
+      PyObject_SetAttrString (Instance.Data, Name, Val);
+      Py_DECREF (Val);
+   end Set_Property;
+
+   overriding procedure Set_Property
+     (Instance : access Python_Class_Instance_Record;
+      Name     : String; Value : Boolean)
+   is
+      Val : PyObject;
+   begin
+      Val := PyBool_FromBoolean (Value);
+      PyObject_SetAttrString (Instance.Data, Name, Val);
+      Py_DECREF (Val);
+   end Set_Property;
+
+   overriding procedure Set_Property
+     (Instance : access Python_Class_Instance_Record;
+      Name     : String; Value : String)
+   is
+      Val : PyObject;
+   begin
+      Val := PyString_FromString (Value);
+      PyObject_SetAttrString (Instance.Data, Name, Val);
+      Py_DECREF (Val);
+   end Set_Property;
 
 end GNATCOLL.Scripts.Python;

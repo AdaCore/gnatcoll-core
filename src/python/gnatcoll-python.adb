@@ -247,6 +247,29 @@ package body GNATCOLL.Python is
       return Internal (Obj) = 1;
    end PyFloat_Check;
 
+   ------------------------
+   -- PyBool_FromBoolean --
+   ------------------------
+
+   function PyBool_FromBoolean (Value : Boolean) return PyObject is
+      function PyTrue return PyObject;
+      pragma Import (C, PyTrue, "ada_py_true");
+
+      function PyFalse return PyObject;
+      pragma Import (C, PyFalse, "ada_py_false");
+
+      Result : PyObject;
+   begin
+      if Value then
+         Result := PyTrue;
+      else
+         Result := PyFalse;
+      end if;
+
+      Py_INCREF (Result);
+      return Result;
+   end PyBool_FromBoolean;
+
    ------------------
    -- PyBool_Check --
    ------------------
