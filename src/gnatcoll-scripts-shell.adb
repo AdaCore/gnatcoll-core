@@ -379,8 +379,6 @@ package body GNATCOLL.Scripts.Shell is
       Command : Command_Descr_Access)
    is
       Cmd    : GNAT.Strings.String_Access;
-      Min    : Natural := Command.Minimum_Args;
-      Max    : Natural := Command.Maximum_Args;
       Info_C : Command_Hash.Cursor;
       Info   : Command_Information_Access;
    begin
@@ -399,13 +397,6 @@ package body GNATCOLL.Scripts.Shell is
             Cmd := new String'
               (Get_Name (Command.Class) & "." & Command.Command);
             --  First parameter is always the instance
-
-            if not Command.Static_Method then
-               Min := Min + 1;
-               if Max /= Natural'Last then
-                  Max := Max + 1;
-               end if;
-            end if;
          end if;
       else
          Cmd := new String'(Command.Command);
@@ -420,8 +411,8 @@ package body GNATCOLL.Scripts.Shell is
 
       else
          Info := new Command_Information'
-           (Command         => Cmd,
-            Cmd             => Command);
+           (Command => Cmd,
+            Cmd     => Command);
          Include (Script.Commands_List, Cmd.all, Info);
       end if;
    end Register_Command;
@@ -744,6 +735,7 @@ package body GNATCOLL.Scripts.Shell is
       Data_C   : Command_Hash.Cursor;
       Data     : Command_Information_Access;
       Instance : Class_Instance;
+      Min, Max : Natural;
 
       Count    : Natural;
       Command  : constant String := Get_Command (CL);
@@ -775,9 +767,21 @@ package body GNATCOLL.Scripts.Shell is
       if Has_Element (Data_C) then
          Data := Element (Data_C);
 
-         if Data.Cmd.Minimum_Args <= Args_Length (CL)
-           and then Args_Length (CL) <= Data.Cmd.Maximum_Args
+         Min := Data.Cmd.Minimum_Args;
+         Max := Data.Cmd.Maximum_Args;
+
+         if Data.Cmd.Class /= No_Class
+           and then not Data.Cmd.Static_Method
+           and then Data.Cmd.Command /= Constructor_Method
+           and then Data.Cmd.Command /= Destructor_Method
          then
+            Min := Min + 1;
+            if Max /= Natural'Last then
+               Max := Max + 1;
+            end if;
+         end if;
+
+         if Min <= Args_Length (CL) and then Args_Length (CL) <= Max then
             Count := Args_Length (CL);
             if Data.Cmd.Command = Constructor_Method then
                Count := Count + 1;
