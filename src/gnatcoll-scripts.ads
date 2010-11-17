@@ -790,15 +790,27 @@ package GNATCOLL.Scripts is
    procedure Destroy (Script : access Scripting_Language_Record) is null;
    --  Destroy the scripting language and the memory it occupies.
 
+   type Command_Descr;
+   type Command_Descr_Access is access all Command_Descr;
+   type Command_Descr (Length : Natural) is record
+      Command         : String (1 .. Length);
+      Handler         : Module_Command_Function;
+      Class           : Class_Type := No_Class;
+      Static_Method   : Boolean := False;
+      Minimum_Args    : Natural := 0;
+      Maximum_Args    : Natural := 0;
+      Next            : Command_Descr_Access;
+   end record;
+
    procedure Register_Command
-     (Script       : access Scripting_Language_Record;
-      Command      : String;
-      Minimum_Args : Natural := 0;
-      Maximum_Args : Natural := 0;
-      Handler      : Module_Command_Function;
-      Class        : Class_Type := No_Class;
-      Class_Method : Boolean := False) is abstract;
-   --  See comment for Register_Command in the scripts repository.
+     (Script  : access Scripting_Language_Record;
+      Command : Command_Descr_Access) is abstract;
+   --  Register a new callback for a command.
+   --  Command will exist as long as Script, so it is safe (and recommended)
+   --  that script points to Command instead of duplicating the data. This
+   --  saves memory by sharing storage among all the scripting languages.
+   --  See also Register_Command applied to the script_repository for more
+   --  information.
 
    procedure Register_Class
      (Script : access Scripting_Language_Record;
@@ -986,7 +998,8 @@ package GNATCOLL.Scripts is
       Maximum_Args  : Natural    := 0;
       Handler       : Module_Command_Function;
       Class         : Class_Type := No_Class;
-      Static_Method : Boolean := False);
+      Static_Method : Boolean := False;
+      Language      : String := "");
    --  Add a new function to all currently registered script languages.
    --
    --  If Class is not No_Class, then this procedure creates a method for this
@@ -1032,6 +1045,9 @@ package GNATCOLL.Scripts is
    --
    --  If the command has some graphical output (dialog,...), it must run in
    --  a separate main loop (Gtk.Main.Gtk_Main or modal dialogs).
+   --
+   --  Language can be specified to restrict the command to a specific
+   --  scripting language.
 
    procedure Block_Commands
      (Repo  : access Scripts_Repository_Record'Class;
@@ -1154,8 +1170,9 @@ private
    type Scripts_Repository_Record is tagged record
       Scripting_Languages  : Scripting_Language_List :=
         new Scripting_Language_Array'(1 .. 0 => null);
+      Commands             : Command_Descr_Access;
       Classes              : Classes_Hash.Map;
-      Console_Class : Class_Type := No_Class;
+      Console_Class        : Class_Type := No_Class;
    end record;
 
 end GNATCOLL.Scripts;

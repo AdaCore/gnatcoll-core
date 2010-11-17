@@ -112,11 +112,7 @@ private
 
    type Command_Information is record
       Command         : GNAT.Strings.String_Access;
-      Short_Command   : GNAT.Strings.String_Access;
-      Minimum_Args    : Natural;
-      Maximum_Args    : Natural;
-      Command_Handler : Module_Command_Function;
-      Class           : Class_Type;
+      Cmd             : Command_Descr_Access;
    end record;
    type Command_Information_Access is access Command_Information;
    --  Description for each of the registered commands.
@@ -154,13 +150,8 @@ private
      (Script : access Shell_Scripting_Record) return Command_Line_Mode;
    overriding procedure Destroy (Script : access Shell_Scripting_Record);
    overriding procedure Register_Command
-     (Script        : access Shell_Scripting_Record;
-      Command       : String;
-      Minimum_Args  : Natural := 0;
-      Maximum_Args  : Natural := 0;
-      Handler       : Module_Command_Function;
-      Class         : Class_Type := No_Class;
-      Static_Method : Boolean := False);
+     (Script  : access Shell_Scripting_Record;
+      Command : Command_Descr_Access);
    overriding procedure Register_Class
      (Script : access Shell_Scripting_Record;
       Name   : String;

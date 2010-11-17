@@ -304,23 +304,27 @@ package body GNATCOLL.Scripts.Shell is
       Register_Scripting_Language (Repo, S);
 
       Register_Command
-        (S, "load",
+        (Repo, "load",
          Minimum_Args => 1,
          Maximum_Args => 1,
-         Handler      => Module_Command_Handler'Access);
+         Handler      => Module_Command_Handler'Access,
+         Language     => Shell_Name);
       Register_Command
-        (S, "echo",
+        (Repo, "echo",
          Minimum_Args => 0,
          Maximum_Args => Natural'Last,
-         Handler      => Module_Command_Handler'Access);
+         Handler      => Module_Command_Handler'Access,
+         Language     => Shell_Name);
       Register_Command
-        (S, "echo_error",
+        (Repo, "echo_error",
          Minimum_Args => 0,
          Maximum_Args => Natural'Last,
-         Handler      => Module_Command_Handler'Access);
+         Handler      => Module_Command_Handler'Access,
+         Language     => Shell_Name);
       Register_Command
-        (S, "clear_cache",
-         Handler => Module_Command_Handler'Access);
+        (Repo, "clear_cache",
+         Handler => Module_Command_Handler'Access,
+         Language     => Shell_Name);
    end Register_Shell_Scripting;
 
    -------------------
@@ -370,37 +374,33 @@ package body GNATCOLL.Scripts.Shell is
    -- Register_Command --
    ----------------------
 
-   procedure Register_Command
-     (Script        : access Shell_Scripting_Record;
-      Command       : String;
-      Minimum_Args  : Natural := 0;
-      Maximum_Args  : Natural := 0;
-      Handler       : Module_Command_Function;
-      Class         : Class_Type := No_Class;
-      Static_Method : Boolean := False)
+   overriding procedure Register_Command
+     (Script  : access Shell_Scripting_Record;
+      Command : Command_Descr_Access)
    is
       Cmd    : GNAT.Strings.String_Access;
-      Min    : Natural := Minimum_Args;
-      Max    : Natural := Maximum_Args;
+      Min    : Natural := Command.Minimum_Args;
+      Max    : Natural := Command.Maximum_Args;
       Info_C : Command_Hash.Cursor;
       Info   : Command_Information_Access;
    begin
-      if Command = "" then
+      if Command.Command = "" then
          return;
       end if;
 
-      if Class /= No_Class then
-         if Command = Constructor_Method then
-            Cmd := new String'(Get_Name (Class));
+      if Command.Class /= No_Class then
+         if Command.Command = Constructor_Method then
+            Cmd := new String'(Get_Name (Command.Class));
 
-         elsif Command = Destructor_Method then
-            Cmd := new String'(Get_Name (Class) & ".__delete");
+         elsif Command.Command = Destructor_Method then
+            Cmd := new String'(Get_Name (Command.Class) & ".__delete");
 
          else
-            Cmd := new String'(Get_Name (Class) & "." & Command);
+            Cmd := new String'
+              (Get_Name (Command.Class) & "." & Command.Command);
             --  First parameter is always the instance
 
-            if not Static_Method then
+            if not Command.Static_Method then
                Min := Min + 1;
                if Max /= Natural'Last then
                   Max := Max + 1;
@@ -408,7 +408,7 @@ package body GNATCOLL.Scripts.Shell is
             end if;
          end if;
       else
-         Cmd := new String'(Command);
+         Cmd := new String'(Command.Command);
       end if;
 
       Info_C := Find (Script.Commands_List, Cmd.all);
@@ -421,12 +421,7 @@ package body GNATCOLL.Scripts.Shell is
       else
          Info := new Command_Information'
            (Command         => Cmd,
-            Short_Command   => new String'(Command),
-            Minimum_Args    => Min,
-            Maximum_Args    => Max,
-            Class           => Class,
-            Command_Handler => Handler);
-
+            Cmd             => Command);
          Include (Script.Commands_List, Cmd.all, Info);
       end if;
    end Register_Command;
@@ -605,7 +600,6 @@ package body GNATCOLL.Scripts.Shell is
         (Command_Information, Command_Information_Access);
    begin
       Free (Com.Command);
-      Free (Com.Short_Command);
       Unchecked_Free (Com);
    end Free;
 
@@ -781,11 +775,11 @@ package body GNATCOLL.Scripts.Shell is
       if Has_Element (Data_C) then
          Data := Element (Data_C);
 
-         if Data.Minimum_Args <= Args_Length (CL)
-           and then Args_Length (CL) <= Data.Maximum_Args
+         if Data.Cmd.Minimum_Args <= Args_Length (CL)
+           and then Args_Length (CL) <= Data.Cmd.Maximum_Args
          then
             Count := Args_Length (CL);
-            if Data.Short_Command.all = Constructor_Method then
+            if Data.Cmd.Command = Constructor_Method then
                Count := Count + 1;
             end if;
 
@@ -799,8 +793,8 @@ package body GNATCOLL.Scripts.Shell is
 
                Callback.CL := Create ("");
 
-               if Data.Short_Command.all = Constructor_Method then
-                  Instance := New_Instance (Callback.Script, Data.Class);
+               if Data.Cmd.Command = Constructor_Method then
+                  Instance := New_Instance (Callback.Script, Data.Cmd.Class);
                   Append_Argument
                     (Callback.CL,
                      Name_From_Instance (Instance),
@@ -836,7 +830,7 @@ package body GNATCOLL.Scripts.Shell is
                   end;
                end loop;
 
-               Data.Command_Handler (Callback, Data.Short_Command.all);
+               Data.Cmd.Handler (Callback, Data.Cmd.Command);
 
                if Callback.Return_As_Error then
                   Errors.all := True;
@@ -849,7 +843,7 @@ package body GNATCOLL.Scripts.Shell is
                   end;
                end if;
 
-               if Data.Short_Command.all = Constructor_Method then
+               if Data.Cmd.Command = Constructor_Method then
                   Set_Return_Value (Callback, Instance);
                end if;
 

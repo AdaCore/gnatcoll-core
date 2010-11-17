@@ -114,16 +114,12 @@ package body GNATCOLL.Scripts.Python is
    -- Handler_Data --
    ------------------
 
-   type Handler_Data (Length : Natural) is record
-      Script                     : Python_Scripting;
-      Handler                    : Module_Command_Function;
-      Minimum_Args, Maximum_Args : Natural;
-      First_Arg_Is_Self          : Boolean := False;
-      Command                    : String (1 .. Length);
-      Class                      : Class_Type;
+   type Handler_Data is record
+      Script            : Python_Scripting;
+      Cmd               : Command_Descr_Access;
    end record;
    type Handler_Data_Access is access Handler_Data;
-   --  Information stores with each python function to call the right Ada
+   --  Information stored with each python function to call the right Ada
    --  subprogram.
 
    function Command_Name (Data : Handler_Data) return String;
@@ -259,10 +255,10 @@ package body GNATCOLL.Scripts.Python is
 
    function Command_Name (Data : Handler_Data) return String is
    begin
-      if Data.Class = No_Class then
-         return Data.Command;
+      if Data.Cmd.Class = No_Class then
+         return Data.Cmd.Command;
       else
-         return Data.Class.Name.all & "." & Data.Command;
+         return Data.Cmd.Class.Name.all & "." & Data.Cmd.Command;
       end if;
    end Command_Name;
 
@@ -469,11 +465,12 @@ package body GNATCOLL.Scripts.Python is
       --  interpreter itself)
 
       Register_Command
-        (Script,
+        (Repo,
          Command       => "exec_in_console",
          Handler       => Python_Global_Command_Handler'Access,
          Minimum_Args  => 1,
-         Maximum_Args  => 1);
+         Maximum_Args  => 1,
+         Language      => Python_Name);
    end Register_Python_Scripting;
 
    -----------------------------------
@@ -682,6 +679,7 @@ package body GNATCOLL.Scripts.Python is
       Size     : Integer := 0;
       Callback : Python_Callback_Data;
       Tmp      : Boolean;
+      First_Arg_Is_Self : Boolean;
       pragma Unreferenced (Tmp);
    begin
       if Active (Me_Stack) then
@@ -722,18 +720,21 @@ package body GNATCOLL.Scripts.Python is
             if S < 0 then
                raise Program_Error with
                  "Incorrect dictionary when calling function "
-                   & Handler.Command;
+                   & Handler.Cmd.Command;
             end if;
             Size := S + Size;
          end;
       end if;
 
-      if Handler.First_Arg_Is_Self then
+      First_Arg_Is_Self :=
+        Handler.Cmd.Class /= No_Class and then not Handler.Cmd.Static_Method;
+
+      if First_Arg_Is_Self then
          Size := Size - 1;  --  First param is always the instance
       end if;
 
       if Handler.Script.Finalized
-        and then Handler.Command /= Destructor_Method
+        and then Handler.Cmd.Command /= Destructor_Method
       then
          PyErr_SetString (Handler.Script.Exception_Unexpected,
                           "Application was already finalized");
@@ -753,25 +754,25 @@ package body GNATCOLL.Scripts.Python is
       --  the Class_Instance as done in the Constructor_Method handler.
 
       if Handler.Script.Ignore_Constructor
-        and then Handler.Command = Constructor_Method
+        and then Handler.Cmd.Command = Constructor_Method
       then
          Py_INCREF (Py_None);
          return Py_None;
       end if;
 
       --  Check number of arguments
-      if Handler.Minimum_Args > Size
-        or else Size > Handler.Maximum_Args
+      if Handler.Cmd.Minimum_Args > Size
+        or else Size > Handler.Cmd.Maximum_Args
       then
-         if Handler.Minimum_Args > Size then
+         if Handler.Cmd.Minimum_Args > Size then
             PyErr_SetString (Handler.Script.Exception_Missing_Args,
                              "Wrong number of parameters, expecting at least"
-                             & Handler.Minimum_Args'Img & ", received"
+                             & Handler.Cmd.Minimum_Args'Img & ", received"
                              & Size'Img);
          else
             PyErr_SetString (Handler.Script.Exception_Missing_Args,
                              "Wrong number of parameters, expecting at most"
-                             & Handler.Maximum_Args'Img & ", received"
+                             & Handler.Cmd.Maximum_Args'Img & ", received"
                              & Size'Img);
          end if;
          return null;
@@ -782,7 +783,7 @@ package body GNATCOLL.Scripts.Python is
       Callback.Return_Value := Py_None;
       Callback.Return_Dict  := null;
       Callback.Script       := Handler.Script;
-      Callback.First_Arg_Is_Self := Handler.First_Arg_Is_Self;
+      Callback.First_Arg_Is_Self := First_Arg_Is_Self;
       Py_INCREF (Callback.Return_Value);
 
       if Callback.Args /= null then
@@ -793,7 +794,7 @@ package body GNATCOLL.Scripts.Python is
          Py_INCREF (Callback.Kw);
       end if;
 
-      Handler.Handler.all (Callback, Handler.Command);
+      Handler.Cmd.Handler.all (Callback, Handler.Cmd.Command);
 
       --  This doesn't free the return value
       Free (Callback);
@@ -838,53 +839,42 @@ package body GNATCOLL.Scripts.Python is
    -- Register_Command --
    ----------------------
 
-   procedure Register_Command
-     (Script        : access Python_Scripting_Record;
-      Command       : String;
-      Minimum_Args  : Natural := 0;
-      Maximum_Args  : Natural := 0;
-      Handler       : Module_Command_Function;
-      Class         : Class_Type := No_Class;
-      Static_Method : Boolean := False)
+   overriding procedure Register_Command
+     (Script : access Python_Scripting_Record;
+      Cmd    : Command_Descr_Access)
    is
       H         : constant Handler_Data_Access := new Handler_Data'
-        (Length       => Command'Length,
-         Command      => Command,
-         Handler      => Handler,
-         Class        => Class,
-         Script       => Python_Scripting (Script),
-         First_Arg_Is_Self => Class /= No_Class and then not Static_Method,
-         Minimum_Args => Minimum_Args,
-         Maximum_Args => Maximum_Args);
+        (Cmd               => Cmd,
+         Script            => Python_Scripting (Script));
       User_Data : constant PyObject := PyCObject_FromVoidPtr
         (H.all'Address, Destroy_Handler_Data'Access);
       Klass     : PyObject;
       Def       : PyMethodDef;
    begin
-      if Class = No_Class then
+      if Cmd.Class = No_Class then
          Add_Function
            (Module => Script.Module,
-            Func   => Create_Method_Def (Command, First_Level'Access),
+            Func   => Create_Method_Def (Cmd.Command, First_Level'Access),
             Self   => User_Data);
 
       else
-         if Command = Constructor_Method then
+         if Cmd.Command = Constructor_Method then
             Def := Create_Method_Def ("__init__", First_Level'Access);
-         elsif Command = Addition_Method then
+         elsif Cmd.Command = Addition_Method then
             Def := Create_Method_Def ("__add__", First_Level'Access);
-         elsif Command = Substraction_Method then
+         elsif Cmd.Command = Substraction_Method then
             Def := Create_Method_Def ("__sub__", First_Level'Access);
-         elsif Command = Comparison_Method then
+         elsif Cmd.Command = Comparison_Method then
             Def := Create_Method_Def ("__cmp__", First_Level'Access);
-         elsif Command = Destructor_Method then
+         elsif Cmd.Command = Destructor_Method then
             Def := Create_Method_Def ("__del__", First_Level'Access);
          else
-            Def := Create_Method_Def (Command, First_Level'Access);
+            Def := Create_Method_Def (Cmd.Command, First_Level'Access);
          end if;
 
-         Klass := Lookup_Object (Script.Module, Get_Name (Class));
+         Klass := Lookup_Object (Script.Module, Get_Name (Cmd.Class));
 
-         if Static_Method then
+         if Cmd.Static_Method then
             Add_Static_Method
               (Class => Klass, Func => Def, Self => User_Data,
                Module => Script.Module);

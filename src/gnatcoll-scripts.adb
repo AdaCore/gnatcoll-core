@@ -99,10 +99,20 @@ package body GNATCOLL.Scripts is
    procedure Destroy (Repo : in out Scripts_Repository) is
       procedure Unchecked_Free is new Ada.Unchecked_Deallocation
         (Scripts_Repository_Record'Class, Scripts_Repository);
+      procedure Unchecked_Free is new Ada.Unchecked_Deallocation
+        (Command_Descr, Command_Descr_Access);
       C     : Classes_Hash.Cursor;
       Class : Class_Type;
+      D, D_Tmp : Command_Descr_Access;
    begin
       if Repo /= null then
+         D := Repo.Commands;
+         while D /= null loop
+            D_Tmp := D.Next;
+            Unchecked_Free (D);
+            D := D_Tmp;
+         end loop;
+
          if Repo.Scripting_Languages /= null then
             for L in Repo.Scripting_Languages'Range loop
                Destroy (Repo.Scripting_Languages (L));
@@ -386,9 +396,11 @@ package body GNATCOLL.Scripts is
       Maximum_Args  : Natural := 0;
       Handler       : Module_Command_Function;
       Class         : Class_Type := No_Class;
-      Static_Method : Boolean := False)
+      Static_Method : Boolean := False;
+      Language      : String := "")
    is
       Tmp : constant Scripting_Language_List := Repo.Scripting_Languages;
+      Cmd : Command_Descr_Access;
    begin
       if Command = Constructor_Method and then Class = No_Class then
          raise Program_Error
@@ -400,11 +412,28 @@ package body GNATCOLL.Scripts is
            with "Static method can only be created for classes";
       end if;
 
+      Cmd := new Command_Descr'
+        (Length        => Command'Length,
+         Command       => Command,
+         Handler       => Handler,
+         Class         => Class,
+         Static_Method => Static_Method,
+         Minimum_Args  => Minimum_Args,
+         Maximum_Args  => Maximum_Args,
+         Next          => null);
+
       for T in Tmp'Range loop
-         Register_Command
-           (Tmp (T), Command,
-            Minimum_Args, Maximum_Args, Handler, Class, Static_Method);
+         if Language = ""
+           or else Get_Name (Tmp (T)) = Language
+         then
+            Register_Command (Tmp (T), Cmd);
+         end if;
       end loop;
+
+      --  Only add it to the list afterward, so that Register_Command is not
+      --  tempted to look at Next
+      Cmd.Next := Repo.Commands;
+      Repo.Commands := Cmd;
    end Register_Command;
 
    ---------------

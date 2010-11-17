@@ -1,7 +1,7 @@
 -----------------------------------------------------------------------
 --                               G N A T C O L L                     --
 --                                                                   --
---                      Copyright (C) 2003-2009, AdaCore             --
+--                      Copyright (C) 2003-2010, AdaCore             --
 --                                                                   --
 -- GPS is free  software;  you can redistribute it and/or modify  it --
 -- under the terms of the GNU General Public License as published by --
@@ -135,16 +135,17 @@ package body GNATCOLL.Scripts.Python.Gtkada is
    -------------------------
 
    procedure Add_PyWidget_Method
-     (Script : access Scripting_Language_Record'Class;
+     (Repo   : access Scripts_Repository_Record'Class;
       Class  : Class_Type)
    is
    begin
       if PyGtk_Initialized then
          Register_Command
-           (Script,
+           (Repo,
             Command      => "pywidget",
             Handler      => On_PyWidget'Access,
-            Class        => Class);
+            Class        => Class,
+            Language     => Python_Name);
       end if;
    end Add_PyWidget_Method;
 

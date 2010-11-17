@@ -118,13 +118,8 @@ private
    overriding procedure Block_Commands
      (Script : access Python_Scripting_Record; Block  : Boolean);
    overriding procedure Register_Command
-     (Script        : access Python_Scripting_Record;
-      Command       : String;
-      Minimum_Args  : Natural := 0;
-      Maximum_Args  : Natural := 0;
-      Handler       : Module_Command_Function;
-      Class         : Class_Type := No_Class;
-      Static_Method : Boolean := False);
+     (Script : access Python_Scripting_Record;
+      Cmd    : Command_Descr_Access);
    overriding procedure Register_Class
      (Script : access Python_Scripting_Record;
       Name   : String;
