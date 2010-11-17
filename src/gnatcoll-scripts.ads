@@ -248,6 +248,9 @@ package GNATCOLL.Scripts is
    --  It is recommended that Names be a global constant, which you can also
    --  use when registering the command, through Parameter_Names_To_Usage, so
    --  that the documentation remains up-to-date.
+   --
+   --  Names should not include "self" in the case of methods. This is an
+   --  implicit parameter in most languages.
 
    function Get_Script (Data : Callback_Data) return Scripting_Language
       is abstract;

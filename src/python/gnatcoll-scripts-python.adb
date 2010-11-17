@@ -79,9 +79,6 @@ package body GNATCOLL.Scripts.Python is
    -- Python_Callback_Data --
    --------------------------
 
-   procedure Unchecked_Free is new Ada.Unchecked_Deallocation
-     (PyObject_Array, PyObject_Array_Access);
-
    procedure Prepare_Value_Key
      (Data   : in out Python_Callback_Data'Class;
       Key    : PyObject;
@@ -525,8 +522,6 @@ package body GNATCOLL.Scripts.Python is
 
       --  Do not free the return value, this is taken care of later on by all
       --  callers
-
-      Unchecked_Free (Data.Kw_Params);
    end Free;
 
    --------------
@@ -580,7 +575,6 @@ package body GNATCOLL.Scripts.Python is
       end if;
       D.Return_Value := null;
       D.Return_Dict  := null;
-      D.Kw_Params    := null;
       return D;
    end Clone;
 
@@ -601,8 +595,7 @@ package body GNATCOLL.Scripts.Python is
          Return_Dict      => null,
          Has_Return_Value => False,
          Return_As_List   => False,
-         Kw_Params        => null,
-         Is_Method        => False);
+         First_Arg_Is_Self        => False);
    begin
       Py_INCREF (Callback.Kw);
       return Callback;
@@ -789,7 +782,7 @@ package body GNATCOLL.Scripts.Python is
       Callback.Return_Value := Py_None;
       Callback.Return_Dict  := null;
       Callback.Script       := Handler.Script;
-      Callback.Is_Method    := Handler.First_Arg_Is_Self;
+      Callback.First_Arg_Is_Self := Handler.First_Arg_Is_Self;
       Py_INCREF (Callback.Return_Value);
 
       if Callback.Args /= null then
@@ -1707,79 +1700,113 @@ package body GNATCOLL.Scripts.Python is
    procedure Name_Parameters
      (Data  : in out Python_Callback_Data; Names : Cst_Argument_List)
    is
-      S : Integer := 0;
-      First : Integer := 0;
+      First     : Integer := 0;
+      Old_Args  : constant PyObject := Data.Args;
+      Item      : PyObject;
+      Nargs     : Natural := 0;  --  Number of entries in Data.Args
+      Nkeywords : Integer;       --  Number of unhandled entries in Data.Kw
    begin
       if Data.Kw = null then
          return;
       end if;
 
+      Nkeywords := PyDict_Size (Data.Kw);
+
       if Data.Args /= null then
-         S := PyObject_Size (Data.Args);
+         Nargs := PyObject_Size (Data.Args);
       end if;
 
-      if Data.Is_Method then
-         First := First + 1;
+      --  Modify Data.Args in place, so we need to resize it appropriately.
+      --  Then, through a single loop, we fill it.
+
+      if Data.First_Arg_Is_Self then
+         First := 1;
       end if;
 
-      --  Parameters can not be both positional and named
+      Data.Args := PyTuple_New (Names'Length + First);
+      if First > 0 then
+         --  Copy "self"
 
-      for Index in First .. S - 1 loop
-         if PyDict_GetItemString
-           (Data.Kw, Names (Index + Names'First - First).all) /= null
-         then
-            Set_Error_Msg
-              (Data, "Parameter cannot be both positional "
-               & " and named: " & Names (Index + Names'First).all);
-            raise Invalid_Parameter;
+         if Old_Args /= null then
+            Item := PyObject_GetItem (Old_Args, 0);
+         else
+            Item := PyDict_GetItemString (Data.Kw, "self");
+            if Item = null then
+               First := 0;  --  Unbound method ?
+            end if;
          end if;
-      end loop;
 
-      --  Check that there are no unknown keywords
-
-      declare
-         Pos : Integer := 0;
-         Key, Value : PyObject;
-      begin
-         loop
-            PyDict_Next (Data.Kw, Pos, Key, Value);
-            exit when Pos = -1;
-
-            declare
-               S : constant String := PyString_AsString (Key);
-               Found : Boolean := False;
-            begin
-               for N in Names'Range loop
-                  if Names (N).all = S then
-                     Found := True;
-                     exit;
-                  end if;
-               end loop;
-
-               if not Found then
-                  Set_Error_Msg
-                    (Data, "Invalid keyword parameter: " & S);
-                  raise Invalid_Parameter;
-               end if;
-            end;
-         end loop;
-      end;
-
-      --  Assign parameters
-
-      Unchecked_Free (Data.Kw_Params);
-      Data.Kw_Params := new PyObject_Array (1 .. Names'Length + First);
-
-      if Data.Is_Method then
-         Data.Kw_Params (Data.Kw_Params'First) :=
-           PyObject_GetItem (Data.Args, 0);
+         if Item /= null then
+            PyTuple_SetItem (Data.Args, 0, Item);
+            Py_INCREF (Item);
+         end if;
       end if;
 
-      for P in Data.Kw_Params'First + First .. Data.Kw_Params'Last loop
-         Data.Kw_Params (P) := PyDict_GetItemString
-           (Data.Kw,
-            Names (P - Data.Kw_Params'First - First + Names'First).all);
+      for N in Names'Range loop
+         --  Do we have a corresponding keyword parameter ?
+         Item := PyDict_GetItemString (Data.Kw, Names (N).all);
+
+         if Item /= null then
+            Nkeywords := Nkeywords - 1;
+
+            if N - Names'First + First < Nargs then
+               Set_Error_Msg
+                 (Data, "Parameter cannot be both positional ("
+                  & Image (N - Names'First + 1 + First, 0) & Nargs'Img
+                  & Names'First'Img
+                  & ") and named: " & Names (N).all);
+               Py_DECREF (Old_Args);
+               raise Invalid_Parameter;
+            end if;
+
+         elsif N - Names'First + First < Nargs then
+            Item := PyObject_GetItem (Old_Args, N - Names'First + First);
+
+         else
+            Item := Py_None;
+         end if;
+
+         PyTuple_SetItem (Data.Args, N - Names'First + First, Item);
+         Py_INCREF (Item);
       end loop;
+
+      Py_DECREF (Old_Args);
+
+      --  Are there unused keyword arguments ?
+
+      if Nkeywords > 0 then
+         declare
+            Pos : Integer := 0;
+            Key, Value : PyObject;
+         begin
+            loop
+               PyDict_Next (Data.Kw, Pos, Key, Value);
+               exit when Pos = 1;
+
+               declare
+                  K : constant String := PyString_AsString (Key);
+                  Found : Boolean := False;
+               begin
+                  for N in Names'Range loop
+                     if Names (N).all = K then
+                        Found := True;
+                        exit;
+                     end if;
+                  end loop;
+
+                  if not Found then
+                     Set_Error_Msg (Data, "Invalid keyword parameter: " & K);
+                     raise Invalid_Parameter;
+                  end if;
+               end;
+            end loop;
+         end;
+      end if;
+
+      --  Get rid of the old arguments
+
+      Py_DECREF (Data.Kw);
+      Data.Kw := null;
    end Name_Parameters;
 
    ---------------
@@ -1792,27 +1819,18 @@ package body GNATCOLL.Scripts.Python is
    is
       Obj : PyObject := null;
    begin
-      --  Check keywords parameters. As a special case, we do not check when
-      --  getting the first parameter of a method, which is always the
-      --  instance, since the callback will generally want to do this in the
-      --  common part, before the command-specific parts.
-      if (N /= 1 or else not Data.Is_Method)
-        and then Data.Kw_Params = null
-        and then Data.Kw /= null
-      then
-         PyErr_SetString
-           (Data.Script.Exception_Misc,
-            "Keyword parameters not supported");
-         raise Invalid_Parameter;
-      elsif Data.Args /= null and then N <= PyObject_Size (Data.Args) then
+      if Data.Args /= null and then N <= PyObject_Size (Data.Args) then
          Obj := PyObject_GetItem (Data.Args, N - 1);
-      elsif Data.Kw_Params /= null and then N <= Data.Kw_Params'Last then
-         Obj := Data.Kw_Params (N);
       end if;
 
-      if Obj = null then
-         raise No_Such_Parameter;
-      elsif Obj = Py_None then
+      if Obj = null and then Data.Kw /= null then
+         --  We haven't called Name_Parameters
+         PyErr_SetString
+           (Data.Script.Exception_Misc, "Keyword parameters not supported");
+         raise Invalid_Parameter;
+      end if;
+
+      if Obj = null or else Obj = Py_None then
          raise No_Such_Parameter;
       end if;
       return Obj;
@@ -1825,31 +1843,20 @@ package body GNATCOLL.Scripts.Python is
       Success : out Boolean)
    is
    begin
-      --  Check keywords parameters. As a special case, we do not check when
-      --  getting the first parameter of a method, which is always the
-      --  instance, since the callback will generally want to do this in the
-      --  common part, before the command-specific parts.
-      if (N /= 1 or else not Data.Is_Method)
-        and then Data.Kw_Params = null
-        and then Data.Kw /= null
-      then
-         PyErr_SetString
-           (Data.Script.Exception_Misc,
-            "Keyword parameters not supported");
-         raise Invalid_Parameter;
-      elsif Data.Args /= null and then N <= PyObject_Size (Data.Args) then
+      Result := null;
+
+      if Data.Args /= null and then N <= PyObject_Size (Data.Args) then
          Result := PyObject_GetItem (Data.Args, N - 1);
-      elsif Data.Kw_Params /= null and then N <= Data.Kw_Params'Last then
-         Result := Data.Kw_Params (N);
       end if;
 
-      if Result = null then
-         Success := False;
-      elsif Result = Py_None then
-         Success := False;
-      else
-         Success := True;
+      if Result = null and then Data.Kw /= null then
+         --  We haven't called Name_Parameters
+         PyErr_SetString
+           (Data.Script.Exception_Misc, "Keyword parameters not supported");
+         raise Invalid_Parameter;
       end if;
+
+      Success := Result /= null and then Result /= Py_None;
    end Get_Param;
 
    -------------
@@ -1866,7 +1873,7 @@ package body GNATCOLL.Scripts.Python is
       Iter    : PyObject;
    begin
       List.Script    := Data.Script;
-      List.Is_Method := False;
+      List.First_Arg_Is_Self := False;
 
       Get_Param (Data, N, Item, Success);
       if not Success then
@@ -2663,7 +2670,7 @@ package body GNATCOLL.Scripts.Python is
       List    : Python_Callback_Data;
    begin
       List.Script    := Python_Scripting (Script);
-      List.Is_Method := False;
+      List.First_Arg_Is_Self := False;
 
       if Class = No_Class then
          List.Args      := PyList_New;

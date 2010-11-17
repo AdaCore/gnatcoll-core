@@ -208,24 +208,25 @@ private
       return List_Instance'Class;
    --  See doc from inherited subprograms
 
-   type PyObject_Array is array (Natural range <>) of PyObject;
-   type PyObject_Array_Access is access PyObject_Array;
-
    type Python_Callback_Data is new Callback_Data with record
       Script           : Python_Scripting;
 
       Args, Kw         : PyObject;
-      --  Args is a tuple, a list, or any iterable
+      --  Args is a tuple, a list, or any iterable.
+      --  These are the arguments passed by python. If Name_Parameters was
+      --  called, these are modified in place: Kw is reset to null, and its
+      --  contents merged into Args. Args is resized appropriately (to the
+      --  number of arguments passed to Name_Parameters). This cannot be used
+      --  for functions with a variable number of parameters.
 
-      Return_Value     : PyObject;
-      Return_Dict      : PyObject;
-      Has_Return_Value : Boolean := False;
-      Return_As_List   : Boolean := False;
-      Kw_Params        : PyObject_Array_Access;
-      Is_Method        : Boolean;
+      Return_Value      : PyObject;
+      Return_Dict       : PyObject;
+      Has_Return_Value  : Boolean := False;
+      Return_As_List    : Boolean := False;
+
+      First_Arg_Is_Self : Boolean;
+      --  True if the first argument is "self", ie we are calling a method
    end record;
-   --  Kw_Params is used to handle keyword parameters. They map from positional
-   --  index to the actual object.
 
    overriding function Clone
      (Data : Python_Callback_Data) return Callback_Data'Class;
