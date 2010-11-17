@@ -98,7 +98,7 @@ private
       --  Buffer for the command, to be added in front of any command before
       --  executing. This is used for multi-line input
 
-      In_New_Instance          : Boolean := False;
+      Ignore_Constructor          : Boolean := False;
       --  Whether we are creating a new instance of a class.
       --  This is used to disable the call to __init__ (for backward
       --  compatibility and because we wouldn't know how to pass extra

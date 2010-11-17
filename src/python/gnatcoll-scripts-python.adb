@@ -121,7 +121,7 @@ package body GNATCOLL.Scripts.Python is
       Script                     : Python_Scripting;
       Handler                    : Module_Command_Function;
       Minimum_Args, Maximum_Args : Natural;
-      Is_Method                  : Boolean := False;
+      First_Arg_Is_Self          : Boolean := False;
       Command                    : String (1 .. Length);
       Class                      : Class_Type;
    end record;
@@ -735,7 +735,7 @@ package body GNATCOLL.Scripts.Python is
          end;
       end if;
 
-      if Handler.Is_Method then
+      if Handler.First_Arg_Is_Self then
          Size := Size - 1;  --  First param is always the instance
       end if;
 
@@ -759,7 +759,7 @@ package body GNATCOLL.Scripts.Python is
       --  relies on the user calling New_Instance and immediately initializing
       --  the Class_Instance as done in the Constructor_Method handler.
 
-      if Handler.Script.In_New_Instance
+      if Handler.Script.Ignore_Constructor
         and then Handler.Command = Constructor_Method
       then
          Py_INCREF (Py_None);
@@ -789,7 +789,7 @@ package body GNATCOLL.Scripts.Python is
       Callback.Return_Value := Py_None;
       Callback.Return_Dict  := null;
       Callback.Script       := Handler.Script;
-      Callback.Is_Method    := Handler.Is_Method;
+      Callback.Is_Method    := Handler.First_Arg_Is_Self;
       Py_INCREF (Callback.Return_Value);
 
       if Callback.Args /= null then
@@ -860,7 +860,7 @@ package body GNATCOLL.Scripts.Python is
          Handler      => Handler,
          Class        => Class,
          Script       => Python_Scripting (Script),
-         Is_Method    => Class /= No_Class and then not Static_Method,
+         First_Arg_Is_Self => Class /= No_Class and then not Static_Method,
          Minimum_Args => Minimum_Args,
          Maximum_Args => Maximum_Args);
       User_Data : constant PyObject := PyCObject_FromVoidPtr
@@ -2711,12 +2711,12 @@ package body GNATCOLL.Scripts.Python is
       --  ??? This API does not permit passing extra parameters to the call
 
       Args := PyTuple_New (0);
-      Script.In_New_Instance := True;
+      Script.Ignore_Constructor := True;
       Obj := PyObject_Call
         (Object => Klass,
          Args   => Args,
          Kw     => null);   --  NOT: Py_None, which is not a valid dictionary
-      Script.In_New_Instance := False;
+      Script.Ignore_Constructor := False;
       Py_DECREF (Args);
 
       if Obj = null then
@@ -2737,7 +2737,7 @@ package body GNATCOLL.Scripts.Python is
 
    exception
       when others =>
-         Script.In_New_Instance := False;
+         Script.Ignore_Constructor := False;
          raise;
    end New_Instance;
 
