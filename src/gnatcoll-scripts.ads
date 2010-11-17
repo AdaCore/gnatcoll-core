@@ -790,17 +790,32 @@ package GNATCOLL.Scripts is
    procedure Destroy (Script : access Scripting_Language_Record) is null;
    --  Destroy the scripting language and the memory it occupies.
 
+   type Param_Descr is private;
+   type Param_Array is array (Natural range <>) of Param_Descr;
+   type Param_Array_Access is access all Param_Array;
+   No_Params : constant Param_Array;
+   --  Description of a parameter
+
+   function Param
+     (Name : String; Optional : Boolean := False) return Param_Descr;
+   --  Describe one of the parameters of a script function.
+
    type Command_Descr;
    type Command_Descr_Access is access all Command_Descr;
    type Command_Descr (Length : Natural) is record
       Command         : String (1 .. Length);
       Handler         : Module_Command_Function;
       Class           : Class_Type := No_Class;
+      Params          : Param_Array_Access;
       Static_Method   : Boolean := False;
       Minimum_Args    : Natural := 0;
       Maximum_Args    : Natural := 0;
       Next            : Command_Descr_Access;
    end record;
+   --  Params is left to null if the user did not specify the name of
+   --  parameters in the call to Register_Command (this is different from
+   --  having a non-null but empty Params, which indicates there are no
+   --  parameters).
 
    procedure Register_Command
      (Script  : access Scripting_Language_Record;
@@ -994,6 +1009,14 @@ package GNATCOLL.Scripts is
    procedure Register_Command
      (Repo          : access Scripts_Repository_Record'Class;
       Command       : String;
+      Params        : Param_Array;
+      Handler       : Module_Command_Function;
+      Class         : Class_Type := No_Class;
+      Static_Method : Boolean := False;
+      Language      : String := "");
+   procedure Register_Command
+     (Repo          : access Scripts_Repository_Record'Class;
+      Command       : String;
       Minimum_Args  : Natural    := 0;
       Maximum_Args  : Natural    := 0;
       Handler       : Module_Command_Function;
@@ -1001,6 +1024,11 @@ package GNATCOLL.Scripts is
       Static_Method : Boolean := False;
       Language      : String := "");
    --  Add a new function to all currently registered script languages.
+   --
+   --  The first version is recommended. By contrast, you will need to call
+   --  Name_Parameters yourself in the Handler for the second version.
+   --
+   --  Params should not be freed by the caller.
    --
    --  If Class is not No_Class, then this procedure creates a method for this
    --  class, for the languages for which this is appropriate. An extra
@@ -1101,6 +1129,13 @@ private
       Name : String (1 .. Length);
       Prop : Instance_Property;
    end record;
+
+   type Param_Descr is record
+      Name     : GNATCOLL.Utils.Cst_String_Access;
+      Optional : Boolean := False;
+   end record;
+
+   No_Params : constant Param_Array := (1 .. 0 => <>);
 
    function Get_Data
      (Instance : Class_Instance; Name : String) return User_Data_List;

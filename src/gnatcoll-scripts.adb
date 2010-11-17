@@ -43,6 +43,18 @@ package body GNATCOLL.Scripts is
    function To_Address is new Ada.Unchecked_Conversion
      (Class_Instance_Record_Access, System.Address);
 
+   procedure Internal_Register_Command
+     (Repo          : access Scripts_Repository_Record'Class;
+      Command       : String;
+      Minimum_Args  : Natural := 0;
+      Maximum_Args  : Natural := 0;
+      Params        : Param_Array_Access := null;
+      Handler       : Module_Command_Function;
+      Class         : Class_Type := No_Class;
+      Static_Method : Boolean := False;
+      Language      : String := "");
+   --  Internal version of Register_Command
+
    -----------------------------------
    -- Data stored in class_instance --
    -----------------------------------
@@ -385,6 +397,18 @@ package body GNATCOLL.Scripts is
       end loop;
    end Block_Commands;
 
+   -----------
+   -- Param --
+   -----------
+
+   function Param
+     (Name : String; Optional : Boolean := False) return Param_Descr is
+   begin
+      return Param_Descr'
+        (Name     => new String'(Name),
+         Optional => Optional);
+   end Param;
+
    ----------------------
    -- Register_Command --
    ----------------------
@@ -392,8 +416,42 @@ package body GNATCOLL.Scripts is
    procedure Register_Command
      (Repo          : access Scripts_Repository_Record'Class;
       Command       : String;
+      Params        : Param_Array;
+      Handler       : Module_Command_Function;
+      Class         : Class_Type := No_Class;
+      Static_Method : Boolean := False;
+      Language      : String := "")
+   is
+      Min : Natural := Params'Length;
+   begin
+      for P in Params'Range loop
+         if Params (P).Optional then
+            Min := Min - 1;
+         end if;
+      end loop;
+
+      Internal_Register_Command
+        (Repo,
+         Command       => Command,
+         Minimum_Args  => Min,
+         Maximum_Args  => Params'Length,
+         Params        => new Param_Array'(Params),
+         Handler       => Handler,
+         Class         => Class,
+         Static_Method => Static_Method,
+         Language      => Language);
+   end Register_Command;
+
+   -------------------------------
+   -- Internal_Register_Command --
+   -------------------------------
+
+   procedure Internal_Register_Command
+     (Repo          : access Scripts_Repository_Record'Class;
+      Command       : String;
       Minimum_Args  : Natural := 0;
       Maximum_Args  : Natural := 0;
+      Params        : Param_Array_Access := null;
       Handler       : Module_Command_Function;
       Class         : Class_Type := No_Class;
       Static_Method : Boolean := False;
@@ -417,6 +475,7 @@ package body GNATCOLL.Scripts is
          Command       => Command,
          Handler       => Handler,
          Class         => Class,
+         Params        => Params,
          Static_Method => Static_Method,
          Minimum_Args  => Minimum_Args,
          Maximum_Args  => Maximum_Args,
@@ -434,6 +493,33 @@ package body GNATCOLL.Scripts is
       --  tempted to look at Next
       Cmd.Next := Repo.Commands;
       Repo.Commands := Cmd;
+   end Internal_Register_Command;
+
+   ----------------------
+   -- Register_Command --
+   ----------------------
+
+   procedure Register_Command
+     (Repo          : access Scripts_Repository_Record'Class;
+      Command       : String;
+      Minimum_Args  : Natural := 0;
+      Maximum_Args  : Natural := 0;
+      Handler       : Module_Command_Function;
+      Class         : Class_Type := No_Class;
+      Static_Method : Boolean := False;
+      Language      : String := "")
+   is
+   begin
+      Internal_Register_Command
+        (Repo,
+         Command       => Command,
+         Minimum_Args  => Minimum_Args,
+         Maximum_Args  => Maximum_Args,
+         Params        => null,
+         Handler       => Handler,
+         Class         => Class,
+         Static_Method => Static_Method,
+         Language      => Language);
    end Register_Command;
 
    ---------------

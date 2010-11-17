@@ -46,6 +46,10 @@ package body GNATCOLL.Scripts.Python is
    procedure Set_Item (Args : PyObject; T : Integer; Item : PyObject);
    --  Change the T-th item in Args
 
+   procedure Name_Parameters
+     (Data  : in out Python_Callback_Data; Params : Param_Array);
+   --  Internal version of Name_Parameters
+
    ------------------------
    -- Python_Subprograms --
    ------------------------
@@ -792,6 +796,10 @@ package body GNATCOLL.Scripts.Python is
 
       if Callback.Kw /= null then
          Py_INCREF (Callback.Kw);
+      end if;
+
+      if Handler.Cmd.Params /= null then
+         Name_Parameters (Callback, Handler.Cmd.Params.all);
       end if;
 
       Handler.Cmd.Handler.all (Callback, Handler.Cmd.Command);
@@ -1688,7 +1696,7 @@ package body GNATCOLL.Scripts.Python is
    ---------------------
 
    procedure Name_Parameters
-     (Data  : in out Python_Callback_Data; Names : Cst_Argument_List)
+     (Data  : in out Python_Callback_Data; Params : Param_Array)
    is
       First     : Integer := 0;
       Old_Args  : constant PyObject := Data.Args;
@@ -1713,7 +1721,7 @@ package body GNATCOLL.Scripts.Python is
          First := 1;
       end if;
 
-      Data.Args := PyTuple_New (Names'Length + First);
+      Data.Args := PyTuple_New (Params'Length + First);
       if First > 0 then
          --  Copy "self"
 
@@ -1732,31 +1740,31 @@ package body GNATCOLL.Scripts.Python is
          end if;
       end if;
 
-      for N in Names'Range loop
+      for N in Params'Range loop
          --  Do we have a corresponding keyword parameter ?
-         Item := PyDict_GetItemString (Data.Kw, Names (N).all);
+         Item := PyDict_GetItemString (Data.Kw, Params (N).Name.all);
 
          if Item /= null then
             Nkeywords := Nkeywords - 1;
 
-            if N - Names'First + First < Nargs then
+            if N - Params'First + First < Nargs then
                Set_Error_Msg
                  (Data, "Parameter cannot be both positional ("
-                  & Image (N - Names'First + 1 + First, 0) & Nargs'Img
-                  & Names'First'Img
-                  & ") and named: " & Names (N).all);
+                  & Image (N - Params'First + 1 + First, 0) & Nargs'Img
+                  & Params'First'Img
+                  & ") and named: " & Params (N).Name.all);
                Py_DECREF (Old_Args);
                raise Invalid_Parameter;
             end if;
 
-         elsif N - Names'First + First < Nargs then
-            Item := PyObject_GetItem (Old_Args, N - Names'First + First);
+         elsif N - Params'First + First < Nargs then
+            Item := PyObject_GetItem (Old_Args, N - Params'First + First);
 
          else
             Item := Py_None;
          end if;
 
-         PyTuple_SetItem (Data.Args, N - Names'First + First, Item);
+         PyTuple_SetItem (Data.Args, N - Params'First + First, Item);
          Py_INCREF (Item);
       end loop;
 
@@ -1777,8 +1785,8 @@ package body GNATCOLL.Scripts.Python is
                   K : constant String := PyString_AsString (Key);
                   Found : Boolean := False;
                begin
-                  for N in Names'Range loop
-                     if Names (N).all = K then
+                  for N in Params'Range loop
+                     if Params (N).Name.all = K then
                         Found := True;
                         exit;
                      end if;
@@ -1797,6 +1805,23 @@ package body GNATCOLL.Scripts.Python is
 
       Py_DECREF (Data.Kw);
       Data.Kw := null;
+   end Name_Parameters;
+
+   ---------------------
+   -- Name_Parameters --
+   ---------------------
+
+   procedure Name_Parameters
+     (Data  : in out Python_Callback_Data; Names : Cst_Argument_List)
+   is
+      Params : Param_Array (Names'Range);
+   begin
+      for N in Names'Range loop
+         Params (N) := (Name     => Names (N),
+                        Optional => True);
+      end loop;
+
+      Name_Parameters (Data, Params);
    end Name_Parameters;
 
    ---------------

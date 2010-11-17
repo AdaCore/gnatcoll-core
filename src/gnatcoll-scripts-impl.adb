@@ -134,18 +134,11 @@ package body GNATCOLL.Scripts.Impl is
      (Data : in out Callback_Data'Class; Command : String)
    is
       type Mode_Kinds is (Text, Log, Error);
-
-      Text_Cst : aliased constant String := "text";
-      Size_Cst : aliased constant String := "size";
-      Mode_Cst : aliased constant String := "mode";
       Inst     : constant Class_Instance := Nth_Arg (Data, 1, Any_Class);
       Console  : Virtual_Console;
       Mode     : Mode_Kinds := Text;
    begin
       if Command = "write" then
-         Name_Parameters (Data, (1 => Text_Cst'Unchecked_Access,
-                                 2 => Mode_Cst'Unchecked_Access));
-
          if Number_Of_Arguments (Data) = 3 then
             begin
                Mode := Mode_Kinds'Value (Nth_Arg (Data, 3));
@@ -189,7 +182,6 @@ package body GNATCOLL.Scripts.Impl is
          Set_Return_Value (Data, False);
 
       elsif Command = "read" then
-         Name_Parameters (Data, (1 => Size_Cst'Unchecked_Access));
          Console := Get_Data (Inst);
          if Console /= null then
             Set_Return_Value
@@ -202,7 +194,6 @@ package body GNATCOLL.Scripts.Impl is
          end if;
 
       elsif Command = "readline" then
-         Name_Parameters (Data, (1 => Size_Cst'Unchecked_Access));
          Console := Get_Data (Inst);
          if Console /= null then
             Set_Return_Value
@@ -226,8 +217,8 @@ package body GNATCOLL.Scripts.Impl is
    begin
       Register_Command
         (Repo, "write",
-         Minimum_Args => 1,
-         Maximum_Args => 2,
+         Params       => (Param ("text"),
+                          Param ("mode", Optional => True)),
          Class        => Class,
          Handler      => Console_Command_Handler'Access);
       Register_Command
@@ -243,11 +234,13 @@ package body GNATCOLL.Scripts.Impl is
          Class        => Class,
          Handler      => Console_Command_Handler'Access);
       Register_Command
-        (Repo, "read", 0, 1,
+        (Repo, "read",
+         Params       => (1 => Param ("size", Optional => True)),
          Class        => Class,
          Handler      => Console_Command_Handler'Access);
       Register_Command
-        (Repo, "readline", 0, 1,
+        (Repo, "readline",
+         Params       => (1 => Param ("size", Optional => True)),
          Class        => Class,
          Handler      => Console_Command_Handler'Access);
    end Register_Console_Class;

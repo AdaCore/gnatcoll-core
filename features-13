@@ -28,6 +28,12 @@ NF-13-JB15-010 Support for python new-style classes (2010-11-15)
    support for multiple-inheritance through super(), support for properties,
    support for __new__, compatibility with Python >= 3.0,...
 
+NF-13-JB12-019 Naming parameters in Scripts.Register_Command (2010-11-17)
+
+   When a command is exported to a scripting language, it is now possible
+   to name its arguments in the Register_Command call, as opposed to doing
+   it in the handler itself.
+
 NF-13-JA25-011 SQL: connect to postgreSQL without SSL (2010-11-05)
 
    It is now possible to specify the SSL mode when connecting to a
