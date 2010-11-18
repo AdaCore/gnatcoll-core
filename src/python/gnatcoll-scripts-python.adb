@@ -33,11 +33,10 @@ with Ada.Strings.Unbounded;      use Ada.Strings.Unbounded;
 with Interfaces.C.Strings;       use Interfaces.C, Interfaces.C.Strings;
 with GNAT.IO;                    use GNAT.IO;
 with GNAT.Strings;               use GNAT.Strings;
+with GNATCOLL.Any_Types.Python;
 with GNATCOLL.Scripts.Impl;      use GNATCOLL.Scripts, GNATCOLL.Scripts.Impl;
 with GNATCOLL.Traces;            use GNATCOLL.Traces;
 with System;                     use System;
-
-with GNATCOLL.Any_Types.Python;
 
 package body GNATCOLL.Scripts.Python is
    Me       : constant Trace_Handle := Create ("PYTHON");
@@ -856,20 +855,20 @@ package body GNATCOLL.Scripts.Python is
       Result  : out PyObject)
    is
    begin
+      --  Return_Value will be set to null in case of error
+      Data.Return_Value := Py_None;
+      Py_INCREF (Py_None);
+
       Cmd.all (Data, Command);
 
       Free (Data);   --  Doesn't free the return value
 
       if Data.Return_Dict /= null then
-         Py_XDECREF (Data.Return_Value);  --  No effect if not set
+         Py_XDECREF (Data.Return_Value);
          Result := Data.Return_Dict;
 
-      elsif Data.Return_Value /= null then
-         Result := Data.Return_Value;
-
       else
-         Py_INCREF (Py_None);
-         Result := Py_None;
+         Result := Data.Return_Value;  --  might be null for an exception
       end if;
 
    exception
@@ -2584,10 +2583,7 @@ package body GNATCOLL.Scripts.Python is
 
    procedure Setup_Return_Value (Data : in out Python_Callback_Data'Class) is
    begin
-      if Data.Return_Value /= null then
-         Py_DECREF (Data.Return_Value);
-      end if;
-
+      Py_XDECREF (Data.Return_Value);
       Data.Has_Return_Value := True;
       Data.Return_Value := null;
    end Setup_Return_Value;

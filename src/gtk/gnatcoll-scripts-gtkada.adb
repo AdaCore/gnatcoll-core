@@ -1,7 +1,7 @@
 -----------------------------------------------------------------------
 --                               G N A T C O L L                     --
 --                                                                   --
---                      Copyright (C) 2003-2008, AdaCore             --
+--                      Copyright (C) 2003-2010, AdaCore             --
 --                                                                   --
 -- GPS is free  software;  you can redistribute it and/or modify  it --
 -- under the terms of the GNU General Public License as published by --
@@ -63,9 +63,7 @@ package body GNATCOLL.Scripts.Gtkada is
       --  Obj has already been reset to null when
       --  On_Widget_Data_Destroyed has been called.
 
-      if Prop.Obj /= null then
-         Prop.Obj := null;
-      end if;
+      Prop.Obj := null;
    end Destroy;
 
    ------------------------------
