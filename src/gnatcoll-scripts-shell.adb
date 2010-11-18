@@ -401,6 +401,20 @@ package body GNATCOLL.Scripts.Shell is
       end;
    end List_Commands;
 
+   -----------------------
+   -- Register_Property --
+   -----------------------
+
+   overriding procedure Register_Property
+     (Script : access Shell_Scripting_Record;
+      Prop   : Property_Descr_Access)
+   is
+      pragma Unreferenced (Script, Prop);
+   begin
+      --  All the work is done in Execute_Command
+      null;
+   end Register_Property;
+
    ----------------------
    -- Register_Command --
    ----------------------
@@ -798,7 +812,7 @@ package body GNATCOLL.Scripts.Shell is
 
       if Command (Command'First) = '@' then
          Min := 1;
-         Max := 1;
+         Max := 2;
          Found := True;
       else
          Data_C := Find (Script.Commands_List, Command);
@@ -880,14 +894,69 @@ package body GNATCOLL.Scripts.Shell is
 
                if Data = null then
                   --  Accessing a field
+                  Instance := Nth_Arg (Callback, 1, Any_Class);
+
+                  --  To match python, we first check for simple properties
+
                   declare
                      Prop : constant Instance_Property :=
                        Get_Data
-                         (Nth_Arg (Callback, 1, Any_Class),
+                         (Instance,
                           Cst_Prefix
                           & Command (Command'First + 1 .. Command'Last));
+                     P : Property_Descr_Access;
                   begin
-                     Set_Return_Value (Callback, As_String (Prop.all));
+                     if Prop /= null then
+                        Trace (Me, "A simple property");
+                        if Number_Of_Arguments (Callback) = 2 then
+                           Errors.all := True;
+                           return "Property is read-only: "
+                             & Command (Command'First + 1 .. Command'Last);
+                        end if;
+
+                        Set_Return_Value (Callback, As_String (Prop.all));
+
+                     else
+                        Trace (Me, "A setter/getter property args="
+                               & Number_Of_Arguments (Callback)'Img);
+                        --  Does this correspond to a setter/getter property ?
+
+                        P := Script.Repo.Properties;
+                        while P /= null loop
+                           exit when P.Class =
+                             Shell_Class_Instance (Get_CIR (Instance)).Class
+                             and then P.Name =
+                               Command (Command'First + 1 .. Command'Last);
+                           P := P.Next;
+                        end loop;
+
+                        if P = null then
+                           Errors.all := True;
+                           return "Command not recognized: " & Command;
+                        end if;
+
+                        if Number_Of_Arguments (Callback) = 1 then
+                           if P.Getter = null then
+                              Trace (Me, "Property is read-only");
+                              Errors.all := True;
+                              return "Property is write-only: "
+                                & Command (Command'First + 1 .. Command'Last);
+                           end if;
+
+                           P.Getter (Callback, P.Name);
+                           --  Already set the return value, nothing else to do
+
+                        else
+                           if P.Setter = null then
+                              Errors.all := True;
+                              return "Property is read-only: "
+                                & Command (Command'First + 1 .. Command'Last);
+                           end if;
+
+                           P.Setter (Callback, P.Name);
+                           --  Already set the value, nothing else to do
+                        end if;
+                     end if;
                   end;
 
                else

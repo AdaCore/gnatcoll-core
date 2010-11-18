@@ -50,6 +50,28 @@ package body GNATCOLL.Scripts.Python is
      (Data  : in out Python_Callback_Data; Params : Param_Array);
    --  Internal version of Name_Parameters
 
+   type Property_User_Data_Record is record
+      Script : Python_Scripting;
+      Prop   : Property_Descr_Access;
+   end record;
+   type Property_User_Data is access all Property_User_Data_Record;
+   function Convert is new Ada.Unchecked_Conversion
+     (System.Address, Property_User_Data);
+   function Convert is new Ada.Unchecked_Conversion
+     (Property_User_Data, System.Address);
+   --  Subprograms needed to support the user data passed to the Property
+   --  setters and getters
+
+   procedure Run_Callback
+     (Script  : Python_Scripting;
+      Cmd     : Module_Command_Function;
+      Command : String;
+      Data    : in out Python_Callback_Data'Class;
+      Result  : out PyObject);
+   --  Return Cmd and pass (Data, Command) parameters to it.
+   --  This properly handles returned value, exceptions and python errors.
+   --  This also freed the memory used by Data
+
    ------------------------
    -- Python_Subprograms --
    ------------------------
@@ -164,6 +186,16 @@ package body GNATCOLL.Scripts.Python is
    procedure Setup_Return_Value (Data : in out Python_Callback_Data'Class);
    --  Mark Data as containing a return value, and free the previous value if
    --  there is any
+
+   function First_Level_Getter
+     (Obj : PyObject; Closure : System.Address) return PyObject;
+   pragma Convention (C, First_Level_Getter);
+   --  Handles getters for descriptor objects
+
+   function First_Level_Setter
+     (Obj, Value : PyObject; Closure : System.Address) return Integer;
+   pragma Convention (C, First_Level_Setter);
+   --  Handles setters for descriptor objects
 
    procedure Trace_Dump (Name : String; Obj : PyObject);
    pragma Unreferenced (Trace_Dump);
@@ -693,6 +725,7 @@ package body GNATCOLL.Scripts.Python is
       Callback : Python_Callback_Data;
       Tmp      : Boolean;
       First_Arg_Is_Self : Boolean;
+      Result   : PyObject;
       pragma Unreferenced (Tmp);
    begin
       if Active (Me_Stack) then
@@ -793,64 +826,187 @@ package body GNATCOLL.Scripts.Python is
 
       Callback.Args         := Args;
       Callback.Kw           := Kw;
-      Callback.Return_Value := Py_None;
+      Callback.Return_Value := null;
       Callback.Return_Dict  := null;
       Callback.Script       := Handler.Script;
       Callback.First_Arg_Is_Self := First_Arg_Is_Self;
-      Py_INCREF (Callback.Return_Value);
 
-      if Callback.Args /= null then
-         Py_INCREF (Callback.Args);
-      end if;
-
-      if Callback.Kw /= null then
-         Py_INCREF (Callback.Kw);
-      end if;
+      Py_XINCREF (Callback.Args);
+      Py_XINCREF (Callback.Kw);
 
       if Handler.Cmd.Params /= null then
          Name_Parameters (Callback, Handler.Cmd.Params.all);
       end if;
 
-      Handler.Cmd.Handler.all (Callback, Handler.Cmd.Command);
+      Run_Callback
+        (Handler.Script, Handler.Cmd.Handler, Handler.Cmd.Command, Callback,
+         Result);
+      return Result;
+   end First_Level;
 
-      --  This doesn't free the return value
-      Free (Callback);
+   ------------------
+   -- Run_Callback --
+   ------------------
 
-      if Callback.Return_Dict /= null then
-         if Callback.Return_Value /= null then
-            Py_DECREF (Callback.Return_Value);
-         end if;
-         return Callback.Return_Dict;
+   procedure Run_Callback
+     (Script  : Python_Scripting;
+      Cmd     : Module_Command_Function;
+      Command : String;
+      Data    : in out Python_Callback_Data'Class;
+      Result  : out PyObject)
+   is
+   begin
+      Cmd.all (Data, Command);
+
+      Free (Data);   --  Doesn't free the return value
+
+      if Data.Return_Dict /= null then
+         Py_XDECREF (Data.Return_Value);  --  No effect if not set
+         Result := Data.Return_Dict;
+
+      elsif Data.Return_Value /= null then
+         Result := Data.Return_Value;
 
       else
-         return Callback.Return_Value;
+         Py_INCREF (Py_None);
+         Result := Py_None;
       end if;
 
    exception
       when E : Invalid_Parameter =>
-         if not Callback.Has_Return_Value
-           or else Callback.Return_Value /= null
+         if not Data.Has_Return_Value
+           or else Data.Return_Value /= null
          then
             PyErr_SetString
-              (Handler.Script.Exception_Invalid_Arg, Exception_Message (E));
+              (Script.Exception_Invalid_Arg, Exception_Message (E));
          end if;
 
-         Free (Callback);
-         return null;
+         Free (Data);
+         Result := null;
 
       when E : others =>
-         if not Callback.Has_Return_Value
-           or else Callback.Return_Value /= null
+         if not Data.Has_Return_Value
+           or else Data.Return_Value /= null
          then
             PyErr_SetString
-              (Handler.Script.Exception_Unexpected,
+              (Script.Exception_Unexpected,
                "unexpected internal exception "
                & Exception_Information (E));
          end if;
 
-         Free (Callback);
-         return null;
-   end First_Level;
+         Free (Data);
+         Result := null;
+   end Run_Callback;
+
+   ------------------------
+   -- First_Level_Getter --
+   ------------------------
+
+   function First_Level_Getter
+     (Obj : PyObject; Closure : System.Address) return PyObject
+   is
+      Prop     : constant Property_User_Data := Convert (Closure);
+      Callback : Python_Callback_Data;
+      Args     : PyObject;
+      Result   : PyObject;
+   begin
+      Args := PyTuple_New (1);
+
+      Py_INCREF (Obj);
+      PyTuple_SetItem (Args, 0, Obj);
+
+      Callback :=
+        (Script            => Prop.Script,
+         Args              => Args,   --  Now owned by Callback
+         Kw                => null,
+         Return_Value      => null,
+         Return_Dict       => null,
+         Has_Return_Value  => False,
+         Return_As_List    => False,
+         First_Arg_Is_Self => False);
+
+      Run_Callback (Prop.Script, Prop.Prop.Getter, Prop.Prop.Name, Callback,
+                    Result);
+      return Result;
+   end First_Level_Getter;
+
+   ------------------------
+   -- First_Level_Setter --
+   ------------------------
+
+   function First_Level_Setter
+     (Obj, Value : PyObject; Closure : System.Address) return Integer
+   is
+      Prop     : constant Property_User_Data := Convert (Closure);
+      Callback : Python_Callback_Data;
+      Args     : PyObject;
+      Result   : PyObject;
+   begin
+      Args := PyTuple_New (2);
+
+      Py_INCREF (Obj);
+      PyTuple_SetItem (Args, 0, Obj);
+
+      Py_INCREF (Value);
+      PyTuple_SetItem (Args, 1, Value);
+
+      Callback :=
+        (Script            => Prop.Script,
+         Args              => Args,  --  Now owned by Callback
+         Kw                => null,
+         Return_Value      => null,
+         Return_Dict       => null,
+         Has_Return_Value  => False,
+         Return_As_List    => False,
+         First_Arg_Is_Self => False);
+      Run_Callback
+        (Prop.Script, Prop.Prop.Getter, Prop.Prop.Name, Callback, Result);
+
+      if Result = null then
+         return 1;
+      else
+         Py_DECREF (Result);
+         return 0;
+      end if;
+   end First_Level_Setter;
+
+   -----------------------
+   -- Register_Property --
+   -----------------------
+
+   overriding procedure Register_Property
+     (Script : access Python_Scripting_Record;
+      Prop   : Property_Descr_Access)
+   is
+      Klass   : PyObject;
+      Ignored : Boolean;
+      pragma Unreferenced (Ignored);
+
+      Setter : C_Setter := First_Level_Setter'Access;
+      Getter : C_Getter := First_Level_Getter'Access;
+
+      H : constant Property_User_Data := new Property_User_Data_Record'
+        (Script => Python_Scripting (Script),
+         Prop   => Prop);
+      --  ??? Memory leak. We do not know when H is no longer needed
+
+   begin
+      if Prop.Setter = null then
+         Setter := null;
+      end if;
+
+      if Prop.Getter = null then
+         Getter := null;
+      end if;
+
+      Klass := Lookup_Object (Script.Module, Get_Name (Prop.Class));
+      Ignored := PyDescr_NewGetSet
+        (Typ     => Klass,
+         Name    => Prop.Name,
+         Setter  => Setter,
+         Getter  => Getter,
+         Closure => Convert (H));
+   end Register_Property;
 
    ----------------------
    -- Register_Command --

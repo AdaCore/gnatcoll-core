@@ -809,6 +809,34 @@ package body GNATCOLL.Python is
    end Add_Class_Method;
 
    -----------------------
+   -- PyDescr_NewGetSet --
+   -----------------------
+
+   function PyDescr_NewGetSet
+     (Typ     : PyObject;
+      Name    : String;
+      Setter  : C_Setter := null;
+      Getter  : C_Getter := null;
+      Doc     : String   := "";
+      Closure : System.Address := System.Null_Address) return Boolean
+   is
+      function To_Callback is new Standard.Ada.Unchecked_Conversion
+        (C_Getter, C_Callback);
+      function To_Callback is new Standard.Ada.Unchecked_Conversion
+        (C_Setter, C_Callback);
+
+      function Internal
+        (Typ : PyObject; Name : chars_ptr;
+         Setter, Getter : C_Callback; Doc : chars_ptr;
+         Closure : System.Address) return Integer;
+      pragma Import (C, Internal, "ada_pydescr_newGetSet");
+   begin
+      return Internal
+        (Typ, New_String (Name), To_Callback (Setter),
+         To_Callback (Getter), New_String (Doc), Closure) /= 0;
+   end PyDescr_NewGetSet;
+
+   -----------------------
    -- Create_Method_Def --
    -----------------------
 

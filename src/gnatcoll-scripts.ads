@@ -524,8 +524,8 @@ package GNATCOLL.Scripts is
    --       c.id = 2
    --  is valid, but will have no effect on the Ada side.
    --
-   --  If you want true read-only properties, you need to use the other version
-   --  of Set_Property through getters and setters.
+   --  If you want true read-only properties, you need to use Register_Property
+   --  through getters and setters.
 
    --------------------
    -- Instance lists --
@@ -887,6 +887,34 @@ package GNATCOLL.Scripts is
    --  See also Register_Command applied to the script_repository for more
    --  information.
 
+   type Property_Descr;
+   type Property_Descr_Access is access all Property_Descr;
+   type Property_Descr (Length : Natural) is record
+      Name    : String (1 .. Length);
+      Class   : Class_Type;
+      Setter  : Module_Command_Function;
+      Getter  : Module_Command_Function;
+      Next    : Property_Descr_Access;
+   end record;
+   --  The setter passes two parameters: first one is the instance, second one
+   --  is the value of the property. Note that the property is untyped: you
+   --  might have to try the various Nth_Arg to find out which type the user
+   --  has passed. You can use Set_Error_Message if the property does not have
+   --  the expected type.
+   --
+   --  The getter passes one parameter in Callback, which is the instance on
+   --  which the property applies.
+   --  It should call Set_Return_Value to return the value of the property.
+   --
+   --  You can potentially use the same callback in both cases, and count the
+   --  number of arguments to find out whether the user is querying or setting
+   --  the property.
+
+   procedure Register_Property
+     (Script   : access Scripting_Language_Record;
+      Prop     : Property_Descr_Access) is abstract;
+   --  See documentation of Register_Property applied on the Scripts_Repository
+
    procedure Register_Class
      (Script : access Scripting_Language_Record;
       Name   : String;
@@ -1137,6 +1165,34 @@ package GNATCOLL.Scripts is
    --  Language can be specified to restrict the command to a specific
    --  scripting language.
 
+   procedure Register_Property
+     (Repo     : access Scripts_Repository_Record'Class;
+      Name     : String;
+      Class    : Class_Type;
+      Setter   : Module_Command_Function := null;
+      Getter   : Module_Command_Function := null);
+   --  Defines a property which is accessed through methods.
+   --  If Setter is null, the property is read-only.
+   --  If Getter is null, the property is write-only.
+   --
+   --  A property is very similar to two functions, but the syntax might be
+   --  different. For instance:
+   --    - In python:
+   --        c = Console()       # Create instance
+   --        c.msg = "message"   # Calls the setter
+   --        print c.msg         # Calls the getter
+   --      A function would have been:
+   --        c.set_msg("message")
+   --        print c.get_msg()
+   --
+   --    - In shell:
+   --        Console             # create instance
+   --        @msg %1 "message"   # Calls the setter
+   --        @msg %2             # Calls the getter
+   --      A function would have been:
+   --        Console.set_msg %1 "message"
+   --        Console.get_msg %2
+
    procedure Block_Commands
      (Repo  : access Scripts_Repository_Record'Class;
       Block : Boolean);
@@ -1262,6 +1318,7 @@ private
       Scripting_Languages  : Scripting_Language_List :=
         new Scripting_Language_Array'(1 .. 0 => null);
       Commands             : Command_Descr_Access;
+      Properties           : Property_Descr_Access;
       Classes              : Classes_Hash.Map;
       Console_Class        : Class_Type := No_Class;
    end record;

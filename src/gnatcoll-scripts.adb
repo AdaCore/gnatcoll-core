@@ -118,9 +118,12 @@ package body GNATCOLL.Scripts is
         (Scripts_Repository_Record'Class, Scripts_Repository);
       procedure Unchecked_Free is new Ada.Unchecked_Deallocation
         (Command_Descr, Command_Descr_Access);
+      procedure Unchecked_Free is new Ada.Unchecked_Deallocation
+        (Property_Descr, Property_Descr_Access);
       C     : Classes_Hash.Cursor;
       Class : Class_Type;
       D, D_Tmp : Command_Descr_Access;
+      Prop, P_Tmp : Property_Descr_Access;
    begin
       if Repo /= null then
          D := Repo.Commands;
@@ -128,6 +131,13 @@ package body GNATCOLL.Scripts is
             D_Tmp := D.Next;
             Unchecked_Free (D);
             D := D_Tmp;
+         end loop;
+
+         Prop := Repo.Properties;
+         while Prop /= null loop
+            P_Tmp := Prop.Next;
+            Unchecked_Free (Prop);
+            Prop := P_Tmp;
          end loop;
 
          if Repo.Scripting_Languages /= null then
@@ -526,6 +536,43 @@ package body GNATCOLL.Scripts is
          Static_Method => Static_Method,
          Language      => Language);
    end Register_Command;
+
+   -----------------------
+   -- Register_Property --
+   -----------------------
+
+   procedure Register_Property
+     (Repo     : access Scripts_Repository_Record'Class;
+      Name     : String;
+      Class    : Class_Type;
+      Setter   : Module_Command_Function := null;
+      Getter   : Module_Command_Function := null)
+   is
+      Tmp  : constant Scripting_Language_List := Repo.Scripting_Languages;
+      Prop : Property_Descr_Access;
+   begin
+      if Setter = null and then Getter = null then
+         raise Program_Error
+           with "A property must have at least a getter or a setter";
+      end if;
+
+      Prop := new Property_Descr'
+        (Length        => Name'Length,
+         Name          => Name,
+         Class         => Class,
+         Getter        => Getter,
+         Setter        => Setter,
+         Next          => null);
+
+      for T in Tmp'Range loop
+         Register_Property (Tmp (T), Prop);
+      end loop;
+
+      --  Only add it to the list afterward, so that Register_Command is not
+      --  tempted to look at Next
+      Prop.Next := Repo.Properties;
+      Repo.Properties := Prop;
+   end Register_Property;
 
    ---------------
    -- New_Class --
@@ -1208,9 +1255,14 @@ package body GNATCOLL.Scripts is
      (Instance : Class_Instance;
       Name     : String) return Instance_Property
    is
+      U : User_Data_List := null;
    begin
       if Instance.Initialized then
-         return Get_Data (Get_CIR (Instance), Name).Prop;
+         U := Get_Data (Get_CIR (Instance), Name);
+      end if;
+
+      if U /= null then
+         return U.Prop;
       else
          return null;
       end if;

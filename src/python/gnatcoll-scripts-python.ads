@@ -120,6 +120,9 @@ private
    overriding procedure Register_Command
      (Script : access Python_Scripting_Record;
       Cmd    : Command_Descr_Access);
+   overriding procedure Register_Property
+     (Script : access Python_Scripting_Record;
+      Prop   : Property_Descr_Access);
    overriding procedure Register_Class
      (Script : access Python_Scripting_Record;
       Name   : String;

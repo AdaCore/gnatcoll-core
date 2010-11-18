@@ -424,3 +424,30 @@ ada_type_new (PyTypeObject* meta, char* name, PyObject* bases, PyObject* dict)
 
   return result;
 }
+
+int
+ada_pydescr_newGetSet (PyTypeObject* type,
+		       char*         name,
+		       setter        set,
+		       getter        get,
+		       char*         doc,
+		       void*         closure)
+{
+  struct PyGetSetDef *descr =
+     (struct PyGetSetDef*)malloc (sizeof (struct PyGetSetDef));
+  PyObject* prop;
+
+  descr->name    = name;
+  descr->get     = get;
+  descr->set     = set;
+  descr->doc     = doc;
+  descr->closure = closure;
+
+  prop = PyDescr_NewGetSet (type, descr);
+  if (prop == NULL) {
+    return 0;
+  } else {
+    PyObject_SetAttrString ((PyObject*)type, name, prop);
+    return 1;
+  }
+}

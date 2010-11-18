@@ -870,6 +870,38 @@ package GNATCOLL.Python is
    --  Return the function object associated with the method. That is the code
    --  that is actually executed when the method is called
 
+   -----------------
+   -- Descriptors --
+   -----------------
+   --  Descriptors are an advanced feature of python, used as the underlying
+   --  capability for bounded methods, properties,...
+   --  Basically, when a field in an install is a descriptor, its value is
+   --  read from a Getter, instead of directly. Likewise it is set through a
+   --  Setter.
+
+   type C_Getter is access function
+     (Obj : PyObject; Closure : System.Address) return PyObject;
+   pragma Convention (C, C_Getter);
+   type C_Setter is access function
+     (Obj     : PyObject;
+      Prop    : PyObject;
+      Closure : System.Address) return Integer;
+   pragma Convention (C, C_Setter);
+   --  Closure is some custom data you have specified in the call to
+   --  Create_GetSetDef
+
+   function PyDescr_NewGetSet
+     (Typ     : PyObject;
+      Name    : String;
+      Setter  : C_Setter := null;
+      Getter  : C_Getter := null;
+      Doc     : String   := "";
+      Closure : System.Address := System.Null_Address) return Boolean;
+   --  Register a new property (accessed through setters and getters) in the
+   --  specified Typ. The property is immediately added to the dictionary.
+   --  False is returned if the property could not be added.
+   --  The Closure will be passed as is to Setter and Getter.
+
    ------------------------------------
    -- Creating and declaring methods --
    ------------------------------------
@@ -1013,7 +1045,7 @@ package GNATCOLL.Python is
      (Obj   : System.Address;
       Destr : PyCObject_Destructor := null)
       return PyObject;
-   --  Create a new PyCObject that encapsulate Obj. Dest is called when the
+   --  Create a new PyCObject that encapsulate Obj. Destr is called when the
    --  object is reclaimed, unless it is null.
    --  Returns a newly referenced object.
 
