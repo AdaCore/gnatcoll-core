@@ -611,8 +611,8 @@ with "@":
 
 @CODESAMPLE{
 Shell> Base arg1 arg2   # Build new instance
-Shell> @id %1           # Access its "id" field
-Shell> @id %1 5         # Set its "id" field
+Shell> @@id %1           # Access its "id" field
+Shell> @@id %1 5         # Set its "id" field
 }
 
 Some commands are automatically added to the shell when this scripting
