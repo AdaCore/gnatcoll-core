@@ -1078,8 +1078,16 @@ package GNATCOLL.Scripts is
    Constructor_Method  : constant String;
    Addition_Method     : constant String;
    Substraction_Method : constant String;
-   Comparison_Method   : constant String;
    Destructor_Method   : constant String;
+
+   Comparison_Method   : constant String;
+   --  Should return -1, 0 or 1 depending on whether A<B, A==B or A>B
+
+   Equal_Method        : constant String;
+   --  Should return a boolean, testing for equality.
+   --  Note that in python, at least, definining this will not automatically
+   --  define the inequality, so it might be better to use Comparison_Method
+   --  instead.
 
    procedure Destroy (Repo : in out Scripts_Repository);
    --  Free all memory associated with the repository
@@ -1224,6 +1232,7 @@ private
    Substraction_Method : constant String := "-";
    Comparison_Method   : constant String := "<=>";
    Destructor_Method   : constant String := "<@destructor@>";
+   Equal_Method        : constant String := "==";
 
    type Virtual_Console_Record is abstract tagged record
       Hide_Output     : Boolean := False;

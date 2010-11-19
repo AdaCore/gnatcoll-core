@@ -1038,6 +1038,8 @@ package body GNATCOLL.Scripts.Python is
             Def := Create_Method_Def ("__sub__", First_Level'Access);
          elsif Cmd.Command = Comparison_Method then
             Def := Create_Method_Def ("__cmp__", First_Level'Access);
+         elsif Cmd.Command = Equal_Method then
+            Def := Create_Method_Def ("__eq__", First_Level'Access);
          elsif Cmd.Command = Destructor_Method then
             Def := Create_Method_Def ("__del__", First_Level'Access);
          else
