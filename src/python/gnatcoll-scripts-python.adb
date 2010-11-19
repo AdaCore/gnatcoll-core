@@ -91,6 +91,9 @@ package body GNATCOLL.Scripts.Python is
       Args       : Callback_Data'Class) return Any_Type;
    overriding function Execute
      (Subprogram : access Python_Subprogram_Record;
+      Args       : Callback_Data'Class) return Class_Instance;
+   overriding function Execute
+     (Subprogram : access Python_Subprogram_Record;
       Args       : Callback_Data'Class)
       return GNAT.Strings.String_List;
    overriding procedure Free (Subprogram : in out Python_Subprogram_Record);
@@ -137,12 +140,13 @@ package body GNATCOLL.Scripts.Python is
       Name     : String; Value : String);
    --  See doc from inherited subprogram
 
-   procedure Set_CI (CI : Class_Instance);
+   procedure Set_CI (CI : in out Class_Instance);
    function Get_CI
      (Script : Python_Scripting; Object : PyObject) return Class_Instance;
    --  Set or retrieve the Class_Instance associated with a python object.
    --  In the case of Get, if the object is not already associated with an
    --  class_instance, a new one is created.
+   --  This adopts Object, no need to DECREF it later on
 
    ------------------
    -- Handler_Data --
@@ -2450,10 +2454,7 @@ package body GNATCOLL.Scripts.Python is
       if not Python_Scripting (Inst.Script).Finalized then
          --  During global finalization of the program, Python itself has been
          --  terminated, so we do not need to do anything
-
-         if Inst.Data /= null then
-            Py_DECREF (Inst.Data);
-         end if;
+         Py_XDECREF (Inst.Data);
       end if;
 
       Decref (Class_Instance_Record (Inst.all)'Access);
@@ -2465,6 +2466,8 @@ package body GNATCOLL.Scripts.Python is
 
    procedure Incref (Inst : access Python_Class_Instance_Record) is
    begin
+      Assert (Me, Inst /= null, "Null instance passed to Incref");
+      Assert (Me, Inst.Data /= null, "Instance improperly initialized");
       Py_INCREF (Inst.Data);
       Incref (Class_Instance_Record (Inst.all)'Access);
    end Incref;
@@ -2494,7 +2497,7 @@ package body GNATCOLL.Scripts.Python is
    -- Set_CI --
    ------------
 
-   procedure Set_CI (CI : Class_Instance) is
+   procedure Set_CI (CI : in out Class_Instance) is
       Data : constant PyObject := PyCObject_FromVoidPtr
         (Get_CIR (CI).all'Address, On_PyObject_Data_Destroy'Access);
    begin
@@ -2502,8 +2505,12 @@ package body GNATCOLL.Scripts.Python is
       --  freed while the python object exists.
       Incref (Get_CIR (CI));
 
-      PyObject_SetAttrString
-        (Python_Class_Instance (Get_CIR (CI)).Data, "__gps_data", Data);
+      if PyObject_SetAttrString
+        (Python_Class_Instance (Get_CIR (CI)).Data, "__gps_data", Data) /= 0
+      then
+         PyErr_Clear;
+         CI := No_Class_Instance;
+      end if;
       Py_DECREF (Data);
    end Set_CI;
 
@@ -2546,7 +2553,15 @@ package body GNATCOLL.Scripts.Python is
          CI.Data := Object;
          Result := From_Instance (Script, CI);
          Set_CI (Result);  --  Associate with Object for the future
-         Decref (Get_CIR (Result));  --  Since From_Instance incremented it
+
+         if Result /= No_Class_Instance then
+            if Active (Me) then
+               Assert
+                 (Me, Python_Class_Instance (Result.Data.Data).Data /= null,
+                  "Get_CI: Result not initialized after Set_CI");
+            end if;
+            Decref (Get_CIR (Result));  --  Since From_Instance incremented it
+         end if;
          return Result;
 
       elsif not PyCObject_Check (Item) then
@@ -2571,11 +2586,14 @@ package body GNATCOLL.Scripts.Python is
      (Instance : access Python_Class_Instance_Record;
       Base     : String) return Boolean
    is
-      C : constant PyObject := PyObject_GetAttrString
-        (Instance.Data, "__class__");
-      B : constant PyObject := Lookup_Object
-        (Python_Scripting (Instance.Script).Module, Base);
+      C, B : PyObject;
    begin
+      if Instance.Data = null then
+         raise Program_Error;
+      end if;
+
+      C := PyObject_GetAttrString (Instance.Data, "__class__");
+      B := Lookup_Object (Python_Scripting (Instance.Script).Module, Base);
       return PyClass_IsSubclass (C, Base => B);
    end Is_Subclass;
 
@@ -2968,6 +2986,27 @@ package body GNATCOLL.Scripts.Python is
         (Script  => Subprogram.Script,
          Command => Subprogram.Subprogram,
          Args    => Args);
+   end Execute;
+
+   -------------
+   -- Execute --
+   -------------
+
+   overriding function Execute
+     (Subprogram : access Python_Subprogram_Record;
+      Args       : Callback_Data'Class) return Class_Instance
+   is
+      Obj  : PyObject;
+   begin
+      Obj := Execute_Command
+        (Script  => Subprogram.Script,
+         Command => Subprogram.Subprogram,
+         Args    => Args);
+      if Obj = null then
+         return No_Class_Instance;
+      else
+         return Get_CI (Subprogram.Script, Obj);
+      end if;
    end Execute;
 
    -------------

@@ -41,6 +41,10 @@ package body GNATCOLL.Scripts.Impl is
    is
       Result : Class_Instance (Initialized => True);
    begin
+      if Inst = null then
+         return No_Class_Instance;
+      end if;
+
       --  Do not modify the refcount, it should have been initialized properly
       --  already.
       Inst.Script := Scripting_Language (Script);
@@ -48,7 +52,7 @@ package body GNATCOLL.Scripts.Impl is
       --  Do not use an aggregate to limit the number of calls to
       --  Adjust/Finalize
       Result.Data.Data := Class_Instance_Record_Access (Inst);
-      Incref (Get_CIR (Result));
+      Incref (Result.Data.Data);
       return Result;
    end From_Instance;
 

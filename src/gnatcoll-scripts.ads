@@ -60,6 +60,11 @@ package GNATCOLL.Scripts is
    --  Data used to communicate with the scripting language engine, to marshall
    --  the parameters and return values.
 
+   type Class_Instance (Initialized : Boolean := False) is private;
+   --  ??? The discriminant declaration could be moved to the
+   --  private declaration but is moved here to work around a bug in
+   --  older versions of GNAT (J629-029)
+
    ----------------------
    -- Subprogram types --
    ----------------------
@@ -86,28 +91,23 @@ package GNATCOLL.Scripts is
    function Execute
      (Subprogram : access Subprogram_Record;
       Args       : Callback_Data'Class) return Boolean is abstract;
-   --  Execute the subprogram with the given arguments, and evaluate its output
-   --  as a boolean
-
    function Execute
      (Subprogram : access Subprogram_Record;
       Args       : Callback_Data'Class) return String is abstract;
-   --  Execute the subprogram with the given arguments, and evaluate its output
-   --  as a string
-
+   function Execute
+     (Subprogram : access Subprogram_Record;
+      Args       : Callback_Data'Class) return Class_Instance is abstract;
    function Execute
      (Subprogram : access Subprogram_Record;
       Args       : Callback_Data'Class) return Any_Type is abstract;
-   --  Execute the subprogram with the given arguments, and evaluate its output
-   --  as an Any_Type.
-
    function Execute
      (Subprogram : access Subprogram_Record;
       Args       : Callback_Data'Class)
       return GNAT.Strings.String_List is abstract;
+   --  Execute the subprogram with the given arguments, and return its output.
    --  Returned value must be freed by the caller.
-   --  Some items in the result value might be left to null if the
-   --  corresponding element from the shell is not a string.
+   --  For a String_List, some items in the result value might be left to null
+   --  if the corresponding element from the shell is not a string.
 
    function Get_Name
      (Subprogram : access Subprogram_Record) return String is abstract;
@@ -131,10 +131,6 @@ package GNATCOLL.Scripts is
    --  that the nth parameter is an instance, but its actual class is
    --  undefined
 
-   type Class_Instance (Initialized : Boolean := False) is private;
-   --  ??? The discriminant declaration could be moved to the
-   --  private declaration but is moved here to work around a bug in
-   --  older versions of GNAT (J629-029)
    No_Class_Instance : constant Class_Instance;
    --  The instance of a class, which embeds some Ada data. This type is
    --  reference counted, and will automatically take care of memory management

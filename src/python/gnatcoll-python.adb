@@ -576,6 +576,20 @@ package body GNATCOLL.Python is
       Internal (Obj, Attr_Name & ASCII.NUL, Value);
    end PyObject_SetAttrString;
 
+   ----------------------------
+   -- PyObject_SetAttrString --
+   ----------------------------
+
+   function PyObject_SetAttrString
+     (Obj : PyObject; Attr_Name : String; Value : PyObject) return Integer
+   is
+      function Internal
+        (Obj : PyObject; Name : String; Val : PyObject) return Integer;
+      pragma Import (C, Internal, "PyObject_SetAttrString");
+   begin
+      return Internal (Obj, Attr_Name & ASCII.NUL, Value);
+   end PyObject_SetAttrString;
+
    -----------------
    -- PyDict_Next --
    -----------------

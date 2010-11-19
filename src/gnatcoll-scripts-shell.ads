@@ -342,24 +342,21 @@ private
    overriding function Execute
      (Subprogram : access Shell_Subprogram_Record;
       Args       : Callback_Data'Class) return Boolean;
-
    overriding function Execute
      (Subprogram : access Shell_Subprogram_Record;
       Args       : Callback_Data'Class) return String;
-
+   overriding function Execute
+     (Subprogram : access Shell_Subprogram_Record;
+      Args       : Callback_Data'Class) return Class_Instance;
    overriding function Execute
      (Subprogram : access Shell_Subprogram_Record;
       Args       : Callback_Data'Class) return GNAT.Strings.String_List;
-
    overriding function Execute
      (Subprogram : access Shell_Subprogram_Record;
       Args       : Callback_Data'Class) return Any_Type;
-
    overriding procedure Free (Subprogram : in out Shell_Subprogram_Record);
-
    overriding function Get_Name
      (Subprogram : access Shell_Subprogram_Record) return String;
-
    overriding function Get_Script
      (Subprogram : Shell_Subprogram_Record) return Scripting_Language;
    --  See doc from inherited subprograms

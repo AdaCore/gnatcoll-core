@@ -136,6 +136,8 @@ package GNATCOLL.Python is
    --  Attr. Returns -1 on failure. This is the equivalent of the Python
    --  statement "Object.Name = Attr".
 
+   function PyObject_SetAttrString
+     (Obj : PyObject; Attr_Name : String; Value : PyObject) return Integer;
    procedure PyObject_SetAttrString
      (Obj : PyObject; Attr_Name : String; Value : PyObject);
    --  Same as above

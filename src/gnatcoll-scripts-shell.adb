@@ -1835,6 +1835,25 @@ package body GNATCOLL.Scripts.Shell is
    -- Execute --
    -------------
 
+   overriding function Execute
+     (Subprogram : access Shell_Subprogram_Record;
+      Args       : Callback_Data'Class) return Class_Instance
+   is
+      Result : constant String := Execute (Subprogram, Args);
+      Ins    : Shell_Class_Instance;
+   begin
+      Ins := Instance_From_Name (Shell_Scripting (Subprogram.Script), Result);
+      if Ins = null then
+         return No_Class_Instance;
+      end if;
+
+      return From_Instance (Subprogram.Script, Ins);
+   end Execute;
+
+   -------------
+   -- Execute --
+   -------------
+
    function Execute
      (Subprogram : access Shell_Subprogram_Record;
       Args       : Callback_Data'Class) return GNAT.Strings.String_List
