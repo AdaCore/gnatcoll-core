@@ -158,6 +158,7 @@ unmodified in any copy.
 * Three state logic:: The tribooleans.
 * Geometry::
 * Projects::
+* Reference counting::
 * Database interface::
 * Index::
 
@@ -3184,6 +3185,152 @@ Or some operations involving a polygon:
       Put_Line ("Area of polygon:" & Area (P));   --   3.015@NL{}
       Put_Line ("P3 inside polygon ? " & Inside (P3, P)'Img);  --  True@NL{}
    end;@NL{}
+}
+
+@c -----------------------------------------------------------------------
+@node Reference counting
+@chapter Reference counting
+@c -----------------------------------------------------------------------
+@noindent
+
+Memory management is often a difficulty in defining an API. Should we let
+the user be responsible for freeing the types when they are no longer needed,
+or can we do it automatically on his behalf ?
+
+The latter approach is somewhat more costly in terms of efficiency (since
+we need extra house keeping to know when the type is no longer needed), but
+provides an easier to use API.
+
+Typically, such an approach is implemented using reference counting: all
+references to an object increment a counter. When a reference disappears,
+the counter is decremented, and when it finally reaches 0, the object is
+destroyed.
+
+@cindex reference counting
+This approach is made convenient in Ada using controlled types. However,
+there are a number of issues to take care of to get things exactly right.
+In particular, the Ada Reference Manual specifies that @code{Finalize}
+should be idempotent: it could be called several times for a given object,
+in particular when exceptions occur.
+
+An additional difficulty is task-safety: incrementing and decrementing the
+counter should be task safe, since the controlled object might be referenced
+from several task (the fact that other methods on the object are task safe
+or not is given by the user application, and cannot be ensures through the
+reference counting mecanism).
+
+To make things easier, @value{gnatcoll} provides the package
+@code{GNATCOLL.Refcount}. This package contains a generic child package.
+
+To use it, you need to create a new tagged type that extends
+@code{GNATCOLL.Refcount.Refcounted}, so that it has a counter. Here is an
+example.
+
+@CODESAMPLE{
+  @b{with} GNATCOLL.Refcount;  @b{use} GNATCOLL.Refcount;@NL{}
+@NL{}
+  @b{package} My_Pkg @b{is}@NL{}
+     @b{type} My_Type @b{is new} Refcounted @b{with record}@NL{}
+        Field1 : ...;   @i{--  Anything}@NL{}
+     @b{end record};@NL{}
+@NL{}
+     @b{package} My_Type_Ptr @b{is new} Smart_Pointers (My_Type);@NL{}
+  @b{end} My_Pkg;@NL{}
+}
+
+The code above makes a @code{Ref} available. This is similar in semantics
+to an access type, although it really is a controlled type. Every time you
+assign the @code{Ref}, the counter is incremented. When the @code{Ref} goes
+out of scope, the counter is decremented, and the object is potentially
+freed.
+
+Here an example of use of the package:
+
+@CODESAMPLE{
+  @b{declare}@NL{}
+     R   : Ref;@NL{}
+     Tmp : My_Type := ...;@NL{}
+  @b{begin}@NL{}
+     R := Allocate (Tmp);    @i{--  Increment counter}@NL{}
+     Get (R).Field1 := ...;  @i{--  Access referenced object}@NL{}
+  @b{end}@NL{}
+  @i{--  R out of scope, so decrement counter, and free Tmp}@NL{}
+}
+
+Although reference counting solves most of the issues with memory management,
+it can get tricky: when there is a cycle between two reference counted objects
+(one includes a reference to the other, and the other a reference to the
+first), their counter can never become 0, and thus they are never freed.
+
+There is in particular when common design where this can severly interfer:
+imagine you want to have a @code{Map}, associating a name with a reference
+counted object. Typically, the map would be a cache of some sort. While the
+object exists, it should be referenced in the map. So we would like the Map
+to store a reference to the object. But that means the object will then
+never be freed while the map exists either, and memory usage will only
+increase.
+
+@cindex reference, weak
+The solution to this issue is to use @code{weak references}. These hold
+a pointer to an object, but do not increase its counter. As a result,
+the object can eventually be freed. At that point, the internal data in
+the weak reference is reset to @code{null}, although the weak reference
+object itself is still valid.
+
+Here is an example
+
+@CODESAMPLE{
+  @b{with} GNATCOLL.Refcount.Weakref;@NL{}
+  @b{use} GNATCOLL.Refcount.Weakref;@NL{}
+@NL{}
+  @b{type} My_Type @b{is new} Weak_Refcounted @b{with}...;@NL{}
+@NL{}
+  @b{package} Pointers @b{is new} Weakref_Pointers (My_Type);@NL{}
+}
+
+The above code can be used instead of the code in the first example, and
+provides the same capability (smart pointers, reference counted types,...).
+However, the type @code{My_Type} is slightly bigger, but can be used to
+create weak references.
+
+@CODESAMPLE{
+  WR : Weak_Ref;@NL{}
+@NL{}
+  @b{declare}@NL{}
+     R   : Ref;@NL{}
+     Tmp : My_Type := ...;@NL{}
+  @b{begin}@NL{}
+     R := Allocate (Tmp);    @i{--  Increment counter}@NL{}
+     WR := Get_Weak_Ref (R); @i{--  Get a weak reference}@NL{}
+@NL{}
+     Get (R).Field1 := ...;  @i{--  Access referenced object}@NL{}
+     Get (Get (WR)).Field1 := ...;  @i{--  Access through weak ref}@NL{}
+  @b{end}@NL{}
+  @i{--  R out of scope, so decrement counter, and free Tmp}@NL{}
+@NL{}
+  @b{if} Get (WR) /= Null_Ref @b{then}  @i{--  access to WR still valid}@NL{}
+      @i{--  Always true, since Tmp was freed}@NL{}
+  @b{end if};@NL{}
+}
+
+The example above is very simplified. Imagine, however, that you store
+@code{WR} in a map. Even when @code{R} is deallocated, the contents of the
+map remains accessible without a @code{Storage_Error} (although using
+@code{Get} will return @code{Null_Ref}, as above).
+
+For task-safety issues, @code{Get} on a weak-reference returns a smart
+pointer. Therefore, this ensures that the object is never freed while that
+smart pointer object. As a result, we recommend the following construct in
+your code:
+
+@CODESAMPLE{
+   @b{declare}@NL{}
+     R : constant Ref := Get (WR);@NL{}
+   @b{begin}@NL{}
+     @b{if} R /= Null_Ref @b{then}@NL{}
+        @i{--  Get (R) never becomes null while in this block}@NL{}
+     @b{end if};@NL{}
+   @b{end};@NL{}
 }
 
 @c -----------------------------------------------------------------------

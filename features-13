@@ -34,6 +34,11 @@ NF-13-JB12-019 Naming parameters in Scripts.Register_Command (2010-11-17)
    to name its arguments in the Register_Command call, as opposed to doing
    it in the handler itself.
 
+NF-13-JB05-010 New package: GNATCOLL.Refcount (2010-11-22)
+
+   This package provides support for smart pointers and reference counted
+   types. It also includes support for weak references.
+
 NF-13-JA25-011 SQL: connect to postgreSQL without SSL (2010-11-05)
 
    It is now possible to specify the SSL mode when connecting to a

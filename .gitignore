@@ -2,3 +2,4 @@ gnat/*.ad?
 gnat/snames*
 gnat/xsnamest
 gnat/sdefault/sdefault.adb
+src/gnatcoll-refcount-sync_counters.adb

@@ -14,6 +14,7 @@ AM_PATH_SQLITE
 AM_PATH_PYGTK(2.8)
 AM_PATH_GMP
 AM_GNAT_SOURCES
+AM_HAS_INTRINSIC_SYNC_COUNTERS
 AM_TO_GPR($GMP_LIBS,      GMP_LIBS_GPR)
 AM_TO_GPR($PYTHON_LIBS,   PYTHON_LIBS_GPR)
 AM_TO_GPR($PYTHON_CFLAGS, PYTHON_CFLAGS_GPR)
@@ -26,6 +27,10 @@ AC_CHECK_PROGS(MAKEINFO, makeinfo)
 AC_CHECK_PROGS(TEXI2DVI, texi2dvi)
 AC_SUBST(MAKEINFO)
 AC_SUBST(TEXI2DVI)
+
+AC_CONFIG_LINKS([src/gnatcoll-refcount-sync_counters.adb:src/gnatcoll-refcount-sync_counters__$SYNC_COUNTERS_IMPL.adb])
+
+AC_OUTPUT(gnatcoll_shared.gpr docs/Makefile Makefile.conf src/gnatcoll_gmp.gpr src/gnatcoll_python.gpr distrib/gnatcoll.gpr distrib/gnatcoll_python.gpr distrib/gnatcoll_gmp.gpr docs/gnatcoll_include.texi gnat/sdefault/sdefault.adb)
 
 AC_MSG_NOTICE([--------- Summary for GNAT Components --------------])
 AC_MSG_NOTICE([ Shared libraries: $GNAT_BUILDS_SHARED (default: $DEFAULT_LIBRARY_TYPE)])
@@ -50,4 +55,3 @@ AC_MSG_NOTICE([ gmp: $WITH_GMP])
 AC_MSG_NOTICE([    use --with-gmp to override])
 AC_MSG_NOTICE([--------------------------------------------])
 
-AC_OUTPUT(gnatcoll_shared.gpr docs/Makefile Makefile.conf src/gnatcoll_gmp.gpr src/gnatcoll_python.gpr distrib/gnatcoll.gpr distrib/gnatcoll_python.gpr distrib/gnatcoll_gmp.gpr docs/gnatcoll_include.texi gnat/sdefault/sdefault.adb)

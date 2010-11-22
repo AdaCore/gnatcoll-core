@@ -3,7 +3,7 @@
 ## In your own aclocal.m4 file, you can use syntax like
 ##   include(gnatcoll/aclocal.m4)
 
-#############################################################
+##############################################################
 # Checking for build type
 # The following variable is exported by configure:
 #   @BUILD_TYPE@: either "Production" or "Debug"
@@ -21,6 +21,70 @@ AC_DEFUN(CHECK_BUILD_TYPE,
 ])
 
 #############################################################
+# Check whether gnatmake can compile, bind and link an Ada program
+#    AM_TRY_ADA(gnatmake,filename,content,success,failure)
+#############################################################
+
+AC_DEFUN(AM_TRY_ADA,
+[
+   mkdir conftest
+   cat > conftest/src.ada <<EOF
+[$3]
+EOF
+   if AC_TRY_COMMAND([cd conftest && gnatchop -q src.ada && $1 $2 >/dev/null 2>../conftest.out])
+   then
+      : Success
+      $4
+   else
+      : Failure
+      $5
+   fi
+   rm -rf conftest*
+])
+
+#############################################################
+# Check whether platform/GNAT supports atomic increment/decrement
+# operations.
+# The following variable is then set:
+#     SYNC_COUNTERS_IMPL
+# to either "intrinsic" or "mutex"
+# Code comes from the polyorb configure.ac
+#############################################################
+
+AC_DEFUN(AM_HAS_INTRINSIC_SYNC_COUNTERS,
+[
+  AC_MSG_CHECKING([whether platform supports atomic inc/dec])
+  AM_TRY_ADA([gnatmake], [check.adb],
+[
+with Interfaces; use Interfaces;
+procedure Check is
+   function Sync_Add_And_Fetch
+     (Ptr   : access Interfaces.Integer_32;
+      Value : Interfaces.Integer_32) return Interfaces.Integer_32;
+   pragma Import (Intrinsic, Sync_Add_And_Fetch, "__sync_add_and_fetch_4");
+   X : aliased Interfaces.Integer_32;
+   Y : Interfaces.Integer_32 := 0;
+   pragma Volatile (Y);
+   --  On some platforms (e.g. i386), GCC has limited support for
+   --  __sync_add_and_fetch_4 for the case where the result is not used.
+   --  Here we want to test for general availability, so make Y volatile to
+   --  prevent the store operation from being discarded.
+begin
+   Y := Sync_Add_And_Fetch (X'Access, 1);
+end Check;
+],
+[
+   AC_MSG_RESULT(yes)
+   SYNC_COUNTERS_IMPL="intrinsic"
+],[
+   AC_MSG_RESULT(no)
+   SYNC_COUNTERS_IMPL="mutex"
+])
+
+   AC_SUBST(SYNC_COUNTERS_IMPL)
+])
+
+#############################################################
 # Check whether we have the GNAT sources available
 # The following variables are exported by configure:
 #   @WITH_PROJECTS@:    either "yes" or "no"
@@ -30,8 +94,10 @@ AC_DEFUN(AM_GNAT_SOURCES,
 [
   AC_MSG_CHECKING(whether gnat sources are found)
   if test -d gnat_src; then
+     AC_MSG_RESULT(yes)
      HAS_GNAT_SOURCES=yes
   else
+     AC_MSG_RESULT(no)
      HAS_GNAT_SOURCES=no
   fi
 
