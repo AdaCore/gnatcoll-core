@@ -1,7 +1,7 @@
 -----------------------------------------------------------------------
 --                          G N A T C O L L                          --
 --                                                                   --
---                 Copyright (C) 2010, AdaCore                       --
+--                    Copyright (C) 2010, AdaCore                    --
 --                                                                   --
 -- GPS is free  software;  you can redistribute it and/or modify  it --
 -- under the terms of the GNU General Public License as published by --
@@ -52,7 +52,7 @@ package GNATCOLL.Refcount is
    --  application.
 
    procedure Free (Self : in out Refcounted) is null;
-   --  Free the memory associated with Self, when Self is no longer referenced.
+   --  Free the memory associated with Self, when Self is no longer referenced
 
    package Sync_Counters is
       function Sync_Add_And_Fetch
@@ -91,7 +91,7 @@ package GNATCOLL.Refcount is
       --  (You can't do Allocate (new Encapsulated) for visibility reasons)
 
       procedure Set (Self : in out Ref; Data : access Encapsulated'Class);
-      --  Replace the current contents of Self. This is similar to Allocate.
+      --  Replace the current contents of Self. This is similar to Allocate
 
       function Get (P : Ref) return Encapsulated_Access;
       pragma Inline (Get);

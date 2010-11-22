@@ -1,7 +1,7 @@
 -----------------------------------------------------------------------
 --                          G N A T C O L L                          --
 --                                                                   --
---                 Copyright (C) 2010, AdaCore                       --
+--                    Copyright (C) 2010, AdaCore                    --
 --                                                                   --
 -- GPS is free  software;  you can redistribute it and/or modify  it --
 -- under the terms of the GNU General Public License as published by --
@@ -45,7 +45,7 @@ package GNATCOLL.Refcount.Weakref is
 
    type Weak_Refcounted
      is abstract new GNATCOLL.Refcount.Refcounted with private;
-   --  A special refcounted type, which can manipulate weak references.
+   --  A special refcounted type, which can manipulate weak references
 
    overriding procedure Free (Self : in out Weak_Refcounted);
    --  If you need to override this procedure in your own code, you need to
