@@ -52,7 +52,7 @@ package GNATCOLL.Refcount is
    --  application.
 
    procedure Free (Self : in out Refcounted) is null;
-   --  Free the memory associated with Self, when Self is no longer referenced
+   --  Free the memory associated with Self, when Self is no longer referenced.
 
    package Sync_Counters is
       function Sync_Add_And_Fetch
@@ -76,22 +76,18 @@ package GNATCOLL.Refcount is
       type Ref is tagged private;
       Null_Ref : constant Ref;
 
-      function Allocate (Data : Encapsulated'Class) return Ref;
-      function Allocate (Data : access Encapsulated'Class) return Ref;
-      pragma Inline (Allocate);
-      --  Allocate a new pointer.
+      procedure Set (Self : in out Ref; Data : Encapsulated'Class);
+      procedure Set (Self : in out Ref; Data : access Encapsulated'Class);
+      --  Replace the current contents of Self.
       --  Data is adopted by the smart pointer, and should no longer be
       --  referenced directly elsewhere. The reference count of Data is
       --  incremented by 1.
-      --  This is meant for efficiency in cases where copying the data would
-      --  cost too much.
       --  Typical code looks like:
       --      Tmp := new Encapsulated;
-      --      Ptr := Allocate (Tmp);
-      --  (You can't do Allocate (new Encapsulated) for visibility reasons)
-
-      procedure Set (Self : in out Ref; Data : access Encapsulated'Class);
-      --  Replace the current contents of Self. This is similar to Allocate
+      --      Set (Ptr, Tmp);
+      --  (You can't do
+      --      Set (Ptr, new Encapsulated);
+      --   for visibility reasons)
 
       function Get (P : Ref) return Encapsulated_Access;
       pragma Inline (Get);
@@ -124,4 +120,5 @@ private
    --  instance). This approach was chosen over storing the refcounting
    --  independently of the refcounted type. The chosen approach provides a
    --  tighter integration between the two.
+
 end GNATCOLL.Refcount;

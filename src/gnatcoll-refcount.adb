@@ -41,29 +41,6 @@ package body GNATCOLL.Refcount is
 
    package body Smart_Pointers is
 
-      --------------
-      -- Allocate --
-      --------------
-
-      function Allocate (Data : Encapsulated'Class) return Ref is
-         Tmp : constant Encapsulated_Access := new Encapsulated'Class'(Data);
-      begin
-         return Allocate (Tmp);
-      end Allocate;
-
-      --------------
-      -- Allocate --
-      --------------
-
-      function Allocate (Data : access Encapsulated'Class) return Ref is
-         Dummy : Integer_32;
-         pragma Unreferenced (Dummy);
-      begin
-         Dummy := Sync_Counters.Sync_Add_And_Fetch
-           (Refcounted (Data.all).Refcount'Access, 1);
-         return (Ada.Finalization.Controlled with Refcounted_Access (Data));
-      end Allocate;
-
       ---------
       -- Set --
       ---------
@@ -78,6 +55,16 @@ package body GNATCOLL.Refcount is
             Self.Data := Refcounted_Access (Data);
             Adjust (Self);    -- increment refcounting
          end if;
+      end Set;
+
+      ---------
+      -- Set --
+      ---------
+
+      procedure Set (Self : in out Ref; Data : Encapsulated'Class) is
+         Tmp : constant Encapsulated_Access := new Encapsulated'Class'(Data);
+      begin
+         Set (Self, Tmp);
       end Set;
 
       ---------

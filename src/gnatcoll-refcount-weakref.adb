@@ -66,7 +66,7 @@ package body GNATCOLL.Refcount.Weakref is
          if P = Proxy_Pointers.Null_Ref then
             D := new Proxy'(GNATCOLL.Refcount.Refcounted
                             with Proxied => Refcounted_Access (Data));
-            P := Proxy_Pointers.Allocate (D);  --  owns a reference to D
+            Set (P, D);  --  now owns a reference to D
             Weak_Refcounted'Class (Data.all).Proxy := P;
          end if;
 
@@ -85,7 +85,12 @@ package body GNATCOLL.Refcount.Weakref is
             return Null_Ref;
          else
             --  Adds a reference to P.Proxied
-            return Pointers.Allocate (Encapsulated_Access (P.Proxied));
+            declare
+               Result : Ref;
+            begin
+               Set (Result, Encapsulated_Access (P.Proxied));
+               return Result;
+            end;
          end if;
       end Get;
 

@@ -80,10 +80,10 @@ package GNATCOLL.Refcount.Weakref is
       subtype Ref is Pointers.Ref;
       Null_Ref : constant Ref := Pointers.Null_Ref;
 
-      function Allocate (Data : Encapsulated'Class) return Ref
-        renames Pointers.Allocate;
-      function Allocate (Data : access Encapsulated'Class) return Ref
-        renames Pointers.Allocate;
+      procedure Set (Self : in out Ref; Data : Encapsulated'Class)
+        renames Pointers.Set;
+      procedure Set (Self : in out Ref; Data : access Encapsulated'Class)
+        renames Pointers.Set;
       function Get (P : Ref) return Encapsulated_Access
         renames Pointers.Get;
       function "=" (P1, P2 : Ref) return Boolean
