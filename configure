@@ -4606,7 +4606,7 @@ done
 
 
 
-          ac_config_links="$ac_config_links src/gnatcoll-refcount-sync_counters.adb:src/gnatcoll-refcount-sync_counters__$SYNC_COUNTERS_IMPL.adb"
+          ac_config_links="$ac_config_links src/gnatcoll-refcount-sync_counters.adb:src/gnatcoll-refcount-sync_counters__$SYNC_COUNTERS_IMPL.ada"
 
 
                                                                                                     ac_config_files="$ac_config_files gnatcoll_shared.gpr docs/Makefile Makefile.conf src/gnatcoll_gmp.gpr src/gnatcoll_python.gpr distrib/gnatcoll.gpr distrib/gnatcoll_python.gpr distrib/gnatcoll_gmp.gpr docs/gnatcoll_include.texi gnat/sdefault/sdefault.adb"
@@ -5172,7 +5172,7 @@ do
   "distrib/gnatcoll_gmp.gpr" ) CONFIG_FILES="$CONFIG_FILES distrib/gnatcoll_gmp.gpr" ;;
   "docs/gnatcoll_include.texi" ) CONFIG_FILES="$CONFIG_FILES docs/gnatcoll_include.texi" ;;
   "gnat/sdefault/sdefault.adb" ) CONFIG_FILES="$CONFIG_FILES gnat/sdefault/sdefault.adb" ;;
-  "src/gnatcoll-refcount-sync_counters.adb" ) CONFIG_LINKS="$CONFIG_LINKS src/gnatcoll-refcount-sync_counters.adb:src/gnatcoll-refcount-sync_counters__$SYNC_COUNTERS_IMPL.adb" ;;
+  "src/gnatcoll-refcount-sync_counters.adb" ) CONFIG_LINKS="$CONFIG_LINKS src/gnatcoll-refcount-sync_counters.adb:src/gnatcoll-refcount-sync_counters__$SYNC_COUNTERS_IMPL.ada" ;;
   *) { { echo "$as_me:$LINENO: error: invalid argument: $ac_config_target" >&5
 echo "$as_me: error: invalid argument: $ac_config_target" >&2;}
    { (exit 1); exit 1; }; };;
