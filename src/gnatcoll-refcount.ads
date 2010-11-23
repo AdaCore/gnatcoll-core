@@ -73,7 +73,7 @@ package GNATCOLL.Refcount is
    package Smart_Pointers is
       type Encapsulated_Access is access all Encapsulated'Class;
 
-      type Ref is private;
+      type Ref is tagged private;
       Null_Ref : constant Ref;
 
       function Allocate (Data : Encapsulated'Class) return Ref;

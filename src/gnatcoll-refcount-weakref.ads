@@ -90,8 +90,8 @@ package GNATCOLL.Refcount.Weakref is
         renames Pointers."=";
       --  The manipulation of the smart pointers
 
-      type Weak_Ref is private;
-      Null_Weak_Ref : constant Weak_Ref;
+      subtype Weak_Ref is Proxy_Pointers.Ref;
+      Null_Weak_Ref : constant Weak_Ref := Weak_Ref (Proxy_Pointers.Null_Ref);
 
       function Get_Weak_Ref (Self : Ref) return Weak_Ref;
       --  Return a weak reference to Self.
@@ -126,10 +126,6 @@ package GNATCOLL.Refcount.Weakref is
       --             own a reference to it
       --         end if;
       --      end;
-
-   private
-      type Weak_Ref is new Proxy_Pointers.Ref;
-      Null_Weak_Ref : constant Weak_Ref := Weak_Ref (Proxy_Pointers.Null_Ref);
    end Weakref_Pointers;
 
 private
