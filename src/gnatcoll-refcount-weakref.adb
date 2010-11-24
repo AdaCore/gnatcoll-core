@@ -81,7 +81,7 @@ package body GNATCOLL.Refcount.Weakref is
          P : constant access Proxy :=
            Proxy_Pointers.Get (Proxy_Pointers.Ref (Self));
       begin
-         if P.Proxied = null then
+         if P = null or else P.Proxied = null then
             R.Set (null);
          else
             --  Adds a reference to P.Proxied
