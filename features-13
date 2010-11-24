@@ -44,6 +44,14 @@ NF-13-JA25-011 SQL: connect to postgreSQL without SSL (2010-11-05)
    It is now possible to specify the SSL mode when connecting to a
    postgreSQL server
 
+NF-13-J827-012 use gnat_util.gpr to access the gnat sources (2010-11-23)
+
+   Some optional features of GNATCOLL require access to the GNAT sources.
+   You previously had to get those sources separately and create link.
+   Recent versions of GNAT come with a gnat_util.gpr that makes this part
+   of the setup easier, and supports applications that use both GNATCOLL and
+   ASIS.
+
 NF-13-J727-015 SQL: numbered table aliases (2010-07-30)
 
    In addition to the history named aliased for tables, it is now

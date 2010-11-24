@@ -3,3 +3,5 @@ gnat/snames*
 gnat/xsnamest
 gnat/sdefault/sdefault.adb
 src/gnatcoll-refcount-sync_counters.adb
+distrib/gnatcoll.gpr__copy
+distrib/gnatcoll.gpr__gnat_util

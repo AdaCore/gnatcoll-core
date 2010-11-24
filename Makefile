@@ -45,7 +45,9 @@ else
 	-@$(foreach f,$(GNAT_SOURCES_FOR_GNATCOLL), \
 	   $(LN_S) ../gnat_src/$(f) gnat > /dev/null 2>&1 ;)
 endif
+ifeq ($(GNAT_SOURCES),copy)
 	@(cd gnat && gnatmake -q xsnamest && ./xsnamest && mv snames.ns snames.ads && mv snames.nb snames.adb)
+endif
 
 else
 do_links:

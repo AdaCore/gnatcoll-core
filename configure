@@ -309,7 +309,7 @@ ac_includes_default="\
 # include <unistd.h>
 #endif"
 
-ac_subst_vars='SHELL PATH_SEPARATOR PACKAGE_NAME PACKAGE_TARNAME PACKAGE_VERSION PACKAGE_STRING PACKAGE_BUGREPORT exec_prefix prefix program_transform_name bindir sbindir libexecdir datadir sysconfdir sharedstatedir localstatedir libdir includedir oldincludedir infodir mandir build_alias host_alias target_alias DEFS ECHO_C ECHO_N ECHO_T LIBS build build_cpu build_vendor build_os host host_cpu host_vendor host_os target target_cpu target_vendor target_os LN_S CC CFLAGS LDFLAGS CPPFLAGS ac_ct_CC EXEEXT OBJEXT CPP EGREP BUILD_TYPE GNAT_BUILDS_SHARED DEFAULT_LIBRARY_TYPE PKG_CONFIG HAVE_GTKADA GTK_GCC_FLAGS WITH_GTK PYTHON PYTHON_BASE PYTHON_VERSION PYTHON_DIR PYTHON_LIBS PYTHON_CFLAGS WITH_PYTHON WITH_POSTGRES PATH_LIBPQ HAS_PQPREPARE WITH_SQLITE PATH_LIBSQLITE PYGTK_PREFIX PYGTK_INCLUDE WITH_PYGTK WITH_GMP GMP_CFLAGS GMP_LIBS WITH_PROJECTS SYNC_COUNTERS_IMPL GMP_LIBS_GPR PYTHON_LIBS_GPR PYTHON_CFLAGS_GPR PYGTK_INCLUDE_GPR GTK_GCC_FLAGS_GPR WITH_SYSLOG MAKEINFO TEXI2DVI LIBOBJS LTLIBOBJS'
+ac_subst_vars='SHELL PATH_SEPARATOR PACKAGE_NAME PACKAGE_TARNAME PACKAGE_VERSION PACKAGE_STRING PACKAGE_BUGREPORT exec_prefix prefix program_transform_name bindir sbindir libexecdir datadir sysconfdir sharedstatedir localstatedir libdir includedir oldincludedir infodir mandir build_alias host_alias target_alias DEFS ECHO_C ECHO_N ECHO_T LIBS build build_cpu build_vendor build_os host host_cpu host_vendor host_os target target_cpu target_vendor target_os LN_S CC CFLAGS LDFLAGS CPPFLAGS ac_ct_CC EXEEXT OBJEXT CPP EGREP BUILD_TYPE GNAT_BUILDS_SHARED DEFAULT_LIBRARY_TYPE PKG_CONFIG HAVE_GTKADA GTK_GCC_FLAGS WITH_GTK PYTHON PYTHON_BASE PYTHON_VERSION PYTHON_DIR PYTHON_LIBS PYTHON_CFLAGS WITH_PYTHON WITH_POSTGRES PATH_LIBPQ HAS_PQPREPARE WITH_SQLITE PATH_LIBSQLITE PYGTK_PREFIX PYGTK_INCLUDE WITH_PYGTK WITH_GMP GMP_CFLAGS GMP_LIBS HAVE_GNAT_UTIL WITH_PROJECTS GNAT_SOURCES SYNC_COUNTERS_IMPL GMP_LIBS_GPR PYTHON_LIBS_GPR PYTHON_CFLAGS_GPR PYGTK_INCLUDE_GPR GTK_GCC_FLAGS_GPR WITH_SYSLOG MAKEINFO TEXI2DVI LIBOBJS LTLIBOBJS'
 ac_subst_files=''
 
 # Initialize some variables set by options.
@@ -4235,19 +4235,59 @@ fi
 
 
 
-  echo "$as_me:$LINENO: checking whether gnat sources are found" >&5
-echo $ECHO_N "checking whether gnat sources are found... $ECHO_C" >&6
-  if test -d gnat_src; then
-     echo "$as_me:$LINENO: result: yes" >&5
-echo "${ECHO_T}yes" >&6
+  echo "$as_me:$LINENO: checking whether gnat_util exists" >&5
+echo $ECHO_N "checking whether gnat_util exists... $ECHO_C" >&6
+
+
+   project=gnat_util
+   output=HAVE_GNAT_UTIL
+
+   # Create a temporary directory (from "info autoconf")
+   : ${TMPDIR=/tmp}
+   {
+     tmp=`(umask 077 && mktemp -d "$TMPDIR/fooXXXXXX") 2>/dev/null` \
+        && test -n "$tmp" && test -d "$tmp"
+   } || {
+     tmp=$TMPDIR/foo$$-$RANDOM
+     (umask 077 && mkdir -p "$tmp")
+   } || exit $?
+
+   mkdir $tmp/lib
+   echo "with \"$project\"; project default is for Source_Dirs use (); end default;" > $tmp/default.gpr
+
+   gnat make -P$tmp/default.gpr >/dev/null 2>/dev/null
+   if test $? = 0 ; then
+     HAVE_GNAT_UTIL=yes
+   else
+     HAVE_GNAT_UTIL=no
+   fi
+
+
+  if test "$HAVE_GNAT_UTIL" = "yes"; then
+     echo "$as_me:$LINENO: result: found" >&5
+echo "${ECHO_T}found" >&6;
      HAS_GNAT_SOURCES=yes
+     GNAT_SOURCES=gnat_util
   else
-     echo "$as_me:$LINENO: result: no" >&5
+     echo "$as_me:$LINENO: result: not found" >&5
+echo "${ECHO_T}not found" >&6
+
+     echo "$as_me:$LINENO: checking whether gnat sources are found" >&5
+echo $ECHO_N "checking whether gnat sources are found... $ECHO_C" >&6
+     if test -d gnat_src; then
+        echo "$as_me:$LINENO: result: yes" >&5
+echo "${ECHO_T}yes" >&6
+        HAS_GNAT_SOURCES=yes
+     else
+        echo "$as_me:$LINENO: result: no" >&5
 echo "${ECHO_T}no" >&6
-     HAS_GNAT_SOURCES=no
+        HAS_GNAT_SOURCES=no
+     fi
+     GNAT_SOURCES=copy
   fi
 
   WITH_PROJECTS=$HAS_GNAT_SOURCES
+
 
 
 
@@ -4606,10 +4646,11 @@ done
 
 
 
-          ac_config_links="$ac_config_links src/gnatcoll-refcount-sync_counters.adb:src/gnatcoll-refcount-sync_counters__$SYNC_COUNTERS_IMPL.ada"
+
+                              ac_config_links="$ac_config_links src/gnatcoll-refcount-sync_counters.adb:src/gnatcoll-refcount-sync_counters__$SYNC_COUNTERS_IMPL.ada src/gnatcoll.gpr:src/gnatcoll__$GNAT_SOURCES.gpr distrib/gnatcoll.gpr:distrib/gnatcoll.gpr__$GNAT_SOURCES"
 
 
-                                                                                                    ac_config_files="$ac_config_files gnatcoll_shared.gpr docs/Makefile Makefile.conf src/gnatcoll_gmp.gpr src/gnatcoll_python.gpr distrib/gnatcoll.gpr distrib/gnatcoll_python.gpr distrib/gnatcoll_gmp.gpr docs/gnatcoll_include.texi gnat/sdefault/sdefault.adb"
+                                                                                                              ac_config_files="$ac_config_files gnatcoll_shared.gpr docs/Makefile Makefile.conf src/gnatcoll_gmp.gpr src/gnatcoll_python.gpr distrib/gnatcoll.gpr__gnat_util distrib/gnatcoll.gpr__copy distrib/gnatcoll_python.gpr distrib/gnatcoll_gmp.gpr docs/gnatcoll_include.texi gnat/sdefault/sdefault.adb"
 cat >confcache <<\_ACEOF
 # This file is a shell script that caches the results of configure
 # tests run on this system so they can be shared between configure
@@ -5167,12 +5208,15 @@ do
   "Makefile.conf" ) CONFIG_FILES="$CONFIG_FILES Makefile.conf" ;;
   "src/gnatcoll_gmp.gpr" ) CONFIG_FILES="$CONFIG_FILES src/gnatcoll_gmp.gpr" ;;
   "src/gnatcoll_python.gpr" ) CONFIG_FILES="$CONFIG_FILES src/gnatcoll_python.gpr" ;;
-  "distrib/gnatcoll.gpr" ) CONFIG_FILES="$CONFIG_FILES distrib/gnatcoll.gpr" ;;
+  "distrib/gnatcoll.gpr__gnat_util" ) CONFIG_FILES="$CONFIG_FILES distrib/gnatcoll.gpr__gnat_util" ;;
+  "distrib/gnatcoll.gpr__copy" ) CONFIG_FILES="$CONFIG_FILES distrib/gnatcoll.gpr__copy" ;;
   "distrib/gnatcoll_python.gpr" ) CONFIG_FILES="$CONFIG_FILES distrib/gnatcoll_python.gpr" ;;
   "distrib/gnatcoll_gmp.gpr" ) CONFIG_FILES="$CONFIG_FILES distrib/gnatcoll_gmp.gpr" ;;
   "docs/gnatcoll_include.texi" ) CONFIG_FILES="$CONFIG_FILES docs/gnatcoll_include.texi" ;;
   "gnat/sdefault/sdefault.adb" ) CONFIG_FILES="$CONFIG_FILES gnat/sdefault/sdefault.adb" ;;
   "src/gnatcoll-refcount-sync_counters.adb" ) CONFIG_LINKS="$CONFIG_LINKS src/gnatcoll-refcount-sync_counters.adb:src/gnatcoll-refcount-sync_counters__$SYNC_COUNTERS_IMPL.ada" ;;
+  "src/gnatcoll.gpr" ) CONFIG_LINKS="$CONFIG_LINKS src/gnatcoll.gpr:src/gnatcoll__$GNAT_SOURCES.gpr" ;;
+  "distrib/gnatcoll.gpr" ) CONFIG_LINKS="$CONFIG_LINKS distrib/gnatcoll.gpr:distrib/gnatcoll.gpr__$GNAT_SOURCES" ;;
   *) { { echo "$as_me:$LINENO: error: invalid argument: $ac_config_target" >&5
 echo "$as_me: error: invalid argument: $ac_config_target" >&2;}
    { (exit 1); exit 1; }; };;
@@ -5304,7 +5348,9 @@ s,@WITH_PYGTK@,$WITH_PYGTK,;t t
 s,@WITH_GMP@,$WITH_GMP,;t t
 s,@GMP_CFLAGS@,$GMP_CFLAGS,;t t
 s,@GMP_LIBS@,$GMP_LIBS,;t t
+s,@HAVE_GNAT_UTIL@,$HAVE_GNAT_UTIL,;t t
 s,@WITH_PROJECTS@,$WITH_PROJECTS,;t t
+s,@GNAT_SOURCES@,$GNAT_SOURCES,;t t
 s,@SYNC_COUNTERS_IMPL@,$SYNC_COUNTERS_IMPL,;t t
 s,@GMP_LIBS_GPR@,$GMP_LIBS_GPR,;t t
 s,@PYTHON_LIBS_GPR@,$PYTHON_LIBS_GPR,;t t

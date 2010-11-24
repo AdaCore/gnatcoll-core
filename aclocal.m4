@@ -87,22 +87,36 @@ end Check;
 #############################################################
 # Check whether we have the GNAT sources available
 # The following variables are exported by configure:
-#   @WITH_PROJECTS@:    either "yes" or "no"
+#   @WITH_PROJECTS@: "yes" or "no"
+#   GNAT_SOURCES: "gnat_util", "copy", "no"
 #############################################################
 
 AC_DEFUN(AM_GNAT_SOURCES,
 [
-  AC_MSG_CHECKING(whether gnat sources are found)
-  if test -d gnat_src; then
-     AC_MSG_RESULT(yes)
+  AC_MSG_CHECKING(whether gnat_util exists)
+
+  AM_PATH_PROJECT(gnat_util, HAVE_GNAT_UTIL)
+  if test "$HAVE_GNAT_UTIL" = "yes"; then
+     AC_MSG_RESULT(found);
      HAS_GNAT_SOURCES=yes
+     GNAT_SOURCES=gnat_util
   else
-     AC_MSG_RESULT(no)
-     HAS_GNAT_SOURCES=no
+     AC_MSG_RESULT(not found)
+
+     AC_MSG_CHECKING(whether gnat sources are found)
+     if test -d gnat_src; then
+        AC_MSG_RESULT(yes)
+        HAS_GNAT_SOURCES=yes
+     else
+        AC_MSG_RESULT(no)
+        HAS_GNAT_SOURCES=no
+     fi
+     GNAT_SOURCES=copy
   fi
 
   WITH_PROJECTS=$HAS_GNAT_SOURCES
   AC_SUBST(WITH_PROJECTS)
+  AC_SUBST(GNAT_SOURCES)
 ])
 
 #############################################################

@@ -297,11 +297,28 @@ running the @code{configure} command in the root directory of the
 @cindex GNATCOLL.Projects
 @cindex projects
 @cindex gnat sources
-If you have access to the sources of GNAT, you should create a link called
-@file{gnat_src} that points to the directory containing those sources. They
-are used to add support for @code{GNATCOLL.Projects}, which reuses the same
-parser as the GNAT tools. If the link @file{gnat_src} does not exist, the
-support for projects will not be compiled.
+@cindex gnat_util
+Some parts of @value{gnatcoll} need access to a subset of the GNAT sources.
+This is in particular the case for @code{GNATCOLL.Projects}, which reuses
+the same parser as the GNAT tools.
+
+@value{gnatcoll} will look for those sources in two different ways:
+
+@itemize @bullet
+@item Recent versions of GNAT come with an additional @code{gnat_util.gpr}
+  project file, installed along with it. This project contains the required
+  subset of the sources. If you have an older version of GNAT, you could
+  also chose to install @code{gnat_util} independently.
+
+@item Otherwise, you could get a copy of the GNAT sources, and create a
+  link called @file{gnat_src} that points to the directory containing those
+  sources. This link should be created in the toplevel @value{gnatcoll}
+  directory.
+
+@item If none of the above is satisfied, @value{gnatcoll} will not include
+  support for @code{GNATCOLL.Projects}.
+@end itemize
+
 
 @code{configure} accepts lots of arguments, among which
 the following ones are most useful:

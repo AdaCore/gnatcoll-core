@@ -5,7 +5,11 @@ LIBNAME=lib${TARNAME}
 include ../Makefile.conf
 
 ifeq ($(WITH_SYSLOG),yes)
-SRCDIRS=./ ../gnat/ ./syslog/ ./paragraph_filling/
+SRCDIRS=./ ./syslog/ ./paragraph_filling/
 else
-SRCDIRS=./ ../gnat/ ./nosyslog/ ./paragraph_filling/
+SRCDIRS=./ ./nosyslog/ ./paragraph_filling/
+endif
+
+ifeq ($(GNAT_SOURCES),copy)
+SRCDIRS+= ../gnat/
 endif

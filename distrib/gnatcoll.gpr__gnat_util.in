@@ -1,0 +1,52 @@
+--  This is the Gnatcoll project file. It can be used both for static and
+--  relocatable libraries, although the two might not be available on
+--  your system depending on how GnatColl was compiled and installed.
+--  You can select either of the two libraries by changing the environment
+--  variable LIBRARY_TYPE.
+--  The default depends on how gnatcoll was configured and compiled (although
+--  in general it will be static since this works better in most cases)
+
+with "gnat_util";
+
+project GnatColl is
+   Version := "@PACKAGE_VERSION@";
+
+   type GnatColl_Kind_Type is ("static", "relocatable");
+   GnatColl_Kind : GnatColl_Kind_Type :=
+     external ("LIBRARY_TYPE", "@DEFAULT_LIBRARY_TYPE@");
+
+   type OS_Kind is ("Windows_NT", "unix");
+   OS : OS_Kind := external ("OS", "unix");
+
+   type Yes_No is ("yes", "no");
+
+   for Library_Name use "gnatcoll";
+   for Source_Dirs use ("../../include/gnatcoll");
+   for Source_List_File use "gnatcoll/" & Project'Library_Name & ".lgpr";
+   for Library_Kind use GnatColl_Kind;
+   for Library_Dir  use "../gnatcoll/" & Project'Library_Kind;
+   for Library_Version use
+      "lib" & Project'Library_Name & ".so." & Version;
+
+   With_Postgres : Yes_No := "@WITH_POSTGRES@";
+   Postgres_Path := "@PATH_LIBPQ@";
+
+   With_Sqlite : Yes_No := "@WITH_SQLITE@";
+   Sqlite_Path := "@PATH_LIBSQLITE@";
+
+   for Externally_Built use "true";
+
+   package Naming is
+      case OS is
+         when "unix" =>
+            for Implementation ("GNATCOLL.Mmap") use "gnatcoll-mmap__unix.adb";
+            for Implementation ("GNATCOLL.IO.Native.Codec")
+	      use "gnatcoll-io-native-codec__unix.adb";
+         when "Windows_NT" =>
+            for Implementation ("GNATCOLL.Mmap") use "gnatcoll-mmap__win32.adb";
+            for Implementation ("GNATCOLL.IO.Native.Codec")
+	      use "gnatcoll-io-native-codec__win32.adb";
+      end case;
+   end Naming;
+
+end GnatColl;
