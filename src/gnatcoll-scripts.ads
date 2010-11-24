@@ -45,6 +45,8 @@ with GNATCOLL.Utils;         use GNATCOLL.Utils;
 with GNATCOLL.VFS;           use GNATCOLL.VFS;
 with GNATCOLL.Any_Types;     use GNATCOLL.Any_Types;
 
+private with Interfaces;
+
 package GNATCOLL.Scripts is
 
    type Scripts_Repository_Record is tagged private;
@@ -1252,14 +1254,14 @@ private
    end record;
 
    type Param_Descr is record
-      Name     : GNATCOLL.Utils.Cst_String_Access;
+      Name     : GNAT.Strings.String_Access;
       Optional : Boolean := False;
    end record;
 
    No_Params : constant Param_Array := (1 .. 0 => <>);
 
    type Class_Instance_Record is abstract tagged limited record
-      Refcount  : Natural := 1;
+      Refcount  : aliased Interfaces.Integer_32 := 1;
       Script    : Scripting_Language;
       User_Data : User_Data_List;
    end record;

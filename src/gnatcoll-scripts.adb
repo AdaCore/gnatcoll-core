@@ -30,11 +30,15 @@ with Ada.Characters.Handling;    use Ada.Characters.Handling;
 with Ada.Unchecked_Conversion;
 with Ada.Unchecked_Deallocation;
 with GNAT.OS_Lib;                use GNAT.OS_Lib;
+with GNATCOLL.Refcount;          use GNATCOLL.Refcount;
 with GNATCOLL.Scripts.Impl;      use GNATCOLL.Scripts.Impl;
+with GNATCOLL.Traces;            use GNATCOLL.Traces;
+with Interfaces;                 use Interfaces;
 with System;                     use System;
 with System.Address_Image;
 
 package body GNATCOLL.Scripts is
+   Me : constant Trace_Handle := Create ("SCRIPTS");
    use Classes_Hash;
 
    Timeout_Threshold : constant Duration := 0.2;   --  in seconds
@@ -99,6 +103,10 @@ package body GNATCOLL.Scripts is
    --  Free the memory used by Data. Data is reset to null, and this doesn't
    --  free other user data in the list.
 
+   procedure Free (Param : in out Param_Descr);
+   procedure Free (Params : in out Param_Array_Access);
+   --  Free memory
+
    -------------
    -- Destroy --
    -------------
@@ -108,6 +116,32 @@ package body GNATCOLL.Scripts is
    begin
       null;
    end Destroy;
+
+   ----------
+   -- Free --
+   ----------
+
+   procedure Free (Param : in out Param_Descr) is
+   begin
+      Free (Param.Name);
+   end Free;
+
+   ----------
+   -- Free --
+   ----------
+
+   procedure Free (Params : in out Param_Array_Access) is
+      procedure Unchecked_Free is new Ada.Unchecked_Deallocation
+        (Param_Array, Param_Array_Access);
+   begin
+      if Params /= null then
+         for P in Params'Range loop
+            Free (Params (P));
+         end loop;
+
+         Unchecked_Free (Params);
+      end if;
+   end Free;
 
    -------------
    -- Destroy --
@@ -125,10 +159,12 @@ package body GNATCOLL.Scripts is
       D, D_Tmp : Command_Descr_Access;
       Prop, P_Tmp : Property_Descr_Access;
    begin
+      Trace (Me, "Destroying scripts repository");
       if Repo /= null then
          D := Repo.Commands;
          while D /= null loop
             D_Tmp := D.Next;
+            Free (D.Params);
             Unchecked_Free (D);
             D := D_Tmp;
          end loop;
@@ -937,18 +973,22 @@ package body GNATCOLL.Scripts is
       Ptr               : Class_Instance_Record_Access;
       L                 : Instance_Array_Access;
       Instances         : Instance_List_Access;
-      Refs_In_User_Data : Natural := 0;
+      Refs_In_User_Data : Integer_32 := 0;
+      New_Refcount      : Integer_32;
    begin
+      --  ??? This code is not task safe
+
       --  We are already in the process of destroying the class instance, so
       --  nothing else to do
 
-      if Inst.Refcount = Natural'Last then
+      if Inst.Refcount = Integer_32'Last then
          return;
       end if;
 
       --  If the instance has only one reference left, and that is owned by
       --  the user data (for instance when it is a selection), we will be able
       --  to kill the CI instances anyway.
+      --  ??? Could we use weak-references here, instead
 
       Data := Inst.User_Data;
 
@@ -970,15 +1010,16 @@ package body GNATCOLL.Scripts is
          Data := Data.Next;
       end loop;
 
-      Inst.Refcount := Inst.Refcount - 1;
+      New_Refcount := Sync_Counters.Sync_Add_And_Fetch
+        (Inst.Refcount'Access, -1);
 
-      if Inst.Refcount = Refs_In_User_Data then
+      if New_Refcount = Refs_In_User_Data then
          --  Reset the references to the CI in the instances of all its user
          --  data. This might result in a recursive call to Decref, which will
          --  set Refcount to 0. To prevent this, and for more efficiency,
          --  we simulate a different refcount, and finalize the CI ourselves
 
-         Inst.Refcount := Natural'Last;
+         Inst.Refcount := Integer_32'Last;
 
          Data := Inst.User_Data;
          while Data /= null loop
@@ -1001,8 +1042,8 @@ package body GNATCOLL.Scripts is
          Inst.Refcount := 0;
       end if;
 
-      if Inst.Refcount = 0 then
-         Inst.Refcount := Natural'Last;
+      if New_Refcount = 0 then
+         Inst.Refcount := Integer_32'Last;
 
          while Inst.User_Data /= null loop
             Data := Inst.User_Data.Next;
@@ -1026,8 +1067,10 @@ package body GNATCOLL.Scripts is
    ------------
 
    procedure Incref (Inst : access Class_Instance_Record) is
+      Dummy : Integer_32;
+      pragma Unreferenced (Dummy);
    begin
-      Inst.Refcount := Inst.Refcount + 1;
+      Dummy := Sync_Counters.Sync_Add_And_Fetch (Inst.Refcount'Access, 1);
    end Incref;
 
    ------------
@@ -1092,7 +1135,7 @@ package body GNATCOLL.Scripts is
    begin
       return "CI=(" & System.Address_Image
         (To_Address (Class_Instance_Record_Access (Instance)))
-        & Integer'Image (Instance.Refcount) & ")";
+        & Integer_32'Image (Instance.Refcount) & ")";
    end Print_Refcount;
 
    --------------

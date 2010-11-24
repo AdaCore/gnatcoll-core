@@ -867,6 +867,7 @@ package GNATCOLL.Python is
    --  Return the instance with which the method is bound. This might be null
    --  if we have an unbound class method (Class.method), or non-null if we
    --  have a bound class method (the result of self.method)
+   --  Returns a borrowed reference, no need to Py_DECREF
 
    function PyMethod_Function (Obj : PyObject) return PyObject;
    --  Return the function object associated with the method. That is the code

@@ -317,6 +317,7 @@ package body GNATCOLL.Scripts.Python is
    procedure Destroy (Script : access Python_Scripting_Record) is
    begin
       if not Script.Finalized then
+         Trace (Me, "Finalizing python");
          Set_Default_Console (Script, null);
          Free (Script.Buffer);
          Py_Finalize;
@@ -611,7 +612,6 @@ package body GNATCOLL.Scripts.Python is
          D.Args := PyTuple_New (Size);
          for T in 0 .. Size - 1 loop
             Item := PyObject_GetItem (Data.Args, T);
-            Py_INCREF (Item);
             Set_Item (D.Args, T, Item);
          end loop;
       end if;
@@ -1637,6 +1637,7 @@ package body GNATCOLL.Scripts.Python is
       Args2 : PyObject;
       Size  : Integer;
       Item  : PyObject;
+      Self, First_Arg : PyObject;
 
    begin
       if Script.Blocked then
@@ -1658,10 +1659,10 @@ package body GNATCOLL.Scripts.Python is
          --   been:
          --     class on_match (self, process, matched, unmatched): pass
 
-         if PyMethod_Self (Command) /= null
-           and then PyMethod_Self (Command) /=
-             PyObject_GetItem (Python_Callback_Data (Args).Args, 0)
-         then
+         Self := PyMethod_Self (Command);
+         First_Arg := PyObject_GetItem (Python_Callback_Data (Args).Args, 0);
+
+         if Self /= null and then Self /= First_Arg then
 
             --  See code in classobject.c::instancemethod_call()
             Size  := PyObject_Size (Python_Callback_Data (Args).Args);
@@ -1670,7 +1671,6 @@ package body GNATCOLL.Scripts.Python is
             PyTuple_SetItem (Args2, 0, PyMethod_Self (Command));
             for T in 0 .. Size - 1 loop
                Item := PyObject_GetItem (Python_Callback_Data (Args).Args, T);
-               Py_INCREF (Item);
                PyTuple_SetItem (Args2, T  + 1, Item);
             end loop;
          else
@@ -1678,6 +1678,8 @@ package body GNATCOLL.Scripts.Python is
             Args2 := Python_Callback_Data (Args).Args;
             Py_INCREF (Args2);
          end if;
+
+         Py_DECREF (First_Arg);
 
          Obj := PyObject_Call
            (Object => PyMethod_Function (Command),
@@ -1897,6 +1899,7 @@ package body GNATCOLL.Scripts.Python is
 
          if Old_Args /= null then
             Item := PyObject_GetItem (Old_Args, 0);
+            Py_DECREF (Item);
          else
             Item := PyDict_GetItemString (Data.Kw, "self");
             if Item = null then
@@ -1927,15 +1930,17 @@ package body GNATCOLL.Scripts.Python is
                raise Invalid_Parameter;
             end if;
 
+            Py_INCREF (Item);
+
          elsif N - Params'First + First < Nargs then
             Item := PyObject_GetItem (Old_Args, N - Params'First + First);
 
          else
             Item := Py_None;
+            Py_INCREF (Item);
          end if;
 
          PyTuple_SetItem (Data.Args, N - Params'First + First, Item);
-         Py_INCREF (Item);
       end loop;
 
       Py_DECREF (Old_Args);
@@ -1984,10 +1989,14 @@ package body GNATCOLL.Scripts.Python is
    procedure Name_Parameters
      (Data  : in out Python_Callback_Data; Names : Cst_Argument_List)
    is
+      function Convert is new Ada.Unchecked_Conversion
+        (Cst_String_Access, GNAT.Strings.String_Access);
       Params : Param_Array (Names'Range);
    begin
       for N in Names'Range loop
-         Params (N) := (Name     => Names (N),
+         --  The conversion here is safe: Name_Parameters does not modify the
+         --  string, nor does it try to free it
+         Params (N) := (Name     => Convert (Names (N)),
                         Optional => True);
       end loop;
 
@@ -2018,8 +2027,14 @@ package body GNATCOLL.Scripts.Python is
       if Obj = null or else Obj = Py_None then
          raise No_Such_Parameter;
       end if;
+
+      Py_DECREF (Obj); --  Return a borrowed reference
       return Obj;
    end Get_Param;
+
+   ---------------
+   -- Get_Param --
+   ---------------
 
    procedure Get_Param
      (Data    : Python_Callback_Data'Class;
@@ -2032,6 +2047,7 @@ package body GNATCOLL.Scripts.Python is
 
       if Data.Args /= null and then N <= PyObject_Size (Data.Args) then
          Result := PyObject_GetItem (Data.Args, N - 1);
+         Py_DECREF (Result);  --  We want to return a borrowed reference
       end if;
 
       if Result = null and then Data.Kw /= null then
