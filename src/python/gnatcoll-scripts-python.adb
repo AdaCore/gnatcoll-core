@@ -2577,6 +2577,8 @@ package body GNATCOLL.Scripts.Python is
                   "Get_CI: Result not initialized after Set_CI");
             end if;
             Decref (Get_CIR (Result));  --  Since From_Instance incremented it
+         else
+            Decref (CI);
          end if;
          return Result;
 
