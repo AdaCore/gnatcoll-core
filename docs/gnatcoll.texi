@@ -3251,7 +3251,7 @@ Here an example of use of the package:
      R   : Ref;@NL{}
      Tmp : My_Type := ...;@NL{}
   @b{begin}@NL{}
-     R := Allocate (Tmp);    @i{--  Increment counter}@NL{}
+     Set (R, Tmp);           @i{--  Increment counter}@NL{}
      Get (R).Field1 := ...;  @i{--  Access referenced object}@NL{}
   @b{end}@NL{}
   @i{--  R out of scope, so decrement counter, and free Tmp}@NL{}
@@ -3300,7 +3300,7 @@ create weak references.
      R   : Ref;@NL{}
      Tmp : My_Type := ...;@NL{}
   @b{begin}@NL{}
-     R := Allocate (Tmp);    @i{--  Increment counter}@NL{}
+     Set (R, Tmp);           @i{--  Increment counter}@NL{}
      WR := Get_Weak_Ref (R); @i{--  Get a weak reference}@NL{}
 @NL{}
      Get (R).Field1 := ...;  @i{--  Access referenced object}@NL{}

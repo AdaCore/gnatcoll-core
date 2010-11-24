@@ -53,8 +53,8 @@ package body GNATCOLL.Refcount.Weakref is
       -- Get_Weak_Ref --
       ------------------
 
-      function Get_Weak_Ref (Self : Ref) return Weak_Ref is
-         Data : constant Encapsulated_Access := Get (Self);
+      function Get_Weak_Ref (Self : Ref'Class) return Weak_Ref is
+         Data : constant Encapsulated_Access := Self.Get;
          P    : Proxy_Pointers.Ref;
          D    : Proxy_Pointers.Encapsulated_Access;
       begin
@@ -77,21 +77,27 @@ package body GNATCOLL.Refcount.Weakref is
       -- Get --
       ---------
 
-      function Get (Self : Weak_Ref) return Ref is
+      procedure Get (Self : Weak_Ref'Class; R : out Ref'Class) is
          P : constant access Proxy :=
            Proxy_Pointers.Get (Proxy_Pointers.Ref (Self));
       begin
          if P.Proxied = null then
-            return Null_Ref;
+            R.Set (null);
          else
             --  Adds a reference to P.Proxied
-            declare
-               Result : Ref;
-            begin
-               Set (Result, Encapsulated_Access (P.Proxied));
-               return Result;
-            end;
+            R.Set (Encapsulated_Access (P.Proxied));
          end if;
+      end Get;
+
+      ---------
+      -- Get --
+      ---------
+
+      function Get (Self : Weak_Ref'Class) return Ref is
+         Result : Ref;
+      begin
+         Get (Self, Result);
+         return Result;
       end Get;
 
    end Weakref_Pointers;

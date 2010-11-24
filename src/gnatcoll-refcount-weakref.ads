@@ -93,16 +93,18 @@ package GNATCOLL.Refcount.Weakref is
       subtype Weak_Ref is Proxy_Pointers.Ref;
       Null_Weak_Ref : constant Weak_Ref := Weak_Ref (Proxy_Pointers.Null_Ref);
 
-      function Get_Weak_Ref (Self : Ref) return Weak_Ref;
+      function Get_Weak_Ref (Self : Ref'Class) return Weak_Ref;
       --  Return a weak reference to Self.
       --  It does not hold a reference to Self, which means that Self could be
       --  destroyed while the weak reference exists. However, this will not
       --  result
       --  in a Storage_Error when you access the reference.
 
-      function Get (Self : Weak_Ref) return Ref;
+      function Get (Self : Weak_Ref'Class) return Ref;
+      procedure Get (Self : Weak_Ref'Class; R : out Ref'Class);
       --  Return the weakly referenced object. This will return Null_Ref
       --  if the object has already been destroyed.
+      --  The procedure version can be used if you have subclassed Ref.
       --  The code should look like:
       --
       --      --  Create the smart pointer
