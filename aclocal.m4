@@ -4,6 +4,18 @@
 ##   include(gnatcoll/aclocal.m4)
 
 ##############################################################
+# Copy a file, as part of config.status
+#  AM_LINK_FILE(SOURCE,DEST)
+##############################################################
+
+AC_DEFUN(AM_LINK_FILE,
+[
+   AC_CONFIG_COMMANDS([$2],
+                      [rm -f $2
+                       cp -f $1 $2], [$3])
+])
+
+##############################################################
 # Checking for build type
 # The following variable is exported by configure:
 #   @BUILD_TYPE@: either "Production" or "Debug"

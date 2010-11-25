@@ -4647,7 +4647,16 @@ done
 
 
 
-                              ac_config_links="$ac_config_links src/gnatcoll-refcount-sync_counters.adb:src/gnatcoll-refcount-sync_counters__$SYNC_COUNTERS_IMPL.ada src/gnatcoll.gpr:src/gnatcoll__$GNAT_SOURCES.gpr distrib/gnatcoll.gpr:distrib/gnatcoll.gpr__$GNAT_SOURCES"
+             ac_config_commands="$ac_config_commands src/gnatcoll-refcount-sync_counters.adb"
+
+
+
+             ac_config_commands="$ac_config_commands src/gnatcoll.gpr"
+
+
+
+             ac_config_commands="$ac_config_commands distrib/gnatcoll.gpr"
+
 
 
                                                                                                               ac_config_files="$ac_config_files gnatcoll_shared.gpr docs/Makefile Makefile.conf src/gnatcoll_gmp.gpr src/gnatcoll_python.gpr distrib/gnatcoll.gpr__gnat_util distrib/gnatcoll.gpr__copy distrib/gnatcoll_python.gpr distrib/gnatcoll_gmp.gpr docs/gnatcoll_include.texi gnat/sdefault/sdefault.adb"
@@ -5092,8 +5101,8 @@ Usage: $0 [OPTIONS] [FILE]...
 Configuration files:
 $config_files
 
-Configuration links:
-$config_links
+Configuration commands:
+$config_commands
 
 Report bugs to <bug-autoconf@gnu.org>."
 _ACEOF
@@ -5194,7 +5203,15 @@ fi
 
 _ACEOF
 
+cat >>$CONFIG_STATUS <<_ACEOF
+#
+# INIT-COMMANDS section.
+#
 
+SYNC_COUNTERS_IMPL=$SYNC_COUNTERS_IMPL
+GNAT_SOURCES=$GNAT_SOURCES
+
+_ACEOF
 
 
 
@@ -5214,9 +5231,9 @@ do
   "distrib/gnatcoll_gmp.gpr" ) CONFIG_FILES="$CONFIG_FILES distrib/gnatcoll_gmp.gpr" ;;
   "docs/gnatcoll_include.texi" ) CONFIG_FILES="$CONFIG_FILES docs/gnatcoll_include.texi" ;;
   "gnat/sdefault/sdefault.adb" ) CONFIG_FILES="$CONFIG_FILES gnat/sdefault/sdefault.adb" ;;
-  "src/gnatcoll-refcount-sync_counters.adb" ) CONFIG_LINKS="$CONFIG_LINKS src/gnatcoll-refcount-sync_counters.adb:src/gnatcoll-refcount-sync_counters__$SYNC_COUNTERS_IMPL.ada" ;;
-  "src/gnatcoll.gpr" ) CONFIG_LINKS="$CONFIG_LINKS src/gnatcoll.gpr:src/gnatcoll__$GNAT_SOURCES.gpr" ;;
-  "distrib/gnatcoll.gpr" ) CONFIG_LINKS="$CONFIG_LINKS distrib/gnatcoll.gpr:distrib/gnatcoll.gpr__$GNAT_SOURCES" ;;
+  "src/gnatcoll-refcount-sync_counters.adb" ) CONFIG_COMMANDS="$CONFIG_COMMANDS src/gnatcoll-refcount-sync_counters.adb" ;;
+  "src/gnatcoll.gpr" ) CONFIG_COMMANDS="$CONFIG_COMMANDS src/gnatcoll.gpr" ;;
+  "distrib/gnatcoll.gpr" ) CONFIG_COMMANDS="$CONFIG_COMMANDS distrib/gnatcoll.gpr" ;;
   *) { { echo "$as_me:$LINENO: error: invalid argument: $ac_config_target" >&5
 echo "$as_me: error: invalid argument: $ac_config_target" >&2;}
    { (exit 1); exit 1; }; };;
@@ -5229,7 +5246,7 @@ done
 # bizarre bug on SunOS 4.1.3.
 if $ac_need_defaults; then
   test "${CONFIG_FILES+set}" = set || CONFIG_FILES=$config_files
-  test "${CONFIG_LINKS+set}" = set || CONFIG_LINKS=$config_links
+  test "${CONFIG_COMMANDS+set}" = set || CONFIG_COMMANDS=$config_commands
 fi
 
 # Have a temporary directory for convenience.  Make it in the build tree
@@ -5565,25 +5582,12 @@ _ACEOF
 cat >>$CONFIG_STATUS <<\_ACEOF
 
 #
-# CONFIG_LINKS section.
+# CONFIG_COMMANDS section.
 #
-
-for ac_file in : $CONFIG_LINKS; do test "x$ac_file" = x: && continue
+for ac_file in : $CONFIG_COMMANDS; do test "x$ac_file" = x: && continue
   ac_dest=`echo "$ac_file" | sed 's,:.*,,'`
   ac_source=`echo "$ac_file" | sed 's,[^:]*:,,'`
-
-  { echo "$as_me:$LINENO: linking $srcdir/$ac_source to $ac_dest" >&5
-echo "$as_me: linking $srcdir/$ac_source to $ac_dest" >&6;}
-
-  if test ! -r $srcdir/$ac_source; then
-    { { echo "$as_me:$LINENO: error: $srcdir/$ac_source: file not found" >&5
-echo "$as_me: error: $srcdir/$ac_source: file not found" >&2;}
-   { (exit 1); exit 1; }; }
-  fi
-  rm -f $ac_dest
-
-  # Make relative symlinks.
-  ac_dest_dir=`(dirname "$ac_dest") 2>/dev/null ||
+  ac_dir=`(dirname "$ac_dest") 2>/dev/null ||
 $as_expr X"$ac_dest" : 'X\(.*[^/]\)//*[^/][^/]*/*$' \| \
          X"$ac_dest" : 'X\(//\)[^/]' \| \
          X"$ac_dest" : 'X\(//\)$' \| \
@@ -5595,35 +5599,10 @@ echo X"$ac_dest" |
   	  /^X\(\/\/\)$/{ s//\1/; q; }
   	  /^X\(\/\).*/{ s//\1/; q; }
   	  s/.*/./; q'`
-  { if $as_mkdir_p; then
-    mkdir -p "$ac_dest_dir"
-  else
-    as_dir="$ac_dest_dir"
-    as_dirs=
-    while test ! -d "$as_dir"; do
-      as_dirs="$as_dir $as_dirs"
-      as_dir=`(dirname "$as_dir") 2>/dev/null ||
-$as_expr X"$as_dir" : 'X\(.*[^/]\)//*[^/][^/]*/*$' \| \
-         X"$as_dir" : 'X\(//\)[^/]' \| \
-         X"$as_dir" : 'X\(//\)$' \| \
-         X"$as_dir" : 'X\(/\)' \| \
-         .     : '\(.\)' 2>/dev/null ||
-echo X"$as_dir" |
-    sed '/^X\(.*[^/]\)\/\/*[^/][^/]*\/*$/{ s//\1/; q; }
-  	  /^X\(\/\/\)[^/].*/{ s//\1/; q; }
-  	  /^X\(\/\/\)$/{ s//\1/; q; }
-  	  /^X\(\/\).*/{ s//\1/; q; }
-  	  s/.*/./; q'`
-    done
-    test ! -n "$as_dirs" || mkdir $as_dirs
-  fi || { { echo "$as_me:$LINENO: error: cannot create directory \"$ac_dest_dir\"" >&5
-echo "$as_me: error: cannot create directory \"$ac_dest_dir\"" >&2;}
-   { (exit 1); exit 1; }; }; }
-
   ac_builddir=.
 
-if test "$ac_dest_dir" != .; then
-  ac_dir_suffix=/`echo "$ac_dest_dir" | sed 's,^\.[\\/],,'`
+if test "$ac_dir" != .; then
+  ac_dir_suffix=/`echo "$ac_dir" | sed 's,^\.[\\/],,'`
   # A "../" for each directory in $ac_dir_suffix.
   ac_top_builddir=`echo "$ac_dir_suffix" | sed 's,/[^\\/]*,../,g'`
 else
@@ -5645,26 +5624,24 @@ case $srcdir in
     ac_srcdir=$ac_top_builddir$srcdir$ac_dir_suffix
     ac_top_srcdir=$ac_top_builddir$srcdir ;;
 esac
-# Don't blindly perform a `cd "$ac_dest_dir"/$ac_foo && pwd` since $ac_foo can be
+# Don't blindly perform a `cd "$ac_dir"/$ac_foo && pwd` since $ac_foo can be
 # absolute.
-ac_abs_builddir=`cd "$ac_dest_dir" && cd $ac_builddir && pwd`
-ac_abs_top_builddir=`cd "$ac_dest_dir" && cd ${ac_top_builddir}. && pwd`
-ac_abs_srcdir=`cd "$ac_dest_dir" && cd $ac_srcdir && pwd`
-ac_abs_top_srcdir=`cd "$ac_dest_dir" && cd $ac_top_srcdir && pwd`
+ac_abs_builddir=`cd "$ac_dir" && cd $ac_builddir && pwd`
+ac_abs_top_builddir=`cd "$ac_dir" && cd ${ac_top_builddir}. && pwd`
+ac_abs_srcdir=`cd "$ac_dir" && cd $ac_srcdir && pwd`
+ac_abs_top_srcdir=`cd "$ac_dir" && cd $ac_top_srcdir && pwd`
 
 
-  case $srcdir in
-  [\\/$]* | ?:[\\/]* ) ac_rel_source=$srcdir/$ac_source ;;
-      *) ac_rel_source=$ac_top_builddir$srcdir/$ac_source ;;
+  { echo "$as_me:$LINENO: executing $ac_dest commands" >&5
+echo "$as_me: executing $ac_dest commands" >&6;}
+  case $ac_dest in
+    src/gnatcoll-refcount-sync_counters.adb ) rm -f src/gnatcoll-refcount-sync_counters.adb
+                       cp -f src/gnatcoll-refcount-sync_counters__$SYNC_COUNTERS_IMPL.ada src/gnatcoll-refcount-sync_counters.adb ;;
+    src/gnatcoll.gpr ) rm -f src/gnatcoll.gpr
+                       cp -f src/gnatcoll__$GNAT_SOURCES.gpr src/gnatcoll.gpr ;;
+    distrib/gnatcoll.gpr ) rm -f distrib/gnatcoll.gpr
+                       cp -f distrib/gnatcoll.gpr__$GNAT_SOURCES distrib/gnatcoll.gpr ;;
   esac
-
-  # Try a symlink, then a hard link, then a copy.
-  ln -s $ac_rel_source $ac_dest 2>/dev/null ||
-    ln $srcdir/$ac_source $ac_dest 2>/dev/null ||
-    cp -p $srcdir/$ac_source $ac_dest ||
-    { { echo "$as_me:$LINENO: error: cannot link or copy $srcdir/$ac_source to $ac_dest" >&5
-echo "$as_me: error: cannot link or copy $srcdir/$ac_source to $ac_dest" >&2;}
-   { (exit 1); exit 1; }; }
 done
 _ACEOF
 
