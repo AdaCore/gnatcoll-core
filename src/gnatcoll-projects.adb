@@ -718,8 +718,29 @@ package body GNATCOLL.Projects is
 
             for F in Tmp'Range loop
                if Tmp (F).Has_Suffix (ALI_Ext) then
-                  Info_Cursor := Self.Data.Tree.Objects_Basename.Find
-                    (Base_Name (Tmp (F), ALI_Ext));
+                  declare
+                     B : constant Filesystem_String :=
+                       Base_Name (Tmp (F), ALI_Ext);
+                     Dot : Integer;
+                  begin
+                     Info_Cursor := Self.Data.Tree.Objects_Basename.Find (B);
+
+                     if not Has_Element (Info_Cursor) then
+                        --  Special case for C files: the library file is
+                        --    file.c.gli
+                        --  instead of file.ali as we would have in Ada
+
+                        Dot := B'Last;
+                        while Dot >= B'First and then B (Dot) /= '.' loop
+                           Dot := Dot - 1;
+                        end loop;
+
+                        if Dot > B'First then
+                           Info_Cursor := Self.Data.Tree.Objects_Basename.Find
+                             (B (B'First .. Dot - 1));
+                        end if;
+                     end if;
+                  end;
 
                   if Has_Element (Info_Cursor) then
                      if Element (Info_Cursor).Project = Self then
