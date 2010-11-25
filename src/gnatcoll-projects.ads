@@ -526,6 +526,17 @@ package GNATCOLL.Projects is
    --  on a remote server.
    --  You need to specify the sensitivity of the remote server.
 
+   function Library_Files
+     (Self                : Project_Type;
+      Recursive           : Boolean := False;
+      Including_Libraries : Boolean := False;
+      Xrefs_Dirs          : Boolean := False;
+      ALI_Ext             : GNATCOLL.VFS.Filesystem_String := ".ali")
+      return GNATCOLL.VFS.File_Array_Access;
+   --  Return a list of all LI files for this project.
+   --  The parameters are similar to that of Object_Path.
+   --  ALI_Ext is the extension to use for those files
+
    --------------------
    -- Naming schemes --
    --------------------

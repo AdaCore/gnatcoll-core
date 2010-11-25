@@ -157,6 +157,11 @@ package body GNATCOLL.Projects is
       Sources : Names_Files.Map;
       --  Index on base source file names, returns information about the file
 
+      Objects_Basename : Names_Files.Map;
+      --  The basename (with no extension or directory) of the object files.
+      --  This is used to quickly filter out the relevant object or library
+      --  files when an object directory is shared amongst multiple projects.
+
       Directories : Directory_Statuses.Map;
       --  Index on directory name
       --  CHANGE: might not be needed anymore, using the hash tables already
@@ -683,6 +688,69 @@ package body GNATCOLL.Projects is
          return (1 .. 0 => <>);
       end if;
    end Object_Path;
+
+   -------------------
+   -- Library_Files --
+   -------------------
+
+   function Library_Files
+     (Self                : Project_Type;
+      Recursive           : Boolean := False;
+      Including_Libraries : Boolean := False;
+      Xrefs_Dirs          : Boolean := False;
+      ALI_Ext             : GNATCOLL.VFS.Filesystem_String := ".ali")
+      return GNATCOLL.VFS.File_Array_Access
+   is
+      Tmp      : File_Array_Access;
+      Result   : File_Array_Access;
+      Objects  : constant File_Array :=
+        Object_Path (Self, Recursive  => Recursive,
+                     Including_Libraries => Including_Libraries,
+                     Xrefs_Dirs          => Xrefs_Dirs);
+      Info_Cursor   : Names_Files.Cursor;
+
+   begin
+      for Dir in Objects'Range loop
+         begin
+            Trace (Me, "Library_Files, reading dir "
+                   & Display_Full_Name (Objects (Dir)));
+            Tmp := Read_Dir (Objects (Dir));
+
+            for F in Tmp'Range loop
+               if Tmp (F).Has_Suffix (ALI_Ext) then
+                  Info_Cursor := Self.Data.Tree.Objects_Basename.Find
+                    (Base_Name (Tmp (F), ALI_Ext));
+
+                  if Has_Element (Info_Cursor) then
+                     if Element (Info_Cursor).Project = Self then
+                        Append (Result, Tmp (F));
+
+                     elsif Active (Me) then
+                        Trace (Me, "Library_Files: "
+                               & Display_Base_Name (Tmp (F))
+                               & " is for project "
+                               & Element (Info_Cursor).Project.Name);
+                     end if;
+
+                  elsif Active (Me) then
+                     Trace
+                       (Me, "Library_Files: "
+                        & Display_Base_Name (Tmp (F))
+                        & " is not for any loaded project");
+                  end if;
+               end if;
+            end loop;
+
+            Unchecked_Free (Tmp);
+         exception
+            when VFS_Directory_Error =>
+               Trace (Me, "Couldn't open the directory " &
+                      Objects (Dir).Display_Full_Name);
+         end;
+      end loop;
+
+      return Result;
+   end Library_Files;
 
    --------------------------
    -- Direct_Sources_Count --
@@ -2376,6 +2444,8 @@ package body GNATCOLL.Projects is
       if Project = No_Project then
          return Start (Root_Project, Recursive => True);
       end if;
+
+      Trace (Me, "Find_All_Projects_Importing " & Project.Name);
 
       if Project.Data.Importing_Projects = null then
          Compute_Imported_Projects (Root_Project);
@@ -4531,6 +4601,14 @@ package body GNATCOLL.Projects is
                Self.Data.Sources.Include
                  (Base_Name (File),
                   (P, File, Source.Language.Name, Source));
+
+               if Source.Object /= Namet.No_File then
+                  Self.Data.Objects_Basename.Include
+                    (Base_Name
+                       (Filesystem_String (Get_Name_String (Source.Object)),
+                        ".o"),
+                     (P, File, Source.Language.Name, Source));
+               end if;
 
                --  The project manager duplicates files that contain several
                --  units. Only add them once in the project sources (and thus
