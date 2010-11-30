@@ -305,15 +305,15 @@ the same parser as the GNAT tools.
 @value{gnatcoll} will look for those sources in two different ways:
 
 @itemize @bullet
-@item Recent versions of GNAT come with an additional @code{gnat_util.gpr}
-  project file, installed along with it. This project contains the required
-  subset of the sources. If you have an older version of GNAT, you could
-  also chose to install @code{gnat_util} independently.
-
-@item Otherwise, you could get a copy of the GNAT sources, and create a
+@item If you have a copy of the GNAT sources, create a
   link called @file{gnat_src} that points to the directory containing those
   sources. This link should be created in the toplevel @value{gnatcoll}
   directory.
+
+@item Otherwise, recent versions of GNAT come with an additional @code{gnat_util.gpr}
+  project file, installed along with it. This project contains the required
+  subset of the sources. If you have an older version of GNAT, you could
+  also chose to install @code{gnat_util} independently.
 
 @item If none of the above is satisfied, @value{gnatcoll} will not include
   support for @code{GNATCOLL.Projects}.
