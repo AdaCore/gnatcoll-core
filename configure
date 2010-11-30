@@ -4246,9 +4246,23 @@ fi
 
 
 
-  echo "$as_me:$LINENO: checking whether gnat_util exists" >&5
-echo $ECHO_N "checking whether gnat_util exists... $ECHO_C" >&6
+  # First check local gnat sources, and use these if possible. That gives
+  # a chance for the user to override a gnat_util.gpr that would be found
+  # in the project path
 
+  echo "$as_me:$LINENO: checking whether gnat sources are found" >&5
+echo $ECHO_N "checking whether gnat sources are found... $ECHO_C" >&6
+  if test -d gnat_src; then
+     echo "$as_me:$LINENO: result: yes" >&5
+echo "${ECHO_T}yes" >&6
+     HAS_GNAT_SOURCES=yes
+     GNAT_SOURCES=copy
+  else
+     echo "$as_me:$LINENO: result: no" >&5
+echo "${ECHO_T}no" >&6
+
+     echo "$as_me:$LINENO: checking whether gnat_util exists" >&5
+echo $ECHO_N "checking whether gnat_util exists... $ECHO_C" >&6
 
    project=gnat_util
    output=HAVE_GNAT_UTIL
@@ -4274,27 +4288,16 @@ echo $ECHO_N "checking whether gnat_util exists... $ECHO_C" >&6
    fi
 
 
-  if test "$HAVE_GNAT_UTIL" = "yes"; then
-     echo "$as_me:$LINENO: result: found" >&5
-echo "${ECHO_T}found" >&6;
-     HAS_GNAT_SOURCES=yes
-     GNAT_SOURCES=gnat_util
-  else
-     echo "$as_me:$LINENO: result: not found" >&5
-echo "${ECHO_T}not found" >&6
-
-     echo "$as_me:$LINENO: checking whether gnat sources are found" >&5
-echo $ECHO_N "checking whether gnat sources are found... $ECHO_C" >&6
-     if test -d gnat_src; then
+     if test "$HAVE_GNAT_UTIL" = "yes"; then
         echo "$as_me:$LINENO: result: yes" >&5
-echo "${ECHO_T}yes" >&6
+echo "${ECHO_T}yes" >&6;
         HAS_GNAT_SOURCES=yes
+        GNAT_SOURCES=gnat_util
      else
         echo "$as_me:$LINENO: result: no" >&5
 echo "${ECHO_T}no" >&6
         HAS_GNAT_SOURCES=no
      fi
-     GNAT_SOURCES=copy
   fi
 
   WITH_PROJECTS=$HAS_GNAT_SOURCES

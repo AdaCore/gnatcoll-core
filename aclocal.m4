@@ -105,25 +105,28 @@ end Check;
 
 AC_DEFUN(AM_GNAT_SOURCES,
 [
-  AC_MSG_CHECKING(whether gnat_util exists)
+  # First check local gnat sources, and use these if possible. That gives
+  # a chance for the user to override a gnat_util.gpr that would be found
+  # in the project path
 
-  AM_PATH_PROJECT(gnat_util, HAVE_GNAT_UTIL)
-  if test "$HAVE_GNAT_UTIL" = "yes"; then
-     AC_MSG_RESULT(found);
+  AC_MSG_CHECKING(whether gnat sources are found)
+  if test -d gnat_src; then
+     AC_MSG_RESULT(yes)
      HAS_GNAT_SOURCES=yes
-     GNAT_SOURCES=gnat_util
+     GNAT_SOURCES=copy
   else
-     AC_MSG_RESULT(not found)
+     AC_MSG_RESULT(no)
 
-     AC_MSG_CHECKING(whether gnat sources are found)
-     if test -d gnat_src; then
-        AC_MSG_RESULT(yes)
+     AC_MSG_CHECKING(whether gnat_util exists)
+     AM_PATH_PROJECT(gnat_util, HAVE_GNAT_UTIL)
+     if test "$HAVE_GNAT_UTIL" = "yes"; then
+        AC_MSG_RESULT(yes);
         HAS_GNAT_SOURCES=yes
+        GNAT_SOURCES=gnat_util
      else
         AC_MSG_RESULT(no)
         HAS_GNAT_SOURCES=no
      fi
-     GNAT_SOURCES=copy
   fi
 
   WITH_PROJECTS=$HAS_GNAT_SOURCES
