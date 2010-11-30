@@ -1,7 +1,7 @@
 -----------------------------------------------------------------------
 --                               G N A T C O L L                     --
 --                                                                   --
---                     Copyright (C) 2003-2008, AdaCore              --
+--                     Copyright (C) 2003-2010, AdaCore              --
 --                                                                   --
 -- GPS is free  software;  you can redistribute it and/or modify  it --
 -- under the terms of the GNU General Public License as published by --
@@ -32,7 +32,7 @@ package body GNATCOLL.Scripts.Python is
    -------------------------------
 
    procedure Register_Python_Scripting
-     (Repo          : Scripts.Scripts_Repository;
+     (Repo          : Scripts.Scripts_Repository'Class;
       Module        : String)
    is
       pragma Unreferenced (Repo, Module);
@@ -41,13 +41,11 @@ package body GNATCOLL.Scripts.Python is
    end Register_Python_Scripting;
 
    procedure Unregister_Python_Scripting
-     (Repo : Scripts.Scripts_Repository)
+     (Repo : Scripts.Scripts_Repository'Class)
    is
       pragma Unreferenced (Repo);
    begin
       null;
    end Unregister_Python_Scripting;
 
-
 end GNATCOLL.Scripts.Python;
-

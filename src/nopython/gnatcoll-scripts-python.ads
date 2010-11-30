@@ -1,7 +1,7 @@
 -----------------------------------------------------------------------
 --                               G N A T C O L L                     --
 --                                                                   --
---                     Copyright (C) 2003-2008, AdaCore              --
+--                     Copyright (C) 2003-2010, AdaCore              --
 --                                                                   --
 -- GPS is free  software;  you can redistribute it and/or modify  it --
 -- under the terms of the GNU General Public License as published by --
@@ -30,10 +30,10 @@ package GNATCOLL.Scripts.Python is
    Python_Name : constant String := "python";
 
    procedure Register_Python_Scripting
-     (Repo          : Scripts.Scripts_Repository;
+     (Repo          : Scripts.Scripts_Repository'Class;
       Module        : String);
    procedure Unregister_Python_Scripting
-     (Repo : Scripts.Scripts_Repository);
+     (Repo : Scripts.Scripts_Repository'Class);
    --  Does nothing, since python was not compiled in.
 
 end GNATCOLL.Scripts.Python;
