@@ -17,6 +17,9 @@
  Place - Suite 330, Boston, MA 02111-1307, USA.                    --
 ---------------------------------------------------------------------*/
 
+/* Force a value for the macro. It will only work for gcc, but otherwise
+ * we cannot use the mingwin python with gcc on Windows*/
+#define PY_LONG_LONG long long
 #include <Python.h>
 #include <compile.h>  /* PyCodeObject definition in older versions*/
 

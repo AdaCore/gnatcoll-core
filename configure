@@ -3543,7 +3543,11 @@ _ACEOF
 cat confdefs.h >>conftest.$ac_ext
 cat >>conftest.$ac_ext <<_ACEOF
 /* end confdefs.h.  */
+
+/* will only work with gcc, but needed to use it with the mingwin python */
+#define PY_LONG_LONG long long
 #include <Python.h>
+
 int
 main ()
 {
@@ -3578,7 +3582,11 @@ _ACEOF
 cat confdefs.h >>conftest.$ac_ext
 cat >>conftest.$ac_ext <<_ACEOF
 /* end confdefs.h.  */
+
+/* will only work with gcc, but needed to use it with the mingwin python */
+#define PY_LONG_LONG long long
 #include <Python.h>
+
 int
 main ()
 {
@@ -3614,6 +3622,9 @@ _ACEOF
 cat confdefs.h >>conftest.$ac_ext
 cat >>conftest.$ac_ext <<_ACEOF
 /* end confdefs.h.  */
+
+/* will only work with gcc, but needed to use it with the mingwin python */
+#define PY_LONG_LONG long long
 #include <Python.h>
 int
 main ()
