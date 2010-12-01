@@ -32,7 +32,7 @@ package body GNATCOLL.Scripts.Python is
    -------------------------------
 
    procedure Register_Python_Scripting
-     (Repo          : Scripts.Scripts_Repository'Class;
+     (Repo          : access Scripts.Scripts_Repository_Record'Class;
       Module        : String)
    is
       pragma Unreferenced (Repo, Module);
@@ -41,7 +41,7 @@ package body GNATCOLL.Scripts.Python is
    end Register_Python_Scripting;
 
    procedure Unregister_Python_Scripting
-     (Repo : Scripts.Scripts_Repository'Class)
+     (Repo : access Scripts.Scripts_Repository_Record'Class)
    is
       pragma Unreferenced (Repo);
    begin

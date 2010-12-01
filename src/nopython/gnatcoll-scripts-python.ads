@@ -30,10 +30,10 @@ package GNATCOLL.Scripts.Python is
    Python_Name : constant String := "python";
 
    procedure Register_Python_Scripting
-     (Repo          : Scripts.Scripts_Repository'Class;
+     (Repo          : access Scripts.Scripts_Repository_Record'Class;
       Module        : String);
    procedure Unregister_Python_Scripting
-     (Repo : Scripts.Scripts_Repository'Class);
+     (Repo : access Scripts.Scripts_Repository_Record'Class);
    --  Does nothing, since python was not compiled in.
 
 end GNATCOLL.Scripts.Python;
