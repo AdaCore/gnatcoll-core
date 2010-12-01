@@ -88,10 +88,14 @@ package GNATCOLL.Refcount.Weakref is
         renames Pointers.Get;
       function "=" (P1, P2 : Ref) return Boolean
         renames Pointers."=";
+      function "=" (P1, P2 : Pointers.Encapsulated_Access) return Boolean
+        renames Pointers."=";
       --  The manipulation of the smart pointers
 
       subtype Weak_Ref is Proxy_Pointers.Ref;
       Null_Weak_Ref : constant Weak_Ref := Weak_Ref (Proxy_Pointers.Null_Ref);
+      function "=" (P1, P2 : Weak_Ref) return Boolean
+        renames Proxy_Pointers."=";
 
       function Get_Weak_Ref (Self : Ref'Class) return Weak_Ref;
       --  Return a weak reference to Self.
