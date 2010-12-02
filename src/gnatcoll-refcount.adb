@@ -47,6 +47,11 @@ package body GNATCOLL.Refcount is
 
       procedure Set (Self : in out Ref; Data : access Encapsulated'Class) is
       begin
+         if Self.Data = Refcounted_Access (Data) then
+            --  Avoid finalizing Self.Data if we are going to reuse it
+            return;
+         end if;
+
          if Self.Data /= null then
             Finalize (Self);  -- decrement refcounting
          end if;
