@@ -104,6 +104,12 @@ package GNATCOLL.Refcount.Weakref is
       --  result
       --  in a Storage_Error when you access the reference.
 
+      function Was_Freed (Self : Weak_Ref'Class) return Boolean;
+      --  True if the weakly referenced element was freed (thus Get would
+      --  return Null_Ref). It is more efficient to use this function than
+      --  compare the result of Get with Null_Ref, since the latter will need
+      --  to play with refcounting.
+
       function Get (Self : Weak_Ref'Class) return Ref;
       procedure Get (Self : Weak_Ref'Class; R : out Ref'Class);
       --  Return the weakly referenced object. This will return Null_Ref

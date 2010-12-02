@@ -26,6 +26,7 @@
 -----------------------------------------------------------------------
 
 pragma Ada_05;
+with Interfaces;  use Interfaces;
 
 package body GNATCOLL.Refcount.Weakref is
    use Proxy_Pointers;
@@ -40,6 +41,7 @@ package body GNATCOLL.Refcount.Weakref is
          Proxy (Get (Self.Proxy).all).Proxied := null;
          Self.Proxy := Proxy_Pointers.Null_Ref;
       end if;
+      Free (Refcounted (Self));
    end Free;
 
    ----------------------
@@ -73,6 +75,17 @@ package body GNATCOLL.Refcount.Weakref is
          return Weak_Ref (P);
       end Get_Weak_Ref;
 
+      ---------------
+      -- Was_Freed --
+      ---------------
+
+      function Was_Freed (Self : Weak_Ref'Class) return Boolean is
+         P : constant access Proxy :=
+           Proxy_Pointers.Get (Proxy_Pointers.Ref (Self));
+      begin
+         return P = null or else P.Proxied = null;
+      end Was_Freed;
+
       ---------
       -- Get --
       ---------
@@ -84,8 +97,16 @@ package body GNATCOLL.Refcount.Weakref is
          if P = null or else P.Proxied = null then
             R.Set (null);
          else
-            --  Adds a reference to P.Proxied
-            R.Set (Encapsulated_Access (P.Proxied));
+            --  A subtetly here: it is possible that the element is actually
+            --  being freed, and Free() is calling Get on one of the weakref.
+            --  In such a case, we do not want to resuscitate the element
+
+            if P.Proxied.Refcount = 0 then
+               R.Set (null);
+            else
+               --  Adds a reference to P.Proxied
+               R.Set (Encapsulated_Access (P.Proxied));
+            end if;
          end if;
       end Get;
 
