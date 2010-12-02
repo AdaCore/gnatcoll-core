@@ -126,6 +126,7 @@ AC_DEFUN(AM_GNAT_SOURCES,
      else
         AC_MSG_RESULT(no)
         HAS_GNAT_SOURCES=no
+        GNAT_SOURCES=copy
      fi
   fi
 

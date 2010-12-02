@@ -4297,6 +4297,7 @@ echo "${ECHO_T}yes" >&6;
         echo "$as_me:$LINENO: result: no" >&5
 echo "${ECHO_T}no" >&6
         HAS_GNAT_SOURCES=no
+        GNAT_SOURCES=copy
      fi
   fi
 
