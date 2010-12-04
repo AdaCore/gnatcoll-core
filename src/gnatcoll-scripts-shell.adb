@@ -1769,7 +1769,7 @@ package body GNATCOLL.Scripts.Shell is
       Inst_Name : constant String := Name_From_Instance (Instance);
    begin
       return new Shell_Subprogram_Record'
-        (Script  => Scripting_Language (Instance.Script),
+        (Script  => Instance.Script,
          Command => new String'
            (Get_Name (Instance.Class) & "." & Name & " " & Inst_Name));
    end Get_Method;
