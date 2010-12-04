@@ -1273,6 +1273,17 @@ package body GNATCOLL.Scripts is
       return Scalar_Properties_Record (Prop).Str.all;
    end As_String;
 
+   ----------------
+   -- Get_Method --
+   ----------------
+
+   function Get_Method
+     (Instance : Class_Instance; Name : String) return Subprogram_Type
+   is
+   begin
+      return Get_Method (Get_CIR (Instance), Name);
+   end Get_Method;
+
    --------------
    -- Get_Data --
    --------------

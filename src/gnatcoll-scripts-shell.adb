@@ -60,7 +60,8 @@ package body GNATCOLL.Scripts.Shell is
    -- Misc --
    ----------
 
-   function Name_From_Instance (Instance : Class_Instance) return String;
+   function Name_From_Instance
+     (Instance : access Class_Instance_Record'Class) return String;
    --  Return the string to display to report the instance in the shell
 
    function Instance_From_Name
@@ -129,10 +130,11 @@ package body GNATCOLL.Scripts.Shell is
    -- Name_From_Instance --
    ------------------------
 
-   function Name_From_Instance (Instance : Class_Instance) return String is
+   function Name_From_Instance
+     (Instance : access Class_Instance_Record'Class) return String is
    begin
-      return '<' & Get_Name (Shell_Class_Instance (Get_CIR (Instance)).Class)
-        & "_0x" & System.Address_Image (Get_CIR (Instance).all'Address)
+      return '<' & Get_Name (Shell_Class_Instance (Instance).Class)
+        & "_0x" & System.Address_Image (Instance.all'Address)
         & '>';
    end Name_From_Instance;
 
@@ -859,7 +861,7 @@ package body GNATCOLL.Scripts.Shell is
                   Instance := New_Instance (Callback.Script, Data.Cmd.Class);
                   Append_Argument
                     (Callback.CL,
-                     Name_From_Instance (Instance),
+                     Name_From_Instance (Get_CIR (Instance)),
                      One_Arg);
                end if;
 
@@ -1263,7 +1265,7 @@ package body GNATCOLL.Scripts.Shell is
      (Data : in out Shell_Callback_Data;
       N : Positive; Value : Class_Instance) is
    begin
-      Set_Nth_Arg (Data.CL, N, Name_From_Instance (Value));
+      Set_Nth_Arg (Data.CL, N, Name_From_Instance (Get_CIR (Value)));
    end Set_Nth_Arg;
 
    -----------------
@@ -1660,7 +1662,7 @@ package body GNATCOLL.Scripts.Shell is
       Key    : Class_Instance;
       Append : Boolean := False) is
    begin
-      Set_Return_Value_Key (Data, Name_From_Instance (Key), Append);
+      Set_Return_Value_Key (Data, Name_From_Instance (Get_CIR (Key)), Append);
    end Set_Return_Value_Key;
 
    ----------------------
@@ -1725,7 +1727,7 @@ package body GNATCOLL.Scripts.Shell is
       if Value = No_Class_Instance then
          Set_Return_Value (Data, String'("null"));
       else
-         Set_Return_Value (Data, Name_From_Instance (Value));
+         Set_Return_Value (Data, Name_From_Instance (Get_CIR (Value)));
       end if;
    end Set_Return_Value;
 
@@ -1755,6 +1757,22 @@ package body GNATCOLL.Scripts.Shell is
       Instances_List.Prepend (Script.Instances, Instance);
       return From_Instance (Script, Instance);
    end New_Instance;
+
+   ----------------
+   -- Get_Method --
+   ----------------
+
+   overriding function Get_Method
+     (Instance : access Shell_Class_Instance_Record;
+      Name : String) return Subprogram_Type
+   is
+      Inst_Name : constant String := Name_From_Instance (Instance);
+   begin
+      return new Shell_Subprogram_Record'
+        (Script  => Scripting_Language (Instance.Script),
+         Command => new String'
+           (Get_Name (Instance.Class) & "." & Name & " " & Inst_Name));
+   end Get_Method;
 
    --------------------
    -- Print_Refcount --

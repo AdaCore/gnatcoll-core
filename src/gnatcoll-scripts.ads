@@ -463,6 +463,13 @@ package GNATCOLL.Scripts is
    --  GNATCOLL, and because otherwise we would have to pass the constructor
    --  parameters to New_Instance.
 
+   function Get_Method
+     (Instance : Class_Instance; Name : String) return Subprogram_Type;
+   --  Return the method of instance Instance. Returned value must be freed by
+   --  the caller.
+   --  Parameters passed to the return value must not specify the instance as
+   --  first parameter.
+
    function Is_Subclass
      (Instance : Class_Instance; Base : Class_Type) return Boolean;
    function Is_Subclass
@@ -662,6 +669,10 @@ package GNATCOLL.Scripts is
    function Get_CIR
      (Inst : Class_Instance) return Class_Instance_Record_Access;
    --  For internal use only.
+
+   function Get_Method
+     (Inst : access Class_Instance_Record;
+      Name : String) return Subprogram_Type is abstract;
 
    function Print_Refcount
      (Instance : access Class_Instance_Record) return String;

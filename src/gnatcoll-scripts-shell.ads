@@ -109,6 +109,9 @@ private
    overriding procedure Set_Property
      (Instance : access Shell_Class_Instance_Record;
       Name : String; Value : String);
+   overriding function Get_Method
+     (Instance : access Shell_Class_Instance_Record;
+      Name : String) return Subprogram_Type;
    --  See doc from inherited subprogram
 
    package Instances_List is new Ada.Containers.Indefinite_Doubly_Linked_Lists

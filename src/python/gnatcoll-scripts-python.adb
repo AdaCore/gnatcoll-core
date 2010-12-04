@@ -138,6 +138,9 @@ package body GNATCOLL.Scripts.Python is
    overriding procedure Set_Property
      (Instance : access Python_Class_Instance_Record;
       Name     : String; Value : String);
+   overriding function Get_Method
+     (Instance : access Python_Class_Instance_Record;
+      Name : String) return Subprogram_Type;
    --  See doc from inherited subprogram
 
    procedure Set_CI (CI : in out Class_Instance);
@@ -2961,6 +2964,22 @@ package body GNATCOLL.Scripts.Python is
          Script.Ignore_Constructor := False;
          raise;
    end New_Instance;
+
+   ----------------
+   -- Get_Method --
+   ----------------
+
+   overriding function Get_Method
+     (Instance : access Python_Class_Instance_Record;
+      Name : String) return Subprogram_Type
+   is
+      Inst : constant PyObject := Instance.Data;
+      Subp : constant PyObject := PyObject_GetAttrString (Inst, Name => Name);
+   begin
+      return new Python_Subprogram_Record'
+        (Script     => Python_Scripting (Instance.Script),
+         Subprogram => Subp);
+   end Get_Method;
 
    --------------------
    -- Print_Refcount --
