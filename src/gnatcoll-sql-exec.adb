@@ -491,14 +491,26 @@ package body GNATCOLL.SQL.Exec is
       --  The number of rows downloaded. If we only have a forward cursor, we
       --  can't display them
 
+      function Get_User return String;
+      --  Return the user name
+
+      function Get_User return String is
+      begin
+         if Connection.Username.all = "" then
+            return "";
+         else
+            return " (" & Connection.Username.all & ")";
+         end if;
+      end Get_User;
+
       function Get_Rows return String is
       begin
          if R.all in DBMS_Direct_Cursor'Class then
-            return Image
+            return " (" & Image
               (Processed_Rows (DBMS_Forward_Cursor'Class (R.all)),
-               Min_Width => 1);
+               Min_Width => 1) & " tuples)";
          else
-            return "??";
+            return "";
          end if;
       end Get_Rows;
 
@@ -515,34 +527,41 @@ package body GNATCOLL.SQL.Exec is
 
          if not Connection.Success then
             Set_Failure (Connection);
-            Trace
-              (Me_Query,
-               Query & " (" & Status (DBMS_Forward_Cursor'Class (R.all))
-               & " " & Error_Msg (DBMS_Forward_Cursor'Class (R.all))
-               & " (" & Connection.Username.all & ")");
-         else
+
+            if Active (Me_Query) then
+               Trace
+                 (Me_Query,
+                  Query & " " & Status (DBMS_Forward_Cursor'Class (R.all))
+                  & " " & Error_Msg (DBMS_Forward_Cursor'Class (R.all))
+                  & Get_User);
+            end if;
+
+         elsif Active (Me_Select) then
             Trace
               (Me_Select,
-               Query & " (" & Get_Rows & " tuples) "
-               & Status (DBMS_Forward_Cursor'Class (R.all))
-               & " (" & Connection.Username.all & ")");
+               Query & Get_Rows & " "
+               & Status (DBMS_Forward_Cursor'Class (R.all)) & Get_User);
          end if;
 
       else
          Connection.Success := Is_Success (DBMS_Forward_Cursor'Class (R.all));
          if not Connection.Success then
-            Set_Failure (Connection);
+            Set_Failure
+              (Connection, Error_Msg (DBMS_Forward_Cursor'Class (R.all)));
+
+            if Active (Me_Query) then
+               Trace
+                 (Me_Query,
+                  Query & " " & Status (DBMS_Forward_Cursor'Class (R.all))
+                  & " " & Error_Msg (DBMS_Forward_Cursor'Class (R.all))
+                  & Get_User);
+            end if;
+
+         elsif Active (Me_Query) then
             Trace
               (Me_Query,
-               Query & " (" & Status (DBMS_Forward_Cursor'Class (R.all))
-               & " " & Error_Msg (DBMS_Forward_Cursor'Class (R.all))
-               & " (" & Connection.Username.all & ")");
-         else
-            Trace
-              (Me_Query,
-               Query & " (" & Get_Rows & " tuples) "
-               & Status (DBMS_Forward_Cursor'Class (R.all))
-               & " (" & Connection.Username.all & ")");
+               Query & Get_Rows & " "
+               & Status (DBMS_Forward_Cursor'Class (R.all)) & Get_User);
          end if;
       end if;
    end Post_Execute_And_Log;
@@ -1064,8 +1083,8 @@ package body GNATCOLL.SQL.Exec is
    -------------
 
    function Last_Id
-     (Connection : access Database_Connection_Record'Class;
-      Self       : Forward_Cursor;
+     (Self       : Forward_Cursor;
+      Connection : access Database_Connection_Record'Class;
       Field      : SQL_Field_Integer) return Integer is
    begin
       return Last_Id

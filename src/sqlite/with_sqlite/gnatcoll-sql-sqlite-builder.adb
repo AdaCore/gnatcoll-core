@@ -170,7 +170,13 @@ package body GNATCOLL.SQL.Sqlite.Builder is
 
    overriding function Status (Self : Sqlite_Cursor) return String is
    begin
-      return Result_Codes'Image (Self.Last_Status);
+      if Self.Last_Status = Sqlite_Done
+        or else Self.Last_Status = Sqlite_Row
+      then
+         return "";
+      else
+         return Result_Codes'Image (Self.Last_Status);
+      end if;
    exception
       when others =>
          return "ERROR";
@@ -496,18 +502,33 @@ package body GNATCOLL.SQL.Sqlite.Builder is
       Connection : access Database_Connection_Record'Class;
       Field      : SQL_Field_Integer) return Integer
    is
-      Res2     : Forward_Cursor;
+      pragma Unreferenced (Connection, Field);
+--        Res2     : Forward_Cursor;
    begin
-      Res2.Fetch
-        (Connection,
-         "SELECT " & Field.To_String (Connection.all, Long => True)
-         & " FROM " & Field.Table.all
-         & " WHERE ROWID="
-         & Long_Integer'Image (Self.Last_Rowid));
-      if Has_Row (Res2) then
-         return Integer_Value (Res2, 0);
+      --  According to sqlite3 documentation, the last_rowid is also the
+      --  primary key when the latter is a single integer primary key (which is
+      --  the case here).
+      --  ??? We assume here that Field is the primary key, but we cannot
+      --  check that.
+
+      if Integer (Self.Last_Rowid) /= 0 then
+         return Integer (Self.Last_Rowid);
+      else
+         return -1;
       end if;
-      return -1;
+
+      --  If we wanted to support multi-key primary keys, for instance, we
+      --  would use:
+--        Res2.Fetch
+--          (Connection,
+--           "SELECT " & Field.To_String (Connection.all, Long => True)
+--           & " FROM " & Field.Table.all
+--           & " WHERE ROWID="
+--           & Long_Integer'Image (Self.Last_Rowid));
+--        if Has_Row (Res2) then
+--           return Integer_Value (Res2, 0);
+--        end if;
+--        return -1;
    end Last_Id;
 
    -----------------

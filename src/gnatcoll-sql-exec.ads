@@ -432,8 +432,8 @@ package GNATCOLL.SQL.Exec is
    --  True if the corresponding cell is not set
 
    function Last_Id
-     (Connection : access Database_Connection_Record'Class;
-      Self       : Forward_Cursor;
+     (Self       : Forward_Cursor;
+      Connection : access Database_Connection_Record'Class;
       Field      : SQL_Field_Integer) return Integer;
    --  Return the value set for field in the last INSERT command on that
    --  connection.
