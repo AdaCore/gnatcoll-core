@@ -27,11 +27,10 @@
 
 --  This package provides support for reference counting.
 --  A Smart_Pointer plays the role of an access type (although it is not an
---  access type), and keeps a reference to the pointed entity. When a smart
---  pointer goes out of scope, the reference counting is automatically
---  decremented.
---  When the reference count reaches 0, the corresponding entity is freed from
---  memory.
+--  access type), and keeps a reference to the designated entity. When a smart
+--  pointer goes out of scope, the designated entity's reference count is
+--  automatically decremented.
+--  When the reference count reaches 0, the corresponding entity is freed.
 
 pragma Ada_05;
 
@@ -112,6 +111,7 @@ package GNATCOLL.Refcount is
    end Smart_Pointers;
 
 private
+
    type Refcounted is abstract tagged record
       Refcount : aliased Interfaces.Integer_32 := 0;
    end record;

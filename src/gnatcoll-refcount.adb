@@ -49,16 +49,17 @@ package body GNATCOLL.Refcount is
       begin
          if Self.Data = Refcounted_Access (Data) then
             --  Avoid finalizing Self.Data if we are going to reuse it
+
             return;
          end if;
 
          if Self.Data /= null then
-            Finalize (Self);  -- decrement refcounting
+            Finalize (Self);  -- decrement reference count
          end if;
 
          if Data /= null then
             Self.Data := Refcounted_Access (Data);
-            Adjust (Self);    -- increment refcounting
+            Adjust (Self);    -- increment reference count
          end if;
       end Set;
 
@@ -98,7 +99,7 @@ package body GNATCOLL.Refcount is
          Data : Refcounted_Access := P.Data;
       begin
          --  Make Finalize idempotent, since it could be called several
-         --  times for the same instance (RM 7.6.1(24).
+         --  times for the same instance (RM 7.6.1(24)).
 
          P.Data := null;
 
