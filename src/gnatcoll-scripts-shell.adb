@@ -106,6 +106,10 @@ package body GNATCOLL.Scripts.Shell is
    function Nth_Arg
      (Data    : Shell_Callback_Data;
       N       : Positive;
+      Success : access Boolean) return Unbounded_String;
+   function Nth_Arg
+     (Data    : Shell_Callback_Data;
+      N       : Positive;
       Success : access Boolean) return Subprogram_Type;
    function Nth_Arg
      (Data : Shell_Callback_Data; N : Positive; Class : Class_Type;
@@ -280,7 +284,7 @@ package body GNATCOLL.Scripts.Shell is
             Result : Unbounded_String;
          begin
             for A in 1 .. Number_Of_Arguments (Data) loop
-               Append (Result, Nth_Arg (Data, A));
+               Append (Result, String'(Nth_Arg (Data, A)));
                if A /= Number_Of_Arguments (Data) then
                   Append (Result, ' ');
                end if;
@@ -1342,6 +1346,24 @@ package body GNATCOLL.Scripts.Shell is
    -------------
 
    function Nth_Arg
+     (Data    : Shell_Callback_Data;
+      N       : Positive;
+      Success : access Boolean) return Unbounded_String is
+   begin
+      if N > Args_Length (Data.CL) then
+         Success.all := False;
+         return Null_Unbounded_String;
+      else
+         Success.all := True;
+         return Nth_Arg (Data.CL, N);
+      end if;
+   end Nth_Arg;
+
+   -------------
+   -- Nth_Arg --
+   -------------
+
+   function Nth_Arg
      (Data       : Shell_Callback_Data;
       N          : Positive;
       Class      : Class_Type;
@@ -1441,6 +1463,23 @@ package body GNATCOLL.Scripts.Shell is
    is
       Success : aliased Boolean;
       Result  : constant String := Nth_Arg (Data, N, Success'Access);
+   begin
+      if not Success then
+         raise No_Such_Parameter;
+      else
+         return Result;
+      end if;
+   end Nth_Arg;
+
+   -------------
+   -- Nth_Arg --
+   -------------
+
+   function Nth_Arg
+     (Data : Shell_Callback_Data; N : Positive) return Unbounded_String
+   is
+      Success : aliased Boolean;
+      Result  : constant Unbounded_String := Nth_Arg (Data, N, Success'Access);
    begin
       if not Success then
          raise No_Such_Parameter;

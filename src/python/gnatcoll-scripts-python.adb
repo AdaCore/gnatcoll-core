@@ -254,6 +254,10 @@ package body GNATCOLL.Scripts.Python is
    function Nth_Arg
      (Data    : Python_Callback_Data;
       N       : Positive;
+      Success : access Boolean) return Unbounded_String;
+   function Nth_Arg
+     (Data    : Python_Callback_Data;
+      N       : Positive;
       Success : access Boolean) return Integer;
    function Nth_Arg
      (Data    : Python_Callback_Data;
@@ -2127,6 +2131,31 @@ package body GNATCOLL.Scripts.Python is
 
    function Nth_Arg
      (Data : Python_Callback_Data; N : Positive; Success : access Boolean)
+      return Unbounded_String
+   is
+      Item : PyObject;
+   begin
+      Get_Param (Data, N, Item, Success.all);
+
+      if not Success.all then
+         return Null_Unbounded_String;
+      end if;
+
+      if not PyString_Check (Item) then
+         Raise_Exception
+           (Invalid_Parameter'Identity,
+            "Parameter" & Integer'Image (N) & " should be a string");
+      else
+         return To_Unbounded_String (PyString_AsString (Item));
+      end if;
+   end Nth_Arg;
+
+   -------------
+   -- Nth_Arg --
+   -------------
+
+   function Nth_Arg
+     (Data : Python_Callback_Data; N : Positive; Success : access Boolean)
       return Integer
    is
       Item : PyObject;
@@ -2286,6 +2315,23 @@ package body GNATCOLL.Scripts.Python is
    is
       Success : aliased Boolean;
       Result  : constant String := Nth_Arg (Data, N, Success'Access);
+   begin
+      if not Success then
+         raise No_Such_Parameter;
+      else
+         return Result;
+      end if;
+   end Nth_Arg;
+
+   -------------
+   -- Nth_Arg --
+   -------------
+
+   function Nth_Arg
+     (Data : Python_Callback_Data; N : Positive) return Unbounded_String
+   is
+      Success : aliased Boolean;
+      Result  : constant Unbounded_String := Nth_Arg (Data, N, Success'Access);
    begin
       if not Success then
          raise No_Such_Parameter;

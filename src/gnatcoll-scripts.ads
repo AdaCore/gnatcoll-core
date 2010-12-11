@@ -37,6 +37,7 @@ with Ada.Containers.Indefinite_Doubly_Linked_Lists;
 with Ada.Containers.Indefinite_Hashed_Maps;
 with Ada.Finalization;
 with Ada.Strings.Hash;
+with Ada.Strings.Unbounded;  use Ada.Strings.Unbounded;
 with GNAT.OS_Lib;
 with GNAT.Strings;
 
@@ -259,6 +260,8 @@ package GNATCOLL.Scripts is
 
    function Nth_Arg
      (Data : Callback_Data; N : Positive) return String is abstract;
+   function Nth_Arg
+     (Data : Callback_Data; N : Positive) return Unbounded_String is abstract;
    function Nth_Arg
      (Data : Callback_Data'Class; N : Positive) return Filesystem_String;
    function Nth_Arg

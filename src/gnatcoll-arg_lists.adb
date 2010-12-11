@@ -470,6 +470,11 @@ package body GNATCOLL.Arg_Lists is
       return To_String (C.V.Element (N).Text);
    end Nth_Arg;
 
+   function Nth_Arg (C : Arg_List; N : Natural) return Unbounded_String is
+   begin
+      return C.V.Element (N).Text;
+   end Nth_Arg;
+
    -----------------
    -- Set_Nth_Arg --
    -----------------

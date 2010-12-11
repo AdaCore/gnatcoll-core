@@ -237,6 +237,8 @@ private
    overriding function Nth_Arg
      (Data : Python_Callback_Data; N : Positive) return String;
    overriding function Nth_Arg
+     (Data : Python_Callback_Data; N : Positive) return Unbounded_String;
+   overriding function Nth_Arg
      (Data : Python_Callback_Data; N : Positive) return Integer;
    overriding function Nth_Arg
      (Data : Python_Callback_Data; N : Positive) return Boolean;
