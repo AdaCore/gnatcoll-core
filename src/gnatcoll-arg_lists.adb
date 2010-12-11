@@ -233,7 +233,8 @@ package body GNATCOLL.Arg_Lists is
 
    function To_Display_String
      (C               : Arg_List;
-      Include_Command : Boolean := True) return String
+      Include_Command : Boolean := True;
+      Max_Arg_Length  : Positive := Positive'Last) return String
    is
       Result : Unbounded_String := To_Unbounded_String ("");
       Start  : Natural := 1;
@@ -243,7 +244,21 @@ package body GNATCOLL.Arg_Lists is
       end if;
 
       for Index in Start .. Natural (C.V.Length) loop
-         Append (Result, C.V.Element (Index - 1).Text);
+         declare
+            Arg_Len : constant Natural :=
+                        Length (C.V.Element (Index - 1).Text);
+         begin
+            if Arg_Len > Max_Arg_Length then
+               Append
+                 (Result,
+                  Unbounded_Slice (C.V.Element (Index - 1).Text,
+                    1, Max_Arg_Length - 1));
+               Append (Result, "...");
+            else
+               Append (Result, C.V.Element (Index - 1).Text);
+            end if;
+         end;
+
          if Index < Natural (C.V.Length) then
             Append (Result, " ");
          end if;

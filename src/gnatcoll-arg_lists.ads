@@ -121,11 +121,13 @@ package GNATCOLL.Arg_Lists is
 
    function To_Display_String
      (C               : Arg_List;
-      Include_Command : Boolean := True) return String;
+      Include_Command : Boolean := True;
+      Max_Arg_Length  : Positive := Positive'Last) return String;
    --  Return a string that represents C, for display purposes.
    --  For instance
    --       cmd /c make LIBRARY_TYPE=static
    --  If Include_Command is False, display only the arguments.
+   --  Max_Arg_Length is the maximum length returned for each argument in C.
 
    function To_Debug_String (C : Arg_List) return String;
    --  Return a string that represents C, for display purposes.
