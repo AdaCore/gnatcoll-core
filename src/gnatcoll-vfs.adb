@@ -33,6 +33,8 @@ with Ada.Strings.Hash;
 with Ada.Strings.Hash_Case_Insensitive;
 with Ada.Unchecked_Conversion;
 
+with System;
+
 with GNAT.Heap_Sort;            use GNAT.Heap_Sort;
 with GNATCOLL.Utils;            use GNATCOLL.Utils;
 with GNATCOLL.IO;               use GNATCOLL.IO;
@@ -1118,6 +1120,24 @@ package body GNATCOLL.VFS is
 
    begin
       Written := GNAT.OS_Lib.Write (File.FD, Str'Address, Str'Length);
+
+      if Written > 0 then
+         File.File.Value.Kind := GNATCOLL.IO.File;
+      end if;
+      --  ??? Should raise an exception if we couldn't write all the bytes
+   end Write;
+
+   procedure Write
+     (File : in out Writable_File;
+      Str  : chars_ptr)
+   is
+      Written : aliased Integer;
+
+      function To_Address is
+        new Ada.Unchecked_Conversion (chars_ptr, System.Address);
+   begin
+      Written := GNAT.OS_Lib.Write
+        (File.FD, To_Address (Str), Integer (Strlen (Str)));
 
       if Written > 0 then
          File.File.Value.Kind := GNATCOLL.IO.File;

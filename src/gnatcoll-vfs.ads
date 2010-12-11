@@ -53,6 +53,8 @@ with Ada.Containers;
 with Ada.Unchecked_Deallocation;
 with Ada.Finalization;
 
+with Interfaces.C.Strings;        use Interfaces.C.Strings;
+
 with GNAT.OS_Lib;
 with GNAT.Strings;
 
@@ -524,6 +526,9 @@ package GNATCOLL.VFS is
    procedure Write
      (File : in out Writable_File;
       Str  : String);
+   procedure Write
+     (File : in out Writable_File;
+      Str  : chars_ptr);
    --  Write a string to File. The contents of Str are written as-is
 
    procedure Close (File : in out Writable_File);
