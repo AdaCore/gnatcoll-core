@@ -252,7 +252,7 @@ package GNATCOLL.Scripts is
 
    function Get_Script (Data : Callback_Data) return Scripting_Language
       is abstract;
-   --  Return the scripting language that created Data.
+   --  Return the scripting language that created Data
 
    function Get_Repository (Data : Callback_Data) return Scripts_Repository;
    --  Return the kernel associated with Data
@@ -272,7 +272,7 @@ package GNATCOLL.Scripts is
 
    function Nth_Arg
      (Data : Callback_Data; N : Positive) return Subprogram_Type is abstract;
-   --  Same as above, for a subprogram. The returned value must be freed.
+   --  Same as above, for a subprogram. The returned value must be freed
 
    function Nth_Arg
      (Data       : Callback_Data;
@@ -438,7 +438,7 @@ package GNATCOLL.Scripts is
    procedure Set_Nth_Arg
      (Data : in out Callback_Data;
       N : Positive; Value : List_Instance) is abstract;
-   --  Override the nth arg in Data.
+   --  Override the nth arg in Data
 
    procedure Set_Return_Value
      (Data : in out Callback_Data; Value : List_Instance) is abstract;
@@ -564,7 +564,7 @@ package GNATCOLL.Scripts is
    function Get
      (List   : Instance_List;
       Script : access Scripting_Language_Record'Class) return Class_Instance;
-   --  Return the instance for a given script.
+   --  Return the instance for a given script
 
    procedure Set
      (List   : in out Instance_List;
@@ -668,7 +668,7 @@ package GNATCOLL.Scripts is
 
    function Get_CIR
      (Inst : Class_Instance) return Class_Instance_Record_Access;
-   --  For internal use only.
+   --  For internal use only
 
    function Get_Method
      (Inst : access Class_Instance_Record;
@@ -689,7 +689,7 @@ package GNATCOLL.Scripts is
    procedure Set_Property
      (Instance : access Class_Instance_Record;
       Name     : String; Value : String) is abstract;
-   --  See definition of Set_Constant (Class_Instance).
+   --  See definition of Set_Constant (Class_Instance)
 
    procedure Set_Data
      (Instance : access Class_Instance_Record'Class;
@@ -857,7 +857,7 @@ package GNATCOLL.Scripts is
    --  called.
 
    procedure Destroy (Script : access Scripting_Language_Record) is null;
-   --  Destroy the scripting language and the memory it occupies.
+   --  Destroy the scripting language and the memory it occupies
 
    type Param_Descr is private;
    type Param_Array is array (Natural range <>) of Param_Descr;
@@ -867,7 +867,7 @@ package GNATCOLL.Scripts is
 
    function Param
      (Name : String; Optional : Boolean := False) return Param_Descr;
-   --  Describe one of the parameters of a script function.
+   --  Describe one of the parameters of a script function
 
    type Command_Descr;
    type Command_Descr_Access is access all Command_Descr;
@@ -1044,7 +1044,7 @@ package GNATCOLL.Scripts is
       Hide_Output  : Boolean := False;
       Show_Command : Boolean := True;
       Errors       : out Boolean) is abstract;
-   --  Execute a script contained in an external file.
+   --  Execute a script contained in an external file
 
    function Interrupt
      (Script : access Scripting_Language_Record) return Boolean;
@@ -1224,14 +1224,14 @@ package GNATCOLL.Scripts is
    function Lookup_Scripting_Language
      (Repo   : access Scripts_Repository_Record'Class;
       Name   : String) return Scripting_Language;
-   --  Lookup one of the registered languages by name.
+   --  Lookup one of the registered languages by name
 
    type Scripting_Language_Array is
      array (Natural range <>) of Scripting_Language;
    function Get_Scripting_Languages
      (Repo : access Scripts_Repository_Record'Class)
       return Scripting_Language_Array;
-   --  Return the list of all registered languages.
+   --  Return the list of all registered languages
 
    No_Args : constant GNAT.OS_Lib.Argument_List := (1 .. 0 => null);
 

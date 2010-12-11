@@ -206,8 +206,7 @@ package body GNATCOLL.Arg_Lists is
 
    function To_List
      (C               : Arg_List;
-      Include_Command : Boolean)
-      return GNAT.OS_Lib.Argument_List
+      Include_Command : Boolean) return GNAT.OS_Lib.Argument_List
    is
       First : Natural;
    begin
@@ -272,8 +271,13 @@ package body GNATCOLL.Arg_Lists is
    ----------------------
 
    function To_Script_String (C : Arg_List) return String is
+
       function Arg (A : Unbounded_String) return Unbounded_String;
       --  Auxiliary function to process one arg
+
+      ---------
+      -- Arg --
+      ---------
 
       function Arg (A : Unbounded_String) return Unbounded_String is
          S : constant String := To_String (A);
@@ -331,6 +335,10 @@ package body GNATCOLL.Arg_Lists is
 
       function Expand_In_String (A : Unbounded_String) return Unbounded_String;
       --  Expand the argument in place in S and return the result
+
+      ----------------------
+      -- Expand_In_String --
+      ----------------------
 
       function Expand_In_String
         (A : Unbounded_String) return Unbounded_String
@@ -466,8 +474,7 @@ package body GNATCOLL.Arg_Lists is
    -- Set_Nth_Arg --
    -----------------
 
-   procedure Set_Nth_Arg (C : in out Arg_List; N : Natural; Arg : String)
-   is
+   procedure Set_Nth_Arg (C : in out Arg_List; N : Natural; Arg : String) is
    begin
       --  If there are not enough arguments, create them
       while N > Args_Length (C) loop

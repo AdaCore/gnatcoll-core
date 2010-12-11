@@ -30,6 +30,7 @@ with Ada.Characters.Handling;   use Ada.Characters.Handling;
 with Ada.Exceptions;            use Ada.Exceptions;
 with Ada.Tags;                  use Ada.Tags;
 with Ada.Strings.Hash;
+with Ada.Strings.Hash_Case_Insensitive;
 with Ada.Unchecked_Conversion;
 
 with GNAT.Heap_Sort;            use GNAT.Heap_Sort;
@@ -40,7 +41,6 @@ with GNATCOLL.Path;             use GNATCOLL.Path;
 with GNATCOLL.Remote;           use GNATCOLL.Remote;
 with GNATCOLL.Remote.Db;        use GNATCOLL.Remote.Db;
 with GNATCOLL.VFS_Types;        use GNATCOLL.VFS_Types;
-with Ada.Strings.Hash_Case_Insensitive;
 
 package body GNATCOLL.VFS is
 

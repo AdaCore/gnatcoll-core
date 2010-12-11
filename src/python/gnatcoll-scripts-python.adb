@@ -173,7 +173,7 @@ package body GNATCOLL.Scripts.Python is
 
    procedure Destroy_Handler_Data (Handler : System.Address);
    pragma Convention (C, Destroy_Handler_Data);
-   --  Called when the python object associated with Handler is destroyed.
+   --  Called when the python object associated with Handler is destroyed
 
    procedure On_PyObject_Data_Destroy (Data : System.Address);
    pragma Convention (C, On_PyObject_Data_Destroy);

@@ -25,7 +25,7 @@
 -- Place - Suite 330, Boston, MA 02111-1307, USA.                    --
 -----------------------------------------------------------------------
 
---  This package provides a type useful to manipulate command lines.
+--  This package provides a type useful to manipulate command lines
 
 with GNAT.OS_Lib;
 with Ada.Containers.Vectors;
@@ -54,7 +54,7 @@ package GNATCOLL.Arg_Lists is
    Empty_Command_Line : constant Arg_List;
 
    function Get_Command (C : Arg_List) return String;
-   --  Return the command contained in C.
+   --  Return the command contained in C
 
    function Create (Command : String) return Arg_List;
    --  Create a command line from command.
@@ -84,7 +84,7 @@ package GNATCOLL.Arg_Lists is
    --  Return -1 if the command is empty.
 
    function Nth_Arg (C : Arg_List; N : Natural) return String;
-   --  Return the Nth argument. Nth_Arg (0) returns the command.
+   --  Return the Nth argument. Nth_Arg (0) returns the command
 
    procedure Set_Nth_Arg (C : in out Arg_List; N : Natural; Arg : String);
    --  Set the Nth arg.
@@ -154,7 +154,7 @@ private
    end record;
 
    Empty_Command_Line : constant Arg_List :=
-     (Mode => Separate_Args,
-      V    => Arg_List_Vector.Empty_Vector);
+                          (Mode => Separate_Args,
+                           V    => Arg_List_Vector.Empty_Vector);
 
 end GNATCOLL.Arg_Lists;

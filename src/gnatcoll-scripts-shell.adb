@@ -847,7 +847,7 @@ package body GNATCOLL.Scripts.Shell is
 
             declare
                Callback : Shell_Callback_Data'Class :=
-                 Shell_Callback_Data'Class (Create (Script, Count));
+                            Shell_Callback_Data'Class (Create (Script, Count));
                --  The call above allocats Callback.Args, no need to do that
                --  below
             begin
@@ -902,11 +902,12 @@ package body GNATCOLL.Scripts.Shell is
 
                   declare
                      Prop : constant Instance_Property :=
-                       Get_Data
-                         (Instance,
-                          Cst_Prefix
-                          & Command (Command'First + 1 .. Command'Last));
-                     P : Property_Descr_Access;
+                              Get_Data
+                                (Instance,
+                                 Cst_Prefix
+                                 & Command
+                                   (Command'First + 1 .. Command'Last));
+                     P    : Property_Descr_Access;
                   begin
                      if Prop /= null then
                         Trace (Me, "A simple property");
