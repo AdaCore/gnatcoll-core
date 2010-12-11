@@ -810,7 +810,9 @@ package body GNATCOLL.Scripts.Shell is
          return "A command is already executing";
       end if;
 
-      Insert_Log (Script, null, "Executing " & To_Display_String (CL));
+      Insert_Log
+        (Script, null,
+         "Executing " & To_Display_String (CL, Max_Arg_Length => 100));
 
       Errors.all := False;
 
