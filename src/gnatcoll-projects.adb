@@ -1653,7 +1653,7 @@ package body GNATCOLL.Projects is
          end if;
 
       elsif Attribute = Old_Implementation_Attribute
-        or else Attribute = Implementation_Attribute
+        or else Attribute = Body_Attribute
       then
          --  Index is a unit name
          Unit := Units_Htable.Get
@@ -1669,11 +1669,15 @@ package body GNATCOLL.Projects is
                return Get_String (Unit.File_Names (Impl).Display_File);
             end if;
          else
-            return "";
+            --  We might have a separate or some other value. Fallback to
+            --  looking in the attribute itself (but this won't handle the
+            --  Index part -- perhaps separates are not usable in a multi-unit
+            --  source file, which would seem logical anyway)
+            null;
          end if;
 
       elsif Attribute = Old_Specification_Attribute
-        or else Attribute = Specification_Attribute
+        or else Attribute = Spec_Attribute
       then
          --  Index is a unit name
          Unit := Units_Htable.Get
@@ -1690,11 +1694,10 @@ package body GNATCOLL.Projects is
          else
             return "";
          end if;
-
-      else
-         Value := Attribute_Value
-           (Project, String (Attribute), Index, Use_Extended);
       end if;
+
+      Value := Attribute_Value
+        (Project, String (Attribute), Index, Use_Extended);
 
       case Value.Kind is
          when Undefined => return Default;

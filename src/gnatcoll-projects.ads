@@ -970,8 +970,8 @@ package GNATCOLL.Projects is
    Spec_Suffix_Attribute           : constant Attribute_Pkg_String;
    Impl_Suffix_Attribute           : constant Attribute_Pkg_String;
    Dot_Replacement_Attribute       : constant Attribute_Pkg_String;
-   Specification_Attribute         : constant Attribute_Pkg_String;
-   Implementation_Attribute        : constant Attribute_Pkg_String;
+   Spec_Attribute                  : constant Attribute_Pkg_String;
+   Body_Attribute                  : constant Attribute_Pkg_String;
    Spec_Exception_Attribute        : constant Attribute_Pkg_List;
    Impl_Exception_Attribute        : constant Attribute_Pkg_List;
 
@@ -1492,8 +1492,8 @@ private
                                   "naming#body_suffix";
    Dot_Replacement_Attribute  : constant Attribute_Pkg_String :=
                                   "naming#dot_replacement";
-   Specification_Attribute    : constant Attribute_Pkg_String := "naming#spec";
-   Implementation_Attribute   : constant Attribute_Pkg_String := "naming#body";
+   Spec_Attribute    : constant Attribute_Pkg_String := "naming#spec";
+   Body_Attribute    : constant Attribute_Pkg_String := "naming#body";
 
    --  Configuration
    Compiler_Driver_Attribute  : constant Attribute_Pkg_String :=
