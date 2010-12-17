@@ -793,7 +793,7 @@ package body GNATCOLL.SQL.Sqlite.Builder is
      (Self : Sqlite_Cursor; Field : Field_Index) return Boolean
    is
    begin
-      return Value (Self, Field) /= "0";
+      return Value (Sqlite_Cursor'Class (Self), Field) /= "0";
    end Boolean_Value;
 
 end GNATCOLL.SQL.Sqlite.Builder;

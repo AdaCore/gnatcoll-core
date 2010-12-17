@@ -147,13 +147,11 @@ package body GNATCOLL.SQL.Exec_Private is
       -- Finalize --
       --------------
 
-      overriding procedure Finalize (Result : in out Direct) is
-         procedure Unchecked_Free is new Ada.Unchecked_Deallocation
-           (Forward, Forward_Access);
+      overriding procedure Finalize (Result : in out Local_Forward) is
       begin
          if Result.Table /= null then
             for R in Result.Table'First
-              .. Result.Cursor.Processed_Rows * Result.Columns
+              .. Result.Processed_Rows * Result.Columns
             loop
                Free (Result.Table (R));
             end loop;
@@ -161,7 +159,16 @@ package body GNATCOLL.SQL.Exec_Private is
             Unchecked_Free (Result.Table);
             Result.Table := null;
          end if;
+      end Finalize;
 
+      --------------
+      -- Finalize --
+      --------------
+
+      overriding procedure Finalize (Result : in out Direct) is
+         procedure Unchecked_Free is new Ada.Unchecked_Deallocation
+           (Local_Forward'Class, Local_Forward_Access);
+      begin
          if Result.Cursor /= null then
             Finalize (Result.Cursor.all);
             Unchecked_Free (Result.Cursor);
@@ -184,6 +191,13 @@ package body GNATCOLL.SQL.Exec_Private is
       overriding function Value
         (Self  : Direct; Field : Field_Index) return String
       is
+      begin
+         return Value (Self.Cursor.all, Field);
+      end Value;
+
+      overriding function Value
+        (Self  : Local_Forward; Field : Field_Index) return String
+      is
          Str : constant GNAT.Strings.String_Access := Self.Table
            (Self.Table'First + Self.Current * Self.Columns + Natural (Field));
       begin
@@ -205,6 +219,29 @@ package body GNATCOLL.SQL.Exec_Private is
          return C_Value (Self.Cursor.all, Field);
       end C_Value;
 
+      -------------------
+      -- Boolean_Value --
+      -------------------
+
+      overriding function Boolean_Value
+         (Self : Direct; Field : Field_Index) return Boolean
+      is
+      begin
+         return Boolean_Value (Self.Cursor.all, Field);
+      end Boolean_Value;
+
+      -------------
+      -- Is_Null --
+      -------------
+
+      overriding function Is_Null
+        (Self  : Local_Forward; Field : Field_Index) return Boolean is
+      begin
+         return Self.Table
+           (Self.Table'First + Self.Columns * Self.Current + Natural (Field)) =
+            null;
+      end Is_Null;
+
       -------------
       -- Is_Null --
       -------------
@@ -212,9 +249,7 @@ package body GNATCOLL.SQL.Exec_Private is
       overriding function Is_Null
         (Self  : Direct; Field : Field_Index) return Boolean is
       begin
-         return Self.Table
-           (Self.Table'First + Self.Columns * Self.Current + Natural (Field)) =
-            null;
+         return Is_Null (Self.Cursor.all, Field);
       end Is_Null;
 
       -------------
@@ -235,7 +270,7 @@ package body GNATCOLL.SQL.Exec_Private is
 
       overriding function Field_Count (Self : Direct) return Field_Index is
       begin
-         return Field_Index (Self.Columns);
+         return Field_Index (Self.Cursor.Columns);
       end Field_Count;
 
       ----------------
@@ -263,7 +298,7 @@ package body GNATCOLL.SQL.Exec_Private is
 
       overriding procedure Next (Self : in out Direct) is
       begin
-         Self.Current := Self.Current + 1;
+         Self.Cursor.Current := Self.Cursor.Current + 1;
       end Next;
 
       -----------
@@ -272,7 +307,7 @@ package body GNATCOLL.SQL.Exec_Private is
 
       overriding procedure First (Self : in out Direct) is
       begin
-         Self.Current := 0;
+         Self.Cursor.Current := 0;
       end First;
 
       ----------
@@ -281,7 +316,7 @@ package body GNATCOLL.SQL.Exec_Private is
 
       overriding procedure Last (Self : in out Direct) is
       begin
-         Self.Current := Self.Cursor.Processed_Rows - 1;
+         Self.Cursor.Current := Self.Cursor.Processed_Rows - 1;
       end Last;
 
       --------------
@@ -290,7 +325,7 @@ package body GNATCOLL.SQL.Exec_Private is
 
       overriding procedure Absolute (Self : in out Direct; Row : Positive) is
       begin
-         Self.Current := Row - 1;
+         Self.Cursor.Current := Row - 1;
       end Absolute;
 
       -------------
@@ -299,7 +334,7 @@ package body GNATCOLL.SQL.Exec_Private is
 
       overriding function Current (Self : Direct) return Positive is
       begin
-         return Self.Current + 1;
+         return Self.Cursor.Current + 1;
       end Current;
 
       --------------
@@ -308,7 +343,7 @@ package body GNATCOLL.SQL.Exec_Private is
 
       overriding procedure Relative (Self : in out Direct; Step : Integer) is
       begin
-         Self.Current := Integer'Min
+         Self.Cursor.Current := Integer'Min
            (Integer'Max (0, Self.Current + Step),
             Self.Cursor.Processed_Rows - 1);
       end Relative;
@@ -319,7 +354,7 @@ package body GNATCOLL.SQL.Exec_Private is
 
       function Get_Cursor (Self : Direct) return Forward_Access is
       begin
-         return Self.Cursor;
+         return Forward_Access (Self.Cursor);
       end Get_Cursor;
 
       ----------------
@@ -327,37 +362,42 @@ package body GNATCOLL.SQL.Exec_Private is
       ----------------
 
       procedure Initialize
-        (Self : access Direct; From : access Forward) is
+        (Self : access Direct; From : access Forward)
+      is
+         Cols : Natural;
       begin
-         Self.Cursor  := Forward_Access (From);
-         Self.Columns := Natural (Field_Count (From.all));
-
-         --  Initialize size is 20 elements (this is a random value for now,
+         --  Initialize size is 20 rows (this is a random value for now,
          --  choice between wasting memory and doing too many allocs).
 
-         Self.Table := new Result_Table (1 .. 20 * Self.Columns);
+         Cols := Natural (Field_Count (From.all));
+
+         Self.Cursor := new Local_Forward'
+           (From.all with
+            Table   => new Result_Table (1 .. 20 * Cols),
+            Columns => Cols,
+            Current => 0);
 
          declare
             pragma Suppress (All_Checks);
             Tmp    : Result_Table_Access;
-            Index  : Natural := Self.Table'First;
+            Index  : Natural := Self.Cursor.Table'First;
             Cval   : chars_ptr;
          begin
             while Has_Row (Self.Cursor.all) loop
-               if Index + Self.Columns > Self.Table'Last then
-                  Tmp := Self.Table;
+               if Index + Self.Cursor.Columns > Self.Cursor.Table'Last then
+                  Tmp := Self.Cursor.Table;
 
                   --  Multiply size by 2, and make sure there is at least
                   --  enough space for the number of columns
                   --  ??? Can we use some sort of Realloc here, would be more
                   --  efficient since it might save some copies
-                  Self.Table := new Result_Table
-                    (1 .. 2 * Tmp'Length + Self.Columns);
-                  Self.Table (Tmp'Range) := Tmp.all;
+                  Self.Cursor.Table := new Result_Table
+                    (1 .. 2 * Tmp'Length + Self.Cursor.Columns);
+                  Self.Cursor.Table (Tmp'Range) := Tmp.all;
                   Unchecked_Free (Tmp);
                end if;
 
-               for C in 0 .. Self.Columns - 1 loop
+               for C in 0 .. Self.Cursor.Columns - 1 loop
                   Cval := C_Value (Self.Cursor.all, Field_Index (C));
                   if Cval /= Null_Ptr then
                      --  For efficiency reasons, we do not use
@@ -377,7 +417,7 @@ package body GNATCOLL.SQL.Exec_Private is
                           new String (1 .. Length);
                      begin
                         Tmp2.all := Unchecked_Convert (Cval).all;
-                        Self.Table (Index) := Tmp2;
+                        Self.Cursor.Table (Index) := Tmp2;
                      end;
                   end if;
 

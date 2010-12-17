@@ -1,7 +1,7 @@
 -----------------------------------------------------------------------
 --                               G N A T C O L L                     --
 --                                                                   --
---                 Copyright (C) 2005-2009, AdaCore                  --
+--                 Copyright (C) 2005-2010, AdaCore                  --
 --                                                                   --
 -- GPS is free  software;  you can redistribute it and/or modify  it --
 -- under the terms of the GNU General Public License as published by --
@@ -146,7 +146,8 @@ private package GNATCOLL.SQL.Exec_Private is
       --  efficiency
 
       procedure Initialize (Self : access Direct; From : access Forward);
-      --  Initialize in-memory data for Self, by reading all rows of From
+      --  Initialize in-memory data for Self, by reading all rows of From.
+      --  From is freed by Self when appropriate.
 
       function Get_Cursor (Self : Direct) return Forward_Access;
       --  Return a pointer to the underlying forward cursor
@@ -176,6 +177,8 @@ private package GNATCOLL.SQL.Exec_Private is
       overriding function Current (Self : Direct) return Positive;
       overriding procedure Absolute (Self : in out Direct; Row : Positive);
       overriding procedure Relative (Self : in out Direct; Step : Integer);
+      overriding function Boolean_Value
+        (Self : Direct; Field : Field_Index) return Boolean;
 
    private
       type Result_Table is
@@ -184,12 +187,7 @@ private package GNATCOLL.SQL.Exec_Private is
       --  The results of a SQL query (all the columns of first row, then all
       --  columns of second row,...)
 
-      type Direct is new DBMS_Direct_Cursor with record
-         Cursor : Forward_Access;
-         --  The cursor that was used to read the results. It has already been
-         --  iterated, but provides a handle on the number of rows, the
-         --  Statement, and other information.
-
+      type Local_Forward is new Forward with record
          Table   : Result_Table_Access := null;
          Columns : Natural := 0;
          --  The cached result. We do not use sqlite3's builtin
@@ -197,6 +195,25 @@ private package GNATCOLL.SQL.Exec_Private is
          --  statements to query this data.
 
          Current        : Natural := 0;  --  Current row
+      end record;
+      --  A local extension, so that we benefit from custom Boolean_Value
+      --  defined on Forward, while still dispatching to our Value
+
+      overriding function Value
+        (Self  : Local_Forward; Field : Field_Index) return String;
+      overriding procedure Finalize (Result : in out Local_Forward);
+      overriding function Is_Null
+        (Self  : Local_Forward; Field : Field_Index) return Boolean;
+
+      type Local_Forward_Access is access all Local_Forward'Class;
+
+      type Direct is new DBMS_Direct_Cursor with record
+         Cursor : Local_Forward_Access;
+         --  The cursor that was used to read the results. It has already been
+         --  iterated, but provides a handle on the number of rows, the
+         --  Statement, and other information.
+         --  Also used to get the correct implementation of Boolean_Value,
+         --  since that depends on the DBMS.
       end record;
    end Generic_Direct_Cursors;
 
