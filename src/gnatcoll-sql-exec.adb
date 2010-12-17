@@ -1032,7 +1032,7 @@ package body GNATCOLL.SQL.Exec is
    -------------------
    -- Integer_Value --
    -------------------
-   --
+
    function Integer_Value
      (Self   : Forward_Cursor;
       Field  : Field_Index;

@@ -195,6 +195,10 @@ package body GNATCOLL.SQL.Exec_Private is
          return Value (Self.Cursor.all, Field);
       end Value;
 
+      -----------
+      -- Value --
+      -----------
+
       overriding function Value
         (Self  : Local_Forward; Field : Field_Index) return String
       is
@@ -289,7 +293,7 @@ package body GNATCOLL.SQL.Exec_Private is
 
       overriding function Has_Row (Self : Direct) return Boolean is
       begin
-         return Self.Current < Self.Cursor.Processed_Rows;
+         return Self.Cursor.Current < Self.Cursor.Processed_Rows;
       end Has_Row;
 
       ----------
@@ -344,7 +348,7 @@ package body GNATCOLL.SQL.Exec_Private is
       overriding procedure Relative (Self : in out Direct; Step : Integer) is
       begin
          Self.Cursor.Current := Integer'Min
-           (Integer'Max (0, Self.Current + Step),
+           (Integer'Max (0, Self.Cursor.Current + Step),
             Self.Cursor.Processed_Rows - 1);
       end Relative;
 
@@ -369,7 +373,7 @@ package body GNATCOLL.SQL.Exec_Private is
          --  Initialize size is 20 rows (this is a random value for now,
          --  choice between wasting memory and doing too many allocs).
 
-         Cols := Natural (Field_Count (From.all));
+         Cols := Natural (Field_Count (Forward'Class (From.all)));
 
          Self.Cursor := new Local_Forward'
            (From.all with
