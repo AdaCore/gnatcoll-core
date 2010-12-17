@@ -31,7 +31,8 @@ package GNATCOLL.Scripts.Python is
 
    procedure Register_Python_Scripting
      (Repo          : access Scripts.Scripts_Repository_Record'Class;
-      Module        : String);
+      Module        : String;
+      Python_Home   : String := "");
    procedure Unregister_Python_Scripting
      (Repo : access Scripts.Scripts_Repository_Record'Class);
    --  Does nothing, since python was not compiled in.
