@@ -66,7 +66,7 @@ with Types;                      use Types;
 
 package body GNATCOLL.Projects is
 
-   Me    : constant Trace_Handle := Create ("Projects");
+   Me    : constant Trace_Handle := Create ("Projects", Default => Off);
    Debug : constant Trace_Handle := Create ("Projects.Debug", Default => Off);
    Me_Gnat : constant Trace_Handle :=
                Create ("Projects.GNAT", GNATCOLL.Traces.Off);
