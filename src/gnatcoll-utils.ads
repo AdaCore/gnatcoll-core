@@ -3,7 +3,7 @@
 --                                                                   --
 --                    Copyright (C) 2008-2010, AdaCore               --
 --                                                                   --
--- GPS is free  software;  you can redistribute it and/or modify  it --
+-- This is free software;  you can redistribute it and/or modify  it --
 -- under the terms of the GNU General Public License as published by --
 -- the Free Software Foundation; either version 2 of the License, or --
 -- (at your option) any later version.                               --
@@ -85,6 +85,22 @@ package GNATCOLL.Utils is
    function Starts_With (Str : String; Suffix : String) return Boolean;
    function Ends_With (Str : String; Suffix : String) return Boolean;
    --  Return True if Str starts or ends with Suffix
+
+   ------------------
+   -- File systems --
+   ------------------
+
+   function Executable_Location return String;
+   --  Return the name of the parent directory where the executable is stored
+   --  (so if you are running "prefix"/bin/gps, you would get "prefix").
+   --  A special case is done for "bin" directories, which are skipped.
+   --  The returned directory always ends up with a directory separator.
+
+   function Is_Directory_Separator (C : Character) return Boolean;
+   --  Returns True if C is a directory separator
+
+   procedure Set_OpenVMS_Host (Setting : Boolean := True);
+   --  Set whether the host is an OpenVMS host
 
 private
 
