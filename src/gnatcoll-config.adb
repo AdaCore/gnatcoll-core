@@ -117,6 +117,7 @@ package body GNATCOLL.Config is
    begin
       Open (File_Config_Parser (Self), Filename);
       Self.Eol      := 0;
+      Next (Self);
    end Open;
 
    ----------
@@ -124,32 +125,32 @@ package body GNATCOLL.Config is
    ----------
 
    overriding procedure Next (Self : in out INI_Parser) is
-      Equal : Integer;
-      Eol   : Integer;
+      Eol   : Integer := Self.First;
       Last  : constant Integer := Length (Self.Contents);
+      Comment : constant Integer := Length (Self.Comment_Start);
    begin
+      Self.First := Self.Eol + 1;
+
       --  Search end of current line
-      loop
+      while Self.First <= Last loop
          Eol := Self.First;
-         Equal := 0;
+         Self.Equal := 0;
          while Eol <= Last
            and then Element (Self.Contents, Eol) /= ASCII.LF
          loop
-            if Equal = 0 and then Element (Self.Contents, Eol) = '=' then
-               Equal := Eol;
+            if Self.Equal = 0 and then Element (Self.Contents, Eol) = '=' then
+               Self.Equal := Eol;
             end if;
             Eol := Eol + 1;
          end loop;
 
          Self.Eol   := Eol;
-         Self.Equal := Equal;
 
          --  Are we seeing a comment ?
 
-         if Self.First + Length (Self.Comment_Start) - 1 <= Eol
+         if Self.First + Comment - 1 <= Eol
            and then Slice
-             (Self.Contents, Self.First,
-              Self.First + Length (Self.Comment_Start) - 1) =
+             (Self.Contents, Self.First, Self.First + Comment - 1) =
            Self.Comment_Start
          then
             null;
@@ -161,7 +162,7 @@ package body GNATCOLL.Config is
             Self.Current_Section := To_Unbounded_String
               (Slice (Self.Contents, Self.First + 1, Self.Eol - 2));
 
-         elsif Equal /= 0 then
+         elsif Self.Equal /= 0 then
             return;
          end if;
 
@@ -333,7 +334,7 @@ package body GNATCOLL.Config is
 
    function Get (Self : Config_Key; Conf : Config_Pool'Class) return String is
    begin
-      return Get (Conf, To_String (Self.Section), To_String (Self.Key));
+      return Get (Conf, To_String (Self.Key), To_String (Self.Section));
    end Get;
 
    -----------------
@@ -344,7 +345,7 @@ package body GNATCOLL.Config is
       (Self : Config_Key; Conf : Config_Pool'Class) return Integer is
    begin
       return Get_Integer
-         (Conf, To_String (Self.Section), To_String (Self.Key));
+         (Conf, To_String (Self.Key), To_String (Self.Section));
    end Get_Integer;
 
    -----------------
@@ -355,7 +356,7 @@ package body GNATCOLL.Config is
       (Self : Config_Key; Conf : Config_Pool'Class) return Boolean is
    begin
       return Get_Boolean
-         (Conf, To_String (Self.Section), To_String (Self.Key));
+         (Conf, To_String (Self.Key), To_String (Self.Section));
    end Get_Boolean;
 
    --------------
@@ -365,7 +366,7 @@ package body GNATCOLL.Config is
    function Get_File
      (Self : Config_Key; Conf : Config_Pool'Class) return String is
    begin
-      return Get_File (Conf, To_String (Self.Section), To_String (Self.Key));
+      return Get_File (Conf, To_String (Self.Key), To_String (Self.Section));
    end Get_File;
 
 end GNATCOLL.Config;

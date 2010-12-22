@@ -209,7 +209,7 @@ private
 
    type File_Config_Parser is abstract new Config_Parser with record
       Contents : Ada.Strings.Unbounded.Unbounded_String;
-      First    : Integer;
+      First    : Integer := Integer'Last;
    end record;
 
    type INI_Parser is new File_Config_Parser with record
