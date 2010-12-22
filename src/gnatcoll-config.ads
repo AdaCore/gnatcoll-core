@@ -177,6 +177,10 @@ package GNATCOLL.Config is
    --  Create a new config key
 
    function Get (Self : Config_Key; Conf : Config_Pool'Class) return String;
+   function Get_Integer
+      (Self : Config_Key; Conf : Config_Pool'Class) return Integer;
+   function Get_Boolean
+      (Self : Config_Key; Conf : Config_Pool'Class) return Boolean;
    function Get_File
      (Self : Config_Key; Conf : Config_Pool'Class) return String;
    --  Read the key from the configuration.

@@ -336,6 +336,28 @@ package body GNATCOLL.Config is
       return Get (Conf, To_String (Self.Section), To_String (Self.Key));
    end Get;
 
+   -----------------
+   -- Get_Integer --
+   -----------------
+
+   function Get_Integer
+      (Self : Config_Key; Conf : Config_Pool'Class) return Integer is
+   begin
+      return Get_Integer
+         (Conf, To_String (Self.Section), To_String (Self.Key));
+   end Get_Integer;
+
+   -----------------
+   -- Get_Boolean --
+   -----------------
+
+   function Get_Boolean
+      (Self : Config_Key; Conf : Config_Pool'Class) return Boolean is
+   begin
+      return Get_Boolean
+         (Conf, To_String (Self.Section), To_String (Self.Key));
+   end Get_Boolean;
+
    --------------
    -- Get_File --
    --------------
