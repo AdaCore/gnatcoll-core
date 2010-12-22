@@ -1,9 +1,9 @@
 -----------------------------------------------------------------------
---                          M O D E L I N G                          --
+--                          G N A T C O L L                          --
 --                                                                   --
 --                 Copyright (C) 2010, AdaCore                       --
 --                                                                   --
--- GPS is free  software;  you can redistribute it and/or modify  it --
+-- This is free software;  you can redistribute it and/or modify  it --
 -- under the terms of the GNU General Public License as published by --
 -- the Free Software Foundation; either version 2 of the License, or --
 -- (at your option) any later version.                               --
