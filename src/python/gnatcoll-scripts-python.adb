@@ -3335,11 +3335,6 @@ package body GNATCOLL.Scripts.Python is
                Show_Command => False,
                Hide_Output  => True,
                Errors       => Errors);
-
-         else
-            Trace
-              (Me, "Not a module "
-               & Create_From_Dir (Files (J), "__init__.py").Display_Full_Name);
          end if;
       end loop;
 
