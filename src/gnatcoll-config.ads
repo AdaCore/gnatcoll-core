@@ -220,9 +220,14 @@ private
       Use_Sections  : Boolean := True;
    end record;
 
+   type Config_Value (Len : Natural) is record
+      System_ID : Ada.Strings.Unbounded.Unbounded_String;
+      Value     : String (1 .. Len);
+   end record;
+
    package String_Maps is new Ada.Containers.Indefinite_Hashed_Maps
      (Key_Type        => String,   --  "section#key"
-      Element_Type    => String,
+      Element_Type    => Config_Value,
       Hash            => Ada.Strings.Hash,
       Equivalent_Keys => "=",
       "="             => "=");

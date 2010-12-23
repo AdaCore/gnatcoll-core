@@ -25,13 +25,19 @@ with GNATCOLL.Mmap;             use GNATCOLL.Mmap;
 package body GNATCOLL.Config is
    use String_Maps;
 
+   function Internal_Get
+     (Self    : Config_Pool;
+      Key     : String;
+      Section : String := Section_From_Key) return Config_Value;
+   --  Internal version of Get
+
    -------------------
    -- Set_System_Id --
    -------------------
 
    procedure Set_System_Id (Self : in out Config_Parser; System_ID : String) is
    begin
-      Self.System_ID := To_Unbounded_String (System_ID);
+      Self.System_ID := To_Unbounded_String (Normalize_Pathname (System_ID));
    end Set_System_Id;
 
    ----------------
@@ -235,17 +241,17 @@ package body GNATCOLL.Config is
 
    procedure Set_System_Id (Self : in out Config_Pool; System_ID : String) is
    begin
-      Self.System_ID := To_Unbounded_String (System_ID);
+      Self.System_ID := To_Unbounded_String (Normalize_Pathname (System_ID));
    end Set_System_Id;
 
-   ---------
-   -- Get --
-   ---------
+   ------------------
+   -- Internal_Get --
+   ------------------
 
-   function Get
+   function Internal_Get
      (Self    : Config_Pool;
       Key     : String;
-      Section : String := Section_From_Key) return String is
+      Section : String := Section_From_Key) return Config_Value is
    begin
       if Section = Section_From_Key then
          for D in Key'Range loop
@@ -261,6 +267,18 @@ package body GNATCOLL.Config is
       else
          return Element (Self.Keys, Section & "#" & Key);
       end if;
+   end Internal_Get;
+
+   ---------
+   -- Get --
+   ---------
+
+   function Get
+     (Self    : Config_Pool;
+      Key     : String;
+      Section : String := Section_From_Key) return String is
+   begin
+      return Internal_Get (Self, Key, Section).Value;
    end Get;
 
    -----------------
@@ -296,14 +314,14 @@ package body GNATCOLL.Config is
       Key     : String;
       Section : String := Section_From_Key) return String
    is
-      Val : constant String := Get (Self, Key, Section);
+      Val : constant Config_Value := Internal_Get (Self, Key, Section);
    begin
-      if Val = "" then
+      if Val.Len = 0 then
          return "";
-      elsif Val (Val'First) = '/' then
-         return Val;
+      elsif Val.Value (Val.Value'First) = '/' then
+         return Val.Value;
       else
-         return Normalize_Pathname (Val, To_String (Self.System_ID));
+         return Normalize_Pathname (Val.Value, To_String (Val.System_ID));
       end if;
    end Get_File;
 
@@ -313,7 +331,11 @@ package body GNATCOLL.Config is
 
    procedure Set (Self : in out Config_Pool; Section, Key, Value : String) is
    begin
-      Include (Self.Keys, Section & "#" & Key, Value);
+      Include (Self.Keys, Section & "#" & Key,
+               Config_Value'
+                 (Len       => Value'Length,
+                  Value     => Value,
+                  System_ID => Self.System_ID));
    end Set;
 
    --  Override a specific key
