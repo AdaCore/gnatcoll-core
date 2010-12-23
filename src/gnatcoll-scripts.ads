@@ -1049,6 +1049,18 @@ package GNATCOLL.Scripts is
       Errors       : out Boolean) is abstract;
    --  Execute a script contained in an external file
 
+   type Script_Loader
+     is access function (File : GNATCOLL.VFS.Virtual_File) return Boolean;
+   function Load_All (File : GNATCOLL.VFS.Virtual_File) return Boolean;
+   --  Given the name of a script, returns True if the script should be loaded.
+
+   procedure Load_Directory
+     (Script       : access Scripting_Language_Record;
+      Directory    : GNATCOLL.VFS.Virtual_File;
+      To_Load      : Script_Loader := Load_All'Access) is null;
+   --  Load all scripts found in the given directory, and for which To_Load
+   --  returns True.
+
    function Interrupt
      (Script : access Scripting_Language_Record) return Boolean;
    --  Interrupt the command currently executed.

@@ -175,6 +175,10 @@ private
      (Script  : access Python_Scripting_Record'Class;
       Command : PyObject;
       Args    : Callback_Data'Class) return Boolean;
+   overriding procedure Load_Directory
+     (Script       : access Python_Scripting_Record;
+      Directory    : GNATCOLL.VFS.Virtual_File;
+      To_Load      : Script_Loader := Load_All'Access);
    overriding procedure Execute_File
      (Script      : access Python_Scripting_Record;
       Filename    : String;

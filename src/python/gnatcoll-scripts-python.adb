@@ -3274,4 +3274,76 @@ package body GNATCOLL.Scripts.Python is
       Py_DECREF (Val);
    end Set_Property;
 
+   --------------------
+   -- Load_Directory --
+   --------------------
+
+   overriding procedure Load_Directory
+     (Script       : access Python_Scripting_Record;
+      Directory    : GNATCOLL.VFS.Virtual_File;
+      To_Load      : Script_Loader := Load_All'Access)
+   is
+      Files  : File_Array_Access;
+      Path   : constant String := +Directory.Full_Name (True);
+      Last   : Integer := Path'Last;
+      Errors : Boolean;
+   begin
+      if not Directory.Is_Directory then
+         return;
+      end if;
+
+      Trace (Me, "Load python files from " & Path);
+
+      --  Add the directory to the default python search path.
+      --  Python requires no trailing dir separator (at least on Windows)
+
+      if Is_Directory_Separator (Path (Last)) then
+         Last := Last - 1;
+      end if;
+
+      Execute_Command
+        (Script,
+         Create ("sys.path=[r'" & Path (Path'First .. Last) & "']+sys.path"),
+         Show_Command => False,
+         Hide_Output  => True,
+         Errors       => Errors);
+
+      --  ??? Should also check for python modules (ie subdirectories that
+      --  contain a __init__.py file
+
+      Files := Directory.Read_Dir;
+
+      for J in Files'Range loop
+         if Equal (Files (J).File_Extension, ".py") then
+            if To_Load (Files (J)) then
+               Trace (Me, "Loading " & Files (J).Display_Full_Name);
+               Execute_Command
+                 (Script,
+                  Create ("import " & (+Base_Name (Files (J), ".py"))),
+                  Show_Command => False,
+                  Hide_Output  => False,
+                  Errors       => Errors);
+            end if;
+
+         elsif Is_Regular_File (Create_From_Dir (Files (J), "__init__.py"))
+           and then To_Load (Files (J))
+         then
+            Trace (Me, "Loading module " & (+Base_Dir_Name (Files (J))));
+            Execute_Command
+              (Script,
+               Create ("import " & (+Base_Dir_Name (Files (J)))),
+               Show_Command => False,
+               Hide_Output  => False,
+               Errors       => Errors);
+
+         else
+            Trace
+              (Me, "Not a module "
+               & Create_From_Dir (Files (J), "__init__.py").Display_Full_Name);
+         end if;
+      end loop;
+
+      Unchecked_Free (Files);
+   end Load_Directory;
+
 end GNATCOLL.Scripts.Python;

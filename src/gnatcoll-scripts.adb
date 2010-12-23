@@ -1579,4 +1579,14 @@ package body GNATCOLL.Scripts is
       Set_Return_Value (Data, +Value);
    end Set_Return_Value;
 
+   --------------
+   -- Load_All --
+   --------------
+
+   function Load_All (File : GNATCOLL.VFS.Virtual_File) return Boolean is
+      pragma Unreferenced (File);
+   begin
+      return True;
+   end Load_All;
+
 end GNATCOLL.Scripts;
