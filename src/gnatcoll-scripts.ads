@@ -140,8 +140,8 @@ package GNATCOLL.Scripts is
    --  issues.
 
    function Lookup_Class
-     (Repo   : access Scripts_Repository_Record;
-      Name   : String) return Class_Type;
+     (Repo : access Scripts_Repository_Record;
+      Name : String) return Class_Type;
    --  Return a Class_Type for Name.
    --  If the given class does not exist, a dummy version is created (but is
    --  not exported to the scripting languages). This is for instance
@@ -182,7 +182,7 @@ package GNATCOLL.Scripts is
      (Script          : access Scripting_Language_Record;
       Arguments_Count : Natural) return Callback_Data'Class is abstract;
    --  Create a new empty list of arguments. You must call Set_Nth_Arg for
-   --  each of these arguments before using the return value
+   --  each of these arguments before using the return value.
 
    function Command_Line_Treatment
      (Script : access Scripting_Language_Record)
@@ -208,14 +208,17 @@ package GNATCOLL.Scripts is
    procedure Set_Nth_Arg
      (Data : in out Callback_Data; N : Positive; Value : Boolean) is abstract;
    procedure Set_Nth_Arg
-     (Data : in out Callback_Data;
-      N : Positive; Value : Class_Instance) is abstract;
+     (Data  : in out Callback_Data;
+      N     : Positive;
+      Value : Class_Instance) is abstract;
    procedure Set_Nth_Arg
-     (Data : in out Callback_Data;
-      N : Positive; Value : Subprogram_Type) is abstract;
+     (Data  : in out Callback_Data;
+      N     : Positive;
+      Value : Subprogram_Type) is abstract;
    procedure Set_Nth_Arg
-     (Data : in out Callback_Data'Class;
-      N : Positive; Value : Filesystem_String);
+     (Data  : in out Callback_Data'Class;
+      N     : Positive;
+      Value : Filesystem_String);
    --  Set the nth argument of Data
 
    function Number_Of_Arguments
@@ -225,8 +228,7 @@ package GNATCOLL.Scripts is
    --  subprogram.
 
    procedure Name_Parameters
-     (Data  : in out Callback_Data; Names : Cst_Argument_List)
-      is abstract;
+     (Data : in out Callback_Data; Names : Cst_Argument_List) is abstract;
    --  Name the parameters, for languages which support it.
    --  For instance, the following call:
    --     Name_Parameters (Data, (1 => new String'("a"),
@@ -292,8 +294,7 @@ package GNATCOLL.Scripts is
    --  of any class.
 
    function Nth_Arg
-     (Data : Callback_Data; N : Positive; Default : String)
-      return String;
+     (Data : Callback_Data; N : Positive; Default : String) return String;
    function Nth_Arg
      (Data : Callback_Data; N : Positive; Default : Filesystem_String)
       return Filesystem_String;
@@ -301,20 +302,19 @@ package GNATCOLL.Scripts is
      (Data : Callback_Data; N : Positive; Default : Integer)
       return Integer;
    function Nth_Arg
-     (Data : Callback_Data; N : Positive; Default : Boolean)
-      return Boolean;
+     (Data : Callback_Data; N : Positive; Default : Boolean) return Boolean;
    function Nth_Arg
-     (Data    : Callback_Data;
-      N       : Positive;
-      Class   : Class_Type := Any_Class;
-      Default : Class_Instance;
+     (Data       : Callback_Data;
+      N          : Positive;
+      Class      : Class_Type := Any_Class;
+      Default    : Class_Instance;
       Allow_Null : Boolean := False) return Class_Instance;
    function Nth_Arg
      (Data    : Callback_Data;
       N       : Positive;
       Default : Subprogram_Type) return Subprogram_Type;
    --  Same as above, except that if there are not enough parameters, Default
-   --  is returned. Returned value must be freed
+   --  is returned. Returned value must be freed.
 
    procedure Set_Error_Msg
      (Data : in out Callback_Data; Msg : String) is abstract;
@@ -1032,8 +1032,8 @@ package GNATCOLL.Scripts is
    --  Return the value returned by the command itself.
 
    function Execute_Command_With_Args
-     (Script  : access Scripting_Language_Record;
-      CL      : Arg_List) return String;
+     (Script : access Scripting_Language_Record;
+      CL     : Arg_List) return String;
    --  Execute a command.
    --  This procedure needs only be implemented for the GPS shell, in all other
    --  language you should keep the default which raises Program_Error, since
@@ -1049,10 +1049,10 @@ package GNATCOLL.Scripts is
       Errors       : out Boolean) is abstract;
    --  Execute a script contained in an external file
 
-   type Script_Loader
-     is access function (File : GNATCOLL.VFS.Virtual_File) return Boolean;
+   type Script_Loader is
+     access function (File : GNATCOLL.VFS.Virtual_File) return Boolean;
    function Load_All (File : GNATCOLL.VFS.Virtual_File) return Boolean;
-   --  Given the name of a script, returns True if the script should be loaded.
+   --  Given the name of a script, returns True if the script should be loaded
 
    procedure Load_Directory
      (Script       : access Scripting_Language_Record;
@@ -1198,11 +1198,11 @@ package GNATCOLL.Scripts is
    --  scripting language.
 
    procedure Register_Property
-     (Repo     : access Scripts_Repository_Record'Class;
-      Name     : String;
-      Class    : Class_Type;
-      Setter   : Module_Command_Function := null;
-      Getter   : Module_Command_Function := null);
+     (Repo   : access Scripts_Repository_Record'Class;
+      Name   : String;
+      Class  : Class_Type;
+      Setter : Module_Command_Function := null;
+      Getter : Module_Command_Function := null);
    --  Defines a property which is accessed through methods.
    --  If Setter is null, the property is read-only.
    --  If Getter is null, the property is write-only.
@@ -1237,8 +1237,8 @@ package GNATCOLL.Scripts is
    --  Scripting languages are freed when the kernel is destroyed
 
    function Lookup_Scripting_Language
-     (Repo   : access Scripts_Repository_Record'Class;
-      Name   : String) return Scripting_Language;
+     (Repo : access Scripts_Repository_Record'Class;
+      Name : String) return Scripting_Language;
    --  Lookup one of the registered languages by name
 
    type Scripting_Language_Array is
@@ -1251,6 +1251,7 @@ package GNATCOLL.Scripts is
    No_Args : constant GNAT.OS_Lib.Argument_List := (1 .. 0 => null);
 
 private
+
    Constructor_Method  : constant String := "<@constructor@>";
    Addition_Method     : constant String := "+";
    Substraction_Method : constant String := "-";
@@ -1269,10 +1270,11 @@ private
       Exists : Boolean := True;
       --  Set to False when the class is found using Lookup_Class. This is for
       --  instance the case for builtin classes.
-
    end record;
+
    type User_Data;
    type User_Data_List is access User_Data;
+
    type User_Data (Length : Natural) is record
       Next : User_Data_List;
       Name : String (1 .. Length);
@@ -1314,16 +1316,17 @@ private
    --  Takes care of the reference counting for a Class_Instance
 
    No_Class_Instance_Data : constant Class_Instance_Data :=
-     (Ada.Finalization.Controlled with Data => null);
-   No_Class_Instance : constant Class_Instance :=
-     (Initialized => False);
+                              (Ada.Finalization.Controlled with Data => null);
+   No_Class_Instance      : constant Class_Instance :=
+                              (Initialized => False);
 
-   No_Class         : constant Class_Type := (Name => null, Exists => False);
-   Any_Class        : constant Class_Type := (Name   => new String'("@#!-"),
-                                              Exists => False);
+   No_Class  : constant Class_Type := (Name => null, Exists => False);
+   Any_Class : constant Class_Type := (Name   => new String'("@#!-"),
+                                       Exists => False);
 
    type Subprogram_Record is abstract tagged null record;
    type Callback_Data is abstract tagged null record;
+
    type Scripting_Language_Record is abstract tagged record
       Console : Virtual_Console;
    end record;
@@ -1349,7 +1352,7 @@ private
 
    type Scripts_Repository_Record is tagged record
       Scripting_Languages  : Scripting_Language_List :=
-        new Scripting_Language_Array'(1 .. 0 => null);
+                               new Scripting_Language_Array'(1 .. 0 => null);
       Commands             : Command_Descr_Access;
       Properties           : Property_Descr_Access;
       Classes              : Classes_Hash.Map;
