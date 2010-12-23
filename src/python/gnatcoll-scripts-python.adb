@@ -3321,7 +3321,7 @@ package body GNATCOLL.Scripts.Python is
                  (Script,
                   Create ("import " & (+Base_Name (Files (J), ".py"))),
                   Show_Command => False,
-                  Hide_Output  => False,
+                  Hide_Output  => True,
                   Errors       => Errors);
             end if;
 
@@ -3333,7 +3333,7 @@ package body GNATCOLL.Scripts.Python is
               (Script,
                Create ("import " & (+Base_Dir_Name (Files (J)))),
                Show_Command => False,
-               Hide_Output  => False,
+               Hide_Output  => True,
                Errors       => Errors);
 
          else
