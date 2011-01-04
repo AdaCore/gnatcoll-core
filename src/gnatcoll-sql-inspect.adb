@@ -1001,14 +1001,13 @@ package body GNATCOLL.SQL.Inspect is
                           Not_Null    =>
                             Line (3).all = "PK"
                             or else Line (3).all = "NOT NULL",
-                          FK          => False,
+                          FK          => Typ'Length > 3
+                            and then Typ (Typ'First .. Typ'First + 2) = "FK ",
                           Table       => Tables_Ref.Get_Weak_Ref (Table),
                           Active      => True));
                   Append (TDR (Table.Get).Fields, Att);
 
-                  if Typ'Length > 3
-                    and then Typ (Typ'First .. Typ'First + 2) = "FK "
-                  then
+                  if Att.Get.FK then
                      Tmp := Typ'First + 3;
                      while Tmp <= Typ'Last and then Typ (Tmp) /= '(' loop
                         Tmp := Tmp + 1;
@@ -1027,7 +1026,12 @@ package body GNATCOLL.SQL.Inspect is
                         To : constant String :=
                           Trim (Typ (Typ'First + 3 .. Tmp - 1), Both);
                      begin
-                        To_Table := Get_Table (Schema, To);
+                        if To = Name then
+                           To_Table := Table;
+                        else
+                           To_Table := Get_Table (Schema, To);
+                        end if;
+
                      exception
                         when Invalid_Table =>
                            --  The table might be declared later on
