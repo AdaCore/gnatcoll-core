@@ -174,7 +174,7 @@ procedure Generate (Generated : String) is
       end if;
 
       Put_Line (Spec_File, "   record");
-      For_Each_Field (T_Descr, For_Field'Access, True);
+      For_Each_Field (T_Descr, For_Field'Access, False);
       Put_Line (Spec_File, "   end record;");
 
       Print_Comment (Spec_File, "   ", T_Descr.Description);
