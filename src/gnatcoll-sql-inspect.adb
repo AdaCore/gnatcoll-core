@@ -1216,13 +1216,10 @@ package body GNATCOLL.SQL.Inspect is
          procedure Print_FK (Table : Table_Description);
          procedure Add_Field (F : in out Field);
 
-         procedure Create_Attributes (Table : Table_Description);
-         --  Print the SQL statement to create the attributes for the table
-
          procedure Add_Field (F : in out Field) is
          begin
             if not Is_First_Attribute then
-               Append (SQL, ",");
+               Append (SQL, "," & ASCII.LF);
             end if;
             Is_First_Attribute := False;
 
@@ -1236,16 +1233,6 @@ package body GNATCOLL.SQL.Inspect is
                Append (SQL, " DEFAULT '" & F.Default & "'");
             end if;
          end Add_Field;
-
-         procedure Create_Attributes (Table : Table_Description) is
-         begin
-            For_Each_Field
-              (Table, Add_Field'Access, Include_Inherited => True);
-
-            if Table.Super_Table /= No_Table then
-               Create_Attributes (Table.Super_Table);
-            end if;
-         end Create_Attributes;
 
          procedure Print_PK (F : in out Field) is
          begin
@@ -1322,7 +1309,8 @@ package body GNATCOLL.SQL.Inspect is
             case Table.Get_Kind is
                when Kind_Table =>
                   Append (SQL, "CREATE TABLE " & Table.Name & " (");
-                  Create_Attributes (Table);
+                  For_Each_Field
+                    (Table, Add_Field'Access, Include_Inherited => True);
                   For_Each_Field (Table, Print_PK'Access, True);
                   Print_FK (Table);
                   Append (SQL, ")");
@@ -1333,7 +1321,7 @@ package body GNATCOLL.SQL.Inspect is
          end if;
 
          if Self.DB = null then
-            Put_Line (To_String (SQL));
+            Put_Line (To_String (SQL) & ";");
          else
             Execute (Self.DB, To_String (SQL));
          end if;
@@ -1347,13 +1335,17 @@ package body GNATCOLL.SQL.Inspect is
       S := First (Indexes);
       while Has_Element (S) loop
          if Self.DB = null then
-            Put_Line (Element (S));
+            Put_Line (Element (S) & ";");
          else
             Execute (Self.DB, Element (S));
          end if;
 
          Next (S);
       end loop;
+
+      if Self.DB /= null then
+         Commit_Or_Rollback (Self.DB);
+      end if;
    end Write_Schema;
 
    ------------------
