@@ -1,7 +1,7 @@
 -----------------------------------------------------------------------
 --                          G N A T C O L L                          --
 --                                                                   --
---                 Copyright (C) 2008-2010, AdaCore                  --
+--                 Copyright (C) 2008-2011, AdaCore                  --
 --                                                                   --
 -- GPS is free  software;  you can redistribute it and/or modify  it --
 -- under the terms of the GNU General Public License as published by --
@@ -46,8 +46,22 @@ procedure Generate (Generated : String) is
      (File : File_Type; Indent : String; Comment : String);
    --  Print a multi-line comment to the File
 
-   procedure Print_Table_Spec (Name : String; T_Descr : Table_Description);
-   --  Print the specs for a table
+   Process_Abstract_Tables : Boolean;
+   procedure Print_Table_Spec (T_Descr : in out Table_Description);
+   --  Print the specs for a table.
+   --  If Process_Abstract_Tables is True, only abstract tables are processed.
+   --  Otherwise they are ignored.
+
+   Names     : String_Sets.Set;
+   procedure Print_String_Constants (Table : in out Table_Description);
+   --  Process a table, and generate string constants for it and its fields.
+   --  Names is used to avoid duplicates
+
+   procedure Print_Table_Global (Table : in out Table_Description);
+   --  Print the global constant for the table.
+
+   procedure Print_FK (Table : in out Table_Description);
+   --  Print the FK subprograms
 
    -------------------
    -- Print_Comment --
@@ -96,20 +110,46 @@ procedure Generate (Generated : String) is
    -- Print_Table_Spec --
    ----------------------
 
-   procedure Print_Table_Spec (Name : String; T_Descr : Table_Description) is
-      A : Attribute_Lists.Cursor;
+   procedure Print_Table_Spec (T_Descr : in out Table_Description) is
+      procedure For_Field (F : in out GNATCOLL.SQL.Inspect.Field);
+      procedure For_Field (F : in out GNATCOLL.SQL.Inspect.Field) is
+      begin
+         Put (Spec_File, "      "
+              & Capitalize (F.Name)
+              & " : SQL_Field_" & To_SQL (F.Get_Type));
+
+         if T_Descr.Is_Abstract then
+            Put (Spec_File, " (Table_Name");
+         else
+            Put (Spec_File, " (Ta_" & Capitalize (T_Descr.Name));
+         end if;
+
+         Put_Line (Spec_File,
+                   ", Instance, N_" & Capitalize (F.Name) & ", Index);");
+
+         if F.Description /= "" then
+            Print_Comment (Spec_File, "      ", F.Description);
+            New_Line (Spec_File);
+         end if;
+      end For_Field;
+
    begin
+      if (Process_Abstract_Tables and then not T_Descr.Is_Abstract)
+        or else (not Process_Abstract_Tables and then T_Descr.Is_Abstract)
+      then
+         return;
+      end if;
+
       New_Line (Spec_File);
 
       if T_Descr.Is_Abstract then
-         Put_Line (Spec_File, "   type T_" & Capitalize (Name));
+         Put_Line (Spec_File, "   type T_" & Capitalize (T_Descr.Name));
          Put (Spec_File, "      (Table_Name, Instance : Cst_String_Access;");
          Put_Line (Spec_File, " Index : Integer)");
          Put (Spec_File, "      is abstract new ");
 
-         if T_Descr.Super_Table /= Null_Unbounded_String then
-            Put (Spec_File,
-                 "T_" & Capitalize (To_String (T_Descr.Super_Table)));
+         if T_Descr.Super_Table /= No_Table then
+            Put (Spec_File, "T_" & Capitalize (T_Descr.Super_Table.Name));
          else
             Put (Spec_File, "SQL_Table");
          end if;
@@ -118,62 +158,39 @@ procedure Generate (Generated : String) is
                    " (Table_Name, Instance, Index) with");
 
       else
-         Put_Line (Spec_File, "   type T_Abstract_" & Capitalize (Name)
+         Put_Line (Spec_File, "   type T_Abstract_" & Capitalize (T_Descr.Name)
                    & " (Instance : Cst_String_Access; Index : Integer)");
          Put (Spec_File, "      is abstract new ");
 
-         if T_Descr.Super_Table /= Null_Unbounded_String then
-            Put (Spec_File,
-                 "T_" & Capitalize (To_String (T_Descr.Super_Table)));
+         if T_Descr.Super_Table /= No_Table then
+            Put (Spec_File, "T_" & Capitalize (T_Descr.Super_Table.Name));
          else
             Put (Spec_File, "SQL_Table");
          end if;
 
          Put_Line (Spec_File,
-                   " (Ta_" & Capitalize (Name) & ", Instance, Index) with");
+                   " (Ta_" & Capitalize (T_Descr.Name)
+                   & ", Instance, Index) with");
       end if;
 
       Put_Line (Spec_File, "   record");
-
-      A := First (T_Descr.Attributes);
-      while Has_Element (A) loop
-         Put (Spec_File, "      "
-              & Capitalize (Element (A).Name)
-              & " : SQL_Field_"
-              & Get_Field_Type (T_Descr, Element (A)));
-
-         if T_Descr.Is_Abstract then
-            Put (Spec_File, " (Table_Name");
-         else
-            Put (Spec_File, " (Ta_" & Capitalize (Name));
-         end if;
-
-         Put_Line (Spec_File,
-                   ", Instance, N_" & Capitalize (Element (A).Name)
-                   & ", Index);");
-
-         if Element (A).Description /= "" then
-            Print_Comment (Spec_File,
-                           "      ", To_String (Element (A).Description));
-            New_Line (Spec_File);
-         end if;
-
-         Next (A);
-      end loop;
-
+      For_Each_Field (T_Descr, For_Field'Access, True);
       Put_Line (Spec_File, "   end record;");
-      Print_Comment (Spec_File, "   ", To_String (T_Descr.Description));
+
+      Print_Comment (Spec_File, "   ", T_Descr.Description);
 
       if not T_Descr.Is_Abstract then
          New_Line (Spec_File);
-         Put_Line (Spec_File, "   type T_" & Capitalize (Name)
+         Put_Line (Spec_File, "   type T_" & Capitalize (T_Descr.Name)
                    & " (Instance : Cst_String_Access)");
-         Put (Spec_File, "      is new T_Abstract_" & Capitalize (Name));
+         Put (Spec_File,
+              "      is new T_Abstract_" & Capitalize (T_Descr.Name));
          Put_Line (Spec_File, " (Instance, -1) with null record;");
 
-         Put_Line (Spec_File, "   type T_Numbered_" & Capitalize (Name)
+         Put_Line (Spec_File, "   type T_Numbered_" & Capitalize (T_Descr.Name)
                    & " (Index : Integer)");
-         Put (Spec_File, "      is new T_Abstract_" & Capitalize (Name));
+         Put (Spec_File,
+              "      is new T_Abstract_" & Capitalize (T_Descr.Name));
          Put_Line (Spec_File, " (null, Index) with null record;");
       end if;
    end Print_Table_Spec;
@@ -187,16 +204,100 @@ procedure Generate (Generated : String) is
       return Capitalize (To_String (Name));
    end Capitalize;
 
-   Names     : String_Sets.Set;
-   N         : String_Sets.Cursor;
+   ----------------------------
+   -- Print_String_Constants --
+   ----------------------------
 
-   C         : Tables_Maps.Cursor;
-   A         : Attribute_Lists.Cursor;
-   T_Descr   : Table_Description;
-   K         : Foreign_Keys.Cursor;
-   FK        : Foreign_Key_Description;
-   S1, S2    : String_Lists.Cursor;
-   To_Attrs  : String_Lists.List;
+   procedure Print_String_Constants (Table : in out Table_Description) is
+      procedure For_Field (F : in out GNATCOLL.SQL.Inspect.Field);
+      procedure For_Field (F : in out GNATCOLL.SQL.Inspect.Field) is
+      begin
+         Names.Include (F.Name);
+      end For_Field;
+
+   begin
+      Put_Line (Spec_File, "   TC_" & Capitalize (Table.Name)
+                & " : aliased constant String := """ & Table.Name & """;");
+      Put_Line (Spec_File, "   Ta_" & Capitalize (Table.Name)
+                & " : constant Cst_String_Access := TC_"
+                & Capitalize (Table.Name) & "'Access;");
+
+      For_Each_Field (Table, For_Field'Access, True);
+   end Print_String_Constants;
+
+   ------------------------
+   -- Print_Table_Global --
+   ------------------------
+
+   procedure Print_Table_Global (Table : in out Table_Description) is
+   begin
+      if not Table.Is_Abstract then
+         Put_Line (Spec_File, "   " & Capitalize (Table.Name)
+                   & " : T_" & Capitalize (Table.Name) & " (null);");
+      end if;
+   end Print_Table_Global;
+
+   --------------
+   -- Print_FK --
+   --------------
+
+   procedure Print_FK (Table : in out Table_Description) is
+      Prev_Id : Integer := -1;
+
+      procedure For_FK
+        (From, To : GNATCOLL.SQL.Inspect.Field;
+         Id : Natural; Ambiguous : Boolean);
+
+      procedure Finish_Subprogram (Id : Integer);
+
+      procedure Finish_Subprogram (Id : Integer) is
+      begin
+         if Id /= Prev_Id then
+            Put_Line (Body_File, ";");
+            Put_Line (Body_File, "   end FK;");
+         end if;
+      end Finish_Subprogram;
+
+      procedure For_FK
+        (From, To : GNATCOLL.SQL.Inspect.Field;
+         Id : Natural; Ambiguous : Boolean) is
+      begin
+         if not Ambiguous then
+            if Id /= Prev_Id then
+               if Prev_Id /= -1 then
+                  Finish_Subprogram (Id);
+               end if;
+
+               Put_Line (Spec_File, "   function FK (Self : T_" &
+                         Capitalize (Table.Name) &
+                         "; Foreign : T_" & Capitalize (To.Get_Table.Name) &
+                         "'Class) return SQL_Criteria;");
+
+               New_Line (Body_File);
+               Put_Line (Body_File, "   function FK (Self : T_" &
+                         Capitalize (Table.Name) &
+                         "; Foreign : T_" & Capitalize (To.Get_Table.Name) &
+                         "'Class) return SQL_Criteria is");
+               Put_Line (Body_File, "   begin");
+               Put (Body_File, "      return Self.");
+            else
+               New_Line (Body_File);
+               Put (Body_File, "         and Self.");
+            end if;
+
+            Put (Body_File,
+                 Capitalize (From.Name)
+                 & " = Foreign." & Capitalize (To.Name));
+            Prev_Id := Id;
+         end if;
+      end For_FK;
+
+   begin
+      For_Each_FK (Table, For_FK'Access);
+      Finish_Subprogram (-1);
+   end Print_FK;
+
+   N : String_Sets.Cursor;
 
 begin
    --  This version creates the output via a simple list of calls to Put_Line.
@@ -210,23 +311,7 @@ begin
    Put_Line (Spec_File, "package " & Generated & "_Names is");
    Put_Line (Spec_File, "   pragma Style_Checks (Off);");
 
-   C := First (Tables);
-   while Has_Element (C) loop
-      Put_Line (Spec_File, "   TC_" & Capitalize (Key (C))
-                & " : aliased constant String := """ & Key (C) & """;");
-      Put_Line (Spec_File, "   Ta_" & Capitalize (Key (C))
-                & " : constant Cst_String_Access := TC_"
-                & Capitalize (Key (C)) & "'Access;");
-
-      T_Descr := Element (C);
-      A       := First (T_Descr.Attributes);
-      while Has_Element (A) loop
-         Names.Include (To_String (Element (A).Name));
-         Next (A);
-      end loop;
-
-      Next (C);
-   end loop;
+   For_Each_Table (Schema, Print_String_Constants'Access);
 
    New_Line (Spec_File);
 
@@ -314,114 +399,16 @@ begin
       end loop;
    end;
 
-   --  First print abstract tables, since others might derive from them
-
-   C := First (Tables);
-   while Has_Element (C) loop
-      T_Descr := Element (C);
-      if T_Descr.Is_Abstract then
-         Print_Table_Spec (Key (C), T_Descr);
-      end if;
-
-      Next (C);
-   end loop;
-
-   --  Process tables
-
-   C := First (Tables);
-   while Has_Element (C) loop
-      T_Descr := Element (C);
-      if not T_Descr.Is_Abstract then
-         Print_Table_Spec (Key (C), T_Descr);
-      end if;
-
-      Next (C);
-   end loop;
+   Process_Abstract_Tables := True;
+   For_Each_Table (Schema, Print_Table_Spec'Access);
+   Process_Abstract_Tables := False;
+   For_Each_Table (Schema, Print_Table_Spec'Access);
 
    New_Line (Spec_File);
-
-   C := First (Tables);
-   while Has_Element (C) loop
-      T_Descr := Element (C);
-
-      K := First (T_Descr.Foreign);
-
-      while Has_Element (K) loop
-         FK := Element (K);
-
-         if not FK.Ambiguous then
-            Put_Line (Spec_File, "   function FK (Self : T_" &
-                      Capitalize (Key (C)) &
-                      "; Foreign : T_" & Capitalize (FK.To_Table) &
-                      "'Class) return SQL_Criteria;");
-         end if;
-
-         Next (K);
-      end loop;
-
-      K := First (T_Descr.Foreign);
-
-      while Has_Element (K) loop
-         FK := Element (K);
-
-         if not FK.Ambiguous then
-            New_Line (Body_File);
-            Put_Line (Body_File, "   function FK (Self : T_" &
-                      Capitalize (Key (C)) &
-                      "; Foreign : T_" & Capitalize (FK.To_Table) &
-                      "'Class) return SQL_Criteria is");
-
-            Put_Line (Body_File, "   begin");
-
-            S1 := First (FK.From_Attributes);
-
-            To_Attrs := Get_To_Attributes (FK);
-            S2 := First (To_Attrs);
-
-            while Has_Element (S1) loop
-               if S1 = First (FK.From_Attributes) then
-                  Put (Body_File, "      return Self.");
-               else
-                  Put (Body_File, "         and Self.");
-               end if;
-
-               Put (Body_File,
-                    Capitalize (Element (S1))
-                    & " = Foreign."
-                    & Capitalize (Element (S2)));
-
-               if S1 = Last (FK.From_Attributes) then
-                  Put_Line (Body_File, ";");
-               else
-                  New_Line (Body_File);
-               end if;
-
-               Next (S1);
-               Next (S2);
-            end loop;
-
-            Put_Line (Body_File, "   end FK;");
-         end if;
-
-         Next (K);
-      end loop;
-
-      Next (C);
-   end loop;
+   For_Each_Table (Schema, Print_FK'Access);
 
    New_Line (Spec_File);
-
-   C := First (Tables);
-   while Has_Element (C) loop
-      T_Descr := Element (C);
-
-      if not T_Descr.Is_Abstract then
-         Put_Line (Spec_File, "   " & Capitalize (Key (C))
-                   & " : T_" & Capitalize (Key (C)) & " (null);");
-      end if;
-
-      Next (C);
-   end loop;
+   For_Each_Table (Schema, Print_Table_Global'Access);
 
    Put_Line (Spec_File, "end Database;");
    Put_Line (Body_File, "end Database;");
