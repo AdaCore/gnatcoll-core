@@ -1,7 +1,7 @@
 -----------------------------------------------------------------------
 --                               G N A T C O L L                     --
 --                                                                   --
---                      Copyright (C) 2003-2010, AdaCore             --
+--                      Copyright (C) 2003-2011, AdaCore             --
 --                                                                   --
 -- GPS is free  software;  you can redistribute it and/or modify  it --
 -- under the terms of the GNU General Public License as published by --
@@ -750,7 +750,7 @@ package body GNATCOLL.Scripts.Python is
                   Newline := PyString_FromString ("");
                   Join := PyObject_CallMethod (Newline, "join", List);
 
-                  Trace (Me_Stack, "Executing " & Command_Name (Handler.all)
+                  Trace (Me_Stack, "Exec " & Command_Name (Handler.all)
                          & ASCII.LF & PyString_AsString (Join));
                   Py_DECREF (Newline);
                   Py_DECREF (List);
@@ -1282,12 +1282,12 @@ package body GNATCOLL.Scripts.Python is
       --  command the user is typing.
 
       if Hide_Output then
-         Insert_Log (Script, Console, "__gps_hide_output");
+         --  Insert_Log (Script, Console, "__gps_hide_output");
          Ignored := PyRun_SimpleString ("__gps_hide_output()");
       end if;
 
       Insert_Log
-        (Script, Console, "executing: " & Script.Buffer.all & Command);
+        (Script, Console, "exec: " & Script.Buffer.all & Command);
 
       Insert_Text
         (Script, Console, Command & ASCII.LF,
@@ -1481,7 +1481,7 @@ package body GNATCOLL.Scripts.Python is
       end if;
 
       if Hide_Output then
-         Insert_Log (Script, Console, "__gps_restore_output");
+         --  Insert_Log (Script, Console, "__gps_restore_output");
          Ignored := PyRun_SimpleString ("__gps_restore_output()");
       end if;
 
@@ -3316,7 +3316,7 @@ package body GNATCOLL.Scripts.Python is
       for J in Files'Range loop
          if Equal (Files (J).File_Extension, ".py") then
             if To_Load (Files (J)) then
-               Trace (Me, "Loading " & Files (J).Display_Full_Name);
+               Trace (Me, "Load " & Files (J).Display_Full_Name);
                Execute_Command
                  (Script,
                   Create ("import " & (+Base_Name (Files (J), ".py"))),
@@ -3328,7 +3328,7 @@ package body GNATCOLL.Scripts.Python is
          elsif Is_Regular_File (Create_From_Dir (Files (J), "__init__.py"))
            and then To_Load (Files (J))
          then
-            Trace (Me, "Loading module " & (+Base_Dir_Name (Files (J))));
+            Trace (Me, "Load " & (+Base_Dir_Name (Files (J))) & "/");
             Execute_Command
               (Script,
                Create ("import " & (+Base_Dir_Name (Files (J)))),
