@@ -1,7 +1,7 @@
 -----------------------------------------------------------------------
 --                          G N A T C O L L                          --
 --                                                                   --
---                 Copyright (C) 2010, AdaCore                       --
+--                 Copyright (C) 2010-2011, AdaCore                  --
 --                                                                   --
 -- This is free software;  you can redistribute it and/or modify  it --
 -- under the terms of the GNU General Public License as published by --
@@ -19,6 +19,7 @@
 
 with Ada.Strings.Fixed;         use Ada.Strings.Fixed;
 with Ada.Strings.Unbounded;     use Ada.Strings.Unbounded;
+with GNAT.Directory_Operations; use GNAT.Directory_Operations;
 with GNAT.OS_Lib;               use GNAT.OS_Lib;
 with GNATCOLL.Mmap;             use GNATCOLL.Mmap;
 
@@ -103,6 +104,8 @@ package body GNATCOLL.Config is
       Str := Data (F);
 
       Self.Contents := To_Unbounded_String (String (Str (1 .. Last (F))));
+      Self.System_ID := To_Unbounded_String
+        (Normalize_Pathname (Dir_Name (Filename)));
       Self.First    := 1;
    end Open;
 
