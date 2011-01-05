@@ -121,7 +121,7 @@
 @page
 @vskip 0pt plus 1filll
 
-Copyright @copyright{} 2007-2010, AdaCore
+Copyright @copyright{} 2007-2011, AdaCore
 
 This document may be copied, in whole or in part, in any form or by any
 means, as is or with alterations, provided that (1) alterations are clearly
@@ -135,7 +135,7 @@ unmodified in any copy.
 
 Version @value{Version}
 
-Copyright @copyright{} 2007-2010, AdaCore
+Copyright @copyright{} 2007-2011, AdaCore
 
 This document may be copied, in whole or in part, in any form or by any
 means, as is or with alterations, provided that (1) alterations are clearly
@@ -242,6 +242,7 @@ Database interface
 * Creating your own SQL types::
 * Query logs::
 * Tasks and databases::
+* Creating and inspecting databases::
 
 @end detailmenu
 @end ifnothtml
@@ -3379,13 +3380,13 @@ API. Out of the box, support is provided for @file{.ini} files, so let's
 detail this very simply format.
 
 @CODESAMPLE{
-# A single-line comment
-[Section1]
-key1 = value
-key2=value2
-
-[Section2]
-key1 = value3
+# A single-line comment@NL{}
+[Section1]@NL{}
+key1 = value@NL{}
+key2=value2@NL{}
+@NL{}
+[Section2]@NL{}
+key1 = value3@NL{}
 }
 
 Comments are (by default) started with @code{'#'} signs, but you can
@@ -3413,15 +3414,15 @@ Reading all the values from a configuration file is done with a loop
 similar to:
 
 @CODESAMPLE{
-declare
-   C : INI_Parser;
-begin
-   Open (C, "settings.txt");
-   while not At_End (C) loop
-      Put_Line ("Found key " & Key (C) & " with value " & Value (C));
-      Next (C);
-   end loop;
-end;
+declare@NL{}
+   C : INI_Parser;@NL{}
+begin@NL{}
+   Open (C, "settings.txt");@NL{}
+   while not At_End (C) loop@NL{}
+      Put_Line ("Found key " & Key (C) & " with value " & Value (C));@NL{}
+      Next (C);@NL{}
+   end loop;@NL{}
+end;@NL{}
 }
 
 This can be made slightly lighter by using the Ada05 dotted notation.
@@ -3435,16 +3436,16 @@ read at any point during the lifetime of your application. You can also
 explicitely override the values when needed.
 
 @CODESAMPLE{
-Config : Config_Pool;   --  A global variable
-
-declare
-   C : INI_Parser;
-begin
-   Open (C, "settings.txt");
-   Fill (Config, C);
-end;
-
-Put_Line (Config.Get ("section.key"));  --  Ada05 dotted notation
+Config : Config_Pool;   --  A global variable@NL{}
+@NL{}
+declare@NL{}
+   C : INI_Parser;@NL{}
+begin@NL{}
+   Open (C, "settings.txt");@NL{}
+   Fill (Config, C);@NL{}
+end;@NL{}
+@NL{}
+Put_Line (Config.Get ("section.key"));  --  Ada05 dotted notation@NL{}
 }
 
 Again, the values are by default read as strings, but you can interpret
@@ -3464,10 +3465,10 @@ represent the keys, and then use these to access the values, solving the
 two problems above:
 
 @CODESAMPLE{
-   Section_Key1 : constant Config_Key := Create ("Key1", "Section");
-   Section_Key2 : constant Config_Key := Create ("Key2", "Section");
-
-   Put_Line (Section_Key1.Get);
+   Section_Key1 : constant Config_Key := Create ("Key1", "Section");@NL{}
+   Section_Key2 : constant Config_Key := Create ("Key2", "Section");@NL{}
+@NL{}
+   Put_Line (Section_Key1.Get);@NL{}
 }
 
 You then access the value of the keys using the Ada05 dotted notation,
@@ -3537,6 +3538,7 @@ history.
 * Creating your own SQL types::
 * Query logs::
 * Tasks and databases::
+* Creating and inspecting databases::
 @end menu
 
 @c -----------------------------------------------------------------------
@@ -4415,6 +4417,79 @@ However, this assumes that the database server itself is thread safe,
 which most often is the case, but not for @code{sqlite} for instance.
 In such a case, you can only connect one per application to the database,
 and you will have to manage a queue of queries somehow.
+
+@c -----------------------------------------------------------------------
+@node Creating and inspecting databases
+@section Creating and inspecting databases
+@c -----------------------------------------------------------------------
+@noindent
+
+The API described earlier in this chapter allows you to query and
+modify and existing database. However, you first need to create that
+database.
+
+In most cases, this creation needs to be done by a system administrator
+with the appropriate rights, and thus will be done as part of the
+deployement of your application, not the application itself. This is
+particularly true for client-server databases like @code{PostgreSQL}.
+
+But in some simpler cases where the database is only manipulated by your
+application, and potentially only needs to exist while your application
+is running (often the case for @code{sqlite}), your application could be
+responsible for creating the database.
+
+The package @code{GNATCOLL.SQL.Inspect} provides a number of subprograms
+to do so, as well as to query the schema of the database (which tables
+exist, what are their fields,...)
+
+The database schema is represented by a specific data structure in
+memory. This structure can be initialized through different means:
+
+@itemize @bullet
+@item either by parsing a file.
+
+The format of this file was described above
+(@pxref{Database schema monitoring}).
+
+@item or by querying an existing database.
+
+This is not the case we are interested in here, but provides a simple
+way to get started with @value{gnatcoll}. In particular, you could
+query your existing database, then dump the schema into a file
+compatible with the GNATCOLL format. From then on, you would manipulate
+that file if you need to perform changes in your schema.
+
+This technics is not as accurate as using file. For instance, there
+is no way to guess that a table only exists to implement a many-to-many
+relationship between two other tables. The file provides a high-level
+view that describes this.
+
+@end itemize
+
+Once you have the schema in memory, you can perform various actions:
+
+@itemize @bullet
+@item dump it into a file
+
+Of course, this is only useful if the schema was loaded from some other
+means.
+
+@item create a database with it
+
+@value{gnatcoll} will emit the appropriate SQL commands to create the
+corresponding tables in the database. For this, you will need a
+connection to the database (see the examples above). Note that in the
+case of @code{sqlite}, the database need not exist first, and it will
+be automatically created if needed.
+
+@end itemize
+
+This input/output mechanism is implemented through an abstract
+@code{Schema_IO} tagged type, with various concrete implementations (either
+@code{File_Schema_IO} to read or write from/to a file, or
+@code{DB_Schema_IO} to read or write from/to a database).
+
+See the specs for more detail on these subprograms.
 
 @c -----------------------------------------------------------------------
 @node Index
