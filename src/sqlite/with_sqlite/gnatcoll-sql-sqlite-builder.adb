@@ -1,7 +1,7 @@
 -----------------------------------------------------------------------
 --                               G N A T C O L L                     --
 --                                                                   --
---                 Copyright (C) 2005-2010, AdaCore                  --
+--                 Copyright (C) 2005-2011, AdaCore                  --
 --                                                                   --
 -- GPS is free  software;  you can redistribute it and/or modify  it --
 -- under the terms of the GNU General Public License as published by --
@@ -31,10 +31,13 @@ with Ada.Unchecked_Conversion;
 with GNATCOLL.SQL.Sqlite.Gnade;    use GNATCOLL.SQL.Sqlite.Gnade;
 with GNATCOLL.SQL.Exec_Private;    use GNATCOLL.SQL.Exec_Private;
 with GNATCOLL.Traces;              use GNATCOLL.Traces;
+with GNAT.OS_Lib;
 with Interfaces.C.Strings;         use Interfaces.C.Strings;
 
 package body GNATCOLL.SQL.Sqlite.Builder is
    Me : constant Trace_Handle := Create ("SQLITE");
+
+   Empty_C_Str : aliased String := "" & ASCII.NUL;
 
    type Sqlite_Cursor is new DBMS_Forward_Cursor with record
       Stmt           : Statement;
@@ -286,11 +289,38 @@ package body GNATCOLL.SQL.Sqlite.Builder is
            (Connection,
             "Connecting to sqlite database "
             & Get_Database (Get_Description (Connection)));
-         Open
-           (DB       => Connection.DB,
-            Filename => Get_Database (Get_Description (Connection)),
-            Flags    => Open_Readwrite,
-            Status   => Status);
+
+         --  Make sure the file exists, otherwise we'll get a storage_error.
+         --  In some cases, the user will want to create a new database from
+         --  scratch, so creating an empty file is valid.
+
+         declare
+            Name : constant String :=
+              Get_Database (Get_Description (Connection));
+            FD   : GNAT.OS_Lib.File_Descriptor;
+            Tmp  : Integer;
+            pragma Unreferenced (Tmp);
+         begin
+            Open
+              (DB       => Connection.DB,
+               Filename => Name,
+               Flags    => Open_Readwrite,
+               Status   => Status);
+
+            if Status = Sqlite_Cantopen then
+               Trace (Me, "Create empty db file");
+
+               FD  := GNAT.OS_Lib.Create_File (Name, GNAT.OS_Lib.Binary);
+               Tmp := GNAT.OS_Lib.Write (FD, Empty_C_Str'Address, 0);
+               GNAT.OS_Lib.Close (FD);
+
+               Open
+                 (DB       => Connection.DB,
+                  Filename => Name,
+                  Flags    => Open_Readwrite,
+                  Status   => Status);
+            end if;
+         end;
 
          if Status /= Sqlite_OK then
             Print_Error
