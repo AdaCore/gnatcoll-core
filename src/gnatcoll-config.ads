@@ -1,7 +1,7 @@
 -----------------------------------------------------------------------
 --                          G N A T C O L L                          --
 --                                                                   --
---                 Copyright (C) 2010, AdaCore                       --
+--                 Copyright (C) 2010-2011, AdaCore                  --
 --                                                                   --
 -- This is free software;  you can redistribute it and/or modify  it --
 -- under the terms of the GNU General Public License as published by --
@@ -26,6 +26,9 @@
 --  key1 = value1
 --  key2 = value2
 --
+--  As a special case, some strings are automatically substituted in the values
+--  - HOME:  home directory for the user, as configured in the parser
+--
 --  This package is build through several layers of tagged objects:
 --  - the first layer provides the parsing of config files, and through a
 --    callback returns the (key, value) pairs to the application
@@ -39,6 +42,7 @@
 private with Ada.Containers.Indefinite_Hashed_Maps;
 private with Ada.Strings.Hash;
 private with Ada.Strings.Unbounded;
+private with GNATCOLL.VFS;
 
 package GNATCOLL.Config is
 
@@ -110,7 +114,10 @@ package GNATCOLL.Config is
    procedure Configure
      (Self             : in out INI_Parser;
       Comment_Start    : String := "#";
-      Handles_Sections : Boolean := True);
+      Handles_Sections : Boolean := True;
+      Home             : String := "");
+   --  "Home" is the substitution pattern for "HOME" in the values. If
+   --  unspecified, it is computed automatically.
 
    overriding procedure Open (Self : in out INI_Parser; Filename : String);
    overriding procedure Next (Self : in out INI_Parser);
@@ -218,6 +225,9 @@ private
       Comment_Start : Ada.Strings.Unbounded.Unbounded_String :=
         Ada.Strings.Unbounded.To_Unbounded_String ("#");
       Use_Sections  : Boolean := True;
+
+      Home          : GNATCOLL.VFS.Virtual_File :=
+        GNATCOLL.VFS.Get_Home_Directory;
    end record;
 
    type Config_Value (Len : Natural) is record

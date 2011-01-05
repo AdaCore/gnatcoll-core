@@ -22,6 +22,8 @@ with Ada.Strings.Unbounded;     use Ada.Strings.Unbounded;
 with GNAT.Directory_Operations; use GNAT.Directory_Operations;
 with GNAT.OS_Lib;               use GNAT.OS_Lib;
 with GNATCOLL.Mmap;             use GNATCOLL.Mmap;
+with GNATCOLL.Templates;        use GNATCOLL.Templates;
+with GNATCOLL.VFS;              use GNATCOLL.VFS;
 
 package body GNATCOLL.Config is
    use String_Maps;
@@ -31,6 +33,11 @@ package body GNATCOLL.Config is
       Key     : String;
       Section : String := Section_From_Key) return Config_Value;
    --  Internal version of Get
+
+   function Substitute
+     (Self : INI_Parser'Class; Value : String) return String;
+   --  Substitute various strings in the value read from the config file,
+   --  for instance $HOME.
 
    -------------------
    -- Set_System_Id --
@@ -186,12 +193,42 @@ package body GNATCOLL.Config is
    procedure Configure
      (Self             : in out INI_Parser;
       Comment_Start    : String := "#";
-      Handles_Sections : Boolean := True)
+      Handles_Sections : Boolean := True;
+      Home             : String := "")
    is
    begin
       Self.Comment_Start := To_Unbounded_String (Comment_Start);
       Self.Use_Sections  := Handles_Sections;
+
+      if Home /= "" then
+         Self.Home := Create (+Home);
+      end if;
    end Configure;
+
+   ----------------
+   -- Substitute --
+   ----------------
+
+   function Substitute
+     (Self : INI_Parser'Class; Value : String) return String
+   is
+      function Callback (Name : String; Quoted : Boolean) return String;
+      function Callback (Name : String; Quoted : Boolean) return String is
+         pragma Unreferenced (Quoted);
+      begin
+         if Name = "HOME" then
+            return +Self.Home.Full_Name;
+         else
+            raise Invalid_Substitution;
+         end if;
+      end Callback;
+
+   begin
+      return Substitute
+        (Str       => Value,
+         Callback  => Callback'Unrestricted_Access,
+         Delimiter => '$');
+   end Substitute;
 
    -------------
    -- Section --
@@ -218,8 +255,10 @@ package body GNATCOLL.Config is
 
    overriding function Value (Self : INI_Parser) return String is
    begin
-      return Trim (Slice (Self.Contents, Self.Equal + 1, Self.Eol - 1),
-                   Side => Ada.Strings.Left);
+      return Substitute
+        (Self,
+         Trim (Slice (Self.Contents, Self.Equal + 1, Self.Eol - 1),
+               Side => Ada.Strings.Left));
    end Value;
 
    ----------
