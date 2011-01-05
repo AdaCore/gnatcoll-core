@@ -1320,10 +1320,12 @@ package body GNATCOLL.SQL.Inspect is
             end case;
          end if;
 
-         if Self.DB = null then
-            Put_Line (To_String (SQL) & ";");
-         else
-            Execute (Self.DB, To_String (SQL));
+         if SQL /= "" then
+            if Self.DB = null then
+               Put_Line (To_String (SQL) & ";");
+            else
+               Execute (Self.DB, To_String (SQL));
+            end if;
          end if;
       end For_Table;
 
