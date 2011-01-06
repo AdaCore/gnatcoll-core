@@ -408,4 +408,24 @@ package body GNATCOLL.Utils is
       return Find_Char (Str, ASCII.LF);
    end EOL;
 
+   ----------
+   -- Join --
+   ----------
+
+   function Join
+     (Str : String; List : GNAT.Strings.String_List) return String
+   is
+      use Ada.Strings.Unbounded;
+      Result : Unbounded_String;
+   begin
+      for L in List'Range loop
+         if L /= List'First then
+            Append (Result, Str);
+         end if;
+
+         Append (Result, List (L).all);
+      end loop;
+      return To_String (Result);
+   end Join;
+
 end GNATCOLL.Utils;

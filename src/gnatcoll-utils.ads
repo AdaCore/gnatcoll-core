@@ -98,6 +98,10 @@ package GNATCOLL.Utils is
    --  Return the first occurrence of Char after Str'First (use substrings for
    --  later occurrences).
 
+   function Join (Str : String; List : GNAT.Strings.String_List) return String;
+   --  Return a string that is the concatenation of the list elements,
+   --  separated by Str: (List(1) & Str & List(2) & Str & ...)
+
    function EOL (Str : String) return Natural;
    pragma Inline (EOL);
    --  Return the first end-of-line after Str'First (use substrings for later
