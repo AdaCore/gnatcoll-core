@@ -220,6 +220,8 @@ package GNATCOLL.SQL.Inspect is
    --  and various other attributes of the database. This can be queried from
    --  an existing database, or loaded from text files.
 
+   No_Schema : constant DB_Schema;
+
    Invalid_Table : exception;
 
    function Get_Table
@@ -267,6 +269,25 @@ package GNATCOLL.SQL.Inspect is
    --  Read or write the schema from a file.
    --  See GNATCOLL documentation for the format of this file.
    --  This will write to stdout if the filename is "-".
+
+   Invalid_File : exception;
+
+   procedure Load_Data
+     (DB     : access Database_Connection_Record'Class;
+      File   : String;
+      Schema : DB_Schema := No_Schema);
+   --  Load data from a file into the database.
+   --  This should be used for initial fixtures when you create a new database,
+   --  so in general after a call to Write_Schema.
+   --  The format of the file is documented in the GNATCOLL documentation.
+   --  The exact commands used for the actual insertion depends on the DBMS
+   --  backend, and are optimized as much as possible.
+   --  The schema must be specified if your input file potentially includes
+   --  cross-references between tables (values starting with "&").
+   --
+   --  You need to call Commit_Or_Rollback to actually commit the data into the
+   --  database, so that a single transaction is used for all data loading when
+   --  there are multiple files to load.
 
 private
    use GNATCOLL.Refcount, GNATCOLL.Refcount.Weakref;
@@ -372,6 +393,8 @@ private
    type DB_Schema is record
       Tables : Tables_Maps.Map;
    end record;
+
+   No_Schema : constant DB_Schema := (Tables => Tables_Maps.Empty_Map);
 
    No_Table : constant Table_Description :=
      (Tables_Ref.Null_Ref with null record);

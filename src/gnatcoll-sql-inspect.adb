@@ -33,9 +33,12 @@ with Ada.Strings.Maps;            use Ada.Strings.Maps;
 with Ada.Text_IO;                 use Ada.Text_IO;
 with GNAT.Strings;                use GNAT.Strings;
 with GNATCOLL.Mmap;               use GNATCOLL.Mmap;
+with GNATCOLL.Traces;             use GNATCOLL.Traces;
 with GNATCOLL.Utils;              use GNATCOLL.Utils;
 
 package body GNATCOLL.SQL.Inspect is
+   Me : constant Trace_Handle := Create ("INSPECT");
+
    use Tables_Maps, Field_Lists, Foreign_Refs;
    use Foreign_Keys, Pair_Lists;
 
@@ -61,6 +64,22 @@ package body GNATCOLL.SQL.Inspect is
    function Get_To (FK : Foreign_Key; Pair : Field_Pair) return Field;
    --  Return the field this points to (possibly the primary key of another
    --  table if FK.To is unset)
+
+   function EOW (Str : String; First : Integer) return Natural;
+   --  Return the position of the next '|'
+
+   procedure Append
+     (List : in out String_List; Last : in out Natural; Str : String);
+   --  Add a new element to the list
+
+   ---------
+   -- EOW --
+   ---------
+
+   function EOW (Str : String; First : Integer) return Natural is
+   begin
+      return Find_Char (Str (First .. Str'Last), '|');
+   end EOW;
 
    ------------
    -- Get_To --
@@ -777,6 +796,17 @@ package body GNATCOLL.SQL.Inspect is
       end loop;
    end Mark_FK_As_Ambiguous;
 
+   ------------
+   -- Append --
+   ------------
+
+   procedure Append
+     (List : in out String_List; Last : in out Natural; Str : String) is
+   begin
+      Last := Last + 1;
+      List (Last) := new String'(Str);
+   end Append;
+
    -----------------
    -- Read_Schema --
    -----------------
@@ -794,9 +824,6 @@ package body GNATCOLL.SQL.Inspect is
 
       type Line_Fields is new String_List (1 .. Fields_Per_Line);
 
-      function EOW return Natural;
-      --  Return the position of end-of-word starting at First
-
       procedure Parse_Line (Result : in out Line_Fields);
       --  Split the line that starts at First into its fields.
       --  On exit, First points to the beginning of the next line
@@ -811,32 +838,19 @@ package body GNATCOLL.SQL.Inspect is
       procedure Parse_FK (Name : String);
       --  Parse all foreign keys for table Name
 
-      procedure Free (Lines : in out Line_Fields);
-
-      ----------
-      -- Free --
-      ----------
-
-      procedure Free (Lines : in out Line_Fields) is
-      begin
-         for R in Lines'Range loop
-            Free (Lines (R));
-         end loop;
-      end Free;
-
       ----------------
       -- Parse_Line --
       ----------------
 
       procedure Parse_Line (Result : in out Line_Fields) is
-         Index  : Natural := Result'First;
+         Index  : Natural := Result'First - 1;
          Last, Tmp : Natural;
          Current_Line_End : constant Natural := EOL (Str (First .. Str'Last));
       begin
          pragma Assert (Str (First) = '|');
          Line_Number := Line_Number + 1;
 
-         Free (Result);
+         Free (String_List (Result));
 
          First := First + 1;
 
@@ -844,29 +858,19 @@ package body GNATCOLL.SQL.Inspect is
             Skip_Blanks (Str.all, First);
             --  First now points to first non-blank char
 
-            Last := EOW;
+            Last := EOW (Str.all, First);
             Tmp := Last - 1;
 
             Skip_Blanks_Backward (Str (First .. Tmp), Tmp);
 
-            Result (Index) := new String'(Str (First .. Tmp));
-            Index := Index + 1;
-            exit when Index > Fields_Per_Line;
+            Append (String_List (Result), Index, Str (First .. Tmp));
+            exit when Index = Fields_Per_Line;
 
             First := Last + 1;
          end loop;
 
          First := Current_Line_End + 1;
       end Parse_Line;
-
-      ---------
-      -- EOW --
-      ---------
-
-      function EOW return Natural is
-      begin
-         return Find_Char (Str (First .. Str'Last), '|');
-      end EOW;
 
       -----------------------------
       -- Parse_Table_Inheritance --
@@ -1025,7 +1029,7 @@ package body GNATCOLL.SQL.Inspect is
             end if;
          end loop;
 
-         Free (Line);
+         Free (String_List (Line));
          Include (Schema.Tables, Name, Table);
       end Parse_Table;
 
@@ -1091,7 +1095,7 @@ package body GNATCOLL.SQL.Inspect is
             end if;
          end loop;
 
-         Free (Line);
+         Free (String_List (Line));
          Replace_Element (Schema.Tables, Curs, From_Table);
       end Parse_FK;
 
@@ -1125,12 +1129,12 @@ package body GNATCOLL.SQL.Inspect is
          end loop;
       end loop;
 
-      Free (Line);
+      Free (String_List (Line));
       Free (Str);
 
    exception
       when E : Invalid_Type =>
-         Free (Line);
+         Free (String_List (Line));
          Put_Line (Standard_Error,
                    To_String (Self.Filename)
                    & ":" & Image (Line_Number, Min_Width => 1) & " "
@@ -1452,5 +1456,231 @@ package body GNATCOLL.SQL.Inspect is
          Close (To_File);
       end if;
    end Write_Schema;
+
+   ---------------
+   -- Load_Data --
+   ---------------
+
+   procedure Load_Data
+     (DB     : access Database_Connection_Record'Class;
+      File   : String;
+      Schema : DB_Schema := No_Schema)
+   is
+      Max_Fields_Per_Line : constant := 30;
+      --  Maximum number of fields per line (separated by '|')
+
+      Str         : GNAT.Strings.String_Access;
+      Line_Number : Natural := 0;
+
+      Line         : String_List (1 .. Max_Fields_Per_Line);
+      First        : Integer;
+      Fields_Count : Natural;  --  Number of fields on current line
+
+      procedure Parse_Line;
+      --  Parse the current line and set Line and Fields_Count as appropriate.
+      --  Fields_Count is set to 0 if the current line is not part of a table
+      --  and should be ignored.
+
+      function Format_Field (Value : String) return String;
+      --  Format a value for proper use in SQL.
+      --  This translates boolean values "true" and "false" as appropriate for
+      --  the backend.
+
+      ------------------
+      -- Format_Field --
+      ------------------
+
+      function Format_Field (Value : String) return String is
+         V : constant String := To_Lower (Value);
+      begin
+         if V = "true" or else V = "false" then
+            return Boolean_Image (DB.all, Boolean'Value (Value));
+         end if;
+
+         if Value'Length = 0 then
+            return "''";
+         elsif Is_Digit (Value (Value'First)) then
+            return Value;
+         elsif V = "null" then
+            return "NULL";
+         else
+            return "'" & Value & "'";
+         end if;
+      end Format_Field;
+
+      ----------------
+      -- Parse_Line --
+      ----------------
+
+      procedure Parse_Line is
+         Line_End : Natural := EOL (Str (First .. Str'Last));
+         Last, Tmp : Natural;
+      begin
+         Free (String_List (Line));
+         Fields_Count := Line'First - 1;
+
+         Line_Number := Line_Number + 1;
+
+         while Str (First) = '|'
+           and then Str (First + 1) = '-'  --  Skip line like  |---|----|
+         loop
+            First := Line_End + 1;
+            Line_End := EOL (Str (First .. Str'Last));
+            Line_Number := Line_Number + 1;
+         end loop;
+
+         if Str (First) = '|' then
+            First := First + 1;
+
+            while First <= Line_End loop
+               Skip_Blanks (Str.all, First);
+               exit when Str (First) = '#';  --  A comment
+
+               --  First now points to first non-blank char
+
+               Last := EOW (Str.all, First);
+               exit when Last > Line_End;
+
+               Tmp := Last - 1;
+               Skip_Blanks_Backward (Str (First .. Tmp), Tmp);
+
+               Append (Line, Fields_Count, Str (First .. Tmp));
+               First := Last + 1;
+            end loop;
+         end if;
+
+         First := Line_End + 1;
+      end Parse_Line;
+
+      Table     : Table_Description;
+      DB_Fields : String_List (1 .. Max_Fields_Per_Line);
+      DB_Fields_Count : Natural := DB_Fields'First - 1;
+
+      Xref       : String_List (1 .. Max_Fields_Per_Line);
+      Xref_Count : Natural := Xref'First - 1;
+
+      Paren : Natural;
+
+   begin
+      Trace (Me, "Loading data from " & File & " into database");
+
+      Str   := Read_Whole_File (File);
+      First := Str'First;
+
+      --  ??? This is sqlite specific, but should be ignored on other DBMS
+      Execute (DB, "PRAGMA foreign_keys=OFF");
+
+      while First <= Str'Last loop
+         Parse_Line;
+
+         if Fields_Count /= 0
+           and then Line (1).all = "TABLE"
+         then
+            Table := Get_Table (Schema, Line (2).all);
+
+            Free (DB_Fields);
+            DB_Fields_Count := DB_Fields'First - 1;
+
+            Free (Xref);
+            Xref_Count      := Xref'First - 1;
+
+            Parse_Line;  --  Parse fields
+            for L in Line'First .. Fields_Count loop
+               exit when Line (L).all = "";
+
+               Paren := Ada.Strings.Fixed.Index (Line (L).all, "(&");
+               if Paren >= Line (L)'First then
+                  Append (DB_Fields, DB_Fields_Count,
+                          Line (L) (Line (L)'First .. Paren - 1));
+                  Append (Xref, Xref_Count,
+                         Line (L) (Paren + 2 .. Line (L)'Last - 1));
+               else
+                  Append (DB_Fields, DB_Fields_Count, Line (L).all);
+                  Append (Xref, Xref_Count, "");
+               end if;
+            end loop;
+
+         elsif Fields_Count /= 0 then
+            declare
+               Tables       : String_List (1 .. Max_Fields_Per_Line);
+               Tables_Count : Natural := Tables'First - 1;
+
+               Where        : String_List (1 .. Max_Fields_Per_Line);
+               Where_Count  : Natural := Where'First - 1;
+
+               Values       : String_List (1 .. Max_Fields_Per_Line);
+               Values_Count : Natural := Values'First - 1;
+
+               FK    : Field;
+
+            begin
+               --  Do we have xref
+
+               for L in Line'First
+                 .. Integer'Min (Fields_Count, DB_Fields_Count)
+               loop
+                  if Starts_With (Line (L).all, "&") then
+                     if Xref (L).all = "" then
+                        raise Invalid_File
+                          with File & ":" & Image (Line_Number, 0)
+                          & ": column title must indicate referenced field";
+                     end if;
+
+                     FK := Table.Field_From_Name (DB_Fields (L).all).Is_FK;
+
+                     Append (Tables, Tables_Count,
+                             FK.Get_Table.Name & " t" & Image (L, 0));
+                     Append (Values, Values_Count,
+                             "t" & Image (L, 0) & "." & FK.Name);
+
+                     Append (Where, Where_Count,
+                             "t" & Image (L, 0)
+                             & "." & Xref (L).all & "='"
+                             & Line (L) (Line (L)'First + 1 .. Line (L)'Last)
+                             & "'");
+                  else
+                     Append
+                       (Values, Values_Count, Format_Field (Line (L).all));
+                  end if;
+               end loop;
+
+               --  ??? Using prepared statement will speed things up a lot here
+
+               if Tables_Count < Tables'First then
+                  Execute (DB, "INSERT INTO " & Table.Name
+                           & "("
+                           & Join
+                             (",",
+                              DB_Fields (DB_Fields'First .. DB_Fields_Count))
+                           & ") VALUES ("
+                           & Join (",", Values (Values'First .. Values_Count))
+                           & ")");
+               else
+                  Execute
+                    (DB, "INSERT INTO " & Table.Name
+                     & "("
+                     & Join
+                       (",", DB_Fields (DB_Fields'First .. DB_Fields_Count))
+                     & ") SELECT "
+                     & Join (",", Values (Values'First .. Values_Count))
+                     & " FROM "
+                     & Join (",", Tables (Tables'First .. Tables_Count))
+                     & " WHERE "
+                     & Join (" and ", Where (Where'First .. Where_Count)));
+               end if;
+
+               Free (Tables);
+               Free (Values);
+               Free (Where);
+            end;
+         end if;
+
+         exit when not Success (DB);
+      end loop;
+
+      Free (Xref);
+      Free (Str);
+      Free (DB_Fields);
+   end Load_Data;
 
 end GNATCOLL.SQL.Inspect;
