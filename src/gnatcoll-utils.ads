@@ -1,7 +1,7 @@
 -----------------------------------------------------------------------
 --                          G N A T C O L L                          --
 --                                                                   --
---                    Copyright (C) 2008-2010, AdaCore               --
+--                    Copyright (C) 2008-2011, AdaCore               --
 --                                                                   --
 -- This is free software;  you can redistribute it and/or modify  it --
 -- under the terms of the GNU General Public License as published by --
@@ -85,6 +85,24 @@ package GNATCOLL.Utils is
    function Starts_With (Str : String; Suffix : String) return Boolean;
    function Ends_With (Str : String; Suffix : String) return Boolean;
    --  Return True if Str starts or ends with Suffix
+
+   procedure Skip_Blanks (Str : String; Index : in out Natural);
+   procedure Skip_Blanks_Backward (Str : String; Index : in out Natural);
+   --  If Str(First) is a white space, skip it and all following ones.
+   --  On exit, First points to the first non white space character, or after
+   --  Str'Last.
+   --  Skip_Blanks_Backward moves Index backward instead, and will leave it
+   --  before Str'First if no non-whitespace was found.
+
+   function Find_Char (Str : String; Char : Character) return Natural;
+   --  Return the first occurrence of Char after Str'First (use substrings for
+   --  later occurrences).
+
+   function EOL (Str : String) return Natural;
+   pragma Inline (EOL);
+   --  Return the first end-of-line after Str'First (use substrings for later
+   --  lines). The result is either Str'Last+1 or pointing to the first
+   --  ASCII.LF found.
 
    ------------------
    -- File systems --

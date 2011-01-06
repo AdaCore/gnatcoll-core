@@ -1,7 +1,7 @@
 -----------------------------------------------------------------------
 --                          G N A T C O L L                          --
 --                                                                   --
---                    Copyright (C) 2008-2010, AdaCore               --
+--                    Copyright (C) 2008-2011, AdaCore               --
 --                                                                   --
 -- THis is free software;  you can redistribute it and/or modify  it --
 -- under the terms of the GNU General Public License as published by --
@@ -363,5 +363,49 @@ package body GNATCOLL.Utils is
          return Dir;
       end;
    end Executable_Location;
+
+   -----------------
+   -- Skip_Blanks --
+   -----------------
+
+   procedure Skip_Blanks (Str : String; Index : in out Natural) is
+   begin
+      while Index <= Str'Last and then Str (Index) = ' ' loop
+         Index := Index + 1;
+      end loop;
+   end Skip_Blanks;
+
+   --------------------------
+   -- Skip_Blanks_Backward --
+   --------------------------
+
+   procedure Skip_Blanks_Backward (Str : String; Index : in out Natural) is
+   begin
+      while Index >= Str'First and then Str (Index) = ' ' loop
+         Index := Index - 1;
+      end loop;
+   end Skip_Blanks_Backward;
+
+   ---------------
+   -- Find_Char --
+   ---------------
+
+   function Find_Char (Str : String; Char : Character) return Natural is
+      Last : Natural := Str'First;
+   begin
+      while Last <= Str'Last and then Str (Last) /= Char loop
+         Last := Last + 1;
+      end loop;
+      return Last;
+   end Find_Char;
+
+   ---------
+   -- EOL --
+   ---------
+
+   function EOL (Str : String) return Natural is
+   begin
+      return Find_Char (Str, ASCII.LF);
+   end EOL;
 
 end GNATCOLL.Utils;

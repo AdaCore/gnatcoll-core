@@ -794,14 +794,8 @@ package body GNATCOLL.SQL.Inspect is
 
       type Line_Fields is new String_List (1 .. Fields_Per_Line);
 
-      function EOL return Natural;
-      --  Return the position of the next End-Of-Line character after First
-
       function EOW return Natural;
       --  Return the position of end-of-word starting at First
-
-      procedure Skip_Blanks;
-      --  Move First forward until it is no longer on a whitespace
 
       procedure Parse_Line (Result : in out Line_Fields);
       --  Split the line that starts at First into its fields.
@@ -837,7 +831,7 @@ package body GNATCOLL.SQL.Inspect is
       procedure Parse_Line (Result : in out Line_Fields) is
          Index  : Natural := Result'First;
          Last, Tmp : Natural;
-         Current_Line_End : constant Natural := EOL;
+         Current_Line_End : constant Natural := EOL (Str (First .. Str'Last));
       begin
          pragma Assert (Str (First) = '|');
          Line_Number := Line_Number + 1;
@@ -847,13 +841,13 @@ package body GNATCOLL.SQL.Inspect is
          First := First + 1;
 
          while First <= Current_Line_End loop
-            Skip_Blanks;  --  First now points to first non-blank char
+            Skip_Blanks (Str.all, First);
+            --  First now points to first non-blank char
+
             Last := EOW;
             Tmp := Last - 1;
 
-            while Tmp >= First and then Str (Tmp) = ' ' loop
-               Tmp := Tmp - 1;
-            end loop;
+            Skip_Blanks_Backward (Str (First .. Tmp), Tmp);
 
             Result (Index) := new String'(Str (First .. Tmp));
             Index := Index + 1;
@@ -865,43 +859,13 @@ package body GNATCOLL.SQL.Inspect is
          First := Current_Line_End + 1;
       end Parse_Line;
 
-      -----------------
-      -- Skip_Blanks --
-      -----------------
-
-      procedure Skip_Blanks is
-      begin
-         while First <= Str'Last and then Str (First) = ' ' loop
-            First := First + 1;
-         end loop;
-      end Skip_Blanks;
-
-      ---------
-      -- EOL --
-      ---------
-
-      function EOL return Natural is
-         Last : Natural := First;
-      begin
-         while Last <= Str'Last and then Str (Last) /= ASCII.LF loop
-            Last := Last + 1;
-         end loop;
-         return Last;
-      end EOL;
-
       ---------
       -- EOW --
       ---------
 
       function EOW return Natural is
-         Last : Natural := First;
       begin
-         while Last <= Str'Last
-           and then Str (Last) /= '|'
-         loop
-            Last := Last + 1;
-         end loop;
-         return Last;
+         return Find_Char (Str (First .. Str'Last), '|');
       end EOW;
 
       -----------------------------
@@ -1008,16 +972,10 @@ package body GNATCOLL.SQL.Inspect is
                   Append (TDR (Table.Get).Fields, Att);
 
                   if Att.Get.FK then
-                     Tmp := Typ'First + 3;
-                     while Tmp <= Typ'Last and then Typ (Tmp) /= '(' loop
-                        Tmp := Tmp + 1;
-                     end loop;
+                     Tmp := Find_Char (Typ (Typ'First + 3 .. Typ'Last), '(');
 
                      if Tmp < Typ'Last then
-                        Tmp2 := Tmp + 1;
-                        while Tmp2 < Typ'Last and then Typ (Tmp2) /= ')' loop
-                           Tmp2 := Tmp2 + 1;
-                        end loop;
+                        Tmp2 := Find_Char (Typ (Tmp + 1 .. Typ'Last), ')');
                      else
                         Tmp2 := Typ'Last;
                      end if;
@@ -1104,16 +1062,13 @@ package body GNATCOLL.SQL.Inspect is
                   First := From'First;
                   while First <= From'Last loop
                      Tmp := First + 1;
-                     while Tmp <= From'Last and then From (Tmp) /= ' ' loop
-                        Tmp := Tmp + 1;
-                     end loop;
-
+                     Skip_Blanks (From, Tmp);
                      Append (FK.Get.Fields,
                              (From => From_Table.Field_From_Name
                                         (From (First .. Tmp - 1)),
                               To   => No_Field));  --  Will be set later
                      First := Tmp + 1;
-                     Skip_Blanks;
+                     Skip_Blanks (Str.all, First);
                   end loop;
 
                   C := FK.Get.Fields.First;
@@ -1121,17 +1076,14 @@ package body GNATCOLL.SQL.Inspect is
                   First := To'First;
                   while First <= To'Last loop
                      Tmp := First + 1;
-                     while Tmp <= To'Last and then To (Tmp) /= ' ' loop
-                        Tmp := Tmp + 1;
-                     end loop;
-
+                     Skip_Blanks (To, Tmp);
                      Replace_Element
                        (FK.Get.Fields, C,
                         (From => Element (C).From,
                          To   => To_Table.Field_From_Name
                                    (To (First .. Tmp - 1))));
                      First := Tmp + 1;
-                     Skip_Blanks;
+                     Skip_Blanks (Str.all, First);
                   end loop;
                end;
 
@@ -1168,7 +1120,7 @@ package body GNATCOLL.SQL.Inspect is
                   end case;
                end if;
             else
-               First := EOL + 1;
+               First := EOL (Str (First .. Str'Last)) + 1;
             end if;
          end loop;
       end loop;
