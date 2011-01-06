@@ -23,6 +23,7 @@ with GNAT.Directory_Operations; use GNAT.Directory_Operations;
 with GNAT.OS_Lib;               use GNAT.OS_Lib;
 with GNATCOLL.Mmap;             use GNATCOLL.Mmap;
 with GNATCOLL.Templates;        use GNATCOLL.Templates;
+with GNATCOLL.Utils;            use GNATCOLL.Utils;
 with GNATCOLL.VFS;              use GNATCOLL.VFS;
 
 package body GNATCOLL.Config is
@@ -33,6 +34,10 @@ package body GNATCOLL.Config is
       Key     : String;
       Section : String := Section_From_Key) return Config_Value;
    --  Internal version of Get
+
+   function At_Index
+     (Value : Config_Value; Index : Natural := Whole_Value) return String;
+   --  Extract an element from a comma-separated list
 
    function Substitute
      (Self : INI_Parser'Class; Value : String) return String;
@@ -305,11 +310,35 @@ package body GNATCOLL.Config is
          end loop;
 
          return Element (Self.Keys, '#' & Key);
-
       else
          return Element (Self.Keys, Section & "#" & Key);
       end if;
    end Internal_Get;
+
+   --------------
+   -- At_Index --
+   --------------
+
+   function At_Index
+     (Value : Config_Value; Index : Natural := Whole_Value) return String
+   is
+      S : String_List_Access;
+   begin
+      if Index = Whole_Value then
+         return Value.Value;
+      else
+         S := Split (Value.Value, ',');
+
+         if Index > S'Last then
+            Free (S);
+            return "";
+         else
+            return R : constant String := S (Index).all do
+               Free (S);
+            end return;
+         end if;
+      end if;
+   end At_Index;
 
    ---------
    -- Get --
@@ -318,9 +347,11 @@ package body GNATCOLL.Config is
    function Get
      (Self    : Config_Pool;
       Key     : String;
-      Section : String := Section_From_Key) return String is
+      Section : String := Section_From_Key;
+      Index   : Natural := Whole_Value) return String
+   is
    begin
-      return Internal_Get (Self, Key, Section).Value;
+      return At_Index (Internal_Get (Self, Key, Section), Index);
    end Get;
 
    -----------------
@@ -330,9 +361,10 @@ package body GNATCOLL.Config is
    function Get_Integer
      (Self    : Config_Pool;
       Key     : String;
-      Section : String := Section_From_Key) return Integer is
+      Section : String := Section_From_Key;
+      Index   : Natural := Whole_Value) return Integer is
    begin
-      return Integer'Value (Get (Self, Key, Section));
+      return Integer'Value (Get (Self, Key, Section, Index));
    end Get_Integer;
 
    -----------------
@@ -342,9 +374,10 @@ package body GNATCOLL.Config is
    function Get_Boolean
      (Self    : Config_Pool;
       Key     : String;
-      Section : String := Section_From_Key) return Boolean is
+      Section : String := Section_From_Key;
+      Index   : Natural := Whole_Value) return Boolean is
    begin
-      return Boolean'Value (Get (Self, Key, Section));
+      return Boolean'Value (Get (Self, Key, Section, Index));
    end Get_Boolean;
 
    --------------
@@ -354,16 +387,18 @@ package body GNATCOLL.Config is
    function Get_File
      (Self    : Config_Pool;
       Key     : String;
-      Section : String := Section_From_Key) return String
+      Section : String := Section_From_Key;
+      Index   : Natural := Whole_Value) return String
    is
       Val : constant Config_Value := Internal_Get (Self, Key, Section);
+      V   : constant String := At_Index (Val, Index);
    begin
-      if Val.Len = 0 then
+      if V = "" then
          return "";
-      elsif Val.Value (Val.Value'First) = '/' then
-         return Val.Value;
+      elsif V (V'First) = '/' then
+         return V;
       else
-         return Normalize_Pathname (Val.Value, To_String (Val.System_ID));
+         return Normalize_Pathname (V, To_String (Val.System_ID));
       end if;
    end Get_File;
 
@@ -396,9 +431,12 @@ package body GNATCOLL.Config is
    -- Get --
    ---------
 
-   function Get (Self : Config_Key; Conf : Config_Pool'Class) return String is
+   function Get
+     (Self  : Config_Key;
+      Conf  : Config_Pool'Class;
+      Index   : Natural := Whole_Value) return String is
    begin
-      return Get (Conf, To_String (Self.Key), To_String (Self.Section));
+      return Get (Conf, To_String (Self.Key), To_String (Self.Section), Index);
    end Get;
 
    -----------------
@@ -406,10 +444,12 @@ package body GNATCOLL.Config is
    -----------------
 
    function Get_Integer
-      (Self : Config_Key; Conf : Config_Pool'Class) return Integer is
+     (Self  : Config_Key;
+      Conf  : Config_Pool'Class;
+      Index   : Natural := Whole_Value) return Integer is
    begin
       return Get_Integer
-         (Conf, To_String (Self.Key), To_String (Self.Section));
+         (Conf, To_String (Self.Key), To_String (Self.Section), Index);
    end Get_Integer;
 
    -----------------
@@ -417,10 +457,12 @@ package body GNATCOLL.Config is
    -----------------
 
    function Get_Boolean
-      (Self : Config_Key; Conf : Config_Pool'Class) return Boolean is
+     (Self  : Config_Key;
+      Conf  : Config_Pool'Class;
+      Index   : Natural := Whole_Value) return Boolean is
    begin
       return Get_Boolean
-         (Conf, To_String (Self.Key), To_String (Self.Section));
+         (Conf, To_String (Self.Key), To_String (Self.Section), Index);
    end Get_Boolean;
 
    --------------
@@ -428,9 +470,12 @@ package body GNATCOLL.Config is
    --------------
 
    function Get_File
-     (Self : Config_Key; Conf : Config_Pool'Class) return String is
+     (Self  : Config_Key;
+      Conf  : Config_Pool'Class;
+      Index   : Natural := Whole_Value) return String is
    begin
-      return Get_File (Conf, To_String (Self.Key), To_String (Self.Section));
+      return Get_File
+        (Conf, To_String (Self.Key), To_String (Self.Section), Index);
    end Get_File;
 
 end GNATCOLL.Config;

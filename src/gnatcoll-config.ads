@@ -153,21 +153,34 @@ package GNATCOLL.Config is
    --  for a small performance penalty and a possible ambiguity if the key
    --  itself contains a ".", which is not recommended.
 
+   Whole_Value : constant Natural := 0;
+
    function Get (Self    : Config_Pool;
                  Key     : String;
-                 Section : String := Section_From_Key) return String;
+                 Section : String := Section_From_Key;
+                 Index   : Natural := Whole_Value) return String;
    --  Return the value associated with Key.
+   --  Index is used for comma-separated lists of values, and will retrieve
+   --  one of the specific elements of the list. The whole value (no splitting)
+   --  is returned if Index is Whole_Value. The empty string is returned if
+   --  there is no such item in the list
 
-   function Get_Integer (Self    : Config_Pool;
-                         Key     : String;
-                         Section : String := Section_From_Key) return Integer;
-   function Get_Boolean (Self    : Config_Pool;
-                         Key     : String;
-                         Section : String := Section_From_Key) return Boolean;
+   function Get_Integer
+     (Self    : Config_Pool;
+      Key     : String;
+      Section : String := Section_From_Key;
+      Index   : Natural := Whole_Value) return Integer;
+   function Get_Boolean
+     (Self    : Config_Pool;
+      Key     : String;
+      Section : String := Section_From_Key;
+      Index   : Natural := Whole_Value) return Boolean;
 
-   function Get_File (Self    : Config_Pool;
-                      Key     : String;
-                      Section : String := Section_From_Key) return String;
+   function Get_File
+     (Self    : Config_Pool;
+      Key     : String;
+      Section : String := Section_From_Key;
+      Index   : Natural := Whole_Value) return String;
    --  Same as above, but returns an absolute filename. Relative paths are
    --  resolved relative to the config location where Key was declared.
 
@@ -183,13 +196,22 @@ package GNATCOLL.Config is
    function Create (Key : String; Section : String := "") return Config_Key;
    --  Create a new config key
 
-   function Get (Self : Config_Key; Conf : Config_Pool'Class) return String;
+   function Get
+     (Self  : Config_Key;
+      Conf  : Config_Pool'Class;
+      Index : Natural := Whole_Value) return String;
    function Get_Integer
-      (Self : Config_Key; Conf : Config_Pool'Class) return Integer;
+     (Self  : Config_Key;
+      Conf  : Config_Pool'Class;
+      Index : Natural := Whole_Value) return Integer;
    function Get_Boolean
-      (Self : Config_Key; Conf : Config_Pool'Class) return Boolean;
+     (Self  : Config_Key;
+      Conf  : Config_Pool'Class;
+      Index : Natural := Whole_Value) return Boolean;
    function Get_File
-     (Self : Config_Key; Conf : Config_Pool'Class) return String;
+     (Self  : Config_Key;
+      Conf  : Config_Pool'Class;
+      Index : Natural := Whole_Value) return String;
    --  Read the key from the configuration.
    --  Using this API might help ensure that you are always accessing existing
    --  keys. In this case, you would have a global package that defines all
