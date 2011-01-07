@@ -3383,7 +3383,7 @@ else
   ;;
   *)
   as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
-as_dummy="$PYTHON_PATH_WITH/bin:$PATH"
+as_dummy="$PYTHON_PATH_WITH/bin:$PYTHON_PATH_WITH:$PATH"
 for as_dir in $as_dummy
 do
   IFS=$as_save_IFS

@@ -460,7 +460,7 @@ AC_HELP_STRING(
       WITH_PYTHON=no
 
    else
-      AC_PATH_PROG(PYTHON, python, no, $PYTHON_PATH_WITH/bin:$PATH)
+      AC_PATH_PROG(PYTHON, python, no, $PYTHON_PATH_WITH/bin:$PYTHON_PATH_WITH:$PATH)
       if test x"$PYTHON" = xno ; then
          PYTHON_BASE=no
          WITH_PYTHON=no
