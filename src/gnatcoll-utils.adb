@@ -370,7 +370,12 @@ package body GNATCOLL.Utils is
 
    procedure Skip_Blanks (Str : String; Index : in out Natural) is
    begin
-      while Index <= Str'Last and then Str (Index) = ' ' loop
+      while Index <= Str'Last
+         and then (Str (Index) = ' '
+                   or else Str (Index) = ASCII.HT
+                   or else Str (Index) = ASCII.LF
+                   or else Str (Index) = ASCII.CR)
+      loop
          Index := Index + 1;
       end loop;
    end Skip_Blanks;
@@ -381,7 +386,12 @@ package body GNATCOLL.Utils is
 
    procedure Skip_Blanks_Backward (Str : String; Index : in out Natural) is
    begin
-      while Index >= Str'First and then Str (Index) = ' ' loop
+      while Index >= Str'First
+         and then (Str (Index) = ' '
+                   or else Str (Index) = ASCII.HT
+                   or else Str (Index) = ASCII.LF
+                   or else Str (Index) = ASCII.CR)
+      loop
          Index := Index - 1;
       end loop;
    end Skip_Blanks_Backward;
