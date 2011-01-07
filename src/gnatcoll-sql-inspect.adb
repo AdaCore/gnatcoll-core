@@ -1534,6 +1534,7 @@ package body GNATCOLL.SQL.Inspect is
 
             while First <= Line_End loop
                Skip_Blanks (Str.all, First);
+               exit when First > Line_End;
                exit when Str (First) = '#';  --  A comment
 
                --  First now points to first non-blank char
