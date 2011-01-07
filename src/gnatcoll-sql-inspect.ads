@@ -41,6 +41,7 @@ with Ada.Containers.Indefinite_Ordered_Maps;
 with Ada.Strings.Unbounded;
 private with GNATCOLL.Refcount.Weakref;
 with GNATCOLL.SQL.Exec;           use GNATCOLL.SQL.Exec;
+with GNATCOLL.VFS;
 private with GNAT.Strings;
 
 package GNATCOLL.SQL.Inspect is
@@ -274,9 +275,14 @@ package GNATCOLL.SQL.Inspect is
 
    procedure Load_Data
      (DB     : access Database_Connection_Record'Class;
-      File   : String;
+      File   : GNATCOLL.VFS.Virtual_File;
       Schema : DB_Schema := No_Schema);
-   --  Load data from a file into the database.
+   procedure Load_Data
+     (DB       : access Database_Connection_Record'Class;
+      Data     : String;
+      Schema   : DB_Schema := No_Schema;
+      Location : String := "data");
+   --  Load data from a file or from memory into the database.
    --  This should be used for initial fixtures when you create a new database,
    --  so in general after a call to Write_Schema.
    --  The format of the file is documented in the GNATCOLL documentation.

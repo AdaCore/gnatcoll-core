@@ -35,6 +35,7 @@ with GNAT.Strings;                use GNAT.Strings;
 with GNATCOLL.Mmap;               use GNATCOLL.Mmap;
 with GNATCOLL.Traces;             use GNATCOLL.Traces;
 with GNATCOLL.Utils;              use GNATCOLL.Utils;
+with GNATCOLL.VFS;                use GNATCOLL.VFS;
 
 package body GNATCOLL.SQL.Inspect is
    Me : constant Trace_Handle := Create ("INSPECT");
@@ -1463,13 +1464,13 @@ package body GNATCOLL.SQL.Inspect is
 
    procedure Load_Data
      (DB     : access Database_Connection_Record'Class;
-      File   : String;
-      Schema : DB_Schema := No_Schema)
+      Data   : String;
+      Schema : DB_Schema := No_Schema;
+      Location : String := "data")
    is
       Max_Fields_Per_Line : constant := 30;
       --  Maximum number of fields per line (separated by '|')
 
-      Str         : GNAT.Strings.String_Access;
       Line_Number : Natural := 0;
 
       Line         : String_List (1 .. Max_Fields_Per_Line);
@@ -1513,7 +1514,7 @@ package body GNATCOLL.SQL.Inspect is
       ----------------
 
       procedure Parse_Line is
-         Line_End : Natural := EOL (Str (First .. Str'Last));
+         Line_End : Natural := EOL (Data (First .. Data'Last));
          Last, Tmp : Natural;
       begin
          Free (String_List (Line));
@@ -1521,31 +1522,31 @@ package body GNATCOLL.SQL.Inspect is
 
          Line_Number := Line_Number + 1;
 
-         while Str (First) = '|'
-           and then Str (First + 1) = '-'  --  Skip line like  |---|----|
+         while Data (First) = '|'
+           and then Data (First + 1) = '-'  --  Skip line like  |---|----|
          loop
             First := Line_End + 1;
-            Line_End := EOL (Str (First .. Str'Last));
+            Line_End := EOL (Data (First .. Data'Last));
             Line_Number := Line_Number + 1;
          end loop;
 
-         if Str (First) = '|' then
+         if Data (First) = '|' then
             First := First + 1;
 
             while First <= Line_End loop
-               Skip_Blanks (Str.all, First);
+               Skip_Blanks (Data, First);
                exit when First > Line_End;
-               exit when Str (First) = '#';  --  A comment
+               exit when Data (First) = '#';  --  A comment
 
                --  First now points to first non-blank char
 
-               Last := EOW (Str.all, First);
+               Last := EOW (Data, First);
                exit when Last > Line_End;
 
                Tmp := Last - 1;
-               Skip_Blanks_Backward (Str (First .. Tmp), Tmp);
+               Skip_Blanks_Backward (Data (First .. Tmp), Tmp);
 
-               Append (Line, Fields_Count, Str (First .. Tmp));
+               Append (Line, Fields_Count, Data (First .. Tmp));
                First := Last + 1;
             end loop;
          end if;
@@ -1563,15 +1564,14 @@ package body GNATCOLL.SQL.Inspect is
       Paren : Natural;
 
    begin
-      Trace (Me, "Loading data from " & File & " into database");
+      Trace (Me, "Loading data from " & Location & " into database");
 
-      Str   := Read_Whole_File (File);
-      First := Str'First;
+      First := Data'First;
 
       --  ??? This is sqlite specific, but should be ignored on other DBMS
       Execute (DB, "PRAGMA foreign_keys=OFF");
 
-      while First <= Str'Last loop
+      while First <= Data'Last loop
          Parse_Line;
 
          if Fields_Count /= 0
@@ -1623,7 +1623,7 @@ package body GNATCOLL.SQL.Inspect is
                   if Starts_With (Line (L).all, "&") then
                      if Xref (L).all = "" then
                         raise Invalid_File
-                          with File & ":" & Image (Line_Number, 0)
+                          with Location & ":" & Image (Line_Number, 0)
                           & ": column title must indicate referenced field";
                      end if;
 
@@ -1680,8 +1680,23 @@ package body GNATCOLL.SQL.Inspect is
       end loop;
 
       Free (Xref);
-      Free (Str);
       Free (DB_Fields);
+   end Load_Data;
+
+   ---------------
+   -- Load_Data --
+   ---------------
+
+   procedure Load_Data
+     (DB     : access Database_Connection_Record'Class;
+      File   : GNATCOLL.VFS.Virtual_File;
+      Schema : DB_Schema := No_Schema)
+   is
+      Str         : GNAT.Strings.String_Access;
+   begin
+      Str := Read_Whole_File (+File.Full_Name.all);
+      Load_Data (DB, Str.all, Schema, File.Display_Full_Name);
+      Free (Str);
    end Load_Data;
 
 end GNATCOLL.SQL.Inspect;
