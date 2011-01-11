@@ -116,7 +116,7 @@ ada_py_xdecref (PyObject* obj)
 int
 ada_pystring_check (PyObject* obj)
 {
-  return PyString_Check (obj);
+  return PyString_Check (obj) || PyUnicode_Check (obj);
 }
 
 int
