@@ -309,7 +309,7 @@ package body GNATCOLL.Utils is
 
       function Get_Install_Dir (S : String) return String is
          Exec      : String  := GNAT.OS_Lib.Normalize_Pathname
-            (S, Resolve_Links => False);
+            (S, Resolve_Links => True);
          Path_Last : Integer := 0;
 
       begin
