@@ -1,7 +1,7 @@
 -----------------------------------------------------------------------
 --                          G N A T C O L L                          --
 --                                                                   --
---                  Copyright (C) 2002-2010, AdaCore                 --
+--                  Copyright (C) 2002-2011, AdaCore                 --
 --                                                                   --
 -- GPS is free  software;  you can redistribute it and/or modify  it --
 -- under the terms of the GNU General Public License as published by --
@@ -4179,6 +4179,7 @@ package body GNATCOLL.Projects is
       Tree.Data.Sources.Clear;
       Tree.Data.Directories.Clear;
       Unchecked_Free (Tree.Data.Scenario_Variables);
+      Prj.Ext.Reset (Tree.Data.Tree);
    end Reset_View;
 
    --------------------
