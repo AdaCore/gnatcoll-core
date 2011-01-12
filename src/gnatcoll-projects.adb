@@ -4179,7 +4179,6 @@ package body GNATCOLL.Projects is
       Tree.Data.Sources.Clear;
       Tree.Data.Directories.Clear;
       Unchecked_Free (Tree.Data.Scenario_Variables);
-      Prj.Ext.Reset (Tree.Data.Tree);
    end Reset_View;
 
    --------------------
@@ -4715,6 +4714,8 @@ package body GNATCOLL.Projects is
         (Self.Data.Tree.Projects_HT);
       Sinput.P.Clear_Source_File_Table;
       Sinput.P.Reset_First;
+
+      Prj.Ext.Reset (Self.Data.Tree);
 
       Reset_View (Self);
 
