@@ -2743,6 +2743,7 @@ package body GNATCOLL.Projects is
          V : constant Name_Id := External_Reference_Of (Variable, T);
          N : constant String := Get_String (V);
          Var : Scenario_Variable;
+         Is_Valid : Boolean;
       begin
          for Index in 1 .. Curr - 1 loop
             if External_Name (List (Index)) = N then
@@ -2760,9 +2761,29 @@ package body GNATCOLL.Projects is
 
          List (Curr) := Var;
 
-         --  Ensure the external reference actually exists
+         --  Ensure the external reference actually exists and has a valid
+         --  value.
 
-         if Prj.Ext.Value_Of (T, Var.Name) = No_Name then
+         Is_Valid := Prj.Ext.Value_Of (T, Var.Name) /= No_Name;
+
+         if Is_Valid then
+            declare
+               Current : constant Name_Id := Prj.Ext.Value_Of (T, Var.Name);
+               Iter : String_List_Iterator := Value_Of (T, Var);
+            begin
+               Is_Valid := False;
+
+               while not Done (Iter) loop
+                  if Data (T, Iter) = Current then
+                     Is_Valid := True;
+                     exit;
+                  end if;
+                  Iter := Next (T, Iter);
+               end loop;
+            end;
+         end if;
+
+         if not Is_Valid then
             if Var.Default /= No_Name then
                Prj.Ext.Add (T, N, Get_Name_String (Var.Default));
             else
@@ -4715,7 +4736,17 @@ package body GNATCOLL.Projects is
       Sinput.P.Clear_Source_File_Table;
       Sinput.P.Reset_First;
 
-      Prj.Ext.Reset (Self.Data.Tree);
+      --  Reset the scenario variables.
+      --  The issue is that a given variable might currently have a value, and
+      --  then be used in another project where that value is now illegal.
+      --  Do not reset if we have an empty project, since otherwise we lose the
+      --  values set from the command line
+      --  ??? Don't reset after all, this is too tricky to get right, and might
+      --  be plain wrong in fact.
+
+--        if Self.Data.Status /= Empty then
+--           Prj.Ext.Reset (Self.Data.Tree);
+--        end if;
 
       Reset_View (Self);
 
