@@ -26,7 +26,7 @@
 -----------------------------------------------------------------------
 
 with Ada.Characters.Handling;    use Ada.Characters.Handling;
-with Interfaces.C.Strings;
+with Ada.Command_Line;
 with GNAT.Case_Util;
 with GNAT.OS_Lib;
 with GNAT.Strings;               use GNAT.Strings;
@@ -289,13 +289,7 @@ package body GNATCOLL.Utils is
    -------------------------
 
    function Executable_Location return String is
-      use Interfaces.C.Strings;
-
-      type chars_ptr_ptr is access all chars_ptr;
-      Argv : chars_ptr_ptr;
-      pragma Import (C, Argv, "gnat_argv");
-
-      Exec_Name : constant String := Value (Argv.all);
+      Exec_Name : constant String := Ada.Command_Line.Command_Name;
 
       function Get_Install_Dir (S : String) return String;
       --  S is the executable name preceeded by the absolute or relative
@@ -354,6 +348,11 @@ package body GNATCOLL.Utils is
 
       --  If you are here, the user has typed the executable name with no
       --  directory prefix.
+      --  There is a potential issue here (see K112-046) where GNAT.OS_Lib
+      --  will in fact return any non-executable file found in the PATH,
+      --  whereas shells only consider executable files. As a result, the
+      --  user might end up with a wrong directory, not patching the one
+      --  found by the shell.
 
       declare
          Ex : String_Access := GNAT.OS_Lib.Locate_Exec_On_Path (Exec_Name);
