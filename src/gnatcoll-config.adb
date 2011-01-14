@@ -119,6 +119,8 @@ package body GNATCOLL.Config is
       Self.System_ID := To_Unbounded_String
         (Normalize_Pathname (Dir_Name (Filename)));
       Self.First    := 1;
+
+      Close (F);
    end Open;
 
    ------------

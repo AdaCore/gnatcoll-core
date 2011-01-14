@@ -1,7 +1,7 @@
 -----------------------------------------------------------------------
 --                               G N A T C O L L                     --
 --                                                                   --
---                     Copyright (C) 2003-2010, AdaCore              --
+--                     Copyright (C) 2003-2011, AdaCore              --
 --                                                                   --
 -- GPS is free  software; you can  redistribute it and/or modify  it --
 -- under the terms of the GNU General Public License as published by --
@@ -748,6 +748,7 @@ package body GNATCOLL.Python is
       pragma Unreferenced (Ignored);
    begin
       Ignored := PyObject_SetAttrString (Class, Func.Name, C_Meth);
+      Py_DECREF (C_Meth);
    end Add_Method;
 
    -----------------------
@@ -784,6 +785,7 @@ package body GNATCOLL.Python is
       if C_Func /= null then
          Static := PyStaticMethod_New (C_Func);
          Result := PyObject_SetAttrString (Class, Func.Name, Static);
+         Py_DECREF (Static);
       end if;
    end Add_Static_Method;
 
@@ -800,6 +802,7 @@ package body GNATCOLL.Python is
       Def    : constant MethodDef_Access := new PyMethodDef'(Func);
       C_Func : PyObject;
       Result : Integer;
+      Meth   : PyObject;
       pragma Unreferenced (Result);
    begin
       Def.Flags := Def.Flags or METH_CLASS;
@@ -817,8 +820,9 @@ package body GNATCOLL.Python is
       C_Func := PyCFunction_New
         (Def, null, PyString_FromString (PyModule_Getname (Module)));
       if C_Func /= null then
-         Result := PyObject_SetAttrString
-           (Class, Func.Name, PyClassMethod_New (C_Func));
+         Meth := PyClassMethod_New (C_Func);
+         Result := PyObject_SetAttrString (Class, Func.Name, Meth);
+         Py_DECREF (Meth);
       end if;
    end Add_Class_Method;
 

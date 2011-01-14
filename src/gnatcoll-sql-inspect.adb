@@ -1679,6 +1679,7 @@ package body GNATCOLL.SQL.Inspect is
          exit when not Success (DB);
       end loop;
 
+      Free (String_List (Line));
       Free (Xref);
       Free (DB_Fields);
    end Load_Data;

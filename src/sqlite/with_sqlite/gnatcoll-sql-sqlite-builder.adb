@@ -28,6 +28,7 @@
 with Ada.Characters.Handling;      use Ada.Characters.Handling;
 with Ada.Strings.Fixed;
 with Ada.Unchecked_Conversion;
+with Ada.Unchecked_Deallocation;
 with GNATCOLL.SQL.Sqlite.Gnade;    use GNATCOLL.SQL.Sqlite.Gnade;
 with GNATCOLL.SQL.Exec_Private;    use GNATCOLL.SQL.Exec_Private;
 with GNATCOLL.Traces;              use GNATCOLL.Traces;
@@ -385,6 +386,8 @@ package body GNATCOLL.SQL.Sqlite.Builder is
       Is_Select   : Boolean;
       Direct      : Boolean) return Abstract_Cursor_Access
    is
+      procedure Unchecked_Free is new Ada.Unchecked_Deallocation
+         (Sqlite_Cursor'Class, Sqlite_Cursor_Access);
       Res    : Sqlite_Cursor_Access;
       Res2   : Sqlite_Direct_Cursor_Access;
       Stmt   : Statement;
@@ -439,6 +442,7 @@ package body GNATCOLL.SQL.Sqlite.Builder is
 
       Finalize (Res.Stmt);
       Res.Stmt := No_Statement;
+      Unchecked_Free (Res);
 
       return Abstract_Cursor_Access (Res2);
    end Execute;
