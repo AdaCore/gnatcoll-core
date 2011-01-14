@@ -8,13 +8,16 @@ GNAT_SOURCES_FOR_GNATCOLL= \
   csets.ads csets.adb \
   debug.ads debug.adb \
   einfo.ads einfo.adb \
+  errout.ads errout.adb \
   erroutc.ads erroutc.adb \
   errutil.ads errutil.adb \
   err_vars.ads \
   fmap.ads fmap.adb \
   fname.ads fname.adb \
+  fname-uf.ads fname-uf.adb \
   gnatvsn.ads gnatvsn.adb \
   hostparm.ads \
+  krunch.ads krunch.adb \
   lib.ads lib.adb \
   lib-list.adb lib-sort.adb \
   makeutl.ads makeutl.adb \
@@ -45,10 +48,12 @@ GNAT_SOURCES_FOR_GNATCOLL= \
   prj-strt.ads prj-strt.adb \
   prj-tree.ads prj-tree.adb \
   prj-util.ads prj-util.adb \
+  restrict.ads restrict.adb \
   rident.ads \
   scans.ads scans.adb \
   scng.ads scng.adb \
   sdefault.ads \
+  sem_aux.ads sem_aux.adb \
   sinfo.ads sinfo.adb \
   sinput.ads sinput.adb \
   sinput-c.ads sinput-c.adb \
