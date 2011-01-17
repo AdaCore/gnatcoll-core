@@ -355,7 +355,7 @@ package body GNATCOLL.Utils is
       --  found by the shell.
 
       declare
-         Ex : String_Access := GNAT.OS_Lib.Locate_Exec_On_Path (Exec_Name);
+         Ex  : String_Access := GNAT.OS_Lib.Locate_Exec_On_Path (Exec_Name);
          Dir : constant String := Get_Install_Dir (Ex.all);
       begin
          Free (Ex);
