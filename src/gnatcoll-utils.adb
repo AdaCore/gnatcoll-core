@@ -351,7 +351,7 @@ package body GNATCOLL.Utils is
       --  There is a potential issue here (see K112-046) where GNAT.OS_Lib
       --  will in fact return any non-executable file found in the PATH,
       --  whereas shells only consider executable files. As a result, the
-      --  user might end up with a wrong directory, not patching the one
+      --  user might end up with a wrong directory, not matching the one
       --  found by the shell.
 
       declare
