@@ -81,7 +81,7 @@ package body GNATCOLL.Refcount.Weakref is
 
       function Was_Freed (Self : Weak_Ref'Class) return Boolean is
          P : constant access Proxy :=
-           Proxy_Pointers.Get (Proxy_Pointers.Ref (Self));
+               Proxy_Pointers.Get (Proxy_Pointers.Ref (Self));
       begin
          return P = null or else P.Proxied = null;
       end Was_Freed;
@@ -92,7 +92,7 @@ package body GNATCOLL.Refcount.Weakref is
 
       procedure Get (Self : Weak_Ref'Class; R : out Ref'Class) is
          P : constant access Proxy :=
-           Proxy_Pointers.Get (Proxy_Pointers.Ref (Self));
+               Proxy_Pointers.Get (Proxy_Pointers.Ref (Self));
       begin
          if Was_Freed (Self) then
             R.Set (null);

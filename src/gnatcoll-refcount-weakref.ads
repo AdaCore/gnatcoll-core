@@ -1,7 +1,7 @@
 -----------------------------------------------------------------------
 --                          G N A T C O L L                          --
 --                                                                   --
---                    Copyright (C) 2010, AdaCore                    --
+--                 Copyright (C) 2010-2011, AdaCore                  --
 --                                                                   --
 -- GPS is free  software;  you can redistribute it and/or modify  it --
 -- under the terms of the GNU General Public License as published by --
@@ -141,8 +141,11 @@ package GNATCOLL.Refcount.Weakref is
    end Weakref_Pointers;
 
 private
+
    type Weak_Refcounted
-     is abstract new GNATCOLL.Refcount.Refcounted with record
+     is abstract new GNATCOLL.Refcount.Refcounted
+   with record
       Proxy : Proxy_Pointers.Ref;  --  Hold a reference to a proxy
    end record;
+
 end GNATCOLL.Refcount.Weakref;

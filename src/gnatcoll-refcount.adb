@@ -1,7 +1,7 @@
 -----------------------------------------------------------------------
 --                          G N A T C O L L                          --
 --                                                                   --
---                    Copyright (C) 2010, AdaCore                    --
+--                 Copyright (C) 2010-2011, AdaCore                  --
 --                                                                   --
 -- GPS is free  software;  you can redistribute it and/or modify  it --
 -- under the terms of the GNU General Public License as published by --
@@ -49,7 +49,6 @@ package body GNATCOLL.Refcount is
       begin
          if Self.Data = Refcounted_Access (Data) then
             --  Avoid finalizing Self.Data if we are going to reuse it
-
             return;
          end if;
 
