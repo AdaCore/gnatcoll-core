@@ -1,7 +1,7 @@
 -----------------------------------------------------------------------
 --                          G N A T C O L L                          --
 --                                                                   --
---                    Copyright (C) 2010, AdaCore                    --
+--                    Copyright (C) 2010-2011, AdaCore               --
 --                                                                   --
 -- GPS is free  software;  you can redistribute it and/or modify  it --
 -- under the terms of the GNU General Public License as published by --
@@ -41,7 +41,7 @@ package body GNATCOLL.Refcount.Weakref is
          Proxy (Get (Self.Proxy).all).Proxied := null;
          Self.Proxy := Proxy_Pointers.Null_Ref;
       end if;
-      Free (Refcounted (Self));
+      Free (Refcounted (Self));   --  ??? static call to a "null" procedure
    end Free;
 
    ----------------------
@@ -94,7 +94,7 @@ package body GNATCOLL.Refcount.Weakref is
          P : constant access Proxy :=
            Proxy_Pointers.Get (Proxy_Pointers.Ref (Self));
       begin
-         if P = null or else P.Proxied = null then
+         if Was_Freed (Self) then
             R.Set (null);
          else
             --  A subtetly here: it is possible that the element is actually
