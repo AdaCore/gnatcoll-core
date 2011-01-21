@@ -549,9 +549,6 @@ package GNATCOLL.SQL is
    function SQL_In
      (Self : SQL_Field'Class; List : String) return SQL_Criteria;
    function SQL_In
-     (Self : SQL_Field'Class; Text : Text_Fields.Field'Class)
-      return SQL_Criteria;
-   function SQL_In
      (Self : SQL_Field'Class; Subquery : SQL_Query) return SQL_Criteria;
    function SQL_Not_In
      (Self : SQL_Field'Class; List : SQL_Field_List) return SQL_Criteria;

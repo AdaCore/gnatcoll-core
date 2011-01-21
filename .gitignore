@@ -6,3 +6,8 @@ src/gnatcoll-refcount-sync_counters.adb
 distrib/gnatcoll.gpr__copy
 distrib/gnatcoll.gpr__gnat_util
 src/gnatcoll.gpr
+
+testsuite/sql/prepared/prepared
+testsuite/sql/prepared/dbschema.ad?
+testsuite/sql/prepared/dbschema_names.ads
+testsuite/sql/prepared/test.db

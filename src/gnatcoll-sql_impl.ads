@@ -85,7 +85,7 @@ package GNATCOLL.SQL_Impl is
    function Parameter_String
      (Self  : Formatter;
       Index : Positive;
-      Typ   : Parameter_Type) return String is abstract;
+      Typ   : Parameter_Type) return String;
    --  Return the character to put before a parameter in a SQL statement, when
    --  the value will be substituted at run time
 

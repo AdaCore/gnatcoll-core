@@ -25,15 +25,17 @@
 -- Place - Suite 330, Boston, MA 02111-1307, USA.                    --
 -----------------------------------------------------------------------
 
+with Ada.Calendar;
 with Ada.Strings.Unbounded;        use Ada.Strings.Unbounded;
+with Ada.Unchecked_Conversion;
 with Ada.Unchecked_Deallocation;
 with GNATCOLL.SQL.Postgres.Gnade;  use GNATCOLL.SQL.Postgres.Gnade;
 with GNATCOLL.SQL.Exec_Private;    use GNATCOLL.SQL.Exec_Private;
 with GNATCOLL.Traces;              use GNATCOLL.Traces;
 with GNATCOLL.Utils;               use GNATCOLL.Utils;
+with GNAT.Calendar;
 with GNAT.Strings;                 use GNAT.Strings;
 with Interfaces.C.Strings;         use Interfaces.C.Strings;
-with System.Storage_Elements;      use System.Storage_Elements;
 
 package body GNATCOLL.SQL.Postgres.Builder is
    Me_Query  : constant Trace_Handle := Create ("SQL");
@@ -46,7 +48,20 @@ package body GNATCOLL.SQL.Postgres.Builder is
    --  at once in the cursor, but even that does not seem to improve things too
    --  much.
 
-   type Cursor_Id is new Natural;
+   type Postgresql_DBMS_Stmt_Record is record
+      Cursor : Ada.Strings.Unbounded.Unbounded_String;
+      --  Name of the associated cursor
+
+   end record;
+   type Postgresql_DBMS_Stmt is access all Postgresql_DBMS_Stmt_Record;
+
+   function Convert is new Ada.Unchecked_Conversion
+     (Postgresql_DBMS_Stmt, DBMS_Stmt);
+   function Convert is new Ada.Unchecked_Conversion
+     (DBMS_Stmt, Postgresql_DBMS_Stmt);
+   procedure Unchecked_Free is new Ada.Unchecked_Deallocation
+     (Postgresql_DBMS_Stmt_Record, Postgresql_DBMS_Stmt);
+
    type Database_Access is access GNATCOLL.SQL.Postgres.Gnade.Database;
 
    type Postgresql_Connection_Record is
@@ -54,7 +69,13 @@ package body GNATCOLL.SQL.Postgres.Builder is
       record
          Connection_String : GNAT.Strings.String_Access;
          Postgres          : Database_Access;
-         Cursor            : Cursor_Id := 0;  --  Id for the current cursor
+
+         Cursor            : Natural := 0;
+         --  Id for the current cursor
+         --  This is used to create the name of cursors for dbms statements,
+         --  when no name is provided by the user.
+
+         Connected_On      : Ada.Calendar.Time := GNAT.Calendar.No_Time;
       end record;
    type Postgresql_Connection is access all Postgresql_Connection_Record'Class;
    overriding procedure Close
@@ -70,10 +91,13 @@ package body GNATCOLL.SQL.Postgres.Builder is
       Direct      : Boolean;
       Params      : SQL_Parameters := No_Parameters)
       return Abstract_Cursor_Access;
+   overriding function Connected_On
+     (Connection : access Postgresql_Connection_Record)
+      return Ada.Calendar.Time;
    overriding function Connect_And_Prepare
      (Connection : access Postgresql_Connection_Record;
       Query      : String;
-      Id         : Stmt_Id;
+      Name       : String;
       Direct     : Boolean)
       return DBMS_Stmt;
    overriding function Execute
@@ -259,8 +283,9 @@ package body GNATCOLL.SQL.Postgres.Builder is
 
    package Forward_Cursors is new Postgresql_Cursors (DBMS_Forward_Cursor);
    type Postgresql_Cursor is new Forward_Cursors.Cursor with record
-      Stmt       : Stmt_Id := No_Stmt_Id;  --  Prepared statement, if any
-      Cursor     : Cursor_Id := 0;  --  the associated DBMS cursor
+      Stmt   : Postgresql_DBMS_Stmt;
+      Must_Free_Stmt : Boolean := False;
+
       Processed_Rows : Natural := 0;
       Connection : Postgresql_Connection;
       Nested_Transactions : Boolean := False;
@@ -275,11 +300,8 @@ package body GNATCOLL.SQL.Postgres.Builder is
      (Self : Postgresql_Cursor) return Boolean;
    overriding procedure Next (Self : in out Postgresql_Cursor);
 
-   function Cursor_Name (Stmt : Stmt_Id; Cursor : Cursor_Id) return String;
-   --  Name of cursor on DBMS for Self
-
    function Declare_Cursor
-     (Query : String; Stmt : Stmt_Id; Cursor : Cursor_Id) return String;
+     (Query : String; Stmt : Postgresql_DBMS_Stmt) return String;
    --  SQL command to declare a cursor
 
    package Direct_Cursors is new Postgresql_Cursors (DBMS_Direct_Cursor);
@@ -461,12 +483,14 @@ package body GNATCOLL.SQL.Postgres.Builder is
 
          Connection.Postgres := new GNATCOLL.SQL.Postgres.Gnade.Database
            (Connection.Connection_String);
+         Connection.Connected_On := Ada.Calendar.Clock;
       else
          Print_Warning
            (Connection,
             "Reconnecting to the database "
             & Get_Connection_String (Get_Description (Connection), False));
          Reset (Connection.Postgres.all);
+         Connection.Connected_On := Ada.Calendar.Clock;
       end if;
 
       --  Now that we have (re)connected, try to execute the query again
@@ -506,29 +530,27 @@ package body GNATCOLL.SQL.Postgres.Builder is
       end if;
    end Connect_And_Do;
 
-   -----------------
-   -- Cursor_Name --
-   -----------------
-
-   function Cursor_Name (Stmt : Stmt_Id; Cursor : Cursor_Id) return String is
-   begin
-      if Stmt /= No_Stmt_Id then
-         return "pcursor" & Image (Integer (Stmt), Min_Width => 0);
-      else
-         return "cursor" & Image (Integer (Cursor), Min_Width => 0);
-      end if;
-   end Cursor_Name;
-
    --------------------
    -- Declare_Cursor --
    --------------------
 
    function Declare_Cursor
-     (Query : String; Stmt : Stmt_Id; Cursor : Cursor_Id) return String is
+     (Query : String; Stmt : Postgresql_DBMS_Stmt) return String is
    begin
-      return "DECLARE " & Cursor_Name (Stmt, Cursor)
+      return "DECLARE " & To_String (Stmt.Cursor)
         & " SCROLL CURSOR FOR " & Query;
    end Declare_Cursor;
+
+   ------------------
+   -- Connected_On --
+   ------------------
+
+   overriding function Connected_On
+     (Connection : access Postgresql_Connection_Record)
+      return Ada.Calendar.Time is
+   begin
+      return Connection.Connected_On;
+   end Connected_On;
 
    -------------------------
    -- Connect_And_Prepare --
@@ -537,10 +559,12 @@ package body GNATCOLL.SQL.Postgres.Builder is
    overriding function Connect_And_Prepare
      (Connection : access Postgresql_Connection_Record;
       Query      : String;
-      Id         : Stmt_Id;
+      Name       : String;
       Direct     : Boolean)
       return DBMS_Stmt
    is
+      P_Stmt : Postgresql_DBMS_Stmt;
+
       procedure Perform
         (Res    : out Result;
          Query  : String;
@@ -551,8 +575,7 @@ package body GNATCOLL.SQL.Postgres.Builder is
          Params : SQL_Parameters := No_Parameters)
       is
          pragma Unreferenced (Params);
-         Name : constant String :=
-           "stmt" & Image (Integer (Id), Min_Width => 0);
+         Name : constant String := To_String (P_Stmt.Cursor);
       begin
          if Active (Me_Query) then
             Trace (Me_Query, "Prepare " & Name & ": " & Query);
@@ -567,20 +590,30 @@ package body GNATCOLL.SQL.Postgres.Builder is
       Success : Boolean;
       Was_Started : Boolean;
       pragma Unreferenced (Was_Started);
+
    begin
+      P_Stmt := new Postgresql_DBMS_Stmt_Record;
+
+      if Name /= "" then
+         P_Stmt.Cursor := To_Unbounded_String ("cursor_" & Name);
+      else
+         Connection.Cursor := Connection.Cursor + 1; --  ??? Concurrency
+         P_Stmt.Cursor := To_Unbounded_String
+           ("cursor_" & Image (Connection.Cursor, 0));
+      end if;
+
       if Direct or else not Use_Cursors then
          Do_Perform (Connection, Query, Res, Success);
       else
          Was_Started := Start_Transaction (Connection);
-         Do_Perform
-           (Connection,
-            Declare_Cursor (Query, Id, Connection.Cursor), Res, Success);
+         Do_Perform (Connection, Declare_Cursor (Query, P_Stmt), Res, Success);
       end if;
 
       if Success then
          Clear (Res);
-         return DBMS_Stmt (To_Address (Integer_Address (Id)));
+         return Convert (P_Stmt);
       else
+         Unchecked_Free (P_Stmt);
          return No_DBMS_Stmt;
       end if;
    end Connect_And_Prepare;
@@ -600,9 +633,8 @@ package body GNATCOLL.SQL.Postgres.Builder is
       R   : Postgresql_Cursor_Access;
       DR  : Postgresql_Direct_Cursor_Access;
       Res : Result;
-      Id  : constant Stmt_Id := Stmt_Id
-        (To_Integer (System.Address (Prepared)));
-      Name : constant String := "stmt" & Image (Integer (Id), Min_Width => 0);
+      Stmt : constant Postgresql_DBMS_Stmt := Convert (Prepared);
+      Name : constant String := To_String (Stmt.Cursor);
    begin
       --  For a direct_cursor, this will execute the query. For a
       --  forward_cursor this will declare the cursor on the DBMS
@@ -614,7 +646,8 @@ package body GNATCOLL.SQL.Postgres.Builder is
          DR := new Postgresql_Direct_Cursor;
          DR.Res := Res;
          Post_Execute_And_Log
-           (DR, Connection, "Exec prepared " & Name, False, Params);
+           (DR, Connection, "Exec prepared " & Name,
+            No_Prepared, False, Params);
 
          if Is_Select then
             DR.Rows := Natural (Tuple_Count (Res));
@@ -628,9 +661,10 @@ package body GNATCOLL.SQL.Postgres.Builder is
          R            := new Postgresql_Cursor;
          R.Connection := Postgresql_Connection (Connection);
          R.Res        := Res;
-         R.Stmt       := Id;
-         Post_Execute_And_Log (R, Connection, "Exec prepared " & Name, False,
-                               Params);
+         R.Stmt       := Stmt;
+         Post_Execute_And_Log
+           (R, Connection, "Exec prepared " & Name, No_Prepared,
+            False, Params);
          Next (R.all);  --  Read first row
          return Abstract_Cursor_Access (R);
       end if;
@@ -658,12 +692,6 @@ package body GNATCOLL.SQL.Postgres.Builder is
          Params : SQL_Parameters := No_Parameters) is
       begin
          Execute (Res, Connection.Postgres.all, Query, Connection.all, Params);
-
---           if Is_Select then
---              Trace (Me_Select, Query & " => " & Status (Res));
---           else
---              Trace (Me_Query, Query & " => " & Status (Res));
---           end if;
       end Perform;
 
       procedure Do_Perform is new Connect_And_Do (Perform);
@@ -689,12 +717,15 @@ package body GNATCOLL.SQL.Postgres.Builder is
          Do_Perform (Connection, Query, Res, Success, Params);
       else
          R.Nested_Transactions := Start_Transaction (Connection);
-         R.Cursor   := Connection.Cursor;
-         Connection.Cursor := Connection.Cursor + 1;  --  ??? Concurrency ?
+
+         R.Stmt := new Postgresql_DBMS_Stmt_Record;
+         R.Must_Free_Stmt := True;
+         Connection.Cursor := Connection.Cursor + 1; --  ??? Concurrency ?
+         R.Stmt.Cursor := To_Unbounded_String
+           ("stmt" & Image (Connection.Cursor, 0));
+
          Do_Perform
-           (Connection,
-            Declare_Cursor (Query, No_Stmt_Id, R.Cursor),
-            Res, Success, Params);
+           (Connection, Declare_Cursor (Query, R.Stmt), Res, Success, Params);
       end if;
 
       if Connection.Postgres = null then
@@ -973,7 +1004,7 @@ package body GNATCOLL.SQL.Postgres.Builder is
    overriding procedure Next (Self : in out Postgresql_Cursor) is
       Count : constant Natural := 1;
       Str : constant String :=
-        "FETCH" & Count'Img & " FROM " & Cursor_Name (Self.Stmt, Self.Cursor);
+        "FETCH" & Count'Img & " FROM " & To_String (Self.Stmt.Cursor);
    begin
       Execute (Self.Res, Self.Connection.Postgres.all, Str,
                Self.Connection.all);
@@ -987,7 +1018,6 @@ package body GNATCOLL.SQL.Postgres.Builder is
       if Self.Has_Row then
          Self.Processed_Rows := Self.Processed_Rows + Count;
       end if;
-
    end Next;
 
    ----------
@@ -1044,24 +1074,20 @@ package body GNATCOLL.SQL.Postgres.Builder is
    --------------
 
    overriding procedure Finalize (Self : in out Postgresql_Cursor) is
-      Close : constant String :=
-        "CLOSE " & Cursor_Name (Self.Stmt, Self.Cursor);
+      Close : constant String := "CLOSE " & To_String (Self.Stmt.Cursor);
    begin
       Execute (Self.Res, Self.Connection.Postgres.all, Close,
                Self.Connection.all);
-      Post_Execute_And_Log (Self'Access, Self.Connection, Close, False);
-
-      --  Avoid having opened too many cursors
-      if Self.Connection.Cursor = Self.Cursor + 1 then
-         --  ??? Concurrency issues, we currently assume there is one
-         --  connection per thread
-
-         Self.Connection.Cursor := Self.Connection.Cursor - 1;
-      end if;
+      Post_Execute_And_Log
+        (Self'Access, Self.Connection, Close, No_Prepared, False);
 
       if Self.Nested_Transactions then
          --  ??? What if something has started a transaction in between ?
          Commit_Or_Rollback (Self.Connection);
+      end if;
+
+      if Self.Must_Free_Stmt then
+         Finalize (Self.Connection, Convert (Self.Stmt));
       end if;
 
       Forward_Cursors.Finalize (Forward_Cursors.Cursor (Self));
@@ -1075,10 +1101,8 @@ package body GNATCOLL.SQL.Postgres.Builder is
      (Connection : access Postgresql_Connection_Record;
       Prepared   : DBMS_Stmt)
    is
-      Id  : constant Stmt_Id := Stmt_Id
-        (To_Integer (System.Address (Prepared)));
-      Str : constant String :=
-        "DEALLOCATE stmt" & Image (Integer (Id), Min_Width => 0);
+      Stmt : Postgresql_DBMS_Stmt := Convert (Prepared);
+      Str : constant String := "DEALLOCATE " & To_String (Stmt.Cursor);
       Res : Result;
    begin
       Execute (Res, Connection.Postgres.all, Str, Connection.all);
@@ -1086,6 +1110,8 @@ package body GNATCOLL.SQL.Postgres.Builder is
          Trace (Me_Query, Str & " (" & Status (Res) & ")");
       end if;
       Clear (Res);
+
+      Unchecked_Free (Stmt);
    end Finalize;
 
    ----------------------

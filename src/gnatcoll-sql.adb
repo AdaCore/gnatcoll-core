@@ -1169,13 +1169,6 @@ package body GNATCOLL.SQL is
       return Result;
    end SQL_In;
 
-   function SQL_In
-     (Self : SQL_Field'Class; Text : Text_Fields.Field'Class)
-      return SQL_Criteria is
-   begin
-      return SQL_In (Self, +Text);
-   end SQL_In;
-
    ----------------
    -- SQL_Not_In --
    ----------------

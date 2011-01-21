@@ -38,7 +38,7 @@ with GNATCOLL.Utils;              use GNATCOLL.Utils;
 with GNATCOLL.VFS;                use GNATCOLL.VFS;
 
 package body GNATCOLL.SQL.Inspect is
-   Me : constant Trace_Handle := Create ("INSPECT");
+   Me : constant Trace_Handle := Create ("SQL.INSPECT");
 
    use Tables_Maps, Field_Lists, Foreign_Refs;
    use Foreign_Keys, Pair_Lists;
@@ -1482,7 +1482,11 @@ package body GNATCOLL.SQL.Inspect is
       --  Fields_Count is set to 0 if the current line is not part of a table
       --  and should be ignored.
 
-      function Format_Field (Value : String) return String;
+      procedure Format_Field
+        (Value    : String;
+         Val      : out GNAT.Strings.String_Access;
+         Param    : out SQL_Parameter;
+         Has_Xref : Boolean);
       --  Format a value for proper use in SQL.
       --  This translates boolean values "true" and "false" as appropriate for
       --  the backend.
@@ -1491,21 +1495,48 @@ package body GNATCOLL.SQL.Inspect is
       -- Format_Field --
       ------------------
 
-      function Format_Field (Value : String) return String is
+      procedure Format_Field
+        (Value    : String;
+         Val      : out GNAT.Strings.String_Access;
+         Param    : out SQL_Parameter;
+         Has_Xref : Boolean)
+      is
          V : constant String := To_Lower (Value);
+         B : Boolean;
       begin
          if V = "true" or else V = "false" then
-            return Boolean_Image (DB.all, Boolean'Value (Value));
-         end if;
+            B := Boolean'Value (Value);
+            Val := new String'(Boolean_Image (DB.all, B));
+            Param := +B;
 
-         if Value'Length = 0 then
-            return "''";
+         elsif Value'Length = 0 then
+            if Has_Xref then
+               Val := new String'("''");
+            else
+               Val := new String'("");
+            end if;
+            Param := +Val;
+
          elsif Is_Digit (Value (Value'First)) then
-            return Value;
+            Val := new String'(Value);
+            Param := +Val;
+
          elsif V = "null" then
-            return "NULL";
+            Val := new String'("NULL");
+            if Has_Xref then
+               Param := +Val;
+            else
+               Param := Null_Parameter;
+            end if;
+
          else
-            return "'" & Value & "'";
+            if Has_Xref then
+               Val := new String'("'" & Value & "'");
+            else
+               Val := new String'(Value);
+            end if;
+
+            Param := +Val;
          end if;
       end Format_Field;
 
@@ -1563,6 +1594,8 @@ package body GNATCOLL.SQL.Inspect is
 
       Paren : Natural;
 
+      Q_Values : Prepared_Statement;
+
    begin
       Trace (Me, "Loading data from " & Location & " into database");
 
@@ -1601,19 +1634,32 @@ package body GNATCOLL.SQL.Inspect is
                end if;
             end loop;
 
+            declare
+               Values : String_List (1 .. DB_Fields_Count);
+            begin
+               for V in Values'Range loop
+                  Values (V) := new String'
+                    (DB.Parameter_String (V, Parameter_Text));
+               end loop;
+
+               Q_Values := Prepare
+                 ("INSERT INTO " & Table.Name & "("
+                  & Join (",", DB_Fields (DB_Fields'First .. DB_Fields_Count))
+                  & ") VALUES (" & Join (",", Values) & ")",
+                  On_Server => True,
+                  Name => "insertval");
+
+               Free (Values);
+            end;
+
          elsif Fields_Count /= 0 then
             declare
-               Tables       : String_List (1 .. Max_Fields_Per_Line);
-               Tables_Count : Natural := Tables'First - 1;
-
-               Where        : String_List (1 .. Max_Fields_Per_Line);
-               Where_Count  : Natural := Where'First - 1;
-
-               Values       : String_List (1 .. Max_Fields_Per_Line);
-               Values_Count : Natural := Values'First - 1;
-
-               FK    : Field;
-
+               Values : SQL_Parameters (1 .. DB_Fields_Count);
+               Vals   : String_List (1 .. DB_Fields_Count);
+               Tables : String_List (1 .. DB_Fields_Count);
+               Where  : String_List (1 .. DB_Fields_Count);
+               Has_Xref : Boolean := False;
+               FK     : Field;
             begin
                --  Do we have xref
 
@@ -1628,50 +1674,48 @@ package body GNATCOLL.SQL.Inspect is
                      end if;
 
                      FK := Table.Field_From_Name (DB_Fields (L).all).Is_FK;
+                     Has_Xref := True;
 
-                     Append (Tables, Tables_Count,
-                             FK.Get_Table.Name & " t" & Image (L, 0));
-                     Append (Values, Values_Count,
-                             "t" & Image (L, 0) & "." & FK.Name);
-
-                     Append (Where, Where_Count,
-                             "t" & Image (L, 0)
-                             & "." & Xref (L).all & "='"
-                             & Line (L) (Line (L)'First + 1 .. Line (L)'Last)
-                             & "'");
-                  else
-                     Append
-                       (Values, Values_Count, Format_Field (Line (L).all));
+                     Tables (L) := new String'
+                       (FK.Get_Table.Name & " t" & Image (L, 0));
+                     Vals (L) := new String'
+                       ("t" & Image (L, 0) & "." & FK.Name);
+                     Values (L) := +Vals (L);
+                     Where (L) := new String'
+                       ("t" & Image (L, 0)
+                        & "." & Xref (L).all & "='"
+                        & Line (L) (Line (L)'First + 1 .. Line (L)'Last)
+                        & "'");
                   end if;
                end loop;
 
-               --  ??? Using prepared statement will speed things up a lot here
+               for L in Line'First
+                 .. Integer'Min (Fields_Count, DB_Fields_Count)
+               loop
+                  if Vals (L) = null then
+                     Format_Field
+                       (Line (L).all,
+                        Vals (L),
+                        Values (L),
+                        Has_Xref);
+                  end if;
+               end loop;
 
-               if Tables_Count < Tables'First then
-                  Execute (DB, "INSERT INTO " & Table.Name
-                           & "("
-                           & Join
-                             (",",
-                              DB_Fields (DB_Fields'First .. DB_Fields_Count))
-                           & ") VALUES ("
-                           & Join (",", Values (Values'First .. Values_Count))
-                           & ")");
+               if not Has_Xref then
+                  Execute (DB, Q_Values, Params => Values);
                else
                   Execute
                     (DB, "INSERT INTO " & Table.Name
                      & "("
                      & Join
                        (",", DB_Fields (DB_Fields'First .. DB_Fields_Count))
-                     & ") SELECT "
-                     & Join (",", Values (Values'First .. Values_Count))
-                     & " FROM "
-                     & Join (",", Tables (Tables'First .. Tables_Count))
-                     & " WHERE "
-                     & Join (" and ", Where (Where'First .. Where_Count)));
+                     & ") SELECT " & Join (",", Vals)
+                     & " FROM " & Join (",", Tables)
+                     & " WHERE " & Join (" and ", Where));
                end if;
 
                Free (Tables);
-               Free (Values);
+               Free (Vals);
                Free (Where);
             end;
          end if;
@@ -1696,8 +1740,12 @@ package body GNATCOLL.SQL.Inspect is
       Str         : GNAT.Strings.String_Access;
    begin
       Str := Read_Whole_File (+File.Full_Name.all);
-      Load_Data (DB, Str.all, Schema, File.Display_Full_Name);
-      Free (Str);
+      if Str /= null then
+         Load_Data (DB, Str.all, Schema, File.Display_Full_Name);
+         Free (Str);
+      else
+         raise Invalid_File with "File not found: " & File.Display_Full_Name;
+      end if;
    end Load_Data;
 
 end GNATCOLL.SQL.Inspect;

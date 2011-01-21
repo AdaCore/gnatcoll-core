@@ -428,11 +428,13 @@ package body GNATCOLL.Utils is
       Result : Unbounded_String;
    begin
       for L in List'Range loop
-         if L /= List'First then
-            Append (Result, Str);
-         end if;
+         if List (L) /= null then
+            if Result /= Null_Unbounded_String then
+               Append (Result, Str);
+            end if;
 
-         Append (Result, List (L).all);
+            Append (Result, List (L).all);
+         end if;
       end loop;
       return To_String (Result);
    end Join;

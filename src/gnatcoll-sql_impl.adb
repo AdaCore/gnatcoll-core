@@ -313,7 +313,7 @@ package body GNATCOLL.SQL_Impl is
             Next (C);
 
             while Has_Element (C) loop
-               Result := Result & " " & Self.Str_Value.all & " "
+               Result := Result & " " & Self.Op_Value.all & " "
                  & To_String (Element (C), Format);
                Next (C);
             end loop;
@@ -1529,5 +1529,19 @@ package body GNATCOLL.SQL_Impl is
          return "'" & New_Str & "'";
       end if;
    end String_To_SQL;
+
+   ----------------------
+   -- Parameter_String --
+   ----------------------
+
+   function Parameter_String
+     (Self  : Formatter;
+      Index : Positive;
+      Typ   : Parameter_Type) return String
+   is
+      pragma Unreferenced (Self, Index, Typ);
+   begin
+      return "?";
+   end Parameter_String;
 
 end GNATCOLL.SQL_Impl;

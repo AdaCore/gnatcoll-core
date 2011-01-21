@@ -33,11 +33,12 @@ with GNATCOLL.SQL.Sqlite.Gnade;    use GNATCOLL.SQL.Sqlite.Gnade;
 with GNATCOLL.SQL.Exec_Private;    use GNATCOLL.SQL.Exec_Private;
 with GNATCOLL.Traces;              use GNATCOLL.Traces;
 with GNATCOLL.Utils;               use GNATCOLL.Utils;
+with GNAT.Calendar;
 with GNAT.OS_Lib;
 with Interfaces.C.Strings;         use Interfaces.C.Strings;
 
 package body GNATCOLL.SQL.Sqlite.Builder is
-   Me : constant Trace_Handle := Create ("SQLITE");
+   Me : constant Trace_Handle := Create ("SQL.LITE");
 
    Empty_C_Str : aliased String := "" & ASCII.NUL;
 
@@ -90,7 +91,8 @@ package body GNATCOLL.SQL.Sqlite.Builder is
    type Sqlite_Connection_Record is
      new GNATCOLL.SQL.Exec.Database_Connection_Record with
       record
-         DB       : GNATCOLL.SQL.Sqlite.Gnade.Database;
+         DB           : GNATCOLL.SQL.Sqlite.Gnade.Database;
+         Connected_On : Ada.Calendar.Time := GNAT.Calendar.No_Time;
       end record;
    overriding function Boolean_Image
      (Self : Sqlite_Connection_Record; Value : Boolean) return String;
@@ -107,10 +109,12 @@ package body GNATCOLL.SQL.Sqlite.Builder is
       Direct      : Boolean;
       Params      : SQL_Parameters := No_Parameters)
       return Abstract_Cursor_Access;
+   overriding function Connected_On
+     (Connection : access Sqlite_Connection_Record) return Ada.Calendar.Time;
    overriding function Connect_And_Prepare
      (Connection : access Sqlite_Connection_Record;
       Query      : String;
-      Id         : Stmt_Id;
+      Name       : String;
       Direct     : Boolean) return DBMS_Stmt;
    overriding function Execute
      (Connection  : access Sqlite_Connection_Record;
@@ -316,6 +320,7 @@ package body GNATCOLL.SQL.Sqlite.Builder is
                Filename => Name,
                Flags    => Open_Readwrite,
                Status   => Status);
+            Connection.Connected_On := Ada.Calendar.Clock;
 
             if Status = Sqlite_Cantopen then
                Trace (Me, "Create empty db file");
@@ -353,10 +358,10 @@ package body GNATCOLL.SQL.Sqlite.Builder is
    overriding function Connect_And_Prepare
      (Connection : access Sqlite_Connection_Record;
       Query      : String;
-      Id         : Stmt_Id;
+      Name       : String;
       Direct     : Boolean) return DBMS_Stmt
    is
-      pragma Unreferenced (Direct, Id);
+      pragma Unreferenced (Direct);
       Stmt   : Statement;
       Status : Result_Codes;
    begin
@@ -377,6 +382,11 @@ package body GNATCOLL.SQL.Sqlite.Builder is
 
       Prepare (Connection.DB, Query, Stmt, Status);
 
+      if Active (Me) and then Name /= "" then
+         --  The full query was already displayed in Compute_Statement
+         Trace (Me, "PREPARE " & Name);
+      end if;
+
       if Status /= Sqlite_OK then
          Finalize (Stmt);
          return No_DBMS_Stmt;
@@ -384,6 +394,16 @@ package body GNATCOLL.SQL.Sqlite.Builder is
 
       return Unchecked_Convert (Stmt);
    end Connect_And_Prepare;
+
+   ------------------
+   -- Connected_On --
+   ------------------
+
+   overriding function Connected_On
+     (Connection : access Sqlite_Connection_Record) return Ada.Calendar.Time is
+   begin
+      return Connection.Connected_On;
+   end Connected_On;
 
    -------------
    -- Execute --
@@ -412,7 +432,10 @@ package body GNATCOLL.SQL.Sqlite.Builder is
       Stmt := Unchecked_Convert (Prepared);
 
       for P in Params'Range loop
-         case Params (P).Typ is
+         if Params (P) = Null_Parameter then
+            Bind_Null (Stmt, P);
+         else
+            case Params (P).Typ is
             when Parameter_Text =>
                Bind_Text (Stmt, P, Params (P).Str_Val.all'Address,
                           Params (P).Str_Val'Length);
@@ -440,7 +463,8 @@ package body GNATCOLL.SQL.Sqlite.Builder is
                begin
                   Bind_Text (Stmt, P, Str'Address, Str'Length);
                end;
-         end case;
+            end case;
+         end if;
       end loop;
 
       Step (Stmt, Last_Status);
@@ -488,14 +512,6 @@ package body GNATCOLL.SQL.Sqlite.Builder is
 
       Res2 := new Sqlite_Direct_Cursor;
       Res2.Initialize (Sqlite_Cursor (Res.all)'Access);
-
-      --  Free the sqlite statement, no longer needed. It might have a shorter
-      --  lifetime (as long as the connection) than the Direct_Cursor (which
-      --  might be in a cache for instance). This would result in storage_error
-      --  later on since finalizing the statement would try to access the DB
-      --  connection
-
-      Finalize (Res.Stmt);
       Res.Stmt := No_Statement;
       Unchecked_Free (Res);
 
@@ -517,7 +533,8 @@ package body GNATCOLL.SQL.Sqlite.Builder is
       Res    : Abstract_Cursor_Access;
       Stmt   : DBMS_Stmt;
    begin
-      Stmt := Connect_And_Prepare (Connection, Query, No_Stmt_Id, Direct);
+      Stmt := Connect_And_Prepare (Connection, Query, "", Direct);
+
       if Stmt /= No_DBMS_Stmt then
          Res := Execute
            (Connection => Connection,
