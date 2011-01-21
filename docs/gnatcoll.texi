@@ -237,6 +237,7 @@ Database interface
 * Database schema monitoring::
 * Writing queries::
 * Executing queries::
+* Prepared queries::
 * Getting results::
 * Writing your own cursors::
 * Creating your own SQL types::
@@ -3533,6 +3534,7 @@ history.
 * Database schema monitoring::
 * Writing queries::
 * Executing queries::
+* Prepared queries::
 * Getting results::
 * Writing your own cursors::
 * Creating your own SQL types::
@@ -4168,6 +4170,153 @@ Execute (DB, SQL_Insert (...));@NL{}
 Commit_Or_Rollback (DB);@NL{}
 @i{--  Commit if both insertion succeeded, rollback otherwise}@NL{}
 @i{--  You can still check Success(DB) afterward if needed}}
+
+@c -----------------------------------------------------------------------
+@node Prepared queries
+@section Prepared queries
+@c -----------------------------------------------------------------------
+@noindent
+
+The previous section showed how to execute queries and statements. But
+these were in fact relatively inefficient.
+
+With most DBMS servers, it is possible to compile the query once on the
+server, and then reuse that prepared query to significantly speed up
+later searches when you reuse that prepared statement.
+
+It is of course pretty rare to run exactly the same query or statement
+multiple times with the same values. For instance, the following query
+would not give much benefit if it was prepared, since you are unlikely
+to reuse it exactly as is later on.
+
+@CODESAMPLE{
+SELECT * FROM data WHERE id=1@NL{}
+}
+
+SQL (and @value{gnatcoll}) provide a way to parameterize queries. Instead
+of hard-code the value @code{1} in the example above, you would in fact
+use a special character (unfortunately specific to the DBMS you are
+interfacing to) to indicate that the value will be provided when the
+query is actually executed. For instance, @code{sqlite} would use:
+
+@CODESAMPLE{
+SELECT * FROM data WHERE id=?@NL{}
+}
+
+You can write such a query in a DBMS-agnostic way by using @value{gnatcoll}.
+Assuming you have automatically generated @file{database.ads} by using
+@code{gnatcoll_db2ada}, here is the corresponding Ada code:
+
+@CODESAMPLE{
+   with Database;  use Database;@NL{}
+@NL{}
+   Q : constant SQL_Query :=@NL{}
+       SQL_Select@NL{}
+          (Fields => Data.Id & Data.Name@NL{}
+           From   => Data,@NL{}
+           Where  => Data.Id = Integer_Param (1));@NL{}
+}
+
+@value{gnatcoll} provides a number of functions (one per type of
+field) to indicate that the value is currently unbound. @code{Integer_Param},
+@code{Text_Param}, @code{Boolean_Param},@dots{} all take a single argument,
+which is the index of the corresponding parameter. A query might need
+several parameters, and each should have a different index. On the other
+hand, the same parameter could be used in several places in the query.
+
+Although the query above could be executed as is by providing the values
+for the parameters, it is more efficient, as we mentioned at the beginning,
+to compile it on the server. In theory, this preparation is done within the
+context of a database connection (thus cannot be done for a global variable,
+where we do not have connections yet, and where the query might be executed
+by any connection later on).
+
+@value{gnatcoll} will let you indicate that the query should be prepared.
+This basically sets up some internal data, but does not immediately compile
+it on the server. The first time the query is executed in a given
+connection, though, it will first be compiled. The result of this compilation
+will be reused for that connection from then on. If you are using a
+second connection, it will do its own compilation of the query.
+
+So in our example we would add the following global variable:
+
+@CODESAMPLE{
+   P : constant Prepared_Statement :=@NL{}
+      Prepare (Q, On_Server => True);@NL{}
+}
+
+Two comments about this code:
+
+@itemize @bullet
+@item You do not have to use global variables. You can prepare the
+  statement locally in a subprogram. A @code{Prepared_Statement} is a
+  reference counted type, that will automatically free the memory on the
+  server when it goes out of scope.
+
+@item Here, we prepared the statement on the server. If we had specified
+  @code{On_Server => False}, we would still have sped things up, since Q
+  would be converted to a string that can be sent to the DBMS, and from
+  then on reused that string (note that this conversion is specific to
+  each DBMS, since they don't always represent things the same way, in
+  particular parameters, as we have seen above).
+@end itemize
+
+Now that we have a prepared statement, we can simply execute it.
+If the statement does not require parameters, the usual @code{Fetch}
+and @code{Execute} subprograms have versions that work exactly the same
+with prepared statements. They also accept a @code{Params} parameter that
+contains the parameter to pass to the server. A number of @code{"+"}
+operators are provided to create those parameters.
+
+@CODESAMPLE{
+   declare@NL{}
+      F : Forward_Cursor;@NL{}
+   begin@NL{}
+      F.Fetch (DB, P, Params => (1 => +2));@NL{}
+      F.Fetch (DB, P, Params => (1 => +3));@NL{}
+   end;@NL{}
+}
+
+Note that for string parameters, the @code{"+"} operator takes an
+access to a string. This is for efficiency, to avoid allocating memory
+and copying the string, and is safe because the parameters are only needed
+while @code{Fetch} executes (even for a @code{Forward_Cursor}.
+
+There is one last property on @code{Prepared_Statement}s: when you
+prepare them, you can pass a @code{Use_Cache => True} parameter. When this
+is used, the result of the query will be cached by @value{gnatcoll}, and
+reuse when the query is executed again later. This is the fastest way
+to get the query, but should be used with care, since it will not detect
+changes in the database. The local cache is automatically invalidated
+every hour, so the query will be performed again at most one hour later.
+Local caching is disabled when you execute a query with parameters. In
+this case, prepare the query on the server which will still be reasonably
+fast.
+
+Finally, here are some examples of timings. The exact timing are
+irrelevant, but it is interesting to look at the different between the
+various scenarios. Each of them performs 100_000 simple queries similar
+to the one used in this section.
+
+@CODESAMPLE{
+Not preparing the query, using @code{Direct_Cursor}:@NL{}
+   4.05s@NL{}
+@NL{}
+Not preparing the query, using @code{Forward_Cursor}, and only@NL{}
+retrieving the first row:@NL{}
+   3.69s@NL{}
+@NL{}
+Preparing the query on the client (@code{On_Server => False}),@NL{}
+with a @code{Direct_Cursor}. This saves the whole @code{GNATCOLL.SQL}@NL{}
+manipulations and allocations:@NL{}
+   2.50s@NL{}
+@NL{}
+Preparing the query on the server, using @code{Direct_Cursor}:@NL{}
+   0.55s@NL{}
+@NL{}
+Caching the query locally (@code{Use_Cache => True}):@NL{}
+   0.13s@NL{}
+}
 
 @c -----------------------------------------------------------------------
 @node Getting results
