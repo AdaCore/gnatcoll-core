@@ -9,7 +9,7 @@
 --  Status          : $State$
 --
 --  Copyright (C) 2000-2003 Juergen Pfeifer
---  Copyright (C) 2004-2009, AdaCore                                         --
+--  Copyright (C) 2004-2011, AdaCore                                         --
 --                                                                           --
 --  GNADE is free software;  you can redistribute it  and/or modify it under --
 --  terms of the  GNU General Public License as published  by the Free Soft- --
@@ -67,12 +67,24 @@ package body GNATCOLL.SQL.Postgres.Gnade is
    procedure Unchecked_Free is new Ada.Unchecked_Deallocation
      (PGConn, Connection_Pointer);
 
+   ------------
+   -- PGConn --
+   ------------
+
    protected body PGConn is
+
+      ------------
+      -- Handle --
+      ------------
 
       function Handle return Connection_Handle is
       begin
          return C_Connection;
       end Handle;
+
+      -----------
+      -- Reset --
+      -----------
 
       procedure Reset is
          procedure PQreset (Connection : System.Address);
@@ -81,6 +93,10 @@ package body GNATCOLL.SQL.Postgres.Gnade is
          PQreset (To_Addr (C_Connection));
       end Reset;
 
+      -----------
+      -- Error --
+      -----------
+
       function Error return String is
          function PQerr (Conn : System.Address) return chars_ptr;
          pragma Import (C, PQerr, "PQerrorMessage");
@@ -88,12 +104,20 @@ package body GNATCOLL.SQL.Postgres.Gnade is
          return CS.Value (PQerr (To_Addr (C_Connection)));
       end Error;
 
+      ------------
+      -- Status --
+      ------------
+
       function Status return ConnStatus is
          function PQstatus (Conn : System.Address) return Interfaces.C.int;
          pragma Import (C, PQstatus, "PQstatus");
       begin
          return ConnStatus'Val (PQstatus (To_Addr (C_Connection)));
       end Status;
+
+      -----------
+      -- Close --
+      -----------
 
       procedure Close is
          procedure PQfinish (Connection : System.Address);
@@ -105,6 +129,10 @@ package body GNATCOLL.SQL.Postgres.Gnade is
          end if;
       end Close;
 
+      ---------
+      -- PID --
+      ---------
+
       function PID return Backend_PID is
          function PQpid (Conn : System.Address) return Interfaces.C.int;
          pragma Import (C, PQpid, "PQbackendPID");
@@ -114,20 +142,90 @@ package body GNATCOLL.SQL.Postgres.Gnade is
          return To_PID (PQpid (To_Addr (C_Connection)));
       end PID;
 
-      procedure Execute (Res     : in out Result;
-                         Success : out Boolean;
-                         Query   : String)
+      -------------
+      -- Execute --
+      -------------
+
+      procedure Execute
+        (Res     : in out Result;
+         Success : out Boolean;
+         Query   : String;
+         Format  : GNATCOLL.SQL_Impl.Formatter'Class;
+         Params  : SQL_Parameters := No_Parameters)
       is
          function PQexec (Conn : System.Address;
                           Qry  : chars_ptr) return System.Address;
          pragma Import (C, PQexec, "PQexec");
 
+         function PQexecParams
+           (Conn         : System.Address;
+            Command      : chars_ptr;
+            nParams      : Interfaces.C.int;
+            paramTypes   : System.Address := System.Null_Address;  --  Oid*
+            paramValues  : CS.chars_ptr_array;  --  const char* const *
+            paramLengths : System.Address := System.Null_Address;  --  int*
+            paramFormats : System.Address := System.Null_Address;  --  int*
+            resultFormat : Interfaces.C.int := 1) return System.Address;
+         pragma Import (C, PQexecParams, "PQexecParams");
+         --  paramTypes can be left to NULL for automatic guessing
+         --
+         --  paramValues:
+         --  Specifies the actual values of the parameters. A null pointer in
+         --  this array means the corresponding parameter is null; otherwise
+         --  the pointer points to a zero-terminated text string (for text
+         --  format) or binary data in the format expected by the server (for
+         --  binary format).
+         --
+         --  paramLengths:
+         --  Specifies the actual data lengths of binary-format parameters. It
+         --  is ignored for null parameters and text-format parameters. The
+         --  array pointer can be null when there are no binary parameters.
+         --
+         --  paramFormats:
+         --  Specifies whether parameters are text (put a zero in the array
+         --  entry for the corresponding parameter) or binary (put a one in the
+         --  array entry for the corresponding parameter). If the array pointer
+         --  is null then all parameters are presumed to be text strings.
+         --  Values passed in binary format require knowledge of the internal
+         --  representation expected by the backend. For example, integers must
+         --  be passed in network byte order. Passing numeric values requires
+         --  knowledge of the server storage format.
+         --
+         --  resultFormat
+         --  Specify zero to obtain results in text format, or one to obtain
+         --  results in binary format. (There is not currently a provision to
+         --  obtain different result columns in different formats, although
+         --  that is possible in the underlying protocol.)
+
          P : chars_ptr := CS.New_String (Query);
-         R : constant PGresult :=
-           To_Result (PQexec (To_Addr (C_Connection), P));
+         R : PGresult;
          Stat : ExecStatus;
 
       begin
+         if Params'Length = 0 then
+            R := To_Result (PQexec (To_Addr (C_Connection), P));
+         else
+            declare
+               Vals : CS.chars_ptr_array (0 .. Params'Length - 1);
+            begin
+               for P in Params'Range loop
+                  Vals (size_t (P - Params'First)) :=
+                    CS.New_String (Image (Format, Params (P)));
+               end loop;
+
+               R := To_Result
+                 (PQexecParams
+                    (Conn    => To_Addr (C_Connection),
+                     Command => P,
+                     nParams => C.int (Vals'Length),
+                     paramValues => Vals));
+
+               for P in Vals'Range loop
+                  CS.Free (Vals (P));
+               end loop;
+            end;
+         end if;
+
          CS.Free (P);
          Clear (Res); --  Free previous results
 
@@ -181,24 +279,40 @@ package body GNATCOLL.SQL.Postgres.Gnade is
 
       procedure Exec_Prepared
         (Res       : out Result;
-         Stmt_Name : String)
+         Stmt_Name : String;
+         Format    : GNATCOLL.SQL_Impl.Formatter'Class;
+         Params    : SQL_Parameters := No_Parameters)
       is
          function PQexecPrepared
            (Conn : System.Address;
             Name : String;
             Nparams : Natural := 0;
-            Values  : System.Address := System.Null_Address;
+            Values  : CS.chars_ptr_array;
             Lengths : System.Address := System.Null_Address;
             Formats : System.Address := System.Null_Address;
             Format  : Natural := 1) return System.Address;
          pragma Import (C, PQexecPrepared, "PQexecPrepared");
 
-         R : constant PGresult :=
-           To_Result
-             (PQexecPrepared
-                  (To_Addr (C_Connection), Stmt_Name & ASCII.NUL));
+         R : PGresult;
+         Vals : CS.chars_ptr_array (0 .. Params'Length - 1);
 
       begin
+         for P in Vals'Range loop
+            Vals (P) := CS.New_String
+              (Image (Format, Params (Integer (P) + Params'First)));
+         end loop;
+
+         R := To_Result
+           (PQexecPrepared
+              (To_Addr (C_Connection),
+               Stmt_Name & ASCII.NUL,
+               Nparams => Vals'Length,
+               Values  => Vals));
+
+         for P in Vals'Range loop
+            CS.Free (Vals (P));
+         end loop;
+
          Clear (Res); --  Free previous results
 
          if R = Null_Result then
@@ -208,6 +322,10 @@ package body GNATCOLL.SQL.Postgres.Gnade is
          end if;
       end Exec_Prepared;
 
+      -----------------
+      -- BLOB_Create --
+      -----------------
+
       function BLOB_Create (Mode : File_Mode) return OID
       is
          function LO_Creat (Conn : System.Address;
@@ -216,6 +334,10 @@ package body GNATCOLL.SQL.Postgres.Gnade is
       begin
          return LO_Creat (To_Addr (C_Connection), C.int (Mode));
       end BLOB_Create;
+
+      -----------------
+      -- BLOB_Import --
+      -----------------
 
       function BLOB_Import (In_File_Name : String) return OID
       is
@@ -228,6 +350,10 @@ package body GNATCOLL.SQL.Postgres.Gnade is
          CS.Free (P);
          return Obj_Id;
       end BLOB_Import;
+
+      -----------------
+      -- BLOB_Export --
+      -----------------
 
       function BLOB_Export (Object_Id     : OID;
                             Out_File_Name : String) return Boolean
@@ -244,6 +370,10 @@ package body GNATCOLL.SQL.Postgres.Gnade is
          return B;
       end BLOB_Export;
 
+      ---------------
+      -- BLOB_Open --
+      ---------------
+
       function BLOB_Open (Object_Id : OID;
                           Mode      : File_Mode)
                           return File_Descriptor
@@ -256,6 +386,10 @@ package body GNATCOLL.SQL.Postgres.Gnade is
          return File_Descriptor
            (LO_Open (To_Addr (C_Connection), Object_Id, C.int (Mode)));
       end BLOB_Open;
+
+      ----------------
+      -- BLOB_Write --
+      ----------------
 
       function BLOB_Write (FD : File_Descriptor;
                            A  : System.Address;
@@ -271,6 +405,10 @@ package body GNATCOLL.SQL.Postgres.Gnade is
          return LO_Write (To_Addr (C_Connection), C.int (FD), A, C.int (N));
       end BLOB_Write;
 
+      ---------------
+      -- BLOB_Read --
+      ---------------
+
       function BLOB_Read (FD : File_Descriptor;
                           A  : System.Address;
                           N  : Integer)
@@ -284,6 +422,10 @@ package body GNATCOLL.SQL.Postgres.Gnade is
       begin
          return LO_Read (To_Addr (C_Connection), C.int (FD), A, C.int (N));
       end BLOB_Read;
+
+      ----------------
+      -- BLOB_Lseek --
+      ----------------
 
       function BLOB_Lseek (FD     : File_Descriptor;
                            Offset : Integer;
@@ -301,6 +443,10 @@ package body GNATCOLL.SQL.Postgres.Gnade is
                       C.int (Offset), C.int (Origin)));
       end BLOB_Lseek;
 
+      ---------------
+      -- BLOB_Tell --
+      ---------------
+
       function BLOB_Tell (FD : File_Descriptor)
                           return Integer
       is
@@ -310,6 +456,10 @@ package body GNATCOLL.SQL.Postgres.Gnade is
       begin
          return Integer (LO_Tell (To_Addr (C_Connection), C.int (FD)));
       end BLOB_Tell;
+
+      ----------------
+      -- BLOB_Close --
+      ----------------
 
       function BLOB_Close (FD : File_Descriptor)
                         return Boolean
@@ -321,6 +471,10 @@ package body GNATCOLL.SQL.Postgres.Gnade is
          return LO_Close (To_Addr (C_Connection), C.int (FD)) >= 0;
       end BLOB_Close;
 
+      -----------------
+      -- BLOB_Unlink --
+      -----------------
+
       function BLOB_Unlink (Object_Id : OID) return Boolean
       is
          function LO_Unlink (Conn          : System.Address;
@@ -330,7 +484,9 @@ package body GNATCOLL.SQL.Postgres.Gnade is
          return LO_Unlink (To_Addr (C_Connection), Object_Id) >= 0;
       end BLOB_Unlink;
 
-      --  --------------------------------------------------------------------
+      ------------------
+      -- Empty_Result --
+      ------------------
 
       procedure Empty_Result (Res    : out Result;
                               Status : ExecStatus) is
@@ -348,6 +504,10 @@ package body GNATCOLL.SQL.Postgres.Gnade is
          end if;
       end Empty_Result;
 
+      --------------------
+      -- SetNonBlocking --
+      --------------------
+
       procedure SetNonBlocking
       is
          --  function PQnonblocking (Conn : System.Address)
@@ -356,6 +516,10 @@ package body GNATCOLL.SQL.Postgres.Gnade is
       begin
          null;
       end SetNonBlocking;
+
+      -------------------
+      -- IsNonBlocking --
+      -------------------
 
       function IsNonBlocking return Boolean
       is
@@ -371,6 +535,10 @@ package body GNATCOLL.SQL.Postgres.Gnade is
             return False;
          end if;
       end IsNonBlocking;
+
+      ---------------
+      -- SendQuery --
+      ---------------
 
       function SendQuery (Query : String) return Boolean
       is
@@ -388,6 +556,10 @@ package body GNATCOLL.SQL.Postgres.Gnade is
          end if;
       end SendQuery;
 
+      ---------------
+      -- GetResult --
+      ---------------
+
       procedure GetResult (Res  : out Result;
                            Done : out Boolean)
       is
@@ -404,8 +576,11 @@ package body GNATCOLL.SQL.Postgres.Gnade is
          end if;
       end GetResult;
 
-      function ConsumeInput return Boolean
-      is
+      ------------------
+      -- ConsumeInput --
+      ------------------
+
+      function ConsumeInput return Boolean is
          function PQconsumeInput (Conn : System.Address)
                                   return Interfaces.C.int;
          pragma Import (C, PQconsumeInput, "PQconsumeInput");
@@ -419,8 +594,11 @@ package body GNATCOLL.SQL.Postgres.Gnade is
          end if;
       end ConsumeInput;
 
-      function Flush return Boolean
-      is
+      -----------
+      -- Flush --
+      -----------
+
+      function Flush return Boolean is
          function PQflush (Conn : System.Address) return Interfaces.C.int;
          pragma Import (C, PQflush, "PQflush");
          R : constant Interfaces.C.int := PQflush (To_Addr (C_Connection));
@@ -432,8 +610,11 @@ package body GNATCOLL.SQL.Postgres.Gnade is
          end if;
       end Flush;
 
-      function IsBusy return Boolean
-      is
+      ------------
+      -- IsBusy --
+      ------------
+
+      function IsBusy return Boolean is
          function PQisBusy (Conn : System.Address) return Interfaces.C.int;
          pragma Import (C, PQisBusy, "PQisBusy");
          R : constant Interfaces.C.int := PQisBusy (To_Addr (C_Connection));
@@ -445,8 +626,11 @@ package body GNATCOLL.SQL.Postgres.Gnade is
          end if;
       end IsBusy;
 
-      function RequestCancel return Boolean
-      is
+      -------------------
+      -- RequestCancel --
+      -------------------
+
+      function RequestCancel return Boolean is
          function PQrequestCancel (Conn : System.Address)
                                    return Interfaces.C.int;
          pragma Import (C, PQrequestCancel, "PQrequestCancel");
@@ -460,14 +644,21 @@ package body GNATCOLL.SQL.Postgres.Gnade is
          end if;
       end RequestCancel;
 
-      function Socket return Interfaces.C.int
-      is
+      ------------
+      -- Socket --
+      ------------
+
+      function Socket return Interfaces.C.int is
          function PQsocket (Conn : System.Address) return Interfaces.C.int;
          pragma Import (C, PQsocket, "PQsocket");
          R : constant Interfaces.C.int := PQsocket (To_Addr (C_Connection));
       begin
          return R;
       end Socket;
+
+      --------------
+      -- Notifies --
+      --------------
 
       procedure Notifies (Message : out Notification;
                           Done    : out Boolean)
@@ -495,11 +686,19 @@ package body GNATCOLL.SQL.Postgres.Gnade is
 
    end PGConn;
 
+   ----------------
+   -- Initialize --
+   ----------------
+
    procedure Initialize (Object : in out Database) is
       pragma Unreferenced (Object);
    begin
       null;
    end Initialize;
+
+   --------------
+   -- Finalize --
+   --------------
 
    procedure Finalize (Object : in out Database) is
    begin
@@ -590,14 +789,21 @@ package body GNATCOLL.SQL.Postgres.Gnade is
       return DB.Connection.PID;
    end Server_PID;
 
-   procedure Execute (Res   : in out Result;
-                      DB    : Database'Class;
-                      Query : String)
+   -------------
+   -- Execute --
+   -------------
+
+   procedure Execute
+     (Res    : in out Result;
+      DB     : Database'Class;
+      Query  : String;
+      Format : GNATCOLL.SQL_Impl.Formatter'Class;
+      Params : SQL_Parameters := No_Parameters)
    is
       Success : Boolean;
    begin
       --  Error status is in fact available through Result already
-      DB.Connection.Execute (Res, Success, Query);
+      DB.Connection.Execute (Res, Success, Query, Format, Params);
    end Execute;
 
    -------------
@@ -621,10 +827,12 @@ package body GNATCOLL.SQL.Postgres.Gnade is
    procedure Exec_Prepared
      (Res       : out Result;
       DB        : Database'Class;
-      Stmt_Name : String)
+      Stmt_Name : String;
+      Format    : GNATCOLL.SQL_Impl.Formatter'Class;
+      Params    : SQL_Parameters := No_Parameters)
    is
    begin
-      DB.Connection.Exec_Prepared (Res, Stmt_Name);
+      DB.Connection.Exec_Prepared (Res, Stmt_Name, Format, Params);
    end Exec_Prepared;
 
    -----------------

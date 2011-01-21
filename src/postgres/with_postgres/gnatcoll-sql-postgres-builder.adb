@@ -1,7 +1,7 @@
 -----------------------------------------------------------------------
 --                               G N A T C O L L                     --
 --                                                                   --
---                 Copyright (C) 2005-2009, AdaCore                  --
+--                 Copyright (C) 2005-2011, AdaCore                  --
 --                                                                   --
 -- GPS is free  software;  you can redistribute it and/or modify  it --
 -- under the terms of the GNU General Public License as published by --
@@ -59,11 +59,17 @@ package body GNATCOLL.SQL.Postgres.Builder is
    type Postgresql_Connection is access all Postgresql_Connection_Record'Class;
    overriding procedure Close
      (Connection : access Postgresql_Connection_Record);
+   overriding function Parameter_String
+     (Self  : Postgresql_Connection_Record;
+      Index : Positive;
+      Typ   : Parameter_Type) return String;
    overriding function Connect_And_Execute
      (Connection  : access Postgresql_Connection_Record;
       Query       : String;
       Is_Select   : Boolean;
-      Direct      : Boolean) return Abstract_Cursor_Access;
+      Direct      : Boolean;
+      Params      : SQL_Parameters := No_Parameters)
+      return Abstract_Cursor_Access;
    overriding function Connect_And_Prepare
      (Connection : access Postgresql_Connection_Record;
       Query      : String;
@@ -74,7 +80,9 @@ package body GNATCOLL.SQL.Postgres.Builder is
      (Connection  : access Postgresql_Connection_Record;
       Prepared    : DBMS_Stmt;
       Is_Select   : Boolean;
-      Direct      : Boolean) return Abstract_Cursor_Access;
+      Direct      : Boolean;
+      Params      : SQL_Parameters := No_Parameters)
+      return Abstract_Cursor_Access;
    overriding function Error
      (Connection : access Postgresql_Connection_Record) return String;
    overriding procedure Foreach_Table
@@ -302,12 +310,16 @@ package body GNATCOLL.SQL.Postgres.Builder is
    --  Create a connection string from the database description
 
    generic
-      with procedure Perform (Res : out Result; Query : String);
+      with procedure Perform
+        (Res    : out Result;
+         Query  : String;
+         Params : SQL_Parameters := No_Parameters);
    procedure Connect_And_Do
      (Connection : access Postgresql_Connection_Record;
       Query      : String;
       Res        : out Result;
-      Success    : out Boolean);
+      Success    : out Boolean;
+      Params      : SQL_Parameters := No_Parameters);
    --  (Re)connect to the database if needed, and perform the action. If the
    --  result of the action is successfull (as per exec status in Res), Success
    --  is set to True and Res to the last result. Otherwise, Success is set to
@@ -396,14 +408,15 @@ package body GNATCOLL.SQL.Postgres.Builder is
      (Connection : access Postgresql_Connection_Record;
       Query      : String;
       Res        : out Result;
-      Success    : out Boolean)
+      Success    : out Boolean;
+      Params      : SQL_Parameters := No_Parameters)
    is
    begin
       if Connection.Postgres /= null then
          Clear (Res);
 
          if Query /= "" then
-            Perform (Res, Query);
+            Perform (Res, Query, Params);
          end if;
 
          case ExecStatus'(Status (Res)) is
@@ -473,7 +486,7 @@ package body GNATCOLL.SQL.Postgres.Builder is
          return;
 
       else
-         Perform (Res, Query);
+         Perform (Res, Query, Params);
 
          case ExecStatus'(Status (Res)) is
             when PGRES_NONFATAL_ERROR
@@ -528,8 +541,16 @@ package body GNATCOLL.SQL.Postgres.Builder is
       Direct     : Boolean)
       return DBMS_Stmt
    is
-      procedure Perform (Res : out Result; Query : String);
-      procedure Perform (Res : out Result; Query : String) is
+      procedure Perform
+        (Res    : out Result;
+         Query  : String;
+         Params : SQL_Parameters := No_Parameters);
+      procedure Perform
+        (Res    : out Result;
+         Query  : String;
+         Params : SQL_Parameters := No_Parameters)
+      is
+         pragma Unreferenced (Params);
          Name : constant String :=
            "stmt" & Image (Integer (Id), Min_Width => 0);
       begin
@@ -572,7 +593,9 @@ package body GNATCOLL.SQL.Postgres.Builder is
      (Connection  : access Postgresql_Connection_Record;
       Prepared    : DBMS_Stmt;
       Is_Select   : Boolean;
-      Direct      : Boolean) return Abstract_Cursor_Access
+      Direct      : Boolean;
+      Params      : SQL_Parameters := No_Parameters)
+      return Abstract_Cursor_Access
    is
       R   : Postgresql_Cursor_Access;
       DR  : Postgresql_Direct_Cursor_Access;
@@ -584,12 +607,14 @@ package body GNATCOLL.SQL.Postgres.Builder is
       --  For a direct_cursor, this will execute the query. For a
       --  forward_cursor this will declare the cursor on the DBMS
 
-      Exec_Prepared (Res, Connection.Postgres.all, Name);
+      Exec_Prepared
+        (Res, Connection.Postgres.all, Name, Connection.all, Params);
 
       if Direct or not Use_Cursors then
          DR := new Postgresql_Direct_Cursor;
          DR.Res := Res;
-         Post_Execute_And_Log (DR, Connection, "Exec prepared " & Name, False);
+         Post_Execute_And_Log
+           (DR, Connection, "Exec prepared " & Name, False, Params);
 
          if Is_Select then
             DR.Rows := Natural (Tuple_Count (Res));
@@ -604,7 +629,8 @@ package body GNATCOLL.SQL.Postgres.Builder is
          R.Connection := Postgresql_Connection (Connection);
          R.Res        := Res;
          R.Stmt       := Id;
-         Post_Execute_And_Log (R, Connection, "Exec prepared " & Name, False);
+         Post_Execute_And_Log (R, Connection, "Exec prepared " & Name, False,
+                               Params);
          Next (R.all);  --  Read first row
          return Abstract_Cursor_Access (R);
       end if;
@@ -618,12 +644,20 @@ package body GNATCOLL.SQL.Postgres.Builder is
      (Connection  : access Postgresql_Connection_Record;
       Query       : String;
       Is_Select   : Boolean;
-      Direct      : Boolean) return Abstract_Cursor_Access
+      Direct      : Boolean;
+      Params      : SQL_Parameters := No_Parameters)
+      return Abstract_Cursor_Access
    is
-      procedure Perform (Res : out Result; Query : String);
-      procedure Perform (Res : out Result; Query : String) is
+      procedure Perform
+        (Res    : out Result;
+         Query  : String;
+         Params : SQL_Parameters := No_Parameters);
+      procedure Perform
+        (Res    : out Result;
+         Query  : String;
+         Params : SQL_Parameters := No_Parameters) is
       begin
-         Execute (Res, Connection.Postgres.all, Query);
+         Execute (Res, Connection.Postgres.all, Query, Connection.all, Params);
 
 --           if Is_Select then
 --              Trace (Me_Select, Query & " => " & Status (Res));
@@ -652,7 +686,7 @@ package body GNATCOLL.SQL.Postgres.Builder is
       end if;
 
       if Create_Direct then
-         Do_Perform (Connection, Query, Res, Success);
+         Do_Perform (Connection, Query, Res, Success, Params);
       else
          R.Nested_Transactions := Start_Transaction (Connection);
          R.Cursor   := Connection.Cursor;
@@ -660,7 +694,7 @@ package body GNATCOLL.SQL.Postgres.Builder is
          Do_Perform
            (Connection,
             Declare_Cursor (Query, No_Stmt_Id, R.Cursor),
-            Res, Success);
+            Res, Success, Params);
       end if;
 
       if Connection.Postgres = null then
@@ -941,7 +975,8 @@ package body GNATCOLL.SQL.Postgres.Builder is
       Str : constant String :=
         "FETCH" & Count'Img & " FROM " & Cursor_Name (Self.Stmt, Self.Cursor);
    begin
-      Execute (Self.Res, Self.Connection.Postgres.all, Str);
+      Execute (Self.Res, Self.Connection.Postgres.all, Str,
+               Self.Connection.all);
       if Status (Self.Res) /= PGRES_TUPLES_OK then
          Post_Execute_And_Log
            (Self'Unrestricted_Access, Self.Connection, Str, Is_Select => True);
@@ -1012,7 +1047,8 @@ package body GNATCOLL.SQL.Postgres.Builder is
       Close : constant String :=
         "CLOSE " & Cursor_Name (Self.Stmt, Self.Cursor);
    begin
-      Execute (Self.Res, Self.Connection.Postgres.all, Close);
+      Execute (Self.Res, Self.Connection.Postgres.all, Close,
+               Self.Connection.all);
       Post_Execute_And_Log (Self'Access, Self.Connection, Close, False);
 
       --  Avoid having opened too many cursors
@@ -1045,11 +1081,38 @@ package body GNATCOLL.SQL.Postgres.Builder is
         "DEALLOCATE stmt" & Image (Integer (Id), Min_Width => 0);
       Res : Result;
    begin
-      Execute (Res, Connection.Postgres.all, Str);
+      Execute (Res, Connection.Postgres.all, Str, Connection.all);
       if Active (Me_Query) then
          Trace (Me_Query, Str & " (" & Status (Res) & ")");
       end if;
       Clear (Res);
    end Finalize;
+
+   ----------------------
+   -- Parameter_String --
+   ----------------------
+
+   overriding function Parameter_String
+     (Self  : Postgresql_Connection_Record;
+      Index : Positive;
+      Typ   : Parameter_Type) return String
+   is
+      pragma Unreferenced (Self);
+   begin
+      case Typ is
+         when Parameter_Text =>
+            return '$' & Image (Index, 0) & "::text";
+         when Parameter_Integer =>
+            return '$' & Image (Index, 0) & "::integer";
+         when Parameter_Boolean =>
+            return '$' & Image (Index, 0) & "::boolean";
+         when Parameter_Float =>
+            return '$' & Image (Index, 0) & "::float";
+         when Parameter_Time =>
+            return '$' & Image (Index, 0) & "::time";
+         when Parameter_Date =>
+            return '$' & Image (Index, 0) & "::date";
+      end case;
+   end Parameter_String;
 
 end GNATCOLL.SQL.Postgres.Builder;

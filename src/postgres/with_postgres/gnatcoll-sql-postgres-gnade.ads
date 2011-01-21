@@ -10,7 +10,7 @@
 --  Status          : $State$
 --
 --  Copyright (C) 2000-2003, Juergen Pfeifer
---  Copyright (C) 2004-2009, AdaCore
+--  Copyright (C) 2004-2011, AdaCore
 --                                                                           --
 --  GNADE is free software;  you can redistribute it  and/or modify it under --
 --  terms of the  GNU General Public License as published  by the Free Soft- --
@@ -45,6 +45,7 @@
 with System.Storage_Elements;
 with Ada.Finalization;
 with Interfaces.C.Strings;
+with GNATCOLL.SQL_Impl;
 
 private package GNATCOLL.SQL.Postgres.Gnade is
    PostgreSQL_Error : exception;
@@ -274,11 +275,13 @@ private package GNATCOLL.SQL.Postgres.Gnade is
    procedure Clear (Res : in out Result);
    --  Free the memory used by Result
 
-   procedure Execute (Res   : in out Result;
-                      DB    : Database'Class;
-                      Query : String);
+   procedure Execute
+     (Res    : in out Result;
+      DB     : Database'Class;
+      Query  : String;
+      Format : GNATCOLL.SQL_Impl.Formatter'Class;
+      Params : SQL_Parameters := No_Parameters);
    --  Submit a query to Postgres and wait for the result
-   pragma Inline (Execute);
 
    procedure Prepare
      (Res       : out Result;
@@ -291,8 +294,9 @@ private package GNATCOLL.SQL.Postgres.Gnade is
    procedure Exec_Prepared
      (Res       : out Result;
       DB        : Database'Class;
-      Stmt_Name : String);
-   pragma Inline (Exec_Prepared);
+      Stmt_Name : String;
+      Format    : GNATCOLL.SQL_Impl.Formatter'Class;
+      Params    : SQL_Parameters := No_Parameters);
    --  Execute a prepared statement
 
    function Status (Res    : Result)     return ExecStatus;
@@ -627,16 +631,21 @@ private
       function Status return  ConnStatus;
       procedure Close;
       function PID return Backend_PID;
-      procedure Execute (Res     : in out Result;
-                         Success : out Boolean;
-                         Query   : String);
+      procedure Execute
+        (Res     : in out Result;
+         Success : out Boolean;
+         Query   : String;
+         Format  : GNATCOLL.SQL_Impl.Formatter'Class;
+         Params  : SQL_Parameters := No_Parameters);
       procedure Prepare
         (Res       : out Result;
          Stmt_Name : String;
          Query     : String);
       procedure Exec_Prepared
         (Res       : out Result;
-         Stmt_Name : String);
+         Stmt_Name : String;
+         Format    : GNATCOLL.SQL_Impl.Formatter'Class;
+         Params    : SQL_Parameters := No_Parameters);
       function BLOB_Create (Mode : File_Mode) return OID;
       function BLOB_Import (In_File_Name : String) return OID;
       function BLOB_Export (Object_Id     : OID;

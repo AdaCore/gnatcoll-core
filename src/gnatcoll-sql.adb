@@ -1,7 +1,7 @@
 -----------------------------------------------------------------------
 --                               G N A T C O L L                     --
 --                                                                   --
---                 Copyright (C) 2005-2010, AdaCore                  --
+--                 Copyright (C) 2005-2011, AdaCore                  --
 --                                                                   --
 -- GPS is free  software;  you can redistribute it and/or modify  it --
 -- under the terms of the GNU General Public License as published by --
@@ -1167,6 +1167,13 @@ package body GNATCOLL.SQL is
    begin
       Set_Data (Result, Data);
       return Result;
+   end SQL_In;
+
+   function SQL_In
+     (Self : SQL_Field'Class; Text : Text_Fields.Field'Class)
+      return SQL_Criteria is
+   begin
+      return SQL_In (Self, +Text);
    end SQL_In;
 
    ----------------

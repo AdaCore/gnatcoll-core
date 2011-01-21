@@ -1,7 +1,7 @@
 -----------------------------------------------------------------------
 --                           G N A T C O L L                         --
 --                                                                   --
---                 Copyright (C) 2005-2010, AdaCore                  --
+--                 Copyright (C) 2005-2011, AdaCore                  --
 --                                                                   --
 -- GPS is free  software;  you can redistribute it and/or modify  it --
 -- under the terms of the GNU General Public License as published by --
@@ -77,6 +77,17 @@ package GNATCOLL.SQL_Impl is
      (Self : Formatter'Class; Value : Ada.Calendar.Time) return String;
    --  Calls the above formatting primitives (or provide default version, when
    --  not overridable)
+
+   type Parameter_Type is
+     (Parameter_Integer, Parameter_Text, Parameter_Boolean, Parameter_Float,
+      Parameter_Time, Parameter_Date);
+
+   function Parameter_String
+     (Self  : Formatter;
+      Index : Positive;
+      Typ   : Parameter_Type) return String is abstract;
+   --  Return the character to put before a parameter in a SQL statement, when
+   --  the value will be substituted at run time
 
    function String_To_SQL
      (Self : Formatter'Class; Value : String) return String;
@@ -423,6 +434,9 @@ package GNATCOLL.SQL_Impl is
       --  implement Check_Value to ensure the max length of the string.
       --  This procedure should raise Constraint_Error in case of error.
 
+      Param_Type : Parameter_Type;
+      --  Internal type to use for the parameter
+
    package Field_Types is
       type Field is new SQL_Field with null record;
 
@@ -447,6 +461,21 @@ package GNATCOLL.SQL_Impl is
       --  already (so for instance no quoting or special-character quoting
       --  would occur for strings). This function just indicates to GNATCOLL
       --  how the string should be interpreted
+
+      function Param (Index : Positive) return Field'Class;
+      --  Return a special string that will be inserted in the query, and
+      --  can be substituted with an actual value when the query is executed.
+      --  This is used to parameterize queries. In particular, this allows you
+      --  to prepare a general form of the query, as in:
+      --      SELECT * FROM table WHERE table.field1 = ?1
+      --  and execute this several times, substituting a different value
+      --  every time.
+      --  This is more efficient in general (since the statement is prepared
+      --  only once, although the preparation cannot take advantage of special
+      --  knowledge related to the value), and safer (no need to worry about
+      --  specially quoting the actual value, which GNATCOLL would do for you
+      --  but potentially there might still be issues).
+      --  The exact string inserted depends on the DBMS.
 
       function "&"
         (Field : SQL_Field'Class; Value : Ada_Type) return SQL_Field_List;

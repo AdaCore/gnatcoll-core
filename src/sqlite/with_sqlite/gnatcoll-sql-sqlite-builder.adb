@@ -32,6 +32,7 @@ with Ada.Unchecked_Deallocation;
 with GNATCOLL.SQL.Sqlite.Gnade;    use GNATCOLL.SQL.Sqlite.Gnade;
 with GNATCOLL.SQL.Exec_Private;    use GNATCOLL.SQL.Exec_Private;
 with GNATCOLL.Traces;              use GNATCOLL.Traces;
+with GNATCOLL.Utils;               use GNATCOLL.Utils;
 with GNAT.OS_Lib;
 with Interfaces.C.Strings;         use Interfaces.C.Strings;
 
@@ -93,13 +94,19 @@ package body GNATCOLL.SQL.Sqlite.Builder is
       end record;
    overriding function Boolean_Image
      (Self : Sqlite_Connection_Record; Value : Boolean) return String;
+   overriding function Parameter_String
+     (Self  : Sqlite_Connection_Record;
+      Index : Positive;
+      Typ   : Parameter_Type) return String;
    overriding procedure Close
      (Connection : access Sqlite_Connection_Record);
    overriding function Connect_And_Execute
      (Connection  : access Sqlite_Connection_Record;
       Query       : String;
       Is_Select   : Boolean;
-      Direct      : Boolean) return Abstract_Cursor_Access;
+      Direct      : Boolean;
+      Params      : SQL_Parameters := No_Parameters)
+      return Abstract_Cursor_Access;
    overriding function Connect_And_Prepare
      (Connection : access Sqlite_Connection_Record;
       Query      : String;
@@ -109,7 +116,9 @@ package body GNATCOLL.SQL.Sqlite.Builder is
      (Connection  : access Sqlite_Connection_Record;
       Prepared    : DBMS_Stmt;
       Is_Select   : Boolean;
-      Direct      : Boolean) return Abstract_Cursor_Access;
+      Direct      : Boolean;
+      Params      : SQL_Parameters := No_Parameters)
+      return Abstract_Cursor_Access;
    overriding procedure Reset
      (Connection : access Sqlite_Connection_Record;
       Prepared   : DBMS_Stmt);
@@ -384,7 +393,9 @@ package body GNATCOLL.SQL.Sqlite.Builder is
      (Connection  : access Sqlite_Connection_Record;
       Prepared    : DBMS_Stmt;
       Is_Select   : Boolean;
-      Direct      : Boolean) return Abstract_Cursor_Access
+      Direct      : Boolean;
+      Params      : SQL_Parameters := No_Parameters)
+      return Abstract_Cursor_Access
    is
       procedure Unchecked_Free is new Ada.Unchecked_Deallocation
          (Sqlite_Cursor'Class, Sqlite_Cursor_Access);
@@ -400,7 +411,51 @@ package body GNATCOLL.SQL.Sqlite.Builder is
 
       Stmt := Unchecked_Convert (Prepared);
 
+      for P in Params'Range loop
+         case Params (P).Typ is
+            when Parameter_Text =>
+               Bind_Text (Stmt, P, Params (P).Str_Val.all'Address,
+                          Params (P).Str_Val'Length);
+            when Parameter_Integer =>
+               Bind_Int (Stmt, P, Interfaces.C.int (Params (P).Int_Val));
+            when Parameter_Float =>
+               Bind_Double
+                 (Stmt, P, Interfaces.C.double (Params (P).Float_Val));
+            when Parameter_Boolean =>
+               Bind_Int
+                 (Stmt, P,
+                  Interfaces.C.int (Boolean'Pos (Params (P).Bool_Val)));
+            when Parameter_Time =>
+               declare
+                  Str : aliased String :=
+                    Time_To_SQL (Connection.all, Params (P).Time_Val);
+               begin
+                  Bind_Text (Stmt, P, Str'Address, Str'Length);
+               end;
+
+            when Parameter_Date =>
+               declare
+                  Str : aliased String :=
+                    Date_To_SQL (Connection.all, Params (P).Date_Val);
+               begin
+                  Bind_Text (Stmt, P, Str'Address, Str'Length);
+               end;
+         end case;
+      end loop;
+
       Step (Stmt, Last_Status);
+
+      --  Reset text parameters, since the string they point to will rapidly
+      --  be out of scope
+
+      for P in Params'Range loop
+         case Params (P).Typ is
+            when Parameter_Text =>
+               Bind_Null (Stmt, P);
+            when others =>
+               null;
+         end case;
+      end loop;
 
       case Last_Status is
          when Sqlite_OK | Sqlite_Row | Sqlite_Done =>
@@ -455,7 +510,9 @@ package body GNATCOLL.SQL.Sqlite.Builder is
      (Connection  : access Sqlite_Connection_Record;
       Query       : String;
       Is_Select   : Boolean;
-      Direct      : Boolean) return Abstract_Cursor_Access
+      Direct      : Boolean;
+      Params      : SQL_Parameters := No_Parameters)
+      return Abstract_Cursor_Access
    is
       Res    : Abstract_Cursor_Access;
       Stmt   : DBMS_Stmt;
@@ -466,7 +523,8 @@ package body GNATCOLL.SQL.Sqlite.Builder is
            (Connection => Connection,
             Prepared   => Stmt,
             Is_Select  => Is_Select,
-            Direct     => Direct);
+            Direct     => Direct,
+            Params     => Params);
 
          if Res /= null then
             if Res.all in Sqlite_Direct_Cursor'Class then
@@ -802,6 +860,20 @@ package body GNATCOLL.SQL.Sqlite.Builder is
    begin
       return new Sqlite_Connection_Record;
    end Build_Sqlite_Connection;
+
+   ----------------------
+   -- Parameter_String --
+   ----------------------
+
+   overriding function Parameter_String
+     (Self  : Sqlite_Connection_Record;
+      Index : Positive;
+      Typ   : Parameter_Type) return String
+   is
+      pragma Unreferenced (Self, Typ);
+   begin
+      return '?' & Image (Index, 0);
+   end Parameter_String;
 
    -------------------
    -- Boolean_Image --

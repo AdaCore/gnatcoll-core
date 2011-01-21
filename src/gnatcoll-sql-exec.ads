@@ -1,7 +1,7 @@
 -----------------------------------------------------------------------
 --                               G N A T C O L L                     --
 --                                                                   --
---                 Copyright (C) 2005-2010, AdaCore                  --
+--                 Copyright (C) 2005-2011, AdaCore                  --
 --                                                                   --
 -- GPS is free  software;  you can redistribute it and/or modify  it --
 -- under the terms of the GNU General Public License as published by --
@@ -197,6 +197,49 @@ package GNATCOLL.SQL.Exec is
    function Get_SSL      (Description : Database_Description) return SSL_Mode;
    --  Return the connection components for the database
 
+   ----------------
+   -- Parameters --
+   ----------------
+   --  All database systems support a way of writing queries without using
+   --  specific values. Instead, those are bound when the query is executed.
+   --  Thus, in sqlite, the query might look like:
+   --      SELECT * FROM table WHERE table.field1 = ?1
+   --  whereas in postgreSQL it would be
+   --      SELECT * FROM table WHERE table.field1 = $1
+   --
+   --  Such queries are created in GNATCOLL through the use of
+   --  GNATCOLL.SQL.Text_Param, GNATCOLL.SQL.Integer_Param,...
+
+   type SQL_Parameter (Typ : Parameter_Type := Parameter_Integer) is record
+      case Typ is
+         when Parameter_Integer => Int_Val : Integer;
+         when Parameter_Text    => Str_Val : access String;
+            --  references external string, to avoid an extra copy
+         when Parameter_Boolean => Bool_Val : Boolean;
+         when Parameter_Float   => Float_Val : Float;
+         when Parameter_Time    => Time_Val  : Ada.Calendar.Time;
+         when Parameter_Date    => Date_Val  : Ada.Calendar.Time;
+      end case;
+   end record;
+
+   Null_Parameter : constant SQL_Parameter;
+
+   function "+" (Value : access String) return SQL_Parameter;
+   function "+" (Value : Integer) return SQL_Parameter;
+   function "+" (Value : Boolean) return SQL_Parameter;
+   function "+" (Value : Float) return SQL_Parameter;
+   function "+" (Time : Ada.Calendar.Time) return SQL_Parameter;
+
+   type SQL_Parameters is array (Positive range <>) of SQL_Parameter;
+   No_Parameters : constant SQL_Parameters;
+
+   function Image
+     (Format : Formatter'Class; Param : SQL_Parameter) return String;
+   function Image
+     (Format : Formatter'Class; Params : SQL_Parameters)
+      return String;
+   --  Return a displayable version of the parameters list
+
    -------------------------
    -- Database_Connection --
    -------------------------
@@ -224,17 +267,21 @@ package GNATCOLL.SQL.Exec is
    procedure Fetch
      (Result     : out Forward_Cursor;
       Connection : access Database_Connection_Record'Class;
-      Query      : String);
+      Query      : String;
+      Params     : SQL_Parameters := No_Parameters);
    procedure Fetch
      (Result     : out Forward_Cursor;
       Connection : access Database_Connection_Record'Class;
-      Query      : GNATCOLL.SQL.SQL_Query);
+      Query      : GNATCOLL.SQL.SQL_Query;
+      Params     : SQL_Parameters := No_Parameters);
    procedure Execute
      (Connection : access Database_Connection_Record'Class;
-      Query      : GNATCOLL.SQL.SQL_Query);
+      Query      : GNATCOLL.SQL.SQL_Query;
+      Params     : SQL_Parameters := No_Parameters);
    procedure Execute
      (Connection : access Database_Connection_Record'Class;
-      Query      : String);
+      Query      : String;
+      Params     : SQL_Parameters := No_Parameters);
    --  Submit a query to the database, log it and wait for the result.
    --  Logs the query, as needed.
    --  The query can either be written directly as a string, or through a
@@ -483,11 +530,13 @@ package GNATCOLL.SQL.Exec is
    overriding procedure Fetch
      (Result     : out Direct_Cursor;
       Connection : access Database_Connection_Record'Class;
-      Query      : String);
+      Query      : String;
+      Params     : SQL_Parameters := No_Parameters);
    overriding procedure Fetch
      (Result     : out Direct_Cursor;
       Connection : access Database_Connection_Record'Class;
-      Query      : GNATCOLL.SQL.SQL_Query);
+      Query      : GNATCOLL.SQL.SQL_Query;
+      Params     : SQL_Parameters := No_Parameters);
    --  Execute the query, and get all results in memory.
 
    -------------------------
@@ -579,7 +628,8 @@ package GNATCOLL.SQL.Exec is
      (Result     : out Direct_Cursor;
       Connection : access Database_Connection_Record'Class;
       Stmt       : SQL_Query;
-      Use_Cache  : Boolean);
+      Use_Cache  : Boolean;
+      Params     : SQL_Parameters := No_Parameters);
    --  Temporary procedure, do not use.
    --  This is for backward compatibility only (it creates a prepared statement
    --  on the fly and executes it, which is not as efficient as having the
@@ -589,11 +639,13 @@ package GNATCOLL.SQL.Exec is
    procedure Fetch
      (Result     : out Direct_Cursor;
       Connection : access Database_Connection_Record'Class;
-      Stmt       : in out Prepared_Statement);
+      Stmt       : in out Prepared_Statement;
+      Params     : SQL_Parameters := No_Parameters);
    procedure Fetch
      (Result     : out Forward_Cursor;
       Connection : access Database_Connection_Record'Class;
-      Stmt       : in out Prepared_Statement);
+      Stmt       : in out Prepared_Statement;
+      Params     : SQL_Parameters := No_Parameters);
    --  Execute a prepared statement on the connection.
 
    procedure Finalize
@@ -685,7 +737,9 @@ package GNATCOLL.SQL.Exec is
      (Connection  : access Database_Connection_Record;
       Query       : String;
       Is_Select   : Boolean;
-      Direct      : Boolean) return Abstract_Cursor_Access is abstract;
+      Direct      : Boolean;
+      Params      : SQL_Parameters := No_Parameters)
+      return Abstract_Cursor_Access is abstract;
    --  This is mostly an internal subprogram, overridden by all DBMS-specific
    --  backends.
    --  If the connection to the database has not been made yet, connect to it.
@@ -725,7 +779,9 @@ package GNATCOLL.SQL.Exec is
      (Connection  : access Database_Connection_Record;
       Prepared    : DBMS_Stmt;
       Is_Select   : Boolean;
-      Direct      : Boolean) return Abstract_Cursor_Access;
+      Direct      : Boolean;
+      Params      : SQL_Parameters := No_Parameters)
+      return Abstract_Cursor_Access;
    --  Execute a prepared statement on the server
 
    procedure Finalize
@@ -743,7 +799,8 @@ package GNATCOLL.SQL.Exec is
      (R          : access Abstract_DBMS_Forward_Cursor'Class;
       Connection : access Database_Connection_Record'Class;
       Query      : String;
-      Is_Select  : Boolean);
+      Is_Select  : Boolean;
+      Params     : SQL_Parameters := No_Parameters);
    --  Mark the connection as success or failure depending on R.
    --  Logs the query
 
@@ -813,5 +870,10 @@ private
      (Ada.Finalization.Controlled with null);
    No_Direct_Element : constant Direct_Cursor :=
      (Ada.Finalization.Controlled with null);
+
+   Null_Parameter : constant SQL_Parameter :=
+     (Typ => Parameter_Integer, Int_Val => Integer'First);
+   No_Parameters : constant SQL_Parameters (1 .. 0) :=
+     (others => Null_Parameter);
 
 end GNATCOLL.SQL.Exec;

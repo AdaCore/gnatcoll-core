@@ -1,7 +1,7 @@
 -----------------------------------------------------------------------
 --                               G N A T C O L L                     --
 --                                                                   --
---                 Copyright (C) 2005-2010, AdaCore                  --
+--                 Copyright (C) 2005-2011, AdaCore                  --
 --                                                                   --
 -- GPS is free  software;  you can redistribute it and/or modify  it --
 -- under the terms of the GNU General Public License as published by --
@@ -62,7 +62,8 @@ package body GNATCOLL.SQL.Exec is
       Query      : String;
       Prepared   : DBMS_Stmt;
       Is_Select  : Boolean;
-      Direct     : Boolean);
+      Direct     : Boolean;
+      Params     : SQL_Parameters := No_Parameters);
    --  Low-level call to perform a query on the database and log results
 
    function Hash
@@ -102,7 +103,8 @@ package body GNATCOLL.SQL.Exec is
       procedure Get_Result
         (Stmt    : Prepared_Statement;
          Cached  : out Direct_Cursor;
-         Found   : out Boolean);
+         Found   : out Boolean;
+         Params  : SQL_Parameters := No_Parameters);
       --  Return null or the cached value for the statement
 
       procedure Set_Cache (Stmt : Prepared_Statement; Cached : Direct_Cursor);
@@ -217,10 +219,17 @@ package body GNATCOLL.SQL.Exec is
       procedure Get_Result
         (Stmt    : Prepared_Statement;
          Cached  : out Direct_Cursor;
-         Found   : out Boolean)
+         Found   : out Boolean;
+         Params  : SQL_Parameters := No_Parameters)
       is
          Tmp : Cached_Result;
       begin
+         if Params /= No_Parameters then
+            --  ??? The cache should take the parameters into account
+            Found := False;
+            return;
+         end if;
+
          if Clock - Timestamp > Cache_Expiration_Delay then
             Reset;
             Found := False;
@@ -477,6 +486,49 @@ package body GNATCOLL.SQL.Exec is
              Cst_Select);
    end Is_Select_Query;
 
+   -----------
+   -- Image --
+   -----------
+
+   function Image
+     (Format : Formatter'Class; Param : SQL_Parameter) return String is
+   begin
+      case Param.Typ is
+         when Parameter_Text    =>
+            return String_To_SQL (Format, Param.Str_Val.all);
+         when Parameter_Integer =>
+            return Integer_To_SQL (Format, Param.Int_Val);
+         when Parameter_Float   =>
+            return Float_To_SQL (Format, Param.Float_Val);
+         when Parameter_Boolean =>
+            return Boolean_To_SQL (Format, Param.Bool_Val);
+         when Parameter_Time =>
+            return Time_To_SQL (Format, Param.Time_Val);
+         when Parameter_Date =>
+            return Date_To_SQL (Format, Param.Date_Val);
+      end case;
+   end Image;
+
+   -----------
+   -- Image --
+   -----------
+
+   function Image
+     (Format : Formatter'Class; Params : SQL_Parameters)
+      return String
+   is
+      Result : Unbounded_String;
+   begin
+      for P in Params'Range loop
+         Append (Result, ", ");
+         Append (Result, Image (P, 0));
+         Append (Result, "=>");
+         Append (Result, Image (Format, Params (P)));
+      end loop;
+
+      return To_String (Result);
+   end Image;
+
    --------------------------
    -- Post_Execute_And_Log --
    --------------------------
@@ -485,7 +537,8 @@ package body GNATCOLL.SQL.Exec is
      (R          : access Abstract_DBMS_Forward_Cursor'Class;
       Connection : access Database_Connection_Record'Class;
       Query      : String;
-      Is_Select  : Boolean)
+      Is_Select  : Boolean;
+      Params     : SQL_Parameters := No_Parameters)
    is
       function Get_Rows return String;
       --  The number of rows downloaded. If we only have a forward cursor, we
@@ -531,7 +584,8 @@ package body GNATCOLL.SQL.Exec is
             if Active (Me_Query) then
                Trace
                  (Me_Query,
-                  Query & " " & Status (DBMS_Forward_Cursor'Class (R.all))
+                  Query & Image (Connection.all, Params)
+                  & " " & Status (DBMS_Forward_Cursor'Class (R.all))
                   & " " & Error_Msg (DBMS_Forward_Cursor'Class (R.all))
                   & Get_User);
             end if;
@@ -539,7 +593,8 @@ package body GNATCOLL.SQL.Exec is
          elsif Active (Me_Select) then
             Trace
               (Me_Select,
-               Query & Get_Rows & " "
+               Query & Image (Connection.all, Params)
+               & Get_Rows & " "
                & Status (DBMS_Forward_Cursor'Class (R.all)) & Get_User);
          end if;
 
@@ -552,7 +607,8 @@ package body GNATCOLL.SQL.Exec is
             if Active (Me_Query) then
                Trace
                  (Me_Query,
-                  Query & " " & Status (DBMS_Forward_Cursor'Class (R.all))
+                  Query & Image (Connection.all, Params)
+                  & " " & Status (DBMS_Forward_Cursor'Class (R.all))
                   & " " & Error_Msg (DBMS_Forward_Cursor'Class (R.all))
                   & Get_User);
             end if;
@@ -560,7 +616,8 @@ package body GNATCOLL.SQL.Exec is
          elsif Active (Me_Query) then
             Trace
               (Me_Query,
-               Query & Get_Rows & " "
+               Query & Image (Connection.all, Params)
+               & Get_Rows & " "
                & Status (DBMS_Forward_Cursor'Class (R.all)) & Get_User);
          end if;
       end if;
@@ -602,7 +659,8 @@ package body GNATCOLL.SQL.Exec is
       Query      : String;
       Prepared   : DBMS_Stmt;
       Is_Select  : Boolean;
-      Direct     : Boolean)
+      Direct     : Boolean;
+      Params     : SQL_Parameters := No_Parameters)
    is
       Is_Begin    : constant Boolean := To_Lower (Query) = "begin";
       Is_Commit   : constant Boolean := To_Lower (Query) = "commit";
@@ -652,14 +710,16 @@ package body GNATCOLL.SQL.Exec is
               (Connection => Connection,
                Prepared   => Prepared,
                Is_Select  => Is_Select,
-               Direct     => Direct);
+               Direct     => Direct,
+               Params     => Params);
 
          else
             R := Connect_And_Execute
               (Connection => Connection,
                Query      => Query,
                Is_Select  => Is_Select,
-               Direct     => Direct);
+               Direct     => Direct,
+               Params     => Params);
          end if;
       end if;
 
@@ -669,7 +729,7 @@ package body GNATCOLL.SQL.Exec is
                 & Boolean'Image (Prepared /= No_DBMS_Stmt));
          Set_Failure (Connection);
       else
-         Post_Execute_And_Log (R, Connection, Query, Is_Select);
+         Post_Execute_And_Log (R, Connection, Query, Is_Select, Params);
       end if;
 
       Result.Res := R;
@@ -688,13 +748,15 @@ package body GNATCOLL.SQL.Exec is
    procedure Fetch
      (Result     : out Forward_Cursor;
       Connection : access Database_Connection_Record'Class;
-      Query      : String)
+      Query      : String;
+      Params     : SQL_Parameters := No_Parameters)
    is
       Is_Select   : constant Boolean := Is_Select_Query (Query);
    begin
       Result := No_Element;
       Execute_And_Log
-        (Result, Connection, Query, No_DBMS_Stmt, Is_Select, Direct => False);
+        (Result, Connection, Query, No_DBMS_Stmt, Is_Select, Direct => False,
+         Params => Params);
    end Fetch;
 
    -----------
@@ -704,10 +766,12 @@ package body GNATCOLL.SQL.Exec is
    procedure Fetch
      (Result     : out Forward_Cursor;
       Connection : access Database_Connection_Record'Class;
-      Query      : SQL_Query) is
+      Query      : SQL_Query;
+      Params     : SQL_Parameters := No_Parameters) is
    begin
       Fetch
-        (Result, Connection, To_String (To_String (Query, Connection.all)));
+        (Result, Connection, To_String (To_String (Query, Connection.all)),
+         Params);
    end Fetch;
 
    -----------
@@ -717,13 +781,15 @@ package body GNATCOLL.SQL.Exec is
    procedure Fetch
      (Result     : out Direct_Cursor;
       Connection : access Database_Connection_Record'Class;
-      Query      : String)
+      Query      : String;
+      Params     : SQL_Parameters := No_Parameters)
    is
       Is_Select   : constant Boolean := Is_Select_Query (Query);
    begin
       Result := No_Direct_Element;
       Execute_And_Log
-        (Result, Connection, Query, No_DBMS_Stmt, Is_Select, Direct => True);
+        (Result, Connection, Query, No_DBMS_Stmt, Is_Select, Direct => True,
+         Params => Params);
    end Fetch;
 
    -----------
@@ -733,10 +799,12 @@ package body GNATCOLL.SQL.Exec is
    overriding procedure Fetch
      (Result     : out Direct_Cursor;
       Connection : access Database_Connection_Record'Class;
-      Query      : GNATCOLL.SQL.SQL_Query) is
+      Query      : GNATCOLL.SQL.SQL_Query;
+      Params     : SQL_Parameters := No_Parameters) is
    begin
       Fetch
-        (Result, Connection, To_String (To_String (Query, Connection.all)));
+        (Result, Connection, To_String (To_String (Query, Connection.all)),
+         Params => Params);
    end Fetch;
 
    -------------
@@ -745,12 +813,13 @@ package body GNATCOLL.SQL.Exec is
 
    procedure Execute
      (Connection : access Database_Connection_Record'Class;
-      Query      : SQL_Query)
+      Query      : SQL_Query;
+      Params     : SQL_Parameters := No_Parameters)
    is
       R : Forward_Cursor;
       pragma Unreferenced (R);
    begin
-      Fetch (R, Connection, Query);
+      Fetch (R, Connection, Query, Params);
    end Execute;
 
    -------------
@@ -759,12 +828,13 @@ package body GNATCOLL.SQL.Exec is
 
    procedure Execute
      (Connection : access Database_Connection_Record'Class;
-      Query      : String)
+      Query      : String;
+      Params     : SQL_Parameters := No_Parameters)
    is
       R : Forward_Cursor;
       pragma Unreferenced (R);
    begin
-      Fetch (R, Connection, Query);
+      Fetch (R, Connection, Query, Params);
    end Execute;
 
    -------------
@@ -1265,7 +1335,8 @@ package body GNATCOLL.SQL.Exec is
    procedure Fetch
      (Result     : out Direct_Cursor;
       Connection : access Database_Connection_Record'Class;
-      Stmt       : in out Prepared_Statement)
+      Stmt       : in out Prepared_Statement;
+      Params     : SQL_Parameters := No_Parameters)
    is
       Found : Boolean;
       DStmt  : DBMS_Stmt := No_DBMS_Stmt;
@@ -1282,7 +1353,7 @@ package body GNATCOLL.SQL.Exec is
       if Stmt.Use_Cache
         and then Connection.DB.Caching
       then
-         Query_Cache.Get_Result (Stmt, Result, Found);
+         Query_Cache.Get_Result (Stmt, Result, Found, Params);
          if Found then
             Result.First; --  Move to first element
             if Active (Me_Cache) then
@@ -1321,7 +1392,8 @@ package body GNATCOLL.SQL.Exec is
 
       Execute_And_Log
         (Result, Connection,
-         Stmt.Cached.Str.all, DStmt, Stmt.Cached.Is_Select, Direct => True);
+         Stmt.Cached.Str.all, DStmt, Stmt.Cached.Is_Select, Direct => True,
+         Params => Params);
 
       --  ??? Should only cache if the query was successful
       if Stmt.Use_Cache
@@ -1338,7 +1410,8 @@ package body GNATCOLL.SQL.Exec is
    procedure Fetch
      (Result     : out Forward_Cursor;
       Connection : access Database_Connection_Record'Class;
-      Stmt       : in out Prepared_Statement)
+      Stmt       : in out Prepared_Statement;
+      Params     : SQL_Parameters := No_Parameters)
    is
       DStmt  : DBMS_Stmt := No_DBMS_Stmt;
    begin
@@ -1354,7 +1427,7 @@ package body GNATCOLL.SQL.Exec is
          declare
             R : Direct_Cursor;
          begin
-            Fetch (R, Connection, Stmt);
+            Fetch (R, Connection, Stmt, Params);
             Result := Forward_Cursor (R);
          end;
 
@@ -1426,9 +1499,11 @@ package body GNATCOLL.SQL.Exec is
      (Connection  : access Database_Connection_Record;
       Prepared    : DBMS_Stmt;
       Is_Select   : Boolean;
-      Direct      : Boolean) return Abstract_Cursor_Access
+      Direct      : Boolean;
+      Params      : SQL_Parameters := No_Parameters)
+      return Abstract_Cursor_Access
    is
-      pragma Unreferenced (Connection, Prepared, Is_Select, Direct);
+      pragma Unreferenced (Connection, Prepared, Is_Select, Direct, Params);
    begin
       return null;
    end Execute;
@@ -1441,11 +1516,58 @@ package body GNATCOLL.SQL.Exec is
      (Result     : out Direct_Cursor;
       Connection : access Database_Connection_Record'Class;
       Stmt       : SQL_Query;
-      Use_Cache  : Boolean)
+      Use_Cache  : Boolean;
+      Params     : SQL_Parameters := No_Parameters)
    is
       P : Prepared_Statement := Prepare (Stmt, Use_Cache => Use_Cache);
    begin
-      Result.Fetch (Connection, P);
+      Result.Fetch (Connection, P, Params);
    end Fetch;
+
+   ---------
+   -- "+" --
+   ---------
+
+   function "+" (Value : access String) return SQL_Parameter is
+   begin
+      return SQL_Parameter'
+        (Typ => Parameter_Text, Str_Val => Value.all'Unchecked_Access);
+   end "+";
+
+   ---------
+   -- "+" --
+   ---------
+
+   function "+" (Value : Integer) return SQL_Parameter is
+   begin
+      return SQL_Parameter'(Typ => Parameter_Integer, Int_Val => Value);
+   end "+";
+
+   ---------
+   -- "+" --
+   ---------
+
+   function "+" (Value : Boolean) return SQL_Parameter is
+   begin
+      return SQL_Parameter'(Typ => Parameter_Boolean, Bool_Val => Value);
+   end "+";
+
+   ---------
+   -- "+" --
+   ---------
+
+   function "+" (Value : Float) return SQL_Parameter is
+   begin
+      return SQL_Parameter'(Typ => Parameter_Float, Float_Val => Value);
+   end "+";
+
+   ---------
+   -- "+" --
+   ---------
+
+   function "+" (Time : Ada.Calendar.Time) return SQL_Parameter is
+   begin
+      return SQL_Parameter'(Typ => Parameter_Time, Time_Val => Time);
+   end "+";
 
 end GNATCOLL.SQL.Exec;

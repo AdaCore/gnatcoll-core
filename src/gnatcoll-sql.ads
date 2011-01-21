@@ -1,7 +1,7 @@
 -----------------------------------------------------------------------
 --                           G N A T C O L L                         --
 --                                                                   --
---                 Copyright (C) 2005-2010, AdaCore                  --
+--                 Copyright (C) 2005-2011, AdaCore                  --
 --                                                                   --
 -- GPS is free  software;  you can redistribute it and/or modify  it --
 -- under the terms of the GNU General Public License as published by --
@@ -209,30 +209,48 @@ package GNATCOLL.SQL is
    --  Specify a specific sort order. This is only used in the Order_By clause
    --  of a Select statement
 
-   package Integer_Fields is new Field_Types (Integer, Integer_To_SQL);
+   package Integer_Fields is new Field_Types
+     (Integer, Integer_To_SQL, Parameter_Integer);
    type SQL_Field_Integer is new Integer_Fields.Field with null record;
    Null_Field_Integer : constant SQL_Field_Integer;
+   function Integer_Param (Index : Positive) return Integer_Fields.Field'Class
+                           renames Integer_Fields.Param;
 
-   package Text_Fields is new Field_Types (String, String_To_SQL);
+   package Text_Fields is new Field_Types
+     (String, String_To_SQL, Parameter_Text);
    type SQL_Field_Text is new Text_Fields.Field with null record;
    Null_Field_Text : constant SQL_Field_Text;
+   function Text_Param (Index : Positive) return Text_Fields.Field'Class
+                        renames Text_Fields.Param;
 
-   package Boolean_Fields is new Field_Types (Boolean, Boolean_To_SQL);
+   package Boolean_Fields is new Field_Types
+     (Boolean, Boolean_To_SQL, Parameter_Boolean);
    type SQL_Field_Boolean is new Boolean_Fields.Field with null record;
    Null_Field_Boolean : constant SQL_Field_Boolean;
+   function Boolean_Param (Index : Positive) return Boolean_Fields.Field'Class
+                           renames Boolean_Fields.Param;
 
-   package Float_Fields is new Field_Types (Float, Float_To_SQL);
+   package Float_Fields is new Field_Types
+     (Float, Float_To_SQL, Parameter_Float);
    type SQL_Field_Float is new Float_Fields.Field with null record;
    Null_Field_Float : constant SQL_Field_Float;
+   function Float_Param (Index : Positive) return Float_Fields.Field'Class
+                         renames Float_Fields.Param;
 
-   package Time_Fields is new Field_Types (Ada.Calendar.Time, Time_To_SQL);
+   package Time_Fields is new Field_Types
+     (Ada.Calendar.Time, Time_To_SQL, Parameter_Time);
    type SQL_Field_Time is new Time_Fields.Field with null record;
    Null_Field_Time : constant SQL_Field_Time;
+   function Time_Param (Index : Positive) return Time_Fields.Field'Class
+                        renames Time_Fields.Param;
    --  A timestamp, ie date + time
 
-   package Date_Fields is new Field_Types (Ada.Calendar.Time, Date_To_SQL);
+   package Date_Fields is new Field_Types
+     (Ada.Calendar.Time, Date_To_SQL, Parameter_Date);
    type SQL_Field_Date is new Date_Fields.Field with null record;
    Null_Field_Date : constant SQL_Field_Date;
+   function Date_Param (Index : Positive) return Date_Fields.Field'Class
+                        renames Date_Fields.Param;
    --  Only includes the date, not the time
 
    function From_String
@@ -530,6 +548,9 @@ package GNATCOLL.SQL is
      (Self : SQL_Field'Class; List : SQL_Field_List) return SQL_Criteria;
    function SQL_In
      (Self : SQL_Field'Class; List : String) return SQL_Criteria;
+   function SQL_In
+     (Self : SQL_Field'Class; Text : Text_Fields.Field'Class)
+      return SQL_Criteria;
    function SQL_In
      (Self : SQL_Field'Class; Subquery : SQL_Query) return SQL_Criteria;
    function SQL_Not_In

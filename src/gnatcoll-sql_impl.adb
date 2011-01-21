@@ -1,7 +1,7 @@
 -----------------------------------------------------------------------
 --                           G N A T C O L L                         --
 --                                                                   --
---                 Copyright (C) 2005-2010, AdaCore                  --
+--                 Copyright (C) 2005-2011, AdaCore                  --
 --                                                                   --
 -- GPS is free  software;  you can redistribute it and/or modify  it --
 -- under the terms of the GNU General Public License as published by --
@@ -52,16 +52,33 @@ package body GNATCOLL.SQL_Impl is
    --  instance via Expression, From_String, or operators on time. Such fields
    --  are still typed
 
-   type Named_Field_Internal is new SQL_Field_Internal with record
-      Table : Table_Names := No_Names;
+   type Field_Type is (Field_Std, Field_Operator, Field_Parameter);
+   --  The type of the field:
+   --     Field_Std: Str_Value is directly the text of the field
+   --     Field_Operator:  Str_Value is the operator, that acts on several
+   --          fields ("-" for instance")
+   --     Field_Parameter: the field's exact value is unknown, and will be
+   --          substituted at runtime (for instance "?1" in sqlite3). Str_Value
+   --          is then the index of the field.
 
-      Str_Value : GNAT.Strings.String_Access;
-      --  The expression representing the field in SQL
+   type Named_Field_Internal (Typ : Field_Type)
+     is new SQL_Field_Internal with record
+      Table     : Table_Names := No_Names;
 
-      Operator : GNAT.Strings.String_Access;
-      --  null unless we have an operator on several fields ("-" for instance)
+      case Typ is
+         when Field_Std =>
+            Str_Value : GNAT.Strings.String_Access;
+            --  The expression representing the field in SQL. See Field_Type
+            --  for more information
 
-      List     : SQL_Field_List;
+         when Field_Operator =>
+            Op_Value : GNAT.Strings.String_Access;
+            List     : SQL_Field_List;
+
+         when Field_Parameter =>
+            Index      : Positive;
+            Param_Type : Parameter_Type;
+      end case;
    end record;
    type Named_Field_Internal_Access is access all Named_Field_Internal'Class;
    overriding procedure Free (Self : in out Named_Field_Internal);
@@ -256,8 +273,11 @@ package body GNATCOLL.SQL_Impl is
 
    procedure Free (Self : in out Named_Field_Internal) is
    begin
-      Free (Self.Operator);
-      Free (Self.Str_Value);
+      case Self.Typ is
+         when Field_Std       => Free (Self.Str_Value);
+         when Field_Operator  => Free (Self.Op_Value);
+         when Field_Parameter => null;
+      end case;
    end Free;
 
    ---------------
@@ -272,36 +292,37 @@ package body GNATCOLL.SQL_Impl is
       Result : Unbounded_String;
       C      : Field_List.Cursor;
    begin
-      if Self.Str_Value /= null then
-         if Self.Table = No_Names then
-            Result := To_Unbounded_String (Self.Str_Value.all);
+      case Self.Typ is
+         when Field_Std =>
+            if Self.Table = No_Names then
+               return Self.Str_Value.all;
 
-         elsif Long then
-            if Self.Table.Instance = null then
-               Result := To_Unbounded_String
-                 (Self.Table.Name.all & '.' & Self.Str_Value.all);
+            elsif Long then
+               if Self.Table.Instance = null then
+                  return Self.Table.Name.all & '.' & Self.Str_Value.all;
+               else
+                  return Self.Table.Instance.all & '.' & Self.Str_Value.all;
+               end if;
             else
-               Result := To_Unbounded_String
-                 (Self.Table.Instance.all & '.' & Self.Str_Value.all);
+               return Self.Str_Value.all;
             end if;
-         else
-            Result := To_Unbounded_String (Self.Str_Value.all);
-         end if;
-      end if;
 
-      if Self.Operator /= null then
-         C := First (Self.List.List);
-         Result := To_Unbounded_String (To_String (Element (C), Format));
-         Next (C);
-
-         while Has_Element (C) loop
-            Result := Result & " " & Self.Operator.all & " "
-              & To_String (Element (C), Format);
+         when Field_Operator =>
+            C := First (Self.List.List);
+            Result := To_Unbounded_String (To_String (Element (C), Format));
             Next (C);
-         end loop;
-      end if;
 
-      return To_String (Result);
+            while Has_Element (C) loop
+               Result := Result & " " & Self.Str_Value.all & " "
+                 & To_String (Element (C), Format);
+               Next (C);
+            end loop;
+
+            return To_String (Result);
+
+         when Field_Parameter =>
+            return Parameter_String (Format, Self.Index, Self.Param_Type);
+      end case;
    end To_String;
 
    -------------------
@@ -348,12 +369,15 @@ package body GNATCOLL.SQL_Impl is
       To           : in out SQL_Field_List'Class;
       Is_Aggregate : in out Boolean)
    is
-      C : Field_List.Cursor := First (Self.List.List);
+      C : Field_List.Cursor;
    begin
-      while Has_Element (C) loop
-         Append_If_Not_Aggregate (Element (C), To, Is_Aggregate);
-         Next (C);
-      end loop;
+      if Self.Typ = Field_Operator then
+         C := First (Self.List.List);
+         while Has_Element (C) loop
+            Append_If_Not_Aggregate (Element (C), To, Is_Aggregate);
+            Next (C);
+         end loop;
+      end if;
 
       --  We create a SQL_Field_Text, but it might be any other type.
       --  This isn't really relevant, however, since the exact type is not used
@@ -849,7 +873,9 @@ package body GNATCOLL.SQL_Impl is
 
          else
             --  Setting a field to null
-            N := new Named_Field_Internal;
+            N := new Named_Field_Internal (Field_Std);
+            Named_Field_Internal (N.all).Str_Value := new String'(Null_String);
+
             List := List
               & Any_Fields.Field'
               (Table    => null,
@@ -857,7 +883,6 @@ package body GNATCOLL.SQL_Impl is
                Instance_Index => -1,
                Name     => null,
                Data     => (Ada.Finalization.Controlled with N));
-            Named_Field_Internal (N.all).Str_Value := new String'(Null_String);
          end if;
 
          Next (C);
@@ -972,6 +997,10 @@ package body GNATCOLL.SQL_Impl is
       procedure Unchecked_Free is new Ada.Unchecked_Deallocation
         (Ada_Type, Ada_Type_Access);
 
+      function Internal_From_Data
+        (Data : SQL_Field_Internal_Access) return Field'Class;
+      pragma Inline (Internal_From_Data);
+
       ----------
       -- Free --
       ----------
@@ -1009,7 +1038,8 @@ package body GNATCOLL.SQL_Impl is
          F : Typed_Data_Fields.Field
            (Table => null, Instance => Table.Instance,
             Instance_Index => Table.Instance_Index, Name => null);
-         D : constant Named_Field_Internal_Access := new Named_Field_Internal;
+         D : constant Named_Field_Internal_Access :=
+           new Named_Field_Internal (Field_Std);
       begin
          D.Table := (Name => null, Instance => Table.Instance,
                      Instance_Index => Table.Instance_Index);
@@ -1018,21 +1048,30 @@ package body GNATCOLL.SQL_Impl is
          return Field (F);
       end From_Table;
 
+      ------------------------
+      -- Internal_From_Data --
+      ------------------------
+
+      function Internal_From_Data
+        (Data : SQL_Field_Internal_Access) return Field'Class is
+      begin
+         return Typed_Data_Fields.Field'
+           (Table => null, Instance => null, Name => null,
+            Instance_Index => -1,
+            Data => (Ada.Finalization.Controlled with Data => Data));
+      end Internal_From_Data;
+
       ----------------
       -- Expression --
       ----------------
 
       function Expression (Value : Ada_Type) return Field'Class is
          Data : constant Named_Field_Internal_Access :=
-           new Typed_Named_Field_Internal;
+           new Typed_Named_Field_Internal (Field_Std);
       begin
          Typed_Named_Field_Internal (Data.all).Data_Value :=
            new Ada_Type'(Value);
-         return Typed_Data_Fields.Field'
-           (Table => null, Instance => null,
-            Instance_Index => -1, Name => null,
-            Data => (Ada.Finalization.Controlled with
-                     Data => SQL_Field_Internal_Access (Data)));
+         return Internal_From_Data (SQL_Field_Internal_Access (Data));
       end Expression;
 
       -----------------
@@ -1041,15 +1080,24 @@ package body GNATCOLL.SQL_Impl is
 
       function From_String (SQL : String) return Field'Class is
          Data : constant Named_Field_Internal_Access :=
-           new Named_Field_Internal;
+           new Named_Field_Internal (Field_Std);
       begin
          Data.Str_Value := new String'(SQL);
-         return Typed_Data_Fields.Field'
-           (Table => null, Instance => null, Name => null,
-            Instance_Index => -1,
-            Data => (Ada.Finalization.Controlled with
-                     Data => SQL_Field_Internal_Access (Data)));
+         return Internal_From_Data (SQL_Field_Internal_Access (Data));
       end From_String;
+
+      -----------
+      -- Param --
+      -----------
+
+      function Param (Index : Positive) return Field'Class is
+         Data : constant Named_Field_Internal_Access :=
+           new Named_Field_Internal (Field_Parameter);
+      begin
+         Data.Index := Index;
+         Data.Param_Type := Param_Type;
+         return Internal_From_Data (SQL_Field_Internal_Access (Data));
+      end Param;
 
       ---------
       -- "&" --
@@ -1087,9 +1135,10 @@ package body GNATCOLL.SQL_Impl is
          F : Typed_Data_Fields.Field
            (Table => null, Instance => null,
             Instance_Index => -1, Name => null);
-         D : constant Named_Field_Internal_Access := new Named_Field_Internal;
+         D : constant Named_Field_Internal_Access :=
+           new Named_Field_Internal (Field_Operator);
       begin
-         D.Operator := new String'(Name);
+         D.Op_Value := new String'(Name);
          D.List := Field1 & Field2;
          F.Data.Data := SQL_Field_Internal_Access (D);
          return F;
@@ -1105,20 +1154,20 @@ package body GNATCOLL.SQL_Impl is
          F : Typed_Data_Fields.Field
            (Table => null, Instance => null, Name => null,
             Instance_Index => -1);
-         D : constant Named_Field_Internal_Access := new Named_Field_Internal;
+         D : constant Named_Field_Internal_Access :=
+           new Named_Field_Internal (Field_Operator);
 
          F2 : Typed_Data_Fields.Field
            (Table => null, Instance => null, Name => null,
             Instance_Index => -1);
          D2 : constant Named_Field_Internal_Access :=
-           new Named_Field_Internal;
+           new Named_Field_Internal (Field_Std);
 
       begin
-         D.Operator := new String'(Name);
-
          D2.Str_Value := new String'(Prefix & Scalar'Image (Operand) & Suffix);
          F2.Data.Data := SQL_Field_Internal_Access (D2);
 
+         D.Op_Value := new String'(Name);
          D.List := Self & F2;
          F.Data.Data := SQL_Field_Internal_Access (D);
          return F;
@@ -1132,7 +1181,8 @@ package body GNATCOLL.SQL_Impl is
          F : Typed_Data_Fields.Field
            (Table => null, Instance => null, Name => null,
             Instance_Index => -1);
-         D : constant Named_Field_Internal_Access := new Named_Field_Internal;
+         D : constant Named_Field_Internal_Access :=
+           new Named_Field_Internal (Field_Std);
       begin
          D.Str_Value := new String'(Name);
          F.Data.Data := SQL_Field_Internal_Access (D);
@@ -1307,7 +1357,7 @@ package body GNATCOLL.SQL_Impl is
       function "=" (Self : Field; Value : Ada_Type) return SQL_Assignment is
          Result : SQL_Assignment;
          F   : constant Named_Field_Internal_Access :=
-           new Typed_Named_Field_Internal;
+           new Typed_Named_Field_Internal (Field_Std);
       begin
          Typed_Named_Field_Internal (F.all).Data_Value := new Ada_Type'(Value);
          Assign (Result, Self, F);

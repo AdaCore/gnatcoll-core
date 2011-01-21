@@ -1,7 +1,7 @@
 -----------------------------------------------------------------------
 --                               G N A T C O L L                     --
 --                                                                   --
---                    Copyright (C) 2009-2010, AdaCore               --
+--                    Copyright (C) 2009-2011, AdaCore               --
 --                                                                   --
 -- GPS is free  software;  you can redistribute it and/or modify  it --
 -- under the terms of the GNU General Public License as published by --
@@ -191,6 +191,24 @@ package GNATCOLL.SQL.Sqlite.Gnade is
    function Column_Name (Stmt : Statement; Col : Natural) return String;
    --  Return the name of the specific column (or the value of the "AS" if one
    --  was specified.
+
+   procedure Bind_Double
+     (Stmt : Statement; Index : Integer; Value : Interfaces.C.double);
+   pragma Import (C, Bind_Double, "sqlite3_bind_double");
+
+   procedure Bind_Int
+     (Stmt : Statement; Index : Integer; Value : Interfaces.C.int);
+   pragma Import (C, Bind_Int, "sqlite3_bind_int");
+
+   procedure Bind_Null (Stmt : Statement; Index : Integer);
+   pragma Import (C, Bind_Null, "sqlite3_bind_null");
+
+   procedure Bind_Text
+     (Stmt : Statement; Index : Integer;
+      Str : System.Address; N_Bytes : Natural;
+      Destructor : System.Address := System.Null_Address);
+   pragma Import (C, Bind_Text, "sqlite3_bind_text");
+   --  Define the values for the parameters
 
    procedure Finalize (Stmt : Statement);
    --  Finalize and free the memory occupied by stmt
