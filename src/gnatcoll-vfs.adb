@@ -1,7 +1,7 @@
 -----------------------------------------------------------------------
 --                          G N A T C O L L                          --
 --                                                                   --
---                 Copyright (C) 2003-2010, AdaCore                  --
+--                 Copyright (C) 2003-2011, AdaCore                  --
 --                                                                   --
 -- GPS is free  software;  you can redistribute it and/or modify  it --
 -- under the terms of the GNU General Public License as published by --
@@ -718,7 +718,7 @@ package body GNATCOLL.VFS is
       end if;
 
       if not Is_Configured (To_Host) then
-         raise GNATCOLL.IO.Remote.Remote_Config_Error;
+         raise VFS_Remote_Config_Error;
       end if;
 
       declare
@@ -762,7 +762,7 @@ package body GNATCOLL.VFS is
       end if;
 
       if not Is_Configured (File.Get_Host) then
-         raise GNATCOLL.IO.Remote.Remote_Config_Error;
+         raise VFS_Remote_Config_Error;
       end if;
 
       declare
