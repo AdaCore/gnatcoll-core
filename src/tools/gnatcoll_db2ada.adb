@@ -35,6 +35,7 @@ with Ada.Text_IO;
 with Ada.Strings.Unbounded;      use Ada.Strings.Unbounded;
 with GNAT.Command_Line;          use GNAT.Command_Line;
 with GNAT.OS_Lib;                use GNAT.OS_Lib;
+with GNAT.Strings;
 with GNATCOLL.SQL.Exec;          use GNATCOLL.SQL, GNATCOLL.SQL.Exec;
 with GNATCOLL.SQL.Inspect;       use GNATCOLL.SQL.Inspect;
 with GNATCOLL.SQL.Postgres;      use GNATCOLL.SQL.Postgres;
@@ -43,7 +44,7 @@ with GNATCOLL.Utils;             use GNATCOLL.Utils;
 
 procedure GNATCOLL_Db2Ada is
 
-   Generated : constant String := "Database";
+   Generated : GNAT.Strings.String_Access := new String'("Database");
 
    type Output_Kind is (Output_Ada_Specs, Output_Text, Output_Createdb);
    Output : Output_Kind := Output_Ada_Specs;
@@ -150,8 +151,10 @@ procedure GNATCOLL_Db2Ada is
       Put_Line ("    Similar to -enum, but dumps one specific value");
       Put_Line ("    from a table, selected with criteria.");
       Put_Line ("-text: generate a textual description of the database,");
-      Put_Line ("       instead of usual output");
+      Put_Line ("    instead of usual output");
       Put_Line ("-createdb: return the SQL commands to create the database");
+      Put_Line ("-api PKG: generate an Ada package describing the schema");
+      Put_Line ("    This is the default output, with PKG='database'");
 
       GNAT.OS_Lib.OS_Exit (0);
    end Print_Help;
@@ -178,9 +181,17 @@ procedure GNATCOLL_Db2Ada is
    begin
       loop
          case Getopt ("dbhost= h -help dbname= dbuser= dbpasswd= enum= var="
-                      & " dbtype= dbmodel= text createdb") is
+                      & " dbtype= dbmodel= text createdb api=") is
             when 'h' | '-' =>
                Print_Help;
+
+            when 'a' =>
+               if Parameter /= "" then
+                  Free (Generated);
+                  Generated := new String'(Parameter);
+               end if;
+
+               Output := Output_Ada_Specs;
 
             when 'd' =>
                if Full_Switch = "dbhost" then
@@ -393,7 +404,7 @@ begin
 
    case Output is
       when Output_Ada_Specs =>
-         Generate (Generated);
+         Generate (Generated.all);
 
       when Output_Text =>
          File_IO.Write_Schema (Schema);

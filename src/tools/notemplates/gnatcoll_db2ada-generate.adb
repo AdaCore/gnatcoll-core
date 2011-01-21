@@ -410,8 +410,8 @@ begin
    New_Line (Spec_File);
    For_Each_Table (Schema, Print_Table_Global'Access);
 
-   Put_Line (Spec_File, "end Database;");
-   Put_Line (Body_File, "end Database;");
+   Put_Line (Spec_File, "end " & Generated & ";");
+   Put_Line (Body_File, "end " & Generated & ";");
 
    Close (Spec_File);
    Close (Body_File);
