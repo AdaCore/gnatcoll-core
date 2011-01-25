@@ -4135,6 +4135,7 @@ package body GNATCOLL.Projects is
       Reset (Tree, Tree.Data.Env);
 
       Trace (Me, "Set project path to " & Predefined_Path);
+      Initialize_Empty (Tree.Data.Tree.Project_Path);
       Prj.Env.Set_Path (Tree.Data.Tree.Project_Path, Predefined_Path);
 
       Project := Empty_Node;
@@ -4156,8 +4157,7 @@ package body GNATCOLL.Projects is
          Store_Comments    => True,
          Is_Config_File    => False,
          Flags             => Create_Flags (On_Error'Unrestricted_Access),
-         Current_Directory => Get_Current_Dir,
-         Target_Name       => "");
+         Current_Directory => Get_Current_Dir);
 
       if Project /= Empty_Node then
          Tree.Data.Root := Tree.Instance_From_Node (Project);
@@ -5311,8 +5311,7 @@ package body GNATCOLL.Projects is
             Is_Config_File         => False,
             Current_Directory      => Get_Current_Dir,
             Flags                  => Create_Flags (null, False),
-            Always_Errout_Finalize => True,
-            Target_Name            => "");
+            Always_Errout_Finalize => True);
 
          Prj.Err.Finalize;
       end if;
