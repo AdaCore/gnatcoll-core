@@ -4087,6 +4087,8 @@ package body GNATCOLL.Projects is
 
       if Tree.Data.Tree = null then
          Tree.Data.Tree := new Project_Node_Tree_Data;
+         Prj.Env.Initialize_Default_Project_Path
+            (Tree.Data.Tree.Project_Path, Target_Name => "");
       end if;
 
       Prj.Tree.Initialize (Tree.Data.Tree);
