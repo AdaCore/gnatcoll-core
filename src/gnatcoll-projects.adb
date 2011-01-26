@@ -4155,7 +4155,6 @@ package body GNATCOLL.Projects is
       Prj.Part.Parse
         (Tree.Data.Tree, Project,
          +Root_Project_Path.Full_Name,
-         True,
          Store_Comments    => True,
          Is_Config_File    => False,
          Flags             => Create_Flags (On_Error'Unrestricted_Access),
@@ -5312,8 +5311,7 @@ package body GNATCOLL.Projects is
             +Full_Name (Imported_Project_Location),
             Is_Config_File         => False,
             Current_Directory      => Get_Current_Dir,
-            Flags                  => Create_Flags (null, False),
-            Always_Errout_Finalize => True);
+            Flags                  => Create_Flags (null, False));
 
          Prj.Err.Finalize;
       end if;

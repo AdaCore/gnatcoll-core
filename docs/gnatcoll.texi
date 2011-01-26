@@ -930,7 +930,7 @@ available from all the code that interfaces with the scripting language.
 
 Like the rest of @value{gnatcoll}, this is a tagged type, which you can
 extend in your own code. For instance, the GPS programming environment is
-organized as a kernel and several option modules. The kernel provides
+organized as a kernel and several optional modules. The kernel provides
 the core functionality of GPS, and should be available from most functions
 that interface with the scripting languages. Since these functions have
 very specific profiles, we cannot pass additional arguments to them. One
