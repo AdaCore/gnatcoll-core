@@ -2757,18 +2757,20 @@ package body GNATCOLL.Projects is
             Default     => External_Default (Variable),
             String_Type => String_Type_Of (Variable, T),
             Value       => Prj.Ext.Value_Of
-              (Tree.Tree, V, With_Default => External_Default (Variable)));
+              (Tree.Tree.External, V,
+               With_Default => External_Default (Variable)));
 
          List (Curr) := Var;
 
          --  Ensure the external reference actually exists and has a valid
          --  value.
 
-         Is_Valid := Prj.Ext.Value_Of (T, Var.Name) /= No_Name;
+         Is_Valid := Prj.Ext.Value_Of (T.External, Var.Name) /= No_Name;
 
          if Is_Valid then
             declare
-               Current : constant Name_Id := Prj.Ext.Value_Of (T, Var.Name);
+               Current : constant Name_Id :=
+                  Prj.Ext.Value_Of (T.External, Var.Name);
                Iter : String_List_Iterator := Value_Of (T, Var);
             begin
                Is_Valid := False;
@@ -2785,14 +2787,14 @@ package body GNATCOLL.Projects is
 
          if not Is_Valid then
             if Var.Default /= No_Name then
-               Prj.Ext.Add (T, N, Get_Name_String (Var.Default));
+               Prj.Ext.Add (T.External, N, Get_Name_String (Var.Default));
             else
                Get_Name_String
                  (String_Value_Of
                     (First_Literal_String
                        (Var.String_Type, T), T));
                Prj.Ext.Add
-                 (T, N, Name_Buffer (Name_Buffer'First .. Name_Len));
+                 (T.External, N, Name_Buffer (Name_Buffer'First .. Name_Len));
             end if;
          end if;
 
@@ -2843,7 +2845,7 @@ package body GNATCOLL.Projects is
       for V in Tree.Scenario_Variables'Range loop
          Tree.Scenario_Variables (V).Value :=
            Prj.Ext.Value_Of
-             (Tree.Tree, Tree.Scenario_Variables (V).Name,
+             (Tree.Tree.External, Tree.Scenario_Variables (V).Name,
               With_Default => Tree.Scenario_Variables (V).Default);
       end loop;
 
@@ -2927,7 +2929,7 @@ package body GNATCOLL.Projects is
    begin
       for V in Vars'Range loop
          Prj.Ext.Add
-           (Self.Data.Tree,
+           (Self.Data.Tree.External,
             Get_String (Vars (V).Name),
             Get_String (Vars (V).Value));
       end loop;
@@ -5686,10 +5688,10 @@ package body GNATCOLL.Projects is
         (Tree.Data.Tree, Tree.Root_Project,
          N, Old_V, Callback'Unrestricted_Access);
 
-      if Prj.Ext.Value_Of (Tree_N, N) /= No_Name
-        and then Prj.Ext.Value_Of (Tree_N, N) = Old_V
+      if Prj.Ext.Value_Of (Tree_N.External, N) /= No_Name
+        and then Prj.Ext.Value_Of (Tree_N.External, N) = Old_V
       then
-         Prj.Ext.Add (Tree_N, External_Name, New_Value);
+         Prj.Ext.Add (Tree_N.External, External_Name, New_Value);
       end if;
 
       Tree.Root_Project.Set_Modified (True);
@@ -5797,15 +5799,15 @@ package body GNATCOLL.Projects is
 
       --  Reset the value of the external variable if needed
 
-      if Prj.Ext.Value_Of (Tree_N, Ext_Var) = V_Name then
+      if Prj.Ext.Value_Of (Tree_N.External, Ext_Var) = V_Name then
          if Type_Decl /= Empty_Node then
-            Prj.Ext.Add (Tree_N,
+            Prj.Ext.Add (Tree_N.External,
                  External_Name,
                  Get_String (String_Value_Of
                                (First_Literal_String (Type_Decl, Tree_N),
                                 Tree_N)));
          else
-            Prj.Ext.Add (Tree_N, External_Name, "");
+            Prj.Ext.Add (Tree_N.External, External_Name, "");
          end if;
       end if;
 
