@@ -3090,17 +3090,21 @@ package body GNATCOLL.Projects is
    is
       Val    : Variable_Value;
    begin
-      Makeutl.Get_Switches
-        (Source_File  => File_Name_Type
-           (Get_String (File.Display_Base_Name)),
-         Source_Lang  => Get_String (Language),
-         Source_Prj   => Project.Data.View,
-         Pkg_Name     => Get_String (In_Pkg),
-         Project_Tree => Project.Data.Tree.View,
-         Value        => Val,
-         Is_Default   => Is_Default_Value);
+      if Get_View (Project) /= Prj.No_Project then
+         Makeutl.Get_Switches
+           (Source_File  => File_Name_Type
+              (Get_String (File.Display_Base_Name)),
+            Source_Lang  => Get_String (Language),
+            Source_Prj   => Project.Data.View,
+            Pkg_Name     => Get_String (In_Pkg),
+            Project_Tree => Project.Data.Tree.View,
+            Value        => Val,
+            Is_Default   => Is_Default_Value);
 
-      Value := Variable_Value_To_List (Project, Val);
+         Value := Variable_Value_To_List (Project, Val);
+      else
+         Value := null;
+      end if;
 
       if Value = null then
          --  No switches
