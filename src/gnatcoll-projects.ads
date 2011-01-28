@@ -1,7 +1,7 @@
 -----------------------------------------------------------------------
 --                          G N A T C O L L                          --
 --                                                                   --
---                   Copyright (C) 2002-2010, AdaCore                --
+--                   Copyright (C) 2002-2011, AdaCore                --
 --                                                                   --
 -- GPS is free  software;  you can redistribute it and/or modify  it --
 -- under the terms of the GNU General Public License as published by --
@@ -98,7 +98,7 @@ private with Namet;
 
 package GNATCOLL.Projects is
 
-   type Project_Environment is tagged private;
+   type Project_Environment (<>) is tagged private;
    type Project_Environment_Access is access all Project_Environment'Class;
    --  This type describes the conditions under which a project is loaded. This
    --  includes scenario variables, various settings that affect the loading
@@ -106,6 +106,9 @@ package GNATCOLL.Projects is
    --  in which the runtime files can be found.
    --  This environment might be common to a set of project trees loaded at the
    --  same time in memory.
+   --  You can already create such types via the Initialize subprogram below.
+   --  However, a default environment will be build automatically if you do
+   --  not provide one when parsing a project.
 
    type Project_Tree is tagged private;
    type Project_Tree_Access is access all Project_Tree'Class;
@@ -116,6 +119,9 @@ package GNATCOLL.Projects is
    --  In practice, this is not necessarily a "tree" in the data structure
    --  sense, more like a graph, but the term Tree makes it more obvious that
    --  one of the projects plays a special role, the root project.
+
+   procedure Initialize (Self : out Project_Environment_Access);
+   --  Allocate a new environment and initialize internal data
 
    procedure Free (Self : in out Project_Environment_Access);
    procedure Free (Self : in out Project_Tree_Access);
@@ -1299,6 +1305,8 @@ private
    end record;
 
    type Project_Environment is tagged record
+      Env : Prj.Tree.Environment;
+
       Predefined_Object_Path : GNATCOLL.VFS.File_Array_Access;
       --  := new GNATCOLL.VFS.File_Array (1 .. 0);
       --  Predefined object path for the runtime library

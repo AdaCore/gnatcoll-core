@@ -2757,7 +2757,7 @@ package body GNATCOLL.Projects is
             Default     => External_Default (Variable),
             String_Type => String_Type_Of (Variable, T),
             Value       => Prj.Ext.Value_Of
-              (Tree.Tree.External, V,
+              (Tree.Env.Env.External, V,
                With_Default => External_Default (Variable)));
 
          List (Curr) := Var;
@@ -2765,12 +2765,13 @@ package body GNATCOLL.Projects is
          --  Ensure the external reference actually exists and has a valid
          --  value.
 
-         Is_Valid := Prj.Ext.Value_Of (T.External, Var.Name) /= No_Name;
+         Is_Valid := Prj.Ext.Value_Of
+            (Tree.Env.Env.External, Var.Name) /= No_Name;
 
          if Is_Valid then
             declare
                Current : constant Name_Id :=
-                  Prj.Ext.Value_Of (T.External, Var.Name);
+                  Prj.Ext.Value_Of (Tree.Env.Env.External, Var.Name);
                Iter : String_List_Iterator := Value_Of (T, Var);
             begin
                Is_Valid := False;
@@ -2787,14 +2788,16 @@ package body GNATCOLL.Projects is
 
          if not Is_Valid then
             if Var.Default /= No_Name then
-               Prj.Ext.Add (T.External, N, Get_Name_String (Var.Default));
+               Prj.Ext.Add
+                  (Tree.Env.Env.External, N, Get_Name_String (Var.Default));
             else
                Get_Name_String
                  (String_Value_Of
                     (First_Literal_String
                        (Var.String_Type, T), T));
                Prj.Ext.Add
-                 (T.External, N, Name_Buffer (Name_Buffer'First .. Name_Len));
+                 (Tree.Env.Env.External, N,
+                  Name_Buffer (Name_Buffer'First .. Name_Len));
             end if;
          end if;
 
@@ -2845,7 +2848,7 @@ package body GNATCOLL.Projects is
       for V in Tree.Scenario_Variables'Range loop
          Tree.Scenario_Variables (V).Value :=
            Prj.Ext.Value_Of
-             (Tree.Tree.External, Tree.Scenario_Variables (V).Name,
+             (Tree.Env.Env.External, Tree.Scenario_Variables (V).Name,
               With_Default => Tree.Scenario_Variables (V).Default);
       end loop;
 
@@ -2929,7 +2932,7 @@ package body GNATCOLL.Projects is
    begin
       for V in Vars'Range loop
          Prj.Ext.Add
-           (Self.Data.Tree.External,
+           (Self.Data.Env.Env.External,
             Get_String (Vars (V).Name),
             Get_String (Vars (V).Value));
       end loop;
@@ -4069,6 +4072,20 @@ package body GNATCOLL.Projects is
       Trace (Me, "End of Load project");
    end Load;
 
+   ----------------
+   -- Initialize --
+   ----------------
+
+   procedure Initialize (Self : out Project_Environment_Access) is
+   begin
+      if Self = null then
+         Self := new Project_Environment;
+         Prj.Tree.Initialize (Self.Env, Create_Flags (null));
+         Prj.Env.Initialize_Default_Project_Path
+            (Self.Env.Project_Path, Target_Name => "");
+      end if;
+   end Initialize;
+
    -----------
    -- Reset --
    -----------
@@ -4081,7 +4098,7 @@ package body GNATCOLL.Projects is
          Tree.Data := new Project_Tree_Data;
 
          if Env = null then
-            Tree.Data.Env := new Project_Environment;
+            Initialize (Tree.Data.Env);
          else
             Tree.Data.Env := Env;
          end if;
@@ -4089,8 +4106,6 @@ package body GNATCOLL.Projects is
 
       if Tree.Data.Tree = null then
          Tree.Data.Tree := new Project_Node_Tree_Data;
-         Prj.Env.Initialize_Default_Project_Path
-            (Tree.Data.Tree.Project_Path, Target_Name => "");
       end if;
 
       Prj.Tree.Initialize (Tree.Data.Tree);
@@ -4139,8 +4154,8 @@ package body GNATCOLL.Projects is
       Reset (Tree, Tree.Data.Env);
 
       Trace (Me, "Set project path to " & Predefined_Path);
-      Initialize_Empty (Tree.Data.Tree.Project_Path);
-      Prj.Env.Set_Path (Tree.Data.Tree.Project_Path, Predefined_Path);
+      Initialize_Empty (Tree.Data.Env.Env.Project_Path);
+      Prj.Env.Set_Path (Tree.Data.Env.Env.Project_Path, Predefined_Path);
 
       Project := Empty_Node;
 
@@ -4154,13 +4169,18 @@ package body GNATCOLL.Projects is
 
       Sinput.P.Clear_Source_File_Table;
       Sinput.P.Reset_First;
+
+      Override_Flags (Tree.Data.Env.Env,
+                      Create_Flags (On_Error'Unrestricted_Access));
       Prj.Part.Parse
         (Tree.Data.Tree, Project,
          +Root_Project_Path.Full_Name,
          Store_Comments    => True,
          Is_Config_File    => False,
-         Flags             => Create_Flags (On_Error'Unrestricted_Access),
+         Env               => Tree.Data.Env.Env,
          Current_Directory => Get_Current_Dir);
+
+      Override_Flags (Tree.Data.Env.Env, Create_Flags (null));
 
       if Project /= Empty_Node then
          Tree.Data.Root := Tree.Instance_From_Node (Project);
@@ -4324,6 +4344,8 @@ package body GNATCOLL.Projects is
          --  Make sure errors are reinitialized before load
          Prj.Err.Initialize;
 
+         Override_Flags (Self.Data.Env.Env, Flags);
+
          Process_Project_And_Apply_Config
            (Main_Project               => View,
             User_Project_Node          => Self.Root_Project.Data.Node,
@@ -4335,12 +4357,16 @@ package body GNATCOLL.Projects is
             Allow_Automatic_Generation => False,
             Automatically_Generated    => Automatically_Generated,
             Config_File_Path           => Config_File_Path,
-            Flags                      => Flags,
+            Env                        => Self.Data.Env.Env,
             Normalized_Hostname        => "",
             On_Load_Config             =>
               Add_GPS_Naming_Schemes_To_Config_File'Unrestricted_Access);
+
+         Override_Flags (Self.Data.Env.Env, Create_Flags (null));
+
       exception
          when Invalid_Config =>
+            Override_Flags (Self.Data.Env.Env, Create_Flags (null));
             --  Error message was already reported via Prj.Err
             null;
       end;
@@ -5308,12 +5334,14 @@ package body GNATCOLL.Projects is
          end if;
 
       else
+         Override_Flags (Tree.Data.Env.Env, Create_Flags (null, False));
+
          Prj.Part.Parse
            (Tree_Node, Imported_Project,
             +Full_Name (Imported_Project_Location),
             Is_Config_File         => False,
             Current_Directory      => Get_Current_Dir,
-            Flags                  => Create_Flags (null, False));
+            Env                    => Tree.Data.Env.Env);
 
          Prj.Err.Finalize;
       end if;
@@ -5688,10 +5716,10 @@ package body GNATCOLL.Projects is
         (Tree.Data.Tree, Tree.Root_Project,
          N, Old_V, Callback'Unrestricted_Access);
 
-      if Prj.Ext.Value_Of (Tree_N.External, N) /= No_Name
-        and then Prj.Ext.Value_Of (Tree_N.External, N) = Old_V
+      if Prj.Ext.Value_Of (Tree.Data.Env.Env.External, N) /= No_Name
+        and then Prj.Ext.Value_Of (Tree.Data.Env.Env.External, N) = Old_V
       then
-         Prj.Ext.Add (Tree_N.External, External_Name, New_Value);
+         Prj.Ext.Add (Tree.Data.Env.Env.External, External_Name, New_Value);
       end if;
 
       Tree.Root_Project.Set_Modified (True);
@@ -5799,15 +5827,15 @@ package body GNATCOLL.Projects is
 
       --  Reset the value of the external variable if needed
 
-      if Prj.Ext.Value_Of (Tree_N.External, Ext_Var) = V_Name then
+      if Prj.Ext.Value_Of (Tree.Data.Env.Env.External, Ext_Var) = V_Name then
          if Type_Decl /= Empty_Node then
-            Prj.Ext.Add (Tree_N.External,
+            Prj.Ext.Add (Tree.Data.Env.Env.External,
                  External_Name,
                  Get_String (String_Value_Of
                                (First_Literal_String (Type_Decl, Tree_N),
                                 Tree_N)));
          else
-            Prj.Ext.Add (Tree_N.External, External_Name, "");
+            Prj.Ext.Add (Tree.Data.Env.Env.External, External_Name, "");
          end if;
       end if;
 
