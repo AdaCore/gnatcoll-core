@@ -46,6 +46,7 @@ with GNATCOLL.VFS;               use GNATCOLL.VFS;
 with GNATCOLL.VFS_Utils;         use GNATCOLL.VFS_Utils;
 with Casing;                     use Casing;
 with Csets;
+with Makeutl;
 with Namet;                      use Namet;
 with Osint;
 with Opt;
@@ -190,6 +191,12 @@ package body GNATCOLL.Projects is
    --  Called for a typed variable declaration that references an external
    --  variable in Prj.
    --  Stops iterating if this subprogram returns False.
+
+   function Variable_Value_To_List
+     (Project : Project_Type;
+      Value   : Variable_Value) return GNAT.Strings.String_List_Access;
+   --  Allocate a new String_List that contains the strings stored in Value.
+   --  Result must be freed by caller.
 
    procedure For_Each_Project_Node
      (Tree     : Project_Node_Tree_Ref;
@@ -1709,18 +1716,14 @@ package body GNATCOLL.Projects is
       end case;
    end Attribute_Value;
 
-   ---------------------
-   -- Attribute_Value --
-   ---------------------
+   ----------------------------
+   -- Variable_Value_To_List --
+   ----------------------------
 
-   function Attribute_Value
-     (Project      : Project_Type;
-      Attribute    : Attribute_Pkg_List;
-      Index        : String := "";
-      Use_Extended : Boolean := False) return GNAT.Strings.String_List_Access
+   function Variable_Value_To_List
+     (Project : Project_Type;
+      Value   : Variable_Value) return GNAT.Strings.String_List_Access
    is
-      Value : constant Variable_Value := Attribute_Value
-        (Project, String (Attribute), Index, Use_Extended);
       V     : String_List_Id;
       S     : String_List_Access;
    begin
@@ -1745,8 +1748,23 @@ package body GNATCOLL.Projects is
                V := Project.Tree_View.String_Elements.Table (V).Next;
             end loop;
             return S;
-
       end case;
+   end Variable_Value_To_List;
+
+   ---------------------
+   -- Attribute_Value --
+   ---------------------
+
+   function Attribute_Value
+     (Project      : Project_Type;
+      Attribute    : Attribute_Pkg_List;
+      Index        : String := "";
+      Use_Extended : Boolean := False) return GNAT.Strings.String_List_Access
+   is
+      Value : constant Variable_Value := Attribute_Value
+        (Project, String (Attribute), Index, Use_Extended);
+   begin
+      return Variable_Value_To_List (Project, Value);
    end Attribute_Value;
 
    -------------------
@@ -3070,36 +3088,19 @@ package body GNATCOLL.Projects is
       Value            : out GNAT.Strings.String_List_Access;
       Is_Default_Value : out Boolean)
    is
+      Val    : Variable_Value;
    begin
-      Value := null;
-      Is_Default_Value := True;
+      Makeutl.Get_Switches
+        (Source_File  => File_Name_Type
+           (Get_String (File.Display_Base_Name)),
+         Source_Lang  => Get_String (Language),
+         Source_Prj   => Project.Data.View,
+         Pkg_Name     => Get_String (In_Pkg),
+         Project_Tree => Project.Data.Tree.View,
+         Value        => Val,
+         Is_Default   => Is_Default_Value);
 
-      --  Do we have some file-specific switches ?
-      if Project /= No_Project and then File /= GNATCOLL.VFS.No_File then
-         Value := Project.Attribute_Value
-           (Attribute      =>
-              Build (In_Pkg, Get_Name_String (Name_Switches)),
-            Index          => +Base_Name (File));
-
-         Is_Default_Value := Value = null;
-      end if;
-
-      --  Search if the user has defined default switches for that tool
-      if Project /= No_Project and then Value = null then
-         Value := Project.Attribute_Value
-           (Attribute      =>
-              Build (In_Pkg, Get_String (Name_Default_Switches)),
-            Index          => Language);
-
-         if Value = null then
-            Value := Project.Attribute_Value
-              (Attribute      =>
-                 Build (In_Pkg, Get_String (Name_Switches)),
-               Index          => Language);
-         end if;
-
-         Is_Default_Value := True;
-      end if;
+      Value := Variable_Value_To_List (Project, Val);
 
       if Value = null then
          --  No switches
