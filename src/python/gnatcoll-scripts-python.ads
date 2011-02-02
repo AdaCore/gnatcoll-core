@@ -1,7 +1,7 @@
 -----------------------------------------------------------------------
 --                               G N A T C O L L                     --
 --                                                                   --
---                     Copyright (C) 2003-2010, AdaCore              --
+--                     Copyright (C) 2003-2011, AdaCore              --
 --                                                                   --
 -- GPS is free  software;  you can redistribute it and/or modify  it --
 -- under the terms of the GNU General Public License as published by --
@@ -160,21 +160,25 @@ private
    function Execute_Command
      (Script  : access Python_Scripting_Record'Class;
       Command : PyObject;
-      Args    : Callback_Data'Class) return String;
+      Args    : Callback_Data'Class;
+      Error   : access Boolean) return String;
    function Execute_Command
      (Script  : access Python_Scripting_Record'Class;
       Command : PyObject;
-      Args    : Callback_Data'Class) return Any_Type;
+      Args    : Callback_Data'Class;
+      Error   : access Boolean) return Any_Type;
    function Execute_Command
      (Script  : access Python_Scripting_Record'Class;
       Command : PyObject;
-      Args    : Callback_Data'Class) return PyObject;
+      Args    : Callback_Data'Class;
+      Error   : access Boolean) return PyObject;
    --  Need to unref the returned value
 
    function Execute_Command
      (Script  : access Python_Scripting_Record'Class;
       Command : PyObject;
-      Args    : Callback_Data'Class) return Boolean;
+      Args    : Callback_Data'Class;
+      Error   : access Boolean) return Boolean;
    overriding procedure Load_Directory
      (Script    : access Python_Scripting_Record;
       Directory : GNATCOLL.VFS.Virtual_File;

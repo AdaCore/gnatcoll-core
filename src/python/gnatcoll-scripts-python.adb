@@ -82,19 +82,24 @@ package body GNATCOLL.Scripts.Python is
 
    overriding function Execute
      (Subprogram : access Python_Subprogram_Record;
-      Args       : Callback_Data'Class) return Boolean;
+      Args       : Callback_Data'Class;
+      Error      : access Boolean) return Boolean;
    overriding function Execute
      (Subprogram : access Python_Subprogram_Record;
-      Args       : Callback_Data'Class) return String;
+      Args       : Callback_Data'Class;
+      Error      : access Boolean) return String;
    overriding function Execute
      (Subprogram : access Python_Subprogram_Record;
-      Args       : Callback_Data'Class) return Any_Type;
+      Args       : Callback_Data'Class;
+      Error      : access Boolean) return Any_Type;
    overriding function Execute
      (Subprogram : access Python_Subprogram_Record;
-      Args       : Callback_Data'Class) return Class_Instance;
+      Args       : Callback_Data'Class;
+      Error      : access Boolean) return Class_Instance;
    overriding function Execute
      (Subprogram : access Python_Subprogram_Record;
-      Args       : Callback_Data'Class)
+      Args       : Callback_Data'Class;
+      Error      : access Boolean)
       return GNAT.Strings.String_List;
    overriding procedure Free (Subprogram : in out Python_Subprogram_Record);
    overriding function Get_Name
@@ -1621,7 +1626,7 @@ package body GNATCOLL.Scripts.Python is
             Errors      => Errors'Unchecked_Access);
 
          if Obj /= null and then PyFunction_Check (Obj) then
-            return Execute_Command (Script, Obj, Args);
+            return Execute_Command (Script, Obj, Args, Errors'Access);
          else
 --              Insert
 --                (Script.Kernel,
@@ -1638,7 +1643,8 @@ package body GNATCOLL.Scripts.Python is
    function Execute_Command
      (Script  : access Python_Scripting_Record'Class;
       Command : PyObject;
-      Args    : Callback_Data'Class) return PyObject
+      Args    : Callback_Data'Class;
+      Error   : access Boolean) return PyObject
    is
       Obj   : PyObject;
       Args2 : PyObject;
@@ -1647,7 +1653,10 @@ package body GNATCOLL.Scripts.Python is
       Self, First_Arg : PyObject;
 
    begin
+      Error.all := False;
+
       if Script.Blocked then
+         Error.all := True;
          --  Insert (Script.Kernel, "A python command is already executing");
          return null;
       end if;
@@ -1706,6 +1715,7 @@ package body GNATCOLL.Scripts.Python is
       end if;
 
       if Obj = null then
+         Error.all := True;
          PyErr_Print;
       end if;
 
@@ -1719,9 +1729,11 @@ package body GNATCOLL.Scripts.Python is
    function Execute_Command
      (Script  : access Python_Scripting_Record'Class;
       Command : PyObject;
-      Args    : Callback_Data'Class) return String
+      Args    : Callback_Data'Class;
+      Error   : access Boolean) return String
    is
-      Obj : constant PyObject := Execute_Command (Script, Command, Args);
+      Obj : constant PyObject :=
+              Execute_Command (Script, Command, Args, Error);
    begin
       if Obj /= null
         and then PyString_Check (Obj)
@@ -1735,6 +1747,8 @@ package body GNATCOLL.Scripts.Python is
       else
          if Obj /= null then
             Py_DECREF (Obj);
+         else
+            Error.all := True;
          end if;
          return "";
       end if;
@@ -1747,9 +1761,11 @@ package body GNATCOLL.Scripts.Python is
    function Execute_Command
      (Script  : access Python_Scripting_Record'Class;
       Command : PyObject;
-      Args    : Callback_Data'Class) return Any_Type
+      Args    : Callback_Data'Class;
+      Error   : access Boolean) return Any_Type
    is
-      Obj : constant PyObject := Execute_Command (Script, Command, Args);
+      Obj : constant PyObject :=
+              Execute_Command (Script, Command, Args, Error);
    begin
       if Obj /= null then
          declare
@@ -1760,9 +1776,6 @@ package body GNATCOLL.Scripts.Python is
             return Any;
          end;
       else
-         if Obj /= null then
-            Py_DECREF (Obj);
-         end if;
          return Empty_Any_Type;
       end if;
    end Execute_Command;
@@ -1774,9 +1787,11 @@ package body GNATCOLL.Scripts.Python is
    function Execute_Command
      (Script  : access Python_Scripting_Record'Class;
       Command : PyObject;
-      Args    : Callback_Data'Class) return Boolean
+      Args    : Callback_Data'Class;
+      Error   : access Boolean) return Boolean
    is
-      Obj    : constant PyObject := Execute_Command (Script, Command, Args);
+      Obj    : constant PyObject :=
+                 Execute_Command (Script, Command, Args, Error);
       Result : Boolean;
    begin
       if Obj = null then
@@ -3047,28 +3062,16 @@ package body GNATCOLL.Scripts.Python is
    -- Execute --
    -------------
 
-   function Execute
+   overriding function Execute
      (Subprogram : access Python_Subprogram_Record;
-      Args       : Callback_Data'Class) return Boolean is
+      Args       : Callback_Data'Class;
+      Error      : access Boolean) return Boolean is
    begin
       return Execute_Command
         (Script  => Subprogram.Script,
          Command => Subprogram.Subprogram,
-         Args    => Args);
-   end Execute;
-
-   -------------
-   -- Execute --
-   -------------
-
-   function Execute
-     (Subprogram : access Python_Subprogram_Record;
-      Args       : Callback_Data'Class) return String is
-   begin
-      return Execute_Command
-        (Script  => Subprogram.Script,
-         Command => Subprogram.Subprogram,
-         Args    => Args);
+         Args    => Args,
+         Error   => Error);
    end Execute;
 
    -------------
@@ -3077,14 +3080,32 @@ package body GNATCOLL.Scripts.Python is
 
    overriding function Execute
      (Subprogram : access Python_Subprogram_Record;
-      Args       : Callback_Data'Class) return Class_Instance
+      Args       : Callback_Data'Class;
+      Error      : access Boolean) return String is
+   begin
+      return Execute_Command
+        (Script  => Subprogram.Script,
+         Command => Subprogram.Subprogram,
+         Args    => Args,
+         Error   => Error);
+   end Execute;
+
+   -------------
+   -- Execute --
+   -------------
+
+   overriding function Execute
+     (Subprogram : access Python_Subprogram_Record;
+      Args       : Callback_Data'Class;
+      Error      : access Boolean) return Class_Instance
    is
       Obj  : PyObject;
    begin
       Obj := Execute_Command
         (Script  => Subprogram.Script,
          Command => Subprogram.Subprogram,
-         Args    => Args);
+         Args    => Args,
+         Error   => Error);
       if Obj = null then
          return No_Class_Instance;
       else
@@ -3098,13 +3119,15 @@ package body GNATCOLL.Scripts.Python is
 
    overriding function Execute
      (Subprogram : access Python_Subprogram_Record;
-      Args       : Callback_Data'Class) return Any_Type
+      Args       : Callback_Data'Class;
+      Error      : access Boolean) return Any_Type
    is
    begin
       return Execute_Command
         (Script  => Subprogram.Script,
          Command => Subprogram.Subprogram,
-         Args    => Args);
+         Args    => Args,
+         Error   => Error);
    end Execute;
 
    -------------
@@ -3113,12 +3136,14 @@ package body GNATCOLL.Scripts.Python is
 
    function Execute
      (Subprogram : access Python_Subprogram_Record;
-      Args       : Callback_Data'Class) return GNAT.Strings.String_List
+      Args       : Callback_Data'Class;
+      Error      : access Boolean) return GNAT.Strings.String_List
    is
       Obj : constant PyObject := Execute_Command
         (Script => Subprogram.Script,
          Command => Subprogram.Subprogram,
-         Args    => Args);
+         Args    => Args,
+         Error   => Error);
    begin
       if Obj = null then
          return (1 .. 0 => null);

@@ -1,7 +1,7 @@
 -----------------------------------------------------------------------
 --                               G N A T C O L L                     --
 --                                                                   --
---                      Copyright (C) 2003-2010, AdaCore             --
+--                      Copyright (C) 2003-2011, AdaCore             --
 --                                                                   --
 -- GPS is free  software;  you can redistribute it and/or modify  it --
 -- under the terms of the GNU General Public License as published by --
@@ -917,6 +917,56 @@ package body GNATCOLL.Scripts is
          Unchecked_Free (Subprogram);
       end if;
    end Free;
+
+   -------------
+   -- Execute --
+   -------------
+
+   function Execute
+     (Subprogram : access Subprogram_Record'Class;
+      Args       : Callback_Data'Class) return Boolean
+   is
+      Err : aliased Boolean;
+   begin
+      return Execute (Subprogram, Args, Err'Access);
+   end Execute;
+
+   function Execute
+     (Subprogram : access Subprogram_Record'Class;
+      Args       : Callback_Data'Class) return String
+   is
+      Err : aliased Boolean;
+   begin
+      return Execute (Subprogram, Args, Err'Access);
+   end Execute;
+
+   function Execute
+     (Subprogram : access Subprogram_Record'Class;
+      Args       : Callback_Data'Class) return Class_Instance
+   is
+      Err : aliased Boolean;
+   begin
+      return Execute (Subprogram, Args, Err'Access);
+   end Execute;
+
+   function Execute
+     (Subprogram : access Subprogram_Record'Class;
+      Args       : Callback_Data'Class) return Any_Type
+   is
+      Err : aliased Boolean;
+   begin
+      return Execute (Subprogram, Args, Err'Access);
+   end Execute;
+
+   function Execute
+     (Subprogram : access Subprogram_Record'Class;
+      Args       : Callback_Data'Class)
+      return GNAT.Strings.String_List
+   is
+      Err : aliased Boolean;
+   begin
+      return Execute (Subprogram, Args, Err'Access);
+   end Execute;
 
    --------------------
    -- Free_User_Data --

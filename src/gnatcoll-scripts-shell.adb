@@ -1,7 +1,7 @@
 -----------------------------------------------------------------------
 --                          G N A T C O L L                          --
 --                                                                   --
---                 Copyright (C) 2003-2010, AdaCore                  --
+--                 Copyright (C) 2003-2011, AdaCore                  --
 --                                                                   --
 -- GPS is free  software;  you can redistribute it and/or modify  it --
 -- under the terms of the GNU General Public License as published by --
@@ -1858,11 +1858,13 @@ package body GNATCOLL.Scripts.Shell is
    -- Execute --
    -------------
 
-   function Execute
+   overriding function Execute
      (Subprogram : access Shell_Subprogram_Record;
-      Args       : Callback_Data'Class) return Boolean
+      Args       : Callback_Data'Class;
+      Error      : access Boolean) return Boolean
    is
    begin
+      Error.all := False;
       return To_Lower
         (Execute (Shell_Subprogram (Subprogram), Args)) = "true";
    end Execute;
@@ -1873,10 +1875,10 @@ package body GNATCOLL.Scripts.Shell is
 
    function Execute
      (Subprogram : access Shell_Subprogram_Record;
-      Args       : Callback_Data'Class) return String
+      Args       : Callback_Data'Class;
+      Error      : access Boolean) return String
    is
       D      : constant Shell_Callback_Data := Shell_Callback_Data (Args);
-      Errors : aliased Boolean;
       CL     : Arg_List;
    begin
       CL := Create (Subprogram.Command.all);
@@ -1888,7 +1890,7 @@ package body GNATCOLL.Scripts.Shell is
       return Execute_GPS_Shell_Command
         (Script  => Shell_Scripting (Subprogram.Script),
          CL      => CL,
-         Errors  => Errors'Unchecked_Access);
+         Errors  => Error);
    end Execute;
 
    -------------
@@ -1897,7 +1899,8 @@ package body GNATCOLL.Scripts.Shell is
 
    overriding function Execute
      (Subprogram : access Shell_Subprogram_Record;
-      Args       : Callback_Data'Class) return Class_Instance
+      Args       : Callback_Data'Class;
+      Error      : access Boolean) return Class_Instance
    is
       Result : constant String := Execute (Subprogram, Args);
       Ins    : Shell_Class_Instance;
@@ -1916,10 +1919,12 @@ package body GNATCOLL.Scripts.Shell is
 
    function Execute
      (Subprogram : access Shell_Subprogram_Record;
-      Args       : Callback_Data'Class) return GNAT.Strings.String_List
+      Args       : Callback_Data'Class;
+      Error      : access Boolean) return GNAT.Strings.String_List
    is
       pragma Unreferenced (Subprogram, Args);
    begin
+      Error.all := True;
       --  ??? We are in asynchronous mode, see Execute for String above
       return (1 .. 0 => null);
    end Execute;
@@ -1930,8 +1935,10 @@ package body GNATCOLL.Scripts.Shell is
 
    overriding function Execute
      (Subprogram : access Shell_Subprogram_Record;
-      Args       : Callback_Data'Class) return Any_Type is
+      Args       : Callback_Data'Class;
+      Error      : access Boolean) return Any_Type is
    begin
+      Error.all := True;
       --  Any_Type is not supported for shell scripts
       raise Program_Error;
       return Empty_Any_Type;

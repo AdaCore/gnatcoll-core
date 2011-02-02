@@ -1,7 +1,7 @@
 -----------------------------------------------------------------------
 --                               G N A T C O L L                     --
 --                                                                   --
---                 Copyright (C) 2003-2010, AdaCore                  --
+--                 Copyright (C) 2003-2011, AdaCore                  --
 --                                                                   --
 -- GPS is free  software;  you can redistribute it and/or modify  it --
 -- under the terms of the GNU General Public License as published by --
@@ -92,20 +92,41 @@ package GNATCOLL.Scripts is
    --  Free the memory occupied by the subprogram instance
 
    function Execute
-     (Subprogram : access Subprogram_Record;
-      Args       : Callback_Data'Class) return Boolean is abstract;
+     (Subprogram : access Subprogram_Record'Class;
+      Args       : Callback_Data'Class) return Boolean;
    function Execute
-     (Subprogram : access Subprogram_Record;
-      Args       : Callback_Data'Class) return String is abstract;
+     (Subprogram : access Subprogram_Record'Class;
+      Args       : Callback_Data'Class) return String;
    function Execute
-     (Subprogram : access Subprogram_Record;
-      Args       : Callback_Data'Class) return Class_Instance is abstract;
+     (Subprogram : access Subprogram_Record'Class;
+      Args       : Callback_Data'Class) return Class_Instance;
    function Execute
-     (Subprogram : access Subprogram_Record;
-      Args       : Callback_Data'Class) return Any_Type is abstract;
+     (Subprogram : access Subprogram_Record'Class;
+      Args       : Callback_Data'Class) return Any_Type;
    function Execute
-     (Subprogram : access Subprogram_Record;
+     (Subprogram : access Subprogram_Record'Class;
       Args       : Callback_Data'Class)
+      return GNAT.Strings.String_List;
+   function Execute
+     (Subprogram : access Subprogram_Record;
+      Args       : Callback_Data'Class;
+      Error      : access Boolean) return Boolean is abstract;
+   function Execute
+     (Subprogram : access Subprogram_Record;
+      Args       : Callback_Data'Class;
+      Error      : access Boolean) return String is abstract;
+   function Execute
+     (Subprogram : access Subprogram_Record;
+      Args       : Callback_Data'Class;
+      Error      : access Boolean) return Class_Instance is abstract;
+   function Execute
+     (Subprogram : access Subprogram_Record;
+      Args       : Callback_Data'Class;
+      Error      : access Boolean) return Any_Type is abstract;
+   function Execute
+     (Subprogram : access Subprogram_Record;
+      Args       : Callback_Data'Class;
+      Error      : access Boolean)
       return GNAT.Strings.String_List is abstract;
    --  Execute the subprogram with the given arguments, and return its output.
    --  Returned value must be freed by the caller.

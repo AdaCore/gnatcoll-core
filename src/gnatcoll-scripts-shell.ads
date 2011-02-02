@@ -1,7 +1,7 @@
 -----------------------------------------------------------------------
 --                          G N A T C O L L                          --
 --                                                                   --
---                 Copyright (C) 2003-2010, AdaCore                  --
+--                 Copyright (C) 2003-2011, AdaCore                  --
 --                                                                   --
 -- GPS is free  software;  you can redistribute it and/or modify  it --
 -- under the terms of the GNU General Public License as published by --
@@ -346,19 +346,24 @@ private
 
    overriding function Execute
      (Subprogram : access Shell_Subprogram_Record;
-      Args       : Callback_Data'Class) return Boolean;
+      Args       : Callback_Data'Class;
+      Error      : access Boolean) return Boolean;
    overriding function Execute
      (Subprogram : access Shell_Subprogram_Record;
-      Args       : Callback_Data'Class) return String;
+      Args       : Callback_Data'Class;
+      Error      : access Boolean) return String;
    overriding function Execute
      (Subprogram : access Shell_Subprogram_Record;
-      Args       : Callback_Data'Class) return Class_Instance;
+      Args       : Callback_Data'Class;
+      Error      : access Boolean) return Class_Instance;
    overriding function Execute
      (Subprogram : access Shell_Subprogram_Record;
-      Args       : Callback_Data'Class) return GNAT.Strings.String_List;
+      Args       : Callback_Data'Class;
+      Error      : access Boolean) return GNAT.Strings.String_List;
    overriding function Execute
      (Subprogram : access Shell_Subprogram_Record;
-      Args       : Callback_Data'Class) return Any_Type;
+      Args       : Callback_Data'Class;
+      Error      : access Boolean) return Any_Type;
    overriding procedure Free (Subprogram : in out Shell_Subprogram_Record);
    overriding function Get_Name
      (Subprogram : access Shell_Subprogram_Record) return String;
