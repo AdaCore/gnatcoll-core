@@ -1902,7 +1902,7 @@ package body GNATCOLL.Scripts.Shell is
       Args       : Callback_Data'Class;
       Error      : access Boolean) return Class_Instance
    is
-      Result : constant String := Execute (Subprogram, Args);
+      Result : constant String := Execute (Subprogram, Args, Error);
       Ins    : Shell_Class_Instance;
    begin
       Ins := Instance_From_Name (Shell_Scripting (Subprogram.Script), Result);
@@ -1936,7 +1936,9 @@ package body GNATCOLL.Scripts.Shell is
    overriding function Execute
      (Subprogram : access Shell_Subprogram_Record;
       Args       : Callback_Data'Class;
-      Error      : access Boolean) return Any_Type is
+      Error      : access Boolean) return Any_Type
+   is
+      pragma Unreferenced (Subprogram, Args);
    begin
       Error.all := True;
       --  Any_Type is not supported for shell scripts
