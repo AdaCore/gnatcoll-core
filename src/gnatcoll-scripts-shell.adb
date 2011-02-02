@@ -1861,7 +1861,7 @@ package body GNATCOLL.Scripts.Shell is
    overriding function Execute
      (Subprogram : access Shell_Subprogram_Record;
       Args       : Callback_Data'Class;
-      Error      : access Boolean) return Boolean
+      Error      : not null access Boolean) return Boolean
    is
    begin
       Error.all := False;
@@ -1876,7 +1876,7 @@ package body GNATCOLL.Scripts.Shell is
    function Execute
      (Subprogram : access Shell_Subprogram_Record;
       Args       : Callback_Data'Class;
-      Error      : access Boolean) return String
+      Error      : not null access Boolean) return String
    is
       D      : constant Shell_Callback_Data := Shell_Callback_Data (Args);
       CL     : Arg_List;
@@ -1900,7 +1900,7 @@ package body GNATCOLL.Scripts.Shell is
    overriding function Execute
      (Subprogram : access Shell_Subprogram_Record;
       Args       : Callback_Data'Class;
-      Error      : access Boolean) return Class_Instance
+      Error      : not null access Boolean) return Class_Instance
    is
       Result : constant String := Execute (Subprogram, Args, Error);
       Ins    : Shell_Class_Instance;
@@ -1920,7 +1920,7 @@ package body GNATCOLL.Scripts.Shell is
    function Execute
      (Subprogram : access Shell_Subprogram_Record;
       Args       : Callback_Data'Class;
-      Error      : access Boolean) return GNAT.Strings.String_List
+      Error      : not null access Boolean) return GNAT.Strings.String_List
    is
       pragma Unreferenced (Subprogram, Args);
    begin
@@ -1936,7 +1936,7 @@ package body GNATCOLL.Scripts.Shell is
    overriding function Execute
      (Subprogram : access Shell_Subprogram_Record;
       Args       : Callback_Data'Class;
-      Error      : access Boolean) return Any_Type
+      Error      : not null access Boolean) return Any_Type
    is
       pragma Unreferenced (Subprogram, Args);
    begin

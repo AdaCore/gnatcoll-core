@@ -110,23 +110,23 @@ package GNATCOLL.Scripts is
    function Execute
      (Subprogram : access Subprogram_Record;
       Args       : Callback_Data'Class;
-      Error      : access Boolean) return Boolean is abstract;
+      Error      : not null access Boolean) return Boolean is abstract;
    function Execute
      (Subprogram : access Subprogram_Record;
       Args       : Callback_Data'Class;
-      Error      : access Boolean) return String is abstract;
+      Error      : not null access Boolean) return String is abstract;
    function Execute
      (Subprogram : access Subprogram_Record;
       Args       : Callback_Data'Class;
-      Error      : access Boolean) return Class_Instance is abstract;
+      Error      : not null access Boolean) return Class_Instance is abstract;
    function Execute
      (Subprogram : access Subprogram_Record;
       Args       : Callback_Data'Class;
-      Error      : access Boolean) return Any_Type is abstract;
+      Error      : not null access Boolean) return Any_Type is abstract;
    function Execute
      (Subprogram : access Subprogram_Record;
       Args       : Callback_Data'Class;
-      Error      : access Boolean)
+      Error      : not null access Boolean)
       return GNAT.Strings.String_List is abstract;
    --  Execute the subprogram with the given arguments, and return its output.
    --  Returned value must be freed by the caller.

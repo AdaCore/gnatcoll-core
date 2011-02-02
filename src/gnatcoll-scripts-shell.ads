@@ -347,23 +347,23 @@ private
    overriding function Execute
      (Subprogram : access Shell_Subprogram_Record;
       Args       : Callback_Data'Class;
-      Error      : access Boolean) return Boolean;
+      Error      : not null access Boolean) return Boolean;
    overriding function Execute
      (Subprogram : access Shell_Subprogram_Record;
       Args       : Callback_Data'Class;
-      Error      : access Boolean) return String;
+      Error      : not null access Boolean) return String;
    overriding function Execute
      (Subprogram : access Shell_Subprogram_Record;
       Args       : Callback_Data'Class;
-      Error      : access Boolean) return Class_Instance;
+      Error      : not null access Boolean) return Class_Instance;
    overriding function Execute
      (Subprogram : access Shell_Subprogram_Record;
       Args       : Callback_Data'Class;
-      Error      : access Boolean) return GNAT.Strings.String_List;
+      Error      : not null access Boolean) return GNAT.Strings.String_List;
    overriding function Execute
      (Subprogram : access Shell_Subprogram_Record;
       Args       : Callback_Data'Class;
-      Error      : access Boolean) return Any_Type;
+      Error      : not null access Boolean) return Any_Type;
    overriding procedure Free (Subprogram : in out Shell_Subprogram_Record);
    overriding function Get_Name
      (Subprogram : access Shell_Subprogram_Record) return String;

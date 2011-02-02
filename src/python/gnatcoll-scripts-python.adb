@@ -83,23 +83,23 @@ package body GNATCOLL.Scripts.Python is
    overriding function Execute
      (Subprogram : access Python_Subprogram_Record;
       Args       : Callback_Data'Class;
-      Error      : access Boolean) return Boolean;
+      Error      : not null access Boolean) return Boolean;
    overriding function Execute
      (Subprogram : access Python_Subprogram_Record;
       Args       : Callback_Data'Class;
-      Error      : access Boolean) return String;
+      Error      : not null access Boolean) return String;
    overriding function Execute
      (Subprogram : access Python_Subprogram_Record;
       Args       : Callback_Data'Class;
-      Error      : access Boolean) return Any_Type;
+      Error      : not null access Boolean) return Any_Type;
    overriding function Execute
      (Subprogram : access Python_Subprogram_Record;
       Args       : Callback_Data'Class;
-      Error      : access Boolean) return Class_Instance;
+      Error      : not null access Boolean) return Class_Instance;
    overriding function Execute
      (Subprogram : access Python_Subprogram_Record;
       Args       : Callback_Data'Class;
-      Error      : access Boolean)
+      Error      : not null access Boolean)
       return GNAT.Strings.String_List;
    overriding procedure Free (Subprogram : in out Python_Subprogram_Record);
    overriding function Get_Name
@@ -3065,7 +3065,7 @@ package body GNATCOLL.Scripts.Python is
    overriding function Execute
      (Subprogram : access Python_Subprogram_Record;
       Args       : Callback_Data'Class;
-      Error      : access Boolean) return Boolean is
+      Error      : not null access Boolean) return Boolean is
    begin
       return Execute_Command
         (Script  => Subprogram.Script,
@@ -3081,7 +3081,7 @@ package body GNATCOLL.Scripts.Python is
    overriding function Execute
      (Subprogram : access Python_Subprogram_Record;
       Args       : Callback_Data'Class;
-      Error      : access Boolean) return String is
+      Error      : not null access Boolean) return String is
    begin
       return Execute_Command
         (Script  => Subprogram.Script,
@@ -3097,7 +3097,7 @@ package body GNATCOLL.Scripts.Python is
    overriding function Execute
      (Subprogram : access Python_Subprogram_Record;
       Args       : Callback_Data'Class;
-      Error      : access Boolean) return Class_Instance
+      Error      : not null access Boolean) return Class_Instance
    is
       Obj  : PyObject;
    begin
@@ -3120,7 +3120,7 @@ package body GNATCOLL.Scripts.Python is
    overriding function Execute
      (Subprogram : access Python_Subprogram_Record;
       Args       : Callback_Data'Class;
-      Error      : access Boolean) return Any_Type
+      Error      : not null access Boolean) return Any_Type
    is
    begin
       return Execute_Command
@@ -3137,7 +3137,7 @@ package body GNATCOLL.Scripts.Python is
    function Execute
      (Subprogram : access Python_Subprogram_Record;
       Args       : Callback_Data'Class;
-      Error      : access Boolean) return GNAT.Strings.String_List
+      Error      : not null access Boolean) return GNAT.Strings.String_List
    is
       Obj : constant PyObject := Execute_Command
         (Script => Subprogram.Script,
