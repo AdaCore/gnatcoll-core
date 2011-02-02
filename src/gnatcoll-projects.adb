@@ -2807,7 +2807,8 @@ package body GNATCOLL.Projects is
          if not Is_Valid then
             if Var.Default /= No_Name then
                Prj.Ext.Add
-                  (Tree.Env.Env.External, N, Get_Name_String (Var.Default));
+                  (Tree.Env.Env.External, N, Get_Name_String (Var.Default),
+                   Prj.Ext.From_Command_Line);
             else
                Get_Name_String
                  (String_Value_Of
@@ -2815,7 +2816,8 @@ package body GNATCOLL.Projects is
                        (Var.String_Type, T), T));
                Prj.Ext.Add
                  (Tree.Env.Env.External, N,
-                  Name_Buffer (Name_Buffer'First .. Name_Len));
+                  Name_Buffer (Name_Buffer'First .. Name_Len),
+                  Prj.Ext.From_Command_Line);
             end if;
          end if;
 
@@ -2952,7 +2954,8 @@ package body GNATCOLL.Projects is
          Prj.Ext.Add
            (Self.Data.Env.Env.External,
             Get_String (Vars (V).Name),
-            Get_String (Vars (V).Value));
+            Get_String (Vars (V).Value),
+            Prj.Ext.From_Command_Line);
       end loop;
    end Change_Environment;
 
@@ -5724,7 +5727,8 @@ package body GNATCOLL.Projects is
       if Prj.Ext.Value_Of (Tree.Data.Env.Env.External, N) /= No_Name
         and then Prj.Ext.Value_Of (Tree.Data.Env.Env.External, N) = Old_V
       then
-         Prj.Ext.Add (Tree.Data.Env.Env.External, External_Name, New_Value);
+         Prj.Ext.Add (Tree.Data.Env.Env.External, External_Name, New_Value,
+                      Prj.Ext.From_Command_Line);
       end if;
 
       Tree.Root_Project.Set_Modified (True);
@@ -5838,9 +5842,11 @@ package body GNATCOLL.Projects is
                  External_Name,
                  Get_String (String_Value_Of
                                (First_Literal_String (Type_Decl, Tree_N),
-                                Tree_N)));
+                                Tree_N)),
+                 Prj.Ext.From_Command_Line);
          else
-            Prj.Ext.Add (Tree.Data.Env.Env.External, External_Name, "");
+            Prj.Ext.Add (Tree.Data.Env.Env.External, External_Name, "",
+                         Prj.Ext.From_Command_Line);
          end if;
       end if;
 
