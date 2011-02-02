@@ -105,10 +105,6 @@ end Check;
 
 AC_DEFUN(AM_GNAT_SOURCES,
 [
-  # First check local gnat sources, and use these if possible. That gives
-  # a chance for the user to override a gnat_util.gpr that would be found
-  # in the project path
-
   AC_MSG_CHECKING(whether gnat sources are found)
   if test -d gnat_src; then
      AC_MSG_RESULT(yes)
@@ -130,9 +126,21 @@ AC_DEFUN(AM_GNAT_SOURCES,
      fi
   fi
 
-  WITH_PROJECTS=$HAS_GNAT_SOURCES
-  AC_SUBST(WITH_PROJECTS)
   AC_SUBST(GNAT_SOURCES)
+])
+
+AC_DEFUN(AM_PROJECTS,
+[
+  # Allow the user to disable projects support so that gnatcoll does not depend
+  # on the installed gnat compiler (gnat_utils project)
+  AC_ARG_ENABLE(projects,
+    AC_HELP_STRING(
+      [--disable-projects],
+      [Disable support for GNAT Projects [[default=enabled]]]),
+    [WITH_PROJECTS=$enableval],
+    [WITH_PROJECTS=$HAS_GNAT_SOURCES])
+
+  AC_SUBST(WITH_PROJECTS)
 ])
 
 #############################################################
