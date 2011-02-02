@@ -2810,13 +2810,11 @@ package body GNATCOLL.Projects is
                   (Tree.Env.Env.External, N, Get_Name_String (Var.Default),
                    Prj.Ext.From_Command_Line);
             else
-               Get_Name_String
-                 (String_Value_Of
-                    (First_Literal_String
-                       (Var.String_Type, T), T));
                Prj.Ext.Add
                  (Tree.Env.Env.External, N,
-                  Name_Buffer (Name_Buffer'First .. Name_Len),
+                  Get_Name_String
+                     (String_Value_Of
+                        (First_Literal_String (Var.String_Type, T), T)),
                   Prj.Ext.From_Command_Line);
             end if;
          end if;
