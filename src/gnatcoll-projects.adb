@@ -446,7 +446,7 @@ package body GNATCOLL.Projects is
      (Data : Project_Tree_Data_Access)
       return Prj.String_Element_Table.Table_Ptr is
    begin
-      return Data.View.String_Elements.Table;
+      return Data.View.Shared.String_Elements.Table;
    end String_Elements;
 
    ------------
@@ -461,7 +461,7 @@ package body GNATCOLL.Projects is
    begin
       while L /= Nil_String loop
          Count := Count + 1;
-         L := Tree.String_Elements.Table (L).Next;
+         L := Tree.Shared.String_Elements.Table (L).Next;
       end loop;
       return Count;
    end Length;
@@ -666,7 +666,8 @@ package body GNATCOLL.Projects is
 
       elsif Recursive then
          return From_Path
-           (+Prj.Env.Ada_Objects_Path (View, Including_Libraries).all);
+           (+Prj.Env.Ada_Objects_Path
+              (View, Project.Data.Tree.View, Including_Libraries).all);
 
       elsif Including_Libraries
         and then View.Library
@@ -1507,6 +1508,8 @@ package body GNATCOLL.Projects is
       Index        : String := "";
       Use_Extended : Boolean := False) return Variable_Value
    is
+      Shared : constant Shared_Project_Tree_Data_Access :=
+        Project.Tree_View.Shared;
       Sep            : constant Natural :=
         Ada.Strings.Fixed.Index (Attribute, "#");
       Attribute_Name : constant String :=
@@ -1529,7 +1532,7 @@ package body GNATCOLL.Projects is
          Pkg := Value_Of
            (Get_String (Pkg_Name),
             In_Packages => Project_View.Decl.Packages,
-            In_Tree     => Project.Tree_View);
+            Shared      => Shared);
 
          if Pkg = No_Package then
             if Use_Extended
@@ -1542,8 +1545,8 @@ package body GNATCOLL.Projects is
             end if;
          end if;
 
-         Var := Project.Tree_View.Packages.Table (Pkg).Decl.Attributes;
-         Arr := Project.Tree_View.Packages.Table (Pkg).Decl.Arrays;
+         Var := Shared.Packages.Table (Pkg).Decl.Attributes;
+         Arr := Shared.Packages.Table (Pkg).Decl.Arrays;
 
       else
          Var := Project_View.Decl.Attributes;
@@ -1553,14 +1556,13 @@ package body GNATCOLL.Projects is
       N := Get_String (Attribute_Name);
 
       if Index /= "" then
-         Elem := Value_Of
-           (N, In_Arrays => Arr, In_Tree => Project.Tree_View);
+         Elem := Value_Of (N, In_Arrays => Arr, Shared => Shared);
          if Elem /= No_Array_Element then
             Value := Value_Of (Index => Get_String (Index), In_Array => Elem,
-                               In_Tree => Project.Tree_View);
+                               Shared => Shared);
          end if;
       else
-         Value := Value_Of (N, Var, In_Tree => Project.Tree_View);
+         Value := Value_Of (N, Var, Shared => Shared);
       end if;
 
       if Value = Nil_Variable_Value
@@ -1724,6 +1726,8 @@ package body GNATCOLL.Projects is
      (Project : Project_Type;
       Value   : Variable_Value) return GNAT.Strings.String_List_Access
    is
+      Shared : constant Shared_Project_Tree_Data_Access :=
+        Project.Tree_View.Shared;
       V     : String_List_Id;
       S     : String_List_Access;
    begin
@@ -1742,10 +1746,9 @@ package body GNATCOLL.Projects is
             V := Value.Values;
 
             for J in S'Range loop
-               Get_Name_String
-                 (Project.Tree_View.String_Elements.Table (V).Value);
+               Get_Name_String (Shared.String_Elements.Table (V).Value);
                S (J) := new String'(Name_Buffer (1 .. Name_Len));
-               V := Project.Tree_View.String_Elements.Table (V).Next;
+               V := Shared.String_Elements.Table (V).Next;
             end loop;
             return S;
       end case;
@@ -1776,6 +1779,8 @@ package body GNATCOLL.Projects is
       Attribute : String;
       Index     : String := "") return Boolean
    is
+      Shared : constant Shared_Project_Tree_Data_Access :=
+        Project.Tree_View.Shared;
       Sep            : constant Natural :=
         Ada.Strings.Fixed.Index (Attribute, "#");
       Attribute_Name : constant String :=
@@ -1796,14 +1801,14 @@ package body GNATCOLL.Projects is
          Pkg := Value_Of
            (Get_String (Pkg_Name),
             In_Packages => Project_View.Decl.Packages,
-            In_Tree     => Project.Tree_View);
+            Shared      => Shared);
 
          if Pkg = No_Package then
             return False;
          end if;
 
-         Var := Project.Tree_View.Packages.Table (Pkg).Decl.Attributes;
-         Arr := Project.Tree_View.Packages.Table (Pkg).Decl.Arrays;
+         Var := Shared.Packages.Table (Pkg).Decl.Attributes;
+         Arr := Shared.Packages.Table (Pkg).Decl.Arrays;
 
       else
          Var := Project_View.Decl.Attributes;
@@ -1815,11 +1820,10 @@ package body GNATCOLL.Projects is
       if Index /= "" then
          --  ??? That seems incorrect, we are not testing for the specific
          --  index
-         return Value_Of (N, In_Arrays => Arr,
-                          In_Tree => Project.Tree_View)
-           /= No_Array_Element;
+         return Value_Of (N, In_Arrays => Arr, Shared => Shared) /=
+           No_Array_Element;
       else
-         return not Value_Of (N, Var, Project.Tree_View).Default;
+         return not Value_Of (N, Var, Shared).Default;
       end if;
    end Has_Attribute;
 
@@ -1848,6 +1852,8 @@ package body GNATCOLL.Projects is
       Attribute    : String;
       Use_Extended : Boolean := False) return GNAT.Strings.String_List
    is
+      Shared : constant Shared_Project_Tree_Data_Access :=
+        Project.Tree_View.Shared;
       Sep            : constant Natural :=
         Ada.Strings.Fixed.Index (Attribute, "#");
       Attribute_Name : constant String :=
@@ -1868,14 +1874,14 @@ package body GNATCOLL.Projects is
          return (1 .. 0 => null);
       end if;
 
-      Packages       := Project.Data.Tree.View.Packages.Table;
-      Array_Elements := Project.Data.Tree.View.Array_Elements.Table;
+      Packages       := Shared.Packages.Table;
+      Array_Elements := Shared.Array_Elements.Table;
 
       if Pkg_Name /= "" then
          Pkg := Value_Of
            (Get_String (Pkg_Name),
             In_Packages => Project_View.Decl.Packages,
-            In_Tree     => Project.Data.Tree.View);
+            Shared      => Shared);
 
          if Pkg = No_Package then
             if Use_Extended
@@ -1895,9 +1901,7 @@ package body GNATCOLL.Projects is
       end if;
 
       N := Get_String (Attribute_Name);
-      Elem := Value_Of (N,
-                        In_Arrays => Arr,
-                        In_Tree   => Project.Data.Tree.View);
+      Elem := Value_Of (N, In_Arrays => Arr, Shared => Shared);
       if Elem = No_Array_Element
         and then Use_Extended
         and then Extended_Project (Project) /= No_Project
@@ -3420,7 +3424,7 @@ package body GNATCOLL.Projects is
 
          Exec_Name := Executable_Of
            (Project  => Project.Data.View,
-            In_Tree  => Project.Data.Tree.View,
+            Shared   => Project.Data.Tree.View.Shared,
             Main     => Main_Source.File,
             Index    => Main_Source.Index,
             Ada_Main => False,
@@ -4473,9 +4477,16 @@ package body GNATCOLL.Projects is
    procedure Create_Project_Instances
      (Self : Project_Tree'Class; With_View : Boolean)
    is
-      procedure Do_Project (Proj : Project_Id; S : in out Integer);
-      procedure Do_Project (Proj : Project_Id; S : in out Integer) is
-         pragma Unreferenced (S);
+      procedure Do_Project
+        (Proj : Project_Id;
+         Tree : Project_Tree_Ref;
+         S    : in out Integer);
+      procedure Do_Project
+        (Proj : Project_Id;
+         Tree : Project_Tree_Ref;
+         S    : in out Integer)
+      is
+         pragma Unreferenced (S, Tree);
          Name : constant String := Get_String (Proj.Name);
          Iter : Project_Htables.Cursor;
          P    : Project_Type;
@@ -4518,7 +4529,10 @@ package body GNATCOLL.Projects is
       if With_View then
          Assert (Me, Self.Data.Root.Data.View /= null,
                  "Create_Project_Instances: Project not parsed");
-         For_All_Projects (Self.Data.Root.Data.View, S);
+         For_All_Projects
+           (Self.Data.Root.Data.View,
+            Self.Data.View,
+            S);
 
       else
          For_Each_Project_Node
