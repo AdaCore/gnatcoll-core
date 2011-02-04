@@ -1852,8 +1852,7 @@ package body GNATCOLL.Projects is
       Attribute    : String;
       Use_Extended : Boolean := False) return GNAT.Strings.String_List
    is
-      Shared : constant Shared_Project_Tree_Data_Access :=
-        Project.Tree_View.Shared;
+      Shared : Shared_Project_Tree_Data_Access;
       Sep            : constant Natural :=
         Ada.Strings.Fixed.Index (Attribute, "#");
       Attribute_Name : constant String :=
@@ -1874,6 +1873,7 @@ package body GNATCOLL.Projects is
          return (1 .. 0 => null);
       end if;
 
+      Shared         := Project.Tree_View.Shared;
       Packages       := Shared.Packages.Table;
       Array_Elements := Shared.Array_Elements.Table;
 
