@@ -25,45 +25,47 @@
 -- Place - Suite 330, Boston, MA 02111-1307, USA.                    --
 -----------------------------------------------------------------------
 
-with Ada.Calendar;               use Ada.Calendar;
-with Ada.Characters.Handling;    use Ada.Characters.Handling;
+with Ada.Calendar;                use Ada.Calendar;
+with Ada.Characters.Handling;     use Ada.Characters.Handling;
 with Ada.Containers.Doubly_Linked_Lists;
 with Ada.Containers.Hashed_Sets;
 with Ada.Directories;
-with Ada.Strings;                use Ada.Strings;
-with Ada.Strings.Fixed;          use Ada.Strings.Fixed;
+with Ada.Strings;                 use Ada.Strings;
+with Ada.Strings.Fixed;           use Ada.Strings.Fixed;
 with Ada.Strings.Hash_Case_Insensitive;
-with Ada.Strings.Maps;           use Ada.Strings.Maps;
-with Ada.Text_IO;                use Ada.Text_IO;
-with Atree;
-with GNAT.Case_Util;             use GNAT.Case_Util;
-with GNAT.Directory_Operations;  use GNAT.Directory_Operations;
-with GNAT.OS_Lib;                use GNAT.OS_Lib;
+with Ada.Strings.Maps;            use Ada.Strings.Maps;
+with Ada.Text_IO;                 use Ada.Text_IO;
+
+with GNAT.Case_Util;              use GNAT.Case_Util;
+with GNAT.Directory_Operations;   use GNAT.Directory_Operations;
+with GNAT.OS_Lib;                 use GNAT.OS_Lib;
 with GNATCOLL.Projects.Normalize; use GNATCOLL.Projects.Normalize;
-with GNATCOLL.Traces;            use GNATCOLL.Traces;
-with GNATCOLL.Utils;             use GNATCOLL.Utils;
-with GNATCOLL.VFS;               use GNATCOLL.VFS;
-with GNATCOLL.VFS_Utils;         use GNATCOLL.VFS_Utils;
-with Casing;                     use Casing;
+with GNATCOLL.Traces;             use GNATCOLL.Traces;
+with GNATCOLL.Utils;              use GNATCOLL.Utils;
+with GNATCOLL.VFS;                use GNATCOLL.VFS;
+with GNATCOLL.VFS_Utils;          use GNATCOLL.VFS_Utils;
+
+with Atree;
+with Casing;                      use Casing;
 with Csets;
 with Makeutl;
-with Namet;                      use Namet;
+with Namet;                       use Namet;
 with Osint;
 with Opt;
 with Output;
-with Prj.Attr;                   use Prj.Attr;
+with Prj.Attr;                    use Prj.Attr;
 with Prj.Com;
-with Prj.Conf;                   use Prj.Conf;
-with Prj.Env;                    use Prj, Prj.Env;
+with Prj.Conf;                    use Prj.Conf;
+with Prj.Env;                     use Prj, Prj.Env;
 with Prj.Err;
 with Prj.Ext;
 with Prj.Part;
-with Prj.PP;                     use Prj.PP;
-with Prj.Tree;                   use Prj.Tree;
-with Prj.Util;                   use Prj.Util;
+with Prj.PP;                      use Prj.PP;
+with Prj.Tree;                    use Prj.Tree;
+with Prj.Util;                    use Prj.Util;
 with Sinput.P;
-with Snames;                     use Snames;
-with Types;                      use Types;
+with Snames;                      use Snames;
+with Types;                       use Types;
 
 package body GNATCOLL.Projects is
 
@@ -98,10 +100,10 @@ package body GNATCOLL.Projects is
    --  user data with project nodes.
 
    type Source_File_Data is record
-      Project   : Project_Type;
-      File      : GNATCOLL.VFS.Virtual_File;
-      Lang      : Namet.Name_Id;
-      Source    : Prj.Source_Id;
+      Project : Project_Type;
+      File    : GNATCOLL.VFS.Virtual_File;
+      Lang    : Namet.Name_Id;
+      Source  : Prj.Source_Id;
    end record;
    --   In some case, Lang might be set to Unknown_Language, if the file was
    --   set in the project (for instance through the Source_Files attribute),
@@ -1779,10 +1781,10 @@ package body GNATCOLL.Projects is
       Attribute : String;
       Index     : String := "") return Boolean
    is
-      Shared : constant Shared_Project_Tree_Data_Access :=
-        Project.Tree_View.Shared;
+      Shared         : constant Shared_Project_Tree_Data_Access :=
+                         Project.Tree_View.Shared;
       Sep            : constant Natural :=
-        Ada.Strings.Fixed.Index (Attribute, "#");
+                         Ada.Strings.Fixed.Index (Attribute, "#");
       Attribute_Name : constant String :=
                          String (Attribute (Sep + 1 .. Attribute'Last));
       Pkg_Name       : constant String :=
@@ -1852,9 +1854,9 @@ package body GNATCOLL.Projects is
       Attribute    : String;
       Use_Extended : Boolean := False) return GNAT.Strings.String_List
    is
-      Shared : Shared_Project_Tree_Data_Access;
+      Shared         : Shared_Project_Tree_Data_Access;
       Sep            : constant Natural :=
-        Ada.Strings.Fixed.Index (Attribute, "#");
+                         Ada.Strings.Fixed.Index (Attribute, "#");
       Attribute_Name : constant String :=
                          String (Attribute (Sep + 1 .. Attribute'Last));
       Pkg_Name       : constant String :=
@@ -2134,12 +2136,16 @@ package body GNATCOLL.Projects is
      (Tree     : Project_Node_Tree_Ref;
       Root     : Project_Node_Id;
       Callback : access procedure
-        (Tree : Project_Node_Tree_Ref; Node : Project_Node_Id))
+                   (Tree : Project_Node_Tree_Ref; Node : Project_Node_Id))
    is
       use Project_Sets;
       Seen : Project_Sets.Set;
 
       procedure Process_Project (Proj : Project_Node_Id);
+
+      ---------------------
+      -- Process_Project --
+      ---------------------
 
       procedure Process_Project (Proj : Project_Node_Id) is
          With_Clause : Project_Node_Id := First_With_Clause_Of (Proj, Tree);
@@ -2191,8 +2197,12 @@ package body GNATCOLL.Projects is
       procedure Do_Count (Tree : Project_Node_Tree_Ref;
                           Node : Project_Node_Id);
 
-      procedure Do_Count (Tree : Project_Node_Tree_Ref;
-                          Node : Project_Node_Id)
+      --------------
+      -- Do_Count --
+      --------------
+
+      procedure Do_Count
+        (Tree : Project_Node_Tree_Ref; Node : Project_Node_Id)
       is
          pragma Unreferenced (Tree, Node);
       begin
@@ -2327,10 +2337,11 @@ package body GNATCOLL.Projects is
       type Boolean_Array is array (Positive range <>) of Boolean;
 
       Root_Project : constant Project_Type := Project.Data.Tree.Root;
-      All_Prj   : Name_Id_Array_Access := Root_Project.Data.Imported_Projects;
-      Importing : Name_Id_Array_Access;
-      Index     : Integer;
-      Parent    : Project_Type;
+      All_Prj      : Name_Id_Array_Access :=
+                       Root_Project.Data.Imported_Projects;
+      Importing    : Name_Id_Array_Access;
+      Index        : Integer;
+      Parent       : Project_Type;
       Imports, Is_Limited_With : Boolean;
 
       procedure Merge_Project (P : Project_Type; Inc : in out Boolean_Array);
@@ -2762,9 +2773,9 @@ package body GNATCOLL.Projects is
         (Variable : Project_Node_Id; Proj : Project_Node_Id) return Boolean
       is
          pragma Unreferenced (Proj);
-         V : constant Name_Id := External_Reference_Of (Variable, T);
-         N : constant String := Get_String (V);
-         Var : Scenario_Variable;
+         V        : constant Name_Id := External_Reference_Of (Variable, T);
+         N        : constant String := Get_String (V);
+         Var      : Scenario_Variable;
          Is_Valid : Boolean;
       begin
          for Index in 1 .. Curr - 1 loop
@@ -3093,7 +3104,7 @@ package body GNATCOLL.Projects is
       Value            : out GNAT.Strings.String_List_Access;
       Is_Default_Value : out Boolean)
    is
-      Val    : Variable_Value;
+      Val : Variable_Value;
    begin
       if Get_View (Project) /= Prj.No_Project then
          Makeutl.Get_Switches
@@ -3215,9 +3226,9 @@ package body GNATCOLL.Projects is
    function Possible_Values_Of
      (Self : Project_Tree; Var : Scenario_Variable) return String_List
    is
-      Tree   : constant Prj.Tree.Project_Node_Tree_Ref := Self.Data.Tree;
-      Count  : Natural := 0;
-      Iter   : String_List_Iterator := Value_Of (Tree, Var);
+      Tree  : constant Prj.Tree.Project_Node_Tree_Ref := Self.Data.Tree;
+      Count : Natural := 0;
+      Iter  : String_List_Iterator := Value_Of (Tree, Var);
    begin
       while not Done (Iter) loop
          Count := Count + 1;
@@ -3346,8 +3357,8 @@ package body GNATCOLL.Projects is
    function Delete_File_Suffix
      (Filename : Filesystem_String; Project : Project_Type) return Natural
    is
-      View  : constant Project_Id := Get_View (Project);
-      Lang  : Language_Ptr;
+      View   : constant Project_Id := Get_View (Project);
+      Lang   : Language_Ptr;
       Suffix : Name_Id;
    begin
       --  View will be null when called from the project wizard
@@ -3379,7 +3390,7 @@ package body GNATCOLL.Projects is
 
       declare
          Ext : constant String :=
-           GNAT.Directory_Operations.File_Extension (+Filename);
+                 GNAT.Directory_Operations.File_Extension (+Filename);
       begin
          if  Ext = ".ads" or else Ext = ".adb" then
             return Filename'Last - 4;
@@ -3977,7 +3988,7 @@ package body GNATCOLL.Projects is
       Reloaded : out Boolean;
       Errors   : Error_Report := null)
    is
-      Iter               : Project_Iterator;
+      Iter : Project_Iterator;
    begin
       Iter     := Start (Self.Root_Project);
       Reloaded := False;
@@ -4459,7 +4470,7 @@ package body GNATCOLL.Projects is
       Node : Project_Node_Id) return Project_Type
    is
       Name : constant String :=
-        Get_String (Prj.Tree.Name_Of (Node, Self.Data.Tree));
+               Get_String (Prj.Tree.Name_Of (Node, Self.Data.Tree));
       Data : constant Project_Data_Access := Self.Data_Factory;
       P    : Project_Type;
    begin
@@ -4481,6 +4492,13 @@ package body GNATCOLL.Projects is
         (Proj : Project_Id;
          Tree : Project_Tree_Ref;
          S    : in out Integer);
+
+      procedure Do_Project2 (T : Project_Node_Tree_Ref; P : Project_Node_Id);
+
+      ----------------
+      -- Do_Project --
+      ----------------
+
       procedure Do_Project
         (Proj : Project_Id;
          Tree : Project_Tree_Ref;
@@ -4508,7 +4526,10 @@ package body GNATCOLL.Projects is
          end if;
       end Do_Project;
 
-      procedure Do_Project2 (T : Project_Node_Tree_Ref; P : Project_Node_Id);
+      -----------------
+      -- Do_Project2 --
+      -----------------
+
       procedure Do_Project2 (T : Project_Node_Tree_Ref; P : Project_Node_Id) is
          Name : constant String := Get_String (Prj.Tree.Name_Of (P, T));
          Proj : Project_Type;
@@ -4627,7 +4648,8 @@ package body GNATCOLL.Projects is
       use Virtual_File_List;
 
       Gnatls           : constant String :=
-        Self.Root_Project.Attribute_Value (Gnatlist_Attribute);
+                           Self.Root_Project.Attribute_Value
+                             (Gnatlist_Attribute);
       Iter             : Project_Iterator;
       Sources          : String_List_Id;
       P                : Project_Type;
@@ -4875,15 +4897,27 @@ package body GNATCOLL.Projects is
       procedure W_Eol;
       procedure W_Str  (S : String);
 
+      ------------
+      -- W_Char --
+      ------------
+
       procedure W_Char (C : Character) is
       begin
          Put (Pretty_Printer'Class (Self), C);
       end W_Char;
 
+      -----------
+      -- W_Eol --
+      -----------
+
       procedure W_Eol is
       begin
          New_Line (Pretty_Printer'Class (Self));
       end W_Eol;
+
+      -----------
+      -- W_Str --
+      -----------
 
       procedure W_Str (S : String) is
       begin
@@ -5012,16 +5046,16 @@ package body GNATCOLL.Projects is
    ----------------------------
 
    function Register_New_Attribute
-     (Name    : String;
-      Pkg     : String;
-      Is_List : Boolean := False;
-      Indexed : Boolean := False;
+     (Name                 : String;
+      Pkg                  : String;
+      Is_List              : Boolean := False;
+      Indexed              : Boolean := False;
       Case_Sensitive_Index : Boolean := False) return String
    is
-      Pkg_Id             : Package_Node_Id := Empty_Package;
-      Attr_Id            : Attribute_Node_Id;
-      Attr_Kind          : Defined_Attribute_Kind;
-      Var_Kind           : Defined_Variable_Kind;
+      Pkg_Id    : Package_Node_Id := Empty_Package;
+      Attr_Id   : Attribute_Node_Id;
+      Attr_Kind : Defined_Attribute_Kind;
+      Var_Kind  : Defined_Variable_Kind;
    begin
       if Pkg /= "" then
          Pkg_Id := Package_Node_Id_Of (Get_String (Pkg));
@@ -5108,12 +5142,16 @@ package body GNATCOLL.Projects is
       Force   : Boolean := False;
       Errors  : Error_Report := null) return Boolean
    is
-      File     : Ada.Text_IO.File_Type;
+      File : Ada.Text_IO.File_Type;
 
       type File_Pretty_Printer is new Pretty_Printer with null record;
       overriding procedure Put
         (Self : in out File_Pretty_Printer; C : Character);
       overriding procedure Put (Self : in out File_Pretty_Printer; S : String);
+
+      ---------
+      -- Put --
+      ---------
 
       overriding procedure Put
         (Self : in out File_Pretty_Printer; C : Character)
@@ -5310,6 +5348,11 @@ package body GNATCOLL.Projects is
       use Prj.Tree.Tree_Private_Part;
 
       procedure Fail (S : String);
+
+      ----------
+      -- Fail --
+      ----------
+
       procedure Fail (S : String) is
       begin
          if Errors /= null then
@@ -5317,8 +5360,10 @@ package body GNATCOLL.Projects is
          end if;
       end Fail;
 
-      Basename         : constant Filesystem_String := Base_Name
-        (Imported_Project_Location, Project_File_Extension);
+      Basename         : constant Filesystem_String :=
+                           Base_Name
+                             (Imported_Project_Location,
+                              Project_File_Extension);
       Imported_Project : Project_Node_Id := Empty_Node;
       Dep_ID           : Name_Id;
       Dep_Name         : Prj.Tree.Tree_Private_Part.Project_Name_And_Node;
@@ -5471,21 +5516,20 @@ package body GNATCOLL.Projects is
    --------------------
 
    function Create_Project
-     (Tree     : Project_Tree'Class;
-      Name     : String;
-      Path     : GNATCOLL.VFS.Virtual_File) return Project_Type
+     (Tree : Project_Tree'Class;
+      Name : String;
+      Path : GNATCOLL.VFS.Virtual_File) return Project_Type
    is
-      D : constant Filesystem_String :=
-            Name_As_Directory (Path.Full_Name)
-            & (+Translate (To_Lower (Name), To_Mapping (".", "-")))
-            & GNATCOLL.Projects.Project_File_Extension;
-      Project   : constant Project_Node_Id :=
-        Prj.Tree.Create_Project
-          (In_Tree        => Tree.Data.Tree,
-           Name           => Get_String (Name),
-           Full_Path      => Path_Name_Type (Get_String (+D)),
-           Is_Config_File => False);
-
+      D       : constant Filesystem_String :=
+                  Name_As_Directory (Path.Full_Name)
+                  & (+Translate (To_Lower (Name), To_Mapping (".", "-")))
+                  & GNATCOLL.Projects.Project_File_Extension;
+      Project : constant Project_Node_Id :=
+                  Prj.Tree.Create_Project
+                    (In_Tree        => Tree.Data.Tree,
+                     Name           => Get_String (Name),
+                     Full_Path      => Path_Name_Type (Get_String (+D)),
+                     Is_Config_File => False);
       P       : Project_Type;
    begin
       P := Tree.Instance_From_Node (Project);
@@ -5515,6 +5559,7 @@ package body GNATCOLL.Projects is
                Self.Data.Tree.Tree,
                To => Path_Name_Type (Get_String (+Path)));
          end;
+
       else
          Set_Extended_Project_Path_Of
            (Self.Data.Node,
@@ -5543,8 +5588,8 @@ package body GNATCOLL.Projects is
       Type_Name     : String;
       External_Name : String) return Scenario_Variable
    is
-      Tree_Node     : constant Project_Node_Tree_Ref := Project.Data.Tree.Tree;
-      Typ, Var : Project_Node_Id;
+      Tree_Node : constant Project_Node_Tree_Ref := Project.Data.Tree.Tree;
+      Typ, Var  : Project_Node_Id;
    begin
       if not Project.Is_Editable then
          Trace (Me, "Project is not editable");
