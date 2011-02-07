@@ -1510,8 +1510,6 @@ package body GNATCOLL.Projects is
       Index        : String := "";
       Use_Extended : Boolean := False) return Variable_Value
    is
-      Shared : constant Shared_Project_Tree_Data_Access :=
-        Project.Tree_View.Shared;
       Sep            : constant Natural :=
         Ada.Strings.Fixed.Index (Attribute, "#");
       Attribute_Name : constant String :=
@@ -1525,10 +1523,13 @@ package body GNATCOLL.Projects is
       Arr            : Array_Id;
       Elem           : Array_Element_Id;
       N              : Name_Id;
+      Shared         : Shared_Project_Tree_Data_Access;
    begin
       if Project_View = Prj.No_Project then
          return Nil_Variable_Value;
       end if;
+
+      Shared := Project.Tree_View.Shared;
 
       if Pkg_Name /= "" then
          Pkg := Value_Of
@@ -1728,10 +1729,9 @@ package body GNATCOLL.Projects is
      (Project : Project_Type;
       Value   : Variable_Value) return GNAT.Strings.String_List_Access
    is
-      Shared : constant Shared_Project_Tree_Data_Access :=
-        Project.Tree_View.Shared;
-      V     : String_List_Id;
-      S     : String_List_Access;
+      V      : String_List_Id;
+      S      : String_List_Access;
+      Shared : Shared_Project_Tree_Data_Access;
    begin
       case Value.Kind is
          when Undefined =>
@@ -1747,6 +1747,7 @@ package body GNATCOLL.Projects is
               (1 .. Length (Project.Tree_View, Value.Values));
             V := Value.Values;
 
+            Shared := Project.Tree_View.Shared;
             for J in S'Range loop
                Get_Name_String (Shared.String_Elements.Table (V).Value);
                S (J) := new String'(Name_Buffer (1 .. Name_Len));
