@@ -1,7 +1,7 @@
 -----------------------------------------------------------------------
 --                          G N A T C O L L                          --
 --                                                                   --
---                   Copyright (C) 2002-2010, AdaCore                --
+--                   Copyright (C) 2002-2011, AdaCore                --
 --                                                                   --
 -- GPS is free  software;  you can redistribute it and/or modify  it --
 -- under the terms of the GNU General Public License as published by --
@@ -2707,7 +2707,10 @@ package body GNATCOLL.Projects.Normalize is
 
             --  If the package doesn't exist, no need to do anything
             if Pkg = Empty_Node then
-               Trace (Me, "Delete attribute: No such package");
+               Trace (Me, "Delete attribute '"
+                      & Get_Name_String (Attribute_Name)
+                      & "': No such package '"
+                      & Pkg_Name & "'");
                return;
             end if;
          end if;
