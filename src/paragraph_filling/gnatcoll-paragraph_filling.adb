@@ -1,7 +1,7 @@
 -----------------------------------------------------------------------
 --                          G N A T C O L L                          --
 --                                                                   --
---                    Copyright (C) 2010, AdaCore                    --
+--                  Copyright (C) 2010-2011, AdaCore                 --
 --                                                                   --
 -- This library is free software; you can redistribute it and/or     --
 -- modify it under the terms of the GNU General Public               --
@@ -212,8 +212,9 @@ package body GNATCOLL.Paragraph_Filling is
       return Unbounded_String
    is
       Para : String renames Paragraph;
+      W    : GNATCOLL.Paragraph_Filling.Words.Words := Index_Paragraph (Para);
    begin
-      return Greedy_Fill (Index_Paragraph (Para), Max_Line_Length);
+      return Greedy_Fill (W, Max_Line_Length);
    end Greedy_Fill;
 
    ----------------------
