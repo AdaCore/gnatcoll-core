@@ -311,6 +311,7 @@ package GNATCOLL.SQL.Exec is
      (Connection : access Database_Connection_Record) is abstract;
    procedure Free (Connection : in out Database_Connection);
    --  Close the connection to the database, if needed.
+   --  Only Free needs to be called, and it will automatically call Close.
 
    function Error
      (Connection : access Database_Connection_Record)

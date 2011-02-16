@@ -1276,9 +1276,9 @@ package body GNATCOLL.SQL.Exec is
       Relative (DBMS_Direct_Cursor'Class (Self.Res.all), Step);
    end Relative;
 
-   -----------
-   -- Close --
-   -----------
+   ----------
+   -- Free --
+   ----------
 
    procedure Free (Connection : in out Database_Connection) is
       procedure Unchecked_Free is new Ada.Unchecked_Deallocation
