@@ -500,17 +500,17 @@ package body GNATCOLL.SQL.Exec is
       else
          case Param.Typ is
          when Parameter_Text    =>
-            return String_To_SQL (Format, Param.Str_Val.all);
+            return String_To_SQL (Format, Param.Str_Val.all, Quote => False);
          when Parameter_Integer =>
-            return Integer_To_SQL (Format, Param.Int_Val);
+            return Integer_To_SQL (Format, Param.Int_Val, Quote => False);
          when Parameter_Float   =>
-            return Float_To_SQL (Format, Param.Float_Val);
+            return Float_To_SQL (Format, Param.Float_Val, Quote => False);
          when Parameter_Boolean =>
-            return Boolean_To_SQL (Format, Param.Bool_Val);
+            return Boolean_To_SQL (Format, Param.Bool_Val, Quote => False);
          when Parameter_Time =>
-            return Time_To_SQL (Format, Param.Time_Val);
+            return Time_To_SQL (Format, Param.Time_Val, Quote => False);
          when Parameter_Date =>
-            return Date_To_SQL (Format, Param.Date_Val);
+            return Date_To_SQL (Format, Param.Date_Val, Quote => False);
          end case;
       end if;
    end Image;

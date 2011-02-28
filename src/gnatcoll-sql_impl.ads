@@ -66,17 +66,23 @@ package GNATCOLL.SQL_Impl is
    --  Boolean_Value (DBMS_Forward_Cursor).
 
    function Boolean_To_SQL
-     (Self : Formatter'Class; Value : Boolean) return String;
+     (Self : Formatter'Class; Value : Boolean; Quote : Boolean) return String;
    function Float_To_SQL
-     (Self : Formatter'Class; Value : Float) return String;
+     (Self : Formatter'Class; Value : Float; Quote : Boolean) return String;
    function Integer_To_SQL
-     (Self : Formatter'Class; Value : Integer) return String;
+     (Self : Formatter'Class; Value : Integer; Quote : Boolean) return String;
    function Time_To_SQL
-     (Self : Formatter'Class; Value : Ada.Calendar.Time) return String;
+     (Self : Formatter'Class; Value : Ada.Calendar.Time; Quote : Boolean)
+      return String;
    function Date_To_SQL
-     (Self : Formatter'Class; Value : Ada.Calendar.Time) return String;
+     (Self : Formatter'Class; Value : Ada.Calendar.Time; Quote : Boolean)
+      return String;
    --  Calls the above formatting primitives (or provide default version, when
    --  not overridable)
+   --  If Quote is False, these functions provide quotes around the values. For
+   --  instance, the image for a string contains the string itself, unquoted,
+   --  and with special characters unprotected. As a result, this is only
+   --  suitable for use with parameterized queries.
 
    type Parameter_Type is
      (Parameter_Integer, Parameter_Text, Parameter_Boolean, Parameter_Float,
@@ -90,10 +96,12 @@ package GNATCOLL.SQL_Impl is
    --  the value will be substituted at run time
 
    function String_To_SQL
-     (Self : Formatter'Class; Value : String) return String;
+     (Self : Formatter'Class; Value : String; Quote : Boolean) return String;
    --  Escape every apostrophe character "'" and backslash "\".
    --  Useful for strings in SQL commands where "'" means the end
    --  of the current string.
+   --  This is not suitable for use for string parameters, which should not be
+   --  quoted.
 
    -------------------------------------
    -- General declarations for tables --
@@ -418,9 +426,11 @@ package GNATCOLL.SQL_Impl is
    generic
       type Ada_Type (<>) is private;
       with function To_SQL
-        (Format : Formatter'Class; Value : Ada_Type) return String;
+        (Format : Formatter'Class;
+         Value  : Ada_Type;
+         Quote  : Boolean) return String;
       --  Converts Ada_Type to a value suitable to pass to SQL. This should
-      --  protect special characters if need be.
+      --  protect special characters if need be and if Quote is True.
       --  This function can also be used to add constraints on the types
       --  supported by these fields.
       --  You can often rely on Ada's builtin checks (for instance an integer

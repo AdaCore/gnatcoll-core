@@ -1021,7 +1021,7 @@ package body GNATCOLL.SQL_Impl is
          Long   : Boolean) return String is
       begin
          if Self.Data_Value /= null then
-            return To_SQL (Format, Self.Data_Value.all);
+            return To_SQL (Format, Self.Data_Value.all, Quote => True);
          end if;
 
          return To_String (Named_Field_Internal (Self), Format, Long);
@@ -1403,7 +1403,11 @@ package body GNATCOLL.SQL_Impl is
    --------------------
 
    function Boolean_To_SQL
-     (Self : Formatter'Class; Value : Boolean) return String is
+     (Self  : Formatter'Class;
+      Value : Boolean;
+      Quote : Boolean) return String
+   is
+      pragma Unreferenced (Quote);
    begin
       return Boolean_Image (Self, Value);
    end Boolean_To_SQL;
@@ -1413,9 +1417,11 @@ package body GNATCOLL.SQL_Impl is
    ------------------
 
    function Float_To_SQL
-     (Self : Formatter'Class; Value : Float) return String
+     (Self  : Formatter'Class;
+      Value : Float;
+      Quote : Boolean) return String
    is
-      pragma Unreferenced (Self);
+      pragma Unreferenced (Self, Quote);
       Img : constant String := Float'Image (Value);
    begin
       if Img (Img'First) = ' ' then
@@ -1430,9 +1436,11 @@ package body GNATCOLL.SQL_Impl is
    --------------------
 
    function Integer_To_SQL
-     (Self : Formatter'Class; Value : Integer) return String
+     (Self  : Formatter'Class;
+      Value : Integer;
+      Quote : Boolean) return String
    is
-      pragma Unreferenced (Self);
+      pragma Unreferenced (Self, Quote);
       Img : constant String := Integer'Image (Value);
    begin
       if Img (Img'First) = ' ' then
@@ -1447,7 +1455,9 @@ package body GNATCOLL.SQL_Impl is
    -----------------
 
    function Time_To_SQL
-     (Self : Formatter'Class; Value : Ada.Calendar.Time) return String
+     (Self  : Formatter'Class;
+      Value : Ada.Calendar.Time;
+      Quote : Boolean) return String
    is
       pragma Unreferenced (Self);
       Adjusted : Time;
@@ -1458,7 +1468,12 @@ package body GNATCOLL.SQL_Impl is
 
       if Value /= GNAT.Calendar.No_Time then
          Adjusted := Value - Duration (UTC_Time_Offset (Value)) * 60.0;
-         return Image (Adjusted, "'%Y-%m-%d %H:%M:%S'");
+
+         if Quote then
+            return Image (Adjusted, "'%Y-%m-%d %H:%M:%S'");
+         else
+            return Image (Adjusted, "%Y-%m-%d %H:%M:%S");
+         end if;
       else
          return "NULL";
       end if;
@@ -1469,7 +1484,9 @@ package body GNATCOLL.SQL_Impl is
    -----------------
 
    function Date_To_SQL
-     (Self : Formatter'Class; Value : Ada.Calendar.Time) return String
+     (Self  : Formatter'Class;
+      Value : Ada.Calendar.Time;
+      Quote : Boolean) return String
    is
       pragma Unreferenced (Self);
       Adjusted : Time;
@@ -1480,7 +1497,12 @@ package body GNATCOLL.SQL_Impl is
 
       if Value /= GNAT.Calendar.No_Time then
          Adjusted := Value - Duration (UTC_Time_Offset (Value)) * 60.0;
-         return Image (Adjusted, "'%Y-%m-%d'");
+
+         if Quote then
+            return Image (Adjusted, "'%Y-%m-%d'");
+         else
+            return Image (Adjusted, "%Y-%m-%d");
+         end if;
       else
          return "NULL";
       end if;
@@ -1491,7 +1513,9 @@ package body GNATCOLL.SQL_Impl is
    -------------------
 
    function String_To_SQL
-     (Self : Formatter'Class; Value : String) return String
+     (Self  : Formatter'Class;
+      Value : String;
+      Quote : Boolean) return String
    is
       pragma Unreferenced (Self);
       Num_Of_Apostrophes : constant Natural :=
@@ -1503,6 +1527,10 @@ package body GNATCOLL.SQL_Impl is
       Index              : Natural := Value'First;
       Prepend_E          : Boolean := False;
    begin
+      if not Quote then
+         return Value;
+      end if;
+
       if Num_Of_Apostrophes = 0
         and then Num_Of_Backslashes = 0
       then

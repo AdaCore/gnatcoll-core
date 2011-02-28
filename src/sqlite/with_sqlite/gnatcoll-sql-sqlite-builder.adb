@@ -451,7 +451,8 @@ package body GNATCOLL.SQL.Sqlite.Builder is
             when Parameter_Time =>
                declare
                   Str : aliased String :=
-                    Time_To_SQL (Connection.all, Params (P).Time_Val);
+                    Time_To_SQL (Connection.all, Params (P).Time_Val,
+                                 Quote => False);
                begin
                   Bind_Text (Stmt, P, Str'Address, Str'Length);
                end;
@@ -459,7 +460,8 @@ package body GNATCOLL.SQL.Sqlite.Builder is
             when Parameter_Date =>
                declare
                   Str : aliased String :=
-                    Date_To_SQL (Connection.all, Params (P).Date_Val);
+                    Date_To_SQL (Connection.all, Params (P).Date_Val,
+                                 Quote => False);
                begin
                   Bind_Text (Stmt, P, Str'Address, Str'Length);
                end;
