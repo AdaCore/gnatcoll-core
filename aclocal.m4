@@ -259,6 +259,9 @@ AC_DEFUN(AM_LIB_PATH,
       if test -f "$lib_dir/lib$1.so"; then
          am_path_$1=$lib_dir
          break
+      elif test -f "$lib_dir/lib$1.dll"; then
+         am_path_$1=$lib_dir
+         break
       fi
    done
    IFS=$as_save_IFS
@@ -303,9 +306,9 @@ AC_HELP_STRING(
        AC_CHECK_LIB(pq,PQreset,WITH_POSTGRES=yes,WITH_POSTGRES=no,[$PATH_LIBPQ])
      else
        WITH_POSTGRES=yes
-       if test -f "$POSTGRESQL_PATH_WITH/libpq.so"; then
+       if test -f "$POSTGRESQL_PATH_WITH/libpq.so" -o -f "$POSTGRESQL_PATH_WITH/libpq.dll" ; then
           PATH_LIBPQ="-L$POSTGRESQL_PATH_WITH"
-       elif test -f "$POSTGRESQL_PATH_WITH/lib/libpq.so"; then
+       elif test -f "$POSTGRESQL_PATH_WITH/lib/libpq.so" -o -f "$POSTGRESQL_PATH_WITH/lib/libpq.dll" ; then
           PATH_LIBPQ="-L$POSTGRESQL_PATH_WITH/lib"
        else
           AC_MSG_CHECKING(for PostgreSQL)
