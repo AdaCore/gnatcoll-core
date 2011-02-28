@@ -290,7 +290,7 @@ package body GNATCOLL.SQL.Postgres.Gnade is
             Values  : CS.chars_ptr_array;
             Lengths : System.Address := System.Null_Address;
             Formats : System.Address := System.Null_Address;
-            Format  : Natural := 1) return System.Address;
+            Format  : Natural := 0) return System.Address;
          pragma Import (C, PQexecPrepared, "PQexecPrepared");
 
          R : PGresult;
