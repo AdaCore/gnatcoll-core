@@ -1,7 +1,7 @@
 -----------------------------------------------------------------------
 --                           G N A T C O L L                         --
 --                                                                   --
---                   Copyright (C) 2009-2010, AdaCore                --
+--                   Copyright (C) 2009-2011, AdaCore                --
 --                                                                   --
 -- GPS is free  software;  you can redistribute it and/or modify  it --
 -- under the terms of the GNU General Public License as published by --
@@ -28,6 +28,7 @@
 --  This package provides a type useful to manipulate command lines
 
 with GNAT.OS_Lib;
+with GNAT.Strings;
 with Ada.Containers.Vectors;
 with Ada.Strings.Unbounded;   use Ada.Strings.Unbounded;
 
@@ -60,6 +61,15 @@ package GNATCOLL.Arg_Lists is
    --  Create a command line from command.
    --  This creates a command line which has Command as a command and
    --  no arguments.
+
+   function Argument_List_To_String
+     (List           : GNAT.Strings.String_List;
+      Protect_Quotes : Boolean := True) return String;
+   --  Concatenate all the elements in List into a single string.
+   --    Argument_String_To_List (Argument_List_To_String (X)) = X
+   --  The returned string ends with a space.
+   --  If Protect_Quotes is True, then all quotes (single and double) are
+   --  preceded by a backslash.
 
    function Parse_String
      (Text : String;

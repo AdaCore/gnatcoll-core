@@ -30,6 +30,7 @@
 
 with Ada.Calendar;
 with Ada.Strings.Unbounded;
+with GNAT.Expect;
 with GNAT.Strings;
 
 package GNATCOLL.Utils is
@@ -107,6 +108,25 @@ package GNATCOLL.Utils is
    --  Return the first end-of-line after Str'First (use substrings for later
    --  lines). The result is either Str'Last+1 or pointing to the first
    --  ASCII.LF found.
+
+   function Strip_Character (Text : String; C : Character) return String;
+   --  Return a version of Text after stripping all C's from the string
+
+   function Strip_CR (Text : String) return String;
+   pragma Inline (Strip_CR);
+   --  Return a version of Text after stripping all the CR from the string.
+   --  This function is used on Windows or when the Strip_CR preference is
+   --  enabled (for systems that share dos files).
+   --  CR/LF sequences are replaced by LF chars.
+
+   ------------
+   -- Expect --
+   ------------
+
+   function Get_Command_Output
+     (Command : access GNAT.Expect.Process_Descriptor'Class) return String;
+   --  Runs Command until it finishes, and return its output.
+   --  This automatically closes the process cleanly.
 
    ------------------
    -- File systems --

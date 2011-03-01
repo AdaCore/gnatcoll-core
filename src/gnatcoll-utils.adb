@@ -439,4 +439,107 @@ package body GNATCOLL.Utils is
       return To_String (Result);
    end Join;
 
+   ---------------------
+   -- Strip_Character --
+   ---------------------
+
+   function Strip_Character (Text : String; C : Character) return String is
+      pragma Suppress (All_Checks);
+
+      To       : String (1 .. Text'Length);
+      Index_To : Positive := 1;
+
+   begin
+      for Index in Text'Range loop
+         if Text (Index) /= C then
+            To (Index_To) := Text (Index);
+            Index_To := Index_To + 1;
+         end if;
+      end loop;
+
+      return To (1 .. Index_To - 1);
+   end Strip_Character;
+
+   --------------
+   -- Strip_CR --
+   --------------
+
+   function Strip_CR (Text : String) return String is
+   begin
+      return Strip_Character (Text, ASCII.CR);
+   end Strip_CR;
+
+   ------------------------
+   -- Get_Command_Output --
+   ------------------------
+
+   function Get_Command_Output
+     (Command : access GNAT.Expect.Process_Descriptor'Class) return String
+   is
+      use GNAT.Expect;
+
+      Output : String_Access := new String (1 .. 1024);
+      --  Buffer used to accumulate standard output from the launched
+      --  command, expanded as necessary during execution.
+
+      Last : Integer := 0;
+      --  Index of the last used character within Output
+
+      Status     : Integer;
+
+   begin
+      declare
+         Result : Expect_Match;
+         pragma Unreferenced (Result);
+
+      begin
+         --  This loop runs until the call to Expect raises Process_Died
+
+         loop
+            Expect (Command.all, Result, ".+");
+
+            declare
+               NOutput : String_Access;
+               S       : constant String := Expect_Out (Command.all);
+               pragma Assert (S'Length > 0);
+
+            begin
+               --  Expand buffer if we need more space. Note here that we add
+               --  S'Length to ensure that S will fit in the new buffer size.
+
+               if Last + S'Length > Output'Last then
+                  NOutput := new String (1 .. 2 * Output'Last + S'Length);
+                  NOutput (Output'Range) := Output.all;
+                  Free (Output);
+
+                  --  Here if current buffer size is OK
+
+               else
+                  NOutput := Output;
+               end if;
+
+               NOutput (Last + 1 .. Last + S'Length) := S;
+               Last := Last + S'Length;
+               Output := NOutput;
+            end;
+         end loop;
+
+      exception
+         when Process_Died =>
+            Close (Command.all, Status);
+      end;
+
+      if Last = 0 then
+         Free (Output);
+         return "";
+      end if;
+
+      declare
+         S : constant String := Output (1 .. Last);
+      begin
+         Free (Output);
+         return S;
+      end;
+   end Get_Command_Output;
+
 end GNATCOLL.Utils;

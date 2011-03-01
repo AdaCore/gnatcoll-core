@@ -1,7 +1,7 @@
 -----------------------------------------------------------------------
 --                           G N A T C O L L                         --
 --                                                                   --
---                   Copyright (C) 2009-2010, AdaCore                --
+--                   Copyright (C) 2009-2011, AdaCore                --
 --                                                                   --
 -- GPS is free  software;  you can redistribute it and/or modify  it --
 -- under the terms of the GNU General Public License as published by --
@@ -504,5 +504,55 @@ package body GNATCOLL.Arg_Lists is
       C.V.Replace_Element
         (N, (C.V.Element (N).Mode, To_Unbounded_String (Arg)));
    end Set_Nth_Arg;
+
+   -----------------------------
+   -- Argument_List_To_String --
+   -----------------------------
+
+   -----------------------------
+   -- Argument_List_To_String --
+   -----------------------------
+
+   function Argument_List_To_String
+     (List           : GNAT.Strings.String_List;
+      Protect_Quotes : Boolean := True) return String
+   is
+      Length : Natural := 0;
+   begin
+      for L in List'Range loop
+         Length := Length + List (L)'Length + 1;
+
+         if Protect_Quotes then
+            for S in List (L)'Range loop
+               if List (L)(S) = '"'
+                 or else List (L)(S) = ' '
+               then
+                  Length := Length + 1;
+               end if;
+            end loop;
+         end if;
+      end loop;
+
+      declare
+         S     : String (1 .. Length);
+         Index : Positive := S'First;
+      begin
+         for L in List'Range loop
+            for J in List (L)'Range loop
+               if Protect_Quotes then
+                  if List (L)(J) = '"' or else List (L)(J) = ' ' then
+                     S (Index) := '\';
+                     Index := Index + 1;
+                  end if;
+               end if;
+               S (Index) := List (L)(J);
+               Index := Index + 1;
+            end loop;
+            S (Index) := ' ';
+            Index := Index + 1;
+         end loop;
+         return S (1 .. S'Last - 1);  -- Ignore last space
+      end;
+   end Argument_List_To_String;
 
 end GNATCOLL.Arg_Lists;

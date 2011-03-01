@@ -38,7 +38,9 @@ with Ada.Text_IO;                 use Ada.Text_IO;
 
 with GNAT.Case_Util;              use GNAT.Case_Util;
 with GNAT.Directory_Operations;   use GNAT.Directory_Operations;
+with GNAT.Expect;                 use GNAT.Expect;
 with GNAT.OS_Lib;                 use GNAT.OS_Lib;
+with GNATCOLL.Arg_Lists;          use GNATCOLL.Arg_Lists;
 with GNATCOLL.Projects.Normalize; use GNATCOLL.Projects.Normalize;
 with GNATCOLL.Traces;             use GNATCOLL.Traces;
 with GNATCOLL.Utils;              use GNATCOLL.Utils;
@@ -60,6 +62,7 @@ with Prj.Env;                     use Prj, Prj.Env;
 with Prj.Err;
 with Prj.Ext;
 with Prj.Part;
+with Prj.Proc;
 with Prj.PP;                      use Prj.PP;
 with Prj.Tree;                    use Prj.Tree;
 with Prj.Util;                    use Prj.Util;
@@ -262,7 +265,8 @@ package body GNATCOLL.Projects is
 
    function Create_Flags
      (On_Error        : Prj.Error_Handler;
-      Require_Sources : Boolean := True) return Prj.Processing_Flags;
+      Require_Sources : Boolean := True;
+      Ignore_Missing_With : Boolean := False) return Prj.Processing_Flags;
    --  Return the flags to pass to the project manager in the context of GPS.
    --  Require_Sources indicates whether each language must have sources
    --  attached to it.
@@ -315,10 +319,13 @@ package body GNATCOLL.Projects is
       Root_Project_Path : GNATCOLL.VFS.Virtual_File;
       Errors            : Projects.Error_Report;
       Project           : out Project_Node_Id;
-      Recompute_View    : Boolean := True);
+      Recompute_View    : Boolean := True;
+      Test_With_Missing_With : Boolean := True);
    --  Internal implementation of load. This doesn't reset the tree at all,
    --  but will properly setup the GNAT project manager so that error messages
-   --  are redirected and fatal errors do not kill GPS
+   --  are redirected and fatal errors do not kill GPS.
+   --  If Test_With_Missing_With is True, first test with ignoring unresolved
+   --  "with" statement, in case we need to first parse the gnatlist attribute.
 
    procedure Parse_Source_Files (Self : in out Project_Tree);
    --  Find all the source files for the project, and cache them.
@@ -3452,7 +3459,8 @@ package body GNATCOLL.Projects is
 
    function Create_Flags
      (On_Error        : Prj.Error_Handler;
-      Require_Sources : Boolean := True) return Processing_Flags is
+      Require_Sources : Boolean := True;
+      Ignore_Missing_With : Boolean := False) return Processing_Flags is
    begin
       if Require_Sources then
          return Create_Flags
@@ -3463,7 +3471,8 @@ package body GNATCOLL.Projects is
             Allow_Duplicate_Basenames  => True,
             Require_Obj_Dirs           => Warning,
             Allow_Invalid_External     => Warning,
-            Missing_Source_Files       => Warning);
+            Missing_Source_Files       => Warning,
+            Ignore_Missing_With        => Ignore_Missing_With);
       else
          return Create_Flags
            (Report_Error               => On_Error,
@@ -3473,7 +3482,8 @@ package body GNATCOLL.Projects is
             Allow_Duplicate_Basenames  => True,
             Require_Obj_Dirs           => Warning,
             Allow_Invalid_External     => Silent,
-            Missing_Source_Files       => Warning);
+            Missing_Source_Files       => Warning,
+            Ignore_Missing_With        => Ignore_Missing_With);
       end if;
    end Create_Flags;
 
@@ -4139,6 +4149,213 @@ package body GNATCOLL.Projects is
       Prj.Initialize (Tree.Data.View);
    end Reset;
 
+   --------------------------
+   -- Set_Path_From_Gnatls --
+   --------------------------
+
+   procedure Set_Path_From_Gnatls
+     (Self         : in out Project_Environment;
+      Gnatls       : String;
+      GNAT_Version : out GNAT.Strings.String_Access;
+      Errors       : Error_Report := null)
+   is
+      Gnatls_Args    : Argument_List_Access :=
+        Argument_String_To_List (Gnatls & " -v");
+
+      procedure Unchecked_Free is new Ada.Unchecked_Deallocation
+        (Process_Descriptor'Class, Process_Descriptor_Access);
+
+      Success : Boolean;
+      Fd      : Process_Descriptor_Access;
+
+   begin
+      Trace (Me, "Executing " & Argument_List_To_String (Gnatls_Args.all));
+      --  ??? Place a error handler here
+      begin
+         Success := True;
+
+         declare
+            Gnatls_Path : constant Virtual_File :=
+              Locate_On_Path
+                (+Gnatls_Args (Gnatls_Args'First).all);
+         begin
+            if Gnatls_Path = GNATCOLL.VFS.No_File then
+               Success := False;
+
+               Trace (Me, "Could not locate exec " &
+                      Gnatls_Args (Gnatls_Args'First).all);
+
+               if Errors /= null then
+                  Errors ("Could not locate exec " &
+                          Gnatls_Args (Gnatls_Args'First).all);
+               end if;
+            else
+               Fd := new Process_Descriptor;
+               Non_Blocking_Spawn
+                 (Fd.all,
+                  +Gnatls_Path.Full_Name,
+                  Gnatls_Args (2 .. Gnatls_Args'Last),
+                  Buffer_Size => 0, Err_To_Out => True);
+            end if;
+         end;
+
+      exception
+         when others =>
+            if Errors /= null then
+               Errors ("Could not execute " & Gnatls_Args (1).all);
+            end if;
+            Success := False;
+      end;
+
+      if not Success then
+         if Errors /= null then
+            Errors
+              ("Could not compute predefined paths for this project.");
+            Errors
+              ("Subprojects might be incorrectly loaded, please make " &
+               "sure they are in your ADA_PROJECT_PATH");
+         end if;
+
+         return;
+      end if;
+
+      if Fd /= null then
+         Set_Path_From_Gnatls_Output
+           (Self,
+            Output => Get_Command_Output (Fd),
+            GNAT_Version => GNAT_Version);
+
+         Unchecked_Free (Fd);
+      end if;
+
+      Free (Gnatls_Args);
+   end Set_Path_From_Gnatls;
+
+   ---------------------------------
+   -- Set_Path_From_Gnatls_Output --
+   ---------------------------------
+
+   procedure Set_Path_From_Gnatls_Output
+     (Self         : in out Project_Environment;
+      Output       : String;
+      Host         : String := GNATCOLL.VFS.Local_Host;
+      GNAT_Version : out GNAT.Strings.String_Access)
+   is
+      type Path_Context is (None, Source_Path, Object_Path, Project_Path);
+      Context : Path_Context := None;
+
+      Current         : GNATCOLL.VFS.File_Array_Access :=
+                          new File_Array'(1 .. 0 => <>);
+      Object_Path_Set : Boolean := False;
+
+      procedure Add_Directory (S : String);
+      --  Add S to the search path.
+      --  If Source_Path is True, the source path is modified.
+      --  Otherwise, the object path is modified.
+
+      procedure Set_Context (New_Context : Path_Context);
+      --  Change the context
+
+      -------------------
+      -- Add_Directory --
+      -------------------
+
+      procedure Add_Directory (S : String) is
+         Dir : Virtual_File;
+      begin
+         if S = "" then
+            return;
+
+         elsif S = "<Current_Directory>" then
+            if not Object_Path_Set then
+               --  Do not include "." in the default source/object paths: when
+               --  the user is compiling, it would represent the object
+               --  directory, when the user is searching file it would
+               --  represent whatever the current directory is at that point,
+               --  ...
+               return;
+            else
+               Dir := Create_From_Base (".");
+               Ensure_Directory (Dir);
+               Append (Current, Dir);
+            end if;
+
+         else
+            Dir := To_Local (Create (+S, Host));
+            Append (Current, Dir);
+         end if;
+      end Add_Directory;
+
+      -----------------
+      -- Set_Context --
+      -----------------
+
+      procedure Set_Context (New_Context : Path_Context) is
+      begin
+         case Context is
+            when None =>
+               null;
+
+            when Source_Path =>
+               Self.Set_Predefined_Source_Path (Current.all);
+
+            when Object_Path =>
+               Object_Path_Set := True;
+               Self.Set_Predefined_Object_Path (Current.all);
+
+            when Project_Path =>
+               Self.Set_Predefined_Project_Path (Current.all);
+         end case;
+
+         if Active (Me) and then Context /= None then
+            Trace (Me, "Set " & Context'Img & " from gnatls to:");
+            for J in Current'Range loop
+               Trace (Me, "  " & Current (J).Display_Full_Name);
+            end loop;
+         end if;
+
+         Context := New_Context;
+         Unchecked_Free (Current);
+         Current := new File_Array'(1 .. 0 => <>);
+      end Set_Context;
+
+      F, L : Natural;
+
+   begin
+      F := Output'First;
+      L  := EOL (Output);
+
+      declare
+         S : constant String := Strip_CR (Output (F .. L - 1));
+      begin
+         GNAT_Version := new String'(S (S'First + 7 .. S'Last - 10));
+      end;
+
+      F := L + 1;
+
+      while F <= Output'Last loop
+         L := EOL (Output (F .. Output'Last));
+
+         if Starts_With (Output (F .. L - 1), "Source Search Path:") then
+            Set_Context (Source_Path);
+
+         elsif Starts_With (Output (F .. L - 1), "Object Search Path:") then
+            Set_Context (Object_Path);
+
+         elsif Starts_With (Output (F .. L - 1), "Project Search Path:") then
+            Set_Context (Project_Path);
+
+         elsif Context /= None then
+            Add_Directory
+              (Trim (Strip_CR (Output (F .. L - 1)), Ada.Strings.Left));
+         end if;
+
+         F := L + 1;
+      end loop;
+
+      Set_Context (None);
+   end Set_Path_From_Gnatls_Output;
+
    -------------------
    -- Internal_Load --
    -------------------
@@ -4148,7 +4365,8 @@ package body GNATCOLL.Projects is
       Root_Project_Path : GNATCOLL.VFS.Virtual_File;
       Errors            : Projects.Error_Report;
       Project           : out Project_Node_Id;
-      Recompute_View    : Boolean := True)
+      Recompute_View    : Boolean := True;
+      Test_With_Missing_With : Boolean := True)
    is
       procedure On_Error is new Mark_Project_Error (Tree);
       --  Any error while parsing the project marks it as incomplete, and
@@ -4193,7 +4411,9 @@ package body GNATCOLL.Projects is
       Sinput.P.Reset_First;
 
       Override_Flags (Tree.Data.Env.Env,
-                      Create_Flags (On_Error'Unrestricted_Access));
+                      Create_Flags
+                        (On_Error'Unrestricted_Access,
+                         Ignore_Missing_With => Test_With_Missing_With));
       Prj.Part.Parse
         (Tree.Data.Tree, Project,
          +Root_Project_Path.Full_Name,
@@ -4201,6 +4421,90 @@ package body GNATCOLL.Projects is
          Is_Config_File    => False,
          Env               => Tree.Data.Env.Env,
          Current_Directory => Get_Current_Dir);
+
+      if Project /= Empty_Node
+        and then Tree.Data.Tree.Incomplete_With
+      then
+         --  Some "with" were found that could not be resolved. Check whether
+         --  the user has specified a "gnatlist" switch. For this, we need to
+         --  do phase1 of the processing (ie not look for sources).
+
+         declare
+            Success : Boolean;
+            Tmp_Prj : Project_Id;
+            P       : Package_Id;
+            Value   : Variable_Value;
+
+         begin
+            Prj.Proc.Process_Project_Tree_Phase_1
+              (In_Tree                => Tree.Data.View,
+               Project                => Tmp_Prj,
+               Success                => Success,
+               From_Project_Node      => Project,
+               From_Project_Node_Tree => Tree.Data.Tree,
+               Env                    => Tree.Data.Env.Env,
+               Reset_Tree             => True);
+
+            if not Success then
+               Project := Empty_Node;
+            else
+               Trace (Me, "Looking for IDE'gnatlist attribute");
+
+               P := Value_Of
+                 (Name_Ide,
+                  In_Packages => Tmp_Prj.Decl.Packages,
+                  Shared      => Tree.Data.View.Shared);
+               if P = No_Package then
+                  Trace (Me, "No package IDE");
+                  Project := Empty_Node;  --  ??? Should we free it
+
+               else
+                  Value := Value_Of
+                    (Get_String ("gnatlist"),
+                     Tree.Data.View.Shared.Packages.Table (P).Decl.Attributes,
+                     Tree.Data.View.Shared);
+                  if Value = Nil_Variable_Value then
+                     Trace (Me, "No attribute IDE'gnatlist");
+                     Project := Empty_Node;  --  ??? Should we free it
+                  else
+                     declare
+                        Gnatls : constant String :=
+                          Get_Name_String (Value.Value);
+                        GNAT_Version : String_Access;
+                     begin
+                        Trace (Me, "gnatlist=" & Gnatls);
+
+                        Tree.Data.Env.Set_Path_From_Gnatls
+                          (Gnatls       => Gnatls,
+                           GNAT_Version => GNAT_Version,
+                           Errors       => Fail'Unrestricted_Access);
+                        Free (GNAT_Version);
+                     end;
+                  end if;
+               end if;
+            end if;
+
+            --  Reparse the tree so that errors are reported as usual
+            --  (or not if the new project path solves the issue)
+
+            Override_Flags
+              (Tree.Data.Env.Env,
+               Create_Flags
+                 (On_Error'Unrestricted_Access,
+                  Ignore_Missing_With => False));
+
+            Trace (Me, "Parsing project tree a second time");
+
+            Internal_Load
+              (Tree              => Tree,
+               Root_Project_Path => Root_Project_Path,
+               Errors            => Errors,
+               Project           => Project,
+               Recompute_View    => Recompute_View,
+               Test_With_Missing_With => False);
+            return;
+         end;
+      end if;
 
       Override_Flags (Tree.Data.Env.Env, Create_Flags (null));
 

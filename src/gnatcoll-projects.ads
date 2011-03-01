@@ -333,6 +333,24 @@ package GNATCOLL.Projects is
    --  Return the predefined paths, or the current directory if no
    --  paths have been set yet.
 
+   procedure Set_Path_From_Gnatls
+     (Self         : in out Project_Environment;
+      Gnatls       : String;
+      GNAT_Version : out GNAT.Strings.String_Access;
+      Errors       : Error_Report := null);
+   --  Execute the given "gnatls" command with switch "-v" and parse the
+   --  default search paths and project path from it.
+   --  This function returns the version of GNAT as read from gnatls. This
+   --  string must be freed by the user.
+
+   procedure Set_Path_From_Gnatls_Output
+     (Self         : in out Project_Environment;
+      Output       : String;
+      Host         : String := GNATCOLL.VFS.Local_Host;
+      GNAT_Version : out GNAT.Strings.String_Access);
+   --  Same as Set_Path_From_Gnatls, but gets the output of "gnatls -v" in
+   --  input (and does not spawn a command)
+
    ------------------------
    -- Project properties --
    ------------------------
