@@ -1,0 +1,6 @@
+Known Problems fixed in Gnatcoll 1.4
+
+- K303-032: configure doesn't find gmp.h
+  Problem:    If the GMP library is installed in a non-standard directory,
+              configure doesn't match to properly detect it.
+  Workaround: make sure that gmp.h can be found by the C compiler.

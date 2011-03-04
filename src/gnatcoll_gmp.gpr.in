@@ -21,7 +21,11 @@ project GnatColl_Gmp is
 
    package Builder renames GnatColl_Shared.Builder;
 
-   package Compiler renames Gnatcoll_Shared.Compiler;
+   package Compiler is
+      for Switches ("Ada") use Gnatcoll_Shared.Compiler'Switches ("Ada");
+      for Switches ("C") use Gnatcoll_Shared.Compiler'Switches ("C")
+        & (@GMP_CFLAGS_GPR@);
+   end Compiler;
 
    package Linker is
       --  When linking an executable

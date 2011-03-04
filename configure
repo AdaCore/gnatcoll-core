@@ -309,7 +309,7 @@ ac_includes_default="\
 # include <unistd.h>
 #endif"
 
-ac_subst_vars='SHELL PATH_SEPARATOR PACKAGE_NAME PACKAGE_TARNAME PACKAGE_VERSION PACKAGE_STRING PACKAGE_BUGREPORT exec_prefix prefix program_transform_name bindir sbindir libexecdir datadir sysconfdir sharedstatedir localstatedir libdir includedir oldincludedir infodir mandir build_alias host_alias target_alias DEFS ECHO_C ECHO_N ECHO_T LIBS build build_cpu build_vendor build_os host host_cpu host_vendor host_os target target_cpu target_vendor target_os LN_S CC CFLAGS LDFLAGS CPPFLAGS ac_ct_CC EXEEXT OBJEXT CPP EGREP BUILD_TYPE GNAT_BUILDS_SHARED DEFAULT_LIBRARY_TYPE PKG_CONFIG HAVE_GTKADA GTK_GCC_FLAGS WITH_GTK PYTHON PYTHON_BASE PYTHON_VERSION PYTHON_DIR PYTHON_LIBS PYTHON_CFLAGS WITH_PYTHON WITH_POSTGRES PATH_LIBPQ HAS_PQPREPARE WITH_SQLITE PATH_LIBSQLITE PYGTK_PREFIX PYGTK_INCLUDE WITH_PYGTK WITH_GMP GMP_CFLAGS GMP_LIBS HAVE_GNAT_UTIL GNAT_SOURCES WITH_PROJECTS SYNC_COUNTERS_IMPL GMP_LIBS_GPR PYTHON_LIBS_GPR PYTHON_CFLAGS_GPR PYGTK_INCLUDE_GPR GTK_GCC_FLAGS_GPR WITH_SYSLOG MAKEINFO TEXI2DVI LIBOBJS LTLIBOBJS'
+ac_subst_vars='SHELL PATH_SEPARATOR PACKAGE_NAME PACKAGE_TARNAME PACKAGE_VERSION PACKAGE_STRING PACKAGE_BUGREPORT exec_prefix prefix program_transform_name bindir sbindir libexecdir datadir sysconfdir sharedstatedir localstatedir libdir includedir oldincludedir infodir mandir build_alias host_alias target_alias DEFS ECHO_C ECHO_N ECHO_T LIBS build build_cpu build_vendor build_os host host_cpu host_vendor host_os target target_cpu target_vendor target_os LN_S CC CFLAGS LDFLAGS CPPFLAGS ac_ct_CC EXEEXT OBJEXT CPP EGREP BUILD_TYPE GNAT_BUILDS_SHARED DEFAULT_LIBRARY_TYPE PKG_CONFIG HAVE_GTKADA GTK_GCC_FLAGS WITH_GTK PYTHON PYTHON_BASE PYTHON_VERSION PYTHON_DIR PYTHON_LIBS PYTHON_CFLAGS WITH_PYTHON WITH_POSTGRES PATH_LIBPQ HAS_PQPREPARE WITH_SQLITE PATH_LIBSQLITE PYGTK_PREFIX PYGTK_INCLUDE WITH_PYGTK WITH_GMP GMP_CFLAGS GMP_LIBS HAVE_GNAT_UTIL GNAT_SOURCES WITH_PROJECTS SYNC_COUNTERS_IMPL GMP_CFLAGS_GPR GMP_LIBS_GPR PYTHON_LIBS_GPR PYTHON_CFLAGS_GPR PYGTK_INCLUDE_GPR GTK_GCC_FLAGS_GPR WITH_SYSLOG MAKEINFO TEXI2DVI LIBOBJS LTLIBOBJS'
 ac_subst_files=''
 
 # Initialize some variables set by options.
@@ -4369,6 +4369,20 @@ echo "${ECHO_T}no" >&6
 
 
 
+   value=$GMP_CFLAGS
+   output=GMP_CFLAGS_GPR
+   result=""
+   for v in $value; do
+      if test "$result" != ""; then
+         result="$result, "
+      fi
+      result="$result\"$v\""
+   done
+   GMP_CFLAGS_GPR=$result
+
+
+
+
    value=$GMP_LIBS
    output=GMP_LIBS_GPR
    result=""
@@ -5396,6 +5410,7 @@ s,@HAVE_GNAT_UTIL@,$HAVE_GNAT_UTIL,;t t
 s,@GNAT_SOURCES@,$GNAT_SOURCES,;t t
 s,@WITH_PROJECTS@,$WITH_PROJECTS,;t t
 s,@SYNC_COUNTERS_IMPL@,$SYNC_COUNTERS_IMPL,;t t
+s,@GMP_CFLAGS_GPR@,$GMP_CFLAGS_GPR,;t t
 s,@GMP_LIBS_GPR@,$GMP_LIBS_GPR,;t t
 s,@PYTHON_LIBS_GPR@,$PYTHON_LIBS_GPR,;t t
 s,@PYTHON_CFLAGS_GPR@,$PYTHON_CFLAGS_GPR,;t t
