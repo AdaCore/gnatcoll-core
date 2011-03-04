@@ -399,10 +399,10 @@ private
    ------------
 
    type DB_Schema is record
-      Tables : Tables_Maps.Map;
+      Tables  : Tables_Maps.Map;
    end record;
 
-   No_Schema : constant DB_Schema := (Tables => Tables_Maps.Empty_Map);
+   No_Schema : constant DB_Schema := (Tables  => Tables_Maps.Empty_Map);
 
    No_Table : constant Table_Description :=
      (Tables_Ref.Null_Ref with null record);

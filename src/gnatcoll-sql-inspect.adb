@@ -1641,7 +1641,7 @@ package body GNATCOLL.SQL.Inspect is
 
             while First <= Line_End loop
                Skip_Blanks (Data, First);
-               exit when First > Line_End;
+               exit when First >= Line_End;
                exit when Data (First) = '#';  --  A comment
 
                --  First now points to first non-blank char
@@ -1726,6 +1726,14 @@ package body GNATCOLL.SQL.Inspect is
 
                Free (Values);
             end;
+
+         elsif Fields_Count /= 0
+           and then Line (1).all = "QUERIES"
+         then
+            while First <= Data'Last and then Data (First) = '|' loop
+               Parse_Line;
+               Execute (DB, Line (1).all);
+            end loop;
 
          elsif Fields_Count /= 0 then
             declare
