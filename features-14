@@ -15,6 +15,12 @@ of the feature.
 New features in 1.4
 -------------------
 
+NF-14-K304-004 GNATCOLL.SQL creates database with indexes (2011-03-03)
+
+   When creating a database through GNATCOLL (and when the schema is
+   specified in a text file), it is now possible to specify indexes to
+   create, to speed up queries.
+
 NF-14-JA21-009 New package GNATCOLL.Config (2010-12-22)
 
    This package provides handling of configuration files, in particular

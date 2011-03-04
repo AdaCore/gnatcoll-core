@@ -314,6 +314,7 @@ private
       Default     : GNAT.Strings.String_Access;
       PK          : Boolean;  --  Part of the primary key ?
       Not_Null    : Boolean;
+      Indexed     : Boolean;  --  Do we need an index ?
       FK          : Boolean;  --  Whether this is part of a foreign key
       Table       : Tables_Ref.Weak_Ref;
       Active      : Boolean := True;

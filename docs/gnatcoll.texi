@@ -1,6 +1,16 @@
 \input texinfo  @c -*-texinfo-*-
 @input texiplus
 
+@c oooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo
+@c                                                                            o
+@c                           GNATCOLL DOCUMENTATION                           o
+@c                                                                            o
+@c              Copyright (C) 2005-2011, AdaCore                              o
+@c                                                                            o
+@c  GNAT is maintained by Ada Core Technologies Inc (http://www.gnat.com).    o
+@c                                                                            o
+@c oooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo
+
 @setfilename gnatcoll.info
 @include gnatcoll_include.texi
 @set gnatcoll GNATColl
@@ -667,7 +677,7 @@ This frees the memory used to store the output of previous commands. Calling
 @subsection The Python language
 @c ----------------------------------------------------------------------
 
-@cindex Python 
+@cindex Python
 @noindent
 Python is an interpreted, object-oriented language. See
 @url{http://www.python.org} for more information, including tutorials, on
@@ -1096,7 +1106,7 @@ to:
 @CODESAMPLE{Console := GtkConsole.Create (...);@NL{}
 Set_Default_Console@NL{}
   (Lookup_Scripting_Language (Repo, "python"),@NL{}
-   Virtual_Console (Console));} 
+   Virtual_Console (Console));}
 
 Creating a new instance of @code{"Console"}, although allowed, will by
 default create an unusable console. Indeed, depending on your application,
@@ -1613,7 +1623,7 @@ The python code now looks like
 ed = MyClass ("file.adb")  # Create new instance
 	@result{} ed is of type MyClassImpl
 ed = MyClass ("file.adb")  # return same instance
-ed.do_something() 
+ed.do_something()
 @end example
 
 It is important to realize that in the call above, we are not calling
@@ -2106,7 +2116,7 @@ stream when one with the same name and arguments already exists.
 @b{function} Factory (Args : String) @b{return} Trace_Stream @b{is}@NL{}
    Str : access My_Stream := @b{new} My_Stream;@NL{}
 @b{begin}@NL{}
-   Str.File := @b{new} File_Type;@NL{} 
+   Str.File := @b{new} File_Type;@NL{}
    Open (Str.File, Out_File, Args);@NL{}
    @b{return} Str;@NL{}
 @b{end} Factory;@NL{}
@@ -2787,7 +2797,7 @@ Ravenscar-compliant semantics only. The core goal of the GNATCOLL.Ravenscar
 applications by factorizing common behavior into instantiable,
 Ravenscar-compliant, generic packages. Instances of such generic packages
 guarantee predictable timing behavior and thus permit the application of most
-common timing analysis techniques.  
+common timing analysis techniques.
 
 @menu
 * Tasks::
@@ -2806,15 +2816,15 @@ tasks enforcing a minimum inter-release time.
 
 @node Servers
 @section Servers
-Servers present a more sophisticated run-time semantics than tasks: for example, they 
-can fulfill different kind of requests (see multiple queues servers). 
+Servers present a more sophisticated run-time semantics than tasks: for example, they
+can fulfill different kind of requests (see multiple queues servers).
 @code{Gnat.Ravenscar.Sporadic_Server_With_Callback} and
- @code{Gnat.Ravenscar.Timed_Out_Sporadic_Server} are particularly interesting. The former shows 
+ @code{Gnat.Ravenscar.Timed_Out_Sporadic_Server} are particularly interesting. The former shows
 how synchronous inter-task communication can be faked in Ravenscar (the only form of communication
-permitted by the profile is through shared resources): the server receives a request to fulfill, 
-computes the result and returns it by invoking a call-back. The latter enforces both a minimum 
+permitted by the profile is through shared resources): the server receives a request to fulfill,
+computes the result and returns it by invoking a call-back. The latter enforces both a minimum
 and a maximum inter-release time: the server automatically releases itself and invokes an appropriate
-handler if a request is not posted within a given period of time. 
+handler if a request is not posted within a given period of time.
 
 
 @node Timers
@@ -3409,7 +3419,7 @@ file (by default, but you can also configure that).
 (in general, that stream will be a file, but you could conceptually read it
 from memory, a socket, or any other location). A specific implementation is
 provided for file-based streams, which is further specialized to parse
-@file{.ini} files. 
+@file{.ini} files.
 
 Reading all the values from a configuration file is done with a loop
 similar to:
@@ -3830,7 +3840,7 @@ following grammar:
 
 @CODESAMPLE{
   fields ::= '|' <name> '|' <type>@NL{}
-      '|' ('PK'|''|'NULL'|'NOT NULL') '|' [default] '|' [doc] '|'@NL{}
+      '|' ('PK'|''|'NULL'|'NOT NULL'|'INDEX') '|' [default] '|' [doc] '|'@NL{}
 }
 
 The type of the fields is the SQL type ("INTEGER", "TEXT",...). The tool
@@ -3874,7 +3884,12 @@ The third column in the fields definition indicates whether we have a
 primary key ("PK"), which must
 never be null. In other cases, the column indicates whether the column can
 have null values (the default, or explicitly "NULL"), or not ("NOT NULL").
+If "INDEX" is specified, an index will be created for that particular column.
 These are similar to the corresponding SQL constraints.
+
+Multiple keywords can be used if they are separated by commas. Thus,
+"NOT NULL, INDEX" indicates a column that must be set by the user, and for
+which an index is created to speed up look ups.
 
 The fourth column gives the default value for the field, and is given in SQL.
 
@@ -4646,4 +4661,3 @@ See the specs for more detail on these subprograms.
 @c -----------------------------------------------------------------------
 @printindex cp
 @bye
-
