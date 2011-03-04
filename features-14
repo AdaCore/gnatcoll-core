@@ -15,6 +15,11 @@ of the feature.
 New features in 1.4
 -------------------
 
+NF-14-K304-012 GNATCOLL.SQL supports auto-increment fields (2011-03-03)
+
+   When creating a database through GNATCOLL, it is now possible to
+   specify that a field should be automatically incremented.
+
 NF-14-K304-004 GNATCOLL.SQL creates database with indexes (2011-03-03)
 
    When creating a database through GNATCOLL (and when the schema is

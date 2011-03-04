@@ -3844,8 +3844,12 @@ following grammar:
 }
 
 The type of the fields is the SQL type ("INTEGER", "TEXT",...). The tool
-will automatically convert these to Ada when generating Ada code. If the
-field is a foreign key (that is a value that must correspond to a row in
+will automatically convert these to Ada when generating Ada code.
+A special type ("AUTOINCREMENT") is an integer that is automatically
+incremented according to available ids in the table. The exact type used will
+depend on the specific DBMS.
+
+If the field is a foreign key (that is a value that must correspond to a row in
 another table), you can use the special syntax
 
 @CODESAMPLE{

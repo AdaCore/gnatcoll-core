@@ -65,6 +65,13 @@ package GNATCOLL.SQL_Impl is
    --  If you override these, you will likely want to also override
    --  Boolean_Value (DBMS_Forward_Cursor).
 
+   function Field_Type_Autoincrement
+     (Self : Formatter) return String is abstract;
+   --  Return the SQL type to use for auto-incremented fields.
+   --  Such a field is always a primary key, so this information is also
+   --  returend as part of the type (this is mandatory for sqlite in
+   --  particular).
+
    function Boolean_To_SQL
      (Self : Formatter'Class; Value : Boolean; Quote : Boolean) return String;
    function Float_To_SQL

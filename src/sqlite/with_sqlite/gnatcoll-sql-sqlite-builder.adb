@@ -102,6 +102,8 @@ package body GNATCOLL.SQL.Sqlite.Builder is
       Typ   : Parameter_Type) return String;
    overriding procedure Close
      (Connection : access Sqlite_Connection_Record);
+   overriding function Field_Type_Autoincrement
+     (Self : Sqlite_Connection_Record) return String;
    overriding function Connect_And_Execute
      (Connection  : access Sqlite_Connection_Record;
       Query       : String;
@@ -920,5 +922,17 @@ package body GNATCOLL.SQL.Sqlite.Builder is
    begin
       return Value (Sqlite_Cursor'Class (Self), Field) /= "0";
    end Boolean_Value;
+
+   ------------------------------
+   -- Field_Type_Autoincrement --
+   ------------------------------
+
+   overriding function Field_Type_Autoincrement
+     (Self : Sqlite_Connection_Record) return String
+   is
+      pragma Unreferenced (Self);
+   begin
+      return "INTEGER PRIMARY KEY AUTOINCREMENT";
+   end Field_Type_Autoincrement;
 
 end GNATCOLL.SQL.Sqlite.Builder;

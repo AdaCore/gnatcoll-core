@@ -107,6 +107,8 @@ package body GNATCOLL.SQL.Postgres.Builder is
       Direct      : Boolean;
       Params      : SQL_Parameters := No_Parameters)
       return Abstract_Cursor_Access;
+   overriding function Field_Type_Autoincrement
+     (Self : Postgresql_Connection_Record) return String;
    overriding function Error
      (Connection : access Postgresql_Connection_Record) return String;
    overriding procedure Foreach_Table
@@ -1140,5 +1142,17 @@ package body GNATCOLL.SQL.Postgres.Builder is
             return '$' & Image (Index, 0) & "::date";
       end case;
    end Parameter_String;
+
+   ------------------------------
+   -- Field_Type_Autoincrement --
+   ------------------------------
+
+   overriding function Field_Type_Autoincrement
+     (Self : Postgresql_Connection_Record) return String
+   is
+      pragma Unreferenced (Self);
+   begin
+      return "SERIAL PRIMARY KEY";
+   end Field_Type_Autoincrement;
 
 end GNATCOLL.SQL.Postgres.Builder;

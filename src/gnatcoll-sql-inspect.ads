@@ -56,7 +56,8 @@ package GNATCOLL.SQL.Inspect is
       Field_Date,
       Field_Time,
       Field_Float,
-      Field_Boolean);
+      Field_Boolean,
+      Field_Autoincrement);
 
    Invalid_Type : exception;
    --  Raise by Read_Schema when some unknown type is used.
@@ -65,7 +66,7 @@ package GNATCOLL.SQL.Inspect is
    --  Convert a SQL type to a field type, or raise Invalid_Type
 
    function To_SQL (Typ : Field_Type) return String;
-   --  Return the Ada type to use for Typ
+   --  Return the Ada type to use for Typ.
 
    ------------
    -- Fields --

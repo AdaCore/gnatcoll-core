@@ -144,11 +144,17 @@ package body GNATCOLL.SQL.Inspect is
    function Get_Type (Self : Field) return Field_Type is
       D  : constant Fields_Ref.Encapsulated_Access := Self.Get;
       FK : constant Field := Self.Is_FK;
+      T  : Field_Type;
    begin
       if FK = No_Field then
          return D.Typ;
       else
-         return Get_Type (FK);
+         T := Get_Type (FK);
+         if T = Field_Autoincrement then
+            T := Field_Integer;
+         end if;
+
+         return T;
       end if;
    end Get_Type;
 
@@ -507,6 +513,11 @@ package body GNATCOLL.SQL.Inspect is
          when Field_Date    => return "Date";
          when Field_Time    => return "Time";
          when Field_Float   => return "Float";
+         when Field_Autoincrement =>
+            --  These types are always mapped to an integer in all DBMS,
+            --  even though they might be created with a different name like
+            --  "SERIAL" and "INTEGER AUTOINCREMENT".
+            return "Integer";
       end case;
    end To_SQL;
 
@@ -544,6 +555,9 @@ package body GNATCOLL.SQL.Inspect is
 
       elsif T = "double precision" then
          return Field_Float;
+
+      elsif T = "autoincrement" then
+         return Field_Autoincrement;
 
       else
          raise Invalid_Type
@@ -1002,7 +1016,7 @@ package body GNATCOLL.SQL.Inspect is
                   Set (Att, Field_Description'
                          (Weak_Refcounted with
                           Name        => new String'(Line (1).all),
-                          Typ         => Field_Text,
+                          Typ         => Field_Text,  --  Set below
                           Id          => Attr_Id,
                           Description => new String'(Line (5).all),
                           Default     => new String'(Line (4).all),
@@ -1219,7 +1233,12 @@ package body GNATCOLL.SQL.Inspect is
             end if;
             Is_First_Attribute := False;
 
-            Append (SQL, "   " & F.Name & " " & To_SQL (Get_Type (F)));
+            if Get_Type (F) = Field_Autoincrement then
+               Append (SQL, "   " & F.Name & " "
+                       & Field_Type_Autoincrement (Self.DB.all));
+            else
+               Append (SQL, "   " & F.Name & " " & To_SQL (Get_Type (F)));
+            end if;
 
             if not F.Can_Be_Null then
                Append (SQL, " NOT NULL");
@@ -1243,7 +1262,9 @@ package body GNATCOLL.SQL.Inspect is
 
          procedure Print_PK (F : in out Field) is
          begin
-            if F.Is_PK then
+            --  Auto increment fields were already setup as primary keys
+            --  via Field_Type_Autoincrement primitive operation.
+            if F.Is_PK and then F.Get_Type /= Field_Autoincrement then
                Append (SQL, ", PRIMARY KEY (" & F.Name & ")");
             end if;
          end Print_PK;
@@ -1388,7 +1409,11 @@ package body GNATCOLL.SQL.Inspect is
          FK : constant Field := Attr.Is_FK;
       begin
          if FK = No_Field then
-            return To_SQL (Attr.Get_Type);
+            if Attr.Get_Type = Field_Autoincrement then
+               return "AUTOINCREMENT";
+            else
+               return To_SQL (Attr.Get_Type);
+            end if;
          else
             return "FK " & FK.Get_Table.Name;
          end if;
