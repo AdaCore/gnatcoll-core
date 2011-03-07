@@ -30,8 +30,6 @@ with Interfaces.C;             use Interfaces.C;
 with Interfaces.C.Strings;     use Interfaces.C.Strings;
 
 package body GNATCOLL.SQL.Sqlite.Gnade is
-   pragma Linker_Options ("-lsqlite3");
-
    type Address_Array is array (Natural) of System.Address;
    pragma Convention (C, Address_Array);
 

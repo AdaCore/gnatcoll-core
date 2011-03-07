@@ -46,8 +46,6 @@ with Interfaces.C; use Interfaces.C;
 with System;
 
 package body GNATCOLL.SQL.Postgres.Gnade is
-   pragma Linker_Options ("-lpq");
-
    package C  renames Interfaces.C;
    package CS renames Interfaces.C.Strings;
 
