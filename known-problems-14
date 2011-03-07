@@ -4,6 +4,15 @@ Known Problems in Gnatcoll 1.3
 
 Copyright (C) 2011, AdaCore
 
+KP-13-K304-032 Configure does not detect postgreSQL on Mac OS X
+
+  Problem:    Configure fails to detect postgreSQL on Mac OS X.
+
+  Status:     This was fixed in 1.4 on 2011-03-07
+
+  Workaround: After running configure, manually edit gnatcoll_shared.gpr
+              and change the variables Postgres_dir and Postgres.
+
 KP-13-K303-032 Configure doesn't find gmp.h
 
   Problem:    If the GMP library is installed in a non-standard directory,

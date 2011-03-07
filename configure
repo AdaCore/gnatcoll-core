@@ -3714,6 +3714,9 @@ echo "${ECHO_T}no" >&6
       elif test -f "$lib_dir/libpq.dll"; then
          am_path_pq=$lib_dir
          break
+      elif test -f "$lib_dir/libpq.dylib"; then
+         am_path_pq=$lib_dir
+         break
       fi
    done
    IFS=$as_save_IFS

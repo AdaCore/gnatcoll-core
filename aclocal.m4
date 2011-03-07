@@ -262,6 +262,9 @@ AC_DEFUN(AM_LIB_PATH,
       elif test -f "$lib_dir/lib$1.dll"; then
          am_path_$1=$lib_dir
          break
+      elif test -f "$lib_dir/lib$1.dylib"; then
+         am_path_$1=$lib_dir
+         break
       fi
    done
    IFS=$as_save_IFS
