@@ -4569,6 +4569,11 @@ package body GNATCOLL.Projects is
       --  Any error while processing the project marks it as incomplete, and
       --  prevents direct edition of the project.
 
+      procedure Initialize_Source_Records;
+      --  Compute extra information for each source file, in particular whether
+      --  it is a separate (as opposed to a body). This might require extra
+      --  parsing of the source file in some cases.
+
       -------------------------------------------
       -- Add_GPS_Naming_Schemes_To_Config_File --
       -------------------------------------------
@@ -4639,6 +4644,64 @@ package body GNATCOLL.Projects is
             NS := NS.Next;
          end loop;
       end Add_GPS_Naming_Schemes_To_Config_File;
+
+      -------------------------------
+      -- Initialize_Source_Records --
+      -------------------------------
+
+      procedure Initialize_Source_Records is
+         procedure For_Sources
+           (Project : Project_Id;
+            Tree    : Project_Tree_Ref;
+            With_State : in out Integer);
+
+         procedure For_Sources
+           (Project : Project_Id;
+            Tree    : Project_Tree_Ref;
+            With_State : in out Integer)
+         is
+            pragma Unreferenced (With_State);
+            Iter : Source_Iterator := For_Each_Source
+              (In_Tree => Tree,
+               Project => Project);
+            Src : Prj.Source_Id;
+         begin
+            loop
+               Src := Element (Iter);
+               exit when Src = No_Source;
+
+               --  ??? Calling Initialize_Source_Record computes additional
+               --  information that we do not need at the moment, at the cost
+               --  of a few system calls per source file. So instead we just
+               --  duplicate the part that computes whether we have a separate
+               --  unit.
+
+               if False then
+                  Makeutl.Initialize_Source_Record (Src);
+               else
+                  if Src.Language.Config.Kind = Unit_Based
+                    and then Src.Kind = Impl
+                    and then Makeutl.Is_Subunit (Src)
+                  then
+                     Src.Kind := Sep;
+                  end if;
+               end if;
+
+               Next (Iter);
+            end loop;
+         end For_Sources;
+
+         procedure For_Projects_Imported is new For_Every_Project_Imported
+           (Integer, For_Sources);
+         State : Integer := 0;
+      begin
+         For_Projects_Imported
+           (By                 => Self.Root_Project.Data.View,
+            Tree               => Self.Data.View,
+            With_State         => State,
+            Include_Aggregated => True,
+            Imported_First     => False);
+      end Initialize_Source_Records;
 
       View                    : Project_Id;
       Automatically_Generated : Boolean;
@@ -4720,6 +4783,7 @@ package body GNATCOLL.Projects is
       Create_Project_Instances (Self, With_View => True);
 
       Parse_Source_Files (Self);
+      Initialize_Source_Records;
 
       --  If the timestamp have not been computed yet (ie we are loading a new
       --  project), do it now.

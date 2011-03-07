@@ -1,6 +1,26 @@
-Known Problems fixed in Gnatcoll 1.4
+==============================
+Known Problems in Gnatcoll 1.3
+==============================
 
-- K303-032: configure doesn't find gmp.h
+Copyright (C) 2011, AdaCore
+
+KP-13-K303-032 Configure doesn't find gmp.h
+
   Problem:    If the GMP library is installed in a non-standard directory,
               configure doesn't match to properly detect it.
+
+  Status:     This was fixed in 1.4 on 2011-03-03
+
   Workaround: make sure that gmp.h can be found by the C compiler.
+
+KP-13-K302-015 Gnatcoll.projects and separate units
+
+  Problem:    The information returned by Info does not distinguish between
+              bodies and separate units.
+
+  Status:     This was fixed in 1.4 on 2011-03-07
+
+  Workaround: Most of the time, it is safe to treat separates as bodies,
+              except when you need to compile them, since the compiler will
+              always return an error for separates. You should be prepared
+              to handle such errors in your application.
