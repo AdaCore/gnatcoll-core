@@ -692,7 +692,7 @@ package body GNATCOLL.Projects is
                          (Project, View.Object_Directory.Display_Name,
                           Xrefs_Dirs)),
                Create (Handle_Subdir
-                         (Project, View.Library_ALI_Dir.Name,
+                         (Project, View.Library_ALI_Dir.Display_Name,
                           Xrefs_Dirs)));
          end if;
 
