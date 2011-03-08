@@ -1559,6 +1559,7 @@ package body GNATCOLL.SQL.Inspect is
 
       procedure Format_Field
         (Value    : String;
+         Typ      : Field_Type;
          Val      : out GNAT.Strings.String_Access;
          Param    : out SQL_Parameter;
          Has_Xref : Boolean);
@@ -1572,6 +1573,7 @@ package body GNATCOLL.SQL.Inspect is
 
       procedure Format_Field
         (Value    : String;
+         Typ      : Field_Type;
          Val      : out GNAT.Strings.String_Access;
          Param    : out SQL_Parameter;
          Has_Xref : Boolean)
@@ -1579,7 +1581,9 @@ package body GNATCOLL.SQL.Inspect is
          V : constant String := To_Lower (Value);
          B : Boolean;
       begin
-         if V = "true" or else V = "false" then
+         if Typ = Field_Boolean
+           and then (V = "true" or else V = "false")
+         then
             B := Boolean'Value (Value);
             Val := new String'(Boolean_Image (DB.all, B));
             Param := +B;
@@ -1664,6 +1668,8 @@ package body GNATCOLL.SQL.Inspect is
       DB_Fields : String_List (1 .. Max_Fields_Per_Line);
       DB_Fields_Count : Natural := DB_Fields'First - 1;
 
+      DB_Field_Types : array (Line'First .. Max_Fields_Per_Line) of Field_Type;
+
       Xref       : String_List (1 .. Max_Fields_Per_Line);
       Xref_Count : Natural := Xref'First - 1;
 
@@ -1708,6 +1714,19 @@ package body GNATCOLL.SQL.Inspect is
                   Append (Xref, Xref_Count, "");
                end if;
             end loop;
+
+            declare
+               L : Integer := DB_Field_Types'First;
+               procedure On_Field (F : in out Field);
+               procedure On_Field (F : in out Field) is
+               begin
+                  DB_Field_Types (L) := F.Get_Type;
+                  L := L + 1;
+               end On_Field;
+            begin
+               Table.For_Each_Field
+                 (On_Field'Access, Include_Inherited => True);
+            end;
 
             declare
                Values : String_List (1 .. DB_Fields_Count);
@@ -1778,6 +1797,7 @@ package body GNATCOLL.SQL.Inspect is
                   if Vals (L) = null then
                      Format_Field
                        (Line (L).all,
+                        DB_Field_Types (L),
                         Vals (L),
                         Values (L),
                         Has_Xref);
