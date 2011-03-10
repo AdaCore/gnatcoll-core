@@ -1610,7 +1610,8 @@ package body GNATCOLL.SQL.Inspect is
 
          else
             if Has_Xref then
-               Val := new String'("'" & Value & "'");
+               Val := new String'
+                 (String_To_SQL (DB.all, Value, Quote => True));
             else
                Val := new String'(Value);
             end if;

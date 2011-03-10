@@ -107,8 +107,11 @@ package GNATCOLL.SQL_Impl is
    --  Escape every apostrophe character "'" and backslash "\".
    --  Useful for strings in SQL commands where "'" means the end
    --  of the current string.
-   --  This is not suitable for use for string parameters, which should not be
+   --  This is not suitable for use for prepared queries, which should not be
    --  quoted.
+   --  If Quote is False, Value is returned as is (suitable for prepared
+   --  queries). Otherwise, Value is surrounded by quote characters, and every
+   --  special character in Value are also protected.
 
    -------------------------------------
    -- General declarations for tables --
