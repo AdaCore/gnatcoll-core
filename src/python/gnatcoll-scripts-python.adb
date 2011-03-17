@@ -2883,9 +2883,16 @@ package body GNATCOLL.Scripts.Python is
    ----------------------
 
    procedure Set_Return_Value
-     (Data : in out Python_Callback_Data; Value : Boolean) is
+     (Data : in out Python_Callback_Data; Value : Boolean)  is
+      Num : Integer;
+      pragma Unreferenced (Num);
    begin
-      Set_Return_Value (Data, Boolean'Pos (Value));
+      if Data.Return_As_List then
+         Num := PyList_Append (Data.Return_Value, PyBool_FromBoolean (Value));
+      else
+         Setup_Return_Value (Data);
+         Data.Return_Value := PyBool_FromBoolean (Value);
+      end if;
    end Set_Return_Value;
 
    ----------------------
