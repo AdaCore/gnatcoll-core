@@ -3346,11 +3346,13 @@ echo "${ECHO_T}$WITH_GTK (from switch)" >&6
 
 
 
+   NEED_PYTHON=no
+
 
 # Check whether --with-python or --without-python was given.
 if test "${with_python+set}" = set; then
   withval="$with_python"
-  PYTHON_PATH_WITH=$withval
+  PYTHON_PATH_WITH=$withval; NEED_PYTHON=yes
 else
   PYTHON_PATH_WITH=yes
 fi;
@@ -3672,6 +3674,12 @@ rm -f conftest.$ac_objext conftest$ac_exeext conftest.$ac_ext
 
       CFLAGS="${SAVE_CFLAGS}"
       LIBS="${SAVE_LIBS}"
+   fi
+
+   if test x"$WITH_PYTHON" = xno -a x"$NEED_PYTHON" = xyes ; then
+     { { echo "$as_me:$LINENO: error: Python not found" >&5
+echo "$as_me: error: Python not found" >&2;}
+   { (exit 1); exit 1; }; }
    fi
 
 
