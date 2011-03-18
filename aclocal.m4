@@ -597,6 +597,8 @@ AC_HELP_STRING(
       CFLAGS="${CFLAGS} ${PYTHON_CFLAGS}"
       LIBS="${LIBS} ${PYTHON_LIBS}"
 
+      # -lutil is almost always needed, for forkpty()
+
       AC_MSG_CHECKING(if we can link with python)
       AC_LINK_IFELSE(
         [AC_LANG_PROGRAM([
@@ -616,22 +618,22 @@ AC_HELP_STRING(
            [PYTHON_LIBS="${PYTHON_LIBS} -lutil"
             AC_MSG_RESULT(yes)],
 
-            [LIBS="${LIBS} -lpthread -lz"
+            [LIBS="${LIBS} -lpthread -lutil -lz"
              AC_LINK_IFELSE(
                [AC_LANG_PROGRAM([
 /* will only work with gcc, but needed to use it with the mingwin python */
 #define PY_LONG_LONG long long
 #include <Python.h>],[Py_Initialize();])],
-               [PYTHON_LIBS="${PYTHON_LIBS} -lpthread -lz"
+               [PYTHON_LIBS="${PYTHON_LIBS} -lpthread -lutil -lz"
                 AC_MSG_RESULT(yes)],
 
-               [LIBS="${LIBS} -lpthread -lssl -lz"
+               [LIBS="${LIBS} -lpthread -lssl -lutil -lz"
                 AC_LINK_IFELSE(
                   [AC_LANG_PROGRAM([
    /* will only work with gcc, but needed to use it with the mingwin python */
    #define PY_LONG_LONG long long
    #include <Python.h>],[Py_Initialize();])],
-                  [PYTHON_LIBS="${PYTHON_LIBS} -lpthread -lssl -lz"
+                  [PYTHON_LIBS="${PYTHON_LIBS} -lpthread -lssl -lutil -lz"
                    AC_MSG_RESULT(yes)],
 
                [AC_MSG_RESULT(no, [can't compile and link python example])

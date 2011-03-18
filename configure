@@ -3538,6 +3538,8 @@ echo "${ECHO_T}yes (version $PYTHON_MAJOR_VERSION.$PYTHON_MINOR_VERSION)" >&6
       CFLAGS="${CFLAGS} ${PYTHON_CFLAGS}"
       LIBS="${LIBS} ${PYTHON_LIBS}"
 
+      # -lutil is almost always needed, for forkpty()
+
       echo "$as_me:$LINENO: checking if we can link with python" >&5
 echo $ECHO_N "checking if we can link with python... $ECHO_C" >&6
       cat >conftest.$ac_ext <<_ACEOF
@@ -3618,7 +3620,7 @@ else
   echo "$as_me: failed program was:" >&5
 sed 's/^/| /' conftest.$ac_ext >&5
 
-LIBS="${LIBS} -lpthread -lz"
+LIBS="${LIBS} -lpthread -lutil -lz"
              cat >conftest.$ac_ext <<_ACEOF
 #line $LINENO "configure"
 /* confdefs.h.  */
@@ -3650,14 +3652,14 @@ if { (eval echo "$as_me:$LINENO: \"$ac_link\"") >&5
   ac_status=$?
   echo "$as_me:$LINENO: \$? = $ac_status" >&5
   (exit $ac_status); }; }; then
-  PYTHON_LIBS="${PYTHON_LIBS} -lpthread -lz"
+  PYTHON_LIBS="${PYTHON_LIBS} -lpthread -lutil -lz"
                 echo "$as_me:$LINENO: result: yes" >&5
 echo "${ECHO_T}yes" >&6
 else
   echo "$as_me: failed program was:" >&5
 sed 's/^/| /' conftest.$ac_ext >&5
 
-LIBS="${LIBS} -lpthread -lssl -lz"
+LIBS="${LIBS} -lpthread -lssl -lutil -lz"
                 cat >conftest.$ac_ext <<_ACEOF
 #line $LINENO "configure"
 /* confdefs.h.  */
@@ -3689,7 +3691,7 @@ if { (eval echo "$as_me:$LINENO: \"$ac_link\"") >&5
   ac_status=$?
   echo "$as_me:$LINENO: \$? = $ac_status" >&5
   (exit $ac_status); }; }; then
-  PYTHON_LIBS="${PYTHON_LIBS} -lpthread -lssl -lz"
+  PYTHON_LIBS="${PYTHON_LIBS} -lpthread -lssl -lutil -lz"
                    echo "$as_me:$LINENO: result: yes" >&5
 echo "${ECHO_T}yes" >&6
 else
