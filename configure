@@ -3650,8 +3650,47 @@ if { (eval echo "$as_me:$LINENO: \"$ac_link\"") >&5
   ac_status=$?
   echo "$as_me:$LINENO: \$? = $ac_status" >&5
   (exit $ac_status); }; }; then
-  PYTHON_LIBS="${PYTHON_LIBS} -lpthread -lutil -lz"
+  PYTHON_LIBS="${PYTHON_LIBS} -lpthread -lz"
                 echo "$as_me:$LINENO: result: yes" >&5
+echo "${ECHO_T}yes" >&6
+else
+  echo "$as_me: failed program was:" >&5
+sed 's/^/| /' conftest.$ac_ext >&5
+
+LIBS="${LIBS} -lpthread -lssl -lz"
+                cat >conftest.$ac_ext <<_ACEOF
+#line $LINENO "configure"
+/* confdefs.h.  */
+_ACEOF
+cat confdefs.h >>conftest.$ac_ext
+cat >>conftest.$ac_ext <<_ACEOF
+/* end confdefs.h.  */
+
+   /* will only work with gcc, but needed to use it with the mingwin python */
+   #define PY_LONG_LONG long long
+   #include <Python.h>
+int
+main ()
+{
+Py_Initialize();
+  ;
+  return 0;
+}
+_ACEOF
+rm -f conftest.$ac_objext conftest$ac_exeext
+if { (eval echo "$as_me:$LINENO: \"$ac_link\"") >&5
+  (eval $ac_link) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); } &&
+         { ac_try='test -s conftest$ac_exeext'
+  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); }; }; then
+  PYTHON_LIBS="${PYTHON_LIBS} -lpthread -lssl -lz"
+                   echo "$as_me:$LINENO: result: yes" >&5
 echo "${ECHO_T}yes" >&6
 else
   echo "$as_me: failed program was:" >&5
@@ -3662,6 +3701,8 @@ echo "${ECHO_T}no" >&6
                 WITH_PYTHON=no
                 PYTHON_BASE=
                 PYTHON_LIBS=
+fi
+rm -f conftest.$ac_objext conftest$ac_exeext conftest.$ac_ext
 fi
 rm -f conftest.$ac_objext conftest$ac_exeext conftest.$ac_ext
 fi

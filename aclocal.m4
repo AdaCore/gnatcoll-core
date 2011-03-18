@@ -605,6 +605,7 @@ AC_HELP_STRING(
 #include <Python.h>
 ],[Py_Initialize();])],
         [AC_MSG_RESULT(yes)],
+
         [LIBS="${LIBS} -lutil"
          AC_LINK_IFELSE(
            [AC_LANG_PROGRAM([
@@ -614,18 +615,29 @@ AC_HELP_STRING(
 ],[Py_Initialize();])],
            [PYTHON_LIBS="${PYTHON_LIBS} -lutil"
             AC_MSG_RESULT(yes)],
+
             [LIBS="${LIBS} -lpthread -lz"
              AC_LINK_IFELSE(
                [AC_LANG_PROGRAM([
 /* will only work with gcc, but needed to use it with the mingwin python */
 #define PY_LONG_LONG long long
 #include <Python.h>],[Py_Initialize();])],
-               [PYTHON_LIBS="${PYTHON_LIBS} -lpthread -lutil -lz"
+               [PYTHON_LIBS="${PYTHON_LIBS} -lpthread -lz"
                 AC_MSG_RESULT(yes)],
+
+               [LIBS="${LIBS} -lpthread -lssl -lz"
+                AC_LINK_IFELSE(
+                  [AC_LANG_PROGRAM([
+   /* will only work with gcc, but needed to use it with the mingwin python */
+   #define PY_LONG_LONG long long
+   #include <Python.h>],[Py_Initialize();])],
+                  [PYTHON_LIBS="${PYTHON_LIBS} -lpthread -lssl -lz"
+                   AC_MSG_RESULT(yes)],
+
                [AC_MSG_RESULT(no, [can't compile and link python example])
                 WITH_PYTHON=no
                 PYTHON_BASE=[]
-                PYTHON_LIBS=[]])])])
+                PYTHON_LIBS=[]])])])])
 
       # Restore an environment python-free, so that further tests are not
       # impacted in case we did not find python
