@@ -1,7 +1,7 @@
 -----------------------------------------------------------------------
 --                               G N A T C O L L                     --
 --                                                                   --
---                     Copyright (C) 2003-2010, AdaCore              --
+--                     Copyright (C) 2003-2011, AdaCore              --
 --                                                                   --
 -- GPS is free  software; you can  redistribute it and/or modify  it --
 -- under the terms of the GNU General Public License as published by --
@@ -161,6 +161,11 @@ package GNATCOLL.Python is
    function PyObject_Dir (Object : PyObject) return PyObject;
    --  A list of strings for all entries in Object's dictionary..
    --  The returned object must be DECREF
+
+   function PyObject_IsTrue (Obj : PyObject) return Boolean;
+   --  Returns True if the object, Obj, is considered to be true, False if Obj
+   --  is considered to be false. This is equivalent to the Python expression:
+   --  "not not obj"
 
    --------------
    -- Integers --

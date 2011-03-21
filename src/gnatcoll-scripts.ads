@@ -406,6 +406,17 @@ package GNATCOLL.Scripts is
    --  No provision is made for creating htables of htables, although htables
    --  of lists are supported, or for getting the currently set value for Key.
 
+   function Return_Value (Data : Callback_Data) return String is abstract;
+   function Return_Value (Data : Callback_Data) return Integer is abstract;
+   function Return_Value (Data : Callback_Data) return Boolean is abstract;
+   function Return_Value
+     (Data : Callback_Data) return Class_Instance is abstract;
+   --  Return the value returned by a script function, via a call to
+   --  Execute_Command below.
+   --  If the type you are requesting is not compatible with the actual
+   --  returned value, Invalid_Parameter is raised.
+   --  See also Return_Value below, which returns a List_Instance'Class.
+
    -----------
    -- Lists --
    -----------
@@ -458,6 +469,10 @@ package GNATCOLL.Scripts is
    --  In the case of python, this function will accept any iterable type (a
    --  list, a tuple, a user-defined type with a __iter__ method, even a
    --  dictionary or a string).
+
+   function Return_Value
+     (Data : Callback_Data) return List_Instance'Class is abstract;
+   --  Returns the list returned by a command (see Execute_Command).
 
    procedure Set_Nth_Arg
      (Data : in out Callback_Data;
@@ -1051,6 +1066,36 @@ package GNATCOLL.Scripts is
    --  Execute a command, the argument of which are specified separately in
    --  Args.
    --  Return the value returned by the command itself.
+
+   Error_In_Command : exception;
+
+   procedure Execute_Command
+     (Args    : in out Callback_Data;
+      Command : String) is abstract;
+   --  Execute the given function passing one or more arguments via Args.
+   --  On exit, Args is modified to contain the value returned by the command.
+   --  If you know the expected result type, you can then use the Return_Value
+   --  functions above to retrieve the values.
+   --     declare
+   --        C : Callback_Data'Class := Create (Script, 1);
+   --     begin
+   --        Set_Nth_Arg (C, 1, "some value");
+   --        Execute_Command (C, "somefunction");
+   --        Put_Line (Return_Value (C));  --  If returned a string
+   --        Put_Line (Integer'Image (Return_Value (C)));  --  If an integer
+   --
+   --        declare
+   --           L : List_Instance'Class := Return_Value (C);  --  If a list
+   --        begin
+   --           for Item in 1 .. Number_Of_Arguments (L) loop
+   --              Put_Line (Nth_Arg (L, Item));  --  A list of strings ?
+   --           end loop;
+   --        end;
+   --     end;
+   --
+   --  If the command returns an error (or raised an exception), an Ada
+   --  exception is raised in turn (Error_In_Command). The exception is also
+   --  printed on the current console for the language.
 
    function Execute_Command_With_Args
      (Script : access Scripting_Language_Record;

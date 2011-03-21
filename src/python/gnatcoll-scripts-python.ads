@@ -322,6 +322,19 @@ private
      (Data  : in out Python_Callback_Data;
       N     : Positive;
       Value : Subprogram_Type);
+   overriding procedure Execute_Command
+     (Args    : in out Python_Callback_Data;
+      Command : String);
+   overriding function Return_Value
+     (Data : Python_Callback_Data) return String;
+   overriding function Return_Value
+     (Data : Python_Callback_Data) return Integer;
+   overriding function Return_Value
+     (Data : Python_Callback_Data) return Boolean;
+   overriding function Return_Value
+     (Data : Python_Callback_Data) return Class_Instance;
+   overriding function Return_Value
+     (Data : Python_Callback_Data) return List_Instance'Class;
    --  See doc from inherited subprogram
 
 end GNATCOLL.Scripts.Python;

@@ -15,6 +15,13 @@ of the feature.
 New features in 1.4
 -------------------
 
+NF-14-K318-018 GNATCOLL.Scripts.Execute_Command returns any object (2011-03-21)
+
+   A new function Execute_Command that directly modifies the Callback_Data
+   is now provided. Through it, you can call a python function that returns
+   an integer, string, boolean or a list of them, and retrieve that value
+   from Ada.
+
 NF-14-K304-012 GNATCOLL.SQL supports auto-increment fields (2011-03-03)
 
    When creating a database through GNATCOLL, it is now possible to

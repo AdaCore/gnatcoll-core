@@ -2024,4 +2024,95 @@ package body GNATCOLL.Scripts.Shell is
       return Separate_Args;
    end Command_Line_Treatment;
 
+   ---------------------
+   -- Execute_Command --
+   ---------------------
+
+   overriding procedure Execute_Command
+     (Args    : in out Shell_Callback_Data;
+      Command : String)
+   is
+      Script : constant Shell_Scripting := Shell_Scripting (Get_Script (Args));
+      Errors : aliased Boolean;
+      CL : Arg_List := Create (Command);
+   begin
+      for J in 1 .. Args_Length (Args.CL) loop
+         Append_Argument (CL, Nth_Arg (Args.CL, J), One_Arg);
+      end loop;
+
+      declare
+         Result : constant String := Trim
+           (Execute_GPS_Shell_Command (Script, CL, Errors'Unchecked_Access),
+            Ada.Strings.Both);
+      begin
+         Free (Args.Return_Value);
+         Args.Return_Value := new String'(Result);
+      end;
+   end Execute_Command;
+
+   ------------------
+   -- Return_Value --
+   ------------------
+
+   overriding function Return_Value
+     (Data : Shell_Callback_Data) return String is
+   begin
+      if Data.Return_Value = null then
+         raise Invalid_Parameter with "No return value";
+      else
+         return Data.Return_Value.all;
+      end if;
+   end Return_Value;
+
+   ------------------
+   -- Return_Value --
+   ------------------
+
+   overriding function Return_Value
+     (Data : Shell_Callback_Data) return Integer is
+   begin
+      return Integer'Value (Return_Value (Data));
+   end Return_Value;
+
+   ------------------
+   -- Return_Value --
+   ------------------
+
+   overriding function Return_Value
+     (Data : Shell_Callback_Data) return Boolean is
+   begin
+      return Boolean'Value (Return_Value (Data));
+   end Return_Value;
+
+   ------------------
+   -- Return_Value --
+   ------------------
+
+   overriding function Return_Value
+     (Data : Shell_Callback_Data) return Class_Instance
+   is
+      Ins : Shell_Class_Instance;
+   begin
+      Ins := Instance_From_Name (Data.Script, Return_Value (Data));
+      if Ins = null then
+         return No_Class_Instance;
+      end if;
+
+      return From_Instance (Data.Script, Ins);
+   end Return_Value;
+
+   ------------------
+   -- Return_Value --
+   ------------------
+
+   overriding function Return_Value
+     (Data : Shell_Callback_Data) return List_Instance'Class
+   is
+      List : Shell_Callback_Data;
+   begin
+      List.Script := Data.Script;
+      List.CL := Parse_String (Return_Value (Data), Separate_Args);
+      return List;
+   end Return_Value;
+
 end GNATCOLL.Scripts.Shell;

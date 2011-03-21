@@ -25,7 +25,6 @@
 -- Place - Suite 330, Boston, MA 02111-1307, USA.                    --
 -----------------------------------------------------------------------
 
-with Ada.Characters.Handling;    use Ada.Characters.Handling;
 with Ada.Unchecked_Conversion;
 with Ada.Unchecked_Deallocation;
 with Ada.Exceptions;             use Ada.Exceptions;
@@ -2208,21 +2207,7 @@ package body GNATCOLL.Scripts.Python is
          return False;
       end if;
 
-      --  ??? Could add more cases of automatic conversion: strings containing
-      --  "true" or "false", or add support for booleans for newer versions of
-      --  python (>= 2.3)
-
-      if PyInt_Check (Item) then
-         return PyInt_AsLong (Item) = 1;
-      elsif PyBool_Check (Item) then
-         return PyBool_Is_True (Item);
-      elsif PyString_Check (Item) then
-         return To_Lower (PyString_AsString (Item)) = "true";
-      else
-         Raise_Exception
-           (Invalid_Parameter'Identity,
-            "Parameter" & Integer'Image (N) & " should be a boolean");
-      end if;
+      return PyObject_IsTrue (Item);
    end Nth_Arg;
 
    -------------
@@ -3372,5 +3357,129 @@ package body GNATCOLL.Scripts.Python is
 
       Unchecked_Free (Files);
    end Load_Directory;
+
+   ---------------------
+   -- Execute_Command --
+   ---------------------
+
+   overriding procedure Execute_Command
+     (Args    : in out Python_Callback_Data;
+      Command : String)
+   is
+      Script : constant Python_Scripting :=
+        Python_Scripting (Get_Script (Args));
+      Func   : PyObject;
+      Errors : aliased Boolean;
+      Result : PyObject;
+
+   begin
+      if Script.Blocked then
+         Set_Error_Msg (Args, "A command is already executing");
+      else
+         --  Fetch a handle on the function to execute. What we want to execute
+         --  is:
+         --     func = module.function_name
+         --     func(args)
+         Func := Run_Command
+           (Script,
+            Command     => Command,
+            Console     => null,
+            Hide_Output => True,
+            Errors      => Errors'Unchecked_Access);
+
+         if Func /= null and then PyFunction_Check (Func) then
+            Setup_Return_Value (Args);
+            Result := Execute_Command (Script, Func, Args, Errors'Access);
+
+            if Errors then
+               PyErr_Clear;
+               raise Error_In_Command;
+            else
+               Args.Return_Value := Result;
+               Py_INCREF (Result);
+            end if;
+
+         else
+            Set_Error_Msg (Args, Command & " is not a function");
+         end if;
+      end if;
+   end Execute_Command;
+
+   ------------------
+   -- Return_Value --
+   ------------------
+
+   overriding function Return_Value
+     (Data : Python_Callback_Data) return String is
+   begin
+      if not PyString_Check (Data.Return_Value) then
+         raise Invalid_Parameter with "Returned value is not a string";
+      else
+         return PyString_AsString (Data.Return_Value);
+      end if;
+   end Return_Value;
+
+   ------------------
+   -- Return_Value --
+   ------------------
+
+   overriding function Return_Value
+     (Data : Python_Callback_Data) return Integer is
+   begin
+      if not PyInt_Check (Data.Return_Value) then
+         raise Invalid_Parameter with "Returned value is not an integer";
+      else
+         return Integer (PyInt_AsLong (Data.Return_Value));
+      end if;
+   end Return_Value;
+
+   ------------------
+   -- Return_Value --
+   ------------------
+
+   overriding function Return_Value
+     (Data : Python_Callback_Data) return Boolean is
+   begin
+      return PyObject_IsTrue (Data.Return_Value);
+   end Return_Value;
+
+   ------------------
+   -- Return_Value --
+   ------------------
+
+   overriding function Return_Value
+     (Data : Python_Callback_Data) return Class_Instance is
+   begin
+      if Data.Return_Value = Py_None then
+         return No_Class_Instance;
+      else
+         return Get_CI
+           (Python_Scripting (Get_Script (Data)), Data.Return_Value);
+      end if;
+   end Return_Value;
+
+   ------------------
+   -- Return_Value --
+   ------------------
+
+   overriding function Return_Value
+     (Data : Python_Callback_Data) return List_Instance'Class
+   is
+      List    : Python_Callback_Data;
+      Iter    : PyObject;
+   begin
+      List.Script    := Data.Script;
+      List.First_Arg_Is_Self := False;
+
+      Iter := PyObject_GetIter (Data.Return_Value);
+      if Iter = null then
+         raise Invalid_Parameter with "Return value is not an iterable";
+      end if;
+
+      Py_DECREF (Iter);
+      List.Args := Data.Return_Value;
+
+      return List;
+   end Return_Value;
 
 end GNATCOLL.Scripts.Python;

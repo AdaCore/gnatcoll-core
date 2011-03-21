@@ -1013,4 +1013,21 @@ package body GNATCOLL.Python is
       return Internal (Inst, Cls) /= 0;
    end PyObject_IsInstance;
 
+   ---------------------
+   -- PyObject_IsTrue --
+   ---------------------
+
+   function PyObject_IsTrue (Obj : PyObject) return Boolean is
+      function Internal (Obj : PyObject) return Integer;
+      pragma Import (C, Internal, "PyObject_IsTrue");
+      Val : Integer;
+   begin
+      Val := Internal (Obj);
+      if Val = -1 then
+         return False;  --  An error
+      else
+         return Val /= 0;
+      end if;
+   end PyObject_IsTrue;
+
 end GNATCOLL.Python;
