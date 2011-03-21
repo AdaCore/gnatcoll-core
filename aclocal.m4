@@ -459,7 +459,7 @@ AC_DEFUN(AM_PATH_PYTHON,
 AC_HELP_STRING(
        [--without-python],
        [Disable python support])],
-     [PYTHON_PATH_WITH=$withval; NEED_PYTHON=yes],
+     [PYTHON_PATH_WITH=$withval; NEED_PYTHON=$PYTHON_PATH_WITH],
      PYTHON_PATH_WITH=yes)
    AC_ARG_ENABLE(shared-python,
      AC_HELP_STRING(
@@ -648,7 +648,7 @@ AC_HELP_STRING(
       LIBS="${SAVE_LIBS}"
    fi
 
-   if test x"$WITH_PYTHON" = xno -a x"$NEED_PYTHON" = xyes ; then
+   if test x"$WITH_PYTHON" = xno -a x"$NEED_PYTHON" != xno ; then
      AC_MSG_ERROR([Python not found])
    fi
 
