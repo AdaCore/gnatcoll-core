@@ -28,6 +28,7 @@
 with Ada.Unchecked_Conversion;
 with Interfaces.C;             use Interfaces.C;
 with Interfaces.C.Strings;     use Interfaces.C.Strings;
+with System.Address_Image;
 
 package body GNATCOLL.SQL.Sqlite.Gnade is
    type Address_Array is array (Natural) of System.Address;
@@ -255,5 +256,16 @@ package body GNATCOLL.SQL.Sqlite.Gnade is
    begin
       return Interfaces.C.Strings.Value (To_Chars_Ptr (Val (Column)));
    end Get_Column_Name;
+
+   -----------
+   -- Image --
+   -----------
+
+   function Image (DB : Database) return String is
+      function Convert is new Ada.Unchecked_Conversion
+        (Database, System.Address);
+   begin
+      return "sqlite=" & System.Address_Image (Convert (DB));
+   end Image;
 
 end GNATCOLL.SQL.Sqlite.Gnade;

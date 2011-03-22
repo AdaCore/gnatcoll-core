@@ -36,6 +36,7 @@ with GNATCOLL.Utils;               use GNATCOLL.Utils;
 with GNAT.Calendar;
 with GNAT.OS_Lib;
 with Interfaces.C.Strings;         use Interfaces.C.Strings;
+with System;
 
 package body GNATCOLL.SQL.Sqlite.Builder is
    Me : constant Trace_Handle := Create ("SQL.LITE");
@@ -169,10 +170,34 @@ package body GNATCOLL.SQL.Sqlite.Builder is
    --  Skip to or until the next whitespace character. Pos is left on the
    --  first whitespace character or on the first character after the spaces
 
+   function On_Busy (Data : System.Address; Count : Integer) return Integer;
+   pragma Convention (C, On_Busy);
+
    function Unchecked_Convert is new Ada.Unchecked_Conversion
      (Statement, DBMS_Stmt);
    function Unchecked_Convert is new Ada.Unchecked_Conversion
      (DBMS_Stmt, Statement);
+
+   -------------
+   -- On_Busy --
+   -------------
+
+   function On_Busy (Data : System.Address; Count : Integer) return Integer is
+      pragma Unreferenced (Data);
+   begin
+      --  Retry commands up to 5 times automatically, in case we get a
+      --  SQLITE_BUSY status.
+      if Count < 5 then
+         if Active (Me) then
+            Trace (Me, "Received SQLITE_BUSY, trying again. Attempt="
+                   & Count'Img);
+         end if;
+         delay 0.1;
+         return 1;
+      else
+         return 0;
+      end if;
+   end On_Busy;
 
    ---------------
    -- Error_Msg --
@@ -345,6 +370,11 @@ package body GNATCOLL.SQL.Sqlite.Builder is
                "Could not connect to database: " & Error_Msg (Connection.DB));
             Connection.DB := No_Database;
          else
+            --  Add a busy handler, which will automatically attempt to
+            --  re-attempt a command if SQLITE_BUSY was returned.
+
+            Busy_Handler (Connection.DB, On_Busy'Access);
+
             --  Make sure that with appropriate versions of sqlite (>= 3.6.19)
             --  we do enforce foreign keys constraints
 

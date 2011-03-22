@@ -37,6 +37,9 @@ package GNATCOLL.SQL.Sqlite.Gnade is
    No_Database : constant Database;
    --  A connection to a sqlite database
 
+   function Image (DB : Database) return String;
+   --  Display the details on the connection (logging only)
+
    type Open_Flags is mod 2**32;
    Open_Readonly  : constant Open_Flags := 16#00001#;
    Open_Readwrite : constant Open_Flags := 16#00002#;
@@ -136,6 +139,32 @@ package GNATCOLL.SQL.Sqlite.Gnade is
    procedure Close (DB : Database);
    --  Close the connection to the database.
    --  This finalizes all prepared statements, as needed
+
+   type Busy_Handler_Callback is access function
+     (Data : System.Address; Count : Integer) return Integer;
+   pragma Convention (C, Busy_Handler_Callback);
+
+   procedure Busy_Handler
+     (DB   : Database;
+      Cb   : Busy_Handler_Callback;
+      Data : System.Address := System.Null_Address);
+   pragma Import (C, Busy_Handler, "sqlite3_busy_handler");
+   --  This routine sets a callback function that might be invoked whenever an
+   --  attempt is made to open a database table that another thread or process
+   --  has locked.
+   --
+   --  If the busy callback is NULL, then SQLITE_BUSY or SQLITE_IOERR_BLOCKED
+   --  is returned immediately upon encountering the lock. If the busy callback
+   --  is not NULL, then the callback will be invoked with two arguments.
+   --
+   --  The first argument to the handler is a copy of Data pointer which
+   --  is the third argument to Busy_Handler. The second argument to
+   --  the handler callback is the number of times that the busy handler has
+   --  been invoked for this locking event. If the busy callback returns 0,
+   --  then no additional attempts are made to access the database and
+   --  SQLITE_BUSY or SQLITE_IOERR_BLOCKED is returned. If the callback returns
+   --  non-zero, then another attempt is made to open the database for reading
+   --  and the cycle repeats.
 
    ----------------
    -- Statements --
