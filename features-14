@@ -15,6 +15,14 @@ of the feature.
 New features in 1.4
 -------------------
 
+NF-14-K322-002 GNATCOLL.Scripts.Python: better support for boolean (2011-03-22)
+
+   The function Nth_Arg uses the standard python way to check whether a
+   parameter is True or False (for instance, an empty list will now be
+   considered as False when returned as a boolean). For backward compatibility,
+   the strings "false" and "0" are still mapped to False, although this is
+   different from what python itself would do.
+
 NF-14-K318-018 GNATCOLL.Scripts.Execute_Command returns any object (2011-03-21)
 
    A new function Execute_Command that directly modifies the Callback_Data

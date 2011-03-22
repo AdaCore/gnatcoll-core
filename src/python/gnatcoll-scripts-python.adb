@@ -25,6 +25,7 @@
 -- Place - Suite 330, Boston, MA 02111-1307, USA.                    --
 -----------------------------------------------------------------------
 
+with Ada.Characters.Handling;    use Ada.Characters.Handling;
 with Ada.Unchecked_Conversion;
 with Ada.Unchecked_Deallocation;
 with Ada.Exceptions;             use Ada.Exceptions;
@@ -2207,7 +2208,21 @@ package body GNATCOLL.Scripts.Python is
          return False;
       end if;
 
-      return PyObject_IsTrue (Item);
+      --  For backward compatibility, accept these as "False" values.
+
+      if PyString_Check (Item)
+        and then (To_Lower (PyString_AsString (Item)) = "false"
+                  or else PyString_AsString (Item) = "0")
+      then
+         Insert_Text
+           (Get_Script (Data), null,
+            "Warning: using string 'false' instead of"
+            & " boolean False is obsolescent");
+         return False;
+      else
+         --  Use standard python behavior
+         return PyObject_IsTrue (Item);
+      end if;
    end Nth_Arg;
 
    -------------
