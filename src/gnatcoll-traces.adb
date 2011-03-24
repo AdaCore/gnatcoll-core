@@ -513,6 +513,10 @@ package body GNATCOLL.Traces is
       if Debug_Mode
         and then Handles_List /= null  --  module not terminated
       then
+         if Handle.Active then
+            Log (Handle, Message, Location, Entity, Message_Color => Color);
+         end if;
+
          if Count_Trace /= null then
             Count_Trace.Count := Count_Trace.Count + 1;
          end if;
@@ -521,10 +525,6 @@ package body GNATCOLL.Traces is
          --  the number of queries that would have been emitted, even if they
          --  don't explicitly log.
          Handle.Count := Handle.Count + 1;
-
-         if Handle.Active then
-            Log (Handle, Message, Location, Entity, Message_Color => Color);
-         end if;
       end if;
    end Trace;
 
