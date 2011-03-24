@@ -688,10 +688,16 @@ package body GNATCOLL.Scripts is
 
    procedure Register_Standard_Classes
      (Repo               : access Scripts_Repository_Record'Class;
-      Console_Class_Name : String) is
+      Console_Class_Name : String;
+      Logger_Class_Name  : String := "") is
    begin
       Repo.Console_Class := New_Class (Repo, Console_Class_Name);
       Register_Console_Class (Repo, Repo.Console_Class);
+
+      if Logger_Class_Name /= "" then
+         Repo.Logger_Class := New_Class (Repo, Logger_Class_Name);
+         Register_Logger_Class (Repo, Repo.Logger_Class);
+      end if;
    end Register_Standard_Classes;
 
    -------------------------------

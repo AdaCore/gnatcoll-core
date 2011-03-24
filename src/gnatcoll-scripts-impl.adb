@@ -1,7 +1,7 @@
 -----------------------------------------------------------------------
 --                          G N A T C O L L                          --
 --                                                                   --
---                 Copyright (C) 2003-2010, AdaCore                  --
+--                 Copyright (C) 2003-2011, AdaCore                  --
 --                                                                   --
 -- GPS is free  software;  you can redistribute it and/or modify  it --
 -- under the terms of the GNU General Public License as published by --
@@ -25,11 +25,23 @@
 -- Place - Suite 330, Boston, MA 02111-1307, USA.                    --
 -----------------------------------------------------------------------
 
+with GNATCOLL.Traces;   use GNATCOLL.Traces;
+with System.Assertions;
+
 package body GNATCOLL.Scripts.Impl is
 
    procedure Console_Command_Handler
      (Data : in out Callback_Data'Class; Command : String);
    --  Handles command related to Console class
+
+   procedure Logger_Handler
+     (Data : in out Callback_Data'Class; Command : String);
+   --  Handles command related to Logger class
+
+   type Logger_Properties_Record is new Instance_Property_Record with record
+      Handle   : Trace_Handle;
+   end record;
+   type Logger_Properties is access all Logger_Properties_Record'Class;
 
    -------------------
    -- From_Instance --
@@ -211,6 +223,48 @@ package body GNATCOLL.Scripts.Impl is
       end if;
    end Console_Command_Handler;
 
+   --------------------
+   -- Logger_Handler --
+   --------------------
+
+   procedure Logger_Handler
+     (Data : in out Callback_Data'Class; Command : String)
+   is
+      Logger_Data : constant String := "Logger";
+      Inst : constant Class_Instance := Nth_Arg (Data, 1);
+      Prop : Instance_Property;
+   begin
+      if Command = Constructor_Method then
+         Set_Data
+           (Inst, Logger_Data, Logger_Properties_Record'
+              (Handle => Create (Nth_Arg (Data, 2))));
+
+      elsif Command = "log" then
+         Prop := Get_Data (Inst, Logger_Data);
+         Trace (Logger_Properties (Prop).Handle, Nth_Arg (Data, 2));
+
+      elsif Command = "set_active" then
+         Prop := Get_Data (Inst, Logger_Data);
+         Set_Active (Logger_Properties (Prop).Handle, Nth_Arg (Data, 2));
+
+      elsif Command = "check" then
+         begin
+            Prop := Get_Data (Inst, Logger_Data);
+            Assert (Logger_Properties (Prop).Handle,
+                    Condition          => Nth_Arg (Data, 2),
+                    Error_Message      => Nth_Arg (Data, 3),
+                    Message_If_Success => Nth_Arg (Data, 4, ""));
+         exception
+            when System.Assertions.Assert_Failure =>
+               Set_Error_Msg (Data, "Assertion error: " & Nth_Arg (Data, 3));
+         end;
+
+      elsif Command = "count" then
+         Prop := Get_Data (Inst, Logger_Data);
+         Set_Return_Value (Data, Count (Logger_Properties (Prop).Handle));
+      end if;
+   end Logger_Handler;
+
    ----------------------------
    -- Register_Console_Class --
    ----------------------------
@@ -248,5 +302,42 @@ package body GNATCOLL.Scripts.Impl is
          Class        => Class,
          Handler      => Console_Command_Handler'Access);
    end Register_Console_Class;
+
+   ---------------------------
+   -- Register_Logger_Class --
+   ---------------------------
+
+   procedure Register_Logger_Class
+     (Repo  : access Scripts_Repository_Record'Class;
+      Class : Class_Type)
+   is
+   begin
+      Register_Command
+        (Repo, Constructor_Method,
+         Params => (1 => Param ("name")),
+         Class => Class,
+         Handler => Logger_Handler'Access);
+      Register_Command
+        (Repo, "log",
+         Params => (1 => Param ("message")),
+         Class => Class,
+         Handler => Logger_Handler'Access);
+      Register_Command
+        (Repo, "set_active",
+         Params => (1 => Param ("active")),
+         Class => Class,
+         Handler => Logger_Handler'Access);
+      Register_Command
+        (Repo, "check",
+         Params => (1 => Param ("condition"),
+                    2 => Param ("error_message"),
+                    3 => Param ("success_message", Optional => True)),
+         Class => Class,
+         Handler => Logger_Handler'Access);
+      Register_Property
+        (Repo, "count",
+         Class  => Class,
+         Getter => Logger_Handler'Access);
+   end Register_Logger_Class;
 
 end GNATCOLL.Scripts.Impl;

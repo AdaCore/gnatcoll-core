@@ -1,7 +1,7 @@
 -----------------------------------------------------------------------
 --                          G N A T C O L L                          --
 --                                                                   --
---                 Copyright (C) 2001-2009, AdaCore                  --
+--                 Copyright (C) 2001-2011, AdaCore                  --
 --                                                                   --
 -- GPS is free  software;  you can redistribute it and/or modify  it --
 -- under the terms of the GNU General Public License as published by --
@@ -196,17 +196,41 @@ package GNATCOLL.Traces is
    --         Me : Trace_Handle := Create ("Generic" & Unit_Name (Self_Debug));
    --         ...
 
+   Red_Fg     : constant String := ASCII.ESC & "[31m";
+   Green_Fg   : constant String := ASCII.ESC & "[32m";
+   Brown_Fg   : constant String := ASCII.ESC & "[33m";
+   Blue_Fg    : constant String := ASCII.ESC & "[34m";
+   Purple_Fg  : constant String := ASCII.ESC & "[35m";
+   Cyan_Fg    : constant String := ASCII.ESC & "[36m";
+   Grey_Fg    : constant String := ASCII.ESC & "[37m";
+   Default_Fg : constant String := ASCII.ESC & "[39m";
+
+   Red_Bg     : constant String := ASCII.ESC & "[41m";
+   Green_Bg   : constant String := ASCII.ESC & "[42m";
+   Brown_Bg   : constant String := ASCII.ESC & "[43m";
+   Blue_Bg    : constant String := ASCII.ESC & "[44m";
+   Purple_Bg  : constant String := ASCII.ESC & "[45m";
+   Cyan_Bg    : constant String := ASCII.ESC & "[46m";
+   Grey_Bg    : constant String := ASCII.ESC & "[47m";
+   Default_Bg : constant String := ASCII.ESC & "[49m";
+   --  The various colors that can be applied to text. You can combine a
+   --  foreground and a background color by concatenating the strings.
+
    procedure Trace
      (Handle : Trace_Handle;
       E      : Ada.Exceptions.Exception_Occurrence;
-      Msg    : String := "Unexpected exception: ");
+      Msg    : String := "Unexpected exception: ";
+      Color  : String := Default_Fg);
    pragma Inline (Trace);
    --  Extract information from the given Exception_Occurence and output it
    --  with Msg as a prefix.
+   --  You can override the default color used for the stream by specifying the
+   --  color parameter.
 
    procedure Trace
      (Handle   : Trace_Handle;
       Message  : String;
+      Color    : String := Default_Fg;
       Location : String := GNAT.Source_Info.Source_Location;
       Entity   : String := GNAT.Source_Info.Enclosing_Entity);
    pragma Inline (Trace);
@@ -270,6 +294,10 @@ package GNATCOLL.Traces is
    --  If Handle and Msg are specified, a message is output on that handle to
    --  explain the change of indentation. The message is only displayed if the
    --  handle is active, but the indentation is always changed.
+
+   function Count (Handler : Trace_Handle) return Natural;
+   --  Return the number of times that Trace was called on the handler. This
+   --  count is incremented even when Handler is inactive.
 
    -------------
    -- Streams --

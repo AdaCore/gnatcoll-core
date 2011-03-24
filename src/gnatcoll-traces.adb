@@ -1,7 +1,7 @@
 -----------------------------------------------------------------------
 --                          G N A T C O L L                          --
 --                                                                   --
---                 Copyright (C) 2001-2009, AdaCore                  --
+--                 Copyright (C) 2001-2011, AdaCore                  --
 --                                                                   --
 -- GPS is free  software;  you can redistribute it and/or modify  it --
 -- under the terms of the GNU General Public License as published by --
@@ -71,24 +71,6 @@ package body GNATCOLL.Traces is
    --  begin
    --     Put_Line (System.Address_Image (Start'Address));
    --  end;
-
-   --  Red_Fg     : constant String := ASCII.ESC & "[31m";
-   --  Green_Fg   : constant String := ASCII.ESC & "[32m";
-   Brown_Fg   : constant String := ASCII.ESC & "[33m";
-   --  Blue_Fg    : constant String := ASCII.ESC & "[34m";
-   Purple_Fg  : constant String := ASCII.ESC & "[35m";
-   Cyan_Fg    : constant String := ASCII.ESC & "[36m";
-   --  Grey_Fg    : constant String := ASCII.ESC & "[37m";
-   Default_Fg : constant String := ASCII.ESC & "[39m";
-
-   Red_Bg     : constant String := ASCII.ESC & "[41m";
-   --  Green_Bg   : constant String := ASCII.ESC & "[42m";
-   --  Brown_Bg   : constant String := ASCII.ESC & "[43m";
-   --  Blue_Bg    : constant String := ASCII.ESC & "[44m";
-   --  Purple_Bg  : constant String := ASCII.ESC & "[45m";
-   --  Cyan_Bg    : constant String := ASCII.ESC & "[46m";
-   --  Grey_Bg    : constant String := ASCII.ESC & "[47m";
-   Default_Bg : constant String := ASCII.ESC & "[49m";
 
    procedure Unchecked_Free is new Ada.Unchecked_Deallocation
      (Trace_Handle_Record'Class, Trace_Handle);
@@ -488,7 +470,7 @@ package body GNATCOLL.Traces is
    Enclosing_Entity : constant Trace_Handle :=
      Create ("DEBUG.ENCLOSING_ENTITY");
    Location         : constant Trace_Handle := Create ("DEBUG.LOCATION");
-   Count            : constant Trace_Handle := Create ("DEBUG.COUNT");
+   Count_Trace      : constant Trace_Handle := Create ("DEBUG.COUNT");
    Finalize_Traces  : constant Trace_Handle :=
      Create ("DEBUG.FINALIZE_TRACES", On);
    --  If set to Off, this module will not be finalized, and traces will still
@@ -510,9 +492,11 @@ package body GNATCOLL.Traces is
    procedure Trace
      (Handle : Trace_Handle;
       E      : Ada.Exceptions.Exception_Occurrence;
-      Msg    : String := "Unexpected exception: ") is
+      Msg    : String := "Unexpected exception: ";
+      Color  : String := Default_Fg) is
    begin
-      Trace (Handle, Msg & Ada.Exceptions.Exception_Information (E));
+      Trace (Handle, Msg & Ada.Exceptions.Exception_Information (E),
+             Color => Color);
    end Trace;
 
    -----------
@@ -522,14 +506,25 @@ package body GNATCOLL.Traces is
    procedure Trace
      (Handle   : Trace_Handle;
       Message  : String;
+      Color    : String := Default_Fg;
       Location : String := GNAT.Source_Info.Source_Location;
       Entity   : String := GNAT.Source_Info.Enclosing_Entity) is
    begin
       if Debug_Mode
         and then Handles_List /= null  --  module not terminated
-        and then Handle.Active
       then
-         Log (Handle, Message, Location, Entity);
+         if Count_Trace /= null then
+            Count_Trace.Count := Count_Trace.Count + 1;
+         end if;
+
+         --  Always increment the count: that way, testsuites can easily count
+         --  the number of queries that would have been emitted, even if they
+         --  don't explicitly log.
+         Handle.Count := Handle.Count + 1;
+
+         if Handle.Active then
+            Log (Handle, Message, Location, Entity, Message_Color => Color);
+         end if;
       end if;
    end Trace;
 
@@ -548,7 +543,8 @@ package body GNATCOLL.Traces is
    begin
       if Debug_Mode and then Handles_List /= null and then Handle.Active then
          if not Condition then
-            Log (Handle, Error_Message, Location, Entity, Red_Bg & Default_Fg);
+            Trace
+              (Handle, Error_Message, Location, Entity, Red_Bg & Default_Fg);
 
             if Raise_Exception then
                Raise_Assert_Failure
@@ -557,7 +553,7 @@ package body GNATCOLL.Traces is
             end if;
 
          elsif Message_If_Success'Length /= 0 then
-            Log (Handle, Message_If_Success, Location, Entity);
+            Trace (Handle, Message_If_Success, Location, Entity);
          end if;
       end if;
    end Assert;
@@ -693,16 +689,14 @@ package body GNATCOLL.Traces is
    is
       pragma Unreferenced (Message);
    begin
-      if Count.Active then
+      if Count_Trace.Active then
          declare
-            C : constant String := Integer'Image (Count.Count);
+            C : constant String := Integer'Image (Count_Trace.Count);
             H : constant String := Integer'Image (Handle.Count);
          begin
             Put (Stream, H (H'First + 1 .. H'Last)
                  & '/' & C (C'First + 1 .. C'Last) & ' ');
          end;
-         Count.Count := Count.Count + 1;
-         Handle.Count := Handle.Count + 1;
       end if;
    end Pre_Decorator;
 
@@ -1382,6 +1376,19 @@ package body GNATCOLL.Traces is
          Streams_List := S;
       end if;
    end Set_Default_Stream;
+
+   -----------
+   -- Count --
+   -----------
+
+   function Count (Handler : Trace_Handle) return Natural is
+   begin
+      if Handler = null then
+         return 0;
+      else
+         return Handler.Count;
+      end if;
+   end Count;
 
 begin
    --  This is the default stream, always register it

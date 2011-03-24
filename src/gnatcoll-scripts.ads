@@ -1184,8 +1184,12 @@ package GNATCOLL.Scripts is
 
    procedure Register_Standard_Classes
      (Repo               : access Scripts_Repository_Record'Class;
-      Console_Class_Name : String);
-   --  Register predefined classes that are needed for support of consoles
+      Console_Class_Name : String;
+      Logger_Class_Name  : String := "");
+   --  Register predefined classes that are needed for support of consoles.
+   --  If Logger_Class_Name, this also creates a new class to interface with
+   --  the GNATCOLL.Traces mechanism. This is especially useful if your own
+   --  application is also uses the same mechanism.
 
    function Get_Console_Class
      (Repo : access Scripts_Repository_Record'Class) return Class_Type;
@@ -1423,6 +1427,7 @@ private
       Properties           : Property_Descr_Access;
       Classes              : Classes_Hash.Map;
       Console_Class        : Class_Type := No_Class;
+      Logger_Class         : Class_Type := No_Class;
    end record;
 
 end GNATCOLL.Scripts;
