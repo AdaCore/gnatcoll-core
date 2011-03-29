@@ -4042,6 +4042,7 @@ package body GNATCOLL.Projects is
       Previous_Status  : Project_Status;
       Success          : Boolean;
       Project          : Project_Node_Id;
+      Project_File     : GNATCOLL.VFS.Virtual_File := Root_Project_Path;
 
    begin
       Trace (Me, "Load project " & Root_Project_Path.Display_Full_Name);
@@ -4062,13 +4063,23 @@ package body GNATCOLL.Projects is
       if not Is_Regular_File (Root_Project_Path) then
          Trace (Me, "Load: " & Display_Full_Name (Root_Project_Path)
                 & " is not a regular file");
+         Project_File :=
+            Create
+              (Normalize_Pathname
+                (Full_Name (Project_File) & Project_File_Extension,
+                 Resolve_Links => False));
+         if not Is_Regular_File (Project_File) then
+            Trace (Me, "Load: " & Display_Full_Name (Project_File)
+                   & " is not a regular file");
 
-         if Errors /= null then
-            Errors (Display_Full_Name (Root_Project_Path)
-                    & " is not a regular file");
+            if Errors /= null then
+               Errors (Display_Full_Name (Root_Project_Path)
+                       & " is not a regular file");
+            end if;
+
+            raise Invalid_Project;
          end if;
 
-         raise Invalid_Project;
       end if;
 
       Self.Unload;
@@ -4087,7 +4098,7 @@ package body GNATCOLL.Projects is
       --  is called.
       Self.Data.Timestamp := GNATCOLL.Utils.No_Time;
 
-      Internal_Load (Self, Root_Project_Path, Errors, Project, Recompute_View);
+      Internal_Load (Self, Project_File, Errors, Project, Recompute_View);
 
       if Project = Empty_Node then
          --  Reset the list of error messages
