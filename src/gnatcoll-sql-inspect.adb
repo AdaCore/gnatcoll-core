@@ -73,6 +73,17 @@ package body GNATCOLL.SQL.Inspect is
      (List : in out String_List; Last : in out Natural; Str : String);
    --  Add a new element to the list
 
+   procedure Format_Field
+     (DB       : access Database_Connection_Record'Class;
+      Value    : String;
+      Typ      : Field_Type;
+      Val      : out GNAT.Strings.String_Access;
+      Param    : out SQL_Parameter;
+      Has_Xref : Boolean);
+   --  Format a value for proper use in SQL.
+   --  This translates boolean values "true" and "false" as appropriate for
+   --  the backend.
+
    ---------
    -- EOW --
    ---------
@@ -823,6 +834,63 @@ package body GNATCOLL.SQL.Inspect is
       List (Last) := new String'(Str);
    end Append;
 
+   ------------------
+   -- Format_Field --
+   ------------------
+
+   procedure Format_Field
+     (DB       : access Database_Connection_Record'Class;
+      Value    : String;
+      Typ      : Field_Type;
+      Val      : out GNAT.Strings.String_Access;
+      Param    : out SQL_Parameter;
+      Has_Xref : Boolean)
+   is
+      V : constant String := To_Lower (Value);
+      B : Boolean;
+   begin
+      if Typ = Field_Boolean then
+         if V = "true" or else V = "false" then
+            B := Boolean'Value (Value);
+            Val := new String'(Boolean_Image (DB.all, B));
+            Param := +B;
+         else
+            Val := new String'(Value);
+            Param := +Val;
+         end if;
+
+      elsif Value'Length = 0 then
+         if Has_Xref then
+            Val := new String'("''");
+         else
+            Val := new String'("");
+         end if;
+         Param := +Val;
+
+      elsif V = "null" then
+         Val := new String'("NULL");
+         if Has_Xref then
+            Param := +Val;
+         else
+            Param := Null_Parameter;
+         end if;
+
+      elsif Typ = Field_Integer then
+         Val := new String'(Value);
+         Param := +Val;
+
+      else
+         if Has_Xref then
+            Val := new String'
+              (String_To_SQL (DB.all, Value, Quote => True));
+         else
+            Val := new String'(Value);
+         end if;
+
+         Param := +Val;
+      end if;
+   end Format_Field;
+
    -----------------
    -- Read_Schema --
    -----------------
@@ -1227,6 +1295,8 @@ package body GNATCOLL.SQL.Inspect is
          procedure Add_Field (F : in out Field);
 
          procedure Add_Field (F : in out Field) is
+            Val : GNAT.Strings.String_Access;
+            Val_Param : SQL_Parameter;
          begin
             if not Is_First_Attribute then
                Append (SQL, "," & ASCII.LF);
@@ -1245,7 +1315,10 @@ package body GNATCOLL.SQL.Inspect is
             end if;
 
             if F.Default /= "" then
-               Append (SQL, " DEFAULT '" & F.Default & "'");
+               Format_Field
+                  (Self.DB, F.Default, Get_Type (F), Val, Val_Param, False);
+               Append (SQL, " DEFAULT '" & Val.all & "'");
+               Free (Val);
             end if;
 
             if F.Get.Indexed then
@@ -1557,69 +1630,6 @@ package body GNATCOLL.SQL.Inspect is
       --  Fields_Count is set to 0 if the current line is not part of a table
       --  and should be ignored.
 
-      procedure Format_Field
-        (Value    : String;
-         Typ      : Field_Type;
-         Val      : out GNAT.Strings.String_Access;
-         Param    : out SQL_Parameter;
-         Has_Xref : Boolean);
-      --  Format a value for proper use in SQL.
-      --  This translates boolean values "true" and "false" as appropriate for
-      --  the backend.
-
-      ------------------
-      -- Format_Field --
-      ------------------
-
-      procedure Format_Field
-        (Value    : String;
-         Typ      : Field_Type;
-         Val      : out GNAT.Strings.String_Access;
-         Param    : out SQL_Parameter;
-         Has_Xref : Boolean)
-      is
-         V : constant String := To_Lower (Value);
-         B : Boolean;
-      begin
-         if Typ = Field_Boolean
-           and then (V = "true" or else V = "false")
-         then
-            B := Boolean'Value (Value);
-            Val := new String'(Boolean_Image (DB.all, B));
-            Param := +B;
-
-         elsif Value'Length = 0 then
-            if Has_Xref then
-               Val := new String'("''");
-            else
-               Val := new String'("");
-            end if;
-            Param := +Val;
-
-         elsif Is_Digit (Value (Value'First)) then
-            Val := new String'(Value);
-            Param := +Val;
-
-         elsif V = "null" then
-            Val := new String'("NULL");
-            if Has_Xref then
-               Param := +Val;
-            else
-               Param := Null_Parameter;
-            end if;
-
-         else
-            if Has_Xref then
-               Val := new String'
-                 (String_To_SQL (DB.all, Value, Quote => True));
-            else
-               Val := new String'(Value);
-            end if;
-
-            Param := +Val;
-         end if;
-      end Format_Field;
-
       ----------------
       -- Parse_Line --
       ----------------
@@ -1717,12 +1727,15 @@ package body GNATCOLL.SQL.Inspect is
             end loop;
 
             declare
-               L : Integer := DB_Field_Types'First;
                procedure On_Field (F : in out Field);
                procedure On_Field (F : in out Field) is
                begin
-                  DB_Field_Types (L) := F.Get_Type;
-                  L := L + 1;
+                  for L in DB_Fields'First .. DB_Fields_Count loop
+                     if DB_Fields (L).all = F.Name then
+                        DB_Field_Types (L) := F.Get_Type;
+                        return;
+                     end if;
+                  end loop;
                end On_Field;
             begin
                Table.For_Each_Field
@@ -1797,7 +1810,8 @@ package body GNATCOLL.SQL.Inspect is
                loop
                   if Vals (L) = null then
                      Format_Field
-                       (Line (L).all,
+                       (DB,
+                        Line (L).all,
                         DB_Field_Types (L),
                         Vals (L),
                         Values (L),
