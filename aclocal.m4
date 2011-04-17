@@ -577,7 +577,7 @@ AC_HELP_STRING(
              ;;
       esac
 
-      if test -f ${PYTHON_DIR}/libpython${PYTHON_VERSION}.a ; then
+      if test \( -f ${PYTHON_DIR}/libpython${PYTHON_VERSION}.a \) -a \( ! x$PYTHON_SHARED = xyes \) ; then
          PYTHON_LIBS="${PYTHON_DIR}/libpython${PYTHON_VERSION}.a ${PYTHON_LIBS}"
       else
          PYTHON_LIBS="-L${PYTHON_DIR} -lpython${PYTHON_VERSION} ${PYTHON_LIBS}"
