@@ -97,6 +97,10 @@ package GNATCOLL.Refcount is
       overriding function "=" (P1, P2 : Ref) return Boolean;
       --  Whether the two pointers point to the same data
 
+      function Get_Refcount (Self : Ref) return Natural;
+      --  Return the current reference count.
+      --  This is mostly intended for debug purposes.
+
    private
       type Ref is new Ada.Finalization.Controlled with record
          Data : Refcounted_Access;

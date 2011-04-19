@@ -129,6 +129,19 @@ package body GNATCOLL.Refcount is
          end if;
       end Adjust;
 
+      ------------------
+      -- Get_Refcount --
+      ------------------
+
+      function Get_Refcount (Self : Ref) return Natural is
+      begin
+         if Self.Data = null then
+            return 0;
+         else
+            return Natural (Self.Data.Refcount);
+         end if;
+      end Get_Refcount;
+
    end Smart_Pointers;
 
 end GNATCOLL.Refcount;
