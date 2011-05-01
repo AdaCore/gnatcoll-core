@@ -4474,13 +4474,14 @@ package body GNATCOLL.Projects is
                     (Get_String ("gnatlist"),
                      Tree.Data.View.Shared.Packages.Table (P).Decl.Attributes,
                      Tree.Data.View.Shared);
+
                   if Value = Nil_Variable_Value then
                      Trace (Me, "No attribute IDE'gnatlist");
                      Project := Empty_Node;  --  ??? Should we free it
                   else
                      declare
-                        Gnatls : constant String :=
-                          Get_Name_String (Value.Value);
+                        Gnatls       : constant String :=
+                                         Get_Name_String (Value.Value);
                         GNAT_Version : String_Access;
                      begin
                         Trace (Me, "gnatlist=" & Gnatls);
