@@ -43,7 +43,8 @@ package body GNATCOLL.Scripts.Python is
    Me_Stack : constant Trace_Handle := Create ("PYTHON.TB", Off);
 
    procedure Set_Item (Args : PyObject; T : Integer; Item : PyObject);
-   --  Change the T-th item in Args
+   --  Change the T-th item in Args.
+   --  This increases the refcount of Item
 
    procedure Name_Parameters
      (Data  : in out Python_Callback_Data; Params : Param_Array);
@@ -298,14 +299,15 @@ package body GNATCOLL.Scripts.Python is
 
    procedure Trace_Dump (Name : String; Obj : PyObject) is
    begin
-      if Obj /= null then
+      if Obj = null then
          Put_Line (Name & "=<null>");
       else
          Put_Line (Name & "="""
-                & PyString_AsString (PyObject_Str (Obj)) & '"' & ASCII.LF
-                & PyString_AsString (PyObject_Str (PyObject_Dir (Obj)))
-                & ASCII.LF
-                & PyString_AsString (PyObject_Repr (Obj)));
+                   & PyString_AsString (PyObject_Str (Obj)) & '"' & ASCII.LF
+                   & " refcount=" & Value (Refcount_Msg (Obj)));
+         --  Other possible debug info:
+         --    repr =  PyString_AsString (PyObject_Repr (Obj))
+         --    methods = PyString_AsString (PyObject_Str (PyObject_Dir (Obj)))
       end if;
    end Trace_Dump;
 
@@ -625,6 +627,7 @@ package body GNATCOLL.Scripts.Python is
          for T in 0 .. Size - 1 loop
             Item := PyObject_GetItem (Data.Args, T);
             Set_Item (D.Args, T, Item);
+            Py_DECREF (Item);
          end loop;
       end if;
       if D.Kw /= null then
@@ -668,7 +671,6 @@ package body GNATCOLL.Scripts.Python is
    begin
       Set_Item (Data.Args, N - 1,
                 Python_Subprogram_Record (Value.all).Subprogram);
-      Py_INCREF (Python_Subprogram_Record (Value.all).Subprogram);
    end Set_Nth_Arg;
 
    -----------------
@@ -676,9 +678,12 @@ package body GNATCOLL.Scripts.Python is
    -----------------
 
    procedure Set_Nth_Arg
-     (Data : in out Python_Callback_Data; N : Positive; Value : String) is
+     (Data : in out Python_Callback_Data; N : Positive; Value : String)
+   is
+      Item : constant PyObject := PyString_FromString (Value);
    begin
-      Set_Item (Data.Args, N - 1, PyString_FromString (Value));
+      Set_Item (Data.Args, N - 1, Item);
+      Py_DECREF (Item);
    end Set_Nth_Arg;
 
    -----------------
@@ -686,9 +691,12 @@ package body GNATCOLL.Scripts.Python is
    -----------------
 
    procedure Set_Nth_Arg
-     (Data : in out Python_Callback_Data; N : Positive; Value : Integer) is
+     (Data : in out Python_Callback_Data; N : Positive; Value : Integer)
+   is
+      Item : constant PyObject := PyInt_FromLong (Interfaces.C.long (Value));
    begin
-      Set_Item (Data.Args, N - 1, PyInt_FromLong (Interfaces.C.long (Value)));
+      Set_Item (Data.Args, N - 1, Item);
+      Py_DECREF (Item);
    end Set_Nth_Arg;
 
    -----------------
@@ -696,9 +704,12 @@ package body GNATCOLL.Scripts.Python is
    -----------------
 
    procedure Set_Nth_Arg
-     (Data : in out Python_Callback_Data; N : Positive; Value : Boolean) is
+     (Data : in out Python_Callback_Data; N : Positive; Value : Boolean)
+   is
+      Item : constant PyObject := PyInt_FromLong (Boolean'Pos (Value));
    begin
-      Set_Item (Data.Args, N - 1, PyInt_FromLong (Boolean'Pos (Value)));
+      Set_Item (Data.Args, N - 1, Item);
+      Py_DECREF (Item);
    end Set_Nth_Arg;
 
    -----------------
@@ -710,8 +721,7 @@ package body GNATCOLL.Scripts.Python is
    is
       Inst : constant PyObject := Python_Class_Instance (Get_CIR (Value)).Data;
    begin
-      Set_Item (Data.Args, N - 1, Inst);
-      Py_INCREF (Inst);
+      Set_Item (Data.Args, N - 1, Inst);  --  Increments refcount
    end Set_Nth_Arg;
 
    -----------------
@@ -723,8 +733,7 @@ package body GNATCOLL.Scripts.Python is
    is
       V : constant PyObject := Python_Callback_Data (Value).Args;
    begin
-      Set_Item (Data.Args, N - 1, V);
-      Py_INCREF (V);
+      Set_Item (Data.Args, N - 1, V);  --  Increments refcount
    end Set_Nth_Arg;
 
    -----------------
