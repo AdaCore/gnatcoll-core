@@ -43,8 +43,7 @@ package body GNATCOLL.Scripts.Python is
    Me_Stack : constant Trace_Handle := Create ("PYTHON.TB", Off);
 
    procedure Set_Item (Args : PyObject; T : Integer; Item : PyObject);
-   --  Change the T-th item in Args.
-   --  This increases the refcount of Item
+   --  Change the T-th item in Args
 
    procedure Name_Parameters
      (Data  : in out Python_Callback_Data; Params : Param_Array);
@@ -627,7 +626,6 @@ package body GNATCOLL.Scripts.Python is
          for T in 0 .. Size - 1 loop
             Item := PyObject_GetItem (Data.Args, T);
             Set_Item (D.Args, T, Item);
-            Py_DECREF (Item);
          end loop;
       end if;
       if D.Kw /= null then
@@ -671,6 +669,7 @@ package body GNATCOLL.Scripts.Python is
    begin
       Set_Item (Data.Args, N - 1,
                 Python_Subprogram_Record (Value.all).Subprogram);
+      Py_INCREF (Python_Subprogram_Record (Value.all).Subprogram);
    end Set_Nth_Arg;
 
    -----------------
@@ -678,12 +677,9 @@ package body GNATCOLL.Scripts.Python is
    -----------------
 
    procedure Set_Nth_Arg
-     (Data : in out Python_Callback_Data; N : Positive; Value : String)
-   is
-      Item : constant PyObject := PyString_FromString (Value);
+     (Data : in out Python_Callback_Data; N : Positive; Value : String) is
    begin
-      Set_Item (Data.Args, N - 1, Item);
-      Py_DECREF (Item);
+      Set_Item (Data.Args, N - 1, PyString_FromString (Value));
    end Set_Nth_Arg;
 
    -----------------
@@ -691,12 +687,9 @@ package body GNATCOLL.Scripts.Python is
    -----------------
 
    procedure Set_Nth_Arg
-     (Data : in out Python_Callback_Data; N : Positive; Value : Integer)
-   is
-      Item : constant PyObject := PyInt_FromLong (Interfaces.C.long (Value));
+     (Data : in out Python_Callback_Data; N : Positive; Value : Integer) is
    begin
-      Set_Item (Data.Args, N - 1, Item);
-      Py_DECREF (Item);
+      Set_Item (Data.Args, N - 1, PyInt_FromLong (Interfaces.C.long (Value)));
    end Set_Nth_Arg;
 
    -----------------
@@ -704,12 +697,9 @@ package body GNATCOLL.Scripts.Python is
    -----------------
 
    procedure Set_Nth_Arg
-     (Data : in out Python_Callback_Data; N : Positive; Value : Boolean)
-   is
-      Item : constant PyObject := PyInt_FromLong (Boolean'Pos (Value));
+     (Data : in out Python_Callback_Data; N : Positive; Value : Boolean) is
    begin
-      Set_Item (Data.Args, N - 1, Item);
-      Py_DECREF (Item);
+      Set_Item (Data.Args, N - 1, PyInt_FromLong (Boolean'Pos (Value)));
    end Set_Nth_Arg;
 
    -----------------
@@ -721,7 +711,8 @@ package body GNATCOLL.Scripts.Python is
    is
       Inst : constant PyObject := Python_Class_Instance (Get_CIR (Value)).Data;
    begin
-      Set_Item (Data.Args, N - 1, Inst);  --  Increments refcount
+      Set_Item (Data.Args, N - 1, Inst);
+      Py_INCREF (Inst);
    end Set_Nth_Arg;
 
    -----------------
@@ -733,7 +724,8 @@ package body GNATCOLL.Scripts.Python is
    is
       V : constant PyObject := Python_Callback_Data (Value).Args;
    begin
-      Set_Item (Data.Args, N - 1, V);  --  Increments refcount
+      Set_Item (Data.Args, N - 1, V);
+      Py_INCREF (V);
    end Set_Nth_Arg;
 
    -----------------
