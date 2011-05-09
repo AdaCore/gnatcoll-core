@@ -287,7 +287,8 @@ package GNATCOLL.Python is
 
    function PyList_Append (List : PyObject; Obj : PyObject) return Integer;
    --  Append Obj at the end of List, and return the index of the newly
-   --  inserted item
+   --  inserted item.
+   --  Increased Obj's refcount
 
    function PyList_GetItem (List : PyObject; Index : Integer) return PyObject;
    pragma Obsolescent (PyList_GetItem, "See PyObject_GetItem instead");

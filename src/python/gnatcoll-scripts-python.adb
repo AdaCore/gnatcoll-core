@@ -592,6 +592,16 @@ package body GNATCOLL.Scripts.Python is
          Py_DECREF (Data.Kw);
       end if;
 
+      if Data.Return_Value /= null then
+         Py_DECREF (Data.Return_Value);
+         Data.Return_Value := null;
+      end if;
+
+      if Data.Return_Dict /= null then
+         Py_DECREF (Data.Return_Dict);
+         Data.Return_Dict := null;
+      end if;
+
       --  Do not free the return value, this is taken care of later on by all
       --  callers
    end Free;
@@ -735,8 +745,6 @@ package body GNATCOLL.Scripts.Python is
       Inst : constant PyObject := Python_Class_Instance (Get_CIR (Value)).Data;
    begin
       Set_Item (Data.Args, N - 1, Inst);  --  Increments refcount
-      --  Py_INCREF (Inst);  --  Storage_Error if commented out
-                        --  Leak if left
    end Set_Nth_Arg;
 
    -----------------
@@ -901,15 +909,14 @@ package body GNATCOLL.Scripts.Python is
 
       Cmd.all (Data, Command);
 
-      Free (Data);   --  Doesn't free the return value
-
       if Data.Return_Dict /= null then
-         Py_XDECREF (Data.Return_Value);
          Result := Data.Return_Dict;
-
       else
          Result := Data.Return_Value;  --  might be null for an exception
       end if;
+
+      Py_INCREF (Result);
+      Free (Data);
 
    exception
       when E : Invalid_Parameter =>
@@ -2675,11 +2682,12 @@ package body GNATCOLL.Scripts.Python is
 
       else
          CIR := PyCObject_AsVoidPtr (Item);
-         Py_DECREF (Item);
 
          if not Script.Finalized then
             Result := From_Instance (Script, Convert (CIR));
          end if;
+
+         Py_DECREF (Item);
          return Result;
       end if;
    end Get_CI;
@@ -2779,9 +2787,9 @@ package body GNATCOLL.Scripts.Python is
       --  dictionary. In both cases, its refcount was increased by one.
 
       Py_DECREF (Data.Return_Value);
-
       Data.Return_Value := Py_None;
       Py_INCREF (Data.Return_Value);
+
       Data.Return_As_List := False;
    end Prepare_Value_Key;
 
@@ -2874,10 +2882,12 @@ package body GNATCOLL.Scripts.Python is
    is
       Num : Integer;
       pragma Unreferenced (Num);
+      Val : PyObject;
    begin
       if Data.Return_As_List then
-         Num := PyList_Append
-           (Data.Return_Value, PyInt_FromLong (long (Value)));
+         Val := PyInt_FromLong (long (Value));
+         Num := PyList_Append (Data.Return_Value, Val);
+         Py_DECREF (Val);
       else
          Setup_Return_Value (Data);
          Data.Return_Value := PyInt_FromLong (long (Value));
@@ -2892,10 +2902,13 @@ package body GNATCOLL.Scripts.Python is
      (Data : in out Python_Callback_Data; Value : String)
    is
       Num : Integer;
+      Val : PyObject;
       pragma Unreferenced (Num);
    begin
       if Data.Return_As_List then
-         Num := PyList_Append (Data.Return_Value, PyString_FromString (Value));
+         Val := PyString_FromString (Value);
+         Num := PyList_Append (Data.Return_Value, Val);
+         Py_DECREF (Val);
       else
          Setup_Return_Value (Data);
          Data.Return_Value := PyString_FromString (Value);
@@ -2907,12 +2920,16 @@ package body GNATCOLL.Scripts.Python is
    ----------------------
 
    procedure Set_Return_Value
-     (Data : in out Python_Callback_Data; Value : Boolean)  is
+     (Data : in out Python_Callback_Data; Value : Boolean)
+   is
+      Val : PyObject;
       Num : Integer;
       pragma Unreferenced (Num);
    begin
       if Data.Return_As_List then
-         Num := PyList_Append (Data.Return_Value, PyBool_FromBoolean (Value));
+         Val := PyBool_FromBoolean (Value);
+         Num := PyList_Append (Data.Return_Value, Val);
+         Py_DECREF (Val);
       else
          Setup_Return_Value (Data);
          Data.Return_Value := PyBool_FromBoolean (Value);
@@ -2939,7 +2956,7 @@ package body GNATCOLL.Scripts.Python is
       end if;
 
       if Data.Return_As_List then
-         Num := PyList_Append (Data.Return_Value, Obj);
+         Num := PyList_Append (Data.Return_Value, Obj);  --  Increase refcount
       else
          Py_INCREF (Obj);
          Setup_Return_Value (Data);
@@ -2959,7 +2976,7 @@ package body GNATCOLL.Scripts.Python is
       pragma Unreferenced (Num);
    begin
       if Data.Return_As_List then
-         Num := PyList_Append (Data.Return_Value, V);
+         Num := PyList_Append (Data.Return_Value, V);  --  Increase refcount
       else
          Py_INCREF (V);
          Setup_Return_Value (Data);
@@ -3431,11 +3448,11 @@ package body GNATCOLL.Scripts.Python is
             Result := Execute_Command (Script, Func, Args, Errors'Access);
 
             if Errors then
+               Py_XDECREF (Result);
                PyErr_Clear;
                raise Error_In_Command;
             else
-               Args.Return_Value := Result;
-               Py_INCREF (Result);
+               Args.Return_Value := Result;  --  Adopts a reference
             end if;
 
          else
@@ -3487,7 +3504,8 @@ package body GNATCOLL.Scripts.Python is
    ------------------
 
    overriding function Return_Value
-     (Data : Python_Callback_Data) return Class_Instance is
+     (Data : Python_Callback_Data) return Class_Instance
+   is
    begin
       if Data.Return_Value = Py_None then
          return No_Class_Instance;
@@ -3514,9 +3532,10 @@ package body GNATCOLL.Scripts.Python is
       if Iter = null then
          raise Invalid_Parameter with "Return value is not an iterable";
       end if;
-
       Py_DECREF (Iter);
+
       List.Args := Data.Return_Value;
+      Py_INCREF (List.Args);
 
       return List;
    end Return_Value;
