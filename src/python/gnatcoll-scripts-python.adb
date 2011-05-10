@@ -915,7 +915,7 @@ package body GNATCOLL.Scripts.Python is
          Result := Data.Return_Value;  --  might be null for an exception
       end if;
 
-      Py_INCREF (Result);
+      Py_XINCREF (Result);
       Free (Data);
 
    exception
