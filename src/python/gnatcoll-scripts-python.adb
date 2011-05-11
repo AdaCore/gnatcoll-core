@@ -601,9 +601,6 @@ package body GNATCOLL.Scripts.Python is
          Py_DECREF (Data.Return_Dict);
          Data.Return_Dict := null;
       end if;
-
-      --  Do not free the return value, this is taken care of later on by all
-      --  callers
    end Free;
 
    --------------
@@ -872,14 +869,15 @@ package body GNATCOLL.Scripts.Python is
       end if;
 
       Callback.Args         := Args;
+      Py_XINCREF (Callback.Args);
+
       Callback.Kw           := Kw;
+      Py_XINCREF (Callback.Kw);
+
       Callback.Return_Value := null;
       Callback.Return_Dict  := null;
       Callback.Script       := Handler.Script;
       Callback.First_Arg_Is_Self := First_Arg_Is_Self;
-
-      Py_XINCREF (Callback.Args);
-      Py_XINCREF (Callback.Kw);
 
       if Handler.Cmd.Params /= null then
          Name_Parameters (Callback, Handler.Cmd.Params.all);
@@ -2719,6 +2717,7 @@ package body GNATCOLL.Scripts.Python is
    begin
       Py_XDECREF (Data.Return_Value);
       Data.Has_Return_Value := True;
+      Data.Return_As_List := False;
       Data.Return_Value := null;
    end Setup_Return_Value;
 
@@ -2957,6 +2956,7 @@ package body GNATCOLL.Scripts.Python is
 
       if Data.Return_As_List then
          Num := PyList_Append (Data.Return_Value, Obj);  --  Increase refcount
+         Py_DECREF (Obj); --  The reference to Object is adopted by the result
       else
          Py_INCREF (Obj);
          Setup_Return_Value (Data);
