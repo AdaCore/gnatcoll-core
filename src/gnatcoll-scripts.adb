@@ -1135,7 +1135,9 @@ package body GNATCOLL.Scripts is
 
    procedure Adjust (CI : in out Class_Instance_Data) is
    begin
-      Incref (CI.Data);
+      if CI.Data /= null then
+         Incref (CI.Data);
+      end if;
    end Adjust;
 
    --------------

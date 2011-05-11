@@ -2956,7 +2956,7 @@ package body GNATCOLL.Scripts.Python is
 
       if Data.Return_As_List then
          Num := PyList_Append (Data.Return_Value, Obj);  --  Increase refcount
-         Py_DECREF (Obj); --  The reference to Object is adopted by the result
+--       Py_DECREF (Obj); --  The reference to Object is adopted by the result
       else
          Py_INCREF (Obj);
          Setup_Return_Value (Data);
