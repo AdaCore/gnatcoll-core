@@ -244,6 +244,10 @@ package GNATCOLL.Traces is
    --  Do not modify the parameters Location and Entity, they will have proper
    --  default values, and are used to output additional information about the
    --  context of the call.
+   --
+   --  In case of exception (for instance because the log file is not
+   --  writable), the behavior is controlled by the parameter On_Exception
+   --  that was passed to Parse_Config_File.
 
    procedure Assert
      (Handle             : Trace_Handle;

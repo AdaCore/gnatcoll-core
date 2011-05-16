@@ -383,6 +383,13 @@ package body GNATCOLL.Traces is
                else
                   Create (File_Stream_Record (Tmp.all).File.all, Out_File, N);
                end if;
+
+            exception
+               when Ada.Text_IO.Use_Error =>
+                  --  Default to stderr
+                  Unchecked_Free (Tmp);
+                  Tmp := new Stderr_Stream_Record'
+                    (Name => new String'(Name), Next => null);
             end;
 
             Add_To_Streams (Tmp);
