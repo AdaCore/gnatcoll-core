@@ -1,7 +1,7 @@
 -----------------------------------------------------------------------
 --                          G N A T C O L L                          --
 --                                                                   --
---                   Copyright (C) 2009, AdaCore                     --
+--                 Copyright (C) 2009-2011, AdaCore                  --
 --                                                                   --
 -- GPS is free  software;  you can redistribute it and/or modify  it --
 -- under the terms of the GNU General Public License as published by --
@@ -56,7 +56,7 @@ private package GNATCOLL.IO is
       --  resolved)
 
       Kind       : Item_Type := Unknown;
-      --  The kind of file represented by this object.
+      --  The kind of file represented by this object
    end record;
 
    type File_Access is access all File_Record'Class;
@@ -69,7 +69,7 @@ private package GNATCOLL.IO is
    function Dispatching_Create
      (Ref : not null access File_Record;
       Full_Path : FS_String) return File_Access is abstract;
-   --  Create a new file using the same tagged type is Ref.
+   --  Create a new file using the same tagged type is Ref
 
    function To_UTF8
      (Ref : not null access File_Record;
@@ -81,14 +81,14 @@ private package GNATCOLL.IO is
    --  Filesystem's charset.
 
    function Is_Local (File : File_Record) return Boolean is abstract;
-   --  Tell if IO denotes a local file or directory.
+   --  Tell if IO denotes a local file or directory
 
-   function Get_FS (File : not null access File_Record) return FS_Type
-                    is abstract;
-   --  Return the kind of FS the file is on.
+   function Get_FS
+     (File : not null access File_Record) return FS_Type is abstract;
+   --  Return the kind of FS the file is on
 
    procedure Resolve_Symlinks (File : not null access File_Record) is abstract;
-   --  Resolve all potential symlinks present in the IO path.
+   --  Resolve all potential symlinks present in the IO path
 
    ----------------------
    -- Queries on files --
@@ -115,7 +115,7 @@ private package GNATCOLL.IO is
 
    function Is_Writable
      (File : not null access File_Record) return Boolean is abstract;
-   --  Return True if File is writable.
+   --  Return True if File is writable
 
    procedure Set_Writable
      (File  : not null access File_Record;
@@ -173,7 +173,7 @@ private package GNATCOLL.IO is
      (File    : not null access File_Record;
       FD      : GNAT.OS_Lib.File_Descriptor;
       Success : out Boolean) is abstract;
-   --  Closes FD and actually flushes the content to File if needed.
+   --  Closes FD and actually flushes the content to File if needed
 
    --------------------------
    -- Directory management --

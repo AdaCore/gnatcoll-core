@@ -1201,7 +1201,7 @@ package body GNATCOLL.VFS is
    ----------------------
 
    procedure Ensure_Directory (Dir : Virtual_File) is
-      Full    : FS_String_Access;
+      Full : FS_String_Access;
    begin
       if Dir.Value /= null then
          if not Is_Dir_Name (Dir.Value.Get_FS, Dir.Value.Full.all) then
@@ -1213,7 +1213,7 @@ package body GNATCOLL.VFS is
 
          if Dir.Value.Normalized /= null
            and then not Is_Dir_Name
-                         (Dir.Value.Get_FS, Dir.Value.Normalized.all)
+             (Dir.Value.Get_FS, Dir.Value.Normalized.all)
          then
             Full := new FS_String'
               (Ensure_Directory
