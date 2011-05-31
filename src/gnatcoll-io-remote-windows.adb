@@ -1,7 +1,7 @@
 -----------------------------------------------------------------------
 --                          G N A T C O L L                          --
 --                                                                   --
---                 Copyright (C) 2006-2010, AdaCore                  --
+--                 Copyright (C) 2006-2011, AdaCore                  --
 --                                                                   --
 -- GPS is free  software;  you can redistribute it and/or modify  it --
 -- under the terms of the GNU General Public License as published by --
@@ -728,8 +728,9 @@ package body GNATCOLL.IO.Remote.Windows is
    --------------
 
    function Make_Dir
-     (Exec : access Server_Record'Class;
-      Dir  : FS_String)
+     (Exec      : access Server_Record'Class;
+      Dir       : FS_String;
+      Recursive : Boolean)
       return Boolean
    is
       Args   : GNAT.OS_Lib.Argument_List :=
@@ -737,6 +738,8 @@ package body GNATCOLL.IO.Remote.Windows is
                   new String'("""" & String (Dir) & """"),
                   new String'("2>&1"));
       Status : Boolean;
+      pragma Unreferenced (Recursive);
+      --  There is no non-recursive mkdir on Windows
 
    begin
       Exec.Execute_Remotely (Args, Status);
