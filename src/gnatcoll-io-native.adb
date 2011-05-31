@@ -641,7 +641,7 @@ package body GNATCOLL.IO.Native is
       if Recursive then
          Ada.Directories.Create_Path (String (Dir.Full.all));
       else
-         GNAT.Directory_Operations.Make_Dir (String (Dir.Full.all));
+         Ada.Directories.Create_Directory (String (Dir.Full.all));
       end if;
 
       return True;
