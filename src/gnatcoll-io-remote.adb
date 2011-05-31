@@ -1,7 +1,7 @@
 -----------------------------------------------------------------------
 --                          G N A T C O L L                          --
 --                                                                   --
---                Copyright (C) 2009-2010, AdaCore                   --
+--                Copyright (C) 2009-2011, AdaCore                   --
 --                                                                   --
 -- GPS is free  software;  you can redistribute it and/or modify  it --
 -- under the terms of the GNU General Public License as published by --
@@ -844,7 +844,8 @@ package body GNATCOLL.IO.Remote is
    --------------
 
    function Make_Dir
-     (Dir : not null access Remote_File_Record) return Boolean
+     (Dir       : not null access Remote_File_Record;
+      Recursive : Boolean) return Boolean
    is
    begin
       Ensure_Initialized (Dir);
@@ -852,10 +853,10 @@ package body GNATCOLL.IO.Remote is
       case Dir.Server.Shell_FS is
          when FS_Unix | FS_Unix_Case_Insensitive =>
             return GNATCOLL.IO.Remote.Unix.Make_Dir
-              (Dir.Server, Dir.Full.all);
+              (Dir.Server, Dir.Full.all, Recursive);
          when FS_Windows =>
             return GNATCOLL.IO.Remote.Windows.Make_Dir
-              (Dir.Server, Dir.Full.all);
+              (Dir.Server, Dir.Full.all, Recursive);
          when FS_Unknown =>
             raise Remote_Config_Error with
               "Invalid FS for host " & Dir.Get_Host;

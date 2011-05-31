@@ -1,7 +1,7 @@
 -----------------------------------------------------------------------
 --                          G N A T C O L L                          --
 --                                                                   --
---                 Copyright (C) 2009-2010, AdaCore                  --
+--                 Copyright (C) 2009-2011, AdaCore                  --
 --                                                                   --
 -- GPS is free  software;  you can redistribute it and/or modify  it --
 -- under the terms of the GNU General Public License as published by --
@@ -634,10 +634,27 @@ package body GNATCOLL.IO.Native is
    --------------
 
    function Make_Dir
-     (Dir : not null access Native_File_Record) return Boolean
+     (Dir       : not null access Native_File_Record;
+      Recursive : Boolean) return Boolean
    is
+      S : constant String := String (Dir.Full.all);
    begin
-      GNAT.Directory_Operations.Make_Dir (String (Dir.Full.all));
+      if Recursive then
+         for J in S'Range loop
+            --  Support both '\' and '/' as directory separators, as this might
+            --  be a user-entered string on any OS.
+            if S (J) = '/'
+              or else S (J) = '\'
+              or else J = S'Last
+            then
+               if not GNAT.OS_Lib.Is_Directory (S (S'First .. J)) then
+                  GNAT.Directory_Operations.Make_Dir (S (S'First .. J));
+               end if;
+            end if;
+         end loop;
+      else
+         GNAT.Directory_Operations.Make_Dir (S);
+      end if;
 
       return True;
 

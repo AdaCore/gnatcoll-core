@@ -461,9 +461,10 @@ package GNATCOLL.VFS is
    --  Changes working directory. Raises Directory_Error if Dir_Name does not
    --  exist or is not a readable directory
 
-   procedure Make_Dir (Dir : Virtual_File);
+   procedure Make_Dir (Dir : Virtual_File; Recursive : Boolean := True);
    --  Create a new directory named Dir_Name. Raises Directory_Error if
    --  Dir_Name cannot be created.
+   --  If Recursive, create all intermediary directories needed.
 
    type Read_Dir_Filter is (All_Files, Dirs_Only, Files_Only);
 

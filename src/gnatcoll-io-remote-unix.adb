@@ -1,7 +1,7 @@
 -----------------------------------------------------------------------
 --                          G N A T C O L L                          --
 --                                                                   --
---                 Copyright (C) 2006-2010, AdaCore                  --
+--                 Copyright (C) 2006-2011, AdaCore                  --
 --                                                                   --
 -- GPS is free  software;  you can redistribute it and/or modify  it --
 -- under the terms of the GNU General Public License as published by --
@@ -645,19 +645,26 @@ package body GNATCOLL.IO.Remote.Unix is
    --------------
 
    function Make_Dir
-     (Exec : access Server_Record'Class;
-      Dir  : FS_String)
+     (Exec      : access Server_Record'Class;
+      Dir       : FS_String;
+      Recursive : Boolean)
       return Boolean
    is
-      Args : GNAT.OS_Lib.Argument_List :=
-        (new String'("mkdir"),
-         new String'("-p"),
-         new String'("'" & String (Dir) & "'"));
       Status : Boolean;
+      Args : GNAT.OS_Lib.Argument_List :=
+        (1 => new String'("mkdir"),
+         2 => new String'("-p"),
+         3 => new String'("'" & String (Dir) & "'"));
 
    begin
-      Exec.Execute_Remotely (Args, Status);
+      if Recursive then
+         Exec.Execute_Remotely (Args, Status);
+      else
+         Exec.Execute_Remotely ((1 => Args (1), 2 => Args (3)), Status);
+      end if;
+
       Free (Args);
+
       return Status;
    end Make_Dir;
 

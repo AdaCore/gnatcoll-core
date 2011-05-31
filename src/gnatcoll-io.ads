@@ -196,7 +196,8 @@ private package GNATCOLL.IO is
    --  only. Same for Files_Only, concerning regular files.
    --  This does *not* return the two special directories "." and ".."
 
-   function Make_Dir (Dir : not null access File_Record) return Boolean
+   function Make_Dir (Dir : not null access File_Record;
+                      Recursive : Boolean) return Boolean
                       is abstract;
    --  Create a new directory on remote named Local_Dir_Name.
    --  Return the creation status.

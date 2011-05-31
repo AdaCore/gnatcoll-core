@@ -1,7 +1,7 @@
 -----------------------------------------------------------------------
 --                          G N A T C O L L                          --
 --                                                                   --
---                   Copyright (C) 2009, AdaCore                     --
+--                 Copyright (C) 2009-2011, AdaCore                  --
 --                                                                   --
 -- GPS is free  software;  you can redistribute it and/or modify  it --
 -- under the terms of the GNU General Public License as published by --
@@ -116,7 +116,8 @@ package GNATCOLL.IO.Native is
       Files_Only     : Boolean := False)
       return GNAT.Strings.String_List;
    overriding function Make_Dir
-     (Dir : not null access Native_File_Record) return Boolean;
+     (Dir : not null access Native_File_Record; Recursive : Boolean)
+      return Boolean;
    overriding procedure Remove_Dir
      (Dir       : not null access Native_File_Record;
       Recursive : Boolean;

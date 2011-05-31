@@ -1353,7 +1353,7 @@ package body GNATCOLL.VFS is
    -- Make_Dir --
    --------------
 
-   procedure Make_Dir (Dir : Virtual_File) is
+   procedure Make_Dir (Dir : Virtual_File; Recursive : Boolean := True) is
       Result : Boolean;
    begin
       if Dir.Value = null then
@@ -1365,7 +1365,7 @@ package body GNATCOLL.VFS is
          return;
       end if;
 
-      Result := Dir.Value.Make_Dir;
+      Result := Dir.Value.Make_Dir (Recursive);
 
       if not Result then
          Dir.Value.Kind := Unknown;
