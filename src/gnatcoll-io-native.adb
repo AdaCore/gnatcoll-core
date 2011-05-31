@@ -27,6 +27,7 @@
 
 with System;
 with Ada.Unchecked_Deallocation;
+with Ada.Directories;
 
 with GNAT.Calendar;             use GNAT.Calendar;
 with GNAT.Directory_Operations; use GNAT.Directory_Operations;
@@ -635,25 +636,12 @@ package body GNATCOLL.IO.Native is
 
    function Make_Dir
      (Dir       : not null access Native_File_Record;
-      Recursive : Boolean) return Boolean
-   is
-      S : constant String := String (Dir.Full.all);
+      Recursive : Boolean) return Boolean is
    begin
       if Recursive then
-         for J in S'Range loop
-            --  Support both '\' and '/' as directory separators, as this might
-            --  be a user-entered string on any OS.
-            if S (J) = '/'
-              or else S (J) = '\'
-              or else J = S'Last
-            then
-               if not GNAT.OS_Lib.Is_Directory (S (S'First .. J)) then
-                  GNAT.Directory_Operations.Make_Dir (S (S'First .. J));
-               end if;
-            end if;
-         end loop;
+         Ada.Directories.Create_Path (String (Dir.Full.all));
       else
-         GNAT.Directory_Operations.Make_Dir (S);
+         GNAT.Directory_Operations.Make_Dir (String (Dir.Full.all));
       end if;
 
       return True;
