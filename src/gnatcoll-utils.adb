@@ -113,6 +113,28 @@ package body GNATCOLL.Utils is
       return Buf (First .. Buf'Last);
    end Image;
 
+   -------------
+   -- Replace --
+   -------------
+
+   procedure Replace
+     (S           : in out Ada.Strings.Unbounded.Unbounded_String;
+      Pattern     : String;
+      Replacement : String)
+   is
+      use Ada.Strings.Unbounded;
+      Ind : Natural := Index_Non_Blank (S);
+   begin
+      while Ind < Length (S) loop
+         Ind := Index (S, Pattern, Ind);
+
+         exit when Ind = 0;
+
+         S := Replace_Slice (S, Ind, Ind + Pattern'Length - 1, Replacement);
+         Ind := Ind + Replacement'Length;
+      end loop;
+   end Replace;
+
    -----------
    -- Split --
    -----------

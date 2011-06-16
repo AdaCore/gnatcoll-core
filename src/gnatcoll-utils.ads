@@ -65,6 +65,12 @@ package GNATCOLL.Utils is
    --  If you set Min_Width to 1, the result is similar to 'Image, without the
    --  leading space for positive numbers.
 
+   procedure Replace
+     (S           : in out Ada.Strings.Unbounded.Unbounded_String;
+      Pattern     : String;
+      Replacement : String);
+   --  Return S, with all occurrences of Pattern replaced with Replacement
+
    function Split
      (Str : String; On : Character) return GNAT.Strings.String_List_Access;
    --  Split the string on the given character.
