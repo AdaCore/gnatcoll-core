@@ -98,6 +98,7 @@ package GNATCOLL.VFS is
 
    type Virtual_File is tagged private;
    No_File : aliased constant Virtual_File;
+   --  Note: a default initialized Virtual_File object has the value No_File
 
    ---------------
    -- Constants --
