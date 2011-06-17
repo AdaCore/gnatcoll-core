@@ -165,7 +165,7 @@ package GNATCOLL.VFS is
    --  Create a file from its base name.
    --  if Base_Name is an absolute path, then the file is created as is
    --  else the file is created relative to Base_Dir or the Current Directory
-   --  if furnished.
+   --  if provided.
 
    function Create_From_UTF8
      (Full_Filename : String;
@@ -183,6 +183,7 @@ package GNATCOLL.VFS is
    ----------------------
    -- Retrieving names --
    ----------------------
+
    --  As mentioned above, a filename is stored internally as a series of bytes
    --  and not interpreted in anyway for an encoding. However, when you
    --  retrieve the name of a file for display, you will have to convert it to
