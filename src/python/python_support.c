@@ -1,7 +1,7 @@
 /*-------------------------------------------------------------------
                                G P S                               --
                                                                    --
-                     Copyright (C) 2003-2010, AdaCore              --
+                     Copyright (C) 2003-2011, AdaCore              --
                                                                    --
  GPS is free  software; you can  redistribute it and/or modify  it --
  under the terms of the GNU General Public License as published by --
@@ -114,9 +114,21 @@ ada_py_xdecref (PyObject* obj)
 }
 
 int
-ada_pystring_check (PyObject* obj)
+ada_pybasestring_check (PyObject* obj)
 {
   return PyString_Check (obj) || PyUnicode_Check (obj);
+}
+
+int
+ada_pystring_check (PyObject* obj)
+{
+  return PyString_Check (obj);
+}
+
+int
+ada_pyunicode_check (PyObject* obj)
+{
+  return PyUnicode_Check (obj);
 }
 
 int

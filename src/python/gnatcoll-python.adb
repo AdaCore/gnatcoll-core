@@ -203,6 +203,28 @@ package body GNATCOLL.Python is
       return Internal (Obj) = 1;
    end PyString_Check;
 
+   ---------------------
+   -- PyUnicode_Check --
+   ---------------------
+
+   function PyUnicode_Check (Obj : PyObject) return Boolean is
+      function Internal (Obj : PyObject) return Integer;
+      pragma Import (C, Internal, "ada_pyunicode_check");
+   begin
+      return Internal (Obj) = 1;
+   end PyUnicode_Check;
+
+   ------------------------
+   -- PyBaseString_Check --
+   ------------------------
+
+   function PyBaseString_Check (Obj : PyObject) return Boolean is
+      function Internal (Obj : PyObject) return Integer;
+      pragma Import (C, Internal, "ada_pybasestring_check");
+   begin
+      return Internal (Obj) = 1;
+   end PyBaseString_Check;
+
    ------------------
    -- PyList_Check --
    ------------------
@@ -352,6 +374,59 @@ package body GNATCOLL.Python is
    begin
       return Internal (Str & ASCII.NUL);
    end PyString_FromString;
+
+   --------------------------
+   -- PyUnicode_FromString --
+   --------------------------
+
+   function PyUnicode_FromString (Str : String) return PyObject is
+      function Internal (Str : String) return PyObject;
+      pragma Import (C, Internal, "PyUnicodeUCS4_FromString");
+   begin
+      return Internal (Str & ASCII.NUL);
+   end PyUnicode_FromString;
+
+   -------------------------------
+   -- PyUnicode_AsEncodedString --
+   -------------------------------
+
+   function PyUnicode_AsEncodedString
+     (Unicode  : PyObject;
+      Encoding : String;
+      Errors   : Unicode_Error_Handling := Strict)
+      return PyObject
+   is
+      function Internal
+        (Unicode : PyObject; Encoding, Errors : String) return PyObject;
+      pragma Import (C, Internal, "PyUnicodeUCS4_AsEncodedString");
+   begin
+      case Errors is
+         when Strict =>
+            return Internal
+              (Unicode, Encoding & ASCII.NUL, "strict" & ASCII.NUL);
+         when Ignore =>
+            return Internal
+              (Unicode, Encoding & ASCII.NUL, "ignore" & ASCII.NUL);
+         when Replace =>
+            return Internal
+              (Unicode, Encoding & ASCII.NUL, "replace" & ASCII.NUL);
+      end case;
+   end PyUnicode_AsEncodedString;
+
+   ----------------------
+   -- Unicode_AsString --
+   ----------------------
+
+   function Unicode_AsString
+     (Str : PyObject; Encoding : String := "utf-8") return String
+   is
+      S : constant PyObject := PyUnicode_AsEncodedString
+        (Unicode => Str, Encoding => Encoding, Errors => Replace);
+      Result : constant String := PyString_AsString (S);
+   begin
+      Py_DECREF (S);
+      return Result;
+   end Unicode_AsString;
 
    ---------------------
    -- PySys_SetObject --

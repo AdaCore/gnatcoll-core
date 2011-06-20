@@ -375,6 +375,9 @@ package GNATCOLL.Python is
    -- Strings --
    -------------
 
+   function PyBaseString_Check (Obj : PyObject) return Boolean;
+   --  Returns True if Obj is either a string or a unicode object
+
    function PyString_Check (Obj : PyObject) return Boolean;
    --  Returns true if the Obj is a string object.
 
@@ -389,6 +392,32 @@ package GNATCOLL.Python is
 
    function PyString_FromString (Str : String) return PyObject;
    --  Return a python object representing Str
+
+   function PyUnicode_Check (Obj : PyObject) return Boolean;
+
+   function PyUnicode_FromString (Str : String) return PyObject;
+   --  A Unicode string, from a latin-1 encoded Ada string.
+
+   function Unicode_AsString
+     (Str : PyObject; Encoding : String := "utf-8") return String;
+   --  Return an encoded version of Str.
+   --  This is not a function from python, but a wrapper around
+   --  PyUnicode_AsEncodedString and PyString_AsString.
+   --  In case of encoding error, characters are replaced with '?'
+
+   type Unicode_Error_Handling is (Strict, Ignore, Replace);
+   --  How encoding errors are treated for unicode objects
+   --    Strict: raise a ValueError
+   --    Ignore: ignore the wrong characters, which are skipped
+   --    Replace: replace illegal characters with '?'
+
+   function PyUnicode_AsEncodedString
+     (Unicode  : PyObject;   --  A unicode object
+      Encoding : String;     --  The encoding
+      Errors   : Unicode_Error_Handling := Strict)     --  Error handling
+      return PyObject;
+   --  Encodes a Unicode object and returns the result as Python string object.
+   --  You can use PyString_AsString to get the corresponding Ada string.
 
    -------------
    -- Modules --
@@ -1107,6 +1136,7 @@ private
    pragma Inline (PyRun_SimpleString);
    pragma Inline (PyArg_ParseTuple);
    pragma Inline (PyString_Check);
+   pragma Inline (PyUnicode_Check);
    pragma Inline (PyInt_Check);
    pragma Inline (PyFloat_Check);
    pragma Import (C, Py_Initialize, "Py_Initialize");

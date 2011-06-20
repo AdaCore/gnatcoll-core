@@ -1624,7 +1624,10 @@ package body GNATCOLL.Scripts.Python is
                      or else (PyBool_Check (Obj) and then PyBool_Is_True (Obj))
                      or else
                        (PyString_Check (Obj)
-                        and then PyString_AsString (Obj) = "true"));
+                        and then PyString_AsString (Obj) = "true")
+                     or else
+                       (PyUnicode_Check (Obj)
+                        and then Unicode_AsString (Obj) = "true"));
          Py_XDECREF (Obj);
          return Result;
       end if;
@@ -1773,6 +1776,17 @@ package body GNATCOLL.Scripts.Python is
             Py_DECREF (Obj);
             return Str;
          end;
+
+      elsif Obj /= null
+        and then PyUnicode_Check (Obj)
+      then
+         declare
+            Str : constant String := Unicode_AsString (Obj, "utf-8");
+         begin
+            Py_DECREF (Obj);
+            return Str;
+         end;
+
       else
          if Obj /= null then
             Py_DECREF (Obj);
@@ -1829,8 +1843,11 @@ package body GNATCOLL.Scripts.Python is
          Result := ((PyInt_Check (Obj) and then PyInt_AsLong (Obj) = 1)
                     or else (PyBool_Check (Obj) and then PyBool_Is_True (Obj))
                     or else
-             (PyString_Check (Obj)
-              and then PyString_AsString (Obj) = "true"));
+                      (PyString_Check (Obj)
+                       and then PyString_AsString (Obj) = "true")
+                    or else
+                      (PyUnicode_Check (Obj)
+                       and then Unicode_AsString (Obj) = "true"));
          Py_DECREF (Obj);
          return Result;
       end if;
@@ -2160,12 +2177,15 @@ package body GNATCOLL.Scripts.Python is
          return "";
       end if;
 
-      if not PyString_Check (Item) then
+      if PyString_Check (Item) then
+         return PyString_AsString (Item);
+      elsif PyUnicode_Check (Item) then
+         return Unicode_AsString (Item, "utf-8");
+      else
          Raise_Exception
            (Invalid_Parameter'Identity,
-            "Parameter" & Integer'Image (N) & " should be a string");
-      else
-         return PyString_AsString (Item);
+            "Parameter"
+            & Integer'Image (N) & " should be a string or unicode");
       end if;
    end Nth_Arg;
 
@@ -2185,13 +2205,7 @@ package body GNATCOLL.Scripts.Python is
          return Null_Unbounded_String;
       end if;
 
-      if not PyString_Check (Item) then
-         Raise_Exception
-           (Invalid_Parameter'Identity,
-            "Parameter" & Integer'Image (N) & " should be a string");
-      else
-         return To_Unbounded_String (PyString_AsString (Item));
-      end if;
+      return To_Unbounded_String (String'(Nth_Arg (Data, N, Success)));
    end Nth_Arg;
 
    -------------
@@ -2238,6 +2252,7 @@ package body GNATCOLL.Scripts.Python is
       end if;
 
       --  For backward compatibility, accept these as "False" values.
+      --  Don't check for unicode here, which was never supported anyway.
 
       if PyString_Check (Item)
         and then (To_Lower (PyString_AsString (Item)) = "false"
@@ -3208,6 +3223,14 @@ package body GNATCOLL.Scripts.Python is
             return (1 .. 1 => new String'(Str));
          end;
 
+      elsif PyUnicode_Check (Obj) then
+         declare
+            Str : constant String := Unicode_AsString (Obj);
+         begin
+            Py_DECREF (Obj);
+            return (1 .. 1 => new String'(Str));
+         end;
+
       elsif PyList_Check (Obj) then
          declare
             Result : GNAT.Strings.String_List (1 .. PyList_Size (Obj));
@@ -3217,6 +3240,8 @@ package body GNATCOLL.Scripts.Python is
                Item := PyList_GetItem (Obj, J);
                if PyString_Check (Item) then
                   Result (J + 1) := new String'(PyString_AsString (Item));
+               elsif PyUnicode_Check (Item) then
+                  Result (J + 1) := new String'(Unicode_AsString (Item));
                end if;
             end loop;
             Py_DECREF (Obj);
@@ -3468,10 +3493,12 @@ package body GNATCOLL.Scripts.Python is
    overriding function Return_Value
      (Data : Python_Callback_Data) return String is
    begin
-      if not PyString_Check (Data.Return_Value) then
-         raise Invalid_Parameter with "Returned value is not a string";
-      else
+      if PyString_Check (Data.Return_Value) then
          return PyString_AsString (Data.Return_Value);
+      elsif PyUnicode_Check (Data.Return_Value) then
+         return Unicode_AsString (Data.Return_Value);
+      else
+         raise Invalid_Parameter with "Returned value is not a string";
       end if;
    end Return_Value;
 
