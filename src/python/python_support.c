@@ -125,6 +125,25 @@ ada_pystring_check (PyObject* obj)
   return PyString_Check (obj);
 }
 
+PyObject* ada_PyUnicode_AsEncodedString
+  (PyObject *unicode, const char *encoding, const char *errors)
+{
+#ifdef Py_UNICODE_WIDE
+  return PyUnicodeUCS4_AsEncodedString (unicode, encoding, errors);
+#else
+  return PyUnicodeUCS2_AsEncodedString (unicode, encoding, errors);
+#endif
+}
+
+PyObject* ada_PyUnicode_FromString (const char *u)
+{
+#ifdef Py_UNICODE_WIDE
+  return PyUnicodeUCS4_FromString (u);
+#else
+  return PyUnicodeUCS2_FromString (u);
+#endif
+}
+
 int
 ada_pyunicode_check (PyObject* obj)
 {

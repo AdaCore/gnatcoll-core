@@ -381,7 +381,7 @@ package body GNATCOLL.Python is
 
    function PyUnicode_FromString (Str : String) return PyObject is
       function Internal (Str : String) return PyObject;
-      pragma Import (C, Internal, "PyUnicodeUCS4_FromString");
+      pragma Import (C, Internal, "ada_PyUnicode_FromString");
    begin
       return Internal (Str & ASCII.NUL);
    end PyUnicode_FromString;
@@ -398,7 +398,7 @@ package body GNATCOLL.Python is
    is
       function Internal
         (Unicode : PyObject; Encoding, Errors : String) return PyObject;
-      pragma Import (C, Internal, "PyUnicodeUCS4_AsEncodedString");
+      pragma Import (C, Internal, "ada_PyUnicode_AsEncodedString");
    begin
       case Errors is
          when Strict =>
