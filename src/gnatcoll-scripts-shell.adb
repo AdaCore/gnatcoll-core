@@ -854,7 +854,7 @@ package body GNATCOLL.Scripts.Shell is
             declare
                Callback : Shell_Callback_Data'Class :=
                             Shell_Callback_Data'Class (Create (Script, Count));
-               --  The call above allocats Callback.Args, no need to do that
+               --  The call above allocates Callback.Args, no need to do that
                --  below
             begin
                Callback.Script := Shell_Scripting (Script);

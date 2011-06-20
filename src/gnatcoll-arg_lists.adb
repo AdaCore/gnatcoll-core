@@ -106,13 +106,17 @@ package body GNATCOLL.Arg_Lists is
       --  If we are parsing an argument in Separate_Args mode, get rid of the
       --  leading spaces, as this would result in multiple arguments in
       --  the call to Argument_String_To_List_With_Triple_Quotes
+      --  Also remove trailing spaces, since otherwise the last argument on
+      --  the command line, when surrounded with quotes, will be seen by
+      --  Process as ending with ASCII.LF, and therefore the quotes will not be
+      --  removed.
 
       if CL.Mode = Separate_Args then
          Local_Args := Argument_String_To_List_With_Triple_Quotes
            (Trim
               (Text,
                Left  => To_Set (' ' & ASCII.LF & ASCII.HT),
-               Right => Ada.Strings.Maps.Null_Set));
+               Right => To_Set (' ' & ASCII.LF & ASCII.HT)));
       else
          Local_Args := Argument_String_To_List_With_Triple_Quotes (Text);
       end if;
