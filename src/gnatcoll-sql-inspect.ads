@@ -277,12 +277,14 @@ package GNATCOLL.SQL.Inspect is
    procedure Load_Data
      (DB     : access Database_Connection_Record'Class;
       File   : GNATCOLL.VFS.Virtual_File;
-      Schema : DB_Schema := No_Schema);
+      Schema : DB_Schema := No_Schema;
+      Replace_Newline : Boolean := True);
    procedure Load_Data
      (DB       : access Database_Connection_Record'Class;
       Data     : String;
       Schema   : DB_Schema := No_Schema;
-      Location : String := "data");
+      Location : String := "data";
+      Replace_Newline : Boolean := True);
    --  Load data from a file or from memory into the database.
    --  This should be used for initial fixtures when you create a new database,
    --  so in general after a call to Write_Schema.
@@ -295,6 +297,9 @@ package GNATCOLL.SQL.Inspect is
    --  You need to call Commit_Or_Rollback to actually commit the data into the
    --  database, so that a single transaction is used for all data loading when
    --  there are multiple files to load.
+   --
+   --  If Replace_Newline is True, then a "\n" string will be replaced by an
+   --  actual ASCII.LF when stored in the database.
 
 private
    use GNATCOLL.Refcount, GNATCOLL.Refcount.Weakref;

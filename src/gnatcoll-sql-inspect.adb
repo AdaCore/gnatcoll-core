@@ -1614,7 +1614,8 @@ package body GNATCOLL.SQL.Inspect is
      (DB     : access Database_Connection_Record'Class;
       Data   : String;
       Schema : DB_Schema := No_Schema;
-      Location : String := "data")
+      Location : String := "data";
+      Replace_Newline : Boolean := True)
    is
       Max_Fields_Per_Line : constant := 30;
       --  Maximum number of fields per line (separated by '|')
@@ -1697,7 +1698,20 @@ package body GNATCOLL.SQL.Inspect is
                Tmp := Last - 1;
                Skip_Blanks_Backward (Data (First .. Tmp), Tmp);
 
-               Append (Line, Fields_Count, Data (First .. Tmp));
+               if Replace_Newline then
+                  declare
+                     S : Unbounded_String :=
+                       To_Unbounded_String (Data (First .. Tmp));
+                  begin
+                     Replace
+                       (S, Pattern => "\n", Replacement => "" & ASCII.LF);
+                     Append (Line, Fields_Count, To_String (S));
+                  end;
+
+               else
+                  Append (Line, Fields_Count, Data (First .. Tmp));
+               end if;
+
                First := Last + 1;
             end loop;
          end if;
@@ -1925,13 +1939,15 @@ package body GNATCOLL.SQL.Inspect is
    procedure Load_Data
      (DB     : access Database_Connection_Record'Class;
       File   : GNATCOLL.VFS.Virtual_File;
-      Schema : DB_Schema := No_Schema)
+      Schema : DB_Schema := No_Schema;
+      Replace_Newline : Boolean := True)
    is
       Str         : GNAT.Strings.String_Access;
    begin
       Str := Read_Whole_File (+File.Full_Name.all);
       if Str /= null then
-         Load_Data (DB, Str.all, Schema, File.Display_Full_Name);
+         Load_Data (DB, Str.all, Schema, File.Display_Full_Name,
+                    Replace_Newline => Replace_Newline);
          Free (Str);
       else
          raise Invalid_File with "File not found: " & File.Display_Full_Name;
