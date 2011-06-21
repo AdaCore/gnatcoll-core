@@ -108,6 +108,7 @@ package GNATCOLL.Utils is
    function Join (Str : String; List : GNAT.Strings.String_List) return String;
    --  Return a string that is the concatenation of the list elements,
    --  separated by Str: (List(1) & Str & List(2) & Str & ...)
+   --  null elements in list are skipped
 
    function EOL (Str : String) return Natural;
    pragma Inline (EOL);

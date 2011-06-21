@@ -1625,10 +1625,40 @@ package body GNATCOLL.SQL.Inspect is
       First        : Integer;
       Fields_Count : Natural;  --  Number of fields on current line
 
+      Table     : Table_Description;
+      Is_Xref : array (1 .. Max_Fields_Per_Line) of Boolean;
+      --  Whether a given column must be an xref
+
+      DB_Fields       : String_List (1 .. Max_Fields_Per_Line);
+      DB_Fields_Count : Natural := DB_Fields'First - 1;
+      Xref       : String_List (1 .. Max_Fields_Per_Line);
+      Xref_Count : Natural := Xref'First - 1;
+      Paren      : Natural;
+      DB_Field_Types : array (Line'First .. Max_Fields_Per_Line) of Field_Type;
+
+      FK : Field;
+      Tables : String_List (1 .. Max_Fields_Per_Line);
+      Where  : String_List (1 .. Max_Fields_Per_Line);
+
+      Select_Values : String_List (1 .. Max_Fields_Per_Line);
+      --  Parameters when values are queries through a SELECT
+
+      DB_Values : String_List (1 .. Max_Fields_Per_Line);
+      --  Parameters when all values are provided in the file
+
+      Has_Xref_Column : Boolean;
+      --  Whether at least one column can handle xref (values starting with &)
+
+      Q_Values : Prepared_Statement;
+      Q_Values_With_Select : Prepared_Statement;
+
       procedure Parse_Line;
       --  Parse the current line and set Line and Fields_Count as appropriate.
       --  Fields_Count is set to 0 if the current line is not part of a table
       --  and should be ignored.
+
+      procedure Free_Vars;
+      --  Free all local variables
 
       ----------------
       -- Parse_Line --
@@ -1675,18 +1705,25 @@ package body GNATCOLL.SQL.Inspect is
          First := Line_End + 1;
       end Parse_Line;
 
-      Table     : Table_Description;
-      DB_Fields : String_List (1 .. Max_Fields_Per_Line);
-      DB_Fields_Count : Natural := DB_Fields'First - 1;
+      ---------------
+      -- Free_Vars --
+      ---------------
 
-      DB_Field_Types : array (Line'First .. Max_Fields_Per_Line) of Field_Type;
+      procedure Free_Vars is
+      begin
+         Has_Xref_Column := False;
 
-      Xref       : String_List (1 .. Max_Fields_Per_Line);
-      Xref_Count : Natural := Xref'First - 1;
+         Free (DB_Fields);
+         DB_Fields_Count := DB_Fields'First - 1;
 
-      Paren : Natural;
+         Free (Xref);
+         Xref_Count := Xref'First - 1;
 
-      Q_Values : Prepared_Statement;
+         Free (Tables);
+         Free (Where);
+         Free (Select_Values);
+         Free (DB_Values);
+      end Free_Vars;
 
    begin
       Trace (Me, "Loading data from " & Location & " into database");
@@ -1702,28 +1739,45 @@ package body GNATCOLL.SQL.Inspect is
          if Fields_Count /= 0
            and then Line (1).all = "TABLE"
          then
+            Free_Vars;
+
             Table := Get_Table (Schema, Line (2).all);
-
-            Free (DB_Fields);
-            DB_Fields_Count := DB_Fields'First - 1;
-
-            Free (Xref);
-            Xref_Count      := Xref'First - 1;
 
             Parse_Line;  --  Parse fields
             for L in Line'First .. Fields_Count loop
                exit when Line (L).all = "";
 
                Paren := Ada.Strings.Fixed.Index (Line (L).all, "(&");
-               if Paren >= Line (L)'First then
+               Is_Xref (DB_Fields_Count + 1) := Paren >= Line (L)'First;
+
+               if Is_Xref (DB_Fields_Count + 1) then
                   Append (DB_Fields, DB_Fields_Count,
                           Line (L) (Line (L)'First .. Paren - 1));
                   Append (Xref, Xref_Count,
-                         Line (L) (Paren + 2 .. Line (L)'Last - 1));
+                          Line (L) (Paren + 2 .. Line (L)'Last - 1));
+
+                  FK := Table.Field_From_Name
+                    (DB_Fields (DB_Fields_Count).all).Is_FK;
+
+                  Has_Xref_Column := True;
+
+                  Tables (L) := new String'
+                    (FK.Get_Table.Name & " t" & Image (L, 0));
+                  Select_Values (L) :=
+                    new String'("t" & Image (L, 0) & "." & FK.Name);
+                  Where (L) := new String'
+                    ("t" & Image (L, 0) & "." & Xref (L).all
+                     & "=" & DB.Parameter_String (L, Parameter_Text));
+
                else
                   Append (DB_Fields, DB_Fields_Count, Line (L).all);
                   Append (Xref, Xref_Count, "");
+                  Select_Values (L) := new String'
+                    (DB.Parameter_String (L, Parameter_Text));
                end if;
+
+               DB_Values (L) := new String'
+                 (DB.Parameter_String (L, Parameter_Text));
             end loop;
 
             declare
@@ -1742,23 +1796,25 @@ package body GNATCOLL.SQL.Inspect is
                  (On_Field'Access, Include_Inherited => True);
             end;
 
-            declare
-               Values : String_List (1 .. DB_Fields_Count);
-            begin
-               for V in Values'Range loop
-                  Values (V) := new String'
-                    (DB.Parameter_String (V, Parameter_Text));
-               end loop;
+            Q_Values := Prepare
+              ("INSERT INTO " & Table.Name & "("
+               & Join (",", DB_Fields (DB_Fields'First .. DB_Fields_Count))
+               & ") VALUES ("
+               & Join (",", DB_Values (1 .. DB_Fields_Count)) & ")",
+               On_Server => True,
+               Name => "insertval");
 
-               Q_Values := Prepare
+            if Has_Xref_Column then
+               Q_Values_With_Select := Prepare
                  ("INSERT INTO " & Table.Name & "("
                   & Join (",", DB_Fields (DB_Fields'First .. DB_Fields_Count))
-                  & ") VALUES (" & Join (",", Values) & ")",
+                  & ") SELECT "
+                  & Join (",", Select_Values (1 .. DB_Fields_Count))
+                  & " FROM " & Join (",", Tables (1 .. DB_Fields_Count))
+                  & " WHERE " & Join (" and ", Where (1 .. DB_Fields_Count)),
                   On_Server => True,
-                  Name => "insertval");
-
-               Free (Values);
-            end;
+                  Name => "insertv");
+            end if;
 
          elsif Fields_Count /= 0
            and then Line (1).all = "QUERIES"
@@ -1772,38 +1828,55 @@ package body GNATCOLL.SQL.Inspect is
             declare
                Values : SQL_Parameters (1 .. DB_Fields_Count);
                Vals   : String_List (1 .. DB_Fields_Count);
-               Tables : String_List (1 .. DB_Fields_Count);
-               Where  : String_List (1 .. DB_Fields_Count);
                Has_Xref : Boolean := False;
-               FK     : Field;
+               Use_Custom : Boolean := False;
+               Custom_Tables : String_List (1 .. DB_Fields_Count);
+               Custom_Where : String_List (1 .. DB_Fields_Count);
             begin
-               --  Do we have xref
+               --  Check the xref in the columns
 
                for L in Line'First
                  .. Integer'Min (Fields_Count, DB_Fields_Count)
                loop
                   if Starts_With (Line (L).all, "&") then
-                     if Xref (L).all = "" then
+                     Has_Xref := True;
+
+                     if not Is_Xref (L) then
+                        --  The column was not prepared as an xref
                         raise Invalid_File
-                          with Location & ":" & Image (Line_Number, 0)
+                           with Location & ":" & Image (Line_Number, 0)
                           & ": column title must indicate referenced field";
                      end if;
 
-                     FK := Table.Field_From_Name (DB_Fields (L).all).Is_FK;
-                     Has_Xref := True;
-
-                     Tables (L) := new String'
-                       (FK.Get_Table.Name & " t" & Image (L, 0));
                      Vals (L) := new String'
-                       ("t" & Image (L, 0) & "." & FK.Name);
+                       (Line (L) (Line (L)'First + 1 .. Line (L)'Last));
                      Values (L) := +Vals (L);
-                     Where (L) := new String'
-                       ("t" & Image (L, 0)
-                        & "." & Xref (L).all & "='"
-                        & Line (L) (Line (L)'First + 1 .. Line (L)'Last)
-                        & "'");
+
+                  else
+                     if Is_Xref (L) then
+                        --  The prepared query expects an xref, but we do not
+                        --  have. So we'll use a custom query
+                        Use_Custom := True;
+                     end if;
                   end if;
                end loop;
+
+               if Use_Custom then
+                  for L in Line'First
+                    .. Integer'Min (Fields_Count, DB_Fields_Count)
+                  loop
+                     if Starts_With (Line (L).all, "&") then
+                        Custom_Tables (L) := Tables (L);
+                        Custom_Where (L) := new String'
+                          ("t" & Image (L, 0) & "." & Xref (L).all
+                           & "='"   --  ??? Beware of SQL injection here
+                           & Line (L) (Line (L)'First + 1 .. Line (L)'Last)
+                           & "'");
+                        Free (Vals (L));
+                        Vals (L) := new String'(Select_Values (L).all);
+                     end if;
+                  end loop;
+               end if;
 
                for L in Line'First
                  .. Integer'Min (Fields_Count, DB_Fields_Count)
@@ -1815,26 +1888,26 @@ package body GNATCOLL.SQL.Inspect is
                         DB_Field_Types (L),
                         Vals (L),
                         Values (L),
-                        Has_Xref);
+                        Has_Xref => Use_Custom);
                   end if;
                end loop;
 
                if not Has_Xref then
                   Execute (DB, Q_Values, Params => Values);
-               else
+               elsif Use_Custom then
                   Execute
-                    (DB, "INSERT INTO " & Table.Name
-                     & "("
+                    (DB, "INSERT INTO " & Table.Name & "("
                      & Join
                        (",", DB_Fields (DB_Fields'First .. DB_Fields_Count))
                      & ") SELECT " & Join (",", Vals)
-                     & " FROM " & Join (",", Tables)
-                     & " WHERE " & Join (" and ", Where));
+                     & " FROM " & Join (",", Custom_Tables)
+                     & " WHERE " & Join (" and ", Custom_Where));
+               else
+                  Execute (DB, Q_Values_With_Select, Params => Values);
                end if;
 
-               Free (Tables);
+               Free (Custom_Where);
                Free (Vals);
-               Free (Where);
             end;
          end if;
 
@@ -1842,8 +1915,7 @@ package body GNATCOLL.SQL.Inspect is
       end loop;
 
       Free (String_List (Line));
-      Free (Xref);
-      Free (DB_Fields);
+      Free_Vars;
    end Load_Data;
 
    ---------------
