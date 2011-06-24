@@ -532,6 +532,29 @@ package body GNATCOLL.JSON is
       Arr.Vals.Append (Val);
    end Append;
 
+   ---------
+   -- "&" --
+   ---------
+
+   function "&" (Arr : JSON_Array; Value : JSON_Value) return JSON_Array is
+      Result : JSON_Array := Arr;
+   begin
+      Append (Result, Value);
+      return Result;
+   end "&";
+
+   ---------
+   -- "&" --
+   ---------
+
+   function "&" (Value1, Value2 : JSON_Value) return JSON_Array is
+      Result : JSON_Array;
+   begin
+      Append (Result, Value1);
+      Append (Result, Value2);
+      return Result;
+   end "&";
+
    ----------------
    -- Initialize --
    ----------------

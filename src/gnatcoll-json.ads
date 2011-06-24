@@ -61,6 +61,12 @@ package GNATCOLL.JSON is
    function Get (Arr : JSON_Array; Index : Positive) return JSON_Value;
    procedure Append (Arr : in out JSON_Array; Val : JSON_Value);
 
+   function "&" (Arr : JSON_Array; Value : JSON_Value) return JSON_Array;
+   function "&" (Value1, Value2 : JSON_Value) return JSON_Array;
+   --  Create a new array. This is lesss efficient than Append because it
+   --  results in an extra copy of the array, but is easier to use when
+   --  manipulating small arrays.
+
    --  Read or write JSON values into strings
 
    function Read (Strm, Filename :  String) return JSON_Value;
