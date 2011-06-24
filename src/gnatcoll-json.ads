@@ -54,6 +54,8 @@ package GNATCOLL.JSON is
    type JSON_Value is tagged private;
    type JSON_Array is private;
 
+   Empty_Array : constant JSON_Array;
+
    --  Array handling
    function Length (Arr : JSON_Array) return Natural;
    function Get (Arr : JSON_Array; Index : Positive) return JSON_Value;
@@ -228,6 +230,9 @@ private
    type JSON_Array is record
       Vals : Vect_Pkg.Vector;
    end record;
+
+   Empty_Array : constant JSON_Array :=
+      (Vals => Vect_Pkg.Empty_Vector);
 
    package Names_Pkg is new Ada.Containers.Indefinite_Vectors
      (Index_Type   => Positive,
