@@ -51,7 +51,7 @@ package GNATCOLL.JSON is
    subtype JSON_Container_Value_Type is JSON_Value_Type range
      JSON_Array_Type .. JSON_Object_Type;
 
-   type JSON_Value is private;
+   type JSON_Value is tagged private;
    type JSON_Array is private;
 
    --  Array handling
