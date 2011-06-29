@@ -38,6 +38,10 @@ package body GNATCOLL.JSON is
 
    procedure Report_Error (File : String; Line, Col : Natural; Msg : String);
 
+   function Write
+     (Item : JSON_Value; Compact : Boolean; Indent : Natural) return String;
+   --  Auxiliary write function.
+
    function Read
      (Strm     :        String;
       Idx      : access Natural;
@@ -411,7 +415,10 @@ package body GNATCOLL.JSON is
    -----------
 
    function Write
-     (Item : JSON_Value) return String is
+     (Item : JSON_Value; Compact : Boolean; Indent : Natural) return String
+   is
+      Base : constant String
+        (1 .. 2 * Indent * (1 - Boolean'Pos (Compact))) := (others => ' ');
    begin
       case Item.Kind is
          when JSON_Null_Type =>
@@ -455,23 +462,39 @@ package body GNATCOLL.JSON is
                Ret   : Unbounded_String;
 
             begin
-               Append (Ret, '[');
+               if Compact then
+                  Append (Ret, '[');
+               else
+                  Append (Ret, ASCII.LF &  2 * Base & '[' & ASCII.LF);
+               end if;
 
                for J in Item.Arr_Value.Vals.First_Index ..
                  Item.Arr_Value.Vals.Last_Index
                loop
                   if not First then
                      Append (Ret, ", ");
+
+                     if not Compact then
+                        Append (Ret, ASCII.LF & Base);
+                     end if;
                   end if;
 
                   First := False;
 
-                  Append (Ret, Write (Item.Arr_Value.Vals.Element (J)));
+                  Append
+                    (Ret, Base & Write
+                       (Item.Arr_Value.Vals.Element (J), Compact, Indent + 1));
                end loop;
 
-               Append (Ret, ']');
+               if Compact then
+                  Append (Ret, ']');
+               else
+                  Append (Ret, ASCII.LF &
+                            2 * Base & ']' & ASCII.LF
+                          & 2 * Base);
+               end if;
 
-               return To_String (Ret);
+               return Base & To_String (Ret);
             end;
 
          when JSON_Object_Type =>
@@ -494,15 +517,30 @@ package body GNATCOLL.JSON is
 
                   Append (Ret, """" & Item.Obj_Value.Names.Element (J) & """");
                   Append (Ret, ": ");
-                  Append (Ret, Write (Item.Obj_Value.Vals.Element (J)));
+                  Append
+                    (Ret,
+                     Write
+                       (Item.Obj_Value.Vals.Element (J),
+                        Compact,
+                        Indent + 1));
                end loop;
 
                Append (Ret, '}');
 
-               return To_String (Ret);
+               return Base & To_String (Ret);
             end;
 
       end case;
+   end Write;
+
+   -----------
+   -- Write --
+   -----------
+
+   function Write
+     (Item : JSON_Value; Compact : Boolean := True) return String is
+   begin
+      return Write (Item, Compact, 0);
    end Write;
 
    ------------
