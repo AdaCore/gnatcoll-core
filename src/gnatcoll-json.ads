@@ -54,6 +54,7 @@ package GNATCOLL.JSON is
    type JSON_Value is tagged private;
    type JSON_Array is private;
 
+   JSON_Null : constant JSON_Value;
    Empty_Array : constant JSON_Array;
 
    --  Array handling
@@ -236,6 +237,11 @@ private
    type JSON_Array is record
       Vals : Vect_Pkg.Vector;
    end record;
+
+   JSON_Null : constant JSON_Value :=
+      (Ada.Finalization.Controlled with Kind => JSON_Null_Type, others => <>);
+   --  Can't call Create, because we would need to see the body of
+   --  Initialize and Adjust.
 
    Empty_Array : constant JSON_Array :=
       (Vals => Vect_Pkg.Empty_Vector);
