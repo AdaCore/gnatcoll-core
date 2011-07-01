@@ -608,7 +608,11 @@ package body GNATCOLL.JSON is
 
    overriding procedure Adjust (Obj : in out JSON_Value) is
    begin
-      Obj.Cnt.all := Obj.Cnt.all + 1;
+      if Obj.Cnt /= null then
+         --  Cnt is null for JSON_Null, and we do not want to do reference
+         --  counting for it.
+         Obj.Cnt.all := Obj.Cnt.all + 1;
+      end if;
    end Adjust;
 
    --------------
@@ -616,15 +620,19 @@ package body GNATCOLL.JSON is
    --------------
 
    overriding procedure Finalize (Obj : in out JSON_Value) is
+      C : Counter := Obj.Cnt;
    begin
-      if Obj.Cnt = null then
+      if C = null then
          return;
       end if;
 
-      Obj.Cnt.all := Obj.Cnt.all - 1;
+      Obj.Cnt := null;
+      --  Prevent multiple calls to Finalize, which is valid in Ada
 
-      if Obj.Cnt.all = 0 then
-         Free (Obj.Cnt);
+      C.all := C.all - 1;
+
+      if C.all = 0 then
+         Free (C);
 
          case Obj.Kind is
             when JSON_Null_Type    |

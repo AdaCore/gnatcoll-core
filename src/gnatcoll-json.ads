@@ -239,7 +239,9 @@ private
    end record;
 
    JSON_Null : constant JSON_Value :=
-      (Ada.Finalization.Controlled with Kind => JSON_Null_Type, others => <>);
+      (Ada.Finalization.Controlled with
+       Kind => JSON_Null_Type,
+       others => <>);
    --  Can't call Create, because we would need to see the body of
    --  Initialize and Adjust.
 
