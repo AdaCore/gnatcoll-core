@@ -214,6 +214,7 @@ package body GNATCOLL.Projects is
    --  As opposed to For_Every_Project_Imported, this iteration in based on the
    --  project tree, and therefore can be used before the project view has been
    --  computed.
+   --  This includes projects extended by Root.
 
    function Default_Spec_Suffix
      (Self          : Project_Environment'Class;
@@ -305,6 +306,7 @@ package body GNATCOLL.Projects is
    procedure Compute_Imported_Projects (Project : Project_Type'Class);
    --  Compute and cache the list of projects imported by Project.
    --  Nothing is done if this is already known.
+   --  This also include projects extended by Project.
 
    function Delete_File_Suffix
      (Filename : GNATCOLL.VFS.Filesystem_String;
