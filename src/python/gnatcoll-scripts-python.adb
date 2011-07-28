@@ -1004,7 +1004,7 @@ package body GNATCOLL.Scripts.Python is
          Return_As_List    => False,
          First_Arg_Is_Self => False);
       Run_Callback
-        (Prop.Script, Prop.Prop.Getter, Prop.Prop.Name, Callback, Result);
+        (Prop.Script, Prop.Prop.Setter, Prop.Prop.Name, Callback, Result);
 
       if Result = null then
          return 1;
