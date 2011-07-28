@@ -1007,10 +1007,10 @@ package body GNATCOLL.Scripts.Python is
         (Prop.Script, Prop.Prop.Setter, Prop.Prop.Name, Callback, Result);
 
       if Result = null then
-         return 1;
+         return -1;
       else
          Py_DECREF (Result);
-         return 0;
+         return 1;
       end if;
    end First_Level_Setter;
 
