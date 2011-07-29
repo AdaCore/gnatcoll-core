@@ -15,6 +15,12 @@ of the feature.
 New features in 1.4
 -------------------
 
+NF-14-K729-026 New package GNATCOLL.Pools (2011-07-29)
+
+   This package provides an implementation for a task-safe resource pool,
+   where resources are allocated when needed, automatically released to the
+   pool when no longer needed, and then reused later on.
+
 NF-14-K322-002 GNATCOLL.Scripts.Python: better support for boolean (2011-03-22)
 
    The function Nth_Arg uses the standard python way to check whether a

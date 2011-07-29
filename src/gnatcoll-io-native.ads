@@ -25,6 +25,8 @@
 -- Place - Suite 330, Boston, MA 02111-1307, USA.                    --
 -----------------------------------------------------------------------
 
+pragma Ada_05;
+
 private with GNATCOLL.Path;
 
 package GNATCOLL.IO.Native is

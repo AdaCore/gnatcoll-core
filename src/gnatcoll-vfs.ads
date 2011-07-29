@@ -48,6 +48,8 @@
 --  types, and as such generate a lot of extra code; and they require at least
 --  one memory allocation when the file is created to store the name.
 
+pragma Ada_05;
+
 with Ada.Calendar;
 with Ada.Containers;
 with Ada.Unchecked_Deallocation;
