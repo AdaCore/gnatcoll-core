@@ -7,7 +7,12 @@ distrib/gnatcoll.gpr__copy
 distrib/gnatcoll.gpr__gnat_util
 src/gnatcoll.gpr
 
+*.cgpr
+
+testsuite/pools/testpools
 testsuite/sql/prepared/prepared
 testsuite/sql/prepared/dbschema.ad?
 testsuite/sql/prepared/dbschema_names.ads
 testsuite/sql/prepared/test.db
+testsuite/sql/prepared_postgres/preparedpsql
+testsuite/sql/database*
