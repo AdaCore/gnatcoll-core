@@ -867,7 +867,8 @@ Optional Packages:
   --with-postgresql=<path>
                           Specify the full path to the PostgreSQL installation
   --without-postgresql    Disable PostgreSQL support
-  --with-sqlite=<path>    Specify the full path to the sqlite installation
+  --with-sqlite=<path>    Specify the full path to the sqlite installation, or
+                          "embedded"
   --without-sqlite        Disable sqlite support
   --with-gmp=<path>       Specify the full path of the gmp installation
   --without-gmp           Disable support for gmp
@@ -3938,19 +3939,26 @@ else
 fi;
 
    PATH_LIBSQLITE=""
-   if test x"$SQLITE_PATH_WITH" = xno ; then
+   if test x"$SQLITE_PATH_WITH" = xembedded ; then
       echo "$as_me:$LINENO: checking for sqlite" >&5
 echo $ECHO_N "checking for sqlite... $ECHO_C" >&6
-      echo "$as_me:$LINENO: result: no" >&5
-echo "${ECHO_T}no" >&6
-      WITH_SQLITE=no
+      echo "$as_me:$LINENO: result: embedded" >&5
+echo "${ECHO_T}embedded" >&6
+      WITH_SQLITE=embedded
 
    else
-     if test x"$SQLITE_PATH_WITH" != xyes ; then
-       PATH_LIBSQLITE="-L$SQLITE_PATH_WITH/lib"
-     fi
+      if test x"$SQLITE_PATH_WITH" = xno ; then
+        echo "$as_me:$LINENO: checking for sqlite" >&5
+echo $ECHO_N "checking for sqlite... $ECHO_C" >&6
+        echo "$as_me:$LINENO: result: no" >&5
+echo "${ECHO_T}no" >&6
+        WITH_SQLITE=no
+      else
+         if test x"$SQLITE_PATH_WITH" != xyes ; then
+           PATH_LIBSQLITE="-L$SQLITE_PATH_WITH/lib"
+         fi
 
-     echo "$as_me:$LINENO: checking for sqlite3_open in -lsqlite3" >&5
+         echo "$as_me:$LINENO: checking for sqlite3_open in -lsqlite3" >&5
 echo $ECHO_N "checking for sqlite3_open in -lsqlite3... $ECHO_C" >&6
 if test "${ac_cv_lib_sqlite3_sqlite3_open+set}" = set; then
   echo $ECHO_N "(cached) $ECHO_C" >&6
@@ -4011,11 +4019,12 @@ else
 fi
 
 
-     if test x"$WITH_SQLITE" = xno -a x"$NEED_SQLITE" = xyes ; then
-       { { echo "$as_me:$LINENO: error: Sqlite not found" >&5
+         if test x"$WITH_SQLITE" = xno -a x"$NEED_SQLITE" = xyes ; then
+           { { echo "$as_me:$LINENO: error: Sqlite not found" >&5
 echo "$as_me: error: Sqlite not found" >&2;}
    { (exit 1); exit 1; }; }
-     fi
+         fi
+      fi
    fi
 
 

@@ -18,11 +18,23 @@ project GnatColl_Sqlite is
       when "yes" =>
         for Source_Dirs use ("sqlite", "sqlite/with_sqlite");
         for Library_Options use (GnatColl_Shared.Sqlite_Dir) & "-lsqlite3";
+      when "embedded" =>
+        for Languages use ("Ada", "C");
+        for Source_Dirs use ("sqlite", "sqlite/with_sqlite", "sqlite/amalgamation");
    end case;
 
    package Builder  renames GnatColl_Shared.Builder;
 
-   package Compiler renames GnatColl_Shared.Compiler;
+   package Compiler is
+      for Switches ("Ada") use GnatColl_Shared.Compiler'Switches ("Ada");
+      case GnatColl_Shared.Sqlite is
+         when "yes" | "no" =>
+            null;
+         when "embedded" =>
+            for Switches ("C") use GnatColl_Shared.Compiler'Switches ("C") 
+               & ("-DSQLITE_OMIT_LOAD_EXTENSION");
+      end case;
+   end Compiler;
 
    package Linker is
       case GnatColl_Shared.Sqlite is

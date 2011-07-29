@@ -16,7 +16,8 @@ project GnatColl_Shared is
    Python : Yes_No := External ("PYTHON", "@WITH_PYTHON@");
    Syslog : Yes_No := External ("SYSLOG", "@WITH_SYSLOG@");
    Postgres : Yes_No := External ("POSTGRES", "@WITH_POSTGRES@");
-   Sqlite   : Yes_No := External ("SQLITE", "@WITH_SQLITE@");
+   type Sqlite_Inclusion is ("yes", "no", "embedded");
+   Sqlite   : Sqlite_Inclusion := External ("SQLITE", "@WITH_SQLITE@");
    Gmp      : Yes_No := External ("GMP", "@WITH_GMP@");
    Projects : Yes_No := External ("PROJECTS", "@WITH_PROJECTS@");
    Templates : Yes_No := "no";  --  Hard-coded for now

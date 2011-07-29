@@ -342,7 +342,7 @@ AC_HELP_STRING(
 # be disabled with
 #    -with-sqlite=no
 # The following variables are exported by configure:
-#    @WITH_SQLITE#: whether sqlite was detected
+#    @WITH_SQLITE@: whether sqlite is detected
 #    @PATH_LIBSQLITE@: path to libsqlite3
 #############################################################
 
@@ -352,7 +352,7 @@ AC_DEFUN(AM_PATH_SQLITE,
    AC_ARG_WITH(sqlite,
      [AC_HELP_STRING(
         [--with-sqlite=<path>],
-        [Specify the full path to the sqlite installation])
+        [Specify the full path to the sqlite installation, or "embedded"])
 AC_HELP_STRING(
         [--without-sqlite],
         [Disable sqlite support])],
@@ -360,24 +360,30 @@ AC_HELP_STRING(
      SQLITE_PATH_WITH=yes)
 
    PATH_LIBSQLITE=""
-   if test x"$SQLITE_PATH_WITH" = xno ; then
+   if test x"$SQLITE_PATH_WITH" = xembedded ; then
       AC_MSG_CHECKING(for sqlite)
-      AC_MSG_RESULT(no, use --with-sqlite if needed)
-      WITH_SQLITE=no
+      AC_MSG_RESULT(embedded, use --with-sqlite to use a dynamic lib)
+      WITH_SQLITE=embedded
 
    else
-     if test x"$SQLITE_PATH_WITH" != xyes ; then
-       PATH_LIBSQLITE="-L$SQLITE_PATH_WITH/lib"
-     fi
+      if test x"$SQLITE_PATH_WITH" = xno ; then
+        AC_MSG_CHECKING(for sqlite)
+        AC_MSG_RESULT(no, use --with-sqlite to use a dynamic lib)
+        WITH_SQLITE=no
+      else
+         if test x"$SQLITE_PATH_WITH" != xyes ; then
+           PATH_LIBSQLITE="-L$SQLITE_PATH_WITH/lib"
+         fi
        
-     AC_CHECK_LIB(sqlite3, sqlite3_open,
-                  [WITH_SQLITE=yes],
-                  [WITH_SQLITE=no],
-                  $SQLITE_CFLAGS $PATH_LIBSQLITE)
-
-     if test x"$WITH_SQLITE" = xno -a x"$NEED_SQLITE" = xyes ; then
-       AC_MSG_ERROR([Sqlite not found])
-     fi
+         AC_CHECK_LIB(sqlite3, sqlite3_open,
+                      [WITH_SQLITE=yes],
+                      [WITH_SQLITE=no],
+                      $SQLITE_CFLAGS $PATH_LIBSQLITE)
+       
+         if test x"$WITH_SQLITE" = xno -a x"$NEED_SQLITE" = xyes ; then
+           AC_MSG_ERROR([Sqlite not found])
+         fi
+      fi
    fi
    
    AC_SUBST(WITH_SQLITE)

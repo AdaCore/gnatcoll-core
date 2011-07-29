@@ -17,6 +17,7 @@ project GnatColl is
    OS : OS_Kind := external ("OS", "unix");
 
    type Yes_No is ("yes", "no");
+   type Sqlite_Inclusion is ("yes", "no", "embedded");
 
    for Library_Name use "gnatcoll";
    for Source_Dirs use ("../../include/gnatcoll");
@@ -29,7 +30,7 @@ project GnatColl is
    With_Postgres : Yes_No := "@WITH_POSTGRES@";
    Postgres_Path := "@PATH_LIBPQ@";
 
-   With_Sqlite : Yes_No := "@WITH_SQLITE@";
+   With_Sqlite : Sqlite_Inclusion := "@WITH_SQLITE@";
    Sqlite_Path := "@PATH_LIBSQLITE@";
 
    for Externally_Built use "true";
