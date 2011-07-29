@@ -1010,7 +1010,7 @@ package body GNATCOLL.Scripts.Python is
          return -1;
       else
          Py_DECREF (Result);
-         return 1;
+         return 0;
       end if;
    end First_Level_Setter;
 
