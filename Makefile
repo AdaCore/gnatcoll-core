@@ -27,9 +27,7 @@ build_library_type:
 ifeq (${WITH_GTK},yes)
 	${MAKE} -C src -f Makefile.gtk buildall
 endif
-ifneq ($(subst no,,${WITH_SQLITE}${WITH_POSTGRES}),)
 	${MAKE} -C src -f Makefile.tools buildall
-endif
 
 examples:
 	${MAKE} -C examples
@@ -81,9 +79,7 @@ ifeq (${WITH_GTK},yes)
 endif
 	${MAKE} -C src -f Makefile.postgres libinstall
 	${MAKE} -C src -f Makefile.sqlite libinstall
-ifneq ($(subst no,,${WITH_SQLITE}${WITH_POSTGRES}),)
 	${MAKE} -C src -f Makefile.tools installbin
-endif
 ifeq (${WITH_GMP},yes)
 	${MAKE} -C src -f Makefile.gmp libinstall
 endif
