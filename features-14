@@ -21,6 +21,13 @@ NF-14-K729-026 New package GNATCOLL.Pools (2011-07-29)
    where resources are allocated when needed, automatically released to the
    pool when no longer needed, and then reused later on.
 
+NF-14-K719-014 Support for embedded SQLite (2011-07-29)
+
+   GNATCOLL can now be configured with the option "--with-sqlite=embedded".
+   This will build a static version of the SQLite library into the GNATCOLL
+   libraries. This is a convenient way to take advantage of the SQLite
+   integration without having to rely on the external SQLite dlls.
+
 NF-14-K322-002 GNATCOLL.Scripts.Python: better support for boolean (2011-03-22)
 
    The function Nth_Arg uses the standard python way to check whether a
