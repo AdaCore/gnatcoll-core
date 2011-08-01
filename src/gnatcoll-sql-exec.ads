@@ -116,15 +116,18 @@ package GNATCOLL.SQL.Exec is
    --  are logged as if the operation took place. This is only intended for
    --  automatic testsuites.
 
-   DBMS_Postgresql : constant String := "postgresql";
-   DBMS_Sqlite : constant String := "sqlite";
-   --  The various database backends that are supported.
-   --  GNATCOLL does not use these constants itself, but they are provided to
-   --  serve as a common vocabulary for applications to describe the backend
-   --  they want to use. These contents should be passed to Setup_Database (see
-   --  below), and then on to the factory for Get_Task_Connection.
-   --  You can create your own backends if needed, and thus create your own
-   --  string constants for your application, if you want.
+   type Database_Connection_Record is abstract new Formatter with private;
+   type Database_Connection is access all Database_Connection_Record'Class;
+   --  A thread-specific access to a database. Each thread, in an application,
+   --  should have its own access to the database, so that transactions really
+   --  are thread-specific. This also stores the result of the last query
+   --  executed, and takes care of creating and cancelling transactions when
+   --  needed.
+   --  This type is really an access to some data, so that all subprograms
+   --  below can take IN parameters. This simplifies user-code, which can
+   --  therefore contain functions.
+   --  This abstract type is specialized in GNATCOLL.SQL.Postgres and other
+   --  child packages.
 
    -------------
    -- Cursors --
@@ -150,52 +153,6 @@ package GNATCOLL.SQL.Exec is
    --  in their code, thus allowing "Result : Cursor" declarations.
    --  In practice, DBMS-specific backends will derive from
    --  gnatcoll-sql-exec-dbms_cursor, which defines the required primitive ops
-
-   --------------------------
-   -- Database_Description --
-   --------------------------
-   --  Data common to all the concurrent connections to the database.
-
-   type Database_Description is private;
-   --  Describes how to access a database, and stores global caches associated
-   --  with that database.
-
-   type SSL_Mode is (Disable, Allow, Prefer, Require);
-   --  Whether to use SSL to connect to the server. This might not be
-   --  applicable to all backends (for instance it doesn't apply to sqlite),
-   --  and even if the backend supports SSL, some of the modes might not exist.
-   --    Disable  => require a non-SSL connection
-   --    Allow    => first try a non-SSL connection, then SSL if failed
-   --    Prefer   => first try a SSL connection, then non-SSL if failed
-   --    Require  => require a SSL connection
-
-   procedure Setup_Database
-     (Description   : out Database_Description;
-      Database      : String;
-      User          : String := "";
-      Host          : String := "";
-      Password      : String := "";
-      DBMS          : String := DBMS_Postgresql;
-      SSL           : SSL_Mode := Prefer;
-      Cache_Support : Boolean := True);
-   --  Register the address of the database, for use by all other subprograms
-   --  in this package.
-   --  If Cache_Support is True, then some SQL queries can be cached locally,
-   --  and reused by Execute above when its Use_Cache parameter is True. If
-   --  Cache_Support is False, then no caching is ever done.
-
-   procedure Free (Description : in out Database_Description);
-   --  Free memory associated with description.
-   --  This should only be called when the last database connection was closed,
-   --  since each connection keeps a handle on the description
-
-   function Get_Host     (Description : Database_Description) return String;
-   function Get_User     (Description : Database_Description) return String;
-   function Get_Database (Description : Database_Description) return String;
-   function Get_Password (Description : Database_Description) return String;
-   function Get_DBMS     (Description : Database_Description) return String;
-   function Get_SSL      (Description : Database_Description) return SSL_Mode;
-   --  Return the connection components for the database
 
    ----------------
    -- Parameters --
@@ -240,22 +197,39 @@ package GNATCOLL.SQL.Exec is
       return String;
    --  Return a displayable version of the parameters list
 
+   --------------------------
+   -- Database_Description --
+   --------------------------
+   --  Data common to all the concurrent connections to the database.
+
+   type Database_Description_Record
+     (Caching : Boolean) is abstract tagged private;
+   type Database_Description is access all Database_Description_Record'Class;
+   --  Describes how to access a database, and stores global caches associated
+   --  with that database.
+   --  This type is derived in each of the DBMS specific packages. See
+   --  GNATCOLL.SQL.Sqlite and GNATCOLL.SQL.Postgres for instance.
+   --
+   --  If Cache is true, some statements will be cached locally in the
+   --  connection (see the parameter Use_Cache for the Prepare subprograms
+   --  below).
+
+   function Build_Connection
+     (Self : Database_Description_Record)
+      return Database_Connection is abstract;
+   --  Returns a new object to represent connection to the database.
+   --  On return, no connection to the DBMS has been made (this will
+   --  be done lazily by the turned object).
+
+   procedure Free (Description : in out Database_Description_Record) is null;
+   procedure Free (Description : in out Database_Description);
+   --  Free memory associated with description.
+   --  This should only be called when the last database connection was closed,
+   --  since each connection keeps a handle on the description
+
    -------------------------
    -- Database_Connection --
    -------------------------
-
-   type Database_Connection_Record is abstract new Formatter with private;
-   type Database_Connection is access all Database_Connection_Record'Class;
-   --  A thread-specific access to a database. Each thread, in an application,
-   --  should have its own access to the database, so that transactions really
-   --  are thread-specific. This also stores the result of the last query
-   --  executed, and takes care of creating and cancelling transactions when
-   --  needed.
-   --  This type is really an access to some data, so that all subprograms
-   --  below can take IN parameters. This simplifies user-code, which can
-   --  therefore contain functions.
-   --  This abstract type is specialized in GNATCOLL.SQL.Postgres and other
-   --  child packages.
 
    function Check_Connection
      (Connection : access Database_Connection_Record'Class) return Boolean;
@@ -390,8 +364,6 @@ package GNATCOLL.SQL.Exec is
 
    function Get_Task_Connection
      (Description : Database_Description;
-      Factory     : access function
-        (Desc : Database_Description) return Database_Connection;
       Username    : String := "")
       return Database_Connection;
    --  Return the database connection specific to the current task. A new one
@@ -401,9 +373,6 @@ package GNATCOLL.SQL.Exec is
    --  Factory.
    --  The newly created connection and Username are then passed to
    --  Reset_Connection (see below).
-   --  Valid values for Factories can be found in
-   --  GNATCOLL.SQL.Postgres.Build_Postgres_Connection and in the other
-   --  back-end specific packages.
 
    procedure Reset_Connection
      (Description : Database_Description;
@@ -814,17 +783,8 @@ package GNATCOLL.SQL.Exec is
 
 private
 
-   type Database_Description_Record is record
-      Host     : GNAT.Strings.String_Access;
-      Dbname   : GNAT.Strings.String_Access;
-      User     : GNAT.Strings.String_Access;
-      Password : GNAT.Strings.String_Access;
-      DBMS     : GNAT.Strings.String_Access;
-      SSL      : SSL_Mode := Prefer;
-
-      Caching : Boolean := True;
-   end record;
-   type Database_Description is access all Database_Description_Record;
+   type Database_Description_Record
+     (Caching : Boolean) is abstract tagged null record;
 
    type Database_Connection_Record is abstract new Formatter with record
       DB             : Database_Description;

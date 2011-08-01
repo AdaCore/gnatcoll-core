@@ -328,113 +328,13 @@ package body GNATCOLL.SQL.Exec is
 
    procedure Free (Description : in out Database_Description) is
       procedure Unchecked_Free is new Ada.Unchecked_Deallocation
-        (Database_Description_Record, Database_Description);
+        (Database_Description_Record'Class, Database_Description);
    begin
       if Description /= null then
-         GNAT.Strings.Free (Description.Host);
-         GNAT.Strings.Free (Description.User);
-         GNAT.Strings.Free (Description.Dbname);
-         GNAT.Strings.Free (Description.Password);
-         GNAT.Strings.Free (Description.DBMS);
+         Free (Description.all);
          Unchecked_Free (Description);
       end if;
    end Free;
-
-   --------------------
-   -- Setup_Database --
-   --------------------
-
-   procedure Setup_Database
-     (Description   : out Database_Description;
-      Database      : String;
-      User          : String := "";
-      Host          : String := "";
-      Password      : String := "";
-      DBMS          : String := DBMS_Postgresql;
-      SSL           : SSL_Mode := Prefer;
-      Cache_Support : Boolean := True)
-   is
-   begin
-      if Description = null then
-         Description := new Database_Description_Record;
-      end if;
-
-      GNAT.Strings.Free (Description.Host);
-      GNAT.Strings.Free (Description.User);
-      GNAT.Strings.Free (Description.Dbname);
-      GNAT.Strings.Free (Description.Password);
-      GNAT.Strings.Free (Description.DBMS);
-
-      Description.Dbname   := new String'(Database);
-      Description.User     := new String'(User);
-      Description.Password := new String'(Password);
-      Description.DBMS     := new String'(DBMS);
-
-      if Host /= ""
-        and then Host /= "localhost"
-      then
-         Description.Host := new String'(Host);
-      else
-         Description.Host := new String'("");
-      end if;
-
-      Description.Caching   := Cache_Support;
-      Description.SSL       := SSL;
-   end Setup_Database;
-
-   --------------
-   -- Get_Host --
-   --------------
-
-   function Get_Host     (Description : Database_Description) return String is
-   begin
-      return Description.Host.all;
-   end Get_Host;
-
-   --------------
-   -- Get_User --
-   --------------
-
-   function Get_User     (Description : Database_Description) return String is
-   begin
-      return Description.User.all;
-   end Get_User;
-
-   ------------------
-   -- Get_Database --
-   ------------------
-
-   function Get_Database (Description : Database_Description) return String is
-   begin
-      return Description.Dbname.all;
-   end Get_Database;
-
-   -------------
-   -- Get_SSL --
-   -------------
-
-   function Get_SSL (Description : Database_Description) return SSL_Mode is
-   begin
-      return Description.SSL;
-   end Get_SSL;
-
-   ------------------
-   -- Get_Password --
-   ------------------
-
-   function Get_Password (Description : Database_Description) return String is
-   begin
-      return Description.Password.all;
-   end Get_Password;
-
-   --------------
-   -- Get_DBMS --
-   --------------
-
-   function Get_DBMS (Description : Database_Description) return String is
-   begin
-      return Description.DBMS.all;
-   end Get_DBMS;
 
    ----------------------
    -- Check_Connection --
@@ -999,8 +899,6 @@ package body GNATCOLL.SQL.Exec is
 
    function Get_Task_Connection
      (Description : Database_Description;
-      Factory     : access function
-        (Desc : Database_Description) return Database_Connection;
       Username    : String := "")
       return Database_Connection
    is
@@ -1008,7 +906,7 @@ package body GNATCOLL.SQL.Exec is
    begin
       Connection := DB_Attributes.Value;
       if Connection = null then
-         Connection := Factory (Description);
+         Connection := Description.Build_Connection;
          if Connection /= null then
             DB_Attributes.Set_Value (Connection);
          else

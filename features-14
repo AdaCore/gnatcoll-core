@@ -15,6 +15,17 @@ of the feature.
 New features in 1.4
 -------------------
 
+NF-14-K801-007 GNATCOLL.SQL choosing the DBMS backend (2011-08-01)
+
+   Changed the way applications select the database backend. This cleans
+   up the API; in particular, Setup no longer exists and was replaced by
+   database-specific Build_*_Connection functions which only take parameters
+   relevant to that DBMS. Get_Task_Connection no longer takes a Factory
+   parameter, since a Database_Description already knows how to create the
+   connections.
+   This change is backward incompatible, and applications will need a minor
+   change to adapt to the new API.
+
 NF-14-K729-026 New package GNATCOLL.Pools (2011-07-29)
 
    This package provides an implementation for a task-safe resource pool,

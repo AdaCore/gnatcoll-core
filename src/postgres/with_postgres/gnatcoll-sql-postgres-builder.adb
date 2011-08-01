@@ -349,14 +349,14 @@ package body GNATCOLL.SQL.Postgres.Builder is
    --  is set to True and Res to the last result. Otherwise, Success is set to
    --  False.
 
-   -------------------------------
-   -- Build_Postgres_Connection --
-   -------------------------------
+   ----------------------
+   -- Build_Connection --
+   ----------------------
 
-   function Build_Postgres_Connection return Database_Connection is
+   function Build_Connection return Database_Connection is
    begin
       return new Postgresql_Connection_Record;
-   end Build_Postgres_Connection;
+   end Build_Connection;
 
    -----------
    -- Error --
@@ -380,12 +380,14 @@ package body GNATCOLL.SQL.Postgres.Builder is
      (Description   : Database_Description;
       With_Password : Boolean) return String
    is
-      User   : constant String := Get_User (Description);
-      Host   : constant String := Get_Host (Description);
-      Passwd : constant String := Get_Password (Description);
+      Descr : constant Postgres_Description_Access :=
+        Postgres_Description_Access (Description);
+      User   : constant String := Descr.User.all;
+      Host   : constant String := Descr.Host.all;
+      Passwd : constant String := Descr.Password.all;
 
       Str : Unbounded_String  := To_Unbounded_String
-        ("dbname=" & Get_Database (Description));
+        ("dbname=" & Descr.Dbname.all);
    begin
       if User /= "" then
          Append (Str, " user=" & User);
@@ -399,7 +401,7 @@ package body GNATCOLL.SQL.Postgres.Builder is
          Append (Str, " password=" & Passwd);
       end if;
 
-      case Get_SSL (Description) is
+      case Descr.SSL is
          when Disable => Append (Str, " sslmode=disable");
          when Allow   => Append (Str, " sslmode=allow");
          when Prefer  => Append (Str, " sslmode=prefer");
@@ -1154,5 +1156,14 @@ package body GNATCOLL.SQL.Postgres.Builder is
    begin
       return "SERIAL PRIMARY KEY";
    end Field_Type_Autoincrement;
+
+   ----------------------------
+   -- Has_Postgresql_Support --
+   ----------------------------
+
+   function Has_Postgresql_Support return Boolean is
+   begin
+      return True;
+   end Has_Postgresql_Support;
 
 end GNATCOLL.SQL.Postgres.Builder;

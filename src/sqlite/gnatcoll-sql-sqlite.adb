@@ -1,7 +1,7 @@
 -----------------------------------------------------------------------
 --                               G N A T C O L L                     --
 --                                                                   --
---                 Copyright (C) 2009, AdaCore                       --
+--                 Copyright (C) 2009-2011, AdaCore                  --
 --                                                                   --
 -- GPS is free  software;  you can redistribute it and/or modify  it --
 -- under the terms of the GNU General Public License as published by --
@@ -29,19 +29,45 @@ with GNATCOLL.SQL.Sqlite.Builder;
 
 package body GNATCOLL.SQL.Sqlite is
 
-   -----------------------------
-   -- Build_Sqlite_Connection --
-   -----------------------------
+   -----------
+   -- Setup --
+   -----------
 
-   function Build_Sqlite_Connection
-     (Descr : GNATCOLL.SQL.Exec.Database_Description)
-      return Database_Connection is
+   function Setup
+     (Database      : String;
+      Cache_Support : Boolean := False)
+      return Database_Description
+   is
+      Result : Sqlite_Description_Access;
    begin
-      if Get_DBMS (Descr) = DBMS_Sqlite then
-         return GNATCOLL.SQL.Sqlite.Builder.Build_Sqlite_Connection;
-      else
+      if not GNATCOLL.SQL.Sqlite.Builder.Has_Sqlite_Support then
          return null;
       end if;
-   end Build_Sqlite_Connection;
+
+      Result := new Sqlite_Description (Caching => Cache_Support);
+      Result.Dbname := new String'(Database);
+      return Database_Description (Result);
+   end Setup;
+
+   ----------------------
+   -- Build_Connection --
+   ----------------------
+
+   overriding function Build_Connection
+     (Self : Sqlite_Description) return Database_Connection
+   is
+      pragma Unreferenced (Self);
+   begin
+      return GNATCOLL.SQL.Sqlite.Builder.Build_Connection;
+   end Build_Connection;
+
+   ----------
+   -- Free --
+   ----------
+
+   overriding procedure Free (Self : in out Sqlite_Description) is
+   begin
+      Free (Self.Dbname);
+   end Free;
 
 end GNATCOLL.SQL.Sqlite;

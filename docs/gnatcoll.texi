@@ -3596,7 +3596,7 @@ history.
 @noindent
 
 This library abstracts the specifics of the various database engines
-it supports. Ideally, a goal written for one database could be ported
+it supports. Ideally, code written for one database could be ported
 almost transparently to another engine. This is not completely doable
 in practice, since each system has its own SQL specifics, and unless
 you are writing things very carefully, the interpretation of your queries
@@ -3617,43 +3617,27 @@ system that you wish to interact with. One possible implementation
 is
 
 @CODESAMPLE{
-@b{function} Connection_Factory@NL{}
-  (Desc : GNATCOLL.SQL.Exec.Database_Description)@NL{}
-  @b{return} GNATCOLL.SQL.Exec.Database_Connection@NL{}
-@b{is}@NL{}
-   DBMS : @b{constant} String := Get_DBMS (Desc);@NL{}
-@b{begin}@NL{}
-   @b{if} DBMS = DBMS_Postgresql @b{then}@NL{}
-      @b{return} GNATCOLL.SQL.Postgres.Build_Postgres_Connection;@NL{}
-   @b{elsif} DBMS = DBMS_Sqlite @b{then}@NL{}
-      @b{return} GNATCOLL.SQL.Sqlite.Build_Sqlite;@NL{}
-   @b{else}@NL{}
-      @b{return null};@NL{}
-   @b{end if};@NL{}
-@b{end} Connection_Factory;@NL{}
-@NL{}
+@b{with} GNATCOLL.SQL.Sqlite;   @i{-- or Postgres}@NL{}
 @b{declare}@NL{}
    DB_Descr : GNATCOLL.SQL.Exec.Database_Description;@NL{}
    DB : GNATCOLL.SQL.Exec.Database_Connection;@NL{}
 @b{begin}@NL{}@NL{}
-   GNATCOLL.SQL.Exec.Setup_Database@NL{}
-     (Description => DB_Descr,@NL{}
-      Database    => "dbname");@NL{}
-@NL{}
+   DB_Descr := GNATCOLL.SQL.Sqlite.Setup ("dbname");@NL{}
    DB := GNATCOLL.SQL.Exec.Get_Task_Connection@NL{}
         (Description  => DB_Descr,@NL{}
-         Factory      => Connection_Factory'Access,@NL{}
          Username     => "myself");@NL{}
 @b{end}@NL{}
 }
 
-The code acts in three steps:
+The code acts in two steps:
 @itemize @bullet
 @item Describe connection parameters
-   The call to @code{Setup_Database} provides the required parameters to
+   The call to @code{Setup} provides the required parameters to
    establish a connection to a database server which might possibly be
    running on a remote host. In this call, one specifies the name of
-   the database, the user login and password, and the type of database.
+   the database and various parameters that depend on the DBMS backend
+   (like the user login and password).
+
    At this point, no connection or exchange of information has been
    done, the @code{Database_Description} type stores this information
    for later.
@@ -3668,24 +3652,11 @@ The code acts in three steps:
    available one to reply to a request. The function
    @code{Get_Task_Connection} will reuse the connection to the
    database that was already established in this thread, or create
-   a new one through the @code{Factory} callback if none was
-   created yet.
+   a new one through the @code{Database_Description}.
 
    This call is the only one that is needed in the various tasks
    of your application, you obviously do not need to repeat the
    call to @code{Setup_Database}.
-
-@item Create the connection
-   If the current task is not associated with a connection, one
-   needs to be created. @value{gnatcoll} does this through a
-   factory callback, instead of just doing it on its own, so that
-   your application can create its own child types for a
-   @code{Database_Connection}, and thus store additional data in
-   that child type. This is also a convenient way to support
-   multiple database backends without @code{with}-ing all the
-   corresponding code in your application (in the example above,
-   the application only ever supports PostgreSQL, and therefore
-   does not need to elaborate the MySQL packages for instance).
 
 @end itemize
 

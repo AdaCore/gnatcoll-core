@@ -1,7 +1,7 @@
 -----------------------------------------------------------------------
 --                               G N A T C O L L                     --
 --                                                                   --
---                 Copyright (C) 2009, AdaCore                       --
+--                 Copyright (C) 2009-2011, AdaCore                  --
 --                                                                   --
 -- GPS is free  software;  you can redistribute it and/or modify  it --
 -- under the terms of the GNU General Public License as published by --
@@ -27,13 +27,22 @@
 
 package body GNATCOLL.SQL.Sqlite.Builder is
 
-   -----------------------------
-   -- Build_Sqlite_Connection --
-   -----------------------------
+   ----------------------
+   -- Build_Connection --
+   ----------------------
 
-   function Build_Sqlite_Connection return Database_Connection is
+   function Build_Connection return Database_Connection is
    begin
       return null;
-   end Build_Sqlite_Connection;
+   end Build_Connection;
+
+   ------------------------
+   -- Has_Sqlite_Support --
+   ------------------------
+
+   function Has_Sqlite_Support return Boolean is
+   begin
+      return False;
+   end Has_Sqlite_Support;
 
 end GNATCOLL.SQL.Sqlite.Builder;

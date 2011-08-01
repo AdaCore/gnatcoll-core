@@ -1,7 +1,7 @@
 -----------------------------------------------------------------------
 --                               G N A T C O L L                     --
 --                                                                   --
---                 Copyright (C) 2005-2010, AdaCore                  --
+--                 Copyright (C) 2005-2011, AdaCore                  --
 --                                                                   --
 -- GPS is free  software;  you can redistribute it and/or modify  it --
 -- under the terms of the GNU General Public License as published by --
@@ -31,20 +31,53 @@ package body GNATCOLL.SQL.Postgres is
 
    N_OID : aliased constant String := "OID";
 
-   -------------------------------
-   -- Build_Postgres_Connection --
-   -------------------------------
+   -----------
+   -- Setup --
+   -----------
 
-   function Build_Postgres_Connection
-     (Descr : GNATCOLL.SQL.Exec.Database_Description)
-      return Database_Connection is
+   function Setup
+     (Database      : String;
+      User          : String := "";
+      Host          : String := "";
+      Password      : String := "";
+      SSL           : SSL_Mode := Prefer;
+      Cache_Support : Boolean := True)
+      return Database_Description
+   is
+      Result : Postgres_Description_Access;
    begin
-      if Get_DBMS (Descr) = DBMS_Postgresql then
-         return GNATCOLL.SQL.Postgres.Builder.Build_Postgres_Connection;
-      else
+      if not GNATCOLL.SQL.Postgres.Builder.Has_Postgresql_Support then
          return null;
       end if;
-   end Build_Postgres_Connection;
+
+      Result := new Postgres_Description (Caching => Cache_Support);
+      Result.SSL      := SSL;
+      Result.Dbname   := new String'(Database);
+      Result.User     := new String'(User);
+      Result.Password := new String'(Password);
+
+      if Host /= ""
+        and then Host /= "localhost"
+      then
+         Result.Host := new String'(Host);
+      else
+         Result.Host := new String'("");
+      end if;
+
+      return Database_Description (Result);
+   end Setup;
+
+   ----------------------
+   -- Build_Connection --
+   ----------------------
+
+   overriding function Build_Connection
+     (Self : Postgres_Description) return Database_Connection
+   is
+      pragma Unreferenced (Self);
+   begin
+      return GNATCOLL.SQL.Postgres.Builder.Build_Connection;
+   end Build_Connection;
 
    ---------------
    -- OID_Field --
@@ -58,5 +91,17 @@ package body GNATCOLL.SQL.Postgres is
          Instance_Index => Table.Instance_Index,
          Name     => N_OID'Access);
    end OID_Field;
+
+   ----------
+   -- Free --
+   ----------
+
+   overriding procedure Free (Description : in out Postgres_Description) is
+   begin
+      GNAT.Strings.Free (Description.Host);
+      GNAT.Strings.Free (Description.User);
+      GNAT.Strings.Free (Description.Dbname);
+      GNAT.Strings.Free (Description.Password);
+   end Free;
 
 end GNATCOLL.SQL.Postgres;

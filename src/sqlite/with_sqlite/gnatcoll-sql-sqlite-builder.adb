@@ -329,7 +329,8 @@ package body GNATCOLL.SQL.Sqlite.Builder is
          Print_Warning
            (Connection,
             "Connecting to sqlite database "
-            & Get_Database (Get_Description (Connection)));
+            & Sqlite_Description_Access
+              (Get_Description (Connection)).Dbname.all);
 
          --  Make sure the file exists, otherwise we'll get a storage_error.
          --  In some cases, the user will want to create a new database from
@@ -337,7 +338,8 @@ package body GNATCOLL.SQL.Sqlite.Builder is
 
          declare
             Name : constant String :=
-              Get_Database (Get_Description (Connection));
+              Sqlite_Description_Access
+                (Get_Description (Connection)).Dbname.all;
             FD   : GNAT.OS_Lib.File_Descriptor;
             Tmp  : Integer;
             pragma Unreferenced (Tmp);
@@ -903,14 +905,23 @@ package body GNATCOLL.SQL.Sqlite.Builder is
       return Self.Processed_Rows + 1;
    end Current;
 
-   -----------------------------
-   -- Build_Sqlite_Connection --
-   -----------------------------
+   ------------------------
+   -- Has_Sqlite_Support --
+   ------------------------
 
-   function Build_Sqlite_Connection return Database_Connection is
+   function Has_Sqlite_Support return Boolean is
+   begin
+      return True;
+   end Has_Sqlite_Support;
+
+   ----------------------
+   -- Build_Connection --
+   ----------------------
+
+   function Build_Connection return Database_Connection is
    begin
       return new Sqlite_Connection_Record;
-   end Build_Sqlite_Connection;
+   end Build_Connection;
 
    ----------------------
    -- Parameter_String --

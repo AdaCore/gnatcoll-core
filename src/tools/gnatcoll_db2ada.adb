@@ -38,8 +38,8 @@ with GNAT.OS_Lib;                use GNAT.OS_Lib;
 with GNAT.Strings;
 with GNATCOLL.SQL.Exec;          use GNATCOLL.SQL, GNATCOLL.SQL.Exec;
 with GNATCOLL.SQL.Inspect;       use GNATCOLL.SQL.Inspect;
-with GNATCOLL.SQL.Postgres;      use GNATCOLL.SQL.Postgres;
-with GNATCOLL.SQL.Sqlite;        use GNATCOLL.SQL.Sqlite;
+with GNATCOLL.SQL.Postgres;
+with GNATCOLL.SQL.Sqlite;
 with GNATCOLL.Utils;             use GNATCOLL.Utils;
 
 procedure GNATCOLL_Db2Ada is
@@ -136,7 +136,7 @@ procedure GNATCOLL_Db2Ada is
       Put_Line ("-dbuser <user>: user name to log in the database");
       Put_Line ("-dbpasswd <passwd>: password for the database");
       Put_Line ("-dbtype <type>: database backend to use"
-                & " (default is " & DBMS_Postgresql & ")");
+                & " (default is postgreSQL)");
       New_Line;
       Put_Line ("==== Specifying output");
       Put_Line ("The default output is a set of Ada files that represent the");
@@ -169,7 +169,7 @@ procedure GNATCOLL_Db2Ada is
       DB_User   : GNAT.OS_Lib.String_Access := new String'("");
       DB_Passwd : GNAT.OS_Lib.String_Access := new String'("");
       DB_Model  : GNAT.OS_Lib.String_Access := null;
-      DB_Type   : GNAT.OS_Lib.String_Access := new String'(DBMS_Postgresql);
+      DB_Type   : GNAT.OS_Lib.String_Access := new String'("postgresql");
 
       Enums, Vars : String_Lists.List;
       --  The internal index corresponding to each table. This is used to
@@ -232,28 +232,25 @@ procedure GNATCOLL_Db2Ada is
       end loop;
 
       if DB_Model = null then
-         Setup_Database
-           (Descr,
-            Database      => DB_Name.all,
-            User          => DB_User.all,
-            Host          => DB_Host.all,
-            Password      => DB_Passwd.all,
-            DBMS          => DB_Type.all,
-            Cache_Support => False);
-
-         if Get_DBMS (Descr) = DBMS_Postgresql then
-            Connection := Build_Postgres_Connection (Descr);
-         elsif Get_DBMS (Descr) = DBMS_Sqlite then
-            Connection := Build_Sqlite_Connection (Descr);
+         if DB_Type.all = "postgresql" then
+            Descr := GNATCOLL.SQL.Postgres.Setup
+              (Database      => DB_Name.all,
+               User          => DB_User.all,
+               Host          => DB_Host.all,
+               Password      => DB_Passwd.all,
+               Cache_Support => False);
+         elsif DB_Type.all = "sqlite" then
+            Descr := GNATCOLL.SQL.Sqlite.Setup
+              (Database      => DB_Name.all,
+               Cache_Support => False);
          else
-            Ada.Text_IO.Put_Line ("Unknown dbtype: " & Get_DBMS (Descr));
+            Ada.Text_IO.Put_Line ("Unknown dbtype: " & DB_Type.all);
             return;
          end if;
 
+         Connection := Descr.Build_Connection;
          Reset_Connection (Descr, Connection);
-
          Dump_Tables (Connection, Enums, Vars);
-
          DB_IO.DB := Connection;
          DB_IO.Read_Schema (Schema);
 

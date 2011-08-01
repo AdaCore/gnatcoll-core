@@ -1,7 +1,7 @@
 -----------------------------------------------------------------------
 --                               G N A T C O L L                     --
 --                                                                   --
---                 Copyright (C) 2005-2009, AdaCore                  --
+--                 Copyright (C) 2005-2011, AdaCore                  --
 --                                                                   --
 -- GPS is free  software;  you can redistribute it and/or modify  it --
 -- under the terms of the GNU General Public License as published by --
@@ -31,7 +31,10 @@
 
 private package GNATCOLL.SQL.Postgres.Builder is
 
-   function Build_Postgres_Connection return Database_Connection;
+   function Has_Postgresql_Support return Boolean;
+   --  Whether PostgreSQL is supported.
+
+   function Build_Connection return Database_Connection;
    --  See doc in GNATCOLL.SQL.Postgres
 
 end GNATCOLL.SQL.Postgres.Builder;

@@ -1,7 +1,7 @@
 -----------------------------------------------------------------------
 --                               G N A T C O L L                     --
 --                                                                   --
---                 Copyright (C) 2005-2009, AdaCore                  --
+--                 Copyright (C) 2005-2011, AdaCore                  --
 --                                                                   --
 -- GPS is free  software;  you can redistribute it and/or modify  it --
 -- under the terms of the GNU General Public License as published by --
@@ -29,20 +29,30 @@
 --  DBMS
 
 with GNATCOLL.SQL.Exec;   use GNATCOLL.SQL.Exec;
+with GNAT.Strings;        use GNAT.Strings;
 
 package GNATCOLL.SQL.Sqlite is
 
-   function Build_Sqlite_Connection
-     (Descr : GNATCOLL.SQL.Exec.Database_Description)
-      return Database_Connection;
+   type Sqlite_Description (<>)
+     is new Database_Description_Record with private;
+   type Sqlite_Description_Access is access all Sqlite_Description'Class;
+
+   overriding procedure Free (Self : in out Sqlite_Description);
+   overriding function Build_Connection
+     (Self : Sqlite_Description) return Database_Connection;
+
+   function Setup
+     (Database      : String;
+      Cache_Support : Boolean := False)
+     return Database_Description;
    --  Return a database connection for sqlite
    --  If sqlite was not detected at installation time, this function will
-   --  return null. The type is hidden in the body so that the spec can always
-   --  be imported in an application, even if sqlite is not installed on the
-   --  machine. Combined with similar behavior for other DBMS, this allows you
-   --  to have a connection factory in your application so that your
-   --  application can potentially support multiple DBMS.
-   --  This function is compatible with the factory expected for
-   --  Get_Task_Connection, but will only work if Descr is for Sqlite
+   --  return null.
 
+private
+   type Sqlite_Description (Caching : Boolean)
+     is new Database_Description_Record (Caching)
+   with record
+      Dbname   : GNAT.Strings.String_Access;
+   end record;
 end GNATCOLL.SQL.Sqlite;

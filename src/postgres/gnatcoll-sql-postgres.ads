@@ -1,7 +1,7 @@
 -----------------------------------------------------------------------
 --                               G N A T C O L L                     --
 --                                                                   --
---                 Copyright (C) 2005-2009, AdaCore                  --
+--                 Copyright (C) 2005-2011, AdaCore                  --
 --                                                                   --
 -- GPS is free  software;  you can redistribute it and/or modify  it --
 -- under the terms of the GNU General Public License as published by --
@@ -29,21 +29,38 @@
 --  DBMS
 
 with GNATCOLL.SQL.Exec;   use GNATCOLL.SQL.Exec;
+with GNAT.Strings;        use GNAT.Strings;
 
 package GNATCOLL.SQL.Postgres is
 
-   function Build_Postgres_Connection
-     (Descr : GNATCOLL.SQL.Exec.Database_Description)
-      return Database_Connection;
+   type Postgres_Description (<>)
+     is new Database_Description_Record with private;
+   type Postgres_Description_Access is access all Postgres_Description'Class;
+
+   overriding procedure Free (Description : in out Postgres_Description);
+   overriding function Build_Connection
+     (Self : Postgres_Description) return Database_Connection;
+
+   type SSL_Mode is (Disable, Allow, Prefer, Require);
+   --  Whether to use SSL to connect to the server. This might not be
+   --  applicable to all backends (for instance it doesn't apply to sqlite),
+   --  and even if the backend supports SSL, some of the modes might not exist.
+   --    Disable  => require a non-SSL connection
+   --    Allow    => first try a non-SSL connection, then SSL if failed
+   --    Prefer   => first try a SSL connection, then non-SSL if failed
+   --    Require  => require a SSL connection
+
+   function Setup
+     (Database      : String;
+      User          : String := "";
+      Host          : String := "";
+      Password      : String := "";
+      SSL           : SSL_Mode := Prefer;
+      Cache_Support : Boolean := True)
+     return Database_Description;
    --  Return a database connection for PostgreSQL.
    --  If postgres was not detected at installation time, this function will
-   --  return null. The type is hidden in the body so that the spec can always
-   --  be imported in an application, even if postgres is not installed on the
-   --  machine. Combined with similar behavior for other DBMS, this allows you
-   --  to have a connection factory in your application so that your
-   --  application can potentially support multiple DBMS.
-   --  This function is compatible with the factory expected for
-   --  Get_Task_Connection, but will only work if Descr is for postgreSQL
+   --  return null.
 
    -------------------------
    -- Postgres extensions --
@@ -61,5 +78,16 @@ package GNATCOLL.SQL.Postgres is
 
    function Now is new Time_Fields.SQL_Function ("now()");
    --  Return the current timestamp, same as Current_Timestamp
+
+private
+   type Postgres_Description (Caching : Boolean)
+     is new Database_Description_Record (Caching)
+   with record
+      Host     : GNAT.Strings.String_Access;
+      Dbname   : GNAT.Strings.String_Access;
+      User     : GNAT.Strings.String_Access;
+      Password : GNAT.Strings.String_Access;
+      SSL      : SSL_Mode := Prefer;
+   end record;
 
 end GNATCOLL.SQL.Postgres;
