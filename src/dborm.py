@@ -2026,7 +2026,6 @@ class Field(object):
 
     def resolve_fk(self, all_tables):
         """Lookup the type of field if it was unknown.
-           Return False in case of failure.
         """
 
         if self.type.startswith("FK "):
@@ -2039,7 +2038,6 @@ class Field(object):
                     print ("Error: '%s.%s' references '%s', which has more"
                            + " than one PK") % (
                                self.table.name, self.name, descr.foreign_name)
-                    return False
                 pk = all_tables[descr.foreign_name].pk[0].type
 
             if isinstance(pk, str):
@@ -2048,7 +2046,6 @@ class Field(object):
                 self.type = pk
         else:
             self.type = Field_Type.get(self.type)
-        return True
 
 
 class Foreign_Key(object):
@@ -2079,7 +2076,6 @@ class Foreign_Key(object):
             else:
                 self.pairs[index] = (table.get_field(p[0]),
                                      self.foreign.get_field(p[1]))
-        return True
 
     def can_be_null(self):
         """Whether the foreign key can be NULL.
@@ -2221,13 +2217,11 @@ class Table(object):
         """
 
         for f in self.fk:
-            if not f.resolve_fk(all_tables):
-                return False
+            f.resolve_fk(all_tables)
             f.foreign.revert_fk.append(f)  # revert FK relationships
 
         for f in self.fields:
-            if not f.resolve_fk(all_tables):
-                return False
+            f.resolve_fk(all_tables)
 
         if self.superClass:  # Add fields inherited from abstract parent
             self.superClass = all_tables[self.superClass]
@@ -2236,7 +2230,6 @@ class Table(object):
                 f = copy.copy(f)
                 f.table = self
                 self.fields.append(f)
-        return True
 
 
 def get_db_schema(setup, requires_pk=False, all_tables=[], omit=[]):
@@ -2317,17 +2310,9 @@ def get_db_schema(setup, requires_pk=False, all_tables=[], omit=[]):
 
     # Now resolve all foreign keys
 
-    has_error = False
-
     for t in tables.itervalues():
-        if not t.pk and not t.is_abstract:
-            print "Error: table %s has no primary key" % t.name
-            has_error = True
-        if not t.resolve_fk(tables):
-            has_error = True
+        t.resolve_fk(tables)
 
-    if has_error:
-        return None
     return tables
 
 

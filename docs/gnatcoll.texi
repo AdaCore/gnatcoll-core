@@ -3892,14 +3892,9 @@ As you can see, the type of the field is not specified explicitly, but will
 always be that of the foreign table's primary key. With this syntax, the
 foreign table must have a single field for its primary key.
 
-In the future, gnatcoll will include a tool that generates an Ada API that
-completly hides the underlying SQL commands. The "revert_name" argument is
-used in the context of that tool. Although you are encouraged to provide one,
-this is currently optional and will have no impact on the output of the
-tool.
-
 "revert_name" is the name that will be generated in the Ada code for the
-reverse relationship. For instance: assume a book is always found in a library.
+reverse relationship, in  he context of @code{GNATCOLL.SQL.ORM}.
+For instance: assume a book is always found in a library.
 If we have two tables "books" and "libraries", we would have one foreign key
 from "books" to "libraries", which, for each book, indicates to which library
 it belongs. As a result, in the generated code, it would be easy to use

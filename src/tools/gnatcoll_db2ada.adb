@@ -473,22 +473,26 @@ procedure GNATCOLL_Db2Ada is
 begin
    Get_Database_Connection;
 
-   --  Create the package Database_Typed_Entities
+   if Schema = No_Schema then
+      Put_Line ("Could not parse the database schema, exiting...");
+   else
+      --  Create the package Database_Typed_Entities
 
-   if Output (Output_Ada_Specs) then
-      Generate (Generated.all);
-   end if;
+      if Output (Output_Ada_Specs) then
+         Generate (Generated.all);
+      end if;
 
-   if Output (Output_Text) then
-      File_IO.Write_Schema (Schema);
-   end if;
+      if Output (Output_Text) then
+         File_IO.Write_Schema (Schema);
+      end if;
 
-   if Output (Output_Createdb) then
-      DB_IO.Write_Schema (Schema);
-   end if;
+      if Output (Output_Createdb) then
+         DB_IO.Write_Schema (Schema);
+      end if;
 
-   if Output (Output_Orm) then
-      Generate_Orm;
+      if Output (Output_Orm) then
+         Generate_Orm;
+      end if;
    end if;
 
    Free (DB_Model);

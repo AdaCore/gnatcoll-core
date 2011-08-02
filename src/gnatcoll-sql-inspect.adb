@@ -903,6 +903,8 @@ package body GNATCOLL.SQL.Inspect is
       First : Natural; --  Current index in Str
       Line_Number : Natural := 0;
 
+      Has_Error : Boolean := False;
+
       Fields_Per_Line : constant := 5;
       --  Maximum number of fields per line (fields are separated with |)
 
@@ -1028,6 +1030,7 @@ package body GNATCOLL.SQL.Inspect is
          Line  : Line_Fields;
          Attr_Id : Natural := 0;
          Props : Field_Properties;
+         Has_PK : Boolean := False;
       begin
          T := T + 1;
 
@@ -1081,6 +1084,7 @@ package body GNATCOLL.SQL.Inspect is
                   To_Table : Table_Description;
 
                begin
+                  Has_PK := Has_PK or else Props.PK;
                   Set (Att, Field_Description'
                          (Weak_Refcounted with
                           Name        => new String'(Line (1).all),
@@ -1150,6 +1154,14 @@ package body GNATCOLL.SQL.Inspect is
                end;
             end if;
          end loop;
+
+         --  Check that the table has a valid Primary Key
+
+         if not Has_PK and not Table.Is_Abstract then
+            Put_Line ("Error: table '"
+                      & Table.Name & "' has no primary key");
+            Has_Error := True;
+         end if;
 
          Free (String_List (Line));
          Include (Schema.Tables, Name, Table);
@@ -1254,6 +1266,10 @@ package body GNATCOLL.SQL.Inspect is
       Free (String_List (Line));
       Free (Str);
 
+      if Has_Error then
+         Schema := No_Schema;
+      end if;
+
    exception
       when E : Invalid_Type =>
          Free (String_List (Line));
@@ -1261,10 +1277,12 @@ package body GNATCOLL.SQL.Inspect is
                    To_String (Self.Filename)
                    & ":" & Image (Line_Number, Min_Width => 1) & " "
                    & Exception_Message (E));
+         Schema := No_Schema;
          raise;
 
       when Name_Error =>
          Put_Line ("Could not open " & To_String (Self.Filename));
+         Schema := No_Schema;
    end Read_Schema;
 
    ------------------
