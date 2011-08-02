@@ -132,8 +132,8 @@ ifneq (${OS},Windows_NT)
 	cd ${libdir}/${TARNAME}/${LIBRARY_TYPE}; ${LN_S} ${LIBFULL} ${LIBNAME}.${basename ${VERSION}}
 	cd ${libdir}; ${LN_S} ${TARNAME}/${LIBRARY_TYPE}/${LIBFULL} ${LIBNAME}.${basename ${VERSION}}
 	cd ${libdir}; ${LN_S} ${TARNAME}/${LIBRARY_TYPE}/${LIBFULL} ${LIBNAME}.${VERSION}
-endif
-
+else
+	${CP} ${TARNAME}/${LIBRARY_TYPE}/${LIBFULL} ${bindir}/${LIBNAME}
 endif
 
 # Install the sources of the library. These can be in multiple source
