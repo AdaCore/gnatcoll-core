@@ -16,3 +16,8 @@ testsuite/sql/prepared/dbschema_names.ads
 testsuite/sql/prepared/test.db
 testsuite/sql/prepared_postgres/preparedpsql
 testsuite/sql/database*
+testsuite/sql/orm/orm_database.ad?
+testsuite/sql/orm/orm_database_names.ads
+testsuite/sql/orm/queries.ad?
+testsuite/sql/orm/schema.dot
+testsuite/sql/orm/schema.ps

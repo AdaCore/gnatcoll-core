@@ -3806,6 +3806,19 @@ code generation is currently implemented in python. The generated code can
 then be compiled on any machine, so it is enough to generate the code once
 and then possibly check it in your version control system.
 
+@item -dot
+
+When this switch is specified, @code{gnatcoll_db2ada} generates a file
+called @file{schema.dot} in the current directory. This file can be
+processed by the @code{dot} utility found in the @code{graphviz} suite,
+to produce a graphicaly representation of your database schema. Each table
+is represented as a rectangle showing the list of all attributes, and the
+foreign keys between the tables are represented as links.
+
+To produce this output, you need a python installation on your machine. If
+you also have @code{dot} installed, the file is processed automatically to
+generate a postscript document @file{schema.ps}.
+
 @item -text
 
 Instead of creating Ada files to represent the database schema, this switch

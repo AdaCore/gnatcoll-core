@@ -1835,7 +1835,7 @@ def create_orm(setup, pkg_name, indir, tables=[], omit=[]):
        First remove any orm-*.ad? in that directory
        TABLES can be used to limit the generation to a subset of the tables.
        OMIT is used to remove some of the tables from the set.
-       Return False in case of error
+       Return 1 in case of error, 0 for success (exit status for the shell)
     """
 
     for dirpath, dirnames, filenames in os.walk(indir):
@@ -1856,10 +1856,10 @@ def create_orm(setup, pkg_name, indir, tables=[], omit=[]):
         exec_or_fail(["gnatchop", "-q", "-w", "-gnat05", "tmp_orm"])
 
     except Cannot_Parse_Schema:
-        return False
+        return 1
 
     unlink_if_exist("tmp_orm")
-    return True
+    return 0
 
 
 class Field_Type(object):
@@ -2323,23 +2323,149 @@ def get_db_schema(setup, requires_pk=False, all_tables=[], omit=[]):
     return tables
 
 
+##########
+# Graphs #
+##########
+
+class Graph(object):
+    default_color = "white"
+    bg_color = "palegoldenrod"
+    font = "tahoma"
+
+    @staticmethod
+    def create(setup, output_file, clusters=dict()):
+        # CLUSTERS can be used to group tables. Grouping is done either
+        # just be settings a specific color for their title bars, but you can
+        # also force graphviz to group them visually by calling the groups with
+        # names starting with "cluster_".
+        # The keys in this dict are the names of the group. Each value is a
+        # tuple, whose first element is the color to use for that group, and the
+        # remaining elements are the names of the database tables belonging to
+        # that group. For instance:
+        #    clusters ["group1"] = ("color", "table1", "table2")
+
+        tables = get_db_schema(setup)
+
+        output_file = os.path.abspath(output_file)
+        output = file(output_file, "w")
+        output.write("""
+digraph g {
+  graph [
+    rankdir = "TD",
+    //rankdir = "LR",
+    concentrate = true,     // Allow edge concentration
+    //page="11.69291,16.53",  // Output on multiple pages (A3), inches
+    size="15.5,20.5",       // Force output on single page (inches)
+    rotate=90,              // Landscape mode
+    nodesep=0,
+    ranksep=0,
+    margin=0
+  ];
+
+  node [
+    fontsize = 8,
+    fontname = "%(font)s",
+    shape = plaintext
+  ];
+
+  edge [ ];
+
+  "legend" [label=<<TABLE CELLBORDER="0" CELLSPACING="0">
+<TR><TD>Legend</TD></TR>
+""" % {"font": Graph.font})
+
+        for c in sorted(clusters.keys()):
+            output.write(
+              '<TR><TD BGCOLOR="%s">%s</TD></TR>\n' % (clusters[c][0], c))
+
+        output.write("""</TABLE>>, layer=0]""")
+
+        colors = dict()
+
+        for c in clusters.keys():
+            t = clusters[c][1:]
+            notfound = [ta for ta in t if ta not in tables]
+            if notfound:
+                print \
+                   "Tables referenced in clusters, but no longer exists: %s" \
+                   % " ".join(notfound)
+            output.write(""" subgraph "%s" { %s }""" % (c, " ".join(t)))
+            for col in t:
+                colors[col.lower()] = clusters[c][0]
+
+        for table in tables.itervalues():
+            attrs = ""
+            for field in table.fields:
+                trans = {"bg":   Graph.bg_color,
+                         "name": field.name}  # + " : " + field.type.sql_type}
+
+                if field.is_fk():
+                    if field.is_pk():
+                        html = '<FONT FACE="bold" COLOR="blue">%(name)s</FONT>'
+                    else:
+                        html = '<FONT COLOR="blue">%(name)s</FONT>'
+                else:
+                    if field.is_pk():
+                        html = '<FONT FACE="bold">%(name)s</FONT>'
+                    else:
+                        html = '%(name)s'
+
+                attrs += ('<TR><TD BGCOLOR="%(bg)s">'
+                          + html + "</TD></TR>") % trans
+
+            output.write("""
+ "%s" [label=<<TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0"><TR>
+                     <TD BGCOLOR="%s">%s</TD></TR>%s</TABLE>>]\n"""
+                 % (table.name,
+                    colors.get(table.name.lower(), Graph.default_color),
+                 table.name, attrs))
+
+        for table in tables.itervalues():
+            for f in table.fk:
+                output.write('"%s" -> "%s";\n' % (table.name, f.foreign.name))
+
+        output.write("}")
+        output.close()
+
+        ps = output_file.replace(".dot", ".ps")
+        sub = subprocess.Popen(["dot", "-Tps", "-o", ps, output_file])
+        sub.wait()
+        print "Created '%s'" % output_file
+        print "Use 'dot -Tps -o %s %s' to convert to PS" % (ps, output_file)
+        print "Use 'pd2pdf -sPAGESIZE=a3' to convert to PDF"
+
+
+########
+# Main #
+########
+
 if __name__ == "__main__":
-    if len(sys.argv) < 2:
-        print "Usage: dborm dbschema.txt [pkg_name] [db_pkg]"
-        print "  Where dbschema.txt contains the description of the database"
-        print "  as described in the Gnat Components Collection documentation"
-    else:
-        if len(sys.argv) >= 3:
-            pkg_name = sys.argv[2]
-        else:
-            pkg_name = "%s.%s" % (pkg_name, "Queries")
+    if len(sys.argv) < 3:
+        print "Usage: dborm -ada   dbschema.txt [pkg_name] [db_pkg]"
+        print "   or: dborm -graph dbschema.txt [clusters]"
+        print ""
+        print "Where dbschema.txt contains the description of the database"
+        print "as described in the Gnat Components Collection documentation."
+        print ""
+        print "Clusters describes the grouping to use for tables in the"
+        print "graph output. These are any number of arguments of the form:"
+        print "    name:bg:table1,table2,table3,..."
+        sys.exit(0)
 
+    db = DBSetup.from_file(filename=sys.argv[2])
+
+    if sys.argv[1] == "-ada":
+        pkg = "%s.%s" % (pkg_name, "Queries")
         if len(sys.argv) >= 4:
-            database_pkg = sys.argv[3]
+            pkg = sys.argv[3]
+        if len(sys.argv) >= 5:
+            database_pkg = sys.argv[4]
 
-        setup = DBSetup.from_file(filename=sys.argv[1])
+        sys.exit(create_orm(db, indir=".", tables=[], omit=[], pkg_name=pkg))
 
-        if create_orm(setup, indir=".", tables=[], omit=[], pkg_name=pkg_name):
-            sys.exit(0)
-        else:
-            sys.exit(1)
+    elif sys.argv[1] == "-graph":
+        clusters = dict()
+        for s in sys.argv[3:]:
+            name, bg, tables = s.split(":")
+            clusters[name] = [bg] + tables.split(",")
+        Graph.create(db, output_file="schema.dot", clusters=clusters)

@@ -15,6 +15,13 @@ of the feature.
 New features in 1.4
 -------------------
 
+NF-14-K802-001 gnatcoll_db2ada generates graph of the DB schema (2011-08-02)
+
+   A new switch -dot can be passed to gnatcoll_db2ada to generate a
+   'schema.dot' graph of the schema database, showing all tables and the
+   links between them. If the graphviz suite was installed on your machine,
+   this file is automatically processed to generate a postscript file.
+
 NF-14-K801-007 GNATCOLL.SQL choosing the DBMS backend (2011-08-01)
 
    Changed the way applications select the database backend. This cleans
