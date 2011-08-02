@@ -529,7 +529,8 @@ class Pretty_Printer(object):
 
         if need_dba:
             self.out.write(
-                "   pragma Warnings (Off, \"*is not referenced\");\n")
+                "   pragma Warnings (Off);\n")
+            #"   pragma Warnings (Off, \"*is not referenced\");\n")
 
             self.out.write("   use Sessions.Pointers;\n")
             if debug:
@@ -549,7 +550,8 @@ class Pretty_Printer(object):
 
         if need_dba:
             self.out.write("\n\n")
-            self.out.write("   pragma Warnings (On, \"*is not referenced\");")
+            #self.out.write("   pragma Warnings (On, \"*is not referenced\");")
+            self.out.write("   pragma Warnings (On);")
         self.out.write("\n")
 
         self._output_subprogram_bodies()
@@ -596,8 +598,10 @@ class Schema(object):
 
         self.pretty.add_with(
           ["GNATCOLL.SQL", "GNATCOLL.SQL.Exec", "GNATCOLL.Tribooleans",
+           "GNATCOLL.SQL.ORM", "GNATCOLL.SQL.ORM.Impl",
+           "GNATCOLL.SQL.Sessions",
            "Ada.Strings.Unbounded", "GNAT.Strings", database_pkg,
-           "GNAT.Calendar", "Ada.Calendar", "Orm.Impl",
+           "GNAT.Calendar", "Ada.Calendar",
             "Ada.Finalization"])
         self.pretty.add_with("ada.unchecked_deallocation", specs=False,
                               do_use=False)
@@ -1512,8 +1516,7 @@ def generate_orb_one_table(name, schema, pretty, all_tables):
                section="Elements: %(cap)s" % translate,
                abstract=table.is_abstract,
                comment=f.comment,
-               body="return Self.%s_Value(F_%s_%s);" %
-                 (f.type.ada_return, table.name, f.name))
+               body="return %s;" % f.ada_from_db(cursor="Self"))
 
             if not table.is_abstract:
                 getter = "return %s;" % \
@@ -1867,7 +1870,7 @@ class Field_Type(object):
                  default_param,   # default value for the Get parameter
                  ada_field,       # As an Ada record field
                  default_record,  # default value for the record
-                 value_from_db,   # field value from db (%1=Cursor, %2=index)
+                 value_from_db,   # Ada value from db (%1=Cursor, %2=index)
                  to_return,       # convert from field type to return type
                  free_field,      # How to free the field
                  to_field):       # Convert from ada_param to ada_field
@@ -1895,7 +1898,7 @@ class Field_Type(object):
                   # redo it ourselves (with complex support for multi-tasking)
                   "text", "String", "String", 'No_Update',
                   "GNAT.Strings.String_Access",
-                  "null", "new String'(String_Value (%s, %s))",
+                  "null", "String_Value (%s, %s)",
                   "%s.all", "Free (%s)", "new String'(%s)"),
                integer=Field_Type(
                   "integer", "Integer", "Integer", -1, "Integer", -1,
@@ -1966,6 +1969,10 @@ class Field(object):
         """Retrieves a field value by reading the current row from CURSOR
            and checking the specific TABLE.FIELD
         """
+        return self.to_field(entity=self.ada_from_db(cursor))
+
+    def ada_from_db(self, cursor):
+        """Retrieves an Ada value by reading the current row from CURSOR"""
         return self.type._value_from_db % (
             cursor, "F_%s_%s" % (self.table.name, self.name))
 
