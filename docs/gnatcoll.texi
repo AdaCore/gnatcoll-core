@@ -3674,7 +3674,7 @@ and the relationship between those tables.
 To reach this goal, an external tool, @file{gnatcoll_db2ada} is provided
 with @value{gnatcoll}, and should be spawned as the first step of the
 build process, or at least whenever the database schema changes. It
-generates an Ada package (@code{Database}) which reflects the current
+generates an Ada package (@code{Database} by default) which reflects the current
 schema of the database.
 
 This tool supports a number of command line parameters (the complete list
@@ -3780,6 +3780,31 @@ to the user, and we could decide to change it (or translate it to
 another language). In such a case, the application would break. On the
 other hand, using the constant @code{0} which we just extracted will
 remain valid, whatever the actual text we display for the user.
+
+@item -api PKG
+
+This is the default behavior if you do not specify @code{-text} or
+@code{-createdb}. This will generate a number of files (@file{PKG.ads},
+@file{PKG.adb} and @file{PKG_names.ads}, where PKG is the argument given
+on the command line). These package represent your database schema, that
+is the list of all tables and their fields, as typed values. This is the
+building block for using @code{GNATCOLL.SQL} and write type-safe queries.
+
+@item -orm PKG
+
+This will generate two files (@file{PKG.ads} and @file{PKG.adb}) that
+support @code{GNATCOLL.SQL.ORM} to write queries without writing actual
+SQL. This is often used in conjunction with @file{-api}, as in:
+
+@smallexample
+gnatcoll_db2ada -api Database -orm ORM -dbmodel dbschema.txt
+@end smallexample
+
+To use this switch, you need to have a version of python
+(@url{http://python.org}) installed on your development machine, since the
+code generation is currently implemented in python. The generated code can
+then be compiled on any machine, so it is enough to generate the code once
+and then possibly check it in your version control system.
 
 @item -text
 

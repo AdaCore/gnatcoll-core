@@ -69,6 +69,7 @@ install_library_type:
 	${MKDIR} ${libdir}/${TARNAME}/${LIBRARY_TYPE}
 	${MKDIR} ${libdir}/gnat/${TARNAME}
 	${MKDIR} ${datadir}/examples
+	${MKDIR} ${datadir}/gnatcoll
 	${MKDIR} ${includedir}/${TARNAME}
 	${MKDIR} ${datadir}/gps/plug-ins
 	${MAKE} -C src -f Makefile.gnatcoll libinstall
@@ -83,6 +84,7 @@ endif
 ifeq (${WITH_GMP},yes)
 	${MAKE} -C src -f Makefile.gmp libinstall
 endif
+	${CP} src/dborm.py ${datadir}/gnatcoll/
 	${CP} distrib/gnatcoll_gps.xml ${datadir}/gps/plug-ins
 	${CP} distrib/gnatcoll_runtime.xml ${datadir}/gps/plug-ins
 	${CP} distrib/*.gpr ${libdir}/gnat
