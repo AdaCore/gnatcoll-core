@@ -24,8 +24,8 @@ gnatcoll.txt: gnatcoll.texi
 .PHONY: install
 install:
 	${MKDIR} ${datadir}/doc/gnatcoll
-	-${CP} gnatcoll.html ${datadir}/doc/gnatcoll/
-	-${CP} gnatcoll.pdf ${datadir}/doc/gnatcoll/
+	-${CP} gnatcoll.html ${datadir}/doc/gnatcoll/ 2> /dev/null
+	-${CP} gnatcoll.pdf ${datadir}/doc/gnatcoll/ 2> /dev/null
 
 .PHONY: clean-temp-files
 clean-temp-files:

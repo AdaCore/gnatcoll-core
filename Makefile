@@ -58,8 +58,8 @@ endif
 ## run the tests on the current binaries, even if we are doing some modifs
 ## that are not yet compilable
 test: 
-	${MAKE} prefix=${shell pwd}/local_install install >/dev/null
-	${MAKE} prefix=${shell pwd}/local_install -C testsuite $@
+	@${MAKE} prefix=${shell pwd}/local_install install >/dev/null
+	@${MAKE} prefix=${shell pwd}/local_install -C testsuite
 
 ## GNU standards say we must not recompile in such a case
 ## Install either the static or the shared lib, based on the value of
