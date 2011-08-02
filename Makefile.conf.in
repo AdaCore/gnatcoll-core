@@ -135,6 +135,7 @@ ifneq (${OS},Windows_NT)
 else
 	${CP} ${TARNAME}/${LIBRARY_TYPE}/${LIBFULL} ${bindir}/${LIBNAME}
 endif
+endif
 
 # Install the sources of the library. These can be in multiple source
 # directories. The second line generates the *.lgpr files which must contain
