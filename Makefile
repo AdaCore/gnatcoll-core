@@ -57,9 +57,12 @@ endif
 ## However, we do not force a recompilation here for now, so that we can still
 ## run the tests on the current binaries, even if we are doing some modifs
 ## that are not yet compilable
+## In the context of GPS, we only build the static version of GNATCOLL, even
+## though BUILDS_SHARED is True. so here we need to only install static
+## libraries (and will do the testing with those)
 test: 
-	@${MAKE} prefix=${shell pwd}/local_install install >/dev/null
-	@${MAKE} prefix=${shell pwd}/local_install -C testsuite
+	@${MAKE} prefix=${shell pwd}/local_install install_static >/dev/null
+	@${MAKE} prefix=${shell pwd}/local_install LIBRARY_TYPE=static -C testsuite
 
 ## GNU standards say we must not recompile in such a case
 ## Install either the static or the shared lib, based on the value of
