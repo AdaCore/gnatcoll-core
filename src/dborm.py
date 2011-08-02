@@ -2433,8 +2433,11 @@ digraph g {
         output.close()
 
         ps = output_file.replace(".dot", ".ps")
-        sub = subprocess.Popen(["dot", "-Tps", "-o", ps, output_file])
-        sub.wait()
+        try:
+            sub = subprocess.Popen(["dot", "-Tps", "-o", ps, output_file])
+            sub.wait()
+        except OSError:
+            pass
         print "Created '%s'" % output_file
         print "Use 'dot -Tps -o %s %s' to convert to PS" % (ps, output_file)
         print "Use 'pd2pdf -sPAGESIZE=a3' to convert to PDF"
