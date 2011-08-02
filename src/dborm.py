@@ -41,13 +41,18 @@ def exec_or_fail(*args, **kwargs):
        case of error, and then raises an exception
     """
 
-    sub = subprocess.Popen(*args, **kwargs)
-    sub.wait()
-    if sub.returncode != 0:
+    try:
+        sub = subprocess.Popen(*args, **kwargs)
+        sub.wait()
+        if sub.returncode != 0:
+            print "Error: could not execute %s" % args[0]
+            raise subprocess.CalledProcessError(sub.returncode, args[0])
+
+        return sub
+
+    except OSError:
         print "Error: could not execute %s" % args[0]
         raise subprocess.CalledProcessError(sub.returncode, args[0])
-
-    return sub
 
 
 def save_dir(fn):
