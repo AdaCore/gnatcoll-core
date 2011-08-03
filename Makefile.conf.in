@@ -133,7 +133,7 @@ ifneq (${OS},Windows_NT)
 	cd ${libdir}; ${LN_S} ${TARNAME}/${LIBRARY_TYPE}/${LIBFULL} ${LIBNAME}.${basename ${VERSION}}
 	cd ${libdir}; ${LN_S} ${TARNAME}/${LIBRARY_TYPE}/${LIBFULL} ${LIBNAME}.${VERSION}
 else
-	${CP} ${TARNAME}/${LIBRARY_TYPE}/${LIBFULL} ${bindir}/${LIBNAME}
+	${CP} ${libdir}/${TARNAME}/${LIBRARY_TYPE}/${LIBFULL} ${bindir}/${LIBNAME}
 endif
 endif
 
