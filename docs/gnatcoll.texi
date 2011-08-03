@@ -250,6 +250,7 @@ Database interface
 * Database schema::
 * The gnatcoll_db2ada tool::
 * Connecting to the database::
+* Loading initial data in the database::
 * Writing queries::
 * Executing queries::
 * Prepared queries::
@@ -257,7 +258,6 @@ Database interface
 * Writing your own cursors::
 * Creating your own SQL types::
 * Query logs::
-* Creating and inspecting databases::
 
 @end detailmenu
 @end ifnothtml
@@ -3658,6 +3658,7 @@ the various steps we went through in the design of this library.
 * Database schema::
 * The gnatcoll_db2ada tool::
 * Connecting to the database::
+* Loading initial data in the database::
 
 * Writing queries::
 * Executing queries::
@@ -3666,7 +3667,6 @@ the various steps we went through in the design of this library.
 * Writing your own cursors::
 * Creating your own SQL types::
 * Query logs::
-* Creating and inspecting databases::
 @end menu
 
 @c -----------------------------------------------------------------------
@@ -4120,6 +4120,16 @@ set of SQL commands that can be used to re-create the set of all tables in
 your schema. This does not create the database itself (which might require
 special rights depending on your DBMS), only the tables.
 
+In most cases, this creation needs to be done by a system administrator
+with the appropriate rights, and thus will be done as part of the
+deployement of your application, not the application itself. This is
+particularly true for client-server databases like @code{PostgreSQL}.
+
+But in some simpler cases where the database is only manipulated by your
+application, and potentially only needs to exist while your application
+is running (often the case for @code{sqlite}), your application could be
+responsible for creating the database.
+
 @end table
 
 @subsection Default output of gnatcoll_db2ada
@@ -4154,6 +4164,33 @@ and any other table in the database (@pxref{Writing queries}).
 Note that the fields which are generated for the table (our example reuses
 the previously seen table @code{ticket_priorities}) are typed, which as we
 will see provides a simple additional type safety for our SQL queries.
+
+
+@subsection database introspection in Ada
+
+As described above, the @code{-createdb} switch makes it possible to
+create a database (or at least its schema). This operation can also be
+performed directly from your Ada code by using the services provided in the
+@code{GNATCOLL.SQL.Inspect} package. In particular, there are services for
+reading the schema of a database either from a file or from a live
+database, just as @code{gnatcoll_db2ada} does.
+
+This results in a structure in memory that you can use to find out which
+are the tables, what are their fields, their primary keys,...
+
+It is also possible to dump this schema to a text file (with the same
+format as expected by @code{-dbmodel}), or more interestingly to output
+the SQL statements that are needed to create the tables in a database. In
+the case of Sqlite, creating a table will also create the database file
+if it doesn't exist yet, so no special rights are needed.
+
+This input/output mechanism is implemented through an abstract
+@code{Schema_IO} tagged type, with various concrete implementations (either
+@code{File_Schema_IO} to read or write from/to a file, or
+@code{DB_Schema_IO} to read or write from/to a database).
+
+See the specs for more detail on these subprograms.
+
 
 @subsection Back to the library example...
 
@@ -4315,6 +4352,125 @@ If you want to use @b{GNATCOLL.SQL.Sessions} along with the Object-Relational
 Mapping API, you will need to initialize the connection pool with the
 @b{Database_Description}, but the session will then take care automatically
 of creating the @b{Database_Connection}. See later sections for more details.
+
+@c -----------------------------------------------------------------------
+@node Loading initial data in the database
+@section Loading initial data in the database
+@c -----------------------------------------------------------------------
+@noindent
+
+We have now created an empty database. To make the queries we will write
+later more interesting, we are going to load initial data.
+
+There are various ways to do it:
+
+@itemize @bullet
+@item Manually or with an external tool
+
+One can connect to the database with an external tool (a web interface
+when the DBMS provides one for instance), or via a command line tool
+(@code{psql} for PostgreSQL or @code{sqlite3} for Sqlite), and start
+inserting data manually. This shows one of the nice aspects of using a
+standard DBMS for your application: you can alter the database (for instance
+to do minor fixes in the data) with a lot of external tools that were
+developed specifically for that purpose and that provide a nice interface.
+However, this is also tedious and error prone, and can't be repeat easily
+every time we recreate the database (for instance before running automatic
+tests).
+
+@item Using @code{GNATCOLL.SQL.EXEC}
+
+As we will describe later, @value{gnatcoll} contains all the required
+machinery for altering the contents of the database and creating new
+objects. Using @code{GNATCOLL.SQL.ORM} this can also be done at a high-level
+and completly hide SQL.
+
+@item Loading a data file
+
+A lot of frameworks call such a file that contains initial data a "fixture".
+We will use this technics as an example. At the Ada level, this is a simple
+call to @code{GNATCOLL.SQL.Inspect.Load_Data}. The package contains a lot
+more than just this subprogram (@pxref{The gnatcoll_db2ada tool}).
+
+@CODESAMPLE{
+@b{declare}@NL{}
+   File : GNATCOLL.VFS.Virtual_File := Create ("fixture.txt");@NL{}
+   @i{DB : Database_Connection;  --  created earlier}@NL{}
+@b{begin}@NL{}
+   GNATCOLL.SQL.Inspect.Load_Data (DB, File);@NL{}
+   DB.Commit;@NL{}
+@b{end;}@NL{}
+}
+
+The format of this file is described just below.
+
+@end itemize
+
+As we mentioned, @value{gnatcoll} can load data from a file. The format
+of this file is similar to the one that describes the database schema. It
+is a set of ASCII tables, each of which describes the data that should go
+in a table (it is valid to duplicate tables). Each block starts with two
+lines: The first one has two mandatory columns, the first of which contains
+the text "TABLE", and the second contains the name of the table you want to
+fill. The second line should contain as many columns as there are fields you
+want to set. Not all the fields of the table need to have a corresponding
+column if you want to set their contents to NULL (provided, of course,
+that your schema allows it). For instance, we could add data for our
+library example as such:
+
+@CODESAMPLE{
+| TABLE | customers |        |@NL{}
+|    id | first     | last   |@NL{}
+|-------+-----------+--------|@NL{}
+|     1 | John      | Smith  |@NL{}
+|     2 | Alain     | Dupont |@NL{}
+@NL{}
+| TABLE      | books   |       |            |             |@NL{}
+| title      | author  | pages |  published | borrowed_by |@NL{}
+|------------+---------+-------+------------+-------------|@NL{}
+| Art of War | Sun Tzu |    90 | 01-01-2000 |           1 |@NL{}
+| Ada RM     | WRG     |   250 | 01-07-2005 |             |@NL{}
+}
+
+A few comments on the above: the @code{id} for @code{books} is not specified,
+although the column is the primary key and therefore cannot be NULL. In fact,
+since the type of the @code{id} was set to AUTOINCREMENT, @value{gnatcoll} will
+automatically assign valid values. We did not use this approach for the
+id of @code{customers}, because we need to know this id to set the
+@code{borrowed_by} field in the @code{books} table.
+
+There is another approach to setting the @code{borrowed_by} field, which
+is to give the value of another field of the @code{customers} table. This
+of course only work if you know this value is unique, but that will often
+be the case in your initial fixtures. Here is an example:
+
+@CODESAMPLE{
+| TABLE        | dvds     |        |                    |@NL{}
+| title        | author   | region | borrowed_by(&last) |@NL{}
+|--------------+----------+--------+--------------------|@NL{}
+| The Birds    | Hitchcok |      1 | &Smith             |@NL{}
+| The Dictator | Chaplin  |      3 | &Dupont            |@NL{}
+}
+
+Here, the title of the column indicates that any value in this column might
+be a reference to the @code{customers.last} value. Values which start
+with an ampersand ("&") will therefore be looked up in @code{customers.last},
+and the @code{id} of the corresponding customer will be inserted in the
+@code{dvds} table. It would still be valid to use directly customer ids
+instead of references, this is just an extra flexibility that the references
+give you to make your fixtures more readable.
+
+However, if we are using such references we need to provide the database
+schema to @code{Load_Data} so that it can write the proper queries. This
+is done by using other services of the @code{GNATCOLL.SQL.Inspect} package.
+
+The code for our example would be:
+
+@CODESAMPLE{
+   Load_Data@NL{}
+      (DB, Create ("fixture.txt"),@NL{}
+       New_Schema_IO (Create ("dbschema.txt")).Read_Schema);@NL{}
+}
 
 
 @c -----------------------------------------------------------------------
@@ -4942,78 +5098,6 @@ This stream logs all select queries. It is separated from SQL because
 very often you will be mostly interested in the queries that impact the
 database, and logging all selects can generate a lot of output.
 @end itemize
-
-@c -----------------------------------------------------------------------
-@node Creating and inspecting databases
-@section Creating and inspecting databases
-@c -----------------------------------------------------------------------
-@noindent
-
-The API described earlier in this chapter allows you to query and
-modify and existing database. However, you first need to create that
-database.
-
-In most cases, this creation needs to be done by a system administrator
-with the appropriate rights, and thus will be done as part of the
-deployement of your application, not the application itself. This is
-particularly true for client-server databases like @code{PostgreSQL}.
-
-But in some simpler cases where the database is only manipulated by your
-application, and potentially only needs to exist while your application
-is running (often the case for @code{sqlite}), your application could be
-responsible for creating the database.
-
-The package @code{GNATCOLL.SQL.Inspect} provides a number of subprograms
-to do so, as well as to query the schema of the database (which tables
-exist, what are their fields,...)
-
-The database schema is represented by a specific data structure in
-memory. This structure can be initialized through different means:
-
-@itemize @bullet
-@item either by parsing a file.
-
-The format of this file was described above (@pxref{Database schema}).
-
-@item or by querying an existing database.
-
-This is not the case we are interested in here, but provides a simple
-way to get started with @value{gnatcoll}. In particular, you could
-query your existing database, then dump the schema into a file
-compatible with the GNATCOLL format. From then on, you would manipulate
-that file if you need to perform changes in your schema.
-
-This technics is not as accurate as using file. For instance, there
-is no way to guess that a table only exists to implement a many-to-many
-relationship between two other tables. The file provides a high-level
-view that describes this.
-
-@end itemize
-
-Once you have the schema in memory, you can perform various actions:
-
-@itemize @bullet
-@item dump it into a file
-
-Of course, this is only useful if the schema was loaded from some other
-means.
-
-@item create a database with it
-
-@value{gnatcoll} will emit the appropriate SQL commands to create the
-corresponding tables in the database. For this, you will need a
-connection to the database (see the examples above). Note that in the
-case of @code{sqlite}, the database need not exist first, and it will
-be automatically created if needed.
-
-@end itemize
-
-This input/output mechanism is implemented through an abstract
-@code{Schema_IO} tagged type, with various concrete implementations (either
-@code{File_Schema_IO} to read or write from/to a file, or
-@code{DB_Schema_IO} to read or write from/to a database).
-
-See the specs for more detail on these subprograms.
 
 @c -----------------------------------------------------------------------
 @node Index

@@ -1,0 +1,19 @@
+# for Emacs: -*- mode: org; mode: flyspell; fill-column: 79 -*-
+
+| TABLE | customers |        |
+|    id | first     | last   |
+|-------+-----------+--------|
+|     1 | John      | Smith  |
+|     2 | Alain     | Dupont |
+
+| TABLE      | books   |       |            |             |
+| title      | author  | pages |  published | borrowed_by |
+|------------+---------+-------+------------+-------------|
+| Art of War | Sun Tzu |    90 | 01-01-2000 |           1 |
+| Ada RM     | WRG     |   250 | 01-07-2005 |             |
+
+| TABLE        | dvds     |        |                    |
+| title        | author   | region | borrowed_by(&last) |
+|--------------+----------+--------+--------------------|
+| The Birds    | Hitchcok |      1 | &Smith             |
+| The Dictator | Chaplin  |      3 | &Dupont            |

@@ -350,6 +350,9 @@ package GNATCOLL.SQL.Exec is
 
    procedure Commit_Or_Rollback
      (Connection : access Database_Connection_Record'Class);
+   procedure Commit
+     (Connection : access Database_Connection_Record'Class)
+      renames Commit_Or_Rollback;
    --  Commit or rollback the current transaction, depending on whether we had
    --  an error. This does not affect the result of Success (unless COMMIT
    --  itself fails), so that you can still know afterward whether the

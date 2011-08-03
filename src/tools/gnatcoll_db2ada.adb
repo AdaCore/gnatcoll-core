@@ -43,6 +43,7 @@ with GNATCOLL.SQL.Inspect;       use GNATCOLL.SQL.Inspect;
 with GNATCOLL.SQL.Postgres;
 with GNATCOLL.SQL.Sqlite;
 with GNATCOLL.Utils;             use GNATCOLL.Utils;
+with GNATCOLL.VFS;               use GNATCOLL.VFS;
 
 procedure GNATCOLL_Db2Ada is
 
@@ -383,18 +384,18 @@ procedure GNATCOLL_Db2Ada is
 
          if DB_Model = null then
             Dump_Tables (Connection, Enums, Vars);
-            DB_IO.Read_Schema (Schema);
+            Schema := DB_IO.Read_Schema;
          end if;
       end if;
 
       if DB_Model /= null then
-         File_IO.Filename := To_Unbounded_String (DB_Model.all);
-         File_IO.Read_Schema (Schema);
+         File_IO.File := GNATCOLL.VFS.Create (+DB_Model.all);
+         Schema := File_IO.Read_Schema;
       end if;
 
       --  Output will always be to stdout
 
-      File_IO.Filename := To_Unbounded_String ("-");
+      File_IO.File := No_File;
 
       Free (DB_Name);
       Free (DB_Host);

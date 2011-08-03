@@ -38,7 +38,6 @@
 
 private with Ada.Containers.Doubly_Linked_Lists;
 with Ada.Containers.Indefinite_Ordered_Maps;
-with Ada.Strings.Unbounded;
 private with GNATCOLL.Refcount.Weakref;
 with GNATCOLL.SQL.Exec;           use GNATCOLL.SQL.Exec;
 with GNATCOLL.VFS;
@@ -243,8 +242,7 @@ package GNATCOLL.SQL.Inspect is
    type Schema_IO is abstract tagged null record;
    --  An object to read and write a schema to various media
 
-   procedure Read_Schema
-     (Self   : Schema_IO; Schema : out DB_Schema) is abstract;
+   function Read_Schema (Self : Schema_IO) return DB_Schema is abstract;
    --  Retrieve the database schema
 
    procedure Write_Schema (Self : Schema_IO; Schema : DB_Schema) is abstract;
@@ -253,8 +251,7 @@ package GNATCOLL.SQL.Inspect is
    type DB_Schema_IO is new Schema_IO with record
       DB : Database_Connection;
    end record;
-   overriding procedure Read_Schema
-     (Self : DB_Schema_IO; Schema : out DB_Schema);
+   overriding function Read_Schema (Self : DB_Schema_IO) return DB_Schema;
    overriding procedure Write_Schema
      (Self : DB_Schema_IO; Schema : DB_Schema);
    --  Read or write the schema to a live database.
@@ -262,15 +259,21 @@ package GNATCOLL.SQL.Inspect is
    --  views (if DB is set, otherwise output statements to stdout)
 
    type File_Schema_IO is new Schema_IO with record
-      Filename : Ada.Strings.Unbounded.Unbounded_String;
+      File : GNATCOLL.VFS.Virtual_File;
    end record;
-   overriding procedure Read_Schema
-     (Self : File_Schema_IO; Schema : out DB_Schema);
+   overriding function Read_Schema (Self : File_Schema_IO) return DB_Schema;
    overriding procedure Write_Schema
      (Self : File_Schema_IO; Schema : DB_Schema);
    --  Read or write the schema from a file.
    --  See GNATCOLL documentation for the format of this file.
-   --  This will write to stdout if the filename is "-".
+   --  This will write to stdout if the file is No_File
+
+   function New_Schema_IO
+     (File : GNATCOLL.VFS.Virtual_File) return File_Schema_IO'Class;
+   function New_Schema_IO (DB : Database_Connection) return DB_Schema_IO'Class;
+   --  Return a new schema io. This is similar to creating a variable and
+   --  assigning its File or DB field, but is easier to use:
+   --      Schema := New_Schema_IO (Create ("file.txt")).Read_Schema;
 
    Invalid_File : exception;
 

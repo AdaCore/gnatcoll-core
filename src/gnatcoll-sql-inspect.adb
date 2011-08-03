@@ -644,9 +644,10 @@ package body GNATCOLL.SQL.Inspect is
    -- Read_Schema --
    -----------------
 
-   overriding procedure Read_Schema
-     (Self : DB_Schema_IO; Schema : out DB_Schema)
+   overriding function Read_Schema
+     (Self : DB_Schema_IO) return DB_Schema
    is
+      Schema : DB_Schema;
       T : Natural := 0;
 
       procedure On_Table (Name, Description : String; Kind : Relation_Kind);
@@ -781,6 +782,8 @@ package body GNATCOLL.SQL.Inspect is
          Update_Element (Schema.Tables, C, Compute_Foreign_Keys'Access);
          Next (C);
       end loop;
+
+      return Schema;
    end Read_Schema;
 
    --------------
@@ -895,9 +898,10 @@ package body GNATCOLL.SQL.Inspect is
    -- Read_Schema --
    -----------------
 
-   overriding procedure Read_Schema
-     (Self : File_Schema_IO; Schema : out DB_Schema)
+   overriding function Read_Schema
+     (Self : File_Schema_IO) return DB_Schema
    is
+      Schema : DB_Schema;
       Str   : GNAT.Strings.String_Access;
       T     : Natural := 0;  --  Index of the table we are creating
       First : Natural; --  Current index in Str
@@ -1243,7 +1247,7 @@ package body GNATCOLL.SQL.Inspect is
       type Parse_Mode is (Parsing_Table, Parsing_FK);
 
    begin
-      Str := Read_Whole_File (To_String (Self.Filename));
+      Str := Self.File.Read_File;
 
       for Mode in Parse_Mode loop
          First := Str'First;
@@ -1273,22 +1277,22 @@ package body GNATCOLL.SQL.Inspect is
       Free (Str);
 
       if Has_Error then
-         Schema := No_Schema;
+         return No_Schema;
       end if;
+      return Schema;
 
    exception
       when E : Invalid_Type =>
          Free (String_List (Line));
          Put_Line (Standard_Error,
-                   To_String (Self.Filename)
+                   Self.File.Display_Full_Name
                    & ":" & Image (Line_Number, Min_Width => 1) & " "
                    & Exception_Message (E));
-         Schema := No_Schema;
          raise;
 
       when Name_Error =>
-         Put_Line ("Could not open " & To_String (Self.Filename));
-         Schema := No_Schema;
+         Put_Line ("Could not open " & Self.File.Display_Full_Name);
+         return No_Schema;
    end Read_Schema;
 
    ------------------
@@ -1617,14 +1621,14 @@ package body GNATCOLL.SQL.Inspect is
       end For_Table;
 
    begin
-      if Self.Filename /= "-" then
-         Create (To_File, Out_File, To_String (Self.Filename));
+      if Self.File /= No_File then
+         Create (To_File, Out_File, Self.File.Display_Full_Name);
          Set_Output (To_File);
       end if;
 
       For_Each_Table (Schema, For_Table'Access);
 
-      if Self.Filename /= "-" then
+      if Self.File /= No_File then
          Set_Output (Standard_Output);
          Close (To_File);
       end if;
@@ -1977,5 +1981,29 @@ package body GNATCOLL.SQL.Inspect is
          raise Invalid_File with "File not found: " & File.Display_Full_Name;
       end if;
    end Load_Data;
+
+   -------------------
+   -- New_Schema_IO --
+   -------------------
+
+   function New_Schema_IO
+     (File : GNATCOLL.VFS.Virtual_File) return File_Schema_IO'Class is
+   begin
+      return Result : File_Schema_IO do
+         Result.File := File;
+      end return;
+   end New_Schema_IO;
+
+   -------------------
+   -- New_Schema_IO --
+   -------------------
+
+   function New_Schema_IO
+     (DB : Database_Connection) return DB_Schema_IO'Class is
+   begin
+      return Result : DB_Schema_IO do
+         Result.DB := DB;
+      end return;
+   end New_Schema_IO;
 
 end GNATCOLL.SQL.Inspect;
