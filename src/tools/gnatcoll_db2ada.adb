@@ -374,7 +374,6 @@ procedure GNATCOLL_Db2Ada is
          end if;
 
          Connection := Descr.Build_Connection;
-         Reset_Connection (Descr, Connection);
          Dump_Tables (Connection, Enums, Vars);
          DB_IO.DB := Connection;
          DB_IO.Read_Schema (Schema);

@@ -72,11 +72,13 @@ package body GNATCOLL.SQL.Postgres is
    ----------------------
 
    overriding function Build_Connection
-     (Self : Postgres_Description) return Database_Connection
+     (Self : access Postgres_Description) return Database_Connection
    is
-      pragma Unreferenced (Self);
+      DB : Database_Connection;
    begin
-      return GNATCOLL.SQL.Postgres.Builder.Build_Connection;
+      DB := GNATCOLL.SQL.Postgres.Builder.Build_Connection (Self);
+      Reset_Connection (DB);
+      return DB;
    end Build_Connection;
 
    ---------------

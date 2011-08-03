@@ -116,19 +116,6 @@ package GNATCOLL.SQL.Exec is
    --  are logged as if the operation took place. This is only intended for
    --  automatic testsuites.
 
-   type Database_Connection_Record is abstract new Formatter with private;
-   type Database_Connection is access all Database_Connection_Record'Class;
-   --  A thread-specific access to a database. Each thread, in an application,
-   --  should have its own access to the database, so that transactions really
-   --  are thread-specific. This also stores the result of the last query
-   --  executed, and takes care of creating and cancelling transactions when
-   --  needed.
-   --  This type is really an access to some data, so that all subprograms
-   --  below can take IN parameters. This simplifies user-code, which can
-   --  therefore contain functions.
-   --  This abstract type is specialized in GNATCOLL.SQL.Postgres and other
-   --  child packages.
-
    -------------
    -- Cursors --
    -------------
@@ -214,12 +201,29 @@ package GNATCOLL.SQL.Exec is
    --  connection (see the parameter Use_Cache for the Prepare subprograms
    --  below).
 
+   type Database_Connection_Record
+     (Descr : access Database_Description_Record'Class)
+     is abstract new Formatter with private;
+   type Database_Connection is access all Database_Connection_Record'Class;
+   --  A thread-specific access to a database. Each thread, in an application,
+   --  should have its own access to the database, so that transactions really
+   --  are thread-specific. This also stores the result of the last query
+   --  executed, and takes care of creating and cancelling transactions when
+   --  needed.
+   --  This type is really an access to some data, so that all subprograms
+   --  below can take IN parameters. This simplifies user-code, which can
+   --  therefore contain functions.
+   --  This abstract type is specialized in GNATCOLL.SQL.Postgres and other
+   --  child packages.
+
    function Build_Connection
-     (Self : Database_Description_Record)
+     (Self : access Database_Description_Record)
       return Database_Connection is abstract;
    --  Returns a new object to represent connection to the database.
    --  On return, no connection to the DBMS has been made (this will
    --  be done lazily by the turned object).
+   --  If instead you want to reuse an existing connection, you should use
+   --  Reset_Connection below.
 
    procedure Free (Description : in out Database_Description_Record) is null;
    procedure Free (Description : in out Database_Description);
@@ -375,11 +379,12 @@ package GNATCOLL.SQL.Exec is
    --  Reset_Connection (see below).
 
    procedure Reset_Connection
-     (Description : Database_Description;
-      Connection  : access Database_Connection_Record'Class;
+     (Connection  : access Database_Connection_Record'Class;
       Username    : String := "");
-   --  Reset the contents of Connection, and binds it to Description. In
-   --  general, it is better to use Get_Task_Connection which does the
+   --  Reset the contents of Connection.
+   --  This terminates any on-going transaction and resets various internal
+   --  fields.
+   --  In general, it is better to use Get_Task_Connection which does the
    --  necessary things, but when not in a multi-tasking application it is
    --  more efficient to have one "global" variable representing the single
    --  connection, and initialize it with this procedure
@@ -786,8 +791,9 @@ private
    type Database_Description_Record
      (Caching : Boolean) is abstract tagged null record;
 
-   type Database_Connection_Record is abstract new Formatter with record
-      DB             : Database_Description;
+   type Database_Connection_Record
+     (Descr : access Database_Description_Record'Class)
+     is abstract new Formatter with record
       Success        : Boolean := True;
       In_Transaction : Boolean := False;
       Username       : GNAT.Strings.String_Access;

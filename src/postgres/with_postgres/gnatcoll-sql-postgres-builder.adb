@@ -353,9 +353,11 @@ package body GNATCOLL.SQL.Postgres.Builder is
    -- Build_Connection --
    ----------------------
 
-   function Build_Connection return Database_Connection is
+   function Build_Connection
+     (Descr : access Postgres_Description'Class) return Database_Connection
+   is
    begin
-      return new Postgresql_Connection_Record;
+      return new Postgresql_Connection_Record (Descr);
    end Build_Connection;
 
    -----------

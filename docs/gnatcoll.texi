@@ -246,7 +246,8 @@ Configuration files
 Resource pools
 
 Database interface
-* Supported database systems::
+* Database abstraction layers::
+* Connecting to the database::
 * Database schema monitoring::
 * Writing queries::
 * Executing queries::
@@ -3562,21 +3563,98 @@ up-to-date description of these parameters.
 @c -----------------------------------------------------------------------
 @noindent
 
-@value{gnatcoll} provides an interface to various database systems.
-Currently, only PostgreSQL and MySQL are supported, but adding a new
-back-end is a matter of extending a tagged type and overriding the
-appropriate subprograms.
+A lot of applications need to provide @b{persistence} for their data
+(or a part of it). This means the data needs to be somehow saved on the
+disk, to be read and manipulated later, possibly after the application
+has been terminated and restarted. Although Ada provides various solutions
+for this (including the use of the streams as declared in the Ada Reference
+Manual), the common technics is through the use of relational database
+management systems (@b{RDBMS}. The term database is in fact overloaded in
+this context, and has come to mean different things:
 
-This interface was designed with several goals in mind: type-safety,
-integrity with regards to changes to the database schema, ease of
-writing queries and performance. A paper was published at the
-Ada-Europe conference in 2008 which describes the various steps
-we went through in the design of this library. The rest of this
-chapter describes the current status of the library, not its
-history.
+@itemize @bullet
+@item The software system that implements file and query management.
+  This is generally provided by a third-party. The common abbreviation for
+  these is @b{DBMS}. Queries are generally written in a language called
+  @b{SQL}. One of the issues is that each DBMS tends to make minor changes
+  to this language. Another issue is that the way to send these SQL
+  commands to the DBMS is vendor-specific. @value{gnatcoll} tries to
+  abstract this communication through its own API. It currently supports
+  @b{PostgreSQL} and @b{sqlite}, and makes it relatively easy to change
+  between these two systems. For instance, development could be done
+  using a local sqlite DBMS, and then deployed (after testing, of course!)
+  on a PostgreSQL system.
+
+  The code in @value{gnatcoll} is such that adding support for a new DBMS
+  should be relatively easy.
+
+@item A place where an application stores its data. The term
+  @b{database} in this document refers to this meaning. In a relational
+  database, this place is organized into tables, each of which contains
+  a number of fields. A row in a table represents one object. The set of
+  tables and their fields is called the @b{schema} of the database.
+
+@end itemize
+
+Traditionally, writting the SQL queries is done inline: special markers
+are inserted into your code to delimit sections that contain SQL code (as
+opposed to Ada code), and these are then preprocessed to generate actual
+code. This isn't the approach chosen in @value{gnatcoll}: there are
+several drawbacks, in particular your code is no longer Ada and various
+tools will choke on it.
+
+The other usual approach is to write the queries as strings, which are
+passed, via a DBMS-specific API, to the DBMS server. This approach is
+very fragile:
+
+@itemize @bullet
+@item The string might not contain @b{well-formed} SQL. This will
+ unfortunately only be detected at run time when the DBMS complains.
+
+@item This is not @b{type safe}. You might be comparing a text field
+ with an integer, for instance. In some cases, the DBMS will accept that
+ (sqlite for instance), but in some other cases it won't (PostgreSQL). The
+ result might then either raise an error, or return an empty list.
+
+@item There is a risk of @b{SQL injection}. Assuming the string is
+ constructed dynamically (using Ada's @code{&} operator), it might be easy
+ for a user to pass a string that breaks the query, and even destroys
+ things in the database.
+
+@item As discussed previously, the SQL code might not be @b{portable}
+ across DBMS. For instance, creating an automatically increment integer
+ primary key in a table is DBMS specific.
+
+@item The string is fragile if the database @b{schema changes}. Finding
+ whether a schema change impacts any of the queries requires looking at
+ all the strings in your application.
+
+@item @b{performance} might be an issue. Whenever you execute a query,
+ the DBMS will analyze it, decide how to execute it (for instance, whether
+ it should traverse all the rows of a table, or whether it can do a faster
+ lookup), and then retrieve the results. The analysis pass is typically
+ slow (relatively the overall execution time), and queries can in fact
+ be @b{prepared} on the server: they are then analyzed only once, and it
+ is possible to run them several times without paying the price of the
+ analysis every time. Such a query can also be @b{parameterized}, in that
+ some values can be derefed until the query is actually executed.
+ All the above is made easy and portable in @value{gnatcoll}, instead of
+ requering DBMS-specific technics.
+
+@item This might require @b{large amount of code} to setup the query,
+ bind the parameters, execute it, and traverse the list of results.
+
+@end itemize
+
+@value{gnatcoll} attempts to solve all these issues. It also
+provides further performance improvements, for instance
+by keeping connections to the DBMS open and reusing them when possible.
+A paper was published at the Ada-Europe conference in 2008 which describes
+the various steps we went through in the design of this library.
 
 @menu
-* Supported database systems::
+* Database abstraction layers::
+* Connecting to the database::
 * Database schema monitoring::
 * Writing queries::
 * Executing queries::
@@ -3590,8 +3668,76 @@ history.
 @end menu
 
 @c -----------------------------------------------------------------------
-@node Supported database systems
-@section Supported database systems
+@node Database abstraction layers
+@section Abstraction Layers
+@c -----------------------------------------------------------------------
+@noindent
+
+@value{gnatcoll} organizes the API into several layers, each written on
+top of the previous one and providing more abstraction. All layers are
+compatible with each other and can be mixed inside a given application.
+
+@itemize @bullet
+
+@item @b{low-level binding}.
+
+This API is DBMS-specific, and is basically a mapping of the C API provided
+by the DBMS vendors into Ada. If you are porting C code, or working with an
+existing application, as a way to start using @value{gnatcoll} before moving
+to higher levels of abstraction.
+
+The code is found in @file{gnatcoll-sql-sqlite-gnade.ads} and
+@file{gnatcoll-sql-postgres-gnade.ads}. The @i{gnade} part in the file names
+indicate that this code was initially inspired by the @b{GNADE} library
+that used to be available on the internet. Part of the code might in fact
+come from that library.
+
+Using this API requires writting the SQL queries as strings, with all the
+disadvantages that were highlighted at the beginning of this chapter.
+
+@item @b{GNATCOLL.SQL} and @b{GNATCOLL.SQL.Exec}
+
+The first of these packages makes it possible to write type-safe queries
+strongly linked to the database schema (thus with a guarantee that the
+query is up-to-date with regards to the schema). To accomplish this, it
+also relies on code that is generated automatically from a description of
+your database schema, using the tool @code{gnatcoll_db2ada}. To simplify
+memory management, the queries are automatically referenced counted and
+freed when they are no longer needed.
+
+The second of these packages provides communication with the DBMS. It
+provides a vendor-neutral API. You can send your queries either as strings,
+or preferably as written with @code{GNATCOLL.SQL}. It also provides a simple
+way to prepare parameterized statements on the server for maximum efficiency,
+as well as the reuse of existing DBMS connections. It provides a simple
+API to retrieve and manipulate the results from a query.
+
+@item @b{GNATCOLL.SQL.ORM} and @b{GNATCOLL.SQL.Sessions}
+
+This is an Object-Relational Mapping (ORM).
+
+The first of these packages makes it possible to manipulate a database
+without writting SQL. Instead, you manipulate Ada objects (tagged types),
+whose primitive operations might transparently execute SQL queries. This
+API provides caching for maximum efficiency. It relies on code automatically
+generated by @code{gnatcoll_db2ada} from the schema of your database. The
+generated objects can then be extended in your own code if needed.
+
+The second package encapsulates DBMS connections into higher-level objects
+which provide their own caching and work best with the ORM objects. A
+session is automatically released to a pool when no longer needed and will
+be reused later on.
+
+@end itemize
+
+The following sections will ignore the lower layer, and concentrate on the
+other layers. They share a number of types and, again, are fully compatible
+with each other. You could connect to the database, and then write some queries
+using @b{GNATCOLL.SQL} and some using @b{GNATCOLL.SQL.ORM}.
+
+@c -----------------------------------------------------------------------
+@node Connecting to the database
+@section Connecting to the database
 @c -----------------------------------------------------------------------
 @noindent
 
@@ -3612,53 +3758,82 @@ database was installed on your machine at that time, that the database
 interface API is available (and your application compiles), but no
 connection can be done to database at run time.
 
-In your code, you will need to create a connection to the database
-system that you wish to interact with. One possible implementation
-is
+To connect to a DBMS, you need to specify the various connection parameters.
+This is done via a @code{GNATCOLL.SQL.Exec.Database_Description} object.
+The creation of this object depends on the specific DBMS you are connecting
+to (and this is the only part of your code that needs to know about the
+specific system). The packages @code{GNATCOLL.SQL.Postgres} and
+@code{GNATCOLL.SQL.Sqlite} contain a @code{Setup} function, whose parameters
+depend on the DBMS. They provide full documentation for their parameters.
+Let's take a simple example from sqlite:
 
 @CODESAMPLE{
 @b{with} GNATCOLL.SQL.Sqlite;   @i{-- or Postgres}@NL{}
 @b{declare}@NL{}
    DB_Descr : GNATCOLL.SQL.Exec.Database_Description;@NL{}
-   DB : GNATCOLL.SQL.Exec.Database_Connection;@NL{}
 @b{begin}@NL{}@NL{}
-   DB_Descr := GNATCOLL.SQL.Sqlite.Setup ("dbname");@NL{}
-   DB := GNATCOLL.SQL.Exec.Get_Task_Connection@NL{}
-        (Description  => DB_Descr,@NL{}
-         Username     => "myself");@NL{}
+   DB_Descr := GNATCOLL.SQL.Sqlite.Setup ("dbname.db");@NL{}
 @b{end}@NL{}
 }
 
-The code acts in two steps:
-@itemize @bullet
-@item Describe connection parameters
-   The call to @code{Setup} provides the required parameters to
-   establish a connection to a database server which might possibly be
-   running on a remote host. In this call, one specifies the name of
-   the database and various parameters that depend on the DBMS backend
-   (like the user login and password).
+At this point, no connection to the DBMS has been done, and no information
+was exchanged.
 
-   At this point, no connection or exchange of information has been
-   done, the @code{Database_Description} type stores this information
-   for later.
+To communicate with the database, however, we need to create another
+object, a @b{GNATCOLL.SQL.Exec.Database_Connection}. Your application can
+create any number of these. Typically, one would create one such connection
+per task in the application, although other strategies are possible (like
+a pool of reusable connections, where a task might be using two connections and
+another task none at any point in time).
 
-@item Connect to the database
-   The call to @code{Get_Task_Connection} establishes the actual
-   connection. As will be seen later, the recommended practice when
-   the database backend supports it is to establish one connection
-   per thread in your application, and keep it alive even if the
-   thread is reused for another reason later on. An example is a
-   web server which has a pool of tasks, and uses the first
-   available one to reply to a request. The function
-   @code{Get_Task_Connection} will reuse the connection to the
-   database that was already established in this thread, or create
-   a new one through the @code{Database_Description}.
+If you do not plan on using the ORM interface from @b{GNATCOLL.SQL.ORM},
+@value{gnatcoll} provides a simple way to create a task-specific connection.
+While in this task, the same connection will always be returned (thus you
+do not have to pass it around in parameter, although the latter might be
+more efficient).
 
-   This call is the only one that is needed in the various tasks
-   of your application, you obviously do not need to repeat the
-   call to @code{Setup_Database}.
+@CODESAMPLE{
+@b{declare}@NL{}
+   DB : GNATCOLL.SQL.Exec.Database_Connection;@NL{}
+@b{begin}@NL{}@NL{}
+   DB := GNATCOLL.SQL.Exec.Get_Task_Connection@NL{}
+        (Description  => DB_Descr);@NL{}
+@b{end}@NL{}
+}
 
-@end itemize
+If your application is not multi-tasking, or you wish to implement your
+own strategy for a connection pool, you can also use the following code
+(using Ada 2005 dotted notation when calling the primitive operation). This
+code will always create a new connection, not reuse an existing one, as
+opposed to the code above.
+
+@CODESAMPLE{
+@b{declare}@NL{}
+   DB : GNATCOLL.SQL.Exec.Database_Connection;@NL{}
+@b{begin}@NL{}@NL{}
+   DB := DB_Descr.Build_Connection;@NL{}
+@b{end}@NL{}
+}
+
+If you wish to reuse the same connection later on, you must reset it. This
+terminates any on-going SQL transaction, and resets various internal fields
+that describe the state of the connection.
+
+@CODESAMPLE{
+   Reset_Connection (DB);
+}
+
+At this point, there still hasn't been any connection to the DBMS. This will
+be done the first time a query is executed. If for some reason the connection
+to the DBMS server is lost, @value{gnatcoll} will automatically attempt to
+reconnect a number of times before it gives up. This might break if there
+was an ongoing SQL transaction, but simplifies your code since you do not
+have to handle reconnection when there was a network failure, for instance.
+
+If you want to use @b{GNATCOLL.SQL.Sessions} along with the Object-Relational
+Mapping API, you will need to initialize the connection pool with the
+@b{Database_Description}, but the session will then take care automatically
+of creating the @b{Database_Connection}. See later sections for more details.
 
 @c -----------------------------------------------------------------------
 @node Database schema monitoring

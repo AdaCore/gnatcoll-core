@@ -167,8 +167,6 @@ package body GNATCOLL.SQL.Sessions is
         (Me, DB /= null,
          "Could not connect to database. Wrong dbtype set in settings ?");
 
-      Reset_Connection (Descr, DB, Username => "");
-
       return (DB          => DB,
               Cache       => new Element_Cache.Map,
               Tmp_List    => Element_List.Empty_List,

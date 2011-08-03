@@ -877,11 +877,9 @@ package body GNATCOLL.SQL.Exec is
    ----------------------
 
    procedure Reset_Connection
-     (Description : Database_Description;
-      Connection  : access Database_Connection_Record'Class;
+     (Connection  : access Database_Connection_Record'Class;
       Username    : String := "") is
    begin
-      Connection.DB             := Description;
       Rollback (Connection); --  In case a previous thread had started on
       Connection.Success        := True;
 
@@ -913,10 +911,9 @@ package body GNATCOLL.SQL.Exec is
             Trace
               (Me_Error, "Could not create connection object for database");
          end if;
-      end if;
 
-      if Connection /= null then
-         Reset_Connection (Description, Connection, Username);
+      else
+         Reset_Connection (Connection, Username);
       end if;
 
       return Connection;
@@ -1107,7 +1104,7 @@ package body GNATCOLL.SQL.Exec is
       return Database_Description
    is
    begin
-      return Connection.DB;
+      return Database_Description (Connection.Descr);
    end Get_Description;
 
    -----------------
@@ -1343,7 +1340,7 @@ package body GNATCOLL.SQL.Exec is
       end if;
 
       if S.Use_Cache
-        and then Connection.DB.Caching
+        and then Connection.Descr.Caching
       then
          Query_Cache.Get_Result (Stmt, Result, Found, Params);
          if Found then
@@ -1362,7 +1359,7 @@ package body GNATCOLL.SQL.Exec is
 
       if Success (Connection)
         and then S.Use_Cache
-        and then Connection.DB.Caching
+        and then Connection.Descr.Caching
       then
          Query_Cache.Set_Cache (Stmt, Result);
       end if;
@@ -1383,7 +1380,7 @@ package body GNATCOLL.SQL.Exec is
       Result := No_Element;
 
       if S.Use_Cache
-        and then Connection.DB.Caching
+        and then Connection.Descr.Caching
       then
          --  When using a cache, we have to use a Direct_Cursor for the cache
          --  to work

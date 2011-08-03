@@ -39,7 +39,7 @@ package GNATCOLL.SQL.Sqlite is
 
    overriding procedure Free (Self : in out Sqlite_Description);
    overriding function Build_Connection
-     (Self : Sqlite_Description) return Database_Connection;
+     (Self : access Sqlite_Description) return Database_Connection;
 
    function Setup
      (Database      : String;

@@ -54,11 +54,13 @@ package body GNATCOLL.SQL.Sqlite is
    ----------------------
 
    overriding function Build_Connection
-     (Self : Sqlite_Description) return Database_Connection
+     (Self : access Sqlite_Description) return Database_Connection
    is
-      pragma Unreferenced (Self);
+      DB : Database_Connection;
    begin
-      return GNATCOLL.SQL.Sqlite.Builder.Build_Connection;
+      DB := GNATCOLL.SQL.Sqlite.Builder.Build_Connection (Self);
+      Reset_Connection (DB);
+      return DB;
    end Build_Connection;
 
    ----------

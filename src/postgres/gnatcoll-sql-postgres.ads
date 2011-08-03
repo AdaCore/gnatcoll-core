@@ -39,7 +39,7 @@ package GNATCOLL.SQL.Postgres is
 
    overriding procedure Free (Description : in out Postgres_Description);
    overriding function Build_Connection
-     (Self : Postgres_Description) return Database_Connection;
+     (Self : access Postgres_Description) return Database_Connection;
 
    type SSL_Mode is (Disable, Allow, Prefer, Require);
    --  Whether to use SSL to connect to the server. This might not be
