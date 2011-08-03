@@ -1,0 +1,13 @@
+with "gnatcoll";
+with "gnatcoll_sqlite";   -- or "gnatcoll_postgres"
+
+project Default is
+   for Source_Dirs use ("obj",  --  automatically generated files
+                        "src"); --  example files
+   for Object_Dir use "obj";
+   for Main use ("library.adb");
+
+   package Compiler is
+      for Switches ("Ada") use ("-gnat05");
+   end Compiler;
+end Default;

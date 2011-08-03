@@ -268,16 +268,18 @@ procedure Generate (Generated : String) is
                   Finish_Subprogram (Id);
                end if;
 
-               Put_Line (Spec_File, "   function FK (Self : T_" &
-                         Capitalize (Table.Name) &
-                         "; Foreign : T_" & Capitalize (To.Get_Table.Name) &
-                         "'Class) return SQL_Criteria;");
+               Put_Line
+                 (Spec_File, "   function FK (Self : T_" &
+                    Capitalize (Table.Name) &
+                    "'Class; Foreign : T_" & Capitalize (To.Get_Table.Name) &
+                    "'Class) return SQL_Criteria;");
 
                New_Line (Body_File);
-               Put_Line (Body_File, "   function FK (Self : T_" &
-                         Capitalize (Table.Name) &
-                         "; Foreign : T_" & Capitalize (To.Get_Table.Name) &
-                         "'Class) return SQL_Criteria is");
+               Put_Line
+                 (Body_File, "   function FK (Self : T_" &
+                    Capitalize (Table.Name) &
+                    "'Class; Foreign : T_" & Capitalize (To.Get_Table.Name) &
+                    "'Class) return SQL_Criteria is");
                Put_Line (Body_File, "   begin");
                Put (Body_File, "      return Self.");
             else

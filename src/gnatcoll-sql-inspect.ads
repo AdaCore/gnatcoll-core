@@ -389,6 +389,9 @@ private
 
       Active      : Boolean := True;
 
+      Has_PK      : Boolean := False;
+      --  Whether the table has a primary key
+
       Super_Table : Table_Description := No_Table;
       --  The table from which we inherit fields
    end record;

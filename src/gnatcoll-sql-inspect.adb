@@ -1030,7 +1030,6 @@ package body GNATCOLL.SQL.Inspect is
          Line  : Line_Fields;
          Attr_Id : Natural := 0;
          Props : Field_Properties;
-         Has_PK : Boolean := False;
       begin
          T := T + 1;
 
@@ -1051,6 +1050,7 @@ package body GNATCOLL.SQL.Inspect is
                     Description => null,
                     Fields      => Empty_Field_List,
                     Is_Abstract => False,
+                    Has_PK      => False,
                     FK          => Foreign_Keys.Empty_List,
                     Active      => True,
                     Super_Table => No_Table));
@@ -1084,7 +1084,9 @@ package body GNATCOLL.SQL.Inspect is
                   To_Table : Table_Description;
 
                begin
-                  Has_PK := Has_PK or else Props.PK;
+                  TDR (Table.Get).Has_PK :=
+                    Props.PK or else TDR (Table.Get).Has_PK;
+
                   Set (Att, Field_Description'
                          (Weak_Refcounted with
                           Name        => new String'(Line (1).all),
@@ -1157,7 +1159,11 @@ package body GNATCOLL.SQL.Inspect is
 
          --  Check that the table has a valid Primary Key
 
-         if not Has_PK and not Table.Is_Abstract then
+         if not TDR (Table.Get).Has_PK
+           and then not Table.Is_Abstract
+           and then (Table.Super_Table = No_Table
+                     or else not TDR (Table.Super_Table.Get).Has_PK)
+         then
             Put_Line ("Error: table '"
                       & Table.Name & "' has no primary key");
             Has_Error := True;

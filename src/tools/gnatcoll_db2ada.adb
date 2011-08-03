@@ -356,7 +356,10 @@ procedure GNATCOLL_Db2Ada is
          end case;
       end loop;
 
-      if DB_Model = null then
+      if DB_Name.all /= "" then
+         --  If the user specified the name of a database, we connect to it.
+         --  This might be to read the schema, or to create the database
+
          if DB_Type.all = "postgresql" then
             Descr := GNATCOLL.SQL.Postgres.Setup
               (Database      => DB_Name.all,
@@ -374,11 +377,17 @@ procedure GNATCOLL_Db2Ada is
          end if;
 
          Connection := Descr.Build_Connection;
-         Dump_Tables (Connection, Enums, Vars);
          DB_IO.DB := Connection;
-         DB_IO.Read_Schema (Schema);
 
-      else
+         --  If we should read the model from the database
+
+         if DB_Model = null then
+            Dump_Tables (Connection, Enums, Vars);
+            DB_IO.Read_Schema (Schema);
+         end if;
+      end if;
+
+      if DB_Model /= null then
          File_IO.Filename := To_Unbounded_String (DB_Model.all);
          File_IO.Read_Schema (Schema);
       end if;
@@ -386,7 +395,6 @@ procedure GNATCOLL_Db2Ada is
       --  Output will always be to stdout
 
       File_IO.Filename := To_Unbounded_String ("-");
-      DB_IO.DB         := null;
 
       Free (DB_Name);
       Free (DB_Host);

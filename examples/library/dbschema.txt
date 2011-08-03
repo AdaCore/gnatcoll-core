@@ -1,0 +1,19 @@
+# for Emacs: -*- mode: org; mode: flyspell; fill-column: 79 -*-
+
+| TABLE | customers     | customer        |   | The customer for the library |
+| id    | AUTOINCREMENT | PK              |   | Auto-generated id            |
+| first | TEXT          | NOT NULL        |   | Customers' first name        |
+| last  | TEXT          | NOT NULL, INDEX |   | Customers' last name         |
+
+| ABSTRACT TABLE | media               | media |   | The contents of the library |
+| id             | AUTOINCREMENT       | PK    |   | Auto-generated id           |
+| title          | TEXT                |       |   | The title of the media      |
+| author         | TEXT                |       |   | The author                  |
+| published      | DATE                |       |   | Publication date            |
+| borrowed_by    | FK customers(items) | NULL  |   | Who borrowed the media      |
+
+| TABLE (media) | books   | book |     | The books in the library |
+| pages         | INTEGER |      | 100 |                          |
+
+| TABLE (media) | dvds    | dvd |   | The dvds in the library |
+| region        | INTEGER |     | 1 |                         |
