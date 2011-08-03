@@ -31,7 +31,10 @@ package body GNATCOLL.SQL.Postgres.Builder is
    -- Build_Connection --
    ----------------------
 
-   function Build_Connection return Database_Connection is
+   function Build_Connection
+      (Descr : access Postgres_Description'Class) return Database_Connection
+   is
+      pragma Unreferenced (Descr);
    begin
       return null;
    end Build_Connection;
