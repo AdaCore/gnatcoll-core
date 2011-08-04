@@ -257,19 +257,24 @@ package body GNATCOLL.SQL.Sqlite.Builder is
    --------------
 
    overriding procedure Finalize (Self : in out Sqlite_Cursor) is
-      Status : Result_Codes;
    begin
       if Self.Stmt /= No_Statement then
          if Self.Free_Stmt then
             Finalize (Self.Stmt);
          else
-            --  We need to reset the statement to free all exclusive LOCKS it
-            --  might hold
-            Status := Reset (Self.Stmt);
-            if Status /= Sqlite_OK then
-               Trace (Me, "Error when reseting cursor to free LOCKS: "
-                      & Status'Img);
-            end if;
+            --  We used to reset Self.Stmt here.
+            --  But this is in fact dangerous: the statement is in fact the
+            --  same DBMS_Stmt that is stored in
+            --  gnatcoll.sql.exec.prepared_in_session_stmt. If the latter was
+            --  finalized before Self is finalized, we end up with a storage
+            --  error because we are referencing freed memory.
+            --  Instead, Reset is called when we initialize the query. At worse
+            --  this means we are keeping a bit of memory allocated in sqlite
+            --  for the DBMS_Stmt for the prepared statements, even though we
+            --  will not call Step() again. But this isn't a memory leak since
+            --  the memory will be freed if the prepared statement is finalized
+
+            null;
          end if;
          Self.Stmt := No_Statement;
       end if;
@@ -457,6 +462,7 @@ package body GNATCOLL.SQL.Sqlite.Builder is
       Res2   : Sqlite_Direct_Cursor_Access;
       Stmt   : Statement;
       Last_Status : Result_Codes;
+      Status : Result_Codes;
    begin
       --  Since we have a prepared statement, the connection already exists, no
       --  need to recreate.
@@ -464,6 +470,16 @@ package body GNATCOLL.SQL.Sqlite.Builder is
       --  used to initialize the direct cursor.
 
       Stmt := Unchecked_Convert (Prepared);
+
+      --  We used to do the reset in Finalize, but this is incorrect, see the
+      --  comment there.
+
+      Clear_Bindings (Stmt);
+      Status := Reset (Stmt);
+      if Status /= Sqlite_OK then
+         Trace (Me, "Error when reseting cursor to free LOCKS: "
+                & Status'Img);
+      end if;
 
       for P in Params'Range loop
          if Params (P) = Null_Parameter then

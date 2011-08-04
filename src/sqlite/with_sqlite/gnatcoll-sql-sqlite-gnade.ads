@@ -245,6 +245,9 @@ package GNATCOLL.SQL.Sqlite.Gnade is
    function Reset (Stmt : Statement) return Result_Codes;
    --  Reset the statement, so that next call to step() returns the first row
 
+   procedure Clear_Bindings (Stmt : Statement);
+   --  Use this routine to reset all bound host parameters to NULL
+
    function Last_Insert_Rowid (DB : Database) return Long_Integer;
    --  This routine returns the rowid of the most recent successful INSERT into
    --  the database from the database connection in the first argument. If no
@@ -380,5 +383,6 @@ private
    pragma Import (C, DB_Handle,         "sqlite3_db_handle");
    pragma Import (C, Last_Insert_Rowid, "sqlite3_last_insert_rowid");
    pragma Import (C, Reset,             "sqlite3_reset");
+   pragma Import (C, Clear_Bindings,    "sqlite3_clear_bindings");
 
 end GNATCOLL.SQL.Sqlite.Gnade;

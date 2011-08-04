@@ -12,7 +12,8 @@ cd ..
 # -m switch is so that gnatmake does not use timestamps but checksums
 # for dependencies (otherwise since we regenerate the files every time
 # we also recompile every time)
-gnatmake -q -m -Pdefault.gpr
+gnatmake -q -g -m -Pdefault.gpr
 
 # Run the executable
-./obj/library
+#    ./obj/library
+#    valgrind --leak-check=full ./obj/library
