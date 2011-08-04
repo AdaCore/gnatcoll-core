@@ -5,7 +5,7 @@ rm -f library.db
 gnatcoll_db2ada -dbtype=sqlite -dbname=library.db -dbmodel=../dbschema.txt -createdb
 
 # Generate the Ada API
-gnatcoll_db2ada -api=Database -dbmodel=../dbschema.txt
+gnatcoll_db2ada -api=Database -orm=ORM -dbmodel=../dbschema.txt
 
 cd ..
 
@@ -16,4 +16,4 @@ gnatmake -q -g -m -Pdefault.gpr
 
 # Run the executable
 #    ./obj/library
-#    valgrind --leak-check=full ./obj/library
+    valgrind --leak-check=full ./obj/library

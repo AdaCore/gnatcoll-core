@@ -3,14 +3,16 @@
 --                 Copyright (C) 2011, AdaCore                       --
 -----------------------------------------------------------------------
 
-with GNATCOLL.SQL;         use GNATCOLL.SQL;
-with GNATCOLL.SQL.Exec;    use GNATCOLL.SQL.Exec;
+with GNATCOLL.SQL;          use GNATCOLL.SQL;
+with GNATCOLL.SQL.Exec;     use GNATCOLL.SQL.Exec;
 with GNATCOLL.SQL.Sqlite;
-with GNATCOLL.SQL.Inspect; use GNATCOLL.SQL.Inspect;
-with GNATCOLL.VFS;         use GNATCOLL.VFS;
-with Database;             use Database;
-with Ada.Text_IO;          use Ada.Text_IO;
-with GNATCOLL.Traces;      use GNATCOLL.Traces;
+with GNATCOLL.SQL.Inspect;  use GNATCOLL.SQL.Inspect;
+with GNATCOLL.SQL.Sessions; use GNATCOLL.SQL.Sessions;
+with GNATCOLL.VFS;          use GNATCOLL.VFS;
+with Database;              use Database;
+with ORM;                   use ORM;
+with Ada.Text_IO;           use Ada.Text_IO;
+with GNATCOLL.Traces;       use GNATCOLL.Traces;
 
 procedure Library is
    Descr : Database_Description :=
@@ -70,9 +72,72 @@ begin
       end loop;
    end;
 
-   --  Free memory
+   --  Free memory for part 1
 
    Free (DB);
    Free (Descr);
+
+   ---------------------------------------------------
+   --  Part 2: using GNATCOLL.SQL.ORM
+   --  The following code does the same queries as above, but using the
+   --  ORM.
+   ---------------------------------------------------
+
+   GNATCOLL.SQL.Sessions.Setup
+      (Descr        => GNATCOLL.SQL.Sqlite.Setup ("obj/library.db"),
+       Max_Sessions => 2);
+
+   declare
+      Session : constant Session_Type := Get_New_Session;
+      B : Book_List;
+      CL : Customer_List;
+      C : ORM.Detached_Customer'Class := Get_Customer (Session, Id => 1);
+   begin
+      Put_Line ("Customer id 1 is " & C.Last);
+
+      --  SQL-like query
+      B := All_Books.Filter
+         (Books.FK (Customers) and Customers.Last = "Smith")
+         .Select_Related (1, Follow_Left_Join => True)
+         .Get (Session);
+      while B.Has_Row loop
+         Put_Line ("Borrowed by " & B.Element.Borrowed_By.Last
+                   & " title=" & B.Element.Title
+                   & " pages=" & B.Element.Pages'Img);
+         B.Next;
+      end loop;
+
+      --  Using the more powerful ORM
+      B := C.Borrowed_Books.Get (Session);
+      while B.Has_Row loop
+         Put_Line ("Borrowed by smith: " & B.Element.Title);
+         B.Next;
+      end loop;
+
+      --  Change a customer, but do not commit to the database yet. So
+      --  the change only exists in memory
+      C.Set_Last ("Smit");
+      C.Set_First ("Andrew");
+
+      --  Retrieve the list of all customers, and make sure the modified
+      --  one is indeed seen with the new values, even though the DBMS
+      --  doesn't know about the changes.
+
+      CL := All_Customers.Get (Session);
+      while CL.Has_Row loop
+         Put_Line ("Customer: " & CL.Element.First & " "
+                   & CL.Element.Last);
+         CL.Next;
+      end loop;
+
+      Session.Commit;
+   end;
+
+   GNATCOLL.SQL.Sessions.Free;
+
+   ---------------------------------------------------
+   --  Free memory
+   ---------------------------------------------------
+
    GNATCOLL.Traces.Finalize;
 end Library;

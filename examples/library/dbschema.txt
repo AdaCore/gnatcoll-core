@@ -10,10 +10,11 @@
 | title          | TEXT                |       |   | The title of the media      |
 | author         | TEXT                |       |   | The author                  |
 | published      | DATE                |       |   | Publication date            |
-| borrowed_by    | FK customers(items) | NULL  |   | Who borrowed the media      |
 
-| TABLE (media) | books   | book |     | The books in the library |
-| pages         | INTEGER |      | 100 |                          |
+| TABLE (media) | books                        | book |     | The books in the library |
+| pages         | INTEGER                      |      | 100 |                          |
+| borrowed_by   | FK customers(borrowed_books) | NULL |     | Who borrowed the media   |
 
-| TABLE (media) | dvds    | dvd |   | The dvds in the library |
-| region        | INTEGER |     | 1 |                         |
+| TABLE (media) | dvds                        | dvd  |   | The dvds in the library |
+| region        | INTEGER                     |      | 1 |                         |
+| borrowed_by   | FK customers(borrowed_dvds) | NULL |   | Who borrowed the media  |

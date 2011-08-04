@@ -283,6 +283,11 @@ package body GNATCOLL.SQL.Orm.Impl is
       begin
          Result.Data  := (Session => Session, Follow_LJ => Self.Follow_LJ);
          Result.Depth := Select_Related (Self);
+
+         if Session.Flush_Before_Query then
+            Session.Flush;
+         end if;
+
          Result.Fetch (Session.DB, Build_Query (Self), Params);
          return Result;
       end Get;
@@ -302,6 +307,11 @@ package body GNATCOLL.SQL.Orm.Impl is
       begin
          Result.Data  := (Session => Session, Follow_LJ => Follow_LJ);
          Result.Depth := Integer (Related);
+
+         if Session.Flush_Before_Query then
+            Session.Flush;
+         end if;
+
          Result.Fetch (Session.DB, Query, Params);
          return Result;
       end Get;
@@ -349,6 +359,11 @@ package body GNATCOLL.SQL.Orm.Impl is
       begin
          Result.Data  := (Session => Session, Follow_LJ => Self.Follow_LJ);
          Result.Depth := Select_Related (Self);
+
+         if Session.Flush_Before_Query then
+            Session.Flush;
+         end if;
+
          Result.Fetch (Session.DB, Build_Query (Self), Params => Params);
          return Result;
       end Get_Direct;
@@ -366,6 +381,11 @@ package body GNATCOLL.SQL.Orm.Impl is
       begin
          Result.Data  := (Session => Session, Follow_LJ => Query.Follow_LJ);
          Result.Depth := Integer (Query.Related);
+
+         if Session.Flush_Before_Query then
+            Session.Flush;
+         end if;
+
          Result.Fetch (Session.DB, Query.Stmt, Params);
          return Result;
       end Get;
@@ -383,6 +403,11 @@ package body GNATCOLL.SQL.Orm.Impl is
       begin
          Result.Data  := (Session => Session, Follow_LJ => Query.Follow_LJ);
          Result.Depth := Integer (Query.Related);
+
+         if Session.Flush_Before_Query then
+            Session.Flush;
+         end if;
+
          Result.Fetch (Session.DB, Query.Stmt, Params => Params);
          return Result;
       end Get_Direct;

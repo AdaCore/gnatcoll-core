@@ -1952,6 +1952,7 @@ class Field(object):
         self.show = show
 
         self._fk = None
+        self.pk = False  # This field is a primary key
 
         self.__default = default  # See default_field () instead
         if default.find("::") != -1:
@@ -2242,6 +2243,8 @@ class Table(object):
                 f = copy.copy(f)
                 f.table = self
                 self.fields.append(f)
+                if f.pk:
+                    self.pk.append(f)
 
 
 def get_db_schema(setup, requires_pk=False, all_tables=[], omit=[]):
@@ -2318,6 +2321,7 @@ def get_db_schema(setup, requires_pk=False, all_tables=[], omit=[]):
                                         not in omit)
                     table.fields.append(field)
                     if fields[3] == "PK":
+                        field.pk = True
                         table.pk.append(field)
 
     # Now resolve all foreign keys

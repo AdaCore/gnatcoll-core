@@ -26,3 +26,4 @@ examples/library/obj/database.ad?
 examples/library/obj/database_names.ads
 examples/library/obj/library
 examples/library/obj/library.db
+examples/library/obj/orm.ad?

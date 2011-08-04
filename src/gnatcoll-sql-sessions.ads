@@ -130,9 +130,6 @@ package GNATCOLL.SQL.Sessions is
    --  If true, a Flush is performed before a query (in a SQL transaction, not
    --  committed). This ensures that the results of the query will be accurate
    --  although it might be slightly less efficient in some scenarios.
-   --  This setting is not used automatically by this setup: it is the
-   --  responsibility of your code to make sure Session.Flush is called before
-   --  a query.
    --
    --  Persist_Cascade:
    --  If true, persisting an element (through a call to Persist) will also

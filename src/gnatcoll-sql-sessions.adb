@@ -509,6 +509,7 @@ package body GNATCOLL.SQL.Sessions is
 
                else
                   --  If it is modified, it must belong to a session
+                  Session.Element.Has_Modified_Elements := True;
                   Session.Persist (Self);
                end if;
             end;
@@ -584,12 +585,8 @@ package body GNATCOLL.SQL.Sessions is
               with "Element already belongs to another session";
          end if;
 
-         --  Element is already in the session, nothing else to do
-         if Active (Me) then
-            Trace (Me, "Add: already in session " & Hash (Element));
-         end if;
-
-         return;
+         --  Element is already in the session, but might not be in the cache
+         --  if it wasn't modified before and Config_Store_Unmodified is False.
       end if;
 
       D.Session := Get_Weak (Self);

@@ -255,9 +255,12 @@ Database interface
 * Executing queries::
 * Prepared queries::
 * Getting results::
-* Writing your own cursors::
 * Creating your own SQL types::
 * Query logs::
+* Writing your own cursors::
+* The Object-Relational Mapping layer (ORM)::
+* Modifying objects in the ORM::
+* Object factories in ORM::
 
 @end detailmenu
 @end ifnothtml
@@ -3664,9 +3667,12 @@ the various steps we went through in the design of this library.
 * Executing queries::
 * Prepared queries::
 * Getting results::
-* Writing your own cursors::
 * Creating your own SQL types::
 * Query logs::
+* Writing your own cursors::
+* The Object-Relational Mapping layer (ORM)::
+* Modifying objects in the ORM::
+* Object factories in ORM::
 @end menu
 
 @c -----------------------------------------------------------------------
@@ -4974,6 +4980,119 @@ For both types of cursors, @value{gnatcoll} automatically manages memory
 the code compared to using the low-level APIs.
 
 @c -----------------------------------------------------------------------
+@node Creating your own SQL types
+@section Creating your own SQL types
+@c -----------------------------------------------------------------------
+@noindent
+
+@value{gnatcoll} comes with a number of predefined types that you can use in
+your queries. @file{gnatcoll_db2ada} will generate a file using any of these
+predefined types, based on what is defined in your actual database.
+
+But sometimes, it is convenient to define your own SQL types to better
+represent the logic of your application. For instance, you might want to
+define a type that would be for a @code{Character} field, rather than use
+the general @code{SQL_Field_Text}, just so that you can write statements
+like:
+
+@CODESAMPLE{
+  @b{declare}@NL{}
+     C : Character := 'A';@NL{}
+     Q : SQL_Query;@NL{}
+  @b{begin}@NL{}
+     Q := SQL_Select (.., Where => Table.Field = C);@NL{}
+  @b{end}@NL{}
+}
+
+This is fortunately easily achieved by instantiating one generic package,
+as such
+
+@CODESAMPLE{
+  @b{with} GNATCOLL.SQL_Impl; @b{use} GNATCOLL.SQL_Impl;@NL{}
+@NL{}
+  @b{function} To_SQL (C : Character) @b{return} String @b{is}@NL{}
+  @b{begin}@NL{}
+     @b{return} "'" & C & "'";@NL{}
+  @b{end} To_SQL;@NL{}
+@NL{}
+  @b{package} Character_Fields @b{is new} Field_Types (Character, To_SQL);@NL{}
+  @b{type} SQL_Field_Character @b{is new} Character_Fields.Field@NL{}
+     @b{with null record};@NL{}
+}
+
+This automatically makes available both the field type (which you can use in
+your database description, as @file{gnatcoll_db2ada} would do, but also
+all comparison operators like @code{<}, @code{>}, @code{=}, and so on, both
+to compare with another character field, or with @code{Character} Ada
+variable. Likewise, this makes available the assignment operator @code{=}
+so that you can create @code{INSERT} statements in the database.
+
+Finally, the package @code{Character_Fields} contain other generic
+packages which you can instantiate to bind SQL operators and functions that
+are either predefined in SQL and have no equivalent in @value{gnatcoll} yet,
+or that are functions that you have created yourself on your DBMS server.
+
+See the specs of @code{GNATCOLL.SQL_Impl} for more details. This package
+is only really useful when writing your own types, since otherwise you
+just have to use @code{GNATCOLL.SQL} to write the actual queries.
+
+@c -----------------------------------------------------------------------
+@node Query logs
+@section Query logs
+@c -----------------------------------------------------------------------
+@noindent
+
+In @ref{Logging information} we discovered the logging module of
+@value{gnatcoll}. The database interface uses this module to log the
+queries that are sent to the server.
+
+If you activate traces in your application, the user can then activate
+one of the following trace handles to get more information on the
+exchange that exists between the database and the application. As we saw
+before, the output of these traces can be sent to the standard output, a
+file, the system logs,...
+
+The following handles are provided:
+
+@itemize @bullet
+@item SQL.ERROR
+This stream is activated by default. Any error returned by the database
+(connection issues, failed transactions,...) will be logged on this stream
+
+@item SQL
+This stream logs all queries that are not SELECT queries, ie mostly all
+queries that actually modify the database
+
+@item SQL.SELECT
+This stream logs all select queries. It is separated from SQL because
+very often you will be mostly interested in the queries that impact the
+database, and logging all selects can generate a lot of output.
+@end itemize
+
+In our library example, we would add the following code to see all SQL
+statements executed on the server:
+
+@CODESAMPLE{
+@b{with} GNATCOLL.Traces;  @b{use} GNATCOLL.Traces;
+@b{procedure} Main @b{is}
+@b{begin}
+   GNATCOLL.Traces.Parse_Config_File (".gnatdebug");
+   ... --  code as before
+   GNATCOLL.Traces.Finalize;  --  reclaim memory
+}
+
+and then create a .gnatdebug in the directory from which we launch our
+executable. This file would contain a single line containing "+" to
+activate all log streams, or the following to activate only the subset of
+fields related to SQL:
+
+@CODESAMPLE{
+SQL=yes
+SQL.SELECT=yes
+SQL.LITE=yes
+}
+
+@c -----------------------------------------------------------------------
 @node Writing your own cursors
 @section Writing your own cursors
 @c -----------------------------------------------------------------------
@@ -5095,117 +5214,596 @@ of rows in the result (3 in the example). You thus need to also override
 those two subprograms to return correct values.
 
 @c -----------------------------------------------------------------------
-@node Creating your own SQL types
-@section Creating your own SQL types
+@node The Object-Relational Mapping layer (ORM)
+@section The Object-Relational Mapping layer (ORM)
 @c -----------------------------------------------------------------------
 @noindent
 
-@value{gnatcoll} comes with a number of predefined types that you can use in
-your queries. @file{gnatcoll_db2ada} will generate a file using any of these
-predefined types, based on what is defined in your actual database.
+@value{gnatcoll} provides a high-level interface to manipulate persistent
+objects stored in a database, using a common paradigm called an
+object-relational mapping. Such mappings exist for most programming
+languages. In the design of @value{gnatcoll}, we were especially inspired
+by the python interface in @code{django} and @code{sqlalchemy}, although the
+last two rely on dynamic run time introspection and @value{gnatcoll} relies
+on code generation instead.
 
-But sometimes, it is convenient to define your own SQL types to better
-represent the logic of your application. For instance, you might want to
-define a type that would be for a @code{Character} field, rather than use
-the general @code{SQL_Field_Text}, just so that you can write statements
-like:
+This API is still compatible with @code{GNATCOLL.SQL}. In fact, we'll
+show below cases where the two are mixed. It can also be mixed with
+@code{GNATCOLL.SQL.Exec}, although this might be more risky. Communication
+with the DBMS is mostly transparent in the ORM, and it uses various caches
+to optimize things and make sure that if you modify an element the next
+querie(s) will also return it. If you use @code{GNATCOLL.SQL.Exec} directly
+you are bypassing this cache so you risk getting inconsistent results in
+some cases.
+
+In ORM, a table is not manipulated directly. Instead, you manipulate objects
+that are read or written to a table. When we defined our database schema
+(@pxref{Database schema}), we gave two names on the first line of a table
+definition. There was the name of the table in the database, and the name
+of the object that each row represent. So for our library example we have
+defined @code{Customer}, @code{Book} and @code{Dvd} objects. These objects
+are declared in a package generated automatically by @code{gnatcoll_db2ada}.
+
+There is first one minor change we need to do to our library example. The
+ORM currently does not handle properly cases where an abstract class has
+foreign keys to other tables. So we remove the @code{borrowed_by} field
+from the @code{Media} table, and change the @code{books} table to be:
 
 @CODESAMPLE{
-  @b{declare}@NL{}
-     C : Character := 'A';@NL{}
-     Q : SQL_Query;@NL{}
-  @b{begin}@NL{}
-     Q := SQL_Select (.., Where => Table.Field = C);@NL{}
-  @b{end}@NL{}
+| TABLE (media) | books                        | book |     | The books in the library |@NL{}
+| pages         | INTEGER                      |      | 100 |                          |@NL{}
+| borrowed_by   | FK customers(borrowed_books) | NULL |     | Who borrowed the media   |@NL{}
 }
 
-This is fortunately easily achieved by instantiating one generic package,
-as such
+Let's thus start by generating this code. We can replace the command we
+ran earlier (with the @code{-api} switch) with one that will also generate
+the ORM API.
 
 @CODESAMPLE{
-  @b{with} GNATCOLL.SQL_Impl; @b{use} GNATCOLL.SQL_Impl;@NL{}
-@NL{}
-  @b{function} To_SQL (C : Character) @b{return} String @b{is}@NL{}
-  @b{begin}@NL{}
-     @b{return} "'" & C & "'";@NL{}
-  @b{end} To_SQL;@NL{}
-@NL{}
-  @b{package} Character_Fields @b{is new} Field_Types (Character, To_SQL);@NL{}
-  @b{type} SQL_Field_Character @b{is new} Character_Fields.Field@NL{}
-     @b{with null record};@NL{}
+   gnatcoll_db2ada -dbmode dbschema.txt -api Database -orm ORM
 }
 
-This automatically makes available both the field type (which you can use in
-your database description, as @file{gnatcoll_db2ada} would do, but also
-all comparison operators like @code{<}, @code{>}, @code{=}, and so on, both
-to compare with another character field, or with @code{Character} Ada
-variable. Likewise, this makes available the assignment operator @code{=}
-so that you can create @code{INSERT} statements in the database.
+The ORM provides a pool of database connections through the package
+@code{GNATCOLL.SQL.Sessions}. A session therefore acts as a wrapper around
+a connection, and provides a lot more advanced features that will be
+described later. The first thing to do in the code is to configure the
+session pool. The @code{Setup} procedure takes a lot of parameters to
+make sessions highly configurable. Some of these parameters will be
+described and used in this documentation, others are for special usage and
+are only documented in @file{gnatcoll-sql-sessions.ads}. Here will we
+use only specify the mandatory parameters and leave the default value for
+the other parameters.
 
-Finally, the package @code{Character_Fields} contain other generic
-packages which you can instantiate to bind SQL operators and functions that
-are either predefined in SQL and have no equivalent in @value{gnatcoll} yet,
-or that are functions that you have created yourself on your DBMS server.
+@CODESAMPLE{
+  GNATCOLL.SQL.Sessions.Setup
+     (Descr  => GNATCOLL.SQL.Sqlite.Setup ("library.db"),
+      Max_Sessions => 2);
+}
 
-See the specs of @code{GNATCOLL.SQL_Impl} for more details. This package
-is only really useful when writing your own types, since otherwise you
-just have to use @code{GNATCOLL.SQL} to write the actual queries.
+The first parameter is the same @code{Database_Description} we saw
+earlier (@pxref{Connecting to the database}), but it will be freed
+automatically by the sessions package, so you should not free it
+yourself.
 
-@c -----------------------------------------------------------------------
-@node Query logs
-@section Query logs
-@c -----------------------------------------------------------------------
-@noindent
+Once configure, we can now request a session. Through a session, we can
+perform queries on the database, make objects persistent, write the
+changes back to the database,@dots{}. We configured the session pool
+to have at most 2 sessions. The first time we call @code{Get_New_Session},
+a new session will be created in the pool and marked as busy. While you
+have a reference to it in your code (generally as a local variable), the
+session belongs to this part of the code. When the session is no longer
+in scope, it is automatically released to the pool to be reused for the
+next call to @code{Get_New_Session}. If you call @code{Get_New_Session}
+a second time while some part of your code holds a session (for instance
+in a different task), a new session will be created. But if you do that
+a third time while the other two are busy, the call to @code{Get_New_Session}
+is blocking until one of the two sessions is released to the pool.
 
-In @ref{Logging information} we discovered the logging module of
-@value{gnatcoll}. The database interface uses this module to log the
-queries that are sent to the server.
+This technics ensures optimal use of the resources: we avoid creating
+a new session every time (with the performance cost of connecting to the
+database), but also avoid creating an unlimited number of sessions which
+could saturate the server. Since the sessions are created lazily the first
+time they are needed, you can also configure the package with a large
+number of sessions with a limited cost.
 
-If you activate traces in your application, the user can then activate
-one of the following trace handles to get more information on the
-exchange that exists between the database and the application. As we saw
-before, the output of these traces can be sent to the standard output, a
-file, the system logs,...
+Let's then take a new session in our code:
 
-The following handles are provided:
+@CODESAMPLE{
+   Session : @b{constant} Session_Type := Get_New_Session;
+}
+
+and let's immediately write our first simple query. A customer comes at
+the library, handles his card and we see his id (1). We need to look up
+in the database to find out who he is. Fortunately, there is no SQL to
+write for this.
+
+@CODESAMPLE{
+  C : ORM.Detached_Customer'Class := Get_Customer (Session, Id => 1);
+}
+
+The call to @code{Get_Customer} performs a SQL query transparently, using
+prepared statements for maximum efficiency. This results in a
+@code{Customer} object.
+
+@code{ORM} is the package that was generated automatically by
+@code{gnatcoll_db2ada}. For each table in the database, it generates a
+number of types:
 
 @itemize @bullet
-@item SQL.ERROR
-This stream is activated by default. Any error returned by the database
-(connection issues, failed transactions,...) will be logged on this stream
+@item @code{Customer}
 
-@item SQL
-This stream logs all queries that are not SELECT queries, ie mostly all
-queries that actually modify the database
+This type represents a row of the @code{Customers} table. It comes with
+a number of primitive operations, in particular one for each of the
+fields in the table. Such an object is returned by a cursor, similarly
+to what was described in the previous section (@pxref{Writing your own
+cursors}). This object is no longer valid as soon as the cursor moves to
+the next row (in the currently implementation, the object will describe
+the next row, but it is best not to rely on this). As a benefit, this
+object is light weight and does not make a copy of the value of the
+fields, only reference the memory that is already allocated for the cursor.
 
-@item SQL.SELECT
-This stream logs all select queries. It is separated from SQL because
-very often you will be mostly interested in the queries that impact the
-database, and logging all selects can generate a lot of output.
+This object redefines the equality operator ("=") to compare the
+primary key fields to get expected results.
+
+@item @code{Detached_Customer}
+
+A detached object is very similar to the @code{Customer} object, but it
+will remain valid even if the cursor moves or is destroyed. In fact, the
+object has made a copy of the value for all of its fields. This object
+is heavier than a @code{Customer}, but sometimes easier to manager. If
+you want to store an object in a data structure, you must always store
+a detached object.
+
+A detached object also embeds a cache for its foreign keys. In the
+context of our demo for instance, a @code{Book} object was borrowed by
+a customer. When returning from a query, the book knows the id of that
+customer. But if call @code{B.Borrowed_By} this returns a
+@code{Detached_Customer} object which is cached (the first time, a query
+is made to the DBMS to find the customer given his id, but the second
+time this value is already cached).
+
+One cache create a @code{Detached_Customer} from a @code{Customer} by
+calling the @code{Detach} primitive operation.
+
+@item @code{Customer_List}
+
+This type extends a @code{Forward_Cursor} (@pxref{Getting results}). In
+addition to the usual @code{Has_Row} and @code{Next} operations, it also
+provides an @code{Element} operation that returns a @code{Customer} for
+easy manipulation of the results.
+
+@item @code{Direct_Customer_List}
+
+This type extends a @code{Direct_Cursor}. It also adds a @code{Element}
+operation that returns a @code{Customer} element.
+
+@item @code{Customers_Managers}
+
+This type is the base type to perform queries on the DBMS. A manager
+provides a number of primitive operations which end up creating a SQL
+query operation in the background, without making that explicit.
+
+Let's first write a query that returns all books in the database:
+
+@CODESAMPLE{
+@b{declare}@NL{}
+   M : Books_Managers := All_Books;@NL{}
+   BL : Book_List := M.Get (Session);@NL{}
+   B : Book;
+@b{begin}@NL{}
+   while BL.Has_Row loop@NL{}
+      B := BL.Element;
+      Put_Line ("Book: " & B.Title);@NL{}
+      Put_Line ("   Borrowed by: " & B.Borrowed_By.Last);@NL{}
+      BL.Next;@NL{}
+   end loop;@NL{}
+@b{end;}
+}
+
+The manager @code{M} corresponds to a query that returns all the books
+in the database. The second line then executes the query on the database,
+and returns a list of books. We then traverse the list. Note how we access
+the book's title by calling a function, rather than by the index of a
+field as we did with @code{GNATCOLL.SQL.Exec} with Value(B, 0). The code
+is much less fragile this way.
+
+The line that calls @code{Borrowed_By} will execute an additional SQL
+query for each book. This might be inefficient if there is a large number
+of books. We will show later how this can be optimized.
+
+The manager however has a lot more primitive operations that can be used
+to alter the result. Each of these primitive operations returns a modified
+copy of the manager, so that you can easily chain calls to those primitive
+operations. Those operations are all declared in the package
+@code{GNATCOLL.SQL.ORM.Impl} if you want to look at the documentation.
+Here are those operations:
+
+@itemize @bullet
+@item @code{Get} and @code{Get_Direct}
+
+As seen in the example above, these are the two functions that execute the
+query on the database, and returns a list of objects (respectively a
+@code{Customer_List} and a @code{Direct_Customer_List}).
+
+@item @code{Distinct}
+
+Returns a copy of the manager that does not return twice a row with the
+same data (in SQL, this is the "DISTINCT" operator)
+
+@item @code{Limit} (Count : Natural; From : Natural := 0)
+
+Returns a copy of the manager that returns a subset of the results, for
+instance the first @code{Count} ones.
+
+@item @code{Order_By} (By : SQL_Field_List)
+
+Returns a copy of the manager that sorts the results according to a criteria.
+The criteria is a list of field as was defined in @code{GNATCOLL.SQL}.
+We can for instance returns the list of books sorted by title, and only the
+first 5 books, by replacing @code{M} with the following:
+
+@CODESAMPLE{
+   M : Books_Managers := All_Books.Limit (5).Order_By (Books.Title);
+}
+
+@item @code{Filter}
+
+Returns a subset of the result matching a criteria. There are currently
+two versions of Filter: one is specialized for the table, and has one
+parameter for each field in the table. We can for instance return all the
+books by Alexandre Dumas by using
+
+@CODESAMPLE{
+   M : Books_Managers := All_Books.Filter (Author => "Dumas");
+}
+
+This version only provides the equality operator for the fields of the
+table itself. If for instance we wanted all books with less than 50 pages,
+we would use the second version of filter. This version takes a
+@code{GNATCOLL.SQL.SQL_Criteria} similar to what was explained in previous
+sections, and we would write:
+
+@CODESAMPLE{
+   M : Books_Managers := All_Books.Filter (Condition => Books.Pages < 50);
+}
+
+More complex conditions are possible, involving other tables. Currently,
+the ORM does not have a very user-friendly interface for those, but you
+can always do this by falling back partially to SQL. For instance, if we
+want to retrieve all the books borrowed by user "Smith", we need to
+involve the @code{Customers} table, and thus make a join with the
+@code{Books} table. In the future, we intend to make this join automatic,
+but for now you will need to write:
+
+@CODESAMPLE{
+   M : Books_Managers := All_Books.Filter@NL{}
+     (Books.FK (Customers)@NL{}
+      and Customers.Last = "Smith");@NL{}
+@NL{}
+   -- SQL query: SELECT books.pages, books.borrowed_by, books.id,@NL{}
+   --    books.title, books.author, books.published@NL{}
+   --    FROM books, customers@NL{}
+   --    WHERE books.borrowed_by=customers.id AND customers.last='Smith'@NL{}
+}
+
+This is still simpler code than we were writting with @code{GNATCOLL.SQL}
+because we do not have to specify the fields or tables, and the results
+are objects rather than fields with specific indexes.
+
+@item @code{Select_Related} (Depth : Integer; Follow_Left_Join : Boolean)
+
+This function returns a new manager that will retrieve all related
+objects. In the example we gave above, we mentioned that every time
+@code{B.Borrowed_By} was called, this resulted in a call to the DBMS.
+We can optimize this by making sure the manager will retrieve that
+information. As a result, there will be a single query rather than lots.
+Be careful however, since the query will return more data, so it might
+sometimes be more efficient to perform multiple smaller queries.
+
+@code{Depth} indicates on how many levels the objects should be retrieved.
+For instance, assume we change the schema such that a Book references
+a Customer which references an Address. If we pass 1 for @code{Depth},
+the data for the book and the customer will be retrieved. If however you
+then call @code{B.Borrowed_By.Address} this will result in a query. So
+if you pass 2 for @code{Depth} the data for book, customers and addresses
+will be retrieved.
+
+The second parameter related to efficiency. When a foreign key was mentioned
+as @code{NOT NULL} in the schema, we know it is always pointing to an
+existing object in another table. @code{Select_Related} will always
+retrieve such objects. If, however, the foreign key can be null, ie there
+isn't necessarily a corresponding object in the other table, the SQL
+query needs to use a @code{LEFT JOIN}, which is less efficient.  By default,
+@value{gnatcoll} will not retrieve such fields unless @code{Follow_Left_Join}
+was set to True.
+
+In our example, a book is not necessarily borrowed by a customer, so we need
+to follow the left joins.
+
+@CODESAMPLE{
+   M : Books_Managers := All_Books.Filter@NL{}
+     (Books.FK (Customers)@NL{}
+      and Customers.Last = "Smith")
+     .Select_Related (1, Follow_Left_Join => True);@NL{}
+@NL{}
+   -- SQL query:  SELECT books.pages, books.borrowed_by, books.id,@NL{}
+   --    books.title, books.author, books.published,@NL{}
+   --    customers.id, customers.first, customers.last@NL{}
+   --    FROM (books LEFT JOIN customers ON books.borrowed_by=customers.id)@NL{}
+   --    WHERE books.borrowed_by=customers.id AND customers.last='Smith'@NL{}
+}
+
 @end itemize
 
-In our library example, we would add the following code to see all SQL
-statements executed on the server:
+@end itemize
+
+@subsection revert relationships
+
+In fact, the query we wrote above could be written differently. Remember
+we have already queries the @code{Customer} object for id 1 through a
+call to @code{Get_Customer}. Since our schema specified a @code{revert_name}
+for the foreign key @code{borrowed_by} in the table @code{books}, we can
+in fact simply use:
 
 @CODESAMPLE{
-@b{with} GNATCOLL.Traces;  @b{use} GNATCOLL.Traces;
-@b{procedure} Main @b{is}
-@b{begin}
-   GNATCOLL.Traces.Parse_Config_File (".gnatdebug");
-   ... --  code as before
-   GNATCOLL.Traces.Finalize;  --  reclaim memory
+   BL := C.Borrowed_Books.Get (Session);@NL{}
+@NL{}
+   -- SQL: SELECT books.pages, books.borrowed_by, books.id, books.title,@NL{}
+   --    books.author, books.published FROM books@NL{}
+   --    WHERE books.borrowed_by=1@NL{}
 }
 
-and then create a .gnatdebug in the directory from which we launch our
-executable. This file would contain a single line containing "+" to
-activate all log streams, or the following to activate only the subset of
-fields related to SQL:
+@code{Borrowed_Books} is a function that was generated because there was
+a @code{revert_name}. It returns a @code{Books_Managers}, so we could
+in fact further filter the list of borrowed books with the same primitive
+operations we just saw. As you can see, the resulting SQL is optimital.
+
+Let's optimize further the initial query. We have hard-coded the
+customer name, but in fact we could be using the same subprograms we
+were using for prepared statements (@pxref{Prepared queries}), and even
+prepare the query on the server for maximum efficiency. Since our application
+is likely to use this query a lot, let's create a global variable
 
 @CODESAMPLE{
-SQL=yes
-SQL.SELECT=yes
-SQL.LITE=yes
+   M : constant Books_Managers := All_Books.Filter@NL{}
+     (Books.FK (Customers)@NL{}
+      and Customers.Id = Integer_Param (1))@NL{}
+     .Select_Related (1, Follow_Left_Join => True);@NL{}
+@NL{}
+   MP : constant ORM_Prepared_Statement :=@NL{}
+     M.Prepare (On_Server => True);@NL{}
+@NL{}
+   ... later in the code@NL{}
+@NL{}
+   Smith_Id : constant Natural := 1;@NL{}
+   BL : Book_List := MP.Get (Session, Params => (1 => Smith_Id));@NL{}
 }
+
+The last call to @code{Get} is very efficient, with timing improvements
+similar to the ones we discussed on the session about prepared statements
+(@pxref{Prepared queries}).
+
+@c -----------------------------------------------------------------------
+@node Modifying objects in the ORM
+@section Modifying objects in the ORM
+@c -----------------------------------------------------------------------
+@noindent
+
+The ORM is much more than writing queries. Once the objects are persistent,
+they can also be simplify modified, and they will be saved in the database
+transparently.
+
+Let's start with a simple example. In the previous section, we retrieve an
+object @code{C} representing a customer. Let's change his name, and make
+sure the change is in the database.
+
+@CODESAMPLE{
+   C := Get_Customer (Session, 1);@NL{}
+   C.Set_Last ("Smit");@NL{}
+   C.Set_First ("Andrew");@NL{}
+   Session.Commit;@NL{}
+}
+
+A reasonable way to modify the database. However, this opens a can of
+complex issues that need to be dealt with.
+
+When we called @code{Set_Last}, this modify the objects in memory. At this
+point, printing the value of @code{C.Last} would indeed print the new value
+as expected. The object was also marked as modified. But no change was
+made in the database.
+
+Such a change in the database might in fact be rejected, depending on
+whether there are constraints on the field. For instance, say there existed
+a constraint that @code{Last} must be the same @code{First} (bear with me,
+this is just an example). If we call @code{Set_Last}, the constraint is
+not satisfied until we also call @code{Set_First}. But if the former resulted
+in an immediate change in the database, it would be rejected and we would not
+even get a change to call @code{Set_First}.
+
+Instead, the session keeps a pointer to all the objects that have been
+modified. When it is committed, it traverses this list of objects, and
+commits their changes into the database. In the example we gave above, the
+call to @code{Commit} will thus commit the changes to @code{C} in the
+database. For efficiency, it uses a single SQL statement for that, which also
+ensures the constraint remains valid.
+
+@CODESAMPLE{
+UPDATE customers SET first='Andrew', last='Smit' WHERE customers.id=1;
+}
+
+We can create a new customer by using similar code:
+
+@CODESAMPLE{
+   C := New_Customer;@NL{}
+   C.Set_First ("John");@NL{}
+   C.Set_Last ("Lee");@NL{}
+   Session.Persist (C);@NL{}
+@NL{}
+   Session.Commit;@NL{}
+}
+
+@code{New_Customer} allocates a new object in memory. However, this object
+is not persistent. You can call all the @code{Set_*} subprograms, but the
+object will not be saved in the database until you add it explicitly to
+a session with a call to @code{Persist}, and then @code{Commit} the
+session as usual.
+
+Another issue can occur when objects can be modified in memory. Imagine
+we retrieve a customer, modify it in memory but do not commit to the
+database yet because there are other changes we want to do in the same
+SQL transaction. We then retrieve the list of all customers. Of course,
+the customer we just modified is part of this list, but the DBMS does not
+know about the change which currently only exists in memory.
+
+
+Thankfully,
+@value{gnatcoll} takes care of this issue automatically: as we mentioned
+before, all modified objects are stored in the session. When traversing
+the list of results, the cursors will check whether the session already
+contains an element with the same id that it sees in the result, and if
+yes will return the existing (i.e. modified) element. For instance:
+
+@CODESAMPLE{
+   C := Get_Customer (Session, Id => 1);@NL{}
+   C.Set_Last ("Lee");@NL{}
+@NL{}
+   CL : Customer_List := All_Customers.Get (Session);@NL{}
+   while CL.Has_Row loop@NL{}
+      Put_Line (CL.Element.Last);@NL{}
+      CL.Next;@NL{}
+   end loop;@NL{}
+}
+
+@cindex Flush_Before_Query
+The above example uses @code{CL.Element}, which is a light-weight
+@code{Customer} object. Such objects will only see the in-memory changes
+if you have set @code{Flush_Before_Query} to true when you configured
+the sessions in the call to @code{GNATCOLL.SQL.Sessions.Setup}. Otherwise,
+it will always return what's really in the database.
+
+If the example was using @code{Detached_Customer} object (by calling
+@code{CL.Element.Detach} for instance) then @value{gnatcoll} looks up in
+its internal cache and returns the cached element when possible. This is
+a subtetly, but this is because an @code{Customer} only exists as long as
+its cursor, and therefore cannot be cached in the session. In practive, the
+@code{Flush_Before_Query} should almost always be true and there will be
+not surprising results.
+
+@c -----------------------------------------------------------------------
+@node Object factories in ORM
+@section Object factories in ORM
+@c -----------------------------------------------------------------------
+@noindent
+
+Often, a database table is used to contain objects that are semantically
+of a different kind. In this section, we will take a slightly different
+example from the library. We no longer store the books and the dvds in
+separate tables. Instead, we have one single @code{media} table which
+contains the title and the author, as well as a new field @code{kind}
+which is either 0 for a book or 1 for a dvd.
+
+Let's now look at all the media borrowed by a customer:
+
+@CODESAMPLE{
+   C : constant Customer'Class := Get_Customer (Session, Id => 1);@NL{}
+   ML : Media_List := C.Borrowed_Media.Get (Session);@NL{}
+@NL{}
+   while ML.Has_Row loop@NL{}
+      case ML.Element.Kind is@NL{}
+         when 0 =>@NL{}
+            Put_Line ("A book " & ML.Element.Title);@NL{}
+         when 1 =>@NL{}
+            Put_Line ("A dvd " & ML.Element.Title);@NL{}
+      end case;@NL{}
+      ML.Next;@NL{}
+   end loop;@NL{}
+}
+
+This code works, but requires a case statement. Now, let's imagine
+the check out procedure is different for a book and a DVD (for the latter
+we need to check that the disk is indeed in the box). We would have two
+subprograms @code{Checkout_Book} and @code{Checkout_DVD} and call them
+from the case. This isn't object-oriented programming.
+
+Instead, we will declare two new types:
+
+@CODESAMPLE{
+   type My_Media is abstract new ORM.Detached_Media with private;@NL{}
+   procedure Checkout (Self : My_Media) is abstract;@NL{}
+@NL{}
+   type Detached_Book is new My_Media with private;@NL{}
+   overriding Checkout (Self : Detached_Book);@NL{}
+@NL{}
+   type Detached_DVD is new My_Media with private;@NL{}
+   overriding Checkout (Self : Detached_DVD);@NL{}
+}
+
+We could manually declare a new Media_List and override @code{Element} so
+that it returns either of the two types instead of a @code{Media}.
+But then we would also need to override @code{Get} so that it returns our
+new list. This is tedious.
+
+We will instead use an element factory in the session. This is a function
+that gets a row of a table (in the form of a @code{Customer}), and returns
+the appropriate type to use when the element is detached (by default,
+the detached type corresponding to a @code{Customer} is a
+@code{Detached_Customer}, and that's what we want to change).
+
+So let's create such a factory:
+
+@CODESAMPLE{
+function Media_Factory@NL{}
+   (From    : Base_Element'Class;@NL{}
+    Default : Detached_Element'Class) return Detached_Element'Class@NL{}
+is@NL{}
+begin@NL{}
+   if From in Media'Class then@NL{}
+      case Media (From).Kind is@NL{}
+         when 0 => @NL{}
+            return R : Detached_Book do null; end return;@NL{}
+         when 1 =>@NL{}
+            return R : Detached_DVD do null; end return;@NL{}
+         when others =>@NL{}
+            return Default;@NL{}
+      end case;@NL{}
+   end if;@NL{}
+   return Default;@NL{}
+end Media_Factory;@NL{}
+@NL{}
+Session.Set_Factory (Media_Factory'Access);@NL{}
+}
+
+This function is a bit tricky. It is associated with a given session (although
+we can also register a default factory that will be associated with all
+sessions by default). For all queries done through this session (and for
+all tables) it will be called. So we must first check whether we are dealing
+with a row from the @code{Media} table. If not, we simply return the
+suggested @code{Default} value (which has the right @code{Detached_*} kind
+corresponding to the type of @code{From}).
+
+If we have a row from the @code{Media} table, we then retrieve its kind
+(through the usual automatically generated function) to return an
+instance of @code{Detached_Book} or @code{Detached_DVD}. We use the
+Ada05 notation for extended return statements, but we could also use a
+declare block with a local variable and return that variable. The returned
+value does not need to be further initialized (the session will take care
+of the rest of the initialization).
+
+We can now write our code as such
+
+@CODESAMPLE{
+   C : constant Customer'Class := Get_Customer (Session, Id => 1);@NL{}
+   ML : Media_List := C.Borrowed_Media.Get (Session);@NL{}
+@NL{}
+   while ML.Has_Row loop@NL{}
+      Checkout (ML.Element.Detach);   --  Dispatching@NL{}
+      ML.Next;@NL{}
+   end loop;@NL{}
+}
+
+The loop is cleaner. Of course, we still have the case statement, but it
+now only exists in the factory, no matter how many loops we have or how
+many primitive operations of the media we want to define.
 
 @c -----------------------------------------------------------------------
 @node Index
