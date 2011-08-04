@@ -257,6 +257,7 @@ package body GNATCOLL.SQL.Sqlite.Builder is
    --------------
 
    overriding procedure Finalize (Self : in out Sqlite_Cursor) is
+      Status : Result_Codes;
    begin
       if Self.Stmt /= No_Statement then
          if Self.Free_Stmt then
@@ -275,6 +276,17 @@ package body GNATCOLL.SQL.Sqlite.Builder is
             --  the memory will be freed if the prepared statement is finalized
 
             null;
+
+            --  ??? Temporarily put these back, since otherwise there are
+            --  remaining locks, and the modeling project fails
+
+            Clear_Bindings (Self.Stmt);
+            Status := Reset (Self.Stmt);
+            if Status /= Sqlite_OK then
+               Trace (Me, "Error when reseting cursor to free LOCKS: "
+                      & Status'Img);
+            end if;
+
          end if;
          Self.Stmt := No_Statement;
       end if;
