@@ -627,6 +627,8 @@ package body GNATCOLL.SQL.Sessions is
            (Ref     => new Detached_Element'Class'(Element),
             Deleted => False,
             WRef    => Pointers.Null_Weak_Ref);
+         Inserted : Boolean;
+         Pos : Element_Cache.Cursor;
       begin
          if Config_Weak_Cache
            and then not Is_Dirty (Detached_Data_Access (Element.Get))
@@ -636,9 +638,11 @@ package body GNATCOLL.SQL.Sessions is
             To_Real_Reference (R);
          end if;
 
-         Self.Element.Cache.Include (Key => H, New_Item => R);
-
-         On_Persist (Element);
+         Self.Element.Cache.Insert
+           (Key => H, New_Item => R, Position => Pos, Inserted => Inserted);
+         if Inserted then
+            On_Persist (Element);
+         end if;
       end;
    end Persist;
 
