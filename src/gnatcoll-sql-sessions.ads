@@ -220,6 +220,12 @@ package GNATCOLL.SQL.Sessions is
    --      be removed from the session (and then we end up in the first case
    --      above).
 
+   function Is_Null (Self : Detached_Element) return Boolean;
+   pragma Inline (Is_Null);
+   --  Whether the element is unset.
+   --  It is better to use this operator rather than compare (with "=") with
+   --  a Null_Element.
+
    Already_Persistent : exception;
    procedure Persist
      (Self : Session_Type; Element : Detached_Element'Class);

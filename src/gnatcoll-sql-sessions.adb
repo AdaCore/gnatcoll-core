@@ -325,6 +325,15 @@ package body GNATCOLL.SQL.Sessions is
       return Self.Element.Factory (From, Default);
    end Factory;
 
+   -------------
+   -- Is_Null --
+   -------------
+
+   function Is_Null (Self : Detached_Element) return Boolean is
+   begin
+      return Self.Get = null;
+   end Is_Null;
+
    ----------
    -- Free --
    ----------
