@@ -275,18 +275,12 @@ package body GNATCOLL.SQL.Sqlite.Builder is
             --  will not call Step() again. But this isn't a memory leak since
             --  the memory will be freed if the prepared statement is finalized
 
-            null;
-
-            --  ??? Temporarily put these back, since otherwise there are
-            --  remaining locks, and the modeling project fails
-
             Clear_Bindings (Self.Stmt);
             Status := Reset (Self.Stmt);
             if Status /= Sqlite_OK then
                Trace (Me, "Error when reseting cursor to free LOCKS: "
                       & Status'Img);
             end if;
-
          end if;
          Self.Stmt := No_Statement;
       end if;

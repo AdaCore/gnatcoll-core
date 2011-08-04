@@ -74,6 +74,7 @@ begin
 
    --  Free memory for part 1
 
+   R := No_Element;
    Free (DB);
    Free (Descr);
 
