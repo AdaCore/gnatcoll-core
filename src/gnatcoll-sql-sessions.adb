@@ -596,9 +596,9 @@ package body GNATCOLL.SQL.Sessions is
 
          --  Element is already in the session, but might not be in the cache
          --  if it wasn't modified before and Config_Store_Unmodified is False.
+      else
+         D.Session := Get_Weak (Self);
       end if;
-
-      D.Session := Get_Weak (Self);
 
       if not Config_Store_Unmodified then
          if not Is_Dirty (D) then
