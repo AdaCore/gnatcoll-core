@@ -39,6 +39,12 @@ NF-14-K729-026 New package GNATCOLL.Pools (2011-07-29)
    where resources are allocated when needed, automatically released to the
    pool when no longer needed, and then reused later on.
 
+NF-14-K729-010 New package GNATCOLL.SQL.ORM (2011-08-04)
+
+   This package provides an object-relational mapping API to make objects
+   persistent into a database, through the use of automatically generated
+   code.
+
 NF-14-K719-014 Support for embedded SQLite (2011-07-29)
 
    GNATCOLL can now be configured with the option "--with-sqlite=embedded".
