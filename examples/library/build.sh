@@ -16,4 +16,4 @@ gnatmake -q -g -m -Pdefault.gpr
 
 # Run the executable
 #    ./obj/library
-    valgrind --leak-check=full ./obj/library
+#    valgrind --leak-check=full ./obj/library

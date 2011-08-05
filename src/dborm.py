@@ -2355,8 +2355,8 @@ class Graph(object):
 
         tables = get_db_schema(setup)
 
-        output_file = os.path.abspath(output_file)
-        output = file(output_file, "w")
+        abs_output_file = os.path.abspath(output_file)
+        output = file(abs_output_file, "w")
         output.write("""
 digraph g {
   graph [
@@ -2436,9 +2436,11 @@ digraph g {
         output.write("}")
         output.close()
 
+        abs_ps = abs_output_file.replace(".dot", ".ps")
         ps = output_file.replace(".dot", ".ps")
         try:
-            sub = subprocess.Popen(["dot", "-Tps", "-o", ps, output_file])
+            sub = subprocess.Popen(
+                ["dot", "-Tps", "-o", abs_ps, abs_output_file])
             sub.wait()
         except OSError:
             pass
