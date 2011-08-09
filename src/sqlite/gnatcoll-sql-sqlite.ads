@@ -33,7 +33,7 @@ with GNAT.Strings;        use GNAT.Strings;
 
 package GNATCOLL.SQL.Sqlite is
 
-   Sqlite_Always_Use_Transactions : Boolean := False;
+   Sqlite_Always_Use_Transactions : Boolean := True;
    --  Sqlite is faster if we always use transactions, even for SELECT
    --  statements, according to
    --  http://web.utk.edu/~jplyon/sqlite/SQLite_optimization_FAQ.html
