@@ -263,6 +263,12 @@ package GNATCOLL.SQL.Sessions is
    --  If your application terminates or crashes, the changes are not
    --  permanent until you call Commit.
 
+   procedure Begin_Transaction (Self : Session_Type);
+   --  Start a SQL transaction. This call is not needed in general, since the
+   --  session will do it automatically when needed. However, some DBMS
+   --  recommend performing the select queries also in a transaction, so you
+   --  might want to force the use of transactions in some cases.
+
    procedure Commit (Self : Session_Type);
    procedure Rollback (Self : Session_Type);
    --  Commit or rollback the session. A Flush is performed as needed, and the

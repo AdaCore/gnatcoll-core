@@ -898,6 +898,17 @@ package body GNATCOLL.SQL.Sessions is
          Decrease_Indent (Me, "while in flushing session");
    end Flush;
 
+   -----------------------
+   -- Begin_Transaction --
+   -----------------------
+
+   procedure Begin_Transaction (Self : Session_Type) is
+   begin
+      if not In_Transaction (Self.DB) then
+         Execute (Self.DB, SQL_Begin);
+      end if;
+   end Begin_Transaction;
+
    ------------
    -- Commit --
    ------------
