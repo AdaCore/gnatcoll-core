@@ -498,6 +498,10 @@ package body GNATCOLL.SQL.Exec is
 
    begin
       if R = null then
+         if Active (Me_Error) then
+            Trace (Me_Error, "Transaction failed " & Query);
+         end if;
+
          Set_Failure (Connection);
 
       elsif Is_Select then
@@ -508,6 +512,9 @@ package body GNATCOLL.SQL.Exec is
          Connection.Success := Is_Success (DBMS_Forward_Cursor'Class (R.all));
 
          if not Connection.Success then
+            if Active (Me_Error) then
+               Trace (Me_Error, "Transaction failed in select " & Query);
+            end if;
             Set_Failure (Connection);
 
             if Active (Me_Query) then
@@ -530,6 +537,10 @@ package body GNATCOLL.SQL.Exec is
       else
          Connection.Success := Is_Success (DBMS_Forward_Cursor'Class (R.all));
          if not Connection.Success then
+            if Active (Me_Error) then
+               Trace (Me_Error, "Transaction failed " & Query);
+            end if;
+
             Set_Failure
               (Connection, Error_Msg (DBMS_Forward_Cursor'Class (R.all)));
 
@@ -611,22 +622,25 @@ package body GNATCOLL.SQL.Exec is
             & " (" & Connection.Username.all & ")");
          return;
 
-      elsif not Connection.In_Transaction
-        and then Is_Begin
-      then
-         Connection.In_Transaction := True;
+      elsif Is_Begin then
+         if not Connection.In_Transaction then
+            Connection.In_Transaction := True;
 
-      elsif Connection.In_Transaction
-        and then Is_Begin
-      then
-         --  ??? Could be ignored silently in fact, but this helps debugging
-         raise Program_Error;
+         else
+            --  Ignore silently: GNATCOLL might have started a transaction
+            --  without the user knowing, for instance on the first SELECT
+            --  statement if Always_Use_Transactions is true.
+            null;
+         end if;
 
       elsif not Connection.In_Transaction
-        and then not Is_Commit
-        and then not Is_Rollback
-        and then not Is_Select   --  INSERT, UPDATE, LOCK, DELETE,...
         and then not Is_Pragma (Query) --  for sqlite
+        and then
+          (Connection.Always_Use_Transactions
+           or else
+             (not Is_Commit
+              and then not Is_Rollback
+              and then not Is_Select))   --  INSERT, UPDATE, LOCK, DELETE,...
       then
          --  Start a transaction automatically
          Was_Started := Start_Transaction (Connection);
@@ -797,6 +811,7 @@ package body GNATCOLL.SQL.Exec is
      (Connection : access Database_Connection_Record'Class;
       Error_Msg  : String := "") is
    begin
+      Trace (Me_Error, "Marking current transaction as failure");
       Connection.Success := False;
       if Connection.Error_Msg = null then
          if Error_Msg /= "" then

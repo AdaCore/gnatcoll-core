@@ -217,8 +217,9 @@ package body GNATCOLL.SQL.Sessions is
       Increase_Indent (Me, "Releasing session");
       if Data.Cache /= null then
          Clear_Cache (Data);
-         Rollback (Data.DB, "");  --  Release any pending transaction
       end if;
+
+      Rollback (Data.DB, "");  --  Release any pending transaction
 
       if Data.User /= null then
          Trace (Me, "Freeing session data");

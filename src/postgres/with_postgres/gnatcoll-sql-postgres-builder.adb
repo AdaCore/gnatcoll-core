@@ -357,7 +357,8 @@ package body GNATCOLL.SQL.Postgres.Builder is
      (Descr : access Postgres_Description'Class) return Database_Connection
    is
    begin
-      return new Postgresql_Connection_Record (Descr);
+      return new Postgresql_Connection_Record
+        (Descr, Always_Use_Transactions => False);
    end Build_Connection;
 
    -----------

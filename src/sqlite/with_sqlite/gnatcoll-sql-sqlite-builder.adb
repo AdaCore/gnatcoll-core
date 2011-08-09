@@ -941,9 +941,12 @@ package body GNATCOLL.SQL.Sqlite.Builder is
    ----------------------
 
    function Build_Connection
-     (Descr : access Sqlite_Description'Class) return Database_Connection is
+     (Descr : access Sqlite_Description'Class) return Database_Connection
+   is
    begin
-      return new Sqlite_Connection_Record (Descr);
+      return new Sqlite_Connection_Record
+        (Descr,
+         Always_Use_Transactions => Sqlite_Always_Use_Transactions);
    end Build_Connection;
 
    ----------------------

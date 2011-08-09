@@ -202,7 +202,8 @@ package GNATCOLL.SQL.Exec is
    --  below).
 
    type Database_Connection_Record
-     (Descr : access Database_Description_Record'Class)
+     (Descr : access Database_Description_Record'Class;
+      Always_Use_Transactions : Boolean)
      is abstract new Formatter with private;
    type Database_Connection is access all Database_Connection_Record'Class;
    --  A thread-specific access to a database. Each thread, in an application,
@@ -215,6 +216,9 @@ package GNATCOLL.SQL.Exec is
    --  therefore contain functions.
    --  This abstract type is specialized in GNATCOLL.SQL.Postgres and other
    --  child packages.
+   --  Always_Use_Transactions is used internally to indicate whether GNATCOLL
+   --  should always start a SQL transaction even for SELECT statements. This
+   --  might result in significant speed ups for some DBMS (sqlite)
 
    function Build_Connection
      (Self : access Database_Description_Record)
@@ -795,7 +799,8 @@ private
      (Caching : Boolean) is abstract tagged null record;
 
    type Database_Connection_Record
-     (Descr : access Database_Description_Record'Class)
+     (Descr : access Database_Description_Record'Class;
+      Always_Use_Transactions : Boolean)
      is abstract new Formatter with record
       Success        : Boolean := True;
       In_Transaction : Boolean := False;
