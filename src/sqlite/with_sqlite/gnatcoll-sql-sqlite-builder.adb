@@ -187,12 +187,12 @@ package body GNATCOLL.SQL.Sqlite.Builder is
    begin
       --  Retry commands up to 5 times automatically, in case we get a
       --  SQLITE_BUSY status.
-      if Count < 5 then
+      if Count < 300 then
          if Active (Me) then
             Trace (Me, "Received SQLITE_BUSY, trying again. Attempt="
                    & Count'Img);
          end if;
-         delay 0.1;
+         delay 0.3;
          return 1;
       else
          return 0;
@@ -468,7 +468,6 @@ package body GNATCOLL.SQL.Sqlite.Builder is
       Res2   : Sqlite_Direct_Cursor_Access;
       Stmt   : Statement;
       Last_Status : Result_Codes;
-      Status : Result_Codes;
    begin
       --  Since we have a prepared statement, the connection already exists, no
       --  need to recreate.
@@ -476,16 +475,6 @@ package body GNATCOLL.SQL.Sqlite.Builder is
       --  used to initialize the direct cursor.
 
       Stmt := Unchecked_Convert (Prepared);
-
-      --  We used to do the reset in Finalize, but this is incorrect, see the
-      --  comment there.
-
-      Clear_Bindings (Stmt);
-      Status := Reset (Stmt);
-      if Status /= Sqlite_OK then
-         Trace (Me, "Error when reseting cursor to free LOCKS: "
-                & Status'Img);
-      end if;
 
       for P in Params'Range loop
          if Params (P) = Null_Parameter then

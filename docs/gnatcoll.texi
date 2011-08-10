@@ -4330,6 +4330,24 @@ opposed to the code above.
 @b{end}@NL{}
 }
 
+A note on concurrency: if you implement your own pool, you might sometimes
+end up with dead locks when using sqlite. If a task uses two or more
+connections to sqlite, and you use the default setting of creating SQL
+transactions even for @code{SELECT} statements (see
+@code{GNATCOLL.SQL.Sqlite.Always_Use_Transactions}), the following scenario
+will result in a deadlock:
+
+@CODESAMPLE{
+   DB1 := ... new connection to sqlite
+      ... execute a SELECT through DB1. The latter then holds a shared
+      ... lock, preventing other connections from writing (but not from
+      ... reading).
+   DB2 := ... another connection in the same thread
+      ... execute an INSERT through DB2. This tries to get a lock, which
+      ... will fail while DB1 holds the shared lock. Since these are in
+      ... the same thread, this will deadlock.
+}
+
 If you wish to reuse the same connection later on, you must reset it. This
 terminates any on-going SQL transaction, and resets various internal fields
 that describe the state of the connection.
