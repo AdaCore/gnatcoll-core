@@ -4332,7 +4332,7 @@ opposed to the code above.
 
 A note on concurrency: if you implement your own pool, you might sometimes
 end up with dead locks when using sqlite. If a task uses two or more
-connections to sqlite, and you use the default setting of creating SQL
+connections to sqlite, and you setup GNATCOLL to create SQL
 transactions even for @code{SELECT} statements (see
 @code{GNATCOLL.SQL.Sqlite.Always_Use_Transactions}), the following scenario
 will result in a deadlock:
@@ -4348,7 +4348,10 @@ will result in a deadlock:
       ... the same thread, this will deadlock.
 }
 
-If you wish to reuse the same connection later on, you must reset it. This
+By default, GNATCOLL will not create SQL transactions for select statements
+to avoid this case, which occurs frequently in code.
+
+If you wish to reuse an existing connection later on, you must reset it. This
 terminates any on-going SQL transaction, and resets various internal fields
 that describe the state of the connection.
 

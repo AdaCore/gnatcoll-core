@@ -33,7 +33,7 @@ with GNAT.Strings;        use GNAT.Strings;
 
 package GNATCOLL.SQL.Sqlite is
 
-   Sqlite_Always_Use_Transactions : Boolean := True;
+   Sqlite_Always_Use_Transactions : Boolean := False;
    --  Sqlite is faster if we always use transactions, even for SELECT
    --  statements, according to
    --  http://web.utk.edu/~jplyon/sqlite/SQLite_optimization_FAQ.html
@@ -42,11 +42,13 @@ package GNATCOLL.SQL.Sqlite is
    --  the first connection, and then no longer touching it.
    --  Changing the setting will not impact existing connections.
    --
-   --  ??? Disabled by default: when in a transaction, sqlite gets some locks
-   --  on the database, so it is easier to starve the threads when using
-   --  transactions for SELECT. This seems a general issue here as soon as two
-   --  processes can start writing in two different transactions, and sqlite
-   --  will return SQLITE_BUSY when calling COMMIT.
+   --  This setting is mostly experimental, and can be tricky in your
+   --  application. It is recommend that you create the transactions yourself
+   --  in a controlled fashion.
+   --  Otherwise, it is easy to have a deadlock in your application if one
+   --  thread is using more than one connection (the first connection does a
+   --  BEGIN and a SELECT and gets a shared lock, then the second connection
+   --  tries to write to the database but cannot obtain a write lock).
 
    type Sqlite_Description (<>)
      is new Database_Description_Record with private;
