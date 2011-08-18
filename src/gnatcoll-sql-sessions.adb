@@ -26,7 +26,6 @@
 
 with Ada.Unchecked_Deallocation;
 with GNATCOLL.SQL;        use GNATCOLL.SQL;
---  with GNATCOLL.SQL.Sqlite; use GNATCOLL.SQL.Sqlite;
 with GNATCOLL.Traces;     use GNATCOLL.Traces;
 
 package body GNATCOLL.SQL.Sessions is
@@ -643,6 +642,8 @@ package body GNATCOLL.SQL.Sessions is
            (Key => H, New_Item => R, Position => Pos, Inserted => Inserted);
          if Inserted then
             On_Persist (Element);
+         else
+            Unchecked_Free (R.Ref);
          end if;
       end;
    end Persist;
