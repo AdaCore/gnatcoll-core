@@ -1513,7 +1513,18 @@ package body GNATCOLL.SQL_Impl is
    -------------------
 
    function String_To_SQL
-     (Self  : Formatter'Class;
+     (Self : Formatter'Class; Value : String; Quote : Boolean) return String
+   is
+   begin
+      return String_Image (Self, Value, Quote);
+   end String_To_SQL;
+
+   ------------------
+   -- String_Image --
+   ------------------
+
+   function String_Image
+     (Self  : Formatter;
       Value : String;
       Quote : Boolean) return String
    is
@@ -1525,7 +1536,6 @@ package body GNATCOLL.SQL_Impl is
       New_Str            : String
         (Value'First .. Value'Last + Num_Of_Apostrophes + Num_Of_Backslashes);
       Index              : Natural := Value'First;
-      Prepend_E          : Boolean := False;
    begin
       if not Quote then
          return Value;
@@ -1543,7 +1553,6 @@ package body GNATCOLL.SQL_Impl is
             Index := Index + 1;
          elsif Value (I) = '\' then
             New_Str (Index .. Index + 1) := "\\";
-            Prepend_E := True;
             Index := Index + 1;
          else
             New_Str (Index) := Value (I);
@@ -1551,12 +1560,8 @@ package body GNATCOLL.SQL_Impl is
          Index := Index + 1;
       end loop;
 
-      if Prepend_E then
-         return "E'" & New_Str & "'";
-      else
-         return "'" & New_Str & "'";
-      end if;
-   end String_To_SQL;
+      return "'" & New_Str & "'";
+   end String_Image;
 
    ----------------------
    -- Parameter_String --

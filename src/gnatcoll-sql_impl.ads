@@ -65,6 +65,17 @@ package GNATCOLL.SQL_Impl is
    --  If you override these, you will likely want to also override
    --  Boolean_Value (DBMS_Forward_Cursor).
 
+   function String_Image
+     (Self : Formatter; Value : String; Quote : Boolean) return String;
+   --  Escape every apostrophe character "'" and backslash "\".
+   --  Useful for strings in SQL commands where "'" means the end
+   --  of the current string.
+   --  This is not suitable for use for prepared queries, which should not be
+   --  quoted.
+   --  If Quote is False, Value is returned as is (suitable for prepared
+   --  queries). Otherwise, Value is surrounded by quote characters, and every
+   --  special character in Value are also protected.
+
    function Field_Type_Autoincrement
      (Self : Formatter) return String is abstract;
    --  Return the SQL type to use for auto-incremented fields.
@@ -78,6 +89,8 @@ package GNATCOLL.SQL_Impl is
      (Self : Formatter'Class; Value : Float; Quote : Boolean) return String;
    function Integer_To_SQL
      (Self : Formatter'Class; Value : Integer; Quote : Boolean) return String;
+   function String_To_SQL
+     (Self : Formatter'Class; Value : String; Quote : Boolean) return String;
    function Time_To_SQL
      (Self : Formatter'Class; Value : Ada.Calendar.Time; Quote : Boolean)
       return String;
@@ -101,17 +114,6 @@ package GNATCOLL.SQL_Impl is
       Typ   : Parameter_Type) return String;
    --  Return the character to put before a parameter in a SQL statement, when
    --  the value will be substituted at run time
-
-   function String_To_SQL
-     (Self : Formatter'Class; Value : String; Quote : Boolean) return String;
-   --  Escape every apostrophe character "'" and backslash "\".
-   --  Useful for strings in SQL commands where "'" means the end
-   --  of the current string.
-   --  This is not suitable for use for prepared queries, which should not be
-   --  quoted.
-   --  If Quote is False, Value is returned as is (suitable for prepared
-   --  queries). Otherwise, Value is surrounded by quote characters, and every
-   --  special character in Value are also protected.
 
    -------------------------------------
    -- General declarations for tables --

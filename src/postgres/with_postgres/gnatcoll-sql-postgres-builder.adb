@@ -26,6 +26,7 @@
 -----------------------------------------------------------------------
 
 with Ada.Calendar;
+with Ada.Strings.Fixed;
 with Ada.Strings.Unbounded;        use Ada.Strings.Unbounded;
 with Ada.Unchecked_Conversion;
 with Ada.Unchecked_Deallocation;
@@ -107,6 +108,9 @@ package body GNATCOLL.SQL.Postgres.Builder is
       Direct      : Boolean;
       Params      : SQL_Parameters := No_Parameters)
       return Abstract_Cursor_Access;
+   overriding function String_Image
+     (Self : Postgresql_Connection_Record; Value : String; Quote : Boolean)
+      return String;
    overriding function Field_Type_Autoincrement
      (Self : Postgresql_Connection_Record) return String;
    overriding function Error
@@ -1168,5 +1172,54 @@ package body GNATCOLL.SQL.Postgres.Builder is
    begin
       return True;
    end Has_Postgresql_Support;
+
+   ------------------
+   -- String_Image --
+   ------------------
+
+   overriding function String_Image
+     (Self : Postgresql_Connection_Record; Value : String; Quote : Boolean)
+      return String
+   is
+      pragma Unreferenced (Self);
+      Num_Of_Apostrophes : constant Natural :=
+        Ada.Strings.Fixed.Count (Value, "'");
+      Num_Of_Backslashes : constant Natural :=
+        Ada.Strings.Fixed.Count (Value, "\");
+      New_Str            : String
+        (Value'First .. Value'Last + Num_Of_Apostrophes + Num_Of_Backslashes);
+      Index              : Natural := Value'First;
+      Prepend_E          : Boolean := False;
+   begin
+      if not Quote then
+         return Value;
+      end if;
+
+      if Num_Of_Apostrophes = 0
+        and then Num_Of_Backslashes = 0
+      then
+         return "'" & Value & "'";
+      end if;
+
+      for I in Value'Range loop
+         if Value (I) = ''' then
+            New_Str (Index .. Index + 1) := "''";
+            Index := Index + 1;
+         elsif Value (I) = '\' then
+            New_Str (Index .. Index + 1) := "\\";
+            Prepend_E := True;
+            Index := Index + 1;
+         else
+            New_Str (Index) := Value (I);
+         end if;
+         Index := Index + 1;
+      end loop;
+
+      if Prepend_E then
+         return "E'" & New_Str & "'";
+      else
+         return "'" & New_Str & "'";
+      end if;
+   end String_Image;
 
 end GNATCOLL.SQL.Postgres.Builder;
