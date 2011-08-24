@@ -1816,6 +1816,7 @@ package body GNATCOLL.Projects is
             Shared      => Shared);
 
          if Pkg = No_Package then
+            Trace (Me, "No such package " & Pkg_Name);
             return False;
          end if;
 
@@ -5440,11 +5441,21 @@ package body GNATCOLL.Projects is
       Attr_Kind : Defined_Attribute_Kind;
       Var_Kind  : Defined_Variable_Kind;
    begin
+      --  Need to make sure the predefined packages are already declared, or
+      --  the new one will be discarded.
+
+      Prj.Attr.Initialize;
+
       if Pkg /= "" then
          Pkg_Id := Package_Node_Id_Of (Get_String (Pkg));
          if Pkg_Id = Empty_Package then
             Trace (Me, "Register_New_Package (" & Pkg & ")");
             Register_New_Package (Name  => Pkg, Id => Pkg_Id);
+            if Pkg_Id = Empty_Package
+              or else Pkg_Id = Unknown_Package
+            then
+               Trace (Me, "Error registering new package");
+            end if;
          end if;
       end if;
 

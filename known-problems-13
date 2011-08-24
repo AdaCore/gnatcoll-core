@@ -4,6 +4,18 @@ Known Problems in Gnatcoll 1.3
 
 Copyright (C) 2011, AdaCore
 
+KP-13-K712-015 GNATCOLL.Projects.Register_New_Attribute has no effect
+
+  Problem:    If this procedure is called before any project has been
+              loaded, it has no effect (the newly created package is
+              simply ignored by the project manager).
+
+  Status:     This was fixed in 1.4 on 2011-08-24
+
+  Workaround: First load a project (for instance an empty one), then
+              register the new attribute, and finally load your actual
+              project.
+
 KP-13-K304-032 Configure does not detect postgreSQL on Mac OS X
 
   Problem:    Configure fails to detect postgreSQL on Mac OS X.
