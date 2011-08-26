@@ -536,85 +536,77 @@ AC_HELP_STRING(
       fi
    fi
 
-   PYTHON_LIBS=""
    if test x"$PYTHON_BASE" != xno; then
-      case "${host}" in
-          hppa*-hp-hpux1* )
-             PYTHON_LIBS="-Wl,-E -lm ${PYTHON_LIBS}"
-             ;;
-          powerpc-ibm-aix5.* )
-             PYTHON_LIBS="-lld -lm ${PYTHON_LIBS}"
-             ;;
-          powerpc-*-darwin* )
-             PYTHON_LIBS="-ldl -lm ${PYTHON_LIBS}"
-             ;;
-          *-sunos5.5* | *-solaris2.5* )
-             PYTHON_LIBS="-lresolv -lsocket -lnsl -ldl -lm ${PYTHON_LIBS}"
-             ;;
-          *-sunos5* | *-solaris* )
-             PYTHON_LIBS="-lresolv -lsocket -lnsl -ldl -lm ${PYTHON_LIBS}"
-             ;;
-          ia64-*-* )
-             case "${host}" in
-               *-linux-gnu* )
-                  PYTHON_LIBS="-Wl,-export-dynamic -ldl -lm ${PYTHON_LIBS}"
-                  ;;
-               *-hp-hpux11* )
-                  PYTHON_LIBS="-ldld -ldl -lm -Wl,-E ${PYTHON_LIBS}"
-                  ;;
-               *-sgi* )
-                  PYTHON_LIBS="-lm ${PYTHON_LIBS}"
-                  ;;
-             esac
-             ;;
-          *-darwin* )
-             PYTHON_LIBS="-ldl -lm ${PYTHON_LIBS}"
-             ;;
-          x86_64-*-* )
-             PYTHON_LIBS="-Wl,-export-dynamic -lm -ldl ${PYTHON_LIBS}"
-             ;;
-          i[[3456]]86-*linux-gnu* )
-             PYTHON_LIBS="-Wl,-export-dynamic -lm -ldl ${PYTHON_LIBS}"
-             ;;
-          i[[3456]]86-*win32* | i[[3456]]86-*mingw32* | i[[3456]]86-*cygwin* )
-             ;;
-          *-freebsd* )
-             PYTHON_LIBS="-lm -lutil ${PYTHON_LIBS}"
-             ;;
-      esac
+      # Find the libs that are required to link with python. We first try
+      # with python-config --libs, but this might not exist on the platform, or
+      # might be incorrect, so we also have hard-coded fallbacks.
 
-      if test \( -f ${PYTHON_DIR}/libpython${PYTHON_VERSION}.a \) -a \( ! x$PYTHON_SHARED = xyes \) ; then
-         PYTHON_LIBS="${PYTHON_DIR}/libpython${PYTHON_VERSION}.a ${PYTHON_LIBS}"
+      AC_PATH_PROG(PYTHON_CONFIG, python-config, no, $PYTHON_PATH_WITH/bin:$PYTHON_PATH_WITH:$PATH)
+
+      AC_MSG_CHECKING(if we can link with python (using python-config))
+      if test x"$PYTHON_CONFIG" != xno ; then
+         PYTHON_LIBS=`$PYTHON_CONFIG --libs`
+         PYTHON_CFLAGS=`$PYTHON_CONFIG --cflags`
       else
-         PYTHON_LIBS="-L${PYTHON_DIR} -lpython${PYTHON_VERSION} ${PYTHON_LIBS}"
+         PYTHON_LIBS=""
+         PYTHON_CFLAGS=""
       fi
-
-      if test x$PYTHON_WIN32 == xyes; then
-         PYTHON_CFLAGS="-I${PYTHON_BASE}/include"
-      else
-         PYTHON_CFLAGS="-I${PYTHON_BASE}/include/python${PYTHON_VERSION}"
-      fi
-
-      # Automatically check whether some libraries are needed to link with
-      # the python libraries.
 
       SAVE_CFLAGS="${CFLAGS}"
       SAVE_LIBS="${LIBS}"
-      CFLAGS="${CFLAGS} ${PYTHON_CFLAGS}"
-      LIBS="${LIBS} ${PYTHON_LIBS}"
+      CFLAGS="${SAVE_CFLAGS} ${PYTHON_CFLAGS}"
+      LIBS="${SAVE_LIBS} ${PYTHON_LIBS}"
 
-      # -lutil is almost always needed, for forkpty()
 
-      AC_MSG_CHECKING(if we can link with python)
       AC_LINK_IFELSE(
         [AC_LANG_PROGRAM([
-/* will only work with gcc, but needed to use it with the mingwin python */
+/*    will only work with gcc, but needed to use it with the mingwin python */
 #define PY_LONG_LONG long long
 #include <Python.h>
-],[Py_Initialize();])],
+],[   Py_Initialize();])],
         [AC_MSG_RESULT(yes)],
 
-        [LIBS="${LIBS} -lutil"
+        [
+         AC_MSG_RESULT(no)
+         AC_MSG_CHECKING(if we can link with python)
+         # hard-code python dependencies
+         if test \( -f ${PYTHON_DIR}/libpython${PYTHON_VERSION}.a \) -a \( ! x$PYTHON_SHARED = xyes \) ; then
+            PYTHON_LIBS="${PYTHON_DIR}/libpython${PYTHON_VERSION}.a"
+         else
+            PYTHON_LIBS="-L${PYTHON_DIR} -lpython${PYTHON_VERSION}"
+         fi
+
+         case "${host}" in
+            hppa*-hp-hpux1* )
+               PYTHON_LIBS="-Wl,-E -lm ${PYTHON_LIBS}"
+               ;;
+            powerpc-ibm-aix5.* | powerpc-*-darwin* | *-darwin*)
+               PYTHON_LIBS="-ldl -lm ${PYTHON_LIBS}"
+               ;;
+            *-sunos5.5* | *-solaris2.5* | *-sunos5* | *-solaris* )
+               PYTHON_LIBS="-lresolv -lsocket -lnsl -ldl -lm ${PYTHON_LIBS}"
+               ;;
+            ia64-*linux-gnu* | x86_64-*-* | i[[3456]]86-*linux-gnu* )
+               PYTHON_LIBS="-Wl,-export-dynamic -lm -ldl ${PYTHON_LIBS}"
+               ;;
+            ia64-*hp-hpux11* )
+               PYTHON_LIBS="-ldld -ldl -lm -Wl,-E ${PYTHON_LIBS}"
+               ;;
+            *-freebsd* )
+               PYTHON_LIBS="-lm -lutil ${PYTHON_LIBS}"
+               ;;
+         esac
+
+         if test x$PYTHON_WIN32 == xyes; then
+            PYTHON_CFLAGS="-I${PYTHON_BASE}/include"
+         else
+            PYTHON_CFLAGS="-I${PYTHON_BASE}/include/python${PYTHON_VERSION}"
+         fi
+
+         # -lutil is almost always needed, for forkpty()
+         CFLAGS="${SAVE_CFLAGS} ${PYTHON_CFLAGS}"
+         LIBS="${SAVE_LIBS} ${PYTHON_LIBS} -lutil"
+
          AC_LINK_IFELSE(
            [AC_LANG_PROGRAM([
 /* will only work with gcc, but needed to use it with the mingwin python */
@@ -645,13 +637,15 @@ AC_HELP_STRING(
                [AC_MSG_RESULT(no, [can't compile and link python example])
                 WITH_PYTHON=no
                 PYTHON_BASE=[]
-                PYTHON_LIBS=[]])])])])
+                PYTHON_LIBS=[]])])])
 
-      # Restore an environment python-free, so that further tests are not
-      # impacted in case we did not find python
+        ])
 
-      CFLAGS="${SAVE_CFLAGS}"
-      LIBS="${SAVE_LIBS}"
+     # Restore an environment python-free, so that further tests are not
+     # impacted in case we did not find python
+
+     CFLAGS="${SAVE_CFLAGS}"
+     LIBS="${SAVE_LIBS}"
    fi
 
    if test x"$WITH_PYTHON" = xno -a x"$NEED_PYTHON" != xno ; then

@@ -83,6 +83,12 @@ NF-14-K302-018 GNATCOLL.Traces can now specify colors (2011-03-24)
    It is now possible to specify the color to use when logging test via
    the Trace procedures.
 
+NF-14-K128-001 configure uses python-config to detect python (2011-08-26)
+
+   "configure" now uses the output of python-config (when available) to find
+   out which libraries are needed for the link. This should improve the
+   detection of python.
+
 NF-14-K111-003 Support for Unicode strings in the python interface (2011-01-11)
 
    Passing unicode strings to Ada is now possible and returns an UTF8 encoded
