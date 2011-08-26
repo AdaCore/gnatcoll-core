@@ -498,10 +498,6 @@ package body GNATCOLL.SQL.Exec is
 
    begin
       if R = null then
-         if Active (Me_Error) then
-            Trace (Me_Error, "Transaction failed " & Query);
-         end if;
-
          Set_Failure (Connection);
 
       elsif Is_Select then
