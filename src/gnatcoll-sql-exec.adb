@@ -813,7 +813,6 @@ package body GNATCOLL.SQL.Exec is
      (Connection : access Database_Connection_Record'Class;
       Error_Msg  : String := "") is
    begin
-      Trace (Me_Error, "Marking current transaction as failure");
       Connection.Success := False;
       if Connection.Error_Msg = null then
          if Error_Msg /= "" then
