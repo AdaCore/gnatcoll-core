@@ -498,6 +498,10 @@ package body GNATCOLL.SQL.Exec is
 
    begin
       if R = null then
+         if Active (Me_Error) then
+            Trace (Me_Error, "Transaction failed " & Query);
+         end if;
+
          Set_Failure (Connection);
 
       elsif Is_Select then
@@ -533,10 +537,6 @@ package body GNATCOLL.SQL.Exec is
       else
          Connection.Success := Is_Success (DBMS_Forward_Cursor'Class (R.all));
          if not Connection.Success then
-            if Active (Me_Error) then
-               Trace (Me_Error, "Transaction failed " & Query);
-            end if;
-
             Set_Failure
               (Connection, Error_Msg (DBMS_Forward_Cursor'Class (R.all)));
 
