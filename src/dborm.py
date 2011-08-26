@@ -208,15 +208,21 @@ class Pretty_Printer(object):
                 if c not in self.unique_body_cst:
                     self.unique_body_cst.append(c)
 
-    def add_property(self, row, name, getter, setter, type,
+    def add_property(self, schema, row, field, getter, setter, type,
                      getter_local_vars=[], setter_local_vars=[],
                      comment=None, abstract=False, section=""):
         """Define a property for self (ie a setter and getter strongly linked
            to each other
         """
+        get_name = schema.subprogram_name_from_field(field)
+        if isinstance(field, str):
+            set_name = "set_%s" % field
+        else:
+            set_name = "set_%s" % field.name
+
         if getter:
             self.add_subprogram(
-                name, body=getter,
+                get_name, body=getter,
                 params=[("self", "detached_%s" % row)],
                 local_vars=getter_local_vars,
                 returns=type,
@@ -224,7 +230,7 @@ class Pretty_Printer(object):
 
         if setter:
             self.add_subprogram(
-                "set_%s" % name, body=setter,
+                set_name, body=setter,
                 local_vars=setter_local_vars,
                 params=[("self", "detached_%s" % row), ("value", type)],
                 comment=comment, abstract=abstract, section=section)
@@ -947,10 +953,11 @@ def create(pretty, table, schema):
        returns="%s_Managers" % table.name)
 
 
-def from_cache(table, with_self):
+def from_cache(schema, table, with_self):
     """Return the parameters passed to the Hash_%row function"""
     if with_self:
-        tmp = ", ".join(["Self.%s" % p.name for p in table.pk])
+        tmp = ", ".join(["Self.%s" % schema.subprogram_name_from_field(p)
+                         for p in table.pk])
     else:
         tmp = ", ".join(["%s" % p.name for p in table.pk])
     return "Hash_%s(%s)" % (table.row, tmp)
@@ -993,7 +1000,7 @@ def detach(pretty, table, schema, translate):
        else
           return Detach_No_Lookup (Self, Self.Data.Session);
         end if;""" % {"row": translate["row"],
-                      "fromcache": from_cache(table, with_self=True)})
+                      "fromcache": from_cache(schema, table, with_self=True)})
 
     # Internal version of Detach
 
@@ -1282,7 +1289,8 @@ def generate_orb_one_table(name, schema, pretty, all_tables):
             else
                declare
                  M : %(name)s_Managers := All_%(cap)s.Filter
-                   (""" % {"fromcache": from_cache(table, with_self=False),
+                   (""" % {"fromcache":
+                              from_cache(schema, table, with_self=False),
                            "row": table.row,
                            "name": table.name,
                            "cap": pretty._title(name)}
@@ -1348,17 +1356,24 @@ def generate_orb_one_table(name, schema, pretty, all_tables):
         where = []
         assign = []
         getpk = ""
+        execute = "R.Fetch"
+
         for index, f in enumerate(table.fields):
             if f.is_pk():
                 has_pk.append(
                     "D.ORM_%s = %s" % (f.name, f.default_for_field()))
-                where.append("DBA.%s.%s = D.ORM_%s" %
-                             (table.name, f.name, f.name))
-                if getpk == "":
+                where.append("DBA.%s.%s = %s" %
+                             (table.name, f.name,
+                              f.to_return("D")))
+                if getpk != "":
+                    getpk = "null; --  Can't retrieve multi-key PK"
+                    execute = "Execute"
+                elif f.type.sql_type != "integer":
+                    getpk = "null;  --  Can only retrieve integer PK"
+                    execute = "Execute"
+                else:
                     getpk = ("D.ORM_%s := R.Last_Id (Self.Session.DB," \
                         + " DBA.%s.%s);") % (f.name, table.name, f.name)
-                else:
-                    getpk = "null; --  Can't retrieve multi-key PK"
 
             elif f.is_fk():
                 tr = {"index": index + 1,
@@ -1367,6 +1382,8 @@ def generate_orb_one_table(name, schema, pretty, all_tables):
                       "name": f.name,
                       "default": f.default_for_field(),
                       "fk": f.fk.name,
+                      "fkrow": f.fk.table.row,
+                      "fkall": f.fk.to_return("D2"),
                       "value": f.to_return("D")}
 
                 if translate["row"] == f.fk.table.row:
@@ -1389,14 +1406,18 @@ def generate_orb_one_table(name, schema, pretty, all_tables):
                     if D.ORM_%(name)s /= %(default)s then
                       A := A & (DBA.%(table)s.%(name)s = %(value)s);
                     else
-                      %(self_check)s
-                      if D.ORM_FK_%(name)s.%(fk)s = %(default)s then
-                         Self.Session.Insert_or_Update
-                            (D.ORM_FK_%(name)s.all);
-                      end if;
+                       %(self_check)s
+                       declare
+                          D2 : constant %(fkrow)s_Data :=
+                             %(fkrow)s_data (D.ORM_FK_%(name)s.Get);
+                       begin
+                          if D2.ORM_%(fk)s = %(default)s then
+                             Self.Session.Insert_or_Update
+                                (D.ORM_FK_%(name)s.all);
+                          end if;
 
-                      A := A & (DBA.%(table)s.%(name)s =
-                         D.ORM_FK_%(name)s.%(fk)s);
+                          A := A & (DBA.%(table)s.%(name)s = %(fkall)s);
+                       end;
                     end if;
                  end if;""" % tr)
 
@@ -1410,7 +1431,18 @@ def generate_orb_one_table(name, schema, pretty, all_tables):
         tr = {"table": table.name,
               "setassign": "\n".join(assign),
               "getpk": getpk,
+              "execute": execute,
               "where": " AND ".join(where)}
+
+        local_vars = [("D", "constant %(row)s_Data" % translate,
+                       "%(row)s_Data (Self.Get)" % translate),
+                      ("Missing_PK", "constant Boolean",
+                       "%s" % " or else ".join(has_pk)),
+                      ("Q", "SQL_Query"),
+                      ("A", "SQL_Assignment", "No_Assignment")]
+
+        if execute == "R.Fetch":
+            local_vars.append(("R", "Forward_Cursor"))
 
         insert_or_update = """
             %(setassign)s
@@ -1419,7 +1451,7 @@ def generate_orb_one_table(name, schema, pretty, all_tables):
             else
                Q := SQL_Update (DBA.%(table)s, A, %(where)s);
             end if;
-            R.Fetch (Self.Session.DB, Q);
+            %(execute)s (Self.Session.DB, Q);
 
             if Missing_PK and then Success (Self.Session.DB) then
                PK_Modified := True;
@@ -1434,13 +1466,7 @@ def generate_orb_one_table(name, schema, pretty, all_tables):
                     ("Mask", "Dirty_Mask")],
             overriding=True,
             section="internal",
-            local_vars=[("D", "constant %(row)s_Data" % translate,
-                           "%(row)s_Data (Self.Get)" % translate),
-                        ("Missing_PK", "constant Boolean",
-                          "%s" % " or else ".join(has_pk)),
-                        ("R", "Forward_Cursor"),
-                        ("Q", "SQL_Query"),
-                        ("A", "SQL_Assignment", "No_Assignment")],
+            local_vars=local_vars,
             body=insert_or_update)
 
         pretty.add_subprogram(
@@ -1454,11 +1480,11 @@ def generate_orb_one_table(name, schema, pretty, all_tables):
                + " SQL_Delete (DBA.%(table)s, %(where)s));""" % tr)
 
         on_add = ""
-        for f in table.fields:
-            if f.is_fk():
-                on_add += """if D.ORM_FK_%s /= null then
-                   Self.Session.Persist (D.ORM_FK_%s.all);
-                   end if;""" % (f.name, f.name)
+        for f in table.fk:
+            name = subprogram_from_fk(f)
+            on_add += """if D.ORM_FK_%s /= null then
+               Self.Session.Persist (D.ORM_FK_%s.all);
+               end if;""" % (name, name)
         if on_add:
             pretty.add_subprogram(
                 name="on_persist",
@@ -1479,7 +1505,7 @@ def generate_orb_one_table(name, schema, pretty, all_tables):
            body="""%(free_fields)s Free (Detached_Data (Self));""" % translate)
 
         if not table.is_abstract:
-            tmp = ", ".join(["D.ORM_%s" % p.name for p in table.pk])
+            tmp = ", ".join([p.to_return("D") for p in table.pk])
             unset = " or else ".join(
                 ["D.ORM_%s = %s" % (p.name, p.type.default_record)
                  for p in table.pk])
@@ -1499,7 +1525,7 @@ def generate_orb_one_table(name, schema, pretty, all_tables):
                 + 'return Hash_%s (%s);' % (translate["row"], tmp) \
                 + " end if;")
 
-            tmp = "& ".join(["%s'Img" % p.name for p in table.pk])
+            tmp = " & ".join(p.image() for p in table.pk)
             pretty.add_subprogram(
                name="hash_%(row)s" % translate,
                params=schema.params_get_pk(table),
@@ -1545,8 +1571,9 @@ def generate_orb_one_table(name, schema, pretty, all_tables):
                            index + 1)
 
                 pretty.add_property(
+                    schema=schema,
                     row="%(row)s" % translate,
-                    name=schema.subprogram_name_from_field(f),
+                    field=f,
                     getter=getter,
                     setter=setter,
                     setter_local_vars=local,
@@ -1566,6 +1593,7 @@ def generate_orb_one_table(name, schema, pretty, all_tables):
             detached_params = []
             reset_fk = []
             is_same = []
+            free_fk = []
 
             for ffrom, fto in fk_field.pairs:
                 params.append("%s => Self.%s"
@@ -1574,8 +1602,12 @@ def generate_orb_one_table(name, schema, pretty, all_tables):
                 detached_params.append("%s => %s"
                                % (fto.name,
                                   ffrom.to_return("D")))
-                reset_fk.append("%s := Value.%s;" %
-                                (ffrom.to_return("D"), fto.name))
+                reset_fk.append(
+                    "D.ORM_%s := %s;" %
+                    (ffrom.name,
+                     fto.to_field("Value.%s"
+                        % schema.subprogram_name_from_field(fto))))
+                free_fk.append(ffrom.free_field("D"))
                 is_same.append(
                     "%s = %s" % (fto.to_return("D"), ffrom.to_return("D")))
 
@@ -1662,8 +1694,9 @@ def generate_orb_one_table(name, schema, pretty, all_tables):
                 setlocal = [("D", "constant %(row)s_Data" % translate,
                              "%(row)s_Data (Self.Get)" % translate)]
                 free = ffrom.free_field("D") \
-                       + "Unchecked_Free (D.ORM_FK_%s);" % table_name \
-                       + "\n".join(reset_fk)
+                    + "".join(free_fk) \
+                    + "Unchecked_Free (D.ORM_FK_%s);" % table_name \
+                    + "\n".join(reset_fk)
                 setter = ""
                 for idx, f2 in enumerate(table.fields):
                     if f2 == ffrom:
@@ -1677,8 +1710,9 @@ def generate_orb_one_table(name, schema, pretty, all_tables):
                     """ % (free, table_name, tr["row"], idx + 1, table_name)
 
                 pretty.add_property(
+                    schema=schema,
                     row="%(row)s" % translate,
-                    name=schema.subprogram_name_from_field(table_name),
+                    field=table_name,
                     getter=getter,
                     setter=setter,
                     setter_local_vars=setlocal,
@@ -1878,6 +1912,7 @@ class Field_Type(object):
                  value_from_db,   # Ada value from db (%1=Cursor, %2=index)
                  to_return,       # convert from field type to return type
                  free_field,      # How to free the field
+                 img,             # From a field type to a string
                  to_field):       # Convert from ada_param to ada_field
         self.sql_type = sql_type
         self.ada_return = ada_return
@@ -1888,6 +1923,7 @@ class Field_Type(object):
         self._value_from_db = value_from_db
         self._to_return = to_return  # %1 => value to convert
         self._to_field = to_field   # %1 => entity to convert
+        self._img = img  # %1 => value to convert
         self._free_field = free_field
 
     __all_types = None
@@ -1904,24 +1940,26 @@ class Field_Type(object):
                   "text", "String", "String", 'No_Update',
                   "GNAT.Strings.String_Access",
                   "null", "String_Value (%s, %s)",
-                  "%s.all", "Free (%s)", "new String'(%s)"),
+                  "%s.all", "Free (%s)", "%s",
+                  "new String'(%s)"),
                integer=Field_Type(
                   "integer", "Integer", "Integer", -1, "Integer", -1,
-                  "Integer_Value (%s, %s)", "%s", "", "%s"),
+                  "Integer_Value (%s, %s)", "%s", "", "%s'Img", "%s"),
                autoincrement=Field_Type(
                   "integer", "Integer", "Integer", -1, "Integer", -1,
-                  "Integer_Value (%s, %s)", "%s", "", "%s"),
+                  "Integer_Value (%s, %s)", "%s", "", "%s'Img", "%s"),
                time=Field_Type(
                   "time", "Ada.Calendar.Time", "Ada.Calendar.Time", "No_Time",
                   "Ada.Calendar.Time", "No_Time",
-                   "Time_Value (%s, %s)", "%s", "", "%s"),
+                   "Time_Value (%s, %s)", "%s", "", "%s'Img", "%s"),
                float=Field_Type(
                   "float", "Float", "Float", "Float'First", "Float",
-                   "Float'First", "Float_Value (%s, %s)", "%s", "", "%s"),
+                   "Float'First", "Float_Value (%s, %s)", "%s", "",
+                   "%s'Img", "%s"),
                boolean=Field_Type(
                   "boolean", "Boolean", "TriBoolean", "Indeterminate",
                    "Boolean", "False", "Boolean_Value (%s, %s)",
-                   "%s", "", "%s"))
+                   "%s", "", "%s'Img", "%s"))
 
         sql = sql.lower()
         if sql in ("timestamp without time zone",
@@ -1997,6 +2035,13 @@ class Field(object):
     def to_return(self, data):
         """Return the value stored in memory to the proper return type"""
         return self.type._to_return % ("%s.ORM_%s" % (data, self.name))
+
+    def image(self, data=""):
+        """Converts a value to a string, for display"""
+        if data == "":
+            return self.type._img % ("%s" % self.name)
+        else:
+            return self.type._img % ("%s.ORM_%s" % (data, self.name))
 
     def is_fk(self):
         """Whether SELF is a foreign key for its table, ie a field referencing

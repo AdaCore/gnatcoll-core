@@ -1207,34 +1207,25 @@ package body GNATCOLL.SQL.Inspect is
                declare
                   From : String renames Line (3).all;
                   To   : String renames Line (4).all;
-                  First, Tmp : Natural;
-                  C    : Pair_Lists.Cursor;
+                  First, First2, Tmp, Tmp2 : Natural;
                begin
-                  First := From'First;
+                  First  := From'First;
+                  First2 := To'First;
+
                   while First <= From'Last loop
-                     Tmp := First + 1;
-                     Skip_Blanks (From, Tmp);
+                     Skip_Blanks (From, First);
+                     Skip_Blanks (To, First2);
+
+                     Tmp := Find_Char (From (First + 1 .. From'Last), ' ');
+                     Tmp2 := Find_Char (To (First2 + 1 .. To'Last), ' ');
+
                      Append (FK.Get.Fields,
                              (From => From_Table.Field_From_Name
                                         (From (First .. Tmp - 1)),
-                              To   => No_Field));  --  Will be set later
-                     First := Tmp + 1;
-                     Skip_Blanks (Str.all, First);
-                  end loop;
-
-                  C := FK.Get.Fields.First;
-
-                  First := To'First;
-                  while First <= To'Last loop
-                     Tmp := First + 1;
-                     Skip_Blanks (To, Tmp);
-                     Replace_Element
-                       (FK.Get.Fields, C,
-                        (From => Element (C).From,
-                         To   => To_Table.Field_From_Name
-                                   (To (First .. Tmp - 1))));
-                     First := Tmp + 1;
-                     Skip_Blanks (Str.all, First);
+                              To   => To_Table.Field_From_Name
+                                        (To (First2 .. Tmp2 - 1))));
+                     First  := Tmp + 1;
+                     First2 := Tmp2 + 1;
                   end loop;
                end;
 
