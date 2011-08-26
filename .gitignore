@@ -22,6 +22,8 @@ testsuite/sql/orm/queries.ad?
 testsuite/sql/orm/schema.dot
 testsuite/sql/orm/schema.ps
 
+testsuite/projects/K712-015/test_it
+
 examples/library/obj/database.ad?
 examples/library/obj/database_names.ads
 examples/library/obj/library

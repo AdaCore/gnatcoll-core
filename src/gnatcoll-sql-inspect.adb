@@ -548,6 +548,9 @@ package body GNATCOLL.SQL.Inspect is
       then
          return Field_Text;
 
+      elsif T = "float" then
+         return Field_Float;
+
       elsif T = "integer"
         or else T = "smallint"
         or else T = "oid"
@@ -1269,6 +1272,7 @@ package body GNATCOLL.SQL.Inspect is
                end if;
             else
                First := EOL (Str (First .. Str'Last)) + 1;
+               Line_Number := Line_Number + 1;
             end if;
          end loop;
       end loop;

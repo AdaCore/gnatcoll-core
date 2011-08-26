@@ -2291,7 +2291,9 @@ def get_db_schema(setup, requires_pk=False, all_tables=[], omit=[]):
                                is_abstract=fields[1].startswith("ABSTRACT"))
                 tables[table.name.lower()] = table
 
-            else:
+            elif table:
+                # Ignores VIEWs
+
                 fields[3] = fields[3].strip()
 
                 if fields[1] == "FK:":
@@ -2425,13 +2427,14 @@ digraph g {
             output.write("""
  "%s" [label=<<TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0"><TR>
                      <TD BGCOLOR="%s">%s</TD></TR>%s</TABLE>>]\n"""
-                 % (table.name,
+                 % (table.name.lower(),
                     colors.get(table.name.lower(), Graph.default_color),
                  table.name, attrs))
 
         for table in tables.itervalues():
             for f in table.fk:
-                output.write('"%s" -> "%s";\n' % (table.name, f.foreign.name))
+                output.write('"%s" -> "%s";\n' % (
+                    table.name.lower(), f.foreign.name.lower()))
 
         output.write("}")
         output.close()
@@ -2441,11 +2444,16 @@ digraph g {
         try:
             sub = subprocess.Popen(
                 ["dot", "-Tps", "-o", abs_ps, abs_output_file])
-            sub.wait()
+            status = sub.wait()
         except OSError:
-            pass
-        print "Created '%s'" % output_file
-        print "Use 'dot -Tps -o %s %s' to convert to PS" % (ps, output_file)
+            status = 1
+
+        if status != 0:
+            print "Created '%s'" % output_file
+            print "Use 'dot -Tps -o %s %s' to convert to PS" % (
+                ps, output_file)
+        else:
+            print "Created '%s'" % abs_ps
         print "Use 'pd2pdf -sPAGESIZE=a3' to convert to PDF"
 
 
