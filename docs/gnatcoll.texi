@@ -4004,6 +4004,14 @@ on the command line). These package represent your database schema, that
 is the list of all tables and their fields, as typed values. This is the
 building block for using @code{GNATCOLL.SQL} and write type-safe queries.
 
+@item -api-enums PKG
+
+This is very similar to @code{-api}, except it will only extract values
+from an existing database as per the @code{-enum} and @code{-var} switches.
+The generated package does not include the description of the database
+schema. The goal is that the values are extracted once from an existing
+database, and then @code{-api} can be used to dump the schema from a
+textual description of the database.
 
 @item -enum table,id,name,prefix,base
 This parameter can be repeated several times if needed. It identifies
@@ -4095,6 +4103,11 @@ To use this switch, you need to have a version of python
 code generation is currently implemented in python. The generated code can
 then be compiled on any machine, so it is enough to generate the code once
 and then possibly check it in your version control system.
+
+@item -ormtables LIST
+
+Restrict the output of @code{-orm} to a subset of the tables. List is a
+comma-separated of table names.
 
 @item -dot
 

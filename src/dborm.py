@@ -1800,6 +1800,8 @@ def generate_orm(setup, pkg_name, tables=[], omit=[], out=sys.stdout):
     schema = Schema(setup, tables, pretty, all_tables=tables, omit=omit)
     if not tables:
         tables = schema.details
+    else:
+        tables = {p:schema.details[p] for p in tables}
 
     pretty.start_package(pkg_name)
 
@@ -2508,7 +2510,7 @@ digraph g {
 
 if __name__ == "__main__":
     if len(sys.argv) < 3:
-        print "Usage: dborm -ada   dbschema.txt [pkg_name] [db_pkg]"
+        print "Usage: dborm -ada   dbschema.txt [pkg_name] [db_pkg] [tables]"
         print "   or: dborm -graph dbschema.txt [clusters]"
         print ""
         print "Where dbschema.txt contains the description of the database"
@@ -2527,8 +2529,13 @@ if __name__ == "__main__":
             pkg = sys.argv[3]
         if len(sys.argv) >= 5:
             database_pkg = sys.argv[4]
+        if len(sys.argv) >= 6:
+            tables = sys.argv[5].split(",")
+        else:
+            tables = []
 
-        sys.exit(create_orm(db, indir=".", tables=[], omit=[], pkg_name=pkg))
+        sys.exit(create_orm(db, indir=".", omit=[], pkg_name=pkg,
+                            tables=tables))
 
     elif sys.argv[1] == "-graph":
         clusters = dict()

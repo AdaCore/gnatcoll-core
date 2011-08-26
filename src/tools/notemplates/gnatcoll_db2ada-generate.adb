@@ -308,36 +308,34 @@ begin
 
    --  Create the database_names package
 
-   Create (Spec_File, Name => To_Lower (Generated) & "_names.ads");
-   Put_Line (Spec_File, "with GNATCOLL.SQL; use GNATCOLL.SQL;");
-   Put_Line (Spec_File, "package " & Generated & "_Names is");
-   Put_Line (Spec_File, "   pragma Style_Checks (Off);");
+   if Output (Output_Ada_Specs) then
+      Create (Spec_File, Name => To_Lower (Generated) & "_names.ads");
+      Put_Line (Spec_File, "with GNATCOLL.SQL; use GNATCOLL.SQL;");
+      Put_Line (Spec_File, "package " & Generated & "_Names is");
+      Put_Line (Spec_File, "   pragma Style_Checks (Off);");
 
-   For_Each_Table (Schema, Print_String_Constants'Access);
+      For_Each_Table (Schema, Print_String_Constants'Access);
 
-   New_Line (Spec_File);
+      New_Line (Spec_File);
 
-   N := First (Names);
-   while Has_Element (N) loop
-      Put_Line (Spec_File, "   NC_" & Capitalize (Element (N))
-                & " : aliased constant String := """
-                & Element (N) & """;");
-      Put_Line (Spec_File, "   N_" & Capitalize (Element (N))
-                & " : constant Cst_String_Access := NC_"
-                & Element (N) & "'Access;");
-      Next (N);
-   end loop;
+      N := First (Names);
+      while Has_Element (N) loop
+         Put_Line (Spec_File, "   NC_" & Capitalize (Element (N))
+                   & " : aliased constant String := """
+                   & Element (N) & """;");
+         Put_Line (Spec_File, "   N_" & Capitalize (Element (N))
+                   & " : constant Cst_String_Access := NC_"
+                   & Element (N) & "'Access;");
+         Next (N);
+      end loop;
 
-   Put_Line (Spec_File, "end " & Generated & "_Names;");
-   Close (Spec_File);
+      Put_Line (Spec_File, "end " & Generated & "_Names;");
+      Close (Spec_File);
+   end if;
 
    --  Create the database package
 
    Create (Spec_File, Name => To_Lower (Generated) & ".ads");
-   Create (Body_File, Name => To_Lower (Generated) & ".adb");
-
-   --  Print header
-
    Put_Line (Spec_File, "with GNATCOLL.SQL; use GNATCOLL.SQL;");
    Put_Line (Spec_File, "with " & Generated & "_Names;"
              & " use " & Generated & "_Names;");
@@ -345,76 +343,86 @@ begin
    Put_Line (Spec_File, "   pragma Style_Checks (Off);");
    Put_Line (Spec_File, "   pragma Elaborate_Body;");
 
-   Put_Line (Body_File, "package body " & Generated & " is");
-   Put_Line (Body_File, "   pragma Style_Checks (Off);");
-   Put_Line (Body_File, "   use type Cst_String_Access;");
+   if Output (Output_Ada_Specs) then
+      Create (Body_File, Name => To_Lower (Generated) & ".adb");
+      Put_Line (Body_File, "package body " & Generated & " is");
+      Put_Line (Body_File, "   pragma Style_Checks (Off);");
+      Put_Line (Body_File, "   use type Cst_String_Access;");
+   end if;
 
    --  Process enumerations
 
-   declare
-      C      : Enumeration_Lists.Cursor := First (Enumerations);
-      Enum   : Dumped_Enums;
-      C2, C3 : String_Lists.Cursor;
-   begin
-      while Has_Element (C) loop
-         Enum := Element (C);
+   if Output (Output_Ada_Enums) then
+      declare
+         C      : Enumeration_Lists.Cursor := First (Enumerations);
+         Enum   : Dumped_Enums;
+         C2, C3 : String_Lists.Cursor;
+      begin
+         while Has_Element (C) loop
+            Enum := Element (C);
 
-         New_Line (Spec_File);
-         Put_Line (Spec_File, "   subtype " & Capitalize (Enum.Type_Name)
-                   & " is " & Capitalize (Enum.Base_Type) & ";");
-         C2 := First (Enum.Names);
-         C3 := First (Enum.Values);
-         while Has_Element (C2) loop
-            if Enum.Base_Type = "String" then
-               Put_Line (Spec_File, "   " & Capitalize (Element (C2))
-                         & " : constant "
-                         & Capitalize (Enum.Type_Name)
-                         & " := """ & Element (C3) & """;");
-            else
-               Put_Line (Spec_File, "   " & Capitalize (Element (C2))
-                         & " : constant "
-                         & Capitalize (Enum.Type_Name)
-                         & " := " & Element (C3) & ";");
-            end if;
-            Next (C2);
-            Next (C3);
+            New_Line (Spec_File);
+            Put_Line (Spec_File, "   subtype " & Capitalize (Enum.Type_Name)
+                      & " is " & Capitalize (Enum.Base_Type) & ";");
+            C2 := First (Enum.Names);
+            C3 := First (Enum.Values);
+            while Has_Element (C2) loop
+               if Enum.Base_Type = "String" then
+                  Put_Line (Spec_File, "   " & Capitalize (Element (C2))
+                            & " : constant "
+                            & Capitalize (Enum.Type_Name)
+                            & " := """ & Element (C3) & """;");
+               else
+                  Put_Line (Spec_File, "   " & Capitalize (Element (C2))
+                            & " : constant "
+                            & Capitalize (Enum.Type_Name)
+                            & " := " & Element (C3) & ";");
+               end if;
+               Next (C2);
+               Next (C3);
+            end loop;
+
+            Next (C);
          end loop;
+      end;
 
-         Next (C);
-      end loop;
-   end;
+      --  Process variables
 
-   --  Process variables
+      declare
+         C4 : Variables_List.Cursor := First (Variables);
+      begin
+         if Has_Element (C4) then
+            New_Line (Spec_File);
+         end if;
 
-   declare
-      C4 : Variables_List.Cursor := First (Variables);
-   begin
-      if Has_Element (C4) then
-         New_Line (Spec_File);
-      end if;
+         while Has_Element (C4) loop
+            Put_Line
+              (Spec_File, "   " & Capitalize (Element (C4).Name)
+               & " : constant := " & To_String (Element (C4).Value) & ";");
+            Print_Comment (Spec_File, "   ", To_String (Element (C4).Comment));
+            Next (C4);
+         end loop;
+      end;
+   end if;
 
-      while Has_Element (C4) loop
-         Put_Line (Spec_File, "   " & Capitalize (Element (C4).Name)
-                   & " : constant := " & To_String (Element (C4).Value) & ";");
-         Print_Comment (Spec_File, "   ", To_String (Element (C4).Comment));
-         Next (C4);
-      end loop;
-   end;
+   if Output (Output_Ada_Specs) then
+      Process_Abstract_Tables := True;
+      For_Each_Table (Schema, Print_Table_Spec'Access);
+      Process_Abstract_Tables := False;
+      For_Each_Table (Schema, Print_Table_Spec'Access);
 
-   Process_Abstract_Tables := True;
-   For_Each_Table (Schema, Print_Table_Spec'Access);
-   Process_Abstract_Tables := False;
-   For_Each_Table (Schema, Print_Table_Spec'Access);
+      New_Line (Spec_File);
+      For_Each_Table (Schema, Print_FK'Access);
 
-   New_Line (Spec_File);
-   For_Each_Table (Schema, Print_FK'Access);
-
-   New_Line (Spec_File);
-   For_Each_Table (Schema, Print_Table_Global'Access);
+      New_Line (Spec_File);
+      For_Each_Table (Schema, Print_Table_Global'Access);
+   end if;
 
    Put_Line (Spec_File, "end " & Generated & ";");
-   Put_Line (Body_File, "end " & Generated & ";");
-
    Close (Spec_File);
-   Close (Body_File);
+
+   if Output (Output_Ada_Specs) then
+      Put_Line (Body_File, "end " & Generated & ";");
+      Close (Body_File);
+   end if;
 end Generate;
