@@ -337,8 +337,12 @@ begin
 
    Create (Spec_File, Name => To_Lower (Generated) & ".ads");
    Put_Line (Spec_File, "with GNATCOLL.SQL; use GNATCOLL.SQL;");
-   Put_Line (Spec_File, "with " & Generated & "_Names;"
-             & " use " & Generated & "_Names;");
+
+   if Output (Output_Ada_Specs) then
+      Put_Line (Spec_File, "with " & Generated & "_Names;"
+                & " use " & Generated & "_Names;");
+   end if;
+
    Put_Line (Spec_File, "package " & Generated & " is");
    Put_Line (Spec_File, "   pragma Style_Checks (Off);");
    Put_Line (Spec_File, "   pragma Elaborate_Body;");

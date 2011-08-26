@@ -1801,7 +1801,9 @@ def generate_orm(setup, pkg_name, tables=[], omit=[], out=sys.stdout):
     if not tables:
         tables = schema.details
     else:
-        tables = {p:schema.details[p] for p in tables}
+        tables = dict()
+        for p in tables:
+            tables[p] = schema.details[p]
 
     pretty.start_package(pkg_name)
 
