@@ -61,9 +61,7 @@ procedure GNATCOLL_Db2Ada is
       Output_Dot,
       Output_Createdb);
    Output : array (Output_Kind) of Boolean :=
-     (Output_Ada_Specs => True,
-      Output_Ada_Enums => True,
-      others => False);
+     (others => False);
    --  The type of output for this utility
 
    Schema  : DB_Schema;
@@ -331,14 +329,12 @@ procedure GNATCOLL_Db2Ada is
                      Free (Generated);
                      Generated := new String'(Parameter);
                   end if;
-                  Output (Output_Ada_Specs) := False;
                   Output (Output_Ada_Enums) := True;
                end if;
 
             when 'd' =>
                if Full_Switch = "dot" then
                   Output (Output_Dot) := True;
-                  Output (Output_Ada_Specs) := False;
                elsif Full_Switch = "dbhost" then
                   Free (DB_Host);
                   DB_Host := new String'(Parameter);
@@ -360,7 +356,6 @@ procedure GNATCOLL_Db2Ada is
                end if;
 
             when 'c' =>
-               Output (Output_Ada_Specs) := False;
                Output (Output_Createdb) := True;
 
             when 'e' =>
@@ -370,7 +365,6 @@ procedure GNATCOLL_Db2Ada is
                Append (Vars, Parameter);
 
             when 't' =>
-               Output (Output_Ada_Specs) := False;
                Output (Output_Text) := True;
 
             when 'o' =>
@@ -391,6 +385,12 @@ procedure GNATCOLL_Db2Ada is
                exit;
          end case;
       end loop;
+
+      if Output = (Output_Kind => False) then
+         Output := (Output_Ada_Specs => True,
+                    Output_Ada_Enums => True,
+                    others => False);
+      end if;
 
       if DB_Name.all /= "" then
          --  If the user specified the name of a database, we connect to it.

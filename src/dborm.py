@@ -1801,9 +1801,10 @@ def generate_orm(setup, pkg_name, tables=[], omit=[], out=sys.stdout):
     if not tables:
         tables = schema.details
     else:
-        tables = dict()
+        t = dict()
         for p in tables:
-            tables[p] = schema.details[p]
+            t[p] = schema.details[p.lower()]
+        tables = t
 
     pretty.start_package(pkg_name)
 
@@ -2531,7 +2532,7 @@ if __name__ == "__main__":
             pkg = sys.argv[3]
         if len(sys.argv) >= 5:
             database_pkg = sys.argv[4]
-        if len(sys.argv) >= 6:
+        if len(sys.argv) >= 6 and sys.argv[5] != '':
             tables = sys.argv[5].split(",")
         else:
             tables = []
