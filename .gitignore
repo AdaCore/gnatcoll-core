@@ -14,13 +14,19 @@ testsuite/sql/prepared/prepared
 testsuite/sql/prepared/dbschema.ad?
 testsuite/sql/prepared/dbschema_names.ads
 testsuite/sql/prepared/test.db
+testsuite/sql/*/obj
 testsuite/sql/prepared_postgres/preparedpsql
+testsuite/sql/prepared_postgres/dbschema.ad?
+testsuite/sql/prepared_postgres/dbschema_names.ads
+testsuite/sql/sql1/database.ad?
+testsuite/sql/sql1/database_names.ads
 testsuite/sql/database*
 testsuite/sql/orm/orm_database.ad?
 testsuite/sql/orm/orm_database_names.ads
 testsuite/sql/orm/queries.ad?
 testsuite/sql/orm/schema.dot
 testsuite/sql/orm/schema.ps
+testsuite/projects/*/obj
 
 testsuite/results
 
