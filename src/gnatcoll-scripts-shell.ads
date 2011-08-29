@@ -27,6 +27,8 @@
 
 --  This package contains the implementation for a simple scripting language
 
+pragma Ada_05;
+
 private with Ada.Containers.Indefinite_Doubly_Linked_Lists;
 private with Ada.Containers.Indefinite_Hashed_Maps;
 private with Ada.Strings.Hash;

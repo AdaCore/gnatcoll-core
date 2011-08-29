@@ -32,6 +32,8 @@
 --  various modules remain as independant as possible from the specific
 --  language.
 
+pragma Ada_05;
+
 with Ada.Calendar;
 with Ada.Containers.Indefinite_Doubly_Linked_Lists;
 with Ada.Containers.Indefinite_Hashed_Maps;
