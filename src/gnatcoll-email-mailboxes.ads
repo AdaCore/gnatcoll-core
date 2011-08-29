@@ -27,6 +27,8 @@
 
 --  This package handles mailboxes that contain one or more email messages
 
+pragma Ada_05;
+
 with Ada.Containers.Indefinite_Doubly_Linked_Lists;
 with Ada.Containers.Doubly_Linked_Lists;
 with Ada.Finalization;
