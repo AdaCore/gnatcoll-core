@@ -367,6 +367,7 @@ package body GNATCOLL.Arg_Lists is
          J   : Natural;
          Beg : Natural;
          New_CL  : Arg_List;
+         Skip_Ending_Bracket : Boolean := False;
       begin
          if S = "" then
             return Null_Unbounded_String;
@@ -378,15 +379,31 @@ package body GNATCOLL.Arg_Lists is
                --  Skip to the next separator
                J := J + 1;
                Beg := J;
-               while J <= S'Last
-                 and then (Is_Alphanumeric (S (J))
-                           or else S (J) = '*'
-                           or else S (J) = '-'
-                           or else S (J) = '@')
 
-               loop
+               if S (J) = '{' then
+                  --  An '{' immediately follows the special character:
+                  --  the parameter should be the whole string contained
+                  --  between this and the ending '}'.
+                  Skip_Ending_Bracket := True;
                   J := J + 1;
-               end loop;
+                  Beg := J;
+                  while J <= S'Last
+                    and then S (J) /= '}'
+                  loop
+                     J := J + 1;
+                  end loop;
+               else
+                  Skip_Ending_Bracket := False;
+                  while J <= S'Last
+                    and then (Is_Alphanumeric (S (J))
+                              or else S (J) = '*'
+                              or else S (J) = '-'
+                              or else S (J) = '@')
+
+                  loop
+                     J := J + 1;
+                  end loop;
+               end if;
 
                --  A doubling of the special character indicates that we
                --  are inserting it.
@@ -410,6 +427,10 @@ package body GNATCOLL.Arg_Lists is
                         Append (U, ' ');
                      end if;
                   end loop;
+               end if;
+
+               if Skip_Ending_Bracket then
+                  J := J + 1;
                end if;
             else
                Append (U, S (J));
