@@ -1400,26 +1400,31 @@ def generate_orb_one_table(name, schema, pretty, all_tables):
 
                 tr["self_check"] = self_check
 
-                assign.append(
-                    """
-                 if Mask (%(index)d) then
-                    if D.ORM_%(name)s /= %(default)s then
-                      A := A & (DBA.%(table)s.%(name)s = %(value)s);
-                    else
-                       %(self_check)s
-                       declare
-                          D2 : constant %(fkrow)s_Data :=
-                             %(fkrow)s_data (D.ORM_FK_%(name)s.Get);
-                       begin
-                          if D2.ORM_%(fk)s = %(default)s then
-                             Self.Session.Insert_or_Update
-                                (D.ORM_FK_%(name)s.all);
-                          end if;
+                if f.fk.table.show:
+                    assign.append(
+                        """if Mask (%(index)d) then
+                        if D.ORM_%(name)s /= %(default)s then
+                          A := A & (DBA.%(table)s.%(name)s = %(value)s);
+                        else
+                           %(self_check)s
+                           declare
+                              D2 : constant %(fkrow)s_Data :=
+                                 %(fkrow)s_data (D.ORM_FK_%(name)s.Get);
+                           begin
+                              if D2.ORM_%(fk)s = %(default)s then
+                                 Self.Session.Insert_Or_Update
+                                    (D.ORM_FK_%(name)s.all);
+                              end if;
 
-                          A := A & (DBA.%(table)s.%(name)s = %(fkall)s);
-                       end;
-                    end if;
-                 end if;""" % tr)
+                              A := A & (DBA.%(table)s.%(name)s = %(fkall)s);
+                           end;
+                        end if;
+                     end if;""" % tr)
+                else:
+                    assign.append(
+                        """if Mask (%(index)d) then
+                          A := A & (DBA.%(table)s.%(name)s = %(value)s);
+                     end if;""" % tr)
 
             else:
                 assign.append(
@@ -1481,10 +1486,11 @@ def generate_orb_one_table(name, schema, pretty, all_tables):
 
         on_add = ""
         for f in table.fk:
-            name = subprogram_from_fk(f)
-            on_add += """if D.ORM_FK_%s /= null then
-               Self.Session.Persist (D.ORM_FK_%s.all);
-               end if;""" % (name, name)
+            if f.foreign.show:
+                name = subprogram_from_fk(f)
+                on_add += """if D.ORM_FK_%s /= null then
+                   Self.Session.Persist (D.ORM_FK_%s.all);
+                   end if;""" % (name, name)
         if on_add:
             pretty.add_subprogram(
                 name="on_persist",
@@ -1559,7 +1565,7 @@ def generate_orb_one_table(name, schema, pretty, all_tables):
                     local = []
                 else:
                     free = f.free_field("D")
-                    if f.is_fk():
+                    if f.is_fk() and f.fk.table.show:
                         free += "Unchecked_Free (D.ORM_FK_%s);" \
                                 % f.name
 
@@ -1728,7 +1734,7 @@ def generate_orb_one_table(name, schema, pretty, all_tables):
 
     for fk in table.revert_fk:      # fk.foreign is always table
         foreign = fk.pairs[0][0].table  # revert the FK relationship
-        if fk.revert and fk.foreign.show:
+        if fk.revert and fk.foreign.show and foreign.show:
             pretty.add_subprogram(
                name=fk.revert,
                params=[("self", "%(row)s'Class" % translate)],

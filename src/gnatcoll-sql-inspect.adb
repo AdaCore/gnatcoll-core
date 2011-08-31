@@ -1253,6 +1253,7 @@ package body GNATCOLL.SQL.Inspect is
 
                if Starts_With (Line (1).all, "ABSTRACT TABLE")
                  or else Starts_With (Line (1).all, "TABLE")
+                 or else Starts_With (Line (1).all, "VIEW")
                then
                   case Mode is
                      when Parsing_Table =>
@@ -1774,7 +1775,8 @@ package body GNATCOLL.SQL.Inspect is
          Parse_Line;
 
          if Fields_Count /= 0
-           and then Line (1).all = "TABLE"
+           and then (Line (1).all = "TABLE"
+                     or else Line (1).all = "VIEW")
          then
             Free_Vars;
 
