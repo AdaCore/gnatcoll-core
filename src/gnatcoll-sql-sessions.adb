@@ -280,6 +280,21 @@ package body GNATCOLL.SQL.Sessions is
       Config_Persist_Cascade := Persist_Cascade;
    end Setup;
 
+   ---------------------------
+   -- Set_Default_User_Data --
+   ---------------------------
+
+   procedure Set_Default_User_Data
+      (Default_User_Data  : User_Data'Class := No_User_Data)
+   is
+   begin
+      if Config_Default_User_Data /= null then
+         Free (Config_Default_User_Data.all);
+         Unchecked_Free (Config_Default_User_Data);
+      end if;
+      Config_Default_User_Data := new User_Data'Class'(Default_User_Data);
+   end Set_Default_User_Data;
+
    -------------------------
    -- Set_Default_Factory --
    -------------------------

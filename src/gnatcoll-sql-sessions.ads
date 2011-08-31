@@ -86,6 +86,11 @@ package GNATCOLL.SQL.Sessions is
    --  is allocated and returned.
    --  The returned value will be null if Setup was never called.
 
+   procedure Set_Default_User_Data
+      (Default_User_Data  : User_Data'Class := No_User_Data);
+   --  Override the default user data for sessions that do not have one yet.
+   --  This does not change existing sessions.
+
    --------------------------
    -- Configuring sessions --
    --------------------------
