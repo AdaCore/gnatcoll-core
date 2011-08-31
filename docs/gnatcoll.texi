@@ -160,6 +160,7 @@ unmodified in any copy.
 * Monitoring memory:: The memory module.
 * Reading and Writing Files:: The mmap module.
 * Searching strings:: The Boyer-Moore module.
+* Paragraph filling::
 * The templates module::
 * Managing Email:: The email module.
 * Ravenscar Patterns::
@@ -211,6 +212,8 @@ Monitoring memory
 Reading and Writing Files
 
 Searching strings
+
+Paragraph filling
 
 The templates module
 
@@ -2529,6 +2532,23 @@ search, as in
 @CODESAMPLE{
   Index := Search (Key, Str (6 .. Str'Last));@NL{}
 }
+
+@c -----------------------------------------------------------------------
+@node Paragraph filling
+@chapter Paragraph filling
+@cindex paragraph filling
+@cindex filling
+@cindex Knuth
+@c -----------------------------------------------------------------------
+@noindent
+
+The package @code{GNATCOLL.Paragraph_Filling} provides several algorithms for
+filling paragraphs---formatting them to take up the minimal number of lines and
+to look better. @code{Knuth_Fill} is based on an algorithm invented by Donald
+Knuth, and used in TeX. @code{Pretty_Fill} uses a different algorithm, which
+was judged by some to produce more aesthetically pleasing output.
+
+More detailed documentation may be found in the comments in the package spec.
 
 @c -----------------------------------------------------------------------
 @node The templates module
