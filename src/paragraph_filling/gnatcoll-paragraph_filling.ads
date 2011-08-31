@@ -1,7 +1,7 @@
 -----------------------------------------------------------------------
 --                          G N A T C O L L                          --
 --                                                                   --
---                    Copyright (C) 2010, AdaCore                    --
+--                    Copyright (C) 2011, AdaCore                    --
 --                                                                   --
 -- This library is free software; you can redistribute it and/or     --
 -- modify it under the terms of the GNU General Public               --
@@ -57,10 +57,9 @@ package GNATCOLL.Paragraph_Filling is
      (Paragraph       : String;
       Max_Line_Length : Positive := Default_Max_Line_Length)
       return Ada.Strings.Unbounded.Unbounded_String;
-   --  Formats a paragraph by first performing To_Greedy_Pragrap and then
-   --  comparing adjacent lines and deciding whether a word should be moved to
-   --  the next line to make the lines more even.
-   --  For example:
+   --  Formats a paragraph by first performing Greedy_Fill and then comparing
+   --  adjacent lines and deciding whether a word should be moved to the next
+   --  line to make the lines more even.  For example:
    --
    --  Reads Ada source code from the file named by Input_Name. Calls Format on
    --  each block comment, and sends the output to the file named by
