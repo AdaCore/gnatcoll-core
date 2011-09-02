@@ -537,6 +537,16 @@ package body GNATCOLL.SQL.Exec is
       else
          Connection.Success := Is_Success (DBMS_Forward_Cursor'Class (R.all));
          if not Connection.Success then
+            if Active (Me_Error) then
+               --  This trace might duplicate information already available
+               --  if both the SQL and SQL.ERRORS streams are active (since
+               --  the result of the SQL has already shown the error message).
+               --  However, it is useful when only SQL.ERRORS is active.
+               Trace (Me_Error, "Transaction failed " & Query
+                      & " => "
+                      & Error_Msg (DBMS_Forward_Cursor'Class (R.all)));
+            end if;
+
             Set_Failure
               (Connection, Error_Msg (DBMS_Forward_Cursor'Class (R.all)));
 

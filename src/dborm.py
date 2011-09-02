@@ -1730,13 +1730,35 @@ def generate_orb_one_table(name, schema, pretty, all_tables):
                     abstract=table.is_abstract,
                     section="Elements: %(cap)s" % translate)
 
+#                if not table.is_abstract:
+#                    # From a table's manager, get a manage for the tables
+#                    # that are related via a FK.
+#
+#                    pretty.add_subprogram(
+#                       name=schema.subprogram_name_from_field(table_name),
+#                       params=[("self",
+#                                "I_%(row)s_Managers'Class" % translate)],
+#                       returns="%s_Managers" % fk_field.foreign.row,
+#                       section="Manager: %(cap)s" % translate,
+#                       local_vars=[("Q", "constant SQL_Query",
+#                                      "I_%s.Build_Query(Self, +DBA.%s.%s)"
+#                                    % (table.name,
+#                                       table.name,
+#                                       table_name))],
+#                       body="""return All_%s.Filter
+#        (SQL_In(DBA.%s.%s, Q));""" % (
+#                          fk_field.foreign.name,
+#                          fk_field.foreign.name,
+#                          fk.pairs[0][1].name))
+
+
     # Generate revert-FK getters for elements
 
     for fk in table.revert_fk:      # fk.foreign is always table
         foreign = fk.pairs[0][0].table  # revert the FK relationship
         if fk.revert and fk.foreign.show and foreign.show:
             pretty.add_subprogram(
-               name=fk.revert,
+               name=schema.subprogram_name_from_field(fk.revert),
                params=[("self", "%(row)s'Class" % translate)],
                returns="%s_Managers" % foreign.name,
                section="Manager: %(cap)s" % translate,
@@ -1748,7 +1770,7 @@ def generate_orb_one_table(name, schema, pretty, all_tables):
 
             if not table.is_abstract:
                 pretty.add_subprogram(
-                   name=fk.revert,
+                   name=schema.subprogram_name_from_field(fk.revert),
                    params=[("self", "Detached_%(row)s'Class" % translate)],
                    returns="%s_Managers" % foreign.name,
                    section="Manager: %(cap)s" % translate,
@@ -1759,7 +1781,7 @@ def generate_orb_one_table(name, schema, pretty, all_tables):
                          fk.pairs[0][1].name))
 
             pretty.add_subprogram(
-               name=fk.revert,
+               name=schema.subprogram_name_from_field(fk.revert),
                params=[("self", "I_%(cap)s_Managers'Class" % translate)],
                returns="%s_Managers" % foreign.name,
                section="Manager: %(cap)s" % translate,
@@ -2368,13 +2390,15 @@ def get_db_schema(setup, requires_pk=False, all_tables=[], omit=[]):
                            Foreign_Key.parse_fk_descr(
                                table, fields[1], fields[2]))
 
+                    null = fields[3].find("NOT NULL") == -1 \
+                            and fields[3].find("PK") == -1
+
                     field = Field(table=table,
                                    name=fields[1],
                                    type=fields[2],
                                    default=fields[4].strip(),
                                    comment=fields[5].strip(),
-                                   null=fields[3] == "NULL"
-                                        or fields[3] == "",
+                                   null=null,
                                    show="%s.%s" % (table.name, fields[1])
                                         not in omit)
                     table.fields.append(field)
