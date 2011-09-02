@@ -256,6 +256,7 @@ package body GNATCOLL.SQL.Sessions is
       Self : Session_Type;
    begin
       Impl.Get (Self);
+      Reset_Connection (Self.DB);
       return Self;
    end Get_New_Session;
 
