@@ -35,11 +35,6 @@ package body GNATCOLL.SQL.Sessions is
    use Element_Cache, Pointers;
 
    Default_Fact              : Element_Factory := Null_Factory'Access;
-   Config_Weak_Cache         : Boolean := True;
-   Config_Flush_Before_Query : Boolean := True;
-   Config_Store_Unmodified   : Boolean := False;
-   Config_Default_User_Data  : User_Data_Access;
-   Config_Persist_Cascade    : Boolean := True;
 
    procedure Unchecked_Free is new Ada.Unchecked_Deallocation
      (Detached_Element'Class, Detached_Element_Access);
@@ -157,22 +152,39 @@ package body GNATCOLL.SQL.Sessions is
    -- Impl_Factory --
    ------------------
 
-   function Impl_Factory
-     (Descr : Database_Description) return Session_Data
-   is
-      DB : constant Database_Connection := Descr.Build_Connection;
+   function Impl_Factory (Data : Pool_Data) return Session_Data is
+      DB : constant Database_Connection := Data.Descr.Build_Connection;
    begin
       Assert
         (Me, DB /= null,
          "Could not connect to database. Wrong dbtype set in settings ?");
 
-      return (DB          => DB,
-              Cache       => new Element_Cache.Map,
-              Tmp_List    => Element_List.Empty_List,
-              User        => null,
+      return (DB                    => DB,
+              Pool                  => Data.Pool,
+              Cache                 => new Element_Cache.Map,
+              Tmp_List              => Element_List.Empty_List,
+              User                  => null,
+              Store_Unmodified      => Data.Config_Store_Unmodified,
+              Weak_Cache            => Data.Config_Weak_Cache,
+              Persist_Cascade       => Data.Config_Persist_Cascade,
+              Flush_Before_Query    => Data.Config_Flush_Before_Query,
               Has_Modified_Elements => False,
-              Factory     => Default_Fact);
+              Factory               => Default_Fact);
    end Impl_Factory;
+
+   ----------
+   -- Free --
+   ----------
+
+   procedure Free (Data : in out Pool_Data) is
+   begin
+      Free (Data.Descr);
+
+      if Data.Config_Default_User_Data /= null then
+         Free (Data.Config_Default_User_Data.all);
+         Unchecked_Free (Data.Config_Default_User_Data);
+      end if;
+   end Free;
 
    -----------------
    -- Clear_Cache --
@@ -213,7 +225,8 @@ package body GNATCOLL.SQL.Sessions is
 
    procedure Impl_On_Release (Data : in out Session_Data) is
    begin
-      Increase_Indent (Me, "Releasing session");
+      Increase_Indent (Me, "Releasing session in pool "
+                       & Session_Pool'Image (Data.Pool));
       if Data.Cache /= null then
          Clear_Cache (Data);
       end if;
@@ -239,7 +252,10 @@ package body GNATCOLL.SQL.Sessions is
       procedure Unchecked_Free is new Ada.Unchecked_Deallocation
         (Element_Cache.Map'Class, Map_Access);
    begin
-      Trace (Me, "Freeing a session and its cache, closing SQL connection");
+      if Active (Me) then
+         Trace (Me, "Freeing a session and its cache, closing SQL connection"
+                & " in pool " & Session_Pool'Image (Data.Pool));
+      end if;
       Clear_Cache (Data);  --  Should have been done in Impl_On_Release
       Unchecked_Free (Data.Cache);
 
@@ -252,10 +268,16 @@ package body GNATCOLL.SQL.Sessions is
    -- Get_New_Session --
    ---------------------
 
-   function Get_New_Session return Session_Type is
+   function Get_New_Session
+     (Pool : Session_Pool := Default_Pool) return Session_Type
+   is
       Self : Session_Type;
    begin
-      Impl.Get (Self);
+      if Active (Me) then
+         Trace (Me, "Getting new session from pool "
+                & Session_Pool'Image (Pool));
+      end if;
+      Impl.Get (Self, Set => Pool);
       Reset_Connection (Self.DB);
       return Self;
    end Get_New_Session;
@@ -271,30 +293,22 @@ package body GNATCOLL.SQL.Sessions is
       Store_Unmodified   : Boolean := False;
       Weak_Cache         : Boolean := True;
       Flush_Before_Query : Boolean := True;
-      Persist_Cascade    : Boolean := True) is
-   begin
-      Impl.Set_Factory (Descr, Max_Sessions);
-      Config_Store_Unmodified := Store_Unmodified;
-      Config_Weak_Cache := Weak_Cache;
-      Config_Flush_Before_Query := Flush_Before_Query;
-      Set_Default_User_Data (Default_User_Data);
-      Config_Persist_Cascade := Persist_Cascade;
-   end Setup;
-
-   ---------------------------
-   -- Set_Default_User_Data --
-   ---------------------------
-
-   procedure Set_Default_User_Data
-      (Default_User_Data  : User_Data'Class := No_User_Data)
+      Persist_Cascade    : Boolean := True;
+      Pool               : Session_Pool := Default_Pool)
    is
    begin
-      if Config_Default_User_Data /= null then
-         Free (Config_Default_User_Data.all);
-         Unchecked_Free (Config_Default_User_Data);
-      end if;
-      Config_Default_User_Data := new User_Data'Class'(Default_User_Data);
-   end Set_Default_User_Data;
+      Impl.Set_Factory
+        (Pool_Data'
+           (Descr                     => Descr,
+            Pool                      => Pool,
+            Config_Store_Unmodified   => Store_Unmodified,
+            Config_Weak_Cache         => Weak_Cache,
+            Config_Flush_Before_Query => Flush_Before_Query,
+            Config_Default_User_Data  =>
+               new User_Data'Class'(Default_User_Data),
+            Config_Persist_Cascade    => Persist_Cascade),
+         Max_Sessions, Set => Pool);
+   end Setup;
 
    -------------------------
    -- Set_Default_Factory --
@@ -557,11 +571,6 @@ package body GNATCOLL.SQL.Sessions is
 
    procedure Free is
    begin
-      if Config_Default_User_Data /= null then
-         Free (Config_Default_User_Data.all);
-         Unchecked_Free (Config_Default_User_Data);
-      end if;
-
       Impl.Free;
    end Free;
 
@@ -616,7 +625,7 @@ package body GNATCOLL.SQL.Sessions is
          D.Session := Get_Weak (Self);
       end if;
 
-      if not Config_Store_Unmodified then
+      if not Self.Element.Store_Unmodified then
          if not Is_Dirty (D) then
             return;
          end if;
@@ -646,7 +655,7 @@ package body GNATCOLL.SQL.Sessions is
          Inserted : Boolean;
          Pos : Element_Cache.Cursor;
       begin
-         if Config_Weak_Cache
+         if Self.Element.Weak_Cache
            and then not Is_Dirty (Detached_Data_Access (Element.Get))
          then
             To_Weak_Reference (R);
@@ -693,7 +702,7 @@ package body GNATCOLL.SQL.Sessions is
             Data.Dirty (D) := False;
          end loop;
 
-         if Config_Weak_Cache then
+         if Self.Element.Weak_Cache then
             To_Weak_Reference (D);
             Self.Element.Cache.Replace_Element (C, D);
          end if;
@@ -733,7 +742,7 @@ package body GNATCOLL.SQL.Sessions is
 
    function Persist_Cascade (Self : Session_Type) return Boolean is
    begin
-      return Config_Persist_Cascade and then Self /= No_Session;
+      return Self.Element.Persist_Cascade and then Self /= No_Session;
    end Persist_Cascade;
 
    ----------------------
@@ -976,22 +985,41 @@ package body GNATCOLL.SQL.Sessions is
    ------------------------
 
    function Flush_Before_Query (Self : Session_Type) return Boolean is
-      pragma Unreferenced (Self);
    begin
-      return Config_Flush_Before_Query;
+      return Self.Element.Flush_Before_Query;
    end Flush_Before_Query;
+
+   ---------------------------
+   -- Set_Default_User_Data --
+   ---------------------------
+
+   procedure Set_Default_User_Data
+     (Default_User_Data  : User_Data'Class := No_User_Data;
+      Pool               : Session_Pool := Default_Pool)
+   is
+      P : constant access Pool_Data := Impl.Get_Factory_Param (Pool);
+   begin
+      Free (P.Config_Default_User_Data.all);
+      Unchecked_Free (P.Config_Default_User_Data);
+      P.Config_Default_User_Data := new User_Data'Class'(Default_User_Data);
+   end Set_Default_User_Data;
 
    -------------------
    -- Get_User_Data --
    -------------------
 
    function Get_User_Data
-     (Self : Session_Type) return access User_Data'Class
+     (Self : Session_Type; Pool : Session_Pool := Default_Pool)
+      return access User_Data'Class
    is
       D : constant access Session_Data := Self.Element;
+      P : access Pool_Data;
    begin
-      if D.User = null and then Config_Default_User_Data /= null then
-         D.User := new User_Data'Class'(Config_Default_User_Data.all);
+      if D.User = null then
+         P := Impl.Get_Factory_Param (Pool);
+         if P.Config_Default_User_Data /= null then
+            D.User := new User_Data'Class'(P.Config_Default_User_Data.all);
+         end if;
       end if;
 
       return D.User;

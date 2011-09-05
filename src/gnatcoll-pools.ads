@@ -28,7 +28,17 @@
 --  A typical usage is when the resource creation is expensive, such as a pool
 --  of database connections.
 --
---  Each instantiation of this package provides a task-safe global pool.
+--  Each instantiation of this package provides one task-safe global pool.
+--  However, this pool can contains multiple sets of elements. Each sets has
+--  its own factory parameter. The subprograms will by default apply to the
+--  first such subset, since in most cases you will only need one such subset
+--  in your application. An example where multiple subsets might be needed is
+--  for instance when we have a pool of database connections. We would for
+--  instance one subset for each DBMS we want to connect to it. Each subset
+--  then contains a number of connections to that specific DBMS.
+--  Of course, this pattern could be implemented by having multiple
+--  instantiations of GNATCOLL.Pools, but this makes the API more complex and
+--  forces the duplication of the whole GNATCOLL.SQL.Session API.
 
 pragma Ada_05;
 
@@ -42,6 +52,17 @@ generic
    with function Factory (Param : Factory_Param) return Element_Type;
    --  Information needed to create new elements as needed. This is passed as
    --  is to the Factory function.
+
+   type Resource_Set is (<>);
+   --  Represents a set of elements within the pool.
+   --  There can be multiple such sets in one pool. Each set is associated with
+   --  its own factory parameter, but all other elements are compatible between
+   --  the various sets (in particular, the resources are the same, so the rest
+   --  of the application doesn't need to know which set this resource is
+   --  from).
+   --  Most times, a pool will need only one such subset, which is created by
+   --  default. All subprograms below apply to this default set, unless
+   --  otherwise specified.
 
    with procedure Free (Self : in out Element_Type) is null;
    --  Called when the [Self] is finally removed from the pool
@@ -59,6 +80,8 @@ generic
    --  Called when the pool itself is freed.
 
 package GNATCOLL.Pools is
+
+   Default_Set : constant Resource_Set;
 
    type Resource is tagged private;
    No_Resource : constant Resource;
@@ -87,12 +110,15 @@ package GNATCOLL.Pools is
    --  cache of some sort.
 
    procedure Set_Factory
-     (Descr        : Factory_Param;
-      Max_Elements : Positive);
+     (Param        : Factory_Param;
+      Max_Elements : Positive;
+      Set          : Resource_Set := Default_Set);
    --  Configure the internal resource pool. This must be called before
    --  calling Get, and only once.
 
-   procedure Get (Self : out Resource'Class);
+   procedure Get
+     (Self : out Resource'Class;
+      Set  : Resource_Set := Default_Set);
    --  Return an available resource (or create a new one if the pool is not
    --  full yet and none is available).
    --  In a multitasking context, this blocks until a resource is actually
@@ -109,6 +135,17 @@ package GNATCOLL.Pools is
    function Get_Refcount (Self : Resource) return Natural;
    --  Return the reference counting for self
 
+   function Get_Factory_Param
+     (Set : Resource_Set := Default_Set) return access Factory_Param;
+   --  Returns a the factory param used for the set.
+   --  Remember that the factory will not be called again for resources that
+   --  have already been created, even if they have been released to the pool
+   --  since then.
+   --  This must only be called when you have called Set_Factory for the
+   --  corresponding set.
+   --  The returned value is shared among multiple threads, so you should only
+   --  modify it from a protected region or before tasks are created.
+
 private
 
    type Pool_Resource is record
@@ -119,9 +156,12 @@ private
    --  The data stored in the pool.
    --  These are not smart pointers, which are created on demand in Get.
 
+   Default_Set : constant Resource_Set := Resource_Set'First;
+
    type Resource_Data is new GNATCOLL.Refcount.Weakref.Weak_Refcounted with
       record
-         In_Pool : Pool_Resource_Access;
+         In_Set : Pool_Resource_Access;
+         Set    : Resource_Set;
       end record;
    overriding procedure Free (Self : in out Resource_Data);
    package Pointers is new GNATCOLL.Refcount.Weakref.Weakref_Pointers

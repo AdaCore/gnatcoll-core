@@ -29,27 +29,40 @@ package body GNATCOLL.Pools is
    Me : constant Trace_Handle := Create ("Pools");
 
    type Pool_Array is array (Positive range <>) of Pool_Resource_Access;
-   type Pool_Array_Access is access Pool_Array;
+   type Pool_Array_Access is access all Pool_Array;
+
+   type Resource_Set_Data is record
+      Elements  : Pool_Array_Access;
+      Param     : aliased Factory_Param;
+      Available : aliased Integer_32 := 0;
+   end record;
+
+   type Sets is array (Resource_Set range <>) of Resource_Set_Data;
+   type Sets_Access is access all Sets;
 
    procedure Unchecked_Free is new Ada.Unchecked_Deallocation
      (Pool_Resource, Pool_Resource_Access);
    procedure Unchecked_Free is new Ada.Unchecked_Deallocation
      (Pool_Array, Pool_Array_Access);
+   procedure Unchecked_Free is new Ada.Unchecked_Deallocation
+     (Sets, Sets_Access);
 
    protected type Pool is
-      entry Get (Element : out Resource'Class);
+      entry Get (Resource_Set) (Element : out Resource'Class);
       --  Get one resource
       --  You must have called Set_Factory before.
       --  The resource must be released explicitly by calling Release, or
       --  there will be starvation
 
-      procedure Release (In_Pool : in out Pool_Resource_Access);
+      procedure Release
+        (In_Pool : in out Pool_Resource_Access; Set : Resource_Set);
       --  Release the resource, and make it available to others.
       --  In_Pool might have been freed on exit
 
       procedure Set_Factory
         (Descr        : Factory_Param;
-         Max_Elements : Positive);
+         Max_Elements : Positive;
+         Set          : Resource_Set);
       --  Describe how to connect to the database. This can be called only
       --  once ie before getting the first connection
 
@@ -58,10 +71,11 @@ package body GNATCOLL.Pools is
       --  If they are in use elsewhere they will not be freed immediately, only
       --  when they are no longer in use.
 
+      function Get_Factory_Param
+        (Set : Resource_Set) return access Factory_Param;
+
    private
-      Available : aliased Integer_32 := 0;
-      Elements  : Pool_Array_Access;
-      Param     : Factory_Param;
+      Elements  : Sets_Access;
    end Pool;
 
    protected body Pool is
@@ -72,32 +86,51 @@ package body GNATCOLL.Pools is
 
       procedure Set_Factory
         (Descr        : Factory_Param;
-         Max_Elements : Positive)
-      is
+         Max_Elements : Positive;
+         Set          : Resource_Set) is
       begin
-         Assert (Me, Elements = null, "Set_Factory can be called only once");
-         Available := Integer_32 (Max_Elements);
-         Elements  := new Pool_Array'(1 .. Max_Elements => null);
-         Param     := Descr;
+         if Elements = null then
+            Elements := new Sets (Resource_Set'Range);
+         end if;
+
+         if Elements (Set).Elements = null then
+            Elements (Set) :=
+              (Elements => new Pool_Array'(1 .. Max_Elements => null),
+               Available => Integer_32 (Max_Elements),
+               Param     => Descr);
+         else
+            raise Program_Error with
+              "Set_Factory can be called only once per resource_set";
+         end if;
       end Set_Factory;
+
+      -----------------------
+      -- Get_Factory_Param --
+      -----------------------
+
+      function Get_Factory_Param
+        (Set : Resource_Set) return access Factory_Param is
+      begin
+         return Elements (Set).Param'Access;
+      end Get_Factory_Param;
 
       ---------
       -- Get --
       ---------
 
-      entry Get (Element : out Resource'Class)
-        when Available > 0
+      entry Get (for Set in Resource_Set) (Element : out Resource'Class)
+        when Elements (Set).Available > 0
       is
          In_Pool : Pointers.Encapsulated_Access;
       begin
-         Available := Available - 1;
+         Elements (Set).Available := Elements (Set).Available - 1;
 
          --  Get the first available resource. Since they are allocated
          --  sequentially, this ensures that we preferably reuse an existing
          --  connection rather than create a new one.
 
-         for E in Elements'Range loop
-            if Elements (E) = null then
+         for E in Elements (Set).Elements'Range loop
+            if Elements (Set).Elements (E) = null then
                --  ??? Issue: the factory might take a long time (for
                --  instance establishing a database connection). During
                --  that time, all threads waiting on Get are blocked.
@@ -112,22 +145,29 @@ package body GNATCOLL.Pools is
                --  resulting in a deadlock. Instead, we start with an
                --  off-by-one refcount, and put things back straight afterward.
 
-               Elements (E) := new Pool_Resource'
-                 (Element           => Factory (Param),
+               Elements (Set).Elements (E) := new Pool_Resource'
+                 (Element           => Factory (Elements (Set).Param),
                   Available         => False);
 
                In_Pool := new Resource_Data'
-                 (Weak_Refcounted with In_Pool => Elements (E));
-               Set (Element, In_Pool);
+                 (Weak_Refcounted with
+                  Set    => Set,
+                  In_Set => Elements (Set).Elements (E));
+               Element.Set (In_Pool);
                return;
 
-            elsif Elements (E).Available then
-               Trace (Me, "Get: returning resources at index" & E'Img);
-               Elements (E).Available         := False;
+            elsif Elements (Set).Elements (E).Available then
+               if Active (Me) then
+                  Trace (Me, "Get: pool " & Set'Img
+                         & " returning resources at index" & E'Img);
+               end if;
+               Elements (Set).Elements (E).Available         := False;
 
                In_Pool := new Resource_Data'
-                 (Weak_Refcounted with In_Pool => Elements (E));
-               Set (Element, In_Pool);
+                 (Weak_Refcounted with
+                  Set    => Set,
+                  In_Set => Elements (Set).Elements (E));
+               Element.Set (In_Pool);
                return;
             end if;
          end loop;
@@ -140,7 +180,9 @@ package body GNATCOLL.Pools is
       -- Release --
       -------------
 
-      procedure Release (In_Pool : in out Pool_Resource_Access) is
+      procedure Release
+        (In_Pool : in out Pool_Resource_Access; Set : Resource_Set)
+      is
       begin
          --  Nothing to do after the pool itself has been freed.
          --  Normal reference counting will take place
@@ -148,7 +190,7 @@ package body GNATCOLL.Pools is
          if Elements /= null then
             Trace (Me, "Released one resource");
             In_Pool.Available := True;
-            Available := Available + 1;
+            Elements (Set).Available := Elements (Set).Available + 1;
          else
             --  The pool has been destroyed and the resource is no longer used.
             --  Simply free it.
@@ -163,23 +205,33 @@ package body GNATCOLL.Pools is
       ----------
 
       procedure Free is
+         R : Pool_Resource_Access;
       begin
          Increase_Indent (Me, "Global_Pool.Free");
 
          if Elements /= null then
-            for E in Elements'Range loop
-               if Elements (E) /= null
-                 and then Elements (E).Available
-               then
-                  Trace (Me, "Freeing a resource");
-                  Free (Elements (E).Element);
-                  Unchecked_Free (Elements (E));
-               elsif Elements (E) /= null then
-                  Trace (Me, "One ressource still in use, can't be freed");
+            for Set in Elements'Range loop
+               if Elements (Set).Elements /= null then
+                  for E in Elements (Set).Elements'Range loop
+                     R := Elements (Set).Elements (E);
+
+                     if R /= null
+                       and then R.Available
+                     then
+                        Trace (Me, "Freeing a resource");
+                        Free (R.Element);
+                        Unchecked_Free (R);
+                     elsif R /= null then
+                        Trace
+                          (Me, "One ressource still in use, can't be freed");
+                     end if;
+                  end loop;
+
+                  Free_Param (Elements (Set).Param);
+                  Unchecked_Free (Elements (Set).Elements);
                end if;
             end loop;
 
-            Free_Param (Param);
             Unchecked_Free (Elements);
          end if;
 
@@ -200,16 +252,17 @@ package body GNATCOLL.Pools is
    begin
       Assert (Me, Enc /= null,
               "A wrapper should not exist without an element");
-      return Enc.In_Pool.Element'Access;
+      return Enc.In_Set.Element'Access;
    end Element;
 
    ---------
    -- Get --
    ---------
 
-   procedure Get (Self : out Resource'Class) is
+   procedure Get
+     (Self : out Resource'Class; Set : Resource_Set := Default_Set) is
    begin
-      Global_Pool.Get (Self);
+      Global_Pool.Get (Set) (Self);
    end Get;
 
    --------------
@@ -252,10 +305,10 @@ package body GNATCOLL.Pools is
       --  Call the user's callback before releasing into the pool, so that the
       --  resource doesn't get reused in the meantime.
 
-      On_Release (Self.In_Pool.Element);
+      On_Release (Self.In_Set.Element);
 
       begin
-         Global_Pool.Release (Self.In_Pool);
+         Global_Pool.Release (Self.In_Set, Self.Set);
       exception
          when E : Program_Error =>
             Trace (Me, "Global pool was already finalized");
@@ -268,11 +321,22 @@ package body GNATCOLL.Pools is
    -----------------
 
    procedure Set_Factory
-     (Descr        : Factory_Param;
-      Max_Elements : Positive) is
+     (Param        : Factory_Param;
+      Max_Elements : Positive;
+      Set          : Resource_Set := Default_Set) is
    begin
-      Global_Pool.Set_Factory (Descr, Max_Elements);
+      Global_Pool.Set_Factory (Param, Max_Elements, Set);
    end Set_Factory;
+
+   -----------------------
+   -- Get_Factory_Param --
+   -----------------------
+
+   function Get_Factory_Param
+     (Set : Resource_Set := Default_Set) return access Factory_Param is
+   begin
+      return Global_Pool.Get_Factory_Param (Set);
+   end Get_Factory_Param;
 
    ------------------
    -- Get_Refcount --

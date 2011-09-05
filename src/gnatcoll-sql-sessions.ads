@@ -34,6 +34,12 @@ with GNATCOLL.Pools;
 
 package GNATCOLL.SQL.Sessions is
 
+   type Session_Pool is new Integer range 1 .. 3;
+   --  Connection to at most three different DBMS.
+   --  ??? Would be nice to make this configurable
+
+   Default_Pool : constant Session_Pool := Session_Pool'First;
+
    type Session_Type is tagged private;
    No_Session : constant Session_Type;
    --  A session implements the "Unit Of Work" design pattern.
@@ -80,16 +86,13 @@ package GNATCOLL.SQL.Sessions is
    procedure Free (Self : in out User_Data) is null;
    --  Free the contents of User_Data.
 
-   function Get_User_Data (Self : Session_Type) return access User_Data'Class;
+   function Get_User_Data
+     (Self : Session_Type; Pool : Session_Pool := Default_Pool)
+      return access User_Data'Class;
    --  Return the user data stored in the session.
    --  If none exists yet, a copy of the Default_User_Data set through Setup
    --  is allocated and returned.
    --  The returned value will be null if Setup was never called.
-
-   procedure Set_Default_User_Data
-      (Default_User_Data  : User_Data'Class := No_User_Data);
-   --  Override the default user data for sessions that do not have one yet.
-   --  This does not change existing sessions.
 
    --------------------------
    -- Configuring sessions --
@@ -102,7 +105,8 @@ package GNATCOLL.SQL.Sessions is
       Store_Unmodified   : Boolean := False;
       Weak_Cache         : Boolean := True;
       Flush_Before_Query : Boolean := True;
-      Persist_Cascade    : Boolean := True);
+      Persist_Cascade    : Boolean := True;
+      Pool               : Session_Pool := Default_Pool);
    --  Describes how to connect to the database.
    --  Max_Sessions is the number of concurrent sessions at maximum. Each holds
    --  a connection to the database.
@@ -145,6 +149,14 @@ package GNATCOLL.SQL.Sessions is
    --  first time for a session. Default_User_Data is freed when this package
    --  is finalized through a call to Free.
 
+   procedure Set_Default_User_Data
+     (Default_User_Data  : User_Data'Class := No_User_Data;
+      Pool               : Session_Pool := Default_Pool);
+   --  Override the default user data. This will affect all sesssions retrieved
+   --  via Get_New_Session from now on.
+   --  This must be called from a protected region where a single thread has
+   --  access, since it modifies shared data.
+
    type Weak_Session is private;
    Null_Weak_Session : constant Weak_Session;
    --  A weak-reference to a session.
@@ -164,7 +176,8 @@ package GNATCOLL.SQL.Sessions is
    --  Return the value of the corresponding setup for the session.
    --  See Setup for more documentation on the various settings.
 
-   function Get_New_Session return Session_Type;
+   function Get_New_Session
+     (Pool : Session_Pool := Default_Pool) return Session_Type;
    pragma Inline (Get_New_Session);
    --  Create a new session, that remains active while in scope.
 
@@ -498,12 +511,19 @@ private
    type User_Data_Access is access all User_Data'Class;
 
    type Session_Data is record
+      Pool     : Session_Pool;
       DB       : Database_Connection;
       Cache    : Map_Access;
       Factory  : Element_Factory := Null_Factory'Access;  --  not null
 
       Has_Modified_Elements : Boolean := False;
       --  Whether the cache contains modified elements
+
+      Store_Unmodified   : Boolean;
+      Weak_Cache         : Boolean;
+      Persist_Cascade    : Boolean;
+      Flush_Before_Query : Boolean;
+      --  See Setup
 
       User     : User_Data_Access;
       --  User data for this session, will be allocated when Get is called.
@@ -518,19 +538,31 @@ private
    --  Cache is implemented as an access type for efficiency: otherwise, every
    --  time we query Session.Element we would get a copy of the cache.
 
-   function Impl_Factory
-     (Descr : Database_Description) return Session_Data;
+   type Pool_Data is record
+      Pool                      : Session_Pool;
+      Descr                     : Database_Description;
+      Config_Weak_Cache         : Boolean := True;
+      Config_Flush_Before_Query : Boolean := True;
+      Config_Store_Unmodified   : Boolean := False;
+      Config_Default_User_Data  : User_Data_Access;
+      Config_Persist_Cascade    : Boolean := True;
+   end record;
+
+   procedure Free (Data : in out Pool_Data);
+
+   function Impl_Factory (Data : Pool_Data) return Session_Data;
    procedure Impl_Free (Data : in out Session_Data);
    procedure Impl_On_Release (Data : in out Session_Data);
    --  Subprograms needed for the instantiation of Pools
 
    package Impl is new GNATCOLL.Pools
      (Element_Type  => Session_Data,
-      Factory_Param => Database_Description,
+      Resource_Set  => Session_Pool,
+      Factory_Param => Pool_Data,
       Factory       => Impl_Factory,
       Free          => Impl_Free,  --  Close SQL connection
       On_Release    => Impl_On_Release,
-      Free_Param    => GNATCOLL.SQL.Exec.Free);
+      Free_Param    => Free);
    --  Note on usage: calling Get will return a valid database connection.
    --  It is valid to use the following construct:
    --      A := All_<type>.Get (Connections.Get.Element)
