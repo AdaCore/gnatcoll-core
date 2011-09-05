@@ -63,9 +63,11 @@ export Gnatcoll_Build
 ifeq (${OS},Windows_NT)
 DIRSEP=;
 LIBEXT=dll
+EXE=.exe
 else
 DIRSEP=:
 LIBEXT=so
+EXE=
 endif
 
 ## Put this first so that it is the default make target

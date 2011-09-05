@@ -15,4 +15,4 @@ gnatcoll_db2ada: force
 	${GPRBUILD} -m -j${PROCESSORS} -P$(PROJECT) $@ -p -largs $(POSTGRES_PATH)
 
 installbin: force
-	$(CP) obj/gnatcoll_db2ada $(bindir)
+	$(CP) obj/gnatcoll_db2ada${EXE} $(bindir)
