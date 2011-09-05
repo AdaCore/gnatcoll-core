@@ -75,8 +75,7 @@ package body GNATCOLL.Pools is
          Max_Elements : Positive)
       is
       begin
-         Assert (Me, Elements = null,
-                 "Set_Database_Description can be called only once");
+         Assert (Me, Elements = null, "Set_Factory can be called only once");
          Available := Integer_32 (Max_Elements);
          Elements  := new Pool_Array'(1 .. Max_Elements => null);
          Param     := Descr;

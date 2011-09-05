@@ -277,7 +277,7 @@ package body GNATCOLL.SQL.Sessions is
       Config_Store_Unmodified := Store_Unmodified;
       Config_Weak_Cache := Weak_Cache;
       Config_Flush_Before_Query := Flush_Before_Query;
-      Config_Default_User_Data := new User_Data'Class'(Default_User_Data);
+      Set_Default_User_Data (Default_User_Data);
       Config_Persist_Cascade := Persist_Cascade;
    end Setup;
 
