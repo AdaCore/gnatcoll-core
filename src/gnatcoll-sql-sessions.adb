@@ -742,7 +742,8 @@ package body GNATCOLL.SQL.Sessions is
 
    function Persist_Cascade (Self : Session_Type) return Boolean is
    begin
-      return Self.Element.Persist_Cascade and then Self /= No_Session;
+      return Self /= No_Session
+        and then Self.Element.Persist_Cascade;
    end Persist_Cascade;
 
    ----------------------
