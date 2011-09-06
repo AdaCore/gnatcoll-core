@@ -650,7 +650,7 @@ class Schema(object):
 
         f = base.lower()
         for table in self.details.itervalues():
-            if f == table.name.lower() or f == table.row.lower():
+            if f == table.row.lower():
                 return "Get_" + base
 
         return base
