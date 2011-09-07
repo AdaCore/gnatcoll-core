@@ -163,7 +163,7 @@ package body GNATCOLL.SQL.Postgres.Gnade is
             paramValues  : CS.chars_ptr_array;  --  const char* const *
             paramLengths : System.Address := System.Null_Address;  --  int*
             paramFormats : System.Address := System.Null_Address;  --  int*
-            resultFormat : Interfaces.C.int := 1) return System.Address;
+            resultFormat : Interfaces.C.int := 0) return System.Address;
          pragma Import (C, PQexecParams, "PQexecParams");
          --  paramTypes can be left to NULL for automatic guessing
          --
