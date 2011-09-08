@@ -2000,7 +2000,7 @@ class Field_Type(object):
                    "timestamp",
                    "date"):
             sql = "time"
-        elif sql.startswith("character varying"):
+        elif sql.startswith("character"):
             sql = "text"
 
         try:

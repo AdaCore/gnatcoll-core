@@ -49,7 +49,7 @@ package GNATCOLL.SQL.Inspect is
    type Field is tagged private;
    type Field_List is tagged private;
 
-   type Field_Type is
+   type Field_Type_Kind is
      (Field_Text,
       Field_Integer,
       Field_Date,
@@ -58,6 +58,14 @@ package GNATCOLL.SQL.Inspect is
       Field_Float,
       Field_Boolean,
       Field_Autoincrement);
+   type Field_Type (Kind : Field_Type_Kind := Field_Text) is record
+      case Kind is
+         when Field_Text =>
+            Max_Length : Integer := Integer'Last;
+         when others =>
+            null;
+      end case;
+   end record;
 
    Invalid_Type : exception;
    --  Raise by Read_Schema when some unknown type is used.

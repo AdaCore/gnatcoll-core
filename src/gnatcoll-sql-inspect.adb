@@ -162,8 +162,8 @@ package body GNATCOLL.SQL.Inspect is
          return D.Typ;
       else
          T := Get_Type (FK);
-         if T = Field_Autoincrement then
-            T := Field_Integer;
+         if T.Kind = Field_Autoincrement then
+            T := (Kind => Field_Integer);
          end if;
 
          return T;
@@ -520,9 +520,16 @@ package body GNATCOLL.SQL.Inspect is
      (Typ          : Field_Type;
       For_Database : Boolean := True) return String is
    begin
-      case Typ is
+      case Typ.Kind is
          when Field_Boolean => return "Boolean";
-         when Field_Text    => return "Text";
+         when Field_Text    =>
+            if Typ.Max_Length = Integer'Last
+              or not For_Database
+            then
+               return "Text";
+            else
+               return "Character(" & Image (Typ.Max_Length, 1) & ")";
+            end if;
          when Field_Integer => return "Integer";
          when Field_Date    => return "Date";
          when Field_Timestamp =>
@@ -549,41 +556,45 @@ package body GNATCOLL.SQL.Inspect is
       T     : constant String := To_Lower (SQL_Type);
    begin
       if T = "boolean" then
-         return Field_Boolean;
+         return (Kind => Field_Boolean);
 
-      elsif T = "text"
-        or else
-          (T'Length >= 9 and then T (T'First .. T'First + 8) = "character")
+      elsif T = "text" then
+         return (Kind => Field_Text, Max_Length => Integer'Last);
+
+      elsif T'Length >= 9
+        and then T (T'First .. T'First + 8) = "character"
       then
-         return Field_Text;
+         return (Kind => Field_Text,
+                 Max_Length =>
+                   Integer'Value (T (T'First + 10 .. T'Last - 1)));
 
       elsif T = "float" then
-         return Field_Float;
+         return (Kind => Field_Float);
 
       elsif T = "integer"
         or else T = "smallint"
         or else T = "oid"
         or else (T'Length >= 7 and then T (T'First .. T'First + 6) = "numeric")
       then
-         return Field_Integer;
+         return (Kind => Field_Integer);
 
       elsif T = "date" then
-         return Field_Date;
+         return (Kind => Field_Date);
 
       elsif T = "timestamp without time zone"
         or else T = "timestamp with time zone"
         or else T = "timestamp"
       then
-         return Field_Timestamp;
+         return (Kind => Field_Timestamp);
 
       elsif T = "time" then
-         return Field_Time;
+         return (Kind => Field_Time);
 
       elsif T = "double precision" then
-         return Field_Float;
+         return (Kind => Field_Float);
 
       elsif T = "autoincrement" then
-         return Field_Autoincrement;
+         return (Kind => Field_Autoincrement);
 
       else
          raise Invalid_Type
@@ -867,7 +878,7 @@ package body GNATCOLL.SQL.Inspect is
       V : constant String := To_Lower (Value);
       B : Boolean;
    begin
-      if Typ = Field_Boolean then
+      if Typ.Kind = Field_Boolean then
          if V = "true" or else V = "false" then
             B := Boolean'Value (Value);
             Val := new String'(Boolean_Image (DB.all, B));
@@ -893,7 +904,7 @@ package body GNATCOLL.SQL.Inspect is
             Param := Null_Parameter;
          end if;
 
-      elsif Typ = Field_Integer then
+      elsif Typ.Kind = Field_Integer then
          Val := new String'(Value);
          Param := +Val;
 
@@ -1116,7 +1127,7 @@ package body GNATCOLL.SQL.Inspect is
                   Set (Att, Field_Description'
                          (Weak_Refcounted with
                           Name        => new String'(Line (1).all),
-                          Typ         => Field_Text,  --  Set below
+                          Typ         => (Kind => Field_Boolean), --  Set below
                           Id          => Attr_Id,
                           Description => new String'(Line (5).all),
                           Default     => new String'(Line (4).all),
@@ -1462,7 +1473,7 @@ package body GNATCOLL.SQL.Inspect is
             end if;
             Is_First_Attribute := False;
 
-            if Get_Type (F) = Field_Autoincrement then
+            if Get_Type (F).Kind = Field_Autoincrement then
                Append (SQL, "   " & F.Name & " "
                        & Field_Type_Autoincrement (Self.DB.all));
             else
@@ -1496,7 +1507,7 @@ package body GNATCOLL.SQL.Inspect is
          begin
             --  Auto increment fields were already setup as primary keys
             --  via Field_Type_Autoincrement primitive operation.
-            if F.Is_PK and then F.Get_Type /= Field_Autoincrement then
+            if F.Is_PK and then F.Get_Type.Kind /= Field_Autoincrement then
                if SQL_PK = Null_Unbounded_String then
                   Append (SQL_PK, F.Name);
                else
@@ -1582,7 +1593,7 @@ package body GNATCOLL.SQL.Inspect is
          FK : constant Field := Attr.Is_FK;
       begin
          if FK = No_Field then
-            if Attr.Get_Type = Field_Autoincrement then
+            if Attr.Get_Type.Kind = Field_Autoincrement then
                return "AUTOINCREMENT";
             else
                return To_SQL (Attr.Get_Type);

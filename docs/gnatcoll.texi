@@ -3863,7 +3863,9 @@ the fields is always given by the following grammar:
 }
 
 The type of the field is the SQL type ("INTEGER", "TEXT", "TIMESTAMP", "DATE",
-"DOUBLE PRECISION", "BOOLEAN"). The tool will automatically convert these to
+"DOUBLE PRECISION", "BOOLEAN", "TIME", "CHARACTER(1)"). Any maximal length
+can be specified for strings, not just 1 as in this example.
+The tool will automatically convert these to
 Ada when generating Ada code. A special type ("AUTOINCREMENT") is an integer
 that is automatically incremented according to available ids in the table.
 The exact type used will depend on the specific DBMS.
