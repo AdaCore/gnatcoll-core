@@ -116,7 +116,7 @@ procedure Generate (Generated : String) is
       begin
          Put (Spec_File, "      "
               & Capitalize (F.Name)
-              & " : SQL_Field_" & To_SQL (F.Get_Type));
+              & " : SQL_Field_" & To_SQL (F.Get_Type, For_Database => False));
 
          if T_Descr.Is_Abstract then
             Put (Spec_File, " (Table_Name");

@@ -62,11 +62,17 @@ package GNATCOLL.SQL.Inspect is
    Invalid_Type : exception;
    --  Raise by Read_Schema when some unknown type is used.
 
-   function From_SQL (SQL_Type : String) return Field_Type;
+   function From_SQL
+     (SQL_Type : String) return Field_Type;
    --  Convert a SQL type to a field type, or raise Invalid_Type
 
-   function To_SQL (Typ : Field_Type) return String;
+   function To_SQL
+     (Typ          : Field_Type;
+      For_Database : Boolean := True) return String;
    --  Return the Ada type to use for Typ.
+   --  If For_Database is True, the returned value can be used in a
+   --  "CREATE TABLE" statement. Otherwise, it is prefixed with "SQL_Field_"
+   --  to represent the corresponding GNATCOLL.SQL type
 
    ------------
    -- Fields --

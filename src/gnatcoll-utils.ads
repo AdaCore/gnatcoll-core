@@ -151,6 +151,24 @@ package GNATCOLL.Utils is
    procedure Set_OpenVMS_Host (Setting : Boolean := True);
    --  Set whether the host is an OpenVMS host
 
+   -----------
+   -- Dates --
+   -----------
+
+   function Time_Value (Str : String) return Ada.Calendar.Time;
+   --  Check the validity of Str as a string representing a date
+   --  using the same formats as in GNAT.Calendar.Time_IO.Value. In addition,
+   --  it also supports timezones (as output for instance by PostgreSQL)
+   --     1970-01-01 12:00:00+01
+   --
+   --  Return the Date if the format is valid, No_Time otherwise
+   --  All the above can start with the day spelled out, as in "thu, "
+   --  The returned date is in UTC format, and should be manipulated through
+   --  the functions in Ada.Calendar.*, not the functions in GNAT.Calendar.*
+   --  which expect a local time.
+   --  The input date is assumed to be in UTC, unless a timezone is specified
+   --  with a final "[+-]\d\d".
+
 private
 
    No_Time : constant Ada.Calendar.Time := Ada.Calendar.Time_Of

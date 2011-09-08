@@ -1,7 +1,7 @@
 -----------------------------------------------------------------------
 --                               G N A T C O L L                     --
 --                                                                   --
---                 Copyright (C) 2005-2010, AdaCore                  --
+--                 Copyright (C) 2005-2011, AdaCore                  --
 --                                                                   --
 -- GPS is free  software;  you can redistribute it and/or modify  it --
 -- under the terms of the GNU General Public License as published by --
@@ -35,7 +35,7 @@
 with Ada.Strings.Fixed;     use Ada.Strings.Fixed;
 with Ada.Unchecked_Conversion;
 with Ada.Unchecked_Deallocation;
-with GNAT.Calendar.Time_IO; use GNAT.Calendar, GNAT.Calendar.Time_IO;
+with GNATCOLL.Utils;        use GNATCOLL.Utils;
 
 package body GNATCOLL.SQL.Exec_Private is
 
@@ -100,9 +100,9 @@ package body GNATCOLL.SQL.Exec_Private is
          --  set one to avoid daylight saving time issues
 
          if Ada.Strings.Fixed.Index (Val, ":") < Val'First then
-            return GNAT.Calendar.Time_IO.Value (Val & " 12:00:00");
+            return GNATCOLL.Utils.Time_Value (Val & " 12:00:00");
          else
-            return GNAT.Calendar.Time_IO.Value (Val);
+            return GNATCOLL.Utils.Time_Value (Val);
          end if;
       end if;
    end Time_Value;

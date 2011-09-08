@@ -516,14 +516,21 @@ package body GNATCOLL.SQL.Inspect is
    -- To_SQL --
    ------------
 
-   function To_SQL (Typ : Field_Type) return String is
+   function To_SQL
+     (Typ          : Field_Type;
+      For_Database : Boolean := True) return String is
    begin
       case Typ is
          when Field_Boolean => return "Boolean";
          when Field_Text    => return "Text";
          when Field_Integer => return "Integer";
          when Field_Date    => return "Date";
-         when Field_Timestamp => return "timestamp with time zone";
+         when Field_Timestamp =>
+            if For_Database then
+               return "timestamp with time zone";
+            else
+               return "Time";
+            end if;
          when Field_Time    => return "Time";
          when Field_Float   => return "Float";
          when Field_Autoincrement =>
