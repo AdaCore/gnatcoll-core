@@ -3899,7 +3899,7 @@ which an index is created to speed up look ups.
 @end itemize
 
 The fourth column gives the default value for the field, and is given in SQL
-syntax.
+syntax. Strings must be quoted with single quotes.
 
 The fifth column contains documentation for the field (if any). This
 documentation will be included in the generated code, so that IDEs can
