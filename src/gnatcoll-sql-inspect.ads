@@ -54,6 +54,7 @@ package GNATCOLL.SQL.Inspect is
       Field_Integer,
       Field_Date,
       Field_Time,
+      Field_Timestamp,
       Field_Float,
       Field_Boolean,
       Field_Autoincrement);

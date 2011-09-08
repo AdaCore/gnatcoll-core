@@ -26,6 +26,7 @@
 -----------------------------------------------------------------------
 
 with Ada.Characters.Handling;     use Ada.Characters.Handling;
+with Ada.Command_Line;
 with Ada.Containers;              use Ada.Containers;
 with Ada.Exceptions;              use Ada.Exceptions;
 with Ada.Strings.Fixed;           use Ada.Strings, Ada.Strings.Fixed;
@@ -522,6 +523,7 @@ package body GNATCOLL.SQL.Inspect is
          when Field_Text    => return "Text";
          when Field_Integer => return "Integer";
          when Field_Date    => return "Date";
+         when Field_Timestamp => return "timestamp with time zone";
          when Field_Time    => return "Time";
          when Field_Float   => return "Float";
          when Field_Autoincrement =>
@@ -565,6 +567,9 @@ package body GNATCOLL.SQL.Inspect is
         or else T = "timestamp with time zone"
         or else T = "timestamp"
       then
+         return Field_Timestamp;
+
+      elsif T = "time" then
          return Field_Time;
 
       elsif T = "double precision" then
@@ -928,7 +933,7 @@ package body GNATCOLL.SQL.Inspect is
       --  Split the line that starts at First into its fields.
       --  On exit, First points to the beginning of the next line
 
-      procedure Parse_Table (Table_Def, Name : String);
+      procedure Parse_Table (Table_Def, Name : String; Is_View : Boolean);
       --  Parse a table description
 
       procedure Parse_Table_Inheritance
@@ -1032,11 +1037,12 @@ package body GNATCOLL.SQL.Inspect is
       -- Parse_Table --
       -----------------
 
-      procedure Parse_Table (Table_Def, Name : String) is
+      procedure Parse_Table (Table_Def, Name : String; Is_View : Boolean) is
          Table : Table_Description;
          Line  : Line_Fields;
          Attr_Id : Natural := 0;
          Props : Field_Properties;
+         Kind : Relation_Kind;
       begin
          T := T + 1;
 
@@ -1048,11 +1054,17 @@ package body GNATCOLL.SQL.Inspect is
          begin
             C := Find (Schema.Tables, Name);
             if C = Tables_Maps.No_Element then
+               if Is_View then
+                  Kind := Kind_View;
+               else
+                  Kind := Kind_Table;
+               end if;
+
                Set (Table, Table_Description_Record'
                    (Weak_Refcounted with
                     Name        => new String'(Name),
                     Row         => null,
-                    Kind        => Kind_Table,
+                    Kind        => Kind,
                     Id          => T,
                     Description => null,
                     Fields      => Empty_Field_List,
@@ -1257,7 +1269,10 @@ package body GNATCOLL.SQL.Inspect is
                then
                   case Mode is
                      when Parsing_Table =>
-                        Parse_Table (Line (1).all, Line (2).all);
+                        Parse_Table
+                          (Line (1).all,
+                           Line (2).all,
+                           Is_View => Starts_With (Line (1).all, "VIEW"));
                      when Parsing_FK    =>
                         Parse_FK (Line (2).all);
                   end case;
@@ -1298,11 +1313,34 @@ package body GNATCOLL.SQL.Inspect is
    overriding procedure Write_Schema
      (Self : DB_Schema_IO; Schema : DB_Schema)
    is
-      Indexes : String_Lists.List;
+      Created : String_Lists.List;
+      --  List of tables that have been created. When a table has already been
+      --  created, we set the foreign key constraints to it immediately,
+      --  otherwise we defer them till all tables have been created.
+
+      Deferred : String_Lists.List;
       --  Statements to execute to create the indexes
 
       procedure For_Table (Table : in out Table_Description);
       --  Process a table
+
+      procedure Do_Statement (SQL : String);
+      --  Execute or output the statement, depending on user's choice
+
+      ------------------
+      -- Do_Statement --
+      ------------------
+
+      procedure Do_Statement (SQL : String) is
+      begin
+         if SQL /= "" then
+            if Self.DB = null then
+               Put_Line (SQL & ";");
+            else
+               Execute (Self.DB, SQL);
+            end if;
+         end if;
+      end Do_Statement;
 
       ---------------
       -- For_Table --
@@ -1312,11 +1350,101 @@ package body GNATCOLL.SQL.Inspect is
          SQL : Unbounded_String;
          --  The statement to execute
 
+         SQL_PK : Unbounded_String;
+         --  The SQL to create the primary key
+
          Is_First_Attribute : Boolean := True;
 
          procedure Print_PK (F : in out Field);
-         procedure Print_FK (Table : Table_Description);
          procedure Add_Field (F : in out Field);
+
+         procedure Print_FK (Table : Table_Description);
+         --  Process the foreign key and indexes constraints. They are either
+         --  added to the table creation statement, or deferred until all
+         --  tables have been created.
+
+         procedure Print_FK (Table : Table_Description) is
+            Stmt : Unbounded_String;
+            --  The deferred statement to execute
+
+            C : Foreign_Keys.Cursor := TDR (Table.Get).FK.First;
+            F : Foreign_Refs.Encapsulated_Access;
+            P : Pair_Lists.Cursor;
+            Is_First : Boolean;
+         begin
+            while Has_Element (C) loop
+               F := Element (C).Get;
+
+               --  Prepare the constraint
+
+               Stmt := To_Unbounded_String (" FOREIGN KEY (");
+
+               Is_First := True;
+               P := F.Fields.First;
+
+               while Has_Element (P) loop
+                  if not Is_First then
+                     Append (Stmt, ",");
+                  end if;
+                  Is_First := False;
+                  Append (Stmt, Element (P).From.Name);
+                  Next (P);
+               end loop;
+
+               Append
+                 (Stmt, ") REFERENCES " & Element (C).To_Table.Name & " (");
+
+               Is_First := True;
+               P := F.Fields.First;
+               while Has_Element (P) loop
+                  if not Is_First then
+                     Append (Stmt, ",");
+                  end if;
+                  Is_First := False;
+
+                  if Element (P).To = No_Field then
+                     Append (Stmt, Element (C).To_Table.Get_PK.Name);
+                  else
+                     Append (Stmt, Element (P).To.Name);
+                  end if;
+
+                  Next (P);
+               end loop;
+
+               Append (Stmt, ")");
+
+               --  If the other table has already been created, we can add the
+               --  new constraint directly in the table creation which is more
+               --  efficient (a single SQL statement).
+
+               if Created.Contains (Element (C).To_Table.Name) then
+                  Append (SQL, "," & Stmt);
+
+               else
+                  Stmt := "ALTER TABLE " & Table.Name & " ADD CONSTRAINT "
+                    & Element (F.Fields.First).From.Name & "_fk" & Stmt;
+                  Append (Deferred, To_String (Stmt));
+               end if;
+
+               --  Create indexes for the reverse relationships, since it is
+               --  likely the user will want to use them a lot anyway
+
+               if Length (F.Fields) = 1
+                 and not Element (F.Fields.First).From.Get.Indexed
+               then
+                  Append (Deferred,
+                          "CREATE INDEX """
+                          & Table.Name & "_"
+                          & Element (F.Fields.First).From.Name
+                          & "_idx"" ON """
+                          & Table.Name & """ ("""
+                          & Element (F.Fields.First).From.Name
+                          & """)");
+               end if;
+
+               Next (C);
+            end loop;
+         end Print_FK;
 
          procedure Add_Field (F : in out Field) is
             Val : GNAT.Strings.String_Access;
@@ -1341,16 +1469,16 @@ package body GNATCOLL.SQL.Inspect is
             if F.Default /= "" then
                Format_Field
                   (Self.DB, F.Default, Get_Type (F), Val, Val_Param, False);
-               Append (SQL, " DEFAULT '" & Val.all & "'");
+               Append (SQL, " DEFAULT " & Val.all);
                Free (Val);
             end if;
 
             if F.Get.Indexed then
-               Append (Indexes,
+               Append (Deferred,
                        "CREATE INDEX """
                        & Table.Name & "_"
                        & F.Get.Name.all
-                       & """ ON """
+                       & "_idx"" ON """
                        & Table.Name & """ ("""
                        & F.Get.Name.all
                        & """)");
@@ -1362,95 +1490,37 @@ package body GNATCOLL.SQL.Inspect is
             --  Auto increment fields were already setup as primary keys
             --  via Field_Type_Autoincrement primitive operation.
             if F.Is_PK and then F.Get_Type /= Field_Autoincrement then
-               Append (SQL, ", PRIMARY KEY (" & F.Name & ")");
+               if SQL_PK = Null_Unbounded_String then
+                  Append (SQL_PK, F.Name);
+               else
+                  Append (SQL_PK, "," & F.Name);
+               end if;
             end if;
          end Print_PK;
-
-         procedure Print_FK (Table : Table_Description) is
-            C : Foreign_Keys.Cursor := TDR (Table.Get).FK.First;
-            F : Foreign_Refs.Encapsulated_Access;
-            P : Pair_Lists.Cursor;
-            Is_First : Boolean;
-         begin
-            while Has_Element (C) loop
-               F := Element (C).Get;
-
-               Append (SQL, ", FOREIGN KEY (");
-
-               Is_First := True;
-               P := F.Fields.First;
-
-               while Has_Element (P) loop
-                  if not Is_First then
-                     Append (SQL, ",");
-                  end if;
-                  Is_First := False;
-                  Append (SQL, Element (P).From.Name);
-                  Next (P);
-               end loop;
-
-               Append
-                 (SQL, ") REFERENCES " & Element (C).To_Table.Name & " (");
-
-               Is_First := True;
-               P := F.Fields.First;
-               while Has_Element (P) loop
-                  if not Is_First then
-                     Append (SQL, ",");
-                  end if;
-                  Is_First := False;
-
-                  if Element (P).To = No_Field then
-                     Append (SQL, Element (C).To_Table.Get_PK.Name);
-                  else
-                     Append (SQL, Element (P).To.Name);
-                  end if;
-
-                  Next (P);
-               end loop;
-
-               Append (SQL, ")");
-
-               if Length (F.Fields) = 1 then
-                  --  Create indexes for the reverse relationships, since
-                  --  it is likely the user will want to use them a lot
-                  --  anyway
-                  Append (Indexes,
-                          "CREATE INDEX """
-                          & Table.Name & "_"
-                          & Element (F.Fields.First).From.Name
-                          & """ ON """
-                          & Table.Name & """ ("""
-                          & Element (F.Fields.First).From.Name
-                          & """)");
-               end if;
-
-               Next (C);
-            end loop;
-         end Print_FK;
 
       begin
          if not Table.Is_Abstract then
             case Table.Get_Kind is
                when Kind_Table =>
+                  Created.Append (Table.Name);   --  mark the table as created
+
                   Append (SQL, "CREATE TABLE " & Table.Name & " (");
                   For_Each_Field
                     (Table, Add_Field'Access, Include_Inherited => True);
+
+                  SQL_PK := Null_Unbounded_String;
                   For_Each_Field (Table, Print_PK'Access, True);
+                  if SQL_PK /= "" then
+                     Append (SQL, ", PRIMARY KEY (" & SQL_PK & ")");
+                  end if;
+
                   Print_FK (Table);
                   Append (SQL, ")");
+                  Do_Statement (To_String (SQL));
 
                when Kind_View  =>
                   null;
             end case;
-         end if;
-
-         if SQL /= "" then
-            if Self.DB = null then
-               Put_Line (To_String (SQL) & ";");
-            else
-               Execute (Self.DB, To_String (SQL));
-            end if;
          end if;
       end For_Table;
 
@@ -1459,19 +1529,18 @@ package body GNATCOLL.SQL.Inspect is
    begin
       For_Each_Table (Schema, For_Table'Access);
 
-      S := First (Indexes);
+      S := First (Deferred);
       while Has_Element (S) loop
-         if Self.DB = null then
-            Put_Line (Element (S) & ";");
-         else
-            Execute (Self.DB, Element (S));
-         end if;
-
+         Do_Statement (Element (S));
          Next (S);
       end loop;
 
       if Self.DB /= null then
          Commit_Or_Rollback (Self.DB);
+
+         if not Self.DB.Success then
+            Ada.Command_Line.Set_Exit_Status (Ada.Command_Line.Failure);
+         end if;
       end if;
    end Write_Schema;
 

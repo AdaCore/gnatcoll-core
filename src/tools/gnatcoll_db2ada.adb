@@ -42,6 +42,7 @@ with GNATCOLL.SQL.Exec;          use GNATCOLL.SQL, GNATCOLL.SQL.Exec;
 with GNATCOLL.SQL.Inspect;       use GNATCOLL.SQL.Inspect;
 with GNATCOLL.SQL.Postgres;
 with GNATCOLL.SQL.Sqlite;
+with GNATCOLL.Traces;
 with GNATCOLL.Utils;             use GNATCOLL.Utils;
 with GNATCOLL.VFS;               use GNATCOLL.VFS;
 
@@ -562,10 +563,13 @@ procedure GNATCOLL_Db2Ada is
    end Dump_Tables;
 
 begin
+   GNATCOLL.Traces.Parse_Config_File;
    Get_Database_Connection;
 
    if Schema = No_Schema then
       Put_Line ("Could not parse the database schema, exiting...");
+      Set_Exit_Status (Failure);
+
    else
       --  Create the package Database_Typed_Entities
 
