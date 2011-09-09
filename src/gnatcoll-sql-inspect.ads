@@ -247,8 +247,11 @@ package GNATCOLL.SQL.Inspect is
 
    procedure For_Each_Table
      (Self     : DB_Schema;
-      Callback : access procedure (T : in out Table_Description));
-   --  For all tables in the database, calls Callback
+      Callback : access procedure (T : in out Table_Description);
+      Alphabetical : Boolean := True);
+   --  For all tables in the database, calls Callback.
+   --  The order is either alphabetical, or in the order used in the textual
+   --  model description.
 
    ---------------
    -- Schema IO --
@@ -419,6 +422,8 @@ private
 
    package Tables_Maps is new Ada.Containers.Indefinite_Ordered_Maps
      (String, Table_Description, "<", "=");
+   package Tables_Lists is new Ada.Containers.Indefinite_Doubly_Linked_Lists
+     (String);
 
    ------------
    -- Schema --
@@ -426,9 +431,14 @@ private
 
    type DB_Schema is record
       Tables  : Tables_Maps.Map;
+
+      Ordered_Tables : Tables_Lists.List;
+      --  In the order in which the user defined them in the description file.
    end record;
 
-   No_Schema : constant DB_Schema := (Tables  => Tables_Maps.Empty_Map);
+   No_Schema : constant DB_Schema :=
+     (Tables         => Tables_Maps.Empty_Map,
+      Ordered_Tables => Tables_Lists.Empty_List);
 
    No_Table : constant Table_Description :=
      (Tables_Ref.Null_Ref with null record);

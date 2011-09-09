@@ -85,6 +85,8 @@ package body GNATCOLL.SQL.Postgres.Builder is
      (Self  : Postgresql_Connection_Record;
       Index : Positive;
       Typ   : Parameter_Type) return String;
+   overriding function Can_Alter_Table_Constraints
+     (Self : access Postgresql_Connection_Record) return Boolean;
    overriding function Connect_And_Execute
      (Connection  : access Postgresql_Connection_Record;
       Query       : String;
@@ -1221,5 +1223,17 @@ package body GNATCOLL.SQL.Postgres.Builder is
          return "'" & New_Str & "'";
       end if;
    end String_Image;
+
+   ---------------------------------
+   -- Can_Alter_Table_Constraints --
+   ---------------------------------
+
+   overriding function Can_Alter_Table_Constraints
+     (Self : access Postgresql_Connection_Record) return Boolean
+   is
+      pragma Unreferenced (Self);
+   begin
+      return True;
+   end Can_Alter_Table_Constraints;
 
 end GNATCOLL.SQL.Postgres.Builder;

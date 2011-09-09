@@ -105,6 +105,8 @@ package body GNATCOLL.SQL.Sqlite.Builder is
      (Connection : access Sqlite_Connection_Record);
    overriding function Field_Type_Autoincrement
      (Self : Sqlite_Connection_Record) return String;
+   overriding function Can_Alter_Table_Constraints
+     (Self : access Sqlite_Connection_Record) return Boolean;
    overriding function Connect_And_Execute
      (Connection  : access Sqlite_Connection_Record;
       Query       : String;
@@ -433,6 +435,8 @@ package body GNATCOLL.SQL.Sqlite.Builder is
       end if;
 
       if Status /= Sqlite_OK then
+         Trace (Me, "Connect_And_Execute failed to prepare statement for "
+                & Query & ASCII.LF & Error_Msg (Connection.DB));
          Finalize (Stmt);
          return No_DBMS_Stmt;
       end if;
@@ -599,8 +603,6 @@ package body GNATCOLL.SQL.Sqlite.Builder is
             end if;
          end if;
       else
-         Trace (Me, "Connect_And_Execute failed to prepare statement for "
-                & Query);
          return null;
       end if;
 
@@ -990,5 +992,17 @@ package body GNATCOLL.SQL.Sqlite.Builder is
    begin
       return "INTEGER PRIMARY KEY AUTOINCREMENT";
    end Field_Type_Autoincrement;
+
+   ---------------------------------
+   -- Can_Alter_Table_Constraints --
+   ---------------------------------
+
+   overriding function Can_Alter_Table_Constraints
+     (Self : access Sqlite_Connection_Record) return Boolean
+   is
+      pragma Unreferenced (Self);
+   begin
+      return False;
+   end Can_Alter_Table_Constraints;
 
 end GNATCOLL.SQL.Sqlite.Builder;

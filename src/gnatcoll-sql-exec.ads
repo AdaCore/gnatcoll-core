@@ -407,6 +407,12 @@ package GNATCOLL.SQL.Exec is
       return Database_Description;
    --  Return the description of the database to which we are connected
 
+   function Can_Alter_Table_Constraints
+     (Self : access Database_Connection_Record)
+      return Boolean is abstract;
+   --  Whether it is possible to add constraints to an existing table.
+   --  This is intended for use when creating tables (in GNATCOLL.SQL.Inspect)
+
    ------------------------------------------
    -- Retrieving results - Forward cursors --
    ------------------------------------------

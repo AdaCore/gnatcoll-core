@@ -42,7 +42,7 @@ package body GNATCOLL.SQL.Inspect is
    Me : constant Trace_Handle := Create ("SQL.INSPECT");
 
    use Tables_Maps, Field_Lists, Foreign_Refs;
-   use Foreign_Keys, Pair_Lists;
+   use Foreign_Keys, Pair_Lists, Tables_Lists;
 
    package String_Lists is new Ada.Containers.Indefinite_Doubly_Linked_Lists
      (String);
@@ -471,16 +471,35 @@ package body GNATCOLL.SQL.Inspect is
 
    procedure For_Each_Table
      (Self     : DB_Schema;
-      Callback : access procedure (T : in out Table_Description))
+      Callback : access procedure (T : in out Table_Description);
+      Alphabetical : Boolean := True)
    is
-      C : Tables_Maps.Cursor := Self.Tables.First;
       T : Table_Description;
    begin
-      while Has_Element (C) loop
-         T := Element (C);
-         Callback (T);
-         Next (C);
-      end loop;
+      if Alphabetical
+        or else Self.Ordered_Tables.Is_Empty
+      then
+         declare
+            C : Tables_Maps.Cursor := Self.Tables.First;
+         begin
+            while Has_Element (C) loop
+               T := Element (C);
+               Callback (T);
+               Next (C);
+            end loop;
+         end;
+
+      else
+         declare
+            C : Tables_Lists.Cursor := Self.Ordered_Tables.First;
+         begin
+            while Has_Element (C) loop
+               T := Self.Tables.Element (Element (C));
+               Callback (T);
+               Next (C);
+            end loop;
+         end;
+      end if;
    end For_Each_Table;
 
    -----------------
@@ -706,7 +725,9 @@ package body GNATCOLL.SQL.Inspect is
          Set (Ref, Descr);
 
          Parse_Table (Self, Ref, TDR (Ref.Get).Fields);
+
          Insert (Schema.Tables, Name, Ref);
+         Schema.Ordered_Tables.Append (Name);
       end On_Table;
 
       ----------------------
@@ -1208,6 +1229,7 @@ package body GNATCOLL.SQL.Inspect is
 
          Free (String_List (Line));
          Include (Schema.Tables, Name, Table);
+         Schema.Ordered_Tables.Append (Name);
       end Parse_Table;
 
       --------------
@@ -1336,7 +1358,8 @@ package body GNATCOLL.SQL.Inspect is
       --  created, we set the foreign key constraints to it immediately,
       --  otherwise we defer them till all tables have been created.
 
-      Deferred : String_Lists.List;
+      Deferred         : String_Lists.List;
+      Deferred_Indexes : String_Lists.List;
       --  Statements to execute to create the indexes
 
       procedure For_Table (Table : in out Table_Description);
@@ -1374,7 +1397,15 @@ package body GNATCOLL.SQL.Inspect is
          Is_First_Attribute : Boolean := True;
 
          procedure Print_PK (F : in out Field);
-         procedure Add_Field (F : in out Field);
+         procedure Add_Field_To_SQL (F : in out Field);
+
+         procedure Get_Field_Def
+           (F    : Field;
+            Stmt : out Unbounded_String;
+            Can_Be_Not_Null : Boolean := True);
+         --  Set Stmt to the definition for the field F.
+         --  If Can_Be_Not_Null is False, the field will never have NOT NULL.
+         --  This is needed in sqlite3 when adding FK columns later on.
 
          procedure Print_FK (Table : Table_Description);
          --  Process the foreign key and indexes constraints. They are either
@@ -1382,8 +1413,10 @@ package body GNATCOLL.SQL.Inspect is
          --  tables have been created.
 
          procedure Print_FK (Table : Table_Description) is
-            Stmt : Unbounded_String;
+            Stmt2 : Unbounded_String;
             --  The deferred statement to execute
+
+            Stmt_FK, Stmt_References : Unbounded_String;
 
             C : Foreign_Keys.Cursor := TDR (Table.Get).FK.First;
             F : Foreign_Refs.Encapsulated_Access;
@@ -1395,53 +1428,71 @@ package body GNATCOLL.SQL.Inspect is
 
                --  Prepare the constraint
 
-               Stmt := To_Unbounded_String (" FOREIGN KEY (");
-
+               Stmt_FK := To_Unbounded_String (" FOREIGN KEY (");
                Is_First := True;
                P := F.Fields.First;
-
                while Has_Element (P) loop
                   if not Is_First then
-                     Append (Stmt, ",");
+                     Append (Stmt_FK, ",");
                   end if;
                   Is_First := False;
-                  Append (Stmt, Element (P).From.Name);
+                  Append (Stmt_FK, Element (P).From.Name);
                   Next (P);
                end loop;
+               Append (Stmt_FK, ")");
 
-               Append
-                 (Stmt, ") REFERENCES " & Element (C).To_Table.Name & " (");
-
+               Stmt_References := To_Unbounded_String
+                 (" REFERENCES " & Element (C).To_Table.Name & " (");
                Is_First := True;
                P := F.Fields.First;
                while Has_Element (P) loop
                   if not Is_First then
-                     Append (Stmt, ",");
+                     Append (Stmt_References, ",");
                   end if;
                   Is_First := False;
 
                   if Element (P).To = No_Field then
-                     Append (Stmt, Element (C).To_Table.Get_PK.Name);
+                     Append
+                       (Stmt_References, Element (C).To_Table.Get_PK.Name);
                   else
-                     Append (Stmt, Element (P).To.Name);
+                     Append
+                       (Stmt_References, Element (P).To.Name);
                   end if;
-
                   Next (P);
                end loop;
+               Append (Stmt_References, ")");
 
-               Append (Stmt, ")");
+               Append (Stmt_FK, Stmt_References);
 
                --  If the other table has already been created, we can add the
                --  new constraint directly in the table creation which is more
                --  efficient (a single SQL statement).
 
                if Created.Contains (Element (C).To_Table.Name) then
-                  Append (SQL, "," & Stmt);
+                  Append (SQL, "," & ASCII.LF & Stmt_FK);
+
+               elsif Self.DB.Can_Alter_Table_Constraints then
+                  Append
+                    (Deferred,
+                     To_String
+                       ("ALTER TABLE " & Table.Name & " ADD CONSTRAINT "
+                        & Element (F.Fields.First).From.Name & "_fk" & Stmt_FK
+                        & " DEFERRABLE INITIALLY DEFERRED"));
 
                else
-                  Stmt := "ALTER TABLE " & Table.Name & " ADD CONSTRAINT "
-                    & Element (F.Fields.First).From.Name & "_fk" & Stmt;
-                  Append (Deferred, To_String (Stmt));
+                  P := F.Fields.First;
+                  while Has_Element (P) loop
+                     --  Sqlite only allows adding a NON NULL REFERENCES column
+                     --  if it has a non-null default. So we need to provide a
+                     --  random default in such a case.
+
+                     Get_Field_Def (Element (P).From, Stmt2,
+                                    Can_Be_Not_Null => False);
+                     Stmt2 := "ALTER TABLE " & Table.Name & " ADD COLUMN "
+                       & Stmt2 & Stmt_References;
+                     Append (Deferred, To_String (Stmt2));
+                     Next (P);
+                  end loop;
                end if;
 
                --  Create indexes for the reverse relationships, since it is
@@ -1450,7 +1501,7 @@ package body GNATCOLL.SQL.Inspect is
                if Length (F.Fields) = 1
                  and not Element (F.Fields.First).From.Get.Indexed
                then
-                  Append (Deferred,
+                  Append (Deferred_Indexes,
                           "CREATE INDEX """
                           & Table.Name & "_"
                           & Element (F.Fields.First).From.Name
@@ -1464,35 +1515,51 @@ package body GNATCOLL.SQL.Inspect is
             end loop;
          end Print_FK;
 
-         procedure Add_Field (F : in out Field) is
+         -------------------
+         -- Get_Field_Def --
+         -------------------
+
+         procedure Get_Field_Def
+           (F    : Field;
+            Stmt : out Unbounded_String;
+            Can_Be_Not_Null : Boolean := True)
+         is
             Val : GNAT.Strings.String_Access;
             Val_Param : SQL_Parameter;
          begin
-            if not Is_First_Attribute then
-               Append (SQL, "," & ASCII.LF);
-            end if;
-            Is_First_Attribute := False;
+            Stmt := Null_Unbounded_String;
 
             if Get_Type (F).Kind = Field_Autoincrement then
-               Append (SQL, "   " & F.Name & " "
+               Append (Stmt, " " & F.Name & " "
                        & Field_Type_Autoincrement (Self.DB.all));
             else
-               Append (SQL, "   " & F.Name & " " & To_SQL (Get_Type (F)));
+               Append (Stmt, " " & F.Name & " " & To_SQL (Get_Type (F)));
             end if;
 
             if not F.Can_Be_Null then
-               Append (SQL, " NOT NULL");
+               if not Can_Be_Not_Null then
+                  Put_Line (Standard_Error,
+                            "'" & F.Get_Table.Name
+                            & "." & F.Name
+                            & "' cannot be NOT NULL in sqlite, because it"
+                            & " references '"
+                            & F.Is_FK.Get_Table.Name
+                            & "' which hasn't been defined yet." & ASCII.LF
+                            & "Try reordering the table definitions");
+               else
+                  Append (Stmt, " NOT NULL");
+               end if;
             end if;
 
             if F.Default /= "" then
                Format_Field
                   (Self.DB, F.Default, Get_Type (F), Val, Val_Param, False);
-               Append (SQL, " DEFAULT " & Val.all);
+               Append (Stmt, " DEFAULT " & Val.all);
                Free (Val);
             end if;
 
             if F.Get.Indexed then
-               Append (Deferred,
+               Append (Deferred_Indexes,
                        "CREATE INDEX """
                        & Table.Name & "_"
                        & F.Get.Name.all
@@ -1501,7 +1568,40 @@ package body GNATCOLL.SQL.Inspect is
                        & F.Get.Name.all
                        & """)");
             end if;
-         end Add_Field;
+         end Get_Field_Def;
+
+         ----------------------
+         -- Add_Field_To_SQL --
+         ----------------------
+
+         procedure Add_Field_To_SQL (F : in out Field) is
+            Tmp : Unbounded_String;
+         begin
+            --  When a field is a FK to a table that hasn't been created yet,
+            --  we need to alter the table later to set the constraint. But in
+            --  some cases (sqlite3), this isn't possible, so we will create
+            --  the field later altogether.
+
+            if not Self.DB.Can_Alter_Table_Constraints
+              and then F.Is_FK /= No_Field
+              and then not Created.Contains (F.Is_FK.Get_Table.Name)
+            then
+               return;
+            end if;
+
+            if not Is_First_Attribute then
+               Append (SQL, "," & ASCII.LF);
+            end if;
+
+            Is_First_Attribute := False;
+
+            Get_Field_Def (F, Tmp);
+            Append (SQL, Tmp);
+         end Add_Field_To_SQL;
+
+         --------------
+         -- Print_PK --
+         --------------
 
          procedure Print_PK (F : in out Field) is
          begin
@@ -1522,9 +1622,10 @@ package body GNATCOLL.SQL.Inspect is
                when Kind_Table =>
                   Created.Append (Table.Name);   --  mark the table as created
 
-                  Append (SQL, "CREATE TABLE " & Table.Name & " (");
+                  Append (SQL, "CREATE TABLE " & Table.Name & " (" & ASCII.LF);
                   For_Each_Field
-                    (Table, Add_Field'Access, Include_Inherited => True);
+                    (Table, Add_Field_To_SQL'Access,
+                     Include_Inherited => True);
 
                   SQL_PK := Null_Unbounded_String;
                   For_Each_Field (Table, Print_PK'Access, True);
@@ -1545,9 +1646,15 @@ package body GNATCOLL.SQL.Inspect is
       S  : String_Lists.Cursor;
 
    begin
-      For_Each_Table (Schema, For_Table'Access);
+      For_Each_Table (Schema, For_Table'Access, Alphabetical => False);
 
       S := First (Deferred);
+      while Has_Element (S) loop
+         Do_Statement (Element (S));
+         Next (S);
+      end loop;
+
+      S := First (Deferred_Indexes);
       while Has_Element (S) loop
          Do_Statement (Element (S));
          Next (S);

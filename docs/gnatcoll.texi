@@ -3879,7 +3879,15 @@ another table), you can use the special syntax for its type:
 
 As you can see, the type of the field is not specified explicitly, but will
 always be that of the foreign table's primary key. With this syntax, the
-foreign table must have a single field for its primary key.
+foreign table must have a single field for its primary key. @value{gnatcoll}
+does not force a specific order for the declaration of tables: if is valid to
+have a foreign key to a table that hasn't been declared yet. There is however
+a restriction if you use the model to create a sqlite database (through the
+@code{-createdb} switch of @code{gnatcoll_db2ada}): in this case, a reference
+to a table that hasn't been defined yet may not be not through a field marked
+as NOT NULL. This is a limitation of the sqlite backend itself. The solution
+in this case is to reorder the declaration of tables, or drop the NOT NULL
+constraint.
 
 "revert_name" is the name that will be generated in the Ada code for the
 reverse relationship, in the context of @code{GNATCOLL.SQL.ORM}.
