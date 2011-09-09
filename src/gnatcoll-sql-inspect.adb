@@ -1353,6 +1353,8 @@ package body GNATCOLL.SQL.Inspect is
    overriding procedure Write_Schema
      (Self : DB_Schema_IO; Schema : DB_Schema)
    is
+      Invalid_Schema : exception;
+
       Created : String_Lists.List;
       --  List of tables that have been created. When a table has already been
       --  created, we set the foreign key constraints to it immediately,
@@ -1402,10 +1404,13 @@ package body GNATCOLL.SQL.Inspect is
          procedure Get_Field_Def
            (F    : Field;
             Stmt : out Unbounded_String;
-            Can_Be_Not_Null : Boolean := True);
+            Can_Be_Not_Null : Boolean := True;
+            FK_Table : String := "");
          --  Set Stmt to the definition for the field F.
          --  If Can_Be_Not_Null is False, the field will never have NOT NULL.
-         --  This is needed in sqlite3 when adding FK columns later on.
+         --  This is needed in sqlite3 when adding FK columns later on. When
+         --  Can_Be_Not_Null is set to False, you must set FK_Table to the
+         --  table pointed to by the field.
 
          procedure Print_FK (Table : Table_Description);
          --  Process the foreign key and indexes constraints. They are either
@@ -1487,7 +1492,8 @@ package body GNATCOLL.SQL.Inspect is
                      --  random default in such a case.
 
                      Get_Field_Def (Element (P).From, Stmt2,
-                                    Can_Be_Not_Null => False);
+                                    Can_Be_Not_Null => False,
+                                    FK_Table => Element (C).To_Table.Name);
                      Stmt2 := "ALTER TABLE " & Table.Name & " ADD COLUMN "
                        & Stmt2 & Stmt_References;
                      Append (Deferred, To_String (Stmt2));
@@ -1522,7 +1528,8 @@ package body GNATCOLL.SQL.Inspect is
          procedure Get_Field_Def
            (F    : Field;
             Stmt : out Unbounded_String;
-            Can_Be_Not_Null : Boolean := True)
+            Can_Be_Not_Null : Boolean := True;
+            FK_Table : String := "")
          is
             Val : GNAT.Strings.String_Access;
             Val_Param : SQL_Parameter;
@@ -1539,13 +1546,12 @@ package body GNATCOLL.SQL.Inspect is
             if not F.Can_Be_Null then
                if not Can_Be_Not_Null then
                   Put_Line (Standard_Error,
-                            "'" & F.Get_Table.Name
+                            "Warning: '" & F.Get_Table.Name
                             & "." & F.Name
                             & "' cannot be NOT NULL in sqlite, because it"
-                            & " references '"
-                            & F.Is_FK.Get_Table.Name
+                            & " references '" & FK_Table
                             & "' which hasn't been defined yet." & ASCII.LF
-                            & "Try reordering the table definitions");
+                            & "  Try reordering the table definitions");
                else
                   Append (Stmt, " NOT NULL");
                end if;
@@ -1556,6 +1562,20 @@ package body GNATCOLL.SQL.Inspect is
                   (Self.DB, F.Default, Get_Type (F), Val, Val_Param, False);
                Append (Stmt, " DEFAULT " & Val.all);
                Free (Val);
+
+               if not Can_Be_Not_Null then
+                  --  When adding FK fields to an existing table, sqlite only
+                  --  allows a NULL default value.
+
+                  Put_Line
+                    (Standard_Error,
+                     "Error: '" & F.Get_Table.Name & "." & F.Name
+                     & "' is a reference to table '"
+                     & F.Is_FK.Get_Table.Name
+                     & "' which isn't defined yet. Sqlite imposes a NULL"
+                     & " default in this case.");
+                  raise Invalid_Schema;
+               end if;
             end if;
 
             if F.Get.Indexed then
@@ -1586,6 +1606,14 @@ package body GNATCOLL.SQL.Inspect is
               and then F.Is_FK /= No_Field
               and then not Created.Contains (F.Is_FK.Get_Table.Name)
             then
+               if F.Is_PK then
+                  Put_Line (Standard_Error,
+                            "Error: '" & F.Get_Table.Name & "." & F.Name
+                            & "' is a primary key and references the table '"
+                            & F.Is_FK.Get_Table.Name & "' which hasn't been"
+                            & " defined yet.");
+                  raise Invalid_Schema;
+               end if;
                return;
             end if;
 
@@ -1667,6 +1695,11 @@ package body GNATCOLL.SQL.Inspect is
             Ada.Command_Line.Set_Exit_Status (Ada.Command_Line.Failure);
          end if;
       end if;
+
+   exception
+      when Invalid_Schema =>
+         Rollback (Self.DB);
+         Ada.Command_Line.Set_Exit_Status (Ada.Command_Line.Failure);
    end Write_Schema;
 
    ------------------
