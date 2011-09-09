@@ -2092,7 +2092,8 @@ class Field(object):
     def default_for_field(self):
         """Return the default value to use for a record field"""
         if self.__default:
-            if self.__default.lower().find("now()") != -1:
+            if self.__default.lower().find("now()") != -1 \
+               or self.__default.lower() == "now":
                 return "Clock"
 
             elif self.__default.lower().find("'now'") != -1:
