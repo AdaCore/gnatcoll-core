@@ -1003,6 +1003,7 @@ package GNATCOLL.Projects is
    --  (Get_Languages,...)
    Source_Dirs_Attribute               : constant Attribute_Pkg_List;
    Source_Files_Attribute              : constant Attribute_Pkg_List;
+   Source_List_File_Attribute          : constant Attribute_Pkg_String;
    Obj_Dir_Attribute                   : constant Attribute_Pkg_String;
    Languages_Attribute                 : constant Attribute_Pkg_List;
    Main_Attribute                      : constant Attribute_Pkg_List;
@@ -1078,6 +1079,7 @@ package GNATCOLL.Projects is
    --  responsible for freeing the memory when this call finished.
    --  Index is the index for the attribute (for instance the file name when
    --  modifying the switches).
+   --  A null entry in Values is ignored.
    --  This subprogram properly handles renaming packages (i.e the project
    --  that contains the real definition of the package is modified, not
    --  necessarily Project itself).
@@ -1462,6 +1464,8 @@ private
 
    Source_Dirs_Attribute      : constant Attribute_Pkg_List := "source_dirs";
    Source_Files_Attribute     : constant Attribute_Pkg_List := "source_files";
+   Source_List_File_Attribute : constant Attribute_Pkg_String :=
+     "source_list_file";
    Locally_Removed_Files_Attribute : constant Attribute_Pkg_List :=
                                        "locally_removed_files";
    GNAT_Attribute            : constant Attribute_Pkg_String := "ide#gnat";

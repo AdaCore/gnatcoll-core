@@ -41,6 +41,7 @@ with Prj.Com;                   use Prj.Com;
 with Prj.Tree;                  use Prj, Prj.Tree;
 with Snames;
 with Types;                     use Types;
+with GNAT.Strings;              use GNAT.Strings;
 
 package body GNATCOLL.Projects.Normalize is
 
@@ -2589,11 +2590,14 @@ package body GNATCOLL.Projects.Normalize is
               (Tree_Node, N_Literal_String_List, Prj.List);
 
             for A in reverse Values'Range loop
-               Expr := String_As_Expression
-                 (Get_String (Values (A).all), Tree_Node);
-               Set_Next_Expression_In_List
-                 (Expr, Tree_Node, First_Expression_In_List (List, Tree_Node));
-               Set_First_Expression_In_List (List, Tree_Node, Expr);
+               if Values (A) /= null then
+                  Expr := String_As_Expression
+                    (Get_String (Values (A).all), Tree_Node);
+                  Set_Next_Expression_In_List
+                    (Expr, Tree_Node,
+                     First_Expression_In_List (List, Tree_Node));
+                  Set_First_Expression_In_List (List, Tree_Node, Expr);
+               end if;
             end loop;
          end if;
 
