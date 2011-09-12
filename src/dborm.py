@@ -12,19 +12,15 @@ store_connections = True
 # explicitly to Get). If False, the connections are queried from a pool
 # automatically otherwise
 
-connection_from_pool = "Connections.Get"
-# How to get a connection from a pool. Only relevant if store_connections is
-# False.
-
-database_connection = "Session_Type"  # "Database_Connection"
-get_db_connection = ".DB"        # ""
+database_connection = "Session_Type"
+get_db_connection = ".DB"
 # These two variables indicate the type used for the database connection.
 # database_connection is what is stored inside lists, and get_db_connection
 # is the suffix to append to get the actual
 # GNATCOLL.SQL.Exec.Database_Connection
 # Only relevant if store_connections is True
 
-max_depth = 5
+max_depth = 3
 # Maximum valid value for Select_Related
 # No need in putting this too high, since that will generate make queries much
 # bigger, thus invalidating any saving we might have in doing only one of them
@@ -1731,7 +1727,7 @@ def generate_orb_one_table(name, schema, pretty, all_tables):
                     section="Elements: %(cap)s" % translate)
 
 #                if not table.is_abstract:
-#                    # From a table's manager, get a manage for the tables
+#                    # From a table's manager, get a manager for the tables
 #                    # that are related via a FK.
 #
 #                    pretty.add_subprogram(
