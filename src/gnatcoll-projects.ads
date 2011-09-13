@@ -90,6 +90,7 @@
 pragma Ada_05;
 
 private with Ada.Containers.Indefinite_Hashed_Maps;
+with Ada.Containers.Doubly_Linked_Lists;
 private with Ada.Strings.Hash;
 private with Ada.Finalization;
 with Ada.Unchecked_Deallocation;
@@ -559,9 +560,29 @@ package GNATCOLL.Projects is
       Xrefs_Dirs          : Boolean := False;
       ALI_Ext             : GNATCOLL.VFS.Filesystem_String := ".ali")
       return GNATCOLL.VFS.File_Array_Access;
-   --  Return a list of all LI files for this project.
+   --  Return a list of all LI files for this project. This never returns null.
    --  The parameters are similar to that of Object_Path.
    --  ALI_Ext is the extension to use for those files
+
+   type Library_Info is record
+      Library_File : GNATCOLL.VFS.Virtual_File;
+      Source_File  : GNATCOLL.VFS.Virtual_File;
+   end record;
+
+   package Library_Info_Lists is new Ada.Containers.Doubly_Linked_Lists
+     (Library_Info);
+
+   procedure Library_Files
+     (Self                : Project_Type;
+      Recursive           : Boolean := False;
+      Including_Libraries : Boolean := False;
+      Xrefs_Dirs          : Boolean := False;
+      ALI_Ext             : GNATCOLL.VFS.Filesystem_String := ".ali";
+      List                : in out Library_Info_Lists.List);
+   --  same as Library_Files, but also returns information about the source
+   --  file associated with each LI file.
+   --  The new files are appended to the list, as a way to collect multiple
+   --  extensions.
 
    --------------------
    -- Naming schemes --

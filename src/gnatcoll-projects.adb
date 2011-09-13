@@ -27,7 +27,6 @@
 
 with Ada.Calendar;                use Ada.Calendar;
 with Ada.Characters.Handling;     use Ada.Characters.Handling;
-with Ada.Containers.Doubly_Linked_Lists;
 with Ada.Containers.Hashed_Sets;
 with Ada.Directories;
 with Ada.Strings;                 use Ada.Strings;
@@ -712,16 +711,15 @@ package body GNATCOLL.Projects is
    -- Library_Files --
    -------------------
 
-   function Library_Files
+   procedure Library_Files
      (Self                : Project_Type;
       Recursive           : Boolean := False;
       Including_Libraries : Boolean := False;
       Xrefs_Dirs          : Boolean := False;
-      ALI_Ext             : GNATCOLL.VFS.Filesystem_String := ".ali")
-      return GNATCOLL.VFS.File_Array_Access
+      ALI_Ext             : GNATCOLL.VFS.Filesystem_String := ".ali";
+      List                : in out Library_Info_Lists.List)
    is
       Tmp      : File_Array_Access;
-      Result   : File_Array_Access;
       Objects  : constant File_Array :=
         Object_Path (Self, Recursive  => Recursive,
                      Including_Libraries => Including_Libraries,
@@ -762,8 +760,13 @@ package body GNATCOLL.Projects is
                   end;
 
                   if Has_Element (Info_Cursor) then
-                     if Element (Info_Cursor).Project = Self then
-                        Append (Result, Tmp (F));
+                     if Element (Info_Cursor).Project = Self
+                       or else Recursive
+                     then
+                        List.Append
+                          (Library_Info'
+                             (Library_File => Tmp (F),
+                              Source_File  => Element (Info_Cursor).File));
 
                      elsif Active (Me) then
                         Trace (Me, "Library_Files: "
@@ -787,6 +790,44 @@ package body GNATCOLL.Projects is
                Trace (Me, "Couldn't open the directory " &
                       Objects (Dir).Display_Full_Name);
          end;
+      end loop;
+
+   end Library_Files;
+
+   -------------------
+   -- Library_Files --
+   -------------------
+
+   function Library_Files
+     (Self                : Project_Type;
+      Recursive           : Boolean := False;
+      Including_Libraries : Boolean := False;
+      Xrefs_Dirs          : Boolean := False;
+      ALI_Ext             : GNATCOLL.VFS.Filesystem_String := ".ali")
+      return GNATCOLL.VFS.File_Array_Access
+   is
+      use Library_Info_Lists;
+      List   : Library_Info_Lists.List;
+      C      : Library_Info_Lists.Cursor;
+      Result : File_Array_Access;
+      Index  : Integer;
+   begin
+      Library_Files
+        (Self,
+         Recursive           => Recursive,
+         Including_Libraries => Including_Libraries,
+         Xrefs_Dirs          => Xrefs_Dirs,
+         ALI_Ext             => ALI_Ext,
+         List                => List);
+
+      Result := new File_Array (1 .. Integer (Length (List)));
+      Index  := Result'First;
+
+      C := List.First;
+      while Has_Element (C) loop
+         Result (Index) := Element (C).Library_File;
+         Index := Index + 1;
+         Next (C);
       end loop;
 
       return Result;
