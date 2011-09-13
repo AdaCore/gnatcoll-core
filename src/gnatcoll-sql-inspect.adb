@@ -583,11 +583,14 @@ package body GNATCOLL.SQL.Inspect is
       if T = "boolean" then
          return (Kind => Field_Boolean);
 
-      elsif T = "text" then
+      elsif T = "text"
+         or else (T'Length >= 9    --  "character varying(...)"
+                  and then T (T'First .. T'First + 9) = "character ")
+      then
          return (Kind => Field_Text, Max_Length => Integer'Last);
 
       elsif T'Length >= 9
-        and then T (T'First .. T'First + 8) = "character"
+        and then T (T'First .. T'First + 9) = "character("
       then
          begin
             return (Kind => Field_Text,
@@ -595,7 +598,7 @@ package body GNATCOLL.SQL.Inspect is
                       Integer'Value (T (T'First + 10 .. T'Last - 1)));
          exception
             when Constraint_Error =>
-               Put_Line ("Missing max length after 'Character'");
+               Put_Line ("Missing max length after 'Character' in " & T);
                raise Invalid_Schema;
          end;
 
