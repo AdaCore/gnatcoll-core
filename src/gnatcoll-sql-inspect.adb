@@ -584,12 +584,12 @@ package body GNATCOLL.SQL.Inspect is
          return (Kind => Field_Boolean);
 
       elsif T = "text"
-         or else (T'Length >= 9    --  "character varying(...)"
+         or else (T'Length >= 10    --  "character varying(...)"
                   and then T (T'First .. T'First + 9) = "character ")
       then
          return (Kind => Field_Text, Max_Length => Integer'Last);
 
-      elsif T'Length >= 9
+      elsif T'Length >= 10
         and then T (T'First .. T'First + 9) = "character("
       then
          begin
