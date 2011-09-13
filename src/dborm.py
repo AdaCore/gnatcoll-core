@@ -2025,6 +2025,9 @@ class Field(object):
         if default.find("::") != -1:
             self.__default = default[:default.find('::')]  # Remove type casts
 
+    def __repr__(self):
+        return "Field<%s.%s>" % (self.table.name, self.name)
+
     @property
     def fk(self):
         """If SELF is a foreign key, return a pointer to the field in the
@@ -2164,6 +2167,8 @@ class Foreign_Key(object):
             else:
                 self.pairs[index] = (table.get_field(p[0]),
                                      self.foreign.get_field(p[1]))
+            if self.pairs[index][0] is None:
+                print "Couldn't resolve field %s.%s" % (table, p[0])
 
     def can_be_null(self):
         """Whether the foreign key can be NULL.
@@ -2221,6 +2226,9 @@ class Table(object):
         self.superClass = superClass  # a Str, then will be instance of Table
         self.revert_fk = []   # the FK from other tables that point to self
 
+    def __repr__(self):
+        return "Table<%s>" % self.name
+
     def fields_count(self, depth, follow_lj, until=""):
         """Remove the count of fields that in SELF and all its fk-related
            tables up to DEPTH. If FOLLOW_LF is False, ignore those fk that can
@@ -2250,6 +2258,7 @@ class Table(object):
 
     def get_field(self, name):
         """Retrieve field, by name"""
+        name = name.lower()
         for f in self.fields:
             if f.name.lower() == name:
                 return f
@@ -2531,7 +2540,7 @@ digraph g {
                 ps, output_file)
         else:
             print "Created '%s'" % abs_ps
-        print "Use 'pd2pdf -sPAGESIZE=a3' to convert to PDF"
+        print "Use 'ps2pdf -sPAGESIZE=a3' to convert to PDF"
 
 
 ########
