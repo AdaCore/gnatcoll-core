@@ -44,6 +44,12 @@ package body GNATCOLL.SQL.Inspect is
    use Tables_Maps, Field_Lists, Foreign_Refs;
    use Foreign_Keys, Pair_Lists, Tables_Lists;
 
+   Invalid_Schema : exception;
+
+   Deferred_FK : constant String := " DEFERRABLE INITIALLY DEFERRED";
+   --  extra attribute set on foreign keys. If we want to check the constraints
+   --  immediately, this should be set to "".
+
    package String_Lists is new Ada.Containers.Indefinite_Doubly_Linked_Lists
      (String);
    use String_Lists;
@@ -583,9 +589,15 @@ package body GNATCOLL.SQL.Inspect is
       elsif T'Length >= 9
         and then T (T'First .. T'First + 8) = "character"
       then
-         return (Kind => Field_Text,
-                 Max_Length =>
-                   Integer'Value (T (T'First + 10 .. T'Last - 1)));
+         begin
+            return (Kind => Field_Text,
+                    Max_Length =>
+                      Integer'Value (T (T'First + 10 .. T'Last - 1)));
+         exception
+            when Constraint_Error =>
+               Put_Line ("Missing max length after 'Character'");
+               raise Invalid_Schema;
+         end;
 
       elsif T = "float" then
          return (Kind => Field_Float);
@@ -1353,8 +1365,6 @@ package body GNATCOLL.SQL.Inspect is
    overriding procedure Write_Schema
      (Self : DB_Schema_IO; Schema : DB_Schema)
    is
-      Invalid_Schema : exception;
-
       Created : String_Lists.List;
       --  List of tables that have been created. When a table has already been
       --  created, we set the foreign key constraints to it immediately,
@@ -1482,7 +1492,7 @@ package body GNATCOLL.SQL.Inspect is
                      To_String
                        ("ALTER TABLE " & Table.Name & " ADD CONSTRAINT "
                         & Element (F.Fields.First).From.Name & "_fk" & Stmt_FK
-                        & " DEFERRABLE INITIALLY DEFERRED"));
+                        & Deferred_FK));
 
                else
                   P := F.Fields.First;

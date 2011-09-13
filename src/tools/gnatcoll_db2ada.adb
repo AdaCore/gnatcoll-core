@@ -50,6 +50,7 @@ procedure GNATCOLL_Db2Ada is
 
    Generated     : GNAT.Strings.String_Access := new String'("Database");
    Generated_Orm : GNAT.Strings.String_Access := new String'("ORM_Queries");
+   Load_File     : Virtual_File := GNATCOLL.VFS.No_File;  --  File to load
 
    DB_Model   : GNAT.OS_Lib.String_Access := null;
    Orm_Tables : GNAT.OS_Lib.String_Access := null;
@@ -60,6 +61,7 @@ procedure GNATCOLL_Db2Ada is
       Output_Text,
       Output_Orm,
       Output_Dot,
+      Output_Load,
       Output_Createdb);
    Output : array (Output_Kind) of Boolean :=
      (others => False);
@@ -285,6 +287,8 @@ procedure GNATCOLL_Db2Ada is
       Put_Line ("-dot: generate in the current directory a file schema.dot");
       Put_Line ("    representing the database schema. If possible, this is");
       Put_Line ("    converted to Postscript via the graphviz utility 'dot'");
+      Put_Line ("-load FILE: load the file contents into the database.");
+      Put_Line ("    You should also use -dbmodel to specify the schema.");
 
       GNAT.OS_Lib.OS_Exit (0);
    end Print_Help;
@@ -311,7 +315,7 @@ procedure GNATCOLL_Db2Ada is
       loop
          case Getopt ("dbhost= h -help dbname= dbuser= dbpasswd= enum= var="
                       & " dbtype= dbmodel= dot text orm= createdb api="
-                      & " ormtables= api-enums=")
+                      & " ormtables= api-enums= load=")
          is
             when 'h' | '-' =>
                Print_Help;
@@ -367,6 +371,10 @@ procedure GNATCOLL_Db2Ada is
 
             when 't' =>
                Output (Output_Text) := True;
+
+            when 'l' =>
+               Output (Output_Load) := True;
+               Load_File := Create (+Parameter);
 
             when 'o' =>
                if Full_Switch = "ormtables" then
@@ -593,6 +601,14 @@ begin
 
       if Output (Output_Dot) then
          Generate_Dot;
+      end if;
+
+      if Output (Output_Load) then
+         Load_Data
+           (DB     => DB_IO.DB,
+            File   => Load_File,
+            Schema => Schema);
+         DB_IO.DB.Commit;
       end if;
    end if;
 
