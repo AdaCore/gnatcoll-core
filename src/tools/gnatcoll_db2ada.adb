@@ -51,6 +51,7 @@ procedure GNATCOLL_Db2Ada is
    Generated     : GNAT.Strings.String_Access := new String'("Database");
    Generated_Orm : GNAT.Strings.String_Access := new String'("ORM_Queries");
    Load_File     : Virtual_File := GNATCOLL.VFS.No_File;  --  File to load
+   Output_Dir    : Virtual_File := Get_Current_Dir;
 
    DB_Model   : GNAT.OS_Lib.String_Access := null;
    Orm_Tables : GNAT.OS_Lib.String_Access := null;
@@ -121,7 +122,7 @@ procedure GNATCOLL_Db2Ada is
    procedure Print_Help;
    --  Print the help and exit the application
 
-   procedure Get_Database_Connection;
+   procedure Main;
    --  Get the list of parameters to use to connect to the postgres database
 
    procedure Dump_Tables
@@ -226,15 +227,16 @@ procedure GNATCOLL_Db2Ada is
    ------------------
 
    procedure Generate_Orm is
-      Args    : Argument_List (1 .. 3);
+      Args    : Argument_List (1 .. 4);
    begin
       Args (1) := new String'(Generated_Orm.all);
       Args (2) := new String'(Generated.all);
+      Args (3) := new String'(Output_Dir.Display_Full_Name);
 
       if Orm_Tables /= null then
-         Args (3) := new String'(Orm_Tables.all);
+         Args (4) := new String'(Orm_Tables.all);
       else
-         Args (3) := new String'("");
+         Args (4) := new String'("");
       end if;
       Spawn_Dborm ("-ada", Args);
    end Generate_Orm;
@@ -289,15 +291,17 @@ procedure GNATCOLL_Db2Ada is
       Put_Line ("    converted to Postscript via the graphviz utility 'dot'");
       Put_Line ("-load FILE: load the file contents into the database.");
       Put_Line ("    You should also use -dbmodel to specify the schema.");
+      Put_Line ("-output DIR: directory in which created files should go");
+      Put_Line ("    Applies to -api, -orm and -api-enums");
 
       GNAT.OS_Lib.OS_Exit (0);
    end Print_Help;
 
-   -----------------------------
-   -- Get_Database_Connection --
-   -----------------------------
+   ----------
+   -- Main --
+   ----------
 
-   procedure Get_Database_Connection is
+   procedure Main is
       DB_Name   : GNAT.OS_Lib.String_Access := new String'("");
       DB_Host   : GNAT.OS_Lib.String_Access := new String'("");
       DB_User   : GNAT.OS_Lib.String_Access := new String'("");
@@ -309,13 +313,14 @@ procedure GNATCOLL_Db2Ada is
       --  create the adjacency matrix, that indicates whether there is a known
       --  relationship between two tables.
 
-      Descr      : Database_Description;
-      Connection : Database_Connection;
+      Descr       : Database_Description;
+      Connection  : Database_Connection;
+      Need_Schema : Boolean;
    begin
       loop
          case Getopt ("dbhost= h -help dbname= dbuser= dbpasswd= enum= var="
                       & " dbtype= dbmodel= dot text orm= createdb api="
-                      & " ormtables= api-enums= load=")
+                      & " ormtables= api-enums= load= output=")
          is
             when 'h' | '-' =>
                Print_Help;
@@ -388,6 +393,9 @@ procedure GNATCOLL_Db2Ada is
                   end if;
 
                   Output (Output_Orm) := True;
+
+               elsif Full_Switch = "output" then
+                  Output_Dir := Create (+Parameter);
                end if;
 
             when others =>
@@ -400,6 +408,13 @@ procedure GNATCOLL_Db2Ada is
                     Output_Ada_Enums => True,
                     others => False);
       end if;
+
+      Need_Schema := Output (Output_Ada_Specs)
+        or else Output (Output_Orm)
+        or else Output (Output_Dot)
+        or else Output (Output_Load)
+        or else Output (Output_Createdb);
+      --  Not needed for Output_Ada_Enums
 
       if DB_Name.all /= "" then
          --  If the user specified the name of a database, we connect to it.
@@ -427,14 +442,18 @@ procedure GNATCOLL_Db2Ada is
          --  If we should read the model from the database
 
          if DB_Model = null then
-            Dump_Tables (Connection, Enums, Vars);
-            Schema := DB_IO.Read_Schema;
+            if Need_Schema then
+               Schema := DB_IO.Read_Schema;
+            end if;
          end if;
       end if;
 
       if DB_Model /= null then
          File_IO.File := GNATCOLL.VFS.Create (+DB_Model.all);
-         Schema := File_IO.Read_Schema;
+
+         if Need_Schema then
+            Schema := File_IO.Read_Schema;
+         end if;
       end if;
 
       --  Output will always be to stdout
@@ -446,7 +465,49 @@ procedure GNATCOLL_Db2Ada is
       Free (DB_User);
       Free (DB_Passwd);
       Free (DB_Type);
-   end Get_Database_Connection;
+
+      if Need_Schema and then Schema = No_Schema then
+         Put_Line ("Could not parse the database schema, exiting...");
+         Set_Exit_Status (Failure);
+         return;
+      end if;
+
+      --  The order below is significant, in case multiple switches are
+      --  specified on the command line
+
+      if Output (Output_Createdb) then
+         DB_IO.Write_Schema (Schema);
+      end if;
+
+      if Output (Output_Load) then
+         Load_Data
+           (DB     => DB_IO.DB,
+            File   => Load_File,
+            Schema => Schema);
+         DB_IO.DB.Commit;
+      end if;
+
+      if Output (Output_Ada_Specs)
+        or else Output (Output_Ada_Enums)
+      then
+         Dump_Tables (Connection, Enums, Vars);
+         Generate (Generated.all);
+      end if;
+
+      if Output (Output_Text) then
+         File_IO.Write_Schema (Schema);
+      end if;
+
+      if Output (Output_Orm) then
+         Generate_Orm;
+      end if;
+
+      if Output (Output_Dot) then
+         Generate_Dot;
+      end if;
+
+      Free (DB_Model);
+   end Main;
 
    ---------------------
    -- Add_Enumeration --
@@ -572,47 +633,7 @@ procedure GNATCOLL_Db2Ada is
 
 begin
    GNATCOLL.Traces.Parse_Config_File;
-   Get_Database_Connection;
-
-   if Schema = No_Schema then
-      Put_Line ("Could not parse the database schema, exiting...");
-      Set_Exit_Status (Failure);
-
-   else
-      --  Create the package Database_Typed_Entities
-
-      if Output (Output_Ada_Specs)
-        or else Output (Output_Ada_Enums)
-      then
-         Generate (Generated.all);
-      end if;
-
-      if Output (Output_Text) then
-         File_IO.Write_Schema (Schema);
-      end if;
-
-      if Output (Output_Createdb) then
-         DB_IO.Write_Schema (Schema);
-      end if;
-
-      if Output (Output_Orm) then
-         Generate_Orm;
-      end if;
-
-      if Output (Output_Dot) then
-         Generate_Dot;
-      end if;
-
-      if Output (Output_Load) then
-         Load_Data
-           (DB     => DB_IO.DB,
-            File   => Load_File,
-            Schema => Schema);
-         DB_IO.DB.Commit;
-      end if;
-   end if;
-
-   Free (DB_Model);
+   Main;
 
 exception
    when Invalid_Type =>

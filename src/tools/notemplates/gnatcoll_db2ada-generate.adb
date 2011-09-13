@@ -300,6 +300,7 @@ procedure Generate (Generated : String) is
    end Print_FK;
 
    N : String_Sets.Cursor;
+   F : Virtual_File;
 
 begin
    --  This version creates the output via a simple list of calls to Put_Line.
@@ -309,7 +310,11 @@ begin
    --  Create the database_names package
 
    if Output (Output_Ada_Specs) then
-      Create (Spec_File, Name => To_Lower (Generated) & "_names.ads");
+      F := Create_From_Dir
+        (Dir => Output_Dir,
+         Base_Name => +To_Lower (Generated) & "_names.ads");
+
+      Create (Spec_File, Name => F.Display_Full_Name);
       Put_Line (Spec_File, "with GNATCOLL.SQL; use GNATCOLL.SQL;");
       Put_Line (Spec_File, "package " & Generated & "_Names is");
       Put_Line (Spec_File, "   pragma Style_Checks (Off);");
@@ -335,7 +340,10 @@ begin
 
    --  Create the database package
 
-   Create (Spec_File, Name => To_Lower (Generated) & ".ads");
+   F := Create_From_Dir
+     (Dir => Output_Dir,
+      Base_Name => +To_Lower (Generated) & ".ads");
+   Create (Spec_File, Name => F.Display_Full_Name);
    Put_Line (Spec_File, "with GNATCOLL.SQL; use GNATCOLL.SQL;");
 
    if Output (Output_Ada_Specs) then
@@ -349,7 +357,10 @@ begin
    if Output (Output_Ada_Specs) then
       Put_Line (Spec_File, "   pragma Elaborate_Body;");
 
-      Create (Body_File, Name => To_Lower (Generated) & ".adb");
+      F := Create_From_Dir
+        (Dir => Output_Dir,
+         Base_Name => +To_Lower (Generated) & ".adb");
+      Create (Body_File, Name => F.Display_Full_Name);
       Put_Line (Body_File, "package body " & Generated & " is");
       Put_Line (Body_File, "   pragma Style_Checks (Off);");
       Put_Line (Body_File, "   use type Cst_String_Access;");

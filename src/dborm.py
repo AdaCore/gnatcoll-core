@@ -1857,7 +1857,7 @@ class DBSetup(object):
     @staticmethod
     def from_file(filename):
         result = DBSetup()
-        result.db_model = filename
+        result.db_model = os.path.abspath(filename)
         return result
 
     @staticmethod
@@ -2549,7 +2549,8 @@ digraph g {
 
 if __name__ == "__main__":
     if len(sys.argv) < 3:
-        print "Usage: dborm -ada   dbschema.txt [pkg_name] [db_pkg] [tables]"
+        print "Usage: dborm -ada   dbschema.txt [pkg_name] [db_pkg]" \
+            + " [output_dir] [tables]"
         print "   or: dborm -graph dbschema.txt [clusters]"
         print ""
         print "Where dbschema.txt contains the description of the database"
@@ -2564,16 +2565,20 @@ if __name__ == "__main__":
 
     if sys.argv[1] == "-ada":
         pkg = "%s.%s" % (pkg_name, "Queries")
+        output_dir = "."
+
         if len(sys.argv) >= 4:
             pkg = sys.argv[3]
         if len(sys.argv) >= 5:
             database_pkg = sys.argv[4]
-        if len(sys.argv) >= 6 and sys.argv[5] != '':
-            tables = sys.argv[5].split(",")
+        if len(sys.argv) >= 6:
+            output_dir = sys.argv[5]
+        if len(sys.argv) >= 7 and sys.argv[6] != '':
+            tables = sys.argv[6].split(",")
         else:
             tables = []
 
-        sys.exit(create_orm(db, indir=".", omit=[], pkg_name=pkg,
+        sys.exit(create_orm(db, indir=output_dir, omit=[], pkg_name=pkg,
                             tables=tables))
 
     elif sys.argv[1] == "-graph":
