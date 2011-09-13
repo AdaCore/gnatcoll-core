@@ -52,8 +52,10 @@ package GNATCOLL.Config is
 
    type Config_Parser is abstract tagged private;
    --  Abstract type for all config streams (files, in-memory,...), with any
-   --  format. Concret types below will provide the actual implementation.
+   --  format. Concrete types below will provide the actual implementation.
+
    --  Typical usage looks like:
+
    --     declare
    --        C : File_Config_Parser;
    --     begin
@@ -65,7 +67,7 @@ package GNATCOLL.Config is
    --     end;
 
    function At_End (Self : Config_Parser) return Boolean is abstract;
-   --  Whether the config parsing is at the end.
+   --  Whether the config parsing is at the end
 
    procedure Next (Self : in out Config_Parser) is abstract;
    --  Move to the next (key, value) in the configuration. Before that call,
@@ -97,7 +99,7 @@ package GNATCOLL.Config is
    -----------------
 
    type File_Config_Parser is abstract new Config_Parser with private;
-   --  A special implementation for config streams based on actual files.
+   --  A special implementation for config streams based on actual files
 
    procedure Open (Self : in out File_Config_Parser; Filename : String);
    --  Open a file
@@ -130,7 +132,7 @@ package GNATCOLL.Config is
    -------------------
 
    type Config_Pool is tagged private;
-   --  This type provides storage for a config file.
+   --  This type provides storage for a config file
 
    procedure Set_System_Id (Self : in out Config_Pool; System_ID : String);
    --  Set the absolute name used to resolve file names in Get_File
@@ -170,6 +172,7 @@ package GNATCOLL.Config is
       Key     : String;
       Section : String := Section_From_Key;
       Index   : Natural := Whole_Value) return Integer;
+
    function Get_Boolean
      (Self    : Config_Pool;
       Key     : String;
