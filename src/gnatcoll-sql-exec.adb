@@ -1327,6 +1327,7 @@ package body GNATCOLL.SQL.Exec is
       if L.Stmt = No_DBMS_Stmt
          or else L.DB_Timestamp /= Connection.Connected_On
       then
+         L.DB_Timestamp := Connection.Connected_On;
          L.Stmt := Connect_And_Prepare
            (Connection, S.Query_Str.all, S.Name.all, Direct => True);
 
