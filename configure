@@ -4510,6 +4510,11 @@ echo "${ECHO_T}no" >&6
 
 
    value=$GMP_CFLAGS
+
+   # Special handling on darwin
+   val=`echo $value | sed -e "s,-framework CoreFoundation,-framework=CoreFoundation,"`
+   value=$val
+
    output=GMP_CFLAGS_GPR
    result=""
    for v in $value; do
@@ -4524,6 +4529,11 @@ echo "${ECHO_T}no" >&6
 
 
    value=$GMP_LIBS
+
+   # Special handling on darwin
+   val=`echo $value | sed -e "s,-framework CoreFoundation,-framework=CoreFoundation,"`
+   value=$val
+
    output=GMP_LIBS_GPR
    result=""
    for v in $value; do
@@ -4538,6 +4548,11 @@ echo "${ECHO_T}no" >&6
 
 
    value=$PYTHON_LIBS
+
+   # Special handling on darwin
+   val=`echo $value | sed -e "s,-framework CoreFoundation,-framework=CoreFoundation,"`
+   value=$val
+
    output=PYTHON_LIBS_GPR
    result=""
    for v in $value; do
@@ -4552,6 +4567,11 @@ echo "${ECHO_T}no" >&6
 
 
    value=$PYTHON_CFLAGS
+
+   # Special handling on darwin
+   val=`echo $value | sed -e "s,-framework CoreFoundation,-framework=CoreFoundation,"`
+   value=$val
+
    output=PYTHON_CFLAGS_GPR
    result=""
    for v in $value; do
@@ -4566,6 +4586,11 @@ echo "${ECHO_T}no" >&6
 
 
    value=$PYGTK_INCLUDE
+
+   # Special handling on darwin
+   val=`echo $value | sed -e "s,-framework CoreFoundation,-framework=CoreFoundation,"`
+   value=$val
+
    output=PYGTK_INCLUDE_GPR
    result=""
    for v in $value; do
@@ -4580,6 +4605,11 @@ echo "${ECHO_T}no" >&6
 
 
    value=$GTK_GCC_FLAGS
+
+   # Special handling on darwin
+   val=`echo $value | sed -e "s,-framework CoreFoundation,-framework=CoreFoundation,"`
+   value=$val
+
    output=GTK_GCC_FLAGS_GPR
    result=""
    for v in $value; do

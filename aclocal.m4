@@ -744,6 +744,11 @@ AC_DEFUN(AM_PATH_PYGTK,
 AC_DEFUN(AM_TO_GPR,
 [
    value=[$1]
+
+   # Special handling on darwin
+   val=`echo $value | sed -e "s,-framework CoreFoundation,-framework=CoreFoundation,"`
+   value=$val
+
    output=$2
    result=""
    for v in $value; do
