@@ -149,6 +149,7 @@ package body GNATCOLL.Config is
 
    overriding procedure Next (Self : in out INI_Parser) is
       Eol   : Integer := Self.First;
+      Tmp   : Integer;
       Last  : constant Integer := Length (Self.Contents);
       Comment : constant Integer := Length (Self.Comment_Start);
    begin
@@ -169,6 +170,11 @@ package body GNATCOLL.Config is
 
          Self.Eol   := Eol;
 
+         Tmp := Eol - 1;
+         if Element (Self.Contents, Tmp) = ASCII.CR then
+            Tmp := Tmp - 1;
+         end if;
+
          --  Are we seeing a comment ?
 
          if Self.First + Comment - 1 <= Eol
@@ -180,10 +186,10 @@ package body GNATCOLL.Config is
 
          elsif Self.Use_Sections
            and then Element (Self.Contents, Self.First) = '['
-           and then Element (Self.Contents, Self.Eol - 1) = ']'
+           and then Element (Self.Contents, Tmp) = ']'
          then
             Self.Current_Section := To_Unbounded_String
-              (Slice (Self.Contents, Self.First + 1, Self.Eol - 2));
+              (Strip_CR (Slice (Self.Contents, Self.First + 1, Tmp - 1)));
 
          elsif Self.Equal /= 0 then
             return;
@@ -252,8 +258,9 @@ package body GNATCOLL.Config is
 
    overriding function Key (Self : INI_Parser) return String is
    begin
-      return Trim (Slice (Self.Contents, Self.First, Self.Equal - 1),
-                   Side => Ada.Strings.Both);
+      return Trim
+        (Strip_CR (Slice (Self.Contents, Self.First, Self.Equal - 1)),
+         Side => Ada.Strings.Both);
    end Key;
 
    -----------
@@ -261,17 +268,10 @@ package body GNATCOLL.Config is
    -----------
 
    overriding function Value (Self : INI_Parser) return String is
-      Eol : Natural := Self.Eol;
    begin
-      --  Handles windows-formatted file.
-
-      if Element (Self.Contents, Eol - 1) = ASCII.CR then
-         Eol := Eol - 1;
-      end if;
-
       return Substitute
         (Self,
-         Trim (Slice (Self.Contents, Self.Equal + 1, Eol - 1),
+         Trim (Strip_CR (Slice (Self.Contents, Self.Equal + 1, Self.Eol - 1)),
            Side => Ada.Strings.Left));
    end Value;
 
