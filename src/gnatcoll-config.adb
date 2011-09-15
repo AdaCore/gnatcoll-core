@@ -261,11 +261,18 @@ package body GNATCOLL.Config is
    -----------
 
    overriding function Value (Self : INI_Parser) return String is
+      Eol : Natural := Self.Eol;
    begin
+      --  Handles windows-formatted file.
+
+      if Element (Self.Contents, Eol - 1) = ASCII.CR then
+         Eol := Eol - 1;
+      end if;
+
       return Substitute
         (Self,
-         Trim (Slice (Self.Contents, Self.Equal + 1, Self.Eol - 1),
-               Side => Ada.Strings.Left));
+         Trim (Slice (Self.Contents, Self.Equal + 1, Eol - 1),
+           Side => Ada.Strings.Left));
    end Value;
 
    ----------
@@ -397,7 +404,7 @@ package body GNATCOLL.Config is
    begin
       if V = "" then
          return "";
-      elsif V (V'First) = '/' then
+      elsif Is_Absolute_Path (V) then
          return V;
       else
          return Normalize_Pathname (V, To_String (Val.System_ID));
