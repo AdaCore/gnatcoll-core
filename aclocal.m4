@@ -380,8 +380,10 @@ AC_HELP_STRING(
                       [WITH_SQLITE=no],
                       $SQLITE_CFLAGS $PATH_LIBSQLITE)
        
-         if test x"$WITH_SQLITE" = xno -a x"$NEED_SQLITE" = xyes ; then
-           AC_MSG_ERROR([Sqlite not found])
+         if test x"$WITH_SQLITE" = xno ; then
+            AC_MSG_CHECKING(for sqlite)
+            AC_MSG_RESULT(embedded, use --with-sqlite to use a dynamic lib)
+            WITH_SQLITE=embedded
          fi
       fi
    fi
