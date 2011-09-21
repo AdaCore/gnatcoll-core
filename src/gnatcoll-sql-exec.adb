@@ -665,27 +665,27 @@ package body GNATCOLL.SQL.Exec is
                Direct     => Direct,
                Params     => Params);
          end if;
-      end if;
 
-      if R = null then
-         if Active (Me_Error) then
-            if Stmt /= No_DBMS_Stmt then
-               Trace (Me_Error, "Failed to execute prepared ("
-                      & Prepared.Get.Name.all & ") " & Query
-                      & " " & Image (Connection.all, Params));
-            else
-               Trace (Me_Error, "Failed to execute " & Query
-                      & " " & Image (Connection.all, Params));
+         if R = null then
+            if Active (Me_Error) then
+               if Stmt /= No_DBMS_Stmt then
+                  Trace (Me_Error, "Failed to execute prepared ("
+                         & Prepared.Get.Name.all & ") " & Query
+                         & " " & Image (Connection.all, Params));
+               else
+                  Trace (Me_Error, "Failed to execute " & Query
+                         & " " & Image (Connection.all, Params));
+               end if;
             end if;
+
+            Set_Failure (Connection);
+         else
+            Post_Execute_And_Log
+              (R, Connection, Query, Prepared, Is_Select, Params);
          end if;
 
-         Set_Failure (Connection);
-      else
-         Post_Execute_And_Log
-           (R, Connection, Query, Prepared, Is_Select, Params);
+         Result.Res := R;
       end if;
-
-      Result.Res := R;
 
       if Connection.In_Transaction
         and then Is_Commit_Or_Rollback
@@ -1102,8 +1102,12 @@ package body GNATCOLL.SQL.Exec is
       Connection : access Database_Connection_Record'Class;
       Field      : SQL_Field_Integer) return Integer is
    begin
-      return Last_Id
-         (DBMS_Forward_Cursor'Class (Self.Res.all), Connection, Field);
+      if Perform_Queries then
+         return Last_Id
+           (DBMS_Forward_Cursor'Class (Self.Res.all), Connection, Field);
+      else
+         return 1;  --  Dummy
+      end if;
    end Last_Id;
 
    ---------------------
