@@ -968,8 +968,6 @@ package body GNATCOLL.SQL.Inspect is
       First : Natural; --  Current index in Str
       Line_Number : Natural := 0;
 
---      Has_Error : Boolean := False;
-
       Fields_Per_Line : constant := 5;
       --  Maximum number of fields per line (fields are separated with |)
 
@@ -1228,6 +1226,9 @@ package body GNATCOLL.SQL.Inspect is
          end loop;
 
          --  Check that the table has a valid Primary Key
+         --  ??? Code is commented out for reference in case we decide to
+         --  output such a warning after all. For now, since there is no way
+         --  to hide the warning for the user, this is too verbose.
 
 --           if not TDR (Table.Get).Has_PK
 --             and then not Table.Is_Abstract
@@ -1341,10 +1342,6 @@ package body GNATCOLL.SQL.Inspect is
 
       Free (String_List (Line));
       Free (Str);
-
---        if Has_Error then
---           return No_Schema;
---        end if;
       return Schema;
 
    exception
