@@ -163,6 +163,7 @@ package GNATCOLL.SQL.Exec is
          when Parameter_Float   => Float_Val : Float;
          when Parameter_Time    => Time_Val  : Ada.Calendar.Time;
          when Parameter_Date    => Date_Val  : Ada.Calendar.Time;
+         when Parameter_Character => Char_Val : Character;
       end case;
    end record;
 
@@ -172,6 +173,7 @@ package GNATCOLL.SQL.Exec is
    function "+" (Value : Integer) return SQL_Parameter;
    function "+" (Value : Boolean) return SQL_Parameter;
    function "+" (Value : Float) return SQL_Parameter;
+   function "+" (Value : Character) return SQL_Parameter;
    function "+" (Time : Ada.Calendar.Time) return SQL_Parameter;
 
    type SQL_Parameters is array (Positive range <>) of SQL_Parameter;

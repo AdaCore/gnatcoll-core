@@ -237,7 +237,10 @@ package GNATCOLL.SQL.Sqlite.Gnade is
       Str : System.Address; N_Bytes : Natural;
       Destructor : System.Address := System.Null_Address);
    pragma Import (C, Bind_Text, "sqlite3_bind_text");
-   --  Define the values for the parameters
+   --  Define the values for the parameters.
+   --  The Destructor is called to free the memory when the parameter is bound
+   --  to another value or destroyed. The default is that we do not free memory
+   --  at all (and thus we assume the string is static).
 
    procedure Finalize (Stmt : Statement);
    --  Finalize and free the memory occupied by stmt

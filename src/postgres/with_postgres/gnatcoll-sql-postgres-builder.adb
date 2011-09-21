@@ -1139,7 +1139,7 @@ package body GNATCOLL.SQL.Postgres.Builder is
       pragma Unreferenced (Self);
    begin
       case Typ is
-         when Parameter_Text =>
+         when Parameter_Text | Parameter_Character =>
             return '$' & Image (Index, 0) & "::text";
          when Parameter_Integer =>
             return '$' & Image (Index, 0) & "::integer";

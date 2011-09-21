@@ -106,7 +106,7 @@ package GNATCOLL.SQL_Impl is
 
    type Parameter_Type is
      (Parameter_Integer, Parameter_Text, Parameter_Boolean, Parameter_Float,
-      Parameter_Time, Parameter_Date);
+      Parameter_Time, Parameter_Date, Parameter_Character);
 
    function Parameter_String
      (Self  : Formatter;

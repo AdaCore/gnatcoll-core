@@ -406,6 +406,8 @@ package body GNATCOLL.SQL.Exec is
             return Time_To_SQL (Format, Param.Time_Val, Quote => False);
          when Parameter_Date =>
             return Date_To_SQL (Format, Param.Date_Val, Quote => False);
+         when Parameter_Character =>
+            return String'(1 .. 1 => Param.Char_Val);
          end case;
       end if;
    end Image;
@@ -1492,6 +1494,15 @@ package body GNATCOLL.SQL.Exec is
    function "+" (Value : Float) return SQL_Parameter is
    begin
       return SQL_Parameter'(Typ => Parameter_Float, Float_Val => Value);
+   end "+";
+
+   ---------
+   -- "+" --
+   ---------
+
+   function "+" (Value : Character) return SQL_Parameter is
+   begin
+      return SQL_Parameter'(Typ => Parameter_Character, Char_Val => Value);
    end "+";
 
    ---------
