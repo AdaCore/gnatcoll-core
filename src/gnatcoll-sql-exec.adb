@@ -26,7 +26,6 @@
 -----------------------------------------------------------------------
 
 with Ada.Calendar;               use Ada.Calendar;
-with Ada.Characters.Handling;    use Ada.Characters.Handling;
 with Ada.Containers.Hashed_Maps; use Ada.Containers;
 with Ada.Containers.Hashed_Sets;
 with Ada.Strings.Hash;
@@ -84,10 +83,6 @@ package body GNATCOLL.SQL.Exec is
       Hash            => Hash,
       Equivalent_Keys => "=");
    --  Cache the results of queries
-
-   function Is_Pragma (Query : String) return Boolean;
-   --  Return true if Query is a PRAGMA command (an sqlite extension).
-   --  We do not need to start a transaction for this type of commands
 
    procedure Compute_Statement
      (Stmt : Prepared_Statement'Class; Format : Formatter'Class);
@@ -585,16 +580,6 @@ package body GNATCOLL.SQL.Exec is
       return False;
    end Start_Transaction;
 
-   ---------------
-   -- Is_Pragma --
-   ---------------
-
-   function Is_Pragma (Query : String) return Boolean is
-   begin
-      return Query'Length > 7
-        and then Query (Query'First .. Query'First + 6) = "PRAGMA ";
-   end Is_Pragma;
-
    ---------------------
    -- Execute_And_Log --
    ---------------------
@@ -608,10 +593,9 @@ package body GNATCOLL.SQL.Exec is
       Direct     : Boolean;
       Params     : SQL_Parameters := No_Parameters)
    is
-      Is_Begin    : constant Boolean := To_Lower (Query) = "begin";
-      Is_Commit   : constant Boolean := To_Lower (Query) = "commit";
-      Is_Rollback : constant Boolean := To_Lower (Query) = "rollback";
-
+      Is_Commit_Or_Rollback   : constant Boolean :=
+        Equal (Query, "commit", Case_Sensitive => False)
+        or else Equal (Query, "rollback", Case_Sensitive => False);
       Stmt : DBMS_Stmt := No_DBMS_Stmt;
       R    : Abstract_Cursor_Access;
       Was_Started : Boolean;
@@ -628,7 +612,7 @@ package body GNATCOLL.SQL.Exec is
             & " (" & Connection.Username.all & ")");
          return;
 
-      elsif Is_Begin then
+      elsif Equal (Query, "begin", Case_Sensitive => False) then
          if not Connection.In_Transaction then
             Connection.In_Transaction := True;
 
@@ -640,13 +624,14 @@ package body GNATCOLL.SQL.Exec is
          end if;
 
       elsif not Connection.In_Transaction
-        and then not Is_Pragma (Query) --  for sqlite
         and then
           (Connection.Always_Use_Transactions
            or else
-             (not Is_Commit
-              and then not Is_Rollback
+             (not Is_Commit_Or_Rollback
               and then not Is_Select))   --  INSERT, UPDATE, LOCK, DELETE,...
+        and then
+          (Query'Length <= 7   --  for sqlite
+           or else Query (Query'First .. Query'First + 6) /= "PRAGMA ")
       then
          --  Start a transaction automatically
          Was_Started := Start_Transaction (Connection);
@@ -701,7 +686,7 @@ package body GNATCOLL.SQL.Exec is
       Result.Res := R;
 
       if Connection.In_Transaction
-        and then (Is_Commit or Is_Rollback)
+        and then Is_Commit_Or_Rollback
       then
          Connection.In_Transaction := False;
       end if;
