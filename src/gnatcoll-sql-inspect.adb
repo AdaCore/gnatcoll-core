@@ -50,8 +50,6 @@ package body GNATCOLL.SQL.Inspect is
    --  extra attribute set on foreign keys. If we want to check the constraints
    --  immediately, this should be set to "".
 
-   package String_Lists is new Ada.Containers.Indefinite_Doubly_Linked_Lists
-     (String);
    use String_Lists;
 
    procedure Parse_Table
@@ -200,7 +198,7 @@ package body GNATCOLL.SQL.Inspect is
 
    function Can_Be_Null (Self : Field) return Boolean is
    begin
-      return not Self.Get.Not_Null;
+      return not Self.Get.Props.Not_Null;
    end Can_Be_Null;
 
    -------------
@@ -223,7 +221,7 @@ package body GNATCOLL.SQL.Inspect is
 
    function Is_PK (Self : Field) return Boolean is
    begin
-      return Self.Get.PK;
+      return Self.Get.Props.PK;
    end Is_PK;
 
    ------------
@@ -235,7 +233,7 @@ package body GNATCOLL.SQL.Inspect is
       PK : Field := No_Field;
    begin
       while Has_Element (F) loop
-         if Element (F).Get.PK then
+         if Element (F).Get.Props.PK then
             if PK = No_Field then
                PK := Element (F);
             else
@@ -674,9 +672,10 @@ package body GNATCOLL.SQL.Inspect is
             Id          => Index,
             Description => new String'(Description),
             Default     => null,
-            PK          => Is_Primary_Key,
-            Indexed     => False,
-            Not_Null    => Not_Null,
+            Props       => (PK       => Is_Primary_Key,
+                            Indexed  => False,
+                            Not_Null => Not_Null or else Is_Primary_Key,
+                            Case_Insensitive => False),
             FK          => False,
             Table       => Tables_Ref.Get_Weak_Ref (Table),
             Active      => True);
@@ -974,13 +973,6 @@ package body GNATCOLL.SQL.Inspect is
       Fields_Per_Line : constant := 5;
       --  Maximum number of fields per line (fields are separated with |)
 
-      type Field_Properties is record
-         PK       : Boolean := False;
-         Not_Null : Boolean := False;
-         Index    : Boolean := False;
-      end record;
-      --  The various properties that can be set for a field in a table.
-
       type Line_Fields is new String_List (1 .. Fields_Per_Line);
 
       procedure Parse_Line (Result : in out Line_Fields);
@@ -994,8 +986,9 @@ package body GNATCOLL.SQL.Inspect is
         (Table_Def : String; Table : in out Table_Description);
       --  Parse the description of table inheritance
 
-      procedure Parse_FK (Name : String);
-      --  Parse all foreign keys for table Name
+      procedure Parse_Table_Properties (Name : String);
+      --  Parse all foreign keys and indices for table Name, when they are
+      --  described on their own line
 
       function Parse_Properties (Str : String) return Field_Properties;
       --  Parse the third column of a field description
@@ -1015,9 +1008,12 @@ package body GNATCOLL.SQL.Inspect is
                if T = "NOT NULL" then
                   Props.Not_Null := True;
                elsif T = "INDEX" then
-                  Props.Index := True;
+                  Props.Indexed := True;
                elsif T = "PK" then
                   Props.PK := True;
+                  Props.Not_Null := True;
+               elsif T = "NOCASE" then
+                  Props.Case_Insensitive := True;
                end if;
             end;
          end loop;
@@ -1122,6 +1118,7 @@ package body GNATCOLL.SQL.Inspect is
                     Id          => T,
                     Description => null,
                     Fields      => Empty_Field_List,
+                    Indexes     => String_Lists.Empty_List,
                     Is_Abstract => False,
                     Has_PK      => False,
                     FK          => Foreign_Keys.Empty_List,
@@ -1139,7 +1136,9 @@ package body GNATCOLL.SQL.Inspect is
          while First <= Str'Last and then Str (First) = '|' loop
             Parse_Line (Result => Line);
 
-            if Line (1).all = "FK:" then
+            if Line (1).all = "FK:"
+              or else Line (1).all = "INDEX:"
+            then
                null;   --  Skip for now, will do in second pass
 
             else
@@ -1167,9 +1166,7 @@ package body GNATCOLL.SQL.Inspect is
                           Id          => Attr_Id,
                           Description => new String'(Line (5).all),
                           Default     => new String'(Line (4).all),
-                          PK          => Props.PK,
-                          Not_Null    => Props.PK or else Props.Not_Null,
-                          Indexed     => Props.Index,
+                          Props       => Props,
                           FK          => Typ'Length > 3
                             and then Typ (Typ'First .. Typ'First + 2) = "FK ",
                           Table       => Tables_Ref.Get_Weak_Ref (Table),
@@ -1247,11 +1244,11 @@ package body GNATCOLL.SQL.Inspect is
          Schema.Ordered_Tables.Append (Name);
       end Parse_Table;
 
-      --------------
-      -- Parse_FK --
-      --------------
+      ----------------------------
+      -- Parse_Table_Properties --
+      ----------------------------
 
-      procedure Parse_FK (Name : String) is
+      procedure Parse_Table_Properties (Name : String) is
          Curs  : constant Tables_Maps.Cursor := Schema.Tables.Find (Name);
          From_Table : Table_Description := Element (Curs);
          To_Table : Table_Description;
@@ -1296,16 +1293,19 @@ package body GNATCOLL.SQL.Inspect is
                   end loop;
                end;
 
-               Append (TDR (From_Table.Get).FK, FK);
+               TDR (From_Table.Get).FK.Append (FK);
+
+            elsif Line (1).all = "INDEX:" then
+               TDR (From_Table.Get).Indexes.Append (Line (2).all);
             end if;
          end loop;
 
          Free (String_List (Line));
          Replace_Element (Schema.Tables, Curs, From_Table);
-      end Parse_FK;
+      end Parse_Table_Properties;
 
       Line : Line_Fields;
-      type Parse_Mode is (Parsing_Table, Parsing_FK);
+      type Parse_Mode is (Parsing_Table, Parsing_Properties);
 
    begin
       Str := Self.File.Read_File;
@@ -1328,8 +1328,8 @@ package body GNATCOLL.SQL.Inspect is
                           (Line (1).all,
                            Line (2).all,
                            Is_View => Starts_With (Line (1).all, "VIEW"));
-                     when Parsing_FK    =>
-                        Parse_FK (Line (2).all);
+                     when Parsing_Properties    =>
+                        Parse_Table_Properties (Line (2).all);
                   end case;
                end if;
             else
@@ -1425,10 +1425,37 @@ package body GNATCOLL.SQL.Inspect is
          --  Can_Be_Not_Null is set to False, you must set FK_Table to the
          --  table pointed to by the field.
 
+         procedure Print_Indexes (Table : Table_Description);
+         --  Create the multi-column indexes for the table
+
          procedure Print_FK (Table : Table_Description);
          --  Process the foreign key and indexes constraints. They are either
          --  added to the table creation statement, or deferred until all
          --  tables have been created.
+
+         -------------------
+         -- Print_Indexes --
+         -------------------
+
+         procedure Print_Indexes (Table : Table_Description) is
+            C : String_Lists.Cursor := TDR (Table.Get).Indexes.First;
+            Index : Positive := 1;
+         begin
+            while Has_Element (C) loop
+               Append (Deferred_Indexes,
+                       "CREATE INDEX """
+                       & Table.Name & "_idx"
+                       & Image (Index, Min_Width => 1)
+                       & """ ON """
+                       & Table.Name & """ (" & Element (C) & ")");
+               Index := Index + 1;
+               Next (C);
+            end loop;
+         end Print_Indexes;
+
+         --------------
+         -- Print_FK --
+         --------------
 
          procedure Print_FK (Table : Table_Description) is
             Stmt2 : Unbounded_String;
@@ -1518,7 +1545,7 @@ package body GNATCOLL.SQL.Inspect is
                --  likely the user will want to use them a lot anyway
 
                if Length (F.Fields) = 1
-                 and not Element (F.Fields.First).From.Get.Indexed
+                 and not Element (F.Fields.First).From.Get.Props.Indexed
                then
                   Append (Deferred_Indexes,
                           "CREATE INDEX """
@@ -1570,6 +1597,10 @@ package body GNATCOLL.SQL.Inspect is
                end if;
             end if;
 
+            if F.Get.Props.Case_Insensitive then
+               Append (Stmt, " COLLATE NOCASE");
+            end if;
+
             if F.Default /= "" then
                Format_Field
                   (Self.DB, F.Default, Get_Type (F), Val, Val_Param, False);
@@ -1591,7 +1622,7 @@ package body GNATCOLL.SQL.Inspect is
                end if;
             end if;
 
-            if F.Get.Indexed then
+            if F.Get.Props.Indexed then
                Append (Deferred_Indexes,
                        "CREATE INDEX """
                        & Table.Name & "_"
@@ -1675,6 +1706,7 @@ package body GNATCOLL.SQL.Inspect is
                   end if;
 
                   Print_FK (Table);
+                  Print_Indexes (Table);
                   Append (SQL, ")");
                   Do_Statement (To_String (SQL));
 

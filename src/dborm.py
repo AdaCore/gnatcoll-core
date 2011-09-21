@@ -2390,6 +2390,10 @@ def get_db_schema(setup, requires_pk=False, all_tables=[], omit=[]):
                     table.fk.append(
                         Foreign_Key(table.name, fields[2], pairs, ''))
 
+                elif fields[1] == "INDEX:":
+                    # Skip, no influence here
+                    pass
+
                 else:
                     if fields[2].startswith("FK "):
                         table.fk.append(

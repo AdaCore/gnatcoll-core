@@ -37,6 +37,7 @@
 --  management in this package.
 
 private with Ada.Containers.Doubly_Linked_Lists;
+private with Ada.Containers.Indefinite_Doubly_Linked_Lists;
 with Ada.Containers.Indefinite_Ordered_Maps;
 private with GNATCOLL.Refcount.Weakref;
 with GNATCOLL.SQL.Exec;           use GNATCOLL.SQL.Exec;
@@ -333,15 +334,21 @@ private
    -- Fields --
    ------------
 
+   type Field_Properties is record
+      PK       : Boolean := False;
+      Not_Null : Boolean := False;  --  (true for a PK, implicitly)
+      Indexed  : Boolean := False;  --  Do we need an index ?
+      Case_Insensitive : Boolean := False;
+   end record;
+   --  The various properties that can be set for a field in a table.
+
    type Field_Description is new Weak_Refcounted with record
       Name        : GNAT.Strings.String_Access;
       Typ         : Field_Type;
       Id          : Positive;
       Description : GNAT.Strings.String_Access;
       Default     : GNAT.Strings.String_Access;
-      PK          : Boolean;  --  Part of the primary key ?
-      Not_Null    : Boolean;
-      Indexed     : Boolean;  --  Do we need an index ?
+      Props       : Field_Properties;
       FK          : Boolean;  --  Whether this is part of a foreign key
       Table       : Tables_Ref.Weak_Ref;
       Active      : Boolean := True;
@@ -393,6 +400,9 @@ private
    package Foreign_Keys is new Ada.Containers.Doubly_Linked_Lists
      (Foreign_Key);
 
+   package String_Lists is new Ada.Containers.Indefinite_Doubly_Linked_Lists
+     (String);
+
    -----------------------
    -- Table_Description --
    -----------------------
@@ -407,6 +417,10 @@ private
       Fields      : Field_List := Empty_Field_List;
       Is_Abstract : Boolean := False;
       FK          : Foreign_Keys.List := Foreign_Keys.Empty_List;
+
+      Indexes     : String_Lists.List;
+      --  The list of multi-column indexes (that are declared in their own line
+      --  in the table description).
 
       Active      : Boolean := True;
 

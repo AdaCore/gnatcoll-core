@@ -3858,7 +3858,7 @@ the fields is always given by the following grammar:
 @CODESAMPLE{
   fields ::=
      '|' <name> '|' <type>@NL{}
-     '|' ('PK'|''|'NULL'|'NOT NULL'|'INDEX') @NL{}
+     '|' ('PK'|''|'NULL'|'NOT NULL'|'INDEX'|'NOCASE') @NL{}
      '|' [default] '|' [doc] '|'@NL{}
 }
 
@@ -3869,6 +3869,9 @@ The tool will automatically convert these to
 Ada when generating Ada code. A special type ("AUTOINCREMENT") is an integer
 that is automatically incremented according to available ids in the table.
 The exact type used will depend on the specific DBMS.
+
+The property 'NOCASE' indicates that comparison should be case insensitive
+for this field.
 
 If the field is a foreign key (that is a value that must correspond to a row in
 another table), you can use the special syntax for its type:
@@ -3929,6 +3932,13 @@ a tuple as its primary key, you can define that foreign key on a new line, as:
 @NL{}
 | TABLE | tableA |@NL{}
 | FK: | tableB | fieldA1, fieldA2 | fieldB1, fieldB2 |
+}
+
+It is also possible to crate multi-column indexes, as in:
+
+@CODESAMPLE{
+| TABLE | tableA |@NL{}
+| INDEX: | field1,field2,field3 |@NL{}
 }
 
 Going back to the example we described earlier (@pxref{Database example}),
