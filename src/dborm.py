@@ -869,15 +869,18 @@ def internal_query(pretty, table, schema):
         fk_list = "From := +Table;"
 
     pkfield_list = ["Table.%s" % f.name for f in table.fields if f.is_pk()]
-    body = """if PK_Only then
+
+    if table.pk != []:
+        body = """if PK_Only then
        Fields := Fields & %(pkfields)s;
     else
        Fields := Fields & %(fields)s;
-    end if;
-    %(fk)s""" % \
-        {"fields":  "\n& ".join(field_list),
-         "pkfields": "\n& ".join(pkfield_list),
-         "fk": body}
+    end if;""" + body
+    else:
+        body = """Fields := Fields & %(fields)s; """ + body
+
+    body = body % {"fields":  "\n& ".join(field_list),
+                   "pkfields": "\n& ".join(pkfield_list)}
 
     if debug:
         tmp = \
@@ -894,6 +897,18 @@ def internal_query(pretty, table, schema):
 
         body = tmp + body
 
+    if table.pk != []:
+        params = [("PK_Only", "Boolean", "False")]
+        internal_body = """Do_Query_%(cap)s(Fields, From, Criteria,
+           0, Alias_%(cap)s, Depth, Follow_LJ, PK_Only);"""
+    else:
+        params = []
+        internal_body = """if PK_Only then
+        raise Program_Error with "Table %(cap)s has no primary key";
+    end if;
+    Do_Query_%(cap)s(Fields, From, Criteria,
+       0, Alias_%(cap)s, Depth, Follow_LJ);"""
+
     pretty.add_subprogram(
         name="internal_query_%s" % table.name,
         params=[("fields",    "in out SQL_Field_List"),
@@ -901,11 +916,9 @@ def internal_query(pretty, table, schema):
                   ("criteria",  "in out SQL_Criteria"),
                   ("depth",     "natural"),
                   ("Follow_LJ", "Boolean"),
-                  ("PK_Only",   "Boolean", "False")],
+                  ("PK_Only", "Boolean", "False")],
         section="Managers(implementation details)",
-        body=("Do_Query_%(cap)s(Fields, From, Criteria,\n" \
-                + " 0, Alias_%(cap)s, Depth, Follow_LJ, PK_Only);")
-              % {"cap": table.name})
+        body=internal_body % {"cap": table.name})
 
     pretty.add_subprogram(
         name="do_query_%s" % table.name,
@@ -915,8 +928,7 @@ def internal_query(pretty, table, schema):
                   ("Base",      "Natural"),
                   ("Aliases",   "Alias_Array"),
                   ("depth",     "natural"),
-                  ("Follow_LJ", "Boolean"),
-                  ("PK_Only",   "Boolean", "False")],
+                  ("Follow_LJ", "Boolean")] + params,
         local_vars=local_vars,
         section="body",
         body=body)
@@ -978,14 +990,11 @@ def detach(pretty, table, schema, translate):
     # In a Detached_*, we store new pointer types, not the ones stored in the
     # session, since the latter might have a shorter lifetime.
 
-    pretty.add_subprogram(
-       name="detach",
-       params=[("self", "%(row)s'Class" % translate)],
-       section="Elements: %(cap)s" % translate,
-       returns="Detached_%(row)s'Class" % translate,
-       local_vars=[("R", "Detached_Element_Access"),
-                   ("D", "Detached_Data_Access")],
-       body="""Self.Data.Session.From_Cache (%(fromcache)s, R, D);
+    if table.pk != []:
+        local = [("R", "Detached_Element_Access"),
+                 ("D", "Detached_Data_Access")]
+
+        body = """Self.Data.Session.From_Cache (%(fromcache)s, R, D);
        if R /= null then
           declare
              R2 : Detached_%(row)s'Class := Detached_%(row)s'Class (R.all);
@@ -995,8 +1004,21 @@ def detach(pretty, table, schema, translate):
           end;
        else
           return Detach_No_Lookup (Self, Self.Data.Session);
-        end if;""" % {"row": translate["row"],
-                      "fromcache": from_cache(schema, table, with_self=True)})
+        end if;"""
+
+    else:
+        local = []
+        body = "return Detach_No_Lookup (Self, Self.Data.Session);"
+
+    pretty.add_subprogram(
+       name="detach",
+       params=[("self", "%(row)s'Class" % translate)],
+       section="Elements: %(cap)s" % translate,
+       returns="Detached_%(row)s'Class" % translate,
+       local_vars=local,
+       body=body
+        % {"row": translate["row"],
+           "fromcache": from_cache(schema, table, with_self=True)})
 
     # Internal version of Detach
 
@@ -1315,26 +1337,27 @@ def generate_orb_one_table(name, schema, pretty, all_tables):
                returns="detached_%(row)s'Class" % translate,
                section="Manager: %(cap)s" % translate)
 
-        pretty.add_subprogram(
-           name='"="',
-           params=[("op1", "%(row)s" % translate),
-                   ("op2", "%(row)s" % translate)],
-           body="return %(equal)s;" % translate,
-           returns="boolean",
-           section="Elements: %(cap)s" % translate)
+        if table.pk:
+            pretty.add_subprogram(
+               name='"="',
+               params=[("op1", "%(row)s" % translate),
+                       ("op2", "%(row)s" % translate)],
+               body="return %(equal)s;" % translate,
+               returns="boolean",
+               section="Elements: %(cap)s" % translate)
 
-        pretty.add_subprogram(
-           name='"="',
-           params=[("op1", "Detached_%(row)s" % translate),
-                  ("op2", "Detached_%(row)s" % translate)],
-           body="""if Op1.Get = null then return Op2.Get = null;
-           elsif Op2.Get = null then return False; else
-           return %(equal)s; end if;""" % translate,
-           section="Elements: %(cap)s" % translate,
-           returns="boolean",
-           comment="""
-              Compares two elements using only the primary keys. All other
-              fields are ignored""")
+            pretty.add_subprogram(
+               name='"="',
+               params=[("op1", "Detached_%(row)s" % translate),
+                      ("op2", "Detached_%(row)s" % translate)],
+               body="""if Op1.Get = null then return Op2.Get = null;
+               elsif Op2.Get = null then return False; else
+               return %(equal)s; end if;""" % translate,
+               section="Elements: %(cap)s" % translate,
+               returns="boolean",
+               comment="""
+                  Compares two elements using only the primary keys. All other
+                  fields are ignored""")
 
         pretty.add_subprogram(
             name='new_%(row)s' % translate,
@@ -1437,28 +1460,36 @@ def generate_orb_one_table(name, schema, pretty, all_tables):
 
         local_vars = [("D", "constant %(row)s_Data" % translate,
                        "%(row)s_Data (Self.Get)" % translate),
-                      ("Missing_PK", "constant Boolean",
-                       "%s" % " or else ".join(has_pk)),
                       ("Q", "SQL_Query"),
                       ("A", "SQL_Assignment", "No_Assignment")]
+
+        if has_pk:
+            local_vars.append(("Missing_PK", "constant Boolean",
+                               " or else ".join(has_pk)))
 
         if execute == "R.Fetch":
             local_vars.append(("R", "Forward_Cursor"))
 
-        insert_or_update = """
-            %(setassign)s
-            if Missing_PK then
-               Q := SQL_Insert (A);
-            else
-               Q := SQL_Update (DBA.%(table)s, A, %(where)s);
-            end if;
-            %(execute)s (Self.Session.DB, Q);
+        if has_pk:
+            insert_or_update = """
+                %(setassign)s
+                if Missing_PK then
+                   Q := SQL_Insert (A);
+                else
+                   Q := SQL_Update (DBA.%(table)s, A, %(where)s);
+                end if;
+                %(execute)s (Self.Session.DB, Q);
 
-            if Missing_PK and then Success (Self.Session.DB) then
-               PK_Modified := True;
-               %(getpk)s
-            end if;
-            """ % tr
+                if Missing_PK and then Success (Self.Session.DB) then
+                   PK_Modified := True;
+                   %(getpk)s
+                end if;
+                """ % tr
+        else:
+            insert_or_update = """
+                %(setassign)s
+                Q := SQL_Insert (A);
+                %(execute)s (Self.Session.DB, Q);""" % tr
 
         pretty.add_subprogram(
             name="insert_or_update",
@@ -1470,15 +1501,23 @@ def generate_orb_one_table(name, schema, pretty, all_tables):
             local_vars=local_vars,
             body=insert_or_update)
 
+        if has_pk:
+            local_vars=[("D", "constant %(row)s_Data" % translate,
+                         "%(row)s_Data (Self.Get)" % translate)]
+            delete_body = ("Execute (Self.Session.DB,"
+               + " SQL_Delete (DBA.%(table)s, %(where)s));") % tr
+        else:
+            local_vars = []
+            delete_body = ('raise Program_Error with'
+               + ' "Table %(cap)s has no primary key";') % translate
+
         pretty.add_subprogram(
             name="delete",
             params=[("self", "detached_%(row)s" % translate)],
             overriding=True,
             section="internal",
-            local_vars=[("D", "constant %(row)s_Data" % translate,
-                           "%(row)s_Data (Self.Get)" % translate)],
-            body="Execute (Self.Session.DB,"
-               + " SQL_Delete (DBA.%(table)s, %(where)s));""" % tr)
+            local_vars=local_vars,
+            body=delete_body)
 
         on_add = ""
         for f in table.fk:
@@ -1507,10 +1546,33 @@ def generate_orb_one_table(name, schema, pretty, all_tables):
            body="""%(free_fields)s Free (Detached_Data (Self));""" % translate)
 
         if not table.is_abstract:
-            tmp = ", ".join([p.to_return("D") for p in table.pk])
-            unset = " or else ".join(
-                ["D.ORM_%s = %s" % (p.name, p.type.default_record)
-                 for p in table.pk])
+            if table.pk:
+                unset = " or else ".join(
+                    ["D.ORM_%s = %s" % (p.name, p.type.default_record)
+                     for p in table.pk])
+                tmp = " & ".join(p.image() for p in table.pk)
+                pretty.add_subprogram(
+                   name="hash_%(row)s" % translate,
+                   params=schema.params_get_pk(table),
+                   returns="String",
+                   section="body",
+                   body="""return "%s" & %s;""" % (translate["row"], tmp))
+
+                local_vars=[("D", "constant %(row)s_Data" % translate,
+                             "%(row)s_Data (Self.Get)" % translate)]
+                tmp = ", ".join([p.to_return("D") for p in table.pk])
+                body='if %s then' % unset \
+                 + '  return "%(row)s" & System.Address_Image' % translate \
+                 + " (D.all'Address);" % translate \
+                 + ' else ' \
+                 + 'return Hash_%s (%s);' % (translate["row"], tmp) \
+                 + " end if;"
+
+            else:
+                local_vars = []
+                body = ('raise Program_Error with ' +
+                        '"Table %(cap)s has no primary key";' +
+                        ' return "";') % translate
 
             pretty.add_subprogram(
                name="hash",
@@ -1518,22 +1580,9 @@ def generate_orb_one_table(name, schema, pretty, all_tables):
                returns="String",
                section="internal",
                overriding=True,
-               local_vars=[("D", "constant %(row)s_Data" % translate,
-                            "%(row)s_Data (Self.Get)" % translate)],
-               body='if %s then' % unset \
-                + '  return "%(row)s" & System.Address_Image' % translate
-                + " (D.all'Address);" % translate \
-                + ' else ' \
-                + 'return Hash_%s (%s);' % (translate["row"], tmp) \
-                + " end if;")
+               local_vars=local_vars,
+               body=body)
 
-            tmp = " & ".join(p.image() for p in table.pk)
-            pretty.add_subprogram(
-               name="hash_%(row)s" % translate,
-               params=schema.params_get_pk(table),
-               returns="String",
-               section="body",
-               body="""return "%s" & %s;""" % (translate["row"], tmp))
 
     # Prepare the getters
     # Prepare the setters for simple values. These are only available for

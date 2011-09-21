@@ -3953,12 +3953,23 @@ The first table contains the customers. Here is its definition.
 | last  | TEXT          | NOT NULL, INDEX |   | Customers' last name         |@NL{}
 }
 
-A table must always contain a primary key. This is a field whose value is
+We highly recommend to set a primary key on all tables.
+This is a field whose value is
 unique in the table, and thus that can act as an identifier for a specific
 row in the table (in this case for a specific customer). We recommand using
 integers for these ids for efficiency reasons. It is possible that the
 primary key will be made of several fields, in which case they should all
 have the "PK" constraint in the third column.
+
+A table with no primary key is still usable. The difference is in the
+code generated for the ORM (@pxref{The Object-Relational Mapping layer (ORM)}),
+since the @code{Delete} operation for this table will raise a
+@code{Program_Error} instead of doing the actual deletion (that's because there
+is no guaranteed unique identifier for the element, so the ORM does not know
+which one to delete -- we do not depend on having unique internal ids on the
+table, like some DBMS have). Likewise, the elements extracted from such a
+primary key-less table will not be cached locally in the session, and cannot
+be updated (only new elements can be created in the table).
 
 As we mentioned, the library contains two types of media, books and DVDs.
 Each of those has a title, an author. However, a book also has a number of

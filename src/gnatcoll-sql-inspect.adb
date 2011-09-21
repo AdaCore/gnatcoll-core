@@ -968,7 +968,7 @@ package body GNATCOLL.SQL.Inspect is
       First : Natural; --  Current index in Str
       Line_Number : Natural := 0;
 
-      Has_Error : Boolean := False;
+--      Has_Error : Boolean := False;
 
       Fields_Per_Line : constant := 5;
       --  Maximum number of fields per line (fields are separated with |)
@@ -1229,15 +1229,15 @@ package body GNATCOLL.SQL.Inspect is
 
          --  Check that the table has a valid Primary Key
 
-         if not TDR (Table.Get).Has_PK
-           and then not Table.Is_Abstract
-           and then (Table.Super_Table = No_Table
-                     or else not TDR (Table.Super_Table.Get).Has_PK)
-         then
-            Put_Line ("Error: table '"
-                      & Table.Name & "' has no primary key");
-            Has_Error := True;
-         end if;
+--           if not TDR (Table.Get).Has_PK
+--             and then not Table.Is_Abstract
+--             and then (Table.Super_Table = No_Table
+--                       or else not TDR (Table.Super_Table.Get).Has_PK)
+--           then
+--              Put_Line ("Warning: table '"
+--                        & Table.Name & "' has no primary key");
+--              Put_Line ("    No Delete operation generated for this table");
+--           end if;
 
          Free (String_List (Line));
          Include (Schema.Tables, Name, Table);
@@ -1342,9 +1342,9 @@ package body GNATCOLL.SQL.Inspect is
       Free (String_List (Line));
       Free (Str);
 
-      if Has_Error then
-         return No_Schema;
-      end if;
+--        if Has_Error then
+--           return No_Schema;
+--        end if;
       return Schema;
 
    exception
