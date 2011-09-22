@@ -1258,6 +1258,7 @@ package body GNATCOLL.SQL.Inspect is
          To_Table : Table_Description;
          FK    : Foreign_Key;
          Line  : Line_Fields;
+         Index_Count : Natural := 1;
       begin
          while First <= Str'Last and then Str (First) = '|' loop
             Parse_Line (Result => Line);
@@ -1300,7 +1301,18 @@ package body GNATCOLL.SQL.Inspect is
                TDR (From_Table.Get).FK.Append (FK);
 
             elsif Line (1).all = "INDEX:" then
-               TDR (From_Table.Get).Indexes.Append (Line (2).all);
+               if Line (3).all = "" then
+                  TDR (From_Table.Get).Indexes.Append
+                    (Line (2).all
+                     & "|"
+                     & Name & "_idx"
+                     & Image (Index_Count, Min_Width => 1));
+               else
+                  TDR (From_Table.Get).Indexes.Append
+                    (Line (2).all & "|" & Line (3).all);
+               end if;
+
+               Index_Count := Index_Count + 1;
             end if;
          end loop;
 
@@ -1439,16 +1451,25 @@ package body GNATCOLL.SQL.Inspect is
 
          procedure Print_Indexes (Table : Table_Description) is
             C : String_Lists.Cursor := TDR (Table.Get).Indexes.First;
-            Index : Positive := 1;
          begin
             while Has_Element (C) loop
-               Append (Deferred_Indexes,
-                       "CREATE INDEX """
-                       & Table.Name & "_idx"
-                       & Image (Index, Min_Width => 1)
-                       & """ ON """
-                       & Table.Name & """ (" & Element (C) & ")");
-               Index := Index + 1;
+               declare
+                  Descr : constant String := Element (C);
+                  Name_Start : Integer := Descr'First + 1;
+               begin
+                  while Descr (Name_Start) /= '|' loop
+                     Name_Start := Name_Start + 1;
+                  end loop;
+
+                  Append (Deferred_Indexes,
+                          "CREATE INDEX """
+                          & Descr (Name_Start + 1 .. Descr'Last)
+                          & """ ON """
+                          & Table.Name & """ ("
+                          & Descr (Descr'First .. Name_Start - 1)
+                          & ")");
+               end;
+
                Next (C);
             end loop;
          end Print_Indexes;

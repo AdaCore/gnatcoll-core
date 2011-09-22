@@ -3941,11 +3941,13 @@ a tuple as its primary key, you can define that foreign key on a new line, as:
 | FK: | tableB | fieldA1, fieldA2 | fieldB1, fieldB2 |
 }
 
-It is also possible to crate multi-column indexes, as in:
+It is also possible to crate multi-column indexes, as in the following example.
+In this case, the third column contains the name of the index to create. If
+left blank, a default name will be computed by @value{gnatcoll}.
 
 @CODESAMPLE{
 | TABLE | tableA |@NL{}
-| INDEX: | field1,field2,field3 |@NL{}
+| INDEX: | field1,field2,field3 | name | @NL{}
 }
 
 Going back to the example we described earlier (@pxref{Database example}),

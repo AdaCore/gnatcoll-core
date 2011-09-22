@@ -421,7 +421,8 @@ private
 
       Indexes     : String_Lists.List;
       --  The list of multi-column indexes (that are declared in their own line
-      --  in the table description).
+      --  in the table description). This contains strings like:
+      --     "field1,field2,field3|index_name"
 
       Active      : Boolean := True;
 
