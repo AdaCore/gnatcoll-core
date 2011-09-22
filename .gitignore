@@ -30,6 +30,7 @@ testsuite/*/*/obj
 testsuite/results
 
 testsuite/projects/K712-015/test_it
+testsuite/config/win/win.txt
 
 examples/library/obj/database.ad?
 examples/library/obj/database_names.ads
