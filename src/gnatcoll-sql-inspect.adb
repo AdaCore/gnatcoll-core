@@ -674,6 +674,7 @@ package body GNATCOLL.SQL.Inspect is
             Default     => null,
             Props       => (PK       => Is_Primary_Key,
                             Indexed  => False,
+                            Noindex  => False,
                             Not_Null => Not_Null or else Is_Primary_Key,
                             Case_Insensitive => False),
             FK          => False,
@@ -1007,6 +1008,8 @@ package body GNATCOLL.SQL.Inspect is
                   Props.Not_Null := True;
                elsif T = "INDEX" then
                   Props.Indexed := True;
+               elsif T = "NOINDEX" then
+                  Props.Noindex := True;
                elsif T = "PK" then
                   Props.PK := True;
                   Props.Not_Null := True;
@@ -1542,7 +1545,12 @@ package body GNATCOLL.SQL.Inspect is
                --  likely the user will want to use them a lot anyway
 
                if Length (F.Fields) = 1
+
+                 --  Unless already created explicitly
                  and not Element (F.Fields.First).From.Get.Props.Indexed
+
+                 --  Unless disabled by the user
+                 and not Element (F.Fields.First).From.Get.Props.Noindex
                then
                   Append (Deferred_Indexes,
                           "CREATE INDEX """

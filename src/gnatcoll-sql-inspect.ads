@@ -338,6 +338,7 @@ private
       PK       : Boolean := False;
       Not_Null : Boolean := False;  --  (true for a PK, implicitly)
       Indexed  : Boolean := False;  --  Do we need an index ?
+      Noindex  : Boolean := False;  --  Force disabling of indexes
       Case_Insensitive : Boolean := False;
    end record;
    --  The various properties that can be set for a field in a table.

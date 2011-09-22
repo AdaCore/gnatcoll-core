@@ -3913,6 +3913,13 @@ which an index is created to speed up look ups.
 @item The value can be left undefined ("NULL")
 @item An index should be created for that column ("INDEX") to speed up
  the lookups.
+@item The automatic index created for a Foreign Key should not be created
+ ("NOINDEX"). Every time a field references another table, @value{gnatcoll}
+ will by default create an index for it, so that the ORM can more efficiently
+ do a reverse query (from the target table's row find all the rows in the current
+ table that reference that target row). This will in general provide more
+ efficiency, but in some cases you never intend to do the reverse query and
+ thus can spare the extra index.
 @end itemize
 
 The fourth column gives the default value for the field, and is given in SQL
