@@ -232,10 +232,13 @@ package GNATCOLL.SQL.Sqlite.Gnade is
    procedure Bind_Null (Stmt : Statement; Index : Integer);
    pragma Import (C, Bind_Null, "sqlite3_bind_null");
 
+   type Text_Destructor is access procedure (Str : in out System.Address);
+   pragma Convention (C, Text_Destructor);
+
    procedure Bind_Text
      (Stmt : Statement; Index : Integer;
       Str : System.Address; N_Bytes : Natural;
-      Destructor : System.Address := System.Null_Address);
+      Destructor : Text_Destructor := null);
    pragma Import (C, Bind_Text, "sqlite3_bind_text");
    --  Define the values for the parameters.
    --  The Destructor is called to free the memory when the parameter is bound

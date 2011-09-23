@@ -472,6 +472,7 @@ package body GNATCOLL.SQL.Sqlite.Builder is
       Res2   : Sqlite_Direct_Cursor_Access;
       Stmt   : Statement;
       Last_Status : Result_Codes;
+      Tmp_Data : array (Params'Range) of GNAT.Strings.String_Access;
    begin
       --  Since we have a prepared statement, the connection already exists, no
       --  need to recreate.
@@ -500,22 +501,18 @@ package body GNATCOLL.SQL.Sqlite.Builder is
                  (Stmt, P,
                   Interfaces.C.int (Boolean'Pos (Params (P).Bool_Val)));
             when Parameter_Time =>
-               declare
-                  Str : aliased String :=
-                    Time_To_SQL (Connection.all, Params (P).Time_Val,
-                                 Quote => False);
-               begin
-                  Bind_Text (Stmt, P, Str'Address, Str'Length);
-               end;
+               Tmp_Data (P) := new String'
+                 (Time_To_SQL
+                    (Connection.all, Params (P).Time_Val, Quote => False));
+               Bind_Text
+                 (Stmt, P, Tmp_Data (P).all'Address, Tmp_Data (P)'Length);
 
             when Parameter_Date =>
-               declare
-                  Str : aliased String :=
-                    Date_To_SQL (Connection.all, Params (P).Date_Val,
-                                 Quote => False);
-               begin
-                  Bind_Text (Stmt, P, Str'Address, Str'Length);
-               end;
+               Tmp_Data (P) := new String'
+                 (Date_To_SQL
+                    (Connection.all, Params (P).Time_Val, Quote => False));
+               Bind_Text
+                 (Stmt, P, Tmp_Data (P).all'Address, Tmp_Data (P)'Length);
             end case;
          end if;
       end loop;
@@ -527,8 +524,13 @@ package body GNATCOLL.SQL.Sqlite.Builder is
 
       for P in Params'Range loop
          case Params (P).Typ is
-            when Parameter_Text =>
+            when Parameter_Text | Parameter_Character =>
                Bind_Null (Stmt, P);
+
+            when Parameter_Time | Parameter_Date =>
+               Bind_Null (Stmt, P);
+               Free (Tmp_Data (P));
+
             when others =>
                null;
          end case;
