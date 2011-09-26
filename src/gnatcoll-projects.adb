@@ -320,7 +320,7 @@ package body GNATCOLL.Projects is
       Root_Project_Path : GNATCOLL.VFS.Virtual_File;
       Errors            : Projects.Error_Report;
       Project           : out Project_Node_Id;
-      Packages_To_Check : GNAT.Strings.String_List_Access := All_Packages;
+      Packages_To_Check : GNAT.Strings.String_List_Access := All_Packs;
       Recompute_View    : Boolean := True;
       Test_With_Missing_With : Boolean := True);
    --  Internal implementation of load. This doesn't reset the tree at all,
@@ -4080,7 +4080,7 @@ package body GNATCOLL.Projects is
      (Self               : in out Project_Tree;
       Root_Project_Path  : GNATCOLL.VFS.Virtual_File;
       Env                : Project_Environment_Access := null;
-      Packages_To_Check  : GNAT.Strings.String_List_Access := All_Packages;
+      Packages_To_Check  : GNAT.Strings.String_List_Access := All_Packs;
       Errors             : Error_Report := null;
       Recompute_View     : Boolean := True)
    is
@@ -4424,7 +4424,7 @@ package body GNATCOLL.Projects is
       Root_Project_Path : GNATCOLL.VFS.Virtual_File;
       Errors            : Projects.Error_Report;
       Project           : out Project_Node_Id;
-      Packages_To_Check : GNAT.Strings.String_List_Access := All_Packages;
+      Packages_To_Check : GNAT.Strings.String_List_Access := All_Packs;
       Recompute_View    : Boolean := True;
       Test_With_Missing_With : Boolean := True)
    is
