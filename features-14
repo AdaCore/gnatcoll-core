@@ -15,6 +15,12 @@ of the feature.
 New features in 1.4
 -------------------
 
+NF-14-K926-026 Control packages to check when loading a project (2011-09-26)
+
+   It is now possible to specify what packages should be checked when
+   calling GNATCOLL.Projects.Load. Unknown attributes in other packages
+   will not cause the load to fail. By default, all packages are checked.
+
 NF-14-K802-001 gnatcoll_db2ada generates graph of the DB schema (2011-08-02)
 
    A new switch -dot can be passed to gnatcoll_db2ada to generate a
