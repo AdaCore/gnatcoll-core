@@ -203,7 +203,7 @@ Logging information
 * Configuring traces::
 * Using the traces module::
 * Log decorators::
-* Defining custom trace streams::
+* Defining custom stream types::
 * Logging to syslog::
 * Dynamically disabling features::
 
@@ -1726,7 +1726,7 @@ can easily be defined in your application.
 * Configuring traces::
 * Using the traces module::
 * Log decorators::
-* Defining custom trace streams::
+* Defining custom stream types::
 * Logging to syslog::
 * Dynamically disabling features::
 @end menu
@@ -1783,7 +1783,7 @@ to associate the name of a @code{trace_handle} with the name of a
 @code{trace_stream} on which it should be displayed.
 
 Streams are identified by a name. You can provide additional streams by
-creating a new tagged object (@pxref{Defining custom trace streams}). Here are
+creating a new tagged object (@pxref{Defining custom stream types}). Here are
 the various possibilities to reference a stream:
 
 @table @code
@@ -2056,12 +2056,13 @@ make all or part of your decorators conditional and configurable through
 the same configuration file as the trace handles themselves.
 
 @c ------------------------------------------------------------------------
-@node Defining custom trace streams
-@section Defining custom trace streams
+@node Defining custom stream types
+@section Defining custom stream types
 @c ------------------------------------------------------------------------
 @noindent
 
-We noted above that several predefined streams exist, to output to a file,
+We noted above that several predefined types of streams exist, to output to
+a file,
 to standard output or to standard error. Depending on your specific needs,
 you might want to output to other media. For instance, in a graphical
 application, you could have a window that shows the traces (perhaps in
@@ -2069,6 +2070,11 @@ addition to filing them in a file, since otherwise the window would
 disappear along with its contents if the application crashes); or you could
 write to a socket (or even a CORBA ORB) to communicate with another
 application which is charge of monitoring your application.
+
+You do not need the code below if you simply want to have a new stream in
+your application (for instance using one for logging Info messages, one for
+Error messages, and so on). In this case, the function @code{Create} is all
+you need.
 
 @code{GNATCOLL.Traces} provides the type @code{Trace_Stream_Record}, which can
 be overridden to redirect the traces to your own streams.
@@ -2115,7 +2121,12 @@ exactly that.
 The above code did not open the file itself, as you might have noticed,
 nor did it register the name @code{"mystream"} so that it can be used in
 the configuration file. All this is done by creating a factory, ie a
-function in charge of creating the new stream. This function receives
+function in charge of creating the new stream.
+
+A factory is also a tagged object (so that you can store custom information
+in it), with a single primitive operation, @code{New_Stream}, in charge of
+creating and initializing a new stream.
+This operation receives
 in parameter the argument specified by the user in the configuration file
 (after the @code{":"} character, if any), and must return a newly
 allocated stream. This function is also never called twice with the
@@ -2123,7 +2134,11 @@ same argument, since @code{GNATCOLL.Traces} automatically reuses an existing
 stream when one with the same name and arguments already exists.
 
 @CODESAMPLE{
-@b{function} Factory (Args : String) @b{return} Trace_Stream @b{is}@NL{}
+@b{type} My_Stream_Factory @b{is new} Stream_Factory @b{with null record};@NL{}
+@NL{}
+@b{overriding function} New_Stream@NL{}
+   (Self : My_Stream_Factory; Args : String) @b{return} Trace_Stream@NL{}
+@b{is}@NL{}
    Str : access My_Stream := @b{new} My_Stream;@NL{}
 @b{begin}@NL{}
    Str.File := @b{new} File_Type;@NL{}
@@ -2131,7 +2146,9 @@ stream when one with the same name and arguments already exists.
    @b{return} Str;@NL{}
 @b{end} Factory;@NL{}
 @NL{}
-Register_Stream_Factory ("mystream", Factory'Access);}
+Fact : access My_Stream_Factory := @b{new} My_Stream_Factory;@NL{}
+Register_Stream_Factory ("mystream", Fact);@NL{}
+}
 
 @c ------------------------------------------------------------------------
 @node Logging to syslog

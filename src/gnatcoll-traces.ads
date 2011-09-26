@@ -373,9 +373,11 @@ package GNATCOLL.Traces is
    --  stream.
    --  In the configuration file, you can redirect to any of the registered
    --  stream, either by default by putting the following on a line of its own:
-   --      >stream_name
+   --      >&stream_name
+   --      >&stream_name:args
    --  or for each specific stream:
-   --     STREAM=yes >stream_name
+   --     STREAM=yes >&stream_name
+   --     STREAM=yes >&stream_name:args
    --  The object pointed by Factory will be freed by automatically when the
    --  factory container is freed.
 
