@@ -320,6 +320,7 @@ package body GNATCOLL.Projects is
       Root_Project_Path : GNATCOLL.VFS.Virtual_File;
       Errors            : Projects.Error_Report;
       Project           : out Project_Node_Id;
+      Packages_To_Check : GNAT.Strings.String_List_Access := All_Packages;
       Recompute_View    : Boolean := True;
       Test_With_Missing_With : Boolean := True);
    --  Internal implementation of load. This doesn't reset the tree at all,
@@ -4079,6 +4080,7 @@ package body GNATCOLL.Projects is
      (Self               : in out Project_Tree;
       Root_Project_Path  : GNATCOLL.VFS.Virtual_File;
       Env                : Project_Environment_Access := null;
+      Packages_To_Check  : GNAT.Strings.String_List_Access := All_Packages;
       Errors             : Error_Report := null;
       Recompute_View     : Boolean := True)
    is
@@ -4142,7 +4144,9 @@ package body GNATCOLL.Projects is
       --  is called.
       Self.Data.Timestamp := GNATCOLL.Utils.No_Time;
 
-      Internal_Load (Self, Project_File, Errors, Project, Recompute_View);
+      Internal_Load
+        (Self, Project_File, Errors, Project,
+         Packages_To_Check, Recompute_View);
 
       if Project = Empty_Node then
          --  Reset the list of error messages
@@ -4420,6 +4424,7 @@ package body GNATCOLL.Projects is
       Root_Project_Path : GNATCOLL.VFS.Virtual_File;
       Errors            : Projects.Error_Report;
       Project           : out Project_Node_Id;
+      Packages_To_Check : GNAT.Strings.String_List_Access := All_Packages;
       Recompute_View    : Boolean := True;
       Test_With_Missing_With : Boolean := True)
    is
@@ -4472,6 +4477,7 @@ package body GNATCOLL.Projects is
       Prj.Part.Parse
         (Tree.Data.Tree, Project,
          +Root_Project_Path.Full_Name,
+         Packages_To_Check => Packages_To_Check,
          Store_Comments    => True,
          Is_Config_File    => False,
          Env               => Tree.Data.Env.Env,

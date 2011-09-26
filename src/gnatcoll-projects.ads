@@ -101,6 +101,8 @@ private with Namet;
 
 package GNATCOLL.Projects is
 
+   All_Packages : constant GNAT.Strings.String_List_Access;
+
    type Project_Environment (<>) is tagged private;
    type Project_Environment_Access is access all Project_Environment'Class;
    --  This type describes the conditions under which a project is loaded. This
@@ -162,6 +164,7 @@ package GNATCOLL.Projects is
      (Self               : in out Project_Tree;
       Root_Project_Path  : GNATCOLL.VFS.Virtual_File;
       Env                : Project_Environment_Access := null;
+      Packages_To_Check  : GNAT.Strings.String_List_Access := All_Packages;
       Errors             : Error_Report := null;
       Recompute_View     : Boolean := True);
    --  Load a new set of project files, starting from a root project.
@@ -1318,6 +1321,9 @@ package GNATCOLL.Projects is
    --  The caller needs to free Values on return.
 
 private
+
+   All_Packages : constant GNAT.Strings.String_List_Access := null;
+
    Project_File_Extension : constant GNATCOLL.VFS.Filesystem_String :=
      GNATCOLL.VFS."+" (Prj.Project_File_Extension);
    --  The standard extension for a project file (".gpr")
