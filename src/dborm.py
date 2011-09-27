@@ -875,7 +875,8 @@ def internal_query(pretty, table, schema):
        Fields := Fields & %(pkfields)s;
     else
        Fields := Fields & %(fields)s;
-    end if;""" + body
+    end if;
+    From := Empty_Table_List;""" + body
     else:
         body = """Fields := Fields & %(fields)s; """ + body
 
