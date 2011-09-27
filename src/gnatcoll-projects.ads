@@ -177,6 +177,11 @@ package GNATCOLL.Projects is
    --  already loaded a project, you might want to reuse the environment by
    --  passing a non-empty Env parameter).
    --
+   --  A list of packages where all the attributes declared must be recognized
+   --  may be indicated by Packages_To_Check. By default, all packages are
+   --  checked. There may be unknown attributes in packages that are not
+   --  included in Packages_To_Check.
+   --
    --  Errors and warnings that occur during loading are reported through the
    --  Errors callback. If the project could not be loaded, the exception
    --  Invalid_Project is then raised. In such a case, any project set
