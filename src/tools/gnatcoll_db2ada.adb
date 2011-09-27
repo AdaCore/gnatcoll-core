@@ -190,7 +190,9 @@ procedure GNATCOLL_Db2Ada is
             Status      => Status'Access,
             Err_To_Out  => True);
       begin
-         Put_Line (Output);
+         if Output /= "" then
+            Put_Line (Output);
+         end if;
 
          if Status /= 0 then
             Put_Line ("FAILED to execute command: "
