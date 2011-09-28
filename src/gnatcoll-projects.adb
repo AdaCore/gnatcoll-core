@@ -4521,7 +4521,7 @@ package body GNATCOLL.Projects is
             Prj.Proc.Process_Project_Tree_Phase_1
               (In_Tree                => Tree.Data.View,
                Project                => Tmp_Prj,
-               Packages_To_Check      => Packages_To_Check,
+               --  Packages_To_Check      => Packages_To_Check,
                Success                => Success,
                From_Project_Node      => Project,
                From_Project_Node_Tree => Tree.Data.Tree,
