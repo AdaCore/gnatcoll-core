@@ -4080,7 +4080,7 @@ package body GNATCOLL.Projects is
      (Self               : in out Project_Tree;
       Root_Project_Path  : GNATCOLL.VFS.Virtual_File;
       Env                : Project_Environment_Access := null;
-      Packages_To_Check  : GNAT.Strings.String_List_Access := All_Packs;
+      Packages_To_Check  : GNAT.Strings.String_List_Access := No_Packs;
       Errors             : Error_Report := null;
       Recompute_View     : Boolean := True)
    is
@@ -4521,6 +4521,7 @@ package body GNATCOLL.Projects is
             Prj.Proc.Process_Project_Tree_Phase_1
               (In_Tree                => Tree.Data.View,
                Project                => Tmp_Prj,
+               Packages_To_Check      => Packages_To_Check,
                Success                => Success,
                From_Project_Node      => Project,
                From_Project_Node_Tree => Tree.Data.Tree,
@@ -5800,6 +5801,7 @@ package body GNATCOLL.Projects is
      (Tree                      : Project_Tree;
       Project                   : Project_Type'Class;
       Imported_Project_Location : GNATCOLL.VFS.Virtual_File;
+      Packages_To_Check         : GNAT.Strings.String_List_Access := No_Packs;
       Errors                    : Error_Report := null;
       Use_Relative_Path         : Boolean := True;
       Use_Base_Name             : Boolean := False;
@@ -5866,6 +5868,7 @@ package body GNATCOLL.Projects is
          Prj.Part.Parse
            (Tree_Node, Imported_Project,
             +Full_Name (Imported_Project_Location),
+            Packages_To_Check      => Packages_To_Check,
             Is_Config_File         => False,
             Current_Directory      => Get_Current_Dir,
             Env                    => Tree.Data.Env.Env);

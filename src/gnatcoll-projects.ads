@@ -103,6 +103,8 @@ package GNATCOLL.Projects is
 
    All_Packs : constant GNAT.Strings.String_List_Access;
 
+   No_Packs : constant GNAT.Strings.String_List_Access;
+
    type Project_Environment (<>) is tagged private;
    type Project_Environment_Access is access all Project_Environment'Class;
    --  This type describes the conditions under which a project is loaded. This
@@ -164,7 +166,7 @@ package GNATCOLL.Projects is
      (Self               : in out Project_Tree;
       Root_Project_Path  : GNATCOLL.VFS.Virtual_File;
       Env                : Project_Environment_Access := null;
-      Packages_To_Check  : GNAT.Strings.String_List_Access := All_Packs;
+      Packages_To_Check  : GNAT.Strings.String_List_Access := No_Packs;
       Errors             : Error_Report := null;
       Recompute_View     : Boolean := True);
    --  Load a new set of project files, starting from a root project.
@@ -1250,6 +1252,7 @@ package GNATCOLL.Projects is
      (Tree                      : Project_Tree;
       Project                   : Project_Type'Class;
       Imported_Project_Location : GNATCOLL.VFS.Virtual_File;
+      Packages_To_Check         : GNAT.Strings.String_List_Access := No_Packs;
       Errors                    : Error_Report := null;
       Use_Relative_Path         : Boolean := True;
       Use_Base_Name             : Boolean := False;
@@ -1371,6 +1374,10 @@ package GNATCOLL.Projects is
 private
 
    All_Packs : constant GNAT.Strings.String_List_Access := null;
+
+   No_Strings : aliased GNAT.Strings.String_List := (1 .. 0 => null);
+   No_Packs   : constant GNAT.Strings.String_List_Access
+                           := No_Strings'Access;
 
    Project_File_Extension : constant GNATCOLL.VFS.Filesystem_String :=
      GNATCOLL.VFS."+" (Prj.Project_File_Extension);
