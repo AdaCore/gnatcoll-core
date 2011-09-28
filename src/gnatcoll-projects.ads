@@ -102,8 +102,14 @@ private with Namet;
 package GNATCOLL.Projects is
 
    All_Packs : constant GNAT.Strings.String_List_Access;
+   --  When used as the value of argument Packages_To_Check in procedures Load
+   --  and Add_Imported_Project, all packages and attributes are checked. Any
+   --  unknown package or attribute will result in an error.
 
    No_Packs : constant GNAT.Strings.String_List_Access;
+   --  Default value for argument Packages_To_Check in procedures Load
+   --  and Add_Imported_Project. All unknown packages and attributes will be
+   --  ignored.
 
    type Project_Environment (<>) is tagged private;
    type Project_Environment_Access is access all Project_Environment'Class;
