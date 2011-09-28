@@ -1368,7 +1368,6 @@ package body GNATCOLL.Scripts.Python is
          Obj := PyEval_EvalCode (Code, Script.Globals, Script.Globals);
 
          Py_DECREF (PyObject (Code));
-         PyEval_SetTrace (null, null);
          if Get_Default_Console (Script) /= null then
             Grab_Events (Get_Default_Console (Script), False);
          end if;
