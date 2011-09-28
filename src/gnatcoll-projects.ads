@@ -180,7 +180,7 @@ package GNATCOLL.Projects is
    --  passing a non-empty Env parameter).
    --
    --  A list of packages where all the attributes declared must be recognized
-   --  may be indicated by Packages_To_Check. By default, all packages are
+   --  may be indicated by Packages_To_Check. By default, no package is
    --  checked. There may be unknown attributes in packages that are not
    --  included in Packages_To_Check. If a value given for Packages_To_Check
    --  has been allocated, this value may be freed immediately after the call
