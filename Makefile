@@ -34,18 +34,16 @@ examples:
 
 ## Create links for the gnat sources
 
-ifeq (${WITH_PROJECTS},yes)
+ifeq ($(GNAT_SOURCES),copy)
 do_links:
 ifeq ($(OS),Windows_NT)
 	-@$(foreach f,$(GNAT_SOURCES_FOR_GNATCOLL), \
 	   $(CP) gnat_src/$(f) gnat > /dev/null 2>&1 ;)
 else
 	-@$(foreach f,$(GNAT_SOURCES_FOR_GNATCOLL), \
-	   $(LN_S) ../gnat_src/$(f) gnat > /dev/null 2>&1 ;)
+	   $(LN_S) ../gnat_src/$(f) gnat >/dev/null 2>&1 ;)
 endif
-ifeq ($(GNAT_SOURCES),copy)
 	@(cd gnat && gnatmake -q xsnamest && ./xsnamest && mv snames.ns snames.ads && mv snames.nb snames.adb)
-endif
 
 else
 do_links:
