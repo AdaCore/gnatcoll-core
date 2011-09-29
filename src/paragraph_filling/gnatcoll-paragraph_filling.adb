@@ -264,6 +264,10 @@ package body GNATCOLL.Paragraph_Filling is
    --  Start of processing for Knuth_Fill
 
    begin
+      if Paragraph = "" then
+         return To_Unbounded_String (Paragraph);
+      end if;
+
       return Merge_Lines
         (W                 => Para,
          Split_Before_Word =>
