@@ -4172,14 +4172,7 @@ package body GNATCOLL.Projects is
       Root_Project_Path  : GNATCOLL.VFS.Virtual_File;
       Env                : Project_Environment_Access := null;
       Errors             : Error_Report := null;
-      Recompute_View     : Boolean := True)
-   is
-      Previous_Project : Virtual_File;
-      Previous_Status  : Project_Status;
-      Success          : Boolean;
-      Project          : Project_Node_Id;
-      Project_File     : GNATCOLL.VFS.Virtual_File := Root_Project_Path;
-
+      Recompute_View     : Boolean := True) is
    begin
       Load (Self, Root_Project_Path, Env, All_Packs, Errors, Recompute_View);
    end Load_From_GNATbench;
