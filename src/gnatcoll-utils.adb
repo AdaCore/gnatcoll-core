@@ -50,6 +50,22 @@ package body GNATCOLL.Utils is
       end loop;
    end Free;
 
+   -------------------
+   -- Is_Whitespace --
+   -------------------
+
+   function Is_Whitespace (Char : Character) return Boolean is
+   begin
+      if Char = ' '
+        or else Char = ASCII.HT
+        or else Char = ASCII.LF
+        or else Char = ASCII.CR
+      then
+         return True;
+      end if;
+      return False;
+   end Is_Whitespace;
+
    -----------
    -- Equal --
    -----------
@@ -396,10 +412,7 @@ package body GNATCOLL.Utils is
    procedure Skip_Blanks (Str : String; Index : in out Natural) is
    begin
       while Index <= Str'Last
-         and then (Str (Index) = ' '
-                   or else Str (Index) = ASCII.HT
-                   or else Str (Index) = ASCII.LF
-                   or else Str (Index) = ASCII.CR)
+        and then Is_Whitespace (Str (Index))
       loop
          Index := Index + 1;
       end loop;
@@ -412,10 +425,7 @@ package body GNATCOLL.Utils is
    procedure Skip_Blanks_Backward (Str : String; Index : in out Natural) is
    begin
       while Index >= Str'First
-         and then (Str (Index) = ' '
-                   or else Str (Index) = ASCII.HT
-                   or else Str (Index) = ASCII.LF
-                   or else Str (Index) = ASCII.CR)
+        and then Is_Whitespace (Str (Index))
       loop
          Index := Index - 1;
       end loop;

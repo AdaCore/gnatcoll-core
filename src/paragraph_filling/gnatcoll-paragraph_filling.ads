@@ -48,10 +48,12 @@ package GNATCOLL.Paragraph_Filling is
 
    function Greedy_Fill
      (Paragraph       : String;
-      Max_Line_Length : Positive := Default_Max_Line_Length)
+      Max_Line_Length : Positive := Default_Max_Line_Length;
+      Line_Prefix     : String := "")
       return Ada.Strings.Unbounded.Unbounded_String;
    --  Formats a paragraph with the greedy algorithm (by putting as many words
    --  as possible on each line).
+   --  Line_Prefix is added at the beginning of each line.
 
    function Pretty_Fill
      (Paragraph       : String;
@@ -79,7 +81,8 @@ package GNATCOLL.Paragraph_Filling is
 
    function Knuth_Fill
      (Paragraph       : String;
-      Max_Line_Length : Positive := Default_Max_Line_Length)
+      Max_Line_Length : Positive := Default_Max_Line_Length;
+      Line_Prefix     : String := "")
       return Ada.Strings.Unbounded.Unbounded_String;
    --  Fill the paragraph in the best possible way, based on an algorithm
    --  invented by Knuth. This algorithm uses dynamic programming techniques in
@@ -89,25 +92,11 @@ package GNATCOLL.Paragraph_Filling is
    --  Paragraphs into Lines", by Donald E. Knuth and Michael F. Plass,
    --  Software Practice and Experience, 11 (1981).
 
-   function Slow_Fill
-    (Paragraph        : String;
-     Max_Line_Length : Positive)
-     return Ada.Strings.Unbounded.Unbounded_String;
-   --  Fill the paragraph in the best possible way, using an extremely slow
-   --  algorithm that tries all the possibilities. Used for testing the Knuth
-   --  algorithm. This should produce the same result as the the Knuth
-   --  algorithm.
-
    function No_Fill
     (Paragraph       : String;
-     Max_Line_Length : Positive := Default_Max_Line_Length)
+     Max_Line_Length : Positive := Default_Max_Line_Length;
+     Line_Prefix     : String := "")
      return Ada.Strings.Unbounded.Unbounded_String;
    --  Return Paragraph unchanged
-
-private
-
-   function Is_Whitespace (Char : Character) return Boolean;
-   --  Returns True if Char is a space, new line, or tab; otherwise returns
-   --  False.
 
 end GNATCOLL.Paragraph_Filling;

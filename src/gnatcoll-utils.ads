@@ -89,6 +89,10 @@ package GNATCOLL.Utils is
    --  Capitalize a string, ie put in upper case the first character and all
    --  characters following '_'
 
+   function Is_Whitespace (Char : Character) return Boolean;
+   --  Returns True if Char is a space, new line, or tab; otherwise returns
+   --  False.
+
    function Starts_With (Str : String; Suffix : String) return Boolean;
    function Ends_With (Str : String; Suffix : String) return Boolean;
    --  Return True if Str starts or ends with Suffix

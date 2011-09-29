@@ -1,7 +1,7 @@
 -----------------------------------------------------------------------
 --                          G N A T C O L L                          --
 --                                                                   --
---                    Copyright (C) 2010, AdaCore                    --
+--                    Copyright (C) 2010-2011, AdaCore               --
 --                                                                   --
 -- This library is free software; you can redistribute it and/or     --
 -- modify it under the terms of the GNU General Public               --
@@ -28,6 +28,7 @@
 
 --  This software was originally contributed by William A. Duff
 
+with Ada.Containers.Vectors;
 with Ada.Strings.Unbounded;
 
 private package GNATCOLL.Paragraph_Filling.Words is
@@ -36,6 +37,13 @@ private package GNATCOLL.Paragraph_Filling.Words is
    --  pointing to the first character of each word in that paragraph.
 
    type Word_Index is new Positive;
+
+   package Word_Vectors is new Ada.Containers.Vectors (
+      Index_Type => Word_Index,
+      Element_Type => Word_Index);
+   use Word_Vectors;
+
+   subtype Word_Vector is Word_Vectors.Vector;
 
    subtype Word_Count is Word_Index'Base range 0 .. Word_Index'Last;
 
@@ -61,16 +69,18 @@ private package GNATCOLL.Paragraph_Filling.Words is
    --  Returns the length of a line beginning with the Xth word and ending with
    --  the Yth word.
 
-   procedure Add_New_Line (W : in out Words; Before : Word_Index);
-   --  Replaces the space before a word in W.Paragraph with a new line
-
-   function To_String
-     (W : Words) return Ada.Strings.Unbounded.Unbounded_String;
-   --  Returns W.Paragraph
+   function Merge_Lines
+     (W                 : Words;
+      Split_Before_Word : Word_Vector;
+      Line_Prefix       : String := "")
+      return Ada.Strings.Unbounded.Unbounded_String;
+   --  Return the formatted paragraph, by splitting lines before each word
+   --  in Split_Before_Word.
+   --  Each created line will start with Line_Prefix.
 
 private
 
-   type Word_Starts is array (Word_Index range <>) of Positive;
+   type Word_Starts is array (Word_Index range <>) of Word_Index;
 
    type Words (After_Last_Word : Word_Count) is limited record
       Paragraph : Ada.Strings.Unbounded.Unbounded_String;

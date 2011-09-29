@@ -1,7 +1,7 @@
 -----------------------------------------------------------------------
 --                          G N A T C O L L                          --
 --                                                                   --
---                    Copyright (C) 2010, AdaCore                    --
+--                    Copyright (C) 2010-2011, AdaCore               --
 --                                                                   --
 -- This library is free software; you can redistribute it and/or     --
 -- modify it under the terms of the GNU General Public               --
@@ -26,30 +26,53 @@
 -- executable file  might be covered by the  GNU Public License.     --
 -----------------------------------------------------------------------
 
---  This software was originally contributed by William A. Duff
-
-with Ada.Containers.Vectors;
+with Ada.Containers;        use Ada.Containers;
 with Ada.Strings.Unbounded; use Ada.Strings.Unbounded;
+with GNATCOLL.Utils;        use GNATCOLL.Utils;
 
 package body GNATCOLL.Paragraph_Filling.Words is
 
-   package Word_Vectors is new Ada.Containers.Vectors
-     (Index_Type   => Word_Index,
-      Element_Type => Positive);
-   use Word_Vectors;
+   -----------------
+   -- Merge_Lines --
+   -----------------
 
-   subtype Word_Vector is Word_Vectors.Vector;
-
-   ------------------
-   -- Add_New_Line --
-   ------------------
-
-   procedure Add_New_Line (W : in out Words; Before : Word_Index) is
+   function Merge_Lines
+     (W                 : Words;
+      Split_Before_Word : Word_Vector;
+      Line_Prefix       : String := "")
+      return Ada.Strings.Unbounded.Unbounded_String
+   is
+      Result : Unbounded_String;
+      From   : Integer := 1;
+      Start  : Integer;
+      To     : Integer;
+      Before_Word : Word_Index;
    begin
-      Replace_Element (W.Paragraph,
-                       W.Starts (Before) - 1,
-                       ASCII.LF);
-   end Add_New_Line;
+      for Count in reverse 2 .. Length (Split_Before_Word) - 1 loop
+         Before_Word := Element (Split_Before_Word, Word_Index (Count));
+         Start := Integer (W.Starts (Before_Word));
+
+         To := Start - 1;
+         while Is_Whitespace (Element (W.Paragraph, To)) loop
+            To := To - 1;
+         end loop;
+
+         Append (Result, Line_Prefix);
+         Append (Result, Slice (W.Paragraph, From, To));
+         Append (Result, ASCII.LF);
+         From := Start;
+      end loop;
+
+      To := Length (W.Paragraph);
+      while Is_Whitespace (Element (W.Paragraph, To)) loop
+         To := To - 1;
+      end loop;
+
+      Append (Result, Line_Prefix);
+      Append (Result, Slice (W.Paragraph, From, To));
+      Append (Result, ASCII.LF);
+      return Result;
+   end Merge_Lines;
 
    ---------------------
    -- Index_Paragraph --
@@ -82,7 +105,7 @@ package body GNATCOLL.Paragraph_Filling.Words is
                end loop;
 
                Append (Fixed_Para, ' ');
-               Append (Result, Length (Fixed_Para) + 1);
+               Append (Result, Word_Index (Length (Fixed_Para) + 1));
 
                if Count <= Paragraph'Last then
                   Append (Fixed_Para, Paragraph (Count));
@@ -130,7 +153,7 @@ package body GNATCOLL.Paragraph_Filling.Words is
 
    function Line_Length (W : Words; X, Y : Word_Index) return Positive is
    begin
-      return W.Starts (Y + 1) - W.Starts (X) - 1;
+      return Positive (W.Starts (Y + 1) - W.Starts (X) - 1);
    end Line_Length;
 
    --------------
@@ -140,18 +163,9 @@ package body GNATCOLL.Paragraph_Filling.Words is
    function Nth_Word (W : Words; N : Word_Index) return String is
    begin
       return Slice (W.Paragraph,
-                    Low  => W.Starts (N),
-                    High => W.Starts (N + 1) - 2);
+                    Low  => Integer (W.Starts (N)),
+                    High => Integer (W.Starts (N + 1) - 2));
    end Nth_Word;
-
-   ---------------
-   -- To_String --
-   ---------------
-
-   function To_String (W : Words) return Unbounded_String is
-   begin
-      return W.Paragraph;
-   end To_String;
 
    -----------------
    -- Word_Length --
@@ -159,7 +173,7 @@ package body GNATCOLL.Paragraph_Filling.Words is
 
    function Word_Length (W : Words; N : Word_Index) return Positive is
    begin
-      return W.Starts (N + 1) - W.Starts (N) - 1;
+      return Integer (W.Starts (N + 1) - W.Starts (N) - 1);
    end Word_Length;
 
 end GNATCOLL.Paragraph_Filling.Words;
