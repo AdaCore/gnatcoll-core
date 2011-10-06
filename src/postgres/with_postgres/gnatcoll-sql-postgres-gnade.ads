@@ -2,15 +2,8 @@
 --                                                                           --
 --                      GNADE  : GNu Ada Database Environment                --
 --                                                                           --
---  Filename        : $RCSfile$
---  Author          : Juergen Pfeifer <juergen.pfeifer@gmx.net>
---  Created On      : 29-Oct-2000
---  Last Modified By: $Author$
---  Last Modified On: $Date$
---  Status          : $State$
---
---  Copyright (C) 2000-2003, Juergen Pfeifer
---  Copyright (C) 2004-2011, AdaCore
+--  Copyright (C) 2000-2003, Juergen Pfeifer <juergen.pfeifer@gmx.net>       --
+--  Copyright (C) 2004-2011, AdaCore                                         --
 --                                                                           --
 --  GNADE is free software;  you can redistribute it  and/or modify it under --
 --  terms of the  GNU General Public License as published  by the Free Soft- --
@@ -31,16 +24,19 @@
 --  covered by the  GNU Public License.                                      --
 --                                                                           --
 --  GNADE is implemented to work with GNAT, the GNU Ada compiler.            --
---                                                                           --
---  This binding is not intended to provide a Layer that hides the details   --
---  of PostgreSQL, instead the opposite is intended. This binding exposes    --
---  the same functionality like the C interface libpq.                       --
 -------------------------------------------------------------------------------
 
 --  This file is adapted from the GNADE package, with local changes, in
 --  particular in the namespace.
+--  This binding is not intended to provide a Layer that hides the details
+--  of PostgreSQL, instead the opposite is intended. This binding exposes
+--  the same functionality as the C interface libpq.
+--
 --  It contains the low-level binding to the postgreSQL library, and is not
---  intended for end users
+--  recommended for end users (the higher-level API in GNATCOLL.SQL is easier
+--  to use, more portable across DBMS and provides type-safety). However, this
+--  package can be used to provide an easier transition of existing code to
+--  the higher-level API.
 
 with System.Storage_Elements;
 with Ada.Finalization;
