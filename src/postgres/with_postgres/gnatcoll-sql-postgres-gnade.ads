@@ -47,7 +47,7 @@ with Ada.Finalization;
 with Interfaces.C.Strings;
 with GNATCOLL.SQL_Impl;
 
-private package GNATCOLL.SQL.Postgres.Gnade is
+package GNATCOLL.SQL.Postgres.Gnade is
    PostgreSQL_Error : exception;
 
    NAMEDATALEN : constant := 32;

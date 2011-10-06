@@ -4,6 +4,18 @@ Known Problems in Gnatcoll 1.3
 
 Copyright (C) 2011, AdaCore
 
+KP-13-KA04-041 GNATCOLL.SQL.Postgres.Gnade no longer private
+
+  Problem:    This package was marked as private, preventing users from
+              using this low-level API in their own application, and thus
+              making it more difficult to do a transition to the higher
+              level API for existing applications.
+
+  Status:     This was fixed in 1.4 on 2011-10-06
+
+  Workaround: Remove the "private" keyword in the specs of this package,
+              and recompile gnatcoll.
+
 KP-13-K712-015 GNATCOLL.Projects.Register_New_Attribute has no effect
 
   Problem:    If this procedure is called before any project has been
