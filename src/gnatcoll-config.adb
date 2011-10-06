@@ -411,6 +411,27 @@ package body GNATCOLL.Config is
       end if;
    end Get_File;
 
+   -------------
+   -- To_File --
+   -------------
+
+   function To_File
+     (Self    : Config_Pool;
+      Key     : String;
+      Section : String := Section_From_Key;
+      Value   : String) return String
+   is
+      Val : constant Config_Value := Internal_Get (Self, Key, Section);
+   begin
+      if Value = "" then
+         return "";
+      elsif Is_Absolute_Path (Value) then
+         return Value;
+      else
+         return Normalize_Pathname (Value, To_String (Val.System_ID));
+      end if;
+   end To_File;
+
    ---------
    -- Set --
    ---------
@@ -423,8 +444,6 @@ package body GNATCOLL.Config is
                   Value     => Value,
                   System_ID => Self.System_ID));
    end Set;
-
-   --  Override a specific key
 
    ------------
    -- Create --
@@ -443,7 +462,7 @@ package body GNATCOLL.Config is
    function Get
      (Self  : Config_Key;
       Conf  : Config_Pool'Class;
-      Index   : Natural := Whole_Value) return String is
+      Index : Natural := Whole_Value) return String is
    begin
       return Get (Conf, To_String (Self.Key), To_String (Self.Section), Index);
    end Get;
@@ -455,7 +474,7 @@ package body GNATCOLL.Config is
    function Get_Integer
      (Self  : Config_Key;
       Conf  : Config_Pool'Class;
-      Index   : Natural := Whole_Value) return Integer is
+      Index : Natural := Whole_Value) return Integer is
    begin
       return Get_Integer
          (Conf, To_String (Self.Key), To_String (Self.Section), Index);
@@ -468,7 +487,7 @@ package body GNATCOLL.Config is
    function Get_Boolean
      (Self  : Config_Key;
       Conf  : Config_Pool'Class;
-      Index   : Natural := Whole_Value) return Boolean is
+      Index : Natural := Whole_Value) return Boolean is
    begin
       return Get_Boolean
          (Conf, To_String (Self.Key), To_String (Self.Section), Index);
@@ -481,10 +500,22 @@ package body GNATCOLL.Config is
    function Get_File
      (Self  : Config_Key;
       Conf  : Config_Pool'Class;
-      Index   : Natural := Whole_Value) return String is
+      Index : Natural := Whole_Value) return String is
    begin
       return Get_File
         (Conf, To_String (Self.Key), To_String (Self.Section), Index);
    end Get_File;
 
+   -------------
+   -- To_File --
+   -------------
+
+   function To_File
+     (Self  : Config_Key;
+      Conf  : Config_Pool'Class;
+      Value : String) return String is
+   begin
+      return To_File
+        (Conf, To_String (Self.Key), To_String (Self.Section), Value);
+   end To_File;
 end GNATCOLL.Config;

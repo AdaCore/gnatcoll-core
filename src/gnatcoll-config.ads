@@ -189,6 +189,16 @@ package GNATCOLL.Config is
    --  Same as above, but returns an absolute filename. Relative paths are
    --  resolved relative to the config location where Key was declared.
 
+   function To_File
+     (Self    : Config_Pool;
+      Key     : String;
+      Section : String := Section_From_Key;
+      Value   : String) return String;
+   --  Converts value to a file. It is relative to the location of the config
+   --  file that provided Key. This is similar to calling Get_File directly,
+   --  but is useful in contexts where you need to first manipulate the value
+   --  read from the config and then interpret it as a file.
+
    procedure Set (Self : in out Config_Pool; Section, Key, Value : String);
    --  Override a specific key
 
@@ -217,6 +227,10 @@ package GNATCOLL.Config is
      (Self  : Config_Key;
       Conf  : Config_Pool'Class;
       Index : Natural := Whole_Value) return String;
+   function To_File
+     (Self  : Config_Key;
+      Conf  : Config_Pool'Class;
+      Value : String) return String;
    --  Read the key from the configuration.
    --  Using this API might help ensure that you are always accessing existing
    --  keys. In this case, you would have a global package that defines all
