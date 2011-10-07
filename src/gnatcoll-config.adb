@@ -419,16 +419,17 @@ package body GNATCOLL.Config is
      (Self    : Config_Pool;
       Key     : String;
       Section : String := Section_From_Key;
-      Value   : String) return String
+      Value   : String) return Virtual_File
    is
       Val : constant Config_Value := Internal_Get (Self, Key, Section);
    begin
       if Value = "" then
-         return "";
+         return GNATCOLL.VFS.No_File;
       elsif Is_Absolute_Path (Value) then
-         return Value;
+         return Create (+Value);
       else
-         return Normalize_Pathname (Value, To_String (Val.System_ID));
+         return Create
+            (+Normalize_Pathname (Value, To_String (Val.System_ID)));
       end if;
    end To_File;
 
@@ -513,7 +514,7 @@ package body GNATCOLL.Config is
    function To_File
      (Self  : Config_Key;
       Conf  : Config_Pool'Class;
-      Value : String) return String is
+      Value : String) return Virtual_File is
    begin
       return To_File
         (Conf, To_String (Self.Key), To_String (Self.Section), Value);

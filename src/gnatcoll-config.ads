@@ -44,7 +44,7 @@ pragma Ada_05;
 private with Ada.Containers.Indefinite_Hashed_Maps;
 private with Ada.Strings.Hash;
 private with Ada.Strings.Unbounded;
-private with GNATCOLL.VFS;
+with GNATCOLL.VFS;
 
 package GNATCOLL.Config is
 
@@ -193,7 +193,7 @@ package GNATCOLL.Config is
      (Self    : Config_Pool;
       Key     : String;
       Section : String := Section_From_Key;
-      Value   : String) return String;
+      Value   : String) return GNATCOLL.VFS.Virtual_File;
    --  Converts value to a file. It is relative to the location of the config
    --  file that provided Key. This is similar to calling Get_File directly,
    --  but is useful in contexts where you need to first manipulate the value
@@ -230,7 +230,7 @@ package GNATCOLL.Config is
    function To_File
      (Self  : Config_Key;
       Conf  : Config_Pool'Class;
-      Value : String) return String;
+      Value : String) return GNATCOLL.VFS.Virtual_File;
    --  Read the key from the configuration.
    --  Using this API might help ensure that you are always accessing existing
    --  keys. In this case, you would have a global package that defines all
