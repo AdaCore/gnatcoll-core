@@ -636,12 +636,6 @@ package body GNATCOLL.SQL.Sessions is
            Self.Element.Has_Modified_Elements or else Is_Dirty (D);
       end if;
 
-      if Active (Me) then
-         Trace (Me, "Adding to session: " & Hash (Element)
-                & " has_modified_elems: "
-                & Self.Element.Has_Modified_Elements'Img);
-      end if;
-
       --  Add the element into the cache. We want the element to outlive the
       --  session (so that we can find out all changes when committing the
       --  session), so we store a real reference.
@@ -666,6 +660,11 @@ package body GNATCOLL.SQL.Sessions is
          Self.Element.Cache.Insert
            (Key => H, New_Item => R, Position => Pos, Inserted => Inserted);
          if Inserted then
+            if Active (Me) then
+               Trace (Me, "Adding to session: " & Hash (Element)
+                      & " has_modified_elems: "
+                      & Self.Element.Has_Modified_Elements'Img);
+            end if;
             On_Persist (Element);
          else
             Unchecked_Free (R.Ref);
@@ -840,14 +839,17 @@ package body GNATCOLL.SQL.Sessions is
                C2 : Element_Cache.Cursor;
                Inserted : Boolean;
             begin
-               Trace (Me, "Changed primary key: " & H);
                if H /= Old_Hash then
                   Self.Element.Cache.Insert
-                    (Key      => Hash (R),
+                    (Key      => H,
                      New_Item => D,
                      Position => C2,
                      Inserted => Inserted);
-                  --  Set_Clean (Self, C2);
+
+                  if Active (Me) then
+                     Trace (Me, "Changed primary key: " & H
+                            & " inserted=" & Inserted'Img);
+                  end if;
 
                   C2 := C;
                   Next (C);
@@ -897,6 +899,8 @@ package body GNATCOLL.SQL.Sessions is
             Insert_Delete_Or_Update (Self, C);
          end loop;
          Decrease_Indent (Me, "Done flushing session");
+
+         Clear (Self.Element.Tmp_List);
       end if;
 
       --  This might remove some elements from the cache
@@ -904,8 +908,6 @@ package body GNATCOLL.SQL.Sessions is
       if Active (Me) then
          Increase_Indent (Me, "removing elements from cache");
       end if;
-
-      Clear (Self.Element.Tmp_List);
 
       if Active (Me) then
          Decrease_Indent (Me, "Done removing elements from cache");
