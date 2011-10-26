@@ -4,6 +4,15 @@ Known Problems in Gnatcoll 1.3
 
 Copyright (C) 2011, AdaCore
 
+KP-13-KA25-034 Parameter mismatch in GNATCOLL.Traces.Log
+
+  Problem:    The call to Post_Decorator is performed in the wrong order,
+              using Message/Location/Entity instead of Location/Entity/Message
+
+  Status:     This was fixed in 1.4 on 2011-10-26
+
+  Workaround: Modify the call to Post_Decorator in gnatcoll-traces.adb.
+
 KP-13-KA04-041 GNATCOLL.SQL.Postgres.Gnade no longer private
 
   Problem:    This package was marked as private, preventing users from
@@ -44,7 +53,7 @@ KP-13-K303-032 Configure doesn't find gmp.h
 
   Status:     This was fixed in 1.4 on 2011-03-03
 
-  Workaround: make sure that gmp.h can be found by the C compiler.
+  Workaround: Make sure that gmp.h can be found by the C compiler.
 
 KP-13-K302-015 Gnatcoll.projects and separate units
 
