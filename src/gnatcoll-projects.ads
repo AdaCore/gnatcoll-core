@@ -213,47 +213,6 @@ package GNATCOLL.Projects is
    --  changes on the project (changing attributes for instance), even though
    --  you will need to call Recompute_View yourself.
 
-   procedure Load_From_GNATbench
-     (Self               : in out Project_Tree;
-      Root_Project_Path  : GNATCOLL.VFS.Virtual_File;
-      Env                : Project_Environment_Access := null;
-      Errors             : Error_Report := null;
-      Recompute_View     : Boolean := True);
-   --  Load a new set of project files, starting from a root project.
-   --  Root_Project_Path is either an absolute path, or relative to the current
-   --  directory. It should point to a readable existing file.
-   --  The two steps of the loading (see general description of this package)
-   --  are performed automatically.
-   --  If the project itself or some of its dependencies should be found on the
-   --  project path, the latter should be initialized properly (if you have
-   --  already loaded a project, you might want to reuse the environment by
-   --  passing a non-empty Env parameter).
-   --
-   --  All packages are checked.
-   --
-   --  Errors and warnings that occur during loading are reported through the
-   --  Errors callback. If the project could not be loaded, the exception
-   --  Invalid_Project is then raised. In such a case, any project set
-   --  previously loaded is still in memory.
-   --
-   --  If no value is provided for Env, a default one will be created
-   --  automatically. Passing a value is useful if you need to share the
-   --  environment between separate project trees. This default value will
-   --  never be freed though, resulting in a potential memory leak.
-   --
-   --  If that project is already loaded in Self, it will be reloaded if any of
-   --  the .gpr files have changed on disk (see also Reload_If_Needed).
-   --
-   --  The previous project is automatically unloaded, and existing instances
-   --  of Project_Type become invalid and should not be used anymore.
-   --
-   --  If Recompute_View is False, the subprogram Recompute_View will not be
-   --  called automatically. This gives you a chance to do some dynamic
-   --  changes on the project (changing attributes for instance), even though
-   --  you will need to call Recompute_View yourself.
-   --
-   --  for GNATbench library compatibility.
-
    procedure Set_Trusted_Mode
      (Self : in out Project_Environment; Trusted : Boolean := True);
    function Trusted_Mode (Self : Project_Environment) return Boolean;

@@ -4163,20 +4163,6 @@ package body GNATCOLL.Projects is
       Trace (Me, "End of Load project");
    end Load;
 
-   -------------------------
-   -- Load_From_GNATbench --
-   -------------------------
-
-   procedure Load_From_GNATbench
-     (Self               : in out Project_Tree;
-      Root_Project_Path  : GNATCOLL.VFS.Virtual_File;
-      Env                : Project_Environment_Access := null;
-      Errors             : Error_Report := null;
-      Recompute_View     : Boolean := True) is
-   begin
-      Load (Self, Root_Project_Path, Env, All_Packs, Errors, Recompute_View);
-   end Load_From_GNATbench;
-
    ----------------
    -- Initialize --
    ----------------
