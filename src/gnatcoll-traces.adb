@@ -842,7 +842,12 @@ package body GNATCOLL.Traces is
          Put (Stream.all, Brown_Fg & Default_Bg);
       end if;
 
-      Post_Decorator (Handle.all, Stream.all, Message, Location, Entity);
+      Post_Decorator
+        (Handle   => Handle.all,
+         Stream   => Stream.all,
+         Message  => Message,
+         Location => Location,
+         Entity   => Entity);
 
       if Color then
          Put (Stream.all, Default_Fg);
