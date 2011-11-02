@@ -68,6 +68,11 @@ procedure GNATCOLL_Db2Ada is
      (others => False);
    --  The type of output for this utility
 
+   Need_Schema_For_Output : constant array (Output_Kind) of Boolean :=
+      (Output_Ada_Enums => False,
+       others           => True);
+   --  Whether the various outputs require a database schema.
+
    Schema  : DB_Schema;
    DB_IO   : DB_Schema_IO;
    File_IO : File_Schema_IO;
@@ -411,12 +416,13 @@ procedure GNATCOLL_Db2Ada is
                     others => False);
       end if;
 
-      Need_Schema := Output (Output_Ada_Specs)
-        or else Output (Output_Orm)
-        or else Output (Output_Dot)
-        or else Output (Output_Load)
-        or else Output (Output_Createdb);
-      --  Not needed for Output_Ada_Enums
+      Need_Schema := False;
+      for J in Need_Schema_For_Output'Range loop
+         if Output (J) and then Need_Schema_For_Output (J) then
+            Need_Schema := True;
+            exit;
+         end if;
+      end loop;
 
       if DB_Name.all /= "" then
          --  If the user specified the name of a database, we connect to it.
