@@ -375,8 +375,9 @@ package body GNATCOLL.JSON is
                         Item : constant JSON_Value :=
                                  Read (Strm, Idx, Col, Line, Filename);
                      begin
-                        Ret.Obj_Value.Names.Append (Name);
-                        Ret.Obj_Value.Vals.Append (Item);
+                        Ret.Obj_Value.Vals.Include
+                          (Key      => Name,
+                           New_Item => Item);
                      end;
                   end;
                end loop;
@@ -499,30 +500,30 @@ package body GNATCOLL.JSON is
 
          when JSON_Object_Type =>
             declare
+               use Names_Pkg;
                First : Boolean := True;
                Ret   : Unbounded_String;
+               J     : Names_Pkg.Cursor := Item.Obj_Value.Vals.First;
 
             begin
                Append (Ret, '{');
 
-               for J in
-                 Item.Obj_Value.Names.First_Index ..
-                   Item.Obj_Value.Names.Last_Index
-               loop
+               while Has_Element (J) loop
                   if not First then
                      Append (Ret, ", ");
                   end if;
 
                   First := False;
 
-                  Append (Ret, """" & Item.Obj_Value.Names.Element (J) & """");
-                  Append (Ret, ": ");
+                  Append (Ret, """" & Key (J) & """:");
                   Append
                     (Ret,
                      Write
-                       (Item.Obj_Value.Vals.Element (J),
+                       (Element (J),
                         Compact,
                         Indent + 1));
+
+                  Next (J);
                end loop;
 
                Append (Ret, '}');
@@ -748,25 +749,17 @@ package body GNATCOLL.JSON is
    ---------------
 
    procedure Set_Field
-     (Val        : in out JSON_Value;
+     (Val        : JSON_Value;
       Field_Name : UTF8_String;
       Field      : JSON_Value) is
    begin
-      for J in
-        Val.Obj_Value.Names.First_Index .. Val.Obj_Value.Names.Last_Index
-      loop
-         if Val.Obj_Value.Names.Element (J) = Field_Name then
-            Val.Obj_Value.Vals.Replace_Element (J, Field);
-            return;
-         end if;
-      end loop;
-
-      Val.Obj_Value.Names.Append (Field_Name);
-      Val.Obj_Value.Vals.Append (Field);
+      Val.Obj_Value.Vals.Include
+        (Key      => Field_Name,
+         New_Item => Field);
    end Set_Field;
 
    procedure Set_Field
-     (Val        : in out JSON_Value;
+     (Val        : JSON_Value;
       Field_Name : UTF8_String;
       Field      : Boolean) is
    begin
@@ -774,7 +767,7 @@ package body GNATCOLL.JSON is
    end Set_Field;
 
    procedure Set_Field
-     (Val        : in out JSON_Value;
+     (Val        : JSON_Value;
       Field_Name : UTF8_String;
       Field      : Integer) is
    begin
@@ -782,7 +775,7 @@ package body GNATCOLL.JSON is
    end Set_Field;
 
    procedure Set_Field
-     (Val        : in out JSON_Value;
+     (Val        : JSON_Value;
       Field_Name : UTF8_String;
       Field      : Float) is
    begin
@@ -790,7 +783,7 @@ package body GNATCOLL.JSON is
    end Set_Field;
 
    procedure Set_Field
-     (Val        : in out JSON_Value;
+     (Val        : JSON_Value;
       Field_Name : UTF8_String;
       Field      : UTF8_String) is
    begin
@@ -798,7 +791,7 @@ package body GNATCOLL.JSON is
    end Set_Field;
 
    procedure Set_Field
-     (Val        : in out JSON_Value;
+     (Val        : JSON_Value;
       Field_Name : UTF8_String;
       Field      : JSON_Array)
    is
@@ -860,18 +853,14 @@ package body GNATCOLL.JSON is
      (Val   : JSON_Value;
       Field : UTF8_String) return JSON_Value
    is
+      use Names_Pkg;
+      J : constant Names_Pkg.Cursor := Val.Obj_Value.Vals.Find (Field);
    begin
-      for J in
-        Val.Obj_Value.Names.First_Index .. Val.Obj_Value.Names.Last_Index
-      loop
-         if Val.Obj_Value.Names.Element (J) = Field then
-            --  value found, return it
-            return Val.Obj_Value.Vals.Element (J);
-         end if;
-      end loop;
+      if Has_Element (J) then
+         return Element (J);
+      end if;
 
-      return Create;
-      --  return a null value
+      return JSON_Null;
    end Get;
 
    ---------
@@ -890,7 +879,7 @@ package body GNATCOLL.JSON is
 
    function Has_Field (Val : JSON_Value; Field : UTF8_String) return Boolean is
    begin
-      return Val.Obj_Value.Names.Contains (Field);
+      return Val.Obj_Value.Vals.Contains (Field);
    end Has_Field;
 
    ---------
@@ -930,11 +919,12 @@ package body GNATCOLL.JSON is
      (Val : JSON_Value;
       CB  : access procedure (Name : UTF8_String; Value : JSON_Value))
    is
+      use Names_Pkg;
+      J : Names_Pkg.Cursor := Val.Obj_Value.Vals.First;
    begin
-      for J in
-        Val.Obj_Value.Names.First_Index .. Val.Obj_Value.Names.Last_Index
-      loop
-         CB (Val.Obj_Value.Names.Element (J), Val.Obj_Value.Vals.Element (J));
+      while Has_Element (J) loop
+         CB (Key (J), Element (J));
+         Next (J);
       end loop;
    end Map_JSON_Object;
 

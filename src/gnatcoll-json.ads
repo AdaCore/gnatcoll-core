@@ -25,9 +25,10 @@
 -- Place - Suite 330, Boston, MA 02111-1307, USA.                    --
 -----------------------------------------------------------------------
 
-with Ada.Containers.Indefinite_Vectors;
-with Ada.Containers.Vectors;
+private with Ada.Containers.Vectors;
+private with Ada.Containers.Indefinite_Hashed_Maps;
 with Ada.Finalization;
+private with Ada.Strings.Hash;
 with Ada.Unchecked_Deallocation;
 
 package GNATCOLL.JSON is
@@ -105,7 +106,7 @@ package GNATCOLL.JSON is
    --  Set_Field methods
 
    procedure Set_Field
-     (Val        : in out JSON_Value;
+     (Val        : JSON_Value;
       Field_Name : UTF8_String;
       Field      : JSON_Value);
    pragma Precondition (Kind (Val) = JSON_Object_Type);
@@ -113,34 +114,35 @@ package GNATCOLL.JSON is
    --  the Field value.
 
    procedure Set_Field
-     (Val        : in out JSON_Value;
+     (Val        : JSON_Value;
       Field_Name : UTF8_String;
       Field      : Boolean);
    pragma Precondition (Kind (Val) = JSON_Object_Type);
 
    procedure Set_Field
-     (Val        : in out JSON_Value;
+     (Val        : JSON_Value;
       Field_Name : UTF8_String;
       Field      : Integer);
    pragma Precondition (Kind (Val) = JSON_Object_Type);
 
    procedure Set_Field
-     (Val        : in out JSON_Value;
+     (Val        : JSON_Value;
       Field_Name : UTF8_String;
       Field      : Float);
    pragma Precondition (Kind (Val) = JSON_Object_Type);
 
    procedure Set_Field
-     (Val        : in out JSON_Value;
+     (Val        : JSON_Value;
       Field_Name : UTF8_String;
       Field      : UTF8_String);
    pragma Precondition (Kind (Val) = JSON_Object_Type);
 
    procedure Set_Field
-     (Val        : in out JSON_Value;
+     (Val        : JSON_Value;
       Field_Name : UTF8_String;
       Field      : JSON_Array);
    pragma Precondition (Kind (Val) = JSON_Object_Type);
+   --  Any change you do to the array afterward will not impact Val.
 
    --  Utility functions used to translate a JSON value into an ordinary object
 
@@ -197,6 +199,7 @@ package GNATCOLL.JSON is
      (Val : JSON_Value;
       CB  : access procedure (Name : UTF8_String; Value : JSON_Value));
    pragma Precondition (Kind (Val) = JSON_Object_Type);
+   --  Iterate over all fields of the object.
 
    generic
       type Mapped is private;
@@ -219,6 +222,7 @@ private
    type JSON_Value is new Ada.Finalization.Controlled with record
       Cnt        : Counter := null;
       Kind       : JSON_Value_Type := JSON_Null_Type;
+
       Bool_Value : Boolean;
       Int_Value  : Integer;
       Flt_Value  : Float;
@@ -234,6 +238,13 @@ private
    package Vect_Pkg is new Ada.Containers.Vectors
      (Index_Type   => Positive,
       Element_Type => JSON_Value);
+
+   package Names_Pkg is new Ada.Containers.Indefinite_Hashed_Maps
+     (Key_Type        => UTF8_String,
+      Element_Type    => JSON_Value,
+      Hash            => Ada.Strings.Hash,
+      Equivalent_Keys => "=");
+
    type JSON_Array is record
       Vals : Vect_Pkg.Vector;
    end record;
@@ -246,14 +257,10 @@ private
    --  Initialize and Adjust.
 
    Empty_Array : constant JSON_Array :=
-      (Vals => Vect_Pkg.Empty_Vector);
+     (Vals => Vect_Pkg.Empty_Vector);
 
-   package Names_Pkg is new Ada.Containers.Indefinite_Vectors
-     (Index_Type   => Positive,
-      Element_Type => UTF8_String);
    type JSON_Object_Internal is record
-      Names : Names_Pkg.Vector;
-      Vals  : Vect_Pkg.Vector;
+      Vals  : Names_Pkg.Map;
    end record;
 
    procedure Free is
