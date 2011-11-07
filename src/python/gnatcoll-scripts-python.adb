@@ -3467,7 +3467,9 @@ package body GNATCOLL.Scripts.Python is
             Hide_Output => True,
             Errors      => Errors'Unchecked_Access);
 
-         if Func /= null and then PyFunction_Check (Func) then
+         if Func /= null
+           and then (PyFunction_Check (Func) or else PyMethod_Check (Func))
+         then
             Setup_Return_Value (Args);
             Result := Execute_Command (Script, Func, Args, Errors'Access);
 
@@ -3480,7 +3482,7 @@ package body GNATCOLL.Scripts.Python is
             end if;
 
          else
-            Set_Error_Msg (Args, Command & " is not a function");
+            raise Error_In_Command with Command & " is not a function";
          end if;
       end if;
    end Execute_Command;
@@ -3492,7 +3494,10 @@ package body GNATCOLL.Scripts.Python is
    overriding function Return_Value
      (Data : Python_Callback_Data) return String is
    begin
-      if PyString_Check (Data.Return_Value) then
+      if Data.Return_Value = null then
+         raise Invalid_Parameter
+            with "Returned value is null (a python exception ?)";
+      elsif PyString_Check (Data.Return_Value) then
          return PyString_AsString (Data.Return_Value);
       elsif PyUnicode_Check (Data.Return_Value) then
          return Unicode_AsString (Data.Return_Value);
