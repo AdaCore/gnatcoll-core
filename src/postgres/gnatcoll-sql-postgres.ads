@@ -55,7 +55,7 @@ package GNATCOLL.SQL.Postgres is
       User          : String := "";
       Host          : String := "";
       Password      : String := "";
-      SSL           : SSL_Mode := Prefer;
+      SSL           : SSL_Mode := Allow;
       Cache_Support : Boolean := True)
      return Database_Description;
    --  Return a database connection for PostgreSQL.
