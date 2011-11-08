@@ -1,7 +1,7 @@
 -----------------------------------------------------------------------
 --                          G N A T C O L L                          --
 --                                                                   --
---                 Copyright (C) 2006-2009, AdaCore                  --
+--                 Copyright (C) 2006-2011, AdaCore                  --
 --                                                                   --
 -- GPS is free  software;  you can redistribute it and/or modify  it --
 -- under the terms of the GNU General Public License as published by --
@@ -225,8 +225,8 @@ package GNATCOLL.Email.Utils is
    --  Encode Str in the best encoding to use for Charset. The encoding depends
    --  on how close charset is to ASCII.
    --  If Header is true, then several encoded blocks will be created as
-   --  required by RFC 2045. In addition, the charset is included as part of
-   --  the encoded field, as suitable for mail headers.
+   --  required by RFC 2045 (separated by spaces). In addition, the charset is
+   --  included as part of the encoded field, as suitable for mail headers.
 
    procedure Decode_Header
      (Str             : String;

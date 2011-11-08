@@ -1,7 +1,7 @@
 -----------------------------------------------------------------------
 --                          G N A T C O L L                          --
 --                                                                   --
---                 Copyright (C) 2006-2009, AdaCore                  --
+--                 Copyright (C) 2006-2011, AdaCore                  --
 --                                                                   --
 -- GPS is free  software;  you can redistribute it and/or modify  it --
 -- under the terms of the GNU General Public License as published by --
@@ -1056,14 +1056,26 @@ package body GNATCOLL.Email.Utils is
       Header             : Boolean := False;
       Result             : out Unbounded_String)
    is
-      Block_Separator : constant String := " ";
+      function Compute_Block_Sep return String;
+      function Compute_Block_Sep return String is
+      begin
+         if Header then
+            return " ";
+         else
+            --  A soft line-break
+            return "=" & ASCII.LF;
+         end if;
+      end Compute_Block_Sep;
+
+      Block_Separator : constant String := Compute_Block_Sep;
       Start           : Integer := -1;
       Current_Len     : Natural := 0;
       Max             : constant Natural :=
                           Max_Block_Len - Block_Prefix'Length -
                             Block_Suffix'Length;
 
-      function Needs_Quoting (Char : Character) return Boolean;
+      function Needs_Quoting
+         (Char : Character; Is_EOL : Boolean) return Boolean;
       --  Return True if C needs to be quoted, False otherwise
 
       function Quote (Char : Character) return String;
@@ -1077,10 +1089,12 @@ package body GNATCOLL.Email.Utils is
       -- Needs_Quoting --
       -------------------
 
-      function Needs_Quoting (Char : Character) return Boolean is
+      function Needs_Quoting
+         (Char : Character; Is_EOL : Boolean) return Boolean
+      is
       begin
          if Char = ' ' or else Char = ASCII.HT then
-            return Quote_White_Spaces;
+            return Is_EOL or else Quote_White_Spaces;
 
          elsif Char = '_' then
             return Header;
@@ -1142,7 +1156,9 @@ package body GNATCOLL.Email.Utils is
 
          else
             if Current_Len + Substring'Length > Max then
-               Append (Result, Block_Suffix & Block_Separator);
+               if Current_Len /= 0 then
+                  Append (Result, Block_Suffix & Block_Separator);
+               end if;
                Current_Len := 0;
                Append (Result, Block_Prefix);
                Append (Result, Substring);
@@ -1161,7 +1177,7 @@ package body GNATCOLL.Email.Utils is
       Result := Null_Unbounded_String;
 
       for S in Str'Range loop
-         if Needs_Quoting (Str (S)) then
+         if Needs_Quoting (Str (S), Is_EOL => S = Str'Last) then
             if Start /= -1 then
                Append (Str (Start .. S - 1), Splittable => True);
                Start := -1;
@@ -1220,7 +1236,7 @@ package body GNATCOLL.Email.Utils is
 
       while S <= Str'Last loop
          if Str (S) = '_' and then Header then
-            --  En coded SPACE
+            --  Encoded SPACE
             if Start /= -1 then
                Append (Result, Str (Start .. S - 1));
                Start := -1;

@@ -4,6 +4,17 @@ Known Problems in Gnatcoll 1.3
 
 Copyright (C) 2011, AdaCore
 
+KP-13-KB03-030 Quoted-printable encoding inserts extra spaces
+
+  Problem:    When encoding a long string (not an email header) into
+              quoted-printable (see GNATCOLL.Email.Utils), extra white
+              spaces are inserted. Instead, they should be soft line breaks
+              ("=" & ASCII.LF).
+
+  Status:     This was fixed in 1.4 on 2011-11-08
+
+  Workaround: Use Base64-encoding instead.
+
 KP-13-KA25-034 Parameter mismatch in GNATCOLL.Traces.Log
 
   Problem:    The call to Post_Decorator is performed in the wrong order,
