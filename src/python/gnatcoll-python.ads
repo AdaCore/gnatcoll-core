@@ -38,7 +38,7 @@ package GNATCOLL.Python is
    --  Initialize the python interpreter. You must call Py_SetProgramName first
 
    procedure Py_Finalize;
-   --  Finalize the python interpreter.
+   --  Finalize the python interpreter
 
    procedure Py_SetProgramName (Name : String);
    --  Set the program name. This must be called before Py_Initialize
@@ -75,15 +75,15 @@ package GNATCOLL.Python is
 
    procedure Py_INCREF (Obj : PyObject);
    procedure Py_DECREF (Obj : PyObject);
-   --  Increment or decrement the reference count for Obj. Obj mustn't be null.
+   --  Increment or decrement the reference count for Obj. Obj mustn't be null
 
    procedure Py_XINCREF (Obj : PyObject);
    procedure Py_XDECREF (Obj : PyObject);
-   --  Same as above, but Obj can be null.
+   --  Same as above, but Obj can be null
 
    procedure Print_Refcount (Obj : PyObject; Msg : String);
    --  A debug procedure that prints the reference count of the object on
-   --  stdout
+   --  stdout.
 
    function Get_Refcount (Obj : PyObject) return Integer;
    --  Return the current reference counter for Obj. Used for debug only
@@ -144,23 +144,23 @@ package GNATCOLL.Python is
 
    function PyObject_HasAttrString
      (Obj : PyObject; Attr_Name : String) return Boolean;
-   --  Whether a specific attribute exists for the object.
+   --  Whether a specific attribute exists for the object
 
    function PyObject_GetAttrString
      (Object : PyObject;
       Name   : Interfaces.C.Strings.chars_ptr) return PyObject;
    pragma Import (C, PyObject_GetAttrString, "PyObject_GetAttrString");
    --  Lookup an attribute in the object's dictionnary.
-   --  The returned object *must* be DECREF
+   --  The returned object *must* be DECREF.
 
    function PyObject_GetAttrString
      (Object : PyObject; Name : String) return PyObject;
    --  Same as above.
-   --  The returned object must be DECREF
+   --  The returned object must be DECREF.
 
    function PyObject_Dir (Object : PyObject) return PyObject;
    --  A list of strings for all entries in Object's dictionary..
-   --  The returned object must be DECREF
+   --  The returned object must be DECREF.
 
    function PyObject_IsTrue (Obj : PyObject) return Boolean;
    --  Returns True if the object, Obj, is considered to be true, False if Obj
@@ -183,17 +183,17 @@ package GNATCOLL.Python is
    --  Return the maximum value an integer can have
 
    function PyInt_Check (Obj : PyObject) return Boolean;
-   --  Returns true if the Obj is an integer object.
+   --  Returns true if the Obj is an integer object
 
    ------------
    -- Floats --
    ------------
 
    function PyFloat_AsDouble (Float : PyObject) return Interfaces.C.double;
-   --  Return the value of Float.
+   --  Return the value of Float
 
    function PyFloat_Check (Obj : PyObject) return Boolean;
-   --  Returns true if the Obj is a float object.
+   --  Returns true if the Obj is a float object
 
    --------------
    -- Booleans --
@@ -253,7 +253,7 @@ package GNATCOLL.Python is
    subtype PyTuple is PyObject;
 
    function PyTuple_New (Size : Integer) return PyObject;
-   --  Create a new tuple that contains Size elements.
+   --  Create a new tuple that contains Size elements
 
    function PyTuple_GetItem (Tuple : PyTuple; Index : Integer) return PyObject;
    pragma Obsolescent (PyTuple_GetItem, "See PyObject_GetItem instead");
@@ -270,20 +270,20 @@ package GNATCOLL.Python is
 
    function PyTuple_Size (Tuple : PyTuple) return Integer;
    pragma Obsolescent (PyTuple_Size, "See PyObject_Size instead");
-   --  Return the size of the tuple.
+   --  Return the size of the tuple
 
    function Create_Tuple (Objects : PyObject_Array) return PyObject;
-   --  Return a new tuple made of Objects.
+   --  Return a new tuple made of Objects
 
    function PyTuple_Check (Obj : PyObject) return Boolean;
-   --  Whether Object is a tuple.
+   --  Whether Object is a tuple
 
    -----------
    -- Lists --
    -----------
 
    function PyList_New (Size : Integer := 0) return PyObject;
-   --  Create a new empty list, with an initialize size.
+   --  Create a new empty list, with an initialize size
 
    function PyList_Append (List : PyObject; Obj : PyObject) return Integer;
    --  Append Obj at the end of List, and return the index of the newly
@@ -294,7 +294,7 @@ package GNATCOLL.Python is
    pragma Obsolescent (PyList_GetItem, "See PyObject_GetItem instead");
    --  Get the item at a specific location in the list, starting at index 0.
    --  Do not decref the returned value.
-   --  See also PyObject_GetItem
+   --  See also PyObject_GetItem.
 
    function PyList_Size (List : PyObject) return Integer;
    pragma Obsolescent (PyList_Size, "See PyObject_Size instead");
@@ -379,7 +379,7 @@ package GNATCOLL.Python is
    --  Returns True if Obj is either a string or a unicode object
 
    function PyString_Check (Obj : PyObject) return Boolean;
-   --  Returns true if the Obj is a string object.
+   --  Returns true if the Obj is a string object
 
    function PyString_AsString (Str : PyObject)
       return Interfaces.C.Strings.chars_ptr;
@@ -396,7 +396,7 @@ package GNATCOLL.Python is
    function PyUnicode_Check (Obj : PyObject) return Boolean;
 
    function PyUnicode_FromString (Str : String) return PyObject;
-   --  A Unicode string, from a latin-1 encoded Ada string.
+   --  A Unicode string, from a latin-1 encoded Ada string
 
    function Unicode_AsString
      (Str : PyObject; Encoding : String := "utf-8") return String;
@@ -574,7 +574,7 @@ package GNATCOLL.Python is
    subtype PyDictObject is PyObject;
 
    function PyDict_New return PyDictObject;
-   --  Create a new empty dictionary.
+   --  Create a new empty dictionary
 
    function PyDict_SetItemString
      (Dict : PyDictObject;
@@ -645,7 +645,7 @@ package GNATCOLL.Python is
    --  ???
 
    function PyCallable_Check (Func : PyObject) return Boolean;
-   --  Determine if the object o is callable. This function always succeeds.
+   --  Determine if the object o is callable. This function always succeeds
 
    ------------------
    -- Object types --
@@ -657,7 +657,7 @@ package GNATCOLL.Python is
    --  primitive subprograms like __getattr__, __setattr__, ...
 
    function GetTypeObject (Obj : PyObject) return PyTypeObject;
-   --  Return the type object that describes the class Obj belongs to.
+   --  Return the type object that describes the class Obj belongs to
 
    function Type_New
      (Name     : String;
@@ -750,7 +750,7 @@ package GNATCOLL.Python is
    --  should also return null to its caller.
 
    function PyErr_Occurred return PyObject;
-   --  Return the current exception, or null if no exception was raised.
+   --  Return the current exception, or null if no exception was raised
 
    function PyErr_NewException
      (Name : String; Base : PyObject := null; Dict : PyObject := null)
@@ -761,7 +761,7 @@ package GNATCOLL.Python is
    --  Name must be of the form "module.name"
 
    procedure PyErr_SetString (Except : PyObject; Msg : String);
-   --  Raise Except, and associate it with a specific message.
+   --  Raise Except, and associate it with a specific message
 
    ---------
    -- Sys --
@@ -1060,10 +1060,10 @@ package GNATCOLL.Python is
    --  the trace function, not the profile function.
 
    procedure PyEval_SetProfile (Proc : Py_Trace_Func; User_Arg : PyObject);
-   --  Register a new profiling function.
+   --  Register a new profiling function
 
    procedure PyEval_SetTrace (Proc : Py_Trace_Func; User_Arg : PyObject);
-   --  Register a new tracing function.
+   --  Register a new tracing function
 
    -------------------------------------
    -- Embedding Ada objects in python --
@@ -1095,13 +1095,13 @@ package GNATCOLL.Python is
       Desc  : System.Address;
       Destr : PyCObject_Destructor2 := null)
       return PyObject;
-   --  Same as above, except Desc is also passed to Destr.
+   --  Same as above, except Desc is also passed to Destr
 
    function PyCObject_AsVoidPtr (Self : PyObject) return System.Address;
    --  Return the Ada object embedded in Self
 
    function PyCObject_GetDesc (Self : PyObject) return System.Address;
-   --  Return the Desc object that Self was created with, or null.
+   --  Return the Desc object that Self was created with, or null
 
 private
 
