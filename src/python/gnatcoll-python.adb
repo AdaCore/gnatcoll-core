@@ -192,6 +192,17 @@ package body GNATCOLL.Python is
       return Internal (Func) = 1;
    end PyFunction_Check;
 
+   ----------------------
+   -- PyCallable_Check --
+   ----------------------
+
+   function PyCallable_Check (Func : PyObject) return Boolean is
+      function Internal (Obj : PyObject) return Integer;
+      pragma Import (C, Internal, "PyCallable_Check");
+   begin
+      return Internal (Func) = 1;
+   end PyCallable_Check;
+
    --------------------
    -- PyString_Check --
    --------------------

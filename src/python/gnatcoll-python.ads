@@ -644,6 +644,9 @@ package GNATCOLL.Python is
    function PyFunction_Get_Closure (Func : PyObject) return PyObject;
    --  ???
 
+   function PyCallable_Check (Func : PyObject) return Boolean;
+   --  Determine if the object o is callable. This function always succeeds.
+
    ------------------
    -- Object types --
    ------------------

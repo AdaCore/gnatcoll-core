@@ -1734,7 +1734,7 @@ package body GNATCOLL.Scripts.Python is
             Kw     => Python_Callback_Data (Args).Kw);
          Py_DECREF (Args2);
 
-      else
+      elsif PyFunction_Check (Command) then
          Obj := PyEval_EvalCodeEx
            (PyFunction_Get_Code (Command),
             Globals  => PyFunction_Get_Globals (Command),
@@ -1743,6 +1743,10 @@ package body GNATCOLL.Scripts.Python is
             Kwds     => Python_Callback_Data (Args).Kw,
             Defaults => PyFunction_Get_Defaults (Command),
             Closure  => PyFunction_Get_Closure (Command));
+
+      else
+         Obj := PyObject_Call
+           (Command, Python_Callback_Data (Args).Args, null);
       end if;
 
       if Obj = null then
@@ -3467,9 +3471,7 @@ package body GNATCOLL.Scripts.Python is
             Hide_Output => True,
             Errors      => Errors'Unchecked_Access);
 
-         if Func /= null
-           and then (PyFunction_Check (Func) or else PyMethod_Check (Func))
-         then
+         if Func /= null and then PyCallable_Check (Func) then
             Setup_Return_Value (Args);
             Result := Execute_Command (Script, Func, Args, Errors'Access);
 
