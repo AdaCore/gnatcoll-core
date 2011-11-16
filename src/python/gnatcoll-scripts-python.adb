@@ -1678,10 +1678,6 @@ package body GNATCOLL.Scripts.Python is
       Error   : access Boolean) return PyObject
    is
       Obj   : PyObject;
-      Args2 : PyObject;
-      Size  : Integer;
-      Item  : PyObject;
-      Self, First_Arg : PyObject;
 
    begin
       Error.all := False;
@@ -1692,62 +1688,10 @@ package body GNATCOLL.Scripts.Python is
          return null;
       end if;
 
-      if PyMethod_Check (Command) then
-
-         --  Bound methods: we need to explicitly pass the instance as the
-         --  first argument. However, in case this instance is the same as the
-         --  first parameter in Args, we do not duplicate it. This makes for
-         --  nicer python code, as in:
-         --    class MyProcess (GPS.Process):
-         --      def on_match (self, matched, unmatched): pass
-         --      def __init__ (self):
-         --           GPS.Process.__init__ (self, on_match=self.on_match)
-         --  If we did not clean up the duplicates, the callback would have
-         --   been:
-         --     class on_match (self, process, matched, unmatched): pass
-
-         Self := PyMethod_Self (Command);
-         First_Arg := PyObject_GetItem (Python_Callback_Data (Args).Args, 0);
-
-         if Self /= null and then Self /= First_Arg then
-
-            --  See code in classobject.c::instancemethod_call()
-            Size  := PyObject_Size (Python_Callback_Data (Args).Args);
-            Args2 := PyTuple_New (Size => Size + 1);
-            Py_INCREF (PyMethod_Self (Command));
-            PyTuple_SetItem (Args2, 0, PyMethod_Self (Command));
-            for T in 0 .. Size - 1 loop
-               Item := PyObject_GetItem (Python_Callback_Data (Args).Args, T);
-               PyTuple_SetItem (Args2, T  + 1, Item);
-            end loop;
-         else
-            --  The "self" argument is the first in Args, nothing special to do
-            Args2 := Python_Callback_Data (Args).Args;
-            Py_INCREF (Args2);
-         end if;
-
-         Py_DECREF (First_Arg);
-
-         Obj := PyObject_Call
-           (Object => PyMethod_Function (Command),
-            Args   => Args2,
-            Kw     => Python_Callback_Data (Args).Kw);
-         Py_DECREF (Args2);
-
-      elsif PyFunction_Check (Command) then
-         Obj := PyEval_EvalCodeEx
-           (PyFunction_Get_Code (Command),
-            Globals  => PyFunction_Get_Globals (Command),
-            Locals   => null,
-            Args     => Python_Callback_Data (Args).Args,
-            Kwds     => Python_Callback_Data (Args).Kw,
-            Defaults => PyFunction_Get_Defaults (Command),
-            Closure  => PyFunction_Get_Closure (Command));
-
-      else
-         Obj := PyObject_Call
-           (Command, Python_Callback_Data (Args).Args, null);
-      end if;
+      Obj := PyObject_Call
+        (Command,
+         Python_Callback_Data (Args).Args,
+         Python_Callback_Data (Args).Kw);
 
       if Obj = null then
          Error.all := True;
