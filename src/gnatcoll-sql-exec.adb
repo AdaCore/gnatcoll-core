@@ -1362,7 +1362,7 @@ package body GNATCOLL.SQL.Exec is
          if Found then
             Result.First; --  Move to first element
             if Active (Me_Cache) then
-               Trace (Me_Cache, "Use cache for " & S.Name.all);
+               Trace (Me_Cache, "(" & S.Name.all & "): from cache");
             end if;
             return;
          end if;

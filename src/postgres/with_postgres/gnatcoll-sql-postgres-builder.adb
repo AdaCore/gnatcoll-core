@@ -450,9 +450,12 @@ package body GNATCOLL.SQL.Postgres.Builder is
       if Connection.Postgres /= null then
          Clear (Res);
 
-         if Query /= "" then
-            Perform (Res, Query, Params);
+         if Query = "" then
+            Success := True;
+            return;
          end if;
+
+         Perform (Res, Query, Params);
 
          case ExecStatus'(Status (Res)) is
             when PGRES_NONFATAL_ERROR
@@ -588,13 +591,17 @@ package body GNATCOLL.SQL.Postgres.Builder is
          Params : SQL_Parameters := No_Parameters)
       is
          pragma Unreferenced (Params);
-         Name : constant String := To_String (P_Stmt.Cursor);
+         CName : constant String := To_String (P_Stmt.Cursor);
       begin
          if Active (Me_Query) then
-            Trace (Me_Query, "Prepare " & Name & ": " & Query);
+            if Name /= "" then
+               Trace (Me_Query, "PQprepare(" & Name & ")");
+            else
+               Trace (Me_Query, "PQprepare(" & CName & ", " & Query & ")");
+            end if;
          end if;
 
-         Prepare (Res, Connection.Postgres.all, Name, Query);
+         Prepare (Res, Connection.Postgres.all, CName, Query);
       end Perform;
 
       procedure Do_Perform is new Connect_And_Do (Perform);
@@ -622,10 +629,14 @@ package body GNATCOLL.SQL.Postgres.Builder is
          Do_Perform (Connection, Declare_Cursor (Query, P_Stmt), Res, Success);
       end if;
 
+      Clear (Res);
+
       if Success then
-         Clear (Res);
          return Convert (P_Stmt);
       else
+         if Active (Me_Query) then
+            Trace (Me_Query, "PQprepared failed: " & Error (Connection));
+         end if;
          Unchecked_Free (P_Stmt);
          return No_DBMS_Stmt;
       end if;
@@ -652,21 +663,26 @@ package body GNATCOLL.SQL.Postgres.Builder is
       --  For a direct_cursor, this will execute the query. For a
       --  forward_cursor this will declare the cursor on the DBMS
 
+      --  Trace (Me_Query, "PQexecPrepared(" & Name & ")");
+
       Exec_Prepared
         (Res, Connection.Postgres.all, Name, Connection.all, Params);
 
       if Direct or not Use_Cursors then
          DR := new Postgresql_Direct_Cursor;
          DR.Res := Res;
-         Post_Execute_And_Log
-           (DR, Connection, "Exec prepared " & Name,
-            No_Prepared, False, Params);
-
          if Is_Select then
             DR.Rows := Natural (Tuple_Count (Res));
          else
             DR.Rows := Natural'(Command_Tuples (Res));
          end if;
+
+         --  Extra trace that might be useful from time to time, but is often
+         --  just noise because GNATCOLL.SQL.Exec will already display the
+         --  result of the query.
+         --  Post_Execute_And_Log
+         --    (DR, Connection, "PQexecPrepared(" & Name & ")",
+         --     No_Prepared, Is_Select => Is_Select, Params => Params);
 
          return Abstract_Cursor_Access (DR);
 
@@ -675,9 +691,11 @@ package body GNATCOLL.SQL.Postgres.Builder is
          R.Connection := Postgresql_Connection (Connection);
          R.Res        := Res;
          R.Stmt       := Stmt;
-         Post_Execute_And_Log
-           (R, Connection, "Exec prepared " & Name, No_Prepared,
-            False, Params);
+
+         --   Post_Execute_And_Log
+         --     (R, Connection, "PQexecPrepared(" & Name & ")", No_Prepared,
+         --      Is_Select => Is_Select, Params => Params);
+
          Next (R.all);  --  Read first row
          return Abstract_Cursor_Access (R);
       end if;
