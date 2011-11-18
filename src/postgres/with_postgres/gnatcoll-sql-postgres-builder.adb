@@ -1133,16 +1133,20 @@ package body GNATCOLL.SQL.Postgres.Builder is
       Prepared   : DBMS_Stmt)
    is
       Stmt : Postgresql_DBMS_Stmt := Convert (Prepared);
-      Str : constant String := "DEALLOCATE " & To_String (Stmt.Cursor);
       Res : Result;
    begin
-      Execute (Res, Connection.Postgres.all, Str, Connection.all);
-      if Active (Me_Query) then
-         Trace (Me_Query, Str & " (" & Status (Res) & ")");
+      if Stmt /= null then
+         declare
+            Str : constant String := "DEALLOCATE " & To_String (Stmt.Cursor);
+         begin
+            Execute (Res, Connection.Postgres.all, Str, Connection.all);
+            if Active (Me_Query) then
+               Trace (Me_Query, Str & " (" & Status (Res) & ")");
+            end if;
+         end;
+         Clear (Res);
+         Unchecked_Free (Stmt);
       end if;
-      Clear (Res);
-
-      Unchecked_Free (Stmt);
    end Finalize;
 
    ----------------------

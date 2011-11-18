@@ -59,6 +59,12 @@ package body GNATCOLL.SQL.Exec is
    function Is_Select_Query (Query : String) return Boolean;
    --  Return true if Query is a select query
 
+   function Display_Query
+     (Query      : String;
+      Prepared   : Prepared_Statement'Class := No_Prepared) return String;
+   --  Return the display for Query (or Prepared, if specified).
+   --  This is for debug purposes only.
+
    procedure Prepare_If_Needed
      (Connection : access Database_Connection_Record'Class;
       Stmt       : Prepared_Statement'Class;
@@ -424,13 +430,29 @@ package body GNATCOLL.SQL.Exec is
    begin
       for P in Params'Range loop
          Append (Result, ", ");
---           Append (Result, Image (P, 0));
---           Append (Result, "=>");
          Append (Result, Image (Format, Params (P)));
       end loop;
 
       return To_String (Result);
    end Image;
+
+   -------------------
+   -- Display_Query --
+   -------------------
+
+   function Display_Query
+     (Query      : String;
+      Prepared   : Prepared_Statement'Class := No_Prepared) return String
+   is
+      use type Prepared_Statements.Encapsulated_Access;
+      S : constant Prepared_Statements.Encapsulated_Access := Prepared.Get;
+   begin
+      if S /= null then
+         return "(" & S.Name.all & ")";
+      else
+         return Query;
+      end if;
+   end Display_Query;
 
    --------------------------
    -- Post_Execute_And_Log --
@@ -450,20 +472,6 @@ package body GNATCOLL.SQL.Exec is
 
       function Get_User return String;
       --  Return the user name
-
-      function Get_Query return String;
-      --  Return the query
-
-      function Get_Query return String is
-         use type Prepared_Statements.Encapsulated_Access;
-         S : constant Prepared_Statements.Encapsulated_Access := Prepared.Get;
-      begin
-         if S /= null then
-            return "(" & S.Name.all & ")";
-         else
-            return Query;
-         end if;
-      end Get_Query;
 
       function Get_User return String is
       begin
@@ -496,7 +504,9 @@ package body GNATCOLL.SQL.Exec is
    begin
       if R = null then
          if Active (Me_Error) then
-            Trace (Me_Error, "Transaction failed " & Query);
+            Trace (Me_Error, "Transaction failed (null result): "
+                   & Display_Query (Query, Prepared)
+                   & Image (Connection.all, Params));
          end if;
 
          Set_Failure (Connection);
@@ -510,23 +520,21 @@ package body GNATCOLL.SQL.Exec is
 
          if not Connection.Success then
             if Active (Me_Error) then
-               Trace (Me_Error, "Transaction failed in select " & Query);
+               Trace (Me_Error, "select failed: "
+                      & Display_Query (Query, Prepared)
+                      & Image (Connection.all, Params)
+                      & " " & Status (DBMS_Forward_Cursor'Class (R.all))
+                      & " " & Error_Msg (DBMS_Forward_Cursor'Class (R.all))
+                      & Get_User);
             end if;
-            Set_Failure (Connection);
 
-            if Active (Me_Query) then
-               Trace
-                 (Me_Query,
-                  Get_Query & Image (Connection.all, Params)
-                  & " " & Status (DBMS_Forward_Cursor'Class (R.all))
-                  & " " & Error_Msg (DBMS_Forward_Cursor'Class (R.all))
-                  & Get_User);
-            end if;
+            Set_Failure (Connection);
 
          elsif Active (Me_Select) then
             Trace
               (Me_Select,
-               Get_Query & Image (Connection.all, Params)
+               Display_Query (Query, Prepared)
+               & Image (Connection.all, Params)
                & Get_Rows & " "
                & Status (DBMS_Forward_Cursor'Class (R.all)) & Get_User);
          end if;
@@ -539,27 +547,22 @@ package body GNATCOLL.SQL.Exec is
                --  if both the SQL and SQL.ERRORS streams are active (since
                --  the result of the SQL has already shown the error message).
                --  However, it is useful when only SQL.ERRORS is active.
-               Trace (Me_Error, "Transaction failed " & Query
-                      & " => "
-                      & Error_Msg (DBMS_Forward_Cursor'Class (R.all)));
+               Trace (Me_Error, "Transaction failed: "
+                      & Display_Query (Query, Prepared)
+                      & Image (Connection.all, Params)
+                      & " " & Status (DBMS_Forward_Cursor'Class (R.all))
+                      & " " & Error_Msg (DBMS_Forward_Cursor'Class (R.all))
+                      & Get_User);
             end if;
 
             Set_Failure
               (Connection, Error_Msg (DBMS_Forward_Cursor'Class (R.all)));
 
-            if Active (Me_Query) then
-               Trace
-                 (Me_Query,
-                  Get_Query & Image (Connection.all, Params)
-                  & " " & Status (DBMS_Forward_Cursor'Class (R.all))
-                  & " " & Error_Msg (DBMS_Forward_Cursor'Class (R.all))
-                  & Get_User);
-            end if;
-
          elsif Active (Me_Query) then
             Trace
               (Me_Query,
-               Get_Query & Image (Connection.all, Params)
+               Display_Query (Query, Prepared)
+               & Image (Connection.all, Params)
                & Get_Rows & " "
                & Status (DBMS_Forward_Cursor'Class (R.all)) & Get_User);
          end if;
@@ -610,7 +613,8 @@ package body GNATCOLL.SQL.Exec is
       then
          Trace
            (Me_Error,
-            "Ignored, since transaction failed: " & Query
+            "Ignored, since transaction in failure: "
+            & Display_Query (Query, Prepared)
             & " (" & Connection.Username.all & ")");
          return;
 
@@ -1320,12 +1324,19 @@ package body GNATCOLL.SQL.Exec is
       if L.Stmt = No_DBMS_Stmt
          or else L.DB_Timestamp /= Connection.Connected_On
       then
-         L.DB_Timestamp := Connection.Connected_On;
          L.Stmt := Connect_And_Prepare
            (Connection, S.Query_Str.all, S.Name.all, Direct => True);
 
+         --  Set the timestamp *after* we have created the connection, in case
+         --  it did not exist before (if prepare is the first command done on
+         --  this connection).
+
+         L.DB_Timestamp := Connection.Connected_On;
+
          --  L.Stmt could still be No_DBMS_Stmt if the backend does not support
          --  preparation on the server.
+         --  ??? This means we'll try again next time. For now, all supported
+         --  DBMS have prepared statement, so that's not an issue.
 
       else
          Reset (Connection, L.Stmt);
