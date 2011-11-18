@@ -590,7 +590,6 @@ package body GNATCOLL.SQL.Postgres.Builder is
          Query  : String;
          Params : SQL_Parameters := No_Parameters)
       is
-         pragma Unreferenced (Params);
          CName : constant String := To_String (P_Stmt.Cursor);
       begin
          if Active (Me_Query) then
@@ -601,7 +600,18 @@ package body GNATCOLL.SQL.Postgres.Builder is
             end if;
          end if;
 
-         Prepare (Res, Connection.Postgres.all, CName, Query);
+         --  Older versions of PostgreSQL (prior to 8.0) do not have a specific
+         --  PQprepare(), so for compatibility we issue a PREPARE statement
+         --  instead.
+
+         if Active (Me_Query) then
+            Trace (Me_Query, "PREPARE " & CName & " AS " & Query);
+         end if;
+
+         Execute (Res, Connection.Postgres.all,
+                  "PREPARE " & CName & " AS " & Query, Connection.all,
+                  Params);
+         --  Prepare (Res, Connection.Postgres.all, CName, Query);
       end Perform;
 
       procedure Do_Perform is new Connect_And_Do (Perform);
