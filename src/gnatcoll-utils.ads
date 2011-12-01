@@ -99,9 +99,9 @@ package GNATCOLL.Utils is
 
    procedure Skip_Blanks (Str : String; Index : in out Natural);
    procedure Skip_Blanks_Backward (Str : String; Index : in out Natural);
-   --  If Str(First) is a white space, skip it and all following ones.
-   --  On exit, First points to the first non white space character, or after
-   --  Str'Last.
+   --  If Str(Index) is a white space, new line, or tab, then skip it and all
+   --  following ones. On exit, Index points to the first non white space
+   --  character, or after Str'Last.
    --  Skip_Blanks_Backward moves Index backward instead, and will leave it
    --  before Str'First if no non-whitespace was found.
 

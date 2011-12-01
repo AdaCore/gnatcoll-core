@@ -4382,12 +4382,14 @@ package body GNATCOLL.Projects is
 
    begin
       F := Output'First;
-      L  := EOL (Output);
+      Skip_Blanks (Output, F);
+
+      L := EOL (Output (F .. Output'Last));
 
       declare
          S : constant String := Strip_CR (Output (F .. L - 1));
       begin
-         GNAT_Version := new String'(S (S'First + 7 .. S'Last - 10));
+         GNAT_Version := new String'(S (S'First + 7 .. S'Last));
       end;
 
       F := L + 1;
