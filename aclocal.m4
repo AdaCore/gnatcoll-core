@@ -851,29 +851,3 @@ AC_DEFUN(AM_PATH_GTK,
    AC_SUBST(WITH_GTK)
 
 ])
-
-##########################################################################
-## Detects required libraries on some platforms
-## This exports the following variables
-##     @REQUIRED_LIBS@: A .gpr list of libraries
-##########################################################################
-
-AC_DEFUN(AM_REQUIRED_LIBS,
-[
-   AC_MSG_CHECKING([whether platform required -lutil library])
-
-   SAVE_LIBS="${LIBS}"
-
-   LIBS='-lutil'
-
-   AC_LINK_IFELSE(
-      [AC_LANG_PROGRAM([],[openpty();])],
-      [REQUIRED_LIBS="-lutil"
-       AC_MSG_RESULT(yes)],
-      [REQUIRED_LIBS=""
-       AC_MSG_RESULT(no)])
-
-   AC_SUBST(REQUIRED_LIBS)
-
-   LIBS="${SAVE_LIBS}"
-])

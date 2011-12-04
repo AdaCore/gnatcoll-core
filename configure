@@ -309,7 +309,7 @@ ac_includes_default="\
 # include <unistd.h>
 #endif"
 
-ac_subst_vars='SHELL PATH_SEPARATOR PACKAGE_NAME PACKAGE_TARNAME PACKAGE_VERSION PACKAGE_STRING PACKAGE_BUGREPORT exec_prefix prefix program_transform_name bindir sbindir libexecdir datadir sysconfdir sharedstatedir localstatedir libdir includedir oldincludedir infodir mandir build_alias host_alias target_alias DEFS ECHO_C ECHO_N ECHO_T LIBS build build_cpu build_vendor build_os host host_cpu host_vendor host_os target target_cpu target_vendor target_os LN_S CC CFLAGS LDFLAGS CPPFLAGS ac_ct_CC EXEEXT OBJEXT CPP EGREP BUILD_TYPE REQUIRED_LIBS GNAT_BUILDS_SHARED DEFAULT_LIBRARY_TYPE PKG_CONFIG HAVE_GTKADA GTK_GCC_FLAGS WITH_GTK PYTHON PYTHON_CONFIG PYTHON_BASE PYTHON_VERSION PYTHON_DIR PYTHON_LIBS PYTHON_CFLAGS WITH_PYTHON WITH_POSTGRES PATH_LIBPQ HAS_PQPREPARE WITH_SQLITE PATH_LIBSQLITE PYGTK_PREFIX PYGTK_INCLUDE WITH_PYGTK WITH_GMP GMP_CFLAGS GMP_LIBS HAVE_GNAT_UTIL GNAT_SOURCES WITH_PROJECTS SYNC_COUNTERS_IMPL GMP_CFLAGS_GPR GMP_LIBS_GPR PYTHON_LIBS_GPR PYTHON_CFLAGS_GPR PYGTK_INCLUDE_GPR GTK_GCC_FLAGS_GPR REQUIRED_LIBS_GPR WITH_SYSLOG MAKEINFO TEXI2DVI LIBOBJS LTLIBOBJS'
+ac_subst_vars='SHELL PATH_SEPARATOR PACKAGE_NAME PACKAGE_TARNAME PACKAGE_VERSION PACKAGE_STRING PACKAGE_BUGREPORT exec_prefix prefix program_transform_name bindir sbindir libexecdir datadir sysconfdir sharedstatedir localstatedir libdir includedir oldincludedir infodir mandir build_alias host_alias target_alias DEFS ECHO_C ECHO_N ECHO_T LIBS build build_cpu build_vendor build_os host host_cpu host_vendor host_os target target_cpu target_vendor target_os LN_S CC CFLAGS LDFLAGS CPPFLAGS ac_ct_CC EXEEXT OBJEXT CPP EGREP BUILD_TYPE GNAT_BUILDS_SHARED DEFAULT_LIBRARY_TYPE PKG_CONFIG HAVE_GTKADA GTK_GCC_FLAGS WITH_GTK PYTHON PYTHON_CONFIG PYTHON_BASE PYTHON_VERSION PYTHON_DIR PYTHON_LIBS PYTHON_CFLAGS WITH_PYTHON WITH_POSTGRES PATH_LIBPQ HAS_PQPREPARE WITH_SQLITE PATH_LIBSQLITE PYGTK_PREFIX PYGTK_INCLUDE WITH_PYGTK WITH_GMP GMP_CFLAGS GMP_LIBS HAVE_GNAT_UTIL GNAT_SOURCES WITH_PROJECTS SYNC_COUNTERS_IMPL GMP_CFLAGS_GPR GMP_LIBS_GPR PYTHON_LIBS_GPR PYTHON_CFLAGS_GPR PYGTK_INCLUDE_GPR GTK_GCC_FLAGS_GPR WITH_SYSLOG MAKEINFO TEXI2DVI LIBOBJS LTLIBOBJS'
 ac_subst_files=''
 
 # Initialize some variables set by options.
@@ -3175,59 +3175,6 @@ fi;
 
 
 
-   echo "$as_me:$LINENO: checking whether platform required -lutil library" >&5
-echo $ECHO_N "checking whether platform required -lutil library... $ECHO_C" >&6
-
-   SAVE_LIBS="${LIBS}"
-
-   LIBS='-lutil'
-
-   cat >conftest.$ac_ext <<_ACEOF
-#line $LINENO "configure"
-/* confdefs.h.  */
-_ACEOF
-cat confdefs.h >>conftest.$ac_ext
-cat >>conftest.$ac_ext <<_ACEOF
-/* end confdefs.h.  */
-
-int
-main ()
-{
-openpty();
-  ;
-  return 0;
-}
-_ACEOF
-rm -f conftest.$ac_objext conftest$ac_exeext
-if { (eval echo "$as_me:$LINENO: \"$ac_link\"") >&5
-  (eval $ac_link) 2>&5
-  ac_status=$?
-  echo "$as_me:$LINENO: \$? = $ac_status" >&5
-  (exit $ac_status); } &&
-         { ac_try='test -s conftest$ac_exeext'
-  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
-  (eval $ac_try) 2>&5
-  ac_status=$?
-  echo "$as_me:$LINENO: \$? = $ac_status" >&5
-  (exit $ac_status); }; }; then
-  REQUIRED_LIBS="-lutil"
-       echo "$as_me:$LINENO: result: yes" >&5
-echo "${ECHO_T}yes" >&6
-else
-  echo "$as_me: failed program was:" >&5
-sed 's/^/| /' conftest.$ac_ext >&5
-
-REQUIRED_LIBS=""
-       echo "$as_me:$LINENO: result: no" >&5
-echo "${ECHO_T}no" >&6
-fi
-rm -f conftest.$ac_objext conftest$ac_exeext conftest.$ac_ext
-
-
-
-   LIBS="${SAVE_LIBS}"
-
-
    echo "$as_me:$LINENO: checking whether gnat can build shared libs" >&5
 echo $ECHO_N "checking whether gnat can build shared libs... $ECHO_C" >&6
 
@@ -4678,25 +4625,6 @@ echo "${ECHO_T}no" >&6
 
 
 
-   value=$REQUIRED_LIBS
-
-   # Special handling on darwin
-   val=`echo $value | sed -e "s,-framework CoreFoundation,-framework=CoreFoundation,"`
-   value=$val
-
-   output=REQUIRED_LIBS_GPR
-   result=""
-   for v in $value; do
-      if test "$result" != ""; then
-         result="$result, "
-      fi
-      result="$result\"$v\""
-   done
-   REQUIRED_LIBS_GPR=$result
-
-
-
-
 
    # Check whether --enable-syslog or --disable-syslog was given.
 if test "${enable_syslog+set}" = set; then
@@ -5626,7 +5554,6 @@ s,@OBJEXT@,$OBJEXT,;t t
 s,@CPP@,$CPP,;t t
 s,@EGREP@,$EGREP,;t t
 s,@BUILD_TYPE@,$BUILD_TYPE,;t t
-s,@REQUIRED_LIBS@,$REQUIRED_LIBS,;t t
 s,@GNAT_BUILDS_SHARED@,$GNAT_BUILDS_SHARED,;t t
 s,@DEFAULT_LIBRARY_TYPE@,$DEFAULT_LIBRARY_TYPE,;t t
 s,@PKG_CONFIG@,$PKG_CONFIG,;t t
@@ -5662,7 +5589,6 @@ s,@PYTHON_LIBS_GPR@,$PYTHON_LIBS_GPR,;t t
 s,@PYTHON_CFLAGS_GPR@,$PYTHON_CFLAGS_GPR,;t t
 s,@PYGTK_INCLUDE_GPR@,$PYGTK_INCLUDE_GPR,;t t
 s,@GTK_GCC_FLAGS_GPR@,$GTK_GCC_FLAGS_GPR,;t t
-s,@REQUIRED_LIBS_GPR@,$REQUIRED_LIBS_GPR,;t t
 s,@WITH_SYSLOG@,$WITH_SYSLOG,;t t
 s,@MAKEINFO@,$MAKEINFO,;t t
 s,@TEXI2DVI@,$TEXI2DVI,;t t

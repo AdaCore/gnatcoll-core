@@ -39,7 +39,6 @@ project GnatColl_Shared is
    Gtk_Include    := (@GTK_GCC_FLAGS_GPR@);
    Postgres_Dir   := "@PATH_LIBPQ@";
    Sqlite_Dir     := "@PATH_LIBSQLITE@";
-   Required_Libs  := (@REQUIRED_LIBS_GPR@);
 
    package Compiler is
       case Build is
@@ -56,7 +55,6 @@ project GnatColl_Shared is
    end Compiler;
 
    package Linker is
-      for Linker_Options use Required_Libs;
    end Linker;
 
    package Binder is
