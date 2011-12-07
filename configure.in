@@ -1,4 +1,4 @@
-# Set the version number below
+# Set the version number below and also in docs/conf.py
 AC_INIT(gnatcoll,1.5w,report@adacore.com,gnatcoll)
 AC_CANONICAL_SYSTEM
 
@@ -25,11 +25,6 @@ AM_TO_GPR($GTK_GCC_FLAGS, GTK_GCC_FLAGS_GPR)
 
 AM_PATH_SYSLOG
 
-AC_CHECK_PROGS(MAKEINFO, makeinfo)
-AC_CHECK_PROGS(TEXI2DVI, texi2dvi)
-AC_SUBST(MAKEINFO)
-AC_SUBST(TEXI2DVI)
-
 AM_LINK_FILE([src/gnatcoll-refcount-sync_counters__$SYNC_COUNTERS_IMPL.ada],
              [src/gnatcoll-refcount-sync_counters.adb],
              [SYNC_COUNTERS_IMPL=$SYNC_COUNTERS_IMPL])
@@ -39,7 +34,7 @@ AM_LINK_FILE([src/gnatcoll__$GNAT_SOURCES.gpr],
 AM_LINK_FILE([distrib/gnatcoll.gpr__$GNAT_SOURCES],
              [distrib/gnatcoll.gpr])
 
-AC_OUTPUT(gnatcoll_shared.gpr docs/Makefile Makefile.conf src/gnatcoll_gmp.gpr src/gnatcoll_python.gpr distrib/gnatcoll.gpr__gnat_util distrib/gnatcoll.gpr__copy distrib/gnatcoll_python.gpr distrib/gnatcoll_gmp.gpr docs/gnatcoll_include.texi gnat/sdefault/sdefault.adb)
+AC_OUTPUT(gnatcoll_shared.gpr Makefile.conf src/gnatcoll_gmp.gpr src/gnatcoll_python.gpr distrib/gnatcoll.gpr__gnat_util distrib/gnatcoll.gpr__copy distrib/gnatcoll_python.gpr distrib/gnatcoll_gmp.gpr gnat/sdefault/sdefault.adb)
 
 AC_MSG_NOTICE([--------- Summary for GNAT Components --------------])
 AC_MSG_NOTICE([ Shared libraries: $GNAT_BUILDS_SHARED (default: $DEFAULT_LIBRARY_TYPE)])

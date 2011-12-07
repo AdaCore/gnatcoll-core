@@ -15,4 +15,6 @@ of the feature.
 New features in 1.5
 -------------------
 
+NF-15-KB21-014 Documentation converted to Sphinx (2011-12-07)
 
+   The documentation was converted from texinfo to Sphinx.
