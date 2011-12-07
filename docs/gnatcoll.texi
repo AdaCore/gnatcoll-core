@@ -652,7 +652,7 @@ and better languages should be used instead.
 
 When an instance has associated properties (which you can export from Ada
 using @code{Set_Property}), you access the properties by prefixing its name
-with "@":
+with "@@":
 
 @CODESAMPLE{
 Shell> Base arg1 arg2   # Build new instance
@@ -2879,7 +2879,7 @@ Ada 2005 Timing Events.
 
 @c -----------------------------------------------------------------------
 @node Managing Memory
-@chapter Managing Memory: The storage pools
+@chapter Managing Memory
 @c -----------------------------------------------------------------------
 @noindent
 
@@ -3714,7 +3714,7 @@ the various steps we went through in the design of this library.
 
 @c -----------------------------------------------------------------------
 @node Database abstraction layers
-@section Abstraction Layers
+@section Database Abstraction Layers
 @c -----------------------------------------------------------------------
 @noindent
 
