@@ -23,6 +23,7 @@ GNAT Reusable Components
    refcount
    config
    pools
+   json
    sql
 
 Indices and tables
