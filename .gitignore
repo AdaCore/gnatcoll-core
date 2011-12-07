@@ -7,6 +7,8 @@ distrib/gnatcoll.gpr__copy
 distrib/gnatcoll.gpr__gnat_util
 src/gnatcoll.gpr
 
+docs/_build
+
 *.cgpr
 
 testsuite/pools/testpools
