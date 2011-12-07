@@ -4,10 +4,10 @@ include Makefile.conf
 
 ifeq (${BUILDS_SHARED},yes)
 all: static relocatable
-install: install_relocatable install_static
+install: install_relocatable install_static install_docs
 else
 all: static
-install: install_static
+install: install_static install_docs
 endif
 
 include Makefile.gnat
@@ -72,7 +72,6 @@ install_library_type:
 	${MKDIR} ${datadir}/gps/plug-ins
 	${MAKE} -C src -f Makefile.gnatcoll libinstall
 	${MAKE} -C src -f Makefile.python libinstall
-	${MAKE} -C docs install
 ifeq (${WITH_GTK},yes)
 	${MAKE} -C src -f Makefile.gtk libinstall
 endif
@@ -86,6 +85,11 @@ endif
 	${CP} distrib/gnatcoll_gps.xml ${datadir}/gps/plug-ins
 	${CP} distrib/gnatcoll_runtime.xml ${datadir}/gps/plug-ins
 	${CP} distrib/*.gpr ${libdir}/gnat
+
+install_docs:
+	${MKDIR} ${datadir}/doc/gnatcoll/html
+	-${CP} -r docs/_build/html/* ${datadir}/doc/gnatcoll/html
+	-${CP} docs/_build/latex/GNATColl.pdf ${datadir}/doc/gnatcoll/gnatcoll.pdf
 
 install_static:
 	${MAKE} LIBRARY_TYPE=static install_library_type
@@ -104,4 +108,4 @@ endif
 	-${MAKE} -C examples $@
 
 docs:
-	${MAKE} -C docs
+	${MAKE} -C docs html latexpdf
