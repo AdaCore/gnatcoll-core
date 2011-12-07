@@ -1,4 +1,4 @@
-# Set the version number below and also in docs/conf.py
+# Set the version number below
 AC_INIT(gnatcoll,1.5w,report@adacore.com,gnatcoll)
 AC_CANONICAL_SYSTEM
 
