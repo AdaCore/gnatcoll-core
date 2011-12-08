@@ -88,8 +88,8 @@ endif
 
 install_docs:
 	${MKDIR} ${datadir}/doc/gnatcoll/html
-	-${CP} -r docs/_build/html/* ${datadir}/doc/gnatcoll/html
-	-${CP} docs/_build/latex/GNATColl.pdf ${datadir}/doc/gnatcoll/gnatcoll.pdf
+	-${CP} -r docs/_build/html/* ${datadir}/doc/gnatcoll/html 2>/dev/null
+	-${CP} docs/_build/latex/GNATColl.pdf ${datadir}/doc/gnatcoll/gnatcoll.pdf 2>/dev/null
 
 install_static:
 	${MAKE} LIBRARY_TYPE=static install_library_type
