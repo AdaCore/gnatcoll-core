@@ -6,7 +6,7 @@ project GnatColl_Python is
 
    for Source_List_File use "gnatcoll/" & Project'Library_Name & ".lgpr";
    for Library_Kind use GnatColl.GnatColl_Kind;
-   for Library_Dir  use "../gnatcoll/" & Project'Library_Kind;
+   for Library_Dir  use GnatColl.Libdir;
    for Library_Version use
      "lib" & Project'Library_Name & ".so." & Gnatcoll.Version;
 

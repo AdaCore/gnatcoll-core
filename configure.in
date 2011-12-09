@@ -25,6 +25,9 @@ AM_TO_GPR($GTK_GCC_FLAGS, GTK_GCC_FLAGS_GPR)
 
 AM_PATH_SYSLOG
 
+LIB=`basename $libdir`
+AC_SUBST(LIB)
+
 AM_LINK_FILE([src/gnatcoll-refcount-sync_counters__$SYNC_COUNTERS_IMPL.ada],
              [src/gnatcoll-refcount-sync_counters.adb],
              [SYNC_COUNTERS_IMPL=$SYNC_COUNTERS_IMPL])

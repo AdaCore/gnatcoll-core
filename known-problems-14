@@ -4,3 +4,14 @@ Known Problems in Gnatcoll 1.4
 
 Copyright (C) 2011, AdaCore
 
+KP-14-KC09-033 Project files not found on x86_64-linux
+
+  Problem:    When installing on a 64bit linux platform, the projects
+              files are copied into the wrong directory and cannot be found
+              automatically by the compiler.
+
+  Status:     Fixed in Gnatcoll 1.5.0
+
+  Workaround: Either set the GPR_PROJECT_PATH environment variable, or
+              manually copy the project files from prefix/lib64/gnat/ to
+              prefix/lib/gnat/.

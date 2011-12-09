@@ -19,11 +19,13 @@ project GnatColl is
    type Yes_No is ("yes", "no");
    type Sqlite_Inclusion is ("yes", "no", "embedded");
 
+   Libdir := "../../@LIB@/gnatcoll/" & Gnatcoll_Kind;
+
    for Library_Name use "gnatcoll";
    for Source_Dirs use ("../../include/gnatcoll");
    for Source_List_File use "gnatcoll/" & Project'Library_Name & ".lgpr";
    for Library_Kind use GnatColl_Kind;
-   for Library_Dir  use "../gnatcoll/" & Project'Library_Kind;
+   for Library_Dir  use Libdir;
    for Library_Version use
       "lib" & Project'Library_Name & ".so." & Version;
 
