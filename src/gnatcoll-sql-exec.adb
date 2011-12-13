@@ -36,6 +36,7 @@ with GNAT.Strings;              use GNAT.Strings;
 with GNATCOLL.Traces;           use GNATCOLL.Traces;
 with GNATCOLL.Utils;            use GNATCOLL.Utils;
 with GNATCOLL.SQL.Exec_Private; use GNATCOLL.SQL.Exec_Private;
+with Interfaces.C.Strings;
 with System.Address_Image;
 
 package body GNATCOLL.SQL.Exec is
@@ -1060,7 +1061,7 @@ package body GNATCOLL.SQL.Exec is
    begin
       return Integer_Value (DBMS_Forward_Cursor'Class (Self.Res.all), Field);
    exception
-      when Constraint_Error =>
+      when Constraint_Error | Interfaces.C.Strings.Dereference_Error  =>
          return Default;
    end Integer_Value;
 
