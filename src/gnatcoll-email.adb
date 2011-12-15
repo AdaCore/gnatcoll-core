@@ -1,7 +1,7 @@
 -----------------------------------------------------------------------
 --                          G N A T C O L L                          --
 --                                                                   --
---                 Copyright (C) 2006-2009, AdaCore                  --
+--                 Copyright (C) 2006-2011, AdaCore                  --
 --                                                                   --
 -- GPS is free  software;  you can redistribute it and/or modify  it --
 -- under the terms of the GNU General Public License as published by --
@@ -212,7 +212,7 @@ package body GNATCOLL.Email is
       Local_Date     : Ada.Calendar.Time := Ada.Calendar.Clock) return Message
    is
       Reply      : Message := New_Message;
-      H, H2      : Header;
+      H, H2, H3  : Header;
       Iter       : Header_Iterator;
       Is_First   : Boolean;
       To_Quote   : Unbounded_String;
@@ -290,14 +290,17 @@ package body GNATCOLL.Email is
          Append (H2, Get_Value (H));
          Add_Header (Reply, H2);
 
-         H2 := Create ("References", "");
-         Append (H2, Get_Value (H));
-         H := Get_Header (Msg, "References");
-
-         if H /= Null_Header then
-            Append (H2, Get_Value (H));
+         H3 := Get_Header (Msg, "References");
+         if H3 /= Null_Header then
+            Append (H2, Get_Value (H3));
+         else
+            H3 := Get_Header (Msg, "In-Reply-To");
+            if H3 /= Null_Header then
+               Append (H2, Get_Value (H3));
+            end if;
          end if;
 
+         Append (H2, Get_Value (H));
          Add_Header (Reply, H2);
       end if;
 
