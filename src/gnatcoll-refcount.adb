@@ -27,8 +27,11 @@
 
 with Ada.Unchecked_Deallocation;
 with Interfaces;  use Interfaces;
+with Ada.Tags;    use Ada.Tags;
+with GNATCOLL.Traces; use GNATCOLL.Traces;
 
 package body GNATCOLL.Refcount is
+   Me : constant Trace_Handle := Create ("REFCOUNT", Off);
 
    procedure Unchecked_Free is new Ada.Unchecked_Deallocation
      (Refcounted'Class, Refcounted_Access);
@@ -109,6 +112,8 @@ package body GNATCOLL.Refcount is
             if Sync_Counters.Sync_Add_And_Fetch (Data.Refcount'Access, -1) =
               0
             then
+               Trace (Me, "Freeing memory for "
+                      & External_Tag (Ref'Class (P)'Tag));
                Free (Data.all);
                Unchecked_Free (Data);
             end if;
