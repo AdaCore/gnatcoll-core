@@ -1279,7 +1279,7 @@ package body GNATCOLL.SQL.Exec is
          Prepared      => null);
 
       if Active (Me_Query) then
-         Trace (Me_Query, "compute (" & Name & "): " & Data.Query_Str.all);
+         Trace (Me_Query, "compute (" & Name & "): " & Query);
       end if;
 
       Set (Stmt, Data);
