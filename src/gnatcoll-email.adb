@@ -380,7 +380,7 @@ package body GNATCOLL.Email is
    -- Adjust --
    ------------
 
-   procedure Adjust   (Msg : in out Message) is
+   procedure Adjust (Msg : in out Message) is
    begin
       if Msg.Contents /= null then
          Msg.Contents.Ref_Count := Msg.Contents.Ref_Count + 1;
