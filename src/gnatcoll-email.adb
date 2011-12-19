@@ -290,6 +290,7 @@ package body GNATCOLL.Email is
          Append (H2, Get_Value (H));
          Add_Header (Reply, H2);
 
+         H2 := Create ("References", "");
          H3 := Get_Header (Msg, "References");
          if H3 /= Null_Header then
             Append (H2, Get_Value (H3));
@@ -299,7 +300,6 @@ package body GNATCOLL.Email is
                Append (H2, Get_Value (H3));
             end if;
          end if;
-
          Append (H2, Get_Value (H));
          Add_Header (Reply, H2);
       end if;
