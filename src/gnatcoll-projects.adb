@@ -4711,10 +4711,15 @@ package body GNATCOLL.Projects is
       -------------------------------
 
       procedure Initialize_Source_Records is
+
          procedure For_Sources
            (Project : Project_Id;
             Tree    : Project_Tree_Ref;
             With_State : in out Integer);
+
+         -----------------
+         -- For_Sources --
+         -----------------
 
          procedure For_Sources
            (Project : Project_Id;
@@ -4723,9 +4728,8 @@ package body GNATCOLL.Projects is
          is
             pragma Unreferenced (With_State);
             Iter : Source_Iterator := For_Each_Source
-              (In_Tree => Tree,
-               Project => Project);
-            Src : Prj.Source_Id;
+                     (In_Tree => Tree, Project => Project);
+            Src  : Prj.Source_Id;
          begin
             loop
                Src := Element (Iter);
@@ -4754,6 +4758,7 @@ package body GNATCOLL.Projects is
 
          procedure For_Projects_Imported is new For_Every_Project_Imported
            (Integer, For_Sources);
+
          State : Integer := 0;
       begin
          For_Projects_Imported
