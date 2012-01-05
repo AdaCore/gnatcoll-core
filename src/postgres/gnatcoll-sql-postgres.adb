@@ -27,6 +27,8 @@ package body GNATCOLL.SQL.Postgres is
 
    N_OID : aliased constant String := "OID";
 
+   Comparison_Regexp : aliased constant String := " ~* ";
+
    -----------
    -- Setup --
    -----------
@@ -101,5 +103,16 @@ package body GNATCOLL.SQL.Postgres is
       GNAT.Strings.Free (Description.Dbname);
       GNAT.Strings.Free (Description.Password);
    end Free;
+
+   ------------
+   -- Regexp --
+   ------------
+
+   function Regexp
+     (Self : Text_Fields.Field'Class;
+      Str  : String) return SQL_Criteria is
+   begin
+      return Compare (Self, Expression (Str), Comparison_Regexp'Access);
+   end Regexp;
 
 end GNATCOLL.SQL.Postgres;

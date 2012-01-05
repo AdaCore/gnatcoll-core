@@ -75,6 +75,12 @@ package GNATCOLL.SQL.Postgres is
    function Now is new Time_Fields.SQL_Function ("now()");
    --  Return the current timestamp, same as Current_Timestamp
 
+   function Regexp
+     (Self : Text_Fields.Field'Class;
+      Str  : String) return SQL_Criteria;
+   --  Check whether the field matches a regular expression. This is the "~*"
+   --  operator specific to postgreSQL.
+
 private
    type Postgres_Description (Caching : Boolean)
      is new Database_Description_Record (Caching)

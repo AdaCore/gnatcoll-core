@@ -2,7 +2,7 @@
 GNATCOLL 1.5 NEW FEATURES LIST
 ==============================
 
-Copyright (C) 2011, AdaCore
+Copyright (C) 2011-2012, AdaCore
 
 This file contains a list of new features introduced in GNATCOLL.
 A full description of all GNATCOLL features can be found in the GNATCOLL
@@ -14,6 +14,11 @@ of the feature.
 
 New features in 1.5
 -------------------
+
+NF-15-L105-042 GNATCOLL.SQL.Postgres adds support for regexps (2012-01-05)
+
+   The package GNATCOLL.SQL.Postgres now adds support for the postgreSQL
+   specific "~*" operator, that matches regular expressions.
 
 NF-15-KB21-014 Documentation converted to Sphinx (2011-12-07)
 
