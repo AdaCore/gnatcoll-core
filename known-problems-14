@@ -2,7 +2,16 @@
 Known Problems in Gnatcoll 1.4
 ==============================
 
-Copyright (C) 2011, AdaCore
+Copyright (C) 2011-2012, AdaCore
+
+KP-14-L112-018 Traces.Syslog: storage_error on some systems
+
+  Problem:    On some systems, sending traces to syslog results in a
+              storage_error.
+
+  Status:     Fixed in Gnatcoll 1.5.0
+
+  Workaround: None.
 
 KP-14-KC09-033 Project files not found on x86_64-linux
 

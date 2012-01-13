@@ -79,8 +79,6 @@ package body GNATCOLL.Traces.Syslog is
    --       we need to be able to combine levels and facilities in the call
    --       to syslog...
 
-   Percent_S : constant String := "%s" & ASCII.NUL;
-
    type Syslog_Stream_Record is new Trace_Stream_Record with record
       Buffer   : Unbounded_String;
       Facility : Facilities;
@@ -216,15 +214,15 @@ package body GNATCOLL.Traces.Syslog is
       Level    : Levels     := Emergency;
       Message  : String)
    is
-      procedure Internal
-        (Priority : Integer;
-         Message  : String;
-         Arg      : String);
-      pragma Import (C, Internal, "syslog");
+      --  We go through our own wrapper of syslog, because on some systems
+      --  apparently we get a STORAGE_ERROR when interfacing directly to
+      --  "syslog".
+
+      procedure Internal (Priority : Integer; Message : String);
+      pragma Import (C, Internal, "syslog_wrapper");
       --  Low-level binding
    begin
       Internal (Levels_To_Integer (Level) + Facilities_To_Integer (Facility),
-                Percent_S,
                 Message & ASCII.NUL);
    end Syslog;
 

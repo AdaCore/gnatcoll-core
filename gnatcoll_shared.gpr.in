@@ -52,6 +52,13 @@ project GnatColl_Shared is
               ("-O2", "-gnatn", "-gnatws", "-gnat05");
             for Switches ("C") use ("-O2");
       end case;
+
+      case Syslog is
+         when "yes" =>
+            for Switches ("C") use Compiler'Switches ("C") & ("-DHAVE_SYSLOG");
+         when "no" =>
+            null;
+      end case;
    end Compiler;
 
    package Linker is
