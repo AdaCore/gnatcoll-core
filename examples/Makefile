@@ -19,10 +19,10 @@ endif
 	@echo "==   LD_LIBRARY_PATH=${prefix}/lib/gnat:\$$LD_LIBRARY_PATH"
 
 clean:
-	gprclean -q -Pexamples
+	-gprclean -q -Pexamples
 ifeq ($(WITH_GTK),yes)
-	gprclean -q -Pexamplesgtk
+	-gprclean -q -Pexamplesgtk
 endif
 ifeq ($(WITH_GMP),yes)
-	gprclean -q -Pgmp/gmp_examples.gpr
+	-gprclean -q -Pgmp/gmp_examples.gpr
 endif
