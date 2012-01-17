@@ -252,14 +252,12 @@ package GNATCOLL.Python is
    --  Create a new tuple that contains Size elements
 
    function PyTuple_GetItem (Tuple : PyTuple; Index : Integer) return PyObject;
-   pragma Obsolescent (PyTuple_GetItem, "See PyObject_GetItem instead");
    --  Get the item at a specific location in the tuple, starting at index 0.
    --  Do not decref returned value.
    --  See also PyObject_GetItem
 
    procedure PyTuple_SetItem
      (Tuple : PyTuple; Index : Integer; Value : PyObject);
-   pragma Obsolescent (PyTuple_SetItem, "See PyObject_SetItem instead");
    --  Set an item in the tuple. The reference counting of Value is not
    --  increased
    --  See also PyObject_SetItem
