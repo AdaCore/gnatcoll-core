@@ -50,6 +50,14 @@ package body GNATCOLL.Any_Types.Python is
             A.Str := S;
             return A;
          end;
+      elsif PyUnicode_Check (Object) then
+         declare
+            S : constant String := Unicode_AsString (Object);
+            A : Any_Type (String_Type, S'Length);
+         begin
+            A.Str := S;
+            return A;
+         end;
       elsif PyList_Check (Object) then
          declare
             Size : constant Integer := PyList_Size (Object);
