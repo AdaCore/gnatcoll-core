@@ -221,23 +221,6 @@ package body GNATCOLL.Scripts.Python is
       Show_Command    : Boolean := False;
       Hide_Output     : Boolean := False;
       Hide_Exceptions : Boolean := False;
-      Errors          : access Boolean) return PyObject;
-   --  Execute a command in the interpreter, and send its output to the
-   --  console. Return its return value (which doesn't need to be Py_DECREF,
-   --  since it is a borrowed reference).
-   --  If Hide_Output is True, then nothing is printed on the console. If the
-   --  command is incomplete and would require extra input (a secondary prompt
-   --  in interactive mode), then it is not executed.
-   --  Errors is set to True if there was an error executing the command or
-   --  if the input was incomplete.
-
-   function Run_Command
-     (Script          : access Python_Scripting_Record'Class;
-      Command         : String;
-      Console         : Virtual_Console := null;
-      Show_Command    : Boolean := False;
-      Hide_Output     : Boolean := False;
-      Hide_Exceptions : Boolean := False;
       Errors          : access Boolean) return String;
    --  Same as above, but also return the output of the command
 
@@ -683,10 +666,25 @@ package body GNATCOLL.Scripts.Python is
 
    procedure Set_Nth_Arg
      (Data : in out Python_Callback_Data;
-      N : Positive; Value : Subprogram_Type) is
+      N : Positive; Value : PyObject) is
    begin
-      Set_Item (Data.Args, N - 1,
-                Python_Subprogram_Record (Value.all).Subprogram);
+      Set_Item (Data.Args, N - 1, Value);
+      Py_DECREF (Value);
+   end Set_Nth_Arg;
+
+   -----------------
+   -- Set_Nth_Arg --
+   -----------------
+
+   procedure Set_Nth_Arg
+     (Data : in out Python_Callback_Data;
+      N : Positive; Value : Subprogram_Type)
+   is
+      Subp : constant PyObject :=
+              Python_Subprogram_Record (Value.all).Subprogram;
+   begin
+      Set_Item (Data.Args, N - 1, Subp);
+      Py_DECREF (Subp);
    end Set_Nth_Arg;
 
    -----------------
@@ -2648,6 +2646,15 @@ package body GNATCOLL.Scripts.Python is
       end if;
    end Get_CI;
 
+   ------------------
+   -- Get_PyObject --
+   ------------------
+
+   function Get_PyObject (Instance : Class_Instance) return PyObject is
+   begin
+      return Python_Class_Instance (Get_CIR (Instance)).Data;
+   end Get_PyObject;
+
    -----------------
    -- Is_Subclass --
    -----------------
@@ -2835,20 +2842,31 @@ package body GNATCOLL.Scripts.Python is
    ----------------------
 
    procedure Set_Return_Value
-     (Data : in out Python_Callback_Data; Value : Integer)
+     (Data : in out Python_Callback_Data; Value : PyObject)
    is
       Num : Integer;
       pragma Unreferenced (Num);
-      Val : PyObject;
    begin
       if Data.Return_As_List then
-         Val := PyInt_FromLong (long (Value));
-         Num := PyList_Append (Data.Return_Value, Val);
-         Py_DECREF (Val);
+         Num := PyList_Append (Data.Return_Value, Value);
       else
          Setup_Return_Value (Data);
-         Data.Return_Value := PyInt_FromLong (long (Value));
+         Data.Return_Value := Value;
+         Py_INCREF (Value);
       end if;
+   end Set_Return_Value;
+
+   ----------------------
+   -- Set_Return_Value --
+   ----------------------
+
+   procedure Set_Return_Value
+     (Data : in out Python_Callback_Data; Value : Integer)
+   is
+      Val : constant PyObject := PyInt_FromLong (long (Value));
+   begin
+      Set_Return_Value (Data, Val);
+      Py_DECREF (Val);
    end Set_Return_Value;
 
    ----------------------
@@ -2858,18 +2876,10 @@ package body GNATCOLL.Scripts.Python is
    procedure Set_Return_Value
      (Data : in out Python_Callback_Data; Value : String)
    is
-      Num : Integer;
-      Val : PyObject;
-      pragma Unreferenced (Num);
+      Val : constant PyObject := PyString_FromString (Value);
    begin
-      if Data.Return_As_List then
-         Val := PyString_FromString (Value);
-         Num := PyList_Append (Data.Return_Value, Val);
-         Py_DECREF (Val);
-      else
-         Setup_Return_Value (Data);
-         Data.Return_Value := PyString_FromString (Value);
-      end if;
+      Set_Return_Value (Data, Val);
+      Py_DECREF (Val);
    end Set_Return_Value;
 
    ----------------------
@@ -2879,18 +2889,10 @@ package body GNATCOLL.Scripts.Python is
    procedure Set_Return_Value
      (Data : in out Python_Callback_Data; Value : Boolean)
    is
-      Val : PyObject;
-      Num : Integer;
-      pragma Unreferenced (Num);
+      Val : constant PyObject := PyBool_FromBoolean (Value);
    begin
-      if Data.Return_As_List then
-         Val := PyBool_FromBoolean (Value);
-         Num := PyList_Append (Data.Return_Value, Val);
-         Py_DECREF (Val);
-      else
-         Setup_Return_Value (Data);
-         Data.Return_Value := PyBool_FromBoolean (Value);
-      end if;
+      Set_Return_Value (Data, Val);
+      Py_DECREF (Val);
    end Set_Return_Value;
 
    ----------------------
@@ -3043,9 +3045,13 @@ package body GNATCOLL.Scripts.Python is
       Inst : constant PyObject := Instance.Data;
       Subp : constant PyObject := PyObject_GetAttrString (Inst, Name => Name);
    begin
-      return new Python_Subprogram_Record'
-        (Script     => Python_Scripting (Instance.Script),
-         Subprogram => Subp);
+      if Subp = null then
+         return null;
+      else
+         return new Python_Subprogram_Record'
+           (Script     => Python_Scripting (Instance.Script),
+            Subprogram => Subp);
+      end if;
    end Get_Method;
 
    --------------------

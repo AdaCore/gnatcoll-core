@@ -69,6 +69,36 @@ package GNATCOLL.Scripts.Python is
    --  if any.
    --  The returned value is a borrowed reference and must not be DECREF'd
 
+   procedure Set_Nth_Arg
+     (Data : in out Python_Callback_Data;
+      N : Positive; Value : PyObject);
+   --  Sets the N-th command line parameter using a low-level PyObject.
+
+   procedure Set_Return_Value
+     (Data : in out Python_Callback_Data; Value : PyObject);
+   --  Sets the return value using a low-level PyObject
+
+   function Run_Command
+     (Script          : access Python_Scripting_Record'Class;
+      Command         : String;
+      Console         : Virtual_Console := null;
+      Show_Command    : Boolean := False;
+      Hide_Output     : Boolean := False;
+      Hide_Exceptions : Boolean := False;
+      Errors          : access Boolean) return PyObject;
+   --  Execute a command in the interpreter, and send its output to the
+   --  console. Return its return value (which doesn't need to be Py_DECREF,
+   --  since it is a borrowed reference).
+   --  If Hide_Output is True, then nothing is printed on the console. If the
+   --  command is incomplete and would require extra input (a secondary prompt
+   --  in interactive mode), then it is not executed.
+   --  Errors is set to True if there was an error executing the command or
+   --  if the input was incomplete.
+
+   function Get_PyObject (Instance : Class_Instance) return PyObject;
+   --  Returns the low level PyObject enclosed in a Python Class_Instance.
+   --  You need to be absolutely sure that Instance is a Python Instance.
+
 private
 
    ----------------------
