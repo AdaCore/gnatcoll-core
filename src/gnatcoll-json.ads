@@ -25,6 +25,7 @@ private with Ada.Containers.Vectors;
 private with Ada.Containers.Indefinite_Hashed_Maps;
 with Ada.Finalization;
 private with Ada.Strings.Hash;
+with Ada.Strings.Unbounded;
 with Ada.Unchecked_Deallocation;
 
 package GNATCOLL.JSON is
@@ -42,6 +43,8 @@ package GNATCOLL.JSON is
 
    subtype UTF8_String is String;
    type UTF8_String_Access is access all UTF8_String;
+
+   subtype UTF8_Unbounded_String is Ada.Strings.Unbounded.Unbounded_String;
 
    subtype JSON_Elementary_Value_Type is JSON_Value_Type range
      JSON_Null_Type .. JSON_String_Type;
@@ -92,6 +95,10 @@ package GNATCOLL.JSON is
    pragma Postcondition (Kind (Create'Result) = JSON_String_Type);
    --  Creates a string-typed JSON value
 
+   function Create (Val : UTF8_Unbounded_String) return JSON_Value;
+   pragma Postcondition (Kind (Create'Result) = JSON_String_Type);
+   --  Creates a string-typed JSON value
+
    function Create (Val : JSON_Array) return JSON_Value;
    pragma Postcondition (Kind (Create'Result) = JSON_Array_Type);
    --  Creates a JSON value from the JSON array
@@ -136,6 +143,12 @@ package GNATCOLL.JSON is
    procedure Set_Field
      (Val        : JSON_Value;
       Field_Name : UTF8_String;
+      Field      : UTF8_Unbounded_String);
+   pragma Precondition (Kind (Val) = JSON_Object_Type);
+
+   procedure Set_Field
+     (Val        : JSON_Value;
+      Field_Name : UTF8_String;
       Field      : JSON_Array);
    pragma Precondition (Kind (Val) = JSON_Object_Type);
    --  Any change you do to the array afterward will not impact Val.
@@ -154,6 +167,9 @@ package GNATCOLL.JSON is
    pragma Precondition (Kind (Val) = JSON_Float_Type);
 
    function Get (Val : JSON_Value) return UTF8_String;
+   pragma Precondition (Kind (Val) = JSON_String_Type);
+
+   function Get (Val : JSON_Value) return UTF8_Unbounded_String;
    pragma Precondition (Kind (Val) = JSON_String_Type);
 
    function Get (Val : JSON_Value) return JSON_Array;
@@ -182,6 +198,12 @@ package GNATCOLL.JSON is
       and then Kind (Get (Val, Field)) = JSON_Float_Type);
 
    function Get (Val : JSON_Value; Field : UTF8_String) return UTF8_String;
+   pragma Precondition
+     (Kind (Val) = JSON_Object_Type
+      and then Kind (Get (Val, Field)) = JSON_String_Type);
+
+   function Get
+     (Val : JSON_Value; Field : UTF8_String) return UTF8_Unbounded_String;
    pragma Precondition
      (Kind (Val) = JSON_Object_Type
       and then Kind (Get (Val, Field)) = JSON_String_Type);
@@ -222,7 +244,7 @@ private
       Bool_Value : Boolean;
       Int_Value  : Integer;
       Flt_Value  : Float;
-      Str_Value  : UTF8_String_Access;
+      Str_Value  : UTF8_Unbounded_String;
       Arr_Value  : JSON_Array_Access;
       Obj_Value  : JSON_Object_Access;
    end record;
@@ -259,8 +281,6 @@ private
       Vals  : Names_Pkg.Map;
    end record;
 
-   procedure Free is
-     new Ada.Unchecked_Deallocation (UTF8_String, UTF8_String_Access);
    procedure Free is
      new Ada.Unchecked_Deallocation (JSON_Array, JSON_Array_Access);
    procedure Free is

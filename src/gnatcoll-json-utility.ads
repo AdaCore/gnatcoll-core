@@ -27,8 +27,8 @@ private package GNATCOLL.JSON.Utility is
 
    function Escape_Non_Print_Character (C : Wide_Character) return String;
 
-   function Escape_String (Text : UTF8_String) return String;
+   function Escape_String (Text : UTF8_Unbounded_String) return String;
 
-   function Un_Escape_String (Text : String) return UTF8_String;
+   function Un_Escape_String (Text : String) return UTF8_Unbounded_String;
 
 end GNATCOLL.JSON.Utility;

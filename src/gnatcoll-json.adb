@@ -81,7 +81,7 @@ package body GNATCOLL.JSON is
       procedure Skip_Blancks;
       --  Does Idx + 1 until a non-blanck character is found
 
-      function Read_String return UTF8_String;
+      function Read_String return UTF8_Unbounded_String;
       --  Reads a string
 
       procedure Error (Msg : String) is
@@ -130,7 +130,7 @@ package body GNATCOLL.JSON is
       -- Read_String --
       -----------------
 
-      function Read_String return UTF8_String is
+      function Read_String return UTF8_Unbounded_String is
          Prev : Natural;
 
       begin
@@ -350,7 +350,7 @@ package body GNATCOLL.JSON is
                   Skip_Blancks;
 
                   declare
-                     Name : constant UTF8_String := Read_String;
+                     Name : constant UTF8_Unbounded_String := Read_String;
                   begin
                      Skip_Blancks;
 
@@ -372,7 +372,7 @@ package body GNATCOLL.JSON is
                                  Read (Strm, Idx, Col, Line, Filename);
                      begin
                         Ret.Obj_Value.Vals.Include
-                          (Key      => Name,
+                          (Key      => To_String (Name),
                            New_Item => Item);
                      end;
                   end;
@@ -451,7 +451,7 @@ package body GNATCOLL.JSON is
             end;
 
          when JSON_String_Type =>
-            return JSON.Utility.Escape_String (Item.Str_Value.all);
+            return JSON.Utility.Escape_String (Item.Str_Value);
 
          when JSON_Array_Type =>
             declare
@@ -638,9 +638,7 @@ package body GNATCOLL.JSON is
                  JSON_Float_Type   =>
                null;
             when JSON_String_Type =>
-               if Obj.Str_Value /= null then
-                  Free (Obj.Str_Value);
-               end if;
+               Obj.Str_Value := Null_Unbounded_String;
 
             when JSON_Array_Type =>
                if Obj.Arr_Value /= null then
@@ -711,7 +709,19 @@ package body GNATCOLL.JSON is
       Ret : JSON_Value;
    begin
       Ret.Kind      := JSON_String_Type;
-      Ret.Str_Value := new UTF8_String'(Val);
+      Ret.Str_Value := To_Unbounded_String (Val);
+      return Ret;
+   end Create;
+
+   ------------
+   -- Create --
+   ------------
+
+   function Create (Val : UTF8_Unbounded_String) return JSON_Value is
+      Ret : JSON_Value;
+   begin
+      Ret.Kind := JSON_String_Type;
+      Ret.Str_Value := Val;
       return Ret;
    end Create;
 
@@ -789,6 +799,14 @@ package body GNATCOLL.JSON is
    procedure Set_Field
      (Val        : JSON_Value;
       Field_Name : UTF8_String;
+      Field      : UTF8_Unbounded_String) is
+   begin
+      Set_Field (Val, Field_Name, Create (Field));
+   end Set_Field;
+
+   procedure Set_Field
+     (Val        : JSON_Value;
+      Field_Name : UTF8_String;
       Field      : JSON_Array)
    is
       F_Val : constant JSON_Value := Create (Field);
@@ -838,7 +856,16 @@ package body GNATCOLL.JSON is
 
    function Get (Val : JSON_Value) return UTF8_String is
    begin
-      return Val.Str_Value.all;
+      return To_String (Val.Str_Value);
+   end Get;
+
+   ---------
+   -- Get --
+   ---------
+
+   function Get (Val : JSON_Value) return UTF8_Unbounded_String is
+   begin
+      return Val.Str_Value;
    end Get;
 
    ---------
@@ -897,6 +924,13 @@ package body GNATCOLL.JSON is
    end Get;
 
    function Get (Val : JSON_Value; Field : UTF8_String) return UTF8_String
+   is
+   begin
+      return Get (Get (Val, Field));
+   end Get;
+
+   function Get
+     (Val : JSON_Value; Field : UTF8_String) return UTF8_Unbounded_String
    is
    begin
       return Get (Get (Val, Field));

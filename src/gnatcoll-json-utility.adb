@@ -57,10 +57,10 @@ package body GNATCOLL.JSON.Utility is
    -- Escape_String --
    -------------------
 
-   function Escape_String (Text : UTF8_String) return String is
+   function Escape_String (Text : UTF8_Unbounded_String) return String is
       Ret : Unbounded_String;
       WS  : constant Wide_String :=
-              GNAT.Decode_UTF8_String.Decode_Wide_String (String (Text));
+              GNAT.Decode_UTF8_String.Decode_Wide_String (To_String (Text));
 
    begin
       Append (Ret, '"');
@@ -100,7 +100,7 @@ package body GNATCOLL.JSON.Utility is
    -- Un_Escape_String --
    ----------------------
 
-   function Un_Escape_String (Text : String) return UTF8_String is
+   function Un_Escape_String (Text : String) return UTF8_Unbounded_String is
       First : Integer;
       Last  : Integer;
       Unb   : Unbounded_String;
@@ -177,7 +177,7 @@ package body GNATCOLL.JSON.Utility is
          Idx := Idx + 1;
       end loop;
 
-      return UTF8_String (To_String (Unb));
+      return Unb;
    end Un_Escape_String;
 
 end GNATCOLL.JSON.Utility;
