@@ -4709,22 +4709,20 @@ package body GNATCOLL.Projects is
       procedure Initialize_Source_Records is
 
          procedure For_Sources
-           (Project          : Project_Id;
-            Tree             : Project_Tree_Ref;
-            In_Aggregate_Lib : Boolean;
-            With_State       : in out Integer);
+           (Project : Project_Id;
+            Tree    : Project_Tree_Ref;
+            With_State : in out Integer);
 
          -----------------
          -- For_Sources --
          -----------------
 
          procedure For_Sources
-           (Project          : Project_Id;
-            Tree             : Project_Tree_Ref;
-            In_Aggregate_Lib : Boolean;
-            With_State       : in out Integer)
+           (Project : Project_Id;
+            Tree    : Project_Tree_Ref;
+            With_State : in out Integer)
          is
-            pragma Unreferenced (In_Aggregate_Lib, With_State);
+            pragma Unreferenced (With_State);
             Iter : Source_Iterator := For_Each_Source
                      (In_Tree => Tree, Project => Project);
             Src  : Prj.Source_Id;
@@ -4922,10 +4920,9 @@ package body GNATCOLL.Projects is
      (Self : Project_Tree'Class; With_View : Boolean)
    is
       procedure Do_Project
-        (Proj             : Project_Id;
-         Tree             : Project_Tree_Ref;
-         In_Aggregate_Lib : Boolean;
-         S                : in out Integer);
+        (Proj : Project_Id;
+         Tree : Project_Tree_Ref;
+         S    : in out Integer);
 
       procedure Do_Project2 (T : Project_Node_Tree_Ref; P : Project_Node_Id);
 
@@ -4934,12 +4931,11 @@ package body GNATCOLL.Projects is
       ----------------
 
       procedure Do_Project
-        (Proj             : Project_Id;
-         Tree             : Project_Tree_Ref;
-         In_Aggregate_Lib : Boolean;
-         S                : in out Integer)
+        (Proj : Project_Id;
+         Tree : Project_Tree_Ref;
+         S    : in out Integer)
       is
-         pragma Unreferenced (S, Tree, In_Aggregate_Lib);
+         pragma Unreferenced (S, Tree);
          Name : constant String := Get_String (Proj.Name);
          Iter : Project_Htables.Cursor;
          P    : Project_Type;
