@@ -113,12 +113,6 @@ package GNATCOLL.Memory is
    -------------
    -- Monitor --
    -------------
-   --  This package provides various optional monitoring capabilities. They
-   --  are only activated if the environment variable GPS_MEMORY_MONITOR is
-   --  set. If so, this package will check where memory is allocated and will
-   --  be able to report where memory is mostly in use. You can query this
-   --  information interactively through the Python console:
-   --      GPS.debug_memory_usage (count);
 
    procedure Configure
      (Activate_Monitor  : Boolean := False;
