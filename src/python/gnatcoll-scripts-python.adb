@@ -733,9 +733,14 @@ package body GNATCOLL.Scripts.Python is
    procedure Set_Nth_Arg
      (Data : in out Python_Callback_Data; N : Positive; Value : Class_Instance)
    is
-      Inst : constant PyObject := Python_Class_Instance (Get_CIR (Value)).Data;
+      Inst : PyObject;
    begin
-      Set_Item (Data.Args, N - 1, Inst);  --  Increments refcount
+      if Value = No_Class_Instance then
+         Set_Item (Data.Args, N - 1, Py_None);  --  Increments refcount
+      else
+         Inst := Python_Class_Instance (Get_CIR (Value)).Data;
+         Set_Item (Data.Args, N - 1, Inst);  --  Increments refcount
+      end if;
    end Set_Nth_Arg;
 
    -----------------
