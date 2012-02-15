@@ -1904,6 +1904,13 @@ def generate_orm(setup, pkg_name, tables=[], omit=[], out=sys.stdout):
 
     order_sections(schema, pretty, tables)
 
+    pretty.add_subprogram(
+        name="Str_Or_Empty",
+        params=[("str", "access String")],
+        returns="String",
+        body='if Str = null then return ""; else return Str.all; end if;',
+        section="body")
+
     for t in tables:
         if tables[t].is_abstract:
             generate_orb_one_table(t, schema, pretty, tables)
@@ -2036,7 +2043,7 @@ class Field_Type(object):
                   "text", "String", "String", 'No_Update',
                   "GNAT.Strings.String_Access",
                   "null", "String_Value (%s, %s)",
-                  "%s.all", "Free (%s)", "%s",
+                  "Str_Or_Empty (%s)", "Free (%s)", "%s",
                   "new String'(%s)"),
                integer=Field_Type(
                   "integer", "Integer", "Integer", -1, "Integer", -1,
