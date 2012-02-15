@@ -824,6 +824,7 @@ package body GNATCOLL.SQL.Sessions is
 
          if D.Deleted then
             Delete (R);
+            Self.Element.Cache.Delete (C);  --  Remove from the cache
          else
             Insert_Or_Update (R, PK_Modified, Dirty);
          end if;
