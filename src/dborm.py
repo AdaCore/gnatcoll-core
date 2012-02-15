@@ -962,14 +962,19 @@ def create(pretty, table, schema):
        returns="%s_Managers" % table.name)
 
 
-def from_cache(schema, table, with_self):
+def from_cache_params(schema, table, with_self):
     """Return the parameters passed to the Hash_%row function"""
     if with_self:
         tmp = ", ".join(["Self.%s" % schema.subprogram_name_from_field(p)
                          for p in table.pk])
     else:
         tmp = ", ".join(["%s" % p.name for p in table.pk])
-    return "Hash_%s(%s)" % (table.row, tmp)
+    return tmp
+
+
+def from_cache_hash(schema, table, with_self):
+    return "Hash_%s (%s)" % (
+        table.row, from_cache_params(schema, table, with_self))
 
 
 def detach(pretty, table, schema, translate):
@@ -992,10 +997,20 @@ def detach(pretty, table, schema, translate):
     # session, since the latter might have a shorter lifetime.
 
     if table.pk != []:
-        local = [("R", "Detached_Element_Access"),
-                 ("D", "Detached_Data_Access")]
+        tr = {"row": translate["row"],
+              "fromcache": from_cache_params(schema, table, with_self=True)}
 
-        body = """Self.Data.Session.From_Cache (%(fromcache)s, R, D);
+        pretty.add_subprogram(
+            name="from_cache",
+            params=[("session", "Session_Type")] + schema.params_get_pk(table),
+            section="Elements: %(cap)s" % translate,
+            returns="Detached_%(row)s'Class" % translate,
+            local_vars=[("R", "Detached_Element_Access"),
+                        ("D", "Detached_Data_Access")],
+            comment="""Lookup in the session whether there is already an element
+with this primary key. If not, the returned value will be a null element
+(test with Is_Null)""",
+            body="""Session.From_Cache (%(fromcache)s, R, D);
        if R /= null then
           declare
              R2 : Detached_%(row)s'Class := Detached_%(row)s'Class (R.all);
@@ -1004,12 +1019,25 @@ def detach(pretty, table, schema, translate):
              return R2;
           end;
        else
-          return Detach_No_Lookup (Self, Self.Data.Session);
-        end if;"""
+          return No_Detached_%(row)s;
+       end if;""" % {
+                "row": translate["row"],
+                "fromcache": from_cache_hash(schema, table, with_self=False)}
+            )
+
+        local = [("R", "constant Detached_%(row)s'Class" % translate,
+                  "From_Cache (Self.Data.Session, %s)" %
+                  from_cache_params(schema, table, with_self=True))]
+        body = """if R.Is_Null then
+              return Detach_No_Lookup (Self, Self.Data.Session);
+          else
+              return R;
+          end if;"""
 
     else:
         local = []
         body = "return Detach_No_Lookup (Self, Self.Data.Session);"
+
 
     pretty.add_subprogram(
        name="detach",
@@ -1017,9 +1045,7 @@ def detach(pretty, table, schema, translate):
        section="Elements: %(cap)s" % translate,
        returns="Detached_%(row)s'Class" % translate,
        local_vars=local,
-       body=body
-        % {"row": translate["row"],
-           "fromcache": from_cache(schema, table, with_self=True)})
+       body=body % tr)
 
     # Internal version of Detach
 
@@ -1293,25 +1319,16 @@ def generate_orb_one_table(name, schema, pretty, all_tables):
                   + schema.params_get_pk(table)
                   + [("Depth",            "Related_Depth", "0"),
                      ("Follow_Left_Join", "Boolean", "False")],
-               local_vars=[("R", "Detached_Element_Access"),
-                           ("D", "Detached_Data_Access")],
-               body="""Session.From_Cache (%(fromcache)s, R, D);
-            if R /= null then
-               --  Ignore Depth, we'll query later if needed
-               declare
-                  R2 : Detached_%(row)s'Class :=
-                     Detached_%(row)s'Class (R.all);
-               begin
-                  Set (R2, D);
-                  return R2;
-               end;
+               local_vars=[("R",
+                            "constant Detached_%s'Class" % table.row,
+                            "From_Cache (Session, %s)" %
+                            from_cache_params(schema, table, with_self=False))],
+               body = """if not R.Is_Null then
+               return R;
             else
                declare
                  M : %(name)s_Managers := All_%(cap)s.Filter
-                   (""" % {"fromcache":
-                              from_cache(schema, table, with_self=False),
-                           "row": table.row,
-                           "name": table.name,
+                   (""" % {"name": table.name,
                            "cap": pretty._title(name)}
                  + ",".join(schema.call_create_params(name))
                  + """);
