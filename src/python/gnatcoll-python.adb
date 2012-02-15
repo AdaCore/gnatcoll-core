@@ -676,17 +676,17 @@ package body GNATCOLL.Python is
    -- PyObject_GenericSetAttrString --
    -----------------------------------
 
-   procedure PyObject_GenericSetAttrString
+   function PyObject_GenericSetAttrString
      (Object : PyObject;
       Name   : String;
-      Attr   : PyObject)
+      Attr   : PyObject) return Integer
    is
       N : constant PyObject := PyString_FromString (Name);
       Result : Integer;
-      pragma Unreferenced (Result);
    begin
       Result := PyObject_GenericSetAttr (Object, N, Attr);
       Py_DECREF (N);
+      return Result;
    end PyObject_GenericSetAttrString;
 
    -----------------

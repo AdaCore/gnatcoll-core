@@ -147,12 +147,11 @@ package GNATCOLL.Python is
    --  __dict__, not with its __setattr__ method.
    --  Name must be decref-ed by the caller.
 
-   procedure PyObject_GenericSetAttrString
+   function PyObject_GenericSetAttrString
      (Object : PyObject;
       Name   : String;
-      Attr   : PyObject);
-   --  Same as above, but accepts a string as parameter and hides the returned
-   --  value.
+      Attr   : PyObject) return Integer;
+   --  Same as above, but accepts a string as parameter
 
    function PyObject_HasAttrString
      (Obj : PyObject; Attr_Name : String) return Boolean;

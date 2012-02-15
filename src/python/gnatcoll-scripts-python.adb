@@ -2575,7 +2575,7 @@ package body GNATCOLL.Scripts.Python is
       --  freed while the python object exists.
       Incref (Get_CIR (CI));
 
-      if PyObject_SetAttrString
+      if PyObject_GenericSetAttrString
         (Python_Class_Instance (Get_CIR (CI)).Data, "__gps_data", Data) /= 0
       then
          PyErr_Clear;
@@ -3298,9 +3298,11 @@ package body GNATCOLL.Scripts.Python is
       Name     : String; Value : Integer)
    is
       Val : PyObject;
+      Result : Integer;
+      pragma Unreferenced (Result);
    begin
       Val := PyInt_FromLong (long (Value));
-      PyObject_GenericSetAttrString (Instance.Data, Name, Val);
+      Result := PyObject_GenericSetAttrString (Instance.Data, Name, Val);
       Py_DECREF (Val);
    end Set_Property;
 
@@ -3309,9 +3311,11 @@ package body GNATCOLL.Scripts.Python is
       Name     : String; Value : Boolean)
    is
       Val : PyObject;
+      Result : Integer;
+      pragma Unreferenced (Result);
    begin
       Val := PyBool_FromBoolean (Value);
-      PyObject_GenericSetAttrString (Instance.Data, Name, Val);
+      Result := PyObject_GenericSetAttrString (Instance.Data, Name, Val);
       Py_DECREF (Val);
    end Set_Property;
 
@@ -3320,9 +3324,11 @@ package body GNATCOLL.Scripts.Python is
       Name     : String; Value : String)
    is
       Val : PyObject;
+      Result : Integer;
+      pragma Unreferenced (Result);
    begin
       Val := PyString_FromString (Value);
-      PyObject_GenericSetAttrString (Instance.Data, Name, Val);
+      Result := PyObject_GenericSetAttrString (Instance.Data, Name, Val);
       Py_DECREF (Val);
    end Set_Property;
 
