@@ -568,6 +568,9 @@ package GNATCOLL.Scripts is
    --
    --  If you want true read-only properties, you need to use Register_Property
    --  through getters and setters.
+   --
+   --  In Python, this procedure doesn't go through the class's __setattr_
+   --  function.
 
    --------------------
    -- Instance lists --

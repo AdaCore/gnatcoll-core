@@ -138,6 +138,22 @@ package GNATCOLL.Python is
      (Obj : PyObject; Attr_Name : String; Value : PyObject);
    --  Same as above
 
+   function PyObject_GenericSetAttr
+     (Object : PyObject;
+      Name   : PyObject;
+      Attr   : PyObject) return Integer;
+   pragma Import (C, PyObject_GenericSetAttr, "PyObject_GenericSetAttr");
+   --  Generic attribute setter that directly interface with the object's
+   --  __dict__, not with its __setattr__ method.
+   --  Name must be decref-ed by the caller.
+
+   procedure PyObject_GenericSetAttrString
+     (Object : PyObject;
+      Name   : String;
+      Attr   : PyObject);
+   --  Same as above, but accepts a string as parameter and hides the returned
+   --  value.
+
    function PyObject_HasAttrString
      (Obj : PyObject; Attr_Name : String) return Boolean;
    --  Whether a specific attribute exists for the object

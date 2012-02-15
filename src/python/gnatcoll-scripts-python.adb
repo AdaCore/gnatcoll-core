@@ -3300,7 +3300,7 @@ package body GNATCOLL.Scripts.Python is
       Val : PyObject;
    begin
       Val := PyInt_FromLong (long (Value));
-      PyObject_SetAttrString (Instance.Data, Name, Val);
+      PyObject_GenericSetAttrString (Instance.Data, Name, Val);
       Py_DECREF (Val);
    end Set_Property;
 
@@ -3311,7 +3311,7 @@ package body GNATCOLL.Scripts.Python is
       Val : PyObject;
    begin
       Val := PyBool_FromBoolean (Value);
-      PyObject_SetAttrString (Instance.Data, Name, Val);
+      PyObject_GenericSetAttrString (Instance.Data, Name, Val);
       Py_DECREF (Val);
    end Set_Property;
 
@@ -3322,7 +3322,7 @@ package body GNATCOLL.Scripts.Python is
       Val : PyObject;
    begin
       Val := PyString_FromString (Value);
-      PyObject_SetAttrString (Instance.Data, Name, Val);
+      PyObject_GenericSetAttrString (Instance.Data, Name, Val);
       Py_DECREF (Val);
    end Set_Property;
 
