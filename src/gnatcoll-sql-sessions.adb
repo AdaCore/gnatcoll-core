@@ -62,7 +62,7 @@ package body GNATCOLL.SQL.Sessions is
      (Self        : in out Null_Element;
       PK_Modified : in out Boolean;
       Dirty       : Dirty_Mask) is null;
-   overriding procedure Delete (Self : Null_Element) is null;
+   overriding procedure Internal_Delete (Self : Null_Element) is null;
    --  A special, always uninitialized element
 
    procedure Clear_Cache (Data : in out Session_Data);
@@ -782,11 +782,14 @@ package body GNATCOLL.SQL.Sessions is
       --  weak ref, that means the element has not been modified
 
       if D.WRef /= Pointers.Null_Weak_Ref
-        or not Is_Dirty (Get_Data (D))
+        or else (not Is_Dirty (Get_Data (D))
+                 and then not D.Deleted)
       then
          Next (C);
          return;
       end if;
+
+      Trace (Me, "MANU Insert_Delete_Or_Update deleted=" & D.Deleted'Img);
 
       if Active (Me) then
          Trace_Debug (Me, C, "Flush: ");
@@ -811,6 +814,7 @@ package body GNATCOLL.SQL.Sessions is
            Detached_Element'Class'(D.Ref.all);
          Dirty : constant Dirty_Mask := Get_Data (D).Dirty;
          Old_Hash : constant String := Key (C);
+         C_Next : Element_Cache.Cursor;
       begin
          Set (R, Get_Data (D));
          Self.Element.Tmp_List.Append (R);
@@ -822,8 +826,10 @@ package body GNATCOLL.SQL.Sessions is
 
          D := Set_Clean (Self, C);
 
+         C_Next := Next (C);
+
          if D.Deleted then
-            Delete (R);
+            Internal_Delete (R);
             Self.Element.Cache.Delete (C);  --  Remove from the cache
          else
             Insert_Or_Update (R, PK_Modified, Dirty);
@@ -856,16 +862,12 @@ package body GNATCOLL.SQL.Sessions is
                             & " inserted=" & Inserted'Img);
                   end if;
 
-                  C2 := C;
-                  Next (C);
-                  Self.Element.Cache.Delete (C2);
-               else
-                  Next (C);
+                  Self.Element.Cache.Delete (C);
                end if;
             end;
-         else
-            Next (C);
          end if;
+
+         C := C_Next;
       end;
    end Insert_Delete_Or_Update;
 
@@ -885,6 +887,7 @@ package body GNATCOLL.SQL.Sessions is
       if Has_Element (C) then
          D := Element_Cache.Element (C);
          D.Deleted := True;
+         Self.Element.Has_Modified_Elements := True;
          Self.Element.Cache.Replace_Element (C, D);
       end if;
    end Delete;
@@ -906,16 +909,6 @@ package body GNATCOLL.SQL.Sessions is
          Decrease_Indent (Me, "Done flushing session");
 
          Clear (Self.Element.Tmp_List);
-      end if;
-
-      --  This might remove some elements from the cache
-
-      if Active (Me) then
-         Increase_Indent (Me, "removing elements from cache");
-      end if;
-
-      if Active (Me) then
-         Decrease_Indent (Me, "Done removing elements from cache");
       end if;
 
       --  Do not clear the cache.
@@ -1032,5 +1025,14 @@ package body GNATCOLL.SQL.Sessions is
 
       return D.User;
    end Get_User_Data;
+
+   ------------
+   -- Delete --
+   ------------
+
+   procedure Delete (Element : Detached_Element) is
+   begin
+      Element.Session.Delete (Element);
+   end Delete;
 
 end GNATCOLL.SQL.Sessions;

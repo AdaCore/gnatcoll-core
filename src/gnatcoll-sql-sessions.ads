@@ -274,6 +274,10 @@ package GNATCOLL.SQL.Sessions is
    --  Return the session to which Self is attached, or No_Session if that
    --  session has been closed.
 
+   procedure Delete (Element : Detached_Element);
+   --  A shortcut for Element.Session.Detach (Element).
+   --  This assumes the element belongs to a session.
+
    ----------------------------
    -- Modifying the database --
    ----------------------------
@@ -466,7 +470,7 @@ package GNATCOLL.SQL.Sessions is
    --  the session cache appropriately (taking into account changes in the
    --  primary key, converting references to weak references,...)
 
-   procedure Delete (Self : Detached_Element) is abstract;
+   procedure Internal_Delete (Self : Detached_Element) is abstract;
    --  Emit the SQL necessary to delete the element from the database.
 
    -----------

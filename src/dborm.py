@@ -1520,19 +1520,17 @@ def generate_orb_one_table(name, schema, pretty, all_tables):
             body=insert_or_update)
 
         if has_pk:
-            #local_vars=[("D", "constant %(row)s_Data" % translate,
-            #             "%(row)s_Data (Self.Get)" % translate)]
-            local_vars = []
-            delete_body = "Self.Session.Delete (Self);"
-            #delete_body = ("Execute (Self.Session.DB,"
-            #   + " SQL_Delete (DBA.%(table)s, %(where)s));") % tr
+            local_vars=[("D", "constant %(row)s_Data" % translate,
+                         "%(row)s_Data (Self.Get)" % translate)]
+            delete_body = ("Execute (Self.Session.DB,"
+               + " SQL_Delete (DBA.%(table)s, %(where)s));") % tr
         else:
             local_vars = []
             delete_body = ('raise Program_Error with'
                + ' "Table %(cap)s has no primary key";') % translate
 
         pretty.add_subprogram(
-            name="delete",
+            name="internal_delete",
             params=[("self", "detached_%(row)s" % translate)],
             overriding=True,
             section="internal",
