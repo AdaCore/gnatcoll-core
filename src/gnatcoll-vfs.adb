@@ -644,12 +644,15 @@ package body GNATCOLL.VFS is
      (File         : Virtual_File;
       Cygwin_Style : Boolean := False) return Filesystem_String
    is
+      FS : FS_Type;
    begin
       if File.Value = null then
          return "";
       else
+         FS := File.Value.Get_FS;
+
          return +To_Unix
-           (File.Value.Get_FS, File.Value.Full.all, Cygwin_Style);
+           (FS, File.Value.Full.all, Cygwin_Style);
       end if;
    end Unix_Style_Full_Name;
 
