@@ -536,13 +536,6 @@ private
 
       User     : User_Data_Access;
       --  User data for this session, will be allocated when Get is called.
-
-      Tmp_List : Element_List.List;
-      --  A temporary list used while flushing a session: it is used to
-      --  artificially increase the refcounting on elements, so that when
-      --  changing from full ref to weak ref, the element does not get removed
-      --  from the cache immediately (since we are traversing the cache at that
-      --  time).
    end record;
    --  Cache is implemented as an access type for efficiency: otherwise, every
    --  time we query Session.Element we would get a copy of the cache.

@@ -31,6 +31,7 @@
 with Ada.Unchecked_Deallocation;
 with GNATCOLL.SQL;        use GNATCOLL.SQL;
 with GNATCOLL.Traces;     use GNATCOLL.Traces;
+with GNATCOLL.Scripts;
 
 package body GNATCOLL.SQL.Sessions is
    Me : constant Trace_Handle := Create ("Session", Off);
@@ -50,8 +51,7 @@ package body GNATCOLL.SQL.Sessions is
    --  Return True if Data has been modified in memory, and not synchronized
    --  yet with the database
 
-   function Set_Clean (Self : Session_Type'Class; C : Element_Cache.Cursor)
-     return Ref_Or_Weak;
+   procedure Set_Clean (Self : Session_Type'Class; C : Element_Cache.Cursor);
    --  Mark the element has clean, and change to a weak ref if needed.
    --  This procedure might change the contents of the cache if we were owning
    --  the last reference to the element.
@@ -74,11 +74,27 @@ package body GNATCOLL.SQL.Sessions is
       Msg : String := "");
    --  Print information on C
 
+   package String_Lists renames GNATCOLL.Scripts.String_Lists;
+   use String_Lists;
+
    procedure Insert_Delete_Or_Update
-     (Self    : Session_Type;
-      C       : in out Element_Cache.Cursor);
-   --  Flush the specific element at the given index. C is move to the next
-   --  element in the cache.
+     (Self      : Session_Type;
+      C         : Element_Cache.Cursor;
+      Tmp_List  : in out Element_List.List;
+      To_Add    : in out Element_List.List;
+      To_Delete : in out String_Lists.List);
+   --  Flush the specific element at the given index.  To_Delete contains on
+   --  exit the list of elements to remove from the cache (since we can't do
+   --  that while traversing the cache).
+   --  To_Add is the list of elements that should be added to the cache.
+   --  Tmp_List is used to hold temporary references to elements that we are
+   --  converting back to a weak reference so that it isn't removed from the
+   --  cache and the latter is not modified.
+
+   procedure Add_To_Cache (Self : Session_Type; E : Detached_Element'Class);
+   --  Add the element into the cache. We want the element to outlive the
+   --  session (so that we can find out all changes when committing the
+   --  session), so we store a real reference.
 
    -----------------
    -- Ref_Or_Weak --
@@ -166,7 +182,6 @@ package body GNATCOLL.SQL.Sessions is
       return (DB                    => DB,
               Pool                  => Data.Pool,
               Cache                 => new Element_Cache.Map,
-              Tmp_List              => Element_List.Empty_List,
               User                  => null,
               Store_Unmodified      => Data.Config_Store_Unmodified,
               Weak_Cache            => Data.Config_Weak_Cache,
@@ -437,25 +452,25 @@ package body GNATCOLL.SQL.Sessions is
          if not Active (Me) and then Count /= 1 then
             --  Always show when an element has remaining references, since it
             --  helps debugging memory issues.
-            Trace (Me_Info, Msg & " (remaining refs to " & Key (C)
-                   & " refcount=" & Count'Img & ")");
+            Trace (Me_Info, Msg & " (remaining refs to '" & Key (C)
+                   & "' refcount=" & Count'Img & ")");
          end if;
 
          if Data = null then
-            Trace (Me, Msg & "ref to deallocated element " & Key (C)
-                   & " refcount=" & Count'Img);
+            Trace (Me, Msg & "ref to deallocated '" & Key (C)
+                   & "' refcount=" & Count'Img);
          elsif Is_Dirty (Data) then
-            Trace (Me, Msg & "ref to modified element " & Key (C)
-                   & " refcount=" & Count'Img);
+            Trace (Me, Msg & "ref to modified '" & Key (C)
+                   & "' refcount=" & Count'Img);
          else
-            Trace (Me, Msg & "ref to unmodified element " & Key (C)
-                   & " refcount=" & Count'Img);
+            Trace (Me, Msg & "ref to unmodified '" & Key (C)
+                   & "' refcount=" & Count'Img);
          end if;
       else
          if Was_Freed (D.WRef) then
-            Trace (Me, Msg & "weakref to freed element " & Key (C));
+            Trace (Me, Msg & "weakref to freed '" & Key (C) & "'");
          else
-            Trace (Me, Msg & "weakref to element " & Key (C));
+            Trace (Me, Msg & "weakref to '" & Key (C) & "'");
          end if;
       end if;
    end Trace_Debug;
@@ -645,40 +660,42 @@ package body GNATCOLL.SQL.Sessions is
            Self.Element.Has_Modified_Elements or else Is_Dirty (D);
       end if;
 
-      --  Add the element into the cache. We want the element to outlive the
-      --  session (so that we can find out all changes when committing the
-      --  session), so we store a real reference.
-
-      declare
-         H : constant String := Hash (Element);
-         R : Ref_Or_Weak :=
-           (Ref     => new Detached_Element'Class'(Element),
-            WRef    => Pointers.Null_Weak_Ref);
-         Inserted : Boolean;
-         Pos : Element_Cache.Cursor;
-      begin
-         if Self.Element.Weak_Cache
-           and then not Is_Dirty (Detached_Data_Access (Element.Get))
-         then
-            To_Weak_Reference (R);
-         else
-            To_Real_Reference (R);
-         end if;
-
-         Self.Element.Cache.Insert
-           (Key => H, New_Item => R, Position => Pos, Inserted => Inserted);
-         if Inserted then
-            if Active (Me) then
-               Trace (Me, "Adding to session: " & Hash (Element)
-                      & " has_modified_elems: "
-                      & Self.Element.Has_Modified_Elements'Img);
-            end if;
-            On_Persist (Element);
-         else
-            Unchecked_Free (R.Ref);
-         end if;
-      end;
+      Add_To_Cache (Self, Element);
    end Persist;
+
+   ------------------
+   -- Add_To_Cache --
+   ------------------
+
+   procedure Add_To_Cache (Self : Session_Type; E : Detached_Element'Class) is
+      H : constant String := Hash (E);
+      R : Ref_Or_Weak :=
+        (Ref     => new Detached_Element'Class'(E),
+         WRef    => Pointers.Null_Weak_Ref);
+      Inserted : Boolean;
+      Pos : Element_Cache.Cursor;
+   begin
+      if Self.Element.Weak_Cache
+        and then not Is_Dirty (Detached_Data_Access (E.Get))
+      then
+         To_Weak_Reference (R);
+      else
+         To_Real_Reference (R);
+      end if;
+
+      Self.Element.Cache.Insert
+        (Key => H, New_Item => R, Position => Pos, Inserted => Inserted);
+      if Inserted then
+         if Active (Me) then
+            Trace (Me, "Adding to session: " & H
+                   & " has_modified_elems: "
+                   & Self.Element.Has_Modified_Elements'Img);
+         end if;
+         On_Persist (E);
+      else
+         Unchecked_Free (R.Ref);
+      end if;
+   end Add_To_Cache;
 
    --------------
    -- Is_Dirty --
@@ -698,8 +715,8 @@ package body GNATCOLL.SQL.Sessions is
    -- Set_Clean --
    ---------------
 
-   function Set_Clean
-     (Self : Session_Type'Class; C : Element_Cache.Cursor) return Ref_Or_Weak
+   procedure Set_Clean
+     (Self : Session_Type'Class; C : Element_Cache.Cursor)
    is
       D    : Ref_Or_Weak := Element (C);
       Data : constant Detached_Data_Access := Get_Data (D);
@@ -714,8 +731,6 @@ package body GNATCOLL.SQL.Sessions is
             Self.Element.Cache.Replace_Element (C, D);
          end if;
       end if;
-
-      return D;
    end Set_Clean;
 
    -----------------
@@ -762,10 +777,10 @@ package body GNATCOLL.SQL.Sessions is
       Element : in out Detached_Element'Class)
    is
       H : constant String := Hash (Element);
-      C : Element_Cache.Cursor := Self.Element.Cache.Find (H);
+      C : constant Element_Cache.Cursor := Self.Element.Cache.Find (H);
    begin
       if Has_Element (C) then
-         Insert_Delete_Or_Update (Self, C);
+         Flush (Self);
       else
          Trace (Me, "Insert_Or_Update: element " & H & " not in cache");
       end if;
@@ -776,11 +791,14 @@ package body GNATCOLL.SQL.Sessions is
    -----------------------------
 
    procedure Insert_Delete_Or_Update
-     (Self    : Session_Type;
-      C       : in out Element_Cache.Cursor)
+     (Self      : Session_Type;
+      C         : Element_Cache.Cursor;
+      Tmp_List  : in out Element_List.List;
+      To_Add    : in out Element_List.List;
+      To_Delete : in out String_Lists.List)
    is
-      D    : Ref_Or_Weak := Element (C);
-      PK_Modified : Boolean;
+      D    : constant Ref_Or_Weak := Element (C);
+      PK_Modified : Boolean := False;
    begin
       --  We only need to look at actual references: if we still have a
       --  weak ref, that means the element has not been modified
@@ -788,7 +806,6 @@ package body GNATCOLL.SQL.Sessions is
       if D.WRef /= Pointers.Null_Weak_Ref
         or else not Is_Dirty (Get_Data (D))
       then
-         Next (C);
          return;
       end if;
 
@@ -815,66 +832,28 @@ package body GNATCOLL.SQL.Sessions is
            Detached_Element'Class'(D.Ref.all);
          Dirty : constant Dirty_Mask := Get_Data (D).Dirty;
          Old_Hash : constant String := Key (C);
-         C_Next : Element_Cache.Cursor;
       begin
          Set (R, Get_Data (D));
-         Self.Element.Tmp_List.Append (R);
-
-         PK_Modified := False;
+         Tmp_List.Append (R);
 
          --  Reset the dirty mask, to prevent infinite recursion when an
          --  element depends (possibly indirectly) on itself
 
-         D := Set_Clean (Self, C);
-
-         C_Next := Next (C);
+         Set_Clean (Self, C);
 
          if Dirty (Dirty_Mask_Deleted) then
             Internal_Delete (R);
-            Self.Element.Cache.Delete (C);  --  Remove from the cache
+            To_Delete.Append (Old_Hash);  --  Will remove from cache
          else
             Insert_Or_Update (R, PK_Modified, Dirty);
-         end if;
 
-         if not Success (Self.DB) then
-            Trace
-              (Me, "Error in SQL statement: " & Last_Error_Message (Self.DB));
-
-            --  Do not rollback explicitly, the user will have to do it.
-            --  Otherwise, the cache is cleared automatically, and calling
-            --  Element.Session will now raise an error, which doesn't allow
-            --  for clean error recovery.
-
-            --   Self.Rollback;
-
-            C := Element_Cache.No_Element;
-            return;
-         end if;
-
-         if PK_Modified then
-            declare
-               H  : constant String := Hash (R);
-               C2 : Element_Cache.Cursor;
-               Inserted : Boolean;
-            begin
-               if H /= Old_Hash then
-                  Self.Element.Cache.Insert
-                    (Key      => H,
-                     New_Item => D,
-                     Position => C2,
-                     Inserted => Inserted);
-
-                  if Active (Me) then
-                     Trace (Me, "Changed primary key: " & H
-                            & " inserted=" & Inserted'Img);
-                  end if;
-
-                  Self.Element.Cache.Delete (C);
+            if PK_Modified then
+               if Hash (R) /= Old_Hash then
+                  To_Add.Append (R);  --  Will insert in cache
+                  To_Delete.Append (Old_Hash);  --  Will remove from cache
                end if;
-            end;
+            end if;
          end if;
-
-         C := C_Next;
       end;
    end Insert_Delete_Or_Update;
 
@@ -898,15 +877,39 @@ package body GNATCOLL.SQL.Sessions is
       use Element_List;
 
       C    : Element_Cache.Cursor := Self.Element.Cache.First;
+      To_Delete : String_Lists.List;
+      C2   : String_Lists.Cursor;
+      To_Add, Tmp_List : Element_List.List;
+      C3 : Element_List.Cursor;
    begin
       if Self.Element.Has_Modified_Elements then
          Increase_Indent (Me, "Flushing session");
          while Has_Element (C) loop
-            Insert_Delete_Or_Update (Self, C);
+            Insert_Delete_Or_Update
+              (Self, C, Tmp_List => Tmp_List, To_Add => To_Add,
+               To_Delete => To_Delete);
+            Next (C);
          end loop;
-         Decrease_Indent (Me, "Done flushing session");
 
-         Clear (Self.Element.Tmp_List);
+         if not Tmp_List.Is_Empty then
+            Trace (Me, "Add element to cache, since the hash has changed");
+            C3 := Tmp_List.First;
+            while Has_Element (C3) loop
+               Add_To_Cache (Self, E => Element_List.Element (C3));
+               Next (C3);
+            end loop;
+         end if;
+
+         if not To_Delete.Is_Empty then
+            Trace (Me, "Removing elements from the cache");
+            C2 := To_Delete.First;
+            while Has_Element (C2) loop
+               Self.Element.Cache.Delete (String_Lists.Element (C2));
+               Next (C2);
+            end loop;
+         end if;
+
+         Decrease_Indent (Me, "Done flushing session");
          Self.Element.Has_Modified_Elements := False;
       end if;
 
