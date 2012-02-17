@@ -839,7 +839,13 @@ package body GNATCOLL.SQL.Sessions is
             Trace
               (Me, "Error in SQL statement: " & Last_Error_Message (Self.DB));
 
-            Self.Rollback;
+            --  Do not rollback explicitly, the user will have to do it.
+            --  Otherwise, the cache is cleared automatically, and calling
+            --  Element.Session will now raise an error, which doesn't allow
+            --  for clean error recovery.
+
+            --   Self.Rollback;
+
             C := Element_Cache.No_Element;
             return;
          end if;
