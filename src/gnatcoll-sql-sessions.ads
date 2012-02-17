@@ -439,10 +439,14 @@ package GNATCOLL.SQL.Sessions is
    --  Wrap, if needed, From into another element.
    --  This calls the Element_Factory set for the session
 
-   type Dirty_Mask is array (Natural range <>) of Boolean;
+   subtype Dirty_Mask_Field is Natural;
+   Dirty_Mask_Deleted : constant Dirty_Mask_Field := 0;
+
+   type Dirty_Mask is array (Dirty_Mask_Field range <>) of Boolean;
    --  Used internally to memorize which fields have been modified. When an
    --  object is saved into the database, the SQL query will only set those
    --  fields for which the Dirty_Mask is set to True.
+   --  Index '0' indicates whether the element should be deleted
 
    procedure Set_Modified (Self : Detached_Element; Field : Natural);
    --  Mark the Field-th field in Self as modified in memory. This change will
@@ -497,9 +501,6 @@ private
       --  Get(Ref)=null  when we contain a weak reference.
       --  Otherwise, we would be holding a reference to the data. We always
       --  need to have a Ref, so that we can return the proper Tag.
-
-      Deleted : Boolean := False;
-      --  Whether the element was marked as deleted
 
       WRef : Pointers.Weak_Ref := Pointers.Null_Weak_Ref;
       --  Set if we are containing a weak reference
@@ -592,7 +593,7 @@ private
      (Field_Count : Natural) is abstract new Weak_Refcounted with
       record
          Session : Weak_Session;
-         Dirty   : Dirty_Mask (1 .. Field_Count) := (others => False);
+         Dirty   : Dirty_Mask (0 .. Field_Count) := (others => False);
       end record;
    overriding procedure Free (Self : in out Detached_Data);
 
