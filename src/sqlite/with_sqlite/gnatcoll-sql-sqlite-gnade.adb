@@ -25,13 +25,71 @@ with Ada.Unchecked_Conversion;
 with Interfaces.C;             use Interfaces.C;
 with Interfaces.C.Strings;     use Interfaces.C.Strings;
 with System.Address_Image;
+with GNATCOLL.Traces;          use GNATCOLL.Traces;
 
 package body GNATCOLL.SQL.Sqlite.Gnade is
+   Me : constant Trace_Handle := Create ("SQL.SQLITE.GNADE", Off);
+   Debug : constant Boolean := False;
+   --  Low-level debugging enabled. This traces all C functions that are
+   --  called, and is used to check whether we use sqlite correctly.
+
    type Address_Array is array (Natural) of System.Address;
    pragma Convention (C, Address_Array);
 
    function To_Chars_Ptr is new Ada.Unchecked_Conversion
      (System.Address, chars_ptr);
+
+   type Sqlite3_Config_Option is
+     (
+      --  Disable all mutexes
+      Config_Single_Thread,  --  nil
+
+      --  Cannot share connections among threads
+      Config_Multi_Thread,   --  nil
+
+      --  Full serialization done by sqlite3, connections can be used
+      --  from multithreads concurrently.
+      Config_Serialized,     --  nil
+
+      --  Specifies alternative memory allocation method
+      Config_Malloc,         --  sqlite3_mem_methods
+      Config_Get_Malloc,     --  sqlite3_mem_methods
+
+      --  Specifies static buffers to use in various cases
+      Config_Scratch,        --  void*, int sz, int N
+      Config_Page_Cache,     --  void*, int sz, int N
+      Config_Heap,           --  void*, int nByte, int min
+
+      --  Should we collect memory allocation statistics (default is True)
+      Config_Mem_Status,     --  boolean
+
+      --  Alternative low-level mutexes
+      Config_Mutex,          --  sqlite3_mutex_methods
+      Config_Get_Mutex,      --  sqlite3_mutex_methods
+
+      Config_Look_Aside,     --  int int
+      Config_Pcache,         --  sqlite3_pcache_methods
+      Config_Get_Pcache,     --  sqlite3_pcache_methods
+      Config_Log,            --  xFunc, void*
+      Config_URI);           --  int
+
+   for Sqlite3_Config_Option use
+     (Config_Single_Thread => 1,
+      Config_Multi_Thread  => 2,
+      Config_Serialized    => 3,
+      Config_Malloc        => 4,
+      Config_Get_Malloc    => 5,
+      Config_Scratch       => 6,
+      Config_Page_Cache    => 7,
+      Config_Heap          => 8,
+      Config_Mem_Status    => 9,
+      Config_Mutex         => 10,
+      Config_Get_Mutex     => 11,
+      Config_Look_Aside    => 13,
+      Config_Pcache        => 14,
+      Config_Get_Pcache    => 15,
+      Config_Log           => 16,
+      Config_URI           => 17);
 
    ----------
    -- Open --
@@ -54,6 +112,10 @@ package body GNATCOLL.SQL.Sqlite.Gnade is
       Ignored : Result_Codes;
       pragma Unreferenced (Ignored);
    begin
+      if Debug then
+         Trace (Me, "sqlite3_open_v2");
+      end if;
+
       Status := Internal
         (Filename & ASCII.NUL, DB2'Unchecked_Access, Integer (Flags));
 
@@ -73,6 +135,10 @@ package body GNATCOLL.SQL.Sqlite.Gnade is
       function Internal (DB : Database) return chars_ptr;
       pragma Import (C, Internal, "sqlite3_errmsg");
    begin
+      if Debug then
+         Trace (Me, "sqlite3_errmsg");
+      end if;
+
       --  No need to free the result
       return Value (Internal (DB));
    end Error_Msg;
@@ -97,10 +163,18 @@ package body GNATCOLL.SQL.Sqlite.Gnade is
       if DB /= null then
          --  Finalize prepared statements
          loop
+            if Debug then
+               Trace (Me, "sqlite3_next_stmt");
+            end if;
+
             Stmt := Next_Stmt (DB);
             exit when Stmt = No_Statement;
             Finalize (Stmt);
          end loop;
+
+         if Debug then
+            Trace (Me, "sqlite3_close");
+         end if;
 
          Ignored := Internal_Close (DB);
       end if;
@@ -127,6 +201,10 @@ package body GNATCOLL.SQL.Sqlite.Gnade is
       Stmt2 : aliased Statement;
       Tail  : aliased System.Address;
    begin
+      if Debug then
+         Trace (Me, "sqlite3_prepare_v2");
+      end if;
+
       Status := Internal (DB, SQL, SQL'Length, Stmt2'Access, Tail'Access);
       Stmt := Stmt2;
    end Prepare;
@@ -142,6 +220,10 @@ package body GNATCOLL.SQL.Sqlite.Gnade is
       function Internal (Stmt : Statement) return Result_Codes;
       pragma Import (C, Internal, "sqlite3_step");
    begin
+      if Debug then
+         Trace (Me, "sqlite3_step");
+      end if;
+
       Status := Internal (Stmt);
    end Step;
 
@@ -163,6 +245,10 @@ package body GNATCOLL.SQL.Sqlite.Gnade is
       function Internal (Stmt : Statement; Col : Natural) return chars_ptr;
       pragma Import (C, Internal, "sqlite3_column_name");
    begin
+      if Debug then
+         Trace (Me, "sqlite3_column_name");
+      end if;
+
       return Value (Internal (Stmt, Col));
    end Column_Name;
 
@@ -187,6 +273,10 @@ package body GNATCOLL.SQL.Sqlite.Gnade is
       pragma Import (C, Internal, "sqlite3_get_table");
 
    begin
+      if Debug then
+         Trace (Me, "sqlite3_get_table");
+      end if;
+
       Status := Internal
         (DB, SQL & ASCII.NUL, Result.Values'Unrestricted_Access,
          Result.Rows'Unrestricted_Access,
@@ -202,6 +292,10 @@ package body GNATCOLL.SQL.Sqlite.Gnade is
       procedure Internal (Result : System.Address);
       pragma Import (C, Internal, "sqlite3_free_table");
    begin
+      if Debug then
+         Trace (Me, "sqlite3_free_table");
+      end if;
+
       Internal (Result.Values);
    end Free_Table;
 
@@ -263,5 +357,219 @@ package body GNATCOLL.SQL.Sqlite.Gnade is
    begin
       return "sqlite=" & System.Address_Image (Convert (DB));
    end Image;
+
+   --------------------
+   -- Set_Config_Log --
+   --------------------
+
+   procedure Set_Config_Log
+     (Func : Logger;
+      Data : System.Address := System.Null_Address)
+   is
+      procedure Sqlite3_Config
+        (Option : Sqlite3_Config_Option;
+         Func  : Logger;
+         Data  : System.Address);
+      pragma Import (C, Sqlite3_Config, "sqlite3_config");
+   begin
+      if Debug then
+         Trace (Me, "sqlite3_config");
+      end if;
+
+      Sqlite3_Config (Config_Log, Func, Data);
+   end Set_Config_Log;
+
+   --------------------------
+   -- Set_Config_Memstatus --
+   --------------------------
+
+   procedure Set_Config_Memstatus (Collect_Stats : Boolean) is
+      procedure Sqlite3_Config
+        (Option : Sqlite3_Config_Option;
+         Status : Integer);
+      pragma Import (C, Sqlite3_Config, "sqlite3_config");
+   begin
+      if Debug then
+         Trace (Me, "sqlite3_config");
+      end if;
+
+      Sqlite3_Config (Config_Mem_Status, Boolean'Pos (Collect_Stats));
+   end Set_Config_Memstatus;
+
+   -----------------------------
+   -- Set_Config_Multi_Thread --
+   -----------------------------
+
+   procedure Set_Config_Multi_Thread is
+      procedure Sqlite3_Config (Option : Sqlite3_Config_Option);
+      pragma Import (C, Sqlite3_Config, "sqlite3_config");
+   begin
+      if Debug then
+         Trace (Me, "sqlite3_config");
+      end if;
+
+      Sqlite3_Config (Config_Multi_Thread);
+   end Set_Config_Multi_Thread;
+
+   ---------------------------
+   -- Set_Config_Serialized --
+   ---------------------------
+
+   procedure Set_Config_Serialized is
+      procedure Sqlite3_Config (Option : Sqlite3_Config_Option);
+      pragma Import (C, Sqlite3_Config, "sqlite3_config");
+   begin
+      if Debug then
+         Trace (Me, "sqlite3_config");
+      end if;
+
+      Sqlite3_Config (Config_Serialized);
+   end Set_Config_Serialized;
+
+   ------------------------------
+   -- Set_Config_Single_Thread --
+   ------------------------------
+
+   procedure Set_Config_Single_Thread is
+      procedure Sqlite3_Config (Option : Sqlite3_Config_Option);
+      pragma Import (C, Sqlite3_Config, "sqlite3_config");
+   begin
+      if Debug then
+         Trace (Me, "sqlite3_config");
+      end if;
+
+      Sqlite3_Config (Config_Single_Thread);
+   end Set_Config_Single_Thread;
+
+   -----------------------
+   -- Last_Insert_Rowid --
+   -----------------------
+
+   function Last_Insert_Rowid (DB : Database) return Long_Integer is
+      function Internal (DB : Database) return Long_Integer;
+      pragma Import (C, Internal, "sqlite3_last_insert_rowid");
+   begin
+      if Debug then
+         Trace (Me, "sqlite3_last_insert_rowid");
+      end if;
+      return Internal (DB);
+   end Last_Insert_Rowid;
+
+   -----------
+   -- Reset --
+   -----------
+
+   function Reset (Stmt : Statement) return Result_Codes is
+      function Internal (Stmt : Statement) return Result_Codes;
+      pragma Import (C, Internal, "sqlite3_reset");
+   begin
+      if Debug then
+         Trace (Me, "sqlite3_reset");
+      end if;
+      return Internal (Stmt);
+   end Reset;
+
+   --------------
+   -- Finalize --
+   --------------
+
+   procedure Finalize (Stmt : Statement) is
+      procedure Internal (Stmt : Statement);
+      pragma Import (C, Internal, "sqlite3_finalize");
+   begin
+      if Debug then
+         Trace (Me, "sqlite3_finalize");
+      end if;
+      Internal (Stmt);
+   end Finalize;
+
+   --------------------
+   -- Clear_Bindings --
+   --------------------
+
+   procedure Clear_Bindings (Stmt : Statement) is
+      procedure Internal (Stmt : Statement);
+      pragma Import (C, Internal, "sqlite3_clear_bindings");
+   begin
+      if Debug then
+         Trace (Me, "sqlite3_clear_bindings");
+      end if;
+      Internal (Stmt);
+   end Clear_Bindings;
+
+   -----------------
+   -- Bind_Double --
+   -----------------
+
+   procedure Bind_Double
+     (Stmt : Statement; Index : Integer; Value : Interfaces.C.double)
+   is
+      procedure Internal
+        (Stmt : Statement; Index : Integer; Value : Interfaces.C.double);
+      pragma Import (C, Internal, "sqlite3_bind_double");
+   begin
+      if Debug then
+         Trace (Me, "sqlite3_bind_double");
+      end if;
+
+      Internal (Stmt, Index, Value);
+   end Bind_Double;
+
+   --------------
+   -- Bind_Int --
+   --------------
+
+   procedure Bind_Int
+     (Stmt : Statement; Index : Integer; Value : Interfaces.C.int)
+   is
+      procedure Internal
+        (Stmt : Statement; Index : Integer; Value : Interfaces.C.int);
+      pragma Import (C, Internal, "sqlite3_bind_int");
+   begin
+      if Debug then
+         Trace (Me, "sqlite3_bind_int");
+      end if;
+
+      Internal (Stmt, Index, Value);
+   end Bind_Int;
+
+   ---------------
+   -- Bind_Null --
+   ---------------
+
+   procedure Bind_Null (Stmt : Statement; Index : Integer) is
+      procedure Internal (Stmt : Statement; Index : Integer);
+      pragma Import (C, Internal, "sqlite3_bind_null");
+   begin
+      if Debug then
+         Trace (Me, "sqlite3_bind_null");
+      end if;
+
+      Internal (Stmt, Index);
+   end Bind_Null;
+
+   ---------------
+   -- Bind_Text --
+   ---------------
+
+   procedure Bind_Text
+     (Stmt : Statement;
+      Index : Integer;
+      Str : System.Address;
+      N_Bytes : Natural;
+      Destructor : Text_Destructor := null)
+   is
+      procedure Internal
+        (Stmt : Statement; Index : Integer;
+         Str : System.Address; N_Bytes : Natural;
+         Destructor : Text_Destructor := null);
+      pragma Import (C, Internal, "sqlite3_bind_text");
+   begin
+      if Debug then
+         Trace (Me, "sqlite3_bind_text");
+      end if;
+
+      Internal (Stmt, Index, Str, N_Bytes, Destructor);
+   end Bind_Text;
 
 end GNATCOLL.SQL.Sqlite.Gnade;

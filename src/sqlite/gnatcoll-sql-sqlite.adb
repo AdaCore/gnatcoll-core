@@ -40,6 +40,8 @@ package body GNATCOLL.SQL.Sqlite is
          return null;
       end if;
 
+      GNATCOLL.SQL.Sqlite.Builder.Setup;
+
       Result := new Sqlite_Description (Caching => Cache_Support);
       Result.Dbname := new String'(Database);
       return Database_Description (Result);

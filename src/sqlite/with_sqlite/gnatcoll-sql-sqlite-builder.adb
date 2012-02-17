@@ -35,9 +35,17 @@ with Interfaces.C.Strings;         use Interfaces.C.Strings;
 with System;
 
 package body GNATCOLL.SQL.Sqlite.Builder is
-   Me : constant Trace_Handle := Create ("SQL.LITE");
+   Me : constant Trace_Handle := Create ("SQL.SQLITE");
+   Me_Log : constant Trace_Handle := Create ("SQL.SQLITE.LOG");
 
    Empty_C_Str : aliased String := "" & ASCII.NUL;
+
+   procedure Logger
+     (Data       : System.Address;
+      Error_Code : Result_Codes;
+      Message    : Interfaces.C.Strings.chars_ptr);
+   pragma Convention (C, Logger);
+   --  Logs error messages from sqlite (see sqlite3_log)
 
    type Sqlite_Cursor is new DBMS_Forward_Cursor with record
       Stmt           : Statement;
@@ -515,16 +523,15 @@ package body GNATCOLL.SQL.Sqlite.Builder is
 
       Step (Stmt, Last_Status);
 
-      --  Reset text parameters, since the string they point to will rapidly
-      --  be out of scope
+      --  Free the memory we just allocated. We should ideally clear the
+      --  bindings at this stage, but:
+      --     using Bind_Null is forbidden because the statement is executing
+      --     Clear_Bindings will be called automatically when the statement
+      --       is Finalized anyway.
 
       for P in Params'Range loop
          case Params (P).Typ is
-            when Parameter_Text | Parameter_Character =>
-               Bind_Null (Stmt, P);
-
             when Parameter_Time | Parameter_Date =>
-               Bind_Null (Stmt, P);
                Free (Tmp_Data (P));
 
             when others =>
@@ -1004,5 +1011,31 @@ package body GNATCOLL.SQL.Sqlite.Builder is
    begin
       return False;
    end Can_Alter_Table_Constraints;
+
+   ------------
+   -- Logger --
+   ------------
+
+   procedure Logger
+     (Data       : System.Address;
+      Error_Code : Result_Codes;
+      Message    : Interfaces.C.Strings.chars_ptr)
+   is
+      pragma Unreferenced (Data);
+   begin
+      if Active (Me_Log) then
+         Trace (Me_Log, Error_Code'Img & " " & Value (Message));
+      end if;
+   end Logger;
+
+   -----------
+   -- Setup --
+   -----------
+
+   procedure Setup is
+   begin
+      Set_Config_Memstatus (Collect_Stats => False);
+      Set_Config_Log (Logger'Access);
+   end Setup;
 
 end GNATCOLL.SQL.Sqlite.Builder;

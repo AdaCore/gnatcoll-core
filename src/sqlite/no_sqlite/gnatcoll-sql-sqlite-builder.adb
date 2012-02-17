@@ -44,4 +44,13 @@ package body GNATCOLL.SQL.Sqlite.Builder is
       return False;
    end Has_Sqlite_Support;
 
+   -----------
+   -- Setup --
+   -----------
+
+   procedure Setup is
+   begin
+      null;
+   end Setup;
+
 end GNATCOLL.SQL.Sqlite.Builder;

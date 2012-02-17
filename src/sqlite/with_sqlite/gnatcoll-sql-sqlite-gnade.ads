@@ -162,6 +162,66 @@ package GNATCOLL.SQL.Sqlite.Gnade is
    --  non-zero, then another attempt is made to open the database for reading
    --  and the cycle repeats.
 
+   type Logger is access procedure
+     (Data       : System.Address;
+      Error_Code : Result_Codes;
+      Message    : Interfaces.C.Strings.chars_ptr);
+   pragma Convention (C, Logger);
+
+   procedure Set_Config_Log
+     (Func : Logger;
+      Data : System.Address := System.Null_Address);
+   --  Set the function used by sqlite3_log to log error messages.
+   --  Data will be passed as is to the function (its first parameter
+
+   procedure Set_Config_Memstatus (Collect_Stats : Boolean);
+   --  This option takes single argument of type int, interpreted as a boolean,
+   --  which enables or disables the collection of memory allocation
+   --  statistics. When memory allocation statistics are disabled, the
+   --  following SQLite interfaces become non-operational:
+   --    * sqlite3_memory_used()
+   --    * sqlite3_memory_highwater()
+   --    * sqlite3_soft_heap_limit64()
+   --    * sqlite3_status()
+   --  Memory allocation statistics are enabled by default unless SQLite is
+   --  compiled with SQLITE_DEFAULT_MEMSTATUS=0 in which case memory allocation
+   --  statistics are disabled by default.
+
+   procedure Set_Config_Single_Thread;
+   --  This option sets the threading mode to Single-thread. In other words, it
+   --  disables all mutexing and puts SQLite into a mode where it can only be
+   --  used by a single thread. If SQLite is compiled with the
+   --  SQLITE_THREADSAFE=0 compile-time option then it is not possible to
+   --  change the threading mode from its default value of Single-thread and so
+   --  sqlite3_config() will return SQLITE_ERROR if called with the
+   --  SQLITE_CONFIG_SINGLETHREAD configuration option.
+
+   procedure Set_Config_Multi_Thread;
+   --  This option sets the threading mode to Multi-thread. In other words, it
+   --  disables mutexing on database connection and prepared statement
+   --  objects. The application is responsible for serializing access to
+   --  database connections and prepared statements. But other mutexes are
+   --  enabled so that SQLite will be safe to use in a multi-threaded
+   --  environment as long as no two threads attempt to use the same database
+   --  connection at the same time. If SQLite is compiled with the
+   --  SQLITE_THREADSAFE=0 compile-time option then it is not possible to set
+   --  the Multi-thread threading mode and sqlite3_config() will return
+   --  SQLITE_ERROR if called with the SQLITE_CONFIG_MULTITHREAD configuration
+   --  option.
+
+   procedure Set_Config_Serialized;
+   --  This option sets the threading mode to Serialized. In other words, this
+   --  option enables all mutexes including the recursive mutexes on database
+   --  connection and prepared statement objects. In this mode (which is the
+   --  default when SQLite is compiled with SQLITE_THREADSAFE=1) the SQLite
+   --  library will itself serialize access to database connections and
+   --  prepared statements so that the application is free to use the same
+   --  database connection or the same prepared statement in different threads
+   --  at the same time. If SQLite is compiled with the SQLITE_THREADSAFE=0
+   --  compile-time option then it is not possible to set the Serialized
+   --  threading mode and sqlite3_config() will return SQLITE_ERROR if called
+   --  with the SQLITE_CONFIG_SERIALIZED configuration option.
+
    ----------------
    -- Statements --
    ----------------
@@ -219,14 +279,11 @@ package GNATCOLL.SQL.Sqlite.Gnade is
 
    procedure Bind_Double
      (Stmt : Statement; Index : Integer; Value : Interfaces.C.double);
-   pragma Import (C, Bind_Double, "sqlite3_bind_double");
 
    procedure Bind_Int
      (Stmt : Statement; Index : Integer; Value : Interfaces.C.int);
-   pragma Import (C, Bind_Int, "sqlite3_bind_int");
 
    procedure Bind_Null (Stmt : Statement; Index : Integer);
-   pragma Import (C, Bind_Null, "sqlite3_bind_null");
 
    type Text_Destructor is access procedure (Str : in out System.Address);
    pragma Convention (C, Text_Destructor);
@@ -235,7 +292,6 @@ package GNATCOLL.SQL.Sqlite.Gnade is
      (Stmt : Statement; Index : Integer;
       Str : System.Address; N_Bytes : Natural;
       Destructor : Text_Destructor := null);
-   pragma Import (C, Bind_Text, "sqlite3_bind_text");
    --  Define the values for the parameters.
    --  The Destructor is called to free the memory when the parameter is bound
    --  to another value or destroyed. The default is that we do not free memory
@@ -378,13 +434,9 @@ private
    pragma Import (C, Column_Int,        "sqlite3_column_int");
    pragma Import (C, Column_C_Text,     "sqlite3_column_text");
    pragma Import (C, Column_Bytes,      "sqlite3_column_bytes");
-   pragma Import (C, Finalize,          "sqlite3_finalize");
    pragma Import (C, Changes,           "sqlite3_changes");
    pragma Import (C, Column_Type,       "sqlite3_column_type");
    pragma Import (C, Column_Count,      "sqlite3_column_count");
    pragma Import (C, DB_Handle,         "sqlite3_db_handle");
-   pragma Import (C, Last_Insert_Rowid, "sqlite3_last_insert_rowid");
-   pragma Import (C, Reset,             "sqlite3_reset");
-   pragma Import (C, Clear_Bindings,    "sqlite3_clear_bindings");
 
 end GNATCOLL.SQL.Sqlite.Gnade;

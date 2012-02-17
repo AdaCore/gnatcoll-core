@@ -34,4 +34,7 @@ private package GNATCOLL.SQL.Sqlite.Builder is
      (Descr : access Sqlite_Description'Class) return Database_Connection;
    --  See doc in GNATCOLL.SQL.Sqlite
 
+   procedure Setup;
+   --  Perform additional setup
+
 end GNATCOLL.SQL.Sqlite.Builder;
