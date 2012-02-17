@@ -309,7 +309,7 @@ ac_includes_default="\
 # include <unistd.h>
 #endif"
 
-ac_subst_vars='SHELL PATH_SEPARATOR PACKAGE_NAME PACKAGE_TARNAME PACKAGE_VERSION PACKAGE_STRING PACKAGE_BUGREPORT exec_prefix prefix program_transform_name bindir sbindir libexecdir datadir sysconfdir sharedstatedir localstatedir libdir includedir oldincludedir infodir mandir build_alias host_alias target_alias DEFS ECHO_C ECHO_N ECHO_T LIBS build build_cpu build_vendor build_os host host_cpu host_vendor host_os target target_cpu target_vendor target_os LN_S CC CFLAGS LDFLAGS CPPFLAGS ac_ct_CC EXEEXT OBJEXT CPP EGREP BUILD_TYPE GNAT_BUILDS_SHARED DEFAULT_LIBRARY_TYPE PKG_CONFIG HAVE_GTKADA GTK_GCC_FLAGS WITH_GTK PYTHON PYTHON_CONFIG PYTHON_BASE PYTHON_VERSION PYTHON_DIR PYTHON_LIBS PYTHON_CFLAGS WITH_PYTHON WITH_POSTGRES PATH_LIBPQ HAS_PQPREPARE WITH_SQLITE PATH_LIBSQLITE PYGTK_PREFIX PYGTK_INCLUDE WITH_PYGTK WITH_GMP GMP_CFLAGS GMP_LIBS HAVE_GNAT_UTIL GNAT_SOURCES WITH_PROJECTS SYNC_COUNTERS_IMPL GMP_CFLAGS_GPR GMP_LIBS_GPR PYTHON_LIBS_GPR PYTHON_CFLAGS_GPR PYGTK_INCLUDE_GPR GTK_GCC_FLAGS_GPR WITH_SYSLOG LIB LIBOBJS LTLIBOBJS'
+ac_subst_vars='SHELL PATH_SEPARATOR PACKAGE_NAME PACKAGE_TARNAME PACKAGE_VERSION PACKAGE_STRING PACKAGE_BUGREPORT exec_prefix prefix program_transform_name bindir sbindir libexecdir datadir sysconfdir sharedstatedir localstatedir libdir includedir oldincludedir infodir mandir build_alias host_alias target_alias DEFS ECHO_C ECHO_N ECHO_T LIBS build build_cpu build_vendor build_os host host_cpu host_vendor host_os target target_cpu target_vendor target_os LN_S CC CFLAGS LDFLAGS CPPFLAGS ac_ct_CC EXEEXT OBJEXT CPP EGREP BUILD_TYPE GNAT_BUILDS_SHARED DEFAULT_LIBRARY_TYPE PKG_CONFIG HAVE_GTKADA GTK_GCC_FLAGS WITH_GTK PYTHON PYTHON_CONFIG PYTHON_BASE PYTHON_VERSION PYTHON_DIR PYTHON_LIBS PYTHON_CFLAGS WITH_PYTHON WITH_POSTGRES PATH_LIBPQ HAS_PQPREPARE WITH_SQLITE PATH_LIBSQLITE PYGTK_PREFIX PYGTK_INCLUDE WITH_PYGTK WITH_GMP GMP_CFLAGS GMP_LIBS HAVE_GNAT_UTIL GNAT_SOURCES HAS_READLINE WITH_PROJECTS SYNC_COUNTERS_IMPL GMP_CFLAGS_GPR GMP_LIBS_GPR PYTHON_LIBS_GPR PYTHON_CFLAGS_GPR PYGTK_INCLUDE_GPR GTK_GCC_FLAGS_GPR WITH_SYSLOG LIB LIBOBJS LTLIBOBJS'
 ac_subst_files=''
 
 # Initialize some variables set by options.
@@ -3523,7 +3523,7 @@ fi
 echo $ECHO_N "checking if we can link with python (using python-config)... $ECHO_C" >&6
       if test x"$PYTHON_CONFIG" != xno ; then
          PYTHON_LIBS=`$PYTHON_CONFIG --libs`
-         PYTHON_CFLAGS=`$PYTHON_CONFIG --cflags`
+         PYTHON_CFLAGS=`$PYTHON_CONFIG --includes`
       else
          PYTHON_LIBS=""
          PYTHON_CFLAGS=""
@@ -4444,6 +4444,67 @@ echo "${ECHO_T}no" >&6
      fi
   fi
 
+
+
+echo "$as_me:$LINENO: checking for readline in -lreadline" >&5
+echo $ECHO_N "checking for readline in -lreadline... $ECHO_C" >&6
+if test "${ac_cv_lib_readline_readline+set}" = set; then
+  echo $ECHO_N "(cached) $ECHO_C" >&6
+else
+  ac_check_lib_save_LIBS=$LIBS
+LIBS="-lreadline  $LIBS"
+cat >conftest.$ac_ext <<_ACEOF
+#line $LINENO "configure"
+/* confdefs.h.  */
+_ACEOF
+cat confdefs.h >>conftest.$ac_ext
+cat >>conftest.$ac_ext <<_ACEOF
+/* end confdefs.h.  */
+
+/* Override any gcc2 internal prototype to avoid an error.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+/* We use char because int might match the return type of a gcc2
+   builtin and then its argument prototype would still apply.  */
+char readline ();
+int
+main ()
+{
+readline ();
+  ;
+  return 0;
+}
+_ACEOF
+rm -f conftest.$ac_objext conftest$ac_exeext
+if { (eval echo "$as_me:$LINENO: \"$ac_link\"") >&5
+  (eval $ac_link) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); } &&
+         { ac_try='test -s conftest$ac_exeext'
+  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); }; }; then
+  ac_cv_lib_readline_readline=yes
+else
+  echo "$as_me: failed program was:" >&5
+sed 's/^/| /' conftest.$ac_ext >&5
+
+ac_cv_lib_readline_readline=no
+fi
+rm -f conftest.$ac_objext conftest$ac_exeext conftest.$ac_ext
+LIBS=$ac_check_lib_save_LIBS
+fi
+echo "$as_me:$LINENO: result: $ac_cv_lib_readline_readline" >&5
+echo "${ECHO_T}$ac_cv_lib_readline_readline" >&6
+if test $ac_cv_lib_readline_readline = yes; then
+  HAS_READLINE=yes
+else
+  HAS_READLINE=no
+fi
 
 
 
@@ -5499,6 +5560,7 @@ s,@GMP_CFLAGS@,$GMP_CFLAGS,;t t
 s,@GMP_LIBS@,$GMP_LIBS,;t t
 s,@HAVE_GNAT_UTIL@,$HAVE_GNAT_UTIL,;t t
 s,@GNAT_SOURCES@,$GNAT_SOURCES,;t t
+s,@HAS_READLINE@,$HAS_READLINE,;t t
 s,@WITH_PROJECTS@,$WITH_PROJECTS,;t t
 s,@SYNC_COUNTERS_IMPL@,$SYNC_COUNTERS_IMPL,;t t
 s,@GMP_CFLAGS_GPR@,$GMP_CFLAGS_GPR,;t t

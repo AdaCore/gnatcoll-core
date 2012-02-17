@@ -60,7 +60,7 @@ ada_py_refcount_msg (PyObject* obj)
 {
    static char msg[200];
    if (obj) {
-      snprintf (msg, 199, "%p (%s, rc=%d)",
+      snprintf (msg, 199, "%p (%s, rc=%ld)",
                 obj, obj->ob_type->tp_name, obj->ob_refcnt);
    } else {
       msg[0] = '\0';
@@ -371,33 +371,33 @@ ada_py_object_callmethod_obj (PyObject *o, char *m, PyObject *arg)
 PyObject *
 ada_py_object_callmethod_int (PyObject *o, char *m, int arg)
 {
-  PyObject_CallMethod (o, m, "(i)", arg);
+  return PyObject_CallMethod (o, m, "(i)", arg);
 }
 
 int
 ada_py_arg_parsetuple_ptr (PyObject *o, char *fmt, void *arg1)
 {
-  PyArg_ParseTuple (o, fmt, arg1);
+  return PyArg_ParseTuple (o, fmt, arg1);
 }
 
 int
 ada_py_arg_parsetuple_ptr2 (PyObject *o, char *fmt, void *arg1, void *arg2)
 {
-  PyArg_ParseTuple (o, fmt, arg1, arg2);
+  return PyArg_ParseTuple (o, fmt, arg1, arg2);
 }
 
 int
 ada_py_arg_parsetuple_ptr3
   (PyObject *o, char *fmt, void *arg1, void * arg2, void *arg3)
 {
-  PyArg_ParseTuple (o, fmt, arg1, arg2, arg3);
+  return PyArg_ParseTuple (o, fmt, arg1, arg2, arg3);
 }
 
 int
 ada_py_arg_parsetuple_ptr4
   (PyObject *o, char *fmt, void *arg1, void * arg2, void *arg3, void *arg4)
 {
-  PyArg_ParseTuple (o, fmt, arg1, arg2, arg3, arg4);
+  return PyArg_ParseTuple (o, fmt, arg1, arg2, arg3, arg4);
 }
 
 int
@@ -405,7 +405,7 @@ ada_py_arg_parsetuple_ptr5
   (PyObject *o, char *fmt,
    void *arg1, void * arg2, void *arg3, void *arg4, void *arg5)
 {
-  PyArg_ParseTuple (o, fmt, arg1, arg2, arg3, arg4, arg5);
+  return PyArg_ParseTuple (o, fmt, arg1, arg2, arg3, arg4, arg5);
 }
 
 extern int gnat_argc;
