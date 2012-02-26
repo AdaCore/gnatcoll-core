@@ -5,6 +5,7 @@ GNAT Reusable Components
    :numbered:
    :maxdepth: 3
 
+   intro
    building
    scripting
    traces
