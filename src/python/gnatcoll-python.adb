@@ -376,10 +376,10 @@ package body GNATCOLL.Python is
    -------------------------
 
    function PyString_FromString (Str : String) return PyObject is
-      function Internal (Str : String) return PyObject;
-      pragma Import (C, Internal, "PyString_FromString");
+      function Internal (Str : String; Size : Integer) return PyObject;
+      pragma Import (C, Internal, "PyString_FromStringAndSize");
    begin
-      return Internal (Str & ASCII.NUL);
+      return Internal (Str, Str'Length);
    end PyString_FromString;
 
    --------------------------
