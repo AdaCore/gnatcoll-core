@@ -5,17 +5,21 @@ Introduction to the GNAT Component Collection
 *********************************************
 
 The reusable library known as the GNAT Component Collection (GNATColl)
-originated in the implementation of the GNAT Programming Studio (GPS)
-technology and the GNAT Tracker web-based interface and
-have thus seen heavy usage in practice.
-The various components deal with a range of commonly encountered 
-programming issues,
+is based on one main principle: general-purpose packages
+that are part of the GNAT technology should also be available to GNAT user
+application code. The compiler front end, the GNAT Programming Studio (GPS)
+Interactive Development Environment, and the GNAT Tracker web-based interface
+all served as sources for the components.
+
+The GNATColl components complement the predefined Ada and GNAT libraries and
+deal with a range of common programming issues
 including string and text processing, memory management,
-and file handling, and several of the components will be
+and file handling. Several of the components are
 especially useful in enterprise applications.
 
-This document explains how to build and install GNATColl and
-then describes the various modules that make up the collection:
+The next chapter explains how to build and install GNATColl.
+The remainder of this document then describes the various components that make up
+the collection:
 
 * *Scripts*: Embedding script languages
 
