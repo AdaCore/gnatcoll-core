@@ -521,6 +521,36 @@ procedure GNATCOLL_Db2Ada is
      (DB : access Database_Connection_Record'Class;
       Table, Id, Name, Prefix, Base_Type : String)
    is
+      function Quote (Str : String) return String;
+      --  Replace characters that are not acceptable in an Ada
+      --  identifier
+
+      function Quote (Str : String) return String is
+         S : String := Str;
+      begin
+         for C in S'Range loop
+            if not Is_Alphanumeric (S (C)) then
+               --  Some special cases to try and keep meaningful
+               --  identifiers.
+
+               if S (C) = '+' then
+                  S (C) := 'p';
+               elsif S (C) = '?' then
+                  S (C) := 'Q';
+               else
+                  S (C) := '_';
+               end if;
+            end if;
+         end loop;
+
+         for C in reverse S'Range loop
+            if S (C) /= '_' then
+               return S (S'First .. C);
+            end if;
+         end loop;
+         return "";
+      end Quote;
+
       Enum : Dumped_Enums;
       R    : GNATCOLL.SQL.Exec.Forward_Cursor;
    begin
@@ -542,7 +572,7 @@ procedure GNATCOLL_Db2Ada is
             & " ORDER BY " & Name);
          while Has_Row (R) loop
             Append (Enum.Values, Value (R, 0));
-            Append (Enum.Names,  Prefix & "_" & Value (R, 1));
+            Append (Enum.Names,  Quote (Prefix & '_' & Value (R, 1)));
             Next (R);
          end loop;
       end if;
