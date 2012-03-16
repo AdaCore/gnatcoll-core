@@ -463,7 +463,7 @@ class Pretty_Printer(object):
         for name, types, subprograms, comment in self.sections:
             subp.extend(subprograms)
 
-        subp.sort()
+        subp.sort(key=lambda x: x.name)
 
         for p in subp:
             if not p.abstract:
