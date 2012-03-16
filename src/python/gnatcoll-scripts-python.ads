@@ -76,7 +76,8 @@ package GNATCOLL.Scripts.Python is
 
    procedure Set_Return_Value
      (Data : in out Python_Callback_Data; Value : PyObject);
-   --  Sets the return value using a low-level PyObject
+   --  Sets the return value using a low-level PyObject.
+   --  The refcounting of Value is increased.
 
    function Run_Command
      (Script          : access Python_Scripting_Record'Class;
