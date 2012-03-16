@@ -1911,11 +1911,11 @@ def generate_orm(setup, pkg_name, tables=[], omit=[], out=sys.stdout):
         body='if Str = null then return ""; else return Str.all; end if;',
         section="body")
 
-    for t in tables:
+    for t in sorted(tables):
         if tables[t].is_abstract:
             generate_orb_one_table(t, schema, pretty, tables)
 
-    for t in tables:
+    for t in sorted(tables):
         if not tables[t].is_abstract:
             generate_orb_one_table(t, schema, pretty, tables)
 
