@@ -159,6 +159,9 @@ otherwise to the default stream, ie standard error)::
 
   --  Applies to MODULE1, MODULE1.FIRST,... This can be used to
   --  disable a whole hierarchy of modules.
+  --  As always, the latest config overrides earlier ones, so the
+  --  module MODULE1.EXCEPTIONS would be disabled as well.
+
   MODULE1.*=no
 
 .. _Using_the_traces_module:
@@ -229,6 +232,36 @@ assertion is met or not::
   
 If the output of the stream is done in color, a failed assertion is
 displayed with a red background to make it more obvious.
+
+Logging unexpected exceptions
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+A special version of `Trace` is provided, which takes an
+`Exception_Occurrence` as argument, and prints its message and backtrace
+into the corresponding log stream.
+
+This procedure will in general be used for unexcepted exceptions. Since
+such exceptions should be handled by developers, it is possible to
+configure `GNATCOLL.TRACES` to use special streams for those.
+
+`Trace (Me, E)` will therefore not used `Me` itself as the log handle,
+but will create (on the fly, the first time) a new handle with the same
+base name and and `.EXCEPTIONS` suffix. Therefore, you could put the
+following in your configuration file::
+
+   # Redirect all exceptions to stdout
+   *.EXCEPTIONS=yes >& stdout
+
+and then the following code will output the exception trace to stdout::
+
+   procedure Proc is
+      Me : Create ("MYMODULE");
+   begin
+      ...
+   exception
+      when E : others =>
+         Trace (Me, E, Msg => "unexcepted exception:");
+   end Proc;
 
 Checking whether the handle is active
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

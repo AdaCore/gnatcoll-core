@@ -178,6 +178,15 @@ package body GNATCOLL.Traces is
    --  none, Default if it exists.
    --  The empty string is returned if no such file was found.
 
+   function Create_Internal
+     (Unit_Name : String;
+      From_Config_File : Boolean;
+      Default   : Default_Activation_Status := From_Config;
+      Stream    : Trace_Stream := null;
+      Factory   : Handle_Factory := null;
+      Finalize  : Boolean := True) return Trace_Handle;
+   --  Internal version of Create.
+
    function Get_Process_Id return Integer;
    --  Return the process ID of the current process
    pragma Import (C, Get_Process_Id, "getpid");
@@ -488,14 +497,50 @@ package body GNATCOLL.Traces is
       Factory   : Handle_Factory := null;
       Finalize  : Boolean := True) return Trace_Handle
    is
-      Tmp        : Trace_Handle    := null;
+   begin
+      if Debug_Mode then
+         return Create_Internal
+           (Unit_Name => Unit_Name,
+            From_Config_File => False,
+            Default   => Default,
+            Stream    => Find_Stream (Stream, "", Append => False),
+            Factory   => Factory,
+            Finalize  => Finalize);
+      else
+         return null;
+      end if;
+   end Create;
+
+   ---------------------
+   -- Create_Internal --
+   ---------------------
+
+   function Create_Internal
+     (Unit_Name : String;
+      From_Config_File : Boolean;
+      Default   : Default_Activation_Status := From_Config;
+      Stream    : Trace_Stream := null;
+      Factory   : Handle_Factory := null;
+      Finalize  : Boolean := True) return Trace_Handle
+   is
+      Tmp, Tmp2  : Trace_Handle    := null;
       Star_Tmp   : Trace_Handle    := null;
       Upper_Case : constant String := To_Upper (Unit_Name);
+      Is_Star    : Boolean;
+
    begin
       if Debug_Mode then
          Lock;
 
-         Tmp := Find_Handle (Upper_Case);
+         Is_Star := Starts_With (Unit_Name, "*.")
+           or else Ends_With (Unit_Name, ".*");
+
+         if Is_Star then
+            Tmp := Find_Star_Handle (Upper_Case);
+         else
+            Tmp := Find_Handle (Upper_Case);
+         end if;
+
          if Tmp = null then
             if Factory /= null then
                Tmp := Factory.all;
@@ -511,9 +556,7 @@ package body GNATCOLL.Traces is
             Tmp.Timer           := No_Time;
             Tmp.Finalize        := Finalize;
 
-            if Starts_With (Unit_Name, "*.")
-              or else Ends_With (Unit_Name, ".*")
-            then
+            if Is_Star then
                Star_Tmp            := null;
                Tmp.Next            := Global.Star_Handles_List;
                Global.Star_Handles_List := Tmp;
@@ -525,16 +568,30 @@ package body GNATCOLL.Traces is
 
             if Star_Tmp /= null then
                Tmp.Active := Star_Tmp.Active;
-               Tmp.Stream := Star_Tmp.Stream;
+
+               --  Unless we specified an explicit stream, inherit it
+               if Stream = null then
+                  Tmp.Stream := Star_Tmp.Stream;
+               end if;
+
             else
                Tmp.Active := Global.Default_Activation;
                Tmp.Stream := null;
             end if;
-
          end if;
 
-         if Tmp.Stream = null then
-            Tmp.Stream := Find_Stream (Stream, "", Append => False);
+         if Stream /= null then
+            --  Only override when we are parsing the configuration file, so
+            --  that if we have the following:
+            --      Me : Trace_Handle := Create ("ME", Stream => "str1");
+            --      parse config file, which contains "ME=yes >str2"
+            --      Me := Create ("ME", Stream => "str3")
+            --  then "ME" is sent to "str2" (priority is given to the config
+            --  file.
+
+            if From_Config_File or else Tmp.Stream = null then
+               Tmp.Stream := Stream;
+            end if;
          end if;
 
          if not Tmp.Forced_Active then
@@ -547,6 +604,38 @@ package body GNATCOLL.Traces is
             end if;
          end if;
 
+         --  If we are declaring a "star" handle, we need to check
+         --  whether any existing handle would match (which will in
+         --  general be the case, since handles are declared at
+         --  elaboration time and star handles in the config file).
+
+         if Is_Star then
+            Tmp2 := Global.Handles_List;
+            while Tmp2 /= null loop
+               if Star_Applies_To
+                 (Tmp2.Name.all, Upper_Star => Upper_Case)
+               then
+                  --  Put_Line ("MANU Star_Applies ? "
+                  --            & Tmp2.Name.all & " " & Upper_Case & " => "
+                  --            & Star_Applies_To
+                  --            (Tmp2.Name.all, Upper_Star => Upper_Case)'Img);
+
+                  if not Tmp2.Forced_Active then
+                     Tmp2.Active := Tmp.Active;
+                     --  Put_Line ("MANU active => " & Tmp.Active'Img);
+                  end if;
+
+                  if Tmp2.Stream = null then
+                     --  Put_Line ("MANU Override stream");
+                     Tmp2.Stream := Tmp.Stream;
+                  end if;
+               end if;
+
+               Tmp2 := Tmp2.Next;
+            end loop;
+
+         end if;
+
          Unlock;
       end if;
       return Tmp;
@@ -554,7 +643,7 @@ package body GNATCOLL.Traces is
       when others =>
          Unlock;
          raise;
-   end Create;
+   end Create_Internal;
 
    ------------------------
    -- Predefined handles --
@@ -593,9 +682,23 @@ package body GNATCOLL.Traces is
      (Handle : Trace_Handle;
       E      : Ada.Exceptions.Exception_Occurrence;
       Msg    : String := "Unexpected exception: ";
-      Color  : String := Default_Fg) is
+      Color  : String := Default_Fg)
+   is
    begin
-      Trace (Handle, Msg & Ada.Exceptions.Exception_Information (E),
+      if Handle.Exception_Handle = null then
+         Handle.Exception_Handle := Create
+           (Unit_Name => Handle.Name.all & ".EXCEPTIONS");
+
+         --  Unless the config file specified an explicit stream,
+         --  we inherit the one from Handle.
+
+         if Handle.Exception_Handle.Stream = null then
+            Handle.Exception_Handle.Stream := Handle.Stream;
+         end if;
+      end if;
+
+      Trace (Handle.Exception_Handle,
+             Msg & Ada.Exceptions.Exception_Information (E),
              Color => Color);
    end Trace;
 
@@ -1161,7 +1264,7 @@ package body GNATCOLL.Traces is
       Buffer     : Str_Access;
       File       : Mapped_File;
       Index, First, Max : Natural;
-      Handle, Tmp : Trace_Handle;
+      Handle     : Trace_Handle;
 
       procedure Skip_Spaces (Skip_Newline : Boolean := True);
       --  Skip the spaces (including possibly newline), and leave Index on the
@@ -1313,82 +1416,72 @@ package body GNATCOLL.Traces is
                         Max := Max - 1;
                      end loop;
 
-                     Handle := Create (String (Buffer (First .. Max)));
+                     declare
+                        Active : Default_Activation_Status := From_Config;
+                        Stream : Trace_Stream := null;
+                     begin
+                        --  Is this active ?
 
-                     if Index > Last (File)
-                       or else Buffer (Index) /= '='
-                     then
-                        Handle.Active := True;
-                     else
-                        Index := Index + 1;
-                        Skip_Spaces;
-                        Handle.Active :=
-                          Index + 1 > Last (File)
-                          or else String (Buffer (Index .. Index + 1)) /= "no";
-                     end if;
-
-                     while Index <= Last (File)
-                       and then Buffer (Index) /= '>'
-                       and then Buffer (Index) /= ASCII.LF
-                       and then Buffer (Index) /= ASCII.CR
-                     loop
-                        Index := Index + 1;
-                     end loop;
-
-                     if Index <= Last (File)
-                       and then Buffer (Index) = '>'
-                     then
-                        declare
-                           Save : Integer := Index + 1;
-                           Append : constant Boolean :=
-                             Buffer (Index + 1) = '>';
-                        begin
-                           if Append then
-                              Save := Index + 2;
-                           end if;
-
-                           Skip_To_Newline;
-                           if Buffer (Index - 1) = ASCII.CR then
-                              Handle.Stream := Find_Stream
-                                (String (Buffer (Save .. Index - 2)),
-                                 +File_Name.Full_Name, Append);
-                           else
-                              Handle.Stream := Find_Stream
-                                (String (Buffer (Save .. Index - 1)),
-                                 +File_Name.Full_Name, Append);
-                           end if;
-                        end;
-                     else
-                        Skip_To_Newline;
-                     end if;
-
-                     --  If we are declaring a "star" handle, we need to check
-                     --  whether any existing handle would match (which will in
-                     --  general be the case, since handles are declared at
-                     --  elaboration time and star handles in the config file).
-
-                     if Starts_With (Handle.Name.all, "*.")
-                       or else Ends_With (Handle.Name.all, ".*")
-                     then
-                        Tmp := Global.Handles_List;
-                        while Tmp /= null loop
-                           if Star_Applies_To
-                             (Tmp.Name.all, Upper_Star => Handle.Name.all)
+                        if Index > Last (File)
+                          or else Buffer (Index) /= '='
+                        then
+                           Active := On;
+                        else
+                           Index := Index + 1;
+                           Skip_Spaces;
+                           if Index + 1 > Last (File) or else
+                             String (Buffer (Index .. Index + 1)) /= "no"
                            then
-                              if not Tmp.Forced_Active then
-                                 Tmp.Active := Handle.Active;
-                                 Tmp.Forced_Active := True;
-                              end if;
-
-                              if Tmp.Stream = null then
-                                 Tmp.Stream := Handle.Stream;
-                              end if;
+                              Active := On;
+                           else
+                              Active := Off;
                            end if;
+                        end if;
 
-                           Tmp := Tmp.Next;
+                        --  What stream is this sent to ?
+
+                        while Index <= Last (File)
+                          and then Buffer (Index) /= '>'
+                          and then Buffer (Index) /= ASCII.LF
+                          and then Buffer (Index) /= ASCII.CR
+                        loop
+                           Index := Index + 1;
                         end loop;
 
-                     end if;
+                        if Index <= Last (File)
+                          and then Buffer (Index) = '>'
+                        then
+                           declare
+                              Save : Integer := Index + 1;
+                              Append : constant Boolean :=
+                                Buffer (Index + 1) = '>';
+                           begin
+                              if Append then
+                                 Save := Index + 2;
+                              end if;
+
+                              Skip_To_Newline;
+
+                              if Buffer (Index - 1) = ASCII.CR then
+                                 Stream := Find_Stream
+                                   (String (Buffer (Save .. Index - 2)),
+                                    +File_Name.Full_Name, Append);
+                              else
+                                 Stream := Find_Stream
+                                   (String (Buffer (Save .. Index - 1)),
+                                    +File_Name.Full_Name, Append);
+                              end if;
+                           end;
+                        else
+                           Skip_To_Newline;
+                        end if;
+
+                        Handle := Create_Internal
+                          (String (Buffer (First .. Max)),
+                           From_Config_File => True,
+                           Default => Active,
+                           Stream => Stream);
+                     end;
                end case;
             end if;
          end loop;

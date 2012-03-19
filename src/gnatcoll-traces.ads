@@ -237,6 +237,15 @@ package GNATCOLL.Traces is
    --  with Msg as a prefix.
    --  You can override the default color used for the stream by specifying the
    --  color parameter.
+   --
+   --  The output is really done on a separate handle with the same name as
+   --  Handle and a suffix of ".EXCEPTIONS". This way, it is possible to
+   --  configure this handle differently. For instance, the configuration file
+   --  could contain:
+   --     *.EXCEPTIONS=yes >&stdout
+   --  to always display those exceptions on stdout and not on the default
+   --  stream for Handle itself (a useful scenario when this version of Trace
+   --  is used to display unexpected exceptions in your application).
 
    procedure Trace
      (Handle   : Trace_Handle;
@@ -471,13 +480,19 @@ private
 
    type Trace_Handle_Record is tagged record
       Name          : GNAT.Strings.String_Access;
-      Active        : Boolean;
-      Forced_Active : Boolean := False;
       Timer         : Ada.Calendar.Time;
       Next          : Trace_Handle;
       Stream        : Trace_Stream;  --  null for default stream
+
+      Exception_Handle : Trace_Handle;
+      --  The handle used when calling Trace and passing an exception
+      --  occurrence. This has  Name & ".EXCEPTIONS" as a name, and is created
+      --  the first time it is needed.
+
       Count         : Natural;
       Finalize      : Boolean;
+      Active        : Boolean;
+      Forced_Active : Boolean := False;
    end record;
    --  If Forced_Active is true, then the Active status shouldn't be impacted
    --  by a '+' in the configuration file
