@@ -15,6 +15,11 @@ of the feature.
 New features in 1.5
 -------------------
 
+NF-15-L207-033 GNATCOLL.Traces adds support for trace hierarchies (2012-03-19)
+
+    It is now possible to use "*." or ".*" in the configuration file to
+    change the settings for multiple trace handles.
+
 NF-15-L105-042 GNATCOLL.SQL.Postgres adds support for regexps (2012-01-05)
 
    The package GNATCOLL.SQL.Postgres now adds support for the postgreSQL
