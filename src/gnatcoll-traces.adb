@@ -40,6 +40,7 @@ with System.Assertions;         use System.Assertions;
 pragma Warnings (Off);
 with System.Traceback_Entries;  use System.Traceback_Entries;
 
+with GNATCOLL.Utils;            use GNATCOLL.Utils;
 with GNATCOLL.VFS_Utils;        use GNATCOLL.VFS_Utils;
 
 pragma Warnings (On);
@@ -87,27 +88,37 @@ package body GNATCOLL.Traces is
    procedure Unchecked_Free is new Ada.Unchecked_Deallocation
      (Stream_Factory'Class, Stream_Factory_Access);
 
-   Handles_List : Trace_Handle := null;
-   --  The global list of all defined handles.
-   --  Accesses to this list are protected by calls to
-   --  System.Soft_Links.Lock_Task (we do not use a protected type so that
-   --  applications that do not use tasking otherwise do not drag the whole
-   --  tasking runtime in).
+   type Global_Vars is record
+      Handles_List : Trace_Handle := null;
+      --  The global list of all defined handles.
+      --  Accesses to this list are protected by calls to
+      --  System.Soft_Links.Lock_Task (we do not use a protected type so that
+      --  applications that do not use tasking otherwise do not drag the whole
+      --  tasking runtime in).
 
-   Streams_List : Trace_Stream := null;
-   --  The global list of all streams. Accesses to this list are protected by
-   --  calls to System.Soft_Links.Lock_Task.
-   --  The default stream is the first in the list.
+      Star_Handles_List : Trace_Handle := null;
+      --  Contains the configuration for module names containing stars, for
+      --  instance "*.EXCEPTIONS".
 
-   Factories_List : Stream_Factories_List := null;
-   --  The global list of all factories. Access to this list are protected by
-   --  calls to Lock_Task
+      Streams_List : Trace_Stream := null;
+      --  The global list of all streams. Accesses to this list are protected
+      --  by calls to System.Soft_Links.Lock_Task.  The default stream is the
+      --  first in the list.
 
-   Default_Activation : Boolean := False;
-   --  Default activation status for debug handles (ie whether the
-   --  configuration file contained "+").
+      Factories_List : Stream_Factories_List := null;
+      --  The global list of all factories. Access to this list are protected
+      --  by calls to Lock_Task
 
-   Indentation : Natural := 0;
+      Default_Activation : Boolean := False;
+      --  Default activation status for debug handles (ie whether the
+      --  configuration file contained "+").
+      --  ??? Could be handled via a "*" star handle
+
+      Indentation : Natural := 0;
+      --  Current indentation for streams.
+   end record;
+
+   Global : Global_Vars;
 
    function Find_Handle (Unit_Name_Upper_Case : String) return Trace_Handle;
    --  Return the debug handle associated with Unit_Name_Upper_Case,
@@ -116,6 +127,16 @@ package body GNATCOLL.Traces is
    --  Note: this subprogram doesn't do any locking, it is the
    --  responsability of the called to make sure that not two tasks
    --  can access it at the same time.
+
+   function Find_Star_Handle
+     (Unit_Name_Upper_Case : String) return Trace_Handle;
+   --  Check whether there is a module name that contains a "*" and that can be
+   --  used to provide the default configuration for Unit_Name_Upper_Case
+
+   function Star_Applies_To
+     (Upper_Name : String; Upper_Star : String) return Boolean;
+   --  Whether the module Upper_Name should take its default configuration from
+   --  Upper_Star_Name.
 
    function Find_Stream
      (Stream_Name      : String;
@@ -190,7 +211,7 @@ package body GNATCOLL.Traces is
    -----------------
 
    function Find_Handle (Unit_Name_Upper_Case : String) return Trace_Handle is
-      Tmp : Trace_Handle := Handles_List;
+      Tmp : Trace_Handle := Global.Handles_List;
    begin
       while Tmp /= null
         and then Tmp.Name.all /= Unit_Name_Upper_Case
@@ -200,12 +221,70 @@ package body GNATCOLL.Traces is
       return Tmp;
    end Find_Handle;
 
+   ---------------------
+   -- Star_Applies_To --
+   ---------------------
+
+   function Star_Applies_To
+     (Upper_Name : String; Upper_Star : String) return Boolean
+   is
+   begin
+      if Upper_Star (Upper_Star'First) = '*' then
+         --  Test must include '.' in the suffix
+         if Ends_With
+           (Upper_Name, Upper_Star (Upper_Star'First + 1 .. Upper_Star'Last))
+         then
+            return True;
+         end if;
+
+      elsif Upper_Star (Upper_Star'Last) = '*' then
+         --  "MODULE.*" should include "MODULE" itself
+         if Upper_Name =
+           Upper_Star (Upper_Star'First .. Upper_Star'Last - 2)
+         then
+            return True;
+         end if;
+
+         --  Otherwise "MODULE.*" should match "MODULE.FOO" but not
+         --  MODULEFOO.BAR
+
+         if Starts_With
+           (Upper_Name, Upper_Star (Upper_Star'First .. Upper_Star'Last - 1))
+         then
+            return True;
+         end if;
+      end if;
+      return False;
+   end Star_Applies_To;
+
+   ----------------------
+   -- Find_Star_Handle --
+   ----------------------
+
+   function Find_Star_Handle
+     (Unit_Name_Upper_Case : String) return Trace_Handle
+   is
+      Tmp : Trace_Handle := Global.Star_Handles_List;
+   begin
+      while Tmp /= null loop
+         if Star_Applies_To
+           (Upper_Name => Unit_Name_Upper_Case,
+            Upper_Star => Tmp.Name.all)
+         then
+            return Tmp;
+         end if;
+
+         Tmp := Tmp.Next;
+      end loop;
+      return null;
+   end Find_Star_Handle;
+
    ------------------------
    -- Show_Configuration --
    ------------------------
 
    procedure Show_Configuration (Output : Output_Proc) is
-      Tmp : Trace_Handle := Handles_List;
+      Tmp : Trace_Handle := Global.Handles_List;
    begin
       while Tmp /= null loop
          if Tmp.Stream /= null then
@@ -240,12 +319,12 @@ package body GNATCOLL.Traces is
       begin
          --  If possible, do not put this first on the list of streams,
          --  since it would become the default stream
-         if Streams_List = null then
-            Streams_List := Tmp;
+         if Global.Streams_List = null then
+            Global.Streams_List := Tmp;
             Tmp.Next := null;
          else
-            Tmp.Next := Streams_List.Next;
-            Streams_List.Next := Tmp;
+            Tmp.Next := Global.Streams_List.Next;
+            Global.Streams_List.Next := Tmp;
          end if;
       end Add_To_Streams;
 
@@ -264,7 +343,7 @@ package body GNATCOLL.Traces is
 
       --  Do we have a matching existing stream ?
 
-      Tmp := Streams_List;
+      Tmp := Global.Streams_List;
       while Tmp /= null loop
          if Tmp.Name.all = Name then
             Unlock;
@@ -294,7 +373,7 @@ package body GNATCOLL.Traces is
 
       elsif Name (Name'First) = '&' then
          Tmp := null;
-         TmpF := Factories_List;
+         TmpF := Global.Factories_List;
          while TmpF /= null loop
             if TmpF.Name.all = Name (Name'First .. Colon - 1) then
                if Colon < Name'Last then
@@ -410,6 +489,7 @@ package body GNATCOLL.Traces is
       Finalize  : Boolean := True) return Trace_Handle
    is
       Tmp        : Trace_Handle    := null;
+      Star_Tmp   : Trace_Handle    := null;
       Upper_Case : constant String := To_Upper (Unit_Name);
    begin
       if Debug_Mode then
@@ -425,15 +505,32 @@ package body GNATCOLL.Traces is
                Tmp := new Trace_Handle_Record;
             end if;
 
-            Tmp.Name          := new String'(Upper_Case);
-            Tmp.Active        := Default_Activation;
-            Tmp.Forced_Active := False;
-            Tmp.Stream        := null;
-            Tmp.Timer         := No_Time;
-            Tmp.Count         := 1;
-            Tmp.Next          := Handles_List;
-            Tmp.Finalize      := Finalize;
-            Handles_List := Tmp;
+            Tmp.Name            := new String'(Upper_Case);
+            Tmp.Forced_Active   := False;
+            Tmp.Count           := 1;
+            Tmp.Timer           := No_Time;
+            Tmp.Finalize        := Finalize;
+
+            if Starts_With (Unit_Name, "*.")
+              or else Ends_With (Unit_Name, ".*")
+            then
+               Star_Tmp            := null;
+               Tmp.Next            := Global.Star_Handles_List;
+               Global.Star_Handles_List := Tmp;
+            else
+               Star_Tmp := Find_Star_Handle (Upper_Case);
+               Tmp.Next            := Global.Handles_List;
+               Global.Handles_List := Tmp;
+            end if;
+
+            if Star_Tmp /= null then
+               Tmp.Active := Star_Tmp.Active;
+               Tmp.Stream := Star_Tmp.Stream;
+            else
+               Tmp.Active := Global.Default_Activation;
+               Tmp.Stream := null;
+            end if;
+
          end if;
 
          if Tmp.Stream = null then
@@ -514,7 +611,7 @@ package body GNATCOLL.Traces is
       Entity   : String := GNAT.Source_Info.Enclosing_Entity) is
    begin
       if Debug_Mode
-        and then Handles_List /= null  --  module not terminated
+        and then Global.Handles_List /= null  --  module not terminated
       then
          if Handle.Active then
             Log (Handle, Message, Location, Entity, Message_Color => Color);
@@ -544,7 +641,10 @@ package body GNATCOLL.Traces is
       Location           : String := GNAT.Source_Info.Source_Location;
       Entity             : String := GNAT.Source_Info.Enclosing_Entity) is
    begin
-      if Debug_Mode and then Handles_List /= null and then Handle.Active then
+      if Debug_Mode
+        and then Global.Handles_List /= null
+        and then Handle.Active
+      then
          if not Condition then
             Trace
               (Handle, Error_Message, Location, Entity, Red_Bg & Default_Fg);
@@ -572,7 +672,7 @@ package body GNATCOLL.Traces is
       if Handle /= null and then Msg /= "" then
          Trace (Handle, Msg);
       end if;
-      Indentation := Indentation + 1;
+      Global.Indentation := Global.Indentation + 1;
    end Increase_Indent;
 
    ---------------------
@@ -582,8 +682,8 @@ package body GNATCOLL.Traces is
    procedure Decrease_Indent
      (Handle : Trace_Handle := null; Msg : String := "") is
    begin
-      if Indentation > 0 then
-         Indentation := Indentation - 1;
+      if Global.Indentation > 0 then
+         Global.Indentation := Global.Indentation - 1;
          if Handle /= null and then Msg /= "" then
             Trace (Handle, Msg);
          end if;
@@ -612,7 +712,7 @@ package body GNATCOLL.Traces is
 
    function Active (Handle : Trace_Handle) return Boolean is
    begin
-      if Handles_List = null then
+      if Global.Handles_List = null then
          --  If this module has been finalized, we always display the traces.
          --  These traces are generally when GNAT finalizes controlled types...
          return True;
@@ -783,7 +883,7 @@ package body GNATCOLL.Traces is
       if Handle.Stream /= null then
          Stream := Handle.Stream;
       else
-         Stream := Streams_List;
+         Stream := Global.Streams_List;
       end if;
 
       if Stream = null then
@@ -794,8 +894,8 @@ package body GNATCOLL.Traces is
 
       Lock;
 
-      if Indentation > 0 then
-         Put (Stream.all, String'(1 .. Indentation * 3 => ' '));
+      if Global.Indentation > 0 then
+         Put (Stream.all, String'(1 .. Global.Indentation * 3 => ' '));
       end if;
 
       if Color then
@@ -936,10 +1036,10 @@ package body GNATCOLL.Traces is
    is
    begin
       Lock;
-      Factories_List := new Stream_Factories'
+      Global.Factories_List := new Stream_Factories'
         (Name    => new String'("&" & Name),
          Factory => Factory,
-         Next    => Factories_List);
+         Next    => Global.Factories_List);
       Unlock;
    end Register_Stream_Factory;
 
@@ -1061,7 +1161,7 @@ package body GNATCOLL.Traces is
       Buffer     : Str_Access;
       File       : Mapped_File;
       Index, First, Max : Natural;
-      Handle     : Trace_Handle;
+      Handle, Tmp : Trace_Handle;
 
       procedure Skip_Spaces (Skip_Newline : Boolean := True);
       --  Skip the spaces (including possibly newline), and leave Index on the
@@ -1158,8 +1258,8 @@ package body GNATCOLL.Traces is
                         if Stream /= null then
                            --  Put this first in the list, since that's the
                            --  default
-                           if Streams_List /= Stream then
-                              Tmp := Streams_List;
+                           if Global.Streams_List /= Stream then
+                              Tmp := Global.Streams_List;
                               while Tmp /= null
                                 and then Tmp.Next /= Stream
                               loop
@@ -1168,17 +1268,17 @@ package body GNATCOLL.Traces is
 
                               if Tmp /= null then
                                  Tmp.Next := Stream.Next;
-                                 Stream.Next := Streams_List;
-                                 Streams_List := Stream;
+                                 Stream.Next := Global.Streams_List;
+                                 Global.Streams_List := Stream;
                               end if;
                            end if;
                         end if;
                      end;
 
                   when '+' =>
-                     Default_Activation := True;
+                     Global.Default_Activation := True;
                      Skip_To_Newline;
-                     Handle := Handles_List;
+                     Handle := Global.Handles_List;
                      while Handle /= null loop
                         if not Handle.Forced_Active
                           and then Handle /= Absolute_Time
@@ -1262,6 +1362,33 @@ package body GNATCOLL.Traces is
                         Skip_To_Newline;
                      end if;
 
+                     --  If we are declaring a "star" handle, we need to check
+                     --  whether any existing handle would match (which will in
+                     --  general be the case, since handles are declared at
+                     --  elaboration time and star handles in the config file).
+
+                     if Starts_With (Handle.Name.all, "*.")
+                       or else Ends_With (Handle.Name.all, ".*")
+                     then
+                        Tmp := Global.Handles_List;
+                        while Tmp /= null loop
+                           if Star_Applies_To
+                             (Tmp.Name.all, Upper_Star => Handle.Name.all)
+                           then
+                              if not Tmp.Forced_Active then
+                                 Tmp.Active := Handle.Active;
+                                 Tmp.Forced_Active := True;
+                              end if;
+
+                              if Tmp.Stream = null then
+                                 Tmp.Stream := Handle.Stream;
+                              end if;
+                           end if;
+
+                           Tmp := Tmp.Next;
+                        end loop;
+
+                     end if;
                end case;
             end if;
          end loop;
@@ -1317,7 +1444,7 @@ package body GNATCOLL.Traces is
    begin
       if Active (Finalize_Traces) then
          Lock;
-         Tmp := Handles_List;
+         Tmp := Global.Handles_List;
          while Tmp /= null loop
             Next := Tmp.Next;
 
@@ -1328,18 +1455,31 @@ package body GNATCOLL.Traces is
 
             Tmp := Next;
          end loop;
-         Handles_List := null;
+         Global.Handles_List := null;
 
-         TmpS := Streams_List;
+         Tmp := Global.Star_Handles_List;
+         while Tmp /= null loop
+            Next := Tmp.Next;
+
+            if Tmp.Finalize then
+               Free (Tmp.Name);
+               Unchecked_Free (Tmp);
+            end if;
+
+            Tmp := Next;
+         end loop;
+         Global.Star_Handles_List := null;
+
+         TmpS := Global.Streams_List;
          while TmpS /= null loop
             NextS := TmpS.Next;
             Close (TmpS.all);
             Unchecked_Free (TmpS);
             TmpS := NextS;
          end loop;
-         Streams_List := null;
+         Global.Streams_List := null;
 
-         TmpF := Factories_List;
+         TmpF := Global.Factories_List;
          while TmpF /= null loop
             NextF := TmpF.Next;
             Free (TmpF.Name);
@@ -1347,7 +1487,7 @@ package body GNATCOLL.Traces is
             Unchecked_Free (TmpF);
             TmpF := NextF;
          end loop;
-         Factories_List := null;
+         Global.Factories_List := null;
 
          Unlock;
       end if;
@@ -1373,15 +1513,15 @@ package body GNATCOLL.Traces is
 
       --  Put it first in the list
 
-      if Streams_List /= S then
-         T := Streams_List;
+      if Global.Streams_List /= S then
+         T := Global.Streams_List;
          while T.Next /= S loop
             T := T.Next;
          end loop;
 
          T.Next := S.Next;
-         S.Next := Streams_List;
-         Streams_List := S;
+         S.Next := Global.Streams_List;
+         Global.Streams_List := S;
       end if;
    end Set_Default_Stream;
 

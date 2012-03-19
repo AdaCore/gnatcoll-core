@@ -27,6 +27,9 @@ testsuite/sql/orm/orm_database_names.ads
 testsuite/sql/orm/queries.ad?
 testsuite/sql/orm/schema.dot
 testsuite/sql/orm/schema.ps
+testsuite/traces/traces4/traces4.out2
+testsuite/projects/K926-026/main
+testsuite/projects/KB30-016/test_it
 testsuite/*/*/obj
 
 testsuite/results

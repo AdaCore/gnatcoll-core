@@ -133,6 +133,10 @@ configurations, as in:
   character followed by the name of the stream to which the handle should
   be directed.
 
+  There is are two special cases for the names on this line: they can
+  start with either "*." or ".*" to indicate the settings apply to a whole
+  set of handles. See the example below.
+
 Here is a short example of a configuration file. It activates all handles
 by default, and defines four handles: two of them are directed to the
 default stream (standard error), the third one to a file on the disk,
@@ -148,6 +152,14 @@ otherwise to the default stream, ie standard error)::
 
   --  decorators (see below)
   DEBUG.COLORS=yes
+
+  --  Applies to FIRST.EXCEPTIONS, LAST.EXCEPTIONS,...
+  --  and forces them to be displayed on stdout
+  *.EXCEPTIONS=yes > stdout
+
+  --  Applies to MODULE1, MODULE1.FIRST,... This can be used to
+  --  disable a whole hierarchy of modules.
+  MODULE1.*=no
 
 .. _Using_the_traces_module:
 

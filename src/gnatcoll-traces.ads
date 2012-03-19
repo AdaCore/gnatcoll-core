@@ -78,6 +78,21 @@ package GNATCOLL.Traces is
    --      the lines following the '+'
    --      +
    --      Note that this doesn't apply to the predefined entities (see below)
+   --
+   --  It is also possible to substitute a module name with a '*', to configure
+   --  a whole set of modules with a single line. For instance:
+   --
+   --    *  *.EXCEPTIONS=yes >&stdout
+   --       will always display a stream whose name ends with ".EXCEPTIONS" to
+   --       stdout.
+   --
+   --    *  MODULE_NAME.*=no
+   --       Disables all streams starting with "MODULE_NAME" (including
+   --       MODULE_NAME itself). The star can only be used to substitute the
+   --       whole first or last name. If the configuration file also contains
+   --       a line like "MODULE_NAME.FOO" anywhere (before or after), then this
+   --       specific stream is not disabled.
+   --
    --  Here is a short example of configuration file:
    --     +                 --  by default, show all
    --     >&2               --  defines the default stream
