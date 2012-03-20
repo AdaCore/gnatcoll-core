@@ -615,18 +615,11 @@ package body GNATCOLL.Traces is
                if Star_Applies_To
                  (Tmp2.Name.all, Upper_Star => Upper_Case)
                then
-                  --  Put_Line ("MANU Star_Applies ? "
-                  --            & Tmp2.Name.all & " " & Upper_Case & " => "
-                  --            & Star_Applies_To
-                  --            (Tmp2.Name.all, Upper_Star => Upper_Case)'Img);
-
                   if not Tmp2.Forced_Active then
                      Tmp2.Active := Tmp.Active;
-                     --  Put_Line ("MANU active => " & Tmp.Active'Img);
                   end if;
 
                   if Tmp2.Stream = null then
-                     --  Put_Line ("MANU Override stream");
                      Tmp2.Stream := Tmp.Stream;
                   end if;
                end if;
@@ -1392,6 +1385,10 @@ package body GNATCOLL.Traces is
                           and then Handle /= Location
                         then
                            Handle.Active := True;
+
+                           --  A later declaration of the stream in the code
+                           --  should not be allowed to reset Active to False
+                           Handle.Forced_Active := True;
                         end if;
                         Handle := Handle.Next;
                      end loop;
