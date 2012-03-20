@@ -59,6 +59,10 @@ test:
 	@${MAKE} prefix=${shell pwd}/local_install install >/dev/null
 	@${MAKE} prefix=${shell pwd}/local_install -C testsuite
 
+test_verbose:
+	@${MAKE} prefix=${shell pwd}/local_install install >/dev/null
+	@${MAKE} prefix=${shell pwd}/local_install -C testsuite verbose
+
 ## GNU standards say we must not recompile in such a case
 ## Install either the static or the shared lib, based on the value of
 ## LIBRARY_TYPE

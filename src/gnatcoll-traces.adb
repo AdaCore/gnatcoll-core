@@ -594,7 +594,7 @@ package body GNATCOLL.Traces is
             end if;
          end if;
 
-         if not Tmp.Forced_Active then
+         if not Tmp.Forced_Active or else From_Config_File then
             if Default = On then
                Tmp.Active := True;
                Tmp.Forced_Active := True;
