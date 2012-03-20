@@ -30,6 +30,7 @@
 
 with Ada.Unchecked_Deallocation;
 with GNATCOLL.SQL;        use GNATCOLL.SQL;
+with GNATCOLL.SQL.Orm;
 with GNATCOLL.Traces;     use GNATCOLL.Traces;
 with GNATCOLL.Scripts;
 
@@ -923,6 +924,10 @@ package body GNATCOLL.SQL.Sessions is
       --  Clear_Cache (Get (Self));
 
    exception
+      when GNATCOLL.SQL.Orm.Self_Referencing =>
+         Decrease_Indent (Me, "Got self-referencing");
+         raise;
+
       when E : others =>
          Trace (Me, E);
          Decrease_Indent (Me, "while in flushing session");
