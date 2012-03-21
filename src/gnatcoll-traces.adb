@@ -96,7 +96,7 @@ package body GNATCOLL.Traces is
       --  applications that do not use tasking otherwise do not drag the whole
       --  tasking runtime in).
 
-      Star_Handles_List : Trace_Handle := null;
+      Wildcard_Handles_List : Trace_Handle := null;
       --  Contains the configuration for module names containing stars, for
       --  instance "*.EXCEPTIONS".
 
@@ -128,15 +128,15 @@ package body GNATCOLL.Traces is
    --  responsability of the called to make sure that not two tasks
    --  can access it at the same time.
 
-   function Find_Star_Handle
+   function Find_Wildcard_Handle
      (Unit_Name_Upper_Case : String) return Trace_Handle;
    --  Check whether there is a module name that contains a "*" and that can be
    --  used to provide the default configuration for Unit_Name_Upper_Case
 
-   function Star_Applies_To
+   function Wildcard_Applies_To
      (Upper_Name : String; Upper_Star : String) return Boolean;
    --  Whether the module Upper_Name should take its default configuration from
-   --  Upper_Star_Name.
+   --  Upper_Wildcard_Name.
 
    function Find_Stream
      (Stream_Name      : String;
@@ -230,11 +230,11 @@ package body GNATCOLL.Traces is
       return Tmp;
    end Find_Handle;
 
-   ---------------------
-   -- Star_Applies_To --
-   ---------------------
+   -------------------------
+   -- Wildcard_Applies_To --
+   -------------------------
 
-   function Star_Applies_To
+   function Wildcard_Applies_To
      (Upper_Name : String; Upper_Star : String) return Boolean
    is
    begin
@@ -264,19 +264,19 @@ package body GNATCOLL.Traces is
          end if;
       end if;
       return False;
-   end Star_Applies_To;
+   end Wildcard_Applies_To;
 
-   ----------------------
-   -- Find_Star_Handle --
-   ----------------------
+   --------------------------
+   -- Find_Wildcard_Handle --
+   --------------------------
 
-   function Find_Star_Handle
+   function Find_Wildcard_Handle
      (Unit_Name_Upper_Case : String) return Trace_Handle
    is
-      Tmp : Trace_Handle := Global.Star_Handles_List;
+      Tmp : Trace_Handle := Global.Wildcard_Handles_List;
    begin
       while Tmp /= null loop
-         if Star_Applies_To
+         if Wildcard_Applies_To
            (Upper_Name => Unit_Name_Upper_Case,
             Upper_Star => Tmp.Name.all)
          then
@@ -286,7 +286,7 @@ package body GNATCOLL.Traces is
          Tmp := Tmp.Next;
       end loop;
       return null;
-   end Find_Star_Handle;
+   end Find_Wildcard_Handle;
 
    ------------------------
    -- Show_Configuration --
@@ -524,7 +524,7 @@ package body GNATCOLL.Traces is
       Finalize  : Boolean := True) return Trace_Handle
    is
       Tmp, Tmp2  : Trace_Handle    := null;
-      Star_Tmp   : Trace_Handle    := null;
+      Wildcard_Tmp   : Trace_Handle    := null;
       Upper_Case : constant String := To_Upper (Unit_Name);
       Is_Star    : Boolean;
 
@@ -536,7 +536,7 @@ package body GNATCOLL.Traces is
            or else Ends_With (Unit_Name, ".*");
 
          if Is_Star then
-            Tmp := Find_Star_Handle (Upper_Case);
+            Tmp := Find_Wildcard_Handle (Upper_Case);
          else
             Tmp := Find_Handle (Upper_Case);
          end if;
@@ -557,21 +557,21 @@ package body GNATCOLL.Traces is
             Tmp.Finalize        := Finalize;
 
             if Is_Star then
-               Star_Tmp            := null;
-               Tmp.Next            := Global.Star_Handles_List;
-               Global.Star_Handles_List := Tmp;
+               Wildcard_Tmp            := null;
+               Tmp.Next            := Global.Wildcard_Handles_List;
+               Global.Wildcard_Handles_List := Tmp;
             else
-               Star_Tmp := Find_Star_Handle (Upper_Case);
+               Wildcard_Tmp := Find_Wildcard_Handle (Upper_Case);
                Tmp.Next            := Global.Handles_List;
                Global.Handles_List := Tmp;
             end if;
 
-            if Star_Tmp /= null then
-               Tmp.Active := Star_Tmp.Active;
+            if Wildcard_Tmp /= null then
+               Tmp.Active := Wildcard_Tmp.Active;
 
                --  Unless we specified an explicit stream, inherit it
                if Stream = null then
-                  Tmp.Stream := Star_Tmp.Stream;
+                  Tmp.Stream := Wildcard_Tmp.Stream;
                end if;
 
             else
@@ -604,7 +604,7 @@ package body GNATCOLL.Traces is
             end if;
          end if;
 
-         --  If we are declaring a "star" handle, we need to check
+         --  If we are declaring a "wildcard" handle, we need to check
          --  whether any existing handle would match (which will in
          --  general be the case, since handles are declared at
          --  elaboration time and star handles in the config file).
@@ -612,12 +612,21 @@ package body GNATCOLL.Traces is
          if Is_Star then
             Tmp2 := Global.Handles_List;
             while Tmp2 /= null loop
-               if Star_Applies_To
+               if Wildcard_Applies_To
                  (Tmp2.Name.all, Upper_Star => Upper_Case)
                then
-                  if not Tmp2.Forced_Active then
-                     Tmp2.Active := Tmp.Active;
-                  end if;
+                  --  Always override the status of matching streams:
+                  --  There are two scenarios here:
+                  --     - in a given config file, we always respect the order
+                  --  of declarations, thus wildcards should in general be put
+                  --  at the beginning.
+                  --     - if a wildcard is declared later on in Ada, we want
+                  --  it to impact existing streams as well (as a convenience
+                  --  for forcing specific settings from the code.
+                  --
+                  --  So do not check Tmp2.Forced_Active
+
+                  Tmp2.Active := Tmp.Active;
 
                   if Tmp2.Stream = null then
                      Tmp2.Stream := Tmp.Stream;
@@ -1547,7 +1556,7 @@ package body GNATCOLL.Traces is
          end loop;
          Global.Handles_List := null;
 
-         Tmp := Global.Star_Handles_List;
+         Tmp := Global.Wildcard_Handles_List;
          while Tmp /= null loop
             Next := Tmp.Next;
 
@@ -1558,7 +1567,7 @@ package body GNATCOLL.Traces is
 
             Tmp := Next;
          end loop;
-         Global.Star_Handles_List := null;
+         Global.Wildcard_Handles_List := null;
 
          TmpS := Global.Streams_List;
          while TmpS /= null loop
