@@ -35,14 +35,13 @@ GPRBUILD=gprbuild
 
 TARNAME=@PACKAGE_TARNAME@
 VERSION=@PACKAGE_VERSION@
+DESTDIR=
 prefix=@prefix@
-exec_prefix=@exec_prefix@
-datarootdir=@datarootdir@
-datadir=@datadir@
-bindir=@bindir@
-libdir=@libdir@
-includedir=@includedir@
-docdir=@docdir@
+exec_prefix=${DESTDIR}@exec_prefix@
+datadir=${DESTDIR}@datadir@
+bindir=${DESTDIR}@bindir@
+libdir=${DESTDIR}@libdir@
+includedir=${DESTDIR}@includedir@
 
 MKDIR=mkdir -p
 CP=cp -p
