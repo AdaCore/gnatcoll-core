@@ -2089,7 +2089,7 @@ package body GNATCOLL.SQL.Inspect is
       First := Data'First;
 
       --  ??? This is sqlite specific, but should be ignored on other DBMS
-      --  Execute (DB, "PRAGMA foreign_keys=OFF");
+      Execute (DB, "PRAGMA foreign_keys=OFF");
 
       while First <= Data'Last loop
          Parse_Line;
