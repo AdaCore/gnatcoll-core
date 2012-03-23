@@ -564,6 +564,7 @@ package body GNATCOLL.SQL.Inspect is
             --  even though they might be created with a different name like
             --  "SERIAL" and "INTEGER AUTOINCREMENT".
             return "Integer";
+         when Field_Money   => return "Money";
       end case;
    end To_SQL;
 
@@ -624,6 +625,8 @@ package body GNATCOLL.SQL.Inspect is
       elsif T = "autoincrement" then
          return (Kind => Field_Autoincrement);
 
+      elsif T = "money" then
+         return (Kind => Field_Money);
       else
          raise Invalid_Type
            with "Cannot convert """ & T & """ to Ada";
@@ -939,6 +942,10 @@ package body GNATCOLL.SQL.Inspect is
       elsif Typ.Kind = Field_Integer then
          Val := new String'(Value);
          Param := +Val;
+
+      elsif Typ.Kind = Field_Money then
+         Param := +GNATCOLL.Sql_Types.T_Money'Value (Value);
+         Val := new String'(Image (DB.all, Param));
 
       else
          if Has_Xref then
@@ -1601,6 +1608,10 @@ package body GNATCOLL.SQL.Inspect is
             if Get_Type (F).Kind = Field_Autoincrement then
                Append (Stmt, " " & F.Name & " "
                        & Field_Type_Autoincrement (Self.DB.all));
+
+            elsif Get_Type (F).Kind = Field_Money then
+               Append (Stmt, " " & F.Name & " "
+                       & Field_Type_Money (Self.DB.all));
             else
                Append (Stmt, " " & F.Name & " " & To_SQL (Get_Type (F)));
             end if;
@@ -1955,6 +1966,20 @@ package body GNATCOLL.SQL.Inspect is
       Paren      : Natural;
       DB_Field_Types : array (Line'First .. Max_Fields_Per_Line) of Field_Type;
 
+      --  TODO : convert for parameter_decimal
+      Tmp_DB_Fields_Count : Natural := DB_Fields'First - 1;
+      Convert_To_Parameter_Type : constant array (Field_Type_Kind)
+        of Parameter_Type :=
+        (Field_Text          => Parameter_Text,
+         Field_Integer       => Parameter_Integer,
+         Field_Date          => Parameter_Date,
+         Field_Time          => Parameter_Time,
+         Field_Timestamp     => Parameter_Time,
+         Field_Float         => Parameter_Float,
+         Field_Boolean       => Parameter_Boolean,
+         Field_Autoincrement => Parameter_Integer,
+         Field_Money         => Parameter_Money);
+
       FK : Field;
       Tables : String_List (1 .. Max_Fields_Per_Line);
       Where  : String_List (1 .. Max_Fields_Per_Line);
@@ -2047,6 +2072,7 @@ package body GNATCOLL.SQL.Inspect is
 
          Free (DB_Fields);
          DB_Fields_Count := DB_Fields'First - 1;
+         Tmp_DB_Fields_Count := DB_Fields'First - 1;
 
          Free (Xref);
          Xref_Count := Xref'First - 1;
@@ -2063,7 +2089,7 @@ package body GNATCOLL.SQL.Inspect is
       First := Data'First;
 
       --  ??? This is sqlite specific, but should be ignored on other DBMS
-      Execute (DB, "PRAGMA foreign_keys=OFF");
+      --  Execute (DB, "PRAGMA foreign_keys=OFF");
 
       while First <= Data'Last loop
          Parse_Line;
@@ -2096,21 +2122,10 @@ package body GNATCOLL.SQL.Inspect is
 
                   Tables (L) := new String'
                     (FK.Get_Table.Name & " t" & Image (L, 0));
-                  Select_Values (L) :=
-                    new String'("t" & Image (L, 0) & "." & FK.Name);
-                  Where (L) := new String'
-                    ("t" & Image (L, 0) & "." & Xref (L).all
-                     & "=" & DB.Parameter_String (L, Parameter_Text));
-
                else
                   Append (DB_Fields, DB_Fields_Count, Line (L).all);
                   Append (Xref, Xref_Count, "");
-                  Select_Values (L) := new String'
-                    (DB.Parameter_String (L, Parameter_Text));
                end if;
-
-               DB_Values (L) := new String'
-                 (DB.Parameter_String (L, Parameter_Text));
             end loop;
 
             declare
@@ -2128,6 +2143,31 @@ package body GNATCOLL.SQL.Inspect is
                Table.For_Each_Field
                  (On_Field'Access, Include_Inherited => True);
             end;
+
+            --  Set Select_Values and DB_Values according to DB_Field_Types
+            for L in Line'First .. Fields_Count loop
+               exit when Line (L).all = "";
+
+               if Is_Xref (Tmp_DB_Fields_Count + 1) then
+                  Select_Values (L) :=
+                    new String'("t" & Image (L, 0) & "." & FK.Name);
+                  Where (L) := new String'
+                    ("t" & Image (L, 0) & "." & Xref (L).all
+                     & "=" & DB.Parameter_String
+                       (L,
+                        Convert_To_Parameter_Type (DB_Field_Types (L).Kind)));
+               else
+                  Select_Values (L) := new String'
+                       (DB.Parameter_String (L,
+                        Convert_To_Parameter_Type (DB_Field_Types (L).Kind)));
+               end if;
+
+               DB_Values (L) := new String'
+                       (DB.Parameter_String (L,
+                        Convert_To_Parameter_Type (DB_Field_Types (L).Kind)));
+
+               Tmp_DB_Fields_Count := Tmp_DB_Fields_Count + 1;
+            end loop;
 
             Q_Values := Prepare
               ("INSERT INTO " & Table.Name & "("

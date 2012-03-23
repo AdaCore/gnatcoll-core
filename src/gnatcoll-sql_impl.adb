@@ -1505,6 +1505,37 @@ package body GNATCOLL.SQL_Impl is
    end Date_To_SQL;
 
    -------------------
+   -- Decimal_To_SQL --
+   -------------------
+
+   function Money_To_SQL
+     (Self  : Formatter'Class;
+      Value : GNATCOLL.Sql_Types.T_Money;
+      Quote : Boolean) return String
+   is
+   begin
+      return Self.Specific_Money_To_Sql (Value, Quote);
+   end Money_To_SQL;
+
+   ---------------------------
+   -- Specific_Money_To_Sql --
+   ---------------------------
+
+   function Specific_Money_To_Sql
+     (Self : Formatter; Value : GNATCOLL.Sql_Types.T_Money; Quote : Boolean)
+      return String
+   is
+      pragma Unreferenced (Self, Quote);
+      Img : constant String := GNATCOLL.Sql_Types.T_Money'Image (Value);
+   begin
+      if Img (Img'First) = ' ' then
+         return Img (Img'First + 1 .. Img'Last);
+      else
+         return Img;
+      end if;
+   end Specific_Money_To_Sql;
+
+   -------------------
    -- String_To_SQL --
    -------------------
 

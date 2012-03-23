@@ -609,7 +609,7 @@ class Schema(object):
            "GNATCOLL.SQL.Sessions",
            "Ada.Strings.Unbounded", "GNAT.Strings", database_pkg,
            "GNAT.Calendar", "Ada.Calendar",
-            "Ada.Finalization"])
+            "Ada.Finalization", "GNATCOLL.Sql_Types"])
         self.pretty.add_with("ada.unchecked_deallocation", specs=False,
                               do_use=False)
         self.pretty.add_with("system.address_image", do_use=False)
@@ -2062,7 +2062,11 @@ class Field_Type(object):
                boolean=Field_Type(
                   "boolean", "Boolean", "TriBoolean", "Indeterminate",
                    "Boolean", "False", "Boolean_Value (%s, %s)",
-                   "%s", "", "%s'Img", "%s"))
+                   "%s", "", "%s'Img", "%s"),
+               money=Field_Type(
+                  "money", "GNATCOLL.Sql_Types.T_Money", "GNATCOLL.Sql_Types.T_Money", "GNATCOLL.Sql_Types.T_Money'First", 
+                  "GNATCOLL.Sql_Types.T_Money", "GNATCOLL.Sql_Types.T_Money'First", "Money_Value (%s, %s)", 
+                  "%s", "", "%s'Img", "%s"))
 
         sql = sql.lower()
         if sql in ("timestamp without time zone",

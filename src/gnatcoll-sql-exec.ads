@@ -104,6 +104,7 @@ with System;
 private with Ada.Finalization;
 private with GNATCOLL.Refcount;
 with GNAT.Strings;
+with GNATCOLL.Sql_Types;
 
 package GNATCOLL.SQL.Exec is
 
@@ -160,6 +161,7 @@ package GNATCOLL.SQL.Exec is
          when Parameter_Time    => Time_Val  : Ada.Calendar.Time;
          when Parameter_Date    => Date_Val  : Ada.Calendar.Time;
          when Parameter_Character => Char_Val : Character;
+         when Parameter_Money   => Money_Val : GNATCOLL.Sql_Types.T_Money;
       end case;
    end record;
 
@@ -171,6 +173,7 @@ package GNATCOLL.SQL.Exec is
    function "+" (Value : Float) return SQL_Parameter;
    function "+" (Value : Character) return SQL_Parameter;
    function "+" (Time : Ada.Calendar.Time) return SQL_Parameter;
+   function "+" (Value : GNATCOLL.Sql_Types.T_Money) return SQL_Parameter;
 
    type SQL_Parameters is array (Positive range <>) of SQL_Parameter;
    No_Parameters : constant SQL_Parameters;
@@ -462,6 +465,9 @@ package GNATCOLL.SQL.Exec is
       Field   : Field_Index) return Integer;
    function Float_Value
      (Self : Forward_Cursor; Field : Field_Index) return Float;
+   function Money_Value
+     (Self : Forward_Cursor; Field : Field_Index)
+     return GNATCOLL.Sql_Types.T_Money;
    function Time_Value
      (Self  : Forward_Cursor; Field : Field_Index) return Ada.Calendar.Time;
    --  Return a specific cell, converted to the appropriate format

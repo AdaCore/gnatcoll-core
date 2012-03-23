@@ -411,6 +411,8 @@ package body GNATCOLL.SQL.Exec is
             return Date_To_SQL (Format, Param.Date_Val, Quote => False);
          when Parameter_Character =>
             return String'(1 .. 1 => Param.Char_Val);
+         when Parameter_Money =>
+            return Money_To_SQL (Format, Param.Money_Val, Quote => False);
          end case;
       end if;
    end Image;
@@ -1076,6 +1078,17 @@ package body GNATCOLL.SQL.Exec is
    -- Value --
    -----------
 
+   function Money_Value
+     (Self : Forward_Cursor; Field : Field_Index)
+     return GNATCOLL.Sql_Types.T_Money is
+   begin
+      return Money_Value (DBMS_Forward_Cursor'Class (Self.Res.all), Field);
+   end Money_Value;
+
+   -----------
+   -- Value --
+   -----------
+
    function Time_Value
      (Self  : Forward_Cursor;
       Field : Field_Index) return Ada.Calendar.Time is
@@ -1524,6 +1537,15 @@ package body GNATCOLL.SQL.Exec is
    function "+" (Time : Ada.Calendar.Time) return SQL_Parameter is
    begin
       return SQL_Parameter'(Typ => Parameter_Time, Time_Val => Time);
+   end "+";
+
+   ---------
+   -- "+" --
+   ---------
+
+   function "+" (Value : GNATCOLL.Sql_Types.T_Money) return SQL_Parameter is
+   begin
+      return SQL_Parameter'(Typ => Parameter_Money, Money_Val => Value);
    end "+";
 
    ----------

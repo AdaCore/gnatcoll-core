@@ -26,6 +26,7 @@ with Ada.Containers.Doubly_Linked_Lists;
 with Ada.Containers.Indefinite_Doubly_Linked_Lists;
 with Ada.Containers.Indefinite_Hashed_Sets;
 with Ada.Finalization;
+with GNATCOLL.Sql_Types;
 
 package GNATCOLL.SQL_Impl is
 
@@ -79,6 +80,15 @@ package GNATCOLL.SQL_Impl is
    --  returend as part of the type (this is mandatory for sqlite in
    --  particular).
 
+   function Field_Type_Money
+     (Self : Formatter) return String is abstract;
+   --  Return the SQL type to use for money fields depending on DBMS
+
+   function Specific_Money_To_Sql
+     (Self : Formatter; Value : GNATCOLL.Sql_Types.T_Money; Quote : Boolean)
+      return String;
+   --  Specific SQL T_Money formatter depending on DBMS
+
    function Boolean_To_SQL
      (Self : Formatter'Class; Value : Boolean; Quote : Boolean) return String;
    function Float_To_SQL
@@ -93,6 +103,10 @@ package GNATCOLL.SQL_Impl is
    function Date_To_SQL
      (Self : Formatter'Class; Value : Ada.Calendar.Time; Quote : Boolean)
       return String;
+   function Money_To_SQL
+     (Self : Formatter'Class;
+      Value : GNATCOLL.Sql_Types.T_Money;
+      Quote : Boolean) return String;
    --  Calls the above formatting primitives (or provide default version, when
    --  not overridable)
    --  If Quote is False, these functions provide quotes around the values. For
@@ -102,7 +116,7 @@ package GNATCOLL.SQL_Impl is
 
    type Parameter_Type is
      (Parameter_Integer, Parameter_Text, Parameter_Boolean, Parameter_Float,
-      Parameter_Time, Parameter_Date, Parameter_Character);
+      Parameter_Time, Parameter_Date, Parameter_Character, Parameter_Money);
 
    function Parameter_String
      (Self  : Formatter;

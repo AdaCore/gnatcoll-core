@@ -79,6 +79,19 @@ package body GNATCOLL.SQL.Exec_Private is
       return Float'Value (Value (DBMS_Forward_Cursor'Class (Self), Field));
    end Float_Value;
 
+   -----------------
+   -- Money_Value --
+   -----------------
+
+   function Money_Value
+     (Self  : DBMS_Forward_Cursor;
+      Field : Field_Index) return GNATCOLL.Sql_Types.T_Money
+   is
+   begin
+      return GNATCOLL.Sql_Types.T_Money'Value
+         (Value (DBMS_Forward_Cursor'Class (Self), Field));
+   end Money_Value;
+
    ----------------
    -- Time_Value --
    ----------------

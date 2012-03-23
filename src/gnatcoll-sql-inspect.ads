@@ -54,7 +54,8 @@ package GNATCOLL.SQL.Inspect is
       Field_Timestamp,
       Field_Float,
       Field_Boolean,
-      Field_Autoincrement);
+      Field_Autoincrement,
+      Field_Money);
    type Field_Type (Kind : Field_Type_Kind := Field_Text) is record
       case Kind is
          when Field_Text =>

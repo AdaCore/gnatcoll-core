@@ -111,6 +111,8 @@ package body GNATCOLL.SQL.Postgres.Builder is
       return String;
    overriding function Field_Type_Autoincrement
      (Self : Postgresql_Connection_Record) return String;
+   overriding function Field_Type_Money
+     (Self : Postgresql_Connection_Record) return String;
    overriding function Error
      (Connection : access Postgresql_Connection_Record) return String;
    overriding procedure Foreach_Table
@@ -1179,6 +1181,8 @@ package body GNATCOLL.SQL.Postgres.Builder is
             return '$' & Image (Index, 0) & "::time";
          when Parameter_Date =>
             return '$' & Image (Index, 0) & "::date";
+         when Parameter_Money =>
+            return '$' & Image (Index, 0) & "::numeric";
       end case;
    end Parameter_String;
 
@@ -1193,6 +1197,19 @@ package body GNATCOLL.SQL.Postgres.Builder is
    begin
       return "SERIAL PRIMARY KEY";
    end Field_Type_Autoincrement;
+
+   ------------------------------
+   -- Field_Type_Money --
+   ------------------------------
+
+   overriding function Field_Type_Money
+     (Self : Postgresql_Connection_Record) return String
+   is
+      pragma Unreferenced (Self);
+      use GNATCOLL.Sql_Types;
+   begin
+      return "NUMERIC (" & K_Digits'Img & "," & K_Decimals'Img & ")";
+   end Field_Type_Money;
 
    ----------------------------
    -- Has_Postgresql_Support --

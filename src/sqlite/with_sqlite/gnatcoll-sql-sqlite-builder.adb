@@ -88,6 +88,9 @@ package body GNATCOLL.SQL.Sqlite.Builder is
    overriding procedure Next   (Self : in out Sqlite_Cursor);
    overriding function Boolean_Value
      (Self : Sqlite_Cursor; Field : Field_Index) return Boolean;
+   overriding function Money_Value
+     (Self  : Sqlite_Cursor;
+      Field : Field_Index) return GNATCOLL.Sql_Types.T_Money;
 
    package Direct_Cursors is new Generic_Direct_Cursors (Sqlite_Cursor);
    type Sqlite_Direct_Cursor is new Direct_Cursors.Direct with null record;
@@ -109,6 +112,12 @@ package body GNATCOLL.SQL.Sqlite.Builder is
      (Connection : access Sqlite_Connection_Record);
    overriding function Field_Type_Autoincrement
      (Self : Sqlite_Connection_Record) return String;
+   overriding function Field_Type_Money
+     (Self : Sqlite_Connection_Record) return String;
+   overriding function Specific_Money_To_Sql
+     (Self : Sqlite_Connection_Record;
+      Value : GNATCOLL.Sql_Types.T_Money; Quote : Boolean)
+      return String;
    overriding function Can_Alter_Table_Constraints
      (Self : access Sqlite_Connection_Record) return Boolean;
    overriding function Connect_And_Execute
@@ -477,6 +486,7 @@ package body GNATCOLL.SQL.Sqlite.Builder is
       Stmt   : Statement;
       Last_Status : Result_Codes;
       Tmp_Data : array (Params'Range) of GNAT.Strings.String_Access;
+      Money_Int : Integer;
    begin
       --  Since we have a prepared statement, the connection already exists, no
       --  need to recreate.
@@ -517,6 +527,12 @@ package body GNATCOLL.SQL.Sqlite.Builder is
                     (Connection.all, Params (P).Time_Val, Quote => False));
                Bind_Text
                  (Stmt, P, Tmp_Data (P).all'Address, Tmp_Data (P)'Length);
+
+            when Parameter_Money =>
+               --  In SQLite, Money type will be mapped as integer
+               Money_Int := Integer
+                 (Params (P).Money_Val / GNATCOLL.Sql_Types.K_Delta);
+               Bind_Int (Stmt, P, Interfaces.C.int (Money_Int));
             end case;
          end if;
       end loop;
@@ -988,6 +1004,19 @@ package body GNATCOLL.SQL.Sqlite.Builder is
       return Value (Sqlite_Cursor'Class (Self), Field) /= "0";
    end Boolean_Value;
 
+   -----------------
+   -- Money_Value --
+   -----------------
+
+   overriding function Money_Value
+      (Self  : Sqlite_Cursor;
+       Field : Field_Index) return GNATCOLL.Sql_Types.T_Money is
+   begin
+      return GNATCOLL.Sql_Types.T_Money'Value
+        (Value (Sqlite_Cursor'Class (Self), Field)) *
+        GNATCOLL.Sql_Types.K_Delta;
+   end Money_Value;
+
    ------------------------------
    -- Field_Type_Autoincrement --
    ------------------------------
@@ -999,6 +1028,41 @@ package body GNATCOLL.SQL.Sqlite.Builder is
    begin
       return "INTEGER PRIMARY KEY AUTOINCREMENT";
    end Field_Type_Autoincrement;
+
+   ----------------------
+   -- Field_Type_Money --
+   ----------------------
+
+   overriding function Field_Type_Money
+     (Self : Sqlite_Connection_Record) return String
+   is
+      pragma Unreferenced (Self);
+   begin
+      --  Note : As SQLite does not support fixed point real, Money type is
+      --  represented as an integer that modelize cents.
+      return "Integer";
+   end Field_Type_Money;
+
+   ---------------------------
+   -- Specific_Money_To_Sql --
+   ---------------------------
+
+   overriding function Specific_Money_To_Sql
+     (Self : Sqlite_Connection_Record;
+      Value : GNATCOLL.Sql_Types.T_Money; Quote : Boolean)
+      return String
+   is
+      pragma Unreferenced (Self, Quote);
+      Long_Value : constant Long_Integer :=
+        Long_Integer (Value / GNATCOLL.Sql_Types.K_Delta);
+      Img : constant String := Long_Integer'Image (Long_Value);
+   begin
+      if Img (Img'First) = ' ' then
+         return Img (Img'First + 1 .. Img'Last);
+      else
+         return Img;
+      end if;
+   end Specific_Money_To_Sql;
 
    ---------------------------------
    -- Can_Alter_Table_Constraints --

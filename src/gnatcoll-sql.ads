@@ -103,6 +103,7 @@ with Ada.Containers.Indefinite_Doubly_Linked_Lists;
 with Ada.Finalization;
 with Ada.Strings.Unbounded;  use Ada.Strings.Unbounded;
 with GNATCOLL.SQL_Impl;      use GNATCOLL.SQL_Impl;
+with GNATCOLL.Sql_Types;
 
 package GNATCOLL.SQL is
 
@@ -232,6 +233,13 @@ package GNATCOLL.SQL is
    Null_Field_Float : constant SQL_Field_Float;
    function Float_Param (Index : Positive) return Float_Fields.Field'Class
                          renames Float_Fields.Param;
+
+   package Money_Fields is new Field_Types
+     (GNATCOLL.Sql_Types.T_Money, Money_To_SQL, Parameter_Money);
+   type SQL_Field_Money is new Money_Fields.Field with null record;
+   Null_Field_Money : constant SQL_Field_Money;
+   function Money_Param (Index : Positive) return Money_Fields.Field'Class
+                         renames Money_Fields.Param;
 
    package Time_Fields is new Field_Types
      (Ada.Calendar.Time, Time_To_SQL, Parameter_Time);
@@ -1074,6 +1082,8 @@ private
      (Boolean_Fields.Null_Field with null record);
    Null_Field_Float : constant SQL_Field_Float :=
      (Float_Fields.Null_Field with null record);
+   Null_Field_Money : constant SQL_Field_Money :=
+     (Money_Fields.Null_Field with null record);
    Null_Field_Time : constant SQL_Field_Time :=
      (Time_Fields.Null_Field with null record);
    Null_Field_Date : constant SQL_Field_Date :=

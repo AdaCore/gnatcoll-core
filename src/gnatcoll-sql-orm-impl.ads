@@ -11,6 +11,7 @@
 --  operations of the managers
 
 with Ada.Calendar;
+with GNATCOLL.Sql_Types;
 
 package GNATCOLL.SQL.Orm.Impl is
 
@@ -38,6 +39,9 @@ package GNATCOLL.SQL.Orm.Impl is
      (Self : Orm_Element'Class; Field : Field_Index) return Ada.Calendar.Time;
    function Float_Value
      (Self : Orm_Element'Class; Field : Field_Index) return Float;
+   function Money_Value
+     (Self : Orm_Element'Class; Field : Field_Index)
+     return GNATCOLL.Sql_Types.T_Money;
    --  Retrieve the specific field from the element
 
    --  Generic implementation of managers.
