@@ -243,10 +243,9 @@ provide that information:
          '|' ('PK'|''|'NULL'|'NOT NULL'|'INDEX'|'NOCASE') 
          '|' [default] '|' [doc] '|'
     
-
   The type of the field is the SQL type ("INTEGER", "TEXT", "TIMESTAMP", "DATE",
-  "DOUBLE PRECISION", "BOOLEAN", "TIME", "CHARACTER(1)"). Any maximal length
-  can be specified for strings, not just 1 as in this example.
+  "DOUBLE PRECISION", "MONEY", "BOOLEAN", "TIME", "CHARACTER(1)"). Any maximal
+  length can be specified for strings, not just 1 as in this example.
   The tool will automatically convert these to
   Ada when generating Ada code. A special type ("AUTOINCREMENT") is an integer
   that is automatically incremented according to available ids in the table.

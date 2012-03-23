@@ -2064,9 +2064,12 @@ class Field_Type(object):
                    "Boolean", "False", "Boolean_Value (%s, %s)",
                    "%s", "", "%s'Img", "%s"),
                money=Field_Type(
-                  "money", "GNATCOLL.Sql_Types.T_Money", "GNATCOLL.Sql_Types.T_Money", "GNATCOLL.Sql_Types.T_Money'First", 
-                  "GNATCOLL.Sql_Types.T_Money", "GNATCOLL.Sql_Types.T_Money'First", "Money_Value (%s, %s)", 
-                  "%s", "", "%s'Img", "%s"))
+                  "money", "GNATCOLL.Sql_Types.T_Money",
+                   "GNATCOLL.Sql_Types.T_Money",
+                   "GNATCOLL.Sql_Types.T_Money'First",
+                   "GNATCOLL.Sql_Types.T_Money",
+                   "GNATCOLL.Sql_Types.T_Money'First",
+                   "Money_Value (%s, %s)", "%s", "", "%s'Img", "%s"))
 
         sql = sql.lower()
         if sql in ("timestamp without time zone",
