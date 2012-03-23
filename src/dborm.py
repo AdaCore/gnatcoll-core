@@ -1037,7 +1037,7 @@ with this primary key. If not, the returned value will be a null element
     else:
         local = []
         body = "return Detach_No_Lookup (Self, Self.Data.Session);"
-
+        tr = {}
 
     pretty.add_subprogram(
        name="detach",
