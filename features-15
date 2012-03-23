@@ -25,6 +25,11 @@ NF-15-L105-042 GNATCOLL.SQL.Postgres adds support for regexps (2012-01-05)
    The package GNATCOLL.SQL.Postgres now adds support for the postgreSQL
    specific "~*" operator, that matches regular expressions.
 
+NF-15-KC22-014 GNATCOLL.SQL adds support for Money type (2012-03-23)
+
+   It is now possible to use a type of "Money" for fields, which will be
+   automatically converted to the appropriate DBMS type.
+
 NF-15-KB21-014 Documentation converted to Sphinx (2011-12-07)
 
    The documentation was converted from texinfo to Sphinx.

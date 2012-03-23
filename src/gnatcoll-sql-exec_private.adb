@@ -85,11 +85,10 @@ package body GNATCOLL.SQL.Exec_Private is
 
    function Money_Value
      (Self  : DBMS_Forward_Cursor;
-      Field : Field_Index) return GNATCOLL.Sql_Types.T_Money
+      Field : Field_Index) return T_Money
    is
    begin
-      return GNATCOLL.Sql_Types.T_Money'Value
-         (Value (DBMS_Forward_Cursor'Class (Self), Field));
+      return T_Money'Value (Value (DBMS_Forward_Cursor'Class (Self), Field));
    end Money_Value;
 
    ----------------

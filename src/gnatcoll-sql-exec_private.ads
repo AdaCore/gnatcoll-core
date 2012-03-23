@@ -90,7 +90,7 @@ private package GNATCOLL.SQL.Exec_Private is
       Field : Field_Index) return Float;
    function Money_Value
      (Self  : DBMS_Forward_Cursor;
-      Field : Field_Index) return GNATCOLL.Sql_Types.T_Money;
+      Field : Field_Index) return T_Money;
    function Time_Value
      (Self  : DBMS_Forward_Cursor;
       Field : Field_Index) return Ada.Calendar.Time;

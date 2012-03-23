@@ -1206,7 +1206,6 @@ package body GNATCOLL.SQL.Postgres.Builder is
      (Self : Postgresql_Connection_Record) return String
    is
       pragma Unreferenced (Self);
-      use GNATCOLL.Sql_Types;
    begin
       return "NUMERIC (" & K_Digits'Img & "," & K_Decimals'Img & ")";
    end Field_Type_Money;

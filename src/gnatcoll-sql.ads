@@ -103,7 +103,6 @@ with Ada.Containers.Indefinite_Doubly_Linked_Lists;
 with Ada.Finalization;
 with Ada.Strings.Unbounded;  use Ada.Strings.Unbounded;
 with GNATCOLL.SQL_Impl;      use GNATCOLL.SQL_Impl;
-with GNATCOLL.Sql_Types;
 
 package GNATCOLL.SQL is
 
@@ -234,8 +233,26 @@ package GNATCOLL.SQL is
    function Float_Param (Index : Positive) return Float_Fields.Field'Class
                          renames Float_Fields.Param;
 
+   subtype T_Money is GNATCOLL.SQL_Impl.T_Money;
+   function "=" (T1, T2 : T_Money) return Boolean
+      renames GNATCOLL.SQL_Impl."=";
+   function "+" (T1, T2 : T_Money) return T_Money
+      renames GNATCOLL.SQL_Impl."+";
+   function "-" (T1, T2 : T_Money) return T_Money
+      renames GNATCOLL.SQL_Impl."-";
+   function "<" (T1, T2 : T_Money) return Boolean
+      renames GNATCOLL.SQL_Impl."<";
+   function "<=" (T1, T2 : T_Money) return Boolean
+      renames GNATCOLL.SQL_Impl."<=";
+   function ">" (T1, T2 : T_Money) return Boolean
+      renames GNATCOLL.SQL_Impl.">";
+   function ">=" (T1, T2 : T_Money) return Boolean
+      renames GNATCOLL.SQL_Impl.">=";
+   --  Make this type visible here, so that users do not have to explicitly
+   --  'with' GNATCOLL.SQL_Impl.
+
    package Money_Fields is new Field_Types
-     (GNATCOLL.Sql_Types.T_Money, Money_To_SQL, Parameter_Money);
+     (T_Money, Money_To_SQL, Parameter_Money);
    type SQL_Field_Money is new Money_Fields.Field with null record;
    Null_Field_Money : constant SQL_Field_Money;
    function Money_Param (Index : Positive) return Money_Fields.Field'Class

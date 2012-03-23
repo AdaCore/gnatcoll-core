@@ -1080,7 +1080,7 @@ package body GNATCOLL.SQL.Exec is
 
    function Money_Value
      (Self : Forward_Cursor; Field : Field_Index)
-     return GNATCOLL.Sql_Types.T_Money is
+     return T_Money is
    begin
       return Money_Value (DBMS_Forward_Cursor'Class (Self.Res.all), Field);
    end Money_Value;
@@ -1543,7 +1543,7 @@ package body GNATCOLL.SQL.Exec is
    -- "+" --
    ---------
 
-   function "+" (Value : GNATCOLL.Sql_Types.T_Money) return SQL_Parameter is
+   function "+" (Value : T_Money) return SQL_Parameter is
    begin
       return SQL_Parameter'(Typ => Parameter_Money, Money_Val => Value);
    end "+";

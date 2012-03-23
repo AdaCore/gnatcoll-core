@@ -944,7 +944,7 @@ package body GNATCOLL.SQL.Inspect is
          Param := +Val;
 
       elsif Typ.Kind = Field_Money then
-         Param := +GNATCOLL.Sql_Types.T_Money'Value (Value);
+         Param := +T_Money'Value (Value);
          Val := new String'(Image (DB.all, Param));
 
       else

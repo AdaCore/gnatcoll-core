@@ -2,7 +2,7 @@
 --                                   CRM                                    --
 --                    [Customer Relationship Management]                    --
 --                                                                          --
---                         Copyright (C) 2009-2011, AdaCore                 --
+--                         Copyright (C) 2009-2012, AdaCore                 --
 ------------------------------------------------------------------------------
 
 --  Implementation facilities for ORM.
@@ -11,7 +11,6 @@
 --  operations of the managers
 
 with Ada.Calendar;
-with GNATCOLL.Sql_Types;
 
 package GNATCOLL.SQL.Orm.Impl is
 
@@ -40,8 +39,7 @@ package GNATCOLL.SQL.Orm.Impl is
    function Float_Value
      (Self : Orm_Element'Class; Field : Field_Index) return Float;
    function Money_Value
-     (Self : Orm_Element'Class; Field : Field_Index)
-     return GNATCOLL.Sql_Types.T_Money;
+     (Self : Orm_Element'Class; Field : Field_Index) return T_Money;
    --  Retrieve the specific field from the element
 
    --  Generic implementation of managers.

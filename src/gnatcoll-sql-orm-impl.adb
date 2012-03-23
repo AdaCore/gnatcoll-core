@@ -2,7 +2,7 @@
 --                                   CRM                                    --
 --                    [Customer Relationship Management]                    --
 --                                                                          --
---                         Copyright (C) 2009-2011, AdaCore                 --
+--                         Copyright (C) 2009-2012, AdaCore                 --
 ------------------------------------------------------------------------------
 
 with GNAT.Calendar;  use GNAT.Calendar;
@@ -156,14 +156,14 @@ package body GNATCOLL.SQL.Orm.Impl is
 
    function Money_Value
      (Self : Orm_Element'Class; Field : Field_Index)
-     return GNATCOLL.Sql_Types.T_Money is
+     return T_Money is
    begin
       if Current (Self.Current) /= Self.Index then
          raise Cursor_Has_Moved;
       end if;
 
       if Is_Null (Self.Current, Self.Column + Field) then
-         return GNATCOLL.Sql_Types.T_Money'First;
+         return T_Money'First;
       else
          return Money_Value (Self.Current, Self.Column + Field);
       end if;

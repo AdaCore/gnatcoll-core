@@ -26,7 +26,6 @@ with Ada.Containers.Doubly_Linked_Lists;
 with Ada.Containers.Indefinite_Doubly_Linked_Lists;
 with Ada.Containers.Indefinite_Hashed_Sets;
 with Ada.Finalization;
-with GNATCOLL.Sql_Types;
 
 package GNATCOLL.SQL_Impl is
 
@@ -45,6 +44,13 @@ package GNATCOLL.SQL_Impl is
 
    Null_String : aliased constant String := "NULL";
 
+   K_Delta : constant := 0.01;
+   K_Decimals : constant := 2;   --  must match K_Delta above
+   K_Digits : constant := 14;
+   type T_Money is delta K_Delta digits K_Digits;
+   --  The base type to represent money in a database. The exact mapping
+   --  depends on the DBMS (for postgreSQL, this is "numeric(14,2)").
+
    ---------------
    -- Formatter --
    ---------------
@@ -55,6 +61,7 @@ package GNATCOLL.SQL_Impl is
    --  various instances of Formatter.
 
    function Boolean_Image (Self : Formatter; Value : Boolean) return String;
+   function Money_Image (Self : Formatter; Value : T_Money) return String;
    --  Return an image of the various basic types suitable for the DBMS.
    --  For instance, sqlite does not support boolean fields, which are thus
    --  mapped to integers at the lowest level, even though the Ada layer still
@@ -84,11 +91,6 @@ package GNATCOLL.SQL_Impl is
      (Self : Formatter) return String is abstract;
    --  Return the SQL type to use for money fields depending on DBMS
 
-   function Specific_Money_To_Sql
-     (Self : Formatter; Value : GNATCOLL.Sql_Types.T_Money; Quote : Boolean)
-      return String;
-   --  Specific SQL T_Money formatter depending on DBMS
-
    function Boolean_To_SQL
      (Self : Formatter'Class; Value : Boolean; Quote : Boolean) return String;
    function Float_To_SQL
@@ -104,9 +106,7 @@ package GNATCOLL.SQL_Impl is
      (Self : Formatter'Class; Value : Ada.Calendar.Time; Quote : Boolean)
       return String;
    function Money_To_SQL
-     (Self : Formatter'Class;
-      Value : GNATCOLL.Sql_Types.T_Money;
-      Quote : Boolean) return String;
+     (Self : Formatter'Class; Value : T_Money; Quote : Boolean) return String;
    --  Calls the above formatting primitives (or provide default version, when
    --  not overridable)
    --  If Quote is False, these functions provide quotes around the values. For
