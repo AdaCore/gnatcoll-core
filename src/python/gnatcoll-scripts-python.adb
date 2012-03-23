@@ -1677,6 +1677,8 @@ package body GNATCOLL.Scripts.Python is
       Error   : access Boolean) return PyObject
    is
       Obj   : PyObject;
+      Old, Args2, Item  : PyObject;
+      Size  : Integer;
 
    begin
       Error.all := False;
@@ -1687,10 +1689,49 @@ package body GNATCOLL.Scripts.Python is
          return null;
       end if;
 
-      Obj := PyObject_Call
-        (Command,
-         Python_Callback_Data (Args).Args,
-         Python_Callback_Data (Args).Kw);
+      --  If we are calling a bound method whose self is the same as the
+      --  first parameter in Args, we remove the first parameter to avoid
+      --  a duplicate. This allows registering callbacks as:
+      --      class MyClass(object):
+      --          def my_callback(self, arg1):
+      --               pass
+      --          def __init__(self):
+      --               register_callback(self, self.my_callback)
+      --               register_callback(self, MyClass.my_callback)
+      --  If Ada calls the registered callback by passing the instance as
+      --  the first parameter in the Callback_Data, both the calls above
+      --  have the same effect when we remove the duplication. Otherwise,
+      --  the first one will result in an error since my_callback will be
+      --  called with three arguments (self, self, arg1).
+      --  Note that the second call does not provide dynamic dispatching when
+      --  MyClass is subclassed and my_callback overridden.
+
+      Old := Python_Callback_Data (Args).Args;
+      Size := PyTuple_Size (Old);
+
+      if PyMethod_Check (Command)
+         and then PyMethod_Self (Command) /= null
+         and then Size > 0
+         and then PyMethod_Self (Command) = PyTuple_GetItem (Old, 0)
+      then
+         if Size = 1 then
+            Args2 := Py_None;
+            Py_INCREF (Args2);
+         else
+            Args2 := PyTuple_New (Size => Size - 1);
+            for T in 1 .. Size - 1 loop   --  Remove arg 0
+               Item := PyTuple_GetItem (Old, T);   --  same refcount
+               Py_INCREF (Item);
+               PyTuple_SetItem (Args2, T - 1, Item);   --  same refcount
+            end loop;
+         end if;
+      else
+         Args2 := Old;
+         Py_INCREF (Args2);
+      end if;
+
+      Obj := PyObject_Call (Command, Args2, Python_Callback_Data (Args).Kw);
+      Py_DECREF (Args2);
 
       if Obj = null then
          Error.all := True;
