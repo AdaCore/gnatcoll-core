@@ -413,6 +413,10 @@ package GNATCOLL.SQL.Exec is
    --  Whether it is possible to add constraints to an existing table.
    --  This is intended for use when creating tables (in GNATCOLL.SQL.Inspect)
 
+   function Has_Pragmas
+     (Self : access Database_Connection_Record) return Boolean is abstract;
+   --  Whether the database knows about the "PRAGMA" command.
+
    ------------------------------------------
    -- Retrieving results - Forward cursors --
    ------------------------------------------

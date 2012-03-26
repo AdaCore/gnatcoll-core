@@ -83,6 +83,8 @@ package body GNATCOLL.SQL.Postgres.Builder is
       Typ   : Parameter_Type) return String;
    overriding function Can_Alter_Table_Constraints
      (Self : access Postgresql_Connection_Record) return Boolean;
+   overriding function Has_Pragmas
+     (Self : access Postgresql_Connection_Record) return Boolean;
    overriding function Connect_And_Execute
      (Connection  : access Postgresql_Connection_Record;
       Query       : String;
@@ -1178,7 +1180,8 @@ package body GNATCOLL.SQL.Postgres.Builder is
          when Parameter_Float =>
             return '$' & Image (Index, 0) & "::float";
          when Parameter_Time =>
-            return '$' & Image (Index, 0) & "::time";
+            --  Don't know how to say "::time with time zon"
+            return '$' & Image (Index, 0);
          when Parameter_Date =>
             return '$' & Image (Index, 0) & "::date";
          when Parameter_Money =>
@@ -1279,5 +1282,17 @@ package body GNATCOLL.SQL.Postgres.Builder is
    begin
       return True;
    end Can_Alter_Table_Constraints;
+
+   -----------------
+   -- Has_Pragmas --
+   -----------------
+
+   overriding function Has_Pragmas
+     (Self : access Postgresql_Connection_Record) return Boolean
+   is
+      pragma Unreferenced (Self);
+   begin
+      return False;
+   end Has_Pragmas;
 
 end GNATCOLL.SQL.Postgres.Builder;

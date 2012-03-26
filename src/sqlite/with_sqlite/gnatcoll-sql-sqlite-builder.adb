@@ -117,6 +117,8 @@ package body GNATCOLL.SQL.Sqlite.Builder is
      (Self : Sqlite_Connection_Record) return String;
    overriding function Can_Alter_Table_Constraints
      (Self : access Sqlite_Connection_Record) return Boolean;
+   overriding function Has_Pragmas
+     (Self : access Sqlite_Connection_Record) return Boolean;
    overriding function Connect_And_Execute
      (Connection  : access Sqlite_Connection_Record;
       Query       : String;
@@ -1067,6 +1069,18 @@ package body GNATCOLL.SQL.Sqlite.Builder is
    begin
       return False;
    end Can_Alter_Table_Constraints;
+
+   -----------------
+   -- Has_Pragmas --
+   -----------------
+
+   overriding function Has_Pragmas
+     (Self : access Sqlite_Connection_Record) return Boolean
+   is
+      pragma Unreferenced (Self);
+   begin
+      return True;
+   end Has_Pragmas;
 
    ------------
    -- Logger --
