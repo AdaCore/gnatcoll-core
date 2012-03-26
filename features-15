@@ -17,8 +17,8 @@ New features in 1.5
 
 NF-15-L207-033 GNATCOLL.Traces adds support for trace hierarchies (2012-03-19)
 
-    It is now possible to use "*." or ".*" in the configuration file to
-    change the settings for multiple trace handles.
+   It is now possible to use "*." or ".*" in the configuration file to
+   change the settings for multiple trace handles.
 
 NF-15-L105-042 GNATCOLL.SQL.Postgres adds support for regexps (2012-01-05)
 
@@ -33,3 +33,10 @@ NF-15-KC22-014 GNATCOLL.SQL adds support for Money type (2012-03-23)
 NF-15-KB21-014 Documentation converted to Sphinx (2011-12-07)
 
    The documentation was converted from texinfo to Sphinx.
+
+NF-15-K921-016 GNATCOLL.SQL.Exec.Insert_And_Get_PK (2012-03-26)
+
+   This new function provides an efficient way to insert a new row in a table
+   and immediately retrieve its primary key (for instance when the key was
+   computed from a sequence). This can be more efficient than using the
+   function Last_Id.

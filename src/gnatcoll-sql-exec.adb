@@ -62,21 +62,15 @@ package body GNATCOLL.SQL.Exec is
    --  Return the display for Query (or Prepared, if specified).
    --  This is for debug purposes only.
 
-   procedure Prepare_If_Needed
-     (Connection : access Database_Connection_Record'Class;
-      Stmt       : Prepared_Statement'Class;
-      Result     : out DBMS_Stmt);
-   --  Prepare, if needed, the statement on the server
-
    procedure Execute_And_Log
      (Result     : in out Forward_Cursor'Class;
       Connection : access Database_Connection_Record'Class;
       Query      : String;
       Prepared   : Prepared_Statement'Class := No_Prepared;
-      Is_Select  : Boolean;
       Direct     : Boolean;
       Params     : SQL_Parameters := No_Parameters);
-   --  Low-level call to perform a query on the database and log results
+   --  Low-level call to perform a query on the database and log results.
+   --  The Query parameter is ignored if Prepared is provided.
 
    function Hash (Key : Cache_Id) return Ada.Containers.Hash_Type;
 
@@ -87,9 +81,13 @@ package body GNATCOLL.SQL.Exec is
       Equivalent_Keys => "=");
    --  Cache the results of queries
 
-   procedure Compute_Statement
-     (Stmt : Prepared_Statement'Class; Format : Formatter'Class);
-   --  Format the statement into a string, if not done yet
+   procedure Compute_And_Prepare_Statement
+     (Prepared   : Prepared_Statement'Class;
+      Connection : access Database_Connection_Record'Class;
+      Stmt       : out DBMS_Stmt);
+   --  Format the statement into a string, if not done yet.
+   --  Suffix is extra SQL code append to the query (for instance
+   --  "RETURNING ..." in postgreSQL).
 
    function Hash (Key : Database_Connection) return Ada.Containers.Hash_Type;
    package Freed_DB_Maps is new Ada.Containers.Hashed_Sets
@@ -278,17 +276,63 @@ package body GNATCOLL.SQL.Exec is
 
    end Query_Cache;
 
-   -----------------------
-   -- Compute_Statement --
-   -----------------------
+   --------------------
+   -- Has_SQL_Suffix --
+   --------------------
 
-   procedure Compute_Statement
-     (Stmt : Prepared_Statement'Class; Format : Formatter'Class)
+   function Has_SQL_Suffix
+     (Prepared : Prepared_Statement'Class) return Boolean
    is
-      S : constant Prepared_Statements.Encapsulated_Access := Stmt.Get;
+      S : constant Prepared_Statements.Encapsulated_Access := Prepared.Get;
+   begin
+      return S.Query_Str /= null or else S.Suffix_Str /= null;
+   end Has_SQL_Suffix;
+
+   --------------------
+   -- Set_SQL_Suffix --
+   --------------------
+
+   procedure Set_SQL_Suffix
+     (Prepared : Prepared_Statement'Class;
+      Suffix   : String)
+   is
+      S : constant Prepared_Statements.Encapsulated_Access := Prepared.Get;
    begin
       if S.Query_Str = null then
-         S.Query_Str := new String'(To_String (To_String (S.Query, Format)));
+         Free (S.Suffix_Str);
+         S.Suffix_Str := new String'(Suffix);
+      else
+         Assert (Me_Error,
+                 False,
+                 "Error: cannot change the SQL statement for ("
+                 & S.Name.all & ") by adding '"
+                 & Suffix & "' since it has already been prepared on the"
+                 & " server");
+      end if;
+   end Set_SQL_Suffix;
+
+   -----------------------------------
+   -- Compute_And_Prepare_Statement --
+   -----------------------------------
+
+   procedure Compute_And_Prepare_Statement
+     (Prepared   : Prepared_Statement'Class;
+      Connection : access Database_Connection_Record'Class;
+      Stmt       : out DBMS_Stmt)
+   is
+      S : constant Prepared_Statements.Encapsulated_Access := Prepared.Get;
+      L : Prepared_In_Session_List;
+   begin
+      if S.Query_Str = null then
+         if S.Suffix_Str = null then
+            S.Query_Str := new String'
+               (To_String (To_String (S.Query, Connection.all)));
+         else
+            S.Query_Str := new String'
+               (To_String (To_String (S.Query, Connection.all))
+                & S.Suffix_Str.all);
+            Free (S.Suffix_Str);  --  no longer needed
+         end if;
 
          if Active (Me_Query) then
             Trace
@@ -298,7 +342,53 @@ package body GNATCOLL.SQL.Exec is
          S.Query := No_Query;   --  release memory
          S.Is_Select := Is_Select_Query (S.Query_Str.all);
       end if;
-   end Compute_Statement;
+
+      if Prepared.Get.On_Server then
+         --  Reuse a prepared statement if one exists for this connection.
+
+         L := S.Prepared;
+         while L /= null loop
+            exit when L.DB = Database_Connection (Connection);
+            L := L.Next;
+         end loop;
+
+         if L = null then
+            S.Prepared := new Prepared_In_Session'
+              (Stmt         => No_DBMS_Stmt,
+               DB           => Database_Connection (Connection),
+               DB_Timestamp => Connection.Connected_On,
+               Next         => S.Prepared);
+            L := S.Prepared;
+         end if;
+
+         --  Else prepare the statement
+
+         if L.Stmt = No_DBMS_Stmt
+            or else L.DB_Timestamp /= Connection.Connected_On
+         then
+            L.Stmt := Connect_And_Prepare
+              (Connection, S.Query_Str.all, S.Name.all, Direct => True);
+
+            --  Set the timestamp *after* we have created the connection, in
+            --  case it did not exist before (if prepare is the first command
+            --  done on this connection).
+
+            L.DB_Timestamp := Connection.Connected_On;
+
+            --  L.Stmt could still be No_DBMS_Stmt if the backend does not
+            --  support preparation on the server.  ??? This means we'll try
+            --  again next time. For now, all supported DBMS have prepared
+            --  statement, so that's not an issue.
+
+         else
+            Reset (Connection, L.Stmt);
+         end if;
+
+         Stmt := L.Stmt;
+      else
+         Stmt := No_DBMS_Stmt;
+      end if;
+   end Compute_And_Prepare_Statement;
 
    -------------------
    -- Print_Warning --
@@ -593,18 +683,40 @@ package body GNATCOLL.SQL.Exec is
       Connection : access Database_Connection_Record'Class;
       Query      : String;
       Prepared   : Prepared_Statement'Class := No_Prepared;
-      Is_Select  : Boolean;
       Direct     : Boolean;
       Params     : SQL_Parameters := No_Parameters)
    is
-      Is_Commit_Or_Rollback   : constant Boolean :=
-        Equal (Query, "commit", Case_Sensitive => False)
-        or else Equal (Query, "rollback", Case_Sensitive => False);
+      Is_Select : Boolean;
+      Is_Commit_Or_Rollback : Boolean := False;
       Stmt : DBMS_Stmt := No_DBMS_Stmt;
       R    : Abstract_Cursor_Access;
       Was_Started : Boolean;
       pragma Unreferenced (Was_Started);
+      S : Prepared_Statements.Encapsulated_Access;
+
+      Q : access String := Query'Unrestricted_Access;
+      --  Should be safe here, we do not intend to free anything.
+
    begin
+      if Prepared /= Prepared_Statement'Class (No_Prepared) then
+         --  Compute the query. We cannot reference the query before
+         --  that, since it might not have been computed yet.
+
+         Compute_And_Prepare_Statement (Prepared, Connection, Stmt);
+         S := Prepared.Get;
+         Is_Select := S.Is_Select;
+         Q := S.Query_Str;
+
+      else
+         Is_Select := Is_Select_Query (Query);
+      end if;
+
+      if not Is_Select then
+         Is_Commit_Or_Rollback :=
+           Equal (Q.all, "commit", Case_Sensitive => False)
+           or else Equal (Q.all, "rollback", Case_Sensitive => False);
+      end if;
+
       --  Transaction management: do we need to start a transaction ?
 
       if Connection.In_Transaction
@@ -613,11 +725,11 @@ package body GNATCOLL.SQL.Exec is
          Trace
            (Me_Error,
             "Ignored, since transaction in failure: "
-            & Display_Query (Query, Prepared)
+            & Display_Query (Q.all, Prepared)
             & " (" & Connection.Username.all & ")");
          return;
 
-      elsif Equal (Query, "begin", Case_Sensitive => False) then
+      elsif Equal (Q.all, "begin", Case_Sensitive => False) then
          if not Connection.In_Transaction then
             Connection.In_Transaction := True;
 
@@ -635,19 +747,13 @@ package body GNATCOLL.SQL.Exec is
              (not Is_Commit_Or_Rollback
               and then not Is_Select))   --  INSERT, UPDATE, LOCK, DELETE,...
         and then
-          (Query'Length <= 7   --  for sqlite
-           or else Query (Query'First .. Query'First + 6) /= "PRAGMA ")
+          (Q'Length <= 7   --  for sqlite
+           or else Q (Q'First .. Q'First + 6) /= "PRAGMA ")
       then
          --  Start a transaction automatically
          Was_Started := Start_Transaction (Connection);
          if not Connection.Success then
             return;
-         end if;
-      end if;
-
-      if Prepared /= Prepared_Statement'Class (No_Prepared) then
-         if Prepared.Get.On_Server then
-            Prepare_If_Needed (Connection, Prepared, Stmt);
          end if;
       end if;
 
@@ -663,7 +769,7 @@ package body GNATCOLL.SQL.Exec is
          else
             R := Connect_And_Execute
               (Connection => Connection,
-               Query      => Query,
+               Query      => Q.all,
                Is_Select  => Is_Select,
                Direct     => Direct,
                Params     => Params);
@@ -673,10 +779,10 @@ package body GNATCOLL.SQL.Exec is
             if Active (Me_Error) then
                if Stmt /= No_DBMS_Stmt then
                   Trace (Me_Error, "Failed to execute prepared ("
-                         & Prepared.Get.Name.all & ") " & Query
+                         & Prepared.Get.Name.all & ") " & Q.all
                          & " " & Image (Connection.all, Params));
                else
-                  Trace (Me_Error, "Failed to execute " & Query
+                  Trace (Me_Error, "Failed to execute " & Q.all
                          & " " & Image (Connection.all, Params));
                end if;
             end if;
@@ -684,7 +790,7 @@ package body GNATCOLL.SQL.Exec is
             Set_Failure (Connection);
          else
             Post_Execute_And_Log
-              (R, Connection, Query, Prepared, Is_Select, Params);
+              (R, Connection, Q.all, Prepared, Is_Select, Params);
          end if;
 
          Result.Res := R;
@@ -697,6 +803,38 @@ package body GNATCOLL.SQL.Exec is
       end if;
    end Execute_And_Log;
 
+   -----------------------
+   -- Insert_And_Get_PK --
+   -----------------------
+
+   function Insert_And_Get_PK
+     (Connection : access Database_Connection_Record'Class;
+      Query      : GNATCOLL.SQL.SQL_Query;
+      Params     : SQL_Parameters := No_Parameters;
+      PK         : SQL_Field_Integer) return Integer
+   is
+   begin
+      return Insert_And_Get_PK
+         (Connection, To_String (To_String (Query, Connection.all)),
+          Params, PK);
+   end Insert_And_Get_PK;
+
+   -----------------------
+   -- Insert_And_Get_PK --
+   -----------------------
+
+   function Insert_And_Get_PK
+     (Connection : access Database_Connection_Record;
+      Query      : String;
+      Params     : SQL_Parameters := No_Parameters;
+      PK         : SQL_Field_Integer) return Integer
+   is
+      R : Forward_Cursor;
+   begin
+      Fetch (R, Connection, Query, Params);
+      return Last_Id (R, Connection, PK);
+   end Insert_And_Get_PK;
+
    -----------
    -- Fetch --
    -----------
@@ -705,13 +843,11 @@ package body GNATCOLL.SQL.Exec is
      (Result     : out Forward_Cursor;
       Connection : access Database_Connection_Record'Class;
       Query      : String;
-      Params     : SQL_Parameters := No_Parameters)
-   is
-      Is_Select   : constant Boolean := Is_Select_Query (Query);
+      Params     : SQL_Parameters := No_Parameters) is
    begin
       Result := No_Element;
       Execute_And_Log
-        (Result, Connection, Query, No_Prepared, Is_Select, Direct => False,
+        (Result, Connection, Query, No_Prepared, Direct => False,
          Params => Params);
    end Fetch;
 
@@ -738,13 +874,11 @@ package body GNATCOLL.SQL.Exec is
      (Result     : out Direct_Cursor;
       Connection : access Database_Connection_Record'Class;
       Query      : String;
-      Params     : SQL_Parameters := No_Parameters)
-   is
-      Is_Select   : constant Boolean := Is_Select_Query (Query);
+      Params     : SQL_Parameters := No_Parameters) is
    begin
       Result := No_Direct_Element;
       Execute_And_Log
-        (Result, Connection, Query, No_Prepared, Is_Select, Direct => True,
+        (Result, Connection, Query, No_Prepared, Direct => True,
          Params => Params);
    end Fetch;
 
@@ -1241,6 +1375,7 @@ package body GNATCOLL.SQL.Exec is
          Use_Cache     => Use_Cache,
          Cached_Result => No_Cache_Id,
          On_Server     => On_Server,
+         Suffix_Str    => null,
          Name          => null,
          Prepared      => null);
 
@@ -1284,6 +1419,7 @@ package body GNATCOLL.SQL.Exec is
          Use_Cache     => Use_Cache,
          Cached_Result => No_Cache_Id,
          On_Server     => On_Server,
+         Suffix_Str    => null,
          Name          => null,
          Prepared      => null);
 
@@ -1304,56 +1440,6 @@ package body GNATCOLL.SQL.Exec is
 
       return Stmt;
    end Prepare;
-
-   -----------------------
-   -- Prepare_If_Needed --
-   -----------------------
-
-   procedure Prepare_If_Needed
-     (Connection : access Database_Connection_Record'Class;
-      Stmt       : Prepared_Statement'Class;
-      Result     : out DBMS_Stmt)
-   is
-      S : constant Prepared_Statements.Encapsulated_Access := Stmt.Get;
-      L : Prepared_In_Session_List := S.Prepared;
-   begin
-      while L /= null loop
-         exit when L.DB = Database_Connection (Connection);
-         L := L.Next;
-      end loop;
-
-      if L = null then
-         S.Prepared := new Prepared_In_Session'
-           (Stmt         => No_DBMS_Stmt,
-            DB           => Database_Connection (Connection),
-            DB_Timestamp => Connection.Connected_On,
-            Next         => S.Prepared);
-         L := S.Prepared;
-      end if;
-
-      if L.Stmt = No_DBMS_Stmt
-         or else L.DB_Timestamp /= Connection.Connected_On
-      then
-         L.Stmt := Connect_And_Prepare
-           (Connection, S.Query_Str.all, S.Name.all, Direct => True);
-
-         --  Set the timestamp *after* we have created the connection, in case
-         --  it did not exist before (if prepare is the first command done on
-         --  this connection).
-
-         L.DB_Timestamp := Connection.Connected_On;
-
-         --  L.Stmt could still be No_DBMS_Stmt if the backend does not support
-         --  preparation on the server.
-         --  ??? This means we'll try again next time. For now, all supported
-         --  DBMS have prepared statement, so that's not an issue.
-
-      else
-         Reset (Connection, L.Stmt);
-      end if;
-
-      Result := L.Stmt;
-   end Prepare_If_Needed;
 
    -----------
    -- Fetch --
@@ -1389,10 +1475,8 @@ package body GNATCOLL.SQL.Exec is
          end if;
       end if;
 
-      Compute_Statement (Stmt, Format => Connection.all);
       Execute_And_Log
-        (Result, Connection,
-         S.Query_Str.all, Stmt, S.Is_Select, Direct => True, Params => Params);
+        (Result, Connection, "", Stmt, Direct => True, Params => Params);
 
       if Success (Connection)
         and then S.Use_Cache
@@ -1401,6 +1485,23 @@ package body GNATCOLL.SQL.Exec is
          Query_Cache.Set_Cache (Stmt, Result);
       end if;
    end Fetch;
+
+   -----------------------
+   -- Insert_And_Get_PK --
+   -----------------------
+
+   function Insert_And_Get_PK
+     (Connection : access Database_Connection_Record;
+      Stmt       : Prepared_Statement'Class;
+      Params     : SQL_Parameters := No_Parameters;
+      PK         : SQL_Field_Integer) return Integer
+   is
+      Result : Forward_Cursor;
+   begin
+      Execute_And_Log
+        (Result, Connection, "", Stmt, Direct => False, Params => Params);
+      return Last_Id (Result, Connection, PK);
+   end Insert_And_Get_PK;
 
    -----------
    -- Fetch --
@@ -1429,10 +1530,8 @@ package body GNATCOLL.SQL.Exec is
          end;
 
       else
-         Compute_Statement (Stmt, Format => Connection.all);
          Execute_And_Log
-           (Result, Connection, S.Query_Str.all, Stmt, S.Is_Select,
-            Direct => False, Params => Params);
+           (Result, Connection, "", Stmt, Direct => False, Params => Params);
       end if;
    end Fetch;
 

@@ -1164,7 +1164,6 @@ to reuse it exactly as is later on::
 
   SELECT * FROM data WHERE id=1
   
-
 SQL (and GNATColl) provide a way to parameterize queries. Instead
 of hard-coding the value `1` in the example above, you would in fact
 use a special character (unfortunately specific to the DBMS you are

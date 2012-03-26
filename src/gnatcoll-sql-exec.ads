@@ -289,6 +289,23 @@ package GNATCOLL.SQL.Exec is
    --  Result is always first reset to No_Element, so any custom field you
    --  might have will also be reset
 
+   function Insert_And_Get_PK
+     (Connection : access Database_Connection_Record'Class;
+      Query      : GNATCOLL.SQL.SQL_Query;
+      Params     : SQL_Parameters := No_Parameters;
+      PK         : SQL_Field_Integer) return Integer;
+   function Insert_And_Get_PK
+     (Connection : access Database_Connection_Record;
+      Query      : String;
+      Params     : SQL_Parameters := No_Parameters;
+      PK         : SQL_Field_Integer) return Integer;
+   --  Execute the INSERT statement, and retrieve the primary key of the
+   --  newly inserted row. This is similar, but more efficient, to calling
+   --      Fetch (Result, Connection, Query, Params);
+   --      return Last_Id (Result, Connection, Field);
+   --  The primary key must be an integer field.
+   --  The function also exists for prepared queries.
+
    procedure Close
      (Connection : access Database_Connection_Record) is abstract;
    procedure Free (Connection : in out Database_Connection);
@@ -668,6 +685,19 @@ package GNATCOLL.SQL.Exec is
       Params     : SQL_Parameters := No_Parameters);
    --  Execute a prepared statement on the connection.
 
+   function Insert_And_Get_PK
+     (Connection : access Database_Connection_Record;
+      Stmt       : Prepared_Statement'Class;
+      Params     : SQL_Parameters := No_Parameters;
+      PK         : SQL_Field_Integer) return Integer;
+   --  Execute a prepared insert statement, and return the Id of the newly
+   --  inserted row. See documentation for Insert_And_Get_PK for non-prepared
+   --  statements.
+   --  Stmt must be used at least once through this function before you use
+   --  Execute or Fetch on it, otherwise it might be incorrectly prepared
+   --  (missing returned value) and you would not get the id of the row
+   --  as expected.
+
    --------------------------------------------
    -- Getting info about the database schema --
    --------------------------------------------
@@ -806,6 +836,18 @@ package GNATCOLL.SQL.Exec is
    --  Mark the connection as success or failure depending on R.
    --  Logs the query
 
+   procedure Set_SQL_Suffix
+      (Prepared : Prepared_Statement'Class;
+       Suffix   : String);
+   --  SQL command added to Prepared's own SQL (for instance, " RETURNING..."
+   --  in postgreSQL). This has no effect if the statement has already been
+   --  prepared on the server.
+
+   function Has_SQL_Suffix
+      (Prepared : Prepared_Statement'Class) return Boolean;
+   --  True if Prepared is either already prepared on the server, or already
+   --  has a suffix defined.
+
 private
 
    type Database_Description_Record
@@ -870,8 +912,13 @@ private
    No_Cache_Id : constant Cache_Id := Cache_Id'Last;
 
    type Prepared_Statement_Data is new GNATCOLL.Refcount.Refcounted with record
-      Query     : SQL_Query;   --  Reset to null once prepared
-      Query_Str : GNAT.Strings.String_Access;
+      Query      : SQL_Query;   --  Reset to null once prepared
+      Query_Str  : GNAT.Strings.String_Access;
+
+      Suffix_Str : GNAT.Strings.String_Access;
+      --  An extra (DBMS dependent) suffix to add to the SQL. Changing this
+      --  invalidates the prepared statement.
+
       Is_Select : Boolean;
 
       Use_Cache     : Boolean := False;

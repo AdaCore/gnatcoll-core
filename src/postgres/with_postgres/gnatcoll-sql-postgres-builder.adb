@@ -108,6 +108,16 @@ package body GNATCOLL.SQL.Postgres.Builder is
       Direct      : Boolean;
       Params      : SQL_Parameters := No_Parameters)
       return Abstract_Cursor_Access;
+   overriding function Insert_And_Get_PK
+     (Connection : access Postgresql_Connection_Record;
+      Query      : String;
+      Params     : SQL_Parameters := No_Parameters;
+      PK         : SQL_Field_Integer) return Integer;
+   overriding function Insert_And_Get_PK
+     (Connection : access Postgresql_Connection_Record;
+      Stmt       : Prepared_Statement'Class;
+      Params     : SQL_Parameters := No_Parameters;
+      PK         : SQL_Field_Integer) return Integer;
    overriding function String_Image
      (Self : Postgresql_Connection_Record; Value : String; Quote : Boolean)
       return String;
@@ -710,6 +720,47 @@ package body GNATCOLL.SQL.Postgres.Builder is
          return Abstract_Cursor_Access (R);
       end if;
    end Execute;
+
+   -----------------------
+   -- Insert_And_Get_PK --
+   -----------------------
+
+   overriding function Insert_And_Get_PK
+     (Connection : access Postgresql_Connection_Record;
+      Query      : String;
+      Params     : SQL_Parameters := No_Parameters;
+      PK         : SQL_Field_Integer) return Integer
+   is
+      R : Forward_Cursor;
+   begin
+      R.Fetch (Connection,
+               Query & " RETURNING " & PK.To_String (Connection.all),
+               Params);
+      return Integer_Value (R, 0);
+   end Insert_And_Get_PK;
+
+   -----------------------
+   -- Insert_And_Get_PK --
+   -----------------------
+
+   overriding function Insert_And_Get_PK
+     (Connection : access Postgresql_Connection_Record;
+      Stmt       : Prepared_Statement'Class;
+      Params     : SQL_Parameters := No_Parameters;
+      PK         : SQL_Field_Integer) return Integer
+   is
+      R : Forward_Cursor;
+   begin
+      if not Stmt.Has_SQL_Suffix then
+         --  ??? Assuming the suffix was already the same (should be since
+         --  this is the primary key).
+         Set_SQL_Suffix
+            (Stmt, " RETURNING " & PK.To_String (Connection.all));
+      end if;
+
+      R.Fetch (Connection, Stmt, Params);
+      return Integer_Value (R, 0);
+   end Insert_And_Get_PK;
 
    -------------------------
    -- Connect_And_Execute --
