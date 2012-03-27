@@ -32,7 +32,7 @@ with GNATCOLL.Utils;               use GNATCOLL.Utils;
 with GNAT.Calendar;
 with GNAT.OS_Lib;
 with Interfaces.C.Strings;         use Interfaces.C.Strings;
-with System;
+with System;                       use System;
 
 package body GNATCOLL.SQL.Sqlite.Builder is
    Me : constant Trace_Handle := Create ("SQL.SQLITE");
@@ -1109,5 +1109,54 @@ package body GNATCOLL.SQL.Sqlite.Builder is
       Set_Config_Memstatus (Collect_Stats => False);
       Set_Config_Log (Logger'Access);
    end Setup;
+
+   ------------
+   -- Backup --
+   ------------
+
+   function Backup
+     (From : access Database_Connection_Record'Class;
+      To   : String) return Boolean
+   is
+      From_DB : constant GNATCOLL.SQL.Sqlite.Gnade.Database :=
+        Sqlite_Connection_Record (From.all).DB;
+      To_DB   : GNATCOLL.SQL.Sqlite.Gnade.Database;
+      Status  : Result_Codes;
+      Bkp     : Sqlite3_Backup;
+      Result  : Boolean := True;
+   begin
+      Open (To_DB, To, Status => Status);
+      if Status /= Sqlite_OK then
+         Trace (Me_Log, Status'Img & " could not open destination db");
+         return False;
+      end if;
+
+      Bkp := Backup_Init
+        (Pdest        => To_DB,
+         Pdest_Name   => "main",
+         Psource      => From_DB,
+         Psource_Name => "main");
+
+      if System.Address (Bkp) = System.Null_Address then
+         Trace (Me_Log, "failed to create the backup object");
+         Close (To_DB);
+         return False;
+      end if;
+
+      Status := Backup_Step (Bkp, -1);
+      if Status /= Sqlite_Done then
+         Trace (Me_Log, Status'Img & " Error in Backup_Step "
+                & Error_Msg (From_DB));
+         Result := False;
+      end if;
+
+      if Backup_Finish (Bkp) /= Sqlite_OK then
+         Trace (Me_Log, "Error in Backup_Finish");
+         Result := False;
+      end if;
+
+      Close (To_DB);
+      return Result;
+   end Backup;
 
 end GNATCOLL.SQL.Sqlite.Builder;

@@ -53,4 +53,17 @@ package body GNATCOLL.SQL.Sqlite.Builder is
       null;
    end Setup;
 
+   ------------
+   -- Backup --
+   ------------
+
+   function Backup
+     (From : access Database_Connection_Record'Class;
+      To   : String) return Boolean
+   is
+      pragma Unreferenced (From, To);
+   begin
+      return False;
+   end Backup;
+
 end GNATCOLL.SQL.Sqlite.Builder;

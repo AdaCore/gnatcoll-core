@@ -15,6 +15,12 @@ of the feature.
 New features in 1.5
 -------------------
 
+NF-15-L327-029 GNATCOLL.SQL.Sqlite binding for online backup API (2012-03-27)
+
+   GNATCOLL now provides a binding to sqlite's online backup API, allowing
+   to manipulate a database in memory and then dumping to the disk (or the
+   opposite), which can greatly speed up operations.
+
 NF-15-L326-008 GNATCOLL.SQL quotes table and field names (2012-03-27)
 
    When a table or field name is also a SQL keyword (or has a special meaning

@@ -355,6 +355,61 @@ package GNATCOLL.SQL.Sqlite.Gnade is
      (Result : Result_Table; Column : Natural) return String;
    --  Return the name of a specific column. Column starts at 0
 
+   -----------------------
+   -- Online backup API --
+   -----------------------
+
+   type Sqlite3_Backup is new System.Address;
+
+   function Backup_Init
+     (Pdest : Database;      --  destination database handle
+      Pdest_Name : String;   --  destination database name
+      Psource : Database;    --  source database handle
+      Psource_Name : String) --  source database name
+      return Sqlite3_Backup;
+   --  The D and N arguments to sqlite3_backup_init(D,N,S,M) are the database
+   --  connection associated with the destination database and the database
+   --  name, respectively.
+   --  The database name is "main" for the main database, "temp" for the
+   --  temporary database, or the name specified after the AS keyword in an
+   --  ATTACH statement for an attached database.
+   --  The S and M arguments passed to sqlite3_backup_init(D,N,S,M)
+   --  identify the database connection and database name of the source
+   --  database, respectively. The source and destination database
+   --  connections (parameters S and D) must be different or else
+   --  sqlite3_backup_init(D,N,S,M) will fail with an error.
+   --
+   --  If an error occurs within sqlite3_backup_init(D,N,S,M), then NULL
+   --  is returned and an error code and error message are stored in the
+   --  destination database connection D. The error code and message for
+   --  the failed call to sqlite3_backup_init() can be retrieved using
+   --  the sqlite3_errcode(), sqlite3_errmsg(), and/or sqlite3_errmsg16()
+   --  functions. A successful call to sqlite3_backup_init() returns a pointer
+   --  to an sqlite3_backup object. The sqlite3_backup object may be used
+   --  with the sqlite3_backup_step() and sqlite3_backup_finish() functions
+   --  to perform the specified backup operation.
+
+   function Backup_Step
+     (Bkp : Sqlite3_Backup;
+      Npage : Integer := -1) return Result_Codes;
+   pragma Import (C, Backup_Step, "sqlite3_backup_step");
+   --  Copy npages (or all if -1)
+   --  Function sqlite3_backup_step(B,N) will copy up to N pages between the
+   --  source and destination databases specified by sqlite3_backup object
+   --  B. If N is negative, all remaining source pages are copied. If
+   --  sqlite3_backup_step(B,N) successfully copies N pages and there are
+   --  still more pages to be copied, then the function returns SQLITE_OK.
+
+   function Backup_Finish (Bkp : Sqlite3_Backup) return Result_Codes;
+   pragma Import (C, Backup_Finish, "sqlite3_backup_finish");
+   --  Finish the backup and free memory
+
+   function Backup_Remaining (Bkp : Sqlite3_Backup) return Integer;
+   pragma Import (C, Backup_Remaining, "sqlite3_backup_remaining");
+
+   function Backup_Page_Count (Bkp : Sqlite3_Backup) return Integer;
+   pragma Import (C, Backup_Page_Count, "sqlite3_backup_pagecount");
+
 private
    type Database_Record is null record; --  Must be null, hides sqlite data
    type Database is access Database_Record;

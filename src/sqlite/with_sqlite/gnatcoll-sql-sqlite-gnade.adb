@@ -572,4 +572,30 @@ package body GNATCOLL.SQL.Sqlite.Gnade is
       Internal (Stmt, Index, Str, N_Bytes, Destructor);
    end Bind_Text;
 
+   -----------------
+   -- Backup_Init --
+   -----------------
+
+   function Backup_Init
+     (Pdest : Database;      --  destination database handle
+      Pdest_Name : String;   --  destination database name
+      Psource : Database;    --  source database handle
+      Psource_Name : String) --  source database name
+      return Sqlite3_Backup
+   is
+      function Internal
+        (Pdest : Database;
+         PdestName : String;
+         Psource : Database;
+         PsourceName : String) return Sqlite3_Backup;
+      pragma Import (C, Internal, "sqlite3_backup_init");
+   begin
+      if Debug then
+         Trace (Me, "sqlite3_backup_init");
+      end if;
+
+      return Internal (Pdest, Pdest_Name & ASCII.NUL,
+                       Psource, Psource_Name & ASCII.NUL);
+   end Backup_Init;
+
 end GNATCOLL.SQL.Sqlite.Gnade;

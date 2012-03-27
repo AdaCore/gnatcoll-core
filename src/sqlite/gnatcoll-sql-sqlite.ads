@@ -62,6 +62,13 @@ package GNATCOLL.SQL.Sqlite is
    --  If sqlite was not detected at installation time, this function will
    --  return null.
 
+   function Backup
+     (From : access Database_Connection_Record'Class;
+      To   : String) return Boolean;
+   --  Backup the database From to a new database with the given file name
+   --  (or ":memory:")
+   --  Returns False in case of error
+
 private
    type Sqlite_Description (Caching : Boolean)
      is new Database_Description_Record (Caching)
