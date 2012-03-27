@@ -56,7 +56,6 @@ package body GNATCOLL.SQL.Sqlite.Builder is
 
       Processed_Rows : Natural := 0;
       Last_Status    : Result_Codes;  --  Last status of Step
-      Last_Rowid     : Long_Integer := -1;
    end record;
    type Sqlite_Cursor_Access is access all Sqlite_Cursor'Class;
 
@@ -564,7 +563,6 @@ package body GNATCOLL.SQL.Sqlite.Builder is
                Res.Processed_Rows := 0;
             else
                Res.Processed_Rows := Changes (Connection.DB);
-               Res.Last_Rowid := Last_Insert_Rowid (Connection.DB);
             end if;
 
          when others =>
@@ -681,7 +679,8 @@ package body GNATCOLL.SQL.Sqlite.Builder is
       Connection : access Database_Connection_Record'Class;
       Field      : SQL_Field_Integer) return Integer
    is
-      pragma Unreferenced (Connection, Field);
+      pragma Unreferenced (Self, Field);
+      Last_Rowid     : Long_Integer := -1;
 --        Res2     : Forward_Cursor;
    begin
       --  According to sqlite3 documentation, the last_rowid is also the
@@ -690,8 +689,11 @@ package body GNATCOLL.SQL.Sqlite.Builder is
       --  ??? We assume here that Field is the primary key, but we cannot
       --  check that.
 
-      if Integer (Self.Last_Rowid) /= 0 then
-         return Integer (Self.Last_Rowid);
+      Last_Rowid := Last_Insert_Rowid
+        (Sqlite_Connection_Record (Connection.all).DB);
+
+      if Integer (Last_Rowid) /= 0 then
+         return Integer (Last_Rowid);
       else
          return -1;
       end if;
