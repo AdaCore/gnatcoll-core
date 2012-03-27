@@ -352,6 +352,19 @@ package GNATCOLL.SQL.Exec is
    --  Reports the last error message on this connection (ie the one that
    --  made the transaction fail)
 
+   procedure Automatic_Transactions
+     (Connection : access Database_Connection_Record'Class;
+      Active     : Boolean := True);
+   --  Activate (which is the default) or deactivate automatic SQL
+   --  transactions. When enabled, the first SQL statement that potentially
+   --  modifies the database (basically other than a SELECT) will start a
+   --  transaction first (with BEGIN). It is however, your responsibility to
+   --  finally do a Commit or Rollback.
+   --  When disabled, transactions will never be started automatically (but
+   --  you can use Start_Transaction to start one).
+   --  It is recommended to change this setting when you just retrieved a new
+   --  connection, not while executing SQL statements.
+
    function Start_Transaction
      (Connection : access Database_Connection_Record'Class)
       return Boolean;
@@ -861,6 +874,7 @@ private
       In_Transaction : Boolean := False;
       Username       : GNAT.Strings.String_Access;
       Error_Msg      : GNAT.Strings.String_Access;
+      Automatic_Transactions : Boolean := True;
    end record;
 
    type Abstract_DBMS_Forward_Cursor is abstract tagged record
