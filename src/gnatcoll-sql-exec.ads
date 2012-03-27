@@ -355,6 +355,8 @@ package GNATCOLL.SQL.Exec is
    procedure Automatic_Transactions
      (Connection : access Database_Connection_Record'Class;
       Active     : Boolean := True);
+   function Automatic_Transactions
+     (Connection : access Database_Connection_Record'Class) return Boolean;
    --  Activate (which is the default) or deactivate automatic SQL
    --  transactions. When enabled, the first SQL statement that potentially
    --  modifies the database (basically other than a SELECT) will start a

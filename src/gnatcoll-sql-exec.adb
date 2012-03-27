@@ -1726,4 +1726,14 @@ package body GNATCOLL.SQL.Exec is
       Connection.Automatic_Transactions := Active;
    end Automatic_Transactions;
 
+   ----------------------------
+   -- Automatic_Transactions --
+   ----------------------------
+
+   function Automatic_Transactions
+     (Connection : access Database_Connection_Record'Class) return Boolean
+   is
+   begin
+      return Connection.Automatic_Transactions;
+   end Automatic_Transactions;
 end GNATCOLL.SQL.Exec;

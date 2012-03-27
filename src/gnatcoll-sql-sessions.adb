@@ -251,7 +251,9 @@ package body GNATCOLL.SQL.Sessions is
          Clear_Cache (Data);
       end if;
 
-      Rollback (Data.DB, "");  --  Release any pending transaction
+      if Data.DB.Automatic_Transactions then
+         Rollback (Data.DB, "");  --  Release any pending transaction
+      end if;
 
       if Data.User /= null then
          Trace (Me, "Freeing session data");
