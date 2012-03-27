@@ -15,6 +15,12 @@ of the feature.
 New features in 1.5
 -------------------
 
+NF-15-L326-008 GNATCOLL.SQL quotes table and field names (2012-03-27)
+
+   When a table or field name is also a SQL keyword (or has a special meaning
+   for one of the DBMS) it is now quoted. This gives more flexibility in what
+   names can be used for the database model.
+
 NF-15-L207-033 GNATCOLL.Traces adds support for trace hierarchies (2012-03-19)
 
    It is now possible to use "*." or ".*" in the configuration file to
