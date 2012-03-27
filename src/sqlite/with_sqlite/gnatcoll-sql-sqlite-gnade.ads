@@ -361,10 +361,8 @@ private
    pragma Convention (C, Database);
    No_Database : constant Database := null;
 
-   type Statement_Record is null record;
-   type Statement is access Statement_Record;
-   pragma Convention (C, Statement);
-   No_Statement : constant Statement := null;
+   type Statement is new System.Address;
+   No_Statement : constant Statement := Statement (System.Null_Address);
 
    type Result_Table is record
       Values  : System.Address;
