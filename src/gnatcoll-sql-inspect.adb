@@ -24,8 +24,11 @@
 with Ada.Characters.Handling;     use Ada.Characters.Handling;
 with Ada.Command_Line;
 with Ada.Containers;              use Ada.Containers;
+with Ada.Containers.Indefinite_Hashed_Sets;
 with Ada.Exceptions;              use Ada.Exceptions;
+with Ada.Strings.Equal_Case_Insensitive;
 with Ada.Strings.Fixed;           use Ada.Strings, Ada.Strings.Fixed;
+with Ada.Strings.Hash_Case_Insensitive;
 with Ada.Strings.Maps;            use Ada.Strings.Maps;
 with Ada.Text_IO;                 use Ada.Text_IO;
 with GNAT.Strings;                use GNAT.Strings;
@@ -47,6 +50,14 @@ package body GNATCOLL.SQL.Inspect is
    --  immediately, this should be set to "".
 
    use String_Lists;
+
+   package String_Sets is new Ada.Containers.Indefinite_Hashed_Sets
+     (String, Ada.Strings.Hash_Case_Insensitive,
+      Ada.Strings.Equal_Case_Insensitive,
+      Ada.Strings.Equal_Case_Insensitive);
+   use String_Sets;
+
+   Keywords : String_Sets.Set;
 
    procedure Parse_Table
      (Self        : DB_Schema_IO'Class;
@@ -1505,13 +1516,13 @@ package body GNATCOLL.SQL.Inspect is
                      Append (Stmt_FK, ",");
                   end if;
                   Is_First := False;
-                  Append (Stmt_FK, Element (P).From.Name);
+                  Append (Stmt_FK, '"' & Element (P).From.Name & '"');
                   Next (P);
                end loop;
                Append (Stmt_FK, ")");
 
                Stmt_References := To_Unbounded_String
-                 (" REFERENCES " & Element (C).To_Table.Name & " (");
+                 (" REFERENCES """ & Element (C).To_Table.Name & """ (");
                Is_First := True;
                P := F.Fields.First;
                while Has_Element (P) loop
@@ -1522,10 +1533,11 @@ package body GNATCOLL.SQL.Inspect is
 
                   if Element (P).To = No_Field then
                      Append
-                       (Stmt_References, Element (C).To_Table.Get_PK.Name);
+                       (Stmt_References,
+                        '"' & Element (C).To_Table.Get_PK.Name & '"');
                   else
                      Append
-                       (Stmt_References, Element (P).To.Name);
+                       (Stmt_References, '"' & Element (P).To.Name & '"');
                   end if;
                   Next (P);
                end loop;
@@ -1544,7 +1556,7 @@ package body GNATCOLL.SQL.Inspect is
                   Append
                     (Deferred,
                      To_String
-                       ("ALTER TABLE " & Table.Name & " ADD CONSTRAINT "
+                       ("ALTER TABLE """ & Table.Name & """ ADD CONSTRAINT "
                         & Element (F.Fields.First).From.Name & "_fk" & Stmt_FK
                         & Deferred_FK));
 
@@ -1558,7 +1570,7 @@ package body GNATCOLL.SQL.Inspect is
                      Get_Field_Def (Element (P).From, Stmt2,
                                     Can_Be_Not_Null => False,
                                     FK_Table => Element (C).To_Table.Name);
-                     Stmt2 := "ALTER TABLE " & Table.Name & " ADD COLUMN "
+                     Stmt2 := "ALTER TABLE """ & Table.Name & """ ADD COLUMN "
                        & Stmt2 & Stmt_References;
                      Append (Deferred, To_String (Stmt2));
                      Next (P);
@@ -1606,14 +1618,14 @@ package body GNATCOLL.SQL.Inspect is
             Stmt := Null_Unbounded_String;
 
             if Get_Type (F).Kind = Field_Autoincrement then
-               Append (Stmt, " " & F.Name & " "
+               Append (Stmt, " """ & F.Name & """ "
                        & Field_Type_Autoincrement (Self.DB.all));
 
             elsif Get_Type (F).Kind = Field_Money then
-               Append (Stmt, " " & F.Name & " "
+               Append (Stmt, " """ & F.Name & """ "
                        & Field_Type_Money (Self.DB.all));
             else
-               Append (Stmt, " " & F.Name & " " & To_SQL (Get_Type (F)));
+               Append (Stmt, " """ & F.Name & """ " & To_SQL (Get_Type (F)));
             end if;
 
             if not F.Can_Be_Null then
@@ -1714,9 +1726,9 @@ package body GNATCOLL.SQL.Inspect is
             --  via Field_Type_Autoincrement primitive operation.
             if F.Is_PK and then F.Get_Type.Kind /= Field_Autoincrement then
                if SQL_PK = Null_Unbounded_String then
-                  Append (SQL_PK, F.Name);
+                  Append (SQL_PK, '"' & F.Name & '"');
                else
-                  Append (SQL_PK, "," & F.Name);
+                  Append (SQL_PK, ",""" & F.Name & '"');
                end if;
             end if;
          end Print_PK;
@@ -1727,7 +1739,8 @@ package body GNATCOLL.SQL.Inspect is
                when Kind_Table =>
                   Created.Append (Table.Name);   --  mark the table as created
 
-                  Append (SQL, "CREATE TABLE " & Table.Name & " (" & ASCII.LF);
+                  Append (SQL, "CREATE TABLE """
+                          & Table.Name & """ (" & ASCII.LF);
                   For_Each_Field
                     (Table, Add_Field_To_SQL'Access,
                      Include_Inherited => True);
@@ -2111,20 +2124,21 @@ package body GNATCOLL.SQL.Inspect is
                Is_Xref (DB_Fields_Count + 1) := Paren >= Line (L)'First;
 
                if Is_Xref (DB_Fields_Count + 1) then
-                  Append (DB_Fields, DB_Fields_Count,
-                          Line (L) (Line (L)'First .. Paren - 1));
-                  Append (Xref, Xref_Count,
-                          Line (L) (Paren + 2 .. Line (L)'Last - 1));
-
-                  FK := Table.Field_From_Name
-                    (DB_Fields (DB_Fields_Count).all).Is_FK;
-
-                  Has_Xref_Column := True;
-
-                  Tables (L) := new String'
-                    (FK.Get_Table.Name & " t" & Image (L, 0));
+                  declare
+                     Name : constant String :=
+                       Line (L) (Line (L)'First .. Paren - 1);
+                  begin
+                     Append (DB_Fields, DB_Fields_Count, Quote_Keyword (Name));
+                     Append (Xref, Xref_Count,
+                             Line (L) (Paren + 2 .. Line (L)'Last - 1));
+                     FK := Table.Field_From_Name (Name).Is_FK;
+                     Has_Xref_Column := True;
+                     Tables (L) := new String'
+                       (FK.Get_Table.Name & " t" & Image (L, 0));
+                  end;
                else
-                  Append (DB_Fields, DB_Fields_Count, Line (L).all);
+                  Append (DB_Fields, DB_Fields_Count,
+                          Quote_Keyword (Line (L).all));
                   Append (Xref, Xref_Count, "");
                end if;
             end loop;
@@ -2132,13 +2146,17 @@ package body GNATCOLL.SQL.Inspect is
             declare
                procedure On_Field (F : in out Field);
                procedure On_Field (F : in out Field) is
+                  N : constant String := Quote_Keyword (F.Name);
                begin
                   for L in DB_Fields'First .. DB_Fields_Count loop
-                     if DB_Fields (L).all = F.Name then
+                     if DB_Fields (L).all = N then
                         DB_Field_Types (L) := F.Get_Type;
                         return;
                      end if;
                   end loop;
+
+                  --  We might not find the field, in case the data only sets
+                  --  a subset of the fields. That doesn't matter.
                end On_Field;
             begin
                Table.For_Each_Field
@@ -2171,7 +2189,7 @@ package body GNATCOLL.SQL.Inspect is
             end loop;
 
             Q_Values := Prepare
-              ("INSERT INTO " & Table.Name & "("
+              ("INSERT INTO """ & Table.Name & """("
                & Join (",", DB_Fields (DB_Fields'First .. DB_Fields_Count))
                & ") VALUES ("
                & Join (",", DB_Values (1 .. DB_Fields_Count)) & ")",
@@ -2180,7 +2198,7 @@ package body GNATCOLL.SQL.Inspect is
 
             if Has_Xref_Column then
                Q_Values_With_Select := Prepare
-                 ("INSERT INTO " & Table.Name & "("
+                 ("INSERT INTO """ & Table.Name & """("
                   & Join (",", DB_Fields (DB_Fields'First .. DB_Fields_Count))
                   & ") SELECT "
                   & Join (",", Select_Values (1 .. DB_Fields_Count))
@@ -2270,7 +2288,7 @@ package body GNATCOLL.SQL.Inspect is
                   Execute (DB, Q_Values, Params => Values);
                elsif Use_Custom then
                   Execute
-                    (DB, "INSERT INTO " & Table.Name & "("
+                    (DB, "INSERT INTO """ & Table.Name & """("
                      & Join
                        (",", DB_Fields (DB_Fields'First .. DB_Fields_Count))
                      & ") SELECT " & Join (",", Vals)
@@ -2337,5 +2355,565 @@ package body GNATCOLL.SQL.Inspect is
          Result.DB := DB;
       end return;
    end New_Schema_IO;
+
+   -------------------
+   -- Quote_Keyword --
+   -------------------
+
+   function Quote_Keyword (Str : String) return String is
+   begin
+      if Keywords.Is_Empty then
+         --  For each keyword (from the postgreSQL documentation):
+         --     * reserved (in sql99 or postgreSQL) means the word cannot be
+         --       used for identifiers
+         --     * non means the word can only be used in some cases.
+
+         --  Keywords.Include ("ABORT");    --  psql:non
+         Keywords.Include ("ABS");          --  sql99:non
+         Keywords.Include ("ABSOLUTE");     --  sql99:reserved, psql:non
+         Keywords.Include ("ACCESS");       --  non postgres
+         Keywords.Include ("ACTION");       --  reserved sql99, not postgres
+         Keywords.Include ("ADA");          --  non
+
+         Keywords.Include ("ADD");   --  psql:non, sql99:reserved
+         Keywords.Include ("ADMIN");   --  psql:reserved, sql99:
+         Keywords.Include ("AFTER");   --  psql:non, sql99:reserved
+         Keywords.Include ("AGGREGATE");   --  psql:non, sql99:reserved
+         Keywords.Include ("ALIAS");   --  psql:reserved, sql99:
+         Keywords.Include ("ALL");   --  psql:reserved, sql99:reserved
+         Keywords.Include ("ALLOCATE");   --  psql:reserved, sql99:reserved
+         Keywords.Include ("ALTER");   --  psql:non, sql99:reserved
+         Keywords.Include ("ANALYSE");   --  psql:reserved, sql99:
+         Keywords.Include ("ANALYZE");   --  psql:reserved, sql99:
+         Keywords.Include ("AND");   --  psql:reserved, sql99:reserved
+         Keywords.Include ("ANY");   --  psql:reserved, sql99:reserved
+         Keywords.Include ("ARE");   --  psql:reserved, sql99:reserved
+         Keywords.Include ("ARRAY");   --  psql:reserved, sql99:
+         Keywords.Include ("AS");   --  psql:reserved, sql99:reserved
+         Keywords.Include ("ASC");   --  psql:reserved, sql99:reserved
+         Keywords.Include ("ASENSITIVE");   --  psql:non, sql99:
+         Keywords.Include ("ASSERTION");   --  psql:non, sql99:reserved
+         Keywords.Include ("ASSIGNMENT");   --  psql:non, sql99:non
+         Keywords.Include ("ASYMMETRIC");   --  psql:non, sql99:
+         Keywords.Include ("AT");   --  psql:non, sql99:reserved
+         Keywords.Include ("ATOMIC");   --  psql:non, sql99:
+         Keywords.Include ("AUTHORIZATION");  --  psql:reserved, sql99:reserved
+         Keywords.Include ("AVG");   --  psql:non, sql99:reserved
+         Keywords.Include ("BACKWARD");   --  psql:non, sql99:
+         Keywords.Include ("BEFORE");   --  psql:non, sql99:reserved
+         Keywords.Include ("BEGIN");   --  psql:non, sql99:reserved
+         Keywords.Include ("BETWEEN");   --  psql:reserved, sql99:(can
+         Keywords.Include ("BIGINT");   --  psql:non, sql99:(cannot
+         Keywords.Include ("BINARY");   --  psql:reserved, sql99:(can
+         Keywords.Include ("BIT");   --  psql:non, sql99:(cannot
+         Keywords.Include ("BITVAR");   --  psql:non, sql99:
+         Keywords.Include ("BIT_LENGTH");   --  psql:non, sql99:reserved
+         Keywords.Include ("BLOB");   --  psql:reserved, sql99:
+         Keywords.Include ("BOOLEAN");   --  psql:non, sql99:(cannot
+         Keywords.Include ("BOTH");   --  psql:reserved, sql99:reserved
+         Keywords.Include ("BREADTH");   --  psql:reserved, sql99:
+         Keywords.Include ("BY");   --  psql:non, sql99:reserved
+         Keywords.Include ("C");   --  psql:non, sql99:non
+         Keywords.Include ("CACHE");   --  psql:non, sql99:
+         Keywords.Include ("CALL");   --  psql:reserved, sql99:
+         Keywords.Include ("CALLED");   --  psql:non, sql99:non
+         Keywords.Include ("CARDINALITY");   --  psql:non, sql99:
+         Keywords.Include ("CASCADE");   --  psql:non, sql99:reserved
+         Keywords.Include ("CASCADED");   --  psql:reserved, sql99:reserved
+         Keywords.Include ("CASE");   --  psql:reserved, sql99:reserved
+         Keywords.Include ("CAST");   --  psql:reserved, sql99:reserved
+         Keywords.Include ("CATALOG");   --  psql:reserved, sql99:reserved
+         Keywords.Include ("CATALOG_NAME");   --  psql:non, sql99:non
+         Keywords.Include ("CHAIN");   --  psql:non, sql99:non
+         Keywords.Include ("CHAR");   --  psql:non, sql99:(cannot
+         Keywords.Include ("CHARACTER");   --  psql:non, sql99:(cannot
+         Keywords.Include ("CHARACTERISTICS");   --  psql:non, sql99:
+         Keywords.Include ("CHARACTER_LENGTH");   --  psql:non, sql99:reserved
+         Keywords.Include ("CHARACTER_SET_CATALOG");   --  psql:non, sql99:non
+         Keywords.Include ("CHARACTER_SET_NAME");   --  psql:non, sql99:non
+         Keywords.Include ("CHARACTER_SET_SCHEMA");   --  psql:non, sql99:non
+         Keywords.Include ("CHAR_LENGTH");   --  psql:non, sql99:reserved
+         Keywords.Include ("CHECK");   --  psql:reserved, sql99:reserved
+         Keywords.Include ("CHECKED");   --  psql:non, sql99:
+         Keywords.Include ("CHECKPOINT");   --  psql:non, sql99:
+         Keywords.Include ("CLASS");   --  psql:non, sql99:reserved
+         Keywords.Include ("CLASS_ORIGIN");   --  psql:non, sql99:non
+         Keywords.Include ("CLOB");   --  psql:reserved, sql99:
+         Keywords.Include ("CLOSE");   --  psql:non, sql99:reserved
+         Keywords.Include ("CLUSTER");   --  psql:non, sql99:
+         Keywords.Include ("COALESCE");   --  psql:non, sql99:non
+         Keywords.Include ("COBOL");   --  psql:non, sql99:non
+         Keywords.Include ("COLLATE");   --  psql:reserved, sql99:reserved
+         Keywords.Include ("COLLATION");   --  psql:reserved, sql99:reserved
+         Keywords.Include ("COLLATION_CATALOG");   --  psql:non, sql99:non
+         Keywords.Include ("COLLATION_NAME");   --  psql:non, sql99:non
+         Keywords.Include ("COLLATION_SCHEMA");   --  psql:non, sql99:non
+         Keywords.Include ("COLUMN");   --  psql:reserved, sql99:reserved
+         Keywords.Include ("COLUMN_NAME");   --  psql:non, sql99:non
+         Keywords.Include ("COMMAND_FUNCTION");   --  psql:non, sql99:non
+         Keywords.Include ("COMMAND_FUNCTION_CODE");   --  psql:non, sql99:
+         Keywords.Include ("COMMENT");   --  psql:non, sql99:
+         Keywords.Include ("COMMIT");   --  psql:non, sql99:reserved
+         Keywords.Include ("COMMITTED");   --  psql:non, sql99:non
+         Keywords.Include ("COMPLETION");   --  psql:reserved, sql99:
+         Keywords.Include ("CONDITION_NUMBER");   --  psql:non, sql99:non
+         Keywords.Include ("CONNECT");   --  psql:reserved, sql99:reserved
+         Keywords.Include ("CONNECTION");   --  psql:reserved, sql99:reserved
+         Keywords.Include ("CONNECTION_NAME");   --  psql:non, sql99:non
+         Keywords.Include ("CONSTRAINT");   --  psql:reserved, sql99:reserved
+         Keywords.Include ("CONSTRAINTS");   --  psql:non, sql99:reserved
+         Keywords.Include ("CONSTRAINT_CATALOG");   --  psql:non, sql99:non
+         Keywords.Include ("CONSTRAINT_NAME");   --  psql:non, sql99:non
+         Keywords.Include ("CONSTRAINT_SCHEMA");   --  psql:non, sql99:non
+         Keywords.Include ("CONSTRUCTOR");   --  psql:reserved, sql99:
+         Keywords.Include ("CONTAINS");   --  psql:non, sql99:
+         Keywords.Include ("CONTINUE");   --  psql:reserved, sql99:reserved
+         Keywords.Include ("CONVERSION");   --  psql:non, sql99:
+         Keywords.Include ("CONVERT");   --  psql:non, sql99:(cannot
+         Keywords.Include ("COPY");   --  psql:non, sql99:
+         Keywords.Include ("CORRESPONDING");   --  psql:res., sql99:res.
+         Keywords.Include ("COUNT");   --  psql:non, sql99:reserved
+         Keywords.Include ("CREATE");   --  psql:reserved, sql99:reserved
+         Keywords.Include ("CREATEDB");   --  psql:non, sql99:
+         Keywords.Include ("CREATEUSER");   --  psql:non, sql99:
+         Keywords.Include ("CROSS");   --  psql:reserved, sql99:(can
+         Keywords.Include ("CUBE");   --  psql:reserved, sql99:
+         Keywords.Include ("CURRENT");   --  psql:reserved, sql99:reserved
+         Keywords.Include ("CURRENT_DATE");   --  psql:reserved, sql99:reserved
+         Keywords.Include ("CURRENT_PATH");   --  psql:reserved, sql99:
+         Keywords.Include ("CURRENT_ROLE");   --  psql:reserved, sql99:
+         Keywords.Include ("CURRENT_TIME");   --  psql:reserved, sql99:reserved
+         Keywords.Include ("CURRENT_TIMESTAMP");   --  psql:res., sql99:res.
+         Keywords.Include ("CURRENT_USER");   --  psql:reserved, sql99:reserved
+         Keywords.Include ("CURSOR");   --  psql:non, sql99:reserved
+         Keywords.Include ("CURSOR_NAME");   --  psql:non, sql99:non
+         Keywords.Include ("CYCLE");   --  psql:non, sql99:reserved
+         Keywords.Include ("DATA");   --  psql:reserved, sql99:non
+         Keywords.Include ("DATABASE");   --  psql:non, sql99:
+         Keywords.Include ("DATE");   --  psql:reserved, sql99:reserved
+         Keywords.Include ("DATETIME_INTERVAL_CODE");   --  psql:non, sql99:non
+         Keywords.Include ("DATETIME_INTERVAL_PRECISION");  --  psql:n, sql99:n
+         Keywords.Include ("DAY");   --  psql:non, sql99:reserved
+         Keywords.Include ("DEALLOCATE");   --  psql:non, sql99:reserved
+         Keywords.Include ("DEC");   --  psql:non, sql99:(cannot
+         Keywords.Include ("DECIMAL");   --  psql:non, sql99:(cannot
+         Keywords.Include ("DECLARE");   --  psql:non, sql99:reserved
+         Keywords.Include ("DEFAULT");   --  psql:reserved, sql99:reserved
+         Keywords.Include ("DEFERRABLE");   --  psql:reserved, sql99:reserved
+         Keywords.Include ("DEFERRED");   --  psql:non, sql99:reserved
+         Keywords.Include ("DEFINED");   --  psql:non, sql99:
+         Keywords.Include ("DEFINER");   --  psql:non, sql99:non
+         Keywords.Include ("DELETE");   --  psql:non, sql99:reserved
+         Keywords.Include ("DELIMITER");   --  psql:non, sql99:
+         Keywords.Include ("DELIMITERS");   --  psql:non, sql99:
+         Keywords.Include ("DEPTH");   --  psql:reserved, sql99:
+         Keywords.Include ("DEREF");   --  psql:reserved, sql99:
+         Keywords.Include ("DESC");   --  psql:reserved, sql99:reserved
+         Keywords.Include ("DESCRIBE");   --  psql:reserved, sql99:reserved
+         Keywords.Include ("DESCRIPTOR");   --  psql:reserved, sql99:reserved
+         Keywords.Include ("DESTROY");   --  psql:reserved, sql99:
+         Keywords.Include ("DESTRUCTOR");   --  psql:reserved, sql99:
+         Keywords.Include ("DETERMINISTIC");   --  psql:reserved, sql99:
+         Keywords.Include ("DIAGNOSTICS");   --  psql:reserved, sql99:reserved
+         Keywords.Include ("DICTIONARY");   --  psql:reserved, sql99:
+         Keywords.Include ("DISCONNECT");   --  psql:reserved, sql99:reserved
+         Keywords.Include ("DISPATCH");   --  psql:non, sql99:
+         Keywords.Include ("DISTINCT");   --  psql:reserved, sql99:reserved
+         Keywords.Include ("DO");   --  psql:reserved, sql99:
+         Keywords.Include ("DOMAIN");   --  psql:non, sql99:reserved
+         Keywords.Include ("DOUBLE");   --  psql:non, sql99:reserved
+         Keywords.Include ("DROP");   --  psql:non, sql99:reserved
+         Keywords.Include ("DYNAMIC");   --  psql:reserved, sql99:
+         Keywords.Include ("DYNAMIC_FUNCTION");   --  psql:non, sql99:non
+         Keywords.Include ("DYNAMIC_FUNCTION_CODE");   --  psql:non, sql99:
+         Keywords.Include ("EACH");   --  psql:non, sql99:reserved
+         Keywords.Include ("ELSE");   --  psql:reserved, sql99:reserved
+         Keywords.Include ("ENCODING");   --  psql:non, sql99:
+         Keywords.Include ("ENCRYPTED");   --  psql:non, sql99:
+         Keywords.Include ("END");   --  psql:reserved, sql99:reserved
+         Keywords.Include ("END-EXEC");   --  psql:reserved, sql99:reserved
+         Keywords.Include ("EQUALS");   --  psql:reserved, sql99:
+         Keywords.Include ("ESCAPE");   --  psql:non, sql99:reserved
+         Keywords.Include ("EVERY");   --  psql:reserved, sql99:
+         Keywords.Include ("EXCEPT");   --  psql:reserved, sql99:reserved
+         Keywords.Include ("EXCEPTION");   --  psql:reserved, sql99:reserved
+         Keywords.Include ("EXCLUSIVE");   --  psql:non, sql99:
+         Keywords.Include ("EXEC");   --  psql:reserved, sql99:reserved
+         Keywords.Include ("EXECUTE");   --  psql:non, sql99:reserved
+         Keywords.Include ("EXISTING");   --  psql:non, sql99:
+         Keywords.Include ("EXISTS");   --  psql:non, sql99:(cannot
+         Keywords.Include ("EXPLAIN");   --  psql:non, sql99:
+         Keywords.Include ("EXTERNAL");   --  psql:non, sql99:reserved
+         Keywords.Include ("EXTRACT");   --  psql:non, sql99:(cannot
+         Keywords.Include ("FALSE");   --  psql:reserved, sql99:reserved
+         Keywords.Include ("FETCH");   --  psql:non, sql99:reserved
+         Keywords.Include ("FINAL");   --  psql:non, sql99:
+         Keywords.Include ("FIRST");   --  psql:reserved, sql99:reserved
+         Keywords.Include ("FLOAT");   --  psql:non, sql99:(cannot
+         Keywords.Include ("FOR");   --  psql:reserved, sql99:reserved
+         Keywords.Include ("FORCE");   --  psql:non, sql99:
+         Keywords.Include ("FOREIGN");   --  psql:reserved, sql99:reserved
+         Keywords.Include ("FORTRAN");   --  psql:non, sql99:non
+         Keywords.Include ("FORWARD");   --  psql:non, sql99:
+         Keywords.Include ("FOUND");   --  psql:reserved, sql99:reserved
+         Keywords.Include ("FREE");   --  psql:reserved, sql99:
+         Keywords.Include ("FREEZE");   --  psql:reserved, sql99:(can
+         Keywords.Include ("FROM");   --  psql:reserved, sql99:reserved
+         Keywords.Include ("FULL");   --  psql:reserved, sql99:(can
+         Keywords.Include ("FUNCTION");   --  psql:non, sql99:reserved
+         Keywords.Include ("G");   --  psql:non, sql99:
+         Keywords.Include ("GENERAL");   --  psql:reserved, sql99:
+         Keywords.Include ("GENERATED");   --  psql:non, sql99:
+         Keywords.Include ("GET");   --  psql:non, sql99:reserved
+         Keywords.Include ("GLOBAL");   --  psql:non, sql99:reserved
+         Keywords.Include ("GO");   --  psql:reserved, sql99:reserved
+         Keywords.Include ("GOTO");   --  psql:reserved, sql99:reserved
+         Keywords.Include ("GRANT");   --  psql:reserved, sql99:reserved
+         Keywords.Include ("GRANTED");   --  psql:non, sql99:
+         Keywords.Include ("GROUP");   --  psql:reserved, sql99:reserved
+         Keywords.Include ("GROUPING");   --  psql:reserved, sql99:
+         Keywords.Include ("HANDLER");   --  psql:non, sql99:
+         Keywords.Include ("HAVING");   --  psql:reserved, sql99:reserved
+         Keywords.Include ("HIERARCHY");   --  psql:non, sql99:
+         Keywords.Include ("HOLD");   --  psql:non, sql99:
+         Keywords.Include ("HOST");   --  psql:reserved, sql99:
+         Keywords.Include ("HOUR");   --  psql:non, sql99:reserved
+         Keywords.Include ("IDENTITY");   --  psql:reserved, sql99:reserved
+         Keywords.Include ("IGNORE");   --  psql:reserved, sql99:
+         Keywords.Include ("ILIKE");   --  psql:reserved, sql99:(can
+         Keywords.Include ("IMMEDIATE");   --  psql:non, sql99:reserved
+         Keywords.Include ("IMMUTABLE");   --  psql:non, sql99:
+         Keywords.Include ("IMPLEMENTATION");   --  psql:non, sql99:
+         Keywords.Include ("IMPLICIT");   --  psql:non, sql99:
+         Keywords.Include ("IN");   --  psql:reserved, sql99:(can
+         Keywords.Include ("INCREMENT");   --  psql:non, sql99:
+         Keywords.Include ("INDEX");   --  psql:non, sql99:
+         Keywords.Include ("INDICATOR");   --  psql:reserved, sql99:reserved
+         Keywords.Include ("INFIX");   --  psql:non, sql99:
+         Keywords.Include ("INHERITS");   --  psql:non, sql99:
+         Keywords.Include ("INITIALIZE");   --  psql:reserved, sql99:
+         Keywords.Include ("INITIALLY");   --  psql:reserved, sql99:reserved
+         Keywords.Include ("INNER");   --  psql:reserved, sql99:(can
+         Keywords.Include ("INOUT");   --  psql:non, sql99:reserved
+         Keywords.Include ("INPUT");   --  psql:non, sql99:reserved
+         Keywords.Include ("INSENSITIVE");   --  psql:non, sql99:non
+         Keywords.Include ("INSERT");   --  psql:non, sql99:reserved
+         Keywords.Include ("INSTANCE");   --  psql:non, sql99:
+         Keywords.Include ("INSTANTIABLE");   --  psql:non, sql99:
+         Keywords.Include ("INSTEAD");   --  psql:non, sql99:
+         Keywords.Include ("INT");   --  psql:non, sql99:(cannot
+         Keywords.Include ("INTEGER");   --  psql:non, sql99:(cannot
+         Keywords.Include ("INTERSECT");   --  psql:reserved, sql99:reserved
+         Keywords.Include ("INTERVAL");   --  psql:non, sql99:(cannot
+         Keywords.Include ("INTO");   --  psql:reserved, sql99:reserved
+         Keywords.Include ("INVOKER");   --  psql:non, sql99:non
+         Keywords.Include ("IS");   --  psql:reserved, sql99:(can
+         Keywords.Include ("ISNULL");   --  psql:reserved, sql99:(can
+         Keywords.Include ("ISOLATION");   --  psql:non, sql99:reserved
+         Keywords.Include ("ITERATE");   --  psql:reserved, sql99:
+         Keywords.Include ("JOIN");   --  psql:reserved, sql99:(can
+         Keywords.Include ("K");   --  psql:non, sql99:
+         Keywords.Include ("KEY");   --  psql:non, sql99:reserved
+         Keywords.Include ("KEY_MEMBER");   --  psql:non, sql99:
+         Keywords.Include ("KEY_TYPE");   --  psql:non, sql99:
+         Keywords.Include ("LANCOMPILER");   --  psql:non, sql99:
+         Keywords.Include ("LANGUAGE");   --  psql:non, sql99:reserved
+         Keywords.Include ("LARGE");   --  psql:reserved, sql99:
+         Keywords.Include ("LAST");   --  psql:reserved, sql99:reserved
+         Keywords.Include ("LATERAL");   --  psql:reserved, sql99:
+         Keywords.Include ("LEADING");   --  psql:reserved, sql99:reserved
+         Keywords.Include ("LEFT");   --  psql:reserved, sql99:(can
+         Keywords.Include ("LENGTH");   --  psql:non, sql99:non
+         Keywords.Include ("LESS");   --  psql:reserved, sql99:
+         Keywords.Include ("LEVEL");   --  psql:non, sql99:reserved
+         Keywords.Include ("LIKE");   --  psql:reserved, sql99:(can
+         Keywords.Include ("LIMIT");   --  psql:reserved, sql99:reserved
+         Keywords.Include ("LISTEN");   --  psql:non, sql99:
+         Keywords.Include ("LOAD");   --  psql:non, sql99:
+         Keywords.Include ("LOCAL");   --  psql:non, sql99:reserved
+         Keywords.Include ("LOCALTIME");   --  psql:reserved, sql99:reserved
+         Keywords.Include ("LOCALTIMESTAMP");   --  psql:reserved, sql99:res.
+         Keywords.Include ("LOCATION");   --  psql:non, sql99:
+         Keywords.Include ("LOCATOR");   --  psql:reserved, sql99:
+         Keywords.Include ("LOCK");   --  psql:non, sql99:
+         Keywords.Include ("LOWER");   --  psql:non, sql99:reserved
+         Keywords.Include ("M");   --  psql:non, sql99:
+         Keywords.Include ("MAP");   --  psql:reserved, sql99:
+         Keywords.Include ("MATCH");   --  psql:non, sql99:reserved
+         Keywords.Include ("MAX");   --  psql:non, sql99:reserved
+         Keywords.Include ("MAXVALUE");   --  psql:non, sql99:
+         Keywords.Include ("MESSAGE_LENGTH");   --  psql:non, sql99:non
+         Keywords.Include ("MESSAGE_OCTET_LENGTH");   --  psql:non, sql99:non
+         Keywords.Include ("MESSAGE_TEXT");   --  psql:non, sql99:non
+         Keywords.Include ("METHOD");   --  psql:non, sql99:
+         Keywords.Include ("MIN");   --  psql:non, sql99:reserved
+         Keywords.Include ("MINUTE");   --  psql:non, sql99:reserved
+         Keywords.Include ("MINVALUE");   --  psql:non, sql99:
+         Keywords.Include ("MOD");   --  psql:non, sql99:
+         Keywords.Include ("MODE");   --  psql:non, sql99:
+         Keywords.Include ("MODIFIES");   --  psql:reserved, sql99:
+         Keywords.Include ("MODIFY");   --  psql:reserved, sql99:
+         Keywords.Include ("MODULE");   --  psql:reserved, sql99:reserved
+         Keywords.Include ("MONTH");   --  psql:non, sql99:reserved
+         Keywords.Include ("MORE");   --  psql:non, sql99:non
+         Keywords.Include ("MOVE");   --  psql:non, sql99:
+         Keywords.Include ("MUMPS");   --  psql:non, sql99:non
+         Keywords.Include ("NAME");   --  psql:non, sql99:non
+         Keywords.Include ("NAMES");   --  psql:non, sql99:reserved
+         Keywords.Include ("NATIONAL");   --  psql:non, sql99:reserved
+         Keywords.Include ("NATURAL");   --  psql:reserved, sql99:(can
+         Keywords.Include ("NCHAR");   --  psql:non, sql99:(cannot
+         Keywords.Include ("NCLOB");   --  psql:reserved, sql99:
+         Keywords.Include ("NEW");   --  psql:reserved, sql99:reserved
+         Keywords.Include ("NEXT");   --  psql:non, sql99:reserved
+         Keywords.Include ("NO");   --  psql:non, sql99:reserved
+         Keywords.Include ("NOCREATEDB");   --  psql:non, sql99:
+         Keywords.Include ("NOCREATEUSER");   --  psql:non, sql99:
+         Keywords.Include ("NONE");   --  psql:non, sql99:(cannot
+         Keywords.Include ("NOT");   --  psql:reserved, sql99:reserved
+         Keywords.Include ("NOTHING");   --  psql:non, sql99:
+         Keywords.Include ("NOTIFY");   --  psql:non, sql99:
+         Keywords.Include ("NOTNULL");   --  psql:reserved, sql99:(can
+         Keywords.Include ("NULL");   --  psql:reserved, sql99:reserved
+         Keywords.Include ("NULLABLE");   --  psql:non, sql99:non
+         Keywords.Include ("NULLIF");   --  psql:non, sql99:(cannot
+         Keywords.Include ("NUMBER");   --  psql:non, sql99:non
+         Keywords.Include ("NUMERIC");   --  psql:non, sql99:(cannot
+         Keywords.Include ("OBJECT");   --  psql:reserved, sql99:
+         Keywords.Include ("OCTET_LENGTH");   --  psql:non, sql99:reserved
+         Keywords.Include ("OF");   --  psql:non, sql99:reserved
+         Keywords.Include ("OFF");   --  psql:reserved, sql99:reserved
+         Keywords.Include ("OFFSET");   --  psql:reserved, sql99:
+         Keywords.Include ("OIDS");   --  psql:non, sql99:
+         Keywords.Include ("OLD");   --  psql:reserved, sql99:reserved
+         Keywords.Include ("ON");   --  psql:reserved, sql99:reserved
+         Keywords.Include ("ONLY");   --  psql:reserved, sql99:reserved
+         Keywords.Include ("OPEN");   --  psql:reserved, sql99:reserved
+         Keywords.Include ("OPERATION");   --  psql:reserved, sql99:
+         Keywords.Include ("OPERATOR");   --  psql:non, sql99:
+         Keywords.Include ("OPTION");   --  psql:non, sql99:reserved
+         Keywords.Include ("OPTIONS");   --  psql:non, sql99:
+         Keywords.Include ("OR");   --  psql:reserved, sql99:reserved
+         Keywords.Include ("ORDER");   --  psql:reserved, sql99:reserved
+         Keywords.Include ("ORDINALITY");   --  psql:reserved, sql99:
+         Keywords.Include ("OUT");   --  psql:non, sql99:reserved
+         Keywords.Include ("OUTER");   --  psql:reserved, sql99:(can
+         Keywords.Include ("OUTPUT");   --  psql:reserved, sql99:reserved
+         Keywords.Include ("OVERLAPS");   --  psql:reserved, sql99:(can
+         Keywords.Include ("OVERLAY");   --  psql:non, sql99:(cannot
+         Keywords.Include ("OVERRIDING");   --  psql:non, sql99:
+         Keywords.Include ("OWNER");   --  psql:non, sql99:
+         Keywords.Include ("PAD");   --  psql:reserved, sql99:reserved
+         Keywords.Include ("PARAMETER");   --  psql:reserved, sql99:
+         Keywords.Include ("PARAMETERS");   --  psql:reserved, sql99:
+         Keywords.Include ("PARAMETER_MODE");   --  psql:non, sql99:
+         Keywords.Include ("PARAMETER_NAME");   --  psql:non, sql99:
+         Keywords.Include ("PARAMETER_ORDINAL_POSITION");   --  sql99:non
+         Keywords.Include ("PARAMETER_SPECIFIC_CATALOG");   --  sql99:non
+         Keywords.Include ("PARAMETER_SPECIFIC_NAME");   --  psql:non, sql99:
+         Keywords.Include ("PARAMETER_SPECIFIC_SCHEMA");   --  psql:non, sql99:
+         Keywords.Include ("PARTIAL");   --  psql:non, sql99:reserved
+         Keywords.Include ("PASCAL");   --  psql:non, sql99:non
+         Keywords.Include ("PASSWORD");   --  psql:non, sql99:
+         Keywords.Include ("PATH");   --  psql:non, sql99:reserved
+         Keywords.Include ("PENDANT");   --  psql:non, sql99:
+         Keywords.Include ("PLACING");   --  psql:reserved, sql99:
+         Keywords.Include ("PLI");   --  psql:non, sql99:non
+         Keywords.Include ("POSITION");   --  psql:non, sql99:(cannot
+         Keywords.Include ("POSTFIX");   --  psql:reserved, sql99:
+         Keywords.Include ("PRECISION");   --  psql:non, sql99:reserved
+         Keywords.Include ("PREFIX");   --  psql:reserved, sql99:
+         Keywords.Include ("PREORDER");   --  psql:reserved, sql99:
+         Keywords.Include ("PREPARE");   --  psql:non, sql99:reserved
+         Keywords.Include ("PRESERVE");   --  psql:reserved, sql99:reserved
+         Keywords.Include ("PRIMARY");   --  psql:reserved, sql99:reserved
+         Keywords.Include ("PRIOR");   --  psql:non, sql99:reserved
+         Keywords.Include ("PRIVILEGES");   --  psql:non, sql99:reserved
+         Keywords.Include ("PROCEDURAL");   --  psql:non, sql99:
+         Keywords.Include ("PROCEDURE");   --  psql:non, sql99:reserved
+         Keywords.Include ("PUBLIC");   --  psql:reserved, sql99:reserved
+         Keywords.Include ("READ");   --  psql:non, sql99:reserved
+         Keywords.Include ("READS");   --  psql:reserved, sql99:
+         Keywords.Include ("REAL");   --  psql:non, sql99:(cannot
+         Keywords.Include ("RECHECK");   --  psql:non, sql99:
+         Keywords.Include ("RECURSIVE");   --  psql:reserved, sql99:
+         Keywords.Include ("REF");   --  psql:reserved, sql99:
+         Keywords.Include ("REFERENCES");   --  psql:reserved, sql99:reserved
+         Keywords.Include ("REFERENCING");   --  psql:reserved, sql99:
+         Keywords.Include ("REINDEX");   --  psql:non, sql99:
+         Keywords.Include ("RELATIVE");   --  psql:non, sql99:reserved
+         Keywords.Include ("RENAME");   --  psql:non, sql99:
+         Keywords.Include ("REPEATABLE");   --  psql:non, sql99:non
+         Keywords.Include ("REPLACE");   --  psql:non, sql99:
+         Keywords.Include ("RESET");   --  psql:non, sql99:
+         Keywords.Include ("RESTRICT");   --  psql:non, sql99:reserved
+         Keywords.Include ("RESULT");   --  psql:reserved, sql99:
+         Keywords.Include ("RETURN");   --  psql:reserved, sql99:
+         Keywords.Include ("RETURNED_LENGTH");   --  psql:non, sql99:non
+         Keywords.Include ("RETURNED_OCTET_LENGTH");   --  psql:non, sql99:non
+         Keywords.Include ("RETURNED_SQLSTATE");   --  psql:non, sql99:non
+         Keywords.Include ("RETURNS");   --  psql:non, sql99:reserved
+         Keywords.Include ("REVOKE");   --  psql:non, sql99:reserved
+         Keywords.Include ("RIGHT");   --  psql:reserved, sql99:(can
+         Keywords.Include ("ROLE");   --  psql:reserved, sql99:
+         Keywords.Include ("ROLLBACK");   --  psql:non, sql99:reserved
+         Keywords.Include ("ROLLUP");   --  psql:reserved, sql99:
+         Keywords.Include ("ROUTINE");   --  psql:reserved, sql99:
+         Keywords.Include ("ROUTINE_CATALOG");   --  psql:non, sql99:
+         Keywords.Include ("ROUTINE_NAME");   --  psql:non, sql99:
+         Keywords.Include ("ROUTINE_SCHEMA");   --  psql:non, sql99:
+         Keywords.Include ("ROW");   --  psql:non, sql99:(cannot
+         Keywords.Include ("ROWS");   --  psql:reserved, sql99:reserved
+         Keywords.Include ("ROW_COUNT");   --  psql:non, sql99:non
+         Keywords.Include ("RULE");   --  psql:non, sql99:
+         Keywords.Include ("SAVEPOINT");   --  psql:reserved, sql99:
+         Keywords.Include ("SCALE");   --  psql:non, sql99:non
+         Keywords.Include ("SCHEMA");   --  psql:non, sql99:reserved
+         Keywords.Include ("SCHEMA_NAME");   --  psql:non, sql99:non
+         Keywords.Include ("SCOPE");   --  psql:reserved, sql99:
+         Keywords.Include ("SCROLL");   --  psql:non, sql99:reserved
+         Keywords.Include ("SEARCH");   --  psql:reserved, sql99:
+         Keywords.Include ("SECOND");   --  psql:non, sql99:reserved
+         Keywords.Include ("SECTION");   --  psql:reserved, sql99:reserved
+         Keywords.Include ("SECURITY");   --  psql:non, sql99:non
+         Keywords.Include ("SELECT");   --  psql:reserved, sql99:reserved
+         Keywords.Include ("SELF");   --  psql:non, sql99:
+         Keywords.Include ("SENSITIVE");   --  psql:non, sql99:
+         Keywords.Include ("SEQUENCE");   --  psql:non, sql99:reserved
+         Keywords.Include ("SERIALIZABLE");   --  psql:non, sql99:non
+         Keywords.Include ("SERVER_NAME");   --  psql:non, sql99:non
+         Keywords.Include ("SESSION");   --  psql:non, sql99:reserved
+         Keywords.Include ("SESSION_USER");   --  psql:reserved, sql99:reserved
+         Keywords.Include ("SET");   --  psql:non, sql99:reserved
+         Keywords.Include ("SETOF");   --  psql:non, sql99:(cannot
+         Keywords.Include ("SETS");   --  psql:reserved, sql99:
+         Keywords.Include ("SHARE");   --  psql:non, sql99:
+         Keywords.Include ("SHOW");   --  psql:non, sql99:
+         Keywords.Include ("SIMILAR");   --  psql:reserved, sql99:(can
+         Keywords.Include ("SIMPLE");   --  psql:non, sql99:non
+         Keywords.Include ("SIZE");   --  psql:reserved, sql99:reserved
+         Keywords.Include ("SMALLINT");   --  psql:non, sql99:(cannot
+         Keywords.Include ("SOME");   --  psql:reserved, sql99:reserved
+         Keywords.Include ("SOURCE");   --  psql:non, sql99:
+         Keywords.Include ("SPACE");   --  psql:reserved, sql99:reserved
+         Keywords.Include ("SPECIFIC");   --  psql:reserved, sql99:
+         Keywords.Include ("SPECIFICTYPE");   --  psql:reserved, sql99:
+         Keywords.Include ("SPECIFIC_NAME");   --  psql:non, sql99:
+         Keywords.Include ("SQL");   --  psql:reserved, sql99:reserved
+         Keywords.Include ("SQLCODE");   --  psql:reserved, sql99:
+         Keywords.Include ("SQLERROR");   --  psql:reserved, sql99:
+         Keywords.Include ("SQLEXCEPTION");   --  psql:reserved, sql99:
+         Keywords.Include ("SQLSTATE");   --  psql:reserved, sql99:reserved
+         Keywords.Include ("SQLWARNING");   --  psql:reserved, sql99:
+         Keywords.Include ("STABLE");   --  psql:non, sql99:
+         Keywords.Include ("START");   --  psql:non, sql99:reserved
+         Keywords.Include ("STATE");   --  psql:reserved, sql99:
+         Keywords.Include ("STATEMENT");   --  psql:non, sql99:reserved
+         Keywords.Include ("STATIC");   --  psql:reserved, sql99:
+         Keywords.Include ("STATISTICS");   --  psql:non, sql99:
+         Keywords.Include ("STDIN");   --  psql:non, sql99:
+         Keywords.Include ("STDOUT");   --  psql:non, sql99:
+         Keywords.Include ("STORAGE");   --  psql:non, sql99:
+         Keywords.Include ("STRICT");   --  psql:non, sql99:
+         Keywords.Include ("STRUCTURE");   --  psql:reserved, sql99:
+         Keywords.Include ("STYLE");   --  psql:non, sql99:
+         Keywords.Include ("SUBCLASS_ORIGIN");   --  psql:non, sql99:non
+         Keywords.Include ("SUBLIST");   --  psql:non, sql99:
+         Keywords.Include ("SUBSTRING");   --  psql:non, sql99:(cannot
+         Keywords.Include ("SUM");   --  psql:non, sql99:reserved
+         Keywords.Include ("SYMMETRIC");   --  psql:non, sql99:
+         Keywords.Include ("SYSID");   --  psql:non, sql99:
+         Keywords.Include ("SYSTEM");   --  psql:non, sql99:
+         Keywords.Include ("SYSTEM_USER");   --  psql:reserved, sql99:reserved
+         Keywords.Include ("TABLE");   --  psql:reserved, sql99:reserved
+         Keywords.Include ("TABLE_NAME");   --  psql:non, sql99:non
+         Keywords.Include ("TEMP");   --  psql:non, sql99:
+         Keywords.Include ("TEMPLATE");   --  psql:non, sql99:
+         Keywords.Include ("TEMPORARY");   --  psql:non, sql99:reserved
+         Keywords.Include ("TERMINATE");   --  psql:reserved, sql99:
+         Keywords.Include ("THAN");   --  psql:reserved, sql99:
+         Keywords.Include ("THEN");   --  psql:reserved, sql99:reserved
+         Keywords.Include ("TIME");   --  psql:non, sql99:(cannot
+         Keywords.Include ("TIMESTAMP");   --  psql:non, sql99:(cannot
+         Keywords.Include ("TIMEZONE_HOUR");   --  psql:reserved, sql99:res.
+         Keywords.Include ("TIMEZONE_MINUTE");   --  psql:reserved, sql99:res.
+         Keywords.Include ("TO");   --  psql:reserved, sql99:reserved
+         Keywords.Include ("TOAST");   --  psql:non, sql99:
+         Keywords.Include ("TRAILING");   --  psql:reserved, sql99:reserved
+         Keywords.Include ("TRANSACTION");   --  psql:non, sql99:reserved
+         Keywords.Include ("TRANSACTIONS_COMMITTED");   --  psql:non, sql99:
+         Keywords.Include ("TRANSACTIONS_ROLLED_BACK");   --  psql:non, sql99:
+         Keywords.Include ("TRANSACTION_ACTIVE");   --  psql:non, sql99:
+         Keywords.Include ("TRANSFORM");   --  psql:non, sql99:
+         Keywords.Include ("TRANSFORMS");   --  psql:non, sql99:
+         Keywords.Include ("TRANSLATE");   --  psql:non, sql99:reserved
+         Keywords.Include ("TRANSLATION");   --  psql:reserved, sql99:reserved
+         Keywords.Include ("TREAT");   --  psql:non, sql99:(cannot
+         Keywords.Include ("TRIGGER");   --  psql:non, sql99:reserved
+         Keywords.Include ("TRIGGER_CATALOG");   --  psql:non, sql99:
+         Keywords.Include ("TRIGGER_NAME");   --  psql:non, sql99:
+         Keywords.Include ("TRIGGER_SCHEMA");   --  psql:non, sql99:
+         Keywords.Include ("TRIM");   --  psql:non, sql99:(cannot
+         Keywords.Include ("TRUE");   --  psql:reserved, sql99:reserved
+         Keywords.Include ("TRUNCATE");   --  psql:non, sql99:
+         Keywords.Include ("TRUSTED");   --  psql:non, sql99:
+         Keywords.Include ("TYPE");   --  psql:non, sql99:non
+         Keywords.Include ("UNCOMMITTED");   --  psql:non, sql99:non
+         Keywords.Include ("UNDER");   --  psql:reserved, sql99:
+         Keywords.Include ("UNENCRYPTED");   --  psql:non, sql99:
+         Keywords.Include ("UNION");   --  psql:reserved, sql99:reserved
+         Keywords.Include ("UNIQUE");   --  psql:reserved, sql99:reserved
+         Keywords.Include ("UNKNOWN");   --  psql:non, sql99:reserved
+         Keywords.Include ("UNLISTEN");   --  psql:non, sql99:
+         Keywords.Include ("UNNAMED");   --  psql:non, sql99:non
+         Keywords.Include ("UNNEST");   --  psql:reserved, sql99:
+         Keywords.Include ("UNTIL");   --  psql:non, sql99:
+         Keywords.Include ("UPDATE");   --  psql:non, sql99:reserved
+         Keywords.Include ("UPPER");   --  psql:non, sql99:reserved
+         Keywords.Include ("USAGE");   --  psql:non, sql99:reserved
+         Keywords.Include ("USER");   --  psql:reserved, sql99:reserved
+         Keywords.Include ("USER_DEFINED_TYPE_CATALOG");   --  psql:non, sql99:
+         Keywords.Include ("USER_DEFINED_TYPE_NAME");   --  psql:non, sql99:
+         Keywords.Include ("USER_DEFINED_TYPE_SCHEMA");   --  psql:non, sql99:
+         Keywords.Include ("USING");   --  psql:reserved, sql99:reserved
+         Keywords.Include ("VACUUM");   --  psql:non, sql99:
+         Keywords.Include ("VALID");   --  psql:non, sql99:
+         Keywords.Include ("VALIDATOR");   --  psql:non, sql99:
+         Keywords.Include ("VALUE");   --  psql:reserved, sql99:reserved
+         Keywords.Include ("VALUES");   --  psql:non, sql99:reserved
+         Keywords.Include ("VARCHAR");   --  psql:non, sql99:(cannot
+         Keywords.Include ("VARIABLE");   --  psql:reserved, sql99:
+         Keywords.Include ("VARYING");   --  psql:non, sql99:reserved
+         Keywords.Include ("VERBOSE");   --  psql:reserved, sql99:(can
+         Keywords.Include ("VERSION");   --  psql:non, sql99:
+         Keywords.Include ("VIEW");   --  psql:non, sql99:reserved
+         Keywords.Include ("VOLATILE");   --  psql:non, sql99:
+         Keywords.Include ("WHEN");   --  psql:reserved, sql99:reserved
+         Keywords.Include ("WHENEVER");   --  psql:reserved, sql99:reserved
+         Keywords.Include ("WHERE");   --  psql:reserved, sql99:reserved
+         Keywords.Include ("WITH");   --  psql:non, sql99:reserved
+         Keywords.Include ("WITHOUT");   --  psql:non, sql99:reserved
+         Keywords.Include ("WORK");   --  psql:non, sql99:reserved
+         Keywords.Include ("WRITE");   --  psql:non, sql99:reserved
+         Keywords.Include ("YEAR");   --  psql:non, sql99:reserved
+         Keywords.Include ("ZONE");   --  psql:non, sql99:reserved
+      end if;
+
+      --  With postgreSQL, there is also an issue with identifiers using
+      --  CamelCase (this is accepted when creating the database, but then
+      --  we get an error when creating an index saying that the field does
+      --  not exist). So we always convert to lower case.
+
+      if Keywords.Contains (Str)
+        or else To_Lower (Str) /= Str
+      then
+         --  Insert two '"' at start and end, since these names will be quoted
+         --  in the generated files.
+
+         return '"' & Str & '"';
+      else
+         return Str;
+      end if;
+   end Quote_Keyword;
 
 end GNATCOLL.SQL.Inspect;

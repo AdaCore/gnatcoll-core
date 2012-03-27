@@ -80,6 +80,10 @@ package GNATCOLL.SQL.Inspect is
    --  "CREATE TABLE" statement. Otherwise, it is prefixed with "SQL_Field_"
    --  to represent the corresponding GNATCOLL.SQL type
 
+   function Quote_Keyword (Str : String) return String;
+   --  If Str is a keyword (or special token) for the DBMS, surround it with
+   --  quotes. Otherwise, return Str as is
+
    ------------
    -- Fields --
    ------------

@@ -213,7 +213,8 @@ procedure Generate (Generated : String) is
 
    begin
       Put_Line (Spec_File, "   TC_" & Capitalize (Table.Name)
-                & " : aliased constant String := """ & Table.Name & """;");
+                & " : aliased constant String := """
+                & Ada_Quote (Quote_Keyword (Table.Name)) & """;");
       Put_Line (Spec_File, "   Ta_" & Capitalize (Table.Name)
                 & " : constant Cst_String_Access := TC_"
                 & Capitalize (Table.Name) & "'Access;");
@@ -323,7 +324,7 @@ begin
       while Has_Element (N) loop
          Put_Line (Spec_File, "   NC_" & Capitalize (Element (N))
                    & " : aliased constant String := """
-                   & Element (N) & """;");
+                   & Ada_Quote (Quote_Keyword (Element (N))) & """;");
          Put_Line (Spec_File, "   N_" & Capitalize (Element (N))
                    & " : constant Cst_String_Access := NC_"
                    & Element (N) & "'Access;");

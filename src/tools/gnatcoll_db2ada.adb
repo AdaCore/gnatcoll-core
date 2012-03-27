@@ -110,6 +110,10 @@ procedure GNATCOLL_Db2Ada is
       Comment : Unbounded_String;
    end record;
 
+   function Ada_Quote (Str : String) return String;
+   --  If Str contains quotes, duplicate them so that Str can be inserted in
+   --  generated code
+
    package Variables_List is new Ada.Containers.Doubly_Linked_Lists
      (Dumped_Vars);
    use Variables_List;
@@ -150,6 +154,19 @@ procedure GNATCOLL_Db2Ada is
    --  Spawn "python dborm.py COMMAND dbschema.txt EXTRA_ARGS".
    --  Do not free Extra_Args, it is already freed in the context of this
    --  procedure
+
+   ---------------
+   -- Ada_Quote --
+   ---------------
+
+   function Ada_Quote (Str : String) return String is
+   begin
+      if Str (Str'First) = '"' then
+         return '"' & Str & '"';
+      else
+         return Str;
+      end if;
+   end Ada_Quote;
 
    -----------------
    -- Spawn_Dborm --
@@ -568,8 +585,9 @@ procedure GNATCOLL_Db2Ada is
       if Name /=  "" then
          R.Fetch
            (DB,
-            "SELECT " & Id & ", " & Name & " FROM " & Table
-            & " ORDER BY " & Name);
+            "SELECT """ & Id
+            & """, """ & Name & """ FROM """
+            & Table & """ ORDER BY " & Name);
          while Has_Row (R) loop
             Append (Enum.Values, Value (R, 0));
             Append (Enum.Names,  Quote (Prefix & '_' & Value (R, 1)));
@@ -591,7 +609,8 @@ procedure GNATCOLL_Db2Ada is
       R   : GNATCOLL.SQL.Exec.Forward_Cursor;
       Var : Dumped_Vars;
    begin
-      R.Fetch (DB, "SELECT " & Field & " FROM " & Table & " WHERE " & Where);
+      R.Fetch (DB, "SELECT """ & Field
+               & """ FROM """ & Table & """ WHERE " & Where);
 
       Var.Name    := To_Unbounded_String (Name);
       Var.Value   := To_Unbounded_String (Value (R, 0));
