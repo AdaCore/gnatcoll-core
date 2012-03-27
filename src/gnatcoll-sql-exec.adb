@@ -381,7 +381,10 @@ package body GNATCOLL.SQL.Exec is
             --  statement, so that's not an issue.
 
          else
-            Reset (Connection, L.Stmt);
+            null; --  Assuming the Reset has already been done as part of the
+                  --  Finalization of the cursor, last time.
+
+            --  Reset (Connection, L.Stmt);
          end if;
 
          Stmt := L.Stmt;
@@ -973,7 +976,8 @@ package body GNATCOLL.SQL.Exec is
    function In_Transaction
      (Connection : access Database_Connection_Record'Class) return Boolean is
    begin
-      return Connection.In_Transaction;
+      return Connection.In_Transaction
+        or else not Connection.Automatic_Transactions;
    end In_Transaction;
 
    --------------
