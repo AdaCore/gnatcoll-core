@@ -23,6 +23,8 @@
 
 with Ada.Containers;          use Ada.Containers;
 with Ada.Containers.Indefinite_Ordered_Sets;
+with Ada.Strings.Fixed;       use Ada.Strings.Fixed;
+with Ada.Strings.Maps;        use Ada.Strings.Maps;
 with Ada.Text_IO;             use Ada.Text_IO;
 with GNATCOLL.Utils;          use GNATCOLL.Utils;
 
@@ -299,6 +301,9 @@ procedure Generate (Generated : String) is
    N : String_Sets.Cursor;
    F : Virtual_File;
 
+   Base_File : constant Filesystem_String :=
+     +To_Lower (Translate (Generated, To_Mapping (".", "-")));
+
 begin
    --  This version creates the output via a simple list of calls to Put_Line.
    --  A more advanced version using the templates_parser is also available,
@@ -308,8 +313,7 @@ begin
 
    if Output (Output_Ada_Specs) then
       F := Create_From_Dir
-        (Dir => Output_Dir,
-         Base_Name => +To_Lower (Generated) & "_names.ads");
+        (Dir => Output_Dir, Base_Name => Base_File & "_names.ads");
 
       Create (Spec_File, Name => F.Display_Full_Name);
       Put_Line (Spec_File, "with GNATCOLL.SQL; use GNATCOLL.SQL;");
@@ -337,9 +341,7 @@ begin
 
    --  Create the database package
 
-   F := Create_From_Dir
-     (Dir => Output_Dir,
-      Base_Name => +To_Lower (Generated) & ".ads");
+   F := Create_From_Dir (Dir => Output_Dir, Base_Name => Base_File & ".ads");
    Create (Spec_File, Name => F.Display_Full_Name);
    Put_Line (Spec_File, "with GNATCOLL.SQL; use GNATCOLL.SQL;");
 
@@ -355,8 +357,7 @@ begin
       Put_Line (Spec_File, "   pragma Elaborate_Body;");
 
       F := Create_From_Dir
-        (Dir => Output_Dir,
-         Base_Name => +To_Lower (Generated) & ".adb");
+        (Dir => Output_Dir, Base_Name => Base_File & ".adb");
       Create (Body_File, Name => F.Display_Full_Name);
       Put_Line (Body_File, "package body " & Generated & " is");
       Put_Line (Body_File, "   pragma Style_Checks (Off);");

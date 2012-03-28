@@ -1,6 +1,8 @@
 --  This project file is only meant for edition in GPS
 with "gnatcoll_build";
 with "src/gnatcoll_gtk";
+with "wip_entities/entities.gpr";
+
 project Gnatcoll_GPS is
    for Source_Dirs use ();
    package IDE is

@@ -44,7 +44,6 @@ procedure Test_Entities is
 
    GPR_File     : Virtual_File;
    DB_Schema_Descr : constant Virtual_File := Create ("dbschema.txt");
-   Initial_Data : constant Virtual_File := Create ("initialdata.txt");
 
    Env     : Project_Environment_Access;
    Tree    : Project_Tree;
@@ -117,43 +116,10 @@ begin
 
    declare
       Session : constant Session_Type := Get_New_Session;
-      Schema  : DB_Schema;
    begin
-      --  Is this an empty database ?
-
       if Need_To_Create_DB then
-         Start := Clock;
-
-         --  Create it
-
-         Schema := New_Schema_IO (DB_Schema_Descr).Read_Schema;
-         New_Schema_IO (Session.DB).Write_Schema (Schema);
-
-         if Session.DB.Success then
-            --  Load initial data
-
-            Load_Data
-              (Session.DB,
-               File   => Initial_Data,
-               Schema => Schema);
-            Session.Commit;
-         end if;
-
-         if not Session.DB.Success then
-            Session.Rollback;
-            return;
-         end if;
-
-         if Active (Me_Timing) then
-            Trace
-              (Me_Timing,
-               "Created database:"
-               & Duration'Image (Clock - Start) & " s");
-         end if;
+         Create_Database (Session.DB, DB_Schema_Descr);
       end if;
-
-      --  Parse all LI files (should use the same session, it is safer with
-      --  :memory: databases)
 
       Parse_All_LI_Files
         (Session,

@@ -2,24 +2,22 @@
 MODEL=dbschema.txt
 INITIAL=initialdata.txt
 
-DB2ADA=gnatcoll_db2ada -output generated -dbmodel=${MODEL}
+DB2ADA=../src/obj/gnatcoll_db2ada -output generated -dbmodel=${MODEL}
 
 all:
-	@mkdir -p obj
 	@mkdir -p generated
-
-	@# Create the Ada API for the database
-	@${DB2ADA} -api Database -orm Orm
 
 	@# Create a dummy database, just to be able to extract the initial
 	@# data from it. ??? Should be doable directly from initialdata.txt
+
 	@${DB2ADA} -dbtype=sqlite -dbname=:memory: \
 		-createdb \
+		-api GNATCOLL.ALI.Database \
 		-load=${INITIAL} \
-		-api-enums Database_Enums -enum "f2f_kind,id,name,F2F_,Integer"  \
-		-api-enums Database_Enums -enum "e2e_kind,id,name,E2E_,Integer" 
+		-enum "f2f_kind,id,name,F2F_,Integer"  \
+		-enum "e2e_kind,id,name,E2E_,Integer" 
 
-	@gprbuild -m -j0 -q -Pentities.gpr
+	@gprbuild -m -j0 -p -q -Pentities.gpr
 
 run_test:
 	rm -f entities.db

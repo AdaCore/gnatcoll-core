@@ -15,39 +15,40 @@
 -- of the license.                                                          --
 ------------------------------------------------------------------------------
 
-with Ada.Calendar;      use Ada.Calendar;
+with Ada.Calendar;            use Ada.Calendar;
 with Ada.Characters.Handling; use Ada.Characters.Handling;
-with Ada.Containers;    use Ada.Containers;
+with Ada.Containers;          use Ada.Containers;
 with Ada.Containers.Doubly_Linked_Lists;
 with Ada.Containers.Hashed_Maps;
 with Ada.Containers.Vectors;
 with Ada.Strings.Unbounded; use Ada.Strings.Unbounded;
-with Database;          use Database;
-with Database_Enums;    use Database_Enums;
-with GNATCOLL.Mmap;     use GNATCOLL.Mmap;
-with GNATCOLL.SQL;      use GNATCOLL.SQL;
-with GNATCOLL.SQL.Exec; use GNATCOLL.SQL.Exec;
-with GNATCOLL.Traces;   use GNATCOLL.Traces;
-with GNATCOLL.Utils;    use GNATCOLL.Utils;
-with GNATCOLL.VFS;      use GNATCOLL.VFS;
-with Orm;               use Orm;
+with GNATCOLL.ALI.Database; use GNATCOLL.ALI.Database;
+with GNATCOLL.Mmap;         use GNATCOLL.Mmap;
+with GNATCOLL.SQL;          use GNATCOLL.SQL;
+with GNATCOLL.SQL.Inspect;  use GNATCOLL.SQL.Inspect;
+with GNATCOLL.Traces;       use GNATCOLL.Traces;
+with GNATCOLL.Utils;        use GNATCOLL.Utils;
+with GNATCOLL.VFS;          use GNATCOLL.VFS;
 
 package body GNATCOLL.ALI is
-   Me_Error : constant Trace_Handle := Create ("ENTITIES.ERROR");
-   Me_Debug : constant Trace_Handle := Create ("ENTITIES.DEBUG", Off);
+   Me_Error   : constant Trace_Handle := Create ("ENTITIES.ERROR");
+   Me_Debug   : constant Trace_Handle := Create ("ENTITIES.DEBUG", Off);
    Me_Forward : constant Trace_Handle := Create ("ENTITIES.FORWARD");
-   Me_Timing : constant Trace_Handle := Create ("ENTITIES.TIMING");
+   Me_Timing  : constant Trace_Handle := Create ("ENTITIES.TIMING");
 
    Instances_Provide_Column : constant Boolean := False;
    --  Whether instance info in the ALI files provide the column information.
    --  This is not the case currently, but this requires additional queries
    --  that could be avoided otherwise.
 
-   Query_Get_File : constant Files_Stmt :=
-     Orm.All_Files
-     .Filter (Database.Files.Path = Text_Param (1))
-     .Limit (1)
-     .Prepare (On_Server => True, Name => "get_file_by_path");
+   Query_Get_File : constant Prepared_Statement :=
+     Prepare
+       (SQL_Select
+            (Database.Files.Id,
+             From => Database.Files,
+             Where => Database.Files.Path = Text_Param (1),
+             Limit => 1),
+        On_Server => True, Name => "get_file_by_path");
    --  Retrieve the info for a file given its path
 
    Query_Insert_File : constant Prepared_Statement :=
@@ -255,6 +256,51 @@ package body GNATCOLL.ALI is
    --  xref. But while parsing a given ALI file, the location is always unique
    --  (which would be potentially false if sharing this table for multiple
    --  ALIs)
+
+   ---------------------
+   -- Create_Database --
+   ---------------------
+
+   procedure Create_Database
+     (Connection      : access Database_Connection_Record'Class;
+      DB_Schema_Descr : GNATCOLL.VFS.Virtual_File)
+   is
+      Schema  : DB_Schema;
+      Start   : Time;
+
+   begin
+      if Active (Me_Timing) then
+         Start := Clock;
+      end if;
+
+      Schema := New_Schema_IO (DB_Schema_Descr).Read_Schema;
+      New_Schema_IO (Database_Connection (Connection)).Write_Schema (Schema);
+
+      if Connection.Success then
+--           Execute
+--             (Connection,
+--              SQL_Insert
+--                ((Database.Files.Id = -1)
+--                 & (Database.Files.Path = "/predefined")
+--                 & (Database.Files.Stamp = No_Time)
+--                 & (Database.Files.Language = "ada")));
+
+         --  Load initial data
+
+         Load_Data
+           (Connection,
+            File   => Create (+"initialdata.txt"),
+            Schema => Schema);
+      end if;
+
+      Connection.Commit_Or_Rollback;
+
+      if Active (Me_Timing) then
+         Trace
+           (Me_Timing,
+            "Created database:" & Duration'Image (Clock - Start) & " s");
+      end if;
+   end Create_Database;
 
    --------------
    -- Parse_LI --
@@ -754,7 +800,7 @@ package body GNATCOLL.ALI is
               Use_Object_Path => False);
 
          Name  : aliased String := +File.Full_Name (Normalize => True).all;
-         Files : File_List;
+         Files : Forward_Cursor;
          Found : VFS_To_Ids.Cursor;
          Id    : Integer;
       begin
@@ -780,10 +826,11 @@ package body GNATCOLL.ALI is
             return Id;
          end if;
 
-         Files := Query_Get_File.Get
-           (Session, Params => (1 => +Name'Access));
+         Files.Fetch
+           (Session.DB, Query_Get_File, Params => (1 => +Name'Access));
+
          if Files.Has_Row then
-            Id := Files.Element.Id;
+            Id := Files.Integer_Value (0);
 
             if Clear then
                Session.DB.Execute
