@@ -727,6 +727,15 @@ package body GNATCOLL.Projects is
       Current_Project : Project_Type;
       Info_Cursor     : Names_Files.Cursor;
 
+      package Virtual_File_Sets is new Ada.Containers.Hashed_Sets
+        (Element_Type        => Virtual_File,
+         Hash                => Full_Name_Hash,
+         Equivalent_Elements => "=",
+         "="                 => "=");
+      use Virtual_File_Sets;
+
+      Seen : Virtual_File_Sets.Set;
+
    begin
       --  We do not call Object_Path with Recursive=>True, but instead
       --  iterate explicitly on the projects so that we can control which of
@@ -739,19 +748,22 @@ package body GNATCOLL.Projects is
 
          declare
             Objects  : constant File_Array :=
-              Object_Path (Self,
+              Object_Path (Current_Project,
                            Recursive           => False,
                            Including_Libraries => Including_Libraries,
                            Xrefs_Dirs          => Xrefs_Dirs);
             Dir : Virtual_File;
          begin
-            if Objects'Length > 0 then
+            if Objects'Length > 0
+              and then not Seen.Contains (Objects (Objects'First))
+            then
                --  Only look at the first object directory (which is either
                --  object_dir, if it exists, or library_dir, if it exists).
                --  We never need to look at both of them.
 
                begin
                   Dir := Objects (Objects'First);
+                  Seen.Include (Dir);
                   Trace (Me, "Library_Files, reading dir "
                          & Dir.Display_Full_Name);
                   Tmp := Read_Dir (Dir);
