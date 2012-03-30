@@ -1618,8 +1618,7 @@ package body GNATCOLL.ALI is
 
       if Active (Me_Timing) then
          Trace (Me_Timing,
-                "Found" & Length (LI_Files)'Img
-                & " ali + gli files:"
+                "Found" & Length (LI_Files)'Img & " ali + gli files:"
                 & Duration'Image (Clock - Start) & " s");
          Start := Clock;
       end if;

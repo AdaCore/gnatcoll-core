@@ -10,7 +10,7 @@
    the rest is much smaller. Should likely try to get a system that really does
    nothing. This is with disk caches
 
-** Database in memory
+** DONE Database in memory
    We could try to create a database in memory, and dump it into a file in the
    end.
    Timing to fill the :memory: sqlite database: 40.09u 0.88s 0:59.33elapsed
@@ -22,7 +22,7 @@
    This also allows creating the database on the side, and then make it
    available to GPS, without blocking all GPS SQL queries in the meantime.
 
-** Using SQL commands similar to Django's bulk_create.
+** DONE Using SQL commands similar to Django's bulk_create.
    Django 1.4 introduces a new bulk_create command, which emits a different
    SQL command (but then does not provide a way to retrieve the new primary
    keys when they are from a sequence).
@@ -61,12 +61,13 @@
    To test: set Instances_Provide_Column to True. On one run of the test,
    it went from 149.5 down to 145s)
 
-** Loading entity references as a file
+** TODO Loading entity references as a file
    Rather than doing the 917_402 entity references through one SQL command each,
    it might be faster to load them in the end as a single file (using either
    .import in sqlite or COPY...FROM in postgreSQL).
 
-*** sqlite
+*** DONE sqlite
+    CLOSED: [2012-03-30 Fri 17:57]
    After creating the full database, the following commands where executed:
 
         .mode csv
@@ -107,8 +108,22 @@
         sqlite3_step
         sqlite3_last_insert_rowid   (we don't need it -- fixed in GNATCOLL)
 
-*** postgreSQL
+*** TODO postgreSQL
    we could use COPY...FROM, this hasn't been tested yet (and not really needed
    for now).
 
+** TODO L330-027  Avoid duplicate references
+   After loading gps.gpr, we seem to be having duplicate entries in entity_refs.
+   The following query was used:
+      select count(*) from
+          (select * from entity_refs r1
+           group by r1.entity, r1.file, r1.line, r1.column,r1.kind);
+       => 860_749
+   whereas:
+      select count(*) from entity_refs;
+       => 918853
 
+   The duplicates could be eliminated directly by GNAT by not output references
+   when they are for an entity defined in a file not in the U set of files and
+   the reference is also not in U (where U is the list of units of the ALI
+   file).
