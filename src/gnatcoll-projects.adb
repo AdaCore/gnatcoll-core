@@ -619,9 +619,10 @@ package body GNATCOLL.Projects is
       Path : constant Filesystem_String :=
         Name_As_Directory (+Get_String (Id));
    begin
-      if not Xref_Dirs or else Xrefs_Subdir (Env.all)'Length = 0 then
-         return Path;
-      elsif View.Externally_Built then
+      if not Xref_Dirs
+        or else Xrefs_Subdir (Env.all)'Length = 0
+        or else View.Externally_Built
+      then
          return Path;
       elsif Prj.Subdirs /= null then
          return Name_As_Directory
@@ -676,10 +677,19 @@ package body GNATCOLL.Projects is
         and then View.Library
         and then View.Library_ALI_Dir /= No_Path_Information
       then
-         if View.Object_Directory = No_Path_Information then
-            return (1 => Create (Handle_Subdir (Project,
-                                                View.Library_ALI_Dir.Name,
-                                                Xrefs_Dirs)));
+         --  Object_Directory is in fact always defined for projects read from
+         --  files (if unspecified in the user's project, it defaults to the
+         --  projects' own directory).
+         --  For externally_built library projects, however, it should not be
+         --  taken into account.
+
+         if View.Object_Directory = No_Path_Information
+           or else View.Externally_Built
+         then
+            return (1 => Create
+                    (Handle_Subdir
+                       (Project, View.Library_ALI_Dir.Display_Name,
+                        Xrefs_Dirs)));
          else
             return
               (Create (Handle_Subdir
@@ -707,84 +717,110 @@ package body GNATCOLL.Projects is
    procedure Library_Files
      (Self                : Project_Type;
       Recursive           : Boolean := False;
-      Including_Libraries : Boolean := False;
+      Including_Libraries : Boolean := True;
       Xrefs_Dirs          : Boolean := False;
       ALI_Ext             : GNATCOLL.VFS.Filesystem_String := ".ali";
       List                : in out Library_Info_Lists.List)
    is
-      Tmp      : File_Array_Access;
-      Objects  : constant File_Array :=
-        Object_Path (Self, Recursive  => Recursive,
-                     Including_Libraries => Including_Libraries,
-                     Xrefs_Dirs          => Xrefs_Dirs);
-      Info_Cursor   : Names_Files.Cursor;
+      Tmp             : File_Array_Access;
+      Prj_Iter        : Project_Iterator;
+      Current_Project : Project_Type;
+      Info_Cursor     : Names_Files.Cursor;
 
    begin
-      for Dir in Objects'Range loop
+      --  We do not call Object_Path with Recursive=>True, but instead
+      --  iterate explicitly on the projects so that we can control which of
+      --  the object_dir or library_dir we want to use *for each project*.
+
+      Prj_Iter := Self.Start (Recursive => Recursive);
+      loop
+         Current_Project := Current (Prj_Iter);
+         exit when Current_Project = No_Project;
+
+         declare
+            Objects  : constant File_Array :=
+              Object_Path (Self,
+                           Recursive           => False,
+                           Including_Libraries => Including_Libraries,
+                           Xrefs_Dirs          => Xrefs_Dirs);
+            Dir : Virtual_File;
          begin
-            Trace (Me, "Library_Files, reading dir "
-                   & Display_Full_Name (Objects (Dir)));
-            Tmp := Read_Dir (Objects (Dir));
+            if Objects'Length > 0 then
+               --  Only look at the first object directory (which is either
+               --  object_dir, if it exists, or library_dir, if it exists).
+               --  We never need to look at both of them.
 
-            for F in Tmp'Range loop
-               if Tmp (F).Has_Suffix (ALI_Ext) then
-                  declare
-                     B : constant Filesystem_String :=
-                       Base_Name (Tmp (F), ALI_Ext);
-                     Dot : Integer;
-                  begin
-                     Info_Cursor := Self.Data.Tree.Objects_Basename.Find (B);
+               begin
+                  Dir := Objects (Objects'First);
+                  Trace (Me, "Library_Files, reading dir "
+                         & Dir.Display_Full_Name);
+                  Tmp := Read_Dir (Dir);
 
-                     if not Has_Element (Info_Cursor) then
-                        --  Special case for C files: the library file is
-                        --    file.c.gli
-                        --  instead of file.ali as we would have in Ada
+                  for F in Tmp'Range loop
+                     if Tmp (F).Has_Suffix (ALI_Ext) then
+                        declare
+                           B : constant Filesystem_String :=
+                             Base_Name (Tmp (F), ALI_Ext);
+                           Dot : Integer;
+                        begin
+                           Info_Cursor :=
+                             Self.Data.Tree.Objects_Basename.Find (B);
 
-                        Dot := B'Last;
-                        while Dot >= B'First and then B (Dot) /= '.' loop
-                           Dot := Dot - 1;
-                        end loop;
+                           if not Has_Element (Info_Cursor) then
+                              --  Special case for C files: the library file is
+                              --    file.c.gli
+                              --  instead of file.ali as we would have in Ada
 
-                        if Dot > B'First then
-                           Info_Cursor := Self.Data.Tree.Objects_Basename.Find
-                             (B (B'First .. Dot - 1));
+                              Dot := B'Last;
+                              while Dot >= B'First and then B (Dot) /= '.' loop
+                                 Dot := Dot - 1;
+                              end loop;
+
+                              if Dot > B'First then
+                                 Info_Cursor :=
+                                   Self.Data.Tree.Objects_Basename.Find
+                                     (B (B'First .. Dot - 1));
+                              end if;
+                           end if;
+                        end;
+
+                        if Has_Element (Info_Cursor) then
+                           if Element (Info_Cursor).Project = Self
+                             or else Recursive
+                           then
+                              List.Append
+                                (Library_Info'
+                                   (Library_File => Tmp (F),
+                                    Source_File  =>
+                                      Element (Info_Cursor).File));
+
+                           elsif Active (Me) then
+                              Trace (Me, "Library_Files: "
+                                     & Display_Base_Name (Tmp (F))
+                                     & " is for project "
+                                     & Element (Info_Cursor).Project.Name);
+                           end if;
+
+                        elsif Active (Me) then
+                           Trace
+                             (Me, "Library_Files: "
+                              & Display_Base_Name (Tmp (F))
+                              & " is not for any loaded project");
                         end if;
                      end if;
-                  end;
+                  end loop;
 
-                  if Has_Element (Info_Cursor) then
-                     if Element (Info_Cursor).Project = Self
-                       or else Recursive
-                     then
-                        List.Append
-                          (Library_Info'
-                             (Library_File => Tmp (F),
-                              Source_File  => Element (Info_Cursor).File));
-
-                     elsif Active (Me) then
-                        Trace (Me, "Library_Files: "
-                               & Display_Base_Name (Tmp (F))
-                               & " is for project "
-                               & Element (Info_Cursor).Project.Name);
-                     end if;
-
-                  elsif Active (Me) then
-                     Trace
-                       (Me, "Library_Files: "
-                        & Display_Base_Name (Tmp (F))
-                        & " is not for any loaded project");
-                  end if;
-               end if;
-            end loop;
-
-            Unchecked_Free (Tmp);
-         exception
-            when VFS_Directory_Error =>
-               Trace (Me, "Couldn't open the directory " &
-                      Objects (Dir).Display_Full_Name);
+                  Unchecked_Free (Tmp);
+               exception
+                  when VFS_Directory_Error =>
+                     Trace (Me, "Couldn't open the directory "
+                            & Dir.Display_Full_Name);
+               end;
+            end if;
          end;
-      end loop;
 
+         Next (Prj_Iter);
+      end loop;
    end Library_Files;
 
    -------------------
@@ -794,7 +830,7 @@ package body GNATCOLL.Projects is
    function Library_Files
      (Self                : Project_Type;
       Recursive           : Boolean := False;
-      Including_Libraries : Boolean := False;
+      Including_Libraries : Boolean := True;
       Xrefs_Dirs          : Boolean := False;
       ALI_Ext             : GNATCOLL.VFS.Filesystem_String := ".ali")
       return GNATCOLL.VFS.File_Array_Access

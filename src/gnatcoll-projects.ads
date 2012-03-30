@@ -464,9 +464,10 @@ package GNATCOLL.Projects is
       Xrefs_Dirs          : Boolean := False) return GNATCOLL.VFS.File_Array;
    --  Return the object path for this project. The empty string is returned
    --  if the project doesn't have any object directory (i.e. the user
-   --  explicitely set it to the empty string). If Including_Libraries is True
-   --  and Project is a library project, it returns both object and ALI paths,
-   --  or only ALI path if project doesn't have object directory.
+   --  explicitely set it to the empty string). If Including_Libraries is
+   --  True and Project is a library project, it returns both object and ALI
+   --  paths (in that order) or only ALI path if project doesn't have object
+   --  directory.
    --  If an Xrefs Subdir is set in the project to a non-empty
    --  string, and Xrefs_Dir is set, then the corresponding subdirectory is
    --  returned if it exists. Else, the subdir corresponding to the current
@@ -566,13 +567,25 @@ package GNATCOLL.Projects is
    function Library_Files
      (Self                : Project_Type;
       Recursive           : Boolean := False;
-      Including_Libraries : Boolean := False;
+      Including_Libraries : Boolean := True;
       Xrefs_Dirs          : Boolean := False;
       ALI_Ext             : GNATCOLL.VFS.Filesystem_String := ".ali")
       return GNATCOLL.VFS.File_Array_Access;
    --  Return a list of all LI files for this project. This never returns null.
    --  The parameters are similar to that of Object_Path.
    --  ALI_Ext is the extension to use for those files
+   --  Including_Libraries controls whether the project's Library_Dir is
+   --  taken into account. This has the following impacts:
+   --     * if True: when a project only has a library_dir (for instance a
+   --       third party library with Externally_Built set to "true"), then the
+   --       ALI files are read in that directory. When a library project has
+   --       both an object_dir and a library_dir, then only the former is
+   --       searched, and the library_dir is ignored (since the object files
+   --       are copied from object_dir to library_dir by the builder).
+   --     * if False, then library_dir is always ignored. As such, a third
+   --       party library project will have no ALI file.
+   --       ??? In general, passing False is of little interest since some ALI
+   --       files will be missing.
 
    type Library_Info is record
       Library_File : GNATCOLL.VFS.Virtual_File;
@@ -585,7 +598,7 @@ package GNATCOLL.Projects is
    procedure Library_Files
      (Self                : Project_Type;
       Recursive           : Boolean := False;
-      Including_Libraries : Boolean := False;
+      Including_Libraries : Boolean := True;
       Xrefs_Dirs          : Boolean := False;
       ALI_Ext             : GNATCOLL.VFS.Filesystem_String := ".ali";
       List                : in out Library_Info_Lists.List);
