@@ -100,6 +100,8 @@ package body GNATCOLL.SQL.Sqlite.Builder is
          DB           : GNATCOLL.SQL.Sqlite.Gnade.Database;
          Connected_On : Ada.Calendar.Time := GNAT.Calendar.No_Time;
       end record;
+   overriding procedure Force_Connect
+     (Connection : access Sqlite_Connection_Record);
    overriding function Boolean_Image
      (Self : Sqlite_Connection_Record; Value : Boolean) return String;
    overriding function Money_Image
@@ -170,10 +172,6 @@ package body GNATCOLL.SQL.Sqlite.Builder is
          Local_Attribute   : Integer;
          Foreign_Table     : String;
          Foreign_Attribute : Integer));
-
-   procedure Connect_If_Needed
-     (Connection : access Sqlite_Connection_Record'Class);
-   --  Connect to the database if needed
 
    function Is_Whitespace (C : Character) return Boolean;
    --  Whether C is a white space character
@@ -337,12 +335,12 @@ package body GNATCOLL.SQL.Sqlite.Builder is
       Close (Connection.DB);
    end Close;
 
-   -----------------------
-   -- Connect_If_Needed --
-   -----------------------
+   -------------------
+   -- Force_Connect --
+   -------------------
 
-   procedure Connect_If_Needed
-     (Connection : access Sqlite_Connection_Record'Class)
+   overriding procedure Force_Connect
+     (Connection : access Sqlite_Connection_Record)
    is
       Status : Result_Codes;
    begin
@@ -407,7 +405,7 @@ package body GNATCOLL.SQL.Sqlite.Builder is
             Execute (Connection, "PRAGMA foreign_keys=ON");
          end if;
       end if;
-   end Connect_If_Needed;
+   end Force_Connect;
 
    -------------------------
    -- Connect_And_Prepare --
@@ -432,7 +430,7 @@ package body GNATCOLL.SQL.Sqlite.Builder is
          return No_DBMS_Stmt;
       end if;
 
-      Connect_If_Needed (Connection);
+      Force_Connect (Connection);
 
       if Connection.DB = No_Database then
          return No_DBMS_Stmt;
@@ -1115,20 +1113,29 @@ package body GNATCOLL.SQL.Sqlite.Builder is
    ------------
 
    function Backup
-     (From : access Database_Connection_Record'Class;
-      To   : String) return Boolean
+     (DB1 : access Database_Connection_Record'Class;
+      DB2 : String;
+      From_DB1_To_DB2 : Boolean := True) return Boolean
    is
-      From_DB : constant GNATCOLL.SQL.Sqlite.Gnade.Database :=
-        Sqlite_Connection_Record (From.all).DB;
+      From_DB : GNATCOLL.SQL.Sqlite.Gnade.Database;
       To_DB   : GNATCOLL.SQL.Sqlite.Gnade.Database;
       Status  : Result_Codes;
       Bkp     : Sqlite3_Backup;
       Result  : Boolean := True;
    begin
-      Open (To_DB, To, Status => Status);
+      Open (To_DB, DB2, Status => Status);
       if Status /= Sqlite_OK then
          Trace (Me_Log, Status'Img & " could not open destination db");
          return False;
+      end if;
+
+      Force_Connect (DB1);
+
+      if From_DB1_To_DB2 then
+         From_DB := Sqlite_Connection_Record (DB1.all).DB;
+      else
+         From_DB := To_DB;
+         To_DB := Sqlite_Connection_Record (DB1.all).DB;
       end if;
 
       Bkp := Backup_Init
@@ -1155,7 +1162,12 @@ package body GNATCOLL.SQL.Sqlite.Builder is
          Result := False;
       end if;
 
-      Close (To_DB);
+      if From_DB1_To_DB2 then
+         Close (To_DB);
+      else
+         Close (From_DB);
+      end if;
+
       return Result;
    end Backup;
 

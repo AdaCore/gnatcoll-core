@@ -63,10 +63,12 @@ package GNATCOLL.SQL.Sqlite is
    --  return null.
 
    function Backup
-     (From : access Database_Connection_Record'Class;
-      To   : String) return Boolean;
-   --  Backup the database From to a new database with the given file name
-   --  (or ":memory:")
+     (DB1 : access Database_Connection_Record'Class;
+      DB2 : String;
+      From_DB1_To_DB2 : Boolean := True) return Boolean;
+   --  Backup the database DB1 to a new database with the given file name
+   --  (or ":memory:"). It is possible to revert the direction of the backup
+   --  by changing the value of From_DB1_To_DB2
    --  Returns False in case of error
 
 private

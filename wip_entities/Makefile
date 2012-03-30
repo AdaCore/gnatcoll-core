@@ -20,7 +20,7 @@ all:
 	@gprbuild -m -j0 -p -q -Pentities.gpr
 
 run_test:
-	rm -f entities.db
+	#rm -f entities.db
 	./obj/test_entities ../../gps/gps.gpr
 
 test1: force

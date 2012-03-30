@@ -108,6 +108,8 @@ package body GNATCOLL.SQL.Postgres.Builder is
       Direct      : Boolean;
       Params      : SQL_Parameters := No_Parameters)
       return Abstract_Cursor_Access;
+   overriding procedure Force_Connect
+     (Connection : access Postgresql_Connection_Record);
    overriding function Insert_And_Get_PK
      (Connection : access Postgresql_Connection_Record;
       Query      : String;
@@ -445,6 +447,38 @@ package body GNATCOLL.SQL.Postgres.Builder is
       end if;
    end Close;
 
+   -------------------
+   -- Force_Connect --
+   -------------------
+
+   overriding procedure Force_Connect
+     (Connection : access Postgresql_Connection_Record)
+   is
+   begin
+      if Connection.Postgres = null then
+         Print_Warning
+           (Connection,
+            "Connecting to the database "
+            & Get_Connection_String (Get_Description (Connection), False));
+
+         if Connection.Connection_String = null then
+            Connection.Connection_String := new String'
+              (Get_Connection_String (Get_Description (Connection), True));
+         end if;
+
+         Connection.Postgres := new GNATCOLL.SQL.Postgres.Gnade.Database
+           (Connection.Connection_String);
+         Connection.Connected_On := Ada.Calendar.Clock;
+      else
+         Print_Warning
+           (Connection,
+            "Reconnecting to the database "
+            & Get_Connection_String (Get_Description (Connection), False));
+         Reset (Connection.Postgres.all);
+         Connection.Connected_On := Ada.Calendar.Clock;
+      end if;
+   end Force_Connect;
+
    --------------------
    -- Connect_And_Do --
    --------------------
@@ -496,28 +530,7 @@ package body GNATCOLL.SQL.Postgres.Builder is
 
       --  Attempt to reconnect, in case we lost the connection
 
-      if Connection.Postgres = null then
-         Print_Warning
-           (Connection,
-            "Connecting to the database "
-            & Get_Connection_String (Get_Description (Connection), False));
-
-         if Connection.Connection_String = null then
-            Connection.Connection_String := new String'
-              (Get_Connection_String (Get_Description (Connection), True));
-         end if;
-
-         Connection.Postgres := new GNATCOLL.SQL.Postgres.Gnade.Database
-           (Connection.Connection_String);
-         Connection.Connected_On := Ada.Calendar.Clock;
-      else
-         Print_Warning
-           (Connection,
-            "Reconnecting to the database "
-            & Get_Connection_String (Get_Description (Connection), False));
-         Reset (Connection.Postgres.all);
-         Connection.Connected_On := Ada.Calendar.Clock;
-      end if;
+      Force_Connect (Connection);
 
       --  Now that we have (re)connected, try to execute the query again
 

@@ -1,7 +1,7 @@
 -----------------------------------------------------------------------
 --                               G N A T C O L L                     --
 --                                                                   --
---                 Copyright (C) 2009-2011, AdaCore                  --
+--                 Copyright (C) 2009-2012, AdaCore                  --
 --                                                                   --
 -- GPS is free  software;  you can redistribute it and/or modify  it --
 -- under the terms of the GNU General Public License as published by --
@@ -77,11 +77,12 @@ package body GNATCOLL.SQL.Sqlite is
    ------------
 
    function Backup
-     (From : access Database_Connection_Record'Class;
-      To   : String) return Boolean
+     (DB1 : access Database_Connection_Record'Class;
+      DB2 : String;
+      From_DB1_To_DB2 : Boolean := True) return Boolean
    is
    begin
-      return GNATCOLL.SQL.Sqlite.Builder.Backup (From, To);
+      return GNATCOLL.SQL.Sqlite.Builder.Backup (DB1, DB2, From_DB1_To_DB2);
    end Backup;
 
 end GNATCOLL.SQL.Sqlite;

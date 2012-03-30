@@ -38,8 +38,9 @@ private package GNATCOLL.SQL.Sqlite.Builder is
    --  Perform additional setup
 
    function Backup
-     (From : access Database_Connection_Record'Class;
-      To   : String) return Boolean;
+     (DB1 : access Database_Connection_Record'Class;
+      DB2 : String;
+      From_DB1_To_DB2 : Boolean := True) return Boolean;
    --  Backup the database From to a new database with the given file name
    --  (or ":memory:")
    --  Returns False in case of error

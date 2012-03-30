@@ -117,18 +117,40 @@ begin
    declare
       Session : constant Session_Type := Get_New_Session;
    begin
-      if Need_To_Create_DB then
-         Create_Database (Session.DB,
-                          DB_Schema_Descr,
-                          Create (+"initialdata.txt"));
+      --  Restore the database from the disk into memory to speed the
+      --  processing
+
+      if not Use_Postgres
+        and then Tmp_DB_Name = ":memory:"
+        and then GNAT.OS_Lib.Is_Regular_File (DB_Name)
+      then
+         Start := Clock;
+
+         if not GNATCOLL.SQL.Sqlite.Backup
+           (DB1 => Session.DB,
+            DB2 => DB_Name,
+            From_DB1_To_DB2 => False)
+         then
+            Put_Line ("Failed to restore the database from disk");
+         elsif Active (Me_Timing) then
+            Trace (Me_Timing,
+                   "Total time for restore:"
+                   & Duration'Image (Clock - Start) & " s");
+         end if;
+
+      else
+         if Need_To_Create_DB then
+            Create_Database (Session.DB,
+                             DB_Schema_Descr,
+                             Create (+"initialdata.txt"));
+         end if;
       end if;
 
       Parse_All_LI_Files
         (Session,
          Tree              => Tree,
          Env               => Env,
-         Project           => Tree.Root_Project,
-         Database_Is_Empty => Need_To_Create_DB);
+         Project           => Tree.Root_Project);
 
       --  Dump into a file
 
@@ -136,13 +158,11 @@ begin
          Start := Clock;
 
          if not GNATCOLL.SQL.Sqlite.Backup
-           (From => Session.DB,
-            To   => DB_Name)
+           (DB1 => Session.DB,
+            DB2 => DB_Name)
          then
             Put_Line ("Failed to backup the database to disk");
-         end if;
-
-         if Active (Me_Timing) then
+         elsif Active (Me_Timing) then
             Trace (Me_Timing,
                    "Total time for backup:"
                    & Duration'Image (Clock - Start) & " s");

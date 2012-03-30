@@ -1548,11 +1548,8 @@ package body GNATCOLL.ALI is
      (Session : Session_Type;
       Tree    : Project_Tree;
       Project : Project_Type;
-      Env     : Project_Environment_Access := null;
-      Database_Is_Empty : Boolean := False)
+      Env     : Project_Environment_Access := null)
    is
-      pragma Unreferenced (Database_Is_Empty);
-
       use Library_Info_Lists;
       LI_Files  : Library_Info_Lists.List;
       Lib_Info  : Library_Info_Lists.Cursor;

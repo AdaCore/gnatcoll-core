@@ -394,6 +394,12 @@ package GNATCOLL.SQL.Exec is
    --  itself fails), so that you can still know afterward whether the
    --  transaction was committed or not.
 
+   procedure Force_Connect
+     (Connection : access Database_Connection_Record) is abstract;
+   --  Force a connection to the DBMS. Normally, this connection is done
+   --  automatically the first time an SQL command is executed, but it might
+   --  be needed sometimes to force a connection earlier.
+
    function Connected_On
      (Connection : access Database_Connection_Record)
       return Ada.Calendar.Time is abstract;
