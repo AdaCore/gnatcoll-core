@@ -1547,8 +1547,7 @@ package body GNATCOLL.ALI is
    procedure Parse_All_LI_Files
      (Session : Session_Type;
       Tree    : Project_Tree;
-      Project : Project_Type;
-      Env     : Project_Environment_Access := null)
+      Project : Project_Type)
    is
       use Library_Info_Lists;
       LI_Files  : Library_Info_Lists.List;
@@ -1598,7 +1597,6 @@ package body GNATCOLL.ALI is
       if Session.DB.Has_Pragmas then
          Session.DB.Execute ("PRAGMA foreign_keys=OFF");
          Session.DB.Execute ("PRAGMA synchronous=OFF");
-         --  Session.DB.Execute ("PRAGMA count_changes=OFF");  --  Deprecated
          Session.DB.Execute ("PRAGMA journal_mode=MEMORY");
          Session.DB.Execute ("PRAGMA temp_store=MEMORY");
       end if;
@@ -1613,30 +1611,10 @@ package body GNATCOLL.ALI is
 
       Project.Library_Files
         (Recursive => True, Xrefs_Dirs => True, Including_Libraries => True,
-         ALI_Ext => ".ali", List => LI_Files);
+         ALI_Ext => ".ali", List => LI_Files, Include_Predefined => True);
       Project.Library_Files
         (Recursive => True, Xrefs_Dirs => True, Including_Libraries => True,
          ALI_Ext => ".gli", List => LI_Files);
-
-      declare
-         Predef : constant File_Array := Env.Predefined_Object_Path;
-         Tmp : File_Array_Access;
-      begin
-         for P in Predef'Range loop
-            Tmp := Read_Dir (Predef (P));
-
-            for F in Tmp'Range loop
-               if Tmp (F).Has_Suffix (".ali") then
-                  LI_Files.Append
-                    (Library_Info'
-                       (Library_File => Tmp (F),
-                        Source_File  => GNATCOLL.VFS.No_File));
-               end if;
-            end loop;
-
-            Unchecked_Free (Tmp);
-         end loop;
-      end;
 
       if Active (Me_Timing) then
          Trace (Me_Timing,

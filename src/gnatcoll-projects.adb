@@ -720,6 +720,7 @@ package body GNATCOLL.Projects is
       Including_Libraries : Boolean := True;
       Xrefs_Dirs          : Boolean := False;
       ALI_Ext             : GNATCOLL.VFS.Filesystem_String := ".ali";
+      Include_Predefined  : Boolean := False;
       List                : in out Library_Info_Lists.List)
    is
       Tmp             : File_Array_Access;
@@ -833,6 +834,32 @@ package body GNATCOLL.Projects is
 
          Next (Prj_Iter);
       end loop;
+
+      if Include_Predefined then
+         declare
+            Predef : constant File_Array_Access :=
+              Self.Data.Tree.Env.Predefined_Object_Path;
+            Tmp : File_Array_Access;
+         begin
+            for P in Predef'Range loop
+               if not Seen.Contains (Predef (P)) then
+                  Seen.Include (Predef (P));
+                  Tmp := Read_Dir (Predef (P));
+
+                  for F in Tmp'Range loop
+                     if Tmp (F).Has_Suffix (ALI_Ext) then
+                        List.Append
+                          (Library_Info'
+                             (Library_File => Tmp (F),
+                              Source_File  => GNATCOLL.VFS.No_File));
+                     end if;
+                  end loop;
+
+                  Unchecked_Free (Tmp);
+               end if;
+            end loop;
+         end;
+      end if;
    end Library_Files;
 
    -------------------
@@ -844,7 +871,8 @@ package body GNATCOLL.Projects is
       Recursive           : Boolean := False;
       Including_Libraries : Boolean := True;
       Xrefs_Dirs          : Boolean := False;
-      ALI_Ext             : GNATCOLL.VFS.Filesystem_String := ".ali")
+      ALI_Ext             : GNATCOLL.VFS.Filesystem_String := ".ali";
+      Include_Predefined  : Boolean := False)
       return GNATCOLL.VFS.File_Array_Access
    is
       use Library_Info_Lists;
@@ -858,6 +886,7 @@ package body GNATCOLL.Projects is
          Recursive           => Recursive,
          Including_Libraries => Including_Libraries,
          Xrefs_Dirs          => Xrefs_Dirs,
+         Include_Predefined  => Include_Predefined,
          ALI_Ext             => ALI_Ext,
          List                => List);
 

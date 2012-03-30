@@ -149,7 +149,6 @@ begin
       Parse_All_LI_Files
         (Session,
          Tree              => Tree,
-         Env               => Env,
          Project           => Tree.Root_Project);
 
       --  Dump into a file

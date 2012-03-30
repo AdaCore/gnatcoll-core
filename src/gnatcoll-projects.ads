@@ -569,7 +569,8 @@ package GNATCOLL.Projects is
       Recursive           : Boolean := False;
       Including_Libraries : Boolean := True;
       Xrefs_Dirs          : Boolean := False;
-      ALI_Ext             : GNATCOLL.VFS.Filesystem_String := ".ali")
+      ALI_Ext             : GNATCOLL.VFS.Filesystem_String := ".ali";
+      Include_Predefined  : Boolean := False)
       return GNATCOLL.VFS.File_Array_Access;
    --  Return a list of all LI files for this project. This never returns null.
    --  The parameters are similar to that of Object_Path.
@@ -586,6 +587,10 @@ package GNATCOLL.Projects is
    --       party library project will have no ALI file.
    --       ??? In general, passing False is of little interest since some ALI
    --       files will be missing.
+   --  If Include_Predefined is True, then the predefined object directories
+   --  (generally the Ada runtime for instance) will also be searched. Setting
+   --  this to True probably only makes sense when Recursive is also True,
+   --  although this isn't enforced.
 
    type Library_Info is record
       Library_File : GNATCOLL.VFS.Virtual_File;
@@ -601,6 +606,7 @@ package GNATCOLL.Projects is
       Including_Libraries : Boolean := True;
       Xrefs_Dirs          : Boolean := False;
       ALI_Ext             : GNATCOLL.VFS.Filesystem_String := ".ali";
+      Include_Predefined  : Boolean := False;
       List                : in out Library_Info_Lists.List);
    --  same as Library_Files, but also returns information about the source
    --  file associated with each LI file.

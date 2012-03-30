@@ -45,8 +45,7 @@ package GNATCOLL.ALI is
    procedure Parse_All_LI_Files
      (Session : Session_Type;
       Tree    : Project_Tree;
-      Project : Project_Type;
-      Env     : Project_Environment_Access := null);
+      Project : Project_Type);
    --  Parse all the LI files for the project, and stores them in the
    --  database.
 
