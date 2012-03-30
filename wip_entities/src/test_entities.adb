@@ -118,7 +118,9 @@ begin
       Session : constant Session_Type := Get_New_Session;
    begin
       if Need_To_Create_DB then
-         Create_Database (Session.DB, DB_Schema_Descr);
+         Create_Database (Session.DB,
+                          DB_Schema_Descr,
+                          Create (+"initialdata.txt"));
       end if;
 
       Parse_All_LI_Files

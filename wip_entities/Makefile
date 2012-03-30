@@ -23,6 +23,11 @@ run_test:
 	rm -f entities.db
 	./obj/test_entities ../../gps/gps.gpr
 
+test1: force
+	rm -f entities.db
+	gnatmake -q -Ptest1/test1.gpr
+	./obj/test_entities test1/test1.gpr
+
 quiet:
 	@rm -f entities.db log
 	@unset ADA_DEBUG_FILE; ./obj/test_entities ../../gps/gps.gpr
@@ -47,10 +52,11 @@ profile:
 	#@${DB2ADA} -dbtype=sqlite -dbname=entities.db -createdb -load=${INITIAL}
 	#@./obj/test_entities
 
-
 doc:
 	@gnatcoll_db2ada -dbmodel=${MODEL} -dot
 	@ps2pdf -sPAGESIZE=a4 schema.ps
 	@${RM} schema.ps schema.dot
 	@echo "Created schema.pdf"
 	xdg-open schema.pdf
+
+force:

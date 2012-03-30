@@ -787,10 +787,12 @@ package body GNATCOLL.SQL.Exec is
                if Stmt /= No_DBMS_Stmt then
                   Trace (Me_Error, "Failed to execute prepared ("
                          & Prepared.Get.Name.all & ") " & Q.all
-                         & " " & Image (Connection.all, Params));
+                         & " " & Image (Connection.all, Params)
+                         & " error=" & Error (Connection));
                else
                   Trace (Me_Error, "Failed to execute " & Q.all
-                         & " " & Image (Connection.all, Params));
+                         & " " & Image (Connection.all, Params)
+                         & " error=" & Error (Connection));
                end if;
             end if;
 

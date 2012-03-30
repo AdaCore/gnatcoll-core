@@ -263,7 +263,8 @@ package body GNATCOLL.ALI is
 
    procedure Create_Database
      (Connection      : access Database_Connection_Record'Class;
-      DB_Schema_Descr : GNATCOLL.VFS.Virtual_File)
+      DB_Schema_Descr : GNATCOLL.VFS.Virtual_File;
+      Initial_Data    : GNATCOLL.VFS.Virtual_File)
    is
       Schema  : DB_Schema;
       Start   : Time;
@@ -277,19 +278,11 @@ package body GNATCOLL.ALI is
       New_Schema_IO (Database_Connection (Connection)).Write_Schema (Schema);
 
       if Connection.Success then
---           Execute
---             (Connection,
---              SQL_Insert
---                ((Database.Files.Id = -1)
---                 & (Database.Files.Path = "/predefined")
---                 & (Database.Files.Stamp = No_Time)
---                 & (Database.Files.Language = "ada")));
-
          --  Load initial data
 
          Load_Data
            (Connection,
-            File   => Create (+"initialdata.txt"),
+            File   => Initial_Data,
             Schema => Schema);
       end if;
 
@@ -1698,6 +1691,8 @@ package body GNATCOLL.ALI is
          Start := Clock;
       end if;
 
+      --  Need to commit before we can change the pragmas
+
       Session.Commit;
 
       if Session.DB.Has_Pragmas then
@@ -1723,10 +1718,10 @@ package body GNATCOLL.ALI is
          Start := Clock;
       end if;
 
-      Session.Commit;
-
-      if Active (Me_Timing) then
-         Trace (Me_Timing, "COMMIT:" & Duration'Image (Clock - Start) & " s");
+      if Session.DB.Automatic_Transactions then
+         --  One transaction was automatically started with the call to
+         --  ANALYZE above, although it isn't stricly necessary.
+         Session.Commit;
       end if;
    end Parse_All_LI_Files;
 

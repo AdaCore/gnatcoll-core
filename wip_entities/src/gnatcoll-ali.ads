@@ -58,7 +58,8 @@ package GNATCOLL.ALI is
 
    procedure Create_Database
      (Connection      : access Database_Connection_Record'Class;
-      DB_Schema_Descr : GNATCOLL.VFS.Virtual_File);
+      DB_Schema_Descr : GNATCOLL.VFS.Virtual_File;
+      Initial_Data    : GNATCOLL.VFS.Virtual_File);
    --  Create the database tables and initial contents.
    --  Behavior is undefined if the database is not empty initially.
    --  DB_Schema_Descr is the file that contains the description of the
