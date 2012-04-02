@@ -22,6 +22,7 @@ with Ada.Containers.Doubly_Linked_Lists;
 with Ada.Containers.Hashed_Maps;
 with Ada.Containers.Vectors;
 with Ada.Strings.Unbounded; use Ada.Strings.Unbounded;
+with Ada.Unchecked_Conversion;
 with GNATCOLL.ALI.Database; use GNATCOLL.ALI.Database;
 with GNATCOLL.Mmap;         use GNATCOLL.Mmap;
 with GNATCOLL.SQL;          use GNATCOLL.SQL;
@@ -53,14 +54,21 @@ package body GNATCOLL.ALI is
    --  duplicates. However, this constant was left as a documentation of the
    --  impact this has on the parsing of ALI files.
 
+   LI_Lang : aliased constant String := "li";
+   --  language to use for LI files in the database
+
+   type Access_String is access constant String;
+   function Convert is new Ada.Unchecked_Conversion
+     (Cst_Filesystem_String_Access, Access_String);
+
    Query_Get_File : constant Prepared_Statement :=
      Prepare
        (SQL_Select
-            (Database.Files.Id,
+            (Database.Files.Id & Database.Files.Stamp,
              From => Database.Files,
              Where => Database.Files.Path = Text_Param (1),
              Limit => 1),
-        On_Server => True, Name => "get_file_by_path");
+        On_Server => True, Name => "get_file");
    --  Retrieve the info for a file given its path
 
    Query_Insert_File : constant Prepared_Statement :=
@@ -93,6 +101,7 @@ package body GNATCOLL.ALI is
             (From => Database.F2f,
              Where => Database.F2f.Fromfile = Integer_Param (1)),
         On_Server => True, Name => "delete_file_dep");
+   --  Delete the f2f relationships for the given file.
 
    Query_Insert_Entity : constant Prepared_Statement :=
      Prepare
@@ -244,22 +253,20 @@ package body GNATCOLL.ALI is
    --  once we have parsed the whole ALI file.
 
    procedure Parse_LI
-     (Session                   : Session_Type;
-      Tree                      : Project_Tree;
-      Library_File, Source_File : Virtual_File;
-      VFS_To_Id                 : in out VFS_To_Ids.Map;
-      Entity_Decl_To_Id         : in out Loc_To_Ids.Map;
-      Entity_Renamings          : in out Entity_Renaming_Lists.List;
-      Ignore_Ref_In_Other_Files : Boolean);
+     (Session           : Session_Type;
+      Language          : String;
+      Tree              : Project_Tree;
+      Library_File      : Virtual_File;
+      VFS_To_Id         : in out VFS_To_Ids.Map;
+      Entity_Decl_To_Id : in out Loc_To_Ids.Map;
+      Entity_Renamings  : in out Entity_Renaming_Lists.List);
    --  Parse the contents of a single LI file.
    --  VFS_To_Id is a local cache for the entries in the files table.
    --
-   --  Ignore_Ref_In_Other_Files should be set to True when we are parsing or
-   --  updating *all* the LI files of the projects. Since we know we will see
-   --  the same xref when parsing the LI file of the unit in which the entity
-   --  is declared, we do not need to insert it. For instance, this applies to
-   --  the parent types of entities, or the list of parameters for subprograms.
-   --  This also avoids duplication in the database.
+   --  Language is the default programming language for the source files in
+   --  this LI. It is possible that parsing the LI also creates source files
+   --  entries for other languages (like a pragma Import in Ada for instance,
+   --  which requires a C file).
    --
    --  Entity_Decl_To_Id maps a "file|line.col" to an entity id. This is filled
    --  during a first pass, and is needed to resolve references to parent
@@ -268,6 +275,8 @@ package body GNATCOLL.ALI is
    --  xref. But while parsing a given ALI file, the location is always unique
    --  (which would be potentially false if sharing this table for multiple
    --  ALIs)
+   --
+   --  VFS_To_Id is a cache for source files.
 
    ---------------------
    -- Create_Database --
@@ -312,15 +321,14 @@ package body GNATCOLL.ALI is
    --------------
 
    procedure Parse_LI
-     (Session                   : Session_Type;
-      Tree                      : Project_Tree;
-      Library_File, Source_File : Virtual_File;
-      VFS_To_Id                 : in out VFS_To_Ids.Map;
-      Entity_Decl_To_Id         : in out Loc_To_Ids.Map;
-      Entity_Renamings          : in out Entity_Renaming_Lists.List;
-      Ignore_Ref_In_Other_Files : Boolean)
+     (Session           : Session_Type;
+      Language          : String;
+      Tree              : Project_Tree;
+      Library_File      : Virtual_File;
+      VFS_To_Id         : in out VFS_To_Ids.Map;
+      Entity_Decl_To_Id : in out Loc_To_Ids.Map;
+      Entity_Renamings  : in out Entity_Renaming_Lists.List)
    is
-      pragma Unreferenced (Source_File, Ignore_Ref_In_Other_Files);
       M      : Mapped_File;
       Str    : Str_Access;
       Last   : Integer;
@@ -336,21 +344,21 @@ package body GNATCOLL.ALI is
 
       Depid_To_Id     : Depid_To_Ids.Vector;
 
-      Internal_Files : Depid_To_Ids.Vector;
+      Unit_Files : Depid_To_Ids.Vector;
       --  Contains the list of units associated with the current ALI (these
       --  are the ids in the "files" table). This list is only traversed once
       --  for each X line, and will generally only contain a few elements, so
       --  it is reasonably fast.
 
       Current_X_File : Integer;
-      Current_X_File_Is_Internal : Boolean;
+      Current_X_File_Is_ALI_Unit : Boolean;
       --  Id (in the database) of the file for the current X section
 
       Xref_File, Xref_Line, Xref_Col : Integer;
       Xref_Kind : Character;
       --  The current xref, result of Get_Xref
 
-      Xref_File_Is_Internal : Boolean;
+      Xref_File_Is_ALI_Unit : Boolean;
       --  Whether the current Xref_File would return true for Is_ALI_Unit.
 
       Current_Entity : Integer;
@@ -432,16 +440,20 @@ package body GNATCOLL.ALI is
       --  entity. This kind of this relationship is given by Eid. Its "order"
       --  is given by E2e_Order.
 
-      function Insert_File
+      function Insert_LI_File (File : Virtual_File) return Integer;
+      --  Returns -2 if the file is already up-to-date in the database, and
+      --  no further parsing is needed.
+
+      function Insert_Source_File
         (Basename : String;
          Language : String;
-         Is_Internal : Boolean := False;
-         Clear    : Boolean := False) return Integer;
+         Is_ALI_Unit : Boolean := False) return Integer;
       --  Retrieves the id for the file in the database, or create a new entry
       --  for it.
+      --  Is_ALI_Unit should be true when the file is one of the units
+      --  associated with the current ALI file.
+      --
       --  Returns -1 if the file is not known in the project.
-      --  If Clear is true, this clears all known relationships from this
-      --  file to any other (Known file dependencies, ALI files,...)
 
       procedure Process_Entity_Line;
       --  Process the current line when it is an entity declaration and its
@@ -462,7 +474,7 @@ package body GNATCOLL.ALI is
       -----------------
 
       function Is_ALI_Unit (Id : Integer) return Boolean is
-         C : Depid_To_Ids.Cursor := Internal_Files.First;
+         C : Depid_To_Ids.Cursor := Unit_Files.First;
       begin
          while Has_Element (C) loop
             if Element (C) = Id then
@@ -518,7 +530,7 @@ package body GNATCOLL.ALI is
          if Str (Index) = '|' then
             Xref_File := Depid_To_Id.Element (Xref_Line);
             if ALI_Contains_External_Refs then
-               Xref_File_Is_Internal := Is_ALI_Unit (Xref_File);
+               Xref_File_Is_ALI_Unit := Is_ALI_Unit (Xref_File);
             end if;
             Index := Index + 1;  --  Skip '|'
             Xref_Line := Get_Natural;
@@ -631,7 +643,7 @@ package body GNATCOLL.ALI is
             --  for entities in other units we'll have to parse the
             --  corresponding LI). This avoids duplicates.
 
-            if Current_X_File_Is_Internal
+            if Current_X_File_Is_ALI_Unit
               and then Xref_File /= -1
             then
                Ref_Entity := Get_Or_Create_Entity
@@ -681,7 +693,7 @@ package body GNATCOLL.ALI is
          Start_File  : constant Integer := Xref_File;
          Start_Line  : constant Integer := Xref_Line;
          Start_Col   : constant Integer := Xref_Col;
-         Start_Internal : constant Boolean := Xref_File_Is_Internal;
+         Start_Internal : constant Boolean := Xref_File_Is_ALI_Unit;
       begin
          Instance := Null_Unbounded_String;
 
@@ -704,7 +716,7 @@ package body GNATCOLL.ALI is
             Xref_File := Start_File;
             Xref_Line := Start_Line;
             Xref_Col  := Start_Col;
-            Xref_File_Is_Internal := Start_Internal;
+            Xref_File_Is_ALI_Unit := Start_Internal;
          end if;
       end Skip_Instance_Info;
 
@@ -794,25 +806,51 @@ package body GNATCOLL.ALI is
          end if;
       end Skip_To_Name_End;
 
-      -----------------
-      -- Insert_File --
-      -----------------
+      --------------------
+      -- Insert_LI_File --
+      --------------------
 
-      function Insert_File
+      function Insert_LI_File (File : Virtual_File) return Integer is
+         Name  : constant Cst_Filesystem_String_Access :=
+           File.Full_Name (Normalize => True);
+         Name_A : constant Access_String := Convert (Name);
+
+         Stamp : constant Ada.Calendar.Time := File.File_Time_Stamp;
+         Files : Forward_Cursor;
+         Id    : Integer;
+      begin
+         Files.Fetch (Session.DB, Query_Get_File, Params => (1 => +Name_A));
+
+         if Files.Has_Row then
+            if Files.Time_Value (1) = Stamp then
+               --  File is up-to-date already
+               return -2;
+            end if;
+
+            Id := Files.Integer_Value (0);
+         else
+            Id := Session.DB.Insert_And_Get_PK
+              (Query_Insert_File,
+               Params => (1 => +Name_A, 2 => +Stamp, 3 => +LI_Lang'Access),
+               PK => Database.Files.Id);
+         end if;
+
+         return Id;
+      end Insert_LI_File;
+
+      ------------------------
+      -- Insert_Source_File --
+      ------------------------
+
+      function Insert_Source_File
         (Basename : String;
          Language : String;
-         Is_Internal : Boolean := False;
-         Clear    : Boolean := False) return Integer
+         Is_ALI_Unit : Boolean := False) return Integer
       is
-         --  Unfortunately we have to copy the name of the string, there is
-         --  no way to directly use the access type...
-
          File : constant Virtual_File :=
            Tree.Create
              (Name            => +Basename,
               Use_Object_Path => False);
-
-         Name  : aliased String := +File.Full_Name (Normalize => True).all;
          Files : Forward_Cursor;
          Found : VFS_To_Ids.Cursor;
          Id    : Integer;
@@ -827,45 +865,36 @@ package body GNATCOLL.ALI is
          Found := VFS_To_Id.Find (File);
          if Has_Element (Found) then
             Id := Element (Found);
-            if Clear then
-               Session.DB.Execute
-                 (Query_Delete_File_Dep, Params => (1 => +Id));
-            end if;
-
-            if Is_Internal then
-               Internal_Files.Append (Id);
-            end if;
-
-            return Id;
-         end if;
-
-         Files.Fetch
-           (Session.DB, Query_Get_File, Params => (1 => +Name'Access));
-
-         if Files.Has_Row then
-            Id := Files.Integer_Value (0);
-
-            if Clear then
-               Session.DB.Execute
-                 (Query_Delete_File_Dep, Params => (1 => +Id));
-            end if;
          else
-            Id := Session.DB.Insert_And_Get_PK
-              (Query_Insert_File,
-               Params => (1  => +Name'Access,
-                          2  => +File.File_Time_Stamp,
-                          3  => +Language'Unrestricted_Access),
-               PK => Database.Files.Id);
+            declare
+               Name  : constant Cst_Filesystem_String_Access :=
+                 File.Full_Name (Normalize => True);
+               Name_A : constant Access_String := Convert (Name);
+            begin
+               Files.Fetch
+                 (Session.DB, Query_Get_File, Params => (1 => +Name_A));
+
+               if Files.Has_Row then
+                  Id := Files.Integer_Value (0);
+               else
+                  Id := Session.DB.Insert_And_Get_PK
+                    (Query_Insert_File,
+                     Params => (1  => +Name_A,
+                                2  => +File.File_Time_Stamp,
+                                3  => +Language'Unrestricted_Access),
+                     PK => Database.Files.Id);
+               end if;
+
+               VFS_To_Id.Insert (File, Id);
+            end;
          end if;
 
-         VFS_To_Id.Insert (File, Id);
-
-         if Is_Internal then
-            Internal_Files.Append (Id);
+         if Is_ALI_Unit then
+            Unit_Files.Append (Id);
          end if;
 
          return Id;
-      end Insert_File;
+      end Insert_Source_File;
 
       --------------------------
       -- Get_Or_Create_Entity --
@@ -1200,7 +1229,7 @@ package body GNATCOLL.ALI is
                Index := Name_End + 1;
                Order := Order + 1;
                Xref_File := Current_X_File;
-               Xref_File_Is_Internal := Current_X_File_Is_Internal;
+               Xref_File_Is_ALI_Unit := Current_X_File_Is_ALI_Unit;
 
                case Str (Name_End) is
                   when '[' =>
@@ -1321,7 +1350,7 @@ package body GNATCOLL.ALI is
 
             Index := Name_End;
             Xref_File := Current_X_File;
-            Xref_File_Is_Internal := Current_X_File_Is_Internal;
+            Xref_File_Is_ALI_Unit := Current_X_File_Is_ALI_Unit;
 
             while Index <= Last
               and then Str (Index) /= ASCII.LF
@@ -1382,7 +1411,7 @@ package body GNATCOLL.ALI is
 
                if Eid = -1 then
                   if ALI_Contains_External_Refs then
-                     Will_Insert_Ref := Xref_File_Is_Internal;
+                     Will_Insert_Ref := Xref_File_Is_ALI_Unit;
                   else
                      Will_Insert_Ref := True;
                   end if;
@@ -1426,6 +1455,12 @@ package body GNATCOLL.ALI is
       end Process_Entity_Line;
 
    begin
+      ALI_Id := Insert_LI_File (File => Library_File);
+      if ALI_Id = -2 then
+         --  Already up-to-date
+         return;
+      end if;
+
       if Active (Me_Debug) then
          Trace (Me_Debug, "Parse LI "
                 & Library_File.Display_Full_Name);
@@ -1439,12 +1474,6 @@ package body GNATCOLL.ALI is
       Str := Data (M);
       Last := GNATCOLL.Mmap.Last (M);
       Index := Str'First;
-
-      ALI_Id := Insert_File
-        (Basename => Library_File.Display_Full_Name,
-         Language => "li");
-      --  ??? Should also clear all known xref from this file, or perhaps from
-      --  its units ?
 
       loop
          Next_Line;
@@ -1463,13 +1492,29 @@ package body GNATCOLL.ALI is
                Start := Index;
                Skip_Word;
 
-               Current_Unit_Id := Insert_File
+               Current_Unit_Id := Insert_Source_File
                  (Basename => String (Str (Start .. Index - 1)),
-                  Language => "ada",
-                  Is_Internal => True,
-                  Clear    => True);
+                  Language => Language,
+                  Is_ALI_Unit => True);
+
+               --  Clear previous info known for this source file.
+               --  This cannot be done with a single query when we see the
+               --  create the LI file because it is possible to get
+               --  duplicates otherwise:
+               --  For isntance, a generic instantiation ALI contains:
+               --     U glib.xml_int%b        glib-xml_int.ads
+               --     U glib.xml_int%s        glib-xml_int.ads
+               --  In this case, we would have duplicate entries in f2f
+               --  ("has ali" at least, and likely "withs" as well)
+               --
+               --  A similar error when a given basename is found in two
+               --  different locations (s-memory.adb for instance), which
+               --  can occur when overriding runtime files.
 
                if Current_Unit_Id /= -1 then
+                  Session.DB.Execute
+                    (Query_Delete_File_Dep,
+                     Params => (1 => +Current_Unit_Id));
                   Session.DB.Execute
                     (Query_Set_ALI,
                      Params => (1 => +Current_Unit_Id,
@@ -1494,16 +1539,16 @@ package body GNATCOLL.ALI is
                   Start := Index;
                   Skip_Word;
 
-                  Dep_Id := Insert_File
-                    (Basename => String (Str (Start .. Index - 1)),
-                     Language => "ada");
+                  if Current_Unit_Id /= -1 then
+                     Dep_Id := Insert_Source_File
+                       (Basename => String (Str (Start .. Index - 1)),
+                        Language => Language);
 
-                  if Dep_Id /= -1
-                    and then Current_Unit_Id /= -1
-                  then
-                     Session.DB.Execute
-                       (Query_Set_File_Dep,
-                        Params => (1 => +Current_Unit_Id, 2 => +Dep_Id));
+                     if Dep_Id /= -1 then
+                        Session.DB.Execute
+                          (Query_Set_File_Dep,
+                           Params => (1 => +Current_Unit_Id, 2 => +Dep_Id));
+                     end if;
                   end if;
                end if;
 
@@ -1514,9 +1559,9 @@ package body GNATCOLL.ALI is
                Start := Index;
                Skip_Word;
 
-               Dep_Id := Insert_File
+               Dep_Id := Insert_Source_File
                  (Basename => String (Str (Start .. Index - 1)),
-                  Language => "ada");
+                  Language => Language);
 
                Depid_To_Id.Set_Length (Ada.Containers.Count_Type (D_Line_Id));
                Depid_To_Id.Replace_Element
@@ -1546,7 +1591,7 @@ package body GNATCOLL.ALI is
             if Str (Index) = 'X' then
                Index := Index + 2;
                Current_X_File := Depid_To_Id.Element (Get_Natural);
-               Current_X_File_Is_Internal := Is_ALI_Unit (Current_X_File);
+               Current_X_File_Is_ALI_Unit := Is_ALI_Unit (Current_X_File);
 
             elsif Str (Index) = '.'
               or else Str (Index) in '0' .. '9'
@@ -1658,13 +1703,13 @@ package body GNATCOLL.ALI is
       Lib_Info := LI_Files.First;
       while Has_Element (Lib_Info) loop
          Parse_LI (Session              => Session,
+                   Language             =>
+                     Tree.Info (Element (Lib_Info).Source_File).Language,
                    Tree                 => Tree,
                    Library_File         => Element (Lib_Info).Library_File,
-                   Source_File          => Element (Lib_Info).Source_File,
                    VFS_To_Id            => VFS_To_Id,
                    Entity_Decl_To_Id    => Entity_Decl_To_Id,
-                   Entity_Renamings     => Entity_Renamings,
-                   Ignore_Ref_In_Other_Files => True);
+                   Entity_Renamings     => Entity_Renamings);
          Next (Lib_Info);
       end loop;
 

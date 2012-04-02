@@ -4,11 +4,11 @@
 # whether the current database applies to the project loaded in GPS.
 # The intent is store the database in the project's object directory
 
-| TABLE   | projects      | project  |       |                                  |
-| id      | AUTOINCREMENT | PK       |       |                                  |
-| path    | TEXT          | NOT NULL |       |                                  |
-| name    | TEXT          | NOT NULL |       |                                  |
-| is_root | BOOLEAN       |          | false | Whether this is the root project |
+#| TABLE   | projects      | project  |       |                                  |
+#| id      | AUTOINCREMENT | PK       |       |                                  |
+#| path    | TEXT          | NOT NULL |       |                                  |
+#| name    | TEXT          | NOT NULL |       |                                  |
+#| is_root | BOOLEAN       |          | false | Whether this is the root project |
 
 # Missing compared to Source_File_Record (this table also includes LI files)
 #   - Entities: not needed, search for all references within that file,

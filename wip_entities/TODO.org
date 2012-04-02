@@ -127,3 +127,15 @@
    when they are for an entity defined in a file not in the U set of files and
    the reference is also not in U (where U is the list of units of the ALI
    file).
+
+** TODO: use "INSERT OR IGNORE"
+   to avoid duplicate files and entities, we currently do a SELECT followed
+   by an UPDATE, but with sqlite these could be combined into a single
+   statement and be faster presumably. With postgreSQL, we would have to
+   keep doing as we do currently (with a possible race condition) or use
+   stored procedure). With MySQL, there exists a "INSERT OR UPDATE".
+
+   We might need to separate the source files in a different table than the
+   LI files, since we do not need the timestamp for source files instead,
+   and thus would not have to compute it.
+   In fact, not computing the timestamp already saves time.

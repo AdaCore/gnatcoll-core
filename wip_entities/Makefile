@@ -23,6 +23,24 @@ run_test:
 	rm -f entities.db
 	./obj/test_entities ../../gps/gps.gpr
 
+run_update:
+	rm -f entities.db
+	./obj/test_entities ../../gps/gps.gpr
+
+	@for table in entities e2e entity_refs f2f; do \
+	   echo "select count(*) as '$$table' from $$table;" \
+		   | sqlite3 -line entities.db; \
+	done
+	@ls --block-size=1 -s entities.db
+
+	@echo ""
+	./obj/test_entities ../../gps/gps.gpr
+	@for table in entities e2e entity_refs f2f; do \
+	   echo "select count(*) as '$$table' from $$table;" \
+		   | sqlite3 -line entities.db; \
+	done
+	@ls --block-size=1 -s entities.db
+
 test1: force
 	rm -f entities.db
 	gnatmake -q -Ptest1/test1.gpr
