@@ -42,12 +42,13 @@ with GNATCOLL.VFS;
 
 package GNATCOLL.ALI is
 
-   procedure Parse_All_LI_Files
+   function Parse_All_LI_Files
      (Session : Session_Type;
       Tree    : Project_Tree;
-      Project : Project_Type);
+      Project : Project_Type) return Boolean;
    --  Parse all the LI files for the project, and stores them in the
    --  database.
+   --  Return True if at least one LI was updated.
 
    procedure Create_Database
      (Connection      : access Database_Connection_Record'Class;

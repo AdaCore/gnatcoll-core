@@ -71,6 +71,14 @@ package body GNATCOLL.ALI is
         On_Server => True, Name => "get_file");
    --  Retrieve the info for a file given its path
 
+   Query_Update_File : constant Prepared_Statement :=
+     Prepare
+       (SQL_Update
+            (Set   => Database.Files.Stamp = Time_Param (2),
+             Table => Database.Files,
+             Where => Database.Files.Id = Integer_Param (1)),
+        On_Server => True, Name => "update_file");
+
    Query_Insert_File : constant Prepared_Statement :=
      Prepare
        (SQL_Insert
@@ -257,6 +265,7 @@ package body GNATCOLL.ALI is
       Language          : String;
       Tree              : Project_Tree;
       Library_File      : Virtual_File;
+      Update_Needed     : access procedure;
       VFS_To_Id         : in out VFS_To_Ids.Map;
       Entity_Decl_To_Id : in out Loc_To_Ids.Map;
       Entity_Renamings  : in out Entity_Renaming_Lists.List);
@@ -277,6 +286,9 @@ package body GNATCOLL.ALI is
    --  ALIs)
    --
    --  VFS_To_Id is a cache for source files.
+   --
+   --  Update needed is called when a change needs to be made to the database
+   --  because an LI file that isn't up-to-date was found.
 
    ---------------------
    -- Create_Database --
@@ -325,6 +337,7 @@ package body GNATCOLL.ALI is
       Language          : String;
       Tree              : Project_Tree;
       Library_File      : Virtual_File;
+      Update_Needed     : access procedure;
       VFS_To_Id         : in out VFS_To_Ids.Map;
       Entity_Decl_To_Id : in out Loc_To_Ids.Map;
       Entity_Renamings  : in out Entity_Renaming_Lists.List)
@@ -828,7 +841,15 @@ package body GNATCOLL.ALI is
             end if;
 
             Id := Files.Integer_Value (0);
+
+            Update_Needed.all;
+            Session.DB.Execute
+              (Query_Update_File, Params => (1 => +Id, 2 => +Stamp));
+
          else
+            --  Let callers know we are about to modify the DB
+            Update_Needed.all;
+
             Id := Session.DB.Insert_And_Get_PK
               (Query_Insert_File,
                Params => (1 => +Name_A, 2 => +Stamp, 3 => +LI_Lang'Access),
@@ -1621,10 +1642,10 @@ package body GNATCOLL.ALI is
    -- Parse_All_LI_Files --
    ------------------------
 
-   procedure Parse_All_LI_Files
+   function Parse_All_LI_Files
      (Session : Session_Type;
       Tree    : Project_Tree;
-      Project : Project_Type)
+      Project : Project_Type) return Boolean
    is
       use Library_Info_Lists;
       LI_Files  : Library_Info_Lists.List;
@@ -1634,6 +1655,12 @@ package body GNATCOLL.ALI is
       VFS_To_Id : VFS_To_Ids.Map;
       Entity_Decl_To_Id : Loc_To_Ids.Map;
       Entity_Renamings : Entity_Renaming_Lists.List;
+
+      Was_Updated : Boolean := False;
+      --  Set to true if at least one change was done to the database.
+
+      procedure Update_Needed;
+      --  Called to prepare the database for changes (start transaction,...)
 
       procedure Resolve_Renamings;
       --  The last pass in parsing a ALI file is to resolve all renamings, now
@@ -1661,6 +1688,32 @@ package body GNATCOLL.ALI is
          end loop;
       end Resolve_Renamings;
 
+      -------------------
+      -- Update_Needed --
+      -------------------
+
+      procedure Update_Needed is
+      begin
+         if not Was_Updated then
+            Was_Updated := True;
+
+            if Session.DB.Has_Pragmas then
+               Session.DB.Execute ("PRAGMA foreign_keys=OFF");
+               Session.DB.Execute ("PRAGMA synchronous=OFF");
+               Session.DB.Execute ("PRAGMA journal_mode=MEMORY");
+               Session.DB.Execute ("PRAGMA temp_store=MEMORY");
+            end if;
+
+            Session.DB.Automatic_Transactions (False);
+            Session.DB.Execute ("BEGIN");
+
+            --  It is faster to recreate the index once at the end than
+            --  maintain it for every insert.
+
+            Session.DB.Execute ("DROP INDEX entity_refs_file_line_col");
+         end if;
+      end Update_Needed;
+
    begin
       --  Disable checks for foreign keys. This saves a bit of time when
       --  inserting the new references. At worse we could end up with an
@@ -1670,21 +1723,6 @@ package body GNATCOLL.ALI is
       --  is when the ALI file has changed format)
       --  Since this is sqlite specific, we test whether the backend supports
       --  this.
-
-      if Session.DB.Has_Pragmas then
-         Session.DB.Execute ("PRAGMA foreign_keys=OFF");
-         Session.DB.Execute ("PRAGMA synchronous=OFF");
-         Session.DB.Execute ("PRAGMA journal_mode=MEMORY");
-         Session.DB.Execute ("PRAGMA temp_store=MEMORY");
-      end if;
-
-      Session.DB.Automatic_Transactions (False);
-      Session.DB.Execute ("BEGIN");
-
-      --  It is faster to recreate the index once at the end than maintain it
-      --  for every insert.
-
-      Session.DB.Execute ("DROP INDEX entity_refs_file_line_col");
 
       Project.Library_Files
         (Recursive => True, Xrefs_Dirs => True, Including_Libraries => True,
@@ -1708,6 +1746,7 @@ package body GNATCOLL.ALI is
                    Tree                 => Tree,
                    Library_File         => Element (Lib_Info).Library_File,
                    VFS_To_Id            => VFS_To_Id,
+                   Update_Needed        => Update_Needed'Access,
                    Entity_Decl_To_Id    => Entity_Decl_To_Id,
                    Entity_Renamings     => Entity_Renamings);
          Next (Lib_Info);
@@ -1722,52 +1761,57 @@ package body GNATCOLL.ALI is
          Start := Clock;
       end if;
 
-      Session.DB.Execute
-        ("CREATE INDEX entity_refs_file_line_col"
-         & " on entity_refs(file,line,""column"")");
+      if Was_Updated then
+         Session.DB.Execute
+           ("CREATE INDEX entity_refs_file_line_col"
+            & " on entity_refs(file,line,""column"")");
 
-      if Active (Me_Timing) then
-         Trace (Me_Timing,
-                "Created entity_refs index: "
-                & Duration'Image (Clock - Start) & " s");
-         Start := Clock;
+         if Active (Me_Timing) then
+            Trace (Me_Timing,
+                   "Created entity_refs index: "
+                   & Duration'Image (Clock - Start) & " s");
+            Start := Clock;
+         end if;
+
+         Resolve_Renamings;
+
+         if Active (Me_Timing) then
+            Trace (Me_Timing,
+                   "Processed" & Length (Entity_Renamings)'Img
+                   & " renaming:" & Duration'Image (Clock - Start) & " s");
+            Start := Clock;
+         end if;
+
+         --  Need to commit before we can change the pragmas
+
+         Session.Commit;
+
+         if Session.DB.Has_Pragmas then
+            Session.DB.Execute ("PRAGMA foreign_keys=ON");
+
+            --  The default would be FULL, but we do not need to prevent
+            --  against system crashes in this application.
+            Session.DB.Execute ("PRAGMA synchronous=NORMAL");
+
+            --  The default would be DELETE, but we do not care enough about
+            --  data integrity
+            Session.DB.Execute ("PRAGMA journal_mode=MEMORY");
+
+            --  We can store temporary tables in memory
+            Session.DB.Execute ("PRAGMA temp_store=MEMORY");
+         end if;
+
+         --  Gather statistic to speed up the query optimizer
+         Session.DB.Execute ("ANALYZE");
+
+         if Active (Me_Timing) then
+            Trace
+              (Me_Timing, "ANALYZE:" & Duration'Image (Clock - Start) & " s");
+            Start := Clock;
+         end if;
       end if;
 
-      Resolve_Renamings;
-
-      if Active (Me_Timing) then
-         Trace (Me_Timing,
-                "Processed" & Length (Entity_Renamings)'Img
-                & " renaming:" & Duration'Image (Clock - Start) & " s");
-         Start := Clock;
-      end if;
-
-      --  Need to commit before we can change the pragmas
-
-      Session.Commit;
-
-      if Session.DB.Has_Pragmas then
-         Session.DB.Execute ("PRAGMA foreign_keys=ON");
-
-         --  The default would be FULL, but we do not need to prevent against
-         --  system crashes in this application.
-         Session.DB.Execute ("PRAGMA synchronous=NORMAL");
-
-         --  The default would be DELETE, but we do not care enough about
-         --  data integrity
-         Session.DB.Execute ("PRAGMA journal_mode=MEMORY");
-
-         --  We can store temporary tables in memory
-         Session.DB.Execute ("PRAGMA temp_store=MEMORY");
-      end if;
-
-      --  Gather statistic to speed up the query optimizer
-      Session.DB.Execute ("ANALYZE");
-
-      if Active (Me_Timing) then
-         Trace (Me_Timing, "ANALYZE:" & Duration'Image (Clock - Start) & " s");
-         Start := Clock;
-      end if;
+      return Was_Updated;
    end Parse_All_LI_Files;
 
 end GNATCOLL.ALI;

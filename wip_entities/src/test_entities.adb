@@ -39,8 +39,8 @@ procedure Test_Entities is
    Do_Not_Perform_Queries : aliased Boolean := False;
    --  Whether to perform the queries in the database
 
-   Tmp_DB_Name : constant String := ":memory:";
-   DB_Name     : constant String := "entities.db";
+   DB_Name     : aliased String_Access;
+   Tmp_DB_Name : aliased String_Access;
 
    GPR_File     : Virtual_File;
    DB_Schema_Descr : constant Virtual_File := Create ("dbschema.txt");
@@ -65,8 +65,27 @@ begin
      (Cmdline_Config, Use_Postgres'Access,
       Long_Switch => "--postgres",
       Help => "Use postgreSQL as the backend, instead of sqlite");
+   Define_Switch
+     (Cmdline_Config, Tmp_DB_Name'Access,
+      Long_Switch => "--tmpdb:",
+      Help =>
+        "Name of the temporary database (use :memory: to copy to memory)");
+   Define_Switch
+     (Cmdline_Config, DB_Name'Access,
+      Long_Switch => "--db:",
+      Help => "Name of the database");
 
    Getopt (Cmdline_Config);
+
+   if DB_Name.all = "" then
+      Free (DB_Name);
+      DB_Name := new String'("entities.db");
+   end if;
+
+   if Tmp_DB_Name.all = "" then
+      Free (Tmp_DB_Name);
+      Tmp_DB_Name := new String'(":memory:");
+   end if;
 
    GPR_File := Create (+GNAT.Command_Line.Get_Argument);
 
@@ -76,14 +95,14 @@ begin
 
    if Use_Postgres then
       GNATCOLL.SQL.Sessions.Setup
-        (Descr        => GNATCOLL.SQL.Postgres.Setup (Database => DB_Name),
+        (Descr        => GNATCOLL.SQL.Postgres.Setup (Database => DB_Name.all),
          Max_Sessions => 1);
       Need_To_Create_DB := True;
    else
       GNATCOLL.SQL.Sessions.Setup
-        (Descr        => GNATCOLL.SQL.Sqlite.Setup (Database => Tmp_DB_Name),
+        (Descr => GNATCOLL.SQL.Sqlite.Setup (Database => Tmp_DB_Name.all),
          Max_Sessions => 1);
-      Need_To_Create_DB := not GNAT.OS_Lib.Is_Regular_File (Tmp_DB_Name);
+      Need_To_Create_DB := not GNAT.OS_Lib.Is_Regular_File (Tmp_DB_Name.all);
    end if;
 
    Start := Clock;
@@ -121,14 +140,14 @@ begin
       --  processing
 
       if not Use_Postgres
-        and then Tmp_DB_Name = ":memory:"
-        and then GNAT.OS_Lib.Is_Regular_File (DB_Name)
+        and then Tmp_DB_Name.all = ":memory:"
+        and then GNAT.OS_Lib.Is_Regular_File (DB_Name.all)
       then
          Start := Clock;
 
          if not GNATCOLL.SQL.Sqlite.Backup
            (DB1 => Session.DB,
-            DB2 => DB_Name,
+            DB2 => DB_Name.all,
             From_DB1_To_DB2 => False)
          then
             Put_Line ("Failed to restore the database from disk");
@@ -138,6 +157,8 @@ begin
                    & Duration'Image (Clock - Start) & " s");
          end if;
 
+         Need_To_Create_DB := False;
+
       else
          if Need_To_Create_DB then
             Create_Database (Session.DB,
@@ -146,25 +167,30 @@ begin
          end if;
       end if;
 
-      Parse_All_LI_Files
+      if Parse_All_LI_Files
         (Session,
          Tree              => Tree,
-         Project           => Tree.Root_Project);
+         Project           => Tree.Root_Project)
+        or else Need_To_Create_DB
+      then
+         --  Dump into a file
 
-      --  Dump into a file
-
-      if not Use_Postgres and then Tmp_DB_Name = ":memory:" then
-         Start := Clock;
-
-         if not GNATCOLL.SQL.Sqlite.Backup
-           (DB1 => Session.DB,
-            DB2 => DB_Name)
+         if not Use_Postgres
+           and then Tmp_DB_Name.all = ":memory:"
+           and then DB_Name.all /= Tmp_DB_Name.all
          then
-            Put_Line ("Failed to backup the database to disk");
-         elsif Active (Me_Timing) then
-            Trace (Me_Timing,
-                   "Total time for backup:"
-                   & Duration'Image (Clock - Start) & " s");
+            Start := Clock;
+
+            if not GNATCOLL.SQL.Sqlite.Backup
+              (DB1 => Session.DB,
+               DB2 => DB_Name.all)
+            then
+               Put_Line ("Failed to backup the database to disk");
+            elsif Active (Me_Timing) then
+               Trace (Me_Timing,
+                      "Total time for backup:"
+                      & Duration'Image (Clock - Start) & " s");
+            end if;
          end if;
       end if;
 

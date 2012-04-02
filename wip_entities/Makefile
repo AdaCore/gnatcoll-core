@@ -33,13 +33,22 @@ run_update:
 	done
 	@ls --block-size=1 -s entities.db
 
+	@# No file modified, but we still copy the database to memory
+	@# temporarily
 	@echo ""
-	./obj/test_entities ../../gps/gps.gpr
+	@echo "===== No file modified (copy db to memory) ====="
+	@./obj/test_entities ../../gps/gps.gpr
 	@for table in entities e2e entity_refs f2f; do \
 	   echo "select count(*) as '$$table' from $$table;" \
 		   | sqlite3 -line entities.db; \
 	done
 	@ls --block-size=1 -s entities.db
+
+	@# No file modified and we only manipulate db on disk
+	@echo ""
+	@echo "===== No file modified (keep db on disk) ====="
+	@./obj/test_entities --tmpdb entities.db ../../gps/gps.gpr
+
 
 test1: force
 	rm -f entities.db
