@@ -149,6 +149,11 @@
 # references from the same instance as the one the user clicked on, which would
 # be harder (and slower) to do if we stored the instances in a separate table,
 # where each instance potentially points to its parent.
+# 
+# This table might contain duplicates (for instance from .gli files). It is
+# also possible that a given location is duplicated with different kinds, for
+# instance the argument for an "in out" parameter has both a "read" and
+# "modified" entries.
 
 | TABLE              | entity_refs             | entity_ref                |   |                                                               |             |                        |                                       |       |
 | entity             | FK entities(references) | NOT NULL                  |   | The entity to which we have a reference                       |             |                        |                                       |       |
