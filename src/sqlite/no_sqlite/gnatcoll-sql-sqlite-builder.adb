@@ -58,8 +58,9 @@ package body GNATCOLL.SQL.Sqlite.Builder is
    ------------
 
    function Backup
-     (From : access Database_Connection_Record'Class;
-      To   : String) return Boolean
+     (DB1 : access Database_Connection_Record'Class;
+      DB2 : String;
+      From_DB1_To_DB2 : Boolean := True) return Boolean
    is
       pragma Unreferenced (From, To);
    begin
