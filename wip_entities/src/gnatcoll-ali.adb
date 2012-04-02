@@ -1768,12 +1768,6 @@ package body GNATCOLL.ALI is
          Trace (Me_Timing, "ANALYZE:" & Duration'Image (Clock - Start) & " s");
          Start := Clock;
       end if;
-
-      if Session.DB.Automatic_Transactions then
-         --  One transaction was automatically started with the call to
-         --  ANALYZE above, although it isn't stricly necessary.
-         Session.Commit;
-      end if;
    end Parse_All_LI_Files;
 
 end GNATCOLL.ALI;

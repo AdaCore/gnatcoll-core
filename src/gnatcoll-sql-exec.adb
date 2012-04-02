@@ -755,6 +755,9 @@ package body GNATCOLL.SQL.Exec is
            and then
              (Q'Length <= 7   --  for sqlite
               or else Q (Q'First .. Q'First + 6) /= "PRAGMA ")
+           and then
+             (Q'Length <= 7   --  for sqlite
+              or else Q (Q'First .. Q'First + 6) /= "ANALYZE")
          then
             --  Start a transaction automatically
             Was_Started := Start_Transaction (Connection);
