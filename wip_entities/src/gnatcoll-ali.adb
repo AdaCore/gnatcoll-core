@@ -49,7 +49,9 @@ package body GNATCOLL.ALI is
    --  also not in a file from U.
    --  The parser does extra tests in this case to remove duplicate references
    --  that would occur in the database otherwise.
-   --  This was fixed in the compiler for L330-027.
+   --  This must be left to True when parsing .gli files since these do have
+   --  duplicates. However, this constant was left as a documentation of the
+   --  impact this has on the parsing of ALI files.
 
    Query_Get_File : constant Prepared_Statement :=
      Prepare
@@ -348,6 +350,9 @@ package body GNATCOLL.ALI is
       Xref_Kind : Character;
       --  The current xref, result of Get_Xref
 
+      Xref_File_Is_Internal : Boolean;
+      --  Whether the current Xref_File would return true for Is_ALI_Unit.
+
       Current_Entity : Integer;
       --  Id in "entities" table for the current entity
 
@@ -512,6 +517,9 @@ package body GNATCOLL.ALI is
 
          if Str (Index) = '|' then
             Xref_File := Depid_To_Id.Element (Xref_Line);
+            if ALI_Contains_External_Refs then
+               Xref_File_Is_Internal := Is_ALI_Unit (Xref_File);
+            end if;
             Index := Index + 1;  --  Skip '|'
             Xref_Line := Get_Natural;
          end if;
@@ -673,6 +681,7 @@ package body GNATCOLL.ALI is
          Start_File  : constant Integer := Xref_File;
          Start_Line  : constant Integer := Xref_Line;
          Start_Col   : constant Integer := Xref_Col;
+         Start_Internal : constant Boolean := Xref_File_Is_Internal;
       begin
          Instance := Null_Unbounded_String;
 
@@ -695,6 +704,7 @@ package body GNATCOLL.ALI is
             Xref_File := Start_File;
             Xref_Line := Start_Line;
             Xref_Col  := Start_Col;
+            Xref_File_Is_Internal := Start_Internal;
          end if;
       end Skip_Instance_Info;
 
@@ -1190,6 +1200,7 @@ package body GNATCOLL.ALI is
                Index := Name_End + 1;
                Order := Order + 1;
                Xref_File := Current_X_File;
+               Xref_File_Is_Internal := Current_X_File_Is_Internal;
 
                case Str (Name_End) is
                   when '[' =>
@@ -1310,6 +1321,7 @@ package body GNATCOLL.ALI is
 
             Index := Name_End;
             Xref_File := Current_X_File;
+            Xref_File_Is_Internal := Current_X_File_Is_Internal;
 
             while Index <= Last
               and then Str (Index) /= ASCII.LF
@@ -1370,15 +1382,7 @@ package body GNATCOLL.ALI is
 
                if Eid = -1 then
                   if ALI_Contains_External_Refs then
-                     if Current_X_File_Is_Internal
-                       or else Xref_File = Current_X_File
-                     then
-                        Will_Insert_Ref := True;
-                     else
-                        --  Could be cached (while we are in the same Xref_File
-                        --  for instance)
-                        Will_Insert_Ref := Is_ALI_Unit (Xref_File);
-                     end if;
+                     Will_Insert_Ref := Xref_File_Is_Internal;
                   else
                      Will_Insert_Ref := True;
                   end if;
