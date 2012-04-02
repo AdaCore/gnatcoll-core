@@ -2214,6 +2214,30 @@ package body GNATCOLL.Projects is
       return False;
    end Is_Main_File;
 
+   -------------------
+   -- Get_Directory --
+   -------------------
+
+   function Get_Directory (Project : Project_Type;
+                           Dir : Filesystem_String) return Virtual_File is
+   begin
+      if Dir'Length > 0 then
+         return Create (Name_As_Directory (Dir));
+      else
+         --  ??? Can't we simply access Object_Dir in the view ?
+
+         declare
+            Path : constant File_Array := Project.Object_Path;
+         begin
+            if Path'Length /= 0 then
+               return Path (Path'First);
+            else
+               return GNATCOLL.VFS.No_File;
+            end if;
+         end;
+      end if;
+   end Get_Directory;
+
    ---------------------------
    -- Executables_Directory --
    ---------------------------
@@ -2231,24 +2255,54 @@ package body GNATCOLL.Projects is
               (Name_Id (Get_View (Project).Exec_Directory.Display_Name));
 
          begin
-            if Exec'Length > 0 then
-               return Create (Name_As_Directory (Exec));
-            else
-               --  ??? Can't we simply access Object_Dir in the view ?
-
-               declare
-                  Path : constant File_Array := Project.Object_Path;
-               begin
-                  if Path'Length /= 0 then
-                     return Path (Path'First);
-                  else
-                     return GNATCOLL.VFS.No_File;
-                  end if;
-               end;
-            end if;
+            return Get_Directory (Project, Exec);
          end;
       end if;
    end Executables_Directory;
+
+   -----------------------
+   -- Library_Directory --
+   -----------------------
+
+   function Library_Directory
+     (Project : Project_Type) return GNATCOLL.VFS.Virtual_File
+   is
+   begin
+      if Project = No_Project or else Get_View (Project) = Prj.No_Project then
+         return GNATCOLL.VFS.No_File;
+
+      else
+         declare
+            Library : constant Filesystem_String := +Get_String
+              (Name_Id (Get_View (Project).Library_Dir.Display_Name));
+
+         begin
+            return Get_Directory (Project, Library);
+         end;
+      end if;
+   end Library_Directory;
+
+   ---------------------------
+   -- Library_Ali_Directory --
+   ---------------------------
+
+   function Library_Ali_Directory
+     (Project : Project_Type) return GNATCOLL.VFS.Virtual_File
+   is
+   begin
+      if Project = No_Project or else Get_View (Project) = Prj.No_Project then
+         return GNATCOLL.VFS.No_File;
+
+      else
+         declare
+            Library_Ali : constant Filesystem_String := +Get_String
+              (Name_Id (Get_View (Project).Library_ALI_Dir.Display_Name));
+
+         begin
+            return Get_Directory (Project, Library_Ali);
+         end;
+      end if;
+   end Library_Ali_Directory;
 
    ---------------------------
    -- For_Each_Project_Node --

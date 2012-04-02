@@ -480,6 +480,14 @@ package GNATCOLL.Projects is
    --  Return the directory that contains the executables generated for the
    --  main programs in Project. This is either Exec_Dir or Object_Dir.
 
+   function Library_Directory
+     (Project : Project_Type) return GNATCOLL.VFS.Virtual_File;
+   --  If a library project, return the directory where the library resides.
+
+   function Library_Ali_Directory
+     (Project : Project_Type) return GNATCOLL.VFS.Virtual_File;
+   --  If a library project, return where the ALI files are copied.
+
    -----------
    -- Files --
    -----------
