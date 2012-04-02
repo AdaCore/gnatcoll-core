@@ -41,6 +41,16 @@ package body GNATCOLL.ALI is
    --  This is not the case currently, but this requires additional queries
    --  that could be avoided otherwise.
 
+   ALI_Contains_External_Refs : constant Boolean := True;
+   --  Given U is the set of units for a given ALI file (corresponding to the
+   --  U lines).
+   --  This variable should be set to True if an ALI file can contain
+   --  references to entities defined in a file not in U, when the reference is
+   --  also not in a file from U.
+   --  The parser does extra tests in this case to remove duplicate references
+   --  that would occur in the database otherwise.
+   --  This was fixed in the compiler for L330-027.
+
    Query_Get_File : constant Prepared_Statement :=
      Prepare
        (SQL_Select
@@ -1131,6 +1141,7 @@ package body GNATCOLL.ALI is
          Entity_Kind : Character;
          Eid : E2e_Id;
          Order : Natural := 0;
+         Will_Insert_Ref : Boolean;
          Instance : Unbounded_String;
          pragma Unreferenced (Is_Library_Level);
       begin
@@ -1358,18 +1369,35 @@ package body GNATCOLL.ALI is
                end case;
 
                if Eid = -1 then
-                  declare
-                     Inst : aliased String := To_String (Instance);
-                  begin
-                     Session.DB.Execute
-                       (Query_Insert_Ref,
-                        Params => (1 => +Current_Entity,
-                                   2 => +Xref_File,
-                                   3 => +Xref_Line,
-                                   4 => +Xref_Col,
-                                   5 => +Xref_Kind,
-                                   6 => +Inst'Unrestricted_Access));
-                  end;
+                  if ALI_Contains_External_Refs then
+                     if Current_X_File_Is_Internal
+                       or else Xref_File = Current_X_File
+                     then
+                        Will_Insert_Ref := True;
+                     else
+                        --  Could be cached (while we are in the same Xref_File
+                        --  for instance)
+                        Will_Insert_Ref := Is_ALI_Unit (Xref_File);
+                     end if;
+                  else
+                     Will_Insert_Ref := True;
+                  end if;
+
+                  if Will_Insert_Ref then
+                     declare
+                        Inst : aliased String := To_String (Instance);
+                     begin
+                        Session.DB.Execute
+                          (Query_Insert_Ref,
+                           Params => (1 => +Current_Entity,
+                                      2 => +Xref_File,
+                                      3 => +Xref_Line,
+                                      4 => +Xref_Col,
+                                      5 => +Xref_Kind,
+                                      6 => +Inst'Unrestricted_Access));
+                     end;
+                  end if;
+
                else
                   --  The reference necessarily points to the declaration of
                   --  the parameter, which exists in the same ALI file (but not
