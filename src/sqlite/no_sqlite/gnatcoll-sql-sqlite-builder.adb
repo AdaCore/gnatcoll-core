@@ -62,7 +62,7 @@ package body GNATCOLL.SQL.Sqlite.Builder is
       DB2 : String;
       From_DB1_To_DB2 : Boolean := True) return Boolean
    is
-      pragma Unreferenced (From, To);
+      pragma Unreferenced (DB1, DB2, From_DB1_To_DB2);
    begin
       return False;
    end Backup;
