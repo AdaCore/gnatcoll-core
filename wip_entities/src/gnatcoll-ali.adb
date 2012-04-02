@@ -54,9 +54,6 @@ package body GNATCOLL.ALI is
    --  duplicates. However, this constant was left as a documentation of the
    --  impact this has on the parsing of ALI files.
 
-   LI_Lang : aliased constant String := "li";
-   --  language to use for LI files in the database
-
    type Access_String is access constant String;
    function Convert is new Ada.Unchecked_Conversion
      (Cst_Filesystem_String_Access, Access_String);
@@ -71,21 +68,28 @@ package body GNATCOLL.ALI is
         On_Server => True, Name => "get_file");
    --  Retrieve the info for a file given its path
 
-   Query_Update_File : constant Prepared_Statement :=
+   Query_Update_LI_File : constant Prepared_Statement :=
      Prepare
        (SQL_Update
             (Set   => Database.Files.Stamp = Time_Param (2),
              Table => Database.Files,
              Where => Database.Files.Id = Integer_Param (1)),
-        On_Server => True, Name => "update_file");
+        On_Server => True, Name => "update_li_file");
 
-   Query_Insert_File : constant Prepared_Statement :=
+   Query_Insert_LI_File : constant Prepared_Statement :=
      Prepare
        (SQL_Insert
             ((Database.Files.Path = Text_Param (1))
              & (Database.Files.Stamp = Time_Param (2))
-             & (Database.Files.Language = Text_Param (3))),
-        On_Server => True, Name => "insert_file");
+             & (Database.Files.Language = "li")),
+        On_Server => True, Name => "insert_li_file");
+
+   Query_Insert_Source_File : constant Prepared_Statement :=
+     Prepare
+       (SQL_Insert
+            ((Database.Files.Path = Text_Param (1))
+             & (Database.Files.Language = Text_Param (2))),
+        On_Server => True, Name => "insert_source_file");
 
    Query_Set_File_Dep : constant Prepared_Statement :=
      Prepare
@@ -844,15 +848,15 @@ package body GNATCOLL.ALI is
 
             Update_Needed.all;
             Session.DB.Execute
-              (Query_Update_File, Params => (1 => +Id, 2 => +Stamp));
+              (Query_Update_LI_File, Params => (1 => +Id, 2 => +Stamp));
 
          else
             --  Let callers know we are about to modify the DB
             Update_Needed.all;
 
             Id := Session.DB.Insert_And_Get_PK
-              (Query_Insert_File,
-               Params => (1 => +Name_A, 2 => +Stamp, 3 => +LI_Lang'Access),
+              (Query_Insert_LI_File,
+               Params => (1 => +Name_A, 2 => +Stamp),
                PK => Database.Files.Id);
          end if;
 
@@ -899,10 +903,9 @@ package body GNATCOLL.ALI is
                   Id := Files.Integer_Value (0);
                else
                   Id := Session.DB.Insert_And_Get_PK
-                    (Query_Insert_File,
-                     Params => (1  => +Name_A,
-                                2  => +File.File_Time_Stamp,
-                                3  => +Language'Unrestricted_Access),
+                    (Query_Insert_Source_File,
+                     Params => (1 => +Name_A,
+                                2 => +Language'Unrestricted_Access),
                      PK => Database.Files.Id);
                end if;
 
