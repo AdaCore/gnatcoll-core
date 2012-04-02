@@ -840,9 +840,16 @@ package body GNATCOLL.SQL.Exec is
       PK         : SQL_Field_Integer) return Integer
    is
       R : Forward_Cursor;
+      Id : Integer;
    begin
       Fetch (R, Connection, Query, Params);
-      return Last_Id (R, Connection, PK);
+      Id := Last_Id (R, Connection, PK);
+
+      if Active (Me_Query) then
+         Trace (Me_Query, "  => id=" & Id'Img);
+      end if;
+
+      return Id;
    end Insert_And_Get_PK;
 
    -----------
@@ -1513,10 +1520,17 @@ package body GNATCOLL.SQL.Exec is
       PK         : SQL_Field_Integer) return Integer
    is
       Result : Forward_Cursor;
+      Id : Integer;
    begin
       Execute_And_Log
         (Result, Connection, "", Stmt, Direct => False, Params => Params);
-      return Last_Id (Result, Connection, PK);
+      Id := Last_Id (Result, Connection, PK);
+
+      if Active (Me_Query) then
+         Trace (Me_Query, "  => id=" & Id'Img);
+      end if;
+
+      return Id;
    end Insert_And_Get_PK;
 
    -----------
@@ -1603,7 +1617,7 @@ package body GNATCOLL.SQL.Exec is
    -- "+" --
    ---------
 
-   function "+" (Value : access String) return SQL_Parameter is
+   function "+" (Value : access constant String) return SQL_Parameter is
    begin
       return SQL_Parameter'
         (Typ => Parameter_Text, Str_Val => Value.all'Unchecked_Access);

@@ -1558,9 +1558,6 @@ package body GNATCOLL.SQL_Impl is
         Ada.Strings.Fixed.Count (Value, "'");
       Num_Of_Backslashes : constant Natural :=
         Ada.Strings.Fixed.Count (Value, "\");
-      New_Str            : String
-        (Value'First .. Value'Last + Num_Of_Apostrophes + Num_Of_Backslashes);
-      Index              : Natural := Value'First;
    begin
       if not Quote then
          return Value;
@@ -1572,20 +1569,30 @@ package body GNATCOLL.SQL_Impl is
          return "'" & Value & "'";
       end if;
 
-      for I in Value'Range loop
-         if Value (I) = ''' then
-            New_Str (Index .. Index + 1) := "''";
-            Index := Index + 1;
-         elsif Value (I) = '\' then
-            New_Str (Index .. Index + 1) := "\\";
-            Index := Index + 1;
-         else
-            New_Str (Index) := Value (I);
-         end if;
-         Index := Index + 1;
-      end loop;
+      declare
+         New_Str            : String
+           (Value'First ..
+              Value'Last + Num_Of_Apostrophes + Num_Of_Backslashes + 2);
+         Index : Natural := New_Str'First + 1;
+      begin
+         New_Str (New_Str'First) := ''';
+         New_Str (New_Str'Last) := ''';
 
-      return "'" & New_Str & "'";
+         for I in Value'Range loop
+            if Value (I) = ''' then
+               New_Str (Index .. Index + 1) := "''";
+               Index := Index + 1;
+            elsif Value (I) = '\' then
+               New_Str (Index .. Index + 1) := "\\";
+               Index := Index + 1;
+            else
+               New_Str (Index) := Value (I);
+            end if;
+            Index := Index + 1;
+         end loop;
+
+         return New_Str;
+      end;
    end String_Image;
 
    ----------------------

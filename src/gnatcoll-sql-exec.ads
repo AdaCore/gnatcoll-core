@@ -153,7 +153,7 @@ package GNATCOLL.SQL.Exec is
    type SQL_Parameter (Typ : Parameter_Type := Parameter_Integer) is record
       case Typ is
          when Parameter_Integer => Int_Val : Integer;
-         when Parameter_Text    => Str_Val : access String;
+         when Parameter_Text    => Str_Val : access constant String;
             --  references external string, to avoid an extra copy
          when Parameter_Boolean => Bool_Val : Boolean;
          when Parameter_Float   => Float_Val : Float;
@@ -166,7 +166,7 @@ package GNATCOLL.SQL.Exec is
 
    Null_Parameter : constant SQL_Parameter;
 
-   function "+" (Value : access String) return SQL_Parameter;
+   function "+" (Value : access constant String) return SQL_Parameter;
    function "+" (Value : Integer) return SQL_Parameter;
    function "+" (Value : Boolean) return SQL_Parameter;
    function "+" (Value : Float) return SQL_Parameter;
