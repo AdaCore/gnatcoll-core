@@ -635,7 +635,6 @@ package body GNATCOLL.Traces is
 
                Tmp2 := Tmp2.Next;
             end loop;
-
          end if;
 
          Unlock;
@@ -686,10 +685,19 @@ package body GNATCOLL.Traces is
       Msg    : String := "Unexpected exception: ";
       Color  : String := Default_Fg)
    is
+      Default : Default_Activation_Status;
    begin
       if Handle.Exception_Handle = null then
+         --  Default activation should be the same as the handle
+         if Handle.Active then
+            Default := On;
+         else
+            Default := Off;
+         end if;
+
          Handle.Exception_Handle := Create
-           (Unit_Name => Handle.Name.all & ".EXCEPTIONS");
+           (Unit_Name => Handle.Name.all & ".EXCEPTIONS",
+            Default   => Default);
 
          --  Unless the config file specified an explicit stream,
          --  we inherit the one from Handle.
