@@ -24,7 +24,6 @@ with Ada.Containers.Vectors;
 with Ada.Strings.Unbounded; use Ada.Strings.Unbounded;
 with Ada.Unchecked_Conversion;
 with Ada.Unchecked_Deallocation;
-with GNAT.IO; use GNAT.IO;
 with GNATCOLL.ALI.Database; use GNATCOLL.ALI.Database;
 with GNATCOLL.Mmap;         use GNATCOLL.Mmap;
 with GNATCOLL.SQL;          use GNATCOLL.SQL;
@@ -201,6 +200,14 @@ package body GNATCOLL.ALI is
                and Database.Entity_Refs.Line = Integer_Param (3)
                and Database.Entity_Refs.Column = Integer_Param (4)),
         On_Server => True, Name => "set_entity_renames");
+
+   Query_Set_Caller_At_Decl : constant Prepared_Statement :=
+     Prepare
+       (SQL_Update
+            (Table => Database.Entities,
+             Set   => (Database.Entities.Decl_Caller = Integer_Param (2)),
+             Where => Database.Entities.Id = Integer_Param (1)),
+        On_Server => True, Name => "set_caller_at_decl");
 
    Query_Set_Entity_Name_And_Kind : constant Prepared_Statement :=
      Prepare
@@ -530,9 +537,12 @@ package body GNATCOLL.ALI is
       --  Whether the current Xref_File would return true for Is_Unit_File.
 
       Current_Entity : Integer;
-      Current_Entity_Decl_Line : Integer;
       --  Id in "entities" table for the current entity.
-      --  Current_Entity_Decl_Line is the location of its declaration.
+
+      Spec_Start_Line : Integer;
+      --  Start of the declaration (which might also be the completion of the
+      --  declaration if a 'c' reference is found). This is used to compute the
+      --  scope of the current entity.
 
       Body_Start_Line : Integer;
       --  The 'b' or 'c' reference for the current entity.
@@ -1375,6 +1385,26 @@ package body GNATCOLL.ALI is
                  ((File_Id => Current_X_File,
                    Line    => Xref_Line,
                    Column  => Xref_Col)).Id;
+               Spec_Start_Line := Xref_Line;
+
+               --  But now we also know the caller at declaration, so we can
+               --  set it.
+
+               if Current_X_File_Unit_File_Index /= -1 then
+                  declare
+                     Caller : constant Integer :=
+                       Get_Caller (Scope_Trees,
+                                   Current_X_File_Unit_File_Index,
+                                   Xref_Line);
+                  begin
+                     if Caller /= -1 then
+                        Session.DB.Execute
+                          (Query_Set_Caller_At_Decl,
+                           Params => (1 => +Current_Entity,
+                                      2 => +Caller));
+                     end if;
+                  end;
+               end if;
 
             else   --  First pass, we might need to create the entity
                --  For operators, omit the quotes when inserting into the
@@ -1388,11 +1418,11 @@ package body GNATCOLL.ALI is
                   Name_End   := Name_End - 1;
                end if;
 
-               Current_Entity_Decl_Line := Xref_Line;
+               Spec_Start_Line := Xref_Line;
                Current_Entity := Get_Or_Create_Entity
                  (Name        => String (Str (Name_Start .. Name_End)),
                   Decl_File   => Current_X_File,
-                  Decl_Line   => Current_Entity_Decl_Line,
+                  Decl_Line   => Spec_Start_Line,
                   Decl_Column => Xref_Col,
                   Kind        => Xref_Kind);
             end if;
@@ -1620,7 +1650,9 @@ package body GNATCOLL.ALI is
                   Eid := E2e_Has_Discriminant;
                when 'z' =>
                   Eid := E2e_Is_Formal_Of;
-               when 'b' | 'c' =>  --  body
+               when 'c' =>  --  completion of spec
+                  Spec_Start_Line := Xref_Line;
+               when 'b' =>  --  body
                   Body_Start_Line := Xref_Line;
                when 'e' =>  --  end of spec
                   if Process_Scopes
@@ -1628,7 +1660,7 @@ package body GNATCOLL.ALI is
                   then
                      Insert (Scope_Trees (Xref_File_Unit_File_Index),
                              Entity => Current_Entity,
-                             Low    => Current_Entity_Decl_Line,
+                             Low    => Spec_Start_Line,
                              High   => Xref_Line);
                   end if;
                when 't' =>  --  end of body
@@ -1854,22 +1886,7 @@ package body GNATCOLL.ALI is
          Process_Xref_Section (First_Pass => False);
       end if;
 
-      if False and then Library_File.Base_Name = "gtk-ctree.ali" then
-         for S in Scope_Trees'Range loop
-            if Scope_Trees (S) /= null then
-               for Line in Scope_Trees (S)'First
-                 ..  Integer'Min (1768, Scope_Trees (S)'Last)
-               loop
-                  Put_Line (Line'Img & ": " & Scope_Trees (S)(Line).Entity'Img
-                            & "  from:"
-                            & Scope_Trees (S)(Line).Scope'Img);
-               end loop;
-            end if;
-         end loop;
-      end if;
-
       Free (Scope_Trees);
-
       Close (M);
    end Parse_LI;
 

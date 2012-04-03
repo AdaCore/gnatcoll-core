@@ -139,3 +139,8 @@
    LI files, since we do not need the timestamp for source files instead,
    and thus would not have to compute it.
    In fact, not computing the timestamp already saves time.
+
+* Queries
+
+** Caller at declaration:
+   select caller.name from entities caller, entities, files where entities.decl_file=files.id and caller.id=entities.decl_caller and files.path like '%gps-kernel.ads' and entities.name='Set_Default_Key' and entities.decl_line=217;
