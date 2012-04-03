@@ -1397,7 +1397,9 @@ package body GNATCOLL.ALI is
                                    Current_X_File_Unit_File_Index,
                                    Xref_Line);
                   begin
-                     if Caller /= -1 then
+                     if Caller /= -1
+                       and then Caller /= Current_Entity
+                     then
                         Session.DB.Execute
                           (Query_Set_Caller_At_Decl,
                            Params => (1 => +Current_Entity,
