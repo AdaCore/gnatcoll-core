@@ -23,6 +23,7 @@ with Ada.Containers.Hashed_Maps;
 with Ada.Containers.Vectors;
 with Ada.Strings.Unbounded; use Ada.Strings.Unbounded;
 with Ada.Unchecked_Conversion;
+with Ada.Unchecked_Deallocation;
 with GNATCOLL.ALI.Database; use GNATCOLL.ALI.Database;
 with GNATCOLL.Mmap;         use GNATCOLL.Mmap;
 with GNATCOLL.SQL;          use GNATCOLL.SQL;
@@ -264,6 +265,34 @@ package body GNATCOLL.ALI is
    --  points to a reference of the renamed entity, which we can only resolve
    --  once we have parsed the whole ALI file.
 
+   type Line_Info is record
+      Entity : Integer; --  id of the entity that encloses this line (or -1)
+      Scope  : Natural; --  number of lines the entity encloses
+   end record;
+   type Line_Info_Array is array (Natural range <>) of Line_Info;
+   type Line_Info_Array_Access is access Line_Info_Array;
+
+   procedure Unchecked_Free is new Ada.Unchecked_Deallocation
+     (Line_Info_Array, Line_Info_Array_Access);
+
+   procedure Insert
+     (Lines     : in out Line_Info_Array_Access;
+      Entity    : Integer;
+      Low, High : Integer);
+   --  Store scope info for a new entity
+
+   type Scope_Tree_Array is array (Natural range <>) of Line_Info_Array_Access;
+   type Scope_Tree_Array_Access is access all Scope_Tree_Array;
+   --  A collection of scope trees, since a given LI file represents multiple
+   --  source files.
+
+   procedure Free (Trees : in out Scope_Tree_Array_Access);
+
+   procedure Grow_As_Needed
+     (Trees : in out Scope_Tree_Array_Access;
+      Count : Natural);
+   --  Ensures that Trees contains at least Count files.
+
    procedure Parse_LI
      (Session           : Session_Type;
       Language          : String;
@@ -332,6 +361,80 @@ package body GNATCOLL.ALI is
       end if;
    end Create_Database;
 
+   ------------
+   -- Insert --
+   ------------
+
+   procedure Insert
+     (Lines     : in out Line_Info_Array_Access;
+      Entity    : Integer;
+      Low, High : Integer)
+   is
+      Tmp   : Line_Info_Array_Access;
+      Scope : constant Natural := High - Low;
+   begin
+      if Lines = null then
+         Lines := new Line_Info_Array (1 .. Integer'Max (High, 10_000));
+         Lines.all := (others => (Entity => -1, Scope => 0));
+      elsif Lines'Last < High then
+         Tmp := Lines;
+         Lines := new Line_Info_Array (1 .. High + 2000);
+         Lines (Tmp'Range) := Tmp.all;
+         Lines (Tmp'Last + 1 .. Lines'Last) :=
+           (others => (Entity => -1, Scope => 0));
+         Unchecked_Free (Tmp);
+      end if;
+
+      for Line in Low .. High loop
+         --  Override only if we have a more narrow scope (ie we are a child of
+         --  the entity known at that line).
+
+         if Lines (Line).Entity = -1
+           or else Lines (Line).Scope > Scope
+         then
+            Lines (Line) := (Entity => Entity, Scope => Scope);
+         end if;
+      end loop;
+   end Insert;
+
+   ----------
+   -- Free --
+   ----------
+
+   procedure Free (Trees : in out Scope_Tree_Array_Access) is
+      procedure Unchecked_Free is new Ada.Unchecked_Deallocation
+        (Scope_Tree_Array, Scope_Tree_Array_Access);
+   begin
+      if Trees /= null then
+         for T in Trees'Range loop
+            Unchecked_Free (Trees (T));
+         end loop;
+         Unchecked_Free (Trees);
+      end if;
+   end Free;
+
+   --------------------
+   -- Grow_As_Needed --
+   --------------------
+
+   procedure Grow_As_Needed
+     (Trees : in out Scope_Tree_Array_Access;
+      Count : Natural)
+   is
+      procedure Unchecked_Free is new Ada.Unchecked_Deallocation
+        (Scope_Tree_Array, Scope_Tree_Array_Access);
+      Tmp : Scope_Tree_Array_Access;
+   begin
+      if Trees = null then
+         Trees := new Scope_Tree_Array (1 .. Count);
+      elsif Trees'Length < Count then
+         Tmp := Trees;
+         Trees := new Scope_Tree_Array (1 .. Count);
+         Trees (Tmp'Range) := Tmp.all;
+         Unchecked_Free (Tmp);
+      end if;
+   end Grow_As_Needed;
+
    --------------
    -- Parse_LI --
    --------------
@@ -363,23 +466,31 @@ package body GNATCOLL.ALI is
 
       Unit_Files : Depid_To_Ids.Vector;
       --  Contains the list of units associated with the current ALI (these
-      --  are the ids in the "files" table). This list is only traversed once
-      --  for each X line, and will generally only contain a few elements, so
-      --  it is reasonably fast.
+      --  are the ids in the "files" table). This list generally only contains
+      --  a few elements, so is reasonably fast.
+      --  These are the files from the "U" lines (spec, body and separates).
+
+      Scope_Trees : Scope_Tree_Array_Access;
 
       Current_X_File : Integer;
-      Current_X_File_Is_ALI_Unit : Boolean;
       --  Id (in the database) of the file for the current X section
+
+      Current_X_File_Unit_File_Index : Integer := -1;
+      --  This is set to a Natural if the Current_X_File represents a file
+      --  associated with a Unit_File ("U" line") of the current LI. The exact
+      --  value is used as an index in the list of scope trees.
 
       Xref_File, Xref_Line, Xref_Col : Integer;
       Xref_Kind : Character;
       --  The current xref, result of Get_Xref
 
-      Xref_File_Is_ALI_Unit : Boolean;
-      --  Whether the current Xref_File would return true for Is_ALI_Unit.
+      Xref_File_Unit_File_Index : Integer := -1;
+      --  Whether the current Xref_File would return true for Is_Unit_File.
 
       Current_Entity : Integer;
-      --  Id in "entities" table for the current entity
+      Current_Entity_Decl_Line : Integer;
+      --  Id in "entities" table for the current entity.
+      --  Current_Entity_Decl_Line is the location of its declaration.
 
       procedure Skip_Spaces;
       pragma Inline (Skip_Spaces);
@@ -448,7 +559,8 @@ package body GNATCOLL.ALI is
         (Endchar   : Character;
          Eid       : E2e_Id := -1;
          E2e_Order : Integer := 1;
-         With_Col  : Boolean := True) return Boolean;
+         With_Col  : Boolean := True;
+         Process_E2E : Boolean) return Boolean;
       --  Parse a "file|line kind col" reference, or the name of a predefined
       --  entity. After this ref or name, we expect to see Endchar.
       --  Returns False if there is an error.
@@ -456,6 +568,8 @@ package body GNATCOLL.ALI is
       --  the relationship between the newly parsed entity and the current
       --  entity. This kind of this relationship is given by Eid. Its "order"
       --  is given by E2e_Order.
+      --  If Process_E2E is false, then nothing is stored in the database, and
+      --  the information is simply skipped.
 
       function Insert_LI_File (File : Virtual_File) return Integer;
       --  Returns -2 if the file is already up-to-date in the database, and
@@ -472,35 +586,41 @@ package body GNATCOLL.ALI is
       --
       --  Returns -1 if the file is not known in the project.
 
-      procedure Process_Entity_Line;
+      procedure Process_Entity_Line (First_Pass : Boolean);
       --  Process the current line when it is an entity declaration and its
       --  references in the current file.
+      --  When First_Pass is true, this skips all the entity-to-entity
+      --  relationships, but stores the references in the database.
+      --  If, on the other hand, First_Pass is False, then it only processes
+      --  the entity-to-entity relationships and skips the references.
 
-      procedure First_Pass;
-      --  Find all entities referenced in the current LI file and store partial
-      --  information in Entity_Decl_To_Id.
-      --  Index should point to the beginning of the first 'X' section, and
-      --  will be put back at the same place.
+      procedure Process_Xref_Section (First_Pass : Boolean);
+      --  Process all the xref information found in the X sections of the ALI
+      --  file.
+      --  See comment in Process_Entity_Line for the meaning of First_Pass.
 
-      function Is_ALI_Unit (Id : Integer) return Boolean;
+      function Is_Unit_File (Id : Integer) return Integer;
       --  Whether the file with the given id is one of the units associated
       --  with the current ALI.
 
-      -----------------
-      -- Is_ALI_Unit --
-      -----------------
+      ------------------
+      -- Is_Unit_File --
+      ------------------
 
-      function Is_ALI_Unit (Id : Integer) return Boolean is
+      function Is_Unit_File (Id : Integer) return Integer is
          C : Depid_To_Ids.Cursor := Unit_Files.First;
+         Index : Natural := 1;
       begin
          while Has_Element (C) loop
             if Element (C) = Id then
-               return True;
+               return Index;
             end if;
+
+            Index := Index + 1;
             Next (C);
          end loop;
-         return False;
-      end Is_ALI_Unit;
+         return -1;
+      end Is_Unit_File;
 
       -----------------
       -- Get_Natural --
@@ -512,6 +632,7 @@ package body GNATCOLL.ALI is
          if Str (Index) not in '0' .. '9' then
             Trace (Me_Error, "Expected a natural, got "
                    & String (Str (Index .. Integer'Min (Index + 20, Last))));
+            raise Program_Error;
             return 0;  --  Error in ALI file
          end if;
 
@@ -547,7 +668,7 @@ package body GNATCOLL.ALI is
          if Str (Index) = '|' then
             Xref_File := Depid_To_Id.Element (Xref_Line);
             if ALI_Contains_External_Refs then
-               Xref_File_Is_ALI_Unit := Is_ALI_Unit (Xref_File);
+               Xref_File_Unit_File_Index := Is_Unit_File (Xref_File);
             end if;
             Index := Index + 1;  --  Skip '|'
             Xref_Line := Get_Natural;
@@ -574,7 +695,8 @@ package body GNATCOLL.ALI is
         (Endchar   : Character;
          Eid       : E2e_Id := -1;
          E2e_Order : Integer := 1;
-         With_Col  : Boolean := True) return Boolean
+         With_Col  : Boolean := True;
+         Process_E2E : Boolean) return Boolean
       is
          Start : constant Integer := Index;
          Name_Last : Integer;
@@ -622,36 +744,38 @@ package body GNATCOLL.ALI is
          end if;
 
          if Is_Predefined then
-            declare
-               R : Forward_Cursor;
-               Name : aliased String := String (Str (Start .. Name_Last));
-            begin
-               R.Fetch
-                 (Session.DB,
-                  Query_Find_Predefined_Entity,
-                  Params => (1 => +Name'Unrestricted_Access));
+            if Process_E2E then
+               declare
+                  R : Forward_Cursor;
+                  Name : aliased String := String (Str (Start .. Name_Last));
+               begin
+                  R.Fetch
+                    (Session.DB,
+                     Query_Find_Predefined_Entity,
+                     Params => (1 => +Name'Unrestricted_Access));
 
-               if not R.Has_Row then
-                  if Active (Me_Error) then
-                     Trace (Me_Error,
-                            "Missing predefined entity in the database: '"
-                            & Name & "' in "
-                            & Library_File.Display_Full_Name);
+                  if not R.Has_Row then
+                     if Active (Me_Error) then
+                        Trace (Me_Error,
+                               "Missing predefined entity in the database: '"
+                               & Name & "' in "
+                               & Library_File.Display_Full_Name);
+                     end if;
+
+                     Ref_Entity := Session.DB.Insert_And_Get_PK
+                       (Query_Insert_Entity,
+                        Params =>
+                          (1 => +Name'Unrestricted_Access,
+                           2 => +'I',
+                           3 => +(-1),
+                           4 => +(-1),
+                           5 => +(-1)),
+                        PK => Database.Entities.Id);
+                  else
+                     Ref_Entity := R.Integer_Value (0);
                   end if;
-
-                  Ref_Entity := Session.DB.Insert_And_Get_PK
-                    (Query_Insert_Entity,
-                     Params =>
-                       (1 => +Name'Unrestricted_Access,
-                        2 => +'I',
-                        3 => +(-1),
-                        4 => +(-1),
-                        5 => +(-1)),
-                     PK => Database.Entities.Id);
-               else
-                  Ref_Entity := R.Integer_Value (0);
-               end if;
-            end;
+               end;
+            end if;
 
          else
             --  Only insert if we have the detailed info for an entity in one
@@ -660,7 +784,8 @@ package body GNATCOLL.ALI is
             --  for entities in other units we'll have to parse the
             --  corresponding LI). This avoids duplicates.
 
-            if Current_X_File_Is_ALI_Unit
+            if Process_E2E
+              and then Current_X_File_Unit_File_Index /= -1
               and then Xref_File /= -1
             then
                Ref_Entity := Get_Or_Create_Entity
@@ -672,7 +797,9 @@ package body GNATCOLL.ALI is
             end if;
          end if;
 
-         if Ref_Entity /= -1 then
+         if Process_E2E
+           and then Ref_Entity /= -1
+         then
             Session.DB.Execute
               (Query_Insert_E2E,
                Params => (1 => +Current_Entity,
@@ -710,7 +837,7 @@ package body GNATCOLL.ALI is
          Start_File  : constant Integer := Xref_File;
          Start_Line  : constant Integer := Xref_Line;
          Start_Col   : constant Integer := Xref_Col;
-         Start_Internal : constant Boolean := Xref_File_Is_ALI_Unit;
+         Start_Index : constant Integer := Xref_File_Unit_File_Index;
       begin
          Instance := Null_Unbounded_String;
 
@@ -733,7 +860,7 @@ package body GNATCOLL.ALI is
             Xref_File := Start_File;
             Xref_Line := Start_Line;
             Xref_Col  := Start_Col;
-            Xref_File_Is_ALI_Unit := Start_Internal;
+            Xref_File_Unit_File_Index := Start_Index;
          end if;
       end Skip_Instance_Info;
 
@@ -915,6 +1042,7 @@ package body GNATCOLL.ALI is
 
          if Is_ALI_Unit then
             Unit_Files.Append (Id);
+            Grow_As_Needed (Scope_Trees, Integer (Unit_Files.Length));
          end if;
 
          return Id;
@@ -1132,54 +1260,26 @@ package body GNATCOLL.ALI is
          end if;
       end Get_Or_Create_Entity;
 
-      ----------------
-      -- First_Pass --
-      ----------------
+      --------------------------
+      -- Process_Xref_Section --
+      --------------------------
 
-      procedure First_Pass is
-         Start_Of_X_Sections  : constant Integer := Index;
-         Name_Start, Name_End : Integer;
+      procedure Process_Xref_Section (First_Pass : Boolean) is
       begin
          while Index <= Last loop
             if Str (Index) = 'X' then
                Index := Index + 2;
 
-               Current_X_File := Depid_To_Id.Element (Get_Natural);
                --  Could be set to -1 if the file is not found in the project's
                --  sources (for instance sdefault.adb)
+               Current_X_File := Depid_To_Id.Element (Get_Natural);
+               Current_X_File_Unit_File_Index := Is_Unit_File (Current_X_File);
 
-            elsif Str (Index) = '.' then
-               --  Same entity as before, nothing to do
-               null;
-
-            elsif Str (Index) in '0' .. '9' then
+            elsif Str (Index) = '.'
+              or else Str (Index) in '0' .. '9'
+            then
                if Current_X_File /= -1 then
-                  --  A new entity for this LI file, check whether we need to
-                  --  insert something in the database.
-
-                  Get_Ref;
-                  Index := Index + 1;   --  Skip Library_Level flag
-                  Name_Start       := Index;
-                  Skip_To_Name_End;
-                  Name_End         := Index - 1;
-
-                  --  For operators, omit the quotes when inserting into the
-                  --  database (since that's not what references to that
-                  --  entity will be using anyway.
-
-                  if Str (Name_Start) = '"'
-                    and then Str (Name_End) = '"'
-                  then
-                     Name_Start := Name_Start + 1;
-                     Name_End   := Name_End - 1;
-                  end if;
-
-                  Current_Entity := Get_Or_Create_Entity
-                    (Name        => String (Str (Name_Start .. Name_End)),
-                     Decl_File   => Current_X_File,
-                     Decl_Line   => Xref_Line,
-                     Decl_Column => Xref_Col,
-                     Kind        => Xref_Kind);
+                  Process_Entity_Line (First_Pass => First_Pass);
                end if;
 
             else
@@ -1189,18 +1289,22 @@ package body GNATCOLL.ALI is
 
             Next_Line;
          end loop;
-
-         Index := Start_Of_X_Sections;
-      end First_Pass;
+      end Process_Xref_Section;
 
       -------------------------
       -- Process_Entity_Line --
       -------------------------
 
-      procedure Process_Entity_Line is
+      procedure Process_Entity_Line (First_Pass : Boolean) is
+         Process_E2E    : constant Boolean := not First_Pass;
+         Process_Refs   : constant Boolean := not First_Pass;
+         Process_Scopes : constant Boolean := First_Pass;
+
+         Body_Start_Line : Integer := -1;
+
          Is_Library_Level : Boolean;
          Ref_Entity : Integer;
-         Name_End : Integer;
+         Name_End, Name_Start : Integer;
          Entity_Kind : Character;
          Eid : E2e_Id;
          Order : Natural := 0;
@@ -1217,16 +1321,41 @@ package body GNATCOLL.ALI is
             Get_Ref;
             Entity_Kind      := Xref_Kind;
             Is_Library_Level := Get_Char = '*';
+            Name_Start       := Index;
             Skip_To_Name_End;
-            Name_End         := Index;
+            Name_End         := Index - 1;
 
-            --  After First_Pass, we know the entity exists, so it is safe to
-            --  call Element directly.
+            if Process_E2E then
+               --  After First_Pass, we know the entity exists, so it is safe
+               --  to call Element directly.
 
-            Current_Entity := Entity_Decl_To_Id.Element
-              ((File_Id => Current_X_File,
-                Line    => Xref_Line,
-                Column  => Xref_Col)).Id;
+               Current_Entity := Entity_Decl_To_Id.Element
+                 ((File_Id => Current_X_File,
+                   Line    => Xref_Line,
+                   Column  => Xref_Col)).Id;
+
+            else   --  First pass, we might need to create the entity
+               --  For operators, omit the quotes when inserting into the
+               --  database (since that's not what references to that
+               --  entity will be using anyway.
+
+               if Str (Name_Start) = '"'
+                 and then Str (Name_End) = '"'
+               then
+                  Name_Start := Name_Start + 1;
+                  Name_End   := Name_End - 1;
+               end if;
+
+               Current_Entity_Decl_Line := Xref_Line;
+               Current_Entity := Get_Or_Create_Entity
+                 (Name        => String (Str (Name_Start .. Name_End)),
+                  Decl_File   => Current_X_File,
+                  Decl_Line   => Current_Entity_Decl_Line,
+                  Decl_Column => Xref_Col,
+                  Kind        => Xref_Kind);
+            end if;
+
+            Name_End := Index;
 
             --  Process the extra information we had (pointed type,...)
 
@@ -1242,18 +1371,20 @@ package body GNATCOLL.ALI is
                Get_Ref;
                Name_End := Index;
 
-               Entity_Renamings.Append
-                 ((Entity => Current_Entity,
-                   File   => Xref_File,
-                   Line   => Xref_Line,
-                   Column => Xref_Col));
+               if Process_E2E then
+                  Entity_Renamings.Append
+                    ((Entity => Current_Entity,
+                      File   => Xref_File,
+                      Line   => Xref_Line,
+                      Column => Xref_Col));
+               end if;
             end if;
 
             loop
                Index := Name_End + 1;
                Order := Order + 1;
                Xref_File := Current_X_File;
-               Xref_File_Is_ALI_Unit := Current_X_File_Is_ALI_Unit;
+               Xref_File_Unit_File_Index := Current_X_File_Unit_File_Index;
 
                case Str (Name_End) is
                   when '[' =>
@@ -1265,7 +1396,8 @@ package body GNATCOLL.ALI is
                        (Endchar => ']',
                         Eid => E2e_Instance_Of,
                         E2e_Order => Order,
-                        With_Col => False)
+                        With_Col => False,
+                        Process_E2E => Process_E2E)
                      then
                         return;
                      end if;
@@ -1289,7 +1421,8 @@ package body GNATCOLL.ALI is
                      end case;
 
                      if not Get_Ref_Or_Predefined
-                       (Endchar => '>', Eid => Eid, E2e_Order => Order)
+                       (Endchar => '>', Eid => Eid, E2e_Order => Order,
+                        Process_E2E => Process_E2E)
                      then
                         return;
                      end if;
@@ -1316,7 +1449,8 @@ package body GNATCOLL.ALI is
                      end case;
 
                      if not Get_Ref_Or_Predefined
-                       (Endchar => ')', Eid => Eid, E2e_Order => Order)
+                       (Endchar => ')', Eid => Eid, E2e_Order => Order,
+                        Process_E2E => Process_E2E)
                      then
                         return;
                      end if;
@@ -1341,7 +1475,8 @@ package body GNATCOLL.ALI is
                      end case;
 
                      if not Get_Ref_Or_Predefined
-                       (Endchar => '}', Eid => Eid, E2e_Order => Order)
+                       (Endchar => '}', Eid => Eid, E2e_Order => Order,
+                        Process_E2E => Process_E2E)
                      then
                         return;
                      end if;
@@ -1374,7 +1509,7 @@ package body GNATCOLL.ALI is
 
             Index := Name_End;
             Xref_File := Current_X_File;
-            Xref_File_Is_ALI_Unit := Current_X_File_Is_ALI_Unit;
+            Xref_File_Unit_File_Index := Current_X_File_Unit_File_Index;
 
             while Index <= Last
               and then Str (Index) /= ASCII.LF
@@ -1419,6 +1554,7 @@ package body GNATCOLL.ALI is
                --      from instance at gtk-handlers.ads:673
 
                Skip_Instance_Info (Instance);
+               Eid := -1;
 
                case Xref_Kind is
                   when '>' =>
@@ -1429,13 +1565,35 @@ package body GNATCOLL.ALI is
                      Eid := E2e_In_Out_Parameter;
                   when '^' =>
                      Eid := E2e_Access_Parameter;
+                  when 'b' =>  --  body
+                     Body_Start_Line := Xref_Line;
+                  when 'e' =>  --  end of spec
+                     if False and then Process_Scopes then
+                        Insert (Scope_Trees (Xref_File_Unit_File_Index),
+                                Entity => Current_Entity,
+                                Low    => Current_Entity_Decl_Line,
+                                High   => Xref_Line);
+                     end if;
+                  when 't' =>  --  end of body
+                     if False
+                       and then Process_Scopes
+                       and then Body_Start_Line /= -1
+                     then
+                        Insert (Scope_Trees (Xref_File_Unit_File_Index),
+                                Entity => Current_Entity,
+                                Low    => Body_Start_Line,
+                                High   => Xref_Line);
+                     end if;
+
                   when others =>
-                     Eid := -1;
+                     null;
                end case;
 
                if Eid = -1 then
-                  if ALI_Contains_External_Refs then
-                     Will_Insert_Ref := Xref_File_Is_ALI_Unit;
+                  if not Process_Refs then
+                     Will_Insert_Ref := False;
+                  elsif ALI_Contains_External_Refs then
+                     Will_Insert_Ref := Xref_File_Unit_File_Index /= -1;
                   else
                      Will_Insert_Ref := True;
                   end if;
@@ -1455,7 +1613,7 @@ package body GNATCOLL.ALI is
                      end;
                   end if;
 
-               else
+               elsif Process_E2E then
                   --  The reference necessarily points to the declaration of
                   --  the parameter, which exists in the same ALI file (but not
                   --  necessarily the same source file).
@@ -1477,6 +1635,8 @@ package body GNATCOLL.ALI is
             end loop;
          end if;
       end Process_Entity_Line;
+
+      Start_Of_X_Section : Integer;
 
    begin
       ALI_Id := Insert_LI_File (File => Library_File);
@@ -1609,34 +1769,13 @@ package body GNATCOLL.ALI is
       --  Then process the xref for each entity.
 
       if Str (Index) = 'X' then
-         First_Pass;
-
-         while Index <= Last loop
-            if Str (Index) = 'X' then
-               Index := Index + 2;
-               Current_X_File := Depid_To_Id.Element (Get_Natural);
-               Current_X_File_Is_ALI_Unit := Is_ALI_Unit (Current_X_File);
-
-            elsif Str (Index) = '.'
-              or else Str (Index) in '0' .. '9'
-            then
-               --  If we know the source file in which the entity is
-               --  declared, we can insert it and all its refs. Otherwise
-               --  we just ignore it. (for instance, sdefault.adb is often not
-               --  found)
-
-               if Current_X_File /= -1 then
-                  Process_Entity_Line;
-               end if;
-
-            else
-               --  The start of another section in the ALI file
-               exit;
-            end if;
-
-            Next_Line;
-         end loop;
+         Start_Of_X_Section := Index;
+         Process_Xref_Section (First_Pass => True);
+         Index := Start_Of_X_Section;
+         Process_Xref_Section (First_Pass => False);
       end if;
+
+      Free (Scope_Trees);
 
       Close (M);
    end Parse_LI;

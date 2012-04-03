@@ -3,8 +3,8 @@ DEBUG.COUNT=yes
 SQL.*=no
 SQL.SQLITE.GNADE=yes   # Requires change in source to activate, too
 SQL.SQLITE.LOG=yes
-SQL.ERROR=yes >&1
 PROJECTS=no
 ENTITIES.*=yes
 ENTITIES.DEBUG=no
-*.TIMING >&1
+*.ERROR=yes >&1
+*.TIMING=yes >&1
