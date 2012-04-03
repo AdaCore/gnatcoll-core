@@ -365,11 +365,6 @@ package body GNATCOLL.Projects is
       Xref_Dirs : Boolean) return Filesystem_String;
    --  Adds the object subdirectory to Id if one is defined
 
-   function Get_Directory
-     (Project : Project_Type;
-      Dir     : Filesystem_String) return Virtual_File;
-   --  ??? Comment need to be added.
-
    -----------
    -- Lists --
    -----------
