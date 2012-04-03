@@ -104,6 +104,8 @@
 |    13 | out parameter    | # B is an "out" parameter for A     |
 |    14 | in out parameter | # B is an "in out" parameter for A  |
 |    15 | access parameter | # B is an "access" parameter for A  |
+|    16 | has discriminant | # B is a discriminant of A          |
+|    17 | is formal of     | # B is a generic formal parameter   |
 
 | TABLE | files |
 | id    | path  | stamp      | language |

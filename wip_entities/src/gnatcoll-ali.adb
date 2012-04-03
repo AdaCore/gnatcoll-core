@@ -24,6 +24,7 @@ with Ada.Containers.Vectors;
 with Ada.Strings.Unbounded; use Ada.Strings.Unbounded;
 with Ada.Unchecked_Conversion;
 with Ada.Unchecked_Deallocation;
+with GNAT.IO; use GNAT.IO;
 with GNATCOLL.ALI.Database; use GNATCOLL.ALI.Database;
 with GNATCOLL.Mmap;         use GNATCOLL.Mmap;
 with GNATCOLL.SQL;          use GNATCOLL.SQL;
@@ -137,6 +138,18 @@ package body GNATCOLL.ALI is
              & (Database.Entity_Refs.From_Instantiation = Text_Param (6))),
         On_Server => True, Name => "insert_ref");
 
+   Query_Insert_Ref_With_Caller : constant Prepared_Statement :=
+     Prepare
+       (SQL_Insert
+            ((Database.Entity_Refs.Entity   = Integer_Param (1))
+             & (Database.Entity_Refs.File   = Integer_Param (2))
+             & (Database.Entity_Refs.Line   = Integer_Param (3))
+             & (Database.Entity_Refs.Column = Integer_Param (4))
+             & (Database.Entity_Refs.Kind   = Text_Param (5))
+             & (Database.Entity_Refs.From_Instantiation = Text_Param (6))
+             & (Database.Entity_Refs.Caller = Integer_Param (7))),
+        On_Server => True, Name => "insert_ref_with_caller");
+
    Query_Insert_E2E : constant Prepared_Statement :=
      Prepare
        (SQL_Insert
@@ -183,7 +196,7 @@ package body GNATCOLL.ALI is
        (SQL_Insert
             (Values => (Database.E2e.Fromentity = Integer_Param (1))
              & (Database.E2e.Toentity = Database.Entity_Refs.Entity)
-             & (Database.E2e.Kind = E2e_Renames),
+             & (Database.E2e.Kind = Integer_Param (5)),
              Where => Database.Entity_Refs.File = Integer_Param (2)
                and Database.Entity_Refs.Line = Integer_Param (3)
                and Database.Entity_Refs.Column = Integer_Param (4)),
@@ -257,6 +270,7 @@ package body GNATCOLL.ALI is
    type Entity_Renaming is record
       Entity : Integer;              --  Id in the entities table
       File, Line, Column : Integer;  --  A reference to the renamed entity
+      Kind  : E2e_Id;
    end record;
    package Entity_Renaming_Lists is new Ada.Containers.Doubly_Linked_Lists
      (Entity_Renaming);
@@ -292,6 +306,14 @@ package body GNATCOLL.ALI is
      (Trees : in out Scope_Tree_Array_Access;
       Count : Natural);
    --  Ensures that Trees contains at least Count files.
+
+   function Get_Caller
+     (Trees      : Scope_Tree_Array_Access;
+      File_Index : Integer;
+      Line       : Integer) return Integer;
+   --  Returns the entity id for the given file (or -1 if file is not in the
+   --  list of scope trees). File_Index is the index as returned by
+   --  Is_Unit_File.
 
    procedure Parse_LI
      (Session           : Session_Type;
@@ -371,7 +393,7 @@ package body GNATCOLL.ALI is
       Low, High : Integer)
    is
       Tmp   : Line_Info_Array_Access;
-      Scope : constant Natural := High - Low;
+      Scope : constant Integer := High - Low;
    begin
       if Lines = null then
          Lines := new Line_Info_Array (1 .. Integer'Max (High, 10_000));
@@ -435,6 +457,26 @@ package body GNATCOLL.ALI is
       end if;
    end Grow_As_Needed;
 
+   ----------------
+   -- Get_Caller --
+   ----------------
+
+   function Get_Caller
+     (Trees      : Scope_Tree_Array_Access;
+      File_Index : Integer;
+      Line       : Integer) return Integer is
+   begin
+      if Trees = null
+        or else File_Index not in Trees'Range
+        or else Trees (File_Index) = null
+        or else Line not in Trees (File_Index)'Range
+      then
+         return -1;
+      else
+         return Trees (File_Index)(Line).Entity;
+      end if;
+   end Get_Caller;
+
    --------------
    -- Parse_LI --
    --------------
@@ -491,6 +533,9 @@ package body GNATCOLL.ALI is
       Current_Entity_Decl_Line : Integer;
       --  Id in "entities" table for the current entity.
       --  Current_Entity_Decl_Line is the location of its declaration.
+
+      Body_Start_Line : Integer;
+      --  The 'b' or 'c' reference for the current entity.
 
       procedure Skip_Spaces;
       pragma Inline (Skip_Spaces);
@@ -1299,9 +1344,6 @@ package body GNATCOLL.ALI is
          Process_E2E    : constant Boolean := not First_Pass;
          Process_Refs   : constant Boolean := not First_Pass;
          Process_Scopes : constant Boolean := First_Pass;
-
-         Body_Start_Line : Integer := -1;
-
          Is_Library_Level : Boolean;
          Ref_Entity : Integer;
          Name_End, Name_Start : Integer;
@@ -1311,10 +1353,10 @@ package body GNATCOLL.ALI is
          Will_Insert_Ref : Boolean;
          Instance : Unbounded_String;
          pragma Unreferenced (Is_Library_Level);
+
       begin
          if Str (Index) = '.' then
             --  Same entity as before, so we do not change current entity
-
             Index := Index + 2;  --  First ref on that line
 
          else
@@ -1376,7 +1418,8 @@ package body GNATCOLL.ALI is
                     ((Entity => Current_Entity,
                       File   => Xref_File,
                       Line   => Xref_Line,
-                      Column => Xref_Col));
+                      Column => Xref_Col,
+                      Kind   => E2e_Renames));
                end if;
             end if;
 
@@ -1508,100 +1551,118 @@ package body GNATCOLL.ALI is
             end loop;
 
             Index := Name_End;
+
             Xref_File := Current_X_File;
             Xref_File_Unit_File_Index := Current_X_File_Unit_File_Index;
+            Body_Start_Line := -1;
+         end if;
 
-            while Index <= Last
-              and then Str (Index) /= ASCII.LF
-            loop
-               Skip_Spaces;
-               Get_Ref;
+         while Index <= Last
+           and then Str (Index) /= ASCII.LF
+         loop
+            Skip_Spaces;
+            Get_Ref;
 
-               --  We want to store in which instantiation the ref is found,
-               --  so that we can display useful info in tooltips. There can be
-               --  nested instantiation information. For instance,
-               --  gtk-handler.ali contains the following:
-               --    X 42 gtk-marshallers.ads
-               --    290P15 Handler(40|446E12) 40|778r33[545[673]]
-               --    X 40 gtk-handlers.ads
-               --    778p10 Cb{42|290P15[545[673]]}
-               --
-               --  in gtk-marshallers.ads
-               --   generic
-               --   package User_Return_Marshallers is        --  line 235
-               --      generic
-               --      package Generic_Widget_Marshaller is   --  line 289
-               --         type Handler is access function     --  line 290
-               --
-               --  in gtk-handlers.ads
-               --  generic
-               --  package User_Return_Callback is
-               --    package Widget_Marshaller is   --  545
-               --       new Marshallers.Generic_Widget_Marshaller(..)  --  545
-               --  end User_Return_Callback;
-               --  package User_Return_Callback_With_Setup is  ---  671
-               --    package Internal_Cb is new User_Return_Callback   --  673
-               --       ...
-               --    package Marshallers renames Internal_Cb.Marshallers;  678
-               --    package Widget_Marshaller   --  761
-               --         renames Internal_Cb.Widget_Marshaller;  --  761
-               --    function To_Marshaller   --  777
-               --       (Cb : Widget_Marshaller.Handler)   -- 778
-               --
-               --  If the user gets info for "Handler" on line 778, we want to
-               --  show a tooltip that contains
-               --      from instance at gtk-handlers.ads:545
-               --      from instance at gtk-handlers.ads:673
+            --  We want to store in which instantiation the ref is found,
+            --  so that we can display useful info in tooltips. There can be
+            --  nested instantiation information. For instance,
+            --  gtk-handler.ali contains the following:
+            --    X 42 gtk-marshallers.ads
+            --    290P15 Handler(40|446E12) 40|778r33[545[673]]
+            --    X 40 gtk-handlers.ads
+            --    778p10 Cb{42|290P15[545[673]]}
+            --
+            --  in gtk-marshallers.ads
+            --   generic
+            --   package User_Return_Marshallers is        --  line 235
+            --      generic
+            --      package Generic_Widget_Marshaller is   --  line 289
+            --         type Handler is access function     --  line 290
+            --
+            --  in gtk-handlers.ads
+            --  generic
+            --  package User_Return_Callback is
+            --    package Widget_Marshaller is   --  545
+            --       new Marshallers.Generic_Widget_Marshaller(..)  --  545
+            --  end User_Return_Callback;
+            --  package User_Return_Callback_With_Setup is  ---  671
+            --    package Internal_Cb is new User_Return_Callback   --  673
+            --       ...
+            --    package Marshallers renames Internal_Cb.Marshallers;  678
+            --    package Widget_Marshaller   --  761
+            --         renames Internal_Cb.Widget_Marshaller;  --  761
+            --    function To_Marshaller   --  777
+            --       (Cb : Widget_Marshaller.Handler)   -- 778
+            --
+            --  If the user gets info for "Handler" on line 778, we want to
+            --  show a tooltip that contains
+            --      from instance at gtk-handlers.ads:545
+            --      from instance at gtk-handlers.ads:673
 
-               Skip_Instance_Info (Instance);
-               Eid := -1;
+            Skip_Instance_Info (Instance);
+            Eid := -1;
 
-               case Xref_Kind is
-                  when '>' =>
-                     Eid := E2e_In_Parameter;
-                  when '<' =>
-                     Eid := E2e_Out_Parameter;
-                  when '=' =>
-                     Eid := E2e_In_Out_Parameter;
-                  when '^' =>
-                     Eid := E2e_Access_Parameter;
-                  when 'b' =>  --  body
-                     Body_Start_Line := Xref_Line;
-                  when 'e' =>  --  end of spec
-                     if False and then Process_Scopes then
-                        Insert (Scope_Trees (Xref_File_Unit_File_Index),
-                                Entity => Current_Entity,
-                                Low    => Current_Entity_Decl_Line,
-                                High   => Xref_Line);
-                     end if;
-                  when 't' =>  --  end of body
-                     if False
-                       and then Process_Scopes
-                       and then Body_Start_Line /= -1
-                     then
-                        Insert (Scope_Trees (Xref_File_Unit_File_Index),
-                                Entity => Current_Entity,
-                                Low    => Body_Start_Line,
-                                High   => Xref_Line);
-                     end if;
-
-                  when others =>
-                     null;
-               end case;
-
-               if Eid = -1 then
-                  if not Process_Refs then
-                     Will_Insert_Ref := False;
-                  elsif ALI_Contains_External_Refs then
-                     Will_Insert_Ref := Xref_File_Unit_File_Index /= -1;
-                  else
-                     Will_Insert_Ref := True;
+            case Xref_Kind is
+               when '>' =>
+                  Eid := E2e_In_Parameter;
+               when '<' =>
+                  Eid := E2e_Out_Parameter;
+               when '=' =>
+                  Eid := E2e_In_Out_Parameter;
+               when '^' =>
+                  Eid := E2e_Access_Parameter;
+               when 'p' | 'P' =>
+                  Eid := E2e_Has_Primitive;
+               when 'r' | 'm' | 'l' | 'R' | 's' | 'w' | 'i' | 'k' | 'D'
+                  | 'H' | 'o' | 'x' =>
+                  null;  --  real references
+               when 'd' =>
+                  Eid := E2e_Has_Discriminant;
+               when 'z' =>
+                  Eid := E2e_Is_Formal_Of;
+               when 'b' | 'c' =>  --  body
+                  Body_Start_Line := Xref_Line;
+               when 'e' =>  --  end of spec
+                  if Process_Scopes
+                    and then Xref_File_Unit_File_Index /= -1
+                  then
+                     Insert (Scope_Trees (Xref_File_Unit_File_Index),
+                             Entity => Current_Entity,
+                             Low    => Current_Entity_Decl_Line,
+                             High   => Xref_Line);
+                  end if;
+               when 't' =>  --  end of body
+                  if Process_Scopes
+                    and then Body_Start_Line /= -1
+                    and then Xref_File_Unit_File_Index /= -1
+                  then
+                     Insert (Scope_Trees (Xref_File_Unit_File_Index),
+                             Entity => Current_Entity,
+                             Low    => Body_Start_Line,
+                             High   => Xref_Line);
                   end if;
 
-                  if Will_Insert_Ref then
-                     declare
-                        Inst : aliased String := To_String (Instance);
-                     begin
+               when others =>
+                  Trace (Me_Error, "Unknown entity kind=" & Xref_Kind'Img);
+            end case;
+
+            if Eid = -1 then
+               if not Process_Refs then
+                  Will_Insert_Ref := False;
+               elsif ALI_Contains_External_Refs then
+                  Will_Insert_Ref := Xref_File_Unit_File_Index /= -1;
+               else
+                  Will_Insert_Ref := True;
+               end if;
+
+               if Will_Insert_Ref then
+                  declare
+                     Inst : aliased String := To_String (Instance);
+                     Caller : constant Integer :=
+                       Get_Caller (Scope_Trees, Xref_File_Unit_File_Index,
+                                   Xref_Line);
+                  begin
+                     if Caller = -1 then
                         Session.DB.Execute
                           (Query_Insert_Ref,
                            Params => (1 => +Current_Entity,
@@ -1610,30 +1671,48 @@ package body GNATCOLL.ALI is
                                       4 => +Xref_Col,
                                       5 => +Xref_Kind,
                                       6 => +Inst'Unrestricted_Access));
-                     end;
-                  end if;
+                     else
+                        Session.DB.Execute
+                          (Query_Insert_Ref_With_Caller,
+                           Params => (1 => +Current_Entity,
+                                      2 => +Xref_File,
+                                      3 => +Xref_Line,
+                                      4 => +Xref_Col,
+                                      5 => +Xref_Kind,
+                                      6 => +Inst'Unrestricted_Access,
+                                      7 => +Caller));
+                     end if;
+                  end;
+               end if;
 
-               elsif Process_E2E then
-                  --  The reference necessarily points to the declaration of
-                  --  the parameter, which exists in the same ALI file (but not
-                  --  necessarily the same source file).
+            elsif Process_E2E then
+               --  The reference necessarily points to the declaration of
+               --  the parameter, which exists in the same ALI file (but not
+               --  necessarily the same source file).
 
+               begin
                   Ref_Entity := Entity_Decl_To_Id.Element
                     ((File_Id => Xref_File,
                       Line    => Xref_Line,
                       Column  => Xref_Col)).Id;
-
                   Session.DB.Execute
                     (Query_Insert_E2E,
                      Params => (1 => +Current_Entity,
                                 2 => +Ref_Entity,
                                 3 => +Eid,
                                 4 => +Order));
-
                   Order := Order + 1;
-               end if;
-            end loop;
-         end if;
+               exception
+                  when Constraint_Error =>
+                     Entity_Renamings.Append
+                       ((Entity => Current_Entity,
+                         File   => Xref_File,
+                         Line   => Xref_Line,
+                         Column => Xref_Col,
+                         Kind   => Eid));
+               end;
+            end if;
+         end loop;
       end Process_Entity_Line;
 
       Start_Of_X_Section : Integer;
@@ -1775,6 +1854,20 @@ package body GNATCOLL.ALI is
          Process_Xref_Section (First_Pass => False);
       end if;
 
+      if False and then Library_File.Base_Name = "gtk-ctree.ali" then
+         for S in Scope_Trees'Range loop
+            if Scope_Trees (S) /= null then
+               for Line in Scope_Trees (S)'First
+                 ..  Integer'Min (1768, Scope_Trees (S)'Last)
+               loop
+                  Put_Line (Line'Img & ": " & Scope_Trees (S)(Line).Entity'Img
+                            & "  from:"
+                            & Scope_Trees (S)(Line).Scope'Img);
+               end loop;
+            end if;
+         end loop;
+      end if;
+
       Free (Scope_Trees);
 
       Close (M);
@@ -1824,7 +1917,8 @@ package body GNATCOLL.ALI is
                Params => (1 => +Ren.Entity,
                           2 => +Ren.File,
                           3 => +Ren.Line,
-                          4 => +Ren.Column));
+                          4 => +Ren.Column,
+                          5 => +Ren.Kind));
 
             Next (C);
          end loop;
