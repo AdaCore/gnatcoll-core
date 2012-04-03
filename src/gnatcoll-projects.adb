@@ -194,7 +194,7 @@ package body GNATCOLL.Projects is
    --  return the Virtual_File
 
    function Get_Directory
-    (Project : Project_Type;
+    (Project  : Project_Type;
      Callback : Get_Directory_Path_Callback) return Virtual_File;
    --  return the Virtual_File generated from the callback return.
    --  If callback returns a 0 length Path_Information then function returns
@@ -2232,7 +2232,7 @@ package body GNATCOLL.Projects is
    -------------------
 
    function Get_Directory
-    (Project : Project_Type;
+    (Project  : Project_Type;
      Callback : Get_Directory_Path_Callback) return Virtual_File
    is
    begin
