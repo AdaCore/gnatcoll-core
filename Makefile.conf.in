@@ -37,7 +37,7 @@ TARNAME=@PACKAGE_TARNAME@
 VERSION=@PACKAGE_VERSION@
 DESTDIR=
 prefix=@prefix@
-exec_prefix=${DESTDIR}@exec_prefix@
+exec_prefix=@exec_prefix@
 datadir=${DESTDIR}@datadir@
 bindir=${DESTDIR}@bindir@
 libdir=${DESTDIR}@libdir@
@@ -150,9 +150,9 @@ endif
 installsources:
 	@${CP} -p ${wildcard ${addsuffix *.ad[bs], ${SRCDIRS}}} ${includedir}/${TARNAME}
 ifeq (${OS},Windows_NT)
-	@cd ${includedir}/${TARNAME}; ls ${notdir ${wildcard ${addsuffix *.ad[bs], ${SRCDIRS}}}} | grep -v unix > ${prefix}/lib/gnat/${TARNAME}/${basename ${PROJECT}}.lgpr
+	@cd ${includedir}/${TARNAME}; ls ${notdir ${wildcard ${addsuffix *.ad[bs], ${SRCDIRS}}}} | grep -v unix > ${DESTDIR}/${prefix}/lib/gnat/${TARNAME}/${basename ${PROJECT}}.lgpr
 else
-	@cd ${includedir}/${TARNAME}; ls ${notdir ${wildcard ${addsuffix *.ad[bs], ${SRCDIRS}}}} | grep -v win32 > ${prefix}/lib/gnat/${TARNAME}/${basename ${PROJECT}}.lgpr
+	@cd ${includedir}/${TARNAME}; ls ${notdir ${wildcard ${addsuffix *.ad[bs], ${SRCDIRS}}}} | grep -v win32 > ${DESTDIR}/${prefix}/lib/gnat/${TARNAME}/${basename ${PROJECT}}.lgpr
 endif
 
 force:
