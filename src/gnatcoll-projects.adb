@@ -188,6 +188,18 @@ package body GNATCOLL.Projects is
    --  variable in Prj.
    --  Stops iterating if this subprogram returns False.
 
+   type Get_Directory_Path_Callback is access function
+     (Project : Prj.Project_Id) return Path_Information;
+   --  Called to get the directory path the Get_Directory function must
+   --  return the Virtual_File
+
+   function Get_Directory (Project : Project_Type;
+                           Callback : Get_Directory_Path_Callback)
+                           return Virtual_File;
+   --  return the Virtual_File generated from the callback return.
+   --  If callback return nothing return the object directory
+   --  If project not accessible return No_File.
+
    function Variable_Value_To_List
      (Project : Project_Type;
       Value   : Variable_Value) return GNAT.Strings.String_List_Access;
@@ -2223,22 +2235,32 @@ package body GNATCOLL.Projects is
    -- Get_Directory --
    -------------------
 
-   function Get_Directory
-     (Project : Project_Type;
-      Dir     : Filesystem_String) return Virtual_File is
+   function Get_Directory (Project : Project_Type;
+                           Callback : Get_Directory_Path_Callback)
+                           return Virtual_File is
    begin
-      if Dir'Length > 0 then
-         return Create (Name_As_Directory (Dir));
-      else
-         --  ??? Can't we simply access Object_Dir in the view ?
+      if Project = No_Project or else Get_View (Project) = Prj.No_Project then
+         return GNATCOLL.VFS.No_File;
 
+      else
          declare
-            Path : constant File_Array := Project.Object_Path;
+            Dir : constant Filesystem_String := +Get_String
+              (Name_Id (Callback (Get_View (Project)).Display_Name));
          begin
-            if Path'Length /= 0 then
-               return Path (Path'First);
+            if Dir'Length > 0 then
+               return Create (Name_As_Directory (Dir));
             else
-               return GNATCOLL.VFS.No_File;
+               --  ??? Can't we simply access Object_Dir in the view ?
+
+               declare
+                  Path : constant File_Array := Project.Object_Path;
+               begin
+                  if Path'Length /= 0 then
+                     return Path (Path'First);
+                  else
+                     return GNATCOLL.VFS.No_File;
+                  end if;
+               end;
             end if;
          end;
       end if;
@@ -2251,19 +2273,23 @@ package body GNATCOLL.Projects is
    function Executables_Directory
      (Project : Project_Type) return Virtual_File
    is
+
+      function Get_Exec_Directory_Callback (Project : Prj.Project_Id)
+         return Path_Information;
+
+      ----------------------------------
+      -- Get_Exec_Directory_Callback  --
+      ----------------------------------
+
+      function Get_Exec_Directory_Callback (Project : Prj.Project_Id)
+         return Path_Information is
+      begin
+         return Project.Exec_Directory;
+      end Get_Exec_Directory_Callback;
+
    begin
-      if Project = No_Project or else Get_View (Project) = Prj.No_Project then
-         return GNATCOLL.VFS.No_File;
-
-      else
-         declare
-            Exec : constant Filesystem_String := +Get_String
-              (Name_Id (Get_View (Project).Exec_Directory.Display_Name));
-
-         begin
-            return Get_Directory (Project, Exec);
-         end;
-      end if;
+      return Get_Directory (Project,
+                            Get_Exec_Directory_Callback'Unrestricted_Access);
    end Executables_Directory;
 
    -----------------------
@@ -2273,19 +2299,23 @@ package body GNATCOLL.Projects is
    function Library_Directory
      (Project : Project_Type) return GNATCOLL.VFS.Virtual_File
    is
+
+      function Get_Library_Dir_Callback (Project : Prj.Project_Id)
+         return Path_Information;
+
+      ------------------------------
+      -- Get_Library_Dir_Callback --
+      ------------------------------
+
+      function Get_Library_Dir_Callback (Project : Prj.Project_Id)
+         return Path_Information is
+      begin
+         return Project.Library_Dir;
+      end Get_Library_Dir_Callback;
+
    begin
-      if Project = No_Project or else Get_View (Project) = Prj.No_Project then
-         return GNATCOLL.VFS.No_File;
-
-      else
-         declare
-            Library : constant Filesystem_String := +Get_String
-              (Name_Id (Get_View (Project).Library_Dir.Display_Name));
-
-         begin
-            return Get_Directory (Project, Library);
-         end;
-      end if;
+      return Get_Directory (Project,
+                            Get_Library_Dir_Callback'Unrestricted_Access);
    end Library_Directory;
 
    ---------------------------
@@ -2295,19 +2325,23 @@ package body GNATCOLL.Projects is
    function Library_Ali_Directory
      (Project : Project_Type) return GNATCOLL.VFS.Virtual_File
    is
+
+      function Get_Library_ALI_Dir_Callback (Project : Prj.Project_Id)
+         return Path_Information;
+
+      ----------------------------------
+      -- Get_Library_ALI_Dir_Callback --
+      ----------------------------------
+
+      function Get_Library_ALI_Dir_Callback (Project : Prj.Project_Id)
+         return Path_Information is
+      begin
+         return Project.Library_ALI_Dir;
+      end Get_Library_ALI_Dir_Callback;
+
    begin
-      if Project = No_Project or else Get_View (Project) = Prj.No_Project then
-         return GNATCOLL.VFS.No_File;
-
-      else
-         declare
-            Library_Ali : constant Filesystem_String := +Get_String
-              (Name_Id (Get_View (Project).Library_ALI_Dir.Display_Name));
-
-         begin
-            return Get_Directory (Project, Library_Ali);
-         end;
-      end if;
+      return Get_Directory (Project,
+                            Get_Library_ALI_Dir_Callback'Unrestricted_Access);
    end Library_Ali_Directory;
 
    ---------------------------
