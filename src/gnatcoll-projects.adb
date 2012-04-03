@@ -193,11 +193,12 @@ package body GNATCOLL.Projects is
    --  Called to get the directory path the Get_Directory function must
    --  return the Virtual_File
 
-   function Get_Directory (Project : Project_Type;
-                           Callback : Get_Directory_Path_Callback)
-                           return Virtual_File;
+   function Get_Directory
+    (Project : Project_Type;
+     Callback : Get_Directory_Path_Callback) return Virtual_File;
    --  return the Virtual_File generated from the callback return.
-   --  If callback return nothing return the object directory
+   --  If callback returns a 0 length Path_Information then function returns
+   --  the project object directory.
    --  If project not accessible return No_File.
 
    function Variable_Value_To_List
@@ -2230,17 +2231,20 @@ package body GNATCOLL.Projects is
    -- Get_Directory --
    -------------------
 
-   function Get_Directory (Project : Project_Type;
-                           Callback : Get_Directory_Path_Callback)
-                           return Virtual_File is
+   function Get_Directory
+    (Project : Project_Type;
+     Callback : Get_Directory_Path_Callback) return Virtual_File
+   is
    begin
-      if Project = No_Project or else Get_View (Project) = Prj.No_Project then
+      if Project = No_Project
+        or else Get_View (Project) = Prj.No_Project
+      then
          return GNATCOLL.VFS.No_File;
 
       else
          declare
             Dir : constant Filesystem_String := +Get_String
-              (Name_Id (Callback (Get_View (Project)).Display_Name));
+                    (Name_Id (Callback (Get_View (Project)).Display_Name));
          begin
             if Dir'Length > 0 then
                return Create (Name_As_Directory (Dir));
@@ -2269,15 +2273,15 @@ package body GNATCOLL.Projects is
      (Project : Project_Type) return Virtual_File
    is
 
-      function Get_Exec_Directory_Callback (Project : Prj.Project_Id)
-         return Path_Information;
+      function Get_Exec_Directory_Callback
+        (Project : Prj.Project_Id) return Path_Information;
 
       ----------------------------------
       -- Get_Exec_Directory_Callback  --
       ----------------------------------
 
-      function Get_Exec_Directory_Callback (Project : Prj.Project_Id)
-         return Path_Information is
+      function Get_Exec_Directory_Callback
+        (Project : Prj.Project_Id) return Path_Information is
       begin
          return Project.Exec_Directory;
       end Get_Exec_Directory_Callback;
@@ -2295,15 +2299,15 @@ package body GNATCOLL.Projects is
      (Project : Project_Type) return GNATCOLL.VFS.Virtual_File
    is
 
-      function Get_Library_Dir_Callback (Project : Prj.Project_Id)
-         return Path_Information;
+      function Get_Library_Dir_Callback
+        (Project : Prj.Project_Id) return Path_Information;
 
       ------------------------------
       -- Get_Library_Dir_Callback --
       ------------------------------
 
-      function Get_Library_Dir_Callback (Project : Prj.Project_Id)
-         return Path_Information is
+      function Get_Library_Dir_Callback
+        (Project : Prj.Project_Id) return Path_Information is
       begin
          return Project.Library_Dir;
       end Get_Library_Dir_Callback;
@@ -2321,15 +2325,15 @@ package body GNATCOLL.Projects is
      (Project : Project_Type) return GNATCOLL.VFS.Virtual_File
    is
 
-      function Get_Library_ALI_Dir_Callback (Project : Prj.Project_Id)
-         return Path_Information;
+      function Get_Library_ALI_Dir_Callback
+        (Project : Prj.Project_Id) return Path_Information;
 
       ----------------------------------
       -- Get_Library_ALI_Dir_Callback --
       ----------------------------------
 
-      function Get_Library_ALI_Dir_Callback (Project : Prj.Project_Id)
-         return Path_Information is
+      function Get_Library_ALI_Dir_Callback
+        (Project : Prj.Project_Id) return Path_Information is
       begin
          return Project.Library_ALI_Dir;
       end Get_Library_ALI_Dir_Callback;
