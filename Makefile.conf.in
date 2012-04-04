@@ -150,9 +150,9 @@ endif
 installsources:
 	@${CP} -p ${wildcard ${addsuffix *.ad[bs], ${SRCDIRS}}} ${includedir}/${TARNAME}
 ifeq (${OS},Windows_NT)
-	@cd ${includedir}/${TARNAME}; ls ${notdir ${wildcard ${addsuffix *.ad[bs], ${SRCDIRS}}}} | grep -v unix > ${DESTDIR}/${prefix}/lib/gnat/${TARNAME}/${basename ${PROJECT}}.lgpr
+	@cd ${includedir}/${TARNAME}; ls ${notdir ${wildcard ${addsuffix *.ad[bs], ${SRCDIRS}}}} | grep -v unix > ${DESTDIR}${prefix}/lib/gnat/${TARNAME}/${basename ${PROJECT}}.lgpr
 else
-	@cd ${includedir}/${TARNAME}; ls ${notdir ${wildcard ${addsuffix *.ad[bs], ${SRCDIRS}}}} | grep -v win32 > ${DESTDIR}/${prefix}/lib/gnat/${TARNAME}/${basename ${PROJECT}}.lgpr
+	@cd ${includedir}/${TARNAME}; ls ${notdir ${wildcard ${addsuffix *.ad[bs], ${SRCDIRS}}}} | grep -v win32 > ${DESTDIR}${prefix}/lib/gnat/${TARNAME}/${basename ${PROJECT}}.lgpr
 endif
 
 force:
