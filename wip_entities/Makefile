@@ -27,7 +27,7 @@ run_update:
 	rm -f entities.db
 	./obj/test_entities ../../gps/gps.gpr
 
-	@for table in entities e2e entity_refs f2f; do \
+	@for table in entities files e2e entity_refs f2f; do \
 	   echo "select count(*) as '$$table' from $$table;" \
 		   | sqlite3 -line entities.db; \
 	done
@@ -38,17 +38,22 @@ run_update:
 	@echo ""
 	@echo "===== No file modified (copy db to memory) ====="
 	@./obj/test_entities ../../gps/gps.gpr
-	@for table in entities e2e entity_refs f2f; do \
-	   echo "select count(*) as '$$table' from $$table;" \
-		   | sqlite3 -line entities.db; \
-	done
-	@ls --block-size=1 -s entities.db
 
 	@# No file modified and we only manipulate db on disk
 	@echo ""
 	@echo "===== No file modified (keep db on disk) ====="
 	@./obj/test_entities --tmpdb entities.db ../../gps/gps.gpr
 
+	@# Updating one ALI file
+	@echo ""
+	@echo "===== Updating gps-kernel.ali (db on disk) ====="
+	@touch ../../kernel/obj/gps-kernel.ali
+	@./obj/test_entities --tmpdb entities.db ../../gps/gps.gpr
+	@for table in entities files e2e entity_refs f2f; do \
+	   echo "select count(*) as '$$table' from $$table;" \
+		   | sqlite3 -line entities.db; \
+	done
+	@ls --block-size=1 -s entities.db
 
 test1: force
 	rm -f entities.db

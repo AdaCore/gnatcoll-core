@@ -292,17 +292,21 @@ package body GNATCOLL.ALI is
    end record;
    type Line_Info_Array is array (Natural range <>) of Line_Info;
    type Line_Info_Array_Access is access Line_Info_Array;
+   type File_Scope_Tree is record
+      Lines : Line_Info_Array_Access;
+      Max   : Natural := 0;
+   end record;
 
    procedure Unchecked_Free is new Ada.Unchecked_Deallocation
      (Line_Info_Array, Line_Info_Array_Access);
 
    procedure Insert
-     (Lines     : in out Line_Info_Array_Access;
+     (Lines     : in out File_Scope_Tree;
       Entity    : Integer;
       Low, High : Integer);
    --  Store scope info for a new entity
 
-   type Scope_Tree_Array is array (Natural range <>) of Line_Info_Array_Access;
+   type Scope_Tree_Array is array (Natural range <>) of File_Scope_Tree;
    type Scope_Tree_Array_Access is access all Scope_Tree_Array;
    --  A collection of scope trees, since a given LI file represents multiple
    --  source files.
@@ -395,33 +399,66 @@ package body GNATCOLL.ALI is
    ------------
 
    procedure Insert
-     (Lines     : in out Line_Info_Array_Access;
+     (Lines     : in out File_Scope_Tree;
       Entity    : Integer;
       Low, High : Integer)
    is
       Tmp   : Line_Info_Array_Access;
       Scope : constant Integer := High - Low;
+      Test_From, Test_To : Integer;
    begin
-      if Lines = null then
-         Lines := new Line_Info_Array (1 .. Integer'Max (High, 10_000));
-         Lines.all := (others => (Entity => -1, Scope => 0));
-      elsif Lines'Last < High then
-         Tmp := Lines;
-         Lines := new Line_Info_Array (1 .. High + 2000);
-         Lines (Tmp'Range) := Tmp.all;
-         Lines (Tmp'Last + 1 .. Lines'Last) :=
-           (others => (Entity => -1, Scope => 0));
+      if Lines.Lines = null then
+         Lines.Lines := new Line_Info_Array (1 .. Integer'Max (High, 10_000));
+         Lines.Max   := 0;  --  no line initialized
+      elsif Lines.Lines'Last < High then
+         Tmp := Lines.Lines;
+         Lines.Lines := new Line_Info_Array (1 .. High * 2);
+         Lines.Lines (Tmp'Range) := Tmp.all;
          Unchecked_Free (Tmp);
       end if;
 
-      for Line in Low .. High loop
+      --  Various cases are possible, depending where the range low..high
+      --  occurs compared to the data we already know. We could take the naive
+      --  approach of always reseting the array when we grow it, and always
+      --  comparing the full Low..High range, but this is slower in practice.
+      --
+      --   |1-------max|
+      --          |low-------high|
+      --              reset: none,  test: low .. max,  force: max + 1 .. high
+      --
+      --                   |low--high|
+      --              reset: max + 1 .. low - 1, test: none, force: low .. high
+      --
+      --      |l..h|
+      --              reset: none, test: low .. high,  force: none
+
+      if Lines.Max < High then
+         Test_From := Low;
+
+         if Low < Lines.Max then
+            Lines.Lines (Lines.Max + 1 .. High) :=  --  force
+              (others => (Entity => Entity, Scope => Scope));
+            Test_To   := Lines.Max;
+         else
+            Lines.Lines (Lines.Max + 1 .. Low - 1) :=  -- reset
+              (others => (Entity => -1, Scope => 0));
+            Lines.Lines (Low .. High) := --  force
+              (others => (Entity => Entity, Scope => Scope));
+            Test_To   := Low - 1;  --  no test
+         end if;
+         Lines.Max := High;
+      else
+         --  no reset and no force
+         Test_From := Low;
+         Test_To   := High;
+      end if;
+
+      for Line in Test_From .. Test_To loop
          --  Override only if we have a more narrow scope (ie we are a child of
          --  the entity known at that line).
 
-         if Lines (Line).Entity = -1
-           or else Lines (Line).Scope > Scope
-         then
-            Lines (Line) := (Entity => Entity, Scope => Scope);
+         if Lines.Lines (Line).Scope > Scope then
+            Lines.Lines (Line) := (Entity => Entity, Scope => Scope);
          end if;
       end loop;
    end Insert;
@@ -436,7 +473,7 @@ package body GNATCOLL.ALI is
    begin
       if Trees /= null then
          for T in Trees'Range loop
-            Unchecked_Free (Trees (T));
+            Unchecked_Free (Trees (T).Lines);
          end loop;
          Unchecked_Free (Trees);
       end if;
@@ -475,12 +512,11 @@ package body GNATCOLL.ALI is
    begin
       if Trees = null
         or else File_Index not in Trees'Range
-        or else Trees (File_Index) = null
-        or else Line not in Trees (File_Index)'Range
+        or else Line > Trees (File_Index).Max
       then
          return -1;
       else
-         return Trees (File_Index)(Line).Entity;
+         return Trees (File_Index).Lines (Line).Entity;
       end if;
    end Get_Caller;
 
