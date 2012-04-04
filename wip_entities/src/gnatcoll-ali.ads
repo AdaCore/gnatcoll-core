@@ -51,7 +51,9 @@ package GNATCOLL.ALI is
    --  database.
    --  If Destroy_Indexes is True, then some of the database indexes will be
    --  temporarily disabled and then recreated in the end. This will be faster
-   --  when doing major changes, but will be slower otherwise.
+   --  when doing major changes, but will be slower otherwise. In any case,
+   --  the index is only destroyed if actual changes take place in the
+   --  database.
    --
    --  Return True if at least one LI was updated.
 

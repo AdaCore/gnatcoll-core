@@ -113,7 +113,7 @@ begin
       Env               => Env,
       Errors            => Put_Line'Access);
 
-   --  Parse LI files
+   --  Parse LI files (loading and dumping to DB_Name)
 
    Absolute_Start := Clock;
    Parse_All_LI_Files_With_Backup

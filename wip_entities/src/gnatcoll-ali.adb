@@ -118,6 +118,20 @@ package body GNATCOLL.ALI is
         On_Server => True, Name => "delete_file_dep");
    --  Delete the f2f relationships for the given file.
 
+   Query_Delete_E2E_From_LI : constant Prepared_Statement :=
+     Prepare
+       (SQL_Delete
+            (From  => Database.E2e,
+             Where => Database.E2e.From_LI = Integer_Param (1)),
+        On_Server => True, Name => "delete_e2e");
+
+   Query_Delete_Refs : constant Prepared_Statement :=
+     Prepare
+       (SQL_Delete
+            (From  => Database.Entity_Refs,
+             Where => Database.Entity_Refs.From_LI = Integer_Param (1)),
+        On_Server => True, Name => "delete_refs");
+
    Query_Insert_Entity : constant Prepared_Statement :=
      Prepare
        (SQL_Insert
@@ -136,7 +150,8 @@ package body GNATCOLL.ALI is
              & (Database.Entity_Refs.Line   = Integer_Param (3))
              & (Database.Entity_Refs.Column = Integer_Param (4))
              & (Database.Entity_Refs.Kind   = Text_Param (5))
-             & (Database.Entity_Refs.From_Instantiation = Text_Param (6))),
+             & (Database.Entity_Refs.From_Instantiation = Text_Param (6))
+             & (Database.Entity_Refs.From_LI = Integer_Param (7))),
         On_Server => True, Name => "insert_ref");
 
    Query_Insert_Ref_With_Caller : constant Prepared_Statement :=
@@ -148,7 +163,8 @@ package body GNATCOLL.ALI is
              & (Database.Entity_Refs.Column = Integer_Param (4))
              & (Database.Entity_Refs.Kind   = Text_Param (5))
              & (Database.Entity_Refs.From_Instantiation = Text_Param (6))
-             & (Database.Entity_Refs.Caller = Integer_Param (7))),
+             & (Database.Entity_Refs.Caller = Integer_Param (7))
+             & (Database.Entity_Refs.From_LI = Integer_Param (8))),
         On_Server => True, Name => "insert_ref_with_caller");
 
    Query_Insert_E2E : constant Prepared_Statement :=
@@ -157,7 +173,8 @@ package body GNATCOLL.ALI is
             ((Database.E2e.Fromentity = Integer_Param (1))
              & (Database.E2e.Toentity = Integer_Param (2))
              & (Database.E2e.Kind = Integer_Param (3))
-             & (Database.E2e.Order_By = Integer_Param (4))),
+             & (Database.E2e.Order_By = Integer_Param (4))
+             & (Database.E2e.From_LI = Integer_Param (5))),
         On_Server => True, Name => "insert_e2e");
 
    Query_Find_Entity_From_Decl : constant Prepared_Statement :=
@@ -197,7 +214,8 @@ package body GNATCOLL.ALI is
        (SQL_Insert
             (Values => (Database.E2e.Fromentity = Integer_Param (1))
              & (Database.E2e.Toentity = Database.Entity_Refs.Entity)
-             & (Database.E2e.Kind = Integer_Param (5)),
+             & (Database.E2e.Kind = Integer_Param (5))
+             & (Database.E2e.From_LI = Integer_Param (6)),
              Where => Database.Entity_Refs.File = Integer_Param (2)
                and Database.Entity_Refs.Line = Integer_Param (3)
                and Database.Entity_Refs.Column = Integer_Param (4)),
@@ -279,7 +297,8 @@ package body GNATCOLL.ALI is
    type Entity_Renaming is record
       Entity : Integer;              --  Id in the entities table
       File, Line, Column : Integer;  --  A reference to the renamed entity
-      Kind  : E2e_Id;
+        Kind  : E2e_Id;
+        From_LI : Integer;
    end record;
    package Entity_Renaming_Lists is new Ada.Containers.Doubly_Linked_Lists
      (Entity_Renaming);
@@ -898,7 +917,8 @@ package body GNATCOLL.ALI is
                Params => (1 => +Current_Entity,
                           2 => +Ref_Entity,
                           3 => +Eid,
-                          4 => +E2e_Order));
+                          4 => +E2e_Order,
+                          5 => +ALI_Id));
          end if;
 
          return True;
@@ -1069,6 +1089,9 @@ package body GNATCOLL.ALI is
             Update_Needed.all;
             Session.DB.Execute
               (Query_Update_LI_File, Params => (1 => +Id, 2 => +Stamp));
+            Session.DB.Execute
+              (Query_Delete_E2E_From_LI, Params => (1 => +Id));
+            Session.DB.Execute (Query_Delete_Refs, Params => (1 => +Id));
 
          else
             --  Let callers know we are about to modify the DB
@@ -1136,6 +1159,24 @@ package body GNATCOLL.ALI is
          if Is_ALI_Unit then
             Unit_Files.Append (Id);
             Grow_As_Needed (Scope_Trees, Integer (Unit_Files.Length));
+
+            --  Clear previous info known for this source file.
+            --  This cannot be done with a single query when we see the
+            --  create the LI file because it is possible to get
+            --  duplicates otherwise:
+            --  For instance, a generic instantiation ALI contains:
+            --     U glib.xml_int%b        glib-xml_int.ads
+            --     U glib.xml_int%s        glib-xml_int.ads
+            --  In this case, we would have duplicate entries in f2f
+            --  ("has ali" at least, and likely "withs" as well)
+            --
+            --  A similar error when a given basename is found in two
+            --  different locations (s-memory.adb for instance), which
+            --  can occur when overriding runtime files.
+
+            Session.DB.Execute
+              (Query_Delete_File_Dep,
+               Params => (1 => +Id));
          end if;
 
          return Id;
@@ -1489,6 +1530,7 @@ package body GNATCOLL.ALI is
                       File   => Xref_File,
                       Line   => Xref_Line,
                       Column => Xref_Col,
+                      From_LI => ALI_Id,
                       Kind   => E2e_Renames));
                end if;
             end if;
@@ -1721,10 +1763,10 @@ package body GNATCOLL.ALI is
             if Eid = -1 then
                if not Process_Refs then
                   Will_Insert_Ref := False;
-               elsif ALI_Contains_External_Refs then
-                  Will_Insert_Ref := Xref_File_Unit_File_Index /= -1;
                else
-                  Will_Insert_Ref := True;
+                  Will_Insert_Ref :=
+                    ALI_Contains_External_Refs
+                    or else Xref_File_Unit_File_Index /= -1;
                end if;
 
                if Will_Insert_Ref then
@@ -1742,7 +1784,8 @@ package body GNATCOLL.ALI is
                                       3 => +Xref_Line,
                                       4 => +Xref_Col,
                                       5 => +Xref_Kind,
-                                      6 => +Inst'Unrestricted_Access));
+                                      6 => +Inst'Unrestricted_Access,
+                                      7 => +ALI_Id));
                      else
                         Session.DB.Execute
                           (Query_Insert_Ref_With_Caller,
@@ -1752,7 +1795,8 @@ package body GNATCOLL.ALI is
                                       4 => +Xref_Col,
                                       5 => +Xref_Kind,
                                       6 => +Inst'Unrestricted_Access,
-                                      7 => +Caller));
+                                      7 => +Caller,
+                                      8 => +ALI_Id));
                      end if;
                   end;
                end if;
@@ -1762,27 +1806,35 @@ package body GNATCOLL.ALI is
                --  the parameter, which exists in the same ALI file (but not
                --  necessarily the same source file).
 
-               begin
-                  Ref_Entity := Entity_Decl_To_Id.Element
-                    ((File_Id => Xref_File,
-                      Line    => Xref_Line,
-                      Column  => Xref_Col)).Id;
-                  Session.DB.Execute
-                    (Query_Insert_E2E,
-                     Params => (1 => +Current_Entity,
-                                2 => +Ref_Entity,
-                                3 => +Eid,
-                                4 => +Order));
-                  Order := Order + 1;
-               exception
-                  when Constraint_Error =>
-                     Entity_Renamings.Append
-                       ((Entity => Current_Entity,
-                         File   => Xref_File,
-                         Line   => Xref_Line,
-                         Column => Xref_Col,
-                         Kind   => Eid));
-               end;
+               Will_Insert_Ref := ALI_Contains_External_Refs
+                 or else Xref_File_Unit_File_Index /= -1
+                 or else Current_X_File_Unit_File_Index /= -1;
+
+               if Will_Insert_Ref then
+                  begin
+                     Ref_Entity := Entity_Decl_To_Id.Element
+                       ((File_Id => Xref_File,
+                         Line    => Xref_Line,
+                         Column  => Xref_Col)).Id;
+                     Session.DB.Execute
+                       (Query_Insert_E2E,
+                        Params => (1 => +Current_Entity,
+                                   2 => +Ref_Entity,
+                                   3 => +Eid,
+                                   4 => +Order,
+                                   5 => +ALI_Id));
+                     Order := Order + 1;
+                  exception
+                     when Constraint_Error =>
+                        Entity_Renamings.Append
+                          ((Entity => Current_Entity,
+                            File   => Xref_File,
+                            Line   => Xref_Line,
+                            Column => Xref_Col,
+                            From_LI => ALI_Id,
+                            Kind   => Eid));
+                  end;
+               end if;
             end if;
          end loop;
       end Process_Entity_Line;
@@ -1831,25 +1883,7 @@ package body GNATCOLL.ALI is
                  (Basename => String (Str (Start .. Index - 1)),
                   Language => Language,
                   Is_ALI_Unit => True);
-
-               --  Clear previous info known for this source file.
-               --  This cannot be done with a single query when we see the
-               --  create the LI file because it is possible to get
-               --  duplicates otherwise:
-               --  For isntance, a generic instantiation ALI contains:
-               --     U glib.xml_int%b        glib-xml_int.ads
-               --     U glib.xml_int%s        glib-xml_int.ads
-               --  In this case, we would have duplicate entries in f2f
-               --  ("has ali" at least, and likely "withs" as well)
-               --
-               --  A similar error when a given basename is found in two
-               --  different locations (s-memory.adb for instance), which
-               --  can occur when overriding runtime files.
-
                if Current_Unit_Id /= -1 then
-                  Session.DB.Execute
-                    (Query_Delete_File_Dep,
-                     Params => (1 => +Current_Unit_Id));
                   Session.DB.Execute
                     (Query_Set_ALI,
                      Params => (1 => +Current_Unit_Id,
@@ -1976,7 +2010,8 @@ package body GNATCOLL.ALI is
                           2 => +Ren.File,
                           3 => +Ren.Line,
                           4 => +Ren.Column,
-                          5 => +Ren.Kind));
+                          5 => +Ren.Kind,
+                          6 => +Ren.From_LI));
 
             Next (C);
          end loop;
@@ -1992,6 +2027,15 @@ package body GNATCOLL.ALI is
             Was_Updated := True;
 
             if Session.DB.Has_Pragmas then
+               --  Disable checks for foreign keys. This saves a bit of time
+               --  when inserting the new references. At worse we could end up
+               --  with an entity or a reference whose kind does not match an
+               --  entry in the *_kind tables, and the xref will not show later
+               --  on in query, but that's easily fixed by adding the new entry
+               --  in the *_kind table (that is when the ALI file has changed
+               --  format) Since this is sqlite specific, we test whether the
+               --  backend supports this.
+
                Session.DB.Execute ("PRAGMA foreign_keys=OFF");
                Session.DB.Execute ("PRAGMA synchronous=OFF");
                Session.DB.Execute ("PRAGMA journal_mode=MEMORY");
@@ -2006,30 +2050,25 @@ package body GNATCOLL.ALI is
 
             if Destroy_Indexes then
                Session.DB.Execute ("DROP INDEX entity_refs_file_line_col");
+               Session.DB.Execute ("DROP INDEX entity_refs_entity");
             end if;
          end if;
       end Update_Needed;
 
    begin
-      --  Disable checks for foreign keys. This saves a bit of time when
-      --  inserting the new references. At worse we could end up with an
-      --  entity or a reference whose kind does not match an entry in the
-      --  *_kind tables, and the xref will not show later on in query, but
-      --  that's easily fixed by adding the new entry in the *_kind table (that
-      --  is when the ALI file has changed format)
-      --  Since this is sqlite specific, we test whether the backend supports
-      --  this.
-
       Project.Library_Files
         (Recursive => True, Xrefs_Dirs => True, Including_Libraries => True,
          ALI_Ext => ".ali", List => LI_Files, Include_Predefined => True);
       Project.Library_Files
         (Recursive => True, Xrefs_Dirs => True, Including_Libraries => True,
          ALI_Ext => ".gli", List => LI_Files);
+      Project.Library_Files
+        (Recursive => True, Xrefs_Dirs => True, Including_Libraries => True,
+         ALI_Ext => ".sli", List => LI_Files);
 
       if Active (Me_Timing) then
          Trace (Me_Timing,
-                "Found" & Length (LI_Files)'Img & " ali + gli files:"
+                "Found" & Length (LI_Files)'Img & " [ags]li files:"
                 & Duration'Image (Clock - Start) & " s");
          Start := Clock;
       end if;
@@ -2062,10 +2101,12 @@ package body GNATCOLL.ALI is
             Session.DB.Execute
               ("CREATE INDEX entity_refs_file_line_col"
                & " on entity_refs(file,line,""column"")");
+            Session.DB.Execute
+              ("CREATE INDEX entity_refs_entity on entity_refs(entity)");
 
             if Active (Me_Timing) then
                Trace (Me_Timing,
-                      "Created entity_refs index: "
+                      "CREATE INDEX entity_refs: "
                       & Duration'Image (Clock - Start) & " s");
                Start := Clock;
             end if;
@@ -2099,7 +2140,7 @@ package body GNATCOLL.ALI is
             Session.DB.Execute ("PRAGMA temp_store=MEMORY");
          end if;
 
-         --  Gather statistic to speed up the query optimizer. This isn't
+         --  Gather statistics to speed up the query optimizer. This isn't
          --  need systematically, and might take a while to generate, so we do
          --  it when the user also wanted to rebuild the index
 

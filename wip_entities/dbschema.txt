@@ -95,7 +95,7 @@
 | decl_file       | FK files(references)                 | NOT NULL, NOINDEX |       | Set to -1 for a predefined entity                                                                                                                                             |
 | decl_line       | INTEGER                              | NOT NULL          |       | Set to -1 for a predefined entity                                                                                                                                             |
 | decl_column     | INTEGER                              | NOT NULL          |       | Set to -1 for a predefined entity                                                                                                                                             |
-| decl_caller     | FK entities                          | NULL              |       | Parent entity                                                                                                                                                           |
+| decl_caller     | FK entities                          | NULL, NOINDEX     |       | Parent entity                                                                                                                                                           |
 | imports         | TEXT                                 |                   |       | Name of imported entity, if any. Format is "lang,name"b                                                                                                                       |
 | INDEX:          | name,decl_file,decl_line,decl_column |                   |       | For Query_Find_Predefined_Entity                                                                                                                                              |
 | INDEX:          | decl_file,decl_line,decl_column      |                   |       | For Query_Find_Entity_From_Decl                                                                                                                                               |
@@ -125,6 +125,7 @@
 | toEntity   | FK entities(linked_from) | NOT NULL          |   |                                                                            |
 | kind       | FK e2e_kind()            | NOT NULL, NOINDEX |   | The type of link. Defined through an enumeration type in Ada               |
 | order_by   | INTEGER                  | NOT NULL          | 1 | Ordering among the references. Used for instance for subprogram parameters |
+| from_li    | FK files                 | NOT NULL, INDEX   |   | Id of the LI file from which this relationship was read. This is used to cleanup the database when the LI file is updated later on |
 
 # The various kinds of references.
 
@@ -156,15 +157,18 @@
 # instance the argument for an "in out" parameter has both a "read" and
 # "modified" entries.
 
-| TABLE              | entity_refs             | entity_ref                |   |                                                               |             |                        |                                       |       |
-| entity             | FK entities(references) | NOT NULL                  |   | The entity to which we have a reference                       |             |                        |                                       |       |
-| file               | FK files(references)    | NOT NULL, NOINDEX         |   |                                                               |             |                        |                                       |       |
-| line               | INTEGER                 | NOT NULL                  |   |                                                               |             |                        |                                       |       |
-| column             | INTEGER                 | NOT NULL                  |   |                                                               |             |                        |                                       |       |
-| kind               | FK reference_kinds()    | NOT NULL, NOINDEX         |   | Type of reference (same letter as in ALI files)               |             |                        |                                       |       |
-| caller             | FK entities(calling)    | NULL, NOINDEX             |   | Enclosing entity at that location                             |             |                        |                                       |       |
-| from_instantiation | TEXT                    |                           |   | The instances in which the ref occurs, in the form "file1     | line1,file2 | line2,..." where file1 | line1 is itself instantiated by file2 | line2 |
-| INDEX:             | "file","line","column"  | entity_refs_file_line_col |   | # Do not include 'entity' to speed up Query_Set_Entity_Rename |             |                        |                                       |       |
+| TABLE              | entity_refs             | entity_ref                |   |                                                                                                                                          |
+| entity             | FK entities(references) | NOT NULL, NOINDEX         |   | The entity to which we have a reference                                                                                                  |
+| file               | FK files(references)    | NOT NULL, NOINDEX         |   |                                                                                                                                          |
+| line               | INTEGER                 | NOT NULL                  |   |                                                                                                                                          |
+| column             | INTEGER                 | NOT NULL                  |   |                                                                                                                                          |
+| kind               | FK reference_kinds()    | NOT NULL, NOINDEX         |   | Type of reference (same letter as in ALI files)                                                                                          |
+| from_li            | FK files                | NOT NULL, NOINDEX         |   |                                                                                                                                          |
+| caller             | FK entities(calling)    | NULL, NOINDEX             |   | Enclosing entity at that location                                                                                                        |
+| from_instantiation | TEXT                    |                           |   | The instances in which the ref occurs, in the form "file1#line1,file2 line2,..." where file1#line1 is itself instantiated by file2#line2 |
+| INDEX:             | "file","line","column"  | entity_refs_file_line_col |   | Do not include 'entity' to speed up Query_Set_Entity_Rename                                                                              |
+| INDEX:             | "entity"                | entity_refs_entity        |   | Disabled during parsing                                                                                                                  |
+| INDEX:             | "from_li"               | entity_refs_from_li       |   | Needed to fast delete references when updating LI files, but this makes insertion slower as well                                         |
 
 # ??? CREATE INDEX entity_refs__loc on entity_refs (file,kind,line,column);
 # See http://www.sqlite.org/queryplanner.html
