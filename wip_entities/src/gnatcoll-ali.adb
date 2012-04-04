@@ -1081,11 +1081,6 @@ package body GNATCOLL.ALI is
          end if;
 
          return Id;
-
-      exception
-         when E : others =>
-            Trace (Me_Forward, E);
-            return -1;
       end Insert_LI_File;
 
       ------------------------
@@ -1996,6 +1991,16 @@ package body GNATCOLL.ALI is
          if not Was_Updated then
             Was_Updated := True;
 
+            if Session.DB.Has_Pragmas then
+               Session.DB.Execute ("PRAGMA foreign_keys=OFF");
+               Session.DB.Execute ("PRAGMA synchronous=OFF");
+               Session.DB.Execute ("PRAGMA journal_mode=MEMORY");
+               Session.DB.Execute ("PRAGMA temp_store=MEMORY");
+            end if;
+
+            Session.DB.Automatic_Transactions (False);
+            Session.DB.Execute ("BEGIN");
+
             --  It is faster to recreate the index once at the end than
             --  maintain it for every insert.
 
@@ -2028,16 +2033,6 @@ package body GNATCOLL.ALI is
                 & Duration'Image (Clock - Start) & " s");
          Start := Clock;
       end if;
-
-      if Session.DB.Has_Pragmas then
-         Session.DB.Execute ("PRAGMA foreign_keys=OFF");
-         Session.DB.Execute ("PRAGMA synchronous=OFF");
-         Session.DB.Execute ("PRAGMA journal_mode=MEMORY");
-         Session.DB.Execute ("PRAGMA temp_store=MEMORY");
-      end if;
-
-      Session.DB.Automatic_Transactions (False);
-      Session.DB.Execute ("BEGIN");
 
       Lib_Info := LI_Files.First;
       while Has_Element (Lib_Info) loop
