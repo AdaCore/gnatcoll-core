@@ -1177,6 +1177,10 @@ package body GNATCOLL.Projects is
    function Language (Info : File_Info'Class) return String is
    begin
       if Info.Lang = No_Name then
+         --  This is likely a file from the predefined search path, for which
+         --  no project information is available. Most likely from the Ada
+         --  runtime.
+         --  ??? Should we return "ada"
          return "";
       else
          return Get_String (Info.Lang);
