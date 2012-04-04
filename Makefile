@@ -69,7 +69,7 @@ test_verbose:
 install_library_type:
 	${MKDIR} ${bindir}
 	${MKDIR} ${libdir}/${TARNAME}/${LIBRARY_TYPE}
-	${MKDIR} ${DESTDIR}/${prefix}/lib/gnat/${TARNAME}
+	${MKDIR} ${DESTDIR}${prefix}/lib/gnat/${TARNAME}
 	${MKDIR} ${datadir}/examples
 	${MKDIR} ${datadir}/gnatcoll
 	${MKDIR} ${includedir}/${TARNAME}
@@ -88,7 +88,7 @@ endif
 	${CP} src/dborm.py ${datadir}/gnatcoll/
 	${CP} distrib/gnatcoll_gps.xml ${datadir}/gps/plug-ins
 	${CP} distrib/gnatcoll_runtime.xml ${datadir}/gps/plug-ins
-	${CP} distrib/*.gpr ${DESTDIR}/${prefix}/lib/gnat
+	${CP} distrib/*.gpr ${DESTDIR}${prefix}/lib/gnat
 
 install_docs:
 	${MKDIR} ${datadir}/doc/gnatcoll/html
