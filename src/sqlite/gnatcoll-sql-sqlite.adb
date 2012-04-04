@@ -63,6 +63,32 @@ package body GNATCOLL.SQL.Sqlite is
       return DB;
    end Build_Connection;
 
+   ---------------
+   -- Is_Sqlite --
+   ---------------
+
+   function Is_Sqlite
+     (DB : access Database_Connection_Record'Class)
+      return Boolean
+   is
+   begin
+      return Get_Description (DB).all in Sqlite_Description;
+   end Is_Sqlite;
+
+   -------------
+   -- DB_Name --
+   -------------
+
+   function DB_Name
+     (DB : access Database_Connection_Record'Class) return String is
+   begin
+      return Sqlite_Description (Get_Description (DB).all).Dbname.all;
+   exception
+      when Constraint_Error =>
+         --  Probably not a Sqlite_Description
+         return "";
+   end DB_Name;
+
    ----------
    -- Free --
    ----------

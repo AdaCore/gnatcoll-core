@@ -62,6 +62,16 @@ package GNATCOLL.SQL.Sqlite is
    --  If sqlite was not detected at installation time, this function will
    --  return null.
 
+   function Is_Sqlite
+     (DB : access Database_Connection_Record'Class)
+      return Boolean;
+   --  Whether the connection is to a sqlite database
+
+   function DB_Name
+     (DB : access Database_Connection_Record'Class) return String;
+   --  Return the name of the file DB is connecting to (or ":memory:" when
+   --  in memory.
+
    function Backup
      (DB1 : access Database_Connection_Record'Class;
       DB2 : String;

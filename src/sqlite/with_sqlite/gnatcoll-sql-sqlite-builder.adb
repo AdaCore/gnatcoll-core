@@ -274,6 +274,11 @@ package body GNATCOLL.SQL.Sqlite.Builder is
          if Self.Free_Stmt then
             Finalize (Self.Stmt);
          else
+            --  Clear bindings is useless, since we never need to free memory
+            --  (even strings are passed by access)
+
+            --  Clear_Bindings (Self.Stmt);
+
             --  We used to reset Self.Stmt here.
             --  But this is in fact dangerous: the statement is in fact the
             --  same DBMS_Stmt that is stored in
@@ -286,7 +291,6 @@ package body GNATCOLL.SQL.Sqlite.Builder is
             --  will not call Step() again. But this isn't a memory leak since
             --  the memory will be freed if the prepared statement is finalized
 
-            Clear_Bindings (Self.Stmt);
             Status := Reset (Self.Stmt);
             if Status /= Sqlite_OK then
                Trace (Me, "Error when reseting cursor to free LOCKS: "

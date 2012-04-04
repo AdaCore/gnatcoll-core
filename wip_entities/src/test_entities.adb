@@ -19,7 +19,6 @@ with Ada.Calendar;          use Ada.Calendar;
 with Ada.Text_IO;           use Ada.Text_IO;
 with GNAT.Command_Line;     use GNAT.Command_Line;
 with GNAT.Strings;          use GNAT.Strings;
-with GNAT.OS_Lib;
 with GNATCOLL.ALI;          use GNATCOLL.ALI;
 with GNATCOLL.SQL.Exec;     use GNATCOLL.SQL.Exec;
 with GNATCOLL.SQL.Inspect;  use GNATCOLL.SQL.Inspect;
@@ -31,8 +30,6 @@ with GNATCOLL.Projects;     use GNATCOLL.Projects;
 with GNATCOLL.VFS;          use GNATCOLL.VFS;
 
 procedure Test_Entities is
-   Me_Timing : constant Trace_Handle := Create ("ENTITIES.TIMING");
-
    Use_Postgres : aliased Boolean := False;
    --  Whether to use sqlite or postgreSQL
 
@@ -43,16 +40,12 @@ procedure Test_Entities is
    Tmp_DB_Name : aliased String_Access;
 
    GPR_File     : Virtual_File;
-   DB_Schema_Descr : constant Virtual_File := Create ("dbschema.txt");
 
    Env     : Project_Environment_Access;
    Tree    : Project_Tree;
-   Start   : Time;
    Absolute_Start : Time;
    GNAT_Version : String_Access;
    Cmdline_Config : Command_Line_Configuration;
-
-   Need_To_Create_DB : Boolean;
 
 begin
    GNATCOLL.Traces.Parse_Config_File;
@@ -97,15 +90,11 @@ begin
       GNATCOLL.SQL.Sessions.Setup
         (Descr        => GNATCOLL.SQL.Postgres.Setup (Database => DB_Name.all),
          Max_Sessions => 1);
-      Need_To_Create_DB := True;
    else
       GNATCOLL.SQL.Sessions.Setup
         (Descr => GNATCOLL.SQL.Sqlite.Setup (Database => Tmp_DB_Name.all),
          Max_Sessions => 1);
-      Need_To_Create_DB := not GNAT.OS_Lib.Is_Regular_File (Tmp_DB_Name.all);
    end if;
-
-   Start := Clock;
 
    --  Load project
 
@@ -124,78 +113,16 @@ begin
       Env               => Env,
       Errors            => Put_Line'Access);
 
-   if Active (Me_Timing) then
-      Trace (Me_Timing,
-             "Loaded project:" & Duration'Image (Clock - Start) & " s");
-   end if;
+   --  Parse LI files
 
    Absolute_Start := Clock;
-
-   --  Create the database if needed
-
-   declare
-      Session : constant Session_Type := Get_New_Session;
-   begin
-      --  Restore the database from the disk into memory to speed the
-      --  processing
-
-      if not Use_Postgres
-        and then Tmp_DB_Name.all = ":memory:"
-        and then GNAT.OS_Lib.Is_Regular_File (DB_Name.all)
-      then
-         Start := Clock;
-
-         if not GNATCOLL.SQL.Sqlite.Backup
-           (DB1 => Session.DB,
-            DB2 => DB_Name.all,
-            From_DB1_To_DB2 => False)
-         then
-            Put_Line ("Failed to restore the database from disk");
-         elsif Active (Me_Timing) then
-            Trace (Me_Timing,
-                   "Total time for restore:"
-                   & Duration'Image (Clock - Start) & " s");
-         end if;
-
-         Need_To_Create_DB := False;
-
-      else
-         if Need_To_Create_DB then
-            Create_Database (Session.DB,
-                             DB_Schema_Descr,
-                             Create (+"initialdata.txt"));
-         end if;
-      end if;
-
-      if Parse_All_LI_Files
-        (Session,
-         Tree              => Tree,
-         Project           => Tree.Root_Project)
-        or else Need_To_Create_DB
-      then
-         --  Dump into a file
-
-         if not Use_Postgres
-           and then Tmp_DB_Name.all = ":memory:"
-           and then DB_Name.all /= Tmp_DB_Name.all
-         then
-            Start := Clock;
-
-            if not GNATCOLL.SQL.Sqlite.Backup
-              (DB1 => Session.DB,
-               DB2 => DB_Name.all)
-            then
-               Put_Line ("Failed to backup the database to disk");
-            elsif Active (Me_Timing) then
-               Trace (Me_Timing,
-                      "Total time for backup:"
-                      & Duration'Image (Clock - Start) & " s");
-            end if;
-         end if;
-      end if;
-
-      Put_Line (Duration'Image (Clock - Absolute_Start) & " s");
-   end;
+   Parse_All_LI_Files_With_Backup
+     (Session      => Get_New_Session,
+      Tree         => Tree,
+      Project      => Tree.Root_Project,
+      From_DB_Name => DB_Name.all,
+      To_DB_Name   => DB_Name.all);
+   Put_Line (Duration'Image (Clock - Absolute_Start) & " s");
 
    --  Free memory
 

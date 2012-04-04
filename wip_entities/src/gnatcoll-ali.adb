@@ -24,10 +24,12 @@ with Ada.Containers.Vectors;
 with Ada.Strings.Unbounded; use Ada.Strings.Unbounded;
 with Ada.Unchecked_Conversion;
 with Ada.Unchecked_Deallocation;
+with GNAT.OS_Lib;           use GNAT.OS_Lib;
 with GNATCOLL.ALI.Database; use GNATCOLL.ALI.Database;
 with GNATCOLL.Mmap;         use GNATCOLL.Mmap;
 with GNATCOLL.SQL;          use GNATCOLL.SQL;
 with GNATCOLL.SQL.Inspect;  use GNATCOLL.SQL.Inspect;
+with GNATCOLL.SQL.Sqlite;
 with GNATCOLL.Traces;       use GNATCOLL.Traces;
 with GNATCOLL.Utils;        use GNATCOLL.Utils;
 with GNATCOLL.VFS;          use GNATCOLL.VFS;
@@ -1079,6 +1081,11 @@ package body GNATCOLL.ALI is
          end if;
 
          return Id;
+
+      exception
+         when E : others =>
+            Trace (Me_Forward, E);
+            return -1;
       end Insert_LI_File;
 
       ------------------------
@@ -1094,7 +1101,6 @@ package body GNATCOLL.ALI is
            Tree.Create
              (Name            => +Basename,
               Use_Object_Path => False);
-         Files : Forward_Cursor;
          Found : VFS_To_Ids.Cursor;
          Id    : Integer;
       begin
@@ -1113,6 +1119,7 @@ package body GNATCOLL.ALI is
                Name  : constant Cst_Filesystem_String_Access :=
                  File.Full_Name (Normalize => True);
                Name_A : constant Access_String := Convert (Name);
+               Files : Forward_Cursor;
             begin
                Files.Fetch
                  (Session.DB, Query_Get_File, Params => (1 => +Name_A));
@@ -1935,7 +1942,8 @@ package body GNATCOLL.ALI is
    function Parse_All_LI_Files
      (Session : Session_Type;
       Tree    : Project_Tree;
-      Project : Project_Type) return Boolean
+      Project : Project_Type;
+      Destroy_Indexes : Boolean := False) return Boolean
    is
       use Library_Info_Lists;
       LI_Files  : Library_Info_Lists.List;
@@ -1988,20 +1996,12 @@ package body GNATCOLL.ALI is
          if not Was_Updated then
             Was_Updated := True;
 
-            if Session.DB.Has_Pragmas then
-               Session.DB.Execute ("PRAGMA foreign_keys=OFF");
-               Session.DB.Execute ("PRAGMA synchronous=OFF");
-               Session.DB.Execute ("PRAGMA journal_mode=MEMORY");
-               Session.DB.Execute ("PRAGMA temp_store=MEMORY");
-            end if;
-
-            Session.DB.Automatic_Transactions (False);
-            Session.DB.Execute ("BEGIN");
-
             --  It is faster to recreate the index once at the end than
             --  maintain it for every insert.
 
-            Session.DB.Execute ("DROP INDEX entity_refs_file_line_col");
+            if Destroy_Indexes then
+               Session.DB.Execute ("DROP INDEX entity_refs_file_line_col");
+            end if;
          end if;
       end Update_Needed;
 
@@ -2029,6 +2029,16 @@ package body GNATCOLL.ALI is
          Start := Clock;
       end if;
 
+      if Session.DB.Has_Pragmas then
+         Session.DB.Execute ("PRAGMA foreign_keys=OFF");
+         Session.DB.Execute ("PRAGMA synchronous=OFF");
+         Session.DB.Execute ("PRAGMA journal_mode=MEMORY");
+         Session.DB.Execute ("PRAGMA temp_store=MEMORY");
+      end if;
+
+      Session.DB.Automatic_Transactions (False);
+      Session.DB.Execute ("BEGIN");
+
       Lib_Info := LI_Files.First;
       while Has_Element (Lib_Info) loop
          Parse_LI (Session              => Session,
@@ -2053,15 +2063,17 @@ package body GNATCOLL.ALI is
       end if;
 
       if Was_Updated then
-         Session.DB.Execute
-           ("CREATE INDEX entity_refs_file_line_col"
-            & " on entity_refs(file,line,""column"")");
+         if Destroy_Indexes then
+            Session.DB.Execute
+              ("CREATE INDEX entity_refs_file_line_col"
+               & " on entity_refs(file,line,""column"")");
 
-         if Active (Me_Timing) then
-            Trace (Me_Timing,
-                   "Created entity_refs index: "
-                   & Duration'Image (Clock - Start) & " s");
-            Start := Clock;
+            if Active (Me_Timing) then
+               Trace (Me_Timing,
+                      "Created entity_refs index: "
+                      & Duration'Image (Clock - Start) & " s");
+               Start := Clock;
+            end if;
          end if;
 
          Resolve_Renamings;
@@ -2092,17 +2104,104 @@ package body GNATCOLL.ALI is
             Session.DB.Execute ("PRAGMA temp_store=MEMORY");
          end if;
 
-         --  Gather statistic to speed up the query optimizer
-         Session.DB.Execute ("ANALYZE");
+         --  Gather statistic to speed up the query optimizer. This isn't
+         --  need systematically, and might take a while to generate, so we do
+         --  it when the user also wanted to rebuild the index
 
-         if Active (Me_Timing) then
-            Trace
-              (Me_Timing, "ANALYZE:" & Duration'Image (Clock - Start) & " s");
-            Start := Clock;
+         if Destroy_Indexes then
+            Session.DB.Execute ("ANALYZE");
+
+            if Active (Me_Timing) then
+               Trace
+                 (Me_Timing,
+                  "ANALYZE:" & Duration'Image (Clock - Start) & " s");
+               Start := Clock;
+            end if;
          end if;
       end if;
 
       return Was_Updated;
    end Parse_All_LI_Files;
+
+   ------------------------------------
+   -- Parse_All_LI_Files_With_Backup --
+   ------------------------------------
+
+   procedure Parse_All_LI_Files_With_Backup
+     (Session      : Session_Type;
+      Tree         : Project_Tree;
+      Project      : Project_Type;
+      From_DB_Name : String := "";
+      To_DB_Name   : String := "")
+   is
+      Start   : Time;
+      Need_To_Create_DB : Boolean;
+      Ignored : Boolean;
+      pragma Unreferenced (Ignored);
+   begin
+      if not GNATCOLL.SQL.Sqlite.Is_Sqlite (Session.DB) then
+         Ignored := Parse_All_LI_Files (Session, Tree, Project);
+         return;
+      end if;
+
+      declare
+         Current_DB  : constant String :=
+           GNATCOLL.SQL.Sqlite.DB_Name (Session.DB);
+      begin
+         if Current_DB /= From_DB_Name
+           and then From_DB_Name /= ""
+           and then Is_Regular_File (From_DB_Name)
+         then
+            Need_To_Create_DB := False;
+            Start := Clock;
+
+            if not GNATCOLL.SQL.Sqlite.Backup
+              (DB1             => Session.DB,
+               DB2             => From_DB_Name,
+               From_DB1_To_DB2 => False)
+            then
+               Trace
+                 (Me_Error,
+                  "Failed to copy the database from " & From_DB_Name);
+
+            elsif Active (Me_Timing) then
+               Trace (Me_Timing, "Total time for restore:"
+                      & Duration'Image (Clock - Start) & " s");
+            end if;
+
+         else
+            Need_To_Create_DB := not Is_Regular_File (Current_DB);
+
+            if Need_To_Create_DB then
+               Create_Database (Session.DB,
+                                Create (+"dbschema.txt"),
+                                Create (+"initialdata.txt"));
+            end if;
+         end if;
+
+         if Parse_All_LI_Files   --   if DB was modified
+           (Session, Tree, Project,
+            Destroy_Indexes => Need_To_Create_DB)
+           or else Need_To_Create_DB
+         then
+            if To_DB_Name /= ""
+              and then Current_DB /= To_DB_Name
+            then
+               Start := Clock;
+
+               if not GNATCOLL.SQL.Sqlite.Backup
+                 (DB1 => Session.DB,
+                  DB2 => To_DB_Name)
+               then
+                  Trace (Me_Error, "Failed to backup the database to disk");
+               elsif Active (Me_Timing) then
+                  Trace (Me_Timing,
+                         "Total time for backup:"
+                         & Duration'Image (Clock - Start) & " s");
+               end if;
+            end if;
+         end if;
+      end;
+   end Parse_All_LI_Files_With_Backup;
 
 end GNATCOLL.ALI;

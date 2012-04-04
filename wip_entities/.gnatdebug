@@ -1,6 +1,6 @@
 >log
 DEBUG.COUNT=yes
-SQL.*=no
+SQL.*=yes
 SQL.SQLITE.GNADE=yes   # Requires change in source to activate, too
 SQL.SQLITE.LOG=yes
 PROJECTS=no

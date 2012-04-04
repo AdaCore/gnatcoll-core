@@ -381,9 +381,6 @@ package body GNATCOLL.SQL.Exec is
             --  statement, so that's not an issue.
 
          else
-            null; --  Assuming the Reset has already been done as part of the
-                  --  Finalization of the cursor, last time.
-
             Reset (Connection, L.Stmt);
          end if;
 
