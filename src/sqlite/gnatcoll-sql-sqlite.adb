@@ -111,4 +111,15 @@ package body GNATCOLL.SQL.Sqlite is
       return GNATCOLL.SQL.Sqlite.Builder.Backup (DB1, DB2, From_DB1_To_DB2);
    end Backup;
 
+   ------------
+   -- Backup --
+   ------------
+
+   function Backup
+     (From : access Database_Connection_Record'Class;
+      To   : access Database_Connection_Record'Class) return Boolean is
+   begin
+      return GNATCOLL.SQL.Sqlite.Builder.Backup (From, To);
+   end Backup;
+
 end GNATCOLL.SQL.Sqlite;

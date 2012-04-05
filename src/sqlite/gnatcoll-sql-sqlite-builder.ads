@@ -45,4 +45,10 @@ private package GNATCOLL.SQL.Sqlite.Builder is
    --  (or ":memory:")
    --  Returns False in case of error
 
+   function Backup
+     (From : access Database_Connection_Record'Class;
+      To   : access Database_Connection_Record'Class) return Boolean;
+   --  Copy all the contents from From to TO.
+   --  Returns False in case of error
+
 end GNATCOLL.SQL.Sqlite.Builder;

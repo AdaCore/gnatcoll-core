@@ -36,6 +36,7 @@ procedure Test_Entities is
    Do_Not_Perform_Queries : aliased Boolean := False;
    --  Whether to perform the queries in the database
 
+   Nightly_DB  : aliased String_Access;
    DB_Name     : aliased String_Access;
    Tmp_DB_Name : aliased String_Access;
 
@@ -54,6 +55,22 @@ procedure Test_Entities is
 begin
    GNATCOLL.Traces.Parse_Config_File;
 
+   Set_Usage
+     (Cmdline_Config,
+      Help => "In general, there are up to three databases involved:"
+      & ASCII.LF
+      & " 'nightly' is a database that could be generated during nightly"
+      & " builds. If unspecified, it defaults to the value of 'db'."
+      & ASCII.LF
+      & " 'db' is the user's database on disk. If it doesn't exist yet, it"
+      & " will be either initialized by copying 'nightly', or created anew."
+      & " On exit, it will have been updated with the new contents."
+      & ASCII.LF
+      & " 'tmpdb' is the database that is modified during the parsing. In"
+      & " general, it should be the same as 'db', and the tool might decide to"
+      & " create a temporary in-memory database if the number of files to"
+      & " update is significant. But you can force it to :memory: to force an"
+      & " update in memory.");
    Define_Switch
      (Cmdline_Config, Do_Not_Perform_Queries'Access,
       Long_Switch => "--nodb",
@@ -63,14 +80,19 @@ begin
       Long_Switch => "--postgres",
       Help => "Use postgreSQL as the backend, instead of sqlite");
    Define_Switch
+     (Cmdline_Config, Nightly_DB'Access,
+      Long_Switch => "--nightly:",
+      Help =>
+        "Name of the pregenerated database (for instance from nightly builds");
+   Define_Switch
+     (Cmdline_Config, DB_Name'Access,
+      Long_Switch => "--db:",
+      Help => "Name of the database on disk");
+   Define_Switch
      (Cmdline_Config, Tmp_DB_Name'Access,
       Long_Switch => "--tmpdb:",
       Help =>
         "Name of the temporary database (use :memory: to copy to memory)");
-   Define_Switch
-     (Cmdline_Config, DB_Name'Access,
-      Long_Switch => "--db:",
-      Help => "Name of the database");
    Define_Switch
      (Cmdline_Config, Omit_Runtime_Files'Access,
       Long_Switch => "--noruntime",
@@ -83,9 +105,14 @@ begin
       DB_Name := new String'("entities.db");
    end if;
 
+   if Nightly_DB.all = "" then
+      Free (Nightly_DB);
+      Nightly_DB := new String'(DB_Name.all);
+   end if;
+
    if Tmp_DB_Name.all = "" then
       Free (Tmp_DB_Name);
-      Tmp_DB_Name := new String'(":memory:");
+      Tmp_DB_Name := new String'(DB_Name.all);
    end if;
 
    GPR_File := Create (+GNAT.Command_Line.Get_Argument);
@@ -130,7 +157,7 @@ begin
       Tree         => Tree,
       Project      => Tree.Root_Project,
       Parse_Runtime_Files => not Omit_Runtime_Files,
-      From_DB_Name => DB_Name.all,
+      From_DB_Name => Nightly_DB.all,
       To_DB_Name   => DB_Name.all);
    Put_Line (Duration'Image (Clock - Absolute_Start) & " s");
 

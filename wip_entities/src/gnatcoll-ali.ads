@@ -65,6 +65,23 @@ package GNATCOLL.ALI is
    --  either be kept in memory (passing "" for To_DB_Name) or dumped back to
    --  a local user-writable file.
    --
+   --  In fact, depending on the number of LI files to update, GNATCOLL might
+   --  decide to temporarily work in memory. Thus, we have the following
+   --  databases involved:
+   --      From_DB_Name (e.g. from nightly builds)
+   --          |        (copy only if DB doesn't exist yet
+   --          v           and is not the same file already)
+   --         DB
+   --          |
+   --          v
+   --       :memory:    (if the number of LI files to update is big)
+   --          |
+   --          v
+   --         DB        (overridden after the update in memory, or changed
+   --          |         directly)
+   --          v
+   --      To_DB_Name   (if specified and different from DB)
+   --
    --  If DB is an in-memory database, this procedure will be faster
    --  than directly modifying the database on the disk (through a call to
    --  Parse_All_LI_Files) when lots of changes need to be made.

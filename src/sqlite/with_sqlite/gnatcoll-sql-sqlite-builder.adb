@@ -1121,55 +1121,56 @@ package body GNATCOLL.SQL.Sqlite.Builder is
       DB2 : String;
       From_DB1_To_DB2 : Boolean := True) return Boolean
    is
-      From_DB : GNATCOLL.SQL.Sqlite.Gnade.Database;
-      To_DB   : GNATCOLL.SQL.Sqlite.Gnade.Database;
+      To     : Database_Connection;
+      Result : Boolean := True;
+   begin
+      To := GNATCOLL.SQL.Sqlite.Setup (DB2).Build_Connection;
+      To.Force_Connect;
+      DB1.Force_Connect;
+
+      if From_DB1_To_DB2 then
+         Result := Backup (DB1, To);
+      else
+         Result := Backup (To, DB1);
+      end if;
+
+      Close (To);
+      return Result;
+   end Backup;
+
+   ------------
+   -- Backup --
+   ------------
+
+   function Backup
+     (From : access Database_Connection_Record'Class;
+      To   : access Database_Connection_Record'Class) return Boolean
+   is
       Status  : Result_Codes;
       Bkp     : Sqlite3_Backup;
       Result  : Boolean := True;
    begin
-      Open (To_DB, DB2, Status => Status);
-      if Status /= Sqlite_OK then
-         Trace (Me_Log, Status'Img & " could not open destination db");
-         return False;
-      end if;
-
-      Force_Connect (DB1);
-
-      if From_DB1_To_DB2 then
-         From_DB := Sqlite_Connection_Record (DB1.all).DB;
-      else
-         From_DB := To_DB;
-         To_DB := Sqlite_Connection_Record (DB1.all).DB;
-      end if;
-
       Bkp := Backup_Init
-        (Pdest        => To_DB,
+        (Pdest        => Sqlite_Connection_Record (To.all).DB,
          Pdest_Name   => "main",
-         Psource      => From_DB,
+         Psource      => Sqlite_Connection_Record (From.all).DB,
          Psource_Name => "main");
 
       if System.Address (Bkp) = System.Null_Address then
          Trace (Me_Log, "failed to create the backup object");
-         Close (To_DB);
          return False;
       end if;
 
       Status := Backup_Step (Bkp, -1);
       if Status /= Sqlite_Done then
          Trace (Me_Log, Status'Img & " Error in Backup_Step "
-                & Error_Msg (From_DB));
+                & Error (From));
          Result := False;
       end if;
 
       if Backup_Finish (Bkp) /= Sqlite_OK then
          Trace (Me_Log, "Error in Backup_Finish");
          Result := False;
-      end if;
-
-      if From_DB1_To_DB2 then
-         Close (To_DB);
-      else
-         Close (From_DB);
       end if;
 
       return Result;

@@ -59,6 +59,16 @@ package body GNATCOLL.ALI is
    --  duplicates. However, this constant was left as a documentation of the
    --  impact this has on the parsing of ALI files.
 
+   Memory_Threshold : constant Ada.Containers.Count_Type := 200;
+   --  Number of LI files to update after which we will use a temporary
+   --  in-memory copy of the database. This is computed as such:
+   --    on the GPS project, it takes about .0230s per LI file when db is in
+   --    memory; but we need 5.822s to recreate the indexes and about 6s to
+   --    dump the database from memory to the disk.
+   --    When working directly on the disk, it takes about .082s per file,
+   --    with no additional cost.
+   --  This gives a threshold of about 190 for my machine.
+
    type Access_String is access constant String;
    function Convert is new Ada.Unchecked_Conversion
      (Cst_Filesystem_String_Access, Access_String);
@@ -1950,7 +1960,12 @@ package body GNATCOLL.ALI is
       --  case, the index is only destroyed if actual changes take place in the
       --  database.
 
-      Start             : Time;
+      Do_Analyze : Boolean := False;
+      --  Whether to perform a "ANALYZE". This is really only needed the first
+      --  time, since it will give a good idea of the contents of the database.
+      --  This is not needed later on.
+      --  ??? Perhaps once a day would be nice ?
+
       LI_Files          : Library_Info_Lists.List;
       LIs               : LI_Lists.List;
       VFS_To_Id         : VFS_To_Ids.Map;
@@ -1961,7 +1976,7 @@ package body GNATCOLL.ALI is
       --  The last pass in parsing a ALI file is to resolve all renamings, now
       --  that we can convert a reference to an entity
 
-      procedure Initialize_DB;
+      procedure Initialize_DB (DB : Database_Connection);
       --  Initialize the database if needed (copy from disk or create db)
 
       procedure Backup_DB_If_Needed
@@ -1991,7 +2006,12 @@ package body GNATCOLL.ALI is
       procedure Resolve_Renamings is
          C   : Entity_Renaming_Lists.Cursor := Entity_Renamings.First;
          Ren : Entity_Renaming;
+         Start : Time;
       begin
+         if Active (Me_Timing) then
+            Start := Clock;
+         end if;
+
          while Has_Element (C) loop
             Ren := Element (C);
             DB.Execute
@@ -2004,24 +2024,40 @@ package body GNATCOLL.ALI is
                           6 => +Ren.From_LI));
             Next (C);
          end loop;
+
+         if Active (Me_Timing)
+           and then not Entity_Renamings.Is_Empty
+         then
+            Trace (Me_Timing,
+                   "Processed" & Length (Entity_Renamings)'Img
+                   & " incomplete refs:"
+                   & Duration'Image (Clock - Start) & " s");
+         end if;
       end Resolve_Renamings;
 
       -------------------
       -- Initialize_DB --
       -------------------
 
-      procedure Initialize_DB is
+      procedure Initialize_DB (DB : Database_Connection) is
+         Start : Time;
       begin
          if Is_Sqlite then
             declare
                Current_DB  : constant String :=
                  GNATCOLL.SQL.Sqlite.DB_Name (DB);
             begin
-               if Current_DB /= From_DB_Name
+               if Is_Regular_File (Current_DB) then
+                  --  If the DB already exists, don't override it
+                  null;
+
+               elsif Current_DB /= From_DB_Name
                  and then From_DB_Name /= ""
                  and then Is_Regular_File (From_DB_Name)
                then
-                  Start := Clock;
+                  if Active (Me_Timing) then
+                     Start := Clock;
+                  end if;
 
                   if not GNATCOLL.SQL.Sqlite.Backup
                     (DB1             => DB,
@@ -2033,17 +2069,17 @@ package body GNATCOLL.ALI is
                         "Failed to copy the database from " & From_DB_Name);
 
                   elsif Active (Me_Timing) then
-                     Trace (Me_Timing, "Total time for restore:"
+                     Trace (Me_Timing, "Copy " & From_DB_Name
+                            & " to " & Current_DB & ":"
                             & Duration'Image (Clock - Start) & " s");
                   end if;
 
                else
-                  if not Is_Regular_File (Current_DB) then
-                     Create_Database (DB,
-                                      Create (+"dbschema.txt"),
-                                      Create (+"initialdata.txt"));
-                     Destroy_Indexes := True;
-                  end if;
+                  Create_Database (DB,
+                                   Create (+"dbschema.txt"),
+                                   Create (+"initialdata.txt"));
+                  Destroy_Indexes := True;
+                  Do_Analyze := True;
                end if;
             end;
          end if;
@@ -2054,28 +2090,27 @@ package body GNATCOLL.ALI is
       -------------------------
 
       procedure Backup_DB_If_Needed
-        (DB : Database_Connection; To_DB : String) is
+        (DB : Database_Connection; To_DB : String)
+      is
+         Start : Time;
       begin
          if Is_Sqlite
-           and then To_DB_Name /= ""
+           and then To_DB /= ""
+           and then GNATCOLL.SQL.Sqlite.DB_Name (DB) /= To_DB
          then
-            if To_DB /= ""
-              and then GNATCOLL.SQL.Sqlite.DB_Name (DB) /= To_DB
-            then
-               if Active (Me_Timing) then
-                  Start := Clock;
-               end if;
+            if Active (Me_Timing) then
+               Start := Clock;
+            end if;
 
-               if not GNATCOLL.SQL.Sqlite.Backup
-                 (DB1 => DB,
-                  DB2 => To_DB)
-               then
-                  Trace (Me_Error, "Failed to backup the database to disk");
-               elsif Active (Me_Timing) then
-                  Trace (Me_Timing,
-                         "Total time for backup:"
-                         & Duration'Image (Clock - Start) & " s");
-               end if;
+            if not GNATCOLL.SQL.Sqlite.Backup
+              (DB1 => DB,
+               DB2 => To_DB)
+            then
+               Trace (Me_Error, "Failed to backup the database to disk");
+            elsif Active (Me_Timing) then
+               Trace (Me_Timing,
+                      "Backup to " & To_DB & ":"
+                      & Duration'Image (Clock - Start) & " s");
             end if;
          end if;
       end Backup_DB_If_Needed;
@@ -2085,8 +2120,13 @@ package body GNATCOLL.ALI is
       -----------------
 
       procedure Finalize_DB (DB : Database_Connection) is
+         Start : Time;
       begin
          if Destroy_Indexes then
+            if Active (Me_Timing) then
+               Start := Clock;
+            end if;
+
             DB.Execute
               ("CREATE INDEX entity_refs_entity on entity_refs(entity)");
 
@@ -2094,20 +2134,12 @@ package body GNATCOLL.ALI is
                Trace (Me_Timing,
                       "CREATE INDEXes: "
                       & Duration'Image (Clock - Start) & " s");
-               Start := Clock;
             end if;
          end if;
 
          --  Do this once we have restored the indexes, to speed up the
          --  search.
          Resolve_Renamings;
-
-         if Active (Me_Timing) then
-            Trace (Me_Timing,
-                   "Processed" & Length (Entity_Renamings)'Img
-                   & " renaming:" & Duration'Image (Clock - Start) & " s");
-            Start := Clock;
-         end if;
 
          --  Need to commit before we can change the pragmas
 
@@ -2132,14 +2164,17 @@ package body GNATCOLL.ALI is
          --  need systematically, and might take a while to generate, so we
          --  do it when the user also wanted to rebuild the index
 
-         if Destroy_Indexes then
+         if Do_Analyze then
+            if Active (Me_Timing) then
+               Start := Clock;
+            end if;
+
             DB.Execute ("ANALYZE");
 
             if Active (Me_Timing) then
                Trace
                  (Me_Timing,
                   "ANALYZE:" & Duration'Image (Clock - Start) & " s");
-               Start := Clock;
             end if;
          end if;
       end Finalize_DB;
@@ -2207,11 +2242,6 @@ package body GNATCOLL.ALI is
 
             Next (Lib_Info);
          end loop;
-
-         if Active (Me_Timing) then
-            Trace (Me_Timing,
-                   "Number of files to update:" & LIs.Length'Img);
-         end if;
       end Search_LI_Files_To_Update;
 
       -----------------
@@ -2219,8 +2249,14 @@ package body GNATCOLL.ALI is
       -----------------
 
       procedure Parse_Files (DB : Database_Connection) is
-         LI_C : LI_Lists.Cursor := LIs.First;
+         LI_C  : LI_Lists.Cursor := LIs.First;
+         Start : Time;
+         Dur   : Duration;
       begin
+         if Active (Me_Timing) then
+            Start := Clock;
+         end if;
+
          while Has_Element (LI_C) loop
             Parse_LI (DB                => DB,
                       Tree              => Tree,
@@ -2232,17 +2268,15 @@ package body GNATCOLL.ALI is
          end loop;
 
          if Active (Me_Timing) then
+            Dur := Clock - Start;
             Trace (Me_Timing,
-                   "Parsed files:" & Duration'Image (Clock - Start) & " s");
-            Start := Clock;
+                   "Parsed" & LIs.Length'Img & " files:"
+                   & Duration'Image (Dur / Integer (LIs.Length)) & "/file,"
+                   & Dur'Img & " s");
          end if;
       end Parse_Files;
 
    begin
-      if Active (Me_Timing) then
-         Start := Clock;
-      end if;
-
       Project.Library_Files
         (Recursive => True, Xrefs_Dirs => True, Including_Libraries => True,
          ALI_Ext => "^.*\.[ags]li$", List => LI_Files,
@@ -2250,11 +2284,10 @@ package body GNATCOLL.ALI is
 
       if Active (Me_Timing) then
          Trace (Me_Timing,
-                "Found" & Length (LI_Files)'Img & " [ags]li files:"
-                & Duration'Image (Clock - Start) & " s");
+                "Found" & Length (LI_Files)'Img & " [ags]li files");
       end if;
 
-      Initialize_DB;
+      Initialize_DB (DB);   --  From_DB_Name -> DB
       Search_LI_Files_To_Update;
 
       if not LIs.Is_Empty then
@@ -2267,19 +2300,45 @@ package body GNATCOLL.ALI is
 
          if Is_Sqlite
            and then GNATCOLL.SQL.Sqlite.DB_Name (DB) /= ":memory:"
-           and then LIs.Length > 100
+           and then LIs.Length > Memory_Threshold
          then
-            Start_Transaction (DB);
-            Parse_Files (DB);
-            Finalize_DB (DB);
-            Backup_DB_If_Needed (DB, To_DB_Name);
+            declare
+               Memory_Descr : constant Database_Description :=
+                 GNATCOLL.SQL.Sqlite.Setup (":memory:");
+               Memory : constant Database_Connection :=
+                 Memory_Descr.Build_Connection;
+               Start : Time;
+            begin
+               Destroy_Indexes := True;
+
+               Trace (Me_Timing, "Temporarily using an in-memory database");
+               Initialize_DB (Memory);            --  DB -> :memory:
+               Start_Transaction (Memory);
+               Parse_Files (Memory);
+               Finalize_DB (Memory);
+
+               if Active (Me_Timing) then
+                  Start := Clock;
+               end if;
+
+               if not GNATCOLL.SQL.Sqlite.Backup
+                 (From => Memory, To => DB)  --  :memory: -> DB
+               then
+                  Trace (Me_Error, "Failed to copy from :memory: to DB");
+               elsif Active (Me_Timing) then
+                  Trace (Me_Timing, "Copy from :memory: to "
+                         & GNATCOLL.SQL.Sqlite.DB_Name (DB) & ":"
+                         & Duration'Image (Clock - Start) & " s");
+               end if;
+            end;
 
          else
             Start_Transaction (DB);
             Parse_Files (DB);
             Finalize_DB (DB);
-            Backup_DB_If_Needed (DB, To_DB_Name);
          end if;
+
+         Backup_DB_If_Needed (DB, To_DB_Name);    --  DB -> To_DB_Name
       end if;
    end Parse_All_LI_Files;
 
