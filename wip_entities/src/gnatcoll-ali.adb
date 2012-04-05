@@ -35,6 +35,8 @@ with GNATCOLL.Utils;        use GNATCOLL.Utils;
 with GNATCOLL.VFS;          use GNATCOLL.VFS;
 
 package body GNATCOLL.ALI is
+   use Library_Info_Lists;
+
    Me_Error   : constant Trace_Handle := Create ("ENTITIES.ERROR");
    Me_Debug   : constant Trace_Handle := Create ("ENTITIES.DEBUG", Off);
    Me_Forward : constant Trace_Handle := Create ("ENTITIES.FORWARD");
@@ -374,6 +376,21 @@ package body GNATCOLL.ALI is
    --
    --  Update needed is called when a change needs to be made to the database
    --  because an LI file that isn't up-to-date was found.
+
+   function Parse_All_LI_Files
+     (Session : Session_Type;
+      Tree    : Project_Tree;
+      LI_Files  : Library_Info_Lists.List;
+      Destroy_Indexes     : Boolean := False) return Boolean;
+   --  Parse all the LI files for the project, and stores them in the
+   --  database.
+   --  If Destroy_Indexes is True, then some of the database indexes will be
+   --  temporarily disabled and then recreated in the end. This will be faster
+   --  when doing major changes, but will be slower otherwise. In any case,
+   --  the index is only destroyed if actual changes take place in the
+   --  database.
+   --
+   --  Return True if at least one LI was updated.
 
    ---------------------
    -- Create_Database --
@@ -1968,12 +1985,9 @@ package body GNATCOLL.ALI is
    function Parse_All_LI_Files
      (Session : Session_Type;
       Tree    : Project_Tree;
-      Project : Project_Type;
-      Parse_Runtime_Files : Boolean := True;
+      LI_Files  : Library_Info_Lists.List;
       Destroy_Indexes     : Boolean := False) return Boolean
    is
-      use Library_Info_Lists;
-      LI_Files  : Library_Info_Lists.List;
       Lib_Info  : Library_Info_Lists.Cursor;
       Start : Time := Clock;
       Dur : Duration;
@@ -2053,29 +2067,9 @@ package body GNATCOLL.ALI is
       end Update_Needed;
 
    begin
-      Project.Library_Files
-        (Recursive => True, Xrefs_Dirs => True, Including_Libraries => True,
-         ALI_Ext => ".ali", List => LI_Files,
-         Include_Predefined => Parse_Runtime_Files);
-      Project.Library_Files
-        (Recursive => True, Xrefs_Dirs => True, Including_Libraries => True,
-         ALI_Ext => ".gli", List => LI_Files);
-      Project.Library_Files
-        (Recursive => True, Xrefs_Dirs => True, Including_Libraries => True,
-         ALI_Ext => ".sli", List => LI_Files);
-
       if Active (Me_Timing) then
-         Trace (Me_Timing,
-                "Found" & Length (LI_Files)'Img & " [ags]li files:"
-                & Duration'Image (Clock - Start) & " s");
          Start := Clock;
       end if;
-
-      --  It would be faster to find all ALI files that are not up-to-date,
-      --  (and purge the LI_Files list appropriately), and cleanup the database
-      --  for these references. Then we can disable the index on
-      --  entity_refs.from_li and e2e.from_li and recreate them in the end,
-      --  which might speed things up.
 
       Lib_Info := LI_Files.First;
       while Has_Element (Lib_Info) loop
@@ -2160,11 +2154,11 @@ package body GNATCOLL.ALI is
       return Was_Updated;
    end Parse_All_LI_Files;
 
-   ------------------------------------
-   -- Parse_All_LI_Files_With_Backup --
-   ------------------------------------
+   ------------------------
+   -- Parse_All_LI_Files --
+   ------------------------
 
-   procedure Parse_All_LI_Files_With_Backup
+   procedure Parse_All_LI_Files
      (Session      : Session_Type;
       Tree         : Project_Tree;
       Project      : Project_Type;
@@ -2172,75 +2166,102 @@ package body GNATCOLL.ALI is
       From_DB_Name : String := "";
       To_DB_Name   : String := "")
    is
-      Start   : Time;
-      Need_To_Create_DB : Boolean;
-      Ignored : Boolean;
-      pragma Unreferenced (Ignored);
+      Is_Sqlite       : constant Boolean :=
+        GNATCOLL.SQL.Sqlite.Is_Sqlite (Session.DB);
+
+      Start           : Time;
+      DB_Was_Created  : Boolean := False;
+      Modified        : Boolean;
+      Destroy_Indexes : Boolean := False;
+      LI_Files        : Library_Info_Lists.List;
+
    begin
-      if not GNATCOLL.SQL.Sqlite.Is_Sqlite (Session.DB) then
-         Ignored := Parse_All_LI_Files (Session, Tree, Project);
-         return;
+      if Active (Me_Timing) then
+         Start := Clock;
       end if;
 
-      declare
-         Current_DB  : constant String :=
-           GNATCOLL.SQL.Sqlite.DB_Name (Session.DB);
-      begin
-         if Current_DB /= From_DB_Name
-           and then From_DB_Name /= ""
-           and then Is_Regular_File (From_DB_Name)
-         then
-            Need_To_Create_DB := False;
-            Start := Clock;
+      Project.Library_Files
+        (Recursive => True, Xrefs_Dirs => True, Including_Libraries => True,
+         ALI_Ext => "^.*\.[ags]li$", List => LI_Files,
+         Include_Predefined => Parse_Runtime_Files);
 
-            if not GNATCOLL.SQL.Sqlite.Backup
-              (DB1             => Session.DB,
-               DB2             => From_DB_Name,
-               From_DB1_To_DB2 => False)
+      if Active (Me_Timing) then
+         Trace (Me_Timing,
+                "Found" & Length (LI_Files)'Img & " [ags]li files:"
+                & Duration'Image (Clock - Start) & " s");
+      end if;
+
+      --  Should count the number of LI files that need to be updated, and
+      --  decide whether we should work in memory or on disk, and whether we
+      --  should disable the indexes temporarily.
+
+      --  Do we need to make a copy of the database first ?
+
+      if Is_Sqlite and then From_DB_Name /= "" then
+         declare
+            Current_DB  : constant String :=
+              GNATCOLL.SQL.Sqlite.DB_Name (Session.DB);
+         begin
+            if Current_DB /= From_DB_Name
+              and then Is_Regular_File (From_DB_Name)
             then
-               Trace
-                 (Me_Error,
-                  "Failed to copy the database from " & From_DB_Name);
-
-            elsif Active (Me_Timing) then
-               Trace (Me_Timing, "Total time for restore:"
-                      & Duration'Image (Clock - Start) & " s");
-            end if;
-
-         else
-            Need_To_Create_DB := not Is_Regular_File (Current_DB);
-
-            if Need_To_Create_DB then
-               Create_Database (Session.DB,
-                                Create (+"dbschema.txt"),
-                                Create (+"initialdata.txt"));
-            end if;
-         end if;
-
-         if Parse_All_LI_Files   --   if DB was modified
-           (Session, Tree, Project,
-            Parse_Runtime_Files => Parse_Runtime_Files,
-            Destroy_Indexes     => Need_To_Create_DB)
-           or else Need_To_Create_DB
-         then
-            if To_DB_Name /= ""
-              and then Current_DB /= To_DB_Name
-            then
+               DB_Was_Created := False;
                Start := Clock;
 
                if not GNATCOLL.SQL.Sqlite.Backup
-                 (DB1 => Session.DB,
-                  DB2 => To_DB_Name)
+                 (DB1             => Session.DB,
+                  DB2             => From_DB_Name,
+                  From_DB1_To_DB2 => False)
                then
-                  Trace (Me_Error, "Failed to backup the database to disk");
+                  Trace
+                    (Me_Error,
+                     "Failed to copy the database from " & From_DB_Name);
+
                elsif Active (Me_Timing) then
-                  Trace (Me_Timing,
-                         "Total time for backup:"
+                  Trace (Me_Timing, "Total time for restore:"
                          & Duration'Image (Clock - Start) & " s");
                end if;
+
+            else
+               if not Is_Regular_File (Current_DB) then
+                  Create_Database (Session.DB,
+                                   Create (+"dbschema.txt"),
+                                   Create (+"initialdata.txt"));
+                  DB_Was_Created := True;
+                  Destroy_Indexes := True;
+               end if;
+            end if;
+         end;
+      end if;
+
+      Modified := Parse_All_LI_Files
+        (Session, Tree,
+         LI_Files            => LI_Files,
+         Destroy_Indexes     => Destroy_Indexes);
+
+      --  Do we need to make a copy of the database on exit ?
+
+      if Is_Sqlite
+        and then (Modified or else DB_Was_Created)
+        and then To_DB_Name /= ""
+      then
+         if To_DB_Name /= ""
+           and then GNATCOLL.SQL.Sqlite.DB_Name (Session.DB) /= To_DB_Name
+         then
+            Start := Clock;
+
+            if not GNATCOLL.SQL.Sqlite.Backup
+              (DB1 => Session.DB,
+               DB2 => To_DB_Name)
+            then
+               Trace (Me_Error, "Failed to backup the database to disk");
+            elsif Active (Me_Timing) then
+               Trace (Me_Timing,
+                      "Total time for backup:"
+                      & Duration'Image (Clock - Start) & " s");
             end if;
          end if;
-      end;
-   end Parse_All_LI_Files_With_Backup;
+      end if;
+   end Parse_All_LI_Files;
 
 end GNATCOLL.ALI;

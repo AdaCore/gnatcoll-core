@@ -30,6 +30,7 @@ with Ada.Text_IO;                 use Ada.Text_IO;
 with GNAT.Case_Util;              use GNAT.Case_Util;
 with GNAT.Directory_Operations;   use GNAT.Directory_Operations;
 with GNAT.Expect;                 use GNAT.Expect;
+with GNAT.Regpat;                 use GNAT.Regpat;
 with GNAT.OS_Lib;                 use GNAT.OS_Lib;
 with GNATCOLL.Arg_Lists;          use GNATCOLL.Arg_Lists;
 with GNATCOLL.Projects.Normalize; use GNATCOLL.Projects.Normalize;
@@ -740,6 +741,7 @@ package body GNATCOLL.Projects is
       Prj_Iter        : Project_Iterator;
       Current_Project : Project_Type;
       Info_Cursor     : Names_Files.Cursor;
+      Re              : Pattern_Matcher_Access;
 
       package Virtual_File_Sets is new Ada.Containers.Hashed_Sets
         (Element_Type        => Virtual_File,
@@ -748,9 +750,16 @@ package body GNATCOLL.Projects is
          "="                 => "=");
       use Virtual_File_Sets;
 
+      procedure Unchecked_Free is new Ada.Unchecked_Deallocation
+        (Pattern_Matcher, Pattern_Matcher_Access);
+
       Seen : Virtual_File_Sets.Set;
 
    begin
+      if ALI_Ext (ALI_Ext'First) = '^' then
+         Re := new Pattern_Matcher'(Compile (+ALI_Ext));
+      end if;
+
       --  We do not call Object_Path with Recursive=>True, but instead
       --  iterate explicitly on the projects so that we can control which of
       --  the object_dir or library_dir we want to use *for each project*.
@@ -783,10 +792,14 @@ package body GNATCOLL.Projects is
                   Tmp := Read_Dir (Dir);
 
                   for F in Tmp'Range loop
-                     if Tmp (F).Has_Suffix (ALI_Ext) then
+                     if (Re /= null
+                         and then Match (Re.all, +Tmp (F).Base_Name))
+                       or else (Re = null
+                                and then Tmp (F).Has_Suffix (ALI_Ext))
+                     then
                         declare
                            B : constant Filesystem_String :=
-                             Base_Name (Tmp (F), ALI_Ext);
+                             Tmp (F).Base_Name (Tmp (F).File_Extension);
                            Dot : Integer;
                         begin
                            Info_Cursor :=
@@ -860,7 +873,11 @@ package body GNATCOLL.Projects is
                   Tmp := Read_Dir (Predef (P));
 
                   for F in Tmp'Range loop
-                     if Tmp (F).Has_Suffix (ALI_Ext) then
+                     if (Re /= null
+                         and then Match (Re.all, +Tmp (F).Base_Name))
+                       or else (Re = null
+                                and then Tmp (F).Has_Suffix (ALI_Ext))
+                     then
                         List.Append
                           (Library_Info'
                              (Library_File => Tmp (F),
@@ -873,6 +890,8 @@ package body GNATCOLL.Projects is
             end loop;
          end;
       end if;
+
+      Unchecked_Free (Re);
    end Library_Files;
 
    -------------------

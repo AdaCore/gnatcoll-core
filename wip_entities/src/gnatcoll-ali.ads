@@ -42,34 +42,22 @@ with GNATCOLL.VFS;
 
 package GNATCOLL.ALI is
 
-   function Parse_All_LI_Files
-     (Session : Session_Type;
-      Tree    : Project_Tree;
-      Project : Project_Type;
+   procedure Parse_All_LI_Files
+     (Session             : Session_Type;
+      Tree                : Project_Tree;
+      Project             : Project_Type;
       Parse_Runtime_Files : Boolean := True;
-      Destroy_Indexes     : Boolean := False) return Boolean;
-   --  Parse all the LI files for the project, and stores them in the
-   --  database.
-   --  If Destroy_Indexes is True, then some of the database indexes will be
-   --  temporarily disabled and then recreated in the end. This will be faster
-   --  when doing major changes, but will be slower otherwise. In any case,
-   --  the index is only destroyed if actual changes take place in the
-   --  database.
-   --  Parse_Runtime_Files indicates whether we should be looking at the
-   --  predefined object directories to find extra ALI files to parse. This
-   --  will in general include the Ada runtime.
+      From_DB_Name        : String := "";
+      To_DB_Name          : String := "");
+   --  Parse all the LI files for the project, and stores the xref info in the
+   --  Session database.
    --
-   --  Return True if at least one LI was updated.
-
-   procedure Parse_All_LI_Files_With_Backup
-     (Session      : Session_Type;
-      Tree         : Project_Tree;
-      Project      : Project_Type;
-      Parse_Runtime_Files : Boolean := True;
-      From_DB_Name : String := "";
-      To_DB_Name   : String := "");
-   --  Same as above, but the database in Session.DB is first initialized by
-   --  copying the database from From_DB_Name (if one exists).
+   --  The database in Session.DB is first initialized by copying the database
+   --  from From_DB_Name (if one exists).
+   --  When no using sqlite, this procedure cannot initialize a database from
+   --  another one. In this case, the database must always have been created
+   --  first (through a call to Create_Database).
+   --
    --  On exit, the in-memory database is copied back to To_DB_Name if that
    --  file is writable and the parameter is not the empty string.
    --  As such, it is possible to generate an entities database as part of a
@@ -84,8 +72,9 @@ package GNATCOLL.ALI is
    --  Otherwise, it will be slower since dumping the in-memory database to the
    --  disk is likely to take several seconds.
    --
-   --  When no using sqlite, this procedure behaves the same as
-   --  Parse_All_LI_Files, and cannot initialize a database from another one.
+   --  Parse_Runtime_Files indicates whether we should be looking at the
+   --  predefined object directories to find extra ALI files to parse. This
+   --  will in general include the Ada runtime.
 
    procedure Create_Database
      (Connection      : access Database_Connection_Record'Class;

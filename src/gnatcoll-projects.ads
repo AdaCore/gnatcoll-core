@@ -582,7 +582,11 @@ package GNATCOLL.Projects is
       return GNATCOLL.VFS.File_Array_Access;
    --  Return a list of all LI files for this project. This never returns null.
    --  The parameters are similar to that of Object_Path.
-   --  ALI_Ext is the extension to use for those files
+   --
+   --  ALI_Ext is the extension to use for those files. As a special case, if
+   --  it starts with "^" it is considered as a regexp matching the basename of
+   --  relevant files.
+   --
    --  Including_Libraries controls whether the project's Library_Dir is
    --  taken into account. This has the following impacts:
    --     * if True: when a project only has a library_dir (for instance a
@@ -619,7 +623,7 @@ package GNATCOLL.Projects is
    --  same as Library_Files, but also returns information about the source
    --  file associated with each LI file.
    --  The new files are appended to the list, as a way to collect multiple
-   --  extensions.
+   --  extensions (in addition to the support of regexp for ALI_Ext).
 
    --------------------
    -- Naming schemes --

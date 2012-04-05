@@ -123,7 +123,7 @@ begin
    --  Parse LI files (loading and dumping to DB_Name)
 
    Absolute_Start := Clock;
-   Parse_All_LI_Files_With_Backup
+   Parse_All_LI_Files
      (Session      => Get_New_Session,
       Tree         => Tree,
       Project      => Tree.Root_Project,
