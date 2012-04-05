@@ -1764,7 +1764,7 @@ package body GNATCOLL.ALI is
                   Will_Insert_Ref := False;
                else
                   Will_Insert_Ref :=
-                    ALI_Contains_External_Refs
+                    not ALI_Contains_External_Refs
                     or else Xref_File_Unit_File_Index /= -1;
                end if;
 
@@ -1803,7 +1803,7 @@ package body GNATCOLL.ALI is
                --  the parameter, which exists in the same ALI file (but not
                --  necessarily the same source file).
 
-               Will_Insert_Ref := ALI_Contains_External_Refs
+               Will_Insert_Ref := not ALI_Contains_External_Refs
                  or else Xref_File_Unit_File_Index /= -1
                  or else Current_X_File_Unit_File_Index /= -1;
 

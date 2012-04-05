@@ -1,5 +1,17 @@
 # for Emacs: -*- mode: org; mode: flyspell; fill-column: 79 -*-
 
+# Update of the database when the project scenario changes:
+#   - if the location of the LI file changes, and since we use the full path,
+#     this will trigger another parsing.
+#   - If it doesn't change, it is possible that the location of the source
+#     files have changed though, but this would not be detected currently
+#     because we do not parse the LI file again (this is only a problem if both
+#     source files contain the same code, since otherwise the xref info has
+#     changed and LI has changed). In this case, it is possible that all
+#     queries will fail because we do not have info for the new location of the
+#     file.
+#     ??? We could search on basenames in the files table, for instance.
+
 | TABLE    | files         | file            |   | Stores the list of source and LI files                                                   |
 |----------+---------------+-----------------+---+------------------------------------------------------------------------------------------|
 | id       | AUTOINCREMENT | PK              |   |                                                                                          |
