@@ -1969,7 +1969,8 @@ package body GNATCOLL.ALI is
      (Session : Session_Type;
       Tree    : Project_Tree;
       Project : Project_Type;
-      Destroy_Indexes : Boolean := False) return Boolean
+      Parse_Runtime_Files : Boolean := True;
+      Destroy_Indexes     : Boolean := False) return Boolean
    is
       use Library_Info_Lists;
       LI_Files  : Library_Info_Lists.List;
@@ -2054,7 +2055,8 @@ package body GNATCOLL.ALI is
    begin
       Project.Library_Files
         (Recursive => True, Xrefs_Dirs => True, Including_Libraries => True,
-         ALI_Ext => ".ali", List => LI_Files, Include_Predefined => True);
+         ALI_Ext => ".ali", List => LI_Files,
+         Include_Predefined => Parse_Runtime_Files);
       Project.Library_Files
         (Recursive => True, Xrefs_Dirs => True, Including_Libraries => True,
          ALI_Ext => ".gli", List => LI_Files);
@@ -2166,6 +2168,7 @@ package body GNATCOLL.ALI is
      (Session      : Session_Type;
       Tree         : Project_Tree;
       Project      : Project_Type;
+      Parse_Runtime_Files : Boolean := True;
       From_DB_Name : String := "";
       To_DB_Name   : String := "")
    is
@@ -2216,7 +2219,8 @@ package body GNATCOLL.ALI is
 
          if Parse_All_LI_Files   --   if DB was modified
            (Session, Tree, Project,
-            Destroy_Indexes => Need_To_Create_DB)
+            Parse_Runtime_Files => Parse_Runtime_Files,
+            Destroy_Indexes     => Need_To_Create_DB)
            or else Need_To_Create_DB
          then
             if To_DB_Name /= ""

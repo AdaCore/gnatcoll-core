@@ -39,6 +39,9 @@ procedure Test_Entities is
    DB_Name     : aliased String_Access;
    Tmp_DB_Name : aliased String_Access;
 
+   Omit_Runtime_Files : aliased Boolean := False;
+   --  Whether to parse files from predefined directories
+
    GPR_File     : Virtual_File;
 
    Env     : Project_Environment_Access;
@@ -67,6 +70,10 @@ begin
      (Cmdline_Config, DB_Name'Access,
       Long_Switch => "--db:",
       Help => "Name of the database");
+   Define_Switch
+     (Cmdline_Config, Omit_Runtime_Files'Access,
+      Long_Switch => "--noruntime",
+      Help => "Do not parse runtime files");
 
    Getopt (Cmdline_Config);
 
@@ -120,6 +127,7 @@ begin
      (Session      => Get_New_Session,
       Tree         => Tree,
       Project      => Tree.Root_Project,
+      Parse_Runtime_Files => not Omit_Runtime_Files,
       From_DB_Name => DB_Name.all,
       To_DB_Name   => DB_Name.all);
    Put_Line (Duration'Image (Clock - Absolute_Start) & " s");

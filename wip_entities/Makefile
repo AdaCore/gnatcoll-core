@@ -21,7 +21,12 @@ all:
 
 run_test:
 	rm -f entities.db
-	./obj/test_entities ../../gps/gps.gpr
+	./obj/test_entities --noruntime ../../gps/gps.gpr
+	@for table in entities files e2e entity_refs f2f; do \
+	   echo "select count(*) as '$$table' from $$table;" \
+		   | sqlite3 -line entities.db; \
+	done
+	@ls --block-size=1 -s entities.db
 
 run_update:
 	rm -f entities.db

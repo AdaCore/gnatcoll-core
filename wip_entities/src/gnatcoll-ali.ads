@@ -46,7 +46,8 @@ package GNATCOLL.ALI is
      (Session : Session_Type;
       Tree    : Project_Tree;
       Project : Project_Type;
-      Destroy_Indexes : Boolean := False) return Boolean;
+      Parse_Runtime_Files : Boolean := True;
+      Destroy_Indexes     : Boolean := False) return Boolean;
    --  Parse all the LI files for the project, and stores them in the
    --  database.
    --  If Destroy_Indexes is True, then some of the database indexes will be
@@ -54,6 +55,9 @@ package GNATCOLL.ALI is
    --  when doing major changes, but will be slower otherwise. In any case,
    --  the index is only destroyed if actual changes take place in the
    --  database.
+   --  Parse_Runtime_Files indicates whether we should be looking at the
+   --  predefined object directories to find extra ALI files to parse. This
+   --  will in general include the Ada runtime.
    --
    --  Return True if at least one LI was updated.
 
@@ -61,6 +65,7 @@ package GNATCOLL.ALI is
      (Session      : Session_Type;
       Tree         : Project_Tree;
       Project      : Project_Type;
+      Parse_Runtime_Files : Boolean := True;
       From_DB_Name : String := "";
       To_DB_Name   : String := "");
    --  Same as above, but the database in Session.DB is first initialized by
