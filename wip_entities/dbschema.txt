@@ -163,12 +163,10 @@
 | line               | INTEGER                 | NOT NULL                  |   |                                                                                                                                          |
 | column             | INTEGER                 | NOT NULL                  |   |                                                                                                                                          |
 | kind               | FK reference_kinds()    | NOT NULL, NOINDEX         |   | Type of reference (same letter as in ALI files)                                                                                          |
-| from_li            | FK files                | NOT NULL, NOINDEX         |   |                                                                                                                                          |
 | caller             | FK entities(calling)    | NULL, NOINDEX             |   | Enclosing entity at that location                                                                                                        |
 | from_instantiation | TEXT                    |                           |   | The instances in which the ref occurs, in the form "file1#line1,file2 line2,..." where file1#line1 is itself instantiated by file2#line2 |
-| INDEX:             | "file","line","column"  | entity_refs_file_line_col |   | Do not include 'entity' to speed up Query_Set_Entity_Rename                                                                              |
+| INDEX:             | "file"                  | entity_refs_file          |   | Do not include 'entity' to speed up Query_Set_Entity_Rename                                                                              |
 | INDEX:             | "entity"                | entity_refs_entity        |   | Disabled during parsing                                                                                                                  |
-| INDEX:             | "from_li"               | entity_refs_from_li       |   | Needed to fast delete references when updating LI files, but this makes insertion slower as well                                         |
 
 # ??? CREATE INDEX entity_refs__loc on entity_refs (file,kind,line,column);
 # See http://www.sqlite.org/queryplanner.html

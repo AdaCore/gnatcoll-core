@@ -129,7 +129,7 @@ package body GNATCOLL.ALI is
      Prepare
        (SQL_Delete
             (From  => Database.Entity_Refs,
-             Where => Database.Entity_Refs.From_LI = Integer_Param (1)),
+             Where => Database.Entity_Refs.File = Integer_Param (1)),
         On_Server => True, Name => "delete_refs");
 
    Query_Insert_Entity : constant Prepared_Statement :=
@@ -150,8 +150,7 @@ package body GNATCOLL.ALI is
              & (Database.Entity_Refs.Line   = Integer_Param (3))
              & (Database.Entity_Refs.Column = Integer_Param (4))
              & (Database.Entity_Refs.Kind   = Text_Param (5))
-             & (Database.Entity_Refs.From_Instantiation = Text_Param (6))
-             & (Database.Entity_Refs.From_LI = Integer_Param (7))),
+             & (Database.Entity_Refs.From_Instantiation = Text_Param (6))),
         On_Server => True, Name => "insert_ref");
 
    Query_Insert_Ref_With_Caller : constant Prepared_Statement :=
@@ -163,8 +162,7 @@ package body GNATCOLL.ALI is
              & (Database.Entity_Refs.Column = Integer_Param (4))
              & (Database.Entity_Refs.Kind   = Text_Param (5))
              & (Database.Entity_Refs.From_Instantiation = Text_Param (6))
-             & (Database.Entity_Refs.Caller = Integer_Param (7))
-             & (Database.Entity_Refs.From_LI = Integer_Param (8))),
+             & (Database.Entity_Refs.Caller = Integer_Param (7))),
         On_Server => True, Name => "insert_ref_with_caller");
 
    Query_Insert_E2E : constant Prepared_Statement :=
@@ -1091,7 +1089,6 @@ package body GNATCOLL.ALI is
               (Query_Update_LI_File, Params => (1 => +Id, 2 => +Stamp));
             Session.DB.Execute
               (Query_Delete_E2E_From_LI, Params => (1 => +Id));
-            Session.DB.Execute (Query_Delete_Refs, Params => (1 => +Id));
 
          else
             --  Let callers know we are about to modify the DB
@@ -1174,9 +1171,8 @@ package body GNATCOLL.ALI is
             --  different locations (s-memory.adb for instance), which
             --  can occur when overriding runtime files.
 
-            Session.DB.Execute
-              (Query_Delete_File_Dep,
-               Params => (1 => +Id));
+            Session.DB.Execute (Query_Delete_File_Dep, Params => (1 => +Id));
+            Session.DB.Execute (Query_Delete_Refs, Params => (1 => +Id));
          end if;
 
          return Id;
@@ -1784,8 +1780,7 @@ package body GNATCOLL.ALI is
                                       3 => +Xref_Line,
                                       4 => +Xref_Col,
                                       5 => +Xref_Kind,
-                                      6 => +Inst'Unrestricted_Access,
-                                      7 => +ALI_Id));
+                                      6 => +Inst'Unrestricted_Access));
                      else
                         Session.DB.Execute
                           (Query_Insert_Ref_With_Caller,
@@ -1795,8 +1790,7 @@ package body GNATCOLL.ALI is
                                       4 => +Xref_Col,
                                       5 => +Xref_Kind,
                                       6 => +Inst'Unrestricted_Access,
-                                      7 => +Caller,
-                                      8 => +ALI_Id));
+                                      7 => +Caller));
                      end if;
                   end;
                end if;
@@ -2049,7 +2043,7 @@ package body GNATCOLL.ALI is
             --  maintain it for every insert.
 
             if Destroy_Indexes then
-               Session.DB.Execute ("DROP INDEX entity_refs_file_line_col");
+--               Session.DB.Execute ("DROP INDEX entity_refs_file");
                Session.DB.Execute ("DROP INDEX entity_refs_entity");
             end if;
          end if;
@@ -2072,6 +2066,12 @@ package body GNATCOLL.ALI is
                 & Duration'Image (Clock - Start) & " s");
          Start := Clock;
       end if;
+
+      --  It would be faster to find all ALI files that are not up-to-date,
+      --  (and purge the LI_Files list appropriately), and cleanup the database
+      --  for these references. Then we can disable the index on
+      --  entity_refs.from_li and e2e.from_li and recreate them in the end,
+      --  which might speed things up.
 
       Lib_Info := LI_Files.First;
       while Has_Element (Lib_Info) loop
@@ -2098,9 +2098,8 @@ package body GNATCOLL.ALI is
 
       if Was_Updated then
          if Destroy_Indexes then
-            Session.DB.Execute
-              ("CREATE INDEX entity_refs_file_line_col"
-               & " on entity_refs(file,line,""column"")");
+--              Session.DB.Execute
+--                ("CREATE INDEX entity_refs_file on entity_refs(file)");
             Session.DB.Execute
               ("CREATE INDEX entity_refs_entity on entity_refs(entity)");
 
