@@ -49,6 +49,7 @@ procedure Test_Entities is
    Absolute_Start : Time;
    GNAT_Version : String_Access;
    Cmdline_Config : Command_Line_Configuration;
+   Session : Session_Type;
 
 begin
    GNATCOLL.Traces.Parse_Config_File;
@@ -123,8 +124,9 @@ begin
    --  Parse LI files (loading and dumping to DB_Name)
 
    Absolute_Start := Clock;
+   Session := Get_New_Session;
    Parse_All_LI_Files
-     (Session      => Get_New_Session,
+     (DB           => Session.DB,
       Tree         => Tree,
       Project      => Tree.Root_Project,
       Parse_Runtime_Files => not Omit_Runtime_Files,

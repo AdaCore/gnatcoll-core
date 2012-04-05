@@ -37,22 +37,21 @@
 
 with GNATCOLL.Projects;     use GNATCOLL.Projects;
 with GNATCOLL.SQL.Exec;     use GNATCOLL.SQL.Exec;
-with GNATCOLL.SQL.Sessions; use GNATCOLL.SQL.Sessions;
 with GNATCOLL.VFS;
 
 package GNATCOLL.ALI is
 
    procedure Parse_All_LI_Files
-     (Session             : Session_Type;
+     (DB                  : Database_Connection;
       Tree                : Project_Tree;
       Project             : Project_Type;
       Parse_Runtime_Files : Boolean := True;
       From_DB_Name        : String := "";
       To_DB_Name          : String := "");
    --  Parse all the LI files for the project, and stores the xref info in the
-   --  Session database.
+   --  DB database.
    --
-   --  The database in Session.DB is first initialized by copying the database
+   --  The database in DB is first initialized by copying the database
    --  from From_DB_Name (if one exists).
    --  When no using sqlite, this procedure cannot initialize a database from
    --  another one. In this case, the database must always have been created
@@ -66,7 +65,7 @@ package GNATCOLL.ALI is
    --  either be kept in memory (passing "" for To_DB_Name) or dumped back to
    --  a local user-writable file.
    --
-   --  If Session.DB is an in-memory database, this procedure will be faster
+   --  If DB is an in-memory database, this procedure will be faster
    --  than directly modifying the database on the disk (through a call to
    --  Parse_All_LI_Files) when lots of changes need to be made.
    --  Otherwise, it will be slower since dumping the in-memory database to the
