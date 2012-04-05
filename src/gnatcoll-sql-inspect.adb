@@ -1151,7 +1151,11 @@ package body GNATCOLL.SQL.Inspect is
          while First <= Str'Last and then Str (First) = '|' loop
             Parse_Line (Result => Line);
 
-            if Line (1).all = "FK:"
+            if Starts_With (Line (1).all, "--") then
+               --  A comment line, skip this line
+               null;
+
+            elsif Line (1).all = "FK:"
               or else Line (1).all = "INDEX:"
             then
                null;   --  Skip for now, will do in second pass

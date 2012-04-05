@@ -60,26 +60,26 @@
 # Parameters (>, = and <) are not in this table, as opposed to what is done in
 # ALI files, but in the e2e table
 
-| TABLE | reference_kinds                |         |         |          |        |                   |
-| id    | display                        | is_real | is_read | is_write | is_end | show_in_callgraph |
-| b     | body                           | true    | true    | false    | false  | false             |
-| c     | full declaration               | true    | true    | false    | false  | false             |
-| d     | discriminant                   | false   | false   | false    | false  | false             |
-| e     | end of spec                    | false   | false   | false    | true   | false             |
-| i     | implicit reference             | false   | false   | false    | false  | false             |
-| k     | parent package                 | false   | false   | false    | false  | false             |
-| l     | label                          | true    | true    | false    | false  | false             |
-| m     | write reference                | true    | false   | true     | false  | false             |
-| o     | own reference                  | true    | true    | false    | false  | false             |
-| p     | primitive operation            | false   | false   | false    | false  | false             |
-| P     | overriding primitive operation | false   | false   | false    | false  | false             |
-| r     | reference                      | true    | true    | false    | false  | true              |
-| s     | call                           | true    | true    | false    | false  | true              |
-| R     | dispatching call               | true    | true    | false    | false  | true              |
-| t     | end of body                    | false   | false   | false    | true   | false             |
-| w     | with line                      | true    | true    | false    | false  | false             |
-| X     | type extension                 | true    | true    | false    | false  | false             |
-| z     | formal generic parameter       | false   | false   | false    | false  | false             |
+| TABLE | reference_kinds          |         |         |          |        |                   |
+| id    | display                  | is_real | is_read | is_write | is_end | show_in_callgraph |
+| b     | body                     | true    | true    | false    | false  | false             |
+| c     | full declaration         | true    | true    | false    | false  | false             |
+| D     | object definition        | true    | true    | false    | false  | false             |
+| e     | end of spec              | false   | false   | false    | true   | false             |
+| i     | implicit reference       | false   | false   | false    | false  | false             |
+| k     | parent package           | false   | false   | false    | false  | false             |
+| H     | abstract type            | true    | false   | false    | false  | false             |
+| l     | label on end line        | true    | true    | false    | false  | false             |
+| m     | write reference          | true    | false   | true     | false  | false             |
+| o     | own reference            | true    | true    | false    | false  | false             |
+| r     | reference                | true    | true    | false    | false  | true              |
+| s     | static call              | true    | true    | false    | false  | true              |
+| R     | dispatching call         | true    | true    | false    | false  | true              |
+| t     | end of body              | false   | false   | false    | true   | false             |
+| w     | with line                | true    | true    | false    | false  | false             |
+| x     | type extension           | true    | true    | false    | false  | false             |
+| X     | type extension           | true    | true    | false    | false  | false             |
+| z     | formal generic parameter | false   | false   | false    | false  | false             |
 
 | TABLE | f2f_kind   |                                           |
 |    id | name       |                                           |

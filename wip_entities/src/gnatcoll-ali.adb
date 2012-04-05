@@ -1732,6 +1732,9 @@ package body GNATCOLL.ALI is
                   Spec_Start_Line := Xref_Line;
                when 'b' =>  --  body
                   Body_Start_Line := Xref_Line;
+
+               --  ??? Should we look in the reference_kinds table to see what
+               --  kinds mark end of scopes.
                when 'e' =>  --  end of spec
                   if Process_Scopes
                     and then Xref_File_Unit_File_Index /= -1
@@ -2043,7 +2046,6 @@ package body GNATCOLL.ALI is
             --  maintain it for every insert.
 
             if Destroy_Indexes then
---               Session.DB.Execute ("DROP INDEX entity_refs_file");
                Session.DB.Execute ("DROP INDEX entity_refs_entity");
             end if;
          end if;
@@ -2098,14 +2100,12 @@ package body GNATCOLL.ALI is
 
       if Was_Updated then
          if Destroy_Indexes then
---              Session.DB.Execute
---                ("CREATE INDEX entity_refs_file on entity_refs(file)");
             Session.DB.Execute
               ("CREATE INDEX entity_refs_entity on entity_refs(entity)");
 
             if Active (Me_Timing) then
                Trace (Me_Timing,
-                      "CREATE INDEX entity_refs: "
+                      "CREATE INDEXes: "
                       & Duration'Image (Clock - Start) & " s");
                Start := Clock;
             end if;
