@@ -307,8 +307,8 @@ package body GNATCOLL.ALI is
    type Entity_Renaming is record
       Entity : Integer;              --  Id in the entities table
       File, Line, Column : Integer;  --  A reference to the renamed entity
-        Kind  : E2e_Id;
-        From_LI : Integer;
+      Kind  : E2e_Id;
+      From_LI : Integer;
    end record;
    package Entity_Renaming_Lists is new Ada.Containers.Doubly_Linked_Lists
      (Entity_Renaming);
@@ -319,9 +319,8 @@ package body GNATCOLL.ALI is
 
    type LI_Info is record
       Id    : Integer;
-      File  : Virtual_File;
+      LI    : GNATCOLL.Projects.Library_Info;
       Stamp : Time;
-      Info  : File_Info;
    end record;
    package LI_Lists is new Ada.Containers.Doubly_Linked_Lists (LI_Info);
    use LI_Lists;
@@ -369,7 +368,7 @@ package body GNATCOLL.ALI is
    procedure Parse_LI
      (DB                : Database_Connection;
       Tree              : Project_Tree;
-      Library_File      : LI_Info;
+      LI                : LI_Info;
       VFS_To_Id         : in out VFS_To_Ids.Map;
       Entity_Decl_To_Id : in out Loc_To_Ids.Map;
       Entity_Renamings  : in out Entity_Renaming_Lists.List);
@@ -557,7 +556,7 @@ package body GNATCOLL.ALI is
    procedure Parse_LI
      (DB                : Database_Connection;
       Tree              : Project_Tree;
-      Library_File      : LI_Info;
+      LI                : LI_Info;
       VFS_To_Id         : in out VFS_To_Ids.Map;
       Entity_Decl_To_Id : in out Loc_To_Ids.Map;
       Entity_Renamings  : in out Entity_Renaming_Lists.List)
@@ -567,13 +566,8 @@ package body GNATCOLL.ALI is
       Last   : Integer;
       Index  : Integer;
 
-      ALI_Id   : Integer := Library_File.Id;
+      ALI_Id   : Integer := LI.Id;
 
-      Language : constant String := Library_File.Info.Language;
-      --  Language is the default programming language for the source files
-      --  in this LI. It is possible that parsing the LI also creates source
-      --  files entries for other languages (like a pragma Import in Ada for
-      --  instance, which requires a C file).
 
       Start           : Integer;
       Current_Unit_Id : Integer := -1;
@@ -698,8 +692,7 @@ package body GNATCOLL.ALI is
       --  the information is simply skipped.
 
       function Insert_Source_File
-        (Basename : String;
-         Language : String;
+        (Basename    : String;
          Is_ALI_Unit : Boolean := False) return Integer;
       --  Retrieves the id for the file in the database, or create a new entry
       --  for it.
@@ -881,7 +874,7 @@ package body GNATCOLL.ALI is
                         Trace (Me_Error,
                                "Missing predefined entity in the database: '"
                                & Name & "' in "
-                               & Library_File.File.Display_Full_Name);
+                               & LI.LI.Library_File.Display_Full_Name);
                      end if;
 
                      Ref_Entity := DB.Insert_And_Get_PK
@@ -1078,8 +1071,7 @@ package body GNATCOLL.ALI is
       ------------------------
 
       function Insert_Source_File
-        (Basename : String;
-         Language : String;
+        (Basename    : String;
          Is_ALI_Unit : Boolean := False) return Integer
       is
          File : constant Virtual_File :=
@@ -1111,11 +1103,15 @@ package body GNATCOLL.ALI is
                if Files.Has_Row then
                   Id := Files.Integer_Value (0);
                else
-                  Id := DB.Insert_And_Get_PK
-                    (Query_Insert_Source_File,
-                     Params => (1 => +Name_A,
-                                2 => +Language'Unrestricted_Access),
-                     PK => Database.Files.Id);
+                  declare
+                     Lang : aliased String := Tree.Info (File).Language;
+                  begin
+                     Id := DB.Insert_And_Get_PK
+                       (Query_Insert_Source_File,
+                        Params => (1 => +Name_A,
+                                   2 => +Lang'Unrestricted_Access),
+                        PK => Database.Files.Id);
+                  end;
                end if;
 
                VFS_To_Id.Insert (File, Id);
@@ -1810,25 +1806,25 @@ package body GNATCOLL.ALI is
    begin
       if Active (Me_Debug) then
          Trace (Me_Debug, "Parse LI "
-                & Library_File.File.Display_Full_Name);
+                & LI.LI.Library_File.Display_Full_Name);
       end if;
 
       if ALI_Id = -1 then
          ALI_Id := DB.Insert_And_Get_PK
            (Query_Insert_LI_File,
             Params => (1 => +Convert
-                          (Library_File.File.Full_Name (Normalize => True)),
-                       2 => +Library_File.Stamp),
+                          (LI.LI.Library_File.Full_Name (Normalize => True)),
+                       2 => +LI.Stamp),
             PK => Database.Files.Id);
       else
          DB.Execute
            (Query_Update_LI_File,
-            Params => (1 => +ALI_Id, 2 => +Library_File.Stamp));
+            Params => (1 => +ALI_Id, 2 => +LI.Stamp));
          DB.Execute (Query_Delete_E2E_From_LI, Params => (1 => +ALI_Id));
       end if;
 
       M := Open_Read
-        (Filename              => +Library_File.File.Full_Name.all,
+        (Filename              => +LI.LI.Library_File.Full_Name.all,
          Use_Mmap_If_Available => True);
       Read (M);
 
@@ -1854,8 +1850,7 @@ package body GNATCOLL.ALI is
                Skip_Word;
 
                Current_Unit_Id := Insert_Source_File
-                 (Basename => String (Str (Start .. Index - 1)),
-                  Language => Language,
+                 (Basename    => String (Str (Start .. Index - 1)),
                   Is_ALI_Unit => True);
                if Current_Unit_Id /= -1 then
                   DB.Execute
@@ -1884,8 +1879,7 @@ package body GNATCOLL.ALI is
 
                   if Current_Unit_Id /= -1 then
                      Dep_Id := Insert_Source_File
-                       (Basename => String (Str (Start .. Index - 1)),
-                        Language => Language);
+                       (Basename => String (Str (Start .. Index - 1)));
 
                      if Dep_Id /= -1 then
                         DB.Execute
@@ -1903,8 +1897,7 @@ package body GNATCOLL.ALI is
                Skip_Word;
 
                Dep_Id := Insert_Source_File
-                 (Basename => String (Str (Start .. Index - 1)),
-                  Language => Language);
+                 (Basename => String (Str (Start .. Index - 1)));
 
                Depid_To_Id.Set_Length (Ada.Containers.Count_Type (D_Line_Id));
                Depid_To_Id.Replace_Element
@@ -2216,16 +2209,17 @@ package body GNATCOLL.ALI is
          Lib_Info : Library_Info_Lists.Cursor := LI_Files.First;
          Files    : Forward_Cursor;
          LI       : LI_Info;
+         File     : Virtual_File;
       begin
          while Has_Element (Lib_Info) loop
-            LI.File  := Element (Lib_Info).Library_File;
-            LI.Stamp := LI.File.File_Time_Stamp;
+            LI.LI := Element (Lib_Info);
+            File := LI.LI.Library_File;
+            LI.Stamp := File.File_Time_Stamp;
             LI.Id    := -1;  --  File unknown in the database
 
             Files.Fetch
               (DB, Query_Get_File,
-               Params => (1 => +Convert
-                          (LI.File.Full_Name (Normalize => True))));
+               Params => (1 => +Convert (File.Full_Name (Normalize => True))));
 
             if Files.Has_Row then
                if Files.Time_Value (1) = LI.Stamp then
@@ -2236,7 +2230,6 @@ package body GNATCOLL.ALI is
             end if;
 
             if LI.Id /= -2 then
-               LI.Info := Tree.Info (Element (Lib_Info).Source_File);
                LIs.Append (LI);
             end if;
 
@@ -2260,7 +2253,7 @@ package body GNATCOLL.ALI is
          while Has_Element (LI_C) loop
             Parse_LI (DB                => DB,
                       Tree              => Tree,
-                      Library_File      => Element (LI_C),
+                      LI                => Element (LI_C),
                       VFS_To_Id         => VFS_To_Id,
                       Entity_Decl_To_Id => Entity_Decl_To_Id,
                       Entity_Renamings  => Entity_Renamings);

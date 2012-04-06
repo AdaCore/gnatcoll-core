@@ -3,6 +3,8 @@ MODEL=dbschema.txt
 INITIAL=initialdata.txt
 
 DB2ADA=../src/obj/gnatcoll_db2ada -output generated -dbmodel=${MODEL}
+PARSE=./obj/test_entities --noruntime ../../gps/gps.gpr
+PARSE=./obj/test_entities ../../gps/gps.gpr
 
 all:
 	@mkdir -p generated
@@ -21,7 +23,7 @@ all:
 
 run_test:
 	rm -f entities.db
-	./obj/test_entities --noruntime ../../gps/gps.gpr
+	$(PARSE)
 	@for table in entities files e2e entity_refs f2f; do \
 	   echo "select count(*) as '$$table' from $$table;" \
 		   | sqlite3 -line entities.db; \
@@ -30,36 +32,37 @@ run_test:
 
 run_update:
 	@rm -f entities.db
-	@./obj/test_entities ../../gps/gps.gpr
+	@$(PARSE)
 
 	@for table in entities files e2e entity_refs f2f; do \
 	   echo "select count(*) as '$$table' from $$table;" \
 		   | sqlite3 -line entities.db; \
 	done
-	@ls --block-size=1 -s entities.db
+	@echo "size=" `ls --block-size=1 -s entities.db`	
+	@cp -f entities.db entities.db.first
 
 	@# No file modified, but we still copy the database to memory
 	@# temporarily
 	@echo ""
 	@echo "===== No file modified (forcing copy to memory) ====="
-	@./obj/test_entities --tmpdb :memory: ../../gps/gps.gpr
+	@$(PARSE) --tmpdb :memory:
 
 	@# No file modified and we only manipulate db on disk
 	@echo ""
 	@echo "===== No file modified (automatic db) ====="
-	@./obj/test_entities ../../gps/gps.gpr
+	@$(PARSE)
 
 	@# Updating one ALI file
 	@echo ""
 	@echo "===== Updating gps-kernel.ali (automatic db) ====="
 	@touch ../../kernel/obj/gps-kernel.ali
-	@./obj/test_entities ../../gps/gps.gpr
+	@$(PARSE)
 
 	@# Updating all ALI files
 	@echo ""
 	@echo "==== Updating all LI files (automatic db) ===="
 	@find ../../ -name '*.ali' -exec touch {} \;
-	@./obj/test_entities ../../gps/gps.gpr
+	@$(PARSE)
 	@for table in entities files e2e entity_refs f2f; do \
 	   echo "select count(*) as '$$table' from $$table;" \
 		   | sqlite3 -line entities.db; \
@@ -68,7 +71,7 @@ run_update:
 test1: force
 	rm -f entities.db
 	gnatmake -q -Ptest1/test1.gpr
-	./obj/test_entities test1/test1.gpr
+	@$(PARSE)
 
 quiet:
 	@rm -f entities.db log
