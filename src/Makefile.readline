@@ -1,0 +1,12 @@
+MODULE=readline
+PROJECT=gnatcoll_${MODULE}
+LIBNAME=lib${TARNAME}_${MODULE}
+
+include ../Makefile.conf
+
+ifeq (${WITH_READLINE},no)
+SRCDIRS=./readline/ ./readline/no_readline/
+else
+SRCDIRS=./readline/ ./readline/with_readline/
+endif
+

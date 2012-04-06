@@ -15,6 +15,11 @@ of the feature.
 New features in 1.5
 -------------------
 
+NF-15-L406-003 GNATCOLL.Readline: new package (2012-04-06)
+
+   This package provides an interface to the readline library, providing
+   advanced interactive input.
+
 NF-15-L327-029 GNATCOLL.SQL.Sqlite binding for online backup API (2012-03-27)
 
    GNATCOLL now provides a binding to sqlite's online backup API, allowing

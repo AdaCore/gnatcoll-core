@@ -6,12 +6,15 @@ src/gnatcoll-refcount-sync_counters.adb
 distrib/gnatcoll.gpr__copy
 distrib/gnatcoll.gpr__gnat_util
 src/gnatcoll.gpr
+src/gnatcoll_readline.gpr
 
 docs/_build
 
 *.cgpr
 
 testsuite/pools/testpools
+testsuite/readline/read1/.gnatcolltest
+testsuite/readline/read1/main
 testsuite/sql/prepared/prepared
 testsuite/sql/prepared/dbschema.ad?
 testsuite/sql/prepared/dbschema_names.ads

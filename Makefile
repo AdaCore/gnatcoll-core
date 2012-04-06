@@ -81,6 +81,7 @@ ifeq (${WITH_GTK},yes)
 endif
 	${MAKE} -C src -f Makefile.postgres libinstall
 	${MAKE} -C src -f Makefile.sqlite libinstall
+	${MAKE} -C src -f Makefile.readline libinstall
 	${MAKE} -C src -f Makefile.tools installbin
 ifeq (${WITH_GMP},yes)
 	${MAKE} -C src -f Makefile.gmp libinstall

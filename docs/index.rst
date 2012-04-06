@@ -22,6 +22,7 @@ GNAT Reusable Components
    geometry
    projects
    refcount
+   readline
    config
    pools
    json

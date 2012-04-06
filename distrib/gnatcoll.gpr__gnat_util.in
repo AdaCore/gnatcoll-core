@@ -37,7 +37,7 @@ project GnatColl is
    With_Sqlite : Sqlite_Inclusion := "@WITH_SQLITE@";
    Sqlite_Path := "@PATH_LIBSQLITE@";
 
-   With_Readline : Yes_No := "@HAS_READLINE@";
+   With_Readline : Yes_No := "@WITH_READLINE@";
 
    Python_Cflags := (@PYTHON_CFLAGS_GPR@);
    Python_Libs := (@PYTHON_LIBS_GPR@);

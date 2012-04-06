@@ -409,7 +409,7 @@ AC_DEFUN(AM_PATH_GMP,
    AC_ARG_WITH(gmp,
      [AC_HELP_STRING(
        [--with-gmp=<path>],
-       [Specify the full path of the gmp installation])
+       [Specify the full path of the gmp install])
 AC_HELP_STRING(
        [--without-gmp],
        [Disable support for gmp])],
@@ -438,6 +438,31 @@ AC_HELP_STRING(
    AC_SUBST(WITH_GMP)
    AC_SUBST(GMP_CFLAGS)
    AC_SUBST(GMP_LIBS)
+])
+
+#############################################################
+# Checking for readline
+#############################################################
+
+AC_DEFUN(AM_CHECK_READLINE,
+[
+   AC_ARG_ENABLE(readline,
+     [AC_HELP_STRING(
+        [--disable-readline],
+        [Disable support for readline])],
+     WITH_READLINE=$enableval,
+     WITH_READLINE="")
+
+   if test "$WITH_READLINE" = "" ; then
+      AC_CHECK_LIB(readline,readline,WITH_READLINE=yes,WITH_READLINE=no)
+   elif test "$WITH_READLINE" = "yes" ; then
+      AC_CHECK_LIB(readline,readline,WITH_READLINE=yes,WITH_READLINE=no)
+      if test "$WITH_READLINE" = "no" ; then
+         AC_MSG_ERROR([Readline not found])
+      fi
+   fi
+
+   AC_SUBST(WITH_READLINE)
 ])
 
 #############################################################
