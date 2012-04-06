@@ -70,13 +70,6 @@
 | id              | AUTOINCREMENT                   | PK                        |       |                                                |
 | name            | TEXT                            | NOT NULL, NOINDEX, NOCASE |       | Can be empty for forward decls (see above).    |
 | kind            | FK entity_kinds()               | NOT NULL, NOINDEX         |       | The E_Kind for this entity                     |
-| class_static    | BOOLEAN                         | NOINDEX                   | false | The various attributes for the entity          |
-| static_local    | BOOLEAN                         | NOINDEX                   | false |                                                |
-| protected_field | BOOLEAN                         | NOINDEX                   | false |                                                |
-| public_field    | BOOLEAN                         | NOINDEX                   | false |                                                |
-| private_field   | BOOLEAN                         | NOINDEX                   | false |                                                |
-| virtual         | BOOLEAN                         | NOINDEX                   | false |                                                |
-| is_abstract     | BOOLEAN                         | NOINDEX                   | false |                                                |
 | decl_file       | FK files(references)            | NOT NULL, NOINDEX         |       | Set to -1 for a predefined entity              |
 | decl_line       | INTEGER                         | NOT NULL, NOINDEX         |       | Set to -1 for a predefined entity              |
 | decl_column     | INTEGER                         | NOT NULL, NOINDEX         |       | Set to -1 for a predefined entity              |
