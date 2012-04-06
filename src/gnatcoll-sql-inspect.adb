@@ -59,6 +59,20 @@ package body GNATCOLL.SQL.Inspect is
 
    Keywords : String_Sets.Set;
 
+   Max_Fields_Per_Line : constant := 30;
+   --  Maximum number of fields per line (separated by '|')
+
+   procedure Parse_Line
+     (Line         : in out String_List;
+      Line_Number  : in out Natural;
+      Fields_Count : out Natural;
+      Data         : String;
+      First        : in out Integer;
+      Replace_Newline : Boolean := True);
+   --  Parse the current line and set Line and Fields_Count as appropriate.
+   --  Fields_Count is set to 0 if the current line is not part of a table
+   --  and should be ignored.
+
    procedure Parse_Table
      (Self        : DB_Schema_IO'Class;
       Table       : Table_Description;
@@ -974,13 +988,13 @@ package body GNATCOLL.SQL.Inspect is
    -- Read_Schema --
    -----------------
 
-   overriding function Read_Schema
-     (Self : File_Schema_IO) return DB_Schema
+   function Read_Schema
+     (Self : File_Schema_IO; Data : String) return DB_Schema
    is
+
       Schema : DB_Schema;
-      Str   : GNAT.Strings.String_Access;
       T     : Natural := 0;  --  Index of the table we are creating
-      First : Natural; --  Current index in Str
+      First : Natural; --  Current index in Data
       Line_Number : Natural := 0;
 
       Fields_Per_Line : constant := 5;
@@ -1044,9 +1058,10 @@ package body GNATCOLL.SQL.Inspect is
       procedure Parse_Line (Result : in out Line_Fields) is
          Index  : Natural := Result'First - 1;
          Last, Tmp : Natural;
-         Current_Line_End : constant Natural := EOL (Str (First .. Str'Last));
+         Current_Line_End : constant Natural :=
+           EOL (Data (First .. Data'Last));
       begin
-         pragma Assert (Str (First) = '|');
+         pragma Assert (Data (First) = '|');
          Line_Number := Line_Number + 1;
 
          Free (String_List (Result));
@@ -1054,15 +1069,15 @@ package body GNATCOLL.SQL.Inspect is
          First := First + 1;
 
          while First <= Current_Line_End loop
-            Skip_Blanks (Str.all, First);
+            Skip_Blanks (Data, First);
             --  First now points to first non-blank char
 
-            Last := EOW (Str.all, First);
+            Last := EOW (Data, First);
             Tmp := Last - 1;
 
-            Skip_Blanks_Backward (Str (First .. Tmp), Tmp);
+            Skip_Blanks_Backward (Data (First .. Tmp), Tmp);
 
-            Append (String_List (Result), Index, Str (First .. Tmp));
+            Append (String_List (Result), Index, Data (First .. Tmp));
             exit when Index = Fields_Per_Line;
 
             First := Last + 1;
@@ -1148,7 +1163,7 @@ package body GNATCOLL.SQL.Inspect is
 
          Parse_Table_Inheritance (Table_Def, Table);
 
-         while First <= Str'Last and then Str (First) = '|' loop
+         while First <= Data'Last and then Data (First) = '|' loop
             Parse_Line (Result => Line);
 
             if Starts_With (Line (1).all, "--") then
@@ -1278,7 +1293,7 @@ package body GNATCOLL.SQL.Inspect is
          Line  : Line_Fields;
          Index_Count : Natural := 1;
       begin
-         while First <= Str'Last and then Str (First) = '|' loop
+         while First <= Data'Last and then Data (First) = '|' loop
             Parse_Line (Result => Line);
 
             if Line (1).all = "FK:" then
@@ -1342,14 +1357,12 @@ package body GNATCOLL.SQL.Inspect is
       type Parse_Mode is (Parsing_Table, Parsing_Properties);
 
    begin
-      Str := Self.File.Read_File;
-
       for Mode in Parse_Mode loop
-         First := Str'First;
+         First := Data'First;
          Line_Number := 0;
 
-         while First <= Str'Last loop
-            if Str (First) = '|' then
+         while First <= Data'Last loop
+            if Data (First) = '|' then
                Parse_Line (Result => Line);
 
                if Starts_With (Line (1).all, "ABSTRACT TABLE")
@@ -1367,14 +1380,13 @@ package body GNATCOLL.SQL.Inspect is
                   end case;
                end if;
             else
-               First := EOL (Str (First .. Str'Last)) + 1;
+               First := EOL (Data (First .. Data'Last)) + 1;
                Line_Number := Line_Number + 1;
             end if;
          end loop;
       end loop;
 
       Free (String_List (Line));
-      Free (Str);
       return Schema;
 
    exception
@@ -1389,6 +1401,26 @@ package body GNATCOLL.SQL.Inspect is
       when Name_Error =>
          Put_Line ("Could not open " & Self.File.Display_Full_Name);
          return No_Schema;
+   end Read_Schema;
+
+   -----------------
+   -- Read_Schema --
+   -----------------
+
+   overriding function Read_Schema
+     (Self : File_Schema_IO) return DB_Schema
+   is
+      Str    : GNAT.Strings.String_Access := Self.File.Read_File;
+      Schema : DB_Schema;
+   begin
+      Schema := Read_Schema (Self, Str.all);
+      Free (Str);
+      return Schema;
+
+   exception
+      when others =>
+         Free (Str);
+         raise;
    end Read_Schema;
 
    ------------------
@@ -1804,7 +1836,23 @@ package body GNATCOLL.SQL.Inspect is
    overriding procedure Write_Schema
      (Self : File_Schema_IO; Schema : DB_Schema)
    is
+   begin
+      Write_Schema (Self, Schema, Ada.Text_IO.Put'Access);
+   end Write_Schema;
+
+   ------------------
+   -- Write_Schema --
+   ------------------
+
+   procedure Write_Schema
+     (Self   : File_Schema_IO;
+      Schema : DB_Schema;
+      Puts   : access procedure (S : String);
+      Align_Columns : Boolean := True;
+      Show_Comments : Boolean := True)
+   is
       To_File : File_Type;
+      Put : access procedure (S : String) := Puts;
 
       Not_Null : constant String := "NOT NULL";
       Column_Widths : array (1 .. 4) of Natural;
@@ -1846,29 +1894,44 @@ package body GNATCOLL.SQL.Inspect is
          Name    : constant String := F.Name;
          Default : constant String := F.Default;
       begin
-         Ada.Text_IO.Put ("|" & Name
-           & (1 .. Column_Widths (1) - Name'Length => ' ') & "|");
+         Put
+           ("|" & Name & (1 .. Column_Widths (1) - Name'Length => ' ') & "|");
 
          declare
             Typ : constant String := SQL_Type (F);
          begin
-            Ada.Text_IO.Put
-              (Typ & (1 .. Column_Widths (2) - Typ'Length => ' ') & "|");
+            Put (Typ & (1 .. Column_Widths (2) - Typ'Length => ' ') & "|");
          end;
 
          if F.Is_PK then
-            Ada.Text_IO.Put ("PK      ");
+            Put ("PK");
          elsif not F.Can_Be_Null then
-            Ada.Text_IO.Put (Not_Null);
-         else
-            Ada.Text_IO.Put ("        ");
+            Put (Not_Null);
+         elsif Align_Columns then
+            Put ("NULL");
          end if;
 
-         Ada.Text_IO.Put_Line
+         if F.Get.Props.Indexed then
+            Put (",INDEX");
+         elsif F.Get.Props.Noindex then
+            Put (",NOINDEX");
+         end if;
+
+         if F.Get.Props.Case_Insensitive then
+            Put (",NOCASE");
+         end if;
+
+         Put
            ("|" & Default & (1 .. Column_Widths (4) - Default'Length => ' ')
-            & "|"
-            & Translate (F.Description,
-                         Mapping => To_Mapping ("" & ASCII.LF, " ")) & "|");
+            & "|");
+
+         if Show_Comments then
+            Put
+              (Translate (F.Description,
+               Mapping => To_Mapping ("" & ASCII.LF, " ")) & "|" & ASCII.LF);
+         else
+            Put ("" & ASCII.LF);
+         end if;
       end For_Field;
 
       ---------------
@@ -1883,27 +1946,32 @@ package body GNATCOLL.SQL.Inspect is
       begin
          --  Compute widths
          --  Minimum size of column 1 is 5 (for "TABLE")
-         Column_Widths := (1 => 5, 2 => 0, 3 => Not_Null'Length, 4 => 0);
-         A := First (TDR (Table.Get).Fields);
-         while Has_Element (A) loop
-            Column_Widths (1) := Integer'Max
-              (Column_Widths (1), Element (A).Name'Length);
-            Column_Widths (2) := Integer'Max
-              (Column_Widths (2), SQL_Type (Element (A))'Length);
-            Column_Widths (4) := Integer'Max
-              (Column_Widths (4), Element (A).Default'Length);
-            Next (A);
-         end loop;
+         if Align_Columns then
+            Column_Widths := (1 => 5, 2 => 0, 3 => Not_Null'Length, 4 => 0);
+            A := First (TDR (Table.Get).Fields);
+            while Has_Element (A) loop
+               Column_Widths (1) := Integer'Max
+                 (Column_Widths (1), Element (A).Name'Length);
+               Column_Widths (2) := Integer'Max
+                 (Column_Widths (2), SQL_Type (Element (A))'Length);
+               Column_Widths (4) := Integer'Max
+                 (Column_Widths (4), Element (A).Default'Length);
+               Next (A);
+            end loop;
+
+         else
+            Column_Widths := (others => 0);
+         end if;
 
          case Table.Get_Kind is
             when Kind_Table =>
-               Put_Line
+               Put
                  ("|TABLE" & (1 .. Column_Widths (1) - 5 => ' ')
-                  & "| " & Table.Name);
+                  & "| " & Table.Name & ASCII.LF);
             when Kind_View  =>
-               Put_Line
+               Put
                  ("|VIEW" & (1 .. Column_Widths (1) - 4 => ' ')
-                  & "| " & Table.Name);
+                  & "| " & Table.Name & ASCII.LF);
          end case;
 
          For_Each_Field (Table, For_Field'Access, True);
@@ -1929,22 +1997,45 @@ package body GNATCOLL.SQL.Inspect is
                   Next (P);
                end loop;
 
-               Put_Line (" |");
+               Put (" |" & ASCII.LF);
             end if;
 
             Next (F);
          end loop;
 
-         Ada.Text_IO.New_Line;
+         declare
+            C : String_Lists.Cursor := TDR (Table.Get).Indexes.First;
+         begin
+            while Has_Element (C) loop
+               declare
+                  Descr : constant String := Element (C);
+                  Name_Start : Integer := Descr'First + 1;
+               begin
+                  while Descr (Name_Start) /= '|' loop
+                     Name_Start := Name_Start + 1;
+                  end loop;
+
+                  Put ("|INDEX:|"
+                       & Descr (Descr'First .. Name_Start - 1)
+                       & "|" & Descr (Name_Start + 1 .. Descr'Last)
+                       & ASCII.LF);
+               end;
+
+               Next (C);
+            end loop;
+         end;
+
+         Put ("" & ASCII.LF);
       end For_Table;
 
    begin
       if Self.File /= No_File then
          Create (To_File, Out_File, Self.File.Display_Full_Name);
          Set_Output (To_File);
+         Put := Ada.Text_IO.Put'Access;
       end if;
 
-      For_Each_Table (Schema, For_Table'Access);
+      For_Each_Table (Schema, For_Table'Access, Alphabetical => False);
 
       if Self.File /= No_File then
          Set_Output (Standard_Output);
@@ -1957,15 +2048,113 @@ package body GNATCOLL.SQL.Inspect is
    ---------------
 
    procedure Load_Data
+     (File   : GNATCOLL.VFS.Virtual_File;
+      Puts   : access procedure (S : String))
+   is
+      Str          : GNAT.Strings.String_Access;
+      Line_Number  : Natural := 0;
+      Line         : String_List (1 .. Max_Fields_Per_Line);
+      First        : Integer;
+      Fields_Count : Natural;  --  Number of fields on current line
+
+   begin
+      Str := Read_Whole_File (+File.Full_Name.all);
+      if Str /= null then
+         First := Str'First;
+
+         while First <= Str'Last loop
+            Parse_Line
+              (Line, Line_Number, Fields_Count, Str.all, First,
+               Replace_Newline => False);
+
+            if Fields_Count > 0 then
+               for F in 1 .. Fields_Count loop
+                  Puts ("|" & Line (F).all);
+               end loop;
+               Puts ("|" & ASCII.LF);
+            end if;
+         end loop;
+      end if;
+
+      Free (Str);
+   end Load_Data;
+
+   ----------------
+   -- Parse_Line --
+   ----------------
+
+   procedure Parse_Line
+     (Line         : in out String_List;
+      Line_Number  : in out Natural;
+      Fields_Count : out Natural;
+      Data         : String;
+      First        : in out Integer;
+      Replace_Newline : Boolean := True)
+   is
+      Line_End : Natural := EOL (Data (First .. Data'Last));
+      Last, Tmp : Natural;
+   begin
+      Free (String_List (Line));
+      Fields_Count := Line'First - 1;
+
+      Line_Number := Line_Number + 1;
+
+      while Data (First) = '|'
+        and then Data (First + 1) = '-'  --  Skip line like  |---|----|
+      loop
+         First := Line_End + 1;
+         Line_End := EOL (Data (First .. Data'Last));
+         Line_Number := Line_Number + 1;
+      end loop;
+
+      if Data (First) = '|' then
+         First := First + 1;
+
+         while First <= Line_End loop
+            Skip_Blanks (Data, First);
+            exit when First >= Line_End;
+            exit when Data (First) = '#';  --  A comment
+
+            --  First now points to first non-blank char
+
+            Last := EOW (Data, First);
+            exit when Last > Line_End;
+
+            Tmp := Last - 1;
+            Skip_Blanks_Backward (Data (First .. Tmp), Tmp);
+
+            if Replace_Newline then
+               declare
+                  S : Unbounded_String :=
+                    To_Unbounded_String (Data (First .. Tmp));
+               begin
+                  Replace
+                    (S, Pattern => "\n", Replacement => "" & ASCII.LF);
+                  Append (Line, Fields_Count, To_String (S));
+               end;
+
+            else
+               Append (Line, Fields_Count, Data (First .. Tmp));
+            end if;
+
+            First := Last + 1;
+         end loop;
+      end if;
+
+      First := Line_End + 1;
+   end Parse_Line;
+
+   ---------------
+   -- Load_Data --
+   ---------------
+
+   procedure Load_Data
      (DB     : access Database_Connection_Record'Class;
       Data   : String;
       Schema : DB_Schema := No_Schema;
       Location : String := "data";
       Replace_Newline : Boolean := True)
    is
-      Max_Fields_Per_Line : constant := 30;
-      --  Maximum number of fields per line (separated by '|')
-
       Line_Number : Natural := 0;
 
       Line         : String_List (1 .. Max_Fields_Per_Line);
@@ -2014,69 +2203,14 @@ package body GNATCOLL.SQL.Inspect is
       Q_Values_With_Select : Prepared_Statement;
 
       procedure Parse_Line;
-      --  Parse the current line and set Line and Fields_Count as appropriate.
-      --  Fields_Count is set to 0 if the current line is not part of a table
-      --  and should be ignored.
 
       procedure Free_Vars;
       --  Free all local variables
 
-      ----------------
-      -- Parse_Line --
-      ----------------
-
       procedure Parse_Line is
-         Line_End : Natural := EOL (Data (First .. Data'Last));
-         Last, Tmp : Natural;
       begin
-         Free (String_List (Line));
-         Fields_Count := Line'First - 1;
-
-         Line_Number := Line_Number + 1;
-
-         while Data (First) = '|'
-           and then Data (First + 1) = '-'  --  Skip line like  |---|----|
-         loop
-            First := Line_End + 1;
-            Line_End := EOL (Data (First .. Data'Last));
-            Line_Number := Line_Number + 1;
-         end loop;
-
-         if Data (First) = '|' then
-            First := First + 1;
-
-            while First <= Line_End loop
-               Skip_Blanks (Data, First);
-               exit when First >= Line_End;
-               exit when Data (First) = '#';  --  A comment
-
-               --  First now points to first non-blank char
-
-               Last := EOW (Data, First);
-               exit when Last > Line_End;
-
-               Tmp := Last - 1;
-               Skip_Blanks_Backward (Data (First .. Tmp), Tmp);
-
-               if Replace_Newline then
-                  declare
-                     S : Unbounded_String :=
-                       To_Unbounded_String (Data (First .. Tmp));
-                  begin
-                     Replace
-                       (S, Pattern => "\n", Replacement => "" & ASCII.LF);
-                     Append (Line, Fields_Count, To_String (S));
-                  end;
-
-               else
-                  Append (Line, Fields_Count, Data (First .. Tmp));
-               end if;
-
-               First := Last + 1;
-            end loop;
-         end if;
-
-         First := Line_End + 1;
+         Parse_Line
+           (Line, Line_Number, Fields_Count, Data, First, Replace_Newline);
       end Parse_Line;
 
       ---------------

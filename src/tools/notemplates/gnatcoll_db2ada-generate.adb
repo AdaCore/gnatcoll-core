@@ -29,8 +29,9 @@ with Ada.Text_IO;             use Ada.Text_IO;
 with GNATCOLL.Utils;          use GNATCOLL.Utils;
 
 separate (GNATCOLL_Db2Ada)
-procedure Generate (Generated : String) is
-
+procedure Generate
+  (Generated : String; Include_Database_Create : Boolean)
+is
    package String_Sets is new Ada.Containers.Indefinite_Ordered_Sets
      (String, "<", "=");
    use String_Sets;
@@ -60,6 +61,10 @@ procedure Generate (Generated : String) is
 
    procedure Print_FK (Table : in out Table_Description);
    --  Print the FK subprograms
+
+   procedure Print_Database_Create;
+   --  Print the Ada subprogram that recreates the database and its initial
+   --  contents.
 
    -------------------
    -- Print_Comment --
@@ -298,6 +303,71 @@ procedure Generate (Generated : String) is
       Finish_Subprogram (-1);
    end Print_FK;
 
+   ---------------------------
+   -- Print_Database_Create --
+   ---------------------------
+
+   procedure Print_Database_Create is
+      Spec : constant String :=
+        "   procedure Create_Database" & ASCII.LF
+        & "      (DB : access"
+        &  " GNATCOLL.SQL.Exec.Database_Connection_Record'Class)";
+
+      procedure Puts (Data : String);
+      --  Format Data as an Ada String
+
+      procedure Puts (Data : String) is
+      begin
+         for D in Data'Range loop
+            if Data (D) = '"' then
+               Put (Body_File, """""");
+            elsif Data (D) = ASCII.LF then
+               Put_Line (Body_File, """ & ASCII.LF");
+               Put (Body_File, "         & """);
+            else
+               Put (Body_File, Data (D));
+            end if;
+         end loop;
+      end Puts;
+
+      F : File_Schema_IO;
+   begin
+      Put_Line (Spec_File, ASCII.LF & Spec & ";");
+      Put_Line
+        (Spec_File, "   --  Create the database and its initial contents");
+      Put_Line
+        (Spec_File, "   --  The SQL is not automatically committed");
+
+      Put_Line (Body_File, ASCII.LF & Spec & ASCII.LF & "   is");
+
+      Put (Body_File, "      DbSchema : constant String := """);
+      F.File := GNATCOLL.VFS.No_File;
+      Write_Schema
+        (F, Schema, Puts => Puts'Access, Align_Columns => False,
+         Show_Comments => False);
+      Put_Line (Body_File, """;");
+
+      if Load_File /= GNATCOLL.VFS.No_File then
+         Put (Body_File, "      Data : constant String := """);
+         Load_Data (Load_File, Puts'Access);
+         Put_Line (Body_File, """;");
+      end if;
+
+      Put_Line (Body_File, "      F : File_Schema_IO;");
+      Put_Line (Body_File, "      D : DB_Schema_IO;");
+      Put_Line (Body_File, "      Schema : DB_Schema;");
+      Put_Line (Body_File, "   begin");
+      Put_Line (Body_File, "      Schema := Read_Schema (F, DbSchema);");
+      Put_Line (Body_File, "      D.DB := Database_Connection (DB);");
+      Put_Line (Body_File, "      Write_Schema (D, Schema);");
+
+      if Load_File /= GNATCOLL.VFS.No_File then
+         Put_Line (Body_File, "      Load_Data (DB, Data, Schema);");
+      end if;
+
+      Put_Line (Body_File, "   end Create_Database;");
+   end Print_Database_Create;
+
    N : String_Sets.Cursor;
    F : Virtual_File;
 
@@ -345,6 +415,10 @@ begin
    Create (Spec_File, Name => F.Display_Full_Name);
    Put_Line (Spec_File, "with GNATCOLL.SQL; use GNATCOLL.SQL;");
 
+   if Include_Database_Create then
+      Put_Line (Spec_File, "with GNATCOLL.SQL.Exec;");
+   end if;
+
    if Output (Output_Ada_Specs) then
       Put_Line (Spec_File, "with " & Generated & "_Names;"
                 & " use " & Generated & "_Names;");
@@ -359,6 +433,12 @@ begin
       F := Create_From_Dir
         (Dir => Output_Dir, Base_Name => Base_File & ".adb");
       Create (Body_File, Name => F.Display_Full_Name);
+
+      if Include_Database_Create then
+         Put_Line
+           (Body_File, "with GNATCOLL.SQL.Inspect; use GNATCOLL.SQL.Inspect;");
+      end if;
+
       Put_Line (Body_File, "package body " & Generated & " is");
       Put_Line (Body_File, "   pragma Style_Checks (Off);");
       Put_Line (Body_File, "   use type Cst_String_Access;");
@@ -430,6 +510,10 @@ begin
 
       New_Line (Spec_File);
       For_Each_Table (Schema, Print_Table_Global'Access);
+   end if;
+
+   if Include_Database_Create then
+      Print_Database_Create;
    end if;
 
    Put_Line (Spec_File, "end " & Generated & ";");

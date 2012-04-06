@@ -390,30 +390,15 @@ package body GNATCOLL.ALI is
    ---------------------
 
    procedure Create_Database
-     (Connection      : access Database_Connection_Record'Class;
-      DB_Schema_Descr : GNATCOLL.VFS.Virtual_File;
-      Initial_Data    : GNATCOLL.VFS.Virtual_File)
+     (Connection      : access Database_Connection_Record'Class)
    is
-      Schema  : DB_Schema;
       Start   : Time;
-
    begin
       if Active (Me_Timing) then
          Start := Clock;
       end if;
 
-      Schema := New_Schema_IO (DB_Schema_Descr).Read_Schema;
-      New_Schema_IO (Database_Connection (Connection)).Write_Schema (Schema);
-
-      if Connection.Success then
-         --  Load initial data
-
-         Load_Data
-           (Connection,
-            File   => Initial_Data,
-            Schema => Schema);
-      end if;
-
+      GNATCOLL.ALI.Database.Create_Database (Connection);
       Connection.Commit_Or_Rollback;
 
       if Active (Me_Timing) then
@@ -567,7 +552,6 @@ package body GNATCOLL.ALI is
       Index  : Integer;
 
       ALI_Id   : Integer := LI.Id;
-
 
       Start           : Integer;
       Current_Unit_Id : Integer := -1;
@@ -2068,9 +2052,7 @@ package body GNATCOLL.ALI is
                   end if;
 
                else
-                  Create_Database (DB,
-                                   Create (+"dbschema.txt"),
-                                   Create (+"initialdata.txt"));
+                  Create_Database (DB);
                   Destroy_Indexes := True;
                   Do_Analyze := True;
                end if;

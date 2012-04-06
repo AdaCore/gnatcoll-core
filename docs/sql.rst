@@ -440,6 +440,14 @@ those switches are:
   database, and then `-api` can be used to dump the schema from a
   textual description of the database.
 
+*-adacreate*
+  This should be used in combination with `-api`. In addition to the usual
+  output of `-api`, it will also generate an Ada subprogram called
+  `Create_Database` that can be used to recreate the database and its
+  initial data (if `-load` was specified) from your application, without
+  requiring access to the external files that define the schema and the
+  initial data.
+
 *-enum table,id,name,prefix,base*
   This parameter can be repeated several times if needed. It identifies
   one of the special tables of the database that acts as an enumeration

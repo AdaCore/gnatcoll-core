@@ -37,7 +37,6 @@
 
 with GNATCOLL.Projects;     use GNATCOLL.Projects;
 with GNATCOLL.SQL.Exec;     use GNATCOLL.SQL.Exec;
-with GNATCOLL.VFS;
 
 package GNATCOLL.ALI is
 
@@ -93,15 +92,8 @@ package GNATCOLL.ALI is
    --  will in general include the Ada runtime.
 
    procedure Create_Database
-     (Connection      : access Database_Connection_Record'Class;
-      DB_Schema_Descr : GNATCOLL.VFS.Virtual_File;
-      Initial_Data    : GNATCOLL.VFS.Virtual_File);
+     (Connection : access Database_Connection_Record'Class);
    --  Create the database tables and initial contents.
    --  Behavior is undefined if the database is not empty initially.
-   --  DB_Schema_Descr is the file that contains the description of the
-   --  entities database schema.
-   --  ??? We should not rely on an external file for this. Perhaps GNATCOLL
-   --  could generate some code to create the GNATCOLL.SQL.Inspect.DB_Schema
-   --  in the code ?
 
 end GNATCOLL.ALI;

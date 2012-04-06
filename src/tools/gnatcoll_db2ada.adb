@@ -59,6 +59,7 @@ procedure GNATCOLL_Db2Ada is
       Output_Orm,
       Output_Dot,
       Output_Load,
+      Output_Adacreate,
       Output_Createdb);
    Output : array (Output_Kind) of Boolean :=
      (others => False);
@@ -139,10 +140,15 @@ procedure GNATCOLL_Db2Ada is
    --  constants for those rather than hard-code them every where. At least
    --  when they are renamed we will be forced to change the Ada code.
 
-   procedure Generate (Generated : String);
-   procedure Generate (Generated : String) is separate;
+   procedure Generate
+     (Generated : String; Include_Database_Create : Boolean);
+   procedure Generate
+     (Generated : String; Include_Database_Create : Boolean) is separate;
    --  Generate the actual output. This can be implemented either through
    --  Ada.Text_IO or using the templates parser
+   --  If Include_Database_Create is true, an additional subprogram is
+   --  generated to regenerate the database and load initial data without
+   --  requiring external files.
 
    procedure Generate_Orm;
    --  Generate the ORM API via a python script
@@ -291,8 +297,10 @@ procedure GNATCOLL_Db2Ada is
       Put_Line ("    from a table, selected with criteria.");
       Put_Line ("-text: generate a textual description of the database,");
       Put_Line ("    instead of usual output. Disables -api.");
-      Put_Line ("-createdb: return the SQL commands to create the database");
-      Put_Line ("    Disables -api.");
+      Put_Line ("-createdb: Creates the database given by -dbname");
+      Put_Line ("-adacreate: Generates an Ada function to create the schema");
+      Put_Line ("    and load the initial data (embedded files from -dbmodel");
+      Put_Line ("    and -load, if specified). This requires -api");
       Put_Line ("-api PKG: generate an Ada package describing the schema");
       Put_Line ("    This is the default output, with PKG='database'");
       Put_Line
@@ -340,6 +348,7 @@ procedure GNATCOLL_Db2Ada is
       loop
          case Getopt ("dbhost= h -help dbname= dbuser= dbpasswd= enum= var="
                       & " dbtype= dbmodel= dot text orm= createdb api="
+                      & " adacreate"
                       & " ormtables= api-enums= load= output=")
          is
             when 'h' | '-' =>
@@ -360,6 +369,9 @@ procedure GNATCOLL_Db2Ada is
                      Generated := new String'(Parameter);
                   end if;
                   Output (Output_Ada_Enums) := True;
+
+               elsif Full_Switch = "adacreate" then
+                  Output (Output_Adacreate) := True;
                end if;
 
             when 'd' =>
@@ -510,9 +522,11 @@ procedure GNATCOLL_Db2Ada is
 
       if Output (Output_Ada_Specs)
         or else Output (Output_Ada_Enums)
+        or else Output (Output_Adacreate)
       then
          Dump_Tables (Connection, Enums, Vars);
-         Generate (Generated.all);
+         Generate (Generated.all,
+                   Include_Database_Create => Output (Output_Adacreate));
       end if;
 
       if Output (Output_Text) then

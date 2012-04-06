@@ -282,11 +282,19 @@ package GNATCOLL.SQL.Inspect is
       File : GNATCOLL.VFS.Virtual_File;
    end record;
    overriding function Read_Schema (Self : File_Schema_IO) return DB_Schema;
+   function Read_Schema
+     (Self : File_Schema_IO; Data : String) return DB_Schema;
    overriding procedure Write_Schema
      (Self : File_Schema_IO; Schema : DB_Schema);
+   procedure Write_Schema
+     (Self   : File_Schema_IO;
+      Schema : DB_Schema;
+      Puts   : access procedure (S : String);
+      Align_Columns : Boolean := True;
+      Show_Comments : Boolean := True);
    --  Read or write the schema from a file.
    --  See GNATCOLL documentation for the format of this file.
-   --  This will write to stdout if the file is No_File
+   --  This will write to Puts parameter if the Self.File is No_File
 
    function New_Schema_IO
      (File : GNATCOLL.VFS.Virtual_File) return File_Schema_IO'Class;
@@ -323,6 +331,12 @@ package GNATCOLL.SQL.Inspect is
    --
    --  If Replace_Newline is True, then a "\n" string will be replaced by an
    --  actual ASCII.LF when stored in the database.
+
+   procedure Load_Data
+     (File   : GNATCOLL.VFS.Virtual_File;
+      Puts   : access procedure (S : String));
+   --  Load the initial data from File, and dumps it to Output without
+   --  pretty-printing or comments.
 
 private
    use GNATCOLL.Refcount, GNATCOLL.Refcount.Weakref;

@@ -14,6 +14,7 @@ all:
 
 	@${DB2ADA} -dbtype=sqlite -dbname=:memory: \
 		-createdb \
+		-adacreate \
 		-api GNATCOLL.ALI.Database \
 		-load=${INITIAL} \
 		-enum "f2f_kind,id,name,F2F_,Integer"  \
