@@ -10,10 +10,6 @@
 -- but WITHOUT ANY WARRANTY;  without even the implied warranty of MERCHAN- --
 -- TABILITY or FITNESS FOR A PARTICULAR PURPOSE.                            --
 --                                                                          --
--- As a special exception under Section 7 of GPL version 3, you are granted --
--- additional permissions described in the GCC Runtime Library Exception,   --
--- version 3.1, as published by the Free Software Foundation.               --
---                                                                          --
 -- You should have received a copy of the GNU General Public License and    --
 -- a copy of the GCC Runtime Library Exception along with this program;     --
 -- see the files COPYING3 and COPYING.RUNTIME respectively.  If not, see    --
@@ -30,6 +26,10 @@
 --  If readline is not available on your system, this package can still be
 --  called by your application and will default to using the services provided
 --  by Ada.Text_IO (which do not provide all the above advantages, of course).
+--
+--  Readline is licensed under the Full GNU General Public License. If you
+--  distribute a program using this package and the readline library, this
+--  program must be free software.
 
 package GNATCOLL.Readline is
 
