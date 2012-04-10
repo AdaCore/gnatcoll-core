@@ -161,21 +161,38 @@ package body GNATCOLL.Utils is
       First : Integer := Str'First;
       Count : Natural := 1;
       Result : GNAT.Strings.String_List_Access;
+      C      : Integer;
    begin
-      for C in Str'Range loop
+      C := Str'First;
+      while C <= Str'Last loop
          if Str (C) = On then
             Count := Count + 1;
+
+            while C <= Str'Last and then Str (C) = On loop
+               C := C + 1;
+            end loop;
+         else
+            C := C + 1;
          end if;
       end loop;
 
       Result := new GNAT.Strings.String_List (1 .. Count);
       Count := 1;
 
-      for C in Str'Range loop
+      C := Str'First;
+      while C <= Str'Last loop
          if Str (C) = On then
             Result (Count) := new String'(Str (First .. C - 1));
-            First := C + 1;
+
+            while C <= Str'Last and then Str (C) = On loop
+               C := C + 1;
+            end loop;
+
+            First := C;
             Count := Count + 1;
+
+         else
+            C := C + 1;
          end if;
       end loop;
 
