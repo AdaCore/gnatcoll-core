@@ -399,9 +399,9 @@ package body GNATCOLL.JSON is
    -- Read --
    ----------
 
-   function Read (Strm, Filename :  String) return JSON_Value is
-      Idx : aliased Natural := Strm'First;
-      Col : aliased Natural := 1;
+   function Read (Strm, Filename : String) return JSON_Value is
+      Idx  : aliased Natural := Strm'First;
+      Col  : aliased Natural := 1;
       Line : aliased Natural := 1;
    begin
       return Read (Strm, Idx'Access, Col'Access, Line'Access, Filename);
