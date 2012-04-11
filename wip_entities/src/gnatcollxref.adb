@@ -74,6 +74,7 @@ procedure GNATCOLLxref is
    procedure Process_Refresh (Args : Arg_List);
    procedure Process_Shell (Args : Arg_List);
    procedure Process_Refs (Args : Arg_List);
+   procedure Process_Params (Args : Arg_List);
    --  Process the various commands.
    --  Args is the command line entered by the user, so Get_Command (Args) for
    --  instance is the command being executed.
@@ -82,7 +83,11 @@ procedure GNATCOLLxref is
    --  Change the value of a variable
 
    function Image (File : Virtual_File) return String;
+   function Image (Self : Entity_Information) return String;
    --  Return a display version of the argument
+
+   procedure Output_Prefix (Count : in out Natural);
+   --  Print the prefix for each output line
 
    type Command_Descr is record
       Name    : GNAT.Strings.String_Access;
@@ -92,29 +97,33 @@ procedure GNATCOLLxref is
    end record;
 
    Commands : constant array (Natural range <>) of Command_Descr :=
-     (1 => (new String'("help"),
-            new String'("[command or variable name]"),
-            new String'("Display the list of commands and their syntax."),
-            Process_Help'Access),
-      2 => (new String'("project"),
-            new String'("file.gpr"),
-            new String'("Load the project file, replacing the one currently"
-              & " loaded. This automatically loads the xref information into"
-              & " the database."),
-            Process_Project'Access),
-      3 => (new String'("refresh"),
-            null,
-            new String'("Refresh the contents of the xref database."),
-            Process_Refresh'Access),
-      4 => (new String'("refs"),
-            new String'("name:file:line:column"),
-            new String'("Display all known references to the entity."),
-            Process_Refs'Access),
-      5 => (new String'("shell"),
-            null,
-            new String'("Execute a shell command (an alternative is to use '!'"
-                & " as the command."),
-            Process_Shell'Access));
+     ((new String'("help"),
+       new String'("[command or variable name]"),
+       new String'("Display the list of commands and their syntax."),
+       Process_Help'Access),
+      (new String'("params"),
+       new String'("name:file:line:column"),
+       new String'("Return the list of parameters for the subprogram"),
+       Process_Params'Access),
+      (new String'("project"),
+       new String'("file.gpr"),
+       new String'("Load the project file, replacing the one currently"
+         & " loaded. This automatically loads the xref information into"
+         & " the database."),
+       Process_Project'Access),
+      (new String'("refresh"),
+       null,
+       new String'("Refresh the contents of the xref database."),
+       Process_Refresh'Access),
+      (new String'("refs"),
+       new String'("name:file:line:column"),
+       new String'("Display all known references to the entity."),
+       Process_Refs'Access),
+      (new String'("shell"),
+       null,
+       new String'("Execute a shell command (an alternative is to use '!'"
+           & " as the command."),
+       Process_Shell'Access));
 
    type Variable_Descr is record
       Name : GNAT.Strings.String_Access;
@@ -146,6 +155,7 @@ procedure GNATCOLLxref is
    Nightly_DB_Name       : aliased GNAT.Strings.String_Access;
    Include_Runtime_Files : aliased Boolean;
    Display_Full_Paths    : aliased Boolean;
+   Verbose               : aliased Boolean;
    --  The options from the command line
 
    ----------------------
@@ -220,6 +230,21 @@ procedure GNATCOLLxref is
       else
          return +File.Base_Name;
       end if;
+   end Image;
+
+   -----------
+   -- Image --
+   -----------
+
+   function Image (Self : Entity_Information) return String is
+      Decl   : Entity_Declaration;
+   begin
+      Decl := Xref.Declaration (Self);
+      return To_String (Decl.Name) & ":"
+        & Image (Decl.Location.File) & ":"
+        & Image (Decl.Location.Line, Min_Width => 0)
+        & ':'
+        & Image (Decl.Location.Column, Min_Width => 0);
    end Image;
 
    ------------------
@@ -395,6 +420,20 @@ procedure GNATCOLLxref is
       return Entity;
    end Get_Entity;
 
+   -------------------
+   -- Output_Prefix --
+   -------------------
+
+   procedure Output_Prefix (Count : in out Natural) is
+   begin
+      if Verbose then
+         Put (" ");
+         Put (Image (Count, Min_Width => 3, Padding => ' '));
+         Put ("> ");
+         Count := Count + 1;
+      end if;
+   end Output_Prefix;
+
    ------------------
    -- Process_Refs --
    ------------------
@@ -403,6 +442,7 @@ procedure GNATCOLLxref is
       Entity : Entity_Information;
       Refs   : References_Cursor;
       Ref    : Entity_Reference;
+      Count  : Natural := 1;
    begin
       if Args_Length (Args) /= 1 then
          Put_Line ("Invalid number of arguments");
@@ -414,14 +454,49 @@ procedure GNATCOLLxref is
       Refs := Xref.References (Entity);
       while Has_Element (Refs) loop
          Ref := Refs.Element;
-         Put_Line (Image (Ref.File) & ":"
-                   & Image (Ref.Line, Min_Width => 0)
-                   & ':'
-                   & Image (Ref.Column, Min_Width => 0)
-                   & " (" & To_String (Ref.Kind) & ")");
+         Output_Prefix (Count);
+         Put (Image (Ref.File) & ":"
+              & Image (Ref.Line, Min_Width => 0)
+              & ':'
+              & Image (Ref.Column, Min_Width => 0)
+              & " (" & To_String (Ref.Kind) & ")");
+
+         if Ref.Scope /= No_Entity then
+            Put_Line (" scope=" & Image (Ref.Scope));
+         else
+            New_Line;
+         end if;
+
          Next (Refs);
       end loop;
    end Process_Refs;
+
+   --------------------
+   -- Process_Params --
+   --------------------
+
+   procedure Process_Params (Args : Arg_List) is
+      Entity : Entity_Information;
+      Ents   : Parameters_Cursor;
+      Param  : Parameter_Information;
+      Count  : Natural := 1;
+   begin
+      if Args_Length (Args) /= 1 then
+         Put_Line ("Invalid number of arguments");
+         return;
+      end if;
+
+      Entity := Get_Entity (Nth_Arg (Args, 1));
+
+      Ents := Xref.Parameters (Entity);
+      while Has_Element (Ents) loop
+         Param  := Ents.Element;
+         Output_Prefix (Count);
+         Put_Line (Image (Param.Parameter)
+                   & " (" & Param.Kind'Img & ")");
+         Next (Ents);
+      end loop;
+   end Process_Params;
 
    ------------------
    -- Set_Variable --
@@ -485,6 +560,9 @@ procedure GNATCOLLxref is
                           & Expr (C) (Expr (C)'First + 1 .. Expr (C)'Last));
 
          else
+            if Verbose then
+               Put_Line (Expr (C).all);
+            end if;
             Colon := Ada.Strings.Fixed.Index (Expr (C).all, ":=");
             if Colon >= Expr (C)'First then
                Set_Variable (Expr (C) (Expr (C)'First .. Colon - 1),
@@ -532,7 +610,9 @@ procedure GNATCOLLxref is
               Ada.Strings.Fixed.Trim (Lines (L).all, Ada.Strings.Both);
          begin
             if Starts_With (Line, "--") then
-               Put_Line (Line);
+               if Verbose then
+                  Put_Line (Line);
+               end if;
             else
                Process_Line (Lines (L).all);
             end if;
@@ -602,6 +682,12 @@ begin
       Long_Switch => "--basenames",
       Value       => False,
       Help        => "Only display file names, instead of full path");
+   Define_Switch
+     (Cmdline,
+      Output      => Verbose'Access,
+      Switch      => "-v",
+      Long_Switch => "--verbose",
+      Help        => "Print commands before executing them");
 
    Getopt (Cmdline);
 

@@ -152,8 +152,21 @@ package GNATCOLL.ALI is
       Line   : Integer;
       Column : Integer;
       Kind   : Ada.Strings.Unbounded.Unbounded_String;
+      Scope  : Entity_Information;
    end record;
+   No_Entity_Reference : constant Entity_Reference;
    --  A reference to an entity, at a given location.
+
+   type Entity_Declaration is record
+      Name     : Ada.Strings.Unbounded.Unbounded_String;
+      Location : Entity_Reference;
+   end record;
+   No_Entity_Declaration : constant Entity_Declaration;
+
+   function Declaration
+     (Xref   : Xref_Database'Class;
+      Entity : Entity_Information) return Entity_Declaration;
+   --  Return the name of the entity
 
    type Base_Cursor is abstract tagged private;
    function Has_Element (Self : Base_Cursor) return Boolean;
@@ -164,6 +177,27 @@ package GNATCOLL.ALI is
    function References
      (Self   : Xref_Database'Class;
       Entity : Entity_Information) return References_Cursor;
+
+   type Entities_Cursor is new Base_Cursor with private;
+   function Element (Self : Entities_Cursor) return Entity_Information;
+
+   type Parameter_Kind is
+     (In_Parameter,
+      Out_Parameter,
+      In_Out_Parameter,
+      Access_Parameter);
+   type Parameter_Information is record
+      Parameter : Entity_Information;
+      Kind      : Parameter_Kind;
+   end record;
+
+   type Parameters_Cursor is new Base_Cursor with private;
+   function Element (Self : Parameters_Cursor) return Parameter_Information;
+   function Parameters
+     (Self   : Xref_Database'Class;
+      Entity : Entity_Information) return Parameters_Cursor;
+   --  Return the list of parameters for the given subprogram. They are in the
+   --  same order as in the source.
 
 private
    type Xref_Database is tagged record
@@ -176,10 +210,23 @@ private
    No_Entity : constant Entity_Information :=
      (Id => -1);
 
+   No_Entity_Reference : constant Entity_Reference :=
+     (File   => GNATCOLL.VFS.No_File,
+      Line   => -1,
+      Column => -1,
+      Kind   => Ada.Strings.Unbounded.Null_Unbounded_String,
+      Scope  => No_Entity);
+
+   No_Entity_Declaration : constant Entity_Declaration :=
+     (Name     => Ada.Strings.Unbounded.Null_Unbounded_String,
+      Location => No_Entity_Reference);
+
    type Base_Cursor is abstract tagged record
       DBCursor : GNATCOLL.SQL.Exec.Forward_Cursor;
    end record;
 
    type References_Cursor is new Base_Cursor with null record;
+   type Entities_Cursor is new Base_Cursor with null record;
+   type Parameters_Cursor is new Base_Cursor with null record;
 
 end GNATCOLL.ALI;

@@ -1,1 +1,5 @@
+.gnatcollxref_hist
 generated/*
+gnatcoll_xref.db
+tests/*/.gnatdebug
+tests/find_ref/main

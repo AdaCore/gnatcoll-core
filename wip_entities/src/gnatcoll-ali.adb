@@ -2378,10 +2378,10 @@ package body GNATCOLL.ALI is
 
       if Line /= -1 then
          C := Database.Entities.Decl_Line = Line;
-      end if;
 
-      if Column /= -1 then
-         C := C and Database.Entities.Decl_Column = Column;
+         if Column /= -1 then
+            C := C and Database.Entities.Decl_Column = Column;
+         end if;
       end if;
 
       Q := SQL_Select
@@ -2405,10 +2405,10 @@ package body GNATCOLL.ALI is
 
          if Line /= -1 then
             C := Database.Entity_Refs.Line = Line;
-         end if;
 
-         if Column /= -1 then
-            C := Database.Entity_Refs.Column = Column;
+            if Column /= -1 then
+               C := C and Database.Entity_Refs.Column = Column;
+            end if;
          end if;
 
          Q := SQL_Select
@@ -2477,12 +2477,18 @@ package body GNATCOLL.ALI is
    -------------
 
    function Element (Self : References_Cursor) return Entity_Reference is
+      Scope : Entity_Information := No_Entity;
    begin
+      if not Self.DBCursor.Is_Null (5) then
+         Scope := (Id => Self.DBCursor.Integer_Value (5));
+      end if;
+
       return Entity_Reference'
-        (File   => Create (+Value (Self.DBCursor, 1)),
-         Line   => Integer_Value (Self.DBCursor, 2),
-         Column => Integer_Value (Self.DBCursor, 3),
-         Kind   => To_Unbounded_String (Value (Self.DBCursor, 4)));
+        (File   => Create (+Self.DBCursor.Value (1)),
+         Line   => Self.DBCursor.Integer_Value (2),
+         Column => Self.DBCursor.Integer_Value (3),
+         Kind   => To_Unbounded_String (Self.DBCursor.Value (4)),
+         Scope  => Scope);
    end Element;
 
    ----------------
@@ -2503,7 +2509,8 @@ package body GNATCOLL.ALI is
                &   Database.Files.Path
                  & Database.Entities.Decl_Line
                  & Database.Entities.Decl_Column
-                 & Expression ("declaration"),
+                 & Expression ("declaration")
+                 & Database.Entities.Decl_Caller,
                From => Database.Entities & Database.Files,
                Where => Database.Entities.Decl_File = Database.Files.Id
                  and Database.Entities.Id = Integer_Param (1)),
@@ -2513,7 +2520,8 @@ package body GNATCOLL.ALI is
                  & Database.Files.Path
                  & Database.Entity_Refs.Line
                  & Database.Entity_Refs.Column
-                 & Database.Reference_Kinds.Display,
+                 & Database.Reference_Kinds.Display
+                 & Database.Entity_Refs.Caller,
                From => Database.Entity_Refs & Database.Files
                  & Database.Reference_Kinds,
                Where => Database.Entity_Refs.File = Database.Files.Id
@@ -2528,5 +2536,102 @@ package body GNATCOLL.ALI is
          Params => (1 => +Entity.Id));
       return Curs;
    end References;
+
+   -----------------
+   -- Declaration --
+   -----------------
+
+   function Declaration
+     (Xref   : Xref_Database'Class;
+      Entity : Entity_Information) return Entity_Declaration
+   is
+      Curs : Forward_Cursor;
+      Scope : Entity_Information := No_Entity;
+   begin
+      Curs.Fetch
+        (Xref.DB,
+         SQL_Select
+           (Database.Entities.Name
+            & Database.Files.Path
+            & Database.Entities.Decl_Line
+            & Database.Entities.Decl_Column
+            & Database.Entities.Decl_Caller,
+            From => Database.Entities & Database.Files,
+            Where => Database.Entities.Decl_File = Database.Files.Id
+            and Database.Entities.Id = Integer_Param (1)),
+         Params => (1 => +Entity.Id));
+
+      if Curs.Has_Row then
+         if not Curs.Is_Null (4) then
+            Scope := (Id => Curs.Integer_Value (4));
+         end if;
+
+         return (Name => To_Unbounded_String (Curs.Value (0)),
+                 Location => (File   => Create (+Curs.Value (1)),
+                              Line   => Curs.Integer_Value (2),
+                              Column => Curs.Integer_Value (3),
+                              Kind   => To_Unbounded_String ("declaration"),
+                              Scope  => Scope));
+      else
+         return No_Entity_Declaration;
+      end if;
+   end Declaration;
+
+   -------------
+   -- Element --
+   -------------
+
+   function Element (Self : Entities_Cursor) return Entity_Information is
+   begin
+      return Entity_Information'(Id => Integer_Value (Self.DBCursor, 0));
+   end Element;
+
+   -------------
+   -- Element --
+   -------------
+
+   function Element (Self : Parameters_Cursor) return Parameter_Information is
+      Kind : Parameter_Kind;
+   begin
+      case Integer_Value (Self.DBCursor, 1) is
+         when E2e_In_Parameter     => Kind := In_Parameter;
+         when E2e_Out_Parameter    => Kind := Out_Parameter;
+         when E2e_In_Out_Parameter => Kind := In_Out_Parameter;
+         when E2e_Access_Parameter => Kind := Access_Parameter;
+         when others               => Kind := In_Parameter;
+      end case;
+
+      return Parameter_Information'
+        (Parameter => (Id => Integer_Value (Self.DBCursor, 0)),
+         Kind      => Kind);
+   end Element;
+
+   ----------------
+   -- Parameters --
+   ----------------
+
+   function Parameters
+     (Self   : Xref_Database'Class;
+      Entity : Entity_Information) return Parameters_Cursor
+   is
+      Curs : Parameters_Cursor;
+   begin
+      Curs.DBCursor.Fetch
+        (Self.DB,
+         SQL_Select
+           (Database.E2e.Toentity
+            & Database.E2e.Kind,
+            From => Database.E2e,
+            Where => Database.E2e.fromentity = Integer_Param (1)
+                and (Database.E2e.Kind = E2e_In_Parameter
+                     or Database.E2e.Kind = E2e_In_Out_Parameter
+                     or Database.E2e.Kind = E2e_Out_Parameter
+                     or Database.E2e.Kind = E2e_Access_Parameter),
+            Order_By => Database.E2e.Order_By,
+            Distinct => True),
+
+         Params => (1 => +Entity.Id));
+      return Curs;
+   end Parameters;
 
 end GNATCOLL.ALI;
