@@ -70,7 +70,7 @@ package GNATCOLL.JSON is
 
    --  Read or write JSON values into strings
 
-   function Read (Strm, Filename :  String) return JSON_Value;
+   function Read (Strm, Filename : String) return JSON_Value;
    function Write (Item : JSON_Value; Compact : Boolean := True) return String;
 
    --  Creation of JSON values
