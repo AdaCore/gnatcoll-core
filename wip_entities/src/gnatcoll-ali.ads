@@ -35,13 +35,39 @@
 --     Parse_All_LI_Files (Session, ...);
 --   end;
 
+with Ada.Strings.Unbounded; use Ada.Strings.Unbounded;
 with GNATCOLL.Projects;     use GNATCOLL.Projects;
 with GNATCOLL.SQL.Exec;     use GNATCOLL.SQL.Exec;
+with GNATCOLL.VFS;
 
 package GNATCOLL.ALI is
 
+   ---------------------------------
+   --  Creating the xref database --
+   ---------------------------------
+
+   type Xref_Database is tagged private;
+
+   procedure Setup_DB
+     (Self : in out Xref_Database;
+      DB   : not null access
+        GNATCOLL.SQL.Exec.Database_Description_Record'Class);
+   --  Points to the actual database that will be used to store the xref
+   --  information.
+   --  This database might contain the information from several projects.
+   --  An example:
+   --     declare
+   --        Xref : Xref_Database;
+   --     begin
+   --        Xref.Setup_DB
+   --          (GNATCOLL.SQL.Sqlite.Setup (":memory:"));
+   --     end;
+
+   procedure Free (Self : in out Xref_Database);
+   --  Free the memory allocated for Self, and closes the database connection.
+
    procedure Parse_All_LI_Files
-     (DB                  : Database_Connection;
+     (Self                : in out Xref_Database;
       Tree                : Project_Tree;
       Project             : Project_Type;
       Parse_Runtime_Files : Boolean := True;
@@ -91,9 +117,69 @@ package GNATCOLL.ALI is
    --  predefined object directories to find extra ALI files to parse. This
    --  will in general include the Ada runtime.
 
-   procedure Create_Database
-     (Connection : access Database_Connection_Record'Class);
-   --  Create the database tables and initial contents.
-   --  Behavior is undefined if the database is not empty initially.
+   -------------
+   -- Queries --
+   -------------
+
+   type Entity_Information is private;
+   No_Entity : constant Entity_Information;
+   --  The description of an entity.
+   --  This entity is independent from the database (ie it remains usable even
+   --  if the database has changed since you retrieved the Entity_Information).
+   --  However, it might not be pointing to an entity that no longer exists.
+   --  This information, however, is only valid as long as the object
+   --  Xref_Database hasn't been destroyed.
+
+   function Get_Entity
+     (Self   : Xref_Database;
+      Name   : String;
+      File   : String;
+      Line   : Integer := -1;
+      Column : Integer := -1) return Entity_Information;
+   function Get_Entity
+     (Self   : Xref_Database;
+      Name   : String;
+      File   : GNATCOLL.VFS.Virtual_File;
+      Line   : Integer := -1;
+      Column : Integer := -1) return Entity_Information;
+   --  Return the entity that has a reference at the given location.
+   --  When the file is passed as a string, it is permissible to pass only the
+   --  basename (or a string like "partial/path/basename") that will be matched
+   --  against all known files in the database.
+
+   type Entity_Reference is record
+      File   : GNATCOLL.VFS.Virtual_File;
+      Line   : Integer;
+      Column : Integer;
+      Kind   : Ada.Strings.Unbounded.Unbounded_String;
+   end record;
+   --  A reference to an entity, at a given location.
+
+   type Base_Cursor is abstract tagged private;
+   function Has_Element (Self : Base_Cursor) return Boolean;
+   procedure Next (Self : in out Base_Cursor);
+
+   type References_Cursor is new Base_Cursor with private;
+   function Element (Self : References_Cursor) return Entity_Reference;
+   function References
+     (Self   : Xref_Database'Class;
+      Entity : Entity_Information) return References_Cursor;
+
+private
+   type Xref_Database is tagged record
+      DB      : GNATCOLL.SQL.Exec.Database_Connection;
+   end record;
+
+   type Entity_Information is record
+      Id          : Integer;
+   end record;
+   No_Entity : constant Entity_Information :=
+     (Id => -1);
+
+   type Base_Cursor is abstract tagged record
+      DBCursor : GNATCOLL.SQL.Exec.Forward_Cursor;
+   end record;
+
+   type References_Cursor is new Base_Cursor with null record;
 
 end GNATCOLL.ALI;

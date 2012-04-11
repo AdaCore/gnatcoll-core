@@ -21,7 +21,6 @@ with Ada.Containers;          use Ada.Containers;
 with Ada.Containers.Doubly_Linked_Lists;
 with Ada.Containers.Hashed_Maps;
 with Ada.Containers.Vectors;
-with Ada.Strings.Unbounded; use Ada.Strings.Unbounded;
 with Ada.Unchecked_Conversion;
 with Ada.Unchecked_Deallocation;
 with GNAT.OS_Lib;           use GNAT.OS_Lib;
@@ -59,7 +58,7 @@ package body GNATCOLL.ALI is
    --  duplicates. However, this constant was left as a documentation of the
    --  impact this has on the parsing of ALI files.
 
-   Memory_Threshold : constant Ada.Containers.Count_Type := 200;
+   Memory_Threshold : constant Ada.Containers.Count_Type := 150;
    --  Number of LI files to update after which we will use a temporary
    --  in-memory copy of the database. This is computed as such:
    --    on the GPS project, it takes about .0230s per LI file when db is in
@@ -364,6 +363,11 @@ package body GNATCOLL.ALI is
    --  Returns the entity id for the given file (or -1 if file is not in the
    --  list of scope trees). File_Index is the index as returned by
    --  Is_Unit_File.
+
+   procedure Create_Database
+     (Connection : access Database_Connection_Record'Class);
+   --  Create the database tables and initial contents.
+   --  Behavior is undefined if the database is not empty initially.
 
    procedure Parse_LI
      (DB                : Database_Connection;
@@ -1920,7 +1924,7 @@ package body GNATCOLL.ALI is
    ------------------------
 
    procedure Parse_All_LI_Files
-     (DB           : Database_Connection;
+     (Self         : in out Xref_Database;
       Tree         : Project_Tree;
       Project      : Project_Type;
       Parse_Runtime_Files : Boolean := True;
@@ -1928,7 +1932,7 @@ package body GNATCOLL.ALI is
       To_DB_Name   : String := "")
    is
       Is_Sqlite       : constant Boolean :=
-        GNATCOLL.SQL.Sqlite.Is_Sqlite (DB);
+        GNATCOLL.SQL.Sqlite.Is_Sqlite (Self.DB);
 
       Destroy_Indexes   : Boolean := False;
       --  If Destroy_Indexes is True, then some of the database indexes will
@@ -1991,7 +1995,7 @@ package body GNATCOLL.ALI is
 
          while Has_Element (C) loop
             Ren := Element (C);
-            DB.Execute
+            Self.DB.Execute
               (Query_Set_Entity_Renames,
                Params => (1 => +Ren.Entity,
                           2 => +Ren.File,
@@ -2196,11 +2200,13 @@ package body GNATCOLL.ALI is
          while Has_Element (Lib_Info) loop
             LI.LI := Element (Lib_Info);
             File := LI.LI.Library_File;
+
+            --  ??? Potentially slow on Windows (conversion to Time)
             LI.Stamp := File.File_Time_Stamp;
             LI.Id    := -1;  --  File unknown in the database
 
             Files.Fetch
-              (DB, Query_Get_File,
+              (Self.DB, Query_Get_File,
                Params => (1 => +Convert (File.Full_Name (Normalize => True))));
 
             if Files.Has_Row then
@@ -2251,7 +2257,12 @@ package body GNATCOLL.ALI is
          end if;
       end Parse_Files;
 
+      Absolute_Start : Time;
    begin
+      if Active (Me_Timing) then
+         Absolute_Start := Clock;
+      end if;
+
       Project.Library_Files
         (Recursive => True, Xrefs_Dirs => True, Including_Libraries => True,
          ALI_Ext => "^.*\.[ags]li$", List => LI_Files,
@@ -2262,7 +2273,7 @@ package body GNATCOLL.ALI is
                 "Found" & Length (LI_Files)'Img & " [ags]li files");
       end if;
 
-      Initialize_DB (DB);   --  From_DB_Name -> DB
+      Initialize_DB (Self.DB);   --  From_DB_Name -> Self.DB
       Search_LI_Files_To_Update;
 
       if not LIs.Is_Empty then
@@ -2274,7 +2285,7 @@ package body GNATCOLL.ALI is
          --      more than the update on disk would
 
          if Is_Sqlite
-           and then GNATCOLL.SQL.Sqlite.DB_Name (DB) /= ":memory:"
+           and then GNATCOLL.SQL.Sqlite.DB_Name (Self.DB) /= ":memory:"
            and then LIs.Length > Memory_Threshold
          then
             declare
@@ -2287,7 +2298,7 @@ package body GNATCOLL.ALI is
                Destroy_Indexes := True;
 
                Trace (Me_Timing, "Temporarily using an in-memory database");
-               Initialize_DB (Memory);            --  DB -> :memory:
+               Initialize_DB (Memory);            --  Self.DB -> :memory:
                Start_Transaction (Memory);
                Parse_Files (Memory);
                Finalize_DB (Memory);
@@ -2297,24 +2308,225 @@ package body GNATCOLL.ALI is
                end if;
 
                if not GNATCOLL.SQL.Sqlite.Backup
-                 (From => Memory, To => DB)  --  :memory: -> DB
+                 (From => Memory, To => Self.DB)  --  :memory: -> Self.DB
                then
                   Trace (Me_Error, "Failed to copy from :memory: to DB");
                elsif Active (Me_Timing) then
                   Trace (Me_Timing, "Copy from :memory: to "
-                         & GNATCOLL.SQL.Sqlite.DB_Name (DB) & ":"
+                         & GNATCOLL.SQL.Sqlite.DB_Name (Self.DB) & ":"
                          & Duration'Image (Clock - Start) & " s");
                end if;
             end;
 
          else
-            Start_Transaction (DB);
-            Parse_Files (DB);
-            Finalize_DB (DB);
+            Start_Transaction (Self.DB);
+            Parse_Files (Self.DB);
+            Finalize_DB (Self.DB);
          end if;
 
-         Backup_DB_If_Needed (DB, To_DB_Name);    --  DB -> To_DB_Name
+         Backup_DB_If_Needed (Self.DB, To_DB_Name);  --  Self.DB -> To_DB_Name
+      end if;
+
+      if Active (Me_Timing) then
+         Trace (Me_Timing, "Total time:"
+                & Duration'Image (Clock - Absolute_Start) & " s");
       end if;
    end Parse_All_LI_Files;
+
+   --------------
+   -- Setup_DB --
+   --------------
+
+   procedure Setup_DB
+     (Self : in out Xref_Database;
+      DB   : not null access
+        GNATCOLL.SQL.Exec.Database_Description_Record'Class)
+   is
+   begin
+      Self.DB := DB.Build_Connection;
+   end Setup_DB;
+
+   ----------
+   -- Free --
+   ----------
+
+   procedure Free (Self : in out Xref_Database) is
+   begin
+      if Self.DB /= null then
+         Close (Self.DB);
+      end if;
+   end Free;
+
+   ----------------
+   -- Get_Entity --
+   ----------------
+
+   function Get_Entity
+     (Self   : Xref_Database;
+      Name   : String;
+      File   : String;
+      Line   : Integer := -1;
+      Column : Integer := -1) return Entity_Information
+   is
+      R  : Forward_Cursor;
+      Q  : SQL_Query;
+      C  : SQL_Criteria;
+      Entity : Entity_Information := No_Entity;
+   begin
+      --  First test whether the user has passed the location of the
+      --  declaration.
+
+      if Line /= -1 then
+         C := Database.Entities.Decl_Line = Line;
+      end if;
+
+      if Column /= -1 then
+         C := C and Database.Entities.Decl_Column = Column;
+      end if;
+
+      Q := SQL_Select
+        (Database.Entities.Id,
+         From  => Database.Entities & Database.Files,
+         Where => Database.Files.Id = Database.Entities.Decl_File
+           and Database.Entities.Name = Text_Param (1)
+           and Like (Database.Files.Path, '%' & File)
+         and C,
+        Distinct => True,
+        Limit    => 1);
+
+      R.Fetch
+        (Self.DB, Q,
+         Params => (1 => +Name'Unrestricted_Access));
+
+      if not R.Has_Row then
+         --  Else check whether we have a matching reference
+
+         C := No_Criteria;
+
+         if Line /= -1 then
+            C := Database.Entity_Refs.Line = Line;
+         end if;
+
+         if Column /= -1 then
+            C := Database.Entity_Refs.Column = Column;
+         end if;
+
+         Q := SQL_Select
+           (Database.Entity_Refs.Entity,
+            From => Database.Entity_Refs & Database.Entities & Database.Files,
+            Where => Database.Entity_Refs.Entity = Database.Entities.Id
+            and Database.Entity_Refs.File = Database.Files.Id
+            and Database.Entities.Name = Text_Param (1)
+            and Like (Database.Files.Path, '%' & File)
+            and C,
+            Distinct => True,
+            Limit    => 1);
+
+         R.Fetch
+           (Self.DB, Q,
+            Params => (1 => +Name'Unrestricted_Access));
+      end if;
+
+      if R.Has_Row then
+         Entity := (Id => R.Integer_Value (0));
+         R.Next;
+
+         if R.Has_Row then
+            --  Overloaded entity found
+            Entity := No_Entity;
+         end if;
+      end if;
+
+      return Entity;
+   end Get_Entity;
+
+   ----------------
+   -- Get_Entity --
+   ----------------
+
+   function Get_Entity
+     (Self   : Xref_Database;
+      Name   : String;
+      File   : GNATCOLL.VFS.Virtual_File;
+      Line   : Integer := -1;
+      Column : Integer := -1) return Entity_Information is
+   begin
+      return Get_Entity (Self, Name, File.Display_Full_Name, Line, Column);
+   end Get_Entity;
+
+   -----------------
+   -- Has_Element --
+   -----------------
+
+   function Has_Element (Self : Base_Cursor) return Boolean is
+   begin
+      return Self.DBCursor.Has_Row;
+   end Has_Element;
+
+   ----------
+   -- Next --
+   ----------
+
+   procedure Next (Self : in out Base_Cursor) is
+   begin
+      Self.DBCursor.Next;
+   end Next;
+
+   -------------
+   -- Element --
+   -------------
+
+   function Element (Self : References_Cursor) return Entity_Reference is
+   begin
+      return Entity_Reference'
+        (File   => Create (+Value (Self.DBCursor, 1)),
+         Line   => Integer_Value (Self.DBCursor, 2),
+         Column => Integer_Value (Self.DBCursor, 3),
+         Kind   => To_Unbounded_String (Value (Self.DBCursor, 4)));
+   end Element;
+
+   ----------------
+   -- References --
+   ----------------
+
+   function References
+     (Self   : Xref_Database'Class;
+      Entity : Entity_Information) return References_Cursor
+   is
+      Curs : References_Cursor;
+   begin
+      Curs.DBCursor.Fetch
+        (Self.DB,
+         SQL_Union
+           (SQL_Select
+              (Database.Files.Id
+               &   Database.Files.Path
+                 & Database.Entities.Decl_Line
+                 & Database.Entities.Decl_Column
+                 & Expression ("declaration"),
+               From => Database.Entities & Database.Files,
+               Where => Database.Entities.Decl_File = Database.Files.Id
+                 and Database.Entities.Id = Integer_Param (1)),
+
+            SQL_Select
+              (Database.Files.Id
+                 & Database.Files.Path
+                 & Database.Entity_Refs.Line
+                 & Database.Entity_Refs.Column
+                 & Database.Reference_Kinds.Display,
+               From => Database.Entity_Refs & Database.Files
+                 & Database.Reference_Kinds,
+               Where => Database.Entity_Refs.File = Database.Files.Id
+                 and Database.Entity_Refs.Kind = Database.Reference_Kinds.Id
+                 and Database.Reference_Kinds.Is_Real
+                 and Database.Entity_Refs.Entity = Integer_Param (1)),
+
+            Order_By => Database.Files.Path
+              & Database.Entity_Refs.Line & Database.Entity_Refs.Column,
+            Distinct => True),
+
+         Params => (1 => +Entity.Id));
+      return Curs;
+   end References;
 
 end GNATCOLL.ALI;

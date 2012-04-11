@@ -15,14 +15,12 @@
 -- of the license.                                                          --
 ------------------------------------------------------------------------------
 
-with Ada.Calendar;          use Ada.Calendar;
 with Ada.Text_IO;           use Ada.Text_IO;
 with GNAT.Command_Line;     use GNAT.Command_Line;
 with GNAT.Strings;          use GNAT.Strings;
 with GNATCOLL.ALI;          use GNATCOLL.ALI;
 with GNATCOLL.SQL.Exec;     use GNATCOLL.SQL.Exec;
 with GNATCOLL.SQL.Inspect;  use GNATCOLL.SQL.Inspect;
-with GNATCOLL.SQL.Sessions; use GNATCOLL.SQL.Sessions;
 with GNATCOLL.SQL.Postgres;
 with GNATCOLL.SQL.Sqlite;
 with GNATCOLL.Traces;       use GNATCOLL.Traces;
@@ -47,10 +45,9 @@ procedure Test_Entities is
 
    Env     : Project_Environment_Access;
    Tree    : Project_Tree;
-   Absolute_Start : Time;
    GNAT_Version : String_Access;
    Cmdline_Config : Command_Line_Configuration;
-   Session : Session_Type;
+   Xref    : Xref_Database;
 
 begin
    GNATCOLL.Traces.Parse_Config_File;
@@ -122,13 +119,11 @@ begin
    --  Prepare database
 
    if Use_Postgres then
-      GNATCOLL.SQL.Sessions.Setup
-        (Descr        => GNATCOLL.SQL.Postgres.Setup (Database => DB_Name.all),
-         Max_Sessions => 1);
+      Xref.Setup_DB
+        (GNATCOLL.SQL.Postgres.Setup (Database => DB_Name.all));
    else
-      GNATCOLL.SQL.Sessions.Setup
-        (Descr => GNATCOLL.SQL.Sqlite.Setup (Database => Tmp_DB_Name.all),
-         Max_Sessions => 1);
+      Xref.Setup_DB
+        (GNATCOLL.SQL.Sqlite.Setup (Database => Tmp_DB_Name.all));
    end if;
 
    --  Load project
@@ -150,21 +145,18 @@ begin
 
    --  Parse LI files (loading and dumping to DB_Name)
 
-   Absolute_Start := Clock;
-   Session := Get_New_Session;
-   Parse_All_LI_Files
-     (DB           => Session.DB,
-      Tree         => Tree,
+   Xref.Parse_All_LI_Files
+     (Tree         => Tree,
       Project      => Tree.Root_Project,
       Parse_Runtime_Files => not Omit_Runtime_Files,
       From_DB_Name => Nightly_DB.all,
       To_DB_Name   => DB_Name.all);
-   Put_Line (Duration'Image (Clock - Absolute_Start) & " s");
 
    --  Free memory
 
    Tree.Unload;
    Free (Env);
+   Xref.Free;
    GNATCOLL.Projects.Finalize;
 
 exception

@@ -1522,6 +1522,75 @@ package body GNATCOLL.SQL is
    end To_String;
 
    ---------------
+   -- SQL_Union --
+   ---------------
+
+   function SQL_Union
+     (Query1, Query2 : SQL_Query;
+      Order_By : SQL_Field_Or_List'Class := Empty_Field_List;
+      Limit    : Integer := -1;
+      Offset   : Integer := -1;
+      Distinct : Boolean := False) return SQL_Query
+   is
+      Data : constant Query_Union_Contents_Access :=
+        new Query_Union_Contents;
+   begin
+      Data.Q1 := Query1;
+      Data.Q2 := Query2;
+
+      if Order_By in SQL_Field'Class then
+         Data.Order_By := +SQL_Field'Class (Order_By);
+      else
+         Data.Order_By := SQL_Field_List (Order_By);
+      end if;
+
+      Data.Limit := Limit;
+      Data.Offset := Offset;
+      Data.Distinct := Distinct;
+      return (Contents =>
+                (Ada.Finalization.Controlled
+                 with SQL_Query_Contents_Access (Data)));
+   end SQL_Union;
+
+   ---------------
+   -- To_String --
+   ---------------
+
+   overriding function To_String
+     (Self   : Query_Union_Contents;
+      Format : Formatter'Class) return Unbounded_String
+   is
+      Result : Unbounded_String;
+   begin
+      Append (Result, To_String (Self.Q1, Format));
+      Append (Result, " UNION ");
+
+      if not Self.Distinct then
+         Append (Result, "ALL ");
+      end if;
+
+      Append (Result, To_String (Self.Q2, Format));
+      Append (Result, " ");
+
+      if Self.Order_By /= Empty_Field_List then
+         Append (Result, " ORDER BY ");
+         Append (Result, To_String (Self.Order_By, Format, Long => True));
+      end if;
+
+      --  Need to output LIMIT before OFFSET for sqlite. This seems to be
+      --  compatible with other backends
+
+      if Self.Limit >= 0 or else Self.Offset >= 0 then
+         Append (Result, " LIMIT" & Integer'Image (Self.Limit));
+      end if;
+      if Self.Offset >= 0 then
+         Append (Result, " OFFSET" & Integer'Image (Self.Offset));
+      end if;
+
+      return Result;
+   end To_String;
+
+   ---------------
    -- To_String --
    ---------------
 

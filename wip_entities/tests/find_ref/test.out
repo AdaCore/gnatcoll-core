@@ -1,0 +1,27 @@
+#!../../standalone_obj/test_parse
+EXECUTING gnatmake -q main
+
+--  find all references to an entity
+REF: a.ads:2:14
+REF: main.adb:4:6
+REF: a.adb:4:14
+REF: a.adb:7:8
+REF: b.adb:5:9
+Param (Proc1): A:a.ads:2:21 as IN_PARAMETER
+Param (Proc1): C:a.ads:2:24 as IN_PARAMETER
+Param (Proc1): F:a.ads:2:37 as IN_PARAMETER
+
+--  Same, but print list of subprograms that call entity
+CALLERS Proc1:a.ads:2:14
+  REF: a.ads:2:14 => A:a.ads:1:9
+  REF: a.adb:4:14 => A:a.ads:1:9
+  REF: b.adb:5:9 => Proc1:b.ads:2:14
+  REF: main.adb:4:6 => Main:main.adb:2:11
+
+--  Same for another entity
+CALLERS Proc1:b.ads:2:14
+  REF: b.ads:2:14 => B:b.ads:1:9
+  REF: a.adb:6:9 => Proc1:a.ads:2:14
+  REF: a.adb:11:9 => Proc2:a.ads:3:14
+  REF: b.adb:3:14 => B:b.ads:1:9
+  REF: main.adb:5:6 => Main:main.adb:2:11

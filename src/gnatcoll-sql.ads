@@ -665,6 +665,18 @@ package GNATCOLL.SQL is
    --  if you had called the Auto_Complete subprogram. This is put here so that
    --  you can have global SQL_Query constants, pre-completed
 
+   function SQL_Union
+     (Query1, Query2 : SQL_Query;
+      Order_By : SQL_Field_Or_List'Class := Empty_Field_List;
+      Limit    : Integer := -1;
+      Offset   : Integer := -1;
+      Distinct : Boolean := False) return SQL_Query;
+   --  Join the two queries with a Union.
+   --  The Limit, Offset and Order_By parameters for each query will be
+   --  ignored by the DBMS. When the union is itself used in another union,
+   --  only the outer-most union will have its Order_By, Limit and Offset
+   --  taken into account.
+
    function SQL_Insert
      (Values : SQL_Assignment;
       Where  : SQL_Criteria := No_Criteria) return SQL_Query;
@@ -1026,6 +1038,18 @@ private
      (Self                   : in out Query_Select_Contents;
       Auto_Complete_From     : Boolean := True;
       Auto_Complete_Group_By : Boolean := True);
+
+   type Query_Union_Contents is new Query_Contents with record
+      Q1, Q2       : SQL_Query;
+      Order_By     : SQL_Field_List;
+      Limit        : Integer;
+      Offset       : Integer;
+      Distinct     : Boolean;
+   end record;
+   type Query_Union_Contents_Access is access all Query_Union_Contents'Class;
+   overriding function To_String
+     (Self   : Query_Union_Contents;
+      Format : Formatter'Class) return Unbounded_String;
 
    type Query_Insert_Contents is new Query_Contents with record
       Into           : Table_Names := No_Names;
