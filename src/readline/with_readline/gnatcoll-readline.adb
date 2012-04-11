@@ -17,6 +17,7 @@
 --                                                                          --
 ------------------------------------------------------------------------------
 
+with Ada.Text_IO;
 with Interfaces.C.Strings;  use Interfaces.C.Strings;
 
 package body GNATCOLL.Readline is
@@ -214,7 +215,7 @@ package body GNATCOLL.Readline is
             return Val;
          end;
       else
-         return "";
+         raise Ada.Text_IO.End_Error;
       end if;
    end Get_Line;
 

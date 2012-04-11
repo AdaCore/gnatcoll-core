@@ -108,6 +108,8 @@ package GNATCOLL.Readline is
    --  When readline is not available on the system, this uses the services
    --  from Ada.Text_IO (although of course there is no possibility to edit the
    --  command line or go back in the history).
+   --  The exception Ada.Text_IO.End_Error is raised if the user presses
+   --  control-D
 
 private
    type Possible_Completions_Array is null record;
