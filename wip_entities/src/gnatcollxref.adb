@@ -78,6 +78,9 @@ procedure GNATCOLLxref is
    --  Args is the command line entered by the user, so Get_Command (Args) for
    --  instance is the command being executed.
 
+   procedure Set_Variable (Name, Value : String);
+   --  Change the value of a variable
+
    function Image (File : Virtual_File) return String;
    --  Return a display version of the argument
 
@@ -90,7 +93,7 @@ procedure GNATCOLLxref is
 
    Commands : constant array (Natural range <>) of Command_Descr :=
      (1 => (new String'("help"),
-            null,
+            new String'("[command or variable name]"),
             new String'("Display the list of commands and their syntax."),
             Process_Help'Access),
       2 => (new String'("project"),
@@ -111,8 +114,19 @@ procedure GNATCOLLxref is
             null,
             new String'("Execute a shell command (an alternative is to use '!'"
                 & " as the command."),
-            Process_Shell'Access)
-     );
+            Process_Shell'Access));
+
+   type Variable_Descr is record
+      Name : GNAT.Strings.String_Access;
+      Help : GNAT.Strings.String_Access;
+   end record;
+
+   Variables : constant array (Natural range <>) of Variable_Descr :=
+     (1 => (new String'("absolute_paths"),
+            new String'("If True, display absolute file names, otherwise"
+              & " display base names only")),
+      2 => (new String'("runtime"),
+            new String'("Whether to include runtime files in the database")));
 
    Complete_Command_List_Index : Integer;
    --  Global variable used by Complete_Command
@@ -156,6 +170,17 @@ procedure GNATCOLLxref is
          end if;
       end loop;
 
+      loop
+         C :=
+           Variables'First + Complete_Command_List_Index - Commands'Last - 1;
+         exit when C > Variables'Last;
+         Complete_Command_List_Index := Complete_Command_List_Index + 1;
+
+         if Starts_With (Variables (C).Name.all, Tx) then
+            return Variables (C).Name.all & ":=";
+         end if;
+      end loop;
+
       return "";
    end Complete_Command;
 
@@ -167,9 +192,16 @@ procedure GNATCOLLxref is
      (Full_Line, Text : String; Start, Last : Integer)
       return Possible_Completions
    is
-      pragma Unreferenced (Full_Line, Last);
+      pragma Unreferenced (Last);
    begin
       if Start = 0 then
+         return Completion_Matches
+           (Text, Complete_Command'Unrestricted_Access);
+
+      elsif Ada.Strings.Fixed.Trim
+        (Full_Line (Full_Line'First .. Start - 1 + Full_Line'First),
+         Ada.Strings.Both) = "help"
+      then
          return Completion_Matches
            (Text, Complete_Command'Unrestricted_Access);
       else
@@ -195,22 +227,46 @@ procedure GNATCOLLxref is
    ------------------
 
    procedure Process_Help (Args : Arg_List) is
-      pragma Unreferenced (Args);
+      Display_Section : Boolean := False;
    begin
       for C in Commands'Range loop
-         Put ("  " & Commands (C).Name.all);
-         if Commands (C).Args = null then
-            New_Line;
-         else
-            Put_Line (" " & Commands (C).Args.all);
-         end if;
+         if Args_Length (Args) = 0
+           or else Nth_Arg (Args, 1) = Commands (C).Name.all
+         then
+            Put ("  " & Commands (C).Name.all);
+            if Commands (C).Args = null then
+               New_Line;
+            else
+               Put_Line (" " & Commands (C).Args.all);
+            end if;
 
-         Put_Line
-           (Ada.Strings.Unbounded.To_String
-              (GNATCOLL.Paragraph_Filling.Knuth_Fill
-                 (Commands (C).Help.all,
-                  Max_Line_Length => 70,
-                  Line_Prefix     => "      ")));
+            Put
+              (Ada.Strings.Unbounded.To_String
+                 (GNATCOLL.Paragraph_Filling.Knuth_Fill
+                    (Commands (C).Help.all,
+                     Max_Line_Length => 70,
+                     Line_Prefix     => "      ")));
+         end if;
+      end loop;
+
+      for C in Variables'Range loop
+         if Args_Length (Args) = 0
+           or else Nth_Arg (Args, 1) = Commands (C).Name.all
+         then
+            if not Display_Section then
+               New_Line;
+               Put_Line ("  == Variable ==");
+               Display_Section := True;
+            end if;
+
+            Put_Line ("  " & Variables (C).Name.all);
+            Put
+              (Ada.Strings.Unbounded.To_String
+                 (GNATCOLL.Paragraph_Filling.Knuth_Fill
+                    (Variables (C).Help.all,
+                     Max_Line_Length => 70,
+                     Line_Prefix     => "      ")));
+         end if;
       end loop;
    end Process_Help;
 
@@ -258,12 +314,14 @@ procedure GNATCOLLxref is
    procedure Process_Refresh (Args : Arg_List) is
       pragma Unreferenced (Args);
    begin
-      Xref.Parse_All_LI_Files
-        (Tree                => Tree,
-         Project             => Tree.Root_Project,
-         Parse_Runtime_Files => Include_Runtime_Files,
-         From_DB_Name        => Nightly_DB_Name.all,
-         To_DB_Name          => DB_Name.all);
+      if Env /= null then
+         Xref.Parse_All_LI_Files
+           (Tree                => Tree,
+            Project             => Tree.Root_Project,
+            Parse_Runtime_Files => Include_Runtime_Files,
+            From_DB_Name        => Nightly_DB_Name.all,
+            To_DB_Name          => DB_Name.all);
+      end if;
    end Process_Refresh;
 
    -------------------
@@ -366,11 +424,51 @@ procedure GNATCOLLxref is
    end Process_Refs;
 
    ------------------
+   -- Set_Variable --
+   ------------------
+
+   procedure Set_Variable (Name, Value : String) is
+      N : constant String :=
+        To_Lower (Ada.Strings.Fixed.Trim (Name, Ada.Strings.Both));
+      V : constant String := Ada.Strings.Fixed.Trim (Value, Ada.Strings.Both);
+      B : Boolean;
+
+      Invalid_Value : exception;
+
+      function To_Boolean (V : String) return Boolean;
+      function To_Boolean (V : String) return Boolean is
+      begin
+         return Boolean'Value (V);
+      exception
+         when Constraint_Error =>
+            Put_Line ("Error: Expected boolean, got '" & V & "'");
+            raise Invalid_Value;
+      end To_Boolean;
+
+   begin
+      if N = "absolute_paths" then
+         Display_Full_Paths := To_Boolean (V);
+      elsif N = "runtime" then
+         B := To_Boolean (V);
+         if B /= Include_Runtime_Files then
+            Include_Runtime_Files := B;
+            Process_Refresh (Empty_Command_Line);
+         end if;
+      else
+         Put_Line ("Error: Unknown variable '" & N & "'");
+      end if;
+   exception
+      when Invalid_Value =>
+         null;
+   end Set_Variable;
+
+   ------------------
    -- Process_Line --
    ------------------
 
    procedure Process_Line (Line : String) is
-      Expr : String_List_Access;
+      Expr  : String_List_Access;
+      Colon : Integer;
    begin
       if Ada.Strings.Fixed.Trim (Line, Ada.Strings.Both) = "" then
          return;
@@ -387,25 +485,31 @@ procedure GNATCOLLxref is
                           & Expr (C) (Expr (C)'First + 1 .. Expr (C)'Last));
 
          else
-            declare
-               List : constant Arg_List :=
-                 Parse_String (Expr (C).all, Mode => Separate_Args);
-               Cmd  : constant String := To_Lower (Get_Command (List));
-               Found : Boolean := False;
-            begin
-               for C in Commands'Range loop
-                  if Commands (C).Name.all = Cmd then
-                     Commands (C).Handler (List);
-                     Found := True;
-                     exit;
-                  end if;
-               end loop;
+            Colon := Ada.Strings.Fixed.Index (Expr (C).all, ":=");
+            if Colon >= Expr (C)'First then
+               Set_Variable (Expr (C) (Expr (C)'First .. Colon - 1),
+                             Expr (C) (Colon + 2 .. Expr (C)'Last));
+            else
+               declare
+                  List : constant Arg_List :=
+                    Parse_String (Expr (C).all, Mode => Separate_Args);
+                  Cmd  : constant String := To_Lower (Get_Command (List));
+                  Found : Boolean := False;
+               begin
+                  for C in Commands'Range loop
+                     if Commands (C).Name.all = Cmd then
+                        Commands (C).Handler (List);
+                        Found := True;
+                        exit;
+                     end if;
+                  end loop;
 
-               if not Found then
-                  Put_Line ("Invalid command: '" & Cmd & "'");
-                  raise Invalid_Command;
-               end if;
-            end;
+                  if not Found then
+                     Put_Line ("Invalid command: '" & Cmd & "'");
+                     raise Invalid_Command;
+                  end if;
+               end;
+            end if;
          end if;
       end loop;
 
@@ -515,6 +619,7 @@ begin
       return;
    end if;
 
+   Put_Line ("Type 'help' for more information");
    loop
       declare
          Input : constant String := GNATCOLL.Readline.Get_Line (">>> ");
