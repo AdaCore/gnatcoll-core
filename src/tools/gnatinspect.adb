@@ -587,8 +587,7 @@ procedure GNATInspect is
                      Start := Clock;
                      Process_Line (Expr (C)
                                    (Expr (C)'First + 5 .. Expr (C)'Last));
-                     Put_Line ("   >" & Duration'Image (Clock - Start)
-                               & " s");
+                     Put_Line (Duration'Image (Clock - Start) & " s");
                   else
                      for Co in Commands'Range loop
                         if Commands (Co).Name.all = Cmd then
