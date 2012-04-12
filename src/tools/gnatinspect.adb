@@ -17,6 +17,7 @@
 --                                                                          --
 ------------------------------------------------------------------------------
 
+with Ada.Calendar;               use Ada.Calendar;
 with Ada.Characters.Handling;    use Ada.Characters.Handling;
 with Ada.Strings.Fixed;
 with Ada.Strings.Unbounded;      use Ada.Strings.Unbounded;
@@ -123,7 +124,12 @@ procedure GNATInspect is
        null,
        new String'("Execute a shell command (an alternative is to use '!'"
            & " as the command."),
-       Process_Shell'Access));
+       Process_Shell'Access),
+      (new String'("time"),
+       new String'("command arguments"),
+       new String'("Execute the command as usual, and report the time it took"
+         & " to execute it"),
+       null));
 
    type Variable_Descr is record
       Name : GNAT.Strings.String_Access;
@@ -562,11 +568,11 @@ procedure GNATInspect is
                           & Expr (C) (Expr (C)'First + 1 .. Expr (C)'Last));
 
          else
-            if Verbose then
-               Put_Line (Expr (C).all);
-            end if;
             Colon := Ada.Strings.Fixed.Index (Expr (C).all, ":=");
             if Colon >= Expr (C)'First then
+               if Verbose then
+                  Put_Line (Expr (C).all);
+               end if;
                Set_Variable (Expr (C) (Expr (C)'First .. Colon - 1),
                              Expr (C) (Colon + 2 .. Expr (C)'Last));
             else
@@ -575,18 +581,30 @@ procedure GNATInspect is
                     Parse_String (Expr (C).all, Mode => Separate_Args);
                   Cmd  : constant String := To_Lower (Get_Command (List));
                   Found : Boolean := False;
+                  Start : Time;
                begin
-                  for C in Commands'Range loop
-                     if Commands (C).Name.all = Cmd then
-                        Commands (C).Handler (List);
-                        Found := True;
-                        exit;
-                     end if;
-                  end loop;
+                  if Cmd = "time" then
+                     Start := Clock;
+                     Process_Line (Expr (C)
+                                   (Expr (C)'First + 5 .. Expr (C)'Last));
+                     Put_Line ("   >" & Duration'Image (Clock - Start)
+                               & " s");
+                  else
+                     for Co in Commands'Range loop
+                        if Commands (Co).Name.all = Cmd then
+                           if Verbose then
+                              Put_Line (Expr (C).all);
+                           end if;
+                           Commands (Co).Handler (List);
+                           Found := True;
+                           exit;
+                        end if;
+                     end loop;
 
-                  if not Found then
-                     Put_Line ("Invalid command: '" & Cmd & "'");
-                     raise Invalid_Command;
+                     if not Found then
+                        Put_Line ("Invalid command: '" & Cmd & "'");
+                        raise Invalid_Command;
+                     end if;
                   end if;
                end;
             end if;
