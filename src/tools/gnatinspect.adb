@@ -642,10 +642,6 @@ procedure GNATInspect is
 
 begin
    GNATCOLL.Traces.Parse_Config_File;
-   GNATCOLL.Readline.Initialize
-     (Appname      => "gnatcollxref",
-      History_File => History_File,
-      Completer    => Command_Line_Completion'Unrestricted_Access);
 
    Set_Usage
      (Cmdline,
@@ -697,8 +693,6 @@ begin
 
    Xref.Setup_DB (GNATCOLL.SQL.Sqlite.Setup (Database => DB_Name.all));
 
-   Install_Ctrl_C_Handler (On_Ctrl_C'Access);
-
    if Commands_From_Switch.all /= "" then
       Process_Line (Commands_From_Switch.all);
       return;
@@ -706,6 +700,13 @@ begin
       Process_File (Commands_From_File.all);
       return;
    end if;
+
+   Install_Ctrl_C_Handler (On_Ctrl_C'Access);
+
+   GNATCOLL.Readline.Initialize
+     (Appname      => "gnatcollxref",
+      History_File => History_File,
+      Completer    => Command_Line_Completion'Unrestricted_Access);
 
    Put_Line ("Type 'help' for more information");
    loop

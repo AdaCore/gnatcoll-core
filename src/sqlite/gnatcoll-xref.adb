@@ -402,7 +402,7 @@ package body GNATCOLL.Xref is
          Start := Clock;
       end if;
 
-      Create_Database (Connection);
+      GNATCOLL.Xref.Database.Create_Database (Connection);
       Connection.Commit_Or_Rollback;
 
       if Active (Me_Timing) then

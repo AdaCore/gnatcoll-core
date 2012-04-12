@@ -1,3 +1,0 @@
-project Dummy is
-   for Source_Files use ("main.adb", "a.ads", "b.ads");
-end Dummy;
