@@ -25,6 +25,9 @@ with System;
 with Ada.Unchecked_Deallocation;
 with Ada.Directories;
 
+with Ada.Calendar;              use Ada.Calendar;
+with Ada.Calendar.Formatting;
+with Ada.Calendar.Time_Zones;  use Ada.Calendar.Time_Zones;
 with GNAT.Calendar;             use GNAT.Calendar;
 with GNAT.Directory_Operations; use GNAT.Directory_Operations;
 with GNAT.OS_Lib;
@@ -353,11 +356,15 @@ package body GNATCOLL.IO.Native is
    -- File_Time_Stamp --
    ---------------------
 
+   TZ : constant Time_Offset := UTC_Time_Offset;
+   --  Time zone cache, assuming that the OS will not change time zones while
+   --  this partition is running.
+
    function File_Time_Stamp
      (File : not null access Native_File_Record) return Ada.Calendar.Time
    is
       T      : constant GNAT.OS_Lib.OS_Time :=
-                 GNAT.OS_Lib.File_Time_Stamp (String (File.Full.all));
+        GNAT.OS_Lib.File_Time_Stamp (String (File.Full.all));
       Year   : GNAT.OS_Lib.Year_Type;
       Month  : GNAT.OS_Lib.Month_Type;
       Day    : GNAT.OS_Lib.Day_Type;
@@ -373,13 +380,15 @@ package body GNATCOLL.IO.Native is
 
       GNAT.OS_Lib.GM_Split (T, Year, Month, Day, Hour, Minute, Second);
 
-      return GNAT.Calendar.Time_Of
-        (Year   => Year,
-         Month  => Month,
-         Day    => Day,
-         Hour   => Hour,
-         Minute => Minute,
-         Second => Second);
+      return Ada.Calendar.Formatting.Time_Of
+        (Year       => Year_Number (Year),
+         Month      => Month_Number (Month),
+         Day        => Day_Number (Day),
+         Hour       => Hour_Number (Hour),
+         Minute     => Minute_Number (Minute),
+         Second     => Second_Number (Second),
+         Sub_Second => 0.0,
+         Time_Zone  => TZ);
    end File_Time_Stamp;
 
    -----------------
