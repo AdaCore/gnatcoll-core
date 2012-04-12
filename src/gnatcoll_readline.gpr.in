@@ -23,7 +23,7 @@ project GnatColl_Readline is
 
    package Linker is
       --  When linking an executable
-      case Gnatcoll_Shared.Gmp is
+      case Gnatcoll_Shared.Readline is
          when "yes" => for Linker_Options use ("-lreadline");
          when "no"  => null;
       end case;
