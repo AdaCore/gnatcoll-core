@@ -1,8 +1,10 @@
 with "../gnatcoll_shared";
 with "gnatcoll_postgres";
 with "gnatcoll_sqlite";
+with "gnatcoll_readline";
 
 project GnatColl_Tools is
+   for Main use ("gnatcoll_db2ada.adb", "gnatinspect.adb");
    for Object_Dir use Gnatcoll_Shared'Object_Dir;
    for Source_Dirs use ("tools");
 
@@ -14,11 +16,8 @@ project GnatColl_Tools is
    end case;
 
    package Builder  renames GnatColl_Shared.Builder;
-
    package Compiler renames GnatColl_Shared.Compiler;
-
    package Binder   renames GnatColl_Shared.Binder;
-
    package Ide      renames GnatColl_Shared.Ide;
 
 end GnatColl_Tools;

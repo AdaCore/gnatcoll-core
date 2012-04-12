@@ -40,7 +40,7 @@ with GNATCOLL.Projects;     use GNATCOLL.Projects;
 with GNATCOLL.SQL.Exec;     use GNATCOLL.SQL.Exec;
 with GNATCOLL.VFS;
 
-package GNATCOLL.ALI is
+package GNATCOLL.Xref is
 
    ---------------------------------
    --  Creating the xref database --
@@ -229,4 +229,4 @@ private
    type Entities_Cursor is new Base_Cursor with null record;
    type Parameters_Cursor is new Base_Cursor with null record;
 
-end GNATCOLL.ALI;
+end GNATCOLL.Xref;

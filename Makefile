@@ -3,10 +3,10 @@
 include Makefile.conf
 
 ifeq (${BUILDS_SHARED},yes)
-all: static relocatable
+all: generate_sources static relocatable tools_relocatable
 install: install_relocatable install_static install_docs
 else
-all: static
+all: generate_sources static tools_static
 install: install_static install_docs
 endif
 
@@ -27,7 +27,29 @@ build_library_type:
 ifeq (${WITH_GTK},yes)
 	${MAKE} -C src -f Makefile.gtk buildall
 endif
-	${MAKE} -C src -f Makefile.tools buildall
+
+tools_static:
+	${MAKE} LIBRARY_TYPE=static -C src -f Makefile.tools buildall
+tools_relocatable:
+	${MAKE} LIBRARY_TYPE=relocatable -C src -f Makefile.tools buildall
+
+# Regenerate part of the sources. Unfortunately, this can be run only after
+# we have build GNATCOLL, and then its tools, even though GNATCOLL itself
+# relies on those generated sources.
+# So this target simply does nothing if gnatcoll_db2ada is not found, in which
+# case we use the checked in sources (which means that changing the dbschema
+# requires to have already build GNATCOLL once before)
+
+generate_sources:
+	-src/obj/gnatcoll_db2ada${EXE} -dbtype=sqlite -dbname=:memory: \
+		-output src/generated \
+		-dbmodel=src/dbschema.txt \
+		-createdb \
+		-adacreate \
+		-api GNATCOLL.Xref.Database \
+		-load=src/initialdata.txt \
+		-enum "f2f_kind,id,name,F2F_,Integer" \
+		-enum "e2e_kind,id,name,E2E_,Integer"
 
 examples:
 	${MAKE} -C examples
@@ -108,6 +130,7 @@ ifeq (${WITH_GTK},yes)
 	-gprclean -r -q -Psrc/gnatcoll_gtk -XLIBRARY_TYPE=relocatable
 	-gprclean -r -q -Psrc/gnatcoll_gtk -XLIBRARY_TYPE=static
 endif
+	-${MAKE} -C src -f Makefile.tools clean
 	-${MAKE} -C testsuite $@
 	-${MAKE} -C docs $@
 	-${MAKE} -C examples $@

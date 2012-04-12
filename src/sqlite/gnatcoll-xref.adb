@@ -24,7 +24,7 @@ with Ada.Containers.Vectors;
 with Ada.Unchecked_Conversion;
 with Ada.Unchecked_Deallocation;
 with GNAT.OS_Lib;           use GNAT.OS_Lib;
-with GNATCOLL.ALI.Database; use GNATCOLL.ALI.Database;
+with GNATCOLL.Xref.Database; use GNATCOLL.Xref.Database;
 with GNATCOLL.Mmap;         use GNATCOLL.Mmap;
 with GNATCOLL.SQL;          use GNATCOLL.SQL;
 with GNATCOLL.SQL.Inspect;  use GNATCOLL.SQL.Inspect;
@@ -33,7 +33,7 @@ with GNATCOLL.Traces;       use GNATCOLL.Traces;
 with GNATCOLL.Utils;        use GNATCOLL.Utils;
 with GNATCOLL.VFS;          use GNATCOLL.VFS;
 
-package body GNATCOLL.ALI is
+package body GNATCOLL.Xref is
    use Library_Info_Lists;
 
    Me_Error   : constant Trace_Handle := Create ("ENTITIES.ERROR");
@@ -402,7 +402,7 @@ package body GNATCOLL.ALI is
          Start := Clock;
       end if;
 
-      GNATCOLL.ALI.Database.Create_Database (Connection);
+      Create_Database (Connection);
       Connection.Commit_Or_Rollback;
 
       if Active (Me_Timing) then
@@ -2634,4 +2634,4 @@ package body GNATCOLL.ALI is
       return Curs;
    end Parameters;
 
-end GNATCOLL.ALI;
+end GNATCOLL.Xref;

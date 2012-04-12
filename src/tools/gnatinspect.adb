@@ -24,7 +24,7 @@ with Ada.Text_IO;                use Ada.Text_IO;
 with GNAT.Command_Line;          use GNAT.Command_Line;
 with GNAT.Strings;               use GNAT.Strings;
 with GNAT.OS_Lib;
-with GNATCOLL.ALI;               use GNATCOLL.ALI;
+with GNATCOLL.Xref;              use GNATCOLL.Xref;
 with GNATCOLL.Arg_Lists;         use GNATCOLL.Arg_Lists;
 with GNATCOLL.Paragraph_Filling;
 with GNATCOLL.Projects;          use GNATCOLL.Projects;
@@ -34,9 +34,9 @@ with GNATCOLL.Traces;            use GNATCOLL.Traces;
 with GNATCOLL.Utils;             use GNATCOLL.Utils;
 with GNATCOLL.VFS;               use GNATCOLL.VFS;
 
-procedure GNATCOLLxref is
+procedure GNATInspect is
 
-   History_File : constant String := ".gnatcollxref_hist";
+   History_File : constant String := ".gnatinspect_hist";
 
    function Command_Line_Completion
      (Full_Line, Text : String; Start, Last : Integer)
@@ -151,7 +151,7 @@ procedure GNATCOLLxref is
    Commands_From_Switch  : aliased GNAT.Strings.String_Access;
    Commands_From_File    : aliased GNAT.Strings.String_Access;
    DB_Name               : aliased GNAT.Strings.String_Access :=
-     new String'("gnatcoll_xref.db");
+     new String'("gnatinspect.db");
    Nightly_DB_Name       : aliased GNAT.Strings.String_Access;
    Include_Runtime_Files : aliased Boolean;
    Display_Full_Paths    : aliased Boolean;
@@ -443,6 +443,7 @@ procedure GNATCOLLxref is
       Refs   : References_Cursor;
       Ref    : Entity_Reference;
       Count  : Natural := 1;
+      Name   : Unbounded_String;
    begin
       if Args_Length (Args) /= 1 then
          Put_Line ("Invalid number of arguments");
@@ -450,12 +451,13 @@ procedure GNATCOLLxref is
       end if;
 
       Entity := Get_Entity (Nth_Arg (Args, 1));
+      Name   := Xref.Declaration (Entity).Name;
 
       Refs := Xref.References (Entity);
       while Has_Element (Refs) loop
          Ref := Refs.Element;
          Output_Prefix (Count);
-         Put (Image (Ref.File) & ":"
+         Put (To_String (Name) & ':' & Image (Ref.File) & ":"
               & Image (Ref.Line, Min_Width => 0)
               & ':'
               & Image (Ref.Column, Min_Width => 0)
@@ -726,4 +728,4 @@ exception
       null;
    when Invalid_Command =>
       null;
-end GNATCOLLxref;
+end GNATInspect;

@@ -23,6 +23,8 @@ project GnatColl_Sqlite is
         for Source_Dirs use ("sqlite", "sqlite/with_sqlite", "sqlite/amalgamation");
    end case;
 
+   for Source_Dirs use Project'Source_Dirs & ("generated");
+
    package Builder  renames GnatColl_Shared.Builder;
 
    package Compiler is
