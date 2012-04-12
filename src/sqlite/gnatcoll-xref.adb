@@ -255,6 +255,85 @@ package body GNATCOLL.Xref is
              Where => Database.Entities.Id = Integer_Param (1)),
         On_Server => True, Name => "set_entity_import");
 
+   Q_Parameters_Toentity : constant := 0;
+   Q_Parameters_Kind     : constant := 1;
+   Query_Parameters : constant Prepared_Statement :=
+     Prepare
+       (SQL_Select
+            (To_List
+                 ((Q_Parameters_Toentity => +Database.E2e.Toentity,
+                   Q_Parameters_Kind     => +Database.E2e.Kind)),
+             From => Database.E2e,
+             Where => Database.E2e.fromentity = Integer_Param (1)
+                and (Database.E2e.Kind = E2e_In_Parameter
+                   or Database.E2e.Kind = E2e_In_Out_Parameter
+                   or Database.E2e.Kind = E2e_Out_Parameter
+                   or Database.E2e.Kind = E2e_Access_Parameter),
+            Order_By => Database.E2e.Order_By,
+             Distinct => True),
+        On_Server => True, Name => "parameters");
+   --  Retrieve the list of parameters for the entity in $1
+
+   Q_Decl_Name   : constant := 0;
+   Q_Decl_File   : constant := 1;
+   Q_Decl_Line   : constant := 2;
+   Q_Decl_Column : constant := 3;
+   Q_Decl_Caller : constant := 4;
+   Query_Declaration : constant Prepared_Statement :=
+     Prepare
+       (SQL_Select
+            (To_List
+                 ((Q_Decl_Name   => +Database.Entities.Name,
+                   Q_Decl_File   => +Database.Files.Path,
+                   Q_Decl_Line   => +Database.Entities.Decl_Line,
+                   Q_Decl_Column => +Database.Entities.Decl_Column,
+                   Q_Decl_Caller => +Database.Entities.Decl_Caller)),
+             From => Database.Entities & Database.Files,
+             Where => Database.Entities.Decl_File = Database.Files.Id
+             and Database.Entities.Id = Integer_Param (1)),
+        On_Server => True, Name => "declaration");
+
+   Q_Ref_File_Id : constant := 0;
+   Q_Ref_File    : constant := 1;
+   Q_Ref_Line    : constant := 2;
+   Q_Ref_Col     : constant := 3;
+   Q_Ref_Kind    : constant := 4;
+   Q_Ref_Caller  : constant := 5;
+   Q_References : constant Prepared_Statement :=
+     Prepare
+       (SQL_Union
+            (SQL_Select
+                 (To_List
+                      ((Q_Ref_File_Id => +Database.Files.Id,
+                        Q_Ref_File    => +Database.Files.Path,
+                        Q_Ref_Line    => +Database.Entities.Decl_Line,
+                        Q_Ref_Col     => +Database.Entities.Decl_Column,
+                        Q_Ref_Kind    => +Expression ("declaration"),
+                        Q_Ref_Caller  => +Database.Entities.Decl_Caller)),
+                  From => Database.Entities & Database.Files,
+                  Where => Database.Entities.Decl_File = Database.Files.Id
+                  and Database.Entities.Id = Integer_Param (1)),
+
+             SQL_Select
+               (To_List
+                  ((Q_Ref_File_Id => +Database.Files.Id,
+                    Q_Ref_File    => +Database.Files.Path,
+                    Q_Ref_Line    => +Database.Entity_Refs.Line,
+                    Q_Ref_Col     => +Database.Entity_Refs.Column,
+                    Q_Ref_Kind    => +Database.Reference_Kinds.Display,
+                    Q_Ref_Caller  => +Database.Entity_Refs.Caller)),
+                From => Database.Entity_Refs & Database.Files
+                  & Database.Reference_Kinds,
+                Where => Database.Entity_Refs.File = Database.Files.Id
+                and Database.Entity_Refs.Kind = Database.Reference_Kinds.Id
+                and Database.Reference_Kinds.Is_Real
+                and Database.Entity_Refs.Entity = Integer_Param (1)),
+
+             Order_By => Database.Files.Path
+                & Database.Entity_Refs.Line & Database.Entity_Refs.Column,
+             Distinct => True),
+        On_Server => True, Name => "references");
+
    package VFS_To_Ids is new Ada.Containers.Hashed_Maps
      (Key_Type        => Virtual_File,
       Element_Type    => Integer,   --  Id in the files table
@@ -2479,15 +2558,15 @@ package body GNATCOLL.Xref is
    function Element (Self : References_Cursor) return Entity_Reference is
       Scope : Entity_Information := No_Entity;
    begin
-      if not Self.DBCursor.Is_Null (5) then
-         Scope := (Id => Self.DBCursor.Integer_Value (5));
+      if not Self.DBCursor.Is_Null (Q_Ref_Caller) then
+         Scope := (Id => Self.DBCursor.Integer_Value (Q_Ref_Caller));
       end if;
 
       return Entity_Reference'
-        (File   => Create (+Self.DBCursor.Value (1)),
-         Line   => Self.DBCursor.Integer_Value (2),
-         Column => Self.DBCursor.Integer_Value (3),
-         Kind   => To_Unbounded_String (Self.DBCursor.Value (4)),
+        (File   => Create (+Self.DBCursor.Value (Q_Ref_File)),
+         Line   => Self.DBCursor.Integer_Value (Q_Ref_Line),
+         Column => Self.DBCursor.Integer_Value (Q_Ref_Col),
+         Kind   => To_Unbounded_String (Self.DBCursor.Value (Q_Ref_Kind)),
          Scope  => Scope);
    end Element;
 
@@ -2501,39 +2580,7 @@ package body GNATCOLL.Xref is
    is
       Curs : References_Cursor;
    begin
-      Curs.DBCursor.Fetch
-        (Self.DB,
-         SQL_Union
-           (SQL_Select
-              (Database.Files.Id
-               &   Database.Files.Path
-                 & Database.Entities.Decl_Line
-                 & Database.Entities.Decl_Column
-                 & Expression ("declaration")
-                 & Database.Entities.Decl_Caller,
-               From => Database.Entities & Database.Files,
-               Where => Database.Entities.Decl_File = Database.Files.Id
-                 and Database.Entities.Id = Integer_Param (1)),
-
-            SQL_Select
-              (Database.Files.Id
-                 & Database.Files.Path
-                 & Database.Entity_Refs.Line
-                 & Database.Entity_Refs.Column
-                 & Database.Reference_Kinds.Display
-                 & Database.Entity_Refs.Caller,
-               From => Database.Entity_Refs & Database.Files
-                 & Database.Reference_Kinds,
-               Where => Database.Entity_Refs.File = Database.Files.Id
-                 and Database.Entity_Refs.Kind = Database.Reference_Kinds.Id
-                 and Database.Reference_Kinds.Is_Real
-                 and Database.Entity_Refs.Entity = Integer_Param (1)),
-
-            Order_By => Database.Files.Path
-              & Database.Entity_Refs.Line & Database.Entity_Refs.Column,
-            Distinct => True),
-
-         Params => (1 => +Entity.Id));
+      Curs.DBCursor.Fetch (Self.DB, Q_References, Params => (1 => +Entity.Id));
       return Curs;
    end References;
 
@@ -2548,28 +2595,17 @@ package body GNATCOLL.Xref is
       Curs : Forward_Cursor;
       Scope : Entity_Information := No_Entity;
    begin
-      Curs.Fetch
-        (Xref.DB,
-         SQL_Select
-           (Database.Entities.Name
-            & Database.Files.Path
-            & Database.Entities.Decl_Line
-            & Database.Entities.Decl_Column
-            & Database.Entities.Decl_Caller,
-            From => Database.Entities & Database.Files,
-            Where => Database.Entities.Decl_File = Database.Files.Id
-            and Database.Entities.Id = Integer_Param (1)),
-         Params => (1 => +Entity.Id));
+      Curs.Fetch (Xref.DB, Query_Declaration, Params => (1 => +Entity.Id));
 
       if Curs.Has_Row then
-         if not Curs.Is_Null (4) then
-            Scope := (Id => Curs.Integer_Value (4));
+         if not Curs.Is_Null (Q_Decl_Caller) then
+            Scope := (Id => Curs.Integer_Value (Q_Decl_Caller));
          end if;
 
-         return (Name => To_Unbounded_String (Curs.Value (0)),
-                 Location => (File   => Create (+Curs.Value (1)),
-                              Line   => Curs.Integer_Value (2),
-                              Column => Curs.Integer_Value (3),
+         return (Name => To_Unbounded_String (Curs.Value (Q_Decl_Name)),
+                 Location => (File   => Create (+Curs.Value (Q_Decl_File)),
+                              Line   => Curs.Integer_Value (Q_Decl_Line),
+                              Column => Curs.Integer_Value (Q_Decl_Column),
                               Kind   => To_Unbounded_String ("declaration"),
                               Scope  => Scope));
       else
@@ -2593,7 +2629,7 @@ package body GNATCOLL.Xref is
    function Element (Self : Parameters_Cursor) return Parameter_Information is
       Kind : Parameter_Kind;
    begin
-      case Integer_Value (Self.DBCursor, 1) is
+      case Integer_Value (Self.DBCursor, Q_Parameters_Kind) is
          when E2e_In_Parameter     => Kind := In_Parameter;
          when E2e_Out_Parameter    => Kind := Out_Parameter;
          when E2e_In_Out_Parameter => Kind := In_Out_Parameter;
@@ -2602,7 +2638,8 @@ package body GNATCOLL.Xref is
       end case;
 
       return Parameter_Information'
-        (Parameter => (Id => Integer_Value (Self.DBCursor, 0)),
+        (Parameter =>
+           (Id => Integer_Value (Self.DBCursor, Q_Parameters_Toentity)),
          Kind      => Kind);
    end Element;
 
@@ -2617,20 +2654,7 @@ package body GNATCOLL.Xref is
       Curs : Parameters_Cursor;
    begin
       Curs.DBCursor.Fetch
-        (Self.DB,
-         SQL_Select
-           (Database.E2e.Toentity
-            & Database.E2e.Kind,
-            From => Database.E2e,
-            Where => Database.E2e.fromentity = Integer_Param (1)
-                and (Database.E2e.Kind = E2e_In_Parameter
-                     or Database.E2e.Kind = E2e_In_Out_Parameter
-                     or Database.E2e.Kind = E2e_Out_Parameter
-                     or Database.E2e.Kind = E2e_Access_Parameter),
-            Order_By => Database.E2e.Order_By,
-            Distinct => True),
-
-         Params => (1 => +Entity.Id));
+        (Self.DB, Query_Parameters, Params => (1 => +Entity.Id));
       return Curs;
    end Parameters;
 
