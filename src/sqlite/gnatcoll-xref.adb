@@ -528,6 +528,7 @@ package body GNATCOLL.Xref is
       --
       --      |l..h|
       --              reset: none, test: low .. high,  force: none
+      --
 
       if Lines.Max < High then
          Test_From := Low;
@@ -555,7 +556,8 @@ package body GNATCOLL.Xref is
          --  the entity known at that line).
 
          if Lines.Lines (Line).Scope > Scope then
-            Lines.Lines (Line) := (Entity => Entity, Scope => Scope);
+            Lines.Lines (Line) :=
+              (Entity => Entity, Scope => Scope);
          end if;
       end loop;
    end Insert;
@@ -605,7 +607,8 @@ package body GNATCOLL.Xref is
    function Get_Caller
      (Trees      : Scope_Tree_Array_Access;
       File_Index : Integer;
-      Line       : Integer) return Integer is
+      Line       : Integer) return Integer
+   is
    begin
       if Trees = null
         or else File_Index not in Trees'Range
@@ -651,7 +654,17 @@ package body GNATCOLL.Xref is
       --  a few elements, so is reasonably fast.
       --  These are the files from the "U" lines (spec, body and separates).
 
-      Scope_Trees : Scope_Tree_Array_Access;
+      Scope_Trees      : Scope_Tree_Array_Access;
+      Decl_Scope_Trees : Scope_Tree_Array_Access;
+      --  There is a special case for the first line of an entity's scope:
+      --  the goal is that subprograms belong to their enclosing package, not
+      --  to themselves, but their parameters belong to them. For instance:
+      --       package body P is
+      --          procedure Proc (A : Integer) is
+      --  The caller at declaration for Proc is "P", but for A is "Proc", so
+      --  we need two pieces of information for the scope for a single line
+      --  of code. We do this by creating two scope trees, one of which
+      --  skips the first line of a scope, the other doesn't.
 
       Current_X_File : Integer;
       --  Id (in the database) of the file for the current X section
@@ -1188,6 +1201,7 @@ package body GNATCOLL.Xref is
          if Is_ALI_Unit then
             Unit_Files.Append (Id);
             Grow_As_Needed (Scope_Trees, Integer (Unit_Files.Length));
+            Grow_As_Needed (Decl_Scope_Trees, Integer (Unit_Files.Length));
 
             --  Clear previous info known for this source file.
             --  This cannot be done with a single query when we see the
@@ -1499,18 +1513,25 @@ package body GNATCOLL.Xref is
 
                if Current_X_File_Unit_File_Index /= -1 then
                   declare
-                     Caller : constant Integer :=
+                     Caller : Integer :=
                        Get_Caller (Scope_Trees,
                                    Current_X_File_Unit_File_Index,
                                    Xref_Line);
                   begin
-                     if Caller /= -1
-                       and then Caller /= Current_Entity
-                     then
-                        DB.Execute
-                          (Query_Set_Caller_At_Decl,
-                           Params => (1 => +Current_Entity,
-                                      2 => +Caller));
+                     if Caller /= -1 then
+                        if Caller = Current_Entity then
+                           Caller := Get_Caller
+                             (Decl_Scope_Trees,
+                              Current_X_File_Unit_File_Index,
+                              Xref_Line);
+                        end if;
+
+                        if Caller /= Current_Entity then
+                           DB.Execute
+                             (Query_Set_Caller_At_Decl,
+                              Params => (1 => +Current_Entity,
+                                         2 => +Caller));
+                        end if;
                      end if;
                   end;
                end if;
@@ -1775,6 +1796,12 @@ package body GNATCOLL.Xref is
                              Entity => Current_Entity,
                              Low    => Spec_Start_Line,
                              High   => Xref_Line);
+                     if Spec_Start_Line + 1 <= Xref_Line then
+                        Insert (Decl_Scope_Trees (Xref_File_Unit_File_Index),
+                                Entity => Current_Entity,
+                                Low    => Spec_Start_Line + 1,
+                                High   => Xref_Line);
+                     end if;
                   end if;
                when 't' =>  --  end of body
                   if Process_Scopes
@@ -1785,6 +1812,12 @@ package body GNATCOLL.Xref is
                              Entity => Current_Entity,
                              Low    => Body_Start_Line,
                              High   => Xref_Line);
+                     if Body_Start_Line + 1 <= Xref_Line then
+                        Insert (Decl_Scope_Trees (Xref_File_Unit_File_Index),
+                                Entity => Current_Entity,
+                                Low    => Body_Start_Line + 1,
+                                High   => Xref_Line);
+                     end if;
                   end if;
 
                when others =>
@@ -1803,7 +1836,7 @@ package body GNATCOLL.Xref is
                if Will_Insert_Ref then
                   declare
                      Inst : aliased String := To_String (Instance);
-                     Caller : constant Integer :=
+                     Caller : Integer :=
                        Get_Caller (Scope_Trees, Xref_File_Unit_File_Index,
                                    Xref_Line);
                   begin
@@ -1817,6 +1850,12 @@ package body GNATCOLL.Xref is
                                       5 => +Xref_Kind,
                                       6 => +Inst'Unrestricted_Access));
                      else
+                        if Caller = Current_Entity then
+                           Caller := Get_Caller
+                             (Decl_Scope_Trees, Xref_File_Unit_File_Index,
+                              Xref_Line);
+                        end if;
+
                         DB.Execute
                           (Query_Insert_Ref_With_Caller,
                            Params => (1 => +Current_Entity,
@@ -1995,6 +2034,7 @@ package body GNATCOLL.Xref is
       end if;
 
       Free (Scope_Trees);
+      Free (Decl_Scope_Trees);
       Close (M);
    end Parse_LI;
 
