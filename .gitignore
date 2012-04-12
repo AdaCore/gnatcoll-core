@@ -33,6 +33,7 @@ testsuite/sql/orm/schema.ps
 testsuite/traces/traces4/traces4.out2
 testsuite/projects/K926-026/main
 testsuite/projects/KB30-016/test_it
+testsuite/xref/find_ref/main
 testsuite/*/*/obj
 
 testsuite/results

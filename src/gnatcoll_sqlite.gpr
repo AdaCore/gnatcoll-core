@@ -23,7 +23,15 @@ project GnatColl_Sqlite is
         for Source_Dirs use ("sqlite", "sqlite/with_sqlite", "sqlite/amalgamation");
    end case;
 
-   for Source_Dirs use Project'Source_Dirs & ("generated");
+   case GnatColl_Shared.Projects is
+      when "no" =>
+         --  GNATCOLL.Xref requires projects support
+         for Excluded_Source_Files use ("gnatcoll-xref.ads",
+                                        "gnatcoll-xref.adb"
+                                        );
+      when "yes" =>
+         for Source_Dirs use Project'Source_Dirs & ("generated");
+   end case;
 
    package Builder  renames GnatColl_Shared.Builder;
 

@@ -4,9 +4,17 @@ with "gnatcoll_sqlite";
 with "gnatcoll_readline";
 
 project GnatColl_Tools is
-   for Main use ("gnatcoll_db2ada.adb", "gnatinspect.adb");
+   for Main use ("gnatcoll_db2ada.adb");
    for Object_Dir use Gnatcoll_Shared'Object_Dir;
    for Source_Dirs use ("tools");
+
+   --  gnatinspect and GNATCOLL.Xref require projects support
+   case GnatColl_Shared.Projects is
+      when "no" =>
+         for Excluded_Source_Files use ("gnatinspect.adb");
+      when "yes" =>
+         for Main use Project'Main & ("gnatinspect.adb");
+   end case;
 
    case GnatColl_Shared.Templates is
       when "no" =>
