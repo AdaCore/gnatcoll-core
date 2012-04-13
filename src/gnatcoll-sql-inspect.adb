@@ -1770,7 +1770,7 @@ package body GNATCOLL.SQL.Inspect is
          end Print_PK;
 
       begin
-         if not Table.Is_Abstract then
+         if Self.DB.Success and then not Table.Is_Abstract then
             case Table.Get_Kind is
                when Kind_Table =>
                   Created.Append (Table.Name);   --  mark the table as created
@@ -1803,17 +1803,19 @@ package body GNATCOLL.SQL.Inspect is
    begin
       For_Each_Table (Schema, For_Table'Access, Alphabetical => False);
 
-      S := First (Deferred);
-      while Has_Element (S) loop
-         Do_Statement (Element (S));
-         Next (S);
-      end loop;
+      if Self.DB.Success then
+         S := First (Deferred);
+         while Has_Element (S) loop
+            Do_Statement (Element (S));
+            Next (S);
+         end loop;
 
-      S := First (Deferred_Indexes);
-      while Has_Element (S) loop
-         Do_Statement (Element (S));
-         Next (S);
-      end loop;
+         S := First (Deferred_Indexes);
+         while Has_Element (S) loop
+            Do_Statement (Element (S));
+            Next (S);
+         end loop;
+      end if;
 
       if Self.DB /= null then
          Commit_Or_Rollback (Self.DB);

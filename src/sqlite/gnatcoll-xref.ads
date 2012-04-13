@@ -202,6 +202,11 @@ package GNATCOLL.Xref is
 private
    type Xref_Database is tagged record
       DB      : GNATCOLL.SQL.Exec.Database_Connection;
+
+      DB_Created : Boolean := False;
+      --  Whether we have already created the database (or assumed that it
+      --  existed). This is so that running Parse_All_LI_Files multiple times
+      --  for an in-memory database does not always try to recreate it
    end record;
 
    type Entity_Information is record

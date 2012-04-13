@@ -362,7 +362,9 @@ is
       Put_Line (Body_File, "      Write_Schema (D, Schema);");
 
       if Load_File /= GNATCOLL.VFS.No_File then
-         Put_Line (Body_File, "      Load_Data (DB, Data, Schema);");
+         Put_Line (Body_File, "      if DB.Success then");
+         Put_Line (Body_File, "         Load_Data (DB, Data, Schema);");
+         Put_Line (Body_File, "      end if;");
       end if;
 
       Put_Line (Body_File, "   end Create_Database;");

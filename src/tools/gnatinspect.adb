@@ -102,29 +102,37 @@ procedure GNATInspect is
        new String'("[command or variable name]"),
        new String'("Display the list of commands and their syntax."),
        Process_Help'Access),
+
       (new String'("params"),
        new String'("name:file:line:column"),
        new String'("Return the list of parameters for the subprogram"),
        Process_Params'Access),
+
       (new String'("project"),
-       new String'("file.gpr"),
+       new String'("[file.gpr]"),
        new String'("Load the project file, replacing the one currently"
          & " loaded. This automatically loads the xref information into"
-         & " the database."),
+         & " the database. If no .gpr file is specified, loads a default"
+         & " project that uses the current directory as its source directory"
+         & " and object directory"),
        Process_Project'Access),
+
       (new String'("refresh"),
        null,
        new String'("Refresh the contents of the xref database."),
        Process_Refresh'Access),
+
       (new String'("refs"),
        new String'("name:file:line:column"),
        new String'("Display all known references to the entity."),
        Process_Refs'Access),
+
       (new String'("shell"),
        null,
        new String'("Execute a shell command (an alternative is to use '!'"
            & " as the command."),
        Process_Shell'Access),
+
       (new String'("time"),
        new String'("command arguments"),
        new String'("Execute the command as usual, and report the time it took"
@@ -149,6 +157,7 @@ procedure GNATInspect is
    Xref    : Xref_Database;
    --  The xref database
 
+   Project_Is_Default : Boolean := True;  --  Whether we have the default prj
    Env     : Project_Environment_Access;
    Tree    : Project_Tree;
    --  The currently loaded project tree
@@ -308,11 +317,6 @@ procedure GNATInspect is
    procedure Process_Project (Args : Arg_List) is
       GNAT_Version : GNAT.Strings.String_Access;
    begin
-      if Args_Length (Args) /= 1 then
-         Put_Line ("Error: please specify project name");
-         return;
-      end if;
-
       Initialize (Env);
       Env.Set_Path_From_Gnatls
         (Gnatls       => "gnatls",
@@ -325,10 +329,22 @@ procedure GNATInspect is
          Default_Spec_Suffix => ".h",
          Default_Body_Suffix => ".c");
       Free (GNAT_Version);
-      Tree.Load
-        (Root_Project_Path => Create (+Nth_Arg (Args, 1)),
-         Env               => Env,
-         Errors            => Put_Line'Access);
+
+      if Args_Length (Args) < 1 then
+         Project_Is_Default := True;
+         Tree.Load_Empty_Project
+           (Env               => Env,
+            Name              => "default");
+         Tree.Root_Project.Set_Attribute
+           (Source_Dirs_Attribute,
+            Values => (1 => new String'(".")));
+      else
+         Project_Is_Default := False;
+         Tree.Load
+           (Root_Project_Path => Create (+Nth_Arg (Args, 1)),
+            Env               => Env,
+            Errors            => Put_Line'Access);
+      end if;
 
       Process_Refresh (Empty_Command_Line);
 
@@ -349,7 +365,8 @@ procedure GNATInspect is
          Xref.Parse_All_LI_Files
            (Tree                => Tree,
             Project             => Tree.Root_Project,
-            Parse_Runtime_Files => Include_Runtime_Files,
+            Parse_Runtime_Files => not Project_Is_Default
+              and then Include_Runtime_Files,
             From_DB_Name        => Nightly_DB_Name.all,
             To_DB_Name          => DB_Name.all);
       end if;
@@ -706,9 +723,8 @@ begin
 
    Getopt (Cmdline);
 
-   --  Max_Sessions must be 1, in case the user wants the database in memory.
-
    Xref.Setup_DB (GNATCOLL.SQL.Sqlite.Setup (Database => DB_Name.all));
+   Process_Project (Empty_Command_Line);   --  Load default project
 
    if Commands_From_Switch.all /= "" then
       Process_Line (Commands_From_Switch.all);
