@@ -76,6 +76,8 @@ procedure GNATInspect is
    procedure Process_Shell (Args : Arg_List);
    procedure Process_Refs (Args : Arg_List);
    procedure Process_Params (Args : Arg_List);
+   procedure Process_Importing (Args : Arg_List);
+   procedure Process_Imports (Args : Arg_List);
    --  Process the various commands.
    --  Args is the command line entered by the user, so Get_Command (Args) for
    --  instance is the command being executed.
@@ -86,6 +88,9 @@ procedure GNATInspect is
    function Image (File : Virtual_File) return String;
    function Image (Self : Entity_Information) return String;
    --  Return a display version of the argument
+
+   procedure Dump (Curs : in out Files_Cursor);
+   --  Display the list of files
 
    procedure Output_Prefix (Count : in out Natural);
    --  Print the prefix for each output line
@@ -98,7 +103,19 @@ procedure GNATInspect is
    end record;
 
    Commands : constant array (Natural range <>) of Command_Descr :=
-     ((new String'("help"),
+     ((new String'("importing"),
+       new String'("filename"),
+       new String'("List the files that import the file (via with statements"
+         & " in Ada or #include in C for instance)"),
+       Process_Importing'Access),
+
+      (new String'("imports"),
+       new String'("filename"),
+       new String'("List the files that the file imports (via with statements"
+         & " in Ada or #include in C for instance)"),
+       Process_Imports'Access),
+
+      (new String'("help"),
        new String'("[command or variable name]"),
        new String'("Display the list of commands and their syntax."),
        Process_Help'Access),
@@ -334,10 +351,14 @@ procedure GNATInspect is
          Project_Is_Default := True;
          Tree.Load_Empty_Project
            (Env               => Env,
-            Name              => "default");
+            Name              => "default",
+           Recompute_View     => False);
          Tree.Root_Project.Set_Attribute
            (Source_Dirs_Attribute,
             Values => (1 => new String'(".")));
+         Tree.Root_Project.Set_Attribute
+           (Languages_Attribute, (1 => new String'("Ada")));
+         Tree.Recompute_View (Errors => Ada.Text_IO.Put_Line'Access);
       else
          Project_Is_Default := False;
          Tree.Load
@@ -662,6 +683,44 @@ procedure GNATInspect is
       when others =>
          Free (Str);
    end Process_File;
+
+   ----------
+   -- Dump --
+   ----------
+
+   procedure Dump (Curs : in out Files_Cursor) is
+      F     : Virtual_File;
+      Count : Natural := 0;
+   begin
+      while Curs.Has_Element loop
+         F := Curs.Element;
+         Output_Prefix (Count);
+         Put_Line (Image (F));
+         Curs.Next;
+      end loop;
+   end Dump;
+
+   -----------------------
+   -- Process_Importing --
+   -----------------------
+
+   procedure Process_Importing (Args : Arg_List) is
+      Curs  : Files_Cursor;
+   begin
+      Curs := Xref.Importing (Tree.Create (+Nth_Arg (Args, 1)));
+      Dump (Curs);
+   end Process_Importing;
+
+   ---------------------
+   -- Process_Imports --
+   ---------------------
+
+   procedure Process_Imports (Args : Arg_List) is
+      Curs  : Files_Cursor;
+   begin
+      Curs := Xref.Imports (Tree.Create (+Nth_Arg (Args, 1)));
+      Dump (Curs);
+   end Process_Imports;
 
    ---------------
    -- On_Ctrl_C --

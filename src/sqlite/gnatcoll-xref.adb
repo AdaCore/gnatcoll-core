@@ -334,6 +334,9 @@ package body GNATCOLL.Xref is
              Distinct => True),
         On_Server => True, Name => "references");
 
+   N_Files2 : aliased String := "f2";
+   Files2 : T_Files (N_Files2'Access);
+
    package VFS_To_Ids is new Ada.Containers.Hashed_Maps
      (Key_Type        => Virtual_File,
       Element_Type    => Integer,   --  Id in the files table
@@ -1976,7 +1979,7 @@ package body GNATCOLL.Xref is
                                 2 => +ALI_Id));
                end if;
 
-            when 'W' =>
+            when 'W' | 'Z' =>
                --  Describes a "with" dependency with the last seen U line.
                --  There are two cases:
                --      W system%s  system.ads   system.ali
@@ -1984,27 +1987,52 @@ package body GNATCOLL.Xref is
                --  The second line does not have ALI information.
 
                Index := Index + 2;
-               Skip_Word;
+               Dep_Id := -1;
 
-               if Str (Index) = ASCII.LF then
-                  --  second format ("unchecked_deallocation"). Nothing to do
-                  null;
-               else
-                  Skip_Spaces;
-                  Start := Index;
+               declare
+                  Word_Start : constant Integer := Index;
+                  Part : Unit_Parts;
+               begin
                   Skip_Word;
 
-                  if Current_Unit_Id /= -1 then
-                     Dep_Id := Insert_Source_File
-                       (Basename => String (Str (Start .. Index - 1)));
+                  if Str (Index - 1) = 's' then
+                     Part := Unit_Spec;
+                  else
+                     Part := Unit_Body;
+                  end if;
 
-                     if Dep_Id /= -1 then
+                  declare
+                     F : constant Filesystem_String :=
+                       Tree.Root_Project.File_From_Unit
+                         (Unit_Name => String (Str (Word_Start .. Index - 3)),
+                          Part      => Part,
+                          Language  => "ada");
+                  begin
+                     if F /= "" then
+                        Skip_Spaces;
+                        Skip_Word;
+                        Dep_Id := Insert_Source_File (Basename => +F);
+                     elsif Str (Index) /= ASCII.LF then
+                        Skip_Spaces;
+                        Start := Index;
+                        Skip_Word;
+                        Dep_Id := Insert_Source_File
+                          (Basename => String (Str (Start .. Index - 1)));
+                     else
+                        --  second format ("unchecked_deallocation%s\n").
+                        Dep_Id := -1;
+                     end if;
+
+                     if Current_Unit_Id /= -1
+                       and then Dep_Id /= -1
+                     then
                         DB.Execute
                           (Query_Set_File_Dep,
-                           Params => (1 => +Current_Unit_Id, 2 => +Dep_Id));
+                           Params =>
+                             (1 => +Current_Unit_Id, 2 => +Dep_Id));
                      end if;
-                  end if;
-               end if;
+                  end;
+               end;
 
             when 'D' =>
                --  All dependencies for all units (used as indexes in xref)
@@ -2710,5 +2738,68 @@ package body GNATCOLL.Xref is
         (Self.DB, Query_Parameters, Params => (1 => +Entity.Id));
       return Curs;
    end Parameters;
+
+   -------------
+   -- Element --
+   -------------
+
+   function Element (Self : Files_Cursor) return GNATCOLL.VFS.Virtual_File is
+   begin
+      return Create (+Self.DBCursor.Value (0));
+   end Element;
+
+   ---------------
+   -- Importing --
+   ---------------
+
+   function Importing
+     (Self : Xref_Database'Class;
+      File : GNATCOLL.VFS.Virtual_File) return Files_Cursor
+   is
+      Name  : constant Cst_Filesystem_String_Access :=
+        File.Full_Name (Normalize => True);
+      Name_A : constant Access_String := Convert (Name);
+      Curs : Files_Cursor;
+   begin
+      Curs.DBCursor.Fetch
+        (Self.DB,
+         SQL_Select
+           (Database.Files.Path,
+            From  => Database.Files & Database.F2f & Files2,
+            Where => Database.F2f.Fromfile = Database.Files.Id
+              and Files2.Id = Database.F2f.Tofile
+              and Files2.Path = Text_Param (1)
+              and Database.F2f.Kind = F2f_Withs,
+            Order_By => Database.Files.Path),
+         Params => (1 => +Name_A));
+      return Curs;
+   end Importing;
+
+   -------------
+   -- Imports --
+   -------------
+
+   function Imports
+     (Self : Xref_Database'Class;
+      File : GNATCOLL.VFS.Virtual_File) return Files_Cursor
+   is
+      Name  : constant Cst_Filesystem_String_Access :=
+        File.Full_Name (Normalize => True);
+      Name_A : constant Access_String := Convert (Name);
+      Curs : Files_Cursor;
+   begin
+      Curs.DBCursor.Fetch
+        (Self.DB,
+         SQL_Select
+           (Database.Files.Path,
+            From  => Database.Files & Database.F2f & Files2,
+            Where => Database.F2f.Tofile = Database.Files.Id
+              and Files2.Id = Database.F2f.Fromfile
+              and Files2.Path = Text_Param (1)
+              and Database.F2f.Kind = F2f_Withs,
+            Order_By => Database.Files.Path),
+         Params => (1 => +Name_A));
+      return Curs;
+   end Imports;
 
 end GNATCOLL.Xref;

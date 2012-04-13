@@ -199,6 +199,20 @@ package GNATCOLL.Xref is
    --  Return the list of parameters for the given subprogram. They are in the
    --  same order as in the source.
 
+   type Files_Cursor is new Base_Cursor with private;
+   function Element (Self : Files_Cursor) return GNATCOLL.VFS.Virtual_File;
+
+   function Importing
+     (Self : Xref_Database'Class;
+      File : GNATCOLL.VFS.Virtual_File) return Files_Cursor;
+   --  Returns the list of files that import (via a "with" statement in Ada,
+   --  or a "#include# in C) the parameter File.
+
+   function Imports
+     (Self : Xref_Database'Class;
+      File : GNATCOLL.VFS.Virtual_File) return Files_Cursor;
+   --  Returns the list of files that File depends on
+
 private
    type Xref_Database is tagged record
       DB      : GNATCOLL.SQL.Exec.Database_Connection;
@@ -233,5 +247,6 @@ private
    type References_Cursor is new Base_Cursor with null record;
    type Entities_Cursor is new Base_Cursor with null record;
    type Parameters_Cursor is new Base_Cursor with null record;
+   type Files_Cursor is new Base_Cursor with null record;
 
 end GNATCOLL.Xref;
