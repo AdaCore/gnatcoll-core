@@ -37,7 +37,7 @@ package body GNATCOLL.Xref is
    use Library_Info_Lists;
 
    Me_Error   : constant Trace_Handle := Create ("ENTITIES.ERROR");
-   Me_Debug   : constant Trace_Handle := Create ("ENTITIES.DEBUG", Off);
+   Me_Debug   : constant Trace_Handle := Create ("ENTITIES.DEBUG");
    Me_Forward : constant Trace_Handle := Create ("ENTITIES.FORWARD");
    Me_Timing  : constant Trace_Handle := Create ("ENTITIES.TIMING");
 
@@ -1092,7 +1092,9 @@ package body GNATCOLL.Xref is
 
       procedure Skip_Spaces is
       begin
-         while Str (Index) = ' ' or else Str (Index) = ASCII.HT loop
+         while Str (Index) = ' '
+           or else Str (Index) = ASCII.HT
+         loop
             Index := Index + 1;
          end loop;
       end Skip_Spaces;
@@ -1106,6 +1108,7 @@ package body GNATCOLL.Xref is
          while Index <= Last
            and then Str (Index) /= ' '
            and then Str (Index) /= ASCII.LF
+           and then Str (Index) /= ASCII.CR
            and then Str (Index) /= ASCII.HT
          loop
             Index := Index + 1;
@@ -1136,6 +1139,7 @@ package body GNATCOLL.Xref is
 
             while Str (Index) /= ' '
               and then Str (Index) /= ASCII.LF
+              and then Str (Index) /= ASCII.CR
               and then Str (Index) /= '{'
               and then Str (Index) /= '['
               and then Str (Index) /= '<'
@@ -1685,7 +1689,7 @@ package body GNATCOLL.Xref is
                         return;
                      end if;
 
-                  when ' ' =>
+                  when ' ' | ASCII.CR =>
                      exit;
 
                   when ASCII.LF =>
@@ -1720,6 +1724,7 @@ package body GNATCOLL.Xref is
 
          while Index <= Last
            and then Str (Index) /= ASCII.LF
+           and then Str (Index) /= ASCII.CR
          loop
             Skip_Spaces;
             Get_Ref;
@@ -1905,6 +1910,12 @@ package body GNATCOLL.Xref is
                end if;
             end if;
          end loop;
+
+         if Index <= Str'Last and then Str (Index) = ASCII.CR then
+            if Index = Str'Last or else Str (Index + 1) = ASCII.LF then
+               Index := Index + 1;
+            end if;
+         end if;
       end Process_Entity_Line;
 
       Start_Of_X_Section : Integer;
