@@ -81,6 +81,7 @@ procedure GNATInspect is
    procedure Process_Imports (Args : Arg_List);
    procedure Process_Depends_On (Args : Arg_List);
    procedure Process_Name (Args : Arg_List);
+   procedure Process_Calls (Args : Arg_List);
    --  Process the various commands.
    --  Args is the command line entered by the user, so Get_Command (Args) for
    --  instance is the command being executed.
@@ -93,6 +94,7 @@ procedure GNATInspect is
    --  Return a display version of the argument
 
    procedure Dump (Curs : in out Files_Cursor);
+   procedure Dump (Curs : in out Entities_Cursor);
    procedure Dump (Curs : File_Sets.Set);
    --  Display the list of files
 
@@ -124,6 +126,11 @@ procedure GNATInspect is
        new String'("List the files that the file depends on (recursively"
            & " calling 'imports'"),
        Process_Depends_On'Access),
+
+      (new String'("calls"),
+       new String'("name:file:line:column"),
+       new String'("List all entities called by the entity."),
+       Process_Calls'Access),
 
       (new String'("help"),
        new String'("[command or variable name]"),
@@ -719,6 +726,22 @@ procedure GNATInspect is
    -- Dump --
    ----------
 
+   procedure Dump (Curs : in out Entities_Cursor) is
+      E : Entity_Information;
+      Count : Natural := 0;
+   begin
+      while Curs.Has_Element loop
+         E := Curs.Element;
+         Output_Prefix (Count);
+         Put_Line (Image (E));
+         Curs.Next;
+      end loop;
+   end Dump;
+
+   ----------
+   -- Dump --
+   ----------
+
    procedure Dump (Curs : File_Sets.Set) is
       C : File_Sets.Cursor := Curs.First;
       Count : Natural := 0;
@@ -780,6 +803,24 @@ procedure GNATInspect is
       Output_Prefix (Count);
       Put_Line (Xref.Qualified_Name (Entity));
    end Process_Name;
+
+   -------------------
+   -- Process_Calls --
+   -------------------
+
+   procedure Process_Calls (Args : Arg_List) is
+      Entity  : Entity_Information;
+      Callees : Entities_Cursor;
+   begin
+      if Args_Length (Args) /= 1 then
+         Put_Line ("Invalid number of arguments");
+         return;
+      end if;
+
+      Entity := Get_Entity (Nth_Arg (Args, 1));
+      Callees := Xref.Calls (Entity);
+      Dump (Callees);
+   end Process_Calls;
 
    ---------------
    -- On_Ctrl_C --

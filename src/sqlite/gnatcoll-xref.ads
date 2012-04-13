@@ -182,6 +182,11 @@ package GNATCOLL.Xref is
    type Entities_Cursor is new Base_Cursor with private;
    function Element (Self : Entities_Cursor) return Entity_Information;
 
+   function Calls
+     (Self   : Xref_Database'Class;
+      Entity : Entity_Information) return Entities_Cursor;
+   --   All entities called by Self
+
    type Parameter_Kind is
      (In_Parameter,
       Out_Parameter,

@@ -2880,4 +2880,44 @@ package body GNATCOLL.Xref is
       return To_String (Name);
    end Qualified_Name;
 
+   -----------
+   -- Calls --
+   -----------
+
+   function Calls
+     (Self   : Xref_Database'Class;
+      Entity : Entity_Information) return Entities_Cursor
+   is
+      C : Entities_Cursor;
+   begin
+      C.DBCursor.Fetch
+        (Self.DB,
+         SQL_Union
+           (SQL_Select
+              (Database.Entities.Id
+                 & Database.Entities.Name
+                 & Database.Entities.Decl_Line
+                 & Database.Entities.Decl_Column,
+               From => Database.Entity_Refs & Database.Entities,
+               Where => Database.Entity_Refs.Caller = Integer_Param (1)
+                 and Database.Entities.Id = Database.Entity_Refs.Entity
+                 and Database.Entity_Refs.Entity /= Integer_Param (1)),
+
+            SQL_Select
+              (Database.Entities.Id
+                 & Database.Entities.Name
+                 & Database.Entities.Decl_Line
+                 & Database.Entities.Decl_Column,
+               From => Database.Entities,
+               Where => Database.Entities.Decl_Caller = Integer_Param (1)
+                 and Database.Entities.Id /= Integer_Param (1)),
+
+            Order_By =>
+              Database.Entities.Name
+              & Database.Entities.Decl_Line,
+            Distinct => True),
+         Params => (1 => +Entity.Id));
+      return C;
+   end Calls;
+
 end GNATCOLL.Xref;
