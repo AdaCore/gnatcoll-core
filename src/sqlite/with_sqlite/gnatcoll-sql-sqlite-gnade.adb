@@ -445,8 +445,8 @@ package body GNATCOLL.SQL.Sqlite.Gnade is
    -- Last_Insert_Rowid --
    -----------------------
 
-   function Last_Insert_Rowid (DB : Database) return Long_Integer is
-      function Internal (DB : Database) return Long_Integer;
+   function Last_Insert_Rowid (DB : Database) return Long_Long_Integer is
+      function Internal (DB : Database) return Long_Long_Integer;
       pragma Import (C, Internal, "sqlite3_last_insert_rowid");
    begin
       if Debug then

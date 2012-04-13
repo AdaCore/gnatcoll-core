@@ -306,7 +306,7 @@ package GNATCOLL.SQL.Sqlite.Gnade is
    procedure Clear_Bindings (Stmt : Statement);
    --  Use this routine to reset all bound host parameters to NULL
 
-   function Last_Insert_Rowid (DB : Database) return Long_Integer;
+   function Last_Insert_Rowid (DB : Database) return Long_Long_Integer;
    --  This routine returns the rowid of the most recent successful INSERT into
    --  the database from the database connection in the first argument. If no
    --  successful INSERTs have ever occurred on that database connection, zero
