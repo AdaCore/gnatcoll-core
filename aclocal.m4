@@ -453,7 +453,11 @@ AC_DEFUN(AM_CHECK_READLINE,
      WITH_READLINE=$enableval,
      WITH_READLINE="")
 
-   if test "$WITH_READLINE" = "" ; then
+   if test "$WITH_GPL" = "no" ; then
+      AC_MSG_CHECKING(for readline)
+      AC_MSG_RESULT([no, this is a pure GPL library (see --enable-gpl)])
+      WITH_READLINE=no
+   elif test "$WITH_READLINE" = "" ; then
       AC_CHECK_LIB(readline,readline,WITH_READLINE=yes,WITH_READLINE=no)
    elif test "$WITH_READLINE" = "yes" ; then
       AC_CHECK_LIB(readline,readline,WITH_READLINE=yes,WITH_READLINE=no)

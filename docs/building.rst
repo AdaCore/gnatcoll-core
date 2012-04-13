@@ -121,6 +121,17 @@ the following are likely to be the most useful:
   Generally speaking, we do not recommend using paths with spaces, since such
   a setup often introduces complications.
 
+*--enable-gpl*
+  GNATCOLL provides interfaces to libraries that are licensed under the
+  Full GNU Public License. This means that, should you choose to distribute
+  your application to anyone, it must be free software and have a
+  GPL-compatible license.
+  
+  To avoid ambiguities, these interfaces are disabled by default, unless
+  you provide the `--enable-gpl` switch to configure.
+
+  This currently only impacts `GNATCOLL.Readline`.
+
 Special support exists in GNATColl for the gtk+ graphical toolkit.
 The `configure` command will attempt to find the installation directory for
 this toolkit by using the `pkg-config` command, which must therefore be

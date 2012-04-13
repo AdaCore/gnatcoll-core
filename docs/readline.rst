@@ -11,7 +11,8 @@
    |Note| The GNU `readline` library is licensed under the terms of the GNU General Public License, version 3. This means that if you want to use Readline in a program that you release or distribute to anyone, the program must be free software and have a GPL-compatible license.
 
 When this library is available on the system, it provides various features
-to enhance command line support in tools.
+to enhance command line support in tools. You also need to pass `--enable-gpl`
+to configure to indicate you understand the license of readline.
 
 In particular, it provides various keybindings to make editing more
 comfortable than Ada.Text_IO.Get_Line. For instance, it is possible to use
