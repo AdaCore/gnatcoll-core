@@ -2802,4 +2802,41 @@ package body GNATCOLL.Xref is
       return Curs;
    end Imports;
 
+   ----------------
+   -- Depends_On --
+   ----------------
+
+   function Depends_On
+     (Self : Xref_Database'Class;
+      File : GNATCOLL.VFS.Virtual_File) return File_Sets.Set
+   is
+      use File_Sets;
+      C    : Files_Cursor := Self.Imports (File);
+      Seen : File_Sets.Set;
+      To_Analyze : File_Sets.Set;
+      F    : Virtual_File;
+   begin
+      while C.Has_Element loop
+         To_Analyze.Include (C.Element);
+         C.Next;
+      end loop;
+
+      while not To_Analyze.Is_Empty loop
+         F := Element (To_Analyze.First);
+         Seen.Include (F);
+         To_Analyze.Delete_First;
+
+         C := Self.Imports (F);
+         while C.Has_Element loop
+            F := C.Element;
+            if not Seen.Contains (F) then
+               To_Analyze.Include (F);
+            end if;
+            C.Next;
+         end loop;
+      end loop;
+
+      return Seen;
+   end Depends_On;
+
 end GNATCOLL.Xref;

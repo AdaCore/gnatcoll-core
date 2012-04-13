@@ -35,6 +35,7 @@
 --     Parse_All_LI_Files (Session, ...);
 --   end;
 
+with Ada.Containers.Ordered_Sets;
 with Ada.Strings.Unbounded; use Ada.Strings.Unbounded;
 with GNATCOLL.Projects;     use GNATCOLL.Projects;
 with GNATCOLL.SQL.Exec;     use GNATCOLL.SQL.Exec;
@@ -211,7 +212,16 @@ package GNATCOLL.Xref is
    function Imports
      (Self : Xref_Database'Class;
       File : GNATCOLL.VFS.Virtual_File) return Files_Cursor;
-   --  Returns the list of files that File depends on
+   --  Returns the list of files that File depends on directly.
+
+   package File_Sets is new Ada.Containers.Ordered_Sets
+     (GNATCOLL.VFS.Virtual_File, GNATCOLL.VFS."<", GNATCOLL.VFS."=");
+
+   function Depends_On
+     (Self : Xref_Database'Class;
+      File : GNATCOLL.VFS.Virtual_File) return File_Sets.Set;
+   --  Returns the list of files that File depends on (either directly or
+   --  indirectly in the case of Depends_On.
 
 private
    type Xref_Database is tagged record

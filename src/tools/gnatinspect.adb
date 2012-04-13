@@ -36,6 +36,7 @@ with GNATCOLL.Utils;             use GNATCOLL.Utils;
 with GNATCOLL.VFS;               use GNATCOLL.VFS;
 
 procedure GNATInspect is
+   use File_Sets;
 
    History_File : constant String := ".gnatinspect_hist";
 
@@ -78,6 +79,7 @@ procedure GNATInspect is
    procedure Process_Params (Args : Arg_List);
    procedure Process_Importing (Args : Arg_List);
    procedure Process_Imports (Args : Arg_List);
+   procedure Process_Depends_On (Args : Arg_List);
    --  Process the various commands.
    --  Args is the command line entered by the user, so Get_Command (Args) for
    --  instance is the command being executed.
@@ -90,6 +92,7 @@ procedure GNATInspect is
    --  Return a display version of the argument
 
    procedure Dump (Curs : in out Files_Cursor);
+   procedure Dump (Curs : File_Sets.Set);
    --  Display the list of files
 
    procedure Output_Prefix (Count : in out Natural);
@@ -112,8 +115,14 @@ procedure GNATInspect is
       (new String'("imports"),
        new String'("filename"),
        new String'("List the files that the file imports (via with statements"
-         & " in Ada or #include in C for instance)"),
+         & " in Ada or #include in C for instance). See also 'depends_on'"),
        Process_Imports'Access),
+
+      (new String'("depends"),
+       new String'("filename"),
+       new String'("List the files that the file depends on (recursively"
+           & " calling 'imports'"),
+       Process_Depends_On'Access),
 
       (new String'("help"),
        new String'("[command or variable name]"),
@@ -700,6 +709,21 @@ procedure GNATInspect is
       end loop;
    end Dump;
 
+   ----------
+   -- Dump --
+   ----------
+
+   procedure Dump (Curs : File_Sets.Set) is
+      C : File_Sets.Cursor := Curs.First;
+      Count : Natural := 0;
+   begin
+      while Has_Element (C) loop
+         Output_Prefix (Count);
+         Put_Line (Image (Element (C)));
+         Next (C);
+      end loop;
+   end Dump;
+
    -----------------------
    -- Process_Importing --
    -----------------------
@@ -721,6 +745,17 @@ procedure GNATInspect is
       Curs := Xref.Imports (Tree.Create (+Nth_Arg (Args, 1)));
       Dump (Curs);
    end Process_Imports;
+
+   ------------------------
+   -- Process_Depends_On --
+   ------------------------
+
+   procedure Process_Depends_On (Args : Arg_List) is
+      Deps : constant File_Sets.Set :=
+        Xref.Depends_On (Tree.Create (+Nth_Arg (Args, 1)));
+   begin
+      Dump (Deps);
+   end Process_Depends_On;
 
    ---------------
    -- On_Ctrl_C --
