@@ -2839,4 +2839,45 @@ package body GNATCOLL.Xref is
       return Seen;
    end Depends_On;
 
+   --------------------
+   -- Qualified_Name --
+   --------------------
+
+   function Qualified_Name
+     (Self   : Xref_Database'Class;
+      Entity : Entity_Information) return String
+   is
+      D    : Entity_Declaration := Self.Declaration (Entity);
+      Name : Unbounded_String := D.Name;
+      E    : Entity_Information := D.Location.Scope;
+      C    : Forward_Cursor;
+      Separator : Unbounded_String := To_Unbounded_String (".");
+   begin
+      C.Fetch
+        (Self.DB,
+         SQL_Select
+           (Database.Files.Language,
+            From  => Database.Files,
+            Where => Database.Files.Path =
+              D.Location.File.Display_Full_Name));
+
+      if C.Has_Row then
+         declare
+            Language : constant String := C.Value (0);
+         begin
+            if Language = "c" or else Language = "c++" then
+               Separator := To_Unbounded_String ("::");
+            end if;
+         end;
+      end if;
+
+      while E /= No_Entity loop
+         D := Self.Declaration (E);
+         Name := D.Name & Separator & Name;
+         E := D.Location.Scope;
+      end loop;
+
+      return To_String (Name);
+   end Qualified_Name;
+
 end GNATCOLL.Xref;

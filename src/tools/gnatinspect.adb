@@ -80,6 +80,7 @@ procedure GNATInspect is
    procedure Process_Importing (Args : Arg_List);
    procedure Process_Imports (Args : Arg_List);
    procedure Process_Depends_On (Args : Arg_List);
+   procedure Process_Name (Args : Arg_List);
    --  Process the various commands.
    --  Args is the command line entered by the user, so Get_Command (Args) for
    --  instance is the command being executed.
@@ -128,6 +129,11 @@ procedure GNATInspect is
        new String'("[command or variable name]"),
        new String'("Display the list of commands and their syntax."),
        Process_Help'Access),
+
+      (new String'("name"),
+       new String'("name:file:line:column"),
+       new String'("Return the fully qualified name for the entity"),
+       Process_Name'Access),
 
       (new String'("params"),
        new String'("name:file:line:column"),
@@ -756,6 +762,24 @@ procedure GNATInspect is
    begin
       Dump (Deps);
    end Process_Depends_On;
+
+   ------------------
+   -- Process_Name --
+   ------------------
+
+   procedure Process_Name (Args : Arg_List) is
+      Entity : Entity_Information;
+      Count  : Natural := 0;
+   begin
+      if Args_Length (Args) /= 1 then
+         Put_Line ("Invalid number of arguments");
+         return;
+      end if;
+
+      Entity := Get_Entity (Nth_Arg (Args, 1));
+      Output_Prefix (Count);
+      Put_Line (Xref.Qualified_Name (Entity));
+   end Process_Name;
 
    ---------------
    -- On_Ctrl_C --

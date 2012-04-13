@@ -223,6 +223,11 @@ package GNATCOLL.Xref is
    --  Returns the list of files that File depends on (either directly or
    --  indirectly in the case of Depends_On.
 
+   function Qualified_Name
+     (Self   : Xref_Database'Class;
+      Entity : Entity_Information) return String;
+   --  Returns the fully qualified name for the entity
+
 private
    type Xref_Database is tagged record
       DB      : GNATCOLL.SQL.Exec.Database_Connection;
