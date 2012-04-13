@@ -682,7 +682,6 @@ package body GNATCOLL.SQL.Sqlite.Builder is
       Field      : SQL_Field_Integer) return Integer
    is
       pragma Unreferenced (Self, Field);
-      Last_Rowid     : Long_Integer := -1;
 --        Res2     : Forward_Cursor;
    begin
       --  According to sqlite3 documentation, the last_rowid is also the
@@ -691,14 +690,8 @@ package body GNATCOLL.SQL.Sqlite.Builder is
       --  ??? We assume here that Field is the primary key, but we cannot
       --  check that.
 
-      Last_Rowid := Last_Insert_Rowid
-        (Sqlite_Connection_Record (Connection.all).DB);
-
-      if Integer (Last_Rowid) /= 0 then
-         return Integer (Last_Rowid);
-      else
-         return -1;
-      end if;
+      return Integer (Last_Insert_Rowid
+        (Sqlite_Connection_Record (Connection.all).DB));
 
       --  If we wanted to support multi-key primary keys, for instance, we
       --  would use:
