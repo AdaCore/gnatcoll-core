@@ -22,6 +22,8 @@
 ------------------------------------------------------------------------------
 
 with Ada.Calendar;              use Ada.Calendar;
+with Ada.Calendar.Formatting;   use Ada.Calendar.Formatting;
+with Ada.Calendar.Time_Zones;   use Ada.Calendar.Time_Zones;
 with Ada.Characters.Handling;   use Ada.Characters.Handling;
 with Ada.Strings.Fixed;         use Ada.Strings.Fixed;
 with Ada.Text_IO;               use Ada.Text_IO;
@@ -116,9 +118,17 @@ package body GNATCOLL.Traces is
 
       Indentation : Natural := 0;
       --  Current indentation for streams.
+
+      TZ : Time_Offset := UTC_Time_Offset;
+      --  Time zone cache, assuming that the OS will not change time zones
+      --  while this partition is running.
    end record;
 
    Global : Global_Vars;
+
+   function Local_Sub_Second (T : Ada.Calendar.Time) return Integer;
+   pragma Inline (Local_Sub_Second);
+      --  Version of Local_Sub_Second taking advantage of the timezone cache
 
    function Find_Handle (Unit_Name_Upper_Case : String) return Trace_Handle;
    --  Return the debug handle associated with Unit_Name_Upper_Case,
@@ -839,13 +849,33 @@ package body GNATCOLL.Traces is
       end if;
    end Active;
 
+   ----------------------
+   -- Local_Sub_Second --
+   ----------------------
+
+   function Local_Sub_Second (T : Ada.Calendar.Time) return Integer is
+      Y  : Year_Number;
+      M  : Month_Number;
+      D  : Day_Number;
+      H  : Ada.Calendar.Formatting.Hour_Number;
+      Mi : Ada.Calendar.Formatting.Minute_Number;
+      S  : Ada.Calendar.Formatting.Second_Number;
+      Ss : Ada.Calendar.Formatting.Second_Duration;
+      Ls : Boolean;
+   begin
+      Ada.Calendar.Formatting.Split (T, Y, M, D, H, Mi, S, Ss, Ls, Global.TZ);
+
+      return Integer (Ss * 1000.0);
+   end Local_Sub_Second;
+
    -----------------------
    -- Put_Absolute_Time --
    -----------------------
 
    procedure Put_Absolute_Time (Stream : in out Trace_Stream_Record'Class) is
       T  : constant Ada.Calendar.Time := Ada.Calendar.Clock;
-      Ms : constant String := Integer'Image (Integer (Sub_Second (T) * 1000));
+
+      Ms : constant String := Integer'Image (Local_Sub_Second (T));
    begin
       if Absolute_Date.Active then
          if Absolute_Time.Active then
