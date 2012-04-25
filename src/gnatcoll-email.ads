@@ -381,20 +381,22 @@ package GNATCOLL.Email is
    --------------------------
 
    procedure Set_Text_Payload
-     (Msg       : Message'Class;
-      Payload   : String;
-      MIME_Type : String := Text_Plain;
-      Charset   : String := Charset_US_ASCII;
-      Prepend   : Boolean := False);
+     (Msg         : Message'Class;
+      Payload     : String;
+      MIME_Type   : String  := Text_Plain;
+      Disposition : String  := "";
+      Charset     : String  := Charset_US_ASCII;
+      Prepend     : Boolean := False);
    --  Set the payload of the message, as text. No parsing is done.
    --  If the message is a single part message, this is the text of the
    --  message. If the message is a multi-part message, this is set as one of
    --  the parts, with the given MIME type. As a result, it can be called
    --  several times in such a case, each time will create a new part.
-   --  The MIME type will changes the Content-Type header.
    --  If MIME_Type is set to the empty string, it is not updated in the
    --  message. This is mostly useful when Msg was parsed through one of the
    --  functions in Email.Parser.
+   --  If Disposition is specified, it is used as the value of the
+   --  Content-Disposition header of the text part.
    --  When Msg is a multi-part message, the new part is either appended after
    --  the existing parts, or prepend before, depending on the Prepend
    --  parameter. If Msg is a single part message, then Payload will replace

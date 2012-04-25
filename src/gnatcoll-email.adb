@@ -1097,11 +1097,12 @@ package body GNATCOLL.Email is
    ----------------------
 
    procedure Set_Text_Payload
-     (Msg       : Message'Class;
-      Payload   : String;
-      MIME_Type : String := Text_Plain;
-      Charset   : String := Charset_US_ASCII;
-      Prepend   : Boolean := False)
+     (Msg         : Message'Class;
+      Payload     : String;
+      MIME_Type   : String  := Text_Plain;
+      Disposition : String  := "";
+      Charset     : String  := Charset_US_ASCII;
+      Prepend     : Boolean := False)
    is
       Msg2 : Message;
       H    : Header;
@@ -1116,6 +1117,11 @@ package body GNATCOLL.Email is
 
          Replace_Header (Msg2, H);
          Replace_Header (Msg2, Create (Content_Transfer_Encoding, "7bit"));
+
+         if Disposition /= "" then
+            Add_Header (Msg2, Create (Content_Disposition, Disposition));
+         end if;
+
          Set_Unbounded_String (Msg2.Contents.Payload.Text, Payload);
 
          if Prepend then
