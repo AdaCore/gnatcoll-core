@@ -295,13 +295,19 @@ package GNATCOLL.Email is
    --  occurs multiple times, only the first occurrence is returned.
    --  Name is case-insensitive
 
+   function Get_Type (H : Header) return String;
+   --  For a header H that is a Content-Type or Content-Disposition, return
+   --  the content type or the disposition type (i.e. the initial part of the
+   --  header, before the semicolon). The returned value is always converted
+   --  to lower case. For a null header, an empty string is returned.
+
    function Get_Content_Type (Msg : Message'Class) return String;
    --  Return the MIME content type for the message.
    --  As per RFC 2045, there is always such a content type, even if it wasn't
    --  specified explicitly by the headers. It defaults to text/plain when the
    --  message is not part of the payload of a multipart/report message, to
-   --  message/rfc822 otherwise.
-   --  This content-type is always lower-cased.
+   --  message/rfc822 otherwise. The returned value is always converted to
+   --  lower case.
 
    function Get_Message_Id (Msg : Message) return String;
    --  Return the Message_Id for this message. This returns the empty string if

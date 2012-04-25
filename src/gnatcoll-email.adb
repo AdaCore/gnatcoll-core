@@ -1298,43 +1298,48 @@ package body GNATCOLL.Email is
    ----------------------
 
    function Get_Content_Type (Msg : Message'Class) return String is
-      H   : constant Header := Get_Header (Msg, Content_Type);
-      ASC : Unbounded_String;
+      T : constant String := Get_Type (Get_Header (Msg, Content_Type));
    begin
-      if H /= Null_Header then
-         Flatten (H.Contents.Value, Result => ASC);
-         declare
-            StrA  : constant String := To_String (ASC);
-            Start : Integer;
-            Stop  : Integer;
-         begin
-            Start := StrA'First;
-            while Start <= StrA'Last
-              and then Is_Whitespace (StrA (Start))
-            loop
-               Start := Start + 1;
-            end loop;
+      if T /= "" then
+         return T;
 
-            if Start < StrA'Last then
-               Stop := Start + 1;
-               while Stop <= StrA'Last
-                 and then not Is_Whitespace (StrA (Stop))
-                 and then StrA (Stop) /= ';'
-               loop
-                  Stop := Stop + 1;
-               end loop;
-
-               return To_Lower (StrA (Start .. Stop - 1));
-            end if;
-         end;
-      end if;
-
-      if Msg.Contents.Is_Nested then
+      elsif Msg.Contents.Is_Nested then
          return Message_RFC822;
+
       else
          return Text_Plain;
       end if;
    end Get_Content_Type;
+
+   --------------
+   -- Get_Type --
+   --------------
+
+   function Get_Type (H : Header) return String is
+      use Ada.Strings;
+
+      H_Ustr : Unbounded_String;
+   begin
+      if H = Null_Header then
+         return "";
+      end if;
+
+      Flatten (H.Contents.Value, Result => H_Ustr);
+      declare
+         H_Str : constant String := Trim (To_String (H_Ustr), Both);
+         SC    : Integer;
+      begin
+         SC := H_Str'First;
+         while SC <= H_Str'Last
+                 and then
+               not (Is_Whitespace (H_Str (SC)) or else H_Str (SC) = ';')
+         loop
+            SC := SC + 1;
+         end loop;
+
+         return To_Lower (H_Str (H_Str'First .. SC - 1));
+      end;
+   end Get_Type;
 
    ----------------------------
    -- Convert_To_Single_Part --
