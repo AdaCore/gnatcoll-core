@@ -1297,9 +1297,13 @@ package body GNATCOLL.Scripts.Python is
       Code           : PyCodeObject;
       Tmp            : GNAT.Strings.String_Access;
       Indented_Input : constant Boolean := Command'Length > 0
-        and then
-          (Command (Command'First) = ASCII.HT
-           or else Command (Command'First) = ' ');
+        and then (Command (Command'First) = ASCII.HT
+                  or else Command (Command'First) = ' ');
+      At_Column_0    : constant Boolean := Command'Length = 0
+        or else Command (Command'Last) = ASCII.LF;
+      Starting_A_Block : constant Boolean := Command'Length > 0
+        and then Command (Command'Last) = ':';
+
       Cmd          : constant String := Script.Buffer.all & Command & ASCII.LF;
 
       Default_Console_Refed : Boolean := False;
@@ -1453,9 +1457,11 @@ package body GNATCOLL.Scripts.Python is
                         --    >>> if 1:
                         --    ...   pass
                         --    ... else:
-                        Script.Use_Secondary_Prompt :=
-                          Msg = "unexpected EOF while parsing"
-                          or else Msg = "expected an indented block";
+                        if Msg = "unexpected EOF while parsing" then
+                           Script.Use_Secondary_Prompt := Starting_A_Block;
+                        elsif Msg = "expected an indented block" then
+                           Script.Use_Secondary_Prompt := not At_Column_0;
+                        end if;
                      end;
                   end if;
 
