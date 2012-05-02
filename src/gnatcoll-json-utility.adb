@@ -152,6 +152,8 @@ package body GNATCOLL.JSON.Utility is
                      Idx := Idx + 4;
                   end;
 
+               when '"' =>
+                  Append (Unb, '"');
                when '\' =>
                   Append (Unb, '\');
                when 'b' =>

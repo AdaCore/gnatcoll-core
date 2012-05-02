@@ -4,6 +4,16 @@ Known Problems in Gnatcoll 1.4
 
 Copyright (C) 2011-2012, AdaCore
 
+KP-14-L429-003 JSON does not decode '\"' characters properly
+
+  Problem:    If the JSON you pass to GNATCOLL.JSON.Read contains the sequence
+              \", the latter is not properly decoded and an exception is raised
+              instead.
+
+  Status:     Fixed in Gnatcoll 1.5.0
+
+  Workaround: None.
+
 KP-14-L112-018 Traces.Syslog: storage_error on some systems
 
   Problem:    On some systems, sending traces to syslog results in a
