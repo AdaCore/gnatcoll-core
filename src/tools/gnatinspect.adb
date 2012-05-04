@@ -36,9 +36,8 @@ with GNATCOLL.Utils;             use GNATCOLL.Utils;
 with GNATCOLL.VFS;               use GNATCOLL.VFS;
 
 procedure GNATInspect is
+   Me : constant Trace_Handle := Create ("Inspect");
    use File_Sets;
-
-   History_File : constant String := ".gnatinspect_hist";
 
    function Command_Line_Completion
      (Full_Line, Text : String; Start, Last : Integer)
@@ -71,17 +70,18 @@ procedure GNATInspect is
    function Get_Entity (Arg : String) return Entity_Information;
    --  Return the entity matching the "name:file:line:column" argument
 
+   procedure Process_Calls (Args : Arg_List);
+   procedure Process_Decl (Args : Arg_List);
+   procedure Process_Depends_On (Args : Arg_List);
    procedure Process_Help (Args : Arg_List);
-   procedure Process_Project (Args : Arg_List);
-   procedure Process_Refresh (Args : Arg_List);
-   procedure Process_Shell (Args : Arg_List);
-   procedure Process_Refs (Args : Arg_List);
-   procedure Process_Params (Args : Arg_List);
    procedure Process_Importing (Args : Arg_List);
    procedure Process_Imports (Args : Arg_List);
-   procedure Process_Depends_On (Args : Arg_List);
    procedure Process_Name (Args : Arg_List);
-   procedure Process_Calls (Args : Arg_List);
+   procedure Process_Params (Args : Arg_List);
+   procedure Process_Project (Args : Arg_List);
+   procedure Process_Refresh (Args : Arg_List);
+   procedure Process_Refs (Args : Arg_List);
+   procedure Process_Shell (Args : Arg_List);
    --  Process the various commands.
    --  Args is the command line entered by the user, so Get_Command (Args) for
    --  instance is the command being executed.
@@ -132,6 +132,12 @@ procedure GNATInspect is
        new String'("List all entities called by the entity."),
        Process_Calls'Access),
 
+      (new String'("decl"),
+       new String'("name:file:line:column"),
+       new String'("Print the location of the declaration for the entity"
+           & " referenced at the given location"),
+       Process_Decl'Access),
+
       (new String'("help"),
        new String'("[command or variable name]"),
        new String'("Display the list of commands and their syntax."),
@@ -146,15 +152,6 @@ procedure GNATInspect is
        new String'("name:file:line:column"),
        new String'("Return the list of parameters for the subprogram"),
        Process_Params'Access),
-
-      (new String'("project"),
-       new String'("[file.gpr]"),
-       new String'("Load the project file, replacing the one currently"
-         & " loaded. This automatically loads the xref information into"
-         & " the database. If no .gpr file is specified, loads a default"
-         & " project that uses the current directory as its source directory"
-         & " and object directory"),
-       Process_Project'Access),
 
       (new String'("refresh"),
        null,
@@ -190,6 +187,8 @@ procedure GNATInspect is
       2 => (new String'("runtime"),
             new String'("Whether to include runtime files in the database")));
 
+   History_File : GNAT.Strings.String_Access;
+
    Complete_Command_List_Index : Integer;
    --  Global variable used by Complete_Command
 
@@ -201,7 +200,7 @@ procedure GNATInspect is
    Tree    : Project_Tree;
    --  The currently loaded project tree
 
-   Cmdline  : Command_Line_Configuration;
+   Cmdline               : Command_Line_Configuration;
    Commands_From_Switch  : aliased GNAT.Strings.String_Access;
    Commands_From_File    : aliased GNAT.Strings.String_Access;
    DB_Name               : aliased GNAT.Strings.String_Access :=
@@ -210,6 +209,7 @@ procedure GNATInspect is
    Include_Runtime_Files : aliased Boolean;
    Display_Full_Paths    : aliased Boolean;
    Verbose               : aliased Boolean;
+   Project_Name          : aliased GNAT.Strings.String_Access;
    --  The options from the command line
 
    ----------------------
@@ -370,6 +370,7 @@ procedure GNATInspect is
       Free (GNAT_Version);
 
       if Args_Length (Args) < 1 then
+         Trace (Me, "processing 'PROJECT' empty");
          Project_Is_Default := True;
          Tree.Load_Empty_Project
            (Env               => Env,
@@ -382,14 +383,13 @@ procedure GNATInspect is
            (Languages_Attribute, (1 => new String'("Ada")));
          Tree.Recompute_View (Errors => Ada.Text_IO.Put_Line'Access);
       else
+         Trace (Me, "processing 'PROJECT' '" & Nth_Arg (Args, 1) & "'");
          Project_Is_Default := False;
          Tree.Load
            (Root_Project_Path => Create (+Nth_Arg (Args, 1)),
             Env               => Env,
             Errors            => Put_Line'Access);
       end if;
-
-      Process_Refresh (Empty_Command_Line);
 
    exception
       when GNATCOLL.Projects.Invalid_Project =>
@@ -648,6 +648,7 @@ procedure GNATInspect is
                      Process_Line (Expr (C)
                                    (Expr (C)'First + 5 .. Expr (C)'Last));
                      Put_Line (Duration'Image (Clock - Start) & " s");
+
                   else
                      for Co in Commands'Range loop
                         if Commands (Co).Name.all = Cmd then
@@ -822,14 +823,41 @@ procedure GNATInspect is
       Dump (Callees);
    end Process_Calls;
 
+   ------------------
+   -- Process_Decl --
+   ------------------
+
+   procedure Process_Decl (Args : Arg_List) is
+      Entity  : Entity_Information;
+      Decl    : Entity_Declaration;
+      Count   : Natural := 0;
+   begin
+      if Args_Length (Args) /= 1 then
+         Put_Line ("Invalid number of arguments");
+         return;
+      end if;
+
+      Entity := Get_Entity (Nth_Arg (Args, 1));
+
+      if Entity /= No_Entity then
+         Decl := Xref.Declaration (Entity);
+         Output_Prefix (Count);
+         Put_Line (To_String (Decl.Name)
+                   & ":" & Image (Decl.Location.File)
+                   & ":" & Image (Decl.Location.Line, Min_Width => 0)
+                   & ":" & Image (Decl.Location.Column, Min_Width => 0));
+      end if;
+   end Process_Decl;
+
    ---------------
    -- On_Ctrl_C --
    ---------------
 
    procedure On_Ctrl_C is
    begin
-      GNATCOLL.Readline.Finalize (History_File => History_File);
+      GNATCOLL.Readline.Finalize (History_File => History_File.all);
       Free (Xref);
+      Free (History_File);
       GNAT.OS_Lib.OS_Exit (0);
    end On_Ctrl_C;
 
@@ -879,11 +907,45 @@ begin
       Switch      => "-v",
       Long_Switch => "--verbose",
       Help        => "Print commands before executing them");
+   Define_Switch
+     (Cmdline,
+      Output      => Project_Name'Access,
+      Switch      => "-P:",
+      Long_Switch => "--project=",
+      Help        => "Load the given project. If unspecified, use sources and"
+        & " ALI files from current directory.");
 
    Getopt (Cmdline);
 
-   Xref.Setup_DB (GNATCOLL.SQL.Sqlite.Setup (Database => DB_Name.all));
-   Process_Project (Empty_Command_Line);   --  Load default project
+   if Project_Name.all = "" then
+      Process_Project (Empty_Command_Line);   --  Load files from current dir
+   else
+      declare
+         List : Arg_List;
+      begin
+         Set_Nth_Arg (List, 1, Project_Name.all);
+         Process_Project (List);
+      end;
+   end if;
+
+   if DB_Name.all /= ":memory:" then
+      declare
+         N : constant String := DB_Name.all;
+      begin
+         Free (DB_Name);
+         DB_Name := new String'
+           (Create_From_Dir
+              (Dir       => Tree.Root_Project.Object_Dir,
+               Base_Name => +N).Display_Full_Name);
+      end;
+   end if;
+
+   Xref.Setup_DB
+     (GNATCOLL.SQL.Sqlite.Setup (Database => DB_Name.all));
+
+   --  Initial loading of the database
+
+   Process_Refresh (Empty_Command_Line);
 
    if Commands_From_Switch.all /= "" then
       Process_Line (Commands_From_Switch.all);
@@ -893,11 +955,16 @@ begin
       return;
    end if;
 
+   History_File := new String'
+     (Create_From_Dir
+        (Dir       => Tree.Root_Project.Object_Dir,
+         Base_Name => +".gnatinspect_hist").Display_Full_Name);
+
    Install_Ctrl_C_Handler (On_Ctrl_C'Access);
 
    GNATCOLL.Readline.Initialize
      (Appname      => "gnatcollxref",
-      History_File => History_File,
+      History_File => History_File.all,
       Completer    => Command_Line_Completion'Unrestricted_Access);
 
    Put_Line ("Type 'help' for more information");

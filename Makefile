@@ -77,13 +77,14 @@ endif
 ## However, we do not force a recompilation here for now, so that we can still
 ## run the tests on the current binaries, even if we are doing some modifs
 ## that are not yet compilable
+test_names=
 test: 
 	@${MAKE} prefix=${shell pwd}/local_install install >/dev/null
-	@${MAKE} prefix=${shell pwd}/local_install -C testsuite
+	@${MAKE} prefix=${shell pwd}/local_install test_names="${test_names}" -C testsuite
 
 test_verbose:
 	@${MAKE} prefix=${shell pwd}/local_install install >/dev/null
-	@${MAKE} prefix=${shell pwd}/local_install -C testsuite verbose
+	@${MAKE} prefix=${shell pwd}/local_install test_names="${test_names}" -C testsuite verbose
 
 ## GNU standards say we must not recompile in such a case
 ## Install either the static or the shared lib, based on the value of
