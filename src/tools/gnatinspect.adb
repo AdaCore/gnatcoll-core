@@ -70,6 +70,7 @@ procedure GNATInspect is
    function Get_Entity (Arg : String) return Entity_Information;
    --  Return the entity matching the "name:file:line:column" argument
 
+   procedure Process_Body (Args : Arg_List);
    procedure Process_Calls (Args : Arg_List);
    procedure Process_Decl (Args : Arg_List);
    procedure Process_Depends_On (Args : Arg_List);
@@ -95,6 +96,7 @@ procedure GNATInspect is
 
    procedure Dump (Curs : in out Files_Cursor);
    procedure Dump (Curs : in out Entities_Cursor);
+   procedure Dump (Refs : in out References_Cursor; Name : String);
    procedure Dump (Curs : File_Sets.Set);
    --  Display the list of files
 
@@ -137,6 +139,12 @@ procedure GNATInspect is
        new String'("Print the location of the declaration for the entity"
            & " referenced at the given location"),
        Process_Decl'Access),
+
+      (new String'("body"),
+       new String'("name:file:line:column"),
+       new String'("Print the location of the body for the entity"
+           & " referenced at the given location"),
+       Process_Body'Access),
 
       (new String'("help"),
        new String'("[command or variable name]"),
@@ -500,30 +508,18 @@ procedure GNATInspect is
       end if;
    end Output_Prefix;
 
-   ------------------
-   -- Process_Refs --
-   ------------------
+   ----------
+   -- Dump --
+   ----------
 
-   procedure Process_Refs (Args : Arg_List) is
-      Entity : Entity_Information;
-      Refs   : References_Cursor;
+   procedure Dump (Refs : in out References_Cursor; Name : String) is
       Ref    : Entity_Reference;
       Count  : Natural := 1;
-      Name   : Unbounded_String;
    begin
-      if Args_Length (Args) /= 1 then
-         Put_Line ("Invalid number of arguments");
-         return;
-      end if;
-
-      Entity := Get_Entity (Nth_Arg (Args, 1));
-      Name   := Xref.Declaration (Entity).Name;
-
-      Refs := Xref.References (Entity);
       while Has_Element (Refs) loop
          Ref := Refs.Element;
          Output_Prefix (Count);
-         Put (To_String (Name) & ':' & Image (Ref.File) & ":"
+         Put (Name & ':' & Image (Ref.File) & ":"
               & Image (Ref.Line, Min_Width => 0)
               & ':'
               & Image (Ref.Column, Min_Width => 0)
@@ -537,6 +533,24 @@ procedure GNATInspect is
 
          Next (Refs);
       end loop;
+   end Dump;
+
+   ------------------
+   -- Process_Refs --
+   ------------------
+
+   procedure Process_Refs (Args : Arg_List) is
+      Entity : Entity_Information;
+      Refs   : References_Cursor;
+   begin
+      if Args_Length (Args) /= 1 then
+         Put_Line ("Invalid number of arguments");
+         return;
+      end if;
+
+      Entity := Get_Entity (Nth_Arg (Args, 1));
+      Refs := Xref.References (Entity);
+      Dump (Refs, To_String (Xref.Declaration (Entity).Name));
    end Process_Refs;
 
    --------------------
@@ -713,7 +727,7 @@ procedure GNATInspect is
 
    procedure Dump (Curs : in out Files_Cursor) is
       F     : Virtual_File;
-      Count : Natural := 0;
+      Count : Natural := 1;
    begin
       while Curs.Has_Element loop
          F := Curs.Element;
@@ -729,7 +743,7 @@ procedure GNATInspect is
 
    procedure Dump (Curs : in out Entities_Cursor) is
       E : Entity_Information;
-      Count : Natural := 0;
+      Count : Natural := 1;
    begin
       while Curs.Has_Element loop
          E := Curs.Element;
@@ -745,7 +759,7 @@ procedure GNATInspect is
 
    procedure Dump (Curs : File_Sets.Set) is
       C : File_Sets.Cursor := Curs.First;
-      Count : Natural := 0;
+      Count : Natural := 1;
    begin
       while Has_Element (C) loop
          Output_Prefix (Count);
@@ -793,7 +807,7 @@ procedure GNATInspect is
 
    procedure Process_Name (Args : Arg_List) is
       Entity : Entity_Information;
-      Count  : Natural := 0;
+      Count  : Natural := 1;
    begin
       if Args_Length (Args) /= 1 then
          Put_Line ("Invalid number of arguments");
@@ -830,7 +844,7 @@ procedure GNATInspect is
    procedure Process_Decl (Args : Arg_List) is
       Entity  : Entity_Information;
       Decl    : Entity_Declaration;
-      Count   : Natural := 0;
+      Count   : Natural := 1;
    begin
       if Args_Length (Args) /= 1 then
          Put_Line ("Invalid number of arguments");
@@ -848,6 +862,24 @@ procedure GNATInspect is
                    & ":" & Image (Decl.Location.Column, Min_Width => 0));
       end if;
    end Process_Decl;
+
+   ------------------
+   -- Process_Body --
+   ------------------
+
+   procedure Process_Body (Args : Arg_List) is
+      Entity  : Entity_Information;
+      Refs    : References_Cursor;
+   begin
+      if Args_Length (Args) /= 1 then
+         Put_Line ("Invalid number of arguments");
+         return;
+      end if;
+
+      Entity := Get_Entity (Nth_Arg (Args, 1));
+      Refs := Xref.Bodies (Entity);
+      Dump (Refs, To_String (Xref.Declaration (Entity).Name));
+   end Process_Body;
 
    ---------------
    -- On_Ctrl_C --

@@ -179,6 +179,12 @@ package GNATCOLL.Xref is
      (Self   : Xref_Database'Class;
       Entity : Entity_Information) return References_Cursor;
 
+   function Bodies
+     (Self   : Xref_Database'Class;
+      Entity : Entity_Information) return References_Cursor;
+   --  Return the location for the bodies of entities, or their full
+   --  declaration in the case of private entities.
+
    type Entities_Cursor is new Base_Cursor with private;
    function Element (Self : Entities_Cursor) return Entity_Information;
 

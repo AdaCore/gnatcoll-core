@@ -23,15 +23,15 @@ with Ada.Containers.Hashed_Maps;
 with Ada.Containers.Vectors;
 with Ada.Unchecked_Conversion;
 with Ada.Unchecked_Deallocation;
-with GNAT.OS_Lib;           use GNAT.OS_Lib;
-with GNATCOLL.Xref.Database; use GNATCOLL.Xref.Database;
-with GNATCOLL.Mmap;         use GNATCOLL.Mmap;
-with GNATCOLL.SQL;          use GNATCOLL.SQL;
-with GNATCOLL.SQL.Inspect;  use GNATCOLL.SQL.Inspect;
+with GNAT.OS_Lib;             use GNAT.OS_Lib;
+with GNATCOLL.Xref.Database;  use GNATCOLL.Xref.Database;
+with GNATCOLL.Mmap;           use GNATCOLL.Mmap;
+with GNATCOLL.SQL;            use GNATCOLL.SQL;
+with GNATCOLL.SQL.Inspect;    use GNATCOLL.SQL.Inspect;
 with GNATCOLL.SQL.Sqlite;
-with GNATCOLL.Traces;       use GNATCOLL.Traces;
-with GNATCOLL.Utils;        use GNATCOLL.Utils;
-with GNATCOLL.VFS;          use GNATCOLL.VFS;
+with GNATCOLL.Traces;         use GNATCOLL.Traces;
+with GNATCOLL.Utils;          use GNATCOLL.Utils;
+with GNATCOLL.VFS;            use GNATCOLL.VFS;
 
 package body GNATCOLL.Xref is
    use Library_Info_Lists;
@@ -333,6 +333,28 @@ package body GNATCOLL.Xref is
                 & Database.Entity_Refs.Line & Database.Entity_Refs.Column,
              Distinct => True),
         On_Server => True, Name => "references");
+
+   Q_References_And_Kind : constant Prepared_Statement :=
+     Prepare
+       (SQL_Select
+            (To_List
+                 ((Q_Ref_File_Id => +Database.Files.Id,
+                   Q_Ref_File    => +Database.Files.Path,
+                   Q_Ref_Line    => +Database.Entity_Refs.Line,
+                   Q_Ref_Col     => +Database.Entity_Refs.Column,
+                   Q_Ref_Kind    => +Database.Reference_Kinds.Display,
+                   Q_Ref_Caller  => +Database.Entity_Refs.Caller)),
+             From => Database.Entity_Refs & Database.Files
+             & Database.Reference_Kinds,
+             Where => Database.Entity_Refs.File = Database.Files.Id
+             and Database.Entity_Refs.Kind = Database.Reference_Kinds.Id
+             and Database.Reference_Kinds.Id = Text_Param (2)
+             and Database.Entity_Refs.Entity = Integer_Param (1),
+
+             Order_By => Database.Files.Path
+             & Database.Entity_Refs.Line & Database.Entity_Refs.Column,
+             Distinct => True),
+        On_Server => True, Name => "references_and_kind");
 
    N_Files2 : aliased String := "f2";
    Files2 : T_Files (N_Files2'Access);
@@ -2041,8 +2063,22 @@ package body GNATCOLL.Xref is
                Start := Index;
                Skip_Word;
 
-               Dep_Id := Insert_Source_File
-                 (Basename => String (Str (Start .. Index - 1)));
+               --  Is this a dependency for a separate unit ? GNAT will not
+               --  generate a 'U' line for separates, but special D lines that
+               --  list the name of the unit, as in:
+               --       D a~bar.adb 20111220095636 1986a86b a.bar
+
+               declare
+                  Base_Last : constant Integer := Index - 1;
+               begin
+                  Skip_Spaces;
+                  Skip_Word;
+                  Skip_Spaces;
+                  Skip_Word;
+                  Dep_Id := Insert_Source_File
+                    (Basename => String (Str (Start .. Base_Last)),
+                     Is_ALI_Unit => Str (Index) /= ASCII.LF);
+               end;
 
                Depid_To_Id.Set_Length (Ada.Containers.Count_Type (D_Line_Id));
                Depid_To_Id.Replace_Element
@@ -2693,6 +2729,24 @@ package body GNATCOLL.Xref is
          return No_Entity_Declaration;
       end if;
    end Declaration;
+
+   ------------
+   -- Bodies --
+   ------------
+
+   function Bodies
+     (Self   : Xref_Database'Class;
+      Entity : Entity_Information) return References_Cursor
+   is
+      Curs : References_Cursor;
+      Kind : aliased String := "b";
+   begin
+      Curs.DBCursor.Fetch
+        (Self.DB, Q_References_And_Kind,
+         Params => (1 => +Entity.Id,
+                    2 => +Kind'Access));
+      return Curs;
+   end Bodies;
 
    -------------
    -- Element --
