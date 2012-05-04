@@ -196,12 +196,29 @@ package GNATCOLL.Xref is
    function Calls
      (Self   : Xref_Database'Class;
       Entity : Entity_Information) return Entities_Cursor;
-   --   All entities called by Self
+   --  All entities called by Self
 
    function Callers
      (Self   : Xref_Database'Class;
       Entity : Entity_Information) return Entities_Cursor;
-   --   All entities calling Self
+   --  All entities calling Self
+
+   function Child_Types
+     (Self   : Xref_Database'Class;
+      Entity : Entity_Information) return Entities_Cursor;
+   --  The child types for the entity (for instance the classes derived from
+   --  Self).
+
+   function Parent_Types
+     (Self   : Xref_Database'Class;
+      Entity : Entity_Information) return Entities_Cursor;
+   --  The parent types for the entity (for instance the classes or interfaces
+   --  from which Self derives).
+
+   function Methods
+     (Self   : Xref_Database'Class;
+      Entity : Entity_Information) return Entities_Cursor;
+   --  The primitive operations (or methods) of Self
 
    type Parameter_Kind is
      (In_Parameter,

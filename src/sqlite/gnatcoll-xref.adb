@@ -16,7 +16,6 @@
 ------------------------------------------------------------------------------
 
 with Ada.Calendar;            use Ada.Calendar;
-with Ada.Characters.Handling; use Ada.Characters.Handling;
 with Ada.Containers;          use Ada.Containers;
 with Ada.Containers.Doubly_Linked_Lists;
 with Ada.Containers.Hashed_Maps;
@@ -71,6 +70,12 @@ package body GNATCOLL.Xref is
    type Access_String is access constant String;
    function Convert is new Ada.Unchecked_Conversion
      (Cst_Filesystem_String_Access, Access_String);
+
+   N_Files2 : aliased String := "f2";
+   Files2 : T_Files (N_Files2'Access);
+
+   N_Entities2 : aliased String := "e2";
+   Entities2 : T_Entities (N_Entities2'Access);
 
    Query_Get_File : constant Prepared_Statement :=
      Prepare
@@ -274,6 +279,38 @@ package body GNATCOLL.Xref is
         On_Server => True, Name => "parameters");
    --  Retrieve the list of parameters for the entity in $1
 
+   Query_E2E_From : constant Prepared_Statement :=
+     Prepare
+       (SQL_Select
+            (Entities2.Id
+             & Entities2.Name
+             & Entities2.Decl_Line
+             & Entities2.Decl_Column,
+             From => Entities2 & Database.E2e,
+             Where => Database.E2e.fromEntity = Integer_Param (1)
+             and Database.E2e.Kind = Integer_Param (2)
+             and Database.E2e.toEntity = Entities2.Id,
+             Order_By =>
+               Entities2.Name & Entities2.Decl_Line & Entities2.Decl_Column,
+             Distinct => True),
+        On_Server => True, Name => "e2e_from");
+
+   Query_E2E_To : constant Prepared_Statement :=
+     Prepare
+       (SQL_Select
+            (Entities2.Id
+             & Entities2.Name
+             & Entities2.Decl_Line
+             & Entities2.Decl_Column,
+             From => Entities2 & Database.E2e,
+             Where => Database.E2e.toEntity = Integer_Param (1)
+             and Database.E2e.Kind = Integer_Param (2)
+             and Database.E2e.fromEntity = Entities2.Id,
+             Order_By =>
+               Entities2.Name & Entities2.Decl_Line & Entities2.Decl_Column,
+             Distinct => True),
+        On_Server => True, Name => "e2e_to");
+
    Q_Decl_Name   : constant := 0;
    Q_Decl_File   : constant := 1;
    Q_Decl_Line   : constant := 2;
@@ -355,12 +392,6 @@ package body GNATCOLL.Xref is
              & Database.Entity_Refs.Line & Database.Entity_Refs.Column,
              Distinct => True),
         On_Server => True, Name => "references_and_kind");
-
-   N_Files2 : aliased String := "f2";
-   Files2 : T_Files (N_Files2'Access);
-
-   N_Entities2 : aliased String := "e2";
-   Entities2 : T_Entities (N_Entities2'Access);
 
    package VFS_To_Ids is new Ada.Containers.Hashed_Maps
      (Key_Type        => Virtual_File,
@@ -1702,12 +1733,10 @@ package body GNATCOLL.Xref is
                            Eid := E2e_Returns;
                         when 'n' =>
                            Eid := E2e_From_Enumeration;
+                        when 'J' | 'j' | 'r' | 'R' =>
+                           Eid := E2e_Parent_Type;
                         when others =>
-                           if Is_Upper (Str (Name_End)) then
-                              Eid := E2e_Parent_Type;
-                           else
-                              Eid := E2e_Of_Type;
-                           end if;
+                           Eid := E2e_Of_Type;
                      end case;
 
                      if not Get_Ref_Or_Predefined
@@ -3081,5 +3110,56 @@ package body GNATCOLL.Xref is
          Params => (1 => +Entity.Id));
       return Curs;
    end Callers;
+
+   -----------------
+   -- Child_Types --
+   -----------------
+
+   function Child_Types
+     (Self   : Xref_Database'Class;
+      Entity : Entity_Information) return Entities_Cursor
+   is
+      Curs : Entities_Cursor;
+   begin
+      Curs.DBCursor.Fetch
+        (Self.DB,
+         Query_E2E_To,
+         Params => (1 => +Entity.Id, 2 => +E2e_Parent_Type));
+      return Curs;
+   end Child_Types;
+
+   ------------------
+   -- Parent_Types --
+   ------------------
+
+   function Parent_Types
+     (Self   : Xref_Database'Class;
+      Entity : Entity_Information) return Entities_Cursor
+   is
+      Curs : Entities_Cursor;
+   begin
+      Curs.DBCursor.Fetch
+        (Self.DB,
+         Query_E2E_From,
+         Params => (1 => +Entity.Id, 2 => +E2e_Parent_Type));
+      return Curs;
+   end Parent_Types;
+
+   -------------
+   -- Methods --
+   -------------
+
+   function Methods
+     (Self   : Xref_Database'Class;
+      Entity : Entity_Information) return Entities_Cursor
+   is
+      Curs : Entities_Cursor;
+   begin
+      Curs.DBCursor.Fetch
+        (Self.DB,
+         Query_E2E_From,
+         Params => (1 => +Entity.Id, 2 => +E2e_Has_Primitive));
+      return Curs;
+   end Methods;
 
 end GNATCOLL.Xref;

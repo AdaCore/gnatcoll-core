@@ -73,13 +73,16 @@ procedure GNATInspect is
    procedure Process_Body (Args : Arg_List);
    procedure Process_Calls (Args : Arg_List);
    procedure Process_Callers (Args : Arg_List);
+   procedure Process_Child_Types (Args : Arg_List);
    procedure Process_Decl (Args : Arg_List);
    procedure Process_Depends_On (Args : Arg_List);
    procedure Process_Help (Args : Arg_List);
    procedure Process_Importing (Args : Arg_List);
    procedure Process_Imports (Args : Arg_List);
+   procedure Process_Methods (Args : Arg_List);
    procedure Process_Name (Args : Arg_List);
    procedure Process_Params (Args : Arg_List);
+   procedure Process_Parent_Types (Args : Arg_List);
    procedure Process_Project (Args : Arg_List);
    procedure Process_Refresh (Args : Arg_List);
    procedure Process_Refs (Args : Arg_List);
@@ -123,6 +126,24 @@ procedure GNATInspect is
        new String'("List the files that the file imports (via with statements"
          & " in Ada or #include in C for instance). See also 'depends_on'"),
        Process_Imports'Access),
+
+      (new String'("child_types"),
+       new String'("name:file:line:column"),
+       new String'("The list of child types of the entity (for instance"
+         & " classes that inherit from the entity). See also 'parent_types'"),
+       Process_Child_Types'Access),
+
+      (new String'("parent_types"),
+       new String'("name:file:line:column"),
+       new String'("The parent types of the entity (for instance the classes"
+           & " or interfaces from which it derives). See also 'child_types'"),
+       Process_Parent_Types'Access),
+
+      (new String'("methods"),
+       new String'("name:file:line:column"),
+       new String'("Returns the list of methods (or primitive operations) for"
+           & " the entity"),
+       Process_Methods'Access),
 
       (new String'("depends"),
        new String'("filename"),
@@ -866,6 +887,60 @@ procedure GNATInspect is
       Callers := Xref.Callers (Entity);
       Dump (Callers);
    end Process_Callers;
+
+   -------------------------
+   -- Process_Child_Types --
+   -------------------------
+
+   procedure Process_Child_Types (Args : Arg_List) is
+      Entity   : Entity_Information;
+      Children : Entities_Cursor;
+   begin
+      if Args_Length (Args) /= 1 then
+         Put_Line ("Invalid number of arguments");
+         return;
+      end if;
+
+      Entity := Get_Entity (Nth_Arg (Args, 1));
+      Children := Xref.Child_Types (Entity);
+      Dump (Children);
+   end Process_Child_Types;
+
+   --------------------------
+   -- Process_Parent_Types --
+   --------------------------
+
+   procedure Process_Parent_Types (Args : Arg_List) is
+      Entity   : Entity_Information;
+      Children : Entities_Cursor;
+   begin
+      if Args_Length (Args) /= 1 then
+         Put_Line ("Invalid number of arguments");
+         return;
+      end if;
+
+      Entity := Get_Entity (Nth_Arg (Args, 1));
+      Children := Xref.Parent_Types (Entity);
+      Dump (Children);
+   end Process_Parent_Types;
+
+   ---------------------
+   -- Process_Methods --
+   ---------------------
+
+   procedure Process_Methods (Args : Arg_List) is
+      Entity   : Entity_Information;
+      Children : Entities_Cursor;
+   begin
+      if Args_Length (Args) /= 1 then
+         Put_Line ("Invalid number of arguments");
+         return;
+      end if;
+
+      Entity := Get_Entity (Nth_Arg (Args, 1));
+      Children := Xref.Methods (Entity);
+      Dump (Children);
+   end Process_Methods;
 
    ------------------
    -- Process_Decl --
