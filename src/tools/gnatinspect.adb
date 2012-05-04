@@ -137,7 +137,7 @@ procedure GNATInspect is
        new String'("Display the list of commands and their syntax."),
        Process_Help'Access),
 
-      (new String'("name"),
+      (new String'("qname"),
        new String'("name:file:line:column"),
        new String'("Return the fully qualified name for the entity"),
        Process_Name'Access),
