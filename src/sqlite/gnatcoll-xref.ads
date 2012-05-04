@@ -148,6 +148,11 @@ package GNATCOLL.Xref is
    --  basename (or a string like "partial/path/basename") that will be matched
    --  against all known files in the database.
 
+   function Is_Fuzzy_Match (Self : Entity_Information) return Boolean;
+   --  Returns True if the entity that was found is only an apprcximation,
+   --  because no exact match was found. This can happen when the ALI files
+   --  haven't been recompiled from the sources, for instance.
+
    type Entity_Reference is record
       File   : GNATCOLL.VFS.Virtual_File;
       Line   : Integer;
@@ -250,10 +255,11 @@ private
    end record;
 
    type Entity_Information is record
-      Id          : Integer;
+      Id    : Integer;
+      Fuzzy : Boolean := False;
    end record;
    No_Entity : constant Entity_Information :=
-     (Id => -1);
+     (Id => -1, Fuzzy => True);
 
    No_Entity_Reference : constant Entity_Reference :=
      (File   => GNATCOLL.VFS.No_File,

@@ -367,6 +367,8 @@ package GNATCOLL.SQL is
       is new Time_Fields.SQL_Function ("current_timestamp");
    --  Return the current date or timestamp
 
+   function Absolute
+     (Field : Integer_Fields.Field'Class) return Integer_Fields.Field'Class;
    function Lower
      (Field : Text_Fields.Field'Class) return Text_Fields.Field'Class;
    function Initcap

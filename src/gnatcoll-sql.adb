@@ -801,6 +801,19 @@ package body GNATCOLL.SQL is
       return Internal (Field);
    end Extract;
 
+   --------------
+   -- Absolute --
+   --------------
+
+   function Absolute
+     (Field : Integer_Fields.Field'Class) return Integer_Fields.Field'Class
+   is
+      function Internal is new Integer_Fields.Apply_Function
+        (Integer_Fields.Field, "ABS (");
+   begin
+      return Internal (Field);
+   end Absolute;
+
    -----------
    -- Lower --
    -----------

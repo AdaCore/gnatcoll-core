@@ -2553,6 +2553,15 @@ package body GNATCOLL.Xref is
       end if;
    end Free;
 
+   --------------------
+   -- Is_Fuzzy_Match --
+   --------------------
+
+   function Is_Fuzzy_Match (Self : Entity_Information) return Boolean is
+   begin
+      return Self.Fuzzy;
+   end Is_Fuzzy_Match;
+
    ----------------
    -- Get_Entity --
    ----------------
@@ -2568,6 +2577,8 @@ package body GNATCOLL.Xref is
       Q  : SQL_Query;
       C  : SQL_Criteria;
       Entity : Entity_Information := No_Entity;
+      Distance, Dist  : Natural;
+
    begin
       --  First test whether the user has passed the location of the
       --  declaration.
@@ -2615,8 +2626,7 @@ package body GNATCOLL.Xref is
             and Database.Entities.Name = Text_Param (1)
             and Like (Database.Files.Path, '%' & File)
             and C,
-            Distinct => True,
-            Limit    => 1);
+            Distinct => True);
 
          R.Fetch
            (Self.DB, Q,
@@ -2624,13 +2634,61 @@ package body GNATCOLL.Xref is
       end if;
 
       if R.Has_Row then
-         Entity := (Id => R.Integer_Value (0));
+         Entity := (Id => R.Integer_Value (0), Fuzzy => False);
          R.Next;
 
          if R.Has_Row then
             --  Overloaded entity found
             Entity := No_Entity;
          end if;
+         return Entity;
+      end if;
+
+      --  Not found ? Try an approximate match (if some location was provided
+      --  by the user, otherwise the scope is just too big and approximation
+      --  would be just a wild guess).
+      --  The algorithm is as follows: we find all homonym entities within a
+      --  given range, and then chose the one closest to the initial location
+      --  provided by the user
+
+      if Line /= -1 then
+         Entity := No_Entity;
+         Distance := Integer'Last;
+
+         declare
+            use type Integer_Fields.Field;
+         begin
+            C := Absolute (Database.Entity_Refs.Line - Line) < 10;
+            if Column /= -1 then
+               C := C and Absolute (Database.Entity_Refs.Column - Column) < 20;
+            end if;
+         end;
+
+         Q := SQL_Select
+           (Database.Entity_Refs.Entity
+            & Database.Entity_Refs.Line
+            & Database.Entity_Refs.Column,
+            From => Database.Entity_Refs & Database.Entities & Database.Files,
+            Where => Database.Entity_Refs.Entity = Database.Entities.Id
+            and Database.Entity_Refs.File = Database.Files.Id
+            and Database.Entities.Name = Text_Param (1)
+            and Like (Database.Files.Path, '%' & File)
+            and C,
+            Distinct => True);
+
+         R.Fetch
+           (Self.DB, Q,
+            Params => (1 => +Name'Unrestricted_Access));
+         while R.Has_Row loop
+            Dist := abs (Line - Integer_Value (R, 1))
+              + abs (Column - Integer_Value (R, 2)) * 250;
+            if Dist < Distance then
+               Entity := (Id => R.Integer_Value (0), Fuzzy => True);
+               Distance := Dist;
+            end if;
+
+            R.Next;
+         end loop;
       end if;
 
       return Entity;
@@ -2674,9 +2732,15 @@ package body GNATCOLL.Xref is
 
    function Element (Self : References_Cursor) return Entity_Reference is
       Scope : Entity_Information := No_Entity;
+      Id    : Integer;
    begin
       if not Self.DBCursor.Is_Null (Q_Ref_Caller) then
-         Scope := (Id => Self.DBCursor.Integer_Value (Q_Ref_Caller));
+         Id := Self.DBCursor.Integer_Value (Q_Ref_Caller);
+         if Id < 0 then
+            Scope := No_Entity;
+         else
+            Scope := (Id => Id, Fuzzy => False);
+         end if;
       end if;
 
       return Entity_Reference'
@@ -2709,14 +2773,20 @@ package body GNATCOLL.Xref is
      (Xref   : Xref_Database'Class;
       Entity : Entity_Information) return Entity_Declaration
    is
-      Curs : Forward_Cursor;
+      Curs  : Forward_Cursor;
       Scope : Entity_Information := No_Entity;
+      Id    : Integer;
    begin
       Curs.Fetch (Xref.DB, Query_Declaration, Params => (1 => +Entity.Id));
 
       if Curs.Has_Row then
          if not Curs.Is_Null (Q_Decl_Caller) then
-            Scope := (Id => Curs.Integer_Value (Q_Decl_Caller));
+            Id := Curs.Integer_Value (Q_Decl_Caller);
+            if Id < 0 then
+               Scope := No_Entity;
+            else
+               Scope := (Id => Id, Fuzzy => False);
+            end if;
          end if;
 
          return (Name => To_Unbounded_String (Curs.Value (Q_Decl_Name)),
@@ -2754,7 +2824,8 @@ package body GNATCOLL.Xref is
 
    function Element (Self : Entities_Cursor) return Entity_Information is
    begin
-      return Entity_Information'(Id => Integer_Value (Self.DBCursor, 0));
+      return Entity_Information'(Id => Integer_Value (Self.DBCursor, 0),
+                                Fuzzy => False);
    end Element;
 
    -------------
@@ -2774,7 +2845,8 @@ package body GNATCOLL.Xref is
 
       return Parameter_Information'
         (Parameter =>
-           (Id => Integer_Value (Self.DBCursor, Q_Parameters_Toentity)),
+           (Id    => Integer_Value (Self.DBCursor, Q_Parameters_Toentity),
+            Fuzzy => False),
          Kind      => Kind);
    end Element;
 
