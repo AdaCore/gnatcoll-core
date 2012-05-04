@@ -12,6 +12,7 @@ docs/_build
 
 *.cgpr
 
+testsuite/json/json1/decode
 testsuite/pools/testpools
 testsuite/readline/read1/.gnatcolltest
 testsuite/readline/read1/main
