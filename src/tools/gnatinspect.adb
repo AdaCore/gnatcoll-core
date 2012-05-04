@@ -72,6 +72,7 @@ procedure GNATInspect is
 
    procedure Process_Body (Args : Arg_List);
    procedure Process_Calls (Args : Arg_List);
+   procedure Process_Callers (Args : Arg_List);
    procedure Process_Decl (Args : Arg_List);
    procedure Process_Depends_On (Args : Arg_List);
    procedure Process_Help (Args : Arg_List);
@@ -131,8 +132,15 @@ procedure GNATInspect is
 
       (new String'("calls"),
        new String'("name:file:line:column"),
-       new String'("List all entities called by the entity."),
+       new String'("List all entities called by the entity"),
        Process_Calls'Access),
+
+      (new String'("callers"),
+       new String'("name:file:line:column"),
+       new String'("List all entities that call the entity. This information"
+         & " also available from a call to 'refs', but 'callers' return the"
+         & " callers directly, instead of references to the original entity"),
+       Process_Callers'Access),
 
       (new String'("decl"),
        new String'("name:file:line:column"),
@@ -840,6 +848,24 @@ procedure GNATInspect is
       Callees := Xref.Calls (Entity);
       Dump (Callees);
    end Process_Calls;
+
+   ---------------------
+   -- Process_Callers --
+   ---------------------
+
+   procedure Process_Callers (Args : Arg_List) is
+      Entity  : Entity_Information;
+      Callers : Entities_Cursor;
+   begin
+      if Args_Length (Args) /= 1 then
+         Put_Line ("Invalid number of arguments");
+         return;
+      end if;
+
+      Entity := Get_Entity (Nth_Arg (Args, 1));
+      Callers := Xref.Callers (Entity);
+      Dump (Callers);
+   end Process_Callers;
 
    ------------------
    -- Process_Decl --

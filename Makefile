@@ -78,12 +78,14 @@ endif
 ## run the tests on the current binaries, even if we are doing some modifs
 ## that are not yet compilable
 test_names=
-test: 
+
+local_install: force
 	@${MAKE} prefix=${shell pwd}/local_install install >/dev/null
+
+test: local_install
 	@${MAKE} prefix=${shell pwd}/local_install test_names="${test_names}" -C testsuite
 
-test_verbose:
-	@${MAKE} prefix=${shell pwd}/local_install install >/dev/null
+test_verbose: local_install
 	@${MAKE} prefix=${shell pwd}/local_install test_names="${test_names}" -C testsuite verbose
 
 ## GNU standards say we must not recompile in such a case
@@ -138,3 +140,5 @@ endif
 
 docs:
 	${MAKE} -C docs html latexpdf
+
+force:

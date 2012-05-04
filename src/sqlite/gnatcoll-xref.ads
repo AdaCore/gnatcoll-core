@@ -198,6 +198,11 @@ package GNATCOLL.Xref is
       Entity : Entity_Information) return Entities_Cursor;
    --   All entities called by Self
 
+   function Callers
+     (Self   : Xref_Database'Class;
+      Entity : Entity_Information) return Entities_Cursor;
+   --   All entities calling Self
+
    type Parameter_Kind is
      (In_Parameter,
       Out_Parameter,

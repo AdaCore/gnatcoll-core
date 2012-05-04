@@ -359,6 +359,9 @@ package body GNATCOLL.Xref is
    N_Files2 : aliased String := "f2";
    Files2 : T_Files (N_Files2'Access);
 
+   N_Entities2 : aliased String := "e2";
+   Entities2 : T_Entities (N_Entities2'Access);
+
    package VFS_To_Ids is new Ada.Containers.Hashed_Maps
      (Key_Type        => Virtual_File,
       Element_Type    => Integer,   --  Id in the files table
@@ -3045,5 +3048,38 @@ package body GNATCOLL.Xref is
          Params => (1 => +Entity.Id));
       return C;
    end Calls;
+
+   -------------
+   -- Callers --
+   -------------
+
+   function Callers
+     (Self   : Xref_Database'Class;
+      Entity : Entity_Information) return Entities_Cursor
+   is
+      Curs : Entities_Cursor;
+   begin
+      Curs.DBCursor.Fetch
+        (Self.DB,
+         SQL_Select
+           (Entities2.Id
+            & Entities2.Name
+            & Entities2.Decl_Line
+            & Entities2.Decl_Column,
+
+            From => Entities2 & Database.Entities & Database.Entity_Refs
+               & Database.Reference_Kinds,
+            Where => Entities2.Id = Database.Entity_Refs.Caller
+               and Database.Entity_Refs.Kind = Database.Reference_Kinds.Id
+               and Database.Reference_Kinds.Is_Real
+               and Database.Entity_Refs.Entity = Integer_Param (1)
+               and Entities2.Id /= Database.Entity_Refs.Entity,
+
+            Order_By =>
+              Entities2.Name & Entities2.Decl_Line & Entities2.Decl_Column,
+            Distinct => True),
+         Params => (1 => +Entity.Id));
+      return Curs;
+   end Callers;
 
 end GNATCOLL.Xref;
