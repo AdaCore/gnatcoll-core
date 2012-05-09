@@ -444,7 +444,8 @@ private
       Has_PK      : Boolean := False;
       --  Whether the table has a primary key
 
-      Super_Table : Table_Description := No_Table;
+      Super_Table : Table_Description :=
+         (Tables_Ref.Null_Ref with null record);
       --  The table from which we inherit fields
    end record;
 
