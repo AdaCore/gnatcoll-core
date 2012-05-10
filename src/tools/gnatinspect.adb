@@ -58,15 +58,6 @@ procedure GNATInspect is
    --  Handler for control-c, to make sure that the history is properly
    --  saved.
 
-   type Ctrl_C_Handler is access procedure;
-   pragma Convention (C, Ctrl_C_Handler);
-   --  Any parameterless library level procedure can be used as a handler.
-   --  Ctrl_C_Handler should not propagate exceptions.
-
-   procedure Install_Ctrl_C_Handler (Handler : Ctrl_C_Handler);
-   pragma Import (C, Install_Ctrl_C_Handler, "__gnat_install_int_handler");
-   --  Set up Handler to be called if the operator hits Ctrl-C
-
    function Get_Entity (Arg : String) return Entity_Information;
    --  Return the entity matching the "name:file:line:column" argument
 
@@ -1097,7 +1088,7 @@ begin
         (Dir       => Tree.Root_Project.Object_Dir,
          Base_Name => +".gnatinspect_hist").Display_Full_Name);
 
-   Install_Ctrl_C_Handler (On_Ctrl_C'Access);
+   Install_Ctrl_C_Handler (On_Ctrl_C'Unrestricted_Access);
 
    GNATCOLL.Readline.Initialize
      (Appname      => "gnatcollxref",

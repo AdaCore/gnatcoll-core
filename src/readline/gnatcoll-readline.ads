@@ -115,6 +115,17 @@ package GNATCOLL.Readline is
    --  The exception Ada.Text_IO.End_Error is raised if the user presses
    --  control-D
 
+   type Ctrl_C_Handler is access procedure;
+   pragma Convention (C, Ctrl_C_Handler);
+   --  Any parameterless library level procedure can be used as a handler.
+   --  Ctrl_C_Handler should not propagate exceptions.
+   --  Such a function is useful for saving the history when the application
+   --  exits for instance.
+
+   procedure Install_Ctrl_C_Handler (Handler : Ctrl_C_Handler);
+   pragma Import (C, Install_Ctrl_C_Handler, "__gnat_install_int_handler");
+   --  Set up Handler to be called if the operator hits Ctrl-C
+
 private
    type Possible_Completions_Array is null record;
 end GNATCOLL.Readline;
