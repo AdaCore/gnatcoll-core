@@ -25,6 +25,7 @@ pragma Ada_05;
 
 with Ada.Strings.Unbounded;
 with GNATCOLL.Python;  use GNATCOLL.Python;
+with System;
 
 package GNATCOLL.Scripts.Python is
 
@@ -100,7 +101,72 @@ package GNATCOLL.Scripts.Python is
    --  Returns the low level PyObject enclosed in a Python Class_Instance.
    --  You need to be absolutely sure that Instance is a Python Instance.
 
+   --------------------------
+   -- Multitasking support --
+   --------------------------
+   --  Python itself is not task-safe. It uses a Global Interpreter Lock to
+   --  make sure that a single thread is accessing it at any one time. However,
+   --  to simulate parallelism, it will automatically release and re-acquire
+   --  the lock every 100 or so opcode instructions, thus giving a chance to
+   --  run to other threads.
+   --
+   --  This has several implications on multitasking Ada programs that want to
+   --  access python:
+   --    - the tasks that do not need to access python do not need anything
+   --      special and can be left as is.
+   --    - other tasks must create a python-specific data structure associated
+   --      with the task. This is done by Ensure_Thread_State below.
+   --
+   --  In addition, whenever you want to access python, you need to first
+   --  acquire the Global Interpreter Lock (which can conveniently be done
+   --  through Ensure_Thread_Safe). You should then release it when you are
+   --  done manipulating python data structures, through a call to
+   --  Begin_Allow_Threads. As such, a typical Ada program would look like:
+   --
+   --      Register_Python_Scripting (...);
+   --      Initialize_Threads_Support;
+   --      Begin_Allow_Threads;
+   --
+   --  and then in all tasks that access python:
+   --
+   --      Ensure_Thread_State;
+   --      ... python commands
+   --      Begin_Allow_Threads;
+
+   procedure Initialize_Threads_Support;
+   --  Add support for multi-tasking on the python side. This also acquires the
+   --  Global Interpreter Lock, so you should call Begin_Allow_Threads later on
+   --  to allow other threads to run.
+
+   type PyThreadState is private;
+
+   function Begin_Allow_Threads return PyThreadState;
+   procedure Begin_Allow_Threads;
+   --  Allow other python threads to run (for instance because we are blocked
+   --  in a system call or in a section of code that doesn't need to execute
+   --  python commands). This also releases the Global Interpreter Lock.
+
+   procedure End_Allow_Threads (State : PyThreadState);
+   --  Acquires the Global Interpreter Lock, and make State the current
+   --  python thread. It must correspond to the current system thread.
+
+   function Get_This_Thread_State return PyThreadState;
+   --  Return the python thread state corresponding to the current
+   --  system thread (hopefully this is also the current python thread,
+   --  but there is no guarantee)
+
+   procedure Ensure_Thread_State;
+   --  Make sure that the current system thread has an equivalent python
+   --  thread state. This should be called for all tasks created in Ada and
+   --  that need to access python commands.
+   --  This also makes sure that the current python thread state matches the
+   --  system thread (so basically lets python know that a different thread
+   --  is running).
+   --  Finally, this acquires the Global Interpreter Lock (it runs the
+   --  equivalent of End_Allow_Threads)
+
 private
+   type PyThreadState is new System.Address;
 
    ----------------------
    -- Python_scripting --
@@ -231,6 +297,8 @@ private
    overriding procedure Display_Prompt
      (Script  : access Python_Scripting_Record;
       Console : Virtual_Console := null);
+   overriding function Get_Prompt
+     (Script : access Python_Scripting_Record) return String;
    overriding function Interrupt
      (Script : access Python_Scripting_Record) return Boolean;
    overriding procedure Complete

@@ -1576,6 +1576,23 @@ package body GNATCOLL.Scripts is
    function Read
      (Console    : access Virtual_Console_Record;
       Size       : Integer;
+      Whole_Line : Boolean;
+      Prompt     : String) return String is
+   begin
+      if Prompt /= "" then
+         Insert_Prompt (Virtual_Console (Console), Prompt);
+      end if;
+
+      return Read (Virtual_Console (Console), Size, Whole_Line);
+   end Read;
+
+   ----------
+   -- Read --
+   ----------
+
+   function Read
+     (Console    : access Virtual_Console_Record;
+      Size       : Integer;
       Whole_Line : Boolean) return String
    is
       pragma Unreferenced (Console, Size, Whole_Line);

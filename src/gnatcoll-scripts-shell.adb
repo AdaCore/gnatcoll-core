@@ -490,6 +490,16 @@ package body GNATCOLL.Scripts.Shell is
       Insert_Prompt (Script, Console, Script.Prompt.all);
    end Display_Prompt;
 
+   ----------------
+   -- Get_Prompt --
+   ----------------
+
+   overriding function Get_Prompt
+     (Script : access Shell_Scripting_Record) return String is
+   begin
+      return Script.Prompt.all;
+   end Get_Prompt;
+
    --------------
    -- Complete --
    --------------

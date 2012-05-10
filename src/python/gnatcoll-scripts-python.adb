@@ -372,33 +372,47 @@ package body GNATCOLL.Scripts.Python is
       --  systematically though, since in interactive mode (consoles...)
       --  we still want the usual python behavior.
       Init_Output    : constant String :=
-          "__gps_saved_stdout=None" & ASCII.LF
-        & "__gps_saved_stderr=None" & ASCII.LF
-        & "__gps_saved_displayhook=None" & ASCII.LF
-        & "def __gps_no_write (*args): pass" & ASCII.LF
-        & "def __gps_no_displayhook (arg):" & ASCII.LF
-        & "   __builtin__._ = arg" & ASCII.LF
-        & "def __gps_hide_output ():" & ASCII.LF
-        & "   global __gps_saved_stdout" & ASCII.LF
-        & "   global __gps_saved_stderr" & ASCII.LF
-        & "   global __gps_saved_displayhook" & ASCII.LF
-        & "   if sys.stdout.write != __gps_no_write:" & ASCII.LF
-        & "      __gps_saved_stdout=sys.stdout.write" & ASCII.LF
-        & "      __gps_saved_stderr=sys.stderr.write" & ASCII.LF
-        & "      __gps_saved_displayhook=sys.displayhook" & ASCII.LF
-        & "      try:" & ASCII.LF
-        & "        sys.displayhook=__gps_no_displayhook" & ASCII.LF
-        & "        sys.stdout.write=__gps_no_write" & ASCII.LF
-        & "        sys.stderr.write=__gps_no_write" & ASCII.LF
-        & "      except: pass" & ASCII.LF
-        & "def __gps_restore_output():" & ASCII.LF
-        & "   if sys.stdout.write == __gps_no_write:" & ASCII.LF
-        & "      try:" & ASCII.LF
-        & "         sys.stdout.write = __gps_saved_stdout" & ASCII.LF
-        & "         sys.stderr.write = __gps_saved_stderr" & ASCII.LF
-        & "         sys.displayhook  = __gps_saved_displayhook" & ASCII.LF
-        & "      except: pass" & ASCII.LF
-        & ASCII.LF;
+        "class _gnatcoll():" & ASCII.LF &
+        "   saved_stdout=None" & ASCII.LF &
+        "   saved_stdin=None"  & ASCII.LF &
+        "   saved_display=None" & ASCII.LF &
+        "   hidden=False" & ASCII.LF &
+        "   @staticmethod" & ASCII.LF &
+        "   def nowrite(*args):" & ASCII.LF &
+        "       pass" & ASCII.LF &
+        "   @staticmethod" & ASCII.LF &
+        "   def nodisplay(arg):" & ASCII.LF &
+        "       __builtin__._ = arg" & ASCII.LF &
+        "   @staticmethod" & ASCII.LF &
+        "   def hide():" & ASCII.LF &
+        "      if not _gnatcoll.hidden:" & ASCII.LF &
+        "          _gnatcoll.hidden=True" & ASCII.LF &
+        "          _gnatcoll.saved_stdout=sys.stdout.write" & ASCII.LF &
+        "          _gnatcoll.saved_stderr=sys.stderr.write" & ASCII.LF &
+        "          _gnatcoll.saved_display=sys.displayhook" & ASCII.LF &
+        "          try:" & ASCII.LF &
+        "              sys.stdout.write=_gnatcoll.nowrite" & ASCII.LF &
+        "          except: pass" & ASCII.LF &
+        "          try:" & ASCII.LF &
+        "              sys.stderr.write=_gnatcoll.nowrite" & ASCII.LF &
+        "          except: pass" & ASCII.LF &
+        "          try:" & ASCII.LF &
+        "              sys.displayhook=_gnatcoll.nodisplay" & ASCII.LF &
+        "          except: pass" & ASCII.LF &
+        "   @staticmethod" & ASCII.LF &
+        "   def show():" & ASCII.LF &
+        "      if _gnatcoll.hidden:" & ASCII.LF &
+        "          _gnatcoll.hidden=False" & ASCII.LF &
+        "          try:" & ASCII.LF &
+        "             sys.stdout.write=_gnatcoll.saved_stdout" & ASCII.LF &
+        "          except: pass" & ASCII.LF &
+        "          try:" & ASCII.LF &
+        "             sys.stderr.write=_gnatcoll.saved_stderr" & ASCII.LF &
+        "          except: pass" & ASCII.LF &
+        "          try:" & ASCII.LF &
+        "             sys.displayhook=_gnatcoll.saved_display" & ASCII.LF &
+        "          except: pass" & ASCII.LF &
+        ASCII.LF;
 
       Main_Module    : PyObject;
       Sigint         : constant Integer := 2;
@@ -1224,23 +1238,40 @@ package body GNATCOLL.Scripts.Python is
       end if;
    end Complete;
 
+   ----------------
+   -- Get_Prompt --
+   ----------------
+
+   overriding function Get_Prompt
+     (Script : access Python_Scripting_Record) return String
+   is
+      Ps : PyObject;
+   begin
+      if Script.Use_Secondary_Prompt then
+         Ps := PySys_GetObject ("ps2");
+         if Ps = null then
+            return "... ";
+         end if;
+      else
+         Ps := PySys_GetObject ("ps1");
+         if Ps = null then
+            return ">>> ";
+         end if;
+      end if;
+
+      return PyString_AsString (Ps);
+   end Get_Prompt;
+
    --------------------
    -- Display_Prompt --
    --------------------
 
    procedure Display_Prompt
      (Script  : access Python_Scripting_Record;
-      Console : Virtual_Console := null)
-   is
-      Ps : PyObject;
+      Console : Virtual_Console := null) is
    begin
-      if Script.Use_Secondary_Prompt then
-         Ps := PySys_GetObject ("ps2");
-      else
-         Ps := PySys_GetObject ("ps1");
-      end if;
-
-      Insert_Prompt (Script, Console, PyString_AsString (Ps));
+      Insert_Prompt
+        (Script, Console, Get_Prompt (Scripting_Language (Script)));
    end Display_Prompt;
 
    -----------------
@@ -1319,8 +1350,8 @@ package body GNATCOLL.Scripts.Python is
       --  command the user is typing.
 
       if Hide_Output then
-         --  Insert_Log (Script, Console, "__gps_hide_output");
-         Ignored := PyRun_SimpleString ("__gps_hide_output()");
+         --  Insert_Log (Script, Console, "_gnatcoll.hide()");
+         Ignored := PyRun_SimpleString ("_gnatcoll.hide()");
       end if;
 
       Insert_Log
@@ -1335,6 +1366,8 @@ package body GNATCOLL.Scripts.Python is
       if Cmd = "" & ASCII.LF then
          if not Hide_Output then
             Display_Prompt (Script);
+         else
+            Ignored := PyRun_SimpleString ("_gnatcoll.show()");
          end if;
          return null;
       end if;
@@ -1384,8 +1417,8 @@ package body GNATCOLL.Scripts.Python is
                      --  We need to preserve the current exception before
                      --  executing the next command
                      PyErr_Fetch (EType, Occurrence, Traceback);
-                     Insert_Log (Script, Console, "__gps_restore_output");
-                     Ignored := PyRun_SimpleString ("__gps_restore_output()");
+                     Insert_Log (Script, Console, "_gnatcoll.show");
+                     Ignored := PyRun_SimpleString ("_gnatcoll.show()");
                      if Get_Default_Console (Script) /= null then
                         Set_Hide_Output (Get_Default_Console (Script), False);
                      end if;
@@ -1397,8 +1430,8 @@ package body GNATCOLL.Scripts.Python is
                   PyErr_Print;
 
                   if Hide_Output then
-                     Insert_Log (Script, Console, "__gps_hide_output");
-                     Ignored := PyRun_SimpleString ("__gps_hide_output()");
+                     Insert_Log (Script, Console, "_gnatcoll.hide()");
+                     Ignored := PyRun_SimpleString ("_gnatcoll.hide()");
                      if Get_Default_Console (Script) /= null then
                         Set_Hide_Output (Get_Default_Console (Script), True);
                      end if;
@@ -1492,17 +1525,13 @@ package body GNATCOLL.Scripts.Python is
       end if;
 
       if not Hide_Output then
-         if Result /= null and then Result /= Py_None then
-            declare
-               Str : constant PyObject := PyObject_Str (Result);
-            begin
-               Insert_Text
-                 (Script, Console, PyString_AsString (Str) & ASCII.LF);
-               Py_DECREF (Str);
-            end;
-         end if;
-
+         --  PyEval_EvalCode has already called sys.displayhook, so it
+         --  has already displayed the expression.
          Display_Prompt (Script);
+      else
+         if Hide_Output then
+            Ignored := PyRun_SimpleString ("_gnatcoll.show()");
+         end if;
       end if;
 
       Script.In_Process := False;
@@ -1518,11 +1547,6 @@ package body GNATCOLL.Scripts.Python is
          Unref (Default_Console);
       end if;
 
-      if Hide_Output then
-         --  Insert_Log (Script, Console, "__gps_restore_output");
-         Ignored := PyRun_SimpleString ("__gps_restore_output()");
-      end if;
-
       return Result;
 
    exception
@@ -1534,7 +1558,7 @@ package body GNATCOLL.Scripts.Python is
          Errors.all := True;
 
          if Hide_Output then
-            Ignored := PyRun_SimpleString ("__gps_restore_output()");
+            Ignored := PyRun_SimpleString ("_gnatcoll.show()");
          end if;
 
          if Default_Console_Refed then
@@ -3576,5 +3600,74 @@ package body GNATCOLL.Scripts.Python is
 
       return List;
    end Return_Value;
+
+   -------------------------
+   -- Begin_Allow_Threads --
+   -------------------------
+
+   function Begin_Allow_Threads return PyThreadState is
+      function PyEval_SaveThread return PyThreadState;
+      pragma Import (C, PyEval_SaveThread, "PyEval_SaveThread");
+   begin
+      return PyEval_SaveThread;
+   end Begin_Allow_Threads;
+
+   -------------------------
+   -- Begin_Allow_Threads --
+   -------------------------
+
+   procedure Begin_Allow_Threads is
+      State : PyThreadState;
+      pragma Unreferenced (State);
+   begin
+      State := Begin_Allow_Threads;
+   end Begin_Allow_Threads;
+
+   -----------------------
+   -- End_Allow_Threads --
+   -----------------------
+
+   procedure End_Allow_Threads (State : PyThreadState) is
+      procedure PyEval_RestoreThread (State : PyThreadState);
+      pragma Import (C, PyEval_RestoreThread, "PyEval_RestoreThread");
+   begin
+      PyEval_RestoreThread (State);
+   end End_Allow_Threads;
+
+   ---------------------------
+   -- Get_This_Thread_State --
+   ---------------------------
+
+   function Get_This_Thread_State return PyThreadState is
+      function PyGILState_GetThisThreadState return PyThreadState;
+      pragma Import
+        (C, PyGILState_GetThisThreadState, "PyGILState_GetThisThreadState");
+   begin
+      return PyGILState_GetThisThreadState;
+   end Get_This_Thread_State;
+
+   -------------------------
+   -- Ensure_Thread_State --
+   -------------------------
+
+   procedure Ensure_Thread_State is
+      function PyGILState_Ensure return Integer;
+      pragma Import (C, PyGILState_Ensure, "PyGILState_Ensure");
+      Ignored : Integer;
+      pragma Unreferenced (Ignored);
+   begin
+      Ignored := PyGILState_Ensure;
+   end Ensure_Thread_State;
+
+   --------------------------------
+   -- Initialize_Threads_Support --
+   --------------------------------
+
+   procedure Initialize_Threads_Support is
+      procedure PyEval_InitThreads;
+      pragma Import (C, PyEval_InitThreads, "PyEval_InitThreads");
+   begin
+      PyEval_InitThreads;
+   end Initialize_Threads_Support;
 
 end GNATCOLL.Scripts.Python;

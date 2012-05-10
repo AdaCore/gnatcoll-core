@@ -878,10 +878,16 @@ package GNATCOLL.Scripts is
    function Read
      (Console    : access Virtual_Console_Record;
       Size       : Integer;
+      Whole_Line : Boolean;
+      Prompt     : String) return String;
+   function Read
+     (Console    : access Virtual_Console_Record;
+      Size       : Integer;
       Whole_Line : Boolean) return String;
    --  Return at most Size characters from the console.
    --  If Whole_Line is true, the returned value stops at the first newline
    --  character seen in any case.
+   --  If Prompt is specified, it is displayed first (via Insert_Prompt).
 
    -------------------------
    -- Scripting languages --
@@ -989,7 +995,12 @@ package GNATCOLL.Scripts is
    procedure Display_Prompt
      (Script  : access Scripting_Language_Record;
       Console : Virtual_Console := null) is null;
-   --  Display the prompt on the script's default console
+   --  Display the prompt on the script's default console. It uses
+   --  Display_Prompt to compute the prompt to display.
+
+   function Get_Prompt
+     (Script : access Scripting_Language_Record) return String is abstract;
+   --  Return the prompt to display
 
    procedure Execute_Command
      (Script       : access Scripting_Language_Record;

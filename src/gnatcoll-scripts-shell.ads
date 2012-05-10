@@ -215,6 +215,8 @@ private
    overriding procedure Display_Prompt
      (Script  : access Shell_Scripting_Record;
       Console : Virtual_Console := null);
+   overriding function Get_Prompt
+     (Script : access Shell_Scripting_Record) return String;
    overriding procedure Complete
      (Script      : access Shell_Scripting_Record;
       Input       : String;
