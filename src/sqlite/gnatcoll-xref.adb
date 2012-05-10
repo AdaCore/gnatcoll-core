@@ -16,6 +16,7 @@
 ------------------------------------------------------------------------------
 
 with Ada.Calendar;            use Ada.Calendar;
+with Ada.Characters.Handling; use Ada.Characters.Handling;
 with Ada.Containers;          use Ada.Containers;
 with Ada.Containers.Doubly_Linked_Lists;
 with Ada.Containers.Hashed_Maps;
@@ -3021,7 +3022,7 @@ package body GNATCOLL.Xref is
 
       if C.Has_Row then
          declare
-            Language : constant String := C.Value (0);
+            Language : constant String := To_Lower (C.Value (0));
          begin
             if Language = "c" or else Language = "c++" then
                Separator := To_Unbounded_String ("::");
