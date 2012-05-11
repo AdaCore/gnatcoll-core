@@ -1204,6 +1204,41 @@ There is not much to be said here, except that you should use the
 
 .. _Debugging_scripts:
 
+Multithreading applications and scripts
+---------------------------------------
+
+Python itself is not thread-safe. So a single thread can call the python C API
+at a time. To enforce this, the python interpreter provides a global
+interpreter lock, which you must acquire before calling the C API, and release
+when you are done. To simulate multitasking, the python interpreter will in
+fact release and reacquire the lock every 100 micro-instructions (opcodes in
+the python virtual machine), to give a chance to run to other tasks. So this is
+preemptive multitasking.
+
+The threads that are created in Ada that do not need access to python do not
+need any special handling. However, those that need access to python must make
+a special function call before they first call the python C API, so that python
+can create a thread-specific data for them.
+
+`GNATCOLL.Scripts.Python` contains a number of subprograms to interact with the
+global interpreter lock of the python engine. The initialization of your
+application needs to do two extra calls::
+
+     Register_Python_Scripting (...);
+     Initialize_Threads_Support;   --  Also acquires the lock
+     Begin_Allow_Threads;          --  Releases the lock
+
+Whenever a task needs to execute python commands (or basically use any
+subprogram from `GNATCOLL.Scripts`, it needs to do the following::
+
+     Ensure_Thread_State;   --  Block all python threads
+     ...  access to python C API as usual
+     Begin_Allow_Threads;   --  Let other python threads run
+
+In some cases, the simplest is to get the lock at the beginning of the task,
+and release it when done. This assumes the task executes fast enough. In other
+cases, you will need finer grain control over the lock.
+
 Debugging scripts
 -----------------
 
