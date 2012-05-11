@@ -39,7 +39,7 @@
 --  Multiple project trees can be loaded in memory at the same time.
 --
 --  Loading a Project_Tree (Project views)
---  =====================================
+--  ======================================
 --
 --  One never loads a project, we only ever load Project_Trees, as a consistent
 --  whole. Loading a project is done in two steps
@@ -895,8 +895,8 @@ package GNATCOLL.Projects is
    --  variable.
 
    procedure Change_Environment
-     (Self  : Project_Tree;
-      Vars  : Scenario_Variable_Array);
+     (Self : Project_Tree;
+      Vars : Scenario_Variable_Array);
    --  Change the environment value for all the variables in Vars (you do not
    --  need to have all the scenario variables from the project, only those
    --  you are interested to change). These values will be used when
@@ -913,8 +913,8 @@ package GNATCOLL.Projects is
    ---------------
 
    function Languages
-     (Project : Project_Type; Recursive : Boolean := False)
-      return GNAT.Strings.String_List;
+     (Project   : Project_Type;
+      Recursive : Boolean := False) return GNAT.Strings.String_List;
    --  Return the value of the Languages attribute. You should use this
    --  function instead of Get_Attribute_Value, since it will correctly default
    --  to Ada if no language was defined by the user.
@@ -1003,7 +1003,7 @@ package GNATCOLL.Projects is
      (Project      : Project_Type;
       Attribute    : Attribute_Pkg_List;
       Use_Extended : Boolean := False) return GNAT.Strings.String_List;
-   --  Return the list of indexes that are in use for this attribute (ie the
+   --  Return the list of indices that are in use for this attribute (ie the
    --  set of values that you can use in the call to Attribute_Value such that
    --  there is a corresponding attribute in the project file).
    --  The returned value must be freed by the user (see GNATCOLL.Utils.Free).
@@ -1161,9 +1161,9 @@ package GNATCOLL.Projects is
    --  construct in the project file:
    --     for Specification ("unit") use "file" at 1;
 
-   Any_Attribute      : constant String := "@@";
+   Any_Attribute : constant String := "@@";
    --  Special value for all the subprograms that take an Attribute_Index
-   --  parameter. When this is used, no matching is done on the indexes.
+   --  parameter. When this is used, no matching is done on the indices.
 
    procedure Delete_Attribute
      (Self      : Project_Type;
