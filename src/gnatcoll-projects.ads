@@ -885,8 +885,8 @@ package GNATCOLL.Projects is
    --  This does not affect the environment or the loaded project. In general,
    --  you would use it as:
    --      Vars : Scenario_Variable_Array := Tree.Scenario_Variables;
-   --      Tree.Set_Value (Vars (Vars'First), "new_value");
-   --      Tree.Set_Value (Vars (Vars'First + 1), "new_value2");
+   --      Set_Value (Vars (Vars'First), "new_value");
+   --      Set_Value (Vars (Vars'First + 1), "new_value2");
    --      Tree.Change_Environment (Vars);
    --      Tree.Recompute_View;
    --  Instead of calling Change_Environment, you could also use Vars in calls
