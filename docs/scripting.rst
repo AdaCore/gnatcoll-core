@@ -390,7 +390,7 @@ application.
 
 |Tip| GNATColl comes with some examples, which you can use
 as a reference when building your own application.
-See the :file:`scripts/examples` directory.
+See the :file:`<prefix>/share/examples/gnatcoll` directory.
 
 Interfacing your application with the scripting module is a multistep
 process:
