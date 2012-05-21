@@ -4,10 +4,10 @@ include Makefile.conf
 
 ifeq (${BUILDS_SHARED},yes)
 all: generate_sources static relocatable tools_relocatable
-install: install_relocatable install_static install_docs
+install: install_common install_relocatable install_static
 else
 all: generate_sources static tools_static
-install: install_static install_docs
+install: install_common install_static
 endif
 
 include Makefile.gnat
@@ -92,13 +92,7 @@ test_verbose: local_install
 ## Install either the static or the shared lib, based on the value of
 ## LIBRARY_TYPE
 install_library_type:
-	${MKDIR} ${bindir}
 	${MKDIR} ${libdir}/${TARNAME}/${LIBRARY_TYPE}
-	${MKDIR} ${DESTDIR}${prefix}/lib/gnat/${TARNAME}
-	${MKDIR} ${datadir}/examples
-	${MKDIR} ${datadir}/gnatcoll
-	${MKDIR} ${includedir}/${TARNAME}
-	${MKDIR} ${datadir}/gps/plug-ins
 	${MAKE} -C src -f Makefile.gnatcoll libinstall
 	${MAKE} -C src -f Makefile.python libinstall
 ifeq (${WITH_GTK},yes)
@@ -111,15 +105,25 @@ endif
 ifeq (${WITH_GMP},yes)
 	${MAKE} -C src -f Makefile.gmp libinstall
 endif
-	${CP} src/dborm.py ${datadir}/gnatcoll/
-	${CP} distrib/gnatcoll_gps.xml ${datadir}/gps/plug-ins
-	${CP} distrib/gnatcoll_runtime.xml ${datadir}/gps/plug-ins
+
+install_common:
+	${MKDIR} ${bindir}
+	${MKDIR} ${DESTDIR}${prefix}/lib/gnat/${TARNAME}
+	${MKDIR} ${datadir}/${TARNAME}
+	${MKDIR} ${includedir}/${TARNAME}
+	${CP} src/dborm.py ${datadir}/${TARNAME}/
 	${CP} distrib/*.gpr ${DESTDIR}${prefix}/lib/gnat
 
-install_docs:
-	${MKDIR} ${datadir}/doc/gnatcoll/html
-	-${CP} -r docs/_build/html/* ${datadir}/doc/gnatcoll/html 2>/dev/null
-	-${CP} docs/_build/latex/GNATColl.pdf ${datadir}/doc/gnatcoll/gnatcoll.pdf 2>/dev/null
+	${MKDIR} ${datadir}/examples/${TARNAME}
+	${CP} -r examples/* ${datadir}/examples/${TARNAME}
+
+	${MKDIR} ${datadir}/gps/plug-ins
+	${CP} distrib/gnatcoll_gps.xml ${datadir}/gps/plug-ins
+	${CP} distrib/gnatcoll_runtime.xml ${datadir}/gps/plug-ins
+
+	${MKDIR} ${datadir}/doc/${TARNAME}/html
+	-${CP} -r docs/_build/html/* ${datadir}/doc/${TARNAME}/html 2>/dev/null
+	-${CP} docs/_build/latex/GNATColl.pdf ${datadir}/doc/${TARNAME}/gnatcoll.pdf 2>/dev/null
 
 install_static:
 	${MAKE} LIBRARY_TYPE=static install_library_type
