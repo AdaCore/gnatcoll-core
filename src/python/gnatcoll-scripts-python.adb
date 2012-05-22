@@ -3606,8 +3606,10 @@ package body GNATCOLL.Scripts.Python is
    -------------------------
 
    function Begin_Allow_Threads return PyThreadState is
+      --  Import only if the function exists in python, otherwise
+      --  we can undefined symbols error at link time.
       function PyEval_SaveThread return PyThreadState;
-      pragma Import (C, PyEval_SaveThread, "PyEval_SaveThread");
+      pragma Import (C, PyEval_SaveThread, "ada_PyEval_SaveThread");
    begin
       return PyEval_SaveThread;
    end Begin_Allow_Threads;
@@ -3629,7 +3631,7 @@ package body GNATCOLL.Scripts.Python is
 
    procedure End_Allow_Threads (State : PyThreadState) is
       procedure PyEval_RestoreThread (State : PyThreadState);
-      pragma Import (C, PyEval_RestoreThread, "PyEval_RestoreThread");
+      pragma Import (C, PyEval_RestoreThread, "ada_PyEval_RestoreThread");
    begin
       PyEval_RestoreThread (State);
    end End_Allow_Threads;
@@ -3641,7 +3643,8 @@ package body GNATCOLL.Scripts.Python is
    function Get_This_Thread_State return PyThreadState is
       function PyGILState_GetThisThreadState return PyThreadState;
       pragma Import
-        (C, PyGILState_GetThisThreadState, "PyGILState_GetThisThreadState");
+         (C, PyGILState_GetThisThreadState,
+          "ada_PyGILState_GetThisThreadState");
    begin
       return PyGILState_GetThisThreadState;
    end Get_This_Thread_State;
@@ -3652,7 +3655,7 @@ package body GNATCOLL.Scripts.Python is
 
    procedure Ensure_Thread_State is
       function PyGILState_Ensure return Integer;
-      pragma Import (C, PyGILState_Ensure, "PyGILState_Ensure");
+      pragma Import (C, PyGILState_Ensure, "ada_PyGILState_Ensure");
       Ignored : Integer;
       pragma Unreferenced (Ignored);
    begin
@@ -3665,7 +3668,7 @@ package body GNATCOLL.Scripts.Python is
 
    procedure Initialize_Threads_Support is
       procedure PyEval_InitThreads;
-      pragma Import (C, PyEval_InitThreads, "PyEval_InitThreads");
+      pragma Import (C, PyEval_InitThreads, "ada_PyEval_InitThreads");
    begin
       PyEval_InitThreads;
    end Initialize_Threads_Support;

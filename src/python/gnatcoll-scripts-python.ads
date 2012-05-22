@@ -132,6 +132,15 @@ package GNATCOLL.Scripts.Python is
    --      Ensure_Thread_State;
    --      ... python commands
    --      Begin_Allow_Threads;
+   --
+   --  NOTE:
+   --  The following functions have no effect if python was compiled without
+   --  support for threading. They do not raise an exception either, so that
+   --  you can run the code even if python doesn't have threads.
+
+   Has_Thread_Support : constant Boolean;
+   pragma Import (C, Has_Thread_Support, "python_with_thread");
+   --  Whether python was compiled with support for threading.
 
    procedure Initialize_Threads_Support;
    --  Add support for multi-tasking on the python side. This also acquires the

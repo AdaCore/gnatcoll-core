@@ -488,3 +488,45 @@ ada_pydescr_newGetSet (PyTypeObject* type,
     return 1;
   }
 }
+
+#ifdef WITH_THREAD
+const int python_with_thread = 1;
+#else
+const int python_with_thread = 0;
+#endif
+
+PyThreadState* ada_PyEval_SaveThread() {
+#ifdef WITH_THREAD
+   return PyEval_SaveThread();
+#else
+   return NULL;
+#endif
+}
+
+void ada_PyEval_RestoreThread (PyThreadState* state) {
+#ifdef WITH_THREAD
+   PyEval_RestoreThread (state);
+#endif
+}
+
+PyThreadState* ada_PyGILState_GetThisThreadState() {
+#ifdef WITH_THREAD
+   return PyGILState_GetThisThreadState();
+#else
+   return NULL;
+#endif
+}
+
+int ada_PyGILState_Ensure() {
+#ifdef WITH_THREAD
+   return PyGILState_Ensure();
+#else
+   return 0;
+#endif
+}
+
+void ada_PyEval_InitThreads() {
+#ifdef WITH_THREAD
+   PyEval_InitThreads();
+#endif
+}
