@@ -116,7 +116,7 @@ install_common:
 
 	${MKDIR} ${datadir}/examples/${TARNAME}
 	@# Do not want to copy .svn directories
-	${CP} -r examples/{.,library,gmp}/* ${datadir}/examples/${TARNAME}
+	${CP} -r examples/* ${datadir}/examples/${TARNAME}
 
 	${MKDIR} ${datadir}/gps/plug-ins
 	${CP} distrib/gnatcoll_gps.xml ${datadir}/gps/plug-ins
