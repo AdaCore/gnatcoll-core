@@ -1292,16 +1292,34 @@ package body GNATCOLL.Email.Utils is
    -------------------
 
    procedure Base64_Encode
-     (Str           : String;
-      Block_Prefix  : String := "";
-      Block_Suffix  : String := "";
-      Max_Block_Len : Integer := Integer'Last;
-      Result        : out Unbounded_String)
+     (Str             : String;
+      Block_Prefix    : String := "";
+      Block_Suffix    : String := "";
+      Block_Separator : String := "" & ASCII.LF;
+      Max_Block_Len   : Integer := Integer'Last;
+      Separate_Blocks : Boolean := False;
+      Result          : out Unbounded_String)
    is
-      Line_Len : constant Integer := Integer'Max
-        (Integer'Min (76, Max_Block_Len)
-         - Block_Prefix'Length - Block_Suffix'Length,
-         1);  --  At least 1 character in word, otherwise there's no point
+      function Get_Line_Length return Integer;
+      --  Get the line length for the encoded string
+
+      function Get_Line_Length return Integer is
+         Len : Integer := Integer'Min (76, Max_Block_Len);
+      begin
+         --  Do not cound prefix and suffix in line length
+         Len := Len - Block_Prefix'Length - Block_Suffix'Length;
+
+         --  Check that the line length is a multiple of 4 and make a shorter
+         --  line if necessary
+         if Separate_Blocks and then Len mod 4 /= 0 then
+            Len := Len - Len mod 4;
+         end if;
+
+         --  At least 1 character in word, otherwise there's no point
+         return Integer'Max (Len, 1);
+      end Get_Line_Length;
+
+      Line_Len : constant Integer := Get_Line_Length;
 
       --  Characters are grouped by 6 bits.
       --     4/3+1 => 8 bits represented by groups of 6 bits
@@ -1310,12 +1328,14 @@ package body GNATCOLL.Email.Utils is
       --  A newline occurs every Line_Len char, and we have at least one
       Lines    : constant Integer := Bytes / Line_Len + 1;
 
-      --  For each line, we have an ASCII.LF, the prefix and a suffix
+      --  For each line, we have a Block_Separator, the prefix and a suffix
       --  Leave space for trailing == if needed
       --  For instance, 'b' gets encoded as 'Yg=='
       Len      : constant Integer :=
         Bytes
-        + Lines * (1 + Block_Prefix'Length + Block_Suffix'Length)
+        + Lines * (Block_Separator'Length
+                  + Block_Prefix'Length
+                  + Block_Suffix'Length)
         + 2;
 
       --  Do not allocate on stack, since when using tasking this will often
@@ -1343,12 +1363,14 @@ package body GNATCOLL.Email.Utils is
          Current        := Current + 1;
 
          if Current = Line_Len then
-            Output (Index .. Index + Block_Suffix'Length - 1) :=
-              Block_Suffix;
+            --  Suffix
+            Output (Index .. Index + Block_Suffix'Length - 1) := Block_Suffix;
             Index := Index + Block_Suffix'Length;
 
-            Output (Index) := ASCII.LF;
-            Index := Index + 1;
+            --  Separator
+            Output (Index .. Index + Block_Separator'Length - 1) :=
+              Block_Separator;
+            Index := Index + Block_Separator'Length;
 
             Current := 0;
          end if;
@@ -1378,7 +1400,10 @@ package body GNATCOLL.Email.Utils is
          Append ('=');
       end if;
 
-      if Current > 0 then
+      if Current = 0 then
+         --  Remove last separator
+         Index := Index - Block_Separator'Length;
+      elsif Current > 0 then
          Output (Index .. Index + Block_Suffix'Length - 1) :=
            Block_Suffix;
          Index := Index + Block_Suffix'Length;
@@ -1502,12 +1527,19 @@ package body GNATCOLL.Email.Utils is
       case Encoding is
          when Encoding_Base64 =>
             if Header then
+               --  The encoded word payload should have a multiple of 4
+               --  characters (see base64 spec), or else the encoded words will
+               --  need to be concatenated before being base64 decoded,  and no
+               --  parser will be able to handler that. This is why
+               --  Separate_Blocks is True.
                Base64_Encode
                  (Str,
-                  Block_Prefix  => "=?" & Set & "?b?",
-                  Block_Suffix  => "?=",
-                  Max_Block_Len => 75,
-                  Result        => Result);
+                  Block_Prefix    => "=?" & Set & "?b?",
+                  Block_Suffix    => "?=",
+                  Block_Separator => " ",
+                  Max_Block_Len   => 75,
+                  Separate_Blocks => True,
+                  Result          => Result);
             else
                Base64_Encode (Str, Result => Result);
             end if;

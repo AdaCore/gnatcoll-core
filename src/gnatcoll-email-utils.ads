@@ -199,11 +199,13 @@ package GNATCOLL.Email.Utils is
    --  Part Three: Message Header Extensions for Non-ASCII Text".
 
    procedure Base64_Encode
-     (Str           : String;
-      Block_Prefix  : String := "";
-      Block_Suffix  : String := "";
-      Max_Block_Len : Integer := Integer'Last;
-      Result        : out Unbounded_String);
+     (Str             : String;
+      Block_Prefix    : String := "";
+      Block_Suffix    : String := "";
+      Block_Separator : String := "" & ASCII.LF;
+      Max_Block_Len   : Integer := Integer'Last;
+      Separate_Blocks : Boolean := False;
+      Result          : out Unbounded_String);
    --  Encode Str in base64 format, as defined by RFC 2045.
    --  This should be used for charsets that have little similarity with
    --  ASCII, for instance asian charsets.
