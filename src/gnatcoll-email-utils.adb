@@ -1518,6 +1518,7 @@ package body GNATCOLL.Email.Utils is
         or else Set = "latin_9" or else Set = "latin-9"
         or else Set = Charset_Windows_1252
         or else Set = "viscii"
+        or else Set = Charset_UTF_8 or else Set = "utf8"
       then
          Encoding := Encoding_QP;
       else

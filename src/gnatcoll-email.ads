@@ -52,6 +52,7 @@ package GNATCOLL.Email is
      (Charset_String);
 
    Charset_US_ASCII     : constant String := "us-ascii";
+   Charset_UTF_8        : constant String := "utf-8";
    Charset_ISO_8859_1   : constant String := "iso-8859-1";
    Charset_ISO_8859_2   : constant String := "iso-8859-2";
    Charset_ISO_8859_3   : constant String := "iso-8859-3";
