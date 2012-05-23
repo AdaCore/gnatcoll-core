@@ -847,7 +847,7 @@ if test -n "$ac_init_help"; then
 Optional Features:
   --disable-FEATURE       do not include FEATURE (same as --enable-FEATURE=no)
   --enable-FEATURE[=ARG]  include FEATURE [ARG=yes]
-  --enable-gpl            Include GPL packages
+  --enable-gpl            Include GPL packages (readline)
   --enable-build=<type>   Default build type for the library (Debug,
                           Production)
   --disable-shared        Disable building of shared libraries
