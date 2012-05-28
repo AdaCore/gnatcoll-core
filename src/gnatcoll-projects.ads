@@ -92,7 +92,9 @@ private with Ada.Finalization;
 with Ada.Unchecked_Deallocation;
 with GNAT.Strings;
 with GNATCOLL.VFS;
+pragma Warnings (Off, "*license of withed unit*");
 private with Prj.Tree;
+pragma Warnings (On, "*license of withed unit*");
 private with Namet;
 
 package GNATCOLL.Projects is
