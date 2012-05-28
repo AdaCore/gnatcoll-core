@@ -41,7 +41,8 @@ tools_relocatable:
 # requires to have already build GNATCOLL once before)
 
 generate_sources:
-	-src/obj/gnatcoll_db2ada${EXE} -dbtype=sqlite -dbname=:memory: \
+	-@if [ -f src/obj/gnatcoll_db2ada${EXE} ]; then \
+	   src/obj/gnatcoll_db2ada${EXE} -dbtype=sqlite -dbname=:memory: \
 		-output src/generated \
 		-dbmodel=src/dbschema.txt \
 		-createdb \
@@ -49,7 +50,8 @@ generate_sources:
 		-api GNATCOLL.Xref.Database \
 		-load=src/initialdata.txt \
 		-enum "f2f_kind,id,name,F2F_,Integer" \
-		-enum "e2e_kind,id,name,E2E_,Integer"
+		-enum "e2e_kind,id,name,E2E_,Integer"; \
+	fi
 
 examples:
 	${MAKE} -C examples
