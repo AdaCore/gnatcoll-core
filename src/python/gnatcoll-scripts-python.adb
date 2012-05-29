@@ -1350,7 +1350,7 @@ package body GNATCOLL.Scripts.Python is
       --  command the user is typing.
 
       if Hide_Output then
-         --  Insert_Log (Script, Console, "_gnatcoll.hide()");
+         Trace (Me, "_gnatcoll.hide()");
          Ignored := PyRun_SimpleString ("_gnatcoll.hide()");
       end if;
 
@@ -1417,7 +1417,7 @@ package body GNATCOLL.Scripts.Python is
                      --  We need to preserve the current exception before
                      --  executing the next command
                      PyErr_Fetch (EType, Occurrence, Traceback);
-                     Insert_Log (Script, Console, "_gnatcoll.show");
+                     Trace (Me, "_gnatcoll.show()");
                      Ignored := PyRun_SimpleString ("_gnatcoll.show()");
                      if Get_Default_Console (Script) /= null then
                         Set_Hide_Output (Get_Default_Console (Script), False);
@@ -1430,7 +1430,7 @@ package body GNATCOLL.Scripts.Python is
                   PyErr_Print;
 
                   if Hide_Output then
-                     Insert_Log (Script, Console, "_gnatcoll.hide()");
+                     Trace (Me, "_gnatcoll.hide()");
                      Ignored := PyRun_SimpleString ("_gnatcoll.hide()");
                      if Get_Default_Console (Script) /= null then
                         Set_Hide_Output (Get_Default_Console (Script), True);
@@ -1529,9 +1529,8 @@ package body GNATCOLL.Scripts.Python is
          --  has already displayed the expression.
          Display_Prompt (Script);
       else
-         if Hide_Output then
-            Ignored := PyRun_SimpleString ("_gnatcoll.show()");
-         end if;
+         Trace (Me, "_gnatcoll.show()");
+         Ignored := PyRun_SimpleString ("_gnatcoll.show()");
       end if;
 
       Script.In_Process := False;
@@ -1558,6 +1557,7 @@ package body GNATCOLL.Scripts.Python is
          Errors.all := True;
 
          if Hide_Output then
+            Trace (Me, "_gnatcoll.show() on exception");
             Ignored := PyRun_SimpleString ("_gnatcoll.show()");
          end if;
 
