@@ -376,7 +376,7 @@ package body GNATCOLL.Scripts.Python is
         "   saved_stdout=None" & ASCII.LF &
         "   saved_stdin=None"  & ASCII.LF &
         "   saved_display=None" & ASCII.LF &
-        "   hidden=False" & ASCII.LF &
+        "   hidden=0" & ASCII.LF &
         "   @staticmethod" & ASCII.LF &
         "   def nowrite(*args):" & ASCII.LF &
         "       pass" & ASCII.LF &
@@ -385,8 +385,8 @@ package body GNATCOLL.Scripts.Python is
         "       __builtin__._ = arg" & ASCII.LF &
         "   @staticmethod" & ASCII.LF &
         "   def hide():" & ASCII.LF &
-        "      if not _gnatcoll.hidden:" & ASCII.LF &
-        "          _gnatcoll.hidden=True" & ASCII.LF &
+        "      _gnatcoll.hidden += 1" & ASCII.LF &
+        "      if _gnatcoll.hidden == 1:" & ASCII.LF &
         "          _gnatcoll.saved_stdout=sys.stdout.write" & ASCII.LF &
         "          _gnatcoll.saved_stderr=sys.stderr.write" & ASCII.LF &
         "          _gnatcoll.saved_display=sys.displayhook" & ASCII.LF &
@@ -401,8 +401,8 @@ package body GNATCOLL.Scripts.Python is
         "          except: pass" & ASCII.LF &
         "   @staticmethod" & ASCII.LF &
         "   def show():" & ASCII.LF &
-        "      if _gnatcoll.hidden:" & ASCII.LF &
-        "          _gnatcoll.hidden=False" & ASCII.LF &
+        "      _gnatcoll.hidden -= 1" & ASCII.LF &
+        "      if _gnatcoll.hidden == 0:" & ASCII.LF &
         "          try:" & ASCII.LF &
         "             sys.stdout.write=_gnatcoll.saved_stdout" & ASCII.LF &
         "          except: pass" & ASCII.LF &
@@ -1350,7 +1350,6 @@ package body GNATCOLL.Scripts.Python is
       --  command the user is typing.
 
       if Hide_Output then
-         Trace (Me, "_gnatcoll.hide()");
          Ignored := PyRun_SimpleString ("_gnatcoll.hide()");
       end if;
 
@@ -1417,7 +1416,6 @@ package body GNATCOLL.Scripts.Python is
                      --  We need to preserve the current exception before
                      --  executing the next command
                      PyErr_Fetch (EType, Occurrence, Traceback);
-                     Trace (Me, "_gnatcoll.show()");
                      Ignored := PyRun_SimpleString ("_gnatcoll.show()");
                      if Get_Default_Console (Script) /= null then
                         Set_Hide_Output (Get_Default_Console (Script), False);
@@ -1430,7 +1428,6 @@ package body GNATCOLL.Scripts.Python is
                   PyErr_Print;
 
                   if Hide_Output then
-                     Trace (Me, "_gnatcoll.hide()");
                      Ignored := PyRun_SimpleString ("_gnatcoll.hide()");
                      if Get_Default_Console (Script) /= null then
                         Set_Hide_Output (Get_Default_Console (Script), True);
@@ -1524,13 +1521,12 @@ package body GNATCOLL.Scripts.Python is
          PyErr_Clear;
       end if;
 
-      if not Hide_Output then
+      if Hide_Output then
+         Ignored := PyRun_SimpleString ("_gnatcoll.show()");
+      else
          --  PyEval_EvalCode has already called sys.displayhook, so it
          --  has already displayed the expression.
          Display_Prompt (Script);
-      else
-         Trace (Me, "_gnatcoll.show()");
-         Ignored := PyRun_SimpleString ("_gnatcoll.show()");
       end if;
 
       Script.In_Process := False;
@@ -1557,7 +1553,6 @@ package body GNATCOLL.Scripts.Python is
          Errors.all := True;
 
          if Hide_Output then
-            Trace (Me, "_gnatcoll.show() on exception");
             Ignored := PyRun_SimpleString ("_gnatcoll.show()");
          end if;
 
