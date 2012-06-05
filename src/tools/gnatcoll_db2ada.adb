@@ -623,8 +623,12 @@ procedure GNATCOLL_Db2Ada is
       R   : GNATCOLL.SQL.Exec.Forward_Cursor;
       Var : Dumped_Vars;
    begin
-      R.Fetch (DB, "SELECT """ & Field
-               & """ FROM """ & Table & """ WHERE " & Where);
+      if Where /= "" then
+         R.Fetch (DB, "SELECT " & Field
+                  & " FROM """ & Table & """ WHERE " & Where);
+      else
+         R.Fetch (DB, "SELECT " & Field & " FROM """ & Table & '"');
+      end if;
 
       Var.Name    := To_Unbounded_String (Name);
       Var.Value   := To_Unbounded_String (Value (R, 0));
