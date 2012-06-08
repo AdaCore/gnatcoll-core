@@ -463,9 +463,8 @@ procedure GNATInspect is
    procedure Process_Scenario (Args : Arg_List) is
       Name  : constant String := Nth_Arg (Args, 1);
       Value : constant String := Nth_Arg (Args, 2);
-      Var   : Scenario_Variable := Tree.Scenario_Variables (Name);
    begin
-      Set_Value (Var, Value);
+      Env.Change_Environment (Name, Value);
       Tree.Recompute_View (Errors => Ada.Text_IO.Put_Line'Access);
    end Process_Scenario;
 
