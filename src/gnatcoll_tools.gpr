@@ -13,7 +13,12 @@ project GnatColl_Tools is
       when "no" =>
          for Excluded_Source_Files use ("gnatinspect.adb");
       when "yes" =>
-         for Main use Project'Main & ("gnatinspect.adb");
+         case GnatColl_Shared.Sqlite is
+            when "no" =>
+               for Excluded_Source_Files use ("gnatinspect.adb");
+            when "yes" =>
+               for Main use Project'Main & ("gnatinspect.adb");
+         end case;
    end case;
 
    case GnatColl_Shared.Templates is

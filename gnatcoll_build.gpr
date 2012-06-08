@@ -4,7 +4,7 @@ with "src/gnatcoll";
 with "src/gnatcoll_python";
 with "src/gnatcoll_postgres";
 with "src/gnatcoll_sqlite";
---  with "src/gnatcoll_tools";
+with "src/gnatcoll_tools";
 with "src/gnatcoll_gmp";
 with "src/gnatcoll_readline";
 with "gnatcoll_shared";
