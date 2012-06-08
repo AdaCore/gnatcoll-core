@@ -2248,10 +2248,15 @@ package body GNATCOLL.Xref is
       -------------------
 
       procedure Initialize_DB (DB : Database_Connection) is
+         In_Memory : constant Boolean :=
+           Is_Sqlite and then GNATCOLL.SQL.Sqlite.DB_Name (DB) /= ":memory:";
          Start : Time;
+
       begin
-         if Is_Sqlite and then not Self.DB_Created then
-            Self.DB_Created := True;
+         if Is_Sqlite and then (not In_Memory or else not Self.DB_Created) then
+            if In_Memory then
+               Self.DB_Created := True;
+            end if;
 
             declare
                Current_DB  : constant String :=
