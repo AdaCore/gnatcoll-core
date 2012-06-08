@@ -2636,7 +2636,7 @@ package body GNATCOLL.Xref is
          From  => Database.Entities & Database.Files,
          Where => Database.Files.Id = Database.Entities.Decl_File
            and Database.Entities.Name = Text_Param (1)
-           and Like (Database.Files.Path, '%' & File)
+           and Like (Database.Files.Path, "%/" & File)
          and C,
         Distinct => True,
         Limit    => 1);
@@ -2664,7 +2664,7 @@ package body GNATCOLL.Xref is
             Where => Database.Entity_Refs.Entity = Database.Entities.Id
             and Database.Entity_Refs.File = Database.Files.Id
             and Database.Entities.Name = Text_Param (1)
-            and Like (Database.Files.Path, '%' & File)
+            and Like (Database.Files.Path, "%/" & File)
             and C,
             Distinct => True);
 
@@ -2683,6 +2683,8 @@ package body GNATCOLL.Xref is
          end if;
          return Entity;
       end if;
+
+      Trace (Me_Error, ASCII.LF & "MANU Get_Entity, not found" & ASCII.LF);
 
       --  Not found ? Try an approximate match (if some location was provided
       --  by the user, otherwise the scope is just too big and approximation
@@ -2712,7 +2714,7 @@ package body GNATCOLL.Xref is
             Where => Database.Entity_Refs.Entity = Database.Entities.Id
             and Database.Entity_Refs.File = Database.Files.Id
             and Database.Entities.Name = Text_Param (1)
-            and Like (Database.Files.Path, '%' & File)
+            and Like (Database.Files.Path, "%/" & File)
             and C,
             Distinct => True);
 
@@ -2723,6 +2725,8 @@ package body GNATCOLL.Xref is
             Dist := abs (Line - Integer_Value (R, 1))
               + abs (Column - Integer_Value (R, 2)) * 250;
             if Dist < Distance then
+               Trace (Me_Error, ASCII.LF & "MANU fuzzy, distance="
+                      & Dist'Img & ASCII.LF);
                Entity := (Id => R.Integer_Value (0), Fuzzy => True);
                Distance := Dist;
             end if;

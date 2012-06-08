@@ -534,9 +534,7 @@ procedure GNATInspect is
 
       if Entity = No_Entity then
          Put_Line ("Error: entity not found '" & Arg & "'");
-      end if;
-
-      if Is_Fuzzy_Match (Entity) then
+      elsif Is_Fuzzy_Match (Entity) then
          Put_Line ("   fuzzy match for the entity");
       end if;
 
