@@ -38,9 +38,11 @@ with System.Address_Image;
 package body GNATCOLL.SQL.Exec is
 
    Me_Error  : constant Trace_Handle := Create ("SQL.ERROR", On);
-   Me_Select : constant Trace_Handle := Create ("SQL.SELECT");
+   Me_Select : constant Trace_Handle := Create ("SQL.SELECT", Off);
    Me_Cache  : constant Trace_Handle := Create ("SQL.CACHE");
-   Me_Query  : constant Trace_Handle := Create ("SQL");
+   Me_Query  : constant Trace_Handle := Create ("SQL", Off);
+   --  Disable by default those streams that tend to output a lot of data in
+   --  standard applications.
 
    Cache_Expiration_Delay : constant Duration := 3600.0;  --  1 hour
    --  Delay after which the SQL cache expires and must be reset
