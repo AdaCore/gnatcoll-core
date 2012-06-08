@@ -249,6 +249,7 @@ procedure GNATInspect is
    Nightly_DB_Name       : aliased GNAT.Strings.String_Access;
    Include_Runtime_Files : aliased Boolean;
    Display_Full_Paths    : aliased Boolean;
+   Exit_After_Refresh    : aliased Boolean;
    Verbose               : aliased Boolean;
    Project_Name          : aliased GNAT.Strings.String_Access;
    --  The options from the command line
@@ -1078,6 +1079,11 @@ begin
       Help        => "Print commands before executing them");
    Define_Switch
      (Cmdline,
+      Output      => Exit_After_Refresh'Access,
+      Long_Switch => "--exit",
+      Help        => "Refresh the database, and exit (no interactive mode)");
+   Define_Switch
+     (Cmdline,
       Output      => Project_Name'Access,
       Switch      => "-P:",
       Long_Switch => "--project=",
@@ -1127,6 +1133,10 @@ begin
       return;
    elsif Commands_From_File.all /= "" then
       Process_File (Commands_From_File.all);
+      return;
+   end if;
+
+   if Exit_After_Refresh then
       return;
    end if;
 
