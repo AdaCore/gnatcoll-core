@@ -2184,8 +2184,11 @@ package body GNATCOLL.Xref is
       --  The last pass in parsing a ALI file is to resolve all renamings, now
       --  that we can convert a reference to an entity
 
-      procedure Initialize_DB (DB : Database_Connection);
+      procedure Initialize_DB
+        (DB : Database_Connection; Force : Boolean);
       --  Initialize the database if needed (copy from disk or create db)
+      --  Force should be True when initializing an in-memory database for the
+      --  first time.
 
       procedure Backup_DB_If_Needed
         (DB : Database_Connection; To_DB : String);
@@ -2247,16 +2250,15 @@ package body GNATCOLL.Xref is
       -- Initialize_DB --
       -------------------
 
-      procedure Initialize_DB (DB : Database_Connection) is
-         In_Memory : constant Boolean :=
-           Is_Sqlite and then GNATCOLL.SQL.Sqlite.DB_Name (DB) /= ":memory:";
+      procedure Initialize_DB
+        (DB    : Database_Connection;
+         Force : Boolean)
+      is
          Start : Time;
 
       begin
-         if Is_Sqlite and then (not In_Memory or else not Self.DB_Created) then
-            if In_Memory then
-               Self.DB_Created := True;
-            end if;
+         if Is_Sqlite and then (Force or else not Self.DB_Created) then
+            Self.DB_Created := True;
 
             declare
                Current_DB  : constant String :=
@@ -2507,7 +2509,7 @@ package body GNATCOLL.Xref is
                 "Found" & Length (LI_Files)'Img & " [ags]li files");
       end if;
 
-      Initialize_DB (Self.DB);   --  From_DB_Name -> Self.DB
+      Initialize_DB (Self.DB, Force => False);   --  From_DB_Name -> Self.DB
       Search_LI_Files_To_Update;
 
       if not LIs.Is_Empty then
@@ -2532,7 +2534,7 @@ package body GNATCOLL.Xref is
                Destroy_Indexes := True;
 
                Trace (Me_Timing, "Temporarily using an in-memory database");
-               Initialize_DB (Memory);            --  Self.DB -> :memory:
+               Initialize_DB (Memory, Force => True);  --  Self.DB -> :memory:
                Start_Transaction (Memory);
                Parse_Files (Memory);
                Finalize_DB (Memory);
