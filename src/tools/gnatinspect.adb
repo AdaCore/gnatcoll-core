@@ -61,6 +61,10 @@ procedure GNATInspect is
    function Get_Entity (Arg : String) return Entity_Information;
    --  Return the entity matching the "name:file:line:column" argument
 
+   procedure Parse_Command_Line (Switch, Parameter, Section : String);
+   --  Handles some switches from the command line. Other switches are handled
+   --  directly by Getopt and will set the corresponding local variables.
+
    procedure Process_Body (Args : Arg_List);
    procedure Process_Calls (Args : Arg_List);
    procedure Process_Callers (Args : Arg_List);
@@ -74,13 +78,16 @@ procedure GNATInspect is
    procedure Process_Name (Args : Arg_List);
    procedure Process_Params (Args : Arg_List);
    procedure Process_Parent_Types (Args : Arg_List);
-   procedure Process_Project (Args : Arg_List);
    procedure Process_Refresh (Args : Arg_List);
    procedure Process_Refs (Args : Arg_List);
+   procedure Process_Scenario (Args : Arg_List);
    procedure Process_Shell (Args : Arg_List);
    --  Process the various commands.
    --  Args is the command line entered by the user, so Get_Command (Args) for
    --  instance is the command being executed.
+
+   procedure Process_Project (Args : Arg_List);
+   --  Load the given project (but does not compute its view)
 
    procedure Set_Variable (Name, Value : String);
    --  Change the value of a variable
@@ -196,6 +203,12 @@ procedure GNATInspect is
        new String'("Execute a shell command (an alternative is to use '!'"
            & " as the command."),
        Process_Shell'Access),
+
+      (new String'("scenario"),
+       new String'("VARIABLE VALUE"),
+       new String'("Change the value of a scenario variable, and reparse the"
+         & " project"),
+       Process_Scenario'Access),
 
       (new String'("time"),
        new String'("command arguments"),
@@ -384,7 +397,6 @@ procedure GNATInspect is
    procedure Process_Project (Args : Arg_List) is
       GNAT_Version : GNAT.Strings.String_Access;
    begin
-      Initialize (Env);
       Env.Set_Path_From_Gnatls
         (Gnatls       => "gnatls",
          GNAT_Version => GNAT_Version,
@@ -442,6 +454,19 @@ procedure GNATInspect is
             To_DB_Name          => DB_Name.all);
       end if;
    end Process_Refresh;
+
+   ----------------------
+   -- Process_Scenario --
+   ----------------------
+
+   procedure Process_Scenario (Args : Arg_List) is
+      Name  : constant String := Nth_Arg (Args, 1);
+      Value : constant String := Nth_Arg (Args, 2);
+      Var   : Scenario_Variable := Tree.Scenario_Variables (Name);
+   begin
+      Set_Value (Var, Value);
+      Tree.Recompute_View (Errors => Ada.Text_IO.Put_Line'Access);
+   end Process_Scenario;
 
    -------------------
    -- Process_Shell --
@@ -989,6 +1014,22 @@ procedure GNATInspect is
       GNAT.OS_Lib.OS_Exit (0);
    end On_Ctrl_C;
 
+   ------------------------
+   -- Parse_Command_Line --
+   ------------------------
+
+   procedure Parse_Command_Line (Switch, Parameter, Section : String) is
+      pragma Unreferenced (Section);
+      Equal : Natural;
+   begin
+      if Switch = "-X" then
+         Equal := Ada.Strings.Fixed.Index (Parameter, "=");
+         Env.Change_Environment
+           (Name  => Parameter (Parameter'First .. Equal - 1),
+            Value => Parameter (Equal + 1 .. Parameter'Last));
+      end if;
+   end Parse_Command_Line;
+
 begin
    GNATCOLL.Traces.Parse_Config_File;
 
@@ -1042,8 +1083,14 @@ begin
       Long_Switch => "--project=",
       Help        => "Load the given project. If unspecified, use sources and"
         & " ALI files from current directory.");
+   Define_Switch
+     (Cmdline,
+      Switch      => "-X:",
+      Help        => "Specify an external reference in the project");
 
-   Getopt (Cmdline);
+   Initialize (Env);
+
+   Getopt (Cmdline, Parse_Command_Line'Unrestricted_Access);
 
    if Project_Name.all = "" then
       Process_Project (Empty_Command_Line);   --  Load files from current dir

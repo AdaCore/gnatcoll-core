@@ -3216,6 +3216,20 @@ package body GNATCOLL.Projects is
       end loop;
    end Change_Environment;
 
+   ------------------------
+   -- Change_Environment --
+   ------------------------
+
+   procedure Change_Environment
+     (Self        : Project_Environment;
+      Name, Value : String)
+   is
+   begin
+      Prj.Ext.Add
+        (Self.Env.External, Name, Value,
+         Prj.Ext.From_Command_Line);
+   end Change_Environment;
+
    -----------
    -- Value --
    -----------

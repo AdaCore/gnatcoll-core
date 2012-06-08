@@ -903,10 +903,15 @@ package GNATCOLL.Projects is
    procedure Change_Environment
      (Self : Project_Tree;
       Vars : Scenario_Variable_Array);
+   procedure Change_Environment
+     (Self : Project_Environment;
+      Name, Value : String);
    --  Change the environment value for all the variables in Vars (you do not
    --  need to have all the scenario variables from the project, only those
    --  you are interested to change). These values will be used when
    --  Recompute_View is called (which you should do).
+   --  The second version (which applies to the environment) can be used before
+   --  a project is loaded. It will not impact already loaded projects.
 
    function Value (Var : Scenario_Variable) return String;
    --  Return the values set for Var.
