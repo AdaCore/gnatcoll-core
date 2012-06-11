@@ -528,6 +528,12 @@ package body GNATCOLL.Xref is
    --
    --  VFS_To_Id is a cache for source files.
 
+   function Single_Entity_From_E2e
+     (Self   : Xref_Database'Class;
+      Entity : Entity_Information;
+      E2e    : Integer) return Entity_Information;
+   --  Do a query on E2e, and returns the single matching entity (or No_Entity)
+
    ---------------------
    -- Create_Database --
    ---------------------
@@ -1204,6 +1210,7 @@ package body GNATCOLL.Xref is
               and then Str (Index) /= '['
               and then Str (Index) /= '<'
               and then Str (Index) /= '('
+              and then Str (Index) /= '='
             loop
                Index := Index + 1;
             end loop;
@@ -3213,26 +3220,60 @@ package body GNATCOLL.Xref is
       return Curs;
    end Methods;
 
-   -------------
-   -- Type_Of --
-   -------------
+   ----------------------------
+   -- Single_Entity_From_E2e --
+   ----------------------------
 
-   function Type_Of
+   function Single_Entity_From_E2e
      (Self   : Xref_Database'Class;
-      Entity : Entity_Information) return Entity_Information
+      Entity : Entity_Information;
+      E2e    : Integer) return Entity_Information
    is
       Curs : Entities_Cursor;
    begin
       Curs.DBCursor.Fetch
         (Self.DB,
          Query_E2E_From,
-         Params => (1 => +Entity.Id, 2 => +E2e_Of_Type));
+         Params => (1 => +Entity.Id, 2 => +E2e));
 
       if Curs.DBCursor.Has_Row then
          return Curs.Element;
       else
          return No_Entity;
       end if;
+   end Single_Entity_From_E2e;
+
+   -------------
+   -- Type_Of --
+   -------------
+
+   function Type_Of
+     (Self   : Xref_Database'Class;
+      Entity : Entity_Information) return Entity_Information is
+   begin
+      return Single_Entity_From_E2e (Self, Entity, E2e_Of_Type);
    end Type_Of;
+
+   -----------------
+   -- Renaming_Of --
+   -----------------
+
+   function Renaming_Of
+     (Self   : Xref_Database'Class;
+      Entity : Entity_Information) return Entity_Information is
+   begin
+      return Single_Entity_From_E2e (Self, Entity, E2e_Renames);
+   end Renaming_Of;
+
+   --------------------
+   -- Component_Type --
+   --------------------
+
+   function Component_Type
+     (Self   : Xref_Database'Class;
+      Entity : Entity_Information) return Entity_Information is
+   begin
+      return Single_Entity_From_E2e (Self, Entity, E2e_Component_Type);
+   end Component_Type;
 
 end GNATCOLL.Xref;

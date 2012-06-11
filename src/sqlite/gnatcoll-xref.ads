@@ -264,8 +264,7 @@ package GNATCOLL.Xref is
    function Depends_On
      (Self : Xref_Database'Class;
       File : GNATCOLL.VFS.Virtual_File) return File_Sets.Set;
-   --  Returns the list of files that File depends on (either directly or
-   --  indirectly in the case of Depends_On.
+   --  Returns the list of files that File depends on explicitly or implicitly.
 
    function Qualified_Name
      (Self   : Xref_Database'Class;
@@ -278,6 +277,18 @@ package GNATCOLL.Xref is
    --  Returns the type of the entity (as declared in the sources for variables
    --  and constants, for instance).
    --  For a function, this is the returned type.
+
+   function Component_Type
+     (Self   : Xref_Database'Class;
+      Entity : Entity_Information) return Entity_Information;
+   --  Return the type of the components of Entity (for arrays for instance,
+   --  this is the type for elements in the array)
+
+   function Renaming_Of
+     (Self   : Xref_Database'Class;
+      Entity : Entity_Information) return Entity_Information;
+   --  Returns the entity renamed by Entity (i.e. Entity acts as an alias
+   --  for the returned entity)
 
 private
    type Xref_Database is tagged record

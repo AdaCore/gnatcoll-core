@@ -69,6 +69,7 @@ procedure GNATInspect is
    procedure Process_Calls (Args : Arg_List);
    procedure Process_Callers (Args : Arg_List);
    procedure Process_Child_Types (Args : Arg_List);
+   procedure Process_Component (Args : Arg_List);
    procedure Process_Decl (Args : Arg_List);
    procedure Process_Depends_On (Args : Arg_List);
    procedure Process_Help (Args : Arg_List);
@@ -203,6 +204,12 @@ procedure GNATInspect is
        new String'("name:file:line:column"),
        new String'("Return the type of the entity (variable or constant)"),
        Process_Type'Access),
+
+      (new String'("component"),
+       new String'("name:file:line:column"),
+       new String'("Return the component type of the entity (for arrays"
+          & " for instance"),
+       Process_Component'Access),
 
       (new String'("shell"),
        null,
@@ -602,8 +609,9 @@ procedure GNATInspect is
    ------------------
 
    procedure Process_Refs (Args : Arg_List) is
-      Entity : Entity_Information;
-      Refs   : References_Cursor;
+      Entity  : Entity_Information;
+      Refs    : References_Cursor;
+      Renamed : Entity_Information;
    begin
       if Args_Length (Args) /= 1 then
          Put_Line ("Invalid number of arguments");
@@ -611,6 +619,12 @@ procedure GNATInspect is
       end if;
 
       Entity := Get_Entity (Nth_Arg (Args, 1));
+
+      Renamed := Xref.Renaming_Of (Entity);
+      if Renamed /= No_Entity then
+         Put_Line ("   Renaming of " & Image (Renamed));
+      end if;
+
       Refs := Xref.References (Entity);
       Dump (Refs, To_String (Xref.Declaration (Entity).Name));
    end Process_Refs;
@@ -1019,6 +1033,28 @@ procedure GNATInspect is
                    & ":" & Image (Decl.Location.Column, Min_Width => 0));
       end if;
    end Process_Decl;
+
+   -----------------------
+   -- Process_Component --
+   -----------------------
+
+   procedure Process_Component (Args : Arg_List) is
+      Entity  : Entity_Information;
+      Comp    : Entity_Information;
+      Count   : Natural := 1;
+   begin
+      if Args_Length (Args) /= 1 then
+         Put_Line ("Invalid number of arguments");
+         return;
+      end if;
+
+      Entity := Get_Entity (Nth_Arg (Args, 1));
+      Comp := Xref.Component_Type (Entity);
+      if Comp /= No_Entity then
+         Output_Prefix (Count);
+         Put_Line (Image (Comp));
+      end if;
+   end Process_Component;
 
    ------------------
    -- Process_Body --
