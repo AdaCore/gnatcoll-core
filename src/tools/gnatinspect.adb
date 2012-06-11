@@ -82,6 +82,7 @@ procedure GNATInspect is
    procedure Process_Refs (Args : Arg_List);
    procedure Process_Scenario (Args : Arg_List);
    procedure Process_Shell (Args : Arg_List);
+   procedure Process_Type (Args : Arg_List);
    --  Process the various commands.
    --  Args is the command line entered by the user, so Get_Command (Args) for
    --  instance is the command being executed.
@@ -197,6 +198,11 @@ procedure GNATInspect is
        new String'("name:file:line:column"),
        new String'("Display all known references to the entity."),
        Process_Refs'Access),
+
+      (new String'("type"),
+       new String'("name:file:line:column"),
+       new String'("Return the type of the entity (variable or constant)"),
+       Process_Type'Access),
 
       (new String'("shell"),
        null,
@@ -340,9 +346,7 @@ procedure GNATInspect is
       else
          Decl := Xref.Declaration (Self);
 
-         --  A predefined entity ?
-
-         if Decl.Location.Line = -1 then
+         if Is_Predefined_Entity (Decl) then
             return "predefined entity: " & To_String (Decl.Name);
          else
             return To_String (Decl.Name) & ":"
@@ -950,6 +954,27 @@ procedure GNATInspect is
       Children := Xref.Parent_Types (Entity);
       Dump (Children);
    end Process_Parent_Types;
+
+   ------------------
+   -- Process_Type --
+   ------------------
+
+   procedure Process_Type (Args : Arg_List) is
+      Entity, Of_Type : Entity_Information;
+      Count : Natural := 1;
+   begin
+      if Args_Length (Args) /= 1 then
+         Put_Line ("Expected entity reference as parameter");
+         return;
+      end if;
+
+      Entity := Get_Entity (Nth_Arg (Args, 1));
+      Of_Type := Xref.Type_Of (Entity);
+      if Of_Type /= No_Entity then
+         Output_Prefix (Count);
+         Put_Line (Image (Of_Type));
+      end if;
+   end Process_Type;
 
    ---------------------
    -- Process_Methods --

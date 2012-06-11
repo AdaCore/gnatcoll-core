@@ -2844,6 +2844,16 @@ package body GNATCOLL.Xref is
       end if;
    end Declaration;
 
+   --------------------------
+   -- Is_Predefined_Entity --
+   --------------------------
+
+   function Is_Predefined_Entity
+     (Decl : Entity_Declaration) return Boolean is
+   begin
+      return Decl.Location.Line = -1;
+   end Is_Predefined_Entity;
+
    ------------
    -- Bodies --
    ------------
@@ -3173,5 +3183,27 @@ package body GNATCOLL.Xref is
          Params => (1 => +Entity.Id, 2 => +E2e_Has_Primitive));
       return Curs;
    end Methods;
+
+   -------------
+   -- Type_Of --
+   -------------
+
+   function Type_Of
+     (Self   : Xref_Database'Class;
+      Entity : Entity_Information) return Entity_Information
+   is
+      Curs : Entities_Cursor;
+   begin
+      Curs.DBCursor.Fetch
+        (Self.DB,
+         Query_E2E_From,
+         Params => (1 => +Entity.Id, 2 => +E2e_Of_Type));
+
+      if Curs.DBCursor.Has_Row then
+         return Curs.Element;
+      else
+         return No_Entity;
+      end if;
+   end Type_Of;
 
 end GNATCOLL.Xref;

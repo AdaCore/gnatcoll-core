@@ -174,6 +174,12 @@ package GNATCOLL.Xref is
       Entity : Entity_Information) return Entity_Declaration;
    --  Return the name of the entity
 
+   function Is_Predefined_Entity
+     (Decl : Entity_Declaration) return Boolean;
+   --  Returns True if the corresponding entity is a predefined entity, ie
+   --  the location of the declaration is irrelevant (only the name should be
+   --  taken into account)
+
    type Base_Cursor is abstract tagged private;
    function Has_Element (Self : Base_Cursor) return Boolean;
    procedure Next (Self : in out Base_Cursor);
@@ -265,6 +271,12 @@ package GNATCOLL.Xref is
      (Self   : Xref_Database'Class;
       Entity : Entity_Information) return String;
    --  Returns the fully qualified name for the entity
+
+   function Type_Of
+     (Self   : Xref_Database'Class;
+      Entity : Entity_Information) return Entity_Information;
+   --  Returns the type of the entity (as declared in the sources for variables
+   --  and constants, for instance).
 
 private
    type Xref_Database is tagged record
