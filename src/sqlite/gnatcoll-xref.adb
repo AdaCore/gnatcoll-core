@@ -1210,8 +1210,17 @@ package body GNATCOLL.Xref is
               and then Str (Index) /= '['
               and then Str (Index) /= '<'
               and then Str (Index) /= '('
-              and then Str (Index) /= '='
             loop
+               --  A "=" might be either the start of renaming info in .ali
+               --  files, or the end for the "=" operator in .gli files.
+
+               if Str (Index) = '='
+                 and then Index < Str'Last
+                 and then Str (Index + 1) /= ' '
+               then
+                  exit;
+               end if;
+
                Index := Index + 1;
             end loop;
          end if;
