@@ -293,8 +293,16 @@ package GNATCOLL.Xref is
    function Referenced_In
      (Self   : Xref_Database'Class;
       File   : GNATCOLL.VFS.Virtual_File) return Entities_Cursor;
+   function Referenced_In
+     (Self   : Xref_Database'Class;
+      File   : GNATCOLL.VFS.Virtual_File;
+      Name   : String) return Entities_Cursor;
    --  Returns the list of all the entities referenced at least once in the
    --  given file. This of course includes entities declared in that file.
+   --
+   --  A version is given that only returns entities with a given name. It is
+   --  for instance useful when Get_Entity returns No_Entity (because there
+   --  is no exact reference, nor close-by, for an entity).
 
 private
    type Xref_Database is tagged record
