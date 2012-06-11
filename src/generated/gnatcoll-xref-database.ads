@@ -27,7 +27,6 @@ package GNATCOLL.Xref.Database is
    E2e_Parent_Type : constant E2e_Id := 1;
    E2e_Pointed_Type : constant E2e_Id := 0;
    E2e_Renames : constant E2e_Id := 3;
-   E2e_Returns : constant E2e_Id := 2;
 
    type T_Abstract_E2e (Instance : Cst_String_Access; Index : Integer)
       is abstract new SQL_Table (Ta_E2e, Instance, Index) with

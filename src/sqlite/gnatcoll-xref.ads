@@ -277,6 +277,7 @@ package GNATCOLL.Xref is
       Entity : Entity_Information) return Entity_Information;
    --  Returns the type of the entity (as declared in the sources for variables
    --  and constants, for instance).
+   --  For a function, this is the returned type.
 
 private
    type Xref_Database is tagged record

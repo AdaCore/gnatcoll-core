@@ -90,7 +90,6 @@
 |    id | name             |                                     |
 |     0 | pointed type     | # A points to B                     |
 |     1 | parent type      | # B is parent of A                  |
-|     2 | returns          | # A returns B                       |
 |     3 | renames          | # A renames B                       |
 |     4 | has primitive    | # B is primitive of A               |
 |     5 | instance of      | # A is instance of B                |
@@ -99,7 +98,7 @@
 |     8 | overrides        | # A overrides B                     |
 |     9 | component type   | # A is an array of B                |
 |    10 | from enumeration | # A is an enumeration literal for B |
-|    11 | of type          | # B is the type of object A         |
+|    11 | of type          | # B is the type of object A. Or A is a function returning B  |
 |    12 | in parameter     | # B is an "in" parameter for A      |
 |    13 | out parameter    | # B is an "out" parameter for A     |
 |    14 | in out parameter | # B is an "in out" parameter for A  |

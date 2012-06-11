@@ -1706,7 +1706,7 @@ package body GNATCOLL.Xref is
                         when 'P' | 'p' =>
                            Eid := E2e_Pointed_Type;
                         when 'G' | 'v' | 'V' | 'y' =>
-                           Eid := E2e_Returns;
+                           Eid := E2e_Of_Type;  --  return type
                         when others =>
                            if Active (Me_Error) then
                               Trace (Me_Error,
@@ -1731,7 +1731,7 @@ package body GNATCOLL.Xref is
 
                      case Entity_Kind is
                         when 'G' | 'v' | 'V' | 'y' =>
-                           Eid := E2e_Returns;
+                           Eid := E2e_Of_Type;  --  Return type
                         when 'n' =>
                            Eid := E2e_From_Enumeration;
                         when 'J' | 'j' | 'r' | 'R' =>
@@ -2615,7 +2615,7 @@ package body GNATCOLL.Xref is
    is
       R  : Forward_Cursor;
       Q  : SQL_Query;
-      C  : SQL_Criteria;
+      C, C2  : SQL_Criteria;
       Entity : Entity_Information := No_Entity;
       Distance, Dist  : Natural;
 
@@ -2684,14 +2684,10 @@ package body GNATCOLL.Xref is
          return Entity;
       end if;
 
-      Trace (Me_Error, ASCII.LF & "MANU Get_Entity, not found" & ASCII.LF);
-
-      --  Not found ? Try an approximate match (if some location was provided
-      --  by the user, otherwise the scope is just too big and approximation
-      --  would be just a wild guess).
-      --  The algorithm is as follows: we find all homonym entities within a
-      --  given range, and then chose the one closest to the initial location
-      --  provided by the user
+      --  Not found ? Try an approximate match on the declaration
+      --  The algorithm is as follows: we find all homonym entities within
+      --  a given range, and then chose the one closest to the initial
+      --  location provided by the user
 
       if Line /= -1 then
          Entity := No_Entity;
@@ -2700,11 +2696,46 @@ package body GNATCOLL.Xref is
          declare
             use type Integer_Fields.Field;
          begin
-            C := Absolute (Database.Entity_Refs.Line - Line) < 10;
+            C := Absolute (Database.Entities.Decl_Line - Line) < 10;
+            C2 := Absolute (Database.Entity_Refs.Line - Line) < 10;
+
             if Column /= -1 then
-               C := C and Absolute (Database.Entity_Refs.Column - Column) < 20;
+               C := C
+                 and Absolute (Database.Entities.Decl_Column - Column) < 20;
+               C2 := C2
+                 and Absolute (Database.Entity_Refs.Column - Column) < 20;
             end if;
          end;
+
+         Q := SQL_Select
+           (Database.Entities.Id
+            & Database.Entities.Decl_Line & Database.Entities.Decl_Column,
+            From  => Database.Entities & Database.Files,
+            Where => Database.Files.Id = Database.Entities.Decl_File
+            and Database.Entities.Name = Text_Param (1)
+            and Like (Database.Files.Path, "%/" & File)
+            and C,
+            Distinct => True,
+            Limit    => 1);
+
+         R.Fetch
+           (Self.DB, Q,
+            Params => (1 => +Name'Unrestricted_Access));
+
+         while R.Has_Row loop
+            Dist := abs (Line - Integer_Value (R, 1))
+              + abs (Column - Integer_Value (R, 2)) * 250;
+            if Dist < Distance then
+               Entity := (Id => R.Integer_Value (0), Fuzzy => True);
+               Distance := Dist;
+            end if;
+
+            R.Next;
+         end loop;
+
+         --  Also try an approximate match on the references (if some location
+         --  was provided by the user, otherwise the scope is just too big and
+         --  approximation would be just a wild guess).
 
          Q := SQL_Select
            (Database.Entity_Refs.Entity
@@ -2715,7 +2746,7 @@ package body GNATCOLL.Xref is
             and Database.Entity_Refs.File = Database.Files.Id
             and Database.Entities.Name = Text_Param (1)
             and Like (Database.Files.Path, "%/" & File)
-            and C,
+            and C2,
             Distinct => True);
 
          R.Fetch
@@ -2725,8 +2756,6 @@ package body GNATCOLL.Xref is
             Dist := abs (Line - Integer_Value (R, 1))
               + abs (Column - Integer_Value (R, 2)) * 250;
             if Dist < Distance then
-               Trace (Me_Error, ASCII.LF & "MANU fuzzy, distance="
-                      & Dist'Img & ASCII.LF);
                Entity := (Id => R.Integer_Value (0), Fuzzy => True);
                Distance := Dist;
             end if;

@@ -195,7 +195,6 @@ package body GNATCOLL.Xref.Database is
          & "|id|name||" & ASCII.LF
          & "|0|pointed type|" & ASCII.LF
          & "|1|parent type|" & ASCII.LF
-         & "|2|returns|" & ASCII.LF
          & "|3|renames|" & ASCII.LF
          & "|4|has primitive|" & ASCII.LF
          & "|5|instance of|" & ASCII.LF
