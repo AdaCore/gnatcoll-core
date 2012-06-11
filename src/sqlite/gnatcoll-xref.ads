@@ -290,6 +290,12 @@ package GNATCOLL.Xref is
    --  Returns the entity renamed by Entity (i.e. Entity acts as an alias
    --  for the returned entity)
 
+   function Referenced_In
+     (Self   : Xref_Database'Class;
+      File   : GNATCOLL.VFS.Virtual_File) return Entities_Cursor;
+   --  Returns the list of all the entities referenced at least once in the
+   --  given file. This of course includes entities declared in that file.
+
 private
    type Xref_Database is tagged record
       DB      : GNATCOLL.SQL.Exec.Database_Connection;

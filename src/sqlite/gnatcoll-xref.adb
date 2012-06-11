@@ -3276,4 +3276,43 @@ package body GNATCOLL.Xref is
       return Single_Entity_From_E2e (Self, Entity, E2e_Component_Type);
    end Component_Type;
 
+   -------------------
+   -- Referenced_In --
+   -------------------
+
+   function Referenced_In
+     (Self   : Xref_Database'Class;
+      File   : GNATCOLL.VFS.Virtual_File) return Entities_Cursor
+   is
+      Curs : Entities_Cursor;
+   begin
+      Curs.DBCursor.Fetch
+        (Self.DB,
+         SQL_Union
+           (SQL_Select
+              (Database.Entities.Id
+               & Database.Files.Path
+               & Database.Entities.Decl_Line
+               & Database.Entities.Decl_Column,
+               From => Database.Entities & Database.Files,
+               Where => Database.Entities.Decl_File = Database.Files.Id
+               and Like (Database.Files.Path, File.Display_Full_Name)),
+
+            SQL_Select
+              (Database.Entities.Id
+               & Database.Files.Path
+               & Database.Entities.Decl_Line
+               & Database.Entities.Decl_Column,
+               From => Database.Entity_Refs & Database.Files
+                  & Database.Entities,
+               Where => Database.Entity_Refs.File = Database.Files.Id
+                  and Like (Database.Files.Path, File.Display_Full_Name)
+                  and Database.Entity_Refs.Entity = Database.Entities.Id),
+
+            Order_By => Database.Files.Path & Database.Entities.Decl_Line
+               & Database.Entities.Decl_Column,
+            Distinct => True));
+      return Curs;
+   end Referenced_In;
+
 end GNATCOLL.Xref;

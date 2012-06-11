@@ -72,6 +72,7 @@ procedure GNATInspect is
    procedure Process_Component (Args : Arg_List);
    procedure Process_Decl (Args : Arg_List);
    procedure Process_Depends_On (Args : Arg_List);
+   procedure Process_Entities (Args : Arg_List);
    procedure Process_Help (Args : Arg_List);
    procedure Process_Importing (Args : Arg_List);
    procedure Process_Imports (Args : Arg_List);
@@ -199,6 +200,11 @@ procedure GNATInspect is
        new String'("name:file:line:column"),
        new String'("Display all known references to the entity."),
        Process_Refs'Access),
+
+      (new String'("entities"),
+       new String'("file"),
+       new String'("List all entities referenced or declared in the file"),
+       Process_Entities'Access),
 
       (new String'("type"),
        new String'("name:file:line:column"),
@@ -932,6 +938,18 @@ procedure GNATInspect is
       Callers := Xref.Callers (Entity);
       Dump (Callers);
    end Process_Callers;
+
+   ----------------------
+   -- Process_Entities --
+   ----------------------
+
+   procedure Process_Entities (Args : Arg_List) is
+      Entities : Entities_Cursor;
+   begin
+      Entities := Xref.Referenced_In
+        (File => Tree.Create (+Nth_Arg (Args, 1)));
+      Dump (Entities);
+   end Process_Entities;
 
    -------------------------
    -- Process_Child_Types --
