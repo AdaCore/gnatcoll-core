@@ -5363,11 +5363,22 @@ package body GNATCOLL.Projects is
                   (P, File, Source.Language.Name, Source));
 
                if Source.Object /= Namet.No_File then
-                  Self.Data.Objects_Basename.Include
-                    (Base_Name
-                       (Filesystem_String (Get_Name_String (Source.Object)),
-                        ".o"),
-                     (P, File, Source.Language.Name, Source));
+                  declare
+                     Base : constant Filesystem_String :=
+                       Base_Name
+                         (Filesystem_String (Get_Name_String (Source.Object)),
+                          ".o");
+                  begin
+                     if Source.Index = 0 then
+                        Self.Data.Objects_Basename.Include
+                          (Base, (P, File, Source.Language.Name, Source));
+                     else
+                        Self.Data.Objects_Basename.Include
+                          (Base & "~"
+                           & (+Image (Integer (Source.Index), Min_Width => 0)),
+                           (P, File, Source.Language.Name, Source));
+                     end if;
+                  end;
                end if;
 
                --  The project manager duplicates files that contain several
