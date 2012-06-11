@@ -107,7 +107,7 @@
 |    16 | has discriminant | # B is a discriminant of A          |
 |    17 | is formal of     | # B is a generic formal parameter   |
 
-| TABLE | files |
+| TABLE | files |            |          |
 | id    | path  | stamp      | language |
 | -1    |  /    | 1970-01-01 | ada      |
 

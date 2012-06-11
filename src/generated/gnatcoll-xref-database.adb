@@ -211,7 +211,7 @@ package body GNATCOLL.Xref.Database is
          & "|15|access parameter|" & ASCII.LF
          & "|16|has discriminant|" & ASCII.LF
          & "|17|is formal of|" & ASCII.LF
-         & "|TABLE|files|" & ASCII.LF
+         & "|TABLE|files|||" & ASCII.LF
          & "|id|path|stamp|language|" & ASCII.LF
          & "|-1|/|1970-01-01|ada|" & ASCII.LF
          & "|TABLE|entities||||" & ASCII.LF

@@ -335,12 +335,23 @@ procedure GNATInspect is
    function Image (Self : Entity_Information) return String is
       Decl   : Entity_Declaration;
    begin
-      Decl := Xref.Declaration (Self);
-      return To_String (Decl.Name) & ":"
-        & Image (Decl.Location.File) & ":"
-        & Image (Decl.Location.Line, Min_Width => 0)
-        & ':'
-        & Image (Decl.Location.Column, Min_Width => 0);
+      if Self = No_Entity then
+         return "Unknown entity";
+      else
+         Decl := Xref.Declaration (Self);
+
+         --  A predefined entity ?
+
+         if Decl.Location.Line = -1 then
+            return "predefined entity: " & To_String (Decl.Name);
+         else
+            return To_String (Decl.Name) & ":"
+              & Image (Decl.Location.File) & ":"
+              & Image (Decl.Location.Line, Min_Width => 0)
+              & ':'
+              & Image (Decl.Location.Column, Min_Width => 0);
+         end if;
+      end if;
    end Image;
 
    ------------------
@@ -794,8 +805,10 @@ procedure GNATInspect is
    begin
       while Curs.Has_Element loop
          E := Curs.Element;
-         Output_Prefix (Count);
-         Put_Line (Image (E));
+         if E /= No_Entity then
+            Output_Prefix (Count);
+            Put_Line (Image (E));
+         end if;
          Curs.Next;
       end loop;
    end Dump;

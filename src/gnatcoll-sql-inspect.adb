@@ -2103,6 +2103,9 @@ package body GNATCOLL.SQL.Inspect is
 
       while Data (First) = '|'
         and then Data (First + 1) = '-'  --  Skip line like  |---|----|
+
+        --  But we want to parse  |-1|...
+        and then (Data'Length < 3 or else Data (First + 2) = '-')
       loop
          First := Line_End + 1;
          Line_End := EOL (Data (First .. Data'Last));
