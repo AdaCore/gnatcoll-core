@@ -2491,12 +2491,17 @@ package body GNATCOLL.Xref is
          end if;
 
          while Has_Element (LI_C) loop
-            Parse_LI (DB                => DB,
-                      Tree              => Tree,
-                      LI                => Element (LI_C),
-                      VFS_To_Id         => VFS_To_Id,
-                      Entity_Decl_To_Id => Entity_Decl_To_Id,
-                      Entity_Renamings  => Entity_Renamings);
+            begin
+               Parse_LI (DB                => DB,
+                         Tree              => Tree,
+                         LI                => Element (LI_C),
+                         VFS_To_Id         => VFS_To_Id,
+                         Entity_Decl_To_Id => Entity_Decl_To_Id,
+                         Entity_Renamings  => Entity_Renamings);
+            exception
+               when E : others =>
+                  Trace (Me_Error, E);
+            end;
             Next (LI_C);
          end loop;
 
