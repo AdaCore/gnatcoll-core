@@ -1994,12 +1994,12 @@ package body GNATCOLL.Xref is
          if Process_Scopes
            and then End_Of_Spec_Line /= 0
          then
-            Insert (Scope_Trees (Xref_File_Unit_File_Index),
+            Insert (Scope_Trees (Current_X_File_Unit_File_Index),
                     Entity => Current_Entity,
                     Low    => Spec_Start_Line,
                     High   => End_Of_Spec_Line);
             if Spec_Start_Line + 1 <= Xref_Line then
-               Insert (Decl_Scope_Trees (Xref_File_Unit_File_Index),
+               Insert (Decl_Scope_Trees (Current_X_File_Unit_File_Index),
                        Entity => Current_Entity,
                        Low    => Spec_Start_Line + 1,
                        High   => End_Of_Spec_Line);
