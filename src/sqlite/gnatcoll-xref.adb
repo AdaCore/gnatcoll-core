@@ -2670,13 +2670,143 @@ package body GNATCOLL.Xref is
       Name   : String;
       File   : String;
       Line   : Integer := -1;
-      Column : Visible_Column := -1) return Entity_Information
+      Column : Visible_Column := -1) return Entity_Reference
    is
-      R  : Forward_Cursor;
-      Q  : SQL_Query;
+      Distance : Natural := Integer'Last;
+      Best_Ref : Entity_Reference := No_Entity_Reference;
+
+      procedure Prepare_Decl
+        (C           : SQL_Criteria;
+         Exact_Match : Boolean);
+      --  Perform the query Q (assuming it checks the declarations).
+
+      procedure Prepare_Ref
+        (C           : SQL_Criteria;
+         Exact_Match : Boolean);
+      --  Perform the query Q (assuming it checks the references).
+
+      procedure Result
+        (Q : SQL_Query; Exact_Match : Boolean; From_Refs : Boolean);
+
+      ------------
+      -- Result --
+      ------------
+
+      procedure Result
+        (Q : SQL_Query; Exact_Match : Boolean; From_Refs : Boolean)
+      is
+         R      : Forward_Cursor;
+         Caller : Entity_Information;
+         Dist   : Natural;
+         Kind   : Unbounded_String;
+      begin
+         R.Fetch (Self.DB, Q, Params => (1 => +Name'Unrestricted_Access));
+
+         if R.Has_Row then
+            loop
+               if Exact_Match then
+                  Dist := 0;
+               else
+                  Dist := abs (Line - Integer_Value (R, 1))
+                    + abs (Integer (Column) - Integer_Value (R, 2)) * 250;
+               end if;
+
+               if Dist < Distance then
+                  if R.Is_Null (3) then
+                     Caller := No_Entity;
+                  else
+                     Caller := (Id => R.Integer_Value (3), Fuzzy => False);
+                  end if;
+
+                  if From_Refs then
+                     Kind := To_Unbounded_String (R.Value (5));
+                  else
+                     Kind := To_Unbounded_String ("declaration");
+                  end if;
+
+                  Best_Ref :=
+                    (Entity =>
+                       (Id => R.Integer_Value (0), Fuzzy => not Exact_Match),
+                     File   => Create (+R.Value (4)),
+                     Line   => R.Integer_Value (1),
+                     Column => Visible_Column (R.Integer_Value (2)),
+                     Kind   => Kind,
+                     Scope  => Caller);
+
+                  Distance := Dist;
+               end if;
+
+               R.Next;
+               exit when not R.Has_Row;
+
+               if Exact_Match then
+                  --  Overloaded entity found
+                  Best_Ref := No_Entity_Reference;
+                  return;
+               end if;
+            end loop;
+         end if;
+
+      end Result;
+
+      ------------------
+      -- Prepare_Decl --
+      ------------------
+
+      procedure Prepare_Decl
+        (C           : SQL_Criteria;
+         Exact_Match : Boolean)
+      is
+         Q      : SQL_Query;
+      begin
+         Q := SQL_Select
+           (Database.Entities.Id
+               & Database.Entities.Decl_Line
+               & Database.Entities.Decl_Column
+               & Database.Entities.Decl_Caller
+               & Database.Files.Path,
+            From  => Database.Entities & Database.Files,
+            Where => Database.Files.Id = Database.Entities.Decl_File
+               and Database.Entities.Name = Text_Param (1)
+               and Like (Database.Files.Path, "%/" & File)
+               and C,
+            Distinct => True,
+            Limit    => 1);
+
+         Result (Q, Exact_Match, From_Refs => False);
+      end Prepare_Decl;
+
+      -----------------
+      -- Prepare_Ref --
+      -----------------
+
+      procedure Prepare_Ref
+        (C           : SQL_Criteria;
+         Exact_Match : Boolean)
+      is
+         Q      : SQL_Query;
+      begin
+         Q := SQL_Select
+           (Database.Entity_Refs.Entity
+               & Database.Entity_Refs.Line
+               & Database.Entity_Refs.Column
+               & Database.Entity_Refs.Caller
+               & Database.Files.Path
+               & Database.Reference_Kinds.Display,
+            From => Database.Entity_Refs & Database.Entities & Database.Files
+               & Database.Reference_Kinds,
+            Where => Database.Entity_Refs.Entity = Database.Entities.Id
+               and Database.Entity_Refs.File = Database.Files.Id
+               and Database.Reference_Kinds.Id = Database.Entity_Refs.Kind
+               and Database.Entities.Name = Text_Param (1)
+               and Like (Database.Files.Path, "%/" & File)
+               and C,
+            Distinct => True);
+
+         Result (Q, Exact_Match, From_Refs => True);
+      end Prepare_Ref;
+
       C, C2  : SQL_Criteria;
-      Entity : Entity_Information := No_Entity;
-      Distance, Dist  : Natural;
 
    begin
       --  First test whether the user has passed the location of the
@@ -2684,63 +2814,27 @@ package body GNATCOLL.Xref is
 
       if Line /= -1 then
          C := Database.Entities.Decl_Line = Line;
-
+         C2 := Database.Entity_Refs.Line = Line;
          if Column /= -1 then
             C := C and Database.Entities.Decl_Column = Integer (Column);
+            C2 := C2 and Database.Entity_Refs.Column = Integer (Column);
          end if;
       end if;
 
-      Q := SQL_Select
-        (Database.Entities.Id,
-         From  => Database.Entities & Database.Files,
-         Where => Database.Files.Id = Database.Entities.Decl_File
-           and Database.Entities.Name = Text_Param (1)
-           and Like (Database.Files.Path, "%/" & File)
-         and C,
-        Distinct => True,
-        Limit    => 1);
-
-      R.Fetch
-        (Self.DB, Q,
-         Params => (1 => +Name'Unrestricted_Access));
-
-      if not R.Has_Row then
-         --  Else check whether we have a matching reference
-
-         C := No_Criteria;
-
-         if Line /= -1 then
-            C := Database.Entity_Refs.Line = Line;
-
-            if Column /= -1 then
-               C := C and Database.Entity_Refs.Column = Integer (Column);
-            end if;
-         end if;
-
-         Q := SQL_Select
-           (Database.Entity_Refs.Entity,
-            From => Database.Entity_Refs & Database.Entities & Database.Files,
-            Where => Database.Entity_Refs.Entity = Database.Entities.Id
-            and Database.Entity_Refs.File = Database.Files.Id
-            and Database.Entities.Name = Text_Param (1)
-            and Like (Database.Files.Path, "%/" & File)
-            and C,
-            Distinct => True);
-
-         R.Fetch
-           (Self.DB, Q,
-            Params => (1 => +Name'Unrestricted_Access));
+      Prepare_Decl (C, Exact_Match => True);
+      if Distance = 0 then
+         return Best_Ref;
       end if;
 
-      if R.Has_Row then
-         Entity := (Id => R.Integer_Value (0), Fuzzy => False);
-         R.Next;
+      --  Else check whether we have a matching reference
 
-         if R.Has_Row then
-            --  Overloaded entity found
-            Entity := No_Entity;
-         end if;
-         return Entity;
+      Prepare_Ref (C2, Exact_Match => True);
+      if Distance = 0 then
+         return Best_Ref;
+      end if;
+
+      if Line = -1 then
+         return No_Entity_Reference;
       end if;
 
       --  Not found ? Try an approximate match on the declaration
@@ -2748,84 +2842,20 @@ package body GNATCOLL.Xref is
       --  a given range, and then chose the one closest to the initial
       --  location provided by the user
 
-      if Line /= -1 then
-         Entity := No_Entity;
-         Distance := Integer'Last;
+      declare
+         use type Integer_Fields.Field;
+      begin
+         C := Absolute (Entities.Decl_Line - Line) < 10;
+         C2 := Absolute (Entity_Refs.Line - Line) < 10;
+         if Column /= -1 then
+            C := C and Absolute (Entities.Decl_Column - Integer (Column)) < 20;
+            C2 := C2 and Absolute (Entity_Refs.Column - Integer (Column)) < 20;
+         end if;
+      end;
 
-         declare
-            use type Integer_Fields.Field;
-         begin
-            C := Absolute (Database.Entities.Decl_Line - Line) < 10;
-            C2 := Absolute (Database.Entity_Refs.Line - Line) < 10;
-
-            if Column /= -1 then
-               C := C
-                 and Absolute
-                   (Database.Entities.Decl_Column - Integer (Column)) < 20;
-               C2 := C2
-                 and Absolute
-                   (Database.Entity_Refs.Column - Integer (Column)) < 20;
-            end if;
-         end;
-
-         Q := SQL_Select
-           (Database.Entities.Id
-            & Database.Entities.Decl_Line & Database.Entities.Decl_Column,
-            From  => Database.Entities & Database.Files,
-            Where => Database.Files.Id = Database.Entities.Decl_File
-            and Database.Entities.Name = Text_Param (1)
-            and Like (Database.Files.Path, "%/" & File)
-            and C,
-            Distinct => True,
-            Limit    => 1);
-
-         R.Fetch
-           (Self.DB, Q,
-            Params => (1 => +Name'Unrestricted_Access));
-
-         while R.Has_Row loop
-            Dist := abs (Line - Integer_Value (R, 1))
-              + abs (Integer (Column) - Integer_Value (R, 2)) * 250;
-            if Dist < Distance then
-               Entity := (Id => R.Integer_Value (0), Fuzzy => True);
-               Distance := Dist;
-            end if;
-
-            R.Next;
-         end loop;
-
-         --  Also try an approximate match on the references (if some location
-         --  was provided by the user, otherwise the scope is just too big and
-         --  approximation would be just a wild guess).
-
-         Q := SQL_Select
-           (Database.Entity_Refs.Entity
-            & Database.Entity_Refs.Line
-            & Database.Entity_Refs.Column,
-            From => Database.Entity_Refs & Database.Entities & Database.Files,
-            Where => Database.Entity_Refs.Entity = Database.Entities.Id
-            and Database.Entity_Refs.File = Database.Files.Id
-            and Database.Entities.Name = Text_Param (1)
-            and Like (Database.Files.Path, "%/" & File)
-            and C2,
-            Distinct => True);
-
-         R.Fetch
-           (Self.DB, Q,
-            Params => (1 => +Name'Unrestricted_Access));
-         while R.Has_Row loop
-            Dist := abs (Line - Integer_Value (R, 1))
-              + abs (Integer (Column) - Integer_Value (R, 2)) * 250;
-            if Dist < Distance then
-               Entity := (Id => R.Integer_Value (0), Fuzzy => True);
-               Distance := Dist;
-            end if;
-
-            R.Next;
-         end loop;
-      end if;
-
-      return Entity;
+      Prepare_Decl (C, Exact_Match => False);
+      Prepare_Ref (C2, Exact_Match => False);
+      return Best_Ref;
    end Get_Entity;
 
    ----------------
@@ -2837,7 +2867,7 @@ package body GNATCOLL.Xref is
       Name   : String;
       File   : GNATCOLL.VFS.Virtual_File;
       Line   : Integer := -1;
-      Column : Visible_Column := -1) return Entity_Information is
+      Column : Visible_Column := -1) return Entity_Reference is
    begin
       return Get_Entity (Self, Name, File.Display_Full_Name, Line, Column);
    end Get_Entity;
@@ -2878,7 +2908,8 @@ package body GNATCOLL.Xref is
       end if;
 
       return Entity_Reference'
-        (File   => Create (+Self.DBCursor.Value (Q_Ref_File)),
+        (Entity => Self.Entity,
+         File   => Create (+Self.DBCursor.Value (Q_Ref_File)),
          Line   => Self.DBCursor.Integer_Value (Q_Ref_Line),
          Column => Visible_Column (Self.DBCursor.Integer_Value (Q_Ref_Col)),
          Kind   => To_Unbounded_String (Self.DBCursor.Value (Q_Ref_Kind)),
@@ -2895,6 +2926,7 @@ package body GNATCOLL.Xref is
    is
       Curs : References_Cursor;
    begin
+      Curs.Entity := Entity;
       Curs.DBCursor.Fetch (Self.DB, Q_References, Params => (1 => +Entity.Id));
       return Curs;
    end References;
@@ -2924,7 +2956,8 @@ package body GNATCOLL.Xref is
          end if;
 
          return (Name => To_Unbounded_String (Curs.Value (Q_Decl_Name)),
-                 Location => (File   => Create (+Curs.Value (Q_Decl_File)),
+                 Location => (Entity => Entity,
+                              File   => Create (+Curs.Value (Q_Decl_File)),
                               Line   => Curs.Integer_Value (Q_Decl_Line),
                               Column => Visible_Column
                                 (Curs.Integer_Value (Q_Decl_Column)),
@@ -2956,6 +2989,7 @@ package body GNATCOLL.Xref is
       Curs : References_Cursor;
       Kind : aliased String := "b";
    begin
+      Curs.Entity := Entity;
       Curs.DBCursor.Fetch
         (Self.DB, Q_References_And_Kind,
          Params => (1 => +Entity.Id,

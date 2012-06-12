@@ -536,10 +536,10 @@ procedure GNATInspect is
 
    function Get_Entity (Arg : String) return Entity_Information is
       Words  : String_List_Access := Split (Arg, On => ':');
-      Entity : Entity_Information := No_Entity;
+      Ref    : Entity_Reference;
    begin
       if Words'Length = 4 then
-         Entity := Xref.Get_Entity
+         Ref := Xref.Get_Entity
            (Name   => Words (Words'First).all,
             File   => Format_Pathname
               (Style => UNIX,
@@ -548,14 +548,14 @@ procedure GNATInspect is
             Column => Visible_Column
               (Integer'Value (Words (Words'First + 3).all)));
       elsif Words'Length = 3 then
-         Entity := Xref.Get_Entity
+         Ref := Xref.Get_Entity
            (Name   => Words (Words'First).all,
             File   => Format_Pathname
               (Style => UNIX,
                Path  => Words (Words'First + 1).all),
             Line   => Integer'Value (Words (Words'First + 2).all));
       elsif Words'Length = 2 then
-         Entity := Xref.Get_Entity
+         Ref := Xref.Get_Entity
            (Name   => Words (Words'First).all,
             File   => Format_Pathname
               (Style => UNIX,
@@ -569,13 +569,13 @@ procedure GNATInspect is
 
       Free (Words);
 
-      if Entity = No_Entity then
+      if Ref.Entity = No_Entity then
          Put_Line ("Error: entity not found '" & Arg & "'");
-      elsif Is_Fuzzy_Match (Entity) then
+      elsif Is_Fuzzy_Match (Ref.Entity) then
          Put_Line ("   fuzzy match for the entity");
       end if;
 
-      return Entity;
+      return Ref.Entity;
    end Get_Entity;
 
    -------------------

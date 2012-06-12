@@ -142,18 +142,29 @@ package GNATCOLL.Xref is
    --  This information, however, is only valid as long as the object
    --  Xref_Database hasn't been destroyed.
 
+   type Entity_Reference is record
+      Entity : Entity_Information;
+      File   : GNATCOLL.VFS.Virtual_File;
+      Line   : Integer;
+      Column : Visible_Column;
+      Kind   : Ada.Strings.Unbounded.Unbounded_String;
+      Scope  : Entity_Information;
+   end record;
+   No_Entity_Reference : constant Entity_Reference;
+   --  A reference to an entity, at a given location.
+
    function Get_Entity
      (Self   : Xref_Database;
       Name   : String;
       File   : String;
       Line   : Integer := -1;
-      Column : Visible_Column := -1) return Entity_Information;
+      Column : Visible_Column := -1) return Entity_Reference;
    function Get_Entity
      (Self   : Xref_Database;
       Name   : String;
       File   : GNATCOLL.VFS.Virtual_File;
       Line   : Integer := -1;
-      Column : Visible_Column := -1) return Entity_Information;
+      Column : Visible_Column := -1) return Entity_Reference;
    --  Return the entity that has a reference at the given location.
    --  When the file is passed as a string, it is permissible to pass only the
    --  basename (or a string like "partial/path/basename") that will be matched
@@ -163,16 +174,6 @@ package GNATCOLL.Xref is
    --  Returns True if the entity that was found is only an apprcximation,
    --  because no exact match was found. This can happen when the ALI files
    --  haven't been recompiled from the sources, for instance.
-
-   type Entity_Reference is record
-      File   : GNATCOLL.VFS.Virtual_File;
-      Line   : Integer;
-      Column : Visible_Column;
-      Kind   : Ada.Strings.Unbounded.Unbounded_String;
-      Scope  : Entity_Information;
-   end record;
-   No_Entity_Reference : constant Entity_Reference;
-   --  A reference to an entity, at a given location.
 
    type Entity_Declaration is record
       Name     : Ada.Strings.Unbounded.Unbounded_String;
@@ -333,7 +334,8 @@ private
      (Id => -1, Fuzzy => True);
 
    No_Entity_Reference : constant Entity_Reference :=
-     (File   => GNATCOLL.VFS.No_File,
+     (Entity => No_Entity,
+      File   => GNATCOLL.VFS.No_File,
       Line   => -1,
       Column => -1,
       Kind   => Ada.Strings.Unbounded.Null_Unbounded_String,
@@ -347,7 +349,9 @@ private
       DBCursor : GNATCOLL.SQL.Exec.Forward_Cursor;
    end record;
 
-   type References_Cursor is new Base_Cursor with null record;
+   type References_Cursor is new Base_Cursor with record
+      Entity : Entity_Information;
+   end record;
    type Entities_Cursor is new Base_Cursor with null record;
    type Parameters_Cursor is new Base_Cursor with null record;
    type Files_Cursor is new Base_Cursor with null record;
