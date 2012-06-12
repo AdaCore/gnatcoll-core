@@ -2653,7 +2653,7 @@ package body GNATCOLL.Xref is
       Name   : String;
       File   : String;
       Line   : Integer := -1;
-      Column : Integer := -1) return Entity_Information
+      Column : Visible_Column := -1) return Entity_Information
    is
       R  : Forward_Cursor;
       Q  : SQL_Query;
@@ -2669,7 +2669,7 @@ package body GNATCOLL.Xref is
          C := Database.Entities.Decl_Line = Line;
 
          if Column /= -1 then
-            C := C and Database.Entities.Decl_Column = Column;
+            C := C and Database.Entities.Decl_Column = Integer (Column);
          end if;
       end if;
 
@@ -2696,7 +2696,7 @@ package body GNATCOLL.Xref is
             C := Database.Entity_Refs.Line = Line;
 
             if Column /= -1 then
-               C := C and Database.Entity_Refs.Column = Column;
+               C := C and Database.Entity_Refs.Column = Integer (Column);
             end if;
          end if;
 
@@ -2743,9 +2743,11 @@ package body GNATCOLL.Xref is
 
             if Column /= -1 then
                C := C
-                 and Absolute (Database.Entities.Decl_Column - Column) < 20;
+                 and Absolute
+                   (Database.Entities.Decl_Column - Integer (Column)) < 20;
                C2 := C2
-                 and Absolute (Database.Entity_Refs.Column - Column) < 20;
+                 and Absolute
+                   (Database.Entity_Refs.Column - Integer (Column)) < 20;
             end if;
          end;
 
@@ -2766,7 +2768,7 @@ package body GNATCOLL.Xref is
 
          while R.Has_Row loop
             Dist := abs (Line - Integer_Value (R, 1))
-              + abs (Column - Integer_Value (R, 2)) * 250;
+              + abs (Integer (Column) - Integer_Value (R, 2)) * 250;
             if Dist < Distance then
                Entity := (Id => R.Integer_Value (0), Fuzzy => True);
                Distance := Dist;
@@ -2796,7 +2798,7 @@ package body GNATCOLL.Xref is
             Params => (1 => +Name'Unrestricted_Access));
          while R.Has_Row loop
             Dist := abs (Line - Integer_Value (R, 1))
-              + abs (Column - Integer_Value (R, 2)) * 250;
+              + abs (Integer (Column) - Integer_Value (R, 2)) * 250;
             if Dist < Distance then
                Entity := (Id => R.Integer_Value (0), Fuzzy => True);
                Distance := Dist;
@@ -2818,7 +2820,7 @@ package body GNATCOLL.Xref is
       Name   : String;
       File   : GNATCOLL.VFS.Virtual_File;
       Line   : Integer := -1;
-      Column : Integer := -1) return Entity_Information is
+      Column : Visible_Column := -1) return Entity_Information is
    begin
       return Get_Entity (Self, Name, File.Display_Full_Name, Line, Column);
    end Get_Entity;
@@ -2861,7 +2863,7 @@ package body GNATCOLL.Xref is
       return Entity_Reference'
         (File   => Create (+Self.DBCursor.Value (Q_Ref_File)),
          Line   => Self.DBCursor.Integer_Value (Q_Ref_Line),
-         Column => Self.DBCursor.Integer_Value (Q_Ref_Col),
+         Column => Visible_Column (Self.DBCursor.Integer_Value (Q_Ref_Col)),
          Kind   => To_Unbounded_String (Self.DBCursor.Value (Q_Ref_Kind)),
          Scope  => Scope);
    end Element;
@@ -2907,7 +2909,8 @@ package body GNATCOLL.Xref is
          return (Name => To_Unbounded_String (Curs.Value (Q_Decl_Name)),
                  Location => (File   => Create (+Curs.Value (Q_Decl_File)),
                               Line   => Curs.Integer_Value (Q_Decl_Line),
-                              Column => Curs.Integer_Value (Q_Decl_Column),
+                              Column => Visible_Column
+                                (Curs.Integer_Value (Q_Decl_Column)),
                               Kind   => To_Unbounded_String ("declaration"),
                               Scope  => Scope));
       else

@@ -366,7 +366,7 @@ procedure GNATInspect is
               & Image (Decl.Location.File) & ":"
               & Image (Decl.Location.Line, Min_Width => 0)
               & ':'
-              & Image (Decl.Location.Column, Min_Width => 0);
+              & Image (Integer (Decl.Location.Column), Min_Width => 0);
          end if;
       end if;
    end Image;
@@ -541,7 +541,8 @@ procedure GNATInspect is
            (Name   => Words (Words'First).all,
             File   => Words (Words'First + 1).all,
             Line   => Integer'Value (Words (Words'First + 2).all),
-            Column => Integer'Value (Words (Words'First + 3).all));
+            Column => Visible_Column
+              (Integer'Value (Words (Words'First + 3).all)));
       elsif Words'Length = 3 then
          Entity := Xref.Get_Entity
            (Name   => Words (Words'First).all,
@@ -597,7 +598,7 @@ procedure GNATInspect is
          Put (Name & ':' & Image (Ref.File) & ":"
               & Image (Ref.Line, Min_Width => 0)
               & ':'
-              & Image (Ref.Column, Min_Width => 0)
+              & Image (Integer (Ref.Column), Min_Width => 0)
               & " (" & To_String (Ref.Kind) & ")");
 
          if Ref.Scope /= No_Entity then
@@ -1048,7 +1049,8 @@ procedure GNATInspect is
          Put_Line (To_String (Decl.Name)
                    & ":" & Image (Decl.Location.File)
                    & ":" & Image (Decl.Location.Line, Min_Width => 0)
-                   & ":" & Image (Decl.Location.Column, Min_Width => 0));
+                   & ":" & Image (Integer (Decl.Location.Column),
+                                  Min_Width => 0));
       end if;
    end Process_Decl;
 

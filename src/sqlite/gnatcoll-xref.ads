@@ -122,6 +122,17 @@ package GNATCOLL.Xref is
    -- Queries --
    -------------
 
+   type Visible_Column is new Integer;
+   --  Columns in this API are related to what the user actually sees, not
+   --  characters in the file. This impacts files that contain tabulation
+   --  characters. For instance, a file that contains
+   --     A :<tab><tab>B;
+   --  has A at column 4 and B at column ((7 + 8 * 2) div 8) * 8 => 17, not 9.
+   --
+   --  As a reminder for this rule, we use a distinct type for column numbers.
+   --  Conversion from visible columns to characters requires access to the
+   --  source file.
+
    type Entity_Information is private;
    No_Entity : constant Entity_Information;
    --  The description of an entity.
@@ -136,13 +147,13 @@ package GNATCOLL.Xref is
       Name   : String;
       File   : String;
       Line   : Integer := -1;
-      Column : Integer := -1) return Entity_Information;
+      Column : Visible_Column := -1) return Entity_Information;
    function Get_Entity
      (Self   : Xref_Database;
       Name   : String;
       File   : GNATCOLL.VFS.Virtual_File;
       Line   : Integer := -1;
-      Column : Integer := -1) return Entity_Information;
+      Column : Visible_Column := -1) return Entity_Information;
    --  Return the entity that has a reference at the given location.
    --  When the file is passed as a string, it is permissible to pass only the
    --  basename (or a string like "partial/path/basename") that will be matched
@@ -156,7 +167,7 @@ package GNATCOLL.Xref is
    type Entity_Reference is record
       File   : GNATCOLL.VFS.Virtual_File;
       Line   : Integer;
-      Column : Integer;
+      Column : Visible_Column;
       Kind   : Ada.Strings.Unbounded.Unbounded_String;
       Scope  : Entity_Information;
    end record;
