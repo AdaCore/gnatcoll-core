@@ -21,7 +21,6 @@ with Ada.Containers;          use Ada.Containers;
 with Ada.Containers.Doubly_Linked_Lists;
 with Ada.Containers.Hashed_Maps;
 with Ada.Containers.Vectors;
-with Ada.Unchecked_Conversion;
 with Ada.Unchecked_Deallocation;
 with GNAT.OS_Lib;             use GNAT.OS_Lib;
 with GNATCOLL.Xref.Database;  use GNATCOLL.Xref.Database;
@@ -69,8 +68,6 @@ package body GNATCOLL.Xref is
    --  This gives a threshold of about 190 for my machine.
 
    type Access_String is access constant String;
-   function Convert is new Ada.Unchecked_Conversion
-     (Cst_Filesystem_String_Access, Access_String);
 
    N_Files2 : aliased String := "f2";
    Files2 : T_Files (N_Files2'Access);
@@ -1262,12 +1259,13 @@ package body GNATCOLL.Xref is
             Id := Element (Found);
          else
             declare
-               Name  : constant Cst_Filesystem_String_Access :=
-                 File.Full_Name (Normalize => True);
-               Name_A : constant Access_String := Convert (Name);
+               Name  : aliased String :=
+                 +File.Unix_Style_Full_Name (Normalize => True);
                Files : Forward_Cursor;
             begin
-               Files.Fetch (DB, Query_Get_File, Params => (1 => +Name_A));
+               Files.Fetch
+                 (DB, Query_Get_File,
+                  Params => (1 => +Name'Unchecked_Access));
 
                if Files.Has_Row then
                   Id := Files.Integer_Value (0);
@@ -1277,7 +1275,7 @@ package body GNATCOLL.Xref is
                   begin
                      Id := DB.Insert_And_Get_PK
                        (Query_Insert_Source_File,
-                        Params => (1 => +Name_A,
+                        Params => (1 => +Name'Unchecked_Access,
                                    2 => +Lang'Unrestricted_Access),
                         PK => Database.Files.Id);
                   end;
@@ -2013,12 +2011,16 @@ package body GNATCOLL.Xref is
       end if;
 
       if ALI_Id = -1 then
-         ALI_Id := DB.Insert_And_Get_PK
-           (Query_Insert_LI_File,
-            Params => (1 => +Convert
-                          (LI.LI.Library_File.Full_Name (Normalize => True)),
-                       2 => +LI.Stamp),
-            PK => Database.Files.Id);
+         declare
+            N : aliased String :=
+              +LI.LI.Library_File.Unix_Style_Full_Name (Normalize => True);
+         begin
+            ALI_Id := DB.Insert_And_Get_PK
+              (Query_Insert_LI_File,
+               Params => (1 => +N'Unchecked_Access,
+                          2 => +LI.Stamp),
+               PK => Database.Files.Id);
+         end;
       else
          DB.Execute
            (Query_Update_LI_File,
@@ -2477,19 +2479,23 @@ package body GNATCOLL.Xref is
             LI.Stamp := File.File_Time_Stamp;
             LI.Id    := -1;  --  File unknown in the database
 
-            Files.Fetch
-              (Self.DB, Query_Get_File,
-               Params => (1 => +Convert (File.Full_Name (Normalize => True))));
+            declare
+               N : aliased String :=
+                 +File.Unix_Style_Full_Name (Normalize => True);
+            begin
+               Files.Fetch
+                 (Self.DB, Query_Get_File,
+                  Params => (1 => +N'Unchecked_Access));
+            end;
 
             if Files.Has_Row then
                if Files.Time_Value (1) = LI.Stamp then
                   LI.Id := -2;   --  Already up-to-date
                else
                   LI.Id := Files.Integer_Value (0);
+                  LIs.Append (LI);
                end if;
-            end if;
-
-            if LI.Id /= -2 then
+            else
                LIs.Append (LI);
             end if;
 
@@ -3010,9 +3016,8 @@ package body GNATCOLL.Xref is
      (Self : Xref_Database'Class;
       File : GNATCOLL.VFS.Virtual_File) return Files_Cursor
    is
-      Name  : constant Cst_Filesystem_String_Access :=
-        File.Full_Name (Normalize => True);
-      Name_A : constant Access_String := Convert (Name);
+      Name  : aliased String :=
+        +File.Unix_Style_Full_Name (Normalize => True);
       Curs : Files_Cursor;
    begin
       Curs.DBCursor.Fetch
@@ -3025,7 +3030,7 @@ package body GNATCOLL.Xref is
               and Files2.Path = Text_Param (1)
               and Database.F2f.Kind = F2f_Withs,
             Order_By => Database.Files.Path),
-         Params => (1 => +Name_A));
+         Params => (1 => +Name'Unchecked_Access));
       return Curs;
    end Importing;
 
@@ -3037,9 +3042,8 @@ package body GNATCOLL.Xref is
      (Self : Xref_Database'Class;
       File : GNATCOLL.VFS.Virtual_File) return Files_Cursor
    is
-      Name  : constant Cst_Filesystem_String_Access :=
-        File.Full_Name (Normalize => True);
-      Name_A : constant Access_String := Convert (Name);
+      Name  : aliased String :=
+        +File.Unix_Style_Full_Name (Normalize => True);
       Curs : Files_Cursor;
    begin
       Curs.DBCursor.Fetch
@@ -3052,7 +3056,7 @@ package body GNATCOLL.Xref is
               and Files2.Path = Text_Param (1)
               and Database.F2f.Kind = F2f_Withs,
             Order_By => Database.Files.Path),
-         Params => (1 => +Name_A));
+         Params => (1 => +Name'Unchecked_Access));
       return Curs;
    end Imports;
 

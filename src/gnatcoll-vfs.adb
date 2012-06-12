@@ -642,7 +642,8 @@ package body GNATCOLL.VFS is
 
    function Unix_Style_Full_Name
      (File         : Virtual_File;
-      Cygwin_Style : Boolean := False) return Filesystem_String
+      Cygwin_Style : Boolean := False;
+      Normalize    : Boolean := False) return Filesystem_String
    is
       FS : FS_Type;
    begin
@@ -651,8 +652,16 @@ package body GNATCOLL.VFS is
       else
          FS := File.Value.Get_FS;
 
-         return +To_Unix
-           (FS, File.Value.Full.all, Cygwin_Style);
+         if Normalize then
+            return +To_Unix
+              (FS,
+               +Full_Name
+                 (File, Normalize => Normalize, Resolve_Links => True).all,
+               Cygwin_Style);
+         else
+            return +To_Unix
+              (FS, File.Value.Full.all, Cygwin_Style);
+         end if;
       end if;
    end Unix_Style_Full_Name;
 

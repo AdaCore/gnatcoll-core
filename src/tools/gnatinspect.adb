@@ -23,6 +23,7 @@ with Ada.Strings.Fixed;
 with Ada.Strings.Unbounded;      use Ada.Strings.Unbounded;
 with Ada.Text_IO;                use Ada.Text_IO;
 with GNAT.Command_Line;          use GNAT.Command_Line;
+with GNAT.Directory_Operations;  use GNAT.Directory_Operations;
 with GNAT.Strings;               use GNAT.Strings;
 with GNAT.OS_Lib;
 with GNATCOLL.Xref;              use GNATCOLL.Xref;
@@ -540,19 +541,25 @@ procedure GNATInspect is
       if Words'Length = 4 then
          Entity := Xref.Get_Entity
            (Name   => Words (Words'First).all,
-            File   => Words (Words'First + 1).all,
+            File   => Format_Pathname
+              (Style => UNIX,
+               Path  => Words (Words'First + 1).all),
             Line   => Integer'Value (Words (Words'First + 2).all),
             Column => Visible_Column
               (Integer'Value (Words (Words'First + 3).all)));
       elsif Words'Length = 3 then
          Entity := Xref.Get_Entity
            (Name   => Words (Words'First).all,
-            File   => Words (Words'First + 1).all,
+            File   => Format_Pathname
+              (Style => UNIX,
+               Path  => Words (Words'First + 1).all),
             Line   => Integer'Value (Words (Words'First + 2).all));
       elsif Words'Length = 2 then
          Entity := Xref.Get_Entity
            (Name   => Words (Words'First).all,
-            File   => Words (Words'First + 1).all);
+            File   => Format_Pathname
+              (Style => UNIX,
+               Path  => Words (Words'First + 1).all));
       else
          Put_Line ("Invalid parameter, expecting name:file:line:column => '"
                    & Arg & "'");
