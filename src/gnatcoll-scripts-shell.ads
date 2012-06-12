@@ -334,7 +334,8 @@ private
       Value : Subprogram_Type);
    overriding procedure Execute_Command
      (Args    : in out Shell_Callback_Data;
-      Command : String);
+      Command : String;
+      Hide_Output : Boolean := True);
    overriding function Return_Value
      (Data : Shell_Callback_Data) return String;
    overriding function Return_Value

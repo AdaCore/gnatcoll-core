@@ -137,6 +137,17 @@ package GNATCOLL.Scripts.Python is
    --  The following functions have no effect if python was compiled without
    --  support for threading. They do not raise an exception either, so that
    --  you can run the code even if python doesn't have threads.
+   --
+   --  Input-Output and multi-tasking
+   --  ------------------------------
+   --
+   --  In a multi-tasking application, it is recommended that you always call
+   --  the various Execute_Command subprograms with Hide_Output=>False.
+   --  Otherwise, there might be some confusion where a thread disabled the
+   --  output (which is done by redirecting sys.stdout) but the next one
+   --  puts its back, and thus the output of the first thread is visible in
+   --  the end. This also seems to avoid some errors in the python interpreter
+   --  itself.
 
    Has_Thread_Support : constant Boolean;
    pragma Import (C, Has_Thread_Support, "python_with_thread");
@@ -430,7 +441,8 @@ private
       Value : Subprogram_Type);
    overriding procedure Execute_Command
      (Args    : in out Python_Callback_Data;
-      Command : String);
+      Command : String;
+      Hide_Output : Boolean := True);
    overriding function Return_Value
      (Data : Python_Callback_Data) return String;
    overriding function Return_Value

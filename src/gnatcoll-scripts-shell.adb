@@ -2036,8 +2036,10 @@ package body GNATCOLL.Scripts.Shell is
 
    overriding procedure Execute_Command
      (Args    : in out Shell_Callback_Data;
-      Command : String)
+      Command : String;
+      Hide_Output : Boolean := True)
    is
+      pragma Unreferenced (Hide_Output);
       Script : constant Shell_Scripting := Shell_Scripting (Get_Script (Args));
       Errors : aliased Boolean;
       CL : Arg_List := Create (Command);

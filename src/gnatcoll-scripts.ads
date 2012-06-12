@@ -1082,8 +1082,9 @@ package GNATCOLL.Scripts is
    Error_In_Command : exception;
 
    procedure Execute_Command
-     (Args    : in out Callback_Data;
-      Command : String) is abstract;
+     (Args        : in out Callback_Data;
+      Command     : String;
+      Hide_Output : Boolean := True) is abstract;
    --  Execute the given function passing one or more arguments via Args.
    --  On exit, Args is modified to contain the value returned by the command.
    --  If you know the expected result type, you can then use the Return_Value

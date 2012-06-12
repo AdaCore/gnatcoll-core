@@ -1683,9 +1683,6 @@ package body GNATCOLL.Scripts.Python is
          if Obj /= null and then PyFunction_Check (Obj) then
             return Execute_Command (Script, Obj, Args, Errors'Access);
          else
---              Insert
---                (Script.Kernel,
---                 Command & " is not a function, when called from a hook");
             return False;
          end if;
       end if;
@@ -1710,7 +1707,7 @@ package body GNATCOLL.Scripts.Python is
 
       if Script.Blocked then
          Error.all := True;
-         --  Insert (Script.Kernel, "A python command is already executing");
+         --  Put_Line ("A python command is already executing");
          return null;
       end if;
 
@@ -1760,6 +1757,7 @@ package body GNATCOLL.Scripts.Python is
 
       if Obj = null then
          Error.all := True;
+         --  Put_Line ("Python script raised an exception");
          PyErr_Print;
       end if;
 
@@ -3471,7 +3469,8 @@ package body GNATCOLL.Scripts.Python is
 
    overriding procedure Execute_Command
      (Args    : in out Python_Callback_Data;
-      Command : String)
+      Command : String;
+      Hide_Output : Boolean := True)
    is
       Script : constant Python_Scripting :=
         Python_Scripting (Get_Script (Args));
@@ -3491,7 +3490,7 @@ package body GNATCOLL.Scripts.Python is
            (Script,
             Command     => Command,
             Console     => null,
-            Hide_Output => True,
+            Hide_Output => Hide_Output,
             Errors      => Errors'Unchecked_Access);
 
          if Func /= null and then PyCallable_Check (Func) then
