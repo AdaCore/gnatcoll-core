@@ -1573,6 +1573,7 @@ package body GNATCOLL.Xref is
          Order : Natural := 0;
          Will_Insert_Ref : Boolean;
          Instance : Unbounded_String;
+         End_Of_Spec_Line : Natural := 0;
          pragma Unreferenced (Is_Library_Level);
 
       begin
@@ -1855,12 +1856,16 @@ package body GNATCOLL.Xref is
             case Xref_Kind is
                when '>' =>
                   Eid := E2e_In_Parameter;
+                  End_Of_Spec_Line := Xref_Line;
                when '<' =>
                   Eid := E2e_Out_Parameter;
+                  End_Of_Spec_Line := Xref_Line;
                when '=' =>
                   Eid := E2e_In_Out_Parameter;
+                  End_Of_Spec_Line := Xref_Line;
                when '^' =>
                   Eid := E2e_Access_Parameter;
+                  End_Of_Spec_Line := Xref_Line;
                when 'p' | 'P' =>
                   Eid := E2e_Has_Primitive;
                when 'r' | 'm' | 'l' | 'R' | 's' | 'w' | 'i' | 'k' | 'D'
@@ -1878,19 +1883,8 @@ package body GNATCOLL.Xref is
                --  ??? Should we look in the reference_kinds table to see what
                --  kinds mark end of scopes.
                when 'e' =>  --  end of spec
-                  if Process_Scopes
-                    and then Xref_File_Unit_File_Index /= -1
-                  then
-                     Insert (Scope_Trees (Xref_File_Unit_File_Index),
-                             Entity => Current_Entity,
-                             Low    => Spec_Start_Line,
-                             High   => Xref_Line);
-                     if Spec_Start_Line + 1 <= Xref_Line then
-                        Insert (Decl_Scope_Trees (Xref_File_Unit_File_Index),
-                                Entity => Current_Entity,
-                                Low    => Spec_Start_Line + 1,
-                                High   => Xref_Line);
-                     end if;
+                  if Xref_File_Unit_File_Index /= -1 then
+                     End_Of_Spec_Line := Xref_Line;
                   end if;
                when 't' =>  --  end of body
                   if Process_Scopes
@@ -1994,6 +1988,23 @@ package body GNATCOLL.Xref is
                end if;
             end if;
          end loop;
+
+         --  Not all subprogram specs get a 'e' line, so we also try to guess
+         --  the end of spec by looking at the last parameter declaration.
+         if Process_Scopes
+           and then End_Of_Spec_Line /= 0
+         then
+            Insert (Scope_Trees (Xref_File_Unit_File_Index),
+                    Entity => Current_Entity,
+                    Low    => Spec_Start_Line,
+                    High   => End_Of_Spec_Line);
+            if Spec_Start_Line + 1 <= Xref_Line then
+               Insert (Decl_Scope_Trees (Xref_File_Unit_File_Index),
+                       Entity => Current_Entity,
+                       Low    => Spec_Start_Line + 1,
+                       High   => End_Of_Spec_Line);
+            end if;
+         end if;
 
          if Index <= Str'Last and then Str (Index) = ASCII.CR then
             if Index = Str'Last or else Str (Index + 1) = ASCII.LF then
