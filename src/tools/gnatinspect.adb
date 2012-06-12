@@ -270,6 +270,7 @@ procedure GNATInspect is
    Display_Full_Paths    : aliased Boolean;
    Exit_After_Refresh    : aliased Boolean;
    Verbose               : aliased Boolean;
+   Support_Symlinks      : aliased Boolean;
    Project_Name          : aliased GNAT.Strings.String_Access;
    --  The options from the command line
 
@@ -1184,6 +1185,13 @@ begin
      (Cmdline,
       Switch      => "-X:",
       Help        => "Specify an external reference in the project");
+   Define_Switch
+     (Cmdline,
+      Output      => Support_Symlinks'Access,
+      Long_Switch => "--symlinks",
+      Help        => "Take additional time to resolve symbolic links");
+
+   GNATCOLL.VFS.Symbolic_Links_Support (Support_Symlinks);
 
    Initialize (Env);
 
