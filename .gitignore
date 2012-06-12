@@ -38,6 +38,10 @@ testsuite/traces/traces4/traces4.out2
 testsuite/projects/K926-026/main
 testsuite/projects/KB30-016/test_it
 testsuite/xref/find_ref/main
+testsuite/xref/naming_schemes/file2
+testsuite/xref/naming_schemes2/file2
+testsuite/xref/rename/rename
+testsuite/xref/scope_tree_separate_runtime/main
 testsuite/xref/E224-007-change_obj_dir/src/a.adb
 testsuite/xref/E224-007-change_obj_dir-c/src/a.c
 testsuite/*/*/obj

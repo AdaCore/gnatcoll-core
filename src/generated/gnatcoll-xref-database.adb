@@ -57,9 +57,9 @@ package body GNATCOLL.Xref.Database is
          & "|name|Text|NOT NULL||" & ASCII.LF
          & "" & ASCII.LF
          & "|TABLE| f2f" & ASCII.LF
-         & "|fromFile|FK files|PK,NOINDEX||" & ASCII.LF
-         & "|toFile|FK files|PK,NOINDEX||" & ASCII.LF
-         & "|kind|FK f2f_kind|PK,NOINDEX||" & ASCII.LF
+         & "|fromFile|FK files|NOT NULL,NOINDEX||" & ASCII.LF
+         & "|toFile|FK files|NOT NULL,NOINDEX||" & ASCII.LF
+         & "|kind|FK f2f_kind|NOT NULL,NOINDEX||" & ASCII.LF
          & "" & ASCII.LF
          & "|TABLE| entity_kinds" & ASCII.LF
          & "|id|Character(1)|PK||" & ASCII.LF

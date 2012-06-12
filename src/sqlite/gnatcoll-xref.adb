@@ -514,7 +514,8 @@ package body GNATCOLL.Xref is
       LI                : LI_Info;
       VFS_To_Id         : in out VFS_To_Ids.Map;
       Entity_Decl_To_Id : in out Loc_To_Ids.Map;
-      Entity_Renamings  : in out Entity_Renaming_Lists.List);
+      Entity_Renamings  : in out Entity_Renaming_Lists.List;
+      Visited_ALI_Units : in out VFS_To_Ids.Map);
    --  Parse the contents of a single LI file.
    --  VFS_To_Id is a local cache for the entries in the files table.
    --
@@ -527,6 +528,13 @@ package body GNATCOLL.Xref is
    --  ALIs)
    --
    --  VFS_To_Id is a cache for source files.
+   --
+   --  Visited_ALI_Units is a subset of VFS_To_Id, containing all the files
+   --  from 'U' lines that have already been processed. In general, the files
+   --  will occur only once since they have a single associated LI file.
+   --  However, in the case of multi-unit source files in Ada, the file might
+   --  already be in Visited_ALI_Units, in which case we need to do fewer
+   --  cleanup prio to parsing the file.
 
    function Single_Entity_From_E2e
      (Self   : Xref_Database'Class;
@@ -696,7 +704,8 @@ package body GNATCOLL.Xref is
       LI                : LI_Info;
       VFS_To_Id         : in out VFS_To_Ids.Map;
       Entity_Decl_To_Id : in out Loc_To_Ids.Map;
-      Entity_Renamings  : in out Entity_Renaming_Lists.List)
+      Entity_Renamings  : in out Entity_Renaming_Lists.List;
+      Visited_ALI_Units : in out VFS_To_Ids.Map)
    is
       M      : Mapped_File;
       Str    : Str_Access;
@@ -838,8 +847,8 @@ package body GNATCOLL.Xref is
       --  the information is simply skipped.
 
       function Insert_Source_File
-        (Basename    : String;
-         Is_ALI_Unit : Boolean := False) return Integer;
+        (Basename        : String;
+         Is_ALI_Unit     : Boolean := False) return Integer;
       --  Retrieves the id for the file in the database, or create a new entry
       --  for it.
       --  Is_ALI_Unit should be true when the file is one of the units
@@ -1231,8 +1240,8 @@ package body GNATCOLL.Xref is
       ------------------------
 
       function Insert_Source_File
-        (Basename    : String;
-         Is_ALI_Unit : Boolean := False) return Integer
+        (Basename        : String;
+         Is_ALI_Unit     : Boolean := False) return Integer
       is
          File : constant Virtual_File :=
            Tree.Create
@@ -1297,8 +1306,11 @@ package body GNATCOLL.Xref is
             --  different locations (s-memory.adb for instance), which
             --  can occur when overriding runtime files.
 
-            DB.Execute (Query_Delete_File_Dep, Params => (1 => +Id));
-            DB.Execute (Query_Delete_Refs, Params => (1 => +Id));
+            if not Visited_ALI_Units.Contains (File) then
+               Visited_ALI_Units.Include (File, Id);
+               DB.Execute (Query_Delete_File_Dep, Params => (1 => +Id));
+               DB.Execute (Query_Delete_Refs, Params => (1 => +Id));
+            end if;
          end if;
 
          return Id;
@@ -1994,7 +2006,7 @@ package body GNATCOLL.Xref is
 
       Start_Of_X_Section : Integer;
 
-   begin
+   begin  --  Parse_LI
       if Active (Me_Debug) then
          Trace (Me_Debug, "Parse LI "
                 & LI.LI.Library_File.Display_Full_Name);
@@ -2040,9 +2052,16 @@ package body GNATCOLL.Xref is
                Start := Index;
                Skip_Word;
 
+               --  In general, we need to remove old references already known
+               --  in this source file. However, in the case of source files
+               --  with multiple units, we should only do so for the first ALI
+               --  file we are seeing, otherwise later ALI files (which have
+               --  also changed, necessarily) will remove the references we
+               --  just added.
+
                Current_Unit_Id := Insert_Source_File
-                 (Basename    => String (Str (Start .. Index - 1)),
-                  Is_ALI_Unit => True);
+                 (Basename        => String (Str (Start .. Index - 1)),
+                  Is_ALI_Unit     => True);
                if Current_Unit_Id /= -1 then
                   DB.Execute
                     (Query_Set_ALI,
@@ -2193,6 +2212,7 @@ package body GNATCOLL.Xref is
       LI_Files          : Library_Info_Lists.List;
       LIs               : LI_Lists.List;
       VFS_To_Id         : VFS_To_Ids.Map;
+      Visited_ALI_Units : VFS_To_Ids.Map;
       Entity_Decl_To_Id : Loc_To_Ids.Map;
       Entity_Renamings  : Entity_Renaming_Lists.List;
 
@@ -2496,6 +2516,7 @@ package body GNATCOLL.Xref is
                          Tree              => Tree,
                          LI                => Element (LI_C),
                          VFS_To_Id         => VFS_To_Id,
+                         Visited_ALI_Units => Visited_ALI_Units,
                          Entity_Decl_To_Id => Entity_Decl_To_Id,
                          Entity_Renamings  => Entity_Renamings);
             exception

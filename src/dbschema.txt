@@ -24,11 +24,15 @@
 | id    | AUTOINCREMENT | PK       |   |                                 |
 | name  | TEXT          | NOT NULL |   |                                 |
 
-| TABLE    | f2f                   |                       |   | Stores relationships between files |
-|----------+-----------------------+-----------------------+---+------------------------------------|
-| fromFile | FK files(links)       | PK, NOT NULL, NOINDEX |   |                                    |
-| toFile   | FK files(linked_from) | PK, NOT NULL, NOINDEX |   |                                    |
-| kind     | FK f2f_kind()         | PK, NOT NULL, NOINDEX |   | Kind of dependency                 |
+# No unique constraint error for (fromFile, toFile, kind), since a given source
+# file might for instance have multiple ALI files if it contains multiple Ada
+# units.
+
+| TABLE    | f2f                   |                   |   | Stores relationships between files |
+|----------+-----------------------+-------------------+---+------------------------------------|
+| fromFile | FK files(links)       | NOT NULL, NOINDEX |   |                                    |
+| toFile   | FK files(linked_from) | NOT NULL, NOINDEX |   |                                    |
+| kind     | FK f2f_kind()         | NOT NULL, NOINDEX |   | Kind of dependency                 |
 
 | TABLE                    | entity_kinds | entity_kinds      |       | General kinds for entities (their metaclasses) |
 |--------------------------+--------------+-------------------+-------+------------------------------------------------|
