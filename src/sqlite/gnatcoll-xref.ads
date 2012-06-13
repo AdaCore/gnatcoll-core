@@ -37,6 +37,7 @@
 
 with Ada.Containers.Ordered_Sets;
 with Ada.Strings.Unbounded; use Ada.Strings.Unbounded;
+
 with GNATCOLL.Projects;     use GNATCOLL.Projects;
 with GNATCOLL.SQL.Exec;     use GNATCOLL.SQL.Exec;
 with GNATCOLL.VFS;
@@ -48,6 +49,14 @@ package GNATCOLL.Xref is
    ---------------------------------
 
    type Xref_Database is tagged private;
+   type Xref_Database_Access is access all Xref_Database'Class;
+
+   procedure On_Error
+     (Self  : Xref_Database;
+      Error : String) is null;
+   --  Called whenever an error should be emitted by the operations on this
+   --  database. Client applications should inherit from Xref_Database and
+   --  redefine this to use their own logging facility.
 
    procedure Setup_DB
      (Self : in out Xref_Database;
