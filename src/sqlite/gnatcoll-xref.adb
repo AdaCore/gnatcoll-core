@@ -2674,6 +2674,7 @@ package body GNATCOLL.Xref is
    is
       Distance : Natural := Integer'Last;
       Best_Ref : Entity_Reference := No_Entity_Reference;
+      F : SQL_Criteria;
 
       procedure Prepare_Decl
         (C           : SQL_Criteria;
@@ -2746,7 +2747,6 @@ package body GNATCOLL.Xref is
                end if;
             end loop;
          end if;
-
       end Result;
 
       ------------------
@@ -2768,7 +2768,7 @@ package body GNATCOLL.Xref is
             From  => Database.Entities & Database.Files,
             Where => Database.Files.Id = Database.Entities.Decl_File
                and Database.Entities.Name = Text_Param (1)
-               and Like (Database.Files.Path, "%/" & File)
+               and F
                and C,
             Distinct => True,
             Limit    => 1);
@@ -2799,7 +2799,7 @@ package body GNATCOLL.Xref is
                and Database.Entity_Refs.File = Database.Files.Id
                and Database.Reference_Kinds.Id = Database.Entity_Refs.Kind
                and Database.Entities.Name = Text_Param (1)
-               and Like (Database.Files.Path, "%/" & File)
+               and F
                and C,
             Distinct => True);
 
@@ -2809,6 +2809,12 @@ package body GNATCOLL.Xref is
       C, C2  : SQL_Criteria;
 
    begin
+      if Is_Absolute_Path (File) then
+         F := Database.Files.Path = File;
+      else
+         F := Like (Database.Files.Path, "%/" & File);
+      end if;
+
       --  First test whether the user has passed the location of the
       --  declaration.
 
