@@ -363,6 +363,7 @@ procedure GNATInspect is
    Verbose               : aliased Boolean;
    Support_Symlinks      : aliased Boolean;
    Project_Name          : aliased GNAT.Strings.String_Access;
+   Subdirs               : aliased GNAT.Strings.String_Access;
    --  The options from the command line
 
    ----------------------
@@ -1179,12 +1180,21 @@ begin
       Output      => Support_Symlinks'Access,
       Long_Switch => "--symlinks",
       Help        => "Take additional time to resolve symbolic links");
+   Define_Switch
+     (Cmdline,
+      Output      => Subdirs'Access,
+      Long_Switch => "--subdirs=",
+      Help        => "Object files will be found in a subdirectory of obj");
 
    GNATCOLL.VFS.Symbolic_Links_Support (Support_Symlinks);
 
    Initialize (Env);
 
    Getopt (Cmdline, Parse_Command_Line'Unrestricted_Access);
+
+   if Subdirs.all /= "" then
+      Env.Set_Object_Subdir (+Subdirs.all);
+   end if;
 
    if Project_Name.all = "" then
       Process_Project (Empty_Command_Line);   --  Load files from current dir
