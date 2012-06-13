@@ -72,7 +72,7 @@ procedure GNATInspect is
    --  Return a display version of the argument
 
    procedure Dump (Curs : in out Files_Cursor);
-   procedure Dump (Curs : in out Entities_Cursor);
+   procedure Dump (Curs : in out Entities_Cursor'Class);
    procedure Dump (Refs : in out References_Cursor'Class; Name : String);
    procedure Dump (Curs : File_Sets.Set);
    --  Display the list of files
@@ -90,9 +90,10 @@ procedure GNATInspect is
    procedure Process_Command_With_Single (Args : Arg_List);
 
    generic
-      with function Compute
-        (Self : Xref_Database'Class;
-         Entity : Entity_Information) return Entities_Cursor;
+      with procedure Compute
+        (Self   : Xref_Database'Class;
+         Entity : Entity_Information;
+         Cursor : out Entities_Cursor'Class);
    procedure Process_Command_Entities (Args : Arg_List);
 
    ---------------------------------
@@ -131,7 +132,7 @@ procedure GNATInspect is
       end if;
 
       Entity := Get_Entity (Nth_Arg (Args, 1));
-      Children := Compute (Xref, Entity);
+      Compute (Xref, Entity, Cursor => Children);
       Dump (Children);
    end Process_Command_Entities;
 
@@ -142,6 +143,7 @@ procedure GNATInspect is
      is new Process_Command_Entities (Callers);
    procedure Process_Child_Types
      is new Process_Command_Entities (Child_Types);
+   procedure Process_Child_Types_Recursive (Args : Arg_List);
    procedure Process_Component
      is new Process_Command_With_Single (Component_Type);
    procedure Process_Decl (Args : Arg_List);
@@ -204,6 +206,13 @@ procedure GNATInspect is
        new String'("The list of child types of the entity (for instance"
          & " classes that inherit from the entity). See also 'parent_types'"),
        Process_Child_Types'Access),
+
+      (new String'("child_types_recursive"),
+       new String'("name:file:line:column"),
+       new String'("The list of child types of the entity (for instance"
+         & " classes that inherit from the entity). This also includes"
+         & " grand-children and down."),
+       Process_Child_Types_Recursive'Access),
 
       (new String'("parent_types"),
        new String'("name:file:line:column"),
@@ -759,6 +768,29 @@ procedure GNATInspect is
       Dump (Refs, To_String (Xref.Declaration (Entity).Name));
    end Process_Refs_Overriding;
 
+   -----------------------------------
+   -- Process_Child_Types_Recursive --
+   -----------------------------------
+
+   procedure Process_Child_Types_Recursive (Args : Arg_List) is
+      Entity : Entity_Information;
+      Children : Recursive_Entities_Cursor;
+   begin
+      if Args_Length (Args) /= 1 then
+         Put_Line ("Invalid number of arguments");
+         return;
+      end if;
+
+      Entity := Get_Entity (Nth_Arg (Args, 1));
+
+      Recursive
+        (Self    => Xref'Unchecked_Access,
+         Entity  => Entity,
+         Compute => Child_Types'Access,
+         Cursor  => Children);
+      Dump (Children);
+   end Process_Child_Types_Recursive;
+
    --------------------
    -- Process_Params --
    --------------------
@@ -948,7 +980,7 @@ procedure GNATInspect is
    -- Dump --
    ----------
 
-   procedure Dump (Curs : in out Entities_Cursor) is
+   procedure Dump (Curs : in out Entities_Cursor'Class) is
       E : Entity_Information;
       Count : Natural := 1;
    begin
@@ -1035,8 +1067,9 @@ procedure GNATInspect is
    procedure Process_Entities (Args : Arg_List) is
       Entities : Entities_Cursor;
    begin
-      Entities := Xref.Referenced_In
-        (File => Tree.Create (+Nth_Arg (Args, 1)));
+      Xref.Referenced_In
+        (File   => Tree.Create (+Nth_Arg (Args, 1)),
+         Cursor => Entities);
       Dump (Entities);
    end Process_Entities;
 

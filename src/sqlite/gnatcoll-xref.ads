@@ -179,6 +179,11 @@ package GNATCOLL.Xref is
    --  basename (or a string like "partial/path/basename") that will be matched
    --  against all known files in the database.
 
+   function Qualified_Name
+     (Self   : Xref_Database'Class;
+      Entity : Entity_Information) return String;
+   --  Returns the fully qualified name for the entity
+
    function Is_Fuzzy_Match (Self : Entity_Information) return Boolean;
    --  Returns True if the entity that was found is only an apprcximation,
    --  because no exact match was found. This can happen when the ALI files
@@ -254,31 +259,36 @@ package GNATCOLL.Xref is
    type Entities_Cursor is new Base_Cursor with private;
    function Element (Self : Entities_Cursor) return Entity_Information;
 
-   function Calls
+   procedure Calls
      (Self   : Xref_Database'Class;
-      Entity : Entity_Information) return Entities_Cursor;
+      Entity : Entity_Information;
+      Cursor : out Entities_Cursor'Class);
    --  All entities called by Self
 
-   function Callers
+   procedure Callers
      (Self   : Xref_Database'Class;
-      Entity : Entity_Information) return Entities_Cursor;
+      Entity : Entity_Information;
+      Cursor : out Entities_Cursor'Class);
    --  All entities calling Self
 
-   function Child_Types
+   procedure Child_Types
      (Self   : Xref_Database'Class;
-      Entity : Entity_Information) return Entities_Cursor;
+      Entity : Entity_Information;
+      Cursor : out Entities_Cursor'Class);
    --  The child types for the entity (for instance the classes derived from
    --  Self).
 
-   function Parent_Types
+   procedure Parent_Types
      (Self   : Xref_Database'Class;
-      Entity : Entity_Information) return Entities_Cursor;
+      Entity : Entity_Information;
+      Cursor : out Entities_Cursor'Class);
    --  The parent types for the entity (for instance the classes or interfaces
    --  from which Self derives).
 
-   function Methods
+   procedure Methods
      (Self   : Xref_Database'Class;
-      Entity : Entity_Information) return Entities_Cursor;
+      Entity : Entity_Information;
+      Cursor : out Entities_Cursor'Class);
    --  The primitive operations (or methods) of Self
 
    function Overrides
@@ -287,56 +297,12 @@ package GNATCOLL.Xref is
    --  The entity that is overridden by Entity (ie the method in
    --  the parent class that is overriden by Entity).
 
-   function Overridden_By
+   procedure Overridden_By
      (Self   : Xref_Database'Class;
-      Entity : Entity_Information) return Entities_Cursor;
+      Entity : Entity_Information;
+      Cursor : out Entities_Cursor'Class);
    --  The list of entities that override Entity (in general, methods of
    --  child classes that override Entity).
-
-   type Parameter_Kind is
-     (In_Parameter,
-      Out_Parameter,
-      In_Out_Parameter,
-      Access_Parameter);
-   type Parameter_Information is record
-      Parameter : Entity_Information;
-      Kind      : Parameter_Kind;
-   end record;
-
-   type Parameters_Cursor is new Base_Cursor with private;
-   function Element (Self : Parameters_Cursor) return Parameter_Information;
-   function Parameters
-     (Self   : Xref_Database'Class;
-      Entity : Entity_Information) return Parameters_Cursor;
-   --  Return the list of parameters for the given subprogram. They are in the
-   --  same order as in the source.
-
-   type Files_Cursor is new Base_Cursor with private;
-   function Element (Self : Files_Cursor) return GNATCOLL.VFS.Virtual_File;
-
-   function Importing
-     (Self : Xref_Database'Class;
-      File : GNATCOLL.VFS.Virtual_File) return Files_Cursor;
-   --  Returns the list of files that import (via a "with" statement in Ada,
-   --  or a "#include# in C) the parameter File.
-
-   function Imports
-     (Self : Xref_Database'Class;
-      File : GNATCOLL.VFS.Virtual_File) return Files_Cursor;
-   --  Returns the list of files that File depends on directly.
-
-   package File_Sets is new Ada.Containers.Ordered_Sets
-     (GNATCOLL.VFS.Virtual_File, GNATCOLL.VFS."<", GNATCOLL.VFS."=");
-
-   function Depends_On
-     (Self : Xref_Database'Class;
-      File : GNATCOLL.VFS.Virtual_File) return File_Sets.Set;
-   --  Returns the list of files that File depends on explicitly or implicitly.
-
-   function Qualified_Name
-     (Self   : Xref_Database'Class;
-      Entity : Entity_Information) return String;
-   --  Returns the fully qualified name for the entity
 
    function Type_Of
      (Self   : Xref_Database'Class;
@@ -362,13 +328,78 @@ package GNATCOLL.Xref is
    --  Returns the entity renamed by Entity (i.e. Entity acts as an alias
    --  for the returned entity)
 
-   function Referenced_In
+   type Recursive_Entities_Cursor is new Entities_Cursor with private;
+   overriding procedure Next (Self : in out Recursive_Entities_Cursor);
+
+   type Entities_Iterator is not null access procedure
      (Self   : Xref_Database'Class;
-      File   : GNATCOLL.VFS.Virtual_File) return Entities_Cursor;
-   function Referenced_In
+      Entity : Entity_Information;
+      Cursor : out Entities_Cursor'Class);
+
+   procedure Recursive
+     (Self    : access Xref_Database'Class;
+      Entity  : Entity_Information;
+      Compute : Entities_Iterator;
+      Cursor  : out Recursive_Entities_Cursor);
+   --  Returns the result of Compute for Entity and all the entities
+   --  returned by Compute, recursively. This can for instance be used to
+   --  retrieve all classes derived directly or indirectly from Entity, by
+   --  passing Child_Types'Access for Compute, or to get all entities called
+   --  even indirectly by Entity).
+
+   type Parameter_Kind is
+     (In_Parameter,
+      Out_Parameter,
+      In_Out_Parameter,
+      Access_Parameter);
+   type Parameter_Information is record
+      Parameter : Entity_Information;
+      Kind      : Parameter_Kind;
+   end record;
+
+   type Parameters_Cursor is new Base_Cursor with private;
+   function Element (Self : Parameters_Cursor) return Parameter_Information;
+   function Parameters
+     (Self   : Xref_Database'Class;
+      Entity : Entity_Information) return Parameters_Cursor;
+   --  Return the list of parameters for the given subprogram. They are in the
+   --  same order as in the source.
+
+   -----------
+   -- Files --
+   -----------
+
+   type Files_Cursor is new Base_Cursor with private;
+   function Element (Self : Files_Cursor) return GNATCOLL.VFS.Virtual_File;
+
+   function Importing
+     (Self : Xref_Database'Class;
+      File : GNATCOLL.VFS.Virtual_File) return Files_Cursor;
+   --  Returns the list of files that import (via a "with" statement in Ada,
+   --  or a "#include# in C) the parameter File.
+
+   function Imports
+     (Self : Xref_Database'Class;
+      File : GNATCOLL.VFS.Virtual_File) return Files_Cursor;
+   --  Returns the list of files that File depends on directly.
+
+   package File_Sets is new Ada.Containers.Ordered_Sets
+     (GNATCOLL.VFS.Virtual_File, GNATCOLL.VFS."<", GNATCOLL.VFS."=");
+
+   function Depends_On
+     (Self : Xref_Database'Class;
+      File : GNATCOLL.VFS.Virtual_File) return File_Sets.Set;
+   --  Returns the list of files that File depends on explicitly or implicitly.
+
+   procedure Referenced_In
      (Self   : Xref_Database'Class;
       File   : GNATCOLL.VFS.Virtual_File;
-      Name   : String) return Entities_Cursor;
+      Cursor : out Entities_Cursor'Class);
+   procedure Referenced_In
+     (Self   : Xref_Database'Class;
+      File   : GNATCOLL.VFS.Virtual_File;
+      Name   : String;
+      Cursor : out Entities_Cursor'Class);
    --  Returns the list of all the entities referenced at least once in the
    --  given file. This of course includes entities declared in that file.
    --
@@ -429,6 +460,13 @@ private
       From_Overriding : Boolean;
       From_Overridden : Boolean;
       From_Renames    : Boolean;
+   end record;
+
+   type Recursive_Entities_Cursor is new Entities_Cursor with record
+      Xref            : Xref_Database_Access;
+      Compute         : Entities_Iterator := Calls'Access;
+      Visited         : Entity_Sets.Set;
+      To_Visit        : Entity_Sets.Set;
    end record;
 
 end GNATCOLL.Xref;
