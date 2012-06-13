@@ -205,17 +205,51 @@ package GNATCOLL.Xref is
    function Has_Element (Self : Base_Cursor) return Boolean;
    procedure Next (Self : in out Base_Cursor);
 
+   ----------------
+   -- References --
+   ----------------
+
    type References_Cursor is new Base_Cursor with private;
    function Element (Self : References_Cursor) return Entity_Reference;
-   function References
-     (Self   : Xref_Database'Class;
-      Entity : Entity_Information) return References_Cursor;
 
-   function Bodies
+   type Reference_Iterator is not null access procedure
      (Self   : Xref_Database'Class;
-      Entity : Entity_Information) return References_Cursor;
+      Entity : Entity_Information;
+      Cursor : out References_Cursor'Class);
+
+   procedure References
+     (Self   : Xref_Database'Class;
+      Entity : Entity_Information;
+      Cursor : out References_Cursor'Class);
+   --  Return all references to the entity
+
+   procedure Bodies
+     (Self   : Xref_Database'Class;
+      Entity : Entity_Information;
+      Cursor : out References_Cursor'Class);
    --  Return the location for the bodies of entities, or their full
    --  declaration in the case of private entities.
+
+   type Recursive_References_Cursor is new References_Cursor with private;
+   overriding procedure Next (Self : in out Recursive_References_Cursor);
+
+   procedure Recursive
+     (Self            : access Xref_Database'Class;
+      Entity          : Entity_Information;
+      Compute         : Reference_Iterator;
+      Cursor          : out Recursive_References_Cursor'Class;
+      From_Overriding : Boolean := True;
+      From_Overridden : Boolean := True;
+      From_Renames    : Boolean := True);
+   --  Execute Compute for Entity and all the entities that override it
+   --  (if From_Overriding is True), that are overridden by it (if
+   --  From_Overridden is True) or that rename it (if From_Renames is True).
+   --
+   --  Freeing Self while the cursor exits results in undefined behavior.
+
+   --------------
+   -- Entities --
+   --------------
 
    type Entities_Cursor is new Base_Cursor with private;
    function Element (Self : Entities_Cursor) return Entity_Information;
@@ -246,6 +280,18 @@ package GNATCOLL.Xref is
      (Self   : Xref_Database'Class;
       Entity : Entity_Information) return Entities_Cursor;
    --  The primitive operations (or methods) of Self
+
+   function Overrides
+     (Self   : Xref_Database'Class;
+      Entity : Entity_Information) return Entity_Information;
+   --  The entity that is overridden by Entity (ie the method in
+   --  the parent class that is overriden by Entity).
+
+   function Overridden_By
+     (Self   : Xref_Database'Class;
+      Entity : Entity_Information) return Entities_Cursor;
+   --  The list of entities that override Entity (in general, methods of
+   --  child classes that override Entity).
 
    type Parameter_Kind is
      (In_Parameter,
@@ -305,6 +351,11 @@ package GNATCOLL.Xref is
    --  Return the type of the components of Entity (for arrays for instance,
    --  this is the type for elements in the array)
 
+   function Pointed_Type
+     (Self   : Xref_Database'Class;
+      Entity : Entity_Information) return Entity_Information;
+   --  Return the type pointed to by the access/pointer Entity
+
    function Renaming_Of
      (Self   : Xref_Database'Class;
       Entity : Entity_Information) return Entity_Information;
@@ -354,6 +405,11 @@ private
      (Name     => Ada.Strings.Unbounded.Null_Unbounded_String,
       Location => No_Entity_Reference);
 
+   function "<" (E1, E2 : Entity_Information) return Boolean;
+   function "=" (E1, E2 : Entity_Information) return Boolean;
+   package Entity_Sets is new Ada.Containers.Ordered_Sets
+     (Entity_Information);
+
    type Base_Cursor is abstract tagged record
       DBCursor : GNATCOLL.SQL.Exec.Forward_Cursor;
    end record;
@@ -364,5 +420,15 @@ private
    type Entities_Cursor is new Base_Cursor with null record;
    type Parameters_Cursor is new Base_Cursor with null record;
    type Files_Cursor is new Base_Cursor with null record;
+
+   type Recursive_References_Cursor is new References_Cursor with record
+      Xref            : Xref_Database_Access;
+      Compute         : Reference_Iterator := References'Access;
+      Visited         : Entity_Sets.Set;
+      To_Visit        : Entity_Sets.Set;
+      From_Overriding : Boolean;
+      From_Overridden : Boolean;
+      From_Renames    : Boolean;
+   end record;
 
 end GNATCOLL.Xref;

@@ -159,9 +159,9 @@ package body GNATCOLL.Xref.Database is
          & "|V|function|true|true|false|" & ASCII.LF
          & "|w|protected object|false|false|false|" & ASCII.LF
          & "|W|protected type|false|false|false|" & ASCII.LF
-         & "|x|procedure|true|true|false|" & ASCII.LF
+         & "|x|abstract procedure|true|true|false|" & ASCII.LF
          & "|X|exception|false|false|false|" & ASCII.LF
-         & "|y|function|true|true|false|" & ASCII.LF
+         & "|y|abstract function|true|true|false|" & ASCII.LF
          & "|Y|entry|true|true|false|" & ASCII.LF
          & "|z|unknown|false|false|false|" & ASCII.LF
          & "|Z|unknown|false|false|false|" & ASCII.LF

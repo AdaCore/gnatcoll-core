@@ -539,6 +539,11 @@ package body GNATCOLL.Xref is
       E2e    : Integer) return Entity_Information;
    --  Do a query on E2e, and returns the single matching entity (or No_Entity)
 
+   procedure Init_For_Entity
+     (Self   : in out Recursive_References_Cursor'Class;
+      Entity : Entity_Information);
+   --  Self will navigate all information extracted from Entity.
+
    ---------------------
    -- Create_Database --
    ---------------------
@@ -1706,14 +1711,18 @@ package body GNATCOLL.Xref is
                      --  For an overriding operation, this points to the
                      --     overridden operation.
 
-                     case Entity_Kind is
+                     if Xref_Kind = 'o' then
+                        Eid := E2e_Overrides;
+                     else
+                        case Entity_Kind is
                         when 'A' | 'a' =>
                            Eid := E2e_Has_Index;
-                        when 'P' | 'p' =>
+                        when 'G' | 'u' | 'U' | 'v' | 'V' | 'y' | 'x' =>
                            Eid := E2e_Overrides;
                         when others =>
                            Eid := E2e_Parent_Type;
-                     end case;
+                        end case;
+                     end if;
 
                      if not Get_Ref_Or_Predefined
                        (Endchar => '>', Eid => Eid, E2e_Order => Order,
@@ -2926,15 +2935,14 @@ package body GNATCOLL.Xref is
    -- References --
    ----------------
 
-   function References
+   procedure References
      (Self   : Xref_Database'Class;
-      Entity : Entity_Information) return References_Cursor
-   is
-      Curs : References_Cursor;
+      Entity : Entity_Information;
+      Cursor : out References_Cursor'Class) is
    begin
-      Curs.Entity := Entity;
-      Curs.DBCursor.Fetch (Self.DB, Q_References, Params => (1 => +Entity.Id));
-      return Curs;
+      Cursor.Entity := Entity;
+      Cursor.DBCursor.Fetch
+        (Self.DB, Q_References, Params => (1 => +Entity.Id));
    end References;
 
    -----------------
@@ -2988,19 +2996,18 @@ package body GNATCOLL.Xref is
    -- Bodies --
    ------------
 
-   function Bodies
+   procedure Bodies
      (Self   : Xref_Database'Class;
-      Entity : Entity_Information) return References_Cursor
+      Entity : Entity_Information;
+      Cursor : out References_Cursor'Class)
    is
-      Curs : References_Cursor;
       Kind : aliased String := "b";
    begin
-      Curs.Entity := Entity;
-      Curs.DBCursor.Fetch
+      Cursor.Entity := Entity;
+      Cursor.DBCursor.Fetch
         (Self.DB, Q_References_And_Kind,
          Params => (1 => +Entity.Id,
                     2 => +Kind'Access));
-      return Curs;
    end Bodies;
 
    -------------
@@ -3313,6 +3320,22 @@ package body GNATCOLL.Xref is
       return Curs;
    end Methods;
 
+   -------------------
+   -- Overridden_By --
+   -------------------
+
+   function Overridden_By
+     (Self   : Xref_Database'Class;
+      Entity : Entity_Information) return Entities_Cursor
+   is
+      Curs : Entities_Cursor;
+   begin
+      Curs.DBCursor.Fetch
+        (Self.DB, Query_E2E_To,
+         Params => (1 => +Entity.Id, 2 => +E2e_Overrides));
+      return Curs;
+   end Overridden_By;
+
    ----------------------------
    -- Single_Entity_From_E2e --
    ----------------------------
@@ -3368,6 +3391,29 @@ package body GNATCOLL.Xref is
    begin
       return Single_Entity_From_E2e (Self, Entity, E2e_Component_Type);
    end Component_Type;
+
+   ---------------
+   -- Overrides --
+   ---------------
+
+   function Overrides
+     (Self   : Xref_Database'Class;
+      Entity : Entity_Information) return Entity_Information
+   is
+   begin
+      return Single_Entity_From_E2e (Self, Entity, E2e_Overrides);
+   end Overrides;
+
+   ------------------
+   -- Pointed_Type --
+   ------------------
+
+   function Pointed_Type
+     (Self   : Xref_Database'Class;
+      Entity : Entity_Information) return Entity_Information is
+   begin
+      return Single_Entity_From_E2e (Self, Entity, E2e_Pointed_Type);
+   end Pointed_Type;
 
    -------------------
    -- Referenced_In --
@@ -3453,5 +3499,109 @@ package body GNATCOLL.Xref is
          Params => (1 => +Name_A));
       return Curs;
    end Referenced_In;
+
+   ---------
+   -- "<" --
+   ---------
+
+   function "<" (E1, E2 : Entity_Information) return Boolean is
+   begin
+      return E1.Id < E2.Id;
+   end "<";
+
+   ---------
+   -- "=" --
+   ---------
+
+   function "=" (E1, E2 : Entity_Information) return Boolean is
+   begin
+      return E1.Id = E2.Id;
+   end "=";
+
+   ---------------------
+   -- Init_For_Entity --
+   ---------------------
+
+   procedure Init_For_Entity
+     (Self   : in out Recursive_References_Cursor'Class;
+      Entity : Entity_Information)
+   is
+      Rename : Entity_Information;
+      Ents   : Entities_Cursor;
+   begin
+      Self.Entity := Entity;
+      Self.Visited.Include (Entity);
+
+      if Self.From_Renames then
+         Rename := Self.Xref.Renaming_Of (Entity);
+         if Rename /= No_Entity
+           and then not Self.Visited.Contains (Rename)
+         then
+            Self.To_Visit.Include (Rename);
+         end if;
+      end if;
+
+      if Self.From_Overriding then
+         Ents := Self.Xref.Overridden_By (Entity);
+         while Ents.Has_Element loop
+            Rename := Ents.Element;
+            if not Self.Visited.Contains (Rename) then
+               Self.To_Visit.Include (Rename);
+            end if;
+            Ents.Next;
+         end loop;
+      end if;
+
+      if Self.From_Overridden then
+         Rename := Self.Xref.Overrides (Entity);
+         if Rename /= No_Entity
+           and then not Self.Visited.Contains (Rename)
+         then
+            Self.To_Visit.Include (Rename);
+         end if;
+      end if;
+
+      --  Sets Self.DBCursor
+      Self.Compute (Self.Xref.all, Entity => Entity, Cursor => Self);
+   end Init_For_Entity;
+
+   ----------
+   -- Next --
+   ----------
+
+   overriding procedure Next (Self : in out Recursive_References_Cursor) is
+      Ent : Entity_Information;
+   begin
+      Next (References_Cursor (Self));
+      if not Self.Has_Element
+        and then not Self.To_Visit.Is_Empty
+      then
+         Ent := Self.To_Visit.First_Element;
+         Self.To_Visit.Delete_First;
+         Init_For_Entity (Self, Ent);
+      end if;
+   end Next;
+
+   ---------------
+   -- Recursive --
+   ---------------
+
+   procedure Recursive
+     (Self            : access Xref_Database'Class;
+      Entity          : Entity_Information;
+      Compute         : Reference_Iterator;
+      Cursor          : out Recursive_References_Cursor'Class;
+      From_Overriding : Boolean := True;
+      From_Overridden : Boolean := True;
+      From_Renames    : Boolean := True)
+   is
+   begin
+      Cursor.Compute         := Compute;
+      Cursor.From_Overridden := From_Overridden;
+      Cursor.From_Overriding := From_Overriding;
+      Cursor.From_Renames    := From_Renames;
+      Cursor.Xref            := Xref_Database_Access (Self);
+      Init_For_Entity (Cursor, Entity);
+   end Recursive;
 
 end GNATCOLL.Xref;

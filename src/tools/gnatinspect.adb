@@ -19,6 +19,7 @@
 
 with Ada.Calendar;               use Ada.Calendar;
 with Ada.Characters.Handling;    use Ada.Characters.Handling;
+with Ada.Exceptions;             use Ada.Exceptions;
 with Ada.Strings.Fixed;
 with Ada.Strings.Unbounded;      use Ada.Strings.Unbounded;
 with Ada.Text_IO;                use Ada.Text_IO;
@@ -66,26 +67,108 @@ procedure GNATInspect is
    --  Handles some switches from the command line. Other switches are handled
    --  directly by Getopt and will set the corresponding local variables.
 
+   function Image (File : Virtual_File) return String;
+   function Image (Self : Entity_Information) return String;
+   --  Return a display version of the argument
+
+   procedure Dump (Curs : in out Files_Cursor);
+   procedure Dump (Curs : in out Entities_Cursor);
+   procedure Dump (Refs : in out References_Cursor'Class; Name : String);
+   procedure Dump (Curs : File_Sets.Set);
+   --  Display the list of files
+
+   procedure Output_Prefix (Count : in out Natural);
+   --  Print the prefix for each output line
+
+   Xref    : aliased Xref_Database;
+   --  The xref database
+
+   generic
+      with function Compute
+        (Self : Xref_Database'Class;
+         Entity : Entity_Information) return Entity_Information;
+   procedure Process_Command_With_Single (Args : Arg_List);
+
+   generic
+      with function Compute
+        (Self : Xref_Database'Class;
+         Entity : Entity_Information) return Entities_Cursor;
+   procedure Process_Command_Entities (Args : Arg_List);
+
+   ---------------------------------
+   -- Process_Command_With_Single --
+   ---------------------------------
+
+   procedure Process_Command_With_Single (Args : Arg_List) is
+      Entity  : Entity_Information;
+      Comp    : Entity_Information;
+      Count   : Natural := 1;
+   begin
+      if Args_Length (Args) /= 1 then
+         Put_Line ("Invalid number of arguments");
+         return;
+      end if;
+
+      Entity := Get_Entity (Nth_Arg (Args, 1));
+      Comp := Compute (Xref, Entity);
+      if Comp /= No_Entity then
+         Output_Prefix (Count);
+         Put_Line (Image (Comp));
+      end if;
+   end Process_Command_With_Single;
+
+   ------------------------------
+   -- Process_Command_Entities --
+   ------------------------------
+
+   procedure Process_Command_Entities (Args : Arg_List) is
+      Entity   : Entity_Information;
+      Children : Entities_Cursor;
+   begin
+      if Args_Length (Args) /= 1 then
+         Put_Line ("Invalid number of arguments");
+         return;
+      end if;
+
+      Entity := Get_Entity (Nth_Arg (Args, 1));
+      Children := Compute (Xref, Entity);
+      Dump (Children);
+   end Process_Command_Entities;
+
    procedure Process_Body (Args : Arg_List);
-   procedure Process_Calls (Args : Arg_List);
-   procedure Process_Callers (Args : Arg_List);
-   procedure Process_Child_Types (Args : Arg_List);
-   procedure Process_Component (Args : Arg_List);
+   procedure Process_Calls
+     is new Process_Command_Entities (Calls);
+   procedure Process_Callers
+     is new Process_Command_Entities (Callers);
+   procedure Process_Child_Types
+     is new Process_Command_Entities (Child_Types);
+   procedure Process_Component
+     is new Process_Command_With_Single (Component_Type);
    procedure Process_Decl (Args : Arg_List);
    procedure Process_Depends_On (Args : Arg_List);
    procedure Process_Entities (Args : Arg_List);
    procedure Process_Help (Args : Arg_List);
    procedure Process_Importing (Args : Arg_List);
    procedure Process_Imports (Args : Arg_List);
-   procedure Process_Methods (Args : Arg_List);
+   procedure Process_Methods
+     is new Process_Command_Entities (Methods);
    procedure Process_Name (Args : Arg_List);
+   procedure Process_Overrides
+     is new Process_Command_With_Single (Overrides);
+   procedure Process_Overridden
+     is new Process_Command_Entities (Overridden_By);
    procedure Process_Params (Args : Arg_List);
-   procedure Process_Parent_Types (Args : Arg_List);
+   procedure Process_Parent_Types
+     is new Process_Command_Entities (Parent_Types);
+   procedure Process_Pointed_Type
+     is new Process_Command_With_Single (Pointed_Type);
    procedure Process_Refresh (Args : Arg_List);
    procedure Process_Refs (Args : Arg_List);
+   procedure Process_Refs_Overriding (Args : Arg_List);
    procedure Process_Scenario (Args : Arg_List);
    procedure Process_Shell (Args : Arg_List);
-   procedure Process_Type (Args : Arg_List);
+   procedure Process_Type
+     is new Process_Command_With_Single (Type_Of);
    --  Process the various commands.
    --  Args is the command line entered by the user, so Get_Command (Args) for
    --  instance is the command being executed.
@@ -95,19 +178,6 @@ procedure GNATInspect is
 
    procedure Set_Variable (Name, Value : String);
    --  Change the value of a variable
-
-   function Image (File : Virtual_File) return String;
-   function Image (Self : Entity_Information) return String;
-   --  Return a display version of the argument
-
-   procedure Dump (Curs : in out Files_Cursor);
-   procedure Dump (Curs : in out Entities_Cursor);
-   procedure Dump (Refs : in out References_Cursor; Name : String);
-   procedure Dump (Curs : File_Sets.Set);
-   --  Display the list of files
-
-   procedure Output_Prefix (Count : in out Natural);
-   --  Print the prefix for each output line
 
    type Command_Descr is record
       Name    : GNAT.Strings.String_Access;
@@ -165,6 +235,18 @@ procedure GNATInspect is
          & " callers directly, instead of references to the original entity"),
        Process_Callers'Access),
 
+      (new String'("overrides"),
+       new String'("name:file:line:column"),
+       new String'("The entity that is overridden by the parameter (generally"
+         & " a method from a parent class"),
+       Process_Overrides'Access),
+
+      (new String'("overridden"),
+       new String'("name:file:line:column"),
+       new String'("The list of entities that override the parameter"
+         & "(generally methods from children classes"),
+       Process_Overridden'Access),
+
       (new String'("decl"),
        new String'("name:file:line:column"),
        new String'("Print the location of the declaration for the entity"
@@ -202,6 +284,12 @@ procedure GNATInspect is
        new String'("Display all known references to the entity."),
        Process_Refs'Access),
 
+      (new String'("refs_overriding"),
+       new String'("name:file:line:column"),
+       new String'("Display all known references to the entity or one of its"
+           & " overriding entities"),
+       Process_Refs_Overriding'Access),
+
       (new String'("entities"),
        new String'("file"),
        new String'("List all entities referenced or declared in the file"),
@@ -217,6 +305,11 @@ procedure GNATInspect is
        new String'("Return the component type of the entity (for arrays"
           & " for instance"),
        Process_Component'Access),
+
+      (new String'("pointed"),
+       new String'("name:file:line:column"),
+       new String'("Return the type pointed to by the entity"),
+       Process_Pointed_Type'Access),
 
       (new String'("shell"),
        null,
@@ -252,9 +345,6 @@ procedure GNATInspect is
 
    Complete_Command_List_Index : Integer;
    --  Global variable used by Complete_Command
-
-   Xref    : Xref_Database;
-   --  The xref database
 
    Project_Is_Default : Boolean := True;  --  Whether we have the default prj
    Env     : Project_Environment_Access;
@@ -596,7 +686,9 @@ procedure GNATInspect is
    -- Dump --
    ----------
 
-   procedure Dump (Refs : in out References_Cursor; Name : String) is
+   procedure Dump
+     (Refs : in out References_Cursor'Class; Name : String)
+   is
       Ref    : Entity_Reference;
       Count  : Natural := 1;
    begin
@@ -640,9 +732,31 @@ procedure GNATInspect is
          Put_Line ("   Renaming of " & Image (Renamed));
       end if;
 
-      Refs := Xref.References (Entity);
+      Xref.References (Entity, Cursor => Refs);
       Dump (Refs, To_String (Xref.Declaration (Entity).Name));
    end Process_Refs;
+
+   -----------------------------
+   -- Process_Refs_Overriding --
+   -----------------------------
+
+   procedure Process_Refs_Overriding (Args : Arg_List) is
+      Refs   : Recursive_References_Cursor;
+      Entity : Entity_Information;
+   begin
+      if Args_Length (Args) /= 1 then
+         Put_Line ("Invalid number of arguments");
+         return;
+      end if;
+
+      Entity := Get_Entity (Nth_Arg (Args, 1));
+      Recursive
+        (Self    => Xref'Unchecked_Access,
+         Entity  => Entity,
+         Compute => References'Access,
+         Cursor  => Refs);
+      Dump (Refs, To_String (Xref.Declaration (Entity).Name));
+   end Process_Refs_Overriding;
 
    --------------------
    -- Process_Params --
@@ -810,6 +924,7 @@ procedure GNATInspect is
    exception
       when others =>
          Free (Str);
+         raise;
    end Process_File;
 
    ----------
@@ -912,42 +1027,6 @@ procedure GNATInspect is
       Put_Line (Xref.Qualified_Name (Entity));
    end Process_Name;
 
-   -------------------
-   -- Process_Calls --
-   -------------------
-
-   procedure Process_Calls (Args : Arg_List) is
-      Entity  : Entity_Information;
-      Callees : Entities_Cursor;
-   begin
-      if Args_Length (Args) /= 1 then
-         Put_Line ("Invalid number of arguments");
-         return;
-      end if;
-
-      Entity := Get_Entity (Nth_Arg (Args, 1));
-      Callees := Xref.Calls (Entity);
-      Dump (Callees);
-   end Process_Calls;
-
-   ---------------------
-   -- Process_Callers --
-   ---------------------
-
-   procedure Process_Callers (Args : Arg_List) is
-      Entity  : Entity_Information;
-      Callers : Entities_Cursor;
-   begin
-      if Args_Length (Args) /= 1 then
-         Put_Line ("Invalid number of arguments");
-         return;
-      end if;
-
-      Entity := Get_Entity (Nth_Arg (Args, 1));
-      Callers := Xref.Callers (Entity);
-      Dump (Callers);
-   end Process_Callers;
-
    ----------------------
    -- Process_Entities --
    ----------------------
@@ -959,81 +1038,6 @@ procedure GNATInspect is
         (File => Tree.Create (+Nth_Arg (Args, 1)));
       Dump (Entities);
    end Process_Entities;
-
-   -------------------------
-   -- Process_Child_Types --
-   -------------------------
-
-   procedure Process_Child_Types (Args : Arg_List) is
-      Entity   : Entity_Information;
-      Children : Entities_Cursor;
-   begin
-      if Args_Length (Args) /= 1 then
-         Put_Line ("Invalid number of arguments");
-         return;
-      end if;
-
-      Entity := Get_Entity (Nth_Arg (Args, 1));
-      Children := Xref.Child_Types (Entity);
-      Dump (Children);
-   end Process_Child_Types;
-
-   --------------------------
-   -- Process_Parent_Types --
-   --------------------------
-
-   procedure Process_Parent_Types (Args : Arg_List) is
-      Entity   : Entity_Information;
-      Children : Entities_Cursor;
-   begin
-      if Args_Length (Args) /= 1 then
-         Put_Line ("Invalid number of arguments");
-         return;
-      end if;
-
-      Entity := Get_Entity (Nth_Arg (Args, 1));
-      Children := Xref.Parent_Types (Entity);
-      Dump (Children);
-   end Process_Parent_Types;
-
-   ------------------
-   -- Process_Type --
-   ------------------
-
-   procedure Process_Type (Args : Arg_List) is
-      Entity, Of_Type : Entity_Information;
-      Count : Natural := 1;
-   begin
-      if Args_Length (Args) /= 1 then
-         Put_Line ("Expected entity reference as parameter");
-         return;
-      end if;
-
-      Entity := Get_Entity (Nth_Arg (Args, 1));
-      Of_Type := Xref.Type_Of (Entity);
-      if Of_Type /= No_Entity then
-         Output_Prefix (Count);
-         Put_Line (Image (Of_Type));
-      end if;
-   end Process_Type;
-
-   ---------------------
-   -- Process_Methods --
-   ---------------------
-
-   procedure Process_Methods (Args : Arg_List) is
-      Entity   : Entity_Information;
-      Children : Entities_Cursor;
-   begin
-      if Args_Length (Args) /= 1 then
-         Put_Line ("Invalid number of arguments");
-         return;
-      end if;
-
-      Entity := Get_Entity (Nth_Arg (Args, 1));
-      Children := Xref.Methods (Entity);
-      Dump (Children);
-   end Process_Methods;
 
    ------------------
    -- Process_Decl --
@@ -1062,28 +1066,6 @@ procedure GNATInspect is
       end if;
    end Process_Decl;
 
-   -----------------------
-   -- Process_Component --
-   -----------------------
-
-   procedure Process_Component (Args : Arg_List) is
-      Entity  : Entity_Information;
-      Comp    : Entity_Information;
-      Count   : Natural := 1;
-   begin
-      if Args_Length (Args) /= 1 then
-         Put_Line ("Invalid number of arguments");
-         return;
-      end if;
-
-      Entity := Get_Entity (Nth_Arg (Args, 1));
-      Comp := Xref.Component_Type (Entity);
-      if Comp /= No_Entity then
-         Output_Prefix (Count);
-         Put_Line (Image (Comp));
-      end if;
-   end Process_Component;
-
    ------------------
    -- Process_Body --
    ------------------
@@ -1098,7 +1080,7 @@ procedure GNATInspect is
       end if;
 
       Entity := Get_Entity (Nth_Arg (Args, 1));
-      Refs := Xref.Bodies (Entity);
+      Xref.Bodies (Entity, Cursor => Refs);
       Dump (Refs, To_String (Xref.Declaration (Entity).Name));
    end Process_Body;
 
@@ -1279,4 +1261,7 @@ exception
       null;
    when Invalid_Command =>
       null;
+   when E : others =>
+      Put_Line ("Unexpected exception");
+      Put_Line (Exception_Information (E));
 end GNATInspect;

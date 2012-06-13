@@ -48,9 +48,9 @@
 | V     | function                 | true          | true         | false                    |
 | w     | protected object         | false         | false        | false                    |
 | W     | protected type           | false         | false        | false                    |
-| x     | procedure                | true          | true         | false                    |
+| x     | abstract procedure       | true          | true         | false                    |
 | X     | exception                | false         | false        | false                    |
-| y     | function                 | true          | true         | false                    |
+| y     | abstract function        | true          | true         | false                    |
 | Y     | entry                    | true          | true         | false                    |
 | z     | unknown                  | false         | false        | false                    |
 | Z     | unknown                  | false         | false        | false                    |
