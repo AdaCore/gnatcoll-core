@@ -373,6 +373,7 @@ procedure GNATInspect is
    Support_Symlinks      : aliased Boolean;
    Project_Name          : aliased GNAT.Strings.String_Access;
    Subdirs               : aliased GNAT.Strings.String_Access;
+   Traces_File_Name      : aliased GNAT.Strings.String_Access;
    --  The options from the command line
 
    ----------------------
@@ -1147,8 +1148,6 @@ procedure GNATInspect is
    end Parse_Command_Line;
 
 begin
-   GNATCOLL.Traces.Parse_Config_File;
-
    Set_Usage
      (Cmdline,
       Help => "Query cross-references on source code");
@@ -1218,12 +1217,19 @@ begin
       Output      => Subdirs'Access,
       Long_Switch => "--subdirs=",
       Help        => "Object files will be found in a subdirectory of obj");
+   Define_Switch
+     (Cmdline,
+      Output      => Traces_File_Name'Access,
+      Long_Switch => "--tracefile=",
+      Help        => "Specify an alternative traces configuration file");
 
    GNATCOLL.VFS.Symbolic_Links_Support (Support_Symlinks);
 
    Initialize (Env);
 
    Getopt (Cmdline, Parse_Command_Line'Unrestricted_Access);
+
+   GNATCOLL.Traces.Parse_Config_File (Traces_File_Name.all);
 
    if Subdirs.all /= "" then
       Env.Set_Object_Subdir (+Subdirs.all);
