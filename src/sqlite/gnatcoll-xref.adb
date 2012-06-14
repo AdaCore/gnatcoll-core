@@ -36,8 +36,8 @@ package body GNATCOLL.Xref is
    use Library_Info_Lists;
 
    Me_Error   : constant Trace_Handle := Create ("ENTITIES.ERROR");
-   Me_Debug   : constant Trace_Handle := Create ("ENTITIES.DEBUG");
-   Me_Forward : constant Trace_Handle := Create ("ENTITIES.FORWARD");
+   Me_Parsing : constant Trace_Handle := Create ("ENTITIES.PARSING");
+   Me_Forward : constant Trace_Handle := Create ("ENTITIES.FORWARD", Off);
    Me_Timing  : constant Trace_Handle := Create ("ENTITIES.TIMING");
 
    Instances_Provide_Column : constant Boolean := False;
@@ -2035,8 +2035,8 @@ package body GNATCOLL.Xref is
       Start_Of_X_Section : Integer;
 
    begin  --  Parse_LI
-      if Active (Me_Debug) then
-         Trace (Me_Debug, "Parse LI "
+      if Active (Me_Parsing) then
+         Trace (Me_Parsing, "Parse LI "
                 & LI.LI.Library_File.Display_Full_Name);
       end if;
 
