@@ -417,6 +417,9 @@ private
       --  for an in-memory database does not always try to recreate it
    end record;
 
+   function "<" (E1, E2 : Entity_Information) return Boolean;
+   function "=" (E1, E2 : Entity_Information) return Boolean;
+
    type Entity_Information is record
       Id    : Integer;
       Fuzzy : Boolean := False;
@@ -436,8 +439,6 @@ private
      (Name     => Ada.Strings.Unbounded.Null_Unbounded_String,
       Location => No_Entity_Reference);
 
-   function "<" (E1, E2 : Entity_Information) return Boolean;
-   function "=" (E1, E2 : Entity_Information) return Boolean;
    package Entity_Sets is new Ada.Containers.Ordered_Sets
      (Entity_Information);
 
