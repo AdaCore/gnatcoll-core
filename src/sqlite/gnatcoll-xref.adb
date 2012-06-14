@@ -618,7 +618,7 @@ package body GNATCOLL.Xref is
             Test_To   := Lines.Max;
          else
             Lines.Lines (Lines.Max + 1 .. Low - 1) :=  -- reset
-              (others => (Entity => -1, Scope => 0));
+              (others => (Entity => -1, Scope => Integer'Last));
             Lines.Lines (Low .. High) := --  force
               (others => (Entity => Entity, Scope => Scope));
             Test_To   := Low - 1;  --  no test
@@ -639,6 +639,11 @@ package body GNATCOLL.Xref is
               (Entity => Entity, Scope => Scope);
          end if;
       end loop;
+
+--        for Line in Lines.Lines'First .. Lines.Max loop
+--           Put (Line'Img & "(" & Lines.Lines (Line).Entity'Img & ")");
+--        end loop;
+--        New_Line;
    end Insert;
 
    ----------
@@ -2003,7 +2008,9 @@ package body GNATCOLL.Xref is
 
          --  Not all subprogram specs get a 'e' line, so we also try to guess
          --  the end of spec by looking at the last parameter declaration.
+
          if Process_Scopes
+           and then Current_X_File_Unit_File_Index /= -1
            and then End_Of_Spec_Line /= 0
          then
             Insert (Scope_Trees (Current_X_File_Unit_File_Index),
