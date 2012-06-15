@@ -3440,7 +3440,7 @@ package body GNATCOLL.Xref is
                --  comments.
                for N in 1 .. Leading_Spaces loop
                   if Pos <= Buffer'Last
-                    and then Is_Whitespace (Buffer (Pos))
+                    and then Buffer (Pos) = ' '
                   then
                      Pos := Pos + 1;
                   else
