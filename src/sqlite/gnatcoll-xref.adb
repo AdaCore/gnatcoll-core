@@ -3373,6 +3373,13 @@ package body GNATCOLL.Xref is
       Beginning, Current   : Natural;
       Result : Unbounded_String;
       Pos, Last : Integer;
+
+      Leading_Spaces : Integer := -1;
+      --  Maximum number of spaces to remove in the comments. This is
+      --  computed from the first line of the comment block (by left-aligning
+      --  the text on that line), and is meant to preserve indentation for
+      --  later lines (in particular if they contain code sample for instance)
+
    begin
       Get_Documentation_Before
         (Context       => Language,
@@ -3421,14 +3428,25 @@ package body GNATCOLL.Xref is
                   Pos := Pos + Language.New_Line_Comment_Start'Length;
                end if;
 
-               --  Remove at most two leading blanks, to preserve indented
-               --  code in the comments.
-               if Pos <= Buffer'Last and then Buffer (Pos) = ' ' then
-                  Pos := Pos + 1;
+               if Leading_Spaces = -1 then
+                  --  First line, compute the number of spaces
+
+                  Leading_Spaces := Pos;
+                  Skip_Blanks (Buffer (Pos .. Buffer'Last), Pos);
+                  Leading_Spaces := Pos - Leading_Spaces;
                end if;
-               if Pos <= Buffer'Last and then Buffer (Pos) = ' ' then
-                  Pos := Pos + 1;
-               end if;
+
+               --  Remove leading blanks, to preserve indented code in the
+               --  comments.
+               for N in 1 .. Leading_Spaces loop
+                  if Pos <= Buffer'Last
+                    and then Is_Whitespace (Buffer (Pos))
+                  then
+                     Pos := Pos + 1;
+                  else
+                     exit;
+                  end if;
+               end loop;
             end if;
 
             if Pos = Last then

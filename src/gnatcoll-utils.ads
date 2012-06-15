@@ -149,7 +149,6 @@ package GNATCOLL.Utils is
    function Next_Line (Str : String; P : Natural) return Natural;
    --  Return the start of the next line or Buffer'Last if the end of the
    --  buffer is reached.
-   --  Consider using procedure Next_Line below instead.
 
    function Previous_Line (Str : String; P : Natural) return Natural;
    --  Return the start of the previous line or Buffer'First if P already
