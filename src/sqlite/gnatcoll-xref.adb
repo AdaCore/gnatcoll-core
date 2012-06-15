@@ -2305,6 +2305,7 @@ package body GNATCOLL.Xref is
       Tree         : Project_Tree;
       Project      : Project_Type;
       Parse_Runtime_Files : Boolean := True;
+      Show_Progress       : access procedure (Current, Total : Integer);
       From_DB_Name : String := "";
       To_DB_Name   : String := "")
    is
@@ -2624,6 +2625,8 @@ package body GNATCOLL.Xref is
          LI_C  : LI_Lists.Cursor := LIs.First;
          Start : Time;
          Dur   : Duration;
+         Total : constant Integer := Integer (LIs.Length);
+         Current : Natural := 1;
       begin
          if Active (Me_Timing) then
             Start := Clock;
@@ -2631,6 +2634,13 @@ package body GNATCOLL.Xref is
 
          while Has_Element (LI_C) loop
             begin
+               if Show_Progress /= null then
+                  Show_Progress
+                    (Current => Current,
+                     Total   => Total);
+                  Current := Current + 1;
+               end if;
+
                Parse_LI (DB                => DB,
                          Tree              => Tree,
                          LI                => Element (LI_C),

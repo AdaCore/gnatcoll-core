@@ -369,6 +369,12 @@ procedure GNATInspect is
    Tree    : Project_Tree;
    --  The currently loaded project tree
 
+   procedure Display_Progress (Current, Total : Integer);
+   --  Display the current progress of the parsing
+
+   Previous_Progress : Natural := 0;
+   Progress_Reporter : access procedure (Current, Total : Integer) := null;
+
    Cmdline               : Command_Line_Configuration;
    Commands_From_Switch  : aliased GNAT.Strings.String_Access;
    Commands_From_File    : aliased GNAT.Strings.String_Access;
@@ -380,6 +386,7 @@ procedure GNATInspect is
    Exit_After_Refresh    : aliased Boolean;
    Verbose               : aliased Boolean;
    Support_Symlinks      : aliased Boolean;
+   Show_Progress         : aliased Boolean;
    Project_Name          : aliased GNAT.Strings.String_Access;
    Subdirs               : aliased GNAT.Strings.String_Access;
    Traces_File_Name      : aliased GNAT.Strings.String_Access;
@@ -589,7 +596,8 @@ procedure GNATInspect is
            (Tree                => Tree,
             Project             => Tree.Root_Project,
             Parse_Runtime_Files => not Project_Is_Default
-              and then Include_Runtime_Files,
+            and then Include_Runtime_Files,
+            Show_Progress       => Progress_Reporter,
             From_DB_Name        => Nightly_DB_Name.all,
             To_DB_Name          => DB_Name.all);
       end if;
@@ -1184,6 +1192,22 @@ procedure GNATInspect is
       end if;
    end Parse_Command_Line;
 
+   ----------------------
+   -- Display_Progress --
+   ----------------------
+
+   procedure Display_Progress (Current, Total : Integer) is
+      Now : constant Integer := Integer (Float'Floor
+        (Float (Current) / Float (Total) * 100.0));
+   begin
+      if Now /= Previous_Progress then
+         Put_Line ("completed" & Current'Img
+                   & " out of" & Total'Img
+                   & " (" & Image (Now, Min_Width => 0) & "%)...");
+         Previous_Progress := Now;
+      end if;
+   end Display_Progress;
+
 begin
    Set_Usage
      (Cmdline,
@@ -1259,6 +1283,11 @@ begin
       Output      => Traces_File_Name'Access,
       Long_Switch => "--tracefile=",
       Help        => "Specify an alternative traces configuration file");
+   Define_Switch
+     (Cmdline,
+      Output      => Show_Progress'Access,
+      Long_Switch => "-d",
+      Help        => "Show progress as LI files are parsed");
 
    GNATCOLL.VFS.Symbolic_Links_Support (Support_Symlinks);
 
@@ -1267,6 +1296,10 @@ begin
    Getopt (Cmdline, Parse_Command_Line'Unrestricted_Access);
 
    GNATCOLL.Traces.Parse_Config_File (Traces_File_Name.all);
+
+   if Show_Progress then
+      Progress_Reporter := Display_Progress'Unrestricted_Access;
+   end if;
 
    if Subdirs.all /= "" then
       Env.Set_Object_Subdir (+Subdirs.all);

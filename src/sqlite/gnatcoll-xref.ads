@@ -82,6 +82,7 @@ package GNATCOLL.Xref is
       Tree                : Project_Tree;
       Project             : Project_Type;
       Parse_Runtime_Files : Boolean := True;
+      Show_Progress       : access procedure (Current, Total : Integer);
       From_DB_Name        : String := "";
       To_DB_Name          : String := "");
    --  Parse all the LI files for the project, and stores the xref info in the
@@ -92,6 +93,9 @@ package GNATCOLL.Xref is
    --  When no using sqlite, this procedure cannot initialize a database from
    --  another one. In this case, the database must always have been created
    --  first (through a call to Create_Database).
+   --
+   --  Show_Progress can be specified if you want to monitor the progress of
+   --  the parsing. It will be called for each file.
    --
    --  On exit, the in-memory database is copied back to To_DB_Name if that
    --  file is writable and the parameter is not the empty string.
