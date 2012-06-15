@@ -37,7 +37,8 @@
 
 with Ada.Containers.Ordered_Sets;
 with Ada.Strings.Unbounded; use Ada.Strings.Unbounded;
-
+with GNAT.Regpat;           use GNAT.Regpat;
+with GNAT.Strings;          use GNAT.Strings;
 with GNATCOLL.Projects;     use GNATCOLL.Projects;
 with GNATCOLL.SQL.Exec;     use GNATCOLL.SQL.Exec;
 with GNATCOLL.VFS;
@@ -162,6 +163,14 @@ package GNATCOLL.Xref is
    No_Entity_Reference : constant Entity_Reference;
    --  A reference to an entity, at a given location.
 
+   function Image
+     (Self : Xref_Database; File : GNATCOLL.VFS.Virtual_File) return String;
+   function Image
+     (Self : Xref_Database; Ref : Entity_Reference) return String;
+   --  Return a display version of the reference's location.
+   --  These subprograms can be overridden if you want to print the full
+   --  path name of files (rather than the default base name)
+
    function Get_Entity
      (Self   : Xref_Database;
       Name   : String;
@@ -179,11 +188,6 @@ package GNATCOLL.Xref is
    --  basename (or a string like "partial/path/basename") that will be matched
    --  against all known files in the database.
 
-   function Qualified_Name
-     (Self   : Xref_Database'Class;
-      Entity : Entity_Information) return String;
-   --  Returns the fully qualified name for the entity
-
    function Is_Fuzzy_Match (Self : Entity_Information) return Boolean;
    --  Returns True if the entity that was found is only an apprcximation,
    --  because no exact match was found. This can happen when the ALI files
@@ -191,12 +195,14 @@ package GNATCOLL.Xref is
 
    type Entity_Declaration is record
       Name     : Ada.Strings.Unbounded.Unbounded_String;
+      Kind     : Ada.Strings.Unbounded.Unbounded_String;
       Location : Entity_Reference;
+      Is_Subprogram : Boolean;
    end record;
    No_Entity_Declaration : constant Entity_Declaration;
 
    function Declaration
-     (Xref   : Xref_Database'Class;
+     (Xref   : Xref_Database;
       Entity : Entity_Information) return Entity_Declaration;
    --  Return the name of the entity
 
@@ -209,6 +215,102 @@ package GNATCOLL.Xref is
    type Base_Cursor is abstract tagged private;
    function Has_Element (Self : Base_Cursor) return Boolean;
    procedure Next (Self : in out Base_Cursor);
+
+   -------------------
+   -- Documentation --
+   -------------------
+   --  The following subprograms are used to provide documentation on an
+   --  entity. Their output is not meant to be parsed by tools (use other
+   --  subprograms for this), but to be displayed to the user.
+   --  Use the Documentation subprogram if you want to combine the various
+   --  pieces of information into a single string.
+
+   type Formatting is (Text, HTML);
+
+   type Language_Syntax is record
+      Comment_Start                 : GNAT.Strings.String_Access;
+      --  How comments start for this language. This is for comments that
+      --  do not end on Newline, but with Comment_End.
+
+      Comment_End                   : GNAT.Strings.String_Access;
+      --  How comments end for this language
+
+      New_Line_Comment_Start        : GNAT.Strings.String_Access;
+      --  How comments start. These comments end on the next newline
+      --  character. If null, use New_Line_Comment_Start_Regexp instead.
+
+      New_Line_Comment_Start_Regexp : access GNAT.Regpat.Pattern_Matcher;
+      --  How comments start. These comments end on the next newline
+      --  character. If null, use New_Line_Comment_Start instead.
+   end record;
+   --  Describes the syntax for a programming language. This is used to
+   --  extra comments from source files.
+
+   Ada_Syntax : constant Language_Syntax;
+   C_Syntax : constant Language_Syntax;
+   Cpp_Syntax : constant Language_Syntax;
+
+   function Overview
+     (Self   : Xref_Database;
+      Entity : Entity_Information;
+      Format : Formatting := Text) return String;
+   --  Returns a one-line overview of the entity's type.
+   --  For instance: "procedure declared at file:line:column" or
+   --  "record declared at file:line:column".
+
+   function Extract_Comment
+     (Buffer     : String;
+      Decl_Start : Integer;
+      Decl_End   : Integer;
+      Language   : Language_Syntax;
+      Format     : Formatting := Text) return String;
+   --  Extra comment from the source code, given the range of an entity
+   --  declaration. This program is made public so that you can reuse it
+   --  if you need to override Comment below, or have other means to get the
+   --  information about an entity's location (for instance, in an IDE where
+   --  the editor might change and the LI files are not regenerated
+   --  immediately).
+
+   function Comment
+     (Self     : Xref_Database;
+      Entity   : Entity_Information;
+      Language : Language_Syntax;
+      Format   : Formatting := Text) return String;
+   --  Returns the comment (extracted from the source file) for the entity.
+   --  This is looked for just before or just after the declaration of the
+   --  entity.
+
+   function Text_Declaration
+     (Self   : Xref_Database;
+      Entity : Entity_Information;
+      Format : Formatting := Text) return String;
+   --  Returns a documentation-oriented version of the declaration of the
+   --  entity. For a subprogram, for instance, it will include the list of
+   --  parameters, their types, the return value,...
+   --  The information given here might not match exactly what is found in
+   --  the source, given the limited details that are provided by the compilers
+   --  in the LI files.
+   --  Output example:
+   --       Parameters
+   --           A : in Integer
+   --           B : out String
+   --       Return
+   --           Integer
+   --  or another example:
+   --       Type: Unbounded_String
+
+   function Documentation
+     (Self     : Xref_Database;
+      Entity   : Entity_Information;
+      Language : Language_Syntax;
+      Format   : Formatting := Text) return String;
+   --  Combines the various documentation subprogram output into a single
+   --  string.
+
+   function Qualified_Name
+     (Self   : Xref_Database;
+      Entity : Entity_Information) return String;
+   --  Returns the fully qualified name for the entity
 
    ----------------
    -- References --
@@ -357,6 +459,9 @@ package GNATCOLL.Xref is
       Kind      : Parameter_Kind;
    end record;
 
+   function Image (Kind : Parameter_Kind) return String;
+   --  Return a display version of Kind
+
    type Parameters_Cursor is new Base_Cursor with private;
    function Element (Self : Parameters_Cursor) return Parameter_Information;
    function Parameters
@@ -437,7 +542,9 @@ private
 
    No_Entity_Declaration : constant Entity_Declaration :=
      (Name     => Ada.Strings.Unbounded.Null_Unbounded_String,
-      Location => No_Entity_Reference);
+      Kind     => Ada.Strings.Unbounded.Null_Unbounded_String,
+      Location => No_Entity_Reference,
+      Is_Subprogram => False);
 
    package Entity_Sets is new Ada.Containers.Ordered_Sets
      (Entity_Information);
@@ -470,4 +577,19 @@ private
       To_Visit        : Entity_Sets.Set;
    end record;
 
+   Ada_Syntax : constant Language_Syntax :=
+     (Comment_Start                 => null,
+      Comment_End                   => null,
+      New_Line_Comment_Start        => new String'("--"),
+      New_Line_Comment_Start_Regexp => null);
+   C_Syntax : constant Language_Syntax :=
+     (Comment_Start                 => new String'("/*"),
+      Comment_End                   => new String'("*/"),
+      New_Line_Comment_Start        => new String'("//"),
+      New_Line_Comment_Start_Regexp => null);
+   Cpp_Syntax : constant Language_Syntax :=
+     (Comment_Start                 => new String'("/*"),
+      Comment_End                   => new String'("*/"),
+      New_Line_Comment_Start        => new String'("//"),
+      New_Line_Comment_Start_Regexp => null);
 end GNATCOLL.Xref;

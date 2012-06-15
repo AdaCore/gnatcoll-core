@@ -659,4 +659,246 @@ package body GNATCOLL.Utils is
          return GNAT.Calendar.No_Time;
    end Time_Value;
 
+   ----------------
+   -- Line_Start --
+   ----------------
+
+   function Line_Start (Str : String; P : Natural) return Natural is
+      Index : Natural := Natural'Min (Str'Last, P);
+   begin
+      if P <= Str'First then
+         return P;
+      end if;
+
+      if Str (Index) = ASCII.LF then
+         Index := Index - 1;
+
+         if Str (Index) = ASCII.LF then
+            return Index + 1;
+         elsif Str (Index) = ASCII.CR then
+            if Index > Str'First then
+               Index := Index - 1;
+
+               if Str (Index) = ASCII.LF then
+                  return Index + 1;
+               end if;
+            else
+               return Str'First;
+            end if;
+         end if;
+
+      elsif Str (Index) = ASCII.CR then
+         Index := Index - 1;
+
+         if Str (Index) = ASCII.LF then
+            return Index + 1;
+         end if;
+      end if;
+
+      for J in reverse Str'First .. Index loop
+         if Str (J) = ASCII.LF or else Str (J) = ASCII.CR then
+            if J < Str'Last then
+               return J + 1;
+            else
+               return Str'Last;
+            end if;
+         end if;
+      end loop;
+
+      return Str'First;
+   end Line_Start;
+
+   --------------
+   -- Line_End --
+   --------------
+
+   function Line_End (Str : String; P : Natural) return Natural is
+   begin
+      for J in P .. Str'Last loop
+         if Str (J) = ASCII.LF or else Str (J) = ASCII.CR then
+            return J - 1;
+         end if;
+      end loop;
+
+      return Str'Last;
+   end Line_End;
+
+   ---------------
+   -- Next_Line --
+   ---------------
+
+   function Next_Line (Str : String; P : Natural) return Natural is
+   begin
+      for J in P .. Str'Last - 1 loop
+         if Str (J) = ASCII.LF then
+            return J + 1;
+         end if;
+      end loop;
+
+      return Str'Last;
+   end Next_Line;
+
+   -------------------
+   -- Previous_Line --
+   -------------------
+
+   function Previous_Line (Str : String; P : Natural) return Natural is
+      Index : constant Natural := Line_Start (Str, P);
+   begin
+      if Index > Str'First then
+         return Line_Start (Str, Index - 1);
+      else
+         return Str'First;
+      end if;
+   end Previous_Line;
+
+   ----------------
+   -- Skip_Lines --
+   ----------------
+
+   procedure Skip_Lines
+     (Str           : String;
+      Lines         : Integer;
+      Index         : in out Natural;
+      Lines_Skipped : out Natural)
+   is
+      Index_Saved : Natural;
+   begin
+      Lines_Skipped := 0;
+
+      if Lines >= 0 then
+         while Lines_Skipped < Lines loop
+            Index := Next_Line (Str, Index);
+
+            if Index = Str'Last then
+               Index := Line_Start (Str, Index);
+               exit;
+            end if;
+
+            Lines_Skipped := Lines_Skipped + 1;
+         end loop;
+      else
+         Index_Saved := Line_Start (Str, Index);
+
+         while Lines_Skipped < -Lines loop
+            Index := Previous_Line (Str, Index);
+
+            exit when Index = Index_Saved;
+
+            Lines_Skipped := Lines_Skipped + 1;
+         end loop;
+      end if;
+   end Skip_Lines;
+
+   -------------------
+   -- Is_Blank_Line --
+   -------------------
+
+   function Is_Blank_Line
+     (Str : String; Index : Natural := 0) return Boolean
+   is
+      It : Natural := Index;
+   begin
+      if It = 0 then
+         It := Str'First;
+      end if;
+
+      if It >= Str'First then
+         while It <= Str'Last
+           and then Str (It) /= ASCII.CR
+           and then Str (It) /= ASCII.LF
+         loop
+            if Str (It) /= ' '
+              and then Str (It) /= ASCII.HT
+            then
+               return False;
+            end if;
+
+            It := It + 1;
+         end loop;
+      end if;
+
+      return True;
+   end Is_Blank_Line;
+
+   --------------------
+   -- Skip_To_String --
+   --------------------
+
+   procedure Skip_To_String
+     (Str       : String;
+      Index     : in out Natural;
+      Substring : String)
+   is
+      L : constant Natural := Substring'Length - 1;
+   begin
+      while Index + L <= Str'Last
+        and then Str (Index .. Index + L) /= Substring
+      loop
+         Index := Index + 1;
+      end loop;
+   end Skip_To_String;
+
+   -----------------------
+   -- Forward_UTF8_Char --
+   -----------------------
+
+   function Forward_UTF8_Char
+     (Str : String; Index : Integer) return Integer
+   is
+      type Unicode_Char is mod 2**32;
+      C : constant Unicode_Char := Character'Pos (Str (Index));
+   begin
+      --  Compute the length of the encoding given what was in the first byte
+      if C < 128 then
+         return Index + 1;
+      elsif (C and 16#E0#) = 16#C0# then
+         return Index + 2;
+      elsif (C and 16#F0#) = 16#E0# then
+         return Index + 3;
+      elsif (C and 16#F8#) = 16#F0# then
+         return Index + 4;
+      elsif (C and 16#FC#) = 16#F8# then
+         return Index + 5;
+      elsif (C and 16#FE#) = 16#FC# then
+         return Index + 6;
+      else
+         --  Invalid encoding
+         return Index + 1;
+      end if;
+   end Forward_UTF8_Char;
+
+   --------------------
+   -- Skip_To_Column --
+   --------------------
+
+   procedure Skip_To_Column
+     (Str           : String;
+      Columns       : Integer := 0;
+      Index         : in out Integer;
+      Tab_Width     : Integer := 8)
+   is
+      Current_Col   : Integer := 1;
+   begin
+      if Str = "" then
+         return;
+      end if;
+
+      while Current_Col < Columns
+        and then Natural (Index) <= Str'Last
+        and then Str (Natural (Index)) /= ASCII.LF
+      loop
+         if Natural (Index) < Str'Last
+           and then Str (Natural (Index)) = ASCII.HT
+         then
+            Current_Col := Current_Col
+              + (Tab_Width - (Current_Col - 1) mod Tab_Width);
+         else
+            Current_Col := Current_Col + 1;
+         end if;
+
+         Index := Forward_UTF8_Char (Str, Natural (Index));
+      end loop;
+   end Skip_To_Column;
+
 end GNATCOLL.Utils;

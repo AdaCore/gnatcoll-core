@@ -67,7 +67,10 @@ procedure GNATInspect is
    --  Handles some switches from the command line. Other switches are handled
    --  directly by Getopt and will set the corresponding local variables.
 
-   function Image (File : Virtual_File) return String;
+   type My_Xref_Database is new Xref_Database with null record;
+
+   overriding function Image
+      (Self : My_Xref_Database; File : Virtual_File) return String;
    function Image (Self : Entity_Information) return String;
    --  Return a display version of the argument
 
@@ -80,7 +83,7 @@ procedure GNATInspect is
    procedure Output_Prefix (Count : in out Natural);
    --  Print the prefix for each output line
 
-   Xref    : aliased Xref_Database;
+   Xref    : aliased My_Xref_Database;
    --  The xref database
 
    generic
@@ -147,6 +150,7 @@ procedure GNATInspect is
    procedure Process_Component
      is new Process_Command_With_Single (Component_Type);
    procedure Process_Decl (Args : Arg_List);
+   procedure Process_Doc (Args : Arg_List);
    procedure Process_Depends_On (Args : Arg_List);
    procedure Process_Entities (Args : Arg_List);
    procedure Process_Help (Args : Arg_List);
@@ -267,6 +271,11 @@ procedure GNATInspect is
        new String'("Print the location of the body for the entity"
            & " referenced at the given location"),
        Process_Body'Access),
+
+      (new String'("doc"),
+       new String'("name:file:line:column"),
+       new String'("Display the documentation for the entity"),
+       Process_Doc'Access),
 
       (new String'("help"),
        new String'("[command or variable name]"),
@@ -441,7 +450,10 @@ procedure GNATInspect is
    -- Image --
    -----------
 
-   function Image (File : Virtual_File) return String is
+   overriding function Image
+     (Self : My_Xref_Database; File : Virtual_File) return String
+   is
+      pragma Unreferenced (Self);
    begin
       if Display_Full_Paths then
          return File.Display_Full_Name;
@@ -465,11 +477,7 @@ procedure GNATInspect is
          if Is_Predefined_Entity (Decl) then
             return "predefined entity: " & To_String (Decl.Name);
          else
-            return To_String (Decl.Name) & ":"
-              & Image (Decl.Location.File) & ":"
-              & Image (Decl.Location.Line, Min_Width => 0)
-              & ':'
-              & Image (Integer (Decl.Location.Column), Min_Width => 0);
+            return To_String (Decl.Name) & ":" & Xref.Image (Decl.Location);
          end if;
       end if;
    end Image;
@@ -706,11 +714,9 @@ procedure GNATInspect is
       while Has_Element (Refs) loop
          Ref := Refs.Element;
          Output_Prefix (Count);
-         Put (Name & ':' & Image (Ref.File) & ":"
-              & Image (Ref.Line, Min_Width => 0)
-              & ':'
-              & Image (Integer (Ref.Column), Min_Width => 0)
-              & " (" & To_String (Ref.Kind) & ")");
+         Put
+           (Name & ':' & Xref.Image (Ref)
+            & " (" & To_String (Ref.Kind) & ")");
 
          if Ref.Scope /= No_Entity then
             Put_Line (" scope=" & Image (Ref.Scope));
@@ -972,7 +978,7 @@ procedure GNATInspect is
       while Curs.Has_Element loop
          F := Curs.Element;
          Output_Prefix (Count);
-         Put_Line (Image (F));
+         Put_Line (Xref.Image (F));
          Curs.Next;
       end loop;
    end Dump;
@@ -1005,7 +1011,7 @@ procedure GNATInspect is
    begin
       while Has_Element (C) loop
          Output_Prefix (Count);
-         Put_Line (Image (Element (C)));
+         Put_Line (Xref.Image (Element (C)));
          Next (C);
       end loop;
    end Dump;
@@ -1061,6 +1067,41 @@ procedure GNATInspect is
       Put_Line (Xref.Qualified_Name (Entity));
    end Process_Name;
 
+   -----------------
+   -- Process_Doc --
+   -----------------
+
+   procedure Process_Doc (Args : Arg_List) is
+      Info   : GNATCOLL.Projects.File_Info;
+      Syntax : Language_Syntax;
+      Entity : Entity_Information;
+      Decl   : Entity_Declaration;
+   begin
+      if Args_Length (Args) /= 1 then
+         Put_Line ("Invalid number of arguments");
+         return;
+      end if;
+
+      Entity := Get_Entity (Nth_Arg (Args, 1));
+      Decl := Xref.Declaration (Entity);
+      Info := Tree.Info (Decl.Location.File);
+
+      if Info.Language = "ada" then
+         Syntax := Ada_Syntax;
+      elsif Info.Language = "c" then
+         Syntax := C_Syntax;
+      elsif Info.Language = "c++" then
+         Syntax := Cpp_Syntax;
+      else
+         Put_Line
+           ("Unknown language for " & Decl.Location.File.Display_Base_Name);
+         return;
+      end if;
+
+      Put_Line (Xref.Documentation (Entity => Entity, Language => Syntax));
+      New_Line;
+   end Process_Doc;
+
    ----------------------
    -- Process_Entities --
    ----------------------
@@ -1093,11 +1134,7 @@ procedure GNATInspect is
       if Entity /= No_Entity then
          Decl := Xref.Declaration (Entity);
          Output_Prefix (Count);
-         Put_Line (To_String (Decl.Name)
-                   & ":" & Image (Decl.Location.File)
-                   & ":" & Image (Decl.Location.Line, Min_Width => 0)
-                   & ":" & Image (Integer (Decl.Location.Column),
-                                  Min_Width => 0));
+         Put_Line (To_String (Decl.Name) & ":" & Xref.Image (Decl.Location));
       end if;
    end Process_Decl;
 

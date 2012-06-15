@@ -21,8 +21,9 @@ with Ada.Containers;          use Ada.Containers;
 with Ada.Containers.Doubly_Linked_Lists;
 with Ada.Containers.Hashed_Maps;
 with Ada.Containers.Vectors;
+with Ada.Strings.Maps;
 with Ada.Unchecked_Deallocation;
-with GNAT.OS_Lib;             use GNAT.OS_Lib;
+with GNAT.OS_Lib;
 with GNATCOLL.Xref.Database;  use GNATCOLL.Xref.Database;
 with GNATCOLL.Mmap;           use GNATCOLL.Mmap;
 with GNATCOLL.SQL;            use GNATCOLL.SQL;
@@ -37,6 +38,7 @@ package body GNATCOLL.Xref is
 
    Me_Error   : constant Trace_Handle := Create ("ENTITIES.ERROR");
    Me_Parsing : constant Trace_Handle := Create ("ENTITIES.PARSING");
+   Me_Debug   : constant Trace_Handle := Create ("ENTITIES.DEBUG", Off);
    Me_Forward : constant Trace_Handle := Create ("ENTITIES.FORWARD", Off);
    Me_Timing  : constant Trace_Handle := Create ("ENTITIES.TIMING");
 
@@ -309,23 +311,30 @@ package body GNATCOLL.Xref is
              Distinct => True),
         On_Server => True, Name => "e2e_to");
 
-   Q_Decl_Name   : constant := 0;
-   Q_Decl_File   : constant := 1;
-   Q_Decl_Line   : constant := 2;
-   Q_Decl_Column : constant := 3;
-   Q_Decl_Caller : constant := 4;
+   Q_Decl_Name    : constant := 0;
+   Q_Decl_File    : constant := 1;
+   Q_Decl_Line    : constant := 2;
+   Q_Decl_Column  : constant := 3;
+   Q_Decl_Caller  : constant := 4;
+   Q_Decl_Kind    : constant := 5;
+   Q_Decl_Is_Subp : constant := 6;
    Query_Declaration : constant Prepared_Statement :=
      Prepare
        (SQL_Select
             (To_List
-                 ((Q_Decl_Name   => +Database.Entities.Name,
-                   Q_Decl_File   => +Database.Files.Path,
-                   Q_Decl_Line   => +Database.Entities.Decl_Line,
-                   Q_Decl_Column => +Database.Entities.Decl_Column,
-                   Q_Decl_Caller => +Database.Entities.Decl_Caller)),
-             From => Database.Entities & Database.Files,
+                 ((Q_Decl_Name    => +Database.Entities.Name,
+                   Q_Decl_File    => +Database.Files.Path,
+                   Q_Decl_Line    => +Database.Entities.Decl_Line,
+                   Q_Decl_Column  => +Database.Entities.Decl_Column,
+                   Q_Decl_Caller  => +Database.Entities.Decl_Caller,
+                   Q_Decl_Kind    => +Database.Entity_Kinds.Display,
+                   Q_Decl_Is_Subp => +Database.Entity_Kinds.Is_Subprogram)),
+             From => Database.Entities
+                & Database.Files
+                & Database.Entity_Kinds,
              Where => Database.Entities.Decl_File = Database.Files.Id
-             and Database.Entities.Id = Integer_Param (1)),
+                and Database.Entities.Kind = Database.Entity_Kinds.Id
+                and Database.Entities.Id = Integer_Param (1)),
         On_Server => True, Name => "declaration");
 
    Q_Ref_File_Id : constant := 0;
@@ -368,6 +377,17 @@ package body GNATCOLL.Xref is
                 & Database.Entity_Refs.Line & Database.Entity_Refs.Column,
              Distinct => True),
         On_Server => True, Name => "references");
+
+   Q_End_Of_Spec : constant Prepared_Statement :=
+     Prepare
+       (SQL_Select
+               (To_List
+                 ((0    => +Database.Entity_Refs.Line,
+                   1     => +Database.Entity_Refs.Column)),
+             From => Database.Entity_Refs,
+             Where => Database.Entity_Refs.Kind = "e"
+             and Database.Entity_Refs.Entity = Integer_Param (1)),
+        On_Server => True, Name => "end_of_spec");
 
    Q_References_And_Kind : constant Prepared_Statement :=
      Prepare
@@ -546,6 +566,69 @@ package body GNATCOLL.Xref is
      (Self   : in out Recursive_Entities_Cursor'Class;
       Entity : Entity_Information);
    --  Self will navigate all information extracted from Entity.
+
+   procedure Get_Documentation_Before
+     (Context       : Language_Syntax;
+      Buffer        : String;
+      Decl_Index    : Natural;
+      Comment_Start : out Natural;
+      Comment_End   : out Natural;
+      Allow_Blanks  : Boolean := False);
+   procedure Get_Documentation_After
+     (Context       : Language_Syntax;
+      Buffer        : String;
+      Decl_Index    : Natural;
+      Comment_Start : out Natural;
+      Comment_End   : out Natural);
+   --  Get the comment just before or just after Decl_Index, skipping code
+   --  lines as needed.
+   --  If Allow_Blanks is True, then skip blank lines before looking for
+   --  comments.
+
+   type Comment_Type is (No_Comment, Comment_Single_Line, Comment_Multi_Line);
+   function Looking_At_Start_Of_Comment
+     (Context : Language_Syntax;
+      Buffer  : String;
+      Index   : Natural) return Comment_Type;
+   --  Whether we have the start of a comment at Index in Buffer
+
+   procedure Skip_To_Current_Comment_Block_Start
+     (Context : Language_Syntax;
+      Buffer  : String;
+      Index   : in out Natural);
+   --  Assuming that Index is at the beginning or inside a comment line, moves
+   --  upward in the file till the end of the current block of comments. This
+   --  block is defined as a group of commented out lines, until a non-comment
+   --  line is seen.
+   --  If Index is not at the beginning or inside a comment line, Index is set
+   --  to 0.
+
+   procedure Skip_To_Current_Comment_Block_End
+     (Context            : Language_Syntax;
+      Buffer             : String;
+      Index              : in out Natural;
+      Ignore_Blank_Lines : Boolean := False);
+   --  Same as Skip_To_Current_Comment_Block_Start, except we move forward to
+   --  the beginning of the last line of comments in the block.
+   --  If Ignore_Blank_Lines is set to True, blocks separated from one another
+   --  with blank lines are considered as a single one.
+
+   procedure Skip_To_Previous_Comment_Start
+     (Context      : Language_Syntax;
+      Buffer       : String;
+      Index        : in out Natural;
+      Allow_Blanks : Boolean := False);
+   --  Skip lines of code (backward) until we find the start of a comment.
+   --  If we see an empty line first Index is set to 0, unless Allow_Blanks.
+   --  Likewise if no comment is found before the beginning of the buffer.
+
+   procedure Skip_To_Next_Comment_Start
+     (Context : Language_Syntax;
+      Buffer  : String;
+      Index   : in out Natural);
+   --  Skip lines of code until we find the beginning of a comment.
+   --  If we see an empty line first Index is set to 0.
+   --  Likewise if no comment is found before the end of the buffer.
 
    ---------------------
    -- Create_Database --
@@ -2332,13 +2415,13 @@ package body GNATCOLL.Xref is
                Current_DB  : constant String :=
                  GNATCOLL.SQL.Sqlite.DB_Name (DB);
             begin
-               if Is_Regular_File (Current_DB) then
+               if GNAT.OS_Lib.Is_Regular_File (Current_DB) then
                   --  If the DB already exists, don't override it
                   null;
 
                elsif Current_DB /= From_DB_Name
                  and then From_DB_Name /= ""
-                 and then Is_Regular_File (From_DB_Name)
+                 and then GNAT.OS_Lib.Is_Regular_File (From_DB_Name)
                then
                   if Active (Me_Timing) then
                      Start := Clock;
@@ -2828,7 +2911,7 @@ package body GNATCOLL.Xref is
       C, C2  : SQL_Criteria;
 
    begin
-      if Is_Absolute_Path (File) then
+      if GNAT.OS_Lib.Is_Absolute_Path (File) then
          F := Database.Files.Path = File;
       else
          F := Like (Database.Files.Path, "%/" & File);
@@ -2960,7 +3043,7 @@ package body GNATCOLL.Xref is
    -----------------
 
    function Declaration
-     (Xref   : Xref_Database'Class;
+     (Xref   : Xref_Database;
       Entity : Entity_Information) return Entity_Declaration
    is
       Curs  : Forward_Cursor;
@@ -2980,6 +3063,8 @@ package body GNATCOLL.Xref is
          end if;
 
          return (Name => To_Unbounded_String (Curs.Value (Q_Decl_Name)),
+                 Kind => To_Unbounded_String (Curs.Value (Q_Decl_Kind)),
+                 Is_Subprogram => Curs.Boolean_Value (Q_Decl_Is_Subp),
                  Location => (Entity => Entity,
                               File   => Create (+Curs.Value (Q_Decl_File)),
                               Line   => Curs.Integer_Value (Q_Decl_Line),
@@ -3170,7 +3255,7 @@ package body GNATCOLL.Xref is
    --------------------
 
    function Qualified_Name
-     (Self   : Xref_Database'Class;
+     (Self   : Xref_Database;
       Entity : Entity_Information) return String
    is
       D    : Entity_Declaration := Self.Declaration (Entity);
@@ -3198,13 +3283,309 @@ package body GNATCOLL.Xref is
       end if;
 
       while E /= No_Entity loop
-         D := Self.Declaration (E);
+         D := Declaration (Xref_Database'Class (Self), E);
          Name := D.Name & Separator & Name;
          E := D.Location.Scope;
       end loop;
 
       return To_String (Name);
    end Qualified_Name;
+
+   -----------
+   -- Image --
+   -----------
+
+   function Image (Kind : Parameter_Kind) return String is
+   begin
+      case Kind is
+         when In_Parameter     => return "in";
+         when Out_Parameter    => return "out";
+         when In_Out_Parameter => return "in out";
+         when Access_Parameter => return "access";
+      end case;
+   end Image;
+
+   -----------
+   -- Image --
+   -----------
+
+   function Image
+     (Self : Xref_Database; File : Virtual_File) return String
+   is
+      pragma Unreferenced (Self);
+   begin
+      return File.Display_Base_Name;
+   end Image;
+
+   -----------
+   -- Image --
+   -----------
+
+   function Image
+     (Self : Xref_Database; Ref : Entity_Reference) return String is
+   begin
+      return Image (Xref_Database'Class (Self), Ref.File) & ":"
+        & Image (Ref.Line, Min_Width => 0)
+        & ':'
+        & Image (Integer (Ref.Column), Min_Width => 0);
+   end Image;
+
+   --------------
+   -- Overview --
+   --------------
+
+   function Overview
+     (Self   : Xref_Database;
+      Entity : Entity_Information;
+      Format : Formatting := Text) return String
+   is
+      pragma Unreferenced (Format);
+      Decl   : constant Entity_Declaration :=
+        Declaration (Xref_Database'Class (Self), Entity);
+   begin
+      return To_String
+        (Decl.Kind & " declared at "
+         & Image (Xref_Database'Class (Self), Decl.Location));
+   end Overview;
+
+   ---------------------
+   -- Extract_Comment --
+   ---------------------
+
+   function Extract_Comment
+     (Buffer     : String;
+      Decl_Start : Integer;
+      Decl_End   : Integer;
+      Language   : Language_Syntax;
+      Format     : Formatting := Text) return String
+   is
+      pragma Unreferenced (Format);
+      Beginning, Current   : Natural;
+      Result : Unbounded_String;
+      Pos, Last : Integer;
+   begin
+      Get_Documentation_Before
+        (Context       => Language,
+         Buffer        => Buffer,
+         Decl_Index    => Decl_Start,
+         Comment_Start => Beginning,
+         Comment_End   => Current);
+
+      if Beginning = 0 then
+         Get_Documentation_After
+           (Context       => Language,
+            Buffer        => Buffer,
+            Decl_Index    => Decl_End,
+            Comment_Start => Beginning,
+            Comment_End   => Current);
+      end if;
+
+      --  Cleanup comment marks
+      if Beginning /= 0 then
+         Pos := Beginning;
+
+         if Language.Comment_Start /= null
+           and then Starts_With
+             (Buffer (Pos .. Current), Language.Comment_Start.all)
+         then
+            Pos := Pos + Language.Comment_Start'Length;
+         end if;
+
+         if Language.Comment_End /= null
+           and then Ends_With
+             (Buffer (Pos .. Current), Language.Comment_End.all)
+         then
+            Current := Current - Language.Comment_End'Length;
+         end if;
+         Skip_Blanks_Backward (Buffer (Pos .. Current), Current);
+
+         while Pos <= Current loop
+            Last := EOL (Buffer (Pos .. Current - 1));
+
+            if Language.New_Line_Comment_Start /= null then
+               Skip_Blanks (Buffer, Pos);
+
+               if Starts_With (Buffer (Pos .. Buffer'Last),
+                               Language.New_Line_Comment_Start.all)
+               then
+                  Pos := Pos + Language.New_Line_Comment_Start'Length;
+               end if;
+
+               --  Remove at most two leading blanks, to preserve indented
+               --  code in the comments.
+               if Pos <= Buffer'Last and then Buffer (Pos) = ' ' then
+                  Pos := Pos + 1;
+               end if;
+               if Pos <= Buffer'Last and then Buffer (Pos) = ' ' then
+                  Pos := Pos + 1;
+               end if;
+            end if;
+
+            if Pos = Last then
+               Append (Result, ASCII.LF);
+            else
+               Append (Result, Buffer (Pos .. Last));
+            end if;
+            Pos := Last + 1;
+         end loop;
+
+         return To_String (Result);
+      else
+         return "";
+      end if;
+   end Extract_Comment;
+
+   -------------
+   -- Comment --
+   -------------
+
+   function Comment
+     (Self     : Xref_Database;
+      Entity   : Entity_Information;
+      Language : Language_Syntax;
+      Format   : Formatting := Text) return String
+   is
+      Buffer : GNAT.Strings.String_Access;
+      Decl   : constant Entity_Declaration :=
+        Declaration (Xref_Database'Class (Self), Entity);
+      Start, Last, Skipped : Integer;
+      R : Forward_Cursor;
+   begin
+      if Decl = No_Entity_Declaration then
+         return "";
+      end if;
+
+      Buffer := Decl.Location.File.Read_File;
+      if Buffer = null then
+         return "";
+      end if;
+
+      Start := Buffer'First;
+      Skip_Lines
+        (Buffer.all,
+         Lines         => Decl.Location.Line - 1,
+         Index         => Start,
+         Lines_Skipped => Skipped);
+      if Skipped /= Decl.Location.Line - 1 then
+         return "";
+      end if;
+
+      Skip_To_Column
+        (Buffer.all,
+         Columns => Integer (Decl.Location.Column) - 1,
+         Index   => Start);
+
+      Last := Start;
+
+      R.Fetch (Self.DB, Q_End_Of_Spec, Params => (1 => +Entity.Id));
+      if R.Has_Row then
+         Skip_Lines
+           (Buffer.all,
+            Lines         => R.Integer_Value (0) - Decl.Location.Line,
+            Index         => Last,
+            Lines_Skipped => Skipped);
+         Skip_To_Column (Buffer.all, R.Integer_Value (1), Last);
+      end if;
+
+      declare
+         Result : constant String := Extract_Comment
+           (Buffer     => Buffer.all,
+            Decl_Start => Start,
+            Decl_End   => Last,
+            Language   => Language,
+            Format     => Format);
+      begin
+         Free (Buffer);
+         return Result;
+      end;
+   end Comment;
+
+   ----------------------
+   -- Text_Declaration --
+   ----------------------
+
+   function Text_Declaration
+     (Self   : Xref_Database;
+      Entity : Entity_Information;
+      Format : Formatting := Text) return String
+   is
+      pragma Unreferenced (Format);
+
+      P : Parameters_Cursor := Parameters (Xref_Database'Class (Self), Entity);
+      Param  : Parameter_Information;
+      Result : Unbounded_String;
+      Typ    : Entity_Information;
+      Decl   : Entity_Declaration;
+   begin
+      if P.Has_Element then
+         Append (Result, "Parameters" & ASCII.LF);
+
+         while P.Has_Element loop
+            Param := P.Element;
+            Decl := Declaration (Xref_Database'Class (Self), Param.Parameter);
+            Append
+              (Result, "   "
+               & Decl.Name
+               & " : " & Image (Param.Kind)
+               & " "
+               & Qualified_Name
+                 (Xref_Database'Class (Self), Self.Type_Of (Param.Parameter))
+               & ASCII.LF);
+            P.Next;
+         end loop;
+      end if;
+
+      Typ := Self.Type_Of (Entity);
+      if Typ /= No_Entity then
+         Decl := Declaration (Xref_Database'Class (Self), Entity);
+         if Decl.Is_Subprogram then
+            Append (Result, "Returns" & ASCII.LF);
+         else
+            Append (Result, "Type" & ASCII.LF);
+         end if;
+
+         Append (Result, "   "
+                 & Qualified_Name (Xref_Database'Class (Self), Typ)
+                 & ASCII.LF);
+      end if;
+
+      return To_String (Result);
+   end Text_Declaration;
+
+   -------------------
+   -- Documentation --
+   -------------------
+
+   function Documentation
+     (Self     : Xref_Database;
+      Entity   : Entity_Information;
+      Language : Language_Syntax;
+      Format   : Formatting := Text) return String
+   is
+      Result : Unbounded_String;
+   begin
+      --  Only output the documentation, not the overview for the entity.
+--        Result := To_Unbounded_String
+--          (Qualified_Name (Xref_Database'Class (Self), Entity) & ASCII.LF);
+--        Append
+--          (Result,
+--           Overview (Xref_Database'Class (Self), Entity, Format) & ASCII.LF);
+      Append
+        (Result,
+         Comment (Xref_Database'Class (Self), Entity, Language, Format)
+         & ASCII.LF);
+      Append
+        (Result,
+         Text_Declaration (Xref_Database'Class (Self), Entity, Format)
+         & ASCII.LF);
+
+      return To_String
+        (Ada.Strings.Unbounded.Trim
+           (Result,
+            Left => Ada.Strings.Maps.Null_Set,
+            Right => Ada.Strings.Maps.To_Set
+              (' ' & ASCII.HT & ASCII.LF & ASCII.CR)));
+   end Documentation;
 
    -----------
    -- Calls --
@@ -3657,5 +4038,343 @@ package body GNATCOLL.Xref is
       Cursor.To_Visit        := Entity_Sets.Empty_Set;
       Init_For_Entity (Cursor, Entity);
    end Recursive;
+
+   ------------------------------
+   -- Get_Documentation_Before --
+   ------------------------------
+
+   procedure Get_Documentation_Before
+     (Context       : Language_Syntax;
+      Buffer        : String;
+      Decl_Index    : Natural;
+      Comment_Start : out Natural;
+      Comment_End   : out Natural;
+      Allow_Blanks  : Boolean := False) is
+   begin
+      Comment_Start := Decl_Index;
+      Skip_To_Previous_Comment_Start
+        (Context, Buffer, Comment_Start, Allow_Blanks);
+      Comment_End := Comment_Start;
+
+      if Comment_Start /= 0 then
+         Skip_To_Current_Comment_Block_End (Context, Buffer, Comment_End);
+         Comment_End := Line_End (Buffer, Comment_End);
+
+         if Active (Me_Debug) then
+            Trace (Me_Debug,
+                   "Get_Documentation: Found a comment before the entity,"
+                   & " from" & Comment_Start'Img & " to" & Comment_End'Img);
+         end if;
+      end if;
+   end Get_Documentation_Before;
+
+   -----------------------------
+   -- Get_Documentation_After --
+   -----------------------------
+
+   procedure Get_Documentation_After
+     (Context       : Language_Syntax;
+      Buffer        : String;
+      Decl_Index    : Natural;
+      Comment_Start : out Natural;
+      Comment_End   : out Natural)
+   is
+   begin
+      --  Else look after the comment after the declaration (which is the
+      --  first block of comments after the declaration line, and not
+      --  separated by a blank line)
+      Comment_Start := Decl_Index;
+      Skip_To_Next_Comment_Start (Context, Buffer, Comment_Start);
+      Comment_End := Comment_Start;
+
+      if Comment_Start /= 0 then
+         Skip_To_Current_Comment_Block_End (Context, Buffer, Comment_End);
+         Comment_End := Line_End (Buffer, Comment_End);
+
+         if Active (Me_Debug) then
+            Trace (Me_Debug,
+                   "Get_Documentation: Found a comment after the entity,"
+                   & " from" & Comment_Start'Img & " to" & Comment_End'Img);
+         end if;
+      end if;
+   end Get_Documentation_After;
+
+   ---------------------------------
+   -- Looking_At_Start_Of_Comment --
+   ---------------------------------
+
+   function Looking_At_Start_Of_Comment
+     (Context : Language_Syntax;
+      Buffer  : String;
+      Index   : Natural) return Comment_Type is
+   begin
+      if Context.New_Line_Comment_Start /= null
+        and then Index + Context.New_Line_Comment_Start'Length <= Buffer'Last
+        and then Buffer
+          (Index .. Index + Context.New_Line_Comment_Start'Length - 1) =
+          Context.New_Line_Comment_Start.all
+      then
+         return Comment_Single_Line;
+      end if;
+
+      if Context.New_Line_Comment_Start_Regexp /= null
+        and then Match (Context.New_Line_Comment_Start_Regexp.all,
+                        Buffer, Data_First => Index)
+      then
+         return Comment_Single_Line;
+      end if;
+
+      if Context.Comment_Start /= null
+        and then Index + Context.Comment_Start'Length <= Buffer'Last
+        and then Buffer (Index .. Index + Context.Comment_Start'Length - 1)
+        = Context.Comment_Start.all
+      then
+         return Comment_Multi_Line;
+      end if;
+
+      return No_Comment;
+   end Looking_At_Start_Of_Comment;
+
+   -----------------------------------------
+   -- Skip_To_Current_Comment_Block_Start --
+   -----------------------------------------
+
+   procedure Skip_To_Current_Comment_Block_Start
+     (Context : Language_Syntax;
+      Buffer  : String;
+      Index   : in out Natural)
+   is
+      Initial_Index : constant Natural := Index;
+      Lines_Skipped : Natural;
+      Tmp           : Integer;
+
+      function Only_Blanks_Before
+        (Buffer : String;
+         Index  : Natural)
+         return Boolean;
+      --  Return True if there are only blanks characters before the one
+      --  pointed by Index in Buffer.
+      --  Return False otherwise.
+
+      ------------------------
+      -- Only_Blanks_Before --
+      ------------------------
+
+      function Only_Blanks_Before
+        (Buffer : String;
+         Index  : Natural)
+         return Boolean
+      is
+         Tmp : Natural := Index - 1;
+      begin
+         Skip_Blanks_Backward (Buffer, Tmp);
+         return Buffer'First = Tmp + 1;
+      end Only_Blanks_Before;
+
+   begin
+      --  Are we in a multi-line comment ?
+
+      if Context.Comment_End /= null then
+         Tmp := Line_End (Buffer, Index);
+
+         if Tmp - Context.Comment_End'Length + 1 >= Index
+           and then Buffer
+             (Tmp - Context.Comment_End'Length + 1 .. Tmp) =
+             Context.Comment_End.all
+         then -- The end of a multi-line comment has been found
+            while Index >= Buffer'First
+              and then Buffer
+                (Index .. Index + Context.Comment_Start'Length - 1) /=
+                Context.Comment_Start.all
+            loop
+               Index := Index - 1;
+            end loop;
+
+            if Looking_At_Start_Of_Comment (Context, Buffer, Index) =
+              Comment_Multi_Line
+            then -- The beginning of a multi-line comment has been found
+               return;
+            end if;
+         end if;
+      end if;
+
+      --  Check for single line comments
+
+      Tmp := Initial_Index;
+
+      loop
+         while Tmp <= Buffer'Last
+           and then (Buffer (Tmp) = ' ' or else Buffer (Tmp) = ASCII.HT)
+         loop
+            Tmp := Tmp + 1;
+         end loop;
+
+         exit when Looking_At_Start_Of_Comment (Context, Buffer, Tmp) =
+           No_Comment;
+
+         Index := Tmp;
+
+         exit when Only_Blanks_Before (Buffer, Tmp);
+
+         Skip_Lines (Buffer, -1, Tmp, Lines_Skipped);
+
+         exit when Lines_Skipped /= 1;
+      end loop;
+
+      if Looking_At_Start_Of_Comment (Context, Buffer, Index) = No_Comment then
+         Index := 0;
+      end if;
+   end Skip_To_Current_Comment_Block_Start;
+
+   ---------------------------------------
+   -- Skip_To_Current_Comment_Block_End --
+   ---------------------------------------
+
+   procedure Skip_To_Current_Comment_Block_End
+     (Context            : Language_Syntax;
+      Buffer             : String;
+      Index              : in out Natural;
+      Ignore_Blank_Lines : Boolean := False)
+   is
+      Last_Comment_Index : Integer := Index;
+      Typ                : Comment_Type;
+      Lines_Skipped      : Natural;
+   begin
+      Block_Iteration : loop
+         Typ := Looking_At_Start_Of_Comment (Context, Buffer, Index);
+
+         case Typ is
+         when No_Comment =>
+            Index := Last_Comment_Index;
+            exit Block_Iteration;
+
+         when Comment_Single_Line =>
+            Index := Line_End (Buffer, Index);
+
+            declare
+               Tmp : Integer := Index;
+            begin
+               loop
+                  Skip_Lines (Buffer, 1, Tmp, Lines_Skipped);
+
+                  exit when Lines_Skipped /= 1;
+
+                  while Tmp <= Buffer'Last
+                    and then (Buffer (Tmp) = ' ' or Buffer (Tmp) = ASCII.HT)
+                  loop
+                     Tmp := Tmp + 1;
+                  end loop;
+
+                  exit when
+                    Looking_At_Start_Of_Comment (Context, Buffer, Tmp) =
+                    No_Comment;
+
+                  Index := Tmp;
+               end loop;
+            end;
+
+         when Comment_Multi_Line =>
+            Skip_To_String (Buffer, Index, Context.Comment_End.all);
+            Index := Index - 1;
+         end case;
+
+         if Ignore_Blank_Lines then
+            Last_Comment_Index := Index;
+            Skip_Lines (Buffer, 1, Index, Lines_Skipped);
+
+            exit Block_Iteration when Lines_Skipped /= 1;
+
+            Skip_Blanks (Buffer, Index);
+         else
+            exit Block_Iteration;
+         end if;
+
+      end loop Block_Iteration;
+   end Skip_To_Current_Comment_Block_End;
+
+   --------------------------------
+   -- Skip_To_Next_Comment_Start --
+   --------------------------------
+
+   procedure Skip_To_Next_Comment_Start
+     (Context : Language_Syntax;
+      Buffer  : String;
+      Index   : in out Natural)
+   is
+      Lines_Skipped : Natural;
+   begin
+      while Index < Buffer'Last loop
+         Skip_Lines (Buffer, 1, Index, Lines_Skipped);
+
+         exit when Lines_Skipped /= 1 or else Is_Blank_Line (Buffer, Index);
+
+         Skip_Blanks (Buffer, Index);
+
+         if Looking_At_Start_Of_Comment (Context, Buffer, Index) /=
+           No_Comment
+         then
+            return;
+         end if;
+      end loop;
+
+      Index := 0;
+   end Skip_To_Next_Comment_Start;
+
+   ------------------------------------
+   -- Skip_To_Previous_Comment_Start --
+   ------------------------------------
+
+   procedure Skip_To_Previous_Comment_Start
+     (Context      : Language_Syntax;
+      Buffer       : String;
+      Index        : in out Natural;
+      Allow_Blanks : Boolean := False)
+   is
+      Lines_Skipped   : Natural;
+      No_Blanks       : Boolean := not Allow_Blanks;
+      Non_Blank_Found : Boolean := False;
+   begin
+      if Index = Buffer'First then
+         Skip_Blanks (Buffer, Index);
+
+         if Looking_At_Start_Of_Comment
+             (Context, Buffer, Index) /= No_Comment
+         then
+            Skip_To_Current_Comment_Block_Start (Context, Buffer, Index);
+         else
+            Index := 0;
+         end if;
+
+         return;
+      end if;
+
+      loop
+         Skip_Lines (Buffer, -1, Index, Lines_Skipped);
+
+         exit when Lines_Skipped /= 1;
+
+         if Is_Blank_Line (Buffer, Index) then
+            exit when No_Blanks;
+         else
+            if Non_Blank_Found then
+               --  No longer allow blank lines after a first non blank one
+               No_Blanks := True;
+            else
+               Non_Blank_Found := True;
+            end if;
+
+            Skip_Blanks (Buffer, Index);
+
+            if Looking_At_Start_Of_Comment (Context, Buffer, Index) /=
+              No_Comment
+            then
+               Skip_To_Current_Comment_Block_Start (Context, Buffer, Index);
+               return;
+            end if;
+         end if;
+      end loop;
+
+      Index := 0;
+   end Skip_To_Previous_Comment_Start;
 
 end GNATCOLL.Xref;

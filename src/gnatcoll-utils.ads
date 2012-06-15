@@ -116,6 +116,58 @@ package GNATCOLL.Utils is
    --  lines). The result is either Str'Last+1 or pointing to the first
    --  ASCII.LF found.
 
+   function Line_Start (Str : String; P : Natural) return Natural;
+   --  Return the start of the line pointed by P
+
+   function Line_End (Str : String; P : Natural) return Natural;
+   --  Return the end of the line pointed by P
+
+   procedure Skip_Lines
+     (Str           : String;
+      Lines         : Integer;
+      Index         : in out Natural;
+      Lines_Skipped : out Natural);
+   --  Skip Lines forward or backward. Index is set to the beginning of a line.
+   --  Lines_Skipped is the number of lines that have actually been skipped.
+   --  Use with Skip_To_Column to go to a specific position in a buffer.
+
+   procedure Skip_To_Column
+     (Str       : String;
+      Columns   : Integer := 0;
+      Index     : in out Integer;
+      Tab_Width : Integer := 8);
+   --  Assuming Index points to the begining of a line (as is the case after
+   --  Skip_Lines for instance), jump to the specific column on that line.
+   --  This procedure handles tabulations (ie Columns are columns visible to
+   --  the user, after tab expansion).
+
+   function Forward_UTF8_Char
+     (Str   : String;
+      Index : Integer) return Integer;
+   --  Moves Index one character forward, taking into account UTF8 encoding.
+
+   function Next_Line (Str : String; P : Natural) return Natural;
+   --  Return the start of the next line or Buffer'Last if the end of the
+   --  buffer is reached.
+   --  Consider using procedure Next_Line below instead.
+
+   function Previous_Line (Str : String; P : Natural) return Natural;
+   --  Return the start of the previous line or Buffer'First if P already
+   --  points to the first line of Buffer.
+
+   function Is_Blank_Line
+     (Str : String; Index : Natural := 0) return Boolean;
+   --  Return True if the line pointed by Index only contains blank characters
+   --  (' ', HT, LF, CR). By default, if Index is 0, then the line considered
+   --  is the first line of the buffer.
+
+   procedure Skip_To_String
+     (Str      : String;
+      Index     : in out Natural;
+      Substring : String);
+   --  Skip every character until an occurence of Substring is found.
+   --  Index is set to the first character of the occurence.
+
    function Strip_Character (Text : String; C : Character) return String;
    --  Return a version of Text after stripping all C's from the string
 
