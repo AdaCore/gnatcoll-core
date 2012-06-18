@@ -999,7 +999,13 @@ package GNATCOLL.Projects is
       Index        : String := "";
       Use_Extended : Boolean := False) return GNAT.Strings.String_List_Access;
    --  Same as above, but for an attribute whose value is a list.
-   --  null is returned if the attribute isn't defined.
+   --
+   --  The returned value is the one read in the project, or the default value
+   --  if one is defined by the project manager. If none exist, this function
+   --  could return null. If you need to find out whether the user has
+   --  explicitly defined the attribute in his project, use Has_Attribute
+   --  instead.
+   --
    --  It is the responsability of the caller to free the memory.
    --  The corresponding attribute would have been set in the project as:
    --      for Attribute use ("value1", "value2");
