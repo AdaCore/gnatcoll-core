@@ -3363,11 +3363,11 @@ package body GNATCOLL.Xref is
    ---------------------
 
    function Extract_Comment
-     (Buffer     : String;
-      Decl_Start : Integer;
-      Decl_End   : Integer;
-      Language   : Language_Syntax;
-      Format     : Formatting := Text) return String
+     (Buffer           : String;
+      Decl_Start_Index : Integer;
+      Decl_End_Index   : Integer;
+      Language         : Language_Syntax;
+      Format           : Formatting := Text) return String
    is
       pragma Unreferenced (Format);
       Beginning, Current   : Natural;
@@ -3384,7 +3384,7 @@ package body GNATCOLL.Xref is
       Get_Documentation_Before
         (Context       => Language,
          Buffer        => Buffer,
-         Decl_Index    => Decl_Start,
+         Decl_Index    => Decl_Start_Index,
          Comment_Start => Beginning,
          Comment_End   => Current);
 
@@ -3392,7 +3392,7 @@ package body GNATCOLL.Xref is
          Get_Documentation_After
            (Context       => Language,
             Buffer        => Buffer,
-            Decl_Index    => Decl_End,
+            Decl_Index    => Decl_End_Index,
             Comment_Start => Beginning,
             Comment_End   => Current);
       end if;
@@ -3463,6 +3463,58 @@ package body GNATCOLL.Xref is
       end if;
    end Extract_Comment;
 
+   ---------------------
+   -- Extract_Comment --
+   ---------------------
+
+   function Extract_Comment
+     (Buffer            : String;
+      Decl_Start_Line   : Integer;
+      Decl_Start_Column : Integer;
+      Decl_End_Line     : Integer := -1;
+      Decl_End_Column   : Integer := -1;
+      Language          : Language_Syntax;
+      Format            : Formatting := Text) return String
+   is
+      Start, Last, Skipped : Integer;
+   begin
+      Start := Buffer'First;
+      Skip_Lines
+        (Buffer,
+         Lines         => Decl_Start_Line - 1,
+         Index         => Start,
+         Lines_Skipped => Skipped);
+      if Skipped /= Decl_Start_Line - 1 then
+         return "";
+      end if;
+
+      Skip_To_Column
+        (Buffer,
+         Columns => Decl_Start_Column - 1,
+         Index   => Start);
+
+      Last := Start;
+
+      if Decl_End_Line /= -1 then
+         Skip_Lines
+           (Buffer,
+            Lines         => Decl_End_Line - Decl_Start_Line,
+            Index         => Last,
+            Lines_Skipped => Skipped);
+
+         if Decl_End_Column /= -1 then
+            Skip_To_Column (Buffer, Decl_End_Column, Last);
+         end if;
+      end if;
+
+      return Extract_Comment
+        (Buffer           => Buffer,
+         Decl_Start_Index => Start,
+         Decl_End_Index   => Last,
+         Language         => Language,
+         Format           => Format);
+   end Extract_Comment;
+
    -------------
    -- Comment --
    -------------
@@ -3476,7 +3528,6 @@ package body GNATCOLL.Xref is
       Buffer : GNAT.Strings.String_Access;
       Decl   : constant Entity_Declaration :=
         Declaration (Xref_Database'Class (Self), Entity);
-      Start, Last, Skipped : Integer;
       R : Forward_Cursor;
    begin
       if Decl = No_Entity_Declaration then
@@ -3488,44 +3539,31 @@ package body GNATCOLL.Xref is
          return "";
       end if;
 
-      Start := Buffer'First;
-      Skip_Lines
-        (Buffer.all,
-         Lines         => Decl.Location.Line - 1,
-         Index         => Start,
-         Lines_Skipped => Skipped);
-      if Skipped /= Decl.Location.Line - 1 then
-         return "";
-      end if;
-
-      Skip_To_Column
-        (Buffer.all,
-         Columns => Integer (Decl.Location.Column) - 1,
-         Index   => Start);
-
-      Last := Start;
-
       R.Fetch (Self.DB, Q_End_Of_Spec, Params => (1 => +Entity.Id));
       if R.Has_Row then
-         Skip_Lines
-           (Buffer.all,
-            Lines         => R.Integer_Value (0) - Decl.Location.Line,
-            Index         => Last,
-            Lines_Skipped => Skipped);
-         Skip_To_Column (Buffer.all, R.Integer_Value (1), Last);
-      end if;
+         return Result : constant String := Extract_Comment
+           (Buffer            => Buffer.all,
+            Decl_Start_Line   => Decl.Location.Line,
+            Decl_Start_Column => Integer (Decl.Location.Column),
+            Decl_End_Line     => R.Integer_Value (0),
+            Decl_End_Column   => R.Integer_Value (1),
+            Language          => Language,
+            Format            => Format)
+         do
+            Free (Buffer);
+         end return;
 
-      declare
-         Result : constant String := Extract_Comment
-           (Buffer     => Buffer.all,
-            Decl_Start => Start,
-            Decl_End   => Last,
-            Language   => Language,
-            Format     => Format);
-      begin
-         Free (Buffer);
-         return Result;
-      end;
+      else
+         return Result : constant String := Extract_Comment
+           (Buffer            => Buffer.all,
+            Decl_Start_Line   => Decl.Location.Line,
+            Decl_Start_Column => Integer (Decl.Location.Column),
+            Language          => Language,
+            Format            => Format)
+         do
+            Free (Buffer);
+         end return;
+      end if;
    end Comment;
 
    ----------------------

@@ -263,17 +263,30 @@ package GNATCOLL.Xref is
    --  "record declared at file:line:column".
 
    function Extract_Comment
-     (Buffer     : String;
-      Decl_Start : Integer;
-      Decl_End   : Integer;
-      Language   : Language_Syntax;
-      Format     : Formatting := Text) return String;
+     (Buffer           : String;
+      Decl_Start_Index : Integer;
+      Decl_End_Index   : Integer;
+      Language         : Language_Syntax;
+      Format           : Formatting := Text) return String;
    --  Extra comment from the source code, given the range of an entity
    --  declaration. This program is made public so that you can reuse it
    --  if you need to override Comment below, or have other means to get the
    --  information about an entity's location (for instance, in an IDE where
    --  the editor might change and the LI files are not regenerated
    --  immediately).
+   --  In this version, the start and end of the declaration are given as
+   --  indexes in Buffer.
+
+   function Extract_Comment
+     (Buffer            : String;
+      Decl_Start_Line   : Integer;
+      Decl_Start_Column : Integer;
+      Decl_End_Line     : Integer := -1;
+      Decl_End_Column   : Integer := -1;
+      Language          : Language_Syntax;
+      Format            : Formatting := Text) return String;
+   --  Same as above, but the scope of the declaration is given as line and
+   --  column. By default, the end is on the same position as the start.
 
    function Comment
      (Self     : Xref_Database;
