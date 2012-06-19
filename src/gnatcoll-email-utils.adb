@@ -643,7 +643,12 @@ package body GNATCOLL.Email.Utils is
                Address.Real_Name := Trim
                  (To_Unbounded_String
                     (Str (From + 1 .. Index - 2)), Ada.Strings.Both);
-               From := Index + 1;
+
+               if Str (Index) = ' ' then
+                  From := Index + 1;
+               else
+                  From := Index;
+               end if;
 
             else
                if Str (From) = '@' then
