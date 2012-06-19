@@ -492,18 +492,27 @@ AC_DEFUN(AM_PATH_PYTHON,
    AC_ARG_WITH(python,
      [AC_HELP_STRING(
        [--with-python=<path>],
-       [Specify the full path to the Python installation])
+       [Specify the prefix of the Python installation])
 AC_HELP_STRING(
        [--without-python],
        [Disable python support])],
      [PYTHON_PATH_WITH=$withval; NEED_PYTHON=$PYTHON_PATH_WITH],
      PYTHON_PATH_WITH=yes)
+   AC_ARG_WITH(python-exec,
+     [AC_HELP_STRING(
+        [--with-python-exec=<path>],
+        [forces a specific python executable (python3 for instance)])],
+     [PYTHON_EXEC=$withval])
    AC_ARG_ENABLE(shared-python,
      AC_HELP_STRING(
        [--enable-shared-python],
        [Link with shared python library instead of static]),
      PYTHON_SHARED=$enableval,
      PYTHON_SHARED=no)
+
+   if test "$PYTHON_EXEC" = "no"; then
+      PYTHON_EXEC="python"
+   fi
 
    WITH_PYTHON=yes
    if test x"$PYTHON_PATH_WITH" = xno ; then
@@ -513,7 +522,7 @@ AC_HELP_STRING(
       WITH_PYTHON=no
 
    else
-      AC_PATH_PROG(PYTHON, python, no, $PYTHON_PATH_WITH/bin:$PYTHON_PATH_WITH:$PATH)
+      AC_PATH_PROG(PYTHON, ${PYTHON_EXEC}, no, $PYTHON_PATH_WITH/bin:$PYTHON_PATH_WITH:$PATH)
       if test x"$PYTHON" = xno ; then
          PYTHON_BASE=no
          WITH_PYTHON=no
@@ -522,12 +531,12 @@ AC_HELP_STRING(
         if test x"$PYTHON_PATH_WITH" != xyes ; then
            PYTHON_BASE=$PYTHON_PATH_WITH
         else
-           PYTHON_BASE=`$PYTHON -c 'import sys; print sys.prefix' `
+           PYTHON_BASE=`$PYTHON -c 'import sys; print(sys.prefix)' `
         fi
 
-        PYTHON_MAJOR_VERSION=`$PYTHON -c 'import sys; print sys.version_info[[0]]' 2>/dev/null`
-        PYTHON_MINOR_VERSION=`$PYTHON -c 'import sys; print sys.version_info[[1]]' 2>/dev/null`
-        if test x$PYTHON_MAJOR_VERSION != x2 ; then
+        PYTHON_MAJOR_VERSION=`$PYTHON -c 'import sys; print(sys.version_info[[0]])' 2>/dev/null`
+        PYTHON_MINOR_VERSION=`$PYTHON -c 'import sys; print(sys.version_info[[1]])' 2>/dev/null`
+        if test $PYTHON_MAJOR_VERSION -lt 2 ; then
            AC_MSG_RESULT(no, need at least version 2.0)
            PYTHON_BASE=no
            WITH_PYTHON=no
@@ -572,7 +581,13 @@ AC_HELP_STRING(
       # with python-config --libs, but this might not exist on the platform, or
       # might be incorrect, so we also have hard-coded fallbacks.
 
-      AC_PATH_PROG(PYTHON_CONFIG, python-config, no, $PYTHON_PATH_WITH/bin:$PYTHON_PATH_WITH:$PATH)
+      if test $PYTHON_MAJOR_VERSION != 2; then
+         PYCONFIG=python${PYTHON_MAJOR_VERSION}-config
+      else
+         PYCONFIG=python-config
+      fi
+
+      AC_PATH_PROG(PYTHON_CONFIG, ${PYCONFIG}, no, $PYTHON_PATH_WITH/bin:$PYTHON_PATH_WITH:$PATH)
 
       AC_MSG_CHECKING(if we can link with python (using python-config))
       if test x"$PYTHON_CONFIG" != xno ; then

@@ -82,6 +82,10 @@ the following are likely to be the most useful:
   when python is installed some special directory. If you specify the second
   option, support for python will not be built in.
 
+  The switch *--with-python-exec* can also be used to specify an alternative
+  python executable. If you pass the value 'python3', it will force GNATCOLL
+  to build with support for python3, not python2.
+
 *--enable-shared-python*
   This specifies the location of the python library as
   `directory`/lib, which will in general be a shared library.

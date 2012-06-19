@@ -36,7 +36,13 @@ with System;                     use System;
 
 package body GNATCOLL.Scripts.Python is
    Me       : constant Trace_Handle := Create ("PYTHON");
+   Me_Error : constant Trace_Handle := Create ("PYTHON.ERROR", On);
    Me_Stack : constant Trace_Handle := Create ("PYTHON.TB", Off);
+
+   function Ada_Py_Builtin return Interfaces.C.Strings.chars_ptr;
+   pragma Import (C, Ada_Py_Builtin, "ada_py_builtin");
+
+   Builtin_Module_Name : constant String := Value (Ada_Py_Builtin);
 
    procedure Set_Item (Args : PyObject; T : Integer; Item : PyObject);
    --  Change the T-th item in Args.
@@ -354,71 +360,15 @@ package body GNATCOLL.Scripts.Python is
       Script  : Python_Scripting;
       Ignored : Integer;
       Result  : PyObject;
-      Tmp     : Boolean;
-      pragma Unreferenced (Ignored, Tmp, Result);
+      pragma Unreferenced (Ignored, Result);
       Errors  : aliased Boolean;
 
-      function Signal
-        (Num : Integer; Handler : System.Address) return System.Address;
-      pragma Import (C, Signal, "signal");
-
-      Setup_Cmd      : constant String := "import sys" & ASCII.LF
-        & "import __builtin__" & ASCII.LF;
-
-      --  To hide the output, we also need to rewrite displayhook.
-      --  Otherwise, calling a python function from Ada will print its
-      --  output to stdout (even though we have redirected sys.stdout ?)
-      --  So we make sure that nothing is ever printed. We cannot do this
-      --  systematically though, since in interactive mode (consoles...)
-      --  we still want the usual python behavior.
-      Init_Output    : constant String :=
-        "class _gnatcoll():" & ASCII.LF &
-        "   saved_stdout=None" & ASCII.LF &
-        "   saved_stdin=None"  & ASCII.LF &
-        "   saved_display=None" & ASCII.LF &
-        "   hidden=0" & ASCII.LF &
-        "   @staticmethod" & ASCII.LF &
-        "   def nowrite(*args):" & ASCII.LF &
-        "       pass" & ASCII.LF &
-        "   @staticmethod" & ASCII.LF &
-        "   def nodisplay(arg):" & ASCII.LF &
-        "       __builtin__._ = arg" & ASCII.LF &
-        "   @staticmethod" & ASCII.LF &
-        "   def hide():" & ASCII.LF &
-        "      _gnatcoll.hidden += 1" & ASCII.LF &
-        "      if _gnatcoll.hidden == 1:" & ASCII.LF &
-        "          _gnatcoll.saved_stdout=sys.stdout.write" & ASCII.LF &
-        "          _gnatcoll.saved_stderr=sys.stderr.write" & ASCII.LF &
-        "          _gnatcoll.saved_display=sys.displayhook" & ASCII.LF &
-        "          try:" & ASCII.LF &
-        "              sys.stdout.write=_gnatcoll.nowrite" & ASCII.LF &
-        "          except: pass" & ASCII.LF &
-        "          try:" & ASCII.LF &
-        "              sys.stderr.write=_gnatcoll.nowrite" & ASCII.LF &
-        "          except: pass" & ASCII.LF &
-        "          try:" & ASCII.LF &
-        "              sys.displayhook=_gnatcoll.nodisplay" & ASCII.LF &
-        "          except: pass" & ASCII.LF &
-        "   @staticmethod" & ASCII.LF &
-        "   def show():" & ASCII.LF &
-        "      _gnatcoll.hidden -= 1" & ASCII.LF &
-        "      if _gnatcoll.hidden == 0:" & ASCII.LF &
-        "          try:" & ASCII.LF &
-        "             sys.stdout.write=_gnatcoll.saved_stdout" & ASCII.LF &
-        "          except: pass" & ASCII.LF &
-        "          try:" & ASCII.LF &
-        "             sys.stderr.write=_gnatcoll.saved_stderr" & ASCII.LF &
-        "          except: pass" & ASCII.LF &
-        "          try:" & ASCII.LF &
-        "             sys.displayhook=_gnatcoll.saved_display" & ASCII.LF &
-        "          except: pass" & ASCII.LF &
-        ASCII.LF;
+      function Initialize_Py_And_Module
+         (Program, Module : String) return PyObject;
+      pragma Import (C, Initialize_Py_And_Module,
+                     "ada_py_initialize_and_module");
 
       Main_Module    : PyObject;
-      Sigint         : constant Integer := 2;
-      Old_Handler    : System.Address;
-      pragma Warnings (Off, Old_Handler);
-      Prompt         : PyObject;
 
    begin
       Script := new Python_Scripting_Record;
@@ -427,21 +377,15 @@ package body GNATCOLL.Scripts.Python is
 
       --  Set the program name and python home
 
-      Py_SetProgramName (Program_Name);
-
       if Python_Home /= "" then
          Py_SetPythonHome (Python_Home);
       end if;
 
-      --  Prevent python's standard Ctrl-C handling, to leave it to the calling
-      --  application.
+      Script.Module := Initialize_Py_And_Module
+         (Program_Name & ASCII.NUL, Module & ASCII.NUL);
 
-      Old_Handler := Signal (Sigint, System.Null_Address);
-      Py_Initialize;
-      Old_Handler := Signal (Sigint, Old_Handler);
-
-      if not PyRun_SimpleString (Setup_Cmd) then
-         raise Program_Error with "Could not execute " & Setup_Cmd;
+      if Script.Module = null then
+         raise Program_Error with "Could not import module " & Module;
       end if;
 
       if Active (Me_Stack)
@@ -456,44 +400,8 @@ package body GNATCOLL.Scripts.Python is
       end if;
       Script.Globals := PyModule_GetDict (Main_Module);
 
-      --  Initialize various variables
-
-      Prompt := PySys_GetObject ("ps1");
-      if Prompt = null then
-         Prompt := PyString_FromString (">>> ");
-         PySys_SetObject ("ps1", Prompt);
-         Py_DECREF (Prompt);
-      end if;
-
-      Prompt := PySys_GetObject ("ps2");
-      if Prompt = null then
-         Prompt := PyString_FromString ("... ");
-         PySys_SetObject ("ps2", Prompt);
-         Py_DECREF (Prompt);
-      end if;
-
       Script.Buffer := new String'("");
-
-      Script.Builtin := PyImport_ImportModule ("__builtin__");
-
-      --  Create the module, in which all functions and classes are
-      --  registered
-
-      Script.Module := Py_InitModule (Module);
-
-      --  Register functions used to provide support for hiding the output
-      --  of commands
-
-      Tmp := PyRun_SimpleString (Init_Output);
-
-      Result := Run_Command
-        (Script,
-         "import " & Module,
-         Hide_Output => True,
-         Errors      => Errors'Unchecked_Access);
-      if Errors then
-         raise Program_Error with "Could not import module " & Module;
-      end if;
+      Script.Builtin := PyImport_ImportModule (Builtin_Module_Name);
 
       Script.Exception_Unexpected := PyErr_NewException
         (Module & ".Unexpected_Exception", null, null);
@@ -1208,7 +1116,8 @@ package body GNATCOLL.Scripts.Python is
       if Start < Input'Last then
          Obj := Run_Command
            (Script,
-            "__builtins__.dir(" & Input (Start + 1 .. Last - 1) & ")",
+            Builtin_Module_Name
+               & ".dir(" & Input (Start + 1 .. Last - 1) & ")",
             Hide_Output => True,
             Hide_Exceptions => True,
             Errors => Errors'Unchecked_Access);
@@ -1707,7 +1616,7 @@ package body GNATCOLL.Scripts.Python is
 
       if Script.Blocked then
          Error.all := True;
-         --  Put_Line ("A python command is already executing");
+         Trace (Me_Error, "A python command is already executing");
          return null;
       end if;
 
@@ -1757,7 +1666,7 @@ package body GNATCOLL.Scripts.Python is
 
       if Obj = null then
          Error.all := True;
-         --  Put_Line ("Python script raised an exception");
+         Trace (Me_Error, "Python script raised an exception");
          PyErr_Print;
       end if;
 
@@ -2352,17 +2261,6 @@ package body GNATCOLL.Scripts.Python is
             & Get_Name (Class) & " but has no __class__");
       end if;
 
-      if Class /= Any_Class
-        and then
-          (C = null or else not PyClass_IsSubclass (Item_Class, Base => C))
-      then
-         Py_DECREF (Item_Class);
-         Raise_Exception
-           (Invalid_Parameter'Identity,
-            "Parameter" & Integer'Image (N) & " should be an instance of "
-            & Get_Name (Class));
-      end if;
-
       Py_DECREF (Item_Class);
       return Get_CI (Python_Scripting (Get_Script (Data)), Item);
 
@@ -2740,7 +2638,7 @@ package body GNATCOLL.Scripts.Python is
 
       C := PyObject_GetAttrString (Instance.Data, "__class__");
       B := Lookup_Object (Python_Scripting (Instance.Script).Module, Base);
-      return PyClass_IsSubclass (C, Base => B);
+      return Py_IsSubclass (C, Base => B);
    end Is_Subclass;
 
    ------------------------
@@ -3498,6 +3396,7 @@ package body GNATCOLL.Scripts.Python is
             Result := Execute_Command (Script, Func, Args, Errors'Access);
 
             if Errors then
+               Trace (Me_Error, "Error in command '" & Command & "()'");
                Py_XDECREF (Result);
                PyErr_Clear;
                raise Error_In_Command;

@@ -24,14 +24,192 @@
 #undef DEBUG
 /* #define DEBUG */
 
+
+#if PY_MAJOR_VERSION >= 3
+PyMODINIT_FUNC
+#else
 PyObject *
+#endif
 ada_Py_InitModule4
   (char *name, PyMethodDef *methods,
-   char *doc, PyObject *self,
-   int apiver)
+   char *doc, PyObject *self)
 {
-  return Py_InitModule4 (name, methods, doc, self, apiver);
+#if PY_MAJOR_VERSION >= 3
+   struct PyModuleDef def = {
+     PyModuleDef_HEAD_INIT,
+     name,                /* m_name */
+     doc,                 /* m_doc */
+     -1,                  /* m_size */
+     methods,             /* m_methods */
+     NULL,                /* m_reload */
+     NULL,                /* m_traverse */
+     NULL,                /* m_clear */
+     NULL};               /* m_free */
+   struct PyModuleDef* module = (struct PyModuleDef*)
+         malloc(sizeof(struct PyModuleDef));
+   PyObject* mod;
+   PyObject* imported;
+
+   memcpy(module, &def, sizeof(struct PyModuleDef));
+   mod = PyModule_Create(module);
+
+   return imported;
+#else
+   return Py_InitModule4 (name, methods, doc, self, PYTHON_API_VERSION);
+#endif
 }
+
+#if PY_MAJOR_VERSION >= 3
+// The definition of the module the user is creating via GNATCOLL.
+// There is a single such module, so it is simpler to declare the
+// variable as static rather than use calls to malloc().
+static PyMethodDef user_methods[] = {
+   {NULL, NULL}  /* Sentinel */
+};
+static struct PyModuleDef user_module = {
+     PyModuleDef_HEAD_INIT,
+     NULL,                /* m_name */
+     NULL,                /* m_doc */
+     -1,                  /* m_size */
+     user_methods,        /* m_methods */
+     NULL,                /* m_reload */
+     NULL,                /* m_traverse */
+     NULL,                /* m_clear */
+     NULL                 /* m_free */
+};
+#endif
+
+static char* user_module_name;
+
+PyMODINIT_FUNC
+init_user_module(void) {
+   //struct PyModuleDef* module = (struct PyModuleDef*)malloc(sizeof(def));
+   //memcpy(module, &def, sizeof(struct PyModuleDef));
+#if PY_MAJOR_VERSION >= 3
+   return PyModule_Create(&user_module);
+#else
+   Py_InitModule4 (user_module_name, NULL, "", NULL, PYTHON_API_VERSION);
+#endif
+};
+
+//  To hide the output, we also need to rewrite displayhook.
+//  Otherwise, calling a python function from Ada will print its
+//  output to stdout (even though we have redirected sys.stdout ?)
+//  So we make sure that nothing is ever printed. We cannot do this
+//  systematically though, since in interactive mode (consoles...)
+//  we still want the usual python behavior.
+
+static const char* init_output =
+  "class _gnatcoll():\n"
+  "   saved_stdout=None\n"
+  "   saved_stdin=None\n"
+  "   saved_display=None\n"
+  "   hidden=0\n"
+  "   @staticmethod\n"
+  "   def nowrite(*args):\n"
+  "       pass\n"
+  "   @staticmethod\n"
+  "   def nodisplay(arg):\n"
+  "       __builtins__._ = arg\n"
+  "   @staticmethod\n"
+  "   def hide():\n"
+  "      _gnatcoll.hidden += 1\n"
+  "      if _gnatcoll.hidden == 1:\n"
+  "          _gnatcoll.saved_stdout=sys.stdout.write\n"
+  "          _gnatcoll.saved_stderr=sys.stderr.write\n"
+  "          _gnatcoll.saved_display=sys.displayhook\n"
+  "          try:\n"
+  "              sys.stdout.write=_gnatcoll.nowrite\n"
+  "          except: pass\n"
+  "          try:\n"
+  "              sys.stderr.write=_gnatcoll.nowrite\n"
+  "          except: pass\n"
+  "          try:\n"
+  "              sys.displayhook=_gnatcoll.nodisplay\n"
+  "          except: pass\n"
+  "   @staticmethod\n"
+  "   def show():\n"
+  "      _gnatcoll.hidden -= 1\n"
+  "      if _gnatcoll.hidden == 0:\n"
+  "          try:\n"
+  "             sys.stdout.write=_gnatcoll.saved_stdout\n"
+  "          except: pass\n"
+  "          try:\n"
+  "             sys.stderr.write=_gnatcoll.saved_stderr\n"
+  "          except: pass\n"
+  "          try:\n"
+  "             sys.displayhook=_gnatcoll.saved_display\n"
+  "          except: pass\n\n";
+
+PyObject*
+ada_py_initialize_and_module(char* program_name, char* name) {
+   PyObject* module;
+   PyObject* imported;
+
+   user_module_name = strdup(name);
+
+#if PY_MAJOR_VERSION >= 3
+   user_module.m_name = user_module_name;
+   Py_SetProgramName ((wchar_t*)program_name);
+#else
+   Py_SetProgramName (program_name);
+#endif
+
+   PyImport_AppendInittab(user_module_name, init_user_module);
+   Py_InitializeEx(0);
+
+   // Initialize the prompt if needed
+
+   PyObject* prompt = PySys_GetObject ("ps1");
+   if (prompt == NULL) {
+      prompt = PyUnicode_FromString (">>> ");
+      PySys_SetObject ("ps1", prompt);
+      Py_DECREF (prompt);
+   }
+
+   prompt = PySys_GetObject ("ps2");
+   if (prompt == NULL) {
+      prompt = PyUnicode_FromString ("... ");
+      PySys_SetObject ("ps2", prompt);
+      Py_DECREF (prompt);
+   }
+
+   PyRun_SimpleString(init_output);
+   PyRun_SimpleString("import sys\n");
+
+   // Make the user's module visible to scripts. We cannot use
+   // PyImport_ImportModule, which imports the module but doesn't add
+   // it to the global dictionary and as such it is not visible to
+   // user scripts.
+
+   imported = PyImport_ImportModule(name);
+   if (imported == NULL) {
+      printf ("Could not import module %s", name);
+      return NULL;
+   }
+
+   char* command = (char*)malloc(9 + strlen(name));
+   strcpy (command, "import ");
+   strcat (command, name);
+   strcat (command, "\n");
+   PyRun_SimpleString(command);
+   free (command);
+
+
+   return imported;
+};
+
+void
+ada_py_add_method(PyObject* cfunc, char* name, PyObject* class) {
+#if PY_MAJOR_VERSION >= 3
+   PyObject_SetAttrString (class, name, cfunc);
+#else
+   // Create an unbound method
+   PyObject* cmeth = PyMethod_New (cfunc, NULL, class);
+   PyObject_SetAttrString (class, name, cmeth);
+   Py_DECREF (cmeth);
+#endif
+};
 
 PyObject *
 ada_pycfunction_newex (PyMethodDef *ml, PyObject *self, PyObject *module)
@@ -114,13 +292,21 @@ ada_py_xdecref (PyObject* obj)
 int
 ada_pybasestring_check (PyObject* obj)
 {
+#if PY_MAJOR_VERSION >= 3
+  return PyUnicode_Check (obj);
+#else
   return PyString_Check (obj) || PyUnicode_Check (obj);
+#endif
 }
 
 int
 ada_pystring_check (PyObject* obj)
 {
+#if PY_MAJOR_VERSION >= 3
+  return PyUnicode_Check (obj);
+#else
   return PyString_Check (obj);
+#endif
 }
 
 PyObject* ada_PyUnicode_AsEncodedString
@@ -156,7 +342,11 @@ ada_pyunicode_check (PyObject* obj)
 int
 ada_pyint_check (PyObject* obj)
 {
+#if PY_MAJOR_VERSION >= 3
+  return PyLong_Check (obj);
+#else
   return PyInt_Check (obj);
+#endif
 }
 
 int
@@ -256,11 +446,23 @@ PyObject* ada_PyEval_EvalCodeEx
      nk = 0;
   }
 
+#if PY_MAJOR_VERSION >= 3
+  result = (PyObject*) PyEval_EvalCodeEx
+    ((PyObject*) co,
+     globals, locals,
+     &PyTuple_GET_ITEM (args, 0) /* args */, PyTuple_Size (args) /* argc*/,
+     k /* kwds */, nk /* kwdc */,
+     d /* defs */, nd /* defcount */,
+     NULL, /* kwdefs */
+     closure /* closure */);
+#else
   result = (PyObject*) PyEval_EvalCodeEx
     (co, globals, locals,
-     &PyTuple_GET_ITEM (args, 0) /* args */,
-     PyTuple_Size (args) /* argcount */,
-     k /* kws */, nk /* kwcount */, d /* defs */, nd /* defcount */, closure);
+     &PyTuple_GET_ITEM (args, 0) /* args */, PyTuple_Size (args) /* argc*/,
+     k /* kwds */, nk /* kwdc */,
+     d /* defs */, nd /* defcount */,
+     closure /* closure */);
+#endif
 
   if (k != NULL) {
     PyMem_DEL (k);
@@ -272,7 +474,11 @@ PyObject* ada_PyEval_EvalCodeEx
 int
 ada_pycobject_check (PyObject* obj)
 {
+#if PY_MAJOR_VERSION >= 3
+  return PyCapsule_CheckExact (obj);
+#else
   return PyCObject_Check (obj);
+#endif
 }
 
 int
@@ -294,12 +500,6 @@ ada_pyiter_check (PyObject* obj)
 }
 
 int
-ada_pyinstance_check (PyObject* obj)
-{
-  return PyInstance_Check (obj);
-}
-
-int
 ada_pymethod_check (PyObject* obj)
 {
   return PyMethod_Check (obj);
@@ -309,12 +509,6 @@ PyTypeObject*
 ada_gettypeobject (PyObject* obj)
 {
   return (PyTypeObject*)(obj->ob_type);
-}
-
-int
-ada_python_api_version ()
-{
-  return PYTHON_API_VERSION;
 }
 
 PyObject* ada_py_none ()
@@ -331,29 +525,6 @@ PyObject*
 ada_py_true()
 {
   return Py_True;
-}
-
-PyObject*
-ada_pyclass_name(PyObject* obj)
-{
-  if (PyClass_Check (obj)) {
-      return ((PyClassObject*)obj)->cl_name;
-  } else {
-     /* Derives from object, not a real class */
-     return PyObject_GetAttrString (obj, "__name__");
-  }
-}
-
-int
-ada_pyclass_is_subclass (PyObject* class, PyObject* base)
-{
-  if (!class || !base) {
-    return -1;
-  } else if (PyClass_Check (class)) {
-    return PyClass_IsSubclass (class, base);
-  } else {
-    return PyObject_TypeCheck (class, base->ob_type);
-  }
 }
 
 PyObject *
@@ -414,7 +585,11 @@ extern char **gnat_argv;
 int
 ada_py_main ()
 {
-  return Py_Main (gnat_argc, gnat_argv);
+#if PY_MAJOR_VERSION >= 3
+  return Py_Main (gnat_argc, (wchar_t**) gnat_argv);
+#else
+  return Py_Main (gnat_argc, (char**) gnat_argv);
+#endif
 }
 
 PyObject*
@@ -442,7 +617,12 @@ ada_type_new (PyTypeObject* meta, char* name, PyObject* bases, PyObject* dict)
   args   = PyTuple_New (3);
   kwargs = PyDict_New ();
 
+#if PY_MAJOR_VERSION >= 3
+  str = PyUnicode_FromString (name);
+#else
   str = PyString_FromString (name);
+#endif
+
   PyTuple_SET_ITEM (args, 0, str);    /* steal reference to str */
 
   if (bases == NULL) {
@@ -530,3 +710,60 @@ void ada_PyEval_InitThreads() {
    PyEval_InitThreads();
 #endif
 }
+
+int
+ada_is_subclass (PyObject* class, PyObject* base)
+{
+  if (!class || !base) {
+    return -1;
+  } else {
+    return PyObject_TypeCheck (class, base->ob_type);
+  }
+}
+
+const char* ada_py_builtin() {
+#if PY_MAJOR_VERSION >= 3
+   return "builtins";
+#else
+   return "__builtin__";
+#endif
+}
+
+#if PY_MAJOR_VERSION >= 3
+
+PyAPI_FUNC(PyObject *) PyInt_FromLong(long val) {
+   return PyLong_FromLong(val);
+};
+
+PyAPI_FUNC(long) PyInt_AsLong(PyObject * val) {
+   return PyLong_AsLong(val);
+};
+
+PyAPI_FUNC(PyObject *) PyString_FromStringAndSize(
+      const char *val, Py_ssize_t s)
+{
+   return PyUnicode_FromStringAndSize(val, s);
+};
+
+PyAPI_FUNC(char *) PyString_AsString(PyObject * val) {
+   PyObject* utf8 = PyUnicode_AsUTF8String(val);
+   char* str = PyBytes_AS_STRING(utf8);
+   Py_XDECREF(utf8);
+   return str;
+};
+
+PyAPI_FUNC(void *) PyCObject_AsVoidPtr(PyObject * val) {
+   void* data = PyCapsule_GetPointer(val, "GNATCOLL._C_API");
+   return data;
+};
+
+PyAPI_FUNC(PyObject *) PyCObject_FromVoidPtr(
+    void *cobj, void (*destruct)(void*))
+{
+   return PyCapsule_New(
+         cobj /* pointer */,
+         "GNATCOLL._C_API" /* name */,
+         (PyCapsule_Destructor) destruct);
+};
+
+#endif

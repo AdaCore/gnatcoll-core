@@ -806,45 +806,6 @@ package GNATCOLL.Python is
    -- Class types --
    -----------------
 
-   subtype PyClassObject is PyObject;
-   pragma Obsolescent (PyClassObject);
-
-   function PyClass_New
-     (Bases : PyObject;
-      Dict  : PyObject;
-      Name  : PyObject) return PyClassObject;
-   pragma Obsolescent (PyClass_New,
-                       "use new-style classes through PyType_New");
-   --  Create a new class (these are the pre 2.2 classes, so this is not
-   --  recommended anymore)
-   --  Bases should be either null or a tuple of PyClassObject (See
-   --  Lookup_Class_Object below)
-   --  Dict must be a dictionary, used to store the attributes of the class,
-   --  including subprograms. The following keys are automatically extracted
-   --  and use for the class:
-   --    - "__doc__"     (documentation for the class)
-   --    - "__module__"  (module in which the class is defined)
-   --    - "__getattr__" (default subprogram to retrieve attributes)
-   --    - "__setattr__" (default subprogram to set attributes)
-   --    - "__delattr__" (default subprogram to remove an attribute)
-   --  Name is the name of the class.
-   --  The class must be added to the module, through PyModule_AddObject.
-   --
-   --  Typical use to build a new class:
-   --     Dict := PyDict_New;
-   --     PyDict_SetItemString
-   --       (Dict, "__module__", PyString_FromString ("mymodule"));
-   --     Klass := PyClass_New
-   --       (Create_Tuple ((1 => Lookup_Class_Object ("__builtin__", "file"))),
-   --        Dict,
-   --        PyString_FromString ("Myclass"));
-   --     Add_Method (Dict, Create_Method_Def (...), Klass);
-   --     Add_Method (Dict, Create_Method_Def (...), Klass);
-
-   function PyClass_Name (Class : PyClassObject) return PyObject;
-   pragma Obsolescent (PyClass_Name);
-   --  Return the name of the class
-
    function Lookup_Object (Module : String; Name : String) return PyObject;
    function Lookup_Object (Module : PyObject; Name : String) return PyObject;
    --  Lookup an object in the module.
@@ -886,26 +847,8 @@ package GNATCOLL.Python is
    --  qualified name of the method, since otherwise there is no way from the
    --  GPS shell to get access to the class to which the method belongs.
 
-   function PyInstance_New
-     (Class : PyObject; Args : PyObject; Keywords : PyObject := null)
-      return PyObject;
-   pragma Obsolescent (PyInstance_New);
-   --  Create a new instance of Class, passing (Args, Keywords) as parameters
-   --  to the constructor.
-
-   function PyInstance_NewRaw
-     (Class : PyObject; Dict : PyObject := null) return PyObject;
-   pragma Obsolescent (PyInstance_NewRaw);
-   --  Create a new instance of Class, but doesn't call the constructor
-
-   function PyClass_IsSubclass
-     (Class : PyObject; Base : PyObject) return Boolean;
-   pragma Obsolescent (PyClass_IsSubclass);
+   function Py_IsSubclass (Class : PyObject; Base : PyObject) return Boolean;
    --  True if Class is a subclass of Base (or Base itself)
-
-   function PyInstance_Check (Obj : PyObject) return Boolean;
-   pragma Obsolescent (PyInstance_Check, "Use PyObject_IsInstance");
-   --  Whether Obj is an instance
 
    function PyMethod_Check (Obj : PyObject) return Boolean;
    --  Whether Obj is a method of a class
@@ -1194,17 +1137,13 @@ private
    pragma Import (C, PyFunction_Get_Closure, "ada_pyfunction_get_closure");
    pragma Import (C, PyFunction_Get_Defaults, "ada_pyfunction_get_defaults");
    pragma Import (C, GetTypeObject, "ada_gettypeobject");
-   pragma Import (C, PyClass_New, "PyClass_New");
    pragma Inline (PyCObject_Check);
    pragma Import (C, PyCObject_FromVoidPtr, "PyCObject_FromVoidPtr");
    pragma Import
      (C, PyCObject_FromVoidPtrAndDesc, "PyCObject_FromVoidPtrAndDesc");
    pragma Import (C, PyCObject_AsVoidPtr, "PyCObject_AsVoidPtr");
    pragma Import (C, PyCObject_GetDesc, "PyCObject_GetDesc");
-   pragma Import (C, PyInstance_New, "PyInstance_New");
-   pragma Import (C, PyInstance_NewRaw, "PyInstance_NewRaw");
    pragma Import (C, PyMethod_Function, "PyMethod_Function");
-   pragma Import (C, PyClass_Name, "ada_pyclass_name");
    pragma Import (C, PyMethod_Self, "PyMethod_Self");
 
 end GNATCOLL.Python;

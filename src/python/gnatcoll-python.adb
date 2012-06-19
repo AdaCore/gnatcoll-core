@@ -29,9 +29,6 @@ package body GNATCOLL.Python is
 
    No_Method_Def : constant PyMethodDef := (Null_Ptr, null, 0, Null_Ptr);
 
-   function Python_API_Version return Integer;
-   pragma Import (C, Python_API_Version, "ada_python_api_version");
-
    type Methods_Access is access PyMethodDef_Array;
    type MethodDef_Access is access PyMethodDef;
    pragma Convention (C, MethodDef_Access);
@@ -45,14 +42,6 @@ package body GNATCOLL.Python is
    --  the Ada subprogram.
    --  This should be used only for standard functions, not for object methods
    --  Self is the first argument that will be passed to the Ada subprogram.
-
-   function PyMethod_New
-     (Func : PyObject; Self : PyObject := null; Klass : PyObject)
-      return PyObject;
-   pragma Import (C, PyMethod_New, "PyMethod_New");
-   --  Create a new method, which calls Func.
-   --  The method is unbounded if Self is null (and will be bound when the
-   --  method is called). It is automatically bound if Self is not null.
 
    ------------------------
    -- PyRun_SimpleString --
@@ -745,8 +734,7 @@ package body GNATCOLL.Python is
         (N       : String;
          Methods : System.Address;
          Doc     : String;
-         Self    : PyObject := null;
-         Apiver  : Integer := Python_API_Version) return PyObject;
+         Self    : PyObject := null) return PyObject;
       pragma Import (C, Internal, "ada_Py_InitModule4");
 
       M : Methods_Access;
@@ -839,15 +827,16 @@ package body GNATCOLL.Python is
       Self  : PyObject := null;
       Module : PyObject)
    is
+      procedure Add_Method (C_Func : PyObject;
+                            Name   : Interfaces.C.Strings.chars_ptr;
+                            Class  : PyObject);
+      pragma Import (C, Add_Method, "ada_py_add_method");
+
       C_Func  : constant PyObject :=
         PyCFunction_New (new PyMethodDef'(Func), Self,
                          PyString_FromString (PyModule_Getname (Module)));
-      C_Meth  : constant PyObject := PyMethod_New (C_Func, null, Class);
-      Ignored : Integer;
-      pragma Unreferenced (Ignored);
    begin
-      Ignored := PyObject_SetAttrString (Class, Func.Name, C_Meth);
-      Py_DECREF (C_Meth);
+      Add_Method (C_Func, Func.Name, Class);
    end Add_Method;
 
    -----------------------
@@ -869,19 +858,10 @@ package body GNATCOLL.Python is
    begin
       Def.Flags := Def.Flags or METH_STATIC;
 
-      --  If the documentation is not specified, store the fully qualified
-      --  name instead. There is no way otherwise to retrieve the class name
-      --  from the python shell.
-      if Def.Doc = Null_Ptr then
-         Def.Doc := New_String
-           (PyString_AsString (PyObject_GetAttrString (Class, "__module__"))
-            & "." & PyString_AsString (PyClass_Name (Class))
-            & "." & Value (Func.Name));
-      end if;
-
       C_Func := PyCFunction_New
         (Def, Self, PyString_FromString (PyModule_Getname (Module)));
       if C_Func /= null then
+         --  ??? Likely not needed for python3
          Static := PyStaticMethod_New (C_Func);
          Result := PyObject_SetAttrString (Class, Func.Name, Static);
          Py_DECREF (Static);
@@ -905,16 +885,6 @@ package body GNATCOLL.Python is
       pragma Unreferenced (Result);
    begin
       Def.Flags := Def.Flags or METH_CLASS;
-
-      --  If the documentation is not specified, store the fully qualified
-      --  name instead. There is no way otherwise to retrieve the class name
-      --  from the python shell.
-      if Def.Doc = Null_Ptr then
-         Def.Doc := New_String
-           (PyString_AsString (PyObject_GetAttrString (Class, "__module__"))
-            & "." & PyString_AsString (PyClass_Name (Class))
-            & "." & Value (Func.Name));
-      end if;
 
       C_Func := PyCFunction_New
         (Def, null, PyString_FromString (PyModule_Getname (Module)));
@@ -1039,17 +1009,6 @@ package body GNATCOLL.Python is
       return Internal (Obj) = 1;
    end PyCObject_Check;
 
-   ----------------------
-   -- PyInstance_Check --
-   ----------------------
-
-   function PyInstance_Check (Obj : PyObject) return Boolean is
-      function Internal (Obj : PyObject) return Integer;
-      pragma Import (C, Internal, "ada_pyinstance_check");
-   begin
-      return Internal (Obj) = 1;
-   end PyInstance_Check;
-
    --------------------
    -- PyMethod_Check --
    --------------------
@@ -1061,18 +1020,18 @@ package body GNATCOLL.Python is
       return Internal (Obj) = 1;
    end PyMethod_Check;
 
-   ------------------------
-   -- PyClass_IsSubclass --
-   ------------------------
+   -------------------
+   -- Py_IsSubclass --
+   -------------------
 
-   function PyClass_IsSubclass
+   function Py_IsSubclass
      (Class : PyObject; Base : PyObject) return Boolean
    is
       function Internal (Class, Base : PyObject) return Integer;
-      pragma Import (C, Internal, "ada_pyclass_is_subclass");
+      pragma Import (C, Internal, "ada_is_subclass");
    begin
       return Internal (Class, Base) /= 0;
-   end PyClass_IsSubclass;
+   end Py_IsSubclass;
 
    --------------
    -- Type_New --
