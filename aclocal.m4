@@ -510,7 +510,7 @@ AC_HELP_STRING(
      PYTHON_SHARED=$enableval,
      PYTHON_SHARED=no)
 
-   if test "$PYTHON_EXEC" = "no"; then
+   if test "$PYTHON_EXEC" = ""; then
       PYTHON_EXEC="python"
    fi
 

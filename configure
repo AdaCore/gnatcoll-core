@@ -3385,7 +3385,7 @@ else
   PYTHON_SHARED=no
 fi;
 
-   if test "$PYTHON_EXEC" = "no"; then
+   if test "$PYTHON_EXEC" = ""; then
       PYTHON_EXEC="python"
    fi
 
