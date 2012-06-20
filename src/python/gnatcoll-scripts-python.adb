@@ -238,6 +238,9 @@ package body GNATCOLL.Scripts.Python is
      (Data : in out Callback_Data'Class; Command : String);
    --  Handles all commands pre-defined in this module
 
+   procedure Log_Python_Exception;
+   --  Log the current exception to a trace_handle
+
    ------------------------
    --  Internals Nth_Arg --
    ------------------------
@@ -1230,6 +1233,27 @@ package body GNATCOLL.Scripts.Python is
       end if;
    end Run_Command;
 
+   --------------------------
+   -- Log_Python_Exception --
+   --------------------------
+
+   procedure Log_Python_Exception is
+      Typ, Occurrence, Traceback, S : PyObject;
+   begin
+      if Active (Me_Error) then
+         PyErr_Fetch (Typ, Occurrence, Traceback);
+         PyErr_NormalizeException (Typ, Occurrence, Traceback);
+
+         S := PyObject_Repr (Occurrence);
+         if S /= null then
+            Trace (Me_Error, "Exception "& PyString_AsString (S));
+            Py_DECREF (S);
+         end if;
+
+         PyErr_Restore (Typ, Occurrence, Traceback);
+      end if;
+   end Log_Python_Exception;
+
    -----------------
    -- Run_Command --
    -----------------
@@ -1260,7 +1284,7 @@ package body GNATCOLL.Scripts.Python is
 
    begin
       if Active (Me_Log) then
-         Trace (Me_Log, Script.Buffer.all & Command);
+         Trace (Me_Log, "command: " & Script.Buffer.all & Command);
       end if;
 
       Errors.all := False;
@@ -1332,8 +1356,11 @@ package body GNATCOLL.Scripts.Python is
                PyErr_NormalizeException (Typ, Occurrence, Traceback);
                S := PyObject_Repr (Occurrence);
                if S /= null then
-                  Trace (Me_Error, "Exception2 "& PyString_AsString (S));
+                  Trace (Me_Error, "Exception "& PyString_AsString (S));
                   Py_DECREF (S);
+               else
+                  Trace
+                    (Me_Error, "Python raised an exception with no __repr__");
                end if;
 
                --  Do not DECREF Typ, Occurrence or Traceback after this
@@ -1356,14 +1383,10 @@ package body GNATCOLL.Scripts.Python is
 
          if not Script.Use_Secondary_Prompt then
             if PyErr_Occurred /= null then
+               Log_Python_Exception;
+
                PyErr_Fetch (Typ, Occurrence, Traceback);
                PyErr_NormalizeException (Typ, Occurrence, Traceback);
-
-               S := PyObject_Repr (Occurrence);
-               if S /= null then
-                  Trace (Me_Error, "Exception "& PyString_AsString (S));
-                  Py_DECREF (S);
-               end if;
 
                if PyTuple_Check (Occurrence) then
                   --  Old style exceptions
@@ -1400,6 +1423,7 @@ package body GNATCOLL.Scripts.Python is
                PyErr_Restore (Typ, Occurrence, Traceback);
 
                if not Script.Use_Secondary_Prompt then
+                  Trace (Me_Error, "exception, incomplete command");
                   PyErr_Print;
                   Errors.all := True;
 
@@ -1420,16 +1444,19 @@ package body GNATCOLL.Scripts.Python is
          end if;
 
       else
-         PyErr_Fetch (Typ, Occurrence, Traceback);
-         PyErr_NormalizeException (Typ, Occurrence, Traceback);
+         if Active (Me_Error) then
+            PyErr_Fetch (Typ, Occurrence, Traceback);
+            PyErr_NormalizeException (Typ, Occurrence, Traceback);
 
-         S := PyObject_Repr (Occurrence);
-         if S /= null then
-            Trace (Me_Error, "Exception3 "& PyString_AsString (S));
-            Py_DECREF (S);
+            S := PyObject_Repr (Occurrence);
+            if S /= null then
+               Trace (Me_Error, "Exception "& PyString_AsString (S));
+               Py_DECREF (S);
+            end if;
+
+            PyErr_Restore (Typ, Occurrence, Traceback);
          end if;
 
-         PyErr_Restore (Typ, Occurrence, Traceback);
          PyErr_Print;
       end if;
 
@@ -1447,7 +1474,9 @@ package body GNATCOLL.Scripts.Python is
       return Result;
 
    exception
-      when others =>
+      when E : others =>
+         Trace (Me_Error, E);
+
          Errors.all := True;
 
          if Default_Console_Refed then
@@ -1602,6 +1631,19 @@ package body GNATCOLL.Scripts.Python is
    begin
       Error.all := False;
 
+      if Command = null then
+         Trace (Me_Error, "Trying to execute 'null'");
+         return null;
+      end if;
+
+      if Active (Me_Log) then
+         Obj := PyObject_Repr (Command);
+         if Obj /= null then
+            Trace (Me_Log, "Execute " & PyString_AsString (Obj));
+            Py_DECREF (Obj);
+         end if;
+      end if;
+
       if Script.Blocked then
          Error.all := True;
          Trace (Me_Error, "A python command is already executing");
@@ -1654,7 +1696,8 @@ package body GNATCOLL.Scripts.Python is
 
       if Obj = null then
          Error.all := True;
-         Trace (Me_Error, "Python script raised an exception");
+         Trace (Me_Error, "Calling object raised an exception");
+         Log_Python_Exception;
          PyErr_Print;
       end if;
 

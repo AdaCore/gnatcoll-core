@@ -27,7 +27,11 @@ with GNAT.OS_Lib;          use GNAT.OS_Lib;
 
 package body GNATCOLL.Python is
 
-   No_Method_Def : constant PyMethodDef := (Null_Ptr, null, 0, Null_Ptr);
+   No_Method_Def : constant PyMethodDef :=
+     (Name  => Null_Ptr,
+      Func  => null,
+      Flags => METH_VARGS or METH_KEYWORDS,
+      Doc   => Null_Ptr);
 
    type Methods_Access is access PyMethodDef_Array;
    type MethodDef_Access is access PyMethodDef;
