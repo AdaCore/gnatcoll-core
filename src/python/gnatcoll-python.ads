@@ -933,9 +933,11 @@ package GNATCOLL.Python is
    Py_Eval_Input   : constant Interpreter_State;
    --  The state of the interpreter when evaluating a string.
    --    - Single_Input: evaluate any command in the interpreter. This will
-   --      return the resulting object.
-   --    - Eval_Input: evaluate an expression. None is always returned
+   --          print the result (but return None)
+   --    - Eval_Input: evaluate an expression. Evaluates an expression.
+   --          Equivalent to 'eval'.
    --    - File_Input: evaluate a whole file, and return None.
+   --          Equivalent to 'exec'.
 
    function PyRun_String
      (Str     : String;
@@ -953,6 +955,10 @@ package GNATCOLL.Python is
       return PyCodeObject;
    --  Compile Cmd into a code object. Null is returned if Cmd couldn't be
    --  compiled, either because of a syntax error or because Cmd is incomplete
+
+   function PyEval_GetGlobals return PyObject;
+   pragma Import (C, PyEval_GetGlobals, "PyEval_GetGlobals");
+   --  Return the dictionary for global variables
 
    function PyEval_EvalCode
      (Code    : PyCodeObject;

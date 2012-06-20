@@ -1482,17 +1482,6 @@ package body GNATCOLL.Scripts is
       return Is_Subclass (Get_CIR (Instance), Base);
    end Is_Subclass;
 
-   ---------------------
-   -- Set_Hide_Output --
-   ---------------------
-
-   procedure Set_Hide_Output
-     (Console     : access Virtual_Console_Record;
-      Hide_Output : Boolean) is
-   begin
-      Console.Hide_Output := Hide_Output;
-   end Set_Hide_Output;
-
    -------------------------
    -- Set_Default_Console --
    -------------------------

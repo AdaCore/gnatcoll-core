@@ -24,7 +24,6 @@
 with Glib.Object;    use Glib.Object;
 with Gtk.Widget;     use Gtk.Widget;
 with GNATCOLL.Scripts.Gtkada; use GNATCOLL.Scripts.Gtkada;
-with GNATCOLL.Scripts.Impl;   use GNATCOLL.Scripts.Impl;
 with System;         use System;
 
 package body GNATCOLL.Scripts.Python.Gtkada is
@@ -111,15 +110,12 @@ package body GNATCOLL.Scripts.Python.Gtkada is
       end if;
 
       if not Errors then
-         Insert_Log (Script, null, "Loading support for pygtk");
          Execute_Command
            (Script      => Script,
             CL          => Create ("pygtk.require('2.0'); import gtk"),
             Hide_Output => True,
             Errors      => Errors);
-         if Errors then
-            Insert_Log (Script, null, "Couldn't initialize gtk");
-         else
+         if not Errors then
             Init_PyGtk;
             PyGtk_Initialized := True;
          end if;

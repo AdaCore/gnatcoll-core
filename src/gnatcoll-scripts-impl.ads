@@ -36,11 +36,6 @@ package GNATCOLL.Scripts.Impl is
    procedure Insert_Text
      (Script  : access Scripting_Language_Record'Class;
       Console : Virtual_Console := null;
-      Txt     : String;
-      Hide    : Boolean := False);
-   procedure Insert_Log
-     (Script  : access Scripting_Language_Record'Class;
-      Console : Virtual_Console := null;
       Txt     : String);
    procedure Insert_Error
      (Script  : access Scripting_Language_Record'Class;

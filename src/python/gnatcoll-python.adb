@@ -1052,6 +1052,7 @@ package body GNATCOLL.Python is
 
       C : chars_ptr := New_String (Name);
       Result : PyObject;
+
    begin
       Result := Internal (Metatype, C, Bases, Dict);
       Free (C);

@@ -38,11 +38,15 @@ package body GNATCOLL.Scripts.Python is
    Me       : constant Trace_Handle := Create ("PYTHON");
    Me_Error : constant Trace_Handle := Create ("PYTHON.ERROR", On);
    Me_Stack : constant Trace_Handle := Create ("PYTHON.TB", Off);
+   Me_Log   : constant Trace_Handle := Create ("SCRIPTS.LOG", Off);
 
    function Ada_Py_Builtin return Interfaces.C.Strings.chars_ptr;
    pragma Import (C, Ada_Py_Builtin, "ada_py_builtin");
+   function Ada_Py_Builtins return Interfaces.C.Strings.chars_ptr;
+   pragma Import (C, Ada_Py_Builtins, "ada_py_builtins");
 
-   Builtin_Module_Name : constant String := Value (Ada_Py_Builtin);
+   Builtin_Name : constant String := Value (Ada_Py_Builtin);
+   Builtins_Name : constant String := Value (Ada_Py_Builtins);
 
    procedure Set_Item (Args : PyObject; T : Integer; Item : PyObject);
    --  Change the T-th item in Args.
@@ -329,10 +333,10 @@ package body GNATCOLL.Scripts.Python is
    begin
       if not Script.Finalized then
          Trace (Me, "Finalizing python");
+         Script.Finalized := True;
          Set_Default_Console (Script, null);
          Free (Script.Buffer);
          Py_Finalize;
-         Script.Finalized := True;
       end if;
    end Destroy;
 
@@ -359,9 +363,7 @@ package body GNATCOLL.Scripts.Python is
    is
       Script  : Python_Scripting;
       Ignored : Integer;
-      Result  : PyObject;
-      pragma Unreferenced (Ignored, Result);
-      Errors  : aliased Boolean;
+      pragma Unreferenced (Ignored);
 
       function Initialize_Py_And_Module
          (Program, Module : String) return PyObject;
@@ -401,7 +403,7 @@ package body GNATCOLL.Scripts.Python is
       Script.Globals := PyModule_GetDict (Main_Module);
 
       Script.Buffer := new String'("");
-      Script.Builtin := PyImport_ImportModule (Builtin_Module_Name);
+      Script.Builtin := PyImport_ImportModule (Builtin_Name);
 
       Script.Exception_Unexpected := PyErr_NewException
         (Module & ".Unexpected_Exception", null, null);
@@ -429,10 +431,9 @@ package body GNATCOLL.Scripts.Python is
       --  PyGTK prints its error messages using sys.argv, which doesn't
       --  exist in non-interactive mode. We therefore define it here
 
-      Result := Run_Command
-        (Script,
-         "sys.argv=['" & Module & "']", Hide_Output => True,
-         Errors         => Errors'Unchecked_Access);
+      if not PyRun_SimpleString ("sys.argv=['" & Module & "']") then
+         Trace (Me_Error, "Could not initialize sys.argv");
+      end if;
 
       --  This function is required for support of the Python menu (F120-025),
       --  so that we can execute python commands in the context of the global
@@ -457,15 +458,16 @@ package body GNATCOLL.Scripts.Python is
      (Data : in out Callback_Data'Class; Command : String)
    is
       Result   : PyObject;
-      pragma Unreferenced (Result);
       Errors   : aliased Boolean;
    begin
       if Command = "exec_in_console" then
          Result := Run_Command
            (Python_Scripting (Get_Script (Data)),
-            Command      => Nth_Arg (Data, 1),
-            Show_Command => True,
-            Errors       => Errors'Unchecked_Access);
+            Command       => Nth_Arg (Data, 1),
+            Need_Output   => False,
+            Show_Command  => True,
+            Errors        => Errors'Unchecked_Access);
+         Py_XDECREF (Result);
       end if;
    end Python_Global_Command_Handler;
 
@@ -1116,8 +1118,9 @@ package body GNATCOLL.Scripts.Python is
       if Start < Input'Last then
          Obj := Run_Command
            (Script,
-            Builtin_Module_Name
+            Builtins_Name
                & ".dir(" & Input (Start + 1 .. Last - 1) & ")",
+            Need_Output => True,
             Hide_Output => True,
             Hide_Exceptions => True,
             Errors => Errors'Unchecked_Access);
@@ -1199,9 +1202,14 @@ package body GNATCOLL.Scripts.Python is
       Result : PyObject;
       Str    : PyObject;
    begin
-      Result :=
-        Run_Command (Script, Command, Console,
-                     Show_Command, Hide_Output, Hide_Exceptions, Errors);
+      Result := Run_Command
+        (Script, Command,
+         Console         => Console,
+         Need_Output     => True,
+         Show_Command    => Show_Command,
+         Hide_Output     => Hide_Output,
+         Hide_Exceptions => Hide_Exceptions,
+         Errors          => Errors);
 
       if Result /= null and then not Errors.all then
          Str := PyObject_Str (Result);
@@ -1210,7 +1218,10 @@ package body GNATCOLL.Scripts.Python is
             S : constant String := PyString_AsString (Str);
          begin
             Py_DECREF (Str);
-            Insert_Log (Script, Console, "output is: " & S);
+
+            if Active (Me_Log) then
+               Trace (Me_Log, "output is: " & S);
+            end if;
             return S;
          end;
       else
@@ -1226,6 +1237,7 @@ package body GNATCOLL.Scripts.Python is
    function Run_Command
      (Script          : access Python_Scripting_Record'Class;
       Command         : String;
+      Need_Output     : Boolean;
       Console         : Virtual_Console := null;
       Show_Command    : Boolean := False;
       Hide_Output     : Boolean := False;
@@ -1233,53 +1245,37 @@ package body GNATCOLL.Scripts.Python is
       Errors          : access Boolean) return PyObject
    is
       Result         : PyObject := null;
-      Obj            : PyObject;
       Code           : PyCodeObject;
-      Tmp            : GNAT.Strings.String_Access;
       Indented_Input : constant Boolean := Command'Length > 0
         and then (Command (Command'First) = ASCII.HT
                   or else Command (Command'First) = ' ');
-      At_Column_0    : constant Boolean := Command'Length = 0
-        or else Command (Command'Last) = ASCII.LF;
-      Starting_A_Block : constant Boolean := Command'Length > 0
-        and then Command (Command'Last) = ':';
 
       Cmd          : constant String := Script.Buffer.all & Command & ASCII.LF;
 
+      Typ, Occurrence, Traceback, S : PyObject;
       Default_Console_Refed : Boolean := False;
-      Ignored : Boolean;
-      pragma Unreferenced (Ignored);
       Default_Console : constant Virtual_Console :=
         Get_Default_Console (Script);
+      State : Interpreter_State;
 
    begin
-      --  Make sure that the output to sys.stdout is properly hidden. This is
-      --  in particular required when doing completion, since the result of
-      --  the command to get completions would be output in the middle of the
-      --  command the user is typing.
-
-      if Hide_Output then
-         Ignored := PyRun_SimpleString ("_gnatcoll.hide()");
+      if Active (Me_Log) then
+         Trace (Me_Log, Script.Buffer.all & Command);
       end if;
-
-      Insert_Log
-        (Script, Console, "exec: " & Script.Buffer.all & Command);
-
-      Insert_Text
-        (Script, Console, Command & ASCII.LF,
-         Hide => not Show_Command or else Hide_Output);
 
       Errors.all := False;
 
-      if Cmd = "" & ASCII.LF then
-         if not Hide_Output then
-            Display_Prompt (Script);
-         else
-            Ignored := PyRun_SimpleString ("_gnatcoll.show()");
-         end if;
+      if Script.Finalized or else Cmd = "" & ASCII.LF then
          return null;
       end if;
 
+      if Show_Command and not Hide_Output then
+         Insert_Text (Script, Console, Command & ASCII.LF);
+      end if;
+
+      --  The following code will not work correctly in multitasking mode if
+      --  each thread is redirecting to a different console. One might argue
+      --  this is up to the user to fix.
       if Console /= null then
          if Default_Console /= null then
             Default_Console_Refed := True;
@@ -1288,80 +1284,70 @@ package body GNATCOLL.Scripts.Python is
          Set_Default_Console (Script, Console);
       end if;
 
-      if Get_Default_Console (Script) /= null then
-         Set_Hide_Output (Get_Default_Console (Script), Hide_Output);
+      --  If we want to have sys.displayhook called, we should use
+      --  <stdin> as the filename, otherwise <string> will ensure this is not
+      --  an interactive session.
+      --  For interactive code, python generates addition opcode PRINT_EXPR
+      --  which will call displayhook.
+      --
+      --  We cannot use Py_Eval_Input, although it would properly return the
+      --  result of evaluating the expression, but it would not support multi
+      --  line input, in particular function defintion.
+      --  So we need to use Py_Single_Input, but then the result of evaluating
+      --  the code is always None.
+
+      if Need_Output then
+         State := Py_Eval_Input;
+      else
+         State := Py_Single_Input;
       end if;
 
-      --  Reset previous output
-      PyObject_SetAttrString (Script.Builtin, "_", Py_None);
-
-      Script.In_Process := True;
-
-      Code := Py_CompileString (Cmd, "<stdin>", Py_Single_Input);
+      if Hide_Output then
+         Code := Py_CompileString (Cmd, "<string>", State);
+      else
+         Code := Py_CompileString (Cmd, "<stdin>", State);
+      end if;
 
       --  If code compiled just fine
+
       if Code /= null and then not Indented_Input then
-         if Get_Default_Console (Script) /= null then
-            Grab_Events (Get_Default_Console (Script), True);
-         end if;
-
-         --  The following line outputs some text on the console via
-         --  sys.displayhook. The latter is redirected when we are hiding
-         --  output. This output is done when calling a function, via the
-         --  PRINT_EXPR instruction in the python virtual machine.
-         Obj := PyEval_EvalCode (Code, Script.Globals, Script.Globals);
-
-         Py_DECREF (PyObject (Code));
-         if Get_Default_Console (Script) /= null then
-            Grab_Events (Get_Default_Console (Script), False);
-         end if;
-
-         if Obj = null then
-            declare
-               EType, Occurrence, Traceback : PyObject;
-            begin
-               if not Hide_Exceptions then
-                  if Hide_Output then
-                     --  We need to preserve the current exception before
-                     --  executing the next command
-                     PyErr_Fetch (EType, Occurrence, Traceback);
-                     Ignored := PyRun_SimpleString ("_gnatcoll.show()");
-                     if Get_Default_Console (Script) /= null then
-                        Set_Hide_Output (Get_Default_Console (Script), False);
-                     end if;
-                     PyErr_Restore (EType, Occurrence, Traceback);
-                  end if;
-
-                  --  Always display exceptions in the python console, since it
-                  --  is likely they are unexpected and should be fixed.
-                  PyErr_Print;
-
-                  if Hide_Output then
-                     Ignored := PyRun_SimpleString ("_gnatcoll.hide()");
-                     if Get_Default_Console (Script) /= null then
-                        Set_Hide_Output (Get_Default_Console (Script), True);
-                     end if;
-                  end if;
-               else
-                  PyErr_Clear;
-               end if;
-
-               Errors.all := True;
-            end;
-         else
-            --  No other python command between this one and the previous
-            --  call to PyEval_EvalCode
-            if PyObject_HasAttrString (Script.Builtin, "_") then
-               Result := PyObject_GetAttrString (Script.Builtin, "_");
-            else
-               Result := null;
-            end if;
-            Py_DECREF (Obj);
-         end if;
-
          Script.Use_Secondary_Prompt := False;
+
          Free (Script.Buffer);
          Script.Buffer := new String'("");
+
+         if Get_Default_Console (Script) /= null then
+            Grab_Events (Get_Default_Console (Script), True);
+            Result := PyEval_EvalCode (Code, Script.Globals, Script.Globals);
+            Grab_Events (Get_Default_Console (Script), False);
+         else
+            Result := PyEval_EvalCode (Code, Script.Globals, Script.Globals);
+         end if;
+
+         Py_XDECREF (PyObject (Code));
+
+         if Result = null then
+            if Active (Me_Error) then
+               PyErr_Fetch (Typ, Occurrence, Traceback);
+               PyErr_NormalizeException (Typ, Occurrence, Traceback);
+               S := PyObject_Repr (Occurrence);
+               if S /= null then
+                  Trace (Me_Error, "Exception2 "& PyString_AsString (S));
+                  Py_DECREF (S);
+               end if;
+
+               --  Do not DECREF Typ, Occurrence or Traceback after this
+               PyErr_Restore (Typ, Occurrence, Traceback);
+            end if;
+
+            if not Hide_Exceptions then
+               PyErr_Print;
+            else
+               PyErr_Clear;
+            end if;
+
+            Errors.all := True;
+         end if;
 
       --  Do we have compilation error because input was incomplete ?
 
@@ -1369,101 +1355,100 @@ package body GNATCOLL.Scripts.Python is
          Script.Use_Secondary_Prompt := Indented_Input;
 
          if not Script.Use_Secondary_Prompt then
-            declare
-               Typ, Occurrence, Traceback : PyObject;
-               S : PyObject;
-            begin
-               if PyErr_Occurred /= null then
-                  PyErr_Fetch (Typ, Occurrence, Traceback);
-                  PyErr_NormalizeException (Typ, Occurrence, Traceback);
+            if PyErr_Occurred /= null then
+               PyErr_Fetch (Typ, Occurrence, Traceback);
+               PyErr_NormalizeException (Typ, Occurrence, Traceback);
 
-                  if PyTuple_Check (Occurrence) then
-                     --  Old style exceptions
-                     S := PyTuple_GetItem (Occurrence, 0);
-                  else
-                     --  New style: occurrence is an instance
-                     --  S is null if the exception is not a syntax_error
-                     S := PyObject_GetAttrString (Occurrence, "msg");
-                  end if;
-
-                  if S = null then
-                     Script.Use_Secondary_Prompt := False;
-                  else
-                     declare
-                        Msg : constant String := PyString_AsString (S);
-                     begin
-                        --  Second message appears when typing:
-                        --    >>> if 1:
-                        --    ...   pass
-                        --    ... else:
-                        if Msg = "unexpected EOF while parsing" then
-                           Script.Use_Secondary_Prompt := Starting_A_Block;
-                        elsif Msg = "expected an indented block" then
-                           Script.Use_Secondary_Prompt := not At_Column_0;
-                        end if;
-                     end;
-                  end if;
-
-                  if not Script.Use_Secondary_Prompt then
-                     PyErr_Restore (Typ, Occurrence, Traceback);
-                     PyErr_Print;
-                     Errors.all := True;
-                  else
-                     PyErr_Clear;
-                  end if;
+               S := PyObject_Repr (Occurrence);
+               if S /= null then
+                  Trace (Me_Error, "Exception "& PyString_AsString (S));
+                  Py_DECREF (S);
                end if;
-            end;
+
+               if PyTuple_Check (Occurrence) then
+                  --  Old style exceptions
+                  S := PyTuple_GetItem (Occurrence, 0);
+               else
+                  --  New style: occurrence is an instance
+                  --  S is null if the exception is not a syntax_error
+                  S := PyObject_GetAttrString (Occurrence, "msg");
+               end if;
+
+               if S = null then
+                  Script.Use_Secondary_Prompt := False;
+               else
+                  declare
+                     Msg : constant String := PyString_AsString (S);
+                  begin
+                     Py_DECREF (S);
+
+                     --  Second message appears when typing:
+                     --    >>> if 1:
+                     --    ...   pass
+                     --    ... else:
+                     if Msg = "unexpected EOF while parsing" then
+                        Script.Use_Secondary_Prompt := Command'Length > 0
+                          and then Command (Command'Last) = ':';
+
+                     elsif Msg = "expected an indented block" then
+                        Script.Use_Secondary_Prompt := Command'Length /= 0
+                          and then Command (Command'Last) /= ASCII.LF;
+                     end if;
+                  end;
+               end if;
+
+               PyErr_Restore (Typ, Occurrence, Traceback);
+
+               if not Script.Use_Secondary_Prompt then
+                  PyErr_Print;
+                  Errors.all := True;
+
+               else
+                  PyErr_Clear;
+               end if;
+            end if;
          else
             PyErr_Clear;
          end if;
 
+         Free (Script.Buffer);
+
          if Script.Use_Secondary_Prompt then
-            Tmp := Script.Buffer;
-            Script.Buffer := new String'
-              (Script.Buffer.all & Command & ASCII.LF);
-            Free (Tmp);
+            Script.Buffer := new String'(Cmd);
          else
-            Free (Script.Buffer);
             Script.Buffer := new String'("");
          end if;
+
       else
-         PyErr_Clear;
+         PyErr_Fetch (Typ, Occurrence, Traceback);
+         PyErr_NormalizeException (Typ, Occurrence, Traceback);
+
+         S := PyObject_Repr (Occurrence);
+         if S /= null then
+            Trace (Me_Error, "Exception3 "& PyString_AsString (S));
+            Py_DECREF (S);
+         end if;
+
+         PyErr_Restore (Typ, Occurrence, Traceback);
+         PyErr_Print;
       end if;
 
-      if Hide_Output then
-         Ignored := PyRun_SimpleString ("_gnatcoll.show()");
-      else
-         --  PyEval_EvalCode has already called sys.displayhook, so it
-         --  has already displayed the expression.
+      if not Hide_Output then
          Display_Prompt (Script);
-      end if;
-
-      Script.In_Process := False;
-      if Get_Default_Console (Script) /= null then
-         Set_Hide_Output (Get_Default_Console (Script), False);
       end if;
 
       if Console /= null then
          Set_Default_Console (Script, Default_Console);
-      end if;
-
-      if Default_Console_Refed then
-         Unref (Default_Console);
+         if Default_Console_Refed then
+            Unref (Default_Console);
+         end if;
       end if;
 
       return Result;
 
    exception
       when others =>
-         Script.In_Process := False;
-         if Get_Default_Console (Script) /= null then
-            Set_Hide_Output (Get_Default_Console (Script), False);
-         end if;
          Errors.all := True;
-
-         if Hide_Output then
-            Ignored := PyRun_SimpleString ("_gnatcoll.show()");
-         end if;
 
          if Default_Console_Refed then
             Unref (Default_Console);
@@ -1493,10 +1478,11 @@ package body GNATCOLL.Scripts.Python is
       else
          Result := Run_Command
            (Script, Get_Command (CL),
-            Console      => Console,
-            Hide_Output  => Hide_Output,
-            Show_Command => Show_Command,
-            Errors       => E'Unchecked_Access);
+            Console       => Console,
+            Need_Output   => False,
+            Hide_Output   => Hide_Output,
+            Show_Command  => Show_Command,
+            Errors        => E'Unchecked_Access);
          Py_XDECREF (Result);
          Errors := E;
       end if;
@@ -1549,8 +1535,11 @@ package body GNATCOLL.Scripts.Python is
          return False;
       else
          Obj := Run_Command
-           (Script, Get_Command (CL), Console,
-            False, Hide_Output, False, Errors);
+           (Script, Get_Command (CL),
+            Need_Output  => True,
+            Console      => Console,
+            Hide_Output  => Hide_Output,
+            Errors       => Errors);
          Result := Obj /= null
            and then ((PyInt_Check (Obj) and then PyInt_AsLong (Obj) = 1)
                      or else (PyBool_Check (Obj) and then PyBool_Is_True (Obj))
@@ -1579,14 +1568,13 @@ package body GNATCOLL.Scripts.Python is
 
    begin
       if Script.Blocked then
-         --  Insert (Script.Kernel, "A command is already executing");
          return False;
       else
          Obj := Run_Command
            (Script,
             Command     => Command,
+            Need_Output => True,
             Console     => null,
-            Hide_Output => True,
             Errors      => Errors'Unchecked_Access);
 
          if Obj /= null and then PyFunction_Check (Obj) then
@@ -3244,10 +3232,10 @@ package body GNATCOLL.Scripts.Python is
             "sys.stdout = sys.__stdout__" & ASCII.LF
             & "sys.stdin  = sys.__stdin__" & ASCII.LF
             & "sys.stderr = sys.__stderr__",
-            Errors => Errors'Access);
-         if Cons /= null then
-            Py_DECREF (Cons);
-         end if;
+            Hide_Output => True,
+            Need_Output => False,
+            Errors      => Errors'Access);
+         Py_XDECREF (Cons);
       end if;
    end Set_Default_Console;
 
@@ -3387,8 +3375,8 @@ package body GNATCOLL.Scripts.Python is
          Func := Run_Command
            (Script,
             Command     => Command,
-            Console     => null,
             Hide_Output => Hide_Output,
+            Need_Output => True,
             Errors      => Errors'Unchecked_Access);
 
          if Func /= null and then PyCallable_Check (Func) then

@@ -57,10 +57,4 @@ package body TextConsole is
       Put (Standard_Error, Txt);
    end Insert_Error;
 
-   procedure Insert_Log (Console : access Text_Console; Txt : String) is
-      pragma Unreferenced (Console);
-   begin
-      Put_Line ("-- log: " & Txt & "--");
-   end Insert_Log;
-
 end TextConsole;

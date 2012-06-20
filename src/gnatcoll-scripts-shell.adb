@@ -42,6 +42,7 @@ with GNATCOLL.Utils;                    use GNATCOLL.Utils;
 
 package body GNATCOLL.Scripts.Shell is
    Me : constant Trace_Handle := Create ("SHELL_SCRIPT", Off);
+   Me_Log : constant Trace_Handle := Create ("SCRIPTS.LOG", Off);
 
    Cst_Prefix : constant String := "@cst@";
    --  Prefix used to store the name of constants in class instances
@@ -559,8 +560,8 @@ package body GNATCOLL.Scripts.Shell is
                  (Script, CL, Err'Unchecked_Access);
       begin
          Errors := Err;
-         if S /= "" then
-            Insert_Text (Script, Console, S & ASCII.LF, Hide_Output);
+         if S /= "" and then not Hide_Output then
+            Insert_Text (Script, Console, S & ASCII.LF);
          end if;
 
          Script.Console := Old_Console;
@@ -610,15 +611,17 @@ package body GNATCOLL.Scripts.Shell is
       CL := Create ("load");
       Append_Argument (CL, Filename, One_Arg);
 
-      Insert_Text (Script, Console, To_Display_String (CL), not Show_Command);
+      if Show_Command then
+         Insert_Text (Script, Console, To_Display_String (CL));
+      end if;
 
       declare
          S : constant String := Execute_GPS_Shell_Command
            (Script, CL, Err'Unchecked_Access);
       begin
          Errors := Err;
-         if S /= "" then
-            Insert_Text (Script, Console, S & ASCII.LF, Hide_Output);
+         if S /= "" and then not Hide_Output then
+            Insert_Text (Script, Console, S & ASCII.LF);
          end if;
 
          Script.Console := Old_Console;
@@ -731,8 +734,8 @@ package body GNATCOLL.Scripts.Shell is
            (Script, CL, Err'Unchecked_Access);
       begin
          Errors.all := Err;
-         if Result /= "" then
-            Insert_Text (Script, Console, Result & ASCII.LF, Hide_Output);
+         if Result /= "" and then not Hide_Output then
+            Insert_Text (Script, Console, Result & ASCII.LF);
          end if;
 
          Script.Console := Old_Console;
@@ -768,7 +771,10 @@ package body GNATCOLL.Scripts.Shell is
             Ada.Strings.Both);
       begin
          Errors.all := Err;
-         Insert_Text (Script, Console, Result & ASCII.LF, Hide_Output);
+
+         if not Hide_Output then
+            Insert_Text (Script, Console, Result & ASCII.LF);
+         end if;
 
          Script.Console := Old_Console;
 
@@ -816,9 +822,10 @@ package body GNATCOLL.Scripts.Shell is
          return "A command is already executing";
       end if;
 
-      Insert_Log
-        (Script, null,
-         "Executing " & To_Display_String (CL, Max_Arg_Length => 100));
+      if Active (Me_Log) then
+         Trace (Me_Log,
+                "Executing " & To_Display_String (CL, Max_Arg_Length => 100));
+      end if;
 
       Errors.all := False;
 

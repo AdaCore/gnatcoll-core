@@ -790,8 +790,8 @@ package GNATCOLL.Scripts is
 
    procedure Insert_Log
      (Console : access Virtual_Console_Record; Txt : String) is null;
-   --  Prints some log messages (for instance all the commands that are
-   --  executed internally by the scripting language)
+   pragma Obsolescent (Insert_Log);
+   --  ignored, kept for backward compatibility only
 
    procedure Insert_Error
      (Console : access Virtual_Console_Record; Txt : String) is abstract;
@@ -817,12 +817,6 @@ package GNATCOLL.Scripts is
    --  the application.
    --  This is mostly used to avoid recursive re-entrant calls to the script
    --  interpreter.
-
-   procedure Set_Hide_Output
-     (Console     : access Virtual_Console_Record;
-      Hide_Output : Boolean);
-   --  If Hide_Output is true, then no output will be displayed on the
-   --  console. This is used for instance when executing internal commands
 
    procedure Set_As_Default_Console
      (Console        : access Virtual_Console_Record;
@@ -1015,9 +1009,13 @@ package GNATCOLL.Scripts is
    --  Depending on the language, Command might be a list of commands to
    --  execute, often semicolon or newline separated.
    --  Errors is set to True if there was any error executing the script.
-   --  The output of the command, as well as the text of the command itself,
+   --
+   --  The result of the command, as well as the text of the command itself,
    --  are not visible to the user if Hide_Output is True. Otherwise, the text
-   --  is sent to Console.
+   --  is sent to Console. Any output done by the command, however (via "print"
+   --  or "sys.stdout.write" statements for instance in python) will be
+   --  displayed.
+   --
    --  If Show_Command is True and Hide_Output is False, then the command
    --  itself is also printed in the console
 

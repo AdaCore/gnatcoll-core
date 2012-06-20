@@ -99,48 +99,6 @@ init_user_module(void) {
 //  systematically though, since in interactive mode (consoles...)
 //  we still want the usual python behavior.
 
-static const char* init_output =
-  "class _gnatcoll():\n"
-  "   saved_stdout=None\n"
-  "   saved_stdin=None\n"
-  "   saved_display=None\n"
-  "   hidden=0\n"
-  "   @staticmethod\n"
-  "   def nowrite(*args):\n"
-  "       pass\n"
-  "   @staticmethod\n"
-  "   def nodisplay(arg):\n"
-  "       __builtins__._ = arg\n"
-  "   @staticmethod\n"
-  "   def hide():\n"
-  "      _gnatcoll.hidden += 1\n"
-  "      if _gnatcoll.hidden == 1:\n"
-  "          _gnatcoll.saved_stdout=sys.stdout.write\n"
-  "          _gnatcoll.saved_stderr=sys.stderr.write\n"
-  "          _gnatcoll.saved_display=sys.displayhook\n"
-  "          try:\n"
-  "              sys.stdout.write=_gnatcoll.nowrite\n"
-  "          except: pass\n"
-  "          try:\n"
-  "              sys.stderr.write=_gnatcoll.nowrite\n"
-  "          except: pass\n"
-  "          try:\n"
-  "              sys.displayhook=_gnatcoll.nodisplay\n"
-  "          except: pass\n"
-  "   @staticmethod\n"
-  "   def show():\n"
-  "      _gnatcoll.hidden -= 1\n"
-  "      if _gnatcoll.hidden == 0:\n"
-  "          try:\n"
-  "             sys.stdout.write=_gnatcoll.saved_stdout\n"
-  "          except: pass\n"
-  "          try:\n"
-  "             sys.stderr.write=_gnatcoll.saved_stderr\n"
-  "          except: pass\n"
-  "          try:\n"
-  "             sys.displayhook=_gnatcoll.saved_display\n"
-  "          except: pass\n\n";
-
 PyObject*
 ada_py_initialize_and_module(char* program_name, char* name) {
    PyObject* module;
@@ -174,9 +132,6 @@ ada_py_initialize_and_module(char* program_name, char* name) {
       Py_DECREF (prompt);
    }
 
-   PyRun_SimpleString(init_output);
-   PyRun_SimpleString("import sys\n");
-
    // Make the user's module visible to scripts. We cannot use
    // PyImport_ImportModule, which imports the module but doesn't add
    // it to the global dictionary and as such it is not visible to
@@ -187,6 +142,10 @@ ada_py_initialize_and_module(char* program_name, char* name) {
       printf ("Could not import module %s", name);
       return NULL;
    }
+
+   // Import 'sys', which is needed for instance in Set_Default_Console
+   // to get access to the default value
+   PyRun_SimpleString("import sys\n");
 
    char* command = (char*)malloc(9 + strlen(name));
    strcpy (command, "import ");
@@ -414,6 +373,7 @@ PyObject* ada_PyEval_EvalCodeEx
 
   PyObject **k, **d;
   PyObject* result;
+  PyObject* kwtuple;
   int nk, nd;
 
   if (defs != NULL && PyTuple_Check(defs)) {
@@ -431,16 +391,19 @@ PyObject* ada_PyEval_EvalCodeEx
 #else
      int pos = 0;
 #endif
+
      nk = PyDict_Size(kwds);
-     k  = PyMem_NEW(PyObject *, 2*nk);
-     if (k == NULL) {
-        PyErr_NoMemory();
-        return NULL;
+     kwtuple = PyTuple_New(2*nk);
+     if (kwtuple == NULL)
+       return NULL;
+     k = &PyTuple_GET_ITEM(kwtuple, 0);
+     pos = i = 0;
+     while (PyDict_Next(kwds, &pos, &k[i], &k[i+1])) {
+       Py_INCREF(k[i]);
+       Py_INCREF(k[i+1]);
+       i += 2;
      }
-     while (PyDict_Next(kwds, &pos, &k[i], &k[i+1]))
-        i += 2;
-      nk = i/2;
-      /* XXX This is broken if the caller deletes dict items! */
+     nk = i/2;
   } else {
      k = NULL;
      nk = 0;
@@ -464,10 +427,7 @@ PyObject* ada_PyEval_EvalCodeEx
      closure /* closure */);
 #endif
 
-  if (k != NULL) {
-    PyMem_DEL (k);
-  }
-
+  Py_XDECREF (kwtuple);
   return result;
 }
 
@@ -726,6 +686,14 @@ const char* ada_py_builtin() {
    return "builtins";
 #else
    return "__builtin__";
+#endif
+}
+
+const char* ada_py_builtins() {
+#if PY_MAJOR_VERSION >= 3
+   return "builtins";
+#else
+   return "__builtins__";
 #endif
 }
 

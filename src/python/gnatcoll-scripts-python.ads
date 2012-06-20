@@ -83,6 +83,7 @@ package GNATCOLL.Scripts.Python is
    function Run_Command
      (Script          : access Python_Scripting_Record'Class;
       Command         : String;
+      Need_Output     : Boolean;
       Console         : Virtual_Console := null;
       Show_Command    : Boolean := False;
       Hide_Output     : Boolean := False;
@@ -96,6 +97,11 @@ package GNATCOLL.Scripts.Python is
    --  in interactive mode), then it is not executed.
    --  Errors is set to True if there was an error executing the command or
    --  if the input was incomplete.
+   --
+   --  If Need_Output is True, the result of Command will be returned
+   --  (otherwise Py_None is returned). However, this also restricts what
+   --  commands can be executed, since only expressions can be called (ie not
+   --  function definitions or import statements, for instance).
 
    function Get_PyObject (Instance : Class_Instance) return PyObject;
    --  Returns the low level PyObject enclosed in a Python Class_Instance.

@@ -71,15 +71,12 @@ package body GNATCOLL.Scripts.Impl is
    procedure Insert_Text
      (Script  : access Scripting_Language_Record'Class;
       Console : Virtual_Console := null;
-      Txt     : String;
-      Hide    : Boolean := False) is
+      Txt     : String) is
    begin
-      if Hide
-        or else (Console /= null and then Console.Hide_Output)
+      if (Console /= null and then Console.Hide_Output)
         or else (Script.Console /= null and then Script.Console.Hide_Output)
       then
          null;
-         --  Insert_Log (Script, Console, Txt);
 
       elsif Console /= null then
          Insert_Text (Console, Txt);
@@ -88,22 +85,6 @@ package body GNATCOLL.Scripts.Impl is
          Insert_Text (Script.Console, Txt);
       end if;
    end Insert_Text;
-
-   ----------------
-   -- Insert_Log --
-   ----------------
-
-   procedure Insert_Log
-     (Script  : access Scripting_Language_Record'Class;
-      Console : Virtual_Console := null;
-      Txt     : String) is
-   begin
-      if Console /= null then
-         Insert_Log (Console, Txt);
-      elsif Script.Console /= null then
-         Insert_Log (Script.Console, Txt);
-      end if;
-   end Insert_Log;
 
    ------------------
    -- Insert_Error --

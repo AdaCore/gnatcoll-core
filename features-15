@@ -15,6 +15,15 @@ of the feature.
 New features in 1.5
 -------------------
 
+NF-15-L620-027 GNATCOLL.Scripts.Python cleanup of output (2012-06-20)
+
+   When you use Execute_Command with the Hide_Output parameter set to True,
+   it now only hides the result of the command (which otherwise python
+   would display through sys.displayhook), and no longer the command's
+   explicit output through print statements.
+   Execute_Command will fail if you expect a result (string or boolean)
+   when executing a command that defines a function or class.
+
 NF-15-L607-001 GNATCOLL.Scripts.Python support for multithreading (2012-05-10)
 
    Several bindings were added to control python's Global Interpreter Lock,
