@@ -706,11 +706,15 @@ package body GNATCOLL.Scripts.Python is
       Result   : PyObject;
 
    begin
-      if Finalized then
+      Handler := Convert (PyCObject_AsVoidPtr (Self));
+
+      if Finalized
+        and then Handler.Cmd.Command /= Destructor_Method
+      then
+         PyErr_SetString (Handler.Script.Exception_Unexpected,
+                          "Application was already finalized");
          return null;
       end if;
-
-      Handler := Convert (PyCObject_AsVoidPtr (Self));
 
       if Active (Me_Stack) then
          declare
@@ -761,14 +765,6 @@ package body GNATCOLL.Scripts.Python is
 
       if First_Arg_Is_Self then
          Size := Size - 1;  --  First param is always the instance
-      end if;
-
-      if Finalized
-        and then Handler.Cmd.Command /= Destructor_Method
-      then
-         PyErr_SetString (Handler.Script.Exception_Unexpected,
-                          "Application was already finalized");
-         return null;
       end if;
 
       --  Special case for constructors:
