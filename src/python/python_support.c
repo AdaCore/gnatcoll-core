@@ -814,6 +814,10 @@ PyAPI_FUNC(const char *) ada_PyString_AsString(PyObject * val) {
 
 #if PY_MAJOR_VERSION >= 3
 
+int ada_is_python3() {
+  return 1;
+}
+
 PyAPI_FUNC(PyObject *) PyInt_FromLong(long val) {
    return PyLong_FromLong(val);
 };
@@ -842,4 +846,8 @@ PyAPI_FUNC(PyObject *) PyCObject_FromVoidPtr(
          (PyCapsule_Destructor) destruct);
 };
 
+#else
+int ada_is_python3() {
+  return 0;
+}
 #endif
