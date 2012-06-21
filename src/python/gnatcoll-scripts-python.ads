@@ -200,7 +200,6 @@ private
 
    type Python_Scripting_Record is new Scripting_Language_Record with record
       Repo                   : Scripts_Repository;
-      Finalized              : Boolean := False;
       Blocked                : Boolean := False;
       Module                 : PyObject;
       Builtin                : PyObject;

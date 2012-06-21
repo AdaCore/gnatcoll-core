@@ -20,10 +20,14 @@
 #define PY_LONG_LONG long long
 #include <Python.h>
 #include <compile.h>  /* PyCodeObject definition in older versions*/
+#include <string.h>
 
 #undef DEBUG
 /* #define DEBUG */
 
+/*****************************************************************************
+ * Modules
+ *****************************************************************************/
 
 #if PY_MAJOR_VERSION >= 3
 PyMODINIT_FUNC
@@ -154,37 +158,129 @@ ada_py_initialize_and_module(char* program_name, char* name) {
    PyRun_SimpleString(command);
    free (command);
 
-
    return imported;
 };
 
-void
-ada_py_add_method(PyObject* cfunc, char* name, PyObject* class) {
+/************************************************************************
+ * Methods
+ * To implement methods, we have the following requirements:
+ *    - we need to support the notion of bound methods in python (where self
+ *      is set automatically by python to the instance that calls the method).
+ *    - we need to pass data back to Ada, that was set when the method was
+ *      declared. This data describes how the method is implemented in Ada.
+ * The implementation is based on Python descriptors. However, none of the
+ * predefined descriptors provides support for passing data back to Ada.
+ * So we define our own descriptor, heavily based on the predefined one.
+ *
+ * From python, when you do a.foo(), the following occurs behind the scene:
+ *   - retrieves "A.foo", as a PyAdaMethodDescrObject
+ *   - since this is a descriptor, calls  .__get__() to get the function
+ *     to execute. In practice, this calls adamethod_descr_get which
+ *     creates a bound method through PyMethod_New (bound to 'a')
+ *   - call that object. The implementation of classobject.c::method_call
+ *     adds self, ie 'a', as the first argument in the tuple of arguments,
+ *     then executes the wrapped function. Here, the wrapped function is
+ *     a PyCFunction that was created when the method was registered
+ *     initially, and that always calls back Ada but always passes the
+ *     same 'self' argument (the data Ada itself provided).
+ ************************************************************************/
+
 #if PY_MAJOR_VERSION >= 3
-   PyObject_SetAttrString (class, name, cfunc);
-#else
-   // Create an unbound method
-   PyObject* cmeth = PyMethod_New (cfunc, NULL, class);
-   PyObject_SetAttrString (class, name, cmeth);
-   Py_DECREF (cmeth);
-#endif
-};
+
+typedef struct {
+  PyDescr_COMMON;
+  PyObject*  cfunc;   // An instance of PyCFunction, bound with the
+                      // data that Ada needs, in the form of a PyCapsule.
+} PyAdaMethodDescrObject;
+
+PyTypeObject PyAdaMethodDescr_Type;
+int adamethod_descr_initialized = 0;
+
+// Implementation of the __get__ descriptor method. The code is heavily
+// copied from descrobject.c::method_get.
+
+static PyObject * adamethod_descr_get
+   (PyAdaMethodDescrObject *descr, PyObject *obj, PyObject *type)
+{
+  PyObject *res;
+
+  if (obj == NULL) {
+    Py_INCREF(descr);
+    return (PyObject*) descr;
+  }
+  if (!PyObject_TypeCheck(obj, descr->d_common.d_type)) {
+    PyErr_Format(PyExc_TypeError,
+                 "descriptor '%V' for '%s' objects "
+                 "doesn't apply to '%s' object",
+                 descr->d_common.d_name, "?",
+                 descr->d_common.d_type->tp_name,
+                 obj->ob_type->tp_name);
+    return NULL;
+  }
+  return PyMethod_New (descr->cfunc, obj);
+}
+
+// Creates a new AdaMethod instance. 'method' is the description of the Ada
+// function to call, and 'data' is a PyCapsule that is passed to Ada as 'self'.
 
 PyObject *
-ada_pycfunction_newex (PyMethodDef *ml, PyObject *self, PyObject *module)
+PyDescr_NewAdaMethod(PyTypeObject *type, PyObject* cfunc, const char* name)
 {
-  PyObject *method = PyCFunction_New (ml, self);
+  if (!adamethod_descr_initialized) {
+    adamethod_descr_initialized = 1;
+    memcpy (&PyAdaMethodDescr_Type, &PyMethodDescr_Type, sizeof (PyTypeObject));
+    PyAdaMethodDescr_Type.tp_basicsize = sizeof(PyAdaMethodDescrObject);
+    PyAdaMethodDescr_Type.tp_descr_get = (descrgetfunc)adamethod_descr_get;
+  }
 
-#if (PY_MAJOR_VERSION > 2 \
-     || (PY_MAJOR_VERSION == 2 \
-	 && (PY_MINOR_VERSION > 3 \
-	     || (PY_MINOR_VERSION == 3 \
-		 && PY_MICRO_VERSION >= 3))))
-  ((PyCFunctionObject*)method)->m_module = module;
-  Py_XINCREF (module);
-#endif
-  return method;
+  PyAdaMethodDescrObject *descr = (PyAdaMethodDescrObject*) PyType_GenericAlloc
+    (&PyAdaMethodDescr_Type, 0);
+
+  if (descr != NULL) {
+    Py_XINCREF(type);
+    descr->d_common.d_type = type;
+    descr->d_common.d_name = PyUnicode_InternFromString(name);
+    if (descr->d_common.d_name == NULL) {
+      Py_DECREF(descr);
+      descr = NULL;
+    }
+  }
+
+  if (descr != NULL) {
+    descr->cfunc = cfunc;
+  }
+
+  return (PyObject *)descr;
 }
+
+#endif  /* python 3.x */
+
+// Adds a new method to the class 'class'.
+// 'module' is the module to which the class belongs, and is used to set
+//    the __module__ attribute of the new method.
+// 'def' described the C function that will be called when the function is
+//    executed in python.
+// 'data' is data to pass from C->Python->C (generally wrapped in a PyCapsule).
+//    It will be pass as the "Self" argument to First_Level.
+
+void ada_py_add_method
+   (PyMethodDef* def, PyObject* data, PyObject* class, PyObject* module)
+{
+  PyObject* cfunc = PyCFunction_NewEx
+    (def, data, PyUnicode_FromString (PyModule_GetName (module)));
+
+#if PY_MAJOR_VERSION >= 3
+  PyObject* method = PyDescr_NewAdaMethod
+    ((PyTypeObject*)class, cfunc, def->ml_name);
+#else
+  PyObject* method = PyMethod_New (cfunc, NULL, class);
+#endif
+
+  PyObject_SetAttrString (class, def->ml_name, method);
+  Py_DECREF (method);
+};
+
+/*****************************************************************************/
 
 int
 ada_pyget_refcount (PyObject* obj)
@@ -691,11 +787,30 @@ const char* ada_py_builtin() {
 
 const char* ada_py_builtins() {
 #if PY_MAJOR_VERSION >= 3
-   return "builtins";
+   return "__builtins__";
 #else
    return "__builtins__";
 #endif
 }
+
+/* Result value must be freed */
+
+PyAPI_FUNC(const char *) ada_PyString_AsString(PyObject * val) {
+
+#if PY_MAJOR_VERSION >= 3
+
+   PyObject* utf8 = PyUnicode_AsUTF8String(val);
+   char* tmp = PyBytes_AsString (utf8);
+   char* str = strdup (tmp);
+   Py_XDECREF(utf8);
+   return str;
+
+#else
+   char * str = PyString_AsString(val);
+   return strdup(str);
+#endif
+};
+
 
 #if PY_MAJOR_VERSION >= 3
 
@@ -711,13 +826,6 @@ PyAPI_FUNC(PyObject *) PyString_FromStringAndSize(
       const char *val, Py_ssize_t s)
 {
    return PyUnicode_FromStringAndSize(val, s);
-};
-
-PyAPI_FUNC(char *) PyString_AsString(PyObject * val) {
-   PyObject* utf8 = PyUnicode_AsUTF8String(val);
-   char* str = PyBytes_AS_STRING(utf8);
-   Py_XDECREF(utf8);
-   return str;
 };
 
 PyAPI_FUNC(void *) PyCObject_AsVoidPtr(PyObject * val) {

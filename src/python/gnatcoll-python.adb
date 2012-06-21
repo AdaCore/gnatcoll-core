@@ -41,11 +41,11 @@ package body GNATCOLL.Python is
      (MethodDef : MethodDef_Access;
       Self      : PyObject;
       Module    : PyObject := null) return PyObject;
-   pragma Import (C, PyCFunction_New, "ada_pycfunction_newex");
+   pragma Import (C, PyCFunction_New, "PyCFunction_NewEx");
    --  Create a new callable object, which, when called from python, will call
    --  the Ada subprogram.
-   --  This should be used only for standard functions, not for object methods
    --  Self is the first argument that will be passed to the Ada subprogram.
+   --  Module is the value of the __module__ attribute for the new function.
 
    ------------------------
    -- PyRun_SimpleString --
@@ -360,8 +360,23 @@ package body GNATCOLL.Python is
    -----------------------
 
    function PyString_AsString (Str : PyObject) return String is
+      function Low (Str : PyObject) return Interfaces.C.Strings.chars_ptr;
+      pragma Import (C, Low, "ada_PyString_AsString");
+      --  Returns a NULL terminated representation of the contents of string.
+      --  Result value must be freed.
+
+      C : Interfaces.C.Strings.chars_ptr := Low (Str);
    begin
-      return Value (PyString_AsString (Str));
+      if C = Null_Ptr then
+         return "";
+      else
+         declare
+            R : constant String := Value (C);
+         begin
+            Free (C);
+            return R;
+         end;
+      end if;
    end PyString_AsString;
 
    -------------------------
@@ -831,16 +846,14 @@ package body GNATCOLL.Python is
       Self  : PyObject := null;
       Module : PyObject)
    is
-      procedure Add_Method (C_Func : PyObject;
-                            Name   : Interfaces.C.Strings.chars_ptr;
-                            Class  : PyObject);
+      procedure Add_Method
+        (Func   : access PyMethodDef;
+         Self   : PyObject;
+         Class  : PyObject;
+         Module : PyObject);
       pragma Import (C, Add_Method, "ada_py_add_method");
-
-      C_Func  : constant PyObject :=
-        PyCFunction_New (new PyMethodDef'(Func), Self,
-                         PyString_FromString (PyModule_Getname (Module)));
    begin
-      Add_Method (C_Func, Func.Name, Class);
+      Add_Method (new PyMethodDef'(Func), Self, Class, Module);
    end Add_Method;
 
    -----------------------
@@ -961,7 +974,7 @@ package body GNATCOLL.Python is
 
       return (Name  => New_String (Name),
               Func  => To_Callback (Func),
-              Flags => METH_KEYWORDS,
+              Flags => METH_KEYWORDS or METH_VARGS,
               Doc   => D);
    end Create_Method_Def;
 

@@ -40,6 +40,9 @@ package body GNATCOLL.Scripts.Python is
    Me_Stack : constant Trace_Handle := Create ("PYTHON.TB", Off);
    Me_Log   : constant Trace_Handle := Create ("SCRIPTS.LOG", Off);
 
+   Finalized : Boolean := True;
+   --  Whether Python has been finalized (or never initialized).
+
    function Ada_Py_Builtin return Interfaces.C.Strings.chars_ptr;
    pragma Import (C, Ada_Py_Builtin, "ada_py_builtin");
    function Ada_Py_Builtins return Interfaces.C.Strings.chars_ptr;
@@ -334,9 +337,9 @@ package body GNATCOLL.Scripts.Python is
 
    procedure Destroy (Script : access Python_Scripting_Record) is
    begin
-      if not Script.Finalized then
+      if not Finalized then
          Trace (Me, "Finalizing python");
-         Script.Finalized := True;
+         Finalized := True;
          Set_Default_Console (Script, null);
          Free (Script.Buffer);
          Py_Finalize;
@@ -392,6 +395,8 @@ package body GNATCOLL.Scripts.Python is
       if Script.Module = null then
          raise Program_Error with "Could not import module " & Module;
       end if;
+
+      Finalized := False;
 
       if Active (Me_Stack)
         and then not PyRun_SimpleString ("import traceback")
@@ -689,15 +694,19 @@ package body GNATCOLL.Scripts.Python is
    function First_Level (Self, Args, Kw : PyObject) return PyObject is
       --  Args and Kw could both be null, as called from PyCFunction_Call
 
-      Handler  : constant Handler_Data_Access :=
-                   Convert (PyCObject_AsVoidPtr (Self));
+      Handler  : Handler_Data_Access;
       Size     : Integer := 0;
       Callback : Python_Callback_Data;
-      Tmp      : Boolean;
       First_Arg_Is_Self : Boolean;
       Result   : PyObject;
-      pragma Unreferenced (Tmp);
+
    begin
+      if Finalized then
+         return null;
+      end if;
+
+      Handler := Convert (PyCObject_AsVoidPtr (Self));
+
       if Active (Me_Stack) then
          declare
             Module  : constant PyObject := PyImport_ImportModule ("traceback");
@@ -749,7 +758,7 @@ package body GNATCOLL.Scripts.Python is
          Size := Size - 1;  --  First param is always the instance
       end if;
 
-      if Handler.Script.Finalized
+      if Finalized
         and then Handler.Cmd.Command /= Destructor_Method
       then
          PyErr_SetString (Handler.Script.Exception_Unexpected,
@@ -1289,7 +1298,7 @@ package body GNATCOLL.Scripts.Python is
 
       Errors.all := False;
 
-      if Script.Finalized or else Cmd = "" & ASCII.LF then
+      if Finalized or else Cmd = "" & ASCII.LF then
          if not Hide_Output then
             Display_Prompt (Script);
          end if;
@@ -1820,8 +1829,13 @@ package body GNATCOLL.Scripts.Python is
       Errors      : out Boolean) is
    begin
       Script.Current_File := To_Unbounded_String (Filename);
+
+      --  The call to compile is only necessary to get an error message
+      --  pointing back to Filename
+
       Execute_Command
-        (Script, Create ("execfile (r'" & Filename & "')"),
+        (Script, Create ("exec(compile(open(r'" & Filename
+                         & "').read(),r'" & Filename & "','exec'))"),
          Console, Hide_Output, Show_Command, Errors);
       Script.Current_File := Null_Unbounded_String;
    end Execute_File;
@@ -2518,7 +2532,7 @@ package body GNATCOLL.Scripts.Python is
 
    procedure Decref (Inst : access Python_Class_Instance_Record) is
    begin
-      if not Python_Scripting (Inst.Script).Finalized then
+      if not Finalized then
          --  During global finalization of the program, Python itself has been
          --  terminated, so we do not need to do anything
          Py_XDECREF (Inst.Data);
@@ -2553,11 +2567,15 @@ package body GNATCOLL.Scripts.Python is
       --  We can also remove the reference that the python object had on the
       --  Class_Instance, so that memory is freed ultimately.
 
-      D.Data := null;
+      if D.Data /= null then
+         D.Data := null;
 
-      --  This decref mirrors the Incref in Set_CI below
+         --  This decref mirrors the Incref in Set_CI below
 
-      Decref (D);
+         if not Finalized then
+            Decref (D);
+         end if;
+      end if;
    end On_PyObject_Data_Destroy;
 
    ------------
@@ -2593,7 +2611,6 @@ package body GNATCOLL.Scripts.Python is
    begin
       if Script /= null then
          Destroy (Script);
-         --  Python_Scripting (Script).Finalized := True;
       end if;
    end Unregister_Python_Scripting;
 
@@ -2639,7 +2656,7 @@ package body GNATCOLL.Scripts.Python is
       else
          CIR := PyCObject_AsVoidPtr (Item);
 
-         if not Script.Finalized then
+         if not Finalized then
             Result := From_Instance (Script, Convert (CIR));
          end if;
 
@@ -3210,7 +3227,7 @@ package body GNATCOLL.Scripts.Python is
 
    procedure Free (Subprogram : in out Python_Subprogram_Record) is
    begin
-      if not Subprogram.Script.Finalized then
+      if not Finalized then
          Py_DECREF (Subprogram.Subprogram);
       end if;
    end Free;

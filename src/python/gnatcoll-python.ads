@@ -390,12 +390,6 @@ package GNATCOLL.Python is
    function PyString_Check (Obj : PyObject) return Boolean;
    --  Returns true if the Obj is a string object
 
-   function PyString_AsString (Str : PyObject)
-      return Interfaces.C.Strings.chars_ptr;
-   pragma Import (C, PyString_AsString, "PyString_AsString");
-   --  Returns a NULL terminated representation of the contents of string.
-   --  Do not free the returned value.
-
    function PyString_AsString (Str : PyObject) return String;
    --  Same as above, higher-level
 

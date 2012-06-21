@@ -24,6 +24,12 @@ NF-15-L620-027 GNATCOLL.Scripts.Python cleanup of output (2012-06-20)
    Execute_Command will fail if you expect a result (string or boolean)
    when executing a command that defines a function or class.
 
+NF-15-L619-031 Support for python 3.x (2012-06-21)
+
+   GNATCOLL is now compatible with both Python 2 and Python 3. You can
+   chose between the two by using the new --with-python-exec configure
+   switch.
+
 NF-15-L607-001 GNATCOLL.Scripts.Python support for multithreading (2012-05-10)
 
    Several bindings were added to control python's Global Interpreter Lock,
