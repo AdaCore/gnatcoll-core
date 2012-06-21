@@ -1383,8 +1383,6 @@ package body GNATCOLL.Scripts.Python is
 
          if not Script.Use_Secondary_Prompt then
             if PyErr_Occurred /= null then
-               Log_Python_Exception;
-
                PyErr_Fetch (Typ, Occurrence, Traceback);
                PyErr_NormalizeException (Typ, Occurrence, Traceback);
 
@@ -1396,6 +1394,8 @@ package body GNATCOLL.Scripts.Python is
                   --  S is null if the exception is not a syntax_error
                   S := PyObject_GetAttrString (Occurrence, "msg");
                end if;
+
+               PyErr_Restore (Typ, Occurrence, Traceback);
 
                if S = null then
                   Script.Use_Secondary_Prompt := False;
@@ -1416,14 +1416,14 @@ package body GNATCOLL.Scripts.Python is
                      elsif Msg = "expected an indented block" then
                         Script.Use_Secondary_Prompt := Command'Length /= 0
                           and then Command (Command'Last) /= ASCII.LF;
+
+                     else
+                        Log_Python_Exception;
                      end if;
                   end;
                end if;
 
-               PyErr_Restore (Typ, Occurrence, Traceback);
-
                if not Script.Use_Secondary_Prompt then
-                  Trace (Me_Error, "exception, incomplete command");
                   PyErr_Print;
                   Errors.all := True;
 
@@ -3420,17 +3420,16 @@ package body GNATCOLL.Scripts.Python is
             Command     => Command,
             Hide_Output => Hide_Output,
             Need_Output => True,
-            Errors      => Errors'Unchecked_Access);
+            Errors      => Errors'Access);
 
          if Func /= null and then PyCallable_Check (Func) then
             Setup_Return_Value (Args);
             Result := Execute_Command (Script, Func, Args, Errors'Access);
 
             if Errors then
-               Trace (Me_Error, "Error in command '" & Command & "()'");
                Py_XDECREF (Result);
                PyErr_Clear;
-               raise Error_In_Command;
+               raise Error_In_Command with "Error in '" & Command & "()'";
             else
                Args.Return_Value := Result;  --  Adopts a reference
             end if;
