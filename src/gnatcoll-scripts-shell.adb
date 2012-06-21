@@ -560,7 +560,7 @@ package body GNATCOLL.Scripts.Shell is
                  (Script, CL, Err'Unchecked_Access);
       begin
          Errors := Err;
-         if S /= "" and then not Hide_Output then
+         if S /= "" then
             Insert_Text (Script, Console, S & ASCII.LF);
          end if;
 
@@ -568,7 +568,9 @@ package body GNATCOLL.Scripts.Shell is
 
          --  Do not display the prompt in the shell console if we did not
          --  output to it
-         if not Hide_Output and then Console = Old_Console then
+         if not Hide_Output
+           and then (Console = null or else Console = Old_Console)
+         then
             Display_Prompt (Script, Script.Console);
          end if;
       end;
