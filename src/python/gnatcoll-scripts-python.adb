@@ -1290,6 +1290,10 @@ package body GNATCOLL.Scripts.Python is
       Errors.all := False;
 
       if Script.Finalized or else Cmd = "" & ASCII.LF then
+         if not Hide_Output then
+            Display_Prompt (Script);
+         end if;
+
          return null;
       end if;
 
