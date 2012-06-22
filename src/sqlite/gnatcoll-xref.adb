@@ -2987,7 +2987,7 @@ package body GNATCOLL.Xref is
       Line   : Integer := -1;
       Column : Visible_Column := -1) return Entity_Reference is
    begin
-      return Get_Entity (Self, Name, File.Display_Full_Name, Line, Column);
+      return Get_Entity (Self, Name, +File.Unix_Style_Full_Name, Line, Column);
    end Get_Entity;
 
    -----------------
