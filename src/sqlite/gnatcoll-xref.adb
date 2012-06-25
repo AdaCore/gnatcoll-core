@@ -2850,13 +2850,16 @@ package body GNATCOLL.Xref is
                end if;
 
                R.Next;
-               exit when not R.Has_Row;
 
-               if Exact_Match then
-                  --  Overloaded entity found
-                  Best_Ref := No_Entity_Reference;
-                  return;
-               end if;
+               --  For an exact match, no need to search further. An
+               --  entity might have multiple references in the same
+               --  location (for instance 'r' and 'm' for an 'in out'
+               --  parameter).
+
+               exit when Exact_Match or else not R.Has_Row;
+
+               --  Overloaded entity found
+               Best_Ref := No_Entity_Reference;
             end loop;
          end if;
       end Result;
