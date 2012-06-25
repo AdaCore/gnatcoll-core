@@ -2857,9 +2857,6 @@ package body GNATCOLL.Xref is
                --  parameter).
 
                exit when Exact_Match or else not R.Has_Row;
-
-               --  Overloaded entity found
-               Best_Ref := No_Entity_Reference;
             end loop;
          end if;
       end Result;
