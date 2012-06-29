@@ -1226,10 +1226,15 @@ package body GNATCOLL.Scripts.Python is
 
       if Result /= null and then not Errors.all then
          Str := PyObject_Str (Result);
-         Py_DECREF (Result);
+         if Str = null then
+            Py_DECREF (Result);
+            return "Error calling __repr__ on the result of the script";
+         end if;
+
          declare
             S : constant String := PyString_AsString (Str);
          begin
+            Py_DECREF (Result);
             Py_DECREF (Str);
 
             if Active (Me_Log) then
