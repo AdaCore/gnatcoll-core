@@ -644,7 +644,7 @@ package body GNATCOLL.Email.Utils is
                  (To_Unbounded_String
                     (Str (From + 1 .. Index - 2)), Ada.Strings.Both);
 
-               if Str (Index) = ' ' then
+               if Index <= Str'Last and then Str (Index) = ' ' then
                   From := Index + 1;
                else
                   From := Index;
