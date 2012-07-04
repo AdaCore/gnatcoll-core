@@ -51,7 +51,7 @@ char* ada_load_pygtk() {
 #ifdef PYGTK
    return "import pygtk; pygtk.require('2.0'); import gtk";
 #else
-   return "import gi; from gi.repository import Gtk";
+   return "import gi, sys; from gi.repository import Gtk,GObject; sys.modules['gtk']=Gtk; sys.modules['gobject']=GObject";
 #endif
 }
 
