@@ -38,6 +38,7 @@ project GnatColl_Gtk is
         ("-g", "-O2")
         & GnatColl_Shared.Python_Cflags
         & GnatColl_Shared.Pygtk_Include
+        & GnatColl_Shared.PyGobject_Include
         & GnatColl_Shared.Gtk_Include;
    end Compiler;
 

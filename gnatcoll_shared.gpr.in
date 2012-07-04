@@ -20,6 +20,7 @@ project GnatColl_Shared is
    Sqlite   : Sqlite_Inclusion := External ("SQLITE", "@WITH_SQLITE@");
    Gmp      : Yes_No := External ("GMP", "@WITH_GMP@");
    Projects : Yes_No := External ("PROJECTS", "@WITH_PROJECTS@");
+   PyGobject : Yes_No := External ("PYGOBJECT", "@WITH_PYGOBJECT@");
    Readline : Yes_No := External ("READLINE", "@WITH_READLINE@");
    Templates : Yes_No := "no";  --  Hard-coded for now
    Postgres_Has_PQprepare : Yes_No :=
@@ -36,6 +37,7 @@ project GnatColl_Shared is
    Python_Base    := "@PYTHON_BASE@";
    Python_Cflags  := (@PYTHON_CFLAGS_GPR@);
    Pygtk_Include  := (@PYGTK_INCLUDE_GPR@);
+   Pygobject_Include := (@PYGOBJECT_INCLUDE_GPR@);
    Python_Dir     := "@PYTHON_DIR@";
    Gtk_Include    := (@GTK_GCC_FLAGS_GPR@);
    Postgres_Dir   := "@PATH_LIBPQ@";

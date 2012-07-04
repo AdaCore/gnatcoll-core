@@ -24,6 +24,7 @@
 with Glib.Object;    use Glib.Object;
 with Gtk.Widget;     use Gtk.Widget;
 with GNATCOLL.Scripts.Gtkada; use GNATCOLL.Scripts.Gtkada;
+with Interfaces.C.Strings; use Interfaces.C.Strings;
 with System;         use System;
 
 package body GNATCOLL.Scripts.Python.Gtkada is
@@ -95,26 +96,21 @@ package body GNATCOLL.Scripts.Python.Gtkada is
    procedure Init_PyGtk_Support
      (Script : access Scripting_Language_Record'Class)
    is
+      function Load_Pygtk return Interfaces.C.Strings.chars_ptr;
+      pragma Import (C, Load_Pygtk, "ada_load_pygtk");
+      --  Do not free returned value
+
       Errors  : aliased Boolean;
+      Cmd : chars_ptr;
    begin
       if Build_With_PyGtk = 1 then
+         Cmd := Load_Pygtk;
          Execute_Command
            (Script          => Script,
-            CL              => Create ("import pygtk"),
+            CL              => Create (Value (Cmd)),
             Hide_Output     => True,
             Errors          => Errors);
-      else
-         --  Since we were not build with pygtk, don't even try to activate the
-         --  special support for it
-         Errors := True;
-      end if;
 
-      if not Errors then
-         Execute_Command
-           (Script      => Script,
-            CL          => Create ("pygtk.require('2.0'); import gtk"),
-            Hide_Output => True,
-            Errors      => Errors);
          if not Errors then
             Init_PyGtk;
             PyGtk_Initialized := True;

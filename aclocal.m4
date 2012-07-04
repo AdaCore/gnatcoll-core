@@ -715,6 +715,53 @@ AC_HELP_STRING(
 ])
 
 ###########################################################################
+## Checking for pygobject
+##
+###########################################################################
+
+AC_DEFUN(AM_PATH_PYGOBJECT,
+[
+    AC_ARG_ENABLE(pygobject,
+      AC_HELP_STRING(
+        [--disable-pygobject],
+        [Disable support for PyGobject [[default=enabled]]]),
+      [WITH_PYGOBJECT=$enableval],
+      [WITH_PYGOBJECT=$WITH_PYTHON])
+
+    AC_MSG_CHECKING(for pygobject)
+
+    if test "$PKG_CONFIG" = "" -o "$PKG_CONFIG" = "no" ; then
+       AC_MSG_RESULT(no (pkg-config not found))
+       WITH_PYGOBJECT=no
+
+    elif test "$GTK_VERSION" = "no" ; then
+       AC_MSG_RESULT(no (gtk+ not found))
+       WITH_PYGOBJECT=no
+
+    elif test x"$WITH_PYGOBJECT" = x -o x"$WITH_PYGOBJECT" = xno ; then
+       AC_MSG_RESULT(no (disabled by user))
+       WITH_PYGOBJECT=no
+
+    else
+       module="pygobject-${GTK_VERSION}"
+       PYGOBJECT_INCLUDE=`$PKG_CONFIG $module --cflags`
+       PYGOBJECT_LIB=`$PKG_CONFIG $module --libs`
+       if test "$PYGOBJECT_INCLUDE" = "" ; then
+          AC_MSG_RESULT(no)
+          WITH_PYGOBJECT=no
+       else
+          AC_MSG_RESULT(yes)
+          WITH_PYGOBJECT=yes
+          PYGOBJECT_INCLUDE="$PYGOBJECT_INCLUDE -DPYGOBJECT"
+       fi
+    fi
+
+    AC_SUBST(WITH_PYGOBJECT)
+    AC_SUBST(PYGOBJECT_INCLUDE)
+    AC_SUBST(PYGOBJECT_LIB)
+])
+
+###########################################################################
 ## Checking for pygtk
 ##   $1=minimum pygtk version required
 ## This function checks whether pygtk exists on the system, and has a recent
@@ -741,6 +788,12 @@ AC_DEFUN(AM_PATH_PYGTK,
        AC_MSG_CHECKING(for pygtk)
        AC_MSG_RESULT(no (pkg-config not found))
        WITH_PYGTK=no
+
+    elif test "$GTK_VERSION" != "2.0" ; then
+       AC_MSG_CHECKING(for pygtk)
+       AC_MSG_RESULT(no (incompatible gtk+ version))
+       WITH_PYGTK=no
+
     else
        min_pygtk_version=ifelse([$1], ,2.8,$1)
        module=pygtk-2.0
@@ -849,6 +902,7 @@ AC_DEFUN(AM_PATH_PROJECT,
 ##     @GTK_GCC_FLAGS@: cflags to pass to the compiler. It isn't call
 ##                      GTK_CFLAGS for compatibility reasons with GPS
 ##     @WITH_GTK@: Either "yes" or "no", depending on whether gtk+ was found
+##     @GTK_VERSION@: one of 2.0, 3.0 or "no"
 ##########################################################################
 
 AC_DEFUN(AM_PATH_GTK,
@@ -856,6 +910,7 @@ AC_DEFUN(AM_PATH_GTK,
    AC_PATH_PROG(PKG_CONFIG, pkg-config, no)
    if test "$PKG_CONFIG" = "no" ; then
       WITH_GTK=no
+      GTK_VERSION=no
    else
       AC_ARG_WITH(gtk,
          AC_HELP_STRING(
@@ -886,8 +941,10 @@ AC_HELP_STRING(
              AC_MSG_CHECKING(for gtkada.gpr)
              AM_PATH_PROJECT(gtkada, HAVE_GTKADA)
              AC_MSG_RESULT($HAVE_GTKADA)
+             GTK_VERSION=$WITH_GTK
              WITH_GTK=${HAVE_GTKADA}
           else
+             GTK_VERSION=no
              WITH_GTK=no
           fi
       fi
@@ -896,5 +953,5 @@ AC_HELP_STRING(
    AC_SUBST(PKG_CONFIG)
    AC_SUBST(GTK_GCC_FLAGS)
    AC_SUBST(WITH_GTK)
-
+   AC_SUBST(GTK_VERSION)
 ])
