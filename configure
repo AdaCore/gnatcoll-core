@@ -711,7 +711,7 @@ enable_option_checking
 enable_gpl
 enable_build
 enable_shared
-enable_gtk
+with_gtk
 with_python
 with_python_exec
 enable_shared_python
@@ -1354,7 +1354,6 @@ Optional Features:
   --disable-shared        Disable building of shared libraries
   --enable-shared         Build shared libraries if supported on the target
                           Make them the installation default
-  --disable-gtk           Disable support for GTK [[default=enabled]]
   --enable-shared-python  Link with shared python library instead of static
   --disable-pygtk         Disable support for PyGTK [[default=enabled]]
   --disable-readline      Disable support for readline
@@ -1365,6 +1364,8 @@ Optional Features:
 Optional Packages:
   --with-PACKAGE[=ARG]    use PACKAGE [ARG=yes]
   --without-PACKAGE       do not use PACKAGE (same as --with-PACKAGE=no)
+  --with-gtk=version      Specify the version of GTK to support (3.0 or 2.0)
+  --without-gtk           Disable support for GTK
   --with-python=<path>    Specify the prefix of the Python installation
   --without-python        Disable python support
   --with-python-exec=<path>
@@ -3794,17 +3795,7 @@ $as_echo "no (--disabled-shared)" >&6; }
 
 
 
-   # Check whether --enable-gtk was given.
-if test "${enable_gtk+set}" = set; then :
-  enableval=$enable_gtk; WITH_GTK=$enableval
-else
-  WITH_GTK=yes
-fi
-
-
-
-   if test $WITH_GTK = yes; then
-     # Extract the first word of "pkg-config", so it can be a program name with args.
+   # Extract the first word of "pkg-config", so it can be a program name with args.
 set dummy pkg-config; ac_word=$2
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking for $ac_word" >&5
 $as_echo_n "checking for $ac_word... " >&6; }
@@ -3845,20 +3836,40 @@ $as_echo "no" >&6; }
 fi
 
 
-     { $as_echo "$as_me:${as_lineno-$LINENO}: checking for gtk+" >&5
-$as_echo_n "checking for gtk+... " >&6; }
-     if test "$PKG_CONFIG" = "no" ; then
-        { $as_echo "$as_me:${as_lineno-$LINENO}: result: not found" >&5
-$as_echo "not found" >&6; }
-        WITH_GTK=no
-     else
-        GTK_PREFIX=`$PKG_CONFIG gtk+-2.0 --variable=prefix`
-        { $as_echo "$as_me:${as_lineno-$LINENO}: result: $GTK_PREFIX" >&5
+   if test "$PKG_CONFIG" = "no" ; then
+      WITH_GTK=no
+   else
+
+# Check whether --with-gtk was given.
+if test "${with_gtk+set}" = set; then :
+  withval=$with_gtk; WITH_GTK=$withval
+else
+
+            { $as_echo "$as_me:${as_lineno-$LINENO}: checking for default gtk+ version" >&5
+$as_echo_n "checking for default gtk+ version... " >&6; }
+            # Detect the version we should use, from the system
+            for WITH_GTK in "3.0" "2.0" "no"; do
+                GTK_PREFIX=`$PKG_CONFIG gtk+-${WITH_GTK} --variable=prefix`
+                if test "$GTK_PREFIX" != ""; then
+                   break
+                fi
+            done
+            { $as_echo "$as_me:${as_lineno-$LINENO}: result: $WITH_GTK" >&5
+$as_echo "$WITH_GTK" >&6; }
+
+fi
+
+
+      if test "$WITH_GTK" != "no"; then
+          { $as_echo "$as_me:${as_lineno-$LINENO}: checking for gtk+ ${WITH_GTK}" >&5
+$as_echo_n "checking for gtk+ ${WITH_GTK}... " >&6; }
+          GTK_PREFIX=`$PKG_CONFIG gtk+-${WITH_GTK} --variable=prefix`
+          { $as_echo "$as_me:${as_lineno-$LINENO}: result: $GTK_PREFIX" >&5
 $as_echo "$GTK_PREFIX" >&6; }
-        GTK_GCC_FLAGS=`$PKG_CONFIG gtk+-2.0 --cflags`
-        if test x"$GTK_GCC_FLAGS" != x ; then
-           { $as_echo "$as_me:${as_lineno-$LINENO}: checking for gtkada" >&5
-$as_echo_n "checking for gtkada... " >&6; }
+          GTK_GCC_FLAGS=`$PKG_CONFIG gtk+-${WITH_GTK} --cflags`
+          if test x"$GTK_GCC_FLAGS" != x ; then
+             { $as_echo "$as_me:${as_lineno-$LINENO}: checking for gtkada.gpr" >&5
+$as_echo_n "checking for gtkada.gpr... " >&6; }
 
    project=gtkada
    output=HAVE_GTKADA
@@ -3884,24 +3895,13 @@ $as_echo_n "checking for gtkada... " >&6; }
    fi
 
 
-           if test "$HAVE_GTKADA" = "yes"; then
-              { $as_echo "$as_me:${as_lineno-$LINENO}: result: found" >&5
-$as_echo "found" >&6; };
-              WITH_GTK=yes
-           else
-              { $as_echo "$as_me:${as_lineno-$LINENO}: result: not found" >&5
-$as_echo "not found" >&6; }
-              WITH_GTK=no
-           fi
-        else
-           WITH_GTK=no
-        fi
-     fi
-   else
-     { $as_echo "$as_me:${as_lineno-$LINENO}: checking for gtk+" >&5
-$as_echo_n "checking for gtk+... " >&6; }
-     { $as_echo "$as_me:${as_lineno-$LINENO}: result: $WITH_GTK (from switch)" >&5
-$as_echo "$WITH_GTK (from switch)" >&6; }
+             { $as_echo "$as_me:${as_lineno-$LINENO}: result: $HAVE_GTKADA" >&5
+$as_echo "$HAVE_GTKADA" >&6; }
+             WITH_GTK=${HAVE_GTKADA}
+          else
+             WITH_GTK=no
+          fi
+      fi
    fi
 
 

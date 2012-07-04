@@ -853,41 +853,44 @@ AC_DEFUN(AM_PATH_PROJECT,
 
 AC_DEFUN(AM_PATH_GTK,
 [
-   AC_ARG_ENABLE(gtk,
-     AC_HELP_STRING(
-       [--disable-gtk],
-       [Disable support for GTK [[default=enabled]]]),
-     [WITH_GTK=$enableval],
-     [WITH_GTK=yes])
-
-
-   if test $WITH_GTK = yes; then
-     AC_PATH_PROG(PKG_CONFIG, pkg-config, no)
-     AC_MSG_CHECKING(for gtk+)
-     if test "$PKG_CONFIG" = "no" ; then
-        AC_MSG_RESULT(not found)
-        WITH_GTK=no
-     else
-        GTK_PREFIX=`$PKG_CONFIG gtk+-2.0 --variable=prefix`
-        AC_MSG_RESULT($GTK_PREFIX)
-        GTK_GCC_FLAGS=`$PKG_CONFIG gtk+-2.0 --cflags`
-        if test x"$GTK_GCC_FLAGS" != x ; then
-           AC_MSG_CHECKING(for gtkada)
-           AM_PATH_PROJECT(gtkada, HAVE_GTKADA)
-           if test "$HAVE_GTKADA" = "yes"; then
-              AC_MSG_RESULT(found);
-              WITH_GTK=yes
-           else
-              AC_MSG_RESULT(not found)
-              WITH_GTK=no
-           fi
-        else
-           WITH_GTK=no
-        fi
-     fi
+   AC_PATH_PROG(PKG_CONFIG, pkg-config, no)
+   if test "$PKG_CONFIG" = "no" ; then
+      WITH_GTK=no
    else
-     AC_MSG_CHECKING(for gtk+)
-     AC_MSG_RESULT($WITH_GTK (from switch))
+      AC_ARG_WITH(gtk,
+         AC_HELP_STRING(
+       [--with-gtk=version],
+       [Specify the version of GTK to support (3.0 or 2.0)])
+AC_HELP_STRING(
+       [--without-gtk],
+       [Disable support for GTK]),
+         [WITH_GTK=$withval],
+         [
+            AC_MSG_CHECKING(for default gtk+ version)
+            # Detect the version we should use, from the system
+            for WITH_GTK in "3.0" "2.0" "no"; do
+                GTK_PREFIX=`$PKG_CONFIG gtk+-${WITH_GTK} --variable=prefix`
+                if test "$GTK_PREFIX" != ""; then
+                   break
+                fi
+            done
+            AC_MSG_RESULT($WITH_GTK)
+         ])
+
+      if test "$WITH_GTK" != "no"; then
+          AC_MSG_CHECKING(for gtk+ ${WITH_GTK})
+          GTK_PREFIX=`$PKG_CONFIG gtk+-${WITH_GTK} --variable=prefix`
+          AC_MSG_RESULT($GTK_PREFIX)
+          GTK_GCC_FLAGS=`$PKG_CONFIG gtk+-${WITH_GTK} --cflags`
+          if test x"$GTK_GCC_FLAGS" != x ; then
+             AC_MSG_CHECKING(for gtkada.gpr)
+             AM_PATH_PROJECT(gtkada, HAVE_GTKADA)
+             AC_MSG_RESULT($HAVE_GTKADA)
+             WITH_GTK=${HAVE_GTKADA}
+          else
+             WITH_GTK=no
+          fi
+      fi
    fi
 
    AC_SUBST(PKG_CONFIG)

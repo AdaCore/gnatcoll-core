@@ -15,6 +15,12 @@ of the feature.
 New features in 1.5
 -------------------
 
+NF-15-L703-035 Support for gtk3 (2012-07-04)
+
+   A new configure switch (--with-gtk) was added to specify which version
+   of gtk+ should be detected. It replaces --disable-gtk, which has been
+   removed.
+
 NF-15-L620-027 GNATCOLL.Scripts.Python cleanup of output (2012-06-20)
 
    When you use Execute_Command with the Hide_Output parameter set to True,
