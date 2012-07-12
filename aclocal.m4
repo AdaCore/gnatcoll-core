@@ -753,10 +753,10 @@ AC_DEFUN(AM_PATH_PYGOBJECT,
        done
 
        if test "$module" == "" ; then
-          PYGOBJECT_INCLUDE=`$PKG_CONFIG $module --cflags`
           AC_MSG_RESULT(no)
           WITH_PYGOBJECT=no
        else
+          PYGOBJECT_INCLUDE=`$PKG_CONFIG $module --cflags`
           PYGOBJECT_LIB=`$PKG_CONFIG $module --libs`
           AC_MSG_RESULT(yes ($version))
           WITH_PYGOBJECT=yes
