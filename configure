@@ -4430,11 +4430,11 @@ $as_echo "no (disabled by user)" >&6; }
        done
 
        if test "$module" == "" ; then
-          PYGOBJECT_INCLUDE=`$PKG_CONFIG $module --cflags`
           { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
 $as_echo "no" >&6; }
           WITH_PYGOBJECT=no
        else
+          PYGOBJECT_INCLUDE=`$PKG_CONFIG $module --cflags`
           PYGOBJECT_LIB=`$PKG_CONFIG $module --libs`
           { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes ($version)" >&5
 $as_echo "yes ($version)" >&6; }
