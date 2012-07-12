@@ -336,7 +336,7 @@ AC_HELP_STRING(
    AC_SUBST(HAS_PQPREPARE)
 ])
 
-#############################################################
+j############################################################
 # Checking for sqlite
 # This checks whether sqlite is installed on the system. It can
 # be disabled with
@@ -743,14 +743,22 @@ AC_DEFUN(AM_PATH_PYGOBJECT,
        WITH_PYGOBJECT=no
 
     else
-       module="pygobject-${GTK_VERSION}"
-       PYGOBJECT_INCLUDE=`$PKG_CONFIG $module --cflags`
-       PYGOBJECT_LIB=`$PKG_CONFIG $module --libs`
-       if test "$PYGOBJECT_INCLUDE" = "" ; then
+       for version in 3.0 2.0 ; do
+           module="pygobject-$version"
+           $PKG_CONFIG $module --exists
+           if test $? = 0 ; then
+               break;
+           fi
+           module=""
+       done
+
+       if test "$module" == "" ; then
+          PYGOBJECT_INCLUDE=`$PKG_CONFIG $module --cflags`
           AC_MSG_RESULT(no)
           WITH_PYGOBJECT=no
        else
-          AC_MSG_RESULT(yes)
+          PYGOBJECT_LIB=`$PKG_CONFIG $module --libs`
+          AC_MSG_RESULT(yes ($version))
           WITH_PYGOBJECT=yes
           PYGOBJECT_INCLUDE="$PYGOBJECT_INCLUDE -DPYGOBJECT"
        fi
