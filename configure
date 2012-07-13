@@ -4363,20 +4363,27 @@ $as_echo "no" >&6; }
           WITH_PYGTK=no
 
        elif test "$PYTHON_BASE" != "no" ; then
-          pygtk_version=`$PKG_CONFIG $module --modversion`
-          $PKG_CONFIG $module --atleast-version=$min_pygtk_version
-          if test $? = 0 ; then
-             PYGTK_INCLUDE="`$PKG_CONFIG $module --cflags` -DPYGTK"
-             PYGTK_PREFIX=`$PKG_CONFIG $module --variable=prefix`
-             { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes (version $pygtk_version)" >&5
-$as_echo "yes (version $pygtk_version)" >&6; }
-             WITH_PYGTK=yes
+          $PKG_CONFIG $module --exists
+          if test $? != 0 ; then
+             { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+
           else
-             { $as_echo "$as_me:${as_lineno-$LINENO}: result: no (found $pygtk_version)" >&5
+             pygtk_version=`$PKG_CONFIG $module --modversion`
+             $PKG_CONFIG $module --atleast-version=$min_pygtk_version
+             if test $? = 0 ; then
+                PYGTK_INCLUDE="`$PKG_CONFIG $module --cflags` -DPYGTK"
+                PYGTK_PREFIX=`$PKG_CONFIG $module --variable=prefix`
+                { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes (version $pygtk_version)" >&5
+$as_echo "yes (version $pygtk_version)" >&6; }
+                WITH_PYGTK=yes
+             else
+                { $as_echo "$as_me:${as_lineno-$LINENO}: result: no (found $pygtk_version)" >&5
 $as_echo "no (found $pygtk_version)" >&6; }
-             PYGTK_PREFIX=""
-             PYGTK_INCLUDE=""
-             WITH_PYGTK=no
+                PYGTK_PREFIX=""
+                PYGTK_INCLUDE=""
+                WITH_PYGTK=no
+             fi
           fi
 
        else

@@ -814,18 +814,24 @@ AC_DEFUN(AM_PATH_PYGTK,
           WITH_PYGTK=no
 
        elif test "$PYTHON_BASE" != "no" ; then
-          pygtk_version=`$PKG_CONFIG $module --modversion`
-          $PKG_CONFIG $module --atleast-version=$min_pygtk_version
-          if test $? = 0 ; then
-             PYGTK_INCLUDE="`$PKG_CONFIG $module --cflags` -DPYGTK"
-             PYGTK_PREFIX=`$PKG_CONFIG $module --variable=prefix`
-             AC_MSG_RESULT(yes (version $pygtk_version))
-             WITH_PYGTK=yes
+          $PKG_CONFIG $module --exists
+          if test $? != 0 ; then
+             AC_MSG_RESULT(no)
+
           else
-             AC_MSG_RESULT(no (found $pygtk_version))
-             PYGTK_PREFIX=""
-             PYGTK_INCLUDE=""
-             WITH_PYGTK=no
+             pygtk_version=`$PKG_CONFIG $module --modversion`
+             $PKG_CONFIG $module --atleast-version=$min_pygtk_version
+             if test $? = 0 ; then
+                PYGTK_INCLUDE="`$PKG_CONFIG $module --cflags` -DPYGTK"
+                PYGTK_PREFIX=`$PKG_CONFIG $module --variable=prefix`
+                AC_MSG_RESULT(yes (version $pygtk_version))
+                WITH_PYGTK=yes
+             else
+                AC_MSG_RESULT(no (found $pygtk_version))
+                PYGTK_PREFIX=""
+                PYGTK_INCLUDE=""
+                WITH_PYGTK=no
+             fi
           fi
 
        else
