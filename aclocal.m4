@@ -817,6 +817,7 @@ AC_DEFUN(AM_PATH_PYGTK,
           $PKG_CONFIG $module --exists
           if test $? != 0 ; then
              AC_MSG_RESULT(no)
+             WITH_PYGTK=no
 
           else
              pygtk_version=`$PKG_CONFIG $module --modversion`
