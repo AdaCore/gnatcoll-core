@@ -911,6 +911,9 @@ AC_DEFUN(AM_PATH_PROJECT,
 
 ##########################################################################
 ## Detects GTK and GtkAda
+## Input:
+##   If CONFIGURE_SWITCH_WITH_GTK is set, it specifies the default value
+##     for gtk. Otherwise, configure will choose the most recent version.
 ## This exports the following variables
 ##     @PKG_CONFIG@: path to pkg-config, or "no" if not found
 ##     @GTK_GCC_FLAGS@: cflags to pass to the compiler. It isn't call
@@ -937,7 +940,7 @@ AC_HELP_STRING(
          [
             AC_MSG_CHECKING(for default gtk+ version)
             # Detect the version we should use, from the system
-            for WITH_GTK in "3.0" "2.0" "no"; do
+            for WITH_GTK in "$CONFIGURE_SWITCH_WITH_GTK" "3.0" "2.0" "no"; do
                 GTK_PREFIX=`$PKG_CONFIG gtk+-${WITH_GTK} --variable=prefix`
                 if test "$GTK_PREFIX" != ""; then
                    break
