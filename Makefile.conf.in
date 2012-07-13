@@ -63,13 +63,13 @@ export Gnatcoll_Build
 
 .PHONY: all examples tests valgrind clean docs install
 
+LIBEXT=@SO_EXT@
+
 ifeq (${OS},Windows_NT)
 DIRSEP=;
-LIBEXT=dll
 EXE=.exe
 else
 DIRSEP=:
-LIBEXT=so
 EXE=
 endif
 
@@ -83,7 +83,7 @@ all:
 ##   ${MODULE}:  subdirectory in $libdir that contain the files
 
 ifeq (${LIBRARY_TYPE},relocatable)
-LIBNAME:=${LIBNAME}.${LIBEXT}
+LIBNAME:=${LIBNAME}${LIBEXT}
 ifeq (${OS},Windows_NT)
 # On windows, gnatmake does not generate libraries with version numbers
 LIBFULL=${LIBNAME}

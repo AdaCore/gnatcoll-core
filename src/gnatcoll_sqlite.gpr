@@ -10,7 +10,8 @@ project GnatColl_Sqlite is
       use Gnatcoll_Shared'Library_Dir & "/sqlite/" & Project'Library_Kind;
    for Library_Name    use GnatColl_Shared.Name & "_sqlite";
    for Library_Version use
-      "lib" & Project'Library_Name & ".so." & GnatColl_Shared.Version;
+      "lib" & Project'Library_Name
+      & GnatColl_Shared.So_Ext & "." & GnatColl_Shared.Version;
 
    case GnatColl_Shared.Sqlite is
       when "no" =>

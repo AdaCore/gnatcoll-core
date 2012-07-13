@@ -849,6 +849,20 @@ AC_DEFUN(AM_PATH_PYGTK,
 ])
 
 ##########################################################################
+## Compute the extension for shared libraries
+##########################################################################
+
+AC_DEFUN(AM_SO_SUFFIX,
+[
+    case $build_os in
+      *darwin*) SO_EXT=.dylib ;;
+      *cygwin*|*mingw*)  SO_EXT=.dll ;;
+      *)        SO_EXT=.so ;;
+    esac
+    AC_SUBST(SO_EXT)
+])
+
+##########################################################################
 ## Converts a list of space-separated words into a list suitable for
 ## inclusion in .gpr files
 ##   $1=the list

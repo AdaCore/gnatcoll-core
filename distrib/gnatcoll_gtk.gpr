@@ -9,7 +9,7 @@ project GnatColl_Gtk is
    for Library_Kind use GnatColl.GnatColl_Kind;
    for Library_Dir  use GnatColl.Libdir;
    for Library_Version use
-     "lib" & Project'Library_Name & ".so." & Gnatcoll.Version;
+     "lib" & Project'Library_Name & GnatColl.So_Ext & "." & Gnatcoll.Version;
 
 end GnatColl_Gtk;
 

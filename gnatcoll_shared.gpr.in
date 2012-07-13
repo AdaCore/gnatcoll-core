@@ -26,6 +26,8 @@ project GnatColl_Shared is
    Postgres_Has_PQprepare : Yes_No :=
       External ("HAS_PQPREPARE", "@HAS_PQPREPARE@");
 
+   So_Ext := "@SO_EXT@";
+
    type Library_Type_Type is ("relocatable", "static");
    Library_Type : Library_Type_Type :=
      external ("LIBRARY_TYPE", "@DEFAULT_LIBRARY_TYPE@");

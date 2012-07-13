@@ -667,6 +667,7 @@ PYTHON_VERSION
 PYTHON_BASE
 PYTHON_CONFIG
 PYTHON
+SO_EXT
 DEFAULT_LIBRARY_TYPE
 GNAT_BUILDS_SHARED
 BUILD_TYPE
@@ -3818,6 +3819,14 @@ $as_echo "no (--disabled-shared)" >&6; }
    fi
 
 
+
+
+
+    case $build_os in
+      *darwin*) SO_EXT=.dylib ;;
+      *cygwin*|*mingw*)  SO_EXT=.dll ;;
+      *)        SO_EXT=.so ;;
+    esac
 
 
 

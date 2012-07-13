@@ -7,7 +7,8 @@ project GnatColl_Python is
    for Library_Dir     use "lib/python/" & Project'Library_Kind;
    for Library_Name    use GnatColl_Shared.Name & "_python";
    for Library_Version use
-      "lib" & Project'Library_Name & ".so." & GnatColl_Shared.Version;
+      "lib" & Project'Library_Name
+      & GnatColl_Shared.So_Ext & "." & GnatColl_Shared.Version;
 
    --  When linking a shared library (see Linker_Options below in addition)
    for Library_Options use GnatColl_Shared.Python_Libs;
