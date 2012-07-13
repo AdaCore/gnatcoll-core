@@ -849,6 +849,20 @@ AC_DEFUN(AM_PATH_PYGTK,
 ])
 
 ##########################################################################
+## Compute the extension for shared libraries
+##########################################################################
+
+AC_DEFUN(AM_SO_SUFFIX,
+[
+    case $build_os in
+      *darwin*) SO_EXT=.dylib ;;
+      *cygwin*|*mingw*)  SO_EXT=.dll ;;
+      *)        SO_EXT=.so ;;
+    esac
+    AC_SUBST(SO_EXT)
+])
+
+##########################################################################
 ## Converts a list of space-separated words into a list suitable for
 ## inclusion in .gpr files
 ##   $1=the list
@@ -860,7 +874,7 @@ AC_DEFUN(AM_TO_GPR,
    value=[$1]
 
    # Special handling on darwin
-   val=`echo $value | sed -e "s,-framework CoreFoundation,-framework=CoreFoundation,"`
+   val=`echo $value | sed -e "s,-framework ,-framework=,g"`
    value=$val
 
    output=$2
@@ -955,6 +969,7 @@ AC_HELP_STRING(
           GTK_PREFIX=`$PKG_CONFIG gtk+-${WITH_GTK} --variable=prefix`
           AC_MSG_RESULT($GTK_PREFIX)
           GTK_GCC_FLAGS=`$PKG_CONFIG gtk+-${WITH_GTK} --cflags`
+          GTK_GCC_LIBS=`$PKG_CONFIG gtk+-${WITH_GTK} --libs`
           if test x"$GTK_GCC_FLAGS" != x ; then
              AC_MSG_CHECKING(for gtkada.gpr)
              AM_PATH_PROJECT(gtkada, HAVE_GTKADA)
@@ -970,6 +985,7 @@ AC_HELP_STRING(
 
    AC_SUBST(PKG_CONFIG)
    AC_SUBST(GTK_GCC_FLAGS)
+   AC_SUBST(GTK_GCC_LIBS)
    AC_SUBST(WITH_GTK)
    AC_SUBST(GTK_VERSION)
 ])

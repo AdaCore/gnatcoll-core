@@ -9,7 +9,8 @@ project GnatColl is
       use Gnatcoll_Shared'Library_Dir & "/gnatcoll/" & Project'Library_Kind;
    for Library_Name    use GnatColl_Shared.Name;
    for Library_Version use
-      "lib" & Project'Library_Name & ".so." & GnatColl_Shared.Version;
+      "lib" & Project'Library_Name
+      & GnatColl_Shared.So_Ext & "." & GnatColl_Shared.Version;
 
    case Gnatcoll_Shared.Projects is
       when "yes" =>

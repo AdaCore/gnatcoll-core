@@ -11,7 +11,8 @@ project GnatColl_Gmp is
          for Object_Dir      use "obj/gmp/" & Project'Library_Kind;
          for Library_Name    use GnatColl_Shared.Name & "_gmp";
          for Library_Version use
-            "lib" & Project'Library_Name & ".so." & GnatColl_Shared.Version;
+            "lib" & Project'Library_Name
+            & GnatColl_Shared.So_Ext & "." & GnatColl_Shared.Version;
 
          --  When linking a shared library (see Linker_Options below)
          for Library_Options use (@GMP_LIBS_GPR@);

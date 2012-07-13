@@ -21,13 +21,15 @@ project GnatColl is
 
    Libdir := "../../@LIB@/gnatcoll/" & Gnatcoll_Kind;
 
+   So_Ext := "@SO_EXT@";
+
    for Library_Name use "gnatcoll";
    for Source_Dirs use ("../../include/gnatcoll");
    for Source_List_File use "gnatcoll/" & Project'Library_Name & ".lgpr";
    for Library_Kind use GnatColl_Kind;
    for Library_Dir  use Libdir;
    for Library_Version use
-      "lib" & Project'Library_Name & ".so." & Version;
+      "lib" & Project'Library_Name & So_Ext & "." & Version;
 
    With_Postgres : Yes_No := "@WITH_POSTGRES@";
    Postgres_Path := "@PATH_LIBPQ@";

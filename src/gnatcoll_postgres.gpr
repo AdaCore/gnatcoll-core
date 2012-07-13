@@ -10,8 +10,8 @@ project GnatColl_Postgres is
       use Gnatcoll_Shared'Library_Dir & "/postgres/" & Project'Library_Kind;
    for Library_Name    use GnatColl_Shared.Name & "_postgres";
    for Library_Version use
-      "lib" & Project'Library_Name & ".so." & GnatColl_Shared.Version;
-
+      "lib" & Project'Library_Name
+      & GnatColl_Shared.So_Ext & "." & GnatColl_Shared.Version;
 
    case GnatColl_Shared.Postgres is
       when "no" =>

@@ -8,7 +8,7 @@ project GnatColl_Gmp is
    for Library_Kind use GnatColl.GnatColl_Kind;
    for Library_Dir  use "../gnatcoll/" & Project'Library_Kind;
    for Library_Version use
-     "lib" & Project'Library_Name & ".so." & Gnatcoll.Version;
+     "lib" & Project'Library_Name & GnatColl.So_Ext & "." & Gnatcoll.Version;
 
    package Linker is
       for Linker_Options use (@GMP_LIBS_GPR@);

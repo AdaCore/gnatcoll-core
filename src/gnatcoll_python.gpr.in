@@ -7,17 +7,18 @@ project GnatColl_Python is
    for Library_Dir     use "lib/python/" & Project'Library_Kind;
    for Library_Name    use GnatColl_Shared.Name & "_python";
    for Library_Version use
-      "lib" & Project'Library_Name & ".so." & GnatColl_Shared.Version;
+      "lib" & Project'Library_Name
+      & GnatColl_Shared.So_Ext & "." & GnatColl_Shared.Version;
 
    --  When linking a shared library (see Linker_Options below in addition)
-   for Library_Options use (@PYTHON_LIBS_GPR@);
+   for Library_Options use GnatColl_Shared.Python_Libs;
 
    for Languages use ("Ada", "C");
 
    case GnatColl_Shared.Python is
       when "yes" =>
          for Source_Dirs use Project'Source_Dirs & ("python");
-         --  for Library_Options use ("python_support.o");
+         for Library_Options use (@PYTHON_LIBS_GPR@);
       when "no"  =>
          for Source_Dirs use Project'Source_Dirs & ("nopython");
    end case;
@@ -34,7 +35,7 @@ project GnatColl_Python is
 
    package Linker is
       --  When linking an executable
-      for Linker_Options use (@PYTHON_LIBS_GPR@);
+      for Linker_Options use GnatColl_Shared.Python_Libs;
    end Linker;
 
    package Ide renames GnatColl_Shared.Ide;
