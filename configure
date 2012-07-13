@@ -627,6 +627,7 @@ LIBOBJS
 LIB
 WITH_SYSLOG
 PYGOBJECT_INCLUDE_GPR
+GTK_GCC_LIBS_GPR
 GTK_GCC_FLAGS_GPR
 PYGTK_INCLUDE_GPR
 PYTHON_CFLAGS_GPR
@@ -654,6 +655,7 @@ PYGTK_INCLUDE
 PYGTK_PREFIX
 GTK_VERSION
 WITH_GTK
+GTK_GCC_LIBS
 GTK_GCC_FLAGS
 HAVE_GTKADA
 PKG_CONFIG
@@ -4282,6 +4284,7 @@ $as_echo_n "checking for gtk+ ${WITH_GTK}... " >&6; }
           { $as_echo "$as_me:${as_lineno-$LINENO}: result: $GTK_PREFIX" >&5
 $as_echo "$GTK_PREFIX" >&6; }
           GTK_GCC_FLAGS=`$PKG_CONFIG gtk+-${WITH_GTK} --cflags`
+          GTK_GCC_LIBS=`$PKG_CONFIG gtk+-${WITH_GTK} --libs`
           if test x"$GTK_GCC_FLAGS" != x ; then
              { $as_echo "$as_me:${as_lineno-$LINENO}: checking for gtkada.gpr" >&5
 $as_echo_n "checking for gtkada.gpr... " >&6; }
@@ -4320,6 +4323,7 @@ $as_echo "$HAVE_GTKADA" >&6; }
           fi
       fi
    fi
+
 
 
 
@@ -5010,7 +5014,7 @@ $as_echo "no" >&6; }
    value=$GMP_CFLAGS
 
    # Special handling on darwin
-   val=`echo $value | sed -e "s,-framework CoreFoundation,-framework=CoreFoundation,"`
+   val=`echo $value | sed -e "s,-framework ,-framework=,g"`
    value=$val
 
    output=GMP_CFLAGS_GPR
@@ -5029,7 +5033,7 @@ $as_echo "no" >&6; }
    value=$GMP_LIBS
 
    # Special handling on darwin
-   val=`echo $value | sed -e "s,-framework CoreFoundation,-framework=CoreFoundation,"`
+   val=`echo $value | sed -e "s,-framework ,-framework=,g"`
    value=$val
 
    output=GMP_LIBS_GPR
@@ -5048,7 +5052,7 @@ $as_echo "no" >&6; }
    value=$PYTHON_LIBS
 
    # Special handling on darwin
-   val=`echo $value | sed -e "s,-framework CoreFoundation,-framework=CoreFoundation,"`
+   val=`echo $value | sed -e "s,-framework ,-framework=,g"`
    value=$val
 
    output=PYTHON_LIBS_GPR
@@ -5067,7 +5071,7 @@ $as_echo "no" >&6; }
    value=$PYTHON_CFLAGS
 
    # Special handling on darwin
-   val=`echo $value | sed -e "s,-framework CoreFoundation,-framework=CoreFoundation,"`
+   val=`echo $value | sed -e "s,-framework ,-framework=,g"`
    value=$val
 
    output=PYTHON_CFLAGS_GPR
@@ -5086,7 +5090,7 @@ $as_echo "no" >&6; }
    value=$PYGTK_INCLUDE
 
    # Special handling on darwin
-   val=`echo $value | sed -e "s,-framework CoreFoundation,-framework=CoreFoundation,"`
+   val=`echo $value | sed -e "s,-framework ,-framework=,g"`
    value=$val
 
    output=PYGTK_INCLUDE_GPR
@@ -5105,7 +5109,7 @@ $as_echo "no" >&6; }
    value=$GTK_GCC_FLAGS
 
    # Special handling on darwin
-   val=`echo $value | sed -e "s,-framework CoreFoundation,-framework=CoreFoundation,"`
+   val=`echo $value | sed -e "s,-framework ,-framework=,g"`
    value=$val
 
    output=GTK_GCC_FLAGS_GPR
@@ -5121,10 +5125,29 @@ $as_echo "no" >&6; }
 
 
 
+   value=$GTK_GCC_LIBS
+
+   # Special handling on darwin
+   val=`echo $value | sed -e "s,-framework ,-framework=,g"`
+   value=$val
+
+   output=GTK_GCC_LIBS_GPR
+   result=""
+   for v in $value; do
+      if test "$result" != ""; then
+         result="$result, "
+      fi
+      result="$result\"$v\""
+   done
+   GTK_GCC_LIBS_GPR=$result
+
+
+
+
    value=$PYGOBJECT_INCLUDE
 
    # Special handling on darwin
-   val=`echo $value | sed -e "s,-framework CoreFoundation,-framework=CoreFoundation,"`
+   val=`echo $value | sed -e "s,-framework ,-framework=,g"`
    value=$val
 
    output=PYGOBJECT_INCLUDE_GPR
