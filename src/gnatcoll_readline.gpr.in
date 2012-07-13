@@ -6,6 +6,7 @@ project GnatColl_Readline is
       when "yes" =>
          for Languages use ("Ada");
          for Source_Dirs use ("readline", "readline/with_readline");
+         for Library_Options use ("-lreadline");
       when "no" =>
          for Source_Dirs use ("readline", "readline/no_readline");
    end case;
