@@ -4367,6 +4367,7 @@ $as_echo "no" >&6; }
           if test $? != 0 ; then
              { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
 $as_echo "no" >&6; }
+             WITH_PYGTK=no
 
           else
              pygtk_version=`$PKG_CONFIG $module --modversion`
