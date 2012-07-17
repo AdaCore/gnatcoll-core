@@ -5351,46 +5351,54 @@ package body GNATCOLL.Projects is
             Source := Element (Source_Iter);
             exit when Source = No_Source;
 
-            --  Get the absolute path name for this source
-            Get_Name_String (Source.Path.Display_Name);
+            --  Do not consider sources that are excluded
 
-            declare
-               File : constant Virtual_File :=
-                        Create (+Name_Buffer (1 .. Name_Len));
-            begin
-               Self.Data.Sources.Include
-                 (Base_Name (File),
-                  (P, File, Source.Language.Name, Source));
+            if not Source.Locally_Removed then
 
-               if Source.Object /= Namet.No_File then
-                  declare
-                     Base : constant Filesystem_String :=
-                       Base_Name
-                         (Filesystem_String (Get_Name_String (Source.Object)),
-                          ".o");
-                  begin
-                     if Source.Index = 0 then
-                        Self.Data.Objects_Basename.Include
-                          (Base, (P, File, Source.Language.Name, Source));
-                     else
-                        Self.Data.Objects_Basename.Include
-                          (Base & "~"
-                           & (+Image (Integer (Source.Index), Min_Width => 0)),
-                           (P, File, Source.Language.Name, Source));
-                     end if;
-                  end;
-               end if;
+               --  Get the absolute path name for this source
+               Get_Name_String (Source.Path.Display_Name);
 
-               --  The project manager duplicates files that contain several
-               --  units. Only add them once in the project sources (and thus
-               --  only when the Index is 0 (single unit) or 1 (first of
-               --  multiple units)
-               --  For source-based languages, we allow duplicate sources
+               declare
+                  File : constant Virtual_File :=
+                           Create (+Name_Buffer (1 .. Name_Len));
+               begin
+                  Self.Data.Sources.Include
+                    (Base_Name (File),
+                     (P, File, Source.Language.Name, Source));
 
-               if Source.Unit = null or else Source.Index <= 1 then
-                  Prepend (Source_File_List, File);
-               end if;
-            end;
+                  if Source.Object /= Namet.No_File then
+                     declare
+                        Base : constant Filesystem_String :=
+                          Base_Name
+                            (Filesystem_String
+                               (Get_Name_String (Source.Object)),
+                                ".o");
+                     begin
+                        if Source.Index = 0 then
+                           Self.Data.Objects_Basename.Include
+                             (Base, (P, File, Source.Language.Name, Source));
+                        else
+                           Self.Data.Objects_Basename.Include
+                             (Base & "~"
+                              & (+Image
+                                    (Integer (Source.Index),
+                                     Min_Width => 0)),
+                              (P, File, Source.Language.Name, Source));
+                        end if;
+                     end;
+                  end if;
+
+                  --  The project manager duplicates files that contain several
+                  --  units. Only add them once in the project sources
+                  --  (and thus only when the Index is 0 (single unit) or 1
+                  --  (first of multiple units).
+                  --  For source-based languages, we allow duplicate sources
+
+                  if Source.Unit = null or else Source.Index <= 1 then
+                     Prepend (Source_File_List, File);
+                  end if;
+               end;
+            end if;
 
             Next (Source_Iter);
          end loop;
