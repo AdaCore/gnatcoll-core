@@ -25,6 +25,15 @@
 #undef DEBUG
 /* #define DEBUG */
 
+#if PY_MAJOR_VERSION >= 3
+#ifndef PyDescr_TYPE
+#define PyDescr_TYPE(x) (((PyDescrObject *)(x))->d_type)
+#define PyDescr_NAME(x) (((PyDescrObject *)(x))->d_name)
+
+#endif
+
+#endif
+
 /*****************************************************************************
  * Modules
  *****************************************************************************/
@@ -208,12 +217,12 @@ static PyObject * adamethod_descr_get
     Py_INCREF(descr);
     return (PyObject*) descr;
   }
-  if (!PyObject_TypeCheck(obj, descr->d_common.d_type)) {
+  if (!PyObject_TypeCheck(obj, PyDescr_TYPE(descr))) {
     PyErr_Format(PyExc_TypeError,
                  "descriptor '%V' for '%s' objects "
                  "doesn't apply to '%s' object",
-                 descr->d_common.d_name, "?",
-                 descr->d_common.d_type->tp_name,
+                 PyDescr_NAME(descr), "?",
+                 PyDescr_TYPE(descr)->tp_name,
                  obj->ob_type->tp_name);
     return NULL;
   }
@@ -238,9 +247,9 @@ PyDescr_NewAdaMethod(PyTypeObject *type, PyObject* cfunc, const char* name)
 
   if (descr != NULL) {
     Py_XINCREF(type);
-    descr->d_common.d_type = type;
-    descr->d_common.d_name = PyUnicode_InternFromString(name);
-    if (descr->d_common.d_name == NULL) {
+    PyDescr_TYPE(descr) = type;
+    PyDescr_NAME(descr) = PyUnicode_InternFromString(name);
+    if (PyDescr_NAME(descr) == NULL) {
       Py_DECREF(descr);
       descr = NULL;
     }
