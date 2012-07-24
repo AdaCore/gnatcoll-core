@@ -1861,7 +1861,7 @@ package body GNATCOLL.Xref is
                            Eid := E2e_Of_Type;  --  Return type
                         when 'n' =>
                            Eid := E2e_From_Enumeration;
-                        when 'J' | 'j' | 'r' | 'R' =>
+                        when 'J' | 'j' | 'R' =>
                            Eid := E2e_Parent_Type;
                         when others =>
                            Eid := E2e_Of_Type;
