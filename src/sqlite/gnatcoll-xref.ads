@@ -369,6 +369,11 @@ package GNATCOLL.Xref is
    --  (if From_Overriding is True), that are overridden by it (if
    --  From_Overridden is True) or that rename it (if From_Renames is True).
    --
+   --  Note that Compute is meant to do the actual computation, so it should
+   --  in general be one of the subprograms defined above like References or
+   --  Bodies. To get access to the actual list of references, you need to
+   --  iterate the Cursor, using Has_Element, Element and Next as usual.
+   --
    --  Freeing Self while the cursor exits results in undefined behavior.
 
    --------------
