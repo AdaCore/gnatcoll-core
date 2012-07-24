@@ -5022,9 +5022,16 @@ $as_echo "no" >&6; }
 
    value=$GMP_CFLAGS
 
-   # Special handling on darwin
-   val=`echo $value | sed -e "s,-framework ,-framework=,g"`
-   value=$val
+   # Special handling on darwin for gcc 4.5
+   case "$build_os" in
+      *darwin*)
+          gcc_version=`gcc --version | head -1`
+          case "$gcc_version" in
+              *4.5.*)
+                 val=`echo $value | sed -e "s,-framework ,-framework=,g"`
+                 value=$val
+          esac
+   esac
 
    output=GMP_CFLAGS_GPR
    result=""
@@ -5041,9 +5048,16 @@ $as_echo "no" >&6; }
 
    value=$GMP_LIBS
 
-   # Special handling on darwin
-   val=`echo $value | sed -e "s,-framework ,-framework=,g"`
-   value=$val
+   # Special handling on darwin for gcc 4.5
+   case "$build_os" in
+      *darwin*)
+          gcc_version=`gcc --version | head -1`
+          case "$gcc_version" in
+              *4.5.*)
+                 val=`echo $value | sed -e "s,-framework ,-framework=,g"`
+                 value=$val
+          esac
+   esac
 
    output=GMP_LIBS_GPR
    result=""
@@ -5060,9 +5074,16 @@ $as_echo "no" >&6; }
 
    value=$PYTHON_LIBS
 
-   # Special handling on darwin
-   val=`echo $value | sed -e "s,-framework ,-framework=,g"`
-   value=$val
+   # Special handling on darwin for gcc 4.5
+   case "$build_os" in
+      *darwin*)
+          gcc_version=`gcc --version | head -1`
+          case "$gcc_version" in
+              *4.5.*)
+                 val=`echo $value | sed -e "s,-framework ,-framework=,g"`
+                 value=$val
+          esac
+   esac
 
    output=PYTHON_LIBS_GPR
    result=""
@@ -5079,9 +5100,16 @@ $as_echo "no" >&6; }
 
    value=$PYTHON_CFLAGS
 
-   # Special handling on darwin
-   val=`echo $value | sed -e "s,-framework ,-framework=,g"`
-   value=$val
+   # Special handling on darwin for gcc 4.5
+   case "$build_os" in
+      *darwin*)
+          gcc_version=`gcc --version | head -1`
+          case "$gcc_version" in
+              *4.5.*)
+                 val=`echo $value | sed -e "s,-framework ,-framework=,g"`
+                 value=$val
+          esac
+   esac
 
    output=PYTHON_CFLAGS_GPR
    result=""
@@ -5098,9 +5126,16 @@ $as_echo "no" >&6; }
 
    value=$PYGTK_INCLUDE
 
-   # Special handling on darwin
-   val=`echo $value | sed -e "s,-framework ,-framework=,g"`
-   value=$val
+   # Special handling on darwin for gcc 4.5
+   case "$build_os" in
+      *darwin*)
+          gcc_version=`gcc --version | head -1`
+          case "$gcc_version" in
+              *4.5.*)
+                 val=`echo $value | sed -e "s,-framework ,-framework=,g"`
+                 value=$val
+          esac
+   esac
 
    output=PYGTK_INCLUDE_GPR
    result=""
@@ -5117,9 +5152,16 @@ $as_echo "no" >&6; }
 
    value=$GTK_GCC_FLAGS
 
-   # Special handling on darwin
-   val=`echo $value | sed -e "s,-framework ,-framework=,g"`
-   value=$val
+   # Special handling on darwin for gcc 4.5
+   case "$build_os" in
+      *darwin*)
+          gcc_version=`gcc --version | head -1`
+          case "$gcc_version" in
+              *4.5.*)
+                 val=`echo $value | sed -e "s,-framework ,-framework=,g"`
+                 value=$val
+          esac
+   esac
 
    output=GTK_GCC_FLAGS_GPR
    result=""
@@ -5136,9 +5178,16 @@ $as_echo "no" >&6; }
 
    value=$GTK_GCC_LIBS
 
-   # Special handling on darwin
-   val=`echo $value | sed -e "s,-framework ,-framework=,g"`
-   value=$val
+   # Special handling on darwin for gcc 4.5
+   case "$build_os" in
+      *darwin*)
+          gcc_version=`gcc --version | head -1`
+          case "$gcc_version" in
+              *4.5.*)
+                 val=`echo $value | sed -e "s,-framework ,-framework=,g"`
+                 value=$val
+          esac
+   esac
 
    output=GTK_GCC_LIBS_GPR
    result=""
@@ -5155,9 +5204,16 @@ $as_echo "no" >&6; }
 
    value=$PYGOBJECT_INCLUDE
 
-   # Special handling on darwin
-   val=`echo $value | sed -e "s,-framework ,-framework=,g"`
-   value=$val
+   # Special handling on darwin for gcc 4.5
+   case "$build_os" in
+      *darwin*)
+          gcc_version=`gcc --version | head -1`
+          case "$gcc_version" in
+              *4.5.*)
+                 val=`echo $value | sed -e "s,-framework ,-framework=,g"`
+                 value=$val
+          esac
+   esac
 
    output=PYGOBJECT_INCLUDE_GPR
    result=""

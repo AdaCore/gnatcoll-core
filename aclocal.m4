@@ -873,9 +873,16 @@ AC_DEFUN(AM_TO_GPR,
 [
    value=[$1]
 
-   # Special handling on darwin
-   val=`echo $value | sed -e "s,-framework ,-framework=,g"`
-   value=$val
+   # Special handling on darwin for gcc 4.5
+   case "$build_os" in
+      *darwin*)
+          gcc_version=`gcc --version | head -1`
+          case "$gcc_version" in
+              *4.5.*)
+                 val=`echo $value | sed -e "s,-framework ,-framework=,g"`
+                 value=$val
+          esac
+   esac
 
    output=$2
    result=""
