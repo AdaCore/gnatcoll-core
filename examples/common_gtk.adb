@@ -82,7 +82,7 @@ package body Common_Gtk is
          Handler => Window_Handler'Access);
 
       Init_PyGtk_Support (Py);
-      Add_PyWidget_Method (Py, Win);
+      Add_PyWidget_Method (Repo, Win);
    end Add_GUI_Subprograms;
 
 end Common_Gtk;
