@@ -35,7 +35,6 @@ with GNATCOLL.Scripts.Gtkada; use GNATCOLL.Scripts.Gtkada;
 with Gtk.Enums;           use Gtk.Enums;
 with Gtk.Handlers;        use Gtk.Handlers;
 with Gtk.Main;            use Gtk.Main;
-with Gtk.Object;          use Gtk.Object;
 with Gtk.Scrolled_Window; use Gtk.Scrolled_Window;
 with Gtk.Text_Buffer;     use Gtk.Text_Buffer;
 with Gtk.Text_Iter;       use Gtk.Text_Iter;
@@ -429,7 +428,8 @@ package body GtkConsole is
       return Class_Instance
    is
    begin
-      return GNATCOLL.Scripts.Gtkada.Get_Instance (Script, GObject (Console.View));
+      return GNATCOLL.Scripts.Gtkada.Get_Instance
+         (Script, GObject (Console.View));
    end Get_Instance;
 
    --------------------------------------
