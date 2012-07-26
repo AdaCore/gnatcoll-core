@@ -23,7 +23,7 @@ gnatcoll_db2ada: force
 
 installbin: force
 	$(CP) obj/gnatcoll_db2ada${EXE} $(bindir)
-ifeq (${WITH_PROJECTS},yes)
+ifeq (${WITH_XREF},yes)
 	$(CP) obj/gnatinspect${EXE} $(bindir)
 endif
 
