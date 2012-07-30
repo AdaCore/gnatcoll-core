@@ -23,7 +23,7 @@ SQLITE_PATH=@PATH_LIBSQLITE@
 
 WITH_XREF=no
 ifeq (${WITH_PROJECTS},yes)
-ifeq (${WITH_SQLITE},yes)
+ifneq (${WITH_SQLITE},no)
 WITH_XREF=yes
 endif
 endif
