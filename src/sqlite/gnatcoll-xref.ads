@@ -415,6 +415,12 @@ package GNATCOLL.Xref is
       Cursor : out Entities_Cursor'Class);
    --  The primitive operations (or methods) of Self
 
+   function Method_Of
+      (Self   : Xref_Database'Class;
+       Entity : Entity_Information) return Entity_Information;
+   --  Return the entity (presumably an Ada tagged type or C++ class) for which
+   --  Entity is a method or primitive operation.
+
    function Overrides
      (Self   : Xref_Database'Class;
       Entity : Entity_Information) return Entity_Information;

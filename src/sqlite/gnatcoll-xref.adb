@@ -3768,6 +3768,28 @@ package body GNATCOLL.Xref is
          Params => (1 => +Entity.Id, 2 => +E2e_Has_Primitive));
    end Methods;
 
+   ---------------
+   -- Method_Of --
+   ---------------
+
+   function Method_Of
+      (Self   : Xref_Database'Class;
+       Entity : Entity_Information) return Entity_Information
+   is
+      Curs : Entities_Cursor;
+   begin
+      Curs.DBCursor.Fetch
+        (Self.DB,
+         Query_E2E_From,
+         Params => (1 => +Entity.Id, 2 => +E2e_Has_Primitive));
+
+      if Curs.DBCursor.Has_Row then
+         return Curs.Element;
+      else
+         return No_Entity;
+      end if;
+   end Method_Of;
+
    -------------------
    -- Overridden_By --
    -------------------
