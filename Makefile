@@ -1,37 +1,39 @@
-.PHONY: all examples test valgrind clean docs install
+.PHONY: all examples test clean docs install
+
+## Put this first so that it is the default make target
+all: static
 
 include Makefile.conf
 
 ifeq (${BUILDS_SHARED},yes)
-all: generate_sources static relocatable tools_relocatable
-install: install_common install_relocatable install_static
-else
-all: generate_sources static tools_static
-install: install_common install_static
+# Additional targets
+all: relocatable
 endif
 
 include Makefile.gnat
 
 ## Builds explicitly the shared or the static libraries
 
-static: do_links
-	${MAKE} LIBRARY_TYPE=static build_library_type
-shared relocatable: do_links
-	${MAKE} LIBRARY_TYPE=relocatable build_library_type
+static: build_library_type/static
+shared relocatable: build_library_type/relocatable
 
-## Builds either the static or the shared version, based on the
-## LIBRARY_TYPE variable
+# Build either type of library. The argument (%) is the type of library to build
 
-build_library_type:
-	${GPRBUILD} -m -j${PROCESSORS} -XLIBRARY_TYPE=${LIBRARY_TYPE} -Pgnatcoll_build -p
+build_library_type/%: generate_sources do_links
+	@echo "====== Building $(@F) libraries ======"
+	${GPRBUILD} -m -j${PROCESSORS} -XLIBRARY_TYPE=$(@F) -Pgnatcoll_build -p
+
+	@# Need to build libgnatcoll_gtk separately, because its project files
+	@# requires gtkada.gpr, which might not exist on the machine.
 ifeq (${WITH_GTK},yes)
-	${MAKE} -C src -f Makefile.gtk buildall
+	${GPRBUILD} -m -j${PROCESSORS} -XLIBRARY_TYPE=$(@F) -Psrc/gnatcoll_gtk -p
 endif
 
-tools_static:
-	${MAKE} LIBRARY_TYPE=static -C src -f Makefile.tools buildall
-tools_relocatable:
-	${MAKE} LIBRARY_TYPE=relocatable -C src -f Makefile.tools buildall
+	@# Build the tools (the list is the project's Main attribute)
+	@# They are not build as part of the above because only the Main from
+	@# gnatcoll_build.gpr are build. We could use aggregate projects to speed
+	@# things up.
+	${GPRBUILD} -q -m -j${PROCESSORS} -XLIBRARY_TYPE=$(@F) -Psrc/gnatcoll_tools
 
 # Regenerate part of the sources. Unfortunately, this can be run only after
 # we have build GNATCOLL, and then its tools, even though GNATCOLL itself
@@ -58,19 +60,11 @@ examples:
 
 ## Create links for the gnat sources
 
+do_links:
 ifeq ($(GNAT_SOURCES),copy)
-do_links:
-ifeq ($(OS),Windows_NT)
 	-@$(foreach f,$(GNAT_SOURCES_FOR_GNATCOLL), \
-	   $(CP) gnat_src/$(f) gnat > /dev/null 2>&1 ;)
-else
-	-@$(foreach f,$(GNAT_SOURCES_FOR_GNATCOLL), \
-	   $(LN_S) ../gnat_src/$(f) gnat >/dev/null 2>&1 ;)
-endif
+	   $(LN_S) -f ../gnat_src/$(f) gnat >/dev/null 2>&1 ;)
 	@(cd gnat && gnatmake -q xsnamest && ./xsnamest && mv snames.ns snames.ads && mv snames.nb snames.adb)
-
-else
-do_links:
 endif
 
 ## Only works after installation, so we should install to a local directory
@@ -90,25 +84,9 @@ test: local_install
 test_verbose: local_install
 	@${MAKE} prefix=${shell pwd}/local_install test_names="${test_names}" -C testsuite verbose
 
-## GNU standards say we must not recompile in such a case
-## Install either the static or the shared lib, based on the value of
-## LIBRARY_TYPE
-install_library_type:
-	${MKDIR} ${libdir}/${TARNAME}/${LIBRARY_TYPE}
-	${MAKE} -C src -f Makefile.gnatcoll libinstall
-	${MAKE} -C src -f Makefile.python libinstall
-ifeq (${WITH_GTK},yes)
-	${MAKE} -C src -f Makefile.gtk libinstall
-endif
-	${MAKE} -C src -f Makefile.postgres libinstall
-	${MAKE} -C src -f Makefile.sqlite libinstall
-	${MAKE} -C src -f Makefile.readline libinstall
-	${MAKE} -C src -f Makefile.tools installbin
-ifeq (${WITH_GMP},yes)
-	${MAKE} -C src -f Makefile.gmp libinstall
-endif
-
-install_common:
+# Installs both static and shared libraries (if they were build)
+# GNU standards say we must not recompile, for this target
+install:
 	${MKDIR} ${bindir}
 	${MKDIR} ${DESTDIR}${prefix}/lib/gnat/${TARNAME}
 	${MKDIR} ${datadir}/${TARNAME}
@@ -125,22 +103,38 @@ install_common:
 	${CP} distrib/gnatcoll_runtime.xml ${datadir}/gps/plug-ins
 
 	${MKDIR} ${datadir}/doc/${TARNAME}/html
-	-${CP} -r docs/_build/html/* ${datadir}/doc/${TARNAME}/html 2>/dev/null
-	-${CP} docs/_build/latex/GNATColl.pdf ${datadir}/doc/${TARNAME}/gnatcoll.pdf 2>/dev/null
+	-${CP} -r docs/_build/html/* ${datadir}/doc/${TARNAME}/html
+	-${CP} docs/_build/latex/GNATColl.pdf ${datadir}/doc/${TARNAME}/gnatcoll.pdf
 
-install_static:
-	${MAKE} LIBRARY_TYPE=static install_library_type
-install_relocatable install_shared:
-	${MAKE} LIBRARY_TYPE=relocatable install_library_type
-
-clean:
-	-gprclean -r -q -Pgnatcoll_build -XLIBRARY_TYPE=relocatable
-	-gprclean -r -q -Pgnatcoll_build -XLIBRARY_TYPE=static
-ifeq (${WITH_GTK},yes)
-	-gprclean -r -q -Psrc/gnatcoll_gtk -XLIBRARY_TYPE=relocatable
-	-gprclean -r -q -Psrc/gnatcoll_gtk -XLIBRARY_TYPE=static
+	${MKDIR} ${libdir}/${TARNAME}/static
+ifeq (${BUILDS_SHARED},yes)
+	${MKDIR} ${libdir}/${TARNAME}/relocatable
 endif
-	-${MAKE} -C src -f Makefile.tools clean
+
+	${MAKE} -C src -f Makefile.gnatcoll libinstall
+	${MAKE} -C src -f Makefile.python libinstall
+ifeq (${WITH_GTK},yes)
+	${MAKE} -C src -f Makefile.gtk libinstall
+endif
+	${MAKE} -C src -f Makefile.postgres libinstall
+	${MAKE} -C src -f Makefile.sqlite libinstall
+	${MAKE} -C src -f Makefile.readline libinstall
+	${MAKE} -C src -f Makefile.tools installbin
+ifeq (${WITH_GMP},yes)
+	${MAKE} -C src -f Makefile.gmp libinstall
+endif
+
+## Clean either type of library, based on the value of (%)
+
+clean_library/%:
+	-gprclean -r -q -Pgnatcoll_build -XLIBRARY_TYPE=$(@F)
+	@# Separate pass to also remove the Main
+	-gprclean -r -q -Psrc/gnatcoll_tools -XLIBRARY_TYPE=$(@F)
+ifeq (${WITH_GTK},yes)
+	-gprclean -r -q -Psrc/gnatcoll_gtk -XLIBRARY_TYPE=$(@F)
+endif
+
+clean: clean_library/static clean_library/relocatable
 	-${MAKE} -C testsuite $@
 	-${MAKE} -C docs $@
 	-${MAKE} -C examples $@

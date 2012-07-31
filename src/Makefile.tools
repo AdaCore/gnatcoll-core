@@ -9,23 +9,8 @@ else
 SRCDIRS=./tools/ ./toosl/notemplates/
 endif
 
-buildall: gnatcoll_db2ada
-
-ifeq (${WITH_XREF},yes)
-buildall: gnatinspect
-endif
-
-gnatinspect: force
-	${GPRBUILD} -m -j${PROCESSORS} -XLIBRARY_TYPE=${LIBRARY_TYPE} -P$(PROJECT) $@ -p -largs $(POSTGRES_PATH)
-
-gnatcoll_db2ada: force
-	${GPRBUILD} -m -j${PROCESSORS} -XLIBRARY_TYPE=${LIBRARY_TYPE} -P$(PROJECT) $@ -p -largs $(POSTGRES_PATH)
-
 installbin: force
 	$(CP) obj/gnatcoll_db2ada${EXE} $(bindir)
 ifeq (${WITH_XREF},yes)
 	$(CP) obj/gnatinspect${EXE} $(bindir)
 endif
-
-clean:
-	gprclean -q -P${PROJECT}
