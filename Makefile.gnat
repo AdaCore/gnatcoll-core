@@ -75,19 +75,3 @@ GNAT_SOURCES_FOR_GNATCOLL= \
   widechar.ads widechar.adb \
   xsnamest.adb \
   xutil.ads xutil.adb
-
-list-sources:
-	@echo $(GNAT_SOURCES_FOR_GNATCOLL)
-
-list-sources-regexp:
-	@echo -n "("
-	@for f in $(GNAT_SOURCES_FOR_GNATCOLL) $(shell $(MAKE) -f ../Makefile.gnat list-sources); do \
-	  if [ "$$f" = "gnat_style.css" ]; then \
-	    echo "$$f)"; \
-	  else \
-	    echo -n "$$f|"; \
-	  fi; \
-	done
-
-install-gnat:
-	@cd gnat; ${CP} $(GNAT_SOURCES_FOR_GNATCOLL) ${includedir}/${TARNAME}
