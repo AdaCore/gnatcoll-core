@@ -1,4 +1,4 @@
-.PHONY: all examples test clean docs install
+.PHONY: all examples test clean docs install generate_sources do_links static relocatable shared
 
 ## Put this first so that it is the default make target
 all: static
