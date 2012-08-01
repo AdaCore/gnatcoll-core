@@ -4339,7 +4339,7 @@ package body GNATCOLL.Projects is
          Self.Data := new Project_Tree_Data;
 
          if Env = null then
-            Self.Data.Env := new Project_Environment;
+            Initialize (Self.Data.Env);
          else
             Self.Data.Env := Env;
          end if;
