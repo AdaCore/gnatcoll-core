@@ -4,6 +4,17 @@ Known Problems in Gnatcoll 1.4
 
 Copyright (C) 2011-2012, AdaCore
 
+KP-14-L801-020 Projects.Load fails when no explicit environment is given
+
+  Problem:    If you do not pass an explicit environment to Load, the one that
+              is created explicitly is not properly initialized. This might
+              result in errors when parsing projects.
+
+  Status:     Fixed in Gnatcoll 1.5.0
+
+  Workaround: Create a variable of type Project_Environment_Access, and call
+              Initialize on it. Then pass it to Load.
+
 KP-14-L429-003 JSON does not decode '\"' characters properly
 
   Problem:    If the JSON you pass to GNATCOLL.JSON.Read contains the sequence
