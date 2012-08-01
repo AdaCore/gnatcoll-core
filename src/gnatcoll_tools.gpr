@@ -16,7 +16,7 @@ project GnatColl_Tools is
          case GnatColl_Shared.Sqlite is
             when "no" =>
                for Excluded_Source_Files use ("gnatinspect.adb");
-            when "yes" =>
+            when "yes" | "embedded" =>
                for Main use Project'Main & ("gnatinspect.adb");
          end case;
    end case;
