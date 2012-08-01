@@ -56,7 +56,7 @@ generate_sources:
 	fi
 
 examples:
-	${MAKE} -C examples
+	${MAKE} -C examples all
 
 ## Create links for the gnat sources
 
