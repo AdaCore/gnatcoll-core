@@ -76,9 +76,11 @@ GNAT_SOURCES_FOR_GNATCOLL= \
   xsnamest.adb \
   xutil.ads xutil.adb
 
+# IMPORTANT: cron-src depends on this target, do NOT remove
 list-sources:
 	@echo $(GNAT_SOURCES_FOR_GNATCOLL)
 
+# IMPORTANT: gps-monitor depends on this target, do NOT remove
 list-sources-regexp:
 	@echo -n "("
 	@for f in $(GNAT_SOURCES_FOR_GNATCOLL) $(shell $(MAKE) -f ../Makefile.gnat list-sources); do \
@@ -89,5 +91,3 @@ list-sources-regexp:
 	  fi; \
 	done
 
-install-gnat:
-	@cd gnat; ${CP} $(GNAT_SOURCES_FOR_GNATCOLL) ${includedir}/${TARNAME}
