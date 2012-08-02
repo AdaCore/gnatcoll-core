@@ -567,6 +567,15 @@ package body GNATCOLL.JSON is
       Arr.Vals.Append (Val);
    end Append;
 
+   -------------
+   -- Prepend --
+   -------------
+
+   procedure Prepend (Arr : in out JSON_Array; Val : JSON_Value) is
+   begin
+      Arr.Vals.Prepend (Val);
+   end Prepend;
+
    ---------
    -- "&" --
    ---------
