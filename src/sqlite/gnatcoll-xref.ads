@@ -193,9 +193,9 @@ package GNATCOLL.Xref is
    --  against all known files in the database.
 
    function Is_Fuzzy_Match (Self : Entity_Information) return Boolean;
-   --  Returns True if the entity that was found is only an apprcximation,
-   --  because no exact match was found. This can happen when the ALI files
-   --  haven't been recompiled from the sources, for instance.
+   --  Returns True if the entity that was found is only an approximation,
+   --  because no exact match was found. This can happen when sources are
+   --  newer than ALI files.
 
    type Entity_Declaration is record
       Name     : Ada.Strings.Unbounded.Unbounded_String;
