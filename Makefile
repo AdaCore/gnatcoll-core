@@ -104,7 +104,7 @@ install:
 
 	${MKDIR} ${datadir}/doc/${TARNAME}/html
 	-${CP} -r docs/_build/html/* ${datadir}/doc/${TARNAME}/html 2>/dev/null
-	-${CP} docs/_build/latex/GNATColl.pdf ${datadir}/doc/${TARNAME}/gnatcoll.pdf 2>dev/null
+	-${CP} docs/_build/latex/GNATColl.pdf ${datadir}/doc/${TARNAME}/gnatcoll.pdf 2>/dev/null
 
 	${MKDIR} ${libdir}/${TARNAME}/static
 ifeq (${BUILDS_SHARED},yes)
