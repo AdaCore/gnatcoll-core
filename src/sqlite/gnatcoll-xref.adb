@@ -3780,7 +3780,7 @@ package body GNATCOLL.Xref is
    begin
       Curs.DBCursor.Fetch
         (Self.DB,
-         Query_E2E_From,
+         Query_E2E_To,
          Params => (1 => +Entity.Id, 2 => +E2e_Has_Primitive));
 
       if Curs.DBCursor.Has_Row then
