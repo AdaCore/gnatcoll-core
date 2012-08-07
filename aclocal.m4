@@ -374,12 +374,12 @@ AC_HELP_STRING(
          if test x"$SQLITE_PATH_WITH" != xyes ; then
            PATH_LIBSQLITE="-L$SQLITE_PATH_WITH/lib"
          fi
-       
+
          AC_CHECK_LIB(sqlite3, sqlite3_open,
                       [WITH_SQLITE=yes],
                       [WITH_SQLITE=no],
                       $SQLITE_CFLAGS $PATH_LIBSQLITE)
-       
+
          if test x"$WITH_SQLITE" = xno ; then
             AC_MSG_CHECKING(for sqlite)
             AC_MSG_RESULT(embedded, use --with-sqlite to use a dynamic lib)
@@ -387,7 +387,7 @@ AC_HELP_STRING(
          fi
       fi
    fi
-   
+
    AC_SUBST(WITH_SQLITE)
    AC_SUBST(PATH_LIBSQLITE)
 
@@ -876,7 +876,7 @@ AC_DEFUN(AM_TO_GPR,
    # Special handling on darwin for gcc 4.5 and 4.7
    case "$build_os" in
       *darwin*)
-         value=`echo $value | sed -e "s,-framework ,-framework=,g"`
+         value=`echo $value | sed -e "s/-framework \([^ ]*\)/-Wl,-framework -Wl,\1/g"`
    esac
 
    output=$2
