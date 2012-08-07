@@ -156,6 +156,8 @@ procedure GNATInspect is
    procedure Process_Help (Args : Arg_List);
    procedure Process_Importing (Args : Arg_List);
    procedure Process_Imports (Args : Arg_List);
+   procedure Process_Method_Of
+     is new Process_Command_With_Single (Method_Of);
    procedure Process_Methods
      is new Process_Command_Entities (Methods);
    procedure Process_Name (Args : Arg_List);
@@ -229,6 +231,12 @@ procedure GNATInspect is
        new String'("Returns the list of methods (or primitive operations) for"
            & " the entity"),
        Process_Methods'Access),
+
+      (new String'("method_of"),
+       new String'("name:file:line:column"),
+       new String'("Returns the class or tagged type for which the entity is"
+           & " a method or a primitive operation"),
+       Process_Method_Of'Access),
 
       (new String'("depends"),
        new String'("filename"),
