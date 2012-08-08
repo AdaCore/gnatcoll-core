@@ -1297,11 +1297,10 @@ begin
       Long_Switch => "-d",
       Help        => "Show progress as LI files are parsed");
 
-   GNATCOLL.VFS.Symbolic_Links_Support (Support_Symlinks);
-
    Initialize (Env);
 
    Getopt (Cmdline, Parse_Command_Line'Unrestricted_Access);
+   GNATCOLL.VFS.Symbolic_Links_Support (Support_Symlinks);
 
    GNATCOLL.Traces.Parse_Config_File (Traces_File_Name.all);
 
