@@ -82,9 +82,9 @@ package GNATCOLL.Xref is
       Tree                : Project_Tree;
       Project             : Project_Type;
       Parse_Runtime_Files : Boolean := True;
-      Show_Progress       : access procedure (Current, Total : Integer);
-      From_DB_Name        : String := "";
-      To_DB_Name          : String := "");
+      Show_Progress      : access procedure (Current, Total : Integer) := null;
+      From_DB_Name       : String := "";
+      To_DB_Name         : String := "");
    --  Parse all the LI files for the project, and stores the xref info in the
    --  DB database.
    --

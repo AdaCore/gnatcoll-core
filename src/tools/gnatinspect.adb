@@ -97,6 +97,7 @@ procedure GNATInspect is
         (Self   : Xref_Database'Class;
          Entity : Entity_Information;
          Cursor : out Entities_Cursor'Class);
+      Recurse : Boolean := False;
    procedure Process_Command_Entities (Args : Arg_List);
 
    ---------------------------------
@@ -128,6 +129,23 @@ procedure GNATInspect is
    procedure Process_Command_Entities (Args : Arg_List) is
       Entity   : Entity_Information;
       Children : Entities_Cursor;
+      Rec_Children : Recursive_Entities_Cursor;
+
+      procedure Do_Compute
+        (Self   : Xref_Database'Class;
+         Entity : Entity_Information;
+         Cursor : out Entities_Cursor'Class);
+      --  Proxy for Compute, so that we can call Recursive.
+
+      procedure Do_Compute
+        (Self   : Xref_Database'Class;
+         Entity : Entity_Information;
+         Cursor : out Entities_Cursor'Class)
+      is
+      begin
+         Compute (Self, Entity, Cursor);
+      end Do_Compute;
+
    begin
       if Args_Length (Args) /= 1 then
          Put_Line ("Invalid number of arguments");
@@ -135,8 +153,18 @@ procedure GNATInspect is
       end if;
 
       Entity := Get_Entity (Nth_Arg (Args, 1));
-      Compute (Xref, Entity, Cursor => Children);
-      Dump (Children);
+
+      if Recurse then
+         Recursive
+           (Self    => Xref'Unchecked_Access,
+            Entity  => Entity,
+            Compute => Do_Compute'Unrestricted_Access,
+            Cursor  => Rec_Children);
+         Dump (Rec_Children);
+      else
+         Compute (Xref, Entity, Cursor => Children);
+         Dump (Children);
+      end if;
    end Process_Command_Entities;
 
    procedure Process_Body (Args : Arg_List);
@@ -164,7 +192,9 @@ procedure GNATInspect is
    procedure Process_Overrides
      is new Process_Command_With_Single (Overrides);
    procedure Process_Overridden
-     is new Process_Command_Entities (Overridden_By);
+     is new Process_Command_Entities (Overridden_By, Recurse => False);
+   procedure Process_Overridden_Recursive
+     is new Process_Command_Entities (Overridden_By, Recurse => True);
    procedure Process_Params (Args : Arg_List);
    procedure Process_Parent_Types
      is new Process_Command_Entities (Parent_Types);
@@ -267,6 +297,12 @@ procedure GNATInspect is
        new String'("The list of entities that override the parameter"
          & "(generally methods from children classes"),
        Process_Overridden'Access),
+
+      (new String'("overridden_recursive"),
+       new String'("name:file:line:column"),
+       new String'("The list of entities that override the parameter"
+         & "(generally methods from children classes. This is recursive."),
+       Process_Overridden_Recursive'Access),
 
       (new String'("decl"),
        new String'("name:file:line:column"),
