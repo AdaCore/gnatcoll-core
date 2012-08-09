@@ -1048,12 +1048,17 @@ package body GNATCOLL.Projects is
       --  specify an explicit project
 
       if Path = GNATCOLL.VFS.No_File and then Project.Data = null then
-         if Use_Source_Path then
+         if Use_Source_Path
+           and then Self.Data.Env.Predefined_Source_Path /= null
+         then
             Path := Locate_Regular_File
               (Name, Self.Data.Env.Predefined_Source_Path.all);
          end if;
 
-         if Use_Object_Path and then Path = GNATCOLL.VFS.No_File then
+         if Use_Object_Path
+           and then Path = GNATCOLL.VFS.No_File
+           and then Self.Data.Env.Predefined_Object_Path /= null
+         then
             Path := Locate_Regular_File
               (Name, Self.Data.Env.Predefined_Object_Path.all);
          end if;

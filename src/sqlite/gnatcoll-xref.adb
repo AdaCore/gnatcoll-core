@@ -276,8 +276,9 @@ package body GNATCOLL.Xref is
                    or Database.E2e.Kind = E2e_Access_Parameter),
             Order_By => Database.E2e.Order_By,
              Distinct => True),
-        On_Server => True, Name => "parameters");
-   --  Retrieve the list of parameters for the entity in $1
+        On_Server => False, Name => "parameters");
+   --  Retrieve the list of parameters for the entity in $1.
+   --  Cannot be prepared because there are risks of concurrent calls.
 
    Query_E2E_From : constant Prepared_Statement :=
      Prepare
@@ -293,7 +294,8 @@ package body GNATCOLL.Xref is
              Order_By =>
                Entities2.Name & Entities2.Decl_Line & Entities2.Decl_Column,
              Distinct => True),
-        On_Server => True, Name => "e2e_from");
+        On_Server => False, Name => "e2e_from");
+   --  Cannot be prepared because there are risks of concurrent calls.
 
    Query_E2E_To : constant Prepared_Statement :=
      Prepare
@@ -309,7 +311,8 @@ package body GNATCOLL.Xref is
              Order_By =>
                Entities2.Name & Entities2.Decl_Line & Entities2.Decl_Column,
              Distinct => True),
-        On_Server => True, Name => "e2e_to");
+        On_Server => False, Name => "e2e_to");
+   --  Cannot be prepared because there are risks of concurrent calls.
 
    Q_Decl_Name    : constant := 0;
    Q_Decl_File    : constant := 1;
@@ -336,6 +339,8 @@ package body GNATCOLL.Xref is
                 and Database.Entities.Kind = Database.Entity_Kinds.Id
                 and Database.Entities.Id = Integer_Param (1)),
         On_Server => True, Name => "declaration");
+   --  Can be prepared because a single row is read so there is no risk of
+   --  concurrent calls.
 
    Q_Ref_File_Id : constant := 0;
    Q_Ref_File    : constant := 1;
@@ -376,7 +381,8 @@ package body GNATCOLL.Xref is
              Order_By => Database.Files.Path
                 & Database.Entity_Refs.Line & Database.Entity_Refs.Column,
              Distinct => True),
-        On_Server => True, Name => "references");
+        On_Server => False, Name => "references");
+   --  Cannot be prepared because there are risks of concurrent calls.
 
    Q_End_Of_Spec : constant Prepared_Statement :=
      Prepare
@@ -388,6 +394,8 @@ package body GNATCOLL.Xref is
              Where => Database.Entity_Refs.Kind = "e"
              and Database.Entity_Refs.Entity = Integer_Param (1)),
         On_Server => True, Name => "end_of_spec");
+   --  Can be prepared because a single row is read so there is no risk of
+   --  concurrent calls.
 
    Q_References_And_Kind : constant Prepared_Statement :=
      Prepare
@@ -409,7 +417,8 @@ package body GNATCOLL.Xref is
              Order_By => Database.Files.Path
              & Database.Entity_Refs.Line & Database.Entity_Refs.Column,
              Distinct => True),
-        On_Server => True, Name => "references_and_kind");
+        On_Server => False, Name => "references_and_kind");
+   --  Cannot be prepared because there are risks of concurrent calls.
 
    package VFS_To_Ids is new Ada.Containers.Hashed_Maps
      (Key_Type        => Virtual_File,
@@ -2305,7 +2314,7 @@ package body GNATCOLL.Xref is
       Tree         : Project_Tree;
       Project      : Project_Type;
       Parse_Runtime_Files : Boolean := True;
-      Show_Progress       : access procedure (Current, Total : Integer);
+      Show_Progress : access procedure (Current, Total : Integer) := null;
       From_DB_Name : String := "";
       To_DB_Name   : String := "")
    is
