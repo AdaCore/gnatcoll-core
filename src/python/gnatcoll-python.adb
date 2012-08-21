@@ -75,7 +75,7 @@ package body GNATCOLL.Python is
 
    function PyImport_ImportModule (Module_Name : String) return PyObject is
       function Internal (Name : String) return PyObject;
-      pragma Import (C, Internal, "PyImport_AddModule");
+      pragma Import (C, Internal, "PyImport_ImportModule");
    begin
       return Internal (Module_Name & ASCII.NUL);
    end PyImport_ImportModule;
