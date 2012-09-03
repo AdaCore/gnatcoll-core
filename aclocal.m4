@@ -302,9 +302,14 @@ AC_HELP_STRING(
 
    else
      if test x"$POSTGRESQL_PATH_WITH" = xyes ; then
-       AM_LIB_PATH(pq)
-       if test x"$am_path_pq" != x ; then
-          PATH_LIBPQ="-L$am_path_pq"
+       PATH_LIBPQ=`pg_config | grep ^LIBDIR | cut -d\  -f3`
+       if test x"$PATH_LIBPQ" != x ; then
+          PATH_LIBPQ="-L$PATH_LIBPQ"
+       else
+          AM_LIB_PATH(pq)
+          if test x"$am_path_pq" != x ; then
+             PATH_LIBPQ="-L$am_path_pq"
+          fi
        fi
        AC_CHECK_LIB(pq,PQreset,WITH_POSTGRES=yes,WITH_POSTGRES=no,[$PATH_LIBPQ])
      else
@@ -876,7 +881,7 @@ AC_DEFUN(AM_TO_GPR,
    # Special handling on darwin for gcc 4.5 and 4.7
    case "$build_os" in
       *darwin*)
-         value=`echo $value | sed -e "s/-framework \([^ ]*\)/-Wl,-framework -Wl,\1/g"`
+         value=`echo $value | sed -e "s/-framework \([[^ ]]*\)/-Wl,-framework -Wl,\1/g"`
    esac
 
    output=$2

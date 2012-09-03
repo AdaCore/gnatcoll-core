@@ -1,3 +1,4 @@
+all:
 include ../Makefile.conf
 
 ADA_PROJECT_PATH:=${prefix}/lib/gnat${DIRSEP}${ADA_PROJECT_PATH}${DIRSEP}../src
