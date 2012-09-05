@@ -156,7 +156,10 @@ package body GNATCOLL.Utils is
    -----------
 
    function Split
-     (Str : String; On : Character) return GNAT.Strings.String_List_Access
+     (Str              : String;
+      On               : Character;
+      Omit_Empty_Lines : Boolean := True)
+      return GNAT.Strings.String_List_Access
    is
       First : Integer := Str'First;
       Count : Natural := 1;
@@ -168,9 +171,13 @@ package body GNATCOLL.Utils is
          if Str (C) = On then
             Count := Count + 1;
 
-            while C <= Str'Last and then Str (C) = On loop
+            if Omit_Empty_Lines then
+               while C <= Str'Last and then Str (C) = On loop
+                  C := C + 1;
+               end loop;
+            else
                C := C + 1;
-            end loop;
+            end if;
          else
             C := C + 1;
          end if;
@@ -184,9 +191,13 @@ package body GNATCOLL.Utils is
          if Str (C) = On then
             Result (Count) := new String'(Str (First .. C - 1));
 
-            while C <= Str'Last and then Str (C) = On loop
+            if Omit_Empty_Lines then
+               while C <= Str'Last and then Str (C) = On loop
+                  C := C + 1;
+               end loop;
+            else
                C := C + 1;
-            end loop;
+            end if;
 
             First := C;
             Count := Count + 1;
@@ -205,16 +216,30 @@ package body GNATCOLL.Utils is
    -----------
 
    function Split
-     (Str : String; On : Character) return Unbounded_String_Array
+     (Str              : String;
+      On               : Character;
+      Omit_Empty_Lines : Boolean := True) return Unbounded_String_Array
    is
       First : Integer := Str'First;
       Count : Natural := 1;
+      C      : Integer;
 
       use Ada.Strings.Unbounded;
    begin
-      for C in Str'Range loop
+      C := Str'First;
+      while C <= Str'Last loop
          if Str (C) = On then
             Count := Count + 1;
+
+            if Omit_Empty_Lines then
+               while C <= Str'Last and then Str (C) = On loop
+                  C := C + 1;
+               end loop;
+            else
+               C := C + 1;
+            end if;
+         else
+            C := C + 1;
          end if;
       end loop;
 
@@ -223,11 +248,24 @@ package body GNATCOLL.Utils is
       begin
          Count := 1;
 
-         for C in Str'Range loop
+         C := Str'First;
+         while C <= Str'Last loop
             if Str (C) = On then
                Result (Count) := To_Unbounded_String (Str (First .. C - 1));
-               First := C + 1;
+
+               if Omit_Empty_Lines then
+                  while C <= Str'Last and then Str (C) = On loop
+                     C := C + 1;
+                  end loop;
+               else
+                  C := C + 1;
+               end if;
+
+               First := C;
                Count := Count + 1;
+
+            else
+               C := C + 1;
             end if;
          end loop;
 
