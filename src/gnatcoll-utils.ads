@@ -68,8 +68,16 @@ package GNATCOLL.Utils is
    --  Return S, with all occurrences of Pattern replaced with Replacement
 
    function Split
-     (Str : String; On : Character) return GNAT.Strings.String_List_Access;
+     (Str              : String;
+      On               : Character;
+      Omit_Empty_Lines : Boolean := True)
+      return GNAT.Strings.String_List_Access;
    --  Split the string on the given character.
+   --  The result depends on the value of Omit_Empty_Lines. For instance, the
+   --  string    "a" & ASCII.LF & ASCII.LF & "b"   will be split as:
+   --       ["a", "b"]  if Omit_Empty_Lines is true
+   --       ["a", "", "b"] otherwise
+   --
    --  Result must be freed by caller.
    --  See also Split below
 
@@ -77,7 +85,9 @@ package GNATCOLL.Utils is
      Ada.Strings.Unbounded.Unbounded_String;
 
    function Split
-     (Str : String; On : Character) return Unbounded_String_Array;
+     (Str              : String;
+      On               : Character;
+      Omit_Empty_Lines : Boolean := True) return Unbounded_String_Array;
    --  Same as Split above, returning an Unbounded_String_Array that does not
    --  need to be freed.
 
