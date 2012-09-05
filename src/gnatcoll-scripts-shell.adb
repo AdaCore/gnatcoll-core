@@ -217,6 +217,15 @@ package body GNATCOLL.Scripts.Shell is
 
    overriding procedure Set_Property
      (Instance : access Shell_Class_Instance_Record;
+      Name : String; Value : Float) is
+   begin
+      --  We can only retrieve string constants later on, so convert here
+      Set_Data
+        (Instance, Cst_Prefix & Name, Create_Property (Float'Image (Value)));
+   end Set_Property;
+
+   overriding procedure Set_Property
+     (Instance : access Shell_Class_Instance_Record;
       Name : String; Value : Boolean) is
    begin
       Set_Data
@@ -1274,6 +1283,16 @@ package body GNATCOLL.Scripts.Shell is
    -----------------
 
    procedure Set_Nth_Arg
+     (Data : in out Shell_Callback_Data; N : Positive; Value : Float) is
+   begin
+      Set_Nth_Arg (Data.CL, N, Float'Image (Value));
+   end Set_Nth_Arg;
+
+   -----------------
+   -- Set_Nth_Arg --
+   -----------------
+
+   procedure Set_Nth_Arg
      (Data : in out Shell_Callback_Data; N : Positive; Value : Boolean) is
    begin
       Set_Nth_Arg (Data.CL, N, Boolean'Image (Value));
@@ -1476,6 +1495,26 @@ package body GNATCOLL.Scripts.Shell is
    -------------
 
    function Nth_Arg
+     (Data : Shell_Callback_Data; N : Positive) return Float
+   is
+      Success : aliased Boolean;
+      S       : constant String := Nth_Arg (Data, N, Success'Access);
+   begin
+      if Success then
+         return Float'Value (S);
+      else
+         raise No_Such_Parameter;
+      end if;
+   exception
+      when Constraint_Error =>
+         raise Invalid_Parameter;
+   end Nth_Arg;
+
+   -------------
+   -- Nth_Arg --
+   -------------
+
+   function Nth_Arg
      (Data : Shell_Callback_Data; N : Positive) return String
    is
       Success : aliased Boolean;
@@ -1574,6 +1613,24 @@ package body GNATCOLL.Scripts.Shell is
          return Default;
       else
          return Integer'Value (Result);
+      end if;
+   end Nth_Arg;
+
+   -------------
+   -- Nth_Arg --
+   -------------
+
+   function Nth_Arg
+     (Data : Shell_Callback_Data; N : Positive; Default : Float)
+      return Float
+   is
+      Success : aliased Boolean;
+      Result  : constant String := Nth_Arg (Data, N, Success'Access);
+   begin
+      if not Success then
+         return Default;
+      else
+         return Float'Value (Result);
       end if;
    end Nth_Arg;
 
@@ -1734,6 +1791,20 @@ package body GNATCOLL.Scripts.Shell is
       end if;
 
       Set_Return_Value (Data, Integer'Image (Value));
+   end Set_Return_Value;
+
+   ----------------------
+   -- Set_Return_Value --
+   ----------------------
+
+   procedure Set_Return_Value
+     (Data : in out Shell_Callback_Data; Value : Float) is
+   begin
+      if not Data.Return_As_List then
+         Free (Data.Return_Value);
+      end if;
+
+      Set_Return_Value (Data, Float'Image (Value));
    end Set_Return_Value;
 
    ----------------------
@@ -2089,6 +2160,16 @@ package body GNATCOLL.Scripts.Shell is
      (Data : Shell_Callback_Data) return Integer is
    begin
       return Integer'Value (Return_Value (Data));
+   end Return_Value;
+
+   ------------------
+   -- Return_Value --
+   ------------------
+
+   overriding function Return_Value
+     (Data : Shell_Callback_Data) return Float is
+   begin
+      return Float'Value (Return_Value (Data));
    end Return_Value;
 
    ------------------

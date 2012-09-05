@@ -157,6 +157,9 @@ package body GNATCOLL.Scripts.Python is
       Name     : String; Value : Boolean);
    overriding procedure Set_Property
      (Instance : access Python_Class_Instance_Record;
+      Name     : String; Value : Float);
+   overriding procedure Set_Property
+     (Instance : access Python_Class_Instance_Record;
       Name     : String; Value : String);
    overriding function Get_Method
      (Instance : access Python_Class_Instance_Record;
@@ -265,6 +268,10 @@ package body GNATCOLL.Scripts.Python is
      (Data    : Python_Callback_Data;
       N       : Positive;
       Success : access Boolean) return Integer;
+   function Nth_Arg
+     (Data    : Python_Callback_Data;
+      N       : Positive;
+      Success : access Boolean) return Float;
    function Nth_Arg
      (Data    : Python_Callback_Data;
       N       : Positive;
@@ -645,6 +652,20 @@ package body GNATCOLL.Scripts.Python is
      (Data : in out Python_Callback_Data; N : Positive; Value : Integer)
    is
       Item : constant PyObject := PyInt_FromLong (Interfaces.C.long (Value));
+   begin
+      Set_Item (Data.Args, N - 1, Item);
+      Py_DECREF (Item);
+   end Set_Nth_Arg;
+
+   -----------------
+   -- Set_Nth_Arg --
+   -----------------
+
+   procedure Set_Nth_Arg
+     (Data : in out Python_Callback_Data; N : Positive; Value : Float)
+   is
+      Item : constant PyObject := PyFloat_FromDouble
+        (Interfaces.C.double (Value));
    begin
       Set_Item (Data.Args, N - 1, Item);
       Py_DECREF (Item);
@@ -2220,6 +2241,32 @@ package body GNATCOLL.Scripts.Python is
    -------------
 
    function Nth_Arg
+     (Data : Python_Callback_Data; N : Positive; Success : access Boolean)
+      return Float
+   is
+      Item : PyObject;
+   begin
+      Get_Param
+        (Data, N, Item, Success.all);
+
+      if not Success.all then
+         return 0.0;
+      end if;
+
+      if not PyFloat_Check (Item) then
+         Raise_Exception
+           (Invalid_Parameter'Identity,
+            "Parameter" & Integer'Image (N) & " should be a float");
+      else
+         return Float (PyFloat_AsDouble (Item));
+      end if;
+   end Nth_Arg;
+
+   -------------
+   -- Nth_Arg --
+   -------------
+
+   function Nth_Arg
      (Data    : Python_Callback_Data;
       N       : Positive;
       Success : access Boolean) return Boolean
@@ -2378,6 +2425,23 @@ package body GNATCOLL.Scripts.Python is
    is
       Success : aliased Boolean;
       Result  : constant Integer := Nth_Arg (Data, N, Success'Access);
+   begin
+      if not Success then
+         raise No_Such_Parameter;
+      else
+         return Result;
+      end if;
+   end Nth_Arg;
+
+   -------------
+   -- Nth_Arg --
+   -------------
+
+   function Nth_Arg
+     (Data : Python_Callback_Data; N : Positive) return Float
+   is
+      Success : aliased Boolean;
+      Result  : constant Float := Nth_Arg (Data, N, Success'Access);
    begin
       if not Success then
          raise No_Such_Parameter;
@@ -2906,6 +2970,19 @@ package body GNATCOLL.Scripts.Python is
    ----------------------
 
    procedure Set_Return_Value
+     (Data : in out Python_Callback_Data; Value : Float)
+   is
+      Val : constant PyObject := PyFloat_FromDouble (double (Value));
+   begin
+      Set_Return_Value (Data, Val);
+      Py_DECREF (Val);
+   end Set_Return_Value;
+
+   ----------------------
+   -- Set_Return_Value --
+   ----------------------
+
+   procedure Set_Return_Value
      (Data : in out Python_Callback_Data; Value : String)
    is
       Val : constant PyObject := PyString_FromString (Value);
@@ -3335,6 +3412,19 @@ package body GNATCOLL.Scripts.Python is
 
    overriding procedure Set_Property
      (Instance : access Python_Class_Instance_Record;
+      Name     : String; Value : Float)
+   is
+      Val : PyObject;
+      Result : Integer;
+      pragma Unreferenced (Result);
+   begin
+      Val := PyFloat_FromDouble (double (Value));
+      Result := PyObject_GenericSetAttrString (Instance.Data, Name, Val);
+      Py_DECREF (Val);
+   end Set_Property;
+
+   overriding procedure Set_Property
+     (Instance : access Python_Class_Instance_Record;
       Name     : String; Value : Boolean)
    is
       Val : PyObject;
@@ -3504,6 +3594,20 @@ package body GNATCOLL.Scripts.Python is
          raise Invalid_Parameter with "Returned value is not an integer";
       else
          return Integer (PyInt_AsLong (Data.Return_Value));
+      end if;
+   end Return_Value;
+
+   ------------------
+   -- Return_Value --
+   ------------------
+
+   overriding function Return_Value
+     (Data : Python_Callback_Data) return Float is
+   begin
+      if not PyFloat_Check (Data.Return_Value) then
+         raise Invalid_Parameter with "Returned value is not a float";
+      else
+         return Float (PyFloat_AsDouble (Data.Return_Value));
       end if;
    end Return_Value;
 
