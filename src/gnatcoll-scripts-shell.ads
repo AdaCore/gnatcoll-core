@@ -103,6 +103,9 @@ private
       Name : String; Value : Integer);
    overriding procedure Set_Property
      (Instance : access Shell_Class_Instance_Record;
+      Name : String; Value : Float);
+   overriding procedure Set_Property
+     (Instance : access Shell_Class_Instance_Record;
       Name : String; Value : Boolean);
    overriding procedure Set_Property
      (Instance : access Shell_Class_Instance_Record;
@@ -254,6 +257,8 @@ private
    overriding function Nth_Arg
      (Data : Shell_Callback_Data; N : Positive) return Integer;
    overriding function Nth_Arg
+     (Data : Shell_Callback_Data; N : Positive) return Float;
+   overriding function Nth_Arg
      (Data : Shell_Callback_Data; N : Positive) return Boolean;
    overriding function Nth_Arg
      (Data : Shell_Callback_Data; N : Positive) return Subprogram_Type;
@@ -269,6 +274,9 @@ private
    overriding function Nth_Arg
      (Data : Shell_Callback_Data; N : Positive; Default : Integer)
       return Integer;
+   overriding function Nth_Arg
+     (Data : Shell_Callback_Data; N : Positive; Default : Float)
+      return Float;
    overriding function Nth_Arg
      (Data : Shell_Callback_Data; N : Positive; Default : Boolean)
       return Boolean;
@@ -290,6 +298,8 @@ private
       Class : Class_Type := No_Class);
    overriding procedure Set_Return_Value
      (Data   : in out Shell_Callback_Data; Value : Integer);
+   overriding procedure Set_Return_Value
+     (Data   : in out Shell_Callback_Data; Value : Float);
    overriding procedure Set_Return_Value
      (Data   : in out Shell_Callback_Data; Value : Boolean);
    overriding procedure Set_Return_Value
@@ -319,6 +329,8 @@ private
    overriding procedure Set_Nth_Arg
      (Data : in out Shell_Callback_Data; N : Positive; Value : Integer);
    overriding procedure Set_Nth_Arg
+     (Data : in out Shell_Callback_Data; N : Positive; Value : Float);
+   overriding procedure Set_Nth_Arg
      (Data : in out Shell_Callback_Data; N : Positive; Value : Boolean);
    overriding procedure Set_Nth_Arg
      (Data  : in out Shell_Callback_Data;
@@ -340,6 +352,8 @@ private
      (Data : Shell_Callback_Data) return String;
    overriding function Return_Value
      (Data : Shell_Callback_Data) return Integer;
+   overriding function Return_Value
+     (Data : Shell_Callback_Data) return Float;
    overriding function Return_Value
      (Data : Shell_Callback_Data) return Boolean;
    overriding function Return_Value

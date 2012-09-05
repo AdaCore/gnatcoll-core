@@ -206,6 +206,10 @@ package GNATCOLL.Python is
    function PyFloat_Check (Obj : PyObject) return Boolean;
    --  Returns true if the Obj is a float object
 
+   function PyFloat_FromDouble (Value : Interfaces.C.double) return PyObject;
+   pragma Import (C, PyFloat_FromDouble, "PyFloat_FromDouble");
+   --  Creates a new float object
+
    --------------
    -- Booleans --
    --------------

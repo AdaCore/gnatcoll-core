@@ -225,6 +225,8 @@ package GNATCOLL.Scripts is
    procedure Set_Nth_Arg
      (Data : in out Callback_Data; N : Positive; Value : Integer) is abstract;
    procedure Set_Nth_Arg
+     (Data : in out Callback_Data; N : Positive; Value : Float) is abstract;
+   procedure Set_Nth_Arg
      (Data : in out Callback_Data; N : Positive; Value : Boolean) is abstract;
    procedure Set_Nth_Arg
      (Data  : in out Callback_Data;
@@ -288,6 +290,8 @@ package GNATCOLL.Scripts is
    function Nth_Arg
      (Data : Callback_Data; N : Positive) return Integer is abstract;
    function Nth_Arg
+     (Data : Callback_Data; N : Positive) return Float is abstract;
+   function Nth_Arg
      (Data : Callback_Data; N : Positive) return Boolean is abstract;
    --  Get the nth argument to the function, starting from 1.
    --  If there is not enough parameters, No_Such_Parameter is raised
@@ -320,6 +324,9 @@ package GNATCOLL.Scripts is
    function Nth_Arg
      (Data : Callback_Data; N : Positive; Default : Integer)
       return Integer;
+   function Nth_Arg
+     (Data : Callback_Data; N : Positive; Default : Float)
+      return Float;
    function Nth_Arg
      (Data : Callback_Data; N : Positive; Default : Boolean) return Boolean;
    function Nth_Arg
@@ -360,6 +367,8 @@ package GNATCOLL.Scripts is
 
    procedure Set_Return_Value
      (Data : in out Callback_Data; Value : Integer) is abstract;
+   procedure Set_Return_Value
+     (Data : in out Callback_Data; Value : Float) is abstract;
    procedure Set_Return_Value
      (Data : in out Callback_Data; Value : String) is abstract;
    procedure Set_Return_Value
@@ -406,6 +415,7 @@ package GNATCOLL.Scripts is
 
    function Return_Value (Data : Callback_Data) return String is abstract;
    function Return_Value (Data : Callback_Data) return Integer is abstract;
+   function Return_Value (Data : Callback_Data) return Float is abstract;
    function Return_Value (Data : Callback_Data) return Boolean is abstract;
    function Return_Value
      (Data : Callback_Data) return Class_Instance is abstract;
@@ -519,6 +529,8 @@ package GNATCOLL.Scripts is
    function Get_Data
      (Instance : Class_Instance; Name : Class_Type) return Integer;
    function Get_Data
+     (Instance : Class_Instance; Name : Class_Type) return Float;
+   function Get_Data
      (Instance : Class_Instance; Name : Class_Type) return String;
    function Get_Data
      (Instance : Class_Instance; Name : Class_Type) return Boolean;
@@ -539,6 +551,8 @@ package GNATCOLL.Scripts is
    procedure Set_Data
      (Instance : Class_Instance; Name : Class_Type; Value : Integer);
    procedure Set_Data
+     (Instance : Class_Instance; Name : Class_Type; Value : Float);
+   procedure Set_Data
      (Instance : Class_Instance; Name : Class_Type; Value : Boolean);
    --  Associate some data with the instance.
    --  These are specialized cases of Set_Data below.
@@ -549,6 +563,8 @@ package GNATCOLL.Scripts is
 
    procedure Set_Property
      (Instance : Class_Instance; Name : String; Value : Integer);
+   procedure Set_Property
+     (Instance : Class_Instance; Name : String; Value : Float);
    procedure Set_Property
      (Instance : Class_Instance; Name : String; Value : String);
    procedure Set_Property
@@ -647,6 +663,8 @@ package GNATCOLL.Scripts is
    function Create_Property
      (Val : Integer) return Instance_Property_Record'Class;
    function Create_Property
+     (Val : Float) return Instance_Property_Record'Class;
+   function Create_Property
      (Val : String) return Instance_Property_Record'Class;
    --  Return an instance of Instance_Property that wraps one of the basic
    --  types. The returned value must be Destroyed, unless you store it
@@ -723,6 +741,9 @@ package GNATCOLL.Scripts is
    procedure Set_Property
      (Instance : access Class_Instance_Record;
       Name     : String; Value : Integer) is abstract;
+   procedure Set_Property
+     (Instance : access Class_Instance_Record;
+      Name     : String; Value : Float) is abstract;
    procedure Set_Property
      (Instance : access Class_Instance_Record;
       Name     : String; Value : Boolean) is abstract;

@@ -28,6 +28,10 @@ NF-15-L703-034 Support for PyGObject (2012-07-04)
    was specified) and use it when appropriate. This provides support for
    gtk+ in the python interface.
 
+NF-15-L628-059 GNATCOLL.Scripts now supports floats (2012-09-05)
+
+   It is now possible to pass float from and to python
+
 NF-15-L620-027 GNATCOLL.Scripts.Python cleanup of output (2012-06-20)
 
    When you use Execute_Command with the Hide_Output parameter set to True,

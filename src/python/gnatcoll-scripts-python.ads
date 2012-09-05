@@ -370,6 +370,8 @@ private
    overriding function Nth_Arg
      (Data : Python_Callback_Data; N : Positive) return Integer;
    overriding function Nth_Arg
+     (Data : Python_Callback_Data; N : Positive) return Float;
+   overriding function Nth_Arg
      (Data : Python_Callback_Data; N : Positive) return Boolean;
    overriding function Nth_Arg
      (Data : Python_Callback_Data; N : Positive) return Subprogram_Type;
@@ -407,6 +409,8 @@ private
    overriding procedure Set_Return_Value
      (Data : in out Python_Callback_Data; Value : Integer);
    overriding procedure Set_Return_Value
+     (Data : in out Python_Callback_Data; Value : Float);
+   overriding procedure Set_Return_Value
      (Data : in out Python_Callback_Data; Value : String);
    overriding procedure Set_Return_Value
      (Data : in out Python_Callback_Data; Value : Boolean);
@@ -432,6 +436,8 @@ private
    overriding procedure Set_Nth_Arg
      (Data : in out Python_Callback_Data; N : Positive; Value : Integer);
    overriding procedure Set_Nth_Arg
+     (Data : in out Python_Callback_Data; N : Positive; Value : Float);
+   overriding procedure Set_Nth_Arg
      (Data : in out Python_Callback_Data; N : Positive; Value : Boolean);
    overriding procedure Set_Nth_Arg
      (Data : in out Python_Callback_Data;
@@ -452,6 +458,8 @@ private
      (Data : Python_Callback_Data) return String;
    overriding function Return_Value
      (Data : Python_Callback_Data) return Integer;
+   overriding function Return_Value
+     (Data : Python_Callback_Data) return Float;
    overriding function Return_Value
      (Data : Python_Callback_Data) return Boolean;
    overriding function Return_Value
