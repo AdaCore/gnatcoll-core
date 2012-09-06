@@ -598,11 +598,16 @@ procedure GNATInspect is
          Errors       => Put_Line'Access);
       Free (GNAT_Version);
 
+      --  The default extensions must match those defined in the gprconfig
+      --  knowledge base.
       Env.Register_Default_Language_Extension
         (Language_Name       => "C",
          Default_Spec_Suffix => ".h",
          Default_Body_Suffix => ".c");
-      Free (GNAT_Version);
+      Env.Register_Default_Language_Extension
+        (Language_Name       => "C++",
+         Default_Spec_Suffix => ".hh",
+         Default_Body_Suffix => ".cpp");
 
       if Path = No_File then
          Trace (Me, "processing 'PROJECT' empty");
@@ -1416,12 +1421,16 @@ begin
    end if;
 
    declare
-      Path : constant Virtual_File := Create (+Project_Name.all);
+      Path : Virtual_File := Create (+Project_Name.all);
    begin
       if not Path.Is_Regular_File then
-         Put_Line ("No such file: " & Project_Name.all);
-         Ada.Command_Line.Set_Exit_Status (Ada.Command_Line.Failure);
-         return;
+         Path := Create (+Project_Name.all & ".gpr");
+
+         if not Path.Is_Regular_File then
+            Put_Line ("No such file: " & Project_Name.all);
+            Ada.Command_Line.Set_Exit_Status (Ada.Command_Line.Failure);
+            return;
+         end if;
       end if;
 
       Load_Project (Path);
