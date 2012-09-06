@@ -19,6 +19,7 @@
 
 with Ada.Calendar;               use Ada.Calendar;
 with Ada.Characters.Handling;    use Ada.Characters.Handling;
+with Ada.Command_Line;           use Ada.Command_Line;
 with Ada.Exceptions;             use Ada.Exceptions;
 with Ada.Strings.Fixed;
 with Ada.Strings.Unbounded;      use Ada.Strings.Unbounded;
@@ -214,7 +215,7 @@ procedure GNATInspect is
    --  Args is the command line entered by the user, so Get_Command (Args) for
    --  instance is the command being executed.
 
-   procedure Process_Project (Args : Arg_List);
+   procedure Load_Project (Path : Virtual_File);
    --  Load the given project (but does not compute its view)
 
    procedure Set_Variable (Name, Value : String);
@@ -588,7 +589,7 @@ procedure GNATInspect is
    -- Process_Project --
    ---------------------
 
-   procedure Process_Project (Args : Arg_List) is
+   procedure Load_Project (Path : Virtual_File) is
       GNAT_Version : GNAT.Strings.String_Access;
    begin
       Env.Set_Path_From_Gnatls
@@ -603,7 +604,7 @@ procedure GNATInspect is
          Default_Body_Suffix => ".c");
       Free (GNAT_Version);
 
-      if Args_Length (Args) < 1 then
+      if Path = No_File then
          Trace (Me, "processing 'PROJECT' empty");
          Project_Is_Default := True;
          Tree.Load_Empty_Project
@@ -617,10 +618,10 @@ procedure GNATInspect is
            (Languages_Attribute, (1 => new String'("Ada")));
          Tree.Recompute_View (Errors => Ada.Text_IO.Put_Line'Access);
       else
-         Trace (Me, "processing 'PROJECT' '" & Nth_Arg (Args, 1) & "'");
+         Trace (Me, "processing 'PROJECT' '" & Path.Display_Full_Name & "'");
          Project_Is_Default := False;
          Tree.Load
-           (Root_Project_Path => Create (+Nth_Arg (Args, 1)),
+           (Root_Project_Path => Path,
             Env               => Env,
             Errors            => Put_Line'Access);
       end if;
@@ -628,8 +629,8 @@ procedure GNATInspect is
    exception
       when GNATCOLL.Projects.Invalid_Project =>
          Put_Line ("Error: invalid project file: '"
-                   & Nth_Arg (Args, 1) & "'");
-   end Process_Project;
+                   & Path.Display_Full_Name & "'");
+   end Load_Project;
 
    ---------------------
    -- Process_Refresh --
@@ -1355,8 +1356,7 @@ begin
       Output      => Project_Name'Access,
       Switch      => "-P:",
       Long_Switch => "--project=",
-      Help        => "Load the given project. If unspecified, use sources and"
-        & " ALI files from current directory.");
+      Help        => "Load the given project (mandatory)");
    Define_Switch
      (Cmdline,
       Switch      => "-X:",
@@ -1392,8 +1392,19 @@ begin
    Initialize (Env);
 
    Getopt (Cmdline, Parse_Command_Line'Unrestricted_Access);
-   GNATCOLL.VFS.Symbolic_Links_Support (Support_Symlinks);
 
+   if Project_Name.all = "" then
+      Free (Project_Name);
+      Project_Name := new String'(GNAT.Command_Line.Get_Argument);
+
+      if Project_Name.all = "" then
+         Put_Line ("No project file specified");
+         Ada.Command_Line.Set_Exit_Status (Ada.Command_Line.Failure);
+         return;
+      end if;
+   end if;
+
+   GNATCOLL.VFS.Symbolic_Links_Support (Support_Symlinks);
    GNATCOLL.Traces.Parse_Config_File (Traces_File_Name.all);
 
    if Show_Progress then
@@ -1404,16 +1415,17 @@ begin
       Env.Set_Object_Subdir (+Subdirs.all);
    end if;
 
-   if Project_Name.all = "" then
-      Process_Project (Empty_Command_Line);   --  Load files from current dir
-   else
-      declare
-         List : Arg_List;
-      begin
-         Set_Nth_Arg (List, 1, Project_Name.all);
-         Process_Project (List);
-      end;
-   end if;
+   declare
+      Path : constant Virtual_File := Create (+Project_Name.all);
+   begin
+      if not Path.Is_Regular_File then
+         Put_Line ("No such file: " & Project_Name.all);
+         Ada.Command_Line.Set_Exit_Status (Ada.Command_Line.Failure);
+         return;
+      end if;
+
+      Load_Project (Path);
+   end;
 
    if DB_Name.all /= ":memory:" then
       declare
