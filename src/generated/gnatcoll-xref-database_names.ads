@@ -52,6 +52,8 @@ package GNATCOLL.Xref.Database_Names is
    N_Id : constant Cst_String_Access := NC_id'Access;
    NC_Imports : aliased constant String := "imports";
    N_Imports : constant Cst_String_Access := NC_imports'Access;
+   NC_Is_Abstract : aliased constant String := "is_abstract";
+   N_Is_Abstract : constant Cst_String_Access := NC_is_abstract'Access;
    NC_Is_Container : aliased constant String := "is_container";
    N_Is_Container : constant Cst_String_Access := NC_is_container'Access;
    NC_Is_End : aliased constant String := "is_end";
