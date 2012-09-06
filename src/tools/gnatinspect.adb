@@ -41,6 +41,9 @@ procedure GNATInspect is
    Me : constant Trace_Handle := Create ("Inspect");
    use File_Sets;
 
+   Output_Lead : aliased GNAT.Strings.String_Access := new String'(" ");
+   --  Prefix written at the beginning of each response line.
+
    function Command_Line_Completion
      (Full_Line, Text : String; Start, Last : Integer)
       return Possible_Completions;
@@ -669,7 +672,8 @@ procedure GNATInspect is
    begin
       Command := GNAT.OS_Lib.Locate_Exec_On_Path (Cmd);
       if Command = null then
-         Put_Line ("Cannot locate '" & Cmd & "' on PATH");
+         Put_Line (Output_Lead.all
+                   & "Cannot locate '" & Cmd & "' on PATH");
          return;
       end if;
 
@@ -685,7 +689,7 @@ procedure GNATInspect is
 
          if not Success then
             Put_Line
-              ("Error: failed to execute '"
+              (Output_Lead.all & "Error: failed to execute '"
                & To_Display_String (Args, Include_Command => False) & "'");
          end if;
       end;
@@ -722,7 +726,8 @@ procedure GNATInspect is
               (Style => UNIX,
                Path  => Words (Words'First + 1).all));
       else
-         Put_Line ("Invalid parameter, expecting name:file:line:column => '"
+         Put_Line (Output_Lead.all
+                   & "Invalid parameter, expecting name:file:line:column => '"
                    & Arg & "'");
          Free (Words);
          return No_Entity;
@@ -731,9 +736,11 @@ procedure GNATInspect is
       Free (Words);
 
       if Ref.Entity = No_Entity then
-         Put_Line ("Error: entity not found '" & Arg & "'");
+         Put_Line (Output_Lead.all
+                   & "Error: entity not found '" & Arg & "'");
       elsif Is_Fuzzy_Match (Ref.Entity) then
-         Put_Line ("   fuzzy match for the entity");
+         Put_Line (Output_Lead.all
+                   & "fuzzy match for the entity");
       end if;
 
       return Ref.Entity;
@@ -746,7 +753,7 @@ procedure GNATInspect is
    procedure Output_Prefix (Count : in out Natural) is
    begin
       if Verbose then
-         Put (" ");
+         Put (Output_Lead.all);
          Put (Image (Count, Min_Width => 3, Padding => ' '));
          Put ("> ");
          Count := Count + 1;
@@ -790,7 +797,7 @@ procedure GNATInspect is
       Renamed : Entity_Information;
    begin
       if Args_Length (Args) /= 1 then
-         Put_Line ("Invalid number of arguments");
+         Put_Line (Output_Lead.all & "Invalid number of arguments");
          return;
       end if;
 
@@ -798,7 +805,7 @@ procedure GNATInspect is
 
       Renamed := Xref.Renaming_Of (Entity);
       if Renamed /= No_Entity then
-         Put_Line ("   Renaming of " & Image (Renamed));
+         Put_Line (Output_Lead.all & "Renaming of " & Image (Renamed));
       end if;
 
       Xref.References (Entity, Cursor => Refs);
@@ -814,7 +821,7 @@ procedure GNATInspect is
       Entity : Entity_Information;
    begin
       if Args_Length (Args) /= 1 then
-         Put_Line ("Invalid number of arguments");
+         Put_Line (Output_Lead.all & "Invalid number of arguments");
          return;
       end if;
 
@@ -836,7 +843,7 @@ procedure GNATInspect is
       Children : Recursive_Entities_Cursor;
    begin
       if Args_Length (Args) /= 1 then
-         Put_Line ("Invalid number of arguments");
+         Put_Line (Output_Lead.all & "Invalid number of arguments");
          return;
       end if;
 
@@ -861,7 +868,7 @@ procedure GNATInspect is
       Count  : Natural := 1;
    begin
       if Args_Length (Args) /= 1 then
-         Put_Line ("Invalid number of arguments");
+         Put_Line (Output_Lead.all & "Invalid number of arguments");
          return;
       end if;
 
@@ -895,7 +902,8 @@ procedure GNATInspect is
          return Boolean'Value (V);
       exception
          when Constraint_Error =>
-            Put_Line ("Error: Expected boolean, got '" & V & "'");
+            Put_Line
+              (Output_Lead.all & "Error: Expected boolean, got '" & V & "'");
             raise Invalid_Value;
       end To_Boolean;
 
@@ -909,7 +917,7 @@ procedure GNATInspect is
             Process_Refresh (Empty_Command_Line);
          end if;
       else
-         Put_Line ("Error: Unknown variable '" & N & "'");
+         Put_Line (Output_Lead.all & "Error: Unknown variable '" & N & "'");
       end if;
    exception
       when Invalid_Value =>
@@ -958,7 +966,9 @@ procedure GNATInspect is
                      Start := Clock;
                      Process_Line (Expr (C)
                                    (Expr (C)'First + 5 .. Expr (C)'Last));
-                     Put_Line (Duration'Image (Clock - Start) & " s");
+                     Put_Line
+                       (Output_Lead.all
+                        & Duration'Image (Clock - Start) & " s");
 
                   else
                      for Co in Commands'Range loop
@@ -973,7 +983,8 @@ procedure GNATInspect is
                      end loop;
 
                      if not Found then
-                        Put_Line ("Invalid command: '" & Cmd & "'");
+                        Put_Line
+                          (Output_Lead.all & "Invalid command: '" & Cmd & "'");
                         raise Invalid_Command;
                      end if;
                   end if;
@@ -994,16 +1005,32 @@ procedure GNATInspect is
       Lines : String_List_Access;
    begin
       Str := Create (+File).Read_File;
-      Lines := Split (Str.all, ASCII.LF);
+      Lines := Split (Str.all, ASCII.LF, Omit_Empty_Lines => False);
       for L in Lines'Range loop
          declare
-            Line : constant String :=
-              Ada.Strings.Fixed.Trim (Lines (L).all, Ada.Strings.Both);
+            Line : constant String := Lines (L).all;
          begin
-            if Starts_With (Line, "--") then
+            if Line = "" then
                if Verbose then
                   Put_Line (Line);
                end if;
+
+            elsif Starts_With (Line, Output_Lead.all) then
+               --  Ignore these lines, they are not even output. In particular,
+               --  we use it for the testsuite to mix commands and expected
+               --  output.
+               null;
+
+            elsif Line (Line'First) = '[' then
+               --  Ignore lines starting with [. In the testsuite, these are
+               --  the output of GNATCOLL.Traces associated with the test
+               null;
+
+            elsif Starts_With (Line, "--") then
+               if Verbose then
+                  Put_Line (Line);
+               end if;
+
             else
                Process_Line (Lines (L).all);
             end if;
@@ -1110,7 +1137,7 @@ procedure GNATInspect is
       Count  : Natural := 1;
    begin
       if Args_Length (Args) /= 1 then
-         Put_Line ("Invalid number of arguments");
+         Put_Line (Output_Lead.all & "Invalid number of arguments");
          return;
       end if;
 
@@ -1130,7 +1157,7 @@ procedure GNATInspect is
       Decl   : Entity_Declaration;
    begin
       if Args_Length (Args) /= 1 then
-         Put_Line ("Invalid number of arguments");
+         Put_Line (Output_Lead.all & "Invalid number of arguments");
          return;
       end if;
 
@@ -1146,12 +1173,26 @@ procedure GNATInspect is
          Syntax := Cpp_Syntax;
       else
          Put_Line
-           ("Unknown language for " & Decl.Location.File.Display_Base_Name);
+           (Output_Lead.all
+            & "Unknown language for " & Decl.Location.File.Display_Base_Name);
          return;
       end if;
 
-      Put_Line (Xref.Documentation (Entity => Entity, Language => Syntax));
-      New_Line;
+      declare
+         Doc : constant String :=
+           Xref.Documentation (Entity => Entity, Language => Syntax);
+         Index, Eol : Natural;
+      begin
+         Index := Doc'First;
+         while Index <= Doc'Last loop
+            Put (Output_Lead.all);
+            Eol := GNATCOLL.Utils.EOL (Doc (Index .. Doc'Last));
+            Put_Line (Doc (Index .. Eol - 1));
+            Index := Eol + 1;
+         end loop;
+
+         Put_Line (Output_Lead.all & "");
+      end;
    end Process_Doc;
 
    ----------------------
@@ -1177,7 +1218,7 @@ procedure GNATInspect is
       Count   : Natural := 1;
    begin
       if Args_Length (Args) /= 1 then
-         Put_Line ("Invalid number of arguments");
+         Put_Line (Output_Lead.all & "Invalid number of arguments");
          return;
       end if;
 
@@ -1199,7 +1240,7 @@ procedure GNATInspect is
       Refs    : References_Cursor;
    begin
       if Args_Length (Args) /= 1 then
-         Put_Line ("Invalid number of arguments");
+         Put_Line (Output_Lead.all & "Invalid number of arguments");
          return;
       end if;
 
@@ -1283,7 +1324,9 @@ begin
       Output      => Commands_From_File'Access,
       Switch      => "-f:",
       Long_Switch => "--file=",
-      Help        => "Execute the commands from the file ARG, and exit");
+      Help        => "Execute the commands from the file ARG, and exit."
+      & " All lines are read, omitting comment lines and lines starting with"
+      & " the lead specified by --lead.");
    Define_Switch
      (Cmdline,
       Output      => Display_Full_Paths'Access,
@@ -1330,8 +1373,15 @@ begin
    Define_Switch
      (Cmdline,
       Output      => Show_Progress'Access,
-      Long_Switch => "-d",
+      Switch      => "-d",
       Help        => "Show progress as LI files are parsed");
+   Define_Switch
+     (Cmdline,
+      Output      => Output_Lead'Access,
+      Long_Switch => "--lead=",
+      Help        => "Set the prefix to display at the beginning of each"
+      & " line of output. This can be used to more easily process the output"
+      & " of gnatinspect if you need to.");
 
    Initialize (Env);
 

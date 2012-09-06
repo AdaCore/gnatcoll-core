@@ -57,3 +57,5 @@ examples/library/obj/database_names.ads
 examples/library/obj/library
 examples/library/obj/library.db
 examples/library/obj/orm.ad?
+examples/gmp/isprime
+examples/gmp/square_triangular_numbers
