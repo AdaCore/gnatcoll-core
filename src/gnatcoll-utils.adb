@@ -35,6 +35,13 @@ package body GNATCOLL.Utils is
 
    OpenVMS_Host : Boolean := False;
 
+   function Count_For_Split
+     (Str              : String;
+      On               : Character;
+      Omit_Empty_Lines : Boolean := True)
+      return Natural;
+   --  Returns the number of strings that will occur after splitting Str on On.
+
    ----------
    -- Free --
    ----------
@@ -151,21 +158,23 @@ package body GNATCOLL.Utils is
       end loop;
    end Replace;
 
-   -----------
-   -- Split --
-   -----------
+   ---------------------
+   -- Count_For_Split --
+   ---------------------
 
-   function Split
+   function Count_For_Split
      (Str              : String;
       On               : Character;
       Omit_Empty_Lines : Boolean := True)
-      return GNAT.Strings.String_List_Access
+      return Natural
    is
-      First : Integer := Str'First;
-      Count : Natural := 1;
-      Result : GNAT.Strings.String_List_Access;
+      Count : Natural := 0;
       C      : Integer;
    begin
+      if Str = "" then
+         return 0;
+      end if;
+
       C := Str'First;
       while C <= Str'Last loop
          if Str (C) = On then
@@ -183,10 +192,33 @@ package body GNATCOLL.Utils is
          end if;
       end loop;
 
-      Result := new GNAT.Strings.String_List (1 .. Count);
-      Count := 1;
+      if Str (Str'Last) /= On then
+         Count := Count + 1;
+      end if;
+      return Count;
+   end Count_For_Split;
 
-      C := Str'First;
+   -----------
+   -- Split --
+   -----------
+
+   function Split
+     (Str              : String;
+      On               : Character;
+      Omit_Empty_Lines : Boolean := True)
+      return GNAT.Strings.String_List_Access
+   is
+      Total  : constant Natural := Count_For_Split (Str, On, Omit_Empty_Lines);
+      Result : constant GNAT.Strings.String_List_Access :=
+        new GNAT.Strings.String_List (1 .. Total);
+      First  : Integer := Str'First;
+      Count  : Natural := 1;
+      C      : Integer := Str'First;
+   begin
+      if Total = 0 then
+         return Result;
+      end if;
+
       while C <= Str'Last loop
          if Str (C) = On then
             Result (Count) := new String'(Str (First .. C - 1));
@@ -207,7 +239,10 @@ package body GNATCOLL.Utils is
          end if;
       end loop;
 
-      Result (Count) := new String'(Str (First .. Str'Last));
+      if First <= Str'Last then
+         Result (Count) := new String'(Str (First .. Str'Last));
+      end if;
+
       return Result;
    end Split;
 
@@ -220,15 +255,21 @@ package body GNATCOLL.Utils is
       On               : Character;
       Omit_Empty_Lines : Boolean := True) return Unbounded_String_Array
    is
-      First : Integer := Str'First;
-      Count : Natural := 1;
-      C      : Integer;
-
       use Ada.Strings.Unbounded;
+      Total  : constant Natural := Count_For_Split (Str, On, Omit_Empty_Lines);
+      Result : Unbounded_String_Array (1 .. Total);
+      First  : Integer := Str'First;
+      Count  : Natural := 1;
+      C      : Integer := Str'First;
+
    begin
-      C := Str'First;
+      if Total = 0 then
+         return Result;
+      end if;
+
       while C <= Str'Last loop
          if Str (C) = On then
+            Result (Count) := To_Unbounded_String (Str (First .. C - 1));
             Count := Count + 1;
 
             if Omit_Empty_Lines then
@@ -238,40 +279,19 @@ package body GNATCOLL.Utils is
             else
                C := C + 1;
             end if;
+
+            First := C;
+
          else
             C := C + 1;
          end if;
       end loop;
 
-      declare
-         Result : Unbounded_String_Array (1 .. Count);
-      begin
-         Count := 1;
-
-         C := Str'First;
-         while C <= Str'Last loop
-            if Str (C) = On then
-               Result (Count) := To_Unbounded_String (Str (First .. C - 1));
-
-               if Omit_Empty_Lines then
-                  while C <= Str'Last and then Str (C) = On loop
-                     C := C + 1;
-                  end loop;
-               else
-                  C := C + 1;
-               end if;
-
-               First := C;
-               Count := Count + 1;
-
-            else
-               C := C + 1;
-            end if;
-         end loop;
-
+      if First <= Str'Last then
          Result (Count) := To_Unbounded_String (Str (First .. Str'Last));
-         return Result;
-      end;
+      end if;
+
+      return Result;
    end Split;
 
    ----------------
