@@ -105,6 +105,7 @@ package GNATCOLL.Xref.Database is
       Is_Subprogram : SQL_Field_Boolean (Ta_Entity_Kinds, Instance, N_Is_Subprogram, Index);
       Is_Container : SQL_Field_Boolean (Ta_Entity_Kinds, Instance, N_Is_Container, Index);
       Body_Is_Full_Declaration : SQL_Field_Boolean (Ta_Entity_Kinds, Instance, N_Body_Is_Full_Declaration, Index);
+      Is_Abstract : SQL_Field_Boolean (Ta_Entity_Kinds, Instance, N_Is_Abstract, Index);
    end record;
 
    type T_Entity_Kinds (Instance : Cst_String_Access)

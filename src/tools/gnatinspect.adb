@@ -1178,20 +1178,26 @@ procedure GNATInspect is
          return;
       end if;
 
+      Put_Line
+        (Output_Lead.all & Xref.Overview (Entity => Entity, Format => Text));
+      Put_Line (Output_Lead.all);
+
       declare
          Doc : constant String :=
            Xref.Documentation (Entity => Entity, Language => Syntax);
          Index, Eol : Natural;
       begin
-         Index := Doc'First;
-         while Index <= Doc'Last loop
-            Put (Output_Lead.all);
-            Eol := GNATCOLL.Utils.EOL (Doc (Index .. Doc'Last));
-            Put_Line (Doc (Index .. Eol - 1));
-            Index := Eol + 1;
-         end loop;
+         if Doc /= "" then
+            Index := Doc'First;
+            while Index <= Doc'Last loop
+               Put (Output_Lead.all);
+               Eol := GNATCOLL.Utils.EOL (Doc (Index .. Doc'Last));
+               Put_Line (Doc (Index .. Eol - 1));
+               Index := Eol + 1;
+            end loop;
 
-         Put_Line (Output_Lead.all & "");
+            Put_Line (Output_Lead.all & "");
+         end if;
       end;
    end Process_Doc;
 
