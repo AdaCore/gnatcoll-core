@@ -77,7 +77,8 @@ package body GNATCOLL.Xref.Database is
          & "|decl_line|Integer|NOT NULL,NOINDEX||" & ASCII.LF
          & "|decl_column|Integer|NOT NULL,NOINDEX||" & ASCII.LF
          & "|decl_caller|FK entities|,NOINDEX||" & ASCII.LF
-         & "|imports|Text|,NOINDEX||" & ASCII.LF
+         & "|mangled_name|Text|||" & ASCII.LF
+         & "|exported|Boolean|NOT NULL,NOINDEX|false|" & ASCII.LF
          & "|INDEX:|decl_file,decl_line,decl_column|entity_loc" & ASCII.LF
          & "" & ASCII.LF
          & "|TABLE| e2e_kind" & ASCII.LF

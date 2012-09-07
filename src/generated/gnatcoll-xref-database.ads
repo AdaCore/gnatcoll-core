@@ -85,8 +85,11 @@ package GNATCOLL.Xref.Database is
       Decl_Caller : SQL_Field_Integer (Ta_Entities, Instance, N_Decl_Caller, Index);
       --  Parent entity
 
-      Imports : SQL_Field_Text (Ta_Entities, Instance, N_Imports, Index);
-      --  Name of imported entity. Format is "lang,name"
+      Mangled_Name : SQL_Field_Text (Ta_Entities, Instance, N_Mangled_Name, Index);
+      --  Mangled name of the entity, if applicable
+
+      Exported : SQL_Field_Boolean (Ta_Entities, Instance, N_Exported, Index);
+      --  Whether the mangled name is an export or an import of the entity
 
    end record;
 

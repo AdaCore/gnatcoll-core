@@ -70,18 +70,19 @@
 #    no index      | scan (~23rows)         |  scan (~238rows)
 # So having only idx2 seems a good compromise (single index is faster at creation)
 
-| TABLE           | entities                        | entity                    |       |                                                |
-|-----------------+---------------------------------+---------------------------+-------+------------------------------------------------|
-| id              | AUTOINCREMENT                   | PK                        |       |                                                |
-| name            | TEXT                            | NOT NULL, NOINDEX, NOCASE |       | Can be empty for forward decls (see above).    |
-| kind            | FK entity_kinds()               | NOT NULL, NOINDEX         |       | The E_Kind for this entity                     |
-| decl_file       | FK files(references)            | NOT NULL, NOINDEX         |       | Set to -1 for a predefined entity              |
-| decl_line       | INTEGER                         | NOT NULL, NOINDEX         |       | Set to -1 for a predefined entity              |
-| decl_column     | INTEGER                         | NOT NULL, NOINDEX         |       | Set to -1 for a predefined entity              |
-| decl_caller     | FK entities                     | NULL, NOINDEX             |       | Parent entity                                  |
-| imports         | TEXT                            | NOINDEX                   |       | Name of imported entity. Format is "lang,name" |
-|-----------------+---------------------------------+---------------------------+-------+------------------------------------------------|
-| INDEX:          | decl_file,decl_line,decl_column | entity_loc                |       | Needed during parse                            |
+| TABLE        | entities                        | entity                    |       |                                                                  |
+|--------------+---------------------------------+---------------------------+-------+------------------------------------------------------------------|
+| id           | AUTOINCREMENT                   | PK                        |       |                                                                  |
+| name         | TEXT                            | NOT NULL, NOINDEX, NOCASE |       | Can be empty for forward decls (see above).                      |
+| kind         | FK entity_kinds()               | NOT NULL, NOINDEX         |       | The E_Kind for this entity                                       |
+| decl_file    | FK files(references)            | NOT NULL, NOINDEX         |       | Set to -1 for a predefined entity                                |
+| decl_line    | INTEGER                         | NOT NULL, NOINDEX         |       | Set to -1 for a predefined entity                                |
+| decl_column  | INTEGER                         | NOT NULL, NOINDEX         |       | Set to -1 for a predefined entity                                |
+| decl_caller  | FK entities                     | NULL, NOINDEX             |       | Parent entity                                                    |
+| mangled_name | TEXT                            | NULL                      |       | Mangled name of the entity, if applicable                        |
+| exported     | BOOLEAN                         | NOT NULL, NOINDEX         | false | Whether the mangled name is an export or an import of the entity |
+|--------------+---------------------------------+---------------------------+-------+------------------------------------------------------------------|
+| INDEX:       | decl_file,decl_line,decl_column | entity_loc                |       | Needed during parse                                              |
 
 # Store links between entities.
 # For instance, pointer to the parent types, pointed type, returned type,
