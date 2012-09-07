@@ -80,7 +80,7 @@ procedure GNATInspect is
 
    procedure Dump (Curs : in out Files_Cursor);
    procedure Dump (Curs : in out Entities_Cursor'Class);
-   procedure Dump (Refs : in out References_Cursor'Class; Name : String);
+   procedure Dump (Refs : in out References_Cursor'Class);
    procedure Dump (Curs : File_Sets.Set);
    --  Display the list of files
 
@@ -771,7 +771,7 @@ procedure GNATInspect is
    ----------
 
    procedure Dump
-     (Refs : in out References_Cursor'Class; Name : String)
+     (Refs : in out References_Cursor'Class)
    is
       Ref    : Entity_Reference;
       Count  : Natural := 1;
@@ -779,15 +779,21 @@ procedure GNATInspect is
       while Has_Element (Refs) loop
          Ref := Refs.Element;
          Output_Prefix (Count);
-         Put
-           (Name & ':' & Xref.Image (Ref)
-            & " (" & To_String (Ref.Kind) & ")");
 
-         if Ref.Scope /= No_Entity then
-            Put_Line (" scope=" & Image (Ref.Scope));
-         else
-            New_Line;
-         end if;
+         declare
+            Name : constant String :=
+              To_String (Xref.Declaration (Ref.Entity).Name);
+         begin
+            Put
+              (Name & ':' & Xref.Image (Ref)
+               & " (" & To_String (Ref.Kind) & ")");
+
+            if Ref.Scope /= No_Entity then
+               Put_Line (" scope=" & Image (Ref.Scope));
+            else
+               New_Line;
+            end if;
+         end;
 
          Next (Refs);
       end loop;
@@ -815,7 +821,7 @@ procedure GNATInspect is
       end if;
 
       Xref.References (Entity, Cursor => Refs);
-      Dump (Refs, To_String (Xref.Declaration (Entity).Name));
+      Dump (Refs);
    end Process_Refs;
 
    -----------------------------
@@ -837,7 +843,7 @@ procedure GNATInspect is
          Entity  => Entity,
          Compute => References'Access,
          Cursor  => Refs);
-      Dump (Refs, To_String (Xref.Declaration (Entity).Name));
+      Dump (Refs);
    end Process_Refs_Overriding;
 
    -----------------------------------
@@ -1258,7 +1264,7 @@ procedure GNATInspect is
 
       Entity := Get_Entity (Nth_Arg (Args, 1));
       Xref.Bodies (Entity, Cursor => Refs);
-      Dump (Refs, To_String (Xref.Declaration (Entity).Name));
+      Dump (Refs);
    end Process_Body;
 
    ---------------
