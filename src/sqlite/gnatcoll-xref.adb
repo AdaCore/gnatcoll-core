@@ -80,7 +80,9 @@ package body GNATCOLL.Xref is
    Query_Get_File : constant Prepared_Statement :=
      Prepare
        (SQL_Select
-            (Database.Files.Id & Database.Files.Stamp,
+            (Database.Files.Id
+                & Database.Files.Stamp
+                & Database.Files.Language,
              From => Database.Files,
              Where => Database.Files.Path = Text_Param (1),
              Limit => 1),
@@ -157,6 +159,26 @@ package body GNATCOLL.Xref is
              & (Database.Entities.Decl_Line = Integer_Param (4))
              & (Database.Entities.Decl_Column = Integer_Param (5))),
         On_Server => True, Name => "insert_entity");
+   Query_Insert_Entity_With_Mangled : constant Prepared_Statement :=
+     Prepare
+       (SQL_Insert
+            ((Database.Entities.Name = Text_Param (1))
+             & (Database.Entities.Kind = Text_Param (2))
+             & (Database.Entities.Decl_File = Integer_Param (3))
+             & (Database.Entities.Decl_Line = Integer_Param (4))
+             & (Database.Entities.Decl_Column = Integer_Param (5))
+             & (Database.Entities.Mangled_Name = Text_Param (6))
+             & (Database.Entities.Exported = True)),
+        On_Server => True, Name => "insert_entity_with_mangled");
+
+   Query_Set_Entity_Mangled_Name : constant Prepared_Statement :=
+     Prepare
+       (SQL_Update
+        (Table => Database.Entities,
+         Set   => (Database.Entities.Mangled_Name = Text_Param (2))
+            & (Database.Entities.Exported = Boolean_Param (3)),
+         Where => Database.Entities.Id = Integer_Param (1)),
+        On_Server => True, Name => "set_mangled");
 
    Query_Insert_Ref : constant Prepared_Statement :=
      Prepare
@@ -252,13 +274,12 @@ package body GNATCOLL.Xref is
              Where => Database.Entities.Id = Integer_Param (1)),
         On_Server => True, Name => "set_entity_name_and_kind");
 
-   Query_Set_Entity_Import : constant Prepared_Statement :=
-     Prepare
-       (SQL_Update
-            (Table => Database.Entities,
-             Set   => Database.Entities.Imports = Text_Param (2),
-             Where => Database.Entities.Id = Integer_Param (1)),
-        On_Server => True, Name => "set_entity_import");
+   Query_Mangled_Name : constant Prepared_Statement := Prepare
+     (SQL_Select
+      (Database.Entities.Mangled_Name,
+       From => Database.Entities,
+       Where => Database.Entities.Id = Integer_Param (1)),
+      On_Server => False, Name => "mangled_name");
 
    Q_Parameters_Toentity : constant := 0;
    Q_Parameters_Kind     : constant := 1;
@@ -348,6 +369,7 @@ package body GNATCOLL.Xref is
    Q_Ref_Col     : constant := 3;
    Q_Ref_Kind    : constant := 4;
    Q_Ref_Caller  : constant := 5;
+   Q_Ref_Entity  : constant := 6;  --  id of the ref'ed entity
    Q_References : constant Prepared_Statement :=
      Prepare
        (SQL_Union
@@ -358,7 +380,8 @@ package body GNATCOLL.Xref is
                         Q_Ref_Line    => +Database.Entities.Decl_Line,
                         Q_Ref_Col     => +Database.Entities.Decl_Column,
                         Q_Ref_Kind    => +Expression ("declaration"),
-                        Q_Ref_Caller  => +Database.Entities.Decl_Caller)),
+                        Q_Ref_Caller  => +Database.Entities.Decl_Caller,
+                        Q_Ref_Entity  => +Database.Entities.Id)),
                   From => Database.Entities & Database.Files,
                   Where => Database.Entities.Decl_File = Database.Files.Id
                   and Database.Entities.Id = Integer_Param (1)),
@@ -370,7 +393,8 @@ package body GNATCOLL.Xref is
                     Q_Ref_Line    => +Database.Entity_Refs.Line,
                     Q_Ref_Col     => +Database.Entity_Refs.Column,
                     Q_Ref_Kind    => +Database.Reference_Kinds.Display,
-                    Q_Ref_Caller  => +Database.Entity_Refs.Caller)),
+                    Q_Ref_Caller  => +Database.Entity_Refs.Caller,
+                    Q_Ref_Entity  => +Database.Entity_Refs.Entity)),
                 From => Database.Entity_Refs & Database.Files
                   & Database.Reference_Kinds,
                 Where => Database.Entity_Refs.File = Database.Files.Id
@@ -406,7 +430,8 @@ package body GNATCOLL.Xref is
                    Q_Ref_Line    => +Database.Entity_Refs.Line,
                    Q_Ref_Col     => +Database.Entity_Refs.Column,
                    Q_Ref_Kind    => +Database.Reference_Kinds.Display,
-                   Q_Ref_Caller  => +Database.Entity_Refs.Caller)),
+                   Q_Ref_Caller  => +Database.Entity_Refs.Caller,
+                   Q_Ref_Entity  => +Database.Entity_Refs.Entity)),
              From => Database.Entity_Refs & Database.Files
              & Database.Reference_Kinds,
              Where => Database.Entity_Refs.File = Database.Files.Id
@@ -418,11 +443,60 @@ package body GNATCOLL.Xref is
              & Database.Entity_Refs.Line & Database.Entity_Refs.Column,
              Distinct => True),
         On_Server => False, Name => "references_and_kind");
+   pragma Unreferenced (Q_References_And_Kind);
    --  Cannot be prepared because there are risks of concurrent calls.
+
+   Q_Bodies : constant Prepared_Statement :=
+     Prepare
+       (SQL_Select
+            (To_List
+                 ((Q_Ref_File_Id => +Database.Files.Id,
+                   Q_Ref_File    => +Database.Files.Path,
+                   Q_Ref_Line    => +Database.Entity_Refs.Line,
+                   Q_Ref_Col     => +Database.Entity_Refs.Column,
+                   Q_Ref_Kind    => +Database.Reference_Kinds.Display,
+                   Q_Ref_Caller  => +Database.Entity_Refs.Caller,
+                   Q_Ref_Entity  => +Database.Entity_Refs.Entity)),
+             From => Database.Entity_Refs & Database.Files
+             & Database.Reference_Kinds,
+             Where => Database.Entity_Refs.File = Database.Files.Id
+             and Database.Entity_Refs.Kind = Database.Reference_Kinds.Id
+             and Database.Reference_Kinds.Id = "b"
+             and (Database.Entity_Refs.Entity = Integer_Param (1)
+
+                  --  Search all matching exported entities
+                  or SQL_In
+                     (Database.Entity_Refs.Entity,
+                      SQL_Select
+                         (Entities2.Id,
+                          From => Database.Entities & Entities2,
+                          Where => Database.Entities.Id = Integer_Param (1)
+                          and Database.Entities.Mangled_Name /= ""
+                          and Entities2.Id /= Database.Entities.Id
+                          and Entities2.Exported
+                          and Entities2.Mangled_Name =
+                             Database.Entities.Mangled_Name))),
+
+             Order_By => Database.Files.Path
+             & Database.Entity_Refs.Line & Database.Entity_Refs.Column,
+             Distinct => True),
+        On_Server => False, Name => "bodies");
+   --  Return the bodies of the entity.
+   --  This query is more complex than Q_References_And_Kind because it also
+   --  looks at mangled name for find matches in other languages.
+
+   type File_Db_Info is record
+      Id   : Integer;  --  Id in the files table
+
+      Export_Mangled_Name : Boolean;
+      --  Whether we should by default use the entity name as the mangled
+      --  name. This is true for C, systematically. We also set it true for C++
+      --  (in case extern"C" was used), but it might get overridden later on.
+   end record;
 
    package VFS_To_Ids is new Ada.Containers.Hashed_Maps
      (Key_Type        => Virtual_File,
-      Element_Type    => Integer,   --  Id in the files table
+      Element_Type    => File_Db_Info,
       Hash            => Full_Name_Hash,
       Equivalent_Keys => "=");
    use VFS_To_Ids;
@@ -465,7 +539,7 @@ package body GNATCOLL.Xref is
 
    package Depid_To_Ids is new Ada.Containers.Vectors
      (Index_Type      => Positive,  --  index in the ALI file ("D" lines)
-      Element_Type    => Integer);  --  Id in the files table
+      Element_Type    => File_Db_Info);
    use Depid_To_Ids;
 
    type Entity_Renaming is record
@@ -844,6 +918,7 @@ package body GNATCOLL.Xref is
       --  skips the first line of a scope, the other doesn't.
 
       Current_X_File : Integer;
+      Current_X_File_Export_Mangled : Boolean;
       --  Id (in the database) of the file for the current X section
 
       Current_X_File_Unit_File_Index : Integer := -1;
@@ -901,6 +976,10 @@ package body GNATCOLL.Xref is
       pragma Inline (Next_Line);
       --  Moves Index to the beginning of the next line
 
+      procedure Set_Mangled_Name (Mangled : String; Exported : Boolean);
+      --  Set the mangled name for the entity, and whether this is an export or
+      --  an import.
+
       function Get_Natural return Natural;
       pragma Inline (Get_Natural);
       --  Read an integer at the current position, and moves Index after it.
@@ -914,7 +993,8 @@ package body GNATCOLL.Xref is
          Decl_Line   : Integer;
          Decl_Column : Integer;
          Name        : String;
-         Kind        : Character) return Integer;
+         Kind        : Character;
+         Set_Mangled_Name : Boolean) return Integer;
       --  Lookup an entity at the given location. If the entity is already
       --  known in the local hash table, it is reused, otherwise it is searched
       --  in the database. If it doesn't exist there, a new entry is created
@@ -950,7 +1030,7 @@ package body GNATCOLL.Xref is
 
       function Insert_Source_File
         (Basename        : String;
-         Is_ALI_Unit     : Boolean := False) return Integer;
+         Is_ALI_Unit     : Boolean := False) return File_Db_Info;
       --  Retrieves the id for the file in the database, or create a new entry
       --  for it.
       --  Is_ALI_Unit should be true when the file is one of the units
@@ -984,7 +1064,7 @@ package body GNATCOLL.Xref is
          Index : Natural := 1;
       begin
          while Has_Element (C) loop
-            if Element (C) = Id then
+            if Element (C).Id = Id then
                return Index;
             end if;
 
@@ -1038,7 +1118,7 @@ package body GNATCOLL.Xref is
          Xref_Line := Get_Natural;
 
          if Str (Index) = '|' then
-            Xref_File := Depid_To_Id.Element (Xref_Line);
+            Xref_File := Depid_To_Id.Element (Xref_Line).Id;
             if ALI_Contains_External_Refs then
                Xref_File_Unit_File_Index := Is_Unit_File (Xref_File);
             end if;
@@ -1165,7 +1245,8 @@ package body GNATCOLL.Xref is
                   Decl_Line   => Xref_Line,
                   Decl_Column => Xref_Col,
                   Name        => "",
-                  Kind        => Xref_Kind);
+                  Kind        => Xref_Kind,
+                  Set_Mangled_Name => False);
             end if;
          end if;
 
@@ -1251,14 +1332,28 @@ package body GNATCOLL.Xref is
             end loop;
             Index := Index + 1;
 
+            --  Ignore language info
+            for Pos in Start .. Index - 1 loop
+               if Str (Pos) = ',' then
+                  Start := Pos + 1;
+                  exit;
+               end if;
+            end loop;
+
             declare
-               Name : aliased String :=
+               Name : constant String :=
                  String (Str (Start .. Index - 2));
             begin
-               DB.Execute
-                 (Query_Set_Entity_Import,
-                  Params => (1 => +Current_Entity,
-                             2 => +Name'Unrestricted_Access));
+               case Xref_Kind is
+                  when 'i' =>
+                     Set_Mangled_Name (Name, Exported => True);
+                  when 'b' =>
+                     Set_Mangled_Name (Name, Exported => False);
+                  when others =>
+                     Trace (Me_Error, "Error: unexpected entity kind"
+                            & " before a mangled name info: '"
+                            & Xref_Kind'Img & "'");
+               end case;
             end;
          end if;
       end Skip_Import_Info;
@@ -1343,25 +1438,25 @@ package body GNATCOLL.Xref is
 
       function Insert_Source_File
         (Basename        : String;
-         Is_ALI_Unit     : Boolean := False) return Integer
+         Is_ALI_Unit     : Boolean := False) return File_Db_Info
       is
          File : constant Virtual_File :=
            Tree.Create
              (Name            => +Basename,
               Use_Object_Path => False);
-         Found : VFS_To_Ids.Cursor;
-         Id    : Integer;
+         Found  : VFS_To_Ids.Cursor;
+         Result : File_Db_Info;
       begin
          if File = GNATCOLL.VFS.No_File then
             if Active (Me_Error) then
                Trace (Me_Error, "File not found in project: " & Basename);
             end if;
-            return -1;
+            return (Id => -1, Export_Mangled_Name => False);
          end if;
 
          Found := VFS_To_Id.Find (File);
          if Has_Element (Found) then
-            Id := Element (Found);
+            Result := Element (Found);
          else
             declare
                Name  : aliased String :=
@@ -1373,25 +1468,31 @@ package body GNATCOLL.Xref is
                   Params => (1 => +Name'Unchecked_Access));
 
                if Files.Has_Row then
-                  Id := Files.Integer_Value (0);
+                  Result := (Id   => Files.Integer_Value (0),
+                             Export_Mangled_Name =>
+                               Files.Value (2) = "c"
+                               or else Files.Value (2) = "c++");
                else
                   declare
                      Lang : aliased String := Tree.Info (File).Language;
                   begin
-                     Id := DB.Insert_And_Get_PK
-                       (Query_Insert_Source_File,
-                        Params => (1 => +Name'Unchecked_Access,
-                                   2 => +Lang'Unrestricted_Access),
-                        PK => Database.Files.Id);
+                     Result :=
+                       (Id => DB.Insert_And_Get_PK
+                           (Query_Insert_Source_File,
+                            Params => (1 => +Name'Unchecked_Access,
+                                       2 => +Lang'Unrestricted_Access),
+                            PK => Database.Files.Id),
+                        Export_Mangled_Name =>
+                          Lang = "c" or else Lang = "c++");
                   end;
                end if;
 
-               VFS_To_Id.Insert (File, Id);
+               VFS_To_Id.Insert (File, Result);
             end;
          end if;
 
          if Is_ALI_Unit then
-            Unit_Files.Append (Id);
+            Unit_Files.Append (Result);
             Grow_As_Needed (Scope_Trees, Integer (Unit_Files.Length));
             Grow_As_Needed (Decl_Scope_Trees, Integer (Unit_Files.Length));
 
@@ -1410,14 +1511,27 @@ package body GNATCOLL.Xref is
             --  can occur when overriding runtime files.
 
             if not Visited_ALI_Units.Contains (File) then
-               Visited_ALI_Units.Include (File, Id);
-               DB.Execute (Query_Delete_File_Dep, Params => (1 => +Id));
-               DB.Execute (Query_Delete_Refs, Params => (1 => +Id));
+               Visited_ALI_Units.Include (File, Result);
+               DB.Execute (Query_Delete_File_Dep, Params => (1 => +Result.Id));
+               DB.Execute (Query_Delete_Refs, Params => (1 => +Result.Id));
             end if;
          end if;
 
-         return Id;
+         return Result;
       end Insert_Source_File;
+
+      ----------------------
+      -- Set_Mangled_Name --
+      ----------------------
+
+      procedure Set_Mangled_Name (Mangled : String; Exported : Boolean) is
+      begin
+         DB.Execute
+           (Query_Set_Entity_Mangled_Name,
+            Params => (1 => +Current_Entity,
+                       2 => +Mangled'Unrestricted_Access,
+                       3 => +Exported));
+      end Set_Mangled_Name;
 
       --------------------------
       -- Get_Or_Create_Entity --
@@ -1428,7 +1542,8 @@ package body GNATCOLL.Xref is
          Decl_Line   : Integer;
          Decl_Column : Integer;
          Name        : String;
-         Kind        : Character) return Integer
+         Kind        : Character;
+         Set_Mangled_Name : Boolean) return Integer
       is
          R : Forward_Cursor;
          Decl : constant Loc :=
@@ -1480,15 +1595,29 @@ package body GNATCOLL.Xref is
 
                Trace
                  (Me_Forward, "Insert forward declaration (column unknown)");
-               Candidate := DB.Insert_And_Get_PK
-                 (Query_Insert_Entity,
-                  Params =>
-                    (1 => +Name'Unrestricted_Access,   --  empty string
-                     2 => +'P',  --  unknown
-                     3 => +Decl_File,
-                     4 => +Decl_Line,
-                     5 => +(-1)),
-                  PK => Database.Entities.Id);
+
+               if Set_Mangled_Name then
+                  Candidate := DB.Insert_And_Get_PK
+                    (Query_Insert_Entity_With_Mangled,
+                     Params =>
+                       (1 => +Name'Unrestricted_Access,   --  empty string
+                        2 => +'P',  --  unknown
+                        3 => +Decl_File,
+                        4 => +Decl_Line,
+                        5 => +(-1),
+                        6 => +Name'Unrestricted_Access),
+                     PK => Database.Entities.Id);
+               else
+                  Candidate := DB.Insert_And_Get_PK
+                    (Query_Insert_Entity,
+                     Params =>
+                       (1 => +Name'Unrestricted_Access,   --  empty string
+                        2 => +'P',  --  unknown
+                        3 => +Decl_File,
+                        4 => +Decl_Line,
+                        5 => +(-1)),
+                     PK => Database.Entities.Id);
+               end if;
             end if;
 
             return Candidate;
@@ -1610,15 +1739,28 @@ package body GNATCOLL.Xref is
          --  we are creating a forward declaration.
 
          if not Has_Element (C) then
-            Candidate := DB.Insert_And_Get_PK
-              (Query_Insert_Entity,
-               Params =>
-                 (1 => +Name'Unrestricted_Access,
-                  2 => +Kind,
-                  3 => +Decl_File,
-                  4 => +Decl_Line,
-                  5 => +Decl_Column),
-               PK => Database.Entities.Id);
+            if Set_Mangled_Name then
+               Candidate := DB.Insert_And_Get_PK
+                 (Query_Insert_Entity_With_Mangled,
+                  Params =>
+                    (1 => +Name'Unrestricted_Access,
+                     2 => +Kind,
+                     3 => +Decl_File,
+                     4 => +Decl_Line,
+                     5 => +Decl_Column,
+                     6 => +Name'Unrestricted_Access),
+                  PK => Database.Entities.Id);
+            else
+               Candidate := DB.Insert_And_Get_PK
+                 (Query_Insert_Entity,
+                  Params =>
+                    (1 => +Name'Unrestricted_Access,
+                     2 => +Kind,
+                     3 => +Decl_File,
+                     4 => +Decl_Line,
+                     5 => +Decl_Column),
+                  PK => Database.Entities.Id);
+            end if;
 
             Entity_Decl_To_Id.Insert
               (Decl,
@@ -1643,7 +1785,14 @@ package body GNATCOLL.Xref is
 
                --  Could be set to -1 if the file is not found in the project's
                --  sources (for instance sdefault.adb)
-               Current_X_File := Depid_To_Id.Element (Get_Natural);
+               declare
+                  Info : constant File_Db_Info :=
+                    Depid_To_Id.Element (Get_Natural);
+               begin
+                  Current_X_File := Info.Id;
+                  Current_X_File_Export_Mangled := Info.Export_Mangled_Name;
+               end;
+
                Current_X_File_Unit_File_Index := Is_Unit_File (Current_X_File);
 
             elsif Str (Index) = '.'
@@ -1745,12 +1894,14 @@ package body GNATCOLL.Xref is
                end if;
 
                Spec_Start_Line := Xref_Line;
+
                Current_Entity := Get_Or_Create_Entity
                  (Name        => String (Str (Name_Start .. Name_End)),
                   Decl_File   => Current_X_File,
                   Decl_Line   => Spec_Start_Line,
                   Decl_Column => Xref_Col,
-                  Kind        => Xref_Kind);
+                  Kind        => Xref_Kind,
+                  Set_Mangled_Name => Current_X_File_Export_Mangled);
             end if;
 
             Name_End := Index;
@@ -1977,7 +2128,7 @@ package body GNATCOLL.Xref is
                   End_Of_Spec_Line := Xref_Line;
                when 'p' | 'P' =>
                   Eid := E2e_Has_Primitive;
-               when 'r' | 'm' | 'l' | 'R' | 's' | 'w' | 'i' | 'k' | 'D'
+               when 'r' | 'm' | 'l' | 'R' | 'i' | 's' | 'w' | 'k' | 'D'
                   | 'H' | 'o' | 'x' =>
                   null;  --  real references
                when 'd' =>
@@ -2185,7 +2336,7 @@ package body GNATCOLL.Xref is
 
                Current_Unit_Id := Insert_Source_File
                  (Basename        => String (Str (Start .. Index - 1)),
-                  Is_ALI_Unit     => True);
+                  Is_ALI_Unit     => True).Id;
                if Current_Unit_Id /= -1 then
                   DB.Execute
                     (Query_Set_ALI,
@@ -2225,13 +2376,13 @@ package body GNATCOLL.Xref is
                      if F /= "" then
                         Skip_Spaces;
                         Skip_Word;
-                        Dep_Id := Insert_Source_File (Basename => +F);
+                        Dep_Id := Insert_Source_File (Basename => +F).Id;
                      elsif Str (Index) /= ASCII.LF then
                         Skip_Spaces;
                         Start := Index;
                         Skip_Word;
                         Dep_Id := Insert_Source_File
-                          (Basename => String (Str (Start .. Index - 1)));
+                          (Basename => String (Str (Start .. Index - 1))).Id;
                      else
                         --  second format ("unchecked_deallocation%s\n").
                         Dep_Id := -1;
@@ -2262,20 +2413,23 @@ package body GNATCOLL.Xref is
 
                declare
                   Base_Last : constant Integer := Index - 1;
+                  Info : File_Db_Info;
                begin
                   Skip_Spaces;
                   Skip_Word;
                   Skip_Spaces;
                   Skip_Word;
-                  Dep_Id := Insert_Source_File
+                  Info := Insert_Source_File
                     (Basename => String (Str (Start .. Base_Last)),
                      Is_ALI_Unit => Str (Index) /= ASCII.LF);
-               end;
+                  Dep_Id := Info.Id;
 
-               Depid_To_Id.Set_Length (Ada.Containers.Count_Type (D_Line_Id));
-               Depid_To_Id.Replace_Element
-                 (Index    => D_Line_Id,
-                  New_Item => Dep_Id);
+                  Depid_To_Id.Set_Length
+                    (Ada.Containers.Count_Type (D_Line_Id));
+                  Depid_To_Id.Replace_Element
+                    (Index    => D_Line_Id,
+                     New_Item => Info);
+               end;
 
                D_Line_Id := D_Line_Id + 1;
 
@@ -3035,7 +3189,8 @@ package body GNATCOLL.Xref is
       end if;
 
       return Entity_Reference'
-        (Entity => Self.Entity,
+        (Entity => (Id => Self.DBCursor.Integer_Value (Q_Ref_Entity),
+                    Fuzzy => False),
          File   => Create (+Self.DBCursor.Value (Q_Ref_File)),
          Line   => Self.DBCursor.Integer_Value (Q_Ref_Line),
          Column => Visible_Column (Self.DBCursor.Integer_Value (Q_Ref_Col)),
@@ -3115,13 +3270,9 @@ package body GNATCOLL.Xref is
       Entity : Entity_Information;
       Cursor : out References_Cursor'Class)
    is
-      Kind : aliased String := "b";
    begin
       Cursor.Entity := Entity;
-      Cursor.DBCursor.Fetch
-        (Self.DB, Q_References_And_Kind,
-         Params => (1 => +Entity.Id,
-                    2 => +Kind'Access));
+      Cursor.DBCursor.Fetch (Self.DB, Q_Bodies, Params => (1 => +Entity.Id));
    end Bodies;
 
    -------------
@@ -3268,6 +3419,28 @@ package body GNATCOLL.Xref is
 
       return Seen;
    end Depends_On;
+
+   ------------------
+   -- Mangled_Name --
+   ------------------
+
+   function Mangled_Name
+     (Self   : Xref_Database;
+      Entity : Entity_Information) return String
+   is
+      C : Forward_Cursor;
+   begin
+      C.Fetch
+        (Self.DB,
+         Query_Mangled_Name,
+         Params => (1 => +Entity.Id));
+
+      if C.Has_Row and not C.Is_Null (0) then
+         return C.Value (0);
+      else
+         return "";
+      end if;
+   end Mangled_Name;
 
    --------------------
    -- Qualified_Name --
@@ -3638,6 +3811,12 @@ package body GNATCOLL.Xref is
       Format   : Formatting := Text) return String
    is
       Result : Unbounded_String;
+      D       : constant Entity_Declaration := Self.Declaration (Entity);
+      Mangled : constant String := Self.Mangled_Name (Entity);
+      Comm    : constant String :=
+        Comment (Xref_Database'Class (Self), Entity, Language, Format);
+      Decl    : constant String :=
+        Text_Declaration (Xref_Database'Class (Self), Entity, Format);
    begin
       --  Only output the documentation, not the overview for the entity.
 --        Result := To_Unbounded_String
@@ -3645,14 +3824,18 @@ package body GNATCOLL.Xref is
 --        Append
 --          (Result,
 --           Overview (Xref_Database'Class (Self), Entity, Format) & ASCII.LF);
-      Append
-        (Result,
-         Comment (Xref_Database'Class (Self), Entity, Language, Format)
-         & ASCII.LF);
-      Append
-        (Result,
-         Text_Declaration (Xref_Database'Class (Self), Entity, Format)
-         & ASCII.LF);
+
+      if Comm /= "" then
+         Append (Result, Comm & ASCII.LF);
+      end if;
+
+      if Decl /= "" then
+         Append (Result, Decl & ASCII.LF);
+      end if;
+
+      if Mangled /= "" and then Mangled /= D.Name then
+         Append (Result, "Mangled name: " & Mangled & ASCII.LF);
+      end if;
 
       return To_String
         (Ada.Strings.Unbounded.Trim

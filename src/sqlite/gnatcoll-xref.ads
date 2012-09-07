@@ -329,6 +329,13 @@ package GNATCOLL.Xref is
       Entity : Entity_Information) return String;
    --  Returns the fully qualified name for the entity
 
+   function Mangled_Name
+     (Self   : Xref_Database;
+      Entity : Entity_Information) return String;
+   --  Return the mangled name of the entity. This is the name seen by the
+   --  linker, and that should be used, for instance, in an Ada pragma
+   --  import to use the entity.
+
    ----------------
    -- References --
    ----------------

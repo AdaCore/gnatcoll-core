@@ -38,6 +38,8 @@ package GNATCOLL.Xref.Database_Names is
    N_Display : constant Cst_String_Access := NC_display'Access;
    NC_Entity : aliased constant String := "entity";
    N_Entity : constant Cst_String_Access := NC_entity'Access;
+   NC_Exported : aliased constant String := "exported";
+   N_Exported : constant Cst_String_Access := NC_exported'Access;
    NC_File : aliased constant String := "file";
    N_File : constant Cst_String_Access := NC_file'Access;
    NC_Fromentity : aliased constant String := """fromEntity""";
@@ -50,8 +52,6 @@ package GNATCOLL.Xref.Database_Names is
    N_From_Li : constant Cst_String_Access := NC_from_li'Access;
    NC_Id : aliased constant String := "id";
    N_Id : constant Cst_String_Access := NC_id'Access;
-   NC_Imports : aliased constant String := "imports";
-   N_Imports : constant Cst_String_Access := NC_imports'Access;
    NC_Is_Abstract : aliased constant String := "is_abstract";
    N_Is_Abstract : constant Cst_String_Access := NC_is_abstract'Access;
    NC_Is_Container : aliased constant String := "is_container";
@@ -72,6 +72,8 @@ package GNATCOLL.Xref.Database_Names is
    N_Language : constant Cst_String_Access := NC_language'Access;
    NC_Line : aliased constant String := "line";
    N_Line : constant Cst_String_Access := NC_line'Access;
+   NC_Mangled_Name : aliased constant String := "mangled_name";
+   N_Mangled_Name : constant Cst_String_Access := NC_mangled_name'Access;
    NC_Name : aliased constant String := """name""";
    N_Name : constant Cst_String_Access := NC_name'Access;
    NC_Order_By : aliased constant String := "order_by";
