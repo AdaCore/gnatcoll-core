@@ -1475,7 +1475,7 @@ begin
 
    History_File := new String'
      (Create_From_Dir
-        (Dir       => Tree.Root_Project.Object_Dir,
+        (Dir       => GNATCOLL.VFS.Get_Home_Directory,
          Base_Name => +".gnatinspect_hist").Display_Full_Name);
 
    Install_Ctrl_C_Handler (On_Ctrl_C'Unrestricted_Access);
