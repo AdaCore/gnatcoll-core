@@ -81,6 +81,7 @@
 | decl_caller  | FK entities                     | NULL, NOINDEX             |       | Parent entity                                                    |
 | mangled_name | TEXT                            | NULL                      |       | Mangled name of the entity, if applicable                        |
 | exported     | BOOLEAN                         | NOT NULL, NOINDEX         | false | Whether the mangled name is an export or an import of the entity |
+| obsolete     | BOOLEAN                         | NOT NULL, NOINDEX         | false | Used for various purposes in GNATCOLL.Xref. Internal only        |
 |--------------+---------------------------------+---------------------------+-------+------------------------------------------------------------------|
 | INDEX:       | decl_file,decl_line,decl_column | entity_loc                |       | Needed during parse                                              |
 

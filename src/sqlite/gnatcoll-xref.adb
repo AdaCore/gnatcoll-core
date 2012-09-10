@@ -105,6 +105,28 @@ package body GNATCOLL.Xref is
              & (Database.Files.Language = "li")),
         On_Server => True, Name => "insert_li_file");
 
+   Query_Mark_Entity_As_Obsolete : constant Prepared_Statement := Prepare
+     (SQL_Update
+        (Table => Database.Entities,
+         Set   => (Database.Entities.Obsolete = True),
+         Where => SQL_In
+           (Database.Entities.Decl_File,
+            SQL_Select
+              (Database.F2f.Fromfile,
+               From  => Database.F2f,
+               Where => Database.F2f.Tofile = Integer_Param (1)   --  LI file
+                  and Database.F2f.Kind = F2f_Has_Ali))),
+      On_Server => True, Name => "mark_entity_as_obsolete");
+   --  Mark all entities declared in one of the main units of a given LI file
+   --  as obsolete.
+
+   Query_Mark_Entity_As_Valid : constant Prepared_Statement := Prepare
+     (SQL_Update
+        (Table => Database.Entities,
+         Set   => (Database.Entities.Obsolete = False),
+         Where => Database.Entities.Id = Integer_Param (1)),
+      On_Server => True, Name => "mark_entity_as_valid");
+
    Query_Insert_Source_File : constant Prepared_Statement :=
      Prepare
        (SQL_Insert
@@ -136,19 +158,56 @@ package body GNATCOLL.Xref is
         On_Server => True, Name => "delete_file_dep");
    --  Delete the f2f relationships for the given file.
 
-   Query_Delete_E2E_From_LI : constant Prepared_Statement :=
-     Prepare
-       (SQL_Delete
-            (From  => Database.E2e,
-             Where => Database.E2e.From_LI = Integer_Param (1)),
-        On_Server => True, Name => "delete_e2e");
-
    Query_Delete_Refs : constant Prepared_Statement :=
      Prepare
        (SQL_Delete
             (From  => Database.Entity_Refs,
              Where => Database.Entity_Refs.File = Integer_Param (1)),
         On_Server => True, Name => "delete_refs");
+   --  Remove all references (within a given file) to entities
+
+   Query_Delete_Obsolete_Refs : constant Prepared_Statement :=
+     Prepare
+       (SQL_Delete
+          (From  => Database.Entity_Refs,
+           Where => SQL_In
+             (Database.Entity_Refs.Entity,
+              SQL_Select
+                (Database.Entities.Id,
+                 From => Database.Entities,
+                 Where => Database.Entities.Obsolete = True))),
+        On_Server => True, Name => "delete_obsolete_refs");
+   --  Delete all references (anywhere) to obsolete entities.
+
+   Query_Delete_Obsolete_E2e : constant Prepared_Statement :=
+     Prepare
+       (SQL_Delete
+          (From  => Database.E2e,
+           Where => SQL_In
+              (Database.E2e.Fromentity,
+               SQL_Select
+                 (Database.Entities.Id,
+                  From => Database.Entities,
+                  Where => Database.Entities.Obsolete = True))
+
+           or SQL_In
+              (Database.E2e.Toentity,
+               SQL_Select
+                 (Database.Entities.Id,
+                  From => Database.Entities,
+                  Where => Database.Entities.Obsolete = True))),
+
+        On_Server => True, Name => "delete_obsolete_e2e");
+   --  Remove all Entity-To-Entity relationships where at least one of the
+   --  entities is obsolete.
+
+   Query_Delete_Obsolete_Entities : constant Prepared_Statement :=
+     Prepare
+       (SQL_Delete
+          (From  => Database.Entities,
+           Where => Database.Entities.Obsolete = True),
+        On_Server => True, Name => "delete_obsolete_entities");
+   --  Remove all obsolete entities
 
    Query_Insert_Entity : constant Prepared_Statement :=
      Prepare
@@ -270,6 +329,7 @@ package body GNATCOLL.Xref is
        (SQL_Update
             (Table => Database.Entities,
              Set   => (Database.Entities.Name = Text_Param (2))
+                & (Database.Entities.Obsolete = False)
                 & (Database.Entities.Kind = Text_Param (3)),
              Where => Database.Entities.Id = Integer_Param (1)),
         On_Server => True, Name => "set_entity_name_and_kind");
@@ -1497,7 +1557,7 @@ package body GNATCOLL.Xref is
             Grow_As_Needed (Decl_Scope_Trees, Integer (Unit_Files.Length));
 
             --  Clear previous info known for this source file.
-            --  This cannot be done with a single query when we see the
+            --  This cannot be done with a single query when we
             --  create the LI file because it is possible to get
             --  duplicates otherwise:
             --  For instance, a generic instantiation ALI contains:
@@ -1703,6 +1763,10 @@ package body GNATCOLL.Xref is
                if not Candidate_Is_Forward then
                   --  We have found an entity with a known name and decl,
                   --  that's the good one.
+
+                  DB.Execute
+                    (Query_Mark_Entity_As_Valid,
+                     Params  => (1 => +Candidate));
 
                   Entity_Decl_To_Id.Include
                     (Decl,
@@ -2298,7 +2362,14 @@ package body GNATCOLL.Xref is
          DB.Execute
            (Query_Update_LI_File,
             Params => (1 => +ALI_Id, 2 => +LI.Stamp));
-         DB.Execute (Query_Delete_E2E_From_LI, Params => (1 => +ALI_Id));
+
+         --  Mark all entities from this LI file as dirty: once we have
+         --  parsed the LI files, the entities that remain dirty will in fact
+         --  no longer exist in the LI file, and must be removed from the
+         --  database. We cannot remove them yet, because that would break e2e
+         --  information coming from other LI files.
+
+         DB.Execute (Query_Mark_Entity_As_Obsolete, Params => (1 => +ALI_Id));
       end if;
 
       M := Open_Read
@@ -2785,7 +2856,7 @@ package body GNATCOLL.Xref is
       -----------------
 
       procedure Parse_Files (DB : Database_Connection) is
-         LI_C  : LI_Lists.Cursor := LIs.First;
+         LI_C  : LI_Lists.Cursor;
          Start : Time;
          Dur   : Duration;
          Total : constant Integer := Integer (LIs.Length);
@@ -2795,6 +2866,7 @@ package body GNATCOLL.Xref is
             Start := Clock;
          end if;
 
+         LI_C := LIs.First;
          while Has_Element (LI_C) loop
             begin
                if Show_Progress /= null then
@@ -2817,6 +2889,13 @@ package body GNATCOLL.Xref is
             end;
             Next (LI_C);
          end loop;
+
+         --  Post-processing: remove all obsolete entities that no longer exist
+         --  in the LI we just parsed.
+
+         DB.Execute (Query_Delete_Obsolete_E2e);
+         DB.Execute (Query_Delete_Obsolete_Refs);
+         DB.Execute (Query_Delete_Obsolete_Entities);
 
          if Active (Me_Timing) then
             Dur := Clock - Start;
