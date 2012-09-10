@@ -40,10 +40,6 @@ package GNATCOLL.Xref.Database is
       --  Ordering among the references. Used for instance for subprogram
       --  parameters
 
-      From_Li : SQL_Field_Integer (Ta_E2e, Instance, N_From_Li, Index);
-      --  LI file from which this relationship was read. Used to cleanup when
-      --  updating
-
    end record;
 
    type T_E2e (Instance : Cst_String_Access)
@@ -90,6 +86,9 @@ package GNATCOLL.Xref.Database is
 
       Exported : SQL_Field_Boolean (Ta_Entities, Instance, N_Exported, Index);
       --  Whether the mangled name is an export or an import of the entity
+
+      Obsolete : SQL_Field_Boolean (Ta_Entities, Instance, N_Obsolete, Index);
+      --  Used for various purposes in GNATCOLL.Xref. Internal only
 
    end record;
 
@@ -218,7 +217,6 @@ package GNATCOLL.Xref.Database is
       is new T_Abstract_Reference_Kinds (null, Index) with null record;
 
    function FK (Self : T_E2e'Class; Foreign : T_E2e_Kind'Class) return SQL_Criteria;
-   function FK (Self : T_E2e'Class; Foreign : T_Files'Class) return SQL_Criteria;
    function FK (Self : T_Entities'Class; Foreign : T_Entity_Kinds'Class) return SQL_Criteria;
    function FK (Self : T_Entities'Class; Foreign : T_Files'Class) return SQL_Criteria;
    function FK (Self : T_Entities'Class; Foreign : T_Entities'Class) return SQL_Criteria;

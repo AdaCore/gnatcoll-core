@@ -192,6 +192,8 @@ procedure GNATInspect is
      is new Process_Command_With_Single (Method_Of);
    procedure Process_Methods
      is new Process_Command_Entities (Methods);
+   procedure Process_Literals
+     is new Process_Command_Entities (Literals);
    procedure Process_Name (Args : Arg_List);
    procedure Process_Overrides
      is new Process_Command_With_Single (Overrides);
@@ -363,7 +365,9 @@ procedure GNATInspect is
 
       (new String'("type"),
        new String'("name:file:line:column"),
-       new String'("Return the type of the entity (variable or constant)"),
+       new String'("Return the type of the entity (variable or constant)."
+           & " For an enumeration literal, this returns the corresponding"
+           & " enumeration"),
        Process_Type'Access),
 
       (new String'("component"),
@@ -371,6 +375,11 @@ procedure GNATInspect is
        new String'("Return the component type of the entity (for arrays"
           & " for instance"),
        Process_Component'Access),
+
+      (new String'("literals"),
+       new String'("name:file:line:column"),
+       new String'("Return the valid literal values for an enumeration"),
+       Process_Literals'Access),
 
       (new String'("pointed"),
        new String'("name:file:line:column"),
@@ -1475,7 +1484,7 @@ begin
 
    History_File := new String'
      (Create_From_Dir
-        (Dir       => Tree.Root_Project.Object_Dir,
+        (Dir       => GNATCOLL.VFS.Get_Home_Directory,
          Base_Name => +".gnatinspect_hist").Display_Full_Name);
 
    Install_Ctrl_C_Handler (On_Ctrl_C'Unrestricted_Access);

@@ -81,6 +81,7 @@
 | decl_caller  | FK entities                     | NULL, NOINDEX             |       | Parent entity                                                    |
 | mangled_name | TEXT                            | NULL                      |       | Mangled name of the entity, if applicable                        |
 | exported     | BOOLEAN                         | NOT NULL, NOINDEX         | false | Whether the mangled name is an export or an import of the entity |
+| obsolete     | BOOLEAN                         | NOT NULL, NOINDEX         | false | Used for various purposes in GNATCOLL.Xref. Internal only        |
 |--------------+---------------------------------+---------------------------+-------+------------------------------------------------------------------|
 | INDEX:       | decl_file,decl_line,decl_column | entity_loc                |       | Needed during parse                                              |
 
@@ -111,7 +112,6 @@
 | toEntity   | FK entities(linked_from) | NOT NULL, NOINDEX |   |                                                                              |
 | kind       | FK e2e_kind()            | NOT NULL, NOINDEX |   | The type of link.                                                            |
 | order_by   | INTEGER                  | NOT NULL, NOINDEX | 1 | Ordering among the references. Used for instance for subprogram parameters   |
-| from_li    | FK files                 | NOT NULL, INDEX   |   | LI file from which this relationship was read. Used to cleanup when updating |
 |------------+--------------------------+-------------------+---+------------------------------------------------------------------------------|
 #| INDEX:     | "fromEntity"             | e2e_from          |   | Not needed during parsing                                                    |
 #| INDEX:     | "toEntity"               | e2e_to            |   | Not needed during parsing                                                    |

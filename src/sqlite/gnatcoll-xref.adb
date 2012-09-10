@@ -105,6 +105,28 @@ package body GNATCOLL.Xref is
              & (Database.Files.Language = "li")),
         On_Server => True, Name => "insert_li_file");
 
+   Query_Mark_Entity_As_Obsolete : constant Prepared_Statement := Prepare
+     (SQL_Update
+        (Table => Database.Entities,
+         Set   => (Database.Entities.Obsolete = True),
+         Where => SQL_In
+           (Database.Entities.Decl_File,
+            SQL_Select
+              (Database.F2f.Fromfile,
+               From  => Database.F2f,
+               Where => Database.F2f.Tofile = Integer_Param (1)   --  LI file
+                  and Database.F2f.Kind = F2f_Has_Ali))),
+      On_Server => True, Name => "mark_entity_as_obsolete");
+   --  Mark all entities declared in one of the main units of a given LI file
+   --  as obsolete.
+
+   Query_Mark_Entity_As_Valid : constant Prepared_Statement := Prepare
+     (SQL_Update
+        (Table => Database.Entities,
+         Set   => (Database.Entities.Obsolete = False),
+         Where => Database.Entities.Id = Integer_Param (1)),
+      On_Server => True, Name => "mark_entity_as_valid");
+
    Query_Insert_Source_File : constant Prepared_Statement :=
      Prepare
        (SQL_Insert
@@ -136,19 +158,56 @@ package body GNATCOLL.Xref is
         On_Server => True, Name => "delete_file_dep");
    --  Delete the f2f relationships for the given file.
 
-   Query_Delete_E2E_From_LI : constant Prepared_Statement :=
-     Prepare
-       (SQL_Delete
-            (From  => Database.E2e,
-             Where => Database.E2e.From_LI = Integer_Param (1)),
-        On_Server => True, Name => "delete_e2e");
-
    Query_Delete_Refs : constant Prepared_Statement :=
      Prepare
        (SQL_Delete
             (From  => Database.Entity_Refs,
              Where => Database.Entity_Refs.File = Integer_Param (1)),
         On_Server => True, Name => "delete_refs");
+   --  Remove all references (within a given file) to entities
+
+   Query_Delete_Obsolete_Refs : constant Prepared_Statement :=
+     Prepare
+       (SQL_Delete
+          (From  => Database.Entity_Refs,
+           Where => SQL_In
+             (Database.Entity_Refs.Entity,
+              SQL_Select
+                (Database.Entities.Id,
+                 From => Database.Entities,
+                 Where => Database.Entities.Obsolete = True))),
+        On_Server => True, Name => "delete_obsolete_refs");
+   --  Delete all references (anywhere) to obsolete entities.
+
+   Query_Delete_Obsolete_E2e : constant Prepared_Statement :=
+     Prepare
+       (SQL_Delete
+          (From  => Database.E2e,
+           Where => SQL_In
+              (Database.E2e.Fromentity,
+               SQL_Select
+                 (Database.Entities.Id,
+                  From => Database.Entities,
+                  Where => Database.Entities.Obsolete = True))
+
+           or SQL_In
+              (Database.E2e.Toentity,
+               SQL_Select
+                 (Database.Entities.Id,
+                  From => Database.Entities,
+                  Where => Database.Entities.Obsolete = True))),
+
+        On_Server => True, Name => "delete_obsolete_e2e");
+   --  Remove all Entity-To-Entity relationships where at least one of the
+   --  entities is obsolete.
+
+   Query_Delete_Obsolete_Entities : constant Prepared_Statement :=
+     Prepare
+       (SQL_Delete
+          (From  => Database.Entities,
+           Where => Database.Entities.Obsolete = True),
+        On_Server => True, Name => "delete_obsolete_entities");
+   --  Remove all obsolete entities
 
    Query_Insert_Entity : constant Prepared_Statement :=
      Prepare
@@ -209,8 +268,7 @@ package body GNATCOLL.Xref is
             ((Database.E2e.Fromentity = Integer_Param (1))
              & (Database.E2e.Toentity = Integer_Param (2))
              & (Database.E2e.Kind = Integer_Param (3))
-             & (Database.E2e.Order_By = Integer_Param (4))
-             & (Database.E2e.From_LI = Integer_Param (5))),
+             & (Database.E2e.Order_By = Integer_Param (4))),
         On_Server => True, Name => "insert_e2e");
 
    Query_Find_Entity_From_Decl : constant Prepared_Statement :=
@@ -250,8 +308,7 @@ package body GNATCOLL.Xref is
        (SQL_Insert
             (Values => (Database.E2e.Fromentity = Integer_Param (1))
              & (Database.E2e.Toentity = Database.Entity_Refs.Entity)
-             & (Database.E2e.Kind = Integer_Param (5))
-             & (Database.E2e.From_LI = Integer_Param (6)),
+             & (Database.E2e.Kind = Integer_Param (5)),
              Where => Database.Entity_Refs.File = Integer_Param (2)
                and Database.Entity_Refs.Line = Integer_Param (3)
                and Database.Entity_Refs.Column = Integer_Param (4)),
@@ -270,6 +327,7 @@ package body GNATCOLL.Xref is
        (SQL_Update
             (Table => Database.Entities,
              Set   => (Database.Entities.Name = Text_Param (2))
+                & (Database.Entities.Obsolete = False)
                 & (Database.Entities.Kind = Text_Param (3)),
              Where => Database.Entities.Id = Integer_Param (1)),
         On_Server => True, Name => "set_entity_name_and_kind");
@@ -1258,8 +1316,7 @@ package body GNATCOLL.Xref is
                Params => (1 => +Current_Entity,
                           2 => +Ref_Entity,
                           3 => +Eid,
-                          4 => +E2e_Order,
-                          5 => +ALI_Id));
+                          4 => +E2e_Order));
          end if;
 
          return True;
@@ -1497,7 +1554,7 @@ package body GNATCOLL.Xref is
             Grow_As_Needed (Decl_Scope_Trees, Integer (Unit_Files.Length));
 
             --  Clear previous info known for this source file.
-            --  This cannot be done with a single query when we see the
+            --  This cannot be done with a single query when we
             --  create the LI file because it is possible to get
             --  duplicates otherwise:
             --  For instance, a generic instantiation ALI contains:
@@ -1703,6 +1760,10 @@ package body GNATCOLL.Xref is
                if not Candidate_Is_Forward then
                   --  We have found an entity with a known name and decl,
                   --  that's the good one.
+
+                  DB.Execute
+                    (Query_Mark_Entity_As_Valid,
+                     Params  => (1 => +Candidate));
 
                   Entity_Decl_To_Id.Include
                     (Decl,
@@ -2232,8 +2293,7 @@ package body GNATCOLL.Xref is
                         Params => (1 => +Current_Entity,
                                    2 => +Ref_Entity,
                                    3 => +Eid,
-                                   4 => +Order,
-                                   5 => +ALI_Id));
+                                   4 => +Order));
                      Order := Order + 1;
                   exception
                      when Constraint_Error =>
@@ -2298,7 +2358,14 @@ package body GNATCOLL.Xref is
          DB.Execute
            (Query_Update_LI_File,
             Params => (1 => +ALI_Id, 2 => +LI.Stamp));
-         DB.Execute (Query_Delete_E2E_From_LI, Params => (1 => +ALI_Id));
+
+         --  Mark all entities from this LI file as dirty: once we have
+         --  parsed the LI files, the entities that remain dirty will in fact
+         --  no longer exist in the LI file, and must be removed from the
+         --  database. We cannot remove them yet, because that would break e2e
+         --  information coming from other LI files.
+
+         DB.Execute (Query_Mark_Entity_As_Obsolete, Params => (1 => +ALI_Id));
       end if;
 
       M := Open_Read
@@ -2546,8 +2613,7 @@ package body GNATCOLL.Xref is
                           2 => +Ren.File,
                           3 => +Ren.Line,
                           4 => +Ren.Column,
-                          5 => +Ren.Kind,
-                          6 => +Ren.From_LI));
+                          5 => +Ren.Kind));
             Next (C);
          end loop;
 
@@ -2785,7 +2851,7 @@ package body GNATCOLL.Xref is
       -----------------
 
       procedure Parse_Files (DB : Database_Connection) is
-         LI_C  : LI_Lists.Cursor := LIs.First;
+         LI_C  : LI_Lists.Cursor;
          Start : Time;
          Dur   : Duration;
          Total : constant Integer := Integer (LIs.Length);
@@ -2795,6 +2861,7 @@ package body GNATCOLL.Xref is
             Start := Clock;
          end if;
 
+         LI_C := LIs.First;
          while Has_Element (LI_C) loop
             begin
                if Show_Progress /= null then
@@ -2817,6 +2884,13 @@ package body GNATCOLL.Xref is
             end;
             Next (LI_C);
          end loop;
+
+         --  Post-processing: remove all obsolete entities that no longer exist
+         --  in the LI we just parsed.
+
+         DB.Execute (Query_Delete_Obsolete_E2e);
+         DB.Execute (Query_Delete_Obsolete_Refs);
+         DB.Execute (Query_Delete_Obsolete_Entities);
 
          if Active (Me_Timing) then
             Dur := Clock - Start;
@@ -3568,7 +3642,8 @@ package body GNATCOLL.Xref is
          Buffer        => Buffer,
          Decl_Index    => Decl_Start_Index,
          Comment_Start => Beginning,
-         Comment_End   => Current);
+         Comment_End   => Current,
+         Allow_Blanks  => False);
 
       if Beginning = 0 then
          Get_Documentation_After
@@ -3717,35 +3792,80 @@ package body GNATCOLL.Xref is
       end if;
 
       Buffer := Decl.Location.File.Read_File;
-      if Buffer = null then
-         return "";
+      if Buffer /= null then
+         R.Fetch (Self.DB, Q_End_Of_Spec, Params => (1 => +Entity.Id));
+         if R.Has_Row then
+            declare
+               Result : constant String := Extract_Comment
+                 (Buffer            => Buffer.all,
+                  Decl_Start_Line   => Decl.Location.Line,
+                  Decl_Start_Column => Integer (Decl.Location.Column),
+                  Decl_End_Line     => R.Integer_Value (0),
+                  Decl_End_Column   => R.Integer_Value (1),
+                  Language          => Language,
+                  Format            => Format);
+            begin
+               if Result /= "" then
+                  Free (Buffer);
+                  return Result;
+               end if;
+            end;
+
+         else
+            declare
+               Result : constant String := Extract_Comment
+                 (Buffer            => Buffer.all,
+                  Decl_Start_Line   => Decl.Location.Line,
+                  Decl_Start_Column => Integer (Decl.Location.Column),
+                  Language          => Language,
+                  Format            => Format);
+            begin
+               if Result /= "" then
+                  Free (Buffer);
+                  return Result;
+               end if;
+            end;
+         end if;
+
+         Free (Buffer);
       end if;
 
-      R.Fetch (Self.DB, Q_End_Of_Spec, Params => (1 => +Entity.Id));
-      if R.Has_Row then
-         return Result : constant String := Extract_Comment
-           (Buffer            => Buffer.all,
-            Decl_Start_Line   => Decl.Location.Line,
-            Decl_Start_Column => Integer (Decl.Location.Column),
-            Decl_End_Line     => R.Integer_Value (0),
-            Decl_End_Column   => R.Integer_Value (1),
-            Language          => Language,
-            Format            => Format)
-         do
-            Free (Buffer);
-         end return;
+      --  No comment next to the spec, try the body.
+      --  In particular, in C, it is rare to have the doc next to an "extern"
+      --  declaration, and the doc will often be with the body instead.
 
-      else
-         return Result : constant String := Extract_Comment
-           (Buffer            => Buffer.all,
-            Decl_Start_Line   => Decl.Location.Line,
-            Decl_Start_Column => Integer (Decl.Location.Column),
-            Language          => Language,
-            Format            => Format)
-         do
-            Free (Buffer);
-         end return;
-      end if;
+      declare
+         Curs : References_Cursor;
+         Ref  : Entity_Reference;
+      begin
+         Self.Bodies (Entity, Curs);
+         while Has_Element (Curs) loop
+            Ref := Element (Curs);
+
+            Buffer := Ref.File.Read_File;
+            if Buffer /= null then
+               declare
+                  Result : constant String := Extract_Comment
+                    (Buffer            => Buffer.all,
+                     Decl_Start_Line   => Ref.Line,
+                     Decl_Start_Column => Integer (Ref.Column),
+                     Language          => Language,
+                     Format            => Format);
+               begin
+                  if Result /= "" then
+                     Free (Buffer);
+                     return Result;
+                  end if;
+               end;
+
+               Free (Buffer);
+            end if;
+
+            Next (Curs);
+         end loop;
+      end;
+
+      return "";
    end Comment;
 
    ----------------------
@@ -3960,6 +4080,21 @@ package body GNATCOLL.Xref is
          Params => (1 => +Entity.Id, 2 => +E2e_Has_Primitive));
    end Methods;
 
+   --------------
+   -- Literals --
+   --------------
+
+   procedure Literals
+     (Self   : Xref_Database'Class;
+      Entity : Entity_Information;
+      Cursor : out Entities_Cursor'Class) is
+   begin
+      Cursor.DBCursor.Fetch
+        (Self.DB,
+         Query_E2E_To,
+         Params => (1 => +Entity.Id, 2 => +E2e_From_Enumeration));
+   end Literals;
+
    ---------------
    -- Method_Of --
    ---------------
@@ -4025,9 +4160,16 @@ package body GNATCOLL.Xref is
 
    function Type_Of
      (Self   : Xref_Database'Class;
-      Entity : Entity_Information) return Entity_Information is
+      Entity : Entity_Information) return Entity_Information
+   is
+      Result : Entity_Information;
    begin
-      return Single_Entity_From_E2e (Self, Entity, E2e_Of_Type);
+      Result := Single_Entity_From_E2e (Self, Entity, E2e_Of_Type);
+      if Result = No_Entity then
+         Result := Single_Entity_From_E2e
+           (Self, Entity, E2e_From_Enumeration);
+      end if;
+      return Result;
    end Type_Of;
 
    -----------------

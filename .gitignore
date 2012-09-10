@@ -50,7 +50,10 @@ testsuite/xref/F516-004/default_naming.gpr
 testsuite/xref/F516-004/default_source_list.txt
 testsuite/xref/H721-012-labels/a
 testsuite/xref/L829-003/example_main
+testsuite/xref/update2/b.ads
+testsuite/xref/update2/c.ads
 testsuite/*/*/obj
+testsuite/xref/L406-006-runtime/a
 
 testsuite/results
 
