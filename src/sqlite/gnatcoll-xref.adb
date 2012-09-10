@@ -268,8 +268,7 @@ package body GNATCOLL.Xref is
             ((Database.E2e.Fromentity = Integer_Param (1))
              & (Database.E2e.Toentity = Integer_Param (2))
              & (Database.E2e.Kind = Integer_Param (3))
-             & (Database.E2e.Order_By = Integer_Param (4))
-             & (Database.E2e.From_LI = Integer_Param (5))),
+             & (Database.E2e.Order_By = Integer_Param (4))),
         On_Server => True, Name => "insert_e2e");
 
    Query_Find_Entity_From_Decl : constant Prepared_Statement :=
@@ -309,8 +308,7 @@ package body GNATCOLL.Xref is
        (SQL_Insert
             (Values => (Database.E2e.Fromentity = Integer_Param (1))
              & (Database.E2e.Toentity = Database.Entity_Refs.Entity)
-             & (Database.E2e.Kind = Integer_Param (5))
-             & (Database.E2e.From_LI = Integer_Param (6)),
+             & (Database.E2e.Kind = Integer_Param (5)),
              Where => Database.Entity_Refs.File = Integer_Param (2)
                and Database.Entity_Refs.Line = Integer_Param (3)
                and Database.Entity_Refs.Column = Integer_Param (4)),
@@ -1318,8 +1316,7 @@ package body GNATCOLL.Xref is
                Params => (1 => +Current_Entity,
                           2 => +Ref_Entity,
                           3 => +Eid,
-                          4 => +E2e_Order,
-                          5 => +ALI_Id));
+                          4 => +E2e_Order));
          end if;
 
          return True;
@@ -2296,8 +2293,7 @@ package body GNATCOLL.Xref is
                         Params => (1 => +Current_Entity,
                                    2 => +Ref_Entity,
                                    3 => +Eid,
-                                   4 => +Order,
-                                   5 => +ALI_Id));
+                                   4 => +Order));
                      Order := Order + 1;
                   exception
                      when Constraint_Error =>
@@ -2617,8 +2613,7 @@ package body GNATCOLL.Xref is
                           2 => +Ren.File,
                           3 => +Ren.Line,
                           4 => +Ren.Column,
-                          5 => +Ren.Kind,
-                          6 => +Ren.From_LI));
+                          5 => +Ren.Kind));
             Next (C);
          end loop;
 

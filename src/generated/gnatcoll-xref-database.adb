@@ -8,11 +8,6 @@ package body GNATCOLL.Xref.Database is
       return Self.Kind = Foreign.Id;
    end FK;
 
-   function FK (Self : T_E2e'Class; Foreign : T_Files'Class) return SQL_Criteria is
-   begin
-      return Self.From_Li = Foreign.Id;
-   end FK;
-
    function FK (Self : T_Entities'Class; Foreign : T_Entity_Kinds'Class) return SQL_Criteria is
    begin
       return Self.Kind = Foreign.Id;
@@ -91,7 +86,6 @@ package body GNATCOLL.Xref.Database is
          & "|toEntity|FK entities|NOT NULL,NOINDEX||" & ASCII.LF
          & "|kind|FK e2e_kind|NOT NULL,NOINDEX||" & ASCII.LF
          & "|order_by|Integer|NOT NULL,NOINDEX|1|" & ASCII.LF
-         & "|from_li|FK files|NOT NULL,INDEX||" & ASCII.LF
          & "" & ASCII.LF
          & "|TABLE| reference_kinds" & ASCII.LF
          & "|id|Character(1)|PK||" & ASCII.LF
