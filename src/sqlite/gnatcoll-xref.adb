@@ -3642,7 +3642,8 @@ package body GNATCOLL.Xref is
          Buffer        => Buffer,
          Decl_Index    => Decl_Start_Index,
          Comment_Start => Beginning,
-         Comment_End   => Current);
+         Comment_End   => Current,
+         Allow_Blanks  => False);
 
       if Beginning = 0 then
          Get_Documentation_After
@@ -3791,35 +3792,80 @@ package body GNATCOLL.Xref is
       end if;
 
       Buffer := Decl.Location.File.Read_File;
-      if Buffer = null then
-         return "";
+      if Buffer /= null then
+         R.Fetch (Self.DB, Q_End_Of_Spec, Params => (1 => +Entity.Id));
+         if R.Has_Row then
+            declare
+               Result : constant String := Extract_Comment
+                 (Buffer            => Buffer.all,
+                  Decl_Start_Line   => Decl.Location.Line,
+                  Decl_Start_Column => Integer (Decl.Location.Column),
+                  Decl_End_Line     => R.Integer_Value (0),
+                  Decl_End_Column   => R.Integer_Value (1),
+                  Language          => Language,
+                  Format            => Format);
+            begin
+               if Result /= "" then
+                  Free (Buffer);
+                  return Result;
+               end if;
+            end;
+
+         else
+            declare
+               Result : constant String := Extract_Comment
+                 (Buffer            => Buffer.all,
+                  Decl_Start_Line   => Decl.Location.Line,
+                  Decl_Start_Column => Integer (Decl.Location.Column),
+                  Language          => Language,
+                  Format            => Format);
+            begin
+               if Result /= "" then
+                  Free (Buffer);
+                  return Result;
+               end if;
+            end;
+         end if;
+
+         Free (Buffer);
       end if;
 
-      R.Fetch (Self.DB, Q_End_Of_Spec, Params => (1 => +Entity.Id));
-      if R.Has_Row then
-         return Result : constant String := Extract_Comment
-           (Buffer            => Buffer.all,
-            Decl_Start_Line   => Decl.Location.Line,
-            Decl_Start_Column => Integer (Decl.Location.Column),
-            Decl_End_Line     => R.Integer_Value (0),
-            Decl_End_Column   => R.Integer_Value (1),
-            Language          => Language,
-            Format            => Format)
-         do
-            Free (Buffer);
-         end return;
+      --  No comment next to the spec, try the body.
+      --  In particular, in C, it is rare to have the doc next to an "extern"
+      --  declaration, and the doc will often be with the body instead.
 
-      else
-         return Result : constant String := Extract_Comment
-           (Buffer            => Buffer.all,
-            Decl_Start_Line   => Decl.Location.Line,
-            Decl_Start_Column => Integer (Decl.Location.Column),
-            Language          => Language,
-            Format            => Format)
-         do
-            Free (Buffer);
-         end return;
-      end if;
+      declare
+         Curs : References_Cursor;
+         Ref  : Entity_Reference;
+      begin
+         Self.Bodies (Entity, Curs);
+         while Has_Element (Curs) loop
+            Ref := Element (Curs);
+
+            Buffer := Ref.File.Read_File;
+            if Buffer /= null then
+               declare
+                  Result : constant String := Extract_Comment
+                    (Buffer            => Buffer.all,
+                     Decl_Start_Line   => Ref.Line,
+                     Decl_Start_Column => Integer (Ref.Column),
+                     Language          => Language,
+                     Format            => Format);
+               begin
+                  if Result /= "" then
+                     Free (Buffer);
+                     return Result;
+                  end if;
+               end;
+
+               Free (Buffer);
+            end if;
+
+            Next (Curs);
+         end loop;
+      end;
+
+      return "";
    end Comment;
 
    ----------------------
