@@ -4034,6 +4034,21 @@ package body GNATCOLL.Xref is
          Params => (1 => +Entity.Id, 2 => +E2e_Has_Primitive));
    end Methods;
 
+   --------------
+   -- Literals --
+   --------------
+
+   procedure Literals
+     (Self   : Xref_Database'Class;
+      Entity : Entity_Information;
+      Cursor : out Entities_Cursor'Class) is
+   begin
+      Cursor.DBCursor.Fetch
+        (Self.DB,
+         Query_E2E_To,
+         Params => (1 => +Entity.Id, 2 => +E2e_From_Enumeration));
+   end Literals;
+
    ---------------
    -- Method_Of --
    ---------------
@@ -4099,9 +4114,16 @@ package body GNATCOLL.Xref is
 
    function Type_Of
      (Self   : Xref_Database'Class;
-      Entity : Entity_Information) return Entity_Information is
+      Entity : Entity_Information) return Entity_Information
+   is
+      Result : Entity_Information;
    begin
-      return Single_Entity_From_E2e (Self, Entity, E2e_Of_Type);
+      Result := Single_Entity_From_E2e (Self, Entity, E2e_Of_Type);
+      if Result = No_Entity then
+         Result := Single_Entity_From_E2e
+           (Self, Entity, E2e_From_Enumeration);
+      end if;
+      return Result;
    end Type_Of;
 
    -----------------

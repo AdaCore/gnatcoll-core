@@ -422,6 +422,12 @@ package GNATCOLL.Xref is
       Cursor : out Entities_Cursor'Class);
    --  The primitive operations (or methods) of Self
 
+   procedure Literals
+     (Self   : Xref_Database'Class;
+      Entity : Entity_Information;
+      Cursor : out Entities_Cursor'Class);
+   --  The valid literal values for an enumeration type.
+
    function Method_Of
       (Self   : Xref_Database'Class;
        Entity : Entity_Information) return Entity_Information;
@@ -447,6 +453,7 @@ package GNATCOLL.Xref is
    --  Returns the type of the entity (as declared in the sources for variables
    --  and constants, for instance).
    --  For a function, this is the returned type.
+   --  For an enumeration literal, this is the enumeration that declares it.
 
    function Component_Type
      (Self   : Xref_Database'Class;
