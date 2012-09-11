@@ -2358,14 +2358,6 @@ package body GNATCOLL.Xref is
          DB.Execute
            (Query_Update_LI_File,
             Params => (1 => +ALI_Id, 2 => +LI.Stamp));
-
-         --  Mark all entities from this LI file as dirty: once we have
-         --  parsed the LI files, the entities that remain dirty will in fact
-         --  no longer exist in the LI file, and must be removed from the
-         --  database. We cannot remove them yet, because that would break e2e
-         --  information coming from other LI files.
-
-         DB.Execute (Query_Mark_Entity_As_Obsolete, Params => (1 => +ALI_Id));
       end if;
 
       M := Open_Read
@@ -2852,6 +2844,7 @@ package body GNATCOLL.Xref is
 
       procedure Parse_Files (DB : Database_Connection) is
          LI_C  : LI_Lists.Cursor;
+         Lib   : LI_Info;
          Start : Time;
          Dur   : Duration;
          Total : constant Integer := Integer (LIs.Length);
@@ -2860,6 +2853,32 @@ package body GNATCOLL.Xref is
          if Active (Me_Timing) then
             Start := Clock;
          end if;
+
+         --  Mark all entities from these LI files as dirty: once we have
+         --  parsed the LI files, the entities that remain dirty will in fact
+         --  no longer exist in the LI file, and must be removed from the
+         --  database. We cannot remove them yet, because that would break e2e
+         --  information coming from other LI files.
+         --
+         --  The do a first separate pass to do this for all LI files for the
+         --  following reason: if we don't, the following scenario is
+         --  possible. Given a.ali (declares A) and b.ali (references A).  If
+         --  b.ali is parsed first, it marks its entities as invalid, including
+         --  A. Since it then finds a reference to A, it marks it as valid. But
+         --  when a.ali is parsed, it marks A as invalid again. When it finds a
+         --  reference to A, we in fact already have the corresponding Id in
+         --  the Entity_Decl_To_Id table, so we do not mark it as valid gain.
+
+         LI_C := LIs.First;
+         while Has_Element (LI_C) loop
+            Lib := Element (LI_C);
+            if Lib.Id /= -1 then
+               DB.Execute
+                 (Query_Mark_Entity_As_Obsolete, Params => (1 => +Lib.Id));
+            end if;
+
+            Next (LI_C);
+         end loop;
 
          LI_C := LIs.First;
          while Has_Element (LI_C) loop
