@@ -637,7 +637,7 @@ AC_HELP_STRING(
             *-sunos5.5* | *-solaris2.5* | *-sunos5* | *-solaris* )
                PYTHON_LIBS="-lresolv -lsocket -lnsl -ldl -lm ${PYTHON_LIBS}"
                ;;
-            ia64-*linux-gnu* | x86_64-*-* | i[[3456]]86-*linux-gnu* )
+            *linux* )
                PYTHON_LIBS="-Wl,-export-dynamic -lm -ldl ${PYTHON_LIBS}"
                ;;
             ia64-*hp-hpux11* )
