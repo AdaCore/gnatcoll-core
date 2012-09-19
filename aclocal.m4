@@ -596,7 +596,7 @@ AC_HELP_STRING(
 
       AC_MSG_CHECKING(if we can link with python (using python-config))
       if test x"$PYTHON_CONFIG" != xno ; then
-         PYTHON_LIBS=`$PYTHON_CONFIG --ldflags`
+         PYTHON_LIBS=`$PYTHON_CONFIG --libs`
          PYTHON_CFLAGS=`$PYTHON_CONFIG --includes`
       else
          PYTHON_LIBS=""
