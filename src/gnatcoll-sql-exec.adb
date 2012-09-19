@@ -1053,7 +1053,7 @@ package body GNATCOLL.SQL.Exec is
       Username    : String := "") is
    begin
       Rollback (Connection); --  In case a previous thread had started on
-      Connection.Success        := True;
+      Connection.Success := True;
       Connection.Automatic_Transactions := True;
 
       if Username /= "" or else Connection.Username = null then
