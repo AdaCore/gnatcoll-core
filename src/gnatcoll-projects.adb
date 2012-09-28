@@ -759,6 +759,18 @@ package body GNATCOLL.Projects is
       procedure Unchecked_Free is new Ada.Unchecked_Deallocation
         (Pattern_Matcher, Pattern_Matcher_Access);
 
+      function Get_Base_Name (F : Virtual_File) return Filesystem_String;
+
+      function Get_Base_Name (F : Virtual_File) return Filesystem_String
+      is
+      begin
+         if Re = null then
+            return F.Base_Name (ALI_Ext);
+         else
+            return F.Base_Name (F.File_Extension);
+         end if;
+      end Get_Base_Name;
+
       Seen : Virtual_File_Sets.Set;
 
    begin
@@ -805,7 +817,7 @@ package body GNATCOLL.Projects is
                      then
                         declare
                            B : constant Filesystem_String :=
-                             Tmp (F).Base_Name (Tmp (F).File_Extension);
+                             Get_Base_Name (Tmp (F));
                            Dot : Integer;
                         begin
                            Info_Cursor :=

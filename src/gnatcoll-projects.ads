@@ -589,7 +589,7 @@ package GNATCOLL.Projects is
    --  Return a list of all LI files for this project. This never returns null.
    --  The parameters are similar to that of Object_Path.
    --
-   --  ALI_Ext is the extension to use for those files. As a special case, if
+   --  ALI_Ext is the suffix to use for those files. As a special case, if
    --  it starts with "^" it is considered as a regexp matching the basename of
    --  relevant files.
    --
