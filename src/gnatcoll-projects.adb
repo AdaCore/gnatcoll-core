@@ -760,7 +760,10 @@ package body GNATCOLL.Projects is
         (Pattern_Matcher, Pattern_Matcher_Access);
 
       function Get_Base_Name (F : Virtual_File) return Filesystem_String;
-      --  ???
+      --  Return the base name of the argument. If ALI_Ext was a regular
+      --  expression, this function simply strips the file extension
+      --  (everything after and including the last dot in the file name).
+      --  Otherwise, the suffix ALI_Ext is removed from the file name.
 
       -------------------
       -- Get_Base_Name --
