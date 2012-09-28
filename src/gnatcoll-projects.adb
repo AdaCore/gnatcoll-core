@@ -760,9 +760,13 @@ package body GNATCOLL.Projects is
         (Pattern_Matcher, Pattern_Matcher_Access);
 
       function Get_Base_Name (F : Virtual_File) return Filesystem_String;
+      --  ???
 
-      function Get_Base_Name (F : Virtual_File) return Filesystem_String
-      is
+      -------------------
+      -- Get_Base_Name --
+      -------------------
+
+      function Get_Base_Name (F : Virtual_File) return Filesystem_String is
       begin
          if Re = null then
             return F.Base_Name (ALI_Ext);
