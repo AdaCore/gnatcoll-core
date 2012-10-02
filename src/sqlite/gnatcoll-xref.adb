@@ -1269,7 +1269,8 @@ package body GNATCOLL.Xref is
                         Trace (Me_Error,
                                "Missing predefined entity in the database: '"
                                & Name & "' in "
-                               & LI.LI.Library_File.Display_Full_Name);
+                               & (+LI.LI.Library_File.Unix_Style_Full_Name
+                                   (Normalize => True)));
                      end if;
 
                      Ref_Entity := DB.Insert_And_Get_PK
@@ -2340,7 +2341,8 @@ package body GNATCOLL.Xref is
    begin  --  Parse_LI
       if Active (Me_Parsing) then
          Trace (Me_Parsing, "Parse LI "
-                & LI.LI.Library_File.Display_Full_Name);
+                & (+LI.LI.Library_File.Unix_Style_Full_Name
+                   (Normalize => True)));
       end if;
 
       if ALI_Id = -1 then
@@ -3555,7 +3557,7 @@ package body GNATCOLL.Xref is
            (Database.Files.Language,
             From  => Database.Files,
             Where => Database.Files.Path =
-              D.Location.File.Display_Full_Name));
+               (+D.Location.File.Unix_Style_Full_Name (Normalize => True))));
 
       if C.Has_Row then
          declare
@@ -4255,7 +4257,8 @@ package body GNATCOLL.Xref is
                & Database.Entities.Decl_Column,
                From => Database.Entities & Database.Files,
                Where => Database.Entities.Decl_File = Database.Files.Id
-               and Like (Database.Files.Path, File.Display_Full_Name)),
+               and Like (Database.Files.Path,
+                         +File.Unix_Style_Full_Name (Normalize => True))),
 
             SQL_Select
               (Database.Entities.Id
@@ -4265,7 +4268,8 @@ package body GNATCOLL.Xref is
                From => Database.Entity_Refs & Database.Files
                   & Database.Entities,
                Where => Database.Entity_Refs.File = Database.Files.Id
-                  and Like (Database.Files.Path, File.Display_Full_Name)
+                  and Like (Database.Files.Path,
+                            +File.Unix_Style_Full_Name (Normalize => True))
                   and Database.Entity_Refs.Entity = Database.Entities.Id),
 
             Order_By => Database.Files.Path & Database.Entities.Decl_Line
@@ -4296,7 +4300,8 @@ package body GNATCOLL.Xref is
                & Database.Entities.Decl_Column,
                From => Database.Entities & Database.Files,
                Where => Database.Entities.Decl_File = Database.Files.Id
-               and Like (Database.Files.Path, File.Display_Full_Name)
+               and Like (Database.Files.Path,
+                         +File.Unix_Style_Full_Name (Normalize => True))
                and Database.Entities.Name = Text_Param (1)),
 
             SQL_Select
@@ -4307,7 +4312,8 @@ package body GNATCOLL.Xref is
                From => Database.Entity_Refs & Database.Files
                   & Database.Entities,
                Where => Database.Entity_Refs.File = Database.Files.Id
-                  and Like (Database.Files.Path, File.Display_Full_Name)
+                 and Like (Database.Files.Path,
+                           +File.Unix_Style_Full_Name (Normalize => True))
                   and Database.Entity_Refs.Entity = Database.Entities.Id
                   and Database.Entities.Name = Text_Param (1)),
 
