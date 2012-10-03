@@ -2438,7 +2438,9 @@ package body GNATCOLL.Xref is
                         Skip_Spaces;
                         Skip_Word;
                         Dep_Id := Insert_Source_File (Basename => +F).Id;
-                     elsif Str (Index) /= ASCII.LF then
+                     elsif Str (Index) /= ASCII.LF
+                       and then Str (Index) /= ASCII.CR
+                     then
                         Skip_Spaces;
                         Start := Index;
                         Skip_Word;
