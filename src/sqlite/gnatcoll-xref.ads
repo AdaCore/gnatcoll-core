@@ -209,7 +209,16 @@ package GNATCOLL.Xref is
       Name     : Ada.Strings.Unbounded.Unbounded_String;
       Kind     : Ada.Strings.Unbounded.Unbounded_String;
       Location : Entity_Reference;
+
       Is_Subprogram : Boolean;
+      --  Whether the entity is a subprogram
+
+      Is_Container  : Boolean;
+      --  Whether the entity can contain other entities (a record, a
+      --  struct,...)
+
+      Is_Abstract : Boolean;
+      --  Whether the entity is abstract
    end record;
    No_Entity_Declaration : constant Entity_Declaration;
 
@@ -259,6 +268,11 @@ package GNATCOLL.Xref is
      (Xref : Xref_Database;
       Ref  : Entity_Reference) return Boolean;
    --  Whether the value of the entity is modified at that reference.
+
+   function Is_Dispatching_Call
+     (Xref : Xref_Database;
+      Ref  : Entity_Reference) return Boolean;
+   --  Whether this is a dispatching call to the entity.
 
    -------------------
    -- Documentation --
@@ -627,7 +641,9 @@ private
      (Name     => Ada.Strings.Unbounded.Null_Unbounded_String,
       Kind     => Ada.Strings.Unbounded.Null_Unbounded_String,
       Location => No_Entity_Reference,
-      Is_Subprogram => False);
+      Is_Subprogram => False,
+      Is_Container  => False,
+      Is_Abstract   => True);
 
    package Entity_Sets is new Ada.Containers.Ordered_Sets
      (Entity_Information);
