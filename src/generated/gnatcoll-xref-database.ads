@@ -209,6 +209,9 @@ package GNATCOLL.Xref.Database is
       Show_In_Callgraph : SQL_Field_Boolean (Ta_Reference_Kinds, Instance, N_Show_In_Callgraph, Index);
       --  Whether this ref. should be shown in the call graph
 
+      Is_Dispatching : SQL_Field_Boolean (Ta_Reference_Kinds, Instance, N_Is_Dispatching, Index);
+      --  Whether this is a dispatching call
+
    end record;
 
    type T_Reference_Kinds (Instance : Cst_String_Access)

@@ -125,6 +125,7 @@
 | is_write          | BOOLEAN         | NOINDEX          | false |                                                         |
 | is_end            | BOOLEAN         | NOINDEX          | false | Whether this marks the end of a scope (spec or body)    |
 | show_in_callgraph | BOOLEAN         | NOINDEX          | true  | Whether this ref. should be shown in the call graph     |
+| is_dispatching    | BOOLEAN         | NOINDEX          | false | Whether this is a dispatching call                      |
 
 # We store instantiations as a string for now: currently, they are only used to
 # display tooltips in GPS as to where an entity comes from. This can easily be
@@ -134,14 +135,14 @@
 # where each instance potentially points to its parent.
 # The format is "file1|line1 file2|line2 ..." where file1|line1 is itself
 # instantiated at file2|line2.
-# 
+#
 # This table might contain duplicates (for instance from .gli files). It is
 # also possible that a given location is duplicated with different kinds, for
 # instance the argument for an "in out" parameter has both a "read" and
 # "modified" entries.
 #
 # Indexes: we have an index on "file". We used to have one on
-# "file,line,column" instead. In practice, "explain query plan" shows that both 
+# "file,line,column" instead. In practice, "explain query plan" shows that both
 # have roughly the same performance on the DELETE query used to cleanup
 # references when updating an ALI file, and on the SELECT query to find which
 # entity occurs at a given location. However, the database is slightly smaller,

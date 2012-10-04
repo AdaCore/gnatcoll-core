@@ -95,6 +95,7 @@ package body GNATCOLL.Xref.Database is
          & "|is_write|Boolean|,NOINDEX|false|" & ASCII.LF
          & "|is_end|Boolean|,NOINDEX|false|" & ASCII.LF
          & "|show_in_callgraph|Boolean|,NOINDEX|true|" & ASCII.LF
+         & "|is_dispatching|Boolean|,NOINDEX|false|" & ASCII.LF
          & "" & ASCII.LF
          & "|TABLE| entity_refs" & ASCII.LF
          & "|entity|FK entities|NOT NULL,NOINDEX||" & ASCII.LF
@@ -164,26 +165,26 @@ package body GNATCOLL.Xref.Database is
          & "|Z|unknown|false|false|false|false|" & ASCII.LF
          & "|+|generic formal|false|false|false|false|" & ASCII.LF
          & "|*|private object|false|false|false|false|" & ASCII.LF
-         & "|TABLE|reference_kinds||||||" & ASCII.LF
-         & "|id|display|is_real|is_read|is_write|is_end|show_in_callgraph|" & ASCII.LF
-         & "|b|body|true|true|false|false|false|" & ASCII.LF
-         & "|c|full declaration|true|true|false|false|false|" & ASCII.LF
-         & "|D|object definition|true|true|false|false|false|" & ASCII.LF
-         & "|e|end of spec|false|false|false|true|false|" & ASCII.LF
-         & "|i|implicit reference|false|false|false|false|false|" & ASCII.LF
-         & "|k|parent package|false|false|false|false|false|" & ASCII.LF
-         & "|H|abstract type|true|false|false|false|false|" & ASCII.LF
-         & "|l|label on end line|true|true|false|false|false|" & ASCII.LF
-         & "|m|write reference|true|false|true|false|false|" & ASCII.LF
-         & "|o|own reference|true|true|false|false|false|" & ASCII.LF
-         & "|r|reference|true|true|false|false|true|" & ASCII.LF
-         & "|s|static call|true|true|false|false|true|" & ASCII.LF
-         & "|R|dispatching call|true|true|false|false|true|" & ASCII.LF
-         & "|t|end of body|false|false|false|true|false|" & ASCII.LF
-         & "|w|with line|true|true|false|false|false|" & ASCII.LF
-         & "|x|type extension|true|true|false|false|false|" & ASCII.LF
-         & "|X|type extension|true|true|false|false|false|" & ASCII.LF
-         & "|z|formal generic parameter|false|false|false|false|false|" & ASCII.LF
+         & "|TABLE|reference_kinds|||||||" & ASCII.LF
+         & "|id|display|is_real|is_read|is_write|is_end|show_in_callgraph|is_dispatching|" & ASCII.LF
+         & "|b|body|true|true|false|false|false|false|" & ASCII.LF
+         & "|c|full declaration|true|true|false|false|false|false|" & ASCII.LF
+         & "|D|object definition|true|true|false|false|false|false|" & ASCII.LF
+         & "|e|end of spec|false|false|false|true|false|false|" & ASCII.LF
+         & "|i|implicit reference|false|false|false|false|false|false|" & ASCII.LF
+         & "|k|parent package|false|false|false|false|false|false|" & ASCII.LF
+         & "|H|abstract type|true|false|false|false|false|false|" & ASCII.LF
+         & "|l|label on end line|true|true|false|false|false|false|" & ASCII.LF
+         & "|m|write reference|true|false|true|false|false|false|" & ASCII.LF
+         & "|o|own reference|true|true|false|false|false|false|" & ASCII.LF
+         & "|r|reference|true|true|false|false|true|false|" & ASCII.LF
+         & "|s|static call|true|true|false|false|true|false|" & ASCII.LF
+         & "|R|dispatching call|true|true|false|false|true|true|" & ASCII.LF
+         & "|t|end of body|false|false|false|true|false|false|" & ASCII.LF
+         & "|w|with line|true|true|false|false|false|false|" & ASCII.LF
+         & "|x|type extension|true|true|false|false|false|false|" & ASCII.LF
+         & "|X|type extension|true|true|false|false|false|false|" & ASCII.LF
+         & "|z|formal generic parameter|false|false|false|false|false|false|" & ASCII.LF
          & "|TABLE|f2f_kind||" & ASCII.LF
          & "|id|name||" & ASCII.LF
          & "|0|withs|" & ASCII.LF
