@@ -157,15 +157,23 @@ package GNATCOLL.Xref is
    --  Xref_Database hasn't been destroyed.
 
    type Entity_Reference is record
-      Entity : Entity_Information;
-      File   : GNATCOLL.VFS.Virtual_File;
-      Line   : Integer;
-      Column : Visible_Column;
-      Kind   : Ada.Strings.Unbounded.Unbounded_String;
-      Scope  : Entity_Information;
+      Entity  : Entity_Information;
+      File    : GNATCOLL.VFS.Virtual_File;
+      Line    : Integer;
+      Column  : Visible_Column;
+      Kind    : Ada.Strings.Unbounded.Unbounded_String;
+      Scope   : Entity_Information;
+
+      Kind_Id : Character;
+      --  internal id for the reference kind. This is used to test various
+      --  properties of the reference kind efficiently, while allowing
+      --  duplicate names for the reference kinds.
    end record;
    No_Entity_Reference : constant Entity_Reference;
    --  A reference to an entity, at a given location.
+
+   Kind_Id_Declaration : constant Character := ' ';
+   --  The Entity_Reference.Kind_Id for a declaration
 
    function Image
      (Self : Xref_Database; File : GNATCOLL.VFS.Virtual_File) return String;
@@ -219,6 +227,38 @@ package GNATCOLL.Xref is
    type Base_Cursor is abstract tagged private;
    function Has_Element (Self : Base_Cursor) return Boolean;
    procedure Next (Self : in out Base_Cursor);
+
+   ---------------------
+   -- Reference kinds --
+   ---------------------
+   --  reference kinds are extensible by the user by creating new entries
+   --  in the database, and as such cannot be represented as an enumeration
+   --  type on the Ada side. So instead we provide a number of subprograms
+   --  to perform the expected tests on the kind.
+
+   function Show_In_Callgraph
+     (Xref : Xref_Database;
+      Ref  : Entity_Reference) return Boolean;
+   --  Whether to show this reference in a callgraph.
+
+   function Is_Real_Reference
+     (Xref : Xref_Database;
+      Ref  : Entity_Reference) return Boolean;
+   --  Whether the name of entity actually appears at this location in the
+   --  source. Sometimes, an entity has implicit references, which it is
+   --  useful to list, and they can be found by testing this function.
+
+   function Is_Read_Reference
+     (Xref : Xref_Database;
+      Ref  : Entity_Reference) return Boolean;
+   --  Whether this is a real reference to the entity, and the value of the
+   --  entity is read at that point. This is also true when calling a
+   --  subprogram for instance.
+
+   function Is_Write_Reference
+     (Xref : Xref_Database;
+      Ref  : Entity_Reference) return Boolean;
+   --  Whether the value of the entity is modified at that reference.
 
    -------------------
    -- Documentation --
@@ -575,12 +615,13 @@ private
      (Id => -1, Fuzzy => True);
 
    No_Entity_Reference : constant Entity_Reference :=
-     (Entity => No_Entity,
-      File   => GNATCOLL.VFS.No_File,
-      Line   => -1,
-      Column => -1,
-      Kind   => Ada.Strings.Unbounded.Null_Unbounded_String,
-      Scope  => No_Entity);
+     (Entity  => No_Entity,
+      File    => GNATCOLL.VFS.No_File,
+      Line    => -1,
+      Column  => -1,
+      Kind    => Ada.Strings.Unbounded.Null_Unbounded_String,
+      Kind_Id => Kind_Id_Declaration,
+      Scope   => No_Entity);
 
    No_Entity_Declaration : constant Entity_Declaration :=
      (Name     => Ada.Strings.Unbounded.Null_Unbounded_String,
