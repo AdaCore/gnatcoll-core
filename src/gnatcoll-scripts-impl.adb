@@ -224,6 +224,10 @@ package body GNATCOLL.Scripts.Impl is
          Prop := Get_Data (Inst, Logger_Data);
          Set_Active (Logger_Properties (Prop).Handle, Nth_Arg (Data, 2));
 
+      elsif Command = "get_active" then
+         Prop := Get_Data (Inst, Logger_Data);
+         Set_Return_Value (Data, Active (Logger_Properties (Prop).Handle));
+
       elsif Command = "check" then
          begin
             Prop := Get_Data (Inst, Logger_Data);
@@ -302,6 +306,10 @@ package body GNATCOLL.Scripts.Impl is
       Register_Command
         (Repo, "set_active",
          Params => (1 => Param ("active")),
+         Class => Class,
+         Handler => Logger_Handler'Access);
+      Register_Command
+        (Repo, "get_active",
          Class => Class,
          Handler => Logger_Handler'Access);
       Register_Command
