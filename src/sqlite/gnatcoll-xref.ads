@@ -264,6 +264,9 @@ package GNATCOLL.Xref is
 
       Is_Static_Local : Boolean;
       --  Whether the entity is a 'static' entity in the C and C++ sense.
+
+      Has_Methods : Boolean;
+      --  Whether the entity can have methods/primitive operations
    end record;
    pragma Pack (Entity_Flags);
 
@@ -539,11 +542,41 @@ package GNATCOLL.Xref is
    --  The parent types for the entity (for instance the classes or interfaces
    --  from which Self derives).
 
+   function Parent_Package
+     (Self   : Xref_Database'Class;
+      Entity : Entity_Information) return Entity_Information;
+   --  The parent package for a package.
+
+   function Method_Of
+      (Self   : Xref_Database'Class;
+       Entity : Entity_Information) return Entity_Information;
+   --  Return the entity (presumably an Ada tagged type or C++ class) for which
+   --  Entity is a method or primitive operation.
+
    procedure Methods
      (Self   : Xref_Database'Class;
       Entity : Entity_Information;
       Cursor : out Entities_Cursor'Class);
    --  The primitive operations (or methods) of Self
+
+   procedure Discriminants
+     (Self   : Xref_Database'Class;
+      Entity : Entity_Information;
+      Cursor : out Entities_Cursor'Class);
+   --  Return the discriminants of the entity
+
+   function Discriminant_Of
+      (Self   : Xref_Database'Class;
+       Entity : Entity_Information) return Entity_Information;
+   --  Return the entity (Ada record in general) for which Entity is a
+   --  discriminant.
+
+   procedure Fields
+     (Self   : Xref_Database'Class;
+      Entity : Entity_Information;
+      Cursor : out Entities_Cursor'Class);
+   --  Return the fields of the entity (record or struct).
+   --  This does not include discriminants.
 
    procedure Literals
      (Self   : Xref_Database'Class;
@@ -551,11 +584,11 @@ package GNATCOLL.Xref is
       Cursor : out Entities_Cursor'Class);
    --  The valid literal values for an enumeration type.
 
-   function Method_Of
-      (Self   : Xref_Database'Class;
-       Entity : Entity_Information) return Entity_Information;
-   --  Return the entity (presumably an Ada tagged type or C++ class) for which
-   --  Entity is a method or primitive operation.
+   procedure Formal_Parameters
+     (Self   : Xref_Database'Class;
+      Entity : Entity_Information;
+      Cursor : out Entities_Cursor'Class);
+   --  The formal parameters of a generic entity
 
    function Instance_Of
       (Self   : Xref_Database'Class;
@@ -587,7 +620,15 @@ package GNATCOLL.Xref is
      (Self   : Xref_Database'Class;
       Entity : Entity_Information) return Entity_Information;
    --  Return the type of the components of Entity (for arrays for instance,
-   --  this is the type for elements in the array)
+   --  this is the type for elements in the array).
+   --  See also Index_Type.
+
+   procedure Index_Types
+     (Self   : Xref_Database'Class;
+      Entity : Entity_Information;
+      Cursor : out Entities_Cursor'Class);
+   --  The type of indexes for an array (one for each dimensions of the array).
+   --  See also Component_Type.
 
    function Pointed_Type
      (Self   : Xref_Database'Class;
@@ -756,6 +797,7 @@ private
                    Is_Type             => False,
                    Is_Global           => False,
                    Is_Static_Local     => False,
+                   Has_Methods         => False,
                    Body_Is_Full_Declaration => True));
 
    package Entity_Sets is new Ada.Containers.Ordered_Sets

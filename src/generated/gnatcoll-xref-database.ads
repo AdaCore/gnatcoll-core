@@ -24,6 +24,7 @@ package GNATCOLL.Xref.Database is
    E2e_Of_Type : constant E2e_Id := 11;
    E2e_Out_Parameter : constant E2e_Id := 13;
    E2e_Overrides : constant E2e_Id := 8;
+   E2e_Parent_Package : constant E2e_Id := 18;
    E2e_Parent_Type : constant E2e_Id := 1;
    E2e_Pointed_Type : constant E2e_Id := 0;
    E2e_Renames : constant E2e_Id := 3;
@@ -119,6 +120,7 @@ package GNATCOLL.Xref.Database is
       Is_Type : SQL_Field_Boolean (Ta_Entity_Kinds, Instance, N_Is_Type, Index);
       Is_Printable_In_Gdb : SQL_Field_Boolean (Ta_Entity_Kinds, Instance, N_Is_Printable_In_Gdb, Index);
       Is_Array : SQL_Field_Boolean (Ta_Entity_Kinds, Instance, N_Is_Array, Index);
+      Has_Methods : SQL_Field_Boolean (Ta_Entity_Kinds, Instance, N_Has_Methods, Index);
    end record;
 
    type T_Entity_Kinds (Instance : Cst_String_Access)

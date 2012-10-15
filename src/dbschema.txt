@@ -49,6 +49,7 @@
 | is_type                  | BOOLEAN      | NOINDEX           | false |                                                |
 | is_printable_in_gdb      | BOOLEAN      | NOINDEX           | false |                                                |
 | is_array                 | BOOLEAN      | NOINDEX           | false |                                                |
+| has_methods              | BOOLEAN      | NOINDEX           | false |                                                |
 
 # An entity is known by its name and the location of its declaration. An entry
 # in this table cannot exist without a corresponding declaration. To make

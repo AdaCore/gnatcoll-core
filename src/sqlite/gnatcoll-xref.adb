@@ -441,6 +441,7 @@ package body GNATCOLL.Xref is
    Q_Decl_Is_Printable_In_Gdb : constant := 14;
    Q_Decl_Is_Global  : constant := 15;
    Q_Decl_Is_Static_Local : constant := 16;
+   Q_Decl_Has_Methods : constant := 17;
    Query_Declaration : constant Prepared_Statement :=
      Prepare
        (SQL_Select
@@ -459,6 +460,7 @@ package body GNATCOLL.Xref is
                    Q_Decl_Is_Type => +Database.Entity_Kinds.Is_Type,
                    Q_Decl_Is_Array => +Database.Entity_Kinds.Is_Array,
                    Q_Decl_Is_Global => +Database.Entities.Is_Global,
+                   Q_Decl_Has_Methods => +Database.Entity_Kinds.Has_Methods,
                    Q_Decl_Is_Static_Local =>
                       +Database.Entities.Is_Static_Local,
                    Q_Decl_Is_Printable_In_Gdb =>
@@ -2284,7 +2286,9 @@ package body GNATCOLL.Xref is
                   End_Of_Spec_Line := Xref_Line;
                when 'p' | 'P' =>
                   Eid := E2e_Has_Primitive;
-               when 'r' | 'm' | 'l' | 'R' | 'i' | 's' | 'w' | 'k' | 'D'
+               when 'k' =>
+                  Eid := E2e_Parent_Package;
+               when 'r' | 'm' | 'l' | 'R' | 'i' | 's' | 'w' | 'D'
                   | 'H' | 'o' | 'x' =>
                   null;  --  real references
                when 'd' =>
@@ -3452,6 +3456,7 @@ package body GNATCOLL.Xref is
                     Is_Access => Curs.Boolean_Value (Q_Decl_Is_Access),
                     Is_Array => Curs.Boolean_Value (Q_Decl_Is_Array),
                     Is_Global => Curs.Boolean_Value (Q_Decl_Is_Global),
+                    Has_Methods => Curs.Boolean_Value (Q_Decl_Has_Methods),
                     Is_Static_Local =>
                       Curs.Boolean_Value (Q_Decl_Is_Static_Local),
                     Is_Printable_In_Gdb =>
@@ -4227,6 +4232,102 @@ package body GNATCOLL.Xref is
          Params => (1 => +Entity.Id, 2 => +E2e_Has_Primitive));
    end Methods;
 
+   ---------------------
+   -- Discriminant_Of --
+   ---------------------
+
+   function Discriminant_Of
+      (Self   : Xref_Database'Class;
+       Entity : Entity_Information) return Entity_Information
+   is
+      Curs : Entities_Cursor;
+   begin
+      Curs.DBCursor.Fetch
+        (Self.DB,
+         Query_E2E_To,
+         Params => (1 => +Entity.Id, 2 => +E2e_Has_Discriminant));
+
+      if Curs.DBCursor.Has_Row then
+         return Curs.Element;
+      else
+         return No_Entity;
+      end if;
+   end Discriminant_Of;
+
+   --------------------
+   -- Parent_Package --
+   --------------------
+
+   function Parent_Package
+     (Self   : Xref_Database'Class;
+      Entity : Entity_Information) return Entity_Information
+   is
+      Curs : Entities_Cursor;
+   begin
+      Curs.DBCursor.Fetch
+        (Self.DB,
+         Query_E2E_From,
+         Params => (1 => +Entity.Id, 2 => +E2e_Parent_Package));
+
+      if Curs.DBCursor.Has_Row then
+         return Curs.Element;
+      else
+         return No_Entity;
+      end if;
+   end Parent_Package;
+
+   -------------------
+   -- Discriminants --
+   -------------------
+
+   procedure Discriminants
+     (Self   : Xref_Database'Class;
+      Entity : Entity_Information;
+      Cursor : out Entities_Cursor'Class) is
+   begin
+      Cursor.DBCursor.Fetch
+        (Self.DB,
+         Query_E2E_From,
+         Params => (1 => +Entity.Id, 2 => +E2e_Has_Discriminant));
+   end Discriminants;
+
+   ------------
+   -- Fields --
+   ------------
+
+   procedure Fields
+     (Self   : Xref_Database'Class;
+      Entity : Entity_Information;
+      Cursor : out Entities_Cursor'Class) is
+   begin
+      --  We need to also omit subprograms, which in some languages like
+      --  Java and C++ are declared within the scope of the class.
+
+      Cursor.DBCursor.Fetch
+        (Self.DB,
+         SQL_Select
+           (Database.Entities.Id
+            & Database.Entities.Name
+            & Database.Entities.Decl_Line
+            & Database.Entities.Decl_Column,
+            From => Database.Entities & Database.Entity_Kinds,
+            Where => Database.Entities.Decl_Caller = Integer_Param (1)
+            and Database.Entities.Kind = Database.Entity_Kinds.Id
+            and Database.Entity_Kinds.Is_Subprogram = False
+            and Database.Entity_Kinds.Is_Type = False
+            and SQL_Not_In
+              (Database.Entities.Id,
+               SQL_Select
+                 (Database.E2e.toEntity,
+                  From => Database.E2e,
+                  Where => Database.E2e.Kind = E2e_Has_Discriminant
+                    and Database.E2e.fromEntity = Integer_Param (1))),
+
+            Order_By =>
+              Database.Entities.Name & Database.Entities.Decl_Line),
+         Params => (1 => +Entity.Id));
+   end Fields;
+
    --------------
    -- Literals --
    --------------
@@ -4241,6 +4342,38 @@ package body GNATCOLL.Xref is
          Query_E2E_To,
          Params => (1 => +Entity.Id, 2 => +E2e_From_Enumeration));
    end Literals;
+
+   -----------------
+   -- Index_Types --
+   -----------------
+
+   procedure Index_Types
+     (Self   : Xref_Database'Class;
+      Entity : Entity_Information;
+      Cursor : out Entities_Cursor'Class)
+   is
+   begin
+      Cursor.DBCursor.Fetch
+        (Self.DB,
+         Query_E2E_From,
+         Params => (1 => +Entity.Id, 2 => +E2e_Has_Index));
+   end Index_Types;
+
+   -----------------------
+   -- Formal_Parameters --
+   -----------------------
+
+   procedure Formal_Parameters
+     (Self   : Xref_Database'Class;
+      Entity : Entity_Information;
+      Cursor : out Entities_Cursor'Class)
+   is
+   begin
+      Cursor.DBCursor.Fetch
+        (Self.DB,
+         Query_E2E_From,
+         Params => (1 => +Entity.Id, 2 => +E2e_Is_Formal_Of));
+   end Formal_Parameters;
 
    ---------------
    -- Method_Of --

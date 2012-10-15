@@ -48,6 +48,8 @@ package GNATCOLL.Xref.Database_Names is
    N_Fromfile : constant Cst_String_Access := NC_fromFile'Access;
    NC_From_Instantiation : aliased constant String := "from_instantiation";
    N_From_Instantiation : constant Cst_String_Access := NC_from_instantiation'Access;
+   NC_Has_Methods : aliased constant String := "has_methods";
+   N_Has_Methods : constant Cst_String_Access := NC_has_methods'Access;
    NC_Id : aliased constant String := "id";
    N_Id : constant Cst_String_Access := NC_id'Access;
    NC_Is_Abstract : aliased constant String := "is_abstract";
