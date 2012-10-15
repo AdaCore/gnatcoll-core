@@ -1389,6 +1389,9 @@ package body GNATCOLL.Projects is
      (Self : Project_Tree'Class; File : GNATCOLL.VFS.Virtual_File)
       return File_Info is
    begin
+      if Self.Data = null then
+         raise Program_Error with "no projet tree was parsed";
+      end if;
       return Info (Self.Data, File);
    end Info;
 
