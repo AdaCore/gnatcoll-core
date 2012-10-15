@@ -21,6 +21,7 @@ with Ada.Containers;          use Ada.Containers;
 with Ada.Containers.Doubly_Linked_Lists;
 with Ada.Containers.Hashed_Maps;
 with Ada.Containers.Vectors;
+with Ada.Strings.Fixed;
 with Ada.Strings.Maps;
 with Ada.Unchecked_Deallocation;
 with GNAT.OS_Lib;
@@ -4263,6 +4264,28 @@ package body GNATCOLL.Xref is
       end if;
    end Method_Of;
 
+   -----------------
+   -- Instance_Of --
+   -----------------
+
+   function Instance_Of
+      (Self   : Xref_Database'Class;
+       Entity : Entity_Information) return Entity_Information
+   is
+      Curs : Entities_Cursor;
+   begin
+      Curs.DBCursor.Fetch
+        (Self.DB,
+         Query_E2E_From,
+         Params => (1 => +Entity.Id, 2 => +E2e_Instance_Of));
+
+      if Curs.DBCursor.Has_Row then
+         return Curs.Element;
+      else
+         return No_Entity;
+      end if;
+   end Instance_Of;
+
    -------------------
    -- Overridden_By --
    -------------------
@@ -5215,5 +5238,88 @@ package body GNATCOLL.Xref is
          end loop;
       end return;
    end All_Real_Reference_Kinds;
+
+   --------------------
+   -- From_Instances --
+   --------------------
+
+   function From_Instances
+     (Self   : Xref_Database'Class;
+      Ref    : Entity_Reference) return Entity_Array
+   is
+      Inst : Entity_Information;
+      R    : Forward_Cursor;
+   begin
+      if Ref.Kind_Id = Kind_Id_Declaration then
+         Inst := Self.Instance_Of (Ref.Entity);
+         if Inst = No_Entity then
+            --  No instantiation
+            return (1 .. 0 => No_Entity);
+         else
+            --  Instantiation of a single entity.
+            return (1 .. 1 => Inst);
+         end if;
+
+      else
+         R.Fetch
+           (Self.DB,
+            SQL_Select
+              (Entity_Refs.From_Instantiation,
+               From => Entity_Refs & Files,
+               Where => Entity_Refs.Entity = Ref.Entity.Id
+               and Entity_Refs.Line = Ref.Line
+               and Entity_Refs.Column = Integer (Ref.Column)
+               and Entity_Refs.File = Files.Id
+               and Files.Path = (+Ref.File.Unix_Style_Full_Name
+                 (Normalize => True))));
+
+         if R.Has_Row then
+            declare
+               Str  : GNAT.Strings.String_List_Access :=
+                 Split (R.Value (0), ',');
+               Result : Entity_Array (Str'Range);
+            begin
+               --  Need to search which entities each of the location
+               --  corresponds to.
+
+               for S in Str'Range loop
+                  declare
+                     Pipe : constant Integer :=
+                       Ada.Strings.Fixed.Index (Str (S).all, "|");
+
+                     File : constant Integer :=
+                       Integer'Value (Str (S)(Str (S)'First .. Pipe - 1));
+
+                     Line : constant Integer :=
+                       Integer'Value (Str (S)(Pipe + 1 .. Str (S)'Last));
+                  begin
+                     R.Fetch
+                       (Self.DB,
+                        SQL_Select
+                          (Entities.Id,
+                           From => Entities,
+                           Where => Entities.Decl_File = File
+                           and Entities.Decl_Line = Line));
+
+                     if R.Has_Row then
+                        Result (S) :=
+                          (Id => R.Integer_Value (0),
+                           Fuzzy => False);
+                     else
+                        Result (S) := No_Entity;
+                     end if;
+                  end;
+               end loop;
+               Free (Str);
+
+               return Result;
+            end;
+
+         else
+            --  No instantiation
+            return (1 .. 0 => No_Entity);
+         end if;
+      end if;
+   end From_Instances;
 
 end GNATCOLL.Xref;

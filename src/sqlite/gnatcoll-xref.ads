@@ -160,6 +160,8 @@ package GNATCOLL.Xref is
    --  This information, however, is only valid as long as the object
    --  Xref_Database hasn't been destroyed.
 
+   type Entity_Array is array (Natural range <>) of Entity_Information;
+
    function Internal_Id (Entity : Entity_Information) return Integer;
    function From_Internal_Id (Id : Integer) return Entity_Information;
    --  return the unique internal identifier for the entity. At any given
@@ -215,6 +217,9 @@ package GNATCOLL.Xref is
    --  When the file is passed as a string, it is permissible to pass only the
    --  basename (or a string like "partial/path/basename") that will be matched
    --  against all known files in the database.
+   --  File names must be normalized in Unix format (ie using '/' as a
+   --  separator, and resolving symbolic links) when you pass a string. This is
+   --  done automatically if you pass a Virtual_File.
 
    function Is_Fuzzy_Match (Self : Entity_Information) return Boolean;
    --  Returns True if the entity that was found is only an approximation,
@@ -552,6 +557,11 @@ package GNATCOLL.Xref is
    --  Return the entity (presumably an Ada tagged type or C++ class) for which
    --  Entity is a method or primitive operation.
 
+   function Instance_Of
+      (Self   : Xref_Database'Class;
+       Entity : Entity_Information) return Entity_Information;
+   --  Return the generic entity that Entity instantiates.
+
    function Overrides
      (Self   : Xref_Database'Class;
       Entity : Entity_Information) return Entity_Information;
@@ -634,6 +644,31 @@ package GNATCOLL.Xref is
       Entity : Entity_Information) return Parameters_Cursor;
    --  Return the list of parameters for the given subprogram. They are in the
    --  same order as in the source.
+
+   --------------
+   -- Generics --
+   --------------
+
+   function From_Instances
+     (Self   : Xref_Database'Class;
+      Ref    : Entity_Reference) return Entity_Array;
+   --  Indicates the instantiation chain for the given reference.
+   --  If we have a nested generic, as in:
+   --     generic package B is
+   --          type T is new Integer;
+   --     end B;
+   --     generic package A is
+   --        package BI is new B;
+   --     end A;
+   --     package AI is new A;
+   --     C : AI.BI.T;
+   --
+   --  And we start from the reference to T on the last line, the array will
+   --  contain BI:a.ads:2, then AI:...:1, since T is from the package BI (an
+   --  instantiation of B), which itself is part of AI, an instantiation of A.
+   --
+   --  When you retrieve BI or AI, you can use Instance_Of to get access to
+   --  resp. B and A.
 
    -----------
    -- Files --
