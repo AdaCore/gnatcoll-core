@@ -154,8 +154,8 @@ package body GNATCOLL.Xref.Database is
          & "|P|access type|false|false|true|true|false|false|false|false|false|true|" & ASCII.LF
          & "|q|block label|false|false|false|false|false|false|false|false|false|false|" & ASCII.LF
          & "|Q|include file|false|false|false|false|false|false|false|false|false|false|" & ASCII.LF
-         & "|r|record|false|false|true|false|false|true|true|false|false|false|" & ASCII.LF
-         & "|R|record type|false|false|false|true|false|true|true|false|false|false|" & ASCII.LF
+         & "|r|record|true|false|true|false|false|true|true|false|false|false|" & ASCII.LF
+         & "|R|record type|true|false|false|true|false|true|true|false|false|false|" & ASCII.LF
          & "|s|string|false|true|true|false|false|false|false|false|false|false|" & ASCII.LF
          & "|S|string type|false|true|false|true|false|false|false|false|false|false|" & ASCII.LF
          & "|t|task|false|false|false|false|true|true|false|false|false|false|" & ASCII.LF

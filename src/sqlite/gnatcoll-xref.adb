@@ -5455,4 +5455,33 @@ package body GNATCOLL.Xref is
       end if;
    end From_Instances;
 
+   -----------------
+   -- From_Prefix --
+   -----------------
+
+   procedure From_Prefix
+     (Self       : Xref_Database'Class;
+      Prefix     : String;
+      Is_Partial : Boolean := True;
+      Cursor     : out Entities_Cursor'Class)
+   is
+      Q : SQL_Query;
+   begin
+      if Is_Partial then
+         Q := SQL_Select
+           (Entities2_Fields,
+            From      => Entities2,
+            Where    => Like (Entities2.Name, Prefix & '%'),
+            Order_By => Entities2.Name);
+      else
+         Q := SQL_Select
+           (Entities2_Fields,
+            From      => Entities2,
+            Where    => Entities2.Name = Prefix,
+            Order_By => Entities2.Name);
+      end if;
+
+      Cursor.DBCursor.Fetch (Self.DB, Q);
+   end From_Prefix;
+
 end GNATCOLL.Xref;

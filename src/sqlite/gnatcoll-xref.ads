@@ -516,6 +516,14 @@ package GNATCOLL.Xref is
    type Entities_Cursor is new Base_Cursor with private;
    function Element (Self : Entities_Cursor) return Entity_Information;
 
+   procedure From_Prefix
+     (Self       : Xref_Database'Class;
+      Prefix     : String;
+      Is_Partial : Boolean := True;
+      Cursor     : out Entities_Cursor'Class);
+   --  Return all entities whose name is either exactly Prefix (when
+   --  Is_Partial is False) or starts with Prefix (when Is_Partial is True).
+
    procedure Calls
      (Self   : Xref_Database'Class;
       Entity : Entity_Information;
