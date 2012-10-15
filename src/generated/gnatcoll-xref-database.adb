@@ -63,6 +63,12 @@ package body GNATCOLL.Xref.Database is
          & "|is_container|Boolean|,NOINDEX|false|" & ASCII.LF
          & "|body_is_full_declaration|Boolean|,NOINDEX|false|" & ASCII.LF
          & "|is_abstract|Boolean|,NOINDEX|false|" & ASCII.LF
+         & "|is_generic|Boolean|,NOINDEX|false|" & ASCII.LF
+         & "|is_access|Boolean|,NOINDEX|false|" & ASCII.LF
+         & "|is_type|Boolean|,NOINDEX|false|" & ASCII.LF
+         & "|is_printable_in_gdb|Boolean|,NOINDEX|false|" & ASCII.LF
+         & "|is_array|Boolean|,NOINDEX|false|" & ASCII.LF
+         & "|has_methods|Boolean|,NOINDEX|false|" & ASCII.LF
          & "" & ASCII.LF
          & "|TABLE| entities" & ASCII.LF
          & "|id|AUTOINCREMENT|PK||" & ASCII.LF
@@ -75,6 +81,8 @@ package body GNATCOLL.Xref.Database is
          & "|mangled_name|Text|||" & ASCII.LF
          & "|exported|Boolean|NOT NULL,NOINDEX|false|" & ASCII.LF
          & "|obsolete|Boolean|NOT NULL,NOINDEX|false|" & ASCII.LF
+         & "|is_global|Boolean|NOT NULL,NOINDEX|false|" & ASCII.LF
+         & "|is_static_local|Boolean|NOT NULL,NOINDEX|false|" & ASCII.LF
          & "|INDEX:|decl_file,decl_line,decl_column|entity_loc" & ASCII.LF
          & "" & ASCII.LF
          & "|TABLE| e2e_kind" & ASCII.LF
@@ -96,6 +104,7 @@ package body GNATCOLL.Xref.Database is
          & "|is_end|Boolean|,NOINDEX|false|" & ASCII.LF
          & "|show_in_callgraph|Boolean|,NOINDEX|true|" & ASCII.LF
          & "|is_dispatching|Boolean|,NOINDEX|false|" & ASCII.LF
+         & "|is_implicit|Boolean|,NOINDEX|false|" & ASCII.LF
          & "" & ASCII.LF
          & "|TABLE| entity_refs" & ASCII.LF
          & "|entity|FK entities|NOT NULL,NOINDEX||" & ASCII.LF
@@ -109,82 +118,80 @@ package body GNATCOLL.Xref.Database is
          & "|INDEX:|""entity""|entity_refs_entity" & ASCII.LF
          & "" & ASCII.LF
          & "";
-      Data : constant String := "|TABLE|entity_kinds|||||" & ASCII.LF
-         & "|id|display|is_subprogram|is_container|body_is_full_declaration|is_abstract|" & ASCII.LF
-         & "|a|array|false|false|false|false|" & ASCII.LF
-         & "|A|array type|false|false|false|false|" & ASCII.LF
-         & "|b|boolean|false|false|false|false|" & ASCII.LF
-         & "|B|boolean type|false|false|false|false|" & ASCII.LF
-         & "|c|class wide|false|false|false|false|" & ASCII.LF
-         & "|C|class wide type|false|false|false|false|" & ASCII.LF
-         & "|d|decimal fixed point|false|false|false|false|" & ASCII.LF
-         & "|D|decimal fixed point type|false|false|false|false|" & ASCII.LF
-         & "|e|enumeration|false|true|true|false|" & ASCII.LF
-         & "|E|enumeration type|false|true|true|false|" & ASCII.LF
-         & "|f|floating point|false|false|false|false|" & ASCII.LF
-         & "|F|floating point type|false|false|false|false|" & ASCII.LF
-         & "|g|macro|true|false|false|false|" & ASCII.LF
-         & "|G|function macro|false|false|false|false|" & ASCII.LF
-         & "|h|interface|false|false|false|true|" & ASCII.LF
-         & "|H|abstract record type|false|true|true|true|" & ASCII.LF
-         & "|i|integer|false|false|false|false|" & ASCII.LF
-         & "|I|integer type|false|false|false|false|" & ASCII.LF
-         & "|j|class instance|false|false|false|false|" & ASCII.LF
-         & "|J|class|false|false|false|false|" & ASCII.LF
-         & "|k|generic package|false|true|false|false|" & ASCII.LF
-         & "|K|package|false|true|false|false|" & ASCII.LF
-         & "|l|loop label|false|false|false|false|" & ASCII.LF
-         & "|L|statement label|false|false|false|false|" & ASCII.LF
-         & "|m|unsigned integer|false|false|false|false|" & ASCII.LF
-         & "|M|unsigned integer type|false|false|false|false|" & ASCII.LF
-         & "|n|enumeration literal|false|false|false|false|" & ASCII.LF
-         & "|N|named number|false|false|false|false|" & ASCII.LF
-         & "|o|fixed point|false|false|false|false|" & ASCII.LF
-         & "|O|fixed point type|false|false|false|false|" & ASCII.LF
-         & "|p|pointer|false|false|false|false|" & ASCII.LF
-         & "|P|access type|false|false|false|false|" & ASCII.LF
-         & "|q|block label|false|false|false|false|" & ASCII.LF
-         & "|Q|include file|false|false|false|false|" & ASCII.LF
-         & "|r|record|false|true|true|false|" & ASCII.LF
-         & "|R|record type|false|true|true|false|" & ASCII.LF
-         & "|s|string|false|false|false|false|" & ASCII.LF
-         & "|S|string type|false|false|false|false|" & ASCII.LF
-         & "|t|task|true|true|false|false|" & ASCII.LF
-         & "|T|task type|true|true|false|false|" & ASCII.LF
-         & "|u|generic procedure|true|true|false|false|" & ASCII.LF
-         & "|U|procedure|true|true|false|false|" & ASCII.LF
-         & "|v|generic function|true|true|false|false|" & ASCII.LF
-         & "|V|function|true|true|false|false|" & ASCII.LF
-         & "|w|protected object|false|false|false|false|" & ASCII.LF
-         & "|W|protected type|false|false|false|false|" & ASCII.LF
-         & "|x|abstract procedure|true|true|false|false|" & ASCII.LF
-         & "|X|exception|false|false|false|false|" & ASCII.LF
-         & "|y|abstract function|true|true|false|false|" & ASCII.LF
-         & "|Y|entry|true|true|false|false|" & ASCII.LF
-         & "|z|unknown|false|false|false|false|" & ASCII.LF
-         & "|Z|unknown|false|false|false|false|" & ASCII.LF
-         & "|+|generic formal|false|false|false|false|" & ASCII.LF
-         & "|*|private object|false|false|false|false|" & ASCII.LF
-         & "|TABLE|reference_kinds|||||||" & ASCII.LF
-         & "|id|display|is_real|is_read|is_write|is_end|show_in_callgraph|is_dispatching|" & ASCII.LF
-         & "|b|body|true|true|false|false|false|false|" & ASCII.LF
-         & "|c|full declaration|true|true|false|false|false|false|" & ASCII.LF
-         & "|D|object definition|true|true|false|false|false|false|" & ASCII.LF
-         & "|e|end of spec|false|false|false|true|false|false|" & ASCII.LF
-         & "|i|implicit reference|false|false|false|false|false|false|" & ASCII.LF
-         & "|k|parent package|false|false|false|false|false|false|" & ASCII.LF
-         & "|H|abstract type|true|false|false|false|false|false|" & ASCII.LF
-         & "|l|label on end line|true|true|false|false|false|false|" & ASCII.LF
-         & "|m|write reference|true|false|true|false|false|false|" & ASCII.LF
-         & "|o|own reference|true|true|false|false|false|false|" & ASCII.LF
-         & "|r|reference|true|true|false|false|true|false|" & ASCII.LF
-         & "|s|static call|true|true|false|false|true|false|" & ASCII.LF
-         & "|R|dispatching call|true|true|false|false|true|true|" & ASCII.LF
-         & "|t|end of body|false|false|false|true|false|false|" & ASCII.LF
-         & "|w|with line|true|true|false|false|false|false|" & ASCII.LF
-         & "|x|type extension|true|true|false|false|false|false|" & ASCII.LF
-         & "|X|type extension|true|true|false|false|false|false|" & ASCII.LF
-         & "|z|formal generic parameter|false|false|false|false|false|false|" & ASCII.LF
+      Data : constant String := "|TABLE|entity_kinds|||||||||||" & ASCII.LF
+         & "|id|display|has_methods|is_array|is_printable_in_gdb|is_type|is_subprogram|is_container|body_is_full_declaration|is_abstract|is_generic|is_access|" & ASCII.LF
+         & "|a|array|false|true|true|false|false|false|false|false|false|false|" & ASCII.LF
+         & "|A|array type|false|true|false|true|false|false|false|false|false|false|" & ASCII.LF
+         & "|b|boolean|false|false|true|false|false|false|false|false|false|false|" & ASCII.LF
+         & "|B|boolean type|false|false|false|trye|false|false|false|false|false|false|" & ASCII.LF
+         & "|c|class wide|false|false|true|false|false|false|false|false|false|false|" & ASCII.LF
+         & "|C|class wide type|false|false|false|true|false|false|false|false|false|false|" & ASCII.LF
+         & "|d|decimal fixed point|false|false|true|false|false|false|false|false|false|false|" & ASCII.LF
+         & "|D|decimal fixed point type|false|false|false|true|false|false|false|false|false|false|" & ASCII.LF
+         & "|e|enumeration|false|false|true|false|false|true|true|false|false|false|" & ASCII.LF
+         & "|E|enumeration type|false|false|false|true|false|true|true|false|false|false|" & ASCII.LF
+         & "|f|floating point|false|false|true|false|false|false|false|false|false|false|" & ASCII.LF
+         & "|F|floating point type|false|false|false|true|false|false|false|false|false|false|" & ASCII.LF
+         & "|g|macro|false|false|false|false|true|false|false|false|false|false|" & ASCII.LF
+         & "|G|function macro|false|false|false|false|false|false|false|false|false|false|" & ASCII.LF
+         & "|h|interface|true|false|false|false|false|false|false|true|false|false|" & ASCII.LF
+         & "|H|abstract record type|false|false|false|true|false|true|true|true|false|false|" & ASCII.LF
+         & "|i|integer|false|false|true|false|false|false|false|false|false|false|" & ASCII.LF
+         & "|I|integer type|false|false|false|true|false|false|false|false|false|false|" & ASCII.LF
+         & "|j|class instance|true|false|false|false|false|true|false|false|false|false|" & ASCII.LF
+         & "|J|class|true|false|true|false|false|true|false|false|false|false|" & ASCII.LF
+         & "|k|generic package|false|false|false|false|false|true|false|false|true|false|" & ASCII.LF
+         & "|K|package|false|false|false|false|false|true|false|false|false|false|" & ASCII.LF
+         & "|l|loop label|false|false|false|false|false|false|false|false|false|false|" & ASCII.LF
+         & "|L|statement label|false|false|false|false|false|false|false|false|false|false|" & ASCII.LF
+         & "|m|unsigned integer|false|false|true|false|false|false|false|false|false|false|" & ASCII.LF
+         & "|M|unsigned integer type|false|false|false|true|false|false|false|false|false|false|" & ASCII.LF
+         & "|n|enumeration literal|false|false|true|false|false|false|false|false|false|false|" & ASCII.LF
+         & "|N|named number|false|false|true|false|false|false|false|false|false|false|" & ASCII.LF
+         & "|o|fixed point|false|false|true|false|false|false|false|false|false|false|" & ASCII.LF
+         & "|O|fixed point type|false|false|false|true|false|false|false|false|false|false|" & ASCII.LF
+         & "|p|pointer|false|false|true|false|false|false|false|false|false|true|" & ASCII.LF
+         & "|P|access type|false|false|true|true|false|false|false|false|false|true|" & ASCII.LF
+         & "|q|block label|false|false|false|false|false|false|false|false|false|false|" & ASCII.LF
+         & "|Q|include file|false|false|false|false|false|false|false|false|false|false|" & ASCII.LF
+         & "|r|record|true|false|true|false|false|true|true|false|false|false|" & ASCII.LF
+         & "|R|record type|true|false|false|true|false|true|true|false|false|false|" & ASCII.LF
+         & "|s|string|false|true|true|false|false|false|false|false|false|false|" & ASCII.LF
+         & "|S|string type|false|true|false|true|false|false|false|false|false|false|" & ASCII.LF
+         & "|t|task|false|false|false|false|true|true|false|false|false|false|" & ASCII.LF
+         & "|T|task type|false|false|false|true|true|true|false|false|false|false|" & ASCII.LF
+         & "|u|generic procedure|false|false|false|false|true|true|false|false|true|false|" & ASCII.LF
+         & "|U|procedure|false|false|false|false|true|true|false|false|false|false|" & ASCII.LF
+         & "|v|generic function|false|false|false|false|true|true|false|false|true|false|" & ASCII.LF
+         & "|V|function|false|false|false|false|true|true|false|false|false|false|" & ASCII.LF
+         & "|w|protected object|false|false|true|false|false|false|false|false|false|false|" & ASCII.LF
+         & "|W|protected type|false|false|false|true|false|false|false|false|false|false|" & ASCII.LF
+         & "|x|abstract procedure|false|false|false|false|true|true|false|true|false|false|" & ASCII.LF
+         & "|X|exception|false|false|false|false|false|false|false|false|false|false|" & ASCII.LF
+         & "|y|abstract function|false|false|false|false|true|true|false|true|false|false|" & ASCII.LF
+         & "|Y|entry|false|false|false|false|true|true|false|false|false|false|" & ASCII.LF
+         & "|z|unknown|false|false|false|false|false|false|false|false|false|false|" & ASCII.LF
+         & "|Z|unknown|false|false|false|false|false|false|false|false|false|false|" & ASCII.LF
+         & "|+|generic formal|false|false|false|false|false|false|false|false|false|false|" & ASCII.LF
+         & "|*|private object|false|false|false|false|false|false|false|false|false|false|" & ASCII.LF
+         & "|TABLE|reference_kinds||||||||" & ASCII.LF
+         & "|id|display|is_implicit|is_real|is_read|is_write|is_end|show_in_callgraph|is_dispatching|" & ASCII.LF
+         & "|b|body|false|true|true|false|false|false|false|" & ASCII.LF
+         & "|c|full declaration|false|true|true|false|false|false|false|" & ASCII.LF
+         & "|D|object definition|false|true|true|false|false|false|false|" & ASCII.LF
+         & "|e|end of spec|false|false|false|false|true|false|false|" & ASCII.LF
+         & "|i|implicit reference|true|true|false|false|false|false|false|" & ASCII.LF
+         & "|H|abstract type|false|true|false|false|false|false|false|" & ASCII.LF
+         & "|l|label on end line|false|true|true|false|false|false|false|" & ASCII.LF
+         & "|m|write reference|false|true|false|true|false|false|false|" & ASCII.LF
+         & "|o|own reference|false|true|true|false|false|false|false|" & ASCII.LF
+         & "|r|reference|false|true|true|false|false|true|false|" & ASCII.LF
+         & "|s|static call|false|true|true|false|false|true|false|" & ASCII.LF
+         & "|R|dispatching call|false|true|true|false|false|true|true|" & ASCII.LF
+         & "|t|end of body|false|false|false|false|true|false|false|" & ASCII.LF
+         & "|w|with line|false|true|true|false|false|false|false|" & ASCII.LF
+         & "|x|type extension|false|true|true|false|false|false|false|" & ASCII.LF
+         & "|X|type extension|false|true|true|false|false|false|false|" & ASCII.LF
          & "|TABLE|f2f_kind||" & ASCII.LF
          & "|id|name||" & ASCII.LF
          & "|0|withs|" & ASCII.LF
@@ -208,45 +215,46 @@ package body GNATCOLL.Xref.Database is
          & "|15|access parameter|" & ASCII.LF
          & "|16|has discriminant|" & ASCII.LF
          & "|17|is formal of|" & ASCII.LF
+         & "|18|parent package|" & ASCII.LF
          & "|TABLE|files|||" & ASCII.LF
          & "|id|path|stamp|language|" & ASCII.LF
          & "|-1|/|1970-01-01|ada|" & ASCII.LF
-         & "|TABLE|entities||||" & ASCII.LF
-         & "|name|kind|decl_file|decl_line|decl_column|" & ASCII.LF
-         & "|__va_list_tag|p|-1|-1|-1|" & ASCII.LF
-         & "|boolean|B|-1|-1|-1|" & ASCII.LF
-         & "|char|I|-1|-1|-1|" & ASCII.LF
-         & "|character|E|-1|-1|-1|" & ASCII.LF
-         & "|double|F|-1|-1|-1|" & ASCII.LF
-         & "|duration|O|-1|-1|-1|" & ASCII.LF
-         & "|float|F|-1|-1|-1|" & ASCII.LF
-         & "|int|I|-1|-1|-1|" & ASCII.LF
-         & "|integer|I|-1|-1|-1|" & ASCII.LF
-         & "|long double|F|-1|-1|-1|" & ASCII.LF
-         & "|long int|I|-1|-1|-1|" & ASCII.LF
-         & "|long long int|I|-1|-1|-1|" & ASCII.LF
-         & "|long long unsigned int|I|-1|-1|-1|" & ASCII.LF
-         & "|long unsigned int|I|-1|-1|-1|" & ASCII.LF
-         & "|long_float|F|-1|-1|-1|" & ASCII.LF
-         & "|long_long_float|F|-1|-1|-1|" & ASCII.LF
-         & "|long_integer|I|-1|-1|-1|" & ASCII.LF
-         & "|long_long_integer|I|-1|-1|-1|" & ASCII.LF
-         & "|natural|I|-1|-1|-1|" & ASCII.LF
-         & "|positive|I|-1|-1|-1|" & ASCII.LF
-         & "|short int|I|-1|-1|-1|" & ASCII.LF
-         & "|short unsigned int|I|-1|-1|-1|" & ASCII.LF
-         & "|short_float|F|-1|-1|-1|" & ASCII.LF
-         & "|short_integer|I|-1|-1|-1|" & ASCII.LF
-         & "|short_short_integer|I|-1|-1|-1|" & ASCII.LF
-         & "|signed char|I|-1|-1|-1|" & ASCII.LF
-         & "|string|A|-1|-1|-1|" & ASCII.LF
-         & "|unsigned char|I|-1|-1|-1|" & ASCII.LF
-         & "|unsigned int|I|-1|-1|-1|" & ASCII.LF
-         & "|void|p|-1|-1|-1|" & ASCII.LF
-         & "|wide_character|E|-1|-1|-1|" & ASCII.LF
-         & "|wide_wide_character|E|-1|-1|-1|" & ASCII.LF
-         & "|wide_string|A|-1|-1|-1|" & ASCII.LF
-         & "|wide_wide_string|A|-1|-1|-1|" & ASCII.LF
+         & "|TABLE|entities|||||" & ASCII.LF
+         & "|name|kind|decl_file|decl_line|decl_column|is_global|" & ASCII.LF
+         & "|__va_list_tag|p|-1|-1|-1|true|" & ASCII.LF
+         & "|boolean|B|-1|-1|-1|true|" & ASCII.LF
+         & "|char|I|-1|-1|-1|true|" & ASCII.LF
+         & "|character|E|-1|-1|-1|true|" & ASCII.LF
+         & "|double|F|-1|-1|-1|true|" & ASCII.LF
+         & "|duration|O|-1|-1|-1|true|" & ASCII.LF
+         & "|float|F|-1|-1|-1|true|" & ASCII.LF
+         & "|int|I|-1|-1|-1|true|" & ASCII.LF
+         & "|integer|I|-1|-1|-1|true|" & ASCII.LF
+         & "|long double|F|-1|-1|-1|true|" & ASCII.LF
+         & "|long int|I|-1|-1|-1|true|" & ASCII.LF
+         & "|long long int|I|-1|-1|-1|true|" & ASCII.LF
+         & "|long long unsigned int|I|-1|-1|-1|true|" & ASCII.LF
+         & "|long unsigned int|I|-1|-1|-1|true|" & ASCII.LF
+         & "|long_float|F|-1|-1|-1|true|" & ASCII.LF
+         & "|long_long_float|F|-1|-1|-1|true|" & ASCII.LF
+         & "|long_integer|I|-1|-1|-1|true|" & ASCII.LF
+         & "|long_long_integer|I|-1|-1|-1|true|" & ASCII.LF
+         & "|natural|I|-1|-1|-1|true|" & ASCII.LF
+         & "|positive|I|-1|-1|-1|true|" & ASCII.LF
+         & "|short int|I|-1|-1|-1|true|" & ASCII.LF
+         & "|short unsigned int|I|-1|-1|-1|true|" & ASCII.LF
+         & "|short_float|F|-1|-1|-1|true|" & ASCII.LF
+         & "|short_integer|I|-1|-1|-1|true|" & ASCII.LF
+         & "|short_short_integer|I|-1|-1|-1|true|" & ASCII.LF
+         & "|signed char|I|-1|-1|-1|true|" & ASCII.LF
+         & "|string|A|-1|-1|-1|true|" & ASCII.LF
+         & "|unsigned char|I|-1|-1|-1|true|" & ASCII.LF
+         & "|unsigned int|I|-1|-1|-1|true|" & ASCII.LF
+         & "|void|p|-1|-1|-1|true|" & ASCII.LF
+         & "|wide_character|E|-1|-1|-1|true|" & ASCII.LF
+         & "|wide_wide_character|E|-1|-1|-1|true|" & ASCII.LF
+         & "|wide_string|A|-1|-1|-1|true|" & ASCII.LF
+         & "|wide_wide_string|A|-1|-1|-1|true|" & ASCII.LF
          & "";
       F : File_Schema_IO;
       D : DB_Schema_IO;

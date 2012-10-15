@@ -1,110 +1,109 @@
 # for Emacs: -*- mode: org; mode: flyspell; fill-column: 79 -*-
 
-| TABLE | entity_kinds             |               |              |                          |             |
-| id    | display                  | is_subprogram | is_container | body_is_full_declaration | is_abstract |
-| a     | array                    | false         | false        | false                    | false       |
-| A     | array type               | false         | false        | false                    | false       |
-| b     | boolean                  | false         | false        | false                    | false       |
-| B     | boolean type             | false         | false        | false                    | false       |
-| c     | class wide               | false         | false        | false                    | false       |
-| C     | class wide type          | false         | false        | false                    | false       |
-| d     | decimal fixed point      | false         | false        | false                    | false       |
-| D     | decimal fixed point type | false         | false        | false                    | false       |
-| e     | enumeration              | false         | true         | true                     | false       |
-| E     | enumeration type         | false         | true         | true                     | false       |
-| f     | floating point           | false         | false        | false                    | false       |
-| F     | floating point type      | false         | false        | false                    | false       |
-| g     | macro                    | true          | false        | false                    | false       |
-| G     | function macro           | false         | false        | false                    | false       |
-| h     | interface                | false         | false        | false                    | true        |
-| H     | abstract record type     | false         | true         | true                     | true        |
-| i     | integer                  | false         | false        | false                    | false       |
-| I     | integer type             | false         | false        | false                    | false       |
-| j     | class instance           | false         | false        | false                    | false       |
-| J     | class                    | false         | false        | false                    | false       |
-| k     | generic package          | false         | true         | false                    | false       |
-| K     | package                  | false         | true         | false                    | false       |
-| l     | loop label               | false         | false        | false                    | false       |
-| L     | statement label          | false         | false        | false                    | false       |
-| m     | unsigned integer         | false         | false        | false                    | false       |
-| M     | unsigned integer type    | false         | false        | false                    | false       |
-| n     | enumeration literal      | false         | false        | false                    | false       |
-| N     | named number             | false         | false        | false                    | false       |
-| o     | fixed point              | false         | false        | false                    | false       |
-| O     | fixed point type         | false         | false        | false                    | false       |
-| p     | pointer                  | false         | false        | false                    | false       |
-| P     | access type              | false         | false        | false                    | false       |
-| q     | block label              | false         | false        | false                    | false       |
-| Q     | include file             | false         | false        | false                    | false       |
-| r     | record                   | false         | true         | true                     | false       |
-| R     | record type              | false         | true         | true                     | false       |
-| s     | string                   | false         | false        | false                    | false       |
-| S     | string type              | false         | false        | false                    | false       |
-| t     | task                     | true          | true         | false                    | false       |
-| T     | task type                | true          | true         | false                    | false       |
-| u     | generic procedure        | true          | true         | false                    | false       |
-| U     | procedure                | true          | true         | false                    | false       |
-| v     | generic function         | true          | true         | false                    | false       |
-| V     | function                 | true          | true         | false                    | false       |
-| w     | protected object         | false         | false        | false                    | false       |
-| W     | protected type           | false         | false        | false                    | false       |
-| x     | abstract procedure       | true          | true         | false                    | false       |
-| X     | exception                | false         | false        | false                    | false       |
-| y     | abstract function        | true          | true         | false                    | false       |
-| Y     | entry                    | true          | true         | false                    | false       |
-| z     | unknown                  | false         | false        | false                    | false       |
-| Z     | unknown                  | false         | false        | false                    | false       |
-| +     | generic formal           | false         | false        | false                    | false       |
-| *     | private object           | false         | false        | false                    | false       |
+| TABLE | entity_kinds             |             |          |                     |         |               |              |                          |             |            |           |
+| id    | display                  | has_methods | is_array | is_printable_in_gdb | is_type | is_subprogram | is_container | body_is_full_declaration | is_abstract | is_generic | is_access |
+| a     | array                    | false       | true     | true                | false   | false         | false        | false                    | false       | false      | false     |
+| A     | array type               | false       | true     | false               | true    | false         | false        | false                    | false       | false      | false     |
+| b     | boolean                  | false       | false    | true                | false   | false         | false        | false                    | false       | false      | false     |
+| B     | boolean type             | false       | false    | false               | trye    | false         | false        | false                    | false       | false      | false     |
+| c     | class wide               | false       | false    | true                | false   | false         | false        | false                    | false       | false      | false     |
+| C     | class wide type          | false       | false    | false               | true    | false         | false        | false                    | false       | false      | false     |
+| d     | decimal fixed point      | false       | false    | true                | false   | false         | false        | false                    | false       | false      | false     |
+| D     | decimal fixed point type | false       | false    | false               | true    | false         | false        | false                    | false       | false      | false     |
+| e     | enumeration              | false       | false    | true                | false   | false         | true         | true                     | false       | false      | false     |
+| E     | enumeration type         | false       | false    | false               | true    | false         | true         | true                     | false       | false      | false     |
+| f     | floating point           | false       | false    | true                | false   | false         | false        | false                    | false       | false      | false     |
+| F     | floating point type      | false       | false    | false               | true    | false         | false        | false                    | false       | false      | false     |
+| g     | macro                    | false       | false    | false               | false   | true          | false        | false                    | false       | false      | false     |
+| G     | function macro           | false       | false    | false               | false   | false         | false        | false                    | false       | false      | false     |
+| h     | interface                | true        | false    | false               | false   | false         | false        | false                    | true        | false      | false     |
+| H     | abstract record type     | false       | false    | false               | true    | false         | true         | true                     | true        | false      | false     |
+| i     | integer                  | false       | false    | true                | false   | false         | false        | false                    | false       | false      | false     |
+| I     | integer type             | false       | false    | false               | true    | false         | false        | false                    | false       | false      | false     |
+| j     | class instance           | true        | false    | false               | false   | false         | true         | false                    | false       | false      | false     |
+| J     | class                    | true        | false    | true                | false   | false         | true         | false                    | false       | false      | false     |
+| k     | generic package          | false       | false    | false               | false   | false         | true         | false                    | false       | true       | false     |
+| K     | package                  | false       | false    | false               | false   | false         | true         | false                    | false       | false      | false     |
+| l     | loop label               | false       | false    | false               | false   | false         | false        | false                    | false       | false      | false     |
+| L     | statement label          | false       | false    | false               | false   | false         | false        | false                    | false       | false      | false     |
+| m     | unsigned integer         | false       | false    | true                | false   | false         | false        | false                    | false       | false      | false     |
+| M     | unsigned integer type    | false       | false    | false               | true    | false         | false        | false                    | false       | false      | false     |
+| n     | enumeration literal      | false       | false    | true                | false   | false         | false        | false                    | false       | false      | false     |
+| N     | named number             | false       | false    | true                | false   | false         | false        | false                    | false       | false      | false     |
+| o     | fixed point              | false       | false    | true                | false   | false         | false        | false                    | false       | false      | false     |
+| O     | fixed point type         | false       | false    | false               | true    | false         | false        | false                    | false       | false      | false     |
+| p     | pointer                  | false       | false    | true                | false   | false         | false        | false                    | false       | false      | true      |
+| P     | access type              | false       | false    | true                | true    | false         | false        | false                    | false       | false      | true      |
+| q     | block label              | false       | false    | false               | false   | false         | false        | false                    | false       | false      | false     |
+| Q     | include file             | false       | false    | false               | false   | false         | false        | false                    | false       | false      | false     |
+| r     | record                   | true        | false    | true                | false   | false         | true         | true                     | false       | false      | false     |
+| R     | record type              | true        | false    | false               | true    | false         | true         | true                     | false       | false      | false     |
+| s     | string                   | false       | true     | true                | false   | false         | false        | false                    | false       | false      | false     |
+| S     | string type              | false       | true     | false               | true    | false         | false        | false                    | false       | false      | false     |
+| t     | task                     | false       | false    | false               | false   | true          | true         | false                    | false       | false      | false     |
+| T     | task type                | false       | false    | false               | true    | true          | true         | false                    | false       | false      | false     |
+| u     | generic procedure        | false       | false    | false               | false   | true          | true         | false                    | false       | true       | false     |
+| U     | procedure                | false       | false    | false               | false   | true          | true         | false                    | false       | false      | false     |
+| v     | generic function         | false       | false    | false               | false   | true          | true         | false                    | false       | true       | false     |
+| V     | function                 | false       | false    | false               | false   | true          | true         | false                    | false       | false      | false     |
+| w     | protected object         | false       | false    | true                | false   | false         | false        | false                    | false       | false      | false     |
+| W     | protected type           | false       | false    | false               | true    | false         | false        | false                    | false       | false      | false     |
+| x     | abstract procedure       | false       | false    | false               | false   | true          | true         | false                    | true        | false      | false     |
+| X     | exception                | false       | false    | false               | false   | false         | false        | false                    | false       | false      | false     |
+| y     | abstract function        | false       | false    | false               | false   | true          | true         | false                    | true        | false      | false     |
+| Y     | entry                    | false       | false    | false               | false   | true          | true         | false                    | false       | false      | false     |
+| z     | unknown                  | false       | false    | false               | false   | false         | false        | false                    | false       | false      | false     |
+| Z     | unknown                  | false       | false    | false               | false   | false         | false        | false                    | false       | false      | false     |
+| +     | generic formal           | false       | false    | false               | false   | false         | false        | false                    | false       | false      | false     |
+| *     | private object           | false       | false    | false               | false   | false         | false        | false                    | false       | false      | false     |
 
 # Parameters (>, = and <) are not in this table, as opposed to what is done in
 # ALI files, but in the e2e table
 
-| TABLE | reference_kinds          |         |         |          |        |                   |                |
-| id    | display                  | is_real | is_read | is_write | is_end | show_in_callgraph | is_dispatching |
-| b     | body                     | true    | true    | false    | false  | false             | false          |
-| c     | full declaration         | true    | true    | false    | false  | false             | false          |
-| D     | object definition        | true    | true    | false    | false  | false             | false          |
-| e     | end of spec              | false   | false   | false    | true   | false             | false          |
-| i     | implicit reference       | false   | false   | false    | false  | false             | false          |
-| k     | parent package           | false   | false   | false    | false  | false             | false          |
-| H     | abstract type            | true    | false   | false    | false  | false             | false          |
-| l     | label on end line        | true    | true    | false    | false  | false             | false          |
-| m     | write reference          | true    | false   | true     | false  | false             | false          |
-| o     | own reference            | true    | true    | false    | false  | false             | false          |
-| r     | reference                | true    | true    | false    | false  | true              | false          |
-| s     | static call              | true    | true    | false    | false  | true              | false          |
-| R     | dispatching call         | true    | true    | false    | false  | true              | true           |
-| t     | end of body              | false   | false   | false    | true   | false             | false          |
-| w     | with line                | true    | true    | false    | false  | false             | false          |
-| x     | type extension           | true    | true    | false    | false  | false             | false          |
-| X     | type extension           | true    | true    | false    | false  | false             | false          |
-| z     | formal generic parameter | false   | false   | false    | false  | false             | false          |
+| TABLE | reference_kinds          |             |         |         |          |        |                   |                |
+| id    | display                  | is_implicit | is_real | is_read | is_write | is_end | show_in_callgraph | is_dispatching |
+| b     | body                     | false       | true    | true    | false    | false  | false             | false          |
+| c     | full declaration         | false       | true    | true    | false    | false  | false             | false          |
+| D     | object definition        | false       | true    | true    | false    | false  | false             | false          |
+| e     | end of spec              | false       | false   | false   | false    | true   | false             | false          |
+| i     | implicit reference       | true        | true    | false   | false    | false  | false             | false          |
+| H     | abstract type            | false       | true    | false   | false    | false  | false             | false          |
+| l     | label on end line        | false       | true    | true    | false    | false  | false             | false          |
+| m     | write reference          | false       | true    | false   | true     | false  | false             | false          |
+| o     | own reference            | false       | true    | true    | false    | false  | false             | false          |
+| r     | reference                | false       | true    | true    | false    | false  | true              | false          |
+| s     | static call              | false       | true    | true    | false    | false  | true              | false          |
+| R     | dispatching call         | false       | true    | true    | false    | false  | true              | true           |
+| t     | end of body              | false       | false   | false   | false    | true   | false             | false          |
+| w     | with line                | false       | true    | true    | false    | false  | false             | false          |
+| x     | type extension           | false       | true    | true    | false    | false  | false             | false          |
+| X     | type extension           | false       | true    | true    | false    | false  | false             | false          |
 
 | TABLE | f2f_kind   |                                           |
 |    id | name       |                                           |
 |     0 | withs      | # A depends on B (a "with" or "#include") |
 |     1 | has ALI    | # B is a lI file for A                    |
 
-| TABLE | e2e_kind         |                                     |
-|    id | name             |                                     |
-|     0 | pointed type     | # A points to B                     |
-|     1 | parent type      | # B is parent of A                  |
-|     3 | renames          | # A renames B                       |
-|     4 | has primitive    | # B is primitive of A               |
-|     5 | instance of      | # A is instance of B                |
-|     6 | is param of      | # B is parameter of B               |
-|     7 | has index        | # B is an index type for array A    |
-|     8 | overrides        | # A overrides B                     |
-|     9 | component type   | # A is an array of B                |
-|    10 | from enumeration | # A is an enumeration literal for B |
-|    11 | of type          | # B is the type of object A. Or A is a function returning B  |
-|    12 | in parameter     | # B is an "in" parameter for A      |
-|    13 | out parameter    | # B is an "out" parameter for A     |
-|    14 | in out parameter | # B is an "in out" parameter for A  |
-|    15 | access parameter | # B is an "access" parameter for A  |
-|    16 | has discriminant | # B is a discriminant of A          |
-|    17 | is formal of     | # B is a generic formal parameter   |
+| TABLE | e2e_kind         |                                                             |
+|    id | name             |                                                             |
+|     0 | pointed type     | # A points to B                                             |
+|     1 | parent type      | # B is parent of A                                          |
+|     3 | renames          | # A renames B                                               |
+|     4 | has primitive    | # B is primitive of A                                       |
+|     5 | instance of      | # A is instance of B                                        |
+|     6 | is param of      | # B is parameter of B                                       |
+|     7 | has index        | # B is an index type for array A                            |
+|     8 | overrides        | # A overrides B                                             |
+|     9 | component type   | # A is an array of B                                        |
+|    10 | from enumeration | # A is an enumeration literal for B                         |
+|    11 | of type          | # B is the type of object A. Or A is a function returning B |
+|    12 | in parameter     | # B is an "in" parameter for A                              |
+|    13 | out parameter    | # B is an "out" parameter for A                             |
+|    14 | in out parameter | # B is an "in out" parameter for A                          |
+|    15 | access parameter | # B is an "access" parameter for A                          |
+|    16 | has discriminant | # B is a discriminant of A                                  |
+|    17 | is formal of     | # B is a formal parameter  for generic entity A             |
+|    18 | parent package   | # B is parent package of A                                  |
 
 | TABLE | files |            |          |
 | id    | path  | stamp      | language |
@@ -113,39 +112,39 @@
 # The predefined entities for each languages. New ones will be inserted as
 # needed, but having a pre-made list helps documentation.
 
-| TABLE                  | entities |           |           |             |
-| name                   | kind     | decl_file | decl_line | decl_column |
-| __va_list_tag          | p        |        -1 |        -1 |          -1 |
-| boolean                | B        |        -1 |        -1 |          -1 |
-| char                   | I        |        -1 |        -1 |          -1 |
-| character              | E        |        -1 |        -1 |          -1 |
-| double                 | F        |        -1 |        -1 |          -1 |
-| duration               | O        |        -1 |        -1 |          -1 |
-| float                  | F        |        -1 |        -1 |          -1 |
-| int                    | I        |        -1 |        -1 |          -1 |
-| integer                | I        |        -1 |        -1 |          -1 |
-| long double            | F        |        -1 |        -1 |          -1 |
-| long int               | I        |        -1 |        -1 |          -1 |
-| long long int          | I        |        -1 |        -1 |          -1 |
-| long long unsigned int | I        |        -1 |        -1 |          -1 |
-| long unsigned int      | I        |        -1 |        -1 |          -1 |
-| long_float             | F        |        -1 |        -1 |          -1 |
-| long_long_float        | F        |        -1 |        -1 |          -1 |
-| long_integer           | I        |        -1 |        -1 |          -1 |
-| long_long_integer      | I        |        -1 |        -1 |          -1 |
-| natural                | I        |        -1 |        -1 |          -1 |
-| positive               | I        |        -1 |        -1 |          -1 |
-| short int              | I        |        -1 |        -1 |          -1 |
-| short unsigned int     | I        |        -1 |        -1 |          -1 |
-| short_float            | F        |        -1 |        -1 |          -1 |
-| short_integer          | I        |        -1 |        -1 |          -1 |
-| short_short_integer    | I        |        -1 |        -1 |          -1 |
-| signed char            | I        |        -1 |        -1 |          -1 |
-| string                 | A        |        -1 |        -1 |          -1 |
-| unsigned char          | I        |        -1 |        -1 |          -1 |
-| unsigned int           | I        |        -1 |        -1 |          -1 |
-| void                   | p        |        -1 |        -1 |          -1 |
-| wide_character         | E        |        -1 |        -1 |          -1 |
-| wide_wide_character    | E        |        -1 |        -1 |          -1 |
-| wide_string            | A        |        -1 |        -1 |          -1 |
-| wide_wide_string       | A        |        -1 |        -1 |          -1 |
+| TABLE                  | entities |           |           |             |           |
+| name                   | kind     | decl_file | decl_line | decl_column | is_global |
+| __va_list_tag          | p        |        -1 |        -1 |          -1 | true      |
+| boolean                | B        |        -1 |        -1 |          -1 | true      |
+| char                   | I        |        -1 |        -1 |          -1 | true      |
+| character              | E        |        -1 |        -1 |          -1 | true      |
+| double                 | F        |        -1 |        -1 |          -1 | true      |
+| duration               | O        |        -1 |        -1 |          -1 | true      |
+| float                  | F        |        -1 |        -1 |          -1 | true      |
+| int                    | I        |        -1 |        -1 |          -1 | true      |
+| integer                | I        |        -1 |        -1 |          -1 | true      |
+| long double            | F        |        -1 |        -1 |          -1 | true      |
+| long int               | I        |        -1 |        -1 |          -1 | true      |
+| long long int          | I        |        -1 |        -1 |          -1 | true      |
+| long long unsigned int | I        |        -1 |        -1 |          -1 | true      |
+| long unsigned int      | I        |        -1 |        -1 |          -1 | true      |
+| long_float             | F        |        -1 |        -1 |          -1 | true      |
+| long_long_float        | F        |        -1 |        -1 |          -1 | true      |
+| long_integer           | I        |        -1 |        -1 |          -1 | true      |
+| long_long_integer      | I        |        -1 |        -1 |          -1 | true      |
+| natural                | I        |        -1 |        -1 |          -1 | true      |
+| positive               | I        |        -1 |        -1 |          -1 | true      |
+| short int              | I        |        -1 |        -1 |          -1 | true      |
+| short unsigned int     | I        |        -1 |        -1 |          -1 | true      |
+| short_float            | F        |        -1 |        -1 |          -1 | true      |
+| short_integer          | I        |        -1 |        -1 |          -1 | true      |
+| short_short_integer    | I        |        -1 |        -1 |          -1 | true      |
+| signed char            | I        |        -1 |        -1 |          -1 | true      |
+| string                 | A        |        -1 |        -1 |          -1 | true      |
+| unsigned char          | I        |        -1 |        -1 |          -1 | true      |
+| unsigned int           | I        |        -1 |        -1 |          -1 | true      |
+| void                   | p        |        -1 |        -1 |          -1 | true      |
+| wide_character         | E        |        -1 |        -1 |          -1 | true      |
+| wide_wide_character    | E        |        -1 |        -1 |          -1 | true      |
+| wide_string            | A        |        -1 |        -1 |          -1 | true      |
+| wide_wide_string       | A        |        -1 |        -1 |          -1 | true      |

@@ -16,7 +16,7 @@
 |----------+---------------+-----------------+---+------------------------------------------------------------------------------------------|
 | id       | AUTOINCREMENT | PK              |   |                                                                                          |
 | path     | TEXT          | NOT NULL, INDEX |   | Full normalized absolute path for the file                                               |
-| stamp    | timestamp     | NULL            |   | The timestamp the last time the file was read (only set for LI files)                    |
+| stamp    | timestamp     | NULL            |   | The timestamp the last time the file was read (only set for LI files for efficiency)     |
 | language | TEXT          | NOT NULL        |   | The language for this file (so that we can limit queries to specific languages), or "li" |
 
 | TABLE | f2f_kind      |          |   | All kinds of file relationships |
@@ -27,6 +27,8 @@
 # No unique constraint error for (fromFile, toFile, kind), since a given source
 # file might for instance have multiple ALI files if it contains multiple Ada
 # units.
+# 'is_array' is mostly used by the debugger to know whether the user should be
+# able to dereference the variable.
 
 | TABLE    | f2f                   |                   |   | Stores relationships between files |
 |----------+-----------------------+-------------------+---+------------------------------------|
@@ -42,6 +44,12 @@
 | is_container             | BOOLEAN      | NOINDEX           | false |                                                |
 | body_is_full_declaration | BOOLEAN      | NOINDEX           | false |                                                |
 | is_abstract              | BOOLEAN      | NOINDEX           | false |                                                |
+| is_generic               | BOOLEAN      | NOINDEX           | false |                                                |
+| is_access                | BOOLEAN      | NOINDEX           | false |                                                |
+| is_type                  | BOOLEAN      | NOINDEX           | false |                                                |
+| is_printable_in_gdb      | BOOLEAN      | NOINDEX           | false |                                                |
+| is_array                 | BOOLEAN      | NOINDEX           | false |                                                |
+| has_methods              | BOOLEAN      | NOINDEX           | false |                                                |
 
 # An entity is known by its name and the location of its declaration. An entry
 # in this table cannot exist without a corresponding declaration. To make
@@ -70,20 +78,22 @@
 #    no index      | scan (~23rows)         |  scan (~238rows)
 # So having only idx2 seems a good compromise (single index is faster at creation)
 
-| TABLE        | entities                        | entity                    |       |                                                                  |
-|--------------+---------------------------------+---------------------------+-------+------------------------------------------------------------------|
-| id           | AUTOINCREMENT                   | PK                        |       |                                                                  |
-| name         | TEXT                            | NOT NULL, NOINDEX, NOCASE |       | Can be empty for forward decls (see above).                      |
-| kind         | FK entity_kinds()               | NOT NULL, NOINDEX         |       | The E_Kind for this entity                                       |
-| decl_file    | FK files(references)            | NOT NULL, NOINDEX         |       | Set to -1 for a predefined entity                                |
-| decl_line    | INTEGER                         | NOT NULL, NOINDEX         |       | Set to -1 for a predefined entity                                |
-| decl_column  | INTEGER                         | NOT NULL, NOINDEX         |       | Set to -1 for a predefined entity                                |
-| decl_caller  | FK entities                     | NULL, NOINDEX             |       | Parent entity                                                    |
-| mangled_name | TEXT                            | NULL                      |       | Mangled name of the entity, if applicable                        |
-| exported     | BOOLEAN                         | NOT NULL, NOINDEX         | false | Whether the mangled name is an export or an import of the entity |
-| obsolete     | BOOLEAN                         | NOT NULL, NOINDEX         | false | Used for various purposes in GNATCOLL.Xref. Internal only        |
-|--------------+---------------------------------+---------------------------+-------+------------------------------------------------------------------|
-| INDEX:       | decl_file,decl_line,decl_column | entity_loc                |       | Needed during parse                                              |
+| TABLE           | entities                        | entity                    |       |                                                                  |
+|-----------------+---------------------------------+---------------------------+-------+------------------------------------------------------------------|
+| id              | AUTOINCREMENT                   | PK                        |       |                                                                  |
+| name            | TEXT                            | NOT NULL, NOINDEX, NOCASE |       | Can be empty for forward decls (see above).                      |
+| kind            | FK entity_kinds()               | NOT NULL, NOINDEX         |       | The E_Kind for this entity                                       |
+| decl_file       | FK files(references)            | NOT NULL, NOINDEX         |       | Set to -1 for a predefined entity                                |
+| decl_line       | INTEGER                         | NOT NULL, NOINDEX         |       | Set to -1 for a predefined entity                                |
+| decl_column     | INTEGER                         | NOT NULL, NOINDEX         |       | Set to -1 for a predefined entity                                |
+| decl_caller     | FK entities                     | NULL, NOINDEX             |       | Parent entity                                                    |
+| mangled_name    | TEXT                            | NULL                      |       | Mangled name of the entity, if applicable                        |
+| exported        | BOOLEAN                         | NOT NULL, NOINDEX         | false | Whether the mangled name is an export or an import of the entity |
+| obsolete        | BOOLEAN                         | NOT NULL, NOINDEX         | false | Used for various purposes in GNATCOLL.Xref. Internal only        |
+| is_global       | BOOLEAN                         | NOT NULL, NOINDEX         | false | Whether this is a global entity (library-level in Ada)           |
+| is_static_local | BOOLEAN                         | NOT NULL, NOINDEX         | false | Whether this is a 'static' variable in C/C++                     |
+|-----------------+---------------------------------+---------------------------+-------+------------------------------------------------------------------|
+| INDEX:          | decl_file,decl_line,decl_column | entity_loc                |       | Needed during parse                                              |
 
 # Store links between entities.
 # For instance, pointer to the parent types, pointed type, returned type,
@@ -126,6 +136,7 @@
 | is_end            | BOOLEAN         | NOINDEX          | false | Whether this marks the end of a scope (spec or body)    |
 | show_in_callgraph | BOOLEAN         | NOINDEX          | true  | Whether this ref. should be shown in the call graph     |
 | is_dispatching    | BOOLEAN         | NOINDEX          | false | Whether this is a dispatching call                      |
+| is_implicit       | BOOLEAN         | NOINDEX          | false |                                                         |
 
 # We store instantiations as a string for now: currently, they are only used to
 # display tooltips in GPS as to where an entity comes from. This can easily be

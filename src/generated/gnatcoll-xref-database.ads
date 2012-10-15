@@ -24,6 +24,7 @@ package GNATCOLL.Xref.Database is
    E2e_Of_Type : constant E2e_Id := 11;
    E2e_Out_Parameter : constant E2e_Id := 13;
    E2e_Overrides : constant E2e_Id := 8;
+   E2e_Parent_Package : constant E2e_Id := 18;
    E2e_Parent_Type : constant E2e_Id := 1;
    E2e_Pointed_Type : constant E2e_Id := 0;
    E2e_Renames : constant E2e_Id := 3;
@@ -90,6 +91,12 @@ package GNATCOLL.Xref.Database is
       Obsolete : SQL_Field_Boolean (Ta_Entities, Instance, N_Obsolete, Index);
       --  Used for various purposes in GNATCOLL.Xref. Internal only
 
+      Is_Global : SQL_Field_Boolean (Ta_Entities, Instance, N_Is_Global, Index);
+      --  Whether this is a global entity (library-level in Ada)
+
+      Is_Static_Local : SQL_Field_Boolean (Ta_Entities, Instance, N_Is_Static_Local, Index);
+      --  Whether this is a 'static' variable in C/C++
+
    end record;
 
    type T_Entities (Instance : Cst_String_Access)
@@ -108,6 +115,12 @@ package GNATCOLL.Xref.Database is
       Is_Container : SQL_Field_Boolean (Ta_Entity_Kinds, Instance, N_Is_Container, Index);
       Body_Is_Full_Declaration : SQL_Field_Boolean (Ta_Entity_Kinds, Instance, N_Body_Is_Full_Declaration, Index);
       Is_Abstract : SQL_Field_Boolean (Ta_Entity_Kinds, Instance, N_Is_Abstract, Index);
+      Is_Generic : SQL_Field_Boolean (Ta_Entity_Kinds, Instance, N_Is_Generic, Index);
+      Is_Access : SQL_Field_Boolean (Ta_Entity_Kinds, Instance, N_Is_Access, Index);
+      Is_Type : SQL_Field_Boolean (Ta_Entity_Kinds, Instance, N_Is_Type, Index);
+      Is_Printable_In_Gdb : SQL_Field_Boolean (Ta_Entity_Kinds, Instance, N_Is_Printable_In_Gdb, Index);
+      Is_Array : SQL_Field_Boolean (Ta_Entity_Kinds, Instance, N_Is_Array, Index);
+      Has_Methods : SQL_Field_Boolean (Ta_Entity_Kinds, Instance, N_Has_Methods, Index);
    end record;
 
    type T_Entity_Kinds (Instance : Cst_String_Access)
@@ -175,8 +188,8 @@ package GNATCOLL.Xref.Database is
       --  Full normalized absolute path for the file
 
       Stamp : SQL_Field_Time (Ta_Files, Instance, N_Stamp, Index);
-      --  The timestamp the last time the file was read (only set for LI
-      --  files)
+      --  The timestamp the last time the file was read (only set for LI files
+      --  for efficiency)
 
       Language : SQL_Field_Text (Ta_Files, Instance, N_Language, Index);
       --  The language for this file (so that we can limit queries to specific
@@ -212,6 +225,7 @@ package GNATCOLL.Xref.Database is
       Is_Dispatching : SQL_Field_Boolean (Ta_Reference_Kinds, Instance, N_Is_Dispatching, Index);
       --  Whether this is a dispatching call
 
+      Is_Implicit : SQL_Field_Boolean (Ta_Reference_Kinds, Instance, N_Is_Implicit, Index);
    end record;
 
    type T_Reference_Kinds (Instance : Cst_String_Access)
