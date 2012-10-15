@@ -42,6 +42,7 @@
 | is_container             | BOOLEAN      | NOINDEX           | false |                                                |
 | body_is_full_declaration | BOOLEAN      | NOINDEX           | false |                                                |
 | is_abstract              | BOOLEAN      | NOINDEX           | false |                                                |
+| is_generic               | BOOLEAN      | NOINDEX           | false |                                                |
 
 # An entity is known by its name and the location of its declaration. An entry
 # in this table cannot exist without a corresponding declaration. To make

@@ -219,6 +219,9 @@ package GNATCOLL.Xref is
 
       Is_Abstract : Boolean;
       --  Whether the entity is abstract
+
+      Is_Generic : Boolean;
+      --  True if the entity is a generic or a template
    end record;
    No_Entity_Declaration : constant Entity_Declaration;
 
@@ -643,7 +646,8 @@ private
       Location => No_Entity_Reference,
       Is_Subprogram => False,
       Is_Container  => False,
-      Is_Abstract   => True);
+      Is_Abstract   => True,
+      Is_Generic    => True);
 
    package Entity_Sets is new Ada.Containers.Ordered_Sets
      (Entity_Information);

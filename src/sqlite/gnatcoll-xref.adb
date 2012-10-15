@@ -402,6 +402,7 @@ package body GNATCOLL.Xref is
    Q_Decl_Is_Subp : constant := 6;
    Q_Decl_Is_Cont : constant := 7;
    Q_Decl_Is_Abst : constant := 8;
+   Q_Decl_Is_Generic : constant := 9;
    Query_Declaration : constant Prepared_Statement :=
      Prepare
        (SQL_Select
@@ -414,7 +415,8 @@ package body GNATCOLL.Xref is
                    Q_Decl_Kind    => +Database.Entity_Kinds.Display,
                    Q_Decl_Is_Subp => +Database.Entity_Kinds.Is_Subprogram,
                    Q_Decl_Is_Cont  => +Database.Entity_Kinds.Is_Container,
-                   Q_Decl_Is_Abst  => +Database.Entity_Kinds.Is_Abstract)),
+                   Q_Decl_Is_Abst  => +Database.Entity_Kinds.Is_Abstract,
+                   Q_Decl_Is_Generic => +Database.Entity_Kinds.Is_Generic)),
              From => Database.Entities
                 & Database.Files
                 & Database.Entity_Kinds,
@@ -3358,6 +3360,7 @@ package body GNATCOLL.Xref is
                  Is_Subprogram => Curs.Boolean_Value (Q_Decl_Is_Subp),
                  Is_Container  => Curs.Boolean_Value (Q_Decl_Is_Cont),
                  Is_Abstract   => Curs.Boolean_Value (Q_Decl_Is_Abst),
+                 Is_Generic    => Curs.Boolean_Value (Q_Decl_Is_Generic),
                  Location => (Entity => Entity,
                               File   => Create (+Curs.Value (Q_Decl_File)),
                               Line   => Curs.Integer_Value (Q_Decl_Line),

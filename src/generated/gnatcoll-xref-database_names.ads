@@ -58,6 +58,8 @@ package GNATCOLL.Xref.Database_Names is
    N_Is_Dispatching : constant Cst_String_Access := NC_is_dispatching'Access;
    NC_Is_End : aliased constant String := "is_end";
    N_Is_End : constant Cst_String_Access := NC_is_end'Access;
+   NC_Is_Generic : aliased constant String := "is_generic";
+   N_Is_Generic : constant Cst_String_Access := NC_is_generic'Access;
    NC_Is_Read : aliased constant String := "is_read";
    N_Is_Read : constant Cst_String_Access := NC_is_read'Access;
    NC_Is_Real : aliased constant String := "is_real";
