@@ -150,6 +150,17 @@ package body GNATCOLL.Xref is
              & (Database.F2f.Kind = F2f_Has_Ali)),
         On_Server => True, Name => "set_ali");
 
+   Query_Get_ALI : constant Prepared_Statement :=
+     Prepare
+       (SQL_Select
+            (Database.Files.Path & Database.Files.Stamp,
+             From => Database.Files & Files2 & Database.F2f,
+             Where => Files2.Path = Text_Param (1)
+                and Database.F2f.Fromfile = Files2.Id
+                and Database.F2f.Tofile = Database.Files.Id
+                and Database.F2f.Kind = F2f_Has_Ali),
+        On_Server => False, Name => "li_from_source");
+
    Query_Delete_File_Dep : constant Prepared_Statement :=
      Prepare
        (SQL_Delete
@@ -216,7 +227,9 @@ package body GNATCOLL.Xref is
              & (Database.Entities.Kind = Text_Param (2))
              & (Database.Entities.Decl_File = Integer_Param (3))
              & (Database.Entities.Decl_Line = Integer_Param (4))
-             & (Database.Entities.Decl_Column = Integer_Param (5))),
+             & (Database.Entities.Decl_Column = Integer_Param (5))
+             & (Database.Entities.Is_Global = Boolean_Param (6))
+             & (Database.Entities.Is_Static_Local = Boolean_Param (7))),
         On_Server => True, Name => "insert_entity");
    Query_Insert_Entity_With_Mangled : constant Prepared_Statement :=
      Prepare
@@ -227,7 +240,9 @@ package body GNATCOLL.Xref is
              & (Database.Entities.Decl_Line = Integer_Param (4))
              & (Database.Entities.Decl_Column = Integer_Param (5))
              & (Database.Entities.Mangled_Name = Text_Param (6))
-             & (Database.Entities.Exported = True)),
+             & (Database.Entities.Exported = True)
+             & (Database.Entities.Is_Global = Boolean_Param (7))
+             & (Database.Entities.Is_Static_Local = Boolean_Param (8))),
         On_Server => True, Name => "insert_entity_with_mangled");
 
    Query_Set_Entity_Mangled_Name : constant Prepared_Statement :=
@@ -328,7 +343,9 @@ package body GNATCOLL.Xref is
             (Table => Database.Entities,
              Set   => (Database.Entities.Name = Text_Param (2))
                 & (Database.Entities.Obsolete = False)
-                & (Database.Entities.Kind = Text_Param (3)),
+                & (Database.Entities.Kind = Text_Param (3))
+                & (Database.Entities.Is_Global = Boolean_Param (4))
+                & (Database.Entities.Is_Static_Local = Boolean_Param (5)),
              Where => Database.Entities.Id = Integer_Param (1)),
         On_Server => True, Name => "set_entity_name_and_kind");
 
@@ -359,13 +376,29 @@ package body GNATCOLL.Xref is
    --  Retrieve the list of parameters for the entity in $1.
    --  Cannot be prepared because there are risks of concurrent calls.
 
+   Entities2_Fields : constant SQL_Field_List :=
+     Entities2.Id
+     & Entities2.Name
+     & Entities2.Decl_Line
+     & Entities2.Decl_Column;
+
+   Query_Parameter_Of : constant Prepared_Statement :=
+     Prepare
+       (SQL_Select
+            (Entities2_Fields,
+             From => Entities2 & Database.E2e,
+             Where => Database.E2e.toEntity = Integer_Param (1)
+               and (Database.E2e.Kind = E2e_In_Parameter
+                  or Database.E2e.Kind = E2e_In_Out_Parameter
+                  or Database.E2e.Kind = E2e_Out_Parameter
+                  or Database.E2e.Kind = E2e_Access_Parameter)
+               and Database.E2e.fromEntity = Entities2.Id),
+        On_Server => False, Name => "parameter_of");
+
    Query_E2E_From : constant Prepared_Statement :=
      Prepare
        (SQL_Select
-            (Entities2.Id
-             & Entities2.Name
-             & Entities2.Decl_Line
-             & Entities2.Decl_Column,
+            (Entities2_Fields,
              From => Entities2 & Database.E2e,
              Where => Database.E2e.fromEntity = Integer_Param (1)
              and Database.E2e.Kind = Integer_Param (2)
@@ -379,10 +412,7 @@ package body GNATCOLL.Xref is
    Query_E2E_To : constant Prepared_Statement :=
      Prepare
        (SQL_Select
-            (Entities2.Id
-             & Entities2.Name
-             & Entities2.Decl_Line
-             & Entities2.Decl_Column,
+            (Entities2_Fields,
              From => Entities2 & Database.E2e,
              Where => Database.E2e.toEntity = Integer_Param (1)
              and Database.E2e.Kind = Integer_Param (2)
@@ -403,6 +433,13 @@ package body GNATCOLL.Xref is
    Q_Decl_Is_Cont : constant := 7;
    Q_Decl_Is_Abst : constant := 8;
    Q_Decl_Is_Generic : constant := 9;
+   Q_Decl_Full_Decl  : constant := 10;
+   Q_Decl_Is_Access  : constant := 11;
+   Q_Decl_Is_Type    : constant := 12;
+   Q_Decl_Is_Array   : constant := 13;
+   Q_Decl_Is_Printable_In_Gdb : constant := 14;
+   Q_Decl_Is_Global  : constant := 15;
+   Q_Decl_Is_Static_Local : constant := 16;
    Query_Declaration : constant Prepared_Statement :=
      Prepare
        (SQL_Select
@@ -416,7 +453,17 @@ package body GNATCOLL.Xref is
                    Q_Decl_Is_Subp => +Database.Entity_Kinds.Is_Subprogram,
                    Q_Decl_Is_Cont  => +Database.Entity_Kinds.Is_Container,
                    Q_Decl_Is_Abst  => +Database.Entity_Kinds.Is_Abstract,
-                   Q_Decl_Is_Generic => +Database.Entity_Kinds.Is_Generic)),
+                   Q_Decl_Is_Generic => +Database.Entity_Kinds.Is_Generic,
+                   Q_Decl_Is_Access => +Database.Entity_Kinds.Is_Access,
+                   Q_Decl_Is_Type => +Database.Entity_Kinds.Is_Type,
+                   Q_Decl_Is_Array => +Database.Entity_Kinds.Is_Array,
+                   Q_Decl_Is_Global => +Database.Entities.Is_Global,
+                   Q_Decl_Is_Static_Local =>
+                      +Database.Entities.Is_Static_Local,
+                   Q_Decl_Is_Printable_In_Gdb =>
+                      +Database.Entity_Kinds.Is_Printable_In_Gdb,
+                   Q_Decl_Full_Decl  =>
+                      +Database.Entity_Kinds.Body_Is_Full_Declaration)),
              From => Database.Entities
                 & Database.Files
                 & Database.Entity_Kinds,
@@ -435,6 +482,7 @@ package body GNATCOLL.Xref is
    Q_Ref_Caller  : constant := 5;
    Q_Ref_Entity  : constant := 6;  --  id of the ref'ed entity
    Q_Ref_Kind_Id : constant := 7;
+   Q_Ref_Is_End_Of_Scope : constant := 8;
    Q_References : constant Prepared_Statement :=
      Prepare
        (SQL_Union
@@ -448,7 +496,8 @@ package body GNATCOLL.Xref is
                         Q_Ref_Caller  => +Database.Entities.Decl_Caller,
                         Q_Ref_Entity  => +Database.Entities.Id,
                         Q_Ref_Kind_Id =>
-                           +Expression ("" & Kind_Id_Declaration))),
+                           +Expression ("" & Kind_Id_Declaration),
+                        Q_Ref_Is_End_Of_Scope => +Expression (False))),
                   From => Database.Entities & Database.Files,
                   Where => Database.Entities.Decl_File = Database.Files.Id
                   and Database.Entities.Id = Integer_Param (1)),
@@ -462,7 +511,9 @@ package body GNATCOLL.Xref is
                     Q_Ref_Kind    => +Database.Reference_Kinds.Display,
                     Q_Ref_Caller  => +Database.Entity_Refs.Caller,
                     Q_Ref_Entity  => +Database.Entity_Refs.Entity,
-                    Q_Ref_Kind_Id => +Database.Reference_Kinds.Id)),
+                    Q_Ref_Kind_Id => +Database.Reference_Kinds.Id,
+                    Q_Ref_Is_End_Of_Scope =>
+                       +Database.Reference_Kinds.Is_End)),
                 From => Database.Entity_Refs & Database.Files
                   & Database.Reference_Kinds,
                 Where => Database.Entity_Refs.File = Database.Files.Id
@@ -500,7 +551,9 @@ package body GNATCOLL.Xref is
                    Q_Ref_Kind    => +Database.Reference_Kinds.Display,
                    Q_Ref_Caller  => +Database.Entity_Refs.Caller,
                    Q_Ref_Entity  => +Database.Entity_Refs.Entity,
-                   Q_Ref_Kind_Id => +Database.Reference_Kinds.Id)),
+                   Q_Ref_Kind_Id => +Database.Reference_Kinds.Id,
+                   Q_Ref_Is_End_Of_Scope =>
+                     +Database.Reference_Kinds.Is_End)),
              From => Database.Entity_Refs & Database.Files
              & Database.Reference_Kinds,
              Where => Database.Entity_Refs.File = Database.Files.Id
@@ -526,7 +579,9 @@ package body GNATCOLL.Xref is
                    Q_Ref_Kind    => +Database.Reference_Kinds.Display,
                    Q_Ref_Caller  => +Database.Entity_Refs.Caller,
                    Q_Ref_Entity  => +Database.Entity_Refs.Entity,
-                   Q_Ref_Kind_Id => +Database.Reference_Kinds.Id)),
+                   Q_Ref_Kind_Id => +Database.Reference_Kinds.Id,
+                   Q_Ref_Is_End_Of_Scope =>
+                      +Database.Reference_Kinds.Is_End)),
              From => Database.Entity_Refs & Database.Files
              & Database.Reference_Kinds,
              Where => Database.Entity_Refs.File = Database.Files.Id
@@ -1063,12 +1118,14 @@ package body GNATCOLL.Xref is
       --  Return the current character, and move forward
 
       function Get_Or_Create_Entity
-        (Decl_File   : Integer;
-         Decl_Line   : Integer;
-         Decl_Column : Integer;
-         Name        : String;
-         Kind        : Character;
-         Set_Mangled_Name : Boolean) return Integer;
+        (Decl_File        : Integer;
+         Decl_Line        : Integer;
+         Decl_Column      : Integer;
+         Name             : String;
+         Kind             : Character;
+         Set_Mangled_Name : Boolean;
+         Is_Global        : Boolean;
+         Is_Static_Local  : Boolean) return Integer;
       --  Lookup an entity at the given location. If the entity is already
       --  known in the local hash table, it is reused, otherwise it is searched
       --  in the database. If it doesn't exist there, a new entry is created
@@ -1321,6 +1378,8 @@ package body GNATCOLL.Xref is
                   Decl_Column => Xref_Col,
                   Name        => "",
                   Kind        => Xref_Kind,
+                  Is_Global   => False,     --  unknown
+                  Is_Static_Local => False, --  unknown
                   Set_Mangled_Name => False);
             end if;
          end if;
@@ -1617,7 +1676,9 @@ package body GNATCOLL.Xref is
          Decl_Column : Integer;
          Name        : String;
          Kind        : Character;
-         Set_Mangled_Name : Boolean) return Integer
+         Set_Mangled_Name : Boolean;
+         Is_Global        : Boolean;
+         Is_Static_Local  : Boolean) return Integer
       is
          R : Forward_Cursor;
          Decl : constant Loc :=
@@ -1679,7 +1740,9 @@ package body GNATCOLL.Xref is
                         3 => +Decl_File,
                         4 => +Decl_Line,
                         5 => +(-1),
-                        6 => +Name'Unrestricted_Access),
+                        6 => +Name'Unrestricted_Access,
+                        7 => +Is_Global,
+                        8 => +Is_Static_Local),
                      PK => Database.Entities.Id);
                else
                   Candidate := DB.Insert_And_Get_PK
@@ -1689,7 +1752,9 @@ package body GNATCOLL.Xref is
                         2 => +'P',  --  unknown
                         3 => +Decl_File,
                         4 => +Decl_Line,
-                        5 => +(-1)),
+                        5 => +(-1),
+                        6 => +Is_Global,
+                        7 => +Is_Static_Local),
                      PK => Database.Entities.Id);
                end if;
             end if;
@@ -1794,7 +1859,9 @@ package body GNATCOLL.Xref is
                     (Query_Set_Entity_Name_And_Kind,
                      Params => (1 => +Candidate,
                                 2 => +Name'Unrestricted_Access,
-                                3 => +Kind));
+                                3 => +Kind,
+                                4 => +Is_Global,
+                                5 => +Is_Static_Local));
 
                   Entity_Decl_To_Id.Include
                     (Decl,
@@ -1826,7 +1893,9 @@ package body GNATCOLL.Xref is
                      3 => +Decl_File,
                      4 => +Decl_Line,
                      5 => +Decl_Column,
-                     6 => +Name'Unrestricted_Access),
+                     6 => +Name'Unrestricted_Access,
+                     7 => +Is_Global,
+                     8 => +Is_Static_Local),
                   PK => Database.Entities.Id);
             else
                Candidate := DB.Insert_And_Get_PK
@@ -1836,7 +1905,9 @@ package body GNATCOLL.Xref is
                      2 => +Kind,
                      3 => +Decl_File,
                      4 => +Decl_Line,
-                     5 => +Decl_Column),
+                     5 => +Decl_Column,
+                     6 => +Is_Global,
+                     7 => +Is_Static_Local),
                   PK => Database.Entities.Id);
             end if;
 
@@ -1898,15 +1969,16 @@ package body GNATCOLL.Xref is
          Process_Refs   : constant Boolean := not First_Pass;
          Process_Scopes : constant Boolean := First_Pass;
          Is_Library_Level : Boolean;
+         Is_Static_Local  : Boolean;
          Ref_Entity : Integer;
          Name_End, Name_Start : Integer;
          Entity_Kind : Character;
+         Visibility : Character;
          Eid : E2e_Id;
          Order : Natural := 0;
          Will_Insert_Ref : Boolean;
          Instance : Unbounded_String;
          End_Of_Spec_Line : Natural := 0;
-         pragma Unreferenced (Is_Library_Level);
 
       begin
          if Str (Index) = '.' then
@@ -1916,7 +1988,10 @@ package body GNATCOLL.Xref is
          else
             Get_Ref;
             Entity_Kind      := Xref_Kind;
-            Is_Library_Level := Get_Char = '*';
+
+            Visibility       := Get_Char;
+            Is_Library_Level := Visibility = '*';
+            Is_Static_Local  := Visibility = '+';
             Name_Start       := Index;
             Skip_To_Name_End;
             Name_End         := Index - 1;
@@ -1979,6 +2054,8 @@ package body GNATCOLL.Xref is
                   Decl_Line   => Spec_Start_Line,
                   Decl_Column => Xref_Col,
                   Kind        => Xref_Kind,
+                  Is_Global   => Is_Library_Level,
+                  Is_Static_Local => Is_Static_Local,
                   Set_Mangled_Name => Current_X_File_Export_Mangled);
             end if;
 
@@ -3089,6 +3166,7 @@ package body GNATCOLL.Xref is
          Dist    : Natural;
          Kind    : Unbounded_String;
          Kind_Id : Character;
+         Is_End_Of_Scope : Boolean;
       begin
          R.Fetch (Self.DB, Q, Params => (1 => +Name'Unrestricted_Access));
 
@@ -3111,9 +3189,11 @@ package body GNATCOLL.Xref is
                   if From_Refs then
                      Kind := To_Unbounded_String (R.Value (5));
                      Kind_Id := Char_Value (R, 6);
+                     Is_End_Of_Scope := Boolean_Value (R, 7);
                   else
                      Kind := To_Unbounded_String ("declaration");
                      Kind_Id := Kind_Id_Declaration;
+                     Is_End_Of_Scope := False;
                   end if;
 
                   Best_Ref :=
@@ -3124,6 +3204,7 @@ package body GNATCOLL.Xref is
                      Column  => Visible_Column (R.Integer_Value (2)),
                      Kind    => Kind,
                      Kind_Id => Kind_Id,
+                     Is_End_Of_Scope => Is_End_Of_Scope,
                      Scope   => Caller);
 
                   Distance := Dist;
@@ -3179,13 +3260,15 @@ package body GNATCOLL.Xref is
          Q      : SQL_Query;
       begin
          Q := SQL_Select
-           (Database.Entity_Refs.Entity
-               & Database.Entity_Refs.Line
-               & Database.Entity_Refs.Column
-               & Database.Entity_Refs.Caller
-               & Database.Files.Path
-               & Database.Reference_Kinds.Display
-               & Database.Reference_Kinds.Id,
+           (To_List ((
+            0 => +Database.Entity_Refs.Entity,
+            1 => +Database.Entity_Refs.Line,
+            2 => +Database.Entity_Refs.Column,
+            3 => +Database.Entity_Refs.Caller,
+            4 => +Database.Files.Path,
+            5 => +Database.Reference_Kinds.Display,
+            6 => +Database.Reference_Kinds.Id,
+            7 => +Database.Reference_Kinds.Is_End)),
             From => Database.Entity_Refs & Database.Entities & Database.Files
                & Database.Reference_Kinds,
             Where => Database.Entity_Refs.Entity = Database.Entities.Id
@@ -3314,6 +3397,8 @@ package body GNATCOLL.Xref is
          Column => Visible_Column (Self.DBCursor.Integer_Value (Q_Ref_Col)),
          Kind   => To_Unbounded_String (Self.DBCursor.Value (Q_Ref_Kind)),
          Kind_Id => Char_Value (Self.DBCursor, Q_Ref_Kind_Id),
+         Is_End_Of_Scope =>
+           Boolean_Value (Self.DBCursor, Q_Ref_Is_End_Of_Scope),
          Scope  => Scope);
    end Element;
 
@@ -3357,10 +3442,21 @@ package body GNATCOLL.Xref is
 
          return (Name => To_Unbounded_String (Curs.Value (Q_Decl_Name)),
                  Kind => To_Unbounded_String (Curs.Value (Q_Decl_Kind)),
-                 Is_Subprogram => Curs.Boolean_Value (Q_Decl_Is_Subp),
-                 Is_Container  => Curs.Boolean_Value (Q_Decl_Is_Cont),
-                 Is_Abstract   => Curs.Boolean_Value (Q_Decl_Is_Abst),
-                 Is_Generic    => Curs.Boolean_Value (Q_Decl_Is_Generic),
+                 Flags =>
+                   (Is_Subprogram => Curs.Boolean_Value (Q_Decl_Is_Subp),
+                    Is_Container  => Curs.Boolean_Value (Q_Decl_Is_Cont),
+                    Is_Abstract   => Curs.Boolean_Value (Q_Decl_Is_Abst),
+                    Is_Generic    => Curs.Boolean_Value (Q_Decl_Is_Generic),
+                    Is_Type => Curs.Boolean_Value (Q_Decl_Is_Type),
+                    Is_Access => Curs.Boolean_Value (Q_Decl_Is_Access),
+                    Is_Array => Curs.Boolean_Value (Q_Decl_Is_Array),
+                    Is_Global => Curs.Boolean_Value (Q_Decl_Is_Global),
+                    Is_Static_Local =>
+                      Curs.Boolean_Value (Q_Decl_Is_Static_Local),
+                    Is_Printable_In_Gdb =>
+                      Curs.Boolean_Value (Q_Decl_Is_Printable_In_Gdb),
+                    Body_Is_Full_Declaration =>
+                      Curs.Boolean_Value (Q_Decl_Full_Decl)),
                  Location => (Entity => Entity,
                               File   => Create (+Curs.Value (Q_Decl_File)),
                               Line   => Curs.Integer_Value (Q_Decl_Line),
@@ -3368,6 +3464,7 @@ package body GNATCOLL.Xref is
                                 (Curs.Integer_Value (Q_Decl_Column)),
                               Kind   => To_Unbounded_String ("declaration"),
                               Kind_Id => Kind_Id_Declaration,
+                              Is_End_Of_Scope => False,
                               Scope  => Scope));
       else
          return No_Entity_Declaration;
@@ -3454,11 +3551,11 @@ package body GNATCOLL.Xref is
       return Create (+Self.DBCursor.Value (0));
    end Element;
 
-   ---------------
-   -- Importing --
-   ---------------
+   -----------------
+   -- Imported_By --
+   -----------------
 
-   function Importing
+   function Imported_By
      (Self : Xref_Database'Class;
       File : GNATCOLL.VFS.Virtual_File) return Files_Cursor
    is
@@ -3478,7 +3575,7 @@ package body GNATCOLL.Xref is
             Order_By => Database.Files.Path),
          Params => (1 => +Name'Unchecked_Access));
       return Curs;
-   end Importing;
+   end Imported_By;
 
    -------------
    -- Imports --
@@ -3955,7 +4052,7 @@ package body GNATCOLL.Xref is
       Typ := Self.Type_Of (Entity);
       if Typ /= No_Entity then
          Decl := Declaration (Xref_Database'Class (Self), Entity);
-         if Decl.Is_Subprogram then
+         if Decl.Flags.Is_Subprogram then
             Append (Result, "Returns" & ASCII.LF);
          else
             Append (Result, "Type" & ASCII.LF);
@@ -4231,6 +4328,26 @@ package body GNATCOLL.Xref is
    begin
       return Single_Entity_From_E2e (Self, Entity, E2e_Renames);
    end Renaming_Of;
+
+   ------------------
+   -- Parameter_Of --
+   ------------------
+
+   function Parameter_Of
+     (Self   : Xref_Database'Class;
+      Entity : Entity_Information) return Entity_Information
+   is
+      Curs : Entities_Cursor;
+   begin
+      Curs.DBCursor.Fetch
+        (Self.DB, Query_Parameter_Of, Params => (1 => +Entity.Id));
+
+      if Curs.DBCursor.Has_Row then
+         return Curs.Element;
+      else
+         return No_Entity;
+      end if;
+   end Parameter_Of;
 
    --------------------
    -- Component_Type --
@@ -4891,6 +5008,30 @@ package body GNATCOLL.Xref is
       end if;
    end Show_In_Callgraph;
 
+   --------------------------------
+   -- Is_Read_Or_Write_Reference --
+   --------------------------------
+
+   function Is_Read_Or_Write_Reference
+     (Xref : Xref_Database;
+      Ref  : Entity_Reference) return Boolean
+   is
+      R : Forward_Cursor;
+   begin
+      if Ref.Kind_Id = Kind_Id_Declaration then
+         return True;
+      else
+         R.Fetch
+           (Xref.DB,
+            SQL_Select
+              (Database.Reference_Kinds.Is_Real
+               & Database.Reference_Kinds.Is_Write,
+               From => Database.Reference_Kinds,
+               Where => Database.Reference_Kinds.Id = "" & Ref.Kind_Id));
+         return Boolean_Value (R, 0) or else Boolean_Value (R, 1);
+      end if;
+   end Is_Read_Or_Write_Reference;
+
    -----------------------
    -- Is_Real_Reference --
    -----------------------
@@ -4937,6 +5078,29 @@ package body GNATCOLL.Xref is
       end if;
    end Is_Read_Reference;
 
+   ---------------------------
+   -- Is_Implicit_Reference --
+   ---------------------------
+
+   function Is_Implicit_Reference
+     (Xref : Xref_Database;
+      Ref  : Entity_Reference) return Boolean
+   is
+      R : Forward_Cursor;
+   begin
+      if Ref.Kind_Id = Kind_Id_Declaration then
+         return True;
+      else
+         R.Fetch
+           (Xref.DB,
+            SQL_Select
+              (Database.Reference_Kinds.Is_Implicit,
+               From => Database.Reference_Kinds,
+               Where => Database.Reference_Kinds.Id = "" & Ref.Kind_Id));
+         return Boolean_Value (R, 0);
+      end if;
+   end Is_Implicit_Reference;
+
    ------------------------
    -- Is_Write_Reference --
    ------------------------
@@ -4982,5 +5146,74 @@ package body GNATCOLL.Xref is
          return Boolean_Value (R, 0);
       end if;
    end Is_Dispatching_Call;
+
+   -----------------
+   -- Internal_Id --
+   -----------------
+
+   function Internal_Id (Entity : Entity_Information) return Integer is
+   begin
+      return Entity.Id;
+   end Internal_Id;
+
+   ----------------------
+   -- From_Internal_Id --
+   ----------------------
+
+   function From_Internal_Id (Id : Integer) return Entity_Information is
+   begin
+      return (Id => Id, Fuzzy => False);
+   end From_Internal_Id;
+
+   -------------------
+   -- Is_Up_To_Date --
+   -------------------
+
+   function Is_Up_To_Date
+     (Self : Xref_Database; File : GNATCOLL.VFS.Virtual_File) return Boolean
+   is
+      N : aliased String :=
+        +File.Unix_Style_Full_Name (Normalize => True);
+      Files    : Forward_Cursor;
+   begin
+      --  For efficiency, we do not store the timestamps for source files in
+      --  the database. So we need to compare the timestamp of the LI file from
+      --  the database with the source stamp
+
+      Files.Fetch
+        (Self.DB, Query_Get_ALI,
+         Params => (1 => +N'Unchecked_Access));
+
+      if Files.Has_Row then
+         return Files.Time_Value (2) >= File.File_Time_Stamp;
+      else
+         return False;  --  file not even known in database
+      end if;
+   end Is_Up_To_Date;
+
+   ------------------------------
+   -- All_Real_Reference_Kinds --
+   ------------------------------
+
+   function All_Real_Reference_Kinds
+     (Xref : Xref_Database) return GNAT.Strings.String_List
+   is
+      R : Direct_Cursor;
+   begin
+      R.Fetch
+        (Xref.DB,
+         SQL_Select
+           (Reference_Kinds.Display,
+            From     => Reference_Kinds,
+            Where    => Reference_Kinds.Is_Real = True,
+            Order_By => Reference_Kinds.Display));
+
+      return Result : String_List (1 .. Integer (R.Rows_Count)) do
+         for Index in Result'Range loop
+            Result (Index) := new String'(Value (R, 0));
+            R.Next;
+         end loop;
+      end return;
+   end All_Real_Reference_Kinds;
 
 end GNATCOLL.Xref;

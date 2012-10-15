@@ -132,6 +132,10 @@ package GNATCOLL.Xref is
    --  predefined object directories to find extra ALI files to parse. This
    --  will in general include the Ada runtime.
 
+   function Is_Up_To_Date
+     (Self : Xref_Database; File : GNATCOLL.VFS.Virtual_File) return Boolean;
+   --  Whether the xref information for this file is up-to-date.
+
    -------------
    -- Queries --
    -------------
@@ -156,6 +160,15 @@ package GNATCOLL.Xref is
    --  This information, however, is only valid as long as the object
    --  Xref_Database hasn't been destroyed.
 
+   function Internal_Id (Entity : Entity_Information) return Integer;
+   function From_Internal_Id (Id : Integer) return Entity_Information;
+   --  return the unique internal identifier for the entity. At any given
+   --  time, this is guaranteed to be unique for each entity, but a given id
+   --  might end up being reused later (although it is highly unlikely).
+   --  These two subprograms should be used with care and very rarely in
+   --  practice. They are provided so that you can store an entity in a
+   --  GtkAda tree model easil.y
+
    type Entity_Reference is record
       Entity  : Entity_Information;
       File    : GNATCOLL.VFS.Virtual_File;
@@ -163,6 +176,9 @@ package GNATCOLL.Xref is
       Column  : Visible_Column;
       Kind    : Ada.Strings.Unbounded.Unbounded_String;
       Scope   : Entity_Information;
+
+      Is_End_Of_Scope : Boolean;
+      --  Whether this marks the end-of-scope for an entity
 
       Kind_Id : Character;
       --  internal id for the reference kind. This is used to test various
@@ -205,11 +221,7 @@ package GNATCOLL.Xref is
    --  because no exact match was found. This can happen when sources are
    --  newer than ALI files.
 
-   type Entity_Declaration is record
-      Name     : Ada.Strings.Unbounded.Unbounded_String;
-      Kind     : Ada.Strings.Unbounded.Unbounded_String;
-      Location : Entity_Reference;
-
+   type Entity_Flags is record
       Is_Subprogram : Boolean;
       --  Whether the entity is a subprogram
 
@@ -222,6 +234,39 @@ package GNATCOLL.Xref is
 
       Is_Generic : Boolean;
       --  True if the entity is a generic or a template
+
+      Is_Access : Boolean;
+      --  True if the entity is a type or a variable that acts as a pointer.
+
+      Is_Type : Boolean;
+      --  True if the entity is a type (as opposed to a variable or a package
+      --  for instance)
+
+      Body_Is_Full_Declaration : Boolean;
+      --  True if the "body" of the entity is in fact called a
+      --  "full declaration". This only impacts visual rendering of the
+      --  information in some IDEs.
+
+      Is_Array : Boolean;
+      --  Whether the entity acts as an array, and can be dereferenced in the
+      --  debugger.
+
+      Is_Printable_In_Gdb : Boolean;
+      --  Whether the entity can be "print"-ed in gdb
+
+      Is_Global : Boolean;
+      --  Whether the entity is a global entity (or library-level)
+
+      Is_Static_Local : Boolean;
+      --  Whether the entity is a 'static' entity in the C and C++ sense.
+   end record;
+   pragma Pack (Entity_Flags);
+
+   type Entity_Declaration is record
+      Name     : Ada.Strings.Unbounded.Unbounded_String;
+      Kind     : Ada.Strings.Unbounded.Unbounded_String;
+      Location : Entity_Reference;
+      Flags    : Entity_Flags;
    end record;
    No_Entity_Declaration : constant Entity_Declaration;
 
@@ -272,10 +317,26 @@ package GNATCOLL.Xref is
       Ref  : Entity_Reference) return Boolean;
    --  Whether the value of the entity is modified at that reference.
 
+   function Is_Implicit_Reference
+     (Xref : Xref_Database;
+      Ref  : Entity_Reference) return Boolean;
+   --  Whether this is an implicit reference to the entity, i.e. a place where
+   --  the entity is "used", but its name does not appear.
+
+   function Is_Read_Or_Write_Reference
+     (Xref : Xref_Database;
+      Ref  : Entity_Reference) return Boolean;
+   --  either Is_Read_Reference or Is_Write_Reference
+
    function Is_Dispatching_Call
      (Xref : Xref_Database;
       Ref  : Entity_Reference) return Boolean;
    --  Whether this is a dispatching call to the entity.
+
+   function All_Real_Reference_Kinds
+     (Xref : Xref_Database) return GNAT.Strings.String_List;
+   --  Returns the list of all known kinds of reference types for an entity.
+   --  The returned value must be freed by the user.
 
    -------------------
    -- Documentation --
@@ -529,6 +590,11 @@ package GNATCOLL.Xref is
    --  Returns the entity renamed by Entity (i.e. Entity acts as an alias
    --  for the returned entity)
 
+   function Parameter_Of
+     (Self   : Xref_Database'Class;
+      Entity : Entity_Information) return Entity_Information;
+   --  Returns the subprogram for which Entity is a parameter
+
    type Recursive_Entities_Cursor is new Entities_Cursor with private;
    overriding procedure Next (Self : in out Recursive_Entities_Cursor);
 
@@ -576,7 +642,7 @@ package GNATCOLL.Xref is
    type Files_Cursor is new Base_Cursor with private;
    function Element (Self : Files_Cursor) return GNATCOLL.VFS.Virtual_File;
 
-   function Importing
+   function Imported_By
      (Self : Xref_Database'Class;
       File : GNATCOLL.VFS.Virtual_File) return Files_Cursor;
    --  Returns the list of files that import (via a "with" statement in Ada,
@@ -638,16 +704,24 @@ private
       Column  => -1,
       Kind    => Ada.Strings.Unbounded.Null_Unbounded_String,
       Kind_Id => Kind_Id_Declaration,
+      Is_End_Of_Scope => False,
       Scope   => No_Entity);
 
    No_Entity_Declaration : constant Entity_Declaration :=
      (Name     => Ada.Strings.Unbounded.Null_Unbounded_String,
       Kind     => Ada.Strings.Unbounded.Null_Unbounded_String,
       Location => No_Entity_Reference,
-      Is_Subprogram => False,
-      Is_Container  => False,
-      Is_Abstract   => True,
-      Is_Generic    => True);
+      Flags    => (Is_Subprogram       => False,
+                   Is_Container        => False,
+                   Is_Abstract         => True,
+                   Is_Generic          => True,
+                   Is_Access           => False,
+                   Is_Array            => False,
+                   Is_Printable_In_Gdb => False,
+                   Is_Type             => False,
+                   Is_Global           => False,
+                   Is_Static_Local     => False,
+                   Body_Is_Full_Declaration => True));
 
    package Entity_Sets is new Ada.Containers.Ordered_Sets
      (Entity_Information);

@@ -1123,7 +1123,7 @@ procedure GNATInspect is
    procedure Process_Importing (Args : Arg_List) is
       Curs  : Files_Cursor;
    begin
-      Curs := Xref.Importing (Tree.Create (+Nth_Arg (Args, 1)));
+      Curs := Xref.Imported_By (Tree.Create (+Nth_Arg (Args, 1)));
       Dump (Curs);
    end Process_Importing;
 
