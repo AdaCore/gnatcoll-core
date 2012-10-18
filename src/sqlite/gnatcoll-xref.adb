@@ -5328,22 +5328,31 @@ package body GNATCOLL.Xref is
    function Is_Up_To_Date
      (Self : Xref_Database; File : GNATCOLL.VFS.Virtual_File) return Boolean
    is
-      N : aliased String :=
-        +File.Unix_Style_Full_Name (Normalize => True);
-      Files    : Forward_Cursor;
    begin
-      --  For efficiency, we do not store the timestamps for source files in
-      --  the database. So we need to compare the timestamp of the LI file from
-      --  the database with the source stamp
+      if File = No_File then
+         --  A predefined entity
+         return True;
 
-      Files.Fetch
-        (Self.DB, Query_Get_ALI,
-         Params => (1 => +N'Unchecked_Access));
-
-      if Files.Has_Row then
-         return Files.Time_Value (2) >= File.File_Time_Stamp;
       else
-         return False;  --  file not even known in database
+         declare
+            N : aliased String :=
+              +File.Unix_Style_Full_Name (Normalize => True);
+            Files    : Forward_Cursor;
+         begin
+            --  For efficiency, we do not store the timestamps for source files
+            --  in the database. So we need to compare the timestamp of the LI
+            --  file from the database with the source stamp
+
+            Files.Fetch
+              (Self.DB, Query_Get_ALI,
+               Params => (1 => +N'Unchecked_Access));
+
+            if Files.Has_Row then
+               return Files.Time_Value (2) >= File.File_Time_Stamp;
+            else
+               return False;  --  file not even known in database
+            end if;
+         end;
       end if;
    end Is_Up_To_Date;
 
