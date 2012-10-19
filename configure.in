@@ -2,6 +2,12 @@
 AC_INIT(gnatcoll,1.5w,report@adacore.com,gnatcoll)
 AC_CANONICAL_SYSTEM
 
+# Configure pkg-config so that it does not remove some directories
+# from the include files. In particular, without this, on OSX we
+# never get the directory that contains py-gobject.h
+export PKG_CONFIG_ALLOW_SYSTEM_CFLAGS=True
+export PKG_CONFIG_ALLOW_SYSTEM_LIBS=True
+
 AC_PROG_LN_S
 AC_FUNC_MMAP
 
