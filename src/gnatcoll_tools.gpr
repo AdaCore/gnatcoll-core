@@ -32,5 +32,6 @@ project GnatColl_Tools is
    package Compiler renames GnatColl_Shared.Compiler;
    package Binder   renames GnatColl_Shared.Binder;
    package Ide      renames GnatColl_Shared.Ide;
+   package Linker   renames GnatColl_Shared.Linker;
 
 end GnatColl_Tools;

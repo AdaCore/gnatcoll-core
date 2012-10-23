@@ -40,8 +40,6 @@ project GnatColl is
       for Switches ("sinfo.adb") use Compiler'Switches ("Ada") & ("-gnatg");
    end Compiler;
 
-   package Linker   renames GnatColl_Shared.Linker;
-
    package Ide renames GnatColl_Shared.Ide;
 
    package Naming is

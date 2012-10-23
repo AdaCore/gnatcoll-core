@@ -59,4 +59,6 @@ project GnatColl is
       end case;
    end Naming;
 
+   System_Linker_Flags := (@EXTRA_LINK_SWITCHES@);
+
 end GnatColl;

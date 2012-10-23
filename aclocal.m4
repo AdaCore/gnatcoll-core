@@ -4,6 +4,21 @@
 ##   include(gnatcoll/aclocal.m4)
 
 ##############################################################
+# Machine-specific linker switches
+#   @EXTRA_LINK_SWITCHES@: list of system-specific linker
+#      switches. Its syntax is compatible with GPR files.
+##############################################################
+
+AC_DEFUN(AM_SYSTEM_LINK_SWITCHES,
+[
+    case $build_os in
+       *darwin*)   EXTRA_LINK_SWITCHES='"-Wl,-no_pie"';;
+       *)          EXTRA_LINK_SWITCHES='';;
+    esac
+    AC_SUBST(EXTRA_LINK_SWITCHES)
+])
+
+##############################################################
 # Copy a file, as part of config.status
 #  AM_LINK_FILE(SOURCE,DEST)
 ##############################################################
