@@ -27,6 +27,7 @@ GNAT Reusable Components
    pools
    json
    sql
+   xref
 
 Indices and tables
 ==================
