@@ -15,6 +15,14 @@ of the feature.
 New features in 1.5
 -------------------
 
+NF-15-LA23-020 New API GNATCOLL.Xref and gnatinspect (2012-10-22)
+
+   A new package GNATCOLL.Xref is provided to perform cross-reference queries
+   on source code. It analyzes the compiler generated .ali and .gli files, and
+   stores them in a sqlite database to perform fast queries. An external tool
+   gnatinspect is also provided that provides a command line interface to this
+   package, that can be used from non-Ada tools.
+
 NF-15-L703-035 Support for gtk3 (2012-07-04)
 
    A new configure switch (--with-gtk) was added to specify which version
