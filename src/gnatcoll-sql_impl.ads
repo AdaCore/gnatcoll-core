@@ -207,7 +207,9 @@ package GNATCOLL.SQL_Impl is
       Long   : Boolean := True) return String;
    --  See inherited doc
 
-   type SQL_Field (Table, Instance, Name : Cst_String_Access;
+   type SQL_Field (Table : Cst_String_Access;
+                   Instance : Cst_String_Access;
+                   Name : Cst_String_Access;
                    Instance_Index : Integer)
       is abstract new SQL_Field_Or_List with null record;
    --  A field that comes directly from the database. It can be within a

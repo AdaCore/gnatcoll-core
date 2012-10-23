@@ -68,7 +68,9 @@ project GnatColl_Shared is
       end case;
    end Compiler;
 
+   System_Linker_Flags := (@EXTRA_LINK_SWITCHES@);
    package Linker is
+      for Switches ("Ada") use System_Linker_Flags;
    end Linker;
 
    package Binder is

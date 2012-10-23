@@ -635,6 +635,7 @@ PYTHON_LIBS_GPR
 GMP_LIBS_GPR
 GMP_CFLAGS_GPR
 SYNC_COUNTERS_IMPL
+EXTRA_LINK_SWITCHES
 WITH_PROJECTS
 WITH_READLINE
 GNAT_SOURCES
@@ -4971,6 +4972,13 @@ else
 fi
 
 
+
+
+
+    case $build_os in
+       *darwin*)   EXTRA_LINK_SWITCHES='"-Wl,-no_pie"';;
+       *)          EXTRA_LINK_SWITCHES='';;
+    esac
 
 
 
