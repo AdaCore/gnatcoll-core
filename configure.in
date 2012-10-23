@@ -1,5 +1,5 @@
 # Set the version number below
-AC_INIT(gnatcoll,1.5w,report@adacore.com,gnatcoll)
+AC_INIT(gnatcoll,1.6w,report@adacore.com,gnatcoll)
 AC_CANONICAL_SYSTEM
 
 AC_PROG_LN_S
