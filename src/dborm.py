@@ -118,7 +118,7 @@ def splitstr(str, maxlen):
 class Subprogram(object):
 
     def __init__(self, name, params, local_vars, body, returns,
-                 comment, overriding, abstract):
+                 comment, overriding, abstract, inline):
         self.name = name
         self.params = params
         self.local_vars = local_vars
@@ -127,6 +127,7 @@ class Subprogram(object):
         self.comment = comment
         self.overriding = overriding
         self.abstract = abstract
+        self.inline = inline
 
 
 def _subprogram_sorter(sub1, sub2):
@@ -233,7 +234,7 @@ class Pretty_Printer(object):
 
     def add_subprogram(self, name, body, params=[], local_vars=[],
                        returns=None, comment=None, overriding=False,
-                       abstract=False,
+                       abstract=False, inline=False,
                        section=""):
         """Add a new subprogram. local_vars and params are lists of
           (name, type, default) tuples.
@@ -243,7 +244,7 @@ class Pretty_Printer(object):
            specs
         """
         news = Subprogram(name, params, local_vars, body, returns, comment,
-                          overriding, abstract)
+                          overriding, abstract, inline)
 
         for index, s in enumerate(self.sections):
             if s[0] == section:
@@ -377,8 +378,11 @@ class Pretty_Printer(object):
         for index, p in enumerate(subprograms):
             self.out.write(self._get_subprogram_proto(p) + ";\n")
 
+            if p.inline:
+                self.out.write("   pragma Inline (%s);\n" % p.name);
+
             if p.comment:
-                comment = comment + " " + p.comment
+                comment += " " + p.comment
 
             # Share the comment with the next subprogram if it has the same
             # name
@@ -612,6 +616,7 @@ class Schema(object):
             "Ada.Finalization"])
         self.pretty.add_with("ada.unchecked_deallocation", specs=False,
                               do_use=False)
+        self.pretty.add_with("ada.containers", specs=False)
         self.pretty.add_with("system.address_image", do_use=False)
 
         if not store_connections:
@@ -962,19 +967,19 @@ def create(pretty, table, schema):
        returns="%s_Managers" % table.name)
 
 
-def from_cache_params(schema, table, with_self):
+def from_cache_params(schema, table, with_self=""):
     """Return the parameters passed to the Hash_%row function"""
     if with_self:
-        tmp = ", ".join(["Self.%s" % schema.subprogram_name_from_field(p)
+        tmp = ", ".join(["%s.%s" % (with_self, schema.subprogram_name_from_field(p))
                          for p in table.pk])
     else:
         tmp = ", ".join(["%s" % p.name for p in table.pk])
     return tmp
 
 
-def from_cache_hash(schema, table, with_self):
-    return "Hash_%s (%s)" % (
-        table.row, from_cache_params(schema, table, with_self))
+def from_cache_hash(schema, table, with_self=""):
+    return "(%d, %s)" % (table.base_key,
+                         from_cache_params(schema, table, with_self))
 
 
 def detach(pretty, table, schema, translate):
@@ -998,36 +1003,24 @@ def detach(pretty, table, schema, translate):
 
     if table.pk != []:
         tr = {"row": translate["row"],
-              "fromcache": from_cache_params(schema, table, with_self=True)}
+              "fromcache": from_cache_params(schema, table, with_self="Self")}
 
         pretty.add_subprogram(
             name="from_cache",
             params=[("session", "Session_Type")] + schema.params_get_pk(table),
             section="Elements: %(cap)s" % translate,
             returns="Detached_%(row)s'Class" % translate,
-            local_vars=[("R", "Detached_Element_Access"),
-                        ("D", "Detached_Data_Access")],
             comment="""Lookup in the session whether there is already an element
 with this primary key. If not, the returned value will be a null element
 (test with Is_Null)""",
-            body="""Session.From_Cache (%(fromcache)s, R, D);
-       if R /= null then
-          declare
-             R2 : Detached_%(row)s'Class := Detached_%(row)s'Class (R.all);
-          begin
-             Set (R2, D);
-             return R2;
-          end;
-       else
-          return No_Detached_%(row)s;
-       end if;""" % {
+            body=("return Detached_%(row)s'Class (Session.From_Cache ("
+                  + "%(fromcache)s, No_Detached_%(row)s));") % {
                 "row": translate["row"],
-                "fromcache": from_cache_hash(schema, table, with_self=False)}
-            )
+                "fromcache": from_cache_hash(schema, table, with_self="")})
 
         local = [("R", "constant Detached_%(row)s'Class" % translate,
                   "From_Cache (Self.Data.Session, %s)" %
-                  from_cache_params(schema, table, with_self=True))]
+                  from_cache_params(schema, table, with_self="Self"))]
         body = """if R.Is_Null then
               return Detach_No_Lookup (Self, Self.Data.Session);
           else
@@ -1322,7 +1315,7 @@ def generate_orb_one_table(name, schema, pretty, all_tables):
                local_vars=[("R",
                             "constant Detached_%s'Class" % table.row,
                             "From_Cache (Session, %s)" %
-                            from_cache_params(schema, table, with_self=False))],
+                            from_cache_params(schema, table, with_self=""))],
                body = """if not R.Is_Null then
                return R;
             else
@@ -1564,41 +1557,28 @@ def generate_orb_one_table(name, schema, pretty, all_tables):
            body="""%(free_fields)s Free (Detached_Data (Self));""" % translate)
 
         if not table.is_abstract:
-            if table.pk:
+            if table.pk or len(table.pk) != 1:
                 unset = " or else ".join(
-                    ["D.ORM_%s = %s" % (p.name, p.type.default_record)
+                    ["Self.ORM_%s = %s" % (p.name, p.type.default_record)
                      for p in table.pk])
-                tmp = " & ".join(p.image() for p in table.pk)
-                pretty.add_subprogram(
-                   name="hash_%(row)s" % translate,
-                   params=schema.params_get_pk(table),
-                   returns="String",
-                   section="body",
-                   body="""return "%s" & %s;""" % (translate["row"], tmp))
-
-                local_vars=[("D", "constant %(row)s_Data" % translate,
-                             "%(row)s_Data (Self.Get)" % translate)]
-                tmp = ", ".join([p.to_return("D") for p in table.pk])
-                body='if %s then' % unset \
-                 + '  return "%(row)s" & System.Address_Image' % translate \
-                 + " (D.all'Address);" % translate \
-                 + ' else ' \
-                 + 'return Hash_%s (%s);' % (translate["row"], tmp) \
-                 + " end if;"
+                tmp = ", ".join([p.to_return("Self") for p in table.pk])
+                body = ('if %s then' % unset
+                 + '  return (%d, No_Primary_Key);' % (table.base_key, )
+                 + ' else '
+                 + '  return (%d, %s);' % (table.base_key, tmp)
+                 + " end if;")
 
             else:
-                local_vars = []
                 body = ('raise Program_Error with ' +
-                        '"Table %(cap)s has no primary key";' +
+                        '"Table %(cap)s has no primary key (or a tuple)";' +
                         ' return "";') % translate
 
             pretty.add_subprogram(
-               name="hash",
-               params=[("self", "Detached_%(row)s" % translate)],
-               returns="String",
+               name="key",
+               params=[("self", "%(row)s_DDR" % translate)],
+               returns="Element_Key",
                section="internal",
                overriding=True,
-               local_vars=local_vars,
                body=body)
 
 
@@ -2287,6 +2267,8 @@ class Foreign_Key(object):
 class Table(object):
     """Describes a database table"""
 
+    base_key = 0
+
     def __init__(self, name, row, show=True, is_abstract=False,
                  superClass=None):
         """FIELDS is a dictionary of Field, indexed by the name of the field
@@ -2304,6 +2286,9 @@ class Table(object):
         self.show = show
         self.superClass = superClass  # a Str, then will be instance of Table
         self.revert_fk = []   # the FK from other tables that point to self
+
+        self.base_key = Table.base_key
+        Table.base_key += 1000000
 
     def __repr__(self):
         return "Table<%s>" % self.name

@@ -28,9 +28,8 @@
 --  session always manipulate the same Ada object (this is especially useful
 --  when the objects have been modified locally).
 
-with Ada.Containers.Indefinite_Hashed_Maps;
+with Ada.Containers.Hashed_Maps;
 with Ada.Containers.Indefinite_Doubly_Linked_Lists;
-with Ada.Strings.Hash;
 with GNATCOLL.Refcount.Weakref; use GNATCOLL.Refcount.Weakref;
 with GNATCOLL.SQL.Exec;         use GNATCOLL.SQL.Exec;
 with GNATCOLL.Traces;
@@ -409,21 +408,30 @@ package GNATCOLL.SQL.Sessions is
    --  The following subprograms are for the implementation of the generated
    --  API, and should not be needed directly in your own code.
 
-   function Hash (Self : Detached_Element) return String is abstract;
-   --  Return the hash code for [Self], so that it can be stored in the session
-   --  cache.
+   No_Primary_Key : constant := -1;
 
-   procedure From_Cache
-     (Self    : Session_Type;
-      Key     : String;
-      Element : out Detached_Element_Access;
-      Data    : out Detached_Data_Access);
-   --  Returns the element from the cache, if any, or null.
-   --  Element is set to null if nothing was found in the cache.
-   --  Otherwise, Element is returned uninitialized (Get(Element)=null), and
-   --  the data is returned separately.
-   --  Element must not be freed or stored in another data structure, since it
-   --  still belongs to the session.
+   type Element_Key is record
+      Table : Natural;  --  A unique table id, one for each table.
+                        --  We recommend using numbers every 1_000_000 or so.
+      Key   : Integer;  --  The element's key (or No_Primary_Key if there is
+                        --  no unique id)
+   end record;
+   --  The key for an element. This must be unique in the database for each
+   --  element. Currently, we only support elements with a single integer
+   --  primary key, although this could presumably be extended. We should not
+   --  use strings, though, since they are expensive to pass around and to
+   --  compute hashes from them.
+
+   function Key (Self : Detached_Data) return Element_Key is abstract;
+   --  Return the unique key for Self, so that it can be stored in the session
+   --  cache.
+   --  This function must be overridden, but can't be set abstract
+
+   function From_Cache
+     (Self         : Session_Type;
+      Key          : Element_Key;
+      If_Not_Found : Detached_Element'Class) return Detached_Element'Class;
+   --  Returns the element from the cache, if any, or If_Not_Found.
 
    --------------------
    -- Implementation --
@@ -466,6 +474,10 @@ package GNATCOLL.SQL.Sessions is
    --  when the element was INSERT-ed in the database for the first time, with
    --  an auto-increment integer primary key). PK_Modified is always
    --  initialized to False when calling this procedure.
+   --
+   --  This procedure can in turn call Insert_Or_Update on other elements, most
+   --  likely its foreign keys if it needs their id, through the procedure
+   --  below.
 
    procedure Insert_Or_Update
      (Self    : Session_Type;
@@ -496,25 +508,34 @@ package GNATCOLL.SQL.Sessions is
 private
    type Base_Element is abstract tagged null record;
 
-   type Ref_Or_Weak  is record
-      Ref : Detached_Element_Access;
-      --  Get(Ref)=null  when we contain a weak reference.
-      --  Otherwise, we would be holding a reference to the data. We always
-      --  need to have a Ref, so that we can return the proper Tag.
-
-      WRef : Pointers.Weak_Ref := Pointers.Null_Weak_Ref;
-      --  Set if we are containing a weak reference
+   type Weak_Cache is record
+      Ref      : Pointers.Weak_Ref;
+      Template : Detached_Element_Access;
    end record;
-   --  Either a weak or a full ref to an element
+   --  a weak reference to an element. Template is always such that
+   --  Get (Template) is null, ie we do not hold a reference to the element,
+   --  but we still need to know its Ada tag so that we can recreate it when
+   --  extracting the element from the cache.
 
-   package Element_Cache is new Ada.Containers.Indefinite_Hashed_Maps
-     (Key_Type        => String,
-      Element_Type    => Ref_Or_Weak,
-      Hash            => Ada.Strings.Hash,
-      Equivalent_Keys => "=");
-   type Map_Access is access all Element_Cache.Map'Class;
+   function Hash (Key : Element_Key) return Ada.Containers.Hash_Type;
+   function "=" (W1, W2 : Weak_Cache) return Boolean;
+   package Weak_Element_Maps is new Ada.Containers.Hashed_Maps
+     (Key_Type         => Element_Key,
+      Element_Type     => Weak_Cache,
+      Hash             => Hash,
+      Equivalent_Keys  => "=",
+      "="              => "=");
+   --  A map of weak refs to elements.
 
-   package Element_List is new Ada.Containers.Indefinite_Doubly_Linked_Lists
+   package Element_Maps is new Ada.Containers.Hashed_Maps
+     (Key_Type        => Element_Key,
+      Element_Type    => Detached_Element_Access,
+      Hash            => Hash,
+      Equivalent_Keys => "=",
+      "="             => "=");
+   --  A set of elements
+
+   package Element_Lists is new Ada.Containers.Indefinite_Doubly_Linked_Lists
      (Detached_Element'Class);
 
    type User_Data_Access is access all User_Data'Class;
@@ -522,11 +543,19 @@ private
    type Session_Data is record
       Pool     : Session_Pool;
       DB       : Database_Connection;
-      Cache    : Map_Access;
-      Factory  : Element_Factory := Null_Factory'Access;  --  not null
 
-      Has_Modified_Elements : Boolean := False;
-      --  Whether the cache contains modified elements
+      Wcache : Weak_Element_Maps.Map;
+      Cache  : Element_Maps.Map;
+      --  The cache for elements. Depending on the Weak_Cache setting, either
+      --  one or the other is used. Modified elements always need to use a full
+      --  ref, but they are on the list of modified elements below, which
+      --  ensures we have a ref to them and they can't be finalized before they
+      --  are flushed to the db.
+
+      Modified_Elements : Element_Lists.List;
+      --  The list of modified elements, that need to be flushed to the db.
+
+      Factory  : Element_Factory := Null_Factory'Access;  --  not null
 
       Store_Unmodified   : Boolean;
       Weak_Cache         : Boolean;

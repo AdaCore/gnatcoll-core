@@ -81,7 +81,7 @@ package GNATCOLL.Refcount.Weakref is
       procedure Set (Self : in out Ref; Data : access Encapsulated'Class)
         renames Pointers.Set;
       function Get (P : Ref) return Encapsulated_Access
-        renames Pointers.Get;
+         renames Pointers.Get;
       function "=" (P1, P2 : Ref) return Boolean
         renames Pointers."=";
       function "=" (P1, P2 : Pointers.Encapsulated_Access) return Boolean
