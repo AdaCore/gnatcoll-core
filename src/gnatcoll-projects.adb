@@ -666,7 +666,7 @@ package body GNATCOLL.Projects is
          return
            Create
              (Handle_Subdir
-                  (Project, View.Object_Directory.Display_Name, False));
+                (Project, View.Object_Directory.Display_Name, False));
       else
          return GNATCOLL.VFS.No_File;
       end if;
