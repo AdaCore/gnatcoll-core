@@ -662,7 +662,9 @@ package body GNATCOLL.Projects is
    is
       View : constant Project_Id := Get_View (Project);
    begin
-      if View.Object_Directory /= No_Path_Information then
+      if View /= Prj.No_Project
+        and then View.Object_Directory /= No_Path_Information
+      then
          return
            Create
              (Handle_Subdir
