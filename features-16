@@ -14,3 +14,9 @@ of the feature.
 
 New features in 1.6
 -------------------
+
+NF-16-LA23-040 Speed up GNATCOLL.SQL.Sessions (2012-10-24)
+
+   The internal handling of the cache in the sessions has been optimized,
+   leading to execution as much as three times faster on a code that performs
+   a lot of manipulation of database elements.
