@@ -1891,13 +1891,25 @@ def generate_orm(setup, pkg_name, tables=[], omit=[], out=sys.stdout):
         body='if Str = null then return ""; else return Str.all; end if;',
         section="body")
 
+    table_image_body = "case Table is"
+
     for t in sorted(tables):
+        table_image_body += ' when %d => return "%s";' % (
+            tables[t].base_key, tables[t].name)
         if tables[t].is_abstract:
             generate_orb_one_table(t, schema, pretty, tables)
 
     for t in sorted(tables):
         if not tables[t].is_abstract:
             generate_orb_one_table(t, schema, pretty, tables)
+
+    table_image_body += " when others => return Table'Image; end case;"
+    #pretty.add_subprogram(
+    #    name="Image",
+    #    params=[("Table", "Integer")],
+    #    returns="String",
+    #    body=table_image_body,
+    #    section="Internal")
 
     pretty.terminate_package(need_dba=True)
 

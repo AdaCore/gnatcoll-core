@@ -273,6 +273,11 @@ package GNATCOLL.SQL.Sessions is
    --  Return the session to which Self is attached, or No_Session if that
    --  session has been closed.
 
+   procedure Delete
+     (Self : Session_Type; Element : Detached_Element'Class);
+   --  Mark the element as deleted in the database.
+   --  The element is first persisted in the session if necessary
+
    procedure Delete (Element : Detached_Element);
    --  A shortcut for Element.Session.Detach (Element).
    --  This assumes the element belongs to a session.
@@ -299,10 +304,8 @@ package GNATCOLL.SQL.Sessions is
    --  Commit or rollback the session. A Flush is performed as needed, and the
    --  cache might get cleared as well.
 
-   procedure Delete
-     (Self : Session_Type; Element : Detached_Element'Class);
-   --  Mark the element as deleted in the database.
-   --  The element is first persisted in the session if necessary
+   function In_Transaction (Self : Session_Type) return Boolean;
+   --  Whether there is an active SQL transaction for this session.
 
    ---------------
    -- Factories --

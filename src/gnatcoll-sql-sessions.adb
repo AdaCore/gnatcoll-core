@@ -394,8 +394,8 @@ package body GNATCOLL.SQL.Sessions is
 
    function Image (K : Element_Key) return String is
    begin
-      return "<table=" & Image (K.Table, Min_Width => 1)
-        & " key=" & Image (K.Key, Min_Width => 1);
+      return "<" & Image (K.Table, Min_Width => 1)
+        & ',' & Image (K.Key, Min_Width => 1) & ">";
    end Image;
 
    -----------------
@@ -652,14 +652,21 @@ package body GNATCOLL.SQL.Sessions is
 
          --  Element is already in the session, but might not be in the cache
          --  if it wasn't modified before and Config_Store_Unmodified is False.
+         --  If it is in the session, and it is dirty, it has already been
+         --  added to the list of modified elements.
+
       else
          D.Session := Get_Weak (Self);
-      end if;
 
-      if Is_Dirty (D) then
-         Self.Element.Modified_Elements.Append (Element);
-      elsif not Self.Element.Store_Unmodified then
-         return;
+         if Is_Dirty (D) then
+            if Active (Me) then
+               Trace (Me, "Persisting a modified element: "
+                      & Image (Key (D.all)));
+            end if;
+            Self.Element.Modified_Elements.Append (Element);
+         elsif not Self.Element.Store_Unmodified then
+            return;
+         end if;
       end if;
 
       Add_To_Cache (Self, Element);
@@ -791,17 +798,31 @@ package body GNATCOLL.SQL.Sessions is
 
             --  Remove the element from the cache. In theory at least, the
             --  element no longer exists
+            --
+            --  ??? In theory at least, we should only remove elements last,
+            --  after all other changes have been done (so that any FK
+            --  reference to them has been updated). Likewise, we should add
+            --  elements first).
             PK_Modified := True;
 
          else
             Insert_Or_Update (Element, PK_Modified, Dirty);
 
             if PK_Modified then
+               if Active (Me) then
+                  Trace (Me, "PK has changed, adding new value to cache");
+               end if;
+
                Add_To_Cache (Self, Element);  --  Insert with new key
             end if;
          end if;
 
-         if PK_Modified then
+         if PK_Modified and then Old_K.Key /= No_Primary_Key then
+            if Active (Me) then
+               Trace (Me, "PK has changed, removing old from cache: "
+                      & Image (Old_K));
+            end if;
+
             --  Remove the old element from the cache
             if Self.Element.Weak_Cache then
                Self.Element.Wcache.Exclude (Old_K);
@@ -845,8 +866,8 @@ package body GNATCOLL.SQL.Sessions is
             Next (C);
          end loop;
 
-         Decrease_Indent (Me, "Done flushing session");
          Data.Modified_Elements.Clear;
+         Decrease_Indent (Me, "Done flushing session");
       end if;
 
       --  ??? The only delicate area is when you have default values set
@@ -859,8 +880,8 @@ package body GNATCOLL.SQL.Sessions is
          raise;
 
       when E : others =>
-         Decrease_Indent (Me, "while in flushing session");
-         Trace (Me, E);
+         Trace (Me, E, "while flushing session");
+         Decrease_Indent (Me);
    end Flush;
 
    -----------------------
@@ -873,6 +894,15 @@ package body GNATCOLL.SQL.Sessions is
          Execute (Self.DB, SQL_Begin);
       end if;
    end Begin_Transaction;
+
+   --------------------
+   -- In_Transaction --
+   --------------------
+
+   function In_Transaction (Self : Session_Type) return Boolean is
+   begin
+      return In_Transaction (Self.DB);
+   end In_Transaction;
 
    ------------
    -- Commit --
