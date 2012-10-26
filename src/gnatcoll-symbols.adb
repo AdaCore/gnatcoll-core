@@ -26,11 +26,11 @@ with Ada.Strings.Hash;
 with Ada.Unchecked_Conversion;
 with Ada.Unchecked_Deallocation;
 with GNAT.IO;                    use GNAT.IO;
---  with GNAT.HTable;                use GNAT.HTable;
 with GNAT.Strings;
 with System.Address_Image;
 
 package body GNATCOLL.Symbols is
+
    use String_Htable;
 
    Table_Size : constant := 98_317;
@@ -39,16 +39,6 @@ package body GNATCOLL.Symbols is
    --  but seems to be the same when using other hash codes.
    --  The table will readjust itself anyway, but setting this properly avoids
    --  a few resizing.
-
---     type Header_Num is mod 2 ** 14;
---
---     package Entities_Hash is new GNAT.HTable.Simple_HTable
---       (Header_Num => Header_Num,
---        Element    => Symbol,
---        No_Element => No_Symbol,
---        Key        => Cst_String_Access,
---        Hash       => Hash,
---        Equal      => Key_Equal);
 
    -----------------
    -- Debug_Print --
@@ -117,12 +107,14 @@ package body GNATCOLL.Symbols is
    -------------------
 
    procedure Display_Stats (Self : access Symbol_Table_Record) is
-      C   : String_Htable.Cursor := Self.Hash.First;
-      Tmp : Cst_String_Access;
+      C     : String_Htable.Cursor := Self.Hash.First;
+      Tmp   : Cst_String_Access;
       Count : Natural := 0;
       Last  : Hash_Type := Hash_Type'Last;
       H     : Hash_Type;
+
       Bucket_Count : Natural := 0;
+
    begin
       while Has_Element (C) loop
          Tmp := Element (C);
@@ -161,8 +153,7 @@ package body GNATCOLL.Symbols is
    ---------
 
    function Get
-      (Sym : Symbol; Empty_If_Null : Boolean := True)
-      return Cst_String_Access
+     (Sym : Symbol; Empty_If_Null : Boolean := True) return Cst_String_Access
    is
    begin
       if Sym = No_Symbol then
@@ -183,12 +174,14 @@ package body GNATCOLL.Symbols is
    procedure Free (Table : in out Symbol_Table_Record) is
       function Convert is new Ada.Unchecked_Conversion
         (Cst_String_Access, GNAT.Strings.String_Access);
+
       procedure Unchecked_Free is new Ada.Unchecked_Deallocation
         (String, GNAT.Strings.String_Access);
-      S : GNAT.Strings.String_Access;
 
-      C : String_Htable.Cursor := Table.Hash.First;
+      S   : GNAT.Strings.String_Access;
+      C   : String_Htable.Cursor := Table.Hash.First;
       Tmp : Cst_String_Access;
+
    begin
       while Has_Element (C) loop
          Tmp := Element (C);

@@ -21,7 +21,8 @@
 --                                                                          --
 ------------------------------------------------------------------------------
 
---  A symbol table.
+--  A symbol table
+
 --  Similar strings are always represented with the same pointer, thus
 --  reducing the amount of memory to store multiple instances of the same
 --  string, and speeding up comparison (since you only need to compare the
@@ -39,11 +40,11 @@ package GNATCOLL.Symbols is
    --  the symbol is to be shared between multiple tasks.
 
    type Symbol is private;
-   No_Symbol        : constant Symbol;
-   Empty_String     : constant Symbol;
+   No_Symbol    : constant Symbol;
+   Empty_String : constant Symbol;
 
    function Allocate return Symbol_Table_Access;
-   --  Allocate a new symbol table.
+   --  Allocate a new symbol table
 
    function Find
      (Table : access Symbol_Table_Record;
@@ -67,7 +68,7 @@ package GNATCOLL.Symbols is
 
    function Hash (S : Symbol) return Ada.Containers.Hash_Type;
    --  Returns a hash for the symbol, in case you need to create your own
-   --  htables
+   --  hash tables.
 
    function Debug_Print (S : Symbol) return String;
    --  Return a displaying version of symbol (debugging purposes only)
@@ -78,12 +79,13 @@ package GNATCOLL.Symbols is
    --  one version to the next.
 
 private
+
    type Symbol is new Cst_String_Access;
 
-   Cst_Empty_String     : aliased constant String := "";
+   Cst_Empty_String : aliased constant String := "";
 
-   No_Symbol        : constant Symbol := null;
-   Empty_String     : constant Symbol := Cst_Empty_String'Access;
+   No_Symbol    : constant Symbol := null;
+   Empty_String : constant Symbol := Cst_Empty_String'Access;
 
    function Hash (Str : Cst_String_Access) return Ada.Containers.Hash_Type;
    function Key_Equal (Key1, Key2 : Cst_String_Access) return Boolean;
