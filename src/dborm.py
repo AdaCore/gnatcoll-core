@@ -494,7 +494,7 @@ class Pretty_Printer(object):
                         unreferenced.append(self._title(param[0]))
 
                 if unreferenced:
-                    self.out.write("      pragma Unreferenced(%s);\n"
+                    self.out.write("      pragma Unreferenced (%s);\n"
                                    % (", ".join(unreferenced)))
 
                 if p.local_vars:
@@ -978,8 +978,11 @@ def from_cache_params(schema, table, with_self=""):
 
 
 def from_cache_hash(schema, table, with_self=""):
-    return "(%d, %s)" % (table.base_key,
-                         from_cache_params(schema, table, with_self))
+    if table.has_cache:
+        return "(%d, %s)" % (table.base_key,
+                             from_cache_params(schema, table, with_self))
+    else:
+        return "(%d, No_Primary_Key)" % table.base_key
 
 
 def detach(pretty, table, schema, translate):
@@ -1001,9 +1004,15 @@ def detach(pretty, table, schema, translate):
     # In a Detached_*, we store new pointer types, not the ones stored in the
     # session, since the latter might have a shorter lifetime.
 
-    if table.pk != []:
+    if table.pk != [] and table.has_cache:
         tr = {"row": translate["row"],
               "fromcache": from_cache_params(schema, table, with_self="Self")}
+
+        body = ("return Detached_%(row)s'Class (Session.From_Cache ("
+                    + "%(fromcache)s, No_Detached_%(row)s));") % {
+                "row": translate["row"],
+                "fromcache": from_cache_hash(schema, table, with_self="")}
+
 
         pretty.add_subprogram(
             name="from_cache",
@@ -1013,10 +1022,7 @@ def detach(pretty, table, schema, translate):
             comment="""Lookup in the session whether there is already an element
 with this primary key. If not, the returned value will be a null element
 (test with Is_Null)""",
-            body=("return Detached_%(row)s'Class (Session.From_Cache ("
-                  + "%(fromcache)s, No_Detached_%(row)s));") % {
-                "row": translate["row"],
-                "fromcache": from_cache_hash(schema, table, with_self="")})
+            body=body)
 
         local = [("R", "constant Detached_%(row)s'Class" % translate,
                   "From_Cache (Self.Data.Session, %s)" %
@@ -1306,19 +1312,7 @@ def generate_orb_one_table(name, schema, pretty, all_tables):
             "(%s)" % aliases)])
 
         if table.pk:
-            pretty.add_subprogram(
-               name="get_%(row)s" % translate,
-               params=[("Session", database_connection)]
-                  + schema.params_get_pk(table)
-                  + [("Depth",            "Related_Depth", "0"),
-                     ("Follow_Left_Join", "Boolean", "False")],
-               local_vars=[("R",
-                            "constant Detached_%s'Class" % table.row,
-                            "From_Cache (Session, %s)" %
-                            from_cache_params(schema, table, with_self=""))],
-               body = """if not R.Is_Null then
-               return R;
-            else
+            when_not_in_cache = ("""
                declare
                  M : %(name)s_Managers := All_%(cap)s.Filter
                    (""" % {"name": table.name,
@@ -1343,8 +1337,27 @@ def generate_orb_one_table(name, schema, pretty, all_tables):
                        return E.Detach_No_Lookup (Session);
                     end;
                  end if;
-               end;
-            end if;""" % translate,
+               end;""" % translate)
+
+            if table.has_cache:
+                local = [("R",
+                          "constant Detached_%s'Class" % table.row,
+                          "From_Cache (Session, %s)" %
+                          from_cache_params(schema, table, with_self=""))]
+                body = ("""if not R.Is_Null then return R; else """ +
+                        when_not_in_cache + """end if;""")
+            else:
+                local = []
+                body = when_not_in_cache
+
+            pretty.add_subprogram(
+               name="get_%(row)s" % translate,
+               params=[("Session", database_connection)]
+                  + schema.params_get_pk(table)
+                  + [("Depth",            "Related_Depth", "0"),
+                     ("Follow_Left_Join", "Boolean", "False")],
+               local_vars=local,
+               body=body,
                returns="detached_%(row)s'Class" % translate,
                section="Manager: %(cap)s" % translate)
 
@@ -1557,7 +1570,7 @@ def generate_orb_one_table(name, schema, pretty, all_tables):
            body="""%(free_fields)s Free (Detached_Data (Self));""" % translate)
 
         if not table.is_abstract:
-            if table.pk or len(table.pk) != 1:
+            if table.has_cache:
                 unset = " or else ".join(
                     ["Self.ORM_%s = %s" % (p.name, p.type.default_record)
                      for p in table.pk])
@@ -1569,9 +1582,9 @@ def generate_orb_one_table(name, schema, pretty, all_tables):
                  + " end if;")
 
             else:
-                body = ('raise Program_Error with ' +
-                        '"Table %(cap)s has no primary key (or a tuple)";' +
-                        ' return "";') % translate
+                body = """
+  --  Not cachable, since the PK is not a single integer field
+  return (%s, No_Primary_Key);""" % table.base_key
 
             pretty.add_subprogram(
                name="key",
@@ -2302,6 +2315,14 @@ class Table(object):
         self.base_key = Table.base_key
         Table.base_key += 1000000
 
+        self.has_cache = True
+        # Whether these items can be cached in the database. When they can't,
+        # for instance because their PK is not a single integer field. In this
+        # case, we generate a dummy Key function for the table, which always
+        # indicate there is no PK, and the element will not be saved in the
+        # session cache as a result. We also need to make sure that no other
+        # part of the generated file uses From_Cache.
+
     def __repr__(self):
         return "Table<%s>" % self.name
 
@@ -2387,6 +2408,8 @@ class Table(object):
         """Lookup the type of fields that were defined as "FK ..."
            ALL_TABLES must contain the set of all tables in the database.
            Return False in case of error.
+
+           This is called immediately after parsing the database schema.
         """
 
         for f in self.fk:
@@ -2405,6 +2428,11 @@ class Table(object):
                 self.fields.append(f)
                 if f.pk:
                     self.pk.append(f)
+
+        if len(self.pk) != 1:
+            self.has_cache = False
+        elif self.pk[0].type.ada_param != "Integer":
+            self.has_cache = False
 
 
 def get_db_schema(setup, requires_pk=False, all_tables=[], omit=[]):
