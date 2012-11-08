@@ -654,14 +654,18 @@ package body GNATCOLL.SQL.Exec is
                Q : constant String := Display_Query (Query, Prepared);
             begin
                if Q = "BEGIN" then
-                  Increase_Indent (Me_Query, "Start SQL transaction");
+                  Increase_Indent
+                    (Me_Query,
+                     Q & Image (Connection.all, Params)
+                     & Get_Rows & " "
+                     & Status (DBMS_Forward_Cursor'Class (R.all)) & Get_User);
+               else
+                  Trace
+                    (Me_Query,
+                     Q & Image (Connection.all, Params)
+                     & Get_Rows & " "
+                     & Status (DBMS_Forward_Cursor'Class (R.all)) & Get_User);
                end if;
-
-               Trace
-                 (Me_Query,
-                  Q & Image (Connection.all, Params)
-                  & Get_Rows & " "
-                  & Status (DBMS_Forward_Cursor'Class (R.all)) & Get_User);
             end;
          end if;
       end if;
@@ -730,7 +734,7 @@ package body GNATCOLL.SQL.Exec is
               Equal (Q.all, "commit", Case_Sensitive => False)
               or else Equal (Q.all, "rollback", Case_Sensitive => False);
             if Is_Commit_Or_Rollback and then Active (Me_Query) then
-               Decrease_Indent (Me_Query, "Finish SQL transaction");
+               Decrease_Indent (Me_Query);
             end if;
          end if;
 
