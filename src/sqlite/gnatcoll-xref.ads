@@ -761,6 +761,30 @@ package GNATCOLL.Xref is
    --  for instance useful when Get_Entity returns No_Entity (because there
    --  is no exact reference, nor close-by, for an entity).
 
+   -------------------------------------
+   -- Adding contents to the database --
+   -------------------------------------
+   --  In general, applications do not need to explicitly add data to the
+   --  database. They should only request the parsing of the ALI files, and
+   --  then query the database.
+   --  However, in some cases an application might have additional dynamic
+   --  information (for instance, a source editor might want to manually update
+   --  the database when a file is modified and the ALI file has not been
+   --  regenerated). To add support for languages that do not have ALI files,
+   --  it is expected that this be done in external tools that would directly
+   --  add information into the database, without going though GNATCOLL.Xref to
+   --  update it.
+
+   function Add_Entity
+     (Self        : Xref_Database;
+      Name        : String;
+      Kind        : String;
+      Decl_File   : GNATCOLL.VFS.Virtual_File;
+      Decl_Line   : Natural;
+      Decl_Column : Natural) return Entity_Information;
+   --  Insert a dummy entity in the database.
+   --  Kind must correspond to one of the entries
+
 private
    type Xref_Database is tagged record
       DB      : GNATCOLL.SQL.Exec.Database_Connection;
