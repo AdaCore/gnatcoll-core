@@ -207,6 +207,40 @@ package body GNATCOLL.IO.Remote.Unix is
       return Status;
    end Is_Regular_File;
 
+   ----------
+   -- Size --
+   ----------
+
+   function Size
+     (Exec : access Server_Record'Class;
+      File : FS_String) return Long_Integer
+   is
+      Args : GNAT.OS_Lib.Argument_List :=
+                         (new String'("stat"),
+                          new String'("-s"),
+                          new String'("""" & String (File) & """"));
+      Status : Boolean;
+      Regexp : constant Pattern_Matcher := Compile ("st_size=(\d+)");
+      Output : String_Access;
+      Matched : Match_Array (0 .. 1);
+      Size    : Long_Integer := 0;
+
+   begin
+      Exec.Execute_Remotely (Args, Output, Status);
+      Free (Args);
+
+      if Status and then Output /= null then
+         Match (Regexp, Output.all, Matched);
+         if Matched (1) /= No_Match then
+            Size := Long_Integer'Value
+              (Output (Matched (1).First .. Matched (1).Last));
+         end if;
+      end if;
+
+      Free (Output);
+      return Size;
+   end Size;
+
    ------------------
    -- Is_Directory --
    ------------------
@@ -285,6 +319,7 @@ package body GNATCOLL.IO.Remote.Unix is
       if Status and then Output /= null then
          Match (Regexp, Output.all, Matched);
          if Matched (0) = No_Match then
+            Free (Output);
             return GNATCOLL.Utils.No_Time;
          end if;
          Year := Natural'Value
@@ -301,10 +336,12 @@ package body GNATCOLL.IO.Remote.Unix is
            (Output (Matched (2).First + 6 .. Matched (2).Last));
          Second := Second
            + (60.0 * Ada.Calendar.Day_Duration (Minute))
-           + (3600.0 * Ada.Calendar.Day_Duration (Hour));
+              + (3600.0 * Ada.Calendar.Day_Duration (Hour));
+         Free (Output);
          return Ada.Calendar.Time_Of (Year, Month, Day, Second);
       end if;
 
+      Free (Output);
       return GNATCOLL.Utils.No_Time;
    end File_Time_Stamp;
 
