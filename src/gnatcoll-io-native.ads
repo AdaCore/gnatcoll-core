@@ -70,6 +70,8 @@ package GNATCOLL.IO.Native is
      (File : not null access Native_File_Record);
    overriding function Is_Regular_File
      (File : not null access Native_File_Record) return Boolean;
+   function Size
+     (File : not null access Native_File_Record) return Long_Integer;
    overriding function Is_Directory
      (File : not null access Native_File_Record) return Boolean;
    overriding function Is_Symbolic_Link

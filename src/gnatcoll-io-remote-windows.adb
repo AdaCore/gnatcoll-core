@@ -254,6 +254,45 @@ package body GNATCOLL.IO.Remote.Windows is
       return Status;
    end Is_Regular_File;
 
+   ----------
+   -- Size --
+   ----------
+
+   function Size
+     (Exec : access Server_Record'Class;
+      File : FS_String) return Long_Integer
+   is
+      Args : GNAT.OS_Lib.Argument_List :=
+               (new String'("dir"),
+                new String'("/-C"),
+                new String'("""" & String (File) & """"),
+                new String'("2>&1"));
+      Status : Boolean;
+      Size   : Long_Integer := 0;
+      Output : GNAT.Strings.String_Access;
+      S : GNAT.Strings.String_List_Access;
+
+   begin
+      Exec.Execute_Remotely (Args, Output, Status);
+      Free (Args);
+
+      if Status and Output /= null then
+         S := GNATCOLL.Utils.Split (Output.all, ' ');
+
+         begin
+            Size := Long_Integer'Value (S (S'First + 2).all);
+         exception
+            when Constraint_Error =>
+               Size := 0;
+         end;
+
+         Free (S);
+      end if;
+
+      Free (Output);
+      return Size;
+   end Size;
+
    ------------------
    -- Is_Directory --
    ------------------

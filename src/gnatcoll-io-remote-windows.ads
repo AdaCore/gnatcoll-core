@@ -43,6 +43,9 @@ package GNATCOLL.IO.Remote.Windows is
    function Is_Regular_File
      (Exec : access Server_Record'Class;
       File : FS_String) return Boolean;
+   function Size
+     (Exec : access Server_Record'Class;
+      File : FS_String) return Long_Integer;
    function Is_Directory
      (Exec : access Server_Record'Class;
       File : FS_String) return Boolean;
