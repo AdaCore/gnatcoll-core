@@ -5495,4 +5495,44 @@ package body GNATCOLL.Xref is
       Cursor.DBCursor.Fetch (Self.DB, Q);
    end From_Prefix;
 
+   ----------------
+   -- Add_Entity --
+   ----------------
+
+   function Add_Entity
+     (Self        : Xref_Database;
+      Name        : String;
+      Kind        : String;
+      Decl_File   : GNATCOLL.VFS.Virtual_File;
+      Decl_Line   : Natural;
+      Decl_Column : Natural) return Entity_Information
+   is
+      N : aliased String :=
+        +Decl_File.Unix_Style_Full_Name (Normalize => True);
+      K : aliased String := Kind;
+      Na : aliased String := Name;
+   begin
+      return Entity_Information'
+        (Fuzzy => False,
+         Id    => Self.DB.Insert_And_Get_PK
+           (SQL_Insert
+              (Fields => Entities.Name & Entities.Kind & Entities.Decl_File
+               & Entities.Decl_Line & Entities.Decl_Column,
+               Values => SQL_Select
+                 (Text_Param (3)
+                  & Entity_Kinds.Id
+                  & Files.Id
+                  & Integer_Param (4) & Integer_Param (5),
+                  From => Entity_Kinds & Files,
+                  Where => Entity_Kinds.Display = Text_Param (2)
+                  and Files.Path = Text_Param (1))),
+            Params =>
+              (1 => +N'Unchecked_Access,
+               2 => +K'Unchecked_Access,
+               3 => +Na'Unchecked_Access,
+               4 => +Decl_Line,
+               5 => +Decl_Column),
+            PK => Entities.Id));
+   end Add_Entity;
+
 end GNATCOLL.Xref;
