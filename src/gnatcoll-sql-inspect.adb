@@ -609,6 +609,22 @@ package body GNATCOLL.SQL.Inspect is
       then
          return (Kind => Field_Text, Max_Length => Integer'Last);
 
+      elsif T = "varchar" then
+         return (Kind => Field_Text, Max_Length => Integer'Last);
+
+      elsif T'Length >= 8
+         and then T (T'First .. T'First + 7) = "varchar("
+      then
+         begin
+            return (Kind => Field_Text,
+                    Max_Length =>
+                      Integer'Value (T (T'First + 10 .. T'Last - 1)));
+         exception
+            when Constraint_Error =>
+               Put_Line ("Missing max length after 'varchar' in " & T);
+               raise Invalid_Schema;
+         end;
+
       elsif T'Length >= 10
         and then T (T'First .. T'First + 9) = "character("
       then

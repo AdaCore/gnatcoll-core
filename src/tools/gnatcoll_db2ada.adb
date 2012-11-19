@@ -707,7 +707,9 @@ begin
    Main;
 
 exception
-   when Invalid_Type =>
+   when E : Invalid_Type =>
+      Ada.Text_IO.Put_Line
+        (Ada.Text_IO.Standard_Error, Exception_Message (E));
       Set_Exit_Status (Failure);
 
    when E : others =>

@@ -15,6 +15,10 @@ of the feature.
 New features in 1.6
 -------------------
 
+NF-16-LB19-004 Support for 'varchar' in GNATCOLL.SQL.Inspect (2012-11-19)
+
+   gnatcoll_db2ada is now able to understand the type 'varchar'
+
 NF-16-LA23-040 Speed up GNATCOLL.SQL.Sessions (2012-10-24)
 
    The internal handling of the cache in the sessions has been optimized,
