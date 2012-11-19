@@ -310,11 +310,11 @@ package body GNATCOLL.IO.Native is
       return GNAT.OS_Lib.Is_Regular_File (String (File.Full.all));
    end Is_Regular_File;
 
-   ----------
-   -- Size --
-   ----------
+   ---------------
+   -- File_Size --
+   ---------------
 
-   function Size
+   function File_Size
      (File : not null access Native_File_Record) return Long_Integer
    is
       Fd : constant GNAT.OS_Lib.File_Descriptor := GNAT.OS_Lib.Open_Read
@@ -324,7 +324,7 @@ package body GNATCOLL.IO.Native is
    begin
       GNAT.OS_Lib.Close (Fd);
       return Result;
-   end Size;
+   end File_Size;
 
    ------------------
    -- Is_Directory --

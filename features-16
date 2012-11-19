@@ -21,7 +21,7 @@ NF-16-LA23-040 Speed up GNATCOLL.SQL.Sessions (2012-10-24)
    leading to execution as much as three times faster on a code that performs
    a lot of manipulation of database elements.
 
-NF-16-LA12-033 New subprogram GNATCOLL.VFS.Size (2012-11-15)
+NF-16-LA12-033 New subprogram GNATCOLL.VFS.File_Size (2012-11-15)
 
    It is now possible to query the size of a file, including on
    remote file systems.
