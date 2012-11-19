@@ -2740,7 +2740,7 @@ package body GNATCOLL.Xref is
                  GNATCOLL.SQL.Sqlite.DB_Name (DB);
             begin
                if GNAT.OS_Lib.Is_Regular_File (Current_DB)
-                 and then Create (Full_Filename => +Current_DB).File_Size /= 0
+                 and then Create (Full_Filename => +Current_DB).Size /= 0
                then
                   --  If the DB already exists, don't override it
                   null;

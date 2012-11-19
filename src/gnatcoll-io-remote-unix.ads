@@ -43,7 +43,7 @@ package GNATCOLL.IO.Remote.Unix is
    function Is_Regular_File
      (Exec : access Server_Record'Class;
       File : FS_String) return Boolean;
-   function File_Size
+   function Size
      (Exec : access Server_Record'Class;
       File : FS_String) return Long_Integer;
    function Is_Directory

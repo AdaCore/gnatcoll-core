@@ -302,7 +302,7 @@ package GNATCOLL.VFS is
    --  Whether File corresponds to an actual file on the disk.
    --  This also works for remote files.
 
-   function File_Size (File : Virtual_File) return Long_Integer;
+   function Size (File : Virtual_File) return Long_Integer;
    --  The size of the file
 
    function "=" (File1, File2 : Virtual_File) return Boolean;
