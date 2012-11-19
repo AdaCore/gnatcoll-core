@@ -938,18 +938,18 @@ package body GNATCOLL.VFS is
       end if;
    end Is_Regular_File;
 
-   ----------
-   -- Size --
-   ----------
+   ---------------
+   -- File_Size --
+   ---------------
 
-   function Size (File : Virtual_File) return Long_Integer is
+   function File_Size (File : Virtual_File) return Long_Integer is
    begin
       if File.Value = null then
          return 0;
       else
-         return File.Value.Size;
+         return File.Value.File_Size;
       end if;
-   end Size;
+   end File_Size;
 
    ------------
    -- Rename --

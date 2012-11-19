@@ -207,11 +207,11 @@ package body GNATCOLL.IO.Remote.Unix is
       return Status;
    end Is_Regular_File;
 
-   ----------
-   -- Size --
-   ----------
+   ---------------
+   -- File_Size --
+   ---------------
 
-   function Size
+   function File_Size
      (Exec : access Server_Record'Class;
       File : FS_String) return Long_Integer
    is
@@ -239,7 +239,7 @@ package body GNATCOLL.IO.Remote.Unix is
 
       Free (Output);
       return Size;
-   end Size;
+   end File_Size;
 
    ------------------
    -- Is_Directory --

@@ -94,7 +94,7 @@ private package GNATCOLL.IO is
      (File : not null access File_Record) return Boolean is abstract;
    --  Return True if Local_Full_Name exists on the remote host
 
-   function Size
+   function File_Size
      (File : not null access File_Record) return Long_Integer is abstract;
    --  Return the size of the file in bytes.
 

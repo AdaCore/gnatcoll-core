@@ -70,7 +70,7 @@ package GNATCOLL.IO.Remote is
      (File : not null access Remote_File_Record);
    overriding function Is_Regular_File
      (File : not null access Remote_File_Record) return Boolean;
-   overriding function Size
+   overriding function File_Size
      (File : not null access Remote_File_Record) return Long_Integer;
    overriding function Is_Directory
      (File : not null access Remote_File_Record) return Boolean;
