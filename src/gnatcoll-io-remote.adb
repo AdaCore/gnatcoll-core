@@ -441,27 +441,27 @@ package body GNATCOLL.IO.Remote is
       end case;
    end Is_Regular_File;
 
-   ---------------
-   -- File_Size --
-   ---------------
+   ----------
+   -- Size --
+   ----------
 
-   overriding function File_Size
+   overriding function Size
      (File : not null access Remote_File_Record) return Long_Integer
    is
    begin
       Ensure_Initialized (File);
       case File.Server.Shell_FS is
          when FS_Unix | FS_Unix_Case_Insensitive =>
-            return GNATCOLL.IO.Remote.Unix.File_Size
+            return GNATCOLL.IO.Remote.Unix.Size
               (File.Server, File.Full.all);
          when FS_Windows =>
-            return GNATCOLL.IO.Remote.Windows.File_Size
+            return GNATCOLL.IO.Remote.Windows.Size
               (File.Server, File.Full.all);
          when FS_Unknown =>
             raise Remote_Config_Error with
               "Invalid FS for host " & File.Get_Host;
       end case;
-   end File_Size;
+   end Size;
 
    ------------------
    -- Is_Directory --
