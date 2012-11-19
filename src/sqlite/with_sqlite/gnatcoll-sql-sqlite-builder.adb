@@ -797,7 +797,7 @@ package body GNATCOLL.SQL.Sqlite.Builder is
          Not_Null       : Boolean))
    is
       R           : Forward_Cursor;
-      Index       : Natural := 0;
+      Index       : Natural := 1;
       Paren_Count : Natural;
       Is_PK       : Boolean;
       Is_Not_Null : Boolean;
