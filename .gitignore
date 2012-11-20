@@ -13,6 +13,8 @@ docs/_build
 *.cgpr
 
 testsuite/*/*/dummy.gpr
+testsuite/sql/sql3/pkg*
+testsuite/sql/sql3/test.db
 testsuite/json/json1/decode
 testsuite/pools/testpools
 testsuite/readline/read1/.gnatcolltest
