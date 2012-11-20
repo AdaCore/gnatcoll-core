@@ -3681,9 +3681,14 @@ package body GNATCOLL.Xref is
       D    : Entity_Declaration := Self.Declaration (Entity);
       Name : Unbounded_String := D.Name;
       E    : Entity_Information := D.Location.Scope;
+      F    : Entity_Information;
       C    : Forward_Cursor;
       Separator : Unbounded_String := To_Unbounded_String (".");
    begin
+      if E = No_Entity then
+         E := Self.Parent_Package (Entity);
+      end if;
+
       C.Fetch
         (Self.DB,
          SQL_Select
@@ -3705,7 +3710,14 @@ package body GNATCOLL.Xref is
       while E /= No_Entity loop
          D := Declaration (Xref_Database'Class (Self), E);
          Name := D.Name & Separator & Name;
-         E := D.Location.Scope;
+
+         F := D.Location.Scope;
+         if F = No_Entity then
+            --  A library-level entity, try parent packages
+            F := Self.Parent_Package (E);
+         end if;
+
+         E := F;
       end loop;
 
       return To_String (Name);
