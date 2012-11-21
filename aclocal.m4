@@ -446,7 +446,7 @@ AC_HELP_STRING(
    else
      if test x"$GMP_PATH_WITH" = xyes ; then
        AC_CHECK_LIB(gmp,__gmpz_init,WITH_GMP=yes,WITH_GMP=no)
-       AC_CHECK_HEADER(gmp.h)
+       AC_CHECK_HEADER(gmp.h, [], [WITH_GMP=no])
        GMP_LIBS="-lgmp"
      else
        GMP_LIBS="-L$GMP_PATH_WITH/lib -lgmp"

@@ -4784,6 +4784,8 @@ fi
        ac_fn_c_check_header_mongrel "$LINENO" "gmp.h" "ac_cv_header_gmp_h" "$ac_includes_default"
 if test "x$ac_cv_header_gmp_h" = xyes; then :
 
+else
+  WITH_GMP=no
 fi
 
 
