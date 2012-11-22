@@ -21,7 +21,7 @@
 | i     | integer                  | false       | false    | true                | false   | false         | false        | false                    | false       | false      | false     |
 | I     | integer type             | false       | false    | false               | true    | false         | false        | false                    | false       | false      | false     |
 | j     | class instance           | true        | false    | false               | false   | false         | true         | false                    | false       | false      | false     |
-| J     | class                    | true        | false    | true                | false   | false         | true         | false                    | false       | false      | false     |
+| J     | class                    | true        | false    | true                | true    | false         | true         | false                    | false       | false      | false     |
 | k     | generic package          | false       | false    | false               | false   | false         | true         | false                    | false       | true       | false     |
 | K     | package                  | false       | false    | false               | false   | false         | true         | false                    | false       | false      | false     |
 | l     | loop label               | false       | false    | false               | false   | false         | false        | false                    | false       | false      | false     |
