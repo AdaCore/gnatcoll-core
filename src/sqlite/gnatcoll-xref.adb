@@ -1031,6 +1031,14 @@ package body GNATCOLL.Xref is
 
       Depid_To_Id     : Depid_To_Ids.Vector;
 
+      Always_Parse_E2E : constant Boolean :=
+        LI.LI.Library_File.File_Extension = ".gli";
+      --  Whether the "entity-to-entity" reference should be systematically
+      --  parsed. If False, this information is only parsed if the current X
+      --  section relates to a source file which is a main unit for the LI
+      --  file (i.e. has a U line). The latter is more efficient, but in C and
+      --  C++ cannot be used because there is no ".gli" for .h files only.
+
       Unit_Files : Depid_To_Ids.Vector;
       --  Contains the list of units associated with the current ALI (these
       --  are the ids in the "files" table). This list generally only contains
@@ -1373,7 +1381,8 @@ package body GNATCOLL.Xref is
             --  corresponding LI). This avoids duplicates.
 
             if Process_E2E
-              and then Current_X_File_Unit_File_Index /= -1
+              and then (Current_X_File_Unit_File_Index /= -1
+                        or else Always_Parse_E2E)
               and then Xref_File /= -1
             then
                Ref_Entity := Get_Or_Create_Entity
@@ -2409,7 +2418,8 @@ package body GNATCOLL.Xref is
 
                Will_Insert_Ref := not ALI_Contains_External_Refs
                  or else Xref_File_Unit_File_Index /= -1
-                 or else Current_X_File_Unit_File_Index /= -1;
+                 or else (Current_X_File_Unit_File_Index /= -1
+                          or else Always_Parse_E2E);
 
                if Will_Insert_Ref then
                   begin
