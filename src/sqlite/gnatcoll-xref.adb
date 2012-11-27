@@ -1346,7 +1346,8 @@ package body GNATCOLL.Xref is
                                "Missing predefined entity in the database: '"
                                & Name & "' in "
                                & (+LI.LI.Library_File.Unix_Style_Full_Name
-                                   (Normalize => True)));
+                                 (Normalize => True))
+                               & " at index" & Index'Img);
                      end if;
 
                      Ref_Entity := DB.Insert_And_Get_PK
@@ -1528,6 +1529,7 @@ package body GNATCOLL.Xref is
       ----------------------
 
       procedure Skip_To_Name_End is
+         Start_Index : constant Integer := Index;
       begin
          Index := Index + 1;
 
@@ -1544,24 +1546,52 @@ package body GNATCOLL.Xref is
             --  pointed type,... So we need to extract the name
             --  itself and will store the extra information in a
             --  second step
+            --
 
-            while Str (Index) /= ' '
-              and then Str (Index) /= ASCII.LF
+            while Str (Index) /= ASCII.LF
               and then Str (Index) /= ASCII.CR
               and then Str (Index) /= '{'
-              and then Str (Index) /= '['
               and then Str (Index) /= '<'
               and then Str (Index) /= '('
             loop
                --  A "=" might be either the start of renaming info in .ali
                --  files, or the end for the "=" operator in .gli files.
 
-               if Str (Index) = '='
+               exit when Str (Index) = '='
                  and then Index < Str'Last
-                 and then Str (Index + 1) /= ' '
-               then
-                  exit;
-               end if;
+                 and then Str (Index + 1) /= ' ';
+
+               --  C++ operators are represented as:
+               --    93V7*operator new 93r12
+               --  so we need to allow a space in the name in some cases.
+
+               exit when Str (Index) = ' '
+                 and then
+                   (Index - 8 /= Start_Index or else
+                    Str (Start_Index .. Index - 1) /= "operator")
+                 and then
+                   (Index - 12 /= Start_Index or else
+                    Str (Start_Index .. Index - 1) /= "operator new" or else
+                    Str (Index + 1) /= '[')
+                 and then
+                   (Index - 15 /= Start_Index or else
+                    Str (Start_Index .. Index - 1) /= "operator delete" or else
+                    Str (Index + 1) /= '[');
+
+               --  A slightly more complex case for delete and new:
+               --    95V7*operator new [] 95i<cpp,_Znam>7 1|88s34
+               --    840V7*operator[]{120J61} 1|46s26
+
+               exit when Str (Index) = '['
+                 and then
+                   (Index - 8 /= Start_Index or else
+                    Str (Start_Index .. Index - 1) /= "operator")
+                 and then
+                   (Index - 13 /= Start_Index or else
+                    Str (Start_Index .. Index - 1) /= "operator new ")
+                 and then
+                   (Index - 16 /= Start_Index or else
+                    Str (Start_Index .. Index - 1) /= "operator delete ");
 
                Index := Index + 1;
             end loop;
