@@ -123,6 +123,7 @@
 | float                  | F        |        -1 |        -1 |          -1 | true      |
 | int                    | I        |        -1 |        -1 |          -1 | true      |
 | integer                | I        |        -1 |        -1 |          -1 | true      |
+| bool                   | B        |        -1 |        -1 |          -1 | true      |
 | long double            | F        |        -1 |        -1 |          -1 | true      |
 | long int               | I        |        -1 |        -1 |          -1 | true      |
 | long long int          | I        |        -1 |        -1 |          -1 | true      |

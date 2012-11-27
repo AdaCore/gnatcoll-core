@@ -139,7 +139,7 @@ package body GNATCOLL.Xref.Database is
          & "|i|integer|false|false|true|false|false|false|false|false|false|false|" & ASCII.LF
          & "|I|integer type|false|false|false|true|false|false|false|false|false|false|" & ASCII.LF
          & "|j|class instance|true|false|false|false|false|true|false|false|false|false|" & ASCII.LF
-         & "|J|class|true|false|true|false|false|true|false|false|false|false|" & ASCII.LF
+         & "|J|class|true|false|true|true|false|true|false|false|false|false|" & ASCII.LF
          & "|k|generic package|false|false|false|false|false|true|false|false|true|false|" & ASCII.LF
          & "|K|package|false|false|false|false|false|true|false|false|false|false|" & ASCII.LF
          & "|l|loop label|false|false|false|false|false|false|false|false|false|false|" & ASCII.LF
@@ -230,6 +230,7 @@ package body GNATCOLL.Xref.Database is
          & "|float|F|-1|-1|-1|true|" & ASCII.LF
          & "|int|I|-1|-1|-1|true|" & ASCII.LF
          & "|integer|I|-1|-1|-1|true|" & ASCII.LF
+         & "|bool|B|-1|-1|-1|true|" & ASCII.LF
          & "|long double|F|-1|-1|-1|true|" & ASCII.LF
          & "|long int|I|-1|-1|-1|true|" & ASCII.LF
          & "|long long int|I|-1|-1|-1|true|" & ASCII.LF
