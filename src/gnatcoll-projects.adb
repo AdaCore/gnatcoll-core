@@ -226,6 +226,8 @@ package body GNATCOLL.Projects is
    --  project tree, and therefore can be used before the project view has been
    --  computed.
    --  This includes projects extended by Root.
+   --  The order is:
+   --      root project, project, extended_project_of_project,...
 
    function Default_Spec_Suffix
      (Self          : Project_Environment'Class;
@@ -318,6 +320,8 @@ package body GNATCOLL.Projects is
    --  Compute and cache the list of projects imported by Project.
    --  Nothing is done if this is already known.
    --  This also include projects extended by Project.
+   --  The order is
+   --       root_project, project, project_extended_by_project, ...
 
    function Delete_File_Suffix
      (Filename : GNATCOLL.VFS.Filesystem_String;
@@ -743,7 +747,8 @@ package body GNATCOLL.Projects is
       Xrefs_Dirs          : Boolean := False;
       ALI_Ext             : GNATCOLL.VFS.Filesystem_String := ".ali";
       Include_Predefined  : Boolean := False;
-      List                : in out Library_Info_Lists.List)
+      List                : in out Library_Info_Lists.List;
+      Exclude_Overridden  : Boolean := True)
    is
       Tmp             : File_Array_Access;
       Prj_Iter        : Project_Iterator;
@@ -791,7 +796,7 @@ package body GNATCOLL.Projects is
       --  iterate explicitly on the projects so that we can control which of
       --  the object_dir or library_dir we want to use *for each project*.
 
-      Prj_Iter := Self.Start (Recursive => Recursive);
+      Prj_Iter := Self.Start (Recursive => Recursive, Reversed => True);
       loop
          Current_Project := Current (Prj_Iter);
          exit when Current_Project = No_Project;
@@ -803,6 +808,7 @@ package body GNATCOLL.Projects is
                            Including_Libraries => Including_Libraries,
                            Xrefs_Dirs          => Xrefs_Dirs);
             Dir : Virtual_File;
+            Should_Append : Boolean;
          begin
             if Objects'Length > 0
               and then not Seen.Contains (Objects (Objects'First))
@@ -827,6 +833,7 @@ package body GNATCOLL.Projects is
                         declare
                            B : constant Filesystem_String :=
                              Get_Base_Name (Tmp (F));
+                           B_Last : Integer := B'Last;
                            Dot : Integer;
                         begin
                            Info_Cursor :=
@@ -843,36 +850,81 @@ package body GNATCOLL.Projects is
                               end loop;
 
                               if Dot > B'First then
+                                 B_Last := Dot - 1;
                                  Info_Cursor :=
                                    Self.Data.Tree.Objects_Basename.Find
-                                     (B (B'First .. Dot - 1));
+                                     (B (B'First .. B_Last));
                               end if;
+                           end if;
+
+                           Should_Append :=
+                             Has_Element (Info_Cursor)
+                             and then
+                               (not Exclude_Overridden
+                                or else Element (Info_Cursor).Project =
+                                  Current_Project);
+
+                           --  We could have a case where an ALI file is
+                           --  reported as belonging to project A, even though
+                           --  it is found in B's object_dir when B extends A.
+                           --  In this case, we need to change the ownership
+                           --  of the ALI file so that:
+                           --     - the one in B is parsed
+                           --     - the one in A is not parsed
+
+                           if Has_Element (Info_Cursor)
+                             and then Element (Info_Cursor).Project /=
+                             Current_Project
+                           then
+                              declare
+                                 P : Project_Type := Self.Extended_Project;
+                              begin
+                                 while P /= No_Project loop
+                                    if P = Element (Info_Cursor).Project then
+                                       Should_Append := True;
+
+                                       if Exclude_Overridden then
+                                          --  Make sure it will not be parsed
+                                          --  again in the context of the
+                                          --  extended project.
+                                          Self.Data.Tree
+                                            .Objects_Basename.Include
+                                            (B (B'First .. B_Last),
+                                             (Self,
+                                              Element (Info_Cursor).File,
+                                              Element (Info_Cursor).Lang,
+                                              Element (Info_Cursor).Source));
+                                       end if;
+                                       exit;
+                                    end if;
+                                    P := P.Extended_Project;
+                                 end loop;
+                              end;
                            end if;
                         end;
 
-                        if Has_Element (Info_Cursor) then
-                           if Element (Info_Cursor).Project = Self
-                             or else Recursive
-                           then
+                        if Should_Append then
+                           if Should_Append then
                               List.Append
                                 (Library_Info'
                                    (Library_File => Tmp (F),
                                     Source_File  =>
                                       Element (Info_Cursor).File));
-
-                           elsif Active (Me) then
-                              Trace (Me, "Library_Files: "
-                                     & Display_Base_Name (Tmp (F))
-                                     & " is for project "
-                                     & Element (Info_Cursor).Project.Name);
                            end if;
 
                         elsif Active (Me) then
-                           Trace
-                             (Me, "Library_Files: "
-                              & Display_Base_Name (Tmp (F))
-                              & " is not for any loaded project");
+                           Trace (Me, "Library_Files not including : "
+                                  & Display_Base_Name (Tmp (F))
+                                  & " (which is for project "
+                                  & Element (Info_Cursor).Project.Name
+                                  & ")");
                         end if;
+
+                     elsif Active (Me) then
+                        Trace
+                          (Me, "Library_Files: "
+                           & Display_Base_Name (Tmp (F))
+                           & " is not for any loaded project");
                      end if;
                   end loop;
 
@@ -931,7 +983,8 @@ package body GNATCOLL.Projects is
       Including_Libraries : Boolean := True;
       Xrefs_Dirs          : Boolean := False;
       ALI_Ext             : GNATCOLL.VFS.Filesystem_String := ".ali";
-      Include_Predefined  : Boolean := False)
+      Include_Predefined  : Boolean := False;
+      Exclude_Overridden  : Boolean := True)
       return GNATCOLL.VFS.File_Array_Access
    is
       use Library_Info_Lists;
@@ -947,6 +1000,7 @@ package body GNATCOLL.Projects is
          Xrefs_Dirs          => Xrefs_Dirs,
          Include_Predefined  => Include_Predefined,
          ALI_Ext             => ALI_Ext,
+         Exclude_Overridden  => Exclude_Overridden,
          List                => List);
 
       Result := new File_Array (1 .. Integer (Length (List)));
@@ -2518,7 +2572,8 @@ package body GNATCOLL.Projects is
      (Root_Project     : Project_Type;
       Recursive        : Boolean := True;
       Direct_Only      : Boolean := False;
-      Include_Extended : Boolean := True) return Project_Iterator
+      Include_Extended : Boolean := True;
+      Reversed         : Boolean := False) return Project_Iterator
    is
       Iter : Project_Iterator;
    begin
@@ -2528,12 +2583,24 @@ package body GNATCOLL.Projects is
       Compute_Imported_Projects (Root_Project);
 
       if Recursive then
-         Iter := Project_Iterator'
-           (Root             => Root_Project,
-            Direct_Only      => Direct_Only,
-            Importing        => False,
-            Include_Extended => Include_Extended,
-            Current          => Root_Project.Data.Imported_Projects'Last + 1);
+         if Reversed then
+            Iter := Project_Iterator'
+              (Root             => Root_Project,
+               Direct_Only      => Direct_Only,
+               Importing        => False,
+               Reversed         => Reversed,
+               Include_Extended => Include_Extended,
+               Current       => Root_Project.Data.Imported_Projects'First - 1);
+         else
+            Iter := Project_Iterator'
+              (Root             => Root_Project,
+               Direct_Only      => Direct_Only,
+               Importing        => False,
+               Reversed         => Reversed,
+               Include_Extended => Include_Extended,
+               Current        => Root_Project.Data.Imported_Projects'Last + 1);
+         end if;
+
          Next (Iter);
          return Iter;
       else
@@ -2541,6 +2608,7 @@ package body GNATCOLL.Projects is
            (Root             => Root_Project,
             Direct_Only      => Direct_Only,
             Importing        => False,
+            Reversed         => False,  --  irrelevant
             Include_Extended => Include_Extended,
             Current          => Root_Project.Data.Imported_Projects'First);
       end if;
@@ -2786,6 +2854,7 @@ package body GNATCOLL.Projects is
         (Root             => Project,
          Direct_Only      => Direct_Only,
          Importing        => True,
+         Reversed         => False,
          Include_Extended => True,   --  ??? Should this be configurable
          Current          => Project.Data.Importing_Projects'Last + 1);
 
@@ -2870,30 +2939,64 @@ package body GNATCOLL.Projects is
    procedure Next (Iterator : in out Project_Iterator) is
       Imports, Is_Limited_With : Boolean;
    begin
-      Iterator.Current := Iterator.Current - 1;
+      if Iterator.Reversed then
+         Iterator.Current := Iterator.Current + 1;
 
-      if Iterator.Direct_Only then
-         if Iterator.Importing then
-            while Iterator.Current >=
-              Iterator.Root.Data.Importing_Projects'First
-            loop
-               Project_Imports
-                 (Current (Iterator), Iterator.Root, Iterator.Include_Extended,
-                  Imports => Imports, Is_Limited_With => Is_Limited_With);
-               exit when Imports;
-               Iterator.Current := Iterator.Current - 1;
-            end loop;
+         if Iterator.Direct_Only then
+            if Iterator.Importing then
+               while Iterator.Current <=
+                 Iterator.Root.Data.Importing_Projects'Last
+               loop
+                  Project_Imports
+                    (Current (Iterator), Iterator.Root,
+                     Iterator.Include_Extended,
+                     Imports => Imports, Is_Limited_With => Is_Limited_With);
+                  exit when Imports;
+                  Iterator.Current := Iterator.Current + 1;
+               end loop;
 
-         else
-            while Iterator.Current >=
-              Iterator.Root.Data.Imported_Projects'First
-            loop
-               Project_Imports
-                 (Iterator.Root, Current (Iterator), Iterator.Include_Extended,
-                  Imports => Imports, Is_Limited_With => Is_Limited_With);
-               exit when Imports;
-               Iterator.Current := Iterator.Current - 1;
-            end loop;
+            else
+               while Iterator.Current <=
+                 Iterator.Root.Data.Imported_Projects'Last
+               loop
+                  Project_Imports
+                    (Iterator.Root, Current (Iterator),
+                     Iterator.Include_Extended,
+                     Imports => Imports, Is_Limited_With => Is_Limited_With);
+                  exit when Imports;
+                  Iterator.Current := Iterator.Current + 1;
+               end loop;
+            end if;
+         end if;
+
+      else
+         Iterator.Current := Iterator.Current - 1;
+
+         if Iterator.Direct_Only then
+            if Iterator.Importing then
+               while Iterator.Current >=
+                 Iterator.Root.Data.Importing_Projects'First
+               loop
+                  Project_Imports
+                    (Current (Iterator), Iterator.Root,
+                     Iterator.Include_Extended,
+                     Imports => Imports, Is_Limited_With => Is_Limited_With);
+                  exit when Imports;
+                  Iterator.Current := Iterator.Current - 1;
+               end loop;
+
+            else
+               while Iterator.Current >=
+                 Iterator.Root.Data.Imported_Projects'First
+               loop
+                  Project_Imports
+                    (Iterator.Root, Current (Iterator),
+                     Iterator.Include_Extended,
+                     Imports => Imports, Is_Limited_With => Is_Limited_With);
+                  exit when Imports;
+                  Iterator.Current := Iterator.Current - 1;
+               end loop;
+            end if;
          end if;
       end if;
    end Next;

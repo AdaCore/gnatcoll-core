@@ -584,7 +584,8 @@ package GNATCOLL.Projects is
       Including_Libraries : Boolean := True;
       Xrefs_Dirs          : Boolean := False;
       ALI_Ext             : GNATCOLL.VFS.Filesystem_String := ".ali";
-      Include_Predefined  : Boolean := False)
+      Include_Predefined  : Boolean := False;
+      Exclude_Overridden  : Boolean := True)
       return GNATCOLL.VFS.File_Array_Access;
    --  Return a list of all LI files for this project. This never returns null.
    --  The parameters are similar to that of Object_Path.
@@ -609,6 +610,12 @@ package GNATCOLL.Projects is
    --  (generally the Ada runtime for instance) will also be searched. Setting
    --  this to True probably only makes sense when Recursive is also True,
    --  although this isn't enforced.
+   --
+   --  If Exclude_Overridden is true, then the files that also exist in an
+   --  extending project are not included in the result. For instance, the
+   --  extending project might also have a "pkg.ali" if "pkg.ads" was
+   --  recompiled in the context of the extending project, and thus we do not
+   --  need to look at "pkg.ali" from the extended project.
 
    type Library_Info is record
       Library_File : GNATCOLL.VFS.Virtual_File;
@@ -625,7 +632,8 @@ package GNATCOLL.Projects is
       Xrefs_Dirs          : Boolean := False;
       ALI_Ext             : GNATCOLL.VFS.Filesystem_String := ".ali";
       Include_Predefined  : Boolean := False;
-      List                : in out Library_Info_Lists.List);
+      List                : in out Library_Info_Lists.List;
+      Exclude_Overridden  : Boolean := True);
    --  same as Library_Files, but also returns information about the source
    --  file associated with each LI file.
    --  The new files are appended to the list, as a way to collect multiple
@@ -760,14 +768,19 @@ package GNATCOLL.Projects is
      (Root_Project     : Project_Type;
       Recursive        : Boolean := True;
       Direct_Only      : Boolean := False;
-      Include_Extended : Boolean := True)
+      Include_Extended : Boolean := True;
+      Reversed         : Boolean := False)
       return Project_Iterator;
    --  Initialize the iterator to start at Root_Project.
    --  It will process Root_Project and all its subprojects, recursively, but
    --  without processing the same project twice.
+   --
    --  The project nodes are returned sorted topologically (ie first the
    --  projects that don't depend on anything, then their parents, and so on
-   --  until the root project).
+   --  until the root project). Extended projects are always returned before
+   --  their extending project.
+   --  Reversed reverses that order, which becomes:
+   --     root_project, project, project_extended_by_project
    --
    --  If Recursive is False, then the only project ever returned is
    --  Root_Project. This is provided only to simplify the caller's code
@@ -1529,6 +1542,8 @@ private
    type Project_Iterator is record
       Root      : Project_Type;
       Current   : Integer;
+
+      Reversed  : Boolean;
 
       Importing : Boolean := False;
       --  True if we are looking for importing projects instead of imported
