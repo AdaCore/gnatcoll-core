@@ -768,8 +768,7 @@ package GNATCOLL.Projects is
      (Root_Project     : Project_Type;
       Recursive        : Boolean := True;
       Direct_Only      : Boolean := False;
-      Include_Extended : Boolean := True;
-      Reversed         : Boolean := False)
+      Include_Extended : Boolean := True)
       return Project_Iterator;
    --  Initialize the iterator to start at Root_Project.
    --  It will process Root_Project and all its subprojects, recursively, but
@@ -779,8 +778,6 @@ package GNATCOLL.Projects is
    --  projects that don't depend on anything, then their parents, and so on
    --  until the root project). Extended projects are always returned before
    --  their extending project.
-   --  Reversed reverses that order, which becomes:
-   --     root_project, project, project_extended_by_project
    --
    --  If Recursive is False, then the only project ever returned is
    --  Root_Project. This is provided only to simplify the caller's code
@@ -790,6 +787,15 @@ package GNATCOLL.Projects is
    --
    --  If Direct_Only is True and Recursive is True, then only the projects
    --  that are imported directly by Root_Project are returned.
+
+   function Start_Reversed
+     (Root_Project     : Project_Type;
+      Recursive        : Boolean := True;
+      Direct_Only      : Boolean := False;
+      Include_Extended : Boolean := True)
+      return Project_Iterator;
+   --  Same as above, but returns the project in the reverse order, thus:
+   --     root_project, project, project_extended_by_project
 
    function Current (Iterator : Project_Iterator) return Project_Type;
    --  Return the project currently pointed to by the iterator.
