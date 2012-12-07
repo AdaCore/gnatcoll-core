@@ -796,7 +796,7 @@ package body GNATCOLL.Projects is
       --  iterate explicitly on the projects so that we can control which of
       --  the object_dir or library_dir we want to use *for each project*.
 
-      Prj_Iter := Self.Start (Recursive => Recursive, Reversed => True);
+      Prj_Iter := Self.Start_Reversed (Recursive => Recursive);
       loop
          Current_Project := Current (Prj_Iter);
          exit when Current_Project = No_Project;
@@ -2564,16 +2564,15 @@ package body GNATCOLL.Projects is
       end if;
    end Compute_Imported_Projects;
 
-   -----------
-   -- Start --
-   -----------
+   --------------------
+   -- Start_Reversed --
+   --------------------
 
-   function Start
+   function Start_Reversed
      (Root_Project     : Project_Type;
       Recursive        : Boolean := True;
       Direct_Only      : Boolean := False;
-      Include_Extended : Boolean := True;
-      Reversed         : Boolean := False) return Project_Iterator
+      Include_Extended : Boolean := True) return Project_Iterator
    is
       Iter : Project_Iterator;
    begin
@@ -2583,24 +2582,51 @@ package body GNATCOLL.Projects is
       Compute_Imported_Projects (Root_Project);
 
       if Recursive then
-         if Reversed then
-            Iter := Project_Iterator'
-              (Root             => Root_Project,
-               Direct_Only      => Direct_Only,
-               Importing        => False,
-               Reversed         => Reversed,
-               Include_Extended => Include_Extended,
-               Current       => Root_Project.Data.Imported_Projects'First - 1);
-         else
-            Iter := Project_Iterator'
-              (Root             => Root_Project,
-               Direct_Only      => Direct_Only,
-               Importing        => False,
-               Reversed         => Reversed,
-               Include_Extended => Include_Extended,
-               Current        => Root_Project.Data.Imported_Projects'Last + 1);
-         end if;
+         Iter := Project_Iterator'
+           (Root             => Root_Project,
+            Direct_Only      => Direct_Only,
+            Importing        => False,
+            Reversed         => True,
+            Include_Extended => Include_Extended,
+            Current       => Root_Project.Data.Imported_Projects'First - 1);
+         Next (Iter);
+         return Iter;
+      else
+         return Project_Iterator'
+           (Root             => Root_Project,
+            Direct_Only      => Direct_Only,
+            Importing        => False,
+            Reversed         => False,  --  irrelevant
+            Include_Extended => Include_Extended,
+            Current          => Root_Project.Data.Imported_Projects'First);
+      end if;
+   end Start_Reversed;
 
+   -----------
+   -- Start --
+   -----------
+
+   function Start
+     (Root_Project     : Project_Type;
+      Recursive        : Boolean := True;
+      Direct_Only      : Boolean := False;
+      Include_Extended : Boolean := True) return Project_Iterator
+   is
+      Iter : Project_Iterator;
+   begin
+      Assert (Me, Root_Project.Data /= null,
+              "Start: Uninitialized project passed as argument");
+
+      Compute_Imported_Projects (Root_Project);
+
+      if Recursive then
+         Iter := Project_Iterator'
+           (Root             => Root_Project,
+            Direct_Only      => Direct_Only,
+            Importing        => False,
+            Reversed         => False,
+            Include_Extended => Include_Extended,
+            Current        => Root_Project.Data.Imported_Projects'Last + 1);
          Next (Iter);
          return Iter;
       else
