@@ -190,6 +190,8 @@ procedure GNATInspect is
    procedure Process_Imports (Args : Arg_List);
    procedure Process_Method_Of
      is new Process_Command_With_Single (Method_Of);
+   procedure Process_Fields
+     is new Process_Command_Entities (Fields);
    procedure Process_Methods
      is new Process_Command_Entities (Methods);
    procedure Process_Literals
@@ -261,6 +263,11 @@ procedure GNATInspect is
        new String'("The parent types of the entity (for instance the classes"
            & " or interfaces from which it derives). See also 'child_types'"),
        Process_Parent_Types'Access),
+
+      (new String'("fields"),
+       new String'("name:file:line:column"),
+       new String'("Returns the list of fields for the entity"),
+       Process_Fields'Access),
 
       (new String'("methods"),
        new String'("name:file:line:column"),
