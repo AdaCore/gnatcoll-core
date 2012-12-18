@@ -51,6 +51,7 @@ package GNATCOLL.SQL.Postgres is
       User          : String := "";
       Host          : String := "";
       Password      : String := "";
+      Port          : Integer := -1;
       SSL           : SSL_Mode := Allow;
       Cache_Support : Boolean := True)
      return Database_Description;
@@ -90,6 +91,7 @@ private
       User     : GNAT.Strings.String_Access;
       Password : GNAT.Strings.String_Access;
       SSL      : SSL_Mode := Prefer;
+      Port     : Integer := -1;
    end record;
 
 end GNATCOLL.SQL.Postgres;

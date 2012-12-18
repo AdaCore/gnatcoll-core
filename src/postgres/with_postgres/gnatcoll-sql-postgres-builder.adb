@@ -418,6 +418,10 @@ package body GNATCOLL.SQL.Postgres.Builder is
          Append (Str, " host=" & Host);
       end if;
 
+      if Descr.Port /= -1 then
+         Append (Str, " port=" & Image (Descr.Port, Min_Width => 1));
+      end if;
+
       if With_Password and then Passwd /= "" then
          Append (Str, " password=" & Passwd);
       end if;

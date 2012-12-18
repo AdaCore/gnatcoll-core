@@ -38,6 +38,7 @@ package body GNATCOLL.SQL.Postgres is
       User          : String := "";
       Host          : String := "";
       Password      : String := "";
+      Port          : Integer := -1;
       SSL           : SSL_Mode := Allow;
       Cache_Support : Boolean := True)
       return Database_Description
@@ -53,6 +54,7 @@ package body GNATCOLL.SQL.Postgres is
       Result.Dbname   := new String'(Database);
       Result.User     := new String'(User);
       Result.Password := new String'(Password);
+      Result.Port     := Port;
 
       if Host /= ""
         and then Host /= "localhost"
