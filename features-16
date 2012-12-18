@@ -15,6 +15,11 @@ of the feature.
 New features in 1.6
 -------------------
 
+NF-16-LC18-014 Specify postgreSQL's port number (2012-12-18)
+
+   It is now possible, when connecting to a postgreSQL server, to specify which
+   port number should be used.
+
 NF-16-LB19-004 Support for 'varchar' in GNATCOLL.SQL.Inspect (2012-11-19)
 
    gnatcoll_db2ada is now able to understand the type 'varchar'
