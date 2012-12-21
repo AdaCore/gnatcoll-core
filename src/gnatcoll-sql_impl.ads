@@ -107,6 +107,8 @@ package GNATCOLL.SQL_Impl is
       return String;
    function Money_To_SQL
      (Self : Formatter'Class; Value : T_Money; Quote : Boolean) return String;
+   function Json_To_SQL
+     (Self : Formatter'Class; Value : String; Quote : Boolean) return String;
    --  Calls the above formatting primitives (or provide default version, when
    --  not overridable)
    --  If Quote is False, these functions provide quotes around the values. For
@@ -116,7 +118,8 @@ package GNATCOLL.SQL_Impl is
 
    type Parameter_Type is
      (Parameter_Integer, Parameter_Text, Parameter_Boolean, Parameter_Float,
-      Parameter_Time, Parameter_Date, Parameter_Character, Parameter_Money);
+      Parameter_Time, Parameter_Date, Parameter_Character, Parameter_Money,
+      Parameter_Json);
 
    function Parameter_String
      (Self  : Formatter;

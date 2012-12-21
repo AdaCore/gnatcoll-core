@@ -443,4 +443,18 @@ package body GNATCOLL.SQL.Exec_Private is
 
    end Generic_Direct_Cursors;
 
+   ---------------------
+   -- Json_Text_Value --
+   ---------------------
+
+   function Json_Text_Value
+     (Self  : DBMS_Forward_Cursor;
+      Field : Field_Index) return String
+   is
+      V : constant String :=
+            Value (C_Value (DBMS_Forward_Cursor'Class (Self), Field));
+   begin
+      return V;
+   end Json_Text_Value;
+
 end GNATCOLL.SQL.Exec_Private;

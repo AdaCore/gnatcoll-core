@@ -503,6 +503,9 @@ package body GNATCOLL.SQL.Sqlite.Builder is
             when Parameter_Text =>
                Bind_Text (Stmt, P, Params (P).Str_Val.all'Address,
                           Params (P).Str_Val'Length);
+            when Parameter_Json =>
+               Bind_Text (Stmt, P, Params (P).Json_Val.all'Address,
+                          Params (P).Json_Val'Length);
             when Parameter_Character =>
                Bind_Text (Stmt, P, Params (P).Char_Val'Address, 1);
             when Parameter_Integer =>

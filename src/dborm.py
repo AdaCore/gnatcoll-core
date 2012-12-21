@@ -2068,6 +2068,12 @@ class Field_Type(object):
                   "boolean", "Boolean", "TriBoolean", "Indeterminate",
                    "Boolean", "False", "Boolean_Value (%s, %s)",
                    "%s", "", "%s'Img", "%s"),
+               json=Field_Type(
+                  "json", "String", "String", "No_Update",
+                   "GNAT.Strings.String_Access",
+                   "null", "String_Value (%s, %s)",
+                   "Str_Or_Empty (%s)", "Free (%s)", "%s",
+                   "new String'(%s)"),
                money=Field_Type(
                   "money", "GNATCOLL.SQL.T_Money",
                    "GNATCOLL.SQL.T_Money", "GNATCOLL.SQL.T_Money'First",

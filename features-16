@@ -24,6 +24,11 @@ NF-16-LB19-004 Support for 'varchar' in GNATCOLL.SQL.Inspect (2012-11-19)
 
    gnatcoll_db2ada is now able to understand the type 'varchar'
 
+NF-16-LA25-002 Support for 'json' type in GNATCOLL.SQL (2012-12-20)
+
+   It is now possible to specify a field type as 'json'. This will be
+   translated to text or json, depending on the SQL engine.
+
 NF-16-LA23-040 Speed up GNATCOLL.SQL.Sessions (2012-10-24)
 
    The internal handling of the cache in the sessions has been optimized,

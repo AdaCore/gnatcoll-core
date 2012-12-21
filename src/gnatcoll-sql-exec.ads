@@ -152,15 +152,16 @@ package GNATCOLL.SQL.Exec is
 
    type SQL_Parameter (Typ : Parameter_Type := Parameter_Integer) is record
       case Typ is
-         when Parameter_Integer => Int_Val : Integer;
-         when Parameter_Text    => Str_Val : access constant String;
+         when Parameter_Integer   => Int_Val : Integer;
+         when Parameter_Json      => Json_Val  : access constant String;
+         when Parameter_Text      => Str_Val : access constant String;
             --  references external string, to avoid an extra copy
-         when Parameter_Boolean => Bool_Val : Boolean;
-         when Parameter_Float   => Float_Val : Float;
-         when Parameter_Time    => Time_Val  : Ada.Calendar.Time;
-         when Parameter_Date    => Date_Val  : Ada.Calendar.Time;
+         when Parameter_Boolean   => Bool_Val : Boolean;
+         when Parameter_Float     => Float_Val : Float;
+         when Parameter_Time      => Time_Val  : Ada.Calendar.Time;
+         when Parameter_Date      => Date_Val  : Ada.Calendar.Time;
          when Parameter_Character => Char_Val : Character;
-         when Parameter_Money   => Money_Val : T_Money;
+         when Parameter_Money     => Money_Val : T_Money;
       end case;
    end record;
 
@@ -511,6 +512,8 @@ package GNATCOLL.SQL.Exec is
      return T_Money;
    function Time_Value
      (Self  : Forward_Cursor; Field : Field_Index) return Ada.Calendar.Time;
+   function Json_Text_Value
+     (Self  : Forward_Cursor; Field : Field_Index) return String;
    --  Return a specific cell, converted to the appropriate format
 
    function Is_Null

@@ -1241,6 +1241,8 @@ package body GNATCOLL.SQL.Postgres.Builder is
       case Typ is
          when Parameter_Text | Parameter_Character =>
             return '$' & Image (Index, 0) & "::text";
+         when Parameter_Json =>
+            return '$' & Image (Index, 0) & "::json";
          when Parameter_Integer =>
             return '$' & Image (Index, 0) & "::integer";
          when Parameter_Boolean =>
