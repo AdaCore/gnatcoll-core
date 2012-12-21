@@ -574,6 +574,7 @@ package body GNATCOLL.SQL.Inspect is
             else
                return "Character(" & Image (Typ.Max_Length, 1) & ")";
             end if;
+         when Field_Json    => return "Json";
          when Field_Integer => return "Integer";
          when Field_Date    => return "Date";
          when Field_Timestamp =>
@@ -637,6 +638,9 @@ package body GNATCOLL.SQL.Inspect is
                Put_Line ("Missing max length after 'Character' in " & T);
                raise Invalid_Schema;
          end;
+
+      elsif T = "json" then
+         return (Kind => Field_Json);
 
       elsif T = "float" then
          return (Kind => Field_Float);
@@ -2200,6 +2204,7 @@ package body GNATCOLL.SQL.Inspect is
         (Field_Text          => Parameter_Text,
          Field_Integer       => Parameter_Integer,
          Field_Date          => Parameter_Date,
+         Field_Json          => Parameter_Json,
          Field_Time          => Parameter_Time,
          Field_Timestamp     => Parameter_Time,
          Field_Float         => Parameter_Float,

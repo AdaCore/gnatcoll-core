@@ -505,6 +505,8 @@ package body GNATCOLL.SQL.Exec is
             return String'(1 .. 1 => Param.Char_Val);
          when Parameter_Money =>
             return Money_To_SQL (Format, Param.Money_Val, Quote => False);
+         when Parameter_Json =>
+            return Json_To_SQL (Format, Param.Json_Val.all, Quote => False);
          end case;
       end if;
    end Image;
@@ -1257,9 +1259,9 @@ package body GNATCOLL.SQL.Exec is
       return Money_Value (DBMS_Forward_Cursor'Class (Self.Res.all), Field);
    end Money_Value;
 
-   -----------
-   -- Value --
-   -----------
+   ----------------
+   -- Time_Value --
+   ----------------
 
    function Time_Value
      (Self  : Forward_Cursor;
@@ -1267,6 +1269,17 @@ package body GNATCOLL.SQL.Exec is
    begin
       return Time_Value (DBMS_Forward_Cursor'Class (Self.Res.all), Field);
    end Time_Value;
+
+   ---------------------
+   -- Json_Text_Value --
+   ---------------------
+
+   function Json_Text_Value
+     (Self  : Forward_Cursor;
+      Field : Field_Index) return String is
+   begin
+      return Value (DBMS_Forward_Cursor'Class (Self.Res.all), Field);
+   end Json_Text_Value;
 
    -------------
    -- Is_Null --

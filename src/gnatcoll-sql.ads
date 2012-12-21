@@ -274,6 +274,13 @@ package GNATCOLL.SQL is
                         renames Date_Fields.Param;
    --  Only includes the date, not the time
 
+   package Json_Fields is new Field_Types
+     (String, Json_To_SQL, Parameter_Json);
+   type SQL_Field_Json is new Json_Fields.Field with null record;
+   Null_Field_Json : constant SQL_Field_Json;
+   function Json_Param (Index : Positive) return Json_Fields.Field'Class
+      renames Json_Fields.Param;
+
    function From_String
      (Expression : String) return Text_Fields.Field'Class
       renames Text_Fields.From_String;
@@ -1131,5 +1138,7 @@ private
      (Time_Fields.Null_Field with null record);
    Null_Field_Date : constant SQL_Field_Date :=
      (Date_Fields.Null_Field with null record);
+   Null_Field_Json : constant SQL_Field_Json :=
+     (Json_Fields.Null_Field with null record);
 
 end GNATCOLL.SQL;
