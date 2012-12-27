@@ -747,7 +747,8 @@ package body GNATCOLL.Xref is
       VFS_To_Id         : in out VFS_To_Ids.Map;
       Entity_Decl_To_Id : in out Loc_To_Ids.Map;
       Entity_Renamings  : in out Entity_Renaming_Lists.List;
-      Visited_ALI_Units : in out VFS_To_Ids.Map);
+      Visited_ALI_Units : in out VFS_To_Ids.Map;
+      Visited_GLI_Files : in out VFS_To_Ids.Map);
    --  Parse the contents of a single LI file.
    --  VFS_To_Id is a local cache for the entries in the files table.
    --
@@ -767,6 +768,10 @@ package body GNATCOLL.Xref is
    --  However, in the case of multi-unit source files in Ada, the file might
    --  already be in Visited_ALI_Units, in which case we need to do fewer
    --  cleanup prio to parsing the file.
+   --
+   --  Visited_GLI_Files is a subset of VFS_To_Id, containing C/C++ include
+   --  files that have already been processed (ie. files from 'D' lines in
+   --  GLI files).
 
    function Single_Entity_From_E2e
      (Self   : Xref_Database'Class;
@@ -1013,7 +1018,8 @@ package body GNATCOLL.Xref is
       VFS_To_Id         : in out VFS_To_Ids.Map;
       Entity_Decl_To_Id : in out Loc_To_Ids.Map;
       Entity_Renamings  : in out Entity_Renaming_Lists.List;
-      Visited_ALI_Units : in out VFS_To_Ids.Map)
+      Visited_ALI_Units : in out VFS_To_Ids.Map;
+      Visited_GLI_Files : in out VFS_To_Ids.Map)
    is
       M      : Mapped_File;
       Str    : Str_Access;
@@ -1031,8 +1037,11 @@ package body GNATCOLL.Xref is
 
       Depid_To_Id     : Depid_To_Ids.Vector;
 
-      Always_Parse_E2E : constant Boolean :=
-        LI.LI.Library_File.File_Extension = ".gli";
+      Is_GLI_File     : constant Boolean :=
+                          LI.LI.Library_File.File_Extension = ".gli";
+
+      Always_Parse_E2E : constant Boolean := Is_GLI_File;
+
       --  Whether the "entity-to-entity" reference should be systematically
       --  parsed. If False, this information is only parsed if the current X
       --  section relates to a source file which is a main unit for the LI
@@ -2607,22 +2616,52 @@ package body GNATCOLL.Xref is
                Start := Index;
                Skip_Word;
 
-               --  Is this a dependency for a separate unit ? GNAT will not
-               --  generate a 'U' line for separates, but special D lines that
-               --  list the name of the unit, as in:
-               --       D a~bar.adb 20111220095636 1986a86b a.bar
-
                declare
                   Base_Last : constant Integer := Index - 1;
+                  Basename  : constant String :=
+                                String (Str (Start .. Base_Last));
                   Info : File_Db_Info;
+                  File : Virtual_File;
+
                begin
                   Skip_Spaces;
                   Skip_Word;
                   Skip_Spaces;
                   Skip_Word;
-                  Info := Insert_Source_File
-                    (Basename => String (Str (Start .. Base_Last)),
-                     Is_ALI_Unit => Str (Index) /= ASCII.LF);
+
+                  if not Is_GLI_File then
+
+                     --  Is this a dependency for a separate unit ? GNAT will
+                     --  not generate a 'U' line for separates, but special D
+                     --  lines that list the name of the unit, as in:
+                     --       D a~bar.adb 20111220095636 1986a86b a.bar
+
+                     Info := Insert_Source_File
+                       (Basename => String (Str (Start .. Base_Last)),
+                        Is_ALI_Unit => Str (Index) /= ASCII.LF);
+
+                  --  Handle C/C++ include files
+
+                  else
+                     File :=
+                       Tree.Create (+Basename, Use_Object_Path => False);
+
+                     --  The first time we visit a dependency of an include
+                     --  file we handle it as if it were a true separate ALI
+                     --  unit (to compute its scope-tree).
+
+                     if not Visited_ALI_Units.Contains (File)
+                       and then not Visited_GLI_Files.Contains (File)
+                     then
+                        Info :=
+                          Insert_Source_File (Basename, Is_ALI_Unit => True);
+                        Visited_GLI_Files.Include (File, Info);
+                     else
+                        Info :=
+                          Insert_Source_File (Basename, Is_ALI_Unit => False);
+                     end if;
+                  end if;
+
                   Dep_Id := Info.Id;
 
                   Depid_To_Id.Set_Length
@@ -2693,6 +2732,7 @@ package body GNATCOLL.Xref is
       LIs               : LI_Lists.List;
       VFS_To_Id         : VFS_To_Ids.Map;
       Visited_ALI_Units : VFS_To_Ids.Map;
+      Visited_GLI_Files : VFS_To_Ids.Map;
       Entity_Decl_To_Id : Loc_To_Ids.Map;
       Entity_Renamings  : Entity_Renaming_Lists.List;
 
@@ -3039,6 +3079,7 @@ package body GNATCOLL.Xref is
                          LI                => Element (LI_C),
                          VFS_To_Id         => VFS_To_Id,
                          Visited_ALI_Units => Visited_ALI_Units,
+                         Visited_GLI_Files => Visited_GLI_Files,
                          Entity_Decl_To_Id => Entity_Decl_To_Id,
                          Entity_Renamings  => Entity_Renamings);
             exception
