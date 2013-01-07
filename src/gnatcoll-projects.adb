@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                             G N A T C O L L                              --
 --                                                                          --
---                     Copyright (C) 2002-2012, AdaCore                     --
+--                     Copyright (C) 2002-2013, AdaCore                     --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -332,12 +332,12 @@ package body GNATCOLL.Projects is
    --  simply be Filename'Last.
 
    procedure Internal_Load
-     (Tree              : in out Project_Tree'Class;
-      Root_Project_Path : GNATCOLL.VFS.Virtual_File;
-      Errors            : Projects.Error_Report;
-      Project           : out Project_Node_Id;
-      Packages_To_Check : GNAT.Strings.String_List_Access := All_Packs;
-      Recompute_View    : Boolean := True;
+     (Tree                   : in out Project_Tree'Class;
+      Root_Project_Path      : GNATCOLL.VFS.Virtual_File;
+      Errors                 : Projects.Error_Report;
+      Project                : out Project_Node_Id;
+      Packages_To_Check      : GNAT.Strings.String_List_Access := All_Packs;
+      Recompute_View         : Boolean := True;
       Test_With_Missing_With : Boolean := True);
    --  Internal implementation of load. This doesn't reset the tree at all,
    --  but will properly setup the GNAT project manager so that error messages
@@ -4785,12 +4785,12 @@ package body GNATCOLL.Projects is
    -------------------
 
    procedure Internal_Load
-     (Tree              : in out Project_Tree'Class;
-      Root_Project_Path : GNATCOLL.VFS.Virtual_File;
-      Errors            : Projects.Error_Report;
-      Project           : out Project_Node_Id;
-      Packages_To_Check : GNAT.Strings.String_List_Access := All_Packs;
-      Recompute_View    : Boolean := True;
+     (Tree                   : in out Project_Tree'Class;
+      Root_Project_Path      : GNATCOLL.VFS.Virtual_File;
+      Errors                 : Projects.Error_Report;
+      Project                : out Project_Node_Id;
+      Packages_To_Check      : GNAT.Strings.String_List_Access := All_Packs;
+      Recompute_View         : Boolean := True;
       Test_With_Missing_With : Boolean := True)
    is
       procedure On_Error is new Mark_Project_Error (Tree);
@@ -4913,7 +4913,7 @@ package body GNATCOLL.Projects is
             end if;
 
             --  Reparse the tree so that errors are reported as usual
-            --  (or not if the new project path solves the issue)
+            --  (or not if the new project path solves the issue).
 
             Override_Flags
               (Tree.Data.Env.Env,
@@ -4924,11 +4924,12 @@ package body GNATCOLL.Projects is
             Trace (Me, "Parsing project tree a second time");
 
             Internal_Load
-              (Tree              => Tree,
-               Root_Project_Path => Root_Project_Path,
-               Errors            => Errors,
-               Project           => Project,
-               Recompute_View    => Recompute_View,
+              (Tree                   => Tree,
+               Root_Project_Path      => Root_Project_Path,
+               Errors                 => Errors,
+               Project                => Project,
+               Recompute_View         => Recompute_View,
+               Packages_To_Check      => Packages_To_Check,
                Test_With_Missing_With => False);
             return;
          end;
