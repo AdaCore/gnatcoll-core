@@ -2,5 +2,13 @@
 Known Problems in Gnatcoll 1.5
 ==============================
 
-Copyright (C) 2012, AdaCore
+Copyright (C) 2012-2013, AdaCore
 
+KP-15-M107-026 Stack overflow may occur when writing large JSON objects
+
+  Problem:    When using GNATCOLL.JSON.Write on a large JSON object, a stack
+              overflow may occur.
+
+  Status:     Fixed in Gnatcoll 1.6.0
+
+  Workaround: None.
