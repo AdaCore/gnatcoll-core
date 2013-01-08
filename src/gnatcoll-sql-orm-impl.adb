@@ -2,7 +2,7 @@
 --                                   CRM                                    --
 --                    [Customer Relationship Management]                    --
 --                                                                          --
---                         Copyright (C) 2009-2012, AdaCore                 --
+--                         Copyright (C) 2009-2013, AdaCore                 --
 ------------------------------------------------------------------------------
 
 with GNAT.Calendar;  use GNAT.Calendar;
