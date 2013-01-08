@@ -611,7 +611,12 @@ AC_HELP_STRING(
 
       AC_MSG_CHECKING(if we can link with python (using python-config))
       if test x"$PYTHON_CONFIG" != xno ; then
+         # We cannot use python-config --ldflags, which generates additional
+         # switches not properly recognized by GNAT's linker on some systems,
+         # for instance "-u _PyMac_Error" on OSX. So we add the "-L..." switch
+         # explicitly
          PYTHON_LIBS=`$PYTHON_CONFIG --libs`
+         PYTHON_LIBS="-L${PYTHON_DIR} ${PYTHON_LIBS}"
          PYTHON_CFLAGS=`$PYTHON_CONFIG --includes`
       else
          PYTHON_LIBS=""
