@@ -73,6 +73,8 @@ package GNATCOLL.JSON is
 
    function Read (Strm, Filename : String) return JSON_Value;
    function Write (Item : JSON_Value; Compact : Boolean := True) return String;
+   function Write (Item : JSON_Value; Compact : Boolean := True)
+                   return Ada.Strings.Unbounded.Unbounded_String;
 
    --  Creation of JSON values
 

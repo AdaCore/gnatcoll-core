@@ -34,8 +34,11 @@ package body GNATCOLL.JSON is
 
    procedure Report_Error (File : String; Line, Col : Natural; Msg : String);
 
-   function Write
-     (Item : JSON_Value; Compact : Boolean; Indent : Natural) return String;
+   procedure Write
+     (Item    : JSON_Value;
+      Compact : Boolean;
+      Indent  : Natural;
+      Ret     : in out Unbounded_String);
    --  Auxiliary write function.
 
    function Read
@@ -411,21 +414,39 @@ package body GNATCOLL.JSON is
    -- Write --
    -----------
 
-   function Write
-     (Item : JSON_Value; Compact : Boolean; Indent : Natural) return String
+   procedure Write
+     (Item    : JSON_Value;
+      Compact : Boolean;
+      Indent  : Natural;
+      Ret     : in out Unbounded_String)
    is
-      Base : constant String
-        (1 .. 2 * Indent * (1 - Boolean'Pos (Compact))) := (others => ' ');
+      procedure Do_Indent (Val : Natural);
+      --  Adds whitespace characters to Ret corresponding to the indentation
+      --  level
+
+      ---------------
+      -- Do_Indent --
+      ---------------
+
+      procedure Do_Indent (Val : Natural) is
+      begin
+         if Compact then
+            return;
+         end if;
+
+         Append (Ret, (1 .. 2 * Val => ' '));
+      end Do_Indent;
+
    begin
       case Item.Kind is
          when JSON_Null_Type =>
-            return "null";
+            Append (Ret, "null");
 
          when JSON_Boolean_Type =>
             if Item.Bool_Value then
-               return "true";
+               Append (Ret, "true");
             else
-               return "false";
+               Append (Ret, "false");
             end if;
 
          when JSON_Int_Type =>
@@ -433,9 +454,9 @@ package body GNATCOLL.JSON is
                S : constant String := Item.Int_Value'Img;
             begin
                if S (S'First) = ' ' then
-                  return S (S'First + 1 .. S'Last);
+                  Append (Ret, S (S'First + 1 .. S'Last));
                else
-                  return S;
+                  Append (Ret, S);
                end if;
             end;
 
@@ -444,87 +465,78 @@ package body GNATCOLL.JSON is
                S : constant String := Item.Flt_Value'Img;
             begin
                if S (S'First) = ' ' then
-                  return S (S'First + 1 .. S'Last);
+                  Append (Ret, S (S'First + 1 .. S'Last));
                else
-                  return S;
+                  Append (Ret, S);
                end if;
             end;
 
          when JSON_String_Type =>
-            return JSON.Utility.Escape_String (Item.Str_Value);
+            Append (Ret, JSON.Utility.Escape_String (Item.Str_Value));
 
          when JSON_Array_Type =>
-            declare
-               First : Boolean := True;
-               Ret   : Unbounded_String;
+            Append (Ret, '[');
 
-            begin
-               if Compact then
-                  Append (Ret, '[');
-               else
-                  Append (Ret, ASCII.LF &  2 * Base & '[' & ASCII.LF);
+            if not Compact then
+               Append (Ret, ASCII.LF);
+            end if;
+
+            for J in Item.Arr_Value.Vals.First_Index ..
+              Item.Arr_Value.Vals.Last_Index
+            loop
+               Do_Indent (Indent + 1);
+               Write
+                 (Item.Arr_Value.Vals.Element (J),
+                  Compact,
+                  Indent + 1,
+                  Ret);
+
+               if J < Item.Arr_Value.Vals.Last_Index then
+                  Append (Ret, ",");
                end if;
 
-               for J in Item.Arr_Value.Vals.First_Index ..
-                 Item.Arr_Value.Vals.Last_Index
-               loop
-                  if not First then
-                     Append (Ret, ", ");
-
-                     if not Compact then
-                        Append (Ret, ASCII.LF & Base);
-                     end if;
-                  end if;
-
-                  First := False;
-
-                  Append
-                    (Ret, Base & Write
-                       (Item.Arr_Value.Vals.Element (J), Compact, Indent + 1));
-               end loop;
-
-               if Compact then
-                  Append (Ret, ']');
-               else
-                  Append (Ret, ASCII.LF &
-                            2 * Base & ']' & ASCII.LF
-                          & 2 * Base);
+               if not Compact then
+                  Append (Ret, ASCII.LF);
                end if;
+            end loop;
 
-               return Base & To_String (Ret);
-            end;
+            Do_Indent (Indent);
+            Append (Ret, ']');
 
          when JSON_Object_Type =>
             declare
                use Names_Pkg;
-               First : Boolean := True;
-               Ret   : Unbounded_String;
-               J     : Names_Pkg.Cursor := Item.Obj_Value.Vals.First;
+               J : Names_Pkg.Cursor := Item.Obj_Value.Vals.First;
 
             begin
                Append (Ret, '{');
 
+               if not Compact then
+                  Append (Ret, ASCII.LF);
+               end if;
+
                while Has_Element (J) loop
-                  if not First then
-                     Append (Ret, ", ");
-                  end if;
-
-                  First := False;
-
-                  Append (Ret, """" & Key (J) & """:");
-                  Append
-                    (Ret,
-                     Write
-                       (Element (J),
-                        Compact,
-                        Indent + 1));
+                  Do_Indent (Indent + 1);
+                  Append (Ret, """" & Key (J) & """: ");
+                  Write
+                    (Element (J),
+                     Compact,
+                     Indent + 1,
+                     Ret);
 
                   Next (J);
+
+                  if Has_Element (J) then
+                     Append (Ret, ",");
+                  end if;
+
+                  if not Compact then
+                     Append (Ret, ASCII.LF);
+                  end if;
                end loop;
 
+               Do_Indent (Indent);
                Append (Ret, '}');
-
-               return Base & To_String (Ret);
             end;
 
       end case;
@@ -535,9 +547,23 @@ package body GNATCOLL.JSON is
    -----------
 
    function Write
-     (Item : JSON_Value; Compact : Boolean := True) return String is
+     (Item : JSON_Value; Compact : Boolean := True) return String
+   is
    begin
-      return Write (Item, Compact, 0);
+      return To_String (Write (Item, Compact));
+   end Write;
+
+   -----------
+   -- Write --
+   -----------
+
+   function Write
+     (Item : JSON_Value; Compact : Boolean := True) return Unbounded_String
+   is
+      Ret : Unbounded_String;
+   begin
+      Write (Item, Compact, 0, Ret);
+      return Ret;
    end Write;
 
    ------------
