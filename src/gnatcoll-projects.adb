@@ -3722,29 +3722,35 @@ package body GNATCOLL.Projects is
      (Project : Project_Type; Recurse : Boolean := False) return Project_Type
    is
       Tree   : constant Project_Node_Tree_Ref := Project.Tree_Tree;
-      Extend : Project_Node_Id;
+      Extended, Extending : Project_Node_Id;
    begin
-      if Recurse then
-         Extend := Project.Data.Node;
+      Extended := Project.Data.Node;
 
-         while Extending_Project_Of
-           (Project_Declaration_Of (Extend, Tree), Tree) /= Empty_Node
-         loop
-            Extend := Extending_Project_Of
-              (Project_Declaration_Of (Extend, Tree), Tree);
-         end loop;
+      loop
+         Extending := Extending_Project_Of
+           (Project_Declaration_Of (Extended, Tree), Tree);
 
-      else
-         Extend := Extending_Project_Of
-           (Project_Declaration_Of (Project.Data.Node, Tree), Tree);
-      end if;
+         exit when not Recurse;
 
-      if Extend = Empty_Node then
+         --  Case of following extension chain: if we reached the of the chain,
+         --  go back one step (to the last non-empty node) and exit.
+
+         if Extending = Empty_Node then
+            Extending := Extended;
+            exit;
+         end if;
+
+         --  Iterate
+
+         Extended := Extending;
+      end loop;
+
+      if Extending = Empty_Node then
          return No_Project;
       else
          return Project_Type
            (Project_From_Name
-              (Project.Data.Tree, Prj.Tree.Name_Of (Extend, Tree)));
+              (Project.Data.Tree, Prj.Tree.Name_Of (Extending, Tree)));
       end if;
    end Extending_Project;
 
