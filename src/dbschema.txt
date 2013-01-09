@@ -123,8 +123,8 @@
 | kind       | FK e2e_kind()            | NOT NULL, NOINDEX |   | The type of link.                                                            |
 | order_by   | INTEGER                  | NOT NULL, NOINDEX | 1 | Ordering among the references. Used for instance for subprogram parameters   |
 |------------+--------------------------+-------------------+---+------------------------------------------------------------------------------|
-#| INDEX:     | "fromEntity"             | e2e_from          |   | Not needed during parsing                                                    |
-#| INDEX:     | "toEntity"               | e2e_to            |   | Not needed during parsing                                                    |
+| INDEX:     | "fromEntity"             | e2e_from          |   | Not needed during parsing                                                    |
+| INDEX:     | "toEntity"               | e2e_to            |   | Not needed during parsing                                                    |
 
 | TABLE             | reference_kinds | reference_kind   |       | Kind of references                                      |
 |-------------------+-----------------+------------------+-------+---------------------------------------------------------|

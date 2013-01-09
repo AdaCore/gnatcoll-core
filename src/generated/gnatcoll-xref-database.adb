@@ -94,6 +94,8 @@ package body GNATCOLL.Xref.Database is
          & "|toEntity|FK entities|NOT NULL,NOINDEX||" & ASCII.LF
          & "|kind|FK e2e_kind|NOT NULL,NOINDEX||" & ASCII.LF
          & "|order_by|Integer|NOT NULL,NOINDEX|1|" & ASCII.LF
+         & "|INDEX:|""fromEntity""|e2e_from" & ASCII.LF
+         & "|INDEX:|""toEntity""|e2e_to" & ASCII.LF
          & "" & ASCII.LF
          & "|TABLE| reference_kinds" & ASCII.LF
          & "|id|Character(1)|PK||" & ASCII.LF

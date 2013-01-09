@@ -2902,6 +2902,11 @@ package body GNATCOLL.Xref is
             DB.Execute
               ("CREATE INDEX entity_refs_entity on entity_refs(entity)");
 
+            --  These two indexes are slow to create, but without them the
+            --  queries on e2e are too slow.
+            DB.Execute ("CREATE INDEX e2e_from on e2e(fromEntity)");
+            DB.Execute ("CREATE INDEX e2e_to on e2e(toEntity)");
+
             if Active (Me_Timing) then
                Trace (Me_Timing,
                       "CREATE INDEXes: "
@@ -2977,6 +2982,8 @@ package body GNATCOLL.Xref is
 
          if Destroy_Indexes then
             DB.Execute ("DROP INDEX entity_refs_entity");
+            DB.Execute ("DROP INDEX e2e_from;");
+            DB.Execute ("DROP INDEX e2e_to;");
          end if;
       end Start_Transaction;
 
