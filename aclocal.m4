@@ -617,6 +617,13 @@ AC_HELP_STRING(
          # explicitly
          PYTHON_LIBS=`$PYTHON_CONFIG --libs`
          PYTHON_LIBS="-L${PYTHON_DIR} ${PYTHON_LIBS}"
+
+         case $build_os in
+             *darwin*)  ;;
+             *-*mingw32* | *cygwin* ) ;;
+             *linux*) PYTHON_LIBS="${PYTHON_LIBS} -export-dynamic" ;;
+         esac
+
          PYTHON_CFLAGS=`$PYTHON_CONFIG --includes`
       else
          PYTHON_LIBS=""
