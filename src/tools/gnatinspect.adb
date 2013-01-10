@@ -1432,7 +1432,14 @@ begin
    end if;
 
    GNATCOLL.VFS.Symbolic_Links_Support (Support_Symlinks);
-   GNATCOLL.Traces.Parse_Config_File (Traces_File_Name.all);
+
+   --  If the user has specified a trace file that doesn't exist, we do not
+   --  want to fallback on the default, so we explicitly test first.
+   if Traces_File_Name.all = ""
+     or else Is_Regular_File (GNATCOLL.VFS.Create (+Traces_File_Name.all))
+   then
+      GNATCOLL.Traces.Parse_Config_File (Traces_File_Name.all);
+   end if;
 
    if Show_Progress then
       Progress_Reporter := Display_Progress'Unrestricted_Access;
