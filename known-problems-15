@@ -4,6 +4,19 @@ Known Problems in Gnatcoll 1.5
 
 Copyright (C) 2012-2013, AdaCore
 
+KP-15-M111-002 Compatibility with GtkAda 3.x
+
+  Problem:    The API for Gtk_Tree_Model has changed slightly in GtkAda 3.x,
+              and GNATCOLL.VFS.GtkAda.Get_File was not compatible. To ensure
+              that GNATCOLL works with both GtkAda 2.x and 3.x, the first
+              parameter of Get_File is now a Gtk_Tree_Model, rather than an
+              access to Gtk_Tree_Model_Record, which might require an explicit
+              cast in user code.
+
+  Status:     Fixed in Gnatcoll 1.6.0
+
+  Workaround: None.
+
 KP-15-M107-026 Stack overflow may occur when writing large JSON objects
 
   Problem:    When using GNATCOLL.JSON.Write on a large JSON object, a stack
