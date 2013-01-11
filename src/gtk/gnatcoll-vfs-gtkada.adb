@@ -160,4 +160,11 @@ package body GNATCOLL.VFS.GtkAda is
       end;
    end Get_File;
 
+   function Get_File
+     (Store      : access Gtk.Tree_Store.Gtk_Tree_Store_Record'Class;
+      Iter       : Gtk.Tree_Model.Gtk_Tree_Iter;
+      Column     : Glib.Gint) return Virtual_File is
+   begin
+      return Get_File (Gtk.Tree_Model.Gtk_Tree_Model (Store), Iter, Column);
+   end Get_File;
 end GNATCOLL.VFS.GtkAda;
