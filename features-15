@@ -2,7 +2,7 @@
 GNATCOLL 1.5 NEW FEATURES LIST
 ==============================
 
-Copyright (C) 2011-2012, AdaCore
+Copyright (C) 2011-2013, AdaCore
 
 This file contains a list of new features introduced in GNATCOLL.
 A full description of all GNATCOLL features can be found in the GNATCOLL
@@ -14,6 +14,11 @@ of the feature.
 
 New features in 1.5
 -------------------
+
+NF-15-M114-038 gnatcoll_db2ada allows specifying postgresql port (2013-01-14)
+
+   It is now possible to specify which port number the postgreSQL server runs
+   on, when running gnatcoll_db2ada.
 
 NF-15-LA23-020 New API GNATCOLL.Xref and gnatinspect (2012-10-22)
 
