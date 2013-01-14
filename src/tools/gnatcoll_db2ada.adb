@@ -280,6 +280,7 @@ procedure GNATCOLL_Db2Ada is
       Put_Line ("-dbname <name>: name of the database");
       Put_Line ("-dbuser <user>: user name to log in the database");
       Put_Line ("-dbpasswd <passwd>: password for the database");
+      Put_Line ("-dbport <port>: port for the database");
       Put_Line ("-dbtype <type>: database backend to use"
                 & " (default is postgreSQL)");
       New_Line;
@@ -334,6 +335,7 @@ procedure GNATCOLL_Db2Ada is
       DB_Host   : GNAT.OS_Lib.String_Access := new String'("");
       DB_User   : GNAT.OS_Lib.String_Access := new String'("");
       DB_Passwd : GNAT.OS_Lib.String_Access := new String'("");
+      DB_Port   : Integer := -1;
       DB_Type   : GNAT.OS_Lib.String_Access := new String'("postgresql");
 
       Enums, Vars : String_Lists.List;
@@ -348,7 +350,7 @@ procedure GNATCOLL_Db2Ada is
       loop
          case Getopt ("dbhost= h -help dbname= dbuser= dbpasswd= enum= var="
                       & " dbtype= dbmodel= dot text orm= createdb api="
-                      & " adacreate"
+                      & " adacreate dbport="
                       & " ormtables= api-enums= load= output=")
          is
             when 'h' | '-' =>
@@ -392,6 +394,13 @@ procedure GNATCOLL_Db2Ada is
                elsif Full_Switch = "dbtype" then
                   Free (DB_Type);
                   DB_Type := new String'(Parameter);
+               elsif Full_Switch = "dbport" then
+                  begin
+                     DB_Port := Integer'Value (Parameter);
+                  exception
+                     when Constraint_Error =>
+                        DB_Port := -1;
+                  end;
                elsif Full_Switch = "dbmodel" then
                   Free (DB_Model);
                   DB_Model := new String'(Parameter);
@@ -459,6 +468,7 @@ procedure GNATCOLL_Db2Ada is
                User          => DB_User.all,
                Host          => DB_Host.all,
                Password      => DB_Passwd.all,
+               Port          => DB_Port,
                Cache_Support => False);
          elsif DB_Type.all = "sqlite" then
             Descr := GNATCOLL.SQL.Sqlite.Setup
