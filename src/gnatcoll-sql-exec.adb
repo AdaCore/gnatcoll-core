@@ -40,6 +40,7 @@ package body GNATCOLL.SQL.Exec is
    Me_Error  : constant Trace_Handle := Create ("SQL.ERROR", On);
    Me_Select : constant Trace_Handle := Create ("SQL.SELECT", Off);
    Me_Cache  : constant Trace_Handle := Create ("SQL.CACHE");
+   Me_Perf   : constant Trace_Handle := Create ("SQL.PERF", Off);
    Me_Query  : constant Trace_Handle := Create ("SQL", Off);
    --  Disable by default those streams that tend to output a lot of data in
    --  standard applications.
@@ -711,10 +712,16 @@ package body GNATCOLL.SQL.Exec is
       pragma Unreferenced (Was_Started);
       S : Prepared_Statements.Encapsulated_Access;
 
+      Start : Time;
+
       Q : access String := Query'Unrestricted_Access;
       --  Should be safe here, we do not intend to free anything.
 
    begin
+      if Active (Me_Perf) then
+         Start := Clock;
+      end if;
+
       if Prepared /= Prepared_Statement'Class (No_Prepared) then
          --  Compute the query. We cannot reference the query before
          --  that, since it might not have been computed yet.
@@ -827,6 +834,11 @@ package body GNATCOLL.SQL.Exec is
         and then Is_Commit_Or_Rollback
       then
          Connection.In_Transaction := False;
+      end if;
+
+      if Active (Me_Perf) then
+         Trace (Me_Perf, "Finished executing query:"
+                & Duration'Image ((Clock - Start) * 1000.0) & " ms");
       end if;
    end Execute_And_Log;
 
