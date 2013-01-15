@@ -2932,8 +2932,10 @@ package body GNATCOLL.Xref is
             DB.Execute ("PRAGMA synchronous=NORMAL");
 
             --  The default would be DELETE, but we do not care enough about
-            --  data integrity
-            DB.Execute ("PRAGMA journal_mode=MEMORY");
+            --  data integrity. WAL apparently allows readers even while there
+            --  is a writer. MEMORY might corrupt the database if the writer is
+            --  killed while processing.
+            DB.Execute ("PRAGMA journal_mode=WAL");
 
             --  We can store temporary tables in memory
             DB.Execute ("PRAGMA temp_store=MEMORY");
