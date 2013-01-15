@@ -838,7 +838,7 @@ package body GNATCOLL.SQL.Exec is
 
       if Active (Me_Perf) then
          Trace (Me_Perf, "Finished executing query:"
-                & Integer'Image (Integer (Clock - Start) * 1000) & " ms");
+                & Duration'Image ((Clock - Start) * 1000.0) & " ms");
       end if;
    end Execute_And_Log;
 
