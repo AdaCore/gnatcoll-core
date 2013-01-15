@@ -2736,7 +2736,7 @@ package body GNATCOLL.Xref is
       Entity_Decl_To_Id : Loc_To_Ids.Map;
       Entity_Renamings  : Entity_Renaming_Lists.List;
 
-      procedure Resolve_Renamings;
+      procedure Resolve_Renamings (DB : Database_Connection);
       --  The last pass in parsing a ALI file is to resolve all renamings, now
       --  that we can convert a reference to an entity
 
@@ -2770,7 +2770,7 @@ package body GNATCOLL.Xref is
       -- Resolve_Renamings --
       -----------------------
 
-      procedure Resolve_Renamings is
+      procedure Resolve_Renamings (DB : Database_Connection) is
          C   : Entity_Renaming_Lists.Cursor := Entity_Renamings.First;
          Ren : Entity_Renaming;
          Start : Time;
@@ -2779,9 +2779,11 @@ package body GNATCOLL.Xref is
             Start := Clock;
          end if;
 
-         while Has_Element (C) loop
+         while Has_Element (C)
+           and then Self.DB.Success
+         loop
             Ren := Element (C);
-            Self.DB.Execute
+            DB.Execute
               (Query_Set_Entity_Renames,
                Params => (1 => +Ren.Entity,
                           2 => +Ren.File,
@@ -2916,7 +2918,7 @@ package body GNATCOLL.Xref is
 
          --  Do this once we have restored the indexes, to speed up the
          --  search.
-         Resolve_Renamings;
+         Resolve_Renamings (DB);
 
          --  Need to commit before we can change the pragmas
 
