@@ -1314,8 +1314,12 @@ package body GNATCOLL.SQL.Exec is
       Field      : SQL_Field_Integer) return Integer is
    begin
       if Perform_Queries then
-         return Last_Id
-           (DBMS_Forward_Cursor'Class (Self.Res.all), Connection, Field);
+         if Self.Res = null then
+            return -1;
+         else
+            return Last_Id
+              (DBMS_Forward_Cursor'Class (Self.Res.all), Connection, Field);
+         end if;
       else
          return 1;  --  Dummy
       end if;
