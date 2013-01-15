@@ -857,10 +857,19 @@ package body GNATCOLL.Projects is
                               end if;
                            end if;
 
+                           --  We must know information about the LI file. In
+                           --  particular, it must match the current project,
+                           --  or any project if we are in recursive mode
+                           --  (since each object directory is parsed only
+                           --  once)
                            Should_Append :=
                              Has_Element (Info_Cursor)
                              and then
                                (not Exclude_Overridden
+                                or else
+                                  (Recursive
+                                   and then Element (Info_Cursor).Project /=
+                                     No_Project)
                                 or else Element (Info_Cursor).Project =
                                   Current_Project);
 
@@ -904,27 +913,25 @@ package body GNATCOLL.Projects is
                         end;
 
                         if Should_Append then
-                           if Should_Append then
-                              List.Append
-                                (Library_Info'
-                                   (Library_File => Tmp (F),
-                                    Source_File  =>
-                                      Element (Info_Cursor).File));
-                           end if;
+                           List.Append
+                             (Library_Info'
+                                (Library_File => Tmp (F),
+                                 Source_File  =>
+                                   Element (Info_Cursor).File));
 
                         elsif Active (Me) then
-                           Trace (Me, "Library_Files not including : "
-                                  & Display_Base_Name (Tmp (F))
-                                  & " (which is for project "
-                                  & Element (Info_Cursor).Project.Name
-                                  & ")");
+                           if Has_Element (Info_Cursor) then
+                              Trace (Me, "Library_Files not including : "
+                                     & Display_Base_Name (Tmp (F))
+                                     & " (which is for project "
+                                     & Element (Info_Cursor).Project.Name
+                                     & ")");
+                           else
+                              Trace (Me, "Library_Files not including : "
+                                     & Display_Base_Name (Tmp (F))
+                                     & " (which is for unknown project)");
+                           end if;
                         end if;
-
-                     elsif Active (Me) then
-                        Trace
-                          (Me, "Library_Files: "
-                           & Display_Base_Name (Tmp (F))
-                           & " is not for any loaded project");
                      end if;
                   end loop;
 
