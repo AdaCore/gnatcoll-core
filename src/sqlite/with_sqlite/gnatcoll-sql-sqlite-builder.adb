@@ -196,9 +196,9 @@ package body GNATCOLL.SQL.Sqlite.Builder is
    function On_Busy (Data : System.Address; Count : Integer) return Integer is
       pragma Unreferenced (Data);
    begin
-      --  Retry commands up to 5 times automatically, in case we get a
+      --  Retry commands up to 2s automatically, in case we get a
       --  SQLITE_BUSY status.
-      if Count < 300 then
+      if Count < 7 then
          if Active (Me) then
             Trace (Me, "Received SQLITE_BUSY, trying again. Attempt="
                    & Count'Img);
