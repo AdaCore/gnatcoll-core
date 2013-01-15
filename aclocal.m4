@@ -75,7 +75,7 @@ EOF
 # The following variable is then set:
 #     SYNC_COUNTERS_IMPL
 # to either "intrinsic" or "mutex"
-# Code comes from the polyorb configure.ac
+# Code comes from the PolyORB configure.ac
 #############################################################
 
 AC_DEFUN(AM_HAS_INTRINSIC_SYNC_COUNTERS,
@@ -129,13 +129,11 @@ AC_DEFUN(AM_GNAT_SOURCES,
      AC_MSG_RESULT(no)
 
      AC_MSG_CHECKING(whether gnat_util exists)
-     AM_PATH_PROJECT(gnat_util, HAVE_GNAT_UTIL)
-     if test "$HAVE_GNAT_UTIL" = "yes"; then
-        AC_MSG_RESULT(yes);
+     AM_HAS_GNAT_PROJECT(gnat_util)
+     if test "$HAVE_GNAT_PROJECT_gnat_util" = "yes"; then
         HAS_GNAT_SOURCES=yes
         GNAT_SOURCES=gnat_util
      else
-        AC_MSG_RESULT(no)
         HAS_GNAT_SOURCES=no
         GNAT_SOURCES=copy
      fi
@@ -187,19 +185,9 @@ Make them the installation default])],
      [GNAT_BUILDS_SHARED=yes])
 
    if test x$GNAT_BUILDS_SHARED = xyes; then
-      # Create a temporary directory (from "info autoconf")
-      : ${TMPDIR=/tmp}
-      {
-        tmp=`(umask 077 && mktemp -d "$TMPDIR/fooXXXXXX") 2>/dev/null` \
-           && test -n "$tmp" && test -d "$tmp"
-      } || {
-        tmp=$TMPDIR/foo$$-$RANDOM
-        (umask 077 && mkdir -p "$tmp")
-      } || exit $?
-
-      mkdir $tmp/lib
-      echo "package Foo is end Foo;" > $tmp/foo.ads
-      cat > $tmp/lib.gpr <<EOF
+      mkdir conftest conftest/lib
+      echo "package Foo is end Foo;" > conftest/foo.ads
+      cat > conftest/lib.gpr <<EOF
 project Lib is
    for Source_Dirs use (".");
    for Library_Dir use "lib";
@@ -208,14 +196,13 @@ project Lib is
 end Lib;
 EOF
 
-      gnatmake -c -q -P$tmp/lib 2>/dev/null
-      if test $? = 0 ; then
+      if AC_TRY_COMMAND([gnatmake -c -q -Pconftest/lib]); then
          GNAT_BUILDS_SHARED=yes
       else
          GNAT_BUILDS_SHARED=no
          DEFAULT_LIBRARY_TYPE=static
       fi
-      rm -rf $tmp
+      rm -rf conftest
       AC_MSG_RESULT($GNAT_BUILDS_SHARED)
    else
       AC_MSG_RESULT([no (--disabled-shared)])
@@ -924,39 +911,29 @@ AC_DEFUN(AM_TO_GPR,
 
 ])
 
-##########################################################################
-## Check the availability of a project file
-## The file is searched on the predefined PATH and (ADA|GPR)_PROJECT_PATH
-##   $1=project to test
-##   $2=exported name
-##########################################################################
+##############################################################
+# Usage: AM_HAS_GNAT_PROJECT(project)
+# Check whether a given project file is available, and set
+# HAVE_GNAT_PROJECT_<project> to "yes" or "no" accordingly.
+# (from PolyORB ada.m4)
+##############################################################
 
-AC_DEFUN(AM_PATH_PROJECT,
-[
-   project=[$1]
-   output=$2
-
-   # Create a temporary directory (from "info autoconf")
-   : ${TMPDIR=/tmp}
-   {
-     tmp=`(umask 077 && mktemp -d "$TMPDIR/fooXXXXXX") 2>/dev/null` \
-        && test -n "$tmp" && test -d "$tmp"
-   } || {
-     tmp=$TMPDIR/foo$$-$RANDOM
-     (umask 077 && mkdir -p "$tmp")
-   } || exit $?
-
-   mkdir $tmp/lib
-   echo "with \"$project\"; project default is for Source_Dirs use (); end default;" > $tmp/default.gpr
-
-   gnat make -P$tmp/default.gpr >/dev/null 2>/dev/null
-   if test $? = 0 ; then
-     $2=yes
-   else
-     $2=no
-   fi
-   AC_SUBST($2)
-])
+AC_DEFUN([AM_HAS_GNAT_PROJECT],
+[AC_MSG_CHECKING([whether GNAT project $1.gpr is available])
+mkdir conftest
+cat > conftest/check.gpr <<EOF
+with "[$1]";
+project Check is for Source_Files use (); end Check;
+EOF
+if AC_TRY_COMMAND([cd conftest && gnat ls -Pcheck system.ads > /dev/null 2>../conftest.out])
+then
+  HAVE_GNAT_PROJECT_$1=yes
+else
+  HAVE_GNAT_PROJECT_$1=no
+fi
+AC_MSG_RESULT($HAVE_GNAT_PROJECT_$1)
+AC_SUBST(HAVE_GNAT_PROJECT_$1)
+rm -fr conftest])
 
 ##########################################################################
 ## Detects GTK and GtkAda
@@ -1006,8 +983,8 @@ AC_HELP_STRING(
           GTK_GCC_LIBS=`$PKG_CONFIG gtk+-${WITH_GTK} --libs`
           if test x"$GTK_GCC_FLAGS" != x ; then
              AC_MSG_CHECKING(for gtkada.gpr)
-             AM_PATH_PROJECT(gtkada, HAVE_GTKADA)
-             AC_MSG_RESULT($HAVE_GTKADA)
+             AM_HAS_GNAT_PROJECT(gtkada)
+             HAVE_GTKADA=$HAVE_GNAT_PROJECT_gtkada
              GTK_VERSION=$WITH_GTK
              WITH_GTK=${HAVE_GTKADA}
           else
