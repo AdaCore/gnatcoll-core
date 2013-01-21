@@ -2977,7 +2977,7 @@ package body GNATCOLL.Xref is
 
             DB.Execute ("PRAGMA foreign_keys=OFF");
             DB.Execute ("PRAGMA synchronous=OFF");
-            DB.Execute ("PRAGMA journal_mode=MEMORY");
+            DB.Execute ("PRAGMA journal_mode=WAL");
             DB.Execute ("PRAGMA temp_store=MEMORY");
          end if;
 
