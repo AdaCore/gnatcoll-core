@@ -60,7 +60,7 @@ package body GNATCOLL.Xref is
    --  duplicates. However, this constant was left as a documentation of the
    --  impact this has on the parsing of ALI files.
 
-   Memory_Threshold : constant Ada.Containers.Count_Type := 150;
+   Memory_Threshold : constant Ada.Containers.Count_Type := 150_000;
    --  Number of LI files to update after which we will use a temporary
    --  in-memory copy of the database. This is computed as such:
    --    on the GPS project, it takes about .0230s per LI file when db is in
@@ -3203,6 +3203,11 @@ package body GNATCOLL.Xref is
    is
    begin
       Self.DB := DB.Build_Connection;
+
+      --  Do not use automatic transactions, to avoid being stuck with an
+      --  unfinished BEGIN, which would lock the database and prevents
+      --  gnatinspect from running in parallel to IDEs.
+      Self.DB.Automatic_Transactions (False);
    end Setup_DB;
 
    ----------
@@ -5615,28 +5620,44 @@ package body GNATCOLL.Xref is
         +Decl_File.Unix_Style_Full_Name (Normalize => True);
       K : aliased String := Kind;
       Na : aliased String := Name;
+      Id : Integer;
+      Was_Started : Boolean;
    begin
+      Was_Started := Self.DB.Start_Transaction;
+      Id := Self.DB.Insert_And_Get_PK
+        (SQL_Insert
+           (Fields => Entities.Name & Entities.Kind & Entities.Decl_File
+            & Entities.Decl_Line & Entities.Decl_Column,
+            Values => SQL_Select
+              (Text_Param (3)
+               & Entity_Kinds.Id
+               & Files.Id
+               & Integer_Param (4) & Integer_Param (5),
+               From => Entity_Kinds & Files,
+               Where => Entity_Kinds.Display = Text_Param (2)
+               and Files.Path = Text_Param (1))),
+         Params =>
+           (1 => +N'Unchecked_Access,
+            2 => +K'Unchecked_Access,
+            3 => +Na'Unchecked_Access,
+            4 => +Decl_Line,
+            5 => +Decl_Column),
+         PK => Entities.Id);
+
+      if Was_Started then
+         Self.DB.Commit;
+      end if;
+
       return Entity_Information'
         (Fuzzy => False,
-         Id    => Self.DB.Insert_And_Get_PK
-           (SQL_Insert
-              (Fields => Entities.Name & Entities.Kind & Entities.Decl_File
-               & Entities.Decl_Line & Entities.Decl_Column,
-               Values => SQL_Select
-                 (Text_Param (3)
-                  & Entity_Kinds.Id
-                  & Files.Id
-                  & Integer_Param (4) & Integer_Param (5),
-                  From => Entity_Kinds & Files,
-                  Where => Entity_Kinds.Display = Text_Param (2)
-                  and Files.Path = Text_Param (1))),
-            Params =>
-              (1 => +N'Unchecked_Access,
-               2 => +K'Unchecked_Access,
-               3 => +Na'Unchecked_Access,
-               4 => +Decl_Line,
-               5 => +Decl_Column),
-            PK => Entities.Id));
+         Id    => Id);
+   exception
+      when E : others =>
+         Trace (Me_Error, E);
+         if Was_Started then
+            Self.DB.Rollback;
+         end if;
+         return No_Entity;
    end Add_Entity;
 
 end GNATCOLL.Xref;
