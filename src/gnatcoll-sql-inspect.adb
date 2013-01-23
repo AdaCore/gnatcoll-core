@@ -1838,7 +1838,9 @@ package body GNATCOLL.SQL.Inspect is
       end if;
 
       if Self.DB /= null then
-         Commit_Or_Rollback (Self.DB);
+         if Self.DB.Automatic_Transactions then
+            Commit_Or_Rollback (Self.DB);
+         end if;
 
          if not Self.DB.Success then
             Ada.Command_Line.Set_Exit_Status (Ada.Command_Line.Failure);
@@ -1847,7 +1849,10 @@ package body GNATCOLL.SQL.Inspect is
 
    exception
       when Invalid_Schema =>
-         Rollback (Self.DB);
+         Self.DB.Set_Failure;
+         if Self.DB.Automatic_Transactions then
+            Rollback (Self.DB);
+         end if;
          Ada.Command_Line.Set_Exit_Status (Ada.Command_Line.Failure);
    end Write_Schema;
 

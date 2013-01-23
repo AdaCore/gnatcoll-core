@@ -858,13 +858,17 @@ package body GNATCOLL.Xref is
      (Connection      : access Database_Connection_Record'Class)
    is
       Start   : Time;
+      Started : Boolean;
    begin
       if Active (Me_Timing) then
          Start := Clock;
       end if;
 
+      Started := Connection.Start_Transaction;
       GNATCOLL.Xref.Database.Create_Database (Connection);
-      Connection.Commit_Or_Rollback;
+      if Started then
+         Connection.Commit_Or_Rollback;
+      end if;
 
       if Active (Me_Timing) then
          Trace
