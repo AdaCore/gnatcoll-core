@@ -3250,7 +3250,7 @@ package body GNATCOLL.Xref is
    is
       Distance : Natural := Integer'Last;
       Best_Ref : Entity_Reference := No_Entity_Reference;
-      F : SQL_Criteria;
+      F        : SQL_Criteria;
 
       procedure Prepare_Decl
         (C           : SQL_Criteria;
@@ -3393,7 +3393,9 @@ package body GNATCOLL.Xref is
          Result (Q, Exact_Match, From_Refs => True);
       end Prepare_Ref;
 
-      C, C2  : SQL_Criteria;
+      C, C2 : SQL_Criteria;
+
+   --  Start of processing for Get_Entity
 
    begin
       if GNAT.OS_Lib.Is_Absolute_Path (File) then
