@@ -2708,18 +2708,17 @@ package body GNATCOLL.Xref is
    ------------------------
 
    procedure Parse_All_LI_Files
-     (Self         : in out Xref_Database;
-      Tree         : Project_Tree;
-      Project      : Project_Type;
+     (Self                : in out Xref_Database;
+      Tree                : Project_Tree;
+      Project             : Project_Type;
       Parse_Runtime_Files : Boolean := True;
-      Show_Progress : access procedure (Current, Total : Integer) := null;
-      From_DB_Name : String := "";
-      To_DB_Name   : String := "")
+      Show_Progress       : access procedure (Cur, Total : Integer) := null;
+      From_DB_Name        : String := "";
+      To_DB_Name          : String := "")
    is
-      Is_Sqlite       : constant Boolean :=
-        GNATCOLL.SQL.Sqlite.Is_Sqlite (Self.DB);
+      Is_Sqlite       : constant Boolean := SQL.Sqlite.Is_Sqlite (Self.DB);
 
-      Destroy_Indexes   : Boolean := False;
+      Destroy_Indexes : Boolean := False;
       --  If Destroy_Indexes is True, then some of the database indexes will
       --  be temporarily disabled and then recreated in the end. This will be
       --  faster when doing major changes, but will be slower otherwise. In any
@@ -2775,8 +2774,8 @@ package body GNATCOLL.Xref is
       -----------------------
 
       procedure Resolve_Renamings (DB : Database_Connection) is
-         C   : Entity_Renaming_Lists.Cursor := Entity_Renamings.First;
-         Ren : Entity_Renaming;
+         C     : Entity_Renaming_Lists.Cursor := Entity_Renamings.First;
+         Ren   : Entity_Renaming;
          Start : Time;
       begin
          if Active (Me_Timing) then
@@ -2822,13 +2821,13 @@ package body GNATCOLL.Xref is
             Self.DB_Created := True;
 
             declare
-               Current_DB  : constant String :=
-                 GNATCOLL.SQL.Sqlite.DB_Name (DB);
+               Current_DB : constant String := SQL.Sqlite.DB_Name (DB);
             begin
                if GNAT.OS_Lib.Is_Regular_File (Current_DB)
                  and then Create (Full_Filename => +Current_DB).Size /= 0
                then
                   --  If the DB already exists, don't override it
+
                   null;
 
                elsif Current_DB /= From_DB_Name
@@ -2910,6 +2909,7 @@ package body GNATCOLL.Xref is
 
             --  These two indexes are slow to create, but without them the
             --  queries on e2e are too slow.
+
             DB.Execute ("CREATE INDEX e2e_from on e2e(fromEntity)");
             DB.Execute ("CREATE INDEX e2e_to on e2e(toEntity)");
 
@@ -2920,8 +2920,8 @@ package body GNATCOLL.Xref is
             end if;
          end if;
 
-         --  Do this once we have restored the indexes, to speed up the
-         --  search.
+         --  Do this once we have restored the indexes, to speed up the search
+
          Resolve_Renamings (DB);
 
          --  Need to commit before we can change the pragmas
@@ -2931,22 +2931,25 @@ package body GNATCOLL.Xref is
          if DB.Has_Pragmas then
             DB.Execute ("PRAGMA foreign_keys=ON");
 
-            --  The default would be FULL, but we do not need to prevent
-            --  against system crashes in this application.
+            --  The default would be FULL, but we do not need to guard against
+            --  system crashes in this application.
+
             DB.Execute ("PRAGMA synchronous=NORMAL");
 
             --  The default would be DELETE, but we do not care enough about
             --  data integrity. WAL apparently allows readers even while there
             --  is a writer. MEMORY might corrupt the database if the writer is
             --  killed while processing.
+
             DB.Execute ("PRAGMA journal_mode=WAL");
 
             --  We can store temporary tables in memory
+
             DB.Execute ("PRAGMA temp_store=MEMORY");
          end if;
 
          --  Gather statistics to speed up the query optimizer. This isn't
-         --  need systematically, and might take a while to generate, so we
+         --  systematically needed, and might take a while to generate, so we
          --  do it when the user also wanted to rebuild the index
 
          if Do_Analyze then
@@ -2971,13 +2974,13 @@ package body GNATCOLL.Xref is
       procedure Start_Transaction (DB : Database_Connection) is
       begin
          if DB.Has_Pragmas then
-            --  Disable checks for foreign keys. This saves a bit of
-            --  time when inserting the new references. At worse we could
-            --  end up with an entity or a reference whose kind does not
-            --  match an entry in the *_kind tables, and the xref will
-            --  not show later on in query, but that's easily fixed by
-            --  adding the new entry in the *_kind table (that is when
-            --  the ALI file has changed format)
+
+            --  Disable checks for foreign keys. This saves a bit of time when
+            --  inserting the new references. At worse we could end up with an
+            --  entity or a reference whose kind does not match an entry in the
+            --  *_kind tables, and the xref will not show later on in query,
+            --  but that's easily fixed by adding the new entry in the *_kind
+            --  table (this occurs when the format of LI files is changed).
 
             DB.Execute ("PRAGMA foreign_keys=OFF");
             DB.Execute ("PRAGMA synchronous=OFF");
@@ -3042,11 +3045,11 @@ package body GNATCOLL.Xref is
       -----------------
 
       procedure Parse_Files (DB : Database_Connection) is
-         LI_C  : LI_Lists.Cursor;
-         Lib   : LI_Info;
-         Start : Time;
-         Dur   : Duration;
-         Total : constant Integer := Integer (LIs.Length);
+         LI_C    : LI_Lists.Cursor;
+         Lib     : LI_Info;
+         Start   : Time;
+         Dur     : Duration;
+         Total   : constant Integer := Integer (LIs.Length);
          Current : Natural := 1;
       begin
          if Active (Me_Timing) then
@@ -3084,8 +3087,8 @@ package body GNATCOLL.Xref is
             begin
                if Show_Progress /= null then
                   Show_Progress
-                    (Current => Current,
-                     Total   => Total);
+                    (Cur   => Current,
+                     Total => Total);
                   Current := Current + 1;
                end if;
 
