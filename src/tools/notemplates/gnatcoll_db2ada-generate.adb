@@ -439,6 +439,8 @@ begin
       if Include_Database_Create then
          Put_Line
            (Body_File, "with GNATCOLL.SQL.Inspect; use GNATCOLL.SQL.Inspect;");
+         Put_Line
+           (Body_File, "with GNATCOLL.SQL.Exec; use GNATCOLL.SQL.Exec;");
       end if;
 
       Put_Line (Body_File, "package body " & Generated & " is");
