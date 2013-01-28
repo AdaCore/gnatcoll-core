@@ -494,7 +494,7 @@ package body GNATCOLL.SQL.Sessions is
 
    function "=" (W1, W2 : Weak_Cache) return Boolean is
    begin
-      return W1.Ref.Get = W2.Ref.Get;
+      return W1.Ref = W2.Ref;
    end "=";
 
    ----------
