@@ -63,6 +63,7 @@ package body GNATCOLL.Templates is
    begin
       if Str (First) = Delimiter then
          --  We are escaping the delimiter by doubling it
+
          Last := First;
          First_After := First + 1;
 
@@ -123,18 +124,19 @@ package body GNATCOLL.Templates is
    ----------------
 
    function Substitute
-     (Str          : String;
-      Substrings   : Substitution_Array := No_Substitution;
-      Callback     : Substitute_Callback := null;
-      Delimiter    : Character := Default_Delimiter;
-      Recursive    : Boolean := False;
-      Errors       : Error_Handling := Keep_As_Is) return String
+     (Str        : String;
+      Substrings : Substitution_Array := No_Substitution;
+      Callback   : Substitute_Callback := null;
+      Delimiter  : Character := Default_Delimiter;
+      Recursive  : Boolean := False;
+      Errors     : Error_Handling := Keep_As_Is) return String
    is
       Result      : Unbounded_String;
       First, Last : Natural := Str'First;
       Found       : Boolean;
       Identifier_First, Identifier_Last, First_After : Natural;
       Quoted      : Boolean := False;
+
    begin
       while First <= Str'Last loop
          Last := First;
@@ -205,6 +207,7 @@ package body GNATCOLL.Templates is
            and then Str (Identifier_First) = Delimiter
          then
             --  We are escaping the Substitution_Char by doubling it
+
             Append (Result, Delimiter);
             Found := True;
 
