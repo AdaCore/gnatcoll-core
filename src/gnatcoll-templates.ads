@@ -24,7 +24,8 @@
 --  This package provides support for replacing special substrings in a string.
 --  Typically, these are used to replace substrings like "%version" by the some
 --  other value, at run time.
---  Do not mix this unit with the templates parser which is provided in the
+
+--  Do not confuse this unit with the templates parser which is provided in the
 --  context of the Ada Web Server (AWS), and which is used to parse external
 --  file and replace part of them.
 
@@ -104,12 +105,12 @@ package GNATCOLL.Templates is
    --    If Report_Error, an exception Invalid_Substitution is raised
 
    function Substitute
-     (Str          : String;
-      Substrings   : Substitution_Array := No_Substitution;
-      Callback     : Substitute_Callback := null;
-      Delimiter    : Character := Default_Delimiter;
-      Recursive    : Boolean := False;
-      Errors       : Error_Handling := Keep_As_Is) return String;
+     (Str        : String;
+      Substrings : Substitution_Array := No_Substitution;
+      Callback   : Substitute_Callback := null;
+      Delimiter  : Character := Default_Delimiter;
+      Recursive  : Boolean := False;
+      Errors     : Error_Handling := Keep_As_Is) return String;
    --  Replace all substrings in Str that start with Delimiter (see the
    --  declaration of Default_Delimiter for more information on identifier
    --  names).
