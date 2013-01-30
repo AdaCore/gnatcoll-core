@@ -1,4 +1,5 @@
 with GNATCOLL.SQL.Inspect; use GNATCOLL.SQL.Inspect;
+with GNATCOLL.SQL.Exec; use GNATCOLL.SQL.Exec;
 package body GNATCOLL.Xref.Database is
    pragma Style_Checks (Off);
    use type Cst_String_Access;
