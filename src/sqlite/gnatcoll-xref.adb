@@ -3398,6 +3398,15 @@ package body GNATCOLL.Xref is
    --  Start of processing for Get_Entity
 
    begin
+      --  A trivial test that the name is a valid identifier or operation. This
+      --  test must match all languages, so is necessarily crude.
+
+      if Name'Length >= 2
+        and then Name (Name'First .. Name'First + 1) = "--"
+      then
+         return No_Entity_Reference;
+      end if;
+
       if GNAT.OS_Lib.Is_Absolute_Path (File) then
          F := Database.Files.Path = File;
       else
@@ -5468,7 +5477,13 @@ package body GNATCOLL.Xref is
                Params => (1 => +N'Unchecked_Access));
 
             if Files.Has_Row then
-               return Files.Time_Value (2) >= File.File_Time_Stamp;
+               if Active (Me_Debug) then
+                  Assert (Me_Debug,
+                          not Files.Is_Null (1),
+                          "No registered timestamp for ALI file "
+                          & Files.Value (0));
+               end if;
+               return Files.Time_Value (1) >= File.File_Time_Stamp;
             else
                return False;  --  file not even known in database
             end if;
