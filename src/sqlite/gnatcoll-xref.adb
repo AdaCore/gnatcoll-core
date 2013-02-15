@@ -70,6 +70,9 @@ package body GNATCOLL.Xref is
    --    with no additional cost.
    --  This gives a threshold of about 190 for my machine.
 
+   Column_Tolerance : constant Natural := 80;
+   --  Tolerance in columns when looking for approximate entity declarations.
+
    type Access_String is access constant String;
 
    N_Files2 : aliased String := "f2";
@@ -3452,8 +3455,10 @@ package body GNATCOLL.Xref is
          C := Absolute (Entities.Decl_Line - Line) < 10;
          C2 := Absolute (Entity_Refs.Line - Line) < 10;
          if Column /= -1 then
-            C := C and Absolute (Entities.Decl_Column - Integer (Column)) < 20;
-            C2 := C2 and Absolute (Entity_Refs.Column - Integer (Column)) < 20;
+            C := C and Absolute (Entities.Decl_Column - Integer (Column)) <
+               Column_Tolerance;
+            C2 := C2 and Absolute (Entity_Refs.Column - Integer (Column)) <
+               Column_Tolerance;
          end if;
       end;
 
