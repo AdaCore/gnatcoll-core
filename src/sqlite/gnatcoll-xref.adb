@@ -3398,6 +3398,15 @@ package body GNATCOLL.Xref is
    --  Start of processing for Get_Entity
 
    begin
+      --  A trivial test that the name is a valid identifier or operation. This
+      --  test must match all languages, so is necessarily crude.
+
+      if Name'Length >= 2
+        and then Name (Name'First .. Name'First + 1) = "--"
+      then
+         return No_Entity_Reference;
+      end if;
+
       if GNAT.OS_Lib.Is_Absolute_Path (File) then
          F := Database.Files.Path = File;
       else
