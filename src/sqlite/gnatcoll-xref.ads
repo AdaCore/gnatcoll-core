@@ -160,6 +160,10 @@ package GNATCOLL.Xref is
    --  This information, however, is only valid as long as the object
    --  Xref_Database hasn't been destroyed.
 
+   function "<" (E1, E2 : Entity_Information) return Boolean;
+   function "=" (E1, E2 : Entity_Information) return Boolean;
+   --  Compare two entities
+
    type Entity_Array is array (Natural range <>) of Entity_Information;
 
    function Internal_Id (Entity : Entity_Information) return Integer;
@@ -794,9 +798,6 @@ private
       --  existed). This is so that running Parse_All_LI_Files multiple times
       --  for an in-memory database does not always try to recreate it
    end record;
-
-   function "<" (E1, E2 : Entity_Information) return Boolean;
-   function "=" (E1, E2 : Entity_Information) return Boolean;
 
    type Entity_Information is record
       Id    : Integer;
