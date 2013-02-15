@@ -5477,7 +5477,13 @@ package body GNATCOLL.Xref is
                Params => (1 => +N'Unchecked_Access));
 
             if Files.Has_Row then
-               return Files.Time_Value (2) >= File.File_Time_Stamp;
+               if Active (Me_Debug) then
+                  Assert (Me_Debug,
+                          not Files.Is_Null (1),
+                          "No registered timestamp for ALI file "
+                          & Files.Value (0));
+               end if;
+               return Files.Time_Value (1) >= File.File_Time_Stamp;
             else
                return False;  --  file not even known in database
             end if;
