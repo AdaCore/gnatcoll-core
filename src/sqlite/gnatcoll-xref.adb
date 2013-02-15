@@ -3502,6 +3502,10 @@ package body GNATCOLL.Xref is
       Scope : Entity_Information := No_Entity;
       Id    : Integer;
    begin
+      if not Self.DBCursor.Has_Row then
+         return No_Entity_Reference;
+      end if;
+
       if not Self.DBCursor.Is_Null (Q_Ref_Caller) then
          Id := Self.DBCursor.Integer_Value (Q_Ref_Caller);
          if Id < 0 then
