@@ -735,6 +735,15 @@ package body GNATCOLL.SQL.Exec is
          Is_Select := Is_Select_Query (Query);
       end if;
 
+      if Active (Me_Query) then
+         Is_Commit_Or_Rollback :=
+           Equal (Q.all, "commit", Case_Sensitive => False)
+           or else Equal (Q.all, "rollback", Case_Sensitive => False);
+         if Is_Commit_Or_Rollback and then Active (Me_Query) then
+            Decrease_Indent (Me_Query);
+         end if;
+      end if;
+
       --  Transaction management: do we need to start a transaction ?
 
       if Connection.Automatic_Transactions then
@@ -742,9 +751,6 @@ package body GNATCOLL.SQL.Exec is
             Is_Commit_Or_Rollback :=
               Equal (Q.all, "commit", Case_Sensitive => False)
               or else Equal (Q.all, "rollback", Case_Sensitive => False);
-            if Is_Commit_Or_Rollback and then Active (Me_Query) then
-               Decrease_Indent (Me_Query);
-            end if;
          end if;
 
          if Connection.In_Transaction
