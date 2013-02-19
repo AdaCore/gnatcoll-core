@@ -184,13 +184,12 @@ class Pretty_Printer(object):
             pkg = [pkg]
 
         for p in pkg:
-            t = self._title(p)
             if specs:
-                if (t, do_use) not in self.spec_withs:
-                    self.spec_withs.append((t, do_use))
+                if (p, do_use) not in self.spec_withs:
+                    self.spec_withs.append((p, do_use))
             else:
-                if (t, do_use) not in self.body_withs:
-                    self.body_withs.append((t, do_use))
+                if (p, do_use) not in self.body_withs:
+                    self.body_withs.append((p, do_use))
 
     def add_constants(self, cst):
         """cst has the same format as the parameters of a subprogram"""
