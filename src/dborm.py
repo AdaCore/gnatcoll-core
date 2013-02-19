@@ -608,18 +608,18 @@ class Schema(object):
 
         self.pretty.add_with(
           ["GNATCOLL.SQL", "GNATCOLL.SQL.Exec", "GNATCOLL.Tribooleans",
-           "GNATCOLL.SQL.ORM", "GNATCOLL.SQL.ORM.Impl",
+           "GNATCOLL.SQL.Orm", "GNATCOLL.SQL.Orm.Impl",
            "GNATCOLL.SQL.Sessions",
-           "Ada.Strings.Unbounded", "GNAT.Strings", database_pkg,
+           "Ada.Strings.Unbounded", "GNAT.Strings", database_pkg.title(),
            "GNAT.Calendar", "Ada.Calendar",
             "Ada.Finalization"])
-        self.pretty.add_with("ada.unchecked_deallocation", specs=False,
+        self.pretty.add_with("Ada.Unchecked_Deallocation", specs=False,
                               do_use=False)
-        self.pretty.add_with("ada.containers", specs=False)
-        self.pretty.add_with("system.address_image", do_use=False)
+        self.pretty.add_with("Ada.Containers", specs=False)
+        self.pretty.add_with("System.Address_Image", do_use=False)
 
         if not store_connections:
-            self.pretty.add_with("sessions", specs=False)
+            self.pretty.add_with("Sessions", specs=False)
         if debug:
             self.pretty.add_with("GNATCOLL.Traces")
             self.pretty.add_with("System.Address_Image", do_use=False)
