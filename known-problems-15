@@ -4,6 +4,19 @@ Known Problems in Gnatcoll 1.5
 
 Copyright (C) 2012-2013, AdaCore
 
+KP-15-M220-011 GNATCOLL.Projects.File_From_Unit fails on runtime files
+
+  Problem:    This function does not handle units coming from the GNAT runtime
+              and that are using special ("krunched") names, like a-textio.ads
+              for instance.
+
+  Status:     Fixed in Gnatcoll 1.6.0
+
+  Workaround: You can explicitly test whether the file starts with "ada-",
+              "system-", "interfaces-" or "gnat-" and call Krunch.Krunch.
+              The solution implemented for this issue removed the parameter
+              Check_Predefined_Library, which did an incorrect job anyway.
+
 KP-15-M111-002 Compatibility with GtkAda 3.x
 
   Problem:    The API for Gtk_Tree_Model has changed slightly in GtkAda 3.x,

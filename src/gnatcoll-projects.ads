@@ -723,7 +723,6 @@ package GNATCOLL.Projects is
       Unit_Name                : String;
       Part                     : Unit_Parts;
       Language                 : String;
-      Check_Predefined_Library : Boolean := False;
       File_Must_Exist          : Boolean := True)
       return GNATCOLL.VFS.Filesystem_String;
    --  Return the base name for the given unit. The empty string is
@@ -731,11 +730,6 @@ package GNATCOLL.Projects is
    --  of unit doesn't apply to the language. If File_Must_Exist is False, then
    --  the name of the file that would be used is returned, even if no such
    --  file currently exists in the project.
-   --  If Check_Predefined_Library is True, the default GNAT naming scheme is
-   --  used (for runtime files).
-   --  If Check_Predefined_Library is False, the file must by default be
-   --  found in the project hierarchy. If File_Must_Exist is False, then
-   --  the Project's naming scheme is used to compute the result.
    --
    --  If Project is No_Project, the default naming scheme is used
 
