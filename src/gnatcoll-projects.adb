@@ -1519,6 +1519,14 @@ package body GNATCOLL.Projects is
       function Is_Runtime_Unit return Boolean is
          Index : Natural := Unit_Name'First;
       begin
+         if Unit_Name = "ada"
+           or else Unit_Name = "interfaces"
+           or else Unit_Name = "system"
+           or else Unit_Name = "gnat"
+         then
+            return True;
+         end if;
+
          while Index <= Unit_Name'Last
            and then Unit_Name (Index) /= '.'
          loop
