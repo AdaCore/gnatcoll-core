@@ -2562,9 +2562,12 @@ package body GNATCOLL.Xref is
             when 'W' | 'Z' =>
                --  Describes a "with" dependency with the last seen U line.
                --  There are two cases:
-               --      W system%s  system.ads   system.ali
+               --      W ada.text_io%s  a-textio.adb   system.ali
                --      W unchecked_deallocation%s
                --  The second line does not have ALI information.
+               --  On the first line, the file name is that of the body unless
+               --  there is only a spec, and yet the dependency is in general
+               --  on the spec.
 
                Index := Index + 2;
                Dep_Id := -1;

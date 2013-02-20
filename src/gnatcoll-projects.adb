@@ -47,6 +47,7 @@ with Atree;
 with Casing;                      use Casing;
 with Csets;
 pragma Warnings (Off, "*license of withed unit*");
+with Krunch;
 with Makeutl;
 with Namet;                       use Namet;
 with Osint;
@@ -1502,12 +1503,34 @@ package body GNATCOLL.Projects is
       Unit_Name                : String;
       Part                     : Unit_Parts;
       Language                 : String;
-      Check_Predefined_Library : Boolean := False;
       File_Must_Exist          : Boolean := True) return Filesystem_String
    is
       function Has_Predefined_Prefix (S : String) return Boolean;
       --  Return True is S has a name that starts like a predefined unit
       --  (e.g. a.b, which should be replaced by a~b)
+
+      function Is_Runtime_Unit return Boolean;
+      --  Return True if Unit_Name is from the runtime
+
+      ---------------------
+      -- Is_Runtime_Unit --
+      ---------------------
+
+      function Is_Runtime_Unit return Boolean is
+         Index : Natural := Unit_Name'First;
+      begin
+         while Index <= Unit_Name'Last
+           and then Unit_Name (Index) /= '.'
+         loop
+            Index := Index + 1;
+         end loop;
+
+         return Index <= Unit_Name'Last and then
+           (Unit_Name (Unit_Name'First .. Index - 1) = "ada" or else
+            Unit_Name (Unit_Name'First .. Index - 1) = "interfaces" or else
+            Unit_Name (Unit_Name'First .. Index - 1) = "system" or else
+            Unit_Name (Unit_Name'First .. Index - 1) = "gnat");
+      end Is_Runtime_Unit;
 
       ---------------------------
       -- Has_Predefined_Prefix --
@@ -1524,15 +1547,31 @@ package body GNATCOLL.Projects is
       UIndex  : Unit_Index;
       Lang    : Language_Ptr;
    begin
+      if Is_Runtime_Unit then
+         declare
+            Buffer : String := Substitute_Dot (Unit_Name, "-");
+            Len    : Natural := Buffer'Length;
+         begin
+            pragma Assert (Buffer'First = 1);
+            Krunch (Buffer, Len, Maxlen => Buffer'Length,
+                    No_Predef => False);
+
+            case Part is
+            when Unit_Body | Unit_Separate =>
+               return +Buffer (1 .. Len) & ".adb";
+            when Unit_Spec =>
+               return +Buffer (1 .. Len) & ".ads";
+            end case;
+         end;
+      end if;
+
       --  Standard GNAT naming scheme
       --  ??? This isn't language independent, what if other languages have
       --  similar requirements. Should use configuration files as gprbuild does
 
-      if Project = No_Project
-        or else (Check_Predefined_Library
-                 and then Case_Insensitive_Equal (Language, "ada"))
-      then
-         case Part is
+      if Project = No_Project then
+         if Language = "ada" then
+            case Part is
             when Unit_Body =>
                return +Substitute_Dot (Unit_Name, "-") & ".adb";
             when Unit_Spec =>
@@ -1540,7 +1579,10 @@ package body GNATCOLL.Projects is
             when others =>
                Assert (Me, False, "Unexpected Unit_Part");
                return "";
-         end case;
+            end case;
+         else
+            return "";
+         end if;
 
       --  The project naming scheme
       else
@@ -1716,7 +1758,7 @@ package body GNATCOLL.Projects is
             declare
                Base : constant Filesystem_String := File_From_Unit
                  (Project (Info), Unit, Part,
-                  Check_Predefined_Library => True, Language => Info.Language);
+                  Language => Info.Language);
             begin
                if Base'Length > 0 then
                   return Self.Create (Base, Use_Object_Path => False);
