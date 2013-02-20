@@ -3625,9 +3625,20 @@ package body GNATCOLL.Xref is
       Entity : Entity_Information;
       Cursor : out References_Cursor'Class)
    is
+      E : Entity_Information;
    begin
       Cursor.Entity := Entity;
       Cursor.DBCursor.Fetch (Self.DB, Q_Bodies, Params => (1 => +Entity.Id));
+
+      --  If we have no bodies, check whether the entity is an instantiation
+      --  of another entity which itself would have a body.
+
+      if not Has_Row (Cursor.DBCursor) then
+         E := Self.Instance_Of (Entity);
+         if E /= No_Entity then
+            Cursor.DBCursor.Fetch (Self.DB, Q_Bodies, Params => (1 => +E.Id));
+         end if;
+      end if;
    end Bodies;
 
    -------------
