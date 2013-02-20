@@ -3641,6 +3641,15 @@ package body GNATCOLL.Xref is
             Cursor.DBCursor.Fetch (Self.DB, Q_Bodies, Params => (1 => +E.Id));
          end if;
       end if;
+
+      --  Still not found, check through renaming
+
+      if not Has_Row (Cursor.DBCursor) then
+         E := Self.Renaming_Of (Entity);
+         if E /= No_Entity then
+            Cursor.DBCursor.Fetch (Self.DB, Q_Bodies, Params => (1 => +E.Id));
+         end if;
+      end if;
    end Bodies;
 
    -------------
