@@ -2183,6 +2183,8 @@ package body GNATCOLL.Xref is
                            Eid := E2e_Has_Index;
                         when 'G' | 'u' | 'U' | 'v' | 'V' | 'y' | 'x' =>
                            Eid := E2e_Overrides;
+                        when 'c' =>  --  Temporary workaround for M220-019
+                           Eid := E2e_Of_Type;
                         when others =>
                            Eid := E2e_Parent_Type;
                         end case;
