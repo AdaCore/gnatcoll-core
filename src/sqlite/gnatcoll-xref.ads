@@ -612,6 +612,9 @@ package GNATCOLL.Xref is
       Entity : Entity_Information) return Entity_Information;
    --  The entity that is overridden by Entity (ie the method in
    --  the parent class that is overriden by Entity).
+   --  If Entity is a parameter of a subprogram, this procedure will return
+   --  the list of homonym parameters in overridden subprograms, as an
+   --  extension to the notion of overriding.
 
    procedure Overridden_By
      (Self   : Xref_Database'Class;
@@ -619,6 +622,9 @@ package GNATCOLL.Xref is
       Cursor : out Entities_Cursor'Class);
    --  The list of entities that override Entity (in general, methods of
    --  child classes that override Entity).
+   --  If Entity is a parameter of a subprogram, this procedure will return
+   --  the list of homonym parameters in overriding subprograms, as an
+   --  extension to the notion of overriding.
 
    function Type_Of
      (Self   : Xref_Database'Class;

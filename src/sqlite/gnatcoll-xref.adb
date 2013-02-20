@@ -81,6 +81,9 @@ package body GNATCOLL.Xref is
    N_Entities2 : aliased String := "e2";
    Entities2 : T_Entities (N_Entities2'Access);
 
+   N_E2E2 : aliased String := "e2e2";
+   E2E2 : T_E2e (N_E2E2'Access);
+
    Query_Get_File : constant Prepared_Statement :=
      Prepare
        (SQL_Select
@@ -426,6 +429,60 @@ package body GNATCOLL.Xref is
              Distinct => True),
         On_Server => False, Name => "e2e_to");
    --  Cannot be prepared because there are risks of concurrent calls.
+
+   Query_Overriding_Parameters : constant Prepared_Statement :=
+     Prepare
+       (SQL_Select
+            (Entities2_Fields,
+             From => Entities2     --  the parameters info
+             & Entities   --  the original parameter
+             & Database.E2e & E2E2,
+             Where =>
+               --  Output parameter must have the same name as original
+             Entities2.Name = Entities.Name
+             and Entities.Id = Integer_Param (1)
+
+               --  Entities3 must be the overriding subprograms
+             and Database.E2e.toEntity = Integer_Param (2)
+             and Database.E2e.Kind = E2e_Overrides
+             and Database.E2e.fromEntity = E2E2.fromEntity
+
+             --  The subprograms of those overriding subprograms
+             and (E2E2.Kind = E2e_In_Parameter
+               or E2E2.Kind = E2e_In_Out_Parameter
+               or E2E2.Kind = E2e_Out_Parameter
+               or E2E2.Kind = E2e_Access_Parameter)
+             and Entities2.Id = E2E2.toEntity,
+
+             Distinct => True),
+        On_Server => False, Name => "overriding_params");
+
+   Query_Overridden_Parameters : constant Prepared_Statement :=
+     Prepare
+       (SQL_Select
+            (Entities2_Fields,
+             From => Entities2     --  the parameters info
+             & Entities   --  the original parameter
+             & Database.E2e & E2E2,
+             Where =>
+               --  Output parameter must have the same name as original
+             Entities2.Name = Entities.Name
+             and Entities.Id = Integer_Param (1)
+
+               --  Entities3 must be the overriding subprograms
+             and Database.E2e.fromEntity = Integer_Param (2)
+             and Database.E2e.Kind = E2e_Overrides
+             and Database.E2e.toEntity = E2E2.fromEntity
+
+             --  The subprograms of those overriding subprograms
+             and (E2E2.Kind = E2e_In_Parameter
+               or E2E2.Kind = E2e_In_Out_Parameter
+               or E2E2.Kind = E2e_Out_Parameter
+               or E2E2.Kind = E2e_Access_Parameter)
+             and Entities2.Id = E2E2.toEntity,
+
+             Distinct => True),
+        On_Server => False, Name => "overridden_params");
 
    Q_Decl_Name    : constant := 0;
    Q_Decl_File    : constant := 1;
@@ -4589,11 +4646,27 @@ package body GNATCOLL.Xref is
    procedure Overridden_By
      (Self   : Xref_Database'Class;
       Entity : Entity_Information;
-      Cursor : out Entities_Cursor'Class) is
+      Cursor : out Entities_Cursor'Class)
+   is
+      S : Entity_Information;
    begin
       Cursor.DBCursor.Fetch
         (Self.DB, Query_E2E_To,
          Params => (1 => +Entity.Id, 2 => +E2e_Overrides));
+
+      --  If the entity does not have direct overridings, it might be the
+      --  parameter of a subprogram. In this case, we find to find the
+      --  homonym parameters in the overridden subprograms (since renaming the
+      --  original parameter might require
+
+      if not Cursor.DBCursor.Has_Row then
+         S := Self.Parameter_Of (Entity);
+         if S /= No_Entity then
+            Cursor.DBCursor.Fetch
+              (Self.DB, Query_Overriding_Parameters,
+               Params => (1 => +Entity.Id, 2 => +S.Id));
+         end if;
+      end if;
    end Overridden_By;
 
    ----------------------------
@@ -4687,8 +4760,25 @@ package body GNATCOLL.Xref is
      (Self   : Xref_Database'Class;
       Entity : Entity_Information) return Entity_Information
    is
+      E, S : Entity_Information;
+      Curs : Entities_Cursor;
    begin
-      return Single_Entity_From_E2e (Self, Entity, E2e_Overrides);
+      E := Single_Entity_From_E2e (Self, Entity, E2e_Overrides);
+
+      --  Handles overriding parameters
+      if E = No_Entity then
+         S := Self.Parameter_Of (Entity);
+         if S /= No_Entity then
+            Curs.DBCursor.Fetch
+              (Self.DB, Query_Overridden_Parameters,
+               Params => (1 => +Entity.Id, 2 => +S.Id));
+            if Curs.DBCursor.Has_Row then
+               E := Curs.Element;
+            end if;
+         end if;
+      end if;
+
+      return E;
    end Overrides;
 
    ------------------
@@ -4697,7 +4787,8 @@ package body GNATCOLL.Xref is
 
    function Pointed_Type
      (Self   : Xref_Database'Class;
-      Entity : Entity_Information) return Entity_Information is
+      Entity : Entity_Information) return Entity_Information
+   is
    begin
       return Single_Entity_From_E2e (Self, Entity, E2e_Pointed_Type);
    end Pointed_Type;
