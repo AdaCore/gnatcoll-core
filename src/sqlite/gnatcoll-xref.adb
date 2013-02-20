@@ -592,7 +592,7 @@ package body GNATCOLL.Xref is
              & Database.Reference_Kinds,
              Where => Database.Entity_Refs.File = Database.Files.Id
              and Database.Entity_Refs.Kind = Database.Reference_Kinds.Id
-             and Database.Reference_Kinds.Id = "b"
+             and SQL_In (Database.Reference_Kinds.Id, "'b','c'")
              and (Database.Entity_Refs.Entity = Integer_Param (1)
 
                   --  Search all matching exported entities
