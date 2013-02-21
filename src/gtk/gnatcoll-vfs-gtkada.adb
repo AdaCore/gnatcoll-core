@@ -197,7 +197,8 @@ package body GNATCOLL.VFS.GtkAda is
       Iter       : Gtk.Tree_Model.Gtk_Tree_Iter;
       Column     : Glib.Gint) return Virtual_File is
    begin
-      return Get_File (Gtk.Tree_Model.Gtk_Tree_Model (Store), Iter, Column);
+      return Get_File
+        (Gtk.Tree_Model.Gtk_Root_Tree_Model (Store), Iter, Column);
    end Get_File;
 
 end GNATCOLL.VFS.GtkAda;
