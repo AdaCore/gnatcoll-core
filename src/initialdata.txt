@@ -115,37 +115,37 @@
 | TABLE                  | entities |           |           |             |           |
 | name                   | kind     | decl_file | decl_line | decl_column | is_global |
 | __va_list_tag          | p        |        -1 |        -1 |          -1 | true      |
-| boolean                | B        |        -1 |        -1 |          -1 | true      |
+| Boolean                | B        |        -1 |        -1 |          -1 | true      |
 | char                   | I        |        -1 |        -1 |          -1 | true      |
-| character              | E        |        -1 |        -1 |          -1 | true      |
-| double                 | F        |        -1 |        -1 |          -1 | true      |
-| duration               | O        |        -1 |        -1 |          -1 | true      |
-| float                  | F        |        -1 |        -1 |          -1 | true      |
+| Character              | E        |        -1 |        -1 |          -1 | true      |
+| Double                 | F        |        -1 |        -1 |          -1 | true      |
+| Duration               | O        |        -1 |        -1 |          -1 | true      |
+| Float                  | F        |        -1 |        -1 |          -1 | true      |
 | int                    | I        |        -1 |        -1 |          -1 | true      |
-| integer                | I        |        -1 |        -1 |          -1 | true      |
+| Integer                | I        |        -1 |        -1 |          -1 | true      |
 | bool                   | B        |        -1 |        -1 |          -1 | true      |
 | long double            | F        |        -1 |        -1 |          -1 | true      |
 | long int               | I        |        -1 |        -1 |          -1 | true      |
 | long long int          | I        |        -1 |        -1 |          -1 | true      |
 | long long unsigned int | I        |        -1 |        -1 |          -1 | true      |
 | long unsigned int      | I        |        -1 |        -1 |          -1 | true      |
-| long_float             | F        |        -1 |        -1 |          -1 | true      |
-| long_long_float        | F        |        -1 |        -1 |          -1 | true      |
-| long_integer           | I        |        -1 |        -1 |          -1 | true      |
-| long_long_integer      | I        |        -1 |        -1 |          -1 | true      |
-| natural                | I        |        -1 |        -1 |          -1 | true      |
-| positive               | I        |        -1 |        -1 |          -1 | true      |
+| Long_Float             | F        |        -1 |        -1 |          -1 | true      |
+| Long_Long_Float        | F        |        -1 |        -1 |          -1 | true      |
+| Long_Integer           | I        |        -1 |        -1 |          -1 | true      |
+| Long_Long_Integer      | I        |        -1 |        -1 |          -1 | true      |
+| Natural                | I        |        -1 |        -1 |          -1 | true      |
+| Positive               | I        |        -1 |        -1 |          -1 | true      |
 | short int              | I        |        -1 |        -1 |          -1 | true      |
 | short unsigned int     | I        |        -1 |        -1 |          -1 | true      |
-| short_float            | F        |        -1 |        -1 |          -1 | true      |
-| short_integer          | I        |        -1 |        -1 |          -1 | true      |
-| short_short_integer    | I        |        -1 |        -1 |          -1 | true      |
+| Short_Float            | F        |        -1 |        -1 |          -1 | true      |
+| Short_Integer          | I        |        -1 |        -1 |          -1 | true      |
+| Short_Short_Integer    | I        |        -1 |        -1 |          -1 | true      |
 | signed char            | I        |        -1 |        -1 |          -1 | true      |
-| string                 | A        |        -1 |        -1 |          -1 | true      |
+| String                 | A        |        -1 |        -1 |          -1 | true      |
 | unsigned char          | I        |        -1 |        -1 |          -1 | true      |
 | unsigned int           | I        |        -1 |        -1 |          -1 | true      |
 | void                   | p        |        -1 |        -1 |          -1 | true      |
-| wide_character         | E        |        -1 |        -1 |          -1 | true      |
-| wide_wide_character    | E        |        -1 |        -1 |          -1 | true      |
-| wide_string            | A        |        -1 |        -1 |          -1 | true      |
-| wide_wide_string       | A        |        -1 |        -1 |          -1 | true      |
+| Wide_Character         | E        |        -1 |        -1 |          -1 | true      |
+| Wide_Wide_Character    | E        |        -1 |        -1 |          -1 | true      |
+| Wide_String            | A        |        -1 |        -1 |          -1 | true      |
+| Wide_Wide_String       | A        |        -1 |        -1 |          -1 | true      |
