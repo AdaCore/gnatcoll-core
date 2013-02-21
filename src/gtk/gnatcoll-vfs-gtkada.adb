@@ -141,6 +141,24 @@ package body GNATCOLL.VFS.GtkAda is
    end Set_File;
 
    --------------
+   -- Set_File --
+   --------------
+
+   procedure Set_File
+     (List_Store : access Gtk.List_Store.Gtk_List_Store_Record'Class;
+      Iter       : Gtk.Tree_Model.Gtk_Tree_Iter;
+      Column     : Glib.Gint;
+      File       : Virtual_File)
+   is
+      Value : GValue;
+   begin
+      Init (Value, Get_Virtual_File_Type);
+      Set_File (Value, File);
+      Gtk.List_Store.Set_Value (List_Store, Iter, Column, Value);
+      Unset (Value);
+   end Set_File;
+
+   --------------
    -- Get_File --
    --------------
 
@@ -167,4 +185,13 @@ package body GNATCOLL.VFS.GtkAda is
    begin
       return Get_File (Gtk.Tree_Model.Gtk_Tree_Model (Store), Iter, Column);
    end Get_File;
+
+   function Get_File
+     (Store      : access Gtk.List_Store.Gtk_List_Store_Record'Class;
+      Iter       : Gtk.Tree_Model.Gtk_Tree_Iter;
+      Column     : Glib.Gint) return Virtual_File is
+   begin
+      return Get_File (Gtk.Tree_Model.Gtk_Tree_Model (Store), Iter, Column);
+   end Get_File;
+
 end GNATCOLL.VFS.GtkAda;

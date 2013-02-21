@@ -23,6 +23,7 @@
 
 with Glib;
 with Glib.Values;
+with Gtk.List_Store;
 with Gtk.Tree_Store;
 with Gtk.Tree_Model;
 
@@ -51,6 +52,11 @@ package GNATCOLL.VFS.GtkAda is
       Iter       : Gtk.Tree_Model.Gtk_Tree_Iter;
       Column     : Glib.Gint;
       File       : Virtual_File);
+   procedure Set_File
+     (List_Store : access Gtk.List_Store.Gtk_List_Store_Record'Class;
+      Iter       : Gtk.Tree_Model.Gtk_Tree_Iter;
+      Column     : Glib.Gint;
+      File       : Virtual_File);
    --  Set a file into a tree store. The column should have been initialized
    --  as GTYpe_Pointer
 
@@ -60,6 +66,10 @@ package GNATCOLL.VFS.GtkAda is
       Column     : Glib.Gint) return Virtual_File;
    function Get_File
      (Store      : access Gtk.Tree_Store.Gtk_Tree_Store_Record'Class;
+      Iter       : Gtk.Tree_Model.Gtk_Tree_Iter;
+      Column     : Glib.Gint) return Virtual_File;
+   function Get_File
+     (Store      : access Gtk.List_Store.Gtk_List_Store_Record'Class;
       Iter       : Gtk.Tree_Model.Gtk_Tree_Iter;
       Column     : Glib.Gint) return Virtual_File;
    --  Get a file from a tree model. The column should have been initialized
