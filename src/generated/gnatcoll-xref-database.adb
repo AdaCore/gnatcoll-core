@@ -225,40 +225,40 @@ package body GNATCOLL.Xref.Database is
          & "|TABLE|entities|||||" & ASCII.LF
          & "|name|kind|decl_file|decl_line|decl_column|is_global|" & ASCII.LF
          & "|__va_list_tag|p|-1|-1|-1|true|" & ASCII.LF
-         & "|boolean|B|-1|-1|-1|true|" & ASCII.LF
+         & "|Boolean|B|-1|-1|-1|true|" & ASCII.LF
          & "|char|I|-1|-1|-1|true|" & ASCII.LF
-         & "|character|E|-1|-1|-1|true|" & ASCII.LF
-         & "|double|F|-1|-1|-1|true|" & ASCII.LF
-         & "|duration|O|-1|-1|-1|true|" & ASCII.LF
-         & "|float|F|-1|-1|-1|true|" & ASCII.LF
+         & "|Character|E|-1|-1|-1|true|" & ASCII.LF
+         & "|Double|F|-1|-1|-1|true|" & ASCII.LF
+         & "|Duration|O|-1|-1|-1|true|" & ASCII.LF
+         & "|Float|F|-1|-1|-1|true|" & ASCII.LF
          & "|int|I|-1|-1|-1|true|" & ASCII.LF
-         & "|integer|I|-1|-1|-1|true|" & ASCII.LF
+         & "|Integer|I|-1|-1|-1|true|" & ASCII.LF
          & "|bool|B|-1|-1|-1|true|" & ASCII.LF
          & "|long double|F|-1|-1|-1|true|" & ASCII.LF
          & "|long int|I|-1|-1|-1|true|" & ASCII.LF
          & "|long long int|I|-1|-1|-1|true|" & ASCII.LF
          & "|long long unsigned int|I|-1|-1|-1|true|" & ASCII.LF
          & "|long unsigned int|I|-1|-1|-1|true|" & ASCII.LF
-         & "|long_float|F|-1|-1|-1|true|" & ASCII.LF
-         & "|long_long_float|F|-1|-1|-1|true|" & ASCII.LF
-         & "|long_integer|I|-1|-1|-1|true|" & ASCII.LF
-         & "|long_long_integer|I|-1|-1|-1|true|" & ASCII.LF
-         & "|natural|I|-1|-1|-1|true|" & ASCII.LF
-         & "|positive|I|-1|-1|-1|true|" & ASCII.LF
+         & "|Long_Float|F|-1|-1|-1|true|" & ASCII.LF
+         & "|Long_Long_Float|F|-1|-1|-1|true|" & ASCII.LF
+         & "|Long_Integer|I|-1|-1|-1|true|" & ASCII.LF
+         & "|Long_Long_Integer|I|-1|-1|-1|true|" & ASCII.LF
+         & "|Natural|I|-1|-1|-1|true|" & ASCII.LF
+         & "|Positive|I|-1|-1|-1|true|" & ASCII.LF
          & "|short int|I|-1|-1|-1|true|" & ASCII.LF
          & "|short unsigned int|I|-1|-1|-1|true|" & ASCII.LF
-         & "|short_float|F|-1|-1|-1|true|" & ASCII.LF
-         & "|short_integer|I|-1|-1|-1|true|" & ASCII.LF
-         & "|short_short_integer|I|-1|-1|-1|true|" & ASCII.LF
+         & "|Short_Float|F|-1|-1|-1|true|" & ASCII.LF
+         & "|Short_Integer|I|-1|-1|-1|true|" & ASCII.LF
+         & "|Short_Short_Integer|I|-1|-1|-1|true|" & ASCII.LF
          & "|signed char|I|-1|-1|-1|true|" & ASCII.LF
-         & "|string|A|-1|-1|-1|true|" & ASCII.LF
+         & "|String|A|-1|-1|-1|true|" & ASCII.LF
          & "|unsigned char|I|-1|-1|-1|true|" & ASCII.LF
          & "|unsigned int|I|-1|-1|-1|true|" & ASCII.LF
          & "|void|p|-1|-1|-1|true|" & ASCII.LF
-         & "|wide_character|E|-1|-1|-1|true|" & ASCII.LF
-         & "|wide_wide_character|E|-1|-1|-1|true|" & ASCII.LF
-         & "|wide_string|A|-1|-1|-1|true|" & ASCII.LF
-         & "|wide_wide_string|A|-1|-1|-1|true|" & ASCII.LF
+         & "|Wide_Character|E|-1|-1|-1|true|" & ASCII.LF
+         & "|Wide_Wide_Character|E|-1|-1|-1|true|" & ASCII.LF
+         & "|Wide_String|A|-1|-1|-1|true|" & ASCII.LF
+         & "|Wide_Wide_String|A|-1|-1|-1|true|" & ASCII.LF
          & "";
       F : File_Schema_IO;
       D : DB_Schema_IO;
