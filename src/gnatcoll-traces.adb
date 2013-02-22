@@ -73,15 +73,16 @@ package body GNATCOLL.Traces is
 
    procedure Unchecked_Free is new Ada.Unchecked_Deallocation
      (Trace_Handle_Record'Class, Trace_Handle);
+
    procedure Unchecked_Free is new Ada.Unchecked_Deallocation
      (Trace_Stream_Record'Class, Trace_Stream);
 
    type Stream_Factories;
    type Stream_Factories_List is access Stream_Factories;
    type Stream_Factories is record
-      Name          : GNAT.Strings.String_Access;
-      Factory       : Stream_Factory_Access;
-      Next          : Stream_Factories_List;
+      Name    : GNAT.Strings.String_Access;
+      Factory : Stream_Factory_Access;
+      Next    : Stream_Factories_List;
    end record;
 
    procedure Unchecked_Free is new Ada.Unchecked_Deallocation
@@ -189,12 +190,12 @@ package body GNATCOLL.Traces is
    --  The empty string is returned if no such file was found.
 
    function Create_Internal
-     (Unit_Name : String;
+     (Unit_Name        : String;
       From_Config_File : Boolean;
-      Default   : Default_Activation_Status := From_Config;
-      Stream    : Trace_Stream := null;
-      Factory   : Handle_Factory := null;
-      Finalize  : Boolean := True) return Trace_Handle;
+      Default          : Default_Activation_Status := From_Config;
+      Stream           : Trace_Stream := null;
+      Factory          : Handle_Factory := null;
+      Finalize         : Boolean := True) return Trace_Handle;
    --  Internal version of Create.
 
    function Get_Process_Id return Integer;
@@ -334,6 +335,10 @@ package body GNATCOLL.Traces is
    is
       procedure Add_To_Streams (Tmp : Trace_Stream);
 
+      --------------------
+      -- Add_To_Streams --
+      --------------------
+
       procedure Add_To_Streams (Tmp : Trace_Stream) is
       begin
          --  If possible, do not put this first on the list of streams,
@@ -393,6 +398,7 @@ package body GNATCOLL.Traces is
       elsif Name (Name'First) = '&' then
          Tmp := null;
          TmpF := Global.Factories_List;
+
          while TmpF /= null loop
             if TmpF.Name.all = Name (Name'First .. Colon - 1) then
                if Colon < Name'Last then
@@ -419,11 +425,11 @@ package body GNATCOLL.Traces is
          declare
             Max_Date_Width : constant Natural := 10; --  "yyyy-mm-dd"
             Max_PID_Width  : constant Natural := 12;
-            Max_Name_Last : constant Natural :=
+            Max_Name_Last  : constant Natural :=
               Name'Last + Max_Date_Width + Max_PID_Width;
-            Name_Tmp : String (Name'First .. Max_Name_Last);
-            Index : Integer := Name_Tmp'First;
-            N     : Integer := Name'First;
+            Name_Tmp       : String (Name'First .. Max_Name_Last);
+            Index          : Integer := Name_Tmp'First;
+            N              : Integer := Name'First;
          begin
             while N <= Name'Last loop
                if Name (N) = '$' then
@@ -444,8 +450,7 @@ package body GNATCOLL.Traces is
                     and then Name (N + 1) = 'D'
                   then
                      declare
-                        Date : constant String := Image
-                          (Clock, "%Y-%m-%d");
+                        Date : constant String := Image (Clock, "%Y-%m-%d");
                      begin
                         Name_Tmp (Index .. Index + Date'Length - 1) := Date;
                         Index := Index + Date'Length;
@@ -526,17 +531,17 @@ package body GNATCOLL.Traces is
    ---------------------
 
    function Create_Internal
-     (Unit_Name : String;
+     (Unit_Name        : String;
       From_Config_File : Boolean;
-      Default   : Default_Activation_Status := From_Config;
-      Stream    : Trace_Stream := null;
-      Factory   : Handle_Factory := null;
-      Finalize  : Boolean := True) return Trace_Handle
+      Default          : Default_Activation_Status := From_Config;
+      Stream           : Trace_Stream := null;
+      Factory          : Handle_Factory := null;
+      Finalize         : Boolean := True) return Trace_Handle
    is
-      Tmp, Tmp2  : Trace_Handle    := null;
-      Wildcard_Tmp   : Trace_Handle    := null;
-      Upper_Case : constant String := To_Upper (Unit_Name);
-      Is_Star    : Boolean;
+      Tmp, Tmp2    : Trace_Handle    := null;
+      Wildcard_Tmp : Trace_Handle    := null;
+      Upper_Case   : constant String := To_Upper (Unit_Name);
+      Is_Star      : Boolean;
 
    begin
       if Debug_Mode then
@@ -560,18 +565,18 @@ package body GNATCOLL.Traces is
                Tmp := new Trace_Handle_Record;
             end if;
 
-            Tmp.Name            := new String'(Upper_Case);
-            Tmp.Forced_Active   := False;
-            Tmp.Count           := 1;
-            Tmp.Timer           := No_Time;
-            Tmp.Finalize        := Finalize;
+            Tmp.Name          := new String'(Upper_Case);
+            Tmp.Forced_Active := False;
+            Tmp.Count         := 1;
+            Tmp.Timer         := No_Time;
+            Tmp.Finalize      := Finalize;
 
             if Is_Star then
-               Wildcard_Tmp            := null;
-               Tmp.Next            := Global.Wildcard_Handles_List;
+               Wildcard_Tmp                 := null;
+               Tmp.Next                     := Global.Wildcard_Handles_List;
                Global.Wildcard_Handles_List := Tmp;
             else
-               Wildcard_Tmp := Find_Wildcard_Handle (Upper_Case);
+               Wildcard_Tmp        := Find_Wildcard_Handle (Upper_Case);
                Tmp.Next            := Global.Handles_List;
                Global.Handles_List := Tmp;
             end if;
@@ -608,6 +613,7 @@ package body GNATCOLL.Traces is
             if Default = On then
                Tmp.Active := True;
                Tmp.Forced_Active := True;
+
             elsif Default = Off then
                Tmp.Active := False;
                Tmp.Forced_Active := True;
@@ -810,6 +816,7 @@ package body GNATCOLL.Traces is
          if Handle /= null and then Msg /= "" then
             Trace (Handle, Msg);
          end if;
+
       else
          if Handle /= null then
             Trace (Handle, "Indentation error: two many decrease");
@@ -874,7 +881,6 @@ package body GNATCOLL.Traces is
 
    procedure Put_Absolute_Time (Stream : in out Trace_Stream_Record'Class) is
       T  : constant Ada.Calendar.Time := Ada.Calendar.Clock;
-
       Ms : constant String := Integer'Image (Local_Sub_Second (T));
    begin
       if Absolute_Date.Active then
@@ -884,6 +890,7 @@ package body GNATCOLL.Traces is
          else
             Put (Stream, "(" & Image (T, ISO_Date) & ')');
          end if;
+
       else
          Put (Stream, "(" & Image (T, "%T.")
               & Ms (Ms'First + 1 .. Ms'Last) & ')');
@@ -965,6 +972,10 @@ package body GNATCOLL.Traces is
 
       procedure Ensure_Space;
       --  Insert a space if not done already
+
+      ------------------
+      -- Ensure_Space --
+      ------------------
 
       procedure Ensure_Space is
       begin
@@ -1126,8 +1137,8 @@ package body GNATCOLL.Traces is
       Default  : Virtual_File)
       return Virtual_File
    is
-      Env  : GNAT.Strings.String_Access;
-      Ret  : Virtual_File;
+      Env : GNAT.Strings.String_Access;
+      Ret : Virtual_File;
    begin
       if Filename /= No_File and then Filename.Is_Regular_File then
          return Filename;
@@ -1300,11 +1311,12 @@ package body GNATCOLL.Traces is
       Default      : Virtual_File := No_File;
       On_Exception : On_Exception_Mode := Propagate)
    is
-      File_Name  : constant Virtual_File := Config_File (Filename, Default);
-      Buffer     : Str_Access;
-      File       : Mapped_File;
+      File_Name : constant Virtual_File := Config_File (Filename, Default);
+
+      Buffer            : Str_Access;
+      File              : Mapped_File;
       Index, First, Max : Natural;
-      Handle     : Trace_Handle;
+      Handle            : Trace_Handle;
 
       procedure Skip_Spaces (Skip_Newline : Boolean := True);
       --  Skip the spaces (including possibly newline), and leave Index on the
