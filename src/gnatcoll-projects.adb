@@ -4558,12 +4558,14 @@ package body GNATCOLL.Projects is
 
       if Self.Data = null then
          Self.Data := new Project_Tree_Data;
+      end if;
 
-         if Env = null then
+      if Env = null then
+         if Self.Data.Env = null then
             Initialize (Self.Data.Env);
-         else
-            Self.Data.Env := Env;
          end if;
+      else
+         Self.Data.Env := Env;
       end if;
 
       --  Force a recomputation of the timestamp the next time Recompute_View
