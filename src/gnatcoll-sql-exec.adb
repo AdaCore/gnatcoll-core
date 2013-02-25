@@ -127,6 +127,7 @@ package body GNATCOLL.SQL.Exec is
 
       procedure Mark_DB_As_Free (DB : Database_Connection);
       function Was_Freed (DB : Database_Connection) return Boolean;
+      pragma Unreferenced (Was_Freed);
 
    private
       Current_Cache_Id : Cache_Id := 1;
@@ -1756,9 +1757,9 @@ package body GNATCOLL.SQL.Exec is
          --  ??? Should not finalize if we haven't finalized all cursors built
          --  from that prepared statement.
 
-         if not Query_Cache.Was_Freed (Self.Prepared.DB) then
-            Finalize (Self.Prepared.DB, Self.Prepared.Stmt);
-         end if;
+--           if not Query_Cache.Was_Freed (Self.Prepared.DB) then
+--              Finalize (Self.Prepared.DB, Self.Prepared.Stmt);
+--           end if;
          Unchecked_Free (Self.Prepared);
 
       elsif Self.Prepared /= null then
