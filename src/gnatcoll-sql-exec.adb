@@ -452,7 +452,7 @@ package body GNATCOLL.SQL.Exec is
       Unchecked_Free (R);
 
       if Success then
-         Trace (Me_Query, "Init_Database: database successfuly initialized");
+         Trace (Me_Query, "Init_Database: database successfully initialized");
       else
          Trace
            (Me_Error,
