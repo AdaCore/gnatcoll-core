@@ -127,7 +127,6 @@ package body GNATCOLL.SQL.Exec is
 
       procedure Mark_DB_As_Free (DB : Database_Connection);
       function Was_Freed (DB : Database_Connection) return Boolean;
-      pragma Unreferenced (Was_Freed);
 
    private
       Current_Cache_Id : Cache_Id := 1;
