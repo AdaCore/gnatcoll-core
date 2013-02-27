@@ -2,7 +2,7 @@
 GNATCOLL 1.6 NEW FEATURES LIST
 ==============================
 
-Copyright (C) 2012, AdaCore
+Copyright (C) 2012-2013, AdaCore
 
 This file contains a list of new features introduced in GNATCOLL.
 A full description of all GNATCOLL features can be found in the GNATCOLL
@@ -14,6 +14,12 @@ of the feature.
 
 New features in 1.6
 -------------------
+
+NF-16-M227-008 GNATCOLL.Refcount provides initialization (2013-02-27)
+
+   It is now possible to pass an additional Initialize parameter when
+   instantiating GNATCOLL.Refcount, for instance to prevent the creation
+   of null pointers.
 
 NF-16-LC18-014 Specify postgreSQL's port number (2012-12-18)
 

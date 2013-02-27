@@ -89,6 +89,19 @@ package body GNATCOLL.Refcount is
          return P1.Data = P2.Data;
       end "=";
 
+      ----------------
+      -- Initialize --
+      ----------------
+
+      overriding procedure Initialize (P : in out Ref) is
+         Data : Refcounted_Access := null;
+      begin
+         Initialize (Data);
+         if Data /= null then
+            Set (P, Encapsulated_Access (Data));
+         end if;
+      end Initialize;
+
       --------------
       -- Finalize --
       --------------
