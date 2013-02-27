@@ -795,6 +795,18 @@ package GNATCOLL.Xref is
    --  Insert a dummy entity in the database.
    --  Kind must correspond to one of the entries
 
+   procedure Is_Update_DB_Needed
+     (Self                : in out Xref_Database;
+      Project             : Project_Type;
+      Update_Needed       : out Boolean;
+      Parse_Runtime_Files : Boolean := True);
+   --  Checks if the xref info in the DB database is up to date compared with
+   --  the LI files of the project.
+   --
+   --  Parse_Runtime_Files indicates whether we should be looking at the
+   --  predefined object directories to find extra ALI files to check. This
+   --  will in general include the Ada runtime.
+
 private
    type Xref_Database is tagged record
       DB      : GNATCOLL.SQL.Exec.Database_Connection;
