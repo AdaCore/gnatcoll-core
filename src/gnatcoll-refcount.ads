@@ -73,6 +73,13 @@ package GNATCOLL.Refcount is
       --  prevent the existence of uninitialized smart pointers). For instance
       --       R : Ref;        --  calls Initialize to provide initial value
       --       R2 : Ref := R;  --  does not call Initialize
+      --
+      --  This procedure is also called after you assign a Null_Ref to
+      --  another value, to ensure the other value is also initialized and
+      --  you can start manipulating it. Unfortunately, this breaks the
+      --  equality if Initialize returns not null:
+      --       R : Ref := Null_Ref;
+      --       pragma Assert (R /= Null_Ref);
 
    package Smart_Pointers is
       type Encapsulated_Access is access all Encapsulated'Class;

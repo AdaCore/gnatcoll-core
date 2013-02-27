@@ -640,6 +640,8 @@ WITH_PROJECTS
 WITH_READLINE
 GNAT_SOURCES
 HAVE_GNAT_PROJECT_gnat_util
+PATH_ICONV
+WITH_ICONV
 GMP_LIBS
 GMP_CFLAGS
 WITH_GMP
@@ -749,6 +751,7 @@ enable_pygobject
 with_postgresql
 with_sqlite
 with_gmp
+with_iconv
 enable_readline
 enable_projects
 enable_syslog
@@ -1408,6 +1411,8 @@ Optional Packages:
   --without-sqlite        Disable sqlite support
   --with-gmp=<path>       Specify the full path of the gmp install
   --without-gmp           Disable support for gmp
+  --with-iconv=<path>     Specify the full path to the iconv library
+  --without-iconv         Disable iconv support
 
 Some influential environment variables:
   CC          C compiler command
@@ -4509,13 +4514,8 @@ $as_echo "no" >&6; }
    for lib_dir in $LD_LIBRARY_PATH
    do
       IFS=$as_save_IFS
-      if test -f "$lib_dir/libpq.so"; then
-         am_path_pq=$lib_dir
-         break
-      elif test -f "$lib_dir/libpq.dll"; then
-         am_path_pq=$lib_dir
-         break
-      elif test -f "$lib_dir/libpq.dylib"; then
+      $as_echo "$as_me:${as_lineno-$LINENO}: Testing $lib_dir/libpq${SO_EXT}" >&5
+      if test -f "$lib_dir/libpq${SO_EXT}"; then
          am_path_pq=$lib_dir
          break
       fi
@@ -4807,6 +4807,127 @@ fi
    fi
 
 
+
+
+
+
+   NEED_ICONV=no
+
+# Check whether --with-iconv was given.
+if test "${with_iconv+set}" = set; then :
+  withval=$with_iconv; ICONV_PATH_WITH=$withval; NEED_ICONV=yes
+else
+  ICONV_PATH_WITH=yes
+fi
+
+
+   { $as_echo "$as_me:${as_lineno-$LINENO}: checking for libiconv" >&5
+$as_echo_n "checking for libiconv... " >&6; }
+
+   # Explicit disabling by user (--with-iconv=no or --without-iconv)
+   if test x"$ICONV_PATH_WITH" = xno ; then
+      { $as_echo "$as_me:${as_lineno-$LINENO}: result: no, disabled by user" >&5
+$as_echo "no, disabled by user" >&6; }
+      WITH_ICONV=no
+   else
+      if test x"$ICONV_PATH_WITH" = xyes ; then
+          # Request automatic detection
+          # On OSX, we do not want to use macport's version of libiconv, which
+          # is not compatible with the system (we end up with errors like
+          # _iconv_open not found for architecture x86_64). So we force the
+          # use of /usr first
+          LD_LIBRARY_PATH="/usr/lib$PATH_SEPARATOR$LD_LIBRARY_PATH"
+
+
+   am_path_iconv=""
+   as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
+   for lib_dir in $LD_LIBRARY_PATH
+   do
+      IFS=$as_save_IFS
+      $as_echo "$as_me:${as_lineno-$LINENO}: Testing $lib_dir/libiconv${SO_EXT}" >&5
+      if test -f "$lib_dir/libiconv${SO_EXT}"; then
+         am_path_iconv=$lib_dir
+         break
+      fi
+   done
+   IFS=$as_save_IFS
+
+          if test x"$am_path_iconv" != x ; then
+             PATH_ICONV="-L$am_path_iconv"
+          else
+             PATH_ICONV=""
+          fi
+
+      else
+          # path provided by user
+
+          PATH_ICONV=""
+          for am_path_iconv in "$ICONV_PATH_WITH" "$ICONV_PATH_WITH/lib" ; do
+              for lib in libiconv${SO_EXT} libiconv.a ; do
+                  $as_echo "$as_me:${as_lineno-$LINENO}: Testing $am_path_iconv/$lib" >&5
+                  if test -f "$am_path_iconv/$lib" ; then
+                      PATH_ICONV="-L$am_path_iconv"
+                      break;
+                   fi
+              done
+          done
+      fi
+
+      if test x"$PATH_ICONV" = x ; then
+          { $as_echo "$as_me:${as_lineno-$LINENO}: result: not found" >&5
+$as_echo "not found" >&6; }
+          WITH_ICONV=no
+      else
+          { $as_echo "$as_me:${as_lineno-$LINENO}: result: found in $am_path_iconv" >&5
+$as_echo "found in $am_path_iconv" >&6; }
+          { $as_echo "$as_me:${as_lineno-$LINENO}: checking for iconv_open in -liconv" >&5
+$as_echo_n "checking for iconv_open in -liconv... " >&6; }
+if ${ac_cv_lib_iconv_iconv_open+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  ac_check_lib_save_LIBS=$LIBS
+LIBS="-liconv $PATH_ICONV $LIBS"
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+char iconv_open ();
+int
+main ()
+{
+return iconv_open ();
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_lib_iconv_iconv_open=yes
+else
+  ac_cv_lib_iconv_iconv_open=no
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+LIBS=$ac_check_lib_save_LIBS
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_iconv_iconv_open" >&5
+$as_echo "$ac_cv_lib_iconv_iconv_open" >&6; }
+if test "x$ac_cv_lib_iconv_iconv_open" = xyes; then :
+  WITH_ICONV=yes
+else
+  WITH_ICONV=no
+fi
+
+      fi
+
+      if test x"$WITH_ICONV" = xno -a x"$NEED_ICONV" = xyes ; then
+        as_fn_error $? "iconv not found" "$LINENO" 5
+      fi
+   fi
 
 
 
@@ -6459,6 +6580,9 @@ $as_echo "$as_me:   gmp:                    $WITH_GMP (see --with-gmp)" >&6;}
 $as_echo "$as_me:   PostgreSQL:             $WITH_POSTGRES $PATH_LIBPQ (see --with-postgresql)" >&6;}
 { $as_echo "$as_me:${as_lineno-$LINENO}:   Sqlite:                 $WITH_SQLITE $PATH_LIBSQLITE (see --with-sqlite)" >&5
 $as_echo "$as_me:   Sqlite:                 $WITH_SQLITE $PATH_LIBSQLITE (see --with-sqlite)" >&6;}
+{ $as_echo "$as_me:${as_lineno-$LINENO}:   Iconv:                  $WITH_ICONV (see --with-iconv)" >&5
+$as_echo "$as_me:   Iconv:                  $WITH_ICONV (see --with-iconv)" >&6;}
+
 { $as_echo "$as_me:${as_lineno-$LINENO}:   Projects:               $WITH_PROJECTS" >&5
 $as_echo "$as_me:   Projects:               $WITH_PROJECTS" >&6;}
 if test $WITH_PROJECTS = no; then

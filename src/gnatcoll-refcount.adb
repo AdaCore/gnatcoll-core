@@ -140,6 +140,8 @@ package body GNATCOLL.Refcount is
          if P.Data /= null then
             Dummy := Sync_Counters.Sync_Add_And_Fetch
               (P.Data.Refcount'Access, 1);
+         else
+            Initialize (P.Data);
          end if;
       end Adjust;
 

@@ -121,6 +121,7 @@ endif
 ifeq (${WITH_GTK},yes)
 	${MAKE} -C src -f Makefile.gtk libinstall
 endif
+	${MAKE} -C src -f Makefile.iconv libinstall
 	${MAKE} -C src -f Makefile.postgres libinstall
 	${MAKE} -C src -f Makefile.sqlite libinstall
 	${MAKE} -C src -f Makefile.readline libinstall
