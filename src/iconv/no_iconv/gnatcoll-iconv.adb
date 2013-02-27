@@ -126,7 +126,7 @@ package body GNATCOLL.Iconv is
        Transliteration : Boolean := False;
        Ignore          : Boolean := False) return String
    is
-      pragma Unreferenced (To_Code, From_Code);
+      pragma Unreferenced (To_Code, From_Code, Transliteration, Ignore);
    begin
       return Input;
    end Iconv;
