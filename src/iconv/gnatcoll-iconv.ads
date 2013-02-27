@@ -98,11 +98,10 @@ package GNATCOLL.Iconv is
    --  The locale charset
 
    function Iconv_Open
-      (To_Code   : String := UTF8;
-       From_Code : String := Locale;
+      (To_Code         : String := UTF8;
+       From_Code       : String := Locale;
        Transliteration : Boolean := False;
-       Ignore          : Boolean := False)
-      return Iconv_T;
+       Ignore          : Boolean := False) return Iconv_T;
    --  Allocate a conversion descriptor suitable for converting byte sequences
    --  from character encoding From_Code to character encoding To_Code.
    --  The values permitted for From_Code and To_Code and the supported
@@ -120,8 +119,8 @@ package GNATCOLL.Iconv is
    --  Raised when the conversion from From_Code to To_Code is not supported
    --  by the implementation.
 
-   type Iconv_Result is (
-      Invalid_Multibyte_Sequence,
+   type Iconv_Result is
+     (Invalid_Multibyte_Sequence,
       Success,
       Incomplete_Multibyte_Sequence,
       Full_Buffer);
@@ -155,7 +154,7 @@ package GNATCOLL.Iconv is
    --      converted character.
 
    procedure Reset (State : Iconv_T);
-   --  Resets the conversion state to the initial state.
+   --  Resets the conversion state to the initial state
 
    procedure Reset
       (State        : Iconv_T;
@@ -167,7 +166,7 @@ package GNATCOLL.Iconv is
    --  The result might be one of Success or Full_Buffer.
 
    procedure Iconv_Close (State : Iconv_T);
-   --  Close the context and free the memory.
+   --  Close the context and free the memory
 
    function Iconv (State : Iconv_T; Input : String) return String;
    --  Converts Input.
@@ -176,7 +175,7 @@ package GNATCOLL.Iconv is
    --  the procedure, it raises exceptions in case of error (either
    --  Invalid_Sequence_Error or Incomplete_Sequence_Error).
 
-   Invalid_Sequence_Error : exception;
+   Invalid_Sequence_Error    : exception;
    Incomplete_Sequence_Error : exception;
 
    function Iconv

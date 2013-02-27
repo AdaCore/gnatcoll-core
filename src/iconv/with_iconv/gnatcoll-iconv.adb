@@ -21,10 +21,10 @@
 --                                                                          --
 ------------------------------------------------------------------------------
 
-with Interfaces.C;          use Interfaces.C;
-with Interfaces.C.Strings;  use Interfaces.C.Strings;
+with Interfaces.C;             use Interfaces.C;
+with Interfaces.C.Strings;     use Interfaces.C.Strings;
 with Ada.Unchecked_Conversion;
-with GNAT.OS_Lib;           use GNAT.OS_Lib;
+with GNAT.OS_Lib;              use GNAT.OS_Lib;
 
 package body GNATCOLL.Iconv is
 
@@ -41,8 +41,7 @@ package body GNATCOLL.Iconv is
       inbuf        : access chars_ptr;
       inbytesleft  : access size_t;
       outbuf       : access chars_ptr;
-      outbytesleft : access size_t)
-      return size_t;
+      outbytesleft : access size_t) return size_t;
    pragma Import (C, C_Iconv, "gnatcoll_iconv");
 
    function C_Iconv_Open (tocode, fromcode : chars_ptr) return Iconv_T;
@@ -52,24 +51,22 @@ package body GNATCOLL.Iconv is
    pragma Import (C, C_Iconv_Close, "gnatcoll_iconv_close");
 
    type Int is mod System.Memory_Size;
-   function To_Int is new Ada.Unchecked_Conversion
-      (Iconv_T, Int);
 
-   function Conv is new Ada.Unchecked_Conversion
-      (System.Address, chars_ptr);
+   function To_Int is new Ada.Unchecked_Conversion (Iconv_T, Int);
+
+   function Conv is new Ada.Unchecked_Conversion (System.Address, chars_ptr);
 
    ----------------
    -- Iconv_Open --
    ----------------
 
    function Iconv_Open
-      (To_Code   : String := UTF8;
-       From_Code : String := Locale;
+      (To_Code         : String := UTF8;
+       From_Code       : String := Locale;
        Transliteration : Boolean := False;
-       Ignore          : Boolean := False)
-      return Iconv_T
+       Ignore          : Boolean := False) return Iconv_T
    is
-      State : Iconv_T;
+      State            : Iconv_T;
       Tocode, Fromcode : chars_ptr;
    begin
       if Transliteration then
@@ -78,6 +75,7 @@ package body GNATCOLL.Iconv is
          else
             Tocode := New_String (To_Code & "//TRANSLIT");
          end if;
+
       else
          if Ignore then
             Tocode := New_String (To_Code & "//IGNORE");
@@ -105,12 +103,12 @@ package body GNATCOLL.Iconv is
    -----------
 
    procedure Iconv
-      (State          : Iconv_T;
-       Inbuf          : String;
-       Input_Index    : in out Positive;
-       Outbuf         : in out String;
-       Output_Index   : in out Positive;
-       Result         : out Iconv_Result)
+      (State        : Iconv_T;
+       Inbuf        : String;
+       Input_Index  : in out Positive;
+       Outbuf       : in out String;
+       Output_Index : in out Positive;
+       Result       : out Iconv_Result)
    is
       Inptr   : aliased chars_ptr := Conv (Inbuf (Input_Index)'Address);
       Inleft  : aliased size_t := size_t (Inbuf'Last - Input_Index + 1);
@@ -120,7 +118,7 @@ package body GNATCOLL.Iconv is
 
    begin
       Res := C_Iconv
-         (State, Inptr'Access, Inleft'Access, Outptr'Access, Outleft'Access);
+        (State, Inptr'Access, Inleft'Access, Outptr'Access, Outleft'Access);
 
       Input_Index := Inbuf'Last - Integer (Inleft) + 1;
       Output_Index := Outbuf'Last - Integer (Outleft) + 1;
@@ -133,6 +131,7 @@ package body GNATCOLL.Iconv is
          else  --  C_EINVAL
             Result := Incomplete_Multibyte_Sequence;
          end if;
+
       else
          Result := Success;
       end if;
@@ -161,10 +160,11 @@ package body GNATCOLL.Iconv is
    is
       Outptr  : aliased chars_ptr := Conv (Outbuf (Output_Index)'Address);
       Outleft : aliased size_t := size_t (Outbuf'Last - Output_Index + 1);
-      Res : size_t;
+      Res     : size_t;
    begin
       Res := C_Iconv (State, null, null, Outptr'Access, Outleft'Access);
       Output_Index := Outbuf'Last - Integer (Outleft) + 1;
+
       if Res = -1 then
          Result := Full_Buffer;
       else
@@ -186,11 +186,11 @@ package body GNATCOLL.Iconv is
    -----------
 
    function Iconv (State : Iconv_T; Input : String) return String is
-      Output : String_Access := new String (1 .. Input'Length);
-      Tmp    : String_Access;
-      Input_Index : Positive := Input'First;
+      Output       : String_Access := new String (1 .. Input'Length);
+      Tmp          : String_Access;
+      Input_Index  : Positive := Input'First;
       Output_Index : Positive := Output'First;
-      Res : Iconv_Result;
+      Res          : Iconv_Result;
    begin
       while Input_Index <= Input'Last loop
          Iconv (State, Input, Input_Index, Output.all, Output_Index, Res);
@@ -236,9 +236,10 @@ package body GNATCOLL.Iconv is
       State : Iconv_T;
    begin
       State := Iconv_Open
-         (To_Code => To_Code, From_Code => From_Code,
-          Transliteration => Transliteration,
-          Ignore          => Ignore);
+        (To_Code         => To_Code,
+         From_Code       => From_Code,
+         Transliteration => Transliteration,
+         Ignore          => Ignore);
 
       return R : constant String := Iconv (State, Input) do
          Iconv_Close (State);
