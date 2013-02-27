@@ -26,6 +26,7 @@ GNAT Reusable Components
    config
    pools
    json
+   iconv
    sql
    xref
 

@@ -30,6 +30,7 @@ AM_PATH_PYGOBJECT
 AM_PATH_POSTGRES
 AM_PATH_SQLITE
 AM_PATH_GMP
+AM_PATH_ICONV
 AM_GNAT_SOURCES
 AM_CHECK_READLINE
 AM_PROJECTS
@@ -82,6 +83,9 @@ AC_MSG_NOTICE(AC_HELP_STRING(
               [PostgreSQL:],[$WITH_POSTGRES $PATH_LIBPQ (see --with-postgresql)]))
 AC_MSG_NOTICE(AC_HELP_STRING(
               [Sqlite:],[$WITH_SQLITE $PATH_LIBSQLITE (see --with-sqlite)]))
+AC_MSG_NOTICE(AC_HELP_STRING(
+              [Iconv:],[$WITH_ICONV (see --with-iconv)]))
+
 AC_MSG_NOTICE(AC_HELP_STRING(
               [Projects:],[$WITH_PROJECTS]))
 if test $WITH_PROJECTS = no; then

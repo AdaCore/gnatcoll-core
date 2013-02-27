@@ -240,6 +240,81 @@ AC_DEFUN(AM_PATH_SYSLOG,
 ])
 
 #############################################################
+# Checking for iconv.
+# There are multiple versions of the library (Solaris, GNU,...)
+# and some of them have slightly different APIs.
+# The following variables are exported by configure:
+#   @WITH_ICONV@: either "yes" or "no"
+#   @PATH_ICONV@: path to libiconv, or "" if not found
+#############################################################
+
+AC_DEFUN(AM_PATH_ICONV,
+[
+   NEED_ICONV=no
+   AC_ARG_WITH(iconv,
+     [AC_HELP_STRING(
+       [--with-iconv=<path>],
+       [Specify the full path to the iconv library])
+AC_HELP_STRING(
+       [--without-iconv],
+       [Disable iconv support])],
+     [ICONV_PATH_WITH=$withval; NEED_ICONV=yes],
+     [ICONV_PATH_WITH=yes])
+
+   AC_MSG_CHECKING(for libiconv)
+
+   # Explicit disabling by user (--with-iconv=no or --without-iconv)
+   if test x"$ICONV_PATH_WITH" = xno ; then
+      AC_MSG_RESULT([no, disabled by user])
+      WITH_ICONV=no
+   else
+      if test x"$ICONV_PATH_WITH" = xyes ; then
+          # Request automatic detection
+          # On OSX, we do not want to use macport's version of libiconv, which
+          # is not compatible with the system (we end up with errors like
+          # _iconv_open not found for architecture x86_64). So we force the
+          # use of /usr first
+          LD_LIBRARY_PATH="/usr/lib$PATH_SEPARATOR$LD_LIBRARY_PATH"
+
+          AM_LIB_PATH(iconv)
+          if test x"$am_path_iconv" != x ; then
+             PATH_ICONV="-L$am_path_iconv"
+          else
+             PATH_ICONV=""
+          fi
+
+      else
+          # path provided by user
+
+          PATH_ICONV=""
+          for am_path_iconv in "$ICONV_PATH_WITH" "$ICONV_PATH_WITH/lib" ; do
+              for lib in libiconv${SO_EXT} libiconv.a ; do
+                  _AS_ECHO_LOG([Testing $am_path_iconv/$lib])
+                  if test -f "$am_path_iconv/$lib" ; then
+                      PATH_ICONV="-L$am_path_iconv"
+                      break;
+                   fi
+              done
+          done
+      fi
+
+      if test x"$PATH_ICONV" = x ; then
+          AC_MSG_RESULT(not found)
+          WITH_ICONV=no
+      else
+          AC_MSG_RESULT(found in $am_path_iconv)
+          AC_CHECK_LIB(iconv,iconv_open,WITH_ICONV=yes,WITH_ICONV=no,[$PATH_ICONV])
+      fi
+
+      if test x"$WITH_ICONV" = xno -a x"$NEED_ICONV" = xyes ; then
+        AC_MSG_ERROR([iconv not found])
+      fi
+   fi
+   AC_SUBST(WITH_ICONV)
+   AC_SUBST(PATH_ICONV)
+])
+
+#############################################################
 # Search for a library anywhere on LD_LIBRARY_PATH
 # This will return the empty string if not found, and the directory
 # otherwise.
@@ -258,13 +333,8 @@ AC_DEFUN(AM_LIB_PATH,
    for lib_dir in $LD_LIBRARY_PATH
    do
       IFS=$as_save_IFS
-      if test -f "$lib_dir/lib$1.so"; then
-         am_path_$1=$lib_dir
-         break
-      elif test -f "$lib_dir/lib$1.dll"; then
-         am_path_$1=$lib_dir
-         break
-      elif test -f "$lib_dir/lib$1.dylib"; then
+      _AS_ECHO_LOG([Testing $lib_dir/lib$1${SO_EXT}])
+      if test -f "$lib_dir/lib$1${SO_EXT}"; then
          am_path_$1=$lib_dir
          break
       fi

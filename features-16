@@ -45,3 +45,8 @@ NF-16-LA12-033 New subprogram GNATCOLL.VFS.Size (2012-11-15)
 
    It is now possible to query the size of a file, including on
    remote file systems.
+
+NF-16-L905-004 New package GNATCOLL.Iconv (2013-02-27)
+
+   This optional package provides a binding to libiconv, to convert between
+   various character encodings.

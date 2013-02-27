@@ -7,6 +7,7 @@ with "src/gnatcoll_sqlite";
 with "src/gnatcoll_tools";
 with "src/gnatcoll_gmp";
 with "src/gnatcoll_readline";
+with "src/gnatcoll_iconv";
 with "gnatcoll_shared";
 project Gnatcoll_Build is
    for Source_Dirs use ();
