@@ -2768,6 +2768,128 @@ package body GNATCOLL.Xref is
       Close (M);
    end Parse_LI;
 
+   procedure Initialize_DB
+     (Database        : in out Xref_Database;
+      DB              : Database_Connection;
+      From_DB_Name    : String;
+      DB_Created      : out Boolean;
+      Force           : Boolean);
+   --  Initialize the database if needed (copy from disk or create db)
+   --  Force should be True when initializing an in-memory database for the
+   --  first time.
+
+   -------------------
+   -- Initialize_DB --
+   -------------------
+
+   procedure Initialize_DB
+     (Database        : in out Xref_Database;
+      DB              : Database_Connection;
+      From_DB_Name    : String;
+      DB_Created      : out Boolean;
+      Force           : Boolean)
+   is
+      Start : Time;
+   begin
+      DB_Created := False;
+      if Force or else not Database.DB_Created then
+         Database.DB_Created := True;
+
+         declare
+            Current_DB : constant String := SQL.Sqlite.DB_Name (DB);
+         begin
+            if GNAT.OS_Lib.Is_Regular_File (Current_DB)
+              and then Create (Full_Filename => +Current_DB).Size /= 0
+            then
+               --  If the DB already exists, don't override it
+
+               null;
+
+            elsif Current_DB /= From_DB_Name
+              and then From_DB_Name /= ""
+              and then GNAT.OS_Lib.Is_Regular_File (From_DB_Name)
+            then
+               if Active (Me_Timing) then
+                  Start := Clock;
+               end if;
+
+               if not GNATCOLL.SQL.Sqlite.Backup
+                 (DB1             => DB,
+                  DB2             => From_DB_Name,
+                  From_DB1_To_DB2 => False)
+               then
+                  Trace
+                    (Me_Error,
+                     "Failed to copy the database from " & From_DB_Name);
+
+               elsif Active (Me_Timing) then
+                  Trace (Me_Timing, "Copy " & From_DB_Name
+                         & " to " & Current_DB & ":"
+                         & Duration'Image (Clock - Start) & " s");
+               end if;
+
+            else
+               Create_Database (DB);
+               DB_Created := True;
+            end if;
+         end;
+      end if;
+   end Initialize_DB;
+
+   procedure Search_LI_Files_To_Update
+     (Database : Xref_Database;
+      LI_Files : Library_Info_Lists.List;
+      LIs      : in out LI_Lists.List);
+   --  Process the list of all LI files (Lib_Files) to detect those that
+   --  need updating. This needs access to an existing database to check
+   --  which files are up to date.
+
+   -------------------------------
+   -- Search_LI_Files_To_Update --
+   -------------------------------
+
+   procedure Search_LI_Files_To_Update
+     (Database : Xref_Database;
+      LI_Files : Library_Info_Lists.List;
+      LIs      : in out LI_Lists.List)
+   is
+      Lib_Info : Library_Info_Lists.Cursor := LI_Files.First;
+      Files    : Forward_Cursor;
+      LI       : LI_Info;
+      File     : Virtual_File;
+   begin
+      while Has_Element (Lib_Info) loop
+         LI.LI := Element (Lib_Info);
+         File := LI.LI.Library_File;
+
+         --  ??? Potentially slow on Windows (conversion to Time)
+         LI.Stamp := File.File_Time_Stamp;
+         LI.Id    := -1;  --  File unknown in the database
+
+         declare
+            N : aliased String :=
+              +File.Unix_Style_Full_Name (Normalize => True);
+         begin
+            Files.Fetch
+              (Database.DB, Query_Get_File,
+               Params => (1 => +N'Unchecked_Access));
+         end;
+
+         if Files.Has_Row then
+            if Files.Time_Value (1) = LI.Stamp then
+               LI.Id := -2;   --  Already up-to-date
+            else
+               LI.Id := Files.Integer_Value (0);
+               LIs.Append (LI);
+            end if;
+         else
+            LIs.Append (LI);
+         end if;
+
+         Next (Lib_Info);
+      end loop;
+   end Search_LI_Files_To_Update;
+
    ------------------------
    -- Parse_All_LI_Files --
    ------------------------
@@ -2808,12 +2930,6 @@ package body GNATCOLL.Xref is
       --  The last pass in parsing a ALI file is to resolve all renamings, now
       --  that we can convert a reference to an entity
 
-      procedure Initialize_DB
-        (DB : Database_Connection; Force : Boolean);
-      --  Initialize the database if needed (copy from disk or create db)
-      --  Force should be True when initializing an in-memory database for the
-      --  first time.
-
       procedure Backup_DB_If_Needed
         (DB : Database_Connection; To_DB : String);
       --  Dump the database to disk if needed.
@@ -2825,11 +2941,6 @@ package body GNATCOLL.Xref is
       procedure Start_Transaction (DB : Database_Connection);
       --  Preparate the database for editing, once we have detected some LI
       --  files need to be updated.
-
-      procedure Search_LI_Files_To_Update;
-      --  Process the list of all LI files (Lib_Files) to detect those that
-      --  need updating. This needs access to an existing database to check
-      --  which files are up to date.
 
       procedure Parse_Files (DB : Database_Connection);
       --  Parse files that need it
@@ -2870,62 +2981,6 @@ package body GNATCOLL.Xref is
                    & Duration'Image (Clock - Start) & " s");
          end if;
       end Resolve_Renamings;
-
-      -------------------
-      -- Initialize_DB --
-      -------------------
-
-      procedure Initialize_DB
-        (DB    : Database_Connection;
-         Force : Boolean)
-      is
-         Start : Time;
-
-      begin
-         if Is_Sqlite and then (Force or else not Self.DB_Created) then
-            Self.DB_Created := True;
-
-            declare
-               Current_DB : constant String := SQL.Sqlite.DB_Name (DB);
-            begin
-               if GNAT.OS_Lib.Is_Regular_File (Current_DB)
-                 and then Create (Full_Filename => +Current_DB).Size /= 0
-               then
-                  --  If the DB already exists, don't override it
-
-                  null;
-
-               elsif Current_DB /= From_DB_Name
-                 and then From_DB_Name /= ""
-                 and then GNAT.OS_Lib.Is_Regular_File (From_DB_Name)
-               then
-                  if Active (Me_Timing) then
-                     Start := Clock;
-                  end if;
-
-                  if not GNATCOLL.SQL.Sqlite.Backup
-                    (DB1             => DB,
-                     DB2             => From_DB_Name,
-                     From_DB1_To_DB2 => False)
-                  then
-                     Trace
-                       (Me_Error,
-                        "Failed to copy the database from " & From_DB_Name);
-
-                  elsif Active (Me_Timing) then
-                     Trace (Me_Timing, "Copy " & From_DB_Name
-                            & " to " & Current_DB & ":"
-                            & Duration'Image (Clock - Start) & " s");
-                  end if;
-
-               else
-                  Create_Database (DB);
-                  Destroy_Indexes := True;
-                  Do_Analyze := True;
-               end if;
-            end;
-         end if;
-      end Initialize_DB;
 
       -------------------------
       -- Backup_DB_If_Needed --
@@ -3063,48 +3118,6 @@ package body GNATCOLL.Xref is
          end if;
       end Start_Transaction;
 
-      -------------------------------
-      -- Search_LI_Files_To_Update --
-      -------------------------------
-
-      procedure Search_LI_Files_To_Update is
-         Lib_Info : Library_Info_Lists.Cursor := LI_Files.First;
-         Files    : Forward_Cursor;
-         LI       : LI_Info;
-         File     : Virtual_File;
-      begin
-         while Has_Element (Lib_Info) loop
-            LI.LI := Element (Lib_Info);
-            File := LI.LI.Library_File;
-
-            --  ??? Potentially slow on Windows (conversion to Time)
-            LI.Stamp := File.File_Time_Stamp;
-            LI.Id    := -1;  --  File unknown in the database
-
-            declare
-               N : aliased String :=
-                 +File.Unix_Style_Full_Name (Normalize => True);
-            begin
-               Files.Fetch
-                 (Self.DB, Query_Get_File,
-                  Params => (1 => +N'Unchecked_Access));
-            end;
-
-            if Files.Has_Row then
-               if Files.Time_Value (1) = LI.Stamp then
-                  LI.Id := -2;   --  Already up-to-date
-               else
-                  LI.Id := Files.Integer_Value (0);
-                  LIs.Append (LI);
-               end if;
-            else
-               LIs.Append (LI);
-            end if;
-
-            Next (Lib_Info);
-         end loop;
-      end Search_LI_Files_To_Update;
-
       -----------------
       -- Parse_Files --
       -----------------
@@ -3204,8 +3217,20 @@ package body GNATCOLL.Xref is
                 "Found" & Length (LI_Files)'Img & " [ags]li files");
       end if;
 
-      Initialize_DB (Self.DB, Force => False);   --  From_DB_Name -> Self.DB
-      Search_LI_Files_To_Update;
+      if Is_Sqlite then
+         declare
+            DB_Created : Boolean;
+         begin
+            Initialize_DB (Self, Self.DB, From_DB_Name, DB_Created,
+                           Force => False);  --  From_DB_Name -> Self.DB
+            if DB_Created then
+               Destroy_Indexes := True;
+               Do_Analyze := True;
+            end if;
+         end;
+      end if;
+
+      Search_LI_Files_To_Update (Self, LI_Files, LIs);
 
       if not LIs.Is_Empty then
          --  Do we need to work in memory ?
@@ -3229,7 +3254,18 @@ package body GNATCOLL.Xref is
                Destroy_Indexes := True;
 
                Trace (Me_Timing, "Temporarily using an in-memory database");
-               Initialize_DB (Memory, Force => True);  --  Self.DB -> :memory:
+
+               declare
+                  DB_Created : Boolean;
+               begin
+                  Initialize_DB (Self, Memory, From_DB_Name, DB_Created,
+                                 Force => True);  --  Self.DB -> :memory:
+                  if DB_Created then
+                     Destroy_Indexes := True;
+                     Do_Analyze := True;
+                  end if;
+               end;
+
                Start_Transaction (Memory);
                Parse_Files (Memory);
                Finalize_DB (Memory);
@@ -5808,5 +5844,64 @@ package body GNATCOLL.Xref is
          end if;
          return No_Entity;
    end Add_Entity;
+
+   -------------------------
+   -- Is_Update_DB_Needed --
+   -------------------------
+   procedure Is_Update_DB_Needed
+     (Self                : in out Xref_Database;
+      Project             : Project_Type;
+      Update_Needed       : out Boolean;
+      Parse_Runtime_Files : Boolean := True)
+
+   is
+      LI_Files       : Library_Info_Lists.List;
+      LIs            : LI_Lists.List;
+      Absolute_Start : Time;
+      Is_Sqlite      : constant Boolean := SQL.Sqlite.Is_Sqlite (Self.DB);
+   begin
+      if Active (Me_Timing) then
+         Absolute_Start := Clock;
+      end if;
+
+      Update_Needed := True;
+
+      Project.Library_Files
+        (Recursive => True, Xrefs_Dirs => True, Including_Libraries => True,
+         ALI_Ext => "^.*\.[ags]li$", List => LI_Files,
+         Include_Predefined => Parse_Runtime_Files);
+
+      if Active (Me_Timing) then
+         Trace (Me_Timing,
+                "Found" & Length (LI_Files)'Img & " [ags]li files");
+      end if;
+
+      if Is_Sqlite then
+         declare
+            DB_Created : Boolean;
+         begin
+            Initialize_DB (Self, Self.DB, "", DB_Created,
+                           Force => False);  --  From_DB_Name -> Self.DB
+         end;
+      end if;
+
+      if Self.DB_Created then
+
+         Search_LI_Files_To_Update (Self, LI_Files, LIs);
+
+         if LIs.Is_Empty then
+            Update_Needed := False;
+         end if;
+
+      elsif LI_Files.Is_Empty then
+         Update_Needed := False;
+      end if;
+
+      if Active (Me_Timing) then
+         Trace (Me_Timing, "Total time:"
+                & Duration'Image (Clock - Absolute_Start) & " s");
+      end if;
+
+   end Is_Update_DB_Needed;
 
 end GNATCOLL.Xref;
