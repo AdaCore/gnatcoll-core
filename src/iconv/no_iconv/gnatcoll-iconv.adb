@@ -28,11 +28,10 @@ package body GNATCOLL.Iconv is
    ----------------
 
    function Iconv_Open
-      (To_Code   : String := UTF8;
-       From_Code : String := Locale;
+      (To_Code         : String := UTF8;
+       From_Code       : String := Locale;
        Transliteration : Boolean := False;
-       Ignore          : Boolean := False)
-      return Iconv_T
+       Ignore          : Boolean := False) return Iconv_T
    is
       pragma Unreferenced (To_Code, From_Code, Transliteration, Ignore);
    begin
@@ -52,7 +51,7 @@ package body GNATCOLL.Iconv is
        Result         : out Iconv_Result)
    is
       pragma Unreferenced (State);
-      Input_Length : constant Natural := Inbuf'Last - Input_Index + 1;
+      Input_Length  : constant Natural := Inbuf'Last - Input_Index + 1;
       Output_Length : constant Natural := Outbuf'Last - Output_Index + 1;
    begin
       if Output_Length > Input_Length then
@@ -61,6 +60,7 @@ package body GNATCOLL.Iconv is
          Input_Index := Inbuf'Last + 1;
          Output_Index := Output_Index + Input_Length;
          Result := Success;
+
       else
          Outbuf (Output_Index .. Outbuf'Last) :=
             Inbuf (Input_Index .. Input_Index + Output_Length - 1);
