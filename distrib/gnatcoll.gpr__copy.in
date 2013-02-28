@@ -39,6 +39,7 @@ project GnatColl is
 
    With_Iconv : Yes_No := "@WITH_ICONV@";
    Iconv_Path := "@PATH_ICONV@";
+   Iconv_Lib  := "@LIB_ICONV@";
 
    With_Readline : Yes_No := "@WITH_READLINE@";
 

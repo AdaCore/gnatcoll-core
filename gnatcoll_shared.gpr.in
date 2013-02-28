@@ -48,6 +48,7 @@ project GnatColl_Shared is
    Postgres_Dir   := "@PATH_LIBPQ@";
    Sqlite_Dir     := "@PATH_LIBSQLITE@";
    Iconv_Dir      := "@PATH_ICONV@";
+   Iconv_Lib      := "@LIB_ICONV@";
 
    package Compiler is
       case Build is
