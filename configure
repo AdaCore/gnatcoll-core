@@ -4941,7 +4941,7 @@ ac_res=$ac_cv_search_iconv_open
 if test "$ac_res" != no; then :
   test "$ac_res" = "none required" || LIBS="$ac_res $LIBS"
   WITH_ICONV=yes;
-          if test x"$ac_cv_search_iconv_open" != x"none required" ; then
+          if test "$ac_cv_search_iconv_open" != "none required" ; then
              LIB_ICONV="$ac_cv_search_iconv_open"
           fi
 
