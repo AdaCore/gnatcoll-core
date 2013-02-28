@@ -248,6 +248,7 @@ package body GNATCOLL.Iconv is
       (Input           : String;
        To_Code         : String := UTF8;
        From_Code       : String := Locale;
+       Ignore_Errors   : Boolean := False;
        Transliteration : Boolean := False;
        Ignore          : Boolean := False) return String
    is
@@ -259,7 +260,9 @@ package body GNATCOLL.Iconv is
          Transliteration => Transliteration,
          Ignore          => Ignore);
 
-      return R : constant String := Iconv (State, Input) do
+      return R : constant String :=
+         Iconv (State, Input, Ignore_Errors => Ignore_Errors)
+      do
          Iconv_Close (State);
       end return;
 

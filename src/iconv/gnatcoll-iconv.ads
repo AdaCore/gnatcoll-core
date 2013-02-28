@@ -187,11 +187,16 @@ package GNATCOLL.Iconv is
       (Input           : String;
        To_Code         : String := UTF8;
        From_Code       : String := Locale;
+       Ignore_Errors   : Boolean := False;
        Transliteration : Boolean := False;
        Ignore          : Boolean := False) return String;
    --  A convenience function that wraps all the above (open, iconv, close)
    --  Might raise Unsupported_Conversion, Invalid_Sequence_Error or
    --  Incomplete_Sequence_Error.
+   --  Ignore means that characters that do not exist in To_Code are simply
+   --  discarded.
+   --  If Ignore_Errors is true, no exception will be raised, and the input
+   --  string will be returned unchanged instead.
 
 private
    type Iconv_T is new System.Address;

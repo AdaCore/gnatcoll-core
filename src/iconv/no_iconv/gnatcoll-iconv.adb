@@ -127,10 +127,12 @@ package body GNATCOLL.Iconv is
       (Input           : String;
        To_Code         : String := UTF8;
        From_Code       : String := Locale;
+       Ignore_Errors   : Boolean := False;
        Transliteration : Boolean := False;
        Ignore          : Boolean := False) return String
    is
       pragma Unreferenced (To_Code, From_Code, Transliteration, Ignore);
+      pragma Unreferenced (Ignore_Errors);
    begin
       return Input;
    end Iconv;
