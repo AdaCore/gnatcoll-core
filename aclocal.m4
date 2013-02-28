@@ -299,12 +299,13 @@ AC_HELP_STRING(
       fi
 
       if test x"$PATH_ICONV" = x ; then
-          AC_MSG_RESULT(not found)
-          WITH_ICONV=no
+          AC_MSG_RESULT(not in LD_LIBRARY_PATH)
+          # Not critical, extra path might not be needed on the system
       else
           AC_MSG_RESULT(found in $am_path_iconv)
-          AC_CHECK_LIB(iconv,iconv_open,WITH_ICONV=yes,WITH_ICONV=no,[$PATH_ICONV])
       fi
+
+      AC_CHECK_LIB(iconv,iconv_open,WITH_ICONV=yes,WITH_ICONV=no,[$PATH_ICONV])
 
       if test x"$WITH_ICONV" = xno -a x"$NEED_ICONV" = xyes ; then
         AC_MSG_ERROR([iconv not found])
@@ -330,7 +331,7 @@ AC_DEFUN(AM_LIB_PATH,
 [
    am_path_$1=""
    as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
-   for lib_dir in $LD_LIBRARY_PATH
+   for lib_dir in $LD_LIBRARY_PATH /usr /usr/local /opt/local
    do
       IFS=$as_save_IFS
       _AS_ECHO_LOG([Testing $lib_dir/lib$1${SO_EXT}])
