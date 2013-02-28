@@ -209,10 +209,13 @@ package body GNATCOLL.Iconv is
                end return;
 
             when Incomplete_Multibyte_Sequence =>
-               Free (Output);
                if Ignore_Errors then
                   Trace (Me, "Incomplete sequence");
-                  return Input;
+                  return R : constant String :=
+                     Output (Output'First .. Output_Index - 1)
+                  do
+                     Free (Output);
+                  end return;
                else
                   raise Incomplete_Sequence_Error with
                     "Incomplete sequence in '" & Input & "'";
@@ -222,7 +225,11 @@ package body GNATCOLL.Iconv is
                Free (Output);
                if Ignore_Errors then
                   Trace (Me, "Invalid sequence");
-                  return Input;
+                  return R : constant String :=
+                     Output (Output'First .. Output_Index - 1)
+                  do
+                     Free (Output);
+                  end return;
                else
                   raise Invalid_Sequence_Error with
                     "Invalid sequence in '" & Input & "'";
