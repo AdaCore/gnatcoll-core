@@ -109,8 +109,12 @@ package body GNATCOLL.Iconv is
    -- Iconv --
    -----------
 
-   function Iconv (State : Iconv_T; Input : String) return String is
-      pragma Unreferenced (State);
+   function Iconv
+      (State : Iconv_T;
+       Input : String;
+       Ignore_Errors : Boolean := False) return String
+   is
+      pragma Unreferenced (State, Ignore_Errors);
    begin
       return Input;
    end Iconv;
