@@ -4511,7 +4511,7 @@ $as_echo "no" >&6; }
 
    am_path_pq=""
    as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
-   for lib_dir in $LD_LIBRARY_PATH
+   for lib_dir in $LD_LIBRARY_PATH /usr /usr/local /opt/local
    do
       IFS=$as_save_IFS
       $as_echo "$as_me:${as_lineno-$LINENO}: Testing $lib_dir/libpq${SO_EXT}" >&5
@@ -4841,7 +4841,7 @@ $as_echo "no, disabled by user" >&6; }
 
    am_path_iconv=""
    as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
-   for lib_dir in $LD_LIBRARY_PATH
+   for lib_dir in $LD_LIBRARY_PATH /usr /usr/local /opt/local
    do
       IFS=$as_save_IFS
       $as_echo "$as_me:${as_lineno-$LINENO}: Testing $lib_dir/libiconv${SO_EXT}" >&5
@@ -4874,13 +4874,15 @@ $as_echo "no, disabled by user" >&6; }
       fi
 
       if test x"$PATH_ICONV" = x ; then
-          { $as_echo "$as_me:${as_lineno-$LINENO}: result: not found" >&5
-$as_echo "not found" >&6; }
-          WITH_ICONV=no
+          { $as_echo "$as_me:${as_lineno-$LINENO}: result: not in LD_LIBRARY_PATH" >&5
+$as_echo "not in LD_LIBRARY_PATH" >&6; }
+          # Not critical, extra path might not be needed on the system
       else
           { $as_echo "$as_me:${as_lineno-$LINENO}: result: found in $am_path_iconv" >&5
 $as_echo "found in $am_path_iconv" >&6; }
-          { $as_echo "$as_me:${as_lineno-$LINENO}: checking for iconv_open in -liconv" >&5
+      fi
+
+      { $as_echo "$as_me:${as_lineno-$LINENO}: checking for iconv_open in -liconv" >&5
 $as_echo_n "checking for iconv_open in -liconv... " >&6; }
 if ${ac_cv_lib_iconv_iconv_open+:} false; then :
   $as_echo_n "(cached) " >&6
@@ -4922,7 +4924,6 @@ else
   WITH_ICONV=no
 fi
 
-      fi
 
       if test x"$WITH_ICONV" = xno -a x"$NEED_ICONV" = xyes ; then
         as_fn_error $? "iconv not found" "$LINENO" 5
