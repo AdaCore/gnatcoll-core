@@ -39,6 +39,7 @@ with Ada.Containers.Ordered_Sets;
 with Ada.Strings.Unbounded; use Ada.Strings.Unbounded;
 with GNAT.Regpat;           use GNAT.Regpat;
 with GNAT.Strings;          use GNAT.Strings;
+with GNATCOLL.Iconv;        use GNATCOLL.Iconv;
 with GNATCOLL.Projects;     use GNATCOLL.Projects;
 with GNATCOLL.SQL.Exec;     use GNATCOLL.SQL.Exec;
 with GNATCOLL.VFS;
@@ -84,7 +85,8 @@ package GNATCOLL.Xref is
       Parse_Runtime_Files : Boolean := True;
       Show_Progress       : access procedure (Cur, Total : Integer) := null;
       From_DB_Name        : String := "";
-      To_DB_Name          : String := "");
+      To_DB_Name          : String := "";
+      ALI_Encoding        : String := GNATCOLL.Iconv.Locale);
    --  Parse all the LI files for the project, and stores the xref info in the
    --  DB database.
    --
@@ -131,6 +133,10 @@ package GNATCOLL.Xref is
    --  Parse_Runtime_Files indicates whether we should be looking at the
    --  predefined object directories to find extra ALI files to parse. This
    --  will in general include the Ada runtime.
+   --
+   --  ALI_Encoding indicates the encoding used for entities in the ALI and
+   --  source files. This cannot be guessed from the current locale, since the
+   --  files might be in a different encoding.
 
    function Is_Up_To_Date
      (Self : Xref_Database; File : GNATCOLL.VFS.Virtual_File) return Boolean;
@@ -207,13 +213,13 @@ package GNATCOLL.Xref is
 
    function Get_Entity
      (Self   : Xref_Database;
-      Name   : String;
+      Name   : String;   --  UTF-8 encoded
       File   : String;
       Line   : Integer := -1;
       Column : Visible_Column := -1) return Entity_Reference;
    function Get_Entity
      (Self   : Xref_Database;
-      Name   : String;
+      Name   : String;   --  UTF-8 encoded
       File   : GNATCOLL.VFS.Virtual_File;
       Line   : Integer := -1;
       Column : Visible_Column := -1) return Entity_Reference;
@@ -275,7 +281,7 @@ package GNATCOLL.Xref is
    pragma Pack (Entity_Flags);
 
    type Entity_Declaration is record
-      Name     : Ada.Strings.Unbounded.Unbounded_String;
+      Name     : Ada.Strings.Unbounded.Unbounded_String;   --  UTF-8 encoded
       Kind     : Ada.Strings.Unbounded.Unbounded_String;
       Location : Entity_Reference;
       Flags    : Entity_Flags;
@@ -457,7 +463,7 @@ package GNATCOLL.Xref is
    function Qualified_Name
      (Self   : Xref_Database;
       Entity : Entity_Information) return String;
-   --  Returns the fully qualified name for the entity
+   --  Returns the fully qualified name for the entity, as UTF-8 string
 
    function Mangled_Name
      (Self   : Xref_Database;
@@ -465,6 +471,7 @@ package GNATCOLL.Xref is
    --  Return the mangled name of the entity. This is the name seen by the
    --  linker, and that should be used, for instance, in an Ada pragma
    --  import to use the entity.
+   --  Returned string is UTF-8 encoded.
 
    ----------------
    -- References --
@@ -762,7 +769,7 @@ package GNATCOLL.Xref is
    procedure Referenced_In
      (Self   : Xref_Database'Class;
       File   : GNATCOLL.VFS.Virtual_File;
-      Name   : String;
+      Name   : String;   --  UTF-8 encoded
       Cursor : out Entities_Cursor'Class);
    --  Returns the list of all the entities referenced at least once in the
    --  given file. This of course includes entities declared in that file.
@@ -787,7 +794,7 @@ package GNATCOLL.Xref is
 
    function Add_Entity
      (Self        : Xref_Database;
-      Name        : String;
+      Name        : String;   --  UTF-8 encoded
       Kind        : String;
       Decl_File   : GNATCOLL.VFS.Virtual_File;
       Decl_Line   : Natural;

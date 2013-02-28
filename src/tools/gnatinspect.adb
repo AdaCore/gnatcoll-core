@@ -454,6 +454,8 @@ procedure GNATInspect is
    Project_Name          : aliased GNAT.Strings.String_Access;
    Subdirs               : aliased GNAT.Strings.String_Access;
    Traces_File_Name      : aliased GNAT.Strings.String_Access;
+   ALI_Encoding          : aliased GNAT.Strings.String_Access :=
+     new String'("");
    --  The options from the command line
 
    ----------------------
@@ -667,6 +669,7 @@ procedure GNATInspect is
             Parse_Runtime_Files => not Project_Is_Default
             and then Include_Runtime_Files,
             Show_Progress       => Progress_Reporter,
+            ALI_Encoding        => ALI_Encoding.all,
             From_DB_Name        => Nightly_DB_Name.all,
             To_DB_Name          => DB_Name.all);
       end if;
@@ -1415,6 +1418,12 @@ begin
       Help        => "Set the prefix to display at the beginning of each"
       & " line of output. This can be used to more easily process the output"
       & " of gnatinspect if you need to.");
+   Define_Switch
+     (Cmdline,
+      Output      => ALI_Encoding'Access,
+      Long_Switch => "--encoding=",
+      Switch      => "-e=",
+      Help        => "The character encoding used for source and ALI files");
 
    Initialize (Env);
 

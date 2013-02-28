@@ -168,12 +168,17 @@ package GNATCOLL.Iconv is
    procedure Iconv_Close (State : Iconv_T);
    --  Close the context and free the memory
 
-   function Iconv (State : Iconv_T; Input : String) return String;
+   function Iconv
+     (State         : Iconv_T;
+      Input         : String;
+      Ignore_Errors : Boolean := False) return String;
    --  Converts Input.
    --  This function is a convenience for the Iconv procedure, but gives less
    --  control, and for big strings will require more memory. As opposed to
    --  the procedure, it raises exceptions in case of error (either
    --  Invalid_Sequence_Error or Incomplete_Sequence_Error).
+   --  If Ignore_Errors is true, no exception will be raised, and the input
+   --  string will be returned unchanged instead.
 
    Invalid_Sequence_Error    : exception;
    Incomplete_Sequence_Error : exception;
