@@ -65,7 +65,7 @@ package GNATCOLL.Xref.Database is
    record
       Id : SQL_Field_Integer (Ta_Entities, Instance, N_Id, Index);
       Name : SQL_Field_Text (Ta_Entities, Instance, N_Name, Index);
-      --  Can be empty for forward decls (see above).
+      --  Can be empty for forward decls (see above). Must be UTF-8
 
       Kind : SQL_Field_Text (Ta_Entities, Instance, N_Kind, Index);
       --  The E_Kind for this entity

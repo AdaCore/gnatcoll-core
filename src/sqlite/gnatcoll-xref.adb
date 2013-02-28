@@ -804,6 +804,7 @@ package body GNATCOLL.Xref is
      (DB                : Database_Connection;
       Tree              : Project_Tree;
       LI                : LI_Info;
+      Iconv_State       : Iconv_T;
       VFS_To_Id         : in out VFS_To_Ids.Map;
       Entity_Decl_To_Id : in out Loc_To_Ids.Map;
       Entity_Renamings  : in out Entity_Renaming_Lists.List;
@@ -1079,6 +1080,7 @@ package body GNATCOLL.Xref is
      (DB                : Database_Connection;
       Tree              : Project_Tree;
       LI                : LI_Info;
+      Iconv_State       : Iconv_T;
       VFS_To_Id         : in out VFS_To_Ids.Map;
       Entity_Decl_To_Id : in out Loc_To_Ids.Map;
       Entity_Renamings  : in out Entity_Renaming_Lists.List;
@@ -1804,6 +1806,9 @@ package body GNATCOLL.Xref is
          Info     : Entity_Info;
          Candidate : Integer := -1;
          Candidate_Is_Forward : Boolean := True;
+
+         N : aliased String := GNATCOLL.Iconv.Iconv
+           (Iconv_State, Name, Ignore_Errors => True);
       begin
          if Decl_Column = -1 then
             if Instances_Provide_Column then
@@ -1817,7 +1822,7 @@ package body GNATCOLL.Xref is
             --  ALI files). We do not use the local cache, since sqlite will be
             --  much more efficient to handle it.
 
-            if Name'Length /= 0 then
+            if N'Length /= 0 then
                if Active (Me_Error) then
                   Trace (Me_Error,
                          "Instantiations should not document the name");
@@ -1850,12 +1855,12 @@ package body GNATCOLL.Xref is
                   Candidate := DB.Insert_And_Get_PK
                     (Query_Insert_Entity_With_Mangled,
                      Params =>
-                       (1 => +Name'Unrestricted_Access,   --  empty string
+                       (1 => +N'Unrestricted_Access,   --  empty string
                         2 => +'P',  --  unknown
                         3 => +Decl_File,
                         4 => +Decl_Line,
                         5 => +(-1),
-                        6 => +Name'Unrestricted_Access,
+                        6 => +N'Unrestricted_Access,
                         7 => +Is_Global,
                         8 => +Is_Static_Local),
                      PK => Database.Entities.Id);
@@ -1863,7 +1868,7 @@ package body GNATCOLL.Xref is
                   Candidate := DB.Insert_And_Get_PK
                     (Query_Insert_Entity,
                      Params =>
-                       (1 => +Name'Unrestricted_Access,   --  empty string
+                       (1 => +N'Unrestricted_Access,   --  empty string
                         2 => +'P',  --  unknown
                         3 => +Decl_File,
                         4 => +Decl_Line,
@@ -1887,7 +1892,7 @@ package body GNATCOLL.Xref is
             Info := Element (C);
 
             if Info.Known_Name         --  Do we know the entity ?
-              or else Name'Length = 0  --  Or do we still have forward decl
+              or else N'Length = 0  --  Or do we still have forward decl
             then
                return Info.Id;
             end if;
@@ -1903,7 +1908,7 @@ package body GNATCOLL.Xref is
          --  declaration (or the local cache would have been updated), and thus
          --  we don't need to search in this case.
 
-         if Name'Length /= 0
+         if N'Length /= 0
            or else not Has_Element (C)
          then
             R.Fetch
@@ -1915,11 +1920,11 @@ package body GNATCOLL.Xref is
                   3 => +Decl_Column));
 
             while R.Has_Row loop
-               if Name'Length /= 0 and then R.Value (1) = Name then
+               if N'Length /= 0 and then R.Value (1) = N then
                   Candidate := R.Integer_Value (0);
                   Candidate_Is_Forward := False;
                   exit;
-               elsif Name'Length = 0 and then R.Value (1) /= "" then
+               elsif N'Length = 0 and then R.Value (1) /= "" then
                   Candidate := R.Integer_Value (0);
                   Candidate_Is_Forward := False;
                   exit;
@@ -1967,13 +1972,13 @@ package body GNATCOLL.Xref is
                      Entity_Info'(Id         => Candidate,
                                   Known_Name => True));
 
-               elsif Name'Length /= 0 then
+               elsif N'Length /= 0 then
                   --  We had a forward declaration in the database, we can
                   --  now update its name.
                   DB.Execute
                     (Query_Set_Entity_Name_And_Kind,
                      Params => (1 => +Candidate,
-                                2 => +Name'Unrestricted_Access,
+                                2 => +N'Unrestricted_Access,
                                 3 => +Kind,
                                 4 => +Is_Global,
                                 5 => +Is_Static_Local));
@@ -2003,12 +2008,12 @@ package body GNATCOLL.Xref is
                Candidate := DB.Insert_And_Get_PK
                  (Query_Insert_Entity_With_Mangled,
                   Params =>
-                    (1 => +Name'Unrestricted_Access,
+                    (1 => +N'Unrestricted_Access,
                      2 => +Kind,
                      3 => +Decl_File,
                      4 => +Decl_Line,
                      5 => +Decl_Column,
-                     6 => +Name'Unrestricted_Access,
+                     6 => +N'Unrestricted_Access,
                      7 => +Is_Global,
                      8 => +Is_Static_Local),
                   PK => Database.Entities.Id);
@@ -2016,7 +2021,7 @@ package body GNATCOLL.Xref is
                Candidate := DB.Insert_And_Get_PK
                  (Query_Insert_Entity,
                   Params =>
-                    (1 => +Name'Unrestricted_Access,
+                    (1 => +N'Unrestricted_Access,
                      2 => +Kind,
                      3 => +Decl_File,
                      4 => +Decl_Line,
@@ -2029,7 +2034,7 @@ package body GNATCOLL.Xref is
             Entity_Decl_To_Id.Insert
               (Decl,
                Entity_Info'(Id         => Candidate,
-                            Known_Name => Name'Length /= 0));
+                            Known_Name => N'Length /= 0));
             return Candidate;
 
          else
@@ -2901,7 +2906,8 @@ package body GNATCOLL.Xref is
       Parse_Runtime_Files : Boolean := True;
       Show_Progress       : access procedure (Cur, Total : Integer) := null;
       From_DB_Name        : String := "";
-      To_DB_Name          : String := "")
+      To_DB_Name          : String := "";
+      ALI_Encoding        : String := GNATCOLL.Iconv.Locale)
    is
       Is_Sqlite       : constant Boolean := SQL.Sqlite.Is_Sqlite (Self.DB);
 
@@ -3129,10 +3135,14 @@ package body GNATCOLL.Xref is
          Dur     : Duration;
          Total   : constant Integer := Integer (LIs.Length);
          Current : Natural := 1;
+         Iconv_State : Iconv_T;
       begin
          if Active (Me_Timing) then
             Start := Clock;
          end if;
+
+         Iconv_State := Iconv_Open
+           (To_Code => UTF8, From_Code => ALI_Encoding, Ignore => True);
 
          --  Mark all entities from these LI files as dirty: once we have
          --  parsed the LI files, the entities that remain dirty will in fact
@@ -3173,6 +3183,7 @@ package body GNATCOLL.Xref is
                Parse_LI (DB                => DB,
                          Tree              => Tree,
                          LI                => Element (LI_C),
+                         Iconv_State       => Iconv_State,
                          VFS_To_Id         => VFS_To_Id,
                          Visited_ALI_Units => Visited_ALI_Units,
                          Visited_GLI_Files => Visited_GLI_Files,
@@ -3184,6 +3195,8 @@ package body GNATCOLL.Xref is
             end;
             Next (LI_C);
          end loop;
+
+         Iconv_Close (Iconv_State);
 
          --  Post-processing: remove all obsolete entities that no longer exist
          --  in the LI we just parsed.

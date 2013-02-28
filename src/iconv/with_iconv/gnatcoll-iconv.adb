@@ -25,8 +25,10 @@ with Interfaces.C;             use Interfaces.C;
 with Interfaces.C.Strings;     use Interfaces.C.Strings;
 with Ada.Unchecked_Conversion;
 with GNAT.OS_Lib;              use GNAT.OS_Lib;
+with GNATCOLL.Traces;          use GNATCOLL.Traces;
 
 package body GNATCOLL.Iconv is
+   Me : constant Trace_Handle := Create ("ICONV");
 
    C_E2BIG  : constant Integer;
    --  C_EINVAL : constant Integer;
@@ -185,7 +187,11 @@ package body GNATCOLL.Iconv is
    -- Iconv --
    -----------
 
-   function Iconv (State : Iconv_T; Input : String) return String is
+   function Iconv
+     (State         : Iconv_T;
+      Input         : String;
+      Ignore_Errors : Boolean := False) return String
+   is
       Output       : String_Access := new String (1 .. Input'Length);
       Tmp          : String_Access;
       Input_Index  : Positive := Input'First;
@@ -204,11 +210,23 @@ package body GNATCOLL.Iconv is
 
             when Incomplete_Multibyte_Sequence =>
                Free (Output);
-               raise Incomplete_Sequence_Error;
+               if Ignore_Errors then
+                  Trace (Me, "Incomplete sequence");
+                  return Input;
+               else
+                  raise Incomplete_Sequence_Error with
+                    "Incomplete sequence in '" & Input & "'";
+               end if;
 
             when Invalid_Multibyte_Sequence =>
                Free (Output);
-               raise Invalid_Sequence_Error;
+               if Ignore_Errors then
+                  Trace (Me, "Invalid sequence");
+                  return Input;
+               else
+                  raise Invalid_Sequence_Error with
+                    "Invalid sequence in '" & Input & "'";
+               end if;
 
             when Full_Buffer =>
                Tmp := new String

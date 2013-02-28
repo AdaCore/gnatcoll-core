@@ -2,6 +2,7 @@ with "../gnatcoll_shared";
 with "gnatcoll_postgres";
 with "gnatcoll_sqlite";
 with "gnatcoll_readline";
+with "gnatcoll_iconv";
 
 project GnatColl_Tools is
    for Main use ("gnatcoll_db2ada.adb");

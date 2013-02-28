@@ -11,7 +11,7 @@ const int gnatcoll_errno_einval = EINVAL;
 const int gnatcoll_errno_e2big  = E2BIG;
 const int gnatcoll_errno_eilseq = EILSEQ;
 
-void gnatcoll_iconv_reset_locale(){
+void gnatcoll_iconv_set_locale(){
   setlocale (LC_ALL, "");
 }
 

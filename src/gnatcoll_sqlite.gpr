@@ -1,4 +1,5 @@
 with "../gnatcoll_shared";
+with "gnatcoll_iconv";  --  for gnatcoll-xref
 with "gnatcoll";
 
 project GnatColl_Sqlite is

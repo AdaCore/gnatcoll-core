@@ -81,7 +81,7 @@
 | TABLE           | entities                        | entity                    |       |                                                                  |
 |-----------------+---------------------------------+---------------------------+-------+------------------------------------------------------------------|
 | id              | AUTOINCREMENT                   | PK                        |       |                                                                  |
-| name            | TEXT                            | NOT NULL, NOINDEX, NOCASE |       | Can be empty for forward decls (see above).                      |
+| name            | TEXT                            | NOT NULL, NOINDEX, NOCASE |       | Can be empty for forward decls (see above). Must be UTF-8        |
 | kind            | FK entity_kinds()               | NOT NULL, NOINDEX         |       | The E_Kind for this entity                                       |
 | decl_file       | FK files(references)            | NOT NULL, NOINDEX         |       | Set to -1 for a predefined entity                                |
 | decl_line       | INTEGER                         | NOT NULL, NOINDEX         |       | Set to -1 for a predefined entity                                |
