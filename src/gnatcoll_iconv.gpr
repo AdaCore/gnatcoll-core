@@ -21,7 +21,7 @@ project GnatColl_Iconv is
       when "yes" =>
         for Languages use ("Ada", "C");
         for Source_Dirs use ("iconv", "iconv/with_iconv");
-        for Library_Options use (GnatColl_Shared.Iconv_Dir) & "-liconv";
+        for Library_Options use (GnatColl_Shared.Iconv_Dir) & Gnatcoll_Shared.Iconv_Lib;
    end case;
 
    package Builder  renames GnatColl_Shared.Builder;
@@ -32,7 +32,7 @@ project GnatColl_Iconv is
          when "no" =>
             null;
          when "yes" =>
-            for Linker_Options use (Gnatcoll_Shared.Iconv_Dir) & "-liconv";
+            for Linker_Options use (Gnatcoll_Shared.Iconv_Dir) & Gnatcoll_Shared.Iconv_Lib;
       end case;
    end Linker;
 

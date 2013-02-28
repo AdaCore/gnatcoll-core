@@ -246,11 +246,14 @@ AC_DEFUN(AM_PATH_SYSLOG,
 # The following variables are exported by configure:
 #   @WITH_ICONV@: either "yes" or "no"
 #   @PATH_ICONV@: path to libiconv, or "" if not found
+#   @LIB_ICONV@:  either "" or "-liconv"
 #############################################################
 
 AC_DEFUN(AM_PATH_ICONV,
 [
    NEED_ICONV=no
+   LIB_ICONV=""
+
    AC_ARG_WITH(iconv,
      [AC_HELP_STRING(
        [--with-iconv=<path>],
@@ -305,7 +308,17 @@ AC_HELP_STRING(
           AC_MSG_RESULT(found in $am_path_iconv)
       fi
 
-      AC_CHECK_LIB(iconv,iconv_open,WITH_ICONV=yes,WITH_ICONV=no,[$PATH_ICONV])
+      _save_libs="$LIBS"
+      LIBS="$LIBS $PATH_ICONV"
+      AC_SEARCH_LIBS(
+         iconv_open, [iconv], 
+         [WITH_ICONV=yes;
+          if test "$ac_cv_search_iconv_open" != "none required" ; then
+             LIB_ICONV="$ac_cv_search_iconv_open"
+          fi
+         ],
+         [WITH_ICONV=no])
+      LIBS="$_save_libs"
 
       if test x"$WITH_ICONV" = xno -a x"$NEED_ICONV" = xyes ; then
         AC_MSG_ERROR([iconv not found])
@@ -313,6 +326,7 @@ AC_HELP_STRING(
    fi
    AC_SUBST(WITH_ICONV)
    AC_SUBST(PATH_ICONV)
+   AC_SUBST(LIB_ICONV)
 ])
 
 #############################################################
