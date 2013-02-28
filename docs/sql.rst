@@ -1691,7 +1691,8 @@ number of types:
   This type represents a row of the `Customers` table. It comes with
   a number of primitive operations, in particular one for each of the
   fields in the table. Such an object is returned by a cursor, similarly
-  to what was described in the previous section (:ref:`Writing_your_own_cursors`). This object is no longer valid as soon as the cursor moves to
+  to what was described in the previous section (:ref:`Writing_your_own_cursors`).
+  This object is no longer valid as soon as the cursor moves to
   the next row (in the currently implementation, the object will describe
   the next row, but it is best not to rely on this). As a benefit, this
   object is light weight and does not make a copy of the value of the
