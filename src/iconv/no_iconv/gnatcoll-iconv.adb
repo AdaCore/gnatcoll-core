@@ -35,7 +35,8 @@ package body GNATCOLL.Iconv is
    is
       pragma Unreferenced (To_Code, From_Code, Transliteration, Ignore);
    begin
-      return Iconv_T (System.Null_Address);
+      return (T => System.Null_Address,
+              Emulate_Ignore => False);
    end Iconv_Open;
 
    -----------
