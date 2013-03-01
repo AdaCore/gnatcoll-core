@@ -22,6 +22,9 @@
 ------------------------------------------------------------------------------
 
 --  An interface to libiconv.
+--  There are multiple variants of libiconv: on some Unix systems it is part
+--  of the C library, whereas other systems have installed the GNU libiconv
+--  separately. Those variants work slightly differently.
 --
 --  For historical reasons, international text is often encoded using a
 --  language or country dependent character encoding. With the advent of the
@@ -108,11 +111,18 @@ package GNATCOLL.Iconv is
    --  combination are system dependent.
    --  The empty encoding name "" is equivalent to the locale dependent
    --  character encoding.
-   --  If Transliteration is True, a character that cannot be represented in
-   --  the target set might be approximated through one or several characters
-   --  that look similar to the original character.
+   --
+   --  If you are using the GNU version of libiconv and Transliteration is
+   --  True, a character that cannot be represented in the target set might be
+   --  approximated through one or several characters that look similar to the
+   --  original character. For other variants of libiconv this flag has no
+   --  effect (and an error will be raised unless Ignore is True).
+   --
    --  If Ignore is True, characters that cannot be represented in the target
-   --  character set will be silently discarded.
+   --  character set will be silently discarded. Support for this feature is
+   --  built in for the GNU libiconv. In other cases, GNATCOLL will emulate it
+   --  by having Iconv return Full_Buffer when an invalid character is found.
+   --
    --  This subprogram might raise Unsupported_Conversion.
 
    Unsupported_Conversion : exception;
@@ -145,13 +155,17 @@ package GNATCOLL.Iconv is
    --
    --  On exit, Result is set to one of:
    --    * Invalid_Multibyte_Sequence: Input_Index is left pointing to the
-   --      beginning of the invalid sequence.
+   --      beginning of the invalid sequence. This error is not returned if
+   --      State was opened with the Ignore flag set to True.
    --    * Success: the input sequence has been entirely converted.
    --    * Incomplete_Multibyte_Sequence: an incomplete sequence is
    --      encountered and the input terminates after it. Input_Index is left
    --      pointing to the beginning of the incomplete sequence.
    --    * Full_Buffer: the output buffer has no more room for the next
    --      converted character.
+   --
+   --  The part that has been converted is available in
+   --      Outbuf (Outbuf'First .. Output_Index - 1)
 
    procedure Reset (State : Iconv_T);
    --  Resets the conversion state to the initial state
@@ -177,8 +191,8 @@ package GNATCOLL.Iconv is
    --  control, and for big strings will require more memory. As opposed to
    --  the procedure, it raises exceptions in case of error (either
    --  Invalid_Sequence_Error or Incomplete_Sequence_Error).
-   --  If Ignore_Errors is true, no exception will be raised, and the input
-   --  string will be returned unchanged instead.
+   --  If Ignore_Errors is true, no exception will be raised, and the part of
+   --  the input string that could be converted will be returned.
 
    Invalid_Sequence_Error    : exception;
    Incomplete_Sequence_Error : exception;
@@ -195,11 +209,17 @@ package GNATCOLL.Iconv is
    --  Incomplete_Sequence_Error.
    --  Ignore means that characters that do not exist in To_Code are simply
    --  discarded.
-   --  If Ignore_Errors is true, no exception will be raised, and the input
-   --  string will be returned unchanged instead.
+   --  If Ignore_Errors is true, no exception will be raised, and the part of
+   --  the input string that could be converted will be returned.
 
 private
-   type Iconv_T is new System.Address;
+   type Iconv_T is record
+      T : System.Address;
+
+      Emulate_Ignore : Boolean := False;
+      --  Whether we should emulate the IGNORE flag of the GNU libiconv. This
+      --  means that Iconv will never return Invalid_Multibyte_Sequence.
+   end record;
 
    pragma Import (C, Set_Locale, "gnatcoll_iconv_set_locale");
 
