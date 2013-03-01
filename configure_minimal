@@ -1,3 +1,3 @@
 #!/bin/sh
 
-./configure --disable-shared --without-postgresql --without-python --without-gtk --disable-pygtk --without-gmp --disable-syslog --without-sqlite --without-readline --without-iconv $@
+./configure --disable-shared --without-postgresql --without-python --without-gtk --disable-pygtk --without-gmp --disable-syslog --without-sqlite --disable-readline --without-iconv $@
