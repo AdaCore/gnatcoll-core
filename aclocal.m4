@@ -442,7 +442,7 @@ AC_HELP_STRING(
 
    else
      if test x"$POSTGRESQL_PATH_WITH" = xyes ; then
-       PATH_LIBPQ=`pg_config | grep ^LIBDIR | cut -d\  -f3`
+       PATH_LIBPQ=`pg_config 2>/dev/null | grep ^LIBDIR | cut -d\  -f3`
        if test x"$PATH_LIBPQ" != x ; then
           PATH_LIBPQ="-L$PATH_LIBPQ"
        else
