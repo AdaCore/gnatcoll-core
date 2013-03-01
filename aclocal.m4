@@ -54,6 +54,7 @@ AC_DEFUN(CHECK_BUILD_TYPE,
 
 AC_DEFUN(AM_TRY_ADA,
 [
+   rm -rf conftest
    mkdir conftest
    cat > conftest/src.ada <<EOF
 [$3]
@@ -246,13 +247,17 @@ AC_DEFUN(AM_PATH_SYSLOG,
 # The following variables are exported by configure:
 #   @WITH_ICONV@: either "yes" or "no"
 #   @PATH_ICONV@: path to libiconv, or "" if not found
+#   @INCLUDE_ICONV@: the "-I..." for iconv.h, if needed
 #   @LIB_ICONV@:  either "" or "-liconv"
 #############################################################
 
 AC_DEFUN(AM_PATH_ICONV,
 [
    NEED_ICONV=no
+   INCLUDE_ICONV=""
    LIB_ICONV=""
+   PATH_ICONV=""
+   WITH_ICONV=yes
 
    AC_ARG_WITH(iconv,
      [AC_HELP_STRING(
@@ -265,68 +270,116 @@ AC_HELP_STRING(
      [ICONV_PATH_WITH=yes])
 
    AC_MSG_CHECKING(for libiconv)
+   case $ICONV_PATH_WITH in
+       no)
+          # Explicitly disabled by user (--with-iconv=no or --without-iconv)
+          AC_MSG_RESULT([no, disabled by user])
+          WITH_ICONV=no
+          ;;
 
-   # Explicit disabling by user (--with-iconv=no or --without-iconv)
-   if test x"$ICONV_PATH_WITH" = xno ; then
-      AC_MSG_RESULT([no, disabled by user])
-      WITH_ICONV=no
-   else
-      if test x"$ICONV_PATH_WITH" = xyes ; then
+       yes)
           # Request automatic detection
+          #
           # On OSX, we do not want to use macport's version of libiconv, which
           # is not compatible with the system (we end up with errors like
           # _iconv_open not found for architecture x86_64). So we force the
-          # use of /usr first
-          LD_LIBRARY_PATH="/usr/lib$PATH_SEPARATOR$LD_LIBRARY_PATH"
+          # use of /usr/lib first
+          #
+          # A special case for instance on Solaris: iconv.h is installed in
+          # /usr/include, but (on our machines at least) also in
+          # /usr/local/include. Both variants are different, and we must make
+          # sure we link with the matching library. If /usr/local/lib is not
+          # in LD_LIBRARY_PATH, AM_LIB_PATH will not find libiconv (part of
+          # the standard library), so will not add -liconv. But the default
+          # search path for cpp is such that /usr/local/include is searched
+          # first (even if -I/usr/include is on the command line, since it is
+          # also a default search path). So we have a discrepency. So we
+          # always add the default search paths to LD_LIBRARY_PATH.
+
+          LD_LIBRARY_PATH="/usr/local/lib:/usr/lib:/usr/target/lib:$LD_LIBRARY_PATH"
 
           AM_LIB_PATH(iconv)
           if test x"$am_path_iconv" != x ; then
              PATH_ICONV="-L$am_path_iconv"
-          else
-             PATH_ICONV=""
+             INCLUDE_ICONV="-I$am_path_iconv/../include"
           fi
+          ;;
 
-      else
+       *)
           # path provided by user
-
-          PATH_ICONV=""
           for am_path_iconv in "$ICONV_PATH_WITH" "$ICONV_PATH_WITH/lib" ; do
               for lib in libiconv${SO_EXT} libiconv.a ; do
                   _AS_ECHO_LOG([Testing $am_path_iconv/$lib])
                   if test -f "$am_path_iconv/$lib" ; then
                       PATH_ICONV="-L$am_path_iconv"
+                      INCLUDE_ICONV="-I$am_path_iconv/../include"
                       break;
                    fi
               done
           done
-      fi
+          ;;
+   esac
 
+   if test x"$WITH_ICONV" = x"yes" ; then
+      _save_LIBS="$LIBS"
       if test x"$PATH_ICONV" = x ; then
-          AC_MSG_RESULT(not in LD_LIBRARY_PATH)
-          # Not critical, extra path might not be needed on the system
+          AC_MSG_RESULT(no special -L needed)
       else
           AC_MSG_RESULT(found in $am_path_iconv)
+          LIBS="$LIBS $PATH_ICONV"
       fi
 
-      _save_libs="$LIBS"
-      LIBS="$LIBS $PATH_ICONV"
-      AC_SEARCH_LIBS(
-         iconv_open, [iconv], 
-         [WITH_ICONV=yes;
-          if test "$ac_cv_search_iconv_open" != "none required" ; then
-             LIB_ICONV="$ac_cv_search_iconv_open"
+      CFLAGS="$CFLAGS $INCLUDE_ICONV"
+
+      # The code below is similar to AC_SEARCH_LIBS(iconv_open, [iconv])
+      # but allows us to also check that #include <iconv.h> is supported
+      # and matches the library we link with. Otherwise, we might be
+      # compiling with /usr/local/include/iconv.h (default search path)
+      # but linking without -liconv (since on Solaris it is part of the
+      # libc and that would be detected).
+
+      AC_LANG_CONFTEST(
+         [AC_LANG_PROGRAM(
+            [#include <iconv.h>],
+            [iconv_open(0,0)])])
+
+      AC_MSG_CHECKING([for library containing iconv_open])
+      for ac_lib in '' iconv ; do
+          if test -z "$ac_lib" ; then
+             switch=""
+          else
+             switch="-l$ac_lib"
           fi
-         ],
-         [WITH_ICONV=no])
-      LIBS="$_save_libs"
+          LIBS="$switch $LIBS"
+          AC_LINK_IFELSE([],
+             [WITH_ICONV=yes;
+              LIB_ICONV="$switch";
+              break],
+             [WITH_ICONV=no])
+      done
+      AC_MSG_RESULT([$WITH_ICONV $LIB_ICONV])
+      rm conftest.$ac_ext
+   
+      #AC_SEARCH_LIBS(
+      #   iconv_open, [iconv], 
+      #   [AC_CHECK_HEADER(
+      #      [iconv.h],
+      #      [WITH_ICONV=yes;
+      #       if test "$ac_cv_search_iconv_open" != "none required" ; then
+      #          LIB_ICONV="$ac_cv_search_iconv_open"
+      #       fi])],
+      #   [WITH_ICONV=no])
+      LIBS="$_save_LIBS"     # Should we leave -liconv ?
 
       if test x"$WITH_ICONV" = xno -a x"$NEED_ICONV" = xyes ; then
         AC_MSG_ERROR([iconv not found])
       fi
    fi
+
    AC_SUBST(WITH_ICONV)
    AC_SUBST(PATH_ICONV)
    AC_SUBST(LIB_ICONV)
+   AC_SUBST(INCLUDE_ICONV)
 ])
 
 #############################################################

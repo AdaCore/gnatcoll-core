@@ -640,6 +640,7 @@ WITH_PROJECTS
 WITH_READLINE
 GNAT_SOURCES
 HAVE_GNAT_PROJECT_gnat_util
+INCLUDE_ICONV
 LIB_ICONV
 PATH_ICONV
 WITH_ICONV
@@ -4813,7 +4814,10 @@ fi
 
 
    NEED_ICONV=no
+   INCLUDE_ICONV=""
    LIB_ICONV=""
+   PATH_ICONV=""
+   WITH_ICONV=yes
 
 
 # Check whether --with-iconv was given.
@@ -4826,20 +4830,34 @@ fi
 
    { $as_echo "$as_me:${as_lineno-$LINENO}: checking for libiconv" >&5
 $as_echo_n "checking for libiconv... " >&6; }
-
-   # Explicit disabling by user (--with-iconv=no or --without-iconv)
-   if test x"$ICONV_PATH_WITH" = xno ; then
-      { $as_echo "$as_me:${as_lineno-$LINENO}: result: no, disabled by user" >&5
+   case $ICONV_PATH_WITH in
+       no)
+          # Explicitly disabled by user (--with-iconv=no or --without-iconv)
+          { $as_echo "$as_me:${as_lineno-$LINENO}: result: no, disabled by user" >&5
 $as_echo "no, disabled by user" >&6; }
-      WITH_ICONV=no
-   else
-      if test x"$ICONV_PATH_WITH" = xyes ; then
+          WITH_ICONV=no
+          ;;
+
+       yes)
           # Request automatic detection
+          #
           # On OSX, we do not want to use macport's version of libiconv, which
           # is not compatible with the system (we end up with errors like
           # _iconv_open not found for architecture x86_64). So we force the
-          # use of /usr first
-          LD_LIBRARY_PATH="/usr/lib$PATH_SEPARATOR$LD_LIBRARY_PATH"
+          # use of /usr/lib first
+          #
+          # A special case for instance on Solaris: iconv.h is installed in
+          # /usr/include, but (on our machines at least) also in
+          # /usr/local/include. Both variants are different, and we must make
+          # sure we link with the matching library. If /usr/local/lib is not
+          # in LD_LIBRARY_PATH, AM_LIB_PATH will not find libiconv (part of
+          # the standard library), so will not add -liconv. But the default
+          # search path for cpp is such that /usr/local/include is searched
+          # first (even if -I/usr/include is on the command line, since it is
+          # also a default search path). So we have a discrepency. So we
+          # always add the default search paths to LD_LIBRARY_PATH.
+
+          LD_LIBRARY_PATH="/usr/local/lib:/usr/lib:/usr/target/lib:$LD_LIBRARY_PATH"
 
 
    am_path_iconv=""
@@ -4857,104 +4875,97 @@ $as_echo "no, disabled by user" >&6; }
 
           if test x"$am_path_iconv" != x ; then
              PATH_ICONV="-L$am_path_iconv"
-          else
-             PATH_ICONV=""
+             INCLUDE_ICONV="-I$am_path_iconv/../include"
           fi
+          ;;
 
-      else
+       *)
           # path provided by user
-
-          PATH_ICONV=""
           for am_path_iconv in "$ICONV_PATH_WITH" "$ICONV_PATH_WITH/lib" ; do
               for lib in libiconv${SO_EXT} libiconv.a ; do
                   $as_echo "$as_me:${as_lineno-$LINENO}: Testing $am_path_iconv/$lib" >&5
                   if test -f "$am_path_iconv/$lib" ; then
                       PATH_ICONV="-L$am_path_iconv"
+                      INCLUDE_ICONV="-I$am_path_iconv/../include"
                       break;
                    fi
               done
           done
-      fi
+          ;;
+   esac
 
+   if test x"$WITH_ICONV" = x"yes" ; then
+      _save_LIBS="$LIBS"
       if test x"$PATH_ICONV" = x ; then
-          { $as_echo "$as_me:${as_lineno-$LINENO}: result: not in LD_LIBRARY_PATH" >&5
-$as_echo "not in LD_LIBRARY_PATH" >&6; }
-          # Not critical, extra path might not be needed on the system
+          { $as_echo "$as_me:${as_lineno-$LINENO}: result: no special -L needed" >&5
+$as_echo "no special -L needed" >&6; }
       else
           { $as_echo "$as_me:${as_lineno-$LINENO}: result: found in $am_path_iconv" >&5
 $as_echo "found in $am_path_iconv" >&6; }
+          LIBS="$LIBS $PATH_ICONV"
       fi
 
-      _save_libs="$LIBS"
-      LIBS="$LIBS $PATH_ICONV"
-      { $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing iconv_open" >&5
-$as_echo_n "checking for library containing iconv_open... " >&6; }
-if ${ac_cv_search_iconv_open+:} false; then :
-  $as_echo_n "(cached) " >&6
-else
-  ac_func_search_save_LIBS=$LIBS
-cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
+      CFLAGS="$CFLAGS $INCLUDE_ICONV"
 
-/* Override any GCC internal prototype to avoid an error.
-   Use char because int might match the return type of a GCC
-   builtin and then its argument prototype would still apply.  */
-#ifdef __cplusplus
-extern "C"
-#endif
-char iconv_open ();
+      # The code below is similar to AC_SEARCH_LIBS(iconv_open, [iconv])
+      # but allows us to also check that #include <iconv.h> is supported
+      # and matches the library we link with. Otherwise, we might be
+      # compiling with /usr/local/include/iconv.h (default search path)
+      # but linking without -liconv (since on Solaris it is part of the
+      # libc and that would be detected).
+
+      cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+#include <iconv.h>
 int
 main ()
 {
-return iconv_open ();
+iconv_open(0,0)
   ;
   return 0;
 }
 _ACEOF
-for ac_lib in '' iconv; do
-  if test -z "$ac_lib"; then
-    ac_res="none required"
-  else
-    ac_res=-l$ac_lib
-    LIBS="-l$ac_lib  $ac_func_search_save_LIBS"
-  fi
-  if ac_fn_c_try_link "$LINENO"; then :
-  ac_cv_search_iconv_open=$ac_res
-fi
-rm -f core conftest.err conftest.$ac_objext \
-    conftest$ac_exeext
-  if ${ac_cv_search_iconv_open+:} false; then :
-  break
-fi
-done
-if ${ac_cv_search_iconv_open+:} false; then :
 
-else
-  ac_cv_search_iconv_open=no
-fi
-rm conftest.$ac_ext
-LIBS=$ac_func_search_save_LIBS
-fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_iconv_open" >&5
-$as_echo "$ac_cv_search_iconv_open" >&6; }
-ac_res=$ac_cv_search_iconv_open
-if test "$ac_res" != no; then :
-  test "$ac_res" = "none required" || LIBS="$ac_res $LIBS"
-  WITH_ICONV=yes;
-          if test "$ac_cv_search_iconv_open" != "none required" ; then
-             LIB_ICONV="$ac_cv_search_iconv_open"
+      { $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing iconv_open" >&5
+$as_echo_n "checking for library containing iconv_open... " >&6; }
+      for ac_lib in '' iconv ; do
+          if test -z "$ac_lib" ; then
+             switch=""
+          else
+             switch="-l$ac_lib"
           fi
-
+          LIBS="$switch $LIBS"
+          if ac_fn_c_try_link "$LINENO"; then :
+  WITH_ICONV=yes;
+              LIB_ICONV="$switch";
+              break
 else
   WITH_ICONV=no
 fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext
+      done
+      { $as_echo "$as_me:${as_lineno-$LINENO}: result: $WITH_ICONV $LIB_ICONV" >&5
+$as_echo "$WITH_ICONV $LIB_ICONV" >&6; }
+      rm conftest.$ac_ext
 
-      LIBS="$_save_libs"
+      #AC_SEARCH_LIBS(
+      #   iconv_open, [iconv],
+      #   [AC_CHECK_HEADER(
+      #      [iconv.h],
+      #      [WITH_ICONV=yes;
+      #       if test "$ac_cv_search_iconv_open" != "none required" ; then
+      #          LIB_ICONV="$ac_cv_search_iconv_open"
+      #       fi])],
+      #   [WITH_ICONV=no])
+      LIBS="$_save_LIBS"     # Should we leave -liconv ?
 
       if test x"$WITH_ICONV" = xno -a x"$NEED_ICONV" = xyes ; then
         as_fn_error $? "iconv not found" "$LINENO" 5
       fi
    fi
+
+
 
 
 
@@ -5138,6 +5149,7 @@ fi
   { $as_echo "$as_me:${as_lineno-$LINENO}: checking whether platform supports atomic inc/dec" >&5
 $as_echo_n "checking whether platform supports atomic inc/dec... " >&6; }
 
+   rm -rf conftest
    mkdir conftest
    cat > conftest/src.ada <<EOF
 

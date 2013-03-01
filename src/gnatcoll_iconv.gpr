@@ -24,8 +24,13 @@ project GnatColl_Iconv is
         for Library_Options use (GnatColl_Shared.Iconv_Dir) & Gnatcoll_Shared.Iconv_Lib;
    end case;
 
+   package Compiler is
+      for Switches ("Ada") use GnatColl_Shared.Compiler'Switches ("Ada");
+      for Switches ("C") use GnatColl_Shared.Compiler'Switches ("C")
+          & GnatColl_Shared.Iconv_Include;
+   end Compiler;
+
    package Builder  renames GnatColl_Shared.Builder;
-   package Compiler renames GnatColl_Shared.Compiler;
    package Ide      renames GnatColl_Shared.Ide;
    package Linker is
       case GnatColl_Shared.Iconv is
