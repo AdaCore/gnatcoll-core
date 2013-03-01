@@ -39,23 +39,22 @@ package body GNATCOLL.Iconv is
    --  C errno values, defined in iconv_support.c
 
    function C_Iconv
-     (cd           : Iconv_T;
+     (cd           : System.Address;
       inbuf        : access chars_ptr;
       inbytesleft  : access size_t;
       outbuf       : access chars_ptr;
       outbytesleft : access size_t) return size_t;
    pragma Import (C, C_Iconv, "gnatcoll_iconv");
 
-   function C_Iconv_Open (tocode, fromcode : chars_ptr) return Iconv_T;
+   function C_Iconv_Open (tocode, fromcode : chars_ptr) return System.Address;
    pragma Import (C, C_Iconv_Open, "gnatcoll_iconv_open");
 
-   procedure C_Iconv_Close (State : Iconv_T);
+   procedure C_Iconv_Close (State : System.Address);
    pragma Import (C, C_Iconv_Close, "gnatcoll_iconv_close");
 
    type Int is mod System.Memory_Size;
 
-   function To_Int is new Ada.Unchecked_Conversion (Iconv_T, Int);
-
+   function To_Int is new Ada.Unchecked_Conversion (System.Address, Int);
    function Conv is new Ada.Unchecked_Conversion (System.Address, chars_ptr);
 
    ----------------
@@ -71,27 +70,32 @@ package body GNATCOLL.Iconv is
       State            : Iconv_T;
       Tocode, Fromcode : chars_ptr;
    begin
-      if Transliteration then
-         if Ignore then
-            Tocode := New_String (To_Code & "//TRANSLIT//IGNORE");
-         else
-            Tocode := New_String (To_Code & "//TRANSLIT");
-         end if;
+      if False then
+         if Transliteration then
+            if Ignore then
+               Tocode := New_String (To_Code & "//TRANSLIT//IGNORE");
+            else
+               Tocode := New_String (To_Code & "//TRANSLIT");
+            end if;
 
-      else
-         if Ignore then
-            Tocode := New_String (To_Code & "//IGNORE");
          else
-            Tocode := New_String (To_Code);
+            if Ignore then
+               Tocode := New_String (To_Code & "//IGNORE");
+            else
+               Tocode := New_String (To_Code);
+            end if;
          end if;
       end if;
+      Tocode := New_String (To_Code);
+
+      State.Emulate_Ignore := Ignore;
 
       Fromcode := New_String (From_Code);
-      State := C_Iconv_Open (Tocode, Fromcode);
+      State.T := C_Iconv_Open (Tocode, Fromcode);
       Free (Fromcode);
       Free (Tocode);
 
-      if To_Int (State) = -1 then
+      if To_Int (State.T) = -1 then
          raise Unsupported_Conversion with
             "Unsupported conversion from '" & From_Code & "' to '"
             & To_Code & "'";
@@ -120,14 +124,19 @@ package body GNATCOLL.Iconv is
 
    begin
       Res := C_Iconv
-        (State, Inptr'Access, Inleft'Access, Outptr'Access, Outleft'Access);
+        (State.T, Inptr'Access, Inleft'Access, Outptr'Access, Outleft'Access);
 
       Input_Index := Inbuf'Last - Integer (Inleft) + 1;
       Output_Index := Outbuf'Last - Integer (Outleft) + 1;
 
       if Res = -1 then
          if Errno = C_EILSEQ then
-            Result := Invalid_Multibyte_Sequence;
+            if State.Emulate_Ignore then
+               Result := Full_Buffer;
+               Input_Index := Input_Index + 1;
+            else
+               Result := Invalid_Multibyte_Sequence;
+            end if;
          elsif Errno = C_E2BIG then
             Result := Full_Buffer;
          else  --  C_EINVAL
@@ -147,7 +156,7 @@ package body GNATCOLL.Iconv is
       Res : size_t;
       pragma Unreferenced (Res);
    begin
-      Res := C_Iconv (State, null, null, null, null);
+      Res := C_Iconv (State.T, null, null, null, null);
    end Reset;
 
    -----------
@@ -164,7 +173,7 @@ package body GNATCOLL.Iconv is
       Outleft : aliased size_t := size_t (Outbuf'Last - Output_Index + 1);
       Res     : size_t;
    begin
-      Res := C_Iconv (State, null, null, Outptr'Access, Outleft'Access);
+      Res := C_Iconv (State.T, null, null, Outptr'Access, Outleft'Access);
       Output_Index := Outbuf'Last - Integer (Outleft) + 1;
 
       if Res = -1 then
@@ -180,7 +189,7 @@ package body GNATCOLL.Iconv is
 
    procedure Iconv_Close (State : Iconv_T) is
    begin
-      C_Iconv_Close (State);
+      C_Iconv_Close (State.T);
    end Iconv_Close;
 
    -----------
@@ -236,15 +245,26 @@ package body GNATCOLL.Iconv is
                end if;
 
             when Full_Buffer =>
-               Tmp := new String
-                  (1 .. Output'Last + (Input'Last - Input_Index + 1) * 2);
-               Tmp (Output'Range) := Output.all;
-               Free (Output);
-               Output := Tmp;
+               --  We might receive this because an invalid sequence was seen
+               --  and the libiconv does not support //IGNORE. So we do not
+               --  want to grow the string too much every time. In UTF-8, a
+               --  character can take up to 6 bytes.
+
+               if Output_Index >= Output'Last - 6 then
+                  Tmp := new String
+                    (1 .. Output'Last + (Input'Last - Input_Index + 1) * 2);
+                  Tmp (Output'Range) := Output.all;
+                  Free (Output);
+                  Output := Tmp;
+               end if;
          end case;
       end loop;
 
-      return Input;
+      return R : constant String :=
+        Output (Output'First .. Output_Index - 1)
+      do
+         Free (Output);
+      end return;
    end Iconv;
 
    -----------
