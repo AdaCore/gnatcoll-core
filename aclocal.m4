@@ -307,16 +307,8 @@ AC_HELP_STRING(
 
        *)
           # path provided by user
-          for am_path_iconv in "$ICONV_PATH_WITH" "$ICONV_PATH_WITH/lib" ; do
-              for lib in libiconv${SO_EXT} libiconv.a ; do
-                  _AS_ECHO_LOG([Testing $am_path_iconv/$lib])
-                  if test -f "$am_path_iconv/$lib" ; then
-                      PATH_ICONV="-L$am_path_iconv"
-                      INCLUDE_ICONV="-I$am_path_iconv/../include"
-                      break;
-                   fi
-              done
-          done
+          PATH_ICONV="-L$am_path_iconv/lib"
+          INCLUDE_ICONV="-I$am_path_iconv/include"
           ;;
    esac
 
