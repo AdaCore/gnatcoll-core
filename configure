@@ -4881,16 +4881,8 @@ $as_echo "no, disabled by user" >&6; }
 
        *)
           # path provided by user
-          for am_path_iconv in "$ICONV_PATH_WITH" "$ICONV_PATH_WITH/lib" ; do
-              for lib in libiconv${SO_EXT} libiconv.a ; do
-                  $as_echo "$as_me:${as_lineno-$LINENO}: Testing $am_path_iconv/$lib" >&5
-                  if test -f "$am_path_iconv/$lib" ; then
-                      PATH_ICONV="-L$am_path_iconv"
-                      INCLUDE_ICONV="-I$am_path_iconv/../include"
-                      break;
-                   fi
-              done
-          done
+          PATH_ICONV="-L$am_path_iconv/lib"
+          INCLUDE_ICONV="-I$am_path_iconv/include"
           ;;
    esac
 
