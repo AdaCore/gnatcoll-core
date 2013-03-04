@@ -5142,9 +5142,7 @@ fi
   { $as_echo "$as_me:${as_lineno-$LINENO}: checking whether platform supports atomic inc/dec" >&5
 $as_echo_n "checking whether platform supports atomic inc/dec... " >&6; }
 
-   if test -d conftest ; then
-       mkdir conftest
-   fi
+   mkdir conftest
    cat > conftest/src.ada <<EOF
 
 with Interfaces; use Interfaces;
