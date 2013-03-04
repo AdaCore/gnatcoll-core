@@ -54,11 +54,10 @@ AC_DEFUN(CHECK_BUILD_TYPE,
 
 AC_DEFUN(AM_TRY_ADA,
 [
-   mkdir conftest
-   cat > conftest/src.ada <<EOF
+   cat > conftest.ada <<EOF
 [$3]
 EOF
-   if AC_TRY_COMMAND([cd conftest && gnatchop -q src.ada && $1 $2 >/dev/null 2>../conftest.out])
+   if AC_TRY_COMMAND([gnatchop -q conftest.ada && $1 $2 >/dev/null 2>conftest.out])
    then
       : Success
       $4
@@ -66,7 +65,7 @@ EOF
       : Failure
       $5
    fi
-   rm -rf conftest*
+   rm -rf conftest.ada
 ])
 
 #############################################################
@@ -1049,13 +1048,12 @@ AC_DEFUN(AM_TO_GPR,
 ##############################################################
 
 AC_DEFUN([AM_HAS_GNAT_PROJECT],
-[AC_MSG_CHECKING([whether GNAT project $1.gpr is available])
-mkdir conftest
-cat > conftest/check.gpr <<EOF
+[
+cat > conftest.gpr <<EOF
 with "[$1]";
-project Check is for Source_Files use (); end Check;
+project Conftest is for Source_Files use (); end Conftest;
 EOF
-if AC_TRY_COMMAND([cd conftest && gnat ls -Pcheck system.ads > /dev/null 2>../conftest.out])
+if AC_TRY_COMMAND([gnat ls -Pconftest.gpr system.ads > /dev/null 2>../conftest.out])
 then
   HAVE_GNAT_PROJECT_$1=yes
 else
@@ -1063,7 +1061,7 @@ else
 fi
 AC_MSG_RESULT($HAVE_GNAT_PROJECT_$1)
 AC_SUBST(HAVE_GNAT_PROJECT_$1)
-rm -fr conftest])
+])
 
 ##########################################################################
 ## Detects GTK and GtkAda
