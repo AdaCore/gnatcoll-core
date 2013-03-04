@@ -4940,7 +4940,7 @@ rm -f core conftest.err conftest.$ac_objext \
       done
       { $as_echo "$as_me:${as_lineno-$LINENO}: result: $WITH_ICONV $LIB_ICONV" >&5
 $as_echo "$WITH_ICONV $LIB_ICONV" >&6; }
-      rm conftest.$ac_ext
+      rm -f conftest.$ac_objext conftest$ac_exeext
 
       #AC_SEARCH_LIBS(
       #   iconv_open, [iconv],

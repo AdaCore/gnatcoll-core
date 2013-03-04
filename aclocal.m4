@@ -350,7 +350,7 @@ AC_HELP_STRING(
              [WITH_ICONV=no])
       done
       AC_MSG_RESULT([$WITH_ICONV $LIB_ICONV])
-      rm conftest.$ac_ext
+      rm -f conftest.$ac_objext conftest$ac_exeext
    
       #AC_SEARCH_LIBS(
       #   iconv_open, [iconv], 
