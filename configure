@@ -5142,7 +5142,6 @@ fi
   { $as_echo "$as_me:${as_lineno-$LINENO}: checking whether platform supports atomic inc/dec" >&5
 $as_echo_n "checking whether platform supports atomic inc/dec... " >&6; }
 
-   rm -rf conftest
    mkdir conftest
    cat > conftest/src.ada <<EOF
 

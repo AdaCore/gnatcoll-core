@@ -54,7 +54,6 @@ AC_DEFUN(CHECK_BUILD_TYPE,
 
 AC_DEFUN(AM_TRY_ADA,
 [
-   rm -rf conftest
    mkdir conftest
    cat > conftest/src.ada <<EOF
 [$3]
