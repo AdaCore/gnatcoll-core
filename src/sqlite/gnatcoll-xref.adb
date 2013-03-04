@@ -1282,6 +1282,11 @@ package body GNATCOLL.Xref is
       begin
          while Has_Element (C) loop
             if Element (C).Id = Id then
+               if Active (Me_Parsing) then
+                  Trace (Me_Parsing, "Is_Unit_File Id=" & Id'Img
+                         & " Index=" & Index'Img);
+               end if;
+
                return Index;
             end if;
 
@@ -1742,6 +1747,10 @@ package body GNATCOLL.Xref is
          end if;
 
          if Is_ALI_Unit then
+            if Active (Me_Parsing) then
+               Trace (Me_Parsing, "Append to Unit_Files "
+                      & Result.Id'Img);
+            end if;
             Unit_Files.Append (Result);
             Grow_As_Needed (Scope_Trees, Integer (Unit_Files.Length));
             Grow_As_Needed (Decl_Scope_Trees, Integer (Unit_Files.Length));
@@ -2063,6 +2072,11 @@ package body GNATCOLL.Xref is
                end;
 
                Current_X_File_Unit_File_Index := Is_Unit_File (Current_X_File);
+               if Active (Me_Parsing) then
+                  Trace (Me_Parsing, "Process_Xref_Section current="
+                         & Current_X_File'Img & " is_unit_file="
+                         & Current_X_File_Unit_File_Index'Img);
+               end if;
 
             elsif Str (Index) = '.'
               or else Str (Index) in '0' .. '9'
@@ -3589,7 +3603,9 @@ package body GNATCOLL.Xref is
       Line   : Integer := -1;
       Column : Visible_Column := -1) return Entity_Reference is
    begin
-      return Get_Entity (Self, Name, +File.Unix_Style_Full_Name, Line, Column);
+      return Get_Entity
+        (Self, Name, +File.Unix_Style_Full_Name (Normalize => True),
+         Line, Column);
    end Get_Entity;
 
    -----------------
