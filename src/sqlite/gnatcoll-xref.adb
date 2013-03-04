@@ -2726,7 +2726,9 @@ package body GNATCOLL.Xref is
 
                      Info := Insert_Source_File
                        (Basename => String (Str (Start .. Base_Last)),
-                        Is_ALI_Unit => Str (Index) /= ASCII.LF);
+                        Is_ALI_Unit =>
+                          Str (Index) /= ASCII.LF
+                          and then Str (Index) /= ASCII.CR);
 
                   --  Handle C/C++ include files
 
