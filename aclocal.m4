@@ -307,6 +307,7 @@ AC_HELP_STRING(
 
        *)
           # path provided by user
+          am_path_iconv="$ICONV_PATH_WITH"
           PATH_ICONV="-L$am_path_iconv/lib"
           INCLUDE_ICONV="-I$am_path_iconv/include"
           ;;
