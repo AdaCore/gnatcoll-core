@@ -203,6 +203,7 @@ package body GNATCOLL.Iconv is
       Input_Index  : Positive := Input'First;
       Output_Index : Positive := Output'First;
       Res          : Iconv_Result;
+      Increment    : Integer;
    begin
       while Input_Index <= Input'Last loop
          Iconv (State, Input, Input_Index, Output.all, Output_Index, Res);
@@ -248,8 +249,9 @@ package body GNATCOLL.Iconv is
                --  character can take up to 6 bytes.
 
                if Output_Index >= Output'Last - 6 then
+                  Increment := Integer'Max (1, Input'Last - Input_Index + 1);
                   Tmp := new String
-                    (1 .. Output'Last + (Input'Last - Input_Index + 1) * 2);
+                     (Output'First .. Output'Last + Increment * 2);
                   Tmp (Output'Range) := Output.all;
                   Free (Output);
                   Output := Tmp;
