@@ -70,23 +70,20 @@ package body GNATCOLL.Iconv is
       State            : Iconv_T;
       Tocode, Fromcode : chars_ptr;
    begin
-      if False then
-         if Transliteration then
-            if Ignore then
-               Tocode := New_String (To_Code & "//TRANSLIT//IGNORE");
-            else
-               Tocode := New_String (To_Code & "//TRANSLIT");
-            end if;
-
+      if Transliteration then
+         if Ignore then
+            Tocode := New_String (To_Code & "//TRANSLIT//IGNORE");
          else
-            if Ignore then
-               Tocode := New_String (To_Code & "//IGNORE");
-            else
-               Tocode := New_String (To_Code);
-            end if;
+            Tocode := New_String (To_Code & "//TRANSLIT");
+         end if;
+
+      else
+         if Ignore then
+            Tocode := New_String (To_Code & "//IGNORE");
+         else
+            Tocode := New_String (To_Code);
          end if;
       end if;
-      Tocode := New_String (To_Code);
 
       State.Emulate_Ignore := Ignore;
 
