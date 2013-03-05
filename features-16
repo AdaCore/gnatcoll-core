@@ -15,12 +15,6 @@ of the feature.
 New features in 1.6
 -------------------
 
-NF-16-M227-008 GNATCOLL.Refcount provides initialization (2013-02-27)
-
-   It is now possible to pass an additional Initialize parameter when
-   instantiating GNATCOLL.Refcount, for instance to prevent the creation
-   of null pointers.
-
 NF-16-LC18-014 Specify postgreSQL's port number (2012-12-18)
 
    It is now possible, when connecting to a postgreSQL server, to specify which

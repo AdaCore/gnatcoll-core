@@ -41,7 +41,7 @@ package GNATCOLL.Refcount is
    --  This ancestor adds a refcount field, which keeps track of how many
    --  references exist to a particular instance of Refcounted.
    --
-   --  The refcounting is task safe (that is you can use the smart pointer from
+   --  The refcounting is type safe (that is you can use the smart pointer from
    --  multiple tasks concurrently, and the refcounting will always be
    --  accurate). But the task-safety of Refcounted itself depends on your
    --  application.
@@ -65,22 +65,6 @@ package GNATCOLL.Refcount is
 
    generic
       type Encapsulated is abstract new Refcounted with private;
-
-      with procedure Initialize (Data : in out Refcounted_Access) is null;
-      --  This procedure is called when an uninitialized smart pointer is
-      --  declared. Data is used to provide an initial value to its data (by
-      --  default it is left to null, but in some cases you might need to
-      --  prevent the existence of uninitialized smart pointers). For instance
-      --       R : Ref;        --  calls Initialize to provide initial value
-      --       R2 : Ref := R;  --  does not call Initialize
-      --
-      --  This procedure is also called after you assign a Null_Ref to
-      --  another value, to ensure the other value is also initialized and
-      --  you can start manipulating it. Unfortunately, this breaks the
-      --  equality if Initialize returns not null:
-      --       R : Ref := Null_Ref;
-      --       pragma Assert (R /= Null_Ref);
-
    package Smart_Pointers is
       type Encapsulated_Access is access all Encapsulated'Class;
 
@@ -118,7 +102,6 @@ package GNATCOLL.Refcount is
          Data : Refcounted_Access;
       end record;
 
-      overriding procedure Initialize (P : in out Ref);
       overriding procedure Finalize (P : in out Ref);
       overriding procedure Adjust   (P : in out Ref);
       --  Take care of reference counting
