@@ -30,15 +30,12 @@ with GNATCOLL.SQL.Exec_Private;    use GNATCOLL.SQL.Exec_Private;
 with GNATCOLL.Traces;              use GNATCOLL.Traces;
 with GNATCOLL.Utils;               use GNATCOLL.Utils;
 with GNAT.Calendar;
-with GNAT.OS_Lib;
 with Interfaces.C.Strings;         use Interfaces.C.Strings;
 with System;                       use System;
 
 package body GNATCOLL.SQL.Sqlite.Builder is
    Me : constant Trace_Handle := Create ("SQL.SQLITE");
    Me_Log : constant Trace_Handle := Create ("SQL.SQLITE.LOG");
-
-   Empty_C_Str : aliased String := "" & ASCII.NUL;
 
    procedure Logger
      (Data       : System.Address;
@@ -337,6 +334,7 @@ package body GNATCOLL.SQL.Sqlite.Builder is
    begin
       Trace (Me, "Closing connection to sqlite");
       Close (Connection.DB);
+      Connection.DB := No_Database;
    end Close;
 
    -------------------
@@ -358,45 +356,29 @@ package body GNATCOLL.SQL.Sqlite.Builder is
             & Sqlite_Description_Access
               (Get_Description (Connection)).Dbname.all);
 
-         --  Make sure the file exists, otherwise we'll get a storage_error.
-         --  In some cases, the user will want to create a new database from
-         --  scratch, so creating an empty file is valid.
-
          declare
             Name : constant String :=
               Sqlite_Description_Access
                 (Get_Description (Connection)).Dbname.all;
-            FD   : GNAT.OS_Lib.File_Descriptor;
-            Tmp  : Integer;
-            pragma Unreferenced (Tmp);
          begin
+            --  We let sqlite create the database (even an empty one) as
+            --  needed. Applications that need to know whether the schema
+            --  has been created should either check earlier whether the
+            --  file exists, or can use "pragma user_version" to check the
+            --  version of the schema.
             Open
               (DB       => Connection.DB,
                Filename => Name,
-               Flags    => Open_Readwrite,
+               Flags    => Open_Readwrite or Open_Create or Open_Nomutex,
                Status   => Status);
             Connection.Connected_On := Ada.Calendar.Clock;
-
-            if Status = Sqlite_Cantopen then
-               Trace (Me, "Create empty db file");
-
-               FD  := GNAT.OS_Lib.Create_File (Name, GNAT.OS_Lib.Binary);
-               Tmp := GNAT.OS_Lib.Write (FD, Empty_C_Str'Address, 0);
-               GNAT.OS_Lib.Close (FD);
-
-               Open
-                 (DB       => Connection.DB,
-                  Filename => Name,
-                  Flags    => Open_Readwrite,
-                  Status   => Status);
-            end if;
          end;
 
          if Status /= Sqlite_OK then
             Print_Error
               (Connection,
                "Could not connect to database: " & Error_Msg (Connection.DB));
-            Connection.DB := No_Database;
+            Connection.Close;   --  avoid memory leaks
          else
             --  Add a busy handler, which will automatically attempt to
             --  re-attempt a command if SQLITE_BUSY was returned.
