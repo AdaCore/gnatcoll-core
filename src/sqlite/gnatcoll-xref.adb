@@ -3125,7 +3125,7 @@ package body GNATCOLL.Xref is
             --  table (this occurs when the format of LI files is changed).
 
             DB.Execute ("PRAGMA foreign_keys=OFF");
-            DB.Execute ("PRAGMA synchronous=OFF");
+            DB.Execute ("PRAGMA synchronous=NORMAL");
             DB.Execute ("PRAGMA journal_mode=WAL");
             DB.Execute ("PRAGMA temp_store=MEMORY");
          end if;
