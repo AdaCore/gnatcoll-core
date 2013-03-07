@@ -766,6 +766,8 @@ AC_HELP_STRING(
          # hard-code python dependencies
          if test \( -f ${PYTHON_DIR}/libpython${PYTHON_MAJOR_VERSION}.${PYTHON_MINOR_VERSION}.a \) -a \( ! x$PYTHON_SHARED = xyes \) ; then
             PYTHON_LIBS="${PYTHON_DIR}/libpython${PYTHON_MAJOR_VERSION}.${PYTHON_MINOR_VERSION}.a"
+         elif test \( -f ${PYTHON_DIR}/libpython${PYTHON_VERSION}.a \) -a \( ! x$PYTHON_SHARED = xyes \) ; then
+            PYTHON_LIBS="${PYTHON_DIR}/libpython${PYTHON_VERSION}.a"
          else
             PYTHON_LIBS="-L${PYTHON_DIR} -lpython${PYTHON_VERSION}"
          fi
