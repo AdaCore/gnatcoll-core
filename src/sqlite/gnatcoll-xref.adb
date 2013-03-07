@@ -3605,7 +3605,9 @@ package body GNATCOLL.Xref is
       --  incorrectly update the cache when gnatinspect commits the
       --  transation. Closing and reconnecting forces a flush of the cache.
 
-      if Best_Ref = No_Entity_Reference then
+      if Best_Ref = No_Entity_Reference
+         and then GNATCOLL.SQL.Sqlite.DB_Name (Self.DB) /= ":memory:"
+      then
          Self.DB.Close;   --  will be reopened automatically in the next query
 
          Prepare_Decl (C, Exact_Match => True);
