@@ -3361,7 +3361,7 @@ package body GNATCOLL.Xref is
    procedure Free (Self : in out Xref_Database) is
    begin
       if Self.DB /= null then
-         Close (Self.DB);
+         Free (Self.DB);
       end if;
    end Free;
 

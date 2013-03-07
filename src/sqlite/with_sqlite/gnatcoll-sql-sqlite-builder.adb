@@ -333,6 +333,7 @@ package body GNATCOLL.SQL.Sqlite.Builder is
      (Connection : access Sqlite_Connection_Record) is
    begin
       Trace (Me, "Closing connection to sqlite");
+      Mark_As_Closed (Connection);
       Close (Connection.DB);
       Connection.DB := No_Database;
    end Close;

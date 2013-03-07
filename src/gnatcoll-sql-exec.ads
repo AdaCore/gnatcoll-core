@@ -313,6 +313,12 @@ package GNATCOLL.SQL.Exec is
    --  Close the connection to the database, if needed.
    --  Only Free needs to be called, and it will automatically call Close.
 
+   procedure Mark_As_Closed
+      (Connection : access Database_Connection_Record'Class);
+   --  This is for internal use only, marks the connection as closed.
+   --  No further operation should be performed on it, in particular
+   --  finalization of prepared statements.
+
    function Error
      (Connection : access Database_Connection_Record)
       return String is abstract;

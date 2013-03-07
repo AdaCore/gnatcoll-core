@@ -1407,6 +1407,16 @@ package body GNATCOLL.SQL.Exec is
       Relative (DBMS_Direct_Cursor'Class (Self.Res.all), Step);
    end Relative;
 
+   --------------------
+   -- Mark_As_Closed --
+   --------------------
+
+   procedure Mark_As_Closed
+      (Connection : access Database_Connection_Record'Class) is
+   begin
+      Query_Cache.Mark_DB_As_Free (Database_Connection (Connection));
+   end Mark_As_Closed;
+
    ----------
    -- Free --
    ----------
@@ -1420,7 +1430,7 @@ package body GNATCOLL.SQL.Exec is
          Free (Connection.Username);
          Free (Connection.Error_Msg);
 
-         Query_Cache.Mark_DB_As_Free (Connection);
+         Mark_As_Closed (Connection);
          Unchecked_Free (Connection);
       end if;
    end Free;
