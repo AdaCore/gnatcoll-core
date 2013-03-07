@@ -764,8 +764,8 @@ AC_HELP_STRING(
          AC_MSG_RESULT(no)
          AC_MSG_CHECKING(if we can link with python)
          # hard-code python dependencies
-         if test \( -f ${PYTHON_DIR}/libpython${PYTHON_VERSION}.a \) -a \( ! x$PYTHON_SHARED = xyes \) ; then
-            PYTHON_LIBS="${PYTHON_DIR}/libpython${PYTHON_VERSION}.a"
+         if test \( -f ${PYTHON_DIR}/libpython${PYTHON_MAJOR_VERSION}.${PYTHON_MINOR_VERSION}.a \) -a \( ! x$PYTHON_SHARED = xyes \) ; then
+            PYTHON_LIBS="${PYTHON_DIR}/libpython${PYTHON_MAJOR_VERSION}.${PYTHON_MINOR_VERSION}.a"
          else
             PYTHON_LIBS="-L${PYTHON_DIR} -lpython${PYTHON_VERSION}"
          fi
