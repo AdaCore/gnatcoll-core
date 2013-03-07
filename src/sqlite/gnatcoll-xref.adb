@@ -2811,6 +2811,7 @@ package body GNATCOLL.Xref is
       Force           : Boolean)
    is
       Start : Time;
+      R : Forward_Cursor;
    begin
       DB_Created := False;
       if Force or else not Database.DB_Created then
@@ -2818,40 +2819,46 @@ package body GNATCOLL.Xref is
 
          declare
             Current_DB : constant String := SQL.Sqlite.DB_Name (DB);
+            Schema_Exists : Boolean := False;
          begin
-            if GNAT.OS_Lib.Is_Regular_File (Current_DB)
-              and then Create (Full_Filename => +Current_DB).Size /= 0
-            then
-               --  If the DB already exists, don't override it
-
-               null;
-
-            elsif Current_DB /= From_DB_Name
-              and then From_DB_Name /= ""
-              and then GNAT.OS_Lib.Is_Regular_File (From_DB_Name)
-            then
-               if Active (Me_Timing) then
-                  Start := Clock;
+            if GNAT.OS_Lib.Is_Regular_File (Current_DB) then
+               R.Fetch (DB, "PRAGMA user_version");
+               if R.Value (0) /= "0" then
+                  --  Schema already exists
+                  Schema_Exists := True;
                end if;
+            end if;
 
-               if not GNATCOLL.SQL.Sqlite.Backup
-                 (DB1             => DB,
-                  DB2             => From_DB_Name,
-                  From_DB1_To_DB2 => False)
+            if not Schema_Exists then
+               if Current_DB /= From_DB_Name
+                 and then From_DB_Name /= ""
+                 and then GNAT.OS_Lib.Is_Regular_File (From_DB_Name)
                then
-                  Trace
-                    (Me_Error,
-                     "Failed to copy the database from " & From_DB_Name);
+                  if Active (Me_Timing) then
+                     Start := Clock;
+                  end if;
 
-               elsif Active (Me_Timing) then
-                  Trace (Me_Timing, "Copy " & From_DB_Name
-                         & " to " & Current_DB & ":"
-                         & Duration'Image (Clock - Start) & " s");
+                  if not GNATCOLL.SQL.Sqlite.Backup
+                    (DB1             => DB,
+                     DB2             => From_DB_Name,
+                     From_DB1_To_DB2 => False)
+                  then
+                     Trace
+                       (Me_Error,
+                        "Failed to copy the database from " & From_DB_Name);
+
+                  elsif Active (Me_Timing) then
+                     Trace (Me_Timing, "Copy " & From_DB_Name
+                            & " to " & Current_DB & ":"
+                            & Duration'Image (Clock - Start) & " s");
+                  end if;
+
+               else
+                  Trace (Me_Timing, "Creating the database schema");
+                  Create_Database (DB);
+                  DB.Execute ("PRAGMA user_version=1");
+                  DB_Created := True;
                end if;
-
-            else
-               Create_Database (DB);
-               DB_Created := True;
             end if;
          end;
       end if;
@@ -3591,6 +3598,29 @@ package body GNATCOLL.Xref is
 
       Prepare_Decl (C, Exact_Match => False);
       Prepare_Ref (C2, Exact_Match => False);
+
+      --  If still not found, try to reconnect to the database. It seems that
+      --  in some cases, if we connected to the database while gnatinspect was
+      --  doing its work, sqlite might have cached some data in memory and
+      --  incorrectly update the cache when gnatinspect commits the
+      --  transation. Closing and reconnecting forces a flush of the cache.
+
+      if Best_Ref = No_Entity_Reference then
+         Self.DB.Close;   --  will be reopened automatically in the next query
+
+         Prepare_Decl (C, Exact_Match => True);
+         if Distance = 0 then
+            return Best_Ref;
+         end if;
+
+         --  Else check whether we have a matching reference
+
+         Prepare_Ref (C2, Exact_Match => True);
+         if Distance = 0 then
+            return Best_Ref;
+         end if;
+      end if;
+
       return Best_Ref;
    end Get_Entity;
 
@@ -5879,6 +5909,7 @@ package body GNATCOLL.Xref is
    -------------------------
    -- Is_Update_DB_Needed --
    -------------------------
+
    procedure Is_Update_DB_Needed
      (Self                : in out Xref_Database;
       Project             : Project_Type;
