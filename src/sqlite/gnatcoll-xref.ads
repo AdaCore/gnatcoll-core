@@ -802,7 +802,7 @@ package GNATCOLL.Xref is
    --  Insert a dummy entity in the database.
    --  Kind must correspond to one of the entries
 
-   procedure Is_Update_DB_Needed
+   procedure Needs_Update
      (Self                : in out Xref_Database;
       Project             : Project_Type;
       Update_Needed       : out Boolean;

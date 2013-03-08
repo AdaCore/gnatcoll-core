@@ -911,6 +911,24 @@ package body GNATCOLL.Xref is
    --  If we see an empty line first Index is set to 0.
    --  Likewise if no comment is found before the end of the buffer.
 
+   procedure Initialize_DB
+     (Database        : in out Xref_Database;
+      DB              : Database_Connection;
+      From_DB_Name    : String;
+      DB_Created      : out Boolean;
+      Force           : Boolean);
+   --  Initialize the database if needed (copy from disk or create db)
+   --  Force should be True when initializing an in-memory database for the
+   --  first time.
+
+   procedure Search_LI_Files_To_Update
+     (Database : Xref_Database;
+      LI_Files : Library_Info_Lists.List;
+      LIs      : in out LI_Lists.List);
+   --  Process the list of all LI files (Lib_Files) to detect those that
+   --  need updating. This needs access to an existing database to check
+   --  which files are up to date.
+
    ---------------------
    -- Create_Database --
    ---------------------
@@ -2789,16 +2807,6 @@ package body GNATCOLL.Xref is
       Close (M);
    end Parse_LI;
 
-   procedure Initialize_DB
-     (Database        : in out Xref_Database;
-      DB              : Database_Connection;
-      From_DB_Name    : String;
-      DB_Created      : out Boolean;
-      Force           : Boolean);
-   --  Initialize the database if needed (copy from disk or create db)
-   --  Force should be True when initializing an in-memory database for the
-   --  first time.
-
    -------------------
    -- Initialize_DB --
    -------------------
@@ -2812,9 +2820,10 @@ package body GNATCOLL.Xref is
    is
       Start : Time;
       R : Forward_Cursor;
+      Is_Sqlite : constant Boolean := SQL.Sqlite.Is_Sqlite (Database.DB);
    begin
       DB_Created := False;
-      if Force or else not Database.DB_Created then
+      if Is_Sqlite and then (Force or else not Database.DB_Created) then
          Database.DB_Created := True;
 
          declare
@@ -2863,14 +2872,6 @@ package body GNATCOLL.Xref is
          end;
       end if;
    end Initialize_DB;
-
-   procedure Search_LI_Files_To_Update
-     (Database : Xref_Database;
-      LI_Files : Library_Info_Lists.List;
-      LIs      : in out LI_Lists.List);
-   --  Process the list of all LI files (Lib_Files) to detect those that
-   --  need updating. This needs access to an existing database to check
-   --  which files are up to date.
 
    -------------------------------
    -- Search_LI_Files_To_Update --
@@ -3253,18 +3254,16 @@ package body GNATCOLL.Xref is
                 "Found" & Length (LI_Files)'Img & " [ags]li files");
       end if;
 
-      if Is_Sqlite then
-         declare
-            DB_Created : Boolean;
-         begin
-            Initialize_DB (Self, Self.DB, From_DB_Name, DB_Created,
-                           Force => False);  --  From_DB_Name -> Self.DB
-            if DB_Created then
-               Destroy_Indexes := True;
-               Do_Analyze := True;
-            end if;
-         end;
-      end if;
+      declare
+         DB_Created : Boolean;
+      begin
+         Initialize_DB (Self, Self.DB, From_DB_Name, DB_Created,
+                        Force => False);  --  From_DB_Name -> Self.DB
+         if DB_Created then
+            Destroy_Indexes := True;
+            Do_Analyze := True;
+         end if;
+      end;
 
       Search_LI_Files_To_Update (Self, LI_Files, LIs);
 
@@ -5909,11 +5908,11 @@ package body GNATCOLL.Xref is
          return No_Entity;
    end Add_Entity;
 
-   -------------------------
-   -- Is_Update_DB_Needed --
-   -------------------------
+   ------------------
+   -- Needs_Update --
+   ------------------
 
-   procedure Is_Update_DB_Needed
+   procedure Needs_Update
      (Self                : in out Xref_Database;
       Project             : Project_Type;
       Update_Needed       : out Boolean;
@@ -5923,7 +5922,6 @@ package body GNATCOLL.Xref is
       LI_Files       : Library_Info_Lists.List;
       LIs            : LI_Lists.List;
       Absolute_Start : Time;
-      Is_Sqlite      : constant Boolean := SQL.Sqlite.Is_Sqlite (Self.DB);
    begin
       if Active (Me_Timing) then
          Absolute_Start := Clock;
@@ -5941,25 +5939,23 @@ package body GNATCOLL.Xref is
                 "Found" & Length (LI_Files)'Img & " [ags]li files");
       end if;
 
-      if Is_Sqlite then
-         declare
-            DB_Created : Boolean;
-         begin
-            Initialize_DB (Self, Self.DB, "", DB_Created,
-                           Force => False);  --  From_DB_Name -> Self.DB
-         end;
-      end if;
+      declare
+         DB_Created : Boolean;
+      begin
+         Initialize_DB (Self, Self.DB, "", DB_Created,
+                        Force => False);  --  From_DB_Name -> Self.DB
+      end;
 
       if Self.DB_Created then
 
          Search_LI_Files_To_Update (Self, LI_Files, LIs);
 
-         if LIs.Is_Empty then
-            Update_Needed := False;
-         end if;
+         Update_Needed := not LIs.Is_Empty;
 
-      elsif LI_Files.Is_Empty then
-         Update_Needed := False;
+      else
+
+         Update_Needed := not LI_Files.Is_Empty;
+
       end if;
 
       if Active (Me_Timing) then
@@ -5967,6 +5963,6 @@ package body GNATCOLL.Xref is
                 & Duration'Image (Clock - Absolute_Start) & " s");
       end if;
 
-   end Is_Update_DB_Needed;
+   end Needs_Update;
 
 end GNATCOLL.Xref;
