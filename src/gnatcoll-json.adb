@@ -374,9 +374,9 @@ package body GNATCOLL.JSON is
                         Item : constant JSON_Value :=
                                  Read (Strm, Idx, Col, Line, Filename);
                      begin
-                        Ret.Obj_Value.Vals.Include
-                          (Key      => To_String (Name),
-                           New_Item => Item);
+                        Ret.Obj_Value.Vals.Append
+                          ((Key => Name,
+                            Val => Item));
                      end;
                   end;
                end loop;
@@ -505,8 +505,8 @@ package body GNATCOLL.JSON is
 
          when JSON_Object_Type =>
             declare
-               use Names_Pkg;
-               J : Names_Pkg.Cursor := Item.Obj_Value.Vals.First;
+               use Object_Items_Pkg;
+               J : Object_Items_Pkg.Cursor := Item.Obj_Value.Vals.First;
 
             begin
                Append (Ret, '{');
@@ -517,9 +517,9 @@ package body GNATCOLL.JSON is
 
                while Has_Element (J) loop
                   Do_Indent (Indent + 1);
-                  Append (Ret, """" & Key (J) & """: ");
+                  Append (Ret, """" & To_String (Element (J).Key) & """: ");
                   Write
-                    (Element (J),
+                    (Element (J).Val,
                      Compact,
                      Indent + 1,
                      Ret);
@@ -792,11 +792,17 @@ package body GNATCOLL.JSON is
    procedure Set_Field
      (Val        : JSON_Value;
       Field_Name : UTF8_String;
-      Field      : JSON_Value) is
+      Field      : JSON_Value)
+   is
    begin
-      Val.Obj_Value.Vals.Include
-        (Key      => Field_Name,
-         New_Item => Field);
+      if Has_Field (Val, Field_Name) then
+         raise Constraint_Error with
+           "Duplicated field in object: " & Field_Name;
+      end if;
+
+      Val.Obj_Value.Vals.Append
+        ((Key      => To_Unbounded_String (Field_Name),
+          Val      => Field));
    end Set_Field;
 
    procedure Set_Field
@@ -911,12 +917,16 @@ package body GNATCOLL.JSON is
      (Val   : JSON_Value;
       Field : UTF8_String) return JSON_Value
    is
-      use Names_Pkg;
-      J : constant Names_Pkg.Cursor := Val.Obj_Value.Vals.Find (Field);
+      Key : constant UTF8_Unbounded_String :=
+              To_Unbounded_String (Field);
    begin
-      if Has_Element (J) then
-         return Element (J);
-      end if;
+      for J in
+        Val.Obj_Value.Vals.First_Index .. Val.Obj_Value.Vals.Last_Index
+      loop
+         if Key = Val.Obj_Value.Vals.Element (J).Key then
+            return Val.Obj_Value.Vals.Element (J).Val;
+         end if;
+      end loop;
 
       return JSON_Null;
    end Get;
@@ -936,8 +946,18 @@ package body GNATCOLL.JSON is
    ---------------
 
    function Has_Field (Val : JSON_Value; Field : UTF8_String) return Boolean is
+      Key : constant UTF8_Unbounded_String :=
+              To_Unbounded_String (Field);
    begin
-      return Val.Obj_Value.Vals.Contains (Field);
+      for J in
+        Val.Obj_Value.Vals.First_Index .. Val.Obj_Value.Vals.Last_Index
+      loop
+         if Key = Val.Obj_Value.Vals.Element (J).Key then
+            return True;
+         end if;
+      end loop;
+
+      return False;
    end Has_Field;
 
    ---------
@@ -984,12 +1004,12 @@ package body GNATCOLL.JSON is
      (Val : JSON_Value;
       CB  : access procedure (Name : UTF8_String; Value : JSON_Value))
    is
-      use Names_Pkg;
-      J : Names_Pkg.Cursor := Val.Obj_Value.Vals.First;
    begin
-      while Has_Element (J) loop
-         CB (Key (J), Element (J));
-         Next (J);
+      for J in
+        Val.Obj_Value.Vals.First_Index .. Val.Obj_Value.Vals.Last_Index
+      loop
+         CB (To_String (Val.Obj_Value.Vals.Element (J).Key),
+             Val.Obj_Value.Vals.Element (J).Val);
       end loop;
    end Map_JSON_Object;
 
