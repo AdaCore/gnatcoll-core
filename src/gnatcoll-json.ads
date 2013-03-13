@@ -22,9 +22,7 @@
 ------------------------------------------------------------------------------
 
 private with Ada.Containers.Vectors;
-private with Ada.Containers.Indefinite_Hashed_Maps;
 with Ada.Finalization;
-private with Ada.Strings.Hash;
 with Ada.Strings.Unbounded;
 with Ada.Unchecked_Deallocation;
 
