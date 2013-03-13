@@ -769,7 +769,8 @@ package body GNATCOLL.JSON is
    procedure Set_Field
      (Val        : JSON_Value;
       Field_Name : UTF8_String;
-      Field      : JSON_Value) is
+      Field      : JSON_Value)
+   is
       Key : constant UTF8_Unbounded_String :=
               To_Unbounded_String (Field_Name);
    begin
