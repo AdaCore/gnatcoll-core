@@ -4105,7 +4105,11 @@ package body GNATCOLL.Projects is
       pragma Unreferenced (Self);
    begin
       Free (Prj.Subdirs);
-      Prj.Subdirs := new String'(+Subdir);
+      if Subdir = "." then
+         Prj.Subdirs := null;
+      else
+         Prj.Subdirs := new String'(+Subdir);
+      end if;
    end Set_Object_Subdir;
 
    -------------------
