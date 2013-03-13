@@ -39,7 +39,7 @@ package body GNATCOLL.JSON is
       Compact : Boolean;
       Indent  : Natural;
       Ret     : in out Unbounded_String);
-   --  Auxiliary write function.
+   --  Auxiliary write function
 
    function Read
      (Strm     :        String;
@@ -47,6 +47,11 @@ package body GNATCOLL.JSON is
       Col      : access Natural;
       Line     : access Natural;
       Filename : String) return JSON_Value;
+   --  ???
+
+   ------------------
+   -- Report_Error --
+   ------------------
 
    procedure Report_Error (File : String; Line, Col : Natural; Msg : String) is
       L : constant String := Line'Img;
@@ -87,10 +92,18 @@ package body GNATCOLL.JSON is
       function Read_String return UTF8_Unbounded_String;
       --  Reads a string
 
+      -----------
+      -- Error --
+      -----------
+
       procedure Error (Msg : String) is
       begin
          Report_Error (Filename, Line.all, Col.all, Msg);
       end Error;
+
+      ---------------
+      -- Next_Char --
+      ---------------
 
       procedure Next_Char (N : Natural := 1) is
       begin
@@ -196,8 +209,8 @@ package body GNATCOLL.JSON is
             --  Numerical value
 
             declare
-               Unb  : Unbounded_String;
                type Num_Part is (Int, Frac, Exp);
+               Unb  : Unbounded_String;
                Part : Num_Part := Int;
             begin
                --  Potential initial '-'
@@ -374,9 +387,7 @@ package body GNATCOLL.JSON is
                         Item : constant JSON_Value :=
                                  Read (Strm, Idx, Col, Line, Filename);
                      begin
-                        Ret.Obj_Value.Vals.Append
-                          ((Key => Name,
-                            Val => Item));
+                        Ret.Obj_Value.Vals.Append ((Key => Name, Val => Item));
                      end;
                   end;
                end loop;
@@ -422,7 +433,7 @@ package body GNATCOLL.JSON is
    is
       procedure Do_Indent (Val : Natural);
       --  Adds whitespace characters to Ret corresponding to the indentation
-      --  level
+      --  level.
 
       ---------------
       -- Do_Indent --
@@ -487,9 +498,7 @@ package body GNATCOLL.JSON is
                Do_Indent (Indent + 1);
                Write
                  (Item.Arr_Value.Vals.Element (J),
-                  Compact,
-                  Indent + 1,
-                  Ret);
+                  Compact, Indent + 1, Ret);
 
                if J < Item.Arr_Value.Vals.Last_Index then
                   Append (Ret, ",");
@@ -518,11 +527,7 @@ package body GNATCOLL.JSON is
                while Has_Element (J) loop
                   Do_Indent (Indent + 1);
                   Append (Ret, """" & To_String (Element (J).Key) & """: ");
-                  Write
-                    (Element (J).Val,
-                     Compact,
-                     Indent + 1,
-                     Ret);
+                  Write (Element (J).Val, Compact, Indent + 1, Ret);
 
                   Next (J);
 
@@ -613,10 +618,6 @@ package body GNATCOLL.JSON is
       return Result;
    end "&";
 
-   ---------
-   -- "&" --
-   ---------
-
    function "&" (Value1, Value2 : JSON_Value) return JSON_Array is
       Result : JSON_Array;
    begin
@@ -700,10 +701,6 @@ package body GNATCOLL.JSON is
       return Ret;
    end Create;
 
-   ------------
-   -- Create --
-   ------------
-
    function Create (Val : Boolean) return JSON_Value is
       Ret : JSON_Value;
    begin
@@ -711,10 +708,6 @@ package body GNATCOLL.JSON is
       Ret.Bool_Value := Val;
       return Ret;
    end Create;
-
-   ------------
-   -- Create --
-   ------------
 
    function Create (Val : Integer) return JSON_Value is
       Ret : JSON_Value;
@@ -724,10 +717,6 @@ package body GNATCOLL.JSON is
       return Ret;
    end Create;
 
-   ------------
-   -- Create --
-   ------------
-
    function Create (Val : Float) return JSON_Value is
       Ret : JSON_Value;
    begin
@@ -735,10 +724,6 @@ package body GNATCOLL.JSON is
       Ret.Flt_Value := Val;
       return Ret;
    end Create;
-
-   ------------
-   -- Create --
-   ------------
 
    function Create (Val : UTF8_String) return JSON_Value is
       Ret : JSON_Value;
@@ -748,21 +733,13 @@ package body GNATCOLL.JSON is
       return Ret;
    end Create;
 
-   ------------
-   -- Create --
-   ------------
-
    function Create (Val : UTF8_Unbounded_String) return JSON_Value is
       Ret : JSON_Value;
    begin
-      Ret.Kind := JSON_String_Type;
+      Ret.Kind      := JSON_String_Type;
       Ret.Str_Value := Val;
       return Ret;
    end Create;
-
-   ------------
-   -- Create --
-   ------------
 
    function Create (Val : JSON_Array) return JSON_Value is
       Ret : JSON_Value;
@@ -792,8 +769,7 @@ package body GNATCOLL.JSON is
    procedure Set_Field
      (Val        : JSON_Value;
       Field_Name : UTF8_String;
-      Field      : JSON_Value)
-   is
+      Field      : JSON_Value) is
    begin
       if Has_Field (Val, Field_Name) then
          raise Constraint_Error with
@@ -801,8 +777,8 @@ package body GNATCOLL.JSON is
       end if;
 
       Val.Obj_Value.Vals.Append
-        ((Key      => To_Unbounded_String (Field_Name),
-          Val      => Field));
+        ((Key => To_Unbounded_String (Field_Name),
+          Val => Field));
    end Set_Field;
 
    procedure Set_Field
@@ -873,45 +849,25 @@ package body GNATCOLL.JSON is
       return Val.Bool_Value;
    end Get;
 
-   ---------
-   -- Get --
-   ---------
-
    function Get (Val : JSON_Value) return Integer is
    begin
       return Val.Int_Value;
    end Get;
-
-   ---------
-   -- Get --
-   ---------
 
    function Get (Val : JSON_Value) return Float is
    begin
       return Val.Flt_Value;
    end Get;
 
-   ---------
-   -- Get --
-   ---------
-
    function Get (Val : JSON_Value) return UTF8_String is
    begin
       return To_String (Val.Str_Value);
    end Get;
 
-   ---------
-   -- Get --
-   ---------
-
    function Get (Val : JSON_Value) return UTF8_Unbounded_String is
    begin
       return Val.Str_Value;
    end Get;
-
-   ---------
-   -- Get --
-   ---------
 
    function Get
      (Val   : JSON_Value;
@@ -931,12 +887,7 @@ package body GNATCOLL.JSON is
       return JSON_Null;
    end Get;
 
-   ---------
-   -- Get --
-   ---------
-
-   function Get (Val : JSON_Value) return JSON_Array
-   is
+   function Get (Val : JSON_Value) return JSON_Array is
    begin
       return Val.Arr_Value.all;
    end Get;
@@ -978,8 +929,7 @@ package body GNATCOLL.JSON is
       return Get (Get (Val, Field));
    end Get;
 
-   function Get (Val : JSON_Value; Field : UTF8_String) return UTF8_String
-   is
+   function Get (Val : JSON_Value; Field : UTF8_String) return UTF8_String is
    begin
       return Get (Get (Val, Field));
    end Get;
@@ -1026,10 +976,16 @@ package body GNATCOLL.JSON is
       User_Object : in out Mapped)
    is
       procedure Internal (Name : UTF8_String; Value : JSON_Value);
+
+      --------------
+      -- Internal --
+      --------------
+
       procedure Internal (Name : UTF8_String; Value : JSON_Value) is
       begin
          CB (User_Object, Name, Value);
       end Internal;
+
    begin
       Map_JSON_Object (Val, Internal'Access);
    end Gen_Map_JSON_Object;
