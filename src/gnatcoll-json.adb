@@ -387,7 +387,7 @@ package body GNATCOLL.JSON is
                         Item : constant JSON_Value :=
                                  Read (Strm, Idx, Col, Line, Filename);
                      begin
-                        Ret.Obj_Value.Vals.Append ((Key => Name, Val => Item));
+                        Set_Field (Ret, To_String (Name), Item);
                      end;
                   end;
                end loop;
@@ -770,11 +770,18 @@ package body GNATCOLL.JSON is
      (Val        : JSON_Value;
       Field_Name : UTF8_String;
       Field      : JSON_Value) is
+      Key : constant UTF8_Unbounded_String :=
+              To_Unbounded_String (Field_Name);
    begin
-      if Has_Field (Val, Field_Name) then
-         raise Constraint_Error with
-           "Duplicated field in object: " & Field_Name;
-      end if;
+      for J in
+        Val.Obj_Value.Vals.First_Index .. Val.Obj_Value.Vals.Last_Index
+      loop
+         if Key = Val.Obj_Value.Vals.Element (J).Key then
+            Val.Obj_Value.Vals.Replace_Element (J, (Key, Field));
+
+            return;
+         end if;
+      end loop;
 
       Val.Obj_Value.Vals.Append
         ((Key => To_Unbounded_String (Field_Name),
