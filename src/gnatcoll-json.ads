@@ -256,18 +256,31 @@ private
    overriding procedure Adjust (Obj : in out JSON_Value);
    overriding procedure Finalize (Obj : in out JSON_Value);
 
+   --  JSON Array definition:
+
    package Vect_Pkg is new Ada.Containers.Vectors
      (Index_Type   => Positive,
       Element_Type => JSON_Value);
 
-   package Names_Pkg is new Ada.Containers.Indefinite_Hashed_Maps
-     (Key_Type        => UTF8_String,
-      Element_Type    => JSON_Value,
-      Hash            => Ada.Strings.Hash,
-      Equivalent_Keys => "=");
-
    type JSON_Array is record
       Vals : Vect_Pkg.Vector;
+   end record;
+
+   Empty_Array : constant JSON_Array :=
+     (Vals => Vect_Pkg.Empty_Vector);
+
+   --  JSON Object definition:
+
+   type Object_Item is record
+      Key : UTF8_Unbounded_String;
+      Val : JSON_Value;
+   end record;
+
+   package Object_Items_Pkg is new Ada.Containers.Vectors
+     (Positive, Object_Item);
+
+   type JSON_Object_Internal is record
+      Vals  : Object_Items_Pkg.Vector;
    end record;
 
    JSON_Null : constant JSON_Value :=
@@ -276,13 +289,6 @@ private
        others => <>);
    --  Can't call Create, because we would need to see the body of
    --  Initialize and Adjust.
-
-   Empty_Array : constant JSON_Array :=
-     (Vals => Vect_Pkg.Empty_Vector);
-
-   type JSON_Object_Internal is record
-      Vals  : Names_Pkg.Map;
-   end record;
 
    procedure Free is
      new Ada.Unchecked_Deallocation (JSON_Array, JSON_Array_Access);
