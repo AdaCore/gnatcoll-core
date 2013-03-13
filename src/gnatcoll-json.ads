@@ -21,10 +21,11 @@
 --                                                                          --
 ------------------------------------------------------------------------------
 
-private with Ada.Containers.Vectors;
 with Ada.Finalization;
 with Ada.Strings.Unbounded;
 with Ada.Unchecked_Deallocation;
+
+private with Ada.Containers.Vectors;
 
 package GNATCOLL.JSON is
 
@@ -152,7 +153,7 @@ package GNATCOLL.JSON is
       Field_Name : UTF8_String;
       Field      : JSON_Array);
    pragma Precondition (Kind (Val) = JSON_Object_Type);
-   --  Any change you do to the array afterward will not impact Val.
+   --  Any change you do to the array afterward will not impact Val
 
    --  Utility functions used to translate a JSON value into an ordinary object
 
@@ -218,7 +219,7 @@ package GNATCOLL.JSON is
      (Val : JSON_Value;
       CB  : access procedure (Name : UTF8_String; Value : JSON_Value));
    pragma Precondition (Kind (Val) = JSON_Object_Type);
-   --  Iterate over all fields of the object.
+   --  Iterate over all fields of the object
 
    generic
       type Mapped is private;
@@ -264,8 +265,7 @@ private
       Vals : Vect_Pkg.Vector;
    end record;
 
-   Empty_Array : constant JSON_Array :=
-     (Vals => Vect_Pkg.Empty_Vector);
+   Empty_Array : constant JSON_Array := (Vals => Vect_Pkg.Empty_Vector);
 
    --  JSON Object definition:
 
@@ -278,13 +278,12 @@ private
      (Positive, Object_Item);
 
    type JSON_Object_Internal is record
-      Vals  : Object_Items_Pkg.Vector;
+      Vals : Object_Items_Pkg.Vector;
    end record;
 
    JSON_Null : constant JSON_Value :=
-      (Ada.Finalization.Controlled with
-       Kind => JSON_Null_Type,
-       others => <>);
+      (Ada.Finalization.Controlled
+       with Kind => JSON_Null_Type, others => <>);
    --  Can't call Create, because we would need to see the body of
    --  Initialize and Adjust.
 
