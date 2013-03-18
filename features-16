@@ -15,6 +15,11 @@ of the feature.
 New features in 1.6
 -------------------
 
+NF-16-M313-004 Cross-building GNATCOLL (2013-03-18)
+
+   Using 'configure --target=...' can now be used to build GNATCOLL for
+   a cross-target. The --target will be passed as is to gprbuild.
+
 NF-16-LC18-014 Specify postgreSQL's port number (2012-12-18)
 
    It is now possible, when connecting to a postgreSQL server, to specify which
