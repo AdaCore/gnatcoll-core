@@ -688,6 +688,7 @@ LDFLAGS
 CFLAGS
 CC
 LN_S
+TARGET
 target_os
 target_vendor
 target_cpu
@@ -2351,6 +2352,9 @@ test -n "$target_alias" &&
   test "$program_prefix$program_suffix$program_transform_name" = \
     NONENONEs,x,x, &&
   program_prefix=${target_alias}-
+
+
+TARGET=${target}
 
 
 # Configure pkg-config so that it does not remove some directories
