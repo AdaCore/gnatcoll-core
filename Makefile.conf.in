@@ -42,7 +42,12 @@ endif
 
 DEFS=@DEFS@
 
-GPRBUILD=gprbuild --target=@TARGET@
+TARGET=@TARGET@
+ifeq ($(TARGET),)
+GPRBUILD=gprbuild
+else
+GPRBUILD=gprbuild --target=${TARGET}
+endif
 
 TARNAME=@PACKAGE_TARNAME@
 VERSION=@PACKAGE_VERSION@

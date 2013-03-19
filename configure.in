@@ -2,8 +2,21 @@
 AC_INIT(gnatcoll,1.6w,report@adacore.com,gnatcoll)
 AC_CANONICAL_SYSTEM
 
-TARGET=${target}
+# Not sure whether $target_alias is reliable (it is not documented), but
+# it is only set when --target was specified to configure.
+
+if test x"$target_alias" = x"" ; then
+   TARGET=""
+else
+   TARGET=${target}
+fi
 AC_SUBST(TARGET)
+
+#case $target in
+#   *cygwin*) TARGET="";;
+#   *) TARGET=${target} ;;
+#esac
+#AC_SUBST(TARGET)
 
 # Configure pkg-config so that it does not remove some directories
 # from the include files. In particular, without this, on OSX we
