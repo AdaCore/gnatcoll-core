@@ -52,6 +52,12 @@ with System;
 
 package GNATCOLL.Iconv is
 
+   subtype Byte_Sequence is String;
+   --  A sequence of bytes, as opposed to a sequence of characters. A character
+   --  could be encoded as several bytes, depending on the charset, so
+   --  you should use the appropriate iterators to retrieve the characters
+   --  themselves.
+
    type Iconv_T is private;
    --  A conversion descriptor between two encodings.
    --  A conversion description cannot be used in multiple threads
@@ -137,9 +143,9 @@ package GNATCOLL.Iconv is
 
    procedure Iconv
       (State          : Iconv_T;
-       Inbuf          : String;
+       Inbuf          : Byte_Sequence;
        Input_Index    : in out Positive;
-       Outbuf         : in out String;
+       Outbuf         : in out Byte_Sequence;
        Output_Index   : in out Positive;
        Result         : out Iconv_Result);
    --  Converts the multibyte sequence starting at Inbuf(Input_Index) into a
@@ -172,7 +178,7 @@ package GNATCOLL.Iconv is
 
    procedure Reset
       (State        : Iconv_T;
-       Outbuf       : in out String;
+       Outbuf       : in out Byte_Sequence;
        Output_Index : in out Positive;
        Result       : out Iconv_Result);
    --  Attempts to reset the conversion state to the initial state, and store
@@ -184,8 +190,8 @@ package GNATCOLL.Iconv is
 
    function Iconv
      (State         : Iconv_T;
-      Input         : String;
-      Ignore_Errors : Boolean := False) return String;
+      Input         : Byte_Sequence;
+      Ignore_Errors : Boolean := False) return Byte_Sequence;
    --  Converts Input.
    --  This function is a convenience for the Iconv procedure, but gives less
    --  control, and for big strings will require more memory. As opposed to
@@ -198,12 +204,12 @@ package GNATCOLL.Iconv is
    Incomplete_Sequence_Error : exception;
 
    function Iconv
-      (Input           : String;
+      (Input           : Byte_Sequence;
        To_Code         : String := UTF8;
        From_Code       : String := Locale;
        Ignore_Errors   : Boolean := False;
        Transliteration : Boolean := False;
-       Ignore          : Boolean := False) return String;
+       Ignore          : Boolean := False) return Byte_Sequence;
    --  A convenience function that wraps all the above (open, iconv, close)
    --  Might raise Unsupported_Conversion, Invalid_Sequence_Error or
    --  Incomplete_Sequence_Error.
