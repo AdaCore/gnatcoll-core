@@ -4882,6 +4882,8 @@ package body GNATCOLL.Projects is
 
       Predefined_Path : constant String :=
         +To_Path (Predefined_Project_Path (Tree.Data.Env.all));
+
+      Errout_Handling : Prj.Part.Errout_Mode := Prj.Part.Always_Finalize;
    begin
       Traces.Assert (Me, Tree.Data /= null, "Tree data initialized");
 
@@ -4896,7 +4898,13 @@ package body GNATCOLL.Projects is
       --  Make sure errors are reinitialized before load
       Prj.Err.Initialize;
 
-      Output.Set_Special_Output (Output.Output_Proc (Errors));
+      if Test_With_Missing_With then
+         Output.Set_Special_Output (null);
+         Errout_Handling := Prj.Part.Never_Finalize;
+      else
+         Output.Set_Special_Output (Output.Output_Proc (Errors));
+      end if;
+
       Prj.Com.Fail := Fail'Unrestricted_Access;
 
       Tree.Data.Root := No_Project;
@@ -4912,6 +4920,7 @@ package body GNATCOLL.Projects is
         (Tree.Data.Tree, Project,
          +Root_Project_Path.Full_Name,
          Packages_To_Check => Packages_To_Check,
+         Errout_Handling   => Errout_Handling,
          Store_Comments    => True,
          Is_Config_File    => False,
          Env               => Tree.Data.Env.Env,
@@ -5002,6 +5011,33 @@ package body GNATCOLL.Projects is
                Test_With_Missing_With => False);
             return;
          end;
+
+      elsif Project = Empty_Node
+        and then Test_With_Missing_With
+      then
+         --  We had error, but we might be missing the one for missing withs.
+         --  So we do a second parsing to make sure these error messages are
+         --  there.
+
+         Trace (Me, "Had error messages, reparsing to include missing withs");
+         Override_Flags
+           (Tree.Data.Env.Env,
+            Create_Flags
+              (On_Error'Unrestricted_Access,
+               Ignore_Missing_With => False));
+         Internal_Load
+           (Tree                   => Tree,
+            Root_Project_Path      => Root_Project_Path,
+            Errors                 => Errors,
+            Project                => Project,
+            Recompute_View         => Recompute_View,
+            Packages_To_Check      => Packages_To_Check,
+            Test_With_Missing_With => False);
+         return;
+
+      elsif Test_With_Missing_With then
+         --  We correctly parsed the project, but should finalize anyway
+         Prj.Err.Finalize;
       end if;
 
       Override_Flags (Tree.Data.Env.Env, Create_Flags (null));
@@ -5027,6 +5063,7 @@ package body GNATCOLL.Projects is
 
    exception
       when Invalid_Project =>
+         Put_Line ("MANU got invalid project");
          Prj.Com.Fail := null;
          Output.Cancel_Special_Output;
          raise;
