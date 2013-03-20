@@ -107,9 +107,9 @@ package body GNATCOLL.Iconv is
 
    procedure Iconv
       (State        : Iconv_T;
-       Inbuf        : String;
+       Inbuf        : Byte_Sequence;
        Input_Index  : in out Positive;
-       Outbuf       : in out String;
+       Outbuf       : in out Byte_Sequence;
        Output_Index : in out Positive;
        Result       : out Iconv_Result)
    is
@@ -162,7 +162,7 @@ package body GNATCOLL.Iconv is
 
    procedure Reset
       (State        : Iconv_T;
-       Outbuf       : in out String;
+       Outbuf       : in out Byte_Sequence;
        Output_Index : in out Positive;
        Result       : out Iconv_Result)
    is
@@ -195,10 +195,10 @@ package body GNATCOLL.Iconv is
 
    function Iconv
      (State         : Iconv_T;
-      Input         : String;
-      Ignore_Errors : Boolean := False) return String
+      Input         : Byte_Sequence;
+      Ignore_Errors : Boolean := False) return Byte_Sequence
    is
-      Output       : String_Access := new String (1 .. Input'Length);
+      Output       : String_Access := new Byte_Sequence (1 .. Input'Length);
       Tmp          : String_Access;
       Input_Index  : Positive := Input'First;
       Output_Index : Positive := Output'First;
@@ -271,12 +271,12 @@ package body GNATCOLL.Iconv is
    -----------
 
    function Iconv
-      (Input           : String;
+      (Input           : Byte_Sequence;
        To_Code         : String := UTF8;
        From_Code       : String := Locale;
        Ignore_Errors   : Boolean := False;
        Transliteration : Boolean := False;
-       Ignore          : Boolean := False) return String
+       Ignore          : Boolean := False) return Byte_Sequence
    is
       State : Iconv_T;
    begin
