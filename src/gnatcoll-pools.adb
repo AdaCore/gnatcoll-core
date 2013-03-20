@@ -289,6 +289,15 @@ package body GNATCOLL.Pools is
       Get (Self.Ref, Res);
    end Get;
 
+   ---------------
+   -- Was_Freed --
+   ---------------
+
+   function Was_Freed (Self : Weak_Resource) return Boolean is
+   begin
+      return Pointers.Was_Freed (Self.Ref);
+   end Was_Freed;
+
    ----------
    -- Free --
    ----------

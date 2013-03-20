@@ -623,8 +623,12 @@ package body GNATCOLL.SQL.Sessions is
    function Get (Self : Weak_Session) return Session_Type is
       Result : Session_Type;
    begin
-      Impl.Get (Self.Ref, Result);
-      return Result;
+      if Impl.Was_Freed (Self.Ref) then
+         return No_Session;
+      else
+         Impl.Get (Self.Ref, Result);
+         return Result;
+      end if;
    end Get;
 
    -------------
