@@ -113,6 +113,9 @@ package GNATCOLL.Pools is
    --  you do not want to prevent the release. For instance if you have a
    --  cache of some sort.
 
+   function Was_Freed (Self : Weak_Resource) return Boolean;
+   --  Whether the resource monitored by Self was released.
+
    procedure Set_Factory
      (Param        : Factory_Param;
       Max_Elements : Positive;
