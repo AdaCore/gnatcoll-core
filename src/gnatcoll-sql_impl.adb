@@ -1570,26 +1570,29 @@ package body GNATCOLL.SQL_Impl is
       Value : String;
       Quote : Boolean) return String
    is
+      --  This function used to quote the backslashes as well. However, this
+      --  is incorrect, since the SQL backends will already take each
+      --  character on its own. For instance, to insert a newline with psql
+      --  we need to
+      --          SELECT 'a\n' || chr(13) || 'e';
+      --  This outputs a string with 5 characters.
+      --  Same with sqlite.
+
       pragma Unreferenced (Self);
       Num_Of_Apostrophes : constant Natural :=
         Ada.Strings.Fixed.Count (Value, "'");
-      Num_Of_Backslashes : constant Natural :=
-        Ada.Strings.Fixed.Count (Value, "\");
    begin
       if not Quote then
          return Value;
       end if;
 
-      if Num_Of_Apostrophes = 0
-        and then Num_Of_Backslashes = 0
-      then
+      if Num_Of_Apostrophes = 0 then
          return "'" & Value & "'";
       end if;
 
       declare
          New_Str            : String
-           (Value'First ..
-              Value'Last + Num_Of_Apostrophes + Num_Of_Backslashes + 2);
+           (Value'First ..  Value'Last + Num_Of_Apostrophes + 2);
          Index : Natural := New_Str'First + 1;
       begin
          New_Str (New_Str'First) := ''';
@@ -1598,9 +1601,6 @@ package body GNATCOLL.SQL_Impl is
          for I in Value'Range loop
             if Value (I) = ''' then
                New_Str (Index .. Index + 1) := "''";
-               Index := Index + 1;
-            elsif Value (I) = '\' then
-               New_Str (Index .. Index + 1) := "\\";
                Index := Index + 1;
             else
                New_Str (Index) := Value (I);
