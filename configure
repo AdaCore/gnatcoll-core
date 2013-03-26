@@ -5200,6 +5200,7 @@ $as_echo "no" >&6; }
    rm -rf conftest.ada
 
 
+   rm -f check.adb check
 
 
 

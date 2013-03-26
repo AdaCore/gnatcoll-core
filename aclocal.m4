@@ -107,6 +107,7 @@ end Check;
    SYNC_COUNTERS_IMPL="mutex"
 ])
 
+   rm -f check.adb check
    AC_SUBST(SYNC_COUNTERS_IMPL)
 ])
 
