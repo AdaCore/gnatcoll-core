@@ -670,6 +670,8 @@ package body GNATCOLL.Traces is
    Absolute_Time    : constant Trace_Handle := Create ("DEBUG.ABSOLUTE_TIME");
    Absolute_Date    : constant Trace_Handle :=
      Create ("DEBUG.ABSOLUTE_DATE", Off);
+   Micro_Time       : constant Trace_Handle :=
+      Create ("DEBUG.MICRO_TIME", Off);
    Elapsed_Time     : constant Trace_Handle := Create ("DEBUG.ELAPSED_TIME");
    Stack_Trace      : constant Trace_Handle := Create ("DEBUG.STACK_TRACE");
    Colors           : constant Trace_Handle := Create ("DEBUG.COLORS");
@@ -885,15 +887,23 @@ package body GNATCOLL.Traces is
    begin
       if Absolute_Date.Active then
          if Absolute_Time.Active then
-            Put (Stream, "(" & Image (T, ISO_Date & " %T.")
-                 & Ms (Ms'First + 1 .. Ms'Last) & ')');
+            if Micro_Time.Active then
+               Put (Stream, "(" & Image (T, ISO_Date & " %T:%e") & ')');
+            else
+               Put (Stream, "(" & Image (T, ISO_Date & " %T.")
+                    & Ms (Ms'First + 1 .. Ms'Last) & ')');
+            end if;
          else
             Put (Stream, "(" & Image (T, ISO_Date) & ')');
          end if;
 
       else
-         Put (Stream, "(" & Image (T, "%T.")
-              & Ms (Ms'First + 1 .. Ms'Last) & ')');
+         if Micro_Time.Active then
+            Put (Stream, "(" & Image (T, ISO_Date & " %T:%e") & ')');
+         else
+            Put (Stream, "(" & Image (T, "%T.")
+                 & Ms (Ms'First + 1 .. Ms'Last) & ')');
+         end if;
       end if;
    end Put_Absolute_Time;
 

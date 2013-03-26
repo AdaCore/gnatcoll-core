@@ -15,6 +15,12 @@ of the feature.
 New features in 1.6
 -------------------
 
+NF-16-M320-028 GNATCOLL.Traces display microseconds precision (2013-03-26)
+
+   When the stream DEBUG.MICRO_TIME is actived, the time displayed by
+   DEBUG.ABSOLUTE_TIME will show microseconds, instead of just milliseconds
+   by default.
+
 NF-16-M313-004 Cross-building GNATCOLL (2013-03-18)
 
    Using 'configure --target=...' can now be used to build GNATCOLL for

@@ -298,6 +298,10 @@ Here is an exhaustive list:
   streams supports it (in particular, this has no effect for syslog, which
   already does this on its own).
 
+*DEBUG.MICRO_TIME*
+  If active, the time displayed by DEBUG.ABSOLUTE_TIME will use a microseconds
+  precision, instead of milliseconds.
+
 *DEBUG.ELAPSED_TIME*
   If this decorator is activated, then the elapsed time since the last call to
   Trace for the same handle is also displayed.
