@@ -1410,7 +1410,7 @@ Optional Packages:
                           Specify the full path to the PostgreSQL installation
   --without-postgresql    Disable PostgreSQL support
   --with-sqlite=<path>    Specify the full path to the sqlite installation, or
-                          "embedded"
+                          "embedded" (default)
   --without-sqlite        Disable sqlite support
   --with-gmp=<path>       Specify the full path of the gmp install
   --without-gmp           Disable support for gmp
@@ -4668,7 +4668,7 @@ fi
 
 
    PATH_LIBSQLITE=""
-   if test x"$SQLITE_PATH_WITH" = xembedded ; then
+   if test x"$SQLITE_PATH_WITH" = xembedded -o x"$SQLITE_PATH_WITH" = xyes ; then
       { $as_echo "$as_me:${as_lineno-$LINENO}: checking for sqlite" >&5
 $as_echo_n "checking for sqlite... " >&6; }
       { $as_echo "$as_me:${as_lineno-$LINENO}: result: embedded" >&5
@@ -4687,9 +4687,10 @@ $as_echo "no" >&6; }
            PATH_LIBSQLITE="-L$SQLITE_PATH_WITH/lib"
          fi
 
-         { $as_echo "$as_me:${as_lineno-$LINENO}: checking for sqlite3_open in -lsqlite3" >&5
-$as_echo_n "checking for sqlite3_open in -lsqlite3... " >&6; }
-if ${ac_cv_lib_sqlite3_sqlite3_open+:} false; then :
+         # Requires at least version 3.7.14
+         { $as_echo "$as_me:${as_lineno-$LINENO}: checking for sqlite3_close_v2 in -lsqlite3" >&5
+$as_echo_n "checking for sqlite3_close_v2 in -lsqlite3... " >&6; }
+if ${ac_cv_lib_sqlite3_sqlite3_close_v2+:} false; then :
   $as_echo_n "(cached) " >&6
 else
   ac_check_lib_save_LIBS=$LIBS
@@ -4703,27 +4704,27 @@ cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 #ifdef __cplusplus
 extern "C"
 #endif
-char sqlite3_open ();
+char sqlite3_close_v2 ();
 int
 main ()
 {
-return sqlite3_open ();
+return sqlite3_close_v2 ();
   ;
   return 0;
 }
 _ACEOF
 if ac_fn_c_try_link "$LINENO"; then :
-  ac_cv_lib_sqlite3_sqlite3_open=yes
+  ac_cv_lib_sqlite3_sqlite3_close_v2=yes
 else
-  ac_cv_lib_sqlite3_sqlite3_open=no
+  ac_cv_lib_sqlite3_sqlite3_close_v2=no
 fi
 rm -f core conftest.err conftest.$ac_objext \
     conftest$ac_exeext conftest.$ac_ext
 LIBS=$ac_check_lib_save_LIBS
 fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_sqlite3_sqlite3_open" >&5
-$as_echo "$ac_cv_lib_sqlite3_sqlite3_open" >&6; }
-if test "x$ac_cv_lib_sqlite3_sqlite3_open" = xyes; then :
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_sqlite3_sqlite3_close_v2" >&5
+$as_echo "$ac_cv_lib_sqlite3_sqlite3_close_v2" >&6; }
+if test "x$ac_cv_lib_sqlite3_sqlite3_close_v2" = xyes; then :
   WITH_SQLITE=yes
 else
   WITH_SQLITE=no
