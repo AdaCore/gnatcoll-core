@@ -417,6 +417,10 @@ package GNATCOLL.Traces is
    --  If this handle is activated, then the absolute time will be added to the
    --  output, if the stream supports it (syslog does not)
 
+   --  "DEBUG.MICRO_TIME"
+   --  If this handle is activated, the absolute time will be displayed using
+   --  micro-seconds resolution, instead of just seconds.
+
    --  "DEBUG.ABSOLUTE_DATE"
    --  If this handle is activated, then the absolute date will be added to the
    --  output, if the stream supports it (syslog does not)
