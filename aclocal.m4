@@ -488,7 +488,7 @@ AC_DEFUN(AM_PATH_SQLITE,
    AC_ARG_WITH(sqlite,
      [AC_HELP_STRING(
         [--with-sqlite=<path>],
-        [Specify the full path to the sqlite installation, or "embedded"])
+        [Specify the full path to the sqlite installation, or "embedded" (default)])
 AC_HELP_STRING(
         [--without-sqlite],
         [Disable sqlite support])],
@@ -496,7 +496,7 @@ AC_HELP_STRING(
      SQLITE_PATH_WITH=yes)
 
    PATH_LIBSQLITE=""
-   if test x"$SQLITE_PATH_WITH" = xembedded ; then
+   if test x"$SQLITE_PATH_WITH" = xembedded -o x"$SQLITE_PATH_WITH" = xyes ; then
       AC_MSG_CHECKING(for sqlite)
       AC_MSG_RESULT(embedded, use --with-sqlite to use a dynamic lib)
       WITH_SQLITE=embedded
@@ -511,7 +511,8 @@ AC_HELP_STRING(
            PATH_LIBSQLITE="-L$SQLITE_PATH_WITH/lib"
          fi
 
-         AC_CHECK_LIB(sqlite3, sqlite3_open,
+         # Requires at least version 3.7.14
+         AC_CHECK_LIB(sqlite3, sqlite3_close_v2,
                       [WITH_SQLITE=yes],
                       [WITH_SQLITE=no],
                       $SQLITE_CFLAGS $PATH_LIBSQLITE)

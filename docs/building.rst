@@ -125,6 +125,14 @@ the following are likely to be the most useful:
   Generally speaking, we do not recommend using paths with spaces, since such
   a setup often introduces complications.
 
+*--with-sqlite=<dir>* and *--without-sqlite*
+  GNATCOLL embeds a set of packages to access sqlite database. This requires
+  a fairly recent version of sqlite. These switches can be used to point to
+  the sqlite install on your system. By default, GNATCOLL will recompile its
+  own embedded version of sqlite and link statically with it, which avoids
+  issues with shared libraries and makes sure the version is compatible with
+  GNATCOLL's needs.
+
 *--enable-gpl*
   GNATCOLL provides interfaces to libraries that are licensed under the
   Full GNU Public License. This means that, should you choose to distribute

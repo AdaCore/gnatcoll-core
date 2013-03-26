@@ -149,31 +149,38 @@ package body GNATCOLL.SQL.Sqlite.Gnade is
 
    procedure Close (DB : Database) is
       function Internal_Close (DB : Database) return Result_Codes;
-      pragma Import (C, Internal_Close, "sqlite3_close");
+      pragma Import (C, Internal_Close, "sqlite3_close_v2");
+      --  If there are still unfinalized prepared statement, actual
+      --  deallocation will be deferred. This is intended for use with garbage
+      --  collected programmation languages, which is the case for the
+      --  GNATCOLL.SQL package.
 
-      function Next_Stmt
-        (DB : Database; After : Statement := No_Statement)
-         return Statement;
-      pragma Import (C, Next_Stmt, "sqlite3_next_stmt");
+      --  function Next_Stmt
+      --    (DB : Database; After : Statement := No_Statement)
+      --     return Statement;
+      --  pragma Import (C, Next_Stmt, "sqlite3_next_stmt");
 
-      Stmt    : Statement;
+      --  Stmt    : Statement;
       Ignored : Result_Codes;
       pragma Unreferenced (Ignored);
    begin
       if DB /= null then
-         --  Finalize prepared statements
-         loop
-            if Debug then
-               Trace (Me, "sqlite3_next_stmt");
-            end if;
+         --  Do not finalize the prepared statements, this will be done as
+         --  part of their Ada finalize already.
 
-            Stmt := Next_Stmt (DB);
-            exit when Stmt = No_Statement;
-            Finalize (Stmt);
-         end loop;
+         --  Finalize prepared statements
+         --  loop
+         --     if Debug then
+         --        Trace (Me, "sqlite3_next_stmt");
+         --     end if;
+
+         --     Stmt := Next_Stmt (DB);
+         --     exit when Stmt = No_Statement;
+         --     Finalize (Stmt);
+         --  end loop;
 
          if Debug then
-            Trace (Me, "sqlite3_close");
+            Trace (Me, "sqlite3_close_v2");
          end if;
 
          Ignored := Internal_Close (DB);
