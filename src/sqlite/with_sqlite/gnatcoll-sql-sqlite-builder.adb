@@ -37,9 +37,6 @@ package body GNATCOLL.SQL.Sqlite.Builder is
    Me : constant Trace_Handle := Create ("SQL.SQLITE");
    Me_Log : constant Trace_Handle := Create ("SQL.SQLITE.LOG");
 
-   Max_Retries : constant := 0;
-   --  The number of attempts after an "SQLITE_BUSY" message
-
    procedure Logger
      (Data       : System.Address;
       Error_Code : Result_Codes;
@@ -198,7 +195,7 @@ package body GNATCOLL.SQL.Sqlite.Builder is
    begin
       --  Retry commands up to 2s automatically, in case we get a
       --  SQLITE_BUSY status.
-      if Count < Max_Retries then
+      if Count < Max_Retries_On_Busy then
          if Active (Me) then
             Trace (Me, "Received SQLITE_BUSY, trying again. Attempt="
                    & Count'Img);
