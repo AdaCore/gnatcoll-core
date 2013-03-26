@@ -46,6 +46,14 @@ package GNATCOLL.SQL.Sqlite is
    --  BEGIN and a SELECT and gets a shared lock, then the second connection
    --  tries to write to the database but cannot obtain a write lock).
 
+   Max_Retries_On_Busy : Natural := 0;
+   --  Number of times GNATCOLL should try a query when it receives SQL_BUSY.
+   --  The default 0 means faster turn-around, even though some queries might
+   --  fail when the database is currently locked, and thus the query could
+   --  not be performed. Numbers greater than 0 means more chance to succeed,
+   --  but since there is a delay between each attempt, the application might
+   --  feel slow.
+
    type Sqlite_Description (<>)
      is new Database_Description_Record with private;
    type Sqlite_Description_Access is access all Sqlite_Description'Class;
