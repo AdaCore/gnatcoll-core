@@ -3789,6 +3789,137 @@ package body GNATCOLL.Xref is
         (Self.DB, Q_References, Params => (1 => +Entity.Id));
    end References;
 
+   ----------------
+   -- References --
+   ----------------
+
+   procedure References
+     (Self             : Xref_Database'Class;
+      Entity           : Entity_Information;
+      Cursor           : out References_Cursor'Class;
+      Include_Implicit : Boolean;
+      Include_All      : Boolean;
+      Kinds            : String := "")
+   is
+      --  Use a prepared statement so that the traces show a clearer string.
+      Q : SQL_Query;
+      P : Prepared_Statement;
+
+      Include_Decl : Boolean := False;
+      Include_Others : Boolean := False;
+   begin
+      if Kinds /= "" then
+         declare
+            R : String_List_Access := GNATCOLL.Utils.Split (Kinds, ',');
+         begin
+            for K in R'Range loop
+               if R (K).all = Reference_Kind_Declaration then
+                  Include_Decl := True;
+               else
+                  Include_Others := True;
+               end if;
+            end loop;
+            Free (R);
+         end;
+
+         if Include_Decl then
+            if Include_Others then
+               Q := SQL_Union
+                 (SQL_Select
+                    (F_References_Decl,
+                     From => Database.Entities & Database.Files,
+                     Where => Database.Entities.Decl_File = Database.Files.Id
+                     and Database.Entities.Id = Integer_Param (1)),
+                  SQL_Select
+                    (F_References,
+                     From => Database.Entity_Refs & Database.Files
+                     & Database.Reference_Kinds,
+                     Where => Database.Entity_Refs.File = Database.Files.Id
+                     and Database.Entity_Refs.Kind =
+                       Database.Reference_Kinds.Id
+                     and SQL_In (Database.Reference_Kinds.Display, Kinds)
+                     and Database.Entity_Refs.Entity = Integer_Param (1)),
+                  Order_By => Database.Files.Path
+                    & Database.Entity_Refs.Line & Database.Entity_Refs.Column,
+                  Distinct => True);
+            else
+               Q := SQL_Select
+                 (F_References_Decl,
+                  From => Database.Entities & Database.Files,
+                  Where => Database.Entities.Decl_File = Database.Files.Id
+                    and Database.Entities.Id = Integer_Param (1),
+                  Order_By => Database.Files.Path
+                    & Database.Entity_Refs.Line & Database.Entity_Refs.Column,
+                  Distinct => True);
+            end if;
+         else
+            Q := SQL_Select
+               (F_References,
+                From => Database.Entity_Refs & Database.Files
+                  & Database.Reference_Kinds,
+                Where => Database.Entity_Refs.File = Database.Files.Id
+                and Database.Entity_Refs.Kind = Database.Reference_Kinds.Id
+                and SQL_In (Database.Reference_Kinds.Display, Kinds)
+                and Database.Entity_Refs.Entity = Integer_Param (1),
+                Order_By => Database.Files.Path
+                  & Database.Entity_Refs.Line & Database.Entity_Refs.Column,
+                Distinct => True);
+         end if;
+
+         P := Prepare
+           (Q, On_Server => False, Name => "references_with_kinds");
+
+      elsif Include_All then
+         Q := SQL_Union
+            (SQL_Select
+               (F_References_Decl,
+                From => Database.Entities & Database.Files,
+                Where => Database.Entities.Decl_File = Database.Files.Id
+                and Database.Entities.Id = Integer_Param (1)),
+             SQL_Select
+               (F_References,
+                From => Database.Entity_Refs & Database.Files
+                  & Database.Reference_Kinds,
+                Where => Database.Entity_Refs.File = Database.Files.Id
+                and Database.Entity_Refs.Kind = Database.Reference_Kinds.Id
+                and Database.Entity_Refs.Entity = Integer_Param (1)),
+             Order_By => Database.Files.Path
+                & Database.Entity_Refs.Line & Database.Entity_Refs.Column,
+             Distinct => True);
+         P := Prepare
+           (Q, On_Server => False, Name => "references_all_kinds");
+
+      elsif Include_Implicit then
+         P := Q_References;
+
+      else
+         Q := SQL_Union
+            (SQL_Select
+               (F_References_Decl,
+                From => Database.Entities & Database.Files,
+                Where => Database.Entities.Decl_File = Database.Files.Id
+                and Database.Entities.Id = Integer_Param (1)),
+             SQL_Select
+               (F_References,
+                From => Database.Entity_Refs & Database.Files
+                  & Database.Reference_Kinds,
+                Where => Database.Entity_Refs.File = Database.Files.Id
+                and Database.Entity_Refs.Kind = Database.Reference_Kinds.Id
+                and Database.Reference_Kinds.Is_Real
+                and not Database.Reference_Kinds.Is_Implicit
+                and Database.Entity_Refs.Entity = Integer_Param (1)),
+             Order_By => Database.Files.Path
+                & Database.Entity_Refs.Line & Database.Entity_Refs.Column,
+             Distinct => True);
+         P := Prepare
+           (Q, On_Server => False, Name => "references_no_implicit");
+      end if;
+
+      Cursor.Entity := Entity;
+      Cursor.DBCursor.Fetch
+        (Self.DB, P, Params => (1 => +Entity.Id));
+   end References;
+
    -----------------
    -- Declaration --
    -----------------
