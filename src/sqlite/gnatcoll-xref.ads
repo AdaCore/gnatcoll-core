@@ -181,6 +181,11 @@ package GNATCOLL.Xref is
    --  practice. They are provided so that you can store an entity in a
    --  GtkAda tree model easil.y
 
+   Reference_Kind_Declaration : constant String := "declaration";
+   --  The reference kind used for the declaration of an entity. Other kinds
+   --  are given in the database and can be customized by any tools that add
+   --  information in the database.
+
    type Entity_Reference is record
       Entity  : Entity_Information;
       File    : GNATCOLL.VFS.Virtual_File;
@@ -777,6 +782,15 @@ package GNATCOLL.Xref is
    --  A version is given that only returns entities with a given name. It is
    --  for instance useful when Get_Entity returns No_Entity (because there
    --  is no exact reference, nor close-by, for an entity).
+
+   type References_Sort is (By_Location, By_Entity);
+   procedure References
+      (Self   : Xref_Database'Class;
+       File   : GNATCOLL.VFS.Virtual_File;
+       Cursor : out References_Cursor'Class;
+       Kind   : String := "";
+       Sort   : References_Sort := By_Location);
+   --  Recompute all references (to any entity) that occur in the file.
 
    -------------------------------------
    -- Adding contents to the database --

@@ -546,49 +546,130 @@ package body GNATCOLL.Xref is
    Q_Ref_Entity  : constant := 6;  --  id of the ref'ed entity
    Q_Ref_Kind_Id : constant := 7;
    Q_Ref_Is_End_Of_Scope : constant := 8;
+   F_References_Decl : constant SQL_Field_List := To_List
+      ((Q_Ref_File_Id => +Database.Files.Id,
+        Q_Ref_File    => +Database.Files.Path,
+        Q_Ref_Line    => +Database.Entities.Decl_Line,
+        Q_Ref_Col     => +Database.Entities.Decl_Column,
+        Q_Ref_Kind    => +Expression (Reference_Kind_Declaration),
+        Q_Ref_Caller  => +Database.Entities.Decl_Caller,
+        Q_Ref_Entity  => +Database.Entities.Id,
+        Q_Ref_Kind_Id =>
+           +Expression ("" & Kind_Id_Declaration),
+        Q_Ref_Is_End_Of_Scope => +Expression (False)));
+   F_References : constant SQL_Field_List := To_List
+      ((Q_Ref_File_Id => +Database.Files.Id,
+        Q_Ref_File    => +Database.Files.Path,
+        Q_Ref_Line    => +Database.Entity_Refs.Line,
+        Q_Ref_Col     => +Database.Entity_Refs.Column,
+        Q_Ref_Kind    => +Database.Reference_Kinds.Display,
+        Q_Ref_Caller  => +Database.Entity_Refs.Caller,
+        Q_Ref_Entity  => +Database.Entity_Refs.Entity,
+        Q_Ref_Kind_Id => +Database.Reference_Kinds.Id,
+        Q_Ref_Is_End_Of_Scope => +Database.Reference_Kinds.Is_End));
    Q_References : constant Prepared_Statement :=
      Prepare
        (SQL_Union
             (SQL_Select
-                 (To_List
-                      ((Q_Ref_File_Id => +Database.Files.Id,
-                        Q_Ref_File    => +Database.Files.Path,
-                        Q_Ref_Line    => +Database.Entities.Decl_Line,
-                        Q_Ref_Col     => +Database.Entities.Decl_Column,
-                        Q_Ref_Kind    => +Expression ("declaration"),
-                        Q_Ref_Caller  => +Database.Entities.Decl_Caller,
-                        Q_Ref_Entity  => +Database.Entities.Id,
-                        Q_Ref_Kind_Id =>
-                           +Expression ("" & Kind_Id_Declaration),
-                        Q_Ref_Is_End_Of_Scope => +Expression (False))),
-                  From => Database.Entities & Database.Files,
-                  Where => Database.Entities.Decl_File = Database.Files.Id
-                  and Database.Entities.Id = Integer_Param (1)),
-
+               (F_References_Decl,
+                From => Database.Entities & Database.Files,
+                Where => Database.Entities.Decl_File = Database.Files.Id
+                and Database.Entities.Id = Integer_Param (1)),
              SQL_Select
-               (To_List
-                  ((Q_Ref_File_Id => +Database.Files.Id,
-                    Q_Ref_File    => +Database.Files.Path,
-                    Q_Ref_Line    => +Database.Entity_Refs.Line,
-                    Q_Ref_Col     => +Database.Entity_Refs.Column,
-                    Q_Ref_Kind    => +Database.Reference_Kinds.Display,
-                    Q_Ref_Caller  => +Database.Entity_Refs.Caller,
-                    Q_Ref_Entity  => +Database.Entity_Refs.Entity,
-                    Q_Ref_Kind_Id => +Database.Reference_Kinds.Id,
-                    Q_Ref_Is_End_Of_Scope =>
-                       +Database.Reference_Kinds.Is_End)),
+               (F_References,
                 From => Database.Entity_Refs & Database.Files
                   & Database.Reference_Kinds,
                 Where => Database.Entity_Refs.File = Database.Files.Id
                 and Database.Entity_Refs.Kind = Database.Reference_Kinds.Id
                 and Database.Reference_Kinds.Is_Real
                 and Database.Entity_Refs.Entity = Integer_Param (1)),
-
              Order_By => Database.Files.Path
                 & Database.Entity_Refs.Line & Database.Entity_Refs.Column,
              Distinct => True),
         On_Server => False, Name => "references");
    --  Cannot be prepared because there are risks of concurrent calls.
+
+   Q_File_References_Decl_By_Loc : constant Prepared_Statement :=
+     Prepare
+       (SQL_Select
+          (F_References_Decl,
+           From => Database.Entities & Database.Files,
+           Where => Database.Entities.Decl_File = Database.Files.Id
+           and Database.Files.Path = Text_Param (1),
+           Order_By =>
+             Database.Entity_Refs.Line & Database.Entity_Refs.Column,
+           Distinct => True),
+        On_Server => False, Name => "file_declarations");
+   Q_File_References_And_Kind_By_Loc : constant Prepared_Statement :=
+     Prepare
+       (SQL_Select
+          (F_References,
+           From => Database.Entity_Refs & Database.Files
+             & Database.Reference_Kinds,
+           Where => Database.Entity_Refs.File = Database.Files.Id
+           and Database.Entity_Refs.Kind = Database.Reference_Kinds.Id
+           and Database.Reference_Kinds.Is_Real
+           and Database.Reference_Kinds.Display = Text_Param (2)
+           and Database.Files.Path = Text_Param (1),
+           Order_By =>
+             Database.Entity_Refs.Line & Database.Entity_Refs.Column,
+           Distinct => True),
+        On_Server => False, Name => "file_references_and_kind_by_loc");
+   Q_File_References_And_Kind_By_Entity : constant Prepared_Statement :=
+     Prepare
+       (SQL_Select
+          (F_References,
+           From => Database.Entity_Refs & Database.Files
+             & Database.Reference_Kinds,
+           Where => Database.Entity_Refs.File = Database.Files.Id
+           and Database.Entity_Refs.Kind = Database.Reference_Kinds.Id
+           and Database.Reference_Kinds.Is_Real
+           and Database.Reference_Kinds.Display = Text_Param (2)
+           and Database.Files.Path = Text_Param (1),
+           Order_By => Database.Entity_Refs.Entity
+             & Database.Entity_Refs.Line & Database.Entity_Refs.Column,
+           Distinct => True),
+        On_Server => False, Name => "file_references_and_kind_by_entity");
+   Q_File_References_By_Loc : constant Prepared_Statement :=
+     Prepare
+       (SQL_Union
+            (SQL_Select
+               (F_References_Decl,
+                From => Database.Entities & Database.Files,
+                Where => Database.Entities.Decl_File = Database.Files.Id
+                and Database.Files.Path = Text_Param (1)),
+             SQL_Select
+               (F_References,
+                From => Database.Entity_Refs & Database.Files
+                  & Database.Reference_Kinds,
+                Where => Database.Entity_Refs.File = Database.Files.Id
+                and Database.Entity_Refs.Kind = Database.Reference_Kinds.Id
+                and Database.Reference_Kinds.Is_Real
+                and Database.Files.Path = Text_Param (1)),
+             Order_By =>
+                Database.Entity_Refs.Line & Database.Entity_Refs.Column,
+             Distinct => True),
+        On_Server => False, Name => "file_references_by_loc");
+   Q_File_References_By_Entity : constant Prepared_Statement :=
+     Prepare
+       (SQL_Union
+            (SQL_Select
+               (F_References_Decl,
+                From => Database.Entities & Database.Files,
+                Where => Database.Entities.Decl_File = Database.Files.Id
+                and Database.Files.Path = Text_Param (1)),
+             SQL_Select
+               (F_References,
+                From => Database.Entity_Refs & Database.Files
+                  & Database.Reference_Kinds,
+                Where => Database.Entity_Refs.File = Database.Files.Id
+                and Database.Entity_Refs.Kind = Database.Reference_Kinds.Id
+                and Database.Reference_Kinds.Is_Real
+                and Database.Files.Path = Text_Param (1)),
+             Order_By => Database.Entity_Refs.Entity
+                & Database.Entity_Refs.Line & Database.Entity_Refs.Column,
+             Distinct => True),
+        On_Server => False, Name => "file_references_by_entity");
 
    Q_End_Of_Spec : constant Prepared_Statement :=
      Prepare
@@ -3438,7 +3519,7 @@ package body GNATCOLL.Xref is
                      Kind_Id := Char_Value (R, 6);
                      Is_End_Of_Scope := Boolean_Value (R, 7);
                   else
-                     Kind := To_Unbounded_String ("declaration");
+                     Kind := To_Unbounded_String (Reference_Kind_Declaration);
                      Kind_Id := Kind_Id_Declaration;
                      Is_End_Of_Scope := False;
                   end if;
@@ -3755,7 +3836,8 @@ package body GNATCOLL.Xref is
                               Line   => Curs.Integer_Value (Q_Decl_Line),
                               Column => Visible_Column
                                 (Curs.Integer_Value (Q_Decl_Column)),
-                              Kind   => To_Unbounded_String ("declaration"),
+                              Kind   => To_Unbounded_String
+                                 (Reference_Kind_Declaration),
                               Kind_Id => Kind_Id_Declaration,
                               Is_End_Of_Scope => False,
                               Scope  => Scope));
@@ -4891,6 +4973,49 @@ package body GNATCOLL.Xref is
    begin
       return Single_Entity_From_E2e (Self, Entity, E2e_Pointed_Type);
    end Pointed_Type;
+
+   ----------------
+   -- References --
+   ----------------
+
+   procedure References
+      (Self   : Xref_Database'Class;
+       File   : GNATCOLL.VFS.Virtual_File;
+       Cursor : out References_Cursor'Class;
+       Kind   : String := "";
+       Sort   : References_Sort := By_Location)
+   is
+      N : aliased String :=
+         +File.Unix_Style_Full_Name (Normalize => True);
+      K : aliased String := Kind;
+   begin
+      Cursor.Entity := No_Entity;
+      if Kind = Reference_Kind_Declaration then
+         Cursor.DBCursor.Fetch
+           (Self.DB, Q_File_References_Decl_By_Loc,
+            Params => (1 => +N'Unchecked_Access));
+      elsif Kind /= "" then
+         if Sort = By_Location then
+            Cursor.DBCursor.Fetch
+              (Self.DB, Q_File_References_And_Kind_By_Loc,
+               Params => (1 => +N'Unchecked_Access, 2 => +K'Unchecked_Access));
+         else
+            Cursor.DBCursor.Fetch
+              (Self.DB, Q_File_References_And_Kind_By_Entity,
+               Params => (1 => +N'Unchecked_Access, 2 => +K'Unchecked_Access));
+         end if;
+      else
+         if Sort = By_Location then
+            Cursor.DBCursor.Fetch
+              (Self.DB, Q_File_References_By_Loc,
+               Params => (1 => +N'Unchecked_Access));
+         else
+            Cursor.DBCursor.Fetch
+              (Self.DB, Q_File_References_By_Entity,
+               Params => (1 => +N'Unchecked_Access));
+         end if;
+      end if;
+   end References;
 
    -------------------
    -- Referenced_In --
