@@ -203,6 +203,11 @@ package GNATCOLL.Xref is
    Kind_Id_Declaration : constant Character := ' ';
    --  The Entity_Reference.Kind_Id for a declaration
 
+   Reference_Kind_Declaration : constant String := "declaration";
+   --  The reference kind used for the declaration of an entity. Other kinds
+   --  are given in the database and can be customized by any tools that add
+   --  information in the database.
+
    function Image
      (Self : Xref_Database; File : GNATCOLL.VFS.Virtual_File) return String;
    function Image
@@ -483,18 +488,36 @@ package GNATCOLL.Xref is
    type Reference_Iterator is not null access procedure
      (Self   : Xref_Database'Class;
       Entity : Entity_Information;
-      Cursor : out References_Cursor'Class);
+      Cursor : in out References_Cursor'Class);
 
    procedure References
-     (Self   : Xref_Database'Class;
-      Entity : Entity_Information;
-      Cursor : out References_Cursor'Class);
-   --  Return all references to the entity
+     (Self             : Xref_Database'Class;
+      Entity           : Entity_Information;
+      Cursor           : in out References_Cursor'Class);
+   procedure References
+     (Self             : Xref_Database'Class;
+      Entity           : Entity_Information;
+      Cursor           : in out References_Cursor'Class;
+      Include_Implicit : Boolean;
+      Include_All      : Boolean;
+      Kinds            : String := "");
+      --  Return all references to the entity.
+      --  The second version can be used to filter out the list of references
+      --  more efficiently than checking each of the references returned by the
+      --  first version.
+      --  If Include_Implicit is True, then implicit references to the entity
+      --  are returned.
+      --  If Include_All is True, then references that are only used to provide
+      --  extra information on the entity are also returned (for instance the
+      --  end-of-spec or end-of-body).
+      --  If Kinds is specified, it is used to filter which kinds of references
+      --  are returned. If specified, Include_Implicit and Include_All are
+      --  ignored. Kind is a comma-separated list of names
 
    procedure Bodies
      (Self   : Xref_Database'Class;
       Entity : Entity_Information;
-      Cursor : out References_Cursor'Class);
+      Cursor : in out References_Cursor'Class);
    --  Return the location for the bodies of entities, or their full
    --  declaration in the case of private entities.
 
@@ -518,7 +541,12 @@ package GNATCOLL.Xref is
    --  Bodies. To get access to the actual list of references, you need to
    --  iterate the Cursor, using Has_Element, Element and Next as usual.
    --
-   --  Freeing Self while the cursor exits results in undefined behavior.
+   --  Compute must be callable during the lifetime of Cursor.
+   --  The Cursor parameter passed to Compute is Cursor itself, so it is
+   --  possible to store data to be passed to Compute directly in a type
+   --  derived from Recursive_References_Cursor.
+   --
+   --  Freeing Self while the cursor exists results in undefined behavior.
 
    --------------
    -- Entities --
@@ -777,6 +805,15 @@ package GNATCOLL.Xref is
    --  A version is given that only returns entities with a given name. It is
    --  for instance useful when Get_Entity returns No_Entity (because there
    --  is no exact reference, nor close-by, for an entity).
+
+   type References_Sort is (By_Location, By_Entity);
+   procedure References
+      (Self   : Xref_Database'Class;
+       File   : GNATCOLL.VFS.Virtual_File;
+       Cursor : out References_Cursor'Class;
+       Kind   : String := "";
+       Sort   : References_Sort := By_Location);
+   --  Recompute all references (to any entity) that occur in the file.
 
    -------------------------------------
    -- Adding contents to the database --
