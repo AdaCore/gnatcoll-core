@@ -5063,7 +5063,6 @@ package body GNATCOLL.Projects is
 
    exception
       when Invalid_Project =>
-         Put_Line ("MANU got invalid project");
          Prj.Com.Fail := null;
          Output.Cancel_Special_Output;
          raise;

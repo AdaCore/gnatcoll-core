@@ -3782,7 +3782,7 @@ package body GNATCOLL.Xref is
    procedure References
      (Self   : Xref_Database'Class;
       Entity : Entity_Information;
-      Cursor : out References_Cursor'Class) is
+      Cursor : in out References_Cursor'Class) is
    begin
       Cursor.Entity := Entity;
       Cursor.DBCursor.Fetch
@@ -3796,7 +3796,7 @@ package body GNATCOLL.Xref is
    procedure References
      (Self             : Xref_Database'Class;
       Entity           : Entity_Information;
-      Cursor           : out References_Cursor'Class;
+      Cursor           : in out References_Cursor'Class;
       Include_Implicit : Boolean;
       Include_All      : Boolean;
       Kinds            : String := "")
@@ -3994,7 +3994,7 @@ package body GNATCOLL.Xref is
    procedure Bodies
      (Self   : Xref_Database'Class;
       Entity : Entity_Information;
-      Cursor : out References_Cursor'Class)
+      Cursor : in out References_Cursor'Class)
    is
       E : Entity_Information;
    begin
@@ -5264,6 +5264,11 @@ package body GNATCOLL.Xref is
       Ents   : Entities_Cursor;
    begin
       Self.Entity := Entity;
+
+      if Entity = No_Entity then
+         return;
+      end if;
+
       Self.Visited.Include (Entity);
 
       if Self.From_Renames then

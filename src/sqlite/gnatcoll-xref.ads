@@ -488,16 +488,16 @@ package GNATCOLL.Xref is
    type Reference_Iterator is not null access procedure
      (Self   : Xref_Database'Class;
       Entity : Entity_Information;
-      Cursor : out References_Cursor'Class);
+      Cursor : in out References_Cursor'Class);
 
    procedure References
      (Self             : Xref_Database'Class;
       Entity           : Entity_Information;
-      Cursor           : out References_Cursor'Class);
+      Cursor           : in out References_Cursor'Class);
    procedure References
      (Self             : Xref_Database'Class;
       Entity           : Entity_Information;
-      Cursor           : out References_Cursor'Class;
+      Cursor           : in out References_Cursor'Class;
       Include_Implicit : Boolean;
       Include_All      : Boolean;
       Kinds            : String := "");
@@ -517,7 +517,7 @@ package GNATCOLL.Xref is
    procedure Bodies
      (Self   : Xref_Database'Class;
       Entity : Entity_Information;
-      Cursor : out References_Cursor'Class);
+      Cursor : in out References_Cursor'Class);
    --  Return the location for the bodies of entities, or their full
    --  declaration in the case of private entities.
 
@@ -541,7 +541,12 @@ package GNATCOLL.Xref is
    --  Bodies. To get access to the actual list of references, you need to
    --  iterate the Cursor, using Has_Element, Element and Next as usual.
    --
-   --  Freeing Self while the cursor exits results in undefined behavior.
+   --  Compute must be callable during the lifetime of Cursor.
+   --  The Cursor parameter passed to Compute is Cursor itself, so it is
+   --  possible to store data to be passed to Compute directly in a type
+   --  derived from Recursive_References_Cursor.
+   --
+   --  Freeing Self while the cursor exists results in undefined behavior.
 
    --------------
    -- Entities --
