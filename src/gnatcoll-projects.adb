@@ -3355,10 +3355,14 @@ package body GNATCOLL.Projects is
      (Self : Project_Tree; External_Name : String)
       return Scenario_Variable
    is
-      Ext  : constant Name_Id := Get_String (External_Name);
+      E : String := External_Name;
+      Ext  : Name_Id;
       List : Scenario_Variable_Array_Access;
       Var  : Scenario_Variable;
    begin
+      Osint.Canonical_Case_Env_Var_Name (E);
+      Ext := Get_String (E);
+
       if Self.Data.Scenario_Variables = null then
          Compute_Scenario_Variables (Self.Data);
       end if;
@@ -3372,7 +3376,7 @@ package body GNATCOLL.Projects is
       Var := Scenario_Variable'
         (Name        => Ext,
          Default     => No_Name,
-         String_Type => Empty_Node,
+         String_Type => Empty_Node,   --   ??? Won't be able to edit it
          Value       => No_Name);
 
       List := Self.Data.Scenario_Variables;
