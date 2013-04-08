@@ -1,13 +1,16 @@
 .PHONY: all examples test clean docs install generate_sources do_links static relocatable shared
 
 ## Put this first so that it is the default make target
-all: static
+all:
 
 include Makefile.conf
 
 ifeq (${BUILDS_SHARED},yes)
-# Additional targets
-all: relocatable
+# Additional targets. Builds relocatble first so that the tools are
+# preferably linked statically.
+all: relocatable static
+else
+all: static
 endif
 
 include Makefile.gnat
