@@ -578,10 +578,8 @@ procedure GNATCOLL_Db2Ada is
                   Append (S, "plus");
                elsif Str (C) = '?' then
                   Append (S, "question");
-               elsif Str (C) = '_' then
-                  Append (S, Str (C));
                else
-                  null;
+                  Append (S, '_');
                end if;
             else
                Append (S, Str (C));
