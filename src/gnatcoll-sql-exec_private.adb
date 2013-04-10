@@ -167,6 +167,7 @@ package body GNATCOLL.SQL.Exec_Private is
             Unchecked_Free (Result.Table);
             Result.Table := null;
          end if;
+         Finalize (Forward (Result));
       end Finalize;
 
       --------------
