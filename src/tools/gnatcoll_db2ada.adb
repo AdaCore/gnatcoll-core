@@ -567,29 +567,35 @@ procedure GNATCOLL_Db2Ada is
       --  identifier
 
       function Quote (Str : String) return String is
-         S : String := Str;
+         S : Unbounded_String;
       begin
-         for C in S'Range loop
-            if not Is_Alphanumeric (S (C)) then
+         for C in Str'Range loop
+            if not Is_Alphanumeric (Str (C)) then
                --  Some special cases to try and keep meaningful
                --  identifiers.
 
-               if S (C) = '+' then
-                  S (C) := 'p';
-               elsif S (C) = '?' then
-                  S (C) := 'Q';
+               if Str (C) = '+' then
+                  Append (S, "plus");
+               elsif Str (C) = '?' then
+                  Append (S, "question");
                else
-                  S (C) := '_';
+                  Append (S, Str (C));
                end if;
+            else
+               Append (S, Str (C));
             end if;
          end loop;
 
-         for C in reverse S'Range loop
-            if S (C) /= '_' then
-               return S (S'First .. C);
-            end if;
-         end loop;
-         return "";
+         declare
+            S2 : constant String := To_String (S);
+         begin
+            for C in reverse S2'Range loop
+               if S2 (C) /= '_' then
+                  return S2 (S2'First .. C);
+               end if;
+            end loop;
+            return "";
+         end;
       end Quote;
 
       Enum : Dumped_Enums;
