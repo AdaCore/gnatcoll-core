@@ -878,6 +878,10 @@ package GNATCOLL.SQL.Exec is
    --  True if Prepared is either already prepared on the server, or already
    --  has a suffix defined.
 
+   function Is_Prepared_On_Server_Supported
+     (Connection : access Database_Connection_Record) return Boolean;
+   --  True if Prepared supported on the server for this connection
+
 private
 
    type Database_Description_Record

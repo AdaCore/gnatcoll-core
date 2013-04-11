@@ -346,7 +346,8 @@ package body GNATCOLL.SQL.Exec is
          S.Is_Select := Is_Select_Query (S.Query_Str.all);
       end if;
 
-      if Prepared.Get.On_Server then
+      if Prepared.Get.On_Server
+         and Is_Prepared_On_Server_Supported (Connection) then
          --  Reuse a prepared statement if one exists for this connection.
 
          L := S.Prepared;
@@ -1812,4 +1813,17 @@ package body GNATCOLL.SQL.Exec is
    begin
       return Connection.Automatic_Transactions;
    end Automatic_Transactions;
+
+   -------------------------------------
+   -- Is_Prepared_On_Server_Supported --
+   -------------------------------------
+
+   function Is_Prepared_On_Server_Supported
+     (Connection : access Database_Connection_Record) return Boolean
+   is
+      pragma Unreferenced (Connection);
+   begin
+      return True;
+   end Is_Prepared_On_Server_Supported;
+
 end GNATCOLL.SQL.Exec;
