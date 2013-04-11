@@ -26,6 +26,7 @@ with Ada.Strings.Fixed;
 with Ada.Unchecked_Conversion;
 with Ada.Unchecked_Deallocation;
 with GNATCOLL.SQL.Sqlite.Gnade;    use GNATCOLL.SQL.Sqlite.Gnade;
+with GNATCOLL.SQL.Exec;
 with GNATCOLL.SQL.Exec_Private;    use GNATCOLL.SQL.Exec_Private;
 with GNATCOLL.Traces;              use GNATCOLL.Traces;
 with GNATCOLL.Utils;               use GNATCOLL.Utils;
@@ -185,6 +186,9 @@ package body GNATCOLL.SQL.Sqlite.Builder is
      (Statement, DBMS_Stmt);
    function Unchecked_Convert is new Ada.Unchecked_Conversion
      (DBMS_Stmt, Statement);
+
+   overriding function Is_Prepared_On_Server_Supported
+     (Connection : access Sqlite_Connection_Record) return Boolean;
 
    -------------
    -- On_Busy --
@@ -1154,5 +1158,16 @@ package body GNATCOLL.SQL.Sqlite.Builder is
 
       return Result;
    end Backup;
+
+   -------------------------------------
+   -- Is_Prepared_On_Server_Supported --
+   -------------------------------------
+
+   function Is_Prepared_On_Server_Supported
+     (Connection : access Sqlite_Connection_Record) return Boolean
+   is
+   begin
+      return not Is_Sqlite (Connection);
+   end Is_Prepared_On_Server_Supported;
 
 end GNATCOLL.SQL.Sqlite.Builder;
