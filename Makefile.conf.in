@@ -42,11 +42,19 @@ endif
 
 DEFS=@DEFS@
 
+TARGET_WIN32=no
+
 TARGET=@TARGET@
 ifeq ($(TARGET),)
 GPRBUILD=gprbuild
+ifeq (${OS},Windows_NT)
+     TARGET_WIN32=yes
+endif
 else
 GPRBUILD=gprbuild --target=${TARGET}
+ifeq ($(filter-out %mingw32,${TARGET}),)
+     TARGET_WIN32=yes
+endif
 endif
 
 TARNAME=@PACKAGE_TARNAME@
@@ -74,12 +82,16 @@ export Gnatcoll_Build
 
 LIBEXT=@SO_EXT@
 
-ifeq (${OS},Windows_NT)
-DIRSEP=;
+ifeq (${TARGET_WIN32},yes)
 EXE=.exe
 else
-DIRSEP=:
 EXE=
+endif
+
+ifeq (${OS},Windows_NT)
+DIRSEP=;
+else
+DIRSEP=:
 endif
 
 ################################################################
@@ -126,7 +138,7 @@ installsources:
 	@# This install is common to shared and static libraries.
 
 	@${CP} -p ${wildcard ${addsuffix *.ad[bs], ${SRCDIRS}}} ${includedir}/${TARNAME}
-ifeq (${OS},Windows_NT)
+ifeq (${TARGET_WIN32},yes)
 	@cd ${includedir}/${TARNAME}; ls ${notdir ${wildcard ${addsuffix *.ad[bs], ${SRCDIRS}}}} | grep -v unix > ${DESTDIR}${prefix}/lib/gnat/${TARNAME}/${basename ${PROJECT}}.lgpr
 else
 	@cd ${includedir}/${TARNAME}; ls ${notdir ${wildcard ${addsuffix *.ad[bs], ${SRCDIRS}}}} | grep -v win32 > ${DESTDIR}${prefix}/lib/gnat/${TARNAME}/${basename ${PROJECT}}.lgpr
