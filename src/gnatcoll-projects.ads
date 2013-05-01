@@ -988,6 +988,13 @@ package GNATCOLL.Projects is
    type Attribute_Pkg_List (<>) is private;
    --  The name of attributes, and their type.
 
+   function Attribute_Project
+     (Project : Project_Type;
+      Attribute : Attribute_Pkg_String) return Project_Type;
+   --  Return the project in which the attribute was defined (which, in the
+   --  case of 'renames' statements might be different from Project).
+   --  Returns No_Project if the attribute is not defined.
+
    function Attribute_Value
      (Project      : Project_Type;
       Attribute    : Attribute_Pkg_String;
