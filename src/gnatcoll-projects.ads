@@ -719,12 +719,11 @@ package GNATCOLL.Projects is
    --  case-insensitive.
 
    function File_From_Unit
-     (Project                  : Project_Type;
-      Unit_Name                : String;
-      Part                     : Unit_Parts;
-      Language                 : String;
-      File_Must_Exist          : Boolean := True)
-      return GNATCOLL.VFS.Filesystem_String;
+     (Project         : Project_Type;
+      Unit_Name       : String;
+      Part            : Unit_Parts;
+      Language        : String;
+      File_Must_Exist : Boolean := True) return GNATCOLL.VFS.Filesystem_String;
    --  Return the base name for the given unit. The empty string is
    --  returned if this unit doesn't belong to the project, or if the concept
    --  of unit doesn't apply to the language. If File_Must_Exist is False, then
@@ -762,8 +761,7 @@ package GNATCOLL.Projects is
      (Root_Project     : Project_Type;
       Recursive        : Boolean := True;
       Direct_Only      : Boolean := False;
-      Include_Extended : Boolean := True)
-      return Project_Iterator;
+      Include_Extended : Boolean := True) return Project_Iterator;
    --  Initialize the iterator to start at Root_Project.
    --  It will process Root_Project and all its subprojects, recursively, but
    --  without processing the same project twice.
@@ -786,8 +784,7 @@ package GNATCOLL.Projects is
      (Root_Project     : Project_Type;
       Recursive        : Boolean := True;
       Direct_Only      : Boolean := False;
-      Include_Extended : Boolean := True)
-      return Project_Iterator;
+      Include_Extended : Boolean := True) return Project_Iterator;
    --  Same as above, but returns the project in the reverse order, thus:
    --     root_project, project, project_extended_by_project
 
@@ -917,7 +914,7 @@ package GNATCOLL.Projects is
      (Self : Project_Tree;
       Vars : Scenario_Variable_Array);
    procedure Change_Environment
-     (Self : Project_Environment;
+     (Self        : Project_Environment;
       Name, Value : String);
    --  Change the environment value for all the variables in Vars (you do not
    --  need to have all the scenario variables from the project, only those
@@ -989,7 +986,7 @@ package GNATCOLL.Projects is
    --  The name of attributes, and their type.
 
    function Attribute_Project
-     (Project : Project_Type;
+     (Project   : Project_Type;
       Attribute : Attribute_Pkg_String;
       Index     : String := "") return Project_Type;
    --  Return the project in which the attribute was defined (which, in the
