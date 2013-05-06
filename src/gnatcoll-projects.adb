@@ -2029,10 +2029,11 @@ package body GNATCOLL.Projects is
 
    function Attribute_Project
      (Project   : Project_Type;
-      Attribute : Attribute_Pkg_String) return Project_Type is
+      Attribute : Attribute_Pkg_String;
+      Index     : String := "") return Project_Type is
 
       Value : constant Variable_Value :=
-                Attribute_Value (Project, String (Attribute));
+                Attribute_Value (Project, String (Attribute), Index);
       Tree : constant Project_Tree := (Data => Project.Data.Tree);
    begin
       if Value.Project = Prj.No_Project then

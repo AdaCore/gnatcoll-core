@@ -990,10 +990,16 @@ package GNATCOLL.Projects is
 
    function Attribute_Project
      (Project : Project_Type;
-      Attribute : Attribute_Pkg_String) return Project_Type;
+      Attribute : Attribute_Pkg_String;
+      Index     : String := "") return Project_Type;
    --  Return the project in which the attribute was defined (which, in the
    --  case of 'renames' statements might be different from Project).
    --  Returns No_Project if the attribute is not defined.
+   --  The corresponding attribute would have been set in the returned project
+   --  as:
+   --      for Attribute use "value";
+   --  or
+   --      for Attribute (Index) use "value";
 
    function Attribute_Value
      (Project      : Project_Type;
