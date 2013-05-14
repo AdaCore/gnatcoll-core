@@ -139,6 +139,11 @@ package body GNATCOLL.Boyer_Moore is
       Tmp             : Natural;
 
    begin
+      if From_String = "" then
+         Motif.Motif := null;
+         return;
+      end if;
+
       Motif.Case_Sensitive  := Case_Sensitive;
       Motif.Last_Occurrence := (others => 0);
       Motif.Motif           := new String (1 .. From_String'Length);
@@ -313,11 +318,16 @@ package body GNATCOLL.Boyer_Moore is
    ------------
 
    function Search (Motif : Pattern; In_String : String) return Integer is
-      M : constant Natural := Motif.Motif'Length; --  length of pattern
+      M : Natural;
       Shift : Natural := In_String'First - 1;
       J : Natural;
       Num_Comp : Natural := 0;
    begin
+      if Motif.Motif = null then
+         return -1;
+      end if;
+
+      M := Motif.Motif'Length;  --  length of pattern
       pragma Assert (Motif.Motif'First = 1);
 
       if not Motif.Case_Sensitive then
