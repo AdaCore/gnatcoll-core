@@ -3256,11 +3256,14 @@ package body GNATCOLL.Projects is
         (Variable : Project_Node_Id; Proj : Project_Node_Id) return Boolean
       is
          pragma Unreferenced (Proj);
-         V        : constant Name_Id := External_Reference_Of (Variable, T);
-         N        : constant String := Get_String (V);
+         V        : Name_Id := External_Reference_Of (Variable, T);
+         N        : String := Get_String (V);
          Var      : Scenario_Variable;
          Is_Valid : Boolean;
       begin
+         Osint.Canonical_Case_Env_Var_Name (N);
+         V := Get_String (N);
+
          for Index in 1 .. Curr - 1 loop
             if External_Name (List (Index)) = N then
                --  Nothing to do
