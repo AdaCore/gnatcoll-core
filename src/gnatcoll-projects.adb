@@ -3379,7 +3379,7 @@ package body GNATCOLL.Projects is
      (Self : Project_Tree; External_Name : String)
       return Scenario_Variable
    is
-      E : String := External_Name;
+      E : constant String := External_Name;
       Ext  : Name_Id;
       List : Scenario_Variable_Array_Access;
       Var  : Scenario_Variable;
