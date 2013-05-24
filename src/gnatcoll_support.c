@@ -93,6 +93,8 @@ __gnatcoll_set_readable (char *file, int set)
      possible to set a file as read-only. To set a file as unreadable it is
      required to use the more complex [Get|Set]FileSecurity Win32 API by
      setting the proper ACL. */
+#elif defined (__VMS__)
+  /* ??? NOT CURRENTLY SUPPORTED. */
 #else
   struct stat statbuf;
 
