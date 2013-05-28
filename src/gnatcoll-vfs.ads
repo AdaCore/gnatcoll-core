@@ -223,6 +223,7 @@ package GNATCOLL.VFS is
    --  Return a Hash_Type computed from the full name of the given VFS.
    --  Could be used to instantiate an Ada 2005 container that uses a VFS as
    --  key and requires a hash function.
+   --  See File_Sets below.
 
    function File_Extension
      (File      : Virtual_File;
