@@ -1466,9 +1466,9 @@ package body GNATCOLL.SQL_Impl is
          Adjusted := Value - Duration (UTC_Time_Offset (Value)) * 60.0;
 
          if Quote then
-            return Image (Adjusted, "'%Y-%m-%d %H:%M:%S'");
+            return Image (Adjusted, "'%Y-%m-%d %H:%M:%S +00:00'");
          else
-            return Image (Adjusted, "%Y-%m-%d %H:%M:%S");
+            return Image (Adjusted, "%Y-%m-%d %H:%M:%S +00:00");
          end if;
       else
          return "NULL";
