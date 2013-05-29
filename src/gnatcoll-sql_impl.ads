@@ -116,6 +116,9 @@ package GNATCOLL.SQL_Impl is
    --  and with special characters unprotected. As a result, this is only
    --  suitable for use with parameterized queries.
 
+   function Supports_Timezone (Self  : Formatter) return Boolean;
+   --  Whether the formatter supports time zones for times. Default is True.
+
    type Parameter_Type is
      (Parameter_Integer, Parameter_Text, Parameter_Boolean, Parameter_Float,
       Parameter_Time, Parameter_Date, Parameter_Character, Parameter_Money,

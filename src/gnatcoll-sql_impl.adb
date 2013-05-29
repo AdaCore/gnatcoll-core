@@ -1446,6 +1446,16 @@ package body GNATCOLL.SQL_Impl is
       end if;
    end Integer_To_SQL;
 
+   -----------------------
+   -- Supports_Timezone --
+   -----------------------
+
+   function Supports_Timezone (Self : Formatter) return Boolean is
+      pragma Unreferenced (Self);
+   begin
+      return True;
+   end Supports_Timezone;
+
    -----------------
    -- Time_To_SQL --
    -----------------
@@ -1455,7 +1465,6 @@ package body GNATCOLL.SQL_Impl is
       Value : Ada.Calendar.Time;
       Quote : Boolean) return String
    is
-      pragma Unreferenced (Self);
       Adjusted : Time;
    begin
       --  Value is always considered as GMT, which is what we store in the
@@ -1465,10 +1474,18 @@ package body GNATCOLL.SQL_Impl is
       if Value /= GNAT.Calendar.No_Time then
          Adjusted := Value - Duration (UTC_Time_Offset (Value)) * 60.0;
 
-         if Quote then
-            return Image (Adjusted, "'%Y-%m-%d %H:%M:%S +00:00'");
+         if Supports_Timezone (Self) then
+            if Quote then
+               return Image (Adjusted, "'%Y-%m-%d %H:%M:%S +00:00'");
+            else
+               return Image (Adjusted, "%Y-%m-%d %H:%M:%S +00:00");
+            end if;
          else
-            return Image (Adjusted, "%Y-%m-%d %H:%M:%S +00:00");
+            if Quote then
+               return Image (Adjusted, "'%Y-%m-%d %H:%M:%S'");
+            else
+               return Image (Adjusted, "%Y-%m-%d %H:%M:%S");
+            end if;
          end if;
       else
          return "NULL";
