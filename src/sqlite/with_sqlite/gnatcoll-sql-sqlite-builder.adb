@@ -100,6 +100,8 @@ package body GNATCOLL.SQL.Sqlite.Builder is
       end record;
    overriding procedure Force_Connect
      (Connection : access Sqlite_Connection_Record);
+   overriding function Supports_Timezone
+     (Self  : Sqlite_Connection_Record) return Boolean;
    overriding function Boolean_Image
      (Self : Sqlite_Connection_Record; Value : Boolean) return String;
    overriding function Money_Image
@@ -947,6 +949,18 @@ package body GNATCOLL.SQL.Sqlite.Builder is
         (Descr,
          Always_Use_Transactions => Sqlite_Always_Use_Transactions);
    end Build_Connection;
+
+   -----------------------
+   -- Supports_Timezone --
+   -----------------------
+
+   overriding function Supports_Timezone
+     (Self  : Sqlite_Connection_Record) return Boolean
+   is
+      pragma Unreferenced (Self);
+   begin
+      return False;
+   end Supports_Timezone;
 
    ----------------------
    -- Parameter_String --
