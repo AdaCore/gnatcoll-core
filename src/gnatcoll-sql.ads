@@ -281,6 +281,13 @@ package GNATCOLL.SQL is
    function Json_Param (Index : Positive) return Json_Fields.Field'Class
       renames Json_Fields.Param;
 
+   package XML_Fields is new Field_Types
+     (String, XML_To_SQL, Parameter_XML);
+   type SQL_Field_XML is new XML_Fields.Field with null record;
+   Null_Field_XML : constant SQL_Field_XML;
+   function XML_Param (Index : Positive) return XML_Fields.Field'Class
+      renames XML_Fields.Param;
+
    function From_String
      (Expression : String) return Text_Fields.Field'Class
       renames Text_Fields.From_String;
@@ -1140,5 +1147,7 @@ private
      (Date_Fields.Null_Field with null record);
    Null_Field_Json : constant SQL_Field_Json :=
      (Json_Fields.Null_Field with null record);
+   Null_Field_XML : constant SQL_Field_XML :=
+     (XML_Fields.Null_Field with null record);
 
 end GNATCOLL.SQL;

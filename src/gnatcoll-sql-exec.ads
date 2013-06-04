@@ -154,6 +154,7 @@ package GNATCOLL.SQL.Exec is
       case Typ is
          when Parameter_Integer   => Int_Val : Integer;
          when Parameter_Json      => Json_Val  : access constant String;
+         when Parameter_XML       => XML_Val   : access constant String;
          when Parameter_Text      => Str_Val : access constant String;
             --  references external string, to avoid an extra copy
          when Parameter_Boolean   => Bool_Val : Boolean;
@@ -519,6 +520,8 @@ package GNATCOLL.SQL.Exec is
    function Time_Value
      (Self  : Forward_Cursor; Field : Field_Index) return Ada.Calendar.Time;
    function Json_Text_Value
+     (Self  : Forward_Cursor; Field : Field_Index) return String;
+   function XML_Text_Value
      (Self  : Forward_Cursor; Field : Field_Index) return String;
    --  Return a specific cell, converted to the appropriate format
 

@@ -51,6 +51,7 @@ package GNATCOLL.SQL.Inspect is
       Field_Integer,
       Field_Date,
       Field_Json,
+      Field_XML,
       Field_Time,
       Field_Timestamp,
       Field_Float,

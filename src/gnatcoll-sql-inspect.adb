@@ -575,6 +575,7 @@ package body GNATCOLL.SQL.Inspect is
                return "Character(" & Image (Typ.Max_Length, 1) & ")";
             end if;
          when Field_Json    => return "Json";
+         when Field_XML     => return "XML";
          when Field_Integer => return "Integer";
          when Field_Date    => return "Date";
          when Field_Timestamp =>
@@ -641,6 +642,9 @@ package body GNATCOLL.SQL.Inspect is
 
       elsif T = "json" then
          return (Kind => Field_Json);
+
+      elsif T = "xml" then
+         return (Kind => Field_XML);
 
       elsif T = "float" then
          return (Kind => Field_Float);
@@ -2210,6 +2214,7 @@ package body GNATCOLL.SQL.Inspect is
          Field_Integer       => Parameter_Integer,
          Field_Date          => Parameter_Date,
          Field_Json          => Parameter_Json,
+         Field_XML           => Parameter_XML,
          Field_Time          => Parameter_Time,
          Field_Timestamp     => Parameter_Time,
          Field_Float         => Parameter_Float,
