@@ -458,4 +458,18 @@ package body GNATCOLL.SQL.Exec_Private is
       return V;
    end Json_Text_Value;
 
+   --------------------
+   -- XML_Text_Value --
+   --------------------
+
+   function XML_Text_Value
+     (Self  : DBMS_Forward_Cursor;
+      Field : Field_Index) return String
+   is
+      V : constant String :=
+            Value (C_Value (DBMS_Forward_Cursor'Class (Self), Field));
+   begin
+      return V;
+   end XML_Text_Value;
+
 end GNATCOLL.SQL.Exec_Private;

@@ -1567,6 +1567,23 @@ package body GNATCOLL.SQL_Impl is
       end if;
    end Json_To_SQL;
 
+   -----------------
+   -- XML_To_SQL --
+   -----------------
+
+   function XML_To_SQL
+     (Self : Formatter'Class; Value : String; Quote : Boolean) return String
+   is
+      pragma Unreferenced (Self, Quote);
+   begin
+      if Trim (Value, Ada.Strings.Both) = "" then
+         return "<null/>";
+         --  XML null, not to be confused with SQL NULL.
+      else
+         return Value;
+      end if;
+   end XML_To_SQL;
+
    -------------------
    -- String_To_SQL --
    -------------------

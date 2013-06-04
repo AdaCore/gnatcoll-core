@@ -96,6 +96,8 @@ private package GNATCOLL.SQL.Exec_Private is
       Field : Field_Index) return Ada.Calendar.Time;
    function Json_Text_Value
      (Self  : DBMS_Forward_Cursor; Field : Field_Index) return String;
+   function XML_Text_Value
+     (Self  : DBMS_Forward_Cursor; Field : Field_Index) return String;
    --  Default implementation is to assume the DBMS only returns strings, and
    --  we convert them to the appropriate Ada type.
 
