@@ -4,6 +4,16 @@ Known Problems in Gnatcoll 1.5
 
 Copyright (C) 2012-2013, AdaCore
 
+KP-15-M604-002 GNATCOLL.JSON does not decode escaped slash
+
+  Problem:    GNATCOLL.JSON does not accept a string that contains the
+              sequence "\/", although it is valid JSON.
+
+  Status:     Fixed in Gnatcoll 1.6.0
+
+  Workaround: You can remove the \, since / itself is not a special character
+              in any case.
+
 KP-15-M320-003 GNATCOLL.Projects missing error messages
 
   Problem:    When a project has unresolved with statements and other errors,

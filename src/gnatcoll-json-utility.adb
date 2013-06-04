@@ -137,6 +137,9 @@ package body GNATCOLL.JSON.Utility is
                  "Unexpected escape character at end of line";
             end if;
 
+            --  See http://tools.ietf.org/html/rfc4627 for the list of
+            --  characters that can be escaped.
+
             case Text (Idx) is
                when 'u' | 'U' =>
                   declare
@@ -155,6 +158,8 @@ package body GNATCOLL.JSON.Utility is
 
                when '"' =>
                   Append (Unb, '"');
+               when '/' =>
+                  Append (Unb, '/');
                when '\' =>
                   Append (Unb, '\');
                when 'b' =>
