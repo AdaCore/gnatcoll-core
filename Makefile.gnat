@@ -8,6 +8,7 @@ GNAT_SOURCES_FOR_GNATCOLL= \
   csets.ads csets.adb \
   debug.ads debug.adb \
   einfo.ads einfo.adb \
+  elists.ads elists.adb \
   errout.ads errout.adb \
   erroutc.ads erroutc.adb \
   errutil.ads errutil.adb \
