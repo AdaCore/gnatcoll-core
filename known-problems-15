@@ -4,6 +4,15 @@ Known Problems in Gnatcoll 1.5
 
 Copyright (C) 2012-2013, AdaCore
 
+KP-15-M605-001 GNATCOLL.JSON parsing string ending with \\
+
+  Problem:    GNATCOLL.JSON fails parsing a string that ends with a backslash
+              as in "test\\".
+
+  Status:     Fixed in Gnatcoll 1.6.0
+
+  Workaround: None
+
 KP-15-M604-002 GNATCOLL.JSON does not decode escaped slash
 
   Problem:    GNATCOLL.JSON does not accept a string that contains the

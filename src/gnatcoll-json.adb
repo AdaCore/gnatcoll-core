@@ -153,8 +153,11 @@ package body GNATCOLL.JSON is
          Prev := Idx.all;
          while Idx.all < Strm'Last loop
             Next_Char;
-            exit when Strm (Idx.all) = '"'
-              and then Strm (Idx.all - 1) /= '\';
+            if Strm (Idx.all) = '\' then
+               Next_Char;
+            elsif Strm (Idx.all) = '"' then
+               exit;
+            end if;
          end loop;
 
          if Strm (Idx.all) /= '"' then
