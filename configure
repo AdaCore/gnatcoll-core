@@ -4309,9 +4309,11 @@ else
 $as_echo_n "checking for default gtk+ version... " >&6; }
             # Detect the version we should use, from the system
             for WITH_GTK in "$CONFIGURE_SWITCH_WITH_GTK" "3.0" "2.0" "no"; do
-                GTK_PREFIX=`$PKG_CONFIG gtk+-${WITH_GTK} --variable=prefix`
-                if test "$GTK_PREFIX" != ""; then
-                   break
+                if test "$WITH_GTK" != ""; then
+                   GTK_PREFIX=`$PKG_CONFIG gtk+-${WITH_GTK} --variable=prefix`
+                   if test "$GTK_PREFIX" != ""; then
+                      break
+                   fi
                 fi
             done
             { $as_echo "$as_me:${as_lineno-$LINENO}: result: $WITH_GTK" >&5

@@ -1097,9 +1097,11 @@ AC_HELP_STRING(
             AC_MSG_CHECKING(for default gtk+ version)
             # Detect the version we should use, from the system
             for WITH_GTK in "$CONFIGURE_SWITCH_WITH_GTK" "3.0" "2.0" "no"; do
-                GTK_PREFIX=`$PKG_CONFIG gtk+-${WITH_GTK} --variable=prefix`
-                if test "$GTK_PREFIX" != ""; then
-                   break
+                if test "$WITH_GTK" != ""; then
+                   GTK_PREFIX=`$PKG_CONFIG gtk+-${WITH_GTK} --variable=prefix`
+                   if test "$GTK_PREFIX" != ""; then
+                      break
+                   fi
                 fi
             done
             AC_MSG_RESULT($WITH_GTK)
