@@ -47,6 +47,11 @@ PyObject* ada_pyobject_from_widget (GObject* object) {
    return pygobject_new (object);
 }
 
+GdkWindow* ada_window_from_pyobject (PyObject* object) {
+   GObject* obj = ada_widget_from_pyobject (object);
+   return (GdkWindow*)obj;
+}
+
 char* ada_load_pygtk() {
 #ifdef PYGTK
    return "import pygtk; pygtk.require('2.0'); import gtk";

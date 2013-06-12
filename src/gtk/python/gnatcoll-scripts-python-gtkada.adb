@@ -89,6 +89,27 @@ package body GNATCOLL.Scripts.Python.Gtkada is
          Stub);
    end From_PyGtk;
 
+   ----------------
+   -- From_PyGtk --
+   ----------------
+
+   function From_PyGtk
+     (Data : Callback_Data'Class;
+      N    : Positive) return Gdk.Gdk_Window
+   is
+      function Internal (Object : PyObject) return Gdk.Gdk_Window;
+      pragma Import (C, Internal, "ada_window_from_pyobject");
+      P : PyObject;
+      Success : Boolean;
+   begin
+      Get_Param (Python_Callback_Data (Data), N, P, Success);
+      if Success then
+         return Internal (P);
+      else
+         return null;
+      end if;
+   end From_PyGtk;
+
    ------------------------
    -- Init_PyGtk_Support --
    ------------------------

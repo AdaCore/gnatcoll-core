@@ -25,6 +25,7 @@
 --  In particular, these provide additional support for pygtk
 
 with Glib.Object;
+with Gdk;
 
 package GNATCOLL.Scripts.Python.Gtkada is
 
@@ -48,6 +49,9 @@ package GNATCOLL.Scripts.Python.Gtkada is
    function From_PyGtk
      (Data : Callback_Data'Class;
       N    : Positive) return Glib.Object.GObject;
+   function From_PyGtk
+     (Data : Callback_Data'Class;
+      N    : Positive) return Gdk.Gdk_Window;
    --  Return the Gtk object encapsulated inside the pygtk object given in the
    --  N-th argument
 
