@@ -49,7 +49,11 @@ PyObject* ada_pyobject_from_widget (GObject* object) {
 
 GdkWindow* ada_window_from_pyobject (PyObject* object) {
    GObject* obj = ada_widget_from_pyobject (object);
-   return (GdkWindow*)obj;
+   if (GDK_IS_WINDOW(object)) {
+      return (GdkWindow*)obj;
+   } else {
+      return (GdkWindow*)NULL;
+   }
 }
 
 char* ada_load_pygtk() {
