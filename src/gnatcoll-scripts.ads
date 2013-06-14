@@ -840,8 +840,8 @@ package GNATCOLL.Scripts is
    --  interpreter.
 
    procedure Set_As_Default_Console
-     (Console        : access Virtual_Console_Record;
-      Script         : Scripting_Language := null) is null;
+     (Console : access Virtual_Console_Record;
+      Script  : Scripting_Language := null) is null;
    --  Called when Console becomes the default console for the scripting
    --  language Script.
    --  Script might be null when the Console is no longer the default console
@@ -933,14 +933,14 @@ package GNATCOLL.Scripts is
    type Command_Descr;
    type Command_Descr_Access is access all Command_Descr;
    type Command_Descr (Length : Natural) is record
-      Command         : String (1 .. Length);
-      Handler         : Module_Command_Function;
-      Class           : Class_Type := No_Class;
-      Params          : Param_Array_Access;
-      Static_Method   : Boolean := False;
-      Minimum_Args    : Natural := 0;
-      Maximum_Args    : Natural := 0;
-      Next            : Command_Descr_Access;
+      Command       : String (1 .. Length);
+      Handler       : Module_Command_Function;
+      Class         : Class_Type := No_Class;
+      Params        : Param_Array_Access;
+      Static_Method : Boolean := False;
+      Minimum_Args  : Natural := 0;
+      Maximum_Args  : Natural := 0;
+      Next          : Command_Descr_Access;
    end record;
    --  Params is left to null if the user did not specify the name of
    --  parameters in the call to Register_Command (this is different from
@@ -960,11 +960,11 @@ package GNATCOLL.Scripts is
    type Property_Descr;
    type Property_Descr_Access is access all Property_Descr;
    type Property_Descr (Length : Natural) is record
-      Name    : String (1 .. Length);
-      Class   : Class_Type;
-      Setter  : Module_Command_Function;
-      Getter  : Module_Command_Function;
-      Next    : Property_Descr_Access;
+      Name   : String (1 .. Length);
+      Class  : Class_Type;
+      Setter : Module_Command_Function;
+      Getter : Module_Command_Function;
+      Next   : Property_Descr_Access;
    end record;
    --  The setter passes two parameters: first one is the instance, second one
    --  is the value of the property. Note that the property is untyped: you
@@ -981,8 +981,8 @@ package GNATCOLL.Scripts is
    --  the property.
 
    procedure Register_Property
-     (Script   : access Scripting_Language_Record;
-      Prop     : Property_Descr_Access) is abstract;
+     (Script : access Scripting_Language_Record;
+      Prop   : Property_Descr_Access) is abstract;
    --  See documentation of Register_Property applied on the Scripts_Repository
 
    procedure Register_Class
@@ -997,13 +997,13 @@ package GNATCOLL.Scripts is
    --  If Block is true, no command can be executed for this scripting language
 
    procedure Set_Default_Console
-     (Script       : access Scripting_Language_Record;
-      Console      : Virtual_Console);
+     (Script  : access Scripting_Language_Record;
+      Console : Virtual_Console);
    --  Defines the console to use to display output, when none is specified
    --  to Execute_Command below
 
    function Get_Default_Console
-     (Script       : access Scripting_Language_Record) return Virtual_Console;
+     (Script : access Scripting_Language_Record) return Virtual_Console;
    --  Return the default console used for all outputs by this scripting
    --  language
 
@@ -1153,9 +1153,9 @@ package GNATCOLL.Scripts is
    --  Given the name of a script, returns True if the script should be loaded
 
    procedure Load_Directory
-     (Script       : access Scripting_Language_Record;
-      Directory    : GNATCOLL.VFS.Virtual_File;
-      To_Load      : Script_Loader := Load_All'Access) is null;
+     (Script    : access Scripting_Language_Record;
+      Directory : GNATCOLL.VFS.Virtual_File;
+      To_Load   : Script_Loader := Load_All'Access) is null;
    --  Load all scripts found in the given directory, and for which To_Load
    --  returns True.
 
@@ -1414,7 +1414,7 @@ private
 
    overriding procedure Adjust   (CI : in out Class_Instance_Data);
    overriding procedure Finalize (CI : in out Class_Instance_Data);
-   function "="       (CI1, CI2 : Class_Instance_Data) return Boolean;
+   function "=" (CI1, CI2 : Class_Instance_Data) return Boolean;
    --  Takes care of the reference counting for a Class_Instance
 
    No_Class_Instance_Data : constant Class_Instance_Data :=
@@ -1437,8 +1437,7 @@ private
       List : Instance_Array_Access;
    end record;
 
-   Null_Instance_List : constant Instance_List :=
-     (List => null);
+   Null_Instance_List : constant Instance_List := (List => null);
 
    type Callback_Data_Array is
      array (Natural range <>) of Callback_Data_Access;
