@@ -438,7 +438,7 @@ package GNATCOLL.Scripts is
    --  following:
    --
    --    procedure Handler (Data : in out Callback_Data'Class; Cmd : String) is
-   --       List : List_Instance := New_List (Get_Script (Data0);
+   --       List : List_Instance := New_List (Get_Script (Data));
    --    begin
    --       Set_Nth_Arg (List, Natural'Last, 12);
    --       Set_Nth_Arg (List, Natural'Last, "value");
