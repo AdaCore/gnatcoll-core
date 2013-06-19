@@ -15,6 +15,12 @@ of the feature.
 New features in 1.6
 -------------------
 
+NF-16-M613-007 Linking with static libiconv (2013-06-19)
+
+   It is now possible to link with a static version of libiconv, to solve
+   link issues with conflicting versions of libiconv. See the
+   --with-iconv=static for configure.
+
 NF-16-M320-028 GNATCOLL.Traces display microseconds precision (2013-03-26)
 
    When the stream DEBUG.MICRO_TIME is actived, the time displayed by
