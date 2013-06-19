@@ -257,6 +257,7 @@ AC_DEFUN(AM_PATH_ICONV,
    LIB_ICONV=""
    PATH_ICONV=""
    WITH_ICONV=yes
+   ICONV_STATIC=no
 
    AC_ARG_WITH(iconv,
      [AC_HELP_STRING(
@@ -274,6 +275,25 @@ AC_HELP_STRING(
           # Explicitly disabled by user (--with-iconv=no or --without-iconv)
           AC_MSG_RESULT([no, disabled by user])
           WITH_ICONV=no
+          ;;
+
+       static)
+          WITH_ICONV=no
+          ICONV_STATIC=yes
+          LD_LIBRARY_PATH="/opt/local/lib:/usr/local/lib:/usr/lib:/lib:$LD_LIBRARY_PATH"
+          as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
+          for dir in $LD_LIBRARY_PATH ; do
+              if test -f "$dir/libiconv.a"; then
+                 am_path_iconv=$dir
+                 WITH_ICONV=yes
+                 PATH_ICONV=""
+                 LIB_ICONV="$dir/libiconv.a"
+                 LIBS="$LIBS $LIB_ICONV"
+                 INCLUDE_ICONV="-I$dir/../include"
+                 break
+              fi
+          done
+          IFS=$as_save_IFS
           ;;
 
        yes)
@@ -335,32 +355,25 @@ AC_HELP_STRING(
             [#include <iconv.h>],
             [iconv_open(0,0)])])
 
-      AC_MSG_CHECKING([for library containing iconv_open])
-      for ac_lib in '' iconv ; do
-          if test -z "$ac_lib" ; then
-             switch=""
-          else
-             switch="-l$ac_lib"
-          fi
-          LIBS="$switch $LIBS"
-          AC_LINK_IFELSE([],
-             [WITH_ICONV=yes;
-              LIB_ICONV="$switch";
-              break],
-             [WITH_ICONV=no])
-      done
-      AC_MSG_RESULT([$WITH_ICONV $LIB_ICONV])
+      if test "$ICONV_STATIC" = "no" ; then
+         AC_MSG_CHECKING([for library containing iconv_open])
+         for ac_lib in '' iconv ; do
+             if test -z "$ac_lib" ; then
+                switch=""
+             else
+                switch="-l$ac_lib"
+             fi
+             LIBS="$switch $LIBS"
+             AC_LINK_IFELSE([],
+                [WITH_ICONV=yes;
+                 LIB_ICONV="$switch";
+                 break],
+                [WITH_ICONV=no])
+         done
+         AC_MSG_RESULT([$WITH_ICONV $LIB_ICONV])
+      fi
       rm -f conftest.$ac_objext conftest$ac_exeext
    
-      #AC_SEARCH_LIBS(
-      #   iconv_open, [iconv], 
-      #   [AC_CHECK_HEADER(
-      #      [iconv.h],
-      #      [WITH_ICONV=yes;
-      #       if test "$ac_cv_search_iconv_open" != "none required" ; then
-      #          LIB_ICONV="$ac_cv_search_iconv_open"
-      #       fi])],
-      #   [WITH_ICONV=no])
       LIBS="$_save_LIBS"     # Should we leave -liconv ?
 
       if test x"$WITH_ICONV" = xno -a x"$NEED_ICONV" = xyes ; then

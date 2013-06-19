@@ -26,6 +26,19 @@ If your application depends on having a working libiconv, you can specify
 `--with-iconv` or `--with-iconv=PATH` to GNATCOLL's configure. This will
 ensure that configure fails if iconv is not found on the system.
 
+An alternative is to use `--with-iconv=static` to force the use of a static
+library for iconv. This might be needed on some systems if you have link
+errors in your application: some versions of libiconv define symbols such
+as `__iconv_open` whereas others define `__libiconv_open`, and it is mandatory
+to use the include file corresponding to the linked version of libiconv.
+For instance, on OSX, the system provides /usr/include/iconv.h and
+/usr/lib/libiconv.dylib, but you might also have the GNU version of libiconv
+in /opt/local/include/iconv.h and /opt/local/lib/libiconv.dylib.
+Unfortunately, these directories might also contain other libraries you
+depend and it sometimes happens that /usr/include/iconv.h is used when
+building, and /opt/local/lib/libiconv.dylib when linking. These are
+incompatible. Using shared libraries solves this issue.
+
 On the other hand, you can avoid compiling GNATCOLL.Iconv altogether by
 specifying `--without-iconv`. This however does not save much.
 
