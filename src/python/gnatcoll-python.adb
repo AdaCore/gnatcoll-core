@@ -710,9 +710,14 @@ package body GNATCOLL.Python is
       function Internal
         (Dict : PyObject; Pos, Key, Value : System.Address) return Integer;
       pragma Import (C, Internal, "PyDict_Next");
+
+      P : Interfaces.C.size_t := Interfaces.C.size_t (Pos);
+
    begin
-      if Internal (Dict, Pos'Address, Key'Address, Value'Address) = 0 then
+      if Internal (Dict, P'Address, Key'Address, Value'Address) = 0 then
          Pos := -1;
+      else
+         Pos := Integer (P);
       end if;
    end PyDict_Next;
 
