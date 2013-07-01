@@ -4,6 +4,14 @@ Known Problems in Gnatcoll 1.5
 
 Copyright (C) 2012-2013, AdaCore
 
+KP-15-M701-028 PyDict_Next iterator won't iterate
+
+  Problem:    On 64 bits OS the iterator won't iterate on Python dictionary.
+
+  Status:     Fixed in Gnatcoll 1.6.0
+
+  Workaround: Use your own import routine with proper type for (size_t) Pos.
+
 KP-15-M605-001 GNATCOLL.JSON parsing string ending with \\
 
   Problem:    GNATCOLL.JSON fails parsing a string that ends with a backslash
