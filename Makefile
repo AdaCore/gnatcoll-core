@@ -107,8 +107,7 @@ install:
 	${CP} -rf examples/* ${datadir}/examples/${TARNAME}
 
 	${MKDIR} ${datadir}/gps/plug-ins
-	${CP} distrib/gnatcoll_gps.xml ${datadir}/gps/plug-ins
-	${CP} distrib/gnatcoll_runtime.xml ${datadir}/gps/plug-ins
+	${CP} -r distrib/gnatcoll ${datadir}/gps/support/core/
 
 	${MKDIR} ${datadir}/doc/${TARNAME}/html
 	-${CP} -r docs/_build/html/* ${datadir}/doc/${TARNAME}/html 2>/dev/null

@@ -29,8 +29,8 @@ def recursive_ls (dir):
    return result
 
 list = recursive_ls ("../src")
-out = file ("gnatcoll_runtime.xml", "w")
-out.write ("""<?xml version="1.0"?>
+out = file ("gnatcoll/runtime.py", "w")
+out.write ("""XML = r'''<?xml version="1.0"?>
 <GPS>
 """)
 
@@ -54,5 +54,8 @@ for pkg, f in sorted (list):
 
 """ % {"file":f, "menu":menu, "package":pkg})
 
-out.write ("""</GPS>""")
+out.write ("""</GPS>'''
+import GPS
+GPS.parse_xml(XML)
+""")
 out.close ()
