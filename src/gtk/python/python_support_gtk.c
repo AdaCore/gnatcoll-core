@@ -88,6 +88,10 @@ void* ada_pyobject_from_widget (GObject* object) {
    return NULL;
 }
 
+GdkWindow* ada_window_from_pyobject (void* object) {
+   return NULL;
+}
+
 char* ada_load_pygtk() {
    return "";
 }
