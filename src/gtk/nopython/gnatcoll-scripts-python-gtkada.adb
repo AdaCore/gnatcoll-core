@@ -49,4 +49,13 @@ package body GNATCOLL.Scripts.Python.Gtkada is
       return null;
    end From_PyGtk;
 
+   function From_PyGtk
+     (Data : Callback_Data'Class;
+      N    : Positive) return Gdk.Gdk_Window
+   is
+      pragma Unreferenced (Data, N);
+   begin
+      return null;
+   end From_PyGtk;
+
 end GNATCOLL.Scripts.Python.Gtkada;

@@ -22,6 +22,7 @@
 ------------------------------------------------------------------------------
 
 with Glib.Object;
+with Gdk;
 
 package GNATCOLL.Scripts.Python.Gtkada is
    procedure Init_PyGtk_Support
@@ -33,5 +34,7 @@ package GNATCOLL.Scripts.Python.Gtkada is
      (Data : Callback_Data'Class;
       N    : Positive) return Glib.Object.GObject;
    --  Does nothing, since python support was not compiled in
-
+   function From_PyGtk
+     (Data : Callback_Data'Class;
+      N    : Positive) return Gdk.Gdk_Window;
 end GNATCOLL.Scripts.Python.Gtkada;
