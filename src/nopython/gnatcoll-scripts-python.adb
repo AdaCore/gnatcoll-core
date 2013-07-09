@@ -37,6 +37,10 @@ package body GNATCOLL.Scripts.Python is
       null;
    end Register_Python_Scripting;
 
+   ---------------------------------
+   -- Unregister_Python_Scripting --
+   ---------------------------------
+
    procedure Unregister_Python_Scripting
      (Repo : access Scripts.Scripts_Repository_Record'Class)
    is

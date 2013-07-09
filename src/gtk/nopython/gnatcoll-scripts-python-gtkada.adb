@@ -23,6 +23,10 @@
 
 package body GNATCOLL.Scripts.Python.Gtkada is
 
+   ------------------------
+   -- Init_PyGtk_Support --
+   ------------------------
+
    procedure Init_PyGtk_Support
      (Script : access Scripting_Language_Record'Class)
    is
@@ -30,6 +34,10 @@ package body GNATCOLL.Scripts.Python.Gtkada is
    begin
       null;
    end Init_PyGtk_Support;
+
+   -------------------------
+   -- Add_PyWidget_Method --
+   -------------------------
 
    procedure Add_PyWidget_Method
      (Repo   : access Scripts_Repository_Record'Class;
@@ -39,6 +47,10 @@ package body GNATCOLL.Scripts.Python.Gtkada is
    begin
       null;
    end Add_PyWidget_Method;
+
+   ----------------
+   -- From_PyGtk --
+   ----------------
 
    function From_PyGtk
      (Data : Callback_Data'Class;
