@@ -106,9 +106,8 @@ install:
 	@# Do not want to copy .svn directories
 	${CP} -rf examples/* ${datadir}/examples/${TARNAME}
 
-	${MKDIR} ${datadir}/gps/plug-ins
-	${CP} distrib/gnatcoll_gps.xml ${datadir}/gps/plug-ins
-	${CP} distrib/gnatcoll_runtime.xml ${datadir}/gps/plug-ins
+	${MKDIR} ${datadir}/gps/support/core/gnatcoll
+	${CP} distrib/gnatcoll/*py ${datadir}/gps/support/core/gnatcoll/
 
 	${MKDIR} ${datadir}/doc/${TARNAME}/html
 	-${CP} -r docs/_build/html/* ${datadir}/doc/${TARNAME}/html 2>/dev/null

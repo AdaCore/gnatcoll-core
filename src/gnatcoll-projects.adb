@@ -2030,15 +2030,14 @@ package body GNATCOLL.Projects is
    function Attribute_Project
      (Project   : Project_Type;
       Attribute : Attribute_Pkg_String;
-      Index     : String := "") return Project_Type is
-
+      Index     : String := "") return Project_Type
+   is
       Value : constant Variable_Value :=
                 Attribute_Value (Project, String (Attribute), Index);
       Tree : constant Project_Tree := (Data => Project.Data.Tree);
    begin
       if Value.Project = Prj.No_Project then
          return No_Project;
-
       else
          declare
             Name : constant String := Get_Name_String (Value.Project.Name);
@@ -3380,10 +3379,13 @@ package body GNATCOLL.Projects is
      (Self : Project_Tree; External_Name : String)
       return Scenario_Variable
    is
-      Ext  : constant Name_Id := Get_String (External_Name);
+      E : constant String := External_Name;
+      Ext  : Name_Id;
       List : Scenario_Variable_Array_Access;
       Var  : Scenario_Variable;
    begin
+      Ext := Get_String (E);
+
       if Self.Data.Scenario_Variables = null then
          Compute_Scenario_Variables (Self.Data);
       end if;
@@ -3397,7 +3399,7 @@ package body GNATCOLL.Projects is
       Var := Scenario_Variable'
         (Name        => Ext,
          Default     => No_Name,
-         String_Type => Empty_Node,
+         String_Type => Empty_Node,   --   ??? Won't be able to edit it
          Value       => No_Name);
 
       List := Self.Data.Scenario_Variables;

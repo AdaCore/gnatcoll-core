@@ -1,4 +1,4 @@
-<?xml version="1.0"?>
+XML = r'''<?xml version="1.0"?>
 <GPS>
   <documentation_file>
      <shell>Editor.edit "gnatcoll-any_types.ads"</shell>
@@ -25,6 +25,13 @@
      <shell>Editor.edit "gnatcoll-boyer_moore.ads"</shell>
      <descr>GNATCOLL.Boyer_Moore</descr>
      <menu>/Help/Gnat Runtime/GNATCOLL/Boyer__Moore</menu>
+     <category>Gnat Components Collection</category>
+  </documentation_file>
+
+  <documentation_file>
+     <shell>Editor.edit "gnatcoll-config.ads"</shell>
+     <descr>GNATCOLL.Config</descr>
+     <menu>/Help/Gnat Runtime/GNATCOLL/Config</menu>
      <category>Gnat Components Collection</category>
   </documentation_file>
 
@@ -120,6 +127,13 @@
   </documentation_file>
 
   <documentation_file>
+     <shell>Editor.edit "gnatcoll-geometry.ads"</shell>
+     <descr>GNATCOLL.Geometry</descr>
+     <menu>/Help/Gnat Runtime/GNATCOLL/Geometry</menu>
+     <category>Gnat Components Collection</category>
+  </documentation_file>
+
+  <documentation_file>
      <shell>Editor.edit "gnatcoll-io-native.ads"</shell>
      <descr>GNATCOLL.IO.Native</descr>
      <menu>/Help/Gnat Runtime/GNATCOLL/IO/Native</menu>
@@ -148,6 +162,20 @@
   </documentation_file>
 
   <documentation_file>
+     <shell>Editor.edit "gnatcoll-iconv.ads"</shell>
+     <descr>GNATCOLL.Iconv</descr>
+     <menu>/Help/Gnat Runtime/GNATCOLL/Iconv</menu>
+     <category>Gnat Components Collection</category>
+  </documentation_file>
+
+  <documentation_file>
+     <shell>Editor.edit "gnatcoll-json.ads"</shell>
+     <descr>GNATCOLL.JSON</descr>
+     <menu>/Help/Gnat Runtime/GNATCOLL/JSON</menu>
+     <category>Gnat Components Collection</category>
+  </documentation_file>
+
+  <documentation_file>
      <shell>Editor.edit "gnatcoll-memory.ads"</shell>
      <descr>GNATCOLL.Memory</descr>
      <menu>/Help/Gnat Runtime/GNATCOLL/Memory</menu>
@@ -158,6 +186,20 @@
      <shell>Editor.edit "gnatcoll-mmap.ads"</shell>
      <descr>GNATCOLL.Mmap</descr>
      <menu>/Help/Gnat Runtime/GNATCOLL/Mmap</menu>
+     <category>Gnat Components Collection</category>
+  </documentation_file>
+
+  <documentation_file>
+     <shell>Editor.edit "gnatcoll-paragraph_filling.ads"</shell>
+     <descr>GNATCOLL.Paragraph_Filling</descr>
+     <menu>/Help/Gnat Runtime/GNATCOLL/Paragraph__Filling</menu>
+     <category>Gnat Components Collection</category>
+  </documentation_file>
+
+  <documentation_file>
+     <shell>Editor.edit "gnatcoll-pools.ads"</shell>
+     <descr>GNATCOLL.Pools</descr>
+     <menu>/Help/Gnat Runtime/GNATCOLL/Pools</menu>
      <category>Gnat Components Collection</category>
   </documentation_file>
 
@@ -253,6 +295,27 @@
   </documentation_file>
 
   <documentation_file>
+     <shell>Editor.edit "gnatcoll-readline.ads"</shell>
+     <descr>GNATCOLL.Readline</descr>
+     <menu>/Help/Gnat Runtime/GNATCOLL/Readline</menu>
+     <category>Gnat Components Collection</category>
+  </documentation_file>
+
+  <documentation_file>
+     <shell>Editor.edit "gnatcoll-refcount.ads"</shell>
+     <descr>GNATCOLL.Refcount</descr>
+     <menu>/Help/Gnat Runtime/GNATCOLL/Refcount/&lt;Refcount&gt;</menu>
+     <category>Gnat Components Collection</category>
+  </documentation_file>
+
+  <documentation_file>
+     <shell>Editor.edit "gnatcoll-refcount-weakref.ads"</shell>
+     <descr>GNATCOLL.Refcount.Weakref</descr>
+     <menu>/Help/Gnat Runtime/GNATCOLL/Refcount/Weakref</menu>
+     <category>Gnat Components Collection</category>
+  </documentation_file>
+
+  <documentation_file>
      <shell>Editor.edit "gnatcoll-remote.ads"</shell>
      <descr>GNATCOLL.Remote</descr>
      <menu>/Help/Gnat Runtime/GNATCOLL/Remote/&lt;Remote&gt;</menu>
@@ -281,16 +344,58 @@
   </documentation_file>
 
   <documentation_file>
+     <shell>Editor.edit "gnatcoll-sql-inspect.ads"</shell>
+     <descr>GNATCOLL.SQL.Inspect</descr>
+     <menu>/Help/Gnat Runtime/GNATCOLL/SQL/Inspect</menu>
+     <category>Gnat Components Collection</category>
+  </documentation_file>
+
+  <documentation_file>
+     <shell>Editor.edit "gnatcoll-sql-orm.ads"</shell>
+     <descr>GNATCOLL.SQL.Orm</descr>
+     <menu>/Help/Gnat Runtime/GNATCOLL/SQL/Orm/&lt;Orm&gt;</menu>
+     <category>Gnat Components Collection</category>
+  </documentation_file>
+
+  <documentation_file>
+     <shell>Editor.edit "gnatcoll-sql-orm-impl.ads"</shell>
+     <descr>GNATCOLL.SQL.Orm.Impl</descr>
+     <menu>/Help/Gnat Runtime/GNATCOLL/SQL/Orm/Impl</menu>
+     <category>Gnat Components Collection</category>
+  </documentation_file>
+
+  <documentation_file>
      <shell>Editor.edit "gnatcoll-sql-postgres.ads"</shell>
      <descr>GNATCOLL.SQL.Postgres</descr>
-     <menu>/Help/Gnat Runtime/GNATCOLL/SQL/Postgres</menu>
+     <menu>/Help/Gnat Runtime/GNATCOLL/SQL/Postgres/&lt;Postgres&gt;</menu>
+     <category>Gnat Components Collection</category>
+  </documentation_file>
+
+  <documentation_file>
+     <shell>Editor.edit "gnatcoll-sql-postgres-gnade.ads"</shell>
+     <descr>GNATCOLL.SQL.Postgres.Gnade</descr>
+     <menu>/Help/Gnat Runtime/GNATCOLL/SQL/Postgres/Gnade</menu>
+     <category>Gnat Components Collection</category>
+  </documentation_file>
+
+  <documentation_file>
+     <shell>Editor.edit "gnatcoll-sql-sessions.ads"</shell>
+     <descr>GNATCOLL.SQL.Sessions</descr>
+     <menu>/Help/Gnat Runtime/GNATCOLL/SQL/Sessions</menu>
      <category>Gnat Components Collection</category>
   </documentation_file>
 
   <documentation_file>
      <shell>Editor.edit "gnatcoll-sql-sqlite.ads"</shell>
      <descr>GNATCOLL.SQL.Sqlite</descr>
-     <menu>/Help/Gnat Runtime/GNATCOLL/SQL/Sqlite</menu>
+     <menu>/Help/Gnat Runtime/GNATCOLL/SQL/Sqlite/&lt;Sqlite&gt;</menu>
+     <category>Gnat Components Collection</category>
+  </documentation_file>
+
+  <documentation_file>
+     <shell>Editor.edit "gnatcoll-sql-sqlite-gnade.ads"</shell>
+     <descr>GNATCOLL.SQL.Sqlite.Gnade</descr>
+     <menu>/Help/Gnat Runtime/GNATCOLL/SQL/Sqlite/Gnade</menu>
      <category>Gnat Components Collection</category>
   </documentation_file>
 
@@ -365,6 +470,13 @@
   </documentation_file>
 
   <documentation_file>
+     <shell>Editor.edit "gnatcoll-symbols.ads"</shell>
+     <descr>GNATCOLL.Symbols</descr>
+     <menu>/Help/Gnat Runtime/GNATCOLL/Symbols</menu>
+     <category>Gnat Components Collection</category>
+  </documentation_file>
+
+  <documentation_file>
      <shell>Editor.edit "gnatcoll-templates.ads"</shell>
      <descr>GNATCOLL.Templates</descr>
      <menu>/Help/Gnat Runtime/GNATCOLL/Templates</menu>
@@ -427,4 +539,27 @@
      <category>Gnat Components Collection</category>
   </documentation_file>
 
-</GPS>
+  <documentation_file>
+     <shell>Editor.edit "gnatcoll-xref.ads"</shell>
+     <descr>GNATCOLL.Xref</descr>
+     <menu>/Help/Gnat Runtime/GNATCOLL/Xref/&lt;Xref&gt;</menu>
+     <category>Gnat Components Collection</category>
+  </documentation_file>
+
+  <documentation_file>
+     <shell>Editor.edit "gnatcoll-xref-database.ads"</shell>
+     <descr>GNATCOLL.Xref.Database</descr>
+     <menu>/Help/Gnat Runtime/GNATCOLL/Xref/Database</menu>
+     <category>Gnat Components Collection</category>
+  </documentation_file>
+
+  <documentation_file>
+     <shell>Editor.edit "gnatcoll-xref-database_names.ads"</shell>
+     <descr>GNATCOLL.Xref.Database_Names</descr>
+     <menu>/Help/Gnat Runtime/GNATCOLL/Xref/Database__Names</menu>
+     <category>Gnat Components Collection</category>
+  </documentation_file>
+
+</GPS>'''
+import GPS
+GPS.parse_xml(XML)

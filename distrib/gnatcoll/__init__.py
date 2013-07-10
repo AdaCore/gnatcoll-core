@@ -1,5 +1,13 @@
-<?xml version="1.0" ?>
-<!--  This file makes the gnatcoll documentation available from GPS -->
+"""
+This file makes the GNATCOLL documentation available from GPS
+"""
+
+
+
+import GPS
+from . import runtime
+
+XML = r"""<?xml version="1.0" ?>
 <GPS>
   <doc_path>share/doc/gnatcoll</doc_path>
   <submenu after="GNAT">
@@ -12,3 +20,6 @@
      <menu>/Help/Gnat Components/Gnat Components User's Guide</menu>
   </documentation_file>
 </GPS>
+"""
+
+GPS.parse_xml(XML)
