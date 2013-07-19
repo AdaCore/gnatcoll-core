@@ -28,7 +28,6 @@ with Ada.Characters.Handling;   use Ada.Characters.Handling;
 with Ada.Strings.Fixed;         use Ada.Strings.Fixed;
 with Ada.Text_IO;               use Ada.Text_IO;
 with Ada.Unchecked_Deallocation;
-with GNAT.Traceback.Symbolic;
 
 with GNAT.Calendar;             use GNAT.Calendar;
 with GNAT.Calendar.Time_IO;     use GNAT.Calendar.Time_IO;
@@ -729,9 +728,6 @@ package body GNATCOLL.Traces is
       Trace (Handle.Exception_Handle,
              Msg & Ada.Exceptions.Exception_Information (E),
              Color => Color);
-
-      Trace (Handle.Exception_Handle,
-             GNAT.Traceback.Symbolic.Symbolic_Traceback (E));
    end Trace;
 
    -----------
