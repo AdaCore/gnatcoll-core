@@ -451,8 +451,8 @@ package GNATCOLL.Email is
    procedure Convert_To_Single_Part (Msg : in out Message'Class);
    --  Try to convert Msg to a single part message. This is only doable if
    --  there is a single textual part, or the message is already single part.
-   --  If Msg contains a single part
-   --  which is in turn a multipart Msg, it gets processed as well.
+   --  If Msg contains a single part which is in turn a multipart Msg, it gets
+   --  processed as well.
    --  All other cases will do nothing.
 
    procedure Set_Preamble (Msg : in out Message'Class; Preamble : String);
