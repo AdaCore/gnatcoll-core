@@ -172,3 +172,4 @@
 |--------------------+-------------------------+--------------------+---+-----------------------------------------------------|
 | INDEX:             | "file"                  | entity_refs_file   |   | Needed during parsing to cleanup outdated ALI files |
 | INDEX:             | "entity"                | entity_refs_entity |   | Not needed during parsing                           |
+| INDEX:             | line,column             | entity_refs_loc    |   | Not needed during parsing                           |
