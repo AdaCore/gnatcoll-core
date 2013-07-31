@@ -221,13 +221,15 @@ package GNATCOLL.Xref is
       Name   : String;   --  UTF-8 encoded
       File   : String;
       Line   : Integer := -1;
-      Column : Visible_Column := -1) return Entity_Reference;
+      Column : Visible_Column := -1;
+      Approximate_Search_Fallback : Boolean := True) return Entity_Reference;
    function Get_Entity
      (Self   : Xref_Database;
       Name   : String;   --  UTF-8 encoded
       File   : GNATCOLL.VFS.Virtual_File;
       Line   : Integer := -1;
-      Column : Visible_Column := -1) return Entity_Reference;
+      Column : Visible_Column := -1;
+      Approximate_Search_Fallback : Boolean := True) return Entity_Reference;
    --  Return the entity that has a reference at the given location.
    --  When the file is passed as a string, it is permissible to pass only the
    --  basename (or a string like "partial/path/basename") that will be matched

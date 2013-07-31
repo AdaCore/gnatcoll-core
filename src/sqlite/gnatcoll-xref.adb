@@ -3466,7 +3466,8 @@ package body GNATCOLL.Xref is
       Name   : String;
       File   : String;
       Line   : Integer := -1;
-      Column : Visible_Column := -1) return Entity_Reference
+      Column : Visible_Column := -1;
+      Approximate_Search_Fallback : Boolean := True) return Entity_Reference
    is
       Distance : Natural := Integer'Last;
       Best_Ref : Entity_Reference := No_Entity_Reference;
@@ -3657,7 +3658,7 @@ package body GNATCOLL.Xref is
          return Best_Ref;
       end if;
 
-      if Line = -1 then
+      if Line = -1 or else not Approximate_Search_Fallback then
          return No_Entity_Reference;
       end if;
 
@@ -3719,11 +3720,13 @@ package body GNATCOLL.Xref is
       Name   : String;
       File   : GNATCOLL.VFS.Virtual_File;
       Line   : Integer := -1;
-      Column : Visible_Column := -1) return Entity_Reference is
+      Column : Visible_Column := -1;
+      Approximate_Search_Fallback : Boolean := True) return Entity_Reference is
    begin
       return Get_Entity
         (Self, Name, +File.Unix_Style_Full_Name (Normalize => True),
-         Line, Column);
+         Line, Column,
+         Approximate_Search_Fallback => Approximate_Search_Fallback);
    end Get_Entity;
 
    -----------------
