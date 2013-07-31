@@ -3226,6 +3226,7 @@ package body GNATCOLL.Xref is
 
          if Destroy_Indexes then
             DB.Execute ("DROP INDEX entity_refs_entity");
+            DB.Execute ("DROP INDEX entity_refs_loc");
             DB.Execute ("DROP INDEX e2e_from;");
             DB.Execute ("DROP INDEX e2e_to;");
          end if;
