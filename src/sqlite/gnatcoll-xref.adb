@@ -430,6 +430,31 @@ package body GNATCOLL.Xref is
         On_Server => False, Name => "e2e_to");
    --  Cannot be prepared because there are risks of concurrent calls.
 
+   Query_Fields : constant Prepared_Statement :=
+     Prepare
+       (SQL_Select
+           (Database.Entities.Id
+            & Database.Entities.Name
+            & Database.Entities.Decl_Line
+            & Database.Entities.Decl_Column,
+            From => Database.Entities & Database.Entity_Kinds,
+            Where => Database.Entities.Decl_Caller = Integer_Param (1)
+            and Database.Entities.Kind = Database.Entity_Kinds.Id
+            and Database.Entity_Kinds.Is_Subprogram = False
+            and Database.Entity_Kinds.Is_Type = False
+            and SQL_Not_In
+              (Database.Entities.Id,
+               SQL_Select
+                 (Database.E2e.toEntity,
+                  From => Database.E2e,
+                  Where => Database.E2e.Kind = E2e_Has_Discriminant
+                    and Database.E2e.fromEntity = Integer_Param (1))),
+            Order_By =>
+             Database.Entities.Name & Database.Entities.Decl_Line),
+        On_Server => False, Name => "fields");
+      --  We need to also omit subprograms, which in some languages like
+      --  Java and C++ are declared within the scope of the class.
+
    Query_Overriding_Parameters : constant Prepared_Statement :=
      Prepare
        (SQL_Select
@@ -4838,32 +4863,8 @@ package body GNATCOLL.Xref is
       Entity : Entity_Information;
       Cursor : out Entities_Cursor'Class) is
    begin
-      --  We need to also omit subprograms, which in some languages like
-      --  Java and C++ are declared within the scope of the class.
-
       Cursor.DBCursor.Fetch
-        (Self.DB,
-         SQL_Select
-           (Database.Entities.Id
-            & Database.Entities.Name
-            & Database.Entities.Decl_Line
-            & Database.Entities.Decl_Column,
-            From => Database.Entities & Database.Entity_Kinds,
-            Where => Database.Entities.Decl_Caller = Integer_Param (1)
-            and Database.Entities.Kind = Database.Entity_Kinds.Id
-            and Database.Entity_Kinds.Is_Subprogram = False
-            and Database.Entity_Kinds.Is_Type = False
-            and SQL_Not_In
-              (Database.Entities.Id,
-               SQL_Select
-                 (Database.E2e.toEntity,
-                  From => Database.E2e,
-                  Where => Database.E2e.Kind = E2e_Has_Discriminant
-                    and Database.E2e.fromEntity = Integer_Param (1))),
-
-            Order_By =>
-              Database.Entities.Name & Database.Entities.Decl_Line),
-         Params => (1 => +Entity.Id));
+        (Self.DB, Query_Fields, Params => (1 => +Entity.Id));
    end Fields;
 
    --------------
