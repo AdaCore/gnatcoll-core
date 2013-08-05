@@ -737,44 +737,68 @@ package body GNATCOLL.Xref is
    pragma Unreferenced (Q_References_And_Kind);
    --  Cannot be prepared because there are risks of concurrent calls.
 
-   Q_Bodies : constant Prepared_Statement :=
+   Q_Bodies_List : constant SQL_Field_List :=
+     To_List
+       ((Q_Ref_File_Id => +Database.Files.Id,
+         Q_Ref_File    => +Database.Files.Path,
+         Q_Ref_Line    => +Database.Entity_Refs.Line,
+         Q_Ref_Col     => +Database.Entity_Refs.Column,
+         Q_Ref_Kind    => +Database.Reference_Kinds.Display,
+         Q_Ref_Caller  => +Database.Entity_Refs.Caller,
+         Q_Ref_Entity  => +Database.Entity_Refs.Entity,
+         Q_Ref_Kind_Id => +Database.Reference_Kinds.Id,
+         Q_Ref_Is_End_Of_Scope =>
+           +Database.Reference_Kinds.Is_End));
+
+   Q_Bodies_Sub_Mangled : constant SQL_Query :=
+     SQL_Select
+       (Entities2.Id,
+        From => Database.Entities & Entities2,
+        Where => Database.Entities.Id = Integer_Param (1)
+        and Database.Entities.Mangled_Name /= ""
+        and Entities2.Id /= Database.Entities.Id
+        and Entities2.Exported
+        and Entities2.Mangled_Name =
+          Database.Entities.Mangled_Name);
+
+   Q_Bodies_Sub_Mangled_Prep : constant Prepared_Statement :=
+     Prepare (Q_Bodies_Sub_Mangled);
+
+   Q_Bodies_Simple : constant Prepared_Statement :=
+     Prepare (SQL_Select
+              (Q_Bodies_List,
+                 From => Database.Entity_Refs & Database.Files
+                 & Database.Reference_Kinds,
+                 Where =>
+                   Database.Entity_Refs.File = Database.Files.Id
+                 and Database.Entity_Refs.Kind = Database.Reference_Kinds.Id
+                 and SQL_In (Database.Reference_Kinds.Id, "'b','c'")
+                 and Database.Entity_Refs.Entity = Integer_Param (1),
+
+                 Order_By => Database.Files.Path
+                 & Database.Entity_Refs.Line & Database.Entity_Refs.Column,
+                 Distinct => True),
+                 On_Server => False, Name => "bodies_simple");
+
+   Q_Bodies_With_Mangled : constant Prepared_Statement :=
      Prepare
        (SQL_Select
-            (To_List
-                 ((Q_Ref_File_Id => +Database.Files.Id,
-                   Q_Ref_File    => +Database.Files.Path,
-                   Q_Ref_Line    => +Database.Entity_Refs.Line,
-                   Q_Ref_Col     => +Database.Entity_Refs.Column,
-                   Q_Ref_Kind    => +Database.Reference_Kinds.Display,
-                   Q_Ref_Caller  => +Database.Entity_Refs.Caller,
-                   Q_Ref_Entity  => +Database.Entity_Refs.Entity,
-                   Q_Ref_Kind_Id => +Database.Reference_Kinds.Id,
-                   Q_Ref_Is_End_Of_Scope =>
-                      +Database.Reference_Kinds.Is_End)),
-             From => Database.Entity_Refs & Database.Files
-             & Database.Reference_Kinds,
-             Where => Database.Entity_Refs.File = Database.Files.Id
+          (Q_Bodies_List,
+           From => Database.Entity_Refs & Database.Files
+           & Database.Reference_Kinds,
+           Where =>
+             Database.Entity_Refs.File = Database.Files.Id
              and Database.Entity_Refs.Kind = Database.Reference_Kinds.Id
              and SQL_In (Database.Reference_Kinds.Id, "'b','c'")
              and (Database.Entity_Refs.Entity = Integer_Param (1)
+               --  Search all matching exported entities
+             or SQL_In
+               (Database.Entity_Refs.Entity, Q_Bodies_Sub_Mangled)),
 
-                  --  Search all matching exported entities
-                  or SQL_In
-                     (Database.Entity_Refs.Entity,
-                      SQL_Select
-                         (Entities2.Id,
-                          From => Database.Entities & Entities2,
-                          Where => Database.Entities.Id = Integer_Param (1)
-                          and Database.Entities.Mangled_Name /= ""
-                          and Entities2.Id /= Database.Entities.Id
-                          and Entities2.Exported
-                          and Entities2.Mangled_Name =
-                             Database.Entities.Mangled_Name))),
-
-             Order_By => Database.Files.Path
-             & Database.Entity_Refs.Line & Database.Entity_Refs.Column,
-             Distinct => True),
-        On_Server => False, Name => "bodies");
+           Order_By => Database.Files.Path
+           & Database.Entity_Refs.Line & Database.Entity_Refs.Column,
+           Distinct => True),
+        On_Server => False, Name => "bodies_with_mangled");
    --  Return the bodies of the entity.
    --  This query is more complex than Q_References_And_Kind because it also
    --  looks at mangled name for find matches in other languages.
@@ -4028,27 +4052,47 @@ package body GNATCOLL.Xref is
       Cursor : in out References_Cursor'Class)
    is
       E : Entity_Information;
+      procedure Bodies_Internal (Body_Statement : Prepared_Statement);
+      procedure Bodies_Internal (Body_Statement : Prepared_Statement) is
+      begin
+         Cursor.DBCursor.Fetch (Self.DB, Body_Statement,
+                                Params => (1 => +Entity.Id));
+
+         --  If we have no bodies, check whether the entity is an instantiation
+         --  of another entity which itself would have a body.
+
+         if not Has_Row (Cursor.DBCursor) then
+            E := Self.Instance_Of (Entity);
+            if E /= No_Entity then
+               Cursor.DBCursor.Fetch (Self.DB, Body_Statement,
+                                      Params => (1 => +E.Id));
+            end if;
+         end if;
+
+         --  Still not found, check through renaming
+
+         if not Has_Row (Cursor.DBCursor) then
+            E := Self.Renaming_Of (Entity);
+            if E /= No_Entity then
+               Cursor.DBCursor.Fetch (Self.DB, Body_Statement,
+                                      Params => (1 => +E.Id));
+            end if;
+         end if;
+
+      end Bodies_Internal;
+      Sub_Has_Elements : Boolean;
    begin
       Cursor.Entity := Entity;
-      Cursor.DBCursor.Fetch (Self.DB, Q_Bodies, Params => (1 => +Entity.Id));
 
-      --  If we have no bodies, check whether the entity is an instantiation
-      --  of another entity which itself would have a body.
+      Cursor.DBCursor.Fetch (Self.DB, Q_Bodies_Sub_Mangled_Prep,
+                             Params => (1 => +Entity.Id));
 
-      if not Has_Row (Cursor.DBCursor) then
-         E := Self.Instance_Of (Entity);
-         if E /= No_Entity then
-            Cursor.DBCursor.Fetch (Self.DB, Q_Bodies, Params => (1 => +E.Id));
-         end if;
-      end if;
+      Sub_Has_Elements := Has_Row (Cursor.DBCursor);
 
-      --  Still not found, check through renaming
-
-      if not Has_Row (Cursor.DBCursor) then
-         E := Self.Renaming_Of (Entity);
-         if E /= No_Entity then
-            Cursor.DBCursor.Fetch (Self.DB, Q_Bodies, Params => (1 => +E.Id));
-         end if;
+      if Sub_Has_Elements then
+         Bodies_Internal (Q_Bodies_With_Mangled);
+      else
+         Bodies_Internal (Q_Bodies_Simple);
       end if;
    end Bodies;
 
