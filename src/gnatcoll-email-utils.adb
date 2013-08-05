@@ -1097,7 +1097,7 @@ package body GNATCOLL.Email.Utils is
          if Char = ' ' or else Char = ASCII.HT then
             return Is_EOL or else Quote_White_Spaces;
 
-         elsif Char = '_' then
+         elsif Char = '_' or else Char = ',' then
             return Header;
 
          else
