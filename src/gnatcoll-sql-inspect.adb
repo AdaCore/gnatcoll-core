@@ -620,7 +620,7 @@ package body GNATCOLL.SQL.Inspect is
          begin
             return (Kind => Field_Text,
                     Max_Length =>
-                      Integer'Value (T (T'First + 10 .. T'Last - 1)));
+                      Integer'Value (T (T'First + 8 .. T'Last - 1)));
          exception
             when Constraint_Error =>
                Put_Line ("Missing max length after 'varchar' in " & T);
