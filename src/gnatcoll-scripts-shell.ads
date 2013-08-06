@@ -387,6 +387,10 @@ private
    overriding function Execute
      (Subprogram : access Shell_Subprogram_Record;
       Args       : Callback_Data'Class;
+      Error      : not null access Boolean) return List_Instance'Class;
+   overriding function Execute
+     (Subprogram : access Shell_Subprogram_Record;
+      Args       : Callback_Data'Class;
       Error      : not null access Boolean) return GNAT.Strings.String_List;
    overriding function Execute
      (Subprogram : access Shell_Subprogram_Record;

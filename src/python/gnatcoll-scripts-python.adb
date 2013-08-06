@@ -116,6 +116,10 @@ package body GNATCOLL.Scripts.Python is
       Args       : Callback_Data'Class;
       Error      : not null access Boolean)
       return GNAT.Strings.String_List;
+   overriding function Execute
+     (Subprogram : access Python_Subprogram_Record;
+      Args       : Callback_Data'Class;
+      Error      : not null access Boolean) return List_Instance'Class;
    overriding procedure Free (Subprogram : in out Python_Subprogram_Record);
    overriding function Get_Name
      (Subprogram : access Python_Subprogram_Record) return String;
@@ -3232,6 +3236,31 @@ package body GNATCOLL.Scripts.Python is
       else
          return Get_CI (Subprogram.Script, Obj);
       end if;
+   end Execute;
+
+   -------------
+   -- Execute --
+   -------------
+
+   overriding function Execute
+     (Subprogram : access Python_Subprogram_Record;
+      Args       : Callback_Data'Class;
+      Error      : not null access Boolean) return List_Instance'Class
+   is
+      Obj  : PyObject;
+      List : Python_Callback_Data;
+   begin
+      Obj := Execute_Command
+        (Script  => Subprogram.Script,
+         Command => Subprogram.Subprogram,
+         Args    => Args,
+         Error   => Error);
+
+      List.Script := Subprogram.Script;
+      List.First_Arg_Is_Self := False;
+      List.Args := Obj;   --   now owns the reference to Obj
+
+      return List;
    end Execute;
 
    -------------

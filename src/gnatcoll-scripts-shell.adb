@@ -2003,6 +2003,23 @@ package body GNATCOLL.Scripts.Shell is
    -- Execute --
    -------------
 
+   overriding function Execute
+     (Subprogram : access Shell_Subprogram_Record;
+      Args       : Callback_Data'Class;
+      Error      : not null access Boolean) return List_Instance'Class
+   is
+      List : Shell_Callback_Data;
+   begin
+      List.Script := Shell_Scripting (Subprogram.Script);
+      List.CL := Parse_String
+        (Execute (Subprogram, Args, Error), Separate_Args);
+      return List;
+   end Execute;
+
+   -------------
+   -- Execute --
+   -------------
+
    function Execute
      (Subprogram : access Shell_Subprogram_Record;
       Args       : Callback_Data'Class;

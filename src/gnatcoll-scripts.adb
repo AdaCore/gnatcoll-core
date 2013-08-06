@@ -968,6 +968,15 @@ package body GNATCOLL.Scripts is
 
    function Execute
      (Subprogram : access Subprogram_Record'Class;
+      Args       : Callback_Data'Class) return List_Instance'Class
+   is
+      Err : aliased Boolean;
+   begin
+      return Execute (Subprogram, Args, Err'Access);
+   end Execute;
+
+   function Execute
+     (Subprogram : access Subprogram_Record'Class;
       Args       : Callback_Data'Class) return Any_Type
    is
       Err : aliased Boolean;
