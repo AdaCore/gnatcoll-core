@@ -480,7 +480,7 @@ procedure GNATCOLL_Db2Ada is
          end if;
 
          if Descr = null then
-            Ada.Text_IO.Put_Line ("Database not suppored: " & DB_Type.all);
+            Ada.Text_IO.Put_Line ("Database not supported: " & DB_Type.all);
             return;
          end if;
 
