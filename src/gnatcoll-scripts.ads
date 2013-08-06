@@ -89,27 +89,6 @@ package GNATCOLL.Scripts is
    procedure Free (Subprogram : in out Subprogram_Record) is abstract;
    --  Free the memory occupied by the subprogram instance
 
---     procedure Execute
---       (Subprogram : access Subprogram_Record;
---        Args       : in out Callback_Data'Class);
-   --  Executes the subprogram and passing the parameters from Args. On exit,
-   --  the value returned by the subprogram is available in Args:
-   --
-   --  declare
-   --     Args : Callback_Data'Class := Create (Script, 1);
-   --  begin
-   --     Set_Nth_Arg (Args, 1, "some value");
-   --     Execute (Subprogram, Args);
-   --     Put_Line ("Output was " & Return_Value (Args));  --  assuming integer
-   --     Free (Args);
-   --  end;
-   --
-   --  Various subprograms are provided below that directly return the value
-   --  returned by the subprogram, for convenience. There is however a
-   --  semantic difference, since using Return_Value will attempt to cast the
-   --  result value to the expected type, whereas the subprograms below really
-   --  except the proper types from the underlying scripting language.
-
    function Execute
      (Subprogram : access Subprogram_Record'Class;
       Args       : Callback_Data'Class) return Boolean;
