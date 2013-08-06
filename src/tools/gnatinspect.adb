@@ -1292,7 +1292,9 @@ procedure GNATInspect is
 
    procedure On_Ctrl_C is
    begin
-      GNATCOLL.Readline.Finalize (History_File => History_File.all);
+      if History_File /= null then
+         GNATCOLL.Readline.Finalize (History_File => History_File.all);
+      end if;
       Free (Xref);
       Free (History_File);
       GNAT.OS_Lib.OS_Exit (0);
@@ -1512,6 +1514,7 @@ begin
    end if;
 
    if Exit_After_Refresh then
+      On_Ctrl_C;
       return;
    end if;
 

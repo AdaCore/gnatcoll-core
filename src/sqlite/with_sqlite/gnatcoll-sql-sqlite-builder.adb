@@ -21,6 +21,8 @@
 --                                                                          --
 ------------------------------------------------------------------------------
 
+pragma Ada_2012;
+
 with Ada.Characters.Handling;      use Ada.Characters.Handling;
 with Ada.Strings.Fixed;
 with Ada.Unchecked_Conversion;
@@ -181,37 +183,25 @@ package body GNATCOLL.SQL.Sqlite.Builder is
    --  Skip to or until the next whitespace character. Pos is left on the
    --  first whitespace character or on the first character after the spaces
 
-   function On_Busy (Data : System.Address; Count : Integer) return Integer;
-   pragma Convention (C, On_Busy);
-
    function Unchecked_Convert is new Ada.Unchecked_Conversion
      (Statement, DBMS_Stmt);
    function Unchecked_Convert is new Ada.Unchecked_Conversion
      (DBMS_Stmt, Statement);
 
    overriding function Is_Prepared_On_Server_Supported
-     (Connection : access Sqlite_Connection_Record) return Boolean;
-
-   -------------
-   -- On_Busy --
-   -------------
-
-   function On_Busy (Data : System.Address; Count : Integer) return Integer is
-      pragma Unreferenced (Data);
-   begin
-      --  Retry commands up to 2s automatically, in case we get a
-      --  SQLITE_BUSY status.
-      if Count < Max_Retries_On_Busy then
-         if Active (Me) then
-            Trace (Me, "Received SQLITE_BUSY, trying again. Attempt="
-                   & Count'Img);
-         end if;
-         delay 0.3;
-         return 1;
-      else
-         return 0;
-      end if;
-   end On_Busy;
+     (Connection : access Sqlite_Connection_Record) return Boolean is (True);
+   --  We allow transactions prepared on the server, but there are several
+   --  restrictions with sqlite:
+   --     - M410-030: when we execute a statement prepared on the server, this
+   --       seems to prevent the deletion of the database on Windows.
+   --       This might however be because we were missing a proper close to
+   --       sqlite3_close.
+   --     - executing the same statements multiple times nested will fail.
+   --       For instance, do a:
+   --            for r in query1(params):
+   --                for r in query1(params2):
+   --                     pass
+   --       means the outer loop will only return a single result.
 
    ---------------
    -- Error_Msg --
@@ -387,10 +377,7 @@ package body GNATCOLL.SQL.Sqlite.Builder is
                "Could not connect to database: " & Error_Msg (Connection.DB));
             Connection.Close;   --  avoid memory leaks
          else
-            --  Add a busy handler, which will automatically attempt to
-            --  re-attempt a command if SQLITE_BUSY was returned.
-
-            Busy_Handler (Connection.DB, On_Busy'Access);
+            Set_Busy_Timeout (Connection.DB, Max_Ms_On_Busy);
 
             --  Make sure that with appropriate versions of sqlite (>= 3.6.19)
             --  we do enforce foreign keys constraints
@@ -1175,16 +1162,5 @@ package body GNATCOLL.SQL.Sqlite.Builder is
 
       return Result;
    end Backup;
-
-   -------------------------------------
-   -- Is_Prepared_On_Server_Supported --
-   -------------------------------------
-
-   function Is_Prepared_On_Server_Supported
-     (Connection : access Sqlite_Connection_Record) return Boolean
-   is
-   begin
-      return not Is_Sqlite (Connection);
-   end Is_Prepared_On_Server_Supported;
 
 end GNATCOLL.SQL.Sqlite.Builder;

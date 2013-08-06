@@ -1593,7 +1593,9 @@ package body GNATCOLL.Xref is
                            2 => +'I',
                            3 => +(-1),
                            4 => +(-1),
-                           5 => +(-1)),
+                           5 => +(-1),
+                           6 => +True,    --  is_global
+                           7 => +False),  --  is_static_local
                         PK => Database.Entities.Id);
                   else
                      Ref_Entity := R.Integer_Value (0);

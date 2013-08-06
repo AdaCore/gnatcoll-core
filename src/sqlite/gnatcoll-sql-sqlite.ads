@@ -35,7 +35,7 @@ package GNATCOLL.SQL.Sqlite is
    --  http://web.utk.edu/~jplyon/sqlite/SQLite_optimization_FAQ.html
    --  You might still want to disable this settings if that doesn't match
    --  your expectation. It is recommended to set this variable before getting
-   --  the first connection, and then no longer touching it.
+   --  the first connection, and then no longer touch it.
    --  Changing the setting will not impact existing connections.
    --
    --  This setting is mostly experimental, and can be tricky in your
@@ -46,13 +46,12 @@ package GNATCOLL.SQL.Sqlite is
    --  BEGIN and a SELECT and gets a shared lock, then the second connection
    --  tries to write to the database but cannot obtain a write lock).
 
-   Max_Retries_On_Busy : Natural := 0;
-   --  Number of times GNATCOLL should try a query when it receives SQL_BUSY.
-   --  The default 0 means faster turn-around, even though some queries might
-   --  fail when the database is currently locked, and thus the query could
-   --  not be performed. Numbers greater than 0 means more chance to succeed,
-   --  but since there is a delay between each attempt, the application might
-   --  feel slow.
+   Max_Ms_On_Busy : Natural := 200;
+   --  Maximum number of milliseconds we are willing to wait when sqlite
+   --  reports that it was enable to perform an action because it is already
+   --  busy.
+   --  Set this to 0 to disable retries altogether, although this means that
+   --  some queries might fail as a result.
 
    type Sqlite_Description (<>)
      is new Database_Description_Record with private;
