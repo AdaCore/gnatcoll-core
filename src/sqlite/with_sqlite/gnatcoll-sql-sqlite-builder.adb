@@ -584,7 +584,7 @@ package body GNATCOLL.SQL.Sqlite.Builder is
       Params      : SQL_Parameters := No_Parameters)
       return Abstract_Cursor_Access
    is
-      Res    : Abstract_Cursor_Access;
+      Res    : Abstract_Cursor_Access := null;
       Stmt   : DBMS_Stmt;
    begin
       Stmt := Connect_And_Prepare (Connection, Query, "", Direct);
@@ -604,9 +604,12 @@ package body GNATCOLL.SQL.Sqlite.Builder is
             else
                Sqlite_Cursor_Access (Res).Free_Stmt := True;
             end if;
+         else
+            --  Stmt is no longer accessible, and yet if we don't finalize it
+            --  we are in effect keeping a transaction (or read transaction)
+            --  open.
+            Finalize (Connection, Stmt);
          end if;
-      else
-         return null;
       end if;
 
       return Res;
