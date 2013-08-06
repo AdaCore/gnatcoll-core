@@ -2162,7 +2162,8 @@ package body GNATCOLL.Scripts.Python is
          end if;
 
          Py_DECREF (Iter);
-         List.Args := Item;
+         List.Args := Item;   --   Item is a borrowed reference ?
+         Py_INCREF (Item);    --   so we just increase the refcount
       end if;
       return List;
    end Nth_Arg;
