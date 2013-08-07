@@ -359,16 +359,17 @@ package body GNATCOLL.Email is
       From_Email     : String;
       Subject        : String := "No Subject";
       From_Real_Name : String := "";
-      Local_Date     : Ada.Calendar.Time := Ada.Calendar.Clock)
+      Local_Date     : Ada.Calendar.Time := Ada.Calendar.Clock;
+      Charset        : String := Charset_US_ASCII)
    is
    begin
       Set_Envelope_From (Msg, From_Email, Local_Date);
-      Replace_Header_Internal
-        (Msg, Create ("Subject", Subject), Append => False);
-      Replace_Header_Internal
-        (Msg, Create ("Date", Format_Date (Local_Date)), Append => False);
-      Replace_Header_Internal
-        (Msg, Create ("From", Format_Address (From_Real_Name, From_Email)),
+      Replace_Header_Internal (Msg,
+        Create ("Subject", Subject, Charset), Append => False);
+      Replace_Header_Internal (Msg,
+        Create ("Date", Format_Date (Local_Date)), Append => False);
+      Replace_Header_Internal (Msg,
+         Create ("From", Format_Address (From_Real_Name, From_Email), Charset),
          Append => False);
    end Set_Default_Headers;
 

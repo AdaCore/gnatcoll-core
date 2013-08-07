@@ -215,10 +215,12 @@ package GNATCOLL.Email is
       From_Email     : String;
       Subject        : String := "No Subject";
       From_Real_Name : String := "";
-      Local_Date     : Ada.Calendar.Time := Ada.Calendar.Clock);
+      Local_Date     : Ada.Calendar.Time := Ada.Calendar.Clock;
+      Charset        : String := Charset_US_ASCII);
    --  Set the standard headers for the message. This is just a convenient
    --  subprogram, since the same can be done by manipulating directly the
-   --  headers.
+   --  headers. Charset is used for MIME encoding of the From: and Subject:
+   --  headers only.
 
    type Header_Filter is access function (H : Header'Class) return Boolean;
    --  A filter for headers. It is returned True, the header will be displayed,
