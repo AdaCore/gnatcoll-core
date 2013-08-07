@@ -1426,10 +1426,20 @@ package body GNATCOLL.SQL.Exec is
    --------------------
 
    procedure Mark_As_Closed
-      (Connection : access Database_Connection_Record'Class) is
+     (Connection : access Database_Connection_Record'Class) is
    begin
       Query_Cache.Mark_DB_As_Free (Database_Connection (Connection));
    end Mark_As_Closed;
+
+   ----------------
+   -- Was_Closed --
+   ----------------
+
+   function Was_Closed
+     (Connection : access Database_Connection_Record'Class) return Boolean is
+   begin
+      return Query_Cache.Was_Freed (Database_Connection (Connection));
+   end Was_Closed;
 
    ----------
    -- Free --
@@ -1775,10 +1785,6 @@ package body GNATCOLL.SQL.Exec is
          if Active (Me_Query) then
             Trace (Me_Query, "Finalize stmt on server: " & Self.Name.all);
          end if;
-
-         --  ??? What if the connection was closed ?
-         --  ??? Should not finalize if we haven't finalized all cursors built
-         --  from that prepared statement.
 
          if not Query_Cache.Was_Freed (Self.Prepared.DB) then
             Finalize (Self.Prepared.DB, Self.Prepared.Stmt);

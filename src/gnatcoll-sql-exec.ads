@@ -316,9 +316,12 @@ package GNATCOLL.SQL.Exec is
 
    procedure Mark_As_Closed
       (Connection : access Database_Connection_Record'Class);
+   function Was_Closed
+     (Connection : access Database_Connection_Record'Class) return Boolean;
    --  This is for internal use only, marks the connection as closed.
    --  No further operation should be performed on it, in particular
    --  finalization of prepared statements.
+   --  It is valid to pass a freed pointer to Was_Closed
 
    function Error
      (Connection : access Database_Connection_Record)
