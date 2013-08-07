@@ -3483,6 +3483,8 @@ package body GNATCOLL.Xref is
    begin
       Self.DB := DB.Build_Connection;
 
+      Self.DB.Execute ("PRAGMA mmap_size=268435456;");
+
       --  Do not use automatic transactions, to avoid being stuck with an
       --  unfinished BEGIN, which would lock the database and prevents
       --  gnatinspect from running in parallel to IDEs.
