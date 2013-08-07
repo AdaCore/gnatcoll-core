@@ -21,7 +21,7 @@
 --                                                                          --
 ------------------------------------------------------------------------------
 
---  This package provides memory mapping of files. Depending on your operation
+--  This package provides memory mapping of files. Depending on your operating
 --  system, this might provide a more efficient method for accessing the
 --  contents of files.
 --  A description of memory-mapping is available on the sqlite page, at:
