@@ -132,9 +132,11 @@ package GNATCOLL.SQL.Sqlite.Gnade is
    --  Return the error message for the most recent query on DB. This is not
    --  thread safe, and might return the error message from another thread.
 
-   procedure Close (DB : Database);
+   procedure Close
+      (DB : Database;
+       Finalize_Prepared_Statements : Boolean := True);
    --  Close the connection to the database.
-   --  This finalizes all prepared statements, as needed
+   --  This finalizes all prepared statements, if specified.
 
    type Busy_Handler_Callback is access function
      (Data : System.Address; Count : Integer) return Integer;

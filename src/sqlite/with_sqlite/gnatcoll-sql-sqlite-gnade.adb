@@ -147,7 +147,10 @@ package body GNATCOLL.SQL.Sqlite.Gnade is
    -- Close --
    -----------
 
-   procedure Close (DB : Database) is
+   procedure Close
+      (DB : Database;
+       Finalize_Prepared_Statements : Boolean := True)
+   is
       function Internal_Close (DB : Database) return Result_Codes;
       pragma Import (C, Internal_Close, "sqlite3_close_v2");
       --  If there are still unfinalized prepared statement, actual
@@ -155,29 +158,32 @@ package body GNATCOLL.SQL.Sqlite.Gnade is
       --  collected programmation languages, which is the case for the
       --  GNATCOLL.SQL package.
 
-      --  function Next_Stmt
-      --    (DB : Database; After : Statement := No_Statement)
-      --     return Statement;
-      --  pragma Import (C, Next_Stmt, "sqlite3_next_stmt");
+      function Next_Stmt
+        (DB : Database; After : Statement := No_Statement)
+         return Statement;
+      pragma Import (C, Next_Stmt, "sqlite3_next_stmt");
 
-      --  Stmt    : Statement;
+      Stmt    : Statement;
       Ignored : Result_Codes;
       pragma Unreferenced (Ignored);
    begin
       if DB /= null then
-         --  Do not finalize the prepared statements, this will be done as
-         --  part of their Ada finalize already.
 
-         --  Finalize prepared statements
-         --  loop
-         --     if Debug then
-         --        Trace (Me, "sqlite3_next_stmt");
-         --     end if;
+         if Finalize_Prepared_Statements then
+            if Debug then
+               Trace (Me, "Finalize prepared statements");
+            end if;
 
-         --     Stmt := Next_Stmt (DB);
-         --     exit when Stmt = No_Statement;
-         --     Finalize (Stmt);
-         --  end loop;
+            loop
+               if Debug then
+                  Trace (Me, "sqlite3_next_stmt");
+               end if;
+
+               Stmt := Next_Stmt (DB);
+               exit when Stmt = No_Statement;
+               Finalize (Stmt);
+            end loop;
+         end if;
 
          if Debug then
             Trace (Me, "sqlite3_close_v2");
