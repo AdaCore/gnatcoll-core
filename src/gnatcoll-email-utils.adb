@@ -44,8 +44,8 @@ package body GNATCOLL.Email.Utils is
    --  Index should point after the opening quote.
 
    procedure Parse_And_Skip_Address
-     (From_C : in out Charset_String_List.Cursor;
-      From   : in out Integer;
+     (From_C  : in out Charset_String_List.Cursor;
+      From    : in out Integer;
       Address : out Email_Address);
    --  Parse the first email address at (From_C, From), and leaves them after
    --  it, so that if there are more addresses in From_C they can all be parsed
@@ -782,8 +782,8 @@ package body GNATCOLL.Email.Utils is
      (Str : Charset_String_List.List) return Address_Set.Set
    is
       use Charset_String_List, Address_Set;
-      C    : Charset_String_List.Cursor := First (Str);
-      From : Integer := 1;
+      C      : Charset_String_List.Cursor := First (Str);
+      From   : Integer := 1;
       Result : Address_Set.Set;
       Addr   : Email_Address;
    begin
@@ -926,8 +926,7 @@ package body GNATCOLL.Email.Utils is
 
    function Get_Recipients
      (Msg          : Message'Class;
-      Include_From : Boolean := False)
-      return Address_Set.Set
+      Include_From : Boolean := False) return Address_Set.Set
    is
       use Address_Set;
       Iter   : Header_Iterator := Get_Headers (Msg);
@@ -1058,6 +1057,12 @@ package body GNATCOLL.Email.Utils is
       Result             : out Unbounded_String)
    is
       function Compute_Block_Sep return String;
+      --  Comment needed???
+
+      -----------------------
+      -- Compute_Block_Sep --
+      -----------------------
+
       function Compute_Block_Sep return String is
       begin
          if Header then
@@ -1174,6 +1179,8 @@ package body GNATCOLL.Email.Utils is
          end if;
       end Append;
 
+   --  Start of processing for Quoted_Printable_Encode
+
    begin
       Result := Null_Unbounded_String;
 
@@ -1230,6 +1237,8 @@ package body GNATCOLL.Email.Utils is
       begin
          return Qp_Convert (Char) >= 0;
       end Is_Hex;
+
+   --  Start of processing for Quoted_Printable_Decode
 
    begin
       S := Str'First;
@@ -1308,6 +1317,10 @@ package body GNATCOLL.Email.Utils is
       function Get_Line_Length return Integer;
       --  Get the line length for the encoded string
 
+      ---------------------
+      -- Get_Line_Length --
+      ---------------------
+
       function Get_Line_Length return Integer is
          Len : Integer := Integer'Min (76, Max_Block_Len);
       begin
@@ -1353,7 +1366,11 @@ package body GNATCOLL.Email.Utils is
       Current  : Integer := 0;
 
       procedure Append (Ch : Character);
-      --  Append a new character in the output, splitting lines as necessary
+      --  Append a new character to the output, splitting lines as necessary
+
+      ------------
+      -- Append --
+      ------------
 
       procedure Append (Ch : Character) is
       begin
@@ -1380,6 +1397,8 @@ package body GNATCOLL.Email.Utils is
             Current := 0;
          end if;
       end Append;
+
+   --  Start of processing for Base64_Encode
 
    begin
       for S in Str'Range loop
@@ -1442,6 +1461,7 @@ package body GNATCOLL.Email.Utils is
 
       Phase    : Phase_Type := 0;
       D, Dlast : Byte := 0;
+
    begin
       for S in Str'First .. Str'Last loop
          if Str (S) = ASCII.LF
@@ -1591,6 +1611,10 @@ package body GNATCOLL.Email.Utils is
       procedure Append (Section : Charset_String);
       --  Add Section to the result, merging with previous section if needed
 
+      ------------
+      -- Append --
+      ------------
+
       procedure Append (Section : Charset_String) is
       begin
          if Is_Empty (Result) then
@@ -1626,6 +1650,8 @@ package body GNATCOLL.Email.Utils is
             end if;
          end if;
       end Append;
+
+   --  Start of processing for Decode_Header
 
    begin
       Result := Charset_String_List.Empty_List;
