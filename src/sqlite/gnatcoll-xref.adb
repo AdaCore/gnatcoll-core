@@ -2963,7 +2963,7 @@ package body GNATCOLL.Xref is
             Schema_Exists : Boolean := False;
          begin
             if GNAT.OS_Lib.Is_Regular_File (Current_DB) then
-               R.Fetch (DB, "PRAGMA user_version");
+               R.Fetch (DB, "PRAGMA user_version;");
                if R.Value (0) /= "0" then
                   --  Schema already exists
                   Schema_Exists := True;
@@ -2997,7 +2997,7 @@ package body GNATCOLL.Xref is
                else
                   Trace (Me_Timing, "Creating the database schema");
                   Create_Database (DB);
-                  DB.Execute ("PRAGMA user_version=1");
+                  DB.Execute ("PRAGMA user_version=1;");
                   DB_Created := True;
                end if;
             end if;
@@ -3213,23 +3213,23 @@ package body GNATCOLL.Xref is
          DB.Commit_Or_Rollback;
 
          if DB.Has_Pragmas then
-            DB.Execute ("PRAGMA foreign_keys=ON");
+            DB.Execute ("PRAGMA foreign_keys=ON;");
 
             --  The default would be FULL, but we do not need to guard against
             --  system crashes in this application.
 
-            DB.Execute ("PRAGMA synchronous=NORMAL");
+            DB.Execute ("PRAGMA synchronous=NORMAL;");
 
             --  The default would be DELETE, but we do not care enough about
             --  data integrity. WAL apparently allows readers even while there
             --  is a writer. MEMORY might corrupt the database if the writer is
             --  killed while processing.
 
-            DB.Execute ("PRAGMA journal_mode=WAL");
+            DB.Execute ("PRAGMA journal_mode=WAL;");
 
             --  We can store temporary tables in memory
 
-            DB.Execute ("PRAGMA temp_store=MEMORY");
+            DB.Execute ("PRAGMA temp_store=MEMORY;");
          end if;
 
          --  Gather statistics to speed up the query optimizer. This isn't
@@ -3266,18 +3266,19 @@ package body GNATCOLL.Xref is
             --  but that's easily fixed by adding the new entry in the *_kind
             --  table (this occurs when the format of LI files is changed).
 
-            DB.Execute ("PRAGMA foreign_keys=OFF");
-            DB.Execute ("PRAGMA synchronous=NORMAL");
-            DB.Execute ("PRAGMA journal_mode=WAL");
-            DB.Execute ("PRAGMA temp_store=MEMORY");
+            DB.Execute ("PRAGMA foreign_keys=OFF;");
+            DB.Execute ("PRAGMA synchronous=NORMAL;");
+            DB.Execute ("PRAGMA journal_mode=WAL;");
+            DB.Execute ("PRAGMA temp_store=MEMORY;");
+            DB.Execute ("PRAGMA mmap_size=268435456;");
          end if;
 
          DB.Automatic_Transactions (False);
          DB.Execute ("BEGIN");
 
          if Destroy_Indexes then
-            DB.Execute ("DROP INDEX entity_refs_entity");
-            DB.Execute ("DROP INDEX entity_refs_loc");
+            DB.Execute ("DROP INDEX entity_refs_entity;");
+            DB.Execute ("DROP INDEX entity_refs_loc;");
             DB.Execute ("DROP INDEX e2e_from;");
             DB.Execute ("DROP INDEX e2e_to;");
          end if;
