@@ -272,18 +272,6 @@ package body GNATCOLL.SQL.Sqlite.Builder is
 
             --  Clear_Bindings (Self.Stmt);
 
-            --  We used to reset Self.Stmt here.
-            --  But this is in fact dangerous: the statement is in fact the
-            --  same DBMS_Stmt that is stored in
-            --  gnatcoll.sql.exec.prepared_in_session_stmt. If the latter was
-            --  finalized before Self is finalized, we end up with a storage
-            --  error because we are referencing freed memory.
-            --  Instead, Reset is called when we initialize the query. At worse
-            --  this means we are keeping a bit of memory allocated in sqlite
-            --  for the DBMS_Stmt for the prepared statements, even though we
-            --  will not call Step() again. But this isn't a memory leak since
-            --  the memory will be freed if the prepared statement is finalized
-
             Status := Reset (Self.Stmt);
             if Status /= Sqlite_OK then
                Trace (Me, "Error when reseting cursor to free LOCKS: "
