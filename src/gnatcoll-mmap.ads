@@ -21,7 +21,23 @@
 --                                                                          --
 ------------------------------------------------------------------------------
 
---  This package provides memory mapping of files
+--  This package provides memory mapping of files. Depending on your operation
+--  system, this might provide a more efficient method for accessing the
+--  contents of files.
+--  A description of memory-mapping is available on the sqlite page, at:
+--      http://www.sqlite.org/mmap.html
+--
+--  The traditional method for reading a file is to allocate a buffer in the
+--  application address space, then open the file and copy its contents. When
+--  memory mapping is available though, the application asks the operating
+--  system to return a pointer to the requested page, if possible. If the
+--  requested page has been or can be mapped into the application address
+--  space, the system returns a pointer to that page for the application to
+--  use without having to copy anything. Skipping the copy step is what makes
+--  memory mapped I/O faster.
+--
+--  When memory mapping is not available, this package automatically falls
+--  back to the traditional copy method.
 --
 --  Example of use for this package, when reading a file that can be fully
 --  mapped
