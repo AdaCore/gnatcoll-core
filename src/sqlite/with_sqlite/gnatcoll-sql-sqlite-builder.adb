@@ -21,8 +21,6 @@
 --                                                                          --
 ------------------------------------------------------------------------------
 
-pragma Ada_2012;
-
 with Ada.Characters.Handling;      use Ada.Characters.Handling;
 with Ada.Strings.Fixed;
 with Ada.Unchecked_Conversion;
@@ -189,7 +187,7 @@ package body GNATCOLL.SQL.Sqlite.Builder is
      (DBMS_Stmt, Statement);
 
    overriding function Is_Prepared_On_Server_Supported
-     (Connection : access Sqlite_Connection_Record) return Boolean is (True);
+     (Connection : access Sqlite_Connection_Record) return Boolean;
    --  We allow transactions prepared on the server, but there are several
    --  restrictions with sqlite:
    --     - M410-030: when we execute a statement prepared on the server, this
@@ -202,6 +200,18 @@ package body GNATCOLL.SQL.Sqlite.Builder is
    --                for r in query1(params2):
    --                     pass
    --       means the outer loop will only return a single result.
+
+   -------------------------------------
+   -- Is_Prepared_On_Server_Supported --
+   -------------------------------------
+
+   overriding function Is_Prepared_On_Server_Supported
+     (Connection : access Sqlite_Connection_Record) return Boolean
+   is
+      pragma Unreferenced (Connection);
+   begin
+      return True;
+   end Is_Prepared_On_Server_Supported;
 
    ---------------
    -- Error_Msg --
