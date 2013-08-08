@@ -127,6 +127,9 @@ package body GNATCOLL.Traces is
 
    Global : Global_Vars;
 
+   procedure Create_Exception_Handle (Handle : Trace_Handle);
+   --  Create the exception handle associated with Handle.
+
    function Local_Sub_Second (T : Ada.Calendar.Time) return Integer;
    pragma Inline (Local_Sub_Second);
       --  Version of Local_Sub_Second taking advantage of the timezone cache
@@ -693,16 +696,11 @@ package body GNATCOLL.Traces is
       return Handle.Name.all;
    end Unit_Name;
 
-   -----------
-   -- Trace --
-   -----------
+   -----------------------------
+   -- Create_Exception_Handle --
+   -----------------------------
 
-   procedure Trace
-     (Handle : Trace_Handle;
-      E      : Ada.Exceptions.Exception_Occurrence;
-      Msg    : String := "Unexpected exception: ";
-      Color  : String := Default_Fg)
-   is
+   procedure Create_Exception_Handle (Handle : Trace_Handle) is
       Default : Default_Activation_Status;
    begin
       if Handle.Exception_Handle = null then
@@ -724,7 +722,19 @@ package body GNATCOLL.Traces is
             Handle.Exception_Handle.Stream := Handle.Stream;
          end if;
       end if;
+   end Create_Exception_Handle;
 
+   -----------
+   -- Trace --
+   -----------
+
+   procedure Trace
+     (Handle : Trace_Handle;
+      E      : Ada.Exceptions.Exception_Occurrence;
+      Msg    : String := "Unexpected exception: ";
+      Color  : String := Default_Fg) is
+   begin
+      Create_Exception_Handle (Handle);
       Trace (Handle.Exception_Handle,
              Msg & Ada.Exceptions.Exception_Information (E),
              Color => Color);
@@ -777,8 +787,10 @@ package body GNATCOLL.Traces is
         and then Handle.Active
       then
          if not Condition then
+            Create_Exception_Handle (Handle);
             Trace
-              (Handle, Error_Message, Location, Entity, Red_Bg & Default_Fg);
+              (Handle.Exception_Handle,
+               Error_Message, Location, Entity, Red_Bg & Default_Fg);
 
             if Raise_Exception then
                Raise_Assert_Failure
