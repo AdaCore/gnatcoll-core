@@ -148,8 +148,6 @@ package body GNATCOLL.Scripts.Python is
 
    overriding function Print_Refcount
      (Instance : access Python_Class_Instance_Record) return String;
-   overriding procedure Incref (Inst : access Python_Class_Instance_Record);
-   overriding procedure Decref (Inst : access Python_Class_Instance_Record);
    overriding function Is_Subclass
      (Instance : access Python_Class_Instance_Record;
       Base     : String) return Boolean;
@@ -2608,33 +2606,6 @@ package body GNATCOLL.Scripts.Python is
       end if;
    end Nth_Arg;
 
-   ------------
-   -- Decref --
-   ------------
-
-   procedure Decref (Inst : access Python_Class_Instance_Record) is
-   begin
-      if not Finalized then
-         --  During global finalization of the program, Python itself has been
-         --  terminated, so we do not need to do anything
-         Py_XDECREF (Inst.Data);
-      end if;
-
-      Decref (Class_Instance_Record (Inst.all)'Access);
-   end Decref;
-
-   ------------
-   -- Incref --
-   ------------
-
-   procedure Incref (Inst : access Python_Class_Instance_Record) is
-   begin
-      Assert (Me, Inst /= null, "Null instance passed to Incref");
-      Assert (Me, Inst.Data /= null, "Instance improperly initialized");
-      Py_INCREF (Inst.Data);
-      Incref (Class_Instance_Record (Inst.all)'Access);
-   end Incref;
-
    ------------------------------
    -- On_PyObject_Data_Destroy --
    ------------------------------
@@ -2667,7 +2638,13 @@ package body GNATCOLL.Scripts.Python is
    procedure Set_CI (CI : in out Class_Instance) is
       Data : constant PyObject := PyCObject_FromVoidPtr
         (Get_CIR (CI).all'Address, On_PyObject_Data_Destroy'Access);
+      Old_Refcount : Natural;
    begin
+      if Active (Me) then
+         Old_Refcount :=
+           Get_Refcount (Python_Class_Instance (Get_CIR (CI)).Data);
+      end if;
+
       --  Python owns a reference to the CI, so that the latter can never be
       --  freed while the python object exists.
       Incref (Get_CIR (CI));
@@ -2679,6 +2656,14 @@ package body GNATCOLL.Scripts.Python is
          CI := No_Class_Instance;
       end if;
       Py_DECREF (Data);
+
+      if Active (Me) then
+         Assert
+           (Me,
+            Get_Refcount (Python_Class_Instance (Get_CIR (CI)).Data) =
+                Old_Refcount,
+            "Set_CI should only increase refcount for Class_Instance");
+      end if;
    end Set_CI;
 
    ---------------------------------
@@ -2710,13 +2695,19 @@ package body GNATCOLL.Scripts.Python is
       CIR    : System.Address;
       CI     : Python_Class_Instance;
       Result : Class_Instance;
+      Old_Refcount : Natural;
    begin
       if Item = null then
          PyErr_Clear;
-         --  If there was no instane associated, avoid a python exception later
+         --  If there was no instance, avoid a python exception later
+
+         if Active (Me) then
+            Old_Refcount := Get_Refcount (Object);
+         end if;
 
          CI := new Python_Class_Instance_Record;
          CI.Data := Object;
+         Py_INCREF (CI.Data);  --  now owns a reference to the object
          Result := From_Instance (Script, CI);
          Set_CI (Result);  --  Associate with Object for the future
 
@@ -2730,6 +2721,13 @@ package body GNATCOLL.Scripts.Python is
          else
             Decref (CI);
          end if;
+
+         if Active (Me) then
+            Assert (Me,
+                    Get_Refcount (Object) = Old_Refcount + 1,
+                    "A Class_Instance should own a reference to PyObject");
+         end if;
+
          return Result;
 
       elsif not PyCObject_Check (Item) then
@@ -3134,12 +3132,18 @@ package body GNATCOLL.Scripts.Python is
          return No_Class_Instance;
       end if;
 
-      Inst := Get_CI (Python_Scripting (Script), Obj);
+      Inst := Get_CI (Python_Scripting (Script), Obj);  --  adopts object
 
       --  The PyObject should have a single reference in the end, owned by
       --  the class instance itself.
 
-      Py_DECREF (Python_Class_Instance (Get_CIR (Inst)).Data);
+      if Active (Me) then
+         Assert
+           (Me,
+            Get_Refcount (Python_Class_Instance (Get_CIR (Inst)).Data) = 1,
+            "New_Instance should own a single refcount of PyObject");
+      end if;
+
       return Inst;
 
    exception
