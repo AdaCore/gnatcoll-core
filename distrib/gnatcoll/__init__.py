@@ -11,7 +11,7 @@ XML = r"""<?xml version="1.0" ?>
 <GPS>
   <doc_path>share/doc/gnatcoll</doc_path>
   <submenu after="GNAT">
-    <title>/Help/Gnat Components</title>
+    <title>/Help/Gnat Runtime/GNATCOLL</title>
   </submenu>
   <documentation_file>
      <name>html/index.html</name>
