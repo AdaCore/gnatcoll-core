@@ -29,7 +29,27 @@ with Ada.Strings.Hash_Case_Insensitive;
 with GNATCOLL.Utils;          use GNATCOLL.Utils;
 with Interfaces;              use Interfaces;
 
+pragma Warnings (Off);
+--  Ada.Strings.Unbounded.Aux is an internal GNAT unit
+with Ada.Strings.Unbounded.Aux;
+pragma Warnings (On);
+
 package body GNATCOLL.Email.Utils is
+
+   function Needs_Quoting
+      (Char   : Character;
+       Where  : Region;
+       Is_EOL : Boolean) return Boolean;
+   --  Return True if C needs to be quoted when appearing in Region, False
+   --  otherwise. Is_EOL indicates whether Char is last of its line.
+
+   function Needs_Quoting
+     (U      : Unbounded_String;
+      Where  : Region;
+      Is_EOL : Boolean) return Boolean;
+   --  True if any non-whitespace character in U needs to be quoted per
+   --  the above function. Is_EOL indicates whehter the last character of U is
+   --  last of its line.
 
    procedure Read_Integer
      (S : String; Index : in out Integer; Value : out Integer);
@@ -712,7 +732,7 @@ package body GNATCOLL.Email.Utils is
             --  Reencode, to preserve names in international charsets
             Encode (Str     => To_String (CS.Contents),
                     Charset => To_String (CS.Charset),
-                    Header  => True,
+                    Where   => Addr_Header,
                     Result  => Tmp);
             Append (Buffer, Tmp);
          end if;
@@ -774,10 +794,6 @@ package body GNATCOLL.Email.Utils is
       return Get_Addresses (L);
    end Get_Addresses;
 
-   -------------------
-   -- Get_Addresses --
-   -------------------
-
    function Get_Addresses
      (Str : Charset_String_List.List) return Address_Set.Set
    is
@@ -829,21 +845,79 @@ package body GNATCOLL.Email.Utils is
    -- Format_Address --
    --------------------
 
-   function Format_Address (Addr : Email_Address) return String is
+   U_Charset_US_ASCII : constant Unbounded_String :=
+                          To_Unbounded_String (Charset_US_ASCII);
+
+   function Format_Address
+     (Email   : Email_Address;
+      Charset : String := Charset_US_ASCII) return Charset_String_List.List
+   is
+      L : Charset_String_List.List;
+
    begin
-      return Format_Address
-        (To_String (Addr.Real_Name), To_String (Addr.Address));
+      --  If Charset is US-ASCII, we can't rely on RFC 2047 encoding to
+      --  protect any special characters, so fall back to legacy formatting
+      --  routine, which will do backslash-escaping as needed. If nothing
+      --  needs quoting, don't bother to go trough RFC 2047 either.
+
+      if Charset = Charset_US_ASCII
+           or else not Needs_Quoting
+                         (Email.Real_Name,
+                          Is_EOL => False, Where => Addr_Header)
+      then
+         L.Append ((Contents =>
+                      To_Unbounded_String
+                        (Legacy_Format_Address
+                           (Real    => To_String (Email.Real_Name),
+                            Address => To_String (Email.Address))),
+                    Charset  => U_Charset_US_ASCII));
+
+      --  Case where we have a non-ASCII charset specified
+
+      else
+         --  Here we have a non-default Charset specified: RFC 2047 encoding
+         --  will also take care of escaping special characters.
+
+         L.Append ((Contents => Email.Real_Name,
+                    Charset  => To_Unbounded_String (Charset)));
+
+         --  Actual address must not be encoded in any way: add a separate
+         --  US ASCII section.
+
+         L.Append (Charset_String'
+                     (Contents => " <" & Email.Address & ">",
+                      Charset  => U_Charset_US_ASCII));
+      end if;
+
+      return L;
    end Format_Address;
 
-   --------------------
-   -- Format_Address --
-   --------------------
+   function Format_Address
+     (Email   : Email_Address;
+      Charset : String := Charset_US_ASCII) return Unbounded_String
+   is
+   begin
+      return Res : Unbounded_String do
+         To_String (Format_Address (Email, Charset), Res);
+      end return;
+   end Format_Address;
 
-   function Format_Address (Real : String; Address : String) return String is
+   ---------------------------
+   -- Legacy_Format_Address --
+   ---------------------------
+
+   function Legacy_Format_Address
+     (Real    : String;
+      Address : String) return String
+   is
       Has_Special : Boolean := False;
+      --  True if Real contains any special character that needs to be
+      --  escaped in an RFC 2822 address header.
+
    begin
       if Real = "" then
          return Address;
+
       else
          for C in Real'Range loop
             if Special_Chars (Real (C)) then
@@ -858,7 +932,7 @@ package body GNATCOLL.Email.Utils is
             return Quote (Real) & " <" & Address & '>';
          end if;
       end if;
-   end Format_Address;
+   end Legacy_Format_Address;
 
    -----------
    -- Quote --
@@ -986,7 +1060,8 @@ package body GNATCOLL.Email.Utils is
 
    procedure To_String
      (List   : Charset_String_List.List;
-      Result : out Unbounded_String)
+      Result : out Unbounded_String;
+      Where  : Any_Header := Other_Header)
    is
       use Charset_String_List;
       C   : Charset_String_List.Cursor := First (List);
@@ -997,7 +1072,7 @@ package body GNATCOLL.Email.Utils is
          Encode
            (Str     => To_String (Element (C).Contents),
             Charset => To_String (Element (C).Charset),
-            Header  => True,
+            Where   => Where,
             Result  => Tmp);
 
          Append (Result, Tmp);
@@ -1043,6 +1118,57 @@ package body GNATCOLL.Email.Utils is
       return Login_From_Address (To_String (Email.Address));
    end Login_From_Address;
 
+   -------------------
+   -- Needs_Quoting --
+   -------------------
+
+   function Needs_Quoting
+      (Char   : Character;
+       Where  : Region;
+       Is_EOL : Boolean) return Boolean
+   is
+   begin
+      if Char = ' ' or else Char = ASCII.HT then
+         return Is_EOL or else Where in Any_Header;
+
+      elsif Char = '='
+              or else Char = '?'
+              or else Character'Pos (Char) not in 32 .. 126
+      then
+         return True;
+
+      else
+         return Where = Addr_Header and then Special_Chars (Char);
+      end if;
+   end Needs_Quoting;
+
+   function Needs_Quoting
+     (U      : Unbounded_String;
+      Where  : Region;
+      Is_EOL : Boolean) return Boolean
+   is
+      use Ada.Strings.Unbounded.Aux;
+
+      Str  : Big_String_Access;
+      Last : Integer;
+      EOL  : Boolean;
+   begin
+      Get_String (U, Str, Last);
+      for J in Str'First .. Last loop
+         EOL := Is_EOL and then J = Last;
+
+         --  No need to quote whitespace unless at EOL
+
+         if (Str (J) = ' ' or else Str (J) = ASCII.HT) and then not EOL then
+            null;
+
+         elsif Needs_Quoting (Str (J), Where, EOL) then
+            return True;
+         end if;
+      end loop;
+      return False;
+   end Needs_Quoting;
+
    -----------------------------
    -- Quoted_Printable_Encode --
    -----------------------------
@@ -1052,12 +1178,11 @@ package body GNATCOLL.Email.Utils is
       Block_Prefix       : String  := "";
       Block_Suffix       : String  := "";
       Max_Block_Len      : Integer := 76;
-      Quote_White_Spaces : Boolean;
-      Header             : Boolean := False;
+      Where              : Region := Text;
       Result             : out Unbounded_String)
    is
       function Compute_Block_Sep return String;
-      --  Comment needed???
+      --  Return block separator to be used in Where
 
       -----------------------
       -- Compute_Block_Sep --
@@ -1065,11 +1190,11 @@ package body GNATCOLL.Email.Utils is
 
       function Compute_Block_Sep return String is
       begin
-         if Header then
-            return " ";
-         else
+         if Where = Text then
             --  A soft line-break
             return "=" & ASCII.LF;
+         else
+            return " ";
          end if;
       end Compute_Block_Sep;
 
@@ -1080,38 +1205,12 @@ package body GNATCOLL.Email.Utils is
                           Max_Block_Len - Block_Prefix'Length -
                             Block_Suffix'Length;
 
-      function Needs_Quoting
-         (Char : Character; Is_EOL : Boolean) return Boolean;
-      --  Return True if C needs to be quoted, False otherwise
-
       function Quote (Char : Character) return String;
       --  Encode a single character
 
       procedure Append (Substring : String; Splittable : Boolean);
       --  Append Substring to Result, taking into account the max line length.
       --  If Splittable is false, Substring cannot be cut
-
-      -------------------
-      -- Needs_Quoting --
-      -------------------
-
-      function Needs_Quoting
-         (Char : Character; Is_EOL : Boolean) return Boolean
-      is
-      begin
-         if Char = ' ' or else Char = ASCII.HT then
-            return Is_EOL or else Quote_White_Spaces;
-
-         elsif Char = '_' or else Char = ',' then
-            return Header;
-
-         else
-            return Char = '='
-              or else Char = '?'
-              or else not (Character'Pos (Char) >= 32
-                           and then Character'Pos (Char) <= 126);
-         end if;
-      end Needs_Quoting;
 
       -----------
       -- Quote --
@@ -1120,10 +1219,7 @@ package body GNATCOLL.Email.Utils is
       function Quote (Char : Character) return String is
          P : Integer;
       begin
-         if Header
-           and then Quote_White_Spaces
-           and then Char = ' '
-         then
+         if Char = ' ' and then Where in Any_Header then
             return "_";
          end if;
 
@@ -1185,7 +1281,7 @@ package body GNATCOLL.Email.Utils is
       Result := Null_Unbounded_String;
 
       for S in Str'Range loop
-         if Needs_Quoting (Str (S), Is_EOL => S = Str'Last) then
+         if Needs_Quoting (Str (S), Where, Is_EOL => S = Str'Last) then
             if Start /= -1 then
                Append (Str (Start .. S - 1), Splittable => True);
                Start := -1;
@@ -1221,7 +1317,7 @@ package body GNATCOLL.Email.Utils is
    procedure Quoted_Printable_Decode
      (Str    : String;
       Result : out Unbounded_String;
-      Header : Boolean := False)
+      Where  : Region := Text)
    is
       Start  : Integer := -1;
       S      : Integer;
@@ -1245,7 +1341,7 @@ package body GNATCOLL.Email.Utils is
       Result := Null_Unbounded_String;
 
       while S <= Str'Last loop
-         if Str (S) = '_' and then Header then
+         if Str (S) = '_' and then Where in Any_Header then
             --  Encoded SPACE
             if Start /= -1 then
                Append (Result, Str (Start .. S - 1));
@@ -1514,13 +1610,15 @@ package body GNATCOLL.Email.Utils is
    procedure Encode
      (Str     : String;
       Charset : String := Charset_US_ASCII;
-      Header  : Boolean := False;
+      Where   : Region := Text;
       Result  : out Unbounded_String)
    is
-      Encoding : Encoding_Type;
-      Set      : constant String := To_Lower (Charset);
+      Encoding          : Encoding_Type;
+      Set               : constant String := To_Lower (Charset);
+
    begin
       --  Preferred encoding are the same as in Python
+
       if Set = Charset_US_ASCII then
          Encoding := Encoding_7bit;
       elsif Set = Charset_ISO_8859_1
@@ -1552,7 +1650,7 @@ package body GNATCOLL.Email.Utils is
 
       case Encoding is
          when Encoding_Base64 =>
-            if Header then
+            if Where in Any_Header then
                --  The encoded word payload should have a multiple of 4
                --  characters (see base64 spec), or else the encoded words will
                --  need to be concatenated before being base64 decoded,  and no
@@ -1570,20 +1668,18 @@ package body GNATCOLL.Email.Utils is
                Base64_Encode (Str, Result => Result);
             end if;
          when Encoding_QP =>
-            if Header then
+            if Where in Any_Header then
                Quoted_Printable_Encode
                  (Str,
                   Block_Prefix       => "=?" & Set & "?q?",
                   Block_Suffix       => "?=",
                   Max_Block_Len      => 75,
-                  Quote_White_Spaces => True,
-                  Header             => Header,
+                  Where              => Where,
                   Result             => Result);
             else
                Quoted_Printable_Encode
                  (Str,
-                  Quote_White_Spaces => False,
-                  Header             => Header,
+                  Where              => Where,
                   Result             => Result);
             end if;
          when others =>
@@ -1598,9 +1694,11 @@ package body GNATCOLL.Email.Utils is
    procedure Decode_Header
      (Str             : String;
       Default_Charset : String := Charset_US_ASCII;
-      Result          : out Charset_String_List.List)
+      Result          : out Charset_String_List.List;
+      Where           : Any_Header := Other_Header)
    is
       use Charset_String_List;
+
       Start    : Integer;
       Index    : Integer;
       Index2   : Integer;
@@ -1609,21 +1707,45 @@ package body GNATCOLL.Email.Utils is
       S        : Integer;
 
       procedure Append (Section : Charset_String);
-      --  Add Section to the result, merging with previous section if needed
+      --  Add Section to the result, merging with previous section if needed.
+      --  If Section.Charset is empty, use Default_Charset, or Charset_US_ASCII
+      --  if possible.
 
       ------------
       -- Append --
       ------------
 
       procedure Append (Section : Charset_String) is
+         NSection : Charset_String := Section;
       begin
-         if Is_Empty (Result) then
-            Append (Result, Section);
-         else
+         if NSection.Charset = Null_Unbounded_String then
+            declare
+               Raw_Str  : Ada.Strings.Unbounded.Aux.Big_String_Access;
+               Raw_Last : Integer;
+            begin
+               Ada.Strings.Unbounded.Aux.Get_String
+                  (NSection.Contents, Raw_Str, Raw_Last);
+               for J in Raw_Str'First .. Raw_Last loop
+                  if Character'Pos (Raw_Str (J)) not in 32 .. 126 then
+                     NSection.Charset := To_Unbounded_String (Default_Charset);
+                     exit;
+                  end if;
+               end loop;
+               if NSection.Charset = Null_Unbounded_String then
+                  NSection.Charset := U_Charset_US_ASCII;
+               end if;
+            end;
+         end if;
 
-            --  An empty section between two encoded ones must be
-            --  ignored
-            if Section.Charset /= Default_Charset
+         --  Now append the new section to the sequence
+
+         if Is_Empty (Result) then
+            Append (Result, NSection);
+
+         else
+            --  An empty section between two encoded ones must be ignored
+
+            if NSection.Charset /= Default_Charset
               and then Element (Last (Result)).Charset = Default_Charset
             then
                declare
@@ -1636,17 +1758,18 @@ package body GNATCOLL.Email.Utils is
                end;
             end if;
 
+            --  Try to merge Section with previous one, if possible
+
             if not Is_Empty (Result)
-              and then Section.Charset = Element (Last (Result)).Charset
+               and then NSection.Charset = Element (Last (Result)).Charset
             then
                Replace_Element
-                 (Result,
-                  Last (Result),
+                 (Result, Last (Result),
                   (Contents =>
-                     Element (Last (Result)).Contents & Section.Contents,
-                   Charset  => Section.Charset));
+                     Element (Last (Result)).Contents & NSection.Contents,
+                   Charset  => NSection.Charset));
             else
-               Append (Result, Section);
+               Append (Result, NSection);
             end if;
          end if;
       end Append;
@@ -1655,8 +1778,8 @@ package body GNATCOLL.Email.Utils is
 
    begin
       Result := Charset_String_List.Empty_List;
-      S     := Str'First;
-      Start := Str'First;
+      S      := Str'First;
+      Start  := Str'First;
       while S < Str'Last loop
          if Str (S) = '='
            and then S < Str'Last
@@ -1677,7 +1800,8 @@ package body GNATCOLL.Email.Utils is
                  and then Index + 2 < Str'Last
                then
                   if Str (Index + 2) = '?' then
-                     --  So far we have the prefix =?iso-8859-1?
+                     --  So far we have the prefix =?<charset>?<encoding>?
+
                      Index2 := Index + 3;
                      Index := Next_Occurrence (Str (Index2 .. Str'Last), '?');
                      if Index < Str'Last and then Str (Index + 1) = '=' then
@@ -1685,7 +1809,7 @@ package body GNATCOLL.Email.Utils is
                            when Encoding_QP   =>
                               Quoted_Printable_Decode
                                 (Str (Index2 .. Index - 1),
-                                 Header => True,
+                                 Where  => Where,
                                  Result => Section.Contents);
                            when Encoding_Base64 =>
                               Base64_Decode
@@ -1694,12 +1818,22 @@ package body GNATCOLL.Email.Utils is
                            when others => null;
                         end case;
 
+                        --  Deal with non-encoded-word part: charset is
+                        --  set to Default_Charset, unless the string has
+                        --  no character which need to be encoded, in which
+                        --  case use US-ASCII instead.
+
                         if Start <= S - 1 then
-                           Append
-                             ((Contents => To_Unbounded_String
-                                 (Str (Start .. S - 1)),
-                               Charset  =>
-                                 To_Unbounded_String (Default_Charset)));
+                           declare
+                              Raw_Section     : String
+                                renames Str (Start .. S - 1);
+                              --  Part of Str that is not an encoded-word
+                           begin
+                              Append
+                                ((Contents =>
+                                    To_Unbounded_String (Raw_Section),
+                                  Charset  => Null_Unbounded_String));
+                           end;
                         end if;
 
                         Append (Section);
@@ -1722,7 +1856,7 @@ package body GNATCOLL.Email.Utils is
       if Start <= Str'Last then
          Append
            ((Contents => To_Unbounded_String (Str (Start .. Str'Last)),
-             Charset  => To_Unbounded_String (Default_Charset)));
+             Charset  => Null_Unbounded_String));
       end if;
    end Decode_Header;
 

@@ -101,8 +101,10 @@ package GNATCOLL.Email is
    function Create
      (Name    : String;
       Value   : String;
-      Charset : String := Charset_US_ASCII)
-      return Header;
+      Charset : String := Charset_US_ASCII) return Header;
+   function Create
+     (Name  : String;
+      Value : Charset_String_List.List) return Header;
    --  Create a new header, with an unparsed string Value. The interpretation
    --  of Value depends on the specific header (it could be a date, some
    --  content type,...).
@@ -158,6 +160,10 @@ package GNATCOLL.Email is
       Max_Line_Len     : Positive := Default_Max_Header_Line_Length;
       Show_Header_Name : Boolean := True;
       Result           : out Unbounded_String);
+   function To_String
+     (H                : Header'Class;
+      Max_Line_Len     : Positive := Default_Max_Header_Line_Length;
+      Show_Header_Name : Boolean := True) return String;
    --  Return the header's value as string. Optionally, the header's name can
    --  be prepended.
    --  Lines will be split as needed to match Max_Line_Len. The first line will
@@ -203,12 +209,14 @@ package GNATCOLL.Email is
       From_Real_Name : String := "";
       Quote          : Boolean := True;
       Reply_All      : Boolean := True;
-      Local_Date     : Ada.Calendar.Time := Ada.Calendar.Clock) return Message;
+      Local_Date     : Ada.Calendar.Time := Ada.Calendar.Clock;
+      Charset        : String := Charset_US_ASCII) return Message;
    --  Create a new message as a reply to Msg. This impacts subjects,
    --  recipients,... If Quote is True, then Msg is quoted in the payload of
    --  the new message.
    --  Headers are set so that the reply will appear in the same thread as Msg
-   --  in mailers that support threads.
+   --  in mailers that support threads. Charset, is supplied, is used for
+   --  encoding of From_Real_Name.
 
    procedure Set_Default_Headers
      (Msg            : in out Message'Class;

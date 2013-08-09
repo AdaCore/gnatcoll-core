@@ -35,6 +35,9 @@ with GNAT.Strings;              use GNAT.Strings;
 package body GNATCOLL.Email is
    use Header_List, Charset_String_List, Message_List;
 
+   function Identify_Header (Name : String) return Any_Header;
+   --  Determine whether Name is the name of an Addr_Header or Other_Header
+
    procedure To_String
      (Payload             : Message_Payload;
       Header_Max_Line_Len : Positive;
@@ -82,6 +85,14 @@ package body GNATCOLL.Email is
    function Clone_Headers (Ref : Header_List.List) return Header_List.List;
    --  Return a deep copy of the given list of headers.
 
+   procedure Set_From_Header
+     (Msg            : in out Message'Class;
+      From_Email     : String;
+      From_Real_Name : String;
+      Charset        : String);
+   --  Create and set a From: header for Msg using the given email address and
+   --  real name. The real name has the indicated Charset.
+
    ---------------------
    -- Next_Occurrence --
    ---------------------
@@ -95,6 +106,26 @@ package body GNATCOLL.Email is
       end loop;
       return S'Last + 1;
    end Next_Occurrence;
+
+   ---------------------
+   -- Identify_Header --
+   ---------------------
+
+   function Identify_Header (Name : String) return Any_Header is
+      L_Name : constant String := To_Lower (Name);
+   begin
+
+      if L_Name = "from"
+           or else L_Name = "sender"
+           or else L_Name = "to"
+           or else L_Name = "cc"
+           or else L_Name = "bcc"
+      then
+         return Addr_Header;
+      else
+         return Other_Header;
+      end if;
+   end Identify_Header;
 
    -------------------
    -- Is_Whitespace --
@@ -205,7 +236,8 @@ package body GNATCOLL.Email is
       From_Real_Name : String := "";
       Quote          : Boolean := True;
       Reply_All      : Boolean := True;
-      Local_Date     : Ada.Calendar.Time := Ada.Calendar.Clock) return Message
+      Local_Date     : Ada.Calendar.Time := Ada.Calendar.Clock;
+      Charset        : String := Charset_US_ASCII) return Message
    is
       Reply      : Message := New_Message;
       H, H2, H3  : Header;
@@ -228,9 +260,8 @@ package body GNATCOLL.Email is
 
       Replace_Header_Internal
         (Reply, Create ("Date", Format_Date (Local_Date)), Append => False);
-      Replace_Header_Internal
-        (Reply, Create ("From", Format_Address (From_Real_Name, From_Email)),
-         Append => False);
+
+      Set_From_Header (Reply, From_Email, From_Real_Name, Charset);
 
       H := Get_Header (Msg, "From");
       H2 := Create ("To", "");
@@ -368,10 +399,30 @@ package body GNATCOLL.Email is
         Create ("Subject", Subject, Charset), Append => False);
       Replace_Header_Internal (Msg,
         Create ("Date", Format_Date (Local_Date)), Append => False);
-      Replace_Header_Internal (Msg,
-         Create ("From", Format_Address (From_Real_Name, From_Email), Charset),
-         Append => False);
+
+      Set_From_Header (Msg, From_Email, From_Real_Name, Charset);
    end Set_Default_Headers;
+
+   ---------------------
+   -- Set_From_Header --
+   ---------------------
+
+   procedure Set_From_Header
+     (Msg            : in out Message'Class;
+      From_Email     : String;
+      From_Real_Name : String;
+      Charset        : String)
+   is
+      From_H : Header;
+   begin
+      From_H := Create ("From",
+                  Format_Address
+                    (Email =>
+                       (Real_Name => To_Unbounded_String (From_Real_Name),
+                        Address   => To_Unbounded_String (From_Email)),
+                     Charset => Charset));
+      Replace_Header_Internal (Msg, From_H, Append => False);
+   end Set_From_Header;
 
    ------------
    -- Adjust --
@@ -490,13 +541,26 @@ package body GNATCOLL.Email is
       Value   : String;
       Charset : String := Charset_US_ASCII) return Header
    is
-      H : Header;
+      V : Charset_String_List.List;
    begin
-      H.Contents := new Header_Record;
-      H.Contents.Name := To_Unbounded_String (To_Lower (Name));
-      Decode_Header
-        (Value, Default_Charset => Charset, Result => H.Contents.Value);
-      return H;
+      Decode_Header (Value,
+        Default_Charset => Charset,
+        Result          => V,
+        Where           => Identify_Header (Name));
+      return Create (Name, V);
+   end Create;
+
+   function Create
+     (Name  : String;
+      Value : Charset_String_List.List) return Header
+   is
+   begin
+      return (Ada.Finalization.Controlled with
+                Contents =>
+                  new Header_Record'
+                        (Name   => To_Unbounded_String (To_Lower (Name)),
+                         Value  => Value,
+                         others => <>));
    end Create;
 
    ------------
@@ -510,7 +574,10 @@ package body GNATCOLL.Email is
    is
       L : Charset_String_List.List;
    begin
-      Decode_Header (Value, Default_Charset => Charset, Result => L);
+      Decode_Header (Value,
+        Default_Charset => Charset,
+        Result          => L,
+        Where           => Identify_Header (To_String (H.Contents.Name)));
       Splice (H.Contents.Value, Charset_String_List.No_Element, L);
    end Append;
 
@@ -540,27 +607,43 @@ package body GNATCOLL.Email is
       Result           : out Unbounded_String)
    is
       Max     : Positive := Max_Line_Len - 2 - Length (H.Contents.Name);
-      N       : String (1 .. Length (H.Contents.Name));
+      N       : String := To_String (H.Contents.Name);
       Value   : constant Charset_String_List.List := Get_Value (H);
       Encoded : Unbounded_String;
 
+      Uppercase_Next : Boolean;
+      Next           : Natural;
    begin
-      To_String (Value, Encoded);
+      To_String (Value, Encoded, Identify_Header (N));
 
       if Show_Header_Name then
-         N := To_String (H.Contents.Name);
-         if N = "mime-version" then
-            N := MIME_Version;
-         elsif N = "message-id" then
+         --  Fix up casing of header name
+
+         if N = "message-id" then
             N := Message_ID;
+
          elsif N = "cc" then
             N := CC;
+
          else
-            N (N'First) := To_Upper (N (N'First));
-            for F in N'First + 1 .. N'Last - 1 loop
-               if N (F) = '-' then
-                  N (F + 1) := To_Upper (N (F + 1));
+            if N'Length >= 5 and then N (N'First .. N'First + 4) = "mime-" then
+               N (N'First .. N'First + 3) := "MIME";
+               Next := N'First + 5;
+            else
+               Next := N'First;
+            end if;
+
+            Uppercase_Next := True;
+            while Next <= N'Last loop
+               if Uppercase_Next then
+                  N (Next) := To_Upper (N (Next));
+                  Uppercase_Next := False;
                end if;
+
+               if N (Next) = '-' then
+                  Uppercase_Next := True;
+               end if;
+               Next := Next + 1;
             end loop;
          end if;
       end if;
@@ -645,6 +728,17 @@ package body GNATCOLL.Email is
             end if;
          end if;
       end;
+   end To_String;
+
+   function To_String
+     (H                : Header'Class;
+      Max_Line_Len     : Positive := Default_Max_Header_Line_Length;
+      Show_Header_Name : Boolean := True) return String
+   is
+      Result : Unbounded_String;
+   begin
+      To_String (H, Max_Line_Len, Show_Header_Name, Result);
+      return To_String (Result);
    end To_String;
 
    ---------------
@@ -1561,10 +1655,7 @@ package body GNATCOLL.Email is
 
             when Encoding_QP =>
                Quoted_Printable_Encode
-                 (Str                => Str.all,
-                  Quote_White_Spaces => False,
-                  Header             => False,
-                  Result             => F);
+                 (Str    => Str.all, Where  => Text, Result => F);
                Add_Header
                  (Attachment,
                   Create (Content_Transfer_Encoding, "quoted-printable"));

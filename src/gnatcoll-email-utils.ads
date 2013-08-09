@@ -29,6 +29,13 @@ with Ada.Containers.Hashed_Sets;
 
 package GNATCOLL.Email.Utils is
 
+   type Region is (Addr_Header, Other_Header, Text);
+   subtype Any_Header is Region range Addr_Header .. Other_Header;
+   --  Used to indicate where a given character occurs:
+   --     Addr_Header: From/To/Cc header
+   --     Header:      any other header
+   --     Text:        message body
+
    -----------
    -- Dates --
    -----------
@@ -123,7 +130,7 @@ package GNATCOLL.Email.Utils is
    function Get_Recipients
      (Msg : Message'Class; Include_From : Boolean := False)
       return Address_Set.Set;
-   function Get_Recipients (H   : Header'Class) return Address_Set.Set;
+   function Get_Recipients (H : Header'Class) return Address_Set.Set;
    --  Return the list of all recipients of the message. This takes into
    --  account all occurrences of all relevant headers.
    --  In the first case, Include_From indicates whether the sender of the
@@ -133,9 +140,22 @@ package GNATCOLL.Email.Utils is
    --  to all headers containing addresses, not only those designating
    --  message recipients.
 
-   function Format_Address (Addr : Email_Address) return String;
-   function Format_Address (Real : String; Address : String) return String;
+   function Legacy_Format_Address
+     (Real : String; Address : String) return String;
+   --  Format the given email address and real name, using quotes and
+   --  backslash escaping to protect any special characters occurring in Real.
+   --  Note: Real should be a US ASCII string.
+
+   function Format_Address
+     (Email   : Email_Address;
+      Charset : String := Charset_US_ASCII) return Charset_String_List.List;
    --  Format an email address into a proper format for RFC2822
+   --  Charset specifies the character for the real name.
+
+   function Format_Address
+     (Email   : Email_Address;
+      Charset : String := Charset_US_ASCII) return Unbounded_String;
+   --  Same as above, and return result as an RFC 2047 encoded string
 
    function Domain_From_Address (Email : String) return String;
    function Domain_From_Address (Email : Email_Address) return String;
@@ -171,8 +191,7 @@ package GNATCOLL.Email.Utils is
       Block_Prefix       : String := "";
       Block_Suffix       : String := "";
       Max_Block_Len      : Integer := 76;
-      Quote_White_Spaces : Boolean;
-      Header             : Boolean := False;
+      Where              : Region := Text;
       Result             : out Unbounded_String);
    --  Encode Str in quoted-printable format, as per RFC 2045.
    --  This should be used for ascii-like charsets, like all iso-8859-*
@@ -181,15 +200,11 @@ package GNATCOLL.Email.Utils is
    --  The output is split in blocks if Max_Block_Len is specified. Each block
    --  has a maximal length, including its prefix and suffix. This is to
    --  conform to the format to use for mail headers.
-   --  Quote_White_Spaces is a flag which controls whether to encode embedded
-   --  spaces and tabs; when true it encodes such embedded whitespace, and when
-   --  false it leaves them unencoded. Note that spaces and tabs appearing at
-   --  the end of lines are always encoded.
 
    procedure Quoted_Printable_Decode
      (Str    : String;
       Result : out Unbounded_String;
-      Header : Boolean := False);
+      Where  : Region := Text);
    --  Decode Str as a quoted-printable encoded string as per RFC 2045.
    --     The returned value may contain non - ASCII characters, their
    --  interpretation is left to the called (ie the charset is unknown).
@@ -218,7 +233,7 @@ package GNATCOLL.Email.Utils is
    procedure Encode
      (Str     : String;
       Charset : String := Charset_US_ASCII;
-      Header  : Boolean := False;
+      Where   : Region := Text;
       Result  : out Unbounded_String);
    --  Encode Str in the best encoding to use for Charset. The encoding depends
    --  on how close charset is to ASCII.
@@ -229,7 +244,8 @@ package GNATCOLL.Email.Utils is
    procedure Decode_Header
      (Str             : String;
       Default_Charset : String := Charset_US_ASCII;
-      Result          : out Charset_String_List.List);
+      Result          : out Charset_String_List.List;
+      Where           : Any_Header := Other_Header);
    --  Decode Str. It might contain several mime-encoded sections, with
    --  different charsets. Each section is returned separately. For each
    --  section, Contents must be interpreted in the context of that charset.
@@ -255,7 +271,8 @@ package GNATCOLL.Email.Utils is
 
    procedure To_String
      (List   : Charset_String_List.List;
-      Result : out Unbounded_String);
+      Result : out Unbounded_String;
+      Where  : Any_Header := Other_Header);
    --  Return a single string representing list, where all sections is
    --  properly encoded and surrounded by =?charset? markers.
 
