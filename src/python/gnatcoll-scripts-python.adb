@@ -2659,7 +2659,7 @@ package body GNATCOLL.Scripts.Python is
       end if;
       Py_DECREF (Data);
 
-      if Active (Me) then
+      if Active (Me) and then CI /= No_Class_Instance then
          Assert
            (Me,
             Get_Refcount (Python_Class_Instance (Get_CIR (CI)).Data) =
@@ -2727,10 +2727,10 @@ package body GNATCOLL.Scripts.Python is
             Decref (CI);
          end if;
 
-         if Active (Me) then
+         if Active (Me) and then Get_CIR (Result) /= null then
             Assert (Me,
                     Get_Refcount (Object) = Old_Refcount + 1,
-                    "Get_CI should owb a reference,"
+                    "Get_CI should own a reference,"
                     & Print_Refcount (Get_CIR (Result)) & " !="
                     & Old_Refcount'Img,
                     Raise_Exception => False);
