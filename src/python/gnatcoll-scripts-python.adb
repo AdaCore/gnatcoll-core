@@ -2730,14 +2730,14 @@ package body GNATCOLL.Scripts.Python is
          --  ??? Temporarily commented out: it seems true with GPS, but
          --  fails on GMS.
 
---           if Active (Me) and then Get_CIR (Result) /= null then
---              Assert (Me,
---                      Get_Refcount (Object) = Old_Refcount + 1,
---                      "Get_CI should own a reference,"
---                      & Print_Refcount (Get_CIR (Result)) & " !="
---                      & Integer'Image (Old_Refcount + 1)'Img,
---                      Raise_Exception => False);
---           end if;
+         if False and then Active (Me) and then Get_CIR (Result) /= null then
+            Assert (Me,
+                    Get_Refcount (Object) = Old_Refcount + 1,
+                    "Get_CI should own a reference,"
+                    & Print_Refcount (Get_CIR (Result)) & " !="
+                    & Integer'Image (Old_Refcount + 1),
+                    Raise_Exception => False);
+         end if;
 
       elsif PyCObject_Check (Item) then
          CIR := PyCObject_AsVoidPtr (Item);
