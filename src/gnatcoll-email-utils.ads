@@ -150,7 +150,7 @@ package GNATCOLL.Email.Utils is
      (Email   : Email_Address;
       Charset : String := Charset_US_ASCII) return Charset_String_List.List;
    --  Format an email address into a proper format for RFC2822
-   --  Charset specifies the character for the real name.
+   --  Charset specifies the character set for the real name.
 
    function Format_Address
      (Email   : Email_Address;

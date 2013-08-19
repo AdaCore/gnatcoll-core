@@ -415,12 +415,13 @@ package body GNATCOLL.Email is
    is
       From_H : Header;
    begin
-      From_H := Create ("From",
-                  Format_Address
-                    (Email =>
-                       (Real_Name => To_Unbounded_String (From_Real_Name),
-                        Address   => To_Unbounded_String (From_Email)),
-                     Charset => Charset));
+      From_H := Create
+         ("From",
+          Charset_String_List.List'(Format_Address
+             (Email =>
+                (Real_Name => To_Unbounded_String (From_Real_Name),
+                 Address   => To_Unbounded_String (From_Email)),
+              Charset => Charset)));
       Replace_Header_Internal (Msg, From_H, Append => False);
    end Set_From_Header;
 

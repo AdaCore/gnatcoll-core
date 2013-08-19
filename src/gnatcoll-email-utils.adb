@@ -36,6 +36,9 @@ pragma Warnings (On);
 
 package body GNATCOLL.Email.Utils is
 
+   U_Charset_US_ASCII : constant Unbounded_String :=
+                          To_Unbounded_String (Charset_US_ASCII);
+
    function Needs_Quoting
       (Char   : Character;
        Where  : Region;
@@ -845,9 +848,6 @@ package body GNATCOLL.Email.Utils is
    -- Format_Address --
    --------------------
 
-   U_Charset_US_ASCII : constant Unbounded_String :=
-                          To_Unbounded_String (Charset_US_ASCII);
-
    function Format_Address
      (Email   : Email_Address;
       Charset : String := Charset_US_ASCII) return Charset_String_List.List
@@ -892,14 +892,18 @@ package body GNATCOLL.Email.Utils is
       return L;
    end Format_Address;
 
+   --------------------
+   -- Format_Address --
+   --------------------
+
    function Format_Address
      (Email   : Email_Address;
       Charset : String := Charset_US_ASCII) return Unbounded_String
    is
+      Res : Unbounded_String;
    begin
-      return Res : Unbounded_String do
-         To_String (Format_Address (Email, Charset), Res);
-      end return;
+      To_String (Format_Address (Email, Charset), Res);
+      return Res;
    end Format_Address;
 
    ---------------------------
