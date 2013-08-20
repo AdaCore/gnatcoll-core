@@ -1480,6 +1480,7 @@ begin
       declare
          N : constant String := DB_Name.all;
          Dir : Virtual_File := Tree.Root_Project.Object_Dir;
+         Dir2 : Virtual_File;
       begin
          Free (DB_Name);
 
@@ -1491,10 +1492,15 @@ begin
                    & "creating database in " & (+Dir.Full_Name.all));
          end if;
 
-         DB_Name := new String'
-           (Create_From_Dir
-              (Dir       => Dir,
-               Base_Name => +N).Display_Full_Name);
+         Dir := Create_From_Base
+           (Base_Dir => Dir.Full_Name.all, Base_Name => +N);
+         Dir2 := Create (Dir.Dir_Name);
+
+         if not Dir2.Is_Directory then
+            Dir2.Make_Dir (Recursive => True);
+         end if;
+
+         DB_Name := new String'(Dir.Display_Full_Name);
       end;
    end if;
 
