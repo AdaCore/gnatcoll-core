@@ -1548,10 +1548,11 @@ begin
 exception
    when GNAT.Command_Line.Exit_From_Command_Line
       | Ada.Text_IO.End_Error =>
-      null;
+      On_Ctrl_C;
    when Invalid_Command =>
-      null;
+      On_Ctrl_C;
    when E : others =>
+      On_Ctrl_C;
       Put_Line ("Unexpected exception");
       Put_Line (Exception_Information (E));
 end GNATInspect;
