@@ -2975,6 +2975,7 @@ package body GNATCOLL.Projects.Normalize is
           Node           => Empty_Node,
           Canonical_Path => Path_Name_Type (Old_Name),
           Extended       => False,
+          From_Extended  => False,
           Proj_Qualifier => Unspecified));
 
       --  Register the new name
@@ -2987,6 +2988,7 @@ package body GNATCOLL.Projects.Normalize is
           Canonical_Path => Path_Name_Type (Get_String (+D)),
           Node           => Project.Node,
           Extended       => False,
+          From_Extended  => False,
           Proj_Qualifier => Unspecified));
 
       Project.Data.Modified := True;
