@@ -29,6 +29,7 @@ with Ada.Strings.Unbounded;      use Ada.Strings.Unbounded;
 with Ada.Task_Attributes;
 with Ada.Unchecked_Deallocation;
 with GNAT.Strings;              use GNAT.Strings;
+with GNAT.Task_Lock;
 with GNATCOLL.Traces;           use GNATCOLL.Traces;
 with GNATCOLL.Utils;            use GNATCOLL.Utils;
 with GNATCOLL.SQL.Exec_Private; use GNATCOLL.SQL.Exec_Private;
@@ -104,7 +105,7 @@ package body GNATCOLL.SQL.Exec is
    -- Query_Cache --
    -----------------
 
-   protected Query_Cache is
+   package Query_Cache is
       procedure Get_Result
         (Stmt    : Prepared_Statement'Class;
          Cached  : out Direct_Cursor;
@@ -160,7 +161,7 @@ package body GNATCOLL.SQL.Exec is
    -- Query_Cache --
    -----------------
 
-   protected body Query_Cache is
+   package body Query_Cache is
 
       ----------------
       -- Get_Result --
@@ -170,33 +171,43 @@ package body GNATCOLL.SQL.Exec is
         (Stmt    : Prepared_Statement'Class;
          Cached  : out Direct_Cursor;
          Found   : out Boolean;
-         Params  : SQL_Parameters := No_Parameters)
-      is
-         C : Cached_Maps.Cursor;
-         S : constant Prepared_Statements.Encapsulated_Access := Stmt.Get;
+         Params  : SQL_Parameters := No_Parameters) is
       begin
+         GNAT.Task_Lock.Lock;
+
          if Params /= No_Parameters then
             --  ??? The cache should take the parameters into account
             Found := False;
-            return;
-         end if;
-
-         if Clock - Timestamp > Cache_Expiration_Delay then
+         elsif Clock - Timestamp > Cache_Expiration_Delay then
             Reset;
             Found := False;
          else
-            if S.Cached_Result = No_Cache_Id
-              or else not S.Use_Cache
-            then
-               Found := False;
-            else
-               C := Cached_Maps.Find (Cache, S.Cached_Result);
-               Found := Cached_Maps.Has_Element (C);
-               if Found then
-                  Cached := Cached_Maps.Element (C);
+            declare
+               C : Cached_Maps.Cursor;
+               S : constant Prepared_Statements.Encapsulated_Access :=
+                 Stmt.Get;
+
+            begin
+               if S.Cached_Result = No_Cache_Id
+                 or else not S.Use_Cache
+               then
+                  Found := False;
+               else
+                  C := Cached_Maps.Find (Cache, S.Cached_Result);
+                  Found := Cached_Maps.Has_Element (C);
+
+                  if Found then
+                     Cached := Cached_Maps.Element (C);
+                  end if;
                end if;
-            end if;
+            end;
          end if;
+
+         GNAT.Task_Lock.Unlock;
+
+      exception
+         when others =>
+            GNAT.Task_Lock.Unlock;
       end Get_Result;
 
       ------------
@@ -204,12 +215,22 @@ package body GNATCOLL.SQL.Exec is
       ------------
 
       procedure Set_Id (Stmt : Prepared_Statement'Class) is
-         S : constant Prepared_Statements.Encapsulated_Access := Stmt.Get;
+         S : Prepared_Statements.Encapsulated_Access;
       begin
+         GNAT.Task_Lock.Lock;
+
+         S := Stmt.Get;
+
          if S.Cached_Result = No_Cache_Id then
             S.Cached_Result := Current_Cache_Id;
             Current_Cache_Id := Current_Cache_Id + 1;
          end if;
+
+         GNAT.Task_Lock.Unlock;
+
+      exception
+         when others =>
+            GNAT.Task_Lock.Unlock;
       end Set_Id;
 
       ---------------
@@ -219,8 +240,12 @@ package body GNATCOLL.SQL.Exec is
       procedure Set_Cache
         (Stmt : Prepared_Statement'Class; Cached : Direct_Cursor)
       is
-         S : constant Prepared_Statements.Encapsulated_Access := Stmt.Get;
+         S : Prepared_Statements.Encapsulated_Access;
       begin
+         GNAT.Task_Lock.Lock;
+
+         S := Stmt.Get;
+
          --  Reserve capacity up to the current assigned id, since we are
          --  likely to need it anyway, and it is bound to be at least as big
          --  as Stmt.Cached.Id
@@ -229,6 +254,12 @@ package body GNATCOLL.SQL.Exec is
             Set_Id (Stmt);
             Cache.Include (S.Cached_Result, Cached);
          end if;
+
+         GNAT.Task_Lock.Unlock;
+
+      exception
+         when others =>
+            GNAT.Task_Lock.Unlock;
       end Set_Cache;
 
       -----------------
@@ -238,6 +269,8 @@ package body GNATCOLL.SQL.Exec is
       procedure Unset_Cache (Stmt : Prepared_Statement_Data) is
          C : Cached_Maps.Cursor;
       begin
+         GNAT.Task_Lock.Lock;
+
          if Stmt.Cached_Result /= No_Cache_Id
            and then Stmt.Use_Cache
          then
@@ -247,6 +280,12 @@ package body GNATCOLL.SQL.Exec is
                Cache.Delete (C);
             end if;
          end if;
+
+         GNAT.Task_Lock.Unlock;
+
+      exception
+         when others =>
+            GNAT.Task_Lock.Unlock;
       end Unset_Cache;
 
       -----------
@@ -255,8 +294,14 @@ package body GNATCOLL.SQL.Exec is
 
       procedure Reset is
       begin
+         GNAT.Task_Lock.Lock;
          Cache.Clear;
          Timestamp := Clock;
+         GNAT.Task_Lock.Unlock;
+
+      exception
+         when others =>
+            GNAT.Task_Lock.Unlock;
       end Reset;
 
       ---------------------
@@ -265,7 +310,13 @@ package body GNATCOLL.SQL.Exec is
 
       procedure Mark_DB_As_Free (DB : Database_Connection) is
       begin
+         GNAT.Task_Lock.Lock;
          Freed_DB.Include (DB);
+         GNAT.Task_Lock.Unlock;
+
+      exception
+         when others =>
+            GNAT.Task_Lock.Unlock;
       end Mark_DB_As_Free;
 
       ---------------
@@ -273,8 +324,17 @@ package body GNATCOLL.SQL.Exec is
       ---------------
 
       function Was_Freed (DB : Database_Connection) return Boolean is
+         Result : Boolean := False;
       begin
-         return Freed_DB.Contains (DB);
+         GNAT.Task_Lock.Lock;
+         Result := Freed_DB.Contains (DB);
+         GNAT.Task_Lock.Unlock;
+         return Result;
+
+      exception
+         when others =>
+            GNAT.Task_Lock.Unlock;
+            return Result;
       end Was_Freed;
 
    end Query_Cache;
