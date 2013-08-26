@@ -46,7 +46,7 @@ package GNATCOLL.SQL.Sqlite is
    --  BEGIN and a SELECT and gets a shared lock, then the second connection
    --  tries to write to the database but cannot obtain a write lock).
 
-   Max_Ms_On_Busy : Natural := 200;
+   Max_Ms_On_Busy : Natural := 0;
    --  Maximum number of milliseconds we are willing to wait when sqlite
    --  reports that it was enable to perform an action because it is already
    --  busy.
