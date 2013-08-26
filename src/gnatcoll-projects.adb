@@ -46,6 +46,7 @@ with GNATCOLL.VFS_Utils;          use GNATCOLL.VFS_Utils;
 with Atree;
 with Casing;                      use Casing;
 with Csets;
+pragma Warnings (Off);
 pragma Warnings (Off, "*license of withed unit*");
 with Krunch;
 with Makeutl;
@@ -66,6 +67,7 @@ with Prj.Tree;                    use Prj.Tree;
 with Prj.Util;                    use Prj.Util;
 with Sinput.P;
 pragma Warnings (On, "*license of withed unit*");
+pragma Warnings (On);
 with Snames;                      use Snames;
 with Types;                       use Types;
 
