@@ -1798,10 +1798,11 @@ package body GNATCOLL.Xref is
 
                exit when Str (Index) = '='
                  and then Index < Str'Last
-                 and then Str (Index + 1) /= ' ';
+                 and then Is_Digit (Str (Index + 1));
 
                --  C++ operators are represented as:
                --    93V7*operator new 93r12
+               --    93V7*operator=={bool}
                --  so we need to allow a space in the name in some cases.
 
                exit when Str (Index) = ' '

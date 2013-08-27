@@ -1513,10 +1513,10 @@ begin
 
    if Commands_From_Switch.all /= "" then
       Process_Line (Commands_From_Switch.all);
-      return;
+      Exit_After_Refresh := True;
    elsif Commands_From_File.all /= "" then
       Process_File (Commands_From_File.all);
-      return;
+      Exit_After_Refresh := True;
    end if;
 
    if Exit_After_Refresh then
