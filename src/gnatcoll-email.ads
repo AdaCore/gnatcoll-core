@@ -64,6 +64,19 @@ package GNATCOLL.Email is
    Charset_ISO_8859_15  : constant String := "iso-8859-15";
    Charset_Windows_1252 : constant String := "windows-1252";
 
+   ---------------
+   -- Addresses --
+   ---------------
+
+   type Email_Address is record
+      Real_Name : Unbounded_String;
+      Address   : Unbounded_String;
+   end record;
+   Null_Address : constant Email_Address;
+
+   function "=" (Addr1, Addr2 : Email_Address) return Boolean;
+   --  Whether Addr1 and Addr2 have the same address, even if real name differs
+
    -------------
    -- Headers --
    -------------
@@ -209,6 +222,9 @@ package GNATCOLL.Email is
       From_Real_Name : String := "";
       Quote          : Boolean := True;
       Reply_All      : Boolean := True;
+      Reply_Filter   : access function
+                                (Recipient : Email_Address) return Boolean
+                         := null;
       Local_Date     : Ada.Calendar.Time := Ada.Calendar.Clock;
       Charset        : String := Charset_US_ASCII) return Message;
    --  Create a new message as a reply to Msg. This impacts subjects,
@@ -216,7 +232,10 @@ package GNATCOLL.Email is
    --  the new message.
    --  Headers are set so that the reply will appear in the same thread as Msg
    --  in mailers that support threads. Charset, is supplied, is used for
-   --  encoding of From_Real_Name.
+   --  encoding of From_Real_Name. If Reply_All is True, all recipients of
+   --  the original message are added to the Cc: header of the reply. If
+   --  in addition Reply_Filter is not null, then only recipients for which
+   --  Reply_Filter returns True are added.
 
    procedure Set_Default_Headers
      (Msg            : in out Message'Class;
@@ -622,6 +641,9 @@ private
      (Ada.Finalization.Controlled with null);
 
    Null_Charset_String : constant Charset_String :=
+     (Null_Unbounded_String, Null_Unbounded_String);
+
+   Null_Address : constant Email_Address :=
      (Null_Unbounded_String, Null_Unbounded_String);
 
 end GNATCOLL.Email;

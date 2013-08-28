@@ -979,16 +979,6 @@ package body GNATCOLL.Email.Utils is
       return Result (Result'First .. Index - 1);
    end Unquote;
 
-   ---------
-   -- "=" --
-   ---------
-
-   function "=" (Addr1, Addr2 : Email_Address) return Boolean is
-   begin
-      return To_Lower (To_String (Addr1.Address))
-        = To_Lower (To_String (Addr2.Address));
-   end "=";
-
    ----------
    -- Hash --
    ----------

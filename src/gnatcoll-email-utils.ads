@@ -87,15 +87,6 @@ package GNATCOLL.Email.Utils is
    -- Addresses --
    ---------------
 
-   type Email_Address is record
-      Real_Name : Unbounded_String;
-      Address   : Unbounded_String;
-   end record;
-   Null_Address : constant Email_Address;
-
-   function "=" (Addr1, Addr2 : Email_Address) return Boolean;
-   --  Whether Addr1 and Addr2 have the same address, even if real name differs
-
    function Hash (Addr : Email_Address) return Ada.Containers.Hash_Type;
    package Address_Set is new Ada.Containers.Hashed_Sets
      (Email_Address, Hash, "=");
@@ -276,7 +267,4 @@ package GNATCOLL.Email.Utils is
    --  Return a single string representing list, where all sections is
    --  properly encoded and surrounded by =?charset? markers.
 
-private
-   Null_Address : constant Email_Address :=
-     (Null_Unbounded_String, Null_Unbounded_String);
 end GNATCOLL.Email.Utils;

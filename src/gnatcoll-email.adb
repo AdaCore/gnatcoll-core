@@ -21,6 +21,8 @@
 --                                                                          --
 ------------------------------------------------------------------------------
 
+pragma Ada_2012;
+
 with Ada.Calendar;              use Ada.Calendar;
 with Ada.Characters.Handling;   use Ada.Characters.Handling;
 with Ada.Containers;            use Ada.Containers;
@@ -92,6 +94,16 @@ package body GNATCOLL.Email is
       Charset        : String);
    --  Create and set a From: header for Msg using the given email address and
    --  real name. The real name has the indicated Charset.
+
+   ---------
+   -- "=" --
+   ---------
+
+   function "=" (Addr1, Addr2 : Email_Address) return Boolean is
+   begin
+      return To_Lower (To_String (Addr1.Address))
+           = To_Lower (To_String (Addr2.Address));
+   end "=";
 
    ---------------------
    -- Next_Occurrence --
@@ -236,12 +248,14 @@ package body GNATCOLL.Email is
       From_Real_Name : String := "";
       Quote          : Boolean := True;
       Reply_All      : Boolean := True;
+      Reply_Filter   : access function
+                                (Recipient : Email_Address) return Boolean
+                         := null;
       Local_Date     : Ada.Calendar.Time := Ada.Calendar.Clock;
       Charset        : String := Charset_US_ASCII) return Message
    is
       Reply      : Message := New_Message;
       H, H2, H3  : Header;
-      Iter       : Header_Iterator;
       Is_First   : Boolean;
       To_Quote   : Unbounded_String;
       Part_Iter  : Payload_Iterator;
@@ -275,38 +289,19 @@ package body GNATCOLL.Email is
       Add_Header (Reply, H2);
 
       if Reply_All then
-         H2 := Create ("CC", "");
+         H2 := Create ("Cc", "");
+
          Is_First := True;
-
-         Iter := Get_Headers (Msg, "To");
-
-         loop
-            Next (Iter, H);
-            exit when H = Null_Header;
-
-            if not Is_First then
-               Append (H2, ",");
-            else
-               Is_First := False;
-            end if;
-            Append (H2, Get_Value (H));
-         end loop;
-
-         if Get_Header (Msg, "CC") /= Null_Header then
-            Iter := Get_Headers (Msg, "CC");
-
-            loop
-               Next (Iter, H);
-               exit when H = Null_Header;
-               if not Is_First then
-                  Append (H2, ",");
-               else
+         for Recipient of Get_Recipients (Msg) loop
+            if Reply_Filter = null or else Reply_Filter (Recipient) then
+               if Is_First then
                   Is_First := False;
+               else
+                  Append (H2, ",");
                end if;
-               Append (H2, Get_Value (H));
-            end loop;
-         end if;
-
+               Append (H2, Format_Address (Recipient));
+            end if;
+         end loop;
          Add_Header (Reply, H2);
       end if;
 
