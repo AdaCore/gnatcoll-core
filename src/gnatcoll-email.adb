@@ -297,12 +297,15 @@ package body GNATCOLL.Email is
                if Is_First then
                   Is_First := False;
                else
-                  Append (H2, ",");
+                  Append (H2, ", ");
                end if;
                Append (H2, Format_Address (Recipient));
             end if;
          end loop;
-         Add_Header (Reply, H2);
+
+         if not Is_First then
+            Add_Header (Reply, H2);
+         end if;
       end if;
 
       H := Get_Header (Msg, "Message-Id");
