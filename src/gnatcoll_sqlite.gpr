@@ -14,15 +14,26 @@ project GnatColl_Sqlite is
       "lib" & Project'Library_Name
       & GnatColl_Shared.So_Ext & "." & GnatColl_Shared.Version;
 
+   Thread_Lib := ();
+
+   case Gnatcoll_Shared.OS is
+      when "Windows_NT" =>
+         null;
+      when others =>
+         Thread_Lib := ("-lpthread");
+   end case;
+
    case GnatColl_Shared.Sqlite is
       when "no" =>
         for Source_Dirs use ("sqlite", "sqlite/no_sqlite");
       when "yes" =>
         for Source_Dirs use ("sqlite", "sqlite/with_sqlite");
-        for Library_Options use (GnatColl_Shared.Sqlite_Dir) & "-lsqlite3";
+        for Library_Options use (GnatColl_Shared.Sqlite_Dir)
+          & "-lsqlite3" & Thread_Lib;
       when "embedded" =>
         for Languages use ("Ada", "C");
         for Source_Dirs use ("sqlite", "sqlite/with_sqlite", "sqlite/amalgamation");
+        for Library_Options use Thread_Lib;
    end case;
 
    case GnatColl_Shared.Projects is
@@ -52,8 +63,12 @@ project GnatColl_Sqlite is
       case GnatColl_Shared.Sqlite is
          when "no" =>
             null;
+         when "embedded" =>
+            for Linker_Options use Thread_Lib;
+
          when "yes" =>
-            for Linker_Options use (Gnatcoll_Shared.Sqlite_Dir) & "-lsqlite3";
+            for Linker_Options use (Gnatcoll_Shared.Sqlite_Dir)
+              & "-lsqlite3" & Thread_Lib;
       end case;
    end Linker;
 

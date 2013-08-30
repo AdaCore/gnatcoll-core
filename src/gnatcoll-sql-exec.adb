@@ -26,7 +26,6 @@ with Ada.Containers.Hashed_Maps; use Ada.Containers;
 with Ada.Containers.Hashed_Sets;
 with Ada.Strings.Hash;
 with Ada.Strings.Unbounded;      use Ada.Strings.Unbounded;
-with Ada.Task_Attributes;
 with Ada.Unchecked_Deallocation;
 with GNAT.Strings;              use GNAT.Strings;
 with GNAT.Task_Lock;
@@ -53,9 +52,6 @@ package body GNATCOLL.SQL.Exec is
      (Abstract_DBMS_Forward_Cursor'Class, Abstract_Cursor_Access);
    procedure Unchecked_Free is new Ada.Unchecked_Deallocation
      (Prepared_In_Session, Prepared_In_Session_List);
-
-   package DB_Attributes is new Ada.Task_Attributes
-     (Database_Connection, null);
 
    function Is_Select_Query (Query : String) return Boolean;
    --  Return true if Query is a select query
@@ -1159,34 +1155,6 @@ package body GNATCOLL.SQL.Exec is
 
       GNAT.Strings.Free (Connection.Error_Msg);
    end Reset_Connection;
-
-   -------------------------
-   -- Get_Task_Connection --
-   -------------------------
-
-   function Get_Task_Connection
-     (Description : Database_Description;
-      Username    : String := "")
-      return Database_Connection
-   is
-      Connection : Database_Connection;
-   begin
-      Connection := DB_Attributes.Value;
-      if Connection = null then
-         Connection := Description.Build_Connection;
-         if Connection /= null then
-            DB_Attributes.Set_Value (Connection);
-         else
-            Trace
-              (Me_Error, "Could not create connection object for database");
-         end if;
-
-      else
-         Reset_Connection (Connection, Username);
-      end if;
-
-      return Connection;
-   end Get_Task_Connection;
 
    ------------------------
    -- Last_Error_Message --

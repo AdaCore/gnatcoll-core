@@ -422,26 +422,14 @@ package GNATCOLL.SQL.Exec is
    --  Invalid all caches associated with the database (for all connections).
    --  Some queries can be cached (see Execute below) for more efficiency.
 
-   function Get_Task_Connection
-     (Description : Database_Description;
-      Username    : String := "")
-      return Database_Connection;
-   --  Return the database connection specific to the current task. A new one
-   --  is created if none existed yet, and the connection to the database is
-   --  done automatically.
-   --  If the thread is not connected yet, a new connection is created through
-   --  Factory.
-   --  The newly created connection and Username are then passed to
-   --  Reset_Connection (see below).
-
    procedure Reset_Connection
      (Connection  : access Database_Connection_Record'Class;
       Username    : String := "");
    --  Reset the contents of Connection.
    --  This terminates any on-going transaction and resets various internal
    --  fields.
-   --  In general, it is better to use Get_Task_Connection which does the
-   --  necessary things, but when not in a multi-tasking application it is
+   --  In general, it is better to use Tasking.Get_Task_Connection which does
+   --  the necessary things, but when not in a multi-tasking application it is
    --  more efficient to have one "global" variable representing the single
    --  connection, and initialize it with this procedure
    --
