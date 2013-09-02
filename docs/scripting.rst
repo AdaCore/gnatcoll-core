@@ -1091,14 +1091,6 @@ There are two cases to distinguish here:
   that purpose, and provides two `Set` and `Get` primitives
   to retrieve existing instances.
 
-  There is one catch however, related to memory management. The instances
-  must continue to exist as long as the Ada object exist (and not be
-  destroyed for instance when the python variables goes out of scope).
-  GNATColl mostly takes care of that for you, but requires a little
-  bit of help still: when you implement a new `Instance_Property_Record`
-  as in the example above, you must also override its primitive
-  `Get_Instances` to return the `Instance_List_Access`. That's it.
-
 The final aspect to consider here is how to return existing instances.
 This cannot be done from the constructor method, since when it is called
 it has already received the created instance (this is forced by python, and

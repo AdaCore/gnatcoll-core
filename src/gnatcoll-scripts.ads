@@ -654,19 +654,6 @@ package GNATCOLL.Scripts is
    --  Type of data that can be associated with a class_instance. This is a
    --  general type, but simpler types are provided already
 
-   function Get_Instances
-     (Prop : Instance_Property_Record) return Instance_List_Access;
-   --  When a component of Prop stores some data that has a list of instances
-   --  associated with it, returns that list of instances.
-   --  (for instance, a selection_context has such a list to ensure that every
-   --  time the user calls the python GPS.Context* constructor we return the
-   --  same existing instance).
-   --  Some special handling of these types is needed, to properly ensure
-   --  refcounting in these mutually dependent types (the instance owns a
-   --  reference to the context, which itself owns a reference to the instance
-   --  through its Instances field).
-   --  The default is to return null.
-
    function Create_Property
      (Val : Boolean) return Instance_Property_Record'Class;
    function Create_Property

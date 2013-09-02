@@ -1039,18 +1039,6 @@ package body GNATCOLL.Scripts is
       end case;
    end Destroy;
 
-   -------------------
-   -- Get_Instances --
-   -------------------
-
-   function Get_Instances
-     (Prop : Instance_Property_Record) return Instance_List_Access
-   is
-      pragma Unreferenced (Prop);
-   begin
-      return null;
-   end Get_Instances;
-
    ------------
    -- Adjust --
    ------------
