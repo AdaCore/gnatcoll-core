@@ -92,9 +92,6 @@ package body GNATCOLL.Scripts is
    -----------------
 
    procedure Unchecked_Free is new Ada.Unchecked_Deallocation
-     (Class_Instance_Record'Class, Class_Instance_Record_Access);
-
-   procedure Unchecked_Free is new Ada.Unchecked_Deallocation
      (Scripting_Language_Array, Scripting_Language_List);
 
    procedure Free_User_Data (Data : in out User_Data_List);
@@ -1013,6 +1010,20 @@ package body GNATCOLL.Scripts is
       end if;
    end Free_User_Data;
 
+   -------------------------
+   -- Free_User_Data_List --
+   -------------------------
+
+   procedure Free_User_Data_List (Data : in out User_Data_List) is
+      D : User_Data_List;
+   begin
+      while Data /= null loop
+         D := Data;
+         Data := Data.Next;
+         Free_User_Data (D);
+      end loop;
+   end Free_User_Data_List;
+
    -------------
    -- Destroy --
    -------------
@@ -1041,121 +1052,16 @@ package body GNATCOLL.Scripts is
    end Get_Instances;
 
    ------------
-   -- Decref --
-   ------------
-
-   procedure Decref (Inst : access Class_Instance_Record) is
-      Data              : User_Data_List;
-      Ptr               : Class_Instance_Record_Access;
-      L                 : Instance_Array_Access;
-      Instances         : Instance_List_Access;
-      Refs_In_User_Data : Integer_32 := 0;
-      New_Refcount      : Integer_32;
-   begin
-      --  ??? This code is not task safe
-
-      --  We are already in the process of destroying the class instance, so
-      --  nothing else to do
-
-      if Inst.Refcount = Integer_32'Last then
-         return;
-      end if;
-
-      --  If the instance has only one reference left, and that is owned by
-      --  the user data (for instance when it is a selection), we will be able
-      --  to kill the CI instances anyway.
-      --  ??? Could we use weak-references here, instead
-
-      Data := Inst.User_Data;
-
-      while Data /= null loop
-         Instances := Get_Instances (Data.Prop.all);
-
-         if Instances /= null and then Instances.List /= null then
-            L := Instances.List;
-
-            for C in L'Range loop
-               if L (C).Initialized
-                 and then L (C).Data.Data = Class_Instance_Record_Access (Inst)
-               then
-                  Refs_In_User_Data := Refs_In_User_Data + 1;
-               end if;
-            end loop;
-         end if;
-
-         Data := Data.Next;
-      end loop;
-
-      New_Refcount := Sync_Counters.Sync_Add_And_Fetch
-        (Inst.Refcount'Access, -1);
-
-      if New_Refcount = Refs_In_User_Data then
-         --  Reset the references to the CI in the instances of all its user
-         --  data. This might result in a recursive call to Decref, which will
-         --  set Refcount to 0. To prevent this, and for more efficiency,
-         --  we simulate a different refcount, and finalize the CI ourselves
-
-         Inst.Refcount := Integer_32'Last;
-
-         Data := Inst.User_Data;
-         while Data /= null loop
-            Instances := Get_Instances (Data.Prop.all);
-            if Instances /= null and then Instances.List /= null then
-               L := Instances.List;
-               for C in L'Range loop
-                  if L (C).Initialized
-                    and then L (C).Data.Data =
-                       Class_Instance_Record_Access (Inst)
-                  then
-                     L (C) := No_Class_Instance;
-                     exit;
-                  end if;
-               end loop;
-            end if;
-            Data := Data.Next;
-         end loop;
-
-         Inst.Refcount := 0;
-      end if;
-
-      if New_Refcount = 0 then
-         Inst.Refcount := Integer_32'Last;
-
-         while Inst.User_Data /= null loop
-            Data := Inst.User_Data.Next;
-            Free_User_Data (Inst.User_Data);
-            Inst.User_Data := Data;
-         end loop;
-
-         Inst.Refcount := 0;
-
-         Ptr := Inst.all'Access;
-         --  The above isn't dangerous: We know there are no more
-         --  Class_Instance referencing this pointer, or we wouldn't be
-         --  destroying it. As a result, it is safe to free the memory here
-
-         Unchecked_Free (Ptr);
-      end if;
-   end Decref;
-
-   ------------
-   -- Incref --
-   ------------
-
-   procedure Incref (Inst : access Class_Instance_Record) is
-      Dummy : Integer_32;
-      pragma Unreferenced (Dummy);
-   begin
-      Dummy := Sync_Counters.Sync_Add_And_Fetch (Inst.Refcount'Access, 1);
-   end Incref;
-
-   ------------
    -- Adjust --
    ------------
 
    procedure Adjust (CI : in out Class_Instance_Data) is
+      Dummy : Integer_32;
+      pragma Unreferenced (Dummy);
    begin
       if CI.Data /= null then
+         Dummy := Sync_Counters.Sync_Add_And_Fetch
+           (CI.Data.Refcount'Access, 1);
          Incref (CI.Data);
       end if;
    end Adjust;
@@ -1165,7 +1071,11 @@ package body GNATCOLL.Scripts is
    --------------
 
    procedure Finalize (CI : in out Class_Instance_Data) is
-      Data : constant Class_Instance_Record_Access := CI.Data;
+      procedure Unchecked_Free is new Ada.Unchecked_Deallocation
+        (Class_Instance_Record'Class, Class_Instance_Record_Access);
+
+      Data  : Class_Instance_Record_Access := CI.Data;
+      Dummy : Integer_32;
    begin
       --  Make Finalize idempotent (RM 7.6.1 (24))
 
@@ -1176,8 +1086,15 @@ package body GNATCOLL.Scripts is
       --  but we still have remaining CI finalized when GNAT finalizes
       --  everything before exit.
 
-      if Data /= null then
-         Decref (Data);
+      if Data = null then
+         return;
+      end if;
+
+      Dummy := Sync_Counters.Sync_Add_And_Fetch (Data.Refcount'Access, -1);
+      Decref (Data);
+
+      if Dummy = 0 then
+         Unchecked_Free (Data);
       end if;
    end Finalize;
 
@@ -1216,6 +1133,19 @@ package body GNATCOLL.Scripts is
         & Integer_32'Image (Instance.Refcount) & ")";
    end Print_Refcount;
 
+   -------------------
+   -- Get_User_Data --
+   -------------------
+
+   function Get_User_Data
+     (Self : not null access Class_Instance_Record)
+      return access User_Data_List is
+   begin
+      --  We could not make the operation abstract and private
+      raise Program_Error with "Get_User_Data should be overridden";
+      return null;
+   end Get_User_Data;
+
    --------------
    -- Get_Data --
    --------------
@@ -1224,15 +1154,18 @@ package body GNATCOLL.Scripts is
      (Instance : access Class_Instance_Record'Class; Name : String)
       return User_Data_List
    is
+      U : constant access User_Data_List := Instance.Get_User_Data;
       D : User_Data_List;
    begin
-      D := Instance.User_Data;
-      while D /= null loop
-         if D.Name = Name then
-            return D;
-         end if;
-         D := D.Next;
-      end loop;
+      if U /= null then
+         D := U.all;
+         while D /= null loop
+            if D.Name = Name then
+               return D;
+            end if;
+            D := D.Next;
+         end loop;
+      end if;
       return null;
    end Get_Data;
 
@@ -1257,27 +1190,31 @@ package body GNATCOLL.Scripts is
       Name     : String;
       Property : Instance_Property_Record'Class)
    is
-      D        : User_Data_List := Instance.User_Data;
+      U        : constant access User_Data_List := Instance.Get_User_Data;
+      D        : User_Data_List;
       Previous : User_Data_List;
    begin
-      while D /= null loop
-         if D.Name = Name then
-            if Previous = null then
-               Instance.User_Data := D.Next;
-            else
-               Previous.Next := D.Next;
+      if U /= null then
+         D := U.all;
+         while D /= null loop
+            if D.Name = Name then
+               if Previous = null then
+                  U.all := D.Next;
+               else
+                  Previous.Next := D.Next;
+               end if;
+               Free_User_Data (D);
+               exit;
             end if;
-            Free_User_Data (D);
-            exit;
-         end if;
-         Previous := D;
-         D := D.Next;
-      end loop;
+            Previous := D;
+            D := D.Next;
+         end loop;
+      end if;
 
-      Instance.User_Data := new User_Data'
+      U.all := new User_Data'
         (Length => Name'Length,
          Name   => Name,
-         Next   => Instance.User_Data,
+         Next   => U.all,
          Prop   => new Instance_Property_Record'Class'(Property));
    end Set_Data;
 

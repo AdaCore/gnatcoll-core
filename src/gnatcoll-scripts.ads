@@ -515,11 +515,9 @@ package GNATCOLL.Scripts is
    --  No data is stored in the object.
    --  This call should generally be the result of the user calling a
    --  function, which acts as a constructor for the class.
-   --  The instance is not fully initialized, in the sense that its
-   --  Constructor_Method (if any) was not called. You need to do it yourself
-   --  manually. This is for backward compatibility with previous versions of
-   --  GNATCOLL, and because otherwise we would have to pass the constructor
-   --  parameters to New_Instance.
+   --  The instance constructor (Constructor_Method) is not called, even
+   --  though the instance has been properly initialized. You should therefore
+   --  perform any initialization manually just after calling New_Instance.
 
    function Get_Method
      (Instance : Class_Instance; Name : String) return Subprogram_Type;
@@ -722,18 +720,6 @@ package GNATCOLL.Scripts is
       Base     : String) return Boolean is abstract;
    --  Whether Instance is a Base or from a subclass of Base. Do not use
    --  directly, use the version that takes a Class_Instance instead
-
-   procedure Incref (Inst : access Class_Instance_Record);
-   procedure Decref (Inst : access Class_Instance_Record);
-   --  Change the reference counting of Inst.
-   --  These subprograms should only be called by Class_Instance itself, not
-   --  from your own code.
-   --  These subprogram should be overriden by each scripting language that
-   --  needs to manage low-level objects, like a PyObject in python for
-   --  instance.
-   --  They should always call the inherited operation as the last part of
-   --  their code (and not as the first call, since otherwise Decref cannot
-   --  properly free the allocated memory).
 
    function Get_CIR
      (Inst : Class_Instance) return Class_Instance_Record_Access;
@@ -1394,6 +1380,9 @@ private
       Prop : Instance_Property;
    end record;
 
+   procedure Free_User_Data_List (Data : in out User_Data_List);
+   --  Free the whole contents of the list
+
    type Param_Descr is record
       Name     : GNAT.Strings.String_Access;
       Optional : Boolean := False;
@@ -1402,14 +1391,34 @@ private
    No_Params : constant Param_Array := (1 .. 0 => <>);
 
    type Class_Instance_Record is abstract tagged limited record
-      Refcount  : aliased Interfaces.Integer_32 := 1;
       Script    : Scripting_Language;
-      User_Data : User_Data_List;
+
+      Refcount  : aliased Interfaces.Integer_32 := 0;
+      --  This is the reference counting only for the Ada side. When
+      --  interfacing with python, for instance, the latter never owns any
+      --  reference to the Class_Instance.
    end record;
+   procedure Incref (Self : not null access Class_Instance_Record) is null;
+   procedure Decref (Self : not null access Class_Instance_Record) is null;
+   --  These subprograms are called when changing the reference counting of
+   --  the Class_Instance that owns this Class_Instance_Record.
+   --  These procedures are called after updating the reference count.
+
+   function Get_User_Data
+     (Self : not null access Class_Instance_Record)
+      return access User_Data_List;
+   --  Return the list of user data stored for this instance. Depending on the
+   --  scripting language, this list might be stored in various places (as a
+   --  python attribute, directly in Ada for the shell,...) This list is shared
+   --  amonst the scripting languages.
 
    type Class_Instance_Data is new Ada.Finalization.Controlled with record
       Data : Class_Instance_Record_Access;
    end record;
+   overriding procedure Adjust   (CI : in out Class_Instance_Data);
+   overriding procedure Finalize (CI : in out Class_Instance_Data);
+   function "=" (CI1, CI2 : Class_Instance_Data) return Boolean;
+   --  Takes care of the reference counting for a Class_Instance
 
    type Class_Instance (Initialized : Boolean := False) is record
       case Initialized is
@@ -1422,11 +1431,6 @@ private
    --  types.
    --  We use a discriminated type so that we can declare No_Class_Instance.
    --  Otherwise, Adjust is called before its body is seen.
-
-   overriding procedure Adjust   (CI : in out Class_Instance_Data);
-   overriding procedure Finalize (CI : in out Class_Instance_Data);
-   function "=" (CI1, CI2 : Class_Instance_Data) return Boolean;
-   --  Takes care of the reference counting for a Class_Instance
 
    No_Class_Instance_Data : constant Class_Instance_Data :=
                               (Ada.Finalization.Controlled with Data => null);

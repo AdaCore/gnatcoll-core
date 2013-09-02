@@ -1148,12 +1148,12 @@ There are two ways to work around that limitation:
             Tmp.Inst := new Instance_List;
          end if;
          Inst := Get (Tmp.Inst.all, Get_Script (Data));
-         if Inst = null then
+         if Inst = No_Class_Instance then
             Inst := New_Instance (Get_Script (Data), MyClass);
             Set (Tmp.Inst.all, Get_Script (Data), Inst);
             Set_Data (Inst, Tmp);
          end if;
-         return Inst;
+         Set_Return_Value (Data, Inst);
        end if;
     end Handler;
 

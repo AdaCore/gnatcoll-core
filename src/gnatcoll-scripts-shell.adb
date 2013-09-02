@@ -63,12 +63,12 @@ package body GNATCOLL.Scripts.Shell is
 
    function Instance_From_Name
      (Script : access Shell_Scripting_Record'Class;
-      Name : String) return Shell_Class_Instance;
+      Name : String) return Class_Instance;
    --  Opposite of Name_From_Instance
 
    function Instance_From_Address
      (Script : access Shell_Scripting_Record'Class;
-      Add : System.Address) return Shell_Class_Instance;
+      Add : System.Address) return Class_Instance;
    --  Return an instance from its address
 
    function Execute_GPS_Shell_Command
@@ -145,12 +145,12 @@ package body GNATCOLL.Scripts.Shell is
 
    function Instance_From_Name
      (Script : access Shell_Scripting_Record'Class;
-      Name   : String) return Shell_Class_Instance
+      Name   : String) return Class_Instance
    is
       Index : Natural := Name'First;
    begin
       if Name = "null" then
-         return null;
+         return No_Class_Instance;
       end if;
 
       while Index <= Name'Last - 3
@@ -165,7 +165,7 @@ package body GNATCOLL.Scripts.Shell is
    exception
       when others =>
          --  Invalid instance
-         return null;
+         return No_Class_Instance;
    end Instance_From_Name;
 
    ---------------------------
@@ -174,18 +174,18 @@ package body GNATCOLL.Scripts.Shell is
 
    function Instance_From_Address
      (Script : access Shell_Scripting_Record'Class;
-      Add    : System.Address) return Shell_Class_Instance
+      Add    : System.Address) return Class_Instance
    is
       L : Instances_List.Cursor := First (Script.Instances);
    begin
       while Has_Element (L) loop
-         if Element (L).all'Address = Add then
+         if Get_CIR (Element (L)).all'Address = Add then
             return Element (L);
          end if;
 
          Next (L);
       end loop;
-      return null;
+      return No_Class_Instance;
    end Instance_From_Address;
 
    -----------------
@@ -670,21 +670,13 @@ package body GNATCOLL.Scripts.Shell is
    ------------------------
 
    procedure Free_Internal_Data
-     (Script : access Shell_Scripting_Record'Class)
-   is
-      C2   : Instances_List.Cursor;
-      Inst : Shell_Class_Instance;
+     (Script : access Shell_Scripting_Record'Class) is
    begin
       for R in Script.Returns'Range loop
          Free (Script.Returns (R));
       end loop;
 
-      C2 := First (Script.Instances);
-      while Has_Element (C2) loop
-         Inst := Element (C2);
-         Decref (Inst);
-         Next (C2);
-      end loop;
+      Script.Instances.Clear;
    end Free_Internal_Data;
 
    -------------
@@ -1407,7 +1399,7 @@ package body GNATCOLL.Scripts.Shell is
       Success    : access Boolean) return Class_Instance
    is
       Class_Name : constant String := Nth_Arg (Data, N, Success);
-      Ins        : Shell_Class_Instance;
+      Ins        : Class_Instance;
    begin
       if not Success.all then
          return No_Class_Instance;
@@ -1415,17 +1407,17 @@ package body GNATCOLL.Scripts.Shell is
 
       Ins := Instance_From_Name (Data.Script, Class_Name);
 
-      if Ins = null and then Allow_Null then
+      if Ins = No_Class_Instance and then Allow_Null then
          return No_Class_Instance;
       end if;
 
-      if Ins = null
+      if Ins = No_Class_Instance
         or else (Class /= Any_Class
                  and then not Is_Subclass (Ins, Get_Name (Class)))
       then
          raise Invalid_Parameter;
       else
-         return From_Instance (Data.Script, Ins);
+         return Ins;
       end if;
    end Nth_Arg;
 
@@ -1879,11 +1871,14 @@ package body GNATCOLL.Scripts.Shell is
       Class  : Class_Type) return Class_Instance
    is
       Instance : Shell_Class_Instance;
+      Inst     : Class_Instance;
    begin
       Instance := new Shell_Class_Instance_Record;
       Instance.Class := Class;
-      Instances_List.Prepend (Script.Instances, Instance);
-      return From_Instance (Script, Instance);
+
+      Inst := From_Instance (Script, Instance);
+      Instances_List.Prepend (Script.Instances, Inst);
+      return Inst;
    end New_Instance;
 
    ----------------
@@ -1989,14 +1984,8 @@ package body GNATCOLL.Scripts.Shell is
       Error      : not null access Boolean) return Class_Instance
    is
       Result : constant String := Execute (Subprogram, Args, Error);
-      Ins    : Shell_Class_Instance;
    begin
-      Ins := Instance_From_Name (Shell_Scripting (Subprogram.Script), Result);
-      if Ins = null then
-         return No_Class_Instance;
-      end if;
-
-      return From_Instance (Subprogram.Script, Ins);
+      return Instance_From_Name (Shell_Scripting (Subprogram.Script), Result);
    end Execute;
 
    -------------
@@ -2204,16 +2193,9 @@ package body GNATCOLL.Scripts.Shell is
    ------------------
 
    overriding function Return_Value
-     (Data : Shell_Callback_Data) return Class_Instance
-   is
-      Ins : Shell_Class_Instance;
+     (Data : Shell_Callback_Data) return Class_Instance is
    begin
-      Ins := Instance_From_Name (Data.Script, Return_Value (Data));
-      if Ins = null then
-         return No_Class_Instance;
-      end if;
-
-      return From_Instance (Data.Script, Ins);
+      return Instance_From_Name (Data.Script, Return_Value (Data));
    end Return_Value;
 
    ------------------
@@ -2229,5 +2211,16 @@ package body GNATCOLL.Scripts.Shell is
       List.CL := Parse_String (Return_Value (Data), Separate_Args);
       return List;
    end Return_Value;
+
+   -------------------
+   -- Get_User_Data --
+   -------------------
+
+   overriding function Get_User_Data
+     (Self : not null access Shell_Class_Instance_Record)
+      return access User_Data_List is
+   begin
+      return Self.Props'Access;
+   end Get_User_Data;
 
 end GNATCOLL.Scripts.Shell;

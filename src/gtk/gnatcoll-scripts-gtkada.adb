@@ -23,7 +23,6 @@
 
 with Glib.Object;           use Glib.Object;
 with Gtkada.Types;          use Gtkada.Types;
-with GNATCOLL.Scripts.Impl; use GNATCOLL.Scripts.Impl;
 
 package body GNATCOLL.Scripts.Gtkada is
 
@@ -34,7 +33,7 @@ package body GNATCOLL.Scripts.Gtkada is
    overriding procedure Destroy (Prop : in out GObject_Properties_Record);
 
    type CIR_Data_Type (Length : Natural) is record
-      CIR           : Class_Instance_Record_Access;
+      Inst          : Class_Instance;
       Property_Name : String (1 .. Length);
    end record;
    package CIR_User_Data is new Glib.Object.User_Data
@@ -67,7 +66,8 @@ package body GNATCOLL.Scripts.Gtkada is
    ------------------------------
 
    procedure On_Widget_Data_Destroyed (CIR : CIR_Data_Type) is
-      Data : User_Data_List := CIR.CIR.User_Data;
+      U : constant access User_Data_List := Get_CIR (CIR.Inst).Get_User_Data;
+      Data : User_Data_List;
    begin
       --  Warning: it is possible that the Ada handle to the widget has already
       --  been deallocated, through a call to Glib.Object.Free_Data. The order
@@ -75,15 +75,16 @@ package body GNATCOLL.Scripts.Gtkada is
       --  since they are both associated with user data stored in the C widget.
       --  As a result, we shouldn't use the Ada handle here!
 
-      while Data /= null loop
-         if Data.Name = CIR.Property_Name then
-            GObject_Properties (Data.Prop).Obj := null;
-            exit;
-         end if;
-         Data := Data.Next;
-      end loop;
-
-      Decref (CIR.CIR); --  Might free CIR, do not reuse afterward!
+      if U /= null then
+         Data := U.all;
+         while Data /= null loop
+            if Data.Name = CIR.Property_Name then
+               GObject_Properties (Data.Prop).Obj := null;
+               exit;
+            end if;
+            Data := Data.Next;
+         end loop;
+      end if;
    end On_Widget_Data_Destroyed;
 
    --------------
@@ -97,20 +98,19 @@ package body GNATCOLL.Scripts.Gtkada is
    begin
       --  The widget will hold a reference to the Instance, so that the
       --  instance is not destroyed while the widget is in use
-      Incref (Get_CIR (Instance));
 
       --  Use a name specific to the scripting language, so that the same
       --  widget can have corresponding instances in several languages
       CIR_User_Data.Set
         (Widget, CIR_Data_Type'
-           (CIR           => Get_CIR (Instance),
+           (Inst          => Instance,
             Length        => Name'Length,
             Property_Name => Name),
          "GPS-Instance-" & Get_Name (Instance.Data.Data.Script),
          On_Destroyed => On_Widget_Data_Destroyed'Access);
 
       --  Do this after we have called CIR_User_Data.Set above, since the
-      --  latter will remove existing user_data associated with Name
+      --  following will remove existing user_data associated with Name
       Set_Data
         (Instance, Name, GObject_Properties_Record'(Obj => Widget));
    end Set_Data;
@@ -124,9 +124,8 @@ package body GNATCOLL.Scripts.Gtkada is
       Widget : access Glib.Object.GObject_Record'Class)
       return Class_Instance is
    begin
-      return From_Instance
-        (Script, CIR_User_Data.Get
-           (Widget, "GPS-Instance-" & Get_Name (Script)).CIR);
+      return CIR_User_Data.Get
+        (Widget, "GPS-Instance-" & Get_Name (Script)).Inst;
    exception
       when Data_Error =>
          return No_Class_Instance;

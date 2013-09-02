@@ -146,6 +146,13 @@ package body GNATCOLL.Scripts.Python is
    end record;
    type Python_Class_Instance is access all Python_Class_Instance_Record'Class;
 
+   overriding procedure Incref
+     (Inst : not null access Python_Class_Instance_Record);
+   overriding procedure Decref
+     (Inst : not null access Python_Class_Instance_Record);
+   overriding function Get_User_Data
+     (Inst : not null access Python_Class_Instance_Record)
+      return access User_Data_List;
    overriding function Print_Refcount
      (Instance : access Python_Class_Instance_Record) return String;
    overriding function Is_Subclass
@@ -168,15 +175,10 @@ package body GNATCOLL.Scripts.Python is
       Name : String) return Subprogram_Type;
    --  See doc from inherited subprogram
 
-   procedure Set_CI (CI : in out Class_Instance);
    function Get_CI
      (Script : Python_Scripting; Object : PyObject) return Class_Instance;
-   --  Set or retrieve the Class_Instance associated with a python object.
-   --  In the case of Get, if the object is not already associated with an
-   --  class_instance, a new one is created.
-   --
-   --  There is no need to DECREF Object on exit, its reference counting is
-   --  either preserved or increased if a new Class_Instance is created.
+   --  Wraps the python object into a Class_Instance.
+   --  The refcount of the object is increased by one, owned by Class_Instance.
 
    ------------------
    -- Handler_Data --
@@ -202,10 +204,25 @@ package body GNATCOLL.Scripts.Python is
    pragma Convention (C, Destroy_Handler_Data);
    --  Called when the python object associated with Handler is destroyed
 
+   -------------------------------
+   -- Class_Instance properties --
+   -------------------------------
+
+   type PyObject_Data_Record is record
+      Props : aliased User_Data_List;
+   end record;
+   type PyObject_Data is access all PyObject_Data_Record;
+   --  Data stored in each PyObject representing a class instance, as a
+   --  __gps_data property.
+
+   function Convert is new Ada.Unchecked_Conversion
+     (System.Address, PyObject_Data);
+   procedure Unchecked_Free is new Ada.Unchecked_Deallocation
+     (PyObject_Data_Record, PyObject_Data);
+
    procedure On_PyObject_Data_Destroy (Data : System.Address);
    pragma Convention (C, On_PyObject_Data_Destroy);
-   --  Called when a PyObject associated with a Class_Instance is destroyed, so
-   --  that we also decrement the class_instance's refcounter
+   --  Called when the __gps_data property is destroyed.
 
    ----------------------
    -- Interpreter_View --
@@ -765,7 +782,6 @@ package body GNATCOLL.Scripts.Python is
             when E : others =>
                Trace (Me_Stack, E);
          end;
-
       end if;
 
       if Args /= null then
@@ -2608,66 +2624,80 @@ package body GNATCOLL.Scripts.Python is
       end if;
    end Nth_Arg;
 
+   ------------
+   -- Incref --
+   ------------
+
+   overriding procedure Incref
+     (Inst : not null access Python_Class_Instance_Record) is
+   begin
+      if Inst.Data /= null and then not Finalized then
+         Py_INCREF (Inst.Data);
+      end if;
+   end Incref;
+
+   ------------
+   -- Decref --
+   ------------
+
+   overriding procedure Decref
+     (Inst : not null access Python_Class_Instance_Record) is
+   begin
+      if Inst.Data /= null and then not Finalized then
+         Py_DECREF (Inst.Data);
+      end if;
+   end Decref;
+
+   -------------------
+   -- Get_User_Data --
+   -------------------
+
+   overriding function Get_User_Data
+     (Inst : not null access Python_Class_Instance_Record)
+      return access User_Data_List
+   is
+      Item     : constant PyObject :=
+        PyObject_GetAttrString (Inst.Data, "__gps_data");
+      Data     : PyObject;
+      Tmp      : PyObject_Data;
+      Tmp_Addr : System.Address;
+   begin
+      if Item = null then
+         PyErr_Clear;  --  error about "no such attribute"
+
+         Tmp := new PyObject_Data_Record;
+         Data := PyCObject_FromVoidPtr
+           (Tmp.all'Address, On_PyObject_Data_Destroy'Access);
+         if PyObject_GenericSetAttrString (Inst.Data, "__gps_data", Data) /=
+           0
+         then
+            Trace (Me, "Error creating __gps_data");
+            PyErr_Clear;
+            Py_DECREF (Data);
+            Unchecked_Free (Tmp);
+            return null;
+         end if;
+
+         Py_DECREF (Data);
+
+         return Tmp.Props'Access;
+      else
+         Tmp_Addr := PyCObject_AsVoidPtr (Item);
+         Tmp := Convert (Tmp_Addr);
+         Py_DECREF (Item);
+         return Tmp.Props'Access;
+      end if;
+   end Get_User_Data;
+
    ------------------------------
    -- On_PyObject_Data_Destroy --
    ------------------------------
 
    procedure On_PyObject_Data_Destroy (Data : System.Address) is
-      function Convert is new Ada.Unchecked_Conversion
-        (System.Address, Python_Class_Instance);
-      D : constant Python_Class_Instance := Convert (Data);
+      D : constant PyObject_Data := Convert (Data);
    begin
-      --  When this function is called, the pyObject D.Data is being destroyed,
-      --  so we make sure that we will not try in the future to access it.
-      --  We can also remove the reference that the python object had on the
-      --  Class_Instance, so that memory is freed ultimately.
-
-      if D.Data /= null then
-         D.Data := null;
-
-         --  This decref mirrors the Incref in Set_CI below
-
-         if not Finalized then
-            Decref (D);
-         end if;
-      end if;
+      Free_User_Data_List (D.Props);
    end On_PyObject_Data_Destroy;
-
-   ------------
-   -- Set_CI --
-   ------------
-
-   procedure Set_CI (CI : in out Class_Instance) is
-      Data : constant PyObject := PyCObject_FromVoidPtr
-        (Get_CIR (CI).all'Address, On_PyObject_Data_Destroy'Access);
-      Old_Refcount : Natural;
-   begin
-      if Active (Me) then
-         Old_Refcount :=
-           Get_Refcount (Python_Class_Instance (Get_CIR (CI)).Data);
-      end if;
-
-      --  Python owns a reference to the CI, so that the latter can never be
-      --  freed while the python object exists.
-      Incref (Get_CIR (CI));
-
-      if PyObject_GenericSetAttrString
-        (Python_Class_Instance (Get_CIR (CI)).Data, "__gps_data", Data) /= 0
-      then
-         PyErr_Clear;
-         CI := No_Class_Instance;
-      end if;
-      Py_DECREF (Data);
-
-      if Active (Me) and then CI /= No_Class_Instance then
-         Assert
-           (Me,
-            Get_Refcount (Python_Class_Instance (Get_CIR (CI)).Data) =
-                Old_Refcount,
-            "Set_CI should only increase refcount for Class_Instance",
-            Raise_Exception => False);
-      end if;
-   end Set_CI;
 
    ---------------------------------
    -- Unregister_Python_Scripting --
@@ -2691,62 +2721,30 @@ package body GNATCOLL.Scripts.Python is
    function Get_CI
      (Script : Python_Scripting; Object : PyObject) return Class_Instance
    is
-      function Convert is new Ada.Unchecked_Conversion
-        (System.Address, Python_Class_Instance);
-      Item   : constant PyObject :=
-                 PyObject_GetAttrString (Object, "__gps_data");
-      CIR    : System.Address;
       CI     : Python_Class_Instance;
       Result : Class_Instance := No_Class_Instance;
-      Old_Refcount : Natural;
+      Old_Refcount : Natural := Natural'Last;
    begin
-      if Item = null then
-         if Active (Me) then
-            Old_Refcount := Get_Refcount (Object);
-         end if;
+      if Active (Me) then
+         Old_Refcount := Get_Refcount (Object);
+      end if;
 
-         PyErr_Clear;
-         --  If there was no instance, avoid a python exception later
+      PyErr_Clear;
+      --  If there was no instance, avoid a python exception later
 
-         CI := new Python_Class_Instance_Record;
-         CI.Data := Object;   --  adopts the object
-         Py_INCREF (Object);  --  the class_instance needs to own one ref
+      CI := new Python_Class_Instance_Record;
+      CI.Data := Object;   --  adopts the object
+      Py_INCREF (Object);  --  the class_instance needs to own one ref
 
-         Result := From_Instance (Script, CI);
-         Set_CI (Result);  --  Associate with Object for the future
+      Result := From_Instance (Script, CI);
 
-         if Result /= No_Class_Instance then
-            if Active (Me) then
-               Assert
-                 (Me, Python_Class_Instance (Result.Data.Data).Data /= null,
-                  "Get_CI: Result not initialized after Set_CI",
+      if Active (Me) then
+         Assert (Me,
+                 Get_Refcount (Object) = Old_Refcount + 1,
+                 "Get_CI should own a reference,"
+                 & Print_Refcount (Get_CIR (Result)) & " !="
+                 & Integer'Image (Old_Refcount + 1),
                  Raise_Exception => False);
-            end if;
-            Decref (Get_CIR (Result));  --  Since From_Instance incremented it
-         else
-            Decref (CI);
-         end if;
-
-         --  ??? Temporarily commented out: it seems true with GPS, but
-         --  fails on GMS.
-
-         if False and then Active (Me) and then Get_CIR (Result) /= null then
-            Assert (Me,
-                    Get_Refcount (Object) = Old_Refcount + 1,
-                    "Get_CI should own a reference,"
-                    & Print_Refcount (Get_CIR (Result)) & " !="
-                    & Integer'Image (Old_Refcount + 1),
-                    Raise_Exception => False);
-         end if;
-
-      elsif PyCObject_Check (Item) then
-         CIR := PyCObject_AsVoidPtr (Item);
-
-         if not Finalized then
-            Result := From_Instance (Script, Convert (CIR));
-         end if;
-
-         Py_DECREF (Item);
       end if;
 
       return Result;
@@ -3040,9 +3038,9 @@ package body GNATCOLL.Scripts.Python is
          Num := PyList_Append (Data.Return_Value, Obj);  --  Increase refcount
 --       Py_DECREF (Obj); --  The reference to Object is adopted by the result
       else
-         Py_INCREF (Obj);
          Setup_Return_Value (Data);
          Data.Return_Value := Obj;
+         Py_INCREF (Obj);
       end if;
    end Set_Return_Value;
 

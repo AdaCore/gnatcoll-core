@@ -90,6 +90,7 @@ private
 
    type Shell_Class_Instance_Record is new Class_Instance_Record with record
       Class : Class_Type;
+      Props : aliased User_Data_List;
    end record;
    type Shell_Class_Instance is access all Shell_Class_Instance_Record'Class;
 
@@ -113,10 +114,13 @@ private
    overriding function Get_Method
      (Instance : access Shell_Class_Instance_Record;
       Name : String) return Subprogram_Type;
+   overriding function Get_User_Data
+     (Self : not null access Shell_Class_Instance_Record)
+      return access User_Data_List;
    --  See doc from inherited subprogram
 
    package Instances_List is new Ada.Containers.Indefinite_Doubly_Linked_Lists
-     (Shell_Class_Instance);
+     (Class_Instance);
    --  ??? Would be faster to use a hash-table...
 
    -------------------------

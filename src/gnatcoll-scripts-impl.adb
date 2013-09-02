@@ -23,6 +23,7 @@
 
 with GNATCOLL.Traces;   use GNATCOLL.Traces;
 with System.Assertions;
+with Interfaces;        use Interfaces;
 
 package body GNATCOLL.Scripts.Impl is
 
@@ -47,21 +48,19 @@ package body GNATCOLL.Scripts.Impl is
      (Script : access Scripting_Language_Record'Class;
       Inst   : access Class_Instance_Record'Class) return Class_Instance
    is
-      Result : Class_Instance (Initialized => True);
    begin
       if Inst = null then
          return No_Class_Instance;
       end if;
 
-      --  Do not modify the refcount, it should have been initialized properly
-      --  already.
       Inst.Script := Scripting_Language (Script);
+      Inst.Refcount := Inst.Refcount + 1;
 
-      --  Do not use an aggregate to limit the number of calls to
-      --  Adjust/Finalize
-      Result.Data.Data := Class_Instance_Record_Access (Inst);
-      Incref (Result.Data.Data);
-      return Result;
+      return Class_Instance'
+        (Initialized => True,
+         Data        =>
+           (Ada.Finalization.Controlled
+            with Data => Class_Instance_Record_Access (Inst)));
    end From_Instance;
 
    -----------------
