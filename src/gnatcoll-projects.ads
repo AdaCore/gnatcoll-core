@@ -423,7 +423,9 @@ package GNATCOLL.Projects is
    --  be searched in the first directories, and if not found in the second,...
    --  If Recursive is True, the source directories of the subtree rooted at
    --  Project (ie all the projects imported directly or indirectly by Project)
-   --  will also be returned.
+   --  will also be returned, but in this case the order of the directories in
+   --  the result is undefined and the result cannot be considered as a search
+   --  path for project sources.
    --  Note that duplicate directories might be returned when directories are
    --  shared by multiple projects in the same tree.
 
