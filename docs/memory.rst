@@ -85,6 +85,20 @@ dump on the standard output various types of data, sorted. To limit the
 output to a somewhat usable format, `Dump` asks you to specify
 how many blocks it should output.
 
+*Debugging dangling pointer*
+Using a dangling pointer can lead (and usually it does) to no crash or no side
+effects. Frequently, freed buffers still contains valid data and are still part
+of pages owned by your process. Probably, this occurs more often on linux
+compare to windows.
+
+Writing 0 or 0xDD pattern when a memory is freed will be (because of the
+exception that will be thrown) detected at the first usage of a freed buffer.
+The crash occurrence will be higher and less random. This makes solid reproducer
+more easy to build.
+
+For dangling pointer usage debugging, use Memory_Free_Pattern parameter when
+calling `GNATCOLL.Memory.Configure` procedure.
+
 *Memory usage*
   Blocks are sorted based on the amount of memory they have allocated and
   is still allocated. This helps you find which part of your application

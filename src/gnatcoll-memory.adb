@@ -43,6 +43,7 @@ package body GNATCOLL.Memory is
 
    Memory_Monitor : Boolean := False;
    Memory_Check   : Boolean := False;
+   Memory_Free_Pattern : Integer := 256;
 
    Disable        : Boolean := False;
    --  This variable is used to avoid infinite loops, where this package would
@@ -138,6 +139,9 @@ package body GNATCOLL.Memory is
    --
    --  To mark a special traceback (Mark_Traceback), we simply set a size of 0,
    --  and a null pointer
+
+   procedure Memset (A : System.Address; C : Integer; N : size_t);
+   pragma Import (C, Memset, "memset");
 
    --------------
    -- Set_Next --
@@ -338,15 +342,30 @@ package body GNATCOLL.Memory is
    procedure Free (Ptr : System.Address) is
       Size_Was    : Byte_Count;
    begin
-      if not Memory_Check then
-         System.CRTL.free (Ptr);
-      end if;
-
       if Memory_Monitor then
+         if Memory_Free_Pattern < 256 and then
+               Ptr /= System.Null_Address then
+            declare
+               Chunk : constant Chunk_Data := Chunks_Htable.Get (Ptr);
+            begin
+
+               --  Protect ourselves in case the allocation was done in C for
+               --  instance (which should not happen, of course)
+               if Chunk /= No_Chunk_Data then
+                  Memset (Ptr, Memory_Free_Pattern, size_t (Chunk.Total));
+               end if;
+            end;
+         end if;
+
          Size_Was   := Find_Or_Create_Traceback (Deallocation, Ptr, 0);
          Total_Free := Total_Free + Size_Was;
          Free_Count := Free_Count + 1;
       end if;
+
+      if not Memory_Check then
+         System.CRTL.free (Ptr);
+      end if;
+
    end Free;
 
    -------------
@@ -590,9 +609,16 @@ package body GNATCOLL.Memory is
    procedure Configure
      (Activate_Monitor  : Boolean := False;
       Disable_Free      : Boolean := False;
-      Stack_Trace_Depth : Positive := 30) is
+      Stack_Trace_Depth : Positive := 30;
+      Memory_Free_Pattern : Integer := 256) is
    begin
-      Memory_Monitor := Activate_Monitor;
+      if Memory_Free_Pattern < 0 or else Memory_Free_Pattern > 255 then
+         Memory_Monitor := Activate_Monitor;
+         GNATCOLL.Memory.Memory_Free_Pattern := 256;
+      else
+         Memory_Monitor := True;
+         GNATCOLL.Memory.Memory_Free_Pattern := Memory_Free_Pattern;
+      end if;
       Memory_Check   := Disable_Free;
       GNATCOLL.Memory.Stack_Trace_Depth := Stack_Trace_Depth;
    end Configure;

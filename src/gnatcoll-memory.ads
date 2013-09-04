@@ -117,7 +117,8 @@ package GNATCOLL.Memory is
    procedure Configure
      (Activate_Monitor  : Boolean := False;
       Disable_Free      : Boolean := False;
-      Stack_Trace_Depth : Positive := 30);
+      Stack_Trace_Depth : Positive := 30;
+      Memory_Free_Pattern : Integer := 256);
    --  Configure this package (these are global settings, not task-specific).
    --  If Activate_Monitor is true, GPS will monitor all memory allocations and
    --  deallocations, and through the Dump procedure below be able to report
@@ -125,6 +126,9 @@ package GNATCOLL.Memory is
    --  disabled.
    --  If Disable_Free is true, no deallocation is ever performed. This can be
    --  temporarily useful when investigating memory issues.
+   --  If Memory_Free_Pattern is in the range 0..255 then Memory_Free_Pattern
+   --  is used to fill freed memory. Only memory handled by the memory monitor
+   --  are concerned.
 
    type Report_Type is
      (All_Reports,
