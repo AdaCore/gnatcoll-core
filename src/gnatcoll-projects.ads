@@ -1535,6 +1535,13 @@ private
    overriding procedure Adjust (Self : in out Project_Type);
    overriding procedure Finalize (Self : in out Project_Type);
 
+   function Tree_View
+     (P : Project_Type'Class) return Prj.Project_Tree_Ref;
+   function Tree_Tree
+     (P : Project_Type'Class) return Prj.Tree.Project_Node_Tree_Ref;
+   pragma Inline (Tree_View, Tree_Tree);
+   --  Access to the project tree
+
    type Project_Tree is tagged record
       Data    : Project_Tree_Data_Access;
    end record;

@@ -354,13 +354,6 @@ package body GNATCOLL.Projects is
    --  all projects and subprojects, and memorize the sources in the
    --  hash-table.
 
-   function Tree_View
-     (P : Project_Type'Class) return Prj.Project_Tree_Ref;
-   function Tree_Tree
-     (P : Project_Type'Class) return Prj.Tree.Project_Node_Tree_Ref;
-   pragma Inline (Tree_View, Tree_Tree);
-   --  Access to the project tree
-
    function Info
      (Tree : Project_Tree_Data_Access;
       File : GNATCOLL.VFS.Virtual_File) return File_Info;
