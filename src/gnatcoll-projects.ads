@@ -21,9 +21,7 @@
 --                                                                          --
 ------------------------------------------------------------------------------
 
---  This package provides an API to manipulate project files. For the time
---  being, this is a read-only access, and no API is provided to modify an
---  existing project.
+--  This package provides an API to manipulate project files.
 --
 --  Projects are complex objects, and thus this API is extensive. A number of
 --  simple subprograms are provided to access the most needed features (list
