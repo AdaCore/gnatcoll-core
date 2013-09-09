@@ -4601,19 +4601,32 @@ package body GNATCOLL.Projects is
 
       Internal_Load
         (Tmp, Project_File, Errors, Project,
-         Packages_To_Check, Recompute_View);
+         Packages_To_Check, Recompute_View => False);
 
       if Project = Empty_Node then
-         --  Reset the list of error messages
+         --  Reset the list of error messages, and keep current project
+         --  unchanged
+         Free (Tmp.Data);
+
+         if Self.Data = null then
+            Self.Load_Empty_Project (Env => Self.Data.Env);
+         end if;
+
          Prj.Err.Initialize;
-         --   Self.Load_Empty_Project (Env => Self.Data.Env);
          raise Invalid_Project;
       end if;
 
-      Self.Unload;
+      --  We know the project is syntactically correct, so we can go on with
+      --  the processing (we can't reuse the previous parsing, because we need
+      --  to Unload first.
 
-      Free (Self.Data);
-      Self.Data := Tmp.Data;
+      Self.Unload;
+      Self.Data.Timestamp := GNATCOLL.Utils.No_Time;
+      Self.Data.Env := Tmp.Data.Env;
+      Free (Tmp.Data);
+      Internal_Load
+        (Self, Project_File, Errors, Project,
+         Packages_To_Check, Recompute_View);
 
       if Previous_Status = Default then
          Trace (Me, "Remove previous default project on disk, no longer used");
