@@ -4539,7 +4539,7 @@ package body GNATCOLL.Projects is
       Errors             : Error_Report := null;
       Recompute_View     : Boolean := True)
    is
-      Tmp : Project_Tree;
+      Tmp : Project_Tree'Class := Self;  --  Must use same tag
       Previous_Project : Virtual_File;
       Previous_Status  : Project_Status;
       Success          : Boolean;
