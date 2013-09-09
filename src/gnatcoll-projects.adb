@@ -187,6 +187,9 @@ package body GNATCOLL.Projects is
       --  Time when we last parsed the project from the disk
    end record;
 
+   procedure Free (Self : in out Project_Tree_Data_Access);
+   --  Free memory used by Self.
+
    function Get_View (Project : Project_Type'Class) return Prj.Project_Id;
    function Get_View
      (Tree : Prj.Project_Tree_Ref; Name : Name_Id) return Prj.Project_Id;
@@ -4536,6 +4539,7 @@ package body GNATCOLL.Projects is
       Errors             : Error_Report := null;
       Recompute_View     : Boolean := True)
    is
+      Tmp : Project_Tree;
       Previous_Project : Virtual_File;
       Previous_Status  : Project_Status;
       Success          : Boolean;
@@ -4577,37 +4581,39 @@ package body GNATCOLL.Projects is
 
             raise Invalid_Project;
          end if;
-
       end if;
 
-      Self.Unload;
-
-      if Self.Data = null then
-         Self.Data := new Project_Tree_Data;
-      end if;
+      Tmp.Data := new Project_Tree_Data;
 
       if Env = null then
-         if Self.Data.Env = null then
-            Initialize (Self.Data.Env);
+         if Self.Data = null or else Self.Data.Env = null then
+            Initialize (Tmp.Data.Env);
+         else
+            Tmp.Data.Env := Self.Data.Env;
          end if;
       else
-         Self.Data.Env := Env;
+         Tmp.Data.Env := Env;
       end if;
 
       --  Force a recomputation of the timestamp the next time Recompute_View
       --  is called.
-      Self.Data.Timestamp := GNATCOLL.Utils.No_Time;
+      Tmp.Data.Timestamp := GNATCOLL.Utils.No_Time;
 
       Internal_Load
-        (Self, Project_File, Errors, Project,
+        (Tmp, Project_File, Errors, Project,
          Packages_To_Check, Recompute_View);
 
       if Project = Empty_Node then
          --  Reset the list of error messages
          Prj.Err.Initialize;
-         Self.Load_Empty_Project (Env => Self.Data.Env);
+         --   Self.Load_Empty_Project (Env => Self.Data.Env);
          raise Invalid_Project;
       end if;
+
+      Self.Unload;
+
+      Free (Self.Data);
+      Self.Data := Tmp.Data;
 
       if Previous_Status = Default then
          Trace (Me, "Remove previous default project on disk, no longer used");
@@ -5742,10 +5748,6 @@ package body GNATCOLL.Projects is
          Data.Node := Empty_Node;
          Next (Iter);
       end loop;
-
-      --  We should not reset the environment variables, which might have
-      --  been set by the user already.
-      --  Prj.Ext.Reset (Registry.Data.Tree);
 
       if Self.Data.View /= null then
          Reset (Self.Data.View);
@@ -6956,23 +6958,35 @@ package body GNATCOLL.Projects is
       end if;
    end Free;
 
-   procedure Free (Self : in out Project_Tree_Access) is
-      procedure Unchecked_Free is new Ada.Unchecked_Deallocation
-        (Project_Tree'Class, Project_Tree_Access);
+   ----------
+   -- Free --
+   ----------
+
+   procedure Free (Self : in out Project_Tree_Data_Access) is
       procedure Unchecked_Free is new Ada.Unchecked_Deallocation
         (Project_Tree_Data, Project_Tree_Data_Access);
    begin
       if Self /= null then
-         if Self.Data /= null then
-            if Self.Data.Tree /= null then
-               Prj.Tree.Tree_Private_Part.Project_Node_Table.Free
-                 (Self.Data.Tree.Project_Nodes);
-            end if;
-
-            Free (Self.Data.Tree);
-            Unchecked_Free (Self.Data);
+         if Self.Tree /= null then
+            Prj.Tree.Tree_Private_Part.Project_Node_Table.Free
+              (Self.Tree.Project_Nodes);
          end if;
 
+         Free (Self.Tree);
+         Unchecked_Free (Self);
+      end if;
+   end Free;
+
+   ----------
+   -- Free --
+   ----------
+
+   procedure Free (Self : in out Project_Tree_Access) is
+      procedure Unchecked_Free is new Ada.Unchecked_Deallocation
+        (Project_Tree'Class, Project_Tree_Access);
+   begin
+      if Self /= null then
+         Free (Self.Data);
          Unchecked_Free (Self);
       end if;
    end Free;
