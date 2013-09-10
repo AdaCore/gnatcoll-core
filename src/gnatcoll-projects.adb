@@ -4959,8 +4959,7 @@ package body GNATCOLL.Projects is
          Output.Set_Special_Output (null);
          Errout_Handling := Prj.Part.Never_Finalize;
       else
-         Output.Set_Special_Output
-           (Output.Output_Proc'(Fail'Unrestricted_Access));
+         Output.Set_Special_Output (Output.Output_Proc (Errors));
       end if;
 
       Prj.Com.Fail := Fail'Unrestricted_Access;
