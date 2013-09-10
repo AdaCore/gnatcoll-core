@@ -341,6 +341,7 @@ package body GNATCOLL.Projects is
      (Tree                   : in out Project_Tree'Class;
       Root_Project_Path      : GNATCOLL.VFS.Virtual_File;
       Errors                 : Projects.Error_Report;
+      Report_Syntax_Errors   : Boolean;
       Project                : out Project_Node_Id;
       Packages_To_Check      : GNAT.Strings.String_List_Access := All_Packs;
       Recompute_View         : Boolean := True;
@@ -4600,8 +4601,11 @@ package body GNATCOLL.Projects is
       Tmp.Data.Timestamp := GNATCOLL.Utils.No_Time;
 
       Internal_Load
-        (Tmp, Project_File, Errors, Project,
-         Packages_To_Check, Recompute_View => False);
+        (Tmp, Project_File, Errors,
+         Report_Syntax_Errors => True,
+         Project              => Project,
+         Packages_To_Check    => Packages_To_Check,
+         Recompute_View       => False);
 
       Prj.Err.Initialize;  --  Clear errors
 
@@ -4633,8 +4637,11 @@ package body GNATCOLL.Projects is
       end if;
 
       Internal_Load
-        (Self, Project_File, Errors, Project,
-         Packages_To_Check, Recompute_View);
+        (Self, Project_File, Errors,
+         Report_Syntax_Errors => False,   --  already done above
+         Project              => Project,
+         Packages_To_Check    => Packages_To_Check,
+         Recompute_View       => Recompute_View);
 
       if Previous_Status = Default then
          Trace (Me, "Remove previous default project on disk, no longer used");
@@ -4906,6 +4913,7 @@ package body GNATCOLL.Projects is
      (Tree                   : in out Project_Tree'Class;
       Root_Project_Path      : GNATCOLL.VFS.Virtual_File;
       Errors                 : Projects.Error_Report;
+      Report_Syntax_Errors   : Boolean;
       Project                : out Project_Node_Id;
       Packages_To_Check      : GNAT.Strings.String_List_Access := All_Packs;
       Recompute_View         : Boolean := True;
@@ -4924,7 +4932,7 @@ package body GNATCOLL.Projects is
 
       procedure Fail (S : String) is
       begin
-         if Errors /= null then
+         if Report_Syntax_Errors and then Errors /= null then
             Errors (S);
          end if;
       end Fail;
@@ -4951,7 +4959,8 @@ package body GNATCOLL.Projects is
          Output.Set_Special_Output (null);
          Errout_Handling := Prj.Part.Never_Finalize;
       else
-         Output.Set_Special_Output (Output.Output_Proc (Errors));
+         Output.Set_Special_Output
+           (Output.Output_Proc'(Fail'Unrestricted_Access));
       end if;
 
       Prj.Com.Fail := Fail'Unrestricted_Access;
@@ -5054,6 +5063,7 @@ package body GNATCOLL.Projects is
               (Tree                   => Tree,
                Root_Project_Path      => Root_Project_Path,
                Errors                 => Errors,
+               Report_Syntax_Errors   => Report_Syntax_Errors,
                Project                => Project,
                Recompute_View         => Recompute_View,
                Packages_To_Check      => Packages_To_Check,
@@ -5078,6 +5088,7 @@ package body GNATCOLL.Projects is
            (Tree                   => Tree,
             Root_Project_Path      => Root_Project_Path,
             Errors                 => Errors,
+            Report_Syntax_Errors   => Report_Syntax_Errors,
             Project                => Project,
             Recompute_View         => Recompute_View,
             Packages_To_Check      => Packages_To_Check,
@@ -5086,7 +5097,11 @@ package body GNATCOLL.Projects is
 
       elsif Test_With_Missing_With then
          --  We correctly parsed the project, but should finalize anyway
-         Prj.Err.Finalize;
+         if Report_Syntax_Errors then
+            Prj.Err.Finalize;
+         else
+            Prj.Err.Initialize;
+         end if;
       end if;
 
       Override_Flags (Tree.Data.Env.Env, Create_Flags (null));
