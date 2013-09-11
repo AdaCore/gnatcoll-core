@@ -4984,6 +4984,15 @@ package body GNATCOLL.Projects is
          Current_Directory => Get_Current_Dir);
 
       if Project /= Empty_Node
+        and then Project_Qualifier_Of (Project, Tree.Data.Tree) =
+        Prj.Aggregate
+      then
+         Fail ("Aggregate projects are not supported");
+         Project := Empty_Node;
+         return;
+      end if;
+
+      if Project /= Empty_Node
         and then Tree.Data.Tree.Incomplete_With
       then
          --  Some "with" were found that could not be resolved. Check whether
