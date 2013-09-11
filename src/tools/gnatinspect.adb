@@ -314,7 +314,7 @@ procedure GNATInspect is
       (new String'("overridden_recursive"),
        new String'("name:file:line:column"),
        new String'("The list of entities that override the parameter"
-         & "(generally methods from children classes. This is recursive."),
+         & "(generally methods from children classes. This is recursive)."),
        Process_Overridden_Recursive'Access),
 
       (new String'("decl"),
@@ -454,6 +454,8 @@ procedure GNATInspect is
    Project_Name          : aliased GNAT.Strings.String_Access;
    Subdirs               : aliased GNAT.Strings.String_Access;
    Traces_File_Name      : aliased GNAT.Strings.String_Access;
+   Config_File           : aliased GNAT.Strings.String_Access;
+   Autoconf              : aliased Boolean;
    ALI_Encoding          : aliased GNAT.Strings.String_Access :=
      new String'("");
    --  The options from the command line
@@ -1313,6 +1315,11 @@ procedure GNATInspect is
          Env.Change_Environment
            (Name  => Parameter (Parameter'First .. Equal - 1),
             Value => Parameter (Equal + 1 .. Parameter'Last));
+
+      elsif Switch = "--configdb" then
+         Add_Config_Dir
+           (Env.all,
+            Create_From_Base (+Parameter, Get_Current_Dir.Full_Name.all));
       end if;
    end Parse_Command_Line;
 
@@ -1426,6 +1433,23 @@ begin
       Long_Switch => "--encoding=",
       Switch      => "-e=",
       Help        => "The character encoding used for source and ALI files");
+   Define_Switch
+     (Cmdline,
+      Output      => Config_File'Access,
+      Long_Switch => "--config=",
+      Help        => "Specify the configuration file (.cgpr) to load before"
+      & " loading the project");
+   Define_Switch
+     (Cmdline,
+      Output      => Autoconf'Access,
+      Long_Switch => "--autoconf",
+      Help        => "Run gprconfig to generate the config file if it doesn't"
+      & " exist");
+   Define_Switch
+     (Cmdline,
+      Long_Switch => "--configdb=",
+      Help        => "An extra directory to be parsed by gprconfig to generate"
+        & " the configuration file");
 
    Initialize (Env);
 
@@ -1473,6 +1497,20 @@ begin
          end if;
       end if;
 
+      if Config_File /= null and then Config_File.all /= "" then
+         Env.Set_Config_File
+           (Create_From_Base
+              (+Config_File.all, Get_Current_Dir.Full_Name.all));
+      end if;
+
+      if Autoconf then
+         Env.Set_Automatic_Config_File (Autoconf);
+         if Config_File = null or else Config_File.all = "" then
+            Env.Set_Config_File
+              (Create_From_Base
+                 ("auto.cgpr", Get_Current_Dir.Full_Name.all));
+         end if;
+      end if;
       Load_Project (Path);
    end;
 

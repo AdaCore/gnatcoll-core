@@ -688,6 +688,31 @@ package GNATCOLL.Projects is
    --  The language is computed from the project's naming scheme and from the
    --  additional extensions registered through Add_Language_Extension.
 
+   procedure Set_Config_File
+     (Self        : in out Project_Environment;
+      Config_File : GNATCOLL.VFS.Virtual_File);
+   --  Set the name of a configuration file to parse before loading the
+   --  project. Such a file is in general generated when running 'gprconfig'
+   --  on the command line, and will contain the default naming schemes (among
+   --  other information) used for all projects.
+   --  All the attributes defined in that file will provide the default value
+   --  when loading projects later on.
+
+   procedure Set_Automatic_Config_File
+     (Self        : in out Project_Environment;
+      Autoconf    : Boolean := True);
+   --  Whether this package should spawn 'gprconfig' to generate a
+   --  configuration file automatically.
+   --  If a name was specified via Set_Config_File and the file exists, it is
+   --  parsed (and not regenerated).
+
+   procedure Add_Config_Dir
+     (Self      : in out Project_Environment;
+      Directory : GNATCOLL.VFS.Virtual_File);
+   --  Add a new directory to be searched by gprconfig (when using
+   --  Set_Automatic_Config_File) for XML files that will be used to generate
+   --  the configuration file.
+
    procedure Register_Default_Language_Extension
      (Self                : in out Project_Environment;
       Language_Name       : String;
@@ -1440,6 +1465,10 @@ private
 
    type Project_Environment is tagged record
       Env : Prj.Tree.Environment;
+
+      Autoconf    : Boolean := False;
+      Config_File : GNATCOLL.VFS.Virtual_File;
+      --  Name of the .cgpr file to parse for the project.
 
       Predefined_Object_Path : GNATCOLL.VFS.File_Array_Access;
       --  := new GNATCOLL.VFS.File_Array (1 .. 0);

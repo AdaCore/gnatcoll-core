@@ -4651,6 +4651,43 @@ package body GNATCOLL.Projects is
       Trace (Me, "End of Load project");
    end Load;
 
+   ---------------------
+   -- Set_Config_File --
+   ---------------------
+
+   procedure Set_Config_File
+     (Self        : in out Project_Environment;
+      Config_File : GNATCOLL.VFS.Virtual_File) is
+   begin
+      Self.Config_File := Config_File;
+   end Set_Config_File;
+
+   -------------------------------
+   -- Set_Automatic_Config_File --
+   -------------------------------
+
+   procedure Set_Automatic_Config_File
+     (Self        : in out Project_Environment;
+      Autoconf    : Boolean := True) is
+   begin
+      Self.Autoconf := Autoconf;
+   end Set_Automatic_Config_File;
+
+   --------------------
+   -- Add_Config_Dir --
+   --------------------
+
+   procedure Add_Config_Dir
+     (Self      : in out Project_Environment;
+      Directory : GNATCOLL.VFS.Virtual_File)
+   is
+      pragma Unreferenced (Self);
+   begin
+      Name_Len := 0;
+      Add_Str_To_Name_Buffer (Directory.Display_Full_Name);
+      Makeutl.Db_Switch_Args.Append (Name_Find);
+   end Add_Config_Dir;
+
    ----------------
    -- Initialize --
    ----------------
@@ -5217,6 +5254,7 @@ package body GNATCOLL.Projects is
          end if;
 
          while NS /= null loop
+            Trace (Me, "Add naming scheme for " & NS.Language.all);
             if NS.Default_Spec_Suffix.all /= Dummy_Suffix then
                Attr := Create_Attribute
                  (Tree               => Project_Tree,
@@ -5346,15 +5384,18 @@ package body GNATCOLL.Projects is
 
          Override_Flags (Self.Data.Env.Env, Flags);
 
+         Trace (Me, "Configuration file is '"
+                & Self.Data.Env.Config_File.Display_Full_Name & "' autoconf="
+                  & Self.Data.Env.Autoconf'Img);
          Process_Project_And_Apply_Config
-           (Main_Project               => View,
-            User_Project_Node          => Self.Root_Project.Data.Node,
-            Config_File_Name           => "",
-            Autoconf_Specified         => False,
-            Project_Tree               => Self.Data.View,
-            Project_Node_Tree          => Self.Data.Tree,
-            Packages_To_Check          => null,
-            Allow_Automatic_Generation => False,
+           (Main_Project        => View,
+            User_Project_Node   => Self.Root_Project.Data.Node,
+            Config_File_Name    => Self.Data.Env.Config_File.Display_Full_Name,
+            Autoconf_Specified  => Self.Data.Env.Autoconf,
+            Project_Tree        => Self.Data.View,
+            Project_Node_Tree   => Self.Data.Tree,
+            Packages_To_Check   => null,
+            Allow_Automatic_Generation => Self.Data.Env.Autoconf,
             Automatically_Generated    => Automatically_Generated,
             Config_File_Path           => Config_File_Path,
             Env                        => Self.Data.Env.Env,
