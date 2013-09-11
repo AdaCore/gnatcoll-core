@@ -424,6 +424,7 @@ package body GNATCOLL.Projects is
 
    procedure Mark_Project_Error (Project : Project_Id; Is_Warning : Boolean) is
       P : Project_Type;
+      pragma Warnings (Off, P);
    begin
       if not Is_Warning then
          if Project = Prj.No_Project then
