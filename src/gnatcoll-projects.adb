@@ -425,6 +425,9 @@ package body GNATCOLL.Projects is
    procedure Mark_Project_Error (Project : Project_Id; Is_Warning : Boolean) is
       P : Project_Type;
       pragma Warnings (Off, P);
+      --  ??? Without the pragma Warnings (Off), when compiling with -gnatwae,
+      --  we get this error:
+      --    warning: variable "P" is assigned but never read
    begin
       if not Is_Warning then
          if Project = Prj.No_Project then
