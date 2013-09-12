@@ -20,7 +20,9 @@ project GnatColl is
          for Excluded_Source_Files use ("gnatcoll-projects.ads",
                                         "gnatcoll-projects.adb",
                                         "gnatcoll-projects-normalize.ads",
-                                        "gnatcoll-projects-normalize.adb");
+                                        "gnatcoll-projects-normalize.adb""
+                                        "gnatcoll-projects-aux.ads",
+                                        "gnatcoll-projects-aux.adb");
    end case;
 
    for Languages use ("Ada", "C");
