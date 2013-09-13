@@ -60,24 +60,25 @@
 # Parameters (>, = and <) are not in this table, as opposed to what is done in
 # ALI files, but in the e2e table
 
-| TABLE | reference_kinds          |             |         |         |          |        |                   |                |
-| id    | display                  | is_implicit | is_real | is_read | is_write | is_end | show_in_callgraph | is_dispatching |
-| b     | body                     | false       | true    | true    | false    | false  | false             | false          |
-| c     | full declaration         | false       | true    | true    | false    | false  | false             | false          |
-| D     | object definition        | false       | true    | true    | false    | false  | false             | false          |
-| e     | end of spec              | false       | false   | false   | false    | true   | false             | false          |
-| i     | implicit reference       | true        | true    | false   | false    | false  | false             | false          |
-| H     | abstract type            | false       | true    | false   | false    | false  | false             | false          |
-| l     | label on end line        | false       | true    | true    | false    | false  | false             | false          |
-| m     | write reference          | false       | true    | false   | true     | false  | false             | false          |
-| o     | own reference            | false       | true    | true    | false    | false  | false             | false          |
-| r     | reference                | false       | true    | true    | false    | false  | true              | false          |
-| s     | static call              | false       | true    | true    | false    | false  | true              | false          |
-| R     | dispatching call         | false       | true    | true    | false    | false  | true              | true           |
-| t     | end of body              | false       | false   | false   | false    | true   | false             | false          |
-| w     | with line                | false       | true    | true    | false    | false  | false             | false          |
-| x     | type extension           | false       | true    | true    | false    | false  | false             | false          |
-| X     | type extension           | false       | true    | true    | false    | false  | false             | false          |
+| TABLE | reference_kinds    |             |         |         |          |        |                   |                |
+| id    | display            | is_implicit | is_real | is_read | is_write | is_end | show_in_callgraph | is_dispatching |
+| b     | body               | false       | true    | true    | false    | false  | false             | false          |
+| c     | full declaration   | false       | true    | true    | false    | false  | false             | false          |
+| D     | object definition  | false       | true    | true    | false    | false  | false             | false          |
+| e     | end of spec        | false       | false   | false   | false    | true   | false             | false          |
+| E     | private part       | false       | false   | false   | false    | false  | false             | false          |
+| i     | implicit reference | true        | true    | false   | false    | false  | false             | false          |
+| H     | abstract type      | false       | true    | false   | false    | false  | false             | false          |
+| l     | label on end line  | false       | true    | true    | false    | false  | false             | false          |
+| m     | write reference    | false       | true    | false   | true     | false  | false             | false          |
+| o     | own reference      | false       | true    | true    | false    | false  | false             | false          |
+| r     | reference          | false       | true    | true    | false    | false  | true              | false          |
+| s     | static call        | false       | true    | true    | false    | false  | true              | false          |
+| R     | dispatching call   | false       | true    | true    | false    | false  | true              | true           |
+| t     | end of body        | false       | false   | false   | false    | true   | false             | false          |
+| w     | with line          | false       | true    | true    | false    | false  | false             | false          |
+| x     | type extension     | false       | true    | true    | false    | false  | false             | false          |
+| X     | type extension     | false       | true    | true    | false    | false  | false             | false          |
 
 | TABLE | f2f_kind   |                                           |
 |    id | name       |                                           |
