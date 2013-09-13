@@ -21,6 +21,13 @@ NF-16-M613-007 Linking with static libiconv (2013-06-19)
    link issues with conflicting versions of libiconv. See the
    --with-iconv=static for configure.
 
+NF-16-M328-013 New function GNATCOLL.Projects.Attribute_Project (2013-05-06)
+
+   A new function Attribute has been added in GNATCOLL.Projects. It takes as
+   parameter a Project_Type and an attribute name and returns a Project_Type.
+   The returned Project_Type may be different from the parameter in cases of
+   renames declarations.
+
 NF-16-M320-028 GNATCOLL.Traces display microseconds precision (2013-03-26)
 
    When the stream DEBUG.MICRO_TIME is actived, the time displayed by

@@ -1016,8 +1016,8 @@ package GNATCOLL.Projects is
      (Project   : Project_Type;
       Attribute : Attribute_Pkg_String;
       Index     : String := "") return Project_Type;
-   --  Return the project in which the attribute was defined (which, in the
-   --  case of 'renames' statements might be different from Project).
+   --  Returns the project in which the attribute was defined (which, in the
+   --  case of 'renames' declarations might be different from Project).
    --  Returns No_Project if the attribute is not defined.
    --  The corresponding attribute would have been set in the returned project
    --  as:
