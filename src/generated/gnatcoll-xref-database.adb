@@ -184,6 +184,7 @@ package body GNATCOLL.Xref.Database is
          & "|c|full declaration|false|true|true|false|false|false|false|" & ASCII.LF
          & "|D|object definition|false|true|true|false|false|false|false|" & ASCII.LF
          & "|e|end of spec|false|false|false|false|true|false|false|" & ASCII.LF
+         & "|E|private part|false|false|false|false|false|false|false|" & ASCII.LF
          & "|i|implicit reference|true|true|false|false|false|false|false|" & ASCII.LF
          & "|H|abstract type|false|true|false|false|false|false|false|" & ASCII.LF
          & "|l|label on end line|false|true|true|false|false|false|false|" & ASCII.LF
