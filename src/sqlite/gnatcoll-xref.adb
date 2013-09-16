@@ -2572,9 +2572,6 @@ package body GNATCOLL.Xref is
                   Eid := E2e_Has_Primitive;
                when 'k' =>
                   Eid := E2e_Parent_Package;
-               when 'r' | 'm' | 'l' | 'R' | 'i' | 's' | 'w' | 'D'
-                  | 'H' | 'o' | 'x' =>
-                  null;  --  real references
                when 'd' =>
                   Eid := E2e_Has_Discriminant;
                when 'z' =>
@@ -2608,7 +2605,8 @@ package body GNATCOLL.Xref is
                   end if;
 
                when others =>
-                  Trace (Me_Error, "Unknown entity kind=" & Xref_Kind'Img);
+                  null;
+                  --  real references, or not an entity->entity relationship
             end case;
 
             if Eid = -1 then
