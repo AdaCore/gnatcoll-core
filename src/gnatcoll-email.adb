@@ -1198,19 +1198,25 @@ package body GNATCOLL.Email is
       Charset     : String  := Charset_US_ASCII;
       Prepend     : Boolean := False)
    is
-      Msg2 : Message;
-      H    : Header;
+      Msg2  : Message;
+      H_CT  : Header := Create (Content_Type, MIME_Type);
+      H_CTE : Header := Null_Header;
    begin
+      if Charset /= "" then
+         Set_Param (H_CT, "charset", Charset);
+         H_CTE := Create (Content_Transfer_Encoding,
+                          (if Charset = Charset_US_ASCII
+                           then "7bit"
+                           else "8bit"));
+      end if;
+
       if Msg.Contents.Payload.Multipart then
          Msg2 := New_Message (MIME_Type => "");
-         H := Create (Content_Type, MIME_Type);
 
-         if Charset /= "" then
-            Set_Param (H, "charset", Charset);
+         Replace_Header (Msg2, H_CT);
+         if H_CTE /= Null_Header then
+            Replace_Header (Msg2, H_CTE);
          end if;
-
-         Replace_Header (Msg2, H);
-         Replace_Header (Msg2, Create (Content_Transfer_Encoding, "7bit"));
 
          if Disposition /= "" then
             Add_Header (Msg2, Create (Content_Disposition, Disposition));
@@ -1226,14 +1232,13 @@ package body GNATCOLL.Email is
 
       else
          if MIME_Type /= "" and not Prepend then
-            H := Create (Content_Type, MIME_Type);
-
-            if Charset /= "" then
-               Set_Param (H, "charset", Charset);
+            Replace_Header (Msg, H_CT);
+            if H_CTE = Null_Header then
+               Delete_Headers (Msg, Content_Transfer_Encoding);
+            else
+               Replace_Header (Msg, H_CTE);
             end if;
 
-            Replace_Header (Msg, H);
-            Delete_Headers (Msg, Content_Transfer_Encoding);
             Delete_Headers (Msg, Content_Disposition);
          end if;
 
@@ -1514,6 +1519,7 @@ package body GNATCOLL.Email is
                   end if;
                end;
                Replace_Header (Msg, Create (MIME_Version, "1.0"));
+               Delete_Headers (Msg, Content_Transfer_Encoding);
             end if;
 
             if Old /= "" then
