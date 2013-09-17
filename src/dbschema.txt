@@ -94,6 +94,7 @@
 | is_static_local | BOOLEAN                         | NOT NULL, NOINDEX         | false | Whether this is a 'static' variable in C/C++                     |
 |-----------------+---------------------------------+---------------------------+-------+------------------------------------------------------------------|
 | INDEX:          | decl_file,decl_line,decl_column | entity_loc                |       | Needed during parse                                              |
+| INDEX:          | decl_caller                     | entity_decl_caller        |       |                                                                  |
 
 # Store links between entities.
 # For instance, pointer to the parent types, pointed type, returned type,
@@ -173,3 +174,4 @@
 | INDEX:             | "file"                  | entity_refs_file   |   | Needed during parsing to cleanup outdated ALI files |
 | INDEX:             | "entity"                | entity_refs_entity |   | Not needed during parsing                           |
 | INDEX:             | line,column             | entity_refs_loc    |   | Not needed during parsing                           |
+| INDEX:             | caller                  | refs_caller        |   |                                                     |

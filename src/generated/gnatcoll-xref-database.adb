@@ -85,6 +85,7 @@ package body GNATCOLL.Xref.Database is
          & "|is_global|Boolean|NOT NULL,NOINDEX|false|" & ASCII.LF
          & "|is_static_local|Boolean|NOT NULL,NOINDEX|false|" & ASCII.LF
          & "|INDEX:|decl_file,decl_line,decl_column|entity_loc" & ASCII.LF
+         & "|INDEX:|decl_caller|entity_decl_caller" & ASCII.LF
          & "" & ASCII.LF
          & "|TABLE| e2e_kind" & ASCII.LF
          & "|id|AUTOINCREMENT|PK||" & ASCII.LF
@@ -120,6 +121,7 @@ package body GNATCOLL.Xref.Database is
          & "|INDEX:|""file""|entity_refs_file" & ASCII.LF
          & "|INDEX:|""entity""|entity_refs_entity" & ASCII.LF
          & "|INDEX:|line,column|entity_refs_loc" & ASCII.LF
+         & "|INDEX:|caller|refs_caller" & ASCII.LF
          & "" & ASCII.LF
          & "";
       Data : constant String := "|TABLE|entity_kinds|||||||||||" & ASCII.LF

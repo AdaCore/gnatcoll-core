@@ -696,6 +696,38 @@ package body GNATCOLL.Xref is
              Distinct => True),
         On_Server => False, Name => "file_references_by_entity");
 
+   Q_Calls : constant Prepared_Statement :=
+     Prepare
+       (SQL_Union
+           (SQL_Select
+              (Database.Entities.Id
+                 & Database.Entities.Name
+                 & Database.Entities.Decl_Line
+                 & Database.Entities.Decl_Column,
+               From => Database.Entity_Refs
+                 & Database.Reference_Kinds
+                 & Database.Entities,
+               Where => Database.Entity_Refs.Caller = Integer_Param (1)
+                 and Database.Entity_Refs.Kind = Database.Reference_Kinds.Id
+                 and Database.Reference_Kinds.Is_Real = True
+                 and Database.Entities.Id = Database.Entity_Refs.Entity
+                 and Database.Entity_Refs.Entity /= Integer_Param (1)),
+
+            SQL_Select
+              (Database.Entities.Id
+                 & Database.Entities.Name
+                 & Database.Entities.Decl_Line
+                 & Database.Entities.Decl_Column,
+               From => Database.Entities,
+               Where => Database.Entities.Decl_Caller = Integer_Param (1)
+                 and Database.Entities.Id /= Integer_Param (1)),
+
+            Order_By =>
+              Database.Entities.Name
+              & Database.Entities.Decl_Line,
+           Distinct => True),
+        On_Server => False, Name => "calls");
+
    Q_End_Of_Spec : constant Prepared_Statement :=
      Prepare
        (SQL_Select
@@ -737,7 +769,48 @@ package body GNATCOLL.Xref is
    pragma Unreferenced (Q_References_And_Kind);
    --  Cannot be prepared because there are risks of concurrent calls.
 
-   Q_Bodies_List : constant SQL_Field_List :=
+   Q_References_No_Implicit : constant Prepared_Statement :=
+     Prepare
+       (SQL_Union
+          (SQL_Select
+             (F_References_Decl,
+              From => Database.Entities & Database.Files,
+              Where => Database.Entities.Decl_File = Database.Files.Id
+              and Database.Entities.Id = Integer_Param (1)),
+           SQL_Select
+             (F_References,
+              From => Database.Entity_Refs & Database.Files
+              & Database.Reference_Kinds,
+              Where => Database.Entity_Refs.File = Database.Files.Id
+              and Database.Entity_Refs.Kind = Database.Reference_Kinds.Id
+              and Database.Reference_Kinds.Is_Real
+              and not Database.Reference_Kinds.Is_Implicit
+              and Database.Entity_Refs.Entity = Integer_Param (1)),
+           Order_By => Database.Files.Path
+           & Database.Entity_Refs.Line & Database.Entity_Refs.Column,
+           Distinct => True),
+        On_Server => False, Name => "references_no_implicit");
+
+   Q_References_All_Kinds : constant Prepared_Statement :=
+     Prepare
+       (SQL_Union
+          (SQL_Select
+             (F_References_Decl,
+              From => Database.Entities & Database.Files,
+              Where => Database.Entities.Decl_File = Database.Files.Id
+              and Database.Entities.Id = Integer_Param (1)),
+           SQL_Select
+             (F_References,
+              From => Database.Entity_Refs & Database.Files
+              & Database.Reference_Kinds,
+              Where => Database.Entity_Refs.File = Database.Files.Id
+              and Database.Entity_Refs.Kind = Database.Reference_Kinds.Id
+              and Database.Entity_Refs.Entity = Integer_Param (1)),
+           Order_By => Database.Files.Path
+           & Database.Entity_Refs.Line & Database.Entity_Refs.Column,
+           Distinct => True),
+        On_Server => False, Name => "references_all_kinds");
+      Q_Bodies_List : constant SQL_Field_List :=
      To_List
        ((Q_Ref_File_Id => +Database.Files.Id,
          Q_Ref_File    => +Database.Files.Path,
@@ -3196,6 +3269,11 @@ package body GNATCOLL.Xref is
             DB.Execute ("CREATE INDEX e2e_from on e2e(fromEntity)");
             DB.Execute ("CREATE INDEX e2e_to on e2e(toEntity)");
 
+            DB.Execute
+              ("CREATE INDEX entity_decl_caller on entities(decl_caller");
+            DB.Execute
+              ("CREATE INDEX refs_caller on entity_refs(caller)");
+
             if Active (Me_Timing) then
                Trace (Me_Timing,
                       "CREATE INDEXes: "
@@ -3280,6 +3358,8 @@ package body GNATCOLL.Xref is
             DB.Execute ("DROP INDEX entity_refs_loc;");
             DB.Execute ("DROP INDEX e2e_from;");
             DB.Execute ("DROP INDEX e2e_to;");
+            DB.Execute ("DROP INDEX entity_decl_caller;");
+            DB.Execute ("DROP INDEX refs_caller;");
          end if;
       end Start_Transaction;
 
@@ -3929,49 +4009,11 @@ package body GNATCOLL.Xref is
            (Q, On_Server => False, Name => "references_with_kinds");
 
       elsif Include_All then
-         Q := SQL_Union
-            (SQL_Select
-               (F_References_Decl,
-                From => Database.Entities & Database.Files,
-                Where => Database.Entities.Decl_File = Database.Files.Id
-                and Database.Entities.Id = Integer_Param (1)),
-             SQL_Select
-               (F_References,
-                From => Database.Entity_Refs & Database.Files
-                  & Database.Reference_Kinds,
-                Where => Database.Entity_Refs.File = Database.Files.Id
-                and Database.Entity_Refs.Kind = Database.Reference_Kinds.Id
-                and Database.Entity_Refs.Entity = Integer_Param (1)),
-             Order_By => Database.Files.Path
-                & Database.Entity_Refs.Line & Database.Entity_Refs.Column,
-             Distinct => True);
-         P := Prepare
-           (Q, On_Server => False, Name => "references_all_kinds");
-
+         P := Q_References_All_Kinds;
       elsif Include_Implicit then
          P := Q_References;
-
       else
-         Q := SQL_Union
-            (SQL_Select
-               (F_References_Decl,
-                From => Database.Entities & Database.Files,
-                Where => Database.Entities.Decl_File = Database.Files.Id
-                and Database.Entities.Id = Integer_Param (1)),
-             SQL_Select
-               (F_References,
-                From => Database.Entity_Refs & Database.Files
-                  & Database.Reference_Kinds,
-                Where => Database.Entity_Refs.File = Database.Files.Id
-                and Database.Entity_Refs.Kind = Database.Reference_Kinds.Id
-                and Database.Reference_Kinds.Is_Real
-                and not Database.Reference_Kinds.Is_Implicit
-                and Database.Entity_Refs.Entity = Integer_Param (1)),
-             Order_By => Database.Files.Path
-                & Database.Entity_Refs.Line & Database.Entity_Refs.Column,
-             Distinct => True);
-         P := Prepare
-           (Q, On_Server => False, Name => "references_no_implicit");
+         P := Q_References_No_Implicit;
       end if;
 
       Cursor.Entity := Entity;
@@ -4739,36 +4781,7 @@ package body GNATCOLL.Xref is
    is
    begin
       Cursor.DBCursor.Fetch
-        (Self.DB,
-         SQL_Union
-           (SQL_Select
-              (Database.Entities.Id
-                 & Database.Entities.Name
-                 & Database.Entities.Decl_Line
-                 & Database.Entities.Decl_Column,
-               From => Database.Entity_Refs
-                 & Database.Reference_Kinds
-                 & Database.Entities,
-               Where => Database.Entity_Refs.Caller = Integer_Param (1)
-                 and Database.Entity_Refs.Kind = Database.Reference_Kinds.Id
-                 and Database.Reference_Kinds.Is_Real = True
-                 and Database.Entities.Id = Database.Entity_Refs.Entity
-                 and Database.Entity_Refs.Entity /= Integer_Param (1)),
-
-            SQL_Select
-              (Database.Entities.Id
-                 & Database.Entities.Name
-                 & Database.Entities.Decl_Line
-                 & Database.Entities.Decl_Column,
-               From => Database.Entities,
-               Where => Database.Entities.Decl_Caller = Integer_Param (1)
-                 and Database.Entities.Id /= Integer_Param (1)),
-
-            Order_By =>
-              Database.Entities.Name
-              & Database.Entities.Decl_Line,
-            Distinct => True),
-         Params => (1 => +Entity.Id));
+        (Self.DB, Q_Calls, Params => (1 => +Entity.Id));
    end Calls;
 
    -------------
