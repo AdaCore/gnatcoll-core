@@ -135,7 +135,7 @@ package body GNATCOLL.Xref.Database is
          & "|d|decimal fixed point|false|false|true|false|false|false|false|false|false|false|" & ASCII.LF
          & "|D|decimal fixed point type|false|false|false|true|false|false|false|false|false|false|" & ASCII.LF
          & "|e|enumeration|false|false|true|false|false|true|true|false|false|false|" & ASCII.LF
-         & "|E|enumeration type|false|false|false|true|false|true|true|false|false|false|" & ASCII.LF
+         & "|E|enumeration type|false|false|false|true|false|false|true|false|false|false|" & ASCII.LF
          & "|f|floating point|false|false|true|false|false|false|false|false|false|false|" & ASCII.LF
          & "|F|floating point type|false|false|false|true|false|false|false|false|false|false|" & ASCII.LF
          & "|g|macro|false|false|false|false|true|false|false|false|false|false|" & ASCII.LF

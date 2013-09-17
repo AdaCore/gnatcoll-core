@@ -11,7 +11,7 @@
 | d     | decimal fixed point      | false       | false    | true                | false   | false         | false        | false                    | false       | false      | false     |
 | D     | decimal fixed point type | false       | false    | false               | true    | false         | false        | false                    | false       | false      | false     |
 | e     | enumeration              | false       | false    | true                | false   | false         | true         | true                     | false       | false      | false     |
-| E     | enumeration type         | false       | false    | false               | true    | false         | true         | true                     | false       | false      | false     |
+| E     | enumeration type         | false       | false    | false               | true    | false         | false        | true                     | false       | false      | false     |
 | f     | floating point           | false       | false    | true                | false   | false         | false        | false                    | false       | false      | false     |
 | F     | floating point type      | false       | false    | false               | true    | false         | false        | false                    | false       | false      | false     |
 | g     | macro                    | false       | false    | false               | false   | true          | false        | false                    | false       | false      | false     |
