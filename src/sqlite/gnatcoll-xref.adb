@@ -3270,7 +3270,7 @@ package body GNATCOLL.Xref is
             DB.Execute ("CREATE INDEX e2e_to on e2e(toEntity)");
 
             DB.Execute
-              ("CREATE INDEX entity_decl_caller on entities(decl_caller");
+              ("CREATE INDEX entity_decl_caller on entities(decl_caller)");
             DB.Execute
               ("CREATE INDEX refs_caller on entity_refs(caller)");
 
