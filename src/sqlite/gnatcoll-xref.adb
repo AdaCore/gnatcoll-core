@@ -4746,8 +4746,12 @@ package body GNATCOLL.Xref is
                  & Database.Entities.Name
                  & Database.Entities.Decl_Line
                  & Database.Entities.Decl_Column,
-               From => Database.Entity_Refs & Database.Entities,
+               From => Database.Entity_Refs
+                 & Database.Reference_Kinds
+                 & Database.Entities,
                Where => Database.Entity_Refs.Caller = Integer_Param (1)
+                 and Database.Entity_Refs.Kind = Database.Reference_Kinds.Id
+                 and Database.Reference_Kinds.Is_Real = True
                  and Database.Entities.Id = Database.Entity_Refs.Entity
                  and Database.Entity_Refs.Entity /= Integer_Param (1)),
 
