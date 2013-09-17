@@ -58,7 +58,7 @@ project GnatColl_Sqlite is
                & ("-DSQLITE_OMIT_LOAD_EXTENSION",
 
                   --  Build sqlite 3.8 on Solaris
-                  "-D__EXTENSIONS__");
+                  "-D__EXTENSIONS__", "-std=c99");
       end case;
    end Compiler;
 
