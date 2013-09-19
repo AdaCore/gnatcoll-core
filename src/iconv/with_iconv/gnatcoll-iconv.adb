@@ -52,9 +52,6 @@ package body GNATCOLL.Iconv is
    procedure C_Iconv_Close (State : System.Address);
    pragma Import (C, C_Iconv_Close, "gnatcoll_iconv_close");
 
-   type Int is mod System.Memory_Size;
-
-   function To_Int is new Ada.Unchecked_Conversion (System.Address, Int);
    function Conv is new Ada.Unchecked_Conversion (System.Address, chars_ptr);
 
    ----------------
@@ -67,8 +64,11 @@ package body GNATCOLL.Iconv is
        Transliteration : Boolean := False;
        Ignore          : Boolean := False) return Iconv_T
    is
+      use System;
+
       State            : Iconv_T;
       Tocode, Fromcode : chars_ptr;
+
    begin
       if Transliteration then
          if Ignore then
@@ -92,7 +92,7 @@ package body GNATCOLL.Iconv is
       Free (Fromcode);
       Free (Tocode);
 
-      if To_Int (State.T) = -1 then
+      if State.T = Null_Address then
          raise Unsupported_Conversion with
             "Unsupported conversion from '" & From_Code & "' to '"
             & To_Code & "'";
