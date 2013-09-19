@@ -27,7 +27,7 @@
 with Ada.Calendar;
 with Ada.Containers.Doubly_Linked_Lists;
 with Ada.Finalization;
-with Ada.Strings.Unbounded;  use Ada.Strings.Unbounded;
+with Ada.Strings.Unbounded; use Ada.Strings.Unbounded;
 
 with GNATCOLL.VFS;
 
