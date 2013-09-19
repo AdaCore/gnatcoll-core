@@ -2063,26 +2063,28 @@ package body GNATCOLL.Email is
    --------------------
 
    function Get_Message_Id (Msg : Message) return String is
-      H           : constant Header := Get_Header (Msg, "Message-ID");
-      Tmp         : Unbounded_String;
-      Index, Stop : Integer;
-   begin
-      if H /= Null_Header then
-         Flatten (Get_Value (H), Tmp);
+      use Ada.Strings;
 
-         declare
-            StrA : constant String := To_String (Tmp);
-         begin
-            Index := Next_Occurrence (StrA, '<');
-            if Index > StrA'Last then
-               return StrA;
-            else
-               Stop := Next_Occurrence (StrA (Index .. StrA'Last), '>');
-               return StrA (Index + 1 .. Stop - 1);
-            end if;
-         end;
+      H           : constant Header := Get_Header (Msg, "Message-ID");
+      MsgId_Str   : constant String :=
+        (if H = Null_Header
+         then ""
+         else Trim (To_String (H, Show_Header_Name => False), Both));
+      Index       : Integer;
+
+   begin
+      --  Note that we remove leading and trailing spaces, so that a Message-Id
+      --  that consists only of spaces will be treated as missing.
+      --  Lotus Notes is known to generate such
+      --  bogus message IDs.
+
+      Index := Next_Occurrence (MsgId_Str, '<');
+      if Index > MsgId_Str'Last then
+         return MsgId_Str;
       else
-         return "";
+         return MsgId_Str (Index + 1 ..
+                             Next_Occurrence
+                               (MsgId_Str (Index .. MsgId_Str'Last), '>') - 1);
       end if;
    end Get_Message_Id;
 
