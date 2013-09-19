@@ -2454,7 +2454,7 @@ def get_db_schema(setup, requires_pk=False, all_tables=[], omit=[]):
     table = None      # Instance of Table
 
     for line in schematxt.splitlines():
-        if line.startswith("|"):
+        if line.startswith("|") and not line.startswith("|--"):
             fields = line.split("|")
             fields[1] = fields[1].strip()
             fields[2] = fields[2].strip()
@@ -2484,9 +2484,8 @@ def get_db_schema(setup, requires_pk=False, all_tables=[], omit=[]):
                                is_abstract=fields[1].startswith("ABSTRACT"))
                 tables[table.name.lower()] = table
 
-            elif table:
+            elif table and len(fields) > 3:
                 # Ignores VIEWs
-
                 fields[3] = fields[3].strip()
 
                 if fields[1] == "FK:":
