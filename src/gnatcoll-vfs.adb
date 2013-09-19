@@ -1207,6 +1207,15 @@ package body GNATCOLL.VFS is
          if File.Tmp_File /= No_File then
             File.Tmp_File.Value.Close (File.FD, File.Success);
             if File.Success then
+               if File.File.Is_Regular_File then
+                  File.File.Delete (File.Success);
+
+                  if not File.Success then
+                     raise Ada.Text_IO.Use_Error with
+                       "Could not remove the original file prior to renaming";
+                  end if;
+               end if;
+
                File.Tmp_File.Rename (File.File, File.Success);
             end if;
 
@@ -1216,7 +1225,7 @@ package body GNATCOLL.VFS is
       end if;
 
       if not File.Success then
-         raise Ada.Text_IO.Use_Error with "Error while writting to the file";
+         raise Ada.Text_IO.Use_Error with "Error while writing to the file";
       end if;
    end Close;
 
