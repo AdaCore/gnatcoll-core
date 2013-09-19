@@ -27,6 +27,7 @@ with Ada.Exceptions;            use Ada.Exceptions;
 with Ada.Tags;                  use Ada.Tags;
 with Ada.Strings.Hash;
 with Ada.Strings.Hash_Case_Insensitive;
+with Ada.Text_IO;
 with Ada.Unchecked_Conversion;
 
 with System;
@@ -1114,18 +1115,33 @@ package body GNATCOLL.VFS is
       Append : Boolean := False) return Writable_File
    is
       use type GNAT.OS_Lib.File_Descriptor;
-      Fd : GNAT.OS_Lib.File_Descriptor;
+      W  : Writable_File;
    begin
       if File.Value = null then
          return Invalid_File;
       end if;
 
-      File.Value.Open_Write (Append and then File.Is_Regular_File, Fd);
+      W.File    := File;
+      W.Append  := Append;
+      W.Success := True;
 
-      if Fd = GNAT.OS_Lib.Invalid_FD then
+      if not Append or else not File.Is_Regular_File then
+         W.Tmp_File := Create
+           (File.Full_Name.all & "~",
+            Host => File.Get_Host);
+         W.Tmp_File.Value.Open_Write (Append => False, FD => W.FD);
+
+      else
+         W.Tmp_File := No_File;
+
+         --  append-mode, and the file already exists.
+         File.Value.Open_Write (Append => True, FD => W.FD);
+      end if;
+
+      if W.FD = GNAT.OS_Lib.Invalid_FD then
          return Invalid_File;
       else
-         return (File => File, FD => Fd, Append => Append);
+         return W;
       end if;
    end Write_File;
 
@@ -1140,30 +1156,43 @@ package body GNATCOLL.VFS is
       Written : aliased Integer;
 
    begin
-      Written := GNAT.OS_Lib.Write (File.FD, Str'Address, Str'Length);
+      if File.Success then
+         Written := GNAT.OS_Lib.Write (File.FD, Str'Address, Str'Length);
+         File.Success := Written = Str'Length;
 
-      if Written > 0 then
-         File.File.Value.Kind := GNATCOLL.IO.File;
+         if Written > 0 then
+            --  File has been overwritten on the disk anyway
+            if File.Tmp_File /= No_File then
+               File.Tmp_File.Value.Kind := GNATCOLL.IO.File;
+            else
+               File.File.Value.Kind := GNATCOLL.IO.File;
+            end if;
+         end if;
       end if;
-      --  ??? Should raise an exception if we couldn't write all the bytes
    end Write;
+
+   -----------
+   -- Write --
+   -----------
 
    procedure Write
      (File : in out Writable_File;
       Str  : chars_ptr)
    is
       Written : aliased Integer;
+      Len     : Integer;
 
       function To_Address is
         new Ada.Unchecked_Conversion (chars_ptr, System.Address);
    begin
-      Written := GNAT.OS_Lib.Write
-        (File.FD, To_Address (Str), Integer (Strlen (Str)));
-
-      if Written > 0 then
-         File.File.Value.Kind := GNATCOLL.IO.File;
+      if File.Success then
+         Len := Integer (Strlen (Str));
+         Written := GNAT.OS_Lib.Write (File.FD, To_Address (Str), Len);
+         File.Success := Written = Len;
+         if Written > 0 then
+            File.File.Value.Kind := GNATCOLL.IO.File;
+         end if;
       end if;
-      --  ??? Should raise an exception if we couldn't write all the bytes
    end Write;
 
    -----------
@@ -1174,7 +1203,21 @@ package body GNATCOLL.VFS is
       Success : Boolean;
       pragma Unreferenced (Success);
    begin
-      File.File.Value.Close (File.FD, Success);
+      if File.Success then
+         if File.Tmp_File /= No_File then
+            File.Tmp_File.Value.Close (File.FD, File.Success);
+            if File.Success then
+               File.Tmp_File.Rename (File.File, File.Success);
+            end if;
+
+         else
+            File.File.Value.Close (File.FD, File.Success);
+         end if;
+      end if;
+
+      if not File.Success then
+         raise Ada.Text_IO.Use_Error with "Error while writting to the file";
+      end if;
    end Close;
 
    ------------------

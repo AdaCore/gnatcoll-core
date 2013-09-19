@@ -529,6 +529,11 @@ package GNATCOLL.VFS is
    --  some cases. If Append is True then writting will be done at the end of
    --  the file if the file exists otherwise the file is created.
    --  Return Invalid_File is the file couldn't be open for writing
+   --
+   --  For safety, the actual writes will occur in a temporary file unless
+   --  Append is true, which will be renamed when calling Close. This ensures
+   --  that the original file (if there was one) is not destroyed if for some
+   --  reason the write fails.
 
    procedure Write
      (File : in out Writable_File;
@@ -573,13 +578,18 @@ private
 
    type Writable_File is record
       File     : Virtual_File;
+      Tmp_File : Virtual_File;
       FD       : GNAT.OS_Lib.File_Descriptor := GNAT.OS_Lib.Invalid_FD;
       Append   : Boolean;
+      Success  : Boolean;
    end record;
 
    Invalid_File : constant Writable_File :=
-     ((Ada.Finalization.Controlled with Value => null),
-      GNAT.OS_Lib.Invalid_FD, False);
+     (File     => (Ada.Finalization.Controlled with Value => null),
+      Tmp_File => (Ada.Finalization.Controlled with Value => null),
+      FD       => GNAT.OS_Lib.Invalid_FD,
+      Append   => False,
+      Success  => False);
 
    type Virtual_Dir is record
       File       : Virtual_File;
@@ -587,14 +597,14 @@ private
       Current    : Natural;
    end record;
 
+   No_File : aliased constant Virtual_File :=
+     (Ada.Finalization.Controlled with Value => null);
+
    Local_Host : aliased constant String := "";
 
    Local_Root_Dir : constant Virtual_File :=
                       (Ada.Finalization.Controlled with
                        Value => GNATCOLL.IO.Native.Local_Root_Dir);
-
-   No_File : aliased constant Virtual_File :=
-     (Ada.Finalization.Controlled with Value => null);
 
    Empty_File_Array : constant File_Array :=
                         File_Array'(1 .. 0 => No_File);
