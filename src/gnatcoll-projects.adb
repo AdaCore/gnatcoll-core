@@ -699,9 +699,27 @@ package body GNATCOLL.Projects is
          return (1 .. 0 => <>);
 
       elsif Recursive then
-         return From_Path
-           (+Prj.Env.Ada_Objects_Path
-              (View, Project.Data.Tree.View, Including_Libraries).all);
+         declare
+            Iter  : Project_Iterator := Start (Project, Recursive);
+            Result : File_Array_Access;
+            P     : Project_Type;
+         begin
+            loop
+               P := Current (Iter);
+               exit when P = No_Project or else P.Get_View = Prj.No_Project;
+
+               Append (Result,
+                       P.Object_Path
+                         (Recursive           => False,
+                          Including_Libraries => Including_Libraries,
+                          Xrefs_Dirs          => Xrefs_Dirs));
+               Next (Iter);
+            end loop;
+
+            return R : constant File_Array := Result.all do
+               Unchecked_Free (Result);
+            end return;
+         end;
 
       elsif Including_Libraries
         and then View.Library
