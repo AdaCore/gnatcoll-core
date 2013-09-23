@@ -1754,6 +1754,24 @@ package body GNATCOLL.VFS is
       end if;
    end Append;
 
+   -------------
+   -- Prepend --
+   -------------
+
+   procedure Prepend (Files : in out File_Array_Access; F : File_Array) is
+      Tmp : File_Array_Access;
+   begin
+      if Files = null then
+         Files := new File_Array'(F);
+      else
+         Tmp := new File_Array (1 .. Files'Length + F'Length);
+         Tmp (1 + F'Length .. Tmp'Length) := Files.all;
+         Tmp (1 .. F'Length) := F;
+         Unchecked_Free (Files);
+         Files := Tmp;
+      end if;
+   end Prepend;
+
    ------------
    -- Remove --
    ------------

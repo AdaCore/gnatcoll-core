@@ -708,11 +708,11 @@ package body GNATCOLL.Projects is
                P := Current (Iter);
                exit when P = No_Project or else P.Get_View = Prj.No_Project;
 
-               Append (Result,
-                       P.Object_Path
-                         (Recursive           => False,
-                          Including_Libraries => Including_Libraries,
-                          Xrefs_Dirs          => Xrefs_Dirs));
+               Prepend (Result,
+                        P.Object_Path
+                          (Recursive           => False,
+                           Including_Libraries => Including_Libraries,
+                           Xrefs_Dirs          => Xrefs_Dirs));
                Next (Iter);
             end loop;
 

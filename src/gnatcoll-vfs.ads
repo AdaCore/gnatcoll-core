@@ -366,6 +366,7 @@ package GNATCOLL.VFS is
 
    procedure Append (Files : in out File_Array_Access; F : Virtual_File);
    procedure Append (Files : in out File_Array_Access; F : File_Array);
+   procedure Prepend (Files : in out File_Array_Access; F : File_Array);
    --  Appends one or more files to Files. Files can be null, in which case a
    --  new File_Array is created.
 
