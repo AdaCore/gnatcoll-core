@@ -7061,6 +7061,8 @@ package body GNATCOLL.Projects is
          Free (Self.Xrefs_Subdir);
          Self.Extensions.Clear;
 
+         Free (Self.Env);
+
          Unchecked_Free (Self);
       end if;
    end Free;
