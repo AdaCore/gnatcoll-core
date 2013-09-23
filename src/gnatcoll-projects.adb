@@ -4639,6 +4639,7 @@ package body GNATCOLL.Projects is
             Self.Load_Empty_Project (Env => Tmp.Data.Env);
          end if;
 
+         Free (Tmp.Data.View);
          Free (Tmp.Data);
 
          raise Invalid_Project;
@@ -4655,6 +4656,8 @@ package body GNATCOLL.Projects is
       else
          Self.Data.Timestamp := GNATCOLL.Utils.No_Time;
          Self.Data.Env := Tmp.Data.Env;
+
+         Free (Tmp.Data.View);
          Free (Tmp.Data);
       end if;
 
