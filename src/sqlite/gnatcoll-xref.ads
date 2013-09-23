@@ -406,11 +406,12 @@ package GNATCOLL.Xref is
    --  "record declared at file:line:column".
 
    function Extract_Comment
-     (Buffer           : String;
-      Decl_Start_Index : Integer;
-      Decl_End_Index   : Integer;
-      Language         : Language_Syntax;
-      Format           : Formatting := Text) return String;
+     (Buffer            : String;
+      Decl_Start_Index  : Integer;
+      Decl_End_Index    : Integer;
+      Language          : Language_Syntax;
+      Format            : Formatting := Text;
+      Look_Before_First : Boolean := True) return String;
    --  Extra comment from the source code, given the range of an entity
    --  declaration. This program is made public so that you can reuse it
    --  if you need to override Comment below, or have other means to get the
@@ -419,6 +420,10 @@ package GNATCOLL.Xref is
    --  immediately).
    --  In this version, the start and end of the declaration are given as
    --  indexes in Buffer.
+   --
+   --  If Look_Before_First is True, the comments are first searched before
+   --  the entity, and if not found after the entity. Otherwise the search
+   --  order is reversed.
 
    function Extract_Comment
      (Buffer            : String;
@@ -427,7 +432,8 @@ package GNATCOLL.Xref is
       Decl_End_Line     : Integer := -1;
       Decl_End_Column   : Integer := -1;
       Language          : Language_Syntax;
-      Format            : Formatting := Text) return String;
+      Format            : Formatting := Text;
+      Look_Before_First : Boolean := True) return String;
    --  Same as above, but the scope of the declaration is given as line and
    --  column. By default, the end is on the same position as the start.
 
@@ -435,7 +441,8 @@ package GNATCOLL.Xref is
      (Self     : Xref_Database;
       Entity   : Entity_Information;
       Language : Language_Syntax;
-      Format   : Formatting := Text) return String;
+      Format   : Formatting := Text;
+      Look_Before_First : Boolean := True) return String;
    --  Returns the comment (extracted from the source file) for the entity.
    --  This is looked for just before or just after the declaration of the
    --  entity.
@@ -463,7 +470,8 @@ package GNATCOLL.Xref is
      (Self     : Xref_Database;
       Entity   : Entity_Information;
       Language : Language_Syntax;
-      Format   : Formatting := Text) return String;
+      Format   : Formatting := Text;
+      Look_Before_First : Boolean := True) return String;
    --  Combines the various documentation subprogram output into a single
    --  string.
 

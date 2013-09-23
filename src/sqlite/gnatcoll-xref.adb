@@ -4424,11 +4424,12 @@ package body GNATCOLL.Xref is
    ---------------------
 
    function Extract_Comment
-     (Buffer           : String;
-      Decl_Start_Index : Integer;
-      Decl_End_Index   : Integer;
-      Language         : Language_Syntax;
-      Format           : Formatting := Text) return String
+     (Buffer            : String;
+      Decl_Start_Index  : Integer;
+      Decl_End_Index    : Integer;
+      Language          : Language_Syntax;
+      Format            : Formatting := Text;
+      Look_Before_First : Boolean := True) return String
    is
       pragma Unreferenced (Format);
       Beginning, Current   : Natural;
@@ -4442,21 +4443,41 @@ package body GNATCOLL.Xref is
       --  later lines (in particular if they contain code sample for instance)
 
    begin
-      Get_Documentation_Before
-        (Context       => Language,
-         Buffer        => Buffer,
-         Decl_Index    => Decl_Start_Index,
-         Comment_Start => Beginning,
-         Comment_End   => Current,
-         Allow_Blanks  => False);
+      if Look_Before_First then
+         Get_Documentation_Before
+           (Context       => Language,
+            Buffer        => Buffer,
+            Decl_Index    => Decl_Start_Index,
+            Comment_Start => Beginning,
+            Comment_End   => Current,
+            Allow_Blanks  => False);
 
-      if Beginning = 0 then
+         if Beginning = 0 then
+            Get_Documentation_After
+              (Context       => Language,
+               Buffer        => Buffer,
+               Decl_Index    => Decl_End_Index,
+               Comment_Start => Beginning,
+               Comment_End   => Current);
+         end if;
+
+      else
          Get_Documentation_After
            (Context       => Language,
             Buffer        => Buffer,
             Decl_Index    => Decl_End_Index,
             Comment_Start => Beginning,
             Comment_End   => Current);
+
+         if Beginning = 0 then
+            Get_Documentation_Before
+              (Context       => Language,
+               Buffer        => Buffer,
+               Decl_Index    => Decl_Start_Index,
+               Comment_Start => Beginning,
+               Comment_End   => Current,
+               Allow_Blanks  => False);
+         end if;
       end if;
 
       --  Cleanup comment marks
@@ -4536,7 +4557,8 @@ package body GNATCOLL.Xref is
       Decl_End_Line     : Integer := -1;
       Decl_End_Column   : Integer := -1;
       Language          : Language_Syntax;
-      Format            : Formatting := Text) return String
+      Format            : Formatting := Text;
+      Look_Before_First : Boolean := True) return String
    is
       Start, Last, Skipped : Integer;
    begin
@@ -4570,11 +4592,12 @@ package body GNATCOLL.Xref is
       end if;
 
       return Extract_Comment
-        (Buffer           => Buffer,
-         Decl_Start_Index => Start,
-         Decl_End_Index   => Last,
-         Language         => Language,
-         Format           => Format);
+        (Buffer            => Buffer,
+         Decl_Start_Index  => Start,
+         Decl_End_Index    => Last,
+         Language          => Language,
+         Format            => Format,
+         Look_Before_First => Look_Before_First);
    end Extract_Comment;
 
    -------------
@@ -4585,7 +4608,8 @@ package body GNATCOLL.Xref is
      (Self     : Xref_Database;
       Entity   : Entity_Information;
       Language : Language_Syntax;
-      Format   : Formatting := Text) return String
+      Format   : Formatting := Text;
+      Look_Before_First : Boolean := True) return String
    is
       Buffer : GNAT.Strings.String_Access;
       Decl   : constant Entity_Declaration :=
@@ -4608,7 +4632,8 @@ package body GNATCOLL.Xref is
                   Decl_End_Line     => R.Integer_Value (0),
                   Decl_End_Column   => R.Integer_Value (1),
                   Language          => Language,
-                  Format            => Format);
+                  Format            => Format,
+                  Look_Before_First => Look_Before_First);
             begin
                if Result /= "" then
                   Free (Buffer);
@@ -4623,7 +4648,8 @@ package body GNATCOLL.Xref is
                   Decl_Start_Line   => Decl.Location.Line,
                   Decl_Start_Column => Integer (Decl.Location.Column),
                   Language          => Language,
-                  Format            => Format);
+                  Format            => Format,
+                  Look_Before_First => Look_Before_First);
             begin
                if Result /= "" then
                   Free (Buffer);
@@ -4655,7 +4681,8 @@ package body GNATCOLL.Xref is
                      Decl_Start_Line   => Ref.Line,
                      Decl_Start_Column => Integer (Ref.Column),
                      Language          => Language,
-                     Format            => Format);
+                     Format            => Format,
+                     Look_Before_First => Look_Before_First);
                begin
                   if Result /= "" then
                      Free (Buffer);
@@ -4733,13 +4760,15 @@ package body GNATCOLL.Xref is
      (Self     : Xref_Database;
       Entity   : Entity_Information;
       Language : Language_Syntax;
-      Format   : Formatting := Text) return String
+      Format   : Formatting := Text;
+      Look_Before_First : Boolean := True) return String
    is
       Result : Unbounded_String;
       D       : constant Entity_Declaration := Self.Declaration (Entity);
       Mangled : constant String := Self.Mangled_Name (Entity);
       Comm    : constant String :=
-        Comment (Xref_Database'Class (Self), Entity, Language, Format);
+        Comment (Xref_Database'Class (Self), Entity, Language, Format,
+                 Look_Before_First => Look_Before_First);
       Decl    : constant String :=
         Text_Declaration (Xref_Database'Class (Self), Entity, Format);
    begin
