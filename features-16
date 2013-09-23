@@ -15,6 +15,11 @@ of the feature.
 New features in 1.6
 -------------------
 
+NF-16-M920-033 Support for Postgres SQL extensions (2013-09-23)
+
+   Package GNATCOLL.SQL.Postgres now supports the construction of
+   UPDATE ... RETURNING and SELECT ... FOR UPDATE statements.
+
 NF-16-M613-007 Linking with static libiconv (2013-06-19)
 
    It is now possible to link with a static version of libiconv, to solve

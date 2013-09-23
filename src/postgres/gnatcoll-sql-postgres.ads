@@ -62,6 +62,7 @@ package GNATCOLL.SQL.Postgres is
    -------------------------
    -- Postgres extensions --
    -------------------------
+
    --  Postgres-specific extensions for GNATCOLL.SQL
 
    function OID_Field (Table : SQL_Table'Class) return SQL_Field_Integer;
@@ -82,6 +83,22 @@ package GNATCOLL.SQL.Postgres is
    --  Check whether the field matches a regular expression. This is the "~*"
    --  operator specific to postgreSQL.
 
+   --  Generic query extensions
+
+   type SQL_PG_Extension is abstract tagged private;
+
+   function Returning (Fields : SQL_Field_List) return SQL_PG_Extension'Class;
+   --  RETURNING clause for UPDATE query
+
+   function For_Update
+     (Tables  : SQL_Table_List := Empty_Table_List;
+      No_Wait : Boolean := False) return SQL_PG_Extension'Class;
+   --  FOR UPDATE clause for SELECT query
+
+   function "&"
+     (Query     : SQL_Query;
+      Extension : SQL_PG_Extension'Class) return SQL_Query;
+
 private
    type Postgres_Description (Caching : Boolean)
      is new Database_Description_Record (Caching)
@@ -93,5 +110,7 @@ private
       SSL      : SSL_Mode := Prefer;
       Port     : Integer := -1;
    end record;
+
+   type SQL_PG_Extension is abstract tagged null record;
 
 end GNATCOLL.SQL.Postgres;

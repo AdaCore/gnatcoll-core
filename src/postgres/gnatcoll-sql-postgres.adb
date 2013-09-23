@@ -29,6 +29,97 @@ package body GNATCOLL.SQL.Postgres is
 
    Comparison_Regexp : aliased constant String := " ~* ";
 
+   --  Support for extending standard query contents with
+   --  Postgres-specific info.
+
+   generic
+      type Query_Std_Contents is new Query_Contents with private;
+      type Query_PG_Contents  is new Query_Std_Contents with private;
+
+   package Extended_Contents is
+      type Query_PG_Contents_Access is access all Query_PG_Contents;
+      function Extend
+        (Std_Contents : SQL_Query_Contents_Access)
+        return Query_PG_Contents_Access;
+   end Extended_Contents;
+
+   -----------------------
+   -- Extended_Contents --
+   -----------------------
+
+   package body Extended_Contents is
+
+      ------------
+      -- Extend --
+      ------------
+
+      function Extend
+        (Std_Contents : SQL_Query_Contents_Access)
+        return Query_PG_Contents_Access
+      is
+      begin
+         if Std_Contents.all in Query_PG_Contents then
+            return new Query_PG_Contents'
+                         (Query_PG_Contents (Std_Contents.all));
+
+         elsif Std_Contents.all in Query_Std_Contents then
+            return Result : constant Query_PG_Contents_Access :=
+                              new Query_PG_Contents
+            do
+               Query_Std_Contents (Result.all) :=
+                 Query_Std_Contents (Std_Contents.all);
+            end return;
+
+         else
+            raise Constraint_Error with "unexpected query type";
+         end if;
+      end Extend;
+
+   end Extended_Contents;
+
+   --  SELECT extensions
+
+   type SQL_PG_For_Update is new SQL_PG_Extension with record
+      Tables : SQL_Table_List := Empty_Table_List;
+      --  List of updated tables (empty means ALL tables in query)
+
+      No_Wait : Boolean := False;
+      --  Set True if NO WAIT
+   end record;
+
+   type Query_PG_Select_Contents is new Query_Select_Contents with record
+      For_Update_Present : Boolean := False;
+      For_Update         : SQL_PG_For_Update;
+   end record;
+
+   overriding function To_String
+     (Self   : Query_PG_Select_Contents;
+      Format : Formatter'Class) return Unbounded_String;
+
+   package Select_Contents is new Extended_Contents
+     (Query_Select_Contents, Query_PG_Select_Contents);
+   subtype Query_PG_Select_Contents_Access is
+     Select_Contents.Query_PG_Contents_Access;
+
+   --  UPDATE extensions
+
+   type SQL_PG_Returning is new SQL_PG_Extension with record
+      Fields : SQL_Field_List;
+   end record;
+
+   type Query_PG_Update_Contents is new Query_Update_Contents with record
+      Returning : SQL_PG_Returning;
+   end record;
+
+   overriding function To_String
+     (Self   : Query_PG_Update_Contents;
+      Format : Formatter'Class) return Unbounded_String;
+
+   package Update_Contents is new Extended_Contents
+     (Query_Update_Contents, Query_PG_Update_Contents);
+   subtype Query_PG_Update_Contents_Access is
+     Update_Contents.Query_PG_Contents_Access;
+
    -----------
    -- Setup --
    -----------
@@ -116,5 +207,113 @@ package body GNATCOLL.SQL.Postgres is
    begin
       return Compare (Self, Expression (Str), Comparison_Regexp'Access);
    end Regexp;
+
+   ----------------
+   -- For_Update --
+   ----------------
+
+   function For_Update
+     (Tables  : SQL_Table_List := Empty_Table_List;
+      No_Wait : Boolean := False) return SQL_PG_Extension'Class
+   is
+   begin
+      return SQL_PG_For_Update'(Tables => Tables, No_Wait => No_Wait);
+   end For_Update;
+
+   ---------------
+   -- Returning --
+   ---------------
+
+   function Returning
+     (Fields : SQL_Field_List) return SQL_PG_Extension'Class
+   is
+   begin
+      return SQL_PG_Returning'(Fields => Fields);
+   end Returning;
+
+   ---------
+   -- "&" --
+   ---------
+
+   function "&"
+     (Query     : SQL_Query;
+      Extension : SQL_PG_Extension'Class) return SQL_Query
+   is
+      Q_Data : SQL_Query_Contents_Access;
+
+   --  Start of processing for "&"
+
+   begin
+      if Extension in SQL_PG_Returning then
+         declare
+            use Update_Contents;
+
+            Data : constant Query_PG_Update_Contents_Access :=
+                     Extend (Query.Contents.Data);
+         begin
+            Data.Returning.Fields := Data.Returning.Fields
+                                   & SQL_PG_Returning (Extension).Fields;
+
+            Q_Data := SQL_Query_Contents_Access (Data);
+         end;
+
+      elsif Extension in SQL_PG_For_Update then
+         declare
+            use Select_Contents;
+
+            Data : constant Query_PG_Select_Contents_Access :=
+                     Extend (Query.Contents.Data);
+         begin
+            Data.For_Update_Present := True;
+            Data.For_Update.Tables :=
+              Data.For_Update.Tables & SQL_PG_For_Update (Extension).Tables;
+            Data.For_Update.No_Wait :=
+              Data.For_Update.No_Wait or SQL_PG_For_Update (Extension).No_Wait;
+
+            Q_Data := SQL_Query_Contents_Access (Data);
+         end;
+      else
+         raise Program_Error with "unexpected extension type";
+      end if;
+
+      return (Contents => (Ada.Finalization.Controlled with Q_Data));
+   end "&";
+
+   ---------------
+   -- To_String --
+   ---------------
+
+   overriding function To_String
+     (Self   : Query_PG_Select_Contents;
+      Format : Formatter'Class) return Unbounded_String
+   is
+      Result : Unbounded_String :=
+                 To_String (Query_Select_Contents (Self), Format);
+   begin
+      if Self.For_Update_Present then
+         Append (Result, " FOR UPDATE");
+         if Self.For_Update.Tables /= Empty_Table_List then
+            Append (Result, " OF ");
+            Append (Result, To_String (Self.For_Update.Tables, Format));
+         end if;
+
+         if Self.For_Update.No_Wait then
+            Append (Result, " NO WAIT");
+         end if;
+      end if;
+      return Result;
+   end To_String;
+
+   overriding function To_String
+     (Self   : Query_PG_Update_Contents;
+      Format : Formatter'Class) return Unbounded_String
+   is
+      Result : Unbounded_String :=
+                 To_String (Query_Update_Contents (Self), Format);
+   begin
+      Append (Result, " RETURNING ");
+      Append (Result, To_String (Self.Returning.Fields, Format, Long => True));
+      return Result;
+   end To_String;
 
 end GNATCOLL.SQL.Postgres;
