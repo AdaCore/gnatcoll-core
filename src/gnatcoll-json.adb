@@ -412,11 +412,10 @@ package body GNATCOLL.JSON is
       end case;
    end Read;
 
-   ----------
-   -- Read --
-   ----------
-
-   function Read (Strm, Filename : String) return JSON_Value is
+   function Read
+     (Strm     : String;
+      Filename : String := "<data>") return JSON_Value
+   is
       Idx  : aliased Natural := Strm'First;
       Col  : aliased Natural := 1;
       Line : aliased Natural := 1;
