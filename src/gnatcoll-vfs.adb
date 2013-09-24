@@ -1200,6 +1200,7 @@ package body GNATCOLL.VFS is
    -----------
 
    procedure Close (File : in out Writable_File) is
+      Norm : Virtual_File;
       Success : Boolean;
       pragma Unreferenced (Success);
    begin
@@ -1207,8 +1208,11 @@ package body GNATCOLL.VFS is
          if File.Tmp_File /= No_File then
             File.Tmp_File.Value.Close (File.FD, File.Success);
             if File.Success then
-               if File.File.Is_Regular_File then
-                  File.File.Delete (File.Success);
+               --  Look past symbolic links
+               Norm := Create (File.File.Full_Name
+                  (Normalize => True, Resolve_Links => True).all);
+               if Norm.Is_Regular_File then
+                  Norm.Delete (File.Success);
 
                   if not File.Success then
                      raise Ada.Text_IO.Use_Error with
@@ -1216,7 +1220,7 @@ package body GNATCOLL.VFS is
                   end if;
                end if;
 
-               File.Tmp_File.Rename (File.File, File.Success);
+               File.Tmp_File.Rename (Norm, File.Success);
             end if;
 
          else
