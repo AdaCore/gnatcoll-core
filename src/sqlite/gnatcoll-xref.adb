@@ -1841,71 +1841,108 @@ package body GNATCOLL.Xref is
       ----------------------
 
       procedure Skip_To_Name_End is
-         Start_Index : constant Integer := Index;
       begin
-         Index := Index + 1;
-
-         if Str (Index - 1) = '"' then
+         if Str (Index) = '"' then
             --  Operators are quoted
+
+            Index := Index + 1;
 
             while Str (Index) /= '"' loop
                Index := Index + 1;
             end loop;
             Index := Index + 1;   --  skip closing quote
 
+         --  C++ operators are represented as:
+         --    93V7*operator new 93r12
+         --    93V7*operator=={bool}
+         --    95V7*operator new [] 95i<cpp,_Znam>7 1|88s34
+         --    840V7*operator[]{120J61} 1|46s26
+         --  so we need to allow a space in the name in some cases.
+
+         elsif Index + 8 <= Str'Last
+           and then Str (Index) = 'o'
+           and then Str (Index + 1) = 'p'
+           and then Str (Index + 2) = 'e'
+           and then Str (Index + 3) = 'r'
+           and then Str (Index + 4) = 'a'
+           and then Str (Index + 5) = 't'
+           and then Str (Index + 6) = 'o'
+           and then Str (Index + 7) = 'r'
+         then
+            Index := Index + 8;
+            if Str (Index) = '=' then
+               if Index < Str'Last and then Str (Index + 1) = '=' then
+                  Index := Index + 2;
+               else
+                  Index := Index + 1;
+               end if;
+            elsif Str (Index) = '<' then
+               if Index < Str'Last and then Str (Index + 1) = '<' then
+                  Index := Index + 2;
+               else
+                  Index := Index + 1;
+               end if;
+            elsif Str (Index) = '>' then
+               if Index < Str'Last and then Str (Index + 1) = '>' then
+                  Index := Index + 2;
+               else
+                  Index := Index + 1;
+               end if;
+            elsif Str (Index) = '[' then
+               if Index < Str'Last and then Str (Index + 1) = ']' then
+                  Index := Index + 2;
+               else
+                  Index := Index + 1;
+               end if;
+
+            elsif Str (Index) = ' ' then
+               --  "operator new", "operator delete"
+               if Starts_With
+                 (String (Str (Index + 1 .. Str'Last)), "new")
+               then
+                  Index := Index + 4;
+
+                  if Str (Index) = ' '
+                    and then Str (Index + 1) = '['
+                    and then Str (Index + 2) = ']'
+                  then
+                     Index := Index + 3;
+                  end if;
+
+               elsif Starts_With
+                 (String (Str (Index + 1 .. Str'Last)), "delete")
+               then
+                  Index := Index + 7;
+
+                  if Str (Index) = ' '
+                    and then Str (Index + 1) = '['
+                    and then Str (Index + 2) = ']'
+                  then
+                     Index := Index + 3;
+                  end if;
+               end if;
+
+            else
+               --  Assume a one-character operator (*, /, +, -,...)
+               Index := Index + 1;
+            end if;
+
          else
+            Index := Index + 1;
+
             --  Entity names can contain extra information, like
             --  pointed type,... So we need to extract the name
             --  itself and will store the extra information in a
             --  second step
-            --
 
             while Str (Index) /= ASCII.LF
               and then Str (Index) /= ASCII.CR
               and then Str (Index) /= '{'
               and then Str (Index) /= '<'
               and then Str (Index) /= '('
+              and then Str (Index) /= ' '
+              and then Str (Index) /= '='
             loop
-               --  A "=" might be either the start of renaming info in .ali
-               --  files, or the end for the "=" operator in .gli files.
-
-               exit when Str (Index) = '='
-                 and then Index < Str'Last
-                 and then Is_Digit (Str (Index + 1));
-
-               --  C++ operators are represented as:
-               --    93V7*operator new 93r12
-               --    93V7*operator=={bool}
-               --  so we need to allow a space in the name in some cases.
-
-               exit when Str (Index) = ' '
-                 and then
-                   (Index - 8 /= Start_Index or else
-                    Str (Start_Index .. Index - 1) /= "operator")
-                 and then
-                   (Index - 12 /= Start_Index or else
-                    Str (Start_Index .. Index - 1) /= "operator new" or else
-                    Str (Index + 1) /= '[')
-                 and then
-                   (Index - 15 /= Start_Index or else
-                    Str (Start_Index .. Index - 1) /= "operator delete" or else
-                    Str (Index + 1) /= '[');
-
-               --  A slightly more complex case for delete and new:
-               --    95V7*operator new [] 95i<cpp,_Znam>7 1|88s34
-               --    840V7*operator[]{120J61} 1|46s26
-
-               exit when Str (Index) = '['
-                 and then
-                   (Index - 8 /= Start_Index or else
-                    Str (Start_Index .. Index - 1) /= "operator")
-                 and then
-                   (Index - 13 /= Start_Index or else
-                    Str (Start_Index .. Index - 1) /= "operator new ")
-                 and then
-                   (Index - 16 /= Start_Index or else
-                    Str (Start_Index .. Index - 1) /= "operator delete ");
-
                Index := Index + 1;
             end loop;
          end if;
