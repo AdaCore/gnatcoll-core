@@ -1942,6 +1942,7 @@ package body GNATCOLL.Xref is
               and then Str (Index) /= '('
               and then Str (Index) /= ' '
               and then Str (Index) /= '='
+              and then Str (Index) /= '['
             loop
                Index := Index + 1;
             end loop;
