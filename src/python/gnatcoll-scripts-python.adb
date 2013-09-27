@@ -1402,6 +1402,8 @@ package body GNATCOLL.Scripts.Python is
 
          if Get_Default_Console (Script) /= null then
             Grab_Events (Get_Default_Console (Script), True);
+            --  No exception handler needed because PyEval_EvalCode cannot
+            --  raise an exception.
             Result := PyEval_EvalCode (Code, Script.Globals, Script.Globals);
             Grab_Events (Get_Default_Console (Script), False);
          else
