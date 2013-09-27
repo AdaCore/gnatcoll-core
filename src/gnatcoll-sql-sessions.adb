@@ -776,7 +776,7 @@ package body GNATCOLL.SQL.Sessions is
    is
       D  : constant Detached_Data_Access :=
         Detached_Data_Access (Get (Element));
-      PK_Modified : Boolean;
+      PK_Modified : Boolean := False;
    begin
       if D = null or else not Is_Dirty (D) then
          --  Nothing to do

@@ -475,8 +475,7 @@ package GNATCOLL.SQL.Sessions is
    --  not need to do it.
    --  PK_Modified will be set to False if the PK was modified (in particular
    --  when the element was INSERT-ed in the database for the first time, with
-   --  an auto-increment integer primary key). PK_Modified is always
-   --  initialized to False when calling this procedure.
+   --  an auto-increment integer primary key).
    --
    --  This procedure can in turn call Insert_Or_Update on other elements, most
    --  likely its foreign keys if it needs their id, through the procedure
