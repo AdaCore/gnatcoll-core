@@ -15,6 +15,10 @@ of the feature.
 New features in 1.6
 -------------------
 
+NF-16-M927-048 Support for long integer values in JSON (2013-09-27)
+
+   GNATCOLL.JSON can now handle 64 bit integer values (Long_Integer).
+
 NF-16-M920-033 Support for Postgres SQL extensions (2013-09-23)
 
    Package GNATCOLL.SQL.Postgres now supports the construction of

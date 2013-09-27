@@ -89,6 +89,8 @@ package GNATCOLL.JSON is
 
    function Create (Val : Integer) return JSON_Value;
    pragma Postcondition (Kind (Create'Result) = JSON_Int_Type);
+   function Create (Val : Long_Integer) return JSON_Value;
+   pragma Postcondition (Kind (Create'Result) = JSON_Int_Type);
    --  Creates an integer-typed JSON value
 
    function Create (Val : Float) return JSON_Value;
@@ -135,6 +137,12 @@ package GNATCOLL.JSON is
    procedure Set_Field
      (Val        : JSON_Value;
       Field_Name : UTF8_String;
+      Field      : Long_Integer);
+   pragma Precondition (Kind (Val) = JSON_Object_Type);
+
+   procedure Set_Field
+     (Val        : JSON_Value;
+      Field_Name : UTF8_String;
       Field      : Float);
    pragma Precondition (Kind (Val) = JSON_Object_Type);
 
@@ -167,6 +175,9 @@ package GNATCOLL.JSON is
    function Get (Val : JSON_Value) return Integer;
    pragma Precondition (Kind (Val) = JSON_Int_Type);
 
+   function Get (Val : JSON_Value) return Long_Integer;
+   pragma Precondition (Kind (Val) = JSON_Int_Type);
+
    function Get (Val : JSON_Value) return Float;
    pragma Precondition (Kind (Val) = JSON_Float_Type);
 
@@ -192,6 +203,11 @@ package GNATCOLL.JSON is
       and then Kind (Get (Val, Field)) = JSON_Boolean_Type);
 
    function Get (Val : JSON_Value; Field : UTF8_String) return Integer;
+   pragma Precondition
+     (Kind (Val) = JSON_Object_Type
+      and then Kind (Get (Val, Field)) = JSON_Int_Type);
+
+   function Get (Val : JSON_Value; Field : UTF8_String) return Long_Integer;
    pragma Precondition
      (Kind (Val) = JSON_Object_Type
       and then Kind (Get (Val, Field)) = JSON_Int_Type);
@@ -246,7 +262,7 @@ private
       Kind       : JSON_Value_Type := JSON_Null_Type;
 
       Bool_Value : Boolean;
-      Int_Value  : Integer;
+      Int_Value  : Long_Integer;
       Flt_Value  : Float;
       Str_Value  : UTF8_Unbounded_String;
       Arr_Value  : JSON_Array_Access;
