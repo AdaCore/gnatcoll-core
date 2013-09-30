@@ -223,6 +223,7 @@ package GNATCOLL.Projects is
    procedure Reload_If_Needed
      (Self     : in out Project_Tree;
       Reloaded : out Boolean;
+      Recompute_View : Boolean := False;
       Errors   : Error_Report := null);
    --  If any of the project files have changed on the disk, reloads the whole
    --  project tree. This performs the two phases of the loading.

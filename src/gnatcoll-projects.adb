@@ -4520,6 +4520,7 @@ package body GNATCOLL.Projects is
    procedure Reload_If_Needed
      (Self     : in out Project_Tree;
       Reloaded : out Boolean;
+      Recompute_View : Boolean := False;
       Errors   : Error_Report := null)
    is
       Iter : Project_Iterator;
@@ -4544,6 +4545,7 @@ package body GNATCOLL.Projects is
          Self.Load
            (Env                => Self.Data.Env,
             Root_Project_Path  => Project_Path (Self.Root_Project),
+            Recompute_View     => Recompute_View,
             Errors             => Errors);
       else
          Trace (Me, "Reload_If_Needed: nothing to do, timestamp unchanged");
