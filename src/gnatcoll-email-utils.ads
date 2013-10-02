@@ -53,7 +53,6 @@ package GNATCOLL.Email.Utils is
 
    function Format_Date
      (Date         : Ada.Calendar.Time;
-      Date_Is_GMT  : Boolean := False;
       Use_GMT      : Boolean := False;
       From_Line    : Boolean := False;
       No_TZ        : Boolean := False;
@@ -62,26 +61,27 @@ package GNATCOLL.Email.Utils is
       Show_Day     : Boolean := True) return String;
    --  Format the date as a RFC 2822 string, eg:
    --     Fri, 09 Nov 2001 01:08:47 -0000
-   --  By default, the input date is considered as local date, rather than GMT.
-   --  You can change this by changing the Date_Is_GMT parameter.
-   --  If Use_GMT is true and no timezone is used, the timezone is output as
-   --  "GMT" rather than a numeric zone. This is needed for some protocols.
-   --  Date is always interpreted as in the UTC timezone.
-   --  The format used will be that of the Unix From_ line if From_Line is
-   --  true. In this case, the format is:
+
+   --  If Use_GMT is true, the time stamp is rendered in UTC, and the time zone
+   --  is shown as "GMT". This is needed for some protocols.
+
+   --  If From_Line is True, use the format of standard UNIX mailbox From_
+   --  lines:
    --     Tue Jan 24 14:48:49 2006 +0100
-   --  If No_TZ is true, then the date is automatically converted to UTC, and
-   --  the timezone indication is not displayed.
+
+   --  If No_TZ is true, then the date is rendered in UTC, and no time zone
+   --  name is shown.
+
    --  If Show_Seconds is false, then seconds will not be displayed (this can
    --  be used to save space, but the output format is not compatible with
    --  RFC 2822).
+
    --  If Show_Day is false, the day of week is not displayed. The output is
    --  also not compatible with RFC 2822.
 
-   function Format_Time
-     (Date      : Ada.Calendar.Time) return String;
-   --  Format the time in Date as a RFC2822 string, eg:
-   --       01:08:47 -0000
+   function Format_Time (Date : Ada.Calendar.Time) return String;
+   --  Format the time part of Date, interpreted in UTC, as a RFC2822 string:
+   --       01:08:47
 
    ---------------
    -- Addresses --

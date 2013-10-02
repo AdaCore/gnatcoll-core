@@ -420,7 +420,8 @@ package body GNATCOLL.Email.Utils is
       S      : Second_Number;
       SS     : Second_Duration;
    begin
-      Split (Date, Y, M, D, H, Min, S, SS);
+      Split
+        (Date, Y, M, D, H, Min, S, SS, Time_Zone => 0);
 
       Result := To_Unbounded_String
         (Image (Integer (H), Min_Width => 2) & ":");
@@ -433,9 +434,23 @@ package body GNATCOLL.Email.Utils is
    -- Format_Date --
    -----------------
 
+   Day_Names : constant array (Day_Name) of String (1 .. 3) :=
+     (Monday    => "Mon",
+      Tuesday   => "Tue",
+      Wednesday => "Wed",
+      Thursday  => "Thu",
+      Friday    => "Fri",
+      Saturday  => "Sat",
+      Sunday    => "Sun");
+
+   Month_Names : constant array (1 .. 12) of String (1 .. 3) :=
+     (1  => "Jan", 2  => "Feb", 3  => "Mar",
+      4  => "Apr", 5  => "May", 6  => "Jun",
+      7  => "Jul", 8  => "Aug", 9  => "Sep",
+      10 => "Oct", 11 => "Nov", 12 => "Dec");
+
    function Format_Date
      (Date         : Ada.Calendar.Time;
-      Date_Is_GMT  : Boolean := False;
       Use_GMT      : Boolean := False;
       From_Line    : Boolean := False;
       No_TZ        : Boolean := False;
@@ -451,38 +466,40 @@ package body GNATCOLL.Email.Utils is
       Min    : Minute_Number;
       S      : Second_Number;
       SS     : Second_Duration;
-      TZ     : Integer := 0;
+      TZ     : Time_Offset := 0;
       RFC_TZ : Integer;
       Unknown_TZ : Boolean := False;
-      Adjusted_Date : Time := Date;
+
    begin
-      begin
-         --  Number of minutes difference for the timezone
-         --  We use moment of time in Date to get proper DST state
-         TZ := Integer (UTC_Time_Offset (Date));
+      if not (Use_GMT or else No_TZ) then
+         begin
+            --  Number of minutes difference for the timezone
 
-         if not Date_Is_GMT then
-            Adjusted_Date := Date + Duration (TZ) * 60.0;
-         end if;
+            TZ := UTC_Time_Offset (Date);
 
-      exception
-         when Unknown_Zone_Error =>
-            Unknown_TZ := True;
-      end;
+         exception
+            when Unknown_Zone_Error =>
+               Unknown_TZ := True;
+         end;
+      end if;
 
       --  We cannot use GNAT.Calendar.Time_IO for week days, since we always
       --  want the english names, not the locale's version.
 
+      Split (Date, Y, M, D, H, Min, S, SS, Time_Zone => TZ);
+
       if Show_Day then
-         case  Day_Of_Week (Adjusted_Date) is
-         when Monday    => Result := To_Unbounded_String ("Mon");
-         when Tuesday   => Result := To_Unbounded_String ("Tue");
-         when Wednesday => Result := To_Unbounded_String ("Wed");
-         when Thursday  => Result := To_Unbounded_String ("Thu");
-         when Friday    => Result := To_Unbounded_String ("Fri");
-         when Saturday  => Result := To_Unbounded_String ("Sat");
-         when Sunday    => Result := To_Unbounded_String ("Sun");
-         end case;
+         --  Note: we can't just call Day_Of_Week (Date), since this gives the
+         --  day of week for Date *in the local time zone*, and in No_TZ or
+         --  Use_GMT mode we want the day of week for Date
+         --  *in the UT time zone*. So, we conjure up another date whose year,
+         --  month, and day number in month (and therefore day of week) in
+         --  local time are the same as those of Date in GMT (namely, Y, M,
+         --  and D).
+
+         Result :=
+           To_Unbounded_String
+             (Day_Names (Day_Of_Week (Ada.Calendar.Time_Of (Y, M, D))));
 
          if From_Line then
             Append (Result, " ");
@@ -491,25 +508,11 @@ package body GNATCOLL.Email.Utils is
          end if;
       end if;
 
-      Split (Adjusted_Date, Y, M, D, H, Min, S, SS);
       if not From_Line then
          Append (Result, Image (Integer (D), Min_Width => 2) & " ");
       end if;
 
-      case M is
-         when 1         => Append (Result, "Jan ");
-         when 2         => Append (Result, "Feb ");
-         when 3         => Append (Result, "Mar ");
-         when 4         => Append (Result, "Apr ");
-         when 5         => Append (Result, "May ");
-         when 6         => Append (Result, "Jun ");
-         when 7         => Append (Result, "Jul ");
-         when 8         => Append (Result, "Aug ");
-         when 9         => Append (Result, "Sep ");
-         when 10        => Append (Result, "Oct ");
-         when 11        => Append (Result, "Nov ");
-         when 12        => Append (Result, "Dec ");
-      end case;
+      Append (Result, Month_Names (M) & ' ');
 
       if From_Line then
          Append (Result, Image (Integer (D), Min_Width => 2) & " ");
@@ -535,7 +538,7 @@ package body GNATCOLL.Email.Utils is
          elsif Unknown_TZ then
             Append (Result, " -0000");
          else
-            RFC_TZ := (TZ / 60) * 100 + TZ mod 60;
+            RFC_TZ := Integer ((TZ / 60) * 100 + TZ mod 60);
             Append (Result, " " & Image (RFC_TZ, Min_Width => 4,
                                          Force_Sign => True));
          end if;

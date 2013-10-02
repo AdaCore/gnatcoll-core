@@ -75,3 +75,12 @@ KP-15-M107-026 Stack overflow may occur when writing large JSON objects
   Status:     Fixed in Gnatcoll 1.6.0
 
   Workaround: None.
+
+KP-15-LB06-010 Wrong day of week in date representation
+
+  Problem:    GNATCOLL.Email.Utils.Format_Date will produce an invalid
+              day of week name for some dates.
+
+  Status:     Fixed in Gnatcoll 1.6.0
+
+  Workaround: Use standard date formatting functions instead.
