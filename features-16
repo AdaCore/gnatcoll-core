@@ -15,6 +15,12 @@ of the feature.
 New features in 1.6
 -------------------
 
+NF-16-MA03-075 GNATCOLL.Traces: time stamp in file name (2013-10-03)
+
+   A new variable substitution $T can now appear in GNATCOLL.Traces log
+   file names, which is replaced with the current date and time in ISO
+   format.
+
 NF-16-M927-048 Support for long integer values in JSON (2013-09-27)
 
    GNATCOLL.JSON can now handle 64 bit integer values (Long_Integer).

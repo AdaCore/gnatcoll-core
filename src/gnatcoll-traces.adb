@@ -21,6 +21,8 @@
 --                                                                          --
 ------------------------------------------------------------------------------
 
+pragma Ada_2012;
+
 with Ada.Calendar;              use Ada.Calendar;
 with Ada.Calendar.Formatting;   use Ada.Calendar.Formatting;
 with Ada.Calendar.Time_Zones;   use Ada.Calendar.Time_Zones;
@@ -450,10 +452,14 @@ package body GNATCOLL.Traces is
                      end;
 
                   elsif N < Name'Last
-                    and then Name (N + 1) = 'D'
+                    and then (Name (N + 1) = 'D' or else Name (N + 1) = 'T')
                   then
                      declare
-                        Date : constant String := Image (Clock, "%Y-%m-%d");
+                        Date : constant String :=
+                          Image (Clock, ISO_Date
+                                        & (if Name (N + 1) = 'T'
+                                           then "T%T"
+                                           else ""));
                      begin
                         Name_Tmp (Index .. Index + Date'Length - 1) := Date;
                         Index := Index + Date'Length;

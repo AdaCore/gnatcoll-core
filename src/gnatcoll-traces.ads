@@ -62,6 +62,7 @@ package GNATCOLL.Traces is
    --        If filename is a relative path, it is relative to the location of
    --        the configuration file. $$ is automatically replaced by the
    --        process number. $D is automatically replaced by the current date.
+   --        $T is automatically replaced by the current date and time.
    --        You can use >>filename instead if you want to append to the file.
    --      - to standard output
    --        >&1
