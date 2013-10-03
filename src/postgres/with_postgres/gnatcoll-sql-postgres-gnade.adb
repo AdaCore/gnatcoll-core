@@ -942,8 +942,8 @@ package body GNATCOLL.SQL.Postgres.Gnade is
    -- Get_Result --
    ----------------
 
-   procedure Get_Result (DB  :  Database'Class;
-                         Res :  out Result;
+   procedure Get_Result (DB   : Database'Class;
+                         Res  : out Result;
                          Done : out Boolean)
    is
       function PQgetResult (Conn : PGconnection) return PGresult;
