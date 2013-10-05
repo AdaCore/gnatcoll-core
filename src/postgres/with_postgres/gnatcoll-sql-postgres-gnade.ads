@@ -82,18 +82,27 @@ package GNATCOLL.SQL.Postgres.Gnade is
    --  This type is used to identify the backend server process handling the
    --  database connection.
 
-   type ExecStatus is (PGRES_EMPTY_QUERY,
-                       PGRES_COMMAND_OK,
-                       PGRES_TUPLES_OK,
-                       PGRES_COPY_OUT,
-                       PGRES_COPY_IN,
-                       PGRES_BAD_RESPONSE,
-                       PGRES_NONFATAL_ERROR,
-                       PGRES_FATAL_ERROR);
+   type ExecStatus is (
+     --  Direct mappings for C values
+
+     PGRES_EMPTY_QUERY,
+     PGRES_COMMAND_OK,
+     PGRES_TUPLES_OK,
+     PGRES_COPY_OUT,
+     PGRES_COPY_IN,
+     PGRES_BAD_RESPONSE,
+     PGRES_NONFATAL_ERROR,
+     PGRES_FATAL_ERROR,
+     PGRES_COPY_BOTH,
+
+     --  Additional value denoting a NULL PQresult
+
+     PGRES_Null_Result);
+
    pragma Convention (C, ExecStatus);
 
    type Database (Parameters :  access String) is tagged limited private;
-   --  You must pass the PostgreSQP connection string as discriminant
+   --  You must pass the PostgreSQL connection string as discriminant
    --  when you instantiate a new Database object. The connection to
    --  the database will be made during the initialization of the object.
    --  The connection will be closed automatically when the Database objects

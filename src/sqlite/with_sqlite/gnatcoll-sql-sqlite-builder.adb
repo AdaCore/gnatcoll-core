@@ -53,6 +53,8 @@ package body GNATCOLL.SQL.Sqlite.Builder is
       end record;
    overriding procedure Force_Connect
      (Connection : access Sqlite_Connection_Record);
+   overriding procedure Force_Disconnect
+     (Connection : access Sqlite_Connection_Record);
    overriding function Supports_Timezone
      (Self  : Sqlite_Connection_Record) return Boolean;
    overriding function Boolean_Image
@@ -391,6 +393,20 @@ package body GNATCOLL.SQL.Sqlite.Builder is
          end if;
       end if;
    end Force_Connect;
+
+   ----------------------
+   -- Force_Disconnect --
+   ----------------------
+
+   overriding procedure Force_Disconnect
+     (Connection : access Sqlite_Connection_Record)
+   is
+      pragma Unreferenced (Connection);
+   begin
+      --  No network connection involved
+
+      null;
+   end Force_Disconnect;
 
    -------------------------
    -- Connect_And_Prepare --

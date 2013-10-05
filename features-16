@@ -21,6 +21,12 @@ NF-16-MA03-075 GNATCOLL.Traces: time stamp in file name (2013-10-03)
    file names, which is replaced with the current date and time in ISO
    format.
 
+NF-16-MA03-074 GNATCOLL.SQL: Improved error recovery (2013-10-05)
+
+   The error recovery circuitry in GNATCOLL.SQL.Postgres was
+   improved to handle more cases of failed connections where
+   a reconnection is required.
+
 NF-16-M927-048 Support for long integer values in JSON (2013-09-27)
 
    GNATCOLL.JSON can now handle 64 bit integer values (Long_Integer).

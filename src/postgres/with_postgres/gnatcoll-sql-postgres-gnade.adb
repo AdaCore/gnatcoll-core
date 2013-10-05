@@ -551,7 +551,7 @@ package body GNATCOLL.SQL.Postgres.Gnade is
       pragma Import (C, PQresStatus, "PQresultStatus");
    begin
       if Res.Res = Null_Result then
-         return PGRES_BAD_RESPONSE;
+         return PGRES_Null_Result;
       else
          return ExecStatus'Val (PQresStatus (Res.Res));
       end if;
@@ -565,7 +565,11 @@ package body GNATCOLL.SQL.Postgres.Gnade is
       function PQresStat (stat : Interfaces.C.int) return chars_ptr;
       pragma Import (C, PQresStat, "PQresStatus");
    begin
-      return CS.Value (PQresStat (ExecStatus'Pos (Status)));
+      if Status = PGRES_Null_Result then
+         return "<null result>";
+      else
+         return CS.Value (PQresStat (ExecStatus'Pos (Status)));
+      end if;
    end Status;
 
    ------------

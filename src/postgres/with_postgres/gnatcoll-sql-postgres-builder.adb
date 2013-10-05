@@ -21,18 +21,24 @@
 --                                                                          --
 ------------------------------------------------------------------------------
 
+pragma Ada_2012;
+
 with Ada.Calendar;
 with Ada.Strings.Fixed;
 with Ada.Strings.Unbounded;        use Ada.Strings.Unbounded;
 with Ada.Unchecked_Conversion;
 with Ada.Unchecked_Deallocation;
+
+with GNAT.Calendar;
+with GNAT.Sockets;                 use GNAT.Sockets;
+with GNAT.Strings;                 use GNAT.Strings;
+
+with Interfaces.C.Strings;         use Interfaces.C.Strings;
+
 with GNATCOLL.SQL.Postgres.Gnade;  use GNATCOLL.SQL.Postgres.Gnade;
 with GNATCOLL.SQL.Exec_Private;    use GNATCOLL.SQL.Exec_Private;
 with GNATCOLL.Traces;              use GNATCOLL.Traces;
 with GNATCOLL.Utils;               use GNATCOLL.Utils;
-with GNAT.Calendar;
-with GNAT.Strings;                 use GNAT.Strings;
-with Interfaces.C.Strings;         use Interfaces.C.Strings;
 
 package body GNATCOLL.SQL.Postgres.Builder is
    Me_Query  : constant Trace_Handle := Create ("SQL");
@@ -109,6 +115,8 @@ package body GNATCOLL.SQL.Postgres.Builder is
       Params      : SQL_Parameters := No_Parameters)
       return Abstract_Cursor_Access;
    overriding procedure Force_Connect
+     (Connection : access Postgresql_Connection_Record);
+   overriding procedure Force_Disconnect
      (Connection : access Postgresql_Connection_Record);
    overriding function Insert_And_Get_PK
      (Connection : access Postgresql_Connection_Record;
@@ -483,6 +491,34 @@ package body GNATCOLL.SQL.Postgres.Builder is
       end if;
    end Force_Connect;
 
+   ----------------------
+   -- Force_Disconnect --
+   ----------------------
+
+   overriding procedure Force_Disconnect
+     (Connection : access Postgresql_Connection_Record)
+   is
+      Sock : Socket_Type;
+      function To_Socket is
+        new Ada.Unchecked_Conversion (Interfaces.C.int, Socket_Type);
+
+   begin
+      if Connection.Postgres = null then
+         Print_Warning
+           (Connection, "Can't disconnect null connection");
+         return;
+      end if;
+
+      Sock := To_Socket (Connection.Postgres.Socket);
+      if Sock = No_Socket then
+         Print_Warning (Connection, "Not connected");
+      else
+         --  Keep the socket descriptor valid, but ensure all reads will fail
+
+         Shutdown_Socket (Sock);
+      end if;
+   end Force_Disconnect;
+
    --------------------
    -- Connect_And_Do --
    --------------------
@@ -494,18 +530,76 @@ package body GNATCOLL.SQL.Postgres.Builder is
       Success    : out Boolean;
       Params      : SQL_Parameters := No_Parameters)
    is
+      Res_Status : ExecStatus;
+      First_Try  : Integer;
+
    begin
-      if Connection.Postgres /= null then
+      if Connection.Postgres /= null
+           and then Status (Connection.Postgres.all)
+                                  = CONNECTION_OK
+      then
+         --  If the connection is already established, first try to send the
+         --  query directly, then try to reconnect if the connection was
+         --  not OK.
+
+         First_Try := 1;
+
+      else
+         --  If not connected, or the connection failed, go straight to the
+         --  second try, where we force a reconnection before sending the
+         --  query.
+
+         First_Try := 2;
+      end if;
+
+      for Try in First_Try .. 2 loop
          Clear (Res);
 
+         --  Reconnect if needed
+
+         if Try = 2 then
+            Force_Connect (Connection);
+         end if;
+
+         Success := (Status (Connection.Postgres.all) = CONNECTION_OK);
+
+         --  If connection status is bad, and we just tried to reconnect,
+         --  report error now.
+
+         if Try = 2 then
+            if not Success then
+               Print_Error
+                 (Connection, "Cannot connect to PostgreSQL database "
+                  & " Connection String is """
+                  & Get_Connection_String
+                    (Get_Description (Connection), False)
+                  & """");
+               Close (Connection);
+               Connection.Postgres := null;
+               return;
+            end if;
+         end if;
+
+         --  Empty query: only check connection status
+
          if Query = "" then
-            Success := True;
             return;
          end if;
 
+         --  Here if we have a presumed working connection
+
          Perform (Res, Query, Params);
 
-         case ExecStatus'(Status (Res)) is
+         Res_Status := Status (Res);
+         case Res_Status is
+            when PGRES_COMMAND_OK |
+                 PGRES_TUPLES_OK  |
+                 PGRES_COPY_OUT   |
+                 PGRES_COPY_IN    |
+                 PGRES_COPY_BOTH  =>
+               Success := True;
+               return;
+
             when PGRES_NONFATAL_ERROR
                | PGRES_FATAL_ERROR
                | PGRES_EMPTY_QUERY =>
@@ -518,59 +612,25 @@ package body GNATCOLL.SQL.Postgres.Builder is
                if Status (Connection.Postgres.all) = CONNECTION_OK then
                   Success := False;
                   return;
-               else
-                  Print_Warning
-                    (Connection,
-                     "DB status is " & Status (Connection.Postgres.all)'Img);
+
                end if;
 
             when others =>
-               Success := True;
-               return;
+               null;
          end case;
-      end if;
 
-      Clear (Res);
+         --  If this was the first attempt, then we'll now retry the connection
 
-      --  Attempt to reconnect, in case we lost the connection
-
-      Force_Connect (Connection);
-
-      --  Now that we have (re)connected, try to execute the query again
-
-      if Query = "" then
-         Success := Status (Connection.Postgres.all) = CONNECTION_OK;
-         if not Success then
-            Print_Error
-              (Connection, "Cannot connect to PostgreSQL database "
-               & " Connection String is """
-               & Get_Connection_String
-                 (Get_Description (Connection), False)
-               & """");
-            Close (Connection);
-            Connection.Postgres := null;
+         if Try = 1 then
+            Print_Warning
+              (Connection,
+               "Query failed with status " & Res_Status'Img);
+            Print_Warning
+              (Connection,
+               "DB status is " & Status (Connection.Postgres.all)'Img
+               & ", reconnecting");
          end if;
-         return;
-
-      else
-         Perform (Res, Query, Params);
-
-         case ExecStatus'(Status (Res)) is
-            when PGRES_NONFATAL_ERROR
-               | PGRES_FATAL_ERROR
-               | PGRES_EMPTY_QUERY =>
-
-               Success := False;
-
-               --  We do not check the connection status here. Ideally, we
-               --  should check whether Res.Res (private) is a Null_Result,
-               --  which postgreSQL uses to indicate fatal errors like
-               --  connection issues.
-
-            when others =>
-               Success := True;
-         end case;
-      end if;
+      end loop;
    end Connect_And_Do;
 
    --------------------
@@ -612,6 +672,11 @@ package body GNATCOLL.SQL.Postgres.Builder is
         (Res    : out Result;
          Query  : String;
          Params : SQL_Parameters := No_Parameters);
+
+      -------------
+      -- Perform --
+      -------------
+
       procedure Perform
         (Res    : out Result;
          Query  : String;
@@ -647,6 +712,8 @@ package body GNATCOLL.SQL.Postgres.Builder is
       Success : Boolean;
       Was_Started : Boolean;
       pragma Unreferenced (Was_Started);
+
+   --  Start of processing for Connect_And_Prepare
 
    begin
       P_Stmt := new Postgresql_DBMS_Stmt_Record;
@@ -795,6 +862,11 @@ package body GNATCOLL.SQL.Postgres.Builder is
         (Res    : out Result;
          Query  : String;
          Params : SQL_Parameters := No_Parameters);
+
+      -------------
+      -- Perform --
+      -------------
+
       procedure Perform
         (Res    : out Result;
          Query  : String;
@@ -814,6 +886,9 @@ package body GNATCOLL.SQL.Postgres.Builder is
         or else not Is_Select
         or else not Use_Cursors
         or else Query = "";
+
+   --  Start of processing for Connect_And_Execute
+
    begin
       if Create_Direct then
          DR := new Postgresql_Direct_Cursor;

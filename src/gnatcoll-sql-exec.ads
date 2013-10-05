@@ -411,6 +411,12 @@ package GNATCOLL.SQL.Exec is
    --  automatically the first time an SQL command is executed, but it might
    --  be needed sometimes to force a connection earlier.
 
+   procedure Force_Disconnect
+     (Connection : access Database_Connection_Record) is abstract;
+   --  Force an immediate disconnection of the connection to the DBMS. This
+   --  does not perform any cleanup action, and is intended only for fault
+   --  injection during application testing.
+
    function Connected_On
      (Connection : access Database_Connection_Record)
       return Ada.Calendar.Time is abstract;
