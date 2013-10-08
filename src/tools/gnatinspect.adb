@@ -1542,6 +1542,8 @@ begin
       end;
    end if;
 
+   Install_Ctrl_C_Handler (On_Ctrl_C'Unrestricted_Access);
+
    Xref.Setup_DB
      (GNATCOLL.SQL.Sqlite.Setup (Database => DB_Name.all));
 
@@ -1566,8 +1568,6 @@ begin
      (Create_From_Dir
         (Dir       => GNATCOLL.VFS.Get_Home_Directory,
          Base_Name => +".gnatinspect_hist").Display_Full_Name);
-
-   Install_Ctrl_C_Handler (On_Ctrl_C'Unrestricted_Access);
 
    GNATCOLL.Readline.Initialize
      (Appname      => "gnatcollxref",
