@@ -489,7 +489,7 @@ package body GNATCOLL.SQL.Exec is
    ----------------------
 
    function Check_Connection
-     (Connection : access Database_Connection_Record'Class) return Boolean
+     (Connection : access Database_Connection_Record) return Boolean
    is
       Success    : Boolean;
       R          : Abstract_Cursor_Access;
@@ -500,7 +500,7 @@ package body GNATCOLL.SQL.Exec is
       end if;
 
       R := Connect_And_Execute
-        (Connection,
+        (Database_Connection (Connection),
          Query     => "",
          Is_Select => False,
          Direct    => False);
@@ -512,8 +512,8 @@ package body GNATCOLL.SQL.Exec is
       else
          Trace
            (Me_Error,
-            "Init_Database: database initialization FAILED: "
-            & Error (Connection));
+            "Init_Database: check_connection FAILED: "
+            & Error (Database_Connection (Connection)));
       end if;
 
       return Success;

@@ -75,6 +75,8 @@ package body GNATCOLL.SQL.Sqlite.Builder is
      (Self : access Sqlite_Connection_Record) return Boolean;
    overriding function Has_Pragmas
      (Self : access Sqlite_Connection_Record) return Boolean;
+   overriding function Check_Connection
+     (Self : access Sqlite_Connection_Record) return Boolean;
    overriding function Connect_And_Execute
      (Connection  : access Sqlite_Connection_Record;
       Query       : String;
@@ -204,6 +206,18 @@ package body GNATCOLL.SQL.Sqlite.Builder is
    --                for r in query1(params2):
    --                     pass
    --       means the outer loop will only return a single result.
+
+   ----------------------
+   -- Check_Connection --
+   ----------------------
+
+   overriding function Check_Connection
+     (Self : access Sqlite_Connection_Record) return Boolean
+   is
+      pragma Unreferenced (Self);
+   begin
+      return True;
+   end Check_Connection;
 
    -------------------------------------
    -- Is_Prepared_On_Server_Supported --

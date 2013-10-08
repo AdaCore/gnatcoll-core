@@ -242,7 +242,7 @@ package GNATCOLL.SQL.Exec is
    -------------------------
 
    function Check_Connection
-     (Connection : access Database_Connection_Record'Class) return Boolean;
+     (Connection : access Database_Connection_Record) return Boolean;
    --  Attempt to connect to the database, and return True if the connection
    --  was successful. Calling this subprogram is optional, since it will be
    --  done automatically when calling Execute (see below). This can however be

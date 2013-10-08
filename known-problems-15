@@ -4,6 +4,16 @@ Known Problems in Gnatcoll 1.5
 
 Copyright (C) 2012-2013, AdaCore
 
+KP-15-MA08-010 Check_Connection fails with sqlite
+
+  Problem:    Calling GNATCOLL.SQL.Exec.Check_Connection always returns False
+              when using sqlite.
+
+  Status:     Fixed in Gnatcoll 1.6.0
+
+  Workaround: This function is not necessary for sqlite (the fix always
+              True).
+
 KP-15-M701-028 PyDict_Next iterator won't iterate
 
   Problem:    On 64 bits OS the iterator won't iterate on Python dictionary.
