@@ -125,6 +125,11 @@ package body GNATCOLL.Traces is
       TZ : Time_Offset := UTC_Time_Offset;
       --  Time zone cache, assuming that the OS will not change time zones
       --  while this partition is running.
+
+      Activated : Boolean := False;
+      --  Whether this package has been activated. It is activated when at
+      --  least one config file is found (and parsed). Until it is activated,
+      --  no trace_handle will ever log anything.
    end record;
 
    Global : Global_Vars;
@@ -758,6 +763,7 @@ package body GNATCOLL.Traces is
       Entity   : String := GNAT.Source_Info.Enclosing_Entity) is
    begin
       if Debug_Mode
+        and then Global.Activated
         and then Global.Handles_List /= null  --  module not terminated
       then
          if Handle.Active then
@@ -789,6 +795,7 @@ package body GNATCOLL.Traces is
       Entity             : String := GNAT.Source_Info.Enclosing_Entity) is
    begin
       if Debug_Mode
+        and then Global.Activated
         and then Global.Handles_List /= null
         and then Handle.Active
       then
@@ -1399,6 +1406,7 @@ package body GNATCOLL.Traces is
          end;
 
          Lock;
+         Global.Activated := True;
          Read (File);
          Buffer := Data (File);
 

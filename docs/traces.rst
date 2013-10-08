@@ -181,6 +181,15 @@ used to find an appropriate configuration::
 The code, as written, will end up looking for a file :file:`.gnatdebug` in
 the current directory.
 
+The function :code:`Parse_Config_File` must be called to indicate that
+you want to activate the traces. It must also end up finding a configuration
+file. If it does not, then none of the other functions will ever output
+anything. This is to make sure your application does not start printing extra
+output just because you happen to use an external library that uses
+:code:`GNATCOLL.Traces`. It also ensures that your application will not
+try to write to :code:`stdout` unless you think it is appropriate (since
+:code:`stdout` might not even exist in fact).
+
 You then need to declare each of the `trace_handle` that your
 application will use. The same handle can be declared several times, so
 the recommended approach is to declare locally in each package body the

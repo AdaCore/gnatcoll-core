@@ -132,6 +132,9 @@ package GNATCOLL.Traces is
    --    - If still not found, parses Default
    --  On_Exception is used to define the behavior should something unexpected
    --  prevent the log stream to be written.
+   --
+   --  Until at least one file is parsed, this package will never output
+   --  anything.
 
    procedure Parse_Config_File
      (Filename     : String := "";

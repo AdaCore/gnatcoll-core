@@ -11,6 +11,8 @@ src/gnatcoll_readline.gpr
 docs/_build
 
 *.cgpr
+b__*
+*.bexch
 
 testsuite/*/*/dummy.gpr
 testsuite/sql/sql3/pkg*
@@ -60,6 +62,7 @@ testsuite/xref/update2/b.ads
 testsuite/xref/update2/c.ads
 testsuite/*/*/obj
 testsuite/xref/L406-006-runtime/a
+testsuite/traces/MA08-038/nofile
 
 testsuite/results
 

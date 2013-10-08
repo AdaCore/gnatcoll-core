@@ -4,6 +4,20 @@ Known Problems in Gnatcoll 1.5
 
 Copyright (C) 2012-2013, AdaCore
 
+KP-15-MA08-038 GNATCOLL.Traces should not write to stdout by default
+
+  Problem:    If you link with code that uses GNATCOLL.Traces (like GNATCOLL
+              itself), but do not explicitly initialize GNATCOLL.Traces, then
+              it is still possible that some debug output will be printed to
+              stdout. This is of course undesirable, and might also lead to
+              deadlock when there is no stdout available.
+
+  Status:     Fixed in Gnatcoll 1.6.0
+
+  Workaround: Create a config file whose single line redirects the default
+              output (">/dev/null" for instance), and parse it with
+              GNATCOLL.Traces.Parse_Config_File.
+
 KP-15-MA08-010 Check_Connection fails with sqlite
 
   Problem:    Calling GNATCOLL.SQL.Exec.Check_Connection always returns False
