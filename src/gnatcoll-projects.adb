@@ -77,8 +77,6 @@ package body GNATCOLL.Projects is
    Debug : constant Trace_Handle := Create ("Projects.Debug", Default => Off);
    Me_Gnat : constant Trace_Handle :=
                Create ("Projects.GNAT", GNATCOLL.Traces.Off);
-   Exception_Handle : constant Trace_Handle :=
-     Create ("UNEXPECTED_EXCEPTION", Default => On);
 
    Dummy_Suffix : constant String := "<no suffix defined>";
    --  A dummy suffixes that is used for languages that have either no spec or
@@ -510,7 +508,7 @@ package body GNATCOLL.Projects is
       return Get_Name_String (Id);
    exception
       when E : others =>
-         Trace (Exception_Handle, E);
+         Trace (Me, E);
          return "";
    end Get_String;
 
@@ -524,7 +522,7 @@ package body GNATCOLL.Projects is
 
    exception
       when E : others =>
-         Trace (Exception_Handle, E);
+         Trace (Me, E);
          return "";
    end Get_String;
 
@@ -2951,7 +2949,7 @@ package body GNATCOLL.Projects is
 
    exception
       when E : others =>
-         Trace (Exception_Handle, E);
+         Trace (Me, E);
          Project.Data.Importing_Projects := null;
    end Compute_Importing_Projects;
 
@@ -5204,7 +5202,7 @@ package body GNATCOLL.Projects is
          raise;
 
       when E : others =>
-         Trace (Exception_Handle, E);
+         Trace (Me, E);
          Prj.Com.Fail := null;
          Output.Cancel_Special_Output;
          raise;
@@ -5504,7 +5502,7 @@ package body GNATCOLL.Projects is
          raise;
 
       when E : others =>
-         Trace (Exception_Handle, E);
+         Trace (Me, E);
          Prj.Err.Finalize;
          Output.Cancel_Special_Output;
    end Recompute_View;
