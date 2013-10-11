@@ -4622,6 +4622,7 @@ package body GNATCOLL.Projects is
       --  is called.
       Tmp.Data.Timestamp := GNATCOLL.Utils.No_Time;
 
+      Trace (Me, "Initial parsing to check the syntax");
       Internal_Load
         (Tmp, Project_File, Errors,
          Report_Syntax_Errors => True,
@@ -4661,6 +4662,7 @@ package body GNATCOLL.Projects is
          Free (Tmp.Data);
       end if;
 
+      Trace (Me, "Parsing again, now that we know the syntax is correct");
       Internal_Load
         (Self, Project_File, Errors,
          Report_Syntax_Errors => False,   --  already done above
@@ -5580,11 +5582,15 @@ package body GNATCOLL.Projects is
          Name : constant String := Get_String (Prj.Tree.Name_Of (P, T));
          Proj : Project_Type;
          Iter : Project_Htables.Cursor;
-         pragma Unreferenced (Proj);
       begin
          Iter := Self.Data.Projects.Find (Name);
          if not Has_Element (Iter) then
             Proj := Self.Instance_From_Node (P);
+            Proj.Data.Node := P;
+            Reset_View (Proj.Data.all);
+         else
+            Element (Iter).Data.Node := P;
+            Reset_View (Element (Iter).Data.all);
          end if;
       end Do_Project2;
 
@@ -5854,7 +5860,7 @@ package body GNATCOLL.Projects is
       while Has_Element (Iter) loop
          Data := Element (Iter).Data;
          Data.Tree := null;
-         Data.View := null;
+         Reset_View (Data.all);
          Data.Node := Empty_Node;
          Next (Iter);
       end loop;
