@@ -597,6 +597,7 @@ package body GNATCOLL.Traces is
 
             if Wildcard_Tmp /= null then
                Tmp.Active := Wildcard_Tmp.Active;
+               Tmp.Forced_Active := True;
 
                --  Unless we specified an explicit stream, inherit it
                if Stream = null then
