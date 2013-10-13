@@ -88,9 +88,6 @@ package GNATCOLL.Xref.Database is
       Exported : SQL_Field_Boolean (Ta_Entities, Instance, N_Exported, Index);
       --  Whether the mangled name is an export or an import of the entity
 
-      Obsolete : SQL_Field_Boolean (Ta_Entities, Instance, N_Obsolete, Index);
-      --  Used for various purposes in GNATCOLL.Xref. Internal only
-
       Is_Global : SQL_Field_Boolean (Ta_Entities, Instance, N_Is_Global, Index);
       --  Whether this is a global entity (library-level in Ada)
 

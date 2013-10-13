@@ -89,7 +89,6 @@
 | decl_caller     | FK entities                     | NULL, NOINDEX             |       | Parent entity                                                    |
 | mangled_name    | TEXT                            | NULL                      |       | Mangled name of the entity, if applicable                        |
 | exported        | BOOLEAN                         | NOT NULL, NOINDEX         | false | Whether the mangled name is an export or an import of the entity |
-| obsolete        | BOOLEAN                         | NOT NULL, NOINDEX         | false | Used for various purposes in GNATCOLL.Xref. Internal only        |
 | is_global       | BOOLEAN                         | NOT NULL, NOINDEX         | false | Whether this is a global entity (library-level in Ada)           |
 | is_static_local | BOOLEAN                         | NOT NULL, NOINDEX         | false | Whether this is a 'static' variable in C/C++                     |
 |-----------------+---------------------------------+---------------------------+-------+------------------------------------------------------------------|

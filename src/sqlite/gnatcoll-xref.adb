@@ -70,6 +70,10 @@ package body GNATCOLL.Xref is
    --    with no additional cost.
    --  This gives a threshold of about 190 for my machine.
 
+   Indexes_Threshold : constant Ada.Containers.Count_Type := 190;
+   --  When reloading more than that many LI files, we first destroy the
+   --  indexes and then recreate them
+
    Column_Tolerance : constant Natural := 80;
    --  Tolerance in columns when looking for approximate entity declarations.
 
@@ -112,28 +116,6 @@ package body GNATCOLL.Xref is
              & (Database.Files.Language = "li")),
         On_Server => True, Name => "insert_li_file");
 
-   Query_Mark_Entity_As_Obsolete : constant Prepared_Statement := Prepare
-     (SQL_Update
-        (Table => Database.Entities,
-         Set   => (Database.Entities.Obsolete = True),
-         Where => SQL_In
-           (Database.Entities.Decl_File,
-            SQL_Select
-              (Database.F2f.Fromfile,
-               From  => Database.F2f,
-               Where => Database.F2f.Tofile = Integer_Param (1)   --  LI file
-                  and Database.F2f.Kind = F2f_Has_Ali))),
-      On_Server => True, Name => "mark_entity_as_obsolete");
-   --  Mark all entities declared in one of the main units of a given LI file
-   --  as obsolete.
-
-   Query_Mark_Entity_As_Valid : constant Prepared_Statement := Prepare
-     (SQL_Update
-        (Table => Database.Entities,
-         Set   => (Database.Entities.Obsolete = False),
-         Where => Database.Entities.Id = Integer_Param (1)),
-      On_Server => True, Name => "mark_entity_as_valid");
-
    Query_Insert_Source_File : constant Prepared_Statement :=
      Prepare
        (SQL_Insert
@@ -167,65 +149,6 @@ package body GNATCOLL.Xref is
                 and Database.F2f.Tofile = Database.Files.Id
                 and Database.F2f.Kind = F2f_Has_Ali),
         On_Server => False, Name => "li_from_source");
-
-   Query_Delete_File_Dep : constant Prepared_Statement :=
-     Prepare
-       (SQL_Delete
-            (From => Database.F2f,
-             Where => Database.F2f.Fromfile = Integer_Param (1)),
-        On_Server => True, Name => "delete_file_dep");
-   --  Delete the f2f relationships for the given file.
-
-   Query_Delete_Refs : constant Prepared_Statement :=
-     Prepare
-       (SQL_Delete
-            (From  => Database.Entity_Refs,
-             Where => Database.Entity_Refs.File = Integer_Param (1)),
-        On_Server => True, Name => "delete_refs");
-   --  Remove all references (within a given file) to entities
-
-   Query_Delete_Obsolete_Refs : constant Prepared_Statement :=
-     Prepare
-       (SQL_Delete
-          (From  => Database.Entity_Refs,
-           Where => SQL_In
-             (Database.Entity_Refs.Entity,
-              SQL_Select
-                (Database.Entities.Id,
-                 From => Database.Entities,
-                 Where => Database.Entities.Obsolete = True))),
-        On_Server => True, Name => "delete_obsolete_refs");
-   --  Delete all references (anywhere) to obsolete entities.
-
-   Query_Delete_Obsolete_E2e : constant Prepared_Statement :=
-     Prepare
-       (SQL_Delete
-          (From  => Database.E2e,
-           Where => SQL_In
-              (Database.E2e.Fromentity,
-               SQL_Select
-                 (Database.Entities.Id,
-                  From => Database.Entities,
-                  Where => Database.Entities.Obsolete = True))
-
-           or SQL_In
-              (Database.E2e.Toentity,
-               SQL_Select
-                 (Database.Entities.Id,
-                  From => Database.Entities,
-                  Where => Database.Entities.Obsolete = True))),
-
-        On_Server => True, Name => "delete_obsolete_e2e");
-   --  Remove all Entity-To-Entity relationships where at least one of the
-   --  entities is obsolete.
-
-   Query_Delete_Obsolete_Entities : constant Prepared_Statement :=
-     Prepare
-       (SQL_Delete
-          (From  => Database.Entities,
-           Where => Database.Entities.Obsolete = True),
-        On_Server => True, Name => "delete_obsolete_entities");
-   --  Remove all obsolete entities
 
    Query_Insert_Entity : constant Prepared_Statement :=
      Prepare
@@ -349,7 +272,6 @@ package body GNATCOLL.Xref is
        (SQL_Update
             (Table => Database.Entities,
              Set   => (Database.Entities.Name = Text_Param (2))
-                & (Database.Entities.Obsolete = False)
                 & (Database.Entities.Kind = Text_Param (3))
                 & (Database.Entities.Is_Global = Boolean_Param (4))
                 & (Database.Entities.Is_Static_Local = Boolean_Param (5)),
@@ -2036,8 +1958,6 @@ package body GNATCOLL.Xref is
 
             if not Visited_ALI_Units.Contains (File) then
                Visited_ALI_Units.Include (File, Result);
-               DB.Execute (Query_Delete_File_Dep, Params => (1 => +Result.Id));
-               DB.Execute (Query_Delete_Refs, Params => (1 => +Result.Id));
             end if;
          end if;
 
@@ -2236,10 +2156,6 @@ package body GNATCOLL.Xref is
                if not Candidate_Is_Forward then
                   --  We have found an entity with a known name and decl,
                   --  that's the good one.
-
-                  DB.Execute
-                    (Query_Mark_Entity_As_Valid,
-                     Params  => (1 => +Candidate));
 
                   Entity_Decl_To_Id.Include
                     (Decl,
@@ -3217,7 +3133,9 @@ package body GNATCOLL.Xref is
       --  After parsing LI files, do the last post-processings in the database
       --  (recreate indexes, analyze,...)
 
-      procedure Start_Transaction (DB : Database_Connection);
+      procedure Start_Transaction
+        (DB : Database_Connection;
+         Destroy_Indexes : Boolean);
       --  Preparate the database for editing, once we have detected some LI
       --  files need to be updated.
 
@@ -3377,7 +3295,9 @@ package body GNATCOLL.Xref is
       -- Start_Transaction --
       -----------------------
 
-      procedure Start_Transaction (DB : Database_Connection) is
+      procedure Start_Transaction
+        (DB : Database_Connection;
+         Destroy_Indexes : Boolean) is
       begin
          if DB.Has_Pragmas then
 
@@ -3428,39 +3348,103 @@ package body GNATCOLL.Xref is
          Iconv_State := Iconv_Open
            (To_Code => UTF8, From_Code => ALI_Encoding, Ignore => True);
 
-         --  Mark all entities from these LI files as dirty: once we have
-         --  parsed the LI files, the entities that remain dirty will in fact
-         --  no longer exist in the LI file, and must be removed from the
-         --  database. We cannot remove them yet, because that would break e2e
-         --  information coming from other LI files.
+         --  Cleanup the database by removing obsolete information. This
+         --  includes:
+         --    * finding source files for which the LI unit has changed (call
+         --      them LI_Units)
+         --    * finding all entities defined in one of those LI_Units. Call
+         --      them LI_Entities).
+         --    * all references to any entities within those LI_Units
+         --    * all references, anywhere, to one of the LI_Entities
+         --    * all e2e information from or to one of the LI_Entities
+         --    * all the LI_Entities themselves.
+         --    * remove f2f originating from one of the LI_Units (typically the
+         --      dependencies these files have on others). After this step, we
+         --      cannot recompute the list of LI_Units, so this must be last).
          --
-         --  The do a first separate pass to do this for all LI files for the
-         --  following reason: if we don't, the following scenario is
-         --  possible. Given a.ali (declares A) and b.ali (references A).  If
-         --  b.ali is parsed first, it marks its entities as invalid, including
-         --  A. Since it then finds a reference to A, it marks it as valid. But
-         --  when a.ali is parsed, it marks A as invalid again. When it finds a
-         --  reference to A, we in fact already have the corresponding Id in
-         --  the Entity_Decl_To_Id table, so we do not mark it as valid gain.
+         --  Note that this cleanup is correct, but if all the ALI files are
+         --  not consistent we are losing information. For instance, a
+         --  reference to an LI_Entity from a file we are not parsing again
+         --  will not exist anymore, so files with obsolete ALI files will have
+         --  partial xref only.
+         --  Likewise for the e2e information, so we might no longer know that
+         --  an entity was inheriting from one of the LI_Entities.
+
+         --  faster to delete the indexes before we delete things
+         Start_Transaction (DB, Destroy_Indexes => Destroy_Indexes);
+         DB.Execute ("CREATE TEMP TABLE temp_lis (id INTEGER PRIMARY KEY);");
 
          LI_C := LIs.First;
          while Has_Element (LI_C) loop
             Lib := Element (LI_C);
             if Lib.Id /= -1 then
                DB.Execute
-                 (Query_Mark_Entity_As_Obsolete, Params => (1 => +Lib.Id));
+                 ("INSERT INTO temp_lis VALUES (" & Lib.Id'Img & ");");
             end if;
-
             Next (LI_C);
          end loop;
+
+         DB.Execute ("CREATE TEMP TABLE temp_files (id INTEGER PRIMARY KEY);");
+         DB.Execute
+           ("INSERT INTO temp_files SELECT DISTINCT "
+            & " f2f.fromFile FROM f2f WHERE "
+            & " f2f.kind = 1 AND"
+            & " f2f.toFile IN (SELECT * FROM temp_lis);");
+
+         DB.Execute
+           ("CREATE TEMP TABLE temp_entities (id INTEGER PRIMARY KEY);");
+         DB.Execute
+           ("INSERT INTO temp_entities SELECT entities.id FROM entities,"
+            & " temp.temp_files WHERE entities.decl_file=temp.temp_files.id;");
+
+         DB.Execute
+           ("DELETE FROM f2f WHERE f2f.fromFile IN"
+            & " (SELECT id FROM temp_files);");
+
+         DB.Execute
+           ("DELETE FROM entity_refs WHERE entity_refs.file IN"
+            & " (SELECT id FROM temp_files);");
+
+         DB.Execute
+           ("DELETE FROM e2e WHERE e2e.fromEntity IN"
+            & " (SELECT id FROM temp_entities);");
+
+         DB.Execute
+           ("DELETE FROM e2e WHERE e2e.toEntity IN"
+            & " (SELECT id FROM temp_entities);");
+
+         DB.Execute
+           ("DELETE FROM entity_refs WHERE entity_refs.entity IN"
+            & " (SELECT id FROM temp_entities);");
+
+         DB.Execute
+           ("DELETE FROM entities WHERE entities.id IN"
+            & " (SELECT id FROM temp_entities);");
+
+         DB.Execute ("DROP TABLE temp_entities;");
+         DB.Execute ("DROP TABLE temp_files;");
+         DB.Execute ("DROP TABLE temp_lis;");
+
+         DB.Commit_Or_Rollback;
+         DB.Execute ("PRAGMA wal_checkpoint(RESTART);");
+
+         if Active (Me_Timing) then
+            Dur := Clock - Start;
+            Trace (Me_Timing,
+                   "Cleaned up" & LIs.Length'Img & " files"
+                   & Dur'Img & " s");
+            Start := Clock;
+         end if;
+
+         Start_Transaction (DB, Destroy_Indexes => False);
 
          LI_C := LIs.First;
          while Has_Element (LI_C) loop
             begin
                if Show_Progress /= null then
                   Show_Progress
-                    (Cur   => Current,
-                     Total => Total);
+                    (Cur                   => Current,
+                     Total                 => Total);
                   Current := Current + 1;
                end if;
 
@@ -3481,13 +3465,6 @@ package body GNATCOLL.Xref is
          end loop;
 
          Iconv_Close (Iconv_State);
-
-         --  Post-processing: remove all obsolete entities that no longer exist
-         --  in the LI we just parsed.
-
-         DB.Execute (Query_Delete_Obsolete_E2e);
-         DB.Execute (Query_Delete_Obsolete_Refs);
-         DB.Execute (Query_Delete_Obsolete_Entities);
 
          if Active (Me_Timing) then
             Dur := Clock - Start;
@@ -3528,6 +3505,9 @@ package body GNATCOLL.Xref is
       Search_LI_Files_To_Update
         (Self, LI_Files, LIs, Force_Refresh => Force_Refresh);
 
+      Destroy_Indexes :=
+        Destroy_Indexes or else Length (LIs) > Indexes_Threshold;
+
       if not LIs.Is_Empty then
          --  Do we need to work in memory ?
          --    - only if using sqlite
@@ -3557,12 +3537,10 @@ package body GNATCOLL.Xref is
                   Initialize_DB (Self, Memory, From_DB_Name, DB_Created,
                                  Force => True);  --  Self.DB -> :memory:
                   if DB_Created then
-                     Destroy_Indexes := True;
                      Do_Analyze := True;
                   end if;
                end;
 
-               Start_Transaction (Memory);
                Parse_Files (Memory);
                Finalize_DB (Memory);
 
@@ -3582,7 +3560,6 @@ package body GNATCOLL.Xref is
             end;
 
          else
-            Start_Transaction (Self.DB);
             Parse_Files (Self.DB);
             Finalize_DB (Self.DB);
          end if;
