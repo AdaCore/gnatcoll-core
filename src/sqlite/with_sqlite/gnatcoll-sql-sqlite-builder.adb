@@ -390,6 +390,15 @@ package body GNATCOLL.SQL.Sqlite.Builder is
                Flags    => Open_Readwrite or Open_Create or Open_Nomutex,
                Status   => Status);
             Connection.Connected_On := Ada.Calendar.Clock;
+
+            --  Controls SQLITE_FCNTL_CHUNK_SIZE setting in sqlite. This helps
+            --  avoid fragmentation by growing/shrinking the database file in
+            --  SQLITE_FCNTL_CHUNK_SIZE increments.
+
+--              File_Control
+--                (Connection.DB, "" & ASCII.NUL,
+--                 SQLITE_FCNTL_CHUNK_SIZE, 1024 * 1024);
+
          end;
 
          if Status /= Sqlite_OK then

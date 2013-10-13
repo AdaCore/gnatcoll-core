@@ -86,7 +86,8 @@ package GNATCOLL.Xref is
       Show_Progress       : access procedure (Cur, Total : Integer) := null;
       From_DB_Name        : String := "";
       To_DB_Name          : String := "";
-      ALI_Encoding        : String := GNATCOLL.Iconv.Locale);
+      ALI_Encoding        : String := GNATCOLL.Iconv.Locale;
+      Force_Refresh       : Boolean := False);
    --  Parse all the LI files for the project, and stores the xref info in the
    --  DB database.
    --
@@ -137,6 +138,9 @@ package GNATCOLL.Xref is
    --  ALI_Encoding indicates the encoding used for entities in the ALI and
    --  source files. This cannot be guessed from the current locale, since the
    --  files might be in a different encoding.
+   --
+   --  If Force_Refresh is True, then all ALI files will be parsed as if they
+   --  had been modified.
 
    function Is_Up_To_Date
      (Self : Xref_Database; File : GNATCOLL.VFS.Virtual_File) return Boolean;

@@ -240,6 +240,79 @@ package GNATCOLL.SQL.Sqlite.Gnade is
    --  threading mode and sqlite3_config() will return SQLITE_ERROR if called
    --  with the SQLITE_CONFIG_SERIALIZED configuration option.
 
+   SQLITE_FCNTL_CHUNK_SIZE : constant Integer := 6;
+   --  The SQLITE_FCNTL_CHUNK_SIZE opcode is used to request that the VFS
+   --  extends and truncates the database file in chunks of a size specified
+   --  by the user. The fourth argument to sqlite3_file_control() should point
+   --  to an integer (type int) containing the new chunk-size to use for the
+   --  nominated database. Allocating database file space in large chunks
+   --  (say 1MB at a time), may reduce file-system fragmentation and improve
+   --  performance on some systems.
+
+   procedure File_Control
+     (DB    : Database;
+      Name  : String;   --  ASCII.NUL terminated
+      Op    : Integer;
+      Value : Integer);
+   pragma Import (C, File_Control, "sqlite3_file_control");
+   --  The sqlite3_file_control() interface makes a direct call to the
+   --  xFileControl method for the sqlite3_io_methods object associated with
+   --  a particular database identified by the second argument. The name of
+   --  the database is "main" for the main database or "temp" for the TEMP
+   --  database, or the name that appears after the AS keyword for databases
+   --  that are added using the ATTACH SQL command. A NULL pointer can be used
+   --  in place of "main" to refer to the main database file. The third and
+   --  fourth parameters to this routine are passed directly through to the
+   --  second and third parameters of the xFileControl method. The return value
+   --  of the xFileControl method becomes the return value of this routine.
+
+   procedure WAL_Autocheckpoint
+     (DB   : Database;
+      N    : Integer);
+   pragma Import (C, WAL_Autocheckpoint, "sqlite3_wal_autocheckpoint");
+   --  The sqlite3_wal_autocheckpoint(D,N) is a wrapper around
+   --  sqlite3_wal_hook() that causes any database on database connection D to
+   --  automatically checkpoint after committing a transaction if there are N
+   --  or more frames in the write-ahead log file. Passing zero or a negative
+   --  value as the nFrame parameter disables automatic checkpoints entirely.
+
+   SQLITE_CHECKPOINT_PASSIVE : constant Integer := 0;
+   SQLITE_CHECKPOINT_FULL    : constant Integer := 1;
+   SQLITE_CHECKPOINT_RESTART : constant Integer := 2;
+
+   procedure WAL_Checkpoint_V2
+     (DB     : Database;
+      zDb    : String;   --  ASCII.NUL terminated
+      eMode  : Integer;
+      pnLog  : out Integer;
+      pnCkpt : out Integer);
+   pragma Import (C, WAL_Checkpoint_V2, "sqlite3_wal_checkpoint_v2");
+   --  Run a checkpoint operation on WAL database zDb attached to database
+   --  handle db. The specific operation is determined by the value of the
+   --  eMode parameter:
+   --
+   --  SQLITE_CHECKPOINT_PASSIVE Checkpoint as many frames as possible without
+   --  waiting for any database readers or writers to finish. Sync the db file
+   --  if all frames in the log are checkpointed. This mode is the same as
+   --  calling sqlite3_wal_checkpoint(). The busy-handler callback is never
+   --  invoked.
+   --
+   --  SQLITE_CHECKPOINT_FULL This mode blocks (calls the busy-handler
+   --  callback) until there is no database writer and all readers are reading
+   --  from the most recent database snapshot. It then checkpoints all frames
+   --  in the log file and syncs the database file. This call blocks database
+   --  writers while it is running, but not database readers.
+   --
+   --  SQLITE_CHECKPOINT_RESTART This mode works the same way as
+   --  SQLITE_CHECKPOINT_FULL, except after checkpointing the log file it
+   --  blocks (calls the busy-handler callback) until all readers are reading
+   --  from the database file only. This ensures that the next client to write
+   --  to the database file restarts the log file from the beginning. This call
+   --  blocks database writers while it is running, but not database readers.
+   --
+   --  pnLog is set to the size of WAL log in frames.
+   --  pnCkpt is set to the total number of frames checkpointed.
+
    ----------------
    -- Statements --
    ----------------

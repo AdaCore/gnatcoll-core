@@ -458,6 +458,7 @@ procedure GNATInspect is
    Autoconf              : aliased Boolean;
    ALI_Encoding          : aliased GNAT.Strings.String_Access :=
      new String'("");
+   Force_Refresh         : aliased Boolean := False;
    --  The options from the command line
 
    ----------------------
@@ -673,7 +674,8 @@ procedure GNATInspect is
             Show_Progress       => Progress_Reporter,
             ALI_Encoding        => ALI_Encoding.all,
             From_DB_Name        => Nightly_DB_Name.all,
-            To_DB_Name          => DB_Name.all);
+            To_DB_Name          => DB_Name.all,
+            Force_Refresh       => Force_Refresh);
       end if;
    end Process_Refresh;
 
@@ -1450,6 +1452,11 @@ begin
       Long_Switch => "--configdb=",
       Help        => "An extra directory to be parsed by gprconfig to generate"
         & " the configuration file");
+   Define_Switch
+     (Cmdline,
+      Output      => Force_Refresh'Access,
+      Long_Switch => "--force",
+      Help        => "Force reloading of all ALI files");
 
    Initialize (Env);
 

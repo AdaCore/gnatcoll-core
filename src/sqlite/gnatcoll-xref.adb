@@ -1127,10 +1127,13 @@ package body GNATCOLL.Xref is
    procedure Search_LI_Files_To_Update
      (Database : Xref_Database;
       LI_Files : Library_Info_Lists.List;
-      LIs      : in out LI_Lists.List);
+      LIs      : in out LI_Lists.List;
+      Force_Refresh : Boolean);
    --  Process the list of all LI files (Lib_Files) to detect those that
    --  need updating. This needs access to an existing database to check
    --  which files are up to date.
+   --  If Force_Refresh is true, all LI files will be marked as needing
+   --  update.
 
    ---------------------
    -- Create_Database --
@@ -3122,7 +3125,8 @@ package body GNATCOLL.Xref is
    procedure Search_LI_Files_To_Update
      (Database : Xref_Database;
       LI_Files : Library_Info_Lists.List;
-      LIs      : in out LI_Lists.List)
+      LIs      : in out LI_Lists.List;
+      Force_Refresh : Boolean)
    is
       Lib_Info : Library_Info_Lists.Cursor := LI_Files.First;
       Files    : Forward_Cursor;
@@ -3147,7 +3151,9 @@ package body GNATCOLL.Xref is
          end;
 
          if Files.Has_Row then
-            if Files.Time_Value (1) = LI.Stamp then
+            if not Force_Refresh
+              and then Files.Time_Value (1) = LI.Stamp
+            then
                LI.Id := -2;   --  Already up-to-date
             else
                LI.Id := Files.Integer_Value (0);
@@ -3173,7 +3179,8 @@ package body GNATCOLL.Xref is
       Show_Progress       : access procedure (Cur, Total : Integer) := null;
       From_DB_Name        : String := "";
       To_DB_Name          : String := "";
-      ALI_Encoding        : String := GNATCOLL.Iconv.Locale)
+      ALI_Encoding        : String := GNATCOLL.Iconv.Locale;
+      Force_Refresh       : Boolean := False)
    is
       Is_Sqlite       : constant Boolean := SQL.Sqlite.Is_Sqlite (Self.DB);
 
@@ -3518,7 +3525,8 @@ package body GNATCOLL.Xref is
          end if;
       end;
 
-      Search_LI_Files_To_Update (Self, LI_Files, LIs);
+      Search_LI_Files_To_Update
+        (Self, LI_Files, LIs, Force_Refresh => Force_Refresh);
 
       if not LIs.Is_Empty then
          --  Do we need to work in memory ?
@@ -3601,6 +3609,7 @@ package body GNATCOLL.Xref is
       Self.DB := DB.Build_Connection;
 
       Self.DB.Execute ("PRAGMA mmap_size=268435456;");
+      Self.DB.Execute ("PRAGMA wal_autocheckpoint=0;");
 
       --  Do not use automatic transactions, to avoid being stuck with an
       --  unfinished BEGIN, which would lock the database and prevents
@@ -6347,15 +6356,11 @@ package body GNATCOLL.Xref is
       end;
 
       if Self.DB_Created then
-
-         Search_LI_Files_To_Update (Self, LI_Files, LIs);
-
+         Search_LI_Files_To_Update
+           (Self, LI_Files, LIs, Force_Refresh => False);
          Update_Needed := not LIs.Is_Empty;
-
       else
-
          Update_Needed := not LI_Files.Is_Empty;
-
       end if;
 
       if Active (Me_Timing) then
