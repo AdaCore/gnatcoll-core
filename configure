@@ -664,22 +664,16 @@ GTK_GCC_LIBS
 GTK_GCC_FLAGS
 HAVE_GNAT_PROJECT_gtkada
 PKG_CONFIG
+WITH_MMAP
+EGREP
+GREP
+CPP
 WITH_PYTHON
 PYTHON_CFLAGS
 PYTHON_LIBS
 PYTHON_DIR
 PYTHON_VERSION
 PYTHON_BASE
-PYTHON_CONFIG
-PYTHON
-SO_EXT
-DEFAULT_LIBRARY_TYPE
-GNAT_BUILDS_SHARED
-BUILD_TYPE
-WITH_GPL
-EGREP
-GREP
-CPP
 OBJEXT
 EXEEXT
 ac_ct_CC
@@ -687,6 +681,13 @@ CPPFLAGS
 LDFLAGS
 CFLAGS
 CC
+PYTHON_CONFIG
+PYTHON
+SO_EXT
+DEFAULT_LIBRARY_TYPE
+GNAT_BUILDS_SHARED
+BUILD_TYPE
+WITH_GPL
 LN_S
 TARGET
 target_os
@@ -1545,6 +1546,52 @@ fi
 
 } # ac_fn_c_try_compile
 
+# ac_fn_c_try_link LINENO
+# -----------------------
+# Try to link conftest.$ac_ext, and return whether this succeeded.
+ac_fn_c_try_link ()
+{
+  as_lineno=${as_lineno-"$1"} as_lineno_stack=as_lineno_stack=$as_lineno_stack
+  rm -f conftest.$ac_objext conftest$ac_exeext
+  if { { ac_try="$ac_link"
+case "(($ac_try" in
+  *\"* | *\`* | *\\*) ac_try_echo=\$ac_try;;
+  *) ac_try_echo=$ac_try;;
+esac
+eval ac_try_echo="\"\$as_me:${as_lineno-$LINENO}: $ac_try_echo\""
+$as_echo "$ac_try_echo"; } >&5
+  (eval "$ac_link") 2>conftest.err
+  ac_status=$?
+  if test -s conftest.err; then
+    grep -v '^ *+' conftest.err >conftest.er1
+    cat conftest.er1 >&5
+    mv -f conftest.er1 conftest.err
+  fi
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; } && {
+	 test -z "$ac_c_werror_flag" ||
+	 test ! -s conftest.err
+       } && test -s conftest$ac_exeext && {
+	 test "$cross_compiling" = yes ||
+	 test -x conftest$ac_exeext
+       }; then :
+  ac_retval=0
+else
+  $as_echo "$as_me: failed program was:" >&5
+sed 's/^/| /' conftest.$ac_ext >&5
+
+	ac_retval=1
+fi
+  # Delete the IPA/IPO (Inter Procedural Analysis/Optimization) information
+  # created by the PGI compiler (conftest_ipa8_conftest.oo), as it would
+  # interfere with the next link command; also delete a directory that is
+  # left behind by Apple's compiler.  We do this before executing the actions.
+  rm -rf conftest.dSYM conftest_ipa8_conftest.oo
+  eval $as_lineno_stack; ${as_lineno_stack:+:} unset as_lineno
+  as_fn_set_status $ac_retval
+
+} # ac_fn_c_try_link
+
 # ac_fn_c_check_header_compile LINENO HEADER VAR INCLUDES
 # -------------------------------------------------------
 # Tests whether HEADER exists and can be compiled using the include files in
@@ -1654,52 +1701,6 @@ fi
   as_fn_set_status $ac_retval
 
 } # ac_fn_c_try_run
-
-# ac_fn_c_try_link LINENO
-# -----------------------
-# Try to link conftest.$ac_ext, and return whether this succeeded.
-ac_fn_c_try_link ()
-{
-  as_lineno=${as_lineno-"$1"} as_lineno_stack=as_lineno_stack=$as_lineno_stack
-  rm -f conftest.$ac_objext conftest$ac_exeext
-  if { { ac_try="$ac_link"
-case "(($ac_try" in
-  *\"* | *\`* | *\\*) ac_try_echo=\$ac_try;;
-  *) ac_try_echo=$ac_try;;
-esac
-eval ac_try_echo="\"\$as_me:${as_lineno-$LINENO}: $ac_try_echo\""
-$as_echo "$ac_try_echo"; } >&5
-  (eval "$ac_link") 2>conftest.err
-  ac_status=$?
-  if test -s conftest.err; then
-    grep -v '^ *+' conftest.err >conftest.er1
-    cat conftest.er1 >&5
-    mv -f conftest.er1 conftest.err
-  fi
-  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
-  test $ac_status = 0; } && {
-	 test -z "$ac_c_werror_flag" ||
-	 test ! -s conftest.err
-       } && test -s conftest$ac_exeext && {
-	 test "$cross_compiling" = yes ||
-	 test -x conftest$ac_exeext
-       }; then :
-  ac_retval=0
-else
-  $as_echo "$as_me: failed program was:" >&5
-sed 's/^/| /' conftest.$ac_ext >&5
-
-	ac_retval=1
-fi
-  # Delete the IPA/IPO (Inter Procedural Analysis/Optimization) information
-  # created by the PGI compiler (conftest_ipa8_conftest.oo), as it would
-  # interfere with the next link command; also delete a directory that is
-  # left behind by Apple's compiler.  We do this before executing the actions.
-  rm -rf conftest.dSYM conftest_ipa8_conftest.oo
-  eval $as_lineno_stack; ${as_lineno_stack:+:} unset as_lineno
-  as_fn_set_status $ac_retval
-
-} # ac_fn_c_try_link
 
 # ac_fn_c_check_func LINENO FUNC VAR
 # ----------------------------------
@@ -2383,6 +2384,85 @@ else
   { $as_echo "$as_me:${as_lineno-$LINENO}: result: no, using $LN_S" >&5
 $as_echo "no, using $LN_S" >&6; }
 fi
+
+
+# Check whether --enable-gpl was given.
+if test "${enable_gpl+set}" = set; then :
+  enableval=$enable_gpl; WITH_GPL=$enableval
+else
+  WITH_GPL=no
+fi
+
+
+
+
+  # Check whether --enable-build was given.
+if test "${enable_build+set}" = set; then :
+  enableval=$enable_build; BUILD_TYPE=$enableval
+else
+  BUILD_TYPE=Production
+fi
+
+
+
+
+   { $as_echo "$as_me:${as_lineno-$LINENO}: checking whether gnat can build shared libs" >&5
+$as_echo_n "checking whether gnat can build shared libs... " >&6; }
+
+   DEFAULT_LIBRARY_TYPE=static
+
+   # Check whether --enable-shared was given.
+if test "${enable_shared+set}" = set; then :
+  enableval=$enable_shared; GNAT_BUILDS_SHARED=$enableval
+      if test $enableval = yes; then
+         DEFAULT_LIBRARY_TYPE=relocatable
+      fi
+else
+  GNAT_BUILDS_SHARED=yes
+fi
+
+
+   if test x$GNAT_BUILDS_SHARED = xyes; then
+      mkdir conftest conftest/lib
+      echo "package Foo is end Foo;" > conftest/foo.ads
+      cat > conftest/lib.gpr <<EOF
+project Lib is
+   for Source_Dirs use (".");
+   for Library_Dir use "lib";
+   for Library_Name use "lib";
+   for Library_Kind use "relocatable";
+end Lib;
+EOF
+
+      if { ac_try='gnatmake -c -q -Pconftest/lib'
+  { { eval echo "\"\$as_me\":${as_lineno-$LINENO}: \"$ac_try\""; } >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }; }; then
+         GNAT_BUILDS_SHARED=yes
+      else
+         GNAT_BUILDS_SHARED=no
+         DEFAULT_LIBRARY_TYPE=static
+      fi
+      rm -rf conftest
+      { $as_echo "$as_me:${as_lineno-$LINENO}: result: $GNAT_BUILDS_SHARED" >&5
+$as_echo "$GNAT_BUILDS_SHARED" >&6; }
+   else
+      { $as_echo "$as_me:${as_lineno-$LINENO}: result: no (--disabled-shared)" >&5
+$as_echo "no (--disabled-shared)" >&6; }
+   fi
+
+
+
+
+
+    case $build_os in
+      *darwin*) SO_EXT=.dylib ;;
+      *cygwin*|*mingw*)  SO_EXT=.dll ;;
+      *)        SO_EXT=.so ;;
+    esac
+
 
 ac_ext=c
 ac_cpp='$CPP $CPPFLAGS'
@@ -3174,6 +3254,408 @@ ac_link='$CC -o conftest$ac_exeext $CFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $
 ac_compiler_gnu=$ac_cv_c_compiler_gnu
 
 
+
+   NEED_PYTHON=no
+
+
+# Check whether --with-python was given.
+if test "${with_python+set}" = set; then :
+  withval=$with_python; PYTHON_PATH_WITH=$withval; NEED_PYTHON=$PYTHON_PATH_WITH
+else
+  PYTHON_PATH_WITH=yes
+fi
+
+
+# Check whether --with-python-exec was given.
+if test "${with_python_exec+set}" = set; then :
+  withval=$with_python_exec; PYTHON_EXEC=$withval
+fi
+
+   # Check whether --enable-shared-python was given.
+if test "${enable_shared_python+set}" = set; then :
+  enableval=$enable_shared_python; PYTHON_SHARED=$enableval
+else
+  PYTHON_SHARED=no
+fi
+
+
+   if test "$PYTHON_EXEC" = ""; then
+      PYTHON_EXEC="python"
+   fi
+
+   WITH_PYTHON=yes
+   if test x"$PYTHON_PATH_WITH" = xno ; then
+      { $as_echo "$as_me:${as_lineno-$LINENO}: checking for python" >&5
+$as_echo_n "checking for python... " >&6; }
+      { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+      PYTHON_BASE=no
+      WITH_PYTHON=no
+
+   else
+      # Extract the first word of "${PYTHON_EXEC}", so it can be a program name with args.
+set dummy ${PYTHON_EXEC}; ac_word=$2
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for $ac_word" >&5
+$as_echo_n "checking for $ac_word... " >&6; }
+if ${ac_cv_path_PYTHON+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  case $PYTHON in
+  [\\/]* | ?:[\\/]*)
+  ac_cv_path_PYTHON="$PYTHON" # Let the user override the test with a path.
+  ;;
+  *)
+  as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
+as_dummy="$PYTHON_PATH_WITH/bin:$PYTHON_PATH_WITH:$PATH"
+for as_dir in $as_dummy
+do
+  IFS=$as_save_IFS
+  test -z "$as_dir" && as_dir=.
+    for ac_exec_ext in '' $ac_executable_extensions; do
+  if as_fn_executable_p "$as_dir/$ac_word$ac_exec_ext"; then
+    ac_cv_path_PYTHON="$as_dir/$ac_word$ac_exec_ext"
+    $as_echo "$as_me:${as_lineno-$LINENO}: found $as_dir/$ac_word$ac_exec_ext" >&5
+    break 2
+  fi
+done
+  done
+IFS=$as_save_IFS
+
+  test -z "$ac_cv_path_PYTHON" && ac_cv_path_PYTHON="no"
+  ;;
+esac
+fi
+PYTHON=$ac_cv_path_PYTHON
+if test -n "$PYTHON"; then
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: $PYTHON" >&5
+$as_echo "$PYTHON" >&6; }
+else
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+fi
+
+
+      if test x"$PYTHON" = xno ; then
+         PYTHON_BASE=no
+         WITH_PYTHON=no
+      else
+        { $as_echo "$as_me:${as_lineno-$LINENO}: checking for python >= 2.0" >&5
+$as_echo_n "checking for python >= 2.0... " >&6; }
+        if test x"$PYTHON_PATH_WITH" != xyes ; then
+           PYTHON_BASE=$PYTHON_PATH_WITH
+        else
+           PYTHON_BASE=`$PYTHON -c 'import sys; print(sys.prefix)' `
+        fi
+
+        PYTHON_MAJOR_VERSION=`$PYTHON -c 'import sys; print(sys.version_info[0])' 2>/dev/null`
+        PYTHON_MINOR_VERSION=`$PYTHON -c 'import sys; print(sys.version_info[1])' 2>/dev/null`
+        if test $PYTHON_MAJOR_VERSION -lt 2 ; then
+           { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+           PYTHON_BASE=no
+           WITH_PYTHON=no
+        else
+           case "${host}" in
+             # On windows, there are two possible types of installation for
+             # python, where the layout of directories are different. Even when
+             # running cygwin, we might want to link with a mingwin version of
+             # python for easier redistribution of the application.
+
+             *-*mingw32* | *cygwin* )
+               if test -d ${PYTHON_BASE}/lib/python${PYTHON_MAJOR_VERSION}.${PYTHON_MINOR_VERSION}/config; then
+                 PYTHON_WIN32=no
+               else
+                 PYTHON_WIN32=yes
+               fi
+               ;;
+             *)
+               PYTHON_WIN32=no
+               ;;
+           esac
+
+           if test x$PYTHON_WIN32 == xyes; then
+             PYTHON_VERSION=$PYTHON_MAJOR_VERSION$PYTHON_MINOR_VERSION
+             PYTHON_DIR=${PYTHON_BASE}/libs
+           else
+             PYTHON_VERSION=$PYTHON_MAJOR_VERSION.$PYTHON_MINOR_VERSION
+             if test x$PYTHON_SHARED = xyes; then
+                PYTHON_DIR=${PYTHON_BASE}/lib
+             else
+                PYTHON_DIR=${PYTHON_BASE}/lib/python${PYTHON_VERSION}/config
+             fi
+           fi
+
+           { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes (version $PYTHON_MAJOR_VERSION.$PYTHON_MINOR_VERSION)" >&5
+$as_echo "yes (version $PYTHON_MAJOR_VERSION.$PYTHON_MINOR_VERSION)" >&6; }
+        fi
+      fi
+   fi
+
+   if test x"$PYTHON_BASE" != xno; then
+      # Find the libs that are required to link with python. We first try
+      # with python-config --libs, but this might not exist on the platform, or
+      # might be incorrect, so we also have hard-coded fallbacks.
+
+      if test $PYTHON_MAJOR_VERSION != 2; then
+         PYCONFIG=python${PYTHON_MAJOR_VERSION}-config
+      else
+         PYCONFIG=python-config
+      fi
+
+      # Extract the first word of "${PYCONFIG}", so it can be a program name with args.
+set dummy ${PYCONFIG}; ac_word=$2
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for $ac_word" >&5
+$as_echo_n "checking for $ac_word... " >&6; }
+if ${ac_cv_path_PYTHON_CONFIG+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  case $PYTHON_CONFIG in
+  [\\/]* | ?:[\\/]*)
+  ac_cv_path_PYTHON_CONFIG="$PYTHON_CONFIG" # Let the user override the test with a path.
+  ;;
+  *)
+  as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
+as_dummy="$PYTHON_PATH_WITH/bin:$PYTHON_PATH_WITH:$PATH"
+for as_dir in $as_dummy
+do
+  IFS=$as_save_IFS
+  test -z "$as_dir" && as_dir=.
+    for ac_exec_ext in '' $ac_executable_extensions; do
+  if as_fn_executable_p "$as_dir/$ac_word$ac_exec_ext"; then
+    ac_cv_path_PYTHON_CONFIG="$as_dir/$ac_word$ac_exec_ext"
+    $as_echo "$as_me:${as_lineno-$LINENO}: found $as_dir/$ac_word$ac_exec_ext" >&5
+    break 2
+  fi
+done
+  done
+IFS=$as_save_IFS
+
+  test -z "$ac_cv_path_PYTHON_CONFIG" && ac_cv_path_PYTHON_CONFIG="no"
+  ;;
+esac
+fi
+PYTHON_CONFIG=$ac_cv_path_PYTHON_CONFIG
+if test -n "$PYTHON_CONFIG"; then
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: $PYTHON_CONFIG" >&5
+$as_echo "$PYTHON_CONFIG" >&6; }
+else
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+fi
+
+
+
+      { $as_echo "$as_me:${as_lineno-$LINENO}: checking if we can link with python (using python-config)" >&5
+$as_echo_n "checking if we can link with python (using python-config)... " >&6; }
+      if test x"$PYTHON_CONFIG" != xno ; then
+         # We cannot use python-config --ldflags, which generates additional
+         # switches not properly recognized by GNAT's linker on some systems,
+         # for instance "-u _PyMac_Error" on OSX. So we add the "-L..." switch
+         # explicitly
+         PYTHON_LIBS=`$PYTHON_CONFIG --libs`
+         PYTHON_LIBS="-L${PYTHON_DIR} ${PYTHON_LIBS}"
+
+         case $build_os in
+             *darwin*)  ;;
+             *-*mingw32* | *cygwin* ) ;;
+             *linux*) PYTHON_LIBS="${PYTHON_LIBS} -export-dynamic" ;;
+         esac
+
+         PYTHON_CFLAGS=`$PYTHON_CONFIG --includes`
+      else
+         PYTHON_LIBS=""
+         PYTHON_CFLAGS=""
+      fi
+
+      SAVE_CFLAGS="${CFLAGS}"
+      SAVE_LIBS="${LIBS}"
+      CFLAGS="${SAVE_CFLAGS} ${PYTHON_CFLAGS}"
+      LIBS="${SAVE_LIBS} ${PYTHON_LIBS}"
+
+
+      cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+/*    will only work with gcc, but needed to use it with the mingwin python */
+#define PY_LONG_LONG long long
+#include <Python.h>
+
+int
+main ()
+{
+   Py_Initialize();
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+$as_echo "yes" >&6; }
+else
+
+         { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+         { $as_echo "$as_me:${as_lineno-$LINENO}: checking if we can link with python" >&5
+$as_echo_n "checking if we can link with python... " >&6; }
+         # hard-code python dependencies
+         if test \( -f ${PYTHON_DIR}/libpython${PYTHON_VERSION}.a \) -a \( ! x$PYTHON_SHARED = xyes \) ; then
+            PYTHON_LIBS="${PYTHON_DIR}/libpython${PYTHON_VERSION}.a"
+         else
+            PYTHON_LIBS="-L${PYTHON_DIR} -lpython${PYTHON_VERSION}"
+         fi
+
+         case "${host}" in
+            hppa*-hp-hpux1* )
+               PYTHON_LIBS="-Wl,-E -lm ${PYTHON_LIBS}"
+               ;;
+            powerpc-ibm-aix5.* | powerpc-*-darwin* | *-darwin*)
+               PYTHON_LIBS="-ldl -lm ${PYTHON_LIBS}"
+               ;;
+            *-sunos5.5* | *-solaris2.5* | *-sunos5* | *-solaris* )
+               PYTHON_LIBS="-lresolv -lsocket -lnsl -ldl -lm ${PYTHON_LIBS}"
+               ;;
+            *linux* )
+               PYTHON_LIBS="-Wl,-export-dynamic -lm -ldl ${PYTHON_LIBS}"
+               ;;
+            ia64-*hp-hpux11* )
+               PYTHON_LIBS="-ldld -ldl -lm -Wl,-E ${PYTHON_LIBS}"
+               ;;
+            *-freebsd* )
+               PYTHON_LIBS="-lm -lutil ${PYTHON_LIBS}"
+               ;;
+         esac
+
+         if test x$PYTHON_WIN32 == xyes; then
+            PYTHON_CFLAGS="-I${PYTHON_BASE}/include"
+         else
+            PYTHON_CFLAGS="-I${PYTHON_BASE}/include/python${PYTHON_VERSION}"
+         fi
+
+         # -lutil is almost always needed, for forkpty()
+         CFLAGS="${SAVE_CFLAGS} ${PYTHON_CFLAGS}"
+         LIBS="${SAVE_LIBS} ${PYTHON_LIBS}"
+
+         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+/* will only work with gcc, but needed to use it with the mingwin python */
+#define PY_LONG_LONG long long
+#include <Python.h>
+
+int
+main ()
+{
+Py_Initialize();
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+$as_echo "yes" >&6; }
+else
+  LIBS="${LIBS} -lutil"
+            cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+/* will only work with gcc, but needed to use it with the mingwin python */
+#define PY_LONG_LONG long long
+#include <Python.h>
+
+int
+main ()
+{
+Py_Initialize();
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  PYTHON_LIBS="${PYTHON_LIBS} -lutil"
+            { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+$as_echo "yes" >&6; }
+else
+  LIBS="${LIBS} -lpthread -lutil -lz"
+             cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+/* will only work with gcc, but needed to use it with the mingwin python */
+#define PY_LONG_LONG long long
+#include <Python.h>
+int
+main ()
+{
+Py_Initialize();
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  PYTHON_LIBS="${PYTHON_LIBS} -lpthread -lutil -lz"
+                { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+$as_echo "yes" >&6; }
+else
+  LIBS="${LIBS} -lpthread -lssl -lutil -lz"
+                cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+   /* will only work with gcc, but needed to use it with the mingwin python */
+   #define PY_LONG_LONG long long
+   #include <Python.h>
+int
+main ()
+{
+Py_Initialize();
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  PYTHON_LIBS="${PYTHON_LIBS} -lpthread -lssl -lutil -lz"
+                   { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+$as_echo "yes" >&6; }
+else
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+                WITH_PYTHON=no
+                PYTHON_BASE=
+                PYTHON_LIBS=
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+
+
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+
+     # Restore an environment python-free, so that further tests are not
+     # impacted in case we did not find python
+
+     CFLAGS="${SAVE_CFLAGS}"
+     LIBS="${SAVE_LIBS}"
+   fi
+
+   if test x"$WITH_PYTHON" = xno -a x"$NEED_PYTHON" != xno ; then
+     as_fn_error $? "Python not found" "$LINENO" 5
+   fi
+
+
+
+
+
+
+
+
 ac_ext=c
 ac_cpp='$CPP $CPPFLAGS'
 ac_compile='$CC -c $CFLAGS $CPPFLAGS conftest.$ac_ext >&5'
@@ -3595,6 +4077,7 @@ done
 
 
 
+
 for ac_func in getpagesize
 do :
   ac_fn_c_check_func "$LINENO" "getpagesize" "ac_cv_func_getpagesize"
@@ -3773,484 +4256,11 @@ fi
 rm -f conftest.mmap conftest.txt
 
 
-# Check whether --enable-gpl was given.
-if test "${enable_gpl+set}" = set; then :
-  enableval=$enable_gpl; WITH_GPL=$enableval
-else
-  WITH_GPL=no
-fi
-
-
-
-
-  # Check whether --enable-build was given.
-if test "${enable_build+set}" = set; then :
-  enableval=$enable_build; BUILD_TYPE=$enableval
-else
-  BUILD_TYPE=Production
-fi
-
-
-
-
-   { $as_echo "$as_me:${as_lineno-$LINENO}: checking whether gnat can build shared libs" >&5
-$as_echo_n "checking whether gnat can build shared libs... " >&6; }
-
-   DEFAULT_LIBRARY_TYPE=static
-
-   # Check whether --enable-shared was given.
-if test "${enable_shared+set}" = set; then :
-  enableval=$enable_shared; GNAT_BUILDS_SHARED=$enableval
-      if test $enableval = yes; then
-         DEFAULT_LIBRARY_TYPE=relocatable
-      fi
-else
-  GNAT_BUILDS_SHARED=yes
-fi
-
-
-   if test x$GNAT_BUILDS_SHARED = xyes; then
-      mkdir conftest conftest/lib
-      echo "package Foo is end Foo;" > conftest/foo.ads
-      cat > conftest/lib.gpr <<EOF
-project Lib is
-   for Source_Dirs use (".");
-   for Library_Dir use "lib";
-   for Library_Name use "lib";
-   for Library_Kind use "relocatable";
-end Lib;
-EOF
-
-      if { ac_try='gnatmake -c -q -Pconftest/lib'
-  { { eval echo "\"\$as_me\":${as_lineno-$LINENO}: \"$ac_try\""; } >&5
-  (eval $ac_try) 2>&5
-  ac_status=$?
-  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
-  test $ac_status = 0; }; }; then
-         GNAT_BUILDS_SHARED=yes
-      else
-         GNAT_BUILDS_SHARED=no
-         DEFAULT_LIBRARY_TYPE=static
-      fi
-      rm -rf conftest
-      { $as_echo "$as_me:${as_lineno-$LINENO}: result: $GNAT_BUILDS_SHARED" >&5
-$as_echo "$GNAT_BUILDS_SHARED" >&6; }
+   if test $ac_cv_func_mmap_fixed_mapped = yes; then
+      WITH_MMAP=yes
    else
-      { $as_echo "$as_me:${as_lineno-$LINENO}: result: no (--disabled-shared)" >&5
-$as_echo "no (--disabled-shared)" >&6; }
+      WITH_MMAP=no
    fi
-
-
-
-
-
-    case $build_os in
-      *darwin*) SO_EXT=.dylib ;;
-      *cygwin*|*mingw*)  SO_EXT=.dll ;;
-      *)        SO_EXT=.so ;;
-    esac
-
-
-
-   NEED_PYTHON=no
-
-
-# Check whether --with-python was given.
-if test "${with_python+set}" = set; then :
-  withval=$with_python; PYTHON_PATH_WITH=$withval; NEED_PYTHON=$PYTHON_PATH_WITH
-else
-  PYTHON_PATH_WITH=yes
-fi
-
-
-# Check whether --with-python-exec was given.
-if test "${with_python_exec+set}" = set; then :
-  withval=$with_python_exec; PYTHON_EXEC=$withval
-fi
-
-   # Check whether --enable-shared-python was given.
-if test "${enable_shared_python+set}" = set; then :
-  enableval=$enable_shared_python; PYTHON_SHARED=$enableval
-else
-  PYTHON_SHARED=no
-fi
-
-
-   if test "$PYTHON_EXEC" = ""; then
-      PYTHON_EXEC="python"
-   fi
-
-   WITH_PYTHON=yes
-   if test x"$PYTHON_PATH_WITH" = xno ; then
-      { $as_echo "$as_me:${as_lineno-$LINENO}: checking for python" >&5
-$as_echo_n "checking for python... " >&6; }
-      { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
-$as_echo "no" >&6; }
-      PYTHON_BASE=no
-      WITH_PYTHON=no
-
-   else
-      # Extract the first word of "${PYTHON_EXEC}", so it can be a program name with args.
-set dummy ${PYTHON_EXEC}; ac_word=$2
-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for $ac_word" >&5
-$as_echo_n "checking for $ac_word... " >&6; }
-if ${ac_cv_path_PYTHON+:} false; then :
-  $as_echo_n "(cached) " >&6
-else
-  case $PYTHON in
-  [\\/]* | ?:[\\/]*)
-  ac_cv_path_PYTHON="$PYTHON" # Let the user override the test with a path.
-  ;;
-  *)
-  as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
-as_dummy="$PYTHON_PATH_WITH/bin:$PYTHON_PATH_WITH:$PATH"
-for as_dir in $as_dummy
-do
-  IFS=$as_save_IFS
-  test -z "$as_dir" && as_dir=.
-    for ac_exec_ext in '' $ac_executable_extensions; do
-  if as_fn_executable_p "$as_dir/$ac_word$ac_exec_ext"; then
-    ac_cv_path_PYTHON="$as_dir/$ac_word$ac_exec_ext"
-    $as_echo "$as_me:${as_lineno-$LINENO}: found $as_dir/$ac_word$ac_exec_ext" >&5
-    break 2
-  fi
-done
-  done
-IFS=$as_save_IFS
-
-  test -z "$ac_cv_path_PYTHON" && ac_cv_path_PYTHON="no"
-  ;;
-esac
-fi
-PYTHON=$ac_cv_path_PYTHON
-if test -n "$PYTHON"; then
-  { $as_echo "$as_me:${as_lineno-$LINENO}: result: $PYTHON" >&5
-$as_echo "$PYTHON" >&6; }
-else
-  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
-$as_echo "no" >&6; }
-fi
-
-
-      if test x"$PYTHON" = xno ; then
-         PYTHON_BASE=no
-         WITH_PYTHON=no
-      else
-        { $as_echo "$as_me:${as_lineno-$LINENO}: checking for python >= 2.0" >&5
-$as_echo_n "checking for python >= 2.0... " >&6; }
-        if test x"$PYTHON_PATH_WITH" != xyes ; then
-           PYTHON_BASE=$PYTHON_PATH_WITH
-        else
-           PYTHON_BASE=`$PYTHON -c 'import sys; print(sys.prefix)' `
-        fi
-
-        PYTHON_MAJOR_VERSION=`$PYTHON -c 'import sys; print(sys.version_info[0])' 2>/dev/null`
-        PYTHON_MINOR_VERSION=`$PYTHON -c 'import sys; print(sys.version_info[1])' 2>/dev/null`
-        if test $PYTHON_MAJOR_VERSION -lt 2 ; then
-           { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
-$as_echo "no" >&6; }
-           PYTHON_BASE=no
-           WITH_PYTHON=no
-        else
-           case "${host}" in
-             # On windows, there are two possible types of installation for
-             # python, where the layout of directories are different. Even when
-             # running cygwin, we might want to link with a mingwin version of
-             # python for easier redistribution of the application.
-
-             *-*mingw32* | *cygwin* )
-               if test -d ${PYTHON_BASE}/lib/python${PYTHON_MAJOR_VERSION}.${PYTHON_MINOR_VERSION}/config; then
-                 PYTHON_WIN32=no
-               else
-                 PYTHON_WIN32=yes
-               fi
-               ;;
-             *)
-               PYTHON_WIN32=no
-               ;;
-           esac
-
-           if test x$PYTHON_WIN32 == xyes; then
-             PYTHON_VERSION=$PYTHON_MAJOR_VERSION$PYTHON_MINOR_VERSION
-             PYTHON_DIR=${PYTHON_BASE}/libs
-           else
-             PYTHON_VERSION=$PYTHON_MAJOR_VERSION.$PYTHON_MINOR_VERSION
-             if test x$PYTHON_SHARED = xyes; then
-                PYTHON_DIR=${PYTHON_BASE}/lib
-             else
-                PYTHON_DIR=${PYTHON_BASE}/lib/python${PYTHON_VERSION}/config
-             fi
-           fi
-
-           { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes (version $PYTHON_MAJOR_VERSION.$PYTHON_MINOR_VERSION)" >&5
-$as_echo "yes (version $PYTHON_MAJOR_VERSION.$PYTHON_MINOR_VERSION)" >&6; }
-        fi
-      fi
-   fi
-
-   if test x"$PYTHON_BASE" != xno; then
-      # Find the libs that are required to link with python. We first try
-      # with python-config --libs, but this might not exist on the platform, or
-      # might be incorrect, so we also have hard-coded fallbacks.
-
-      if test $PYTHON_MAJOR_VERSION != 2; then
-         PYCONFIG=python${PYTHON_MAJOR_VERSION}-config
-      else
-         PYCONFIG=python-config
-      fi
-
-      # Extract the first word of "${PYCONFIG}", so it can be a program name with args.
-set dummy ${PYCONFIG}; ac_word=$2
-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for $ac_word" >&5
-$as_echo_n "checking for $ac_word... " >&6; }
-if ${ac_cv_path_PYTHON_CONFIG+:} false; then :
-  $as_echo_n "(cached) " >&6
-else
-  case $PYTHON_CONFIG in
-  [\\/]* | ?:[\\/]*)
-  ac_cv_path_PYTHON_CONFIG="$PYTHON_CONFIG" # Let the user override the test with a path.
-  ;;
-  *)
-  as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
-as_dummy="$PYTHON_PATH_WITH/bin:$PYTHON_PATH_WITH:$PATH"
-for as_dir in $as_dummy
-do
-  IFS=$as_save_IFS
-  test -z "$as_dir" && as_dir=.
-    for ac_exec_ext in '' $ac_executable_extensions; do
-  if as_fn_executable_p "$as_dir/$ac_word$ac_exec_ext"; then
-    ac_cv_path_PYTHON_CONFIG="$as_dir/$ac_word$ac_exec_ext"
-    $as_echo "$as_me:${as_lineno-$LINENO}: found $as_dir/$ac_word$ac_exec_ext" >&5
-    break 2
-  fi
-done
-  done
-IFS=$as_save_IFS
-
-  test -z "$ac_cv_path_PYTHON_CONFIG" && ac_cv_path_PYTHON_CONFIG="no"
-  ;;
-esac
-fi
-PYTHON_CONFIG=$ac_cv_path_PYTHON_CONFIG
-if test -n "$PYTHON_CONFIG"; then
-  { $as_echo "$as_me:${as_lineno-$LINENO}: result: $PYTHON_CONFIG" >&5
-$as_echo "$PYTHON_CONFIG" >&6; }
-else
-  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
-$as_echo "no" >&6; }
-fi
-
-
-
-      { $as_echo "$as_me:${as_lineno-$LINENO}: checking if we can link with python (using python-config)" >&5
-$as_echo_n "checking if we can link with python (using python-config)... " >&6; }
-      if test x"$PYTHON_CONFIG" != xno ; then
-         # We cannot use python-config --ldflags, which generates additional
-         # switches not properly recognized by GNAT's linker on some systems,
-         # for instance "-u _PyMac_Error" on OSX. So we add the "-L..." switch
-         # explicitly
-         PYTHON_LIBS=`$PYTHON_CONFIG --libs`
-         PYTHON_LIBS="-L${PYTHON_DIR} ${PYTHON_LIBS}"
-
-         case $build_os in
-             *darwin*)  ;;
-             *-*mingw32* | *cygwin* ) ;;
-             *linux*) PYTHON_LIBS="${PYTHON_LIBS} -export-dynamic" ;;
-         esac
-
-         PYTHON_CFLAGS=`$PYTHON_CONFIG --includes`
-      else
-         PYTHON_LIBS=""
-         PYTHON_CFLAGS=""
-      fi
-
-      SAVE_CFLAGS="${CFLAGS}"
-      SAVE_LIBS="${LIBS}"
-      CFLAGS="${SAVE_CFLAGS} ${PYTHON_CFLAGS}"
-      LIBS="${SAVE_LIBS} ${PYTHON_LIBS}"
-
-
-      cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-
-/*    will only work with gcc, but needed to use it with the mingwin python */
-#define PY_LONG_LONG long long
-#include <Python.h>
-
-int
-main ()
-{
-   Py_Initialize();
-  ;
-  return 0;
-}
-_ACEOF
-if ac_fn_c_try_link "$LINENO"; then :
-  { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
-$as_echo "yes" >&6; }
-else
-
-         { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
-$as_echo "no" >&6; }
-         { $as_echo "$as_me:${as_lineno-$LINENO}: checking if we can link with python" >&5
-$as_echo_n "checking if we can link with python... " >&6; }
-         # hard-code python dependencies
-         if test \( -f ${PYTHON_DIR}/libpython${PYTHON_VERSION}.a \) -a \( ! x$PYTHON_SHARED = xyes \) ; then
-            PYTHON_LIBS="${PYTHON_DIR}/libpython${PYTHON_VERSION}.a"
-         else
-            PYTHON_LIBS="-L${PYTHON_DIR} -lpython${PYTHON_VERSION}"
-         fi
-
-         case "${host}" in
-            hppa*-hp-hpux1* )
-               PYTHON_LIBS="-Wl,-E -lm ${PYTHON_LIBS}"
-               ;;
-            powerpc-ibm-aix5.* | powerpc-*-darwin* | *-darwin*)
-               PYTHON_LIBS="-ldl -lm ${PYTHON_LIBS}"
-               ;;
-            *-sunos5.5* | *-solaris2.5* | *-sunos5* | *-solaris* )
-               PYTHON_LIBS="-lresolv -lsocket -lnsl -ldl -lm ${PYTHON_LIBS}"
-               ;;
-            *linux* )
-               PYTHON_LIBS="-Wl,-export-dynamic -lm -ldl ${PYTHON_LIBS}"
-               ;;
-            ia64-*hp-hpux11* )
-               PYTHON_LIBS="-ldld -ldl -lm -Wl,-E ${PYTHON_LIBS}"
-               ;;
-            *-freebsd* )
-               PYTHON_LIBS="-lm -lutil ${PYTHON_LIBS}"
-               ;;
-         esac
-
-         if test x$PYTHON_WIN32 == xyes; then
-            PYTHON_CFLAGS="-I${PYTHON_BASE}/include"
-         else
-            PYTHON_CFLAGS="-I${PYTHON_BASE}/include/python${PYTHON_VERSION}"
-         fi
-
-         # -lutil is almost always needed, for forkpty()
-         CFLAGS="${SAVE_CFLAGS} ${PYTHON_CFLAGS}"
-         LIBS="${SAVE_LIBS} ${PYTHON_LIBS}"
-
-         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-
-/* will only work with gcc, but needed to use it with the mingwin python */
-#define PY_LONG_LONG long long
-#include <Python.h>
-
-int
-main ()
-{
-Py_Initialize();
-  ;
-  return 0;
-}
-_ACEOF
-if ac_fn_c_try_link "$LINENO"; then :
-  { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
-$as_echo "yes" >&6; }
-else
-  LIBS="${LIBS} -lutil"
-            cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-
-/* will only work with gcc, but needed to use it with the mingwin python */
-#define PY_LONG_LONG long long
-#include <Python.h>
-
-int
-main ()
-{
-Py_Initialize();
-  ;
-  return 0;
-}
-_ACEOF
-if ac_fn_c_try_link "$LINENO"; then :
-  PYTHON_LIBS="${PYTHON_LIBS} -lutil"
-            { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
-$as_echo "yes" >&6; }
-else
-  LIBS="${LIBS} -lpthread -lutil -lz"
-             cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-
-/* will only work with gcc, but needed to use it with the mingwin python */
-#define PY_LONG_LONG long long
-#include <Python.h>
-int
-main ()
-{
-Py_Initialize();
-  ;
-  return 0;
-}
-_ACEOF
-if ac_fn_c_try_link "$LINENO"; then :
-  PYTHON_LIBS="${PYTHON_LIBS} -lpthread -lutil -lz"
-                { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
-$as_echo "yes" >&6; }
-else
-  LIBS="${LIBS} -lpthread -lssl -lutil -lz"
-                cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-
-   /* will only work with gcc, but needed to use it with the mingwin python */
-   #define PY_LONG_LONG long long
-   #include <Python.h>
-int
-main ()
-{
-Py_Initialize();
-  ;
-  return 0;
-}
-_ACEOF
-if ac_fn_c_try_link "$LINENO"; then :
-  PYTHON_LIBS="${PYTHON_LIBS} -lpthread -lssl -lutil -lz"
-                   { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
-$as_echo "yes" >&6; }
-else
-  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
-$as_echo "no" >&6; }
-                WITH_PYTHON=no
-                PYTHON_BASE=
-                PYTHON_LIBS=
-fi
-rm -f core conftest.err conftest.$ac_objext \
-    conftest$ac_exeext conftest.$ac_ext
-fi
-rm -f core conftest.err conftest.$ac_objext \
-    conftest$ac_exeext conftest.$ac_ext
-fi
-rm -f core conftest.err conftest.$ac_objext \
-    conftest$ac_exeext conftest.$ac_ext
-
-
-fi
-rm -f core conftest.err conftest.$ac_objext \
-    conftest$ac_exeext conftest.$ac_ext
-fi
-rm -f core conftest.err conftest.$ac_objext \
-    conftest$ac_exeext conftest.$ac_ext
-
-     # Restore an environment python-free, so that further tests are not
-     # impacted in case we did not find python
-
-     CFLAGS="${SAVE_CFLAGS}"
-     LIBS="${SAVE_LIBS}"
-   fi
-
-   if test x"$WITH_PYTHON" = xno -a x"$NEED_PYTHON" != xno ; then
-     as_fn_error $? "Python not found" "$LINENO" 5
-   fi
-
-
-
-
-
-
 
 
 

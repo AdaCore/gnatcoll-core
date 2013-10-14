@@ -22,6 +22,7 @@ project GnatColl_Shared is
    Projects : Yes_No := External ("PROJECTS", "@WITH_PROJECTS@");
    PyGobject : Yes_No := External ("PYGOBJECT", "@WITH_PYGOBJECT@");
    Readline : Yes_No := External ("READLINE", "@WITH_READLINE@");
+   Mmap     : Yes_No := External ("MMAP", "@WITH_MMAP@");
    Iconv : Yes_No := "@WITH_ICONV@";
    Templates : Yes_No := "no";  --  Hard-coded for now
    Postgres_Has_PQprepare : Yes_No :=
@@ -67,6 +68,13 @@ project GnatColl_Shared is
       case Syslog is
          when "yes" =>
             for Switches ("C") use Compiler'Switches ("C") & ("-DHAVE_SYSLOG");
+         when "no" =>
+            null;
+      end case;
+
+      case Mmap is
+         when "yes" =>
+            for Switches ("C") use Compiler'Switches ("C") & ("-DHAVE_MMAP");
          when "no" =>
             null;
       end case;
