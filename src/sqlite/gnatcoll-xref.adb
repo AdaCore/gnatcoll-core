@@ -2155,7 +2155,14 @@ package body GNATCOLL.Xref is
             if Candidate /= -1 then
                if not Candidate_Is_Forward then
                   --  We have found an entity with a known name and decl,
-                  --  that's the good one.
+                  --  that's the good one. Since the entity still exists, we
+                  --  will not want to remove it as obsolete once we are done
+                  --  parsing, so that other LI files referencing it still have
+                  --  that info.
+
+                  DB.Execute
+                    ("DELETE FROM temp_entities WHERE id="
+                     & Candidate'Img & ";");
 
                   Entity_Decl_To_Id.Include
                     (Decl,
@@ -3390,40 +3397,19 @@ package body GNATCOLL.Xref is
             & " f2f.fromFile FROM f2f WHERE "
             & " f2f.kind = 1 AND"
             & " f2f.toFile IN (SELECT * FROM temp_lis);");
-
+         DB.Execute ("DROP TABLE temp_lis;");
          DB.Execute
            ("CREATE TEMP TABLE temp_entities (id INTEGER PRIMARY KEY);");
          DB.Execute
            ("INSERT INTO temp_entities SELECT entities.id FROM entities,"
             & " temp.temp_files WHERE entities.decl_file=temp.temp_files.id;");
-
-         DB.Execute
+         DB.Execute   --  all import/with statements from LI_Units
            ("DELETE FROM f2f WHERE f2f.fromFile IN"
             & " (SELECT id FROM temp_files);");
-
-         DB.Execute
+         DB.Execute   --  all references within LI_Units files
            ("DELETE FROM entity_refs WHERE entity_refs.file IN"
             & " (SELECT id FROM temp_files);");
-
-         DB.Execute
-           ("DELETE FROM e2e WHERE e2e.fromEntity IN"
-            & " (SELECT id FROM temp_entities);");
-
-         DB.Execute
-           ("DELETE FROM e2e WHERE e2e.toEntity IN"
-            & " (SELECT id FROM temp_entities);");
-
-         DB.Execute
-           ("DELETE FROM entity_refs WHERE entity_refs.entity IN"
-            & " (SELECT id FROM temp_entities);");
-
-         DB.Execute
-           ("DELETE FROM entities WHERE entities.id IN"
-            & " (SELECT id FROM temp_entities);");
-
-         DB.Execute ("DROP TABLE temp_entities;");
          DB.Execute ("DROP TABLE temp_files;");
-         DB.Execute ("DROP TABLE temp_lis;");
 
          DB.Commit_Or_Rollback;
          DB.Execute ("PRAGMA wal_checkpoint(RESTART);");
@@ -3463,6 +3449,24 @@ package body GNATCOLL.Xref is
             end;
             Next (LI_C);
          end loop;
+
+         --  ??? If we had a failure earlier, we will exit early and lost the
+         --  contents of temp_entities, and therefore never clean those
+         --  entities from the database until we parse the corresponding LI
+         --  files again.
+         DB.Execute
+           ("DELETE FROM e2e WHERE e2e.fromEntity IN"
+            & " (SELECT id FROM temp_entities);");
+         DB.Execute
+           ("DELETE FROM e2e WHERE e2e.toEntity IN"
+            & " (SELECT id FROM temp_entities);");
+         DB.Execute
+           ("DELETE FROM entity_refs WHERE entity_refs.entity IN"
+            & " (SELECT id FROM temp_entities);");
+         DB.Execute
+           ("DELETE FROM entities WHERE entities.id IN"
+            & " (SELECT id FROM temp_entities);");
+         DB.Execute ("DROP TABLE temp_entities;");
 
          Iconv_Close (Iconv_State);
 
