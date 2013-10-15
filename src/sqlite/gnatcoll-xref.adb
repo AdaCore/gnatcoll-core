@@ -42,6 +42,7 @@ package body GNATCOLL.Xref is
    Me_Debug   : constant Trace_Handle := Create ("ENTITIES.DEBUG", Off);
    Me_Forward : constant Trace_Handle := Create ("ENTITIES.FORWARD", Off);
    Me_Timing  : constant Trace_Handle := Create ("ENTITIES.TIMING");
+   Me_Use_WAL : constant Trace_Handle := Create ("ENTITIES.USE_WAL", On);
 
    Instances_Provide_Column : constant Boolean := False;
    --  Whether instance info in the ALI files provide the column information.
@@ -3272,7 +3273,9 @@ package body GNATCOLL.Xref is
             --  is a writer. MEMORY might corrupt the database if the writer is
             --  killed while processing.
 
-            DB.Execute ("PRAGMA journal_mode=WAL;");
+            if Active (Me_Use_WAL) then
+               DB.Execute ("PRAGMA journal_mode=WAL;");
+            end if;
 
             --  We can store temporary tables in memory
 
@@ -3317,7 +3320,11 @@ package body GNATCOLL.Xref is
 
             DB.Execute ("PRAGMA foreign_keys=OFF;");
             DB.Execute ("PRAGMA synchronous=NORMAL;");
-            DB.Execute ("PRAGMA journal_mode=WAL;");
+
+            if Active (Me_Use_WAL) then
+               DB.Execute ("PRAGMA journal_mode=WAL;");
+            end if;
+
             DB.Execute ("PRAGMA temp_store=MEMORY;");
             DB.Execute ("PRAGMA mmap_size=268435456;");
          end if;
