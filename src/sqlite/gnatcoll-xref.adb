@@ -3597,7 +3597,6 @@ package body GNATCOLL.Xref is
       Self.DB := DB.Build_Connection;
 
       Self.DB.Execute ("PRAGMA mmap_size=268435456;");
-      Self.DB.Execute ("PRAGMA wal_autocheckpoint=0;");
 
       --  Do not use automatic transactions, to avoid being stuck with an
       --  unfinished BEGIN, which would lock the database and prevents
