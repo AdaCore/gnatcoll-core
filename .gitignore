@@ -18,7 +18,9 @@ testsuite/*/*/dummy.gpr
 testsuite/sql/sql3/pkg*
 testsuite/sql/sql3/test.db
 testsuite/json/json1/decode
+testsuite/json/M605-001/read
 testsuite/pools/testpools
+testsuite/projects/M320-003/main
 testsuite/readline/read1/.gnatcolltest
 testsuite/readline/read1/main
 testsuite/sql/prepared/prepared
@@ -43,6 +45,8 @@ testsuite/sql/json/db.ad?
 testsuite/sql/json/db_names.ads
 testsuite/sql/json/queries.ad?
 testsuite/traces/traces4/traces4.out2
+testsuite/traces/wildcard/wildcard.out
+testsuite/traces/wildcard/wildcard.out2
 testsuite/projects/K926-026/main
 testsuite/projects/KB30-016/test_it
 testsuite/xref/find_ref/main
@@ -56,13 +60,20 @@ testsuite/xref/E224-007-change_obj_dir-c/src/a.c
 testsuite/xref/F516-004/main
 testsuite/xref/F516-004/default_naming.gpr
 testsuite/xref/F516-004/default_source_list.txt
+testsuite/xref/F516-004/default.gpr.saved*
 testsuite/xref/H721-012-labels/a
+testsuite/xref/M701_043/main
+testsuite/xref/cpp_operators/header.s
+testsuite/xref/empty_db/modeling.db
 testsuite/xref/L829-003/example_main
 testsuite/xref/update2/b.ads
 testsuite/xref/update2/c.ads
 testsuite/*/*/obj
 testsuite/xref/L406-006-runtime/a
 testsuite/traces/MA08-038/nofile
+testsuite/vfs/links1/hello.adb
+testsuite/vfs/links1/hello.orig
+testsuite/vfs/links1/test_links
 
 testsuite/results
 
