@@ -56,7 +56,7 @@ package GNATCOLL.SQL_Impl is
    ---------------
 
    type Formatter is abstract tagged null record;
-   --  A formatter provides DBMS-specific formating for SQL statements.
+   --  A formatter provides DBMS-specific formatting for SQL statements.
    --  Each backend has its peculiarities, and these are handled through
    --  various instances of Formatter.
 
