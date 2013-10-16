@@ -4720,12 +4720,16 @@ package body GNATCOLL.Projects is
    ----------------
 
    procedure Initialize (Self : out Project_Environment_Access) is
+      Path : String_Access;
    begin
       if Self = null then
          Self := new Project_Environment;
          Prj.Tree.Initialize (Self.Env, Create_Flags (null));
          Prj.Env.Initialize_Default_Project_Path
-            (Self.Env.Project_Path, Target_Name => "");
+           (Self.Env.Project_Path, Target_Name => "");
+         Prj.Env.Get_Path (Self.Env.Project_Path, Path);
+         Self.Predefined_Project_Path :=
+           new File_Array'(From_Path (+Path.all));
       end if;
    end Initialize;
 
