@@ -4785,7 +4785,6 @@ package body GNATCOLL.Projects is
 
    begin
       Trace (Me, "Executing " & Argument_List_To_String (Gnatls_Args.all));
-      --  ??? Place a error handler here
       begin
          Success := True;
 
@@ -4805,6 +4804,7 @@ package body GNATCOLL.Projects is
                           Gnatls_Args (Gnatls_Args'First).all);
                end if;
             else
+               Trace (Me, "Spawning " & (+Gnatls_Path.Full_Name));
                Fd := new Process_Descriptor;
                Non_Blocking_Spawn
                  (Fd.all,
@@ -4816,6 +4816,7 @@ package body GNATCOLL.Projects is
 
       exception
          when others =>
+            Trace (Me, "Could not execute " & Gnatls_Args (1).all);
             if Errors /= null then
                Errors ("Could not execute " & Gnatls_Args (1).all);
             end if;
@@ -4823,6 +4824,7 @@ package body GNATCOLL.Projects is
       end;
 
       if not Success then
+         Trace (Me, "Could not compute predefined paths");
          if Errors /= null then
             Errors
               ("Could not compute predefined paths for this project.");
@@ -4835,10 +4837,15 @@ package body GNATCOLL.Projects is
       end if;
 
       if Fd /= null then
-         Set_Path_From_Gnatls_Output
-           (Self,
-            Output => Get_Command_Output (Fd),
-            GNAT_Version => GNAT_Version);
+         declare
+            S : constant String := Get_Command_Output (Fd);
+         begin
+            Trace (Me, "Output of gnatls is " & S);
+            Set_Path_From_Gnatls_Output
+              (Self,
+               Output       => S,
+               GNAT_Version => GNAT_Version);
+         end;
 
          Unchecked_Free (Fd);
       end if;
