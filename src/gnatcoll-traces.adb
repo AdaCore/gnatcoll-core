@@ -1343,9 +1343,10 @@ package body GNATCOLL.Traces is
    -----------------------
 
    procedure Parse_Config_File
-     (Filename     : Virtual_File;
-      Default      : Virtual_File := No_File;
-      On_Exception : On_Exception_Mode := Propagate)
+     (Filename         : Virtual_File;
+      Default          : Virtual_File := No_File;
+      On_Exception     : On_Exception_Mode := Propagate;
+      Force_Activation : Boolean := True)
    is
       File_Name : constant Virtual_File := Config_File (Filename, Default);
 
@@ -1398,7 +1399,12 @@ package body GNATCOLL.Traces is
    begin
       GNATCOLL.Traces.On_Exception := On_Exception;
 
-      if File_Name /= No_File then
+      if File_Name = No_File then
+         if Force_Activation then
+            Global.Activated := True;
+         end if;
+
+      else
          begin
             File := Open_Read (+File_Name.Full_Name);
          exception
@@ -1594,9 +1600,10 @@ package body GNATCOLL.Traces is
    -----------------------
 
    procedure Parse_Config_File
-     (Filename     : String := "";
-      Default      : String := "";
-      On_Exception : On_Exception_Mode := Propagate)
+     (Filename         : String := "";
+      Default          : String := "";
+      On_Exception     : On_Exception_Mode := Propagate;
+      Force_Activation : Boolean := True)
    is
       F_Filename : Virtual_File;
       F_Default  : Virtual_File;
@@ -1613,7 +1620,8 @@ package body GNATCOLL.Traces is
          F_Default := Create_From_Base (+Default);
       end if;
 
-      Parse_Config_File (F_Filename, F_Default, On_Exception);
+      Parse_Config_File
+        (F_Filename, F_Default, On_Exception, Force_Activation);
    end Parse_Config_File;
 
    --------------

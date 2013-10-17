@@ -118,9 +118,10 @@ package GNATCOLL.Traces is
    --                anymore.
 
    procedure Parse_Config_File
-     (Filename     : Virtual_File;
-      Default      : Virtual_File := No_File;
-      On_Exception : On_Exception_Mode := Propagate);
+     (Filename         : Virtual_File;
+      Default          : Virtual_File := No_File;
+      On_Exception     : On_Exception_Mode := Propagate;
+      Force_Activation : Boolean := True);
    --  Initializes this package, and parse the configuration file. The
    --  algorithm is the following:
    --    - If filename is specified and exists on the disk, parse this file
@@ -134,12 +135,15 @@ package GNATCOLL.Traces is
    --  prevent the log stream to be written.
    --
    --  Until at least one file is parsed, this package will never output
-   --  anything.
+   --  anything, unless Force_Activation is set, in which case the default
+   --  trace_handle status will apply after the call to Parse_Config_File even
+   --  if Filename or Default are unspecified.
 
    procedure Parse_Config_File
-     (Filename     : String := "";
-      Default      : String := "";
-      On_Exception : On_Exception_Mode := Propagate);
+     (Filename         : String := "";
+      Default          : String := "";
+      On_Exception     : On_Exception_Mode := Propagate;
+      Force_Activation : Boolean := True);
    --  Same as above, using regular strings for file names.
 
    type Output_Proc is access procedure (Str : String);

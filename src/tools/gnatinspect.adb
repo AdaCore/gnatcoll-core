@@ -1480,7 +1480,8 @@ begin
    if Traces_File_Name.all = ""
      or else Is_Regular_File (GNATCOLL.VFS.Create (+Traces_File_Name.all))
    then
-      GNATCOLL.Traces.Parse_Config_File (Traces_File_Name.all);
+      GNATCOLL.Traces.Parse_Config_File
+        (Traces_File_Name.all, Force_Activation => False);
    end if;
 
    if Show_Progress then
