@@ -421,7 +421,10 @@ procedure GNATInspect is
             new String'("If True, display absolute file names, otherwise"
               & " display base names only")),
       2 => (new String'("runtime"),
-            new String'("Whether to include runtime files in the database")));
+            new String'("Whether to include runtime files in the database")),
+      3 => (new String'("leading_doc"),
+            new String'("Whether the documentation appears before entities"
+              & " in general")));
 
    History_File : GNAT.Strings.String_Access;
 
@@ -459,6 +462,7 @@ procedure GNATInspect is
    ALI_Encoding          : aliased GNAT.Strings.String_Access :=
      new String'("");
    Force_Refresh         : aliased Boolean := False;
+   Look_Before_First_For_Doc : Boolean := True;
    --  The options from the command line
 
    ----------------------
@@ -951,6 +955,8 @@ procedure GNATInspect is
             Include_Runtime_Files := B;
             Process_Refresh (Empty_Command_Line);
          end if;
+      elsif N = "leading_doc" then
+         Look_Before_First_For_Doc := To_Boolean (V);
       else
          Put_Line (Output_Lead.all & "Error: Unknown variable '" & N & "'");
       end if;
@@ -1219,7 +1225,10 @@ procedure GNATInspect is
 
       declare
          Doc : constant String :=
-           Xref.Documentation (Entity => Entity, Language => Syntax);
+           Xref.Documentation
+             (Entity            => Entity,
+              Language          => Syntax,
+              Look_Before_First => Look_Before_First_For_Doc);
          Index, Eol : Natural;
       begin
          if Doc /= "" then

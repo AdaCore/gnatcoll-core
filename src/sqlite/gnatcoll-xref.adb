@@ -3425,8 +3425,10 @@ package body GNATCOLL.Xref is
             & " (SELECT id FROM temp_files);");
          DB.Execute ("DROP TABLE temp_files;");
 
-         DB.Commit_Or_Rollback;
-         DB.Execute ("PRAGMA wal_checkpoint(RESTART);");
+         if DB.In_Transaction then
+            DB.Commit_Or_Rollback;
+            DB.Execute ("PRAGMA wal_checkpoint(RESTART);");
+         end if;
 
          if Active (Me_Timing) then
             Dur := Clock - Start;
@@ -3496,9 +3498,14 @@ package body GNATCOLL.Xref is
          --  querying immediately even if we haven't recreated the indexes
          --  yet.
 
-         if Active (Me_Commit_Before_Indexes) then
+         if Active (Me_Commit_Before_Indexes)
+           and then DB.In_Transaction
+         then
             DB.Commit_Or_Rollback;
             DB.Execute ("PRAGMA wal_checkpoint(RESTART);");
+
+            --  Will need a new transaction for the indexes and renamings
+            Start_Transaction (DB, Destroy_Indexes => False);
          end if;
       end Parse_Files;
 
@@ -4511,6 +4518,19 @@ package body GNATCOLL.Xref is
                Comment_End   => Current);
          end if;
 
+         if Beginning = 0 then
+            --  In Ada, packages end of spec is after the final "end;", which
+            --  is not where users put the documentation. So we also check
+            --  after the beginning of the spec.
+
+            Get_Documentation_After
+              (Context       => Language,
+               Buffer        => Buffer,
+               Decl_Index    => Decl_Start_Index,
+               Comment_Start => Beginning,
+               Comment_End   => Current);
+         end if;
+
       else
          Get_Documentation_After
            (Context       => Language,
@@ -4518,6 +4538,19 @@ package body GNATCOLL.Xref is
             Decl_Index    => Decl_End_Index,
             Comment_Start => Beginning,
             Comment_End   => Current);
+
+         if Beginning = 0 then
+            --  In Ada, packages end of spec is after the final "end;", which
+            --  is not where users put the documentation. So we also check
+            --  after the beginning of the spec.
+
+            Get_Documentation_After
+              (Context       => Language,
+               Buffer        => Buffer,
+               Decl_Index    => Decl_Start_Index,
+               Comment_Start => Beginning,
+               Comment_End   => Current);
+         end if;
 
          if Beginning = 0 then
             Get_Documentation_Before
