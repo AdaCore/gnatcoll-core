@@ -79,9 +79,10 @@ package body GNATCOLL.SQL.Sqlite.Builder is
      (Self : access Sqlite_Connection_Record) return Boolean;
    overriding function Connect_And_Execute
      (Connection  : access Sqlite_Connection_Record;
-      Query       : String;
       Is_Select   : Boolean;
       Direct      : Boolean;
+      Query       : String         := "";
+      Stmt        : DBMS_Stmt      := No_DBMS_Stmt;
       Params      : SQL_Parameters := No_Parameters)
       return Abstract_Cursor_Access;
    overriding function Connected_On
@@ -468,7 +469,7 @@ package body GNATCOLL.SQL.Sqlite.Builder is
       end if;
 
       if Status /= Sqlite_OK then
-         Trace (Me, "Connect_And_Execute failed to prepare statement for "
+         Trace (Me, "Connect_And_Prepare failed to prepare statement for "
                 & Query & ASCII.LF & Error_Msg (Connection.DB));
          Finalize (Stmt);
          return No_DBMS_Stmt;
@@ -624,37 +625,46 @@ package body GNATCOLL.SQL.Sqlite.Builder is
 
    overriding function Connect_And_Execute
      (Connection  : access Sqlite_Connection_Record;
-      Query       : String;
       Is_Select   : Boolean;
       Direct      : Boolean;
+      Query       : String         := "";
+      Stmt        : DBMS_Stmt      := No_DBMS_Stmt;
       Params      : SQL_Parameters := No_Parameters)
       return Abstract_Cursor_Access
    is
       Res    : Abstract_Cursor_Access := null;
-      Stmt   : DBMS_Stmt;
+      P_Stmt : DBMS_Stmt := Stmt;
    begin
-      Stmt := Connect_And_Prepare (Connection, Query, "", Direct);
+      if Stmt = No_DBMS_Stmt then
+         P_Stmt := Connect_And_Prepare (Connection, Query, "", Direct);
+      else
+         P_Stmt := Stmt;
+      end if;
 
-      if Stmt /= No_DBMS_Stmt then
+      if P_Stmt /= No_DBMS_Stmt then
          Res := Execute
            (Connection => Connection,
-            Prepared   => Stmt,
+            Prepared   => P_Stmt,
             Is_Select  => Is_Select,
             Direct     => Direct,
             Params     => Params);
 
+         --  If the statement was prepared locally (Stmt = No_DBMS_Stmt) then
+         --  finalize it now if needed.
+
          if Res /= null then
             if Res.all in Sqlite_Direct_Cursor'Class then
                Get_Cursor (Sqlite_Direct_Cursor_Access (Res).all).Free_Stmt :=
-                 True;
+                 Stmt = No_DBMS_Stmt;
             else
-               Sqlite_Cursor_Access (Res).Free_Stmt := True;
+               Sqlite_Cursor_Access (Res).Free_Stmt := Stmt = No_DBMS_Stmt;
             end if;
-         else
-            --  Stmt is no longer accessible, and yet if we don't finalize it
+
+         elsif Stmt = No_DBMS_Stmt then
+            --  P_Stmt is no longer accessible, and yet if we don't finalize it
             --  we are in effect keeping a transaction (or read transaction)
             --  open.
-            Finalize (Connection, Stmt);
+            Finalize (Connection, P_Stmt);
          end if;
       end if;
 

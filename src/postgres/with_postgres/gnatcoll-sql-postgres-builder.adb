@@ -91,9 +91,10 @@ package body GNATCOLL.SQL.Postgres.Builder is
      (Self : access Postgresql_Connection_Record) return Boolean;
    overriding function Connect_And_Execute
      (Connection  : access Postgresql_Connection_Record;
-      Query       : String;
       Is_Select   : Boolean;
       Direct      : Boolean;
+      Query       : String         := "";
+      Stmt        : DBMS_Stmt      := No_DBMS_Stmt;
       Params      : SQL_Parameters := No_Parameters)
       return Abstract_Cursor_Access;
    overriding function Connected_On
@@ -361,13 +362,15 @@ package body GNATCOLL.SQL.Postgres.Builder is
       with procedure Perform
         (Res    : out Result;
          Query  : String;
+         Stmt   : DBMS_Stmt;
          Params : SQL_Parameters := No_Parameters);
    procedure Connect_And_Do
      (Connection : access Postgresql_Connection_Record;
       Query      : String;
+      Stmt       : DBMS_Stmt;
       Res        : out Result;
       Success    : out Boolean;
-      Params      : SQL_Parameters := No_Parameters);
+      Params     : SQL_Parameters := No_Parameters);
    --  (Re)connect to the database if needed, and perform the action. If the
    --  result of the action is successfull (as per exec status in Res), Success
    --  is set to True and Res to the last result. Otherwise, Success is set to
@@ -524,6 +527,7 @@ package body GNATCOLL.SQL.Postgres.Builder is
    procedure Connect_And_Do
      (Connection : access Postgresql_Connection_Record;
       Query      : String;
+      Stmt       : DBMS_Stmt;
       Res        : out Result;
       Success    : out Boolean;
       Params      : SQL_Parameters := No_Parameters)
@@ -580,13 +584,13 @@ package body GNATCOLL.SQL.Postgres.Builder is
 
          --  Empty query: only check connection status
 
-         if Query = "" then
+         if Query = "" and then Stmt = No_DBMS_Stmt then
             return;
          end if;
 
          --  Here if we have a presumed working connection
 
-         Perform (Res, Query, Params);
+         Perform (Res, Query, Stmt, Params);
 
          Res_Status := Status (Res);
          case Res_Status is
@@ -669,6 +673,7 @@ package body GNATCOLL.SQL.Postgres.Builder is
       procedure Perform
         (Res    : out Result;
          Query  : String;
+         Stmt   : DBMS_Stmt;
          Params : SQL_Parameters := No_Parameters);
 
       -------------
@@ -678,8 +683,11 @@ package body GNATCOLL.SQL.Postgres.Builder is
       procedure Perform
         (Res    : out Result;
          Query  : String;
+         Stmt   : DBMS_Stmt;
          Params : SQL_Parameters := No_Parameters)
       is
+         pragma Assert (Stmt = No_DBMS_Stmt);
+
          CName : constant String := To_String (P_Stmt.Cursor);
       begin
          if Active (Me_Query) then
@@ -725,10 +733,12 @@ package body GNATCOLL.SQL.Postgres.Builder is
       end if;
 
       if Direct or else not Use_Cursors then
-         Do_Perform (Connection, Query, Res, Success);
+         Do_Perform (Connection,
+           Query, No_DBMS_Stmt, Res, Success);
       else
          Was_Started := Start_Transaction (Connection);
-         Do_Perform (Connection, Declare_Cursor (Query, P_Stmt), Res, Success);
+         Do_Perform (Connection,
+           Declare_Cursor (Query, P_Stmt), No_DBMS_Stmt, Res, Success);
       end if;
 
       Clear (Res);
@@ -756,9 +766,9 @@ package body GNATCOLL.SQL.Postgres.Builder is
       Params      : SQL_Parameters := No_Parameters)
       return Abstract_Cursor_Access
    is
-      R   : Postgresql_Cursor_Access;
-      DR  : Postgresql_Direct_Cursor_Access;
-      Res : Result;
+      R    : Postgresql_Cursor_Access;
+      DR   : Postgresql_Direct_Cursor_Access;
+      Res  : Result;
       Stmt : constant Postgresql_DBMS_Stmt := Convert (Prepared);
       Name : constant String := To_String (Stmt.Cursor);
    begin
@@ -850,15 +860,17 @@ package body GNATCOLL.SQL.Postgres.Builder is
 
    function Connect_And_Execute
      (Connection  : access Postgresql_Connection_Record;
-      Query       : String;
       Is_Select   : Boolean;
       Direct      : Boolean;
+      Query       : String         := "";
+      Stmt        : DBMS_Stmt      := No_DBMS_Stmt;
       Params      : SQL_Parameters := No_Parameters)
       return Abstract_Cursor_Access
    is
       procedure Perform
         (Res    : out Result;
          Query  : String;
+         Stmt   : DBMS_Stmt;
          Params : SQL_Parameters := No_Parameters);
 
       -------------
@@ -868,9 +880,19 @@ package body GNATCOLL.SQL.Postgres.Builder is
       procedure Perform
         (Res    : out Result;
          Query  : String;
+         Stmt   : DBMS_Stmt;
          Params : SQL_Parameters := No_Parameters) is
       begin
-         Execute (Res, Connection.Postgres.all, Query, Connection.all, Params);
+         if Stmt /= No_DBMS_Stmt then
+            Exec_Prepared (Res,
+              Connection.Postgres.all,
+              To_String (Convert (Stmt).Cursor),
+              Connection.all,
+              Params);
+         else
+            Execute (Res,
+              Connection.Postgres.all, Query, Connection.all, Params);
+         end if;
       end Perform;
 
       procedure Do_Perform is new Connect_And_Do (Perform);
@@ -883,7 +905,8 @@ package body GNATCOLL.SQL.Postgres.Builder is
         Direct
         or else not Is_Select
         or else not Use_Cursors
-        or else Query = "";
+        or else Query = ""
+        or else Stmt /= No_DBMS_Stmt;
 
    --  Start of processing for Connect_And_Execute
 
@@ -896,7 +919,7 @@ package body GNATCOLL.SQL.Postgres.Builder is
       end if;
 
       if Create_Direct then
-         Do_Perform (Connection, Query, Res, Success, Params);
+         Do_Perform (Connection, Query, Stmt, Res, Success, Params);
       else
          R.Nested_Transactions := Start_Transaction (Connection);
 
@@ -907,7 +930,12 @@ package body GNATCOLL.SQL.Postgres.Builder is
            ("stmt" & Image (Connection.Cursor, 0));
 
          Do_Perform
-           (Connection, Declare_Cursor (Query, R.Stmt), Res, Success, Params);
+           (Connection,
+            Declare_Cursor (Query, R.Stmt),
+            No_DBMS_Stmt,
+            Res,
+            Success,
+            Params);
       end if;
 
       if Connection.Postgres = null then

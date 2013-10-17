@@ -774,7 +774,7 @@ package body GNATCOLL.SQL.Exec is
       Start : Time;
 
       Q : access String := Query'Unrestricted_Access;
-      --  Should be safe here, we do not intend to free anything.
+      --  Should be safe here, we do not intend to free anything
 
    begin
       if Active (Me_Perf) then
@@ -854,22 +854,13 @@ package body GNATCOLL.SQL.Exec is
       end if;
 
       if Perform_Queries then
-         if Stmt /= No_DBMS_Stmt then
-            R := Execute
-              (Connection => Connection,
-               Prepared   => Stmt,
-               Is_Select  => Is_Select,
-               Direct     => Direct,
-               Params     => Params);
-
-         else
-            R := Connect_And_Execute
-              (Connection => Connection,
-               Query      => Q.all,
-               Is_Select  => Is_Select,
-               Direct     => Direct,
-               Params     => Params);
-         end if;
+         R := Connect_And_Execute
+           (Connection => Connection,
+            Query      => Q.all,
+            Stmt       => Stmt,
+            Is_Select  => Is_Select,
+            Direct     => Direct,
+            Params     => Params);
 
          if R = null then
             if Active (Me_Error) then

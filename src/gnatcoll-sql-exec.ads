@@ -800,17 +800,24 @@ package GNATCOLL.SQL.Exec is
    --  for each DBMS. You should not use them directly in your applications,
    --  since the subprograms above wrap them better.
 
+   type DBMS_Stmt is new System.Address;
+   No_DBMS_Stmt : constant DBMS_Stmt;
+   --  A statement prepared on the server. This is only valid for a specific
+   --  connection.
+
    function Connect_And_Execute
      (Connection  : access Database_Connection_Record;
-      Query       : String;
       Is_Select   : Boolean;
       Direct      : Boolean;
+      Query       : String         := "";
+      Stmt        : DBMS_Stmt      := No_DBMS_Stmt;
       Params      : SQL_Parameters := No_Parameters)
       return Abstract_Cursor_Access is abstract;
    --  This is mostly an internal subprogram, overridden by all DBMS-specific
    --  backends.
    --  If the connection to the database has not been made yet, connect to it.
-   --  Then perform the query, reconnecting once if the connection failed.
+   --  Then perform the query or prepared statement, reconnecting once if the
+   --  connection failed. (If Stmt is set, Query is ignored).
    --  Will return null if the connection to the database is bad.
    --  If the query is the empty string, this procedure only connects to
    --  the database and checks the connection. It returns null if the
@@ -819,11 +826,6 @@ package GNATCOLL.SQL.Exec is
    --  Forward_Cursor. The connection is allowed to return a direct cursor even
    --  if the user only wanted a forward_cursor, but the opposite is not
    --  allowed.
-
-   type DBMS_Stmt is new System.Address;
-   No_DBMS_Stmt : constant DBMS_Stmt;
-   --  A statement prepared on the server. This is only valid for a specific
-   --  connection.
 
    function Connect_And_Prepare
      (Connection : access Database_Connection_Record;
