@@ -42,7 +42,14 @@ package body GNATCOLL.Xref is
    Me_Debug   : constant Trace_Handle := Create ("ENTITIES.DEBUG", Off);
    Me_Forward : constant Trace_Handle := Create ("ENTITIES.FORWARD", Off);
    Me_Timing  : constant Trace_Handle := Create ("ENTITIES.TIMING");
+
    Me_Use_WAL : constant Trace_Handle := Create ("ENTITIES.USE_WAL", On);
+   --  Whether to use WAL journaling
+
+   Me_Commit_Before_Indexes : constant Trace_Handle :=
+      Create ("ENTITIES.COMMIT_BEFORE_INDEXES", On);
+   --  If set, a COMMIT is done before we recreate the indexes, so that GPS
+   --  can still making (slow) queries immediately.
 
    Instances_Provide_Column : constant Boolean := False;
    --  Whether instance info in the ALI files provide the column information.
@@ -3483,6 +3490,15 @@ package body GNATCOLL.Xref is
                    "Parsed" & LIs.Length'Img & " files:"
                    & Duration'Image (Dur / Integer (LIs.Length)) & "/file,"
                    & Dur'Img & " s");
+         end if;
+
+         --  Do a commit now, so that other users (like GPS) can start
+         --  querying immediately even if we haven't recreated the indexes
+         --  yet.
+
+         if Active (Me_Commit_Before_Indexes) then
+            DB.Commit_Or_Rollback;
+            DB.Execute ("PRAGMA wal_checkpoint(RESTART);");
          end if;
       end Parse_Files;
 
