@@ -881,16 +881,6 @@ package body GNATCOLL.Projects is
                                    Self.Data.Tree.Objects_Basename.Find
                                      (B (B'First .. B_Last));
                               end if;
-                           else
-                              Trace (Me, "MANU object info for "
-                                     & Tmp (F).Display_Full_Name
-                                     & " " & (+B)
-                                     & " is "
-                                     & Element (Info_Cursor).Project.Name
-                                     & " exclude="
-                                     & Exclude_Overridden'Img & " recursive="
-                                     & Recursive'Img & " current="
-                                     & Current_Project.Name);
                            end if;
 
                            --  An LI file is taking into account if:
@@ -963,7 +953,9 @@ package body GNATCOLL.Projects is
                               --  with the object dirs.
 
                               Should_Append :=
-                                Dir = Lowest_Project.Object_Dir;
+                                Dir = Lowest_Project.Object_Dir
+                                or else Dir =
+                                  Lowest_Project.Library_Ali_Directory;
                            end if;
                         end;
 
