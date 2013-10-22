@@ -1437,8 +1437,8 @@ package body GNATCOLL.Xref is
       begin
          while Has_Element (C) loop
             if Element (C).Id = Id then
-               if Active (Me_Parsing) then
-                  Trace (Me_Parsing, "Is_Unit_File Id=" & Id'Img
+               if Active (Me_Debug) then
+                  Trace (Me_Debug, "Is_Unit_File Id=" & Id'Img
                          & " Index=" & Index'Img);
                end if;
 
@@ -1943,8 +1943,8 @@ package body GNATCOLL.Xref is
          end if;
 
          if Is_ALI_Unit then
-            if Active (Me_Parsing) then
-               Trace (Me_Parsing, "Append to Unit_Files "
+            if Active (Me_Debug) then
+               Trace (Me_Debug, "Append to Unit_Files "
                       & Result.Id'Img);
             end if;
             Unit_Files.Append (Result);
@@ -2269,8 +2269,8 @@ package body GNATCOLL.Xref is
                end;
 
                Current_X_File_Unit_File_Index := Is_Unit_File (Current_X_File);
-               if Active (Me_Parsing) then
-                  Trace (Me_Parsing, "Process_Xref_Section current="
+               if Active (Me_Debug) then
+                  Trace (Me_Debug, "Process_Xref_Section current="
                          & Current_X_File'Img & " is_unit_file="
                          & Current_X_File_Unit_File_Index'Img);
                end if;
@@ -3402,6 +3402,11 @@ package body GNATCOLL.Xref is
             if Lib.Id /= -1 then
                DB.Execute
                  ("INSERT INTO temp_lis VALUES (" & Lib.Id'Img & ");");
+
+               if Active (Me_Parsing) then
+                  Trace (Me_Parsing, "Cleanup "
+                         & Lib.LI.Library_File.Display_Full_Name);
+               end if;
             end if;
             Next (LI_C);
          end loop;
@@ -3517,9 +3522,13 @@ package body GNATCOLL.Xref is
       end if;
 
       Project.Library_Files
-        (Recursive => True, Xrefs_Dirs => True, Including_Libraries => True,
-         ALI_Ext => "^.*\.[ags]li$", List => LI_Files,
-         Include_Predefined => Parse_Runtime_Files);
+        (Recursive           => True,
+         Xrefs_Dirs          => True,
+         Including_Libraries => True,
+         ALI_Ext             => "^.*\.[ags]li$",
+         List                => LI_Files,
+         Include_Predefined  => Parse_Runtime_Files,
+         Exclude_Overridden  => True);
 
       if Active (Me_Timing) then
          Trace (Me_Timing,
