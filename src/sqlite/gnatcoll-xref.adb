@@ -24,6 +24,7 @@ with Ada.Containers.Vectors;
 with Ada.Strings.Fixed;
 with Ada.Strings.Maps;
 with Ada.Unchecked_Deallocation;
+with GNAT.Calendar.Time_IO;   use GNAT.Calendar.Time_IO;
 with GNAT.OS_Lib;
 with GNATCOLL.Xref.Database;  use GNATCOLL.Xref.Database;
 with GNATCOLL.Mmap;           use GNATCOLL.Mmap;
@@ -6151,6 +6152,10 @@ package body GNATCOLL.Xref is
                           not Files.Is_Null (1),
                           "No registered timestamp for ALI file "
                           & Files.Value (0));
+                  Trace (Me_Debug,
+                         "ali db=" & Image (Files.Time_Value (1), "%D-%T")
+                         & " src disk="
+                         & Image (File.File_Time_Stamp, "%D-%T"));
                end if;
                return Files.Time_Value (1) >= File.File_Time_Stamp;
             else
