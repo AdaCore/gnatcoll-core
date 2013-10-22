@@ -351,7 +351,7 @@ package body GNATCOLL.SQL.Sqlite.Builder is
      (Connection : access Sqlite_Connection_Record) is
    begin
       Trace (Me, "Closing connection to sqlite");
-      Mark_As_Closed (Connection);
+      Mark_As_Closed (Connection, Closed => True);
       Close (Connection.DB, Finalize_Prepared_Statements => True);
       Connection.DB := No_Database;
    end Close;
@@ -408,6 +408,7 @@ package body GNATCOLL.SQL.Sqlite.Builder is
                "Could not connect to database: " & Error_Msg (Connection.DB));
             Connection.Close;   --  avoid memory leaks
          else
+            Mark_As_Closed (Connection, Closed => False);
             Set_Busy_Timeout (Connection.DB, Max_Ms_On_Busy);
 
             --  Make sure that with appropriate versions of sqlite (>= 3.6.19)

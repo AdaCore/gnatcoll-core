@@ -122,7 +122,7 @@ package body GNATCOLL.SQL.Exec is
       procedure Reset;
       --  Reset the cache
 
-      procedure Mark_DB_As_Free (DB : Database_Connection);
+      procedure Mark_DB_As_Free (DB : Database_Connection; Closed : Boolean);
       function Was_Freed (DB : Database_Connection) return Boolean;
 
    private
@@ -304,10 +304,16 @@ package body GNATCOLL.SQL.Exec is
       -- Mark_DB_As_Free --
       ---------------------
 
-      procedure Mark_DB_As_Free (DB : Database_Connection) is
+      procedure Mark_DB_As_Free (DB : Database_Connection; Closed : Boolean) is
       begin
          GNAT.Task_Lock.Lock;
-         Freed_DB.Include (DB);
+
+         if Closed then
+            Freed_DB.Include (DB);
+         else
+            Freed_DB.Delete (DB);
+         end if;
+
          GNAT.Task_Lock.Unlock;
 
       exception
@@ -1445,9 +1451,10 @@ package body GNATCOLL.SQL.Exec is
    --------------------
 
    procedure Mark_As_Closed
-     (Connection : access Database_Connection_Record'Class) is
+     (Connection : access Database_Connection_Record'Class;
+      Closed     : Boolean) is
    begin
-      Query_Cache.Mark_DB_As_Free (Database_Connection (Connection));
+      Query_Cache.Mark_DB_As_Free (Database_Connection (Connection), Closed);
    end Mark_As_Closed;
 
    ----------------
@@ -1473,7 +1480,7 @@ package body GNATCOLL.SQL.Exec is
          Free (Connection.Username);
          Free (Connection.Error_Msg);
 
-         Mark_As_Closed (Connection);
+         Mark_As_Closed (Connection, Closed => True);
          Unchecked_Free (Connection);
       end if;
    end Free;
