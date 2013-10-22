@@ -889,7 +889,8 @@ package body GNATCOLL.Projects is
                                      & Element (Info_Cursor).Project.Name
                                      & " exclude="
                                      & Exclude_Overridden'Img & " recursive="
-                                     & Recursive'Img);
+                                     & Recursive'Img & " current="
+                                     & Current_Project.Name);
                            end if;
 
                            --  An LI file is taking into account if:
@@ -956,8 +957,13 @@ package body GNATCOLL.Projects is
                                  P := P.Extending_Project;
                               end loop For_Each_Extending_Project;
 
+                              --  Since we are traversing each directory only
+                              --  once, we cannot check that Lowest_Project is
+                              --  Current_Project. Instead, we need to check
+                              --  with the object dirs.
+
                               Should_Append :=
-                                Lowest_Project = Current_Project;
+                                Dir = Lowest_Project.Object_Dir;
                            end if;
                         end;
 
