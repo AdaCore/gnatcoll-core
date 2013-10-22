@@ -4,6 +4,15 @@ Known Problems in Gnatcoll 1.5
 
 Copyright (C) 2012-2013, AdaCore
 
+KP-15-MA17-007 GNATCOLL.Projects.Library_Files shows overridden files
+
+  Problem:    This function does not always filter out ALI files that
+              have been overridden in extending projects.
+
+  Status:     Fixes in Gnatcoll 1.6.0
+
+  Workaround: None
+
 KP-15-MA08-038 GNATCOLL.Traces should not write to stdout by default
 
   Problem:    If you link with code that uses GNATCOLL.Traces (like GNATCOLL

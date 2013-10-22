@@ -166,6 +166,9 @@ package body GNATCOLL.Projects is
       --  The basename (with no extension or directory) of the object files.
       --  This is used to quickly filter out the relevant object or library
       --  files when an object directory is shared amongst multiple projects.
+      --  This table does not point to the actual location of the object
+      --  files, which might be in an extending project. It only provides a
+      --  quick way to filter out irrelevant object files.
 
       Directories : Directory_Statuses.Map;
       --  Index on directory name
@@ -815,6 +818,8 @@ package body GNATCOLL.Projects is
       --  We do not call Object_Path with Recursive=>True, but instead
       --  iterate explicitly on the projects so that we can control which of
       --  the object_dir or library_dir we want to use *for each project*.
+      --
+      --  We are seeing extending projects before extended projects
 
       Prj_Iter := Self.Start_Reversed (Recursive => Recursive);
       loop
@@ -855,6 +860,7 @@ package body GNATCOLL.Projects is
                              Get_Base_Name (Tmp (F));
                            B_Last : Integer := B'Last;
                            Dot : Integer;
+                           P, Lowest_Project   : Project_Type;
                         begin
                            Info_Cursor :=
                              Self.Data.Tree.Objects_Basename.Find (B);
@@ -875,60 +881,83 @@ package body GNATCOLL.Projects is
                                    Self.Data.Tree.Objects_Basename.Find
                                      (B (B'First .. B_Last));
                               end if;
+                           else
+                              Trace (Me, "MANU object info for "
+                                     & Tmp (F).Display_Full_Name
+                                     & " " & (+B)
+                                     & " is "
+                                     & Element (Info_Cursor).Project.Name
+                                     & " exclude="
+                                     & Exclude_Overridden'Img & " recursive="
+                                     & Recursive'Img);
                            end if;
 
-                           --  We must know information about the LI file. In
-                           --  particular, it must match the current project,
-                           --  or any project if we are in recursive mode
-                           --  (since each object directory is parsed only
-                           --  once)
-                           Should_Append :=
-                             Has_Element (Info_Cursor)
-                             and then
-                               (not Exclude_Overridden
-                                or else
-                                  (Recursive
-                                   and then Element (Info_Cursor).Project /=
-                                     No_Project)
-                                or else Element (Info_Cursor).Project =
-                                  Current_Project);
+                           --  An LI file is taking into account if:
+                           --  * it has a name that is known in this
+                           --    project (and thus matches one source file).
+                           --    This is a quick filter.
+                           --  * AND it is not overridden in one of the
+                           --    extending projects.
+                           --    This test is not necessary if we don't want
+                           --    to filter out overridden LI files
 
-                           --  We could have a case where an ALI file is
-                           --  reported as belonging to project A, even though
-                           --  it is found in B's object_dir when B extends A.
-                           --  In this case, we need to change the ownership
-                           --  of the ALI file so that:
-                           --     - the one in B is parsed
-                           --     - the one in A is not parsed
+                           if not Has_Element (Info_Cursor) then
+                              if Active (Me) then
+                                 Trace (Me, "Library_Files not including : "
+                                        & Display_Base_Name (Tmp (F))
+                                        & " (which is for unknown project)");
+                              end if;
+                              Should_Append := False;
 
-                           if Has_Element (Info_Cursor)
-                             and then Element (Info_Cursor).Project /=
-                             Current_Project
-                           then
-                              declare
-                                 P : Project_Type := Self.Extended_Project;
-                              begin
-                                 while P /= No_Project loop
-                                    if P = Element (Info_Cursor).Project then
-                                       Should_Append := True;
+                           elsif not Exclude_Overridden then
+                              Should_Append :=
+                                Element (Info_Cursor).Project /= No_Project;
 
-                                       if Exclude_Overridden then
-                                          --  Make sure it will not be parsed
-                                          --  again in the context of the
-                                          --  extended project.
-                                          Self.Data.Tree
-                                            .Objects_Basename.Include
-                                            (B (B'First .. B_Last),
-                                             (Self,
-                                              Element (Info_Cursor).File,
-                                              Element (Info_Cursor).Lang,
-                                              Element (Info_Cursor).Source));
+                           else
+                              --  P is the candidate project that contains the
+                              --  LI file, but the latter might be overridden
+                              --  in any project extending P.
+                              P := Element (Info_Cursor).Project;
+
+                              --  This will contain the most-extending project
+                              --  that contains a homonym of the LI file
+                              Lowest_Project := P;
+
+                              P := P.Extending_Project;
+
+                              For_Each_Extending_Project :
+                              while P /= No_Project loop
+                                 declare
+                                    Objs  : constant File_Array :=
+                                      P.Object_Path
+                                        (Recursive           => False,
+                                         Including_Libraries =>
+                                           Including_Libraries,
+                                         Xrefs_Dirs          => Xrefs_Dirs);
+                                 begin
+                                    for Obj in Objs'Range loop
+                                       if Create_From_Base
+                                         (Tmp (F).Base_Name,
+                                          Objs (Obj).Full_Name.all)
+                                           .Is_Regular_File
+                                       then
+                                          if Active (Me) then
+                                             Trace
+                                               (Me, "overridden in project "
+                                                & P.Name);
+                                          end if;
+
+                                          Lowest_Project := P;
+                                          exit;
                                        end if;
-                                       exit;
-                                    end if;
-                                    P := P.Extended_Project;
-                                 end loop;
-                              end;
+                                    end loop;
+                                 end;
+
+                                 P := P.Extending_Project;
+                              end loop For_Each_Extending_Project;
+
+                              Should_Append :=
+                                Lowest_Project = Current_Project;
                            end if;
                         end;
 
@@ -939,18 +968,14 @@ package body GNATCOLL.Projects is
                                  Source_File  =>
                                    Element (Info_Cursor).File));
 
-                        elsif Active (Me) then
-                           if Has_Element (Info_Cursor) then
-                              Trace (Me, "Library_Files not including : "
-                                     & Display_Base_Name (Tmp (F))
-                                     & " (which is for project "
-                                     & Element (Info_Cursor).Project.Name
-                                     & ")");
-                           else
-                              Trace (Me, "Library_Files not including : "
-                                     & Display_Base_Name (Tmp (F))
-                                     & " (which is for unknown project)");
-                           end if;
+                        elsif Active (Me)
+                          and then Has_Element (Info_Cursor)
+                        then
+                           Trace (Me, "Library_Files not including : "
+                                  & Display_Base_Name (Tmp (F))
+                                  & " (which is for project "
+                                  & Element (Info_Cursor).Project.Name
+                                  & ")");
                         end if;
                      end if;
                   end loop;
@@ -5062,6 +5087,7 @@ package body GNATCOLL.Projects is
         and then Project_Qualifier_Of (Project, Tree.Data.Tree) =
         Prj.Aggregate
       then
+         Trace (Me, "Aggregate projects are not supported");
          Fail ("Aggregate projects are not supported");
          Project := Empty_Node;
          return;
@@ -5070,6 +5096,8 @@ package body GNATCOLL.Projects is
       if Project /= Empty_Node
         and then Tree.Data.Tree.Incomplete_With
       then
+         Trace (Me, "Could not find some with-ed projects");
+
          --  Some "with" were found that could not be resolved. Check whether
          --  the user has specified a "gnatlist" switch. For this, we need to
          --  do phase1 of the processing (ie not look for sources).
@@ -5092,6 +5120,7 @@ package body GNATCOLL.Projects is
                Reset_Tree             => True);
 
             if not Success then
+               Trace (Me, "Processing phase 1 failed");
                Project := Empty_Node;
             else
                Trace (Me, "Looking for IDE'gnatlist attribute");
@@ -5179,6 +5208,8 @@ package body GNATCOLL.Projects is
          return;
 
       elsif Test_With_Missing_With then
+         Trace (Me, "Project parsed with success");
+
          --  We correctly parsed the project, but should finalize anyway
          if Report_Syntax_Errors then
             Prj.Err.Finalize;
@@ -5791,8 +5822,14 @@ package body GNATCOLL.Projects is
                           Base_Name
                             (Filesystem_String
                                (Get_Name_String (Source.Object)),
-                                ".o");
+                             ".o");
                      begin
+                        --  We know the actual object file will be in either
+                        --  P or one of its extending projects. We can't
+                        --  compute this information now though, because the
+                        --  sources might not have been compiled. So the final
+                        --  computation is done directly in Library_Files.
+
                         if Source.Index = 0 then
                            Self.Data.Objects_Basename.Include
                              (Base, (P, File, Source.Language.Name, Source));
