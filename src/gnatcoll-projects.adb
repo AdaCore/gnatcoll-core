@@ -952,10 +952,23 @@ package body GNATCOLL.Projects is
                               --  Current_Project. Instead, we need to check
                               --  with the object dirs.
 
-                              Should_Append :=
-                                Dir = Lowest_Project.Object_Dir
-                                or else Dir =
-                                  Lowest_Project.Library_Ali_Directory;
+                              Should_Append := Lowest_Project = P;
+
+                              if not Should_Append then
+                                 declare
+                                    Lowest_Objs : constant File_Array :=
+                                       Lowest_Project.Object_Path
+                                          (Recursive => False,
+                                           Including_Libraries =>
+                                              Including_Libraries,
+                                           Xrefs_Dirs          => Xrefs_Dirs);
+                                 begin
+                                    for Ob in Lowest_Objs'Range loop
+                                       Should_Append := Lowest_Objs (Ob) = Dir;
+                                       exit when Should_Append;
+                                    end loop;
+                                 end;
+                              end if;
                            end if;
                         end;
 
