@@ -143,6 +143,12 @@ package body GNATCOLL.Mmap is
 
    procedure Close (File : in out Mapped_File) is
    begin
+      --  Closing a closed file is allowed and should do nothing
+
+      if File = Invalid_Mapped_File then
+         return;
+      end if;
+
       if File.Current_Region /= null then
          Free (File.Current_Region);
       end if;
@@ -162,6 +168,12 @@ package body GNATCOLL.Mmap is
       Ignored : Integer;
       pragma Unreferenced (Ignored);
    begin
+      --  Freeing an already free'd file is allowed and should do nothing
+
+      if Region = Invalid_Mapped_Region then
+         return;
+      end if;
+
       if Region.Mapping /= Invalid_System_Mapping then
          Dispose_Mapping (Region.Mapping);
       end if;
