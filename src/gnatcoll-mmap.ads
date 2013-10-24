@@ -81,25 +81,35 @@
 --         Offs := Offs + Long_Integer (Last (File));
 --     end loop;
 
-with GNAT.OS_Lib;
-with GNAT.Strings;
-with System;
 with Interfaces.C;
+
+with GNAT.Strings;
 
 package GNATCOLL.Mmap is
 
    type Mapped_File is private;
-   --  A representation of (part of) a file in memory.
-   --  This package will use the fastest possible algorithm to load the file in
-   --  memory. On systems that support it, the file is not really loaded in
-   --  memory. Instead, a call to the mmap() system call (or
-   --  CreateFileMapping()) will keep the file on disk, but make it accessible
-   --  as if it was in memory.
+   --  File to be mapped in memory.
+
+   --  This package will use the fastest possible algorithm to load the
+   --  file in memory. On systems that support it, the file is not really
+   --  loaded in memory. Instead, a call to the mmap() system call (or
+   --  CreateFileMapping()) will keep the file on disk, but make it
+   --  accessible as if it was in memory.
+
    --  When the system does not support it, the file is actually loaded in
    --  memory through calls to read(), and written back with write() when you
-   --  close it. This is of course much slower
+   --  close it. This is of course much slower.
+
+   --  Legacy: each mapped file has a "default" mapped region in it.
+
+   type Mapped_Region is private;
+   --  A representation of part of a file in memory. Actual reading/writing
+   --  is done through a mapped region. After being returned by Read, a mapped
+   --  region must be free'd when done. If the original Mapped_File was open
+   --  for reading, it can be closed before the mapped region is free'd.
 
    Invalid_Mapped_File : constant Mapped_File;
+   Invalid_Mapped_Region : constant Mapped_Region;
 
    type Unconstrained_String is new String (Positive);
    type Str_Access is access all Unconstrained_String;
@@ -131,57 +141,97 @@ package GNATCOLL.Mmap is
    --  Filename should be compatible with the filesystem.
 
    procedure Close (File : in out Mapped_File);
-   --  Close the file, and unmap the memory that is used.
-   --  If the system does not support the unmmap() system call or equivalent,
-   --  or these were not available for the file itself, then the file is
-   --  written back to the disk if it was opened for writing.
+   --  Close the file, and unmap the memory that is used for the region
+   --  contained in File. If the system does not support the unmmap() system
+   --  call or equivalent, or these were not available for the file itself,
+   --  then the file is written back to the disk if it was opened for writing.
+
+   procedure Free (Region : in out Mapped_Region);
+   --  Unmap the memory that is used for this region and deallocate the region
 
    procedure Read
-     (File   : in out Mapped_File;
+     (File   : Mapped_File;
+      Region : in out Mapped_Region;
       Offset : File_Size := 0;
-      Length : File_Size := 0);
-   --  Read a specific part of the file in memory. Offset is the number of
-   --  bytes since the beginning of the file at which we should start reading.
-   --  Length is the number of bytes that should be read. If set to 0, as much
-   --  of the file as possible is read (presumably the whole file unless you
-   --  are reading a _huge_ file).
-   --  Nothing is done if that part of the file is already available through
-   --  File.
-   --  If the file was opened for writing, any modification you do to the data
-   --  stored in File will be stored on disk (either immediately when the file
-   --  is opened through a mmap() system call, or when the file is closed
+      Length : File_Size := 0;
+      Mutable : Boolean := False);
+   --  Read a specific part of File and set Region to the corresponding mapped
+   --  region, or re-use it if possible.
+   --  Offset is the number of bytes since the beginning of the file at which
+   --  we should start reading. Length is the number of bytes that should be
+   --  read. If set to 0, as much of the file as possible is read (presumably
+   --  the whole file unless you are reading a _huge_ file).
+   --  Note that no (un)mapping is is done if that part of the file is already
+   --  available through Region.
+   --  If the file was opened for writing, any modification you do to the
+   --  data stored in File will be stored on disk (either immediately when the
+   --  file is opened through a mmap() system call, or when the file is closed
    --  otherwise).
-   --  There is no guarantee that the data read will actually start at Offset,
-   --  or be only Length characters in length, since at the system level the
-   --  offset must be a multiple of the page size on your system. So you should
-   --  always use the functions below to get information on what exactly was
-   --  mapped.
+   --  Mutable is processed only for reading files. If set to True, the
+   --  data can be modified, even through it will not be carried through the
+   --  underlying file, nor it is guaranteed to be carried through remapping.
+   --  This function takes care of page size alignment issues. The accessors
+   --  below only expose the region that has been requested by this call, even
+   --  if more bytes were actually mapped by this function.
+   --  TODO??? Enable to have a private copy for readable files
 
-   function Offset (File : Mapped_File) return File_Size;
-   --  Return the offset, in the physical file on disk, corresponding to the
-   --  region mapped in File.
+   function Read
+     (File    : Mapped_File;
+      Offset  : File_Size := 0;
+      Length  : File_Size := 0;
+      Mutable : Boolean := False) return Mapped_Region;
+   --  Likewise, return a new mapped region
 
-   function Last (File : Mapped_File) return Integer;
-   --  Return the number of bytes mapped in File.
-   --  It is erroneous to access Data for indices outside of 1 .. Last (File);
-   --  such accesses may cause Storage_Error to be raised.
+   procedure Read
+     (File    : Mapped_File;
+      Offset  : File_Size := 0;
+      Length  : File_Size := 0;
+      Mutable : Boolean := False);
+   --  Likewise, use the legacy "default" region in File
 
    function Length (File : Mapped_File) return File_Size;
    --  Size of the file on the disk
 
+   function Offset (Region : Mapped_Region) return File_Size;
+   --  Return the offset, in the physical file on disk, corresponding to the
+   --  requested mapped region. The first byte in the file has offest 0.
+
+   function Offset (File : Mapped_File) return File_Size;
+   --  Likewise for the region contained in File
+
+   function Last (Region : Mapped_Region) return Integer;
+   --  Return the number of requested bytes mapped in this region. It is
+   --  erroneous to access Data for indices outside 1 .. Last (Region).
+   --  Such accesses may cause Storage_Error to be raised.
+
+   function Last (File : Mapped_File) return Integer;
+   --  Return the number of requested bytes mapped in the region contained in
+   --  File. It is erroneous to access Data for indices outside of 1 .. Last
+   --  (File); such accesses may cause Storage_Error to be raised.
+
+   function Data (Region : Mapped_Region) return Str_Access;
+   --  The data mapped in Region as requested. The result is an unconstrained
+   --  string, so you cannot use the usual 'First and 'Last attributes.
+   --  Instead, these are respectively 1 and Size.
+
    function Data (File : Mapped_File) return Str_Access;
-   --  The data read from the file. The result is an unconstrained string, so
-   --  you cannot use the usual 'First and 'Last attributes. Instead, these are
-   --  respectively 1 and Last (File).
+   --  Likewise for the region contained in File
+
+   function Is_Mutable (Region : Mapped_Region) return Boolean;
+   --  Return whether it is safe to change bytes in Data (Region). This is true
+   --  for regions from writeable files, for regions mapped with the "Mutable"
+   --  flag set, and for regions that are copied in a buffer. Note that it is
+   --  not specified whether empty regions are mutable or not, since there is
+   --  no byte no modify.
 
    function Is_Mmapped (File : Mapped_File) return Boolean;
-   --  Whether the file was opened through an mmap() system call or equivalent.
-   --  This is in general irrelevant to your application, unless the file can
-   --  be accessed by multiple concurrent processes or tasks. In such a case,
-   --  and if the file is indeed mmap-ed, then the various parts of the file
-   --  can be written simulatenously, and thus you cannot ensure the integrity
-   --  of the file. If the file is not mmapped, the latest process to Close it
-   --  overwrite what other processes have done.
+   --  Whether regions for this file are opened through an mmap() system call
+   --  or equivalent. This is in general irrelevant to your application, unless
+   --  the file can be accessed by multiple concurrent processes or tasks. In
+   --  such a case, and if the file is indeed mmap-ed, then the various parts
+   --  of the file can be written simulatenously, and thus you cannot ensure
+   --  the integrity of the file. If the file is not mmapped, the latest
+   --  process to Close it overwrite what other processes have done.
 
    function Get_Page_Size return Integer;
    --  Returns the number of bytes in a page. Once a file is mapped from the
@@ -205,25 +255,13 @@ package GNATCOLL.Mmap is
 private
    pragma Inline (Data, Length, Last, Offset, Is_Mmapped, To_Str_Access);
 
-   --  ??? The components of the record below must be documented!
+   type Mapped_File_Record;
+   type Mapped_File is access Mapped_File_Record;
 
-   type Mapped_File is record
-      Data               : Str_Access;
-      Buffer             : GNAT.Strings.String_Access;
-      Offset             : File_Size;
-      Last               : Integer;
-      Length             : File_Size;
-      Write              : Boolean;
-      Mapped             : Boolean;
-      Fd                 : GNAT.OS_Lib.File_Descriptor;
-      Page_Size          : File_Size;
-      --  Win32 specific handle below
-      Handle, Map_Handle : System.Address;
-   end record;
-   --  Fd is either a file descriptor on Unix systems or a Handle on Windows
+   type Mapped_Region_Record;
+   type Mapped_Region is access Mapped_Region_Record;
 
-   Invalid_Mapped_File : constant Mapped_File :=
-     (null, null, 0, 0, 0, False, False,
-      GNAT.OS_Lib.Invalid_FD, 0, System.Null_Address, System.Null_Address);
+   Invalid_Mapped_File   : constant Mapped_File := null;
+   Invalid_Mapped_Region : constant Mapped_Region := null;
 
 end GNATCOLL.Mmap;

@@ -53,11 +53,17 @@ project GnatColl is
    package Naming is
       case OS is
          when "unix" =>
-            for Implementation ("GNATCOLL.Mmap") use "gnatcoll-mmap__unix.adb";
+            for Specification  ("GNATCOLL.Mmap.System")
+              use "gnatcoll-mmap-system__unix.ads";
+            for Implementation ("GNATCOLL.Mmap.System")
+              use "gnatcoll-mmap-system__unix.adb";
             for Implementation ("GNATCOLL.IO.Native.Codec")
 	      use "gnatcoll-io-native-codec__unix.adb";
          when "Windows_NT" =>
-            for Implementation ("GNATCOLL.Mmap") use "gnatcoll-mmap__win32.adb";
+            for Specification  ("GNATCOLL.Mmap.System")
+              use "gnatcoll-mmap-system__win32.ads";
+            for Implementation ("GNATCOLL.Mmap.System")
+              use "gnatcoll-mmap-system__win32.adb";
             for Implementation ("GNATCOLL.IO.Native.Codec")
 	      use "gnatcoll-io-native-codec__win32.adb";
       end case;
