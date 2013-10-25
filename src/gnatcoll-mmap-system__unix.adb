@@ -168,7 +168,7 @@ package body GNATCOLL.Mmap.System is
       Flags : Mmap_Flags;
    begin
       if File.Write then
-         Prot  := PROT_WRITE;
+         Prot  := PROT_READ or PROT_WRITE;
          Flags := MAP_SHARED;
       else
          Prot := PROT_READ;
