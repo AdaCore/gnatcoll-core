@@ -15,3 +15,7 @@ of the feature.
 New features in 1.7
 -------------------
 
+NF-17-MA10-035 GNATCOLL.Mmap: multiple region mapping (2013-10-24)
+
+  Multiple regions of the same file can now be mapped in memory at the
+  same time.
