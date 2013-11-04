@@ -202,7 +202,7 @@ provide that information:
   because as explained above this is too low-level. This text file also
   provides additional capabilities that do not exist when reverse-engineering
   an existing database, for instance the ability to use name to represent
-  revert relationships for foreign keys (see below and the ORM).
+  reverse relationships for foreign keys (see below and the ORM).
 
   The most convenient editor for this file is Emacs, using the `org-mode`
   which provides convenient key shortcuts for editing the contents of ASCII
@@ -257,7 +257,7 @@ provide that information:
   If the field is a foreign key (that is a value that must correspond to a row
   in another table), you can use the special syntax for its type::
 
-      fk_type ::= 'FK' <table_name> (<revert_name>)
+      fk_type ::= 'FK' <table_name> [ '(' <reverse_name> ')' ]
 
   As you can see, the type of the field is not specified explicitly, but will
   always be that of the foreign table's primary key. With this syntax, the
@@ -275,11 +275,11 @@ provide that information:
   reference a table that has already been defined. You need to reorder the
   declaration of your tables to ensure this is the case.
 
-  "revert_name" is the name that will be generated in the Ada code for the
+  "reverse_name" is the optional name that will be generated in the Ada code for the
   reverse relationship, in the context of `GNATCOLL.SQL.ORM`.
-  If the "revert_name" is empty (the parenthesis are shown), no revert
-  relationship is generated. If the parenthesis and the revert_name are both
-  omitted, a default name is generated.
+  If the "reverse_name" is empty (the parenthesis are shown), no reverse
+  relationship is generated. If the parenthesis and the reverse_name are both
+  omitted, a default name is generated based on the name of the field.
 
   The third column in the fields definition indicates the constraints of the
   type. Multiple keywords can be used if they are separated by commas. Thus,
@@ -366,7 +366,7 @@ provide that information:
   **one-to-many** relationship. In SQL, this is in general described through
   the use of a foreign key that goes from the table on the "many" side. In
   this example, we therefore have a foreign key from media to customers. We
-  also provide a name for the revert relationship, which will become clearer
+  also provide a name for the reverse relationship, which will become clearer
   when we describe the ORM interface.
 
   Here are the declarations::
@@ -1878,12 +1878,12 @@ number of types:
          --    FROM (books LEFT JOIN customers ON books.borrowed_by=customers.id)
          --    WHERE books.borrowed_by=customers.id AND customers.last='Smith'
       
-revert relationships
+reverse relationships
 --------------------
 
 In fact, the query we wrote above could be written differently. Remember
 we have already queries the `Customer` object for id 1 through a
-call to `Get_Customer`. Since our schema specified a `revert_name`
+call to `Get_Customer`. Since our schema specified a `reverse_name`
 for the foreign key `borrowed_by` in the table `books`, we can
 in fact simply use::
 
@@ -1895,7 +1895,7 @@ in fact simply use::
   
 
 `Borrowed_Books` is a function that was generated because there was
-a `revert_name`. It returns a `Books_Managers`, so we could
+a `reverse_name`. It returns a `Books_Managers`, so we could
 in fact further filter the list of borrowed books with the same primitive
 operations we just saw. As you can see, the resulting SQL is optimital.
 
