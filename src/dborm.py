@@ -2459,10 +2459,8 @@ def get_db_schema(setup, requires_pk=False, all_tables=[], omit=[]):
             fields[1] = fields[1].strip()
             fields[2] = fields[2].strip()
 
-            if fields[1].startswith("VIEW"):
-                table = None
-
-            elif fields[1].startswith("TABLE") \
+            if fields[1].startswith("VIEW") \
+               or fields[1].startswith("TABLE") \
                or fields[1].startswith("ABSTRACT TABLE"):
 
                 m = re.search("\((.*)\)", fields[1])

@@ -15,6 +15,11 @@ of the feature.
 New features in 1.7
 -------------------
 
+NF-17-MA25-038 GNATCOLL.SQL.ORM: supports for views (2013-11-04)
+
+  It is now possible to generate a high-level database interface for
+  views, in addition to tables.
+
 NF-17-MA10-035 GNATCOLL.Mmap: multiple region mapping (2013-10-24)
 
   Multiple regions of the same file can now be mapped in memory at the
