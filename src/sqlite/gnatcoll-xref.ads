@@ -608,17 +608,22 @@ package GNATCOLL.Xref is
       Entity : Entity_Information) return Entity_Information;
    --  The parent package for a package.
 
-   function Method_Of
+   procedure Method_Of
       (Self   : Xref_Database'Class;
-       Entity : Entity_Information) return Entity_Information;
-   --  Return the entity (presumably an Ada tagged type or C++ class) for which
-   --  Entity is a method or primitive operation.
+       Entity : Entity_Information;
+       Cursor : out Entities_Cursor'Class);
+   --  Return the entities (presumably an Ada tagged type or C++ class) for
+   --  which Entity is a method or primitive operation.
+   --  An entity might be a primitive for multiple classes, when it is
+   --  inherited by child classes (it is then also a primitive of the
+   --  child class).
 
    procedure Methods
-     (Self   : Xref_Database'Class;
-      Entity : Entity_Information;
-      Cursor : out Entities_Cursor'Class);
-   --  The primitive operations (or methods) of Self
+     (Self              : Xref_Database'Class;
+      Entity            : Entity_Information;
+      Cursor            : out Entities_Cursor'Class;
+      Include_Inherited : Boolean := True);
+   --  The primitive operations (or methods) of Self.
 
    procedure Discriminants
      (Self   : Xref_Database'Class;

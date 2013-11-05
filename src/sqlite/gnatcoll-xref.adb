@@ -361,6 +361,38 @@ package body GNATCOLL.Xref is
         On_Server => False, Name => "e2e_to");
    --  Cannot be prepared because there are risks of concurrent calls.
 
+   Query_Non_Inherited_Methods : constant Prepared_Statement :=
+     Prepare
+       (SQL_Select
+          (Entities2_Fields,
+           From => Entities2 & Database.E2e,
+           Where => Database.E2e.fromEntity = Integer_Param (1)
+           and Database.E2e.Kind = E2e_Has_Primitive
+           and Database.E2e.toEntity = Entities2.Id
+
+           --   Not a primitive of one of the parent types
+           and SQL_Not_In
+             (Database.E2e.toEntity,
+              SQL_Select
+                (Database.E2e.toEntity,
+                 From  => Database.E2e,
+                 Where => SQL_In
+                   (Database.E2e.fromEntity,
+
+                    --  compute the parent types (this is Query_E2e_From
+                    SQL_Select
+                      (Database.E2e.toEntity,
+                       From => Database.E2e,
+                       Where => Database.E2e.fromEntity = Integer_Param (1)
+                       and Database.E2e.Kind = E2e_Parent_Type))
+
+                 and Database.E2e.Kind = E2e_Has_Primitive)),
+           Order_By =>
+             Entities2.Name & Entities2.Decl_Line & Entities2.Decl_Column,
+           Distinct => True),
+        On_Server => False, Name => "non_inherited_methods");
+   --  Cannot be prepared because there are risks of concurrent calls.
+
    Query_Fields : constant Prepared_Statement :=
      Prepare
        (SQL_Select
@@ -4972,14 +5004,22 @@ package body GNATCOLL.Xref is
    -------------
 
    procedure Methods
-     (Self   : Xref_Database'Class;
-      Entity : Entity_Information;
-      Cursor : out Entities_Cursor'Class) is
+     (Self              : Xref_Database'Class;
+      Entity            : Entity_Information;
+      Cursor            : out Entities_Cursor'Class;
+      Include_Inherited : Boolean := True) is
    begin
-      Cursor.DBCursor.Fetch
-        (Self.DB,
-         Query_E2E_From,
-         Params => (1 => +Entity.Id, 2 => +E2e_Has_Primitive));
+      if Include_Inherited then
+         Cursor.DBCursor.Fetch
+           (Self.DB,
+            Query_E2E_From,
+            Params => (1 => +Entity.Id, 2 => +E2e_Has_Primitive));
+      else
+         Cursor.DBCursor.Fetch
+           (Self.DB,
+            Query_Non_Inherited_Methods,
+            Params => (1 => +Entity.Id));
+      end if;
    end Methods;
 
    ---------------------
@@ -5105,22 +5145,16 @@ package body GNATCOLL.Xref is
    -- Method_Of --
    ---------------
 
-   function Method_Of
+   procedure Method_Of
       (Self   : Xref_Database'Class;
-       Entity : Entity_Information) return Entity_Information
+       Entity : Entity_Information;
+       Cursor : out Entities_Cursor'Class)
    is
-      Curs : Entities_Cursor;
    begin
-      Curs.DBCursor.Fetch
+      Cursor.DBCursor.Fetch
         (Self.DB,
          Query_E2E_To,
          Params => (1 => +Entity.Id, 2 => +E2e_Has_Primitive));
-
-      if Curs.DBCursor.Has_Row then
-         return Curs.Element;
-      else
-         return No_Entity;
-      end if;
    end Method_Of;
 
    -----------------

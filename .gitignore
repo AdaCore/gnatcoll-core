@@ -49,6 +49,10 @@ testsuite/traces/wildcard/wildcard.out
 testsuite/traces/wildcard/wildcard.out2
 testsuite/projects/K926-026/main
 testsuite/projects/KB30-016/test_it
+testsuite/projects/objects/objects
+testsuite/projects/objects/out
+testsuite/projects/objects2/objects
+testsuite/projects/objects2/out
 testsuite/xref/find_ref/main
 testsuite/xref/naming_schemes/file2
 testsuite/xref/naming_schemes2/file2

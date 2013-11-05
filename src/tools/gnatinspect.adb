@@ -188,12 +188,10 @@ procedure GNATInspect is
    procedure Process_Help (Args : Arg_List);
    procedure Process_Importing (Args : Arg_List);
    procedure Process_Imports (Args : Arg_List);
-   procedure Process_Method_Of
-     is new Process_Command_With_Single (Method_Of);
+   procedure Process_Method_Of is new Process_Command_Entities (Method_Of);
    procedure Process_Fields
      is new Process_Command_Entities (Fields);
-   procedure Process_Methods
-     is new Process_Command_Entities (Methods);
+   procedure Process_Methods (Args : Arg_List);
    procedure Process_Literals
      is new Process_Command_Entities (Literals);
    procedure Process_Name (Args : Arg_List);
@@ -895,6 +893,24 @@ procedure GNATInspect is
          Cursor  => Children);
       Dump (Children);
    end Process_Child_Types_Recursive;
+
+   ---------------------
+   -- Process_Methods --
+   ---------------------
+
+   procedure Process_Methods (Args : Arg_List) is
+      Entity   : Entity_Information;
+      Children : Entities_Cursor;
+   begin
+      if Args_Length (Args) /= 1 then
+         Put_Line ("Invalid number of arguments");
+         return;
+      end if;
+
+      Entity := Get_Entity (Nth_Arg (Args, 1));
+      Methods (Xref, Entity, Children, Include_Inherited => True);
+      Dump (Children);
+   end Process_Methods;
 
    --------------------
    -- Process_Params --
