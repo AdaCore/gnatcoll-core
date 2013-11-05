@@ -4071,7 +4071,6 @@ package body GNATCOLL.Projects is
    is
       P_Cursor, P_Found : Project_Htables.Cursor;
       Name_Found : Boolean := False;
-      K : Virtual_File;
 
       --  Name is a base name (for now), but the htable is indexed on the
       --  full path of the project. So we need to traverse all its elements.
@@ -4086,6 +4085,9 @@ package body GNATCOLL.Projects is
       --  case-insensitive. So we convert to lower-case here. However, if we
       --  want a version of Project_From_Name that takes a path, we will need
       --  to use the filesystem's casing.
+      --
+      --  We can't compare project names and file names, because child projects
+      --  have names like "p.main" when the file name is "p-main".
 
       N : constant String := To_Lower (+Normalized);
 
@@ -4101,11 +4103,7 @@ package body GNATCOLL.Projects is
            Prj.Aggregate
          then
             while P_Cursor /= Project_Htables.No_Element loop
-               K := Key (P_Cursor);
-               if To_Lower
-                  (+K.Base_Name (Suffix => +Prj.Project_File_Extension,
-                                 Normalize => True)) = N
-               then
+               if To_Lower (Element (P_Cursor).Name) = N then
                   if Name_Found then
                      Trace (Me, "Multiple projects with same name");
                      return No_Project;
@@ -4124,11 +4122,7 @@ package body GNATCOLL.Projects is
 
          else
             while P_Cursor /= Project_Htables.No_Element loop
-               K := Key (P_Cursor);
-               if To_Lower
-                  (+K.Base_Name (Suffix => +Prj.Project_File_Extension,
-                                 Normalize => True)) = N
-               then
+               if To_Lower (Element (P_Cursor).Name) = N then
                   return Element (P_Cursor);
                end if;
                Next (P_Cursor);
