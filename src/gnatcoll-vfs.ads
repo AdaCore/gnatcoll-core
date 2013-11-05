@@ -194,7 +194,9 @@ package GNATCOLL.VFS is
    --  file name.
 
    function Base_Name
-     (File : Virtual_File; Suffix : Filesystem_String := "")
+     (File      : Virtual_File;
+      Suffix    : Filesystem_String := "";
+      Normalize : Boolean := False)
       return Filesystem_String;
    --  Return the base name of the file
 

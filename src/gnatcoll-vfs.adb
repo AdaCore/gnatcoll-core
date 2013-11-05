@@ -458,14 +458,22 @@ package body GNATCOLL.VFS is
    ---------------
 
    function Base_Name
-     (File : Virtual_File; Suffix : Filesystem_String := "")
+     (File      : Virtual_File;
+      Suffix    : Filesystem_String := "";
+      Normalize : Boolean := False)
       return Filesystem_String is
    begin
       if File.Value = null then
          return "";
       end if;
 
-      return +Base_Name (File.Value.Get_FS, File.Value.Full.all, +Suffix);
+      if Normalize then
+         Ensure_Normalized (File, Handle_Symbolic_Links);
+         return +Base_Name
+            (File.Value.Get_FS, File.Value.Normalized.all, +Suffix);
+      else
+         return +Base_Name (File.Value.Get_FS, File.Value.Full.all, +Suffix);
+      end if;
    end Base_Name;
 
    -------------------

@@ -95,10 +95,10 @@ package body GNATCOLL.Projects is
      (Scenario_Variable_Array, Scenario_Variable_Array_Access);
 
    package Project_Htables is new Ada.Containers.Indefinite_Hashed_Maps
-     (Key_Type        => String,   --  project path
+     (Key_Type        => Virtual_File,   --  project path
       Element_Type    => Project_Type,
-      Hash            => Ada.Strings.Hash_Case_Insensitive,
-      Equivalent_Keys => GNATCOLL.Utils.Case_Insensitive_Equal);
+      Hash            => Full_Name_Hash,
+      Equivalent_Keys => GNATCOLL.VFS."=");
    --  maps project paths (casing insensitive) to project types
    --  ??? This would not be needed if we could, in the prj* sources, associate
    --  user data with project nodes.
@@ -4071,12 +4071,24 @@ package body GNATCOLL.Projects is
    is
       P_Cursor, P_Found : Project_Htables.Cursor;
       Name_Found : Boolean := False;
+      K : Virtual_File;
 
       --  Name is a base name (for now), but the htable is indexed on the
       --  full path of the project. So we need to traverse all its elements.
       --  In the case of aggregate projects, we return No_Project if multiple
-      --  projects match
-      N : constant String := To_Lower (Get_String (Name));
+      --  projects match.
+
+      Normalized : constant Filesystem_String :=
+         Create (+Get_String (Name)).Base_Name
+            (Suffix => +Prj.Project_File_Extension, Normalize => True);
+
+      --  The name of a project is not related to file names, and is always
+      --  case-insensitive. So we convert to lower-case here. However, if we
+      --  want a version of Project_From_Name that takes a path, we will need
+      --  to use the filesystem's casing.
+
+      N : constant String := To_Lower (+Normalized);
+
    begin
       if Tree = null or else Tree.Tree = null then
          Trace (Me, "Project_From_Name: Registry not initialized");
@@ -4089,8 +4101,10 @@ package body GNATCOLL.Projects is
            Prj.Aggregate
          then
             while P_Cursor /= Project_Htables.No_Element loop
-               if Ends_With
-                  (Key (P_Cursor), N & Prj.Project_File_Extension)
+               K := Key (P_Cursor);
+               if To_Lower
+                  (+K.Base_Name (Suffix => +Prj.Project_File_Extension,
+                                 Normalize => True)) = N
                then
                   if Name_Found then
                      Trace (Me, "Multiple projects with same name");
@@ -4110,8 +4124,10 @@ package body GNATCOLL.Projects is
 
          else
             while P_Cursor /= Project_Htables.No_Element loop
-               if Ends_With
-                   (Key (P_Cursor), N & Prj.Project_File_Extension)
+               K := Key (P_Cursor);
+               if To_Lower
+                  (+K.Base_Name (Suffix => +Prj.Project_File_Extension,
+                                 Normalize => True)) = N
                then
                   return Element (P_Cursor);
                end if;
@@ -4119,7 +4135,8 @@ package body GNATCOLL.Projects is
             end loop;
          end if;
 
-         Trace (Me, "Get_Project_From_Name: " & N & " wasn't found");
+         Trace (Me, "Get_Project_From_Name: "
+                & Get_String (Name) & " wasn't found");
          return No_Project;
       end if;
    end Project_From_Name;
@@ -5650,8 +5667,8 @@ package body GNATCOLL.Projects is
       Tree_For_Map : Project_Tree'Class;
       Node         : Project_Node_Id) return Project_Type
    is
-      Path : constant String :=
-               Get_String (Prj.Tree.Path_Name_Of (Node, Self.Data.Tree));
+      Path : constant Virtual_File :=
+         Create (+Get_String (Prj.Tree.Path_Name_Of (Node, Self.Data.Tree)));
       Data : constant Project_Data_Access := Tree_For_Map.Data_Factory;
       P    : Project_Type;
    begin
@@ -5691,14 +5708,15 @@ package body GNATCOLL.Projects is
          Name : constant String := Get_String (Proj.Name);
          Iter : Project_Htables.Cursor;
          P    : Project_Type;
+         Path : Virtual_File;
 
       begin
          --  Ignore virtual extending projects
          if Name'Length < Virtual_Prefix'Length
            or else Name (1 .. Virtual_Prefix'Length) /= Virtual_Prefix
          then
-            Iter :=
-              Tree_For_Map.Data.Projects.Find (Get_String (Proj.Path.Name));
+            Path := Create (+Get_String (Proj.Path.Name));
+            Iter := Tree_For_Map.Data.Projects.Find (Path);
 
             Assert (Me, Has_Element (Iter),
                     "Create_Project_Instances must be called"
@@ -5714,7 +5732,8 @@ package body GNATCOLL.Projects is
       -----------------
 
       procedure Do_Project2 (T : Project_Node_Tree_Ref; P : Project_Node_Id) is
-         Path : constant String := Get_String (Prj.Tree.Path_Name_Of (P, T));
+         Path : constant Virtual_File :=
+            Create (+Get_String (Prj.Tree.Path_Name_Of (P, T)));
          Proj : Project_Type;
          Iter : Project_Htables.Cursor;
       begin
@@ -6235,8 +6254,11 @@ package body GNATCOLL.Projects is
       GNATCOLL.Projects.Normalize.Rename_And_Move
         (Self.Data.Tree, Self, New_Name, Directory, Errors);
 
-      Self.Data.Tree.Projects.Delete  (Self.Name);
-      Self.Data.Tree.Projects.Include (New_Name, Self);
+      Self.Data.Tree.Projects.Delete  (Self.Project_Path);
+      Self.Data.Tree.Projects.Include
+         (Create_From_Base (Base_Name => +New_Name,
+                            Base_Dir  => Directory.Full_Name.all),
+          Self);
 
       if Self.Data.View /= Prj.No_Project then
          Self.Data.View.Display_Name := Get_String (New_Name);
