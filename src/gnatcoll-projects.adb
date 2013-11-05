@@ -5523,12 +5523,23 @@ package body GNATCOLL.Projects is
             Timestamp => Self.Data.Timestamp,
             others => <>);
          Create_Project_Instances (T, Self, With_View => False);
-
       end On_New_Tree_Loaded;
 
    begin
       Trace (Me, "Recomputing project view");
       Output.Set_Special_Output (Output.Output_Proc (Errors));
+
+      --  The views stored in the projects are no longer valid, we should make
+      --  sure they are not called.
+
+      declare
+         C : Project_Htables.Cursor := Self.Data.Projects.First;
+      begin
+         while Has_Element (C) loop
+            Element (C).Data.View := Prj.No_Project;
+            Next (C);
+         end loop;
+      end;
 
       Reset_View (Self);
       Prj.Initialize (Self.Data.View);
@@ -5755,7 +5766,7 @@ package body GNATCOLL.Projects is
            (Self.Data.Root.Data.View,
             Self.Data.View,
             S,
-            True);
+            Include_Aggregated => True);
 
       else
          For_Each_Project_Node
