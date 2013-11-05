@@ -628,6 +628,15 @@ package body GNATCOLL.JSON is
       return Result;
    end "&";
 
+   -----------
+   -- Clear --
+   -----------
+
+   procedure Clear (Arr : in out JSON_Array) is
+   begin
+      Arr.Vals.Clear;
+   end Clear;
+
    ----------------
    -- Initialize --
    ----------------
