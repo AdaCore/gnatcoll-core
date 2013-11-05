@@ -76,7 +76,9 @@ package body GNATCOLL.Projects is
    Me    : constant Trace_Handle := Create ("Projects", Default => Off);
    Debug : constant Trace_Handle := Create ("Projects.Debug", Default => Off);
    Me_Gnat : constant Trace_Handle :=
-               Create ("Projects.GNAT", GNATCOLL.Traces.Off);
+     Create ("Projects.GNAT", GNATCOLL.Traces.Off);
+   Me_Aggregate_Support : constant Trace_Handle :=
+     Create ("Projects.Aggregate", Default => Off);
 
    Dummy_Suffix : constant String := "<no suffix defined>";
    --  A dummy suffixes that is used for languages that have either no spec or
@@ -93,11 +95,11 @@ package body GNATCOLL.Projects is
      (Scenario_Variable_Array, Scenario_Variable_Array_Access);
 
    package Project_Htables is new Ada.Containers.Indefinite_Hashed_Maps
-     (Key_Type        => String,   --  project name
+     (Key_Type        => String,   --  project path
       Element_Type    => Project_Type,
       Hash            => Ada.Strings.Hash_Case_Insensitive,
       Equivalent_Keys => GNATCOLL.Utils.Case_Insensitive_Equal);
-   --  maps project names (casing insensitive) to project types
+   --  maps project paths (casing insensitive) to project types
    --  ??? This would not be needed if we could, in the prj* sources, associate
    --  user data with project nodes.
 
@@ -176,7 +178,7 @@ package body GNATCOLL.Projects is
       --  in prj.*
 
       Projects : Project_Htables.Map;
-      --  Index on project names. This table is filled when the project is
+      --  Index on project paths. This table is filled when the project is
       --  loaded.
 
       Scenario_Variables : Scenario_Variable_Array_Access;
@@ -365,11 +367,15 @@ package body GNATCOLL.Projects is
    --  Internal version of Info
 
    procedure Create_Project_Instances
-     (Self : Project_Tree'Class; With_View : Boolean);
+     (Self         : Project_Tree'Class;
+      Tree_For_Map : Project_Tree'Class;
+      With_View    : Boolean);
    function Instance_From_Node
-     (Self : Project_Tree'Class;
-      Node : Project_Node_Id) return Project_Type;
+     (Self         : Project_Tree'Class;
+      Tree_For_Map : Project_Tree'Class;
+      Node         : Project_Node_Id) return Project_Type;
    --  Create all instances of Project_Type for the loaded projects.
+   --  Instances are put in Htable of Tree_For_Map parameter.
    --  This also resets the internal data for the view.
 
    function Handle_Subdir
@@ -377,6 +383,9 @@ package body GNATCOLL.Projects is
       Id      : Namet.Path_Name_Type;
       Xref_Dirs : Boolean) return Filesystem_String;
    --  Adds the object subdirectory to Id if one is defined
+
+   function Normalized_Name (Project : Project_Type) return String;
+   --  Return normalized name of the project.
 
    -----------
    -- Lists --
@@ -546,6 +555,24 @@ package body GNATCOLL.Projects is
            (Prj.Tree.Name_Of (Project.Data.Node, Project.Tree_Tree));
       end if;
    end Name;
+
+   ---------------------
+   -- Normalized_Name --
+   ---------------------
+
+   function Normalized_Name (Project : Project_Type) return String is
+   begin
+      if Project.Data = null then
+         return "default";
+
+      elsif Get_View (Project) /= Prj.No_Project then
+         return Get_String (Get_View (Project).Name);
+
+      else
+         return To_Lower (Get_String
+           (Prj.Tree.Name_Of (Project.Data.Node, Project.Tree_Tree)));
+      end if;
+   end Normalized_Name;
 
    ------------------
    -- Project_Path --
@@ -4061,23 +4088,53 @@ package body GNATCOLL.Projects is
      (Tree : Project_Tree_Data_Access;
       Name : Namet.Name_Id) return Project_Type'Class
    is
-      P_Cursor : Project_Htables.Cursor;
+      P_Cursor, P_Found : Project_Htables.Cursor;
+      Name_Found : Boolean := False;
    begin
       if Tree = null or else Tree.Tree = null then
          Trace (Me, "Project_From_Name: Registry not initialized");
          return No_Project;
 
       else
-         Get_Name_String (Name);
-         P_Cursor := Tree.Projects.Find (Name_Buffer (1 .. Name_Len));
+         P_Cursor := Tree.Projects.First;
 
-         if Has_Element (P_Cursor) then
-            return Element (P_Cursor);
+         if
+           Project_Qualifier_Of (Tree.Root.Data.Node, Tree.Tree) =
+           Prj.Aggregate
+         then
+            while P_Cursor /= Project_Htables.No_Element loop
+               if
+                 Normalized_Name (Element (P_Cursor)) = Get_String (Name)
+               then
+                  if Name_Found then
+                     Trace (Me, "Multiple projects with same name");
+                     return No_Project;
+                  else
+                     Name_Found := True;
+                     P_Found := P_Cursor;
+                  end if;
+
+               end if;
+
+               Next (P_Cursor);
+            end loop;
+
+            if Name_Found then
+               return Element (P_Found);
+            end if;
+
          else
-            Trace (Me, "Get_Project_From_Name: "
-                   & Get_String (Name) & " wasn't found");
-            return No_Project;
+            while P_Cursor /= Project_Htables.No_Element loop
+               if Normalized_Name (Element (P_Cursor)) = Get_String (Name) then
+                  return Element (P_Cursor);
+               end if;
+               Next (P_Cursor);
+            end loop;
          end if;
+
+         Trace (Me, "Get_Project_From_Name: "
+                & Get_String (Name) & " wasn't found");
+         return No_Project;
       end if;
    end Project_From_Name;
 
@@ -5094,7 +5151,8 @@ package body GNATCOLL.Projects is
          Env               => Tree.Data.Env.Env,
          Current_Directory => Get_Current_Dir);
 
-      if Project /= Empty_Node
+      if not Active (Me_Aggregate_Support)
+        and then Project /= Empty_Node
         and then Project_Qualifier_Of (Project, Tree.Data.Tree) =
         Prj.Aggregate
       then
@@ -5128,7 +5186,8 @@ package body GNATCOLL.Projects is
                From_Project_Node      => Project,
                From_Project_Node_Tree => Tree.Data.Tree,
                Env                    => Tree.Data.Env.Env,
-               Reset_Tree             => True);
+               Reset_Tree             => True,
+               On_New_Tree_Loaded     => null);
 
             if not Success then
                Trace (Me, "Processing phase 1 failed");
@@ -5232,13 +5291,15 @@ package body GNATCOLL.Projects is
       Override_Flags (Tree.Data.Env.Env, Create_Flags (null));
 
       if Project /= Empty_Node then
-         Tree.Data.Root := Tree.Instance_From_Node (Project);
+         Tree.Data.Root :=
+           Tree.Instance_From_Node (Tree, Project);
 
          --  Create the project instances, so that we can use the
          --  project_iterator (otherwise Current cannot return a project_type).
          --  These instances, for now, will have now view associated
 
-         Create_Project_Instances (Tree, With_View => False);
+         Create_Project_Instances
+           (Tree, Tree, With_View => False);
 
          Tree.Data.Status := From_File;
 
@@ -5296,6 +5357,13 @@ package body GNATCOLL.Projects is
       --  Compute extra information for each source file, in particular whether
       --  it is a separate (as opposed to a body). This might require extra
       --  parsing of the source file in some cases.
+
+      procedure On_New_Tree_Loaded
+        (Node_Tree : Project_Node_Tree_Ref;
+         Tree : Project_Tree_Ref;
+         Project_Node : Project_Node_Id;
+         Project : Project_Id);
+      --  Creates project instancies for given project tree.
 
       -------------------------------------------
       -- Add_GPS_Naming_Schemes_To_Config_File --
@@ -5439,6 +5507,28 @@ package body GNATCOLL.Projects is
       Iter                    : Project_Iterator;
       Timestamp               : Time;
 
+      procedure On_New_Tree_Loaded
+        (Node_Tree : Project_Node_Tree_Ref;
+         Tree : Project_Tree_Ref;
+         Project_Node : Project_Node_Id;
+         Project : Project_Id)
+      is
+         pragma Unreferenced (Project);
+
+         T : Project_Tree'Class := Self;
+      begin
+         T.Data := new Project_Tree_Data'
+           (Env => Self.Data.Env,
+            Tree => Node_Tree,
+            View => Tree,
+            Status => Self.Data.Status,
+            Root => T.Instance_From_Node (Self, Project_Node),
+            Timestamp => Self.Data.Timestamp,
+            others => <>);
+         Create_Project_Instances (T, Self, With_View => False);
+
+      end On_New_Tree_Loaded;
+
    begin
       Trace (Me, "Recomputing project view");
       Output.Set_Special_Output (Output.Output_Proc (Errors));
@@ -5466,7 +5556,8 @@ package body GNATCOLL.Projects is
 
          Trace (Me, "Configuration file is '"
                 & Self.Data.Env.Config_File.Display_Full_Name & "' autoconf="
-                  & Self.Data.Env.Autoconf'Img);
+                & Self.Data.Env.Autoconf'Img);
+
          Process_Project_And_Apply_Config
            (Main_Project        => View,
             User_Project_Node   => Self.Root_Project.Data.Node,
@@ -5481,7 +5572,9 @@ package body GNATCOLL.Projects is
             Env                        => Self.Data.Env.Env,
             Normalized_Hostname        => "",
             On_Load_Config             =>
-              Add_GPS_Naming_Schemes_To_Config_File'Unrestricted_Access);
+              Add_GPS_Naming_Schemes_To_Config_File'Unrestricted_Access,
+            On_New_Tree_Loaded         =>
+              On_New_Tree_Loaded'Unrestricted_Access);
 
          Override_Flags (Self.Data.Env.Env, Create_Flags (null));
 
@@ -5512,7 +5605,7 @@ package body GNATCOLL.Projects is
          Self.Data.Root.Data.View := View;
       end if;
 
-      Create_Project_Instances (Self, With_View => True);
+      Create_Project_Instances (Self, Self, With_View => True);
 
       Parse_Source_Files (Self);
       Initialize_Source_Records;
@@ -5567,18 +5660,19 @@ package body GNATCOLL.Projects is
    ------------------------
 
    function Instance_From_Node
-     (Self : Project_Tree'Class;
-      Node : Project_Node_Id) return Project_Type
+     (Self         : Project_Tree'Class;
+      Tree_For_Map : Project_Tree'Class;
+      Node         : Project_Node_Id) return Project_Type
    is
-      Name : constant String :=
-               Get_String (Prj.Tree.Name_Of (Node, Self.Data.Tree));
+      Path : constant String :=
+               Get_String (Prj.Tree.Path_Name_Of (Node, Self.Data.Tree));
       Data : constant Project_Data_Access := Self.Data_Factory;
       P    : Project_Type;
    begin
       Data.Tree := Self.Data;
       Data.Node := Node;
       P := Project_Type'(Ada.Finalization.Controlled with Data => Data);
-      Self.Data.Projects.Include (Name, P);
+      Tree_For_Map.Data.Projects.Include (Path, P);
       return P;
    end Instance_From_Node;
 
@@ -5587,7 +5681,9 @@ package body GNATCOLL.Projects is
    ------------------------------
 
    procedure Create_Project_Instances
-     (Self : Project_Tree'Class; With_View : Boolean)
+     (Self      : Project_Tree'Class;
+      Tree_For_Map : Project_Tree'Class;
+      With_View : Boolean)
    is
       procedure Do_Project
         (Proj : Project_Id;
@@ -5615,9 +5711,9 @@ package body GNATCOLL.Projects is
          if Name'Length < Virtual_Prefix'Length
            or else Name (1 .. Virtual_Prefix'Length) /= Virtual_Prefix
          then
-            --  The project will always exist, since we have already called
-            --  Create_Project_Instances once before to create them
-            Iter := Self.Data.Projects.Find (Name);
+            Iter :=
+              Tree_For_Map.Data.Projects.Find (Get_String (Proj.Path.Name));
+
             Assert (Me, Has_Element (Iter),
                     "Create_Project_Instances must be called"
                     & " to create project_type");
@@ -5632,15 +5728,16 @@ package body GNATCOLL.Projects is
       -----------------
 
       procedure Do_Project2 (T : Project_Node_Tree_Ref; P : Project_Node_Id) is
-         Name : constant String := Get_String (Prj.Tree.Name_Of (P, T));
+         Path : constant String := Get_String (Prj.Tree.Path_Name_Of (P, T));
          Proj : Project_Type;
          Iter : Project_Htables.Cursor;
       begin
-         Iter := Self.Data.Projects.Find (Name);
+         Iter := Tree_For_Map.Data.Projects.Find (Path);
          if not Has_Element (Iter) then
-            Proj := Self.Instance_From_Node (P);
+            Proj := Self.Instance_From_Node (Tree_For_Map, P);
             Proj.Data.Node := P;
             Reset_View (Proj.Data.all);
+
          else
             Element (Iter).Data.Node := P;
             Reset_View (Element (Iter).Data.all);
@@ -5658,7 +5755,8 @@ package body GNATCOLL.Projects is
          For_All_Projects
            (Self.Data.Root.Data.View,
             Self.Data.View,
-            S);
+            S,
+            True);
 
       else
          For_Each_Project_Node
@@ -5692,7 +5790,7 @@ package body GNATCOLL.Projects is
          Full_Path      => Path_Name_Type (Get_String (+D)),
          Is_Config_File => False);
 
-      Self.Data.Root := Self.Instance_From_Node (Node);
+      Self.Data.Root := Self.Instance_From_Node (Self, Node);
       Self.Data.Status := Empty;
 
       --  No language known for empty project
@@ -5701,7 +5799,7 @@ package body GNATCOLL.Projects is
 
       Self.Data.Root.Data.Modified := False;
 
-      Create_Project_Instances (Self, With_View => False);
+      Create_Project_Instances (Self, Self, With_View => False);
 
       if Recompute_View then
          Project_Tree'Class (Self).Recompute_View;
@@ -6562,14 +6660,15 @@ package body GNATCOLL.Projects is
         (Tree                      => Project.Data.Tree,
          Project                   => Project,
          Imported_Project          =>
-           Tree.Instance_From_Node (Imported_Project),
+           Tree.Instance_From_Node (Tree, Imported_Project),
          Errors                    => Errors,
          Use_Relative_Path         => Use_Relative_Path,
          Use_Base_Name             => Use_Base_Name,
          Limited_With              => Limited_With);
 
       if Error = Success then
-         Create_Project_Instances (Tree, With_View => False);
+         Create_Project_Instances
+           (Tree, Tree, With_View => False);
       end if;
 
       return Error;
@@ -6670,7 +6769,7 @@ package body GNATCOLL.Projects is
                      Is_Config_File => False);
       P       : Project_Type;
    begin
-      P := Tree.Instance_From_Node (Project);
+      P := Tree.Instance_From_Node (Tree, Project);
       P.Set_Modified (True);
       return P;
    end Create_Project;
