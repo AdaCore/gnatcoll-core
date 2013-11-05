@@ -384,9 +384,6 @@ package body GNATCOLL.Projects is
       Xref_Dirs : Boolean) return Filesystem_String;
    --  Adds the object subdirectory to Id if one is defined
 
-   function Normalized_Name (Project : Project_Type) return String;
-   --  Return normalized name of the project.
-
    -----------
    -- Lists --
    -----------
@@ -555,24 +552,6 @@ package body GNATCOLL.Projects is
            (Prj.Tree.Name_Of (Project.Data.Node, Project.Tree_Tree));
       end if;
    end Name;
-
-   ---------------------
-   -- Normalized_Name --
-   ---------------------
-
-   function Normalized_Name (Project : Project_Type) return String is
-   begin
-      if Project.Data = null then
-         return "default";
-
-      elsif Get_View (Project) /= Prj.No_Project then
-         return Get_String (Get_View (Project).Name);
-
-      else
-         return To_Lower (Get_String
-           (Prj.Tree.Name_Of (Project.Data.Node, Project.Tree_Tree)));
-      end if;
-   end Normalized_Name;
 
    ------------------
    -- Project_Path --
@@ -4104,7 +4083,9 @@ package body GNATCOLL.Projects is
          then
             while P_Cursor /= Project_Htables.No_Element loop
                if
-                 Normalized_Name (Element (P_Cursor)) = Get_String (Name)
+                 Ends_With
+                   (Key (P_Cursor),
+                    Get_String (Name) & Prj.Project_File_Extension)
                then
                   if Name_Found then
                      Trace (Me, "Multiple projects with same name");
@@ -4125,7 +4106,11 @@ package body GNATCOLL.Projects is
 
          else
             while P_Cursor /= Project_Htables.No_Element loop
-               if Normalized_Name (Element (P_Cursor)) = Get_String (Name) then
+               if
+                 Ends_With
+                   (Key (P_Cursor),
+                    Get_String (Name) & Prj.Project_File_Extension)
+               then
                   return Element (P_Cursor);
                end if;
                Next (P_Cursor);
