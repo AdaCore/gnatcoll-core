@@ -1270,7 +1270,7 @@ package body GNATCOLL.Projects is
 
    begin
       if not Recursive then
-         if Project.Data.Files = null then
+         if Project.Data = null or else Project.Data.Files = null then
             return new File_Array (1 .. 0);
          else
             return new File_Array'(Project.Data.Files.all);
@@ -2679,7 +2679,9 @@ package body GNATCOLL.Projects is
       end Do_Count;
 
    begin
-      if Project.Data.Imported_Projects = null then
+      if Project.Data /= null
+         and then Project.Data.Imported_Projects = null
+      then
          For_Each_Project_Node
            (Project.Data.Tree.Tree, Project.Data.Node,
             Do_Count'Unrestricted_Access);
@@ -4069,6 +4071,12 @@ package body GNATCOLL.Projects is
    is
       P_Cursor, P_Found : Project_Htables.Cursor;
       Name_Found : Boolean := False;
+
+      --  Name is a base name (for now), but the htable is indexed on the
+      --  full path of the project. So we need to traverse all its elements.
+      --  In the case of aggregate projects, we return No_Project if multiple
+      --  projects match
+      N : constant String := To_Lower (Get_String (Name));
    begin
       if Tree = null or else Tree.Tree = null then
          Trace (Me, "Project_From_Name: Registry not initialized");
@@ -4077,15 +4085,12 @@ package body GNATCOLL.Projects is
       else
          P_Cursor := Tree.Projects.First;
 
-         if
-           Project_Qualifier_Of (Tree.Root.Data.Node, Tree.Tree) =
+         if Project_Qualifier_Of (Tree.Root.Data.Node, Tree.Tree) =
            Prj.Aggregate
          then
             while P_Cursor /= Project_Htables.No_Element loop
-               if
-                 Ends_With
-                   (Key (P_Cursor),
-                    Get_String (Name) & Prj.Project_File_Extension)
+               if Ends_With
+                  (Key (P_Cursor), N & Prj.Project_File_Extension)
                then
                   if Name_Found then
                      Trace (Me, "Multiple projects with same name");
@@ -4094,7 +4099,6 @@ package body GNATCOLL.Projects is
                      Name_Found := True;
                      P_Found := P_Cursor;
                   end if;
-
                end if;
 
                Next (P_Cursor);
@@ -4106,10 +4110,8 @@ package body GNATCOLL.Projects is
 
          else
             while P_Cursor /= Project_Htables.No_Element loop
-               if
-                 Ends_With
-                   (Key (P_Cursor),
-                    Get_String (Name) & Prj.Project_File_Extension)
+               if Ends_With
+                   (Key (P_Cursor), N & Prj.Project_File_Extension)
                then
                   return Element (P_Cursor);
                end if;
@@ -4117,8 +4119,7 @@ package body GNATCOLL.Projects is
             end loop;
          end if;
 
-         Trace (Me, "Get_Project_From_Name: "
-                & Get_String (Name) & " wasn't found");
+         Trace (Me, "Get_Project_From_Name: " & N & " wasn't found");
          return No_Project;
       end if;
    end Project_From_Name;
@@ -5651,7 +5652,7 @@ package body GNATCOLL.Projects is
    is
       Path : constant String :=
                Get_String (Prj.Tree.Path_Name_Of (Node, Self.Data.Tree));
-      Data : constant Project_Data_Access := Self.Data_Factory;
+      Data : constant Project_Data_Access := Tree_For_Map.Data_Factory;
       P    : Project_Type;
    begin
       Data.Tree := Self.Data;
