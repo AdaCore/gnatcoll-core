@@ -14,7 +14,7 @@ project Gnatcoll_Build is
    for Object_Dir use "src/" & Gnatcoll_Shared'Object_Dir;  --  for auto.cgpr
 
    package IDE is
-      for VCS_Kind use "Subversion";
+      for VCS_Kind use "auto";
    end IDE;
 
    package Builder renames GNATCOLL_Shared.Builder;
