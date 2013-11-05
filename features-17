@@ -15,6 +15,10 @@ of the feature.
 New features in 1.7
 -------------------
 
+NF-17-MA27-009 GNATCOLL.Xref.Methods, new param Include_Inherited (2013-11-05)
+
+  It is now possible to only query non-inherited methods.
+
 NF-17-MA25-038 GNATCOLL.SQL.ORM: supports for views (2013-11-04)
 
   It is now possible to generate a high-level database interface for
