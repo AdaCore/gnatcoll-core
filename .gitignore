@@ -44,6 +44,9 @@ testsuite/sql/orm/schema.ps
 testsuite/sql/json/db.ad?
 testsuite/sql/json/db_names.ads
 testsuite/sql/json/queries.ad?
+testsuite/sql/orm_views/main
+testsuite/sql/orm_views/orm_database*
+testsuite/sql/orm_views/queries*
 testsuite/traces/traces4/traces4.out2
 testsuite/traces/wildcard/wildcard.out
 testsuite/traces/wildcard/wildcard.out2
@@ -53,6 +56,7 @@ testsuite/projects/objects/objects
 testsuite/projects/objects/out
 testsuite/projects/objects2/objects
 testsuite/projects/objects2/out
+testsuite/projects/aggregate/main
 testsuite/xref/find_ref/main
 testsuite/xref/naming_schemes/file2
 testsuite/xref/naming_schemes2/file2

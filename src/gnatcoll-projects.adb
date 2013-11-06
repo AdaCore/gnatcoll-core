@@ -5720,15 +5720,20 @@ package body GNATCOLL.Projects is
          if Name'Length < Virtual_Prefix'Length
            or else Name (1 .. Virtual_Prefix'Length) /= Virtual_Prefix
          then
-            Path := Create (+Get_String (Proj.Path.Name));
+            Path := Create (+Get_String (Proj.Path.Display_Name));
             Iter := Tree_For_Map.Data.Projects.Find (Path);
 
-            Assert (Me, Has_Element (Iter),
-                    "Create_Project_Instances must be called"
-                    & " to create project_type");
-            P := Element (Iter);
-            Reset_View (P.Data.all);
-            P.Data.View := Proj;
+            if Active (Me) then
+               Assert (Me, Has_Element (Iter),
+                       "Create_Project_Instances must be called"
+                       & " to create project_type");
+            end if;
+
+            if Has_Element (Iter) then
+               P := Element (Iter);
+               Reset_View (P.Data.all);
+               P.Data.View := Proj;
+            end if;
          end if;
       end Do_Project;
 
