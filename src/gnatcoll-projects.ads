@@ -773,6 +773,11 @@ package GNATCOLL.Projects is
      (Self : Project_Tree'Class; Name : String) return Project_Type;
    --  Select a project by name
 
+   function Project_From_Path
+     (Self : Project_Tree'Class;
+      Path : GNATCOLL.VFS.Virtual_File) return Project_Type;
+   --  Select a project by path
+
    type Project_Iterator is private;
    --  Iterate over projects in a tree.
    --  There is no need to free such an iterator.
@@ -1506,6 +1511,13 @@ private
    type Name_Id_Array_Access is access Name_Id_Array;
    procedure Unchecked_Free is new Ada.Unchecked_Deallocation
      (Name_Id_Array, Name_Id_Array_Access);
+   --  Still needed for some routines like Get_All_Possible_Values
+
+   type Path_Name_Id_Array is array (Positive range <>)
+     of Namet.Path_Name_Type;
+   type Path_Name_Id_Array_Access is access Path_Name_Id_Array;
+   procedure Unchecked_Free is new Ada.Unchecked_Deallocation
+     (Path_Name_Id_Array, Path_Name_Id_Array_Access);
 
    type Project_Tree_Data;
    type Project_Tree_Data_Access is access Project_Tree_Data;
@@ -1516,8 +1528,8 @@ private
       Node : Prj.Tree.Project_Node_Id;
       View : Prj.Project_Id;
 
-      Imported_Projects  : Name_Id_Array_Access;
-      Importing_Projects : Name_Id_Array_Access;
+      Imported_Projects  : Path_Name_Id_Array_Access;
+      Importing_Projects : Path_Name_Id_Array_Access;
       --  Sorted list of imported projects (Cache for Project_Iterator).
       --  Importing_Project always contains the project itself in last
       --  position.
@@ -1527,6 +1539,14 @@ private
 
       Tree : Project_Tree_Data_Access;
       --  Needed so that we can return other projects like imported projects
+
+      Local_Tree : Prj.Project_Tree_Ref := null;
+      --  If given project is an aggregated one this allows to access
+      --  corresponding project tree data.
+
+      Local_Node_Tree : Prj.Tree.Project_Node_Tree_Ref := null;
+      --  If given project is an aggregated one this allows to access
+      --  corresponding node tree data.
 
       View_Is_Complete : Boolean := True;
       --  True if the view for the project was correctly computed.
@@ -1716,6 +1736,14 @@ private
      (Tree : Project_Tree_Data_Access;
       Name : Namet.Name_Id) return Project_Type'Class;
    --  Internal version of Project_From_Name
+
+   function Project_From_Path
+     (Tree    : Project_Tree_Data_Access;
+      Path_Id : Namet.Path_Name_Type) return Project_Type'Class;
+   --  Internal version of Project_From_Path
+
+   function Is_Aggregate_Project (Project : Project_Type'Class) return Boolean;
+   --  Return true if the current project is an aggregate project.
 
    function Scenario_Variables
      (Tree : Project_Tree_Data_Access) return Scenario_Variable_Array;

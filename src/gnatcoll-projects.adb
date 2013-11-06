@@ -84,7 +84,7 @@ package body GNATCOLL.Projects is
    --  A dummy suffixes that is used for languages that have either no spec or
    --  no implementation suffix defined.
 
-   Unknown_Importing_Projects : aliased constant Name_Id_Array (1 .. 0) :=
+   Unknown_Importing_Projects : aliased constant Path_Name_Id_Array (1 .. 0) :=
      (others => <>);
    --  A dummy array used while computing importing projects
 
@@ -594,7 +594,24 @@ package body GNATCOLL.Projects is
       P           : Project_Type;
       View        : Project_Id;
       Src         : String_List_Id;
+
+      Aggregated      : Aggregated_Project_List;
+      Aggregated_Dirs : File_Array_Access := null;
    begin
+      if Is_Aggregate_Project (Project) and then Recursive then
+         Aggregated := Project.Data.View.Aggregated_Projects;
+         while Aggregated /= null loop
+            Append
+              (Aggregated_Dirs,
+               Source_Dirs
+                 (Project_From_Path
+                    (Project.Data.Tree, Aggregated.Path),
+                  Recursive => True));
+            Aggregated := Aggregated.Next;
+         end loop;
+         return Aggregated_Dirs.all;
+      end if;
+
       loop
          P := Current (Iter);
          exit when P = No_Project;
@@ -2682,27 +2699,40 @@ package body GNATCOLL.Projects is
       if Project.Data /= null
          and then Project.Data.Imported_Projects = null
       then
-         For_Each_Project_Node
-           (Project.Data.Tree.Tree, Project.Data.Node,
-            Do_Count'Unrestricted_Access);
+
+         if Project.Data.Local_Node_Tree = null then
+            For_Each_Project_Node
+              (Project.Data.Tree.Tree, Project.Data.Node,
+               Do_Count'Unrestricted_Access);
+         else
+            For_Each_Project_Node
+              (Project.Data.Local_Node_Tree, Project.Data.Node,
+               Do_Count'Unrestricted_Access);
+         end if;
 
          declare
-            Imports : Name_Id_Array (1 .. Count);
+            Imports : Path_Name_Id_Array (1 .. Count);
             Index   : Integer := Imports'First;
 
             procedure Do_Add (T : Project_Node_Tree_Ref; P : Project_Node_Id);
             procedure Do_Add
               (T : Project_Node_Tree_Ref; P : Project_Node_Id) is
             begin
-               Imports (Index) := Prj.Tree.Name_Of (P, T);
+               Imports (Index) := Prj.Tree.Path_Name_Of (P, T);
                Index := Index + 1;
             end Do_Add;
 
          begin
-            For_Each_Project_Node
-              (Project.Data.Tree.Tree, Project.Data.Node,
-               Do_Add'Unrestricted_Access);
-            Project.Data.Imported_Projects := new Name_Id_Array'
+            if Project.Data.Local_Node_Tree = null then
+               For_Each_Project_Node
+                 (Project.Data.Tree.Tree, Project.Data.Node,
+                  Do_Add'Unrestricted_Access);
+            else
+               For_Each_Project_Node
+                 (Project.Data.Local_Node_Tree, Project.Data.Node,
+                  Do_Add'Unrestricted_Access);
+            end if;
+            Project.Data.Imported_Projects := new Path_Name_Id_Array'
               (Imports (Imports'First .. Index - 1));
          end;
       end if;
@@ -2848,9 +2878,9 @@ package body GNATCOLL.Projects is
       type Boolean_Array is array (Positive range <>) of Boolean;
 
       Root_Project : constant Project_Type := Project.Data.Tree.Root;
-      All_Prj      : Name_Id_Array_Access :=
+      All_Prj      : Path_Name_Id_Array_Access :=
                        Root_Project.Data.Imported_Projects;
-      Importing    : Name_Id_Array_Access;
+      Importing    : Path_Name_Id_Array_Access;
       Index        : Integer;
       Parent       : Project_Type;
       Imports, Is_Limited_With : Boolean;
@@ -2907,7 +2937,7 @@ package body GNATCOLL.Projects is
       begin
          for Index in All_Prj'Range loop
             Parent := Project_Type
-              (Project_From_Name (Project.Data.Tree, All_Prj (Index)));
+              (Project_From_Path (Project.Data.Tree, All_Prj (Index)));
 
             --  Avoid processing a project twice
 
@@ -2944,7 +2974,7 @@ package body GNATCOLL.Projects is
                      --  efficiency
                      for J in Parent.Data.Importing_Projects'Range loop
                         if Parent.Data.Importing_Projects (J) =
-                          Get_View (Project).Display_Name
+                          Get_View (Project).Path.Name
                         then
                            Unchecked_Free (Parent.Data.Importing_Projects);
                            exit;
@@ -2966,7 +2996,7 @@ package body GNATCOLL.Projects is
 
          --  Keep the last place for the project itself
 
-         Importing := new Name_Id_Array (1 .. Index + 1);
+         Importing := new Path_Name_Id_Array (1 .. Index + 1);
 
          Index := Importing'First;
          for Inc in Include'Range loop
@@ -2977,7 +3007,7 @@ package body GNATCOLL.Projects is
          end loop;
       end;
 
-      Importing (Importing'Last) := Prj.Tree.Name_Of
+      Importing (Importing'Last) := Prj.Tree.Path_Name_Of
         (Project.Data.Node, Project.Data.Tree.Tree);
 
       Project.Data.Importing_Projects := Importing;
@@ -3051,7 +3081,7 @@ package body GNATCOLL.Projects is
            Iterator.Root.Data.Importing_Projects'First
          then
             return Project_Type
-              (Project_From_Name
+              (Project_From_Path
                  (Iterator.Root.Data.Tree,
                   Iterator.Root.Data.Importing_Projects (Iterator.Current)));
          end if;
@@ -3061,7 +3091,7 @@ package body GNATCOLL.Projects is
 
       elsif Iterator.Current >= Iterator.Root.Data.Imported_Projects'First then
          P := Project_Type
-           (Project_From_Name
+           (Project_From_Path
               (Iterator.Root.Data.Tree,
                Iterator.Root.Data.Imported_Projects (Iterator.Current)));
 
@@ -4144,6 +4174,46 @@ package body GNATCOLL.Projects is
    begin
       return Project_Type (Project_From_Name (Self.Data, Get_String (Name)));
    end Project_From_Name;
+
+   -------------------------
+   --  Project_From_Path  --
+   -------------------------
+
+   function Project_From_Path
+     (Self : Project_Tree'Class;
+      Path : Virtual_File) return Project_Type
+   is
+      Project_File : Virtual_File;
+      P_Cursor     : Project_Htables.Cursor;
+   begin
+      Project_File := Create (Normalize_Pathname (Full_Name (Path)));
+      P_Cursor := Self.Data.Projects.Find (Project_File);
+
+      if P_Cursor = Project_Htables.No_Element then
+         return No_Project;
+      end if;
+
+      return Element (P_Cursor);
+   end Project_From_Path;
+
+   -------------------------
+   --  Project_From_Path  --
+   -------------------------
+
+   function Project_From_Path
+     (Tree    : Project_Tree_Data_Access;
+      Path_Id : Path_Name_Type) return Project_Type'Class
+   is
+      P_Cursor : Project_Htables.Cursor :=
+        Tree.Projects.Find (Create (+Get_String (Path_Id)));
+   begin
+
+      if P_Cursor = Project_Htables.No_Element then
+         return No_Project;
+      end if;
+
+      return Element (P_Cursor);
+   end Project_From_Path;
 
    ----------------------
    -- Set_Trusted_Mode --
@@ -5677,9 +5747,16 @@ package body GNATCOLL.Projects is
       Data : constant Project_Data_Access := Tree_For_Map.Data_Factory;
       P    : Project_Type;
    begin
-      Data.Tree := Self.Data;
+      Data.Tree := Tree_For_Map.Data;
       Data.Node := Node;
       P := Project_Type'(Ada.Finalization.Controlled with Data => Data);
+
+      if Self /= Tree_For_Map then
+         --  Different project trees mean that we're dealing with one of
+         --  aggregated projects.
+         P.Data.Local_Tree := Self.Data.View;
+         P.Data.Local_Node_Tree := Self.Data.Tree;
+      end if;
       Tree_For_Map.Data.Projects.Include (Path, P);
       return P;
    end Instance_From_Node;
@@ -6071,6 +6148,25 @@ package body GNATCOLL.Projects is
 
       Free (Self.Data.View);
    end Unload;
+
+   --------------------------
+   -- Is_Aggregate_Project --
+   --------------------------
+
+   function Is_Aggregate_Project (Project : Project_Type'Class) return Boolean
+   is
+   begin
+      if Project.Data.Local_Tree = null then
+         --  root project
+         return
+           Project_Qualifier_Of (Project.Data.Node, Project.Data.Tree.Tree) =
+           Prj.Aggregate;
+      else
+         return
+           Project_Qualifier_Of
+             (Project.Data.Node, Project.Data.Local_Node_Tree) = Prj.Aggregate;
+      end if;
+   end Is_Aggregate_Project;
 
    -----------------
    -- Is_Editable --
