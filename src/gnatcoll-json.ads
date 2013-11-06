@@ -57,6 +57,7 @@ package GNATCOLL.JSON is
    Empty_Array : constant JSON_Array;
 
    --  Array handling
+   function Is_Empty (Arr : JSON_Array) return Boolean;
    function Length (Arr : JSON_Array) return Natural;
    function Get (Arr : JSON_Array; Index : Positive) return JSON_Value;
    procedure Append (Arr : in out JSON_Array; Val : JSON_Value);

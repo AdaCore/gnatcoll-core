@@ -582,6 +582,15 @@ package body GNATCOLL.JSON is
       return Natural (Arr.Vals.Length);
    end Length;
 
+   --------------
+   -- Is_Empty --
+   --------------
+
+   function Is_Empty (Arr : JSON_Array) return Boolean is
+   begin
+      return Arr.Vals.Is_Empty;
+   end Is_Empty;
+
    ---------
    -- Get --
    ---------
