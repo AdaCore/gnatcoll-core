@@ -13,13 +13,13 @@ project GnatColl_Python is
    --  When linking a shared library (see Linker_Options below in addition)
    for Library_Options use GnatColl_Shared.Python_Libs;
 
-   for Languages use ("Ada", "C");
-
    case GnatColl_Shared.Python is
       when "yes" =>
+         for Languages use ("Ada", "C");
          for Source_Dirs use Project'Source_Dirs & ("python");
          for Library_Options use (@PYTHON_LIBS_GPR@);
       when "no"  =>
+         for Languages use ("Ada");
          for Source_Dirs use Project'Source_Dirs & ("nopython");
    end case;
 
