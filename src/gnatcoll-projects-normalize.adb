@@ -3200,10 +3200,9 @@ package body GNATCOLL.Projects.Normalize is
 
       if Project.Data.Importing_Projects /= null then
          for P in Project.Data.Importing_Projects'Range loop
-            if
-              Project_From_Path
-                (Tree, Project.Data.Importing_Projects (P)).Data.View.Name =
-              Imported_Name
+            if To_Lower (Project_From_Path
+                (Tree, Project.Data.Importing_Projects (P)).Name) =
+              To_Lower (Get_Name_String (Imported_Name))
             then
                Fail ("Circular dependency detected in the project hierarchy");
                Output.Cancel_Special_Output;
