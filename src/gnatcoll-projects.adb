@@ -4204,10 +4204,9 @@ package body GNATCOLL.Projects is
      (Tree    : Project_Tree_Data_Access;
       Path_Id : Path_Name_Type) return Project_Type'Class
    is
-      P_Cursor : Project_Htables.Cursor :=
+      P_Cursor : constant Project_Htables.Cursor :=
         Tree.Projects.Find (Create (+Get_String (Path_Id)));
    begin
-
       if P_Cursor = Project_Htables.No_Element then
          return No_Project;
       end if;
