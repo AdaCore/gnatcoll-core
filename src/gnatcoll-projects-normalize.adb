@@ -2846,9 +2846,14 @@ package body GNATCOLL.Projects.Normalize is
       New_Path      : GNATCOLL.VFS.Virtual_File;
       Errors        : Error_Report := null)
    is
+      Use_Relative_Path : constant Boolean := True;
+      --  Whether to use relative paths when we have to modify with clauses
+
       Tree_Node : constant Project_Node_Tree_Ref :=
         GNATCOLL.Projects.Tree (Tree);
       Old_Path : constant Filesystem_String := Project.Project_Path.Dir_Name;
+
+      New_Dir : Virtual_File;
 
       procedure Change_Directory (Node : Project_Node_Id);
       --  Change the directory refered to by Node
@@ -2868,14 +2873,12 @@ package body GNATCOLL.Projects.Normalize is
                            Create
                              (Normalize_Pathname
                                 (D, Old_Path, Resolve_Links => False),
-                              Get_Host (New_Path));
+                              Get_Host (New_Dir));
                begin
                   if not Is_Absolute_Path (D) then
                      Set_String_Value_Of
                        (Node, Tree_Node,
-                        Get_String
-                          (+Relative_Path
-                             (File, New_Path)));
+                        Get_String (+Relative_Path (File, New_Dir)));
                   end if;
                end;
 
@@ -2885,12 +2888,7 @@ package body GNATCOLL.Projects.Normalize is
          end case;
       end Change_Directory;
 
-      D           : constant Filesystem_String :=
-                      Name_As_Directory (Full_Name (New_Path))
-                      & (+Translate (To_Lower (New_Name),
-                                     To_Mapping (".", "-")))
-                      & GNATCOLL.Projects.Project_File_Extension;
-      Full_Path   : constant Name_Id := Get_String (+D);
+      Full_Path   : Name_Id;
       Name        : constant Name_Id := Get_String (New_Name);
       Old_Name    : constant Name_Id := Get_String (Project.Name);
       Old         : constant Project_Type :=
@@ -2899,8 +2897,15 @@ package body GNATCOLL.Projects.Normalize is
       Iterator    : Project_Iterator;
       With_Clause : Project_Node_Id;
       Modified    : Boolean;
+      P           : Path_Name_Type;
 
    begin
+      if New_Path = GNATCOLL.VFS.No_File then
+         New_Dir := Create (Old_Path);
+      else
+         New_Dir := New_Path;
+      end if;
+
       if Project = No_Project then
          Trace (Me, "Unspecified project to remove");
          return;
@@ -2922,6 +2927,11 @@ package body GNATCOLL.Projects.Normalize is
 
       Iterator := Find_All_Projects_Importing (Project, Direct_Only => False);
 
+      Full_Path := Get_String
+         (+(Name_As_Directory (Full_Name (New_Dir))
+            & (+Translate (To_Lower (New_Name), To_Mapping (".", "-")))
+            & GNATCOLL.Projects.Project_File_Extension));
+
       loop
          Imported := Current (Iterator);
          exit when Imported = GNATCOLL.Projects.No_Project;
@@ -2934,7 +2944,18 @@ package body GNATCOLL.Projects.Normalize is
                Set_Name_Of (With_Clause, Tree_Node, Name);
                Set_Path_Name_Of (With_Clause, Tree_Node,
                                  Path_Name_Of (Project.Node, Tree_Node));
-               Set_String_Value_Of (With_Clause, Tree_Node, Full_Path);
+
+               if Use_Relative_Path then
+                  Set_String_Value_Of
+                    (With_Clause, Tree_Node,
+                     Get_String
+                       (+Relative_Path
+                            (File => Create (+Get_String (Full_Path)),
+                             From => Create
+                               (Imported.Project_Path.Dir_Name))));
+               else
+                  Set_String_Value_Of (With_Clause, Tree_Node, Full_Path);
+               end if;
                Modified := True;
             end if;
 
@@ -2951,7 +2972,7 @@ package body GNATCOLL.Projects.Normalize is
       --  If the file was moved, update the source directories so that we still
       --  point to the same physical directories.
 
-      if New_Path.Full_Name /= Old_Path then
+      if New_Dir.Full_Name /= Old_Path then
          For_Each_Directory_Node
            (Tree_Node, Project, Change_Directory'Unrestricted_Access);
       end if;
@@ -2959,9 +2980,14 @@ package body GNATCOLL.Projects.Normalize is
       Set_Name_Of (Project.Node, Tree_Node, Name);
       Set_Directory_Of
         (Project.Node, Tree_Node,
-         Path_Name_Type (Get_String (+New_Path.Full_Name)));
-      Set_Path_Name_Of
-        (Project.Node, Tree_Node, Path_Name_Type (Get_String (+D)));
+         Path_Name_Type (Get_String (+New_Dir.Full_Name)));
+
+      P := Path_Name_Type (Full_Path);
+      Set_Path_Name_Of (Project.Node, Tree_Node, P);
+
+      if Get_View (Project) /= Prj.No_Project then
+         Get_View (Project).Path := (Name => P, Display_Name => P);
+      end if;
 
       --  We do not want to reread the display_name from the source, which is
       --  no longer up-to-date, so we'll force its refresh from the tree
@@ -2987,7 +3013,7 @@ package body GNATCOLL.Projects.Normalize is
          Prj.Tree.Tree_Private_Part.Project_Name_And_Node'
          (Name           => Name,
           Display_Name   => Name,
-          Canonical_Path => Path_Name_Type (Get_String (+D)),
+          Canonical_Path => Path_Name_Type (Full_Path),
           Node           => Project.Node,
           Extended       => False,
           From_Extended  => False,

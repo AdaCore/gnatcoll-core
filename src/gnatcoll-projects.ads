@@ -1725,11 +1725,12 @@ private
    No_Project : aliased constant Project_Type :=
      (Ada.Finalization.Controlled with Data => null);
 
+   function Get_View (Project : Project_Type'Class) return Prj.Project_Id;
    function Node
      (Project : Project_Type'Class) return Prj.Tree.Project_Node_Id;
    function Tree
      (Data : Project_Tree_Data_Access) return Prj.Tree.Project_Node_Tree_Ref;
-   pragma Inline (Node, Tree);
+   pragma Inline (Node, Tree, Get_View);
    --  Needed for the support packages for the edition of project files.
 
    function Project_From_Name

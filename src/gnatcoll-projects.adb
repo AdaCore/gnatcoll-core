@@ -193,7 +193,6 @@ package body GNATCOLL.Projects is
    procedure Free (Self : in out Project_Tree_Data_Access);
    --  Free memory used by Self.
 
-   function Get_View (Project : Project_Type'Class) return Prj.Project_Id;
    function Get_View
      (Tree : Prj.Project_Tree_Ref; Name : Name_Id) return Prj.Project_Id;
    --  Return the project view for the project Name
@@ -6354,16 +6353,17 @@ package body GNATCOLL.Projects is
      (Self      : Project_Type;
       New_Name  : String;
       Directory : GNATCOLL.VFS.Virtual_File;
-      Errors    : Error_Report := null) is
+      Errors    : Error_Report := null)
+   is
+      Old_Path : constant Virtual_File := Self.Project_Path;
+
    begin
       GNATCOLL.Projects.Normalize.Rename_And_Move
         (Self.Data.Tree, Self, New_Name, Directory, Errors);
 
-      Self.Data.Tree.Projects.Delete  (Self.Project_Path);
-      Self.Data.Tree.Projects.Include
-         (Create_From_Base (Base_Name => +New_Name,
-                            Base_Dir  => Directory.Full_Name.all),
-          Self);
+      Self.Data.Tree.Projects.Delete (Old_Path);
+
+      Self.Data.Tree.Projects.Include (Self.Project_Path, Self);
 
       if Self.Data.View /= Prj.No_Project then
          Self.Data.View.Display_Name := Get_String (New_Name);
