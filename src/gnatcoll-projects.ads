@@ -85,6 +85,7 @@ pragma Ada_05;
 
 private with Ada.Containers.Indefinite_Hashed_Maps;
 with Ada.Containers.Doubly_Linked_Lists;
+with Ada.Containers.Vectors;
 private with Ada.Strings.Hash;
 private with Ada.Finalization;
 with Ada.Unchecked_Deallocation;
@@ -778,6 +779,7 @@ package GNATCOLL.Projects is
       Path : GNATCOLL.VFS.Virtual_File) return Project_Type;
    --  Select a project by path
 
+   type Inner_Project_Iterator is private;
    type Project_Iterator is private;
    --  Iterate over projects in a tree.
    --  There is no need to free such an iterator.
@@ -1327,6 +1329,8 @@ package GNATCOLL.Projects is
    --  relative path is used in the with statement, otherwise an absolute path
    --  is used.
    --  You will need to call Recompute_View afterwards.
+   --
+   --  Doesn't work if Tree.Root_Project is an aggregate project.
 
    function Add_Imported_Project
      (Project           : Project_Type;
@@ -1431,6 +1435,36 @@ package GNATCOLL.Projects is
       Values   : GNAT.Strings.String_List);
    --  Add some values to the list of possible values for Variable.
    --  The caller needs to free Values on return.
+
+   function Start
+     (Root_Project     : Project_Type;
+      Recursive        : Boolean := True;
+      Direct_Only      : Boolean := False;
+      Include_Extended : Boolean := True) return Inner_Project_Iterator;
+   --  Internal version of Start
+
+   function Start_Reversed
+     (Root_Project     : Project_Type;
+      Recursive        : Boolean := True;
+      Direct_Only      : Boolean := False;
+      Include_Extended : Boolean := True) return Inner_Project_Iterator;
+   --  Internal Version of Start_Reversed
+
+   procedure Next (Iterator : in out Inner_Project_Iterator);
+   --  Internal version of Next
+
+   function Current (Iterator : Inner_Project_Iterator) return Project_Type;
+   --  Internal version of Current
+
+   function Find_All_Projects_Importing
+     (Project      : Project_Type;
+      Root_Project : Project_Type;
+      Include_Self : Boolean := False;
+      Direct_Only  : Boolean := False) return Inner_Project_Iterator;
+   --  Inner version of Find_All_Projects_Importing
+
+   function Is_Limited_With (Iterator : Inner_Project_Iterator) return Boolean;
+   --  Inner version of Is_Limited_With
 
 private
 
@@ -1608,7 +1642,7 @@ private
    All_Scenarios : aliased constant Scenario_Variable_Array (1 .. 0) :=
                    (others => No_Variable);
 
-   type Project_Iterator is record
+   type Inner_Project_Iterator is record
       Root      : Project_Type;
       Current   : Integer;
 
@@ -1623,6 +1657,21 @@ private
 
       Direct_Only : Boolean := False;
       --  Relevant only when listing projects importing Root
+   end record;
+
+   package Project_Lists is new
+     Ada.Containers.Vectors (Positive, Project_Type);
+   use Project_Lists;
+
+   type Project_Iterator is record
+      Root         : Project_Type;
+
+      Importing    : Boolean := False;
+      --  True if we are looking for importing projects instead of imported
+      --  projects. Only used by Is_Limited_With.
+
+      Project_List : Project_Lists.Vector  := Project_Lists.Empty_Vector;
+      Project_Idx  : Natural               := Project_Lists.No_Index;
    end record;
 
    type Attribute_Pkg_String is new String;

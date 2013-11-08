@@ -598,7 +598,7 @@ package body GNATCOLL.Projects.Normalize is
          end loop;
       end Recurse_In_Project;
 
-      Iter : Project_Iterator := Start (Root_Project);
+      Iter : Inner_Project_Iterator := Start (Root_Project);
    begin
       while Current (Iter) /= No_Project loop
          Recurse_In_Project (Current (Iter).Node, Empty_Node);
@@ -2894,7 +2894,7 @@ package body GNATCOLL.Projects.Normalize is
       Old         : constant Project_Type :=
                       Project_Type (Project_From_Name (Tree, Name));
       Imported    : Project_Type;
-      Iterator    : Project_Iterator;
+      Iterator    : Inner_Project_Iterator;
       With_Clause : Project_Node_Id;
       Modified    : Boolean;
       P           : Path_Name_Type;
@@ -2925,7 +2925,8 @@ package body GNATCOLL.Projects.Normalize is
       --  Replace all the with_clauses in the project hierarchy that points to
       --  Project.
 
-      Iterator := Find_All_Projects_Importing (Project, Direct_Only => False);
+      Iterator := Find_All_Projects_Importing
+        (Project, Project, Direct_Only => False);
 
       Full_Path := Get_String
          (+(Name_As_Directory (Full_Name (New_Dir))

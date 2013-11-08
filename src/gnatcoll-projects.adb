@@ -24,6 +24,7 @@
 with Ada.Calendar;                use Ada.Calendar;
 with Ada.Characters.Handling;     use Ada.Characters.Handling;
 with Ada.Containers.Hashed_Sets;
+with Ada.Containers.Indefinite_Ordered_Sets;
 with Ada.Directories;
 with Ada.Strings;                 use Ada.Strings;
 with Ada.Strings.Fixed;           use Ada.Strings.Fixed;
@@ -264,7 +265,9 @@ package body GNATCOLL.Projects is
      (Unit_Name : String; Dot_Replacement : String) return String;
    --  Replace the '.' in unit_name with Dot_Replacement
 
-   procedure Compute_Importing_Projects (Project : Project_Type'Class);
+   procedure Compute_Importing_Projects
+     (Project      : Project_Type'Class;
+      Root_Project : Project_Type'Class);
    --  Compute the list of all projects that import, possibly indirectly,
    --  Project.
 
@@ -439,7 +442,7 @@ package body GNATCOLL.Projects is
          if Project = Prj.No_Project then
             if Tree.Root_Project /= No_Project then
                declare
-                  Iter : Project_Iterator := Start (Tree.Root_Project);
+                  Iter : Inner_Project_Iterator := Start (Tree.Root_Project);
                begin
                   while Current (Iter) /= No_Project loop
                      Current (Iter).Data.View_Is_Complete := False;
@@ -588,7 +591,7 @@ package body GNATCOLL.Projects is
       Recursive : Boolean := False) return GNATCOLL.VFS.File_Array
    is
       Current_Dir : constant Filesystem_String := Get_Current_Dir;
-      Iter        : Project_Iterator := Start (Project, Recursive);
+      Iter        : Inner_Project_Iterator := Start (Project, Recursive);
       Count       : Natural := 0;
       P           : Project_Type;
       View        : Project_Id;
@@ -723,7 +726,7 @@ package body GNATCOLL.Projects is
 
       elsif Recursive then
          declare
-            Iter  : Project_Iterator := Start (Project, Recursive);
+            Iter  : Inner_Project_Iterator := Start (Project, Recursive);
             Result : File_Array_Access;
             P     : Project_Type;
          begin
@@ -796,7 +799,7 @@ package body GNATCOLL.Projects is
       Exclude_Overridden  : Boolean := True)
    is
       Tmp             : File_Array_Access;
-      Prj_Iter        : Project_Iterator;
+      Prj_Iter        : Inner_Project_Iterator;
       Current_Project : Project_Type;
       Info_Cursor     : Names_Files.Cursor;
       Re              : Pattern_Matcher_Access;
@@ -1131,7 +1134,7 @@ package body GNATCOLL.Projects is
       Base          : constant Filesystem_String := Base_Name (Name);
       Project2      : Project_Type;
       Path          : Virtual_File := GNATCOLL.VFS.No_File;
-      Iterator      : Project_Iterator;
+      Iterator      : Inner_Project_Iterator;
       Info_Cursor   : Names_Files.Cursor;
       Info          : Source_File_Data;
       In_Predefined : Boolean := False;
@@ -1294,7 +1297,7 @@ package body GNATCOLL.Projects is
       end if;
 
       declare
-         Iter : Project_Iterator := Start (Project, Recursive);
+         Iter : Inner_Project_Iterator := Start (Project, Recursive);
       begin
          Count := 0;
 
@@ -2362,7 +2365,7 @@ package body GNATCOLL.Projects is
    function Languages
      (Project : Project_Type; Recursive : Boolean := False) return String_List
    is
-      Iter          : Project_Iterator := Start (Project, Recursive);
+      Iter          : Inner_Project_Iterator := Start (Project, Recursive);
       Num_Languages : Natural := 0;
       Val           : Variable_Value;
       P             : Project_Type;
@@ -2747,7 +2750,109 @@ package body GNATCOLL.Projects is
       Direct_Only      : Boolean := False;
       Include_Extended : Boolean := True) return Project_Iterator
    is
-      Iter : Project_Iterator;
+      Iter       : Project_Iterator;
+      Iter_Inner : Inner_Project_Iterator;
+
+      package Path_Sets is new
+        Ada.Containers.Indefinite_Ordered_Sets (String);
+      use Path_Sets;
+
+      Project_Paths : Path_Sets.Set;
+
+      procedure Add_Project (Project : Project_Type'Class);
+      procedure Add_Project (Project : Project_Type'Class) is
+         P          : Project_Type;
+         Aggregated : Aggregated_Project_List;
+      begin
+         if Is_Aggregate_Project (Project) then
+            Aggregated := Project.Data.View.Aggregated_Projects;
+
+            if
+              Project_Paths.Find
+                (Project.Project_Path.Display_Full_Name) =
+                  Path_Sets.No_Element
+            then
+               Iter.Project_List.Append (Project_Type (Project));
+               Project_Paths.Include
+                 (Project.Project_Path.Display_Full_Name);
+            end if;
+
+            while Aggregated /= null loop
+
+               P := Project_Type
+                 (Project_From_Path (Project.Data.Tree, Aggregated.Path));
+
+               if Direct_Only then
+
+                  if
+                    Project_Paths.Find (P.Project_Path.Display_Full_Name) =
+                    Path_Sets.No_Element
+                  then
+                     Iter.Project_List.Append (P);
+                     Project_Paths.Include
+                       (P.Project_Path.Display_Full_Name);
+                  end if;
+               else
+
+                  Add_Project (P);
+               end if;
+
+               Aggregated := Aggregated.Next;
+            end loop;
+         else
+            Iter_Inner :=
+              Start_Reversed
+                (Root_Project     => Project,
+                 Recursive        => Recursive,
+                 Direct_Only      => Direct_Only,
+                 Include_Extended => Include_Extended);
+
+            loop
+               exit when Current (Iter_Inner) = No_Project;
+
+               if
+                 Project_Paths.Find
+                   (Current (Iter_Inner).Project_Path.Display_Full_Name) =
+                     Path_Sets.No_Element
+               then
+                  Iter.Project_List.Append (Current (Iter_Inner));
+                  Project_Paths.Include
+                    (Current (Iter_Inner).Project_Path.Display_Full_Name);
+               end if;
+
+               Next (Iter_Inner);
+            end loop;
+         end if;
+      end Add_Project;
+
+   begin
+
+      Iter.Root := Root_Project;
+
+      if not Recursive then
+         Iter.Project_List.Append (Root_Project);
+         Iter.Project_Idx := Iter.Project_List.First_Index;
+         return Iter;
+      end if;
+
+      Add_Project (Root_Project);
+      Project_Paths.Clear;
+      Iter.Project_Idx := Iter.Project_List.First_Index;
+
+      return Iter;
+   end Start_Reversed;
+
+   --------------------
+   -- Start_Reversed --
+   --------------------
+
+   function Start_Reversed
+     (Root_Project     : Project_Type;
+      Recursive        : Boolean := True;
+      Direct_Only      : Boolean := False;
+      Include_Extended : Boolean := True) return Inner_Project_Iterator
+   is
+      Iter : Inner_Project_Iterator;
    begin
       Assert (Me, Root_Project.Data /= null,
               "Start: Uninitialized project passed as argument");
@@ -2755,7 +2860,7 @@ package body GNATCOLL.Projects is
       Compute_Imported_Projects (Root_Project);
 
       if Recursive then
-         Iter := Project_Iterator'
+         Iter := Inner_Project_Iterator'
            (Root             => Root_Project,
             Direct_Only      => Direct_Only,
             Importing        => False,
@@ -2765,7 +2870,7 @@ package body GNATCOLL.Projects is
          Next (Iter);
          return Iter;
       else
-         return Project_Iterator'
+         return Inner_Project_Iterator'
            (Root             => Root_Project,
             Direct_Only      => Direct_Only,
             Importing        => False,
@@ -2785,7 +2890,109 @@ package body GNATCOLL.Projects is
       Direct_Only      : Boolean := False;
       Include_Extended : Boolean := True) return Project_Iterator
    is
-      Iter : Project_Iterator;
+      Iter       : Project_Iterator;
+      Iter_Inner : Inner_Project_Iterator;
+
+      package Path_Sets is new
+        Ada.Containers.Indefinite_Ordered_Sets (String);
+      use Path_Sets;
+
+      Project_Paths : Path_Sets.Set;
+
+      procedure Add_Project (Project : Project_Type'Class);
+      procedure Add_Project (Project : Project_Type'Class) is
+         P          : Project_Type;
+         Aggregated : Aggregated_Project_List;
+      begin
+         if Is_Aggregate_Project (Project) then
+            Aggregated := Project.Data.View.Aggregated_Projects;
+
+            while Aggregated /= null loop
+
+               P := Project_Type
+                 (Project_From_Path (Project.Data.Tree, Aggregated.Path));
+
+               if Direct_Only then
+
+                  if
+                    Project_Paths.Find (P.Project_Path.Display_Full_Name) =
+                    Path_Sets.No_Element
+                  then
+                     Iter.Project_List.Append (P);
+                     Project_Paths.Include
+                       (P.Project_Path.Display_Full_Name);
+                  end if;
+               else
+
+                  Add_Project (P);
+               end if;
+
+               Aggregated := Aggregated.Next;
+            end loop;
+
+            if
+              Project_Paths.Find
+                (Project.Project_Path.Display_Full_Name) =
+                  Path_Sets.No_Element
+            then
+               Iter.Project_List.Append (Project_Type (Project));
+               Project_Paths.Include
+                 (Project.Project_Path.Display_Full_Name);
+            end if;
+         else
+            Iter_Inner :=
+              Start
+                (Root_Project     => Project,
+                 Recursive        => Recursive,
+                 Direct_Only      => Direct_Only,
+                 Include_Extended => Include_Extended);
+
+            loop
+               exit when Current (Iter_Inner) = No_Project;
+
+               if
+                 Project_Paths.Find
+                   (Current (Iter_Inner).Project_Path.Display_Full_Name) =
+                     Path_Sets.No_Element
+               then
+                  Iter.Project_List.Append (Current (Iter_Inner));
+                  Project_Paths.Include
+                    (Current (Iter_Inner).Project_Path.Display_Full_Name);
+               end if;
+
+               Next (Iter_Inner);
+            end loop;
+         end if;
+      end Add_Project;
+
+   begin
+
+      Iter.Root := Root_Project;
+
+      if not Recursive then
+         Iter.Project_List.Append (Root_Project);
+         Iter.Project_Idx := Iter.Project_List.First_Index;
+         return Iter;
+      end if;
+
+      Add_Project (Root_Project);
+      Project_Paths.Clear;
+      Iter.Project_Idx := Iter.Project_List.First_Index;
+
+      return Iter;
+   end Start;
+
+   -----------
+   -- Start --
+   -----------
+
+   function Start
+     (Root_Project     : Project_Type;
+      Recursive        : Boolean := True;
+      Direct_Only      : Boolean := False;
+      Include_Extended : Boolean := True) return Inner_Project_Iterator
+   is
+      Iter : Inner_Project_Iterator;
    begin
       Assert (Me, Root_Project.Data /= null,
               "Start: Uninitialized project passed as argument");
@@ -2793,7 +3000,7 @@ package body GNATCOLL.Projects is
       Compute_Imported_Projects (Root_Project);
 
       if Recursive then
-         Iter := Project_Iterator'
+         Iter := Inner_Project_Iterator'
            (Root             => Root_Project,
             Direct_Only      => Direct_Only,
             Importing        => False,
@@ -2803,7 +3010,7 @@ package body GNATCOLL.Projects is
          Next (Iter);
          return Iter;
       else
-         return Project_Iterator'
+         return Inner_Project_Iterator'
            (Root             => Root_Project,
             Direct_Only      => Direct_Only,
             Importing        => False,
@@ -2826,6 +3033,8 @@ package body GNATCOLL.Projects is
    is
       With_Clause : Project_Node_Id;
       Extended    : Project_Node_Id;
+
+      Tree_Tree   : Project_Node_Tree_Ref := Parent.Tree_Tree;
    begin
       Assert (Me, Child.Data /= null, "Project_Imports: no child provided");
 
@@ -2835,29 +3044,35 @@ package body GNATCOLL.Projects is
          return;
       end if;
 
+      if Parent.Data.Local_Node_Tree /= null then
+         --  root project is aggregate project, we need to use the proper tree
+         --  for the aggregated project
+         Tree_Tree := Parent.Data.Local_Node_Tree;
+      end if;
+
       With_Clause := First_With_Clause_Of
-        (Parent.Data.Node, Parent.Tree_Tree);
+           (Parent.Data.Node, Tree_Tree);
 
       while With_Clause /= Empty_Node loop
          if Project_Node_Of
-           (With_Clause, Parent.Tree_Tree) = Child.Data.Node
+           (With_Clause, Tree_Tree) = Child.Data.Node
          then
             Imports         := True;
             Is_Limited_With :=
-              Non_Limited_Project_Node_Of (With_Clause, Parent.Tree_Tree)
+              Non_Limited_Project_Node_Of (With_Clause, Tree_Tree)
               = Empty_Node;
             return;
          end if;
 
-         With_Clause := Next_With_Clause_Of (With_Clause, Parent.Tree_Tree);
+         With_Clause := Next_With_Clause_Of (With_Clause, Tree_Tree);
       end loop;
 
       --  Handling for extending projects ?
 
       if Include_Extended then
          Extended := Extended_Project_Of
-           (Project_Declaration_Of (Parent.Data.Node, Parent.Tree_Tree),
-            Parent.Tree_Tree);
+           (Project_Declaration_Of (Parent.Data.Node, Tree_Tree),
+            Tree_Tree);
          if Extended = Child.Data.Node then
             Imports := True;
             Is_Limited_With := False;
@@ -2873,10 +3088,12 @@ package body GNATCOLL.Projects is
    -- Compute_Importing_Projects --
    --------------------------------
 
-   procedure Compute_Importing_Projects (Project : Project_Type'Class) is
+   procedure Compute_Importing_Projects
+     (Project      : Project_Type'Class;
+      Root_Project : Project_Type'Class)
+   is
       type Boolean_Array is array (Positive range <>) of Boolean;
 
-      Root_Project : constant Project_Type := Project.Data.Tree.Root;
       All_Prj      : Path_Name_Id_Array_Access :=
                        Root_Project.Data.Imported_Projects;
       Importing    : Path_Name_Id_Array_Access;
@@ -2963,7 +3180,7 @@ package body GNATCOLL.Projects is
                     or else Parent.Data.Importing_Projects =
                       Unknown_Importing_Projects'Unrestricted_Access;
 
-                  Compute_Importing_Projects (Parent);
+                  Compute_Importing_Projects (Parent, Root_Project);
                   Merge_Project (Parent, Include);
 
                   if Was_Unknown then
@@ -3006,8 +3223,14 @@ package body GNATCOLL.Projects is
          end loop;
       end;
 
-      Importing (Importing'Last) := Prj.Tree.Path_Name_Of
-        (Project.Data.Node, Project.Data.Tree.Tree);
+      if Project.Data.Local_Node_Tree /= null then
+         --  chosing local tree for aggregated project
+         Importing (Importing'Last) := Prj.Tree.Path_Name_Of
+           (Project.Data.Node, Project.Data.Local_Node_Tree);
+      else
+         Importing (Importing'Last) := Prj.Tree.Path_Name_Of
+           (Project.Data.Node, Project.Data.Tree.Tree);
+      end if;
 
       Project.Data.Importing_Projects := Importing;
 
@@ -3035,8 +3258,111 @@ package body GNATCOLL.Projects is
       Include_Self : Boolean := False;
       Direct_Only  : Boolean := False) return Project_Iterator
    is
-      Root_Project : constant Project_Type := Project.Data.Tree.Root;
-      Iter         : Project_Iterator;
+      Iter       : Project_Iterator;
+      Iter_Inner : Inner_Project_Iterator;
+
+      Local_Roots : Project_Lists.Vector := Project_Lists.Empty_Vector;
+
+      package Path_Sets is new
+        Ada.Containers.Indefinite_Ordered_Sets (String);
+      use Path_Sets;
+
+      Project_Paths : Path_Sets.Set := Path_Sets.Empty_Set;
+
+      procedure Add_Local_Roots (Project : Project_Type);
+      procedure Add_Local_Roots (Project : Project_Type) is
+         P          : Project_Type;
+         Aggregated : Aggregated_Project_List;
+      begin
+
+         if Is_Aggregate_Project (Project) then
+            Aggregated := Project.Data.View.Aggregated_Projects;
+
+            while Aggregated /= null loop
+
+               P := Project_Type
+                 (Project_From_Path (Project.Data.Tree, Aggregated.Path));
+
+               Add_Local_Roots (P);
+
+               Aggregated := Aggregated.Next;
+            end loop;
+         else
+
+            Local_Roots.Append (Project);
+         end if;
+      end Add_Local_Roots;
+   begin
+
+      Iter.Root      := Project;
+      Iter.Importing := True;
+
+      if Is_Aggregate_Project (Project.Data.Tree.Root) then
+         --  you gonna have a bad time
+         Add_Local_Roots (Project.Data.Tree.Root);
+
+         for I in Local_Roots.First_Index .. Local_Roots.Last_Index loop
+
+            --  we neew to reset importing projects for each local root
+            Unchecked_Free (Project.Data.Importing_Projects);
+
+            Iter_Inner := Find_All_Projects_Importing
+              (Project      => Project,
+               Root_Project => Local_Roots.Element (I),
+               Include_Self => Include_Self,
+               Direct_Only  => Direct_Only);
+
+            loop
+               exit when Current (Iter_Inner) = No_Project;
+
+               if
+                 not Project_Paths.Contains
+                   (Current (Iter_Inner).Project_Path.Display_Full_Name)
+               then
+                  --  avoiding possible duplication
+                  Iter.Project_List.Append (Current (Iter_Inner));
+                  Project_Paths.Include
+                    (Current (Iter_Inner).Project_Path.Display_Full_Name);
+               end if;
+
+               Next (Iter_Inner);
+            end loop;
+         end loop;
+
+         Iter.Project_Idx := Iter.Project_List.First_Index;
+         return Iter;
+      else
+
+         Iter_Inner := Find_All_Projects_Importing
+           (Project      => Project,
+            Root_Project => Project.Data.Tree.Root,
+            Include_Self => Include_Self,
+            Direct_Only  => Direct_Only);
+
+         loop
+            exit when Current (Iter_Inner) = No_Project;
+
+            Iter.Project_List.Append (Current (Iter_Inner));
+
+            Next (Iter_Inner);
+         end loop;
+      end if;
+
+      Iter.Project_Idx := Iter.Project_List.First_Index;
+      return Iter;
+   end Find_All_Projects_Importing;
+
+   ---------------------------------
+   -- Find_All_Projects_Importing --
+   ---------------------------------
+
+   function Find_All_Projects_Importing
+     (Project      : Project_Type;
+      Root_Project : Project_Type;
+      Include_Self : Boolean := False;
+      Direct_Only  : Boolean := False) return Inner_Project_Iterator
+   is
+      Iter         : Inner_Project_Iterator;
    begin
       if Project = No_Project then
          return Start (Root_Project, Recursive => True);
@@ -3046,10 +3372,10 @@ package body GNATCOLL.Projects is
 
       if Project.Data.Importing_Projects = null then
          Compute_Imported_Projects (Root_Project);
-         Compute_Importing_Projects (Project);
+         Compute_Importing_Projects (Project, Root_Project);
       end if;
 
-      Iter := Project_Iterator'
+      Iter := Inner_Project_Iterator'
         (Root             => Project,
          Direct_Only      => Direct_Only,
          Importing        => True,
@@ -3072,6 +3398,24 @@ package body GNATCOLL.Projects is
 
    function Current
      (Iterator : Project_Iterator) return Project_Type
+   is
+   begin
+      if
+        Iterator.Project_List.To_Cursor (Iterator.Project_Idx) =
+        Project_Lists.No_Element
+      then
+         return No_Project;
+      end if;
+
+      return Iterator.Project_List.Element (Iterator.Project_Idx);
+   end Current;
+
+   -------------
+   -- Current --
+   -------------
+
+   function Current
+     (Iterator : Inner_Project_Iterator) return Project_Type
    is
       P : Project_Type;
    begin
@@ -3108,8 +3452,41 @@ package body GNATCOLL.Projects is
    -- Is_Limited_With --
    ---------------------
 
+   function Is_Limited_With (Iterator : Project_Iterator) return Boolean
+   is
+      Imports, Is_Limited_With : Boolean;
+   begin
+
+      if Iterator.Importing then
+
+         if Is_Aggregate_Project (Iterator.Root) then
+            --  aggregate projects cannot be imported
+            return False;
+         end if;
+
+         Project_Imports
+           (Current (Iterator), Iterator.Root,
+            Include_Extended => False,
+            Imports          => Imports,
+            Is_Limited_With  => Is_Limited_With);
+      else
+         Project_Imports
+           (Iterator.Root, Current (Iterator),
+            Include_Extended => False,
+            Imports          => Imports,
+            Is_Limited_With  => Is_Limited_With);
+      end if;
+
+      return Imports and Is_Limited_With;
+
+   end Is_Limited_With;
+
+   ---------------------
+   -- Is_Limited_With --
+   ---------------------
+
    function Is_Limited_With
-     (Iterator : Project_Iterator) return Boolean
+     (Iterator : Inner_Project_Iterator) return Boolean
    is
       Imports, Is_Limited_With : Boolean;
    begin
@@ -3136,6 +3513,15 @@ package body GNATCOLL.Projects is
    ----------
 
    procedure Next (Iterator : in out Project_Iterator) is
+   begin
+      Iterator.Project_Idx := Iterator.Project_Idx + 1;
+   end Next;
+
+   ----------
+   -- Next --
+   ----------
+
+   procedure Next (Iterator : in out Inner_Project_Iterator) is
       Imports, Is_Limited_With : Boolean;
    begin
       if Iterator.Reversed then
@@ -3624,7 +4010,7 @@ package body GNATCOLL.Projects is
       Callback  : External_Variable_Callback)
    is
       Tree     : constant Prj.Tree.Project_Node_Tree_Ref := Project.Tree_Tree;
-      Iterator : Project_Iterator := Start (Project, Recursive);
+      Iterator : Inner_Project_Iterator := Start (Project, Recursive);
       P        : Project_Type;
 
       procedure Process_Prj (Prj : Project_Node_Id);
@@ -3849,7 +4235,7 @@ package body GNATCOLL.Projects is
    ---------------------------
 
    function Has_Imported_Projects (Project : Project_Type) return Boolean is
-      Iter : constant Project_Iterator := Start
+      Iter : constant Inner_Project_Iterator := Start
         (Project, Recursive => True, Direct_Only => True);
    begin
       return Current (Iter) /= No_Project;
@@ -4679,7 +5065,7 @@ package body GNATCOLL.Projects is
       Recompute_View : Boolean := False;
       Errors   : Error_Report := null)
    is
-      Iter : Project_Iterator;
+      Iter : Inner_Project_Iterator;
    begin
       Iter     := Start (Self.Root_Project);
       Reloaded := False;
@@ -5569,7 +5955,7 @@ package body GNATCOLL.Projects is
       Automatically_Generated : Boolean;
       Config_File_Path        : String_Access;
       Flags                   : Processing_Flags;
-      Iter                    : Project_Iterator;
+      Iter                    : Inner_Project_Iterator;
       Timestamp               : Time;
 
       procedure On_New_Tree_Loaded
@@ -5587,9 +5973,10 @@ package body GNATCOLL.Projects is
             Tree => Node_Tree,
             View => Tree,
             Status => Self.Data.Status,
-            Root => T.Instance_From_Node (Self, Project_Node),
             Timestamp => Self.Data.Timestamp,
             others => <>);
+         --  T.Data.Tree should be set before the instances can be created
+         T.Data.Root := T.Instance_From_Node (Self, Project_Node);
          Create_Project_Instances (T, Self, With_View => False);
       end On_New_Tree_Loaded;
 
@@ -5943,7 +6330,7 @@ package body GNATCOLL.Projects is
       Gnatls           : constant String :=
                            Self.Root_Project.Attribute_Value
                              (Gnatlist_Attribute);
-      Iter             : Project_Iterator;
+      Iter             : Inner_Project_Iterator;
       Sources          : String_List_Id;
       P                : Project_Type;
       Source_Iter      : Source_Iterator;
@@ -6592,7 +6979,7 @@ package body GNATCOLL.Projects is
      (Project   : Project_Type;
       Recursive : Boolean := False) return Boolean
    is
-      Iter : Project_Iterator := Start (Project, Recursive);
+      Iter : Inner_Project_Iterator := Start (Project, Recursive);
       P    : Project_Type;
    begin
       loop
@@ -6768,7 +7155,7 @@ package body GNATCOLL.Projects is
          return Imported_Project_Not_Found;
       end if;
 
-      Compute_Importing_Projects (Project);
+      Compute_Importing_Projects (Project, Project.Data.Tree.Root);
       Error := Add_Imported_Project
         (Tree                      => Project.Data.Tree,
          Project                   => Project,
@@ -6799,7 +7186,7 @@ package body GNATCOLL.Projects is
       Use_Base_Name     : Boolean := False;
       Limited_With      : Boolean := False) return Import_Project_Error is
    begin
-      Compute_Importing_Projects (Project);
+      Compute_Importing_Projects (Project, Project.Data.Tree.Root);
 
       return GNATCOLL.Projects.Normalize.Add_Imported_Project
         (Tree                      => Project.Data.Tree,
@@ -7278,7 +7665,7 @@ package body GNATCOLL.Projects is
    is
       Tree_N         : constant Project_Node_Tree_Ref := Tree.Data.Tree;
       Type_Node, Var : Project_Node_Id;
-      Iter           : Project_Iterator := Tree.Root_Project.Start;
+      Iter           : Inner_Project_Iterator := Tree.Root_Project.Start;
       P              : Project_Type;
    begin
       loop
