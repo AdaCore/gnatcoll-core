@@ -2769,12 +2769,12 @@ package body GNATCOLL.Projects is
 
             if
               Project_Paths.Find
-                (Project.Project_Path.Display_Full_Name) =
+                (Project_Path (Project).Display_Full_Name) =
                   Path_Sets.No_Element
             then
                Iter.Project_List.Append (Project_Type (Project));
                Project_Paths.Include
-                 (Project.Project_Path.Display_Full_Name);
+                 (Project_Path (Project).Display_Full_Name);
             end if;
 
             while Aggregated /= null loop
@@ -2785,12 +2785,12 @@ package body GNATCOLL.Projects is
                if Direct_Only then
 
                   if
-                    Project_Paths.Find (P.Project_Path.Display_Full_Name) =
+                    Project_Paths.Find (Project_Path (P).Display_Full_Name) =
                     Path_Sets.No_Element
                   then
                      Iter.Project_List.Append (P);
                      Project_Paths.Include
-                       (P.Project_Path.Display_Full_Name);
+                       (Project_Path (P).Display_Full_Name);
                   end if;
                else
 
@@ -2932,12 +2932,12 @@ package body GNATCOLL.Projects is
 
             if
               Project_Paths.Find
-                (Project.Project_Path.Display_Full_Name) =
+                (Project_Path (Project).Display_Full_Name) =
                   Path_Sets.No_Element
             then
                Iter.Project_List.Append (Project_Type (Project));
                Project_Paths.Include
-                 (Project.Project_Path.Display_Full_Name);
+                 (Project_Path (Project).Display_Full_Name);
             end if;
          else
             Iter_Inner :=
@@ -2952,12 +2952,12 @@ package body GNATCOLL.Projects is
 
                if
                  Project_Paths.Find
-                   (Current (Iter_Inner).Project_Path.Display_Full_Name) =
+                   (Project_Path (Current (Iter_Inner)).Display_Full_Name) =
                      Path_Sets.No_Element
                then
                   Iter.Project_List.Append (Current (Iter_Inner));
                   Project_Paths.Include
-                    (Current (Iter_Inner).Project_Path.Display_Full_Name);
+                    (Project_Path (Current (Iter_Inner)).Display_Full_Name);
                end if;
 
                Next (Iter_Inner);
