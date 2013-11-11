@@ -2760,13 +2760,21 @@ package body GNATCOLL.Projects is
       Project_Paths : Path_Sets.Set;
 
       procedure Add_Project (Project : Project_Type'Class);
+      --  Fills Project_Iterator with a list of projects. For each of
+      --  aggregated project trees (if any) corresponding projects are put in
+      --  the list in the same reversed topological order as for regular
+      --  project. Aggregate project itself goes in front of corresponding
+      --  aggregated projects.
+
       procedure Add_Project (Project : Project_Type'Class) is
          P          : Project_Type;
          Aggregated : Aggregated_Project_List;
       begin
          if Is_Aggregate_Project (Project) then
+            --  processing aggregated project hierarchies
             Aggregated := Project.Data.View.Aggregated_Projects;
 
+            --  aggregate project goes first in reversed order.
             if
               Project_Paths.Find
                 (Project_Path (Project).Display_Full_Name) =
@@ -2785,9 +2793,11 @@ package body GNATCOLL.Projects is
                if Direct_Only then
 
                   if
-                    Project_Paths.Find (Project_Path (P).Display_Full_Name) =
-                    Path_Sets.No_Element
+                    Project_Paths.Find
+                      (Project_Path (P).Display_Full_Name) =
+                        Path_Sets.No_Element
                   then
+                     --  we only need projects that are not yet in the list
                      Iter.Project_List.Append (P);
                      Project_Paths.Include
                        (Project_Path (P).Display_Full_Name);
@@ -2800,6 +2810,9 @@ package body GNATCOLL.Projects is
                Aggregated := Aggregated.Next;
             end loop;
          else
+
+            --  For the regulat project (aggregated or root) do a full
+            --  iteration placing projects in the list.
             Iter_Inner :=
               Start_Reversed
                 (Root_Project     => Project,
@@ -2815,6 +2828,7 @@ package body GNATCOLL.Projects is
                    (Current (Iter_Inner).Project_Path.Display_Full_Name) =
                      Path_Sets.No_Element
                then
+                  --  we only need projects that are not yet in the list
                   Iter.Project_List.Append (Current (Iter_Inner));
                   Project_Paths.Include
                     (Current (Iter_Inner).Project_Path.Display_Full_Name);
@@ -2900,11 +2914,18 @@ package body GNATCOLL.Projects is
       Project_Paths : Path_Sets.Set;
 
       procedure Add_Project (Project : Project_Type'Class);
+      --  Fills Project_Iterator with a list of projects. For each of
+      --  aggregated project trees (if any) corresponding projects are put in
+      --  the list in the same topological order as for regular project.
+      --  Aggregate project itself goes after corresponding aggregated
+      --  projects.
+
       procedure Add_Project (Project : Project_Type'Class) is
          P          : Project_Type;
          Aggregated : Aggregated_Project_List;
       begin
          if Is_Aggregate_Project (Project) then
+            --  processing aggregated project hierarchies
             Aggregated := Project.Data.View.Aggregated_Projects;
 
             while Aggregated /= null loop
@@ -2915,12 +2936,14 @@ package body GNATCOLL.Projects is
                if Direct_Only then
 
                   if
-                    Project_Paths.Find (P.Project_Path.Display_Full_Name) =
-                    Path_Sets.No_Element
+                    Project_Paths.Find
+                      (Project_Path (P).Display_Full_Name) =
+                        Path_Sets.No_Element
                   then
+                     --  we only need projects that are not yet in the list
                      Iter.Project_List.Append (P);
                      Project_Paths.Include
-                       (P.Project_Path.Display_Full_Name);
+                       (Project_Path (P).Display_Full_Name);
                   end if;
                else
 
@@ -2930,6 +2953,7 @@ package body GNATCOLL.Projects is
                Aggregated := Aggregated.Next;
             end loop;
 
+            --  aggregate project goes last in straight order
             if
               Project_Paths.Find
                 (Project_Path (Project).Display_Full_Name) =
@@ -2940,6 +2964,9 @@ package body GNATCOLL.Projects is
                  (Project_Path (Project).Display_Full_Name);
             end if;
          else
+
+            --  For the regulat project (aggregated or root) do a full
+            --  iteration placing projects in the list.
             Iter_Inner :=
               Start
                 (Root_Project     => Project,
@@ -2955,6 +2982,7 @@ package body GNATCOLL.Projects is
                    (Project_Path (Current (Iter_Inner)).Display_Full_Name) =
                      Path_Sets.No_Element
                then
+                  --  we only need projects that are not yet in the list
                   Iter.Project_List.Append (Current (Iter_Inner));
                   Project_Paths.Include
                     (Project_Path (Current (Iter_Inner)).Display_Full_Name);
@@ -3045,8 +3073,8 @@ package body GNATCOLL.Projects is
       end if;
 
       if Parent.Data.Local_Node_Tree /= null then
-         --  root project is aggregate project, we need to use the proper tree
-         --  for the aggregated project
+         --  Root project is aggregate project, we need to use the proper tree
+         --  for the aggregated project.
          Tree_Tree := Parent.Data.Local_Node_Tree;
       end if;
 
@@ -3224,7 +3252,7 @@ package body GNATCOLL.Projects is
       end;
 
       if Project.Data.Local_Node_Tree /= null then
-         --  chosing local tree for aggregated project
+         --  choosing local tree for aggregated project
          Importing (Importing'Last) := Prj.Tree.Path_Name_Of
            (Project.Data.Node, Project.Data.Local_Node_Tree);
       else
@@ -3270,6 +3298,8 @@ package body GNATCOLL.Projects is
       Project_Paths : Path_Sets.Set := Path_Sets.Empty_Set;
 
       procedure Add_Local_Roots (Project : Project_Type);
+      --  creating a list of root level aggregated projects
+
       procedure Add_Local_Roots (Project : Project_Type) is
          P          : Project_Type;
          Aggregated : Aggregated_Project_List;
@@ -3298,12 +3328,13 @@ package body GNATCOLL.Projects is
       Iter.Importing := True;
 
       if Is_Aggregate_Project (Project.Data.Tree.Root) then
-         --  you gonna have a bad time
+         --  We need to look for importing projects in all trees created for
+         --  each  directly aggregated project.
          Add_Local_Roots (Project.Data.Tree.Root);
 
          for I in Local_Roots.First_Index .. Local_Roots.Last_Index loop
 
-            --  we neew to reset importing projects for each local root
+            --  we need to reset importing projects for each local root
             Unchecked_Free (Project.Data.Importing_Projects);
 
             Iter_Inner := Find_All_Projects_Importing
