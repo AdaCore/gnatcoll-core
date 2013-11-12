@@ -2894,7 +2894,7 @@ package body GNATCOLL.Projects.Normalize is
       Old         : constant Project_Type :=
                       Project_Type (Project_From_Name (Tree, Name));
       Imported    : Project_Type;
-      Iterator    : Inner_Project_Iterator;
+      Iterator    : Project_Iterator;
       With_Clause : Project_Node_Id;
       Modified    : Boolean;
       P           : Path_Name_Type;
@@ -2926,7 +2926,7 @@ package body GNATCOLL.Projects.Normalize is
       --  Project.
 
       Iterator := Find_All_Projects_Importing
-        (Project, Project, Direct_Only => False);
+        (Project, Direct_Only => False);
 
       Full_Path := Get_String
          (+(Name_As_Directory (Full_Name (New_Dir))
