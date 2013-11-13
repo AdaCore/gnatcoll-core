@@ -782,7 +782,7 @@ ada_is_subclass (PyObject* class, PyObject* base)
   if (!class || !base) {
     return -1;
   } else {
-    return PyObject_TypeCheck (class, base->ob_type);
+    return PyObject_IsSubclass (class, base);
   }
 }
 
