@@ -178,6 +178,7 @@ package body GNATCOLL.Xref.Database is
          & "|z|unknown|false|false|false|false|false|false|false|false|false|false|" & ASCII.LF
          & "|Z|unknown|false|false|false|false|false|false|false|false|false|false|" & ASCII.LF
          & "|+|generic formal|false|false|false|false|false|false|false|false|false|false|" & ASCII.LF
+         & "|@|abstract state|false|false|false|false|false|false|false|false|false|false|" & ASCII.LF
          & "|*|private object|false|false|false|false|false|false|false|false|false|false|" & ASCII.LF
          & "|TABLE|reference_kinds||||||||" & ASCII.LF
          & "|id|display|is_implicit|is_real|is_read|is_write|is_end|show_in_callgraph|is_dispatching|" & ASCII.LF
