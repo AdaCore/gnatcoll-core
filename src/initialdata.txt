@@ -55,6 +55,7 @@
 | z     | unknown                  | false       | false    | false               | false   | false         | false        | false                    | false       | false      | false     |
 | Z     | unknown                  | false       | false    | false               | false   | false         | false        | false                    | false       | false      | false     |
 | +     | generic formal           | false       | false    | false               | false   | false         | false        | false                    | false       | false      | false     |
+| @     | abstract state           | false       | false    | false               | false   | false         | false        | false                    | false       | false      | false     |
 | *     | private object           | false       | false    | false               | false   | false         | false        | false                    | false       | false      | false     |
 
 # Parameters (>, = and <) are not in this table, as opposed to what is done in
