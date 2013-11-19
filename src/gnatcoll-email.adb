@@ -2075,8 +2075,7 @@ package body GNATCOLL.Email is
    begin
       --  Note that we remove leading and trailing spaces, so that a Message-Id
       --  that consists only of spaces will be treated as missing.
-      --  Lotus Notes is known to generate such
-      --  bogus message IDs.
+      --  Lotus Notes is known to generate such bogus message IDs.
 
       Index := Next_Occurrence (MsgId_Str, '<');
       if Index > MsgId_Str'Last then
