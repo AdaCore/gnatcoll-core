@@ -652,8 +652,22 @@ package body GNATCOLL.SQL.Inspect is
       elsif T = "integer"
         or else T = "smallint"
         or else T = "oid"
-        or else (T'Length >= 7 and then T (T'First .. T'First + 6) = "numeric")
       then
+         return (Kind => Field_Integer);
+
+      elsif T'Length >= 7
+         and then T (T'First .. T'First + 6) = "numeric"
+      then
+         --  Check the scale
+         for Comma in reverse T'Range loop
+            if T (Comma) = ',' then
+               if T (Comma + 1 .. T'Last - 1) = "0" then
+                  return (Kind => Field_Integer);
+               else
+                  return (Kind => Field_Float);
+               end if;
+            end if;
+         end loop;
          return (Kind => Field_Integer);
 
       elsif T = "date" then
