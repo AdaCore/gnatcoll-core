@@ -326,7 +326,8 @@ package body GNATCOLL.Email.Utils is
          --  Timezone (we might have none in badly formed dates)
          if Index < Date'Last then
             if Date (Index) = '-' or else Date (Index) = '+' or else
-               Date (Index) in '0' .. '9' then
+               Date (Index) in '0' .. '9'
+            then
                Read_Integer (Date (Index .. Date'Last), Index,
                              Value => TZ_Local);
                TZ := Time_Offset ((TZ_Local / 100) * 60 + TZ_Local mod 100);

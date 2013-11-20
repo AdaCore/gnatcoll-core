@@ -409,7 +409,8 @@ package body GNATCOLL.SQL.Exec is
       end if;
 
       if Prepared.Get.On_Server
-         and Is_Prepared_On_Server_Supported (Connection) then
+         and Is_Prepared_On_Server_Supported (Connection)
+      then
          --  Reuse a prepared statement if one exists for this connection.
 
          L := S.Prepared;

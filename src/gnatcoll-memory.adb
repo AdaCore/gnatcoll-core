@@ -344,7 +344,8 @@ package body GNATCOLL.Memory is
    begin
       if Memory_Monitor then
          if Memory_Free_Pattern < 256 and then
-               Ptr /= System.Null_Address then
+               Ptr /= System.Null_Address
+         then
             declare
                Chunk : constant Chunk_Data := Chunks_Htable.Get (Ptr);
             begin

@@ -1679,7 +1679,8 @@ package body GNATCOLL.VFS is
    begin
       if Parent.Value = null
         or else Child.Value = null
-        or else Parent.Value'Tag /= Child.Value'Tag then
+        or else Parent.Value'Tag /= Child.Value'Tag
+      then
          return False;
       end if;
 
