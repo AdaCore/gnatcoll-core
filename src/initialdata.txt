@@ -46,8 +46,8 @@
 | U     | procedure                | false       | false    | false               | false   | true          | true         | false                    | false       | false      | false     |
 | v     | generic function         | false       | false    | false               | false   | true          | true         | false                    | false       | true       | false     |
 | V     | function                 | false       | false    | false               | false   | true          | true         | false                    | false       | false      | false     |
-| w     | protected object         | false       | false    | true                | false   | false         | false        | false                    | false       | false      | false     |
-| W     | protected type           | false       | false    | false               | true    | false         | false        | false                    | false       | false      | false     |
+| w     | protected object         | false       | false    | true                | false   | false         | true         | false                    | false       | false      | false     |
+| W     | protected type           | false       | false    | false               | true    | false         | true         | false                    | false       | false      | false     |
 | x     | abstract procedure       | false       | false    | false               | false   | true          | true         | false                    | true        | false      | false     |
 | X     | exception                | false       | false    | false               | false   | false         | false        | false                    | false       | false      | false     |
 | y     | abstract function        | false       | false    | false               | false   | true          | true         | false                    | true        | false      | false     |
