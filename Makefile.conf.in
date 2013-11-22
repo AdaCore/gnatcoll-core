@@ -137,7 +137,7 @@ installsources:
 	@# install would complain.
 	@# This install is common to shared and static libraries.
 
-	@${CP} -p ${wildcard ${addsuffix *.ad[bs], ${SRCDIRS}}} ${includedir}/${TARNAME}
+	@${CP} ${wildcard ${addsuffix *.ad[bs], ${SRCDIRS}}} ${includedir}/${TARNAME}
 ifeq (${TARGET_WIN32},yes)
 	@cd ${includedir}/${TARNAME}; ls ${notdir ${wildcard ${addsuffix *.ad[bs], ${SRCDIRS}}}} | grep -v unix > ${DESTDIR}${prefix}/lib/gnat/${TARNAME}/${basename ${PROJECT}}.lgpr
 else
