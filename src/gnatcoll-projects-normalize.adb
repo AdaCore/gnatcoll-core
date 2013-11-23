@@ -3002,7 +3002,7 @@ package body GNATCOLL.Projects.Normalize is
          (Name           => Old_Name,
           Display_Name   => Old_Name,
           Node           => Empty_Node,
-          Canonical_Path => Path_Name_Type (Old_Name),
+          Resolved_Path  => Path_Name_Type (Old_Name),
           Extended       => False,
           From_Extended  => False,
           Proj_Qualifier => Unspecified));
@@ -3014,7 +3014,7 @@ package body GNATCOLL.Projects.Normalize is
          Prj.Tree.Tree_Private_Part.Project_Name_And_Node'
          (Name           => Name,
           Display_Name   => Name,
-          Canonical_Path => Path_Name_Type (Full_Path),
+          Resolved_Path  => Path_Name_Type (Full_Path),
           Node           => Project.Node,
           Extended       => False,
           From_Extended  => False,
