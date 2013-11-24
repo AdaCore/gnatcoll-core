@@ -139,7 +139,7 @@ package body GNATCOLL.Xref.Database is
          & "|F|floating point type|false|false|false|true|false|false|false|false|false|false|" & ASCII.LF
          & "|g|macro|false|false|false|false|true|false|false|false|false|false|" & ASCII.LF
          & "|G|function macro|false|false|false|false|false|false|false|false|false|false|" & ASCII.LF
-         & "|h|interface|true|false|false|false|false|false|false|true|false|false|" & ASCII.LF
+         & "|h|interface|true|false|false|true|false|false|false|true|false|false|" & ASCII.LF
          & "|H|abstract record type|false|false|false|true|false|true|true|true|false|false|" & ASCII.LF
          & "|i|integer|false|false|true|false|false|false|false|false|false|false|" & ASCII.LF
          & "|I|integer type|false|false|false|true|false|false|false|false|false|false|" & ASCII.LF
