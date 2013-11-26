@@ -177,7 +177,11 @@ package body GNATCOLL.Email.Parser is
          --  itself starting with a space. This is not full RFC2822 of course,
          --  but it is nice to handle this correctly anyway
 
-         Value := To_Unbounded_String (Str (Colon + 1 .. Eol - 1));
+         if Str (Eol - 1) = ASCII.CR then
+            Value := To_Unbounded_String (Str (Colon + 1 .. Eol - 2));
+         else
+            Value := To_Unbounded_String (Str (Colon + 1 .. Eol - 1));
+         end if;
 
          while Eol < Str'Last and then Is_Whitespace (Str (Eol + 1)) loop
             Next := Eol + 1;
@@ -185,7 +189,11 @@ package body GNATCOLL.Email.Parser is
             Eol2 := Next_Occurrence (Str (Next .. Stop), ASCII.LF);
             for F in Next + 1 .. Eol2 - 1 loop
                if not Is_Whitespace (Str (F)) then
-                  Append (Value, ' ' & Str (F .. Eol2 - 1));
+                  if Str (Eol2 - 1) = ASCII.CR then
+                     Append (Value, ' ' & Str (F .. Eol2 - 2));
+                  else
+                     Append (Value, ' ' & Str (F .. Eol2 - 1));
+                  end if;
                   Is_Continuation := True;
                   exit;
                end if;
