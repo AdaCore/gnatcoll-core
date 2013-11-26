@@ -104,15 +104,27 @@ package body GNATCOLL.Projects is
    --  ??? This would not be needed if we could, in the prj* sources, associate
    --  user data with project nodes.
 
+   type Source_File_Data;
+   type Source_File_Data_Access is access all Source_File_Data;
    type Source_File_Data is record
       Project : Project_Type;
       File    : GNATCOLL.VFS.Virtual_File;
       Lang    : Namet.Name_Id;
       Source  : Prj.Source_Id;
+      Next    : Source_File_Data_Access := null;
    end record;
-   --   In some case, Lang might be set to Unknown_Language, if the file was
-   --   set in the project (for instance through the Source_Files attribute),
-   --   but no matching language was found.
+   --  In some case, Lang might be set to Unknown_Language, if the file was
+   --  set in the project (for instance through the Source_Files attribute),
+   --  but no matching language was found.
+   --  Next is only relevant when root project is aggregate project. In that
+   --  case we can have multiple source files with same base name but different
+   --  full names. Even sources with same full name can belong to different
+   --  aggregated projects, so there are different Source_File_Data instances
+   --  for such each such project;
+
+   function Same_Source_And_Project (L, R : Source_File_Data) return Boolean;
+   --  Returns true is both arguments have same full names and belong to
+   --  the same project.
 
    function Hash
      (File : GNATCOLL.VFS.Filesystem_String) return Ada.Containers.Hash_Type;
@@ -126,6 +138,13 @@ package body GNATCOLL.Projects is
       Hash            => Hash,
       Equivalent_Keys => Equal);
    --  maps for file base names to info about the file
+
+   procedure Include_File
+     (Map  : in out Names_Files.Map;
+      Key  : GNATCOLL.VFS.Filesystem_String;
+      Elem : Source_File_Data);
+   --  If there is no file with same base name in map, adds the file as the
+   --  first element in corresponding list. Otherwise adds it to the list.
 
    function Hash (Node : Project_Node_Id) return Ada.Containers.Hash_Type;
    pragma Inline (Hash);
@@ -1134,7 +1153,7 @@ package body GNATCOLL.Projects is
       Base          : constant Filesystem_String := Base_Name (Name);
       Project2      : Project_Type;
       Path          : Virtual_File := GNATCOLL.VFS.No_File;
-      Iterator      : Inner_Project_Iterator;
+      Iterator      : Project_Iterator;
       Info_Cursor   : Names_Files.Cursor;
       Info          : Source_File_Data;
       In_Predefined : Boolean := False;
@@ -1261,13 +1280,14 @@ package body GNATCOLL.Projects is
            (Project => Project2,
             File    => Path,
             Lang    => No_Name,
-            Source  => null);
+            Source  => null,
+            Next => null);
 
          if In_Predefined then
             Info.Lang := Get_String (Language (Self.Info (Path)));
          end if;
 
-         Self.Data.Sources.Include (Base, Info);
+         Include_File (Self.Data.Sources, Base, Info);
       end if;
 
       return Path;
@@ -1297,7 +1317,7 @@ package body GNATCOLL.Projects is
       end if;
 
       declare
-         Iter : Inner_Project_Iterator := Start (Project, Recursive);
+         Iter : Project_Iterator := Start (Project, Recursive);
       begin
          Count := 0;
 
@@ -1534,7 +1554,10 @@ package body GNATCOLL.Projects is
       return File_Info is
    begin
       if Self.Data = null then
-         raise Program_Error with "no projet tree was parsed";
+         raise Program_Error with "no project tree was parsed";
+      end if;
+      if Is_Aggregate_Project (Self.Data.Root) then
+         raise Program_Error with "root project is aggregate, cannot use Info";
       end if;
       return Info (Self.Data, File);
    end Info;
@@ -5030,6 +5053,15 @@ package body GNATCOLL.Projects is
       return Self.Data.Root;
    end Root_Project;
 
+   -----------------------------
+   -- Same_Source_And_Project --
+   -----------------------------
+
+   function Same_Source_And_Project (L, R : Source_File_Data) return Boolean is
+   begin
+      return L.File = R.File and then L.Project = R.Project;
+   end Same_Source_And_Project;
+
    ----------------------------------
    -- Directory_Belongs_To_Project --
    ----------------------------------
@@ -5070,6 +5102,73 @@ package body GNATCOLL.Projects is
    begin
       return Ada.Containers.Hash_Type (Prj.Tree.Hash (Node));
    end Hash;
+
+   ------------------
+   -- Include_File --
+   ------------------
+
+   procedure Include_File
+     (Map  : in out Names_Files.Map;
+      Key  : GNATCOLL.VFS.Filesystem_String;
+      Elem : Source_File_Data)
+   is
+      M_Cur       : Names_Files.Cursor;
+      Found_Elem  : Source_File_Data;
+      Elem_Access : Source_File_Data_Access;
+   begin
+
+      M_Cur := Map.Find (Key);
+      if M_Cur = Names_Files.No_Element then
+         Names_Files.Include (Map, Key, Elem);
+         return;
+      end if;
+
+      Found_Elem := Names_Files.Element (M_Cur);
+
+      --  Check the first one with same base name since we might have to update
+      --  it in the map,
+      if Same_Source_And_Project (Found_Elem, Elem) then
+
+         --  Exactly same file, nothing has to be done.
+         return;
+      else
+
+         --  Another file with same base name.
+
+         if Found_Elem.Next = null then
+
+            --  We still have to update the element in map.
+
+            Found_Elem.Next := new Source_File_Data'(Elem);
+            Map.Replace (Key, Found_Elem);
+         else
+            --  Look through other files with same base name and add elem
+            --  if not present.
+
+            Elem_Access := Found_Elem.Next;
+            loop
+
+               if Same_Source_And_Project (Elem_Access.all, Elem) then
+                  --  Same file, nothing to add.
+                  return;
+               end if;
+
+               if Elem_Access.Next = null then
+
+                  --  We're at the last one, no given file in map.
+
+                  Elem_Access.Next := new Source_File_Data'(Elem);
+                  return;
+               else
+                  Elem_Access := Elem_Access.Next;
+               end if;
+
+            end loop;
+
+         end if;
+      end if;
+
+   end Include_File;
 
    -----------
    -- Equal --
@@ -6248,6 +6347,12 @@ package body GNATCOLL.Projects is
 
          else
             Element (Iter).Data.Node := P;
+            if Self /= Tree_For_Map then
+               --  We need to update local trees containing this project
+               --  to be able to get source files later.
+               Element (Iter).Data.Local_Tree      := Self.Data.View;
+               Element (Iter).Data.Local_Node_Tree := Self.Data.Tree;
+            end if;
             Reset_View (Element (Iter).Data.all);
          end if;
       end Do_Project2;
@@ -6361,7 +6466,7 @@ package body GNATCOLL.Projects is
       Gnatls           : constant String :=
                            Self.Root_Project.Attribute_Value
                              (Gnatlist_Attribute);
-      Iter             : Inner_Project_Iterator;
+      Iter             : Project_Iterator;
       Sources          : String_List_Id;
       P                : Project_Type;
       Source_Iter      : Source_Iterator;
@@ -6413,7 +6518,12 @@ package body GNATCOLL.Projects is
          --  Add the sources that are already in the project.
          --  Convert the names to UTF8 for proper handling in GPS
 
-         Source_Iter := For_Each_Source (Self.Data.View, Get_View (P));
+         if P.Data.Local_Tree = null then
+            Source_Iter := For_Each_Source (Self.Data.View, Get_View (P));
+         else
+            Source_Iter := For_Each_Source (P.Data.Local_Tree, Get_View (P));
+            Trace (Me, "Local tree chosen");
+         end if;
          loop
             Source := Element (Source_Iter);
             exit when Source = No_Source;
@@ -6427,11 +6537,20 @@ package body GNATCOLL.Projects is
 
                declare
                   File : constant Virtual_File :=
-                           Create (+Name_Buffer (1 .. Name_Len));
+                    Create (+Name_Buffer (1 .. Name_Len));
                begin
-                  Self.Data.Sources.Include
-                    (Base_Name (File),
-                     (P, File, Source.Language.Name, Source));
+                  if Is_Aggregate_Project (Self.Data.Root) then
+                     Include_File
+                       (Self.Data.Sources,
+                        Base_Name (File),
+                        (P, File, Source.Language.Name, Source, null));
+                  else
+                     --  No point in all the checks for regular project.
+
+                     Self.Data.Sources.Include
+                       (Base_Name (File),
+                        (P, File, Source.Language.Name, Source, null));
+                  end if;
 
                   if Source.Object /= Namet.No_File then
                      declare
@@ -6449,14 +6568,15 @@ package body GNATCOLL.Projects is
 
                         if Source.Index = 0 then
                            Self.Data.Objects_Basename.Include
-                             (Base, (P, File, Source.Language.Name, Source));
+                             (Base,
+                              (P, File, Source.Language.Name, Source, null));
                         else
                            Self.Data.Objects_Basename.Include
                              (Base & "~"
                               & (+Image
-                                    (Integer (Source.Index),
+                                (Integer (Source.Index),
                                      Min_Width => 0)),
-                              (P, File, Source.Language.Name, Source));
+                              (P, File, Source.Language.Name, Source, null));
                         end if;
                      end;
                   end if;

@@ -515,10 +515,10 @@ package GNATCOLL.Projects is
    --  The sources that are returned are not necessarily the ones that are used
    --  when compiling the root project, since some of them might be overriden
    --  by extending projects. Instead, they are the sources that would be used
-   --  when compiling from Project ("gnatmake -PProject"). The basenames of the
-   --  returned files are always unique, since if the project has two or
-   --  more duplicate files, only the first one found in the source path
-   --  is returned.
+   --  when compiling from Project ("gnatmake -PProject"). Base names of
+   --  returned files may not be unique in case when root project is an
+   --  aggregate project. For languages other than Ada multiple sources with
+   --  same base name can also be returned.
 
    function Direct_Sources_Count (Project : Project_Type) return Natural;
    --  Return the number of direct source files for Project
@@ -689,6 +689,8 @@ package GNATCOLL.Projects is
    --  Retrieve information about the source file.
    --  The language is computed from the project's naming scheme and from the
    --  additional extensions registered through Add_Language_Extension.
+   --  Can only be applied if root project is not an aggregate project,
+   --  Program_Error raised otherwise.
 
    procedure Set_Config_File
      (Self        : in out Project_Environment;
