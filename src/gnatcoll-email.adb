@@ -605,127 +605,137 @@ package body GNATCOLL.Email is
       Show_Header_Name : Boolean := True;
       Result           : out Unbounded_String)
    is
-      Max     : Positive := Max_Line_Len - 2 - Length (H.Contents.Name);
-      N       : String := To_String (H.Contents.Name);
-      Value   : constant Charset_String_List.List := Get_Value (H);
-      Encoded : Unbounded_String;
-
-      Uppercase_Next : Boolean;
-      Next           : Natural;
    begin
-      To_String (Value, Encoded, Identify_Header (N));
-
-      if Show_Header_Name then
-         --  Fix up casing of header name
-
-         if N = "message-id" then
-            N := Message_ID;
-
-         elsif N = "cc" then
-            N := CC;
-
-         else
-            if N'Length >= 5 and then N (N'First .. N'First + 4) = "mime-" then
-               N (N'First .. N'First + 3) := "MIME";
-               Next := N'First + 5;
-            else
-               Next := N'First;
-            end if;
-
-            Uppercase_Next := True;
-            while Next <= N'Last loop
-               if Uppercase_Next then
-                  N (Next) := To_Upper (N (Next));
-                  Uppercase_Next := False;
-               end if;
-
-               if N (Next) = '-' then
-                  Uppercase_Next := True;
-               end if;
-               Next := Next + 1;
-            end loop;
-         end if;
+      if H.Contents = null then
+         Result := Null_Unbounded_String;
+         return;
       end if;
 
-      --  Fold continuation lines
-
       declare
-         Str    : String := To_String (Encoded);
-         Last   : Natural;
-         Index, Index2 : Integer;
+         Max     : Positive := Max_Line_Len - 2 - Length (H.Contents.Name);
+         N       : String := To_String (H.Contents.Name);
+         Value   : constant Charset_String_List.List := Get_Value (H);
+         Encoded : Unbounded_String;
 
-         Offset : Integer := 0;
-         --  Count of LF characters skipped so far
-
+         Uppercase_Next : Boolean;
+         Next           : Natural;
       begin
-         --  Flatten the header on a single line, eliminating newline
-         --  characters.
-
-         for J in Str'Range loop
-            if Str (J) = ASCII.LF then
-               Offset := Offset + 1;
-            elsif Offset > 0 then
-               Str (J - Offset) := Str (J);
-            end if;
-         end loop;
-
-         Last := Str'Last - Offset;
-
-         if Show_Header_Name and then Last <= Max then
-            if Last = 0 then  --  Empty header
-               Result := To_Unbounded_String (N & ": ");
-            elsif Element (Encoded, 1) = ' ' then
-               Result := To_Unbounded_String (N & ':' & Str (1 .. Last));
-            else
-               Result := To_Unbounded_String (N & ": " & Str (1 .. Last));
-            end if;
-            return;
-
-         elsif not Show_Header_Name and then Last <= Max_Line_Len then
-            if Offset = 0 then
-               Result := Encoded;  --  Save a string copy
-            else
-               Result := To_Unbounded_String (Str (1 .. Last));
-            end if;
-            return;
-         end if;
-
-         Result := Null_Unbounded_String;
-         Index  := Str'First;
-
-         while Index <= Last loop
-            --  Only split on spaces. To keep Content-Type headers as much as
-            --  possible on a single line, we split on the first blank space
-            --  after the theoretical split point.
-
-            Index2 := Integer'Min (Index + Max - 1, Last);
-            loop
-               Index2 := Index2 + 1;
-               exit when Index2 > Last or else Str (Index2) = ' ';
-            end loop;
-
-            --  Index2 points right after last non-blank character
-
-            Append (Result, Str (Index .. Index2 - 1));
-
-            --  Do not print a last line containing only white spaces, this
-            --  might confuse mailers.
-
-            if Index2 < Last then
-               Append (Result, ASCII.LF & ' ');
-            end if;
-
-            Index := Index2 + 1;
-            Max   := Max_Line_Len;
-         end loop;
+         To_String (Value, Encoded, Identify_Header (N));
 
          if Show_Header_Name then
-            if Length (Result) = 0 or else Element (Result, 1) = ' ' then
-               Result := N & ':' & Result;
+            --  Fix up casing of header name
+
+            if N = "message-id" then
+               N := Message_ID;
+
+            elsif N = "cc" then
+               N := CC;
+
             else
-               Result := N & ": " & Result;
+               if N'Length >= 5
+                  and then N (N'First .. N'First + 4) = "mime-"
+               then
+                  N (N'First .. N'First + 3) := "MIME";
+                  Next := N'First + 5;
+               else
+                  Next := N'First;
+               end if;
+
+               Uppercase_Next := True;
+               while Next <= N'Last loop
+                  if Uppercase_Next then
+                     N (Next) := To_Upper (N (Next));
+                     Uppercase_Next := False;
+                  end if;
+
+                  if N (Next) = '-' then
+                     Uppercase_Next := True;
+                  end if;
+                  Next := Next + 1;
+               end loop;
             end if;
          end if;
+
+         --  Fold continuation lines
+
+         declare
+            Str    : String := To_String (Encoded);
+            Last   : Natural;
+            Index, Index2 : Integer;
+
+            Offset : Integer := 0;
+            --  Count of LF characters skipped so far
+
+         begin
+            --  Flatten the header on a single line, eliminating newline
+            --  characters.
+
+            for J in Str'Range loop
+               if Str (J) = ASCII.LF then
+                  Offset := Offset + 1;
+               elsif Offset > 0 then
+                  Str (J - Offset) := Str (J);
+               end if;
+            end loop;
+
+            Last := Str'Last - Offset;
+
+            if Show_Header_Name and then Last <= Max then
+               if Last = 0 then  --  Empty header
+                  Result := To_Unbounded_String (N & ": ");
+               elsif Element (Encoded, 1) = ' ' then
+                  Result := To_Unbounded_String (N & ':' & Str (1 .. Last));
+               else
+                  Result := To_Unbounded_String (N & ": " & Str (1 .. Last));
+               end if;
+               return;
+
+            elsif not Show_Header_Name and then Last <= Max_Line_Len then
+               if Offset = 0 then
+                  Result := Encoded;  --  Save a string copy
+               else
+                  Result := To_Unbounded_String (Str (1 .. Last));
+               end if;
+               return;
+            end if;
+
+            Result := Null_Unbounded_String;
+            Index  := Str'First;
+
+            while Index <= Last loop
+               --  Only split on spaces. To keep Content-Type headers as much
+               --  as possible on a single line, we split on the first blank
+               --  space after the theoretical split point.
+
+               Index2 := Integer'Min (Index + Max - 1, Last);
+               loop
+                  Index2 := Index2 + 1;
+                  exit when Index2 > Last or else Str (Index2) = ' ';
+               end loop;
+
+               --  Index2 points right after last non-blank character
+
+               Append (Result, Str (Index .. Index2 - 1));
+
+               --  Do not print a last line containing only white spaces, this
+               --  might confuse mailers.
+
+               if Index2 < Last then
+                  Append (Result, ASCII.LF & ' ');
+               end if;
+
+               Index := Index2 + 1;
+               Max   := Max_Line_Len;
+            end loop;
+
+            if Show_Header_Name then
+               if Length (Result) = 0 or else Element (Result, 1) = ' ' then
+                  Result := N & ':' & Result;
+               else
+                  Result := N & ": " & Result;
+               end if;
+            end if;
+         end;
       end;
    end To_String;
 
