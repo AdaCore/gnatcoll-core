@@ -126,7 +126,7 @@ package GNATCOLL.Email is
    --  charset should be left to us-ascii. If Value contains extended
    --  characters from another charset, the latter must be specified. For
    --  instance, you could replace the previous mime-encoded string with:
-   --     Value='pôstal'  Charset='iso-8859-1'
+   --     Value='pÃ´stal'  Charset='iso-8859-1'
    --  The charset influences how the header is encoded when it is displayed in
    --  a message.
    --  The Value, if it was split into several lines, must have been normalized
