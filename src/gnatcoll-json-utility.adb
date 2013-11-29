@@ -24,6 +24,7 @@
 with Ada.Integer_Text_IO;
 with Ada.Strings.Fixed;
 with Ada.Strings.Unbounded;       use Ada.Strings.Unbounded;
+with Ada.Strings.Wide_Unbounded;  use Ada.Strings.Wide_Unbounded;
 with Ada.Unchecked_Conversion;
 
 with GNAT.Encode_UTF8_String;
@@ -57,17 +58,45 @@ package body GNATCOLL.JSON.Utility is
    -- Escape_String --
    -------------------
 
-   function Escape_String (Text : UTF8_Unbounded_String)
-                           return Unbounded_String is
-      Ret : Unbounded_String;
-      WS  : constant Wide_String :=
-              GNAT.Decode_UTF8_String.Decode_Wide_String (To_String (Text));
+   function Escape_String
+     (Text : UTF8_Unbounded_String) return Unbounded_String
+   is
+      Ret         : Unbounded_String;
+      WS          : Unbounded_Wide_String;
+      Low         : Natural;
+      High        : Natural;
+      Text_Length : constant Natural := Ada.Strings.Unbounded.Length (Text);
+      W_Chr       : Wide_Character;
 
    begin
+      --  First decode the UTF-8 String
+      Low := 1;
+      while Low <= Text_Length loop
+         --  UTF-8 sequence is maximum 4 characters long according to RFC3629
+         if Low + 4 > Text_Length then
+            High := Text_Length;
+         else
+            High := Low + 4;
+         end if;
+
+         declare
+            Slice : constant String :=
+                      Ada.Strings.Unbounded.Slice (Text, Low, High);
+            Idx   : Natural := Slice'First;
+
+         begin
+            GNAT.Decode_UTF8_String.Decode_Wide_Character (Slice, Idx, W_Chr);
+            Append (WS, W_Chr);
+            Low := Low + Idx - Slice'First;
+         end;
+      end loop;
+
       Append (Ret, '"');
 
-      for J in WS'Range loop
-         case WS (J) is
+      for J in 1 .. Length (WS) loop
+         W_Chr := Element (WS, J);
+
+         case W_Chr is
             when '"' =>
                Append (Ret, "\""");
             when '\' =>
@@ -83,11 +112,11 @@ package body GNATCOLL.JSON.Utility is
             when Wide_Character'Val (Character'Pos (ASCII.HT)) =>
                Append (Ret, "\t");
             when others =>
-               if Wide_Character'Pos (WS (J)) > 128 then
-                  Append (Ret, Escape_Non_Print_Character (WS (J)));
+               if Wide_Character'Pos (W_Chr) > 128 then
+                  Append (Ret, Escape_Non_Print_Character (W_Chr));
                else
                   Append
-                    (Ret, "" & Character'Val (Wide_Character'Pos (WS (J))));
+                    (Ret, "" & Character'Val (Wide_Character'Pos (W_Chr)));
                end if;
          end case;
       end loop;
@@ -101,38 +130,42 @@ package body GNATCOLL.JSON.Utility is
    -- Un_Escape_String --
    ----------------------
 
-   function Un_Escape_String (Text : String) return UTF8_Unbounded_String is
+   function Un_Escape_String
+     (Text : Unbounded_String;
+      Low  : Natural;
+      High : Natural) return UTF8_Unbounded_String
+   is
       First : Integer;
       Last  : Integer;
       Unb   : Unbounded_String;
       Idx   : Natural;
 
    begin
-      First := Text'First;
-      Last  := Text'Last;
+      First := Low;
+      Last  := High;
 
       --  Trim blancks and the double quotes
 
-      while First <= Text'Last and then Text (First) = ' ' loop
+      while First <= High and then Element (Text, First) = ' ' loop
          First := First + 1;
       end loop;
-      if First <= Text'Last and then Text (First) = '"' then
+      if First <= High and then Element (Text, First) = '"' then
          First := First + 1;
       end if;
 
-      while Last >= Text'First and then Text (Last) = ' ' loop
+      while Last >= Low and then Element (Text, Last) = ' ' loop
          Last := Last - 1;
       end loop;
-      if Last >= Text'First and then Text (Last) = '"' then
+      if Last >= Low and then Element (Text, Last) = '"' then
          Last := Last - 1;
       end if;
 
       Idx := First;
       while Idx <= Last loop
-         if Text (Idx) = '\' then
+         if Element (Text, Idx) = '\' then
             Idx := Idx + 1;
 
-            if Idx > Text'Last then
+            if Idx > High then
                raise Invalid_JSON_Stream with
                  "Unexpected escape character at end of line";
             end if;
@@ -140,12 +173,12 @@ package body GNATCOLL.JSON.Utility is
             --  See http://tools.ietf.org/html/rfc4627 for the list of
             --  characters that can be escaped.
 
-            case Text (Idx) is
+            case Element (Text, Idx) is
                when 'u' | 'U' =>
                   declare
                      I : constant Short_Integer :=
                            Short_Integer'Value
-                             ("16#" & Text (Idx + 1 .. Idx + 4) & "#");
+                             ("16#" & Slice (Text, Idx + 1, Idx + 4) & "#");
                      function Unch is new Ada.Unchecked_Conversion
                        (Short_Integer, Wide_Character);
                   begin
@@ -174,12 +207,13 @@ package body GNATCOLL.JSON.Utility is
                   Append (Unb, ASCII.HT);
                when others =>
                   raise Invalid_JSON_Stream with
-                    "Unexpected escape sequence '\" & Text (Idx) & "'";
+                    "Unexpected escape sequence '\" &
+                    Element (Text, Idx) & "'";
             end case;
 
          else
             Append
-              (Unb, Text (Idx));
+              (Unb, Element (Text, Idx));
          end if;
 
          Idx := Idx + 1;

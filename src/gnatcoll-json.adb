@@ -33,6 +33,7 @@ with GNATCOLL.JSON.Utility;
 package body GNATCOLL.JSON is
 
    procedure Report_Error (File : String; Line, Col : Natural; Msg : String);
+   pragma No_Return (Report_Error);
 
    procedure Write
      (Item    : JSON_Value;
@@ -42,7 +43,7 @@ package body GNATCOLL.JSON is
    --  Auxiliary write function
 
    function Read
-     (Strm     :        String;
+     (Strm     :        Unbounded_String;
       Idx      : access Natural;
       Col      : access Natural;
       Line     : access Natural;
@@ -76,13 +77,14 @@ package body GNATCOLL.JSON is
    ----------
 
    function Read
-     (Strm     :        String;
+     (Strm     :        Unbounded_String;
       Idx      : access Natural;
       Col      : access Natural;
       Line     : access Natural;
       Filename : String) return JSON_Value
    is
       procedure Error (Msg : String);
+      pragma No_Return (Error);
 
       procedure Next_Char (N : Natural := 1);
 
@@ -114,11 +116,11 @@ package body GNATCOLL.JSON is
          end if;
 
          Idx.all := Idx.all + 1;
-         if Idx.all not in Strm'Range then
+         if Idx.all > Length (Strm) then
             Col.all := Col.all + 1;
-         elsif Strm (Idx.all) = ASCII.CR then
+         elsif Element (Strm, Idx.all) = ASCII.CR then
             Col.all := 0;
-         elsif Strm (Idx.all) = ASCII.LF then
+         elsif Element (Strm, Idx.all) = ASCII.LF then
             Col.all := 1;
             Line.all := Line.all + 1;
          else
@@ -132,11 +134,11 @@ package body GNATCOLL.JSON is
 
       procedure Skip_Blancks is
       begin
-         while Idx.all <= Strm'Last loop
-            exit when Strm (Idx.all) /= ' '
-              and then Strm (Idx.all) /= ASCII.HT
-              and then Strm (Idx.all) /= ASCII.CR
-              and then Strm (Idx.all) /= ASCII.LF;
+         while Idx.all <= Length (Strm) loop
+            exit when Element (Strm, Idx.all) /= ' '
+              and then Element (Strm, Idx.all) /= ASCII.HT
+              and then Element (Strm, Idx.all) /= ASCII.CR
+              and then Element (Strm, Idx.all) /= ASCII.LF;
 
             Next_Char;
          end loop;
@@ -151,36 +153,38 @@ package body GNATCOLL.JSON is
 
       begin
          Prev := Idx.all;
-         while Idx.all < Strm'Last loop
+         while Idx.all < Length (Strm) loop
             Next_Char;
-            if Strm (Idx.all) = '\' then
+            if Element (Strm, Idx.all) = '\' then
                Next_Char;
-            elsif Strm (Idx.all) = '"' then
+            elsif Element (Strm, Idx.all) = '"' then
                exit;
             end if;
          end loop;
 
-         if Strm (Idx.all) /= '"' then
+         if Idx.all > Length (Strm)
+           or else Element (Strm, Idx.all) /= '"'
+         then
             Error ("Invalid string: cannot find ending """);
          end if;
 
          --  Skip the trailing '"'
          Next_Char;
 
-         return Utility.Un_Escape_String (Strm (Prev .. Idx.all - 1));
+         return Utility.Un_Escape_String (Strm, Prev, Idx.all - 1);
       end Read_String;
 
    begin
       Skip_Blancks;
 
-      if Idx.all not in Strm'Range then
+      if Idx.all not in 1 .. Length (Strm) then
          Error ("Nothing to read from stream");
       end if;
 
-      case Strm (Idx.all) is
+      case Element (Strm, Idx.all) is
          when 'n' | 'N' =>
             --  null
-            if To_Lower (Strm (Idx.all .. Idx.all + 3)) /= "null" then
+            if To_Lower (Slice (Strm, Idx.all, Idx.all + 3)) /= "null" then
                Error ("Invalid token");
             end if;
 
@@ -190,7 +194,7 @@ package body GNATCOLL.JSON is
 
          when 't' =>
             --  true
-            if To_Lower (Strm (Idx.all .. Idx .all + 3)) /= "true" then
+            if To_Lower (Slice (Strm, Idx.all, Idx .all + 3)) /= "true" then
                Error ("Invalid token");
             end if;
 
@@ -200,7 +204,7 @@ package body GNATCOLL.JSON is
 
          when 'f' =>
             --  false
-            if To_Lower (Strm (Idx.all .. Idx.all + 4)) /= "false" then
+            if To_Lower (Slice (Strm, Idx.all, Idx.all + 4)) /= "false" then
                Error ("Invalid token");
             end if;
 
@@ -213,16 +217,19 @@ package body GNATCOLL.JSON is
 
             declare
                type Num_Part is (Int, Frac, Exp);
-               Unb  : Unbounded_String;
-               Part : Num_Part := Int;
+               Unb      : Unbounded_String;
+               Part     : Num_Part := Int;
+               Old_Col  : constant Natural := Col.all;
+               Old_Line : constant Natural := Line.all;
+
             begin
                --  Potential initial '-'
-               if Strm (Idx.all) = '-' then
-                  Append (Unb, Strm (Idx.all));
+               if Element (Strm, Idx.all) = '-' then
+                  Append (Unb, Element (Strm, Idx.all));
                   Next_Char;
 
-                  if Idx.all > Strm'Last
-                    or else Strm (Idx.all) not in '0' .. '9'
+                  if Idx.all > Length (Strm)
+                    or else Element (Strm, Idx.all) not in '0' .. '9'
                   then
                      Error
                        ("Expecting a digit after the initial '-' when " &
@@ -230,58 +237,83 @@ package body GNATCOLL.JSON is
                   end if;
                end if;
 
-               while Idx.all in Strm'Range loop
-                  if Strm (Idx.all) = '.' and then Part = Int then
+               while Idx.all <= Length (Strm) loop
+                  if Element (Strm, Idx.all) = '.' and then Part = Int then
                      Part := Frac;
-                     Append (Unb, Strm (Idx.all));
+                     Append (Unb, Element (Strm, Idx.all));
                      Next_Char;
 
-                     if Idx.all > Strm'Last
-                       or else Strm (Idx.all) not in '0' .. '9'
+                     if Idx.all > Length (Strm)
+                       or else Element (Strm, Idx.all) not in '0' .. '9'
                      then
                         Error ("Expecting digits after a '.' when decoding " &
                                "a number");
                      end if;
 
-                  elsif (Strm (Idx.all) = 'e' or else Strm (Idx.all) = 'E')
+                  elsif (Element (Strm, Idx.all) = 'e'
+                         or else Element (Strm, Idx.all) = 'E')
                     and then Part in Int .. Frac
                   then
                      --  Authorized patterns for exponent:
                      --  e E e+ e- E+ E- followed by digits
                      Part := Exp;
-                     Append (Unb, Strm (Idx.all));
+                     Append (Unb, Element (Strm, Idx.all));
                      Next_Char;
 
-                     if Idx.all > Strm'Last then
+                     if Idx.all > Length (Strm) then
                         Error ("Invalid number");
                      end if;
 
-                     if Strm (Idx.all) = '+'
-                       or else Strm (Idx.all) = '-'
+                     if Element (Strm, Idx.all) = '+'
+                       or else Element (Strm, Idx.all) = '-'
                      then
-                        Append (Unb, Strm (Idx.all));
+                        Append (Unb, Element (Strm, Idx.all));
                         Next_Char;
                      end if;
 
-                     if Idx.all > Strm'Last
-                       or else Strm (Idx.all) not in '0' .. '9'
+                     if Idx.all > Length (Strm)
+                       or else Element (Strm, Idx.all) not in '0' .. '9'
                      then
                         Error ("Expecting digits after 'e' when decoding " &
                                "a number");
                      end if;
                   end if;
 
-                  exit when Idx.all not in Strm'Range
-                    or else Strm (Idx.all) not in '0' .. '9';
+                  exit when Idx.all > Length (Strm)
+                    or else Element (Strm, Idx.all) not in '0' .. '9';
 
-                  Append (Unb, Strm (Idx.all));
+                  Append (Unb, Element (Strm, Idx.all));
                   Next_Char;
                end loop;
 
                if Part = Int then
-                  return Create (Long_Integer'Value (To_String (Unb)));
+                  declare
+                     Int : Long_Long_Integer;
+                  begin
+                     Int := Long_Long_Integer'Value (To_String (Unb));
+
+                     return Create (Int);
+                  exception
+                     when Constraint_Error =>
+                        Report_Error
+                          (Filename, Old_Line, Old_Col,
+                           "Numerical value too large to fit " &
+                             "into a Long_Long_Integer");
+                  end;
                else
-                  return Create (Float'Value (To_String (Unb)));
+                  declare
+                     Flt : Float;
+                  begin
+                     Flt := Float'Value (To_String (Unb));
+
+                     return Create (Flt);
+                  exception
+                     when Constraint_Error =>
+                        Report_Error
+                          (Filename, Old_Line, Old_Col,
+                           "Numerical value too large to fit " &
+                             "into an IEEE 754 float");
+                  end;
                end if;
             end;
 
@@ -297,17 +329,17 @@ package body GNATCOLL.JSON is
                --  Skip '['
                Next_Char;
 
-               while Idx.all < Strm'Last loop
+               while Idx.all < Length (Strm) loop
                   Skip_Blancks;
 
-                  if Idx.all > Strm'Last then
+                  if Idx.all > Length (Strm) then
                      Error ("Uncomplete JSON array");
                   end if;
 
-                  exit when Strm (Idx.all) = ']';
+                  exit when Element (Strm, Idx.all) = ']';
 
                   if not First then
-                     if Strm (Idx.all) /= ',' then
+                     if Element (Strm, Idx.all) /= ',' then
                         Error ("Expected ',' in the array value");
                      end if;
 
@@ -319,7 +351,9 @@ package body GNATCOLL.JSON is
                   Append (Arr.all, Read (Strm, Idx, Col, Line, Filename));
                end loop;
 
-               if Idx.all > Strm'Last or else Strm (Idx.all) /= ']' then
+               if Idx.all > Length (Strm)
+                 or else Element (Strm, Idx.all) /= ']'
+               then
                   Error ("Unfinished array, expecting ending ']'");
                end if;
 
@@ -347,17 +381,17 @@ package body GNATCOLL.JSON is
                --  Skip '{'
                Next_Char;
 
-               while Idx.all < Strm'Last loop
+               while Idx.all < Length (Strm) loop
                   Skip_Blancks;
 
-                  if Idx.all > Strm'Last then
+                  if Idx.all > Length (Strm) then
                      Error ("Unterminated object value");
                   end if;
 
-                  exit when Strm (Idx.all) = '}';
+                  exit when Element (Strm, Idx.all) = '}';
 
                   if not First then
-                     if Strm (Idx.all) /= ',' then
+                     if Element (Strm, Idx.all) /= ',' then
                         Error ("Expected ',' as object value separator");
                      end if;
 
@@ -373,11 +407,11 @@ package body GNATCOLL.JSON is
                   begin
                      Skip_Blancks;
 
-                     if Idx.all > Strm'Last then
+                     if Idx.all > Length (Strm) then
                         Error ("Unterminated object value");
                      end if;
 
-                     if Strm (Idx.all) /= ':' then
+                     if Element (Strm, Idx.all) /= ':' then
                         Error
                           ("Expected a value after the name in a JSON object"
                            & " at index" & Idx.all'Img);
@@ -395,8 +429,8 @@ package body GNATCOLL.JSON is
                   end;
                end loop;
 
-               if Idx.all > Strm'Last
-                 or else Strm (Idx.all) /= '}'
+               if Idx.all > Length (Strm)
+                 or else Element (Strm, Idx.all) /= '}'
                then
                   Error ("Unterminated object value");
                end if;
@@ -413,14 +447,22 @@ package body GNATCOLL.JSON is
    end Read;
 
    function Read
-     (Strm     : String;
+     (Strm     : Unbounded_String;
       Filename : String := "<data>") return JSON_Value
    is
-      Idx  : aliased Natural := Strm'First;
+      Idx  : aliased Natural := 1;
       Col  : aliased Natural := 1;
       Line : aliased Natural := 1;
    begin
       return Read (Strm, Idx'Access, Col'Access, Line'Access, Filename);
+   end Read;
+
+   function Read
+     (Strm     : String;
+      Filename : String := "<data>") return JSON_Value
+   is
+   begin
+      return Read (To_Unbounded_String (Strm), Filename);
    end Read;
 
    -----------
@@ -528,7 +570,9 @@ package body GNATCOLL.JSON is
 
                while Has_Element (J) loop
                   Do_Indent (Indent + 1);
-                  Append (Ret, """" & To_String (Element (J).Key) & """: ");
+                  Append (Ret, """");
+                  Append (Ret, Element (J).Key);
+                  Append (Ret, """: ");
                   Write (Element (J).Val, Compact, Indent + 1, Ret);
 
                   Next (J);
@@ -733,11 +777,19 @@ package body GNATCOLL.JSON is
       Ret : JSON_Value;
    begin
       Ret.Kind      := JSON_Int_Type;
-      Ret.Int_Value := Long_Integer (Val);
+      Ret.Int_Value := Long_Long_Integer (Val);
       return Ret;
    end Create;
 
    function Create (Val : Long_Integer) return JSON_Value is
+      Ret : JSON_Value;
+   begin
+      Ret.Kind      := JSON_Int_Type;
+      Ret.Int_Value := Long_Long_Integer (Val);
+      return Ret;
+   end Create;
+
+   function Create (Val : Long_Long_Integer) return JSON_Value is
       Ret : JSON_Value;
    begin
       Ret.Kind      := JSON_Int_Type;
@@ -899,6 +951,11 @@ package body GNATCOLL.JSON is
    end Get;
 
    function Get (Val : JSON_Value) return Long_Integer is
+   begin
+      return Long_Integer (Val.Int_Value);
+   end Get;
+
+   function Get (Val : JSON_Value) return Long_Long_Integer is
    begin
       return Val.Int_Value;
    end Get;

@@ -4,3 +4,12 @@ Known Problems in Gnatcoll 1.6
 
 Copyright (C) 2013, AdaCore
 
+KP-16-MB28-001 stack usage issues with the JSON stream decoder
+
+  Problem:    The stack usage of the JSON serializer/deserializer is too high
+              when working on very large JSON string values, and JSON object's
+              key values.
+
+  Status:     Fixed in Gnatcoll 1.7.0
+
+  Workaround: None

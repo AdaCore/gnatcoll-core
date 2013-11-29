@@ -27,9 +27,18 @@ private package GNATCOLL.JSON.Utility is
 
    function Escape_Non_Print_Character (C : Wide_Character) return String;
 
-   function Escape_String (Text : UTF8_Unbounded_String)
-                           return Ada.Strings.Unbounded.Unbounded_String;
+   function Escape_String
+     (Text : UTF8_Unbounded_String)
+      return Ada.Strings.Unbounded.Unbounded_String;
+   --  Translates an UTF-8 encoded unbounded string into a JSON-escaped string
 
-   function Un_Escape_String (Text : String) return UTF8_Unbounded_String;
+   function Un_Escape_String
+     (Text : Ada.Strings.Unbounded.Unbounded_String;
+      Low  : Natural;
+      High : Natural)
+      return UTF8_Unbounded_String;
+   --  Translates a JSON-escaped string into an UTF-8 encoded unbounded string
+   --  Low represents the lower bound of the JSON string in Text
+   --  High represents the higher bound of the JSON string in Text
 
 end GNATCOLL.JSON.Utility;

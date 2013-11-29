@@ -73,6 +73,9 @@ package GNATCOLL.JSON is
    --  Read or write JSON values into strings
 
    function Read
+     (Strm     : Ada.Strings.Unbounded.Unbounded_String;
+      Filename : String := "<data>") return JSON_Value;
+   function Read
      (Strm     : String;
       Filename : String := "<data>") return JSON_Value;
    function Write (Item : JSON_Value; Compact : Boolean := True) return String;
@@ -92,6 +95,8 @@ package GNATCOLL.JSON is
    function Create (Val : Integer) return JSON_Value;
    pragma Postcondition (Kind (Create'Result) = JSON_Int_Type);
    function Create (Val : Long_Integer) return JSON_Value;
+   pragma Postcondition (Kind (Create'Result) = JSON_Int_Type);
+   function Create (Val : Long_Long_Integer) return JSON_Value;
    pragma Postcondition (Kind (Create'Result) = JSON_Int_Type);
    --  Creates an integer-typed JSON value
 
@@ -180,6 +185,9 @@ package GNATCOLL.JSON is
    function Get (Val : JSON_Value) return Long_Integer;
    pragma Precondition (Kind (Val) = JSON_Int_Type);
 
+   function Get (Val : JSON_Value) return Long_Long_Integer;
+   pragma Precondition (Kind (Val) = JSON_Int_Type);
+
    function Get (Val : JSON_Value) return Float;
    pragma Precondition (Kind (Val) = JSON_Float_Type);
 
@@ -264,7 +272,7 @@ private
       Kind       : JSON_Value_Type := JSON_Null_Type;
 
       Bool_Value : Boolean;
-      Int_Value  : Long_Integer;
+      Int_Value  : Long_Long_Integer;
       Flt_Value  : Float;
       Str_Value  : UTF8_Unbounded_String;
       Arr_Value  : JSON_Array_Access;
