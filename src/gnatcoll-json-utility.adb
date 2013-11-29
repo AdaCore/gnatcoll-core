@@ -27,6 +27,10 @@ with Ada.Strings.Unbounded;       use Ada.Strings.Unbounded;
 with Ada.Strings.Wide_Unbounded;  use Ada.Strings.Wide_Unbounded;
 with Ada.Unchecked_Conversion;
 
+pragma Warnings (Off, "*internal GNAT unit*");
+with System.Unsigned_Types;       use System.Unsigned_Types;
+pragma Warnings (On, "*internal GNAT unit*");
+
 with GNAT.Encode_UTF8_String;
 with GNAT.Decode_UTF8_String;
 
@@ -176,11 +180,11 @@ package body GNATCOLL.JSON.Utility is
             case Element (Text, Idx) is
                when 'u' | 'U' =>
                   declare
-                     I : constant Short_Integer :=
-                           Short_Integer'Value
+                     I : constant Short_Unsigned :=
+                           Short_Unsigned'Value
                              ("16#" & Slice (Text, Idx + 1, Idx + 4) & "#");
                      function Unch is new Ada.Unchecked_Conversion
-                       (Short_Integer, Wide_Character);
+                       (Short_Unsigned, Wide_Character);
                   begin
                      Append
                        (Unb,

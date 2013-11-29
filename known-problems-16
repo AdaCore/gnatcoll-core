@@ -4,6 +4,16 @@ Known Problems in Gnatcoll 1.6
 
 Copyright (C) 2013, AdaCore
 
+KP-16-MB29-017 GNATCOLL.JSON crashes decoding high Unicode codepoints
+
+  Problem:    GNATCOLL.JSON.Read raises Constraint_Error when processing
+              a string literal containing an encoded reference to a Unicode
+              codepoint beyond U+7FFF (e.g. "\uA726").
+
+  Status:     Fixed in Gnatcoll 1.7.0
+
+  Workaround: None
+
 KP-16-MB28-001 stack usage issues with the JSON stream decoder
 
   Problem:    The stack usage of the JSON serializer/deserializer is too high
