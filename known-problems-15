@@ -9,7 +9,7 @@ KP-15-MA17-007 GNATCOLL.Projects.Library_Files shows overridden files
   Problem:    This function does not always filter out ALI files that
               have been overridden in extending projects.
 
-  Status:     Fixes in Gnatcoll 1.6.0
+  Status:     Fixed in Gnatcoll 1.6.0
 
   Workaround: None
 
