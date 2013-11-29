@@ -306,6 +306,10 @@ package body GNATCOLL.JSON is
                   begin
                      Flt := Float'Value (To_String (Unb));
 
+                     if not Flt'Valid then
+                        raise Constraint_Error;
+                     end if;
+
                      return Create (Flt);
                   exception
                      when Constraint_Error =>
