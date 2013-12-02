@@ -14,7 +14,7 @@ KP-16-MB29-017 GNATCOLL.JSON crashes decoding high Unicode codepoints
 
   Workaround: None
 
-KP-16-MB28-001 stack usage issues with the JSON stream decoder
+KP-16-MB28-001 Stack usage issues with the JSON stream decoder
 
   Problem:    The stack usage of the JSON serializer/deserializer is too high
               when working on very large JSON string values, and JSON object's
@@ -23,3 +23,17 @@ KP-16-MB28-001 stack usage issues with the JSON stream decoder
   Status:     Fixed in Gnatcoll 1.7.0
 
   Workaround: None
+
+KP-16-MB19-040 gnatcoll_db2ada: fix handling of 'numeric(x,y)'
+
+  Problem:    When a database schema contains a 'numeric(x,y)' type, that
+              type needs to be mapped either to an integer or to a float on
+              the Ada side. So far, gnatcoll_db2ada was always mapping to
+              integers.
+
+  Status:     Fixed in Gnatcoll 1.7.0 on 2013-11-20
+
+  Workaround: Export the schema to a txt file, and replace the types
+              manually in that file. It is in any case better than extracting
+              the schema from a live database, because you can put it under
+              revision control.
