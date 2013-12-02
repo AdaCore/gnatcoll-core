@@ -4422,6 +4422,34 @@ package body GNATCOLL.Xref is
       F    : Entity_Information;
       C    : Forward_Cursor;
       Separator : Unbounded_String := To_Unbounded_String (".");
+
+      --------------------------
+      --  In_Neverending_Loop --
+      --------------------------
+
+      function In_Neverending_Loop return Boolean;
+      pragma Inline (In_Neverending_Loop);
+      --  Return true if the sequence of parents repeats. This problem occurs
+      --  when the compiler does not generate the scope of some parent package.
+
+      Max_Parents : constant := 50; --  Large enough to cover all cases
+      Parents : array (1 .. Max_Parents) of Integer;
+      P_Count : Natural := 0;
+
+      function In_Neverending_Loop return Boolean is
+      begin
+         for J in 1 .. P_Count loop
+            if Parents (J) = E.Id then
+               return True;
+            end if;
+         end loop;
+
+         P_Count := P_Count + 1;
+         Parents (P_Count) := E.Id;
+
+         return False;
+      end In_Neverending_Loop;
+
    begin
       if E = No_Entity then
          E := Self.Parent_Package (Entity);
@@ -4446,6 +4474,10 @@ package body GNATCOLL.Xref is
       end if;
 
       while E /= No_Entity loop
+         if In_Neverending_Loop then
+            return To_String (Name);
+         end if;
+
          D := Declaration (Xref_Database'Class (Self), E);
          Name := D.Name & Separator & Name;
 
