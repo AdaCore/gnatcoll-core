@@ -85,6 +85,7 @@ pragma Ada_05;
 
 private with Ada.Containers.Indefinite_Hashed_Maps;
 with Ada.Containers.Doubly_Linked_Lists;
+with Ada.Containers.Ordered_Sets;
 with Ada.Containers.Vectors;
 private with Ada.Strings.Hash;
 private with Ada.Finalization;
@@ -659,6 +660,8 @@ package GNATCOLL.Projects is
    --      separates.
 
    type File_Info is tagged private;
+   type File_Info_Access is access File_Info;
+   function "<" (L, R : File_Info_Access) return Boolean;
    --  Various information that can be gathered about a file
 
    function Project
@@ -691,6 +694,18 @@ package GNATCOLL.Projects is
    --  additional extensions registered through Add_Language_Extension.
    --  Can only be applied if root project is not an aggregate project,
    --  Program_Error raised otherwise.
+
+   package File_Info_Sets is new
+     Ada.Containers.Ordered_Sets (File_Info_Access);
+
+   function Info_Set
+     (Self : Project_Tree'Class; File : GNATCOLL.VFS.Virtual_File)
+      return File_Info_Sets.Set;
+   --  Retrieve information about the source file.
+   --  The language is computed from the project's naming scheme and from the
+   --  additional extensions registered through Add_Language_Extension.
+   --  Can be applied both to aggregate and regular projects. For aggregate
+   --  project tree may return several elements in the set.
 
    procedure Set_Config_File
      (Self        : in out Project_Environment;

@@ -1562,6 +1562,87 @@ package body GNATCOLL.Projects is
       return Info (Self.Data, File);
    end Info;
 
+   ---------------
+   -- Info_List --
+   ---------------
+
+   function Info_Set
+     (Self : Project_Tree'Class; File : GNATCOLL.VFS.Virtual_File)
+      return File_Info_Sets.Set
+   is
+      M_Cur  : Names_Files.Cursor;
+      B_Name : constant Filesystem_String := File.Base_Name;
+
+      Source : Source_File_Data;
+      S_Info : File_Info;
+
+      Result : File_Info_Sets.Set := File_Info_Sets.Empty_Set;
+
+      function Unit_Kid_To_Part (Src_Kind : Prj.Source_Kind) return Unit_Parts;
+      --  Translate Prj.Source_Kind into Unit_Parts.
+
+      function Unit_Kid_To_Part (Src_Kind : Prj.Source_Kind) return Unit_Parts
+      is
+      begin
+         case Src_Kind is
+            when Spec =>
+               return Unit_Spec;
+            when Impl =>
+               return Unit_Body;
+            when Sep =>
+               return Unit_Separate;
+         end case;
+      end Unit_Kid_To_Part;
+
+   begin
+      if Self.Data = null then
+         raise Program_Error with "no project tree was parsed";
+      end if;
+
+      M_Cur := Self.Data.Sources.Find (B_Name);
+
+      if M_Cur = Names_Files.No_Element then
+         Result.Include (new File_Info'(Info (Self.Data, File)));
+         return Result;
+      end if;
+
+      Source := Names_Files.Element (M_Cur);
+
+      loop
+
+         Trace
+           (Me,
+            Source.File.Display_Full_Name
+            & " vs " & File.Display_Full_Name);
+
+         if Source.File = File then
+            S_Info.Project := Source.Project;
+            S_Info.Root_Project := Self.Root_Project;
+            S_Info.Part := Unit_Kid_To_Part (Source.Source.Kind);
+            if Source.Source.Unit = No_Unit_Index then
+               --  Not applicable to C and other non unit-based languages.
+               S_Info.Name := No_Name;
+            else
+               S_Info.Name := Source.Source.Unit.Name;
+            end if;
+            S_Info.Lang := Source.Source.Language.Name;
+
+            Result.Include (new File_Info'(S_Info));
+         end if;
+
+         exit when Source.Next = null;
+         Source := Source.Next.all;
+      end loop;
+
+      if Result.Is_Empty then
+         --  Same base name present, but no source with same full path.
+         Result.Include (new File_Info'(Info (Self.Data, File)));
+      end if;
+
+      return Result;
+
+   end Info_Set;
+
    --------------------
    -- Substitute_Dot --
    --------------------
@@ -4310,6 +4391,15 @@ package body GNATCOLL.Projects is
       end if;
    end "=";
 
+   ---------
+   -- "<" --
+   ---------
+
+   function "<" (L, R : File_Info_Access) return Boolean is
+   begin
+      return L.Project.Project_Path < R.Project.Project_Path;
+   end "<";
+
    ----------------------
    -- Extended_Project --
    ----------------------
@@ -5059,7 +5149,7 @@ package body GNATCOLL.Projects is
 
    function Same_Source_And_Project (L, R : Source_File_Data) return Boolean is
    begin
-      return L.File = R.File and then L.Project = R.Project;
+      return L.Project = R.Project and then L.File = R.File;
    end Same_Source_And_Project;
 
    ----------------------------------
