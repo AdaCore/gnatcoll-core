@@ -1284,15 +1284,26 @@ package body GNATCOLL.SQL.Exec is
          return Default;
    end Integer_Value;
 
-   -----------
-   -- Value --
-   -----------
+   -----------------
+   -- Float_Value --
+   -----------------
 
    function Float_Value
      (Self  : Forward_Cursor;
       Field : Field_Index) return Float is
    begin
       return Float_Value (DBMS_Forward_Cursor'Class (Self.Res.all), Field);
+   end Float_Value;
+
+   function Float_Value
+     (Self    : Forward_Cursor;
+      Field   : Field_Index;
+      Default : Float) return Float is
+   begin
+      return Float_Value (DBMS_Forward_Cursor'Class (Self.Res.all), Field);
+   exception
+      when Constraint_Error | Interfaces.C.Strings.Dereference_Error =>
+         return Default;
    end Float_Value;
 
    -----------

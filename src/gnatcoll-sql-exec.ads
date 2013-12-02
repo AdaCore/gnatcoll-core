@@ -503,6 +503,7 @@ package GNATCOLL.SQL.Exec is
    function Value (Self : Forward_Cursor; Field : Field_Index) return String;
    function Boolean_Value
      (Self : Forward_Cursor; Field : Field_Index) return Boolean;
+
    function Integer_Value
      (Self    : Forward_Cursor;
       Field   : Field_Index;
@@ -510,8 +511,20 @@ package GNATCOLL.SQL.Exec is
    function Integer_Value
      (Self    : Forward_Cursor;
       Field   : Field_Index) return Integer;
+   --  Reads a value as an integer. The second version might raise a
+   --  Constraint_Error if the field is null or does not contain an integer.
+   --  The first version will return the default instead.
+
+   function Float_Value
+     (Self    : Forward_Cursor;
+      Field   : Field_Index;
+      Default : Float) return Float;
    function Float_Value
      (Self : Forward_Cursor; Field : Field_Index) return Float;
+   --  Reads a value as a float. The second version might raise a
+   --  Constraint_Error if the field is null or does not contain a float.
+   --  The first version will return the default instead.
+
    function Money_Value
      (Self : Forward_Cursor; Field : Field_Index)
      return T_Money;
