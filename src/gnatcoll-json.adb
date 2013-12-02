@@ -294,7 +294,7 @@ package body GNATCOLL.JSON is
 
                      return Create (Int);
                   exception
-                     when Constraint_Error =>
+                     when Constraint_Error | Storage_Error =>
                         Report_Error
                           (Filename, Old_Line, Old_Col,
                            "Numerical value too large to fit " &
