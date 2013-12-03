@@ -216,9 +216,9 @@ package body GNATCOLL.JSON is
             --  Numerical value
 
             declare
-               type Num_Part is (Int, Frac, Exp);
+               type Num_Part is (Trail, Int, Frac, Exp);
                Unb      : Unbounded_String;
-               Part     : Num_Part := Int;
+               Part     : Num_Part := Trail;
                Old_Col  : constant Natural := Col.all;
                Old_Line : constant Natural := Line.all;
 
@@ -238,7 +238,14 @@ package body GNATCOLL.JSON is
                end if;
 
                while Idx.all <= Length (Strm) loop
-                  if Element (Strm, Idx.all) = '.' and then Part = Int then
+                  if Element (Strm, Idx.all) in '1' .. '9'
+                    and then Part = Trail
+                  then
+                     --  Non-0 value, we can start adding the digits to the
+                     --  Int part of the number
+                     Part := Int;
+
+                  elsif Element (Strm, Idx.all) = '.' and then Part = Int then
                      Part := Frac;
                      Append (Unb, Element (Strm, Idx.all));
                      Next_Char;
@@ -254,8 +261,7 @@ package body GNATCOLL.JSON is
                          or else Element (Strm, Idx.all) = 'E')
                     and then Part in Int .. Frac
                   then
-                     --  Authorized patterns for exponent:
-                     --  e E e+ e- E+ E- followed by digits
+                     --  Authorized patterns for exponent: (e|E)(+|-)?[0-9]+
                      Part := Exp;
                      Append (Unb, Element (Strm, Idx.all));
                      Next_Char;
@@ -282,19 +288,38 @@ package body GNATCOLL.JSON is
                   exit when Idx.all > Length (Strm)
                     or else Element (Strm, Idx.all) not in '0' .. '9';
 
-                  Append (Unb, Element (Strm, Idx.all));
+                  --  Ignore trailing zeros
+                  if Part /= Trail then
+                     Append (Unb, Element (Strm, Idx.all));
+                  end if;
+
                   Next_Char;
                end loop;
 
                if Part = Int then
+                  --  Protect against too large values to fit in the stack: a
+                  --  128-bit integer is maximum 39 digits, so any longer
+                  --  string won't fit into an integer, whatever the CPU.
+                  --  Note that the string representation is already striped
+                  --  of trailing zeros, see the decoding part above.
+                  if Length (Unb) > 40 then
+                     Report_Error
+                       (Filename, Old_Line, Old_Col,
+                        "Numerical value too large to fit " &
+                          "into a Long_Long_Integer");
+                  end if;
+
                   declare
                      Int : Long_Long_Integer;
                   begin
                      Int := Long_Long_Integer'Value (To_String (Unb));
 
                      return Create (Int);
+
                   exception
                      when Constraint_Error | Storage_Error =>
+                        --  The test above is not sufficient ... We still catch
+                        --  too large values here.
                         Report_Error
                           (Filename, Old_Line, Old_Col,
                            "Numerical value too large to fit " &
