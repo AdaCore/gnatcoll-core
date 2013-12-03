@@ -56,7 +56,7 @@ project GnatColl_Shared is
       case Build is
          when "Debug" =>
             for Switches ("Ada") use
-              ("-g", "-O1", "-gnata", "-gnatVa", "-gnatQ", "-gnaty", "-gnateE",
+              ("-g", "-O0", "-gnata", "-gnatVa", "-gnatQ", "-gnaty", "-gnateE",
                "-gnatwaCJe", "-gnat05");
             for Switches ("C") use ("-g", "-fdump-xref");
          when "Production" =>
