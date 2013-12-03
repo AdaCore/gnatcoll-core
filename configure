@@ -2363,7 +2363,7 @@ fi
 
 
 case $target in
-   *cygwin*) GNATCOLL_OS="window";;
+   *cygwin*) GNATCOLL_OS="windows";;
    *) GNATCOLL_OS="unix";;
 esac
 
