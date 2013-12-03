@@ -37,3 +37,15 @@ KP-16-MB19-040 gnatcoll_db2ada: fix handling of 'numeric(x,y)'
               manually in that file. It is in any case better than extracting
               the schema from a live database, because you can put it under
               revision control.
+
+KP-16-M926-004 gnatcoll.gpr conflicts with OS environment variable
+
+  Problem:    The project files installed by gnatcoll depends on an
+              environment variable named OS, with a restricted set of
+              allowed values. This name is too generic and might conflict
+              with similar variables used in user projects.
+
+  Status:     Fixed in Gnatcoll 1.7.0
+
+  Workaround: edit prefix/lib/gnat/gnatcoll.gpr and replace "OS" with
+              "GNATCOLL_OS".

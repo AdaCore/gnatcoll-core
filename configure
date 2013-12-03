@@ -689,6 +689,7 @@ GNAT_BUILDS_SHARED
 BUILD_TYPE
 WITH_GPL
 LN_S
+GNATCOLL_OS
 TARGET
 target_os
 target_vendor
@@ -2361,11 +2362,11 @@ if test x$host != x$target ; then
 fi
 
 
-#case $target in
-#   *cygwin*) TARGET="";;
-#   *) TARGET=${target} ;;
-#esac
-#AC_SUBST(TARGET)
+case $target in
+   *cygwin*) GNATCOLL_OS="window";;
+   *) GNATCOLL_OS="unix";;
+esac
+
 
 # Configure pkg-config so that it does not remove some directories
 # from the include files. In particular, without this, on OSX we

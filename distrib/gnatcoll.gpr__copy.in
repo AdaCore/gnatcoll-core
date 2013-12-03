@@ -13,8 +13,8 @@ project GnatColl is
    GnatColl_Kind : GnatColl_Kind_Type :=
      external ("LIBRARY_TYPE", "@DEFAULT_LIBRARY_TYPE@");
 
-   type OS_Kind is ("Windows_NT", "unix");
-   OS : OS_Kind := external ("OS", "unix");
+   type OS_Kind is ("windows", "unix");
+   OS : OS_Kind := "@GNATCOLL_OS@";
 
    type Yes_No is ("yes", "no");
    type Sqlite_Inclusion is ("yes", "no", "embedded");
@@ -57,7 +57,7 @@ project GnatColl is
               use "gnatcoll-mmap-system__unix.adb";
             for Implementation ("GNATCOLL.IO.Native.Codec")
 	      use "gnatcoll-io-native-codec__unix.adb";
-         when "Windows_NT" =>
+         when "windows" =>
             for Specification  ("GNATCOLL.Mmap.System")
               use "gnatcoll-mmap-system__win32.ads";
             for Implementation ("GNATCOLL.Mmap.System")
