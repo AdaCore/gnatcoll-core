@@ -296,7 +296,11 @@ package body GNATCOLL.JSON is
                   Next_Char;
                end loop;
 
-               if Part = Int then
+               if Part = Trail then
+                  --  The number only contains zeros
+                  return Create (0);
+
+               elsif Part = Int then
                   --  Protect against too large values to fit in the stack: a
                   --  128-bit integer is maximum 39 digits, so any longer
                   --  string won't fit into an integer, whatever the CPU.
