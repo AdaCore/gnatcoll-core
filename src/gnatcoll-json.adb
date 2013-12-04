@@ -298,7 +298,7 @@ package body GNATCOLL.JSON is
 
                if Part = Trail then
                   --  The number only contains zeros
-                  return Create (0);
+                  return Create (Long_Long_Integer'(0));
 
                elsif Part = Int then
                   --  Protect against too large values to fit in the stack: a
