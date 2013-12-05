@@ -9,8 +9,11 @@ fi
 AC_SUBST(TARGET)
 
 case $target in
-   *cygwin*) GNATCOLL_OS="windows";;
-   *) GNATCOLL_OS="unix";;
+   *cygwin*) GNATCOLL_OS="windows"
+             TARGET="";;
+
+   *) GNATCOLL_OS="unix"
+      TARGET=${target};;
 esac
 AC_SUBST(GNATCOLL_OS)
 
