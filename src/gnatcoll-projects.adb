@@ -1155,8 +1155,31 @@ package body GNATCOLL.Projects is
       Path          : Virtual_File := GNATCOLL.VFS.No_File;
       Iterator      : Project_Iterator;
       Info_Cursor   : Names_Files.Cursor;
-      Info          : Source_File_Data;
+      Source_Info   : Source_File_Data;
       In_Predefined : Boolean := False;
+      Duplicate_Obj : Boolean := False;
+
+      function Ambiguous_Base_Name
+        (First_SFD : Source_File_Data) return Boolean;
+      --  Return false if any of source files in given list has different full
+      --  name than First_SFD.
+
+      function Ambiguous_Base_Name
+        (First_SFD : Source_File_Data) return Boolean
+      is
+         Next_SFD : Source_File_Data := First_SFD;
+      begin
+         loop
+            if Next_SFD.File /= First_SFD.File then
+               return True;
+            end if;
+
+            exit when Next_SFD.Next = null;
+            Next_SFD := Next_SFD.Next.all;
+         end loop;
+
+         return False;
+      end Ambiguous_Base_Name;
 
    begin
       if Self.Data = null then
@@ -1177,7 +1200,11 @@ package body GNATCOLL.Projects is
          Info_Cursor := Self.Data.Sources.Find (Base);
 
          if Has_Element (Info_Cursor) then
-            return Element (Info_Cursor).File;
+            if Ambiguous_Base_Name (Element (Info_Cursor)) then
+               return GNATCOLL.VFS.No_File;
+            else
+               return Element (Info_Cursor).File;
+            end if;
          end if;
       end if;
 
@@ -1185,19 +1212,33 @@ package body GNATCOLL.Projects is
       --  This means we might be looking outside of the source and obj dirs.
 
       if Equal (File_Extension (Name), Project_File_Extension) then
-         Iterator := Self.Root_Project.Start;
+         if Project.Data /= null then
+            Iterator := Project.Start (Recursive => False);
+         else
+            Iterator := Self.Root_Project.Start (Recursive => True);
+         end if;
          loop
             Project2 := Current (Iterator);
             exit when Project2 = No_Project;
 
             if Case_Insensitive_Equal
-              (Project2.Name & (+Project_File_Extension), +Base)
+              (+Project2.Project_Path.Base_Name, +Base)
             then
-               return Project2.Project_Path;
+               if Path = GNATCOLL.VFS.No_File then
+                  Path := Project2.Project_Path;
+               else
+                  --  Duplicate project base name.
+                  return GNATCOLL.VFS.No_File;
+               end if;
             end if;
 
             Next (Iterator);
          end loop;
+      end if;
+
+      if Path /= GNATCOLL.VFS.No_File then
+         --  Found single project with given base name.
+         return Path;
       end if;
 
       --  We have to search in one or more projects
@@ -1208,19 +1249,46 @@ package body GNATCOLL.Projects is
          Iterator := Self.Root_Project.Start (Recursive => True);
       end if;
 
-      while Path = GNATCOLL.VFS.No_File loop
+      while Path = GNATCOLL.VFS.No_File or else Duplicate_Obj loop
+         --  Checking whenever we have an ambiguous object file.
          Project2 := Current (Iterator);
          exit when Project2 = No_Project;
 
-         if Use_Source_Path then
+         if
+           Duplicate_Obj
+           and then Locate_Regular_File
+              (Name, Project2.Object_Path
+                 (Recursive => False, Including_Libraries => True)) /=
+               GNATCOLL.VFS.No_File
+         then
+            return GNATCOLL.VFS.No_File;
+         end if;
+
+         if not Duplicate_Obj and then Use_Source_Path then
+            --  No need to check for object duplicates in source dirs.
             Path := Locate_Regular_File
               (Name, Project2.Source_Dirs (Recursive => False));
          end if;
 
-         if Use_Object_Path and then Path = GNATCOLL.VFS.No_File then
+         if
+           Use_Object_Path
+           and then not Duplicate_Obj
+           and then Path = GNATCOLL.VFS.No_File
+         then
+            --  We do not want to loose Path in the check fails.
             Path := Locate_Regular_File
               (Name, Project2.Object_Path
                  (Recursive => False, Including_Libraries => True));
+
+            if
+              Path /= GNATCOLL.VFS.No_File
+              and then Is_Aggregate_Project (Self.Root_Project)
+              and then Project.Data = null
+            then
+               --  Check is only relevant when root project is aggregate and
+               --  no project has been given as an argument.
+               Duplicate_Obj := True;
+            end if;
          end if;
 
          Next (Iterator);
@@ -1276,7 +1344,7 @@ package body GNATCOLL.Projects is
          --  However, for runtime files we do compute the language since these
          --  are likely to be source files
 
-         Info := Source_File_Data'
+         Source_Info := Source_File_Data'
            (Project => Project2,
             File    => Path,
             Lang    => No_Name,
@@ -1284,10 +1352,10 @@ package body GNATCOLL.Projects is
             Next => null);
 
          if In_Predefined then
-            Info.Lang := Get_String (Language (Self.Info (Path)));
+            Source_Info.Lang := Get_String (Language (Info (Self.Data, Path)));
          end if;
 
-         Include_File (Self.Data.Sources, Base, Info);
+         Include_File (Self.Data.Sources, Base, Source_Info);
       end if;
 
       return Path;

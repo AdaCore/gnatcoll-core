@@ -550,6 +550,11 @@ package GNATCOLL.Projects is
    --  source dirs and object dirs. See also Project_From_Name.
    --
    --  If no such file is found, GNATCOLL.VFS.No_File is returned.
+   --
+   --  If root project is an aggregate project, no Project specified and
+   --  base name of source file is abiguous, GNATCOLL.VFS.No_File is returned.
+   --  In order to get the source with ambiguous base name Project has to be
+   --  specified.
 
    function Predefined_Source_Files
      (Self : access Project_Environment) return GNATCOLL.VFS.File_Array;
