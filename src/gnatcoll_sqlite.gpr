@@ -55,7 +55,11 @@ project GnatColl_Sqlite is
             null;
          when "embedded" =>
             for Switches ("C") use GnatColl_Shared.Compiler'Switches ("C") 
-               & ("-DSQLITE_OMIT_LOAD_EXTENSION");
+               & ("-DSQLITE_OMIT_LOAD_EXTENSION",
+               
+                  --  force full optimization for sqlite, we do not debug it
+                  --  in any case.
+                  "-O3");
       end case;
    end Compiler;
 
