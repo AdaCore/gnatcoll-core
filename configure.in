@@ -6,7 +6,6 @@ TARGET=""
 if test x$host != x$target ; then
    TARGET=${target}
 fi
-AC_SUBST(TARGET)
 
 case $target in
    *cygwin*|*mingw*) GNATCOLL_OS="windows"
@@ -15,6 +14,7 @@ case $target in
    *) GNATCOLL_OS="unix"
       TARGET=${target};;
 esac
+AC_SUBST(TARGET)
 AC_SUBST(GNATCOLL_OS)
 
 # Configure pkg-config so that it does not remove some directories

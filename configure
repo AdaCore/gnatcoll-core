@@ -2361,7 +2361,6 @@ if test x$host != x$target ; then
    TARGET=${target}
 fi
 
-
 case $target in
    *cygwin*|*mingw*) GNATCOLL_OS="windows"
              TARGET="";;
@@ -2369,6 +2368,7 @@ case $target in
    *) GNATCOLL_OS="unix"
       TARGET=${target};;
 esac
+
 
 
 # Configure pkg-config so that it does not remove some directories
