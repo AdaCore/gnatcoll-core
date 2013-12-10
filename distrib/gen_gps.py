@@ -22,7 +22,7 @@ def recursive_ls (dir):
 
          if not private:
             result.add ((pkg, os.path.splitext (f)[0]))
- 
+
       elif os.path.isdir (os.path.join (dir, f)):
          result = result.union (recursive_ls (os.path.join (dir, f)))
 
@@ -48,8 +48,8 @@ for pkg, f in sorted (list):
    out.write ("""  <documentation_file>
      <shell>Editor.edit "%(file)s.ads"</shell>
      <descr>%(package)s</descr>
-     <menu>/Help/Gnat Runtime/%(menu)s</menu>
-     <category>Gnat Components Collection</category>
+     <menu>/Help/GNAT Runtime/%(menu)s</menu>
+     <category>GNAT Components Collection</category>
   </documentation_file>
 
 """ % {"file":f, "menu":menu, "package":pkg})
