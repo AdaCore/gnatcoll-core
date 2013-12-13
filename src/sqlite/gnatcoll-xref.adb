@@ -1854,6 +1854,10 @@ package body GNATCOLL.Xref is
                else
                   Index := Index + 1;
                end if;
+            elsif Index < Str'Last
+                and then Str (Index .. Index + 1) = "!="
+            then
+               Index := Index + 2;
             elsif Str (Index) = '[' then
                if Index < Str'Last and then Str (Index + 1) = ']' then
                   Index := Index + 2;
