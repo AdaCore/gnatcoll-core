@@ -1836,66 +1836,181 @@ package body GNATCOLL.Xref is
            and then Str (Index + 7) = 'r'
          then
             Index := Index + 8;
-            if Str (Index) = '=' then
-               if Index < Str'Last and then Str (Index + 1) = '=' then
-                  Index := Index + 2;
-               else
-                  Index := Index + 1;
-               end if;
-            elsif Str (Index) = '<' then
-               if Index < Str'Last and then Str (Index + 1) = '<' then
-                  Index := Index + 2;
-               else
-                  Index := Index + 1;
-               end if;
-            elsif Str (Index) = '>' then
-               if Index < Str'Last and then Str (Index + 1) = '>' then
-                  Index := Index + 2;
-               else
-                  Index := Index + 1;
-               end if;
-            elsif Index < Str'Last
-                and then Str (Index .. Index + 1) = "!="
-            then
-               Index := Index + 2;
-            elsif Str (Index) = '[' then
-               if Index < Str'Last and then Str (Index + 1) = ']' then
-                  Index := Index + 2;
-               else
-                  Index := Index + 1;
-               end if;
 
-            elsif Str (Index) = ' ' then
-               --  "operator new", "operator delete"
-               if Starts_With
-                 (String (Str (Index + 1 .. Str'Last)), "new")
-               then
-                  Index := Index + 4;
-
-                  if Str (Index) = ' '
-                    and then Str (Index + 1) = '['
-                    and then Str (Index + 2) = ']'
-                  then
-                     Index := Index + 3;
+            case Str (Index) is
+               when '=' =>
+                  if Index < Str'Last and then Str (Index + 1) = '=' then
+                     Index := Index + 2;  --  == operator
+                  else
+                     Index := Index + 1;  --  = operator
                   end if;
 
-               elsif Starts_With
-                 (String (Str (Index + 1 .. Str'Last)), "delete")
-               then
-                  Index := Index + 7;
-
-                  if Str (Index) = ' '
-                    and then Str (Index + 1) = '['
-                    and then Str (Index + 2) = ']'
-                  then
-                     Index := Index + 3;
+               when '<' =>
+                  if Index < Str'Last and then Str (Index + 1) = '<' then
+                     if Index + 1 < Str'Last
+                        and then Str (Index + 2) = '='
+                     then
+                        Index := Index + 3;  --  <<= operator
+                     else
+                        Index := Index + 2;   --  << operator
+                     end if;
+                  elsif Index < Str'Last and then Str (Index + 1) = '=' then
+                     Index := Index + 2;   --  <= operator
+                  else
+                     Index := Index + 1;   --  < operator
                   end if;
-               end if;
 
-            else
-               --  Assume a one-character operator (*, /, +, -,...)
-               Index := Index + 1;
-            end if;
+               when '>' =>
+                  if Index < Str'Last and then Str (Index + 1) = '>' then
+                     if Index + 1 < Str'Last
+                        and then Str (Index + 2) = '='
+                     then
+                        Index := Index + 3;  --  >>= operator
+                     else
+                        Index := Index + 2;   --  >> operator
+                     end if;
+                  elsif Index < Str'Last and then Str (Index + 1) = '=' then
+                     Index := Index + 2;  --  >= operator
+                  else
+                     Index := Index + 1;  --  > operator
+                  end if;
+
+               when '-' =>
+                  if Index < Str'Last and then Str (Index + 1) = '=' then
+                     Index := Index + 2;  --  -= operator
+                  elsif Index < Str'Last and then Str (Index + 1) = '-' then
+                     Index := Index + 2;  --  -- operator
+                  elsif Index + 2 <= Str'Last
+                     and then Str (Index + 1 .. Index + 2) = ">*"
+                  then
+                     Index := Index + 3;   --  ->*() operator (smart pointers)
+                  elsif Index < Str'Last and then Str (Index + 1) = '>' then
+                     Index := Index + 2;   --  ->() operator (smart pointers)
+                  else
+                     Index := Index + 1;  --  - operator
+                  end if;
+
+               when '+' =>
+                  if Index < Str'Last and then Str (Index + 1) = '=' then
+                     Index := Index + 2;  --  += operator
+                  elsif Index < Str'Last and then Str (Index + 1) = '+' then
+                     Index := Index + 2;  --  ++ operator
+                  else
+                     Index := Index + 1;  --  + operator
+                  end if;
+
+               when '*' =>
+                  if Index < Str'Last and then Str (Index + 1) = '=' then
+                     Index := Index + 2;  --  *= operator
+                  elsif Index + 2 < Str'Last
+                     and then Str (Index + 1 .. Index + 2) = "()"
+                  then
+                     Index := Index + 3;   --  *() operator (smart pointers)
+                  else
+                     Index := Index + 1;  --  * operator
+                  end if;
+
+               when '/' =>
+                  if Index < Str'Last and then Str (Index + 1) = '=' then
+                     Index := Index + 2;  --  /= operator
+                  else
+                     Index := Index + 1;  --  / operator
+                  end if;
+
+               when '!' =>
+                  if Index < Str'Last and then Str (Index + 1) = '=' then
+                     Index := Index + 2;  --  != operator
+                  else
+                     Index := Index + 1;  --  ! operator (not)
+                  end if;
+
+               when '[' =>
+                  if Index < Str'Last and then Str (Index + 1) = ']' then
+                     Index := Index + 2;  --  [] operator
+                  else
+                     Index := Index + 1;  --  ???
+                  end if;
+
+               when '(' =>
+                  if Index < Str'Last and then Str (Index + 1) = ')' then
+                     Index := Index + 2;  --  () operator
+                  else
+                     Index := Index + 1;  --  ???
+                  end if;
+
+               when '%' =>
+                  if Index < Str'Last and then Str (Index + 1) = '=' then
+                     Index := Index + 2;   --  %= operator
+                  else
+                     Index := Index + 1;   --  % operator
+                  end if;
+
+               when '|' =>
+                  if Index < Str'Last and then Str (Index + 1) = '|' then
+                     Index := Index + 2;   --  || operator
+                  elsif Index < Str'Last and then Str (Index + 1) = '=' then
+                     Index := Index + 2;   --  |= operator
+                  else
+                     Index := Index + 1;   --  | operator
+                  end if;
+
+               when '&' =>
+                  if Index < Str'Last and then Str (Index + 1) = '&' then
+                     Index := Index + 2;   --  && operator
+                  elsif Index < Str'Last and then Str (Index + 1) = '=' then
+                     Index := Index + 2;   --  &= operator
+                  elsif Index < Str'Last and then Str (Index + 1) = '(' then
+                     Index := Index + 4;   --  &() operator (smart pointers)
+                  else
+                     Index := Index + 1;   --  & operator
+                  end if;
+
+               when '^' =>
+                  if Index < Str'Last and then Str (Index + 1) = '=' then
+                     Index := Index + 2;   --  ^= operator
+                  else
+                     Index := Index + 1;   --  ^ operator
+                  end if;
+
+               when ' ' =>
+                  if Starts_With
+                    (String (Str (Index + 1 .. Str'Last)), "new")
+                  then
+                     Index := Index + 4;  --  new operator
+
+                     if Str (Index) = ' '
+                       and then Str (Index + 1) = '['
+                       and then Str (Index + 2) = ']'
+                     then
+                        Index := Index + 3;  --  new[] operator
+                     end if;
+
+                  elsif Starts_With
+                    (String (Str (Index + 1 .. Str'Last)), "delete")
+                  then
+                     Index := Index + 7;  --  delete operator
+
+                     if Str (Index) = ' '
+                       and then Str (Index + 1) = '['
+                       and then Str (Index + 2) = ']'
+                     then
+                        Index := Index + 3;  --  delete[] operator
+                     end if;
+
+                  else
+                     --  type conversion operators (int(), float(),...)
+                     while Index <= Str'Last and then Str (Index) /= '{' loop
+                        Index := Index + 1;
+                     end loop;
+                  end if;
+
+               when '~' | ',' =>
+                  Index := Index + 1;
+
+               when others =>
+                  --  unexpected
+                  Index := Index + 1;
+            end case;
 
          else
             Index := Index + 1;
