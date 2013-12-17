@@ -745,7 +745,7 @@ package body GNATCOLL.Projects is
 
       elsif Recursive then
          declare
-            Iter  : Inner_Project_Iterator := Start (Project, Recursive);
+            Iter  : Project_Iterator := Start (Project, Recursive);
             Result : File_Array_Access;
             P     : Project_Type;
          begin
@@ -818,7 +818,7 @@ package body GNATCOLL.Projects is
       Exclude_Overridden  : Boolean := True)
    is
       Tmp             : File_Array_Access;
-      Prj_Iter        : Inner_Project_Iterator;
+      Prj_Iter        : Project_Iterator;
       Current_Project : Project_Type;
       Info_Cursor     : Names_Files.Cursor;
       Re              : Pattern_Matcher_Access;
@@ -839,6 +839,17 @@ package body GNATCOLL.Projects is
       --  (everything after and including the last dot in the file name).
       --  Otherwise, the suffix ALI_Ext is removed from the file name.
 
+      function Find_In_Subtree
+        (Map  : Names_Files.Map;
+         Key  : GNATCOLL.VFS.Filesystem_String;
+         Root : Project_Type) return Names_Files.Cursor;
+      Local_Obj_Map : Names_Files.Map;
+      --  Searches for Source_File_Data with given base name and a project from
+      --  a project subtree that starts from Root.
+      --  If the resulting Source_File_Data is not the first one in the list,
+      --  it is placed in Local_Obj_Map and returning Coursor points to it.
+      --  Local_Obj_Map must be cleared after each object file processed.
+
       -------------------
       -- Get_Base_Name --
       -------------------
@@ -852,9 +863,94 @@ package body GNATCOLL.Projects is
          end if;
       end Get_Base_Name;
 
+      ---------------------
+      -- Find_In_Subtree --
+      ---------------------
+
+      function Find_In_Subtree
+        (Map  : Names_Files.Map;
+         Key  : GNATCOLL.VFS.Filesystem_String;
+         Root : Project_Type) return Names_Files.Cursor
+      is
+         Cur  : Names_Files.Cursor;
+         Iter : Inner_Project_Iterator;
+         SFD  : Source_File_Data;
+      begin
+         Cur := Map.Find (Key);
+         if Cur = Names_Files.No_Element then
+            --  No object files with same base name expected for any project.
+            return Cur;
+         end if;
+
+         Iter := Start (Extending_Project (Root, True));
+         loop
+            exit when Current (Iter) = No_Project;
+
+            if Current (Iter) = Element (Cur).Project then
+               --  First Source_File_Data is the one, we can return a cursor
+               --  pointing at original map.
+               return Cur;
+            end if;
+
+            Next (Iter);
+         end loop;
+
+         SFD := Element (Cur);
+         loop
+            exit when SFD.Next = null;
+            SFD := SFD.Next.all;
+
+            Iter := Start (Extending_Project (Root, True));
+            loop
+               exit when Current (Iter) = No_Project;
+
+               if Current (Iter) = SFD.Project then
+                  --  Creating a temporary element to point to.
+                  Local_Obj_Map.Include (Key, SFD);
+                  Cur := Local_Obj_Map.First;
+                  return Cur;
+               end if;
+
+               Next (Iter);
+            end loop;
+         end loop;
+
+         return Names_Files.No_Element;
+      end Find_In_Subtree;
+
       Seen : Virtual_File_Sets.Set;
 
    begin
+      if Is_Aggregate_Project (Self) then
+         declare
+            Aggregated : Aggregated_Project_List;
+            P : Project_Type;
+         begin
+            --  processing aggregated project hierarchies
+            Aggregated := Self.Data.View.Aggregated_Projects;
+
+            while Aggregated /= null loop
+
+               P := Project_Type
+                 (Project_From_Path (Self.Data.Tree, Aggregated.Path));
+
+               Library_Files
+                 (Self                => P,
+                  Recursive           => Recursive,
+                  Including_Libraries => Including_Libraries,
+                  Xrefs_Dirs          => Xrefs_Dirs,
+                  ALI_Ext             => ALI_Ext,
+                  Include_Predefined  => False,
+                  List                => List,
+                  Exclude_Overridden  => Exclude_Overridden);
+
+               Aggregated := Aggregated.Next;
+            end loop;
+         end;
+
+         return;
+      end if;
+
       if ALI_Ext (ALI_Ext'First) = '^' then
          Re := new Pattern_Matcher'(Compile (+ALI_Ext));
       end if;
@@ -907,7 +1003,8 @@ package body GNATCOLL.Projects is
                            P, Lowest_Project   : Project_Type;
                         begin
                            Info_Cursor :=
-                             Self.Data.Tree.Objects_Basename.Find (B);
+                             Find_In_Subtree
+                               (Self.Data.Tree.Objects_Basename, B, Self);
 
                            if not Has_Element (Info_Cursor) then
                               --  Special case for C files: the library file is
@@ -922,8 +1019,10 @@ package body GNATCOLL.Projects is
                               if Dot > B'First then
                                  B_Last := Dot - 1;
                                  Info_Cursor :=
-                                   Self.Data.Tree.Objects_Basename.Find
-                                     (B (B'First .. B_Last));
+                                   Find_In_Subtree
+                                     (Self.Data.Tree.Objects_Basename,
+                                      B (B'First .. B_Last),
+                                      Self);
                               end if;
                            end if;
 
@@ -1032,6 +1131,8 @@ package body GNATCOLL.Projects is
                                   & Element (Info_Cursor).Project.Name
                                   & ")");
                         end if;
+
+                        Local_Obj_Map.Clear;
                      end if;
                   end loop;
 
@@ -4495,9 +4596,13 @@ package body GNATCOLL.Projects is
    function Extending_Project
      (Project : Project_Type; Recurse : Boolean := False) return Project_Type
    is
-      Tree   : constant Project_Node_Tree_Ref := Project.Tree_Tree;
+      Tree   : Project_Node_Tree_Ref := Project.Tree_Tree;
       Extended, Extending : Project_Node_Id;
    begin
+      if Project.Data.Local_Node_Tree /= null then
+         --  Setting proper tree for aggregated projects.
+         Tree := Project.Data.Local_Node_Tree;
+      end if;
       Extended := Project.Data.Node;
 
       loop
@@ -6725,16 +6830,44 @@ package body GNATCOLL.Projects is
                         --  computation is done directly in Library_Files.
 
                         if Source.Index = 0 then
-                           Self.Data.Objects_Basename.Include
-                             (Base,
-                              (P, File, Source.Language.Name, Source, null));
+                           if Is_Aggregate_Project (Self.Data.Root) then
+                              Include_File
+                                (Self.Data.Objects_Basename,
+                                 Base,
+                                 (P, File, Source.Language.Name, Source,
+                                  null));
+                           else
+                              --  No point in all the checks for regular
+                              --  project.
+
+                              Self.Data.Objects_Basename.Include
+                                (Base,
+                                 (P, File, Source.Language.Name, Source,
+                                  null));
+                           end if;
                         else
-                           Self.Data.Objects_Basename.Include
-                             (Base & "~"
-                              & (+Image
-                                (Integer (Source.Index),
-                                     Min_Width => 0)),
-                              (P, File, Source.Language.Name, Source, null));
+
+                           if Is_Aggregate_Project (Self.Data.Root) then
+                              Include_File
+                                (Self.Data.Objects_Basename,
+                                 Base & "~"
+                                 & (+Image
+                                   (Integer (Source.Index),
+                                        Min_Width => 0)),
+                                 (P, File, Source.Language.Name, Source,
+                                  null));
+                           else
+                              --  No point in all the checks for regular
+                              --  project.
+
+                              Self.Data.Objects_Basename.Include
+                                (Base & "~"
+                                 & (+Image
+                                   (Integer (Source.Index),
+                                        Min_Width => 0)),
+                                 (P, File, Source.Language.Name, Source,
+                                  null));
+                           end if;
                         end if;
                      end;
                   end if;
