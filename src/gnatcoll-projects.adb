@@ -5968,11 +5968,10 @@ package body GNATCOLL.Projects is
       Prj.Err.Initialize;
 
       if Test_With_Missing_With then
-         Output.Set_Special_Output (null);
          Errout_Handling := Prj.Part.Never_Finalize;
-      else
-         Output.Set_Special_Output (Output.Output_Proc (Errors));
       end if;
+
+      Output.Set_Special_Output (Output.Output_Proc (Errors));
 
       Prj.Com.Fail := Fail'Unrestricted_Access;
 
@@ -6003,6 +6002,7 @@ package body GNATCOLL.Projects is
          Trace (Me, "Aggregate projects are not supported");
          Fail ("Aggregate projects are not supported");
          Project := Empty_Node;
+         Output.Cancel_Special_Output;
          return;
       end if;
 
@@ -6094,6 +6094,9 @@ package body GNATCOLL.Projects is
                Recompute_View         => Recompute_View,
                Packages_To_Check      => Packages_To_Check,
                Test_With_Missing_With => False);
+
+            Output.Cancel_Special_Output;
+
             return;
          end;
 
