@@ -1779,22 +1779,33 @@ package body GNATCOLL.Projects is
 
       loop
 
-         Trace
-           (Me,
-            Source.File.Display_Full_Name
-            & " vs " & File.Display_Full_Name);
-
          if Source.File = File then
             S_Info.Project := Source.Project;
             S_Info.Root_Project := Self.Root_Project;
-            S_Info.Part := Unit_Kid_To_Part (Source.Source.Kind);
-            if Source.Source.Unit = No_Unit_Index then
-               --  Not applicable to C and other non unit-based languages.
-               S_Info.Name := No_Name;
+
+            if Source.Source /= null then
+               --  One of the initially cashed source files.
+               S_Info.Part := Unit_Kid_To_Part (Source.Source.Kind);
+               if Source.Source.Unit = No_Unit_Index then
+                  --  Not applicable to C and other non unit-based languages.
+                  S_Info.Name := No_Name;
+               else
+                  S_Info.Name := Source.Source.Unit.Name;
+               end if;
+               S_Info.Lang := Source.Source.Language.Name;
+
             else
-               S_Info.Name := Source.Source.Unit.Name;
+               --  Cashed after a call to create, thus no Source_Id. The only
+               --  thing known is the language.
+
+               declare
+                  Tmp_Info : constant File_Info := Info (Self.Data, File);
+               begin
+                  S_Info.Part := Tmp_Info.Part;
+                  S_Info.Lang := Tmp_Info.Lang;
+                  S_Info.Name := Tmp_Info.Name;
+               end;
             end if;
-            S_Info.Lang := Source.Source.Language.Name;
 
             Result.Include (new File_Info'(S_Info));
          end if;
