@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                             G N A T C O L L                              --
 --                                                                          --
---                     Copyright (C) 2011-2013, AdaCore                     --
+--                     Copyright (C) 2011-2014, AdaCore                     --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -238,14 +238,20 @@ package body GNATCOLL.JSON is
                end if;
 
                while Idx.all <= Length (Strm) loop
-                  if Element (Strm, Idx.all) in '1' .. '9'
-                    and then Part = Trail
+                  if Part = Trail
+                    and then Element (Strm, Idx.all) in '1' .. '9'
                   then
                      --  Non-0 value, we can start adding the digits to the
                      --  Int part of the number
                      Part := Int;
 
-                  elsif Element (Strm, Idx.all) = '.' and then Part = Int then
+                  elsif (Part = Trail or else Part = Int)
+                    and then Element (Strm, Idx.all) = '.'
+                  then
+                     if Part = Trail then
+                        Append (Unb, "0");
+                     end if;
+
                      Part := Frac;
                      Append (Unb, Element (Strm, Idx.all));
                      Next_Char;
@@ -257,10 +263,16 @@ package body GNATCOLL.JSON is
                                "a number");
                      end if;
 
-                  elsif (Element (Strm, Idx.all) = 'e'
-                         or else Element (Strm, Idx.all) = 'E')
-                    and then Part in Int .. Frac
+                  elsif Part /= Exp
+                    and then (Element (Strm, Idx.all) = 'e'
+                                or else Element (Strm, Idx.all) = 'E')
                   then
+                     if Part = Trail then
+                        --  Although legal, so handled here, this case is
+                        --  a number of the form 0e99.
+                        Append (Unb, "0");
+                     end if;
+
                      --  Authorized patterns for exponent: (e|E)(+|-)?[0-9]+
                      Part := Exp;
                      Append (Unb, Element (Strm, Idx.all));
