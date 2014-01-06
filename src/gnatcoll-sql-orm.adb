@@ -2,7 +2,7 @@
 --                                   CRM                                    --
 --                    [Customer Relationship Management]                    --
 --                                                                          --
---                         Copyright (C) 2009-2013, AdaCore                 --
+--                         Copyright (C) 2009-2014, AdaCore                 --
 ------------------------------------------------------------------------------
 
 package body GNATCOLL.SQL.Orm is
