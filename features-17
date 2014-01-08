@@ -2,7 +2,7 @@
 GNATCOLL 1.7 NEW FEATURES LIST
 ==============================
 
-Copyright (C) 2013, AdaCore
+Copyright (C) 2013-2014, AdaCore
 
 This file contains a list of new features introduced in GNATCOLL.
 A full description of all GNATCOLL features can be found in the GNATCOLL
@@ -14,6 +14,12 @@ of the feature.
 
 New features in 1.7
 -------------------
+
+NF-17-N108-018 GNATCOLL.SQL: support for CREATE TABLE AS (2014-01-08)
+
+  The CREATE TABLE AS SQL query is now supported. In particular it can
+  be used to create temporary tables to hold the results of an intermediate
+  query.
 
 NF-17-MB29-039 GNATCOLL.SQL.Exec.Float_Value new param Default (2013-12-01)
 

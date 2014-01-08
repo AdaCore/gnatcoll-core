@@ -623,6 +623,7 @@ package GNATCOLL.SQL is
    -----------------
    -- Assignments --
    -----------------
+
    --  The operator "=" is inherited from gnatcoll-sql_impl for all fields
    --  (either between two fields, or between a field and a scalar value).
 
@@ -727,6 +728,15 @@ package GNATCOLL.SQL is
      (From  : SQL_Table'Class;
       Where : SQL_Criteria := No_Criteria) return SQL_Query;
    --  Deletes all fields matching WHERE in the table FROM
+
+   type Temp_Table_Behavior is (Preserve_Rows, Delete_Rows, Drop);
+
+   function SQL_Create_Table
+     (Name      : String;
+      As        : SQL_Query;
+      Temp      : Boolean := False;
+      On_Commit : Temp_Table_Behavior := Preserve_Rows) return SQL_Query;
+   --  CREATE [TEMP] TABLE AS
 
    function SQL_Begin    return SQL_Query;
    function SQL_Rollback return SQL_Query;
@@ -1107,6 +1117,18 @@ private
    type Query_Delete_Contents_Access is access all Query_Delete_Contents'Class;
    overriding function To_String
      (Self   : Query_Delete_Contents;
+      Format : Formatter'Class) return Unbounded_String;
+
+   type Query_Create_Table_As_Contents is new Query_Contents with record
+      Name      : Ada.Strings.Unbounded.Unbounded_String;
+      Temp      : Boolean;
+      On_Commit : Temp_Table_Behavior;
+      As        : SQL_Query;
+   end record;
+   type Query_Create_Table_As_Contents_Access is
+     access all Query_Create_Table_As_Contents'Class;
+   overriding function To_String
+     (Self   : Query_Create_Table_As_Contents;
       Format : Formatter'Class) return Unbounded_String;
 
    type Simple_Query_Contents is new Query_Contents with record

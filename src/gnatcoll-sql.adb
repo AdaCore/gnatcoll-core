@@ -1969,6 +1969,59 @@ package body GNATCOLL.SQL is
       Is_Aggregate := True;
    end Append_If_Not_Aggregate;
 
+   ----------------------
+   -- SQL_Create_Table --
+   ----------------------
+
+   function SQL_Create_Table
+     (Name      : String;
+      As        : SQL_Query;
+      Temp      : Boolean := False;
+      On_Commit : Temp_Table_Behavior := Preserve_Rows) return SQL_Query
+   is
+      Data : constant Query_Create_Table_As_Contents_Access :=
+        new Query_Create_Table_As_Contents;
+   begin
+      Data.Name      := To_Unbounded_String (Name);
+      Data.As        := As;
+      Data.Temp      := Temp;
+      Data.On_Commit := On_Commit;
+      return (Contents =>
+              (Ada.Finalization.Controlled
+               with SQL_Query_Contents_Access (Data)));
+   end SQL_Create_Table;
+
+   ---------------
+   -- To_String --
+   ---------------
+
+   function To_String
+     (Self : Query_Create_Table_As_Contents; Format : Formatter'Class)
+      return Unbounded_String
+   is
+      Result : Unbounded_String;
+   begin
+      Result := To_Unbounded_String ("CREATE ");
+      if Self.Temp then
+         Append (Result, "TEMPORARY ");
+      end if;
+      Append (Result, "TABLE ");
+      Append (Result, Self.Name);
+      if Self.Temp then
+         Append (Result, " ON COMMIT ");
+         case Self.On_Commit is
+            when Preserve_Rows => Append (Result, "PRESERVE ROWS");
+            when Delete_Rows   => Append (Result, "DELETE ROWS");
+            when Drop          => Append (Result, "DROP");
+         end case;
+      end if;
+      Append (Result, " AS (");
+      Append (Result, Unbounded_String'(To_String (Self.As, Format)));
+      Append (Result, ')');
+
+      return Result;
+   end To_String;
+
    ----------------
    -- SQL_Delete --
    ----------------
