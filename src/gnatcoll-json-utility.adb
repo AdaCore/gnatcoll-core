@@ -23,11 +23,10 @@
 
 with Ada.Integer_Text_IO;
 with Ada.Strings.Fixed;
-with Ada.Strings.Unbounded;       use Ada.Strings.Unbounded;
 with Ada.Strings.Wide_Unbounded;  use Ada.Strings.Wide_Unbounded;
-with Ada.Unchecked_Conversion;
 
 pragma Warnings (Off, "*internal GNAT unit*");
+with Ada.Strings.Unbounded.Aux;
 with System.Unsigned_Types;       use System.Unsigned_Types;
 pragma Warnings (On, "*internal GNAT unit*");
 
@@ -36,12 +35,13 @@ with GNAT.Decode_UTF8_String;
 
 package body GNATCOLL.JSON.Utility is
 
+   use Ada.Strings.Unbounded;
+
    --------------------------------
    -- Escape_Non_Print_Character --
    --------------------------------
 
-   function Escape_Non_Print_Character (C : Wide_Character) return String
-   is
+   function Escape_Non_Print_Character (C : Wide_Character) return String is
       Int : constant Integer := Wide_Character'Pos (C);
       Str : String (1 .. 8);
       First, Last : Natural;
@@ -65,34 +65,27 @@ package body GNATCOLL.JSON.Utility is
    function Escape_String
      (Text : UTF8_Unbounded_String) return Unbounded_String
    is
+      use Ada.Strings.Unbounded.Aux;
+
+      Str         : Big_String_Access;
+      Text_Length : Natural;
       Ret         : Unbounded_String;
       WS          : Unbounded_Wide_String;
       Low         : Natural;
-      High        : Natural;
-      Text_Length : constant Natural := Ada.Strings.Unbounded.Length (Text);
       W_Chr       : Wide_Character;
 
    begin
+      Get_String (Text, Str, Text_Length);
+
       --  First decode the UTF-8 String
+
       Low := 1;
       while Low <= Text_Length loop
          --  UTF-8 sequence is maximum 4 characters long according to RFC3629
-         if Low + 4 > Text_Length then
-            High := Text_Length;
-         else
-            High := Low + 4;
-         end if;
 
-         declare
-            Slice : constant String :=
-                      Ada.Strings.Unbounded.Slice (Text, Low, High);
-            Idx   : Natural := Slice'First;
-
-         begin
-            GNAT.Decode_UTF8_String.Decode_Wide_Character (Slice, Idx, W_Chr);
-            Append (WS, W_Chr);
-            Low := Low + Idx - Slice'First;
-         end;
+         GNAT.Decode_UTF8_String.Decode_Wide_Character
+           (Str (Low .. Natural'Min (Text_Length, Low + 3)), Low, W_Chr);
+         Append (WS, W_Chr);
       end loop;
 
       Append (Ret, '"');
@@ -116,7 +109,7 @@ package body GNATCOLL.JSON.Utility is
             when Wide_Character'Val (Character'Pos (ASCII.HT)) =>
                Append (Ret, "\t");
             when others =>
-               if Wide_Character'Pos (W_Chr) > 128 then
+               if Wide_Character'Pos (W_Chr) >= 16#80# then
                   Append (Ret, Escape_Non_Print_Character (W_Chr));
                else
                   Append
@@ -126,7 +119,6 @@ package body GNATCOLL.JSON.Utility is
       end loop;
 
       Append (Ret, '"');
-
       return Ret;
    end Escape_String;
 
@@ -148,7 +140,7 @@ package body GNATCOLL.JSON.Utility is
       First := Low;
       Last  := High;
 
-      --  Trim blancks and the double quotes
+      --  Trim blanks and double quotes
 
       while First <= High and then Element (Text, First) = ' ' loop
          First := First + 1;
@@ -183,13 +175,11 @@ package body GNATCOLL.JSON.Utility is
                      I : constant Short_Unsigned :=
                            Short_Unsigned'Value
                              ("16#" & Slice (Text, Idx + 1, Idx + 4) & "#");
-                     function Unch is new Ada.Unchecked_Conversion
-                       (Short_Unsigned, Wide_Character);
                   begin
                      Append
                        (Unb,
                         GNAT.Encode_UTF8_String.Encode_Wide_String
-                          ("" & Unch (I)));
+                          ((1 => Wide_Character'Val (I))));
                      Idx := Idx + 4;
                   end;
 
