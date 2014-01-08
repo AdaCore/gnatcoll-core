@@ -2,7 +2,17 @@
 Known Problems in Gnatcoll 1.6
 ==============================
 
-Copyright (C) 2013, AdaCore
+Copyright (C) 2013-2014, AdaCore
+
+KP-16-N108-033 GNATCOLL.JSON fails to escape U+0080
+
+  Problem:    GNATCOLL.JSON.Write fails to escape a reference to Unicode
+              codepoint U+0080 from an UTF-8 string as \u0080.
+
+  Status:     Fixed in Gnatcoll 1.7.0
+
+  Workaround: Replace any occurrence of character 16#80# in generated
+              JSON strings with "\u0080".
 
 KP-16-MB29-017 GNATCOLL.JSON crashes decoding high Unicode codepoints
 
