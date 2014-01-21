@@ -4907,7 +4907,15 @@ $as_echo "no, disabled by user" >&6; }
           # also a default search path). So we have a discrepency. So we
           # always add the default search paths to LD_LIBRARY_PATH.
 
-          LD_LIBRARY_PATH="/usr/local/lib:/usr/lib:/usr/target/lib:$LD_LIBRARY_PATH"
+          case $target in
+              *aix*)
+                 WITH_ICONV=no
+                 { $as_echo "$as_me:${as_lineno-$LINENO}: result: no, unsupported on AIX" >&5
+$as_echo "no, unsupported on AIX" >&6; }
+                 ;;
+
+              *)
+                LD_LIBRARY_PATH="/usr/local/lib:/usr/lib:/usr/target/lib:$LD_LIBRARY_PATH"
 
 
    am_path_iconv=""
@@ -4923,10 +4931,12 @@ $as_echo "no, disabled by user" >&6; }
    done
    IFS=$as_save_IFS
 
-          if test x"$am_path_iconv" != x ; then
-             PATH_ICONV="-L$am_path_iconv"
-             INCLUDE_ICONV="-I$am_path_iconv/../include"
-          fi
+                if test x"$am_path_iconv" != x ; then
+                   PATH_ICONV="-L$am_path_iconv"
+                   INCLUDE_ICONV="-I$am_path_iconv/../include"
+                fi
+                ;;
+          esac
           ;;
 
        *)

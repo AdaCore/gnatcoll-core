@@ -1629,7 +1629,7 @@ exception
    when Invalid_Command =>
       On_Ctrl_C;
    when E : others =>
-      On_Ctrl_C;
       Put_Line ("Unexpected exception");
       Put_Line (Exception_Information (E));
+      On_Ctrl_C;
 end GNATInspect;

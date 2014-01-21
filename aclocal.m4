@@ -243,6 +243,9 @@ AC_DEFUN(AM_PATH_SYSLOG,
 # Checking for iconv.
 # There are multiple versions of the library (Solaris, GNU,...)
 # and some of them have slightly different APIs.
+# Iconv on AIX is currently not supported because it does not
+# support passing an empty string to iconv_open to specify the
+# locale charset.
 # The following variables are exported by configure:
 #   @WITH_ICONV@: either "yes" or "no"
 #   @PATH_ICONV@: path to libiconv, or "" if not found
@@ -315,13 +318,22 @@ AC_HELP_STRING(
           # also a default search path). So we have a discrepency. So we
           # always add the default search paths to LD_LIBRARY_PATH.
 
-          LD_LIBRARY_PATH="/usr/local/lib:/usr/lib:/usr/target/lib:$LD_LIBRARY_PATH"
+          case $target in
+              *aix*)
+                 WITH_ICONV=no
+                 AC_MSG_RESULT([no, unsupported on AIX])
+                 ;;
 
-          AM_LIB_PATH(iconv)
-          if test x"$am_path_iconv" != x ; then
-             PATH_ICONV="-L$am_path_iconv"
-             INCLUDE_ICONV="-I$am_path_iconv/../include"
-          fi
+              *)
+                LD_LIBRARY_PATH="/usr/local/lib:/usr/lib:/usr/target/lib:$LD_LIBRARY_PATH"
+
+                AM_LIB_PATH(iconv)
+                if test x"$am_path_iconv" != x ; then
+                   PATH_ICONV="-L$am_path_iconv"
+                   INCLUDE_ICONV="-I$am_path_iconv/../include"
+                fi
+                ;;
+          esac
           ;;
 
        *)
