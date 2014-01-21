@@ -316,6 +316,10 @@ package body GNATCOLL.Traces is
    procedure Show_Configuration (Output : Output_Proc) is
       Tmp : Trace_Handle := Global.Handles_List;
    begin
+      if Global.Streams_List /= null then
+         Output ("> " & Global.Streams_List.Name.all);
+      end if;
+
       while Tmp /= null loop
          if Tmp.Stream /= null then
             if Tmp.Active then
