@@ -17,7 +17,7 @@
 | g     | macro                    | false       | false    | false               | false   | true          | false        | false                    | false       | false      | false     |
 | G     | function macro           | false       | false    | false               | false   | false         | false        | false                    | false       | false      | false     |
 | h     | interface                | true        | false    | false               | true    | false         | false        | false                    | true        | false      | false     |
-| H     | abstract record type     | false       | false    | false               | true    | false         | true         | true                     | true        | false      | false     |
+| H     | abstract record type     | true        | false    | false               | true    | false         | true         | true                     | true        | false      | false     |
 | i     | integer                  | false       | false    | true                | false   | false         | false        | false                    | false       | false      | false     |
 | I     | integer type             | false       | false    | false               | true    | false         | false        | false                    | false       | false      | false     |
 | j     | class instance           | true        | false    | false               | false   | false         | true         | false                    | false       | false      | false     |
