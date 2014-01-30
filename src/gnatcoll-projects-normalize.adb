@@ -90,11 +90,11 @@ package body GNATCOLL.Projects.Normalize is
    --  Then stmt1 can be reach with an External_Variable_Value_Array equal to:
    --      ((V1, Val1), (V1, Val2), (V2, Val2_1))
    --  stmt2 can be reached with
-   --      ((V1, Val1), (V1, Val2), (V2, Val2_1, False))
+   --      ((V1, Val1), (V1, Val2), (V2, Val2_1, True))
    --  stmt3 can be reached with
-   --      ((V1, Val1, False), (V1, Val2, False), (V3, V3_1))
+   --      ((V1, Val1, True), (V1, Val2, True), (V3, V3_1))
    --  Both stmt3 and stmt4 can be reached at the same time with
-   --      ((V1, Val1, False), (V1, Val2, False))
+   --      ((V1, Val1, True), (V1, Val2, True))
    --
    --  If there was at least one non-negated element in the array, then at
    --  least one of the non-negated elements must be matched
