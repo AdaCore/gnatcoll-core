@@ -967,15 +967,15 @@ package body GNATCOLL.Xref is
    --  Behavior is undefined if the database is not empty initially.
 
    procedure Parse_LI
-     (DB                : Database_Connection;
-      Tree              : Project_Tree;
-      LI                : LI_Info;
-      Iconv_State       : Iconv_T;
-      VFS_To_Id         : in out VFS_To_Ids.Map;
-      Entity_Decl_To_Id : in out Loc_To_Ids.Map;
-      Entity_Renamings  : in out Entity_Renaming_Lists.List;
-      Visited_ALI_Units : in out VFS_To_Ids.Map;
-      Visited_GLI_Files : in out VFS_To_Ids.Map);
+     (DB                  : Database_Connection;
+      Tree                : Project_Tree;
+      LI                  : LI_Info;
+      Default_Iconv_State : Iconv_T;
+      VFS_To_Id           : in out VFS_To_Ids.Map;
+      Entity_Decl_To_Id   : in out Loc_To_Ids.Map;
+      Entity_Renamings    : in out Entity_Renaming_Lists.List;
+      Visited_ALI_Units   : in out VFS_To_Ids.Map;
+      Visited_GLI_Files   : in out VFS_To_Ids.Map);
    --  Parse the contents of a single LI file.
    --  VFS_To_Id is a local cache for the entries in the files table.
    --
@@ -1264,15 +1264,15 @@ package body GNATCOLL.Xref is
    --------------
 
    procedure Parse_LI
-     (DB                : Database_Connection;
-      Tree              : Project_Tree;
-      LI                : LI_Info;
-      Iconv_State       : Iconv_T;
-      VFS_To_Id         : in out VFS_To_Ids.Map;
-      Entity_Decl_To_Id : in out Loc_To_Ids.Map;
-      Entity_Renamings  : in out Entity_Renaming_Lists.List;
-      Visited_ALI_Units : in out VFS_To_Ids.Map;
-      Visited_GLI_Files : in out VFS_To_Ids.Map)
+     (DB                  : Database_Connection;
+      Tree                : Project_Tree;
+      LI                  : LI_Info;
+      Default_Iconv_State : Iconv_T;
+      VFS_To_Id           : in out VFS_To_Ids.Map;
+      Entity_Decl_To_Id   : in out Loc_To_Ids.Map;
+      Entity_Renamings    : in out Entity_Renaming_Lists.List;
+      Visited_ALI_Units   : in out VFS_To_Ids.Map;
+      Visited_GLI_Files   : in out VFS_To_Ids.Map)
    is
       M      : Mapped_File;
       Str    : Str_Access;
@@ -1345,6 +1345,9 @@ package body GNATCOLL.Xref is
 
       Body_Start_Line : Integer;
       --  The 'b' or 'c' reference for the current entity.
+
+      Iconv_State : Iconv_T := Default_Iconv_State;
+      --  Iconv state to be used to convert names in ALI file.
 
       procedure Skip_Spaces;
       pragma Inline (Skip_Spaces);
@@ -3109,6 +3112,21 @@ package body GNATCOLL.Xref is
 
                D_Line_Id := D_Line_Id + 1;
 
+            when 'A' =>
+               --  Compiler switches.
+
+               Skip_Word;
+               Skip_Spaces;
+               Start := Index;
+               Skip_Word;
+
+               if Str (Start .. Index - 1) = "-gnatW8" then
+                  --  File is marked as UTF-8 encoded
+
+                  Iconv_State := Iconv_Open
+                    (To_Code => UTF8, From_Code => UTF8, Ignore => True);
+               end if;
+
             when 'X' =>
                exit;
 
@@ -3133,6 +3151,12 @@ package body GNATCOLL.Xref is
       Free (Scope_Trees);
       Free (Decl_Scope_Trees);
       Close (M);
+
+      --  Close Iconv state when it was opened by this function.
+
+      if Iconv_State /= Default_Iconv_State then
+         Iconv_Close (Iconv_State);
+      end if;
    end Parse_LI;
 
    -------------------
@@ -3607,15 +3631,15 @@ package body GNATCOLL.Xref is
                   Current := Current + 1;
                end if;
 
-               Parse_LI (DB                => DB,
-                         Tree              => Tree,
-                         LI                => Element (LI_C),
-                         Iconv_State       => Iconv_State,
-                         VFS_To_Id         => VFS_To_Id,
-                         Visited_ALI_Units => Visited_ALI_Units,
-                         Visited_GLI_Files => Visited_GLI_Files,
-                         Entity_Decl_To_Id => Entity_Decl_To_Id,
-                         Entity_Renamings  => Entity_Renamings);
+               Parse_LI (DB                  => DB,
+                         Tree                => Tree,
+                         LI                  => Element (LI_C),
+                         Default_Iconv_State => Iconv_State,
+                         VFS_To_Id           => VFS_To_Id,
+                         Visited_ALI_Units   => Visited_ALI_Units,
+                         Visited_GLI_Files   => Visited_GLI_Files,
+                         Entity_Decl_To_Id   => Entity_Decl_To_Id,
+                         Entity_Renamings    => Entity_Renamings);
             exception
                when E : others =>
                   Trace (Me_Error, E);
