@@ -89,7 +89,7 @@ package GNATCOLL.Iconv is
    ISO_8859_14 : constant String := "ISO-8859-14";
    ISO_8859_15 : constant String := "ISO-8859-15";
    ISO_8859_16 : constant String := "ISO-8859-16";
-   KOI8_R  : constant String := "KOI8-R";
+   KOI8_R      : constant String := "KOI8-R";
    --  Some charsets seemingly supported by most implementations of iconv,
    --  for European languages.
 
