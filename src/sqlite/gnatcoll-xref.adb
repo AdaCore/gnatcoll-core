@@ -2142,11 +2142,11 @@ package body GNATCOLL.Xref is
       --------------------------
 
       function Get_Or_Create_Entity
-        (Decl_File   : Integer;
-         Decl_Line   : Integer;
-         Decl_Column : Integer;
-         Name        : String;
-         Kind        : Character;
+        (Decl_File        : Integer;
+         Decl_Line        : Integer;
+         Decl_Column      : Integer;
+         Name             : String;
+         Kind             : Character;
          Set_Mangled_Name : Boolean;
          Is_Global        : Boolean;
          Is_Static_Local  : Boolean) return Integer
