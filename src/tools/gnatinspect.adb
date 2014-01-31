@@ -460,6 +460,7 @@ procedure GNATInspect is
    ALI_Encoding          : aliased GNAT.Strings.String_Access :=
      new String'("");
    Force_Refresh         : aliased Boolean := False;
+   Delete_If_Mismatch    : aliased Boolean := False;
    Look_Before_First_For_Doc : Boolean := True;
    --  The options from the command line
 
@@ -1482,6 +1483,11 @@ begin
       Output      => Force_Refresh'Access,
       Long_Switch => "--force",
       Help        => "Force reloading of all ALI files");
+   Define_Switch
+     (Cmdline,
+      Output      => Delete_If_Mismatch'Access,
+      Long_Switch => "--check_db_version",
+      Help        => "If database schema is incorrect, reset the database");
 
    Initialize (Env);
 
@@ -1577,8 +1583,26 @@ begin
 
    Install_Ctrl_C_Handler (On_Ctrl_C'Unrestricted_Access);
 
-   Xref.Setup_DB
-     (GNATCOLL.SQL.Sqlite.Setup (Database => DB_Name.all));
+   declare
+      Error : GNAT.Strings.String_Access;
+   begin
+      Xref.Setup_DB
+        (GNATCOLL.SQL.Sqlite.Setup (Database => DB_Name.all),
+         Delete_If_Mismatch => Delete_If_Mismatch,
+         Error              => Error);
+      if Error /= null then
+         Put_Line (Error.all);
+         Free (Error);
+
+         if Delete_If_Mismatch then
+            Put_Line ("Recreating the database...");
+         else
+            Put_Line ("Consider using --check_db_version");
+            Set_Exit_Status (Failure);
+            return;
+         end if;
+      end if;
+   end;
 
    --  Initial loading of the database
 

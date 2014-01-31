@@ -1,5 +1,10 @@
 # for Emacs: -*- mode: org; mode: flyspell; fill-column: 79 -*-
 
+
+# The database schema version is stored in sqlite's "PRAGMA user_version",
+# which is faster to access than a specific table.
+
+
 # Update of the database when the project scenario changes:
 #   - if the location of the LI file changes, and since we use the full path,
 #     this will trigger another parsing.
@@ -18,6 +23,7 @@
 | path     | TEXT          | NOT NULL, INDEX |   | Full normalized absolute path for the file                                               |
 | stamp    | timestamp     | NULL            |   | The timestamp the last time the file was read (only set for LI files for efficiency)     |
 | language | TEXT          | NOT NULL        |   | The language for this file (so that we can limit queries to specific languages), or "li" |
+| project  | FK files()    | NULL            |   | V2.0: The project to which a source file belongs. With aggregate projects, a source file might occur several times in this table, each time with a different project. |
 
 | TABLE | f2f_kind      |          |   | All kinds of file relationships |
 |-------+---------------+----------+---+---------------------------------|

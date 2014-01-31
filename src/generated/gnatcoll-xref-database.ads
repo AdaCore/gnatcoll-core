@@ -192,6 +192,11 @@ package GNATCOLL.Xref.Database is
       --  The language for this file (so that we can limit queries to specific
       --  languages), or "li"
 
+      Project : SQL_Field_Integer (Ta_Files, Instance, N_Project, Index);
+      --  V2.0: The project to which a source file belongs. With aggregate
+      --  projects, a source file might occur several times in this table,
+      --  each time with a different project.
+
    end record;
 
    type T_Files (Instance : Cst_String_Access)
@@ -237,6 +242,7 @@ package GNATCOLL.Xref.Database is
    function FK (Self : T_Entity_Refs'Class; Foreign : T_Files'Class) return SQL_Criteria;
    function FK (Self : T_Entity_Refs'Class; Foreign : T_Reference_Kinds'Class) return SQL_Criteria;
    function FK (Self : T_F2f'Class; Foreign : T_F2f_Kind'Class) return SQL_Criteria;
+   function FK (Self : T_Files'Class; Foreign : T_Files'Class) return SQL_Criteria;
 
    E2e : T_E2e (null);
    E2e_Kind : T_E2e_Kind (null);

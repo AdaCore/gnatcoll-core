@@ -98,6 +98,8 @@ package GNATCOLL.Xref.Database_Names is
    N_Order_By : constant Cst_String_Access := NC_order_by'Access;
    NC_Path : aliased constant String := """path""";
    N_Path : constant Cst_String_Access := NC_path'Access;
+   NC_Project : aliased constant String := "project";
+   N_Project : constant Cst_String_Access := NC_project'Access;
    NC_Show_In_Callgraph : aliased constant String := "show_in_callgraph";
    N_Show_In_Callgraph : constant Cst_String_Access := NC_show_in_callgraph'Access;
    NC_Stamp : aliased constant String := "stamp";

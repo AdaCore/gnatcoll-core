@@ -52,6 +52,10 @@ package body GNATCOLL.Xref is
    --  If set, a COMMIT is done before we recreate the indexes, so that GPS
    --  can still making (slow) queries immediately.
 
+   Schema_Version : constant Integer := 2;
+   --  The current version of the database schema.
+   --  Actual databases must match the version number exactly.
+
    Instances_Provide_Column : constant Boolean := False;
    --  Whether instance info in the ALI files provide the column information.
    --  This is not the case currently, but this requires additional queries
@@ -1114,6 +1118,9 @@ package body GNATCOLL.Xref is
 
       Started := Connection.Start_Transaction;
       GNATCOLL.Xref.Database.Create_Database (Connection);
+
+      Connection.Execute ("PRAGMA user_version=" & Schema_Version'Img & ";");
+
       if Started then
          Connection.Commit_Or_Rollback;
       end if;
@@ -3173,6 +3180,7 @@ package body GNATCOLL.Xref is
       Start : Time;
       R : Forward_Cursor;
       Is_Sqlite : constant Boolean := SQL.Sqlite.Is_Sqlite (Database.DB);
+      Need_To_Create : Boolean;
    begin
       DB_Created := False;
       if Is_Sqlite and then (Force or else not Database.DB_Created) then
@@ -3180,21 +3188,24 @@ package body GNATCOLL.Xref is
 
          declare
             Current_DB : constant String := SQL.Sqlite.DB_Name (DB);
-            Schema_Exists : Boolean := False;
+            Schema_Is_Valid : Boolean := True;
          begin
-            if GNAT.OS_Lib.Is_Regular_File (Current_DB) then
-               R.Fetch (DB, "PRAGMA user_version;");
-               if R.Value (0) /= "0" then
-                  --  Schema already exists
-                  Schema_Exists := True;
-               end if;
+            R.Fetch (DB, "PRAGMA user_version;");
+            if R.Integer_Value (0) /= Schema_Version then
+               Schema_Is_Valid := False;
             end if;
 
-            if not Schema_Exists then
+            --  schema was never created, or is incorrect version
+
+            if not Schema_Is_Valid then
+               Need_To_Create := True;
+
                if Current_DB /= From_DB_Name
                  and then From_DB_Name /= ""
                  and then GNAT.OS_Lib.Is_Regular_File (From_DB_Name)
                then
+                  Trace (Me_Debug, "Copying database from " & From_DB_Name);
+
                   if Active (Me_Timing) then
                      Start := Clock;
                   end if;
@@ -3214,10 +3225,19 @@ package body GNATCOLL.Xref is
                             & Duration'Image (Clock - Start) & " s");
                   end if;
 
-               else
+                  R.Fetch (DB, "PRAGMA user_version;");
+                  if R.Integer_Value (0) /= Schema_Version then
+                     Trace (Me_Error,
+                            "Schema Version from copied db was incorrect");
+                  else
+                     --  Schema version is good, no need to recreate
+                     Need_To_Create := False;
+                  end if;
+               end if;
+
+               if Need_To_Create then
                   Trace (Me_Timing, "Creating the database schema");
                   Create_Database (DB);
-                  DB.Execute ("PRAGMA user_version=1;");
                   DB_Created := True;
                end if;
             end if;
@@ -3797,12 +3817,50 @@ package body GNATCOLL.Xref is
    --------------
 
    procedure Setup_DB
-     (Self : in out Xref_Database;
-      DB   : not null access
-        GNATCOLL.SQL.Exec.Database_Description_Record'Class)
+     (Self  : in out Xref_Database;
+      DB    : not null access
+        GNATCOLL.SQL.Exec.Database_Description_Record'Class;
+      Error : in out GNAT.Strings.String_Access;
+      Delete_If_Mismatch : Boolean := False)
    is
+      R          : Forward_Cursor;
+      Current_DB : Virtual_File;
+      Success    : Boolean;
    begin
+      Error := null;
+
       Self.DB := DB.Build_Connection;
+
+      Current_DB := Create (+SQL.Sqlite.DB_Name (Self.DB));
+
+      if SQL.Sqlite.Is_Sqlite (Self.DB)
+        and then Current_DB.Is_Regular_File
+      then
+         R.Fetch (Self.DB, "PRAGMA user_version;");
+
+         if R.Integer_Value (0) /= Schema_Version then
+            Trace (Me_Debug, "Version mismatch : "
+                   & R.Value (0) & " /=" & Schema_Version'Img);
+            Error := new String'
+              ("Database schema version is "
+               & R.Value (0) & ", expecting" & Schema_Version'Img);
+
+            if Delete_If_Mismatch then
+               Self.DB.Close;
+               Current_DB.Delete (Success);
+               if not Success then
+                  Free (Error);
+                  Error := new String'
+                    ("Database schema version is "
+                     & R.Value (0) & ", expecting"
+                     & Schema_Version'Img
+                     & " and could not delete the database");
+               else
+                  Self.DB := DB.Build_Connection;
+               end if;
+            end if;
+         end if;
+      end if;
 
       Self.DB.Execute ("PRAGMA mmap_size=268435456;");
 

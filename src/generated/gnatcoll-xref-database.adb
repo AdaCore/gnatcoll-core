@@ -39,6 +39,11 @@ package body GNATCOLL.Xref.Database is
       return Self.Kind = Foreign.Id;
    end FK;
 
+   function FK (Self : T_Files'Class; Foreign : T_Files'Class) return SQL_Criteria is
+   begin
+      return Self.Project = Foreign.Id;
+   end FK;
+
    procedure Create_Database
       (DB : access GNATCOLL.SQL.Exec.Database_Connection_Record'Class)
    is
@@ -47,6 +52,7 @@ package body GNATCOLL.Xref.Database is
          & "|path|Text|NOT NULL,INDEX||" & ASCII.LF
          & "|stamp|timestamp with time zone|||" & ASCII.LF
          & "|language|Text|NOT NULL||" & ASCII.LF
+         & "|project|FK files|||" & ASCII.LF
          & "" & ASCII.LF
          & "|TABLE| f2f_kind" & ASCII.LF
          & "|id|AUTOINCREMENT|PK||" & ASCII.LF

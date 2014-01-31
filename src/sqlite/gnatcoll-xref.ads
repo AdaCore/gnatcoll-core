@@ -61,19 +61,30 @@ package GNATCOLL.Xref is
    --  redefine this to use their own logging facility.
 
    procedure Setup_DB
-     (Self : in out Xref_Database;
-      DB   : not null access
-        GNATCOLL.SQL.Exec.Database_Description_Record'Class);
+     (Self  : in out Xref_Database;
+      DB    : not null access
+        GNATCOLL.SQL.Exec.Database_Description_Record'Class;
+      Error : in out GNAT.Strings.String_Access;
+      Delete_If_Mismatch : Boolean := False);
    --  Points to the actual database that will be used to store the xref
    --  information.
    --  This database might contain the information from several projects.
    --  An example:
    --     declare
-   --        Xref : Xref_Database;
+   --        Xref  : Xref_Database;
+   --        Error : String_Access;
    --     begin
    --        Xref.Setup_DB
-   --          (GNATCOLL.SQL.Sqlite.Setup (":memory:"));
+   --          (GNATCOLL.SQL.Sqlite.Setup (":memory:"), Error => Error);
+   --        if Error /= null then
+   --             return;   --  incorrect schema
+   --        end if;
    --     end;
+   --
+   --  This function verifies that the schema of an existing database matches
+   --  the expected schema. If this is not the case, an error message will be
+   --  set in Error (which must be freed by the caller), and optionally the
+   --  existing database will be deleted before we connect to it.
 
    procedure Free (Self : in out Xref_Database);
    --  Free the memory allocated for Self, and closes the database connection.
