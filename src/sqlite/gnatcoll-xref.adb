@@ -3838,7 +3838,9 @@ package body GNATCOLL.Xref is
       then
          R.Fetch (Self.DB, "PRAGMA user_version;");
 
-         if R.Integer_Value (0) /= Schema_Version then
+         if R.Integer_Value (0) /= Schema_Version
+           and then R.Integer_Value (0) /= 0  --  0 means "no schema created"
+         then
             Trace (Me_Debug, "Version mismatch : "
                    & R.Value (0) & " /=" & Schema_Version'Img);
             Error := new String'
