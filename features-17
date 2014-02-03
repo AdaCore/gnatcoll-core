@@ -15,6 +15,12 @@ of the feature.
 New features in 1.7
 -------------------
 
+NF-17-N203-036 GNATCOLL.Terminal new package (2014-02-03)
+
+  This package provides advanced console output features, like color
+  output and displaying progress indicator. It works on both Unix and Windows
+  systems.
+
 NF-17-N108-018 GNATCOLL.SQL: support for CREATE TABLE AS (2014-01-08)
 
   The CREATE TABLE AS SQL query is now supported. In particular it can

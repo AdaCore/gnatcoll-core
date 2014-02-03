@@ -29,6 +29,7 @@ GNAT Reusable Components
    iconv
    sql
    xref
+   terminals
 
 Indices and tables
 ==================
