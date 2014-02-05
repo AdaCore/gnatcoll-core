@@ -5,6 +5,7 @@
 #else
 #include <unistd.h>
 #include <sys/ioctl.h>
+#include <stdio.h>
 #endif
 
 int gnatcoll_get_console_screen_buffer_info(int forStderr) {
@@ -79,5 +80,22 @@ void gnatcoll_clear_to_end_of_line(int forStderr) {
 
 #else
    write(forStderr ? 2 : 1, "\033[0K", 4);
+#endif
+}
+
+int gnatcoll_terminal_width(int forStderr) {
+#ifdef _WIN32
+   const HANDLE handle =
+      GetStdHandle (forStderr ? STD_ERROR_HANDLE : STD_OUTPUT_HANDLE);
+   CONSOLE_SCREEN_BUFFER_INFO csbiInfo;
+   if (GetConsoleScreenBufferInfo (handle, &csbiInfo)) {
+      return (int)csbiInfo.dwSize.X;
+   }
+   return -1;
+ 
+#else
+    struct winsize w;
+    ioctl(forStderr ? 1 : 0, TIOCGWINSZ, &w);
+    return w.ws_col;
 #endif
 }

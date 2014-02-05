@@ -128,6 +128,10 @@ package GNATCOLL.Terminal is
    procedure Clear_To_End_Of_Line (Self : in out Terminal_Info);
    --  Delete from the cursor position to the end of line
 
+   function Get_Width (Self : Terminal_Info) return Integer;
+   --  Return the width of the terminal, or -1 if that width is either
+   --  unknown or does not apply (as is the case for files for instance).
+
 private
    type Color_Sequence_Type is (Unsupported, ANSI_Sequences, WIN32_Sequences);
 
