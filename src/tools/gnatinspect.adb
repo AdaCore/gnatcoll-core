@@ -1599,6 +1599,7 @@ begin
          else
             Put_Line ("Consider using --check_db_version");
             Set_Exit_Status (Failure);
+            On_Ctrl_C;
             return;
          end if;
       end if;
