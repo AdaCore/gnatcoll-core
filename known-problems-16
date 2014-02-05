@@ -48,6 +48,17 @@ KP-16-MB19-040 gnatcoll_db2ada: fix handling of 'numeric(x,y)'
               the schema from a live database, because you can put it under
               revision control.
 
+KP-16-MB05-053 GNATCOLL.Email.Get_Param incorrect handling of semicolons
+
+  Problem:    When the header Content-Disposition references a filename that
+              contains a semicolon, that name is truncated if you use
+              Get_Param to read it.
+
+  Status:     Fixed in Gnatcoll 1.7.0 on 2014-02-05
+
+  Workaround: Get the full value of the header, and parse it directly,
+              ignoring semicolons within quotes.
+
 KP-16-M926-004 gnatcoll.gpr conflicts with OS environment variable
 
   Problem:    The project files installed by gnatcoll depends on an

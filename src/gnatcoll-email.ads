@@ -624,9 +624,13 @@ private
    Null_Message : constant Message :=
      (Ada.Finalization.Controlled with Contents => null);
 
-   function Next_Occurrence (S : String; Char : Character) return Integer;
-   --  Return the index of the next line start, or a number greater than
-   --  S'Last if we are on the last line
+   function Next_Occurrence
+      (S           : String;
+       Char        : Character;
+       Skip_Quotes : Boolean := False) return Integer;
+   --  Return the index of the next occurrence of Char, or a number greater
+   --  than S'Last if we are on the last line.
+   --  If Skip_Quotes is true, characters between a "..." will be ignored.
 
    function Is_Whitespace (Char : Character) return Boolean;
    pragma Inline (Is_Whitespace);

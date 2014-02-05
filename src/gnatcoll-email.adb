@@ -109,10 +109,17 @@ package body GNATCOLL.Email is
    -- Next_Occurrence --
    ---------------------
 
-   function Next_Occurrence (S : String; Char : Character) return Integer is
+   function Next_Occurrence
+      (S   : String;
+      Char : Character;
+      Skip_Quotes : Boolean := False) return Integer
+   is
+      In_Quotes : Boolean := False;
    begin
       for Index in S'Range loop
-         if S (Index) = Char then
+         if Skip_Quotes and then S (Index) = '"' then
+            In_Quotes := not In_Quotes;
+         elsif S (Index) = Char and then not In_Quotes then
             return Index;
          end if;
       end loop;
@@ -1728,17 +1735,21 @@ package body GNATCOLL.Email is
             Val_Stop : Natural;
          begin
             while Index <= Str'Last loop
-               Index := Next_Occurrence (Str (Index .. Str'Last), ';');
+               --  Look for next occurrence of ';', but not within a quoted
+               --  string, for instance a filename in Content-Disposition.
+               Index := Next_Occurrence
+                  (Str (Index .. Str'Last), ';', Skip_Quotes => True);
 
                if Index <= Str'Last then
                   Semicolon := Index;
                   Index := Index + 1;
                   Skip_Whitespaces (Str, Index);
 
-                  Stop := Next_Occurrence (Str (Index + 1 .. Str'Last), '=');
+                  Stop := Next_Occurrence
+                     (Str (Index + 1 .. Str'Last), '=', Skip_Quotes => True);
                   if Stop < Str'Last then
                      Val_Stop := Next_Occurrence
-                       (Str (Stop + 1 .. Str'Last), ';');
+                       (Str (Stop + 1 .. Str'Last), ';', Skip_Quotes => True);
 
                      if To_Lower
                        (Str (Index .. Stop - 1)) = To_Lower (Param_Name)
@@ -1821,11 +1832,10 @@ package body GNATCOLL.Email is
       if H.Contents /= null then
          C := First (H.Contents.Value);
          Get_Param_Index
-           (H, Param_Name, C, Semicolon, Name_Start, Name_End,
-            Val_End);
+           (H, Param_Name, C, Semicolon, Name_Start, Name_End, Val_End);
+
          if Has_Element (C) then
             return Get_Val;
-
          else
             --  Support for continuation headers
             --  http://greenbytes.de/tech/webdav/rfc2231.html#rfc.section.3
