@@ -34,6 +34,8 @@
 --   [PTTRI]  http://www.blackpawn.com/texts/pointinpoly/default.html
 --   [SEGSEG] http://astronomy.swin.edu.au/~pbourke/geometry/lineline2d/
 --   [GEO]    http://geometryalgorithms.com/Archive/algorithm_0.04
+--
+--  See also the FAQ of comp.graphics.algorithms
 
 package body GNATCOLL.Geometry is
 
