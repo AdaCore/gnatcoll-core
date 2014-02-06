@@ -557,6 +557,14 @@ procedure GNATCOLL_Db2Ada is
       end if;
 
       Free (DB_Model);
+
+   exception
+      when GNAT.Command_Line.Invalid_Switch
+         | GNAT.Command_Line.Invalid_Parameter =>
+         Put_Line ("gnatcoll_db2ada: unrecognized option '-"
+                   & Full_Switch & "'");
+         Put_Line ("Try `gnatcoll_db2ada --help` for more information.");
+         Set_Exit_Status (Failure);
    end Main;
 
    ---------------------

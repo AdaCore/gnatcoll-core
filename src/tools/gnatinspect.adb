@@ -1649,6 +1649,7 @@ begin
 
 exception
    when GNAT.Command_Line.Exit_From_Command_Line
+      | GNAT.Command_Line.Invalid_Switch
       | Ada.Text_IO.End_Error =>
       On_Ctrl_C;
    when Invalid_Command =>
