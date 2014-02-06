@@ -59,6 +59,9 @@ procedure GNATInspect is
    --  Process a full line of commands.
    --  Raise Invalid_Command when the command is invalid.
 
+   procedure On_Exit (Exit_Status : Integer);
+   --  Cleanup gnatinspect, and exit
+
    procedure On_Ctrl_C;
    pragma Convention (C, On_Ctrl_C);
    --  Handler for control-c, to make sure that the history is properly
@@ -1322,12 +1325,22 @@ procedure GNATInspect is
 
    procedure On_Ctrl_C is
    begin
+      On_Exit (0);
+   end On_Ctrl_C;
+
+   -------------
+   -- On_Exit --
+   -------------
+
+   procedure On_Exit (Exit_Status : Integer) is
+   begin
       if History_File /= null then
          GNATCOLL.Readline.Finalize (History_File => History_File.all);
       end if;
       Free (Xref);
       Free (History_File);
-   end On_Ctrl_C;
+      GNAT.OS_Lib.OS_Exit (Exit_Status);
+   end On_Exit;
 
    ------------------------
    -- Parse_Command_Line --
@@ -1598,7 +1611,7 @@ begin
          else
             Put_Line ("Consider using --check_db_version");
             Set_Exit_Status (Failure);
-            On_Ctrl_C;
+            On_Exit (0);
             return;
          end if;
       end if;
@@ -1617,7 +1630,7 @@ begin
    end if;
 
    if Exit_After_Refresh then
-      On_Ctrl_C;
+      On_Exit (0);
       return;
    end if;
 
@@ -1644,18 +1657,17 @@ begin
       end;
    end loop;
 
-   On_Ctrl_C;
+   On_Exit (0);
 
 exception
    when GNAT.Command_Line.Exit_From_Command_Line
       | GNAT.Command_Line.Invalid_Switch
       | Ada.Text_IO.End_Error =>
-      Set_Exit_Status (Failure);
-      On_Ctrl_C;
+      On_Exit (1);
    when Invalid_Command =>
-      On_Ctrl_C;
+      On_Exit (1);
    when E : others =>
       Put_Line ("Unexpected exception");
       Put_Line (Exception_Information (E));
-      On_Ctrl_C;
+      On_Exit (1);
 end GNATInspect;
