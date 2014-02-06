@@ -4726,17 +4726,26 @@ package body GNATCOLL.Projects is
 
    begin
       if Project = No_Project then
+         Trace (Me, "Executable_Name: no project");
          --  Simply remove the current extension, since we don't have any
          --  information on the file itself.
          return Base
            (Base'First .. Delete_File_Suffix (Base, Project));
 
       else
-         Main_Source := Find_Source
-           (In_Tree   => Project.Data.Tree.View,
-            Project   => Project.Data.View,
-            Base_Name => File_Name_Type (Get_String (+Base)));
+         declare
+            Norm : constant String := +Base;
+         begin
+            Osint.Canonical_Case_File_Name (Norm);
+            Main_Source := Find_Source
+              (In_Tree   => Project.Data.Tree.View,
+               Project   => Project.Data.View,
+               Base_Name => File_Name_Type (Get_String (Norm)));
+         end;
+
          if Main_Source = No_Source then
+            Trace (Me, "Executable_Name: source not found ("
+                   & (+Base) & ')');
             return Base
               (Base'First .. Delete_File_Suffix (Base, Project));
          end if;
