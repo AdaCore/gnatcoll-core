@@ -1327,7 +1327,6 @@ procedure GNATInspect is
       end if;
       Free (Xref);
       Free (History_File);
-      GNAT.OS_Lib.OS_Exit (0);
    end On_Ctrl_C;
 
    ------------------------
@@ -1651,6 +1650,7 @@ exception
    when GNAT.Command_Line.Exit_From_Command_Line
       | GNAT.Command_Line.Invalid_Switch
       | Ada.Text_IO.End_Error =>
+      Set_Exit_Status (Failure);
       On_Ctrl_C;
    when Invalid_Command =>
       On_Ctrl_C;
