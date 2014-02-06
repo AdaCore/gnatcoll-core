@@ -4,6 +4,11 @@
 #include <wincon.h>
 #else
 #include <unistd.h>
+
+#ifdef HAVE_TERMIOS_H
+#include <termios.h>    // for TIOCGWINSZ on some systems
+#endif
+
 #include <sys/ioctl.h>
 #include <stdio.h>
 #endif
@@ -94,8 +99,12 @@ int gnatcoll_terminal_width(int forStderr) {
    return -1;
  
 #else
+#ifdef TIOCGWINSZ
     struct winsize w;
     ioctl(forStderr ? 1 : 0, TIOCGWINSZ, &w);
     return w.ws_col;
+#else
+    return -1;
+#endif
 #endif
 }
