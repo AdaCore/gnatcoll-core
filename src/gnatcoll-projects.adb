@@ -4734,7 +4734,7 @@ package body GNATCOLL.Projects is
 
       else
          declare
-            Norm : constant String := +Base;
+            Norm : String := +Base;
          begin
             Osint.Canonical_Case_File_Name (Norm);
             Main_Source := Find_Source
