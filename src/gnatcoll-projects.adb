@@ -6168,7 +6168,7 @@ package body GNATCOLL.Projects is
          Create_Project_Instances
            (Tree, Tree, With_View => False);
 
-         Tree.Data.Status := From_File;
+         Tree.Set_Status (From_File);
 
          Prj.Com.Fail := null;
          Output.Cancel_Special_Output;
@@ -6690,7 +6690,7 @@ package body GNATCOLL.Projects is
          Is_Config_File => False);
 
       Self.Data.Root := Self.Instance_From_Node (Self, Node);
-      Self.Data.Status := Empty;
+      Self.Set_Status (Empty);
 
       --  No language known for empty project
 
@@ -7225,6 +7225,7 @@ package body GNATCOLL.Projects is
       --  renamed. Otherwise, Project_Path would still return "" when saving
       --  the default project.
 
+      Trace (Me, "Set project status to From_File");
       Self.Data.Tree.Status := From_File;
 
       Reset_All_Caches (Self.Data.Tree);
@@ -7418,7 +7419,10 @@ package body GNATCOLL.Projects is
             Close (File);
 
             Project.Data.Modified := False;
+
+            Trace (Me, "Set project status to From_File");
             Project.Data.Tree.Status := From_File;
+
             return True;
 
          exception
@@ -8251,6 +8255,7 @@ package body GNATCOLL.Projects is
 
    procedure Set_Status (Self : Project_Tree; Status : Project_Status) is
    begin
+      Trace (Me, "set project status to " & Status'Img);
       Self.Data.Status := Status;
    end Set_Status;
 
