@@ -484,6 +484,16 @@ package GNATCOLL.VFS is
    --  includes directories in systems providing a hierarchical directory
    --  structure, including . (the current directory) and .. (the parent
    --  directory) in systems providing these entries.
+   --  The result must be freed by the caller.
+
+   function Read_Dir_Recursive
+     (Dir       : Virtual_File;
+      Extension : Filesystem_String := "";
+      Filter    : Read_Dir_Filter := All_Files) return File_Array_Access;
+   --  Reads all entries from the directory, recursively, and returns all
+   --  files with the given extension (if specified) that match the filter.
+   --  The entries "." and ".." are never returned.
+   --  The result must be freed by the caller.
 
    procedure Remove_Dir
      (Dir       : Virtual_File;

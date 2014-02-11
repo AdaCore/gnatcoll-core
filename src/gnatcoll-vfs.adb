@@ -1485,9 +1485,9 @@ package body GNATCOLL.VFS is
       end if;
    end Remove_Dir;
 
-   ----------
-   -- Read --
-   ----------
+   --------------
+   -- Read_Dir --
+   --------------
 
    function Read_Dir
      (Dir    : Virtual_File;
@@ -1546,17 +1546,77 @@ package body GNATCOLL.VFS is
             Exception_Message (E));
    end Read_Dir;
 
+   ------------------------
+   -- Read_Dir_Recursive --
+   ------------------------
+
+   function Read_Dir_Recursive
+      (Dir       : Virtual_File;
+       Extension : Filesystem_String := "";
+       Filter    : Read_Dir_Filter := All_Files) return File_Array_Access
+   is
+      Result : File_Array_Access;
+
+      procedure Internal (Directory : Virtual_File);
+      --  process a directory recursively
+
+      procedure Internal (Directory : Virtual_File) is
+         Files : File_Array_Access := Directory.Read_Dir (Filter => All_Files);
+      begin
+         if Files = null then
+            return;
+         end if;
+
+         for F in Files'Range loop
+            declare
+               B : constant Filesystem_String := Files (F).Base_Name;
+            begin
+               if B /= "." and then B /= ".." then
+                  if Extension = ""
+                     or else Files (F).File_Extension = Extension
+                  then
+                     case Filter is
+                     when Dirs_Only =>
+                        if Files (F).Is_Directory then
+                           Append (Result, Files (F));
+                        end if;
+                     when Files_Only =>
+                        if Files (F).Is_Regular_File then
+                           Append (Result, Files (F));
+                        end if;
+                     when All_Files =>
+                        Append (Result, Files (F));
+                     end case;
+                  end if;
+
+                  if Files (F).Is_Directory then
+                     Internal (Files (F));
+                  end if;
+               end if;
+            end;
+         end loop;
+
+         Unchecked_Free (Files);
+      end Internal;
+
+   begin
+      if Dir.Is_Directory then
+         Internal (Dir);
+      end if;
+      return Result;
+   end Read_Dir_Recursive;
+
    --------------------------
    -- Read_Files_From_Dirs --
    --------------------------
 
-   function Read_Files_From_Dirs (Dirs : File_Array) return File_Array_Access
+   function Read_Files_From_Dirs
+      (Dirs : File_Array) return File_Array_Access
    is
       Ret    : File_Array_Access := null;
       Files  : array (Dirs'Range) of File_Array_Access;
       Length : Natural := 0;
       Idx    : Natural;
-
    begin
       for J in Dirs'Range loop
          begin
