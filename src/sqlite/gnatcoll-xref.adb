@@ -52,9 +52,11 @@ package body GNATCOLL.Xref is
    --  If set, a COMMIT is done before we recreate the indexes, so that GPS
    --  can still making (slow) queries immediately.
 
-   Schema_Version : constant Integer := 2;
+   Schema_Version : constant Integer := 3;
    --  The current version of the database schema.
    --  Actual databases must match the version number exactly.
+   --     version 2 added files.project
+   --     version 3 initialized files with a default project (this came later)
 
    Instances_Provide_Column : constant Boolean := False;
    --  Whether instance info in the ALI files provide the column information.
@@ -90,10 +92,16 @@ package body GNATCOLL.Xref is
    Column_Tolerance : constant Natural := 80;
    --  Tolerance in columns when looking for approximate entity declarations.
 
+   No_Project_Id : constant Integer := -2;
+   --  Id of 'no project' in the files table
+
    type Access_String is access constant String;
 
    N_Files2 : aliased String := "f2";
    Files2 : T_Files (N_Files2'Access);
+
+   N_Files3 : aliased String := "f3";
+   Files3 : T_Files (N_Files3'Access);
 
    N_Entities2 : aliased String := "e2";
    Entities2 : T_Entities (N_Entities2'Access);
@@ -129,11 +137,19 @@ package body GNATCOLL.Xref is
              & (Database.Files.Language = "li")),
         On_Server => True, Name => "insert_li_file");
 
+   Query_Insert_Project_File : constant Prepared_Statement :=
+     Prepare
+       (SQL_Insert
+          ((Database.Files.Path = Text_Param (1))
+           & (Database.Files.Language = "project")),
+        On_Server => True, Name => "insert_project_file");
+
    Query_Insert_Source_File : constant Prepared_Statement :=
      Prepare
        (SQL_Insert
             ((Database.Files.Path = Text_Param (1))
-             & (Database.Files.Language = Text_Param (2))),
+             & (Database.Files.Language = Text_Param (2))
+             & (Database.Files.Project = Integer_Param (3))),
         On_Server => True, Name => "insert_source_file");
 
    Query_Set_File_Dep : constant Prepared_Statement :=
@@ -494,37 +510,41 @@ package body GNATCOLL.Xref is
    Q_Decl_Is_Global  : constant := 15;
    Q_Decl_Is_Static_Local : constant := 16;
    Q_Decl_Has_Methods : constant := 17;
+   Q_Decl_Project     : constant := 18;
    Query_Declaration : constant Prepared_Statement :=
      Prepare
        (SQL_Select
             (To_List
-                 ((Q_Decl_Name    => +Database.Entities.Name,
-                   Q_Decl_File    => +Database.Files.Path,
-                   Q_Decl_Line    => +Database.Entities.Decl_Line,
-                   Q_Decl_Column  => +Database.Entities.Decl_Column,
-                   Q_Decl_Caller  => +Database.Entities.Decl_Caller,
-                   Q_Decl_Kind    => +Database.Entity_Kinds.Display,
-                   Q_Decl_Is_Subp => +Database.Entity_Kinds.Is_Subprogram,
-                   Q_Decl_Is_Cont  => +Database.Entity_Kinds.Is_Container,
-                   Q_Decl_Is_Abst  => +Database.Entity_Kinds.Is_Abstract,
-                   Q_Decl_Is_Generic => +Database.Entity_Kinds.Is_Generic,
-                   Q_Decl_Is_Access => +Database.Entity_Kinds.Is_Access,
-                   Q_Decl_Is_Type => +Database.Entity_Kinds.Is_Type,
-                   Q_Decl_Is_Array => +Database.Entity_Kinds.Is_Array,
-                   Q_Decl_Is_Global => +Database.Entities.Is_Global,
+                 ((Q_Decl_Name        => +Database.Entities.Name,
+                   Q_Decl_File        => +Database.Files.Path,
+                   Q_Decl_Line        => +Database.Entities.Decl_Line,
+                   Q_Decl_Column      => +Database.Entities.Decl_Column,
+                   Q_Decl_Caller      => +Database.Entities.Decl_Caller,
+                   Q_Decl_Kind        => +Database.Entity_Kinds.Display,
+                   Q_Decl_Is_Subp     => +Database.Entity_Kinds.Is_Subprogram,
+                   Q_Decl_Is_Cont     => +Database.Entity_Kinds.Is_Container,
+                   Q_Decl_Is_Abst     => +Database.Entity_Kinds.Is_Abstract,
+                   Q_Decl_Is_Generic  => +Database.Entity_Kinds.Is_Generic,
+                   Q_Decl_Is_Access   => +Database.Entity_Kinds.Is_Access,
+                   Q_Decl_Is_Type     => +Database.Entity_Kinds.Is_Type,
+                   Q_Decl_Is_Array    => +Database.Entity_Kinds.Is_Array,
+                   Q_Decl_Is_Global   => +Database.Entities.Is_Global,
                    Q_Decl_Has_Methods => +Database.Entity_Kinds.Has_Methods,
-                   Q_Decl_Is_Static_Local =>
+                   Q_Decl_Project     => +Files2.Path,
+                   Q_Decl_Is_Static_Local     =>
                       +Database.Entities.Is_Static_Local,
                    Q_Decl_Is_Printable_In_Gdb =>
                       +Database.Entity_Kinds.Is_Printable_In_Gdb,
-                   Q_Decl_Full_Decl  =>
+                   Q_Decl_Full_Decl           =>
                       +Database.Entity_Kinds.Body_Is_Full_Declaration)),
              From => Database.Entities
                 & Database.Files
-                & Database.Entity_Kinds,
+                & Database.Entity_Kinds
+                & Files2,
              Where => Database.Entities.Decl_File = Database.Files.Id
                 and Database.Entities.Kind = Database.Entity_Kinds.Id
-                and Database.Entities.Id = Integer_Param (1)),
+                and Database.Entities.Id = Integer_Param (1)
+                and Database.Files.Project = Files2.Id),
         On_Server => True, Name => "declaration");
    --  Can be prepared because a single row is read so there is no risk of
    --  concurrent calls.
@@ -538,6 +558,7 @@ package body GNATCOLL.Xref is
    Q_Ref_Entity  : constant := 6;  --  id of the ref'ed entity
    Q_Ref_Kind_Id : constant := 7;
    Q_Ref_Is_End_Of_Scope : constant := 8;
+   Q_Ref_Project : constant := 9;
    F_References_Decl : constant SQL_Field_List := To_List
       ((Q_Ref_File_Id => +Database.Files.Id,
         Q_Ref_File    => +Database.Files.Path,
@@ -548,7 +569,8 @@ package body GNATCOLL.Xref is
         Q_Ref_Entity  => +Database.Entities.Id,
         Q_Ref_Kind_Id =>
            +Expression ("" & Kind_Id_Declaration),
-        Q_Ref_Is_End_Of_Scope => +Expression (False)));
+        Q_Ref_Is_End_Of_Scope => +Expression (False),
+        Q_Ref_Project => +Files3.Path));
    F_References : constant SQL_Field_List := To_List
       ((Q_Ref_File_Id => +Database.Files.Id,
         Q_Ref_File    => +Database.Files.Path,
@@ -558,22 +580,25 @@ package body GNATCOLL.Xref is
         Q_Ref_Caller  => +Database.Entity_Refs.Caller,
         Q_Ref_Entity  => +Database.Entity_Refs.Entity,
         Q_Ref_Kind_Id => +Database.Reference_Kinds.Id,
-        Q_Ref_Is_End_Of_Scope => +Database.Reference_Kinds.Is_End));
+        Q_Ref_Is_End_Of_Scope => +Database.Reference_Kinds.Is_End,
+        Q_Ref_Project => +Files3.Path));
    Q_References : constant Prepared_Statement :=
      Prepare
        (SQL_Union
             (SQL_Select
                (F_References_Decl,
-                From => Database.Entities & Database.Files,
+                From => Database.Entities & Database.Files & Files3,
                 Where => Database.Entities.Decl_File = Database.Files.Id
+                and Database.Files.Project = Files3.Id
                 and Database.Entities.Id = Integer_Param (1)),
              SQL_Select
                (F_References,
                 From => Database.Entity_Refs & Database.Files
-                  & Database.Reference_Kinds,
+                  & Database.Reference_Kinds & Files3,
                 Where => Database.Entity_Refs.File = Database.Files.Id
                 and Database.Entity_Refs.Kind = Database.Reference_Kinds.Id
                 and Database.Reference_Kinds.Is_Real
+                and Database.Files.Project = Files3.Id
                 and Database.Entity_Refs.Entity = Integer_Param (1)),
              Order_By => Database.Files.Path
                 & Database.Entity_Refs.Line & Database.Entity_Refs.Column,
@@ -585,9 +610,10 @@ package body GNATCOLL.Xref is
      Prepare
        (SQL_Select
           (F_References_Decl,
-           From => Database.Entities & Database.Files,
+           From => Database.Entities & Database.Files & Files3,
            Where => Database.Entities.Decl_File = Database.Files.Id
-           and Database.Files.Path = Text_Param (1),
+              and Database.Files.Project = Files3.Id
+              and Database.Files.Path = Text_Param (1),
            Order_By =>
              Database.Entity_Refs.Line & Database.Entity_Refs.Column,
            Distinct => True),
@@ -596,10 +622,11 @@ package body GNATCOLL.Xref is
      Prepare
        (SQL_Select
           (F_References,
-           From => Database.Entity_Refs & Database.Files
+           From => Database.Entity_Refs & Database.Files & Files3
              & Database.Reference_Kinds,
            Where => Database.Entity_Refs.File = Database.Files.Id
            and Database.Entity_Refs.Kind = Database.Reference_Kinds.Id
+           and Database.Files.Project = Files3.Id
            and Database.Reference_Kinds.Is_Real
            and Database.Reference_Kinds.Display = Text_Param (2)
            and Database.Files.Path = Text_Param (1),
@@ -611,12 +638,13 @@ package body GNATCOLL.Xref is
      Prepare
        (SQL_Select
           (F_References,
-           From => Database.Entity_Refs & Database.Files
+           From => Database.Entity_Refs & Database.Files & Files3
              & Database.Reference_Kinds,
            Where => Database.Entity_Refs.File = Database.Files.Id
            and Database.Entity_Refs.Kind = Database.Reference_Kinds.Id
            and Database.Reference_Kinds.Is_Real
            and Database.Reference_Kinds.Display = Text_Param (2)
+           and Database.Files.Project = Files3.Id
            and Database.Files.Path = Text_Param (1),
            Order_By => Database.Entity_Refs.Entity
              & Database.Entity_Refs.Line & Database.Entity_Refs.Column,
@@ -627,15 +655,17 @@ package body GNATCOLL.Xref is
        (SQL_Union
             (SQL_Select
                (F_References_Decl,
-                From => Database.Entities & Database.Files,
+                From => Database.Entities & Database.Files & Files3,
                 Where => Database.Entities.Decl_File = Database.Files.Id
+                and Database.Files.Project = Files3.Id
                 and Database.Files.Path = Text_Param (1)),
              SQL_Select
                (F_References,
-                From => Database.Entity_Refs & Database.Files
+                From => Database.Entity_Refs & Database.Files & Files3
                   & Database.Reference_Kinds,
                 Where => Database.Entity_Refs.File = Database.Files.Id
                 and Database.Entity_Refs.Kind = Database.Reference_Kinds.Id
+                and Database.Files.Project = Files3.Id
                 and Database.Reference_Kinds.Is_Real
                 and Database.Files.Path = Text_Param (1)),
              Order_By =>
@@ -647,15 +677,17 @@ package body GNATCOLL.Xref is
        (SQL_Union
             (SQL_Select
                (F_References_Decl,
-                From => Database.Entities & Database.Files,
+                From => Database.Entities & Database.Files & Files3,
                 Where => Database.Entities.Decl_File = Database.Files.Id
+                and Database.Files.Project = Files3.Id
                 and Database.Files.Path = Text_Param (1)),
              SQL_Select
                (F_References,
-                From => Database.Entity_Refs & Database.Files
+                From => Database.Entity_Refs & Database.Files & Files3
                   & Database.Reference_Kinds,
                 Where => Database.Entity_Refs.File = Database.Files.Id
                 and Database.Entity_Refs.Kind = Database.Reference_Kinds.Id
+                and Database.Files.Project = Files3.Id
                 and Database.Reference_Kinds.Is_Real
                 and Database.Files.Path = Text_Param (1)),
              Order_By => Database.Entity_Refs.Entity
@@ -914,9 +946,9 @@ package body GNATCOLL.Xref is
    --  once we have parsed the whole ALI file.
 
    type LI_Info is record
-      Id    : Integer;
-      LI    : GNATCOLL.Projects.Library_Info;
-      Stamp : Time;
+      Id         : Integer;  --  for the LI file
+      LI         : GNATCOLL.Projects.Library_Info;
+      Stamp      : Time;
    end record;
    package LI_Lists is new Ada.Containers.Doubly_Linked_Lists (LI_Info);
    use LI_Lists;
@@ -972,7 +1004,6 @@ package body GNATCOLL.Xref is
 
    procedure Parse_LI
      (DB                  : Database_Connection;
-      Tree                : Project_Tree;
       LI                  : LI_Info;
       Default_Iconv_State : Iconv_T;
       VFS_To_Id           : in out VFS_To_Ids.Map;
@@ -982,6 +1013,7 @@ package body GNATCOLL.Xref is
       Visited_GLI_Files   : in out VFS_To_Ids.Map);
    --  Parse the contents of a single LI file.
    --  VFS_To_Id is a local cache for the entries in the files table.
+   --  Project is the one to which LI belongs.
    --
    --  Entity_Decl_To_Id maps a "file|line.col" to an entity id. This is filled
    --  during a first pass, and is needed to resolve references to parent
@@ -1093,7 +1125,7 @@ package body GNATCOLL.Xref is
 
    procedure Search_LI_Files_To_Update
      (Database : Xref_Database;
-      LI_Files : Library_Info_Lists.List;
+      LI_Files : Library_Info_List;
       LIs      : in out LI_Lists.List;
       Force_Refresh : Boolean);
    --  Process the list of all LI files (Lib_Files) to detect those that
@@ -1272,7 +1304,6 @@ package body GNATCOLL.Xref is
 
    procedure Parse_LI
      (DB                  : Database_Connection;
-      Tree                : Project_Tree;
       LI                  : LI_Info;
       Default_Iconv_State : Iconv_T;
       VFS_To_Id           : in out VFS_To_Ids.Map;
@@ -1285,6 +1316,9 @@ package body GNATCOLL.Xref is
       Str    : Str_Access;
       Last   : Integer;
       Index  : Integer;
+
+      LI_Project : constant Project_Type :=
+        Project_Type (LI.LI.LI_Project.all);
 
       ALI_Id   : Integer := LI.Id;
 
@@ -1443,8 +1477,9 @@ package body GNATCOLL.Xref is
       --  the information is simply skipped.
 
       function Insert_Source_File
-        (Basename        : String;
-         Is_ALI_Unit     : Boolean := False) return File_Db_Info;
+        (Basename    : Filesystem_String;
+         Project     : Project_Type;
+         Is_ALI_Unit : Boolean := False) return File_Db_Info;
       --  Retrieves the id for the file in the database, or create a new entry
       --  for it.
       --  Is_ALI_Unit should be true when the file is one of the units
@@ -2049,30 +2084,32 @@ package body GNATCOLL.Xref is
       ------------------------
 
       function Insert_Source_File
-        (Basename        : String;
+        (Basename        : Filesystem_String;
+         Project         : Project_Type;
          Is_ALI_Unit     : Boolean := False) return File_Db_Info
       is
-         File : constant Virtual_File :=
-           Tree.Create
-             (Name            => +Basename,
-              Use_Object_Path => False);
+         Info : constant File_Info :=
+           Project.Create_From_Project (Basename);
          Found  : VFS_To_Ids.Cursor;
          Result : File_Db_Info;
+         Id     : Integer;
       begin
-         if File = GNATCOLL.VFS.No_File then
+         if Info.File = GNATCOLL.VFS.No_File then
             if Active (Me_Error) then
-               Trace (Me_Error, "File not found in project: " & Basename);
+               Trace (Me_Error, "File " & (+Basename)
+                      & " not found in project "
+                      & Project.Project_Path.Display_Full_Name);
             end if;
             return (Id => -1, Export_Mangled_Name => False);
          end if;
 
-         Found := VFS_To_Id.Find (File);
+         Found := VFS_To_Id.Find (Info.File);
          if Has_Element (Found) then
             Result := Element (Found);
          else
             declare
                Name  : aliased String :=
-                 +File.Unix_Style_Full_Name (Normalize => True);
+                 +Info.File.Unix_Style_Full_Name (Normalize => True);
                Files : Forward_Cursor;
             begin
                Files.Fetch
@@ -2086,20 +2123,27 @@ package body GNATCOLL.Xref is
                                or else Files.Value (2) = "c++");
                else
                   declare
-                     Lang : aliased String := Tree.Info (File).Language;
+                     Lang : aliased String := Info.Language;
                   begin
+                     if Project = No_Project then
+                        Id := No_Project_Id;
+                     else
+                        Id := VFS_To_Id.Element (Project.Project_Path).Id;
+                     end if;
+
                      Result :=
                        (Id => DB.Insert_And_Get_PK
                            (Query_Insert_Source_File,
                             Params => (1 => +Name'Unchecked_Access,
-                                       2 => +Lang'Unrestricted_Access),
+                                       2 => +Lang'Unrestricted_Access,
+                                       3 => +Id),
                             PK => Database.Files.Id),
                         Export_Mangled_Name =>
                           Lang = "c" or else Lang = "c++");
                   end;
                end if;
 
-               VFS_To_Id.Insert (File, Result);
+               VFS_To_Id.Insert (Info.File, Result);
             end;
          end if;
 
@@ -2126,8 +2170,8 @@ package body GNATCOLL.Xref is
             --  different locations (s-memory.adb for instance), which
             --  can occur when overriding runtime files.
 
-            if not Visited_ALI_Units.Contains (File) then
-               Visited_ALI_Units.Include (File, Result);
+            if not Visited_ALI_Units.Contains (Info.File) then
+               Visited_ALI_Units.Include (Info.File, Result);
             end if;
          end if;
 
@@ -2928,9 +2972,10 @@ package body GNATCOLL.Xref is
 
    begin  --  Parse_LI
       if Active (Me_Parsing) then
-         Trace (Me_Parsing, "Parse LI "
-                & (+LI.LI.Library_File.Unix_Style_Full_Name
-                   (Normalize => True)));
+         Increase_Indent
+           (Me_Parsing, "Parse LI "
+            & (+LI.LI.Library_File.Unix_Style_Full_Name
+              (Normalize => True)));
       end if;
 
       if ALI_Id = -1 then
@@ -2963,6 +3008,9 @@ package body GNATCOLL.Xref is
          Next_Line;
 
          if Index > Last then
+            if Active (Me_Parsing) then
+               Decrease_Indent (Me_Parsing);
+            end if;
             return;
          end if;
 
@@ -2984,8 +3032,9 @@ package body GNATCOLL.Xref is
                --  just added.
 
                Current_Unit_Id := Insert_Source_File
-                 (Basename        => String (Str (Start .. Index - 1)),
-                  Is_ALI_Unit     => True).Id;
+                 (Basename     => Filesystem_String (Str (Start .. Index - 1)),
+                  Project      => LI_Project,  --  same as the LI
+                  Is_ALI_Unit  => True).Id;
                if Current_Unit_Id /= -1 then
                   DB.Execute
                     (Query_Set_ALI,
@@ -3020,7 +3069,7 @@ package body GNATCOLL.Xref is
 
                   declare
                      F : constant Filesystem_String :=
-                       Tree.Root_Project.File_From_Unit
+                       LI_Project.File_From_Unit
                          (Unit_Name => String (Str (Word_Start .. Index - 3)),
                           Part      => Part,
                           Language  => "ada");
@@ -3028,7 +3077,8 @@ package body GNATCOLL.Xref is
                      if F /= "" then
                         Skip_Spaces;
                         Skip_Word;
-                        Dep_Id := Insert_Source_File (Basename => +F).Id;
+                        Dep_Id := Insert_Source_File (F, LI_Project).Id;
+
                      elsif Str (Index) /= ASCII.LF
                        and then Str (Index) /= ASCII.CR
                      then
@@ -3036,7 +3086,8 @@ package body GNATCOLL.Xref is
                         Start := Index;
                         Skip_Word;
                         Dep_Id := Insert_Source_File
-                          (Basename => String (Str (Start .. Index - 1))).Id;
+                          (Filesystem_String (Str (Start .. Index - 1)),
+                           LI_Project).Id;
                      else
                         --  second format ("unchecked_deallocation%s\n").
                         Dep_Id := -1;
@@ -3062,10 +3113,10 @@ package body GNATCOLL.Xref is
 
                declare
                   Base_Last : constant Integer := Index - 1;
-                  Basename  : constant String :=
-                                String (Str (Start .. Base_Last));
+                  Basename  : constant Filesystem_String :=
+                                Filesystem_String (Str (Start .. Base_Last));
                   Info : File_Db_Info;
-                  File : Virtual_File;
+                  File : File_Info;
 
                begin
                   Skip_Spaces;
@@ -3081,7 +3132,8 @@ package body GNATCOLL.Xref is
                      --       D a~bar.adb 20111220095636 1986a86b a.bar
 
                      Info := Insert_Source_File
-                       (Basename => String (Str (Start .. Base_Last)),
+                       (Filesystem_String (Str (Start .. Base_Last)),
+                        LI_Project,
                         Is_ALI_Unit =>
                           Str (Index) /= ASCII.LF
                           and then Str (Index) /= ASCII.CR);
@@ -3089,22 +3141,30 @@ package body GNATCOLL.Xref is
                   --  Handle C/C++ include files
 
                   else
-                     File :=
-                       Tree.Create (+Basename, Use_Object_Path => False);
+                     File := LI_Project.Create_From_Project (Basename);
+                     if File.File = GNATCOLL.VFS.No_File then
+                        if Active (Me_Parsing) then
+                           Trace (Me_Parsing, "On D line, file " & (+Basename)
+                                  & " not found in "
+                                  & LI_Project.Project_Path.Display_Full_Name);
+                        end if;
+                     end if;
 
                      --  The first time we visit a dependency of an include
                      --  file we handle it as if it were a true separate ALI
                      --  unit (to compute its scope-tree).
 
-                     if not Visited_ALI_Units.Contains (File)
-                       and then not Visited_GLI_Files.Contains (File)
+                     if not Visited_ALI_Units.Contains (File.File)
+                       and then not Visited_GLI_Files.Contains (File.File)
                      then
-                        Info :=
-                          Insert_Source_File (Basename, Is_ALI_Unit => True);
-                        Visited_GLI_Files.Include (File, Info);
+                        Info := Insert_Source_File
+                          (File.File.Full_Name.all,
+                           LI_Project, Is_ALI_Unit => True);
+                        Visited_GLI_Files.Include (File.File, Info);
                      else
-                        Info :=
-                          Insert_Source_File (Basename, Is_ALI_Unit => False);
+                        Info := Insert_Source_File
+                          (File.File.Full_Name.all,
+                           LI_Project, Is_ALI_Unit => False);
                      end if;
                   end if;
 
@@ -3163,6 +3223,10 @@ package body GNATCOLL.Xref is
 
       if Iconv_State /= Default_Iconv_State then
          Iconv_Close (Iconv_State);
+      end if;
+
+      if Active (Me_Parsing) then
+         Decrease_Indent (Me_Parsing);
       end if;
    end Parse_LI;
 
@@ -3251,26 +3315,26 @@ package body GNATCOLL.Xref is
 
    procedure Search_LI_Files_To_Update
      (Database : Xref_Database;
-      LI_Files : Library_Info_Lists.List;
+      LI_Files : Library_Info_List;
       LIs      : in out LI_Lists.List;
       Force_Refresh : Boolean)
    is
       Lib_Info : Library_Info_Lists.Cursor := LI_Files.First;
       Files    : Forward_Cursor;
       LI       : LI_Info;
-      File     : Virtual_File;
    begin
       while Has_Element (Lib_Info) loop
-         LI.LI := Element (Lib_Info);
-         File := LI.LI.Library_File;
+         --  ??? Computing the timestamp is potentially slow
+         --  on Windows (conversion to Time).
 
-         --  ??? Potentially slow on Windows (conversion to Time)
-         LI.Stamp := File.File_Time_Stamp;
-         LI.Id    := -1;  --  File unknown in the database
+         LI :=
+           (LI         => Element (Lib_Info),
+            Id         => -1,   --  unknown in the database
+            Stamp      => Element (Lib_Info).Library_File.File_Time_Stamp);
 
          declare
             N : aliased String :=
-              +File.Unix_Style_Full_Name (Normalize => True);
+              +LI.LI.Library_File.Unix_Style_Full_Name (Normalize => True);
          begin
             Files.Fetch
               (Database.DB, Query_Get_File,
@@ -3324,7 +3388,7 @@ package body GNATCOLL.Xref is
       --  This is not needed later on.
       --  ??? Perhaps once a day would be nice ?
 
-      LI_Files          : Library_Info_Lists.List;
+      LI_Files          : Library_Info_List;
       LIs               : LI_Lists.List;
       VFS_To_Id         : VFS_To_Ids.Map;
       Visited_ALI_Units : VFS_To_Ids.Map;
@@ -3641,6 +3705,45 @@ package body GNATCOLL.Xref is
 
          Start_Transaction (DB, Destroy_Indexes => False);
 
+         --  Make sure all projects haev an id in the database
+
+         declare
+            Iter : Project_Iterator := Tree.Root_Project.Start;
+            P    : Project_Type;
+            R    : Forward_Cursor;
+         begin
+            loop
+               P := GNATCOLL.Projects.Current (Iter);
+               exit when P = No_Project;
+
+               declare
+                  N : aliased String := +P.Project_Path.Unix_Style_Full_Name
+                    (Normalize => True);
+                  Id : Integer;
+               begin
+                  R.Fetch (DB, Query_Get_File, (1 => +N'Unchecked_Access));
+                  if R.Has_Row then
+                     Id := R.Integer_Value (0);
+                  else
+                     Id := DB.Insert_And_Get_PK
+                       (Query_Insert_Project_File,
+                        Params => (1 => +N'Unchecked_Access),
+                        PK => Database.Files.Id);
+                  end if;
+
+                  VFS_To_Id.Include
+                    (P.Project_Path,
+                     File_Db_Info'
+                       (Id                  => Id,
+                        Export_Mangled_Name => False));
+               end;
+
+               Next (Iter);
+            end loop;
+         end;
+
+         --  Now process the LI files
+
          LI_C := LIs.First;
          while Has_Element (LI_C) loop
             begin
@@ -3652,7 +3755,6 @@ package body GNATCOLL.Xref is
                end if;
 
                Parse_LI (DB                  => DB,
-                         Tree                => Tree,
                          LI                  => Element (LI_C),
                          Default_Iconv_State => Iconv_State,
                          VFS_To_Id           => VFS_To_Id,
@@ -3818,6 +3920,7 @@ package body GNATCOLL.Xref is
 
    procedure Setup_DB
      (Self  : in out Xref_Database;
+      Tree  : not null GNATCOLL.Projects.Project_Tree_Access;
       DB    : not null access
         GNATCOLL.SQL.Exec.Database_Description_Record'Class;
       Error : in out GNAT.Strings.String_Access;
@@ -3830,6 +3933,7 @@ package body GNATCOLL.Xref is
       Error := null;
 
       Self.DB := DB.Build_Connection;
+      Self.Tree := Tree;
 
       Current_DB := Create (+SQL.Sqlite.DB_Name (Self.DB));
 
@@ -3880,6 +3984,7 @@ package body GNATCOLL.Xref is
    begin
       if Self.DB /= null then
          Free (Self.DB);
+         Self.Tree := null;
       end if;
    end Free;
 
@@ -3897,11 +4002,12 @@ package body GNATCOLL.Xref is
    ----------------
 
    function Get_Entity
-     (Self   : Xref_Database;
-      Name   : String;
-      File   : String;
-      Line   : Integer := -1;
-      Column : Visible_Column := -1;
+     (Self    : Xref_Database;
+      Name    : String;
+      File    : String;
+      Project : Project_Type;
+      Line    : Integer := -1;
+      Column  : Visible_Column := -1;
       Approximate_Search_Fallback : Boolean := True) return Entity_Reference
    is
       Distance : Natural := Integer'Last;
@@ -3967,6 +4073,7 @@ package body GNATCOLL.Xref is
                     (Entity  =>
                        (Id => R.Integer_Value (0), Fuzzy => not Exact_Match),
                      File    => Create (+R.Value (4)),
+                     Project => Project,
                      Line    => R.Integer_Value (1),
                      Column  => Visible_Column (R.Integer_Value (2)),
                      Kind    => Kind,
@@ -4151,16 +4258,17 @@ package body GNATCOLL.Xref is
    ----------------
 
    function Get_Entity
-     (Self   : Xref_Database;
-      Name   : String;
-      File   : GNATCOLL.VFS.Virtual_File;
-      Line   : Integer := -1;
-      Column : Visible_Column := -1;
+     (Self    : Xref_Database;
+      Name    : String;
+      File    : GNATCOLL.VFS.Virtual_File;
+      Project : Project_Type;
+      Line    : Integer := -1;
+      Column  : Visible_Column := -1;
       Approximate_Search_Fallback : Boolean := True) return Entity_Reference is
    begin
       return Get_Entity
         (Self, Name, +File.Unix_Style_Full_Name (Normalize => True),
-         Line, Column,
+         Project, Line, Column,
          Approximate_Search_Fallback => Approximate_Search_Fallback);
    end Get_Entity;
 
@@ -4187,8 +4295,9 @@ package body GNATCOLL.Xref is
    -------------
 
    function Element (Self : References_Cursor) return Entity_Reference is
-      Scope : Entity_Information := No_Entity;
-      Id    : Integer;
+      Scope   : Entity_Information := No_Entity;
+      Id      : Integer;
+      Project : Project_Type := No_Project;
    begin
       if not Self.DBCursor.Has_Row then
          return No_Entity_Reference;
@@ -4203,13 +4312,19 @@ package body GNATCOLL.Xref is
          end if;
       end if;
 
+      if not Self.DBCursor.Is_Null (Q_Ref_Project) then
+         Project := Self.Tree.Project_From_Path
+           (Create (+Self.DBCursor.Value (Q_Ref_Project)));
+      end if;
+
       return Entity_Reference'
-        (Entity => (Id => Self.DBCursor.Integer_Value (Q_Ref_Entity),
+        (Entity  => (Id => Self.DBCursor.Integer_Value (Q_Ref_Entity),
                     Fuzzy => False),
-         File   => Create (+Self.DBCursor.Value (Q_Ref_File)),
-         Line   => Self.DBCursor.Integer_Value (Q_Ref_Line),
-         Column => Visible_Column (Self.DBCursor.Integer_Value (Q_Ref_Col)),
-         Kind   => To_Unbounded_String (Self.DBCursor.Value (Q_Ref_Kind)),
+         File    => Create (+Self.DBCursor.Value (Q_Ref_File)),
+         Project => Project,
+         Line    => Self.DBCursor.Integer_Value (Q_Ref_Line),
+         Column  => Visible_Column (Self.DBCursor.Integer_Value (Q_Ref_Col)),
+         Kind    => To_Unbounded_String (Self.DBCursor.Value (Q_Ref_Kind)),
          Kind_Id => Char_Value (Self.DBCursor, Q_Ref_Kind_Id),
          Is_End_Of_Scope =>
            Boolean_Value (Self.DBCursor, Q_Ref_Is_End_Of_Scope),
@@ -4226,6 +4341,7 @@ package body GNATCOLL.Xref is
       Cursor : in out References_Cursor'Class) is
    begin
       Cursor.Entity := Entity;
+      Cursor.Tree := Self.Tree;
       Cursor.DBCursor.Fetch
         (Self.DB, Q_References, Params => (1 => +Entity.Id));
    end References;
@@ -4319,6 +4435,7 @@ package body GNATCOLL.Xref is
       end if;
 
       Cursor.Entity := Entity;
+      Cursor.Tree := Self.Tree;
       Cursor.DBCursor.Fetch
         (Self.DB, P, Params => (1 => +Entity.Id));
    end References;
@@ -4370,6 +4487,8 @@ package body GNATCOLL.Xref is
                               Line   => Curs.Integer_Value (Q_Decl_Line),
                               Column => Visible_Column
                                 (Curs.Integer_Value (Q_Decl_Column)),
+                              Project => Xref.Tree.Project_From_Path
+                                (Create (+Curs.Value (Q_Decl_Project))),
                               Kind   => To_Unbounded_String
                                  (Reference_Kind_Declaration),
                               Kind_Id => Kind_Id_Declaration,
@@ -4431,7 +4550,7 @@ package body GNATCOLL.Xref is
       Sub_Has_Elements : Boolean;
    begin
       Cursor.Entity := Entity;
-
+      Cursor.Tree := Self.Tree;
       Cursor.DBCursor.Fetch (Self.DB, Q_Bodies_Sub_Mangled_Prep,
                              Params => (1 => +Entity.Id));
 
@@ -4505,24 +4624,30 @@ package body GNATCOLL.Xref is
    -----------------
 
    function Imported_By
-     (Self : Xref_Database'Class;
-      File : GNATCOLL.VFS.Virtual_File) return Files_Cursor
+     (Self    : Xref_Database'Class;
+      File    : GNATCOLL.VFS.Virtual_File;
+      Project : Project_Type) return Files_Cursor
    is
       Name  : aliased String :=
         +File.Unix_Style_Full_Name (Normalize => True);
+      Project_Path  : aliased String :=
+        +Project.Project_Path.Unix_Style_Full_Name (Normalize => True);
       Curs : Files_Cursor;
    begin
       Curs.DBCursor.Fetch
         (Self.DB,
          SQL_Select
            (Database.Files.Path,
-            From  => Database.Files & Database.F2f & Files2,
+            From  => Database.Files & Database.F2f & Files2 & Files3,
             Where => Database.F2f.Fromfile = Database.Files.Id
               and Files2.Id = Database.F2f.Tofile
               and Files2.Path = Text_Param (1)
-              and Database.F2f.Kind = F2f_Withs,
+              and Database.F2f.Kind = F2f_Withs
+              and Files2.Project = Files3.Id
+              and Files3.Path = Text_Param (2),
             Order_By => Database.Files.Path),
-         Params => (1 => +Name'Unchecked_Access));
+         Params => (1 => +Name'Unchecked_Access,
+                    2 => +Project_Path'Unchecked_Access));
       return Curs;
    end Imported_By;
 
@@ -4531,24 +4656,30 @@ package body GNATCOLL.Xref is
    -------------
 
    function Imports
-     (Self : Xref_Database'Class;
-      File : GNATCOLL.VFS.Virtual_File) return Files_Cursor
+     (Self    : Xref_Database'Class;
+      File    : GNATCOLL.VFS.Virtual_File;
+      Project : Project_Type) return Files_Cursor
    is
       Name  : aliased String :=
         +File.Unix_Style_Full_Name (Normalize => True);
+      Project_Path  : aliased String :=
+        +Project.Project_Path.Unix_Style_Full_Name (Normalize => True);
       Curs : Files_Cursor;
    begin
       Curs.DBCursor.Fetch
         (Self.DB,
          SQL_Select
            (Database.Files.Path,
-            From  => Database.Files & Database.F2f & Files2,
+            From  => Database.Files & Database.F2f & Files2 & Files3,
             Where => Database.F2f.Tofile = Database.Files.Id
               and Files2.Id = Database.F2f.Fromfile
               and Files2.Path = Text_Param (1)
-              and Database.F2f.Kind = F2f_Withs,
+              and Database.F2f.Kind = F2f_Withs
+              and Files2.Project = Files3.Id
+              and Files3.Path = Text_Param (2),
             Order_By => Database.Files.Path),
-         Params => (1 => +Name'Unchecked_Access));
+         Params => (1 => +Name'Unchecked_Access,
+                    2 => +Project_Path'Unchecked_Access));
       return Curs;
    end Imports;
 
@@ -4557,11 +4688,12 @@ package body GNATCOLL.Xref is
    ----------------
 
    function Depends_On
-     (Self : Xref_Database'Class;
-      File : GNATCOLL.VFS.Virtual_File) return File_Sets.Set
+     (Self    : Xref_Database'Class;
+      File    : GNATCOLL.VFS.Virtual_File;
+      Project : Project_Type) return File_Sets.Set
    is
       use File_Sets;
-      C    : Files_Cursor := Self.Imports (File);
+      C    : Files_Cursor := Self.Imports (File, Project);
       Seen : File_Sets.Set;
       To_Analyze : File_Sets.Set;
       F    : Virtual_File;
@@ -4576,7 +4708,7 @@ package body GNATCOLL.Xref is
          Seen.Include (F);
          To_Analyze.Delete_First;
 
-         C := Self.Imports (F);
+         C := Self.Imports (F, Project);
          while C.Has_Element loop
             F := C.Element;
             if not Seen.Contains (F) then
@@ -5584,6 +5716,8 @@ package body GNATCOLL.Xref is
       K : aliased String := Kind;
    begin
       Cursor.Entity := No_Entity;
+      Cursor.Tree := Self.Tree;
+
       if Kind = Reference_Kind_Declaration then
          Cursor.DBCursor.Fetch
            (Self.DB, Q_File_References_Decl_By_Loc,
@@ -5616,9 +5750,13 @@ package body GNATCOLL.Xref is
    -------------------
 
    procedure Referenced_In
-     (Self   : Xref_Database'Class;
-      File   : GNATCOLL.VFS.Virtual_File;
-      Cursor : out Entities_Cursor'Class) is
+     (Self    : Xref_Database'Class;
+      File    : GNATCOLL.VFS.Virtual_File;
+      Project : Project_Type;
+      Cursor  : out Entities_Cursor'Class)
+   is
+      Project_N : aliased constant String :=
+        +Project.Project_Path.Unix_Style_Full_Name (Normalize => True);
    begin
       Cursor.DBCursor.Fetch
         (Self.DB,
@@ -5628,26 +5766,32 @@ package body GNATCOLL.Xref is
                & Database.Files.Path
                & Database.Entities.Decl_Line
                & Database.Entities.Decl_Column,
-               From => Database.Entities & Database.Files,
+               From => Database.Entities & Database.Files & Files3,
                Where => Database.Entities.Decl_File = Database.Files.Id
-               and Like (Database.Files.Path,
-                         +File.Unix_Style_Full_Name (Normalize => True))),
+                 and Like (Database.Files.Path,
+                   +File.Unix_Style_Full_Name (Normalize => True))
+                 and Database.Files.Project = Files3.Id
+                 and Files3.Path = Text_Param (1)),
 
             SQL_Select
               (Database.Entities.Id
                & Database.Files.Path
                & Database.Entities.Decl_Line
                & Database.Entities.Decl_Column,
-               From => Database.Entity_Refs & Database.Files
+               From => Database.Entity_Refs & Database.Files & Files3
                   & Database.Entities,
                Where => Database.Entity_Refs.File = Database.Files.Id
                   and Like (Database.Files.Path,
                             +File.Unix_Style_Full_Name (Normalize => True))
-                  and Database.Entity_Refs.Entity = Database.Entities.Id),
+                  and Database.Entity_Refs.Entity = Database.Entities.Id
+                  and Database.Files.Project = Files3.Id
+                  and Files3.Path = Text_Param (1)),
 
             Order_By => Database.Files.Path & Database.Entities.Decl_Line
                & Database.Entities.Decl_Column,
-            Distinct => True));
+            Distinct => True),
+
+        Params => (1 => +Project_N'Unchecked_Access));
    end Referenced_In;
 
    -------------------
@@ -5655,13 +5799,16 @@ package body GNATCOLL.Xref is
    -------------------
 
    procedure Referenced_In
-     (Self   : Xref_Database'Class;
-      File   : GNATCOLL.VFS.Virtual_File;
-      Name   : String;
-      Cursor : out Entities_Cursor'Class)
+     (Self    : Xref_Database'Class;
+      File    : GNATCOLL.VFS.Virtual_File;
+      Project : Project_Type;
+      Name    : String;
+      Cursor  : out Entities_Cursor'Class)
    is
       NName  : aliased String := Name;
       Name_A : constant Access_String := NName'Unchecked_Access;
+      Project_N : aliased constant String :=
+        +Project.Project_Path.Unix_Style_Full_Name (Normalize => True);
    begin
       Cursor.DBCursor.Fetch
         (Self.DB,
@@ -5671,30 +5818,34 @@ package body GNATCOLL.Xref is
                & Database.Files.Path
                & Database.Entities.Decl_Line
                & Database.Entities.Decl_Column,
-               From => Database.Entities & Database.Files,
+               From => Database.Entities & Database.Files & Files3,
                Where => Database.Entities.Decl_File = Database.Files.Id
-               and Like (Database.Files.Path,
+                 and Like (Database.Files.Path,
                          +File.Unix_Style_Full_Name (Normalize => True))
-               and Database.Entities.Name = Text_Param (1)),
+                 and Database.Entities.Name = Text_Param (1)
+                 and Database.Files.Project = Files3.Id
+                 and Files3.Path = Text_Param (2)),
 
             SQL_Select
               (Database.Entities.Id
                & Database.Files.Path
                & Database.Entities.Decl_Line
                & Database.Entities.Decl_Column,
-               From => Database.Entity_Refs & Database.Files
+               From => Database.Entity_Refs & Database.Files & Files3
                   & Database.Entities,
                Where => Database.Entity_Refs.File = Database.Files.Id
                  and Like (Database.Files.Path,
                            +File.Unix_Style_Full_Name (Normalize => True))
-                  and Database.Entity_Refs.Entity = Database.Entities.Id
-                  and Database.Entities.Name = Text_Param (1)),
+                 and Database.Entity_Refs.Entity = Database.Entities.Id
+                 and Database.Entities.Name = Text_Param (1)
+                 and Database.Files.Project = Files3.Id
+                and Files3.Path = Text_Param (2)),
 
             Order_By => Database.Files.Path & Database.Entities.Decl_Line
                & Database.Entities.Decl_Column,
             Distinct => True),
 
-         Params => (1 => +Name_A));
+         Params => (1 => +Name_A, 2 => +Project_N'Unchecked_Access));
    end Referenced_In;
 
    ---------
@@ -5798,6 +5949,7 @@ package body GNATCOLL.Xref is
       From_Renames    : Boolean := True)
    is
    begin
+      Cursor.Tree            := Self.Tree;
       Cursor.Compute         := Compute;
       Cursor.From_Overridden := From_Overridden;
       Cursor.From_Overriding := From_Overriding;
@@ -6585,21 +6737,25 @@ package body GNATCOLL.Xref is
    ----------------
 
    function Add_Entity
-     (Self        : Xref_Database;
-      Name        : String;
-      Kind        : String;
-      Decl_File   : GNATCOLL.VFS.Virtual_File;
-      Decl_Line   : Natural;
-      Decl_Column : Natural) return Entity_Information
+     (Self         : Xref_Database;
+      Name         : String;
+      Kind         : String;
+      Decl_File    : GNATCOLL.VFS.Virtual_File;
+      Decl_Project : Project_Type;
+      Decl_Line    : Natural;
+      Decl_Column  : Natural) return Entity_Information
    is
       N : aliased String :=
         +Decl_File.Unix_Style_Full_Name (Normalize => True);
+      Project_N : aliased String :=
+        +Decl_Project.Project_Path.Unix_Style_Full_Name (Normalize => True);
       K : aliased String := Kind;
       Na : aliased String := Name;
-      Id : Integer;
+      Id          : Integer;
       Was_Started : Boolean;
    begin
       Was_Started := Self.DB.Start_Transaction;
+
       Id := Self.DB.Insert_And_Get_PK
         (SQL_Insert
            (Fields => Entities.Name & Entities.Kind & Entities.Decl_File
@@ -6609,15 +6765,18 @@ package body GNATCOLL.Xref is
                & Entity_Kinds.Id
                & Files.Id
                & Integer_Param (4) & Integer_Param (5),
-               From => Entity_Kinds & Files,
+               From => Entity_Kinds & Files & Files3,
                Where => Entity_Kinds.Display = Text_Param (2)
-               and Files.Path = Text_Param (1))),
+               and Files.Path = Text_Param (1)
+               and Files.Project = Files3.Id
+               and Files3.Path = Text_Param (6))),
          Params =>
            (1 => +N'Unchecked_Access,
             2 => +K'Unchecked_Access,
             3 => +Na'Unchecked_Access,
             4 => +Decl_Line,
-            5 => +Decl_Column),
+            5 => +Decl_Column,
+            6 => +Project_N'Unchecked_Access),
          PK => Entities.Id);
 
       if Was_Started then
@@ -6647,7 +6806,7 @@ package body GNATCOLL.Xref is
       Parse_Runtime_Files : Boolean := True)
 
    is
-      LI_Files       : Library_Info_Lists.List;
+      LI_Files       : Library_Info_List;
       LIs            : LI_Lists.List;
       Absolute_Start : Time;
    begin

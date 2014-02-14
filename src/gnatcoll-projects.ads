@@ -141,6 +141,7 @@ package GNATCOLL.Projects is
    --  Free memory allocated for the pointer. You should first unload the tree.
 
    type Project_Type is tagged private;
+   type Project_Type_Access is access all Project_Type'Class;
    No_Project : aliased constant Project_Type;
    --  This type represents a single .gpr project file, which is part of a
    --  Project_Tree.
@@ -272,6 +273,9 @@ package GNATCOLL.Projects is
    --  created from a directory, automatically created from an executable
    --  (debugger case), or default empty project. An actual project file exists
    --  on disk only in the From_File or Default cases.
+
+   function Is_Aggregate_Project (Self : Project_Type) return Boolean;
+   --  Return true if the current project is an aggregate project.
 
    ------------------
    -- Project data --
@@ -499,6 +503,72 @@ package GNATCOLL.Projects is
      (Project : Project_Type) return GNATCOLL.VFS.Virtual_File;
    --  If a library project, return where the ALI files are copied.
 
+   ---------------
+   -- File info --
+   ---------------
+
+   type Unit_Parts is (Unit_Body, Unit_Spec, Unit_Separate);
+   --  A unit is usally composed of two parts: the spec and the body.
+   --    - Unit_Spec represents package/subprogram/generic declarations
+   --    - Unit_Body represents package/subprogram/generic bodies and subunits.
+   --    - Unit_Separate is used for additional implementation code in Ada
+   --      separates.
+
+   type File_Info is tagged private;
+   type File_Info_Access is access File_Info;
+   function "<" (L, R : File_Info_Access) return Boolean;
+   --  Various information that can be gathered about a file
+
+   procedure Free (Self : in out File_Info_Access);
+   --  Free the memory used by Self
+
+   function Project
+     (Info              : File_Info'Class;
+      Root_If_Not_Found : Boolean := False) return Project_Type;
+   --  Retrieve the project that the file belongs to. If the file is not a
+   --  source of the project, No_Project is returned, unless Root_If_Not_Found
+   --  is true, in which case the root project is returned.
+
+   function Unit_Part (Info : File_Info'Class) return Unit_Parts;
+   function Unit_Name (Info : File_Info'Class) return String;
+   function Language  (Info : File_Info'Class) return String;
+   function File (Info : File_Info'Class) return GNATCOLL.VFS.Virtual_File;
+   --  Retrieve information about the file.
+
+   function Other_File
+     (Self : Project_Tree;
+      File : GNATCOLL.VFS.Virtual_File) return GNATCOLL.VFS.Virtual_File;
+   --  If Info is a spec, returns the body of the same unit. If Info is a
+   --  body, returns its spec.
+   --  If there is no "other file" in the project, but we could compute the
+   --  name it should have, that name is returned (the file is created in the
+   --  same directory as File).
+   --  Otherwise, File itself is returned.
+
+   function Info
+     (Self : Project_Tree'Class; File : GNATCOLL.VFS.Virtual_File)
+      return File_Info;
+   pragma Precondition (not Self.Root_Project.Is_Aggregate_Project);
+   --  Retrieve information about the source file.
+   --  The language is computed from the project's naming scheme and from the
+   --  additional extensions registered through Add_Language_Extension.
+   --  Can only be applied if root project is not an aggregate project,
+   --  Program_Error raised otherwise.
+
+   package File_Info_Sets is new
+     Ada.Containers.Ordered_Sets (File_Info_Access);
+   type File_Info_Set is new File_Info_Sets.Set with null record;
+   overriding procedure Clear (Self : in out File_Info_Set);
+
+   function Info_Set
+     (Self : Project_Tree'Class; File : GNATCOLL.VFS.Virtual_File)
+      return File_Info_Set;
+   --  Retrieve information about the source file.
+   --  The language is computed from the project's naming scheme and from the
+   --  additional extensions registered through Add_Language_Extension.
+   --  Can be applied both to aggregate and regular projects. For aggregate
+   --  project tree may return several elements in the set.
+
    -----------
    -- Files --
    -----------
@@ -529,7 +599,9 @@ package GNATCOLL.Projects is
       Name            : GNATCOLL.VFS.Filesystem_String;
       Project         : Project_Type'Class := No_Project;
       Use_Source_Path : Boolean := True;
-      Use_Object_Path : Boolean := True) return GNATCOLL.VFS.Virtual_File;
+      Use_Object_Path : Boolean := True;
+      Ambiguous       : access Boolean := null)
+      return GNATCOLL.VFS.Virtual_File;
    --  Create a new file. This will automatically try to solve Name to an
    --  absolute path if it currently is a base name.
    --
@@ -549,12 +621,38 @@ package GNATCOLL.Projects is
    --  the already loaded project, even if their directory is outside the
    --  source dirs and object dirs. See also Project_From_Name.
    --
-   --  If no such file is found, GNATCOLL.VFS.No_File is returned.
+   --  If no such file is found, GNATCOLL.VFS.No_File is returned and
+   --  Ambiguous is set to False.
    --
-   --  If root project is an aggregate project, no Project specified and
-   --  base name of source file is abiguous, GNATCOLL.VFS.No_File is returned.
-   --  In order to get the source with ambiguous base name Project has to be
-   --  specified.
+   --  The matching from base source names to full path names is potentially
+   --  ambiguous when using aggregate projects, because it is valid to have
+   --  multiple files with the same base name within a given project tree.
+   --  In such an ambiguous case, this function will return No_File.
+   --  To lift this ambiguity, and if you know which project the file is found
+   --  in, you must pass a Project argument. The file must be a direct source
+   --  of that project.
+   --
+   --  When a file is ambiguous, No_File is returned, and Ambiguous (if given)
+   --  is set To True.
+   --
+   --  If you are not sure which project the file belongs to, you can also use
+   --  Create_From_Project below.
+
+   function Create_From_Project
+     (Self            : Project_Type'Class;
+      Name            : GNATCOLL.VFS.Filesystem_String)
+      return File_Info;
+   pragma Precondition
+     (Project_Type (Self) /= No_Project
+      and then not Self.Is_Aggregate_Project);
+   --  This is similar to Create above (converts from a base name to a full
+   --  path for a source file).
+   --  Here, however, the source is searched in the specified project or
+   --  any of the projects it imports (Create only searches in the direct
+   --  sources of the project). This function also only works for source files,
+   --  for for project files or ALI files.
+   --  This function will also search in the predefined source path.
+   --  Self must not be an aggregate project, to remove ambiguities.
 
    function Predefined_Source_Files
      (Self : access Project_Environment) return GNATCOLL.VFS.File_Array;
@@ -629,11 +727,19 @@ package GNATCOLL.Projects is
 
    type Library_Info is record
       Library_File : GNATCOLL.VFS.Virtual_File;
-      Source_File  : GNATCOLL.VFS.Virtual_File;
+      LI_Project   : Project_Type_Access;
+      Source       : File_Info_Access;
    end record;
+   --  Source is set to null for ALI files found in the predefined source
+   --  path, since we do not know the mapping to source files in this context.
+   --
+   --  LI_Project is the project in which the LI file was found. It might not
+   --  be the same as the source's project, when using extending projects.
 
    package Library_Info_Lists is new Ada.Containers.Doubly_Linked_Lists
      (Library_Info);
+   type Library_Info_List is new Library_Info_Lists.List with null record;
+   overriding procedure Clear (Self : in out Library_Info_List);
 
    procedure Library_Files
      (Self                : Project_Type;
@@ -642,75 +748,16 @@ package GNATCOLL.Projects is
       Xrefs_Dirs          : Boolean := False;
       ALI_Ext             : GNATCOLL.VFS.Filesystem_String := ".ali";
       Include_Predefined  : Boolean := False;
-      List                : in out Library_Info_Lists.List;
+      List                : in out Library_Info_List'Class;
       Exclude_Overridden  : Boolean := True);
    --  same as Library_Files, but also returns information about the source
    --  file associated with each LI file.
    --  The new files are appended to the list, as a way to collect multiple
    --  extensions (in addition to the support of regexp for ALI_Ext).
 
-   --------------------
-   -- Naming schemes --
-   --------------------
-   --  Through the naming scheme defined in a project, there are several
-   --  information that can be computed: the type of source (implementation or
-   --  specification), the name of the unit (in the case of Ada) or the
-   --  programming language in which the file is written.
-
-   type Unit_Parts is (Unit_Body, Unit_Spec, Unit_Separate);
-   --  A unit is usally composed of two parts: the spec and the body.
-   --    - Unit_Spec represents package/subprogram/generic declarations
-   --    - Unit_Body represents package/subprogram/generic bodies and subunits.
-   --    - Unit_Separate is used for additional implementation code in Ada
-   --      separates.
-
-   type File_Info is tagged private;
-   type File_Info_Access is access File_Info;
-   function "<" (L, R : File_Info_Access) return Boolean;
-   --  Various information that can be gathered about a file
-
-   function Project
-     (Info              : File_Info'Class;
-      Root_If_Not_Found : Boolean := False) return Project_Type;
-   --  Retrieve the project that the file belongs to. If the file is not a
-   --  source of the project, No_Project is returned, unless Root_If_Not_Found
-   --  is true, in which case the root project is returned.
-
-   function Unit_Part (Info : File_Info'Class) return Unit_Parts;
-   function Unit_Name (Info : File_Info'Class) return String;
-   function Language  (Info : File_Info'Class) return String;
-   --  Retrieve information about the file.
-
-   function Other_File
-     (Self : Project_Tree;
-      File : GNATCOLL.VFS.Virtual_File) return GNATCOLL.VFS.Virtual_File;
-   --  If Info is a spec, returns the body of the same unit. If Info is a
-   --  body, returns its spec.
-   --  If there is no "other file" in the project, but we could compute the
-   --  name it should have, that name is returned (the file is created in the
-   --  same directory as File).
-   --  Otherwise, File itself is returned.
-
-   function Info
-     (Self : Project_Tree'Class; File : GNATCOLL.VFS.Virtual_File)
-      return File_Info;
-   --  Retrieve information about the source file.
-   --  The language is computed from the project's naming scheme and from the
-   --  additional extensions registered through Add_Language_Extension.
-   --  Can only be applied if root project is not an aggregate project,
-   --  Program_Error raised otherwise.
-
-   package File_Info_Sets is new
-     Ada.Containers.Ordered_Sets (File_Info_Access);
-
-   function Info_Set
-     (Self : Project_Tree'Class; File : GNATCOLL.VFS.Virtual_File)
-      return File_Info_Sets.Set;
-   --  Retrieve information about the source file.
-   --  The language is computed from the project's naming scheme and from the
-   --  additional extensions registered through Add_Language_Extension.
-   --  Can be applied both to aggregate and regular projects. For aggregate
-   --  project tree may return several elements in the set.
+   ------------------
+   -- Config files --
+   ------------------
 
    procedure Set_Config_File
      (Self        : in out Project_Environment;
@@ -736,6 +783,14 @@ package GNATCOLL.Projects is
    --  Add a new directory to be searched by gprconfig (when using
    --  Set_Automatic_Config_File) for XML files that will be used to generate
    --  the configuration file.
+
+   --------------------
+   -- Naming schemes --
+   --------------------
+   --  Through the naming scheme defined in a project, there are several
+   --  information that can be computed: the type of source (implementation or
+   --  specification), the name of the unit (in the case of Ada) or the
+   --  programming language in which the file is written.
 
    procedure Register_Default_Language_Extension
      (Self                : in out Project_Environment;
@@ -794,7 +849,9 @@ package GNATCOLL.Projects is
 
    function Project_From_Name
      (Self : Project_Tree'Class; Name : String) return Project_Type;
-   --  Select a project by name
+   --  Select a project by name.
+   --  When using aggregate projects, there could be multiple projects with the
+   --  same name. In this case, No_Project is returned.
 
    function Project_From_Path
      (Self : Project_Tree'Class;
@@ -1501,10 +1558,11 @@ private
    --  The standard extension for a project file (".gpr")
 
    type File_Info is tagged record
+      File         : GNATCOLL.VFS.Virtual_File;
       Project      : Project_Type;
       Root_Project : Project_Type;
       Part         : Unit_Parts;
-      Name         : Namet.Name_Id;
+      Name         : Namet.Name_Id;   --  Unit name
       Lang         : Namet.Name_Id;
    end record;
 
@@ -1813,9 +1871,6 @@ private
      (Tree    : Project_Tree_Data_Access;
       Path_Id : Namet.Path_Name_Type) return Project_Type'Class;
    --  Internal version of Project_From_Path
-
-   function Is_Aggregate_Project (Project : Project_Type'Class) return Boolean;
-   --  Return true if the current project is an aggregate project.
 
    function Scenario_Variables
      (Tree : Project_Tree_Data_Access) return Scenario_Variable_Array;
