@@ -229,29 +229,8 @@ useful:
 * *--encoding=ARG* is the character encoding used for source and ALI files.
   By default, gnatinspect assumes they are encoded in UTF-8.
 
-
-Once it has finished parsing the xref information, gnatinspect displays an
-interactive prompt, where a number of commands can be used to perform
-queries. In a lot of cases, these commands take some file information as
-argument (either just the file, or an entity name and the file in which it
-is defined).
-
-.. index:: projects; aggregate projects
-
-The file names can be given as either a base name, or relative to the current
-directory, or even a full name.  But file names are ambiguous (even when a full
-path is specified) when aggregate projects are used. It is valid for a given
-file to be part of multiple aggregate projects, and depending on the project we
-are considering the result of the xref queries might vary).
-
-To remove the ambiguity, it is possible to specify the project to which the
-file belongs. The project is specified either as a project name (which itself
-could be ambiguous with aggregate projects), or as a full path.
-
-In all commands below, whenever the parameter specifies ":file", you can
-use instead ":file:project" if there are ambiguities.
-
-Here is the full list of commands supported by gnatinspect:
+Once gnatinspect is displayed, you can perform various queries, which are
+described below:
 
 * *decl name:file:line:column* is probably the most useful command. Given a
   reference to an entity, it will indicate where the entity is declared. The

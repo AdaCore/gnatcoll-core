@@ -229,10 +229,9 @@ package body GNATCOLL.Xref.Database is
          & "|16|has discriminant|" & ASCII.LF
          & "|17|is formal of|" & ASCII.LF
          & "|18|parent package|" & ASCII.LF
-         & "|TABLE|files||||" & ASCII.LF
-         & "|id|path|stamp|language|project|" & ASCII.LF
-         & "|-2|/|1970-01-01|project|NULL|" & ASCII.LF
-         & "|-1|/|1970-01-01|ada|-2|" & ASCII.LF
+         & "|TABLE|files|||" & ASCII.LF
+         & "|id|path|stamp|language|" & ASCII.LF
+         & "|-1|/|1970-01-01|ada|" & ASCII.LF
          & "|TABLE|entities|||||" & ASCII.LF
          & "|name|kind|decl_file|decl_line|decl_column|is_global|" & ASCII.LF
          & "|__va_list_tag|p|-1|-1|-1|true|" & ASCII.LF

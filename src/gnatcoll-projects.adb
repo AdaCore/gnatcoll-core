@@ -94,8 +94,6 @@ package body GNATCOLL.Projects is
 
    procedure Unchecked_Free is new Ada.Unchecked_Deallocation
      (Scenario_Variable_Array, Scenario_Variable_Array_Access);
-   procedure Unchecked_Free is new Ada.Unchecked_Deallocation
-     (Project_Type'Class, Project_Type_Access);
 
    package Project_Htables is new Ada.Containers.Indefinite_Hashed_Maps
      (Key_Type        => Virtual_File,   --  project path
@@ -348,9 +346,6 @@ package body GNATCOLL.Projects is
    --  project tree.
    --  This also ensures that each external reference actually exists
 
-   function Source_File_Data_To_Info (S : Source_File_Data) return File_Info;
-   --  Converts from one structure to the other
-
    procedure Compute_Imported_Projects (Project : Project_Type'Class);
    --  Compute and cache the list of projects imported by Project.
    --  Nothing is done if this is already known.
@@ -410,9 +405,6 @@ package body GNATCOLL.Projects is
       Xref_Dirs : Boolean) return Filesystem_String;
    --  Adds the object subdirectory to Id if one is defined
 
-   function Kind_To_Part (Source : Source_Id) return Unit_Parts;
-   --  Converts from Source.Kind to Unit_Parts
-
    -----------
    -- Lists --
    -----------
@@ -453,23 +445,6 @@ package body GNATCOLL.Projects is
    --  Handler called when the project parser finds an error.
    --  Mark_Project_Incomplete should be true if any error should prevent the
    --  edition of project properties graphically.
-
-   ------------------
-   -- Kind_To_Part --
-   ------------------
-
-   function Kind_To_Part (Source : Source_Id) return Unit_Parts is
-   begin
-      if Source = null then
-         return Unit_Separate;
-      end if;
-
-      case Source.Kind is
-         when Spec => return Unit_Spec;
-         when Impl => return Unit_Body;
-         when Sep  => return Unit_Separate;
-      end case;
-   end Kind_To_Part;
 
    ------------------------
    -- Mark_Project_Error --
@@ -839,7 +814,7 @@ package body GNATCOLL.Projects is
       Xrefs_Dirs          : Boolean := False;
       ALI_Ext             : GNATCOLL.VFS.Filesystem_String := ".ali";
       Include_Predefined  : Boolean := False;
-      List                : in out Library_Info_List'Class;
+      List                : in out Library_Info_Lists.List;
       Exclude_Overridden  : Boolean := True)
    is
       Tmp             : File_Array_Access;
@@ -955,6 +930,7 @@ package body GNATCOLL.Projects is
             Aggregated := Self.Data.View.Aggregated_Projects;
 
             while Aggregated /= null loop
+
                P := Project_Type
                  (Project_From_Path (Self.Data.Tree, Aggregated.Path));
 
@@ -975,13 +951,6 @@ package body GNATCOLL.Projects is
          return;
       end if;
 
-
-      if Active (Me) then
-         Increase_Indent
-           (Me, "Library_Files for project "
-            & Self.Project_Path.Display_Full_Name);
-      end if;
-
       if ALI_Ext (ALI_Ext'First) = '^' then
          Re := new Pattern_Matcher'(Compile (+ALI_Ext));
       end if;
@@ -996,11 +965,6 @@ package body GNATCOLL.Projects is
       loop
          Current_Project := Current (Prj_Iter);
          exit when Current_Project = No_Project;
-
-         if Active (Me) then
-            Trace (Me, "Current project: "
-                   & Current_Project.Project_Path.Display_Full_Name);
-         end if;
 
          declare
             Objects  : constant File_Array :=
@@ -1155,11 +1119,9 @@ package body GNATCOLL.Projects is
                            List.Append
                              (Library_Info'
                                 (Library_File => Tmp (F),
-                                 LI_Project => new Project_Type'
-                                   (Current_Project),
-                                 Source       => new File_Info'
-                                   (Source_File_Data_To_Info
-                                        (Element (Info_Cursor)))));
+                                 Source_File  =>
+                                   Element (Info_Cursor).File));
+
                         elsif Active (Me)
                           and then Has_Element (Info_Cursor)
                         then
@@ -1206,8 +1168,7 @@ package body GNATCOLL.Projects is
                         List.Append
                           (Library_Info'
                              (Library_File => Tmp (F),
-                              LI_Project   => null,
-                              Source       => null));
+                              Source_File  => GNATCOLL.VFS.No_File));
                      end if;
                   end loop;
 
@@ -1218,10 +1179,6 @@ package body GNATCOLL.Projects is
       end if;
 
       Unchecked_Free (Re);
-
-      if Active (Me) then
-         Decrease_Indent (Me);
-      end if;
    end Library_Files;
 
    -------------------
@@ -1239,7 +1196,7 @@ package body GNATCOLL.Projects is
       return GNATCOLL.VFS.File_Array_Access
    is
       use Library_Info_Lists;
-      List   : Library_Info_List;
+      List   : Library_Info_Lists.List;
       C      : Library_Info_Lists.Cursor;
       Result : File_Array_Access;
       Index  : Integer;
@@ -1264,56 +1221,8 @@ package body GNATCOLL.Projects is
          Next (C);
       end loop;
 
-      List.Clear;
-
       return Result;
    end Library_Files;
-
-   ----------
-   -- Free --
-   ----------
-
-   procedure Free (Self : in out File_Info_Access) is
-      procedure Unchecked_Free is new Ada.Unchecked_Deallocation
-        (File_Info, File_Info_Access);
-   begin
-      Unchecked_Free (Self);
-   end Free;
-
-   -----------
-   -- Clear --
-   -----------
-
-   overriding procedure Clear (Self : in out Library_Info_List) is
-      L : Library_Info;
-      C : Library_Info_Lists.Cursor := Self.First;
-   begin
-      while Library_Info_Lists.Has_Element (C) loop
-         L := Library_Info_Lists.Element (C);
-         Free (L.Source);
-         Unchecked_Free (L.LI_Project);
-         Library_Info_Lists.Next (C);
-      end loop;
-
-      Library_Info_Lists.Clear (Library_Info_Lists.List (Self)); --  inherited
-   end Clear;
-
-   -----------
-   -- Clear --
-   -----------
-
-   overriding procedure Clear (Self : in out File_Info_Set) is
-      S : File_Info_Access;
-      C : File_Info_Sets.Cursor := Self.First;
-   begin
-      while File_Info_Sets.Has_Element (C) loop
-         S := File_Info_Sets.Element (C);
-         Free (S);
-         File_Info_Sets.Next (C);
-      end loop;
-
-      File_Info_Sets.Clear (File_Info_Sets.Set (Self)); --  inherited
-   end Clear;
 
    --------------------------
    -- Direct_Sources_Count --
@@ -1325,128 +1234,11 @@ package body GNATCOLL.Projects is
       --  precomputed when the project is loaded
       if Get_View (Project) = Prj.No_Project then
          return 0;
+
       else
          return Project.Data.Files'Length;
       end if;
    end Direct_Sources_Count;
-
-   ------------------------------
-   -- Source_File_Data_To_Info --
-   ------------------------------
-
-   function Source_File_Data_To_Info (S : Source_File_Data) return File_Info is
-      Unit : Name_Id := No_Name;
-   begin
-      if S.Source /= null and then S.Source.Unit /= null then
-         Unit := S.Source.Unit.Name;
-      end if;
-
-      return File_Info'
-        (Project      => S.Project,
-         Root_Project => S.Project,
-         File         => S.File,
-         Part         => Kind_To_Part (S.Source),
-         Name         => Unit,
-         Lang         => S.Lang);
-   end Source_File_Data_To_Info;
-
-   -------------------------
-   -- Create_From_Project --
-   -------------------------
-
-   function Create_From_Project
-     (Self            : Project_Type'Class;
-      Name            : GNATCOLL.VFS.Filesystem_String)
-      return File_Info
-   is
-      Curs       : Names_Files.Cursor;
-      File       : Virtual_File;
-      Source     : Source_File_Data;
-      Imports    : Boolean;
-      Is_Limited : Boolean;
-      Result     : File_Info;
-
-   begin
-      if Is_Absolute_Path (Name) then
-         File := Create (Normalize_Pathname (Name, Resolve_Links => False));
-         Result := Info (Tree => Self.Data.Tree, File => File);
-
-         if Result.File = GNATCOLL.VFS.No_File then
-            Result := File_Info'
-              (File         => File,
-               Project      => No_Project,
-               Root_Project => Project_Type (Self),
-               Part         => Unit_Separate,
-               Name         => Namet.No_Name,
-               Lang         => Namet.No_Name);
-         end if;
-
-         return Result;
-      end if;
-
-      --  Amongst all the files with the right basename, search the one, if
-      --  any, that is visible from Self.
-
-      Curs := Self.Data.Tree.Sources.Find (Name);
-      if Has_Element (Curs) then
-         --  Check amongst all possibilities which one is in Self or its
-         --  imported projects.
-
-         Source := Element (Curs);
-         loop
-            Imports := Source.Project = Project_Type (Self)
-              or else Source.Project = No_Project;  --  predefined source file
-            if not Imports then
-               Self.Project_Imports
-                 (Child            => Source.Project,
-                  Include_Extended => True,
-                  Imports          => Imports,
-                  Is_Limited_With  => Is_Limited);
-            end if;
-
-            if Imports then
-               return Source_File_Data_To_Info (Source);
-            end if;
-
-            exit when Source.Next = null;
-            Source := Source.Next.all;
-         end loop;
-      end if;
-
-      --  Search in the predefined source path
-
-      if Self.Data.Tree.Env.Predefined_Source_Path /= null then
-         File := Locate_Regular_File
-           (Name, Self.Data.Tree.Env.Predefined_Source_Path.all);
-
-         if File /= GNATCOLL.VFS.No_File then
-            Include_File
-              (Self.Data.Tree.Sources, Name,
-               Source_File_Data'
-                 (Project  => No_Project,
-                  File     => File,
-                  Lang     => No_Name,
-                  Source   => null,
-                  Next     => null));
-
-            return File_Info'
-              (File         => File,
-               Project      => No_Project,
-               Root_Project => Project_Type (Self),
-               Part         => Unit_Separate,
-               Name         => No_Name,
-               Lang         => No_Name);
-         end if;
-      end if;
-
-      return
-        (File         => GNATCOLL.VFS.No_File,
-         Project      => No_Project,
-         Root_Project => Project_Type (Self),
-         Part         => Unit_Separate,
-         Name         => Namet.No_Name,
-         Lang         => Namet.No_Name);
-   end Create_From_Project;
 
    ------------
    -- Create --
@@ -1457,9 +1249,7 @@ package body GNATCOLL.Projects is
       Name            : Filesystem_String;
       Project         : Project_Type'Class := No_Project;
       Use_Source_Path : Boolean := True;
-      Use_Object_Path : Boolean := True;
-      Ambiguous       : access Boolean := null)
-      return GNATCOLL.VFS.Virtual_File
+      Use_Object_Path : Boolean := True) return GNATCOLL.VFS.Virtual_File
    is
       Base          : constant Filesystem_String := Base_Name (Name);
       Project2      : Project_Type;
@@ -1493,10 +1283,6 @@ package body GNATCOLL.Projects is
       end Ambiguous_Base_Name;
 
    begin
-      if Ambiguous /= null then
-         Ambiguous.all := False;
-      end if;
-
       if Self.Data = null then
          --  No view computed, we do not even know the source dirs
          return GNATCOLL.VFS.No_File;
@@ -1516,10 +1302,6 @@ package body GNATCOLL.Projects is
 
          if Has_Element (Info_Cursor) then
             if Ambiguous_Base_Name (Element (Info_Cursor)) then
-               if Ambiguous /= null then
-                  Ambiguous.all := True;
-               end if;
-
                return GNATCOLL.VFS.No_File;
             else
                return Element (Info_Cursor).File;
@@ -1573,10 +1355,11 @@ package body GNATCOLL.Projects is
          Project2 := Current (Iterator);
          exit when Project2 = No_Project;
 
-         if Duplicate_Obj
+         if
+           Duplicate_Obj
            and then Locate_Regular_File
-             (Name, Project2.Object_Path
-                (Recursive => False, Including_Libraries => True)) /=
+              (Name, Project2.Object_Path
+                 (Recursive => False, Including_Libraries => True)) /=
                GNATCOLL.VFS.No_File
          then
             return GNATCOLL.VFS.No_File;
@@ -1822,12 +1605,8 @@ package body GNATCOLL.Projects is
    begin
       if File = GNATCOLL.VFS.No_File then
          return
-           (File         => GNATCOLL.VFS.No_File,
-            Project      => No_Project,
-            Root_Project => Tree.Root,
-            Part         => Unit_Separate,
-            Name         => Namet.No_Name,
-            Lang         => Namet.No_Name);
+           (No_Project, Tree.Root, Unit_Separate,
+            Namet.No_Name, Namet.No_Name);
       end if;
 
       --  Lookup in the project's Source_Paths_HT, rather than in
@@ -1846,14 +1625,17 @@ package body GNATCOLL.Projects is
       Id := Source_Paths_Htable.Get (Tree.View.Source_Paths_HT, Path);
 
       if Id /= No_Source then
-         Part := Kind_To_Part (Id);
+         case Id.Kind is
+            when Spec => Part := Unit_Spec;
+            when Impl => Part := Unit_Body;
+            when Sep  => Part := Unit_Separate;
+         end case;
 
          if Id.Unit /= null then
             return File_Info'
               (Project      => Project_Type
                  (Project_From_Name (Tree, Id.Project.Name)),
                Root_Project => Tree.Root,
-               File         => File,
                Part         => Part,
                Name         => Id.Unit.Name,
                Lang         => Id.Language.Name);
@@ -1862,7 +1644,6 @@ package body GNATCOLL.Projects is
               (Project      => Project_Type
                  (Project_From_Name (Tree, Id.Project.Name)),
                Root_Project => Tree.Root,
-               File         => File,
                Part         => Part,
                Name         => No_Name,
                Lang         => Id.Language.Name);
@@ -1885,7 +1666,6 @@ package body GNATCOLL.Projects is
             return File_Info'
               (Project      => No_Project,
                Root_Project => Tree.Root,
-               File         => File,
                Part         => Unit_Spec,
                Name         => Namet.No_Name,
                Lang         => Name_Ada);
@@ -1894,7 +1674,6 @@ package body GNATCOLL.Projects is
             return File_Info'
               (Project      => No_Project,
                Root_Project => Tree.Root,
-               File         => File,
                Part         => Unit_Body,
                Name         => Namet.No_Name,
                Lang         => Name_Ada);
@@ -1932,12 +1711,7 @@ package body GNATCOLL.Projects is
       end;
 
       return
-        (File         => GNATCOLL.VFS.No_File,
-         Project      => No_Project,
-         Root_Project => Tree.Root,
-         Part         => Unit_Separate,
-         Name         => Namet.No_Name,
-         Lang         => Lang);
+        (No_Project, Tree.Root, Unit_Separate, Namet.No_Name, Lang => Lang);
    end Info;
 
    ----------
@@ -1963,7 +1737,7 @@ package body GNATCOLL.Projects is
 
    function Info_Set
      (Self : Project_Tree'Class; File : GNATCOLL.VFS.Virtual_File)
-      return File_Info_Set
+      return File_Info_Sets.Set
    is
       M_Cur  : Names_Files.Cursor;
       B_Name : constant Filesystem_String := File.Base_Name;
@@ -1971,8 +1745,7 @@ package body GNATCOLL.Projects is
       Source : Source_File_Data;
       S_Info : File_Info;
 
-      Result : File_Info_Set :=
-        (File_Info_Sets.Empty_Set with null record);
+      Result : File_Info_Sets.Set := File_Info_Sets.Empty_Set;
 
       function Unit_Kid_To_Part (Src_Kind : Prj.Source_Kind) return Unit_Parts;
       --  Translate Prj.Source_Kind into Unit_Parts.
@@ -2005,6 +1778,7 @@ package body GNATCOLL.Projects is
       Source := Names_Files.Element (M_Cur);
 
       loop
+
          if Source.File = File then
             S_Info.Project := Source.Project;
             S_Info.Root_Project := Self.Root_Project;
@@ -2046,16 +1820,8 @@ package body GNATCOLL.Projects is
       end if;
 
       return Result;
+
    end Info_Set;
-
-   ----------
-   -- File --
-   ----------
-
-   function File (Info : File_Info'Class) return GNATCOLL.VFS.Virtual_File is
-   begin
-      return Info.File;
-   end File;
 
    --------------------
    -- Substitute_Dot --
@@ -5632,8 +5398,8 @@ package body GNATCOLL.Projects is
       M_Cur       : Names_Files.Cursor;
       Found_Elem  : Source_File_Data;
       Elem_Access : Source_File_Data_Access;
-
    begin
+
       M_Cur := Map.Find (Key);
       if M_Cur = Names_Files.No_Element then
          Names_Files.Include (Map, Key, Elem);
@@ -5645,6 +5411,7 @@ package body GNATCOLL.Projects is
       --  Check the first one with same base name since we might have to update
       --  it in the map,
       if Same_Source_And_Project (Found_Elem, Elem) then
+
          --  Exactly same file, nothing has to be done.
          return;
       else
@@ -5652,11 +5419,11 @@ package body GNATCOLL.Projects is
          --  Another file with same base name.
 
          if Found_Elem.Next = null then
+
             --  We still have to update the element in map.
 
             Found_Elem.Next := new Source_File_Data'(Elem);
             Map.Replace (Key, Found_Elem);
-
          else
             --  Look through other files with same base name and add elem
             --  if not present.
@@ -5675,13 +5442,15 @@ package body GNATCOLL.Projects is
 
                   Elem_Access.Next := new Source_File_Data'(Elem);
                   return;
-
                else
                   Elem_Access := Elem_Access.Next;
                end if;
+
             end loop;
+
          end if;
       end if;
+
    end Include_File;
 
    -----------
@@ -7234,15 +7003,18 @@ package body GNATCOLL.Projects is
    -- Is_Aggregate_Project --
    --------------------------
 
-   function Is_Aggregate_Project (Self : Project_Type) return Boolean is
+   function Is_Aggregate_Project (Project : Project_Type'Class) return Boolean
+   is
    begin
-      if Self.Data.Local_Tree = null then
+      if Project.Data.Local_Tree = null then
          --  root project
-         return Project_Qualifier_Of
-           (Self.Data.Node, Self.Data.Tree.Tree) = Prj.Aggregate;
+         return
+           Project_Qualifier_Of (Project.Data.Node, Project.Data.Tree.Tree) =
+           Prj.Aggregate;
       else
-         return Project_Qualifier_Of
-           (Self.Data.Node, Self.Data.Local_Node_Tree) = Prj.Aggregate;
+         return
+           Project_Qualifier_Of
+             (Project.Data.Node, Project.Data.Local_Node_Tree) = Prj.Aggregate;
       end if;
    end Is_Aggregate_Project;
 

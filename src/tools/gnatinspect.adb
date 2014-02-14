@@ -25,6 +25,7 @@ with Ada.Strings.Fixed;
 with Ada.Strings.Unbounded;      use Ada.Strings.Unbounded;
 with Ada.Text_IO;                use Ada.Text_IO;
 with GNAT.Command_Line;          use GNAT.Command_Line;
+with GNAT.Directory_Operations;  use GNAT.Directory_Operations;
 with GNAT.Strings;               use GNAT.Strings;
 with GNAT.OS_Lib;
 with GNATCOLL.Xref;              use GNATCOLL.Xref;
@@ -67,24 +68,7 @@ procedure GNATInspect is
    --  saved.
 
    function Get_Entity (Arg : String) return Entity_Information;
-   --  Return the entity matching the "name:file:[project:]line:column"
-   --  argument.
-
-   function Project_From_Arg (Name : String) return Project_Type;
-   --  A project specified in the command line can be specified either as a
-   --  project name, or as a path relative to the current directory.
-
-   type File_And_Project is record
-      File    : GNATCOLL.VFS.Virtual_File;
-      Project : Project_Type;
-   end record;
-   --  information extracted from teh command line.
-   --  File will be No_File if there are ambiguities (for instance when using
-   --  aggregate projects).
-
-   function Get_File (Arg : String) return File_And_Project;
-   --  Extra full path and project from a command line argument
-   --  "file[:project]"
+   --  Return the entity matching the "name:file:line:column" argument
 
    procedure Parse_Command_Line (Switch, Parameter, Section : String);
    --  Handles some switches from the command line. Other switches are handled
@@ -450,7 +434,7 @@ procedure GNATInspect is
 
    Project_Is_Default : Boolean := True;  --  Whether we have the default prj
    Env     : Project_Environment_Access;
-   Tree    : aliased Project_Tree;
+   Tree    : Project_Tree;
    --  The currently loaded project tree
 
    procedure Display_Progress (Current, Total : Integer);
@@ -746,143 +730,43 @@ procedure GNATInspect is
       end;
    end Process_Shell;
 
-   ----------------------
-   -- Project_From_Arg --
-   ----------------------
-
-   function Project_From_Arg (Name : String) return Project_Type is
-      Project : Project_Type;
-   begin
-      Project := Tree.Project_From_Path (Create_From_Base (+Name));
-      if Project = No_Project then
-         Project := Tree.Project_From_Name (Name);
-      end if;
-      return Project;
-   end Project_From_Arg;
-
-   --------------
-   -- Get_File --
-   --------------
-
-   function Get_File (Arg : String) return File_And_Project is
-      Words   : String_List_Access := Split (Arg, On => ':');
-      File    : Virtual_File := GNATCOLL.VFS.No_File;
-      Project : Project_Type := No_Project;
-      Ambiguous : aliased Boolean := False;
-   begin
-      if Words'Length = 1 then
-         Project := Tree.Root_Project;
-         File    := Tree.Create
-           (Name      => +Words (Words'First).all,
-            Ambiguous => Ambiguous'Access);
-      elsif Words'Length > 1 then
-         --  The project could be given either by its name, or by its path.
-
-         Project := Project_From_Arg (Words (Words'First + 1).all);
-         if Project /= No_Project then
-            File := Tree.Create
-              (Name      => +Words (Words'First).all,
-               Project   => Project,
-               Ambiguous => Ambiguous'Access);
-         end if;
-      end if;
-
-      if File = No_File then
-         if Ambiguous then
-            Put_Line (Output_Lead.all & "Error: ambiguous file name '"
-                      & Words (Words'First).all & "'");
-         else
-            Put_Line (Output_Lead.all & "Error: file not found '"
-                      & Words (Words'First).all & "'");
-         end if;
-      end if;
-
-      Free (Words);
-      return (File, Project);
-   end Get_File;
-
    ----------------
    -- Get_Entity --
    ----------------
 
    function Get_Entity (Arg : String) return Entity_Information is
-      --  The format of Arg is the following
-      --      name:file[:project][:line[:column]]
-      --  The project information is optional, and only used in case of
-      --  ambiguities for aggregate projects.
-
-      Words   : String_List_Access := Split (Arg, On => ':');
-      Ref     : Entity_Reference;
-      Project : Project_Type := No_Project;
-      File    : Virtual_File := GNATCOLL.VFS.No_File;
-      Line    : Integer := -1;
-      Column  : Integer := -1;
-      Idx     : Natural;
-      Ambiguous : aliased Boolean;
+      Words  : String_List_Access := Split (Arg, On => ':');
+      Ref    : Entity_Reference;
    begin
-      if Words'Length < 2 then
-         Put_Line
-           (Output_Lead.all
-            & "Invalid parameter, expecting "
-              & "name:file[:project]:line:column => '" & Arg & "'");
+      if Words'Length = 4 then
+         Ref := Xref.Get_Entity
+           (Name   => Words (Words'First).all,
+            File   => Format_Pathname
+              (Style => UNIX,
+               Path  => Words (Words'First + 1).all),
+            Line   => Integer'Value (Words (Words'First + 2).all),
+            Column => Visible_Column
+              (Integer'Value (Words (Words'First + 3).all)));
+      elsif Words'Length = 3 then
+         Ref := Xref.Get_Entity
+           (Name   => Words (Words'First).all,
+            File   => Format_Pathname
+              (Style => UNIX,
+               Path  => Words (Words'First + 1).all),
+            Line   => Integer'Value (Words (Words'First + 2).all));
+      elsif Words'Length = 2 then
+         Ref := Xref.Get_Entity
+           (Name   => Words (Words'First).all,
+            File   => Format_Pathname
+              (Style => UNIX,
+               Path  => Words (Words'First + 1).all));
+      else
+         Put_Line (Output_Lead.all
+                   & "Invalid parameter, expecting name:file:line:column => '"
+                   & Arg & "'");
          Free (Words);
          return No_Entity;
       end if;
-
-      if Words'Length > 2 then
-         --  third parameter could be either line or project
-
-         begin
-            Line := Integer'Value (Words (Words'First + 2).all);
-            Idx := 2;
-         exception
-            when Constraint_Error =>
-               Line := -1;
-               Project := Project_From_Arg (Words (Words'First + 2).all);
-               Idx := 3;
-         end;
-
-         if Idx = 3 and then Words'Length >= 4 then
-            begin
-               Line := Integer'Value (Words (Words'First + Idx).all);
-            exception
-               when Constraint_Error =>
-                  Line := -1;
-            end;
-         end if;
-
-         if Words'First + Idx + 1 <= Words'Last then
-            begin
-               Column := Integer'Value (Words (Words'First + Idx + 1).all);
-            exception
-               when Constraint_Error =>
-                  Column := -1;
-            end;
-         end if;
-      end if;
-
-      File := Tree.Create
-        (Name      => +Words (Words'First + 1).all,
-         Project   => Project,
-         Ambiguous => Ambiguous'Access);
-
-      if File = No_File then
-         if Ambiguous then
-            Put_Line (Output_Lead.all & "Error: ambiguous file name '"
-                      & Words (Words'First + 1).all & "'");
-         else
-            Put_Line (Output_Lead.all & "Error: file not found '"
-                      & Words (Words'First + 1).all & "'");
-         end if;
-         return No_Entity;
-      end if;
-
-      Ref  := Xref.Get_Entity
-        (Name    => Words (Words'First).all,
-         File    => File,
-         Project => Project,
-         Line    => Line,
-         Column  => Visible_Column (Column));
 
       Free (Words);
 
@@ -1278,12 +1162,9 @@ procedure GNATInspect is
 
    procedure Process_Importing (Args : Arg_List) is
       Curs  : Files_Cursor;
-      File  : constant File_And_Project := Get_File (Nth_Arg (Args, 1));
    begin
-      if File.File /= No_File then
-         Curs := Xref.Imported_By (File.File, File.Project);
-         Dump (Curs);
-      end if;
+      Curs := Xref.Imported_By (Tree.Create (+Nth_Arg (Args, 1)));
+      Dump (Curs);
    end Process_Importing;
 
    ---------------------
@@ -1292,12 +1173,9 @@ procedure GNATInspect is
 
    procedure Process_Imports (Args : Arg_List) is
       Curs  : Files_Cursor;
-      File  : constant File_And_Project := Get_File (Nth_Arg (Args, 1));
    begin
-      if File.File /= No_File then
-         Curs := Xref.Imports (File.File, File.Project);
-         Dump (Curs);
-      end if;
+      Curs := Xref.Imports (Tree.Create (+Nth_Arg (Args, 1)));
+      Dump (Curs);
    end Process_Imports;
 
    ------------------------
@@ -1305,13 +1183,10 @@ procedure GNATInspect is
    ------------------------
 
    procedure Process_Depends_On (Args : Arg_List) is
-      File  : constant File_And_Project := Get_File (Nth_Arg (Args, 1));
-      Deps  : File_Sets.Set;
+      Deps : constant File_Sets.Set :=
+        Xref.Depends_On (Tree.Create (+Nth_Arg (Args, 1)));
    begin
-      if File.File /= No_File then
-         Deps := Xref.Depends_On (File.File, File.Project);
-         Dump (Deps);
-      end if;
+      Dump (Deps);
    end Process_Depends_On;
 
    ------------------
@@ -1396,15 +1271,11 @@ procedure GNATInspect is
 
    procedure Process_Entities (Args : Arg_List) is
       Entities : Entities_Cursor;
-      File  : constant File_And_Project := Get_File (Nth_Arg (Args, 1));
    begin
-      if File.File /= No_File then
-         Xref.Referenced_In
-           (File    => File.File,
-            Project => File.Project,
-            Cursor  => Entities);
-         Dump (Entities);
-      end if;
+      Xref.Referenced_In
+        (File   => Tree.Create (+Nth_Arg (Args, 1)),
+         Cursor => Entities);
+      Dump (Entities);
    end Process_Entities;
 
    ------------------
@@ -1489,12 +1360,6 @@ procedure GNATInspect is
          Add_Config_Dir
            (Env.all,
             Create_From_Base (+Parameter, Get_Current_Dir.Full_Name.all));
-
-      elsif Switch = "--traceoff" then
-         Set_Active (GNATCOLL.Traces.Create (Parameter), False);
-
-      elsif Switch = "--traceon" then
-         Set_Active (GNATCOLL.Traces.Create (Parameter), True);
       end if;
    end Parse_Command_Line;
 
@@ -1590,14 +1455,6 @@ begin
       Output      => Traces_File_Name'Access,
       Long_Switch => "--tracefile=",
       Help        => "Specify an alternative traces configuration file");
-   Define_Switch
-     (Cmdline,
-      Long_Switch => "--traceoff=",
-      Help        => "Disable a specific trace");
-   Define_Switch
-     (Cmdline,
-      Long_Switch => "--traceon=",
-      Help        => "Enable a specific trace");
    Define_Switch
      (Cmdline,
       Output      => Show_Progress'Access,
@@ -1742,8 +1599,7 @@ begin
       Error : GNAT.Strings.String_Access;
    begin
       Xref.Setup_DB
-        (DB    => GNATCOLL.SQL.Sqlite.Setup (Database => DB_Name.all),
-         Tree  => Tree'Unrestricted_Access,
+        (GNATCOLL.SQL.Sqlite.Setup (Database => DB_Name.all),
          Delete_If_Mismatch => Delete_If_Mismatch,
          Error              => Error);
       if Error /= null then
