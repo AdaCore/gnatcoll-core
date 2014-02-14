@@ -90,10 +90,10 @@ local_install: force
 	@${MAKE} prefix=${shell pwd}/local_install install >/dev/null
 
 test: local_install
-	@${MAKE} prefix=${shell pwd}/local_install test_names="${test_names}" -C testsuite
+	@${MAKE} test_names="${test_names}" -C testsuite
 
 test_verbose: local_install
-	@${MAKE} prefix=${shell pwd}/local_install test_names="${test_names}" -C testsuite verbose
+	@${MAKE} test_names="${test_names}" -C testsuite verbose
 
 # Installs both static and shared libraries (if they were build)
 # GNU standards say we must not recompile, for this target
