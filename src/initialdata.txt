@@ -107,9 +107,10 @@
 |    17 | is formal of     | # B is a formal parameter  for generic entity A             |
 |    18 | parent package   | # B is parent package of A                                  |
 
-| TABLE | files |            |          |
-| id    | path  | stamp      | language |
-| -1    |  /    | 1970-01-01 | ada      |
+| TABLE | files |            |          |         |
+| id    | path  | stamp      | language | project |
+| -2    |  /    | 1970-01-01 | project  | NULL    |
+| -1    |  /    | 1970-01-01 | ada      | -2      |
 
 # The predefined entities for each languages. New ones will be inserted as
 # needed, but having a pre-made list helps documentation.

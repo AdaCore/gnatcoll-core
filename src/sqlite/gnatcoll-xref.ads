@@ -62,6 +62,7 @@ package GNATCOLL.Xref is
 
    procedure Setup_DB
      (Self  : in out Xref_Database;
+      Tree  : not null GNATCOLL.Projects.Project_Tree_Access;
       DB    : not null access
         GNATCOLL.SQL.Exec.Database_Description_Record'Class;
       Error : in out GNAT.Strings.String_Access;
@@ -200,6 +201,7 @@ package GNATCOLL.Xref is
       Entity  : Entity_Information;
       File    : GNATCOLL.VFS.Virtual_File;
       Line    : Integer;
+      Project : GNATCOLL.Projects.Project_Type;
       Column  : Visible_Column;
       Kind    : Ada.Strings.Unbounded.Unbounded_String;
       Scope   : Entity_Information;
@@ -232,18 +234,20 @@ package GNATCOLL.Xref is
    --  path name of files (rather than the default base name)
 
    function Get_Entity
-     (Self   : Xref_Database;
-      Name   : String;   --  UTF-8 encoded
-      File   : String;
-      Line   : Integer := -1;
-      Column : Visible_Column := -1;
+     (Self    : Xref_Database;
+      Name    : String;   --  UTF-8 encoded
+      File    : String;
+      Project : GNATCOLL.Projects.Project_Type;
+      Line    : Integer := -1;
+      Column  : Visible_Column := -1;
       Approximate_Search_Fallback : Boolean := True) return Entity_Reference;
    function Get_Entity
-     (Self   : Xref_Database;
-      Name   : String;   --  UTF-8 encoded
-      File   : GNATCOLL.VFS.Virtual_File;
-      Line   : Integer := -1;
-      Column : Visible_Column := -1;
+     (Self    : Xref_Database;
+      Name    : String;   --  UTF-8 encoded
+      File    : GNATCOLL.VFS.Virtual_File;
+      Project : GNATCOLL.Projects.Project_Type;
+      Line    : Integer := -1;
+      Column  : Visible_Column := -1;
       Approximate_Search_Fallback : Boolean := True) return Entity_Reference;
    --  Return the entity that has a reference at the given location.
    --  When the file is passed as a string, it is permissible to pass only the
@@ -252,6 +256,11 @@ package GNATCOLL.Xref is
    --  File names must be normalized in Unix format (ie using '/' as a
    --  separator, and resolving symbolic links) when you pass a string. This is
    --  done automatically if you pass a Virtual_File.
+   --
+   --  The project information is used when the user has loaded an aggregate
+   --  project, since the xref for A:a.ads:1 could end up being in
+   --  dir1/b.ads or dir2/b.ads for instance, depending on which project
+   --  a.ads is seen from.
 
    function Is_Fuzzy_Match (Self : Entity_Information) return Boolean;
    --  Returns True if the entity that was found is only an approximation,
@@ -313,7 +322,8 @@ package GNATCOLL.Xref is
    function Declaration
      (Xref   : Xref_Database;
       Entity : Entity_Information) return Entity_Declaration;
-   --  Return the name of the entity
+   --  Return information on the entity (its name, kind, the location of its
+   --  declaration,...)
 
    function Is_Predefined_Entity
      (Decl : Entity_Declaration) return Boolean;
@@ -802,33 +812,41 @@ package GNATCOLL.Xref is
    function Element (Self : Files_Cursor) return GNATCOLL.VFS.Virtual_File;
 
    function Imported_By
-     (Self : Xref_Database'Class;
-      File : GNATCOLL.VFS.Virtual_File) return Files_Cursor;
+     (Self    : Xref_Database'Class;
+      File    : GNATCOLL.VFS.Virtual_File;
+      Project : GNATCOLL.Projects.Project_Type) return Files_Cursor;
    --  Returns the list of files that import (via a "with" statement in Ada,
    --  or a "#include# in C) the parameter File.
+   --  The project is used when loading aggregate projects, since although
+   --  the dependencies do not change, a "with A" could point to dir1/a.ads
+   --  or dir2/a.ads depending on which project we are using.
 
    function Imports
-     (Self : Xref_Database'Class;
-      File : GNATCOLL.VFS.Virtual_File) return Files_Cursor;
+     (Self    : Xref_Database'Class;
+      File    : GNATCOLL.VFS.Virtual_File;
+      Project : GNATCOLL.Projects.Project_Type) return Files_Cursor;
    --  Returns the list of files that File depends on directly.
 
    package File_Sets is new Ada.Containers.Ordered_Sets
      (GNATCOLL.VFS.Virtual_File, GNATCOLL.VFS."<", GNATCOLL.VFS."=");
 
    function Depends_On
-     (Self : Xref_Database'Class;
-      File : GNATCOLL.VFS.Virtual_File) return File_Sets.Set;
+     (Self    : Xref_Database'Class;
+      File    : GNATCOLL.VFS.Virtual_File;
+      Project : GNATCOLL.Projects.Project_Type) return File_Sets.Set;
    --  Returns the list of files that File depends on explicitly or implicitly.
 
    procedure Referenced_In
-     (Self   : Xref_Database'Class;
-      File   : GNATCOLL.VFS.Virtual_File;
-      Cursor : out Entities_Cursor'Class);
+     (Self    : Xref_Database'Class;
+      File    : GNATCOLL.VFS.Virtual_File;
+      Project : GNATCOLL.Projects.Project_Type;
+      Cursor  : out Entities_Cursor'Class);
    procedure Referenced_In
-     (Self   : Xref_Database'Class;
-      File   : GNATCOLL.VFS.Virtual_File;
-      Name   : String;   --  UTF-8 encoded
-      Cursor : out Entities_Cursor'Class);
+     (Self    : Xref_Database'Class;
+      File    : GNATCOLL.VFS.Virtual_File;
+      Project : GNATCOLL.Projects.Project_Type;
+      Name    : String;   --  UTF-8 encoded
+      Cursor  : out Entities_Cursor'Class);
    --  Returns the list of all the entities referenced at least once in the
    --  given file. This of course includes entities declared in that file.
    --
@@ -860,12 +878,13 @@ package GNATCOLL.Xref is
    --  update it.
 
    function Add_Entity
-     (Self        : Xref_Database;
-      Name        : String;   --  UTF-8 encoded
-      Kind        : String;
-      Decl_File   : GNATCOLL.VFS.Virtual_File;
-      Decl_Line   : Natural;
-      Decl_Column : Natural) return Entity_Information;
+     (Self         : Xref_Database;
+      Name         : String;   --  UTF-8 encoded
+      Kind         : String;
+      Decl_File    : GNATCOLL.VFS.Virtual_File;
+      Decl_Project : GNATCOLL.Projects.Project_Type;
+      Decl_Line    : Natural;
+      Decl_Column  : Natural) return Entity_Information;
    --  Insert a dummy entity in the database.
    --  Kind must correspond to one of the entries
 
@@ -889,6 +908,9 @@ private
       --  Whether we have already created the database (or assumed that it
       --  existed). This is so that running Parse_All_LI_Files multiple times
       --  for an in-memory database does not always try to recreate it
+
+      Tree  : access GNATCOLL.Projects.Project_Tree'Class;
+      --  The project tree
    end record;
 
    type Entity_Information is record
@@ -901,6 +923,7 @@ private
    No_Entity_Reference : constant Entity_Reference :=
      (Entity  => No_Entity,
       File    => GNATCOLL.VFS.No_File,
+      Project => GNATCOLL.Projects.No_Project,
       Line    => -1,
       Column  => -1,
       Kind    => Ada.Strings.Unbounded.Null_Unbounded_String,
@@ -930,6 +953,7 @@ private
 
    type Base_Cursor is abstract tagged record
       DBCursor : GNATCOLL.SQL.Exec.Forward_Cursor;
+      Tree     : access Project_Tree'Class;
    end record;
 
    type References_Cursor is new Base_Cursor with record
