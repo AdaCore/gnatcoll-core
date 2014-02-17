@@ -632,6 +632,11 @@ package GNATCOLL.Projects is
    --  in, you must pass a Project argument. The file must be a direct source
    --  of that project.
    --
+   --  If a given full path is part of the sources for several projects, this
+   --  is also considered as ambiguous, because the associated object file,
+   --  for instance, is different. However, in this case the returned value is
+   --  set to the common source file, and Ambiguous is set to True.
+   --
    --  When a file is ambiguous, No_File is returned, and Ambiguous (if given)
    --  is set To True.
    --

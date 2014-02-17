@@ -787,14 +787,15 @@ procedure GNATInspect is
          end if;
       end if;
 
-      if File = No_File then
-         if Ambiguous then
-            Put_Line (Output_Lead.all & "Error: ambiguous file name '"
-                      & Words (Words'First).all & "'");
-         else
-            Put_Line (Output_Lead.all & "Error: file not found '"
-                      & Words (Words'First).all & "'");
-         end if;
+      --  Whether or not File has been set, we know there are multiple
+      --  projects involved, and thus the xref are ambiguous
+
+      if Ambiguous then
+         Put_Line (Output_Lead.all & "Error : ambiguous file name '"
+                   & Words (Words'First).all & "'");
+      else
+         Put_Line (Output_Lead.all & "Error : file not found '"
+                   & Words (Words'First).all & "'");
       end if;
 
       Free (Words);
@@ -866,14 +867,16 @@ procedure GNATInspect is
          Project   => Project,
          Ambiguous => Ambiguous'Access);
 
-      if File = No_File then
-         if Ambiguous then
-            Put_Line (Output_Lead.all & "Error: ambiguous file name '"
-                      & Words (Words'First + 1).all & "'");
-         else
-            Put_Line (Output_Lead.all & "Error: file not found '"
-                      & Words (Words'First + 1).all & "'");
-         end if;
+      if Ambiguous then
+         --  Whether or not File has been set, we know there are multiple
+         --  projects involved, and thus the xref are ambiguous
+         Put_Line (Output_Lead.all & "Error: ambiguous file name '"
+                   & Words (Words'First + 1).all & "'");
+         return No_Entity;
+
+      elsif File = No_File then
+         Put_Line (Output_Lead.all & "Error: file not found '"
+                   & Words (Words'First + 1).all & "'");
          return No_Entity;
       end if;
 

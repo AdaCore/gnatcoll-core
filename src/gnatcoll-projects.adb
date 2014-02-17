@@ -124,10 +124,6 @@ package body GNATCOLL.Projects is
    --  aggregated projects, so there are different Source_File_Data instances
    --  for such each such project;
 
-   function Same_Source_And_Project (L, R : Source_File_Data) return Boolean;
-   --  Returns true is both arguments have same full names and belong to
-   --  the same project.
-
    function Hash
      (File : GNATCOLL.VFS.Filesystem_String) return Ada.Containers.Hash_Type;
    function Equal (F1, F2 : GNATCOLL.VFS.Filesystem_String) return Boolean;
@@ -1473,20 +1469,18 @@ package body GNATCOLL.Projects is
       function Ambiguous_Base_Name
         (First_SFD : Source_File_Data) return Boolean;
       --  Return false if any of source files in given list has different full
-      --  name than First_SFD.
+      --  paths than First_SFD.
 
       function Ambiguous_Base_Name
         (First_SFD : Source_File_Data) return Boolean
       is
-         Next_SFD : Source_File_Data := First_SFD;
+         Next_SFD : Source_File_Data_Access := First_SFD.Next;
       begin
-         loop
+         while Next_SFD /= null loop
             if Next_SFD.File /= First_SFD.File then
                return True;
             end if;
-
-            exit when Next_SFD.Next = null;
-            Next_SFD := Next_SFD.Next.all;
+            Next_SFD := Next_SFD.Next;
          end loop;
 
          return False;
@@ -1515,15 +1509,26 @@ package body GNATCOLL.Projects is
          Info_Cursor := Self.Data.Sources.Find (Base);
 
          if Has_Element (Info_Cursor) then
-            if Ambiguous_Base_Name (Element (Info_Cursor)) then
-               if Ambiguous /= null then
-                  Ambiguous.all := True;
+            --  Multiple cases for ambiguity:
+            --    1 - multiple possible full paths
+            --    2 - same full path in multiple projects
+
+            declare
+               C : Source_File_Data renames Element (Info_Cursor);
+            begin
+               if Ambiguous_Base_Name (Element (Info_Cursor)) then
+                  if Ambiguous /= null then
+                     Ambiguous.all := True;
+                  end if;
+                  return GNATCOLL.VFS.No_File;
                end if;
 
-               return GNATCOLL.VFS.No_File;
-            else
-               return Element (Info_Cursor).File;
-            end if;
+               if C.Next /= null and then Ambiguous /= null then
+                  Ambiguous.all := True;
+               end if;
+            end;
+
+            return Element (Info_Cursor).File;
          end if;
       end if;
 
@@ -4788,7 +4793,8 @@ package body GNATCOLL.Projects is
       elsif Prj2.Data = null then
          return False;
       else
-         return Prj1.Data.Node = Prj2.Data.Node;
+         return Prj1.Data.Node = Prj2.Data.Node
+           and then Prj1.Data.Local_Tree = Prj2.Data.Local_Tree;
       end if;
    end "=";
 
@@ -5560,15 +5566,6 @@ package body GNATCOLL.Projects is
       return Self.Data.Root;
    end Root_Project;
 
-   -----------------------------
-   -- Same_Source_And_Project --
-   -----------------------------
-
-   function Same_Source_And_Project (L, R : Source_File_Data) return Boolean is
-   begin
-      return L.Project = R.Project and then L.File = R.File;
-   end Same_Source_And_Project;
-
    ----------------------------------
    -- Directory_Belongs_To_Project --
    ----------------------------------
@@ -5619,58 +5616,47 @@ package body GNATCOLL.Projects is
       Key  : GNATCOLL.VFS.Filesystem_String;
       Elem : Source_File_Data)
    is
-      M_Cur       : Names_Files.Cursor;
+      M_Cur       : constant Names_Files.Cursor := Map.Find (Key);
       Found_Elem  : Source_File_Data;
       Elem_Access : Source_File_Data_Access;
 
    begin
-      M_Cur := Map.Find (Key);
       if M_Cur = Names_Files.No_Element then
-         Names_Files.Include (Map, Key, Elem);
+         Map.Include (Key, Elem);
          return;
       end if;
 
       Found_Elem := Names_Files.Element (M_Cur);
 
-      --  Check the first one with same base name since we might have to update
-      --  it in the map,
-      if Same_Source_And_Project (Found_Elem, Elem) then
+      if Found_Elem.Project = Elem.Project
+        and then Found_Elem.File = Elem.File
+      then
          --  Exactly same file, nothing has to be done.
          return;
+
+      elsif Found_Elem.Next = null then
+         Found_Elem.Next := new Source_File_Data'(Elem);
+         Map.Replace (Key, Found_Elem);
+
       else
+         --  Look through other files with same base name and add elem
+         --  if not present.
 
-         --  Another file with same base name.
+         Elem_Access := Found_Elem.Next;
+         loop
+            if Elem_Access.Project = Elem.Project
+              and then Elem_Access.File = Elem.File
+            then
+               return;
+            end if;
 
-         if Found_Elem.Next = null then
-            --  We still have to update the element in map.
+            if Elem_Access.Next = null then
+               Elem_Access.Next := new Source_File_Data'(Elem);
+               return;
+            end if;
 
-            Found_Elem.Next := new Source_File_Data'(Elem);
-            Map.Replace (Key, Found_Elem);
-
-         else
-            --  Look through other files with same base name and add elem
-            --  if not present.
-
-            Elem_Access := Found_Elem.Next;
-            loop
-
-               if Same_Source_And_Project (Elem_Access.all, Elem) then
-                  --  Same file, nothing to add.
-                  return;
-               end if;
-
-               if Elem_Access.Next = null then
-
-                  --  We're at the last one, no given file in map.
-
-                  Elem_Access.Next := new Source_File_Data'(Elem);
-                  return;
-
-               else
-                  Elem_Access := Elem_Access.Next;
-               end if;
-            end loop;
-         end if;
+            Elem_Access := Elem_Access.Next;
+         end loop;
       end if;
    end Include_File;
 
@@ -7056,7 +7042,8 @@ package body GNATCOLL.Projects is
                   File : constant Virtual_File :=
                     Create (+Name_Buffer (1 .. Name_Len));
                begin
-                  if Is_Aggregate_Project (Self.Data.Root) then
+                  if Self.Data.Root.Is_Aggregate_Project then
+                     --  If we have duplicates, create lists
                      Include_File
                        (Self.Data.Sources,
                         Base_Name (File),
@@ -7099,8 +7086,8 @@ package body GNATCOLL.Projects is
                                  (P, File, Source.Language.Name, Source,
                                   null));
                            end if;
-                        else
 
+                        else
                            if Is_Aggregate_Project (Self.Data.Root) then
                               Include_File
                                 (Self.Data.Objects_Basename,
