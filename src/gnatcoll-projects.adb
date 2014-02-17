@@ -947,6 +947,7 @@ package body GNATCOLL.Projects is
 
    begin
       if Is_Aggregate_Project (Self) then
+         Increase_Indent (Me, "Library file for an aggregate project");
          declare
             Aggregated : Aggregated_Project_List;
             P : Project_Type;
@@ -972,9 +973,9 @@ package body GNATCOLL.Projects is
             end loop;
          end;
 
+         Decrease_Indent (Me, "Done Library file for aggregate project");
          return;
       end if;
-
 
       if Active (Me) then
          Increase_Indent
@@ -1038,9 +1039,8 @@ package body GNATCOLL.Projects is
                            Dot : Integer;
                            P, Lowest_Project   : Project_Type;
                         begin
-                           Info_Cursor :=
-                             Find_In_Subtree
-                               (Self.Data.Tree.Objects_Basename, B, Self);
+                           Info_Cursor := Find_In_Subtree
+                             (Self.Data.Tree.Objects_Basename, B, Self);
 
                            if not Has_Element (Info_Cursor) then
                               --  Special case for C files: the library file is
@@ -1220,7 +1220,7 @@ package body GNATCOLL.Projects is
       Unchecked_Free (Re);
 
       if Active (Me) then
-         Decrease_Indent (Me);
+         Decrease_Indent (Me, "Done library files");
       end if;
    end Library_Files;
 
@@ -3219,7 +3219,6 @@ package body GNATCOLL.Projects is
       if Project.Data /= null
          and then Project.Data.Imported_Projects = null
       then
-
          if Project.Data.Local_Node_Tree = null then
             For_Each_Project_Node
               (Project.Data.Tree.Tree, Project.Data.Node,
@@ -3447,24 +3446,19 @@ package body GNATCOLL.Projects is
             Aggregated := Project.Data.View.Aggregated_Projects;
 
             while Aggregated /= null loop
-
                P := Project_Type
                  (Project_From_Path (Project.Data.Tree, Aggregated.Path));
 
                if Direct_Only then
-
-                  if
-                    Project_Paths.Find
-                      (Project_Path (P).Display_Full_Name) =
-                        Path_Sets.No_Element
+                  if Project_Paths.Find (P.Project_Path.Display_Full_Name) =
+                      Path_Sets.No_Element
                   then
                      --  we only need projects that are not yet in the list
                      Iter.Project_List.Append (P);
-                     Project_Paths.Include
-                       (Project_Path (P).Display_Full_Name);
+                     Project_Paths.Include (P.Project_Path.Display_Full_Name);
                   end if;
-               else
 
+               else
                   Add_Project (P);
                end if;
 
@@ -3472,17 +3466,14 @@ package body GNATCOLL.Projects is
             end loop;
 
             --  aggregate project goes last in straight order
-            if
-              Project_Paths.Find
-                (Project_Path (Project).Display_Full_Name) =
-                  Path_Sets.No_Element
+            if Project_Paths.Find
+              (Project.Project_Path.Display_Full_Name) = Path_Sets.No_Element
             then
                Iter.Project_List.Append (Project_Type (Project));
-               Project_Paths.Include
-                 (Project_Path (Project).Display_Full_Name);
+               Project_Paths.Include (Project.Project_Path.Display_Full_Name);
             end if;
-         else
 
+         else
             --  For the regulat project (aggregated or root) do a full
             --  iteration placing projects in the list.
             Iter_Inner :=
@@ -3492,18 +3483,15 @@ package body GNATCOLL.Projects is
                  Direct_Only      => Direct_Only,
                  Include_Extended => Include_Extended);
 
-            loop
-               exit when Current (Iter_Inner) = No_Project;
-
-               if
-                 Project_Paths.Find
-                   (Project_Path (Current (Iter_Inner)).Display_Full_Name) =
-                     Path_Sets.No_Element
+            while Current (Iter_Inner) /= No_Project loop
+               if Project_Paths.Find
+                 (Current (Iter_Inner).Project_Path.Display_Full_Name) =
+                   Path_Sets.No_Element
                then
                   --  we only need projects that are not yet in the list
                   Iter.Project_List.Append (Current (Iter_Inner));
                   Project_Paths.Include
-                    (Project_Path (Current (Iter_Inner)).Display_Full_Name);
+                    (Current (Iter_Inner).Project_Path.Display_Full_Name);
                end if;
 
                Next (Iter_Inner);
@@ -3512,7 +3500,6 @@ package body GNATCOLL.Projects is
       end Add_Project;
 
    begin
-
       Iter.Root := Root_Project;
 
       if not Recursive then
@@ -4848,6 +4835,7 @@ package body GNATCOLL.Projects is
          --  Setting proper tree for aggregated projects.
          Tree := Project.Data.Local_Node_Tree;
       end if;
+
       Extended := Project.Data.Node;
 
       loop
@@ -4873,8 +4861,9 @@ package body GNATCOLL.Projects is
          return No_Project;
       else
          return Project_Type
-           (Project_From_Name
-              (Project.Data.Tree, Prj.Tree.Name_Of (Extending, Tree)));
+           (Project_From_Path
+              (Project.Data.Tree,
+               Prj.Tree.Path_Name_Of (Extending, Tree)));
       end if;
    end Extending_Project;
 
@@ -5091,7 +5080,8 @@ package body GNATCOLL.Projects is
             while P_Cursor /= Project_Htables.No_Element loop
                if To_Lower (Element (P_Cursor).Name) = N then
                   if Name_Found then
-                     Trace (Me, "Multiple projects with same name");
+                     Trace (Me, "Multiple projects with same name ("
+                            & N & ')');
                      return No_Project;
                   else
                      Name_Found := True;
@@ -5758,7 +5748,8 @@ package body GNATCOLL.Projects is
       Project_File     : GNATCOLL.VFS.Virtual_File := Root_Project_Path;
 
    begin
-      Trace (Me, "Load project " & Root_Project_Path.Display_Full_Name);
+      Increase_Indent
+        (Me, "Load project " & Root_Project_Path.Display_Full_Name);
 
       if Active (Me_Gnat) then
          Prj.Current_Verbosity := Prj.High;
@@ -5782,8 +5773,9 @@ package body GNATCOLL.Projects is
                 (Full_Name (Project_File) & Project_File_Extension,
                  Resolve_Links => False));
          if not Is_Regular_File (Project_File) then
-            Trace (Me, "Load: " & Display_Full_Name (Project_File)
-                   & " is not a regular file");
+            Decrease_Indent
+              (Me, "Load: " & Display_Full_Name (Project_File)
+               & " is not a regular file");
 
             if Errors /= null then
                Errors (Display_Full_Name (Root_Project_Path)
@@ -5831,6 +5823,7 @@ package body GNATCOLL.Projects is
          Free (Tmp.Data.View);
          Free (Tmp.Data);
 
+         Decrease_Indent (Me, "empty_node after parsing the tree");
          raise Invalid_Project;
       end if;
 
@@ -5863,7 +5856,7 @@ package body GNATCOLL.Projects is
          Delete (Previous_Project, Success);
       end if;
 
-      Trace (Me, "End of Load project");
+      Decrease_Indent (Me, "End of Load project");
    end Load;
 
    ---------------------
@@ -5972,7 +5965,8 @@ package body GNATCOLL.Projects is
       Fd      : Process_Descriptor_Access;
 
    begin
-      Trace (Me, "Executing " & Argument_List_To_String (Gnatls_Args.all));
+      Increase_Indent
+        (Me, "Executing " & Argument_List_To_String (Gnatls_Args.all));
       begin
          Success := True;
 
@@ -6021,6 +6015,7 @@ package body GNATCOLL.Projects is
                "sure they are in your ADA_PROJECT_PATH");
          end if;
 
+         Decrease_Indent (Me);
          return;
       end if;
 
@@ -6039,6 +6034,7 @@ package body GNATCOLL.Projects is
       end if;
 
       Free (Gnatls_Args);
+      Decrease_Indent (Me);
    end Set_Path_From_Gnatls;
 
    ---------------------------------
@@ -6991,7 +6987,7 @@ package body GNATCOLL.Projects is
       Source_File_List : Virtual_File_List.List;
 
    begin
-      Trace (Me, "Parse source files");
+      Increase_Indent (Me, "Parse source files");
 
       Iter := Self.Root_Project.Start (Recursive => True);
 
@@ -7039,7 +7035,11 @@ package body GNATCOLL.Projects is
             Source_Iter := For_Each_Source (Self.Data.View, Get_View (P));
          else
             Source_Iter := For_Each_Source (P.Data.Local_Tree, Get_View (P));
-            Trace (Me, "Local tree chosen");
+
+            if Active (Me) then
+               Trace (Me, "Using tree from aggregated project "
+                      & P.Project_Path.Display_Full_Name);
+            end if;
          end if;
          loop
             Source := Element (Source_Iter);
@@ -7167,6 +7167,8 @@ package body GNATCOLL.Projects is
 
          Next (Iter);
       end loop;
+
+      Decrease_Indent (Me, "Done parse source files");
    end Parse_Source_Files;
 
    ------------
