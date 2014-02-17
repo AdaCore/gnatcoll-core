@@ -793,7 +793,7 @@ procedure GNATInspect is
       if Ambiguous then
          Put_Line (Output_Lead.all & "Error : ambiguous file name '"
                    & Words (Words'First).all & "'");
-      else
+      elsif File = No_File then
          Put_Line (Output_Lead.all & "Error : file not found '"
                    & Words (Words'First).all & "'");
       end if;
