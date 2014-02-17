@@ -1302,7 +1302,7 @@ package body GNATCOLL.Scripts.Python is
 
          S := PyObject_Repr (Occurrence);
          if S /= null then
-            Trace (Me_Error, "Exception "& PyString_AsString (S));
+            Trace (Me_Error, "Exception " & PyString_AsString (S));
             Py_DECREF (S);
          end if;
 
@@ -1418,7 +1418,7 @@ package body GNATCOLL.Scripts.Python is
                PyErr_NormalizeException (Typ, Occurrence, Traceback);
                S := PyObject_Repr (Occurrence);
                if S /= null then
-                  Trace (Me_Error, "Exception "& PyString_AsString (S));
+                  Trace (Me_Error, "Exception " & PyString_AsString (S));
                   Py_DECREF (S);
                else
                   Trace
@@ -1512,7 +1512,7 @@ package body GNATCOLL.Scripts.Python is
 
             S := PyObject_Repr (Occurrence);
             if S /= null then
-               Trace (Me_Error, "Exception "& PyString_AsString (S));
+               Trace (Me_Error, "Exception " & PyString_AsString (S));
                Py_DECREF (S);
             end if;
 
