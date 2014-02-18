@@ -422,6 +422,7 @@ package GNATCOLL.Projects is
    function Source_Dirs
      (Project   : Project_Type;
       Recursive : Boolean := False) return GNATCOLL.VFS.File_Array;
+   pragma Precondition (Project /= No_Project);
    --  Return the list of source directories.
    --  The directories are returned in the order in which they are defined in
    --  the project files, so that in the case of Ada files the file will first
@@ -899,6 +900,7 @@ package GNATCOLL.Projects is
       Recursive        : Boolean := True;
       Direct_Only      : Boolean := False;
       Include_Extended : Boolean := True) return Project_Iterator;
+   pragma Precondition (Root_Project /= No_Project);
    --  Initialize the iterator to start at Root_Project.
    --  It will process Root_Project and all its subprojects, recursively, but
    --  without processing the same project twice.

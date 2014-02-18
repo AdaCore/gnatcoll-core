@@ -3572,9 +3572,6 @@ package body GNATCOLL.Projects is
    is
       Iter : Inner_Project_Iterator;
    begin
-      Assert (Me, Root_Project.Data /= null,
-              "Start: Uninitialized project passed as argument");
-
       Compute_Imported_Projects (Root_Project);
 
       if Recursive then
