@@ -964,9 +964,10 @@ package body GNATCOLL.Xref is
    --  once we have parsed the whole ALI file.
 
    type LI_Info is record
-      Id         : Integer;  --  for the LI file
-      LI         : GNATCOLL.Projects.Library_Info;
-      Stamp      : Time;
+      Id     : Integer;  --  for the LI file
+      LI     : GNATCOLL.Projects.Library_Info;
+      Is_New : Boolean;
+      Stamp  : Time;
    end record;
    package LI_Lists is new Ada.Containers.Doubly_Linked_Lists (LI_Info);
    use LI_Lists;
@@ -1021,7 +1022,7 @@ package body GNATCOLL.Xref is
    --  Behavior is undefined if the database is not empty initially.
 
    procedure Parse_LI
-     (DB                  : Database_Connection;
+     (Self                : Xref_Database'Class;
       LI                  : LI_Info;
       Default_Iconv_State : Iconv_T;
       Source_To_Id        : in out VFS_To_Ids.Map;
@@ -1326,7 +1327,7 @@ package body GNATCOLL.Xref is
    --------------
 
    procedure Parse_LI
-     (DB                  : Database_Connection;
+     (Self                : Xref_Database'Class;
       LI                  : LI_Info;
       Default_Iconv_State : Iconv_T;
       Source_To_Id        : in out VFS_To_Ids.Map;
@@ -1336,13 +1337,14 @@ package body GNATCOLL.Xref is
       Visited_ALI_Units   : in out VFS_To_Ids.Map;
       Visited_GLI_Files   : in out VFS_To_Ids.Map)
    is
+      DB : constant Database_Connection := Self.DB;
+
       M      : Mapped_File;
       Str    : Str_Access;
       Last   : Integer;
       Index  : Integer;
 
-      LI_Project : constant Project_Type :=
-        Project_Type (LI.LI.LI_Project.all);
+      LI_Project : Project_Type := No_Project;
 
       ALI_Id   : constant Integer := LI.Id;
 
@@ -3001,8 +3003,13 @@ package body GNATCOLL.Xref is
          Increase_Indent
            (Me_Parsing, "Parse LI "
             & (+LI.LI.Library_File.Unix_Style_Full_Name
-              (Normalize => True)) & " in project "
-            & LI.LI.LI_Project.Project_Path.Display_Full_Name);
+              (Normalize => True)));
+      end if;
+
+      if LI.LI.LI_Project /= null then
+         LI_Project := Project_Type (LI.LI.LI_Project.all);
+      else
+         LI_Project := Self.Tree.Root_Project;
       end if;
 
       M := Open_Read
@@ -3338,9 +3345,10 @@ package body GNATCOLL.Xref is
          --  on Windows (conversion to Time).
 
          LI :=
-           (LI         => Element (Lib_Info),
-            Id         => -1,   --  unknown in the database
-            Stamp      => Element (Lib_Info).Library_File.File_Time_Stamp);
+           (LI     => Element (Lib_Info),
+            Id     => -1,   --  unknown in the database
+            Is_New => False,
+            Stamp  => Element (Lib_Info).Library_File.File_Time_Stamp);
 
          declare
             N : aliased String :=
@@ -3368,6 +3376,7 @@ package body GNATCOLL.Xref is
                --  same LI file could be seen again if we are using aggregate
                --  projects
 
+               LI.Is_New := True;
                LI.Id := Database.DB.Insert_And_Get_PK
                  (Query_Insert_LI_File,
                   Params => (1 => +N'Unchecked_Access,
@@ -3726,7 +3735,7 @@ package body GNATCOLL.Xref is
          LI_C := LIs.First;
          while Has_Element (LI_C) loop
             Lib := Element (LI_C);
-            if Lib.Id /= -1 then
+            if not Lib.Is_New then
                DB.Execute
                  ("INSERT INTO temp_lis VALUES (" & Lib.Id'Img & ");");
 
@@ -3808,7 +3817,7 @@ package body GNATCOLL.Xref is
                      Source_To_Id.Clear;
                   end if;
 
-                  Parse_LI (DB                  => DB,
+                  Parse_LI (Self                => Self,
                             LI                  => Lib,
                             Default_Iconv_State => Iconv_State,
                             Source_To_Id        => Source_To_Id,
