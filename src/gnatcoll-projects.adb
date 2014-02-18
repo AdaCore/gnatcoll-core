@@ -864,12 +864,15 @@ package body GNATCOLL.Projects is
         (Map  : Names_Files.Map;
          Key  : GNATCOLL.VFS.Filesystem_String;
          Root : Project_Type) return Names_Files.Cursor;
-      Local_Obj_Map : Names_Files.Map;
       --  Searches for Source_File_Data with given base name and a project from
       --  a project subtree that starts from Root.
       --  If the resulting Source_File_Data is not the first one in the list,
       --  it is placed in Local_Obj_Map and returning Coursor points to it.
       --  Local_Obj_Map must be cleared after each object file processed.
+      --
+      --  ??? This function seems to be the same as Create_From_Project.
+
+      Local_Obj_Map : Names_Files.Map;
 
       -------------------
       -- Get_Base_Name --
@@ -1453,9 +1456,30 @@ package body GNATCOLL.Projects is
       Name            : Filesystem_String;
       Project         : Project_Type'Class := No_Project;
       Use_Source_Path : Boolean := True;
-      Use_Object_Path : Boolean := True;
-      Ambiguous       : access Boolean := null)
+      Use_Object_Path : Boolean := True)
       return GNATCOLL.VFS.Virtual_File
+   is
+      File      : GNATCOLL.VFS.Virtual_File;
+      Ambiguous : Boolean;
+   begin
+      Create
+        (Self, Name, Project, Use_Source_Path, Use_Object_Path,
+         Ambiguous, File);
+      return File;
+   end Create;
+
+   ------------
+   -- Create --
+   ------------
+
+   procedure Create
+     (Self            : Project_Tree;
+      Name            : GNATCOLL.VFS.Filesystem_String;
+      Project         : Project_Type'Class := No_Project;
+      Use_Source_Path : Boolean := True;
+      Use_Object_Path : Boolean := True;
+      Ambiguous       : out Boolean;
+      File            : out GNATCOLL.VFS.Virtual_File)
    is
       Base          : constant Filesystem_String := Base_Name (Name);
       Project2      : Project_Type;
@@ -1487,17 +1511,17 @@ package body GNATCOLL.Projects is
       end Ambiguous_Base_Name;
 
    begin
-      if Ambiguous /= null then
-         Ambiguous.all := False;
-      end if;
+      Ambiguous := False;
 
       if Self.Data = null then
          --  No view computed, we do not even know the source dirs
-         return GNATCOLL.VFS.No_File;
+         File := GNATCOLL.VFS.No_File;
+         return;
       end if;
 
       if Is_Absolute_Path (Name) then
-         return Create (Normalize_Pathname (Name, Resolve_Links => False));
+         File := Create (Normalize_Pathname (Name, Resolve_Links => False));
+         return;
       end if;
 
       --  Is the file already in the cache ?
@@ -1517,18 +1541,18 @@ package body GNATCOLL.Projects is
                C : Source_File_Data renames Element (Info_Cursor);
             begin
                if Ambiguous_Base_Name (Element (Info_Cursor)) then
-                  if Ambiguous /= null then
-                     Ambiguous.all := True;
-                  end if;
-                  return GNATCOLL.VFS.No_File;
+                  Ambiguous := True;
+                  File := GNATCOLL.VFS.No_File;
+                  return;
                end if;
 
-               if C.Next /= null and then Ambiguous /= null then
-                  Ambiguous.all := True;
+               if C.Next /= null then
+                  Ambiguous := True;
                end if;
             end;
 
-            return Element (Info_Cursor).File;
+            File := Element (Info_Cursor).File;
+            return;
          end if;
       end if;
 
@@ -1552,7 +1576,8 @@ package body GNATCOLL.Projects is
                   Path := Project2.Project_Path;
                else
                   --  Duplicate project base name.
-                  return GNATCOLL.VFS.No_File;
+                  File := GNATCOLL.VFS.No_File;
+                  return;
                end if;
             end if;
 
@@ -1562,7 +1587,8 @@ package body GNATCOLL.Projects is
 
       if Path /= GNATCOLL.VFS.No_File then
          --  Found single project with given base name.
-         return Path;
+         File := Path;
+         return;
       end if;
 
       --  We have to search in one or more projects
@@ -1584,7 +1610,8 @@ package body GNATCOLL.Projects is
                 (Recursive => False, Including_Libraries => True)) /=
                GNATCOLL.VFS.No_File
          then
-            return GNATCOLL.VFS.No_File;
+            File := GNATCOLL.VFS.No_File;
+            return;
          end if;
 
          if not Duplicate_Obj and then Use_Source_Path then
@@ -1681,7 +1708,7 @@ package body GNATCOLL.Projects is
          Include_File (Self.Data.Sources, Base, Source_Info);
       end if;
 
-      return Path;
+      File := Path;
    end Create;
 
    ------------------

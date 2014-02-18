@@ -599,9 +599,16 @@ package GNATCOLL.Projects is
       Name            : GNATCOLL.VFS.Filesystem_String;
       Project         : Project_Type'Class := No_Project;
       Use_Source_Path : Boolean := True;
-      Use_Object_Path : Boolean := True;
-      Ambiguous       : access Boolean := null)
+      Use_Object_Path : Boolean := True)
       return GNATCOLL.VFS.Virtual_File;
+   procedure Create
+     (Self            : Project_Tree;
+      Name            : GNATCOLL.VFS.Filesystem_String;
+      Project         : Project_Type'Class := No_Project;
+      Use_Source_Path : Boolean := True;
+      Use_Object_Path : Boolean := True;
+      Ambiguous       : out Boolean;
+      File            : out GNATCOLL.VFS.Virtual_File);
    --  Create a new file. This will automatically try to solve Name to an
    --  absolute path if it currently is a base name.
    --

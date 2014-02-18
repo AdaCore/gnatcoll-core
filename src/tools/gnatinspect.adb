@@ -765,25 +765,27 @@ procedure GNATInspect is
    --------------
 
    function Get_File (Arg : String) return File_And_Project is
-      Words   : String_List_Access := Split (Arg, On => ':');
-      File    : Virtual_File := GNATCOLL.VFS.No_File;
-      Project : Project_Type := No_Project;
-      Ambiguous : aliased Boolean := False;
+      Words     : String_List_Access := Split (Arg, On => ':');
+      File      : Virtual_File := GNATCOLL.VFS.No_File;
+      Project   : Project_Type := No_Project;
+      Ambiguous : Boolean := False;
    begin
       if Words'Length = 1 then
          Project := Tree.Root_Project;
-         File    := Tree.Create
+         Tree.Create
            (Name      => +Words (Words'First).all,
-            Ambiguous => Ambiguous'Access);
+            File      => File,
+            Ambiguous => Ambiguous);
       elsif Words'Length > 1 then
          --  The project could be given either by its name, or by its path.
 
          Project := Project_From_Arg (Words (Words'First + 1).all);
          if Project /= No_Project then
-            File := Tree.Create
+            Tree.Create
               (Name      => +Words (Words'First).all,
                Project   => Project,
-               Ambiguous => Ambiguous'Access);
+               File      => File,
+               Ambiguous => Ambiguous);
          end if;
       end if;
 
@@ -812,14 +814,14 @@ procedure GNATInspect is
       --  The project information is optional, and only used in case of
       --  ambiguities for aggregate projects.
 
-      Words   : String_List_Access := Split (Arg, On => ':');
-      Ref     : Entity_Reference;
-      Project : Project_Type := No_Project;
-      File    : Virtual_File := GNATCOLL.VFS.No_File;
-      Line    : Integer := -1;
-      Column  : Integer := -1;
-      Idx     : Natural;
-      Ambiguous : aliased Boolean;
+      Words     : String_List_Access := Split (Arg, On => ':');
+      Ref       : Entity_Reference;
+      Project   : Project_Type := No_Project;
+      File      : Virtual_File := GNATCOLL.VFS.No_File;
+      Line      : Integer := -1;
+      Column    : Integer := -1;
+      Idx       : Natural;
+      Ambiguous : Boolean;
    begin
       if Words'Length < 2 then
          Put_Line
@@ -862,10 +864,11 @@ procedure GNATInspect is
          end if;
       end if;
 
-      File := Tree.Create
+      Tree.Create
         (Name      => +Words (Words'First + 1).all,
          Project   => Project,
-         Ambiguous => Ambiguous'Access);
+         File      => File,
+         Ambiguous => Ambiguous);
 
       if Ambiguous then
          --  Whether or not File has been set, we know there are multiple
