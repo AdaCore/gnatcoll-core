@@ -633,12 +633,18 @@ procedure GNATInspect is
    ---------------------
 
    procedure Load_Project (Path : Virtual_File) is
+      procedure Local_On_Error (Str : String);
+      procedure Local_On_Error (Str : String) is
+      begin
+         Put_Line (Output_Lead.all & Str);
+      end Local_On_Error;
+
       GNAT_Version : GNAT.Strings.String_Access;
    begin
       Env.Set_Path_From_Gnatls
         (Gnatls       => "gnatls",
          GNAT_Version => GNAT_Version,
-         Errors       => Put_Line'Access);
+         Errors       => Local_On_Error'Unrestricted_Access);
       Free (GNAT_Version);
 
       --  The default extensions must match those defined in the gprconfig
@@ -664,19 +670,19 @@ procedure GNATInspect is
             Values => (1 => new String'(".")));
          Tree.Root_Project.Set_Attribute
            (Languages_Attribute, (1 => new String'("Ada")));
-         Tree.Recompute_View (Errors => Ada.Text_IO.Put_Line'Access);
+         Tree.Recompute_View (Errors => Local_On_Error'Unrestricted_Access);
       else
          Trace (Me, "processing 'PROJECT' '" & Path.Display_Full_Name & "'");
          Project_Is_Default := False;
          Tree.Load
            (Root_Project_Path => Path,
             Env               => Env,
-            Errors            => Put_Line'Access);
+            Errors            => Local_On_Error'Unrestricted_Access);
       end if;
 
    exception
       when GNATCOLL.Projects.Invalid_Project =>
-         Put_Line ("Error: invalid project file: '"
+         Put_Line (Output_Lead.all & "Error: invalid project file: '"
                    & Path.Display_Full_Name & "'");
    end Load_Project;
 

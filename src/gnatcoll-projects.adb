@@ -79,7 +79,7 @@ package body GNATCOLL.Projects is
    Me_Gnat : constant Trace_Handle :=
      Create ("Projects.GNAT", GNATCOLL.Traces.Off);
    Me_Aggregate_Support : constant Trace_Handle :=
-     Create ("Projects.Aggregate", Default => Off);
+     Create ("Projects.Aggregate", Default => On);
 
    Dummy_Suffix : constant String := "<no suffix defined>";
    --  A dummy suffixes that is used for languages that have either no spec or
@@ -1156,6 +1156,8 @@ package body GNATCOLL.Projects is
                                 (Library_File => Tmp (F),
                                  LI_Project => new Project_Type'
                                    (Current_Project),
+                                 Non_Aggregate_Root_Project =>
+                                    new Project_Type'(Self),
                                  Source       => new File_Info'
                                    (Source_File_Data_To_Info
                                         (Element (Info_Cursor)))));
@@ -1205,6 +1207,7 @@ package body GNATCOLL.Projects is
                         List.Append
                           (Library_Info'
                              (Library_File => Tmp (F),
+                              Non_Aggregate_Root_Project => null,
                               LI_Project   => null,
                               Source       => null));
                      end if;
@@ -1279,6 +1282,17 @@ package body GNATCOLL.Projects is
       Unchecked_Free (Self);
    end Free;
 
+   ----------
+   -- Free --
+   ----------
+
+   procedure Free (Self : in out Library_Info) is
+   begin
+      Free (Self.Source);
+      Unchecked_Free (Self.LI_Project);
+      Unchecked_Free (Self.Non_Aggregate_Root_Project);
+   end Free;
+
    -----------
    -- Clear --
    -----------
@@ -1289,8 +1303,7 @@ package body GNATCOLL.Projects is
    begin
       while Library_Info_Lists.Has_Element (C) loop
          L := Library_Info_Lists.Element (C);
-         Free (L.Source);
-         Unchecked_Free (L.LI_Project);
+         Free (L);
          Library_Info_Lists.Next (C);
       end loop;
 
@@ -3598,8 +3611,7 @@ package body GNATCOLL.Projects is
    is
       With_Clause : Project_Node_Id;
       Extended    : Project_Node_Id;
-
-      Tree_Tree   : Project_Node_Tree_Ref := Parent.Tree_Tree;
+      T           : Project_Node_Tree_Ref := Parent.Tree_Tree;
    begin
       Assert (Me, Child.Data /= null, "Project_Imports: no child provided");
 
@@ -3612,32 +3624,33 @@ package body GNATCOLL.Projects is
       if Parent.Data.Local_Node_Tree /= null then
          --  Root project is aggregate project, we need to use the proper tree
          --  for the aggregated project.
-         Tree_Tree := Parent.Data.Local_Node_Tree;
+         T := Parent.Data.Local_Node_Tree;
       end if;
 
-      With_Clause := First_With_Clause_Of
-           (Parent.Data.Node, Tree_Tree);
+      With_Clause := First_With_Clause_Of (Parent.Data.Node, T);
 
       while With_Clause /= Empty_Node loop
-         if Project_Node_Of
-           (With_Clause, Tree_Tree) = Child.Data.Node
+         --  We cannot compare the nodes directly, since they might be the same
+         --  in two aggregated projects, even when this is not the same project
+
+         if Get_Name_String
+           (Path_Name_Of (Project_Node_Of (With_Clause, T), T)) =
+             Child.Project_Path.Display_Full_Name
          then
             Imports         := True;
-            Is_Limited_With :=
-              Non_Limited_Project_Node_Of (With_Clause, Tree_Tree)
+            Is_Limited_With := Non_Limited_Project_Node_Of (With_Clause, T)
               = Empty_Node;
             return;
          end if;
 
-         With_Clause := Next_With_Clause_Of (With_Clause, Tree_Tree);
+         With_Clause := Next_With_Clause_Of (With_Clause, T);
       end loop;
 
       --  Handling for extending projects ?
 
       if Include_Extended then
          Extended := Extended_Project_Of
-           (Project_Declaration_Of (Parent.Data.Node, Tree_Tree),
-            Tree_Tree);
+           (Project_Declaration_Of (Parent.Data.Node, T), T);
          if Extended = Child.Data.Node then
             Imports := True;
             Is_Limited_With := False;

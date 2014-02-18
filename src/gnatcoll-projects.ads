@@ -740,6 +740,7 @@ package GNATCOLL.Projects is
    type Library_Info is record
       Library_File : GNATCOLL.VFS.Virtual_File;
       LI_Project   : Project_Type_Access;
+      Non_Aggregate_Root_Project : Project_Type_Access;
       Source       : File_Info_Access;
    end record;
    --  Source is set to null for ALI files found in the predefined source
@@ -747,6 +748,16 @@ package GNATCOLL.Projects is
    --
    --  LI_Project is the project in which the LI file was found. It might not
    --  be the same as the source's project, when using extending projects.
+   --  null for predefined sources.
+   --
+   --  Non_Aggregate_Root_Project is the non-aggregated root project for the
+   --  tree. When using aggregated projects, it will take the value of any of
+   --  the aggregated project. In other cases, this is the project loaded by
+   --  the user.
+   --  null for predefined sources.
+
+   procedure Free (Self : in out Library_Info);
+   --  Free the memory used by Self
 
    package Library_Info_Lists is new Ada.Containers.Doubly_Linked_Lists
      (Library_Info);

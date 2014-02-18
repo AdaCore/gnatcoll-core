@@ -55,8 +55,8 @@ package body GNATCOLL.Xref is
    Schema_Version : constant Integer := 3;
    --  The current version of the database schema.
    --  Actual databases must match the version number exactly.
-   --     version 2 added files.project
-   --     version 3 initialized files with a default project (this came later)
+   --   2: added files.project
+   --   3: initialized files with a default project (this came later)
 
    Instances_Provide_Column : constant Boolean := False;
    --  Whether instance info in the ALI files provide the column information.
@@ -119,7 +119,21 @@ package body GNATCOLL.Xref is
              Where => Database.Files.Path = Text_Param (1),
              Limit => 1),
         On_Server => True, Name => "get_file");
-   --  Retrieve the info for a file given its path
+   --  Retrieve the info for a file given its path. Should only be used for
+   --  project files and ALI files.
+
+   Query_Get_File_And_Project : constant Prepared_Statement :=
+     Prepare
+       (SQL_Select
+          (Database.Files.Id
+           & Database.Files.Stamp
+           & Database.Files.Language,
+           From => Database.Files & Files3,
+           Where => Database.Files.Path = Text_Param (1)
+           and Database.Files.Project = Integer_Param (2),
+           Limit => 1),
+        On_Server => True, Name => "get_file_and_project");
+   --  Retrieve the info for a source file given its path and its project
 
    Query_Update_LI_File : constant Prepared_Statement :=
      Prepare
@@ -1010,7 +1024,8 @@ package body GNATCOLL.Xref is
      (DB                  : Database_Connection;
       LI                  : LI_Info;
       Default_Iconv_State : Iconv_T;
-      VFS_To_Id           : in out VFS_To_Ids.Map;
+      Source_To_Id        : in out VFS_To_Ids.Map;
+      Project_To_Id       : VFS_To_Ids.Map;
       Entity_Decl_To_Id   : in out Loc_To_Ids.Map;
       Entity_Renamings    : in out Entity_Renaming_Lists.List;
       Visited_ALI_Units   : in out VFS_To_Ids.Map;
@@ -1027,7 +1042,11 @@ package body GNATCOLL.Xref is
    --  (which would be potentially false if sharing this table for multiple
    --  ALIs)
    --
-   --  VFS_To_Id is a cache for source files.
+   --  Source_To_Id is a cache for source files. It is specific to each root
+   --  aggregated project, since the same full path could belong to multiple
+   --  projects, each in its own aggregated tree.
+   --
+   --  Project_To_Id maps full path to id in the files table for project files.
    --
    --  Visited_ALI_Units is a subset of VFS_To_Id, containing all the files
    --  from 'U' lines that have already been processed. In general, the files
@@ -1310,7 +1329,8 @@ package body GNATCOLL.Xref is
      (DB                  : Database_Connection;
       LI                  : LI_Info;
       Default_Iconv_State : Iconv_T;
-      VFS_To_Id           : in out VFS_To_Ids.Map;
+      Source_To_Id        : in out VFS_To_Ids.Map;
+      Project_To_Id       : VFS_To_Ids.Map;
       Entity_Decl_To_Id   : in out Loc_To_Ids.Map;
       Entity_Renamings    : in out Entity_Renaming_Lists.List;
       Visited_ALI_Units   : in out VFS_To_Ids.Map;
@@ -1324,7 +1344,7 @@ package body GNATCOLL.Xref is
       LI_Project : constant Project_Type :=
         Project_Type (LI.LI.LI_Project.all);
 
-      ALI_Id   : Integer := LI.Id;
+      ALI_Id   : constant Integer := LI.Id;
 
       Start           : Integer;
       Current_Unit_Id : Integer := -1;
@@ -2096,7 +2116,6 @@ package body GNATCOLL.Xref is
            Project.Create_From_Project (Basename);
          Found  : VFS_To_Ids.Cursor;
          Result : File_Db_Info;
-         Id     : Integer;
       begin
          if Info.File = GNATCOLL.VFS.No_File then
             if Active (Me_Error) then
@@ -2104,10 +2123,11 @@ package body GNATCOLL.Xref is
                       & " not found in project "
                       & Project.Project_Path.Display_Full_Name);
             end if;
-            return (Id => -1, Export_Mangled_Name => False);
+            return (Id                  => -1,
+                    Export_Mangled_Name => False);
          end if;
 
-         Found := VFS_To_Id.Find (Info.File);
+         Found := Source_To_Id.Find (Info.File);
          if Has_Element (Found) then
             Result := Element (Found);
          else
@@ -2115,10 +2135,18 @@ package body GNATCOLL.Xref is
                Name  : aliased String :=
                  +Info.File.Unix_Style_Full_Name (Normalize => True);
                Files : Forward_Cursor;
+               Id    : Integer;  --  for the project
             begin
+               if Info.Project = No_Project then
+                  Id := No_Project_Id;
+               else
+                  Id := Project_To_Id.Element (Info.Project.Project_Path).Id;
+               end if;
+
                Files.Fetch
-                 (DB, Query_Get_File,
-                  Params => (1 => +Name'Unchecked_Access));
+                 (DB, Query_Get_File_And_Project,
+                  Params => (1 => +Name'Unchecked_Access,
+                             2 => +Id));
 
                if Files.Has_Row then
                   Result := (Id   => Files.Integer_Value (0),
@@ -2129,12 +2157,6 @@ package body GNATCOLL.Xref is
                   declare
                      Lang : aliased String := Info.Language;
                   begin
-                     if Project = No_Project then
-                        Id := No_Project_Id;
-                     else
-                        Id := VFS_To_Id.Element (Project.Project_Path).Id;
-                     end if;
-
                      Result :=
                        (Id => DB.Insert_And_Get_PK
                            (Query_Insert_Source_File,
@@ -2147,7 +2169,7 @@ package body GNATCOLL.Xref is
                   end;
                end if;
 
-               VFS_To_Id.Insert (Info.File, Result);
+               Source_To_Id.Insert (Info.File, Result);
             end;
          end if;
 
@@ -2979,24 +3001,8 @@ package body GNATCOLL.Xref is
          Increase_Indent
            (Me_Parsing, "Parse LI "
             & (+LI.LI.Library_File.Unix_Style_Full_Name
-              (Normalize => True)));
-      end if;
-
-      if ALI_Id = -1 then
-         declare
-            N : aliased String :=
-              +LI.LI.Library_File.Unix_Style_Full_Name (Normalize => True);
-         begin
-            ALI_Id := DB.Insert_And_Get_PK
-              (Query_Insert_LI_File,
-               Params => (1 => +N'Unchecked_Access,
-                          2 => +LI.Stamp),
-               PK => Database.Files.Id);
-         end;
-      else
-         DB.Execute
-           (Query_Update_LI_File,
-            Params => (1 => +ALI_Id, 2 => +LI.Stamp));
+              (Normalize => True)) & " in project "
+            & LI.LI.LI_Project.Project_Path.Display_Full_Name);
       end if;
 
       M := Open_Read
@@ -3343,20 +3349,33 @@ package body GNATCOLL.Xref is
             Files.Fetch
               (Database.DB, Query_Get_File,
                Params => (1 => +N'Unchecked_Access));
-         end;
 
-         if Files.Has_Row then
-            if not Force_Refresh
-              and then Files.Time_Value (1) = LI.Stamp
-            then
-               LI.Id := -2;   --  Already up-to-date
+            if Files.Has_Row then
+               if not Force_Refresh
+                 and then Files.Time_Value (1) = LI.Stamp
+               then
+                  LI.Id := -2;   --  Already up-to-date
+               else
+                  LI.Id := Files.Integer_Value (0);
+                  Database.DB.Execute
+                    (Query_Update_LI_File,
+                     Params => (1 => +LI.Id, 2 => +LI.Stamp));
+                  LIs.Append (LI);
+               end if;
+
             else
-               LI.Id := Files.Integer_Value (0);
+               --  We need to insert the LI in the database now, because the
+               --  same LI file could be seen again if we are using aggregate
+               --  projects
+
+               LI.Id := Database.DB.Insert_And_Get_PK
+                 (Query_Insert_LI_File,
+                  Params => (1 => +N'Unchecked_Access,
+                             2 => +LI.Stamp),
+                  PK => GNATCOLL.Xref.Database.Files.Id);
                LIs.Append (LI);
             end if;
-         else
-            LIs.Append (LI);
-         end if;
+         end;
 
          Next (Lib_Info);
       end loop;
@@ -3394,7 +3413,10 @@ package body GNATCOLL.Xref is
 
       LI_Files          : Library_Info_List;
       LIs               : LI_Lists.List;
-      VFS_To_Id         : VFS_To_Ids.Map;
+
+      Source_To_Id      : VFS_To_Ids.Map;
+      Project_To_Id     : VFS_To_Ids.Map;
+
       Visited_ALI_Units : VFS_To_Ids.Map;
       Visited_GLI_Files : VFS_To_Ids.Map;
       Entity_Decl_To_Id : Loc_To_Ids.Map;
@@ -3417,6 +3439,9 @@ package body GNATCOLL.Xref is
          Destroy_Indexes : Boolean);
       --  Preparate the database for editing, once we have detected some LI
       --  files need to be updated.
+
+      procedure Create_Project_Entries (DB : Database_Connection);
+      --  Make sure that all project files have an entry in the files table
 
       procedure Parse_Files (DB : Database_Connection);
       --  Parse files that need it
@@ -3613,6 +3638,45 @@ package body GNATCOLL.Xref is
          end if;
       end Start_Transaction;
 
+      ----------------------------
+      -- Create_Project_Entries --
+      ----------------------------
+
+      procedure Create_Project_Entries (DB : Database_Connection) is
+         Iter : Project_Iterator := Tree.Root_Project.Start;
+         P    : Project_Type;
+         R    : Forward_Cursor;
+      begin
+         loop
+            P := GNATCOLL.Projects.Current (Iter);
+            exit when P = No_Project;
+
+            declare
+               N  : aliased String := +P.Project_Path.Unix_Style_Full_Name
+                 (Normalize => True);
+               Id : Integer;
+            begin
+               R.Fetch (DB, Query_Get_File, (1 => +N'Unchecked_Access));
+               if R.Has_Row then
+                  Id := R.Integer_Value (0);
+               else
+                  Id := DB.Insert_And_Get_PK
+                    (Query_Insert_Project_File,
+                     Params => (1              => +N'Unchecked_Access),
+                     PK     => Database.Files.Id);
+               end if;
+
+               Project_To_Id.Include
+                 (P.Project_Path,
+                  File_Db_Info'
+                    (Id                  => Id,
+                     Export_Mangled_Name => False));
+            end;
+
+            Next (Iter);
+         end loop;
+      end Create_Project_Entries;
+
       -----------------
       -- Parse_Files --
       -----------------
@@ -3709,69 +3773,57 @@ package body GNATCOLL.Xref is
 
          Start_Transaction (DB, Destroy_Indexes => False);
 
-         --  Make sure all projects haev an id in the database
-
-         declare
-            Iter : Project_Iterator := Tree.Root_Project.Start;
-            P    : Project_Type;
-            R    : Forward_Cursor;
-         begin
-            loop
-               P := GNATCOLL.Projects.Current (Iter);
-               exit when P = No_Project;
-
-               declare
-                  N : aliased String := +P.Project_Path.Unix_Style_Full_Name
-                    (Normalize => True);
-                  Id : Integer;
-               begin
-                  R.Fetch (DB, Query_Get_File, (1 => +N'Unchecked_Access));
-                  if R.Has_Row then
-                     Id := R.Integer_Value (0);
-                  else
-                     Id := DB.Insert_And_Get_PK
-                       (Query_Insert_Project_File,
-                        Params => (1 => +N'Unchecked_Access),
-                        PK => Database.Files.Id);
-                  end if;
-
-                  VFS_To_Id.Include
-                    (P.Project_Path,
-                     File_Db_Info'
-                       (Id                  => Id,
-                        Export_Mangled_Name => False));
-               end;
-
-               Next (Iter);
-            end loop;
-         end;
+         Create_Project_Entries (DB);
 
          --  Now process the LI files
 
-         LI_C := LIs.First;
-         while Has_Element (LI_C) loop
-            begin
-               if Show_Progress /= null then
-                  Show_Progress
-                    (Cur                   => Current,
-                     Total                 => Total);
-                  Current := Current + 1;
-               end if;
+         declare
+            Prev_Root : Project_Type := No_Project;
+            Lib       : LI_Info;
+         begin
+            LI_C := LIs.First;
+            while Has_Element (LI_C) loop
+               begin
+                  if Show_Progress /= null then
+                     Show_Progress (Cur   => Current, Total => Total);
+                     Current := Current + 1;
+                  end if;
 
-               Parse_LI (DB                  => DB,
-                         LI                  => Element (LI_C),
-                         Default_Iconv_State => Iconv_State,
-                         VFS_To_Id           => VFS_To_Id,
-                         Visited_ALI_Units   => Visited_ALI_Units,
-                         Visited_GLI_Files   => Visited_GLI_Files,
-                         Entity_Decl_To_Id   => Entity_Decl_To_Id,
-                         Entity_Renamings    => Entity_Renamings);
-            exception
-               when E : others =>
-                  Trace (Me_Error, E);
-            end;
-            Next (LI_C);
-         end loop;
+                  Lib := Element (LI_C);
+
+                  --  The Source_To_Id cache is only valid for a specific
+                  --  aggregate tree, but needs to be cleared before we move
+                  --  on to the next aggregated tree.
+                  if Lib.LI.Non_Aggregate_Root_Project = null
+                    and then Prev_Root /= No_Project
+                  then
+                     Prev_Root := No_Project;
+                     Source_To_Id.Clear;
+                  elsif Lib.LI.Non_Aggregate_Root_Project /= null
+                    and then Prev_Root /=
+                      Project_Type (Lib.LI.Non_Aggregate_Root_Project.all)
+                  then
+                     Prev_Root := Project_Type
+                       (Lib.LI.Non_Aggregate_Root_Project.all);
+                     Source_To_Id.Clear;
+                  end if;
+
+                  Parse_LI (DB                  => DB,
+                            LI                  => Lib,
+                            Default_Iconv_State => Iconv_State,
+                            Source_To_Id        => Source_To_Id,
+                            Project_To_Id       => Project_To_Id,
+                            Visited_ALI_Units   => Visited_ALI_Units,
+                            Visited_GLI_Files   => Visited_GLI_Files,
+                            Entity_Decl_To_Id   => Entity_Decl_To_Id,
+                            Entity_Renamings    => Entity_Renamings);
+               exception
+                  when E : others =>
+                     Trace (Me_Error, E);
+               end;
+               Next (LI_C);
+            end loop;
+         end;
 
          --  ??? If we had a failure earlier, we will exit early and lost the
          --  contents of temp_entities, and therefore never clean those
@@ -4016,7 +4068,7 @@ package body GNATCOLL.Xref is
    is
       Distance : Natural := Integer'Last;
       Best_Ref : Entity_Reference := No_Entity_Reference;
-      F        : SQL_Criteria;
+      F, P     : SQL_Criteria;
 
       procedure Prepare_Decl
         (C           : SQL_Criteria;
@@ -4116,9 +4168,11 @@ package body GNATCOLL.Xref is
                & Database.Entities.Decl_Column
                & Database.Entities.Decl_Caller
                & Database.Files.Path,
-            From  => Database.Entities & Database.Files,
+            From  => Database.Entities & Database.Files & Files3,
             Where => Database.Files.Id = Database.Entities.Decl_File
                and Database.Entities.Name = Text_Param (1)
+               and Database.Files.Project = Files3.Id
+               and P
                and F
                and C,
             Distinct => True,
@@ -4148,11 +4202,13 @@ package body GNATCOLL.Xref is
             6 => +Database.Reference_Kinds.Id,
             7 => +Database.Reference_Kinds.Is_End)),
             From => Database.Entity_Refs & Database.Entities & Database.Files
-               & Database.Reference_Kinds,
+               & Database.Reference_Kinds & Files3,
             Where => Database.Entity_Refs.Entity = Database.Entities.Id
                and Database.Entity_Refs.File = Database.Files.Id
                and Database.Reference_Kinds.Id = Database.Entity_Refs.Kind
                and Database.Entities.Name = Text_Param (1)
+               and Database.Files.Project = Files3.Id
+               and P
                and F
                and C,
             Distinct => True);
@@ -4178,6 +4234,11 @@ package body GNATCOLL.Xref is
          F := Database.Files.Path = File;
       else
          F := Like (Database.Files.Path, "%/" & File);
+      end if;
+
+      if Project /= No_Project then
+         P := Files3.Path =
+           +Project.Project_Path.Unix_Style_Full_Name (Normalize => True);
       end if;
 
       --  First test whether the user has passed the location of the
