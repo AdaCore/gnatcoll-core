@@ -92,6 +92,7 @@ package body GNATCOLL.Xref is
    Column_Tolerance : constant Natural := 80;
    --  Tolerance in columns when looking for approximate entity declarations.
 
+   No_File_Id    : constant Integer := -1;
    No_Project_Id : constant Integer := -2;
    --  Id of 'no project' in the files table
 
@@ -4239,13 +4240,15 @@ package body GNATCOLL.Xref is
          return No_Entity_Reference;
       end if;
 
-      if GNAT.OS_Lib.Is_Absolute_Path (File) then
+      if File = "" then
+         F := Database.Files.Id = No_File_Id;
+      elsif GNAT.OS_Lib.Is_Absolute_Path (File) then
          F := Database.Files.Path = File;
       else
          F := Like (Database.Files.Path, "%/" & File);
       end if;
 
-      if Project /= No_Project then
+      if Project /= No_Project and then File /= "" then
          P := Files3.Path =
            +Project.Project_Path.Unix_Style_Full_Name (Normalize => True);
       end if;
