@@ -4851,10 +4851,16 @@ package body GNATCOLL.Projects is
    function Extended_Project
      (Project : Project_Type) return Project_Type
    is
-      Tree     : constant Project_Node_Tree_Ref := Project.Tree_Tree;
-      Extended : constant Project_Node_Id := Extended_Project_Of
-        (Project_Declaration_Of (Project.Data.Node, Tree), Tree);
+      Tree     : Project_Node_Tree_Ref := Project.Tree_Tree;
+      Extended : Project_Node_Id;
    begin
+      if Project.Data.Local_Node_Tree /= null then
+         Tree := Project.Data.Local_Node_Tree;
+      end if;
+
+      Extended := Extended_Project_Of
+        (Project_Declaration_Of (Project.Data.Node, Tree), Tree);
+
       if Extended = Empty_Node then
          return No_Project;
       else
