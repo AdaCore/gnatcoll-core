@@ -27,6 +27,10 @@ NF-17-N108-018 GNATCOLL.SQL: support for CREATE TABLE AS (2014-01-08)
   be used to create temporary tables to hold the results of an intermediate
   query.
 
+NF-17-MC19-005 GNATCOLL.Xref support for aggregate projects (2014-02-18)
+
+  GNATCOLL.Xref and gnatinspect now support aggregate projects.
+
 NF-17-MB29-039 GNATCOLL.SQL.Exec.Float_Value new param Default (2013-12-01)
 
   A new version of Float_Value has been added. It takes a default value, and
@@ -46,3 +50,7 @@ NF-17-MA10-035 GNATCOLL.Mmap: multiple region mapping (2013-10-24)
 
   Multiple regions of the same file can now be mapped in memory at the
   same time.
+
+NF-17-M703-040 GNATCOLL.Projects support for aggregate projects (2013-12-17)
+
+  It is now possible to load aggregate projects through this API.
