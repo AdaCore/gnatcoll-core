@@ -15,6 +15,13 @@ of the feature.
 New features in 1.7
 -------------------
 
+NF-17-N224-034 New function Create_Config_Pragmas_File (2014-02-26)
+
+  A new function Create_Config_Pragmas_File is added to package
+  GNATCOLL.Projects.Aux. It creates a temporary file that contains the
+  configuration pragmas for a project tree and returns the full path of
+  the temporary file.
+
 NF-17-N203-036 GNATCOLL.Terminal new package (2014-02-03)
 
   This package provides advanced console output features, like color
