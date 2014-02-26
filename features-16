@@ -2,7 +2,7 @@
 GNATCOLL 1.6 NEW FEATURES LIST
 ==============================
 
-Copyright (C) 2012-2013, AdaCore
+Copyright (C) 2012-2014, AdaCore
 
 This file contains a list of new features introduced in GNATCOLL.
 A full description of all GNATCOLL features can be found in the GNATCOLL
@@ -35,6 +35,13 @@ NF-16-M920-033 Support for Postgres SQL extensions (2013-09-23)
 
    Package GNATCOLL.SQL.Postgres now supports the construction of
    UPDATE ... RETURNING and SELECT ... FOR UPDATE statements.
+
+NF-16-M903-015 GNATCOOL.Projects.Aux new package (2013-09-06)
+
+   This package provides additional services when using Project Files:
+   functions to get data types from the underlying implementation of the
+   Project Manager and subprograms that are usually only used by specialized
+   tools.
 
 NF-16-M613-007 Linking with static libiconv (2013-06-19)
 
