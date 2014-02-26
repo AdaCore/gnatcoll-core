@@ -55,6 +55,19 @@ package GNATCOLL.Projects.Aux is
    --  path of the temporary file. If the creation of this mapping file is
    --  unsuccessful, either an exception is raised or the empty string is
    --  returned.
+   --
+   --  It is the responsibility of the user to delete this temporary file when
+   --  it is no longer needed, either directly or by calling
+   --  Delete_All_Temp_Files.
+
+   function Create_Config_Pragmas_File
+     (Project : Projects.Project_Type)
+      return String;
+   --  Creates a temporary file that contains the configuration pragmas for
+   --  the project tree rooted at Project and returns the full path of the
+   --  temporary file. If the creation of this mapping file is unsuccessful,
+   --  either an exception is raised or the empty string is returned.
+   --
    --  It is the responsibility of the user to delete this temporary file when
    --  it is no longer needed, either directly or by calling
    --  Delete_All_Temp_Files.

@@ -79,6 +79,31 @@ package body GNATCOLL.Projects.Aux is
       end if;
    end Create_Ada_Mapping_File;
 
+   --------------------------------
+   -- Create_Config_Pragmas_File --
+   --------------------------------
+
+   function Create_Config_Pragmas_File
+     (Project : Projects.Project_Type)
+      return String
+   is
+   begin
+      Prj.Env.Create_Config_Pragmas_File
+        (For_Project  => Project.Data.View,
+         In_Tree      => Tree_View (Project));
+
+      declare
+         Path : constant Path_Name_Type := Project.Data.View.Config_File_Name;
+      begin
+         if Path = No_Path then
+            return "";
+
+         else
+            return Get_Name_String (Path);
+         end if;
+      end;
+   end Create_Config_Pragmas_File;
+
    ---------------------------
    -- Delete_All_Temp_Files --
    ---------------------------
