@@ -3738,7 +3738,7 @@ $as_echo "no" >&6; }
                ;;
            esac
 
-           if test x$PYTHON_WIN32 == xyes; then
+           if test x$PYTHON_WIN32 = xyes; then
              PYTHON_VERSION=$PYTHON_MAJOR_VERSION$PYTHON_MINOR_VERSION
              PYTHON_DIR=${PYTHON_BASE}/libs
            else
@@ -3890,7 +3890,7 @@ $as_echo_n "checking if we can link with python... " >&6; }
                ;;
          esac
 
-         if test x$PYTHON_WIN32 == xyes; then
+         if test x$PYTHON_WIN32 = xyes; then
             PYTHON_CFLAGS="-I${PYTHON_BASE}/include"
          else
             PYTHON_CFLAGS="-I${PYTHON_BASE}/include/python${PYTHON_VERSION}"
@@ -4587,7 +4587,7 @@ $as_echo "no (disabled by user)" >&6; }
            module=""
        done
 
-       if test "$module" == "" ; then
+       if test "$module" = "" ; then
           { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
 $as_echo "no" >&6; }
           WITH_PYGOBJECT=no

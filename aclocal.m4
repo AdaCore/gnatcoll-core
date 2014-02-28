@@ -740,7 +740,7 @@ AC_HELP_STRING(
                ;;
            esac
 
-           if test x$PYTHON_WIN32 == xyes; then
+           if test x$PYTHON_WIN32 = xyes; then
              PYTHON_VERSION=$PYTHON_MAJOR_VERSION$PYTHON_MINOR_VERSION
              PYTHON_DIR=${PYTHON_BASE}/libs
            else
@@ -836,7 +836,7 @@ AC_HELP_STRING(
                ;;
          esac
 
-         if test x$PYTHON_WIN32 == xyes; then
+         if test x$PYTHON_WIN32 = xyes; then
             PYTHON_CFLAGS="-I${PYTHON_BASE}/include"
          else
             PYTHON_CFLAGS="-I${PYTHON_BASE}/include/python${PYTHON_VERSION}"
@@ -945,7 +945,7 @@ AC_DEFUN(AM_PATH_PYGOBJECT,
            module=""
        done
 
-       if test "$module" == "" ; then
+       if test "$module" = "" ; then
           AC_MSG_RESULT(no)
           WITH_PYGOBJECT=no
        else
