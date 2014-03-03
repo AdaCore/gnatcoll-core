@@ -58,11 +58,11 @@ project GnatColl_Shared is
             for Switches ("Ada") use
               ("-g", "-O0", "-gnata", "-gnatVa", "-gnatQ", "-gnaty", "-gnateE",
                "-gnatwaCJe", "-gnat05");
-            for Switches ("C") use ("-g", "-fdump-xref");
+            for Switches ("C") use ("-g", "-fdump-xref", "-Wunreachable-code");
          when "Production" =>
             for Switches ("Ada") use
               ("-O2", "-gnatn", "-gnatws", "-gnat05");
-            for Switches ("C") use ("-O2");
+            for Switches ("C") use ("-O2", "-fdump-xref", "-Wunreachable-code");
       end case;
 
       case Syslog is
