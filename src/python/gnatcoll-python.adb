@@ -745,6 +745,17 @@ package body GNATCOLL.Python is
       return Internal (Text & ASCII.NUL, File) /= 0;
    end PyFile_WriteString;
 
+   -----------------------
+   -- PyFile_FromString --
+   -----------------------
+
+   function PyFile_FromString (File_Name, Mode : String) return PyObject is
+      function Internal (N, M : String) return PyObject;
+      pragma Import (C, Internal, "PyFile_FromString");
+   begin
+      return Internal (File_Name & ASCII.NUL, Mode & ASCII.NUL);
+   end PyFile_FromString;
+
    -------------------
    -- Py_InitModule --
    -------------------

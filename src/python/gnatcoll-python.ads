@@ -821,7 +821,6 @@ package GNATCOLL.Python is
    --  Return False if the string couldn't be written
 
    function PyFile_FromString (File_Name, Mode : String) return PyObject;
-   pragma Import (C, PyFile_FromString, "PyFile_FromString");
    --  Create an instance of file.
 
    -----------------
