@@ -569,6 +569,9 @@ package GNATCOLL.Projects is
    --  additional extensions registered through Add_Language_Extension.
    --  Can be applied both to aggregate and regular projects. For aggregate
    --  project tree may return several elements in the set.
+   --
+   --  This function returns an empty set when the file is not part of any
+   --  project.
 
    -----------
    -- Files --

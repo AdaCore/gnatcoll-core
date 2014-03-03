@@ -2002,9 +2002,9 @@ package body GNATCOLL.Projects is
       return Info (Self.Data, File);
    end Info;
 
-   ---------------
-   -- Info_List --
-   ---------------
+   --------------
+   -- Info_Set --
+   --------------
 
    function Info_Set
      (Self : Project_Tree'Class; File : GNATCOLL.VFS.Virtual_File)
@@ -2084,11 +2084,6 @@ package body GNATCOLL.Projects is
          exit when Source.Next = null;
          Source := Source.Next.all;
       end loop;
-
-      if Result.Is_Empty then
-         --  Same base name present, but no source with same full path.
-         Result.Include (new File_Info'(Info (Self.Data, File)));
-      end if;
 
       return Result;
    end Info_Set;
