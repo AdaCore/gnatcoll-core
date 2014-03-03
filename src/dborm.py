@@ -64,7 +64,7 @@ def save_dir(fn):
     def do_work(*args, **kwargs):
         saved = os.getcwd()
         try:
-            result = fn(args, kwargs)
+            result = fn(*args, **kwargs)
         finally:
             os.chdir(saved)
         return result
@@ -750,7 +750,7 @@ class Schema(object):
                     ("procedure Unchecked_Free is "
                      + "new Ada.Unchecked_Deallocation\n"
                      + "     (Detached_%(row)s'Class, Detached_%(row)s_Access)"
-                        % {"row": f.foreign.row}))
+                        % {"row": f.foreign.row}, ))
 
         # The call to set() is to uniquify the elements in the list
         return list(l)
@@ -1286,8 +1286,7 @@ def generate_orb_one_table(name, schema, pretty, all_tables):
              for index, f in enumerate(table.fields) if f.show])
         pretty.add_unique_constants(
             [("""procedure Unchecked_Free is new Ada.Unchecked_Deallocation
-      ( %(row)s_DDR, %(row)s_Data)"""
-             % translate,)]
+      ( %(row)s_DDR, %(row)s_Data)""" % translate, )]
             + schema.unchecked_free(name, all_tables))
 
         # Constants Counts_%s are the number of fields needed for %s and its
