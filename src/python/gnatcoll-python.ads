@@ -123,6 +123,15 @@ package GNATCOLL.Python is
    --  NULL, but the 'kw' argument can be NULL.
    --  The returned object must be DECREF
 
+   function PyObject_CallObject
+     (Object : PyObject; Args : PyObject) return PyObject;
+   pragma Import (C, PyObject_CallObject, "PyObject_CallObject");
+   --  Call a callable Python object, callable_object, with
+   --  arguments given by the tuple, args.  If no arguments are
+   --  needed, then args may be NULL.  Returns the result of the
+   --  call on success, or NULL on failure.  This is the equivalent
+   --  of the Python expression: apply(o,args).
+
    function PyObject_SetAttrString
      (Object : PyObject;
       Name   : Interfaces.C.Strings.chars_ptr;
@@ -445,6 +454,17 @@ package GNATCOLL.Python is
 
    function PyImport_ImportModule (Module_Name : String) return PyObject;
    --  Import a new module in the interpreter
+
+   function PyImport_Import (Name : PyObject) return PyObject;
+   pragma Import (C, PyImport_Import, "PyImport_Import");
+   --  Higher-level import emulator which emulates the "import" statement
+   --  more accurately -- it invokes the __import__() function from the
+   --  builtins of the current globals.  This means that the import is
+   --  done using whatever import hooks are installed in the current
+   --  environment, e.g. by "rexec".
+   --  A dummy list ["__doc__"] is passed as the 4th argument so that
+   --  e.g. PyImport_Import(PyString_FromString("win32com.client.gencache"))
+   --  will return <module "gencache"> instead of <module "win32com">. */
 
    function PyModule_GetDict (Module : PyObject) return PyObject;
    --  Return the dictionary object that implements module's namespace; this
@@ -799,6 +819,10 @@ package GNATCOLL.Python is
    --  instance by using
    --     PySys_GetObject ("stdout")
    --  Return False if the string couldn't be written
+
+   function PyFile_FromString (File_Name, Mode : String) return PyObject;
+   pragma Import (C, PyFile_FromString, "PyFile_FromString");
+   --  Create an instance of file.
 
    -----------------
    -- Class types --
