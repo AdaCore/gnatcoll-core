@@ -1010,6 +1010,7 @@ package body GNATCOLL.Projects is
                            Xrefs_Dirs          => Xrefs_Dirs);
             Dir : Virtual_File;
             Should_Append : Boolean;
+            Lowest_Project : Project_Type;
          begin
             if Objects'Length > 0
               and then not Seen.Contains (Objects (Objects'First))
@@ -1035,8 +1036,8 @@ package body GNATCOLL.Projects is
                            B : constant Filesystem_String :=
                              Get_Base_Name (Tmp (F));
                            B_Last : Integer := B'Last;
-                           Dot : Integer;
-                           P, Lowest_Project   : Project_Type;
+                           Dot    : Integer;
+                           P      : Project_Type;
                         begin
                            Info_Cursor := Find_In_Subtree
                              (Self.Data.Tree.Objects_Basename, B, Self);
@@ -1079,8 +1080,8 @@ package body GNATCOLL.Projects is
                               Should_Append := False;
 
                            elsif not Exclude_Overridden then
-                              Should_Append :=
-                                Element (Info_Cursor).Project /= No_Project;
+                              Lowest_Project := Element (Info_Cursor).Project;
+                              Should_Append := Lowest_Project /= No_Project;
 
                            else
                               --  P is the candidate project that contains the
@@ -1155,7 +1156,7 @@ package body GNATCOLL.Projects is
                              (Library_Info'
                                 (Library_File => Tmp (F),
                                  LI_Project => new Project_Type'
-                                   (Current_Project),
+                                   (Lowest_Project),
                                  Non_Aggregate_Root_Project =>
                                     new Project_Type'(Self),
                                  Source       => new File_Info'
