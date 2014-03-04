@@ -62,7 +62,7 @@ project GnatColl_Shared is
          when "Production" =>
             for Switches ("Ada") use
               ("-O2", "-gnatn", "-gnatws", "-gnat05");
-            for Switches ("C") use ("-O2", "-fdump-xref", "-Wunreachable-code");
+            for Switches ("C") use ("-O2", "-Wunreachable-code");
       end case;
 
       case Syslog is
