@@ -825,7 +825,8 @@ package GNATCOLL.Projects is
      (Self                : in out Project_Environment;
       Language_Name       : String;
       Default_Spec_Suffix : String;
-      Default_Body_Suffix : String);
+      Default_Body_Suffix : String;
+      Obj_Suffix          : String := "-");
    --  Register Default_Spec_Suffix and Default_Body_Suffix as the default
    --  extensions for the language. This procedure impacts the loading of
    --  projects (in particular the automatic search for source files in the
@@ -834,6 +835,10 @@ package GNATCOLL.Projects is
    --  The two suffixes also become the default value returned when you
    --  query the value of the Spec_Suffix_Attribute or Impl_Suffix_Attribute
    --  for a project that does not explicit define them.
+   --  The Obj_Suffix should be set to "-" or "" for languages that do not have
+   --  object files (XML, txt,...) so that Library_Files does not try to
+   --  match a .ali or .o file to the corresponding source. For Ada and
+   --  C, the obj_suffix should be set to ".o".
 
    procedure Add_Language_Extension
      (Self          : in out Project_Environment;
@@ -1610,6 +1615,7 @@ private
       Language            : GNAT.Strings.String_Access;
       Default_Spec_Suffix : GNAT.Strings.String_Access;
       Default_Body_Suffix : GNAT.Strings.String_Access;
+      Obj_Suffix          : GNAT.Strings.String_Access;
       Next                : Naming_Scheme_Access;
    end record;
 

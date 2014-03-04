@@ -867,8 +867,8 @@ package body GNATCOLL.Projects is
       --  Searches for Source_File_Data with given base name and a project from
       --  a project subtree that starts from Root.
       --  If the resulting Source_File_Data is not the first one in the list,
-      --  it is placed in Local_Obj_Map and returning Coursor points to it.
-      --  Local_Obj_Map must be cleared after each object file processed.
+      --  it is placed in Local_Obj_Map and returned Cursor points to it.
+      --  Local_Obj_Map must be cleared after each object file is processed.
       --
       --  ??? This function seems to be the same as Create_From_Project.
 
@@ -5502,9 +5502,10 @@ package body GNATCOLL.Projects is
      (Self                : in out Project_Environment;
       Language_Name       : String;
       Default_Spec_Suffix : String;
-      Default_Body_Suffix : String)
+      Default_Body_Suffix : String;
+      Obj_Suffix          : String := "-")
    is
-      Spec, Impl : String_Access;
+      Spec, Impl, Obj : String_Access;
       Spec_Suff  : String := Default_Spec_Suffix;
       Impl_Suff  : String := Default_Body_Suffix;
    begin
@@ -5526,10 +5527,17 @@ package body GNATCOLL.Projects is
          Impl := new String'(Impl_Suff);
       end if;
 
+      if Obj_Suffix = "" then
+         Obj := new String'("-");
+      else
+         Obj := new String'(Obj_Suffix);
+      end if;
+
       Self.Naming_Schemes := new Naming_Scheme_Record'
         (Language            => new String'(To_Lower (Language_Name)),
          Default_Spec_Suffix => Spec,
          Default_Body_Suffix => Impl,
+         Obj_Suffix          => Obj,
          Next                => Self.Naming_Schemes);
    end Register_Default_Language_Extension;
 
@@ -6510,6 +6518,8 @@ package body GNATCOLL.Projects is
       is
          NS   : Naming_Scheme_Access := Self.Data.Env.Naming_Schemes;
          Attr : Project_Node_Id;
+         Spec_Suffix, Body_Suffix, Obj_Suffix : Name_Id;
+         Naming_Pkg, Compiler_Pkg : Project_Node_Id;
          pragma Unreferenced (Attr);
       begin
          if Config_File = Empty_Node then
@@ -6536,17 +6546,26 @@ package body GNATCOLL.Projects is
                   Str  => Get_String ("full")));
          end if;
 
+         Spec_Suffix := Get_String ("spec_suffix");
+         Body_Suffix := Get_String ("body_suffix");
+         Obj_Suffix  := Get_String ("object_file_suffix");
+         Naming_Pkg  := Create_Package
+            (Tree    => Project_Tree,
+             Project => Config_File,
+             Pkg     => "naming");
+         Compiler_Pkg  := Create_Package
+            (Tree    => Project_Tree,
+             Project => Config_File,
+             Pkg     => "compiler");
+
          while NS /= null loop
             Trace (Me, "Add naming scheme for " & NS.Language.all);
             if NS.Default_Spec_Suffix.all /= Dummy_Suffix then
                Attr := Create_Attribute
                  (Tree               => Project_Tree,
-                  Prj_Or_Pkg         => Create_Package
-                    (Tree    => Project_Tree,
-                     Project => Config_File,
-                     Pkg     => "naming"),
+                  Prj_Or_Pkg         => Naming_Pkg,
                   Kind               => Single,
-                  Name               => Get_String ("spec_suffix"),
+                  Name               => Spec_Suffix,
                   Index_Name         => Get_String (NS.Language.all),
                   Value              => Create_Literal_String
                     (Tree  => Project_Tree,
@@ -6556,16 +6575,25 @@ package body GNATCOLL.Projects is
             if NS.Default_Body_Suffix.all /= Dummy_Suffix then
                Attr := Create_Attribute
                  (Tree               => Project_Tree,
-                  Prj_Or_Pkg         => Create_Package
-                    (Tree    => Project_Tree,
-                     Project => Config_File,
-                     Pkg     => "naming"),
+                  Prj_Or_Pkg         => Naming_Pkg,
                   Kind               => Single,
-                  Name               => Get_String ("body_suffix"),
+                  Name               => Body_Suffix,
                   Index_Name         => Get_String (NS.Language.all),
                   Value              => Create_Literal_String
                     (Tree  => Project_Tree,
                      Str   => Get_String (NS.Default_Body_Suffix.all)));
+            end if;
+
+            if NS.Obj_Suffix /= null then
+               Attr := Create_Attribute
+                 (Tree               => Project_Tree,
+                  Prj_Or_Pkg         => Compiler_Pkg,
+                  Kind               => Single,
+                  Name               => Obj_Suffix,
+                  Index_Name         => Get_String (NS.Language.all),
+                  Value              => Create_Literal_String
+                    (Tree  => Project_Tree,
+                     Str   => Get_String (NS.Obj_Suffix.all)));
             end if;
 
             NS := NS.Next;
@@ -7111,12 +7139,15 @@ package body GNATCOLL.Projects is
                         (P, File, Source.Language.Name, Source, null));
                   end if;
 
-                  if Source.Object /= Namet.No_File then
+                  if Source.Object /= Namet.No_File
+                     and then Source.Language /= null
+                     and then Source.Language.Config.Object_File_Suffix /=
+                        Name_Op_Subtract
+                  then
                      declare
                         Base : constant Filesystem_String :=
                           Base_Name
-                            (Filesystem_String
-                               (Get_Name_String (Source.Object)),
+                            (Filesystem_String (Get_String (Source.Object)),
                              ".o");
                      begin
                         --  We know the actual object file will be in either
@@ -8459,6 +8490,7 @@ package body GNATCOLL.Projects is
             Free (NS.Language);
             Free (NS.Default_Spec_Suffix);
             Free (NS.Default_Body_Suffix);
+            Free (NS.Obj_Suffix);
             Unchecked_Free (NS);
          end loop;
 

@@ -652,11 +652,13 @@ procedure GNATInspect is
       Env.Register_Default_Language_Extension
         (Language_Name       => "C",
          Default_Spec_Suffix => ".h",
-         Default_Body_Suffix => ".c");
+         Default_Body_Suffix => ".c",
+         Obj_Suffix          => ".o");
       Env.Register_Default_Language_Extension
         (Language_Name       => "C++",
          Default_Spec_Suffix => ".hh",
-         Default_Body_Suffix => ".cpp");
+         Default_Body_Suffix => ".cpp",
+         Obj_Suffix          => ".o");
 
       if Path = No_File then
          Trace (Me, "processing 'PROJECT' empty");
