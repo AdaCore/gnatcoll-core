@@ -1996,9 +1996,11 @@ package body GNATCOLL.Projects is
       if Self.Data = null then
          raise Program_Error with "no project tree was parsed";
       end if;
+
       if Is_Aggregate_Project (Self.Data.Root) then
          raise Program_Error with "root project is aggregate, cannot use Info";
       end if;
+
       return Info (Self.Data, File);
    end Info;
 
@@ -2084,6 +2086,14 @@ package body GNATCOLL.Projects is
          exit when Source.Next = null;
          Source := Source.Next.all;
       end loop;
+
+      if Result.Is_Empty then
+         --  The file does not belong to the project. However, we can still
+         --  make some guesses regarding its language and various pieces of
+         --  information.
+
+         Result.Include (new File_Info'(Info (Self.Data, File)));
+      end if;
 
       return Result;
    end Info_Set;

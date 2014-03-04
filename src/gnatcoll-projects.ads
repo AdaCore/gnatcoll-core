@@ -570,8 +570,10 @@ package GNATCOLL.Projects is
    --  Can be applied both to aggregate and regular projects. For aggregate
    --  project tree may return several elements in the set.
    --
-   --  This function returns an empty set when the file is not part of any
-   --  project.
+   --  This function never returns an empty set. When the file does not belong
+   --  to the project, the function returns a set with a single element. In
+   --  this element, the project field is set to No_Project, but other fields
+   --  are set to best guesses (like the language of the file for instance).
 
    -----------
    -- Files --
