@@ -266,6 +266,7 @@ package body GNATCOLL.Xref.Database is
          & "|unsigned char|I|-1|-1|-1|true|" & ASCII.LF
          & "|unsigned int|I|-1|-1|-1|true|" & ASCII.LF
          & "|void|p|-1|-1|-1|true|" & ASCII.LF
+         & "|_Bool|B|-1|-1|-1|true|" & ASCII.LF
          & "|Wide_Character|E|-1|-1|-1|true|" & ASCII.LF
          & "|Wide_Wide_Character|E|-1|-1|-1|true|" & ASCII.LF
          & "|Wide_String|A|-1|-1|-1|true|" & ASCII.LF

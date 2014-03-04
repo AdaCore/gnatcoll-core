@@ -1889,6 +1889,8 @@ package body GNATCOLL.Xref is
                Index := Index + 1;
             end loop;
             Index := Index + 1;   --  skip closing quote
+            return;
+         end if;
 
          --  C++ operators are represented as:
          --    93V7*operator new 93r12
@@ -1897,7 +1899,7 @@ package body GNATCOLL.Xref is
          --    840V7*operator[]{120J61} 1|46s26
          --  so we need to allow a space in the name in some cases.
 
-         elsif Index + 8 <= Str'Last
+         if Index + 8 <= Str'Last
            and then Str (Index) = 'o'
            and then Str (Index + 1) = 'p'
            and then Str (Index + 2) = 'e'
@@ -1916,6 +1918,7 @@ package body GNATCOLL.Xref is
                   else
                      Index := Index + 1;  --  = operator
                   end if;
+                  return;
 
                when '<' =>
                   if Index < Str'Last and then Str (Index + 1) = '<' then
@@ -1931,6 +1934,7 @@ package body GNATCOLL.Xref is
                   else
                      Index := Index + 1;   --  < operator
                   end if;
+                  return;
 
                when '>' =>
                   if Index < Str'Last and then Str (Index + 1) = '>' then
@@ -1946,6 +1950,7 @@ package body GNATCOLL.Xref is
                   else
                      Index := Index + 1;  --  > operator
                   end if;
+                  return;
 
                when '-' =>
                   if Index < Str'Last and then Str (Index + 1) = '=' then
@@ -1961,6 +1966,7 @@ package body GNATCOLL.Xref is
                   else
                      Index := Index + 1;  --  - operator
                   end if;
+                  return;
 
                when '+' =>
                   if Index < Str'Last and then Str (Index + 1) = '=' then
@@ -1970,6 +1976,7 @@ package body GNATCOLL.Xref is
                   else
                      Index := Index + 1;  --  + operator
                   end if;
+                  return;
 
                when '*' =>
                   if Index < Str'Last and then Str (Index + 1) = '=' then
@@ -1981,6 +1988,7 @@ package body GNATCOLL.Xref is
                   else
                      Index := Index + 1;  --  * operator
                   end if;
+                  return;
 
                when '/' =>
                   if Index < Str'Last and then Str (Index + 1) = '=' then
@@ -1988,6 +1996,7 @@ package body GNATCOLL.Xref is
                   else
                      Index := Index + 1;  --  / operator
                   end if;
+                  return;
 
                when '!' =>
                   if Index < Str'Last and then Str (Index + 1) = '=' then
@@ -1995,6 +2004,7 @@ package body GNATCOLL.Xref is
                   else
                      Index := Index + 1;  --  ! operator (not)
                   end if;
+                  return;
 
                when '[' =>
                   if Index < Str'Last and then Str (Index + 1) = ']' then
@@ -2002,6 +2012,7 @@ package body GNATCOLL.Xref is
                   else
                      Index := Index + 1;  --  ???
                   end if;
+                  return;
 
                when '(' =>
                   if Index < Str'Last and then Str (Index + 1) = ')' then
@@ -2009,6 +2020,7 @@ package body GNATCOLL.Xref is
                   else
                      Index := Index + 1;  --  ???
                   end if;
+                  return;
 
                when '%' =>
                   if Index < Str'Last and then Str (Index + 1) = '=' then
@@ -2016,6 +2028,7 @@ package body GNATCOLL.Xref is
                   else
                      Index := Index + 1;   --  % operator
                   end if;
+                  return;
 
                when '|' =>
                   if Index < Str'Last and then Str (Index + 1) = '|' then
@@ -2025,6 +2038,7 @@ package body GNATCOLL.Xref is
                   else
                      Index := Index + 1;   --  | operator
                   end if;
+                  return;
 
                when '&' =>
                   if Index < Str'Last and then Str (Index + 1) = '&' then
@@ -2036,6 +2050,7 @@ package body GNATCOLL.Xref is
                   else
                      Index := Index + 1;   --  & operator
                   end if;
+                  return;
 
                when '^' =>
                   if Index < Str'Last and then Str (Index + 1) = '=' then
@@ -2043,6 +2058,7 @@ package body GNATCOLL.Xref is
                   else
                      Index := Index + 1;   --  ^ operator
                   end if;
+                  return;
 
                when ' ' =>
                   if Starts_With
@@ -2076,34 +2092,39 @@ package body GNATCOLL.Xref is
                      end loop;
                   end if;
 
+                  return;
+
                when '~' | ',' =>
                   Index := Index + 1;
+                  return;
 
                when others =>
-                  --  unexpected
-                  Index := Index + 1;
+                  --  The name of an entity that starts with 'operator'
+                  --  fall through the default handling
+                  null;
             end case;
-
-         else
-            Index := Index + 1;
-
-            --  Entity names can contain extra information, like
-            --  pointed type,... So we need to extract the name
-            --  itself and will store the extra information in a
-            --  second step
-
-            while Str (Index) /= ASCII.LF
-              and then Str (Index) /= ASCII.CR
-              and then Str (Index) /= '{'
-              and then Str (Index) /= '<'
-              and then Str (Index) /= '('
-              and then Str (Index) /= ' '
-              and then Str (Index) /= '='
-              and then Str (Index) /= '['
-            loop
-               Index := Index + 1;
-            end loop;
          end if;
+
+         --  Default handling
+
+         Index := Index + 1;
+
+         --  Entity names can contain extra information, like
+         --  pointed type,... So we need to extract the name
+         --  itself and will store the extra information in a
+         --  second step
+
+         while Str (Index) /= ASCII.LF
+           and then Str (Index) /= ASCII.CR
+           and then Str (Index) /= '{'
+           and then Str (Index) /= '<'
+           and then Str (Index) /= '('
+           and then Str (Index) /= ' '
+           and then Str (Index) /= '='
+           and then Str (Index) /= '['
+         loop
+            Index := Index + 1;
+         end loop;
       end Skip_To_Name_End;
 
       ------------------------

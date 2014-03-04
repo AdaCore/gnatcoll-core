@@ -148,6 +148,7 @@
 | unsigned char          | I        |        -1 |        -1 |          -1 | true      |
 | unsigned int           | I        |        -1 |        -1 |          -1 | true      |
 | void                   | p        |        -1 |        -1 |          -1 | true      |
+| _Bool                  | B        |        -1 |        -1 |          -1 | true      |
 | Wide_Character         | E        |        -1 |        -1 |          -1 | true      |
 | Wide_Wide_Character    | E        |        -1 |        -1 |          -1 | true      |
 | Wide_String            | A        |        -1 |        -1 |          -1 | true      |
