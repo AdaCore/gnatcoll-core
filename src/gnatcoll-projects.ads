@@ -668,7 +668,7 @@ package GNATCOLL.Projects is
    --  Here, however, the source is searched in the specified project or
    --  any of the projects it imports (Create only searches in the direct
    --  sources of the project). This function also only works for source files,
-   --  for for project files or ALI files.
+   --  not for project files or ALI files.
    --  This function will also search in the predefined source path.
    --  Self must not be an aggregate project, to remove ambiguities.
 

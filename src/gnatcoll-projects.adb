@@ -1375,8 +1375,8 @@ package body GNATCOLL.Projects is
       File       : Virtual_File;
       Source     : Source_File_Data;
       Imports    : Boolean;
-      Is_Limited : Boolean;
       Result     : File_Info;
+      Iter       : Project_Iterator;
 
    begin
       if Is_Absolute_Path (Name) then
@@ -1409,11 +1409,19 @@ package body GNATCOLL.Projects is
             Imports := Source.Project = Project_Type (Self)
               or else Source.Project = No_Project;  --  predefined source file
             if not Imports then
-               Self.Project_Imports
-                 (Child            => Source.Project,
-                  Include_Extended => True,
-                  Imports          => Imports,
-                  Is_Limited_With  => Is_Limited);
+               Iter := Self.Start
+                  (Recursive        => True,
+                   Include_Extended => True);
+               loop
+                  exit when Current (Iter) = No_Project;
+
+                  if Current (Iter) = Source.Project then
+                     Imports := True;
+                     exit;
+                  end if;
+
+                  Next (Iter);
+               end loop;
             end if;
 
             if Imports then
