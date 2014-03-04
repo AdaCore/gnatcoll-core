@@ -3294,7 +3294,10 @@ package body GNATCOLL.Xref is
             Schema_Is_Valid : Boolean := True;
          begin
             R.Fetch (DB, "PRAGMA user_version;");
-            if R.Integer_Value (0) /= Schema_Version then
+
+            if not DB.Success
+               or else R.Integer_Value (0) /= Schema_Version
+            then
                Schema_Is_Valid := False;
             end if;
 
@@ -3329,7 +3332,9 @@ package body GNATCOLL.Xref is
                   end if;
 
                   R.Fetch (DB, "PRAGMA user_version;");
-                  if R.Integer_Value (0) /= Schema_Version then
+                  if not DB.Success
+                     or else R.Integer_Value (0) /= Schema_Version
+                  then
                      Trace (Me_Error,
                             "Schema Version from copied db was incorrect");
                   else
@@ -4029,11 +4034,20 @@ package body GNATCOLL.Xref is
       then
          R.Fetch (Self.DB, "PRAGMA user_version;");
 
-         if R.Integer_Value (0) /= Schema_Version
-           and then R.Integer_Value (0) /= 0  --  0 means "no schema created"
+         if not Self.DB.Success
+            or else
+            (R.Integer_Value (0) /= Schema_Version
+
+             --  0 means "no schema created"
+             and then R.Integer_Value (0) /= 0)
          then
-            Trace (Me_Debug, "Version mismatch : "
-                   & R.Value (0) & " /=" & Schema_Version'Img);
+            if not Self.DB.Success then
+               Trace (Me_Error, "database seems to be corrupted");
+            else
+               Trace (Me_Error, "Version mismatch : "
+                      & R.Value (0) & " /=" & Schema_Version'Img);
+            end if;
+
             Error := new String'
               ("Database schema version is "
                & R.Value (0) & ", expecting" & Schema_Version'Img);
