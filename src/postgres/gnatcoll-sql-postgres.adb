@@ -131,7 +131,8 @@ package body GNATCOLL.SQL.Postgres is
       Password      : String := "";
       Port          : Integer := -1;
       SSL           : SSL_Mode := Allow;
-      Cache_Support : Boolean := True)
+      Cache_Support : Boolean := True;
+      Errors        : access Error_Reporter'Class := null)
       return Database_Description
    is
       Result : Postgres_Description_Access;
@@ -140,7 +141,8 @@ package body GNATCOLL.SQL.Postgres is
          return null;
       end if;
 
-      Result := new Postgres_Description (Caching => Cache_Support);
+      Result := new Postgres_Description
+        (Caching => Cache_Support, Errors => Errors);
       Result.SSL      := SSL;
       Result.Dbname   := new String'(Database);
       Result.User     := new String'(User);

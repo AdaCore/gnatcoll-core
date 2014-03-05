@@ -191,8 +191,16 @@ package GNATCOLL.SQL.Exec is
    --------------------------
    --  Data common to all the concurrent connections to the database.
 
+   type Error_Reporter is abstract tagged private;
+   type Error_Reporter_Access is access all Error_Reporter'Class;
+   --  This type is used by the various methods that need to report SQL
+   --  errors or issues with the database. Not all the primitive operations
+   --  are used by all database backends (for instance, postgresql does not
+   --  report an error for a corrupted database).
+
    type Database_Description_Record
-     (Caching : Boolean) is abstract tagged private;
+     (Caching : Boolean;
+      Errors  : access Error_Reporter'Class) is abstract tagged private;
    type Database_Description is access all Database_Description_Record'Class;
    --  Describes how to access a database, and stores global caches associated
    --  with that database.
@@ -206,7 +214,7 @@ package GNATCOLL.SQL.Exec is
    type Database_Connection_Record
      (Descr : access Database_Description_Record'Class;
       Always_Use_Transactions : Boolean)
-     is abstract new Formatter with private;
+   is abstract new Formatter with private;
    type Database_Connection is access all Database_Connection_Record'Class;
    --  A thread-specific access to a database. Each thread, in an application,
    --  should have its own access to the database, so that transactions really
@@ -236,6 +244,31 @@ package GNATCOLL.SQL.Exec is
    --  Free memory associated with description.
    --  This should only be called when the last database connection was closed,
    --  since each connection keeps a handle on the description
+
+   --------------------
+   -- Error_Reporter --
+   --------------------
+
+   procedure Free (Self : in out Error_Reporter) is null;
+   --  Free the memory used by Self
+
+   procedure On_Database_Corrupted
+     (Self       : in out Error_Reporter;
+      Connection : access Database_Connection_Record'Class) is null;
+   --  Called when the database is corrupted.
+   --  A call to On_Error will also occur.
+
+   procedure On_Warning
+     (Self       : in out Error_Reporter;
+      Connection : access Database_Connection_Record'Class;
+      Message    : String) is null;
+   --  Called when a warning is emitted by the database.
+
+   procedure On_Error
+     (Self       : in out Error_Reporter;
+      Connection : access Database_Connection_Record'Class;
+      Message    : String) is null;
+   --  Called when an error is emitted by the database.
 
    -------------------------
    -- Database_Connection --
@@ -800,11 +833,14 @@ package GNATCOLL.SQL.Exec is
    -------------------------
    -- Errors and Warnings --
    -------------------------
+   --  This subprograms are for internal implementation only
 
    procedure Print_Warning
      (Connection : access Database_Connection_Record'Class; Str : String);
    procedure Print_Error
      (Connection : access Database_Connection_Record'Class; Str : String);
+   procedure Report_Database_Corrupted
+     (Connection : access Database_Connection_Record'Class);
    --  Print a warning or message to the appropriate GNATCOLL.Traces stream.
 
    -------------------------
@@ -900,8 +936,11 @@ package GNATCOLL.SQL.Exec is
 
 private
 
+   type Error_Reporter is abstract tagged null record;
+
    type Database_Description_Record
-     (Caching : Boolean) is abstract tagged null record;
+     (Caching : Boolean;
+      Errors  : access Error_Reporter'Class) is abstract tagged null record;
 
    type Database_Connection_Record
      (Descr : access Database_Description_Record'Class;

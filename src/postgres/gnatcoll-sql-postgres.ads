@@ -53,11 +53,14 @@ package GNATCOLL.SQL.Postgres is
       Password      : String := "";
       Port          : Integer := -1;
       SSL           : SSL_Mode := Allow;
-      Cache_Support : Boolean := True)
+      Cache_Support : Boolean := True;
+      Errors        : access Error_Reporter'Class := null)
      return Database_Description;
    --  Return a database connection for PostgreSQL.
    --  If postgres was not detected at installation time, this function will
    --  return null.
+   --  Errors (if specified) will be used to report errors and warnings to the
+   --  application. Errors is never freed.
 
    -------------------------
    -- Postgres extensions --
@@ -100,9 +103,7 @@ package GNATCOLL.SQL.Postgres is
       Extension : SQL_PG_Extension'Class) return SQL_Query;
 
 private
-   type Postgres_Description (Caching : Boolean)
-     is new Database_Description_Record (Caching)
-   with record
+   type Postgres_Description is new Database_Description_Record with record
       Host     : GNAT.Strings.String_Access;
       Dbname   : GNAT.Strings.String_Access;
       User     : GNAT.Strings.String_Access;

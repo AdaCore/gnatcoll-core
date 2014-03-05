@@ -465,6 +465,10 @@ package body GNATCOLL.SQL.Exec is
      (Connection : access Database_Connection_Record'Class; Str : String) is
    begin
       Trace (Me_Query, Str & " (" & Connection.Username.all & ")");
+
+      if Connection.Descr.Errors /= null then
+         Connection.Descr.Errors.On_Warning (Connection, Str);
+      end if;
    end Print_Warning;
 
    -----------------
@@ -475,7 +479,26 @@ package body GNATCOLL.SQL.Exec is
      (Connection : access Database_Connection_Record'Class; Str : String) is
    begin
       Trace (Me_Error, Str & " (" & Connection.Username.all & ")");
+
+      if Connection.Descr.Errors /= null then
+         Connection.Descr.Errors.On_Error (Connection, Str);
+      end if;
    end Print_Error;
+
+   -------------------------------
+   -- Report_Database_Corrupted --
+   -------------------------------
+
+   procedure Report_Database_Corrupted
+     (Connection : access Database_Connection_Record'Class)
+   is
+   begin
+      if Connection.Descr.Errors /= null then
+         Connection.Descr.Errors.On_Database_Corrupted (Connection);
+      end if;
+
+      Print_Error (Connection, "Error, database is corrupted");
+   end Report_Database_Corrupted;
 
    ----------
    -- Free --
@@ -486,6 +509,9 @@ package body GNATCOLL.SQL.Exec is
         (Database_Description_Record'Class, Database_Description);
    begin
       if Description /= null then
+         --  as documented (in gnatcoll.sql.sqlite.setup), do not free the
+         --  memory for Errors
+
          Free (Description.all);
          Unchecked_Free (Description);
       end if;

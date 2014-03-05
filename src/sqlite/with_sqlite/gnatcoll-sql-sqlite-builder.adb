@@ -596,6 +596,10 @@ package body GNATCOLL.SQL.Sqlite.Builder is
                Res.Processed_Rows := Changes (Connection.DB);
             end if;
 
+         when Sqlite_Corrupt =>
+            Report_Database_Corrupted (Connection);
+            return null;
+
          when others =>
             Print_Warning
               (Connection,
