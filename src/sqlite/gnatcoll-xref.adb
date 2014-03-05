@@ -3736,24 +3736,37 @@ package body GNATCOLL.Xref is
          --  Cleanup the database by removing obsolete information. This
          --  includes:
          --    * finding source files for which the LI unit has changed (call
-         --      them LI_Units)
-         --    * finding all entities defined in one of those LI_Units. Call
-         --      them LI_Entities).
-         --    * all references to any entities within those LI_Units
-         --    * all references, anywhere, to one of the LI_Entities
-         --    * all e2e information from or to one of the LI_Entities
-         --    * all the LI_Entities themselves.
-         --    * remove f2f originating from one of the LI_Units (typically the
-         --      dependencies these files have on others). After this step, we
-         --      cannot recompute the list of LI_Units, so this must be last).
+         --      them temp_files)
+         --    * finding all entities defined in one of those temp_files. Call
+         --      them temp_entities).
+         --    * all references to any entities within those temp_files
+         --
+         --  Before doing the rest of the cleanup, we want to try and preserve
+         --  entities that still exist in the new LI file. This is approximate
+         --  but should work almost always: when an entity with the same name
+         --  and exactly the same declaration for its location exists, we
+         --  remove it from temp_entities, so that its references in other
+         --  files are preserved.
+         --
+         --    * all references, anywhere, to one of the temp_entities
+         --      See note below
+         --    * all e2e information from or to one of the temp_entities
+         --    * all the temp_entities themselves.
+         --    * remove f2f originating from one of the temp_files (typically
+         --      the dependencies these files have on others). After this step
+         --      we cannot recompute the list of temp_files, so this must be
+         --      last).
          --
          --  Note that this cleanup is correct, but if all the ALI files are
          --  not consistent we are losing information. For instance, a
-         --  reference to an LI_Entity from a file we are not parsing again
-         --  will not exist anymore, so files with obsolete ALI files will have
-         --  partial xref only.
+         --  reference to a temp_entities whose declaration line has changed,
+         --  in a file we are not parsing again will not exist anymore,
+         --  so files with obsolete ALI files will have  partial xref only.
+         --  Removing entities from temp_entities as we did above will hide
+         --  this issue somewhat.
+         --
          --  Likewise for the e2e information, so we might no longer know that
-         --  an entity was inheriting from one of the LI_Entities.
+         --  an entity was inheriting from one of the temp_entities.
 
          --  faster to delete the indexes before we delete things
          Start_Transaction (DB, Destroy_Indexes => Destroy_Indexes);
@@ -3775,13 +3788,13 @@ package body GNATCOLL.Xref is
          end loop;
 
          DB.Execute ("CREATE TEMP TABLE temp_files (id INTEGER PRIMARY KEY);");
-         DB.Execute
+         DB.Execute  --  source files corresponding to the temp_lis
            ("INSERT INTO temp_files SELECT DISTINCT "
             & " f2f.fromFile FROM f2f WHERE "
             & " f2f.kind = 1 AND"
             & " f2f.toFile IN (SELECT * FROM temp_lis);");
          DB.Execute ("DROP TABLE temp_lis;");
-         DB.Execute
+         DB.Execute  --  defined in any of the temp_files
            ("CREATE TEMP TABLE temp_entities (id INTEGER PRIMARY KEY);");
          DB.Execute
            ("INSERT INTO temp_entities SELECT entities.id FROM entities,"
@@ -3861,7 +3874,7 @@ package body GNATCOLL.Xref is
             end loop;
          end;
 
-         --  ??? If we had a failure earlier, we will exit early and lost the
+         --  ??? If we had a failure earlier, we will exit early and lose the
          --  contents of temp_entities, and therefore never clean those
          --  entities from the database until we parse the corresponding LI
          --  files again.
