@@ -2337,7 +2337,12 @@ package body GNATCOLL.Projects is
      (Self : Project_Tree;
       File : GNATCOLL.VFS.Virtual_File) return GNATCOLL.VFS.Virtual_File
    is
-      Info : constant File_Info := Self.Info (File);
+      --  Should we ask the user for the project ?
+      --  in practice, it is likely that the other file is in the same
+      --  project, so whichever project tree we choose we would likely end up
+      --  with the same other file.
+
+      Info : constant File_Info := Self.Info_Set (File).First_Element.all;
       Unit : constant String := Unit_Name (Info);
       Part : Unit_Parts;
 
