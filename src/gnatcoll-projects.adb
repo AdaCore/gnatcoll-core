@@ -5508,7 +5508,7 @@ package body GNATCOLL.Projects is
       Language_Name       : String;
       Default_Spec_Suffix : String;
       Default_Body_Suffix : String;
-      Obj_Suffix          : String := "-")
+      Obj_Suffix          : String := ".o")
    is
       Spec, Impl, Obj : String_Access;
       Spec_Suff  : String := Default_Spec_Suffix;

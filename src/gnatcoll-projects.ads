@@ -826,7 +826,7 @@ package GNATCOLL.Projects is
       Language_Name       : String;
       Default_Spec_Suffix : String;
       Default_Body_Suffix : String;
-      Obj_Suffix          : String := "-");
+      Obj_Suffix          : String := ".o");
    --  Register Default_Spec_Suffix and Default_Body_Suffix as the default
    --  extensions for the language. This procedure impacts the loading of
    --  projects (in particular the automatic search for source files in the
