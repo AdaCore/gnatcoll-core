@@ -1211,14 +1211,21 @@ package body GNATCOLL.VFS is
       Norm : Virtual_File;
       Success : Boolean;
       pragma Unreferenced (Success);
+
+      --  We'll need to force the resolution of symbolic links,
+      --  since we never want to transform a link into a regular
+      --  file (which among other things breaks support for CM Synergy)
+      Save_Handle_Symbolic_Links : constant Boolean := Handle_Symbolic_Links;
    begin
       if File.Success then
          if File.Tmp_File /= No_File then
             File.Tmp_File.Value.Close (File.FD, File.Success);
             if File.Success then
                --  Look past symbolic links
+               Handle_Symbolic_Links := True;
                Norm := Create (File.File.Full_Name
                   (Normalize => True, Resolve_Links => True).all);
+               Handle_Symbolic_Links := Save_Handle_Symbolic_Links;
                if Norm.Is_Regular_File then
                   Norm.Delete (File.Success);
 
