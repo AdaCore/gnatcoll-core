@@ -260,7 +260,8 @@ package GNATCOLL.VFS is
      (File         : Virtual_File;
       Cygwin_Style : Boolean := False;
       Normalize    : Boolean := False) return Filesystem_String;
-   --  Returns the file path using a unix-style path
+   --  Returns the file path using a unix-style path.
+   --  If Normalize is True, the casing is also lower-cased when applicable
 
    function Relative_Path
      (File : Virtual_File;

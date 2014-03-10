@@ -655,6 +655,17 @@ package body GNATCOLL.VFS is
       Normalize    : Boolean := False) return Filesystem_String
    is
       FS : FS_Type;
+
+      function Auto_Case (Str : FS_String) return Filesystem_String;
+      function Auto_Case (Str : FS_String) return Filesystem_String is
+      begin
+         if Is_Case_Sensitive (FS) then
+            return +Str;
+         else
+            return +To_Lower (+Str);
+         end if;
+      end Auto_Case;
+
    begin
       if File.Value = null then
          return "";
@@ -662,14 +673,14 @@ package body GNATCOLL.VFS is
          FS := File.Value.Get_FS;
 
          if Normalize then
-            return +To_Unix
+            return Auto_Case (To_Unix
               (FS,
                +Full_Name
                  (File, Normalize => Normalize, Resolve_Links => True).all,
-               Cygwin_Style);
+               Cygwin_Style));
          else
-            return +To_Unix
-              (FS, File.Value.Full.all, Cygwin_Style);
+            return Auto_Case (To_Unix
+              (FS, File.Value.Full.all, Cygwin_Style));
          end if;
       end if;
    end Unix_Style_Full_Name;
