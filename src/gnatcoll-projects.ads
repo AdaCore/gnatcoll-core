@@ -597,6 +597,25 @@ package GNATCOLL.Projects is
    --  aggregate project. For languages other than Ada multiple sources with
    --  same base name can also be returned.
 
+   type File_And_Project is record
+      File    : GNATCOLL.VFS.Virtual_File;
+      Project : GNATCOLL.Projects.Project_Type;
+   end record;
+
+   type File_And_Project_Array is array (Natural range <>) of File_And_Project;
+   type File_And_Project_Array_Access is access all File_And_Project_Array;
+
+   procedure Free (Self : in out File_And_Project_Array_Access);
+   --  Free the memory used by Self
+
+   function Source_Files
+     (Project   : Project_Type;
+      Recursive : Boolean := False) return File_And_Project_Array_Access;
+   --  Return the list of source files (recursively) for Project.
+   --  For each file, include the name of its project, which is especially
+   --  useful in the context of aggregate projects.
+   --  Result must be freed by the caller.
+
    function Direct_Sources_Count (Project : Project_Type) return Natural;
    --  Return the number of direct source files for Project
 
@@ -661,8 +680,8 @@ package GNATCOLL.Projects is
       Name            : GNATCOLL.VFS.Filesystem_String)
       return File_Info;
    pragma Precondition
-     (Project_Type (Self) /= No_Project
-      and then not Self.Is_Aggregate_Project);
+     (Project_Type (Self) = No_Project
+      or else not Self.Is_Aggregate_Project);
    --  This is similar to Create above (converts from a base name to a full
    --  path for a source file).
    --  Here, however, the source is searched in the specified project or

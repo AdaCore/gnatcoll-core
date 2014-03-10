@@ -1380,6 +1380,16 @@ package body GNATCOLL.Projects is
       Iter       : Project_Iterator;
 
    begin
+      if Project_Type (Self) = No_Project then
+         return File_Info'
+           (File         => Create (Name),
+            Project      => No_Project,
+            Root_Project => Project_Type (Self),
+            Part         => Unit_Separate,
+            Name         => Namet.No_Name,
+            Lang         => Namet.No_Name);
+      end if;
+
       if Is_Absolute_Path (Name) then
          File := Create (Normalize_Pathname (Name, Resolve_Links => False));
          Result := Info (Tree => Self.Data.Tree, File => File);
@@ -1733,6 +1743,68 @@ package body GNATCOLL.Projects is
       File := Path;
    end Create;
 
+   ----------
+   -- Free --
+   ----------
+
+   procedure Free (Self : in out File_And_Project_Array_Access) is
+      procedure Unchecked_Free is new Ada.Unchecked_Deallocation
+        (File_And_Project_Array, File_And_Project_Array_Access);
+   begin
+      Unchecked_Free (Self);
+   end Free;
+
+   ------------------
+   -- Source_Files --
+   ------------------
+
+   function Source_Files
+     (Project   : Project_Type;
+      Recursive : Boolean := False) return File_And_Project_Array_Access
+   is
+      Count   : Natural := 0;
+      Index   : Natural;
+      P       : Project_Type;
+      Result  : File_And_Project_Array_Access;
+      Iter    : Project_Iterator := Start (Project, Recursive => Recursive);
+   begin
+      --  Count files
+
+      loop
+         P := Current (Iter);
+         exit when P = No_Project;
+
+         if P.Data.Files /= null then
+            Count := Count + P.Data.Files'Length;
+         end if;
+
+         Next (Iter);
+      end loop;
+
+      Result := new File_And_Project_Array (1 .. Count);
+      Index := Result'First;
+
+      Iter := Start (Project, Recursive => Recursive);
+
+      loop
+         P := Current (Iter);
+         exit when P = No_Project;
+
+         if P.Data.Files /= null then
+            for S in P.Data.Files'Range loop
+               Result (Index) :=
+                 (File    => P.Data.Files (S),
+                  Project => P);
+               Index := Index + 1;
+            end loop;
+         end if;
+
+         Next (Iter);
+      end loop;
+
+      return Result;
+   end Source_Files;
+
    ------------------
    -- Source_Files --
    ------------------
@@ -1741,11 +1813,10 @@ package body GNATCOLL.Projects is
      (Project   : Project_Type;
       Recursive : Boolean := False) return GNATCOLL.VFS.File_Array_Access
    is
-      Count   : Natural;
+      Count   : Natural := 0;
       Index   : Natural := 1;
       P       : Project_Type;
       Sources : File_Array_Access;
-      Ret     : File_Array_Access;
 
    begin
       if not Recursive then
@@ -1759,8 +1830,6 @@ package body GNATCOLL.Projects is
       declare
          Iter : Project_Iterator := Start (Project, Recursive);
       begin
-         Count := 0;
-
          --  Count files
 
          loop
@@ -1795,9 +1864,7 @@ package body GNATCOLL.Projects is
             Next (Iter);
          end loop;
 
-         Ret := new File_Array'(Sources (Sources'First .. Index - 1));
-         Unchecked_Free (Sources);
-         return Ret;
+         return Sources;
       end;
    end Source_Files;
 
