@@ -1363,7 +1363,11 @@ procedure GNATInspect is
 
       Entity := Get_Entity (Nth_Arg (Args, 1));
       Decl := Xref.Declaration (Entity);
-      Info := Tree.Info (Decl.Location.File);
+
+      --  Since we are only interested in the language, we can take any
+      --  matching File_Info (unlikely that the same file will have different
+      --  languages in different aggregated projects)
+      Info := Tree.Info_Set (Decl.Location.File).First_Element.all;
 
       if Info.Language = "ada" then
          Syntax := Ada_Syntax;

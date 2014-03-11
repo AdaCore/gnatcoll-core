@@ -349,6 +349,13 @@ package body GNATCOLL.Xref is
    --  Retrieve the list of parameters for the entity in $1.
    --  Cannot be prepared because there are risks of concurrent calls.
 
+   Files_Cursor_Path    : constant := 0;
+   Files_Cursor_Project : constant := 1;
+   Files_Cursor_Fields : constant SQL_Field_List := To_List
+     ((Files_Cursor_Path    => +Database.Files.Path,
+       Files_Cursor_Project => +Files3.Path));
+   --  The fields for the files_cursor
+
    Entities2_Fields : constant SQL_Field_List :=
      Entities2.Id
      & Entities2.Name
@@ -4741,8 +4748,22 @@ package body GNATCOLL.Xref is
 
    function Element (Self : Files_Cursor) return GNATCOLL.VFS.Virtual_File is
    begin
-      return Create (+Self.DBCursor.Value (0));
+      return Create (+Self.DBCursor.Value (Files_Cursor_Path));
    end Element;
+
+   -------------
+   -- Project --
+   -------------
+
+   function Project
+     (Self : Files_Cursor;
+      Tree : GNATCOLL.Projects.Project_Tree'Class)
+      return GNATCOLL.Projects.Project_Type
+   is
+   begin
+      return Tree.Project_From_Path
+        (Create (+Self.DBCursor.Value (Files_Cursor_Project)));
+   end Project;
 
    -----------------
    -- Imported_By --
@@ -4762,7 +4783,7 @@ package body GNATCOLL.Xref is
       Curs.DBCursor.Fetch
         (Self.DB,
          SQL_Select
-           (Database.Files.Path,
+           (Files_Cursor_Fields,
             From  => Database.Files & Database.F2f & Files2 & Files3,
             Where => Database.F2f.Fromfile = Database.Files.Id
               and Files2.Id = Database.F2f.Tofile
@@ -4794,7 +4815,7 @@ package body GNATCOLL.Xref is
       Curs.DBCursor.Fetch
         (Self.DB,
          SQL_Select
-           (Database.Files.Path,
+           (Files_Cursor_Fields,
             From  => Database.Files & Database.F2f & Files2 & Files3,
             Where => Database.F2f.Tofile = Database.Files.Id
               and Files2.Id = Database.F2f.Fromfile

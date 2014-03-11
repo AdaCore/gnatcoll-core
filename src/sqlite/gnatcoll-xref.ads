@@ -810,6 +810,11 @@ package GNATCOLL.Xref is
 
    type Files_Cursor is new Base_Cursor with private;
    function Element (Self : Files_Cursor) return GNATCOLL.VFS.Virtual_File;
+   function Project
+     (Self : Files_Cursor;
+      Tree : GNATCOLL.Projects.Project_Tree'Class)
+      return GNATCOLL.Projects.Project_Type;
+   --  The current file, and the path of the project it belongs to.
 
    function Imported_By
      (Self    : Xref_Database'Class;
