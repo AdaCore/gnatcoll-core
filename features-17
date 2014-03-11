@@ -36,7 +36,12 @@ NF-17-N108-018 GNATCOLL.SQL: support for CREATE TABLE AS (2014-01-08)
 
 NF-17-MC19-005 GNATCOLL.Xref support for aggregate projects (2014-02-18)
 
-  GNATCOLL.Xref and gnatinspect now support aggregate projects.
+  GNATCOLL.Xref and gnatinspect now support aggregate projects. To port
+  your application, you mostly need to replace calls to Info with calls
+  to Info_Set, since a given file can now belong to several projects. This
+  returns the list of possible project, and you can either use some other
+  context to choose the appropriate project, or take the first one (which
+  will not work for all types of aggregates though).
 
 NF-17-MB29-039 GNATCOLL.SQL.Exec.Float_Value new param Default (2013-12-01)
 
