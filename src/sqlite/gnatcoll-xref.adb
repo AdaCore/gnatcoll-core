@@ -4808,24 +4808,34 @@ package body GNATCOLL.Xref is
    is
       Name  : aliased String :=
         +File.Unix_Style_Full_Name (Normalize => True);
-      Project_Path  : aliased String :=
-        +Project.Project_Path.Unix_Style_Full_Name (Normalize => True);
+      P : Project_Type;
       Curs : Files_Cursor;
    begin
-      Curs.DBCursor.Fetch
-        (Self.DB,
-         SQL_Select
-           (Files_Cursor_Fields,
-            From  => Database.Files & Database.F2f & Files2 & Files3,
-            Where => Database.F2f.Tofile = Database.Files.Id
-              and Files2.Id = Database.F2f.Fromfile
-              and Files2.Path = Text_Param (1)
-              and Database.F2f.Kind = F2f_Withs
-              and Files2.Project = Files3.Id
-              and Files3.Path = Text_Param (2),
-            Order_By => Database.Files.Path),
-         Params => (1 => +Name'Unchecked_Access,
-                    2 => +Project_Path'Unchecked_Access));
+      if Project = No_Project then
+         P := Self.Tree.Info_Set (File).First_Element.Project;
+      else
+         P := Project;
+      end if;
+
+      declare
+         Project_Path  : aliased String :=
+           +P.Project_Path.Unix_Style_Full_Name (Normalize => True);
+      begin
+         Curs.DBCursor.Fetch
+           (Self.DB,
+            SQL_Select
+              (Files_Cursor_Fields,
+               From      => Database.Files & Database.F2f & Files2 & Files3,
+               Where     => Database.F2f.Tofile = Database.Files.Id
+               and Files2.Id = Database.F2f.Fromfile
+               and Files2.Path = Text_Param (1)
+               and Database.F2f.Kind = F2f_Withs
+               and Files2.Project = Files3.Id
+               and Files3.Path = Text_Param (2),
+               Order_By  => Database.Files.Path),
+            Params => (1 => +Name'Unchecked_Access,
+                       2 => +Project_Path'Unchecked_Access));
+      end;
       return Curs;
    end Imports;
 
@@ -5901,43 +5911,53 @@ package body GNATCOLL.Xref is
       Project : Project_Type;
       Cursor  : out Entities_Cursor'Class)
    is
-      Project_N : aliased constant String :=
-        +Project.Project_Path.Unix_Style_Full_Name (Normalize => True);
+      P : Project_Type;
    begin
-      Cursor.DBCursor.Fetch
-        (Self.DB,
-         SQL_Union
-           (SQL_Select
-              (Database.Entities.Id
-               & Database.Files.Path
-               & Database.Entities.Decl_Line
-               & Database.Entities.Decl_Column,
-               From => Database.Entities & Database.Files & Files3,
-               Where => Database.Entities.Decl_File = Database.Files.Id
-                 and Like (Database.Files.Path,
-                   +File.Unix_Style_Full_Name (Normalize => True))
-                 and Database.Files.Project = Files3.Id
-                 and Files3.Path = Text_Param (1)),
+      if Project = No_Project then
+         P := Self.Tree.Info_Set (File).First_Element.Project;
+      else
+         P := Project;
+      end if;
 
-            SQL_Select
-              (Database.Entities.Id
-               & Database.Files.Path
-               & Database.Entities.Decl_Line
-               & Database.Entities.Decl_Column,
-               From => Database.Entity_Refs & Database.Files & Files3
+      declare
+         Project_N : aliased constant String :=
+           +P.Project_Path.Unix_Style_Full_Name (Normalize => True);
+      begin
+         Cursor.DBCursor.Fetch
+           (Self.DB,
+            SQL_Union
+              (SQL_Select
+                   (Database.Entities.Id
+                    & Database.Files.Path
+                    & Database.Entities.Decl_Line
+                    & Database.Entities.Decl_Column,
+                    From  => Database.Entities & Database.Files & Files3,
+                    Where => Database.Entities.Decl_File = Database.Files.Id
+                    and Like (Database.Files.Path,
+                      +File.Unix_Style_Full_Name (Normalize => True))
+                    and Database.Files.Project = Files3.Id
+                    and Files3.Path = Text_Param (1)),
+
+               SQL_Select
+                 (Database.Entities.Id
+                  & Database.Files.Path
+                  & Database.Entities.Decl_Line
+                  & Database.Entities.Decl_Column,
+                  From    => Database.Entity_Refs & Database.Files & Files3
                   & Database.Entities,
-               Where => Database.Entity_Refs.File = Database.Files.Id
+                  Where   => Database.Entity_Refs.File = Database.Files.Id
                   and Like (Database.Files.Path,
-                            +File.Unix_Style_Full_Name (Normalize => True))
+                    +File.Unix_Style_Full_Name (Normalize   => True))
                   and Database.Entity_Refs.Entity = Database.Entities.Id
                   and Database.Files.Project = Files3.Id
                   and Files3.Path = Text_Param (1)),
 
-            Order_By => Database.Files.Path & Database.Entities.Decl_Line
+               Order_By => Database.Files.Path & Database.Entities.Decl_Line
                & Database.Entities.Decl_Column,
-            Distinct => True),
+               Distinct => True),
 
-        Params => (1 => +Project_N'Unchecked_Access));
+            Params => (1 => +Project_N'Unchecked_Access));
+      end;
    end Referenced_In;
 
    -------------------
