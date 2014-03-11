@@ -7401,6 +7401,7 @@ package body GNATCOLL.Projects is
    function Is_Editable (Project : Project_Type) return Boolean is
    begin
       return not Project.Data.Uses_Variables
+        and then not Project.Is_Aggregate_Project
         and then Project.Data.View_Is_Complete;
    end Is_Editable;
 
