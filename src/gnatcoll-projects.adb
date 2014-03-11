@@ -1652,8 +1652,7 @@ package body GNATCOLL.Projects is
               (Name, Project2.Source_Dirs (Recursive => False));
          end if;
 
-         if
-           Use_Object_Path
+         if Use_Object_Path
            and then not Duplicate_Obj
            and then Path = GNATCOLL.VFS.No_File
          then
@@ -1662,8 +1661,7 @@ package body GNATCOLL.Projects is
               (Name, Project2.Object_Path
                  (Recursive => False, Including_Libraries => True));
 
-            if
-              Path /= GNATCOLL.VFS.No_File
+            if Path /= GNATCOLL.VFS.No_File
               and then Is_Aggregate_Project (Self.Root_Project)
               and then Project.Data = null
             then
@@ -1683,6 +1681,7 @@ package body GNATCOLL.Projects is
          if Use_Source_Path
            and then Self.Data.Env.Predefined_Source_Path /= null
          then
+            Project2 := No_Project;
             Path := Locate_Regular_File
               (Name, Self.Data.Env.Predefined_Source_Path.all);
          end if;
@@ -1691,6 +1690,7 @@ package body GNATCOLL.Projects is
            and then Path = GNATCOLL.VFS.No_File
            and then Self.Data.Env.Predefined_Object_Path /= null
          then
+            Project2 := No_Project;
             Path := Locate_Regular_File
               (Name, Self.Data.Env.Predefined_Object_Path.all);
          end if;
@@ -1701,6 +1701,8 @@ package body GNATCOLL.Projects is
       --  If still not found, search in the current directory
 
       if Path = GNATCOLL.VFS.No_File then
+         Project2 := No_Project;
+         In_Predefined := False;
          Path := Locate_Regular_File (Name, (1 => Get_Current_Dir));
       end if;
 
@@ -1727,7 +1729,7 @@ package body GNATCOLL.Projects is
          --  are likely to be source files
 
          Source_Info := Source_File_Data'
-           (Project => Project2,
+           (Project => No_Project,  --  file is not a source
             File    => Path,
             Lang    => No_Name,
             Source  => null,
@@ -1968,7 +1970,6 @@ package body GNATCOLL.Projects is
 
       if Id /= No_Source then
          Part := Kind_To_Part (Id);
-
          if Id.Unit /= null then
             return File_Info'
               (Project      => Project_Type
