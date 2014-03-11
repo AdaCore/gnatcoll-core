@@ -72,7 +72,7 @@ package body GNATCOLL.VFS.GtkAda is
    begin
       File.Value := To_Contents_Access (Get_Boxed (Value));
       if File.Value /= null then
-         File.Value.Ref_Count := File.Value.Ref_Count + 1;
+         Ref (File.Value);
       end if;
 
       return File;
