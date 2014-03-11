@@ -679,8 +679,8 @@ package body GNATCOLL.VFS is
                  (File, Normalize => Normalize, Resolve_Links => True).all,
                Cygwin_Style));
          else
-            return Auto_Case (To_Unix
-              (FS, File.Value.Full.all, Cygwin_Style));
+            return +To_Unix
+              (FS, File.Value.Full.all, Cygwin_Style);
          end if;
       end if;
    end Unix_Style_Full_Name;
