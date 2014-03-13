@@ -38,8 +38,8 @@ with GNATCOLL.VFS;            use GNATCOLL.VFS;
 package body GNATCOLL.Xref is
    use Library_Info_Lists;
 
-   Me_Error   : constant Trace_Handle := Create ("ENTITIES.ERROR");
-   Me_Parsing : constant Trace_Handle := Create ("ENTITIES.PARSING");
+   Me_Error   : constant Trace_Handle := Create ("ENTITIES.ERROR", On);
+   Me_Parsing : constant Trace_Handle := Create ("ENTITIES.PARSING", On);
    Me_Debug   : constant Trace_Handle := Create ("ENTITIES.DEBUG", Off);
    Me_Forward : constant Trace_Handle := Create ("ENTITIES.FORWARD", Off);
    Me_Timing  : constant Trace_Handle := Create ("ENTITIES.TIMING");
