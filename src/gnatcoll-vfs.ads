@@ -259,9 +259,13 @@ package GNATCOLL.VFS is
    function Unix_Style_Full_Name
      (File         : Virtual_File;
       Cygwin_Style : Boolean := False;
-      Normalize    : Boolean := False) return Filesystem_String;
+      Normalize    : Boolean := False;
+      Casing       : Boolean := False) return Filesystem_String;
    --  Returns the file path using a unix-style path.
-   --  If Normalize is True, the casing is also lower-cased when applicable
+   --  The casing of the filename is not impacted unless Casing is True
+   --  (i.e. we do not convert to lower-cases on case-insensitive systems),
+   --  because applications should preserve the original casing as much as
+   --  possible.
 
    function Relative_Path
      (File : Virtual_File;

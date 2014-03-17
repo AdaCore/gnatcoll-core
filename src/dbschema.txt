@@ -1,26 +1,12 @@
 # for Emacs: -*- mode: org; mode: flyspell; fill-column: 79 -*-
 
-
 # The database schema version is stored in sqlite's "PRAGMA user_version",
 # which is faster to access than a specific table.
-
-
-# Update of the database when the project scenario changes:
-#   - if the location of the LI file changes, and since we use the full path,
-#     this will trigger another parsing.
-#   - If it doesn't change, it is possible that the location of the source
-#     files have changed though, but this would not be detected currently
-#     because we do not parse the LI file again (this is only a problem if both
-#     source files contain the same code, since otherwise the xref info has
-#     changed and LI has changed). In this case, it is possible that all
-#     queries will fail because we do not have info for the new location of the
-#     file.
-#     ??? We could search on basenames in the files table, for instance.
 
 | TABLE    | files         | file            |   | Stores the list of source and LI files                                                   |
 |----------+---------------+-----------------+---+------------------------------------------------------------------------------------------|
 | id       | AUTOINCREMENT | PK              |   |                                                                                          |
-| path     | TEXT          | NOT NULL, INDEX |   | Full normalized absolute path for the file                                               |
+| path     | TEXT          | NOT NULL, INDEX |   | Full normalized absolute path for the file. Casing is not normalized                     |
 | stamp    | timestamp     | NULL            |   | The timestamp the last time the file was read (only set for LI files for efficiency)     |
 | language | TEXT          | NOT NULL        |   | The language for this file (so that we can limit queries to specific languages), or "li" |
 | project  | FK files()    | NULL            |   | V2.0: The project to which a source file belongs. With aggregate projects, a source file might occur several times in this table, each time with a different project. |

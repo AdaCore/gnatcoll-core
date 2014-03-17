@@ -604,6 +604,9 @@ package GNATCOLL.SQL is
       return SQL_Criteria;
    function Like
      (Self : Text_Fields.Field'Class; Str : String) return SQL_Criteria;
+   function Like
+     (Self : Text_Fields.Field'Class; Field : Text_Fields.Field'Class)
+      return SQL_Criteria;
    function Not_Ilike
      (Self : Text_Fields.Field'Class; Str : String) return SQL_Criteria;
    function Not_Like

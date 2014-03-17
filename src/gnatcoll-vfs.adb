@@ -652,14 +652,15 @@ package body GNATCOLL.VFS is
    function Unix_Style_Full_Name
      (File         : Virtual_File;
       Cygwin_Style : Boolean := False;
-      Normalize    : Boolean := False) return Filesystem_String
+      Normalize    : Boolean := False;
+      Casing       : Boolean := False) return Filesystem_String
    is
       FS : FS_Type;
 
       function Auto_Case (Str : FS_String) return Filesystem_String;
       function Auto_Case (Str : FS_String) return Filesystem_String is
       begin
-         if Is_Case_Sensitive (FS) then
+         if not Casing or else Is_Case_Sensitive (FS) then
             return +Str;
          else
             return +To_Lower (+Str);
@@ -679,8 +680,7 @@ package body GNATCOLL.VFS is
                  (File, Normalize => Normalize, Resolve_Links => True).all,
                Cygwin_Style));
          else
-            return +To_Unix
-              (FS, File.Value.Full.all, Cygwin_Style);
+            return Auto_Case (To_Unix (FS, File.Value.Full.all, Cygwin_Style));
          end if;
       end if;
    end Unix_Style_Full_Name;

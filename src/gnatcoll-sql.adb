@@ -1273,8 +1273,20 @@ package body GNATCOLL.SQL is
      (Self : Text_Fields.Field'Class; Field : SQL_Field'Class)
       return SQL_Criteria is
    begin
-      return Compare (Self, Field, Comparison_Like'Access);
+      return Compare (Self, Field, Comparison_ILike'Access);
    end Ilike;
+
+   ----------
+   -- Like --
+   ----------
+
+   function Like
+     (Self : Text_Fields.Field'Class; Field : Text_Fields.Field'Class)
+      return SQL_Criteria
+   is
+   begin
+      return Compare (Self, Field, Comparison_Like'Access);
+   end Like;
 
    ---------------
    -- Not_Ilike --

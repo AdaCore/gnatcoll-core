@@ -182,7 +182,7 @@ package GNATCOLL.Xref.Database is
    record
       Id : SQL_Field_Integer (Ta_Files, Instance, N_Id, Index);
       Path : SQL_Field_Text (Ta_Files, Instance, N_Path, Index);
-      --  Full normalized absolute path for the file
+      --  Full normalized absolute path for the file. Casing is not normalized
 
       Stamp : SQL_Field_Time (Ta_Files, Instance, N_Stamp, Index);
       --  The timestamp the last time the file was read (only set for LI files

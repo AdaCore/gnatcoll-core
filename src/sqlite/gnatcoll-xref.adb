@@ -28,6 +28,7 @@ with GNAT.Calendar.Time_IO;   use GNAT.Calendar.Time_IO;
 with GNAT.OS_Lib;
 with GNATCOLL.Xref.Database;  use GNATCOLL.Xref.Database;
 with GNATCOLL.Mmap;           use GNATCOLL.Mmap;
+with GNATCOLL.Path;           use GNATCOLL.Path;
 with GNATCOLL.SQL;            use GNATCOLL.SQL;
 with GNATCOLL.SQL.Inspect;    use GNATCOLL.SQL.Inspect;
 with GNATCOLL.SQL.Sqlite;
@@ -96,6 +97,43 @@ package body GNATCOLL.Xref is
    No_Project_Id : constant Integer := -2;
    --  Id of 'no project' in the files table
 
+   function Compare_Files
+     (Field1 : SQL_Field_Text'Class;
+      Field2 : Text_Fields.Field'Class) return SQL_Criteria;
+   function Compare_Files
+     (Field1 : SQL_Field_Text'Class; Name : String) return SQL_Criteria;
+   --  Compare (possibly case-insensitive) file names. This should only be
+   --  used to replace "=", not to replace "like"
+
+   -------------------
+   -- Compare_Files --
+   -------------------
+
+   function Compare_Files
+     (Field1 : SQL_Field_Text'Class;
+      Field2 : Text_Fields.Field'Class) return SQL_Criteria is
+   begin
+      if Is_Case_Sensitive (Local_FS) then
+         return Field1 = Field2;
+      else
+         return Like (Field1, Field2);
+      end if;
+   end Compare_Files;
+
+   -------------------
+   -- Compare_Files --
+   -------------------
+
+   function Compare_Files
+     (Field1 : SQL_Field_Text'Class; Name : String) return SQL_Criteria is
+   begin
+      if Is_Case_Sensitive (Local_FS) then
+         return Field1 = Name;
+      else
+         return Like (Field1, Name);
+      end if;
+   end Compare_Files;
+
    type Access_String is access constant String;
 
    N_Files2 : aliased String := "f2";
@@ -117,7 +155,7 @@ package body GNATCOLL.Xref is
                 & Database.Files.Stamp
                 & Database.Files.Language,
              From => Database.Files,
-             Where => Database.Files.Path = Text_Param (1),
+             Where => Compare_Files (Database.Files.Path, Text_Param (1)),
              Limit => 1),
         On_Server => True, Name => "get_file");
    --  Retrieve the info for a file given its path. Should only be used for
@@ -130,7 +168,7 @@ package body GNATCOLL.Xref is
            & Database.Files.Stamp
            & Database.Files.Language,
            From => Database.Files & Files3,
-           Where => Database.Files.Path = Text_Param (1)
+           Where => Compare_Files (Database.Files.Path, Text_Param (1))
            and Database.Files.Project = Integer_Param (2),
            Limit => 1),
         On_Server => True, Name => "get_file_and_project");
@@ -188,7 +226,7 @@ package body GNATCOLL.Xref is
        (SQL_Select
             (Database.Files.Path & Database.Files.Stamp,
              From => Database.Files & Files2 & Database.F2f,
-             Where => Files2.Path = Text_Param (1)
+             Where => Compare_Files (Files2.Path, Text_Param (1))
                 and Database.F2f.Fromfile = Files2.Id
                 and Database.F2f.Tofile = Database.Files.Id
                 and Database.F2f.Kind = F2f_Has_Ali),
@@ -635,7 +673,7 @@ package body GNATCOLL.Xref is
            From => Database.Entities & Database.Files & Files3,
            Where => Database.Entities.Decl_File = Database.Files.Id
               and Database.Files.Project = Files3.Id
-              and Database.Files.Path = Text_Param (1),
+              and Compare_Files (Database.Files.Path, Text_Param (1)),
            Order_By =>
              Database.Entity_Refs.Line & Database.Entity_Refs.Column,
            Distinct => True),
@@ -651,7 +689,7 @@ package body GNATCOLL.Xref is
            and Database.Files.Project = Files3.Id
            and Database.Reference_Kinds.Is_Real
            and Database.Reference_Kinds.Display = Text_Param (2)
-           and Database.Files.Path = Text_Param (1),
+           and Compare_Files (Database.Files.Path, Text_Param (1)),
            Order_By =>
              Database.Entity_Refs.Line & Database.Entity_Refs.Column,
            Distinct => True),
@@ -667,7 +705,7 @@ package body GNATCOLL.Xref is
            and Database.Reference_Kinds.Is_Real
            and Database.Reference_Kinds.Display = Text_Param (2)
            and Database.Files.Project = Files3.Id
-           and Database.Files.Path = Text_Param (1),
+           and Compare_Files (Database.Files.Path, Text_Param (1)),
            Order_By => Database.Entity_Refs.Entity
              & Database.Entity_Refs.Line & Database.Entity_Refs.Column,
            Distinct => True),
@@ -680,7 +718,7 @@ package body GNATCOLL.Xref is
                 From => Database.Entities & Database.Files & Files3,
                 Where => Database.Entities.Decl_File = Database.Files.Id
                 and Database.Files.Project = Files3.Id
-                and Database.Files.Path = Text_Param (1)),
+                and Compare_Files (Database.Files.Path, Text_Param (1))),
              SQL_Select
                (F_References,
                 From => Database.Entity_Refs & Database.Files & Files3
@@ -689,7 +727,7 @@ package body GNATCOLL.Xref is
                 and Database.Entity_Refs.Kind = Database.Reference_Kinds.Id
                 and Database.Files.Project = Files3.Id
                 and Database.Reference_Kinds.Is_Real
-                and Database.Files.Path = Text_Param (1)),
+                and Compare_Files (Database.Files.Path, Text_Param (1))),
              Order_By =>
                 Database.Entity_Refs.Line & Database.Entity_Refs.Column,
              Distinct => True),
@@ -702,7 +740,7 @@ package body GNATCOLL.Xref is
                 From => Database.Entities & Database.Files & Files3,
                 Where => Database.Entities.Decl_File = Database.Files.Id
                 and Database.Files.Project = Files3.Id
-                and Database.Files.Path = Text_Param (1)),
+                and Compare_Files (Database.Files.Path, Text_Param (1))),
              SQL_Select
                (F_References,
                 From => Database.Entity_Refs & Database.Files & Files3
@@ -711,7 +749,7 @@ package body GNATCOLL.Xref is
                 and Database.Entity_Refs.Kind = Database.Reference_Kinds.Id
                 and Database.Files.Project = Files3.Id
                 and Database.Reference_Kinds.Is_Real
-                and Database.Files.Path = Text_Param (1)),
+                and Compare_Files (Database.Files.Path, Text_Param (1))),
              Order_By => Database.Entity_Refs.Entity
                 & Database.Entity_Refs.Line & Database.Entity_Refs.Column,
              Distinct => True),
@@ -4298,14 +4336,15 @@ package body GNATCOLL.Xref is
       if File = "" then
          F := Database.Files.Id = No_File_Id;
       elsif GNAT.OS_Lib.Is_Absolute_Path (File) then
-         F := Database.Files.Path = File;
+         F := Compare_Files (Database.Files.Path, File);
       else
          F := Like (Database.Files.Path, "%/" & File);
       end if;
 
       if Project /= No_Project and then File /= "" then
-         P := Files3.Path =
-           +Project.Project_Path.Unix_Style_Full_Name (Normalize => True);
+         P := Compare_Files
+           (Files3.Path,
+            +Project.Project_Path.Unix_Style_Full_Name (Normalize => True));
       end if;
 
       --  First test whether the user has passed the location of the
@@ -4787,10 +4826,10 @@ package body GNATCOLL.Xref is
             From  => Database.Files & Database.F2f & Files2 & Files3,
             Where => Database.F2f.Fromfile = Database.Files.Id
               and Files2.Id = Database.F2f.Tofile
-              and Files2.Path = Text_Param (1)
+              and Compare_Files (Files2.Path, Text_Param (1))
               and Database.F2f.Kind = F2f_Withs
               and Files2.Project = Files3.Id
-              and Files3.Path = Text_Param (2),
+              and Compare_Files (Files3.Path, Text_Param (2)),
             Order_By => Database.Files.Path),
          Params => (1 => +Name'Unchecked_Access,
                     2 => +Project_Path'Unchecked_Access));
@@ -4828,10 +4867,10 @@ package body GNATCOLL.Xref is
                From      => Database.Files & Database.F2f & Files2 & Files3,
                Where     => Database.F2f.Tofile = Database.Files.Id
                and Files2.Id = Database.F2f.Fromfile
-               and Files2.Path = Text_Param (1)
+               and Compare_Files (Files2.Path, Text_Param (1))
                and Database.F2f.Kind = F2f_Withs
                and Files2.Project = Files3.Id
-               and Files3.Path = Text_Param (2),
+               and Compare_Files (Files3.Path, Text_Param (2)),
                Order_By  => Database.Files.Path),
             Params => (1 => +Name'Unchecked_Access,
                        2 => +Project_Path'Unchecked_Access));
@@ -4951,8 +4990,9 @@ package body GNATCOLL.Xref is
          SQL_Select
            (Database.Files.Language,
             From  => Database.Files,
-            Where => Database.Files.Path =
-               (+D.Location.File.Unix_Style_Full_Name (Normalize => True))));
+            Where => Compare_Files
+              (Database.Files.Path,
+               +D.Location.File.Unix_Style_Full_Name (Normalize => True))));
 
       if C.Has_Row then
          declare
@@ -5933,10 +5973,11 @@ package body GNATCOLL.Xref is
                     & Database.Entities.Decl_Column,
                     From  => Database.Entities & Database.Files & Files3,
                     Where => Database.Entities.Decl_File = Database.Files.Id
-                    and Like (Database.Files.Path,
-                      +File.Unix_Style_Full_Name (Normalize => True))
+                    and Compare_Files
+                      (Database.Files.Path,
+                       +File.Unix_Style_Full_Name (Normalize => True))
                     and Database.Files.Project = Files3.Id
-                    and Files3.Path = Text_Param (1)),
+                    and Compare_Files (Files3.Path, Text_Param (1))),
 
                SQL_Select
                  (Database.Entities.Id
@@ -5946,11 +5987,12 @@ package body GNATCOLL.Xref is
                   From    => Database.Entity_Refs & Database.Files & Files3
                   & Database.Entities,
                   Where   => Database.Entity_Refs.File = Database.Files.Id
-                  and Like (Database.Files.Path,
-                    +File.Unix_Style_Full_Name (Normalize   => True))
+                  and Compare_Files
+                    (Database.Files.Path,
+                     +File.Unix_Style_Full_Name (Normalize   => True))
                   and Database.Entity_Refs.Entity = Database.Entities.Id
                   and Database.Files.Project = Files3.Id
-                  and Files3.Path = Text_Param (1)),
+                  and Compare_Files (Files3.Path, Text_Param (1))),
 
                Order_By => Database.Files.Path & Database.Entities.Decl_Line
                & Database.Entities.Decl_Column,
@@ -5986,11 +6028,12 @@ package body GNATCOLL.Xref is
                & Database.Entities.Decl_Column,
                From => Database.Entities & Database.Files & Files3,
                Where => Database.Entities.Decl_File = Database.Files.Id
-                 and Like (Database.Files.Path,
-                         +File.Unix_Style_Full_Name (Normalize => True))
+                 and Compare_Files
+                   (Database.Files.Path,
+                    +File.Unix_Style_Full_Name (Normalize => True))
                  and Database.Entities.Name = Text_Param (1)
                  and Database.Files.Project = Files3.Id
-                 and Files3.Path = Text_Param (2)),
+                 and Compare_Files (Files3.Path, Text_Param (2))),
 
             SQL_Select
               (Database.Entities.Id
@@ -6000,12 +6043,13 @@ package body GNATCOLL.Xref is
                From => Database.Entity_Refs & Database.Files & Files3
                   & Database.Entities,
                Where => Database.Entity_Refs.File = Database.Files.Id
-                 and Like (Database.Files.Path,
-                           +File.Unix_Style_Full_Name (Normalize => True))
+               and Compare_Files
+                 (Database.Files.Path,
+                  +File.Unix_Style_Full_Name (Normalize => True))
                  and Database.Entity_Refs.Entity = Database.Entities.Id
                  and Database.Entities.Name = Text_Param (1)
                  and Database.Files.Project = Files3.Id
-                and Files3.Path = Text_Param (2)),
+                 and Compare_Files (Files3.Path, Text_Param (2))),
 
             Order_By => Database.Files.Path & Database.Entities.Decl_Line
                & Database.Entities.Decl_Column,
@@ -6817,8 +6861,9 @@ package body GNATCOLL.Xref is
                and Entity_Refs.Line = Ref.Line
                and Entity_Refs.Column = Integer (Ref.Column)
                and Entity_Refs.File = Files.Id
-               and Files.Path = (+Ref.File.Unix_Style_Full_Name
-                 (Normalize => True))));
+               and Compare_Files
+                 (Files.Path,
+                  +Ref.File.Unix_Style_Full_Name (Normalize => True))));
 
          if R.Has_Row then
             declare
@@ -6933,9 +6978,9 @@ package body GNATCOLL.Xref is
                & Integer_Param (4) & Integer_Param (5),
                From => Entity_Kinds & Files & Files3,
                Where => Entity_Kinds.Display = Text_Param (2)
-               and Files.Path = Text_Param (1)
+               and Compare_Files (Files.Path, Text_Param (1))
                and Files.Project = Files3.Id
-               and Files3.Path = Text_Param (6))),
+               and Compare_Files (Files3.Path, Text_Param (6)))),
          Params =>
            (1 => +N'Unchecked_Access,
             2 => +K'Unchecked_Access,
