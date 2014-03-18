@@ -37,7 +37,7 @@ endif
 
 # Unless already set by the user to another value
 ifeq ($(PROCESSORS),)
-PROCESSORS=1
+PROCESSORS=0
 endif
 
 DEFS=@DEFS@

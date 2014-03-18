@@ -33,11 +33,12 @@ package body GNATCOLL.SQL.Sqlite.Gnade is
    --  Low-level debugging enabled. This traces all C functions that are
    --  called, and is used to check whether we use sqlite correctly.
 
-   type Address_Array is array (Natural) of System.Address;
-   pragma Convention (C, Address_Array);
+   type Char_Ptr_Array is array (Natural) of chars_ptr;
+   type Char_Ptr_Array_Access is access Char_Ptr_Array;
+   pragma Convention (C, Char_Ptr_Array_Access);
 
-   function To_Chars_Ptr is new Ada.Unchecked_Conversion
-     (System.Address, chars_ptr);
+   function To_Array is new Ada.Unchecked_Conversion
+      (System.Address, Char_Ptr_Array_Access);
 
    type Sqlite3_Config_Option is
      (
@@ -320,13 +321,10 @@ package body GNATCOLL.SQL.Sqlite.Gnade is
      (Result : Result_Table;
       Row, Column : Natural) return Interfaces.C.Strings.chars_ptr
    is
-      Val : Address_Array;
-      for Val'Address use Result.Values;
-      Index : constant Natural :=
-        (Row + 1) * Result.Columns + Column;
+      Val : constant Char_Ptr_Array_Access := To_Array (Result.Values);
    begin
       --  First row is for column names, so skip it
-      return To_Chars_Ptr (Val (Index));
+      return Val ((Row * 1) * Result.Columns + Column);
    end Get_Value;
 
    --------------
@@ -354,10 +352,9 @@ package body GNATCOLL.SQL.Sqlite.Gnade is
    function Get_Column_Name
      (Result : Result_Table; Column : Natural) return String
    is
-      Val : Address_Array;
-      for Val'Address use Result.Values;
+      Val : constant Char_Ptr_Array_Access := To_Array (Result.Values);
    begin
-      return Interfaces.C.Strings.Value (To_Chars_Ptr (Val (Column)));
+      return Interfaces.C.Strings.Value (Val (Column));
    end Get_Column_Name;
 
    -----------

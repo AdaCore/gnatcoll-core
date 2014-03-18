@@ -3044,6 +3044,10 @@ package body GNATCOLL.Xref is
            and then Current_X_File_Unit_File_Index /= -1
            and then End_Of_Spec_Line /= 0
          then
+            Trace (Me_Parsing, "MANU scope_tree entity="
+               & Current_Entity'Img
+               & Spec_Start_Line'Img
+               & End_Of_Spec_Line'Img);
             Insert (Scope_Trees (Current_X_File_Unit_File_Index),
                     Entity => Current_Entity,
                     Low    => Spec_Start_Line,
