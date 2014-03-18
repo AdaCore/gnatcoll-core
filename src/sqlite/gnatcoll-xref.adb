@@ -3044,10 +3044,6 @@ package body GNATCOLL.Xref is
            and then Current_X_File_Unit_File_Index /= -1
            and then End_Of_Spec_Line /= 0
          then
-            Trace (Me_Parsing, "MANU scope_tree entity="
-               & Current_Entity'Img
-               & Spec_Start_Line'Img
-               & End_Of_Spec_Line'Img);
             Insert (Scope_Trees (Current_X_File_Unit_File_Index),
                     Entity => Current_Entity,
                     Low    => Spec_Start_Line,
@@ -3217,14 +3213,32 @@ package body GNATCOLL.Xref is
                      --  Is this a dependency for a separate unit ? GNAT will
                      --  not generate a 'U' line for separates, but special D
                      --  lines that list the name of the unit, as in:
-                     --       D a~bar.adb 20111220095636 1986a86b a.bar
+                     --      D a~bar.adb 20111220095636 1986a86b a.bar
+                     --
+                     --  For D lines of units that are not subunits, the unit
+                     --  name ends with %b or %s, as in:
+                     --     D toto.adb   20140302175738 6a5da479 toto%b
+                     --     D system.ads 20120706154652 90249111 system%s
 
-                     Info := Insert_Source_File
-                       (Filesystem_String (Str (Start .. Base_Last)),
-                        LI_Project,
-                        Is_ALI_Unit =>
+                     declare
+                        Is_Subunit : Boolean :=
                           Str (Index) /= ASCII.LF
-                          and then Str (Index) /= ASCII.CR);
+                          and then Str (Index) /= ASCII.CR;
+                     begin
+                        if Is_Subunit then
+                           Skip_Spaces;
+                           Skip_Word;
+
+                           if Str (Index - 2) = '%' then
+                              Is_Subunit := False;
+                           end if;
+                        end if;
+
+                        Info := Insert_Source_File
+                          (Filesystem_String (Str (Start .. Base_Last)),
+                           LI_Project,
+                           Is_ALI_Unit => Is_Subunit);
+                     end;
 
                   --  Handle C/C++ include files
 
