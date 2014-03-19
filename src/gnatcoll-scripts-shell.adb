@@ -807,6 +807,8 @@ package body GNATCOLL.Scripts.Shell is
       Count    : Natural;
       Command  : constant String := Get_Command (CL);
    begin
+      Errors.all := False;
+
       if Script.Finalized then
          return "";
       end if;
@@ -829,8 +831,6 @@ package body GNATCOLL.Scripts.Shell is
          Trace (Me_Log,
                 "Executing " & To_Display_String (CL, Max_Arg_Length => 100));
       end if;
-
-      Errors.all := False;
 
       --  Special case: access to instance constants
 
