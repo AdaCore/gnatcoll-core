@@ -12,8 +12,10 @@ unpacked the GNATColl package in a temporary directory and that
 `installdir` is the directory in which you
 would like to install the selected components.
 
-|Important| GNATColl requires a fairly recent Ada05 compatible compiler.
-If you do not have such a compiler, please contact `info@adacore.com <mail:sales@adacore.com>`_
+|Important| GNATColl requires the same version of GNAT it was released with,
+since it is sharing some sources with GNAT's :file:`libgnatutil` library.  If
+you do not have such a compiler, please contact `info@adacore.com
+<mail:sales@adacore.com>`_
 
 
 .. _Configuring_the_build_environment:
@@ -46,7 +48,9 @@ GNATColl will locate the needed source files in one of the following ways:
 
 * Otherwise, recent versions of GNAT include an additional `gnat_util.gpr`
   project file. This project contains the required
-  subset of the sources. If you have an older version of GNAT, you could
+  subset of the sources. You must use the same versino of GNAT that GNATColl
+  was released with, otherwise the sources might not be compatible.
+  If you have an older version of GNAT, you could
   also chose to install `gnat_util` independently.
 
 If neither of the above is satisfied, GNATColl will not include
