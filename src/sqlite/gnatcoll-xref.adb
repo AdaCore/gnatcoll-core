@@ -35,7 +35,6 @@ with GNATCOLL.SQL.Sqlite;
 with GNATCOLL.Traces;         use GNATCOLL.Traces;
 with GNATCOLL.Utils;          use GNATCOLL.Utils;
 with GNATCOLL.VFS;            use GNATCOLL.VFS;
-with Ada.Containers.Hashed_Sets;
 
 package body GNATCOLL.Xref is
    use Library_Info_Lists;
@@ -105,21 +104,6 @@ package body GNATCOLL.Xref is
      (Field1 : SQL_Field_Text'Class; Name : String) return SQL_Criteria;
    --  Compare (possibly case-insensitive) file names. This should only be
    --  used to replace "=", not to replace "like"
-
-   package Hashed_File_Sets is new Ada.Containers.Hashed_Sets
-     (Element_Type        => GNATCOLL.VFS.Virtual_File,
-      Hash                => GNATCOLL.VFS.Full_Name_Hash,
-      Equivalent_Elements => GNATCOLL.VFS."=",
-      "="                 => GNATCOLL.VFS."=");
-
-   package File_LI_Map is new Ada.Containers.Hashed_Maps
-     (Key_Type            => GNATCOLL.VFS.Virtual_File,
-      --  The library file
-      Element_Type        => Library_Info,
-      --  The Library_Info file
-      Hash                => GNATCOLL.VFS.Full_Name_Hash,
-      Equivalent_Keys     => GNATCOLL.VFS."=",
-      "="                 => "=");
 
    -------------------
    -- Compare_Files --
@@ -240,7 +224,7 @@ package body GNATCOLL.Xref is
    Query_Get_ALI : constant Prepared_Statement :=
      Prepare
        (SQL_Select
-            (Database.Files.Path & Database.Files.Stamp & Database.Files.Id,
+            (Database.Files.Path & Database.Files.Stamp,
              From => Database.Files & Files2 & Database.F2f,
              Where => Compare_Files (Files2.Path, Text_Param (1))
                 and Database.F2f.Fromfile = Files2.Id
@@ -3797,118 +3781,13 @@ package body GNATCOLL.Xref is
       -----------------
 
       procedure Parse_Files (DB : Database_Connection) is
-
-         procedure Remove_Files_Not_In_Project;
-         --  Go through the files stored in the database.
-         --  For each file which is not a source of the project in the
-         --  current scenario:
-         --   - add an entry in temp_files for this file
-         --   - if there is an ALI that corresponds to this file, mark it
-         --     for refresh
-
-         ---------------------------------
-         -- Remove_Files_Not_In_Project --
-         ---------------------------------
-
-         procedure Remove_Files_Not_In_Project is
-            Source_To_LI : File_LI_Map.Map;
-            S            : Hashed_File_Sets.Set;
-            C            : Library_Info_Lists.Cursor;
-            Files        : File_Array_Access;
-            Q            : SQL_Query;
-            R            : Forward_Cursor;
-         begin
-            --  For efficiency, make a set of all project files, hashed by
-            --  their full name.
-
-            Files := Project.Source_Files (Recursive => True);
-
-            for J in Files'Range loop
-               S.Insert (Files (J));
-            end loop;
-
-            --  Also make a map of source to LI
-
-            C := LI_Files.First;
-
-            while Library_Info_Lists.Has_Element (C) loop
-               Source_To_LI.Insert (Element (C).Library_File, Element (C));
-               Library_Info_Lists.Next (C);
-            end loop;
-
-            --  Now browse all files in the database: we want to remove
-            --  each entry not present in S.
-
-            Q := SQL_Select
-              (To_List ((0 => +Database.Files.Id,
-                         1 => +Database.Files.Path)),
-               From  => Database.Files,
-               Where => Database.Files.Project > 0);
-            --  ??? is the criteria
-            --     Database.Files.Project > 0
-            --  the correct way to retrieve all project source files?
-
-            R.Fetch (Self.DB, Q);
-
-            while R.Has_Row loop
-               declare
-                  N    : aliased String := R.Value (1);
-                  File : constant Virtual_File := Create (+N);
-               begin
-                  if not S.Contains (File) then
-
-                     --  We have found a source file which is in the database
-                     --  but not in the project: there might be an ali for this
-                     --  file which now corresponds to a new file after the
-                     --  scenario change: earmark this file for deletion...
-
-                     DB.Execute
-                       ("INSERT INTO temp_files VALUES ("
-                        & R.Value (0) & ");");
-
-                     --  ... and earmark the ali for refresh
-
-                     declare
-                        F       : Forward_Cursor;
-                        LI      : LI_Info;
-                        C       : File_LI_Map.Cursor;
-                        LI_File : Virtual_File;
-                     begin
-                        F.Fetch (Self.DB, Query_Get_ALI,
-                                 Params => (1 => +N'Unchecked_Access));
-
-                        if F.Has_Row then
-                           LI_File := Create (+F.Value (0));
-                           C := Source_To_LI.Find (LI_File);
-
-                           if File_LI_Map.Has_Element (C) then
-                              LI :=
-                                (LI     => File_LI_Map.Element (C),
-                                 Id     => F.Integer_Value (2),
-                                 Is_New => True,
-                                 Stamp  =>
-                                   File_LI_Map.Element
-                                     (C).Library_File.File_Time_Stamp);
-                              LIs.Append (LI);
-                              exit;
-                           end if;
-                        end if;
-                     end;
-                  end if;
-               end;
-               R.Next;
-            end loop;
-
-            Unchecked_Free (Files);
-         end Remove_Files_Not_In_Project;
-
          LI_C    : LI_Lists.Cursor;
          Lib     : LI_Info;
          Start   : Time;
          Dur     : Duration;
+         Total   : constant Integer := Integer (LIs.Length);
          Current : Natural := 1;
          Iconv_State : Iconv_T;
-
       begin
          if Active (Me_Timing) then
             Start := Clock;
@@ -3955,13 +3834,6 @@ package body GNATCOLL.Xref is
          --  faster to delete the indexes before we delete things
          Start_Transaction (DB, Destroy_Indexes => Destroy_Indexes);
          DB.Execute ("CREATE TEMP TABLE temp_lis (id INTEGER PRIMARY KEY);");
-         DB.Execute ("CREATE TEMP TABLE temp_files (id INTEGER PRIMARY KEY);");
-
-         --  Look at files in the database, and remove all files that are no
-         --  longer in the project.
-         --  ??? Possible optimization: store in a table the scenario,
-         --  and run this only when the scenario has actually changed.
-         Remove_Files_Not_In_Project;
 
          LI_C := LIs.First;
          while Has_Element (LI_C) loop
@@ -3978,13 +3850,13 @@ package body GNATCOLL.Xref is
             Next (LI_C);
          end loop;
 
+         DB.Execute ("CREATE TEMP TABLE temp_files (id INTEGER PRIMARY KEY);");
          DB.Execute  --  source files corresponding to the temp_lis
            ("INSERT INTO temp_files SELECT DISTINCT "
             & " f2f.fromFile FROM f2f WHERE "
             & " f2f.kind = 1 AND"
             & " f2f.toFile IN (SELECT * FROM temp_lis);");
          DB.Execute ("DROP TABLE temp_lis;");
-
          DB.Execute  --  defined in any of the temp_files
            ("CREATE TEMP TABLE temp_entities (id INTEGER PRIMARY KEY);");
          DB.Execute
@@ -3996,14 +3868,6 @@ package body GNATCOLL.Xref is
          DB.Execute   --  all references within LI_Units files
            ("DELETE FROM entity_refs WHERE entity_refs.file IN"
             & " (SELECT id FROM temp_files);");
-
-         --  Delete all files no longer present in the project. Not strictly
-         --  necessary, but helpful to reduce the size of the database
-         --  in case of large scenario switches.
-         DB.Execute
-           ("DELETE FROM files WHERE id IN"
-            & " (SELECT id FROM temp_files);");
-
          DB.Execute ("DROP TABLE temp_files;");
 
          if DB.In_Transaction then
@@ -4028,7 +3892,6 @@ package body GNATCOLL.Xref is
          declare
             Prev_Root : Project_Type := No_Project;
             Lib       : LI_Info;
-            Total     : constant Integer := Integer (LIs.Length);
          begin
             LI_C := LIs.First;
             while Has_Element (LI_C) loop
@@ -4154,62 +4017,64 @@ package body GNATCOLL.Xref is
       Destroy_Indexes :=
         Destroy_Indexes or else Length (LIs) > Indexes_Threshold;
 
-      --  Do we need to work in memory ?
-      --    - only if using sqlite
-      --    - unless DB is already in memory (in which case
-      --      Initialize_DB has already initialized it)
-      --    - if modifying enough LI files that dumping later does not cost
-      --      more than the update on disk would
+      if not LIs.Is_Empty then
+         --  Do we need to work in memory ?
+         --    - only if using sqlite
+         --    - unless DB is already in memory (in which case
+         --      Initialize_DB has already initialized it)
+         --    - if modifying enough LI files that dumping later does not cost
+         --      more than the update on disk would
 
-      if Is_Sqlite
-        and then GNATCOLL.SQL.Sqlite.DB_Name (Self.DB) /= ":memory:"
-        and then LIs.Length > Memory_Threshold
-      then
-         declare
-            Memory_Descr : constant Database_Description :=
-              GNATCOLL.SQL.Sqlite.Setup (":memory:");
-            Memory : constant Database_Connection :=
-              Memory_Descr.Build_Connection;
-            Start : Time;
-         begin
-            Destroy_Indexes := True;
-
-            Trace (Me_Timing, "Temporarily using an in-memory database");
-
+         if Is_Sqlite
+           and then GNATCOLL.SQL.Sqlite.DB_Name (Self.DB) /= ":memory:"
+           and then LIs.Length > Memory_Threshold
+         then
             declare
-               DB_Created : Boolean;
+               Memory_Descr : constant Database_Description :=
+                 GNATCOLL.SQL.Sqlite.Setup (":memory:");
+               Memory : constant Database_Connection :=
+                 Memory_Descr.Build_Connection;
+               Start : Time;
             begin
-               Initialize_DB (Self, Memory, From_DB_Name, DB_Created,
-                              Force => True);  --  Self.DB -> :memory:
-               if DB_Created then
-                  Do_Analyze := True;
+               Destroy_Indexes := True;
+
+               Trace (Me_Timing, "Temporarily using an in-memory database");
+
+               declare
+                  DB_Created : Boolean;
+               begin
+                  Initialize_DB (Self, Memory, From_DB_Name, DB_Created,
+                                 Force => True);  --  Self.DB -> :memory:
+                  if DB_Created then
+                     Do_Analyze := True;
+                  end if;
+               end;
+
+               Parse_Files (Memory);
+               Finalize_DB (Memory);
+
+               if Active (Me_Timing) then
+                  Start := Clock;
+               end if;
+
+               if not GNATCOLL.SQL.Sqlite.Backup
+                 (From => Memory, To => Self.DB)  --  :memory: -> Self.DB
+               then
+                  Trace (Me_Error, "Failed to copy from :memory: to DB");
+               elsif Active (Me_Timing) then
+                  Trace (Me_Timing, "Copy from :memory: to "
+                         & GNATCOLL.SQL.Sqlite.DB_Name (Self.DB) & ":"
+                         & Duration'Image (Clock - Start) & " s");
                end if;
             end;
 
-            Parse_Files (Memory);
-            Finalize_DB (Memory);
+         else
+            Parse_Files (Self.DB);
+            Finalize_DB (Self.DB);
+         end if;
 
-            if Active (Me_Timing) then
-               Start := Clock;
-            end if;
-
-            if not GNATCOLL.SQL.Sqlite.Backup
-              (From => Memory, To => Self.DB)  --  :memory: -> Self.DB
-            then
-               Trace (Me_Error, "Failed to copy from :memory: to DB");
-            elsif Active (Me_Timing) then
-               Trace (Me_Timing, "Copy from :memory: to "
-                      & GNATCOLL.SQL.Sqlite.DB_Name (Self.DB) & ":"
-                      & Duration'Image (Clock - Start) & " s");
-            end if;
-         end;
-
-      else
-         Parse_Files (Self.DB);
-         Finalize_DB (Self.DB);
+         Backup_DB_If_Needed (Self.DB, To_DB_Name);  --  Self.DB -> To_DB_Name
       end if;
-
-      Backup_DB_If_Needed (Self.DB, To_DB_Name);  --  Self.DB -> To_DB_Name
 
       if Active (Me_Timing) then
          Trace (Me_Timing, "Total time:"
