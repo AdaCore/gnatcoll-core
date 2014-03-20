@@ -4190,6 +4190,7 @@ package body GNATCOLL.Xref is
       Distance : Natural := Integer'Last;
       Best_Ref : Entity_Reference := No_Entity_Reference;
       F, P     : SQL_Criteria;
+      T        : SQL_Table_List;
 
       procedure Prepare_Decl
         (C           : SQL_Criteria;
@@ -4289,10 +4290,9 @@ package body GNATCOLL.Xref is
                & Database.Entities.Decl_Column
                & Database.Entities.Decl_Caller
                & Database.Files.Path,
-            From  => Database.Entities & Database.Files & Files3,
+            From  => Database.Entities & Database.Files & T,
             Where => Database.Files.Id = Database.Entities.Decl_File
                and Database.Entities.Name = Text_Param (1)
-               and Database.Files.Project = Files3.Id
                and P
                and F
                and C,
@@ -4323,12 +4323,11 @@ package body GNATCOLL.Xref is
             6 => +Database.Reference_Kinds.Id,
             7 => +Database.Reference_Kinds.Is_End)),
             From => Database.Entity_Refs & Database.Entities & Database.Files
-               & Database.Reference_Kinds & Files3,
+               & Database.Reference_Kinds & T,
             Where => Database.Entity_Refs.Entity = Database.Entities.Id
                and Database.Entity_Refs.File = Database.Files.Id
                and Database.Reference_Kinds.Id = Database.Entity_Refs.Kind
                and Database.Entities.Name = Text_Param (1)
-               and Database.Files.Project = Files3.Id
                and P
                and F
                and C,
@@ -4360,7 +4359,9 @@ package body GNATCOLL.Xref is
       end if;
 
       if Project /= No_Project and then File /= "" then
-         P := Compare_Files
+         T := Empty_Table_List & Files3;
+         P := Database.Files.Project = Files3.Id
+           and Compare_Files
            (Files3.Path,
             +Project.Project_Path.Unix_Style_Full_Name (Normalize => True));
       end if;

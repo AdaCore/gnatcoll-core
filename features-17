@@ -15,6 +15,10 @@ of the feature.
 New features in 1.7
 -------------------
 
+NF-17-N318-055 Update to sqlite 3.8.4.1 (2014-03-20)
+
+  Mostly performance improvements
+
 NF-17-N224-034 New function Create_Config_Pragmas_File (2014-02-26)
 
   A new function Create_Config_Pragmas_File is added to package
