@@ -2838,8 +2838,7 @@ package body GNATCOLL.Projects is
       Attribute : String;
       Index     : String := "") return Boolean
    is
-      Shared         : constant Shared_Project_Tree_Data_Access :=
-                         Project.Tree_View.Shared;
+      Shared         : Shared_Project_Tree_Data_Access;
       Sep            : constant Natural :=
                          Ada.Strings.Fixed.Index (Attribute, "#");
       Attribute_Name : constant String :=
@@ -2855,6 +2854,8 @@ package body GNATCOLL.Projects is
       if Project_View = Prj.No_Project then
          return False;
       end if;
+
+      Shared := Project.Tree_View.Shared;
 
       if Pkg_Name /= "" then
          Pkg := Value_Of
