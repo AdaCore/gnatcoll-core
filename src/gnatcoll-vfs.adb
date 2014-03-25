@@ -1237,14 +1237,11 @@ package body GNATCOLL.VFS is
                Norm := Create (File.File.Full_Name
                   (Normalize => True, Resolve_Links => True).all);
                Handle_Symbolic_Links := Save_Handle_Symbolic_Links;
-               if Norm.Is_Regular_File then
-                  Norm.Delete (File.Success);
 
-                  if not File.Success then
-                     raise Ada.Text_IO.Use_Error with
-                       "Could not remove the original file prior to renaming";
-                  end if;
-               end if;
+               --  We use to delete explicitly Norm. But in fact this is not a
+               --  good idea, since the directory might allow us to delete the
+               --  file (or not), but not to recreate it afterwards, as seem to
+               --  be the case with CM Synergy.
 
                File.Tmp_File.Rename (Norm, File.Success);
             end if;
