@@ -1244,6 +1244,19 @@ package body GNATCOLL.VFS is
                --  be the case with CM Synergy.
 
                File.Tmp_File.Rename (Norm, File.Success);
+
+               if not File.Success then
+                  --  Renaming failed. It might be because it could not
+                  --  remove the original (read-only directory for instance)
+                  --  so let's try with a simple copy instead
+                  File.Tmp_File.Copy
+                     (Norm.Full_Name (Normalize => True).all, File.Success);
+                  if File.Success then
+                     File.Tmp_File.Delete (Success);
+                     --  ignore Success, that's fine if the temp file is
+                     --  still there.
+                  end if;
+               end if;
             end if;
 
          else
