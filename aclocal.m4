@@ -551,8 +551,18 @@ AC_HELP_STRING(
       fi
    fi
 
+   case "${host}" in
+      *solaris2.10 )
+          SQLITE_CFLAGS='"-std=c99"'
+          ;;
+      *)
+          SQLITE_CFLAGS=''
+          ;;
+   esac
+
    AC_SUBST(WITH_SQLITE)
    AC_SUBST(PATH_LIBSQLITE)
+   AC_SUBST(SQLITE_CFLAGS)
 
 ])
 

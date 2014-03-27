@@ -51,6 +51,7 @@ project GnatColl_Shared is
    Iconv_Dir      := "@PATH_ICONV@";
    Iconv_Lib      := "@LIB_ICONV@";
    Iconv_Include  := "@INCLUDE_ICONV@";
+   Sqlite_Switches := (@SQLITE_CFLAGS@);
 
    package Compiler is
       case Build is

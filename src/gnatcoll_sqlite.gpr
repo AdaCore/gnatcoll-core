@@ -56,11 +56,11 @@ project GnatColl_Sqlite is
          when "embedded" =>
             for Switches ("C") use GnatColl_Shared.Compiler'Switches ("C") 
                & ("-DSQLITE_OMIT_LOAD_EXTENSION",
-                  "-D__EXTENSIONS__", "-std=c99",
-               
+                  "-D__EXTENSIONS__",
+
                   --  force full optimization for sqlite, we do not debug it
                   --  in any case.
-                  "-O3");
+                  "-O3") & Gnatcoll_Shared.Sqlite_Switches;
       end case;
    end Compiler;
 

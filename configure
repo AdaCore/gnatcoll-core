@@ -647,6 +647,7 @@ WITH_ICONV
 GMP_LIBS
 GMP_CFLAGS
 WITH_GMP
+SQLITE_CFLAGS
 PATH_LIBSQLITE
 WITH_SQLITE
 HAS_PQPREPARE
@@ -4845,6 +4846,16 @@ $as_echo "embedded" >&6; }
          fi
       fi
    fi
+
+   case "${host}" in
+      *solaris2.10 )
+          SQLITE_CFLAGS='"-std=c99"'
+          ;;
+      *)
+          SQLITE_CFLAGS=''
+          ;;
+   esac
+
 
 
 
