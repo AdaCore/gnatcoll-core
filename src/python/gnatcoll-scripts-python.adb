@@ -376,7 +376,7 @@ package body GNATCOLL.Scripts.Python is
       if Data.Cmd.Class = No_Class then
          return Data.Cmd.Command;
       else
-         return Data.Cmd.Class.Qualified_Name.all & "." & Data.Cmd.Command;
+         return Get_Name (Data.Cmd.Class) & "." & Data.Cmd.Command;
       end if;
    end Command_Name;
 
@@ -1084,9 +1084,11 @@ package body GNATCOLL.Scripts.Python is
             Def := Create_Method_Def (Cmd.Command, First_Level'Access);
          end if;
 
-         Klass := Lookup_Object (Script, Get_Name (Cmd.Class));
+         Klass := Lookup_Object
+           (Script, Cmd.Class.Qualified_Name.all);
          if Klass = null then
-            Trace (Me_Error, "Class not found " & Get_Name (Cmd.Class));
+            Trace (Me_Error, "Class not found "
+                   & Cmd.Class.Qualified_Name.all);
          elsif Cmd.Static_Method then
             Add_Static_Method
               (Class => Klass, Func => Def, Self => User_Data,

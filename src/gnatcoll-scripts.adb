@@ -679,6 +679,12 @@ package body GNATCOLL.Scripts is
    begin
       if Class.Qualified_Name = null then
          return "";
+      elsif Class.Qualified_Name'Length > 2
+        and then Class.Qualified_Name
+          (Class.Qualified_Name'First .. Class.Qualified_Name'First + 1) = "@."
+      then
+         return Class.Qualified_Name
+           (Class.Qualified_Name'First + 2 .. Class.Qualified_Name'Last);
       else
          return Class.Qualified_Name.all;
       end if;
