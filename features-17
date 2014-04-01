@@ -15,6 +15,15 @@ of the feature.
 New features in 1.7
 -------------------
 
+NF-17-N401-014 Creating new nested modules in gnatcoll.scripts (2014-04-01)
+
+  It is now possible to programmatically create nested modules, or even new
+  toplevel modules from the GNATCOLL.Scripts API. For instance, you could
+  now export a class to 'MyApp.MyModule.MyClass', and another to
+  'MyApp_Internal.MyClass'. The latter is in particular useful when you want
+  to export low-level functions from Ada, and wrap them in a higher-level
+  API directly in python.
+
 NF-17-N318-055 Update to sqlite 3.8.4.1 (2014-03-20)
 
   Mostly performance improvements

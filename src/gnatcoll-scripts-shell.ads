@@ -175,7 +175,8 @@ private
    overriding procedure Register_Class
      (Script : access Shell_Scripting_Record;
       Name   : String;
-      Base   : Class_Type := No_Class);
+      Base   : Class_Type := No_Class;
+      Module : Module_Type := Default_Module);
    overriding procedure Block_Commands
      (Script : access Shell_Scripting_Record; Block : Boolean);
    overriding procedure Execute_Command

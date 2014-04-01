@@ -137,6 +137,36 @@ package GNATCOLL.Scripts is
    --  the user. This is used when analysing the contents of a hook for
    --  instance
 
+   ------------------
+   -- Module types --
+   ------------------
+
+   type Module_Type is private;
+   Default_Module : constant Module_Type;
+   --  A module is equivalent to an Ada package, or a namespace in C++.
+   --  It is a way to group classes and subprograms into their own namespace.
+   --
+   --  By default, all functions and classes are exported to the module defined
+   --  in a module defined by the scripting language (for python, this default
+   --  module is defined in GNATCOLL.Scripts.Python.Register_Python_Scripting).
+   --
+   --  But it is possible to export to other modules instead
+
+   function Lookup_Module
+     (Repo           : access Scripts_Repository_Record;
+      Qualified_Name : String) return Module_Type;
+   --  Lookup an existing module or create it if needed.
+   --  The qualified name uses '.' as the separator, and all intermediate
+   --  levels are created as needed. The name of the toplevel module must be
+   --  included, so even if you passed "MyApp" as the Module name to
+   --  Register_Python_Scripting, the qualified name here should look like
+   --       MyApp.Module1.Module2
+   --  In practice, the module might not be created until you actually add a
+   --  class or a function to it.
+   --  As a special case, Qualified_Name may start with "@." to indicate a
+   --  submodule of the default module, which avoids duplicating the name of
+   --  that default module in several places of the application.
+
    -----------------
    -- Class types --
    -----------------
@@ -159,8 +189,9 @@ package GNATCOLL.Scripts is
    --  issues.
 
    function Lookup_Class
-     (Repo : access Scripts_Repository_Record;
-      Name : String) return Class_Type;
+     (Repo   : access Scripts_Repository_Record;
+      Name   : String;
+      Module : Module_Type := Default_Module) return Class_Type;
    --  Return a Class_Type for Name.
    --  If the given class does not exist, a dummy version is created (but is
    --  not exported to the scripting languages). This is for instance
@@ -172,9 +203,10 @@ package GNATCOLL.Scripts is
    --  class.
 
    function New_Class
-     (Repo : access Scripts_Repository_Record'Class;
-      Name : String;
-      Base : Class_Type := No_Class) return Class_Type;
+     (Repo   : access Scripts_Repository_Record'Class;
+      Name   : String;
+      Base   : Class_Type := No_Class;
+      Module : Module_Type := Default_Module) return Class_Type;
    --  For some languages, this notion is not supported, and the class will not
    --  be visible by the user in the shell. Methods created for the class will
    --  then simply be made available directly in the shell.
@@ -188,7 +220,7 @@ package GNATCOLL.Scripts is
    --  which is read dynamically when generating the documentation.
 
    function Get_Name (Class : Class_Type) return String;
-   --  Return the name of the class
+   --  Return the name of the class (module.name)
 
    -------------------
    -- Callback_Data --
@@ -972,8 +1004,10 @@ package GNATCOLL.Scripts is
    procedure Register_Class
      (Script : access Scripting_Language_Record;
       Name   : String;
-      Base   : Class_Type := No_Class) is abstract;
-   --  Create a new class in the interpreter
+      Base   : Class_Type := No_Class;
+      Module : Module_Type := Default_Module) is abstract;
+   --  Create a new class in the interpreter.
+   --  This is a low-level procedure, use New_Class instead
 
    procedure Block_Commands
      (Script : access Scripting_Language_Record;
@@ -1351,12 +1385,20 @@ private
    end record;
 
    type Class_Type is record
-      Name   : GNAT.Strings.String_Access;
+      Qualified_Name   : GNAT.Strings.String_Access;
+      --  Fully qualified name for the class (module.module.name)
 
       Exists : Boolean := True;
       --  Set to False when the class is found using Lookup_Class. This is for
       --  instance the case for builtin classes.
    end record;
+
+   type Module_Type is record
+      Name   : Ada.Strings.Unbounded.Unbounded_String;
+   end record;
+
+   Default_Module : constant Module_Type :=
+     (Name => Ada.Strings.Unbounded.To_Unbounded_String ("@"));
 
    type User_Data;
    type User_Data_List is access User_Data;
@@ -1424,9 +1466,10 @@ private
    No_Class_Instance      : constant Class_Instance :=
                               (Initialized => False);
 
-   No_Class  : constant Class_Type := (Name => null, Exists => False);
-   Any_Class : constant Class_Type := (Name   => new String'("@#!-"),
-                                       Exists => False);
+   No_Class  : constant Class_Type :=
+     (Qualified_Name => null, Exists => False);
+   Any_Class : constant Class_Type :=
+     (Qualified_Name => new String'("@#!-"), Exists => False);
 
    type Subprogram_Record is abstract tagged null record;
    type Callback_Data is abstract tagged null record;

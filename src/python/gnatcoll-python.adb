@@ -815,6 +815,17 @@ package body GNATCOLL.Python is
       end loop;
    end Free;
 
+   ------------------
+   -- PyModule_New --
+   ------------------
+
+   function PyModule_New (Module_Name : String) return PyObject is
+      function Internal (N : String) return PyObject;
+      pragma Import (C, Internal, "PyModule_New");
+   begin
+      return Internal (Module_Name & ASCII.NUL);
+   end PyModule_New;
+
    ----------------------
    -- PyModule_Getname --
    ----------------------

@@ -187,7 +187,7 @@ package body GNATCOLL.Scripts is
          C := First (Repo.Classes);
          while Has_Element (C) loop
             Class := Element (C);
-            Free (Class.Name);
+            Free (Class.Qualified_Name);
             Next (C);
          end loop;
 
@@ -610,36 +610,28 @@ package body GNATCOLL.Scripts is
    ---------------
 
    function New_Class
-     (Repo : access Scripts_Repository_Record'Class;
-      Name : String;
-      Base : Class_Type := No_Class) return Class_Type
+     (Repo   : access Scripts_Repository_Record'Class;
+      Name   : String;
+      Base   : Class_Type := No_Class;
+      Module : Module_Type := Default_Module) return Class_Type
    is
       Tmp   : constant Scripting_Language_List := Repo.Scripting_Languages;
       Class : Class_Type;
-      C     : Classes_Hash.Cursor;
-
    begin
       if Tmp = null then
          return No_Class;
-
       else
-         C := Find (Repo.Classes, Name);
-         if Has_Element (C) and then Element (C).Exists then
-            Class := Element (C);
-         else
-            if Tmp /= null then
-               for T in Tmp'Range loop
-                  Register_Class (Tmp (T), Name, Base);
-               end loop;
-
-               Class := Class_Type'(Name   => new String'(Name),
-                                    Exists => True);
-               Include (Repo.Classes, Name, Class);
-            end if;
+         Class := Lookup_Class (Repo, Name, Module);
+         if not Class.Exists then
+            Class.Exists := True;
+            Include
+              (Repo.Classes, To_String (Module.Name) & '.' & Name, Class);
+            for T in Tmp'Range loop
+               Register_Class (Tmp (T), Name, Base, Module);
+            end loop;
          end if;
+         return Class;
       end if;
-
-      return Class;
    end New_Class;
 
    ------------------
@@ -648,21 +640,36 @@ package body GNATCOLL.Scripts is
 
    function Lookup_Class
      (Repo   : access Scripts_Repository_Record;
-      Name   : String) return Class_Type
+      Name   : String;
+      Module : Module_Type := Default_Module) return Class_Type
    is
       C     : Classes_Hash.Cursor;
       Class : Class_Type;
+      N     : constant String := To_String (Module.Name) & '.' & Name;
    begin
-      C := Find (Repo.Classes, Name);
+      C := Find (Repo.Classes, N);
       if Has_Element (C) then
          return Element (C);
       else
-         Class := Class_Type'(Name   => new String'(Name),
-                              Exists => False);
-         Include (Repo.Classes, Name, Class);
+         Class := Class_Type'
+           (Qualified_Name => new String'(N), Exists => False);
+         Include (Repo.Classes, N, Class);
          return Class;
       end if;
    end Lookup_Class;
+
+   -------------------
+   -- Lookup_Module --
+   -------------------
+
+   function Lookup_Module
+     (Repo           : access Scripts_Repository_Record;
+      Qualified_Name : String) return Module_Type
+   is
+      pragma Unreferenced (Repo);
+   begin
+      return Module_Type'(Name => To_Unbounded_String (Qualified_Name));
+   end Lookup_Module;
 
    --------------
    -- Get_Name --
@@ -670,10 +677,10 @@ package body GNATCOLL.Scripts is
 
    function Get_Name (Class : Class_Type) return String is
    begin
-      if Class.Name = null then
+      if Class.Qualified_Name = null then
          return "";
       else
-         return Class.Name.all;
+         return Class.Qualified_Name.all;
       end if;
    end Get_Name;
 

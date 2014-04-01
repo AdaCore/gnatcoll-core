@@ -311,6 +311,22 @@ package body GNATCOLL.Scripts.Python is
    --  enclosing Nth_Arg to either raise a No_Such_Parameter exception or to
    --  return a default value.
 
+   -------------
+   -- Modules --
+   -------------
+
+   function Lookup_Module
+     (Self   : not null access Python_Scripting_Record'Class;
+      Name   : String) return PyObject;
+   --  Return the module object.
+
+   function Lookup_Object
+     (Self           : not null access Python_Scripting_Record'Class;
+      Qualified_Name : String) return PyObject;
+   --  Lookup an object from its fully qualified name (module.module.name).
+   --  If there is no module specified, the object is looked for in the default
+   --  module, or the builtins.
+
    --------------------
    -- Block_Commands --
    --------------------
@@ -360,7 +376,7 @@ package body GNATCOLL.Scripts.Python is
       if Data.Cmd.Class = No_Class then
          return Data.Cmd.Command;
       else
-         return Data.Cmd.Class.Name.all & "." & Data.Cmd.Command;
+         return Data.Cmd.Class.Qualified_Name.all & "." & Data.Cmd.Command;
       end if;
    end Command_Name;
 
@@ -1020,7 +1036,7 @@ package body GNATCOLL.Scripts.Python is
          Getter := null;
       end if;
 
-      Klass := Lookup_Object (Script.Module, Get_Name (Prop.Class));
+      Klass := Lookup_Object (Script, Get_Name (Prop.Class));
       Ignored := PyDescr_NewGetSet
         (Typ     => Klass,
          Name    => Prop.Name,
@@ -1068,9 +1084,10 @@ package body GNATCOLL.Scripts.Python is
             Def := Create_Method_Def (Cmd.Command, First_Level'Access);
          end if;
 
-         Klass := Lookup_Object (Script.Module, Get_Name (Cmd.Class));
-
-         if Cmd.Static_Method then
+         Klass := Lookup_Object (Script, Get_Name (Cmd.Class));
+         if Klass = null then
+            Trace (Me_Error, "Class not found " & Get_Name (Cmd.Class));
+         elsif Cmd.Static_Method then
             Add_Static_Method
               (Class => Klass, Func => Def, Self => User_Data,
                Module => Script.Module);
@@ -1081,14 +1098,95 @@ package body GNATCOLL.Scripts.Python is
       end if;
    end Register_Command;
 
+   -------------------
+   -- Lookup_Module --
+   -------------------
+
+   function Lookup_Module
+     (Self   : not null access Python_Scripting_Record'Class;
+      Name   : String) return PyObject
+   is
+      M, Tmp : PyObject := null;
+      First  : Natural;
+   begin
+      if Name = "@" then
+         return Self.Module;
+      end if;
+
+      First := Name'First;
+      for N in Name'First .. Name'Last + 1 loop
+         if N > Name'Last or else Name (N) = '.' then
+            if Name (First .. N - 1) = "@" then
+               M := Self.Module;
+            else
+               if Name (Name'First .. Name'First + 1) = "@." then
+                  Tmp := PyImport_AddModule
+                    (PyModule_Getname (Self.Module)
+                     & '.' & Name (Name'First + 2 .. N - 1));
+               else
+                  Tmp := PyImport_AddModule (Name (Name'First .. N - 1));
+               end if;
+
+               if M /= null then
+                  PyDict_SetItemString
+                    (PyModule_GetDict (Tmp),
+                     "__module__",
+                     PyObject_GetAttrString (M, "__name__"));
+
+                  Py_INCREF (Tmp);
+                  if PyModule_AddObject
+                    (M, Name (First .. N - 1), Tmp) /= 0
+                  then
+                     Trace (Me_Error, "Could not register submodule "
+                            & Name (Name'First .. N - 1));
+                     return null;
+                  end if;
+               end if;
+
+               M := Tmp;
+            end if;
+
+            First := N + 1;
+         end if;
+      end loop;
+      return M;
+   end Lookup_Module;
+
+   -------------------
+   -- Lookup_Object --
+   -------------------
+
+   function Lookup_Object
+     (Self           : not null access Python_Scripting_Record'Class;
+      Qualified_Name : String) return PyObject
+   is
+      M : PyObject;
+   begin
+      for N in reverse Qualified_Name'Range loop
+         if Qualified_Name (N) = '.' then
+            M := Lookup_Module
+              (Self, Qualified_Name (Qualified_Name'First .. N - 1));
+            return Lookup_Object
+              (M, Qualified_Name (N + 1 .. Qualified_Name'Last));
+         end if;
+      end loop;
+
+      M := Lookup_Object (Self.Module, Qualified_Name);
+      if M = null then
+         M := Lookup_Object (Self.Builtin, Qualified_Name);
+      end if;
+      return M;
+   end Lookup_Object;
+
    --------------------
    -- Register_Class --
    --------------------
 
-   procedure Register_Class
-     (Script        : access Python_Scripting_Record;
-      Name          : String;
-      Base          : Class_Type := No_Class)
+   overriding procedure Register_Class
+     (Script : access Python_Scripting_Record;
+      Name   : String;
+      Base   : Class_Type := No_Class;
+      Module : Module_Type := Default_Module)
    is
       Dict    : constant PyDictObject := PyDict_New;
       Class   : PyObject;
@@ -1096,21 +1194,17 @@ package body GNATCOLL.Scripts.Python is
       Bases   : PyObject := null;
       S       : Interfaces.C.Strings.chars_ptr;
       pragma Unreferenced (Ignored);
+
+      M       : constant PyObject :=
+        Lookup_Module (Script, To_String (Module.Name));
+
    begin
       PyDict_SetItemString
-        (Dict, "__module__",
-         PyObject_GetAttrString (Script.Module, "__name__"));
+        (Dict, "__module__", PyObject_GetAttrString (M, "__name__"));
 
       if Base /= No_Class then
-         declare
-            N : constant String := Get_Name (Base);
-            B : PyObject := Lookup_Object (Script.Module, N);
-         begin
-            if B = null and then not Base.Exists then
-               B := Lookup_Object (Script.Builtin, N);
-            end if;
-            Bases := Create_Tuple ((1 => B));
-         end;
+         Bases := Create_Tuple
+           ((1 => Lookup_Object (Script, Get_Name (Base))));
       end if;
 
       Class := Type_New
@@ -1124,7 +1218,7 @@ package body GNATCOLL.Scripts.Python is
       end if;
 
       S := New_String (Name);
-      Ignored := PyModule_AddObject (Script.Module, S, Class);
+      Ignored := PyModule_AddObject (M, S, Class);
       Free (S);
    end Register_Class;
 
@@ -2365,7 +2459,7 @@ package body GNATCOLL.Scripts.Python is
 
    begin
       if Class /= Any_Class then
-         C := Lookup_Object (Data.Script.Module, Get_Name (Class));
+         C := Lookup_Object (Data.Script, Get_Name (Class));
       end if;
 
       Get_Param (Data, N, Item, Success.all); --  Item is a borrowed reference
@@ -2776,7 +2870,7 @@ package body GNATCOLL.Scripts.Python is
       end if;
 
       C := PyObject_GetAttrString (Instance.Data, "__class__");
-      B := Lookup_Object (Python_Scripting (Instance.Script).Module, Base);
+      B := Lookup_Object (Python_Scripting (Instance.Script), Base);
       return Py_IsSubclass (C, Base => B);
    end Is_Subclass;
 
@@ -3105,8 +3199,7 @@ package body GNATCOLL.Scripts.Python is
      (Script : access Python_Scripting_Record;
       Class  : Class_Type) return Class_Instance
    is
-      Klass : constant PyObject := Lookup_Object
-        (Script.Module, Get_Name (Class));
+      Klass : constant PyObject := Lookup_Object (Script, Get_Name (Class));
       Inst : Class_Instance;
       Obj  : PyObject;
       Args : PyObject;

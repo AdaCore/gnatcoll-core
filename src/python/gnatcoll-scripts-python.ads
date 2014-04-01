@@ -246,7 +246,8 @@ private
    overriding procedure Register_Class
      (Script : access Python_Scripting_Record;
       Name   : String;
-      Base   : Class_Type := No_Class);
+      Base   : Class_Type := No_Class;
+      Module : Module_Type := Default_Module);
    overriding function Create
      (Script          : access Python_Scripting_Record;
       Arguments_Count : Natural) return Callback_Data'Class;

@@ -478,12 +478,13 @@ package body GNATCOLL.Scripts.Shell is
    -- Register_Class --
    --------------------
 
-   procedure Register_Class
+   overriding procedure Register_Class
      (Script : access Shell_Scripting_Record;
       Name   : String;
-      Base   : Class_Type := No_Class)
+      Base   : Class_Type := No_Class;
+      Module : Module_Type := Default_Module)
    is
-      pragma Unreferenced (Script, Name, Base);
+      pragma Unreferenced (Script, Name, Base, Module);
    begin
       --   Classes not supported in the shell module
       null;

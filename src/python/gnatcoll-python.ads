@@ -475,6 +475,11 @@ package GNATCOLL.Python is
    --  The returned dictionary is a borrow reference, so you shouldn't
    --  Py_DECREF it.
 
+   function PyModule_New (Module_Name : String) return PyObject;
+   --  Create a new module.
+   --  Use the PyModule_GetDic function to add new objects to the module, or
+   --  better use PyModule_AddObject.
+
    function PyModule_AddObject
      (Module : PyObject;
       Name   : Interfaces.C.Strings.chars_ptr;
