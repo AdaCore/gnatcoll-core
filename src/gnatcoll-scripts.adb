@@ -624,8 +624,7 @@ package body GNATCOLL.Scripts is
          Class := Lookup_Class (Repo, Name, Module);
          if not Class.Exists then
             Class.Exists := True;
-            Include
-              (Repo.Classes, To_String (Module.Name) & '.' & Name, Class);
+            Include (Repo.Classes, Class.Qualified_Name.all, Class);
             for T in Tmp'Range loop
                Register_Class (Tmp (T), Name, Base, Module);
             end loop;
@@ -645,7 +644,18 @@ package body GNATCOLL.Scripts is
    is
       C     : Classes_Hash.Cursor;
       Class : Class_Type;
-      N     : constant String := To_String (Module.Name) & '.' & Name;
+
+      function Qualified_Name return String;
+      function Qualified_Name return String is
+      begin
+         if Module = Default_Module then
+            return Name;
+         else
+            return To_String (Module.Name) & '.' & Name;
+         end if;
+      end Qualified_Name;
+
+      N     : constant String := Qualified_Name;
    begin
       C := Find (Repo.Classes, N);
       if Has_Element (C) then
