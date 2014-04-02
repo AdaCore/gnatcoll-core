@@ -79,7 +79,7 @@ package body GNATCOLL.Xref.Database is
          & "" & ASCII.LF
          & "|TABLE| entities" & ASCII.LF
          & "|id|AUTOINCREMENT|PK||" & ASCII.LF
-         & "|name|Text|NOT NULL,NOINDEX,NOCASE||" & ASCII.LF
+         & "|name|Text|NOT NULL,NOINDEX||" & ASCII.LF
          & "|kind|FK entity_kinds|NOT NULL,NOINDEX||" & ASCII.LF
          & "|decl_file|FK files|NOT NULL,NOINDEX||" & ASCII.LF
          & "|decl_line|Integer|NOT NULL,NOINDEX||" & ASCII.LF

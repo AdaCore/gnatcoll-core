@@ -113,11 +113,11 @@ package body GNATCOLL.Xref is
      (Field1 : SQL_Field_Text'Class;
       Field2 : Text_Fields.Field'Class) return SQL_Criteria is
    begin
-      if Is_Case_Sensitive (Local_FS) then
-         return Field1 = Field2;
-      else
-         return Like (Field1, Field2);
-      end if;
+      --  No need to check for case sensitivity here, the database column
+      --  itself is marked as case insensitive when needed, which allows
+      --  sqlite to use the indexes to perform the queries.
+      --      if Is_Case_Sensitive (Local_FS) then
+      return Field1 = Field2;
    end Compare_Files;
 
    -------------------
@@ -127,11 +127,7 @@ package body GNATCOLL.Xref is
    function Compare_Files
      (Field1 : SQL_Field_Text'Class; Name : String) return SQL_Criteria is
    begin
-      if Is_Case_Sensitive (Local_FS) then
-         return Field1 = Name;
-      else
-         return Like (Field1, Name);
-      end if;
+      return Field1 = Name;
    end Compare_Files;
 
    type Access_String is access constant String;

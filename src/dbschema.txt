@@ -6,7 +6,7 @@
 | TABLE    | files         | file            |   | Stores the list of source and LI files                                                   |
 |----------+---------------+-----------------+---+------------------------------------------------------------------------------------------|
 | id       | AUTOINCREMENT | PK              |   |                                                                                          |
-| path     | TEXT          | NOT NULL, INDEX |   | Full normalized absolute path for the file. Casing is not normalized                     |
+| path     | TEXT          | NOT NULL, INDEX, COLLATE NOCASE |   | Full normalized absolute path for the file. Casing is not normalized                     |
 | stamp    | timestamp     | NULL            |   | The timestamp the last time the file was read (only set for LI files for efficiency)     |
 | language | TEXT          | NOT NULL        |   | The language for this file (so that we can limit queries to specific languages), or "li" |
 | project  | FK files()    | NULL            |   | V2.0: The project to which a source file belongs. With aggregate projects, a source file might occur several times in this table, each time with a different project. |
@@ -73,7 +73,7 @@
 | TABLE           | entities                        | entity                    |       |                                                                  |
 |-----------------+---------------------------------+---------------------------+-------+------------------------------------------------------------------|
 | id              | AUTOINCREMENT                   | PK                        |       |                                                                  |
-| name            | TEXT                            | NOT NULL, NOINDEX, NOCASE |       | Can be empty for forward decls (see above). Must be UTF-8        |
+| name            | TEXT                            | NOT NULL, NOINDEX, COLLATE NOCASE |       | Can be empty for forward decls (see above). Must be UTF-8        |
 | kind            | FK entity_kinds()               | NOT NULL, NOINDEX         |       | The E_Kind for this entity                                       |
 | decl_file       | FK files(references)            | NOT NULL, NOINDEX         |       | Set to -1 for a predefined entity                                |
 | decl_line       | INTEGER                         | NOT NULL, NOINDEX         |       | Set to -1 for a predefined entity                                |
