@@ -28,7 +28,6 @@ with GNAT.Calendar.Time_IO;   use GNAT.Calendar.Time_IO;
 with GNAT.OS_Lib;
 with GNATCOLL.Xref.Database;  use GNATCOLL.Xref.Database;
 with GNATCOLL.Mmap;           use GNATCOLL.Mmap;
-with GNATCOLL.Path;           use GNATCOLL.Path;
 with GNATCOLL.SQL;            use GNATCOLL.SQL;
 with GNATCOLL.SQL.Inspect;    use GNATCOLL.SQL.Inspect;
 with GNATCOLL.SQL.Sqlite;
