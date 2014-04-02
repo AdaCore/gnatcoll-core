@@ -1036,7 +1036,7 @@ package body GNATCOLL.Scripts.Python is
          Getter := null;
       end if;
 
-      Klass := Lookup_Object (Script, Get_Name (Prop.Class));
+      Klass := Lookup_Object (Script, Prop.Class.Qualified_Name.all);
       Ignored := PyDescr_NewGetSet
         (Typ     => Klass,
          Name    => Prop.Name,
@@ -1206,7 +1206,7 @@ package body GNATCOLL.Scripts.Python is
 
       if Base /= No_Class then
          Bases := Create_Tuple
-           ((1 => Lookup_Object (Script, Get_Name (Base))));
+           ((1 => Lookup_Object (Script, Base.Qualified_Name.all)));
       end if;
 
       Class := Type_New
@@ -2373,9 +2373,13 @@ package body GNATCOLL.Scripts.Python is
       end if;
 
       if not PyFloat_Check (Item) then
-         Raise_Exception
-           (Invalid_Parameter'Identity,
-            "Parameter" & Integer'Image (N) & " should be a float");
+         if PyInt_Check (Item) then
+            return Float (PyInt_AsLong (Item));
+         else
+            Raise_Exception
+              (Invalid_Parameter'Identity,
+               "Parameter" & Integer'Image (N) & " should be a float");
+         end if;
       else
          return Float (PyFloat_AsDouble (Item));
       end if;
@@ -2461,7 +2465,7 @@ package body GNATCOLL.Scripts.Python is
 
    begin
       if Class /= Any_Class then
-         C := Lookup_Object (Data.Script, Get_Name (Class));
+         C := Lookup_Object (Data.Script, Class.Qualified_Name.all);
       end if;
 
       Get_Param (Data, N, Item, Success.all); --  Item is a borrowed reference
@@ -3201,7 +3205,8 @@ package body GNATCOLL.Scripts.Python is
      (Script : access Python_Scripting_Record;
       Class  : Class_Type) return Class_Instance
    is
-      Klass : constant PyObject := Lookup_Object (Script, Get_Name (Class));
+      Klass : constant PyObject :=
+        Lookup_Object (Script, Class.Qualified_Name.all);
       Inst : Class_Instance;
       Obj  : PyObject;
       Args : PyObject;
