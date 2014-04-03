@@ -49,7 +49,7 @@ package body GNATCOLL.Xref.Database is
    is
       DbSchema : constant String := "|TABLE| files" & ASCII.LF
          & "|id|AUTOINCREMENT|PK||" & ASCII.LF
-         & "|path|Text|NOT NULL,INDEX||" & ASCII.LF
+         & "|path|Text|NOT NULL,INDEX,NOCASE||" & ASCII.LF
          & "|stamp|timestamp with time zone|||" & ASCII.LF
          & "|language|Text|NOT NULL||" & ASCII.LF
          & "|project|FK files|||" & ASCII.LF
@@ -79,7 +79,7 @@ package body GNATCOLL.Xref.Database is
          & "" & ASCII.LF
          & "|TABLE| entities" & ASCII.LF
          & "|id|AUTOINCREMENT|PK||" & ASCII.LF
-         & "|name|Text|NOT NULL,NOINDEX||" & ASCII.LF
+         & "|name|Text|NOT NULL,NOINDEX,NOCASE||" & ASCII.LF
          & "|kind|FK entity_kinds|NOT NULL,NOINDEX||" & ASCII.LF
          & "|decl_file|FK files|NOT NULL,NOINDEX||" & ASCII.LF
          & "|decl_line|Integer|NOT NULL,NOINDEX||" & ASCII.LF
