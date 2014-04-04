@@ -2190,7 +2190,7 @@ package body GNATCOLL.Xref is
          Info   : constant File_Info :=
                     Project.Create_From_Project (Basename);
          Found  : VFS_To_Ids.Cursor;
-         Result : File_DB_Info;
+         Result : File_Db_Info;
       begin
          if Info.File = GNATCOLL.VFS.No_File then
             if Active (Me_Error) then
