@@ -65,11 +65,11 @@ package body GNATCOLL.Readline is
 
    function Completion_Matches
       (Text      : String;
-       Generator : Completion_Entry_Func)
-       return Possible_Completions
+       Generator : Completion_Entry_Func) return Possible_Completions
    is
       pragma Unreferenced (Text, Generator);
    begin
       return null;
    end Completion_Matches;
+
 end GNATCOLL.Readline;

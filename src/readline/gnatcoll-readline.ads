@@ -56,8 +56,7 @@ package GNATCOLL.Readline is
 
    function Completion_Matches
       (Text      : String;
-       Generator : Completion_Entry_Func)
-       return Possible_Completions;
+       Generator : Completion_Entry_Func) return Possible_Completions;
    --  An adaptator for a completion generator.
    --  The goal of Generator is to return (one by one) each of the possible
    --  completions for Text. The first time it is called for a given word,

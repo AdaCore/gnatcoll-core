@@ -29,7 +29,7 @@ package body GNATCOLL.Readline is
    pragma Convention (C, Rl_Completion_Function);
 
    type Rl_Compentry_Func is access
-      function (Text : Interfaces.C.Strings.chars_ptr;
+      function (Text  : Interfaces.C.Strings.chars_ptr;
                 State : Integer) return chars_ptr;
    pragma Convention (C, Rl_Compentry_Func);
    --  A function that returns each of the possible completions for
@@ -37,7 +37,7 @@ package body GNATCOLL.Readline is
    --  This function should return Null_Ptr when there are no more matches.
 
    function Rl_Completion_Matches
-      (Text : chars_ptr;
+      (Text      : chars_ptr;
        Generator : Rl_Compentry_Func) return Possible_Completions;
    pragma Import (C, Rl_Completion_Matches, "rl_completion_matches");
    --  Returns an array of strings which is a list of completions for
@@ -131,8 +131,7 @@ package body GNATCOLL.Readline is
 
    function Completion_Matches
       (Text      : String;
-       Generator : Completion_Entry_Func)
-      return Possible_Completions
+       Generator : Completion_Entry_Func) return Possible_Completions
    is
       Txt : Interfaces.C.Strings.chars_ptr := New_String (Text);
 
@@ -142,8 +141,12 @@ package body GNATCOLL.Readline is
       pragma Convention (C, Completion_Generator);
       --  Wrapper around the user's completion function.
 
+      --------------------------
+      -- Completion_Generator --
+      --------------------------
+
       function Completion_Generator
-         (Txt : Interfaces.C.Strings.chars_ptr;
+         (Txt   : Interfaces.C.Strings.chars_ptr;
           State : Integer) return chars_ptr
       is
          pragma Unreferenced (Txt);
@@ -157,9 +160,10 @@ package body GNATCOLL.Readline is
       end Completion_Generator;
 
       Result : Possible_Completions;
+
    begin
-      Result := Rl_Completion_Matches (
-         Txt, Completion_Generator'Unrestricted_Access);
+      Result := Rl_Completion_Matches
+        (Txt, Completion_Generator'Unrestricted_Access);
       Free (Txt);
       return Result;
    end Completion_Matches;
@@ -186,19 +190,21 @@ package body GNATCOLL.Readline is
    --------------
 
    function Get_Line (Prompt : String := "") return String is
+
       function Readline (Prompt : chars_ptr) return chars_ptr;
       pragma Import (C, Readline, "readline");
 
       procedure Add_History (Str : chars_ptr);
       pragma Import (C, Add_History, "add_history");
 
-      Pr : chars_ptr;
+      Pr     : chars_ptr;
       Result : chars_ptr;
    begin
       if Prompt /= "" then
          Pr := New_String (Prompt);
          Result := Readline (Pr);
          Free (Pr);
+
       else
          Result := Readline (Null_Ptr);
       end if;
@@ -214,6 +220,7 @@ package body GNATCOLL.Readline is
             Free (Result);
             return Val;
          end;
+
       else
          raise Ada.Text_IO.End_Error;
       end if;
