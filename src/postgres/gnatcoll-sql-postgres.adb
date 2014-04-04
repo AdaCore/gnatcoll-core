@@ -55,7 +55,7 @@ package body GNATCOLL.SQL.Postgres is
 
       function Extend
         (Std_Contents : SQL_Query_Contents_Access)
-        return Query_PG_Contents_Access
+         return Query_PG_Contents_Access
       is
       begin
          if Std_Contents.all in Query_PG_Contents then
@@ -181,10 +181,10 @@ package body GNATCOLL.SQL.Postgres is
    function OID_Field (Table : SQL_Table'Class) return SQL_Field_Integer is
    begin
       return SQL_Field_Integer'
-        (Table    => Table.Table_Name,
-         Instance => Table.Instance,
+        (Table          => Table.Table_Name,
+         Instance       => Table.Instance,
          Instance_Index => Table.Instance_Index,
-         Name     => N_OID'Access);
+         Name           => N_OID'Access);
    end OID_Field;
 
    ----------
@@ -254,7 +254,7 @@ package body GNATCOLL.SQL.Postgres is
                      Extend (Query.Contents.Data);
          begin
             Data.Returning.Fields := Data.Returning.Fields
-                                   & SQL_PG_Returning (Extension).Fields;
+              & SQL_PG_Returning (Extension).Fields;
 
             Q_Data := SQL_Query_Contents_Access (Data);
          end;
@@ -274,6 +274,7 @@ package body GNATCOLL.SQL.Postgres is
 
             Q_Data := SQL_Query_Contents_Access (Data);
          end;
+
       else
          raise Program_Error with "unexpected extension type";
       end if;

@@ -28,7 +28,7 @@
 private package GNATCOLL.SQL.Sqlite.Builder is
 
    function Has_Sqlite_Support return Boolean;
-   --  Whether Sqlite is supported.
+   --  Whether Sqlite is supported
 
    function Build_Connection
      (Descr : access Sqlite_Description'Class) return Database_Connection;
@@ -38,8 +38,8 @@ private package GNATCOLL.SQL.Sqlite.Builder is
    --  Perform additional setup
 
    function Backup
-     (DB1 : access Database_Connection_Record'Class;
-      DB2 : String;
+     (DB1             : access Database_Connection_Record'Class;
+      DB2             : String;
       From_DB1_To_DB2 : Boolean := True) return Boolean;
    --  Backup the database From to a new database with the given file name
    --  (or ":memory:")

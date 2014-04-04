@@ -70,8 +70,7 @@ package body GNATCOLL.SQL.Sqlite is
    ---------------
 
    function Is_Sqlite
-     (DB : access Database_Connection_Record'Class)
-      return Boolean
+     (DB : access Database_Connection_Record'Class) return Boolean
    is
    begin
       return Get_Description (DB).all in Sqlite_Description;
@@ -105,8 +104,8 @@ package body GNATCOLL.SQL.Sqlite is
    ------------
 
    function Backup
-     (DB1 : access Database_Connection_Record'Class;
-      DB2 : String;
+     (DB1             : access Database_Connection_Record'Class;
+      DB2             : String;
       From_DB1_To_DB2 : Boolean := True) return Boolean
    is
    begin

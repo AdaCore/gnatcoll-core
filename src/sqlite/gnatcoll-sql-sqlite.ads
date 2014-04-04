@@ -65,7 +65,7 @@ package GNATCOLL.SQL.Sqlite is
      (Database      : String;
       Cache_Support : Boolean := False;
       Errors        : access Error_Reporter'Class := null)
-     return Database_Description;
+      return Database_Description;
    --  Return a database connection for sqlite
    --  If sqlite was not detected at installation time, this function will
    --  return null.
@@ -83,8 +83,8 @@ package GNATCOLL.SQL.Sqlite is
    --  in memory.
 
    function Backup
-     (DB1 : access Database_Connection_Record'Class;
-      DB2 : String;
+     (DB1             : access Database_Connection_Record'Class;
+      DB2             : String;
       From_DB1_To_DB2 : Boolean := True) return Boolean;
    function Backup
      (From : access Database_Connection_Record'Class;
@@ -95,7 +95,9 @@ package GNATCOLL.SQL.Sqlite is
    --  Returns False in case of error
 
 private
+
    type Sqlite_Description is new Database_Description_Record with record
       Dbname   : GNAT.Strings.String_Access;
    end record;
+
 end GNATCOLL.SQL.Sqlite;

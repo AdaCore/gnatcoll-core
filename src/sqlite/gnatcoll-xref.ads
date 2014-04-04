@@ -36,12 +36,14 @@
 --   end;
 
 with Ada.Containers.Ordered_Sets;
-with Ada.Strings.Unbounded; use Ada.Strings.Unbounded;
-with GNAT.Regpat;           use GNAT.Regpat;
-with GNAT.Strings;          use GNAT.Strings;
-with GNATCOLL.Iconv;        use GNATCOLL.Iconv;
-with GNATCOLL.Projects;     use GNATCOLL.Projects;
-with GNATCOLL.SQL.Exec;     use GNATCOLL.SQL.Exec;
+with Ada.Strings.Unbounded;       use Ada.Strings.Unbounded;
+
+with GNAT.Regpat;       use GNAT.Regpat;
+with GNAT.Strings;      use GNAT.Strings;
+
+with GNATCOLL.Iconv;    use GNATCOLL.Iconv;
+with GNATCOLL.Projects; use GNATCOLL.Projects;
+with GNATCOLL.SQL.Exec; use GNATCOLL.SQL.Exec;
 with GNATCOLL.VFS;
 
 package GNATCOLL.Xref is
@@ -64,7 +66,7 @@ package GNATCOLL.Xref is
      (Self  : in out Xref_Database;
       Tree  : not null GNATCOLL.Projects.Project_Tree_Access;
       DB    : not null access
-        GNATCOLL.SQL.Exec.Database_Description_Record'Class;
+                GNATCOLL.SQL.Exec.Database_Description_Record'Class;
       Error : in out GNAT.Strings.String_Access;
       Delete_If_Mismatch : Boolean := False);
    --  Points to the actual database that will be used to store the xref
@@ -463,10 +465,10 @@ package GNATCOLL.Xref is
    --  column. By default, the end is on the same position as the start.
 
    function Comment
-     (Self     : Xref_Database;
-      Entity   : Entity_Information;
-      Language : Language_Syntax;
-      Format   : Formatting := Text;
+     (Self              : Xref_Database;
+      Entity            : Entity_Information;
+      Language          : Language_Syntax;
+      Format            : Formatting := Text;
       Look_Before_First : Boolean := True) return String;
    --  Returns the comment (extracted from the source file) for the entity.
    --  This is looked for just before or just after the declaration of the
@@ -492,10 +494,10 @@ package GNATCOLL.Xref is
    --       Type: Unbounded_String
 
    function Documentation
-     (Self     : Xref_Database;
-      Entity   : Entity_Information;
-      Language : Language_Syntax;
-      Format   : Formatting := Text;
+     (Self              : Xref_Database;
+      Entity            : Entity_Information;
+      Language          : Language_Syntax;
+      Format            : Formatting := Text;
       Look_Before_First : Boolean := True) return String;
    --  Combines the various documentation subprogram output into a single
    --  string.
@@ -763,6 +765,7 @@ package GNATCOLL.Xref is
       Out_Parameter,
       In_Out_Parameter,
       Access_Parameter);
+
    type Parameter_Information is record
       Parameter : Entity_Information;
       Kind      : Parameter_Kind;
@@ -784,8 +787,8 @@ package GNATCOLL.Xref is
    --------------
 
    function From_Instances
-     (Self   : Xref_Database'Class;
-      Ref    : Entity_Reference) return Entity_Array;
+     (Self : Xref_Database'Class;
+      Ref  : Entity_Reference) return Entity_Array;
    --  Indicates the instantiation chain for the given reference.
    --  If we have a nested generic, as in:
    --     generic package B is
@@ -906,6 +909,7 @@ package GNATCOLL.Xref is
    --  will in general include the Ada runtime.
 
 private
+
    type Xref_Database is tagged record
       DB      : GNATCOLL.SQL.Exec.Database_Connection;
 
@@ -926,35 +930,35 @@ private
      (Id => -1, Fuzzy => True);
 
    No_Entity_Reference : constant Entity_Reference :=
-     (Entity  => No_Entity,
-      File    => GNATCOLL.VFS.No_File,
-      Project => GNATCOLL.Projects.No_Project,
-      Line    => -1,
-      Column  => -1,
-      Kind    => Ada.Strings.Unbounded.Null_Unbounded_String,
-      Kind_Id => Kind_Id_Declaration,
-      Is_End_Of_Scope => False,
-      Scope   => No_Entity);
+                           (Entity          => No_Entity,
+                            File            => GNATCOLL.VFS.No_File,
+                            Project         => GNATCOLL.Projects.No_Project,
+                            Line            => -1,
+                            Column          => -1,
+                            Kind            => Null_Unbounded_String,
+                            Kind_Id         => Kind_Id_Declaration,
+                            Is_End_Of_Scope => False,
+                            Scope           => No_Entity);
 
    No_Entity_Declaration : constant Entity_Declaration :=
-     (Name     => Ada.Strings.Unbounded.Null_Unbounded_String,
-      Kind     => Ada.Strings.Unbounded.Null_Unbounded_String,
-      Location => No_Entity_Reference,
-      Flags    => (Is_Subprogram       => False,
-                   Is_Container        => False,
-                   Is_Abstract         => True,
-                   Is_Generic          => True,
-                   Is_Access           => False,
-                   Is_Array            => False,
-                   Is_Printable_In_Gdb => False,
-                   Is_Type             => False,
-                   Is_Global           => False,
-                   Is_Static_Local     => False,
-                   Has_Methods         => False,
-                   Body_Is_Full_Declaration => True));
+                             (Name     => Null_Unbounded_String,
+                              Kind     => Null_Unbounded_String,
+                              Location => No_Entity_Reference,
+                              Flags    => (Is_Subprogram            => False,
+                                           Is_Container             => False,
+                                           Is_Abstract              => True,
+                                           Is_Generic               => True,
+                                           Is_Access                => False,
+                                           Is_Array                 => False,
+                                           Is_Printable_In_Gdb      => False,
+                                           Is_Type                  => False,
+                                           Is_Global                => False,
+                                           Is_Static_Local          => False,
+                                           Has_Methods              => False,
+                                           Body_Is_Full_Declaration => True));
 
-   package Entity_Sets is new Ada.Containers.Ordered_Sets
-     (Entity_Information);
+   package Entity_Sets is
+     new Ada.Containers.Ordered_Sets (Entity_Information);
 
    type Base_Cursor is abstract tagged record
       DBCursor : GNATCOLL.SQL.Exec.Forward_Cursor;
@@ -979,10 +983,10 @@ private
    end record;
 
    type Recursive_Entities_Cursor is new Entities_Cursor with record
-      Xref            : Xref_Database_Access;
-      Compute         : Entities_Iterator := Calls'Access;
-      Visited         : Entity_Sets.Set;
-      To_Visit        : Entity_Sets.Set;
+      Xref     : Xref_Database_Access;
+      Compute  : Entities_Iterator := Calls'Access;
+      Visited  : Entity_Sets.Set;
+      To_Visit : Entity_Sets.Set;
    end record;
 
    Ada_Syntax : constant Language_Syntax :=
