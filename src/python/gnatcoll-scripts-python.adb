@@ -2157,7 +2157,8 @@ package body GNATCOLL.Scripts.Python is
 
                   if not Found then
                      Set_Error_Msg (Data, "Invalid keyword parameter: " & K);
-                     raise Invalid_Parameter;
+                     raise Invalid_Parameter
+                        with "Invalid keyword parameter " & K;
                   end if;
                end;
             end loop;
