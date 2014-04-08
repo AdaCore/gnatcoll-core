@@ -39,6 +39,9 @@ package body GNATCOLL.Memory is
 
    use Ada.Exceptions;
 
+   subtype Tracebacks_Array is GNAT.Traceback.Tracebacks_Array;
+   --  Avoid use-clause collision with the one in System.Traceback_Entries
+
    Stack_Trace_Depth : Integer := 30;
 
    Memory_Monitor : Boolean := False;
