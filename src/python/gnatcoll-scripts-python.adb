@@ -3644,6 +3644,10 @@ package body GNATCOLL.Scripts.Python is
 
       Files := Directory.Read_Dir;
 
+      --  Sort the files, to make the load order more stable than the
+      --  filesystem order.
+      Sort (Files.all);
+
       for J in Files'Range loop
          if Equal (Files (J).File_Extension, ".py") then
             if To_Load (Files (J)) then
