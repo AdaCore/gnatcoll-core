@@ -51,6 +51,9 @@ pragma Warnings (On);
 
 package body GNATCOLL.Traces is
 
+   subtype Tracebacks_Array is GNAT.Traceback.Tracebacks_Array;
+   --  Avoid use-clause collision with the one in System.Traceback_Entries
+
    On_Exception : On_Exception_Mode := Propagate;
    --  The behavior that should be adopted when something unexpected prevent
    --  the log stream to be written.
