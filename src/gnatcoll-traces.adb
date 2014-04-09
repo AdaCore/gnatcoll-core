@@ -29,6 +29,7 @@ with Ada.Calendar.Time_Zones;   use Ada.Calendar.Time_Zones;
 with Ada.Characters.Handling;   use Ada.Characters.Handling;
 with Ada.Strings.Fixed;         use Ada.Strings.Fixed;
 with Ada.Text_IO;               use Ada.Text_IO;
+with Ada.Exceptions.Traceback;  use Ada.Exceptions.Traceback;
 with Ada.Unchecked_Deallocation;
 
 with GNAT.Calendar;             use GNAT.Calendar;
@@ -41,18 +42,10 @@ with GNAT.Traceback;            use GNAT.Traceback;
 
 with System.Address_Image;
 with System.Assertions;         use System.Assertions;
-pragma Warnings (Off);
-with System.Traceback_Entries;  use System.Traceback_Entries;
 
 with GNATCOLL.Utils;            use GNATCOLL.Utils;
-with GNATCOLL.VFS_Utils;        use GNATCOLL.VFS_Utils;
-
-pragma Warnings (On);
 
 package body GNATCOLL.Traces is
-
-   subtype Tracebacks_Array is GNAT.Traceback.Tracebacks_Array;
-   --  Avoid use-clause collision with the one in System.Traceback_Entries
 
    On_Exception : On_Exception_Mode := Propagate;
    --  The behavior that should be adopted when something unexpected prevent
@@ -963,13 +956,13 @@ package body GNATCOLL.Traces is
    ---------------------
 
    procedure Put_Stack_Trace (Stream : in out Trace_Stream_Record'Class) is
-      Tracebacks : Tracebacks_Array (1 .. 50);
+      Tracebacks : GNAT.Traceback.Tracebacks_Array (1 .. 50);
       Len        : Natural;
    begin
       Call_Chain (Tracebacks, Len);
       Put (Stream, "(callstack: ");
       for J in Tracebacks'First .. Len loop
-         Put (Stream, System.Address_Image (PC_For (Tracebacks (J))) & ' ');
+         Put (Stream, System.Address_Image (Get_PC (Tracebacks (J))) & ' ');
       end loop;
       Put (Stream, ")");
    end Put_Stack_Trace;

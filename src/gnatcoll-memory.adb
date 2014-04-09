@@ -22,6 +22,7 @@
 ------------------------------------------------------------------------------
 
 with Ada.Exceptions;
+with Ada.Exceptions.Traceback; use Ada.Exceptions.Traceback;
 with Ada.Unchecked_Deallocation;
 with GNAT.IO;                  use GNAT.IO;
 with GNAT.Traceback;           use GNAT.Traceback;
@@ -30,7 +31,6 @@ with System.Address_Image;
 with System.Storage_Elements;  use System.Storage_Elements;
 
 pragma Warnings (Off);
-with System.Traceback_Entries; use System.Traceback_Entries;
 with System.CRTL;
 pragma Warnings (On);
 
@@ -196,7 +196,7 @@ package body GNATCOLL.Memory is
 
    begin
       for X in T'Range loop
-         Result := Result + To_Integer (PC_For (T (X)));
+         Result := Result + To_Integer (Get_PC (T (X)));
       end loop;
 
       return Header (Result mod Integer_Address (Header'Last));
@@ -524,7 +524,7 @@ package body GNATCOLL.Memory is
             end;
 
             for J in Max (M).Traceback'Range loop
-               Put (" 0x" & Address_Image (PC_For (Max (M).Traceback (J))));
+               Put (" 0x" & Address_Image (Get_PC (Max (M).Traceback (J))));
             end loop;
 
             New_Line;
