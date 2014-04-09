@@ -22,7 +22,7 @@
 ------------------------------------------------------------------------------
 
 with Ada.Exceptions;
-with Ada.Exceptions.Traceback; use Ada.Exceptions.Traceback;
+with Ada.Exceptions.Traceback;
 with Ada.Unchecked_Deallocation;
 with GNAT.IO;                  use GNAT.IO;
 with GNAT.Traceback;           use GNAT.Traceback;
@@ -172,6 +172,7 @@ package body GNATCOLL.Memory is
    -----------
 
    function Equal (K1, K2 : Tracebacks_Array_Access) return Boolean is
+      use Ada.Exceptions.Traceback;
    begin
       return K1.all = K2.all;
    end Equal;
@@ -194,6 +195,7 @@ package body GNATCOLL.Memory is
    function Hash (T : Tracebacks_Array_Access) return Header is
       Result : Integer_Address := 0;
 
+      use Ada.Exceptions.Traceback;
    begin
       for X in T'Range loop
          Result := Result + To_Integer (Get_PC (T (X)));
@@ -425,6 +427,8 @@ package body GNATCOLL.Memory is
          Max  : array (1 .. Size) of Traceback_Htable_Elem_Ptr :=
            (others => null);
          --  Sorted array for the biggest memory users
+
+         use Ada.Exceptions.Traceback;
       begin
          New_Line;
          case Sort is
