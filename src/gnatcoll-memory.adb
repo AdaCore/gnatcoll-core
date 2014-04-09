@@ -22,7 +22,6 @@
 ------------------------------------------------------------------------------
 
 with Ada.Exceptions;
-with Ada.Exceptions.Traceback;
 with Ada.Unchecked_Deallocation;
 with GNAT.IO;                  use GNAT.IO;
 with GNAT.Traceback;           use GNAT.Traceback;
@@ -173,7 +172,6 @@ package body GNATCOLL.Memory is
    -----------
 
    function Equal (K1, K2 : Tracebacks_Array_Access) return Boolean is
-      use Ada.Exceptions.Traceback;
    begin
       return K1.all = K2.all;
    end Equal;
