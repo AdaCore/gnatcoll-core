@@ -831,7 +831,7 @@ procedure GNATInspect is
       Idx       : Natural;
       Ambiguous : Boolean;
    begin
-      if Words'Length < 2 then
+      if Words'Length < 1 then
          Put_Line
            (Output_Lead.all
             & "Invalid parameter, expecting "
@@ -872,23 +872,25 @@ procedure GNATInspect is
          end if;
       end if;
 
-      Tree.Create
-        (Name      => +Words (Words'First + 1).all,
-         Project   => Project,
-         File      => File,
-         Ambiguous => Ambiguous);
+      if Words'Length >= 2 then
+         Tree.Create
+           (Name      => +Words (Words'First + 1).all,
+            Project   => Project,
+            File      => File,
+            Ambiguous => Ambiguous);
 
-      if Ambiguous then
-         --  Whether or not File has been set, we know there are multiple
-         --  projects involved, and thus the xref are ambiguous
-         Put_Line (Output_Lead.all & "Error: ambiguous file name '"
-                   & Words (Words'First + 1).all & "'");
-         return No_Entity;
+         if Ambiguous then
+            --  Whether or not File has been set, we know there are multiple
+            --  projects involved, and thus the xref are ambiguous
+            Put_Line (Output_Lead.all & "Error: ambiguous file name '"
+                      & Words (Words'First + 1).all & "'");
+            return No_Entity;
 
-      elsif File = No_File then
-         Put_Line (Output_Lead.all & "Error: file not found '"
-                   & Words (Words'First + 1).all & "'");
-         return No_Entity;
+         elsif File = No_File then
+            Put_Line (Output_Lead.all & "Error: file not found '"
+                      & Words (Words'First + 1).all & "'");
+            return No_Entity;
+         end if;
       end if;
 
       Ref  := Xref.Get_Entity

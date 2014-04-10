@@ -249,7 +249,9 @@ file belongs. The project is specified either as a project name (which itself
 could be ambiguous with aggregate projects), or as a full path.
 
 In all commands below, whenever the parameter specifies ":file", you can
-use instead ":file:project" if there are ambiguities.
+use instead ":file:project" if there are ambiguities. It is also possible
+not to specify the file, in which case the entity will be looked for in all
+sources of the project.
 
 Here is the full list of commands supported by gnatinspect:
 

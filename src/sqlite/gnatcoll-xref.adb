@@ -4365,8 +4365,10 @@ package body GNATCOLL.Xref is
          return No_Entity_Reference;
       end if;
 
-      if File = "" then
-         F := Database.Files.Id = No_File_Id;
+      if File = Predefined_Entity then
+         F := Database.Files.Id = No_File_Id;   --  predefined entities
+      elsif File = Any_File then
+         F := No_Criteria;  --  any file
       elsif GNAT.OS_Lib.Is_Absolute_Path (File) then
          F := Compare_Files (Database.Files.Path, File);
       else

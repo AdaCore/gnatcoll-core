@@ -235,6 +235,12 @@ package GNATCOLL.Xref is
    --  These subprograms can be overridden if you want to print the full
    --  path name of files (rather than the default base name)
 
+   Predefined_Entity : constant String := "<predefined>";
+   Any_File          : constant String := "";
+   --  Valid values for the File parameter of Get_Entity, which indicates
+   --  we are searching for either a predefined entity, or for an entity
+   --  with that name in any of the source files or predefined entities.
+
    function Get_Entity
      (Self    : Xref_Database;
       Name    : String;   --  UTF-8 encoded
@@ -263,6 +269,10 @@ package GNATCOLL.Xref is
    --  project, since the xref for A:a.ads:1 could end up being in
    --  dir1/b.ads or dir2/b.ads for instance, depending on which project
    --  a.ads is seen from.
+   --
+   --  File should be set to Any_File to search for the entity is all
+   --  the files of the project. It can also be set to Predefined_Entity to
+   --  search for one of the predefined entities.
 
    function Is_Fuzzy_Match (Self : Entity_Information) return Boolean;
    --  Returns True if the entity that was found is only an approximation,
