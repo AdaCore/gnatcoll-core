@@ -3634,8 +3634,39 @@ package body GNATCOLL.Xref is
 
       procedure Finalize_DB (DB : Database_Connection) is
          Start : Time;
+
+         function Should_Regenerate_Indexes return Boolean;
+         --  Return True if the indexes should be regenerated
+
+         -------------------------------
+         -- Should_Regenerate_Indexes --
+         -------------------------------
+
+         function Should_Regenerate_Indexes return Boolean is
+            R     : Forward_Cursor;
+         begin
+            if Destroy_Indexes then
+               --  We have destroyed the indexes earlier: they need to be
+               --  recreated now.
+               return True;
+            end if;
+
+            --  Check whether index 'entity_refs_entity' is missing
+            --  ??? This is sqlite-specific
+            R.Fetch (DB, "SELECT * FROM sqlite_master WHERE type='index'"
+                     & "AND name='entity_refs_entity'");
+
+            if not R.Has_Row then
+               --  'entity_refs_entity' is missing. This means that the
+               --  indexes should be regenerated.
+               return True;
+            end if;
+
+            return False;
+         end Should_Regenerate_Indexes;
+
       begin
-         if Destroy_Indexes then
+         if Should_Regenerate_Indexes then
             if Active (Me_Timing) then
                Start := Clock;
             end if;
