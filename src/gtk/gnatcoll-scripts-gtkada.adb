@@ -122,10 +122,15 @@ package body GNATCOLL.Scripts.Gtkada is
    function Get_Instance
      (Script : access Scripting_Language_Record'Class;
       Widget : access Glib.Object.GObject_Record'Class)
-      return Class_Instance is
+      return Class_Instance
+   is
+      Data_Name : constant String :=  "GPS-Instance-" & Get_Name (Script);
    begin
-      return CIR_User_Data.Get
-        (Widget, "GPS-Instance-" & Get_Name (Script)).Inst;
+      if CIR_User_Data.Is_Set (Widget, Data_Name) then
+         return CIR_User_Data.Get (Widget, Data_Name).Inst;
+      else
+         return No_Class_Instance;
+      end if;
    exception
       when Data_Error =>
          return No_Class_Instance;
