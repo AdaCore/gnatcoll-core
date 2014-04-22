@@ -3545,6 +3545,9 @@ package body GNATCOLL.Xref is
         (DB : Database_Connection; To_DB : String);
       --  Dump the database to disk if needed.
 
+      procedure Recreate_Indexes (DB : Database_Connection);
+      --  Recreate the indexes if needed
+
       procedure Finalize_DB (DB : Database_Connection);
       --  After parsing LI files, do the last post-processings in the database
       --  (recreate indexes, analyze,...)
@@ -3628,45 +3631,27 @@ package body GNATCOLL.Xref is
          end if;
       end Backup_DB_If_Needed;
 
-      -----------------
-      -- Finalize_DB --
-      -----------------
+      ----------------------
+      -- Recreate_Indexes --
+      ----------------------
 
-      procedure Finalize_DB (DB : Database_Connection) is
+      procedure Recreate_Indexes (DB : Database_Connection) is
+         Should_Create : Boolean := Destroy_Indexes;
+         --  Whether we should recreate the indexes: yes if we destroyed
+         --  them earlier.
+
+         R     : Forward_Cursor;
          Start : Time;
-
-         function Should_Regenerate_Indexes return Boolean;
-         --  Return True if the indexes should be regenerated
-
-         -------------------------------
-         -- Should_Regenerate_Indexes --
-         -------------------------------
-
-         function Should_Regenerate_Indexes return Boolean is
-            R     : Forward_Cursor;
-         begin
-            if Destroy_Indexes then
-               --  We have destroyed the indexes earlier: they need to be
-               --  recreated now.
-               return True;
-            end if;
-
+      begin
+         if not Should_Create then
             --  Check whether index 'entity_refs_entity' is missing
             --  ??? This is sqlite-specific
             R.Fetch (DB, "SELECT * FROM sqlite_master WHERE type='index'"
                      & "AND name='entity_refs_entity'");
+            Should_Create := not R.Has_Row;
+         end if;
 
-            if not R.Has_Row then
-               --  'entity_refs_entity' is missing. This means that the
-               --  indexes should be regenerated.
-               return True;
-            end if;
-
-            return False;
-         end Should_Regenerate_Indexes;
-
-      begin
-         if Should_Regenerate_Indexes then
+         if Should_Create then
             if Active (Me_Timing) then
                Start := Clock;
             end if;
@@ -3693,6 +3678,16 @@ package body GNATCOLL.Xref is
                       & Duration'Image (Clock - Start) & " s");
             end if;
          end if;
+      end Recreate_Indexes;
+
+      -----------------
+      -- Finalize_DB --
+      -----------------
+
+      procedure Finalize_DB (DB : Database_Connection) is
+         Start : Time;
+      begin
+         Recreate_Indexes (DB);
 
          --  Do this once we have restored the indexes, to speed up the search
 
@@ -4103,10 +4098,14 @@ package body GNATCOLL.Xref is
                   Start := Clock;
                end if;
 
-               if not GNATCOLL.SQL.Sqlite.Backup
+               if not Memory.Success then
+                  Trace (Me_Timing, "Failure, not copying :memory: to db");
+
+               elsif not GNATCOLL.SQL.Sqlite.Backup
                  (From => Memory, To => Self.DB)  --  :memory: -> Self.DB
                then
                   Trace (Me_Error, "Failed to copy from :memory: to DB");
+
                elsif Active (Me_Timing) then
                   Trace (Me_Timing, "Copy from :memory: to "
                          & GNATCOLL.SQL.Sqlite.DB_Name (Self.DB) & ":"
@@ -4126,6 +4125,13 @@ package body GNATCOLL.Xref is
          Trace (Me_Timing, "Total time:"
                 & Duration'Image (Clock - Absolute_Start) & " s");
       end if;
+
+   exception
+      when E : others =>
+         Trace (Me_Error, E);
+         Self.DB.Rollback;
+         Recreate_Indexes (Self.DB);
+         raise;
    end Parse_All_LI_Files;
 
    --------------
