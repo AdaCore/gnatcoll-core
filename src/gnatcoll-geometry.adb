@@ -60,7 +60,7 @@ package body GNATCOLL.Geometry is
 
    function To_Line (P1, P2 : Point) return Line is
       A : constant Coordinate := P2.Y - P1.Y;
-      B : constant Coordinate := P2.X - P1.X;
+      B : constant Coordinate := P1.X - P2.X;
    begin
       return (A => A,
               B => B,
