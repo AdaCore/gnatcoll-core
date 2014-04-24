@@ -33,6 +33,7 @@ with Ada.Text_IO;
 package GNATCOLL.Terminal is
 
    type Terminal_Info is tagged private;
+   type Terminal_Info_Access is access all Terminal_Info'Class;
    --  Information about a terminal on which we output.
    --  This structure does not encapsulate the terminal itself, which is a
    --  limited type.
