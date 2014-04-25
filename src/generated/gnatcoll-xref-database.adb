@@ -125,7 +125,7 @@ package body GNATCOLL.Xref.Database is
          & "|from_instantiation|Text|,NOINDEX||" & ASCII.LF
          & "|INDEX:|""file""|entity_refs_file" & ASCII.LF
          & "|INDEX:|""entity""|entity_refs_entity" & ASCII.LF
-         & "|INDEX:|line,column|entity_refs_loc" & ASCII.LF
+         & "|INDEX:|line,""column""|entity_refs_loc" & ASCII.LF
          & "|INDEX:|caller|refs_caller" & ASCII.LF
          & "" & ASCII.LF
          & "";
