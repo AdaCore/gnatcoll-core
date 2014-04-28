@@ -7620,6 +7620,7 @@ package body GNATCOLL.Projects is
       Indexed              : Boolean := False;
       Case_Sensitive_Index : Boolean := False) return String
    is
+      Lower_Pkg : constant String := To_Lower (Pkg);
       Pkg_Id    : Package_Node_Id := Empty_Package;
       Attr_Id   : Attribute_Node_Id;
       Attr_Kind : Defined_Attribute_Kind;
@@ -7630,11 +7631,11 @@ package body GNATCOLL.Projects is
 
       Prj.Attr.Initialize;
 
-      if Pkg /= "" then
-         Pkg_Id := Package_Node_Id_Of (Get_String (Pkg));
+      if Lower_Pkg /= "" then
+         Pkg_Id := Package_Node_Id_Of (Get_String (Lower_Pkg));
          if Pkg_Id = Empty_Package then
-            Trace (Me, "Register_New_Package (" & Pkg & ")");
-            Register_New_Package (Name  => Pkg, Id => Pkg_Id);
+            Trace (Me, "Register_New_Package (" & Lower_Pkg & ")");
+            Register_New_Package (Name  => Lower_Pkg, Id => Pkg_Id);
             if Pkg_Id = Empty_Package
               or else Pkg_Id = Unknown_Package
             then
@@ -7678,14 +7679,14 @@ package body GNATCOLL.Projects is
       end if;
 
       if Attr_Id = Empty_Attribute then
-         if Pkg = "" then
+         if Lower_Pkg = "" then
             return "Project attributes cannot be added at the top level of"
               & " project files, only in packages";
 
          else
             if Active (Me) then
                Trace (Me, "Register_New_Attribute (" & Name
-                      & ", " & Pkg & ", " & Attr_Kind'Img & ", "
+                      & ", " & Lower_Pkg & ", " & Attr_Kind'Img & ", "
                       & Var_Kind'Img & ")");
             end if;
 
