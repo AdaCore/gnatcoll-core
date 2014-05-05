@@ -188,7 +188,7 @@ provide that information:
   If you pass the DBMS vendor (postgresql, sqlite,...) and the connection
   parameters to `gnatcoll_db2ada`, it is able to query the schema on
   its own. However, this should not be the preferred method: this is similar
-  to revert engineering assembly code into the original high-level code, and
+  to reverse engineering assembly code into the original high-level code, and
   some semantic information will be missing. For instance, in SQL
   we have to create tables just to represent the many-to-many relationships.
   These extra tables are part of the implementation of the schema, but are
