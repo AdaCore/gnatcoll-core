@@ -37,7 +37,6 @@ with GNAT.Directory_Operations;   use GNAT.Directory_Operations;
 with GNAT.Expect;                 use GNAT.Expect;
 with GNAT.Regpat;                 use GNAT.Regpat;
 with GNAT.OS_Lib;                 use GNAT.OS_Lib;
-with GNATCOLL.Arg_Lists;          use GNATCOLL.Arg_Lists;
 with GNATCOLL.Projects.Normalize; use GNATCOLL.Projects.Normalize;
 with GNATCOLL.Traces;             use GNATCOLL.Traces;
 with GNATCOLL.Utils;              use GNATCOLL.Utils;
@@ -408,6 +407,15 @@ package body GNATCOLL.Projects is
 
    function Kind_To_Part (Source : Source_Id) return Unit_Parts;
    --  Converts from Source.Kind to Unit_Parts
+
+   function Set_Path_From_Gnatls_Attribute
+     (Project      : Project_Id;
+      Tree         : Project_Tree'Class;
+      Errors       : Error_Report := null)
+      return Boolean;
+   --  Look at the gnatls attribute, if defined, and update the predefined
+   --  path if needed.
+   --  Return True if the path was updated.
 
    -----------
    -- Lists --
@@ -6023,18 +6031,19 @@ package body GNATCOLL.Projects is
    -- Initialize --
    ----------------
 
-   procedure Initialize (Self : out Project_Environment_Access) is
+   procedure Initialize (Self : in out Project_Environment_Access) is
       Path : String_Access;
    begin
       if Self = null then
          Self := new Project_Environment;
-         Prj.Tree.Initialize (Self.Env, Create_Flags (null));
-         Prj.Env.Initialize_Default_Project_Path
-           (Self.Env.Project_Path, Target_Name => "");
-         Prj.Env.Get_Path (Self.Env.Project_Path, Path);
-         Self.Predefined_Project_Path :=
-           new File_Array'(From_Path (+Path.all));
       end if;
+
+      Prj.Tree.Initialize (Self.Env, Create_Flags (null));
+      Prj.Env.Initialize_Default_Project_Path
+        (Self.Env.Project_Path, Target_Name => "");
+      Prj.Env.Get_Path (Self.Env.Project_Path, Path);
+      Self.Predefined_Project_Path :=
+        new File_Array'(From_Path (+Path.all));
    end Initialize;
 
    -----------
@@ -6068,6 +6077,99 @@ package body GNATCOLL.Projects is
       Prj.Initialize (Tree.Data.View);
    end Reset;
 
+   ------------------------------------
+   -- Set_Path_From_Gnatls_Attribute --
+   ------------------------------------
+
+   function Set_Path_From_Gnatls_Attribute
+     (Project      : Project_Id;
+      Tree         : Project_Tree'Class;
+      Errors       : Error_Report := null)
+      return Boolean
+   is
+      P       : Package_Id;
+      Value   : Variable_Value;
+      GNAT_Version : GNAT.Strings.String_Access;
+   begin
+      P := Value_Of
+        (Name_Ide,
+         In_Packages => Project.Decl.Packages,
+         Shared      => Tree.Data.View.Shared);
+      if P = No_Package then
+         Trace (Me, "No package IDE, no gnatlist attribute");
+      else
+         Value := Value_Of
+           (Get_String ("gnatlist"),
+            Tree.Data.View.Shared.Packages.Table (P).Decl.Attributes,
+            Tree.Data.View.Shared);
+
+         if Value = Nil_Variable_Value then
+            Trace (Me, "No attribute IDE'gnatlist");
+         else
+            declare
+               Gnatls : constant String := Get_Name_String (Value.Value);
+            begin
+               if Gnatls = "" then
+                  if Tree.Data.Env.Gnatls = null
+                     or else Tree.Data.Env.Gnatls.all /= "gnatls"
+                  then
+                     Tree.Data.Env.Set_Path_From_Gnatls
+                       (Gnatls       => "gnatls",
+                        GNAT_Version => GNAT_Version,
+                        Errors       => Errors);
+                     Free (GNAT_Version);
+                     return True;
+                  end if;
+
+               elsif Tree.Data.Env.Gnatls = null
+                 or else Tree.Data.Env.Gnatls.all /= Gnatls
+               then
+                  Tree.Data.Env.Set_Path_From_Gnatls
+                    (Gnatls       => Gnatls,
+                     GNAT_Version => GNAT_Version,
+                     Errors       => Errors);
+                  Free (GNAT_Version);
+                  return True;
+               end if;
+            end;
+         end if;
+      end if;
+      return False;
+   end Set_Path_From_Gnatls_Attribute;
+
+   -----------------
+   -- Spawn_Gnatl --
+   -----------------
+
+   procedure Spawn_Gnatls
+     (Self         : Project_Environment;
+      Fd           : out Process_Descriptor_Access;
+      Gnatls_Args  : Argument_List_Access;
+      Errors       : Error_Report)
+   is
+      pragma Unreferenced (Self);
+      Gnatls_Path : constant Virtual_File :=
+        Locate_On_Path (+Gnatls_Args (Gnatls_Args'First).all);
+   begin
+      if Gnatls_Path = GNATCOLL.VFS.No_File then
+         Trace (Me, "Could not locate exec " &
+                  Gnatls_Args (Gnatls_Args'First).all);
+
+         if Errors /= null then
+            Errors ("Could not locate exec " &
+                      Gnatls_Args (Gnatls_Args'First).all);
+         end if;
+      else
+         Trace (Me, "Spawning " & (+Gnatls_Path.Full_Name));
+         Fd := new Process_Descriptor;
+         Non_Blocking_Spawn
+           (Fd.all,
+            +Gnatls_Path.Full_Name,
+            Gnatls_Args (Gnatls_Args'First + 1 .. Gnatls_Args'Last),
+            Buffer_Size => 0, Err_To_Out => True);
+      end if;
+   end Spawn_Gnatls;
+
    --------------------------
    -- Set_Path_From_Gnatls --
    --------------------------
@@ -6084,41 +6186,24 @@ package body GNATCOLL.Projects is
       procedure Unchecked_Free is new Ada.Unchecked_Deallocation
         (Process_Descriptor'Class, Process_Descriptor_Access);
 
-      Success : Boolean;
+      Success : Boolean := True;
       Fd      : Process_Descriptor_Access;
 
    begin
-      Increase_Indent
-        (Me, "Executing " & Argument_List_To_String (Gnatls_Args.all));
+      if Self.Gnatls /= null
+        and then Self.Gnatls.all = Gnatls
+      then
+         Trace (Me, "Gnatls was already run with same arguments: " & Gnatls);
+         return;
+      end if;
+
+      Free (Self.Gnatls);
+      Self.Gnatls := new String'(Gnatls);
+
+      Increase_Indent (Me, "Executing " & Gnatls & " -v");
       begin
-         Success := True;
-
-         declare
-            Gnatls_Path : constant Virtual_File :=
-              Locate_On_Path
-                (+Gnatls_Args (Gnatls_Args'First).all);
-         begin
-            if Gnatls_Path = GNATCOLL.VFS.No_File then
-               Success := False;
-
-               Trace (Me, "Could not locate exec " &
-                      Gnatls_Args (Gnatls_Args'First).all);
-
-               if Errors /= null then
-                  Errors ("Could not locate exec " &
-                          Gnatls_Args (Gnatls_Args'First).all);
-               end if;
-            else
-               Trace (Me, "Spawning " & (+Gnatls_Path.Full_Name));
-               Fd := new Process_Descriptor;
-               Non_Blocking_Spawn
-                 (Fd.all,
-                  +Gnatls_Path.Full_Name,
-                  Gnatls_Args (2 .. Gnatls_Args'Last),
-                  Buffer_Size => 0, Err_To_Out => True);
-            end if;
-         end;
-
+         Spawn_Gnatls
+           (Project_Environment'Class (Self), Fd, Gnatls_Args, Errors);
       exception
          when others =>
             Trace (Me, "Could not execute " & Gnatls_Args (1).all);
@@ -6144,7 +6229,7 @@ package body GNATCOLL.Projects is
 
       if Fd /= null then
          declare
-            S : constant String := Get_Command_Output (Fd);
+            S : constant String := GNATCOLL.Utils.Get_Command_Output (Fd);
          begin
             Trace (Me, "Output of gnatls is " & S);
             Set_Path_From_Gnatls_Output
@@ -6325,10 +6410,12 @@ package body GNATCOLL.Projects is
       Errout_Handling : Prj.Part.Errout_Mode := Prj.Part.Always_Finalize;
    begin
       Traces.Assert (Me, Tree.Data /= null, "Tree data initialized");
+      Increase_Indent
+         (Me, "Internal_Load recompute_view=" & Recompute_View'Img);
 
       Reset (Tree, Tree.Data.Env);
 
-      Trace (Me, "Set project path to " & Predefined_Path);
+      Trace (Me, "project path is " & Predefined_Path);
       Initialize_Empty (Tree.Data.Env.Env.Project_Path);
       Prj.Env.Set_Path (Tree.Data.Env.Env.Project_Path, Predefined_Path);
 
@@ -6373,6 +6460,7 @@ package body GNATCOLL.Projects is
          Fail ("Aggregate projects are not supported");
          Project := Empty_Node;
          Output.Cancel_Special_Output;
+         Decrease_Indent (Me);
          return;
       end if;
 
@@ -6388,9 +6476,7 @@ package body GNATCOLL.Projects is
          declare
             Success : Boolean;
             Tmp_Prj : Project_Id;
-            P       : Package_Id;
-            Value   : Variable_Value;
-
+            Dummy   : Boolean;
          begin
             Prj.Proc.Process_Project_Tree_Phase_1
               (In_Tree                => Tree.Data.View,
@@ -6408,40 +6494,8 @@ package body GNATCOLL.Projects is
                Project := Empty_Node;
             else
                Trace (Me, "Looking for IDE'gnatlist attribute");
-
-               P := Value_Of
-                 (Name_Ide,
-                  In_Packages => Tmp_Prj.Decl.Packages,
-                  Shared      => Tree.Data.View.Shared);
-               if P = No_Package then
-                  Trace (Me, "No package IDE");
-                  Project := Empty_Node;  --  ??? Should we free it
-
-               else
-                  Value := Value_Of
-                    (Get_String ("gnatlist"),
-                     Tree.Data.View.Shared.Packages.Table (P).Decl.Attributes,
-                     Tree.Data.View.Shared);
-
-                  if Value = Nil_Variable_Value then
-                     Trace (Me, "No attribute IDE'gnatlist");
-                     Project := Empty_Node;  --  ??? Should we free it
-                  else
-                     declare
-                        Gnatls       : constant String :=
-                                         Get_Name_String (Value.Value);
-                        GNAT_Version : String_Access;
-                     begin
-                        Trace (Me, "gnatlist=" & Gnatls);
-
-                        Tree.Data.Env.Set_Path_From_Gnatls
-                          (Gnatls       => Gnatls,
-                           GNAT_Version => GNAT_Version,
-                           Errors       => Fail'Unrestricted_Access);
-                        Free (GNAT_Version);
-                     end;
-                  end if;
-               end if;
+               Dummy := Set_Path_From_Gnatls_Attribute
+                 (Tmp_Prj, Tree, Fail'Unrestricted_Access);
             end if;
 
             --  Reparse the tree so that errors are reported as usual
@@ -6467,6 +6521,7 @@ package body GNATCOLL.Projects is
 
             Output.Cancel_Special_Output;
 
+            Decrease_Indent (Me);
             return;
          end;
 
@@ -6528,16 +6583,20 @@ package body GNATCOLL.Projects is
          end if;
       end if;
 
+      Decrease_Indent (Me);
+
    exception
       when Invalid_Project =>
          Prj.Com.Fail := null;
          Output.Cancel_Special_Output;
+         Decrease_Indent (Me);
          raise;
 
       when E : others =>
          Trace (Me, E);
          Prj.Com.Fail := null;
          Output.Cancel_Special_Output;
+         Decrease_Indent (Me);
          raise;
    end Internal_Load;
 
@@ -6602,8 +6661,7 @@ package body GNATCOLL.Projects is
 
             Trace (Me, "Creating dummy configuration file");
 
-            Add_Default_GNAT_Naming_Scheme
-              (Config_File, Project_Tree);
+            Add_Default_GNAT_Naming_Scheme (Config_File, Project_Tree);
 
             --  Pretend we support shared and static libs. Since we are not
             --  trying to build anyway, this isn't dangerous, and allows
@@ -6633,7 +6691,6 @@ package body GNATCOLL.Projects is
              Pkg     => "compiler");
 
          while NS /= null loop
-            Trace (Me, "Add naming scheme for " & NS.Language.all);
             if NS.Default_Spec_Suffix.all /= Dummy_Suffix then
                Attr := Create_Attribute
                  (Tree               => Project_Tree,
@@ -6767,7 +6824,7 @@ package body GNATCOLL.Projects is
       end On_New_Tree_Loaded;
 
    begin
-      Trace (Me, "Recomputing project view");
+      Increase_Indent (Me, "Recomputing project view");
       Output.Set_Special_Output (Output.Output_Proc (Errors));
 
       --  The views stored in the projects are no longer valid, we should make
@@ -6825,10 +6882,46 @@ package body GNATCOLL.Projects is
             On_New_Tree_Loaded         =>
               On_New_Tree_Loaded'Unrestricted_Access);
 
+         --  Should we reprocess with a different predefined path ?
+         --  It might mean that the first time the project is processed, we
+         --  first parse the wrong list of sources (which might take a while)
+         --  and then do it again after spawning gnatls. The second time around
+         --  the proper gnatls will already have been parsed, so we don't look
+         --  for sources twice.
+         --  ??? This could be improved if Process_Project_And_Apply_Config
+         --  had an option to skip processing phase 1, and we do it explicitly.
+
+         Trace (Me, "Checking whether the gnatls attribute has changed");
+         if Set_Path_From_Gnatls_Attribute (View, Self, Errors) then
+            Trace (Me, "recompute view a second time with proper path");
+            Reset_View (Self);
+            Prj.Initialize (Self.Data.View);
+
+            Process_Project_And_Apply_Config
+              (Main_Project        => View,
+               User_Project_Node   => Self.Root_Project.Data.Node,
+               Config_File_Name    =>
+                 Self.Data.Env.Config_File.Display_Full_Name,
+               Autoconf_Specified  => Self.Data.Env.Autoconf,
+               Project_Tree        => Self.Data.View,
+               Project_Node_Tree   => Self.Data.Tree,
+               Packages_To_Check   => null,
+               Allow_Automatic_Generation => Self.Data.Env.Autoconf,
+               Automatically_Generated    => Automatically_Generated,
+               Config_File_Path           => Config_File_Path,
+               Env                        => Self.Data.Env.Env,
+               Normalized_Hostname        => "",
+               On_Load_Config             =>
+                 Add_GPS_Naming_Schemes_To_Config_File'Unrestricted_Access,
+               On_New_Tree_Loaded         =>
+                 On_New_Tree_Loaded'Unrestricted_Access);
+         end if;
+
          Override_Flags (Self.Data.Env.Env, Create_Flags (null));
 
       exception
-         when Invalid_Config =>
+         when E : Invalid_Config =>
+            Trace (Me, E);
             Override_Flags (Self.Data.Env.Env, Create_Flags (null));
             --  Error message was already reported via Prj.Err
             null;
@@ -6887,6 +6980,8 @@ package body GNATCOLL.Projects is
       Prj.Err.Finalize;
       Output.Cancel_Special_Output;
 
+      Decrease_Indent (Me);
+
    exception
       --  We can get an unexpected exception (actually Directory_Error) if the
       --  project file's path is invalid, for instance because it was
@@ -6896,12 +6991,14 @@ package body GNATCOLL.Projects is
          Trace (Me, "Could not compute project view");
          Prj.Err.Finalize;
          Output.Cancel_Special_Output;
+         Decrease_Indent (Me);
          raise;
 
       when E : others =>
          Trace (Me, E);
          Prj.Err.Finalize;
          Output.Cancel_Special_Output;
+         Decrease_Indent (Me);
    end Recompute_View;
 
    ------------------------

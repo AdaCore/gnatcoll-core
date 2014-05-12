@@ -90,7 +90,9 @@ with Ada.Containers.Vectors;
 private with Ada.Strings.Hash;
 private with Ada.Finalization;
 with Ada.Unchecked_Deallocation;
+with GNAT.Expect;
 with GNAT.Strings;
+with GNAT.OS_Lib;
 with GNATCOLL.VFS;
 pragma Warnings (Off);
 pragma Warnings (Off, "*license of withed unit*");
@@ -111,7 +113,7 @@ package GNATCOLL.Projects is
    --  and Add_Imported_Project. All unknown packages and attributes will be
    --  ignored.
 
-   type Project_Environment (<>) is tagged private;
+   type Project_Environment is tagged private;
    type Project_Environment_Access is access all Project_Environment'Class;
    --  This type describes the conditions under which a project is loaded. This
    --  includes scenario variables, various settings that affect the loading
@@ -122,6 +124,8 @@ package GNATCOLL.Projects is
    --  You can already create such types via the Initialize subprogram below.
    --  However, a default environment will be build automatically if you do
    --  not provide one when parsing a project.
+   --  If you subclass this type, you should still call Initialize after
+   --  allocating a variable of this type.
 
    type Project_Tree is tagged private;
    type Project_Tree_Access is access all Project_Tree'Class;
@@ -133,8 +137,9 @@ package GNATCOLL.Projects is
    --  sense, more like a graph, but the term Tree makes it more obvious that
    --  one of the projects plays a special role, the root project.
 
-   procedure Initialize (Self : out Project_Environment_Access);
-   --  Allocate a new environment and initialize internal data
+   procedure Initialize (Self : in out Project_Environment_Access);
+   --  Allocate a new environment (if Self is null) and initialize internal
+   --  data
 
    procedure Free (Self : in out Project_Environment_Access);
    procedure Free (Self : in out Project_Tree_Access);
@@ -376,6 +381,15 @@ package GNATCOLL.Projects is
       GNAT_Version : out GNAT.Strings.String_Access);
    --  Same as Set_Path_From_Gnatls, but gets the output of "gnatls -v" in
    --  input (and does not spawn a command)
+
+   procedure Spawn_Gnatls
+     (Self         : Project_Environment;
+      Fd           : out GNAT.Expect.Process_Descriptor_Access;
+      Gnatls_Args  : GNAT.OS_Lib.Argument_List_Access;
+      Errors       : Error_Report);
+   --  Spawns the gnatls command passed in argument.
+   --  This subprogram can be overridden if gnatls needs to be spawned on
+   --  another machine (the default is to spawn on the local machine).
 
    ------------------------
    -- Project properties --
@@ -1644,6 +1658,10 @@ private
       Autoconf    : Boolean := False;
       Config_File : GNATCOLL.VFS.Virtual_File;
       --  Name of the .cgpr file to parse for the project.
+
+      Gnatls : GNAT.Strings.String_Access;
+      --  The gnatls that was run to set the predefined paths (or unset if the
+      --  paths were set manually).
 
       Predefined_Object_Path : GNATCOLL.VFS.File_Array_Access;
       --  := new GNATCOLL.VFS.File_Array (1 .. 0);
