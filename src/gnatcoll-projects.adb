@@ -6078,6 +6078,15 @@ package body GNATCOLL.Projects is
       Prj.Initialize (Tree.Data.View);
    end Reset;
 
+   -----------------------------
+   -- Invalidate_Gnatls_Cache --
+   -----------------------------
+
+   procedure Invalidate_Gnatls_Cache (Self : in out Project_Environment) is
+   begin
+      Free (Self.Gnatls);
+   end Invalidate_Gnatls_Cache;
+
    ------------------------------------
    -- Set_Path_From_Gnatls_Attribute --
    ------------------------------------
@@ -6562,6 +6571,46 @@ package body GNATCOLL.Projects is
          end if;
       end if;
 
+      --  Should we reprocess with a different predefined path ?
+      --  We need to do a full reparse here (not just recompute the view),
+      --  because changing gnatls might change the search path for projects,
+      --  and thus the way the with statements are resolved.
+
+      declare
+         Success : Boolean;
+         Tmp_Prj : Project_Id;
+         Dummy   : Boolean;
+      begin
+         Trace (Me, "Checking whether the gnatls attribute has changed");
+         Prj.Proc.Process_Project_Tree_Phase_1
+           (In_Tree                => Tree.Data.View,
+            Project                => Tmp_Prj,
+            Packages_To_Check      => Packages_To_Check,
+            Success                => Success,
+            From_Project_Node      => Project,
+            From_Project_Node_Tree => Tree.Data.Tree,
+            Env                    => Tree.Data.Env.Env,
+            Reset_Tree             => True,
+            On_New_Tree_Loaded     => null);
+
+         if Success
+           and then Set_Path_From_Gnatls_Attribute
+               (Tmp_Prj, Tree, Fail'Unrestricted_Access)
+         then
+            Trace (Me, "load again with proper path");
+            Internal_Load
+              (Tree                   => Tree,
+               Root_Project_Path      => Root_Project_Path,
+               Errors                 => Errors,
+               Report_Syntax_Errors   => Report_Syntax_Errors,
+               Project                => Project,
+               Recompute_View         => Recompute_View,
+               Packages_To_Check      => Packages_To_Check,
+               Test_With_Missing_With => False);
+            return;
+         end if;
+      end;
+
       Override_Flags (Tree.Data.Env.Env, Create_Flags (null));
 
       if Project /= Empty_Node then
@@ -6883,41 +6932,6 @@ package body GNATCOLL.Projects is
               Add_GPS_Naming_Schemes_To_Config_File'Unrestricted_Access,
             On_New_Tree_Loaded         =>
               On_New_Tree_Loaded'Unrestricted_Access);
-
-         --  Should we reprocess with a different predefined path ?
-         --  It might mean that the first time the project is processed, we
-         --  first parse the wrong list of sources (which might take a while)
-         --  and then do it again after spawning gnatls. The second time around
-         --  the proper gnatls will already have been parsed, so we don't look
-         --  for sources twice.
-         --  ??? This could be improved if Process_Project_And_Apply_Config
-         --  had an option to skip processing phase 1, and we do it explicitly.
-
-         Trace (Me, "Checking whether the gnatls attribute has changed");
-         if Set_Path_From_Gnatls_Attribute (View, Self, Errors) then
-            Trace (Me, "recompute view a second time with proper path");
-            Reset_View (Self);
-            Prj.Initialize (Self.Data.View);
-
-            Process_Project_And_Apply_Config
-              (Main_Project        => View,
-               User_Project_Node   => Self.Root_Project.Data.Node,
-               Config_File_Name    =>
-                 Self.Data.Env.Config_File.Display_Full_Name,
-               Autoconf_Specified  => Self.Data.Env.Autoconf,
-               Project_Tree        => Self.Data.View,
-               Project_Node_Tree   => Self.Data.Tree,
-               Packages_To_Check   => null,
-               Allow_Automatic_Generation => Self.Data.Env.Autoconf,
-               Automatically_Generated    => Automatically_Generated,
-               Config_File_Path           => Config_File_Path,
-               Env                        => Self.Data.Env.Env,
-               Normalized_Hostname        => "",
-               On_Load_Config             =>
-                 Add_GPS_Naming_Schemes_To_Config_File'Unrestricted_Access,
-               On_New_Tree_Loaded         =>
-                 On_New_Tree_Loaded'Unrestricted_Access);
-         end if;
 
          Override_Flags (Self.Data.Env.Env, Create_Flags (null));
 

@@ -364,6 +364,12 @@ package GNATCOLL.Projects is
    --  Return the predefined paths, or the current directory if no
    --  paths have been set yet.
 
+   procedure Invalidate_Gnatls_Cache (Self : in out Project_Environment);
+   --  Forces the recomputation of the predefined paths via gnatls.
+   --  This should be called prior to calling Recompute_View, when the
+   --  environment has changed (ADA_PROJECT_PATH, running gnatls on a
+   --  different host,...)
+
    procedure Set_Path_From_Gnatls
      (Self         : in out Project_Environment;
       Gnatls       : String;
