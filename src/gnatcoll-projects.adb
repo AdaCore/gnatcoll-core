@@ -26,6 +26,7 @@ with Ada.Characters.Handling;     use Ada.Characters.Handling;
 with Ada.Containers.Hashed_Sets;
 with Ada.Containers.Indefinite_Ordered_Sets;
 with Ada.Directories;
+with Ada.Exceptions;              use Ada.Exceptions;
 with Ada.Strings;                 use Ada.Strings;
 with Ada.Strings.Fixed;           use Ada.Strings.Fixed;
 with Ada.Strings.Hash_Case_Insensitive;
@@ -6090,6 +6091,23 @@ package body GNATCOLL.Projects is
       P       : Package_Id;
       Value   : Variable_Value;
       GNAT_Version : GNAT.Strings.String_Access;
+
+      function Process_Gnatls (Gnatls : String) return Boolean;
+      function Process_Gnatls (Gnatls : String) return Boolean is
+      begin
+         if Tree.Data.Env.Gnatls = null
+            or else Tree.Data.Env.Gnatls.all /= Gnatls
+         then
+            Tree.Data.Env.Set_Path_From_Gnatls
+               (Gnatls       => Gnatls,
+                GNAT_Version => GNAT_Version,
+                Errors       => Errors);
+            Free (GNAT_Version);
+            return True;
+         end if;
+         return False;
+      end Process_Gnatls;
+
    begin
       P := Value_Of
         (Name_Ide,
@@ -6097,6 +6115,7 @@ package body GNATCOLL.Projects is
          Shared      => Tree.Data.View.Shared);
       if P = No_Package then
          Trace (Me, "No package IDE, no gnatlist attribute");
+         return Process_Gnatls ("gnatls");
       else
          Value := Value_Of
            (Get_String ("gnatlist"),
@@ -6105,36 +6124,19 @@ package body GNATCOLL.Projects is
 
          if Value = Nil_Variable_Value then
             Trace (Me, "No attribute IDE'gnatlist");
+            return Process_Gnatls ("gnatls");
          else
             declare
                Gnatls : constant String := Get_Name_String (Value.Value);
             begin
                if Gnatls = "" then
-                  if Tree.Data.Env.Gnatls = null
-                     or else Tree.Data.Env.Gnatls.all /= "gnatls"
-                  then
-                     Tree.Data.Env.Set_Path_From_Gnatls
-                       (Gnatls       => "gnatls",
-                        GNAT_Version => GNAT_Version,
-                        Errors       => Errors);
-                     Free (GNAT_Version);
-                     return True;
-                  end if;
-
-               elsif Tree.Data.Env.Gnatls = null
-                 or else Tree.Data.Env.Gnatls.all /= Gnatls
-               then
-                  Tree.Data.Env.Set_Path_From_Gnatls
-                    (Gnatls       => Gnatls,
-                     GNAT_Version => GNAT_Version,
-                     Errors       => Errors);
-                  Free (GNAT_Version);
-                  return True;
+                  return Process_Gnatls ("gnatls");
+               else
+                  return Process_Gnatls (Gnatls);
                end if;
             end;
          end if;
       end if;
-      return False;
    end Set_Path_From_Gnatls_Attribute;
 
    -----------------
@@ -6921,7 +6923,7 @@ package body GNATCOLL.Projects is
 
       exception
          when E : Invalid_Config =>
-            Trace (Me, E);
+            Trace (Me, Exception_Message (E));  --  not the exception itself
             Override_Flags (Self.Data.Env.Env, Create_Flags (null));
             --  Error message was already reported via Prj.Err
             null;
