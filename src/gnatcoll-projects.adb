@@ -6500,7 +6500,7 @@ package body GNATCOLL.Projects is
                Reset_Tree             => True,
                On_New_Tree_Loaded     => null);
 
-            if not Success then
+            if not Success or else Tmp_Prj = null then
                Trace (Me, "Processing phase 1 failed");
                Project := Empty_Node;
             else
@@ -6594,6 +6594,7 @@ package body GNATCOLL.Projects is
             On_New_Tree_Loaded     => null);
 
          if Success
+           and then Tmp_Prj /= null
            and then Set_Path_From_Gnatls_Attribute
                (Tmp_Prj, Tree, Fail'Unrestricted_Access)
          then
