@@ -6936,6 +6936,44 @@ package body GNATCOLL.Projects is
             On_New_Tree_Loaded         =>
               On_New_Tree_Loaded'Unrestricted_Access);
 
+         --  Should we reprocess with a different predefined path ?
+         --  A similar test has already been done in Internal_Load, which
+         --  ensures we are resolving the with clauses correctly and not
+         --  looking for source file with the wrong path.
+         --  But we need to do this test again, in case the user has changed
+         --  the scenario variables and they influence which gnatls command is
+         --  run. Unfortunately, this mean we might have spent time looking
+         --  for incorrect sources above.
+         --  ??? It might be simpler to hide the Recompute_View altogether and
+         --  force users to reload the project systematically (this would not
+         --  change performance most likely)
+
+         Trace (Me, "Checking whether the gnatls attribute has changed");
+         if Set_Path_From_Gnatls_Attribute (View, Self, Errors) then
+            Trace (Me, "recompute view a second time with proper path");
+            Reset_View (Self);
+            Prj.Initialize (Self.Data.View);
+
+            Process_Project_And_Apply_Config
+              (Main_Project        => View,
+               User_Project_Node   => Self.Root_Project.Data.Node,
+               Config_File_Name    =>
+                 Self.Data.Env.Config_File.Display_Full_Name,
+               Autoconf_Specified  => Self.Data.Env.Autoconf,
+               Project_Tree        => Self.Data.View,
+               Project_Node_Tree   => Self.Data.Tree,
+               Packages_To_Check   => null,
+               Allow_Automatic_Generation => Self.Data.Env.Autoconf,
+               Automatically_Generated    => Automatically_Generated,
+               Config_File_Path           => Config_File_Path,
+               Env                        => Self.Data.Env.Env,
+               Normalized_Hostname        => "",
+               On_Load_Config             =>
+                 Add_GPS_Naming_Schemes_To_Config_File'Unrestricted_Access,
+               On_New_Tree_Loaded         =>
+                 On_New_Tree_Loaded'Unrestricted_Access);
+         end if;
+
          Override_Flags (Self.Data.Env.Env, Create_Flags (null));
 
       exception
