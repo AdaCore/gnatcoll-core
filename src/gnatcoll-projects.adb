@@ -6558,6 +6558,7 @@ package body GNATCOLL.Projects is
             Recompute_View         => Recompute_View,
             Packages_To_Check      => Packages_To_Check,
             Test_With_Missing_With => False);
+         Decrease_Indent (Me);
          return;
 
       elsif Test_With_Missing_With then
@@ -6608,6 +6609,7 @@ package body GNATCOLL.Projects is
                Recompute_View         => Recompute_View,
                Packages_To_Check      => Packages_To_Check,
                Test_With_Missing_With => False);
+            Decrease_Indent (Me);
             return;
          end if;
       end;
