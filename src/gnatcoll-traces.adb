@@ -1062,7 +1062,8 @@ package body GNATCOLL.Traces is
       Message_Color : String := Default_Fg)
    is
       Start, Last  : Natural;
-      Continuation : constant String := '_' & Handle.Name.all & "_ ";
+      Continuation : constant String :=
+         (1 .. Global.Indentation * 3 => ' ') & '_' & Handle.Name.all & "_ ";
       Stream       : Trace_Stream;
       Color        : Boolean;
    begin
