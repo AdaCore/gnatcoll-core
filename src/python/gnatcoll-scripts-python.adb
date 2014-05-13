@@ -2797,9 +2797,13 @@ package body GNATCOLL.Scripts.Python is
    ------------------------------
 
    procedure On_PyObject_Data_Destroy (Data : System.Address) is
-      D : constant PyObject_Data := Convert (Data);
+      procedure Free is new Ada.Unchecked_Deallocation
+        (PyObject_Data_Record, PyObject_Data);
+
+      D : PyObject_Data := Convert (Data);
    begin
       Free_User_Data_List (D.Props);
+      Free (D);
    end On_PyObject_Data_Destroy;
 
    ---------------------------------
