@@ -548,38 +548,43 @@ package body GNATCOLL.Path is
 
    begin
       while Src <= Path'Last loop
-         if Path (Src) = DS then
-            if Src + 3 <= Path'Last
-              and then Path (Src + 1 .. Src + 3) = ".." & DS
-            then
-               for K in reverse Dest'First .. Idx - 1 loop
-                  if Dest (K) = Dir_Separator (FS) then
-                     Idx := K + 1;
-                     exit;
+         if Idx > Dest'First and then Dest (Idx - 1) = DS then
+            if Path (Src) = '.' then
+               if Src >= Path'Last or else Path (Src + 1) = DS then
+                  Src := Src + 2;
+
+               elsif Path (Src + 1) = '.' then
+                  if Src + 1 >= Path'Last or else Path (Src + 2) = DS then
+                     for K in reverse Dest'First .. Idx - 2 loop
+                        if Dest (K) = DS then
+                           Idx := K;
+                           exit;
+                        end if;
+                     end loop;
+                     Src := Src + 2;
+                  else
+                     Dest (Idx) := '.';
+                     Dest (Idx + 1) := '.';
+                     Idx := Idx + 2;
+                     Src := Src + 2;
                   end if;
-               end loop;
 
-               Src := Src + 4;
-
-            elsif Src + 2 <= Path'Last
-              and then Path (Src + 1 .. Src + 2) = "." & DS
-            then
-               Src := Src + 2;
-               Dest (Idx) := DS;
-
+               else
+                  Dest (Idx) := Path (Src);
+                  Idx := Idx + 1;
+                  Src := Src + 1;
+               end if;
             else
                Dest (Idx) := Path (Src);
                Idx := Idx + 1;
                Src := Src + 1;
             end if;
-
          else
             Dest (Idx) := Path (Src);
             Idx := Idx + 1;
             Src := Src + 1;
          end if;
       end loop;
-
       return Dest (Dest'First .. Idx - 1);
    end Normalize;
 
