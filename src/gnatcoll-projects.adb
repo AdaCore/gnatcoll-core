@@ -6949,7 +6949,9 @@ package body GNATCOLL.Projects is
          --  change performance most likely)
 
          Trace (Me, "Checking whether the gnatls attribute has changed");
-         if Set_Path_From_Gnatls_Attribute (View, Self, Errors) then
+         if View /= Prj.No_Project
+            and then Set_Path_From_Gnatls_Attribute (View, Self, Errors)
+         then
             Trace (Me, "recompute view a second time with proper path");
             Reset_View (Self);
             Prj.Initialize (Self.Data.View);
