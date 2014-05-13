@@ -1191,9 +1191,9 @@ package body GNATCOLL.Scripts.Shell is
    ----------
 
    procedure Free (Data : in out Shell_Callback_Data) is
-      pragma Unreferenced (Data);
    begin
-      null;
+      Free (Data.Return_Value);
+      Free (Data.Return_Dict);
    end Free;
 
    -----------
