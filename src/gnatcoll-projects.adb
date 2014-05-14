@@ -36,6 +36,7 @@ with Ada.Text_IO;                 use Ada.Text_IO;
 with GNAT.Case_Util;              use GNAT.Case_Util;
 with GNAT.Directory_Operations;   use GNAT.Directory_Operations;
 with GNAT.Expect;                 use GNAT.Expect;
+with GNAT.Expect.TTY;             use GNAT.Expect.TTY;
 with GNAT.Regpat;                 use GNAT.Regpat;
 with GNAT.OS_Lib;                 use GNAT.OS_Lib;
 with GNATCOLL.Projects.Normalize; use GNATCOLL.Projects.Normalize;
@@ -6172,7 +6173,7 @@ package body GNATCOLL.Projects is
          end if;
       else
          Trace (Me, "Spawning " & (+Gnatls_Path.Full_Name));
-         Fd := new Process_Descriptor;
+         Fd := new TTY_Process_Descriptor;
          Non_Blocking_Spawn
            (Fd.all,
             +Gnatls_Path.Full_Name,
