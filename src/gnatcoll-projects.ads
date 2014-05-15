@@ -370,6 +370,14 @@ package GNATCOLL.Projects is
    --  environment has changed (ADA_PROJECT_PATH, running gnatls on a
    --  different host,...)
 
+   procedure Set_Default_Gnatls
+     (Self         : in out Project_Environment;
+      Gnatls       : String);
+   --  Set the default gnatls to run (before a project is loaded).
+   --  This impacts the default path on which projects are looked for, but
+   --  will be overridden if the user has specified an IDE.Gnatlist attribute
+   --  in his project.
+
    procedure Set_Path_From_Gnatls
      (Self         : in out Project_Environment;
       Gnatls       : String;
@@ -1670,22 +1678,20 @@ private
       --  paths were set manually).
 
       Predefined_Object_Path : GNATCOLL.VFS.File_Array_Access;
-      --  := new GNATCOLL.VFS.File_Array (1 .. 0);
       --  Predefined object path for the runtime library
 
       Predefined_Source_Path : GNATCOLL.VFS.File_Array_Access;
-      --  := new GNATCOLL.VFS.File_Array (1 .. 0);
       --  Predefined source paths for the runtime library
 
       Predefined_Project_Path : GNATCOLL.VFS.File_Array_Access;
-      --  := new GNATCOLL.VFS.File_Array'
-      --  ((1 .. 1 => GNATCOLL.VFS.Create (".")));
       --  Predefined project path.
       --  prj-ext.ads does not expect an empty path, ever
 
       Predefined_Source_Files : GNATCOLL.VFS.File_Array_Access;
-      --  := new GNATCOLL.VFS.File_Array (1 .. 0);
       --  The list of source files in Predefined_Source_Path
+
+      Default_Gnatls : GNAT.Strings.String_Access := new String'("gnatls");
+      --  The default gnatls command to run.
 
       Xrefs_Subdir : GNAT.Strings.String_Access;
       --  Object dirs subdirectory containing the cross-refs

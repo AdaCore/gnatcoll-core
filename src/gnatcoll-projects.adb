@@ -6088,6 +6088,19 @@ package body GNATCOLL.Projects is
       Free (Self.Gnatls);
    end Invalidate_Gnatls_Cache;
 
+   ------------------------
+   -- Set_Default_Gnatls --
+   ------------------------
+
+   procedure Set_Default_Gnatls
+     (Self         : in out Project_Environment;
+      Gnatls       : String)
+   is
+   begin
+      Free (Self.Default_Gnatls);
+      Self.Default_Gnatls := new String'(Gnatls);
+   end Set_Default_Gnatls;
+
    ------------------------------------
    -- Set_Path_From_Gnatls_Attribute --
    ------------------------------------
@@ -6125,7 +6138,7 @@ package body GNATCOLL.Projects is
          Shared      => Tree.Data.View.Shared);
       if P = No_Package then
          Trace (Me, "No package IDE, no gnatlist attribute");
-         return Process_Gnatls ("gnatls");
+         return Process_Gnatls (Tree.Data.Env.Default_Gnatls.all);
       else
          Value := Value_Of
            (Get_String ("gnatlist"),
@@ -6134,13 +6147,13 @@ package body GNATCOLL.Projects is
 
          if Value = Nil_Variable_Value then
             Trace (Me, "No attribute IDE'gnatlist");
-            return Process_Gnatls ("gnatls");
+            return Process_Gnatls (Tree.Data.Env.Default_Gnatls.all);
          else
             declare
                Gnatls : constant String := Get_Name_String (Value.Value);
             begin
                if Gnatls = "" then
-                  return Process_Gnatls ("gnatls");
+                  return Process_Gnatls (Tree.Data.Env.Default_Gnatls.all);
                else
                   return Process_Gnatls (Gnatls);
                end if;
