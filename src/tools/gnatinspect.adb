@@ -462,8 +462,7 @@ procedure GNATInspect is
    Cmdline               : Command_Line_Configuration;
    Commands_From_Switch  : aliased GNAT.Strings.String_Access;
    Commands_From_File    : aliased GNAT.Strings.String_Access;
-   DB_Name               : aliased GNAT.Strings.String_Access :=
-     new String'("gnatinspect.db");
+   DB_Name               : aliased GNAT.Strings.String_Access;
    Nightly_DB_Name       : aliased GNAT.Strings.String_Access;
    Include_Runtime_Files : aliased Boolean;
    Display_Full_Paths    : aliased Boolean;
@@ -1700,6 +1699,10 @@ begin
 
    declare
       Path : Virtual_File := Create (+Project_Name.all);
+
+      Dummy : constant String := Register_New_Attribute
+        (Name => "Xref_Database", Pkg => "IDE");
+      pragma Unreferenced (Dummy);
    begin
       if not Path.Is_Regular_File then
          Path := Create (+Project_Name.all & ".gpr");
@@ -1725,8 +1728,21 @@ begin
                  ("auto.cgpr", Get_Current_Dir.Full_Name.all));
          end if;
       end if;
+
       Load_Project (Path);
    end;
+
+   if DB_Name = null or else DB_Name.all = "" then
+      Trace (Me, "MANU --db was unspecified");
+      --  read it from the project
+
+      Free (DB_Name);
+      DB_Name := new String'
+        (Tree.Root_Project.Attribute_Value
+           (Build ("IDE", "Xref_Database"), Default => "gnatinspect.db",
+            Use_Extended => True));
+      Trace (Me, "MANU => " & DB_Name.all);
+   end if;
 
    if DB_Name.all /= ":memory:" then
       declare
@@ -1753,6 +1769,7 @@ begin
          end if;
 
          DB_Name := new String'(Dir.Display_Full_Name);
+         Trace (Me, "MANU db is now " & DB_Name.all);
       end;
    end if;
 
