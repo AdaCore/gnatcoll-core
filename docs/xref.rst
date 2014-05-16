@@ -163,15 +163,22 @@ Let's first look at a number of command line switches that might be
 useful:
 
 * *--db=ARG*: this switch can be used to specify the name of the database.
-  By default, this will be a file named 'gnatinspect.db' in the project's
-  object directory. If there is no such directory defined in the project,
-  the file is created in the project's directory itself.
-  You can however specify any name, including an absolute path, or a path
-  relative to the project's object directory.
+
+  By default, gnatinspect checks in the project whether there exists an
+  attribute IDE'Xref_Database, which should specify a file name (relative to
+  the project's object_dir) for the database.
+
+  If this attribute does not exist, it defaults to "gnatinspect.db" in
+  the project's object directory.
+
+  If there is no object directory defined in the project, the file is created
+  in the project's directory itself.  You can however specify any name,
+  including an absolute path, or a path relative to the project's object
+  directory.
 
   An alternative is to specify ':memory:', which creates the database in
   memory. This is of course a temporary database which will disappear when
-  gnatinspect exists, and cannot be shared with other tools.
+  gnatinspect exits, and cannot be shared with other tools.
 
 * *--nightlydb=ARG*: this switch can help speed up the initial startup
   of gnatinspect. The idea is that in a lot of cases, the software on which
