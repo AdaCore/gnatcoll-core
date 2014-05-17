@@ -1352,7 +1352,6 @@ procedure GNATInspect is
    -----------------
 
    procedure Process_Doc (Args : Arg_List) is
-      Info   : GNATCOLL.Projects.File_Info;
       Syntax : Language_Syntax;
       Entity : Entity_Information;
       Decl   : Entity_Declaration;
@@ -1368,20 +1367,24 @@ procedure GNATInspect is
       --  Since we are only interested in the language, we can take any
       --  matching File_Info (unlikely that the same file will have different
       --  languages in different aggregated projects)
-      Info := Tree.Info_Set (Decl.Location.File).First_Element.all;
-
-      if Info.Language = "ada" then
-         Syntax := Ada_Syntax;
-      elsif Info.Language = "c" then
-         Syntax := C_Syntax;
-      elsif Info.Language = "c++" then
-         Syntax := Cpp_Syntax;
-      else
-         Put_Line
-           (Output_Lead.all
-            & "Unknown language for " & Decl.Location.File.Display_Base_Name);
-         return;
-      end if;
+      declare
+         Info : constant GNATCOLL.Projects.File_Info'Class :=
+           File_Info'Class (Tree.Info_Set (Decl.Location.File).First_Element);
+      begin
+         if Info.Language = "ada" then
+            Syntax := Ada_Syntax;
+         elsif Info.Language = "c" then
+            Syntax := C_Syntax;
+         elsif Info.Language = "c++" then
+            Syntax := Cpp_Syntax;
+         else
+            Put_Line
+              (Output_Lead.all
+               & "Unknown language for "
+               & Decl.Location.File.Display_Base_Name);
+            return;
+         end if;
+      end;
 
       Put_Line
         (Output_Lead.all & Xref.Overview (Entity => Entity, Format => Text));

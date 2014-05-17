@@ -24,7 +24,6 @@
 with Ada.Calendar;                use Ada.Calendar;
 with Ada.Characters.Handling;     use Ada.Characters.Handling;
 with Ada.Containers.Hashed_Sets;
-with Ada.Containers.Indefinite_Ordered_Sets;
 with Ada.Directories;
 with Ada.Exceptions;              use Ada.Exceptions;
 with Ada.Strings;                 use Ada.Strings;
@@ -1321,23 +1320,6 @@ package body GNATCOLL.Projects is
       Library_Info_Lists.Clear (Library_Info_Lists.List (Self)); --  inherited
    end Clear;
 
-   -----------
-   -- Clear --
-   -----------
-
-   overriding procedure Clear (Self : in out File_Info_Set) is
-      S : File_Info_Access;
-      C : File_Info_Sets.Cursor := Self.First;
-   begin
-      while File_Info_Sets.Has_Element (C) loop
-         S := File_Info_Sets.Element (C);
-         Free (S);
-         File_Info_Sets.Next (C);
-      end loop;
-
-      File_Info_Sets.Clear (File_Info_Sets.Set (Self)); --  inherited
-   end Clear;
-
    --------------------------
    -- Direct_Sources_Count --
    --------------------------
@@ -2132,7 +2114,7 @@ package body GNATCOLL.Projects is
       M_Cur := Self.Data.Sources.Find (B_Name);
 
       if M_Cur = Names_Files.No_Element then
-         Result.Include (new File_Info'(Info (Self.Data, File)));
+         Result.Include (Info (Self.Data, File));
          return Result;
       end if;
 
@@ -2167,7 +2149,7 @@ package body GNATCOLL.Projects is
                end;
             end if;
 
-            Result.Include (new File_Info'(S_Info));
+            Result.Include (S_Info);
          end if;
 
          exit when Source.Next = null;
@@ -2179,7 +2161,7 @@ package body GNATCOLL.Projects is
          --  make some guesses regarding its language and various pieces of
          --  information.
 
-         Result.Include (new File_Info'(Info (Self.Data, File)));
+         Result.Include (Info (Self.Data, File));
       end if;
 
       return Result;
@@ -2420,7 +2402,8 @@ package body GNATCOLL.Projects is
       --  project, so whichever project tree we choose we would likely end up
       --  with the same other file.
 
-      Info : constant File_Info := Self.Info_Set (File).First_Element.all;
+      Info : constant File_Info :=
+        File_Info (Self.Info_Set (File).First_Element);
       Unit : constant String := Unit_Name (Info);
       Part : Unit_Parts;
 
@@ -4937,7 +4920,16 @@ package body GNATCOLL.Projects is
    -- "<" --
    ---------
 
-   function "<" (L, R : File_Info_Access) return Boolean is
+   function Less (L, R : File_Info_Abstract'Class) return Boolean is
+   begin
+      return L < R;
+   end Less;
+
+   ---------
+   -- "<" --
+   ---------
+
+   function "<" (L, R : File_Info) return Boolean is
    begin
       return L.Project.Project_Path < R.Project.Project_Path;
    end "<";

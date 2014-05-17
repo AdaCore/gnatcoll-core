@@ -4935,7 +4935,12 @@ package body GNATCOLL.Xref is
       Curs  : Files_Cursor;
    begin
       if Project = No_Project then
-         P := Self.Tree.Info_Set (File).First_Element.Project;
+         declare
+            F_Info : constant File_Info'Class :=
+              File_Info'Class (Self.Tree.Info_Set (File).First_Element);
+         begin
+            P := F_Info.Project;
+         end;
       else
          P := Project;
       end if;
@@ -6052,7 +6057,7 @@ package body GNATCOLL.Xref is
       P : Project_Type;
    begin
       if Project = No_Project then
-         P := Self.Tree.Info_Set (File).First_Element.Project;
+         P := File_Info (Self.Tree.Info_Set (File).First_Element).Project;
       else
          P := Project;
       end if;

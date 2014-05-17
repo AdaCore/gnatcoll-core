@@ -85,7 +85,7 @@ pragma Ada_05;
 
 private with Ada.Containers.Indefinite_Hashed_Maps;
 with Ada.Containers.Doubly_Linked_Lists;
-with Ada.Containers.Ordered_Sets;
+with Ada.Containers.Indefinite_Ordered_Sets;
 with Ada.Containers.Vectors;
 private with Ada.Strings.Hash;
 private with Ada.Finalization;
@@ -543,9 +543,13 @@ package GNATCOLL.Projects is
    --    - Unit_Separate is used for additional implementation code in Ada
    --      separates.
 
-   type File_Info is tagged private;
+   type File_Info_Abstract is abstract tagged null record;
+   function Less (L, R : File_Info_Abstract'Class) return Boolean;
+   function "<" (L, R : File_Info_Abstract) return Boolean is abstract;
+
+   type File_Info is new File_Info_Abstract with private;
    type File_Info_Access is access File_Info;
-   function "<" (L, R : File_Info_Access) return Boolean;
+   function "<" (L, R : File_Info) return Boolean;
    --  Various information that can be gathered about a file
 
    procedure Free (Self : in out File_Info_Access);
@@ -585,9 +589,8 @@ package GNATCOLL.Projects is
    --  Program_Error raised otherwise.
 
    package File_Info_Sets is new
-     Ada.Containers.Ordered_Sets (File_Info_Access);
+     Ada.Containers.Indefinite_Ordered_Sets (File_Info_Abstract'Class, Less);
    type File_Info_Set is new File_Info_Sets.Set with null record;
-   overriding procedure Clear (Self : in out File_Info_Set);
 
    function Info_Set
      (Self : Project_Tree'Class; File : GNATCOLL.VFS.Virtual_File)
@@ -1639,7 +1642,7 @@ private
      GNATCOLL.VFS."+" (Prj.Project_File_Extension);
    --  The standard extension for a project file (".gpr")
 
-   type File_Info is tagged record
+   type File_Info is new File_Info_Abstract with record
       File         : GNATCOLL.VFS.Virtual_File;
       Project      : Project_Type;
       Root_Project : Project_Type;
