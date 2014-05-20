@@ -4993,11 +4993,6 @@ $as_echo "no, disabled by user" >&6; }
        yes)
           # Request automatic detection
           #
-          # On OSX, we do not want to use macport's version of libiconv, which
-          # is not compatible with the system (we end up with errors like
-          # _iconv_open not found for architecture x86_64). So we force the
-          # use of /usr/lib first
-          #
           # A special case for instance on Solaris: iconv.h is installed in
           # /usr/include, but (on our machines at least) also in
           # /usr/local/include. Both variants are different, and we must make
@@ -5015,7 +5010,20 @@ $as_echo "no, disabled by user" >&6; }
                  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no, unsupported on AIX" >&5
 $as_echo "no, unsupported on AIX" >&6; }
                  ;;
+	      *darwin*)
+                 # On OSX, we do not want to use macport's version of libiconv,
+                 # which is not compatible with the system (we end up with
+                 # errors like _iconv_open not found for architecture x86_64).
+                 # So we force the use of /usr/lib. Note that in that case we
+                 # don't want to add a -L/usr/lib. Otherwise all libraries
+                 # present in that directory (libpython, ...) will be taken
+                 # first at that location and so break other configure
+                 # switches such --with-python.
 
+                 LIB_ICONV="/usr/lib/libiconv.dylib"
+                 INCLUDE_ICONV="-I/usr/include"
+                 PATH_ICONV=""
+                 ;;
               *)
                 LD_LIBRARY_PATH="/usr/local/lib:/usr/lib:/usr/target/lib:$LD_LIBRARY_PATH"
 
@@ -5081,7 +5089,7 @@ iconv_open(0,0)
 }
 _ACEOF
 
-      if test "$ICONV_STATIC" = "no" ; then
+      if test "$ICONV_STATIC" = "no" -a "$LIB_ICONV" = ""; then
          { $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing iconv_open" >&5
 $as_echo_n "checking for library containing iconv_open... " >&6; }
          for ac_lib in '' iconv ; do

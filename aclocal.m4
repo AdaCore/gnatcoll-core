@@ -302,11 +302,6 @@ AC_HELP_STRING(
        yes)
           # Request automatic detection
           #
-          # On OSX, we do not want to use macport's version of libiconv, which
-          # is not compatible with the system (we end up with errors like
-          # _iconv_open not found for architecture x86_64). So we force the
-          # use of /usr/lib first
-          #
           # A special case for instance on Solaris: iconv.h is installed in
           # /usr/include, but (on our machines at least) also in
           # /usr/local/include. Both variants are different, and we must make
@@ -323,7 +318,20 @@ AC_HELP_STRING(
                  WITH_ICONV=no
                  AC_MSG_RESULT([no, unsupported on AIX])
                  ;;
+	      *darwin*)
+                 # On OSX, we do not want to use macport's version of libiconv,
+                 # which is not compatible with the system (we end up with
+                 # errors like _iconv_open not found for architecture x86_64).
+                 # So we force the use of /usr/lib. Note that in that case we
+                 # don't want to add a -L/usr/lib. Otherwise all libraries
+                 # present in that directory (libpython, ...) will be taken
+                 # first at that location and so break other configure
+                 # switches such --with-python.
 
+                 LIB_ICONV="/usr/lib/libiconv.dylib"
+                 INCLUDE_ICONV="-I/usr/include"
+                 PATH_ICONV=""
+                 ;;
               *)
                 LD_LIBRARY_PATH="/usr/local/lib:/usr/lib:/usr/target/lib:$LD_LIBRARY_PATH"
 
@@ -367,7 +375,7 @@ AC_HELP_STRING(
             [#include <iconv.h>],
             [iconv_open(0,0)])])
 
-      if test "$ICONV_STATIC" = "no" ; then
+      if test "$ICONV_STATIC" = "no" -a "$LIB_ICONV" = ""; then
          AC_MSG_CHECKING([for library containing iconv_open])
          for ac_lib in '' iconv ; do
              if test -z "$ac_lib" ; then
