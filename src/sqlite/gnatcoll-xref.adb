@@ -3308,6 +3308,44 @@ package body GNATCOLL.Xref is
 
                   Iconv_State := Iconv_Open
                     (To_Code => UTF8, From_Code => UTF8, Ignore => True);
+
+               elsif Str (Start .. Index - 1) = "-gnati1" then
+                  --  File is marked as ISO-8859-1 encoded
+
+                  Iconv_State := Iconv_Open
+                    (To_Code => UTF8, From_Code => ISO_8859_1, Ignore => True);
+
+               elsif Str (Start .. Index - 1) = "-gnati2" then
+                  --  File is marked as ISO-8859-2 encoded
+
+                  Iconv_State := Iconv_Open
+                    (To_Code => UTF8, From_Code => ISO_8859_2, Ignore => True);
+
+               elsif Str (Start .. Index - 1) = "-gnati3" then
+                  --  File is marked as ISO-8859-3 encoded
+
+                  Iconv_State := Iconv_Open
+                    (To_Code => UTF8, From_Code => ISO_8859_3, Ignore => True);
+
+               elsif Str (Start .. Index - 1) = "-gnati4" then
+                  --  File is marked as ISO-8859-4 encoded
+
+                  Iconv_State := Iconv_Open
+                    (To_Code => UTF8, From_Code => ISO_8859_4, Ignore => True);
+
+               elsif Str (Start .. Index - 1) = "-gnati5" then
+                  --  File is marked as ISO-8859-5 encoded
+
+                  Iconv_State := Iconv_Open
+                    (To_Code => UTF8, From_Code => ISO_8859_5, Ignore => True);
+
+               elsif Str (Start .. Index - 1) = "-gnati9" then
+                  --  File is marked as ISO-8859-15 encoded
+
+                  Iconv_State := Iconv_Open
+                    (To_Code   => UTF8,
+                     From_Code => ISO_8859_15,
+                     Ignore    => True);
                end if;
 
             when 'X' =>
