@@ -129,6 +129,14 @@ the following are likely to be the most useful:
   Generally speaking, we do not recommend using paths with spaces, since such
   a setup often introduces complications.
 
+  It is possible to link with a static library for postgres, by specifying the
+  full path to libpq.a, as in::
+
+    ./configure --with-postgres="/usr/local/lib/libpq.a"
+
+   However, that library depends on shared libraries ssl and crypto, so your
+   application is still not fully linked statically.
+
 *--with-sqlite=<dir>* and *--without-sqlite*
   GNATCOLL embeds a set of packages to access sqlite database. This requires
   a fairly recent version of sqlite. These switches can be used to point to

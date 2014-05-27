@@ -47,6 +47,7 @@ project GnatColl_Shared is
    Gtk_Include    := (@GTK_GCC_FLAGS_GPR@);
    Gtk_Libs       := (@GTK_GCC_LIBS_GPR@);
    Postgres_Dir   := "@PATH_LIBPQ@";
+   Postgres_Lib   := (@LIB_PQ_GPR@);
    Sqlite_Dir     := "@PATH_LIBSQLITE@";
    Iconv_Dir      := "@PATH_ICONV@";
    Iconv_Lib      := "@LIB_ICONV@";

@@ -15,6 +15,11 @@ of the feature.
 New features in 1.7
 -------------------
 
+NF-17-N527-002 Linking with static libpq (postgres) (2014-05-27)
+
+  It is now possible to link with a static version of the postgres library,
+  by passing its full path to configure's --with-postgres switch.
+
 NF-17-N409-022 GNATCOLL.Xref.Get_Entity searching in all files (2014-04-10)
 
   It is now possible to call Get_Entity and look for that entity in all

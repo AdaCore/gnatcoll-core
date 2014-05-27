@@ -626,6 +626,7 @@ ac_subst_vars='LTLIBOBJS
 LIBOBJS
 LIB
 WITH_SYSLOG
+LIB_PQ_GPR
 PYGOBJECT_INCLUDE_GPR
 GTK_GCC_LIBS_GPR
 GTK_GCC_FLAGS_GPR
@@ -651,6 +652,7 @@ SQLITE_CFLAGS
 PATH_LIBSQLITE
 WITH_SQLITE
 HAS_PQPREPARE
+LIB_PQ
 PATH_LIBPQ
 WITH_POSTGRES
 PYGOBJECT_LIB
@@ -4630,6 +4632,7 @@ $as_echo "no" >&6; }
        PATH_LIBPQ=`pg_config 2>/dev/null | grep ^LIBDIR | cut -d\  -f3`
        if test x"$PATH_LIBPQ" != x ; then
           PATH_LIBPQ="-L$PATH_LIBPQ"
+          LIB_PQ="-lpq"
        else
 
    am_path_pq=""
@@ -4647,6 +4650,7 @@ $as_echo "no" >&6; }
 
           if test x"$am_path_pq" != x ; then
              PATH_LIBPQ="-L$am_path_pq"
+             LIB_PQ="-lpq"
           fi
        fi
        { $as_echo "$as_me:${as_lineno-$LINENO}: checking for PQreset in -lpq" >&5
@@ -4691,12 +4695,22 @@ else
   WITH_POSTGRES=no
 fi
 
+
      else
        WITH_POSTGRES=yes
-       if test -f "$POSTGRESQL_PATH_WITH/libpq.so" -o -f "$POSTGRESQL_PATH_WITH/libpq.dll" -o -f "$POSTGRESQL_PATH_WITH/libpq.dylib" ; then
+
+       # Did the user provide a path to a static libpq ?
+
+       if test -f "$POSTGRESQL_PATH_WITH" -a `basename "$POSTGRESQL_PATH_WITH"` = "libpq.a" ; then
+          PATH_LIBPQ=""
+          LIB_PQ="$POSTGRESQL_PATH_WITH -lssl -lcrypto"
+
+       elif test -f "$POSTGRESQL_PATH_WITH/libpq.so" -o -f "$POSTGRESQL_PATH_WITH/libpq.dll" -o -f "$POSTGRESQL_PATH_WITH/libpq.dylib" ; then
           PATH_LIBPQ="-L$POSTGRESQL_PATH_WITH"
+          LIB_PQ="-lpq"
        elif test -f "$POSTGRESQL_PATH_WITH/lib/libpq.so" -o -f "$POSTGRESQL_PATH_WITH/lib/libpq.dll" -o -f "$POSTGRESQL_PATH_WITH/lib/libpq.dylib" ; then
           PATH_LIBPQ="-L$POSTGRESQL_PATH_WITH/lib"
+          LIB_PQ="-lpq"
        else
           { $as_echo "$as_me:${as_lineno-$LINENO}: checking for PostgreSQL" >&5
 $as_echo_n "checking for PostgreSQL... " >&6; }
@@ -4757,6 +4771,7 @@ fi
    else
      HAS_PQPREPARE=no
    fi
+
 
 
 
@@ -5515,6 +5530,27 @@ $as_echo "no" >&6; }
       result="$result\"$v\""
    done
    PYGOBJECT_INCLUDE_GPR=$result
+
+
+
+
+   value=$LIB_PQ
+
+   # Special handling on darwin for gcc 4.5 and 4.7
+   case "$build_os" in
+      *darwin*)
+         value=`echo $value | sed -e "s/-framework \([^ ]*\)/-Wl,-framework -Wl,\1/g"`
+   esac
+
+   output=LIB_PQ_GPR
+   result=""
+   for v in $value; do
+      if test "$result" != ""; then
+         result="$result, "
+      fi
+      result="$result\"$v\""
+   done
+   LIB_PQ_GPR=$result
 
 
 

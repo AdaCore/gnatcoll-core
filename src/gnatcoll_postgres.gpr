@@ -20,7 +20,8 @@ project GnatColl_Postgres is
       when "yes" =>
         for Languages use ("Ada", "C");
         for Source_Dirs use ("postgres", "postgres/with_postgres");
-        for Library_Options use (GnatColl_Shared.Postgres_Dir) & "-lpq";
+        for Library_Options use
+           (GnatColl_Shared.Postgres_Dir) & GnatColl_Shared.Postgres_Lib;
    end case;
 
    package Builder  renames GnatColl_Shared.Builder;
@@ -44,7 +45,8 @@ project GnatColl_Postgres is
          when "no" =>
             null;
          when "yes" =>
-            for Linker_Options use (Gnatcoll_Shared.Postgres_Dir) & "-lpq";
+            for Linker_Options use
+               (GnatColl_Shared.Postgres_Dir) & GnatColl_Shared.Postgres_Lib;
       end case;
    end Linker;
 

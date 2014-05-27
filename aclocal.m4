@@ -470,19 +470,31 @@ AC_HELP_STRING(
        PATH_LIBPQ=`pg_config 2>/dev/null | grep ^LIBDIR | cut -d\  -f3`
        if test x"$PATH_LIBPQ" != x ; then
           PATH_LIBPQ="-L$PATH_LIBPQ"
+          LIB_PQ="-lpq"
        else
           AM_LIB_PATH(pq)
           if test x"$am_path_pq" != x ; then
              PATH_LIBPQ="-L$am_path_pq"
+             LIB_PQ="-lpq"
           fi
        fi
        AC_CHECK_LIB(pq,PQreset,WITH_POSTGRES=yes,WITH_POSTGRES=no,[$PATH_LIBPQ])
+
      else
        WITH_POSTGRES=yes
-       if test -f "$POSTGRESQL_PATH_WITH/libpq.so" -o -f "$POSTGRESQL_PATH_WITH/libpq.dll" -o -f "$POSTGRESQL_PATH_WITH/libpq.dylib" ; then
+
+       # Did the user provide a path to a static libpq ?
+
+       if test -f "$POSTGRESQL_PATH_WITH" -a `basename "$POSTGRESQL_PATH_WITH"` = "libpq.a" ; then
+          PATH_LIBPQ=""
+          LIB_PQ="$POSTGRESQL_PATH_WITH -lssl -lcrypto"
+
+       elif test -f "$POSTGRESQL_PATH_WITH/libpq.so" -o -f "$POSTGRESQL_PATH_WITH/libpq.dll" -o -f "$POSTGRESQL_PATH_WITH/libpq.dylib" ; then
           PATH_LIBPQ="-L$POSTGRESQL_PATH_WITH"
+          LIB_PQ="-lpq"
        elif test -f "$POSTGRESQL_PATH_WITH/lib/libpq.so" -o -f "$POSTGRESQL_PATH_WITH/lib/libpq.dll" -o -f "$POSTGRESQL_PATH_WITH/lib/libpq.dylib" ; then
           PATH_LIBPQ="-L$POSTGRESQL_PATH_WITH/lib"
+          LIB_PQ="-lpq"
        else
           AC_MSG_CHECKING(for PostgreSQL)
           AC_MSG_RESULT(not found in $POSTGRESQL_PATH_WITH)
@@ -503,6 +515,7 @@ AC_HELP_STRING(
 
    AC_SUBST(WITH_POSTGRES)
    AC_SUBST(PATH_LIBPQ)
+   AC_SUBST(LIB_PQ)
    AC_SUBST(HAS_PQPREPARE)
 ])
 
