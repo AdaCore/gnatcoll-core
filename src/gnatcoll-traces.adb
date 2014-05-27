@@ -826,14 +826,10 @@ package body GNATCOLL.Traces is
      (Handle : Trace_Handle := null; Msg : String := "")
    is
    begin
-      if Handle /= null then
-         if Msg /= "" then
-            Trace (Handle, Msg);
-         end if;
-         if Active (Handle) then
-            Global.Indentation := Global.Indentation + 1;
-         end if;
+      if Handle /= null and then Msg /= "" then
+         Trace (Handle, Msg);
       end if;
+      Global.Indentation := Global.Indentation + 1;
    end Increase_Indent;
 
    ---------------------
@@ -844,15 +840,10 @@ package body GNATCOLL.Traces is
      (Handle : Trace_Handle := null; Msg : String := "") is
    begin
       if Global.Indentation > 0 then
-         if Handle /= null then
-            if Active (Handle) then
-               Global.Indentation := Global.Indentation - 1;
-            end if;
-            if Msg /= "" then
-               Trace (Handle, Msg);
-            end if;
+         Global.Indentation := Global.Indentation - 1;
+         if Handle /= null and then Msg /= "" then
+            Trace (Handle, Msg);
          end if;
-
       else
          if Handle /= null then
             Trace (Handle, "Indentation error: too many decrease");
