@@ -148,14 +148,7 @@ package body GNATCOLL.SQL.Postgres is
       Result.User     := new String'(User);
       Result.Password := new String'(Password);
       Result.Port     := Port;
-
-      if Host /= ""
-        and then Host /= "localhost"
-      then
-         Result.Host := new String'(Host);
-      else
-         Result.Host := new String'("");
-      end if;
+      Result.Host := new String'(Host);
 
       return Database_Description (Result);
    end Setup;

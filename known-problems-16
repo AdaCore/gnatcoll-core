@@ -4,6 +4,20 @@ Known Problems in Gnatcoll 1.6
 
 Copyright (C) 2013-2014, AdaCore
 
+KP-16-N527-001 GNATCOLL.SQL.Postgres handling of localhost
+
+  Problem:    For historical reasons, GNATCOLL was not replacing the
+              name of the host "localhost" with an empty string when
+              connecting to postgreSQL. This changes the protocol used
+              by postgreSQL and creates an element of surprise for
+              users of the API.
+              Existing code can be adapted by replacing "localhost" with
+              "" directly in the application code.
+
+  Status:     Fixed in Gnatcoll 1.7.0 on 2014-05-27
+
+  Workaround: Connect with 127.0.0.1 rather than "localhost".
+
 KP-16-N108-033 GNATCOLL.JSON fails to escape U+0080
 
   Problem:    GNATCOLL.JSON.Write fails to escape a reference to Unicode
