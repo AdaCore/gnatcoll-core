@@ -4238,6 +4238,10 @@ package body GNATCOLL.Xref is
 
       Self.DB.Execute ("PRAGMA mmap_size=268435456;");
 
+      if SQL.Sqlite.DB_Name (Self.DB) = ":memory:" then
+         Create_Database (Self.DB);
+      end if;
+
       --  Do not use automatic transactions, to avoid being stuck with an
       --  unfinished BEGIN, which would lock the database and prevents
       --  gnatinspect from running in parallel to IDEs.

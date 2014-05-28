@@ -1736,7 +1736,6 @@ begin
    end;
 
    if DB_Name = null or else DB_Name.all = "" then
-      Trace (Me, "MANU --db was unspecified");
       --  read it from the project
 
       Free (DB_Name);
@@ -1744,7 +1743,6 @@ begin
         (Tree.Root_Project.Attribute_Value
            (Build ("IDE", "Xref_Database"), Default => "gnatinspect.db",
             Use_Extended => True));
-      Trace (Me, "MANU => " & DB_Name.all);
    end if;
 
    if DB_Name.all /= ":memory:" then
@@ -1772,7 +1770,24 @@ begin
          end if;
 
          DB_Name := new String'(Dir.Display_Full_Name);
-         Trace (Me, "MANU db is now " & DB_Name.all);
+
+         Dir := Create (+DB_Name.all);
+
+         if not Create (Dir.Dir_Name).Is_Writable then
+            Put_Line
+              (Standard_Error,
+               "Directory '"
+               & (+Dir.Dir_Name)
+               & "' is not writable, cannot create xref database");
+            return;
+         elsif Dir.Is_Regular_File and then not Dir.Is_Writable then
+            Put_Line
+              (Standard_Error,
+               "File '"
+               & Dir.Display_Full_Name
+               & "' is not writable, cannot create xref database");
+            return;
+         end if;
       end;
    end if;
 
