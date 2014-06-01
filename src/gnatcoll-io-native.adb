@@ -321,6 +321,7 @@ package body GNATCOLL.IO.Native is
         (String (File.Full.all), Fmode => GNAT.OS_Lib.Binary);
       Result : constant Long_Integer :=
         Long_Integer (GNAT.OS_Lib.File_Length (Fd));
+      pragma Warnings (Off, Result);
    begin
       GNAT.OS_Lib.Close (Fd);
       return Result;
