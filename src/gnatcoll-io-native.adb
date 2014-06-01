@@ -320,7 +320,7 @@ package body GNATCOLL.IO.Native is
       Fd : constant GNAT.OS_Lib.File_Descriptor := GNAT.OS_Lib.Open_Read
         (String (File.Full.all), Fmode => GNAT.OS_Lib.Binary);
       Result : constant Long_Integer :=
-        GNAT.OS_Lib.File_Length (Fd);
+        Long_Integer (GNAT.OS_Lib.File_Length (Fd));
    begin
       GNAT.OS_Lib.Close (Fd);
       return Result;
