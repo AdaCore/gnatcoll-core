@@ -319,9 +319,10 @@ package body GNATCOLL.IO.Native is
    is
       Fd : constant GNAT.OS_Lib.File_Descriptor := GNAT.OS_Lib.Open_Read
         (String (File.Full.all), Fmode => GNAT.OS_Lib.Binary);
+      pragma Warnings (Off);
       Result : constant Long_Integer :=
         Long_Integer (GNAT.OS_Lib.File_Length (Fd));
-      pragma Warnings (Off, Result);
+      pragma Warnings (On);
    begin
       GNAT.OS_Lib.Close (Fd);
       return Result;
