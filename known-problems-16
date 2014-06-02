@@ -4,6 +4,16 @@ Known Problems in Gnatcoll 1.6
 
 Copyright (C) 2013-2014, AdaCore
 
+KP-16-N530-001 GNATCOLL.SQL.Postgres stack usage
+
+  Problem:    Executing a SQL query with postgres, and passing a large
+              string parameter, copies this string on the stack, although
+              the copy is not needed.
+
+  Status:     Fixed in Gnatcoll 1.7.0 on 2014-06-02
+
+  Workaround: This impacts efficiency, not correctness.
+
 KP-16-N527-001 GNATCOLL.SQL.Postgres handling of localhost
 
   Problem:    For historical reasons, GNATCOLL was not replacing the
