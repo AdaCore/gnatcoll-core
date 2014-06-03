@@ -47,9 +47,10 @@ private package GNATCOLL.IO is
       Normalized : FS_String_Access;
       --  The file's normalized form ('..' and '.' directories removed)
 
-      Resolved   : Boolean;
-      --  Tell if Full has been fully resolved (e.g. normalized, and symlinks
-      --  resolved)
+      Normalized_And_Resolved : FS_String_Access;
+      --  The normalized form with resolved symlinks.
+      --  This points to the same value as Normalized if these have the same
+      --  value.
 
       Kind       : Item_Type := Unknown;
       --  The kind of file represented by this object
@@ -84,7 +85,8 @@ private package GNATCOLL.IO is
    --  Return the kind of FS the file is on
 
    procedure Resolve_Symlinks (File : not null access File_Record) is abstract;
-   --  Resolve all potential symlinks present in the IO path
+   --  Resolve all potential symlinks present in the IO path.
+   --  Does nothing if this computation has already been done.
 
    ----------------------
    -- Queries on files --

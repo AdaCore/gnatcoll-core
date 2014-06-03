@@ -54,7 +54,7 @@ package body GNATCOLL.IO.Native is
         (Ref_Count  => 1,
          Full       => new FS_String'(From_Unix (Local_FS, Path)),
          Normalized => null,
-         Resolved   => False,
+         Normalized_And_Resolved => null,
          Kind       => Unknown);
    end Create;
 
@@ -264,14 +264,8 @@ package body GNATCOLL.IO.Native is
    is
       Is_Dir_Path : Boolean;
    begin
-      if not File.Resolved then
+      if File.Normalized_And_Resolved = null then
          Is_Dir_Path := Path.Is_Dir_Name (File.Get_FS, File.Full.all);
-
-         --  File has been normalized, but symlinks not resolved. We remove the
-         --  old value.
-         if File.Normalized /= null then
-            Free (File.Normalized);
-         end if;
 
          declare
             --  We have to pass "" for the directory, in case File.Full is a
@@ -289,14 +283,27 @@ package body GNATCOLL.IO.Native is
             if not Is_Dir_Path
               or else Norm (Norm'Last) = GNAT.OS_Lib.Directory_Separator
             then
-               File.Normalized := new FS_String'(FS_String (Norm));
+               if File.Normalized /= null
+                 and then FS_String (Norm) = File.Normalized.all
+               then
+                  File.Normalized_And_Resolved := File.Normalized;
+               else
+                  File.Normalized_And_Resolved :=
+                    new FS_String'(FS_String (Norm));
+               end if;
+
             else
-               File.Normalized := new FS_String'
-                 (FS_String (Norm) & GNAT.OS_Lib.Directory_Separator);
+               if File.Normalized /= null
+                 and then FS_String (Norm) & GNAT.OS_Lib.Directory_Separator =
+                    File.Normalized.all
+               then
+                  File.Normalized_And_Resolved := File.Normalized;
+               else
+                  File.Normalized_And_Resolved := new FS_String'
+                    (FS_String (Norm) & GNAT.OS_Lib.Directory_Separator);
+               end if;
             end if;
          end;
-
-         File.Resolved := True;
       end if;
    end Resolve_Symlinks;
 

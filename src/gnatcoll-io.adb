@@ -60,6 +60,11 @@ package body GNATCOLL.IO is
    procedure Destroy (File : in out File_Record) is
    begin
       Free (File.Full);
+
+      if File.Normalized_And_Resolved /= File.Normalized then
+         Free (File.Normalized_And_Resolved);
+      end if;
+
       Free (File.Normalized);
    end Destroy;
 

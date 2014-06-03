@@ -123,16 +123,18 @@ package body GNATCOLL.VFS is
 
       --  Finally, we test the normalized paths
       else
-         Ensure_Normalized (File1, Handle_Symbolic_Links);
-         Ensure_Normalized (File2, Handle_Symbolic_Links);
+         Ensure_Normalized (File1, Resolve_Symlinks => True);
+         Ensure_Normalized (File2, Resolve_Symlinks => True);
 
          --  We also take care of potential trailing dir separator by enforcing
          --  them
 
          return Equal
            (File1.Value.Get_FS,
-            Ensure_Directory (File1.Value.Get_FS, File1.Value.Normalized.all),
-            Ensure_Directory (File1.Value.Get_FS, File2.Value.Normalized.all));
+            Ensure_Directory
+              (File1.Value.Get_FS, File1.Value.Normalized_And_Resolved.all),
+            Ensure_Directory
+              (File1.Value.Get_FS, File2.Value.Normalized_And_Resolved.all));
       end if;
    end "=";
 
@@ -166,22 +168,23 @@ package body GNATCOLL.VFS is
          Case_Sensitive := Is_Case_Sensitive (File1.Value.Get_FS)
            and then Is_Case_Sensitive (File2.Value.Get_FS);
 
-         Ensure_Normalized (File1, True);
-         Ensure_Normalized (File2, True);
+         Ensure_Normalized (File1, Resolve_Symlinks => True);
+         Ensure_Normalized (File2, Resolve_Symlinks => True);
 
          if Case_Sensitive then
-            return File1.Value.Normalized.all < File2.Value.Normalized.all;
+            return File1.Value.Normalized_And_Resolved.all <
+              File2.Value.Normalized_And_Resolved.all;
          else
-            Ind1 := File1.Value.Normalized'First;
-            Ind2 := File2.Value.Normalized'First;
+            Ind1 := File1.Value.Normalized_And_Resolved'First;
+            Ind2 := File2.Value.Normalized_And_Resolved'First;
 
-            for C in 1 .. File1.Value.Normalized'Length loop
-               if Ind2 > File2.Value.Normalized'Last then
+            for C in 1 .. File1.Value.Normalized_And_Resolved'Length loop
+               if Ind2 > File2.Value.Normalized_And_Resolved'Last then
                   return False;
                end if;
 
-               C1 := To_Lower (File1.Value.Normalized (Ind1));
-               C2 := To_Lower (File2.Value.Normalized (Ind2));
+               C1 := To_Lower (File1.Value.Normalized_And_Resolved (Ind1));
+               C2 := To_Lower (File2.Value.Normalized_And_Resolved (Ind2));
 
                if C1 < C2 then
                   return True;
@@ -468,9 +471,11 @@ package body GNATCOLL.VFS is
       end if;
 
       if Normalize then
-         Ensure_Normalized (File, Handle_Symbolic_Links);
+         Ensure_Normalized (File, Resolve_Symlinks => True);
          return +Base_Name
-            (File.Value.Get_FS, File.Value.Normalized.all, +Suffix);
+           (File.Value.Get_FS,
+            File.Value.Normalized_And_Resolved.all,
+            +Suffix);
       else
          return +Base_Name (File.Value.Get_FS, File.Value.Full.all, +Suffix);
       end if;
@@ -515,8 +520,13 @@ package body GNATCOLL.VFS is
 
       elsif File.Value.Full /= null and then Normalize then
          Ensure_Normalized (File, Resolve_Links);
-         return Cst_Filesystem_String_Access
-           (+File.Value.Normalized.all'Access);
+         if Resolve_Links then
+            return Cst_Filesystem_String_Access
+              (+File.Value.Normalized_And_Resolved.all'Access);
+         else
+            return Cst_Filesystem_String_Access
+              (+File.Value.Normalized.all'Access);
+         end if;
 
       elsif File.Value.Full = null
         and then Get_Host (File) /= Local_Host
@@ -541,12 +551,13 @@ package body GNATCOLL.VFS is
          return 0;
       end if;
 
-      Ensure_Normalized (Key, True);
+      Ensure_Normalized (Key, Resolve_Symlinks => True);
 
       if Is_Case_Sensitive (Key.Value.Get_FS) then
-         return Ada.Strings.Hash (+Key.Value.Normalized.all);
+         return Ada.Strings.Hash (+Key.Value.Normalized_And_Resolved.all);
       else
-         return Ada.Strings.Hash_Case_Insensitive (+Key.Value.Normalized.all);
+         return Ada.Strings.Hash_Case_Insensitive
+           (+Key.Value.Normalized_And_Resolved.all);
       end if;
    end Full_Name_Hash;
 
@@ -1232,10 +1243,14 @@ package body GNATCOLL.VFS is
          if File.Tmp_File /= No_File then
             File.Tmp_File.Value.Close (File.FD, File.Success);
             if File.Success then
-               --  Look past symbolic links
+               --  Look past symbolic links. We do not want to impact the
+               --  normalized name saved in File, so we need to use local
+               --  copies.
                Handle_Symbolic_Links := True;
-               Norm := Create (File.File.Full_Name
-                  (Normalize => True, Resolve_Links => True).all);
+               Norm := Create (File.File.Full_Name.all);
+               Norm := Create
+                 (Norm.Full_Name
+                    (Normalize => True, Resolve_Links => True).all);
                Handle_Symbolic_Links := Save_Handle_Symbolic_Links;
 
                --  We use to delete explicitly Norm. But in fact this is not a
@@ -1331,8 +1346,14 @@ package body GNATCOLL.VFS is
             Full := new FS_String'
               (Ensure_Directory
                  (Dir.Value.Get_FS, Dir.Value.Normalized.all));
+
+            if Dir.Value.Normalized /= Dir.Value.Normalized_And_Resolved then
+               Free (Dir.Value.Normalized_And_Resolved);
+            end if;
             Free (Dir.Value.Normalized);
-            Dir.Value.Normalized := Full;
+            Dir.Value.Normalized_And_Resolved := null;
+
+            Dir.Value.Normalized := new FS_String'(Full.all);
          end if;
       end if;
    end Ensure_Directory;
@@ -1349,15 +1370,17 @@ package body GNATCOLL.VFS is
          return;
       end if;
 
-      if not File.Value.Resolved
-        and then Resolve_Symlinks
-        and then Handle_Symbolic_Links
-      then
-         GNATCOLL.IO.Resolve_Symlinks (File.Value);
-
-      elsif File.Value.Normalized = null then
+      if File.Value.Normalized = null then
          File.Value.Normalized := new FS_String'
            (Path.Normalize (File.Value.Get_FS, File.Value.Full.all));
+      end if;
+
+      if Resolve_Symlinks then
+         if Handle_Symbolic_Links then
+            GNATCOLL.IO.Resolve_Symlinks (File.Value);
+         else
+            File.Value.Normalized_And_Resolved := File.Value.Normalized;
+         end if;
       end if;
    end Ensure_Normalized;
 
@@ -1377,7 +1400,13 @@ package body GNATCOLL.VFS is
       Ensure_Normalized (File, Resolve_Symlinks);
 
       Free (File.Value.Full);
-      File.Value.Full := new FS_String'(File.Value.Normalized.all);
+
+      if Resolve_Symlinks then
+         File.Value.Full :=
+           new FS_String'(File.Value.Normalized_And_Resolved.all);
+      else
+         File.Value.Full := new FS_String'(File.Value.Normalized.all);
+      end if;
    end Normalize_Path;
 
    --------------
@@ -1772,20 +1801,22 @@ package body GNATCOLL.VFS is
          return False;
       end if;
 
-      Ensure_Normalized (Parent, True);
-      Ensure_Normalized (Child, True);
+      Ensure_Normalized (Parent, Resolve_Symlinks => True);
+      Ensure_Normalized (Child, Resolve_Symlinks => True);
 
-      if Parent.Value.Normalized'Length > Child.Value.Normalized'Length then
+      if Parent.Value.Normalized_And_Resolved'Length >
+        Child.Value.Normalized_And_Resolved'Length
+      then
          return False;
       end if;
 
       return Equal
         (Parent.Value.Get_FS,
-         Parent.Value.Normalized.all,
-         Child.Value.Normalized
-           (Child.Value.Normalized'First ..
-              Child.Value.Normalized'First +
-                Parent.Value.Normalized'Length - 1));
+         Parent.Value.Normalized_And_Resolved.all,
+         Child.Value.Normalized_And_Resolved
+           (Child.Value.Normalized_And_Resolved'First ..
+              Child.Value.Normalized_And_Resolved'First +
+                Parent.Value.Normalized_And_Resolved'Length - 1));
    end Is_Parent;
 
    ----------

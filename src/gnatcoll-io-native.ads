@@ -144,7 +144,7 @@ private
       Full       => new FS_String'
         (GNATCOLL.Path.Path (GNATCOLL.Path.Local_FS, "", "", "")),
       Normalized => null,
-      Resolved   => True,
+      Normalized_And_Resolved => null,
       Kind       => Directory);
 
 end GNATCOLL.IO.Native;

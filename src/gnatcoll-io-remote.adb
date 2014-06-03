@@ -69,7 +69,7 @@ package body GNATCOLL.IO.Remote is
            (From_Unix (Server.Shell_FS, Path (Path'First .. Last)));
       end if;
 
-      File.Resolved   := False;
+      File.Normalized_And_Resolved := null;
    end Internal_Initialize;
 
    ------------------------
@@ -115,7 +115,7 @@ package body GNATCOLL.IO.Remote is
          Server     => null,
          Full       => null,
          Normalized => null,
-         Resolved   => False,
+         Normalized_And_Resolved => null,
          Kind       => Unknown);
 
       if not Is_Configured (Host) then
@@ -408,13 +408,12 @@ package body GNATCOLL.IO.Remote is
       Ensure_Initialized (File);
 
       --  ??? Should we do something more here (e.g. try to actually resolve ?)
-      if not File.Resolved then
+      if File.Normalized_And_Resolved = null then
          if File.Normalized = null then
             File.Normalized := new FS_String'
               (GNATCOLL.Path.Normalize (Get_FS (File), File.Full.all));
          end if;
-
-         File.Resolved   := True;
+         File.Normalized_And_Resolved := File.Normalized;
       end if;
    end Resolve_Symlinks;
 
