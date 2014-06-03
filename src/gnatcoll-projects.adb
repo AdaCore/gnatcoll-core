@@ -2137,7 +2137,7 @@ package body GNATCOLL.Projects is
                S_Info.Lang := Source.Source.Language.Name;
 
             else
-               --  Cashed after a call to create, thus no Source_Id. The only
+               --  Cached after a call to create, thus no Source_Id. The only
                --  thing known is the language.
 
                declare
