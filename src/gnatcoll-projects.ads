@@ -664,7 +664,8 @@ package GNATCOLL.Projects is
       Use_Source_Path : Boolean := True;
       Use_Object_Path : Boolean := True;
       Ambiguous       : out Boolean;
-      File            : out GNATCOLL.VFS.Virtual_File);
+      File            : out GNATCOLL.VFS.Virtual_File;
+      Predefined_Only : Boolean := False);
    --  Create a new file. This will automatically try to solve Name to an
    --  absolute path if it currently is a base name.
    --
@@ -676,6 +677,8 @@ package GNATCOLL.Projects is
    --  frequent use for this function. We never look at the cache when a
    --  specific project is specified, since you might be looking for sources
    --  that are in fact overridden in an extending project.
+   --  Set Predefined_Only to True to disable looking in the project sources
+   --  and only look in the predefined source files.
    --
    --  Otherwise, the file will be searched for in the source dirs and/or
    --  object dirs of either a specific Project or in the whole project tree.
@@ -1646,9 +1649,9 @@ private
       File         : GNATCOLL.VFS.Virtual_File;
       Project      : Project_Type;
       Root_Project : Project_Type;
-      Part         : Unit_Parts;
-      Name         : Namet.Name_Id;   --  Unit name
-      Lang         : Namet.Name_Id;
+      Part         : Unit_Parts    := Unit_Separate;
+      Name         : Namet.Name_Id := Namet.No_Name;   --  Unit name
+      Lang         : Namet.Name_Id := Namet.No_Name;
    end record;
 
    package Extensions_Languages is new Ada.Containers.Indefinite_Hashed_Maps

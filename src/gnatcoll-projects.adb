@@ -1204,7 +1204,9 @@ package body GNATCOLL.Projects is
             Tmp : File_Array_Access;
          begin
             for P in Predef'Range loop
-               if not Seen.Contains (Predef (P)) then
+               if not Seen.Contains (Predef (P))
+                  and then Predef (P).Is_Directory
+               then
                   Seen.Include (Predef (P));
                   Tmp := Read_Dir (Predef (P));
 
@@ -1503,7 +1505,8 @@ package body GNATCOLL.Projects is
       Use_Source_Path : Boolean := True;
       Use_Object_Path : Boolean := True;
       Ambiguous       : out Boolean;
-      File            : out GNATCOLL.VFS.Virtual_File)
+      File            : out GNATCOLL.VFS.Virtual_File;
+      Predefined_Only : Boolean := False)
    is
       Base          : constant Filesystem_String := Base_Name (Name);
       Project2      : Project_Type;
@@ -1553,7 +1556,10 @@ package body GNATCOLL.Projects is
       --  loaded, so we know that all source files of the project are in the
       --  cache and will be returned efficiently
 
-      if Project.Data = null and then Use_Source_Path then
+      if not Predefined_Only
+         and then Project.Data = null
+         and then Use_Source_Path
+      then
          Info_Cursor := Self.Data.Sources.Find (Base);
 
          if Has_Element (Info_Cursor) then
@@ -1617,54 +1623,56 @@ package body GNATCOLL.Projects is
 
       --  We have to search in one or more projects
 
-      if Project.Data /= null then
-         Iterator := Project.Start (Recursive => False);
-      else
-         Iterator := Self.Root_Project.Start (Recursive => True);
-      end if;
-
-      while Path = GNATCOLL.VFS.No_File or else Duplicate_Obj loop
-         --  Checking whenever we have an ambiguous object file.
-         Project2 := Current (Iterator);
-         exit when Project2 = No_Project;
-
-         if Duplicate_Obj
-           and then Locate_Regular_File
-             (Name, Project2.Object_Path
-                (Recursive => False, Including_Libraries => True)) /=
-               GNATCOLL.VFS.No_File
-         then
-            File := GNATCOLL.VFS.No_File;
-            return;
+      if not Predefined_Only then
+         if Project.Data /= null then
+            Iterator := Project.Start (Recursive => False);
+         else
+            Iterator := Self.Root_Project.Start (Recursive => True);
          end if;
 
-         if not Duplicate_Obj and then Use_Source_Path then
-            --  No need to check for object duplicates in source dirs.
-            Path := Locate_Regular_File
-              (Name, Project2.Source_Dirs (Recursive => False));
-         end if;
+         while Path = GNATCOLL.VFS.No_File or else Duplicate_Obj loop
+            --  Checking whenever we have an ambiguous object file.
+            Project2 := Current (Iterator);
+            exit when Project2 = No_Project;
 
-         if Use_Object_Path
-           and then not Duplicate_Obj
-           and then Path = GNATCOLL.VFS.No_File
-         then
-            --  We do not want to loose Path in the check fails.
-            Path := Locate_Regular_File
-              (Name, Project2.Object_Path
-                 (Recursive => False, Including_Libraries => True));
-
-            if Path /= GNATCOLL.VFS.No_File
-              and then Is_Aggregate_Project (Self.Root_Project)
-              and then Project.Data = null
+            if Duplicate_Obj
+              and then Locate_Regular_File
+                (Name, Project2.Object_Path
+                   (Recursive => False, Including_Libraries => True)) /=
+                  GNATCOLL.VFS.No_File
             then
-               --  Check is only relevant when root project is aggregate and
-               --  no project has been given as an argument.
-               Duplicate_Obj := True;
+               File := GNATCOLL.VFS.No_File;
+               return;
             end if;
-         end if;
 
-         Next (Iterator);
-      end loop;
+            if not Duplicate_Obj and then Use_Source_Path then
+               --  No need to check for object duplicates in source dirs.
+               Path := Locate_Regular_File
+                 (Name, Project2.Source_Dirs (Recursive => False));
+            end if;
+
+            if Use_Object_Path
+              and then not Duplicate_Obj
+              and then Path = GNATCOLL.VFS.No_File
+            then
+               --  We do not want to loose Path in the check fails.
+               Path := Locate_Regular_File
+                 (Name, Project2.Object_Path
+                    (Recursive => False, Including_Libraries => True));
+
+               if Path /= GNATCOLL.VFS.No_File
+                 and then Is_Aggregate_Project (Self.Root_Project)
+                 and then Project.Data = null
+               then
+                  --  Check is only relevant when root project is aggregate and
+                  --  no project has been given as an argument.
+                  Duplicate_Obj := True;
+               end if;
+            end if;
+
+            Next (Iterator);
+         end loop;
+      end if;
 
       --  Only search in the predefined directories if the user did not
       --  specify an explicit project
@@ -1714,6 +1722,11 @@ package body GNATCOLL.Projects is
         and then Project.Data = null
         and then (Project2 /= No_Project   --  found in a specific project
                   or else In_Predefined)   --  or in the runtime
+
+        --  Make sure the predefined file does not hide a project source
+        --  (since we bypassed the cached above when Predefined_Only is true)
+        and then (not Predefined_Only
+                  or else not Self.Data.Sources.Contains (Base))
       then
          --  Language and Source are always unknown: if we had a source file,
          --  it would have been set in the cache while loading the project.

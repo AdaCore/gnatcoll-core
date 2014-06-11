@@ -2187,12 +2187,29 @@ package body GNATCOLL.Xref is
          Project     : Project_Type;
          Is_ALI_Unit : Boolean := False) return File_Db_Info
       is
-         Info   : constant File_Info :=
-                    Project.Create_From_Project (Basename);
          Found  : VFS_To_Ids.Cursor;
          Result : File_Db_Info;
+         Ambiguous : Boolean;
+         File   : Virtual_File;
+         Prj    : Project_Type;
+         Info   : File_Info;
       begin
-         if Info.File = GNATCOLL.VFS.No_File then
+         if Project /= No_Project then
+            Info := Project.Create_From_Project (Basename);
+            File := Info.File;
+            Prj  := Info.Project;
+         else
+            Self.Tree.Create
+               (Name            => Basename,
+                Predefined_Only => True,
+                Use_Object_Path => False,
+                Ambiguous       => Ambiguous,
+                File            => File);
+            Prj := No_Project;
+            --  Info.Language is still used, but will return ""
+         end if;
+
+         if File = GNATCOLL.VFS.No_File then
             if Active (Me_Error) then
                Trace (Me_Error, "File " & (+Basename)
                       & " not found in project "
@@ -2202,7 +2219,7 @@ package body GNATCOLL.Xref is
                     Export_Mangled_Name => False);
          end if;
 
-         Found := Source_To_Id.Find (Info.File);
+         Found := Source_To_Id.Find (File);
 
          if Has_Element (Found) then
             Result := Element (Found);
@@ -2210,14 +2227,14 @@ package body GNATCOLL.Xref is
          else
             declare
                Name  : aliased String :=
-                         +Info.File.Unix_Style_Full_Name (Normalize => True);
+                         +File.Unix_Style_Full_Name (Normalize => True);
                Files : Forward_Cursor;
                Id    : Integer;  --  for the project
             begin
-               if Info.Project = No_Project then
+               if Prj = No_Project then
                   Id := No_Project_Id;
                else
-                  Id := Project_To_Id.Element (Info.Project.Project_Path).Id;
+                  Id := Project_To_Id.Element (Prj.Project_Path).Id;
                end if;
 
                Files.Fetch
@@ -2246,7 +2263,7 @@ package body GNATCOLL.Xref is
                   end;
                end if;
 
-               Source_To_Id.Insert (Info.File, Result);
+               Source_To_Id.Insert (File, Result);
             end;
          end if;
 
@@ -2274,8 +2291,8 @@ package body GNATCOLL.Xref is
             --  different locations (s-memory.adb for instance), which
             --  can occur when overriding runtime files.
 
-            if not Visited_ALI_Units.Contains (Info.File) then
-               Visited_ALI_Units.Include (Info.File, Result);
+            if not Visited_ALI_Units.Contains (File) then
+               Visited_ALI_Units.Include (File, Result);
             end if;
          end if;
 
@@ -3080,17 +3097,16 @@ package body GNATCOLL.Xref is
       Start_Of_X_Section : Integer;
 
    begin  --  Parse_LI
+      if LI.LI.LI_Project /= null then
+         LI_Project := Project_Type (LI.LI.LI_Project.all);
+      end if;
+
       if Active (Me_Parsing) then
          Increase_Indent
            (Me_Parsing, "Parse LI "
             & (+LI.LI.Library_File.Unix_Style_Full_Name
-              (Normalize => True)));
-      end if;
-
-      if LI.LI.LI_Project /= null then
-         LI_Project := Project_Type (LI.LI.LI_Project.all);
-      else
-         LI_Project := Self.Tree.Root_Project;
+              (Normalize => True))
+            & " in project " & LI_Project.Name);
       end if;
 
       M := Open_Read
