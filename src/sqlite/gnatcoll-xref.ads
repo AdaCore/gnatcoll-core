@@ -48,9 +48,9 @@ with GNATCOLL.VFS;
 
 package GNATCOLL.Xref is
 
-   ---------------------------------
-   --  Creating the xref database --
-   ---------------------------------
+   --------------------------------
+   -- Creating the xref database --
+   --------------------------------
 
    type Xref_Database is tagged private;
    type Xref_Database_Access is access all Xref_Database'Class;
