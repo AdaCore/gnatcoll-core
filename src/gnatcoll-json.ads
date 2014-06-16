@@ -104,6 +104,9 @@ package GNATCOLL.JSON is
    pragma Postcondition (Kind (Create'Result) = JSON_Float_Type);
    --  Creates a float-typed JSON value
 
+   function Create (Val : Long_Float) return JSON_Value;
+   pragma Postcondition (Kind (Create'Result) = JSON_Float_Type);
+
    function Create (Val : UTF8_String) return JSON_Value;
    pragma Postcondition (Kind (Create'Result) = JSON_String_Type);
    --  Creates a string-typed JSON value
@@ -156,6 +159,12 @@ package GNATCOLL.JSON is
    procedure Set_Field
      (Val        : JSON_Value;
       Field_Name : UTF8_String;
+      Field      : Long_Float);
+   pragma Precondition (Kind (Val) = JSON_Object_Type);
+
+   procedure Set_Field
+     (Val        : JSON_Value;
+      Field_Name : UTF8_String;
       Field      : UTF8_String);
    pragma Precondition (Kind (Val) = JSON_Object_Type);
 
@@ -191,6 +200,9 @@ package GNATCOLL.JSON is
    function Get (Val : JSON_Value) return Float;
    pragma Precondition (Kind (Val) = JSON_Float_Type);
 
+   function Get (Val : JSON_Value) return Long_Float;
+   pragma Precondition (Kind (Val) = JSON_Float_Type);
+
    function Get (Val : JSON_Value) return UTF8_String;
    pragma Precondition (Kind (Val) = JSON_String_Type);
 
@@ -223,6 +235,11 @@ package GNATCOLL.JSON is
       and then Kind (Get (Val, Field)) = JSON_Int_Type);
 
    function Get (Val : JSON_Value; Field : UTF8_String) return Float;
+   pragma Precondition
+     (Kind (Val) = JSON_Object_Type
+      and then Kind (Get (Val, Field)) = JSON_Float_Type);
+
+   function Get (Val : JSON_Value; Field : UTF8_String) return Long_Float;
    pragma Precondition
      (Kind (Val) = JSON_Object_Type
       and then Kind (Get (Val, Field)) = JSON_Float_Type);
@@ -267,16 +284,21 @@ private
 
    type Counter is access Natural;
 
-   type JSON_Value is new Ada.Finalization.Controlled with record
-      Cnt        : Counter := null;
-      Kind       : JSON_Value_Type := JSON_Null_Type;
+   type Data_Type (Kind : JSON_Value_Type := JSON_Null_Type) is record
+      case Kind is
+         when JSON_Null_Type    => null;
+         when JSON_Boolean_Type => Bool_Value : Boolean;
+         when JSON_Int_Type     => Int_Value  : Long_Long_Integer;
+         when JSON_Float_Type   => Flt_Value  : Long_Float;
+         when JSON_String_Type  => Str_Value  : UTF8_Unbounded_String;
+         when JSON_Array_Type   => Arr_Value  : JSON_Array_Access;
+         when JSON_Object_Type  => Obj_Value  : JSON_Object_Access;
+      end case;
+   end record;
 
-      Bool_Value : Boolean;
-      Int_Value  : Long_Long_Integer;
-      Flt_Value  : Float;
-      Str_Value  : UTF8_Unbounded_String;
-      Arr_Value  : JSON_Array_Access;
-      Obj_Value  : JSON_Object_Access;
+   type JSON_Value is new Ada.Finalization.Controlled with record
+      Cnt  : Counter := null;
+      Data : Data_Type;
    end record;
 
    overriding procedure Initialize (Obj : in out JSON_Value);
@@ -310,8 +332,7 @@ private
    end record;
 
    JSON_Null : constant JSON_Value :=
-      (Ada.Finalization.Controlled
-       with Kind => JSON_Null_Type, others => <>);
+      (Ada.Finalization.Controlled with others => <>);
    --  Can't call Create, because we would need to see the body of
    --  Initialize and Adjust.
 
