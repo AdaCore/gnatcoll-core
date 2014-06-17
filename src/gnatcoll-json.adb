@@ -88,8 +88,8 @@ package body GNATCOLL.JSON is
 
       procedure Next_Char (N : Natural := 1);
 
-      procedure Skip_Blancks;
-      --  Does Idx + 1 until a non-blanck character is found
+      procedure Skip_Blanks;
+      --  Does Idx + 1 until a non-blank character is found
 
       function Read_String return UTF8_Unbounded_String;
       --  Reads a string
@@ -132,7 +132,7 @@ package body GNATCOLL.JSON is
       -- Skip_Blancks --
       ------------------
 
-      procedure Skip_Blancks is
+      procedure Skip_Blanks is
       begin
          while Idx.all <= Length (Strm) loop
             exit when Element (Strm, Idx.all) /= ' '
@@ -142,7 +142,7 @@ package body GNATCOLL.JSON is
 
             Next_Char;
          end loop;
-      end Skip_Blancks;
+      end Skip_Blanks;
 
       -----------------
       -- Read_String --
@@ -175,7 +175,7 @@ package body GNATCOLL.JSON is
       end Read_String;
 
    begin
-      Skip_Blancks;
+      Skip_Blanks;
 
       if Idx.all not in 1 .. Length (Strm) then
          Error ("Nothing to read from stream");
@@ -375,7 +375,7 @@ package body GNATCOLL.JSON is
                Next_Char;
 
                while Idx.all < Length (Strm) loop
-                  Skip_Blancks;
+                  Skip_Blanks;
 
                   if Idx.all > Length (Strm) then
                      Error ("Uncomplete JSON array");
@@ -426,7 +426,7 @@ package body GNATCOLL.JSON is
                Next_Char;
 
                while Idx.all < Length (Strm) loop
-                  Skip_Blancks;
+                  Skip_Blanks;
 
                   if Idx.all > Length (Strm) then
                      Error ("Unterminated object value");
@@ -444,12 +444,12 @@ package body GNATCOLL.JSON is
                   end if;
 
                   First := False;
-                  Skip_Blancks;
+                  Skip_Blanks;
 
                   declare
                      Name : constant UTF8_Unbounded_String := Read_String;
                   begin
-                     Skip_Blancks;
+                     Skip_Blanks;
 
                      if Idx.all > Length (Strm) then
                         Error ("Unterminated object value");
