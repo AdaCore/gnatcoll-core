@@ -156,7 +156,7 @@ package GNATCOLL.JSON is
       Field      : Float);
    pragma Precondition (Kind (Val) = JSON_Object_Type);
 
-   procedure Set_Field
+   procedure Set_Field_Long_Float
      (Val        : JSON_Value;
       Field_Name : UTF8_String;
       Field      : Long_Float);
@@ -200,7 +200,7 @@ package GNATCOLL.JSON is
    function Get (Val : JSON_Value) return Float;
    pragma Precondition (Kind (Val) = JSON_Float_Type);
 
-   function Get (Val : JSON_Value) return Long_Float;
+   function Get_Long_Float (Val : JSON_Value) return Long_Float;
    pragma Precondition (Kind (Val) = JSON_Float_Type);
 
    function Get (Val : JSON_Value) return UTF8_String;
@@ -239,7 +239,8 @@ package GNATCOLL.JSON is
      (Kind (Val) = JSON_Object_Type
       and then Kind (Get (Val, Field)) = JSON_Float_Type);
 
-   function Get (Val : JSON_Value; Field : UTF8_String) return Long_Float;
+   function Get_Long_Float
+      (Val : JSON_Value; Field : UTF8_String) return Long_Float;
    pragma Precondition
      (Kind (Val) = JSON_Object_Type
       and then Kind (Get (Val, Field)) = JSON_Float_Type);

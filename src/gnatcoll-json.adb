@@ -941,13 +941,13 @@ package body GNATCOLL.JSON is
       Set_Field (Val, Field_Name, Create (Field));
    end Set_Field;
 
-   procedure Set_Field
+   procedure Set_Field_Long_Float
      (Val        : JSON_Value;
       Field_Name : UTF8_String;
       Field      : Long_Float) is
    begin
       Set_Field (Val, Field_Name, Create (Field));
-   end Set_Field;
+   end Set_Field_Long_Float;
 
    procedure Set_Field
      (Val        : JSON_Value;
@@ -1013,10 +1013,10 @@ package body GNATCOLL.JSON is
       return Float (Val.Data.Flt_Value);
    end Get;
 
-   function Get (Val : JSON_Value) return Long_Float is
+   function Get_Long_Float (Val : JSON_Value) return Long_Float is
    begin
       return Val.Data.Flt_Value;
-   end Get;
+   end Get_Long_Float;
 
    function Get (Val : JSON_Value) return UTF8_String is
    begin
@@ -1092,10 +1092,11 @@ package body GNATCOLL.JSON is
       return Get (Get (Val, Field));
    end Get;
 
-   function Get (Val : JSON_Value; Field : UTF8_String) return Long_Float is
+   function Get_Long_Float
+      (Val : JSON_Value; Field : UTF8_String) return Long_Float is
    begin
-      return Get (Get (Val, Field));
-   end Get;
+      return Get_Long_Float (Get (Val, Field));
+   end Get_Long_Float;
 
    function Get (Val : JSON_Value; Field : UTF8_String) return UTF8_String is
    begin
