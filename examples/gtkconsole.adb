@@ -249,7 +249,7 @@ package body GtkConsole is
             --  another grab is taken (G305-005)
 
             if Gtk.Main.Grab_Get_Current = null then
-               Gtk.Main.Grab_Add (Console.View);
+               Console.View.Grab_Add;
                Console.Took_Grab := True;
             end if;
          end if;
@@ -259,7 +259,7 @@ package body GtkConsole is
          --  we need to check that it still exists.
 
          if Console.Took_Grab then
-            Gtk.Main.Grab_Remove (Console.View);
+            Console.View.Grab_Remove;
             Unref (Console.View);
          end if;
       end if;
