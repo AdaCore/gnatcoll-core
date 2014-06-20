@@ -3268,6 +3268,13 @@ package body GNATCOLL.Xref is
                           (Filesystem_String (Str (Start .. Base_Last)),
                            LI_Project,
                            Is_ALI_Unit => Is_Subunit);
+
+                        if Is_Subunit and then Info.Id /= -1 then
+                           DB.Execute
+                             (Query_Set_ALI,
+                              Params => (1 => +Info.Id,
+                                         2 => +ALI_Id));
+                        end if;
                      end;
 
                   --  Handle C/C++ include files
