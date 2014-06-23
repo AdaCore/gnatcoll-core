@@ -145,6 +145,10 @@ the following are likely to be the most useful:
   issues with shared libraries and makes sure the version is compatible with
   GNATCOLL's needs.
 
+  configure will look for the sqlite libraries in :file:`dir/lib/`,
+  :file:`dir/lib64` or :file:`dir`, in that order, and using the first
+  directory that exists.
+
 *--enable-gpl*
   GNATCOLL provides interfaces to libraries that are licensed under the
   Full GNU Public License. This means that, should you choose to distribute

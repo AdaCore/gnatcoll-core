@@ -560,7 +560,7 @@ AC_HELP_STRING(
            elif test -d $SQLITE_PATH_WITH/lib64; then
               PATH_LIBSQLITE="-L$SQLITE_PATH_WITH/lib64"
            else
-              AC_MSG_WARN([Path not found: $SQLITE_PATH_WITH/lib])
+              PATH_LIBSQLITE="-L$SQLITE_PATH_WITH"
            fi
          fi
 
