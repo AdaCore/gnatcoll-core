@@ -15,6 +15,11 @@ of the feature.
 New features in 1.7
 -------------------
 
+NF-17-N623-003 configure: search for sqlite in path/lib64 (2014-06-23)
+
+  When a path is passed to configure's --with-sqlite switch, we now test both
+  the lib and lib64 directories.
+
 NF-17-N527-002 Linking with static libpq (postgres) (2014-05-27)
 
   It is now possible to link with a static version of the postgres library,

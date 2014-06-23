@@ -4805,7 +4805,14 @@ $as_echo "no" >&6; }
         WITH_SQLITE=no
       else
          if test x"$SQLITE_PATH_WITH" != xyes ; then
-           PATH_LIBSQLITE="-L$SQLITE_PATH_WITH/lib"
+           if test -d $SQLITE_PATH_WITH/lib; then
+              PATH_LIBSQLITE="-L$SQLITE_PATH_WITH/lib"
+           elif test -d $SQLITE_PATH_WITH/lib64; then
+              PATH_LIBSQLITE="-L$SQLITE_PATH_WITH/lib64"
+           else
+              { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: Path not found: $SQLITE_PATH_WITH/lib" >&5
+$as_echo "$as_me: WARNING: Path not found: $SQLITE_PATH_WITH/lib" >&2;}
+           fi
          fi
 
          # Requires at least version 3.7.14

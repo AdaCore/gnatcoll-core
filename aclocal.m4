@@ -555,7 +555,13 @@ AC_HELP_STRING(
         WITH_SQLITE=no
       else
          if test x"$SQLITE_PATH_WITH" != xyes ; then
-           PATH_LIBSQLITE="-L$SQLITE_PATH_WITH/lib"
+           if test -d $SQLITE_PATH_WITH/lib; then
+              PATH_LIBSQLITE="-L$SQLITE_PATH_WITH/lib"
+           elif test -d $SQLITE_PATH_WITH/lib64; then
+              PATH_LIBSQLITE="-L$SQLITE_PATH_WITH/lib64"
+           else
+              AC_MSG_WARN([Path not found: $SQLITE_PATH_WITH/lib])
+           fi
          fi
 
          # Requires at least version 3.7.14
