@@ -4,6 +4,16 @@ Known Problems in Gnatcoll 1.6
 
 Copyright (C) 2013-2014, AdaCore
 
+KP-16-N626-001 GNATCOLL.SQL.Postgres quotes connection parameters
+
+  Problem:    It is now possible to use backslashes, spaces and quotes in
+              passwords and other connection parameters.
+
+  Status:     Fixed in Gnatcoll 1.7.0 on 2014-06-26
+
+  Workaround: Do the escaping of the special characters before you pass them
+              to GNATCOLL.SQL.Postgres.Setup.
+
 KP-16-N530-001 GNATCOLL.SQL.Postgres stack usage
 
   Problem:    Executing a SQL query with postgres, and passing a large

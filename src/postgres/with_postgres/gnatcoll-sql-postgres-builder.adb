@@ -416,15 +416,42 @@ package body GNATCOLL.SQL.Postgres.Builder is
       Host   : constant String := Descr.Host.all;
       Passwd : constant String := Descr.Password.all;
 
+      function Escape (Str : String) return String;
+      function Escape (Str : String) return String is
+         Len : Natural := 0;
+      begin
+         for S in Str'Range loop
+            if Str (S) = ''' or else Str (S) = '\' then
+               Len := Len + 2;
+            else
+               Len := Len + 1;
+            end if;
+         end loop;
+
+         return Result : String (Str'First .. Str'First + Len - 1) do
+            Len := Result'First;
+            for S in Str'Range loop
+               if Str (S) = ''' or else Str (S) = '\' then
+                  Result (Len) := '\';
+                  Result (Len + 1) := Str (S);
+                  Len := Len + 2;
+               else
+                  Result (Len) := Str (S);
+                  Len := Len + 1;
+               end if;
+            end loop;
+         end return;
+      end Escape;
+
       Str : Unbounded_String  := To_Unbounded_String
-        ("dbname=" & Descr.Dbname.all);
+        ("dbname='" & Escape (Descr.Dbname.all) & "'");
    begin
       if User /= "" then
-         Append (Str, " user=" & User);
+         Append (Str, " user='" & Escape (User) & "'");
       end if;
 
       if Host /= "" then
-         Append (Str, " host=" & Host);
+         Append (Str, " host='" & Escape (Host) & "'");
       end if;
 
       if Descr.Port /= -1 then
@@ -432,7 +459,7 @@ package body GNATCOLL.SQL.Postgres.Builder is
       end if;
 
       if With_Password and then Passwd /= "" then
-         Append (Str, " password=" & Passwd);
+         Append (Str, " password='" & Escape (Passwd) & "'");
       end if;
 
       case Descr.SSL is

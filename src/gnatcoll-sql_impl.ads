@@ -71,7 +71,7 @@ package GNATCOLL.SQL_Impl is
 
    function String_Image
      (Self : Formatter; Value : String; Quote : Boolean) return String;
-   --  Escape every apostrophe character "'" and backslash "\".
+   --  Escape every apostrophe character "'".
    --  Useful for strings in SQL commands where "'" means the end
    --  of the current string.
    --  This is not suitable for use for prepared queries, which should not be
