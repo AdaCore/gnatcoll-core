@@ -16,11 +16,11 @@ project GnatColl_Python is
    case GnatColl_Shared.Python is
       when "yes" =>
          for Languages use ("Ada", "C");
-         for Source_Dirs use Project'Source_Dirs & ("python");
+         for Source_Dirs use ("python");
          for Library_Options use (@PYTHON_LIBS_GPR@);
       when "no"  =>
          for Languages use ("Ada");
-         for Source_Dirs use Project'Source_Dirs & ("nopython");
+         for Source_Dirs use ("nopython");
    end case;
 
    package Builder renames GnatColl_Shared.Builder;
