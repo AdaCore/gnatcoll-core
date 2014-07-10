@@ -568,32 +568,6 @@ package body GNATCOLL.Scripts is
          Language      => Language);
    end Register_Command;
 
-   ----------------------
-   -- Override_Command --
-   ----------------------
-
-   procedure Override_Command
-     (Repo          : access Scripts_Repository_Record'Class;
-      Command       : String;
-      Handler       : Module_Command_Function;
-      Class         : Class_Type := No_Class)
-   is
-      Cmd : Command_Descr_Access := Repo.Commands;
-   begin
-      while Cmd /= null loop
-         if Cmd.Command = Command
-           and then Cmd.Class = Class
-         then
-            Cmd.Handler := Handler;
-            return;
-         end if;
-
-         Cmd := Cmd.Next;
-      end loop;
-
-      raise Program_Error with "Command " & Command & " not found";
-   end Override_Command;
-
    -----------------------
    -- Register_Property --
    -----------------------
