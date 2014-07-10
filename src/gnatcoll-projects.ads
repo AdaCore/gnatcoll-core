@@ -1603,6 +1603,10 @@ package GNATCOLL.Projects is
    --  Add some values to the list of possible values for Variable.
    --  The caller needs to free Values on return.
 
+   --------------
+   -- Internal --
+   --------------
+
    function Start
      (Root_Project     : Project_Type;
       Recursive        : Boolean := True;

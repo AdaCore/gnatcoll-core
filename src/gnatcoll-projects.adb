@@ -7563,10 +7563,11 @@ package body GNATCOLL.Projects is
       if Self.Data.Local_Tree = null then
          --  root project
          return Project_Qualifier_Of
-           (Self.Data.Node, Self.Data.Tree.Tree) = Prj.Aggregate;
+           (Self.Data.Node, Self.Data.Tree.Tree) in Prj.Aggregate_Project;
       else
          return Project_Qualifier_Of
-           (Self.Data.Node, Self.Data.Local_Node_Tree) = Prj.Aggregate;
+           (Self.Data.Node, Self.Data.Local_Node_Tree)
+           in Prj.Aggregate_Project;
       end if;
    end Is_Aggregate_Project;
 
