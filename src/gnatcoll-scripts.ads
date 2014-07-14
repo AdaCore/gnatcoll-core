@@ -44,6 +44,7 @@ with GNATCOLL.Utils;         use GNATCOLL.Utils;
 with GNATCOLL.VFS;           use GNATCOLL.VFS;
 with GNATCOLL.Any_Types;     use GNATCOLL.Any_Types;
 
+private with GNATCOLL.Projects;
 private with Interfaces;
 
 package GNATCOLL.Scripts is
@@ -1317,6 +1318,14 @@ package GNATCOLL.Scripts is
    --  Language can be specified to restrict the command to a specific
    --  scripting language.
 
+   procedure Override_Command
+     (Repo          : access Scripts_Repository_Record'Class;
+      Command       : String;
+      Handler       : Module_Command_Function;
+      Class         : Class_Type := No_Class);
+   --  You can change behavior of already registered function providing
+   --  new Handler for it. See Register_Command for parameter descriptions.
+
    procedure Register_Property
      (Repo   : access Scripts_Repository_Record'Class;
       Name   : String;
@@ -1504,6 +1513,7 @@ private
       Classes              : Classes_Hash.Map;
       Console_Class        : Class_Type := No_Class;
       Logger_Class         : Class_Type := No_Class;
+      Project_Tree         : GNATCOLL.Projects.Project_Tree_Access;
    end record;
 
 end GNATCOLL.Scripts;
