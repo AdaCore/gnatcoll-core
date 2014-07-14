@@ -20,43 +20,30 @@
 -- <http://www.gnu.org/licenses/>.                                          --
 --                                                                          --
 ------------------------------------------------------------------------------
---  Implementation of File class
 
-with GNATCOLL.Scripts;       use GNATCOLL.Scripts;
-with GNATCOLL.VFS;
+with GNATCOLL.Projects;
 
-package GNATCOLL.Scripts.Files is
+package GNATCOLL.Scripts.Projects is
 
    procedure Register_Commands
-     (Repo : access Scripts_Repository_Record'Class);
-   --  Add basic script commands for File class.
+     (Kernel : access Scripts_Repository_Record'Class;
+      Tree   : GNATCOLL.Projects.Project_Tree_Access);
+   --  Add script commands for Project class.
 
    --  Next subprogram could be useful to define new commands
 
-   function Get_File_Class
-     (Repo : access Scripts_Repository_Record'Class)
+   function Get_Project_Class
+     (Kernel : access Scripts_Repository_Record'Class)
       return Class_Type;
-   --  Return the class to use for file types. This encapsulates a File_Info.
+   --  Return the class to use for projects. This encapsulates a Project_Type
 
-   function Nth_Arg
-     (Data : Callback_Data'Class; N : Positive)
-      return GNATCOLL.VFS.Virtual_File;
-   procedure Set_Nth_Arg
-     (Data : in out Callback_Data'Class;
-      N    : Positive;
-      File : GNATCOLL.VFS.Virtual_File);
-   function Get_Data
-     (Instance : Class_Instance) return GNATCOLL.VFS.Virtual_File;
-   procedure Set_Data (Instance : Class_Instance; File : Virtual_File);
-   --  Retrieve the file information from an instance. This returns No_File
-   --  if no instance is passed
+   function Get_Data (Data : Callback_Data'Class; N : Positive)
+      return GNATCOLL.Projects.Project_Type;
+   --  Retrieve some project information in Instance
 
-   function Create_File
-     (Script : access Scripting_Language_Record'Class;
-      File   : GNATCOLL.VFS.Virtual_File) return Class_Instance;
-   --  Return a new File
+   function Create_Project
+     (Script  : access Scripting_Language_Record'Class;
+      Project : GNATCOLL.Projects.Project_Type) return Class_Instance;
+   --  Return a new project
 
-   function Get_File_Class (Data : Callback_Data'Class) return Class_Type;
-   --  Return Class_Type from File class
-
-end GNATCOLL.Scripts.Files;
+end GNATCOLL.Scripts.Projects;

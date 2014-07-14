@@ -25,6 +25,8 @@ with GNATCOLL.Projects;       use GNATCOLL.Projects;
 with GNATCOLL.VFS;            use GNATCOLL.VFS;
 with GNATCOLL.VFS_Utils;      use GNATCOLL.VFS_Utils;
 
+with GNATCOLL.Scripts.Projects;
+
 package body GNATCOLL.Scripts.Files is
 
    type File_Properties_Record is new Instance_Property_Record with record
@@ -202,12 +204,10 @@ package body GNATCOLL.Scripts.Files is
             Project := Repo.Project_Tree.Root_Project;
          end if;
 
-         Set_Error_Msg (Data, "Project not implemented yet");
-      --  This will be fixed on moving GPS.Scripts.Projects to GNATCOLL
---         Set_Return_Value
---           (Data,
---            GNATCOLL.Scripts.Projects.Create_Project
---              (Get_Script (Data), Project));
+         Set_Return_Value
+           (Data,
+            GNATCOLL.Scripts.Projects.Create_Project
+              (Get_Script (Data), Project));
 
       end if;
    end File_Command_Handler;
@@ -242,12 +242,9 @@ package body GNATCOLL.Scripts.Files is
    -----------------------
 
    procedure Register_Commands
-     (Repo : access Scripts_Repository_Record'Class;
-      Tree : GNATCOLL.Projects.Project_Tree_Access)
+     (Repo : access Scripts_Repository_Record'Class)
    is
    begin
-      Repo.Project_Tree := Tree;
-
       Register_Command
         (Repo, Constructor_Method,
          Minimum_Args => 1,
@@ -268,13 +265,13 @@ package body GNATCOLL.Scripts.Files is
         (Repo, "other_file",
          Class        => Get_File_Class (Repo),
          Handler      => File_Command_Handler'Access);
-      --  This will be fixed on moving GPS.Scripts.Projects to GNATCOLL
---        Register_Command
---          (Repo, "project",
---           Minimum_Args => 0,
---           Maximum_Args => 1,
---           Class        => Get_File_Class (Repo),
---           Handler      => File_Command_Handler'Access);
+
+      Register_Command
+        (Repo, "project",
+         Minimum_Args => 0,
+         Maximum_Args => 1,
+         Class        => Get_File_Class (Repo),
+         Handler      => File_Command_Handler'Access);
    end Register_Commands;
 
    --------------
