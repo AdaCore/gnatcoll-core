@@ -25,7 +25,7 @@ project GnatColl is
                                         "gnatcoll-projects-aux.adb",
                                         "gnatcoll-scripts-projects.ads",
                                         "gnatcoll-scripts-projects.adb",
-                                        "gnatcoll-scripts-flies.ads",
+                                        "gnatcoll-scripts-files.ads",
                                         "gnatcoll-scripts-files.adb");
    end case;
 

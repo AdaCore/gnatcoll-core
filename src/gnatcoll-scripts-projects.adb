@@ -307,9 +307,12 @@ package body GNATCOLL.Scripts.Projects is
    -----------------------
 
    procedure Register_Commands
-     (Repo : access Scripts_Repository_Record'Class)
+     (Repo  : access Scripts_Repository_Record'Class;
+      Value : access Project_Tree_Retriever'Class)
    is
    begin
+      Set_Tree_Retrieved (Value);
+
       Register_Command
         (Repo, Constructor_Method,
          Minimum_Args => 1,
