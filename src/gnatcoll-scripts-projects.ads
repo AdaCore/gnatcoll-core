@@ -37,13 +37,10 @@ package GNATCOLL.Scripts.Projects is
    --  Get project tree from assigned project tree retriver pointer
 
    procedure Register_Commands
-     (Repo  : access Scripts_Repository_Record'Class;
-      Value : access Project_Tree_Retriever'Class);
+     (Repo  : not null access Scripts_Repository_Record'Class;
+      Value : not null access Project_Tree_Retriever'Class);
    --  Add script commands for Project class and an object to access project
    --  tree from scripting API.
-
-   procedure Set_Tree_Retrieved (Value : access Project_Tree_Retriever'Class);
-   --  Change project tree retriver global value
 
    --  Next subprogram could be useful to define new commands
 

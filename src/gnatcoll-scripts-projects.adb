@@ -24,6 +24,7 @@
 with Ada.Characters.Handling; use Ada.Characters.Handling;
 
 with GNAT.Strings;
+with GNAT.OS_Lib;             use GNAT.OS_Lib;
 
 with GNATCOLL.Projects;       use GNATCOLL.Projects;
 with GNATCOLL.VFS;            use GNATCOLL.VFS;
@@ -36,10 +37,13 @@ package body GNATCOLL.Scripts.Projects is
       Project : Project_Type;
    end record;
 
-   Project_Class_Name       : constant String := "Project";
+   Project_Class_Name : constant String := "Project";
 
-   Name_Cst       : aliased constant String := "name";
-   Recursive_Cst  : aliased constant String := "recursive";
+   Name_Cst           : aliased constant String := "name";
+   Recursive_Cst      : aliased constant String := "recursive";
+   Attribute_Cst      : aliased constant String := "attribute";
+   Package_Cst        : aliased constant String := "package";
+   Index_Cst          : aliased constant String := "index";
 
    Sources_Cmd_Parameters : constant GNATCOLL.Scripts.Cst_Argument_List :=
      (1 => Recursive_Cst'Access);
@@ -50,6 +54,10 @@ package body GNATCOLL.Scripts.Projects is
 
    Project_Cmd_Parameters   : constant Cst_Argument_List :=
                                 (1 => Name_Cst'Access);
+   Get_Attributes_Parameters : constant Cst_Argument_List :=
+     (1 => Attribute_Cst'Unchecked_Access,
+      2 => Package_Cst'Unchecked_Access,
+      3 => Index_Cst'Unchecked_Access);
 
    type Project_Tree_Retriever_Access is
      access all Project_Tree_Retriever'Class;
@@ -202,6 +210,67 @@ package body GNATCOLL.Scripts.Projects is
             end loop;
          end;
 
+      elsif Command = "get_attribute_as_list" then
+         Name_Parameters (Data, Get_Attributes_Parameters);
+         declare
+            Project : constant Project_Type := Get_Data (Data, 1);
+            Attr    : constant String := Nth_Arg (Data, 2);
+            Pkg     : constant String := Nth_Arg (Data, 3, "");
+            Index   : constant String := Nth_Arg (Data, 4, "");
+            List    : String_List_Access := Project.Attribute_Value
+                    (Attribute_Pkg_List'(Build (Pkg, Attr)), Index);
+            Value   : constant String := Project.Attribute_Value
+                   (Attribute_Pkg_String'(Build (Pkg, Attr)),
+                   Default => "", Index => Index);
+         begin
+            Set_Return_Value_As_List (Data);
+
+            if List = null and then Value /= "" then
+               Set_Return_Value (Data, Value);
+            elsif List /= null then
+               for L in List'Range loop
+                  Set_Return_Value (Data, List (L).all);
+               end loop;
+            end if;
+
+            Free (List);
+         end;
+
+      elsif Command = "get_attribute_as_string" then
+         Name_Parameters (Data, Get_Attributes_Parameters);
+         declare
+            Project : constant Project_Type := Get_Data (Data, 1);
+            Attr    : constant String := Nth_Arg (Data, 2);
+            Pkg     : constant String := Nth_Arg (Data, 3, "");
+            Index   : constant String := Nth_Arg (Data, 4, "");
+            Value   : constant String := Project.Attribute_Value
+                   (Attribute_Pkg_String'(Build (Pkg, Attr)),
+                   Default => "", Index => Index);
+         begin
+            if Value = "" then
+               declare
+                  Result : Unbounded_String;
+                  List   : String_List_Access := Project.Attribute_Value
+                    (Attribute_Pkg_List'(Build (Pkg, Attr)), Index);
+               begin
+                  if List /= null then
+                     for L in List'Range loop
+                        Append (Result, List (L).all);
+
+                        if L /= List'Last then
+                           Append (Result, " ");
+                        end if;
+                     end loop;
+
+                     Free (List);
+                  end if;
+
+                  Set_Return_Value (Data, To_String (Result));
+               end;
+            else
+               Set_Return_Value (Data, Value);
+            end if;
+         end;
       end if;
    end Project_Command_Handler;
 
@@ -307,11 +376,11 @@ package body GNATCOLL.Scripts.Projects is
    -----------------------
 
    procedure Register_Commands
-     (Repo  : access Scripts_Repository_Record'Class;
-      Value : access Project_Tree_Retriever'Class)
+     (Repo  : not null access Scripts_Repository_Record'Class;
+      Value : not null access Project_Tree_Retriever'Class)
    is
    begin
-      Set_Tree_Retrieved (Value);
+      Retriever := Project_Tree_Retriever_Access (Value);
 
       Register_Command
         (Repo, Constructor_Method,
@@ -341,6 +410,18 @@ package body GNATCOLL.Scripts.Projects is
          Class        => Get_Project_Class (Repo),
          Minimum_Args => 0,
          Maximum_Args => 1,
+         Handler      => Project_Command_Handler'Access);
+      Register_Command
+        (Repo, "get_attribute_as_string",
+         Minimum_Args => 1,
+         Maximum_Args => 3,
+         Class        => Get_Project_Class (Repo),
+         Handler      => Project_Command_Handler'Access);
+      Register_Command
+        (Repo, "get_attribute_as_list",
+         Minimum_Args => 1,
+         Maximum_Args => 3,
+         Class        => Get_Project_Class (Repo),
          Handler      => Project_Command_Handler'Access);
 
       Register_Command
@@ -389,16 +470,5 @@ package body GNATCOLL.Scripts.Projects is
         (Instance, Project_Class_Name,
          Project_Properties_Record'(Project => Project));
    end Set_Data;
-
-   ------------------------
-   -- Set_Tree_Retrieved --
-   ------------------------
-
-   procedure Set_Tree_Retrieved
-     (Value : access Project_Tree_Retriever'Class)
-   is
-   begin
-      Retriever := Project_Tree_Retriever_Access (Value);
-   end Set_Tree_Retrieved;
 
 end GNATCOLL.Scripts.Projects;
