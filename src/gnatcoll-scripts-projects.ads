@@ -25,15 +25,28 @@ with GNATCOLL.Projects;
 
 package GNATCOLL.Scripts.Projects is
 
+   type Project_Tree_Retriever is interface;
+   --  This type provides access to project tree for scripting API
+
+   not overriding function Get_Project_Tree
+     (Self : Project_Tree_Retriever)
+      return GNATCOLL.Projects.Project_Tree_Access is abstract;
+   --  Get current project tree
+
+   procedure Set_Tree_Retrieved (Value : access Project_Tree_Retriever'Class);
+   --  Assign project tree retriver pointer
+
+   function Project_Tree return GNATCOLL.Projects.Project_Tree_Access;
+   --  Get project tree from assigned project tree retriver pointer
+
    procedure Register_Commands
-     (Kernel : access Scripts_Repository_Record'Class;
-      Tree   : GNATCOLL.Projects.Project_Tree_Access);
+     (Repo : access Scripts_Repository_Record'Class);
    --  Add script commands for Project class.
 
    --  Next subprogram could be useful to define new commands
 
    function Get_Project_Class
-     (Kernel : access Scripts_Repository_Record'Class)
+     (Repo : access Scripts_Repository_Record'Class)
       return Class_Type;
    --  Return the class to use for projects. This encapsulates a Project_Type
 

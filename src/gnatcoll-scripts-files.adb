@@ -21,11 +21,11 @@
 --                                                                          --
 ------------------------------------------------------------------------------
 
-with GNATCOLL.Projects;       use GNATCOLL.Projects;
+with GNATCOLL.Projects;
 with GNATCOLL.VFS;            use GNATCOLL.VFS;
 with GNATCOLL.VFS_Utils;      use GNATCOLL.VFS_Utils;
 
-with GNATCOLL.Scripts.Projects;
+with GNATCOLL.Scripts.Projects; use GNATCOLL.Scripts.Projects;
 
 package body GNATCOLL.Scripts.Files is
 
@@ -104,9 +104,11 @@ package body GNATCOLL.Scripts.Files is
    procedure File_Command_Handler
      (Data : in out Callback_Data'Class; Command : String)
    is
-      Repo   : constant Scripts_Repository := Get_Repository (Data);
+      use type GNATCOLL.Projects.Project_Type;
+      use type GNATCOLL.Projects.Project_Tree_Access;
+
       Info    : Virtual_File;
-      Project : Project_Type;
+      Project : GNATCOLL.Projects.Project_Type;
    begin
       if Command = Constructor_Method then
          Name_Parameters (Data, File_Cmd_Parameters);
@@ -143,10 +145,10 @@ package body GNATCOLL.Scripts.Files is
                end;
             end if;
 
-            if Repo.Project_Tree /= null then
+            if Project_Tree /= null then
                declare
                   File : constant Virtual_File :=
-                    Repo.Project_Tree.Create
+                    Project_Tree.Create
                       (Base_Name (Create_From_Base (Name)));
                begin
                   if File /= No_File then
@@ -170,7 +172,7 @@ package body GNATCOLL.Scripts.Files is
          Set_Return_Value (Data, Dir_Name (Info));
 
       elsif Command = "other_file" then
-         if Repo.Project_Tree = null then
+         if Project_Tree = null then
             Set_Error_Msg (Data, "Project not set");
             return;
          end if;
@@ -179,10 +181,10 @@ package body GNATCOLL.Scripts.Files is
          Set_Return_Value
            (Data,
             Create_File (Get_Script (Data),
-                         Repo.Project_Tree.Other_File (Info)));
+                         Project_Tree.Other_File (Info)));
 
       elsif Command = "project" then
-         if Repo.Project_Tree = null then
+         if Project_Tree = null then
             Set_Error_Msg (Data, "Project not set");
             return;
          end if;
@@ -193,15 +195,17 @@ package body GNATCOLL.Scripts.Files is
          --  Return the first possible project, we have nothing else to base
          --  our guess on.
          declare
-            F_Info : constant File_Info'Class :=
-              File_Info'Class
-                (Repo.Project_Tree.Info_Set (Info).First_Element);
+            F_Info : constant GNATCOLL.Projects.File_Info'Class :=
+              GNATCOLL.Projects.File_Info'Class
+                (Project_Tree.Info_Set (Info).First_Element);
          begin
             Project := F_Info.Project;
          end;
 
-         if Project = No_Project and then Nth_Arg (Data, 2, True) then
-            Project := Repo.Project_Tree.Root_Project;
+         if Project = GNATCOLL.Projects.No_Project
+           and then Nth_Arg (Data, 2, True)
+         then
+            Project := Project_Tree.Root_Project;
          end if;
 
          Set_Return_Value

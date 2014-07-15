@@ -44,7 +44,6 @@ with GNATCOLL.Utils;         use GNATCOLL.Utils;
 with GNATCOLL.VFS;           use GNATCOLL.VFS;
 with GNATCOLL.Any_Types;     use GNATCOLL.Any_Types;
 
-private with GNATCOLL.Projects;
 private with Interfaces;
 
 package GNATCOLL.Scripts is
@@ -1513,7 +1512,6 @@ private
       Classes              : Classes_Hash.Map;
       Console_Class        : Class_Type := No_Class;
       Logger_Class         : Class_Type := No_Class;
-      Project_Tree         : GNATCOLL.Projects.Project_Tree_Access;
    end record;
 
 end GNATCOLL.Scripts;

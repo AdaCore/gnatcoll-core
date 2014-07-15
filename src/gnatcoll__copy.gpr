@@ -22,7 +22,11 @@ project GnatColl is
                                         "gnatcoll-projects-normalize.ads",
                                         "gnatcoll-projects-normalize.adb",
                                         "gnatcoll-projects-aux.ads",
-                                        "gnatcoll-projects-aux.adb");
+                                        "gnatcoll-projects-aux.adb",
+                                        "gnatcoll-scripts-projects.ads",
+                                        "gnatcoll-scripts-projects.adb",
+                                        "gnatcoll-scripts-flies.ads",
+                                        "gnatcoll-scripts-files.adb");
    end case;
 
    for Languages use ("Ada", "C");
@@ -52,14 +56,14 @@ project GnatColl is
             for Implementation ("GNATCOLL.Mmap.System")
               use "gnatcoll-mmap-system__unix.adb";
             for Implementation ("GNATCOLL.IO.Native.Codec")
-	      use "gnatcoll-io-native-codec__unix.adb";
+              use "gnatcoll-io-native-codec__unix.adb";
          when "Windows_NT" =>
             for Specification  ("GNATCOLL.Mmap.System")
               use "gnatcoll-mmap-system__win32.ads";
             for Implementation ("GNATCOLL.Mmap.System")
               use "gnatcoll-mmap-system__win32.adb";
             for Implementation ("GNATCOLL.IO.Native.Codec")
-	      use "gnatcoll-io-native-codec__win32.adb";
+              use "gnatcoll-io-native-codec__win32.adb";
       end case;
 
       case GnatColl_Shared.Projects is

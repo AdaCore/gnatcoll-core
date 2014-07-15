@@ -51,6 +51,11 @@ package body GNATCOLL.Scripts.Projects is
    Project_Cmd_Parameters   : constant Cst_Argument_List :=
                                 (1 => Name_Cst'Access);
 
+   type Project_Tree_Retriever_Access is
+     access all Project_Tree_Retriever'Class;
+
+   Retriever : Project_Tree_Retriever_Access;
+
    procedure Project_Command_Handler
      (Data : in out Callback_Data'Class; Command : String);
 
@@ -112,10 +117,10 @@ package body GNATCOLL.Scripts.Projects is
    -----------------------
 
    function Get_Project_Class
-     (Kernel : access Scripts_Repository_Record'Class)
+     (Repo : access Scripts_Repository_Record'Class)
       return Class_Type is
    begin
-      return New_Class (Kernel, Project_Class_Name);
+      return New_Class (Repo, Project_Class_Name);
    end Get_Project_Class;
 
    -----------------------------
@@ -125,26 +130,26 @@ package body GNATCOLL.Scripts.Projects is
    procedure Project_Command_Handler
      (Data : in out Callback_Data'Class; Command : String)
    is
-      Kernel   : constant Scripts_Repository := Get_Repository (Data);
+      Repo   : constant Scripts_Repository := Get_Repository (Data);
       Instance : Class_Instance;
       Project  : Project_Type;
    begin
       if Command = Constructor_Method then
          Name_Parameters (Data, Project_Cmd_Parameters);
-         Project  := Kernel.Project_Tree.Project_From_Name
+         Project  := Project_Tree.Project_From_Name
            (Nth_Arg (Data, 2));
 
          if Project = No_Project then
             Set_Error_Msg (Data, "No such project: " & Nth_Arg (Data, 2));
          else
-            Instance := Nth_Arg (Data, 1, Get_Project_Class (Kernel));
+            Instance := Nth_Arg (Data, 1, Get_Project_Class (Repo));
             Set_Data (Instance, Project);
          end if;
 
       elsif Command = "root" then
          Set_Return_Value
            (Data, Create_Project (Get_Script (Data),
-                                  Kernel.Project_Tree.Root_Project));
+                                  Project_Tree.Root_Project));
 
       elsif Command = "name" then
          Project := Get_Data (Data, 1);
@@ -284,75 +289,85 @@ package body GNATCOLL.Scripts.Projects is
       end if;
    end Project_Queries;
 
+   ------------------
+   -- Project_Tree --
+   ------------------
+
+   function Project_Tree return GNATCOLL.Projects.Project_Tree_Access is
+   begin
+      if Retriever = null then
+         return null;
+      else
+         return Retriever.Get_Project_Tree;
+      end if;
+   end Project_Tree;
+
    -----------------------
    -- Register_Commands --
    -----------------------
 
    procedure Register_Commands
-     (Kernel : access Scripts_Repository_Record'Class;
-      Tree   : GNATCOLL.Projects.Project_Tree_Access)
+     (Repo : access Scripts_Repository_Record'Class)
    is
    begin
-      Kernel.Project_Tree := Tree;
-
       Register_Command
-        (Kernel, Constructor_Method,
+        (Repo, Constructor_Method,
          Minimum_Args => 1,
          Maximum_Args => 1,
-         Class        => Get_Project_Class (Kernel),
+         Class        => Get_Project_Class (Repo),
          Handler      => Project_Command_Handler'Access);
       Register_Command
-        (Kernel, "root",
-         Class         => Get_Project_Class (Kernel),
+        (Repo, "root",
+         Class         => Get_Project_Class (Repo),
          Static_Method => True,
          Handler       => Project_Command_Handler'Access);
       Register_Command
-        (Kernel, "name",
-         Class        => Get_Project_Class (Kernel),
+        (Repo, "name",
+         Class        => Get_Project_Class (Repo),
          Handler      => Project_Command_Handler'Access);
       Register_Command
-        (Kernel, "file",
-         Class        => Get_Project_Class (Kernel),
+        (Repo, "file",
+         Class        => Get_Project_Class (Repo),
          Handler      => Project_Command_Handler'Access);
       Register_Command
-        (Kernel, "ancestor_deps",
-         Class        => Get_Project_Class (Kernel),
+        (Repo, "ancestor_deps",
+         Class        => Get_Project_Class (Repo),
          Handler      => Project_Command_Handler'Access);
       Register_Command
-        (Kernel, "dependencies",
-         Class        => Get_Project_Class (Kernel),
+        (Repo, "dependencies",
+         Class        => Get_Project_Class (Repo),
          Minimum_Args => 0,
          Maximum_Args => 1,
          Handler      => Project_Command_Handler'Access);
 
       Register_Command
-        (Kernel, "sources",
+        (Repo, "sources",
          Maximum_Args => Sources_Cmd_Parameters'Length,
-         Class        => Get_Project_Class (Kernel),
+         Class        => Get_Project_Class (Repo),
          Handler      => Project_Queries'Access);
       Register_Command
-        (Kernel, "source_dirs",
+        (Repo, "source_dirs",
          Minimum_Args => Source_Dirs_Cmd_Parameters'Length - 1,
          Maximum_Args => Source_Dirs_Cmd_Parameters'Length,
-         Class        => Get_Project_Class (Kernel),
+         Class        => Get_Project_Class (Repo),
          Handler      => Project_Queries'Access);
       Register_Command
-        (Kernel, "get_executable_name",
+        (Repo, "get_executable_name",
          Minimum_Args => 1,
          Maximum_Args => 1,
-         Class        => Get_Project_Class (Kernel),
+         Class        => Get_Project_Class (Repo),
          Handler      => Project_Queries'Access);
       Register_Command
-        (Kernel, "languages",
+        (Repo, "languages",
          Minimum_Args => 0,
          Maximum_Args => 1,
-         Class        => Get_Project_Class (Kernel),
+         Class        => Get_Project_Class (Repo),
          Handler      => Project_Queries'Access);
       Register_Command
-        (Kernel, "object_dirs",
+        (Repo, "object_dirs",
          Minimum_Args => Source_Dirs_Cmd_Parameters'Length - 1,
          Maximum_Args => Source_Dirs_Cmd_Parameters'Length,
-         Class        => Get_Project_Class (Kernel),
+         Class        => Get_Project_Class (Repo),
          Handler      => Project_Queries'Access);
    end Register_Commands;
 
@@ -371,5 +386,16 @@ package body GNATCOLL.Scripts.Projects is
         (Instance, Project_Class_Name,
          Project_Properties_Record'(Project => Project));
    end Set_Data;
+
+   ------------------------
+   -- Set_Tree_Retrieved --
+   ------------------------
+
+   procedure Set_Tree_Retrieved
+     (Value : access Project_Tree_Retriever'Class)
+   is
+   begin
+      Retriever := Project_Tree_Retriever_Access (Value);
+   end Set_Tree_Retrieved;
 
 end GNATCOLL.Scripts.Projects;
