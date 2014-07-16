@@ -25,7 +25,7 @@ with GNATCOLL.Projects;
 
 package GNATCOLL.Scripts.Projects is
 
-   type Project_Tree_Retriever is interface;
+   type Project_Tree_Retriever is abstract tagged null record;
    --  This type provides access to project tree for scripting API
 
    not overriding function Get_Project_Tree
