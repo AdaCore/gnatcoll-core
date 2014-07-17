@@ -196,7 +196,7 @@ project Lib is
 end Lib;
 EOF
 
-      if AC_TRY_COMMAND([gnatmake -c -q -Pconftest/lib]); then
+      if AC_TRY_COMMAND([gprbuild -c -q -Pconftest/lib]); then
          GNAT_BUILDS_SHARED=yes
       else
          GNAT_BUILDS_SHARED=no

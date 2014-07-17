@@ -3592,7 +3592,7 @@ project Lib is
 end Lib;
 EOF
 
-      if { ac_try='gnatmake -c -q -Pconftest/lib'
+      if { ac_try='gprbuild -c -q -Pconftest/lib'
   { { eval echo "\"\$as_me\":${as_lineno-$LINENO}: \"$ac_try\""; } >&5
   (eval $ac_try) 2>&5
   ac_status=$?
