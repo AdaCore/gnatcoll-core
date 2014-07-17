@@ -5282,7 +5282,7 @@ package body GNATCOLL.Projects is
       Path : Virtual_File) return Project_Type
    is
       VF : constant GNATCOLL.VFS.Virtual_File :=
-        Create (Normalize_Pathname (Path.Full_Name));
+        Create (Normalize_Pathname (Path.Full_Name, Resolve_Links => False));
 
       P_Cursor     : Project_Htables.Cursor;
    begin
