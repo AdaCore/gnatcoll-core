@@ -5273,9 +5273,9 @@ package body GNATCOLL.Projects is
       return Project_Type (Project_From_Name (Self.Data, Get_String (Name)));
    end Project_From_Name;
 
-   -------------------------
-   --  Project_From_Path  --
-   -------------------------
+   -----------------------
+   -- Project_From_Path --
+   -----------------------
 
    function Project_From_Path
      (Self : Project_Tree'Class;
@@ -5292,9 +5292,9 @@ package body GNATCOLL.Projects is
       return Element (P_Cursor);
    end Project_From_Path;
 
-   -------------------------
-   --  Project_From_Path  --
-   -------------------------
+   -----------------------
+   -- Project_From_Path --
+   -----------------------
 
    function Project_From_Path
      (Tree    : Project_Tree_Data_Access;
