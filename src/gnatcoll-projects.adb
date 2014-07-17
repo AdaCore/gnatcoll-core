@@ -5281,9 +5281,12 @@ package body GNATCOLL.Projects is
      (Self : Project_Tree'Class;
       Path : Virtual_File) return Project_Type
    is
+      VF : constant GNATCOLL.VFS.Virtual_File :=
+        Create (Normalize_Pathname (Path.Full_Name));
+
       P_Cursor     : Project_Htables.Cursor;
    begin
-      P_Cursor := Self.Data.Projects.Find (Path);
+      P_Cursor := Self.Data.Projects.Find (VF);
 
       if P_Cursor = Project_Htables.No_Element then
          return No_Project;
