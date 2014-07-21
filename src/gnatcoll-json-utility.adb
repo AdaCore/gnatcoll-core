@@ -21,13 +21,11 @@
 --                                                                          --
 ------------------------------------------------------------------------------
 
-with Ada.Integer_Text_IO;
-with Ada.Strings.Fixed;
-with Ada.Strings.Wide_Unbounded;  use Ada.Strings.Wide_Unbounded;
+with Ada.Characters.Wide_Wide_Latin_1; use Ada.Characters.Wide_Wide_Latin_1;
 
 pragma Warnings (Off, "*internal GNAT unit*");
 with Ada.Strings.Unbounded.Aux;
-with System.Unsigned_Types;       use System.Unsigned_Types;
+with System.Unsigned_Types;            use System.Unsigned_Types;
 pragma Warnings (On, "*internal GNAT unit*");
 
 with GNAT.Encode_UTF8_String;
@@ -37,25 +35,48 @@ package body GNATCOLL.JSON.Utility is
 
    use Ada.Strings.Unbounded;
 
+   To_Hex : constant array (Integer range 0 .. 15) of Character :=
+     "0123456789ABCDEF";
+
    --------------------------------
    -- Escape_Non_Print_Character --
    --------------------------------
 
-   function Escape_Non_Print_Character (C : Wide_Character) return String is
-      Int : constant Integer := Wide_Character'Pos (C);
-      Str : String (1 .. 8);
-      First, Last : Natural;
+   function Escape_Non_Print_Character
+     (C : Wide_Wide_Character) return String
+   is
+      Code  : constant Integer := Wide_Wide_Character'Pos (C);
+      Buf   : String (1 .. 12);
+      Last  : Natural := Buf'First - 1;
+
+      procedure Append_Escaped (Code : Integer);
+
+      --------------------
+      -- Append_Escaped --
+      --------------------
+
+      procedure Append_Escaped (Code : Integer) is
+      begin
+         Last := Last + 6;
+         Buf (Last - 5 .. Last - 4) := "\u";
+         Buf (Last - 3) := To_Hex ((Code / 16#1000#) mod 16#10#);
+         Buf (Last - 2) := To_Hex ((Code / 16#100#) mod 16#10#);
+         Buf (Last - 1) := To_Hex ((Code / 16#10#) mod 16#10#);
+         Buf (Last) := To_Hex (Code mod 16#10#);
+      end Append_Escaped;
 
    begin
-      Ada.Integer_Text_IO.Put (Str, Int, 16);
-      First := Ada.Strings.Fixed.Index (Str, "16#") + 3;
-      Last := Ada.Strings.Fixed.Index (Str, "#", Ada.Strings.Backward) - 1;
+      if Code <= 16#FFFF# then
+         Append_Escaped (Code);
 
-      --  Make sure we have 4 characters, prefixed with '0's
-      Str (Last - 3 .. First - 1) := (others => '0');
-      First := Last - 3;
+      else
+         --  Represent character as surrogate pair
 
-      return "\u" & Str (First .. Last);
+         Append_Escaped (16#D800# + ((Code - 16#1_0000#) / 16#400#));
+         Append_Escaped (16#DC00# + Code mod 16#400#);
+      end if;
+
+      return Buf (Buf'First .. Last);
    end Escape_Non_Print_Character;
 
    -------------------
@@ -70,50 +91,43 @@ package body GNATCOLL.JSON.Utility is
       Str         : Big_String_Access;
       Text_Length : Natural;
       Ret         : Unbounded_String;
-      WS          : Unbounded_Wide_String;
       Low         : Natural;
-      W_Chr       : Wide_Character;
+      W_Chr       : Wide_Wide_Character;
 
    begin
       Get_String (Text, Str, Text_Length);
 
-      --  First decode the UTF-8 String
-
+      Append (Ret, '"');
       Low := 1;
+
       while Low <= Text_Length loop
          --  UTF-8 sequence is maximum 4 characters long according to RFC3629
 
-         GNAT.Decode_UTF8_String.Decode_Wide_Character
+         GNAT.Decode_UTF8_String.Decode_Wide_Wide_Character
            (Str (Low .. Natural'Min (Text_Length, Low + 3)), Low, W_Chr);
-         Append (WS, W_Chr);
-      end loop;
-
-      Append (Ret, '"');
-
-      for J in 1 .. Length (WS) loop
-         W_Chr := Element (WS, J);
 
          case W_Chr is
             when '"' =>
                Append (Ret, "\""");
             when '\' =>
                Append (Ret, "\\");
-            when Wide_Character'Val (Character'Pos (ASCII.BS)) =>
+            when BS =>
                Append (Ret, "\b");
-            when Wide_Character'Val (Character'Pos (ASCII.FF)) =>
+            when FF =>
                Append (Ret, "\f");
-            when Wide_Character'Val (Character'Pos (ASCII.LF)) =>
+            when LF =>
                Append (Ret, "\n");
-            when Wide_Character'Val (Character'Pos (ASCII.CR)) =>
+            when CR =>
                Append (Ret, "\r");
-            when Wide_Character'Val (Character'Pos (ASCII.HT)) =>
+            when HT =>
                Append (Ret, "\t");
             when others =>
-               if Wide_Character'Pos (W_Chr) >= 16#80# then
+               if Wide_Wide_Character'Pos (W_Chr) >= 16#80# then
                   Append (Ret, Escape_Non_Print_Character (W_Chr));
                else
                   Append
-                    (Ret, "" & Character'Val (Wide_Character'Pos (W_Chr)));
+                    (Ret,
+                     "" & Character'Val (Wide_Wide_Character'Pos (W_Chr)));
                end if;
          end case;
       end loop;

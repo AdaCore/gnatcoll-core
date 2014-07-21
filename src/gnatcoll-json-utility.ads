@@ -25,7 +25,7 @@ private package GNATCOLL.JSON.Utility is
 
    JsonMimeType           : constant String := "application/json";
 
-   function Escape_Non_Print_Character (C : Wide_Character) return String;
+   function Escape_Non_Print_Character (C : Wide_Wide_Character) return String;
 
    function Escape_String
      (Text : UTF8_Unbounded_String)
