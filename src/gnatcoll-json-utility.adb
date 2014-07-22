@@ -21,11 +21,13 @@
 --                                                                          --
 ------------------------------------------------------------------------------
 
+pragma Ada_2012;
+
 with Ada.Characters.Wide_Wide_Latin_1; use Ada.Characters.Wide_Wide_Latin_1;
+with Interfaces;                       use Interfaces;
 
 pragma Warnings (Off, "*internal GNAT unit*");
 with Ada.Strings.Unbounded.Aux;
-with System.Unsigned_Types;            use System.Unsigned_Types;
 pragma Warnings (On, "*internal GNAT unit*");
 
 with GNAT.Encode_UTF8_String;
@@ -35,7 +37,7 @@ package body GNATCOLL.JSON.Utility is
 
    use Ada.Strings.Unbounded;
 
-   To_Hex : constant array (Integer range 0 .. 15) of Character :=
+   To_Hex : constant array (Unsigned_16 range 0 .. 15) of Character :=
      "0123456789ABCDEF";
 
    --------------------------------
@@ -45,17 +47,17 @@ package body GNATCOLL.JSON.Utility is
    function Escape_Non_Print_Character
      (C : Wide_Wide_Character) return String
    is
-      Code  : constant Integer := Wide_Wide_Character'Pos (C);
+      Code  : constant Unsigned_32 := Wide_Wide_Character'Pos (C);
       Buf   : String (1 .. 12);
       Last  : Natural := Buf'First - 1;
 
-      procedure Append_Escaped (Code : Integer);
+      procedure Append_Escaped (Code : Unsigned_16);
 
       --------------------
       -- Append_Escaped --
       --------------------
 
-      procedure Append_Escaped (Code : Integer) is
+      procedure Append_Escaped (Code : Unsigned_16) is
       begin
          Last := Last + 6;
          Buf (Last - 5 .. Last - 4) := "\u";
@@ -67,13 +69,14 @@ package body GNATCOLL.JSON.Utility is
 
    begin
       if Code <= 16#FFFF# then
-         Append_Escaped (Code);
+         Append_Escaped (Unsigned_16 (Code));
 
       else
          --  Represent character as surrogate pair
 
-         Append_Escaped (16#D800# + ((Code - 16#1_0000#) / 16#400#));
-         Append_Escaped (16#DC00# + Code mod 16#400#);
+         Append_Escaped
+           (16#D800# + Unsigned_16 ((Code - 16#1_0000#) / 16#400#));
+         Append_Escaped (16#DC00# + Unsigned_16 (Code mod 16#400#));
       end if;
 
       return Buf (Buf'First .. Last);
@@ -186,14 +189,36 @@ package body GNATCOLL.JSON.Utility is
             case Element (Text, Idx) is
                when 'u' | 'U' =>
                   declare
-                     I : constant Short_Unsigned :=
-                           Short_Unsigned'Value
-                             ("16#" & Slice (Text, Idx + 1, Idx + 4) & "#");
+                     Lead : constant Unsigned_16 :=
+                       Unsigned_16'Value
+                         ("16#" & Slice (Text, Idx + 1, Idx + 4) & "#");
+                     Trail : Unsigned_16;
+                     Char  : Wide_Wide_Character;
+
                   begin
+                     Char := Wide_Wide_Character'Val (Lead);
+
+                     --  If character is high surrogate and next character is
+                     --  low surrogate then them represent one non-BMP
+                     --  character.
+
+                     if Lead in 16#D800# .. 16#DBFF#
+                       and then Element (Text, Idx + 5) = '\'
+                       and then Element (Text, Idx + 6) in 'u' | 'U'
+                     then
+                        Trail := Unsigned_16'Value
+                          ("16#" & Slice (Text, Idx + 7, Idx + 10) & '#');
+                        Char := Wide_Wide_Character'Val
+                          (16#1_0000#
+                           + Unsigned_32 (Lead and 16#03FF#) * 16#0400#
+                           + Unsigned_32 (Trail and 16#03FF#));
+                        Idx := Idx + 6;
+                     end if;
+
                      Append
                        (Unb,
-                        GNAT.Encode_UTF8_String.Encode_Wide_String
-                          ((1 => Wide_Character'Val (I))));
+                        GNAT.Encode_UTF8_String.Encode_Wide_Wide_String
+                          ((1 => Char)));
                      Idx := Idx + 4;
                   end;
 
@@ -220,8 +245,7 @@ package body GNATCOLL.JSON.Utility is
             end case;
 
          else
-            Append
-              (Unb, Element (Text, Idx));
+            Append (Unb, Element (Text, Idx));
          end if;
 
          Idx := Idx + 1;
