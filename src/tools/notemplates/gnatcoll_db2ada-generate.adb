@@ -21,6 +21,8 @@
 --                                                                          --
 ------------------------------------------------------------------------------
 
+pragma Ada_2012;
+
 with Ada.Containers;          use Ada.Containers;
 with Ada.Containers.Indefinite_Ordered_Sets;
 with Ada.Strings.Fixed;       use Ada.Strings.Fixed;
@@ -455,6 +457,9 @@ begin
          C      : Enumeration_Lists.Cursor := First (Enumerations);
          Enum   : Dumped_Enums;
          C2, C3 : String_Lists.Cursor;
+
+         Max_Name_Len : Integer;
+
       begin
          while Has_Element (C) loop
             Enum := Element (C);
@@ -462,20 +467,28 @@ begin
             New_Line (Spec_File);
             Put_Line (Spec_File, "   subtype " & Capitalize (Enum.Type_Name)
                       & " is " & Capitalize (Enum.Base_Type) & ";");
+
+            Max_Name_Len := 0;
+            for N of Enum.Names loop
+               if N'Length > Max_Name_Len then
+                  Max_Name_Len := N'Length;
+               end if;
+            end loop;
+
             C2 := First (Enum.Names);
             C3 := First (Enum.Values);
             while Has_Element (C2) loop
-               if Enum.Base_Type = "String" then
-                  Put_Line (Spec_File, "   " & Capitalize (Element (C2))
-                            & " : constant "
-                            & Capitalize (Enum.Type_Name)
-                            & " := """ & Element (C3) & """;");
-               else
-                  Put_Line (Spec_File, "   " & Capitalize (Element (C2))
-                            & " : constant "
-                            & Capitalize (Enum.Type_Name)
-                            & " := " & Element (C3) & ";");
-               end if;
+               Put_Line (Spec_File,
+                 "   "
+                 & Head (Capitalize (Element (C2)), Max_Name_Len)
+                 & " : constant "
+                 & Capitalize (Enum.Type_Name)
+                 & " := "
+                 & (if Enum.Base_Type = "String"
+                    then """" & Element (C3) & """"
+                    else Element (C3))
+                 & ";");
+
                Next (C2);
                Next (C3);
             end loop;

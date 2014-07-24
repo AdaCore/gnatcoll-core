@@ -613,6 +613,7 @@ procedure GNATCOLL_Db2Ada is
 
       Enum : Dumped_Enums;
       R    : GNATCOLL.SQL.Exec.Forward_Cursor;
+
    begin
       Enum.Table := To_Unbounded_String (Table);
       Enum.Id    := To_Unbounded_String (Id);
@@ -630,7 +631,7 @@ procedure GNATCOLL_Db2Ada is
            (DB,
             "SELECT """ & Id
             & """, """ & Name & """ FROM """
-            & Table & """ ORDER BY " & Name);
+            & Table & """ ORDER BY lower(" & Name & ")");
          while Has_Row (R) loop
             Append (Enum.Values, Value (R, 0));
             Append (Enum.Names,  Quote (Prefix & '_' & Value (R, 1)));
