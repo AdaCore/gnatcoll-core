@@ -614,9 +614,10 @@ package body GNATCOLL.JSON is
 
                while Has_Element (J) loop
                   Do_Indent (Indent + 1);
-                  Append (Ret, """");
-                  Append (Ret, Element (J).Key);
-                  Append (Ret, """: ");
+                  Append
+                    (Ret,
+                     GNATCOLL.JSON.Utility.Escape_String (Element (J).Key));
+                  Append (Ret, ": ");
                   Write (Element (J).Val, Compact, Indent + 1, Ret);
 
                   Next (J);
