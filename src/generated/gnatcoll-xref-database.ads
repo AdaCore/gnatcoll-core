@@ -6,28 +6,28 @@ package GNATCOLL.Xref.Database is
    pragma Elaborate_Body;
 
    subtype F2f_Id is Integer;
-   F2f_Has_Ali : constant F2f_Id := 1;
-   F2f_Withs : constant F2f_Id := 0;
+   F2f_Has_Ali  : constant F2f_Id := 1;
+   F2f_Withs    : constant F2f_Id := 0;
 
    subtype E2e_Id is Integer;
-   E2e_Access_Parameter : constant E2e_Id := 15;
-   E2e_Component_Type : constant E2e_Id := 9;
-   E2e_From_Enumeration : constant E2e_Id := 10;
-   E2e_Has_Discriminant : constant E2e_Id := 16;
-   E2e_Has_Index : constant E2e_Id := 7;
-   E2e_Has_Primitive : constant E2e_Id := 4;
-   E2e_In_Out_Parameter : constant E2e_Id := 14;
-   E2e_In_Parameter : constant E2e_Id := 12;
-   E2e_Instance_Of : constant E2e_Id := 5;
-   E2e_Is_Formal_Of : constant E2e_Id := 17;
-   E2e_Is_Param_Of : constant E2e_Id := 6;
-   E2e_Of_Type : constant E2e_Id := 11;
-   E2e_Out_Parameter : constant E2e_Id := 13;
-   E2e_Overrides : constant E2e_Id := 8;
-   E2e_Parent_Package : constant E2e_Id := 18;
-   E2e_Parent_Type : constant E2e_Id := 1;
-   E2e_Pointed_Type : constant E2e_Id := 0;
-   E2e_Renames : constant E2e_Id := 3;
+   E2e_Access_Parameter  : constant E2e_Id := 15;
+   E2e_Component_Type    : constant E2e_Id := 9;
+   E2e_From_Enumeration  : constant E2e_Id := 10;
+   E2e_Has_Discriminant  : constant E2e_Id := 16;
+   E2e_Has_Index         : constant E2e_Id := 7;
+   E2e_Has_Primitive     : constant E2e_Id := 4;
+   E2e_In_Out_Parameter  : constant E2e_Id := 14;
+   E2e_In_Parameter      : constant E2e_Id := 12;
+   E2e_Instance_Of       : constant E2e_Id := 5;
+   E2e_Is_Formal_Of      : constant E2e_Id := 17;
+   E2e_Is_Param_Of       : constant E2e_Id := 6;
+   E2e_Of_Type           : constant E2e_Id := 11;
+   E2e_Out_Parameter     : constant E2e_Id := 13;
+   E2e_Overrides         : constant E2e_Id := 8;
+   E2e_Parent_Package    : constant E2e_Id := 18;
+   E2e_Parent_Type       : constant E2e_Id := 1;
+   E2e_Pointed_Type      : constant E2e_Id := 0;
+   E2e_Renames           : constant E2e_Id := 3;
 
    type T_Abstract_E2e (Instance : Cst_String_Access; Index : Integer)
       is abstract new SQL_Table (Ta_E2e, Instance, Index) with
