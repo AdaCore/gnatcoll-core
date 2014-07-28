@@ -43,6 +43,7 @@ package body GNATCOLL.Scripts.Projects is
    Recursive_Cst      : aliased constant String := "recursive";
    Attribute_Cst      : aliased constant String := "attribute";
    Package_Cst        : aliased constant String := "package";
+   Prefix_Cst         : aliased constant String := "prefix";
    Index_Cst          : aliased constant String := "index";
 
    Sources_Cmd_Parameters : constant GNATCOLL.Scripts.Cst_Argument_List :=
@@ -59,6 +60,9 @@ package body GNATCOLL.Scripts.Projects is
       2 => Package_Cst'Unchecked_Access,
       3 => Index_Cst'Unchecked_Access);
 
+   Scenar_Var_Parameters    : constant Cst_Argument_List :=
+                                (1 => Prefix_Cst'Access);
+
    type Project_Tree_Retriever_Access is
      access all Project_Tree_Retriever'Class;
 
@@ -72,6 +76,12 @@ package body GNATCOLL.Scripts.Projects is
 
    procedure Set_Data
      (Instance : Class_Instance; Project  : Project_Type);
+
+   function Scenario_Variables_Cmd_Line (Prefix : String) return String;
+   --  Return the command line to use to set up the scenario variables when
+   --  calling an external tool that handles project files.
+   --  For a Makefile, set Prefix to "", for gnatmake set prefix to "-X".
+   --  This function returns a concatenation of Prefix & "VAR=VALUE".
 
    --------------------
    -- Create_Project --
@@ -271,6 +281,47 @@ package body GNATCOLL.Scripts.Projects is
                Set_Return_Value (Data, Value);
             end if;
          end;
+
+      elsif Command = "scenario_variables" then
+         declare
+            Vars : constant Scenario_Variable_Array :=
+              Project_Tree.Scenario_Variables;
+         begin
+            for V in Vars'Range loop
+               Set_Return_Value (Data, Value (Vars (V)));
+               Set_Return_Value_Key
+                 (Data, External_Name (Vars (V)));
+            end loop;
+         end;
+
+      elsif Command = "scenario_variables_cmd_line" then
+         Name_Parameters (Data, Scenar_Var_Parameters);
+         declare
+            Prefix : constant String := Nth_Arg (Data, 1, "");
+         begin
+            Set_Return_Value (Data, Scenario_Variables_Cmd_Line (Prefix));
+         end;
+
+      elsif Command = "scenario_variables_values" then
+         declare
+            Tree : constant Project_Tree_Access := Project_Tree;
+            Vars : constant Scenario_Variable_Array := Tree.Scenario_Variables;
+         begin
+            for V in Vars'Range loop
+               declare
+                  Name   : constant String := External_Name (Vars (V));
+                  Values : String_List := Tree.Possible_Values_Of (Vars (V));
+               begin
+                  for Iter in Values'Range loop
+                     Set_Return_Value (Data, Values (Iter).all);
+                     Set_Return_Value_Key (Data, Name, True);
+                  end loop;
+
+                  Free (Values);
+               end;
+            end loop;
+         end;
+
       end if;
    end Project_Command_Handler;
 
@@ -423,6 +474,25 @@ package body GNATCOLL.Scripts.Projects is
          Maximum_Args => 3,
          Class        => Get_Project_Class (Repo),
          Handler      => Project_Command_Handler'Access);
+      Register_Command
+        (Repo, "scenario_variables",
+         Class         => Get_Project_Class (Repo),
+         Static_Method => True,
+         Handler       => Project_Command_Handler'Access);
+      Register_Command
+        (Repo, "scenario_variables_cmd_line",
+         Minimum_Args  => 0,
+         Maximum_Args  => 1,
+         Class         => Get_Project_Class (Repo),
+         Static_Method => True,
+         Handler       => Project_Command_Handler'Access);
+      Register_Command
+        (Repo, "scenario_variables_values",
+         Minimum_Args  => 0,
+         Maximum_Args  => 0,
+         Class         => Get_Project_Class (Repo),
+         Static_Method => True,
+         Handler       => Project_Command_Handler'Access);
 
       Register_Command
         (Repo, "sources",
@@ -454,6 +524,46 @@ package body GNATCOLL.Scripts.Projects is
          Class        => Get_Project_Class (Repo),
          Handler      => Project_Queries'Access);
    end Register_Commands;
+
+   ---------------------------------
+   -- Scenario_Variables_Cmd_Line --
+   ---------------------------------
+
+   function Scenario_Variables_Cmd_Line (Prefix : String) return String is
+      Scenario_Vars : constant Scenario_Variable_Array :=
+        Project_Tree.Scenario_Variables;
+
+      function Concat
+        (Current : String; Index : Natural; Set_Var : String) return String;
+      --  Concat the command line line for the Index-nth variable and the
+      --  following ones to Current, and return the result.
+
+      ------------
+      -- Concat --
+      ------------
+
+      function Concat
+        (Current : String; Index : Natural; Set_Var : String) return String is
+      begin
+         if Index > Scenario_Vars'Last then
+            return Current;
+         end if;
+
+         return Concat
+           (Current
+            & Set_Var & External_Name (Scenario_Vars (Index))
+            & "=" & Value (Scenario_Vars (Index))
+            & " ",
+            Index + 1,
+            Set_Var);
+      end Concat;
+
+   begin
+      --  A recursive function is probably not the most efficient way, but this
+      --  prevents limits on the command line lengths. This also avoids the use
+      --  of unbounded strings.
+      return Concat ("", Scenario_Vars'First, Prefix);
+   end Scenario_Variables_Cmd_Line;
 
    --------------
    -- Set_Data --
