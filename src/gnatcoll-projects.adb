@@ -7003,6 +7003,9 @@ package body GNATCOLL.Projects is
       exception
          when E : Invalid_Config =>
             Trace (Me, Exception_Message (E));  --  not the exception itself
+            if Errors /= null then
+               Errors (Exception_Message (E));
+            end if;
             Override_Flags (Self.Data.Env.Env, Create_Flags (null));
             --  Error message was already reported via Prj.Err
             null;
