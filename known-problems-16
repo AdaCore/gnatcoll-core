@@ -4,6 +4,24 @@ Known Problems in Gnatcoll 1.6
 
 Copyright (C) 2013-2014, AdaCore
 
+KP-16-N721-043 GNATCOLL.JSON incorrect decoding of non-BMP characters
+
+  Problem:    Characters with code point outside of Basic Multilingual Page are
+              decoded incorrectly.
+
+  Status:     Fixed in Gnatcoll 1.7.0 on 2014-07-22
+
+  Workaround: None
+
+KP-16-N721-003 GNATCOLL.JSON incorrect escaping of non-BMP characters
+
+  Problem:    Characters with code point outside of Basic Multilingual Page are
+              escaped incorrectly.
+
+  Status:     Fixed in Gnatcoll 1.7.0 on 2014-07-21
+
+  Workaround: None
+
 KP-16-N626-001 GNATCOLL.SQL.Postgres quotes connection parameters
 
   Problem:    It is now possible to use backslashes, spaces and quotes in
