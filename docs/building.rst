@@ -48,7 +48,7 @@ GNATColl will locate the needed source files in one of the following ways:
 
 * Otherwise, recent versions of GNAT include an additional `gnat_util.gpr`
   project file. This project contains the required
-  subset of the sources. You must use the same versino of GNAT that GNATColl
+  subset of the sources. You must use the same version of GNAT that GNATColl
   was released with, otherwise the sources might not be compatible.
   If you have an older version of GNAT, you could
   also chose to install `gnat_util` independently.
