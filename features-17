@@ -15,6 +15,11 @@ of the feature.
 New features in 1.7
 -------------------
 
+NF-17-N730-023 GNATCOLL.Atomic: new package (2014-08-11)
+
+  This package provides some task-safe, low-level subprograms, which are
+  implemented via CPU-supported atomic operations when possible.
+
 NF-17-N623-003 configure: search for sqlite in path/lib64 (2014-06-23)
 
   When a path is passed to configure's --with-sqlite switch, we now test both

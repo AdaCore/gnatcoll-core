@@ -31,6 +31,7 @@ with Ada.Strings.Fixed;         use Ada.Strings.Fixed;
 with Ada.Text_IO;               use Ada.Text_IO;
 with Ada.Exceptions.Traceback;  use Ada.Exceptions.Traceback;
 with Ada.Unchecked_Deallocation;
+with Interfaces;                use Interfaces;
 
 with GNAT.Calendar;             use GNAT.Calendar;
 with GNAT.Calendar.Time_IO;     use GNAT.Calendar.Time_IO;
@@ -43,6 +44,7 @@ with GNAT.Traceback;            use GNAT.Traceback;
 with System.Address_Image;
 with System.Assertions;         use System.Assertions;
 
+with GNATCOLL.Atomic;           use GNATCOLL.Atomic;
 with GNATCOLL.Utils;            use GNATCOLL.Utils;
 
 package body GNATCOLL.Traces is
@@ -115,7 +117,7 @@ package body GNATCOLL.Traces is
       --  configuration file contained "+").
       --  ??? Could be handled via a "*" star handle
 
-      Indentation : Natural := 0;
+      Indentation : aliased Interfaces.Integer_32 := 0;
       --  Current indentation for streams.
 
       TZ : Time_Offset := UTC_Time_Offset;
@@ -825,11 +827,15 @@ package body GNATCOLL.Traces is
    procedure Increase_Indent
      (Handle : Trace_Handle := null; Msg : String := "")
    is
+      Tmp : Integer_32;
+      pragma Unreferenced (Tmp);
    begin
       if Handle /= null and then Msg /= "" then
          Trace (Handle, Msg);
       end if;
-      Global.Indentation := Global.Indentation + 1;
+
+      --  Atomic increase by 1
+      Tmp := Sync_Add_And_Fetch (Global.Indentation'Access, 1);
    end Increase_Indent;
 
    ---------------------
@@ -837,10 +843,13 @@ package body GNATCOLL.Traces is
    ---------------------
 
    procedure Decrease_Indent
-     (Handle : Trace_Handle := null; Msg : String := "") is
+     (Handle : Trace_Handle := null; Msg : String := "")
+   is
+      --  Atomic decrease by 1
+      Tmp : constant Integer_32 :=
+         Sync_Add_And_Fetch (Global.Indentation'Access, -1);
    begin
-      if Global.Indentation > 0 then
-         Global.Indentation := Global.Indentation - 1;
+      if Tmp >= 0 then
          if Handle /= null and then Msg /= "" then
             Trace (Handle, Msg);
          end if;
@@ -1060,9 +1069,10 @@ package body GNATCOLL.Traces is
       Entity        : String := GNAT.Source_Info.Enclosing_Entity;
       Message_Color : String := Default_Fg)
    is
+      Indent : constant Integer := Integer (Global.Indentation) * 3;
       Start, Last  : Natural;
-      Continuation : constant String :=
-         (1 .. Global.Indentation * 3 => ' ') & '_' & Handle.Name.all & "_ ";
+      Continuation : constant String := (1 .. Indent => ' ')
+         & '_' & Handle.Name.all & "_ ";
       Stream       : Trace_Stream;
       Color        : Boolean;
    begin
@@ -1085,7 +1095,7 @@ package body GNATCOLL.Traces is
       Lock;
 
       if Global.Indentation > 0 then
-         Put (Stream.all, String'(1 .. Global.Indentation * 3 => ' '));
+         Put (Stream.all, String'(1 .. Indent => ' '));
       end if;
 
       if Color then

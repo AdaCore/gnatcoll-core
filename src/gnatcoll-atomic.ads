@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                             G N A T C O L L                              --
 --                                                                          --
---                     Copyright (C) 2010-2012, AdaCore                     --
+--                     Copyright (C) 2010-2014, AdaCore                     --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -21,22 +21,22 @@
 --                                                                          --
 ------------------------------------------------------------------------------
 
-with GNAT.Task_Lock;
+--  This package provides a number of low-level primitives to execute
+--  task-safe operations.
+--  When possible, these operations are executed via one of the intrinsic
+--  atomic operations of the compiler (generally implemented with special
+--  support from the CPU).
 
-separate (GNATCOLL.Refcount)
-package body Sync_Counters is
+with Interfaces;
+
+package GNATCOLL.Atomic is
 
    function Sync_Add_And_Fetch
-     (Ptr   : access Interfaces.Integer_32;
-      Value : Interfaces.Integer_32) return Interfaces.Integer_32
-   is
-      Result : Interfaces.Integer_32;
-   begin
-      GNAT.Task_Lock.Lock;
-      Ptr.all := Ptr.all + Value;
-      Result := Ptr.all;
-      GNAT.Task_Lock.Unlock;
-      return Result;
-   end Sync_Add_And_Fetch;
+      (Ptr   : access Interfaces.Integer_32;
+       Value : Interfaces.Integer_32) return Interfaces.Integer_32;
+    --  Increment Ptr by Value. This is task safe (either using a lock or
+    --  intrinsic atomic operations). Returns the new value (as set, it
+    --  might already have been changed by another task by the time this
+    --  function returns.
 
-end Sync_Counters;
+end GNATCOLL.Atomic;

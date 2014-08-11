@@ -49,16 +49,6 @@ package GNATCOLL.Refcount is
    procedure Free (Self : in out Refcounted) is null;
    --  Free the memory associated with Self, when Self is no longer referenced.
 
-   package Sync_Counters is
-      function Sync_Add_And_Fetch
-        (Ptr   : access Interfaces.Integer_32;
-         Value : Interfaces.Integer_32) return Interfaces.Integer_32;
-      --  Increment Ptr by Value. This is task safe (either using a lock or
-      --  intrinsic atomic operations). Returns the new value (as set, it
-      --  might already have been changed by another by the time this function
-      --  returns.
-   end Sync_Counters;
-
    --------------------
    -- Smart_Pointers --
    --------------------

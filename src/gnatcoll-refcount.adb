@@ -22,8 +22,9 @@
 ------------------------------------------------------------------------------
 
 with Ada.Unchecked_Deallocation;
-with Interfaces;  use Interfaces;
-with Ada.Tags;    use Ada.Tags;
+with Interfaces;      use Interfaces;
+with Ada.Tags;        use Ada.Tags;
+with GNATCOLL.Atomic; use GNATCOLL.Atomic;
 with GNATCOLL.Traces; use GNATCOLL.Traces;
 
 package body GNATCOLL.Refcount is
@@ -31,8 +32,6 @@ package body GNATCOLL.Refcount is
 
    procedure Unchecked_Free is new Ada.Unchecked_Deallocation
      (Refcounted'Class, Refcounted_Access);
-
-   package body Sync_Counters is separate;
 
    --------------------
    -- Smart_Pointers --
@@ -100,9 +99,7 @@ package body GNATCOLL.Refcount is
          --  element.
 
          if Data /= null then
-            if Sync_Counters.Sync_Add_And_Fetch (Data.Refcount'Access, -1) =
-              0
-            then
+            if Sync_Add_And_Fetch (Data.Refcount'Access, -1) = 0 then
                Trace (Me, "Freeing memory for "
                       & External_Tag (Ref'Class (P)'Tag));
                Free (Data.all);
@@ -120,8 +117,7 @@ package body GNATCOLL.Refcount is
          pragma Unreferenced (Dummy);
       begin
          if P.Data /= null then
-            Dummy := Sync_Counters.Sync_Add_And_Fetch
-              (P.Data.Refcount'Access, 1);
+            Dummy := Sync_Add_And_Fetch (P.Data.Refcount'Access, 1);
          end if;
       end Adjust;
 

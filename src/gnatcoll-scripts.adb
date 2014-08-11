@@ -26,7 +26,7 @@ with Ada.Characters.Handling;    use Ada.Characters.Handling;
 with Ada.Unchecked_Conversion;
 with Ada.Unchecked_Deallocation;
 with GNAT.OS_Lib;                use GNAT.OS_Lib;
-with GNATCOLL.Refcount;          use GNATCOLL.Refcount;
+with GNATCOLL.Atomic;            use GNATCOLL.Atomic;
 with GNATCOLL.Scripts.Impl;      use GNATCOLL.Scripts.Impl;
 with GNATCOLL.Traces;            use GNATCOLL.Traces;
 with Interfaces;                 use Interfaces;
@@ -1097,8 +1097,7 @@ package body GNATCOLL.Scripts is
       pragma Unreferenced (Dummy);
    begin
       if CI.Data /= null then
-         Dummy := Sync_Counters.Sync_Add_And_Fetch
-           (CI.Data.Refcount'Access, 1);
+         Dummy := Sync_Add_And_Fetch (CI.Data.Refcount'Access, 1);
          Incref (CI.Data);
       end if;
    end Adjust;
@@ -1127,7 +1126,7 @@ package body GNATCOLL.Scripts is
          return;
       end if;
 
-      Dummy := Sync_Counters.Sync_Add_And_Fetch (Data.Refcount'Access, -1);
+      Dummy := Sync_Add_And_Fetch (Data.Refcount'Access, -1);
       Decref (Data);
 
       if Dummy = 0 then

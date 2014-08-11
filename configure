@@ -5588,7 +5588,7 @@ LIB=`basename $libdir`
 
 
 
-   ac_config_commands="$ac_config_commands src/gnatcoll-refcount-sync_counters.adb"
+   ac_config_commands="$ac_config_commands src/gnatcoll-atomic.adb"
 
 
 
@@ -6317,7 +6317,7 @@ cat >>$CONFIG_STATUS <<\_ACEOF || ac_write_fail=1
 for ac_config_target in $ac_config_targets
 do
   case $ac_config_target in
-    "src/gnatcoll-refcount-sync_counters.adb") CONFIG_COMMANDS="$CONFIG_COMMANDS src/gnatcoll-refcount-sync_counters.adb" ;;
+    "src/gnatcoll-atomic.adb") CONFIG_COMMANDS="$CONFIG_COMMANDS src/gnatcoll-atomic.adb" ;;
     "src/gnatcoll.gpr") CONFIG_COMMANDS="$CONFIG_COMMANDS src/gnatcoll.gpr" ;;
     "distrib/gnatcoll.gpr") CONFIG_COMMANDS="$CONFIG_COMMANDS distrib/gnatcoll.gpr" ;;
     "gnatcoll_shared.gpr") CONFIG_FILES="$CONFIG_FILES gnatcoll_shared.gpr" ;;
@@ -6748,8 +6748,8 @@ $as_echo "$as_me: executing $ac_file commands" >&6;}
 
 
   case $ac_file$ac_mode in
-    "src/gnatcoll-refcount-sync_counters.adb":C) rm -f src/gnatcoll-refcount-sync_counters.adb
-                       cp -f src/gnatcoll-refcount-sync_counters__$SYNC_COUNTERS_IMPL.ada src/gnatcoll-refcount-sync_counters.adb ;;
+    "src/gnatcoll-atomic.adb":C) rm -f src/gnatcoll-atomic.adb
+                       cp -f src/gnatcoll-atomic__$SYNC_COUNTERS_IMPL.ada src/gnatcoll-atomic.adb ;;
     "src/gnatcoll.gpr":C) rm -f src/gnatcoll.gpr
                        cp -f src/gnatcoll__$GNAT_SOURCES.gpr src/gnatcoll.gpr ;;
     "distrib/gnatcoll.gpr":C) rm -f distrib/gnatcoll.gpr
