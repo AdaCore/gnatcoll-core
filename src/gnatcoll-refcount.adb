@@ -51,14 +51,9 @@ package body GNATCOLL.Refcount is
             return;
          end if;
 
-         if Self.Data /= null then
-            Finalize (Self);  -- decrement reference count
-         end if;
-
-         if Data /= null then
-            Self.Data := Refcounted_Access (Data);
-            Adjust (Self);    -- increment reference count
-         end if;
+         Finalize (Self);  -- decrement reference count
+         Self.Data := Refcounted_Access (Data);
+         Adjust (Self);    -- increment reference count if needed
       end Set;
 
       ---------
