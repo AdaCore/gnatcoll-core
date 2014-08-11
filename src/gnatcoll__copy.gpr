@@ -29,6 +29,10 @@ project GnatColl is
                                         "gnatcoll-scripts-files.adb");
    end case;
 
+   for Excluded_Source_Files use
+      Project'Excluded_Source_Files
+      & ("xutil.ads", "xutil.adb", "xsnamest.adb");
+
    for Languages use ("Ada", "C");
 
    case GnatColl_Shared.Syslog is

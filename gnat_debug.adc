@@ -1,1 +1,2 @@
 --  pragma Initialize_Scalars;
+--  pragma Restrictions (No_Streams);
