@@ -386,7 +386,7 @@ package GNATCOLL.Projects is
    --  Execute the given "gnatls" command with switch "-v" and parse the
    --  default search paths and project path from it.
    --  This function returns the version of GNAT as read from gnatls. This
-   --  string must be freed by the user.
+   --  string must be freed by the user (Set_GNAT_Version is also called).
 
    procedure Set_Path_From_Gnatls_Output
      (Self         : in out Project_Environment;
@@ -394,7 +394,8 @@ package GNATCOLL.Projects is
       Host         : String := GNATCOLL.VFS.Local_Host;
       GNAT_Version : out GNAT.Strings.String_Access);
    --  Same as Set_Path_From_Gnatls, but gets the output of "gnatls -v" in
-   --  input (and does not spawn a command)
+   --  input (and does not spawn a command).
+   --  This procedure also calls Set_GNAT_Version.
 
    procedure Spawn_Gnatls
      (Self         : Project_Environment;
@@ -404,6 +405,14 @@ package GNATCOLL.Projects is
    --  Spawns the gnatls command passed in argument.
    --  This subprogram can be overridden if gnatls needs to be spawned on
    --  another machine (the default is to spawn on the local machine).
+
+   procedure Set_GNAT_Version
+      (Self    : Project_Environment;
+       Version : String) is null;
+   --  This procedure is called when the project manager spawns and parses
+   --  gnatls. At that point, it finds the version of GNAT and calls this
+   --  subprogram, which you can override if you wish to store that version
+   --  somewhere.
 
    ------------------------
    -- Project properties --

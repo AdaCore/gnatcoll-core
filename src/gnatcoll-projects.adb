@@ -6170,9 +6170,9 @@ package body GNATCOLL.Projects is
       end if;
    end Set_Path_From_Gnatls_Attribute;
 
-   -----------------
-   -- Spawn_Gnatl --
-   -----------------
+   ------------------
+   -- Spawn_Gnatls --
+   ------------------
 
    procedure Spawn_Gnatls
      (Self         : Project_Environment;
@@ -6378,6 +6378,7 @@ package body GNATCOLL.Projects is
          S : constant String := Strip_CR (Output (F .. L - 1));
       begin
          GNAT_Version := new String'(S (S'First + 7 .. S'Last));
+         Project_Environment'Class (Self).Set_GNAT_Version (GNAT_Version.all);
       end;
 
       F := L + 1;
