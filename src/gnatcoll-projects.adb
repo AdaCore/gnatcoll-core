@@ -6203,6 +6203,18 @@ package body GNATCOLL.Projects is
       end if;
    end Spawn_Gnatls;
 
+   -----------------
+   -- Gnatls_Host --
+   -----------------
+
+   function Gnatls_Host
+     (Self : Project_Environment) return String
+   is
+      pragma Unreferenced (Self);
+   begin
+      return Local_Host;
+   end Gnatls_Host;
+
    --------------------------
    -- Set_Path_From_Gnatls --
    --------------------------
@@ -6268,7 +6280,9 @@ package body GNATCOLL.Projects is
             Set_Path_From_Gnatls_Output
               (Self,
                Output       => S,
-               GNAT_Version => GNAT_Version);
+               GNAT_Version => GNAT_Version,
+               Host         =>
+                 Gnatls_Host (Project_Environment'Class (Self)));
          end;
 
          Unchecked_Free (Fd);

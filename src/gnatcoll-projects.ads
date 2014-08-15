@@ -406,6 +406,11 @@ package GNATCOLL.Projects is
    --  This subprogram can be overridden if gnatls needs to be spawned on
    --  another machine (the default is to spawn on the local machine).
 
+   function Gnatls_Host
+     (Self : Project_Environment) return String;
+   --  Returns the name of the remote host configuration responsible for
+   --  executing gnatls. By default, returns the local host.
+
    procedure Set_GNAT_Version
       (Self    : Project_Environment;
        Version : String) is null;
