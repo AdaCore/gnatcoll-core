@@ -24,9 +24,9 @@
 
 | TABLE    | f2f                   |                   |   | Stores relationships between files |
 |----------+-----------------------+-------------------+---+------------------------------------|
-| fromFile | FK files(links)       | NOT NULL, NOINDEX |   |                                    |
-| toFile   | FK files(linked_from) | NOT NULL, NOINDEX |   |                                    |
-| kind     | FK f2f_kind()         | NOT NULL, NOINDEX |   | Kind of dependency                 |
+| fromFile | FK files(links)       | NOT NULL, NOINDEX, PK |   |                                    |
+| toFile   | FK files(linked_from) | NOT NULL, NOINDEX, PK |   |                                    |
+| kind     | FK f2f_kind()         | NOT NULL, NOINDEX, PK |   | Kind of dependency                 |
 
 | TABLE                    | entity_kinds | entity_kinds      |       | General kinds for entities (their metaclasses) |
 |--------------------------+--------------+-------------------+-------+------------------------------------------------|
@@ -110,9 +110,9 @@
 
 | TABLE      | e2e                      |                   |   |                                                                              |
 |------------+--------------------------+-------------------+---+------------------------------------------------------------------------------|
-| fromEntity | FK entities(links)       | NOT NULL, NOINDEX |   |                                                                              |
-| toEntity   | FK entities(linked_from) | NOT NULL, NOINDEX |   |                                                                              |
-| kind       | FK e2e_kind()            | NOT NULL, NOINDEX |   | The type of link.                                                            |
+| fromEntity | FK entities(links)       | NOT NULL, NOINDEX, PK |   |                                                                              |
+| toEntity   | FK entities(linked_from) | NOT NULL, NOINDEX, PK |   |                                                                              |
+| kind       | FK e2e_kind()            | NOT NULL, NOINDEX, PK |   | The type of link.                                                            |
 | order_by   | INTEGER                  | NOT NULL, NOINDEX | 1 | Ordering among the references. Used for instance for subprogram parameters   |
 |------------+--------------------------+-------------------+---+------------------------------------------------------------------------------|
 | INDEX:     | "fromEntity"             | e2e_from          |   | Not needed during parsing                                                    |

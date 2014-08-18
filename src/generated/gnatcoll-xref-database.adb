@@ -59,9 +59,9 @@ package body GNATCOLL.Xref.Database is
          & "|name|Text|NOT NULL||" & ASCII.LF
          & "" & ASCII.LF
          & "|TABLE| f2f" & ASCII.LF
-         & "|fromFile|FK files|NOT NULL,NOINDEX||" & ASCII.LF
-         & "|toFile|FK files|NOT NULL,NOINDEX||" & ASCII.LF
-         & "|kind|FK f2f_kind|NOT NULL,NOINDEX||" & ASCII.LF
+         & "|fromFile|FK files|PK,NOINDEX||" & ASCII.LF
+         & "|toFile|FK files|PK,NOINDEX||" & ASCII.LF
+         & "|kind|FK f2f_kind|PK,NOINDEX||" & ASCII.LF
          & "" & ASCII.LF
          & "|TABLE| entity_kinds" & ASCII.LF
          & "|id|Character(1)|PK||" & ASCII.LF
@@ -97,9 +97,9 @@ package body GNATCOLL.Xref.Database is
          & "|name|Text|NOT NULL,NOINDEX||" & ASCII.LF
          & "" & ASCII.LF
          & "|TABLE| e2e" & ASCII.LF
-         & "|fromEntity|FK entities|NOT NULL,NOINDEX||" & ASCII.LF
-         & "|toEntity|FK entities|NOT NULL,NOINDEX||" & ASCII.LF
-         & "|kind|FK e2e_kind|NOT NULL,NOINDEX||" & ASCII.LF
+         & "|fromEntity|FK entities|PK,NOINDEX||" & ASCII.LF
+         & "|toEntity|FK entities|PK,NOINDEX||" & ASCII.LF
+         & "|kind|FK e2e_kind|PK,NOINDEX||" & ASCII.LF
          & "|order_by|Integer|NOT NULL,NOINDEX|1|" & ASCII.LF
          & "|INDEX:|""fromEntity""|e2e_from" & ASCII.LF
          & "|INDEX:|""toEntity""|e2e_to" & ASCII.LF

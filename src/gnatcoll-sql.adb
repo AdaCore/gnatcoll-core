@@ -2100,8 +2100,9 @@ package body GNATCOLL.SQL is
    ----------------
 
    function SQL_Insert
-     (Fields   : SQL_Field_Or_List'Class;
-      Values   : SQL_Query) return SQL_Query
+     (Fields    : SQL_Field_Or_List'Class;
+      Values    : SQL_Query;
+      Qualifier : String := "") return SQL_Query
    is
       Data : constant Query_Insert_Contents_Access :=
         new Query_Insert_Contents;
@@ -2115,6 +2116,10 @@ package body GNATCOLL.SQL is
 
       Data.Into   := No_Names;
       Data.Subquery := Values;
+      if Qualifier /= "" then
+         Data.Qualifier := To_Unbounded_String (Qualifier);
+      end if;
+
       Q := (Contents =>
               (Ada.Finalization.Controlled
                with SQL_Query_Contents_Access (Data)));
@@ -2127,8 +2132,9 @@ package body GNATCOLL.SQL is
    ----------------
 
    function SQL_Insert
-     (Values : SQL_Assignment;
-      Where  : SQL_Criteria := No_Criteria) return SQL_Query
+     (Values    : SQL_Assignment;
+      Where     : SQL_Criteria := No_Criteria;
+      Qualifier : String := "") return SQL_Query
    is
       Data : constant Query_Insert_Contents_Access :=
         new Query_Insert_Contents;
@@ -2137,6 +2143,11 @@ package body GNATCOLL.SQL is
       Data.Into   := No_Names;
       Data.Values := Values;
       Data.Where  := Where;
+
+      if Qualifier /= "" then
+         Data.Qualifier := To_Unbounded_String (Qualifier);
+      end if;
+
       Q := (Contents =>
               (Ada.Finalization.Controlled
                with SQL_Query_Contents_Access (Data)));
@@ -2154,7 +2165,12 @@ package body GNATCOLL.SQL is
    is
       Result : Unbounded_String;
    begin
-      Result := To_Unbounded_String ("INSERT INTO ");
+      if Self.Qualifier = "" then
+         Result := To_Unbounded_String ("INSERT INTO ");
+      else
+         Result := "INSERT " & Self.Qualifier & " INTO ";
+      end if;
+
       Append (Result, To_String (Self.Into));
 
       if Self.Default_Values then

@@ -698,8 +698,9 @@ package GNATCOLL.SQL is
    --  taken into account.
 
    function SQL_Insert
-     (Values : SQL_Assignment;
-      Where  : SQL_Criteria := No_Criteria) return SQL_Query;
+     (Values    : SQL_Assignment;
+      Where     : SQL_Criteria := No_Criteria;
+      Qualifier : String := "") return SQL_Query;
    --  Insert a new row in the table specified by the left-hand side of
    --  the assignments. All these left-hand side fields must belong to the same
    --  table, or the query is ambiguous and will raise a Program_Error.
@@ -707,10 +708,15 @@ package GNATCOLL.SQL is
    --  or fields from other tables. When other tables are referenced, the
    --  insert statement is transformed into an INSERT with a subquery (see
    --  below), and WHERE is used as the WHERE claused for that subquery.
+   --
+   --  Qualifier is inserted just after the "INSERT" keyword, in the query. It
+   --  can be used for DBMS-specific queries, like "INSERT OR IGNORE" in
+   --  sqlite, "INSERT IGNORE" in mysql,...
 
    function SQL_Insert
-     (Fields : SQL_Field_Or_List'Class;
-      Values : SQL_Query) return SQL_Query;
+     (Fields    : SQL_Field_Or_List'Class;
+      Values    : SQL_Query;
+      Qualifier : String := "") return SQL_Query;
    --  Insert a new row in the table. The list of values come from a subquery
 
    function SQL_Insert_Default_Values
@@ -1083,6 +1089,7 @@ private
    type Query_Insert_Contents is new Query_Contents with record
       Into           : Table_Names := No_Names;
       Default_Values : Boolean := False;
+      Qualifier      : Unbounded_String;
       Fields         : SQL_Field_List;
       Values         : SQL_Assignment;
       Where          : SQL_Criteria;

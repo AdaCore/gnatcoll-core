@@ -206,17 +206,20 @@ package body GNATCOLL.Xref is
    Query_Set_File_Dep : constant Prepared_Statement :=
      Prepare
        (SQL_Insert
-            ((Database.F2f.Fromfile = Integer_Param (1))
-             & (Database.F2f.Tofile = Integer_Param (2))
-             & (Database.F2f.Kind = F2f_Withs)),
+          ((Database.F2f.Fromfile = Integer_Param (1))
+           & (Database.F2f.Tofile = Integer_Param (2))
+           & (Database.F2f.Kind = F2f_Withs),
+          Qualifier => "OR IGNORE"),   --  ignore duplicates),
         On_Server => True, Name => "set_file_dep");
 
    Query_Set_ALI : constant Prepared_Statement :=
      Prepare
        (SQL_Insert
-            ((Database.F2f.Fromfile = Integer_Param (1))
-             & (Database.F2f.Tofile = Integer_Param (2))
-             & (Database.F2f.Kind = F2f_Has_Ali)),
+          ((Database.F2f.Fromfile = Integer_Param (1))
+           & (Database.F2f.Tofile = Integer_Param (2))
+           & (Database.F2f.Kind = F2f_Has_Ali),
+           Qualifier => "OR IGNORE"   --  ignore duplicates
+          ),
         On_Server => True, Name => "set_ali");
 
    Query_Get_ALI : constant Prepared_Statement :=
@@ -290,10 +293,12 @@ package body GNATCOLL.Xref is
    Query_Insert_E2E : constant Prepared_Statement :=
      Prepare
        (SQL_Insert
-            ((Database.E2e.Fromentity = Integer_Param (1))
-             & (Database.E2e.Toentity = Integer_Param (2))
-             & (Database.E2e.Kind = Integer_Param (3))
-             & (Database.E2e.Order_By = Integer_Param (4))),
+          ((Database.E2e.Fromentity = Integer_Param (1))
+           & (Database.E2e.Toentity = Integer_Param (2))
+           & (Database.E2e.Kind = Integer_Param (3))
+           & (Database.E2e.Order_By = Integer_Param (4)),
+           Qualifier => "OR IGNORE" --  do not insert duplicates
+          ),
         On_Server => True, Name => "insert_e2e");
 
    Query_Find_Entity_From_Decl : constant Prepared_Statement :=
