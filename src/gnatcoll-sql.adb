@@ -2134,6 +2134,7 @@ package body GNATCOLL.SQL is
    function SQL_Insert
      (Values    : SQL_Assignment;
       Where     : SQL_Criteria := No_Criteria;
+      Limit     : Integer := -1;
       Qualifier : String := "") return SQL_Query
    is
       Data : constant Query_Insert_Contents_Access :=
@@ -2143,6 +2144,7 @@ package body GNATCOLL.SQL is
       Data.Into   := No_Names;
       Data.Values := Values;
       Data.Where  := Where;
+      Data.Limit  := Limit;
 
       if Qualifier /= "" then
          Data.Qualifier := To_Unbounded_String (Qualifier);
@@ -2252,7 +2254,8 @@ package body GNATCOLL.SQL is
             if Length (List) > 0 then
                To_List (Self.Values, Subfields);
                Self.Subquery := SQL_Select
-                 (Fields => Subfields, Where => Self.Where);
+                 (Fields => Subfields, Where => Self.Where,
+                  Limit => Self.Limit);
                Auto_Complete (Self.Subquery);
                Self.Values := No_Assignment;
             end if;

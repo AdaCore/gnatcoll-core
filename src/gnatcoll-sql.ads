@@ -700,6 +700,7 @@ package GNATCOLL.SQL is
    function SQL_Insert
      (Values    : SQL_Assignment;
       Where     : SQL_Criteria := No_Criteria;
+      Limit     : Integer := -1;
       Qualifier : String := "") return SQL_Query;
    --  Insert a new row in the table specified by the left-hand side of
    --  the assignments. All these left-hand side fields must belong to the same
@@ -1093,6 +1094,7 @@ private
       Fields         : SQL_Field_List;
       Values         : SQL_Assignment;
       Where          : SQL_Criteria;
+      Limit          : Integer := -1;
       Subquery       : SQL_Query := No_Query;
    end record;
    type Query_Insert_Contents_Access is access all Query_Insert_Contents'Class;

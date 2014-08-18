@@ -341,7 +341,9 @@ package body GNATCOLL.Xref is
              & (Database.E2e.Kind = Integer_Param (5)),
              Where => Database.Entity_Refs.File = Integer_Param (2)
                and Database.Entity_Refs.Line = Integer_Param (3)
-               and Database.Entity_Refs.Column = Integer_Param (4)),
+               and Database.Entity_Refs.Column = Integer_Param (4),
+             Limit => 1,
+            Qualifier => "OR IGNORE"),
         On_Server => True, Name => "set_entity_renames");
 
    Query_Set_Caller_At_Decl : constant Prepared_Statement :=
@@ -1733,7 +1735,10 @@ package body GNATCOLL.Xref is
          end if;
 
          if Is_Predefined then
-            if Process_E2E then
+            if Process_E2E
+              and then (Current_X_File_Unit_File_Index /= -1
+                        or else Always_Parse_E2E)
+            then
                declare
                   R    : Forward_Cursor;
                   Name : aliased String := String (Str (Start .. Name_Last));
@@ -2738,7 +2743,10 @@ package body GNATCOLL.Xref is
                Get_Ref;
                Name_End := Index;
 
-               if Process_E2E then
+               if Process_E2E
+                 and then (Current_X_File_Unit_File_Index /= -1
+                           or else Always_Parse_E2E)
+               then
                   Entity_Renamings.Append
                     ((Entity => Current_Entity,
                       File    => Xref_File,
@@ -3036,7 +3044,10 @@ package body GNATCOLL.Xref is
                   end;
                end if;
 
-            elsif Process_E2E then
+            elsif Process_E2E
+              and then (Current_X_File_Unit_File_Index /= -1
+                        or else Always_Parse_E2E)
+            then
                --  The reference necessarily points to the declaration of
                --  the parameter, which exists in the same ALI file (but not
                --  necessarily the same source file).
@@ -3377,25 +3388,23 @@ package body GNATCOLL.Xref is
                end if;
 
             when 'X' =>
-               exit;
+               --  Now process all 'X' sections, that contain the actual xref.
+               --  This is done in two passes: first create entries in the db
+               --  for all the entities, since we need to map from the location
+               --  of a declaration to an id to resolve pointers to parent
+               --  types, index types,... Then process the xref for each
+               --  entity.
+
+               Start_Of_X_Section := Index;
+               Process_Xref_Section (First_Pass => True);
+               Index := Start_Of_X_Section;
+               Process_Xref_Section (First_Pass => False);
+               exit;   --  done with this LI file
 
             when others =>
                null;
          end case;
       end loop;
-
-      --  Now process all 'X' sections, that contain the actual xref. This is
-      --  done in two passes: first create entries in the db for all the
-      --  entities, since we need to map from the location of a declaration to
-      --  an id to resolve pointers to parent types, index types,...
-      --  Then process the xref for each entity.
-
-      if Str (Index) = 'X' then
-         Start_Of_X_Section := Index;
-         Process_Xref_Section (First_Pass => True);
-         Index := Start_Of_X_Section;
-         Process_Xref_Section (First_Pass => False);
-      end if;
 
       Free (Scope_Trees);
       Free (Decl_Scope_Trees);
@@ -3978,6 +3987,15 @@ package body GNATCOLL.Xref is
             & " (SELECT id FROM temp_files);");
          DB.Execute ("DROP TABLE temp_files;");
 
+         --  Information for fromEntity always come from the LI file declaring
+         --  the entity, so we should clean it up before parsing the LI file.
+         --  We can't do this for toEntity, since this information comes from
+         --  other LI files, and we will try to preserve it if possible (if the
+         --  entity still exists after all).
+         DB.Execute
+           ("DELETE FROM e2e WHERE e2e.fromEntity IN"
+            & " (SELECT id FROM temp_entities);");
+
          if DB.In_Transaction then
             DB.Commit_Or_Rollback;
             DB.Execute ("PRAGMA wal_checkpoint(RESTART);");
@@ -4049,9 +4067,6 @@ package body GNATCOLL.Xref is
          --  contents of temp_entities, and therefore never clean those
          --  entities from the database until we parse the corresponding LI
          --  files again.
-         DB.Execute
-           ("DELETE FROM e2e WHERE e2e.fromEntity IN"
-            & " (SELECT id FROM temp_entities);");
          DB.Execute
            ("DELETE FROM e2e WHERE e2e.toEntity IN"
             & " (SELECT id FROM temp_entities);");
