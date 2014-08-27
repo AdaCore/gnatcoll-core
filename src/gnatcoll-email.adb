@@ -1261,6 +1261,9 @@ package body GNATCOLL.Email is
 
          if Prepend then
             Msg.Contents.Payload.Text := Payload & Msg.Contents.Payload.Text;
+            --  Incorrect if Charset does not match the charset of the existing
+            --  payload???
+
          else
             --  Do not use Set_Unbounded_String, which has a memory leak in the
             --  GNAT implementation ???
