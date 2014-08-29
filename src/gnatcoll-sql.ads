@@ -212,6 +212,13 @@ package GNATCOLL.SQL is
    function Integer_Param (Index : Positive) return Integer_Fields.Field'Class
                            renames Integer_Fields.Param;
 
+   package Bigint_Fields is new Field_Types
+     (Long_Long_Integer, Bigint_To_SQL, Parameter_Bigint);
+   type SQL_Field_Bigint is new Bigint_Fields.Field with null record;
+   Null_Field_Bigint : constant SQL_Field_Bigint;
+   function Bigint_Param (Index : Positive) return Bigint_Fields.Field'Class
+                           renames Bigint_Fields.Param;
+
    package Text_Fields is new Field_Types
      (String, String_To_SQL, Parameter_Text);
    type SQL_Field_Text is new Text_Fields.Field with null record;
@@ -1183,5 +1190,7 @@ private
      (Json_Fields.Null_Field with null record);
    Null_Field_XML : constant SQL_Field_XML :=
      (XML_Fields.Null_Field with null record);
+   Null_Field_Bigint : constant SQL_Field_Bigint :=
+      (Bigint_Fields.Null_Field with null record);
 
 end GNATCOLL.SQL;

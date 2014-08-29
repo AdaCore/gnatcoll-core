@@ -374,6 +374,9 @@ package GNATCOLL.SQL.Sqlite.Gnade is
    procedure Bind_Int
      (Stmt : Statement; Index : Integer; Value : Interfaces.C.int);
 
+   procedure Bind_Int64
+     (Stmt : Statement; Index : Integer; Value : Interfaces.C.long);
+
    procedure Bind_Null (Stmt : Statement; Index : Integer);
 
    type Text_Destructor is access procedure (Str : in out System.Address);

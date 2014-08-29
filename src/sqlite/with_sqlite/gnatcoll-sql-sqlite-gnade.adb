@@ -543,6 +543,24 @@ package body GNATCOLL.SQL.Sqlite.Gnade is
       Internal (Stmt, Index, Value);
    end Bind_Int;
 
+   ----------------
+   -- Bind_Int64 --
+   ----------------
+
+   procedure Bind_Int64
+     (Stmt : Statement; Index : Integer; Value : Interfaces.C.long)
+   is
+      procedure Internal
+        (Stmt : Statement; Index : Integer; Value : Interfaces.C.long);
+      pragma Import (C, Internal, "sqlite3_bind_int64");
+   begin
+      if Debug then
+         Trace (Me, "sqlite3_bind_int64");
+      end if;
+
+      Internal (Stmt, Index, Value);
+   end Bind_Int64;
+
    ---------------
    -- Bind_Null --
    ---------------

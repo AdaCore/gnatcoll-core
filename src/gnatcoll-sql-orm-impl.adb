@@ -66,6 +66,25 @@ package body GNATCOLL.SQL.Orm.Impl is
       end if;
    end Integer_Value;
 
+   ------------------
+   -- Bigint_Value --
+   ------------------
+
+   function Bigint_Value
+     (Self : Orm_Element'Class; Field : Field_Index)
+     return Long_Long_Integer is
+   begin
+      if Current (Self.Current) /= Self.Index then
+         raise Cursor_Has_Moved;
+      end if;
+
+      if Is_Null (Self.Current, Self.Column + Field) then
+         return Long_Long_Integer'First;
+      else
+         return Bigint_Value (Self.Current, Self.Column + Field);
+      end if;
+   end Bigint_Value;
+
    -------------------
    -- Boolean_Value --
    -------------------

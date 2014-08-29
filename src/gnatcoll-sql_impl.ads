@@ -97,6 +97,10 @@ package GNATCOLL.SQL_Impl is
      (Self : Formatter'Class; Value : Float; Quote : Boolean) return String;
    function Integer_To_SQL
      (Self : Formatter'Class; Value : Integer; Quote : Boolean) return String;
+   function Bigint_To_SQL
+     (Self  : Formatter'Class;
+      Value : Long_Long_Integer;
+      Quote : Boolean) return String;
    function String_To_SQL
      (Self : Formatter'Class; Value : String; Quote : Boolean) return String;
    function Time_To_SQL
@@ -124,7 +128,7 @@ package GNATCOLL.SQL_Impl is
    type Parameter_Type is
      (Parameter_Integer, Parameter_Text, Parameter_Boolean, Parameter_Float,
       Parameter_Time, Parameter_Date, Parameter_Character, Parameter_Money,
-      Parameter_Json, Parameter_XML);
+      Parameter_Json, Parameter_XML, Parameter_Bigint);
 
    function Parameter_String
      (Self  : Formatter;

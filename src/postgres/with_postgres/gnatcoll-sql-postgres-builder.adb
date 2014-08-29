@@ -1375,6 +1375,8 @@ package body GNATCOLL.SQL.Postgres.Builder is
             return '$' & Image (Index, 0) & "::xml";
          when Parameter_Integer =>
             return '$' & Image (Index, 0) & "::integer";
+         when Parameter_Bigint =>
+            return '$' & Image (Index, 0) & "::bigint";
          when Parameter_Boolean =>
             return '$' & Image (Index, 0) & "::boolean";
          when Parameter_Float =>

@@ -153,6 +153,7 @@ package GNATCOLL.SQL.Exec is
    type SQL_Parameter (Typ : Parameter_Type := Parameter_Integer) is record
       case Typ is
          when Parameter_Integer   => Int_Val : Integer;
+         when Parameter_Bigint    => Bigint_Val : Long_Long_Integer;
          when Parameter_Json      => Json_Val  : access constant String;
          when Parameter_XML       => XML_Val   : access constant String;
          when Parameter_Text      => Str_Val : access constant String;
@@ -170,6 +171,7 @@ package GNATCOLL.SQL.Exec is
 
    function "+" (Value : access constant String) return SQL_Parameter;
    function "+" (Value : Integer) return SQL_Parameter;
+   function As_Bigint (Value : Long_Long_Integer) return SQL_Parameter;
    function "+" (Value : Boolean) return SQL_Parameter;
    function "+" (Value : Float) return SQL_Parameter;
    function "+" (Value : Character) return SQL_Parameter;
@@ -547,6 +549,15 @@ package GNATCOLL.SQL.Exec is
    --  Reads a value as an integer. The second version might raise a
    --  Constraint_Error if the field is null or does not contain an integer.
    --  The first version will return the default instead.
+
+   function Bigint_Value
+     (Self    : Forward_Cursor;
+      Field   : Field_Index;
+      Default : Long_Long_Integer) return Long_Long_Integer;
+   function Bigint_Value
+     (Self    : Forward_Cursor;
+      Field   : Field_Index) return Long_Long_Integer;
+   --  Reads a value as a bigint.
 
    function Float_Value
      (Self    : Forward_Cursor;

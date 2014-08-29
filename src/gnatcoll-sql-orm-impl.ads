@@ -28,6 +28,8 @@ package GNATCOLL.SQL.Orm.Impl is
 
    function Integer_Value
      (Self : Orm_Element'Class; Field : Field_Index) return Integer;
+   function Bigint_Value
+     (Self : Orm_Element'Class; Field : Field_Index) return Long_Long_Integer;
    function Boolean_Value
      (Self : Orm_Element'Class; Field : Field_Index) return Boolean;
    function String_Value

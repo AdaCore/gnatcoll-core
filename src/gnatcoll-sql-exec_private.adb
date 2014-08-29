@@ -68,6 +68,18 @@ package body GNATCOLL.SQL.Exec_Private is
       return Integer'Value (Value (DBMS_Forward_Cursor'Class (Self), Field));
    end Integer_Value;
 
+   ------------------
+   -- Bigint_Value --
+   ------------------
+
+   function Bigint_Value
+     (Self  : DBMS_Forward_Cursor;
+      Field : Field_Index) return Long_Long_Integer is
+   begin
+      return Long_Long_Integer'Value
+         (Value (DBMS_Forward_Cursor'Class (Self), Field));
+   end Bigint_Value;
+
    -----------------
    -- Float_Value --
    -----------------

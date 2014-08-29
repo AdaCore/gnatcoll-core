@@ -584,6 +584,8 @@ package body GNATCOLL.SQL.Exec is
             return String_To_SQL (Format, Param.Str_Val.all, Quote => False);
          when Parameter_Integer =>
             return Integer_To_SQL (Format, Param.Int_Val, Quote => False);
+         when Parameter_Bigint =>
+            return Bigint_To_SQL (Format, Param.Bigint_Val, Quote => False);
          when Parameter_Float   =>
             return Float_To_SQL (Format, Param.Float_Val, Quote => False);
          when Parameter_Boolean =>
@@ -1310,6 +1312,34 @@ package body GNATCOLL.SQL.Exec is
          return Default;
    end Integer_Value;
 
+   ------------------
+   -- Bigint_Value --
+   ------------------
+
+   function Bigint_Value
+     (Self   : Forward_Cursor;
+      Field  : Field_Index) return Long_Long_Integer
+   is
+   begin
+      return Bigint_Value (DBMS_Forward_Cursor'Class (Self.Res.all), Field);
+   end Bigint_Value;
+
+   ------------------
+   -- Bigint_Value --
+   ------------------
+
+   function Bigint_Value
+     (Self   : Forward_Cursor;
+      Field  : Field_Index;
+      Default : Long_Long_Integer) return Long_Long_Integer
+   is
+   begin
+      return Bigint_Value (DBMS_Forward_Cursor'Class (Self.Res.all), Field);
+   exception
+      when Constraint_Error | Interfaces.C.Strings.Dereference_Error  =>
+         return Default;
+   end Bigint_Value;
+
    -----------------
    -- Float_Value --
    -----------------
@@ -1779,6 +1809,15 @@ package body GNATCOLL.SQL.Exec is
    begin
       return SQL_Parameter'(Typ => Parameter_Integer, Int_Val => Value);
    end "+";
+
+   ---------------
+   -- As_Bigint --
+   ---------------
+
+   function As_Bigint (Value : Long_Long_Integer) return SQL_Parameter is
+   begin
+      return SQL_Parameter'(Typ => Parameter_Bigint, Bigint_Val => Value);
+   end As_Bigint;
 
    ---------
    -- "+" --

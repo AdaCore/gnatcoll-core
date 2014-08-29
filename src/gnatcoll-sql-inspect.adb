@@ -577,6 +577,7 @@ package body GNATCOLL.SQL.Inspect is
          when Field_Json    => return "Json";
          when Field_XML     => return "XML";
          when Field_Integer => return "Integer";
+         when Field_Bigint  => return "Bigint";
          when Field_Date    => return "Date";
          when Field_Timestamp =>
             if For_Database then
@@ -654,6 +655,9 @@ package body GNATCOLL.SQL.Inspect is
         or else T = "oid"
       then
          return (Kind => Field_Integer);
+
+      elsif T = "bigint" then
+         return (Kind => Field_Bigint);
 
       elsif T'Length >= 7
          and then T (T'First .. T'First + 6) = "numeric"
@@ -2226,6 +2230,7 @@ package body GNATCOLL.SQL.Inspect is
         of Parameter_Type :=
         (Field_Text          => Parameter_Text,
          Field_Integer       => Parameter_Integer,
+         Field_Bigint        => Parameter_Bigint,
          Field_Date          => Parameter_Date,
          Field_Json          => Parameter_Json,
          Field_XML           => Parameter_XML,

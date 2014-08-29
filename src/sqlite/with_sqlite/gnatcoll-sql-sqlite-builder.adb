@@ -535,6 +535,8 @@ package body GNATCOLL.SQL.Sqlite.Builder is
                Bind_Text (Stmt, P, Params (P).Char_Val'Address, 1);
             when Parameter_Integer =>
                Bind_Int (Stmt, P, Interfaces.C.int (Params (P).Int_Val));
+            when Parameter_Bigint =>
+               Bind_Int64 (Stmt, P, Interfaces.C.long (Params (P).Bigint_Val));
             when Parameter_Float =>
                Bind_Double
                  (Stmt, P, Interfaces.C.double (Params (P).Float_Val));

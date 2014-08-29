@@ -1446,6 +1446,25 @@ package body GNATCOLL.SQL_Impl is
       end if;
    end Integer_To_SQL;
 
+   -------------------
+   -- Bigint_To_SQL --
+   -------------------
+
+   function Bigint_To_SQL
+     (Self  : Formatter'Class;
+      Value : Long_Long_Integer;
+      Quote : Boolean) return String
+   is
+      pragma Unreferenced (Self, Quote);
+      Img : constant String := Long_Long_Integer'Image (Value);
+   begin
+      if Img (Img'First) = ' ' then
+         return Img (Img'First + 1 .. Img'Last);
+      else
+         return Img;
+      end if;
+   end Bigint_To_SQL;
+
    -----------------------
    -- Supports_Timezone --
    -----------------------

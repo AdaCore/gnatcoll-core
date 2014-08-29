@@ -2074,6 +2074,18 @@ class Field_Type(object):
                 integer=Field_Type(
                     "integer", "Integer", "Integer", -1, "Integer", -1,
                     "Integer_Value (%s, %s)", "%s", "", "%s'Img", "%s"),
+                bigint=Field_Type(
+                    sql_type="bigint",
+                    ada_return="Long_Long_Integer",
+                    ada_param="Long_Long_Integer",
+                    default_param=-1,
+                    ada_field="Long_Long_Integer",
+                    default_record=-1,
+                    value_from_db="Bigint_Value (%s, %s)",
+                    to_return="%s",
+                    free_field="",
+                    img="Long_Long_Integer'Image (%s)",
+                    to_field="%s"),
                 autoincrement=Field_Type(
                     "integer", "Integer", "Integer", -1, "Integer", -1,
                     "Integer_Value (%s, %s)", "%s", "", "%s'Img", "%s"),

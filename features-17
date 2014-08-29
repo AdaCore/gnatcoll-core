@@ -15,6 +15,11 @@ of the feature.
 New features in 1.7
 -------------------
 
+NF-17-N819-020 GNATCOLL.SQL: support for bigint (2014-08-29)
+
+  Add support for the standard sqlite type BIGINT, mapping to a
+  Long_Long_Integer.
+
 NF-17-N730-023 GNATCOLL.Atomic: new package (2014-08-11)
 
   This package provides some task-safe, low-level subprograms, which are
