@@ -67,7 +67,7 @@ examples:
 SQLITE_DIR=src/sqlite/amalgamation
 sqlite3_shell: $(SQLITE_DIR)/sqlite3_for_gps
 $(SQLITE_DIR)/sqlite3_for_gps: $(SQLITE_DIR)/shell.c $(SQLITE_DIR)/sqlite3.c
-	cd $(SQLITE_DIR); gcc -O2 -o sqlite3_for_gps shell.c sqlite3.c
+	cd $(SQLITE_DIR); gcc -O2 -o sqlite3_for_gps shell.c sqlite3.c -lpthread -ldl
 
 ## Create links for the gnat sources
 
