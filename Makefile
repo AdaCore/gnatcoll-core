@@ -94,7 +94,7 @@ test_names=
 local_install: force
 	@${MAKE} prefix=${shell pwd}/local_install install >/dev/null
 
-test: local_install
+test: sqlite3_shell local_install
 	@${MAKE} test_names="${test_names}" -C testsuite
 
 test_verbose: local_install
