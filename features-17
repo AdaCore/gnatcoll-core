@@ -15,6 +15,13 @@ of the feature.
 New features in 1.7
 -------------------
 
+NF-17-N902-040 GNATCOLL.Email: Reset multipart to single part (2014-09-02)
+
+  Procedure Convert_To_Single_Part now takes an additional formal
+  parameter Purge (default False). When Purge is set True, the message
+  is reset to an empty single part text/plain payload, regardless of
+  previous contents.
+
 NF-17-N819-020 GNATCOLL.SQL: support for bigint (2014-08-29)
 
   Add support for the standard sqlite type BIGINT, mapping to a

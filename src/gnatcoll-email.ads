@@ -477,12 +477,16 @@ package GNATCOLL.Email is
    --  The current textual content is set to be the first part of the converted
    --  message.
 
-   procedure Convert_To_Single_Part (Msg : in out Message'Class);
+   procedure Convert_To_Single_Part
+     (Msg   : in out Message'Class;
+      Purge : Boolean := False);
    --  Try to convert Msg to a single part message. This is only doable if
    --  there is a single textual part, or the message is already single part.
    --  If Msg contains a single part which is in turn a multipart Msg, it gets
    --  processed as well.
-   --  All other cases will do nothing.
+   --  All other cases will do nothing, unless Purge is set True, in which
+   --  case all contents are lost, and the (single part) payload is reset
+   --  to an empty text/plain part.
 
    procedure Set_Preamble (Msg : in out Message'Class; Preamble : String);
    --  Set the preamble of the MIME message.

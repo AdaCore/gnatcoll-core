@@ -1470,11 +1470,15 @@ package body GNATCOLL.Email is
    -- Convert_To_Single_Part --
    ----------------------------
 
-   procedure Convert_To_Single_Part (Msg : in out Message'Class) is
+   procedure Convert_To_Single_Part
+     (Msg   : in out Message'Class;
+      Purge : Boolean := False)
+   is
       Attach : Message;
+
    begin
       if Msg.Contents.Payload.Multipart then
-         if Length (Msg.Contents.Payload.Parts) = 0 then
+         if Length (Msg.Contents.Payload.Parts) = 0 or else Purge then
             Msg.Contents.Payload :=
               (Multipart => False,
                Text      => Null_Unbounded_String);
@@ -2027,6 +2031,7 @@ package body GNATCOLL.Email is
          Candidate := To_Unbounded_String (Get_Boundary (Msg));
          if Candidate = "" then
             --  Else default on an unlikely one
+            --  Should generate a unique string???
             Candidate := To_Unbounded_String ("=_=_=____=_=_");
          end if;
       else
