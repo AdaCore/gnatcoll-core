@@ -68,9 +68,10 @@ SQLITE_DIR=src/sqlite/amalgamation
 sqlite3_shell: $(SQLITE_DIR)/sqlite3_for_gps
 $(SQLITE_DIR)/sqlite3_for_gps: $(SQLITE_DIR)/shell.c $(SQLITE_DIR)/sqlite3.c
 ifeq ($(OS),Windows_NT)
-	cd $(SQLITE_DIR); gcc -O2 -DSQLITE_OMIT_LOAD_EXTENSION -D__EXTENSIONS__ -o sqlite3_for_gps shell.c sqlite3.c
+	-cd $(SQLITE_DIR); gcc -O2 -DSQLITE_OMIT_LOAD_EXTENSION -D__EXTENSIONS__ -o sqlite3_for_gps shell.c sqlite3.c
 else
-	cd $(SQLITE_DIR); gcc -O2 -DSQLITE_OMIT_LOAD_EXTENSION -D__EXTENSIONS__ -o sqlite3_for_gps shell.c sqlite3.c -lpthread -ldl
+	# If we fail to compile, never mind. Some tests will simply be disabled
+	-cd $(SQLITE_DIR); gcc -O2 -DSQLITE_OMIT_LOAD_EXTENSION -D__EXTENSIONS__ -o sqlite3_for_gps shell.c sqlite3.c -lpthread -ldl
 endif
 
 ## Create links for the gnat sources
