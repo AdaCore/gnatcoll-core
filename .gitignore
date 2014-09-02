@@ -27,6 +27,7 @@ b__*
 *.pyc
 /config.status
 /config.log
+/gnat_src
 
 Makefile.conf
 distrib/gnatcoll.gpr
