@@ -85,6 +85,7 @@ testsuite/projects/objects/out
 testsuite/projects/objects2/objects
 testsuite/projects/objects2/out
 testsuite/projects/aggregate/main
+testsuite/projects/aggregate_info/main
 testsuite/xref/find_ref/main
 testsuite/xref/naming_schemes/file2
 testsuite/xref/naming_schemes2/file2
@@ -104,7 +105,6 @@ testsuite/xref/empty_db/modeling.db
 testsuite/xref/L829-003/example_main
 testsuite/xref/update2/b.ads
 testsuite/xref/update2/c.ads
-testsuite/*/*/obj
 testsuite/xref/L406-006-runtime/a
 testsuite/traces/MA08-038/nofile
 testsuite/vfs/links1/hello.adb
