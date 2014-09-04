@@ -140,6 +140,9 @@ package body GNATCOLL.Xref is
    N_Files3 : aliased String := "f3";
    Files3 : T_Files (N_Files3'Access);
 
+   N_Files4 : aliased String := "f4";
+   Files4 : T_Files (N_Files4'Access);
+
    N_Entities2 : aliased String := "e2";
    Entities2 : T_Entities (N_Entities2'Access);
 
@@ -396,7 +399,7 @@ package body GNATCOLL.Xref is
    Files_Cursor_Project : constant := 1;
    Files_Cursor_Fields : constant SQL_Field_List := To_List
      ((Files_Cursor_Path    => +Database.Files.Path,
-       Files_Cursor_Project => +Files3.Path));
+       Files_Cursor_Project => +Files4.Path));
    --  The fields for the files_cursor
 
    Entities2_Fields : constant SQL_Field_List :=
@@ -4992,13 +4995,14 @@ package body GNATCOLL.Xref is
         (Self.DB,
          SQL_Select
            (Files_Cursor_Fields,
-            From  => Database.Files & Database.F2f & Files2 & Files3,
+            From  => Database.Files & Database.F2f & Files2 & Files3 & Files4,
             Where => Database.F2f.Fromfile = Database.Files.Id
               and Files2.Id = Database.F2f.Tofile
               and Compare_Files (Files2.Path, Text_Param (1))
               and Database.F2f.Kind = F2f_Withs
               and Files2.Project = Files3.Id
-              and Compare_Files (Files3.Path, Text_Param (2)),
+              and Compare_Files (Files3.Path, Text_Param (2))
+              and Database.Files.Project = Files4.Id,
             Order_By => Database.Files.Path),
          Params => (1 => +Name'Unchecked_Access,
                     2 => +Project_Path'Unchecked_Access));
@@ -5038,13 +5042,15 @@ package body GNATCOLL.Xref is
            (Self.DB,
             SQL_Select
               (Files_Cursor_Fields,
-               From      => Database.Files & Database.F2f & Files2 & Files3,
+               From      =>
+                 Database.Files & Database.F2f & Files2 & Files3 & Files4,
                Where     => Database.F2f.Tofile = Database.Files.Id
                and Files2.Id = Database.F2f.Fromfile
                and Compare_Files (Files2.Path, Text_Param (1))
                and Database.F2f.Kind = F2f_Withs
                and Files2.Project = Files3.Id
-               and Compare_Files (Files3.Path, Text_Param (2)),
+               and Compare_Files (Files3.Path, Text_Param (2))
+               and Database.Files.Project = Files4.Id,
                Order_By  => Database.Files.Path),
             Params => (1 => +Name'Unchecked_Access,
                        2 => +Project_Path'Unchecked_Access));
