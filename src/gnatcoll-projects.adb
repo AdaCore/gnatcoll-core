@@ -3135,6 +3135,132 @@ package body GNATCOLL.Projects is
       return False;
    end Has_Language;
 
+   ----------------
+   -- Get_Target --
+   ----------------
+
+   function Get_Target (Project : Project_Type) return String is
+
+      function Extract_From_Attribute
+        (Attribute : Attribute_Pkg_String;
+         Suffix    : String) return String;
+      --  Attempt to extract target from the value of the given attribute,
+      --  assuming the value is of the form <target><suffix>.
+
+      ----------------------------
+      -- Extract_From_Attribute --
+      ----------------------------
+
+      function Extract_From_Attribute
+        (Attribute : Attribute_Pkg_String;
+         Suffix    : String) return String
+      is
+         Val : constant String := Project.Attribute_Value
+             (Attribute    => Attribute,
+              Use_Extended => True);
+         SL  : constant Natural := Suffix'Length;
+      begin
+         if Val'Length > Suffix'Length
+           and then To_Lower (Val (Val'Last - SL + 1 .. Val'Last)) = Suffix
+         then
+            return Val (Val'First .. Val'Last - SL);
+         end if;
+
+         return "";
+      end Extract_From_Attribute;
+
+   begin
+      --  First check whether the "Target" attribute is explicitly given
+
+      declare
+         Target : constant String := Project.Attribute_Value
+           (Attribute    => Target_Attribute,
+            Use_Extended => True);
+      begin
+         if Target /= "" then
+            --  The attribute target is defined and non-empty: look no further!
+            return Target;
+         end if;
+      end;
+
+      --  Next: look for the legacy way of defining the target via
+      --  the "gnat" in the package "ide". We expect something of the form
+      --      "arm-eabi-gnat";
+      --  and we assume the target is the first part.
+
+      declare
+         G : constant String := Extract_From_Attribute
+           (GNAT_Attribute, "-gnat");
+      begin
+         if G /= "" then
+            return G;
+         end if;
+      end;
+
+      --  Also look, similarly, at the gnatls attribute, expecting something
+      --  of the form "arm-eabi-gnatls"
+
+      declare
+         G : constant String := Extract_From_Attribute
+           (Gnatlist_Attribute, "-gnatls");
+      begin
+         if G /= "" then
+            return G;
+         end if;
+      end;
+
+      --  Nothing? The target is not defined.
+
+      return "";
+   end Get_Target;
+
+   -----------------
+   -- Get_Runtime --
+   -----------------
+
+   function Get_Runtime (Project : Project_Type) return String is
+      List : GNAT.Strings.String_List_Access;
+      S    : String_Access;
+   begin
+      --  First check whether the "Runtime" attribute is explicitly given
+
+      declare
+         Runtime : constant String := Project.Attribute_Value
+           (Attribute    => Runtime_Attribute,
+            Index        => "ada",
+            Use_Extended => True);
+      begin
+         if Runtime /= "" then
+            --  Got it!
+            return Runtime;
+         end if;
+      end;
+
+      --  Look for the legacy way of specifying the runtime as a --RTS
+      --  argument in the builder switches.
+
+      List := Project.Attribute_Value
+        (Attribute    => Builder_Default_Switches_Attribute,
+         Index        => "ada",
+         Use_Extended => True);
+
+      if List /= null then
+         for L in List'Range loop
+            S := List (L);
+            if S /= null
+              and then S'Length > 5
+              and then To_Lower (S (S'First .. S'First + 5)) = "--rts="
+            then
+               return S (S'First + 6 .. S'Last);
+            end if;
+         end loop;
+      end if;
+
+      --  No runtime defined
+
+      return "";
+   end Get_Runtime;
+
    ------------------
    -- Is_Main_File --
    ------------------

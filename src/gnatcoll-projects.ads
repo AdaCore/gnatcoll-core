@@ -1165,6 +1165,18 @@ package GNATCOLL.Projects is
      (Project : Project_Type; Language : String) return Boolean;
    --  Whether the specified language is used by that project
 
+   -----------------------
+   -- Build environment --
+   -----------------------
+
+   function Get_Target (Project : Project_Type) return String;
+   --  Return the target configured in the project, if any, and the empty
+   --  string otherwise.
+
+   function Get_Runtime (Project : Project_Type) return String;
+   --  Return the runtime configured in the project, if any, and the empty
+   --  string otherwise. This concerns only the runtime for Ada.
+
    --------------
    -- Switches --
    --------------
@@ -1305,6 +1317,9 @@ package GNATCOLL.Projects is
    Local_Pragmas_Attribute         : constant Attribute_Pkg_String;
    Locally_Removed_Files_Attribute : constant Attribute_Pkg_List;
    Documentation_Dir_Attribute     : constant Attribute_Pkg_String;
+
+   Target_Attribute                : constant Attribute_Pkg_String;
+   Runtime_Attribute               : constant Attribute_Pkg_String;
 
    --  Naming package
    Casing_Attribute                : constant Attribute_Pkg_String;
@@ -1904,7 +1919,11 @@ private
    VCS_Patch_Root            : constant Attribute_Pkg_String :=
                                  "ide#vcs_patch_root";
    Documentation_Dir_Attribute : constant Attribute_Pkg_String :=
-                                   "ide#documentation_dir";
+                                 "ide#documentation_dir";
+
+   Target_Attribute  : constant Attribute_Pkg_String := "target";
+   Runtime_Attribute : constant Attribute_Pkg_String := "runtime";
+
    Global_Pragmas_Attribute  : constant Attribute_Pkg_String :=
                                  "builder#global_configuration_pragmas";
    Local_Pragmas_Attribute   : constant Attribute_Pkg_String :=
