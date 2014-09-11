@@ -6,6 +6,6 @@ with "src/gnatcoll_tools";
 project Gnatcoll_GPS is
    for Source_Dirs use ();
    package IDE is
-      for VCS_Kind use "Subversion";
+      for VCS_Kind use "Git";
    end IDE;
 end Gnatcoll_GPS;

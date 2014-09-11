@@ -109,7 +109,7 @@ project GnatColl_Shared is
    end Builder;
 
    package Ide is
-      for VCS_Kind use "Subversion";
+      for VCS_Kind use "Git";
    end Ide;
 
 end GnatColl_Shared;
