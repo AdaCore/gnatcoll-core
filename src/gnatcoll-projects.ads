@@ -1145,6 +1145,11 @@ package GNATCOLL.Projects is
    --  have used Set_Value. However, it will be if the variable comes straight
    --  from the result of Tree.Scenario_Variables.
 
+   function Value (Self : Project_Environment; Name : String) return String;
+   --  Return the value that the variable will use when a project is loaded.
+   --  This is different from Value above which reports the value as seen in
+   --  the loaded project, but is only valid once a project has been loaded.
+
    ---------------
    -- Languages --
    ---------------

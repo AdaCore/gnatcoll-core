@@ -4633,6 +4633,10 @@ package body GNATCOLL.Projects is
    function Scenario_Variables
      (Tree : Project_Tree_Data_Access) return Scenario_Variable_Array is
    begin
+      if Tree = null then
+         return (1 .. 0 => <>);
+      end if;
+
       if Tree.Scenario_Variables = null then
          Compute_Scenario_Variables (Tree);
       end if;
@@ -4747,6 +4751,21 @@ package body GNATCOLL.Projects is
         (Self.Env.External, Name, Value,
          Prj.Ext.From_Command_Line);
    end Change_Environment;
+
+   -----------
+   -- Value --
+   -----------
+
+   function Value (Self : Project_Environment; Name : String) return String is
+      V : Name_Id;
+   begin
+      V := Prj.Ext.Value_Of (Self.Env.External, Get_String (Name));
+      if V /= No_Name then
+         return Get_String (V);
+      else
+         return "";
+      end if;
+   end Value;
 
    -----------
    -- Value --
@@ -5844,7 +5863,11 @@ package body GNATCOLL.Projects is
 
    function Root_Project (Self : Project_Tree'Class) return Project_Type is
    begin
-      return Self.Data.Root;
+      if Self.Data = null then
+         return No_Project;
+      else
+         return Self.Data.Root;
+      end if;
    end Root_Project;
 
    ----------------------------------
@@ -6098,11 +6121,10 @@ package body GNATCOLL.Projects is
       --  the processing (we can't reuse the previous parsing, because we need
       --  to Unload first.
 
-      Self.Unload;
-
       if Self.Data = null then
          Self.Data := Tmp.Data;
       else
+         Project_Tree'Class (Self).Unload;
          Self.Data.Timestamp := GNATCOLL.Utils.No_Time;
          Self.Data.Env := Tmp.Data.Env;
 
@@ -7372,7 +7394,9 @@ package body GNATCOLL.Projects is
       Node : Project_Node_Id;
    begin
       Trace (Me, "Loading empty project");
-      Self.Unload;
+
+      Project_Tree'Class (Self).Unload;
+
       Reset (Self, Env);
 
       Node := Prj.Tree.Create_Project
