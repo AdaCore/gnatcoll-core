@@ -71,6 +71,7 @@ package GNATCOLL.JSON is
    --  manipulating small arrays.
 
    function Is_Empty (Val : JSON_Value) return Boolean;
+   --  Returns True if Val is empty array, empty object or null value
 
    --  Read or write JSON values into strings
 
