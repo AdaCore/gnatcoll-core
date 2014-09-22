@@ -70,6 +70,8 @@ package GNATCOLL.JSON is
    --  results in an extra copy of the array, but is easier to use when
    --  manipulating small arrays.
 
+   function Is_Empty (Val : JSON_Value) return Boolean;
+
    --  Read or write JSON values into strings
 
    function Read

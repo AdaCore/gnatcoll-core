@@ -50,6 +50,16 @@ package body GNATCOLL.JSON is
       Filename : String) return JSON_Value;
    --  ???
 
+   function Is_Empty (Val : JSON_Value) return Boolean is
+   begin
+      case Val.Kind is
+         when JSON_Null_Type   => return True;
+         when JSON_Array_Type  => return Val.Data.Arr_Value.Vals.Is_Empty;
+         when JSON_Object_Type => return Val.Data.Obj_Value.Vals.Is_Empty;
+         when others           => return False;
+      end case;
+   end Is_Empty;
+
    ------------------
    -- Report_Error --
    ------------------
