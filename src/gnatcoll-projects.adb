@@ -3533,7 +3533,6 @@ package body GNATCOLL.Projects is
       Include_Extended : Boolean := True) return Project_Iterator
    is
       Iter       : Project_Iterator;
-      Iter_Inner : Inner_Project_Iterator;
 
       package Path_Sets is new
         Ada.Containers.Indefinite_Ordered_Sets (String);
@@ -3551,6 +3550,7 @@ package body GNATCOLL.Projects is
       procedure Add_Project (Project : Project_Type'Class) is
          P          : Project_Type;
          Aggregated : Aggregated_Project_List;
+         Iter_Inner : Inner_Project_Iterator;
       begin
          if Is_Aggregate_Project (Project) then
             --  processing aggregated project hierarchies
@@ -3611,9 +3611,13 @@ package body GNATCOLL.Projects is
                      Path_Sets.No_Element
                then
                   --  we only need projects that are not yet in the list
-                  Iter.Project_List.Append (Current (Iter_Inner));
-                  Project_Paths.Include
-                    (Current (Iter_Inner).Project_Path.Display_Full_Name);
+                  if Is_Aggregate_Project (Current (Iter_Inner)) then
+                     Add_Project (Current (Iter_Inner));
+                  else
+                     Iter.Project_List.Append (Current (Iter_Inner));
+                     Project_Paths.Include
+                       (Current (Iter_Inner).Project_Path.Display_Full_Name);
+                  end if;
                end if;
 
                Next (Iter_Inner);
@@ -3687,7 +3691,6 @@ package body GNATCOLL.Projects is
       Include_Extended : Boolean := True) return Project_Iterator
    is
       Iter       : Project_Iterator;
-      Iter_Inner : Inner_Project_Iterator;
 
       package Path_Sets is new
         Ada.Containers.Indefinite_Ordered_Sets (String);
@@ -3705,6 +3708,7 @@ package body GNATCOLL.Projects is
       procedure Add_Project (Project : Project_Type'Class) is
          P          : Project_Type;
          Aggregated : Aggregated_Project_List;
+         Iter_Inner : Inner_Project_Iterator;
       begin
          if Is_Aggregate_Project (Project) then
             --  processing aggregated project hierarchies
@@ -3754,9 +3758,14 @@ package body GNATCOLL.Projects is
                    Path_Sets.No_Element
                then
                   --  we only need projects that are not yet in the list
-                  Iter.Project_List.Append (Current (Iter_Inner));
-                  Project_Paths.Include
-                    (Current (Iter_Inner).Project_Path.Display_Full_Name);
+                  if Is_Aggregate_Project (Current (Iter_Inner)) then
+                     --  aggregate library
+                     Add_Project (Current (Iter_Inner));
+                  else
+                     Iter.Project_List.Append (Current (Iter_Inner));
+                     Project_Paths.Include
+                       (Current (Iter_Inner).Project_Path.Display_Full_Name);
+                  end if;
                end if;
 
                Next (Iter_Inner);
