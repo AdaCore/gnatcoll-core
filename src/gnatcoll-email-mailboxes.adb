@@ -289,47 +289,21 @@ package body GNATCOLL.Email.Mailboxes is
       From   : in out Integer)
    is
       pragma Unreferenced (Self);
-      Tmp : Integer;
    begin
-      --  We might match a "From " line that is in fact part of the body, so
+      --  Note: we used to treat a From_ line that does not contain a colon
+      --  as part of the message body. This was not the intent of the code,
+      --  and in any case was a questionable heuristic, since all From_ lines
+      --  in bodies should really be assumed to have been escaped as >From_.
+      --  So, we now just search for From_ at beginning of line.
       --  put in place a heuristic
 
-      loop
-         From := Search (From_Pattern, Buffer (From .. Buffer'Last));
+      From := Search (From_Pattern, Buffer (From .. Buffer'Last));
+      if From /= -1 then
 
-         --  We should also check the format of the line itself, so that if a
-         --  message contains lines starting with "From", they are not taken
-         --  into account. Unfortunately, this format is not precisely defined,
-         --  and may vary depending on the MUA used by the sender. One partial
-         --  solution is to check that the next line is a proper mail header.
+         --  Match present: skip initial ASCII.LF
 
-         if From = -1 then
-            return;
-         end if;
-
-         Tmp := From + 1;
-         loop
-            if Tmp > Buffer'Last then
-               From := -1;
-               return;
-            end if;
-
-            --  No following header, so not the start of a new message
-            exit when Buffer (Tmp) = ASCII.LF;
-            if Buffer (Tmp) = ':' then
-               --  The From_ line was followed by a header, so probably starts
-               --  a new message.
-               --  Skip ASCII.LF
-               From := From + 1;
-               return;
-            end if;
-
-            Tmp := Tmp + 1;
-         end loop;
-
-         --  Skip ASCII.LF & "From "
-         From := From + 5;
-      end loop;
+         From := From + 1;
+      end if;
    end Internal_Search_Start;
 
    --------------
