@@ -106,10 +106,19 @@ package body GNATCOLL.JSON.Utility is
       while Low <= Text_Length loop
          --  UTF-8 sequence is maximum 4 characters long according to RFC3629
 
-         GNAT.Decode_UTF8_String.Decode_Wide_Wide_Character
-           (Str (Low .. Natural'Min (Text_Length, Low + 3)), Low, W_Chr);
+         begin
+            GNAT.Decode_UTF8_String.Decode_Wide_Wide_Character
+              (Str (Low .. Natural'Min (Text_Length, Low + 3)), Low, W_Chr);
+         exception
+            when Constraint_Error =>
+               --  Skip the character even if it is invalid.
+               Low := Low + 1;
+               W_Chr := NUL;
+         end;
 
          case W_Chr is
+            when NUL =>
+               null;
             when '"' =>
                Append (Ret, "\""");
             when '\' =>
