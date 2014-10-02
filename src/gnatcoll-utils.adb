@@ -25,6 +25,7 @@ with Ada.Calendar;               use Ada.Calendar;
 with Ada.Calendar.Time_Zones;    use Ada.Calendar.Time_Zones;
 with Ada.Characters.Handling;    use Ada.Characters.Handling;
 with Ada.Command_Line;
+with Ada.Strings.Fixed;          use Ada.Strings;
 with GNAT.Calendar;              use GNAT.Calendar;
 with GNAT.Calendar.Time_IO;      use GNAT.Calendar.Time_IO;
 with GNAT.Case_Util;
@@ -156,6 +157,24 @@ package body GNATCOLL.Utils is
          S := Replace_Slice (S, Ind, Ind + Pattern'Length - 1, Replacement);
          Ind := Ind + Replacement'Length;
       end loop;
+   end Replace;
+
+   function Replace
+     (S : String; Pattern : String; Replacement : String) return String
+   is
+      Idx : Natural;
+   begin
+      Idx := Fixed.Index (S, Pattern);
+
+      if Idx = 0 then
+         return S;
+      else
+         return S (S'First .. Idx - 1) & Replacement
+                & Replace
+                    (S           => S (Idx + Pattern'Length .. S'Last),
+                     Pattern     => Pattern,
+                     Replacement => Replacement);
+      end if;
    end Replace;
 
    ---------------------

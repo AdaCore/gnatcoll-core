@@ -67,6 +67,10 @@ package GNATCOLL.Utils is
       Replacement : String);
    --  Return S, with all occurrences of Pattern replaced with Replacement
 
+   function Replace
+     (S : String; Pattern : String; Replacement : String) return String;
+   --  Return S, with all occurrences of Pattern replaced with Replacement
+
    function Split
      (Str              : String;
       On               : Character;
