@@ -24,6 +24,8 @@
 --  Various utility subprograms used in GNATCOLL, and that can easily be reused
 --  elsewhere
 
+pragma Ada_2012;
+
 with Ada.Calendar;
 with Ada.Strings.Unbounded;
 with GNAT.Expect;
@@ -64,11 +66,13 @@ package GNATCOLL.Utils is
    procedure Replace
      (S           : in out Ada.Strings.Unbounded.Unbounded_String;
       Pattern     : String;
-      Replacement : String);
+      Replacement : String)
+     with Pre => Pattern /= "";
    --  Return S, with all occurrences of Pattern replaced with Replacement
 
    function Replace
-     (S : String; Pattern : String; Replacement : String) return String;
+     (S : String; Pattern : String; Replacement : String) return String
+     with Pre => Pattern /= "";
    --  Return S, with all occurrences of Pattern replaced with Replacement
 
    function Split
