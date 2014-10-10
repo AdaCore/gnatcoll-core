@@ -3611,7 +3611,10 @@ package body GNATCOLL.Projects is
                      Path_Sets.No_Element
                then
                   --  we only need projects that are not yet in the list
-                  if Is_Aggregate_Project (Current (Iter_Inner)) then
+                  if
+                    Is_Aggregate_Project (Current (Iter_Inner))
+                    and then not Direct_Only
+                  then
                      Add_Project (Current (Iter_Inner));
                   else
                      Iter.Project_List.Append (Current (Iter_Inner));
@@ -3626,7 +3629,6 @@ package body GNATCOLL.Projects is
       end Add_Project;
 
    begin
-
       Iter.Root := Root_Project;
 
       if not Recursive then
@@ -3758,7 +3760,10 @@ package body GNATCOLL.Projects is
                    Path_Sets.No_Element
                then
                   --  we only need projects that are not yet in the list
-                  if Is_Aggregate_Project (Current (Iter_Inner)) then
+                  if
+                    Is_Aggregate_Project (Current (Iter_Inner))
+                    and then not Direct_Only
+                  then
                      --  aggregate library
                      Add_Project (Current (Iter_Inner));
                   else
@@ -3882,6 +3887,28 @@ package body GNATCOLL.Projects is
             Is_Limited_With := False;
             return;
          end if;
+      end if;
+
+      --  Handling aggregate libraries
+      if Is_Aggregate_Library (Parent) then
+         Is_Limited_With := False;
+         declare
+            Aggregated : Aggregated_Project_List :=
+              Parent.Data.View.Aggregated_Projects;
+            P          : Project_Type;
+         begin
+            while Aggregated /= null loop
+               P := Project_Type
+                 (Project_From_Path (Parent.Data.Tree, Aggregated.Path));
+
+               if P.Data = Child.Data then
+                  Imports := True;
+                  return;
+               end if;
+
+               Aggregated := Aggregated.Next;
+            end loop;
+         end;
       end if;
 
       Imports := False;
@@ -7733,6 +7760,23 @@ package body GNATCOLL.Projects is
 
       Free (Self.Data.View);
    end Unload;
+
+   --------------------------
+   -- Is_Aggregate_Library --
+   --------------------------
+
+   function Is_Aggregate_Library (Self : Project_Type) return Boolean is
+   begin
+      if Self.Data.Local_Tree = null then
+         --  root project
+         return Project_Qualifier_Of
+           (Self.Data.Node, Self.Data.Tree.Tree) = Prj.Aggregate_Library;
+      else
+         return Project_Qualifier_Of
+           (Self.Data.Node, Self.Data.Local_Node_Tree)
+           = Prj.Aggregate_Library;
+      end if;
+   end Is_Aggregate_Library;
 
    --------------------------
    -- Is_Aggregate_Project --

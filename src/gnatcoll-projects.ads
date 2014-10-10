@@ -282,6 +282,9 @@ package GNATCOLL.Projects is
    function Is_Aggregate_Project (Self : Project_Type) return Boolean;
    --  Return true if the current project is an aggregate project.
 
+   function Is_Aggregate_Library (Self : Project_Type) return Boolean;
+   --  Return true if the current project is an aggregate library project.
+
    ------------------
    -- Project data --
    ------------------
@@ -1022,7 +1025,10 @@ package GNATCOLL.Projects is
    --  Return the list of all the projects that import Project, either directly
    --  or indirectly. It also includes projects that extend Project, and their
    --  own extensions, so that a project and all its extensions are considered
-   --  as the same project.
+   --  as the same project. Aggregate library projects are also included in the
+   --  list, if Project or one of the projects importing it is aggregated by
+   --  the aggregate library. Aggregate projects (not libraries) are not added
+   --  to the list.
    --  If Project is No_Project, the resulting iterator returns all the
    --  projects in the hierarchy.
    --  If Include_Self is true, then Project will be included in the iterator
@@ -1045,6 +1051,8 @@ package GNATCOLL.Projects is
    --  if Parents or Child is No_Project, True is returned.
    --  If Include_Extended is true, then True is also returned if Child is an
    --  extended project of Parent
+   --  If Parent is an aggregate library and Child is one of it's aggregated
+   --  projects, True is returned.
 
    ---------------
    -- Scenarios --
