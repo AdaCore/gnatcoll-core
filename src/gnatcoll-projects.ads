@@ -380,6 +380,16 @@ package GNATCOLL.Projects is
    --  This impacts the default path on which projects are looked for, but
    --  will be overridden if the user has specified an IDE.Gnatlist attribute
    --  in his project.
+   --  This procedure is now deprecated, and we recommend that project use the
+   --  Runtime and Target attributes instead. See Set_Target_And_Runtime below.
+
+   procedure Set_Target_And_Runtime
+     (Self    : in out Project_Environment;
+      Target  : String := "";
+      Runtime : String := "");
+   --  Override the Runtime and Target attributes. These values take priority
+   --  over what is defined in the project file.
+   --  These are generally set from --target and --RTS command line switches.
 
    procedure Set_Path_From_Gnatls
      (Self         : in out Project_Environment;
@@ -1724,6 +1734,10 @@ private
       Autoconf    : Boolean := False;
       Config_File : GNATCOLL.VFS.Virtual_File;
       --  Name of the .cgpr file to parse for the project.
+
+      Forced_Target : GNAT.Strings.String_Access;
+      Forced_Runtime : GNAT.Strings.String_Access;
+      --  force specific values for runtime and target
 
       Gnatls : GNAT.Strings.String_Access;
       --  The gnatls that was run to set the predefined paths (or unset if the

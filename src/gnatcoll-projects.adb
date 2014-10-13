@@ -21,6 +21,7 @@
 --                                                                          --
 ------------------------------------------------------------------------------
 
+pragma Ada_2012;
 with Ada.Calendar;                use Ada.Calendar;
 with Ada.Characters.Handling;     use Ada.Characters.Handling;
 with Ada.Containers.Hashed_Sets;
@@ -3170,6 +3171,12 @@ package body GNATCOLL.Projects is
       end Extract_From_Attribute;
 
    begin
+      --  What this explicitly set in the environment ?
+
+      if Project.Data.Tree.Env.Forced_Target /= null then
+         return Project.Data.Tree.Env.Forced_Target.all;
+      end if;
+
       --  First check whether the "Target" attribute is explicitly given
 
       declare
@@ -3222,6 +3229,12 @@ package body GNATCOLL.Projects is
       List : GNAT.Strings.String_List_Access;
       S    : String_Access;
    begin
+      --  What this explicitly set in the environment ?
+
+      if Project.Data.Tree.Env.Forced_Runtime /= null then
+         return Project.Data.Tree.Env.Forced_Runtime.all;
+      end if;
+
       --  First check whether the "Runtime" attribute is explicitly given
 
       declare
@@ -6293,19 +6306,82 @@ package body GNATCOLL.Projects is
       Self.Default_Gnatls := new String'(Gnatls);
    end Set_Default_Gnatls;
 
+   ----------------------------
+   -- Set_Target_And_Runtime --
+   ----------------------------
+
+   procedure Set_Target_And_Runtime
+      (Self    : in out Project_Environment;
+       Target  : String := "";
+       Runtime : String := "") is
+   begin
+      Free (Self.Forced_Target);
+      Free (Self.Forced_Runtime);
+      if Target /= "" then
+         Self.Forced_Target := new String'(Target);
+      end if;
+      if Runtime /= "" then
+         Self.Forced_Runtime := new String'(Runtime);
+      end if;
+   end Set_Target_And_Runtime;
+
    ------------------------------------
    -- Set_Path_From_Gnatls_Attribute --
    ------------------------------------
 
    function Set_Path_From_Gnatls_Attribute
-     (Project      : Project_Id;
-      Tree         : Project_Tree'Class;
-      Errors       : Error_Report := null)
+     (Project         : Project_Id;
+      Tree            : Project_Tree'Class;
+      Errors          : Error_Report := null)
       return Boolean
    is
       P       : Package_Id;
       Value   : Variable_Value;
       GNAT_Version : GNAT.Strings.String_Access;
+
+      Shared : constant Shared_Project_Tree_Data_Access :=
+         Tree.Data.View.Shared;
+
+      Unset : constant String := "";
+
+      Target : constant String :=
+         (if Tree.Data.Env.Forced_Target /= null then
+           Tree.Data.Env.Forced_Target.all
+         else
+           Value_Of
+           (Value_Of
+              (Get_String ("target"), Project.Decl.Attributes, Shared),
+            Unset));
+
+      Elem : constant Array_Element_Id := Value_Of
+         (Get_String ("runtime"), Project.Decl.Arrays, Shared);
+      Runtime : constant String :=
+         (if Tree.Data.Env.Forced_Runtime /= null then
+            Tree.Data.Env.Forced_Runtime.all
+          else
+            Value_Of
+               ((if Elem = No_Array_Element then Nil_Variable_Value
+                 else Value_Of
+                    (Index    => Get_String ("ada"),
+                     In_Array => Elem,
+                     Shared   => Shared)),
+                Unset));
+
+      function Default_Gnatls return String;
+      --  Compute the default 'gnatls' command to spawn
+
+      function Default_Gnatls return String is
+      begin
+         if Runtime /= Unset
+            or else Target /= Unset
+         then
+            return (if Target /= Unset then Target & '-' else "")
+               & "gnatls"
+               & (if Runtime /= Unset then " --RTS=" & Runtime else "");
+         else
+            return Tree.Data.Env.Default_Gnatls.all;
+         end if;
+      end Default_Gnatls;
 
       function Process_Gnatls (Gnatls : String) return Boolean;
       function Process_Gnatls (Gnatls : String) return Boolean is
@@ -6327,26 +6403,44 @@ package body GNATCOLL.Projects is
       P := Value_Of
         (Name_Ide,
          In_Packages => Project.Decl.Packages,
-         Shared      => Tree.Data.View.Shared);
+         Shared      => Shared);
       if P = No_Package then
          Trace (Me, "No package IDE, no gnatlist attribute");
-         return Process_Gnatls (Tree.Data.Env.Default_Gnatls.all);
+         return Process_Gnatls (Default_Gnatls);
       else
+         --  Do we have a gnatlist attribute ?
          Value := Value_Of
            (Get_String ("gnatlist"),
-            Tree.Data.View.Shared.Packages.Table (P).Decl.Attributes,
-            Tree.Data.View.Shared);
+            Tree.Data.View.Shared.Packages.Table (P).Decl.Attributes, Shared);
 
          if Value = Nil_Variable_Value then
             Trace (Me, "No attribute IDE'gnatlist");
-            return Process_Gnatls (Tree.Data.Env.Default_Gnatls.all);
+            return Process_Gnatls (Default_Gnatls);
          else
             declare
                Gnatls : constant String := Get_Name_String (Value.Value);
             begin
                if Gnatls = "" then
-                  return Process_Gnatls (Tree.Data.Env.Default_Gnatls.all);
+                  return Process_Gnatls (Default_Gnatls);
                else
+                  if Runtime /= Unset then
+                     Trace (Me, "Error, IDE'Gnatlist attribute cannot be set"
+                        & " when Runtime is also set");
+                     if Errors /= null then
+                        Errors ("Error, IDE'Gnatlist attribute cannot be set"
+                           & " when Runtime is also set");
+                     end if;
+                     return False;
+                  elsif Target /= Unset then
+                     Trace (Me, "Error, IDE'Gnatlist attribute cannot be set"
+                        & " when Target is also set");
+                     if Errors /= null then
+                        Errors ("Error, IDE'Gnatlist attribute cannot be set"
+                           & " when Target is also set");
+                     end if;
+                     return False;
+                  end if;
+
                   return Process_Gnatls (Gnatls);
                end if;
             end;
