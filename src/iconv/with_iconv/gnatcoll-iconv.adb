@@ -185,8 +185,11 @@ package body GNATCOLL.Iconv is
    -----------------
 
    procedure Iconv_Close (State : Iconv_T) is
+      use type System.Address;
    begin
-      C_Iconv_Close (State.T);
+      if State.T /= System.Null_Address then
+         C_Iconv_Close (State.T);
+      end if;
    end Iconv_Close;
 
    -----------

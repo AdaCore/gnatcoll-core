@@ -220,7 +220,9 @@ package GNATCOLL.Iconv is
 
 private
    type Iconv_T is record
-      T : System.Address;
+      T : System.Address := System.Null_Address;
+      --  Underlying C iconv_t value. Null_Address denotes an uninitialized
+      --  state.
 
       Emulate_Ignore : Boolean := False;
       --  Whether we should emulate the IGNORE flag of the GNU libiconv. This
