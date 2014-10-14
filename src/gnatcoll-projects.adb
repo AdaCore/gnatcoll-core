@@ -6423,22 +6423,10 @@ package body GNATCOLL.Projects is
                if Gnatls = "" then
                   return Process_Gnatls (Default_Gnatls);
                else
-                  if Runtime /= Unset then
+                  if Runtime /= Unset or else Target /= Unset then
                      Trace (Me, "Error, IDE'Gnatlist attribute cannot be set"
-                        & " when Runtime is also set");
-                     if Errors /= null then
-                        Errors ("Error, IDE'Gnatlist attribute cannot be set"
-                           & " when Runtime is also set");
-                     end if;
-                     return False;
-                  elsif Target /= Unset then
-                     Trace (Me, "Error, IDE'Gnatlist attribute cannot be set"
-                        & " when Target is also set");
-                     if Errors /= null then
-                        Errors ("Error, IDE'Gnatlist attribute cannot be set"
-                           & " when Target is also set");
-                     end if;
-                     return False;
+                        & " when Runtime or Target is also set");
+                     return Process_Gnatls (Default_Gnatls);
                   end if;
 
                   return Process_Gnatls (Gnatls);
@@ -7231,7 +7219,13 @@ package body GNATCOLL.Projects is
 
          Trace (Me, "Configuration file is '"
                 & Self.Data.Env.Config_File.Display_Full_Name & "' autoconf="
-                & Self.Data.Env.Autoconf'Img);
+                & Self.Data.Env.Autoconf'Img
+                & " for target " & Self.Root_Project.Get_Target);
+
+         --  Get_Target only returns a non-empty string when
+         --  Set_Target_And_Runtime was called first; otherwise we depend on
+         --  the project manager to extract target and runtime information
+         --  from project attributes
 
          Process_Project_And_Apply_Config
            (Main_Project        => View,
@@ -7241,6 +7235,7 @@ package body GNATCOLL.Projects is
             Project_Tree        => Self.Data.View,
             Project_Node_Tree   => Self.Data.Tree,
             Packages_To_Check   => null,
+            Target_Name                => Self.Root_Project.Get_Target,
             Allow_Automatic_Generation => Self.Data.Env.Autoconf,
             Automatically_Generated    => Automatically_Generated,
             Config_File_Path           => Config_File_Path,

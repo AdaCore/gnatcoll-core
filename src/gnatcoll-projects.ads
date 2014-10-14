@@ -885,6 +885,10 @@ package GNATCOLL.Projects is
    --  configuration file automatically.
    --  If a name was specified via Set_Config_File and the file exists, it is
    --  parsed (and not regenerated).
+   --  The switch --target will be passed to gprconfig only if the project
+   --  defines the Target attribute or Set_Target_And_Runtime was called.
+   --  The target is NOT automatically extracted from IDE attributes
+   --  (since their values are not yet known when gprconfig is spawned).
 
    procedure Add_Config_Dir
      (Self      : in out Project_Environment;
