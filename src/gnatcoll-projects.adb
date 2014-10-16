@@ -3565,6 +3565,11 @@ package body GNATCOLL.Projects is
          Aggregated : Aggregated_Project_List;
          Iter_Inner : Inner_Project_Iterator;
       begin
+         if Project.Get_View = Prj.No_Project then
+            --  View has not been computed for this project.
+            return;
+         end if;
+
          if Is_Aggregate_Project (Project) then
             --  processing aggregated project hierarchies
             Aggregated := Project.Data.View.Aggregated_Projects;
@@ -3725,6 +3730,11 @@ package body GNATCOLL.Projects is
          Aggregated : Aggregated_Project_List;
          Iter_Inner : Inner_Project_Iterator;
       begin
+         if Project.Get_View = Prj.No_Project then
+            --  View has not been computed for this project.
+            return;
+         end if;
+
          if Is_Aggregate_Project (Project) then
             --  processing aggregated project hierarchies
             Aggregated := Project.Data.View.Aggregated_Projects;

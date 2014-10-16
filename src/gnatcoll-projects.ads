@@ -545,6 +545,8 @@ package GNATCOLL.Projects is
    --  builder mode is returned.
    --  If Recursive is True, it also includes the object path (and ALI paths if
    --  requested) for all imported projects.
+   --
+   --  If the view is not fully recomputed, an empty path is returned.
 
    function Executables_Directory
      (Project : Project_Type) return GNATCOLL.VFS.Virtual_File;
@@ -1012,6 +1014,8 @@ package GNATCOLL.Projects is
    --
    --  If Direct_Only is True and Recursive is True, then only the projects
    --  that are imported directly by Root_Project are returned.
+   --
+   --  Start should not be called before the view has been fully recomputed.
 
    function Start_Reversed
      (Root_Project     : Project_Type;
