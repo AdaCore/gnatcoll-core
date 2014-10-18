@@ -2979,6 +2979,7 @@ package body GNATCOLL.Projects.Normalize is
       end if;
 
       Set_Name_Of (Project.Node, Tree_Node, Name);
+      Set_Display_Name_Of (Project.Node, Tree_Node, Name);
       Set_Directory_Of
         (Project.Node, Tree_Node,
          Path_Name_Type (Get_String (+New_Dir.Full_Name)));
@@ -3000,7 +3001,6 @@ package body GNATCOLL.Projects.Normalize is
          Prj.Tree.Name_Of (Project.Node, Tree_Node),
          Prj.Tree.Tree_Private_Part.Project_Name_And_Node'
          (Name           => Old_Name,
-          Display_Name   => Old_Name,
           Node           => Empty_Node,
           Resolved_Path  => Path_Name_Type (Old_Name),
           Extended       => False,
@@ -3013,7 +3013,6 @@ package body GNATCOLL.Projects.Normalize is
          Prj.Tree.Name_Of (Project.Node, Tree_Node),
          Prj.Tree.Tree_Private_Part.Project_Name_And_Node'
          (Name           => Name,
-          Display_Name   => Name,
           Resolved_Path  => Path_Name_Type (Full_Path),
           Node           => Project.Node,
           Extended       => False,
