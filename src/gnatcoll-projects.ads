@@ -833,6 +833,8 @@ package GNATCOLL.Projects is
    end record;
    --  Source is set to null for ALI files found in the predefined source
    --  path, since we do not know the mapping to source files in this context.
+   --  When is Source *not* set to null??? and what does it correspond to
+   --  in that case???
    --
    --  LI_Project is the project in which the LI file was found. It might not
    --  be the same as the source's project, when using extending projects.
@@ -841,8 +843,7 @@ package GNATCOLL.Projects is
    --  Non_Aggregate_Root_Project is the non-aggregated root project for the
    --  tree. When using aggregated projects, it will take the value of any of
    --  the aggregated project. In other cases, this is the project loaded by
-   --  the user.
-   --  null for predefined sources.
+   --  the user. Set to null for predefined sources.
 
    procedure Free (Self : in out Library_Info);
    --  Free the memory used by Self
