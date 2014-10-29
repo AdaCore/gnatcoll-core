@@ -2140,7 +2140,7 @@ package body GNATCOLL.Projects is
             S_Info.Root_Project := Self.Root_Project;
 
             if Source.Source /= null then
-               --  One of the initially cashed source files.
+               --  One of the initially cached source files.
                S_Info.Part := Unit_Kid_To_Part (Source.Source.Kind);
                if Source.Source.Unit = No_Unit_Index then
                   --  Not applicable to C and other non unit-based languages.
