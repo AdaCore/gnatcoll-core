@@ -110,6 +110,8 @@ testsuite/traces/MA08-038/nofile
 testsuite/vfs/links1/hello.adb
 testsuite/vfs/links1/hello.orig
 testsuite/vfs/links1/test_links
+testsuite/utils/time/run
+testsuite/utils/split/obj
 
 testsuite/results
 

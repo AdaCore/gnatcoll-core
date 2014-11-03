@@ -1522,18 +1522,17 @@ package body GNATCOLL.SQL_Impl is
    is
       pragma Unreferenced (Self);
       Adjusted : Time;
+      Offset   : Duration;
    begin
-      --  Value is always considered as GMT, which is what we store in the
-      --  database. Unfortunately, GNAT.Calendar.Time_IO converts that back to
-      --  local time.
-
       if Value /= GNAT.Calendar.No_Time then
-         Adjusted := Value - Duration (UTC_Time_Offset (Value)) * 60.0;
+         --  Input Value should be interpreted in GMT, but Image assumes this
+         --  is local time zone. So we need an offset here.
 
+         Offset := Duration (UTC_Time_Offset (Value)) * 60.0;
          if Quote then
-            return Image (Adjusted, "'%Y-%m-%d'");
+            return Image (Value - Offset, "'%Y-%m-%d'");
          else
-            return Image (Adjusted, "%Y-%m-%d");
+            return Image (Value - Offset, "%Y-%m-%d");
          end if;
       else
          return "NULL";

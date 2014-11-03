@@ -229,14 +229,12 @@ package GNATCOLL.Utils is
    --  using the same formats as in GNAT.Calendar.Time_IO.Value. In addition,
    --  it also supports timezones (as output for instance by PostgreSQL)
    --     1970-01-01 12:00:00+01
-   --
-   --  Return the Date if the format is valid, No_Time otherwise
+   --  and the ISO format
+   --     1970-01-01T12:00:00+01   or   1970-01-01T12:00:00Z
    --  All the above can start with the day spelled out, as in "thu, "
-   --  The returned date is in UTC format, and should be manipulated through
-   --  the functions in Ada.Calendar.*, not the functions in GNAT.Calendar.*
-   --  which expect a local time.
-   --  The input date is assumed to be in UTC, unless a timezone is specified
-   --  with a final "[+-]\d\d".
+   --
+   --  The input date is assumed to be in UTC by default, unless a timezone
+   --  is specified with a final "[+-]\d\d".
 
 private
 

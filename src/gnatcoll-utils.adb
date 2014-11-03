@@ -675,11 +675,17 @@ package body GNATCOLL.Utils is
    function Time_Value (Str : String) return Ada.Calendar.Time is
       First  : Integer := Str'First;
       Last   : Integer := Str'Last;
-      TZ     : Integer := Integer'Last;
       Result : Ada.Calendar.Time;
+
+      Local_TZ : constant Duration :=
+        Duration (Ada.Calendar.Time_Zones.UTC_Time_Offset (Result)) * 60.0;
+      --  Time zone offset (in seconds) for the local timezone
+
+      --  When no timezone is specified by the user, UTC is assumed.
+      TZ     : Duration := 0.0;
    begin
       --  Do we have the name of the day at the beginning of the string, as in
-      --     Tue, 19 Dec 2006 13:59:04 +0000
+      --     Tue, 19 Dec 2006 13:59:04+00
 
       if Str'Length > 4 and then Str (First + 3) = ',' then
          First := First + 5;
@@ -691,11 +697,16 @@ package body GNATCOLL.Utils is
       --  8 for date (01/02/02)
 
       if Str'Length > 16
-        and then (Str (Str'Last - 2) = '+'
-                  or else Str (Str'Last - 2) = '-')
+        and then (Str (Last - 2) = '+'
+                  or else Str (Last - 2) = '-')
       then
-         Last := Str'Last - 3;
-         TZ   := Integer'Value (Str (Str'Last - 2 .. Str'Last));
+         TZ   := -Duration (Integer'Value (Str (Last - 2 .. Last)) * 3600);
+         Last := Last - 3;
+      end if;
+
+      if Str'Length > 1 and then Str (Last) = 'Z' then
+         Last := Last - 1;
+         TZ := 0.0;   --  date is given as UTC
       end if;
 
       --  Postgres includes subseconds in the display. We should ignore them,
@@ -708,28 +719,24 @@ package body GNATCOLL.Utils is
          end if;
       end loop;
 
-      Result := GNAT.Calendar.Time_IO.Value (Str (First .. Last));
+      --  In ISO format, the separator between date and time is 'T', whereas
+      --  GNAT.Calendar.Time_IO expects as space.
 
-      --  Take into account the timezone specified in the time
+      declare
+         S2 : String := Str (First .. Last);
+      begin
+         for S in S2'Range loop
+            if S2 (S) = 'T' then
+               S2 (S) := ' ';
+               exit;
+            end if;
+         end loop;
 
-      if TZ /= Integer'Last then
-         Result := Result - Duration (TZ * 3600);
-      end if;
-
-      --  GNAT.Calendar.Time_IO has added an time offset for the local
-      --  timezone, as opposed to what Ada.Calendar.Formatting.Time_Of does.
-      --  Therefore, we remove that extra offset. This also ensures that Image
-      --  behaves the same whether the time was created through
-      --  Accounts.Value (ie GNAT.Calendar.Time_Of) or through
-      --  GNATCOLL.Email.Utils.To_Time (ie Ada.Calendar.Formatting.Time_Of).
-      --  The drawback is that this requires a system call every time we
-      --  convert a string to a time, and then every time we convert a time to
-      --  a string. A more efficient approach could have been that
-      --  GNATCOLL.Email.Utils.To_Time would use GNAT.Calendar, but GNATCOLL
-      --  really should output UTC date I think.
-
-      return Result
-        + Duration (Ada.Calendar.Time_Zones.UTC_Time_Offset (Result)) * 60.0;
+         --  GNAT.Calendar.Time_IO.Value uses Ada.Calendars.Time_Of, which
+         --  for GNAT assumes the input date is in the local time zone.
+         --  Local_TZ is used to compensated that offset.
+         return GNAT.Calendar.Time_IO.Value (S2) + TZ + Local_TZ;
+      end;
 
    exception
       when Constraint_Error =>
