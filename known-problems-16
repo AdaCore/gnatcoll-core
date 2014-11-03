@@ -4,6 +4,16 @@ Known Problems in Gnatcoll 1.6
 
 Copyright (C) 2013-2014, AdaCore
 
+KP-16-NA24-020 GNATCOLL.Config.Get raises exception when key not found
+
+  Problem:    When the requested key does not exist in the config file, an
+              exception is raised rather than returning an empty string, as
+              documented.
+
+  Status:     Fixed in Gnatcoll 1.7.0 on 2014-11-03
+
+  Workaround: use a local declare block to catch the exception.
+
 KP-16-N721-043 GNATCOLL.JSON incorrect decoding of non-BMP characters
 
   Problem:    Characters with code point outside of Basic Multilingual Page are

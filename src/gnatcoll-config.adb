@@ -33,6 +33,9 @@ with GNATCOLL.VFS;              use GNATCOLL.VFS;
 package body GNATCOLL.Config is
    use String_Maps;
 
+   No_Value : constant Config_Value :=
+      (Len => 0, System_Id => Null_Unbounded_String, Value => (others => ' '));
+
    function Internal_Get
      (Self    : Config_Pool;
       Key     : String;
@@ -311,20 +314,32 @@ package body GNATCOLL.Config is
    function Internal_Get
      (Self    : Config_Pool;
       Key     : String;
-      Section : String := Section_From_Key) return Config_Value is
+      Section : String := Section_From_Key) return Config_Value
+   is
+      C : String_Maps.Cursor;
    begin
       if Section = Section_From_Key then
          for D in Key'Range loop
             if Key (D) = '.' then
-               return Element (Self.Keys,
-                               Key (Key'First .. D - 1)
-                               & '#' & Key (D + 1 .. Key'Last));
+               C := Self.Keys.Find
+                  (Key (Key'First .. D - 1) & '#' & Key (D + 1 .. Key'Last));
+               if C = No_Element then
+                  return No_Value;
+               else
+                  return Element (C);
+               end if;
             end if;
          end loop;
 
-         return Element (Self.Keys, '#' & Key);
+         C := Self.Keys.Find ('#' & Key);
       else
-         return Element (Self.Keys, Section & "#" & Key);
+         C := Self.Keys.Find (Section & '#' & Key);
+      end if;
+
+      if C = No_Element then
+         return No_Value;
+      else
+         return Element (C);
       end if;
    end Internal_Get;
 
