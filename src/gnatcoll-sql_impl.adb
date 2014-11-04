@@ -1521,7 +1521,6 @@ package body GNATCOLL.SQL_Impl is
       Quote : Boolean) return String
    is
       pragma Unreferenced (Self);
-      Adjusted : Time;
       Offset   : Duration;
    begin
       if Value /= GNAT.Calendar.No_Time then

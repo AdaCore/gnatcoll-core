@@ -675,11 +675,6 @@ package body GNATCOLL.Utils is
    function Time_Value (Str : String) return Ada.Calendar.Time is
       First  : Integer := Str'First;
       Last   : Integer := Str'Last;
-      Result : Ada.Calendar.Time;
-
-      Local_TZ : constant Duration :=
-        Duration (Ada.Calendar.Time_Zones.UTC_Time_Offset (Result)) * 60.0;
-      --  Time zone offset (in seconds) for the local timezone
 
       --  When no timezone is specified by the user, UTC is assumed.
       TZ     : Duration := 0.0;
@@ -723,7 +718,9 @@ package body GNATCOLL.Utils is
       --  GNAT.Calendar.Time_IO expects as space.
 
       declare
-         S2 : String := Str (First .. Last);
+         S2       : String := Str (First .. Last);
+         Local    : Ada.Calendar.Time;
+         Local_TZ : Duration;
       begin
          for S in S2'Range loop
             if S2 (S) = 'T' then
@@ -732,10 +729,17 @@ package body GNATCOLL.Utils is
             end if;
          end loop;
 
+         Local := GNAT.Calendar.Time_IO.Value (S2);
+
          --  GNAT.Calendar.Time_IO.Value uses Ada.Calendars.Time_Of, which
          --  for GNAT assumes the input date is in the local time zone.
          --  Local_TZ is used to compensated that offset.
-         return GNAT.Calendar.Time_IO.Value (S2) + TZ + Local_TZ;
+
+         Local_TZ := Duration
+           (Ada.Calendar.Time_Zones.UTC_Time_Offset (Local)) * 60.0;
+
+         --  Time zone offset (in seconds) for the local timezone
+         return Local + TZ + Local_TZ;
       end;
 
    exception
