@@ -4,3 +4,13 @@ Known Problems in Gnatcoll 1.7
 
 Copyright (C) 2013-2014, AdaCore
 
+KP-17-NA29-019 GNATCOLL.Projects.Info_Set does not set file information
+
+  Problem:    Using Info_Set to retrieve information a source file (unit
+              name, language,...) will not set the file name in the result.
+              This differs from what GNATCOLL.Projects.Info does.
+
+  Status:     Fixed in Gnatcoll 1.8.0 on 2014-11-06
+
+  Workaround: The file was passed as a parameter to Info_Set, so it is in
+              general available to the code.

@@ -2138,6 +2138,7 @@ package body GNATCOLL.Projects is
          if Source.File = File then
             S_Info.Project := Source.Project;
             S_Info.Root_Project := Self.Root_Project;
+            S_Info.File := File;
 
             if Source.Source /= null then
                --  One of the initially cached source files.
