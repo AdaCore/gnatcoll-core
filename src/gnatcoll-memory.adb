@@ -235,7 +235,16 @@ package body GNATCOLL.Memory is
          when Allocation =>
             Size_Was := Byte_Count (Size);
 
-            Call_Chain (Trace, Len);
+            --  handle exceptions (EXCEPTION_ACCESS_VIOLATION) thrown
+            --  randomly when called from JVM on Windows 64 bits platform.
+            begin
+               Call_Chain (Trace, Len);
+
+            exception
+               when others =>
+                  Len := Trace'First + 2;
+
+            end;
 
             --  Check if the traceback is already in the table
             --  Ignore the first two levels:
