@@ -1105,8 +1105,7 @@ package body GNATCOLL.SQL.Exec is
    function In_Transaction
      (Connection : access Database_Connection_Record'Class) return Boolean is
    begin
-      return Connection.In_Transaction
-        or else not Connection.Automatic_Transactions;
+      return Connection.In_Transaction;
    end In_Transaction;
 
    --------------

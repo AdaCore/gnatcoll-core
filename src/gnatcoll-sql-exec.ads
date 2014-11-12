@@ -385,8 +385,11 @@ package GNATCOLL.SQL.Exec is
    procedure Rollback
      (Connection : access Database_Connection_Record'Class;
       Error_Msg  : String := "");
-   --  If a transaction is still active on Connection, then cancel it. This
-   --  should be called as the last operation before the threads ends, to
+   --  This command emits a "ROLLBACK" of the current transaction.
+   --  When automatic transactions are enabled, it does nothing if no
+   --  transaction is currently active. When automatic transactions are
+   --  disabled, it will systematically emit the ROLLBACK.
+   --  This should be called as the last operation before the threads ends, to
    --  clean up the connection. The user must explicitly commit the transaction
    --  at an appropriate time.
    --  This resets the "Success" status to True.
@@ -417,11 +420,16 @@ package GNATCOLL.SQL.Exec is
    function Start_Transaction
      (Connection : access Database_Connection_Record'Class)
       return Boolean;
-   --  Start a new transaction, if not already in one. This does not need to be
-   --  called in general, since transactions are automatically started when you
-   --  modify the contents of the database, but you might need to start one
-   --  manually in some cases (declaring a cursor with "DECLARE .. CURSOR" for
-   --  instance).
+   --  This command emits a "BEGIN" to start a new transaction.
+   --  When automatic transactions are enabled, it does nothing if a
+   --  transaction is already active. When automatic transactions are
+   --  disabled, it will systematically emit the BEGIN.
+   --
+   --  This does not need to be called in general, since transactions are
+   --  automatically started when you modify the contents of the database,
+   --  but you might need to start one manually in some cases (declaring a
+   --  cursor with "DECLARE .. CURSOR" for instance).
+   --
    --  Return True if a transaction was started, False if one was already in
    --  progress.
 
