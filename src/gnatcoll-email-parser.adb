@@ -222,7 +222,7 @@ package body GNATCOLL.Email.Parser is
 
       if Store_Payload then
          if not Parse_Payload then
-            Set_Text_Payload (Msg, Str (Index .. Str'Last));
+            Set_Text_Payload (Msg, Str (Index .. Str'Last), Charset => "");
          else
             Email.Parser.Parse_Payload (Msg, Str (Index .. Str'Last));
          end if;
