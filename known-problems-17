@@ -4,6 +4,18 @@ Known Problems in Gnatcoll 1.7
 
 Copyright (C) 2013-2014, AdaCore
 
+KP-17-NB11-001 In_Transaction returns True without automatic transactions
+
+  Problem:    If you disable automatic handling of transactions in
+              GNATCOLL.SQL.Exec, the function In_Transaction always returns
+              True.
+
+  Status:     Fixed in Gnatcoll 1.8.0 on 2014-11-13
+
+  Workaround: In this mode, GNATCOLL does not send BEGIN or COMMIT commands
+              automatically, so your application can in fact keep track of
+              whether it started a transaction explicitly.
+
 KP-17-NA29-019 GNATCOLL.Projects.Info_Set does not set file information
 
   Problem:    Using Info_Set to retrieve information a source file (unit
