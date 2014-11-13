@@ -679,6 +679,10 @@ package body GNATCOLL.Utils is
       --  When no timezone is specified by the user, UTC is assumed.
       TZ     : Duration := 0.0;
    begin
+      if Str = "" then
+         return GNAT.Calendar.No_Time;
+      end if;
+
       --  Do we have the name of the day at the beginning of the string, as in
       --     Tue, 19 Dec 2006 13:59:04+00
 
