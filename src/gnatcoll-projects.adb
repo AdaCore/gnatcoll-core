@@ -8145,12 +8145,10 @@ package body GNATCOLL.Projects is
 
       if Lower_Pkg /= "" then
          Pkg_Id := Package_Node_Id_Of (Get_String (Lower_Pkg));
-         if Pkg_Id = Empty_Package then
+         if Pkg_Id = Empty_Package or else Pkg_Id = Unknown_Package then
             Trace (Me, "Register_New_Package (" & Lower_Pkg & ")");
             Register_New_Package (Name  => Lower_Pkg, Id => Pkg_Id);
-            if Pkg_Id = Empty_Package
-              or else Pkg_Id = Unknown_Package
-            then
+            if Pkg_Id = Empty_Package or else Pkg_Id = Unknown_Package then
                Trace (Me, "Error registering new package");
             end if;
          end if;
