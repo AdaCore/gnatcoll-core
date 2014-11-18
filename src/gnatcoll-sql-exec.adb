@@ -1169,7 +1169,9 @@ package body GNATCOLL.SQL.Exec is
      (Connection  : access Database_Connection_Record'Class;
       Username    : String := "") is
    begin
-      Rollback (Connection); --  In case a previous thread had started on
+      if Connection.In_Transaction then
+         Rollback (Connection); --  In case a previous thread had started on
+      end if;
       Connection.Success := True;
       Connection.Automatic_Transactions := True;
 
