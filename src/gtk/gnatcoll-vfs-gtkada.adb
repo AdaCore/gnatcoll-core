@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                             G N A T C O L L                              --
 --                                                                          --
---                     Copyright (C) 2007-2014, AdaCore                     --
+--                     Copyright (C) 2007-2015, AdaCore                     --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -190,7 +190,6 @@ package body GNATCOLL.VFS.GtkAda is
          return Result;
       end;
    end Get_File;
-
 
    function Get_File
      (Store      : access Gtk.List_Store.Gtk_List_Store_Record'Class;

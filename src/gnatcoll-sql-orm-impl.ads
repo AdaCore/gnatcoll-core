@@ -2,7 +2,7 @@
 --                                   CRM                                    --
 --                    [Customer Relationship Management]                    --
 --                                                                          --
---                         Copyright (C) 2009-2014, AdaCore                 --
+--                         Copyright (C) 2009-2015, AdaCore                 --
 ------------------------------------------------------------------------------
 
 --  Implementation facilities for ORM.
