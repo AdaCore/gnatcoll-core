@@ -173,7 +173,8 @@ package body GNATCOLL.Email is
    -----------------
 
    function New_Message
-     (MIME_Type : String := Text_Plain) return Message
+     (MIME_Type : String := Text_Plain;
+      Charset   : String := Charset_US_ASCII) return Message
    is
       Pay : Message_Payload;
       Msg : Message;
@@ -193,7 +194,10 @@ package body GNATCOLL.Email is
             Payload       => Pay));
 
       if MIME_Type /= "" then
-         Replace_Header (Msg, Create ("Content-Type", MIME_Type));
+         Replace_Header
+            (Msg,
+            Create ("Content-Type",
+                    MIME_Type & "; charset=""" & Charset & '"'));
       end if;
 
       return Msg;

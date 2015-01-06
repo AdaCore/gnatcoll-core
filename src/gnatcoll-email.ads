@@ -199,7 +199,8 @@ package GNATCOLL.Email is
    Null_Message : constant Message;
 
    function New_Message
-     (MIME_Type : String := Text_Plain) return Message;
+     (MIME_Type : String := Text_Plain;
+      Charset   : String := Charset_US_ASCII) return Message;
    --  Return a new empty message. The memory will be freed automatically when
    --  the message is no longer used.
    --  The MIME type is the initial type, but it can be changed at any time by
