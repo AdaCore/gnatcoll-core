@@ -478,9 +478,34 @@ package GNATCOLL.Traces is
       Entity   : String;
       Message  : String);
    --  You can override either of these two procedures to add your own
-   --  decorators (ie additional information) each time some message is logged.
+   --  decorators to specific trace handles (ie additional information) each
+   --  time some message is logged.
    --  It is recommended that you call the inherited procedure to get access to
    --  the standard decorators.
+
+   procedure Add_Global_Decorator
+      (Decorator : not null access Trace_Handle_Record'Class);
+   --  Register a global decorator that will apply to all existing
+   --  Trace_Handle. The decorator only has an effect when it is active.
+   --  Such a Decorator should override Pre_Decorator and/or Post_Decorator,
+   --  but these should not call the inherited code or this will result in
+   --  an infinite loop.
+   --  Here is an example:
+   --     type My_Decorator is new Trace_Handle_Record with null record;
+   --     overriding procedure Pre_Decorator
+   --        (Handle : in out My_Decorator;
+   --         Stream : in out Trace_Stream_Record'Class;
+   --         Message : String)  is
+   --     begin
+   --        Put (Stream, "Some info");
+   --     end Pre_Decorator;
+   --
+   --     function Factory return Trace_Handle is (new My_Decorator);
+   --     Add_Global_Decorator
+   --        (Create ("MY_DECO", Off, Factory => Factory'Access));
+   --
+   --  And then you can use your configuration file as usual to activate or
+   --  deactivate the "MY_DECO" handle.
 
 private
    type Trace_Stream_Record is abstract tagged record
@@ -505,6 +530,7 @@ private
       Finalize      : Boolean;
       Active        : Boolean;
       Forced_Active : Boolean := False;
+      Is_Decorator  : Boolean := False;
    end record;
    --  If Forced_Active is true, then the Active status shouldn't be impacted
    --  by a '+' in the configuration file

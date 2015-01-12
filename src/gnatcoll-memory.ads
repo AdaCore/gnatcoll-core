@@ -117,7 +117,7 @@ package GNATCOLL.Memory is
    procedure Configure
      (Activate_Monitor  : Boolean := False;
       Disable_Free      : Boolean := False;
-      Stack_Trace_Depth : Positive := 30;
+      Stack_Trace_Depth : Natural := 30;
       Memory_Free_Pattern : Integer := 256);
    --  Configure this package (these are global settings, not task-specific).
    --  If Activate_Monitor is true, GPS will monitor all memory allocations and
@@ -157,6 +157,17 @@ package GNATCOLL.Memory is
    --  a convenient way to check how many times we go through a given path,
    --  and where this is called from.
    --  Nothing is done if the memory monitor has not been activated
+
+   type Byte_Count is mod System.Max_Binary_Modulus;
+
+   type Watermark_Info is record
+      High    : Byte_Count;
+      Current : Byte_Count;
+   end record;
+
+   function Get_Ada_Allocations return Watermark_Info;
+   --  Return information about the allocations done from Ada.
+   --  This does not include allocations done from other languages.
 
 private
 

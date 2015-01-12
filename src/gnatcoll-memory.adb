@@ -41,7 +41,7 @@ package body GNATCOLL.Memory is
    subtype Tracebacks_Array is GNAT.Traceback.Tracebacks_Array;
    --  Avoid use-clause collision with the one in System.Traceback_Entries
 
-   Stack_Trace_Depth : Integer := 30;
+   Stack_Trace_Depth : Natural := 30;
 
    Memory_Monitor : Boolean := False;
    Memory_Check   : Boolean := False;
@@ -50,8 +50,6 @@ package body GNATCOLL.Memory is
    Disable        : Boolean := False;
    --  This variable is used to avoid infinite loops, where this package would
    --  itself allocate memory and then calls itself recursively, forever.
-
-   type Byte_Count is mod System.Max_Binary_Modulus;
 
    Total_Allocs   : Byte_Count := 0;
    Alloc_Count    : Long_Integer := 0;
@@ -368,6 +366,7 @@ package body GNATCOLL.Memory is
          end if;
 
          Size_Was   := Find_Or_Create_Traceback (Deallocation, Ptr, 0);
+
          Total_Free := Total_Free + Size_Was;
          Free_Count := Free_Count + 1;
       end if;
@@ -375,7 +374,6 @@ package body GNATCOLL.Memory is
       if not Memory_Check then
          System.CRTL.free (Ptr);
       end if;
-
    end Free;
 
    -------------
@@ -578,6 +576,16 @@ package body GNATCOLL.Memory is
       Disable := False;
    end Dump;
 
+   -------------------------
+   -- Get_Ada_Allocations --
+   -------------------------
+
+   function Get_Ada_Allocations return Watermark_Info is
+   begin
+      return (High    => High_Watermark,
+              Current => Total_Allocs - Total_Free);
+   end Get_Ada_Allocations;
+
    -----------
    -- Reset --
    -----------
@@ -620,7 +628,7 @@ package body GNATCOLL.Memory is
    procedure Configure
      (Activate_Monitor  : Boolean := False;
       Disable_Free      : Boolean := False;
-      Stack_Trace_Depth : Positive := 30;
+      Stack_Trace_Depth : Natural := 30;
       Memory_Free_Pattern : Integer := 256) is
    begin
       if Memory_Free_Pattern < 0 or else Memory_Free_Pattern > 255 then

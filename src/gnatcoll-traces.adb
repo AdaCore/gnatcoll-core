@@ -99,6 +99,10 @@ package body GNATCOLL.Traces is
       --  applications that do not use tasking otherwise do not drag the whole
       --  tasking runtime in).
 
+      Decorators : Trace_Handle := null;
+      --  All the global decorators registered through Add_Global_Decorator.
+      --  Items on this list are not on Handles_List or Wildcard_Handles_List.
+
       Wildcard_Handles_List : Trace_Handle := null;
       --  Contains the configuration for module names containing stars, for
       --  instance "*.EXCEPTIONS".
@@ -239,13 +243,24 @@ package body GNATCOLL.Traces is
    -----------------
 
    function Find_Handle (Unit_Name_Upper_Case : String) return Trace_Handle is
-      Tmp : Trace_Handle := Global.Handles_List;
+      function Find_On_List (List : Trace_Handle) return Trace_Handle;
+      function Find_On_List (List : Trace_Handle) return Trace_Handle is
+         Tmp : Trace_Handle := List;
+      begin
+         while Tmp /= null
+           and then Tmp.Name.all /= Unit_Name_Upper_Case
+         loop
+            Tmp := Tmp.Next;
+         end loop;
+         return Tmp;
+      end Find_On_List;
+
+      Tmp : Trace_Handle;
    begin
-      while Tmp /= null
-        and then Tmp.Name.all /= Unit_Name_Upper_Case
-      loop
-         Tmp := Tmp.Next;
-      end loop;
+      Tmp := Find_On_List (Global.Handles_List);
+      if Tmp = null then
+         Tmp := Find_On_List (Global.Decorators);
+      end if;
       return Tmp;
    end Find_Handle;
 
@@ -984,8 +999,20 @@ package body GNATCOLL.Traces is
       Stream  : in out Trace_Stream_Record'Class;
       Message : String)
    is
-      pragma Unreferenced (Message);
+      Dec : Trace_Handle;
    begin
+      if Handle.Is_Decorator then
+         return;
+      end if;
+
+      Dec := Global.Decorators;
+      while Dec /= null loop
+         if Dec.Active then
+            Dec.Pre_Decorator (Stream, Message);
+         end if;
+         Dec := Dec.Next;
+      end loop;
+
       if Count_Trace.Active then
          declare
             C : constant String := Integer'Image (Count_Trace.Count);
@@ -995,6 +1022,9 @@ package body GNATCOLL.Traces is
                  & '/' & C (C'First + 1 .. C'Last) & ' ');
          end;
       end if;
+   exception
+      when E : others =>
+         Put (Stream, Ada.Exceptions.Exception_Information (E));
    end Pre_Decorator;
 
    --------------------
@@ -1008,8 +1038,6 @@ package body GNATCOLL.Traces is
       Entity   : String;
       Message  : String)
    is
-      pragma Unreferenced (Message);
-
       Space_Inserted : Boolean := False;
       --  True when a space has been inserted after the main trace text, before
       --  the Post_Decorator information.
@@ -1029,7 +1057,20 @@ package body GNATCOLL.Traces is
          end if;
       end Ensure_Space;
 
+      Dec : Trace_Handle;
    begin
+      if Handle.Is_Decorator then
+         return;
+      end if;
+
+      Dec := Global.Decorators;
+      while Dec /= null loop
+         if Dec.Active then
+            Dec.Post_Decorator (Stream, Location, Entity, Message);
+         end if;
+         Dec := Dec.Next;
+      end loop;
+
       if (Absolute_Time.Active or else Absolute_Date.Active)
         and then Supports_Time (Stream)
       then
@@ -1057,6 +1098,42 @@ package body GNATCOLL.Traces is
          Put_Stack_Trace (Stream);
       end if;
    end Post_Decorator;
+
+   --------------------------
+   -- Add_Global_Decorator --
+   --------------------------
+
+   procedure Add_Global_Decorator
+      (Decorator : not null access Trace_Handle_Record'Class)
+   is
+      H, Prev : Trace_Handle := null;
+   begin
+      Lock;
+
+      --  Remove the decorator from the handles lists (not from the
+      --  wildcard handles list, this is a named handle)
+      H := Global.Handles_List;
+      while  H /= null loop
+         if H = Trace_Handle (Decorator) then
+            if Prev = null then
+               Global.Handles_List := H.Next;
+            else
+               Prev.Next := H.Next;
+            end if;
+            exit;
+         end if;
+         Prev := H;
+         H := H.Next;
+      end loop;
+
+      --  And add it to the decorators list instead
+
+      Decorator.Next := Global.Decorators;
+      Decorator.Is_Decorator := True;
+      Global.Decorators := Trace_Handle (Decorator);
+
+      Unlock;
+   end Add_Global_Decorator;
 
    ---------
    -- Log --
@@ -1692,6 +1769,9 @@ package body GNATCOLL.Traces is
             TmpF := NextF;
          end loop;
          Global.Factories_List := null;
+
+         --  Already free-ed as part of the handles_List
+         Global.Decorators := null;
 
          Unlock;
       end if;
