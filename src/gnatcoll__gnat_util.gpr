@@ -12,6 +12,7 @@ project GnatColl is
    for Library_Version use
       "lib" & Project'Library_Name
       & GnatColl_Shared.So_Ext & "." & GnatColl_Shared.Version;
+   for Library_Options use GnatColl_Shared.Rss_Libs;
 
    case Gnatcoll_Shared.Projects is
       when "yes" =>
@@ -67,4 +68,7 @@ project GnatColl is
       end case;
    end Naming;
 
+   package Linker is
+      for Linker_Options use GnatColl_Shared.Rss_Libs;
+   end Linker;
 end GnatColl;

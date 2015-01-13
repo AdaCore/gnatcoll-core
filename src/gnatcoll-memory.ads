@@ -169,6 +169,11 @@ package GNATCOLL.Memory is
    --  Return information about the allocations done from Ada.
    --  This does not include allocations done from other languages.
 
+   function Get_Allocations return Watermark_Info;
+   --  Return information about the allocations done in any language.
+   --  This uses system calls to find out the program's resident size (RSS)
+   --  information, both the peak and the current size.
+
 private
 
    pragma Convention (C, Alloc);

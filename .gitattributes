@@ -1,3 +1,6 @@
 testsuite/*/*/*                            no-precommit-check
 testsuite/*/*/*/*                          no-precommit-check
 testsuite/*/*/*/*/*                        no-precommit-check
+
+# Third-party package
+src/getRSS.c                               no-precommit-check

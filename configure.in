@@ -8,14 +8,16 @@ if test x$host != x$target ; then
 fi
 
 case $target in
-   *cygwin*|*mingw*) GNATCOLL_OS="windows"
-             # TARGET=""
-             ;;
+   *cygwin*|*mingw*)
+      GNATCOLL_OS="windows"
+      RSS_LIBS="-lpsapi"    # Needed for gnatcoll-memory
+      ;;
 
    *) GNATCOLL_OS="unix"
-      # TARGET=${target}
+      RSS_LIBS=""
       ;;
 esac
+AM_TO_GPR($RSS_LIBS, RSS_LIBS_GPR)
 AC_SUBST(TARGET)
 AC_SUBST(GNATCOLL_OS)
 

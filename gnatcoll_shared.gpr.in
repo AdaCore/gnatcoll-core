@@ -53,6 +53,7 @@ project GnatColl_Shared is
    Iconv_Lib      := "@LIB_ICONV@";
    Iconv_Include  := "@INCLUDE_ICONV@";
    Sqlite_Switches := (@SQLITE_CFLAGS@);
+   Rss_Libs        := (@RSS_LIBS_GPR@);   --  For gnatcoll.memory
 
    package Compiler is
       case Build is

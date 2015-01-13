@@ -586,6 +586,22 @@ package body GNATCOLL.Memory is
               Current => Total_Allocs - Total_Free);
    end Get_Ada_Allocations;
 
+   ---------------------
+   -- Get_Allocations --
+   ---------------------
+
+   function Get_Allocations return Watermark_Info is
+      function Get_Peak_RSS return size_t;
+      pragma Import (C, Get_Peak_RSS, "gnatcoll_getPeakRSS");
+
+      function Get_Current_RSS return size_t;
+      pragma Import (C, Get_Current_RSS, "gnatcoll_getCurrentRSS");
+
+   begin
+      return (High    => Byte_Count (Get_Peak_RSS),
+              Current => Byte_Count (Get_Current_RSS));
+   end Get_Allocations;
+
    -----------
    -- Reset --
    -----------

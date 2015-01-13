@@ -694,6 +694,7 @@ CC
 LN_S
 GNATCOLL_OS
 TARGET
+RSS_LIBS_GPR
 target_os
 target_vendor
 target_cpu
@@ -2365,14 +2366,36 @@ if test x$host != x$target ; then
 fi
 
 case $target in
-   *cygwin*|*mingw*) GNATCOLL_OS="windows"
-             # TARGET=""
-             ;;
+   *cygwin*|*mingw*)
+      GNATCOLL_OS="windows"
+      RSS_LIBS="-lpsapi"    # Needed for gnatcoll-memory
+      ;;
 
    *) GNATCOLL_OS="unix"
-      # TARGET=${target}
+      RSS_LIBS=""
       ;;
 esac
+
+   value=$RSS_LIBS
+
+   # Special handling on darwin for gcc 4.5 and 4.7
+   case "$build_os" in
+      *darwin*)
+         value=`echo $value | sed -e "s/-framework \([^ ]*\)/-Wl,-framework -Wl,\1/g"`
+   esac
+
+   output=RSS_LIBS_GPR
+   result=""
+   for v in $value; do
+      if test "$result" != ""; then
+         result="$result, "
+      fi
+      result="$result\"$v\""
+   done
+   RSS_LIBS_GPR=$result
+
+
+
 
 
 

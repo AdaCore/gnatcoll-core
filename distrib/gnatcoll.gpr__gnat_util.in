@@ -49,6 +49,8 @@ project GnatColl is
    Python_Cflags := (@PYTHON_CFLAGS_GPR@);
    Python_Libs := (@PYTHON_LIBS_GPR@);
 
+   Rss_Libs := (@RSS_LIBS_GPR@);
+
    for Externally_Built use "true";
 
    package Naming is
@@ -69,6 +71,10 @@ project GnatColl is
 	      use "gnatcoll-io-native-codec__win32.adb";
       end case;
    end Naming;
+
+   package Linker is
+      for Linker_Options use (RSS_Libs);
+   end Linker;
 
    System_Linker_Flags := (@EXTRA_LINK_SWITCHES@);
 
