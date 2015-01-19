@@ -134,7 +134,9 @@ package body GNATCOLL.JSON.Utility is
             when HT =>
                Append (Ret, "\t");
             when others =>
-               if Wide_Wide_Character'Pos (W_Chr) >= 16#80# then
+               if Wide_Wide_Character'Pos (W_Chr) < 32 then
+                  Append (Ret, Escape_Non_Print_Character (W_Chr));
+               elsif Wide_Wide_Character'Pos (W_Chr) >= 16#80# then
                   Append (Ret, Escape_Non_Print_Character (W_Chr));
                else
                   Append

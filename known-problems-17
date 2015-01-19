@@ -2,7 +2,18 @@
 Known Problems in Gnatcoll 1.7
 ==============================
 
-Copyright (C) 2013-2014, AdaCore
+Copyright (C) 2013-2015, AdaCore
+
+KP-17-O114-020 GNATCOLL.JSON not quoting control characters
+
+  Problem:    When adding a string that contains control characters (like
+              ctrl-Z), the resulting JSON is not parsed correctly in some
+              cases (for instance Firefox).
+
+  Status:     Fixed in Gnatcoll 1.8.0 on 2015-01-19
+
+  Workaround: Do a second pass on the string and escape such characters with
+              GNATCOLL.JSON.Utility.Escape_Non_Print_Character.
 
 KP-17-NB11-001 In_Transaction returns True without automatic transactions
 
