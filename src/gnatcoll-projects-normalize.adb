@@ -2496,7 +2496,7 @@ package body GNATCOLL.Projects.Normalize is
       V : Name_Id;
 
       Local_Val : constant String :=
-        +Unix_Style_Full_Name (Create (+Value), Cygwin_Style => True);
+        +Unix_Style_Full_Name (Create (+Value), Cygwin_Style => False);
 
       procedure Add_Or_Replace
         (Tree_Node      : Project_Node_Tree_Ref;
@@ -2589,7 +2589,7 @@ package body GNATCOLL.Projects.Normalize is
             if Values (A) /= null then
                Result (A) := new String'
                  (+Unix_Style_Full_Name
-                    (Create (+Values (A).all), Cygwin_Style => True));
+                    (Create (+Values (A).all), Cygwin_Style => False));
             end if;
          end loop;
 
