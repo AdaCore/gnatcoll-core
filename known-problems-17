@@ -4,6 +4,17 @@ Known Problems in Gnatcoll 1.7
 
 Copyright (C) 2013-2015, AdaCore
 
+KP-17-O126-034 GNATCOLL.Projects.Other_File and separate units
+
+  Problem:    The Other_File for a separate unit (say 'parent-child.adb')
+              is returned incorrectly as 'parent-child.ads', whereas it
+              should be 'parent.ads'.
+
+  Status:     Fixed in Gnatcoll 1.8.0 on 2015-01-28
+
+  Workaround: Use Info to get the name of the unit and get the file name
+              for the parent unit.
+
 KP-17-O114-020 GNATCOLL.JSON not quoting control characters
 
   Problem:    When adding a string that contains control characters (like

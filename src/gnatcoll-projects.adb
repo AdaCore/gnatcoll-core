@@ -2484,6 +2484,25 @@ package body GNATCOLL.Projects is
             end if;
          end;
 
+         --  Special case for separate units, since the spec is a parent
+         --  package
+
+         if Info.Part = Unit_Separate then
+            for J in reverse Unit'Range loop
+               if Unit (J) = '.' then
+                  declare
+                     Base : constant Filesystem_String := File_From_Unit
+                       (Project (Info), Unit (Unit'First .. J - 1), Part,
+                        Language => Info.Language);
+                  begin
+                     if Base'Length > 0 then
+                        return Self.Create (Base, Use_Object_Path => False);
+                     end if;
+                  end;
+               end if;
+            end loop;
+         end if;
+
          --  Else try to guess from naming scheme
 
          declare
