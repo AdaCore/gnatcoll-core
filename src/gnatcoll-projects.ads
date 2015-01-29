@@ -669,11 +669,15 @@ package GNATCOLL.Projects is
    --  Free the memory used by Self
 
    function Source_Files
-     (Project   : Project_Type;
-      Recursive : Boolean := False) return File_And_Project_Array_Access;
+     (Project               : Project_Type;
+      Recursive             : Boolean := False;
+      Include_Project_Files : Boolean := False)
+      return File_And_Project_Array_Access;
    --  Return the list of source files (recursively) for Project.
    --  For each file, include the name of its project, which is especially
    --  useful in the context of aggregate projects.
+   --  If Include_Project_Files is true, then the .gpr files themselves will
+   --  be included in the result
    --  Result must be freed by the caller.
 
    function Direct_Sources_Count (Project : Project_Type) return Natural;

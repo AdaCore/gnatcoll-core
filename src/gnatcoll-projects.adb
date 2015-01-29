@@ -1767,8 +1767,10 @@ package body GNATCOLL.Projects is
    ------------------
 
    function Source_Files
-     (Project   : Project_Type;
-      Recursive : Boolean := False) return File_And_Project_Array_Access
+     (Project               : Project_Type;
+      Recursive             : Boolean := False;
+      Include_Project_Files : Boolean := False)
+      return File_And_Project_Array_Access
    is
       Count   : Natural := 0;
       Index   : Natural;
@@ -1786,6 +1788,10 @@ package body GNATCOLL.Projects is
             Count := Count + P.Data.Files'Length;
          end if;
 
+         if Include_Project_Files then
+            Count := Count + 1;
+         end if;
+
          Next (Iter);
       end loop;
 
@@ -1797,6 +1803,13 @@ package body GNATCOLL.Projects is
       loop
          P := Current (Iter);
          exit when P = No_Project;
+
+         if Include_Project_Files then
+            Result (Index) :=
+               (File    => P.Project_Path,
+                Project => P);
+            Index := Index + 1;
+         end if;
 
          if P.Data.Files /= null then
             for S in P.Data.Files'Range loop
