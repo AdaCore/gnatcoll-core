@@ -4,6 +4,17 @@ Known Problems in Gnatcoll 1.7
 
 Copyright (C) 2013-2015, AdaCore
 
+KP-17-O130-001 Postgresq: show full error message when connection fails
+
+  Problem:    When the connection to the database fails, the specific
+              message from the server (like "invalid port number") is not
+              available to the application.
+
+  Status:     Fixecd in Gnatcoll 1.8.0. on 2015-01-30
+
+  Workaround: Test the connection string (which is part of the error message)
+              by using the command line client psql.
+
 KP-17-O126-034 GNATCOLL.Projects.Other_File and separate units
 
   Problem:    The Other_File for a separate unit (say 'parent-child.adb')

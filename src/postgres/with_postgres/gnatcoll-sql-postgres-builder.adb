@@ -597,12 +597,21 @@ package body GNATCOLL.SQL.Postgres.Builder is
 
          if Try = 2 then
             if not Success then
-               Print_Error
-                 (Connection, "Cannot connect to PostgreSQL database "
-                  & " Connection String is """
-                  & Get_Connection_String
-                    (Get_Description (Connection), False)
-                  & """");
+               declare
+                  Err : constant String := Error (Connection);
+                  Str : constant String := Get_Connection_String
+                     (Get_Description (Connection), False);
+               begin
+                  if Err /= "" then
+                     Print_Error
+                       (Connection, Err & " params=""" & Str & '"');
+                  else
+                     Print_Error
+                       (Connection,
+                       "Cannot connect to PostgreSQL database "
+                        & " Params=""" & Str & '"');
+                  end if;
+               end;
                Close (Connection);
                Connection.Postgres := null;
                return;
