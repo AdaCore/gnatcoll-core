@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                             G N A T C O L L                              --
 --                                                                          --
---                     Copyright (C) 2010-2014, AdaCore                     --
+--                     Copyright (C) 2010-2015, AdaCore                     --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -21,7 +21,42 @@
 --                                                                          --
 ------------------------------------------------------------------------------
 
+pragma Ada_2012;
+
 package body GNATCOLL.Atomic is
+
+   function Sync_Add_And_Fetch
+     (Ptr   : access Atomic_Counter;
+      Value : Atomic_Counter) return Atomic_Counter
+     with Import, Convention => Intrinsic,
+          External_Name => "__sync_add_and_fetch_4";
+
+   ---------------
+   -- Increment --
+   ---------------
+
+   procedure Increment
+     (Item : aliased in out Atomic_Counter; Value : Atomic_Counter := 1)
+   is
+      Tmp : Atomic_Counter with Unreferenced;
+   begin
+      Tmp := Sync_Add_And_Fetch (Item'Access, Value);
+   end Increment;
+
+   ---------------
+   -- Decrement --
+   ---------------
+
+   procedure Decrement (Item : aliased in out Atomic_Counter) is
+   begin
+      Increment (Item, -1);
+   end Decrement;
+
+   function Decrement
+     (Item : aliased in out Atomic_Counter) return Atomic_Counter is
+   begin
+      return Sync_Add_And_Fetch (Item'Access, -1);
+   end Decrement;
 
    ------------------------
    -- Sync_Add_And_Fetch --

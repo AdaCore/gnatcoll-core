@@ -29,6 +29,7 @@ with Ada.Calendar;
 with Ada.Exceptions;
 
 with GNATCOLL.VFS; use GNATCOLL.VFS;
+with GNATCOLL.Atomic; use GNATCOLL.Atomic;
 
 package GNATCOLL.Traces is
 
@@ -526,7 +527,7 @@ private
       --  occurrence. This has  Name & ".EXCEPTIONS" as a name, and is created
       --  the first time it is needed.
 
-      Count         : Natural;
+      Count         : aliased Atomic_Counter;
       Finalize      : Boolean;
       Active        : Boolean;
       Forced_Active : Boolean := False;

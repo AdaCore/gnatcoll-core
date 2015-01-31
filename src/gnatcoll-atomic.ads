@@ -27,9 +27,26 @@
 --  atomic operations of the compiler (generally implemented with special
 --  support from the CPU).
 
+pragma Ada_2012;
+
 with Interfaces;
 
 package GNATCOLL.Atomic is
+
+   type Atomic_Counter is new Interfaces.Integer_32;
+
+   procedure Increment
+     (Item : aliased in out Atomic_Counter; Value : Atomic_Counter := 1)
+     with Inline_Always;
+   --  Increments value of atomic counter
+
+   procedure Decrement
+     (Item : aliased in out Atomic_Counter) with Inline_Always;
+   --  Decrements value of atomic counter
+
+   function Decrement
+     (Item : aliased in out Atomic_Counter) return Atomic_Counter
+     with Inline_Always;
 
    function Sync_Add_And_Fetch
       (Ptr   : access Interfaces.Integer_32;

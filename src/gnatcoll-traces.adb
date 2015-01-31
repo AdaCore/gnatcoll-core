@@ -31,7 +31,6 @@ with Ada.Strings.Fixed;         use Ada.Strings.Fixed;
 with Ada.Text_IO;               use Ada.Text_IO;
 with Ada.Exceptions.Traceback;  use Ada.Exceptions.Traceback;
 with Ada.Unchecked_Deallocation;
-with Interfaces;                use Interfaces;
 
 with GNAT.Calendar;             use GNAT.Calendar;
 with GNAT.Calendar.Time_IO;     use GNAT.Calendar.Time_IO;
@@ -44,7 +43,6 @@ with GNAT.Traceback;            use GNAT.Traceback;
 with System.Address_Image;
 with System.Assertions;         use System.Assertions;
 
-with GNATCOLL.Atomic;           use GNATCOLL.Atomic;
 with GNATCOLL.Utils;            use GNATCOLL.Utils;
 
 package body GNATCOLL.Traces is
@@ -121,7 +119,7 @@ package body GNATCOLL.Traces is
       --  configuration file contained "+").
       --  ??? Could be handled via a "*" star handle
 
-      Indentation : aliased Interfaces.Integer_32 := 0;
+      Indentation : aliased Atomic_Counter := 0;
       --  Current indentation for streams.
 
       TZ : Time_Offset := UTC_Time_Offset;
@@ -789,13 +787,13 @@ package body GNATCOLL.Traces is
          end if;
 
          if Count_Trace /= null then
-            Count_Trace.Count := Count_Trace.Count + 1;
+            Increment (Count_Trace.Count);
          end if;
 
          --  Always increment the count: that way, testsuites can easily count
          --  the number of queries that would have been emitted, even if they
          --  don't explicitly log.
-         Handle.Count := Handle.Count + 1;
+         Increment (Handle.Count);
       end if;
    end Trace;
 
@@ -840,17 +838,14 @@ package body GNATCOLL.Traces is
    ---------------------
 
    procedure Increase_Indent
-     (Handle : Trace_Handle := null; Msg : String := "")
-   is
-      Tmp : Integer_32;
-      pragma Unreferenced (Tmp);
+     (Handle : Trace_Handle := null; Msg : String := "") is
    begin
       if Handle /= null and then Msg /= "" then
          Trace (Handle, Msg);
       end if;
 
       --  Atomic increase by 1
-      Tmp := Sync_Add_And_Fetch (Global.Indentation'Access, 1);
+      Increment (Global.Indentation);
    end Increase_Indent;
 
    ---------------------
@@ -860,9 +855,8 @@ package body GNATCOLL.Traces is
    procedure Decrease_Indent
      (Handle : Trace_Handle := null; Msg : String := "")
    is
-      --  Atomic decrease by 1
-      Tmp : constant Integer_32 :=
-         Sync_Add_And_Fetch (Global.Indentation'Access, -1);
+      --  Atomic decrement
+      Tmp : constant Atomic_Counter := Decrement (Global.Indentation);
    begin
       if Tmp >= 0 then
          if Handle /= null and then Msg /= "" then
@@ -1015,8 +1009,8 @@ package body GNATCOLL.Traces is
 
       if Count_Trace.Active then
          declare
-            C : constant String := Integer'Image (Count_Trace.Count);
-            H : constant String := Integer'Image (Handle.Count);
+            C : constant String := Atomic_Counter'Image (Count_Trace.Count);
+            H : constant String := Atomic_Counter'Image (Handle.Count);
          begin
             Put (Stream, H (H'First + 1 .. H'Last)
                  & '/' & C (C'First + 1 .. C'Last) & ' ');
@@ -1818,7 +1812,7 @@ package body GNATCOLL.Traces is
       if Handler = null then
          return 0;
       else
-         return Handler.Count;
+         return Natural (Handler.Count);
       end if;
    end Count;
 
