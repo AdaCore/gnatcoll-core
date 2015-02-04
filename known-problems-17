@@ -4,13 +4,24 @@ Known Problems in Gnatcoll 1.7
 
 Copyright (C) 2013-2015, AdaCore
 
-KP-17-O130-001 Postgresq: show full error message when connection fails
+KP-17-O203-001 Postgresql: Insert_and_Get_PK fails with string prepared query
+
+  Problem:    When you use a Prepared_Statement for a query given as a string,
+              and use that in a Insert_and_Get_PK call, Gnatcoll generates an
+              invalid query and postgreSQL complains.
+
+  Status:     Fixed in Gnatcoll 1.8.0 on 2015-02-04
+
+  Workaround: Send an INSERT statement ending with " RETURNING id" via
+              Execute, and use the Last_Id function to get the actual id.
+
+KP-17-O130-001 Postgresql: show full error message when connection fails
 
   Problem:    When the connection to the database fails, the specific
               message from the server (like "invalid port number") is not
               available to the application.
 
-  Status:     Fixecd in Gnatcoll 1.8.0. on 2015-01-30
+  Status:     Fixed in Gnatcoll 1.8.0. on 2015-01-30
 
   Workaround: Test the connection string (which is part of the error message)
               by using the command line client psql.

@@ -86,8 +86,6 @@ package body GNATCOLL.SQL.Exec is
       Connection : access Database_Connection_Record'Class;
       Stmt       : out DBMS_Stmt);
    --  Format the statement into a string, if not done yet.
-   --  Suffix is extra SQL code append to the query (for instance
-   --  "RETURNING ..." in postgreSQL).
 
    function Hash (Key : Database_Connection) return Ada.Containers.Hash_Type;
    package Freed_DB_Maps is new Ada.Containers.Hashed_Sets
@@ -341,40 +339,33 @@ package body GNATCOLL.SQL.Exec is
 
    end Query_Cache;
 
-   --------------------
-   -- Has_SQL_Suffix --
-   --------------------
+   ---------------
+   -- To_String --
+   ---------------
 
-   function Has_SQL_Suffix
-     (Prepared : Prepared_Statement'Class) return Boolean
+   function To_String
+      (Connection : access Database_Connection_Record;
+       Stmt       : Prepared_Statement'Class)
+      return String
    is
-      S : constant Prepared_Statements.Encapsulated_Access := Prepared.Get;
-   begin
-      return S.Query_Str /= null or else S.Suffix_Str /= null;
-   end Has_SQL_Suffix;
-
-   --------------------
-   -- Set_SQL_Suffix --
-   --------------------
-
-   procedure Set_SQL_Suffix
-     (Prepared : Prepared_Statement'Class;
-      Suffix   : String)
-   is
-      S : constant Prepared_Statements.Encapsulated_Access := Prepared.Get;
+      S : constant Prepared_Statements.Encapsulated_Access := Stmt.Get;
    begin
       if S.Query_Str = null then
-         Free (S.Suffix_Str);
-         S.Suffix_Str := new String'(Suffix);
-      else
-         Assert (Me_Error,
-                 False,
-                 "Error: cannot change the SQL statement for ("
-                 & S.Name.all & ") by adding '"
-                 & Suffix & "' since it has already been prepared on the"
-                 & " server");
+         S.Query_Str := new String'
+            (To_String (To_String (S.Query, Connection.all)));
+
+         if Active (Me_Query) then
+            Trace
+              (Me_Query, "compute (" & S.Name.all & "): "
+               & S.Query_Str.all);
+         end if;
+
+         S.Query := No_Query;   --  release memory
+         S.Is_Select := Is_Select_Query (S.Query_Str.all);
       end if;
-   end Set_SQL_Suffix;
+
+      return S.Query_Str.all;
+   end To_String;
 
    -----------------------------------
    -- Compute_And_Prepare_Statement --
@@ -387,27 +378,10 @@ package body GNATCOLL.SQL.Exec is
    is
       S : constant Prepared_Statements.Encapsulated_Access := Prepared.Get;
       L : Prepared_In_Session_List;
+
+      --  The side effect is to set S.Query_Str
+      Str : constant String := To_String (Connection, Prepared);
    begin
-      if S.Query_Str = null then
-         if S.Suffix_Str = null then
-            S.Query_Str := new String'
-               (To_String (To_String (S.Query, Connection.all)));
-         else
-            S.Query_Str := new String'
-               (To_String (To_String (S.Query, Connection.all))
-                & S.Suffix_Str.all);
-            Free (S.Suffix_Str);  --  no longer needed
-         end if;
-
-         if Active (Me_Query) then
-            Trace
-              (Me_Query, "compute (" & S.Name.all & "): " & S.Query_Str.all);
-         end if;
-
-         S.Query := No_Query;   --  release memory
-         S.Is_Select := Is_Select_Query (S.Query_Str.all);
-      end if;
-
       if Prepared.Get.On_Server
          and Is_Prepared_On_Server_Supported (Connection)
       then
@@ -434,7 +408,7 @@ package body GNATCOLL.SQL.Exec is
             or else L.DB_Timestamp /= Connection.Connected_On
          then
             L.Stmt := Connect_And_Prepare
-              (Connection, S.Query_Str.all, S.Name.all, Direct => True);
+              (Connection, Str, S.Name.all, Direct => True);
 
             --  Set the timestamp *after* we have created the connection, in
             --  case it did not exist before (if prepare is the first command
@@ -1577,7 +1551,6 @@ package body GNATCOLL.SQL.Exec is
          Use_Cache     => Use_Cache,
          Cached_Result => No_Cache_Id,
          On_Server     => On_Server,
-         Suffix_Str    => null,
          Name          => null,
          Prepared      => null);
 
@@ -1621,7 +1594,6 @@ package body GNATCOLL.SQL.Exec is
          Use_Cache     => Use_Cache,
          Cached_Result => No_Cache_Id,
          On_Server     => On_Server,
-         Suffix_Str    => null,
          Name          => null,
          Prepared      => null);
 

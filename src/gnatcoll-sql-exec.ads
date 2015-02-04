@@ -794,6 +794,12 @@ package GNATCOLL.SQL.Exec is
    --  (missing returned value) and you would not get the id of the row
    --  as expected.
 
+   function To_String
+      (Connection : access Database_Connection_Record;
+       Stmt       : Prepared_Statement'Class)
+      return String;
+   --  Return the SQL statement for Stmt.
+
    --------------------------------------------
    -- Getting info about the database schema --
    --------------------------------------------
@@ -937,18 +943,6 @@ package GNATCOLL.SQL.Exec is
    --  Mark the connection as success or failure depending on R.
    --  Logs the query
 
-   procedure Set_SQL_Suffix
-      (Prepared : Prepared_Statement'Class;
-       Suffix   : String);
-   --  SQL command added to Prepared's own SQL (for instance, " RETURNING..."
-   --  in postgreSQL). This has no effect if the statement has already been
-   --  prepared on the server.
-
-   function Has_SQL_Suffix
-      (Prepared : Prepared_Statement'Class) return Boolean;
-   --  True if Prepared is either already prepared on the server, or already
-   --  has a suffix defined.
-
    function Is_Prepared_On_Server_Supported
      (Connection : access Database_Connection_Record) return Boolean;
    --  True if Prepared supported on the server for this connection
@@ -1023,10 +1017,6 @@ private
    type Prepared_Statement_Data is new GNATCOLL.Refcount.Refcounted with record
       Query      : SQL_Query;   --  Reset to null once prepared
       Query_Str  : GNAT.Strings.String_Access;
-
-      Suffix_Str : GNAT.Strings.String_Access;
-      --  An extra (DBMS dependent) suffix to add to the SQL. Changing this
-      --  invalidates the prepared statement.
 
       Is_Select : Boolean;
 

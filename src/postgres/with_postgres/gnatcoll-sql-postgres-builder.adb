@@ -860,11 +860,24 @@ package body GNATCOLL.SQL.Postgres.Builder is
       PK         : SQL_Field_Integer) return Integer
    is
       R : Forward_Cursor;
+      Last : Natural := Query'Last;
    begin
+      --  Make sure the command does not end with a semicolon
+      while Last >= Query'First
+         and then (Query (Last) = ' ' or else Query (Last) = ';')
+      loop
+         Last := Last - 1;
+      end loop;
+
       R.Fetch (Connection,
-               Query & " RETURNING " & PK.To_String (Connection.all),
+               Query (Query'First .. Last)
+               & " RETURNING " & PK.To_String (Connection.all),
                Params);
-      return Integer_Value (R, 0);
+      if not Connection.Success or else Is_Null (R, 0) then
+         return -1;
+      else
+         return Integer_Value (R, 0);
+      end if;
    end Insert_And_Get_PK;
 
    -----------------------
@@ -877,17 +890,12 @@ package body GNATCOLL.SQL.Postgres.Builder is
       Params     : SQL_Parameters := No_Parameters;
       PK         : SQL_Field_Integer) return Integer
    is
-      R : Forward_Cursor;
+      Str : constant String := To_String (Connection, Stmt);
    begin
-      if not Stmt.Has_SQL_Suffix then
-         --  ??? Assuming the suffix was already the same (should be since
-         --  this is the primary key).
-         Set_SQL_Suffix
-            (Stmt, " RETURNING " & PK.To_String (Connection.all));
-      end if;
+      --  We cannot use the prepared statement here, since we need to modify
+      --  it on the fly to add a " RETURNING " suffix
 
-      R.Fetch (Connection, Stmt, Params);
-      return Integer_Value (R, 0);
+      return Insert_And_Get_PK (Connection, Str, Params, PK);
    end Insert_And_Get_PK;
 
    -------------------------
