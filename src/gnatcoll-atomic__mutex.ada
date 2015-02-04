@@ -27,44 +27,13 @@ with GNAT.Task_Lock;
 
 package body GNATCOLL.Atomic is
 
-   function Sync_Add_And_Fetch
-     (Ptr   : access Atomic_Counter;
-      Value : Atomic_Counter) return Atomic_Counter;
-
-   ---------------
-   -- Increment --
-   ---------------
-
-   procedure Increment
-     (Item : aliased in out Atomic_Counter; Value : Atomic_Counter := 1)
-   is
-      Tmp : Atomic_Counter with Unreferenced;
-   begin
-      Tmp := Sync_Add_And_Fetch (Item'Access, Value);
-   end Increment;
-
-   ---------------
-   -- Decrement --
-   ---------------
-
-   procedure Decrement (Item : aliased in out Atomic_Counter) is
-   begin
-      Increment (Item, -1);
-   end Decrement;
-
-   function Decrement
-     (Item : aliased in out Atomic_Counter) return Atomic_Counter is
-   begin
-      return Sync_Add_And_Fetch (Item'Access, -1);
-   end Decrement;
-
    ------------------------
    -- Sync_Add_And_Fetch --
    ------------------------
 
    function Sync_Add_And_Fetch
-     (Ptr   : access Interfaces.Integer_32;
-      Value : Interfaces.Integer_32) return Interfaces.Integer_32
+     (Ptr   : access Atomic_Counter;
+      Value : Atomic_Counter) return Atomic_Counter
    is
       use type Interfaces.Integer_32;
       Result : Interfaces.Integer_32;
@@ -76,17 +45,13 @@ package body GNATCOLL.Atomic is
       return Result;
    end Sync_Add_And_Fetch;
 
-   function Sync_Add_And_Fetch
-     (Ptr   : access Atomic_Counter;
-      Value : Atomic_Counter) return Atomic_Counter
+   procedure Sync_Add_And_Fetch
+     (Ptr : access Atomic_Counter; Value : Atomic_Counter)
    is
-      Result : Atomic_Counter;
+      Dummy : Atomic_Counter;
+      pragma Unreferenced (Dummy);
    begin
-      GNAT.Task_Lock.Lock;
-      Ptr.all := Ptr.all + Value;
-      Result := Ptr.all;
-      GNAT.Task_Lock.Unlock;
-      return Result;
+      Dummy := Sync_Add_And_Fetch (Ptr, Value);
    end Sync_Add_And_Fetch;
 
 end GNATCOLL.Atomic;

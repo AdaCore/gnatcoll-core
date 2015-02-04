@@ -27,33 +27,22 @@
 --  atomic operations of the compiler (generally implemented with special
 --  support from the CPU).
 
-pragma Ada_2012;
-
 with Interfaces;
 
 package GNATCOLL.Atomic is
 
-   type Atomic_Counter is new Interfaces.Integer_32;
-
-   procedure Increment
-     (Item : aliased in out Atomic_Counter; Value : Atomic_Counter := 1)
-     with Inline_Always;
-   --  Increments value of atomic counter
-
-   procedure Decrement
-     (Item : aliased in out Atomic_Counter) with Inline_Always;
-   --  Decrements value of atomic counter
-
-   function Decrement
-     (Item : aliased in out Atomic_Counter) return Atomic_Counter
-     with Inline_Always;
+   subtype Atomic_Counter is Interfaces.Integer_32;
 
    function Sync_Add_And_Fetch
-      (Ptr   : access Interfaces.Integer_32;
-       Value : Interfaces.Integer_32) return Interfaces.Integer_32;
-    --  Increment Ptr by Value. This is task safe (either using a lock or
-    --  intrinsic atomic operations). Returns the new value (as set, it
-    --  might already have been changed by another task by the time this
-    --  function returns.
+     (Ptr   : access Atomic_Counter;
+      Value : Atomic_Counter) return Atomic_Counter;
+   --  Increment Ptr by Value. This is task safe (either using a lock or
+   --  intrinsic atomic operations). Returns the new value (as set, it
+   --  might already have been changed by another task by the time this
+   --  function returns.
+
+   procedure Sync_Add_And_Fetch
+     (Ptr : access Atomic_Counter; Value : Atomic_Counter);
+   pragma Inline (Sync_Add_And_Fetch);
 
 end GNATCOLL.Atomic;

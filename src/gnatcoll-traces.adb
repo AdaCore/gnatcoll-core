@@ -44,6 +44,7 @@ with System.Address_Image;
 with System.Assertions;         use System.Assertions;
 
 with GNATCOLL.Utils;            use GNATCOLL.Utils;
+with Interfaces;                use Interfaces;
 
 package body GNATCOLL.Traces is
 
@@ -787,13 +788,13 @@ package body GNATCOLL.Traces is
          end if;
 
          if Count_Trace /= null then
-            Increment (Count_Trace.Count);
+            Sync_Add_And_Fetch (Count_Trace.Count'Access, 1);
          end if;
 
          --  Always increment the count: that way, testsuites can easily count
          --  the number of queries that would have been emitted, even if they
          --  don't explicitly log.
-         Increment (Handle.Count);
+         Sync_Add_And_Fetch (Handle.Count'Access, 1);
       end if;
    end Trace;
 
@@ -845,7 +846,7 @@ package body GNATCOLL.Traces is
       end if;
 
       --  Atomic increase by 1
-      Increment (Global.Indentation);
+      Sync_Add_And_Fetch (Global.Indentation'Access, 1);
    end Increase_Indent;
 
    ---------------------
@@ -856,7 +857,8 @@ package body GNATCOLL.Traces is
      (Handle : Trace_Handle := null; Msg : String := "")
    is
       --  Atomic decrement
-      Tmp : constant Atomic_Counter := Decrement (Global.Indentation);
+      Tmp : constant Atomic_Counter :=
+        Sync_Add_And_Fetch (Global.Indentation'Access, -1);
    begin
       if Tmp >= 0 then
          if Handle /= null and then Msg /= "" then

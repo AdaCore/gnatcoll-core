@@ -113,11 +113,9 @@ package body GNATCOLL.Refcount is
       ------------
 
       overriding procedure Adjust (P : in out Ref) is
-         Dummy : Integer_32;
-         pragma Unreferenced (Dummy);
       begin
          if P.Data /= null then
-            Dummy := Sync_Add_And_Fetch (P.Data.Refcount'Access, 1);
+            Sync_Add_And_Fetch (P.Data.Refcount'Access, 1);
          end if;
       end Adjust;
 

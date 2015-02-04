@@ -1093,11 +1093,9 @@ package body GNATCOLL.Scripts is
    ------------
 
    procedure Adjust (CI : in out Class_Instance_Data) is
-      Dummy : Integer_32;
-      pragma Unreferenced (Dummy);
    begin
       if CI.Data /= null then
-         Dummy := Sync_Add_And_Fetch (CI.Data.Refcount'Access, 1);
+         Sync_Add_And_Fetch (CI.Data.Refcount'Access, 1);
          Incref (CI.Data);
       end if;
    end Adjust;
