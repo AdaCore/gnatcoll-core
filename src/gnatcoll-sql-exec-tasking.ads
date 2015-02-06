@@ -38,4 +38,33 @@ package GNATCOLL.SQL.Exec.Tasking is
    --  The newly created connection and Username are then passed to
    --  Reset_Connection (see below).
 
+   ----------------------------------------------------------------------------
+   --  The database independent cursor implementation. Could be used either  --
+   --  to provide Direct_Cursor for databases where it is not supported or   --
+   --  to provide data which could be shared between different tasks.        --
+   ----------------------------------------------------------------------------
+
+   function Task_Safe_Instance
+     (Source : Forward_Cursor'Class) return Direct_Cursor;
+   --  Creates and returns cursor which could be used to clone the copies for
+   --  different tasks. This routine creates Source cursor data copy into
+   --  internal structures of the resulting cursor. If the Source cursor
+   --  already created using this routine, copy is not created but returned the
+   --  Source cursor.
+
+   function Task_Safe_Instance
+     (Source : Abstract_Cursor_Access) return Abstract_Cursor_Access;
+   --  Need to support databases, where direct cursors is not supported.
+   --  Returns the same pointer if the Source is already the task safe
+   --  direct cursor.
+
+   function Task_Safe_Clone (Source : Direct_Cursor) return Direct_Cursor;
+   --  Clone the cursor copy to use in different task.
+   --  Source must be the result of a call to Task_Safe_Instance.
+   --  The clone have to be made in the task where it will be used.
+   --  Each task would use the same data, but own cursor pointer to the current
+   --  record. If the Task_Safe_Clone called from the same task where the
+   --  Task_Safe_Instance called, the routine returns the same Source cursor to
+   --  avoid odd copy.
+
 end GNATCOLL.SQL.Exec.Tasking;

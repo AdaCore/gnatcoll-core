@@ -29,7 +29,6 @@
 --  API.
 
 with GNATCOLL.SQL.Exec;    use GNATCOLL.SQL.Exec;
-with GNAT.Strings;         use GNAT.Strings;
 with Interfaces.C.Strings; use Interfaces.C.Strings;
 
 private package GNATCOLL.SQL.Exec_Private is
@@ -138,90 +137,6 @@ private package GNATCOLL.SQL.Exec_Private is
    procedure Relative
      (Self : in out DBMS_Direct_Cursor; Step : Integer) is abstract;
    --  See documentation for GNATCOLL.SQL.Exec.Direct_Cursor
-
-   generic
-      type Forward is new DBMS_Forward_Cursor with private;
-   package Generic_Direct_Cursors is
-      type Direct is new DBMS_Direct_Cursor with private;
-      --  A direct cursor based on Forward. It caches locally the values
-      --  returned for each row of Forward, and should be used for systems that
-      --  do not have special support for direct cursors.
-
-      type Forward_Access is access all Forward;
-      --  Not "access 'Class" to avoid some dynamic dispatching calls, for
-      --  efficiency
-
-      procedure Initialize (Self : access Direct; From : access Forward);
-      --  Initialize in-memory data for Self, by reading all rows of From.
-      --  From is freed by Self when appropriate.
-
-      function Get_Cursor (Self : Direct) return Forward_Access;
-      --  Return a pointer to the underlying forward cursor
-
-      overriding function Error_Msg (Self : Direct) return String;
-      overriding function Status (Self : Direct) return String;
-      overriding function Is_Success (Self : Direct) return Boolean;
-      overriding procedure Finalize (Result : in out Direct);
-      overriding function Processed_Rows (Self : Direct) return Natural;
-      overriding function C_Value
-        (Self  : Direct; Field : Field_Index) return chars_ptr;
-      overriding function Value
-        (Self  : Direct; Field : Field_Index) return String;
-      overriding function Is_Null
-        (Self  : Direct; Field : Field_Index) return Boolean;
-      overriding function Last_Id
-        (Self       : Direct;
-         Connection : access Database_Connection_Record'Class;
-         Field      : SQL_Field_Integer) return Integer;
-      overriding function Field_Count (Self : Direct) return Field_Index;
-      overriding function Field_Name
-        (Self : Direct; Field : Field_Index) return String;
-      overriding function Has_Row   (Self : Direct) return Boolean;
-      overriding procedure Next     (Self : in out Direct);
-      overriding procedure First    (Self : in out Direct);
-      overriding procedure Last     (Self : in out Direct);
-      overriding function Current (Self : Direct) return Positive;
-      overriding procedure Absolute (Self : in out Direct; Row : Positive);
-      overriding procedure Relative (Self : in out Direct; Step : Integer);
-      overriding function Boolean_Value
-        (Self : Direct; Field : Field_Index) return Boolean;
-
-   private
-      type Result_Table is
-        array (Natural range <>) of GNAT.Strings.String_Access;
-      type Result_Table_Access is access all Result_Table;
-      --  The results of a SQL query (all the columns of first row, then all
-      --  columns of second row,...)
-
-      type Local_Forward is new Forward with record
-         Table   : Result_Table_Access := null;
-         Columns : Natural := 0;
-         --  The cached result. We do not use sqlite3's builtin
-         --  sqlite3_get_table since we want to be able to use prepared
-         --  statements to query this data.
-
-         Current        : Natural := 0;  --  Current row
-      end record;
-      --  A local extension, so that we benefit from custom Boolean_Value
-      --  defined on Forward, while still dispatching to our Value
-
-      overriding function Value
-        (Self  : Local_Forward; Field : Field_Index) return String;
-      overriding procedure Finalize (Result : in out Local_Forward);
-      overriding function Is_Null
-        (Self  : Local_Forward; Field : Field_Index) return Boolean;
-
-      type Local_Forward_Access is access all Local_Forward'Class;
-
-      type Direct is new DBMS_Direct_Cursor with record
-         Cursor : Local_Forward_Access;
-         --  The cursor that was used to read the results. It has already been
-         --  iterated, but provides a handle on the number of rows, the
-         --  Statement, and other information.
-         --  Also used to get the correct implementation of Boolean_Value,
-         --  since that depends on the DBMS.
-      end record;
-   end Generic_Direct_Cursors;
 
 private
 

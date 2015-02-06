@@ -28,6 +28,7 @@ with Ada.Unchecked_Deallocation;
 with GNATCOLL.SQL.Sqlite.Gnade;    use GNATCOLL.SQL.Sqlite.Gnade;
 with GNATCOLL.SQL.Exec;
 with GNATCOLL.SQL.Exec_Private;    use GNATCOLL.SQL.Exec_Private;
+with GNATCOLL.SQL.Exec.Tasking;    use GNATCOLL.SQL.Exec.Tasking;
 with GNATCOLL.Traces;              use GNATCOLL.Traces;
 with GNATCOLL.Utils;               use GNATCOLL.Utils;
 with GNAT.Calendar;
@@ -175,10 +176,6 @@ package body GNATCOLL.SQL.Sqlite.Builder is
      (Self : Sqlite_Cursor; Field : Field_Index) return Boolean;
    overriding function Money_Value
      (Self  : Sqlite_Cursor; Field : Field_Index) return T_Money;
-
-   package Direct_Cursors is new Generic_Direct_Cursors (Sqlite_Cursor);
-   type Sqlite_Direct_Cursor is new Direct_Cursors.Direct with null record;
-   type Sqlite_Direct_Cursor_Access is access all Sqlite_Direct_Cursor'Class;
 
    function Is_Whitespace (C : Character) return Boolean;
    --  Whether C is a white space character
@@ -504,7 +501,7 @@ package body GNATCOLL.SQL.Sqlite.Builder is
       procedure Unchecked_Free is new Ada.Unchecked_Deallocation
          (Sqlite_Cursor'Class, Sqlite_Cursor_Access);
       Res    : Sqlite_Cursor_Access;
-      Res2   : Sqlite_Direct_Cursor_Access;
+      Res2   : Abstract_Cursor_Access;
       Stmt   : Statement;
       Last_Status : Result_Codes;
       Tmp_Data : array (Params'Range) of GNAT.Strings.String_Access;
@@ -617,13 +614,13 @@ package body GNATCOLL.SQL.Sqlite.Builder is
       --  For direct cursors, we now need to actually read all the results, and
       --  store them in memory
 
-      Res2 := new Sqlite_Direct_Cursor;
-      Res2.Initialize (Sqlite_Cursor (Res.all)'Access);
+      Res2 := Task_Safe_Instance (Abstract_Cursor_Access (Res));
+
       Res.Stmt := No_Statement;
       Res.DB := null;
       Unchecked_Free (Res);
 
-      return Abstract_Cursor_Access (Res2);
+      return Res2;
    end Execute;
 
    -------------------------
@@ -660,10 +657,7 @@ package body GNATCOLL.SQL.Sqlite.Builder is
          --  finalize it now if needed.
 
          if Res /= null then
-            if Res.all in Sqlite_Direct_Cursor'Class then
-               Get_Cursor (Sqlite_Direct_Cursor_Access (Res).all).Free_Stmt :=
-                 Stmt = No_DBMS_Stmt;
-            else
+            if Res.all in Sqlite_Cursor'Class then
                Sqlite_Cursor_Access (Res).Free_Stmt := Stmt = No_DBMS_Stmt;
             end if;
 

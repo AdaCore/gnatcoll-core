@@ -34,6 +34,7 @@ with GNAT.Task_Lock;
 with GNATCOLL.Traces;           use GNATCOLL.Traces;
 with GNATCOLL.Utils;            use GNATCOLL.Utils;
 with GNATCOLL.SQL.Exec_Private; use GNATCOLL.SQL.Exec_Private;
+with GNATCOLL.SQL.Exec.Tasking; use GNATCOLL.SQL.Exec.Tasking;
 with Interfaces.C.Strings;
 with System.Address_Image;
 
@@ -74,6 +75,12 @@ package body GNATCOLL.SQL.Exec is
    --  Low-level call to perform a query on the database and log results.
    --  The Query parameter is ignored if Prepared is provided.
 
+   procedure Fetch_Internal
+     (Result     : out Forward_Cursor'Class;
+      Connection : access Database_Connection_Record'Class;
+      Stmt       : Prepared_Statement'Class;
+      Params     : SQL_Parameters);
+
    function Hash (Key : Cache_Id) return Ada.Containers.Hash_Type;
 
    package Cached_Maps is new Ada.Containers.Hashed_Maps
@@ -105,15 +112,14 @@ package body GNATCOLL.SQL.Exec is
       procedure Get_Result
         (Stmt    : Prepared_Statement'Class;
          Cached  : out Direct_Cursor;
-         Found   : out Boolean;
-         Params  : SQL_Parameters := No_Parameters);
+         Found   : out Boolean);
       --  Return null or the cached value for the statement
 
       procedure Set_Id (Stmt : Prepared_Statement'Class);
       --  Set the Cached_Result field of Stmt
 
       procedure Set_Cache
-        (Stmt : Prepared_Statement'Class; Cached : Direct_Cursor);
+        (Stmt : Prepared_Statement'Class; Cached : Forward_Cursor'Class);
       --  Add a new value in the cache
 
       procedure Unset_Cache (Stmt : Prepared_Statement_Data);
@@ -166,15 +172,11 @@ package body GNATCOLL.SQL.Exec is
       procedure Get_Result
         (Stmt    : Prepared_Statement'Class;
          Cached  : out Direct_Cursor;
-         Found   : out Boolean;
-         Params  : SQL_Parameters := No_Parameters) is
+         Found   : out Boolean) is
       begin
          GNAT.Task_Lock.Lock;
 
-         if Params /= No_Parameters then
-            --  ??? The cache should take the parameters into account
-            Found := False;
-         elsif Clock - Timestamp > Cache_Expiration_Delay then
+         if Clock - Timestamp > Cache_Expiration_Delay then
             Reset;
             Found := False;
          else
@@ -193,7 +195,7 @@ package body GNATCOLL.SQL.Exec is
                   Found := Cached_Maps.Has_Element (C);
 
                   if Found then
-                     Cached := Cached_Maps.Element (C);
+                     Cached := Task_Safe_Clone (Cached_Maps.Element (C));
                   end if;
                end if;
             end;
@@ -202,8 +204,10 @@ package body GNATCOLL.SQL.Exec is
          GNAT.Task_Lock.Unlock;
 
       exception
-         when others =>
+         when E : others =>
             GNAT.Task_Lock.Unlock;
+
+            Trace (Me_Cache, E, "Get_Result ");
       end Get_Result;
 
       ------------
@@ -225,8 +229,10 @@ package body GNATCOLL.SQL.Exec is
          GNAT.Task_Lock.Unlock;
 
       exception
-         when others =>
+         when E : others =>
             GNAT.Task_Lock.Unlock;
+
+            Trace (Me_Cache, E, "Set_Id ");
       end Set_Id;
 
       ---------------
@@ -234,7 +240,7 @@ package body GNATCOLL.SQL.Exec is
       ---------------
 
       procedure Set_Cache
-        (Stmt : Prepared_Statement'Class; Cached : Direct_Cursor)
+        (Stmt : Prepared_Statement'Class; Cached : Forward_Cursor'Class)
       is
          S : Prepared_Statements.Encapsulated_Access;
       begin
@@ -248,14 +254,16 @@ package body GNATCOLL.SQL.Exec is
 
          if S.Use_Cache then
             Set_Id (Stmt);
-            Cache.Include (S.Cached_Result, Cached);
+            Cache.Include (S.Cached_Result, Task_Safe_Instance (Cached));
          end if;
 
          GNAT.Task_Lock.Unlock;
 
       exception
-         when others =>
+         when E : others =>
             GNAT.Task_Lock.Unlock;
+
+            Trace (Me_Cache, E, "Set_Cache ");
       end Set_Cache;
 
       -----------------
@@ -280,8 +288,10 @@ package body GNATCOLL.SQL.Exec is
          GNAT.Task_Lock.Unlock;
 
       exception
-         when others =>
+         when E : others =>
             GNAT.Task_Lock.Unlock;
+
+            Trace (Me_Cache, E, "Unset_Cache ");
       end Unset_Cache;
 
       -----------
@@ -296,8 +306,10 @@ package body GNATCOLL.SQL.Exec is
          GNAT.Task_Lock.Unlock;
 
       exception
-         when others =>
+         when E : others =>
             GNAT.Task_Lock.Unlock;
+
+            Trace (Me_Cache, E, "Reset ");
       end Reset;
 
       ---------------------
@@ -311,14 +323,16 @@ package body GNATCOLL.SQL.Exec is
          if Closed then
             Freed_DB.Include (DB);
          else
-            Freed_DB.Delete (DB);
+            Freed_DB.Exclude (DB);
          end if;
 
          GNAT.Task_Lock.Unlock;
 
       exception
-         when others =>
+         when E : others =>
             GNAT.Task_Lock.Unlock;
+
+            Trace (Me_Cache, E, "Mark_DB_As_Free ");
       end Mark_DB_As_Free;
 
       ---------------
@@ -334,8 +348,11 @@ package body GNATCOLL.SQL.Exec is
          return Result;
 
       exception
-         when others =>
+         when E : others =>
             GNAT.Task_Lock.Unlock;
+
+            Trace (Me_Cache, E, "Was_Freed ");
+
             return Result;
       end Was_Freed;
 
@@ -1613,6 +1630,96 @@ package body GNATCOLL.SQL.Exec is
       return Stmt;
    end Prepare;
 
+   --------------------
+   -- Fetch_Internal --
+   --------------------
+
+   procedure Fetch_Internal
+     (Result     : out Forward_Cursor'Class;
+      Connection : access Database_Connection_Record'Class;
+      Stmt       : Prepared_Statement'Class;
+      Params     : SQL_Parameters)
+   is
+      use type Prepared_Statements.Encapsulated_Access;
+      Direct : constant Boolean := Result in Direct_Cursor;
+      Found : Boolean;
+      S : constant Prepared_Statements.Encapsulated_Access := Stmt.Get;
+
+      procedure Put_Result (Item : Forward_Cursor'Class);
+
+      procedure Put_Result (Item : Forward_Cursor'Class) is
+      begin
+         if Direct then
+            Direct_Cursor (Result) := Direct_Cursor (Item);
+         else
+            Forward_Cursor (Result) := Forward_Cursor (Item);
+         end if;
+      end Put_Result;
+
+   begin
+      Put_Result (No_Direct_Element);
+
+      if S = null then
+         Trace (Me_Error, "Prepared statement was freed, can't execute");
+         return;
+      end if;
+
+      if S.Use_Cache
+        and then Connection.Descr.Caching
+        and then Params = No_Parameters --  Parameters not supported for now
+      then
+         declare
+            RC : Direct_Cursor;
+         begin
+            Query_Cache.Get_Result (Stmt, RC, Found);
+
+            if Found then
+               RC.First; --  Move to first element
+               if Active (Me_Cache) then
+                  Trace (Me_Cache, "(" & S.Name.all & "): from cache");
+               end if;
+
+               Put_Result (RC);
+
+               return;
+            end if;
+         end;
+
+         declare
+            RE : Forward_Cursor;
+         begin
+            --  for the caching do not need the Direct cursor, because it have
+            --  to be translated into cache task safe anyway.
+
+            Execute_And_Log
+              (RE, Connection, "", Stmt, Direct => False, Params => Params);
+
+            if Success (Connection) then
+               Query_Cache.Set_Cache (Stmt, RE);
+
+               --  Recoursive reuse get from cahce code of this routine
+
+               Fetch_Internal (Result, Connection, Stmt, Params);
+
+            elsif Direct then
+               --  Just to return error in direct cursor type
+
+               Put_Result (Task_Safe_Instance (RE));
+
+            else
+               --  Just to return error
+
+               Put_Result (RE);
+            end if;
+
+            return;
+         end;
+      end if; -- Cache processing
+
+      Execute_And_Log
+        (Result, Connection, "", Stmt, Direct => Direct, Params => Params);
+   end Fetch_Internal;
+
    -----------
    -- Fetch --
    -----------
@@ -1621,41 +1728,22 @@ package body GNATCOLL.SQL.Exec is
      (Result     : out Direct_Cursor;
       Connection : access Database_Connection_Record'Class;
       Stmt       : Prepared_Statement'Class;
-      Params     : SQL_Parameters := No_Parameters)
-   is
-      use type Prepared_Statements.Encapsulated_Access;
-      Found : Boolean;
-      S : constant Prepared_Statements.Encapsulated_Access := Stmt.Get;
+      Params     : SQL_Parameters := No_Parameters) is
    begin
-      Result := No_Direct_Element;   --  Free memory used by previous use
+      Fetch_Internal (Result, Connection, Stmt, Params);
+   end Fetch;
 
-      if S = null then
-         Trace (Me_Query, "Prepared statement was freed, can't execute");
-         return;
-      end if;
+   -----------
+   -- Fetch --
+   -----------
 
-      if S.Use_Cache
-        and then Connection.Descr.Caching
-      then
-         Query_Cache.Get_Result (Stmt, Result, Found, Params);
-         if Found then
-            Result.First; --  Move to first element
-            if Active (Me_Cache) then
-               Trace (Me_Cache, "(" & S.Name.all & "): from cache");
-            end if;
-            return;
-         end if;
-      end if;
-
-      Execute_And_Log
-        (Result, Connection, "", Stmt, Direct => True, Params => Params);
-
-      if Success (Connection)
-        and then S.Use_Cache
-        and then Connection.Descr.Caching
-      then
-         Query_Cache.Set_Cache (Stmt, Result);
-      end if;
+   procedure Fetch
+     (Result     : out Forward_Cursor;
+      Connection : access Database_Connection_Record'Class;
+      Stmt       : Prepared_Statement'Class;
+      Params     : SQL_Parameters := No_Parameters) is
+   begin
+      Fetch_Internal (Result, Connection, Stmt, Params);
    end Fetch;
 
    -----------------------
@@ -1681,38 +1769,6 @@ package body GNATCOLL.SQL.Exec is
 
       return Id;
    end Insert_And_Get_PK;
-
-   -----------
-   -- Fetch --
-   -----------
-
-   procedure Fetch
-     (Result     : out Forward_Cursor;
-      Connection : access Database_Connection_Record'Class;
-      Stmt       : Prepared_Statement'Class;
-      Params     : SQL_Parameters := No_Parameters)
-   is
-      S : constant Prepared_Statements.Encapsulated_Access := Stmt.Get;
-   begin
-      Result := No_Element;
-
-      if S.Use_Cache
-        and then Connection.Descr.Caching
-      then
-         --  When using a cache, we have to use a Direct_Cursor for the cache
-         --  to work
-         declare
-            R : Direct_Cursor;
-         begin
-            Fetch (R, Connection, Stmt, Params);
-            Result := Forward_Cursor (R);
-         end;
-
-      else
-         Execute_And_Log
-           (Result, Connection, "", Stmt, Direct => False, Params => Params);
-      end if;
-   end Fetch;
 
    -------------
    -- Execute --
