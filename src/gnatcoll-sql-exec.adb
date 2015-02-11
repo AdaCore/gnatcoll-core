@@ -24,6 +24,8 @@
 with Ada.Calendar;               use Ada.Calendar;
 with Ada.Containers.Hashed_Maps; use Ada.Containers;
 with Ada.Containers.Hashed_Sets;
+with Ada.Strings.Fixed;          use Ada.Strings;
+with Ada.Strings.Maps.Constants;
 with Ada.Strings.Hash;
 with Ada.Strings.Unbounded;      use Ada.Strings.Unbounded;
 with Ada.Unchecked_Deallocation;
@@ -533,14 +535,10 @@ package body GNATCOLL.SQL.Exec is
    function Is_Select_Query (Query : String) return Boolean is
       --  Allow both "SELECT" and "(SELECT" (the latter is used when we do a
       --  union between two selects
-      Cst_Select      : constant String := "SELECT ";
    begin
-      return Query'Length > Cst_Select'Length + 1
-        and then
-          (Query (Query'First .. Query'First + Cst_Select'Length - 1)
-           = Cst_Select
-           or else Query (Query'First + 1 .. Query'First + Cst_Select'Length) =
-             Cst_Select);
+      return Fixed.Index
+               (Query, "SELECT ", Mapping => Maps.Constants.Upper_Case_Map)
+             in 1 .. 2;
    end Is_Select_Query;
 
    -----------
