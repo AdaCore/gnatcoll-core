@@ -971,9 +971,8 @@ package body GNATCOLL.SQL.Sqlite.Builder is
 
    overriding procedure Next (Self : in out Sqlite_Cursor) is
    begin
-      Step (Self.Stmt, Self.Last_Status);
-
       if Self.Has_Row then
+         Step (Self.Stmt, Self.Last_Status);
          Self.Processed_Rows := Self.Processed_Rows + 1;
       end if;
    end Next;
