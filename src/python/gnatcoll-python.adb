@@ -24,6 +24,7 @@
 with System;               use System;
 with Interfaces.C.Strings; use Interfaces.C.Strings;
 with GNAT.OS_Lib;          use GNAT.OS_Lib;
+with Interfaces.C;         use Interfaces.C;
 
 package body GNATCOLL.Python is
 
@@ -46,6 +47,39 @@ package body GNATCOLL.Python is
    --  the Ada subprogram.
    --  Self is the first argument that will be passed to the Ada subprogram.
    --  Module is the value of the __module__ attribute for the new function.
+
+   function PyGILState_Ensure return int;
+   pragma Import (C, PyGILState_Ensure, "PyGILState_Ensure");
+   --  Ensure that the current thread is ready to call the Python
+   --  C API, regardless of the current state of Python, or of its
+   --  thread lock.  This may be called as many times as desired
+   --  by a thread so long as each call is matched with a call to
+   --  PyGILState_Release().  In general, other thread-state APIs may
+   --  be used between _Ensure() and _Release() calls, so long as the
+   --  thread-state is restored to its previous state before the Release().
+   --  For example, normal use of the Py_BEGIN_ALLOW_THREADS/
+   --  Py_END_ALLOW_THREADS macros are acceptable.
+   --
+   --  The return value is an opaque "handle" to the thread state when
+   --  PyGILState_Ensure() was called, and must be passed to
+   --  PyGILState_Release() to ensure Python is left in the same state. Even
+   --  though recursive calls are allowed, these handles can *not* be shared -
+   --  each unique call to PyGILState_Ensure must save the handle for its
+   --  call to PyGILState_Release.
+   --
+   --  When the function returns, the current thread will hold the GIL.
+   --
+   --  Failure is a fatal error.
+
+   procedure PyGILState_Release (State : int);
+   pragma Import (C, PyGILState_Release, "PyGILState_Release");
+   --  Release any resources previously acquired.  After this call, Python's
+   --  state will be the same as it was prior to the corresponding
+   --  PyGILState_Ensure() call (but generally this state will be unknown to
+   --  the caller, hence the use of the GILState API.)
+   --
+   --  Every call to PyGILState_Ensure must be matched by a call to
+   --  PyGILState_Release on the same thread.
 
    ------------------------
    -- PyRun_SimpleString --
@@ -76,8 +110,13 @@ package body GNATCOLL.Python is
    function PyImport_ImportModule (Module_Name : String) return PyObject is
       function Internal (Name : String) return PyObject;
       pragma Import (C, Internal, "PyImport_ImportModule");
+      Result : PyObject;
+      State  : int;
    begin
-      return Internal (Module_Name & ASCII.NUL);
+      State := PyGILState_Ensure;
+      Result := Internal (Module_Name & ASCII.NUL);
+      PyGILState_Release (State);
+      return Result;
    end PyImport_ImportModule;
 
    ------------------
@@ -96,8 +135,13 @@ package body GNATCOLL.Python is
          Globals : PyObject;
          Locals  : PyObject) return PyObject;
       pragma Import (C, Internal, "PyRun_String");
+      Result : PyObject;
+      State  : int;
    begin
-      return Internal (Str & ASCII.LF, Start, Globals, Locals);
+      State := PyGILState_Ensure;
+      Result := Internal (Str & ASCII.LF, Start, Globals, Locals);
+      PyGILState_Release (State);
+      return Result;
    end PyRun_String;
 
    ----------------------
@@ -450,8 +494,11 @@ package body GNATCOLL.Python is
    procedure PySys_SetObject (Name : String; Object : PyObject) is
       procedure Internal (Name : String; Object : PyObject);
       pragma Import (C, Internal, "PySys_SetObject");
+      State  : int;
    begin
+      State := PyGILState_Ensure;
       Internal (Name & ASCII.NUL, Object);
+      PyGILState_Release (State);
    end PySys_SetObject;
 
    ---------------------
@@ -461,8 +508,13 @@ package body GNATCOLL.Python is
    function PySys_GetObject (Name : String) return PyObject is
       function Internal (Name : String) return PyObject;
       pragma Import (C, Internal, "PySys_GetObject");
+      Result : PyObject;
+      State  : int;
    begin
-      return Internal (Name & ASCII.NUL);
+      State := PyGILState_Ensure;
+      Result := Internal (Name & ASCII.NUL);
+      PyGILState_Release (State);
+      return Result;
    end PySys_GetObject;
 
    -------------------------
@@ -541,8 +593,12 @@ package body GNATCOLL.Python is
       function Internal (Cmd, Name : String; State : Interpreter_State)
          return PyCodeObject;
       pragma Import (C, Internal, "Py_CompileString");
+      St     : constant int := PyGILState_Ensure;
+      Result : PyCodeObject;
    begin
-      return Internal (Cmd & ASCII.NUL, Name & ASCII.NUL, State);
+      Result := Internal (Cmd & ASCII.NUL, Name & ASCII.NUL, State);
+      PyGILState_Release (St);
+      return Result;
    end Py_CompileString;
 
    --------------------------
@@ -553,9 +609,11 @@ package body GNATCOLL.Python is
      (Dict : PyDictObject; Key : String; Obj : PyObject)
    is
       S      : chars_ptr := New_String (Key);
+      State  : constant int := PyGILState_Ensure;
       Result : constant Integer := PyDict_SetItemString (Dict, S, Obj);
       pragma Unreferenced (Result);
    begin
+      PyGILState_Release (State);
       Free (S);
    end PyDict_SetItemString;
 
@@ -634,9 +692,11 @@ package body GNATCOLL.Python is
      (Object : PyObject; Name : String) return PyObject
    is
       S : chars_ptr := New_String (Name);
+      State  : constant int := PyGILState_Ensure;
       Result : constant PyObject := PyObject_GetAttrString (Object, S);
    begin
       Free (S);
+      PyGILState_Release (State);
       return Result;
    end PyObject_GetAttrString;
 
@@ -1073,8 +1133,13 @@ package body GNATCOLL.Python is
    is
       function Internal (Class, Base : PyObject) return Integer;
       pragma Import (C, Internal, "ada_is_subclass");
+      State : int;
+      Result : Boolean;
    begin
-      return Internal (Class, Base) /= 0;
+      State := PyGILState_Ensure;
+      Result := Internal (Class, Base) /= 0;
+      PyGILState_Release (State);
+      return Result;
    end Py_IsSubclass;
 
    --------------
@@ -1132,5 +1197,121 @@ package body GNATCOLL.Python is
          return Val /= 0;
       end if;
    end PyObject_IsTrue;
+
+   -------------------
+   -- PyObject_Call --
+   -------------------
+
+   function PyObject_Call
+     (Object : PyObject; Args : PyObject; Kw : PyObject) return PyObject
+   is
+      function Internal
+        (Object : PyObject; Args : PyObject; Kw : PyObject) return PyObject;
+      pragma Import (C, Internal, "PyObject_Call");
+
+      State : int;
+      Result : PyObject;
+   begin
+      State := PyGILState_Ensure;
+      Result := Internal (Object, Args, Kw);
+      PyGILState_Release (State);
+
+      return Result;
+   end PyObject_Call;
+
+   -----------------
+   -- PyErr_Clear --
+   -----------------
+
+   procedure PyErr_Clear is
+      procedure Internal;
+      pragma Import (C, Internal, "PyErr_Clear");
+
+      State : int;
+   begin
+      State := PyGILState_Ensure;
+      Internal;
+      PyGILState_Release (State);
+   end PyErr_Clear;
+
+   ---------------
+   -- Py_INCREF --
+   ---------------
+
+   procedure Py_INCREF (Obj : PyObject) is
+      State  : int;
+      procedure Internal (Obj : PyObject);
+      pragma Import (C, Internal, "ada_py_incref");
+   begin
+      State := PyGILState_Ensure;
+      Internal (Obj);
+      PyGILState_Release (State);
+   end Py_INCREF;
+
+   ---------------
+   -- Py_DECREF --
+   ---------------
+
+   procedure Py_DECREF (Obj : PyObject) is
+      State  : int;
+      procedure Internal (Obj : PyObject);
+      pragma Import (C, Internal, "ada_py_decref");
+   begin
+      State := PyGILState_Ensure;
+      Internal (Obj);
+      PyGILState_Release (State);
+   end Py_DECREF;
+
+   ----------------
+   -- Py_XINCREF --
+   ----------------
+
+   procedure Py_XINCREF (Obj : PyObject) is
+      State  : int;
+      procedure Internal (Obj : PyObject);
+      pragma Import (C, Internal, "ada_py_xincref");
+   begin
+      State := PyGILState_Ensure;
+      Internal (Obj);
+      PyGILState_Release (State);
+   end Py_XINCREF;
+
+   ----------------
+   -- Py_XDECREF --
+   ----------------
+
+   procedure Py_XDECREF (Obj : PyObject) is
+      State  : int;
+      procedure Internal (Obj : PyObject);
+      pragma Import (C, Internal, "ada_py_xdecref");
+   begin
+      State := PyGILState_Ensure;
+      Internal (Obj);
+      PyGILState_Release (State);
+   end Py_XDECREF;
+
+   ---------------------
+   -- PyEval_EvalCode --
+   ---------------------
+
+   function PyEval_EvalCode
+     (Code    : PyCodeObject;
+      Globals : PyObject;
+      Locals  : PyObject) return PyObject
+   is
+      function Internal
+        (Code    : PyCodeObject;
+         Globals : PyObject;
+         Locals  : PyObject) return PyObject;
+      pragma Import (C, Internal, "PyEval_EvalCode");
+
+      Result : PyObject;
+      State  : int;
+   begin
+      State := PyGILState_Ensure;
+      Result := Internal (Code, Globals, Locals);
+      PyGILState_Release (State);
+      return Result;
+   end PyEval_EvalCode;
 
 end GNATCOLL.Python;
