@@ -125,6 +125,7 @@ package GNATCOLL.Python is
 
    function PyObject_CallObject
      (Object : PyObject; Args : PyObject) return PyObject;
+   pragma Import (C, PyObject_CallObject, "PyObject_CallObject");
    --  Call a callable Python object, callable_object, with
    --  arguments given by the tuple, args.  If no arguments are
    --  needed, then args may be NULL.  Returns the result of the
@@ -135,6 +136,7 @@ package GNATCOLL.Python is
      (Object : PyObject;
       Name   : Interfaces.C.Strings.chars_ptr;
       Attr   : PyObject) return Integer;
+   pragma Import (C, PyObject_SetAttrString, "PyObject_SetAttrString");
    --  Set the value of the attribute named Name, for Object, to the value
    --  Attr. Returns -1 on failure. This is the equivalent of the Python
    --  statement "Object.Name = Attr".
@@ -149,6 +151,7 @@ package GNATCOLL.Python is
      (Object : PyObject;
       Name   : PyObject;
       Attr   : PyObject) return Integer;
+   pragma Import (C, PyObject_GenericSetAttr, "PyObject_GenericSetAttr");
    --  Generic attribute setter that directly interface with the object's
    --  __dict__, not with its __setattr__ method.
    --  Name must be decref-ed by the caller.
@@ -166,6 +169,7 @@ package GNATCOLL.Python is
    function PyObject_GetAttrString
      (Object : PyObject;
       Name   : Interfaces.C.Strings.chars_ptr) return PyObject;
+   pragma Import (C, PyObject_GetAttrString, "PyObject_GetAttrString");
    --  Lookup an attribute in the object's dictionnary.
    --  The returned object *must* be DECREF.
 
@@ -212,6 +216,7 @@ package GNATCOLL.Python is
    --  Returns true if the Obj is a float object
 
    function PyFloat_FromDouble (Value : Interfaces.C.double) return PyObject;
+   pragma Import (C, PyFloat_FromDouble, "PyFloat_FromDouble");
    --  Creates a new float object
 
    --------------
@@ -330,18 +335,21 @@ package GNATCOLL.Python is
    --  True if object is an iterator (as returned by PyObject_GetIter)
 
    function PyObject_GetIter (Obj : PyObject) return PyObject;
+   pragma Import (C, PyObject_GetIter, "PyObject_GetIter");
    --  This is equivalent to the Python expression iter(o). It returns a new
    --  iterator for the object argument, or the object itself if the object is
    --  already an iterator. Raises TypeError and returns NULL if the object
    --  cannot be iterated.
 
    function PyObject_Size (Obj : PyObject) return Integer;
+   pragma Import (C, PyObject_Size, "PyObject_Size");
    --  Return the length of object o. If the object o provides either the
    --  sequence and mapping protocols, the sequence length is returned. On
    --  error, -1 is returned. This is the equivalent to the Python expression
    --  len(o).
 
    function PyObject_GetItem (Obj, Key : PyObject) return PyObject;
+   pragma Import (C, PyObject_GetItem, "PyObject_GetItem");
    --  Returns a new reference
    --  Return element of o corresponding to the object key or NULL on failure.
    --  This is the equivalent of the Python expression o[key].
@@ -350,6 +358,7 @@ package GNATCOLL.Python is
    --  A special case where the key is an integer
 
    function PyObject_SetItem (Obj, Key, Value : PyObject) return Integer;
+   pragma Import (C, PyObject_SetItem, "PyObject_SetItem");
    --  Map the object key to the value v. Returns -1 on failure. This is the
    --  equivalent of the Python statement o[key] = v.
 
@@ -358,6 +367,7 @@ package GNATCOLL.Python is
    --  A special case where the key is an integer
 
    function PyIter_Next (Obj : PyObject) return PyObject;
+   pragma Import (C, PyIter_Next, "PyIter_Next");
    --  Return the next value from the iteration o. If the object is an
    --  iterator, this retrieves the next value from the iteration, and returns
    --  NULL with no exception set if there are no remaining items. If the
@@ -446,6 +456,7 @@ package GNATCOLL.Python is
    --  Import a new module in the interpreter
 
    function PyImport_Import (Name : PyObject) return PyObject;
+   pragma Import (C, PyImport_Import, "PyImport_Import");
    --  Higher-level import emulator which emulates the "import" statement
    --  more accurately -- it invokes the __import__() function from the
    --  builtins of the current globals.  This means that the import is
@@ -473,6 +484,7 @@ package GNATCOLL.Python is
      (Module : PyObject;
       Name   : Interfaces.C.Strings.chars_ptr;
       Object : PyObject) return Integer;
+   pragma Import (C, PyModule_AddObject, "PyModule_AddObject");
    --  Add a new object to the module's directory. Object can be a subprogram,
    --  integer, ... Do not Py_DECREF Object afterward, this is only a borrowed
    --  reference.
@@ -600,6 +612,7 @@ package GNATCOLL.Python is
      (Dict : PyDictObject;
       Key  : Interfaces.C.Strings.chars_ptr;
       Obj  : PyObject) return Integer;
+   pragma Import (C, PyDict_SetItemString, "PyDict_SetItemString");
    --  Store a new object in Dict. Obj should be Py_DECREF after the call.
    --  Return 0 if all went well, -1 otherwise
    --  Key should be deallocated.
@@ -620,6 +633,7 @@ package GNATCOLL.Python is
    function PyDict_GetItemString
      (Dict : PyDictObject;
       Key  : Interfaces.C.Strings.chars_ptr) return PyObject;
+   pragma Import (C, PyDict_GetItemString, "PyDict_GetItemString");
    --  Get an object from a dictionary. Do not decref the returned value
 
    function PyDict_GetItemString
@@ -969,6 +983,7 @@ package GNATCOLL.Python is
    --  compiled, either because of a syntax error or because Cmd is incomplete
 
    function PyEval_GetGlobals return PyObject;
+   pragma Import (C, PyEval_GetGlobals, "PyEval_GetGlobals");
    --  Return the dictionary for global variables
 
    function PyEval_EvalCode
@@ -1101,6 +1116,9 @@ private
    pragma Convention (C, PyTypeObject);
 
    pragma Convention (C, Py_Trace_Func);
+   pragma Import (C, PyDict_New, "PyDict_New");
+   pragma Import (C, PyEval_SetProfile, "PyEval_SetProfile");
+   pragma Import (C, PyEval_SetTrace, "PyEval_SetTrace");
    pragma Inline (PyImport_AddModule);
    pragma Inline (PyRun_SimpleString);
    pragma Inline (PyArg_ParseTuple);
@@ -1108,8 +1126,49 @@ private
    pragma Inline (PyUnicode_Check);
    pragma Inline (PyInt_Check);
    pragma Inline (PyFloat_Check);
-   pragma Inline (PyCObject_Check);
-
    pragma Import (C, Py_Initialize, "Py_Initialize");
    pragma Import (C, Py_Finalize, "Py_Finalize");
+   pragma Import (C, PyModule_GetDict, "PyModule_GetDict");
+   pragma Import (C, PyErr_Print, "PyErr_Print");
+   pragma Import (C, PyObject_Str, "PyObject_Str");
+   pragma Import (C, PyEval_EvalCodeEx, "ada_PyEval_EvalCodeEx");
+   pragma Import (C, PyErr_SetInterrupt, "PyErr_SetInterrupt");
+   pragma Import (C, PyTuple_New, "PyTuple_New");
+   pragma Import (C, PyTuple_GetItem, "PyTuple_GetItem");
+   pragma Import (C, PyTuple_SetItem, "PyTuple_SetItem");
+   pragma Import (C, Py_None, "ada_py_none");
+   pragma Import (C, PyErr_Fetch, "PyErr_Fetch");
+   pragma Import (C, PyTuple_Size, "PyTuple_Size");
+   pragma Import (C, PyInt_FromLong, "PyInt_FromLong");
+   pragma Import (C, PyInt_AsLong, "PyInt_AsLong");
+   pragma Import (C, PyFloat_AsDouble, "PyFloat_AsDouble");
+   pragma Import (C, PyInt_GetMax, "PyInt_GetMax");
+   pragma Import (C, PyErr_Occurred, "PyErr_Occurred");
+   pragma Import (C, PyList_New, "PyList_New");
+   pragma Import (C, PyList_Append, "PyList_Append");
+   pragma Import (C, PyErr_BadArgument, "PyErr_BadArgument");
+   pragma Import (C, PyErr_NormalizeException, "PyErr_NormalizeException");
+   pragma Import (C, PyObject_Dir, "PyObject_Dir");
+   pragma Import (C, PyObject_Repr, "PyObject_Repr");
+   pragma Import (C, PyErr_Restore, "PyErr_Restore");
+   pragma Import (C, PyDict_Size, "PyDict_Size");
+   pragma Import (C, PyList_GetItem, "PyList_GetItem");
+   pragma Import (C, PyList_Size, "PyList_Size");
+   pragma Import (C, PyDict_SetItem, "PyDict_SetItem");
+   pragma Import (C, PyDict_GetItem, "PyDict_GetItem");
+   pragma Import (C, Get_Refcount, "ada_pyget_refcount");
+   pragma Import (C, PyFunction_Get_Code, "ada_pyfunction_get_code");
+   pragma Import (C, PyFunction_Get_Globals, "ada_pyfunction_get_globals");
+   pragma Import (C, PyFunction_Get_Closure, "ada_pyfunction_get_closure");
+   pragma Import (C, PyFunction_Get_Defaults, "ada_pyfunction_get_defaults");
+   pragma Import (C, GetTypeObject, "ada_gettypeobject");
+   pragma Inline (PyCObject_Check);
+   pragma Import (C, PyCObject_FromVoidPtr, "PyCObject_FromVoidPtr");
+   pragma Import
+     (C, PyCObject_FromVoidPtrAndDesc, "PyCObject_FromVoidPtrAndDesc");
+   pragma Import (C, PyCObject_AsVoidPtr, "PyCObject_AsVoidPtr");
+   pragma Import (C, PyCObject_GetDesc, "PyCObject_GetDesc");
+   pragma Import (C, PyMethod_Function, "PyMethod_Function");
+   pragma Import (C, PyMethod_Self, "PyMethod_Self");
+
 end GNATCOLL.Python;
