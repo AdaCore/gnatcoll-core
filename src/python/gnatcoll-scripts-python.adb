@@ -3283,9 +3283,14 @@ package body GNATCOLL.Scripts.Python is
       Name : String) return Subprogram_Type
    is
       Inst : constant PyObject := Instance.Data;
-      Subp : constant PyObject := PyObject_GetAttrString (Inst, Name => Name);
+      Subp : constant PyObject :=
+        PyObject_GetAttrString (Inst, Name => Name);
    begin
       if Subp = null then
+
+         --  Clear the raised python exception
+         PyErr_Clear;
+
          return null;
       else
          return new Python_Subprogram_Record'
