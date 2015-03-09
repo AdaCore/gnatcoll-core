@@ -27,7 +27,6 @@ with Ada.Containers.Indefinite_Holders;
 with Ada.Containers.Indefinite_Vectors;
 with Ada.Finalization;
 with Ada.Task_Attributes;
-with Ada.Unchecked_Deallocation;
 
 with Ada.Strings.Unbounded;     use Ada.Strings.Unbounded;
 with Ada.Task_Identification;   use Ada.Task_Identification;
