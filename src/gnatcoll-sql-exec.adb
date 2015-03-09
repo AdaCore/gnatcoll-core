@@ -30,7 +30,6 @@ with Ada.Strings.Hash;
 with Ada.Strings.Unbounded;      use Ada.Strings.Unbounded;
 with Ada.Unchecked_Deallocation;
 with GNAT.Strings;              use GNAT.Strings;
-with GNAT.Task_Lock;
 with GNATCOLL.Traces;           use GNATCOLL.Traces;
 with GNATCOLL.Utils;            use GNATCOLL.Utils;
 with GNATCOLL.SQL.Exec_Private; use GNATCOLL.SQL.Exec_Private;
@@ -108,7 +107,7 @@ package body GNATCOLL.SQL.Exec is
    -- Query_Cache --
    -----------------
 
-   package Query_Cache is
+   protected Query_Cache is
       procedure Get_Result
         (Stmt    : Prepared_Statement'Class;
          Cached  : out Direct_Cursor;
@@ -163,7 +162,7 @@ package body GNATCOLL.SQL.Exec is
    -- Query_Cache --
    -----------------
 
-   package body Query_Cache is
+   protected body Query_Cache is
 
       ----------------
       -- Get_Result --
@@ -174,8 +173,6 @@ package body GNATCOLL.SQL.Exec is
          Cached  : out Direct_Cursor;
          Found   : out Boolean) is
       begin
-         GNAT.Task_Lock.Lock;
-
          if Clock - Timestamp > Cache_Expiration_Delay then
             Reset;
             Found := False;
@@ -201,12 +198,8 @@ package body GNATCOLL.SQL.Exec is
             end;
          end if;
 
-         GNAT.Task_Lock.Unlock;
-
       exception
          when E : others =>
-            GNAT.Task_Lock.Unlock;
-
             Trace (Me_Cache, E, "Get_Result ");
       end Get_Result;
 
@@ -217,8 +210,6 @@ package body GNATCOLL.SQL.Exec is
       procedure Set_Id (Stmt : Prepared_Statement'Class) is
          S : Prepared_Statements.Encapsulated_Access;
       begin
-         GNAT.Task_Lock.Lock;
-
          S := Stmt.Get;
 
          if S.Cached_Result = No_Cache_Id then
@@ -226,12 +217,8 @@ package body GNATCOLL.SQL.Exec is
             Current_Cache_Id := Current_Cache_Id + 1;
          end if;
 
-         GNAT.Task_Lock.Unlock;
-
       exception
          when E : others =>
-            GNAT.Task_Lock.Unlock;
-
             Trace (Me_Cache, E, "Set_Id ");
       end Set_Id;
 
@@ -244,8 +231,6 @@ package body GNATCOLL.SQL.Exec is
       is
          S : Prepared_Statements.Encapsulated_Access;
       begin
-         GNAT.Task_Lock.Lock;
-
          S := Stmt.Get;
 
          --  Reserve capacity up to the current assigned id, since we are
@@ -257,12 +242,8 @@ package body GNATCOLL.SQL.Exec is
             Cache.Include (S.Cached_Result, Task_Safe_Instance (Cached));
          end if;
 
-         GNAT.Task_Lock.Unlock;
-
       exception
          when E : others =>
-            GNAT.Task_Lock.Unlock;
-
             Trace (Me_Cache, E, "Set_Cache ");
       end Set_Cache;
 
@@ -273,8 +254,6 @@ package body GNATCOLL.SQL.Exec is
       procedure Unset_Cache (Stmt : Prepared_Statement_Data) is
          C : Cached_Maps.Cursor;
       begin
-         GNAT.Task_Lock.Lock;
-
          if Stmt.Cached_Result /= No_Cache_Id
            and then Stmt.Use_Cache
          then
@@ -285,12 +264,8 @@ package body GNATCOLL.SQL.Exec is
             end if;
          end if;
 
-         GNAT.Task_Lock.Unlock;
-
       exception
          when E : others =>
-            GNAT.Task_Lock.Unlock;
-
             Trace (Me_Cache, E, "Unset_Cache ");
       end Unset_Cache;
 
@@ -300,15 +275,10 @@ package body GNATCOLL.SQL.Exec is
 
       procedure Reset is
       begin
-         GNAT.Task_Lock.Lock;
          Cache.Clear;
          Timestamp := Clock;
-         GNAT.Task_Lock.Unlock;
-
       exception
          when E : others =>
-            GNAT.Task_Lock.Unlock;
-
             Trace (Me_Cache, E, "Reset ");
       end Reset;
 
@@ -318,20 +288,14 @@ package body GNATCOLL.SQL.Exec is
 
       procedure Mark_DB_As_Free (DB : Database_Connection; Closed : Boolean) is
       begin
-         GNAT.Task_Lock.Lock;
-
          if Closed then
             Freed_DB.Include (DB);
          else
             Freed_DB.Exclude (DB);
          end if;
 
-         GNAT.Task_Lock.Unlock;
-
       exception
          when E : others =>
-            GNAT.Task_Lock.Unlock;
-
             Trace (Me_Cache, E, "Mark_DB_As_Free ");
       end Mark_DB_As_Free;
 
@@ -342,15 +306,11 @@ package body GNATCOLL.SQL.Exec is
       function Was_Freed (DB : Database_Connection) return Boolean is
          Result : Boolean := False;
       begin
-         GNAT.Task_Lock.Lock;
          Result := Freed_DB.Contains (DB);
-         GNAT.Task_Lock.Unlock;
          return Result;
 
       exception
          when E : others =>
-            GNAT.Task_Lock.Unlock;
-
             Trace (Me_Cache, E, "Was_Freed ");
 
             return Result;
