@@ -186,7 +186,7 @@ package body GNATCOLL.SQL is
             C2       : Field_List.Cursor;
          begin
             if Field in SQL_Field_Any'Class then
-               Internal := SQL_Field_Any (Field).Data.Data;
+               Internal := SQL_Field_Any (Field).Data.Get;
                if Internal.all in Multiple_Args_Field_Internal'Class then
                   D := Multiple_Args_Field_Internal_Access (Internal);
 
@@ -214,7 +214,7 @@ package body GNATCOLL.SQL is
          Next (C);
       end loop;
 
-      F.Data.Data := SQL_Field_Internal_Access (Data);
+      F.Data.Set (Data);
       return F;
    end Field_List_Function;
 
@@ -558,16 +558,17 @@ package body GNATCOLL.SQL is
      (Field : SQL_Field'Class; Name : String) return SQL_Field'Class
    is
       Data : constant As_Field_Internal_Access := new As_Field_Internal;
+      F    : Field_Pointers.Ref;
    begin
       Data.As      := new String'(Name);
       Data.Renamed := +Field;
+      F.Set (Data);
       return SQL_Field_Any'
         (Table          => null,
          Instance       => null,
          Name           => null,
          Instance_Index => -1,
-         Data           => (Ada.Finalization.Controlled with
-                            Data => SQL_Field_Internal_Access (Data)));
+         Data           => F);
    end As;
 
    ----------
@@ -577,16 +578,17 @@ package body GNATCOLL.SQL is
    function Desc (Field : SQL_Field'Class) return SQL_Field'Class is
       Data : constant Sorted_Field_Internal_Access :=
                new Sorted_Field_Internal;
+      F    : Field_Pointers.Ref;
    begin
       Data.Ascending := False;
       Data.Sorted    := +Field;
+      F.Set (Data);
       return SQL_Field_Any'
         (Table          => null,
          Instance       => null,
          Name           => null,
          Instance_Index => -1,
-         Data           => (Ada.Finalization.Controlled with
-                            Data => SQL_Field_Internal_Access (Data)));
+         Data           => F);
    end Desc;
 
    ---------
@@ -596,14 +598,15 @@ package body GNATCOLL.SQL is
    function Asc  (Field : SQL_Field'Class) return SQL_Field'Class is
       Data : constant Sorted_Field_Internal_Access :=
                new Sorted_Field_Internal;
+      F    : Field_Pointers.Ref;
    begin
       Data.Ascending := True;
       Data.Sorted    := +Field;
+      F.Set (Data);
       return SQL_Field_Any'
         (Table => null, Instance => null, Name => null,
          Instance_Index => -1,
-         Data => (Ada.Finalization.Controlled with
-                  Data => SQL_Field_Internal_Access (Data)));
+         Data => F);
    end Asc;
 
    ------------------------
@@ -745,18 +748,19 @@ package body GNATCOLL.SQL is
    is
       Data : constant Case_Stmt_Internal_Access :=
         new Case_Stmt_Internal;
+      F    : Field_Pointers.Ref;
    begin
       Data.Criteria := List;
       if Else_Clause /= SQL_Field'Class (Null_Field_Text) then
          Data.Else_Clause := +Else_Clause;
       end if;
+      F.Set (Data);
       return SQL_Field_Any'
         (Table          => null,
          Instance       => null,
          Name           => null,
          Instance_Index => -1,
-         Data           => (Ada.Finalization.Controlled
-                            with SQL_Field_Internal_Access (Data)));
+         Data           => F);
    end SQL_Case;
 
    -------------
@@ -909,14 +913,15 @@ package body GNATCOLL.SQL is
    is
       Data : constant Aggregate_Field_Internal_Access :=
         new Aggregate_Field_Internal;
+      F    : Field_Pointers.Ref;
    begin
       Data.Criteria := Criteria;
       Data.Func   := new String'(String (Func));
+      F.Set (Data);
       return SQL_Field_Any'
         (Table => null, Instance => null, Name => null,
          Instance_Index => -1,
-         Data => (Ada.Finalization.Controlled with
-                  Data => SQL_Field_Internal_Access (Data)));
+         Data => F);
    end Apply;
 
    -----------
@@ -929,16 +934,17 @@ package body GNATCOLL.SQL is
    is
       Data : constant Aggregate_Field_Internal_Access :=
         new Aggregate_Field_Internal;
+      F    : Field_Pointers.Ref;
    begin
       Data.Params := Fields;
       Data.Func   := new String'(String (Func));
+      F.Set (Data);
       return SQL_Field_Any'
         (Table          => null,
          Instance       => null,
          Name           => null,
          Instance_Index => -1,
-         Data           => (Ada.Finalization.Controlled with
-                            Data => SQL_Field_Internal_Access (Data)));
+         Data           => F);
    end Apply;
 
    -----------
@@ -951,16 +957,17 @@ package body GNATCOLL.SQL is
    is
       Data : constant Aggregate_Field_Internal_Access :=
         new Aggregate_Field_Internal;
+      F    : Field_Pointers.Ref;
    begin
       Data.Params := +Field;
       Data.Func   := new String'(String (Func));
+      F.Set (Data);
       return SQL_Field_Any'
         (Table          => null,
          Instance       => null,
          Name           => null,
          Instance_Index => -1,
-         Data           => (Ada.Finalization.Controlled with
-                            Data => SQL_Field_Internal_Access (Data)));
+         Data           => F);
    end Apply;
 
    ------------

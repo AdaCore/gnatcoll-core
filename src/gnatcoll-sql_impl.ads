@@ -25,7 +25,8 @@ with Ada.Calendar;
 with Ada.Containers.Doubly_Linked_Lists;
 with Ada.Containers.Indefinite_Doubly_Linked_Lists;
 with Ada.Containers.Indefinite_Hashed_Sets;
-with Ada.Finalization;
+
+with GNATCOLL.Refcount; use GNATCOLL.Refcount;
 
 package GNATCOLL.SQL_Impl is
 
@@ -316,14 +317,8 @@ package GNATCOLL.SQL_Impl is
    --  latter need to allocate memory to store their contents, and are stored
    --  in a refcounted type internally, so that we can properly manage memory.
 
-   type SQL_Field_Internal is abstract tagged record
-      Refcount : Natural := 1;
-   end record;
-   type SQL_Field_Internal_Access is access all SQL_Field_Internal'Class;
+   type SQL_Field_Internal is abstract new Refcounted with null record;
    --  Data that can be stored in a field
-
-   procedure Free (Data : in out SQL_Field_Internal) is null;
-   --  Free memory associated with Data
 
    function To_String
      (Self   : SQL_Field_Internal;
@@ -339,15 +334,13 @@ package GNATCOLL.SQL_Impl is
    --  field contains some data, it will simply delegate the calls to the above
    --  subprograms.
 
-   type Field_Data is new Ada.Finalization.Controlled with record
-      Data : SQL_Field_Internal_Access;
-   end record;
+   package Field_Pointers is new Smart_Pointers (SQL_Field_Internal);
+
+   subtype SQL_Field_Internal_Access is Field_Pointers.Encapsulated_Access;
+
+   subtype Field_Data is Field_Pointers.Ref;
    --  The type that is actually stored in a field, and provides the
    --  refcounting for Data.
-
-   overriding procedure Adjust   (Self : in out Field_Data);
-   overriding procedure Finalize (Self : in out Field_Data);
-   --  Refcounted internal data for some types of fields
 
    generic
       type Base_Field is abstract new SQL_Field with private;
@@ -389,13 +382,9 @@ package GNATCOLL.SQL_Impl is
       Is_Aggregate : in out Boolean);
    --  The usual semantics for these subprograms (see SQL_Field)
 
-   type SQL_Criteria_Data is abstract tagged private;
-   type SQL_Criteria_Data_Access is access all SQL_Criteria_Data'Class;
+   type SQL_Criteria_Data is abstract new Refcounted with null record;
    --  The data contained in a criteria. You can create new versions of it if
    --  you need to create new types of criterias
-
-   procedure Free (Self : in out SQL_Criteria_Data) is null;
-   --  Free memory associated with Self
 
    function To_String
      (Self   : SQL_Criteria_Data;
@@ -412,6 +401,12 @@ package GNATCOLL.SQL_Impl is
 
    procedure Set_Data
      (Self : in out SQL_Criteria; Data : not null access SQL_Criteria_Data);
+
+   package SQL_Criteria_Pointers is new Smart_Pointers (SQL_Criteria_Data);
+
+   subtype SQL_Criteria_Data_Access is
+     SQL_Criteria_Pointers.Encapsulated_Access;
+
    function Get_Data (Self : SQL_Criteria) return SQL_Criteria_Data_Access;
    --  Set the data associated with Self.
    --  This is only needed when you implement your own kinds of criteria, not
@@ -639,25 +634,15 @@ private
    -- Criterias --
    ---------------
 
-   type SQL_Criteria_Data is abstract tagged record
-      Refcount : Natural := 1;
-   end record;
-
-   type Controlled_SQL_Criteria is new Ada.Finalization.Controlled with record
-      Data : SQL_Criteria_Data_Access;
-   end record;
-   overriding procedure Finalize (Self : in out Controlled_SQL_Criteria);
-   overriding procedure Adjust   (Self : in out Controlled_SQL_Criteria);
-
    type SQL_Criteria is record
-      Criteria : Controlled_SQL_Criteria;
+      Criteria : SQL_Criteria_Pointers.Ref;
    end record;
    --  SQL_Criteria must not be tagged, otherwise we have subprograms that are
    --  primitive for two types. This would also be impossible for users to
    --  declare a variable of type SQL_Criteria.
 
    No_Criteria : constant SQL_Criteria :=
-     (Criteria => (Ada.Finalization.Controlled with Data => null));
+     (Criteria => SQL_Criteria_Pointers.Null_Ref);
 
    --------------------
    -- Field pointers --

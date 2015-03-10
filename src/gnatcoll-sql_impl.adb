@@ -32,7 +32,8 @@ with GNAT.Strings;               use GNAT.Strings;
 with GNATCOLL.Utils;             use GNATCOLL.Utils;
 
 package body GNATCOLL.SQL_Impl is
-   use Field_List, Table_Sets, Assignment_Lists;
+   use Field_List, Table_Sets, Assignment_Lists, SQL_Criteria_Pointers,
+       Field_Pointers;
 
    Comparison_Equal         : aliased constant String := "=";
    Comparison_Different     : aliased constant String := "<>";
@@ -147,8 +148,8 @@ package body GNATCOLL.SQL_Impl is
          Format : Formatter'Class;
          Long   : Boolean := True) return String is
       begin
-         if Self.Data.Data /= null then
-            return To_String (Self.Data.Data.all, Format, Long);
+         if Self.Data.Get /= null then
+            return To_String (Self.Data.Get.all, Format, Long);
          else
             return "";
          end if;
@@ -157,8 +158,8 @@ package body GNATCOLL.SQL_Impl is
       overriding procedure Append_Tables
         (Self : Field; To : in out Table_Sets.Set) is
       begin
-         if Self.Data.Data /= null then
-            Append_Tables (Self.Data.Data.all, To);
+         if Self.Data.Get /= null then
+            Append_Tables (Self.Data.Get.all, To);
          end if;
       end Append_Tables;
 
@@ -168,8 +169,8 @@ package body GNATCOLL.SQL_Impl is
          Is_Aggregate : in out Boolean)
       is
       begin
-         if Self.Data.Data /= null then
-            Append_If_Not_Aggregate (Self.Data.Data, To, Is_Aggregate);
+         if Self.Data.Get /= null then
+            Append_If_Not_Aggregate (Self.Data.Get, To, Is_Aggregate);
          end if;
       end Append_If_Not_Aggregate;
    end Data_Fields;
@@ -366,6 +367,7 @@ package body GNATCOLL.SQL_Impl is
       Is_Aggregate : in out Boolean)
    is
       C : Field_List.Cursor;
+      F : Field_Pointers.Ref;
    begin
       if Self.Typ = Field_Operator then
          C := First (Self.List.List);
@@ -380,47 +382,17 @@ package body GNATCOLL.SQL_Impl is
       --  later on.
 
       if Self.Table /= No_Names then
-         Self.Refcount := Self.Refcount + 1;
+         F.Set (Self);
+
          Append
            (To.List, Any_Fields.Field'
               (Table    => Self.Table.Name,
                Instance => Self.Table.Instance,
                Instance_Index => Self.Table.Instance_Index,
                Name     => null,
-               Data     => (Ada.Finalization.Controlled with
-                            SQL_Field_Internal_Access (Self))));
+               Data     => F));
       end if;
    end Append_If_Not_Aggregate;
-
-   ------------
-   -- Adjust --
-   ------------
-
-   procedure Adjust (Self : in out Field_Data) is
-   begin
-      if Self.Data /= null then
-         Self.Data.Refcount := Self.Data.Refcount + 1;
-      end if;
-   end Adjust;
-
-   --------------
-   -- Finalize --
-   --------------
-
-   procedure Finalize (Self : in out Field_Data) is
-      procedure Unchecked_Free is new Ada.Unchecked_Deallocation
-        (SQL_Field_Internal'Class, SQL_Field_Internal_Access);
-      Data : SQL_Field_Internal_Access := Self.Data;
-   begin
-      Self.Data := null;  --  Make Finalize idempotent
-      if Data /= null then
-         Data.Refcount := Data.Refcount - 1;
-         if Data.Refcount = 0 then
-            Free (Data.all);
-            Unchecked_Free (Data);
-         end if;
-      end if;
-   end Finalize;
 
    ---------
    -- "&" --
@@ -530,8 +502,8 @@ package body GNATCOLL.SQL_Impl is
       Long   : Boolean := True) return String
    is
    begin
-      if Self.Criteria.Data /= null then
-         return To_String (Self.Criteria.Data.all, Format, Long);
+      if Self.Criteria.Get /= null then
+         return To_String (Self.Criteria.Get.all, Format, Long);
       else
          return "";
       end if;
@@ -543,8 +515,8 @@ package body GNATCOLL.SQL_Impl is
 
    procedure Append_Tables (Self : SQL_Criteria; To : in out Table_Sets.Set) is
    begin
-      if Self.Criteria.Data /= null then
-         Append_Tables (Self.Criteria.Data.all, To);
+      if Self.Criteria.Get /= null then
+         Append_Tables (Self.Criteria.Get.all, To);
       end if;
    end Append_Tables;
 
@@ -557,8 +529,8 @@ package body GNATCOLL.SQL_Impl is
       To           : in out SQL_Field_List'Class;
       Is_Aggregate : in out Boolean) is
    begin
-      if Self.Criteria.Data /= null then
-         Append_If_Not_Aggregate (Self.Criteria.Data.all, To, Is_Aggregate);
+      if Self.Criteria.Get /= null then
+         Append_If_Not_Aggregate (Self.Criteria.Get.all, To, Is_Aggregate);
       end if;
    end Append_If_Not_Aggregate;
 
@@ -569,13 +541,7 @@ package body GNATCOLL.SQL_Impl is
    procedure Set_Data
      (Self : in out SQL_Criteria; Data : not null access SQL_Criteria_Data) is
    begin
-      --  Make sure Adjust/Finalize are properly called for memory management.
-      --  We cannot simply change the pointer directly
-
-      Self.Criteria :=
-        Controlled_SQL_Criteria'
-          (Ada.Finalization.Controlled with
-           Data => SQL_Criteria_Data_Access (Data));
+      SQL_Criteria_Pointers.Set (Self.Criteria, Data);
    end Set_Data;
 
    --------------
@@ -584,38 +550,8 @@ package body GNATCOLL.SQL_Impl is
 
    function Get_Data (Self : SQL_Criteria) return SQL_Criteria_Data_Access is
    begin
-      return Self.Criteria.Data;
+      return Self.Criteria.Get;
    end Get_Data;
-
-   ------------
-   -- Adjust --
-   ------------
-
-   procedure Adjust (Self : in out Controlled_SQL_Criteria) is
-   begin
-      if Self.Data /= null then
-         Self.Data.Refcount := Self.Data.Refcount + 1;
-      end if;
-   end Adjust;
-
-   --------------
-   -- Finalize --
-   --------------
-
-   procedure Finalize (Self : in out Controlled_SQL_Criteria) is
-      procedure Unchecked_Free is new Ada.Unchecked_Deallocation
-        (SQL_Criteria_Data'Class, SQL_Criteria_Data_Access);
-      Data : SQL_Criteria_Data_Access := Self.Data;
-   begin
-      Self.Data := null;  --  Make Finalize idempotent
-      if Data /= null then
-         Data.Refcount := Data.Refcount - 1;
-         if Data.Refcount = 0 then
-            Free (Data.all);
-            Unchecked_Free (Data);
-         end if;
-      end if;
-   end Finalize;
 
    ------------
    -- Adjust --
@@ -857,7 +793,7 @@ package body GNATCOLL.SQL_Impl is
    -------------
 
    procedure To_List (Self : SQL_Assignment; List : out SQL_Field_List) is
-      N    : SQL_Field_Internal_Access;
+      N    : Field_Pointers.Ref;
       C    : Assignment_Lists.Cursor := First (Self.List);
       Data : Assignment_Item;
    begin
@@ -869,8 +805,9 @@ package body GNATCOLL.SQL_Impl is
 
          else
             --  Setting a field to null
-            N := new Named_Field_Internal (Field_Std);
-            Named_Field_Internal (N.all).Str_Value := new String'(Null_String);
+            N.Set (new Named_Field_Internal (Field_Std));
+            Named_Field_Internal (N.Get.all).Str_Value :=
+              new String'(Null_String);
 
             List := List
               & Any_Fields.Field'
@@ -878,7 +815,7 @@ package body GNATCOLL.SQL_Impl is
                Instance => null,
                Instance_Index => -1,
                Name     => null,
-               Data     => (Ada.Finalization.Controlled with N));
+               Data     => N);
          end if;
 
          Next (C);
@@ -923,6 +860,20 @@ package body GNATCOLL.SQL_Impl is
       Field : SQL_Field'Class;
       Value : Named_Field_Internal_Access)
    is
+
+      function To_Ref return Field_Pointers.Ref;
+
+      ------------
+      -- To_Ref --
+      ------------
+
+      function To_Ref return Field_Pointers.Ref is
+         Result : Field_Pointers.Ref;
+      begin
+         Result.Set (Value);
+         return Result;
+      end To_Ref;
+
    begin
       if Value = null then
          Append (R.List, Assignment_Item'(+Field, No_Field_Pointer));
@@ -936,8 +887,7 @@ package body GNATCOLL.SQL_Impl is
                   Instance => null,
                   Instance_Index => -1,
                   Name     => null,
-                  Data     => (Ada.Finalization.Controlled
-                               with SQL_Field_Internal_Access (Value))));
+                  Data     => To_Ref));
          begin
             Append (R.List, A);
          end;
@@ -1039,8 +989,8 @@ package body GNATCOLL.SQL_Impl is
       begin
          D.Table := (Name => null, Instance => Table.Instance,
                      Instance_Index => Table.Instance_Index);
-         D.Str_Value  := new String'(Self.Name.all);
-         F.Data.Data := SQL_Field_Internal_Access (D);
+         D.Str_Value := new String'(Self.Name.all);
+         F.Data.Set (D);
          return Field (F);
       end From_Table;
 
@@ -1049,12 +999,16 @@ package body GNATCOLL.SQL_Impl is
       ------------------------
 
       function Internal_From_Data
-        (Data : SQL_Field_Internal_Access) return Field'Class is
+        (Data : SQL_Field_Internal_Access) return Field'Class
+      is
+         F : Field_Pointers.Ref;
       begin
+         F.Set (Data);
+
          return Typed_Data_Fields.Field'
            (Table => null, Instance => null, Name => null,
             Instance_Index => -1,
-            Data => (Ada.Finalization.Controlled with Data => Data));
+            Data => F);
       end Internal_From_Data;
 
       ----------------
@@ -1136,7 +1090,7 @@ package body GNATCOLL.SQL_Impl is
       begin
          D.Op_Value := new String'(Name);
          D.List := Field1 & Field2;
-         F.Data.Data := SQL_Field_Internal_Access (D);
+         F.Data.Set (D);
          return F;
       end Operator;
 
@@ -1161,11 +1115,11 @@ package body GNATCOLL.SQL_Impl is
 
       begin
          D2.Str_Value := new String'(Prefix & Scalar'Image (Operand) & Suffix);
-         F2.Data.Data := SQL_Field_Internal_Access (D2);
+         F2.Data.Set (D2);
 
          D.Op_Value := new String'(Name);
          D.List := Self & F2;
-         F.Data.Data := SQL_Field_Internal_Access (D);
+         F.Data.Set (D);
          return F;
       end Scalar_Operator;
 
@@ -1181,7 +1135,7 @@ package body GNATCOLL.SQL_Impl is
            new Named_Field_Internal (Field_Std);
       begin
          D.Str_Value := new String'(Name);
-         F.Data.Data := SQL_Field_Internal_Access (D);
+         F.Data.Set (D);
          return F;
       end SQL_Function;
 
@@ -1206,7 +1160,7 @@ package body GNATCOLL.SQL_Impl is
             D.To_Field := +Self;
             D.Suffix := new String'(Suffix);
          end if;
-         F.Data.Data := SQL_Field_Internal_Access (D);
+         F.Data.Set (D);
          return F;
       end Apply_Function;
 
