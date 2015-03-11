@@ -805,17 +805,19 @@ package body GNATCOLL.SQL_Impl is
 
          else
             --  Setting a field to null
-            N.Set (new Named_Field_Internal (Field_Std));
+            N.Set
+              (Named_Field_Internal'
+                 (SQL_Field_Internal with Typ => Field_Std, others => <>));
             Named_Field_Internal (N.Get.all).Str_Value :=
               new String'(Null_String);
 
             List := List
               & Any_Fields.Field'
-              (Table    => null,
-               Instance => null,
-               Instance_Index => -1,
-               Name     => null,
-               Data     => N);
+                  (Table          => null,
+                   Instance       => null,
+                   Instance_Index => -1,
+                   Name           => null,
+                   Data           => N);
          end if;
 
          Next (C);
