@@ -701,6 +701,7 @@ package body GNATCOLL.Email.Utils is
       Address : out Email_Address)
    is
       use Charset_String_List;
+
       Buffer  : Unbounded_String;
       Comment : Unbounded_String;
       Buffer_Has_At : Boolean := False;
@@ -746,6 +747,8 @@ package body GNATCOLL.Email.Utils is
 
          Continue := not Found;
       end Analyze;
+
+   --  Start of processing for Parse_And_Skip_Address
 
    begin
       Address := Null_Address;
