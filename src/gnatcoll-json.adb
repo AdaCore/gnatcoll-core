@@ -627,7 +627,12 @@ package body GNATCOLL.JSON is
                   Append
                     (Ret,
                      GNATCOLL.JSON.Utility.Escape_String (Element (J).Key));
-                  Append (Ret, ": ");
+
+                  Append (Ret, ':');
+                  if not Compact then
+                     Append (Ret, ' ');
+                  end if;
+
                   Write (Element (J).Val, Compact, Indent + 1, Ret);
 
                   Next (J);
