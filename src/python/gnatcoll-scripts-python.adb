@@ -630,14 +630,13 @@ package body GNATCOLL.Scripts.Python is
         (Callback_Data with
          Script           => Python_Scripting (Script),
          Args             => PyTuple_New (Arguments_Count),
-         Kw               => Py_None,
+         Kw               => null,
          Return_Value     => null,
          Return_Dict      => null,
          Has_Return_Value => False,
          Return_As_List   => False,
          First_Arg_Is_Self        => False);
    begin
-      Py_INCREF (Callback.Kw);
       return Callback;
    end Create;
 
