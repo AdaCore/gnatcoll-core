@@ -436,6 +436,18 @@ ada_pybool_is_true (PyObject* obj)
 }
 
 int
+ada_pydict_check (PyObject* obj)
+{
+  return PyDict_Check (obj);
+}
+
+int
+ada_pyanyset_check (PyObject* obj)
+{
+  return PyAnySet_Check (obj);
+}
+
+int
 ada_pyfunction_check (PyObject* obj)
 {
   return PyFunction_Check (obj);
@@ -574,6 +586,12 @@ PyTypeObject*
 ada_gettypeobject (PyObject* obj)
 {
   return (PyTypeObject*)(obj->ob_type);
+}
+
+char*
+ada_tp_name (PyTypeObject* obj)
+{
+  return obj->tp_name;
 }
 
 PyObject* ada_py_none ()

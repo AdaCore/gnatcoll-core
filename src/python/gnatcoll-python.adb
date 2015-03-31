@@ -545,6 +545,28 @@ package body GNATCOLL.Python is
       return Internal (Cmd & ASCII.NUL, Name & ASCII.NUL, State);
    end Py_CompileString;
 
+   ------------------
+   -- PyDict_Check --
+   ------------------
+
+   function PyDict_Check (Obj : PyObject) return Boolean is
+      function Internal (Obj : PyObject) return Integer;
+      pragma Import (C, Internal, "ada_pydict_check");
+   begin
+      return Internal (Obj) /= 0;
+   end PyDict_Check;
+
+   --------------------
+   -- PyAnySet_Check --
+   --------------------
+
+   function PyAnySet_Check (Obj : PyObject) return Boolean is
+      function Internal (Obj : PyObject) return Integer;
+      pragma Import (C, Internal, "ada_pyanyset_check");
+   begin
+      return Internal (Obj) /= 0;
+   end PyAnySet_Check;
+
    --------------------------
    -- PyDict_SetItemString --
    --------------------------
@@ -1102,6 +1124,18 @@ package body GNATCOLL.Python is
       Free (C);
       return Result;
    end Type_New;
+
+   ---------
+   -- Name --
+   ----------
+
+   function Name (Obj : PyTypeObject) return String is
+      function Internal (Obj : PyTypeObject) return chars_ptr;
+      pragma Import (C, Internal, "ada_tp_name");
+
+   begin
+      return Value (Internal (Obj));
+   end Name;
 
    -------------------------
    -- PyObject_IsInstance --

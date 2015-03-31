@@ -2274,6 +2274,16 @@ package body GNATCOLL.Scripts.Python is
               (Invalid_Parameter'Identity,
                "Parameter" & Integer'Image (N) & " should be iterable");
          end if;
+         if PyDict_Check (Item) then
+            Raise_Exception
+              (Invalid_Parameter'Identity,
+               "Parameter" & Integer'Image (N) & " should not be dictionary");
+         end if;
+         if PyAnySet_Check (Item) then
+            Raise_Exception
+              (Invalid_Parameter'Identity,
+               "Parameter" & Integer'Image (N) & " should not be set");
+         end if;
 
          Py_DECREF (Iter);
          List.Args := Item;   --   Item is a borrowed reference ?

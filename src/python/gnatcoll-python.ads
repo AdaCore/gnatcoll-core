@@ -605,6 +605,10 @@ package GNATCOLL.Python is
 
    subtype PyDictObject is PyObject;
 
+   function PyDict_Check (Obj : PyObject) return Boolean;
+   --  Return True if Obj is a dict object or an instance of a subtype of the
+   --  dict type.
+
    function PyDict_New return PyDictObject;
    --  Create a new empty dictionary
 
@@ -656,6 +660,18 @@ package GNATCOLL.Python is
    function PyDict_Size (Dict : PyObject) return Integer;
    --  Return the number of elements in Dict
 
+   ----------
+   -- Sets --
+   ----------
+   --  A set object is an unordered collection of distinct hashable objects.
+   --  Common uses include membership testing, removing duplicates from a
+   --  sequence, and computing mathematical operations such as intersection,
+   --  union, difference, and symmetric difference.
+
+   function PyAnySet_Check (Obj : PyObject) return Boolean;
+   --  Return true if p is a set object, a frozenset object, or an instance of
+   --  a subtype.
+
    ---------------
    -- Functions --
    ---------------
@@ -690,6 +706,9 @@ package GNATCOLL.Python is
 
    function GetTypeObject (Obj : PyObject) return PyTypeObject;
    --  Return the type object that describes the class Obj belongs to
+
+   function Name (Obj : PyTypeObject) return String;
+   --  Name of type, useful for printing, in format "<module>.<name>"
 
    function Type_New
      (Name     : String;
