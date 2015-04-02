@@ -995,12 +995,14 @@ package GNATCOLL.Projects is
    --          ...
    --          Next (Iter);
    --       end loop;
+   --  As opposed to a Project_Iterator, this one does not return aggregated
+   --  projects.
 
    function Start
-     (Root_Project     : Project_Type;
-      Recursive        : Boolean := True;
-      Direct_Only      : Boolean := False;
-      Include_Extended : Boolean := True) return Project_Iterator;
+     (Root_Project       : Project_Type;
+      Recursive          : Boolean := True;
+      Direct_Only        : Boolean := False;
+      Include_Extended   : Boolean := True) return Project_Iterator;
    pragma Precondition (Root_Project /= No_Project);
    --  Initialize the iterator to start at Root_Project.
    --  It will process Root_Project and all its subprojects, recursively, but
@@ -1019,6 +1021,10 @@ package GNATCOLL.Projects is
    --
    --  If Direct_Only is True and Recursive is True, then only the projects
    --  that are imported directly by Root_Project are returned.
+   --
+   --  Projects mentioned in a Project_Files attribute (aggregate project
+   --  or library aggregate project) will also be returned (and their own
+   --  dependencies recursively, if needed).
    --
    --  Start should not be called before the view has been fully recomputed.
 
@@ -1796,6 +1802,10 @@ private
    type Path_Name_Id_Array_Access is access Path_Name_Id_Array;
    procedure Unchecked_Free is new Ada.Unchecked_Deallocation
      (Path_Name_Id_Array, Path_Name_Id_Array_Access);
+   type Path_Name_Array is record
+      Items : Path_Name_Id_Array_Access;
+      Last  : Natural := 0;
+   end record;
 
    type Project_Tree_Data;
    type Project_Tree_Data_Access is access Project_Tree_Data;
@@ -1806,7 +1816,7 @@ private
       Node : Prj.Tree.Project_Node_Id;
       View : Prj.Project_Id;
 
-      Imported_Projects  : Path_Name_Id_Array_Access;
+      Imported_Projects  : Path_Name_Array;
       Importing_Projects : Path_Name_Id_Array_Access;
       --  Sorted list of imported projects (Cache for Project_Iterator).
       --  Importing_Project always contains the project itself in last

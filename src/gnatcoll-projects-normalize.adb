@@ -3048,7 +3048,8 @@ package body GNATCOLL.Projects.Normalize is
           Proj_Qualifier => Unspecified));
 
       Project.Data.Modified := True;
-      Unchecked_Free (Project.Data.Imported_Projects);
+      Unchecked_Free (Project.Data.Imported_Projects.Items);
+      Project.Data.Imported_Projects.Last := 0;
       Unchecked_Free (Project.Data.Importing_Projects);
 
    exception
