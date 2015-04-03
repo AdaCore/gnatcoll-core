@@ -41,7 +41,7 @@ package GNATCOLL.Refcount is
    --  This ancestor adds a refcount field, which keeps track of how many
    --  references exist to a particular instance of Refcounted.
    --
-   --  The refcounting is type safe (that is you can use the smart pointer from
+   --  The refcounting is task safe (that is you can use the smart pointer from
    --  multiple tasks concurrently, and the refcounting will always be
    --  accurate). But the task-safety of Refcounted itself depends on your
    --  application.
