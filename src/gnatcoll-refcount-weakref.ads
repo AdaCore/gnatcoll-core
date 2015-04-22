@@ -38,6 +38,7 @@
 pragma Ada_05;
 
 package GNATCOLL.Refcount.Weakref is
+   pragma Obsolescent (Weakref, "Use GNATCOLL.Refcount.Shared_Pointers");
 
    type Weak_Refcounted
      is abstract new GNATCOLL.Refcount.Refcounted with private;

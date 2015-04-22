@@ -45,4 +45,15 @@ package GNATCOLL.Atomic is
      (Ptr : access Atomic_Counter; Value : Atomic_Counter);
    pragma Inline (Sync_Add_And_Fetch);
 
+   generic
+      type Element_Type (<>) is private;
+      type Element_Access is access Element_Type;
+   function Sync_Bool_Compare_And_Swap
+      (Ptr    : access Element_Access;
+       Oldval : Element_Access;
+       Newval : Element_Access) return Boolean;
+   --  If Ptr is equal to Oldval, set it to Newval and return True.
+   --  Otherwise, return False and do not modify the current value.
+   --  This operation is task safe and atomic.
+
 end GNATCOLL.Atomic;

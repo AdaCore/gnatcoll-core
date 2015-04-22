@@ -21,6 +21,8 @@
 --                                                                          --
 ------------------------------------------------------------------------------
 
+with Interfaces;    use Interfaces;
+
 package body GNATCOLL.Atomic is
 
    function Intrinsic_Sync_Add_And_Fetch
@@ -48,5 +50,24 @@ package body GNATCOLL.Atomic is
    begin
       Dummy := Intrinsic_Sync_Add_And_Fetch (Ptr, Value);
    end Sync_Add_And_Fetch;
+
+   --------------------------------
+   -- Sync_Bool_Compare_And_Swap --
+   --------------------------------
+
+   function Sync_Bool_Compare_And_Swap
+      (Ptr    : access Element_Access;
+       Oldval : Element_Access;
+       Newval : Element_Access) return Boolean
+   is
+      function Intrinsic_Sync_Bool_And_Swap_Access
+         (Ptr   : access Element_Access;
+          Oldval, Newval : Element_Access) return Interfaces.Integer_8;
+      pragma Import
+         (Intrinsic, Intrinsic_Sync_Bool_And_Swap_Access,
+          External_Name => "gnatcoll_sync_bool_compare_and_swap_access");
+   begin
+      return Intrinsic_Sync_Bool_And_Swap_Access (Ptr, Oldval, Newval) /= 0;
+   end Sync_Bool_Compare_And_Swap;
 
 end GNATCOLL.Atomic;

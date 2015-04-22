@@ -179,9 +179,7 @@ package body GNATCOLL.SQL.Exec is
          else
             declare
                C : Cached_Maps.Cursor;
-               S : constant Prepared_Statements.Encapsulated_Access :=
-                 Stmt.Get;
-
+               S : constant access Prepared_Statement_Data := Stmt.Get;
             begin
                if S.Cached_Result = No_Cache_Id
                  or else not S.Use_Cache
@@ -208,10 +206,8 @@ package body GNATCOLL.SQL.Exec is
       ------------
 
       procedure Set_Id (Stmt : Prepared_Statement'Class) is
-         S : Prepared_Statements.Encapsulated_Access;
+         S : constant access Prepared_Statement_Data := Stmt.Get;
       begin
-         S := Stmt.Get;
-
          if S.Cached_Result = No_Cache_Id then
             S.Cached_Result := Current_Cache_Id;
             Current_Cache_Id := Current_Cache_Id + 1;
@@ -229,10 +225,8 @@ package body GNATCOLL.SQL.Exec is
       procedure Set_Cache
         (Stmt : Prepared_Statement'Class; Cached : Forward_Cursor'Class)
       is
-         S : Prepared_Statements.Encapsulated_Access;
+         S : constant access Prepared_Statement_Data := Stmt.Get;
       begin
-         S := Stmt.Get;
-
          --  Reserve capacity up to the current assigned id, since we are
          --  likely to need it anyway, and it is bound to be at least as big
          --  as Stmt.Cached.Id
@@ -327,7 +321,7 @@ package body GNATCOLL.SQL.Exec is
        Stmt       : Prepared_Statement'Class)
       return String
    is
-      S : constant Prepared_Statements.Encapsulated_Access := Stmt.Get;
+      S : constant access Prepared_Statement_Data := Stmt.Get;
    begin
       if S.Query_Str = null then
          S.Query_Str := new String'
@@ -355,7 +349,7 @@ package body GNATCOLL.SQL.Exec is
       Connection : access Database_Connection_Record'Class;
       Stmt       : out DBMS_Stmt)
    is
-      S : constant Prepared_Statements.Encapsulated_Access := Prepared.Get;
+      S : constant access Prepared_Statement_Data := Prepared.Get;
       L : Prepared_In_Session_List;
 
       --  The side effect is to set S.Query_Str
@@ -581,8 +575,7 @@ package body GNATCOLL.SQL.Exec is
      (Query      : String;
       Prepared   : Prepared_Statement'Class := No_Prepared) return String
    is
-      use type Prepared_Statements.Encapsulated_Access;
-      S : constant Prepared_Statements.Encapsulated_Access := Prepared.Get;
+      S : constant access Prepared_Statement_Data := Prepared.Get;
    begin
       if S /= null then
          return "(" & S.Name.all & ")";
@@ -753,7 +746,7 @@ package body GNATCOLL.SQL.Exec is
       R    : Abstract_Cursor_Access;
       Was_Started : Boolean;
       pragma Unreferenced (Was_Started);
-      S : Prepared_Statements.Encapsulated_Access;
+      S : access Prepared_Statement_Data;
 
       Start : Time;
 
@@ -1516,11 +1509,10 @@ package body GNATCOLL.SQL.Exec is
       return Prepared_Statement
    is
       Stmt : Prepared_Statement;
-      Data : Prepared_Statements.Encapsulated_Access;
+      Data : Prepared_Statement_Data;
    begin
-      Data := new Prepared_Statement_Data'
-        (GNATCOLL.Refcount.Refcounted with
-         Query         => Query,
+      Data := Prepared_Statement_Data'
+        (Query         => Query,
          Query_Str     => null,   --  Computed later
          Is_Select     => False,  --  Computed later
          Use_Cache     => Use_Cache,
@@ -1528,8 +1520,6 @@ package body GNATCOLL.SQL.Exec is
          On_Server     => On_Server,
          Name          => null,
          Prepared      => null);
-
-      Set (Stmt, Data);
 
       Query_Cache.Set_Id (Stmt);
 
@@ -1543,6 +1533,8 @@ package body GNATCOLL.SQL.Exec is
       if Auto_Complete then
          GNATCOLL.SQL.Auto_Complete (Data.Query);
       end if;
+
+      Stmt.Set (Data);
 
       return Stmt;
    end Prepare;
@@ -1559,11 +1551,8 @@ package body GNATCOLL.SQL.Exec is
       return Prepared_Statement
    is
       Stmt : Prepared_Statement;
-      Data : Prepared_Statements.Encapsulated_Access;
-   begin
-      Data := new Prepared_Statement_Data'
-        (GNATCOLL.Refcount.Refcounted with
-         Query         => No_Query,
+      Data : Prepared_Statement_Data :=
+        (Query         => No_Query,
          Query_Str     => new String'(Query),
          Is_Select     => Is_Select_Query (Query),
          Use_Cache     => Use_Cache,
@@ -1571,12 +1560,10 @@ package body GNATCOLL.SQL.Exec is
          On_Server     => On_Server,
          Name          => null,
          Prepared      => null);
-
+   begin
       if Active (Me_Query) then
          Trace (Me_Query, "compute (" & Name & "): " & Query);
       end if;
-
-      Set (Stmt, Data);
 
       Query_Cache.Set_Id (Stmt);
 
@@ -1587,6 +1574,7 @@ package body GNATCOLL.SQL.Exec is
          Data.Name := new String'(Name);
       end if;
 
+      Stmt.Set (Data);
       return Stmt;
    end Prepare;
 
@@ -1600,10 +1588,9 @@ package body GNATCOLL.SQL.Exec is
       Stmt       : Prepared_Statement'Class;
       Params     : SQL_Parameters)
    is
-      use type Prepared_Statements.Encapsulated_Access;
       Direct : constant Boolean := Result in Direct_Cursor;
       Found : Boolean;
-      S : constant Prepared_Statements.Encapsulated_Access := Stmt.Get;
+      S : constant access Prepared_Statement_Data := Stmt.Get;
 
       procedure Put_Result (Item : Forward_Cursor'Class);
 
@@ -1855,7 +1842,7 @@ package body GNATCOLL.SQL.Exec is
    -- Free --
    ----------
 
-   overriding procedure Free (Self : in out Prepared_Statement_Data) is
+   procedure Free (Self : in out Prepared_Statement_Data) is
       L, L2 : Prepared_In_Session_List;
       Count : Natural := 0;
    begin

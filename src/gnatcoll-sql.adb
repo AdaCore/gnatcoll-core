@@ -71,7 +71,6 @@ package body GNATCOLL.SQL is
       As      : GNAT.Strings.String_Access;
       Renamed : SQL_Field_Pointer;
    end record;
-   type As_Field_Internal_Access is access all As_Field_Internal'Class;
    overriding procedure Free (Self : in out As_Field_Internal);
    overriding function To_String
      (Self   : As_Field_Internal;
@@ -120,8 +119,6 @@ package body GNATCOLL.SQL is
       Params   : SQL_Field_List;
       Criteria : SQL_Criteria;
    end record;
-   type Aggregate_Field_Internal_Access
-     is access all Aggregate_Field_Internal'Class;
    overriding procedure Free (Self : in out Aggregate_Field_Internal);
    overriding function To_String
      (Self   : Aggregate_Field_Internal;
@@ -143,7 +140,6 @@ package body GNATCOLL.SQL is
       Ascending : Boolean;
       Sorted    : SQL_Field_Pointer;
    end record;
-   type Sorted_Field_Internal_Access is access all Sorted_Field_Internal'Class;
    overriding function To_String
      (Self   : Sorted_Field_Internal;
       Format : Formatter'Class;
@@ -162,8 +158,7 @@ package body GNATCOLL.SQL is
    function Field_List_Function
      (Fields : SQL_Field_List) return SQL_Field'Class
    is
-      Data   : constant Multiple_Args_Field_Internal_Access :=
-        new Multiple_Args_Field_Internal;
+      Data   : Multiple_Args_Field_Internal;
       F : SQL_Field_Any
         (Table => null, Instance => null, Instance_Index => -1, Name => null);
       C : Field_List.Cursor := First (Fields);
@@ -557,7 +552,7 @@ package body GNATCOLL.SQL is
    function As
      (Field : SQL_Field'Class; Name : String) return SQL_Field'Class
    is
-      Data : constant As_Field_Internal_Access := new As_Field_Internal;
+      Data : As_Field_Internal;
       F    : Field_Pointers.Ref;
    begin
       Data.As      := new String'(Name);
@@ -576,8 +571,7 @@ package body GNATCOLL.SQL is
    ----------
 
    function Desc (Field : SQL_Field'Class) return SQL_Field'Class is
-      Data : constant Sorted_Field_Internal_Access :=
-               new Sorted_Field_Internal;
+      Data : Sorted_Field_Internal;
       F    : Field_Pointers.Ref;
    begin
       Data.Ascending := False;
@@ -596,8 +590,7 @@ package body GNATCOLL.SQL is
    ---------
 
    function Asc  (Field : SQL_Field'Class) return SQL_Field'Class is
-      Data : constant Sorted_Field_Internal_Access :=
-               new Sorted_Field_Internal;
+      Data : Sorted_Field_Internal;
       F    : Field_Pointers.Ref;
    begin
       Data.Ascending := True;
@@ -746,8 +739,7 @@ package body GNATCOLL.SQL is
      (List : When_List; Else_Clause : SQL_Field'Class := Null_Field_Text)
       return SQL_Field'Class
    is
-      Data : constant Case_Stmt_Internal_Access :=
-        new Case_Stmt_Internal;
+      Data : Case_Stmt_Internal;
       F    : Field_Pointers.Ref;
    begin
       Data.Criteria := List;
@@ -911,8 +903,7 @@ package body GNATCOLL.SQL is
      (Func     : Aggregate_Function;
       Criteria : SQL_Criteria) return SQL_Field'Class
    is
-      Data : constant Aggregate_Field_Internal_Access :=
-        new Aggregate_Field_Internal;
+      Data : Aggregate_Field_Internal;
       F    : Field_Pointers.Ref;
    begin
       Data.Criteria := Criteria;
@@ -932,8 +923,7 @@ package body GNATCOLL.SQL is
      (Func   : Aggregate_Function;
       Fields : SQL_Field_List) return SQL_Field'Class
    is
-      Data : constant Aggregate_Field_Internal_Access :=
-        new Aggregate_Field_Internal;
+      Data : Aggregate_Field_Internal;
       F    : Field_Pointers.Ref;
    begin
       Data.Params := Fields;
@@ -955,8 +945,7 @@ package body GNATCOLL.SQL is
      (Func   : Aggregate_Function;
       Field  : SQL_Field'Class) return SQL_Field'Class
    is
-      Data : constant Aggregate_Field_Internal_Access :=
-        new Aggregate_Field_Internal;
+      Data : Aggregate_Field_Internal;
       F    : Field_Pointers.Ref;
    begin
       Data.Params := +Field;
@@ -1021,15 +1010,14 @@ package body GNATCOLL.SQL is
    -----------
 
    function "not" (Self : SQL_Criteria) return SQL_Criteria is
-      Data   : SQL_Criteria_Data_Access;
+      Data   : SQL_Criteria_Data (Criteria_Not);
       Result : SQL_Criteria;
    begin
       if Self = No_Criteria then
          return No_Criteria;
       end if;
 
-      Data := new SQL_Criteria_Data (Criteria_Not);
-      SQL_Criteria_Data (Data.all).Criteria := Self;
+      Data.Criteria := Self;
       Set_Data (Result, Data);
       return Result;
    end "not";
@@ -1044,7 +1032,7 @@ package body GNATCOLL.SQL is
       List : Criteria_List.List;
       C    : Criteria_List.Cursor;
       Result : SQL_Criteria;
-      Data   : SQL_Criteria_Data_Access;
+      Data   : SQL_Criteria_Data (Op);
    begin
       if Left = No_Criteria then
          return Right;
@@ -1079,8 +1067,7 @@ package body GNATCOLL.SQL is
          Append (List, Right);
       end if;
 
-      Data := new SQL_Criteria_Data (Op);
-      SQL_Criteria_Data (Data.all).Criterias := List;
+      Data.Criterias := List;
       Set_Data (Result, Data);
       return Result;
    end Combine;
@@ -1150,11 +1137,11 @@ package body GNATCOLL.SQL is
    function SQL_In
      (Self : SQL_Field'Class; List : SQL_Field_List) return SQL_Criteria
    is
-      Data : constant SQL_Criteria_Data_Access := new SQL_Criteria_Data'
-        (GNATCOLL.SQL_Impl.SQL_Criteria_Data with
-         Op => Criteria_In, Arg => +Self, List => List, others => <>);
+      Data : SQL_Criteria_Data (Criteria_In);
       Result : SQL_Criteria;
    begin
+      Data.Arg := +Self;
+      Data.List := List;
       Set_Data (Result, Data);
       return Result;
    end SQL_In;
@@ -1162,12 +1149,11 @@ package body GNATCOLL.SQL is
    function SQL_In
      (Self : SQL_Field'Class; Subquery : SQL_Query) return SQL_Criteria
    is
-      Data : constant SQL_Criteria_Data_Access := new SQL_Criteria_Data'
-        (GNATCOLL.SQL_Impl.SQL_Criteria_Data with
-         Op => Criteria_In,
-         Arg => +Self, Subquery => Subquery, others => <>);
+      Data : SQL_Criteria_Data (Criteria_In);
       Result : SQL_Criteria;
    begin
+      Data.Arg := +Self;
+      Data.Subquery := Subquery;
       Set_Data (Result, Data);
       return Result;
    end SQL_In;
@@ -1175,12 +1161,11 @@ package body GNATCOLL.SQL is
    function SQL_In
      (Self : SQL_Field'Class; List : String) return SQL_Criteria
    is
-      Data : constant SQL_Criteria_Data_Access := new SQL_Criteria_Data'
-        (GNATCOLL.SQL_Impl.SQL_Criteria_Data with
-         Op => Criteria_In,
-         Arg => +Self, In_String => To_Unbounded_String (List), others => <>);
+      Data : SQL_Criteria_Data (Criteria_In);
       Result : SQL_Criteria;
    begin
+      Data.Arg := +Self;
+      Data.In_String := To_Unbounded_String (List);
       Set_Data (Result, Data);
       return Result;
    end SQL_In;
@@ -1192,11 +1177,11 @@ package body GNATCOLL.SQL is
    function SQL_Not_In
      (Self : SQL_Field'Class; List : SQL_Field_List) return SQL_Criteria
    is
-      Data : constant SQL_Criteria_Data_Access := new SQL_Criteria_Data'
-        (GNATCOLL.SQL_Impl.SQL_Criteria_Data with
-         Op => Criteria_Not_In, Arg => +Self, List => List, others => <>);
+      Data : SQL_Criteria_Data (Criteria_Not_In);
       Result : SQL_Criteria;
    begin
+      Data.Arg := +Self;
+      Data.List := List;
       Set_Data (Result, Data);
       return Result;
    end SQL_Not_In;
@@ -1204,12 +1189,11 @@ package body GNATCOLL.SQL is
    function SQL_Not_In
      (Self : SQL_Field'Class; Subquery : SQL_Query) return SQL_Criteria
    is
-      Data : constant SQL_Criteria_Data_Access := new SQL_Criteria_Data'
-        (GNATCOLL.SQL_Impl.SQL_Criteria_Data with
-         Op => Criteria_Not_In,
-         Arg => +Self, Subquery => Subquery, others => <>);
+      Data : SQL_Criteria_Data (Criteria_Not_In);
       Result : SQL_Criteria;
    begin
+      Data.Arg := +Self;
+      Data.Subquery := Subquery;
       Set_Data (Result, Data);
       return Result;
    end SQL_Not_In;
@@ -1219,11 +1203,10 @@ package body GNATCOLL.SQL is
    -------------
 
    function Is_Null (Self : SQL_Field'Class) return SQL_Criteria is
-      Data : constant SQL_Criteria_Data_Access := new SQL_Criteria_Data'
-          (GNATCOLL.SQL_Impl.SQL_Criteria_Data
-           with Op => Criteria_Null, Arg3 => +Self);
+      Data : SQL_Criteria_Data (Criteria_Null);
       Result : SQL_Criteria;
    begin
+      Data.Arg3 := +Self;
       Set_Data (Result, Data);
       return Result;
    end Is_Null;
@@ -1233,11 +1216,10 @@ package body GNATCOLL.SQL is
    -----------------
 
    function Is_Not_Null (Self : SQL_Field'Class) return SQL_Criteria is
-      Data : constant SQL_Criteria_Data_Access := new SQL_Criteria_Data'
-          (GNATCOLL.SQL_Impl.SQL_Criteria_Data
-           with Op => Criteria_Not_Null, Arg3 => +Self);
+      Data : SQL_Criteria_Data (Criteria_Not_Null);
       Result : SQL_Criteria;
    begin
+      Data.Arg3 := +Self;
       Set_Data (Result, Data);
       return Result;
    end Is_Not_Null;

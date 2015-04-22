@@ -21,11 +21,11 @@
 --                                                                          --
 ------------------------------------------------------------------------------
 
+pragma Ada_2012;
 with Ada.Calendar;
 with Ada.Containers.Doubly_Linked_Lists;
 with Ada.Containers.Indefinite_Doubly_Linked_Lists;
 with Ada.Containers.Indefinite_Hashed_Sets;
-
 with GNATCOLL.Refcount; use GNATCOLL.Refcount;
 
 package GNATCOLL.SQL_Impl is
@@ -317,9 +317,11 @@ package GNATCOLL.SQL_Impl is
    --  latter need to allocate memory to store their contents, and are stored
    --  in a refcounted type internally, so that we can properly manage memory.
 
-   type SQL_Field_Internal is abstract new Refcounted with null record;
+   type SQL_Field_Internal is abstract tagged null record;
    --  Data that can be stored in a field
 
+   procedure Free (Self : in out SQL_Field_Internal) is null;
+   procedure Free_Dispatch (Self : in out SQL_Field_Internal'Class);
    function To_String
      (Self   : SQL_Field_Internal;
       Format : Formatter'Class;
@@ -327,26 +329,23 @@ package GNATCOLL.SQL_Impl is
    procedure Append_Tables
      (Self : SQL_Field_Internal; To : in out Table_Sets.Set) is null;
    procedure Append_If_Not_Aggregate
-     (Self         : access SQL_Field_Internal;
+     (Self         : access SQL_Field_Internal;   --  for dispatching
       To           : in out SQL_Field_List'Class;
       Is_Aggregate : in out Boolean) is null;
    --  The three subprograms are equivalent to the ones for SQL_Field. When a
    --  field contains some data, it will simply delegate the calls to the above
    --  subprograms.
+   --  Self_Field is added to the list. Self_Field.Get must be equal to Self
 
-   package Field_Pointers is new Smart_Pointers (SQL_Field_Internal);
-
-   subtype SQL_Field_Internal_Access is Field_Pointers.Encapsulated_Access;
-
-   subtype Field_Data is Field_Pointers.Ref;
-   --  The type that is actually stored in a field, and provides the
-   --  refcounting for Data.
+   package Field_Pointers is new Shared_Pointers
+      (SQL_Field_Internal'Class, Free_Dispatch);
+   subtype SQL_Field_Internal_Access is Field_Pointers.Element_Access;
 
    generic
       type Base_Field is abstract new SQL_Field with private;
    package Data_Fields is
       type Field is new Base_Field with record
-         Data : Field_Data;
+         Data : Field_Pointers.Ref;
       end record;
 
       overriding function To_String
@@ -382,10 +381,12 @@ package GNATCOLL.SQL_Impl is
       Is_Aggregate : in out Boolean);
    --  The usual semantics for these subprograms (see SQL_Field)
 
-   type SQL_Criteria_Data is abstract new Refcounted with null record;
+   type SQL_Criteria_Data is abstract tagged null record;
    --  The data contained in a criteria. You can create new versions of it if
    --  you need to create new types of criterias
 
+   procedure Free (Self : in out SQL_Criteria_Data) is null;
+   procedure Free_Dispatch (Self : in out SQL_Criteria_Data'Class);
    function To_String
      (Self   : SQL_Criteria_Data;
       Format : Formatter'Class;
@@ -400,12 +401,13 @@ package GNATCOLL.SQL_Impl is
    --  See description of these subprograms for a SQL_Criteria
 
    procedure Set_Data
-     (Self : in out SQL_Criteria; Data : not null access SQL_Criteria_Data);
+     (Self : in out SQL_Criteria; Data : SQL_Criteria_Data'Class);
 
-   package SQL_Criteria_Pointers is new Smart_Pointers (SQL_Criteria_Data);
+   package SQL_Criteria_Pointers
+      is new Shared_Pointers (SQL_Criteria_Data'Class, Free_Dispatch);
 
    subtype SQL_Criteria_Data_Access is
-     SQL_Criteria_Pointers.Encapsulated_Access;
+     SQL_Criteria_Pointers.Element_Access;
 
    function Get_Data (Self : SQL_Criteria) return SQL_Criteria_Data_Access;
    --  Set the data associated with Self.
@@ -648,20 +650,10 @@ private
    -- Field pointers --
    --------------------
 
-   type Field_Access is access all SQL_Field'Class;
-   type Field_Pointer_Data is record
-      Refcount : Natural := 1;
-      Field    : Field_Access;
-   end record;
-   type Field_Pointer_Data_Access is access Field_Pointer_Data;
-   type SQL_Field_Pointer is new Ada.Finalization.Controlled with record
-      Data : Field_Pointer_Data_Access;
-   end record;
-   procedure Adjust   (Self : in out SQL_Field_Pointer);
-   procedure Finalize (Self : in out SQL_Field_Pointer);
-
+   package SQL_Field_Pointers is new Shared_Pointers (SQL_Field'Class);
+   type SQL_Field_Pointer is new SQL_Field_Pointers.Ref with null record;
    No_Field_Pointer : constant SQL_Field_Pointer :=
-     (Ada.Finalization.Controlled with null);
+      (SQL_Field_Pointers.Null_Ref with null record);
 
    -----------------
    -- Assignments --

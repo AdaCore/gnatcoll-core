@@ -55,6 +55,9 @@ project GnatColl_Shared is
    Sqlite_Switches := (@SQLITE_CFLAGS@);
    Rss_Libs        := (@RSS_LIBS_GPR@);   --  For gnatcoll.memory
 
+   type Atomics_Kind is ("intrinsic", "mutex");
+   Atomics : Atomics_Kind := "@SYNC_COUNTERS_IMPL@";
+
    package Compiler is
       case Build is
          --  It is tempting to compile all packages with -gnat12, but this

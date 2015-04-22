@@ -32,12 +32,13 @@
 --  deallocated when needed, so you do not need to worry about memory
 --  management in this package.
 
+pragma Ada_2012;
 private with Ada.Containers.Doubly_Linked_Lists;
 private with Ada.Containers.Indefinite_Doubly_Linked_Lists;
 with Ada.Containers.Indefinite_Ordered_Maps;
-private with GNATCOLL.Refcount.Weakref;
 with GNATCOLL.SQL.Exec;           use GNATCOLL.SQL.Exec;
 with GNATCOLL.VFS;
+private with GNATCOLL.Refcount;
 private with GNAT.Strings;
 
 package GNATCOLL.SQL.Inspect is
@@ -342,10 +343,13 @@ package GNATCOLL.SQL.Inspect is
    --  pretty-printing or comments.
 
 private
-   use GNATCOLL.Refcount, GNATCOLL.Refcount.Weakref;
+   use GNATCOLL.Refcount;
 
-   type Abstract_Table_Description is new Weak_Refcounted with null record;
-   package Tables_Ref is new Weakref_Pointers (Abstract_Table_Description);
+   type Abstract_Table_Description is tagged null record;
+   procedure Free (Self : in out Abstract_Table_Description) is null;
+   procedure Free_Dispatch (Self : in out Abstract_Table_Description'Class);
+   package Tables_Ref
+      is new Shared_Pointers (Abstract_Table_Description'Class, Free_Dispatch);
    type Table_Description is new Tables_Ref.Ref with null record;
 
    ------------
@@ -361,7 +365,7 @@ private
    end record;
    --  The various properties that can be set for a field in a table.
 
-   type Field_Description is new Weak_Refcounted with record
+   type Field_Description is record
       Name        : GNAT.Strings.String_Access;
       Typ         : Field_Type;
       Id          : Positive;
@@ -373,9 +377,9 @@ private
       Active      : Boolean := True;
    end record;
 
-   overriding procedure Free (Self : in out Field_Description);
+   procedure Free (Self : in out Field_Description);
 
-   package Fields_Ref is new Weakref_Pointers (Field_Description);
+   package Fields_Ref is new Shared_Pointers (Field_Description, Free);
    type Field is new Fields_Ref.Ref with null record;
 
    No_Field : constant Field := (Fields_Ref.Null_Ref with null record);
@@ -392,7 +396,7 @@ private
    end record;
    package Pair_Lists is new Ada.Containers.Doubly_Linked_Lists (Field_Pair);
 
-   type Foreign_Key_Description is new Refcounted with record
+   type Foreign_Key_Description is record
       To_Table        : Tables_Ref.Weak_Ref;
       --  Needed, since a pair.To might be No_Field, in which case we would
       --  not have this info.
@@ -408,9 +412,9 @@ private
    --     (who_contact) REFERENCES contact(id)
    --     (contact)     REFERENCES contact(id)
 
-   overriding procedure Free (Self : in out Foreign_Key_Description);
+   procedure Free (Self : in out Foreign_Key_Description);
 
-   package Foreign_Refs is new Smart_Pointers (Foreign_Key_Description);
+   package Foreign_Refs is new Shared_Pointers (Foreign_Key_Description, Free);
    type Foreign_Key is new Foreign_Refs.Ref with null record;
 
    function To_Table (FK : Foreign_Key) return Table_Description'Class;
@@ -453,6 +457,8 @@ private
    end record;
 
    type TDR is access all Table_Description_Record'Class;
+   for TDR'Size use Standard'Address_Size;
+   for TDR'Storage_Pool use Tables_Ref.Element_Access'Storage_Pool;
    overriding procedure Free (Self : in out Table_Description_Record);
 
    package Tables_Maps is new Ada.Containers.Indefinite_Ordered_Maps

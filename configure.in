@@ -72,9 +72,6 @@ AM_PATH_SYSLOG
 LIB=`basename $libdir`
 AC_SUBST(LIB)
 
-AM_LINK_FILE([src/gnatcoll-atomic__$SYNC_COUNTERS_IMPL.ada],
-             [src/gnatcoll-atomic.adb],
-             [SYNC_COUNTERS_IMPL=$SYNC_COUNTERS_IMPL])
 AM_LINK_FILE([src/gnatcoll__$GNAT_SOURCES.gpr],
              [src/gnatcoll.gpr],
              [GNAT_SOURCES=$GNAT_SOURCES])

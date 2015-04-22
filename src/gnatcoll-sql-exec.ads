@@ -99,6 +99,7 @@
 --         sqlite:
 --             DIRECT_CURSOR =>  0.015502000 s
 
+pragma Ada_2012;
 with Ada.Calendar;
 with System;
 private with Ada.Finalization;
@@ -1014,7 +1015,7 @@ private
    type Cache_Id is new Natural;
    No_Cache_Id : constant Cache_Id := Cache_Id'Last;
 
-   type Prepared_Statement_Data is new GNATCOLL.Refcount.Refcounted with record
+   type Prepared_Statement_Data is record
       Query      : SQL_Query;   --  Reset to null once prepared
       Query_Str  : GNAT.Strings.String_Access;
 
@@ -1031,10 +1032,10 @@ private
    --  It is reference counted, so that it is automatically released when no
    --  longer needed.
 
-   overriding procedure Free (Self : in out Prepared_Statement_Data);
+   procedure Free (Self : in out Prepared_Statement_Data);
 
-   package Prepared_Statements is new GNATCOLL.Refcount.Smart_Pointers
-     (Prepared_Statement_Data);
+   package Prepared_Statements is new GNATCOLL.Refcount.Shared_Pointers
+     (Prepared_Statement_Data, Free);
    type Prepared_Statement is new Prepared_Statements.Ref with null record;
 
    No_Prepared : constant Prepared_Statement :=

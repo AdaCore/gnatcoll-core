@@ -21,6 +21,7 @@
 --                                                                          --
 ------------------------------------------------------------------------------
 
+pragma Ada_2012;
 with Ada.Characters.Handling;     use Ada.Characters.Handling;
 with Ada.Command_Line;
 with Ada.Containers;              use Ada.Containers;
@@ -169,9 +170,10 @@ package body GNATCOLL.SQL.Inspect is
    ---------------
 
    function Get_Table (Self : Field) return Table_Description'Class is
+      R : Table_Description;
    begin
-      return Table_Description'
-        (Tables_Ref.Get (Self.Get.Table) with null record);
+      R.Set (Self.Get.Table);
+      return R;
    end Get_Table;
 
    --------------
@@ -179,7 +181,7 @@ package body GNATCOLL.SQL.Inspect is
    --------------
 
    function Get_Type (Self : Field) return Field_Type is
-      D  : constant Fields_Ref.Encapsulated_Access := Self.Get;
+      D  : constant access Field_Description := Self.Get;
       FK : constant Field := Self.Is_FK;
       T  : Field_Type;
    begin
@@ -281,7 +283,7 @@ package body GNATCOLL.SQL.Inspect is
          C := TDR (T.Get).FK.First;
          while Has_Element (C) loop
             declare
-               FK : constant Foreign_Refs.Encapsulated_Access :=
+               FK : constant access Foreign_Key_Description :=
                  Element (C).Get;
                A : Pair_Lists.Cursor := FK.Fields.First;
                P : Field_Pair;
@@ -307,7 +309,7 @@ package body GNATCOLL.SQL.Inspect is
    -- Free --
    ----------
 
-   overriding procedure Free (Self : in out Field_Description) is
+   procedure Free (Self : in out Field_Description) is
    begin
       Free (Self.Name);
       Free (Self.Description);
@@ -457,7 +459,7 @@ package body GNATCOLL.SQL.Inspect is
    -- Free --
    ----------
 
-   overriding procedure Free (Self : in out Foreign_Key_Description) is
+   procedure Free (Self : in out Foreign_Key_Description) is
    begin
       Free (Self.Revert_Name);
    end Free;
@@ -483,8 +485,7 @@ package body GNATCOLL.SQL.Inspect is
       C : constant Tables_Maps.Cursor := Self.Tables.Find (Name);
    begin
       if C = Tables_Maps.No_Element then
-         raise Invalid_Table with
-           "No such table: " & Name;
+         raise Invalid_Table with "No such table: " & Name;
       end if;
 
       return Element (C);
@@ -732,8 +733,7 @@ package body GNATCOLL.SQL.Inspect is
          Ref   : Field;
       begin
          Descr := Field_Description'
-           (Weak_Refcounted with
-            Name        => new String'(Name),
+           (Name        => new String'(Name),
             Typ         => From_SQL (Typ),
             Id          => Index,
             Description => new String'(Description),
@@ -744,7 +744,7 @@ package body GNATCOLL.SQL.Inspect is
                             Not_Null => Not_Null or else Is_Primary_Key,
                             Case_Insensitive => False),
             FK          => False,
-            Table       => Tables_Ref.Get_Weak_Ref (Table),
+            Table       => Table.Weak,
             Active      => True);
 
          if Default_Value'Length < 8
@@ -755,7 +755,7 @@ package body GNATCOLL.SQL.Inspect is
             Descr.Default  := new String'(Default_Value);
          end if;
 
-         Set (Ref, Descr);
+         Ref.Set (Descr);
          Append (Attributes, Ref);
       end On_Field;
 
@@ -803,7 +803,7 @@ package body GNATCOLL.SQL.Inspect is
          Descr.Name        := new String'(Name);
          Descr.Row         := null;  --  Will default to Descr.Name
          Descr.Description := new String'(Description);
-         Set (Ref, Descr);
+         Ref.Set (Descr);
 
          Parse_Table (Self, Ref, TDR (Ref.Get).Fields);
 
@@ -862,7 +862,7 @@ package body GNATCOLL.SQL.Inspect is
                --  key
 
                if Prev_Index /= -1 then
-                  Set (R, Descr);
+                  R.Set (Descr);
                   Append (TDR (Table.Get).FK, R);
                end if;
 
@@ -870,8 +870,7 @@ package body GNATCOLL.SQL.Inspect is
 
                To_Table := Get_Table (Schema, Foreign_Table);
                Descr :=
-                 (Refcounted with
-                  To_Table        => Tables_Ref.Get_Weak_Ref (To_Table),
+                 (To_Table        => To_Table.Weak,
                   Revert_Name     => null,
                   Fields          => Pair_Lists.Empty_List,
                   Ambiguous       => False);
@@ -895,7 +894,7 @@ package body GNATCOLL.SQL.Inspect is
             Callback   => On_Key'Access);
 
          if Prev_Index /= -1 then
-            Set (R, Descr);
+            R.Set (Descr);
             Append (TDR (Table.Get).FK, R);
          end if;
       end Compute_Foreign_Keys;
@@ -919,9 +918,10 @@ package body GNATCOLL.SQL.Inspect is
    --------------
 
    function To_Table (FK : Foreign_Key) return Table_Description'Class is
+      R : Tables_Ref.Ref;
    begin
-      return Table_Description'
-        (Tables_Ref.Get (FK.Get.To_Table) with null record);
+      R.Set (FK.Get.To_Table);
+      return Table_Description'(R with null record);
    end To_Table;
 
    --------------------------
@@ -933,24 +933,26 @@ package body GNATCOLL.SQL.Inspect is
       Foreign   : Table_Description;
       Ambiguous : out Boolean)
    is
-      C     : Foreign_Keys.Cursor := First (TDR (Table.Get).FK);
-      FK    : Foreign_Key;
+      --  C     : Foreign_Keys.Cursor := First (TDR (Table.Get).FK);
+      --  FK    : Foreign_Key;
+      R     : Tables_Ref.Ref;
    begin
       Ambiguous := False;
+      for FK of TDR (Table.Get).FK loop
+      --  while Has_Element (C) loop
+      --     FK := Element (C);
 
-      while Has_Element (C) loop
-         FK := Element (C);
-
-         if TDR (Tables_Ref.Get (FK.Get.To_Table).Get) = TDR (Foreign.Get) then
+         R.Set (FK.Get.To_Table);
+         if TDR (R.Get) = TDR (Foreign.Get) then
             if not FK.Get.Ambiguous then
                FK.Get.Ambiguous := True;
-               Replace_Element (TDR (Table.Get).FK, C, FK);
+      --         Replace_Element (TDR (Table.Get).FK, C, FK);
             end if;
 
             Ambiguous := True;
             return;
          end if;
-         Next (C);
+      --   Next (C);
       end loop;
    end Mark_FK_As_Ambiguous;
 
@@ -1182,9 +1184,8 @@ package body GNATCOLL.SQL.Inspect is
                   Kind := Kind_Table;
                end if;
 
-               Set (Table, Table_Description_Record'
-                   (Weak_Refcounted with
-                    Name        => new String'(Name),
+               Table.Set (Table_Description_Record'
+                   (Name        => new String'(Name),
                     Row         => null,
                     Kind        => Kind,
                     Id          => T,
@@ -1196,6 +1197,7 @@ package body GNATCOLL.SQL.Inspect is
                     FK          => Foreign_Keys.Empty_List,
                     Active      => True,
                     Super_Table => No_Table));
+               Include (Schema.Tables, Name, Table);
             else
                Table := Element (C);
             end if;
@@ -1235,9 +1237,8 @@ package body GNATCOLL.SQL.Inspect is
                   TDR (Table.Get).Has_PK :=
                     Props.PK or else TDR (Table.Get).Has_PK;
 
-                  Set (Att, Field_Description'
-                         (Weak_Refcounted with
-                          Name        => new String'(Line (1).all),
+                  Att.Set (Field_Description'
+                         (Name        => new String'(Line (1).all),
                           Typ         => (Kind => Field_Boolean), --  Set below
                           Id          => Attr_Id,
                           Description => new String'(Line (5).all),
@@ -1245,7 +1246,7 @@ package body GNATCOLL.SQL.Inspect is
                           Props       => Props,
                           FK          => Typ'Length > 3
                             and then Typ (Typ'First .. Typ'First + 2) = "FK ",
-                          Table       => Tables_Ref.Get_Weak_Ref (Table),
+                          Table       => Table.Weak,
                           Active      => True));
                   Append (TDR (Table.Get).Fields, Att);
 
@@ -1271,16 +1272,14 @@ package body GNATCOLL.SQL.Inspect is
                      exception
                         when Invalid_Table =>
                            --  The table might be declared later on
-                           Set (To_Table, Table_Description_Record'
-                                  (Weak_Refcounted with
-                                   Name   => new String'(To),
+                           To_Table.Set (Table_Description_Record'
+                                  (Name   => new String'(To),
                                    others => <>));
                            Include (Schema.Tables, To, To_Table);
                      end;
 
                      FKD := Foreign_Key_Description'
-                       (Refcounted with
-                        To_Table    => Tables_Ref.Get_Weak_Ref (To_Table),
+                       (To_Table    => To_Table.Weak,
                         Revert_Name => new String'(Typ (Tmp + 1 .. Tmp2 - 1)),
                         Fields      => Pair_Lists.Empty_List,
                         Ambiguous   => False);
@@ -1291,7 +1290,7 @@ package body GNATCOLL.SQL.Inspect is
                                (From => Att,
                                 To   => No_Field));   --  To primary key
 
-                     Set (FK, FKD);
+                     FK.Set (FKD);
                      Append (TDR (Table.Get).FK, FK);
 
                      Att.Get.FK := True;
@@ -1319,7 +1318,6 @@ package body GNATCOLL.SQL.Inspect is
 --           end if;
 
          Free (String_List (Line));
-         Include (Schema.Tables, Name, Table);
          Schema.Ordered_Tables.Append (Name);
       end Parse_Table;
 
@@ -1340,9 +1338,8 @@ package body GNATCOLL.SQL.Inspect is
 
             if Line (1).all = "FK:" then
                To_Table := Get_Table (Schema, Line (2).all);
-               Set (FK, Foreign_Key_Description'
-                    (Refcounted with
-                     To_Table        => Tables_Ref.Get_Weak_Ref (To_Table),
+               FK.Set (Foreign_Key_Description'
+                    (To_Table        => To_Table.Weak,
                      Revert_Name     => null,
                      Ambiguous       => False,
                      Fields          => Pair_Lists.Empty_List));
@@ -1577,7 +1574,7 @@ package body GNATCOLL.SQL.Inspect is
             Stmt_FK, Stmt_References : Unbounded_String;
 
             C : Foreign_Keys.Cursor := TDR (Table.Get).FK.First;
-            F : Foreign_Refs.Encapsulated_Access;
+            F : access Foreign_Key_Description;
             P : Pair_Lists.Cursor;
             Is_First : Boolean;
          begin
@@ -1990,7 +1987,7 @@ package body GNATCOLL.SQL.Inspect is
       procedure For_Table (Table : in out Table_Description) is
          A  : Field_Lists.Cursor;
          F  : Foreign_Keys.Cursor;
-         FK : Foreign_Refs.Encapsulated_Access;
+         FK : access Foreign_Key_Description;
          P  : Pair_Lists.Cursor;
       begin
          --  Compute widths
@@ -3108,5 +3105,14 @@ package body GNATCOLL.SQL.Inspect is
          return Str;
       end if;
    end Quote_Keyword;
+
+   -------------------
+   -- Free_Dispatch --
+   -------------------
+
+   procedure Free_Dispatch (Self : in out Abstract_Table_Description'Class) is
+   begin
+      Free (Self);
+   end Free_Dispatch;
 
 end GNATCOLL.SQL.Inspect;

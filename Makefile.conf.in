@@ -21,6 +21,7 @@ POSTGRES_PATH=@PATH_LIBPQ@
 BUILDS_SHARED=@GNAT_BUILDS_SHARED@
 WITH_SQLITE=@WITH_SQLITE@
 SQLITE_PATH=@PATH_LIBSQLITE@
+ATOMICS=@SYNC_COUNTERS_IMPL@
 
 WITH_XREF=no
 ifeq (${WITH_PROJECTS},yes)
@@ -137,11 +138,12 @@ installsources:
 	@# install would complain.
 	@# This install is common to shared and static libraries.
 
-	@${CP} ${wildcard ${addsuffix *.ad[bs], ${SRCDIRS}}} ${includedir}/${TARNAME}
+	@${RM} ${includedir}/${TARNAME}/gnatcoll-atomic.adb
+	@${CP} ${wildcard ${addsuffix *.ad[bsa], ${SRCDIRS}}} ${includedir}/${TARNAME}
 ifeq (${TARGET_WIN32},yes)
-	@cd ${includedir}/${TARNAME}; ls ${notdir ${wildcard ${addsuffix *.ad[bs], ${SRCDIRS}}}} | grep -v unix > ${DESTDIR}${prefix}/lib/gnat/${TARNAME}/${basename ${PROJECT}}.lgpr
+	@cd ${includedir}/${TARNAME}; ls ${notdir ${wildcard ${addsuffix *.ad[bs], ${SRCDIRS}} ${addsuffix *${ATOMICS}*ada, ${SRCDIRS}}}} | grep -v unix > ${DESTDIR}${prefix}/lib/gnat/${TARNAME}/${basename ${PROJECT}}.lgpr
 else
-	@cd ${includedir}/${TARNAME}; ls ${notdir ${wildcard ${addsuffix *.ad[bs], ${SRCDIRS}}}} | grep -v win32 > ${DESTDIR}${prefix}/lib/gnat/${TARNAME}/${basename ${PROJECT}}.lgpr
+	@cd ${includedir}/${TARNAME}; ls ${notdir ${wildcard ${addsuffix *.ad[bs], ${SRCDIRS}} ${addsuffix *${ATOMICS}*.ada, ${SRCDIRS}}}} | grep -v win32 > ${DESTDIR}${prefix}/lib/gnat/${TARNAME}/${basename ${PROJECT}}.lgpr
 endif
 
 libinstall_static: installsources

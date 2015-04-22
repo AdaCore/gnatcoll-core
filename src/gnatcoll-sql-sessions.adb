@@ -41,6 +41,7 @@ package body GNATCOLL.SQL.Sessions is
    Me_Info : constant Trace_Handle := Create ("Session.Info");
 
    use Element_Maps, Weak_Element_Maps, Element_Lists, Pointers;
+   use type Pointers.Element_Access;
 
    Default_Fact              : Element_Factory := Null_Factory'Access;
 
@@ -100,8 +101,11 @@ package body GNATCOLL.SQL.Sessions is
    --------------
 
    function Get_Data (Self : Weak_Cache) return Detached_Data_Access is
+      R : Pointers.Ref;
    begin
-      return Detached_Data_Access (Get (Self.Ref).Get);
+      R.Set (Self.Ref);
+      return Detached_Data_Access (R.Get);
+      --   ??? That's bad, the data could be freed while we return it
    end Get_Data;
 
    --------------
@@ -367,8 +371,6 @@ package body GNATCOLL.SQL.Sessions is
       --  At this point, the weak references in the cache that are no longer
       --  pointing to anything can simply be removed.
 
-      Free (Weak_Refcounted (Self));
-
       if Session /= No_Session then
          D := Session.Element;
          if D.Weak_Cache then
@@ -535,7 +537,7 @@ package body GNATCOLL.SQL.Sessions is
             declare
                R : Detached_Element'Class := Wref.Template.all;
             begin
-               Set (R, Get_Data (Wref));
+               R.Set (Wref.Ref);
                return R;
             end;
          end if;
@@ -621,13 +623,13 @@ package body GNATCOLL.SQL.Sessions is
    ---------
 
    function Get (Self : Weak_Session) return Session_Type is
-      Result : Session_Type;
+      Result : Impl.Resource;
    begin
       if Impl.Was_Freed (Self.Ref) then
          return No_Session;
       else
          Impl.Get (Self.Ref, Result);
-         return Result;
+         return (Result with null record);
       end if;
    end Get;
 
@@ -698,11 +700,13 @@ package body GNATCOLL.SQL.Sessions is
       end if;
 
       if Self.Element.Weak_Cache then
+         --  We only want the tag, not a reference
          T := new Detached_Element'Class'(E);
-         Set (T.all, null);   --  We only want the template, not a ref
+         T.Set (Pointers.Null_Weak_Ref);
+
          Self.Element.Wcache.Insert
            (Key => K,
-            New_Item => (Ref      => Pointers.Get_Weak_Ref (E),
+            New_Item => (Ref      => E.Weak,
                          Template => T),
             Position => WC,
             Inserted => Inserted);
@@ -1006,5 +1010,14 @@ package body GNATCOLL.SQL.Sessions is
    begin
       Element.Session.Delete (Element);
    end Delete;
+
+   -------------------
+   -- Free_Dispatch --
+   -------------------
+
+   procedure Free_Dispatch (Self : in out Base_Detached_Data'Class) is
+   begin
+      Free (Self);
+   end Free_Dispatch;
 
 end GNATCOLL.SQL.Sessions;

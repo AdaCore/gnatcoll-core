@@ -28,9 +28,10 @@
 --  session always manipulate the same Ada object (this is especially useful
 --  when the objects have been modified locally).
 
+pragma Ada_2012;
 with Ada.Containers.Hashed_Maps;
 with Ada.Containers.Indefinite_Doubly_Linked_Lists;
-with GNATCOLL.Refcount.Weakref; use GNATCOLL.Refcount.Weakref;
+with GNATCOLL.Refcount;         use GNATCOLL.Refcount;
 with GNATCOLL.SQL.Exec;         use GNATCOLL.SQL.Exec;
 with GNATCOLL.Traces;
 with GNATCOLL.Pools;
@@ -205,16 +206,20 @@ package GNATCOLL.SQL.Sessions is
    --  handling changes to the element and committing them to the database
    --  later on.
 
+   type Base_Detached_Data is abstract tagged null record;
+   procedure Free (Self : in out Base_Detached_Data) is null;
+   procedure Free_Dispatch (Self : in out Base_Detached_Data'Class);
+
    type Detached_Data (Field_Count : Natural)
-     is abstract new Weak_Refcounted with private;
+     is abstract new Base_Detached_Data with private;
    type Detached_Data_Access is access all Detached_Data'Class;
    --  Data stored in a Detached_Element.
    --  Field_Count must be the total number of fields, and is used to keep
    --  track of which field has been modified in memory but not reflected into
    --  the database yet.
 
-   package Pointers is new GNATCOLL.Refcount.Weakref.Weakref_Pointers
-     (Weak_Refcounted);
+   package Pointers is new GNATCOLL.Refcount.Shared_Pointers
+     (Base_Detached_Data'Class, Free_Dispatch);
    type Detached_Element is abstract new Pointers.Ref with null record;
    type Detached_Element_Access is access all Detached_Element'Class;
    --  An element that represents a row from a database table. Such an element
@@ -613,13 +618,12 @@ private
    type Session_Type is new Impl.Resource with null record;
    No_Session : constant Session_Type := (Impl.No_Resource with null record);
 
-   type Detached_Data
-     (Field_Count : Natural) is abstract new Weak_Refcounted with
-      record
-         Session : Weak_Session;
-         Dirty   : Dirty_Mask (0 .. Field_Count) := (others => False);
-      end record;
-   overriding procedure Free (Self : in out Detached_Data);
+   type Detached_Data (Field_Count : Natural)
+   is abstract new Base_Detached_Data with record
+      Session : Weak_Session;
+      Dirty   : Dirty_Mask (0 .. Field_Count) := (others => False);
+   end record;
+   procedure Free (Self : in out Detached_Data);
 
    No_User_Data : constant User_Data'Class := User_Data'(null record);
 end GNATCOLL.SQL.Sessions;

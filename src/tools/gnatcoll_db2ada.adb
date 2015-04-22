@@ -38,11 +38,12 @@ with GNATCOLL.SQL.Exec;          use GNATCOLL.SQL, GNATCOLL.SQL.Exec;
 with GNATCOLL.SQL.Inspect;       use GNATCOLL.SQL.Inspect;
 with GNATCOLL.SQL.Postgres;
 with GNATCOLL.SQL.Sqlite;
-with GNATCOLL.Traces;
+with GNATCOLL.Traces;            use GNATCOLL.Traces;
 with GNATCOLL.Utils;             use GNATCOLL.Utils;
 with GNATCOLL.VFS;               use GNATCOLL.VFS;
 
 procedure GNATCOLL_Db2Ada is
+   Me : constant Trace_Handle := Create ("DB2ADA");
 
    Generated     : GNAT.Strings.String_Access := new String'("Database");
    Generated_Orm : GNAT.Strings.String_Access := new String'("ORM_Queries");
@@ -557,6 +558,8 @@ procedure GNATCOLL_Db2Ada is
       end if;
 
       Free (DB_Model);
+      Free (Generated);
+      Free (Generated_Orm);
 
    exception
       when GNAT.Command_Line.Invalid_Switch
@@ -735,6 +738,7 @@ procedure GNATCOLL_Db2Ada is
 begin
    GNATCOLL.Traces.Parse_Config_File;
    Main;
+   GNATCOLL.Traces.Finalize;
 
 exception
    when E : Invalid_Type =>
@@ -743,6 +747,7 @@ exception
       Set_Exit_Status (Failure);
 
    when E : others =>
+      Trace (Me, E);
       Ada.Text_IO.Put_Line
         (Ada.Text_IO.Standard_Error,
          "A database error occurred, please try again...");

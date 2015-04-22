@@ -44,9 +44,9 @@
 --  instantiations of GNATCOLL.Pools, but this makes the API more complex and
 --  forces the duplication of the whole GNATCOLL.SQL.Session API.
 
-pragma Ada_05;
+pragma Ada_12;
 
-private with GNATCOLL.Refcount.Weakref;
+private with GNATCOLL.Refcount;
 
 generic
    type Element_Type is private;
@@ -103,7 +103,7 @@ package GNATCOLL.Pools is
    type Weak_Resource is private;
    Null_Weak_Resource : constant Weak_Resource;
    function Get_Weak (Self : Resource'Class) return Weak_Resource;
-   procedure Get (Self : Weak_Resource; Res : out Resource'Class);
+   procedure Get (Self : Weak_Resource; Res : out Resource);
    --  A resource with a weak-reference.
    --  Such a resource does not prevent the release into the pool when no other
    --  Resource exists. While the resource has not been released, you can get
@@ -165,24 +165,23 @@ private
 
    Default_Set : constant Resource_Set := Resource_Set'First;
 
-   type Resource_Data is new GNATCOLL.Refcount.Weakref.Weak_Refcounted with
-      record
-         In_Set : Pool_Resource_Access;
-         Set    : Resource_Set;
-      end record;
-   overriding procedure Free (Self : in out Resource_Data);
-   package Pointers is new GNATCOLL.Refcount.Weakref.Weakref_Pointers
-     (Resource_Data);
+   type Resource_Data is record
+      In_Set : Pool_Resource_Access;
+      Set    : Resource_Set;
+   end record;
+   procedure Free (Self : in out Resource_Data);
+   package Pointers is new GNATCOLL.Refcount.Shared_Pointers
+     (Resource_Data, Free);
    --  The smart pointers returned to the application. When no longer
    --  referenced, the resource is released back into the pool.
-
-   type Resource is new Pointers.Ref with null record;
-   No_Resource : constant Resource :=
-     Resource'(Pointers.Null_Ref with null record);
 
    type Weak_Resource is record
       Ref : Pointers.Weak_Ref;
    end record;
+
+   type Resource is new Pointers.Ref with null record;
+   No_Resource : constant Resource :=
+     Resource'(Pointers.Null_Ref with null record);
 
    Null_Weak_Resource : constant Weak_Resource :=
      (Ref => Pointers.Null_Weak_Ref);

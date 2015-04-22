@@ -45,6 +45,11 @@ project GnatColl is
       for Switches ("Ada") use GnatColl_Shared.Compiler'Switches ("Ada");
       for Switches ("C") use GnatColl_Shared.Compiler'Switches ("C");
       for Switches ("sinfo.adb") use Compiler'Switches ("Ada") & ("-gnatg");
+
+      case GnatColl_Shared.Atomics is
+         when "intrinsic" =>
+            for Switches ("C") use Compiler'Switches ("C") & ("-DATOMIC_INTRINSICS");
+      end case;
    end Compiler;
 
    package Ide renames GnatColl_Shared.Ide;
@@ -65,6 +70,15 @@ project GnatColl is
               use "gnatcoll-mmap-system__win32.adb";
             for Implementation ("GNATCOLL.IO.Native.Codec")
               use "gnatcoll-io-native-codec__win32.adb";
+      end case;
+
+      case GnatColl_Shared.Atomics is
+         when "intrinsic" =>
+            for Implementation ("GNATCOLL.Atomic")
+               use "gnatcoll-atomic__intrinsic.ada";
+         when "mutex" =>
+            for Implementation ("GNATCOLL.Atomic")
+               use "gnatcoll-atomic__mutex.ada";
       end case;
    end Naming;
 

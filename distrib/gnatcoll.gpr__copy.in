@@ -49,6 +49,9 @@ project GnatColl is
 
    Rss_Libs := (@RSS_LIBS_GPR@);
 
+   type Atomics_Kinds is ("intrinsic", "mutex");
+   Atomics : Atomics_Kinds := "@SYNC_COUNTERS_IMPL@";
+
    for Externally_Built use "true";
 
    package Naming is
@@ -67,6 +70,15 @@ project GnatColl is
               use "gnatcoll-mmap-system__win32.adb";
             for Implementation ("GNATCOLL.IO.Native.Codec")
 	      use "gnatcoll-io-native-codec__win32.adb";
+      end case;
+
+      case Atomics is
+         when "intrinsic" =>
+            for Implementation ("GNATCOLL.Atomic")
+               use "gnatcoll-atomic__intrinsic.ada";
+         when "mutex" =>
+            for Implementation ("GNATCOLL.Atomic")
+               use "gnatcoll-atomic__mutex.ada";
       end case;
    end Naming;
 

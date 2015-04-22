@@ -54,4 +54,24 @@ package body GNATCOLL.Atomic is
       Dummy := Sync_Add_And_Fetch (Ptr, Value);
    end Sync_Add_And_Fetch;
 
+   --------------------------------
+   -- Sync_Bool_Compare_And_Swap --
+   --------------------------------
+
+   function Sync_Bool_Compare_And_Swap
+      (Ptr    : access Element_Access;
+       Oldval : Element_Access;
+       Newval : Element_Access) return Boolean is
+   begin
+      GNAT.Task_Lock.Lock;
+      if Ptr.all = Oldval then
+         Ptr.all := Newval;
+         GNAT.Task_Lock.Unlock;
+         return True;
+      else
+         GNAT.Task_Lock.Unlock;
+         return False;
+      end if;
+   end Sync_Bool_Compare_And_Swap;
+
 end GNATCOLL.Atomic;

@@ -38,3 +38,12 @@ In GNATColl, you will find the following storage pools:
   This package overcomes that limitation, by allocating larger chunks
   of memory than needed, and returning an address within that chunk which
   is properly aligned.
+
+*`GNATCOLL.Storage_Pools.Headers`*
+  This pool allows you to allocate memory for the element and reserve extra
+  space before it for a header. This header can be used to store per-element
+  information, like for instance a reference counter, or next and previous
+  links to other elements in the same collection.
+
+  In many cases, this can be used to reduce the number of allocations, and
+  thus speed up the overall application.

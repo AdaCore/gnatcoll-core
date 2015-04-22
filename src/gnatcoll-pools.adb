@@ -23,7 +23,6 @@
 
 with Ada.Unchecked_Deallocation;
 with GNATCOLL.Refcount;           use GNATCOLL.Refcount;
-with GNATCOLL.Refcount.Weakref;   use GNATCOLL.Refcount.Weakref;
 with GNATCOLL.Traces;             use GNATCOLL.Traces;
 with Interfaces;                  use Interfaces;
 
@@ -125,7 +124,7 @@ package body GNATCOLL.Pools is
       entry Get (for Set in Resource_Set) (Element : out Resource'Class)
         when Elements (Set).Available > 0
       is
-         In_Pool : Pointers.Encapsulated_Access;
+         In_Pool : Resource_Data;
       begin
          Elements (Set).Available := Elements (Set).Available - 1;
 
@@ -153,9 +152,8 @@ package body GNATCOLL.Pools is
                  (Element           => Factory (Elements (Set).Param),
                   Available         => False);
 
-               In_Pool := new Resource_Data'
-                 (Weak_Refcounted with
-                  Set    => Set,
+               In_Pool := Resource_Data'
+                 (Set    => Set,
                   In_Set => Elements (Set).Elements (E));
                Element.Set (In_Pool);
                return;
@@ -167,9 +165,8 @@ package body GNATCOLL.Pools is
                end if;
                Elements (Set).Elements (E).Available         := False;
 
-               In_Pool := new Resource_Data'
-                 (Weak_Refcounted with
-                  Set    => Set,
+               In_Pool := Resource_Data'
+                 (Set    => Set,
                   In_Set => Elements (Set).Elements (E));
                Element.Set (In_Pool);
                return;
@@ -252,7 +249,7 @@ package body GNATCOLL.Pools is
    -------------
 
    function Element (Self : Resource) return access Element_Type is
-      Enc : constant Encapsulated_Access := Get (Self);
+      Enc : access Resource_Data := Get (Self);
    begin
       Assert (Me, Enc /= null,
               "A wrapper should not exist without an element");
@@ -274,19 +271,17 @@ package body GNATCOLL.Pools is
    --------------
 
    function Get_Weak (Self : Resource'Class) return Weak_Resource is
-      W : Weak_Ref;
    begin
-      W := Get_Weak_Ref (Self);
-      return Weak_Resource'(Ref => W);
+      return Weak_Resource'(Ref => Self.Weak);
    end Get_Weak;
 
    ---------
    -- Get --
    ---------
 
-   procedure Get (Self : Weak_Resource; Res : out Resource'Class) is
+   procedure Get (Self : Weak_Resource; Res : out Resource) is
    begin
-      Get (Self.Ref, Res);
+      Res.Set (Self.Ref);
    end Get;
 
    ---------------
@@ -311,10 +306,8 @@ package body GNATCOLL.Pools is
    -- Free --
    ----------
 
-   overriding procedure Free (Self : in out Resource_Data) is
+   procedure Free (Self : in out Resource_Data) is
    begin
-      Free (Weak_Refcounted (Self));
-
       --  Call the user's callback before releasing into the pool, so that the
       --  resource doesn't get reused in the meantime.
 
@@ -355,9 +348,9 @@ package body GNATCOLL.Pools is
    -- Get_Refcount --
    ------------------
 
-   overriding function Get_Refcount (Self : Resource) return Natural is
+   function Get_Refcount (Self : Resource) return Natural is
    begin
-      return Pointers.Pointers.Get_Refcount (Pointers.Pointers.Ref (Self));
+      return Pointers.Get_Refcount (Self);
    end Get_Refcount;
 
 end GNATCOLL.Pools;

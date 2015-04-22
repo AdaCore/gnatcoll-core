@@ -83,7 +83,7 @@ package body GNATCOLL.SQL.Exec.Tasking is
      new Ada.Containers.Indefinite_Vectors (Natural, Record_Type);
    --  Zero index is for field names
 
-   type Data_Set is new Refcounted with record
+   type Data_Set is record
       Table   : Data_Set_Vectors.Vector;
       Error   : Unbounded_String;
       Status  : Unbounded_String;
@@ -91,7 +91,7 @@ package body GNATCOLL.SQL.Exec.Tasking is
       Success : Boolean;
    end record;
 
-   package Data_Set_Pointers is new Smart_Pointers (Data_Set);
+   package Data_Set_Pointers is new Shared_Pointers (Data_Set);
 
    type Task_Cursor is new DBMS_Direct_Cursor with record
       Position : Natural := 1;
@@ -278,8 +278,7 @@ package body GNATCOLL.SQL.Exec.Tasking is
       Result := new Task_Cursor;
 
       Result.Data.Set (Data_Set'
-                         (Refcounted with
-                          Error   => To_Unbounded_String (Src.Error_Msg),
+                         (Error   => To_Unbounded_String (Src.Error_Msg),
                           Status  => To_Unbounded_String (Src.Status),
                           Success => Src.Is_Success,
                           TID     => Current_Task,
