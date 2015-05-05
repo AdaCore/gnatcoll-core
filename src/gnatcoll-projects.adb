@@ -6388,19 +6388,35 @@ package body GNATCOLL.Projects is
          else
             "");
 
-      Elem : constant Array_Element_Id := Value_Of
-         (Get_String ("runtime"), Project.Decl.Arrays, Shared);
+      function Get_Value_Of_Runtime (Project : Project_Id) return String;
+      --  Look for the value of Runtime attribute in given project or projects
+      --  extended by it recursively.
+
+      function Get_Value_Of_Runtime (Project : Project_Id) return String is
+         Elem : constant Array_Element_Id := Value_Of
+           (Get_String ("runtime"), Project.Decl.Arrays, Shared);
+      begin
+         if Elem = No_Array_Element then
+            if Project.Extends = Prj.No_Project then
+               return Value_Of (Nil_Variable_Value, Unset);
+            else
+               return Get_Value_Of_Runtime (Project.Extends);
+            end if;
+         else
+            return Value_Of
+               (Value_Of
+                    (Index    => Get_String ("ada"),
+                     In_Array => Elem,
+                     Shared   => Shared),
+              Unset);
+         end if;
+      end Get_Value_Of_Runtime;
+
       Runtime : constant String :=
          (if Tree.Data.Env.Forced_Runtime /= null then
             Tree.Data.Env.Forced_Runtime.all
           else
-            Value_Of
-               ((if Elem = No_Array_Element then Nil_Variable_Value
-                 else Value_Of
-                    (Index    => Get_String ("ada"),
-                     In_Array => Elem,
-                     Shared   => Shared)),
-                Unset));
+            Get_Value_Of_Runtime (Project));
 
       function Default_Gnatls return String;
       --  Compute the default 'gnatls' command to spawn
