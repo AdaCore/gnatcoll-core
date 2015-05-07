@@ -87,7 +87,8 @@ package GNATCOLL.Refcount is
 
    generic
       type Element_Type (<>) is private;
-      --  The element that will be encapsulated within a smart pointer
+      --  The element that will be encapsulated within a smart pointer.
+      --  We need to be able to copy it as part of Set.
 
       with procedure Release (Self : in out Element_Type) is null;
       --  This procedure should be used if you need to perform actions when
@@ -148,7 +149,39 @@ package GNATCOLL.Refcount is
       --  Warning: this must only be called when Element comes from a
       --  shared pointer, otherwise an invalid memory access will result.
 
-      function Get (Self : Ref'Class) return Element_Access
+      type Reference_Type (Element : access Element_Type)
+         is limited null record
+         with Implicit_Dereference => Element;
+      --  A reference to an element_type.
+      --  This type is used as the return value for Get, instead of an
+      --  Element_Access, because it is safer:
+      --     * applications cannot free the returned value (and
+      --       they should never do it !)
+      --     * the Element discriminant cannot be stored in a variable,
+      --       so that prevents keeping a reference when it could be freed at
+      --       any time.
+      --     * since the type is limited, it is in general difficult to
+      --       store it in records. This is intended, since the shared
+      --       pointer itself should be stored instead (at the access type
+      --       might be freed at any time).
+      --  This type is often mostly transparent for the application. Assuming
+      --  the Element_Type is defined as:
+      --
+      --       type Element_Type is tagged record
+      --          Field : Integer;
+      --       end record;
+      --       procedure Primitive (Self : Element_Type);
+      --       procedure Primitive2 (Self : access Element_Type);
+      --
+      --  then a shared pointer SP can be used as:
+      --
+      --       SP.Get.Field := 1;
+      --       SP.Get.Primitive1;
+      --       SP.Get.Element.Primitive2;
+
+      function Get (Self : Ref'Class) return Reference_Type
+         with Inline => True;
+      function Unchecked_Get (Self : Ref'Class) return Element_Access
          with Inline => True;
       --  The resulting access must not be deallocated. Passing it to
       --  Set might also be dangerous if the Element_Type contains data

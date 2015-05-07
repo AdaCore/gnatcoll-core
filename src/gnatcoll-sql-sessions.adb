@@ -104,7 +104,7 @@ package body GNATCOLL.SQL.Sessions is
       R : Pointers.Ref;
    begin
       R.Set (Self.Ref);
-      return Detached_Data_Access (R.Get);
+      return Detached_Data_Access (R.Unchecked_Get);
       --   ??? That's bad, the data could be freed while we return it
    end Get_Data;
 
@@ -115,7 +115,7 @@ package body GNATCOLL.SQL.Sessions is
    function Get_Data
      (Self : Detached_Element_Access) return Detached_Data_Access is
    begin
-      return Detached_Data_Access (Self.Get);
+      return Detached_Data_Access (Self.Unchecked_Get);
    end Get_Data;
 
    ------------------
@@ -340,15 +340,6 @@ package body GNATCOLL.SQL.Sessions is
       return Self.Element.Factory (From, Default);
    end Factory;
 
-   -------------
-   -- Is_Null --
-   -------------
-
-   function Is_Null (Self : Detached_Element) return Boolean is
-   begin
-      return Self.Get = null;
-   end Is_Null;
-
    ----------
    -- Free --
    ----------
@@ -557,7 +548,8 @@ package body GNATCOLL.SQL.Sessions is
    procedure Set_Modified
      (Self : Detached_Element; Field : Natural)
    is
-      D : constant Detached_Data_Access := Detached_Data_Access (Self.Get);
+      D : constant Detached_Data_Access :=
+         Detached_Data_Access (Self.Unchecked_Get);
       Session : Session_Type;
       Was_Dirty : constant Boolean := Is_Dirty (D);
    begin
@@ -640,7 +632,8 @@ package body GNATCOLL.SQL.Sessions is
    procedure Persist
      (Self : Session_Type; Element : Detached_Element'Class)
    is
-      D : constant Detached_Data_Access := Detached_Data_Access (Element.Get);
+      D : constant Detached_Data_Access :=
+         Detached_Data_Access (Element.Unchecked_Get);
    begin
       if D = null then
          return;
@@ -683,7 +676,8 @@ package body GNATCOLL.SQL.Sessions is
    ------------------
 
    procedure Add_To_Cache (Self : Session_Type; E : Detached_Element'Class) is
-      K : constant Element_Key := Key (Detached_Data_Access (E.Get).all);
+      K : constant Element_Key :=
+         Key (Detached_Data_Access (E.Unchecked_Get).all);
       T : Detached_Element_Access;
       Inserted : Boolean;
       C : Element_Maps.Cursor;
@@ -779,7 +773,7 @@ package body GNATCOLL.SQL.Sessions is
       Element : in out Detached_Element'Class)
    is
       D  : constant Detached_Data_Access :=
-        Detached_Data_Access (Get (Element));
+        Detached_Data_Access (Element.Unchecked_Get);
       PK_Modified : Boolean := False;
    begin
       if D = null or else not Is_Dirty (D) then
@@ -944,7 +938,7 @@ package body GNATCOLL.SQL.Sessions is
 
    function Session (Self : Detached_Element'Class) return Session_Type is
    begin
-      return Get (Detached_Data_Access (Self.Get).Session);
+      return Get (Detached_Data_Access (Self.Unchecked_Get).Session);
    end Session;
 
    ----------------------
@@ -954,7 +948,7 @@ package body GNATCOLL.SQL.Sessions is
    function Get_Weak_Session
      (Self : Detached_Element'Class) return Weak_Session is
    begin
-      return Detached_Data_Access (Self.Get).Session;
+      return Detached_Data (Self.Get.Element.all).Session;
    end Get_Weak_Session;
 
    ------------------------

@@ -181,12 +181,11 @@ package body GNATCOLL.SQL.Inspect is
    --------------
 
    function Get_Type (Self : Field) return Field_Type is
-      D  : constant access Field_Description := Self.Get;
       FK : constant Field := Self.Is_FK;
       T  : Field_Type;
    begin
       if FK = No_Field then
-         return D.Typ;
+         return Self.Get.Typ;
       else
          T := Get_Type (FK);
          if T.Kind = Field_Autoincrement then
@@ -252,7 +251,7 @@ package body GNATCOLL.SQL.Inspect is
    ------------
 
    function Get_PK (Self : Table_Description'Class) return Field is
-      F  : Field_Lists.Cursor := TDR (Self.Get).Fields.First;
+      F  : Field_Lists.Cursor := TDR (Self.Unchecked_Get).Fields.First;
       PK : Field := No_Field;
    begin
       while Has_Element (F) loop
@@ -280,12 +279,10 @@ package body GNATCOLL.SQL.Inspect is
    begin
       if Self.Get.FK then
          T := Table_Description (Get_Table (Self));
-         C := TDR (T.Get).FK.First;
+         C := TDR (T.Unchecked_Get).FK.First;
          while Has_Element (C) loop
             declare
-               FK : constant access Foreign_Key_Description :=
-                 Element (C).Get;
-               A : Pair_Lists.Cursor := FK.Fields.First;
+               A : Pair_Lists.Cursor := Element (C).Get.Fields.First;
                P : Field_Pair;
             begin
                while Has_Element (A) loop
@@ -322,7 +319,7 @@ package body GNATCOLL.SQL.Inspect is
 
    function Id (Self : Table_Description) return Positive is
    begin
-      return TDR (Self.Get).Id;
+      return TDR (Self.Unchecked_Get).Id;
    end Id;
 
    --------------
@@ -331,7 +328,7 @@ package body GNATCOLL.SQL.Inspect is
 
    function Get_Kind (Self : Table_Description) return Relation_Kind is
    begin
-      return TDR (Self.Get).Kind;
+      return TDR (Self.Unchecked_Get).Kind;
    end Get_Kind;
 
    ----------
@@ -340,7 +337,7 @@ package body GNATCOLL.SQL.Inspect is
 
    function Name (Self : Table_Description) return String is
    begin
-      return TDR (Self.Get).Name.all;
+      return TDR (Self.Unchecked_Get).Name.all;
    end Name;
 
    --------------
@@ -348,10 +345,11 @@ package body GNATCOLL.SQL.Inspect is
    --------------
 
    function Row_Name (Self : Table_Description) return String is
-      Row : constant GNAT.Strings.String_Access := TDR (Self.Get).Row;
+      Row : constant GNAT.Strings.String_Access :=
+         TDR (Self.Unchecked_Get).Row;
    begin
       if Row = null then
-         return TDR (Self.Get).Name.all;
+         return Name (Self);
       else
          return Row.all;
       end if;
@@ -363,7 +361,7 @@ package body GNATCOLL.SQL.Inspect is
 
    function Description (Self : Table_Description) return String is
       Descr : constant GNAT.Strings.String_Access :=
-        TDR (Self.Get).Description;
+        TDR (Self.Unchecked_Get).Description;
    begin
       if Descr = null then
          return "";
@@ -378,7 +376,7 @@ package body GNATCOLL.SQL.Inspect is
 
    function Is_Abstract (Self : Table_Description) return Boolean is
    begin
-      return TDR (Self.Get).Is_Abstract;
+      return TDR (Self.Unchecked_Get).Is_Abstract;
    end Is_Abstract;
 
    ----------------
@@ -387,7 +385,7 @@ package body GNATCOLL.SQL.Inspect is
 
    procedure Set_Active (Self : in out Table_Description; Active : Boolean) is
    begin
-      TDR (Self.Get).Active := Active;
+      TDR (Self.Unchecked_Get).Active := Active;
    end Set_Active;
 
    ---------------
@@ -396,7 +394,7 @@ package body GNATCOLL.SQL.Inspect is
 
    function Is_Active (Self : Table_Description) return Boolean is
    begin
-      return TDR (Self.Get).Active;
+      return TDR (Self.Unchecked_Get).Active;
    end Is_Active;
 
    -----------------
@@ -405,7 +403,7 @@ package body GNATCOLL.SQL.Inspect is
 
    function Super_Table (Self : Table_Description) return Table_Description is
    begin
-      return TDR (Self.Get).Super_Table;
+      return TDR (Self.Unchecked_Get).Super_Table;
    end Super_Table;
 
    --------------------
@@ -417,7 +415,7 @@ package body GNATCOLL.SQL.Inspect is
       Callback          : access procedure (F : in out Field);
       Include_Inherited : Boolean := False)
    is
-      C      : Field_Lists.Cursor := TDR (Self.Get).Fields.First;
+      C      : Field_Lists.Cursor := TDR (Self.Unchecked_Get).Fields.First;
       F      : Field;
    begin
       while Has_Element (C) loop
@@ -427,7 +425,7 @@ package body GNATCOLL.SQL.Inspect is
       end loop;
 
       if Include_Inherited
-        and then TDR (Self.Get).Super_Table /= No_Table
+        and then TDR (Self.Unchecked_Get).Super_Table /= No_Table
       then
          For_Each_Field (Self.Super_Table, Callback, Include_Inherited);
       end if;
@@ -541,7 +539,7 @@ package body GNATCOLL.SQL.Inspect is
       P  : Pair_Lists.Cursor;
       Id : Integer := 1;
    begin
-      F := TDR (Self.Get).FK.First;
+      F := TDR (Self.Unchecked_Get).FK.First;
       while Has_Element (F) loop
          P := Element (F).Get.Fields.First;
          while Has_Element (P) loop
@@ -805,7 +803,7 @@ package body GNATCOLL.SQL.Inspect is
          Descr.Description := new String'(Description);
          Ref.Set (Descr);
 
-         Parse_Table (Self, Ref, TDR (Ref.Get).Fields);
+         Parse_Table (Self, Ref, TDR (Ref.Unchecked_Get).Fields);
 
          Insert (Schema.Tables, Name, Ref);
          Schema.Ordered_Tables.Append (Name);
@@ -819,7 +817,7 @@ package body GNATCOLL.SQL.Inspect is
         (Descr     : Table_Description;
          Index     : Natural) return Field
       is
-         A : Field_Lists.Cursor := First (TDR (Descr.Get).Fields);
+         A : Field_Lists.Cursor := First (TDR (Descr.Unchecked_Get).Fields);
       begin
          while Has_Element (A) loop
             if Element (A).Id = Index then
@@ -863,7 +861,7 @@ package body GNATCOLL.SQL.Inspect is
 
                if Prev_Index /= -1 then
                   R.Set (Descr);
-                  Append (TDR (Table.Get).FK, R);
+                  Append (TDR (Table.Unchecked_Get).FK, R);
                end if;
 
                Prev_Index := Index;
@@ -895,7 +893,7 @@ package body GNATCOLL.SQL.Inspect is
 
          if Prev_Index /= -1 then
             R.Set (Descr);
-            Append (TDR (Table.Get).FK, R);
+            Append (TDR (Table.Unchecked_Get).FK, R);
          end if;
       end Compute_Foreign_Keys;
 
@@ -933,26 +931,20 @@ package body GNATCOLL.SQL.Inspect is
       Foreign   : Table_Description;
       Ambiguous : out Boolean)
    is
-      --  C     : Foreign_Keys.Cursor := First (TDR (Table.Get).FK);
-      --  FK    : Foreign_Key;
+      use Tables_Ref;
       R     : Tables_Ref.Ref;
    begin
       Ambiguous := False;
-      for FK of TDR (Table.Get).FK loop
-      --  while Has_Element (C) loop
-      --     FK := Element (C);
-
+      for FK of TDR (Table.Unchecked_Get).FK loop
          R.Set (FK.Get.To_Table);
-         if TDR (R.Get) = TDR (Foreign.Get) then
+         if R = Tables_Ref.Ref (Foreign) then
             if not FK.Get.Ambiguous then
                FK.Get.Ambiguous := True;
-      --         Replace_Element (TDR (Table.Get).FK, C, FK);
             end if;
 
             Ambiguous := True;
             return;
          end if;
-      --   Next (C);
       end loop;
    end Mark_FK_As_Ambiguous;
 
@@ -1145,7 +1137,7 @@ package body GNATCOLL.SQL.Inspect is
                Last := First + 1;
                while Last <= Table_Def'Last loop
                   if Table_Def (Last) = ')' then
-                     TDR (Table.Get).Super_Table :=
+                     TDR (Table.Unchecked_Get).Super_Table :=
                        Get_Table (Schema, Table_Def (First + 1 .. Last - 1));
                      return;
                   end if;
@@ -1202,7 +1194,8 @@ package body GNATCOLL.SQL.Inspect is
                Table := Element (C);
             end if;
 
-            TDR (Table.Get).Is_Abstract := Starts_With (Table_Def, "ABSTRACT");
+            TDR (Table.Unchecked_Get).Is_Abstract :=
+               Starts_With (Table_Def, "ABSTRACT");
          end;
 
          Parse_Table_Inheritance (Table_Def, Table);
@@ -1234,8 +1227,8 @@ package body GNATCOLL.SQL.Inspect is
                   To_Table : Table_Description;
 
                begin
-                  TDR (Table.Get).Has_PK :=
-                    Props.PK or else TDR (Table.Get).Has_PK;
+                  TDR (Table.Unchecked_Get).Has_PK :=
+                    Props.PK or else TDR (Table.Unchecked_Get).Has_PK;
 
                   Att.Set (Field_Description'
                          (Name        => new String'(Line (1).all),
@@ -1248,7 +1241,7 @@ package body GNATCOLL.SQL.Inspect is
                             and then Typ (Typ'First .. Typ'First + 2) = "FK ",
                           Table       => Table.Weak,
                           Active      => True));
-                  Append (TDR (Table.Get).Fields, Att);
+                  Append (TDR (Table.Unchecked_Get).Fields, Att);
 
                   if Att.Get.FK then
                      Tmp := Find_Char (Typ (Typ'First + 3 .. Typ'Last), '(');
@@ -1291,7 +1284,7 @@ package body GNATCOLL.SQL.Inspect is
                                 To   => No_Field));   --  To primary key
 
                      FK.Set (FKD);
-                     Append (TDR (Table.Get).FK, FK);
+                     Append (TDR (Table.Unchecked_Get).FK, FK);
 
                      Att.Get.FK := True;
 
@@ -1370,17 +1363,17 @@ package body GNATCOLL.SQL.Inspect is
                   end loop;
                end;
 
-               TDR (From_Table.Get).FK.Append (FK);
+               TDR (From_Table.Unchecked_Get).FK.Append (FK);
 
             elsif Line (1).all = "INDEX:" then
                if Line (3).all = "" then
-                  TDR (From_Table.Get).Indexes.Append
+                  TDR (From_Table.Unchecked_Get).Indexes.Append
                     (Line (2).all
                      & "|"
                      & Name & "_idx"
                      & Image (Index_Count, Min_Width => 1));
                else
-                  TDR (From_Table.Get).Indexes.Append
+                  TDR (From_Table.Unchecked_Get).Indexes.Append
                     (Line (2).all & "|" & Line (3).all);
                end if;
 
@@ -1539,7 +1532,8 @@ package body GNATCOLL.SQL.Inspect is
          -------------------
 
          procedure Print_Indexes (Table : Table_Description) is
-            C : String_Lists.Cursor := TDR (Table.Get).Indexes.First;
+            C : String_Lists.Cursor :=
+               TDR (Table.Unchecked_Get).Indexes.First;
          begin
             while Has_Element (C) loop
                declare
@@ -1572,20 +1566,15 @@ package body GNATCOLL.SQL.Inspect is
             --  The deferred statement to execute
 
             Stmt_FK, Stmt_References : Unbounded_String;
-
-            C : Foreign_Keys.Cursor := TDR (Table.Get).FK.First;
-            F : access Foreign_Key_Description;
             P : Pair_Lists.Cursor;
             Is_First : Boolean;
          begin
-            while Has_Element (C) loop
-               F := Element (C).Get;
-
+            for R of TDR (Table.Unchecked_Get).FK loop
                --  Prepare the constraint
 
                Stmt_FK := To_Unbounded_String (" FOREIGN KEY (");
                Is_First := True;
-               P := F.Fields.First;
+               P := R.Get.Fields.First;
                while Has_Element (P) loop
                   if not Is_First then
                      Append (Stmt_FK, ",");
@@ -1597,9 +1586,9 @@ package body GNATCOLL.SQL.Inspect is
                Append (Stmt_FK, ")");
 
                Stmt_References := To_Unbounded_String
-                 (" REFERENCES """ & Element (C).To_Table.Name & """ (");
+                 (" REFERENCES """ & R.To_Table.Name & """ (");
                Is_First := True;
-               P := F.Fields.First;
+               P := R.Get.Fields.First;
                while Has_Element (P) loop
                   if not Is_First then
                      Append (Stmt_References, ",");
@@ -1608,8 +1597,7 @@ package body GNATCOLL.SQL.Inspect is
 
                   if Element (P).To = No_Field then
                      Append
-                       (Stmt_References,
-                        '"' & Element (C).To_Table.Get_PK.Name & '"');
+                       (Stmt_References, '"' & R.To_Table.Get_PK.Name & '"');
                   else
                      Append
                        (Stmt_References, '"' & Element (P).To.Name & '"');
@@ -1624,7 +1612,7 @@ package body GNATCOLL.SQL.Inspect is
                --  new constraint directly in the table creation which is more
                --  efficient (a single SQL statement).
 
-               if Created.Contains (Element (C).To_Table.Name) then
+               if Created.Contains (R.To_Table.Name) then
                   Append (SQL, "," & ASCII.LF & Stmt_FK);
 
                elsif Self.DB.Can_Alter_Table_Constraints then
@@ -1632,11 +1620,12 @@ package body GNATCOLL.SQL.Inspect is
                     (Deferred,
                      To_String
                        ("ALTER TABLE """ & Table.Name & """ ADD CONSTRAINT "
-                        & Element (F.Fields.First).From.Name & "_fk" & Stmt_FK
+                        & Element (R.Get.Fields.First).From.Name
+                        & "_fk" & Stmt_FK
                         & Deferred_FK));
 
                else
-                  P := F.Fields.First;
+                  P := R.Get.Fields.First;
                   while Has_Element (P) loop
                      --  Sqlite only allows adding a NON NULL REFERENCES column
                      --  if it has a non-null default. So we need to provide a
@@ -1644,7 +1633,7 @@ package body GNATCOLL.SQL.Inspect is
 
                      Get_Field_Def (Element (P).From, Stmt2,
                                     Can_Be_Not_Null => False,
-                                    FK_Table => Element (C).To_Table.Name);
+                                    FK_Table => R.To_Table.Name);
                      Stmt2 := "ALTER TABLE """ & Table.Name & """ ADD COLUMN "
                        & Stmt2 & Stmt_References;
                      Append (Deferred, To_String (Stmt2));
@@ -1655,25 +1644,23 @@ package body GNATCOLL.SQL.Inspect is
                --  Create indexes for the reverse relationships, since it is
                --  likely the user will want to use them a lot anyway
 
-               if Length (F.Fields) = 1
+               if Length (R.Get.Fields) = 1
 
                  --  Unless already created explicitly
-                 and not Element (F.Fields.First).From.Get.Props.Indexed
+                 and not Element (R.Get.Fields.First).From.Get.Props.Indexed
 
                  --  Unless disabled by the user
-                 and not Element (F.Fields.First).From.Get.Props.Noindex
+                 and not Element (R.Get.Fields.First).From.Get.Props.Noindex
                then
                   Append (Deferred_Indexes,
                           "CREATE INDEX """
                           & Table.Name & "_"
-                          & Element (F.Fields.First).From.Name
+                          & Element (R.Get.Fields.First).From.Name
                           & "_idx"" ON """
                           & Table.Name & """ ("""
-                          & Element (F.Fields.First).From.Name
+                          & Element (R.Get.Fields.First).From.Name
                           & """)");
                end if;
-
-               Next (C);
             end loop;
          end Print_FK;
 
@@ -1985,24 +1972,19 @@ package body GNATCOLL.SQL.Inspect is
       ---------------
 
       procedure For_Table (Table : in out Table_Description) is
-         A  : Field_Lists.Cursor;
-         F  : Foreign_Keys.Cursor;
-         FK : access Foreign_Key_Description;
          P  : Pair_Lists.Cursor;
       begin
          --  Compute widths
          --  Minimum size of column 1 is 5 (for "TABLE")
          if Align_Columns then
             Column_Widths := (1 => 5, 2 => 0, 3 => Not_Null'Length, 4 => 0);
-            A := First (TDR (Table.Get).Fields);
-            while Has_Element (A) loop
+            for A of TDR (Table.Unchecked_Get).Fields loop
                Column_Widths (1) := Integer'Max
-                 (Column_Widths (1), Element (A).Name'Length);
+                 (Column_Widths (1), A.Name'Length);
                Column_Widths (2) := Integer'Max
-                 (Column_Widths (2), SQL_Type (Element (A))'Length);
+                 (Column_Widths (2), SQL_Type (A)'Length);
                Column_Widths (4) := Integer'Max
-                 (Column_Widths (4), Element (A).Default'Length);
-               Next (A);
+                 (Column_Widths (4), A.Default'Length);
             end loop;
 
          else
@@ -2022,14 +2004,11 @@ package body GNATCOLL.SQL.Inspect is
 
          For_Each_Field (Table, For_Field'Access, True);
 
-         F := TDR (Table.Get).FK.First;
-         while Has_Element (F) loop
-            FK := Element (F).Get;
+         for FK of TDR (Table.Unchecked_Get).FK loop
+            if Length (FK.Get.Fields) > 1 then
+               Put ("| FK: | " & FK.To_Table.Name & " | ");
 
-            if Length (FK.Fields) > 1 then
-               Put ("| FK: | " & Element (F).To_Table.Name & " | ");
-
-               P := FK.Fields.First;
+               P := FK.Get.Fields.First;
                while Has_Element (P) loop
                   Put (Element (P).From.Name & " ");
                   Next (P);
@@ -2037,7 +2016,7 @@ package body GNATCOLL.SQL.Inspect is
 
                Put (" | ");
 
-               P := FK.Fields.First;
+               P := FK.Get.Fields.First;
                while Has_Element (P) loop
                   Put (Element (P).To.Name & " ");
                   Next (P);
@@ -2045,31 +2024,22 @@ package body GNATCOLL.SQL.Inspect is
 
                Put (" |" & ASCII.LF);
             end if;
-
-            Next (F);
          end loop;
 
-         declare
-            C : String_Lists.Cursor := TDR (Table.Get).Indexes.First;
-         begin
-            while Has_Element (C) loop
-               declare
-                  Descr : constant String := Element (C);
-                  Name_Start : Integer := Descr'First + 1;
-               begin
-                  while Descr (Name_Start) /= '|' loop
-                     Name_Start := Name_Start + 1;
-                  end loop;
+         for Descr of TDR (Table.Unchecked_Get).Indexes loop
+            declare
+               Name_Start : Integer := Descr'First + 1;
+            begin
+               while Descr (Name_Start) /= '|' loop
+                  Name_Start := Name_Start + 1;
+               end loop;
 
-                  Put ("|INDEX:|"
-                       & Descr (Descr'First .. Name_Start - 1)
-                       & "|" & Descr (Name_Start + 1 .. Descr'Last)
-                       & ASCII.LF);
-               end;
-
-               Next (C);
-            end loop;
-         end;
+               Put ("|INDEX:|"
+                    & Descr (Descr'First .. Name_Start - 1)
+                    & "|" & Descr (Name_Start + 1 .. Descr'Last)
+                    & ASCII.LF);
+            end;
+         end loop;
 
          Put ("" & ASCII.LF);
       end For_Table;

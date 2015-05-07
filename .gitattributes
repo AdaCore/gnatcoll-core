@@ -5,3 +5,5 @@ testsuite/*/*/*/*/*                        no-precommit-check
 # Third-party package
 src/getRSS.c                               no-precommit-check
 src/sqlite/amalgamation/*                  no-precommit-check
+
+src/dborm.py                               no-precommit-check

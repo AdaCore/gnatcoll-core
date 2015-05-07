@@ -100,6 +100,7 @@
 --             DIRECT_CURSOR =>  0.015502000 s
 
 pragma Ada_2012;
+
 with Ada.Calendar;
 with System;
 private with Ada.Finalization;

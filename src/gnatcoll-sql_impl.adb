@@ -153,7 +153,7 @@ package body GNATCOLL.SQL_Impl is
          Long   : Boolean := True) return String is
       begin
          if not Self.Data.Is_Null then
-            return To_String (Self.Data.Get.all, Format, Long);
+            return To_String (Self.Data.Get.Element.all, Format, Long);
          else
             return "";
          end if;
@@ -163,7 +163,7 @@ package body GNATCOLL.SQL_Impl is
         (Self : Field; To : in out Table_Sets.Set) is
       begin
          if not Self.Data.Is_Null then
-            Append_Tables (Self.Data.Get.all, To);
+            Append_Tables (Self.Data.Get.Element.all, To);
          end if;
       end Append_Tables;
 
@@ -174,7 +174,7 @@ package body GNATCOLL.SQL_Impl is
       is
       begin
          if not Self.Data.Is_Null then
-            Append_If_Not_Aggregate (Self.Data.Get, To, Is_Aggregate);
+            Append_If_Not_Aggregate (Self.Data.Get.Element, To, Is_Aggregate);
          end if;
       end Append_If_Not_Aggregate;
    end Data_Fields;
@@ -363,7 +363,7 @@ package body GNATCOLL.SQL_Impl is
    overriding procedure Append_Tables
      (Self : Function_Field; To : in out Table_Sets.Set) is
    begin
-      Append_Tables (Self.To_Field.Get.all, To);
+      Append_Tables (Self.To_Field.Get.Element.all, To);
    end Append_Tables;
 
    -----------------------------
@@ -376,7 +376,8 @@ package body GNATCOLL.SQL_Impl is
       Is_Aggregate : in out Boolean)
    is
    begin
-      Append_If_Not_Aggregate (Self.To_Field.Get.all, To, Is_Aggregate);
+      Append_If_Not_Aggregate
+         (Self.To_Field.Get.Element.all, To, Is_Aggregate);
    end Append_If_Not_Aggregate;
 
    -----------------------------
@@ -525,7 +526,7 @@ package body GNATCOLL.SQL_Impl is
    is
    begin
       if not Self.Criteria.Is_Null then
-         return To_String (Self.Criteria.Get.all, Format, Long);
+         return To_String (Self.Criteria.Get.Element.all, Format, Long);
       else
          return "";
       end if;
@@ -538,7 +539,7 @@ package body GNATCOLL.SQL_Impl is
    procedure Append_Tables (Self : SQL_Criteria; To : in out Table_Sets.Set) is
    begin
       if not Self.Criteria.Is_Null then
-         Append_Tables (Self.Criteria.Get.all, To);
+         Append_Tables (Self.Criteria.Get.Element.all, To);
       end if;
    end Append_Tables;
 
@@ -552,7 +553,8 @@ package body GNATCOLL.SQL_Impl is
       Is_Aggregate : in out Boolean) is
    begin
       if not Self.Criteria.Is_Null then
-         Append_If_Not_Aggregate (Self.Criteria.Get.all, To, Is_Aggregate);
+         Append_If_Not_Aggregate
+            (Self.Criteria.Get.Element.all, To, Is_Aggregate);
       end if;
    end Append_If_Not_Aggregate;
 
@@ -572,7 +574,7 @@ package body GNATCOLL.SQL_Impl is
 
    function Get_Data (Self : SQL_Criteria) return SQL_Criteria_Data_Access is
    begin
-      return Self.Criteria.Get;
+      return Self.Criteria.Unchecked_Get;
    end Get_Data;
 
    ---------
@@ -667,7 +669,7 @@ package body GNATCOLL.SQL_Impl is
       Format : Formatter'Class;
       Long   : Boolean) return String is
    begin
-      return To_String (Self.Get.all, Format, Long);
+      return To_String (Self.Get.Element.all, Format, Long);
    end To_String;
 
    -------------------
@@ -678,7 +680,7 @@ package body GNATCOLL.SQL_Impl is
      (Self : SQL_Field_Pointer; To : in out Table_Sets.Set) is
    begin
       if not Self.Is_Null then
-         Append_Tables (Self.Get.all, To);
+         Append_Tables (Self.Get.Element.all, To);
       end if;
    end Append_Tables;
 
@@ -692,7 +694,7 @@ package body GNATCOLL.SQL_Impl is
       Is_Aggregate : in out Boolean) is
    begin
       if not Self.Is_Null then
-         Append_If_Not_Aggregate (Self.Get.all, To, Is_Aggregate);
+         Append_If_Not_Aggregate (Self.Get.Element.all, To, Is_Aggregate);
       end if;
    end Append_If_Not_Aggregate;
 
@@ -713,7 +715,7 @@ package body GNATCOLL.SQL_Impl is
      (List : in out SQL_Field_List'Class; Field : SQL_Field_Pointer) is
    begin
       if not Field.Is_Null then
-         Append (List.List, Field.Get.all);
+         Append (List.List, Field.Get.Element.all);
       end if;
    end Append;
 
@@ -795,7 +797,7 @@ package body GNATCOLL.SQL_Impl is
             N.Set
               (Named_Field_Internal'
                  (SQL_Field_Internal with Typ => Field_Std, others => <>));
-            Named_Field_Internal (N.Get.all).Str_Value :=
+            Named_Field_Internal (N.Get.Element.all).Str_Value :=
               new String'(Null_String);
 
             List := List
@@ -913,7 +915,7 @@ package body GNATCOLL.SQL_Impl is
       pragma Unreferenced (Long);
    begin
       return Self.Prefix.all
-        & To_String (Self.To_Field.Get.all, Format, Long => True)
+        & To_String (Self.To_Field.Get.Element.all, Format, Long => True)
         & Self.Suffix.all;
    end To_String;
 

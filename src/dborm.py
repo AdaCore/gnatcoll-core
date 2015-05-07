@@ -114,7 +114,7 @@ def splitstr(str, maxlen):
 
 
 ######################################
-## Pretty-printer
+# Pretty-printer
 ######################################
 
 class Subprogram(object):
@@ -170,12 +170,12 @@ class Pretty_Printer(object):
         self.unique_body_cst = []
         self.private_before = ""        # Private part of the spec
         self.private_after = ""        # Private part of the spec
-        self.body_code = ""      # Goes in body before subprograms
-        self.sections = []       # Sections in the specs. Contains tuples:
-                                 #    0 => section name
-                                 #    1 => types declaration for the section
-                                 #    2 => list of subprograms:
-                                 #     (name, params, body, returns, comment)
+        self.body_code = ""    # Goes in body before subprograms
+        self.sections = []  # Sections in the specs. Contains tuples:
+                            #    0 => section name
+                            #    1 => types declaration for the section
+                            #    2 => list of subprograms:
+                            #     (name, params, body, returns, comment)
         self.sections.append(("", "", [], ""))  # Default subprograms
 
     def add_with(self, pkg, specs=True, do_use=True):
@@ -510,7 +510,7 @@ class Pretty_Printer(object):
         if not self.pkg_name:
             return
 
-        ## Specs
+        # Specs
 
         self._output_withs(self.spec_withs)
         self.out.write("pragma Style_Checks (Off);\n\n")
@@ -534,16 +534,13 @@ class Pretty_Printer(object):
 
         self.out.write("end %s;\n\n" % self.pkg_name)
 
-        ## Bodies
+        # Bodies
         self._output_withs(self.body_withs)
         self.out.write("pragma Style_Checks (Off);\n\n")
         self.out.write("package body %s is\n" % self.pkg_name)
 
         if need_dba:
-            self.out.write(
-                "   pragma Warnings (Off);\n")
-            #"   pragma Warnings (Off, \"*is not referenced\");\n")
-
+            self.out.write("   pragma Warnings (Off);\n")
             self.out.write("   use Sessions.Pointers;\n")
             if debug:
                 self.out.write(
@@ -562,7 +559,6 @@ class Pretty_Printer(object):
 
         if need_dba:
             self.out.write("\n\n")
-            #self.out.write("   pragma Warnings (On, \"*is not referenced\");")
             self.out.write("   pragma Warnings (On);")
         self.out.write("\n")
 
@@ -573,7 +569,7 @@ class Pretty_Printer(object):
 
 
 ######################################
-## Schema
+# Schema
 ######################################
 
 class Cannot_Parse_Schema(Exception):
@@ -584,7 +580,7 @@ class Schema(object):
     """A class that represents a database schema"""
 
     #############
-    ## __init__
+    # __init__
     #############
 
     def __init__(self, setup, tables, pretty, all_tables, omit):
@@ -602,7 +598,7 @@ class Schema(object):
         self.sql_tables = None
 
     #############
-    ## withs_for
+    # withs_for
     #############
 
     def withs_for(self, table):
@@ -626,7 +622,7 @@ class Schema(object):
             self.pretty.add_with("System.Address_Image", do_use=False)
 
     #################
-    ## params_create
+    # params_create
     #################
 
     def params_create(self, table):
@@ -636,10 +632,10 @@ class Schema(object):
                 for f in table.fields]
 
     ##########################
-    ## Compute the name of the subprogram to use for a field
-    ## If the field has the same name as one of the tables or rows, we would
-    ## get conflicts and couldn't compile the code, so we have to generate
-    ## a different name for the subprogram
+    # Compute the name of the subprogram to use for a field
+    # If the field has the same name as one of the tables or rows, we would
+    # get conflicts and couldn't compile the code, so we have to generate
+    # a different name for the subprogram
     ##########################
 
     def subprogram_name_from_field(self, field):
@@ -657,7 +653,7 @@ class Schema(object):
         return base
 
     ######################
-    ## call_create_params
+    # call_create_params
     ######################
 
     def call_create_params(self, table):
@@ -668,9 +664,9 @@ class Schema(object):
             params.append("%s => %s" % (pk.name.title(), pk.name.title()))
         return params
 
-    #########
-    ## equal
-    #########
+    #######
+    # equal
+    #######
 
     def equal(self, table):
         """Return the comparison operators when comparing Op1 and Op2
@@ -687,7 +683,7 @@ class Schema(object):
         return params
 
     #################
-    ## params_get_pk
+    # params_get_pk
     #################
 
     def params_get_pk(self, table):
@@ -704,8 +700,8 @@ class Schema(object):
 
         return params
 
-    ########################
-    ## detached_data_fields
+    #######################
+    # detached_data_fields
     #######################
 
     def detached_data_fields(self, table):
@@ -735,7 +731,7 @@ class Schema(object):
         return ";\n".join(sorted(data))
 
     ##################
-    ## unchecked_free
+    # unchecked_free
     ##################
 
     def unchecked_free(self, table, all_tables):
@@ -756,7 +752,7 @@ class Schema(object):
         return list(l)
 
     ###############
-    ## free_fields
+    # free_fields
     ###############
 
     def free_fields(self, table):
@@ -782,7 +778,7 @@ class Schema(object):
 
 
 ######################
-## subprogram_from_fk
+# subprogram_from_fk
 ######################
 
 def subprogram_from_fk(fk):
@@ -802,7 +798,7 @@ def subprogram_from_fk(fk):
 
 
 ######################################
-## generator for Internal_Query
+# generator for Internal_Query
 ######################################
 
 def internal_query(pretty, table, schema):
@@ -1118,27 +1114,29 @@ with this primary key. If not, the returned value will be a null element
         params=[("self", "%(row)s'Class" % translate),
                 ("session", database_connection)],
         returns="Detached_%(row)s'Class" % translate,
-        local_vars=decl + [("Tmp", "%(row)s_Data" % translate)],
+        local_vars=decl + [('Tmp', '%(row)s_Data' % translate)],
         body="""
-  Tmp := %(row)s_Data (Result.Get);
-  if Tmp = null then
-     Tmp := new %(row)s_DDR;
-     Set (Result, Tmp);
+  if Result.Is_Null then
+     Result.Set (%(row)s_DDR'
+        (Detached_Data with Field_Count => %(field_count)s, others => <>));
   end if;
 
+  Tmp := %(row)s_Data (Result.Unchecked_Get);
   %(tests)s %(aggregate)s
   %(traces)sSession.Persist (Result);
   return Result;
- """ % {"cap":       table.name,
-        "tests":     tests,
-        "row":       translate["row"],
-        "traces":    debug_msg(table, "Creating", "Result.all"),
-        "aggregate": "\n            ".join(sorted(aggregate))})
+ """ % {
+     "cap":       table.name,
+     "tests":     tests,
+     "row":       translate["row"],
+     "field_count": translate["field_count"],
+     "traces":    debug_msg(table, "Creating", "Result.all"),
+     "aggregate": "\n            ".join(sorted(aggregate))})
 
 
 ##########################
-## Prepare the sections in the specs
-## so that they appear in the right order
+# Prepare the sections in the specs
+# so that they appear in the right order
 ##########################
 
 def order_sections(schema, pretty, all_tables):
@@ -1188,7 +1186,7 @@ def order_sections(schema, pretty, all_tables):
 
 
 #########################
-## debug trace
+# debug trace
 #########################
 
 def debug_msg(table, msg, self="Self"):
@@ -1216,7 +1214,7 @@ def add_debug_msg(pretty, table):
 
 
 ##########################
-## generate_orb_one_table
+# generate_orb_one_table
 ##########################
 
 def generate_orb_one_table(name, schema, pretty, all_tables):
@@ -1389,8 +1387,8 @@ def generate_orb_one_table(name, schema, pretty, all_tables):
                 name='"="',
                 params=[("op1", "Detached_%(row)s" % translate),
                         ("op2", "Detached_%(row)s" % translate)],
-                body="""if Op1.Get = null then return Op2.Get = null;
-                elsif Op2.Get = null then return False; else
+                body="""if Op1.Is_Null then return Op2.Is_Null;
+                elsif Op2.Is_Null then return False; else
                 return %(equal)s; end if;""" % translate,
                 section="Elements: %(cap)s" % translate,
                 returns="boolean",
@@ -1403,9 +1401,8 @@ def generate_orb_one_table(name, schema, pretty, all_tables):
             returns="Detached_%(row)s'Class" % translate,
             section="Elements: %(cap)s" % translate,
             local_vars=[("Result", "Detached_%(row)s" % translate),
-                        ("Data", "constant %(row)s_Data" % translate,
-                         "new %(row)s_DDR" % translate)],
-            body="Set (Result, Data); return Result;",
+                        ("Data", "%(row)s_DDR" % translate)],
+            body="Result.Set (Data); return Result;",
             comment="""
             Create a new element, but no attribute is set. Use Set_* to
             modify any attribute for which you need a value""")
@@ -1468,7 +1465,7 @@ def generate_orb_one_table(name, schema, pretty, all_tables):
                            %(self_check)s
                            declare
                               D2 : constant %(fkrow)s_Data :=
-                                 %(fkrow)s_data (D.ORM_FK_%(name)s.Get);
+                                 %(fkrow)s_data (D.ORM_FK_%(name)s.Unchecked_Get);
                            begin
                               if D2.ORM_%(fk)s = %(default)s then
                                  Self.Session.Insert_Or_Update
@@ -1499,7 +1496,7 @@ def generate_orb_one_table(name, schema, pretty, all_tables):
               "where": " AND ".join(where)}
 
         local_vars = [("D", "constant %(row)s_Data" % translate,
-                       "%(row)s_Data (Self.Get)" % translate),
+                       "%(row)s_Data (Self.Unchecked_Get)" % translate),
                       ("Q", "SQL_Query"),
                       ("A", "SQL_Assignment", "No_Assignment")]
 
@@ -1545,7 +1542,7 @@ def generate_orb_one_table(name, schema, pretty, all_tables):
             local_vars = [
                 ('D',
                  'constant %(row)s_Data' % translate,
-                 '%(row)s_Data (Self.Get)' % translate)]
+                 '%(row)s_Data (Self.Unchecked_Get)' % translate)]
             delete_body = (
                 'Execute (Self.Session.DB,'
                 + ' SQL_Delete (DBA.%(table)s, %(where)s));') % tr
@@ -1576,7 +1573,7 @@ def generate_orb_one_table(name, schema, pretty, all_tables):
                 overriding=True,
                 params=[("self", "Detached_%(row)s" % translate)],
                 local_vars=[("D", "constant %(row)s_Data" % translate,
-                             "%(row)s_Data (Self.Get)" % translate)],
+                             "%(row)s_Data (Self.Unchecked_Get)" % translate)],
                 section="internal",
                 body="if Persist_Cascade (Self.Session) then "
                         + on_add + " end if;")
@@ -1634,7 +1631,7 @@ def generate_orb_one_table(name, schema, pretty, all_tables):
 
             if not table.is_abstract:
                 getter = "return %s;" % \
-                    f.to_return("%s_Data (Self.Get)" % f.table.row)
+                    f.to_return("%s_Data (Self.Unchecked_Get)" % f.table.row)
 
                 if f.is_pk():
                     # We must not change primary keys
@@ -1647,7 +1644,7 @@ def generate_orb_one_table(name, schema, pretty, all_tables):
                                 % f.name
 
                     local = [("D", "constant %(row)s_Data" % translate,
-                              "%(row)s_Data (Self.Get)" % translate)]
+                              "%(row)s_Data (Self.Unchecked_Get)" % translate)]
                     setter = """%sD.ORM_%s := %s;
                     Self.Set_Modified (%d);
                     """ % (free, f.name, f.to_field("Value"),
@@ -1777,7 +1774,7 @@ def generate_orb_one_table(name, schema, pretty, all_tables):
                 getter += """end if; return D.ORM_FK_%(name)s.all;""" % tr
 
                 setlocal = [("D", "constant %(row)s_Data" % translate,
-                             "%(row)s_Data (Self.Get)" % translate)]
+                             "%(row)s_Data (Self.Unchecked_Get)" % translate)]
                 free = ffrom.free_field("D") \
                     + "".join(free_fk) \
                     + "Unchecked_Free (D.ORM_FK_%s);" % table_name \
@@ -1803,7 +1800,7 @@ def generate_orb_one_table(name, schema, pretty, all_tables):
                     setter_local_vars=setlocal,
                     getter_local_vars=[
                         ("D", "constant %(row)s_Data" % translate,
-                         "%(row)s_Data (Self.Get)" % translate),
+                         "%(row)s_Data (Self.Unchecked_Get)" % translate),
                         ("S", "Session_Type")],
                     type="Detached_%s'Class" % fk_field.foreign.row,
                     abstract=table.is_abstract,
@@ -1889,7 +1886,7 @@ def generate_orb_one_table(name, schema, pretty, all_tables):
 
 
 #################
-## generate_orm
+# generate_orm
 #################
 
 def generate_orm(setup, pkg_name, tables=[], omit=[], out=sys.stdout):
@@ -1938,7 +1935,7 @@ def generate_orm(setup, pkg_name, tables=[], omit=[], out=sys.stdout):
             generate_orb_one_table(t, schema, pretty, tables)
 
     table_image_body += " when others => return Table'Image; end case;"
-    #pretty.add_subprogram(
+    # pretty.add_subprogram(
     #    name="Image",
     #    params=[("Table", "Integer")],
     #    returns="String",

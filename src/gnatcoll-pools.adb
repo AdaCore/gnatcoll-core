@@ -249,7 +249,7 @@ package body GNATCOLL.Pools is
    -------------
 
    function Element (Self : Resource) return access Element_Type is
-      Enc : access Resource_Data := Get (Self);
+      Enc : access Resource_Data := Get (Self).Element;
    begin
       Assert (Me, Enc /= null,
               "A wrapper should not exist without an element");

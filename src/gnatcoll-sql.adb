@@ -95,8 +95,6 @@ package body GNATCOLL.SQL is
       Suffix         : GNAT.Strings.String_Access; --  can be null
       List           : Field_List.List;
    end record;
-   type Multiple_Args_Field_Internal_Access is access all
-     Multiple_Args_Field_Internal'Class;
    overriding function To_String
      (Self   : Multiple_Args_Field_Internal;
       Format : Formatter'Class;
@@ -176,29 +174,31 @@ package body GNATCOLL.SQL is
       while Has_Element (C) loop
          declare
             Field    : constant SQL_Field'Class := Element (C);
-            Internal : SQL_Field_Internal_Access;
-            D        : Multiple_Args_Field_Internal_Access;
             C2       : Field_List.Cursor;
+            R        : Field_Pointers.Ref;
          begin
             if Field in SQL_Field_Any'Class then
-               Internal := SQL_Field_Any (Field).Data.Get;
-               if Internal.all in Multiple_Args_Field_Internal'Class then
-                  D := Multiple_Args_Field_Internal_Access (Internal);
+               R := SQL_Field_Any (Field).Data;
+               if R.Get.Element.all in Multiple_Args_Field_Internal'Class then
+                  declare
+                     D : Multiple_Args_Field_Internal'Class renames
+                        Multiple_Args_Field_Internal'Class (R.Get.Element.all);
+                  begin
+                     if D.Separator.all = Separator then
+                        --  Avoid nested concatenations, put them all at the
+                        --  same level. This simplifies the query. Due to this,
+                        --  we are also sure the concatenation itself doesn't
+                        --  have sub-expressions
 
-                  if D.Separator.all = Separator then
-                     --  Avoid nested concatenations, put them all at the same
-                     --  level. This simplifies the query. Due to this, we are
-                     --  also sure the concatenation itself doesn't have
-                     --  sub-expressions
-
-                     C2 := First (D.List);
-                     while Has_Element (C2) loop
-                        Append (Data.List, Element (C2));
-                        Next (C2);
-                     end loop;
-                  else
-                     Append (Data.List, Field);
-                  end if;
+                        C2 := First (D.List);
+                        while Has_Element (C2) loop
+                           Append (Data.List, Element (C2));
+                           Next (C2);
+                        end loop;
+                     else
+                        Append (Data.List, Field);
+                     end if;
+                  end;
                else
                   Append (Data.List, Field);
                end if;

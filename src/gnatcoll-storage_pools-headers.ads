@@ -94,7 +94,7 @@ package GNATCOLL.Storage_Pools.Headers is
       -----------
 
       generic
-         type Element_Type (<>) is private;
+         type Element_Type (<>) is limited private;
          --  A pool is specific to an element type, so that we can properly
          --  handle unconstrained arrays (for which we need a specific Size
          --  representation clause and we need to take into account the bounds

@@ -139,10 +139,19 @@ package body GNATCOLL.Refcount is
       -- Get --
       ---------
 
-      function Get (Self : Ref'Class) return Element_Access is
+      function Get (Self : Ref'Class) return Reference_Type is
+      begin
+         return (Element => Self.Data);
+      end Get;
+
+      -------------------
+      -- Unchecked_Get --
+      -------------------
+
+      function Unchecked_Get (Self : Ref'Class) return Element_Access is
       begin
          return Self.Data;
-      end Get;
+      end Unchecked_Get;
 
       -------------
       -- Is_Null --
@@ -412,7 +421,6 @@ package body GNATCOLL.Refcount is
             return Natural (Self.Data.Refcount);
          end if;
       end Get_Refcount;
-
    end Smart_Pointers;
 
 end GNATCOLL.Refcount;

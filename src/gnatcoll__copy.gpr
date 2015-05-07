@@ -53,6 +53,8 @@ project GnatColl is
       case GnatColl_Shared.Atomics is
          when "intrinsic" =>
             for Switches ("C") use Compiler'Switches ("C") & ("-DATOMIC_INTRINSICS");
+         when "mutex" =>
+            null;
       end case;
    end Compiler;
 

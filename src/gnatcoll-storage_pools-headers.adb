@@ -26,6 +26,9 @@ with System.Memory;           use System, System.Memory;
 
 package body GNATCOLL.Storage_Pools.Headers is
 
+   Pointer_Size_Bytes : constant Storage_Count :=
+      System.Address'Size / Storage_Unit;
+
    ------------------
    -- Header_Pools --
    ------------------
@@ -39,8 +42,6 @@ package body GNATCOLL.Storage_Pools.Headers is
 
       Header_Size_Bytes : constant Storage_Count :=
          Header'Size / Storage_Unit;
-      Pointer_Size_Bytes : constant Storage_Count :=
-         System.Address'Size / Storage_Unit;
 
       Extra_Allocation_Bytes : constant Storage_Count :=
          ((Header_Size_Bytes + Pointer_Size_Bytes - 1) / Pointer_Size_Bytes)

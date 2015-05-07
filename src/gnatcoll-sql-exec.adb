@@ -21,6 +21,7 @@
 --                                                                          --
 ------------------------------------------------------------------------------
 
+pragma Ada_2012;
 with Ada.Calendar;               use Ada.Calendar;
 with Ada.Containers.Hashed_Maps; use Ada.Containers;
 with Ada.Containers.Hashed_Sets;
@@ -179,14 +180,13 @@ package body GNATCOLL.SQL.Exec is
          else
             declare
                C : Cached_Maps.Cursor;
-               S : constant access Prepared_Statement_Data := Stmt.Get;
             begin
-               if S.Cached_Result = No_Cache_Id
-                 or else not S.Use_Cache
+               if Stmt.Get.Cached_Result = No_Cache_Id
+                 or else not Stmt.Get.Use_Cache
                then
                   Found := False;
                else
-                  C := Cached_Maps.Find (Cache, S.Cached_Result);
+                  C := Cached_Maps.Find (Cache, Stmt.Get.Cached_Result);
                   Found := Cached_Maps.Has_Element (C);
 
                   if Found then
@@ -206,10 +206,11 @@ package body GNATCOLL.SQL.Exec is
       ------------
 
       procedure Set_Id (Stmt : Prepared_Statement'Class) is
-         S : constant access Prepared_Statement_Data := Stmt.Get;
       begin
-         if S.Cached_Result = No_Cache_Id then
-            S.Cached_Result := Current_Cache_Id;
+         if not Stmt.Is_Null
+            and then Stmt.Get.Cached_Result = No_Cache_Id
+         then
+            Stmt.Get.Cached_Result := Current_Cache_Id;
             Current_Cache_Id := Current_Cache_Id + 1;
          end if;
 
@@ -225,15 +226,15 @@ package body GNATCOLL.SQL.Exec is
       procedure Set_Cache
         (Stmt : Prepared_Statement'Class; Cached : Forward_Cursor'Class)
       is
-         S : constant access Prepared_Statement_Data := Stmt.Get;
       begin
          --  Reserve capacity up to the current assigned id, since we are
          --  likely to need it anyway, and it is bound to be at least as big
          --  as Stmt.Cached.Id
 
-         if S.Use_Cache then
+         if Stmt.Get.Use_Cache then
             Set_Id (Stmt);
-            Cache.Include (S.Cached_Result, Task_Safe_Instance (Cached));
+            Cache.Include
+               (Stmt.Get.Cached_Result, Task_Safe_Instance (Cached));
          end if;
 
       exception
@@ -321,7 +322,7 @@ package body GNATCOLL.SQL.Exec is
        Stmt       : Prepared_Statement'Class)
       return String
    is
-      S : constant access Prepared_Statement_Data := Stmt.Get;
+      S : constant access Prepared_Statement_Data := Stmt.Unchecked_Get;
    begin
       if S.Query_Str = null then
          S.Query_Str := new String'
@@ -349,7 +350,6 @@ package body GNATCOLL.SQL.Exec is
       Connection : access Database_Connection_Record'Class;
       Stmt       : out DBMS_Stmt)
    is
-      S : constant access Prepared_Statement_Data := Prepared.Get;
       L : Prepared_In_Session_List;
 
       --  The side effect is to set S.Query_Str
@@ -360,19 +360,19 @@ package body GNATCOLL.SQL.Exec is
       then
          --  Reuse a prepared statement if one exists for this connection.
 
-         L := S.Prepared;
+         L := Prepared.Get.Prepared;
          while L /= null loop
             exit when L.DB = Database_Connection (Connection);
             L := L.Next;
          end loop;
 
          if L = null then
-            S.Prepared := new Prepared_In_Session'
+            L := new Prepared_In_Session'
               (Stmt         => No_DBMS_Stmt,
                DB           => Database_Connection (Connection),
                DB_Timestamp => Connection.Connected_On,
-               Next         => S.Prepared);
-            L := S.Prepared;
+               Next         => Prepared.Get.Prepared);
+            Prepared.Get.Prepared := L;
          end if;
 
          --  Else prepare the statement
@@ -381,7 +381,7 @@ package body GNATCOLL.SQL.Exec is
             or else L.DB_Timestamp /= Connection.Connected_On
          then
             L.Stmt := Connect_And_Prepare
-              (Connection, Str, S.Name.all, Direct => True);
+              (Connection, Str, Prepared.Get.Name.all, Direct => True);
 
             --  Set the timestamp *after* we have created the connection, in
             --  case it did not exist before (if prepare is the first command
@@ -573,12 +573,10 @@ package body GNATCOLL.SQL.Exec is
 
    function Display_Query
      (Query      : String;
-      Prepared   : Prepared_Statement'Class := No_Prepared) return String
-   is
-      S : constant access Prepared_Statement_Data := Prepared.Get;
+      Prepared   : Prepared_Statement'Class := No_Prepared) return String is
    begin
-      if S /= null then
-         return "(" & S.Name.all & ")";
+      if not Prepared.Is_Null then
+         return "(" & Prepared.Get.Name.all & ")";
       else
          return Query;
       end if;
@@ -746,7 +744,6 @@ package body GNATCOLL.SQL.Exec is
       R    : Abstract_Cursor_Access;
       Was_Started : Boolean;
       pragma Unreferenced (Was_Started);
-      S : access Prepared_Statement_Data;
 
       Start : Time;
 
@@ -763,9 +760,8 @@ package body GNATCOLL.SQL.Exec is
          --  that, since it might not have been computed yet.
 
          Compute_And_Prepare_Statement (Prepared, Connection, Stmt);
-         S := Prepared.Get;
-         Is_Select := S.Is_Select;
-         Q := S.Query_Str;
+         Is_Select := Prepared.Get.Is_Select;
+         Q := Prepared.Get.Query_Str;
 
       else
          Is_Select := Is_Select_Query (Query);
@@ -1590,7 +1586,6 @@ package body GNATCOLL.SQL.Exec is
    is
       Direct : constant Boolean := Result in Direct_Cursor;
       Found : Boolean;
-      S : constant access Prepared_Statement_Data := Stmt.Get;
 
       procedure Put_Result (Item : Forward_Cursor'Class);
 
@@ -1606,12 +1601,12 @@ package body GNATCOLL.SQL.Exec is
    begin
       Put_Result (No_Direct_Element);
 
-      if S = null then
+      if Stmt.Is_Null then
          Trace (Me_Error, "Prepared statement was freed, can't execute");
          return;
       end if;
 
-      if S.Use_Cache
+      if Stmt.Get.Use_Cache
         and then Connection.Descr.Caching
         and then Params = No_Parameters --  Parameters not supported for now
       then
@@ -1623,7 +1618,7 @@ package body GNATCOLL.SQL.Exec is
             if Found then
                RC.First; --  Move to first element
                if Active (Me_Cache) then
-                  Trace (Me_Cache, "(" & S.Name.all & "): from cache");
+                  Trace (Me_Cache, "(" & Stmt.Get.Name.all & "): from cache");
                end if;
 
                Put_Result (RC);
