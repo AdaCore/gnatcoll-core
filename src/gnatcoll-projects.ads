@@ -280,7 +280,8 @@ package GNATCOLL.Projects is
    --  on disk only in the From_File or Default cases.
 
    function Is_Aggregate_Project (Self : Project_Type) return Boolean;
-   --  Return true if the current project is an aggregate project.
+   --  Return true if the current project is an aggregate project or a library
+   --  aggregate project.
 
    function Is_Aggregate_Library (Self : Project_Type) return Boolean;
    --  Return true if the current project is an aggregate library project.
@@ -1825,16 +1826,12 @@ private
       Non_Recursive_Include_Path : GNATCOLL.VFS.File_Array_Access;
       --  The include path for this project
 
-      Tree : Project_Tree_Data_Access;
-      --  Needed so that we can return other projects like imported projects
-
-      Local_Tree : Prj.Project_Tree_Ref := null;
-      --  If given project is an aggregated one this allows to access
-      --  corresponding project tree data.
-
-      Local_Node_Tree : Prj.Tree.Project_Node_Tree_Ref := null;
-      --  If given project is an aggregated one this allows to access
-      --  corresponding node tree data.
+      Tree         : Project_Tree_Data_Access;
+      Tree_For_Map : Project_Tree_Data_Access;
+      --  Needed so that we can return other projects like imported projects.
+      --  Tree_For_Map is the tree for the root project, which is used to
+      --  retrieve other projects. Tree_For_Map is the same as Tree in the
+      --  case of non-aggregate projects.
 
       View_Is_Complete : Boolean := True;
       --  True if the view for the project was correctly computed.
@@ -1899,7 +1896,6 @@ private
    type Inner_Project_Iterator is record
       Root      : Project_Type;
       Current   : Integer;
-
       Reversed  : Boolean;
 
       Importing : Boolean := False;

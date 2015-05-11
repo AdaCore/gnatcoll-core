@@ -4,6 +4,16 @@ Known Problems in Gnatcoll 1.7
 
 Copyright (C) 2013-2015, AdaCore
 
+KP-17-O507-023 Projects: parsing of library aggregate projects
+
+  Problem:    A number of issues related to the loading of library aggregate
+              projects were fixed, in particular when the aggregated projects
+              have homonyms.
+
+  Status:     Fixed in Gnatcoll 1.8.0 on 2015-05-12
+
+  Workaround: None.
+
 KP-17-O203-001 Postgresql: Insert_and_Get_PK fails with string prepared query
 
   Problem:    When you use a Prepared_Statement for a query given as a string,
