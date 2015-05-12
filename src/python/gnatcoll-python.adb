@@ -372,8 +372,16 @@ package body GNATCOLL.Python is
       else
          declare
             R : constant String := Value (C);
+
+            procedure C_Free (S : chars_ptr);
+            pragma Import (C, C_Free, "free");
+
          begin
-            Free (C);
+            --  Since C was allocated by ada_PyString_AsString via strdup(),
+            --  and not via System.Memory, we should not be using
+            --  Interfaces.C.Strings.Free which goes through System.Memory.
+            --  So we call free() directly instead.
+            C_Free (C);
             return R;
          end;
       end if;
