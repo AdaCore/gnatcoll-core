@@ -365,7 +365,7 @@ package body GNATCOLL.Python is
       --  Returns a NULL terminated representation of the contents of string.
       --  Result value must be freed.
 
-      C : Interfaces.C.Strings.chars_ptr := Low (Str);
+      C : constant Interfaces.C.Strings.chars_ptr := Low (Str);
    begin
       if C = Null_Ptr then
          return "";
