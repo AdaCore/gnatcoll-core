@@ -58,6 +58,7 @@
 --  end System.Memory;
 
 with System; use System;
+with GNAT.Debug_Pools; use GNAT.Debug_Pools;
 
 package GNATCOLL.Memory is
    type size_t is mod 2 ** Standard'Address_Size;
@@ -115,33 +116,75 @@ package GNATCOLL.Memory is
    -------------
 
    procedure Configure
-     (Activate_Monitor  : Boolean := False;
-      Disable_Free      : Boolean := False;
-      Stack_Trace_Depth : Natural := 30;
-      Memory_Free_Pattern : Integer := 256);
+     (Activate_Monitor               : Boolean           := False;
+      Disable_Free                   : Boolean           := False;
+      Stack_Trace_Depth              : Natural           := 30;
+      Maximum_Logically_Freed_Memory : Long_Long_Integer := 50_000_000;
+      Minimum_To_Free                : Long_Long_Integer  := 0;
+      Reset_Content_On_Free          : Boolean           := True;
+      Raise_Exceptions               : Boolean           := False;
+      Advanced_Scanning              : Boolean           := False;
+      Errors_To_Stdout               : Boolean           := True;
+      Low_Level_Traces               : Boolean           := False);
    --  Configure this package (these are global settings, not task-specific).
+   --
    --  If Activate_Monitor is true, GPS will monitor all memory allocations and
    --  deallocations, and through the Dump procedure below be able to report
    --  the memory usage. The overhead is almost null when the monitor is
    --  disabled.
+   --
    --  If Disable_Free is true, no deallocation is ever performed. This can be
    --  temporarily useful when investigating memory issues.
-   --  If Memory_Free_Pattern is in the range 0..255 then Memory_Free_Pattern
-   --  is used to fill freed memory. Only memory handled by the memory monitor
-   --  are concerned.
+   --
+   --    Stack_Trace_Depth. This parameter controls the maximum depth of stack
+   --    traces that are output to indicate locations of actions for error
+   --    conditions such as bad allocations. If set to zero, the debug pool
+   --    will not try to compute backtraces. This is more efficient but gives
+   --    less information on problem locations
+   --
+   --    Maximum_Logically_Freed_Memory: maximum amount of memory (bytes)
+   --    that should be kept before starting to physically deallocate some.
+   --    This value should be non-zero, since having memory that is logically
+   --    but not physically freed helps to detect invalid memory accesses.
+   --
+   --    Minimum_To_Free is the minimum amount of memory that should be freed
+   --    every time the pool starts physically releasing memory. The algorithm
+   --    to compute which block should be physically released needs some
+   --    expensive initialization (see Advanced_Scanning below), and this
+   --    parameter can be used to limit the performance impact by ensuring
+   --    that a reasonable amount of memory is freed each time. Even in the
+   --    advanced scanning mode, marked blocks may be released to match this
+   --    Minimum_To_Free parameter.
+   --
+   --    Reset_Content_On_Free: If true, then the contents of the freed memory
+   --    is reset to the pattern 16#DEADBEEF#, following an old IBM convention.
+   --    This helps in detecting invalid memory references from the debugger.
+   --
+   --    Raise_Exceptions: If true, the exceptions below will be raised every
+   --    time an error is detected. If you set this to False, then the action
+   --    is to generate output on standard error or standard output, depending
+   --    on Errors_To_Stdout, noting the errors, but to
+   --    keep running if possible (of course if storage is badly damaged, this
+   --    attempt may fail. This helps to detect more than one error in a run.
+   --
+   --    Advanced_Scanning: If true, the pool will check the contents of all
+   --    allocated blocks before physically releasing memory. Any possible
+   --    reference to a logically free block will prevent its deallocation.
+   --    Note that this algorithm is approximate, and it is recommended
+   --    that you set Minimum_To_Free to a non-zero value to save time.
+   --
+   --    Errors_To_Stdout: Errors messages will be displayed on stdout if
+   --    this parameter is True, or to stderr otherwise.
+   --
+   --    Low_Level_Traces: Traces all allocation and deallocations on the
+   --    stream specified by Errors_To_Stdout. This can be used for
+   --    post-processing by your own application, or to debug the
+   --    debug_pool itself. The output indicates the size of the allocated
+   --    block both as requested by the application and as physically
+   --    allocated to fit the additional information needed by the debug
+   --    pool.
 
-   type Report_Type is
-     (All_Reports,
-      Memory_Usage,
-      Allocations_Count,
-      Sort_Total_Allocs,
-      Marked_Blocks);
-   for Report_Type use
-     (All_Reports       => 0,
-      Memory_Usage      => 1,
-      Allocations_Count => 2,
-      Sort_Total_Allocs => 3,
-      Marked_Blocks     => 4);
+   type Report_Type is new GNAT.Debug_Pools.Report_Type;
 
    procedure Dump (Size : Positive; Report : Report_Type := All_Reports);
    --  Dump information about memory usage.
@@ -158,7 +201,7 @@ package GNATCOLL.Memory is
    --  and where this is called from.
    --  Nothing is done if the memory monitor has not been activated
 
-   type Byte_Count is mod System.Max_Binary_Modulus;
+   type Byte_Count is new GNAT.Debug_Pools.Byte_Count;
 
    type Watermark_Info is record
       High    : Byte_Count;
