@@ -318,9 +318,10 @@ package GNATCOLL.Traces is
      (Handle : Trace_Handle := null; Msg : String := "");
    procedure Decrease_Indent
      (Handle : Trace_Handle := null; Msg : String := "");
-   --  Change the indentation level for traces. This is so that traces that
-   --  result from other subprograms be slightly indented, so as to make the
-   --  output more readable. The output would for instance look like:
+   --  Change the indentation level for traces with the same output stream.
+   --  This is so that traces that result from other subprograms be slightly
+   --  indented, so as to make the output more readable. The output would for
+   --  instance look like:
    --       [HANDLE1] Procedure 1
    --          [HANDLE2] Procedure 2
    --       [HANDLE1] End of Procedure 1
@@ -512,6 +513,8 @@ private
    type Trace_Stream_Record is abstract tagged record
       Name          : GNAT.Strings.String_Access;
       Next          : Trace_Stream;
+      Indentation   : aliased Atomic_Counter := 0;
+      --  Current indentation for stream
    end record;
    --  Name is the full name including the arguments, for instance "file:foo"
    --  if the user has defined a stream called "file" with a parameter "foo"

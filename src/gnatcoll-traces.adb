@@ -120,9 +120,6 @@ package body GNATCOLL.Traces is
       --  configuration file contained "+").
       --  ??? Could be handled via a "*" star handle
 
-      Indentation : aliased Atomic_Counter := 0;
-      --  Current indentation for streams.
-
       TZ : Time_Offset := UTC_Time_Offset;
       --  Time zone cache, assuming that the OS will not change time zones
       --  while this partition is running.
@@ -134,6 +131,10 @@ package body GNATCOLL.Traces is
    end record;
 
    Global : Global_Vars;
+
+   function Stream (Handle : Trace_Handle) return Trace_Stream
+   is (if Handle = null or else Handle.Stream = null then Global.Streams_List
+       else Handle.Stream);
 
    procedure Create_Exception_Handle (Handle : Trace_Handle);
    --  Create the exception handle associated with Handle.
@@ -412,13 +413,13 @@ package body GNATCOLL.Traces is
       if Name = "&1" then
          Tmp := new Stdout_Stream_Record'
            (Name => new String'(Name),
-            Next => null);
+            others => <>);
          Add_To_Streams (Tmp);
 
       elsif Name = "&2" then
          Tmp := new Stderr_Stream_Record'
            (Name => new String'(Name),
-            Next => null);
+            others => <>);
          Add_To_Streams (Tmp);
 
       elsif Name (Name'First) = '&' then
@@ -445,8 +446,8 @@ package body GNATCOLL.Traces is
       else
          Tmp := new File_Stream_Record'
            (Name => new String'(Name),
-            Next => null,
-            File => new File_Type);
+            File => new File_Type,
+            others => <>);
 
          declare
             Max_Date_Width : constant Natural := 10; --  "yyyy-mm-dd"
@@ -518,7 +519,7 @@ package body GNATCOLL.Traces is
                   --  Default to stderr
                   Unchecked_Free (Tmp);
                   Tmp := new Stderr_Stream_Record'
-                    (Name => new String'(Name), Next => null);
+                    (Name => new String'(Name), others => <>);
             end;
 
             Add_To_Streams (Tmp);
@@ -839,14 +840,20 @@ package body GNATCOLL.Traces is
    ---------------------
 
    procedure Increase_Indent
-     (Handle : Trace_Handle := null; Msg : String := "") is
+     (Handle : Trace_Handle := null; Msg : String := "")
+   is
+      S : constant Trace_Stream := Stream (Handle);
    begin
-      if Handle /= null and then Msg /= "" then
+      if S = null then
+         return;
+      end if;
+
+      if Msg /= "" then
          Trace (Handle, Msg);
       end if;
 
       --  Atomic increase by 1
-      Sync_Add_And_Fetch (Global.Indentation'Access, 1);
+      Sync_Add_And_Fetch (S.Indentation'Access, 1);
    end Increase_Indent;
 
    ---------------------
@@ -856,11 +863,15 @@ package body GNATCOLL.Traces is
    procedure Decrease_Indent
      (Handle : Trace_Handle := null; Msg : String := "")
    is
-      --  Atomic decrement
-      Tmp : constant Atomic_Counter :=
-        Sync_Add_And_Fetch (Global.Indentation'Access, -1);
+      S : constant Trace_Stream := Stream (Handle);
    begin
-      if Tmp >= 0 then
+      if S = null then
+         return;
+      end if;
+
+      --  Atomic decrement
+
+      if Sync_Add_And_Fetch (S.Indentation'Access, -1) >= 0 then
          if Handle /= null and then Msg /= "" then
             Trace (Handle, Msg);
          end if;
@@ -1142,24 +1153,15 @@ package body GNATCOLL.Traces is
       Entity        : String := GNAT.Source_Info.Enclosing_Entity;
       Message_Color : String := Default_Fg)
    is
-      Indent : constant Integer := Integer (Global.Indentation) * 3;
       Start, Last  : Natural;
+      Stream       : constant Trace_Stream := Traces.Stream (Handle);
+      Indent       : constant Integer :=
+        (if Stream = null then 0 else Integer (Stream.Indentation) * 3);
       Continuation : constant String := (1 .. Indent => ' ')
          & '_' & Handle.Name.all & "_ ";
-      Stream       : Trace_Stream;
       Color        : Boolean;
    begin
-      if Message'Length = 0 then
-         return;
-      end if;
-
-      if Handle.Stream /= null then
-         Stream := Handle.Stream;
-      else
-         Stream := Global.Streams_List;
-      end if;
-
-      if Stream = null then
+      if Message'Length = 0 or else Stream = null then
          return;
       end if;
 
@@ -1167,7 +1169,7 @@ package body GNATCOLL.Traces is
 
       Lock;
 
-      if Global.Indentation > 0 then
+      if Indent > 0 then
          Put (Stream.all, String'(1 .. Indent => ' '));
       end if;
 
