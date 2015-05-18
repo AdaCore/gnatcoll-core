@@ -231,7 +231,7 @@ package body GNATCOLL.Scripts.Projects is
                     (Attribute_Pkg_List'(Build (Pkg, Attr)), Index);
             Value   : constant String := Project.Attribute_Value
                    (Attribute_Pkg_String'(Build (Pkg, Attr)),
-                   Default => "", Index => Index);
+                   Default => "", Index => Index, Use_Extended => True);
          begin
             Set_Return_Value_As_List (Data);
 
@@ -255,7 +255,7 @@ package body GNATCOLL.Scripts.Projects is
             Index   : constant String := Nth_Arg (Data, 4, "");
             Value   : constant String := Project.Attribute_Value
                    (Attribute_Pkg_String'(Build (Pkg, Attr)),
-                   Default => "", Index => Index);
+                   Default => "", Index => Index, Use_Extended => True);
          begin
             if Value = "" then
                declare
