@@ -4097,7 +4097,12 @@ package body GNATCOLL.Projects is
    exception
       when E : others =>
          Trace (Me, E);
-         Unchecked_Free (Project.Data.Importing_Projects);
+         if Project.Data.Importing_Projects /=
+            Unknown_Importing_Projects'Unrestricted_Access
+         then
+            Unchecked_Free (Project.Data.Importing_Projects);
+         end if;
+         Project.Data.Importing_Projects := null;
    end Compute_Importing_Projects;
 
    ---------------------------------
@@ -5487,8 +5492,12 @@ package body GNATCOLL.Projects is
      (Tree    : Project_Tree_Data_Access;
       Path_Id : Path_Name_Type) return Project_Type'Class
    is
+      Tree_For_Map : constant Project_Tree_Data_Access :=
+         Tree.Root.Data.Tree_For_Map;
+      --  An access to the root tree
+
       P_Cursor : constant Project_Htables.Cursor :=
-        Tree.Projects.Find (Create (+Get_String (Path_Id)));
+        Tree_For_Map.Projects.Find (Create (+Get_String (Path_Id)));
    begin
       if not Has_Element (P_Cursor) then
          return No_Project;
