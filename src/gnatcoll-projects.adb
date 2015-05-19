@@ -180,9 +180,6 @@ package body GNATCOLL.Projects is
       Root    : Project_Type := No_Project;
       --  The root of the project hierarchy
 
-      Sources : Names_Files.Map;
-      --  Index on base source file names, returns information about the file
-
       Objects_Basename : Names_Files.Map;
       --  The basename (with no extension or directory) of the object files.
       --  This is used to quickly filter out the relevant object or library
@@ -201,6 +198,10 @@ package body GNATCOLL.Projects is
 
       case Is_Aggregated is
          when False =>
+            Sources : Names_Files.Map;
+            --  Index on base source file names, returns information about
+            --  the file.
+
             Projects : Project_Htables.Map;
             --  Index on project paths. This table is filled when the project
             --  is loaded.
@@ -1422,7 +1423,7 @@ package body GNATCOLL.Projects is
       --  Amongst all the files with the right basename, search the one, if
       --  any, that is visible from Self.
 
-      Curs := Self.Data.Tree.Sources.Find (Name);
+      Curs := Self.Data.Tree_For_Map.Sources.Find (Name);
       if Has_Element (Curs) then
          --  Check amongst all possibilities which one is in Self or its
          --  imported projects.
@@ -1464,7 +1465,7 @@ package body GNATCOLL.Projects is
 
          if File /= GNATCOLL.VFS.No_File then
             Include_File
-              (Self.Data.Tree.Sources, Name,
+              (Self.Data.Tree_For_Map.Sources, Name,
                Source_File_Data'
                  (Project  => No_Project,
                   File     => File,
@@ -1526,6 +1527,9 @@ package body GNATCOLL.Projects is
       File            : out GNATCOLL.VFS.Virtual_File;
       Predefined_Only : Boolean := False)
    is
+      Tree_For_Map  : Project_Tree_Data_Access;
+      --  The root tree
+
       Base          : constant Filesystem_String := Base_Name (Name);
       Project2      : Project_Type;
       Path          : Virtual_File := GNATCOLL.VFS.No_File;
@@ -1564,6 +1568,8 @@ package body GNATCOLL.Projects is
          return;
       end if;
 
+      Tree_For_Map := Self.Data.Root.Data.Tree_For_Map;
+
       if Is_Absolute_Path (Name) then
          File := Create (Normalize_Pathname (Name, Resolve_Links => False));
          return;
@@ -1578,7 +1584,7 @@ package body GNATCOLL.Projects is
          and then Project.Data = null
          and then Use_Source_Path
       then
-         Info_Cursor := Self.Data.Sources.Find (Base);
+         Info_Cursor := Tree_For_Map.Sources.Find (Base);
 
          if Has_Element (Info_Cursor) then
             --  Multiple cases for ambiguity:
@@ -1744,7 +1750,7 @@ package body GNATCOLL.Projects is
         --  Make sure the predefined file does not hide a project source
         --  (since we bypassed the cached above when Predefined_Only is true)
         and then (not Predefined_Only
-                  or else not Self.Data.Sources.Contains (Base))
+                  or else not Tree_For_Map.Sources.Contains (Base))
       then
          --  Language and Source are always unknown: if we had a source file,
          --  it would have been set in the cache while loading the project.
@@ -1762,7 +1768,7 @@ package body GNATCOLL.Projects is
             Source_Info.Lang := Get_String (Language (Info (Self.Data, Path)));
          end if;
 
-         Include_File (Self.Data.Sources, Base, Source_Info);
+         Include_File (Tree_For_Map.Sources, Base, Source_Info);
       end if;
 
       File := Path;
@@ -2131,6 +2137,8 @@ package body GNATCOLL.Projects is
       Source : Source_File_Data;
       S_Info : File_Info;
 
+      Tree_For_Map : Project_Tree_Data_Access;
+
       Result : File_Info_Set :=
         (File_Info_Sets.Empty_Set with null record);
 
@@ -2155,7 +2163,8 @@ package body GNATCOLL.Projects is
          raise Program_Error with "no project tree was parsed";
       end if;
 
-      M_Cur := Self.Data.Sources.Find (B_Name);
+      Tree_For_Map := Self.Data.Root.Data.Tree_For_Map;
+      M_Cur := Tree_For_Map.Sources.Find (B_Name);
 
       if M_Cur = Names_Files.No_Element then
          Result.Include (Info (Self.Data, File));
@@ -6988,7 +6997,10 @@ package body GNATCOLL.Projects is
 
    procedure Reset_View (Tree : Project_Tree'Class) is
    begin
-      Tree.Data.Sources.Clear;
+      if not Tree.Data.Is_Aggregated then
+         Tree.Data.Sources.Clear;
+      end if;
+
       Tree.Data.Directories.Clear;
       Unchecked_Free (Tree.Data.Scenario_Variables);
    end Reset_View;
@@ -7472,7 +7484,7 @@ package body GNATCOLL.Projects is
          Tree : Project_Tree_Ref;
          S    : in out Integer)
       is
-         pragma Unreferenced (S, Tree);
+         pragma Unreferenced (S); --  , Tree);
          Iter : Project_Htables.Cursor;
          P    : Project_Type;
          Path : Virtual_File;
@@ -7485,7 +7497,18 @@ package body GNATCOLL.Projects is
             if Has_Element (Iter) then
                P := Element (Iter);
                Reset_View (P.Data.all);
-               P.Data.View := Proj;
+
+               --  For a given project, it does not matter much whether we are
+               --  seeing the view from one aggregated project or another. But
+               --  we must ensure that the project_id matches the view from the
+               --  tree, otherwise the project will not be found by the prj*
+               --  packages.
+               if P.Data.Tree.View = null
+                  or else P.Data.Tree.View = Tree
+               then
+                  P.Data.View := Proj;
+                  P.Data.Tree.View := Tree;  --  must match Proj
+               end if;
             elsif Active (Me) then
                Assert (Me, False,
                        "Create_Project_Instances must be called"
@@ -7624,6 +7647,8 @@ package body GNATCOLL.Projects is
       Source_Iter      : Source_Iterator;
       Source           : Source_Id;
       Source_File_List : Virtual_File_List.List;
+      Tree_For_Map     : constant Project_Tree_Data_Access :=
+         Self.Data.Root.Data.Tree_For_Map;
 
    begin
       Increase_Indent (Me, "Parse source files");
@@ -7691,13 +7716,13 @@ package body GNATCOLL.Projects is
                   if Self.Data.Root.Is_Aggregate_Project then
                      --  If we have duplicates, create lists
                      Include_File
-                       (Self.Data.Sources,
+                       (Tree_For_Map.Sources,
                         Base_Name (File),
                         (P, File, Source.Language.Name, Source, null));
                   else
                      --  No point in all the checks for regular project.
 
-                     Self.Data.Sources.Include
+                     Tree_For_Map.Sources.Include
                        (Base_Name (File),
                         (P, File, Source.Language.Name, Source, null));
                   end if;
