@@ -2,7 +2,7 @@
 GNATCOLL 1.8 NEW FEATURES LIST
 ==============================
 
-Copyright (C) 2013-2014, AdaCore
+Copyright (C) 2014-2015, AdaCore
 
 This file contains a list of new features introduced in GNATCOLL.
 A full description of all GNATCOLL features can be found in the GNATCOLL
@@ -14,4 +14,14 @@ of the feature.
 
 New features in 1.8
 -------------------
+
+NF-18-O422-013 GNATCOLL.Refcount: new package Shared_Pointers (2015-05-18)
+
+  A new implementation for reference counted types is provided. It provides
+  a more flexible API than the Smart_Pointers (since the Element_Type does
+  not need to be a tagged type derived from Refcounted), and is faster,
+  thanks to the use of storage pools. The API is safer since Get now returns
+  a reference type rather than a direct access to the element.
+  This new package is used throughout GNATCOLL, in particular GNATCOLL.SQL.
+  In general, this has no effect on existing code.
 
