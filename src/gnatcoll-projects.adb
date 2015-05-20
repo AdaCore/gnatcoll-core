@@ -934,18 +934,12 @@ package body GNATCOLL.Projects is
          --  instead of an inner iterator, so that library projects aggregated
          --  in a library aggregate are also considered
          Iter := Start (Extending_Project (Root, True));
-         loop
-            exit when Current (Iter) = No_Project;
-
-            --  If this is still the same project tree
-            if Current (Iter).Data.Tree = Root.Data.Tree then
-               if Current (Iter) = Element (Cur).Project then
-                  --  First Source_File_Data is the one, we can return a cursor
-                  --  pointing at original map.
-                  return Cur;
-               end if;
+         while Current (Iter) /= No_Project loop
+            if Current (Iter) = Element (Cur).Project then
+               --  First Source_File_Data is the one, we can return a cursor
+               --  pointing at original map.
+               return Cur;
             end if;
-
             Next (Iter);
          end loop;
 
@@ -953,16 +947,12 @@ package body GNATCOLL.Projects is
          loop
             exit when SFD.Next = null;
             SFD := SFD.Next.all;
-
             Iter := Start (Extending_Project (Root, True));
-            loop
-               exit when Current (Iter) = No_Project;
-
+            while Current (Iter) /= No_Project loop
                if Current (Iter) = SFD.Project then
                   --  Creating a temporary element to point to.
                   Local_Obj_Map.Include (Key, SFD);
-                  Cur := Local_Obj_Map.First;
-                  return Cur;
+                  return Local_Obj_Map.First;
                end if;
 
                Next (Iter);
@@ -5396,6 +5386,8 @@ package body GNATCOLL.Projects is
      (Tree : Project_Tree_Data_Access;
       Name : Namet.Name_Id) return Project_Type'Class
    is
+      Tree_For_Map : Project_Tree_Data_Access;
+
       P_Cursor, P_Found : Project_Htables.Cursor;
       Name_Found : Boolean := False;
 
@@ -5424,7 +5416,8 @@ package body GNATCOLL.Projects is
          return No_Project;
 
       else
-         P_Cursor := Tree.Projects.First;
+         Tree_For_Map := Tree.Root.Data.Tree_For_Map;
+         P_Cursor := Tree_For_Map.Projects.First;
 
          if Project_Qualifier_Of (Tree.Root.Data.Node, Tree.Tree) =
            Prj.Aggregate
@@ -7748,6 +7741,8 @@ package body GNATCOLL.Projects is
                         --  computation is done directly in Library_Files.
 
                         if Source.Index = 0 then
+                           --  ??? What if we have a non-aggregate root, that
+                           --  imports a library aggregate project ?
                            if Is_Aggregate_Project (Self.Data.Root) then
                               Include_File
                                 (Tree_For_Map.Objects_Basename,
