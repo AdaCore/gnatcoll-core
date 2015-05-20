@@ -180,17 +180,9 @@ package body GNATCOLL.Projects is
       Root    : Project_Type := No_Project;
       --  The root of the project hierarchy
 
-      Objects_Basename : Names_Files.Map;
-      --  The basename (with no extension or directory) of the object files.
-      --  This is used to quickly filter out the relevant object or library
-      --  files when an object directory is shared amongst multiple projects.
-      --  This table does not point to the actual location of the object
-      --  files, which might be in an extending project. It only provides a
-      --  quick way to filter out irrelevant object files.
-
       Directories : Directory_Statuses.Map;
       --  Index on directory name
-      --  CHANGE: might not be needed anymore, using the hash tables already
+      --  ??? might not be needed anymore, using the hash tables already
       --  in prj.*
 
       Timestamp : Ada.Calendar.Time := GNATCOLL.Utils.No_Time;
@@ -202,6 +194,15 @@ package body GNATCOLL.Projects is
             --  Index on base source file names, returns information about
             --  the file.
 
+            Objects_Basename : Names_Files.Map;
+            --  The basename (with no extension or directory) of the object
+            --  files.  This is used to quickly filter out the relevant object
+            --  or library files when an object directory is shared amongst
+            --  multiple projects.  This table does not point to the actual
+            --  location of the object files, which might be in an extending
+            --  project. It only provides a quick way to filter out irrelevant
+            --  object files.
+
             Projects : Project_Htables.Map;
             --  Index on project paths. This table is filled when the project
             --  is loaded.
@@ -210,6 +211,7 @@ package body GNATCOLL.Projects is
             --  Cached value of the scenario variables. This should be accessed
             --  only through the function Scenario_Variables, since it needs to
             --  be initialized first.
+
          when True =>
             null;
       end case;
@@ -1068,7 +1070,8 @@ package body GNATCOLL.Projects is
                            P      : Project_Type;
                         begin
                            Info_Cursor := Find_In_Subtree
-                             (Self.Data.Tree.Objects_Basename, B, Self);
+                             (Self.Data.Tree_For_Map.Objects_Basename,
+                              B, Self);
 
                            if not Has_Element (Info_Cursor) then
                               --  Special case for C files: the library file is
@@ -1084,7 +1087,7 @@ package body GNATCOLL.Projects is
                                  B_Last := Dot - 1;
                                  Info_Cursor :=
                                    Find_In_Subtree
-                                     (Self.Data.Tree.Objects_Basename,
+                                     (Self.Data.Tree_For_Map.Objects_Basename,
                                       B (B'First .. B_Last),
                                       Self);
                               end if;
@@ -4160,14 +4163,13 @@ package body GNATCOLL.Projects is
          end if;
       end Add_Local_Roots;
    begin
-
       Iter.Root      := Project;
       Iter.Importing := True;
 
-      if Is_Aggregate_Project (Project.Data.Tree.Root) then
+      if Is_Aggregate_Project (Project.Data.Tree_For_Map.Root) then
          --  We need to look for importing projects in all trees created for
          --  each  directly aggregated project.
-         Add_Local_Roots (Project.Data.Tree.Root);
+         Add_Local_Roots (Project.Data.Tree_For_Map.Root);
 
          for I in Local_Roots.First_Index .. Local_Roots.Last_Index loop
 
@@ -4203,7 +4205,7 @@ package body GNATCOLL.Projects is
 
          Iter_Inner := Find_All_Projects_Importing
            (Project      => Project,
-            Root_Project => Project.Data.Tree.Root,
+            Root_Project => Project.Data.Tree_For_Map.Root,
             Include_Self => Include_Self,
             Direct_Only  => Direct_Only);
 
@@ -4236,7 +4238,8 @@ package body GNATCOLL.Projects is
          return Start (Root_Project, Recursive => True);
       end if;
 
-      Trace (Me, "Find_All_Projects_Importing " & Project.Name);
+      Trace (Me, "Find_All_Projects_Importing " & Project.Name
+         & " with root=" & Root_Project.Name);
 
       Compute_Imported_Projects (Root_Project);
       Compute_Importing_Projects (Project, Root_Project);
@@ -7653,7 +7656,7 @@ package body GNATCOLL.Projects is
    begin
       Increase_Indent (Me, "Parse source files");
 
-      Self.Data.Objects_Basename.Clear;
+      Tree_For_Map.Objects_Basename.Clear;
 
       Iter := Self.Root_Project.Start (Recursive => True);
 
@@ -7747,7 +7750,7 @@ package body GNATCOLL.Projects is
                         if Source.Index = 0 then
                            if Is_Aggregate_Project (Self.Data.Root) then
                               Include_File
-                                (Self.Data.Objects_Basename,
+                                (Tree_For_Map.Objects_Basename,
                                  Base,
                                  (P, File, Source.Language.Name, Source,
                                   null));
@@ -7755,7 +7758,7 @@ package body GNATCOLL.Projects is
                               --  No point in all the checks for regular
                               --  project.
 
-                              Self.Data.Objects_Basename.Include
+                              Tree_For_Map.Objects_Basename.Include
                                 (Base,
                                  (P, File, Source.Language.Name, Source,
                                   null));
@@ -7764,7 +7767,7 @@ package body GNATCOLL.Projects is
                         else
                            if Is_Aggregate_Project (Self.Data.Root) then
                               Include_File
-                                (Self.Data.Objects_Basename,
+                                (Tree_For_Map.Objects_Basename,
                                  Base & "~"
                                  & (+Image
                                    (Integer (Source.Index),
@@ -7775,7 +7778,7 @@ package body GNATCOLL.Projects is
                               --  No point in all the checks for regular
                               --  project.
 
-                              Self.Data.Objects_Basename.Include
+                              Tree_For_Map.Objects_Basename.Include
                                 (Base & "~"
                                  & (+Image
                                    (Integer (Source.Index),
