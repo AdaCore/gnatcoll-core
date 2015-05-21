@@ -146,11 +146,18 @@ package GNATCOLL.Storage_Pools.Headers is
          --  All memory allocation and deallocation for Element_Access will go
          --  through the pool.
 
+         pragma Warnings
+            (Off, "*pragma Inline for ""Header_Of"" is redundant");
+         --  For older versions of the compiler
+
          function Header_Of
             (Element : Element_Access) return access Extra_Header
             is (if Element = null
                 then null else Header_Of (Pool, Element.all'Address))
             with Inline => True;
+
+         pragma Warnings
+            (On, "*pragma Inline for ""Header_Of"" is redundant");
       end Typed;
 
    end Header_Pools;
