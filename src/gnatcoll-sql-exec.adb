@@ -1506,6 +1506,7 @@ package body GNATCOLL.SQL.Exec is
    is
       Stmt : Prepared_Statement;
       Data : Prepared_Statement_Data;
+      Ptr  : access Prepared_Statement_Data;
    begin
       Data := Prepared_Statement_Data'
         (Query         => Query,
@@ -1517,20 +1518,22 @@ package body GNATCOLL.SQL.Exec is
          Name          => null,
          Prepared      => null);
 
-      Query_Cache.Set_Id (Stmt);
-
-      if Name = "" then
-         Data.Name :=
-           new String'("stmt" & Image (Integer (Data.Cached_Result), 0));
-      else
-         Data.Name := new String'(Name);
-      end if;
-
       if Auto_Complete then
          GNATCOLL.SQL.Auto_Complete (Data.Query);
       end if;
 
       Stmt.Set (Data);
+
+      Query_Cache.Set_Id (Stmt);
+
+      Ptr := Stmt.Unchecked_Get;
+
+      if Name = "" then
+         Ptr.Name :=
+           new String'("stmt" & Image (Integer (Ptr.Cached_Result), 0));
+      else
+         Ptr.Name := new String'(Name);
+      end if;
 
       return Stmt;
    end Prepare;
