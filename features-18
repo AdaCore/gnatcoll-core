@@ -24,4 +24,3 @@ NF-18-O422-013 GNATCOLL.Refcount: new package Shared_Pointers (2015-05-18)
   a reference type rather than a direct access to the element.
   This new package is used throughout GNATCOLL, in particular GNATCOLL.SQL.
   In general, this has no effect on existing code.
-
