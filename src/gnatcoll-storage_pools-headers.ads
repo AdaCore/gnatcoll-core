@@ -100,9 +100,17 @@ package GNATCOLL.Storage_Pools.Headers is
          --  representation clause and we need to take into account the bounds
          --  of the array, which are stored next to the array).
 
+         Potentially_Controlled : Boolean := True;
+         --  See comment for Finalization_Master_Size below.
+         --  If the element_type cannot be controlled or contain controlled
+         --  elements, you should set this parameter to False to allocate
+         --  less memory.
+         --  ??? This parameter will be removed when the compiler can provide
+         --  this information automatically.
+
       package Typed is
          Finalization_Master_Size : constant Storage_Count :=
-            2 * System.Address'Size;
+            (if Potentially_Controlled then 2 * System.Address'Size else 0);
          --  Extra memory that needs to be allocated for the handling of
          --  potentially controlled types (see System.Finalization_Masters).
          --  Ideally, the compiler will be able to tell us whether these

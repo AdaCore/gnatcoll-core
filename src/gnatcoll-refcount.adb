@@ -135,15 +135,6 @@ package body GNATCOLL.Refcount is
          R.Weak_Data := null;
       end Set;
 
-      ---------
-      -- Get --
-      ---------
-
-      function Get (Self : Ref'Class) return Reference_Type is
-      begin
-         return (Element => Self.Data);
-      end Get;
-
       -------------------
       -- Unchecked_Get --
       -------------------

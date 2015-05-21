@@ -65,18 +65,19 @@ package GNATCOLL.Refcount is
    --  of this package. They are not useful for applications.
 
    type Weak_Data is record
-      Refcount : aliased GNATCOLL.Atomic.Atomic_Counter;
       Element  : System.Address := System.Null_Address;
+      Refcount : aliased GNATCOLL.Atomic.Atomic_Counter;
    end record;
    type Weak_Data_Access is access all Weak_Data;
 
    type Counters is record
-      Refcount      : aliased GNATCOLL.Atomic.Atomic_Counter := 1;
       Weak_Data     : aliased Weak_Data_Access := null;
       --  A pointer to the weak pointers'data. This data is created the
       --  first time we create a weak pointer. We hold a reference to that
       --  data, so that it can never be freed while at least one reference
       --  exists.
+
+      Refcount      : aliased GNATCOLL.Atomic.Atomic_Counter := 1;
    end record;
 
    package Headers is new Header_Pools (Counters);
@@ -101,7 +102,15 @@ package GNATCOLL.Refcount is
       --  True, the smart pointer is task safe. Of course, that does not
       --  mean that the Element_Type itself is task safe.
 
+      Potentially_Controlled : Boolean := True;
+      --  See the comment for GNATCOLL.Storage_Pools.Headers.
+      --  Set this to False if you know that Element_Type cannot be
+      --  controlled or contain controlled element. This parameter will be
+      --  removed when the compiler can provide this information automatically
+
    package Shared_Pointers is
+      pragma Suppress (All_Checks);
+
       type Ref is tagged private;
       Null_Ref : constant Ref;
       --  This type acts like a pointer, but holds a reference to the object,
@@ -115,7 +124,8 @@ package GNATCOLL.Refcount is
       --  expired). Holding a weak reference does not prevent the deallocation
       --  of the object
 
-      package Pools is new Headers.Typed (Element_Type);
+      package Pools is new Headers.Typed
+         (Element_Type, Potentially_Controlled => Potentially_Controlled);
       subtype Element_Access is Pools.Element_Access;
 
       procedure Set (Self : in out Ref'Class; Data : Element_Type)
@@ -179,10 +189,11 @@ package GNATCOLL.Refcount is
       --       SP.Get.Primitive1;
       --       SP.Get.Element.Primitive2;
 
-      function Get (Self : Ref'Class) return Reference_Type
-         with Inline => True;
       function Unchecked_Get (Self : Ref'Class) return Element_Access
-         with Inline => True;
+         with Inline_Always => True;
+      function Get (Self : Ref'Class) return Reference_Type
+         is ((Element => Unchecked_Get (Self)))
+         with Inline_Always => True;
       --  The resulting access must not be deallocated. Passing it to
       --  Set might also be dangerous if the Element_Type contains data
       --  that might be freed when other smart pointers are freed.
