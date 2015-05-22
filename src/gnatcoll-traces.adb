@@ -392,7 +392,7 @@ package body GNATCOLL.Traces is
 
       Lock;
 
-      --  Do we have a matching existing stream ?
+      --  Do we have a matching existing stream?
 
       Tmp := Global.Streams_List;
       while Tmp /= null loop

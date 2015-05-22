@@ -62,7 +62,7 @@ package GNATCOLL.Templates is
    --  overriden in the various Substitute subprograms below.
    --  The special substrings always start with this delimiter, and including
    --  the following number or identifier. That identifier can be quoted
-   --  between curly braces ({...}) or parenthesis to avoid ambiguities.
+   --  between curly braces ({...}) or parentheses to avoid ambiguities.
    --  For instance:
    --    a%bcd*df    =>  identifier name is "bcd"
    --    a%123ab     =>  identifier name is "123"
@@ -88,7 +88,7 @@ package GNATCOLL.Templates is
    --  explicit replacement for it). For instance, if the string contains
    --    "a%%b" it will be replaced with "a%b".
    --
-   --  When an identifier is specified within curly braces or parenthesis, a
+   --  When an identifier is specified within curly braces or parentheses, a
    --  default value can be specified for it, which will be used if no other
    --  substitution is available. The syntax is similar to that of the Unix
    --  shell:
