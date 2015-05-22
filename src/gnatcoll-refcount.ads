@@ -128,14 +128,13 @@ package GNATCOLL.Refcount is
          (Element_Type, Potentially_Controlled => Potentially_Controlled);
       subtype Element_Access is Pools.Element_Access;
 
-      procedure Set (Self : in out Ref'Class; Data : Element_Type)
-         with Inline => True;
+      procedure Set (Self : in out Ref'Class; Data : Element_Type);
+      pragma Inline (Set);
       --  A copy of Data will be put under control of Self, and freed when
       --  the last reference to it is removed.
 
-      procedure From_Element
-         (Self : out Ref'Class; Element : Element_Access)
-         with Inline => True;
+      procedure From_Element (Self : out Ref'Class; Element : Element_Access);
+      pragma Inline (From_Element);
       --  Given an element that is already under control of a
       --  shared pointer, returns the corresponding shared pointer.
       --  This is especially useful when the element_type is a tagged
@@ -189,23 +188,23 @@ package GNATCOLL.Refcount is
       --       SP.Get.Primitive1;
       --       SP.Get.Element.Primitive2;
 
-      function Unchecked_Get (Self : Ref'Class) return Element_Access
-         with Inline_Always => True;
+      function Unchecked_Get (Self : Ref'Class) return Element_Access;
+      pragma Inline_Always (Unchecked_Get);
       function Get (Self : Ref'Class) return Reference_Type
-         is ((Element => Unchecked_Get (Self)))
-         with Inline_Always => True;
+         is ((Element => Unchecked_Get (Self)));
+      pragma Inline_Always (Get);
       --  The resulting access must not be deallocated. Passing it to
       --  Set might also be dangerous if the Element_Type contains data
       --  that might be freed when other smart pointers are freed.
       --  It also must not be stored in a record (store Self instead).
 
-      function Is_Null (Self : Ref'Class) return Boolean
-         with Inline => True;
+      function Is_Null (Self : Ref'Class) return Boolean;
+      pragma Inline (Is_Null);
       --  Whether the data is unset. Using this function might avoid the
       --  need for a "use type Element_Access" in your code.
 
-      overriding function "=" (P1, P2 : Ref) return Boolean
-         with Inline => True;
+      overriding function "=" (P1, P2 : Ref) return Boolean;
+      pragma Inline ("=");
       --  This operator checks whether P1 and P2 share the same pointer.
       --  When the pointers differ, this operator returns False even if the
       --  two pointed elements are equal.
@@ -232,16 +231,16 @@ package GNATCOLL.Refcount is
          Data : Element_Access;
       end record;
       pragma Finalize_Storage_Only (Ref);
-      overriding procedure Adjust (Self : in out Ref)
-         with Inline => True;
+      overriding procedure Adjust (Self : in out Ref);
+      pragma Inline (Adjust);
       overriding procedure Finalize (Self : in out Ref);
 
       type Weak_Ref is new Ada.Finalization.Controlled with record
          Data : Weak_Data_Access;
       end record;
       pragma Finalize_Storage_Only (Weak_Ref);
-      overriding procedure Adjust (Self : in out Weak_Ref)
-         with Inline => True;
+      overriding procedure Adjust (Self : in out Weak_Ref);
+      pragma Inline (Adjust);
       overriding procedure Finalize (Self : in out Weak_Ref);
 
       Null_Ref : constant Ref :=

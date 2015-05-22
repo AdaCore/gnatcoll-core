@@ -69,8 +69,8 @@ package GNATCOLL.Storage_Pools.Headers is
       --  provide the size needed to store the bounds of the array.
 
       function Header_Of
-         (Self : Header_Pool; Addr : System.Address) return access Extra_Header
-         with Inline => True;
+        (Self : Header_Pool; Addr : System.Address) return access Extra_Header;
+      pragma Inline (Header_Of);
       --  Points to the begining of the header, given an element allocated by
       --  the pool.
 
@@ -86,8 +86,8 @@ package GNATCOLL.Storage_Pools.Headers is
           Alignment : Storage_Count);
       overriding function Storage_Size
          (Self      : Header_Pool) return Storage_Count
-         is (Storage_Count'Last)
-         with Inline => True;
+         is (Storage_Count'Last);
+      pragma Inline (Storage_Size);
 
       -----------
       -- Typed --
@@ -146,18 +146,11 @@ package GNATCOLL.Storage_Pools.Headers is
          --  All memory allocation and deallocation for Element_Access will go
          --  through the pool.
 
-         pragma Warnings
-            (Off, "*pragma Inline for ""Header_Of"" is redundant");
-         --  For older versions of the compiler
-
          function Header_Of
             (Element : Element_Access) return access Extra_Header
             is (if Element = null
-                then null else Header_Of (Pool, Element.all'Address))
-            with Inline => True;
-
-         pragma Warnings
-            (On, "*pragma Inline for ""Header_Of"" is redundant");
+                then null else Header_Of (Pool, Element.all'Address));
+         pragma Inline (Header_Of);
       end Typed;
 
    end Header_Pools;
