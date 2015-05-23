@@ -89,9 +89,12 @@ the various possibilities to reference a stream:
   This is the name of a file to which the traces should be redirected. The
   previous contents of the file is discarded. If the name of the file is a
   relative path, it is relative to the location of the configuration file, not
-  necessarily to the current directory when the file is parsed. If you used
-  ">>" instead of ">" to redirect to that stream, the initial content of the
-  file is not overridden, and new traces are appended to the file instead.
+  necessarily to the current directory when the file is parsed.
+  In the file name, $$ is automatically replaced by the process number.
+  $D is automatically replaced by the current date. $T is automatically
+  replaced by the current date and time. If you used ">>" instead of ">"
+  to redirect to that stream, the initial content of the file is not overridden,
+  and new traces are appended to the file instead.
 
 *"&1"*
   This syntax is similar to the one used on Unix shells, and indicates that
