@@ -319,7 +319,7 @@ provide that information:
     | TABLE | tableA |
     | FK: | tableB | fieldA1, fieldA2 | fieldB1, fieldB2 |
     
-  It is also possible to crate multi-column indexes, as in the following
+  It is also possible to create multi-column indexes, as in the following
   example.  In this case, the third column contains the name of the index to
   create. If left blank, a default name will be computed by GNATColl::
 
