@@ -98,13 +98,17 @@
 --         Where  => AI.FK (Action_Item))
 
 with Ada.Calendar;
-with Ada.Containers.Doubly_Linked_Lists;
-with Ada.Containers.Indefinite_Doubly_Linked_Lists;
+with Ada.Containers.Vectors;
+with Ada.Containers.Indefinite_Vectors;
 with Ada.Finalization;
 with Ada.Strings.Unbounded;  use Ada.Strings.Unbounded;
 with GNATCOLL.SQL_Impl;      use GNATCOLL.SQL_Impl;
 
 package GNATCOLL.SQL is
+   --  Work around issue with the Ada containers: the tampering checks
+   --  mean that the container might be corrupted if used from multiple
+   --  tasks, even in read-only.
+   --     pragma Suppress (Tampering_Check);
 
    subtype SQL_Criteria is GNATCOLL.SQL_Impl.SQL_Criteria;
 
@@ -865,12 +869,12 @@ private
    -- Tables lists --
    ------------------
 
-   package Table_List is new Ada.Containers.Indefinite_Doubly_Linked_Lists
-     (SQL_Single_Table'Class);
+   package Table_List is new Ada.Containers.Indefinite_Vectors
+     (Natural, SQL_Single_Table'Class);
 
    type Table_List_Internal is record
       Refcount : Natural := 1;
-      List     : Table_List.List;
+      List     : Table_List.Vector;
    end record;
    type Table_List_Internal_Access is access all Table_List_Internal;
    --  Store the actual data for a SQL_Table_List in a different block (using
@@ -929,14 +933,14 @@ private
    subtype Null_Criteria
      is SQL_Criteria_Type range Criteria_Null .. Criteria_Not_Null;
 
-   package Criteria_List is new Ada.Containers.Doubly_Linked_Lists
-     (SQL_Criteria);
+   package Criteria_List is new Ada.Containers.Vectors
+     (Natural, SQL_Criteria);
 
    type SQL_Criteria_Data (Op : SQL_Criteria_Type) is
       new GNATCOLL.SQL_Impl.SQL_Criteria_Data with record
       case Op is
          when Criteria_Criteria =>
-            Criterias : Criteria_List.List;
+            Criterias : Criteria_List.Vector;
 
          when Criteria_In | Criteria_Not_In =>
             Arg       : SQL_Field_Pointer;
@@ -972,10 +976,10 @@ private
       Field    : SQL_Field_Pointer;
    end record;
 
-   package When_Lists is new Ada.Containers.Indefinite_Doubly_Linked_Lists
-     (When_List_Item);
+   package When_Lists is new Ada.Containers.Indefinite_Vectors
+     (Natural, When_List_Item);
    type When_List is record
-      List : When_Lists.List;
+      List : When_Lists.Vector;
    end record;
 
    type Case_Stmt_Internal is new SQL_Field_Internal with record

@@ -28,7 +28,7 @@
 --  ??? sqlalchemy provides a SingletonThreadPool where a connection is only
 --      returned in the thread that was used to create it (for sqlite)
 
-with Ada.Containers.Doubly_Linked_Lists;
+with Ada.Containers.Vectors;
 use Ada.Containers;
 with Ada.Unchecked_Deallocation;
 with GNATCOLL.SQL;        use GNATCOLL.SQL;
@@ -37,6 +37,11 @@ with GNATCOLL.Traces;     use GNATCOLL.Traces;
 with GNATCOLL.Utils;      use GNATCOLL.Utils;
 
 package body GNATCOLL.SQL.Sessions is
+   --  Work around issue with the Ada containers: the tampering checks
+   --  mean that the container might be corrupted if used from multiple
+   --  tasks, even in read-only.
+   --     pragma Suppress (Tampering_Check);
+
    Me : constant Trace_Handle := Create ("Session", Off);
    Me_Info : constant Trace_Handle := Create ("Session.Info");
 
@@ -77,8 +82,8 @@ package body GNATCOLL.SQL.Sessions is
       Msg : String := "");
    --  Print information on C
 
-   package Hash_Lists is new Ada.Containers.Doubly_Linked_Lists
-      (Ada.Containers.Hash_Type);
+   package Hash_Lists is new Ada.Containers.Vectors
+      (Natural, Ada.Containers.Hash_Type);
    use Hash_Lists;
 
    procedure Add_To_Cache (Self : Session_Type; E : Detached_Element'Class);
@@ -133,7 +138,7 @@ package body GNATCOLL.SQL.Sessions is
               Pool                  => Data.Pool,
               Wcache                => Weak_Element_Maps.Empty_Map,
               Cache                 => Element_Maps.Empty_Map,
-              Modified_Elements     => Element_Lists.Empty_List,
+              Modified_Elements     => Element_Lists.Empty_Vector,
               User                  => null,
               Store_Unmodified      => Data.Config_Store_Unmodified,
               Weak_Cache            => Data.Config_Weak_Cache,

@@ -23,12 +23,16 @@
 
 pragma Ada_2012;
 with Ada.Calendar;
-with Ada.Containers.Doubly_Linked_Lists;
-with Ada.Containers.Indefinite_Doubly_Linked_Lists;
+with Ada.Containers.Vectors;
+with Ada.Containers.Indefinite_Vectors;
 with Ada.Containers.Indefinite_Hashed_Sets;
 with GNATCOLL.Refcount; use GNATCOLL.Refcount;
 
 package GNATCOLL.SQL_Impl is
+   --  Work around issue with the Ada containers: the tampering checks
+   --  mean that the container might be corrupted if used from multiple
+   --  tasks, even in read-only.
+   --      pragma Suppress (Tampering_Check);
 
    type Cst_String_Access is access constant String;
    --  Various aspects of a database description (table names, field names,...)
@@ -274,8 +278,8 @@ package GNATCOLL.SQL_Impl is
    function "+" (Left : SQL_Field'Class) return SQL_Field_List;
    --  Create a list with a single field
 
-   package Field_List is new Ada.Containers.Indefinite_Doubly_Linked_Lists
-     (SQL_Field'Class);
+   package Field_List is new Ada.Containers.Indefinite_Vectors
+     (Natural, SQL_Field'Class);
 
    function First (List : SQL_Field_List) return Field_List.Cursor;
    --  Return the first field contained in the list
@@ -620,7 +624,7 @@ package GNATCOLL.SQL_Impl is
 
 private
    type SQL_Field_List is new SQL_Field_Or_List with record
-      List : Field_List.List;
+      List : Field_List.Vector;
    end record;
 
    type SQL_Table_Or_List is abstract tagged null record;
@@ -667,17 +671,17 @@ private
       --  Its new value (No_Field_Pointer sets to NULL)
    end record;
 
-   package Assignment_Lists is new Ada.Containers.Doubly_Linked_Lists
-     (Assignment_Item);
+   package Assignment_Lists is new Ada.Containers.Vectors
+      (Natural, Assignment_Item);
 
    type SQL_Assignment is record
-      List : Assignment_Lists.List;
+      List : Assignment_Lists.Vector;
    end record;
 
    No_Assignment : constant SQL_Assignment :=
-     (List => Assignment_Lists.Empty_List);
+     (List => Assignment_Lists.Empty_Vector);
 
    Empty_Field_List : constant SQL_Field_List :=
-     (SQL_Field_Or_List with List => Field_List.Empty_List);
+     (SQL_Field_Or_List with List => Field_List.Empty_Vector);
 
 end GNATCOLL.SQL_Impl;

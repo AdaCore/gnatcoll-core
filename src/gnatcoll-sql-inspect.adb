@@ -870,7 +870,7 @@ package body GNATCOLL.SQL.Inspect is
                Descr :=
                  (To_Table        => To_Table.Weak,
                   Revert_Name     => null,
-                  Fields          => Pair_Lists.Empty_List,
+                  Fields          => Pair_Lists.Empty_Vector,
                   Ambiguous       => False);
 
                Mark_FK_As_Ambiguous (Table, To_Table, Descr.Ambiguous);
@@ -1183,10 +1183,10 @@ package body GNATCOLL.SQL.Inspect is
                     Id          => T,
                     Description => null,
                     Fields      => Empty_Field_List,
-                    Indexes     => String_Lists.Empty_List,
+                    Indexes     => String_Lists.Empty_Vector,
                     Is_Abstract => False,
                     Has_PK      => False,
-                    FK          => Foreign_Keys.Empty_List,
+                    FK          => Foreign_Keys.Empty_Vector,
                     Active      => True,
                     Super_Table => No_Table));
                Include (Schema.Tables, Name, Table);
@@ -1274,7 +1274,7 @@ package body GNATCOLL.SQL.Inspect is
                      FKD := Foreign_Key_Description'
                        (To_Table    => To_Table.Weak,
                         Revert_Name => new String'(Typ (Tmp + 1 .. Tmp2 - 1)),
-                        Fields      => Pair_Lists.Empty_List,
+                        Fields      => Pair_Lists.Empty_Vector,
                         Ambiguous   => False);
                      Mark_FK_As_Ambiguous (Table, To_Table, FKD.Ambiguous);
 
@@ -1335,7 +1335,7 @@ package body GNATCOLL.SQL.Inspect is
                     (To_Table        => To_Table.Weak,
                      Revert_Name     => null,
                      Ambiguous       => False,
-                     Fields          => Pair_Lists.Empty_List));
+                     Fields          => Pair_Lists.Empty_Vector));
                Mark_FK_As_Ambiguous (From_Table, To_Table, FK.Get.Ambiguous);
 
                declare
@@ -1368,13 +1368,13 @@ package body GNATCOLL.SQL.Inspect is
             elsif Line (1).all = "INDEX:" then
                if Line (3).all = "" then
                   TDR (From_Table.Unchecked_Get).Indexes.Append
-                    (Line (2).all
+                    (String'(Line (2).all
                      & "|"
                      & Name & "_idx"
-                     & Image (Index_Count, Min_Width => 1));
+                     & Image (Index_Count, Min_Width => 1)));
                else
                   TDR (From_Table.Unchecked_Get).Indexes.Append
-                    (Line (2).all & "|" & Line (3).all);
+                    (String'(Line (2).all & "|" & Line (3).all));
                end if;
 
                Index_Count := Index_Count + 1;
@@ -1462,13 +1462,13 @@ package body GNATCOLL.SQL.Inspect is
    overriding procedure Write_Schema
      (Self : DB_Schema_IO; Schema : DB_Schema)
    is
-      Created : String_Lists.List;
+      Created : String_Lists.Vector;
       --  List of tables that have been created. When a table has already been
       --  created, we set the foreign key constraints to it immediately,
       --  otherwise we defer them till all tables have been created.
 
-      Deferred         : String_Lists.List;
-      Deferred_Indexes : String_Lists.List;
+      Deferred         : String_Lists.Vector;
+      Deferred_Indexes : String_Lists.Vector;
       --  Statements to execute to create the indexes
 
       procedure For_Table (Table : in out Table_Description);
@@ -1544,13 +1544,14 @@ package body GNATCOLL.SQL.Inspect is
                      Name_Start := Name_Start + 1;
                   end loop;
 
-                  Append (Deferred_Indexes,
-                          "CREATE INDEX """
-                          & Descr (Name_Start + 1 .. Descr'Last)
-                          & """ ON """
-                          & Table.Name & """ ("
-                          & Descr (Descr'First .. Name_Start - 1)
-                          & ")");
+                  Deferred_Indexes.Append
+                     (String'
+                      ("CREATE INDEX """
+                       & Descr (Name_Start + 1 .. Descr'Last)
+                       & """ ON """
+                       & Table.Name & """ ("
+                       & Descr (Descr'First .. Name_Start - 1)
+                       & ")"));
                end;
 
                Next (C);
@@ -1652,14 +1653,15 @@ package body GNATCOLL.SQL.Inspect is
                  --  Unless disabled by the user
                  and not Element (R.Get.Fields.First).From.Get.Props.Noindex
                then
-                  Append (Deferred_Indexes,
-                          "CREATE INDEX """
-                          & Table.Name & "_"
-                          & Element (R.Get.Fields.First).From.Name
-                          & "_idx"" ON """
-                          & Table.Name & """ ("""
-                          & Element (R.Get.Fields.First).From.Name
-                          & """)");
+                  Deferred_Indexes.Append
+                     (String'
+                        ("CREATE INDEX """
+                         & Table.Name & "_"
+                         & Element (R.Get.Fields.First).From.Name
+                         & "_idx"" ON """
+                         & Table.Name & """ ("""
+                         & Element (R.Get.Fields.First).From.Name
+                         & """)"));
                end if;
             end loop;
          end Print_FK;
@@ -1730,14 +1732,15 @@ package body GNATCOLL.SQL.Inspect is
             end if;
 
             if F.Get.Props.Indexed then
-               Append (Deferred_Indexes,
-                       "CREATE INDEX """
-                       & Table.Name & "_"
-                       & F.Get.Name.all
-                       & "_idx"" ON """
-                       & Table.Name & """ ("""
-                       & F.Get.Name.all
-                       & """)");
+               Deferred_Indexes.Append
+                  (String'
+                    ("CREATE INDEX """
+                     & Table.Name & "_"
+                     & F.Get.Name.all
+                     & "_idx"" ON """
+                     & Table.Name & """ ("""
+                     & F.Get.Name.all
+                     & """)"));
             end if;
          end Get_Field_Def;
 

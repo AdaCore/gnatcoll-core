@@ -33,8 +33,8 @@
 --  management in this package.
 
 pragma Ada_2012;
-private with Ada.Containers.Doubly_Linked_Lists;
-private with Ada.Containers.Indefinite_Doubly_Linked_Lists;
+private with Ada.Containers.Vectors;
+private with Ada.Containers.Indefinite_Vectors;
 with Ada.Containers.Indefinite_Ordered_Maps;
 with GNATCOLL.SQL.Exec;           use GNATCOLL.SQL.Exec;
 with GNATCOLL.VFS;
@@ -42,6 +42,10 @@ private with GNATCOLL.Refcount;
 private with GNAT.Strings;
 
 package GNATCOLL.SQL.Inspect is
+   --  Work around issue with the Ada containers: the tampering checks
+   --  mean that the container might be corrupted if used from multiple
+   --  tasks, even in read-only.
+   --  pragma Suppress (Tampering_Check);
 
    type Table_Description is tagged private;
    type Field is tagged private;
@@ -384,17 +388,17 @@ private
 
    No_Field : constant Field := (Fields_Ref.Null_Ref with null record);
 
-   package Field_Lists is new Ada.Containers.Doubly_Linked_Lists (Field);
-   type Field_List is new Field_Lists.List with null record;
+   package Field_Lists is new Ada.Containers.Vectors (Natural, Field);
+   type Field_List is new Field_Lists.Vector with null record;
 
    Empty_Field_List : constant Field_List :=
-     (Field_Lists.Empty_List with null record);
+     (Field_Lists.Empty_Vector with null record);
 
    type Field_Pair is record
       From : Field;
       To   : Field;  --  No field if pointing to foreign primary key
    end record;
-   package Pair_Lists is new Ada.Containers.Doubly_Linked_Lists (Field_Pair);
+   package Pair_Lists is new Ada.Containers.Vectors (Natural, Field_Pair);
 
    type Foreign_Key_Description is record
       To_Table        : Tables_Ref.Weak_Ref;
@@ -402,7 +406,7 @@ private
       --  not have this info.
 
       Revert_Name     : GNAT.Strings.String_Access;
-      Fields          : Pair_Lists.List;
+      Fields          : Pair_Lists.Vector;
       Ambiguous       : Boolean;
    end record;
    --  A foreign key from one table to another
@@ -420,11 +424,11 @@ private
    function To_Table (FK : Foreign_Key) return Table_Description'Class;
    --  The table that is referenced by the foreign key
 
-   package Foreign_Keys is new Ada.Containers.Doubly_Linked_Lists
-     (Foreign_Key);
+   package Foreign_Keys is new Ada.Containers.Vectors
+     (Natural, Foreign_Key);
 
-   package String_Lists is new Ada.Containers.Indefinite_Doubly_Linked_Lists
-     (String);
+   package String_Lists is new Ada.Containers.Indefinite_Vectors
+     (Natural, String);
 
    -----------------------
    -- Table_Description --
@@ -439,9 +443,9 @@ private
       Description : GNAT.Strings.String_Access := null;
       Fields      : Field_List := Empty_Field_List;
       Is_Abstract : Boolean := False;
-      FK          : Foreign_Keys.List := Foreign_Keys.Empty_List;
+      FK          : Foreign_Keys.Vector := Foreign_Keys.Empty_Vector;
 
-      Indexes     : String_Lists.List;
+      Indexes     : String_Lists.Vector;
       --  The list of multi-column indexes (that are declared in their own line
       --  in the table description). This contains strings like:
       --     "field1,field2,field3|index_name"
@@ -463,8 +467,8 @@ private
 
    package Tables_Maps is new Ada.Containers.Indefinite_Ordered_Maps
      (String, Table_Description, "<", "=");
-   package Tables_Lists is new Ada.Containers.Indefinite_Doubly_Linked_Lists
-     (String);
+   package Tables_Lists is new Ada.Containers.Indefinite_Vectors
+     (Index_Type => Natural, Element_Type => String);
 
    ------------
    -- Schema --
@@ -473,13 +477,13 @@ private
    type DB_Schema is record
       Tables  : Tables_Maps.Map;
 
-      Ordered_Tables : Tables_Lists.List;
+      Ordered_Tables : Tables_Lists.Vector;
       --  In the order in which the user defined them in the description file.
    end record;
 
    No_Schema : constant DB_Schema :=
      (Tables         => Tables_Maps.Empty_Map,
-      Ordered_Tables => Tables_Lists.Empty_List);
+      Ordered_Tables => Tables_Lists.Empty_Vector);
 
    No_Table : constant Table_Description :=
      (Tables_Ref.Null_Ref with null record);

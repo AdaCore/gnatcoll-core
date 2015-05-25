@@ -93,7 +93,7 @@ package body GNATCOLL.SQL is
       Func_Name      : GNAT.Strings.String_Access; --  can be null
       Separator      : GNAT.Strings.String_Access;
       Suffix         : GNAT.Strings.String_Access; --  can be null
-      List           : Field_List.List;
+      List           : Field_List.Vector;
    end record;
    overriding function To_String
      (Self   : Multiple_Args_Field_Internal;
@@ -1029,7 +1029,7 @@ package body GNATCOLL.SQL is
    function Combine
      (Left, Right : SQL_Criteria; Op : SQL_Criteria_Type) return SQL_Criteria
    is
-      List : Criteria_List.List;
+      List : Criteria_List.Vector;
       C    : Criteria_List.Cursor;
       Result : SQL_Criteria;
       Data   : SQL_Criteria_Data (Op);

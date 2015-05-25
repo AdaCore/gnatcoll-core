@@ -67,8 +67,12 @@ project GnatColl_Shared is
          --  enough in GNATCOLL.
          when "Debug" =>
             for Switches ("Ada") use
-              ("-g", "-O0", "-gnata", "-gnatVa", "-gnatQ", "-gnaty", "-gnateE",
+              ("-g", "-O0", "-gnatVa", "-gnatQ", "-gnaty", "-gnateE",
                "-gnatwaCJe", "-gnat05");
+
+            --  Disable -gnata pending O525-006, since assertions checks are
+            --  not compatible with disabling tampering checks
+
             for Switches ("C") use ("-g", "-fdump-xref", "-Wunreachable-code");
          when "Production" =>
             for Switches ("Ada") use

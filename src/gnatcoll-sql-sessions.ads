@@ -30,13 +30,18 @@
 
 pragma Ada_2012;
 with Ada.Containers.Hashed_Maps;
-with Ada.Containers.Indefinite_Doubly_Linked_Lists;
+with Ada.Containers.Indefinite_Vectors;
 with GNATCOLL.Refcount;         use GNATCOLL.Refcount;
 with GNATCOLL.SQL.Exec;         use GNATCOLL.SQL.Exec;
 with GNATCOLL.Traces;
 with GNATCOLL.Pools;
 
 package GNATCOLL.SQL.Sessions is
+
+   --  Work around issue with the Ada containers: the tampering checks
+   --  mean that the container might be corrupted if used from multiple
+   --  tasks, even in read-only.
+   --     pragma Suppress (Tampering_Check);
 
    type Session_Pool is new Integer range 1 .. 3;
    --  Connection to at most three different DBMS.
@@ -540,8 +545,8 @@ private
       "="             => "=");
    --  A set of elements
 
-   package Element_Lists is new Ada.Containers.Indefinite_Doubly_Linked_Lists
-     (Detached_Element'Class);
+   package Element_Lists is new Ada.Containers.Indefinite_Vectors
+     (Natural, Detached_Element'Class);
 
    type User_Data_Access is access all User_Data'Class;
 
@@ -557,7 +562,7 @@ private
       --  ensures we have a ref to them and they can't be finalized before they
       --  are flushed to the db.
 
-      Modified_Elements : Element_Lists.List;
+      Modified_Elements : Element_Lists.Vector;
       --  The list of modified elements, that need to be flushed to the db.
 
       Factory  : Element_Factory := Null_Factory'Access;  --  not null
