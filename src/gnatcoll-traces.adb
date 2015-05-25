@@ -27,6 +27,7 @@ with Ada.Calendar;              use Ada.Calendar;
 with Ada.Calendar.Formatting;   use Ada.Calendar.Formatting;
 with Ada.Calendar.Time_Zones;   use Ada.Calendar.Time_Zones;
 with Ada.Characters.Handling;   use Ada.Characters.Handling;
+with Ada.Environment_Variables;
 with Ada.Strings.Fixed;         use Ada.Strings.Fixed;
 with Ada.Text_IO;               use Ada.Text_IO;
 with Ada.Exceptions.Traceback;  use Ada.Exceptions.Traceback;
@@ -43,6 +44,7 @@ with GNAT.Traceback;            use GNAT.Traceback;
 with System.Address_Image;
 with System.Assertions;         use System.Assertions;
 
+with GNATCOLL.Templates;
 with GNATCOLL.Utils;            use GNATCOLL.Utils;
 with Interfaces;                use Interfaces;
 
@@ -450,60 +452,40 @@ package body GNATCOLL.Traces is
             others => <>);
 
          declare
-            Max_Date_Width : constant Natural := 10; --  "yyyy-mm-dd"
-            Max_PID_Width  : constant Natural := 12;
-            Max_Name_Last  : constant Natural :=
-              Name'Last + Max_Date_Width + Max_PID_Width;
-            Name_Tmp       : String (Name'First .. Max_Name_Last);
-            Index          : Integer := Name_Tmp'First;
-            N              : Integer := Name'First;
-         begin
-            while N <= Name'Last loop
-               if Name (N) = '$' then
-                  if N < Name'Last
-                    and then Name (N + 1) = '$'
-                  then
-                     declare
-                        Pid : constant String :=
-                          Integer'Image (Get_Process_Id);
-                     begin
-                        Name_Tmp (Index .. Index + Pid'Length - 2) :=
-                          Pid (Pid'First + 1 .. Pid'Last);
-                        Index := Index + Pid'Length - 1;
-                        N     := N + 1;
-                     end;
+            use GNATCOLL.Templates;
 
-                  elsif N < Name'Last
-                    and then (Name (N + 1) = 'D' or else Name (N + 1) = 'T')
-                  then
-                     declare
-                        Date : constant String :=
-                          Image (Clock, ISO_Date
-                                        & (if Name (N + 1) = 'T'
-                                           then "T%T"
-                                           else ""));
-                     begin
-                        Name_Tmp (Index .. Index + Date'Length - 1) := Date;
-                        Index := Index + Date'Length;
-                        N     := N + 1;
-                     end;
+            function Substitute_Cb
+              (Var : String; Quoted : Boolean) return String;
+            --  Callback for variable substitution in Name
 
-                  else
-                     Name_Tmp (Index) := Name (N);
-                     Index := Index + 1;
-                  end if;
+            --------------------
+            --  Substitute_Cb --
+            --------------------
 
-               else
-                  Name_Tmp (Index) := Name (N);
-                  Index := Index + 1;
+            function Substitute_Cb
+              (Var : String; Quoted : Boolean) return String
+            is
+               pragma Unreferenced (Quoted);
+               use Ada.Environment_Variables;
+            begin
+               if Var = "$" then
+                  return Trim (Get_Process_Id'Img, Ada.Strings.Both);
+               elsif Var = "D" or else Var = "T" then
+                  return Image (Clock, ISO_Date
+                           & (if Var = "T" then "T%T" else ""));
+               elsif Exists (Var) then
+                  return Value (Var);
                end if;
+               raise Invalid_Substitution;
+            end Substitute_Cb;
 
-               N := N + 1;
-            end loop;
-
+         begin
             declare
                N : constant String := Normalize_Pathname
-                 (Name_Tmp (Name_Tmp'First .. Index - 1),
+                 (Substitute
+                    (Str       => Name,
+                     Callback  => Substitute_Cb'Unrestricted_Access,
+                     Delimiter => '$'),
                   Dir_Name (Config_File_Name));
             begin
                if Append
