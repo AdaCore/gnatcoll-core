@@ -1,4 +1,4 @@
-project GnatColl_Shared is
+abstract project GnatColl_Shared is
    Version := "@PACKAGE_VERSION@";
    Name    := "@PACKAGE_TARNAME@";
 
