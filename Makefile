@@ -18,6 +18,9 @@ endif
 
 include Makefile.gnat
 
+#######################################################################
+#  build
+
 ## Builds explicitly the shared or the static libraries
 
 static: build_library_type/static
@@ -25,23 +28,25 @@ shared relocatable: build_library_type/relocatable
 
 # Build either type of library. The argument (%) is the type of library to build
 
+GPRBLD_OPTS=-p -m -j${PROCESSORS} -XLIBRARY_TYPE=$(@F)
+
 build_library_type/%: generate_sources do_links
 	@${RM} src/gnatcoll-atomic.adb
 
 	@echo "====== Building $(@F) libraries ======"
-	${GPRBUILD} -m -j${PROCESSORS} -XLIBRARY_TYPE=$(@F) -Pgnatcoll_build -p
+	${GPRBUILD} ${GPRBLD_OPTS} -Pgnatcoll_main
 
 	@# Need to build libgnatcoll_gtk separately, because its project files
 	@# requires gtkada.gpr, which might not exist on the machine.
 ifeq (${WITH_GTK},yes)
-	${GPRBUILD} -m -j${PROCESSORS} -XLIBRARY_TYPE=$(@F) -Psrc/gnatcoll_gtk -p
+	${GPRBUILD} ${GPRBLD_OPTS} -Psrc/gnatcoll_gtk
 endif
 
-	@# Build the tools (the list is the project's Main attribute)
+	@# Build the tools (the list is the project\'s Main attribute)
 	@# They are not build as part of the above because only the Main from
-	@# gnatcoll_build.gpr are build. We could use aggregate projects to speed
-	@# things up.
-	${GPRBUILD} -q -m -j${PROCESSORS} -XLIBRARY_TYPE=$(@F) -Psrc/gnatcoll_tools
+	@# gnatcoll_main.gpr are build. We could use aggregate projects to
+	@# speed things up.
+	${GPRBUILD} ${GPRBLD_OPTS} -q -Psrc/gnatcoll_tools
 
 #######################################################################
 #  install
@@ -132,15 +137,19 @@ test: sqlite3_shell local_install
 test_verbose: local_install
 	@${MAKE} test_names="${test_names}" -C testsuite verbose
 
+#######################################################################
+#  clean
 
 ## Clean either type of library, based on the value of (%)
 
+GPRCLN_OPTS=-r -q -XLIBRARY_TYPE=$(@F)
+
 clean_library/%:
-	-gprclean -r -q -Pgnatcoll_build -XLIBRARY_TYPE=$(@F)
+	-gprclean ${GPRCLN_OPTS} -Pgnatcoll_main
 	@# Separate pass to also remove the Main
-	-gprclean -r -q -Psrc/gnatcoll_tools -XLIBRARY_TYPE=$(@F)
+	-gprclean ${GPRCLN_OPTS} -Psrc/gnatcoll_tools
 ifeq (${WITH_GTK},yes)
-	-gprclean -r -q -Psrc/gnatcoll_gtk -XLIBRARY_TYPE=$(@F)
+	-gprclean ${GPRCLN_OPTS} -Psrc/gnatcoll_gtk
 endif
 
 clean: clean_library/static clean_library/relocatable
