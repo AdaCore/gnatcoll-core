@@ -1,5 +1,5 @@
 --  This project file is only meant for edition in GPS
-with "gnatcoll_build";
+with "gnatcoll_main";
 with "src/gnatcoll_gtk";
 with "src/gnatcoll_tools";
 

@@ -1,9 +1,0 @@
-MODULE=gmp
-PROJECT=gnatcoll_${MODULE}
-LIBNAME=lib${TARNAME}_${MODULE}
-
-include ../Makefile.conf
-
-ifeq (${WITH_GMP},yes)
-SRCDIRS=./gmp/
-endif

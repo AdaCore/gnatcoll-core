@@ -9,8 +9,11 @@ ifeq (${BUILDS_SHARED},yes)
 # Additional targets. Builds relocatble first so that the tools are
 # preferably linked statically.
 all: relocatable static
+install:  install-clean install_library_type/static \
+		install_library_type/relocatable
 else
 all: static
+install:  install-clean install_library_type/static
 endif
 
 include Makefile.gnat
@@ -39,6 +42,28 @@ endif
 	@# gnatcoll_build.gpr are build. We could use aggregate projects to speed
 	@# things up.
 	${GPRBUILD} -q -m -j${PROCESSORS} -XLIBRARY_TYPE=$(@F) -Psrc/gnatcoll_tools
+
+#######################################################################
+#  install
+
+GPRINST_OPTS=-p -f --prefix=${prefix} --install-name=gnatcoll \
+	--exec-subdir=${bindir} --project-subdir=lib/gnat \
+	--build-var=LIBRARY_TYPE --build-name=$(@F) -XLIBRARY_TYPE=$(@F)
+
+install-clean:
+ifneq (,$(wildcard $(prefix)/lib/gnat/manifests/gnatcoll))
+	-$(GPRINSTALL) --uninstall -f \
+		--prefix=$(prefix) --project-subdir=lib/gnat gnatcoll
+endif
+
+
+install_library_type/%:
+	@echo "====== Installing $(@F) libraries ======"
+	${GPRINSTALL} -r ${GPRINST_OPTS} -Pgnatcoll_main
+ifeq (${WITH_GTK},yes)
+	${GPRINSTALL} ${GPRINST_OPTS} -Psrc/gnatcoll_gtk
+endif
+	${GPRINSTALL} --mode=usage ${GPRINST_OPTS} -Psrc/gnatcoll_tools
 
 # Regenerate part of the sources. Unfortunately, this can be run only after
 # we have build GNATCOLL, and then its tools, even though GNATCOLL itself
@@ -107,45 +132,6 @@ test: sqlite3_shell local_install
 test_verbose: local_install
 	@${MAKE} test_names="${test_names}" -C testsuite verbose
 
-# Installs both static and shared libraries (if they were build)
-# GNU standards say we must not recompile, for this target
-install:
-	${MKDIR} ${bindir}
-	${MKDIR} ${DESTDIR}${prefix}/lib/gnat/${TARNAME}
-	${MKDIR} ${datadir}/${TARNAME}
-	${MKDIR} ${includedir}/${TARNAME}
-	${CP} src/dborm.py ${datadir}/${TARNAME}/
-	${CP} distrib/*.gpr ${DESTDIR}${prefix}/lib/gnat
-
-	${MKDIR} ${datadir}/examples/${TARNAME}
-	@# Do not want to copy .svn directories
-	${CP} -rf examples/* ${datadir}/examples/${TARNAME}
-
-	${MKDIR} ${datadir}/gps/support/core/gnatcoll
-	${CP} distrib/gnatcoll/*py ${datadir}/gps/support/core/gnatcoll/
-
-	${MKDIR} ${datadir}/doc/${TARNAME}/html
-	-${CP} -r docs/_build/html/* ${datadir}/doc/${TARNAME}/html 2>/dev/null
-	-${CP} docs/_build/latex/GNATColl.pdf ${datadir}/doc/${TARNAME}/gnatcoll.pdf 2>/dev/null
-
-	${MKDIR} ${libdir}/${TARNAME}/static
-ifeq (${BUILDS_SHARED},yes)
-	${MKDIR} ${libdir}/${TARNAME}/relocatable
-endif
-
-	${MAKE} -C src -f Makefile.gnatcoll libinstall
-	${MAKE} -C src -f Makefile.python libinstall
-ifeq (${WITH_GTK},yes)
-	${MAKE} -C src -f Makefile.gtk libinstall
-endif
-	${MAKE} -C src -f Makefile.iconv libinstall
-	${MAKE} -C src -f Makefile.postgres libinstall
-	${MAKE} -C src -f Makefile.sqlite libinstall
-	${MAKE} -C src -f Makefile.readline libinstall
-	${MAKE} -C src -f Makefile.tools installbin
-ifeq (${WITH_GMP},yes)
-	${MAKE} -C src -f Makefile.gmp libinstall
-endif
 
 ## Clean either type of library, based on the value of (%)
 

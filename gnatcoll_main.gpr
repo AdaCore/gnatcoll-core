@@ -1,5 +1,6 @@
 --  This project file is used to build all modules that have no external
 --  dependencies on external project files
+
 with "src/gnatcoll";
 with "src/gnatcoll_python";
 with "src/gnatcoll_postgres";
@@ -8,8 +9,11 @@ with "src/gnatcoll_tools";
 with "src/gnatcoll_gmp";
 with "src/gnatcoll_readline";
 with "src/gnatcoll_iconv";
+
 with "gnatcoll_shared";
-project Gnatcoll_Build is
+
+project Gnatcoll_Main is
+
    for Source_Dirs use ();
    for Object_Dir use "src/" & Gnatcoll_Shared'Object_Dir;  --  for auto.cgpr
 
@@ -18,4 +22,15 @@ project Gnatcoll_Build is
    end IDE;
 
    package Builder renames GNATCOLL_Shared.Builder;
-end Gnatcoll_Build;
+
+   package Install is
+      for Artifacts ("share/examples/gnatcoll") use ("examples/*");
+      for Artifacts ("share/doc/gnatcoll/html") use ("docs/_build/html");
+      for Artifacts ("share/doc/gnatcoll")
+        use ("docs/_build/latex/GNATColl.pdf");
+      for Artifacts ("share/gps/support/core/gnatcoll")
+        use ("distrib/gnatcoll/*py");
+      for Artifacts ("share/gnatcoll") use ("src/dborm.py");
+   end Install;
+
+end Gnatcoll_Main;

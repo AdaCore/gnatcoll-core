@@ -7,13 +7,12 @@ export ADA_PROJECT_PATH
 export LD_LIBRARY_PATH
 
 all:
-	@${MKDIR} obj
-	gnatmake -Pexamples
+	gnatmake -p -Pexamples
 ifeq ($(WITH_GTK),yes)
-	gprbuild -Pexamplesgtk -p
+	gprbuild -p -Pexamplesgtk
 endif
 ifeq ($(WITH_GMP),yes)
-	gprbuild -Pgmp/gmp_examples.gpr -p
+	gprbuild -p -Pgmp/gmp_examples.gpr
 endif
 	@echo "==================================================="
 	@echo "== To run, set the environment variable LD_LIBRARY_PATH"

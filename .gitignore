@@ -3,8 +3,6 @@ gnat/snames*
 gnat/xsnamest
 gnat/sdefault/sdefault.adb
 src/gnatcoll-atomic.adb
-distrib/gnatcoll.gpr__copy
-distrib/gnatcoll.gpr__gnat_util
 src/gnatcoll.gpr
 src/gnatcoll_readline.gpr
 src/sqlite/amalgamation/sqlite3_for_gps
@@ -35,11 +33,6 @@ obj/
 /gnat_src
 
 Makefile.conf
-distrib/gnatcoll.gpr
-distrib/gnatcoll_gmp.gpr
-distrib/gnatcoll_python.gpr
-distrib/relocatable/gnatcoll.gpr
-distrib/static/gnatcoll.gpr
 gnatcoll_shared.gpr
 src/gnatcoll_gmp.gpr
 src/gnatcoll_python.gpr

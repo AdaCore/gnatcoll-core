@@ -5615,11 +5615,7 @@ LIB=`basename $libdir`
 
 
 
-   ac_config_commands="$ac_config_commands distrib/gnatcoll.gpr"
-
-
-
-ac_config_files="$ac_config_files gnatcoll_shared.gpr Makefile.conf src/gnatcoll_gmp.gpr src/gnatcoll_python.gpr distrib/gnatcoll.gpr__gnat_util distrib/gnatcoll.gpr__copy distrib/gnatcoll_python.gpr distrib/gnatcoll_gmp.gpr gnat/sdefault/sdefault.adb src/gnatcoll_readline.gpr"
+ac_config_files="$ac_config_files gnatcoll_shared.gpr Makefile.conf src/gnatcoll_gmp.gpr src/gnatcoll_python.gpr gnat/sdefault/sdefault.adb src/gnatcoll_readline.gpr"
 
 cat >confcache <<\_ACEOF
 # This file is a shell script that caches the results of configure
@@ -6336,15 +6332,10 @@ for ac_config_target in $ac_config_targets
 do
   case $ac_config_target in
     "src/gnatcoll.gpr") CONFIG_COMMANDS="$CONFIG_COMMANDS src/gnatcoll.gpr" ;;
-    "distrib/gnatcoll.gpr") CONFIG_COMMANDS="$CONFIG_COMMANDS distrib/gnatcoll.gpr" ;;
     "gnatcoll_shared.gpr") CONFIG_FILES="$CONFIG_FILES gnatcoll_shared.gpr" ;;
     "Makefile.conf") CONFIG_FILES="$CONFIG_FILES Makefile.conf" ;;
     "src/gnatcoll_gmp.gpr") CONFIG_FILES="$CONFIG_FILES src/gnatcoll_gmp.gpr" ;;
     "src/gnatcoll_python.gpr") CONFIG_FILES="$CONFIG_FILES src/gnatcoll_python.gpr" ;;
-    "distrib/gnatcoll.gpr__gnat_util") CONFIG_FILES="$CONFIG_FILES distrib/gnatcoll.gpr__gnat_util" ;;
-    "distrib/gnatcoll.gpr__copy") CONFIG_FILES="$CONFIG_FILES distrib/gnatcoll.gpr__copy" ;;
-    "distrib/gnatcoll_python.gpr") CONFIG_FILES="$CONFIG_FILES distrib/gnatcoll_python.gpr" ;;
-    "distrib/gnatcoll_gmp.gpr") CONFIG_FILES="$CONFIG_FILES distrib/gnatcoll_gmp.gpr" ;;
     "gnat/sdefault/sdefault.adb") CONFIG_FILES="$CONFIG_FILES gnat/sdefault/sdefault.adb" ;;
     "src/gnatcoll_readline.gpr") CONFIG_FILES="$CONFIG_FILES src/gnatcoll_readline.gpr" ;;
 
@@ -6767,8 +6758,6 @@ $as_echo "$as_me: executing $ac_file commands" >&6;}
   case $ac_file$ac_mode in
     "src/gnatcoll.gpr":C) rm -f src/gnatcoll.gpr
                        cp -f src/gnatcoll__$GNAT_SOURCES.gpr src/gnatcoll.gpr ;;
-    "distrib/gnatcoll.gpr":C) rm -f distrib/gnatcoll.gpr
-                       cp -f distrib/gnatcoll.gpr__$GNAT_SOURCES distrib/gnatcoll.gpr ;;
 
   esac
 done # for ac_tag
@@ -6841,4 +6830,3 @@ $as_echo "$as_me:                           create gnat_src to override" >&6;}
 fi
 { $as_echo "$as_me:${as_lineno-$LINENO}: --------------------------------------------" >&5
 $as_echo "$as_me: --------------------------------------------" >&6;}
-
