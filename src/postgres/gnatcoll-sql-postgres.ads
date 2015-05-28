@@ -24,6 +24,7 @@
 --  This package instantiates the GNATCOLL.SQL hierarchy for the PostgreSQL
 --  DBMS
 
+with Ada.Strings.Unbounded;
 with GNATCOLL.SQL.Exec;   use GNATCOLL.SQL.Exec;
 with GNAT.Strings;        use GNAT.Strings;
 
@@ -89,6 +90,9 @@ package GNATCOLL.SQL.Postgres is
    --  Generic query extensions
 
    type SQL_PG_Extension is abstract tagged private;
+   function To_String
+      (Self : SQL_PG_Extension; Format : Formatter'Class)
+      return Ada.Strings.Unbounded.Unbounded_String is abstract;
 
    function Returning (Fields : SQL_Field_List) return SQL_PG_Extension'Class;
    --  RETURNING clause for UPDATE query
@@ -101,6 +105,9 @@ package GNATCOLL.SQL.Postgres is
    function "&"
      (Query     : SQL_Query;
       Extension : SQL_PG_Extension'Class) return SQL_Query;
+   --  Extends an existing query with postgres-specific additions. For
+   --  instance:
+   --      R.Fetch (DB, SQL_Select (...) & Returning (Field1));
 
 private
    type Postgres_Description is new Database_Description_Record with record
@@ -113,5 +120,6 @@ private
    end record;
 
    type SQL_PG_Extension is abstract tagged null record;
+   type SQL_PG_Extension_Access is access all SQL_PG_Extension'Class;
 
 end GNATCOLL.SQL.Postgres;

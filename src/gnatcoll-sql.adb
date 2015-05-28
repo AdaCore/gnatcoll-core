@@ -29,7 +29,7 @@ with GNAT.Strings;               use GNAT.Strings;
 package body GNATCOLL.SQL is
 
    use Table_List, Field_List, Criteria_List, Table_Sets;
-   use When_Lists;
+   use When_Lists, Query_Pointers;
    use type Boolean_Fields.Field;
 
    Comparison_Like        : aliased constant String := " LIKE ";
@@ -54,10 +54,6 @@ package body GNATCOLL.SQL is
    function To_String (Names : Table_Names) return String;
    function To_String (Self : Table_Sets.Set) return Unbounded_String;
    --  Various implementations for To_String, for different types
-
-   function Clone_Select_Contents
-     (Query : SQL_Query) return Query_Select_Contents_Access;
-   --  Clone the contents of the query (assuming it is a SELECT query)
 
    package Any_Fields is new Data_Fields (SQL_Field);
    type SQL_Field_Any is new Any_Fields.Field with null record;
@@ -854,7 +850,7 @@ package body GNATCOLL.SQL is
    ------------------
 
    function Cast_To_Date
-     (Field : SQL_Field_Time'Class) return Date_Fields.Field'Class
+     (Field : SQL_Field'Class) return Date_Fields.Field'Class
    is
       function Internal is new Date_Fields.Apply_Function
         (SQL_Field, "CAST (", "AS DATE)");
@@ -1383,35 +1379,41 @@ package body GNATCOLL.SQL is
       return To_String (Result);
    end To_String;
 
-   --------------
-   -- Finalize --
-   --------------
+   ----------------
+   -- SQL_Values --
+   ----------------
 
-   procedure Finalize (Self : in out Controlled_SQL_Query) is
-      procedure Unchecked_Free is new Ada.Unchecked_Deallocation
-        (Query_Contents'Class, SQL_Query_Contents_Access);
-      Data : SQL_Query_Contents_Access := Self.Data;
+   function SQL_Values (Val : Field_List_Array) return SQL_Query is
+      Q    : SQL_Query;
+      Data : Query_Values_Contents (Size => Val'Length);
    begin
-      Self.Data := null;  --  Make Finalize idempotent
-      if Data /= null then
-         Data.Refcount := Data.Refcount - 1;
-         if Data.Refcount = 0 then
-            Free (Data.all);
-            Unchecked_Free (Data);
+      Data.Values := Val;
+      Q.Set (Data);
+      return Q;
+   end SQL_Values;
+
+   ---------------
+   -- To_String --
+   ---------------
+
+   overriding function To_String
+     (Self : Query_Values_Contents;
+      Format : Formatter'Class) return Unbounded_String
+   is
+      Result : Unbounded_String := To_Unbounded_String ("VALUES ");
+   begin
+      for R in Self.Values'Range loop
+         if R /= Self.Values'First then
+            Append (Result, ", (");
+         else
+            Append (Result, '(');
          end if;
-      end if;
-   end Finalize;
 
-   ------------
-   -- Adjust --
-   ------------
-
-   procedure Adjust (Self : in out Controlled_SQL_Query) is
-   begin
-      if Self.Data /= null then
-         Self.Data.Refcount := Self.Data.Refcount + 1;
-      end if;
-   end Adjust;
+         Append (Result, To_String (Self.Values (R), Format, Long => True));
+         Append (Result, ')');
+      end loop;
+      return Result;
+   end To_String;
 
    ----------------
    -- SQL_Select --
@@ -1429,8 +1431,7 @@ package body GNATCOLL.SQL is
       Distinct : Boolean := False;
       Auto_Complete : Boolean := False) return SQL_Query
    is
-      Data : constant Query_Select_Contents_Access :=
-        new Query_Select_Contents;
+      Data : Query_Select_Contents;
       Q    : SQL_Query;
    begin
       if Fields in SQL_Field'Class then
@@ -1464,9 +1465,7 @@ package body GNATCOLL.SQL is
       Data.Limit    := Limit;
       Data.Offset   := Offset;
       Data.Distinct := Distinct;
-      Q := (Contents =>
-              (Ada.Finalization.Controlled
-               with SQL_Query_Contents_Access (Data)));
+      Q.Set (Data);
 
       if Auto_Complete then
          GNATCOLL.SQL.Auto_Complete (Q);
@@ -1546,8 +1545,8 @@ package body GNATCOLL.SQL is
       Offset   : Integer := -1;
       Distinct : Boolean := False) return SQL_Query
    is
-      Data : constant Query_Union_Contents_Access :=
-        new Query_Union_Contents;
+      Data : Query_Union_Contents;
+      Q    : SQL_Query;
    begin
       Data.Q1 := Query1;
       Data.Q2 := Query2;
@@ -1561,9 +1560,8 @@ package body GNATCOLL.SQL is
       Data.Limit := Limit;
       Data.Offset := Offset;
       Data.Distinct := Distinct;
-      return (Contents =>
-                (Ada.Finalization.Controlled
-                 with SQL_Query_Contents_Access (Data)));
+      Q.Set (Data);
+      return Q;
    end SQL_Union;
 
    ---------------
@@ -1611,10 +1609,10 @@ package body GNATCOLL.SQL is
    function To_String
      (Self : SQL_Query; Format : Formatter'Class) return Unbounded_String is
    begin
-      if Self.Contents.Data = null then
+      if Self.Get = null then
          return Null_Unbounded_String;
       else
-         return To_String (Self.Contents.Data.all, Format);
+         return To_String (Self.Get.all, Format);
       end if;
    end To_String;
 
@@ -1680,8 +1678,10 @@ package body GNATCOLL.SQL is
       Auto_Complete_From     : Boolean := True;
       Auto_Complete_Group_By : Boolean := True) is
    begin
-      Auto_Complete
-        (Self.Contents.Data.all, Auto_Complete_From, Auto_Complete_Group_By);
+      if Self.Get /= null then
+         Auto_Complete
+           (Self.Get.all, Auto_Complete_From, Auto_Complete_Group_By);
+      end if;
    end Auto_Complete;
 
    -------------------
@@ -1980,16 +1980,15 @@ package body GNATCOLL.SQL is
       Temp      : Boolean := False;
       On_Commit : Temp_Table_Behavior := Preserve_Rows) return SQL_Query
    is
-      Data : constant Query_Create_Table_As_Contents_Access :=
-        new Query_Create_Table_As_Contents;
+      Data : Query_Create_Table_As_Contents;
+      Q    : SQL_Query;
    begin
       Data.Name      := To_Unbounded_String (Name);
       Data.As        := As;
       Data.Temp      := Temp;
       Data.On_Commit := On_Commit;
-      return (Contents =>
-              (Ada.Finalization.Controlled
-               with SQL_Query_Contents_Access (Data)));
+      Q.Set (Data);
+      return Q;
    end SQL_Create_Table;
 
    ---------------
@@ -2031,14 +2030,13 @@ package body GNATCOLL.SQL is
      (From     : SQL_Table'Class;
       Where    : SQL_Criteria := No_Criteria) return SQL_Query
    is
-      Data : constant Query_Delete_Contents_Access :=
-        new Query_Delete_Contents;
+      Data : Query_Delete_Contents;
+      Q    : SQL_Query;
    begin
       Data.Table := +From;
       Data.Where := Where;
-      return (Contents =>
-              (Ada.Finalization.Controlled
-               with SQL_Query_Contents_Access (Data)));
+      Q.Set (Data);
+      return Q;
    end SQL_Delete;
 
    ---------------
@@ -2072,16 +2070,15 @@ package body GNATCOLL.SQL is
    function SQL_Insert_Default_Values
      (Table : SQL_Table'Class) return SQL_Query
    is
-      Data : constant Query_Insert_Contents_Access :=
-        new Query_Insert_Contents;
+      Data : Query_Insert_Contents;
+      Q    : SQL_Query;
    begin
       Data.Into := (Name     => Table.Table_Name,
                     Instance => Table.Instance,
                     Instance_Index => Table.Instance_Index);
       Data.Default_Values := True;
-      return (Contents =>
-              (Ada.Finalization.Controlled
-               with SQL_Query_Contents_Access (Data)));
+      Q.Set (Data);
+      return Q;
    end SQL_Insert_Default_Values;
 
    ----------------
@@ -2093,8 +2090,7 @@ package body GNATCOLL.SQL is
       Values    : SQL_Query;
       Qualifier : String := "") return SQL_Query
    is
-      Data : constant Query_Insert_Contents_Access :=
-        new Query_Insert_Contents;
+      Data : Query_Insert_Contents;
       Q    : SQL_Query;
    begin
       if Fields in SQL_Field'Class then
@@ -2109,9 +2105,7 @@ package body GNATCOLL.SQL is
          Data.Qualifier := To_Unbounded_String (Qualifier);
       end if;
 
-      Q := (Contents =>
-              (Ada.Finalization.Controlled
-               with SQL_Query_Contents_Access (Data)));
+      Q.Set (Data);
       Auto_Complete (Q);
       return Q;
    end SQL_Insert;
@@ -2126,8 +2120,7 @@ package body GNATCOLL.SQL is
       Limit     : Integer := -1;
       Qualifier : String := "") return SQL_Query
    is
-      Data : constant Query_Insert_Contents_Access :=
-        new Query_Insert_Contents;
+      Data : Query_Insert_Contents;
       Q    : SQL_Query;
    begin
       Data.Into   := No_Names;
@@ -2139,9 +2132,7 @@ package body GNATCOLL.SQL is
          Data.Qualifier := To_Unbounded_String (Qualifier);
       end if;
 
-      Q := (Contents =>
-              (Ada.Finalization.Controlled
-               with SQL_Query_Contents_Access (Data)));
+      Q.Set (Data);
       Auto_Complete (Q);
       return Q;
    end SQL_Insert;
@@ -2262,8 +2253,8 @@ package body GNATCOLL.SQL is
       Where    : SQL_Criteria := No_Criteria;
       From     : SQL_Table_Or_List'Class := Empty_Table_List) return SQL_Query
    is
-      Data : constant Query_Update_Contents_Access :=
-        new Query_Update_Contents;
+      Data : Query_Update_Contents;
+      Q    : SQL_Query;
    begin
       Data.Table := +Table;
       Data.Set   := Set;
@@ -2275,9 +2266,8 @@ package body GNATCOLL.SQL is
          Data.From := SQL_Table_List (From);
       end if;
 
-      return (Contents =>
-              (Ada.Finalization.Controlled
-               with SQL_Query_Contents_Access (Data)));
+      Q.Set (Data);
+      return Q;
    end SQL_Update;
 
    ---------------
@@ -2447,13 +2437,12 @@ package body GNATCOLL.SQL is
    --------------
 
    function SQL_Lock (Table : SQL_Table'Class) return SQL_Query is
-      Data : constant Simple_Query_Contents_Access :=
-        new Simple_Query_Contents;
+      Data : Simple_Query_Contents;
+      Q    : SQL_Query;
    begin
       Data.Command := To_Unbounded_String ("LOCK " & To_String (Table));
-      return (Contents =>
-              (Ada.Finalization.Controlled
-               with SQL_Query_Contents_Access (Data)));
+      Q.Set (Data);
+      return Q;
    end SQL_Lock;
 
    ---------------
@@ -2461,13 +2450,12 @@ package body GNATCOLL.SQL is
    ---------------
 
    function SQL_Begin return SQL_Query is
-      Data : constant Simple_Query_Contents_Access :=
-        new Simple_Query_Contents;
+      Data : Simple_Query_Contents;
+      Q    : SQL_Query;
    begin
       Data.Command := To_Unbounded_String ("BEGIN");
-      return (Contents =>
-              (Ada.Finalization.Controlled
-               with SQL_Query_Contents_Access (Data)));
+      Q.Set (Data);
+      return Q;
    end SQL_Begin;
 
    ------------------
@@ -2475,13 +2463,12 @@ package body GNATCOLL.SQL is
    ------------------
 
    function SQL_Rollback return SQL_Query is
-      Data : constant Simple_Query_Contents_Access :=
-        new Simple_Query_Contents;
+      Data : Simple_Query_Contents;
+      Q    : SQL_Query;
    begin
       Data.Command := To_Unbounded_String ("ROLLBACK");
-      return (Contents =>
-              (Ada.Finalization.Controlled
-               with SQL_Query_Contents_Access (Data)));
+      Q.Set (Data);
+      return Q;
    end SQL_Rollback;
 
    ----------------
@@ -2489,13 +2476,12 @@ package body GNATCOLL.SQL is
    ----------------
 
    function SQL_Commit return SQL_Query is
-      Data : constant Simple_Query_Contents_Access :=
-        new Simple_Query_Contents;
+      Data : Simple_Query_Contents;
+      Q    : SQL_Query;
    begin
       Data.Command := To_Unbounded_String ("COMMIT");
-      return (Contents =>
-              (Ada.Finalization.Controlled
-               with SQL_Query_Contents_Access (Data)));
+      Q.Set (Data);
+      return Q;
    end SQL_Commit;
 
    --------------
@@ -2523,21 +2509,6 @@ package body GNATCOLL.SQL is
       Unchecked_Free (A);
    end Free;
 
-   ---------------------------
-   -- Clone_Select_Contents --
-   ---------------------------
-
-   function Clone_Select_Contents
-     (Query : SQL_Query) return Query_Select_Contents_Access is
-   begin
-      if Query.Contents.Data.all not in Query_Select_Contents'Class then
-         raise Program_Error with "not a SELECT query";
-      end if;
-
-      return new Query_Select_Contents'Class'
-        (Query_Select_Contents_Access (Query.Contents.Data).all);
-   end Clone_Select_Contents;
-
    ---------------
    -- Where_And --
    ---------------
@@ -2546,11 +2517,11 @@ package body GNATCOLL.SQL is
      (Query : SQL_Query; Where : SQL_Criteria) return SQL_Query
    is
       Q2       : SQL_Query;
-      Contents : constant Query_Select_Contents_Access :=
-        Clone_Select_Contents (Query);
+      Contents : Query_Select_Contents'Class :=   --  clone contents
+         Query_Select_Contents'Class (Query.Get.all);
    begin
       Contents.Criteria := Contents.Criteria and Where;
-      Q2.Contents.Data := SQL_Query_Contents_Access (Contents);
+      Q2.Set (Contents);
       return Q2;
    end Where_And;
 
@@ -2562,11 +2533,11 @@ package body GNATCOLL.SQL is
      (Query : SQL_Query; Where : SQL_Criteria) return SQL_Query
    is
       Q2       : SQL_Query;
-      Contents : constant Query_Select_Contents_Access :=
-        Clone_Select_Contents (Query);
+      Contents : Query_Select_Contents'Class :=   --  clone contents
+         Query_Select_Contents'Class (Query.Get.all);
    begin
       Contents.Criteria := Contents.Criteria or Where;
-      Q2.Contents.Data := SQL_Query_Contents_Access (Contents);
+      Q2.Set (Contents);
       return Q2;
    end Where_Or;
 
@@ -2579,8 +2550,8 @@ package body GNATCOLL.SQL is
       return SQL_Query
    is
       Q2       : SQL_Query;
-      Contents : constant Query_Select_Contents_Access :=
-        Clone_Select_Contents (Query);
+      Contents : Query_Select_Contents'Class :=   --  clone contents
+         Query_Select_Contents'Class (Query.Get.all);
    begin
       if Order_By in SQL_Field'Class then
          Contents.Order_By := SQL_Field'Class (Order_By) & Contents.Order_By;
@@ -2588,7 +2559,7 @@ package body GNATCOLL.SQL is
          Contents.Order_By := SQL_Field_List (Order_By) & Contents.Order_By;
       end if;
 
-      Q2.Contents.Data := SQL_Query_Contents_Access (Contents);
+      Q2.Set (Contents);
       return Q2;
    end Order_By;
 
@@ -2598,11 +2569,11 @@ package body GNATCOLL.SQL is
 
    function Distinct (Query : SQL_Query) return SQL_Query is
       Q2       : SQL_Query;
-      Contents : constant Query_Select_Contents_Access :=
-        Clone_Select_Contents (Query);
+      Contents : Query_Select_Contents'Class :=   --  clone contents
+         Query_Select_Contents'Class (Query.Get.all);
    begin
       Contents.Distinct := True;
-      Q2.Contents.Data := SQL_Query_Contents_Access (Contents);
+      Q2.Set (Contents);
       return Q2;
    end Distinct;
 
@@ -2612,11 +2583,11 @@ package body GNATCOLL.SQL is
 
    function Limit (Query : SQL_Query; Limit : Natural) return SQL_Query is
       Q2       : SQL_Query;
-      Contents : constant Query_Select_Contents_Access :=
-        Clone_Select_Contents (Query);
+      Contents : Query_Select_Contents'Class :=   --  clone contents
+         Query_Select_Contents'Class (Query.Get.all);
    begin
       Contents.Limit := Limit;
-      Q2.Contents.Data := SQL_Query_Contents_Access (Contents);
+      Q2.Set (Contents);
       return Q2;
    end Limit;
 
@@ -2626,11 +2597,11 @@ package body GNATCOLL.SQL is
 
    function Offset (Query : SQL_Query; Offset : Natural) return SQL_Query is
       Q2       : SQL_Query;
-      Contents : constant Query_Select_Contents_Access :=
-        Clone_Select_Contents (Query);
+      Contents : Query_Select_Contents'Class :=   --  clone contents
+         Query_Select_Contents'Class (Query.Get.all);
    begin
       Contents.Offset := Offset;
-      Q2.Contents.Data := SQL_Query_Contents_Access (Contents);
+      Q2.Set (Contents);
       return Q2;
    end Offset;
 

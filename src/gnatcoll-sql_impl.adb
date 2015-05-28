@@ -981,7 +981,7 @@ package body GNATCOLL.SQL_Impl is
       is
          F : Typed_Data_Fields.Field
            (Table => null, Instance => Table.Instance,
-            Instance_Index => Table.Instance_Index, Name => null);
+            Instance_Index => Table.Instance_Index, Name => Self.Name);
          D : Named_Field_Internal (Typ => Field_Std);
       begin
          D.Table := (Name => null, Instance => Table.Instance,

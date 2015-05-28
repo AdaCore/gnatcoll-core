@@ -102,6 +102,7 @@ with Ada.Containers.Vectors;
 with Ada.Containers.Indefinite_Vectors;
 with Ada.Finalization;
 with Ada.Strings.Unbounded;  use Ada.Strings.Unbounded;
+with GNATCOLL.Refcount;
 with GNATCOLL.SQL_Impl;      use GNATCOLL.SQL_Impl;
 
 package GNATCOLL.SQL is
@@ -405,8 +406,8 @@ package GNATCOLL.SQL is
    --  Convert any field type to a text field
 
    function Cast_To_Date
-     (Field : SQL_Field_Time'Class) return Date_Fields.Field'Class;
-   --  Convert a time to a date
+     (Field : SQL_Field'Class) return Date_Fields.Field'Class;
+   --  Convert a field to a date
 
    function At_Time_Zone
      (Field : Time_Fields.Field'Class; TZ : String)
@@ -758,6 +759,23 @@ package GNATCOLL.SQL is
       Temp      : Boolean := False;
       On_Commit : Temp_Table_Behavior := Preserve_Rows) return SQL_Query;
    --  CREATE [TEMP] TABLE AS
+   --  "as" could be the result of a SQL_Select, or SQL_Values for instance.
+
+   type Field_List_Array is array (Natural range <>) of SQL_Field_List;
+   function SQL_Values (Val : Field_List_Array) return SQL_Query;
+   --  A query that returns one row for each element in the array Val.
+   --  Each element in the array is itself a tuple, which results in several
+   --  columns in the output.
+   --  This command is mostly useful with SQL_Create_Table.
+   --  For instance:
+   --      Q := SQL_Create_Table
+   --        (Name => "tmp", Temp => True, On_Commit => Drop,
+   --         As => Values
+   --             ((1 => Expression (1) & Expression ("name1"),
+   --               2 => Expression (2) & Expression ("name2"))));
+   --
+   --  This is a quick way to create a temporary table on the server, that can
+   --  then be reused in other queries.
 
    function SQL_Begin    return SQL_Query;
    function SQL_Rollback return SQL_Query;
@@ -822,8 +840,8 @@ package GNATCOLL.SQL is
    --     N_Sorted : aliased constant String := "sorted";
    --     Sorted : constant Subquery_Table :=
    --       Subquery (SQL_Select (Config.Name, ...), N_Sorted'Access);
-   --     Sorted_Config   : constant SQL_Field_Text'Class :=
-   --       SQL_Field_Text (Config.Name.From_Table (Sorted));
+   --     Sorted_Config   : constant Text_Fields.Field'Class :=
+   --       Config.Name.From_Table (Sorted);
    --
    --  You can then use the table Sorted in any SQL_Select query, and access
    --  its fields via Sorted_Config.
@@ -1040,10 +1058,8 @@ private
    -- Queries --
    -------------
 
-   type Query_Contents is abstract tagged record
-      Refcount : Natural := 1;
-   end record;
-   type SQL_Query_Contents_Access is access all Query_Contents'Class;
+   type Query_Contents is abstract new GNATCOLL.Refcount.Refcounted
+      with null record;
    procedure Free (Self : in out Query_Contents) is null;
    function To_String
      (Self   : Query_Contents;
@@ -1053,17 +1069,10 @@ private
       Auto_Complete_From     : Boolean := True;
       Auto_Complete_Group_By : Boolean := True) is null;
 
-   type Controlled_SQL_Query is new Ada.Finalization.Controlled with record
-      Data : SQL_Query_Contents_Access;
-   end record;
-   procedure Finalize (Self : in out Controlled_SQL_Query);
-   procedure Adjust   (Self : in out Controlled_SQL_Query);
-
-   type SQL_Query is tagged record
-      Contents : Controlled_SQL_Query;
-   end record;
-   No_Query : constant SQL_Query :=
-     (Contents => (Ada.Finalization.Controlled with null));
+   package Query_Pointers is new GNATCOLL.Refcount.Smart_Pointers
+     (Query_Contents);
+   type SQL_Query is new Query_Pointers.Ref with null record;
+   No_Query : constant SQL_Query := (Query_Pointers.Null_Ref with null record);
 
    type Query_Select_Contents is new Query_Contents with record
       Fields       : SQL_Field_List;
@@ -1077,7 +1086,6 @@ private
       Offset       : Integer;
       Distinct     : Boolean;
    end record;
-   type Query_Select_Contents_Access is access all Query_Select_Contents'Class;
    overriding function To_String
      (Self   : Query_Select_Contents;
       Format : Formatter'Class) return Unbounded_String;
@@ -1093,7 +1101,6 @@ private
       Offset       : Integer;
       Distinct     : Boolean;
    end record;
-   type Query_Union_Contents_Access is access all Query_Union_Contents'Class;
    overriding function To_String
      (Self   : Query_Union_Contents;
       Format : Formatter'Class) return Unbounded_String;
@@ -1108,7 +1115,6 @@ private
       Limit          : Integer := -1;
       Subquery       : SQL_Query := No_Query;
    end record;
-   type Query_Insert_Contents_Access is access all Query_Insert_Contents'Class;
    overriding function To_String
      (Self   : Query_Insert_Contents;
       Format : Formatter'Class) return Unbounded_String;
@@ -1124,7 +1130,6 @@ private
       From       : SQL_Table_List;
       Extra_From : Table_Sets.Set; --  from auto complete
    end record;
-   type Query_Update_Contents_Access is access all Query_Update_Contents'Class;
    overriding function To_String
      (Self   : Query_Update_Contents;
       Format : Formatter'Class) return Unbounded_String;
@@ -1137,7 +1142,6 @@ private
       Table : SQL_Table_List;
       Where : SQL_Criteria;
    end record;
-   type Query_Delete_Contents_Access is access all Query_Delete_Contents'Class;
    overriding function To_String
      (Self   : Query_Delete_Contents;
       Format : Formatter'Class) return Unbounded_String;
@@ -1148,16 +1152,22 @@ private
       On_Commit : Temp_Table_Behavior;
       As        : SQL_Query;
    end record;
-   type Query_Create_Table_As_Contents_Access is
-     access all Query_Create_Table_As_Contents'Class;
    overriding function To_String
      (Self   : Query_Create_Table_As_Contents;
+      Format : Formatter'Class) return Unbounded_String;
+
+   type Query_Values_Contents
+     (Size : Natural) is new Query_Contents
+   with record
+      Values    : Field_List_Array (1 .. Size);
+   end record;
+   overriding function To_String
+     (Self   : Query_Values_Contents;
       Format : Formatter'Class) return Unbounded_String;
 
    type Simple_Query_Contents is new Query_Contents with record
       Command : Ada.Strings.Unbounded.Unbounded_String;
    end record;
-   type Simple_Query_Contents_Access is access all Simple_Query_Contents'Class;
    overriding function To_String
      (Self   : Simple_Query_Contents;
       Format : Formatter'Class) return Unbounded_String;
