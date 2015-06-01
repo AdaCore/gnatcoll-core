@@ -883,9 +883,12 @@ package body GNATCOLL.Traces is
    function Active (Handle : Trace_Handle) return Boolean is
    begin
       if Global.Handles_List = null then
-         --  If this module has been finalized, we always display the traces.
-         --  These traces are generally when GNAT finalizes controlled types...
-         return True;
+         --  After this module has been finalized, traces might still be
+         --  queried, typically when GNAT finalizes controlled types.
+         --  At this point, the memory allocated to handles has been freed
+         --  in Finalize, and Handle is a dangling pointer.
+         --  To protect against access to data in Handle, return False here.
+         return False;
 
       elsif Handle = null then
          --  In case Handle hasn't been initialized yet
