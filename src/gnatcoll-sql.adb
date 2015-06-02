@@ -2517,12 +2517,19 @@ package body GNATCOLL.SQL is
      (Query : SQL_Query; Where : SQL_Criteria) return SQL_Query
    is
       Q2       : SQL_Query;
-      Contents : Query_Select_Contents'Class :=   --  clone contents
-         Query_Select_Contents'Class (Query.Get.all);
    begin
-      Contents.Criteria := Contents.Criteria and Where;
-      Q2.Set (Contents);
-      return Q2;
+      if Query.Get.all not in Query_Select_Contents'Class then
+         raise Program_Error with "not a SELECT query";
+      end if;
+
+      declare
+         Contents : Query_Select_Contents'Class :=   --  clone contents
+            Query_Select_Contents'Class (Query.Get.all);
+      begin
+         Contents.Criteria := Contents.Criteria and Where;
+         Q2.Set (Contents);
+         return Q2;
+      end;
    end Where_And;
 
    --------------
@@ -2533,12 +2540,19 @@ package body GNATCOLL.SQL is
      (Query : SQL_Query; Where : SQL_Criteria) return SQL_Query
    is
       Q2       : SQL_Query;
-      Contents : Query_Select_Contents'Class :=   --  clone contents
-         Query_Select_Contents'Class (Query.Get.all);
    begin
-      Contents.Criteria := Contents.Criteria or Where;
-      Q2.Set (Contents);
-      return Q2;
+      if Query.Get.all not in Query_Select_Contents'Class then
+         raise Program_Error with "not a SELECT query";
+      end if;
+
+      declare
+         Contents : Query_Select_Contents'Class :=   --  clone contents
+            Query_Select_Contents'Class (Query.Get.all);
+      begin
+         Contents.Criteria := Contents.Criteria or Where;
+         Q2.Set (Contents);
+         return Q2;
+      end;
    end Where_Or;
 
    --------------
@@ -2550,17 +2564,25 @@ package body GNATCOLL.SQL is
       return SQL_Query
    is
       Q2       : SQL_Query;
-      Contents : Query_Select_Contents'Class :=   --  clone contents
-         Query_Select_Contents'Class (Query.Get.all);
    begin
-      if Order_By in SQL_Field'Class then
-         Contents.Order_By := SQL_Field'Class (Order_By) & Contents.Order_By;
-      else
-         Contents.Order_By := SQL_Field_List (Order_By) & Contents.Order_By;
+      if Query.Get.all not in Query_Select_Contents'Class then
+         raise Program_Error with "not a SELECT query";
       end if;
 
-      Q2.Set (Contents);
-      return Q2;
+      declare
+         Contents : Query_Select_Contents'Class :=   --  clone contents
+            Query_Select_Contents'Class (Query.Get.all);
+      begin
+         if Order_By in SQL_Field'Class then
+            Contents.Order_By :=
+               SQL_Field'Class (Order_By) & Contents.Order_By;
+         else
+            Contents.Order_By := SQL_Field_List (Order_By) & Contents.Order_By;
+         end if;
+
+         Q2.Set (Contents);
+         return Q2;
+      end;
    end Order_By;
 
    --------------
@@ -2569,12 +2591,19 @@ package body GNATCOLL.SQL is
 
    function Distinct (Query : SQL_Query) return SQL_Query is
       Q2       : SQL_Query;
-      Contents : Query_Select_Contents'Class :=   --  clone contents
-         Query_Select_Contents'Class (Query.Get.all);
    begin
-      Contents.Distinct := True;
-      Q2.Set (Contents);
-      return Q2;
+      if Query.Get.all not in Query_Select_Contents'Class then
+         raise Program_Error with "not a SELECT query";
+      end if;
+
+      declare
+         Contents : Query_Select_Contents'Class :=   --  clone contents
+            Query_Select_Contents'Class (Query.Get.all);
+      begin
+         Contents.Distinct := True;
+         Q2.Set (Contents);
+         return Q2;
+      end;
    end Distinct;
 
    -----------
@@ -2583,12 +2612,19 @@ package body GNATCOLL.SQL is
 
    function Limit (Query : SQL_Query; Limit : Natural) return SQL_Query is
       Q2       : SQL_Query;
-      Contents : Query_Select_Contents'Class :=   --  clone contents
-         Query_Select_Contents'Class (Query.Get.all);
    begin
-      Contents.Limit := Limit;
-      Q2.Set (Contents);
-      return Q2;
+      if Query.Get.all not in Query_Select_Contents'Class then
+         raise Program_Error with "not a SELECT query";
+      end if;
+
+      declare
+         Contents : Query_Select_Contents'Class :=   --  clone contents
+            Query_Select_Contents'Class (Query.Get.all);
+      begin
+         Contents.Limit := Limit;
+         Q2.Set (Contents);
+         return Q2;
+      end;
    end Limit;
 
    ------------
@@ -2597,12 +2633,19 @@ package body GNATCOLL.SQL is
 
    function Offset (Query : SQL_Query; Offset : Natural) return SQL_Query is
       Q2       : SQL_Query;
-      Contents : Query_Select_Contents'Class :=   --  clone contents
-         Query_Select_Contents'Class (Query.Get.all);
    begin
-      Contents.Offset := Offset;
-      Q2.Set (Contents);
-      return Q2;
+      if Query.Get.all not in Query_Select_Contents'Class then
+         raise Program_Error with "not a SELECT query";
+      end if;
+
+      declare
+         Contents : Query_Select_Contents'Class :=   --  clone contents
+            Query_Select_Contents'Class (Query.Get.all);
+      begin
+         Contents.Offset := Offset;
+         Q2.Set (Contents);
+         return Q2;
+      end;
    end Offset;
 
 end GNATCOLL.SQL;
