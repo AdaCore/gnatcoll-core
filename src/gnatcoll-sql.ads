@@ -436,6 +436,7 @@ package GNATCOLL.SQL is
    Func_Distinct : constant Aggregate_Function := "distinct";
    Func_Min      : constant Aggregate_Function := "min";
    Func_Max      : constant Aggregate_Function := "max";
+   Func_Sum      : constant Aggregate_Function := "sum";
    Func_Concat   : constant Aggregate_Function := "concat";
    Func_Bool_And : constant Aggregate_Function := "bool_and";
    Func_Bool_Or  : constant Aggregate_Function := "bool_or";
