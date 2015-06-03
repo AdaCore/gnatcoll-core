@@ -1,0 +1,59 @@
+------------------------------------------------------------------------------
+--                             G N A T C O L L                              --
+--                                                                          --
+--                      Copyright (C) 2015, AdaCore                         --
+--                                                                          --
+-- This library is free software;  you can redistribute it and/or modify it --
+-- under terms of the  GNU General Public License  as published by the Free --
+-- Software  Foundation;  either version 3,  or (at your  option) any later --
+-- version. This library is distributed in the hope that it will be useful, --
+-- but WITHOUT ANY WARRANTY;  without even the implied warranty of MERCHAN- --
+-- TABILITY or FITNESS FOR A PARTICULAR PURPOSE.                            --
+--                                                                          --
+-- As a special exception under Section 7 of GPL version 3, you are granted --
+-- additional permissions described in the GCC Runtime Library Exception,   --
+-- version 3.1, as published by the Free Software Foundation.               --
+--                                                                          --
+-- You should have received a copy of the GNU General Public License and    --
+-- a copy of the GCC Runtime Library Exception along with this program;     --
+-- see the files COPYING3 and COPYING.RUNTIME respectively.  If not, see    --
+-- <http://www.gnu.org/licenses/>.                                          --
+--                                                                          --
+------------------------------------------------------------------------------
+
+--  This project file is used to build all modules that have no external
+--  dependencies on external project files
+
+with "src/gnatcoll";
+with "src/gnatcoll_python";
+with "src/gnatcoll_postgres";
+with "src/gnatcoll_sqlite";
+with "src/gnatcoll_tools";
+with "src/gnatcoll_gmp";
+with "src/gnatcoll_readline";
+with "src/gnatcoll_iconv";
+
+with "gnatcoll_shared";
+
+project Gnatcoll_Full is
+
+   for Source_Dirs use ();
+   for Object_Dir use "src/" & Gnatcoll_Shared'Object_Dir;  --  for auto.cgpr
+
+   package IDE is
+      for VCS_Kind use "auto";
+   end IDE;
+
+   package Builder renames GNATCOLL_Shared.Builder;
+
+   package Install is
+      for Artifacts ("share/examples/gnatcoll") use ("examples/*");
+      for Artifacts ("share/doc/gnatcoll/html") use ("docs/_build/html");
+      for Artifacts ("share/doc/gnatcoll")
+        use ("docs/_build/latex/GNATColl.pdf");
+      for Artifacts ("share/gps/support/core/gnatcoll")
+        use ("distrib/gnatcoll/*py");
+      for Artifacts ("share/gnatcoll") use ("src/dborm.py");
+   end Install;
+
+end Gnatcoll_Full;

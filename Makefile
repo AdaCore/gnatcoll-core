@@ -34,7 +34,7 @@ build_library_type/%: generate_sources do_links
 	@${RM} src/gnatcoll-atomic.adb
 
 	@echo "====== Building $(@F) libraries ======"
-	${GPRBUILD} ${GPRBLD_OPTS} -Pgnatcoll_main
+	${GPRBUILD} ${GPRBLD_OPTS} -Pgnatcoll_full
 
 	@# Need to build libgnatcoll_gtk separately, because its project files
 	@# requires gtkada.gpr, which might not exist on the machine.
@@ -44,7 +44,7 @@ endif
 
 	@# Build the tools (the list is the project\'s Main attribute)
 	@# They are not build as part of the above because only the Main from
-	@# gnatcoll_main.gpr are build. We could use aggregate projects to
+	@# gnatcoll_full.gpr are build. We could use aggregate projects to
 	@# speed things up.
 	${GPRBUILD} ${GPRBLD_OPTS} -q -Psrc/gnatcoll_tools
 
@@ -64,7 +64,7 @@ endif
 
 install_library_type/%:
 	@echo "====== Installing $(@F) libraries ======"
-	${GPRINSTALL} -r ${GPRINST_OPTS} -Pgnatcoll_main
+	${GPRINSTALL} -r ${GPRINST_OPTS} -Pgnatcoll_full
 ifeq (${WITH_GTK},yes)
 	${GPRINSTALL} ${GPRINST_OPTS} -Psrc/gnatcoll_gtk
 endif
@@ -145,7 +145,7 @@ test_verbose: local_install
 GPRCLN_OPTS=-r -q -XLIBRARY_TYPE=$(@F)
 
 clean_library/%:
-	-gprclean ${GPRCLN_OPTS} -Pgnatcoll_main
+	-gprclean ${GPRCLN_OPTS} -Pgnatcoll_full
 	@# Separate pass to also remove the Main
 	-gprclean ${GPRCLN_OPTS} -Psrc/gnatcoll_tools
 ifeq (${WITH_GTK},yes)
