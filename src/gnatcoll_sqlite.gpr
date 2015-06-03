@@ -77,7 +77,7 @@ project GnatColl_Sqlite is
          when "yes" | "no" =>
             null;
          when "embedded" =>
-            for Switches ("C") use GnatColl_Shared.Compiler'Switches ("C") 
+            for Switches ("C") use GnatColl_Shared.Compiler'Switches ("C")
                & ("-DSQLITE_OMIT_LOAD_EXTENSION",
                   "-D__EXTENSIONS__",
 
