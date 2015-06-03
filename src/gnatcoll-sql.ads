@@ -427,6 +427,10 @@ package GNATCOLL.SQL is
       return Date_Fields.Field'Class;
    --  Return the result of "extract (attribute from field)"
 
+   function As_Boolean
+      (Criteria : SQL_Criteria) return SQL_Field'Class;
+   --  A SQL criteria used as a field
+
    -------------------------
    -- Aggregate functions --
    -------------------------

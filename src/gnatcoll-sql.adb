@@ -106,10 +106,12 @@ package body GNATCOLL.SQL is
    -----------------------
    -- Aggregrate fields --
    -----------------------
-   --  Representing an sql aggregate function
+   --  Representing an sql aggregate function.
 
    type Aggregate_Field_Internal is new SQL_Field_Internal with record
       Func     : GNAT.Strings.String_Access;
+      --  Func might be null if we only want to represent as criteria as
+      --  a field
       Params   : SQL_Field_List;
       Criteria : SQL_Criteria;
    end record;
@@ -613,6 +615,24 @@ package body GNATCOLL.SQL is
       end if;
    end Expression_Or_Null;
 
+   ----------------
+   -- As_Boolean --
+   ----------------
+
+   function As_Boolean
+      (Criteria : SQL_Criteria) return SQL_Field'Class
+   is
+      Data : Aggregate_Field_Internal;
+      F    : Field_Pointers.Ref;
+   begin
+      Data.Criteria := Criteria;
+      F.Set (Data);
+      return SQL_Field_Any'
+        (Table => null, Instance => null, Name => null,
+         Instance_Index => -1,
+         Data => F);
+   end As_Boolean;
+
    -------------
    -- As_Days --
    -------------
@@ -870,7 +890,9 @@ package body GNATCOLL.SQL is
       C      : Field_List.Cursor := First (Self.Params);
       Result : Unbounded_String;
    begin
-      Result := To_Unbounded_String (Self.Func.all & " (");
+      if Self.Func /= null then
+         Result := To_Unbounded_String (Self.Func.all & " (");
+      end if;
 
       if Has_Element (C) then
          Append (Result, To_String (Element (C), Format, Long));
@@ -887,7 +909,10 @@ package body GNATCOLL.SQL is
          Append (Result, GNATCOLL.SQL_Impl.To_String (Self.Criteria, Format));
       end if;
 
-      Append (Result, ")");
+      if Self.Func /= null then
+         Append (Result, ")");
+      end if;
+
       return To_String (Result);
    end To_String;
 
