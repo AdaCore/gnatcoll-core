@@ -180,7 +180,8 @@ package GNATCOLL.Projects is
       Env                : Project_Environment_Access := null;
       Packages_To_Check  : GNAT.Strings.String_List_Access := No_Packs;
       Errors             : Error_Report := null;
-      Recompute_View     : Boolean := True);
+      Recompute_View     : Boolean := True;
+      Report_Missing_Dirs : Boolean := True);
    --  Load a new set of project files, starting from a root project.
    --  Root_Project_Path is either an absolute path, or relative to the current
    --  directory. It should point to a readable existing file.
@@ -218,6 +219,9 @@ package GNATCOLL.Projects is
    --  called automatically. This gives you a chance to do some dynamic
    --  changes on the project (changing attributes for instance), even though
    --  you will need to call Recompute_View yourself.
+   --
+   --  If Report_Missing_Dirs is true, then a warning will be issued when a
+   --  project file's object directory does not exist yet.
 
    procedure Set_Trusted_Mode
      (Self : in out Project_Environment; Trusted : Boolean := True);

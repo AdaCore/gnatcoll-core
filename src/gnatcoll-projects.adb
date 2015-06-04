@@ -323,7 +323,8 @@ package body GNATCOLL.Projects is
    function Create_Flags
      (On_Error        : Prj.Error_Handler;
       Require_Sources : Boolean := True;
-      Ignore_Missing_With : Boolean := False) return Prj.Processing_Flags;
+      Ignore_Missing_With : Boolean := False;
+      Report_Missing_Dirs : Boolean := True) return Processing_Flags;
    --  Return the flags to pass to the project manager in the context of GPS.
    --  Require_Sources indicates whether each language must have sources
    --  attached to it.
@@ -385,7 +386,8 @@ package body GNATCOLL.Projects is
       Project                : out Project_Node_Id;
       Packages_To_Check      : GNAT.Strings.String_List_Access := All_Packs;
       Recompute_View         : Boolean := True;
-      Test_With_Missing_With : Boolean := True);
+      Test_With_Missing_With : Boolean := True;
+      Report_Missing_Dirs    : Boolean := True);
    --  Internal implementation of load. This doesn't reset the tree at all,
    --  but will properly setup the GNAT project manager so that error messages
    --  are redirected and fatal errors do not kill GPS.
@@ -5338,7 +5340,8 @@ package body GNATCOLL.Projects is
    function Create_Flags
      (On_Error        : Prj.Error_Handler;
       Require_Sources : Boolean := True;
-      Ignore_Missing_With : Boolean := False) return Processing_Flags is
+      Ignore_Missing_With : Boolean := False;
+      Report_Missing_Dirs : Boolean := True) return Processing_Flags is
    begin
       if Require_Sources then
          return Create_Flags
@@ -5347,7 +5350,8 @@ package body GNATCOLL.Projects is
             Require_Sources_Other_Lang => True,
             Compiler_Driver_Mandatory  => False,
             Allow_Duplicate_Basenames  => True,
-            Require_Obj_Dirs           => Warning,
+            Require_Obj_Dirs           =>
+               (if Report_Missing_Dirs then Warning else Silent),
             Allow_Invalid_External     => Warning,
             Missing_Source_Files       => Warning,
             Ignore_Missing_With        => Ignore_Missing_With);
@@ -5358,7 +5362,8 @@ package body GNATCOLL.Projects is
             Require_Sources_Other_Lang => False,
             Compiler_Driver_Mandatory  => False,
             Allow_Duplicate_Basenames  => True,
-            Require_Obj_Dirs           => Warning,
+            Require_Obj_Dirs           =>
+               (if Report_Missing_Dirs then Warning else Silent),
             Allow_Invalid_External     => Silent,
             Missing_Source_Files       => Warning,
             Ignore_Missing_With        => Ignore_Missing_With);
@@ -6080,7 +6085,8 @@ package body GNATCOLL.Projects is
       Env                : Project_Environment_Access := null;
       Packages_To_Check  : GNAT.Strings.String_List_Access := No_Packs;
       Errors             : Error_Report := null;
-      Recompute_View     : Boolean := True)
+      Recompute_View     : Boolean := True;
+      Report_Missing_Dirs : Boolean := True)
    is
       Tmp : Project_Tree'Class := Self;  --  Must use same tag
       Previous_Project : Virtual_File;
@@ -6150,7 +6156,8 @@ package body GNATCOLL.Projects is
          Report_Syntax_Errors => True,
          Project              => Project,
          Packages_To_Check    => Packages_To_Check,
-         Recompute_View       => False);
+         Recompute_View       => False,
+         Report_Missing_Dirs  => Report_Missing_Dirs);
 
       Prj.Err.Initialize;  --  Clear errors
 
@@ -6190,7 +6197,8 @@ package body GNATCOLL.Projects is
          Report_Syntax_Errors => False,   --  already done above
          Project              => Project,
          Packages_To_Check    => Packages_To_Check,
-         Recompute_View       => Recompute_View);
+         Recompute_View       => Recompute_View,
+         Report_Missing_Dirs  => Report_Missing_Dirs);
 
       if Previous_Status = Default then
          Trace (Me, "Remove previous default project on disk, no longer used");
@@ -6729,7 +6737,8 @@ package body GNATCOLL.Projects is
       Project                : out Project_Node_Id;
       Packages_To_Check      : GNAT.Strings.String_List_Access := All_Packs;
       Recompute_View         : Boolean := True;
-      Test_With_Missing_With : Boolean := True)
+      Test_With_Missing_With : Boolean := True;
+      Report_Missing_Dirs    : Boolean := True)
    is
       procedure On_Error is new Mark_Project_Error (Tree);
       --  Any error while parsing the project marks it as incomplete, and
@@ -6782,10 +6791,12 @@ package body GNATCOLL.Projects is
       Sinput.P.Clear_Source_File_Table;
       Sinput.P.Reset_First;
 
-      Override_Flags (Tree.Data.Env.Env,
-                      Create_Flags
-                        (On_Error'Unrestricted_Access,
-                         Ignore_Missing_With => Test_With_Missing_With));
+      Override_Flags
+         (Tree.Data.Env.Env,
+             Create_Flags
+               (On_Error'Unrestricted_Access,
+                Report_Missing_Dirs => not Report_Missing_Dirs,
+                Ignore_Missing_With => Test_With_Missing_With));
       Prj.Part.Parse
         (Tree.Data.Tree, Project,
          +Root_Project_Path.Full_Name,
@@ -6850,6 +6861,7 @@ package body GNATCOLL.Projects is
               (Tree.Data.Env.Env,
                Create_Flags
                  (On_Error'Unrestricted_Access,
+                  Report_Missing_Dirs => Report_Missing_Dirs,
                   Ignore_Missing_With => False));
 
             Trace (Me, "Parsing project tree a second time");
@@ -6862,7 +6874,8 @@ package body GNATCOLL.Projects is
                Project                => Project,
                Recompute_View         => Recompute_View,
                Packages_To_Check      => Packages_To_Check,
-               Test_With_Missing_With => False);
+               Test_With_Missing_With => False,
+               Report_Missing_Dirs    => Report_Missing_Dirs);
 
             Output.Cancel_Special_Output;
 
@@ -6882,6 +6895,7 @@ package body GNATCOLL.Projects is
            (Tree.Data.Env.Env,
             Create_Flags
               (On_Error'Unrestricted_Access,
+               Report_Missing_Dirs => Report_Missing_Dirs,
                Ignore_Missing_With => False));
          Internal_Load
            (Tree                   => Tree,
@@ -6891,7 +6905,8 @@ package body GNATCOLL.Projects is
             Project                => Project,
             Recompute_View         => Recompute_View,
             Packages_To_Check      => Packages_To_Check,
-            Test_With_Missing_With => False);
+            Test_With_Missing_With => False,
+            Report_Missing_Dirs    => Report_Missing_Dirs);
          Decrease_Indent (Me);
          return;
 
@@ -6942,7 +6957,8 @@ package body GNATCOLL.Projects is
                Project                => Project,
                Recompute_View         => Recompute_View,
                Packages_To_Check      => Packages_To_Check,
-               Test_With_Missing_With => False);
+               Test_With_Missing_With => False,
+               Report_Missing_Dirs    => Report_Missing_Dirs);
             Decrease_Indent (Me);
             return;
          end if;
