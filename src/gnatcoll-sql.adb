@@ -128,6 +128,25 @@ package body GNATCOLL.SQL is
       Is_Aggregate : in out Boolean);
 
    -----------------
+   -- Query fields --
+   -----------------
+   --  a SQL query represented as a field
+
+   type Query_Field_Internal is new SQL_Field_Internal with record
+      Query  : SQL_Query;
+   end record;
+   overriding function To_String
+     (Self   : Query_Field_Internal;
+      Format : Formatter'Class;
+      Long   : Boolean) return String;
+   overriding procedure Append_Tables
+     (Self : Query_Field_Internal; To : in out Table_Sets.Set) is null;
+   overriding procedure Append_If_Not_Aggregate
+     (Self         : access Query_Field_Internal;
+      To           : in out SQL_Field_List'Class;
+      Is_Aggregate : in out Boolean) is null;
+
+   -----------------
    -- Sort fields --
    -----------------
    --  Fields used in the "ORDER BY" clauses
@@ -2672,5 +2691,41 @@ package body GNATCOLL.SQL is
          return Q2;
       end;
    end Offset;
+
+   ---------
+   -- "=" --
+   ---------
+
+   function "="
+      (Left  : SQL_Field'Class; Query : SQL_Query) return SQL_Assignment
+   is
+      Data : Query_Field_Internal;
+      F    : Field_Pointers.Ref;
+   begin
+      Data.Query := Query;
+      F.Set (Data);
+
+      return Create
+         (Left,
+          SQL_Field_Any'
+             (Table          => null,
+              Instance       => null,
+              Name           => null,
+              Instance_Index => -1,
+              Data           => F));
+   end "=";
+
+   ---------------
+   -- To_String --
+   ---------------
+
+   overriding function To_String
+     (Self   : Query_Field_Internal;
+      Format : Formatter'Class;
+      Long   : Boolean) return String
+   is
+   begin
+      return "(" & To_String (To_String (Self.Query, Format)) & ")";
+   end To_String;
 
 end GNATCOLL.SQL;

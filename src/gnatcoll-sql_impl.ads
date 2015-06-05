@@ -452,6 +452,9 @@ package GNATCOLL.SQL_Impl is
    procedure Get_Fields (Self : SQL_Assignment; List : out SQL_Field_List);
    --  Return the list of fields impacted by the assignments
 
+   function Create (F1, F2 : SQL_Field'Class) return SQL_Assignment;
+   --  A generic way to create assignments
+
    --------------
    -- Generics --
    --------------

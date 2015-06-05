@@ -1619,4 +1619,18 @@ package body GNATCOLL.SQL_Impl is
       return "?";
    end Parameter_String;
 
+   ------------
+   -- Create --
+   ------------
+
+   function Create (F1, F2 : SQL_Field'Class) return SQL_Assignment is
+      R : SQL_Assignment;
+      It : Assignment_Item;
+   begin
+      It.Field.Set (F1);
+      It.To_Field.Set (F2);
+      R.List.Append (It);
+      return R;
+   end Create;
+
 end GNATCOLL.SQL_Impl;

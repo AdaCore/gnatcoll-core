@@ -659,6 +659,11 @@ package GNATCOLL.SQL is
                  renames GNATCOLL.SQL_Impl."&";
    --  Create a list of assignments
 
+   function "="
+      (Left  : SQL_Field'Class; Query : SQL_Query) return SQL_Assignment;
+   --  Set the value of one or more fields base on the result of a query.
+   --  There is no type checking here, so this should be used with care.
+
    -------------
    -- Queries --
    -------------
