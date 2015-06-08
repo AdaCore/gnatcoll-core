@@ -119,6 +119,7 @@ project GnatColl is
    end Naming;
 
    package Linker is
-      for Linker_Options use GnatColl_Shared.Rss_Libs;
+      for Linker_Options
+        use GnatColl_Shared.Rss_Libs & GnatColl_Shared.System_Linker_Flags;
    end Linker;
 end GnatColl;
