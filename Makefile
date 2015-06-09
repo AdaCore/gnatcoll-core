@@ -28,7 +28,7 @@ shared relocatable: build_library_type/relocatable
 
 # Build either type of library. The argument (%) is the type of library to build
 
-GPRBLD_OPTS=-p -m -j${PROCESSORS} -XLIBRARY_TYPE=$(@F)
+GPRBLD_OPTS=-p -m -j${PROCESSORS} -XLIBRARY_TYPE=$(@F) -XGnatcoll_Build=${Gnatcoll_Build}
 
 build_library_type/%: generate_sources do_links
 	@${RM} src/gnatcoll-atomic.adb
