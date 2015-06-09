@@ -2724,6 +2724,7 @@ package body GNATCOLL.SQL is
       Format : Formatter'Class;
       Long   : Boolean) return String
    is
+      pragma Unreferenced (Long);
    begin
       return "(" & To_String (To_String (Self.Query, Format)) & ")";
    end To_String;
