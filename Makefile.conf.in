@@ -71,6 +71,8 @@ bindir=${DESTDIR}@bindir@
 libdir=${DESTDIR}@libdir@
 includedir=${DESTDIR}@includedir@
 
+CP=cp -p
+
 ifeq (${OS},Windows_NT)
 LN_S=${CP}
 else
