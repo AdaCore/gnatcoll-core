@@ -316,10 +316,10 @@ package body GNATCOLL.VFS is
       return
         (Ada.Finalization.Controlled with
          Dispatching_Create
-           (Dir.Value,
-            +Dir.Full_Name (Normalize) &
-            GNATCOLL.Path.Normalize
+           (Ref       => Dir.Value,
+            Full_Path => GNATCOLL.Path.Normalize
               (Dir.Value.Get_FS,
+               FS_String (Dir.Full_Name (Normalize).all) &
                From_Unix (Dir.Value.Get_FS, +Base_Name))));
    end Create_From_Dir;
 
