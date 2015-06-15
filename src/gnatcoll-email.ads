@@ -101,6 +101,7 @@ package GNATCOLL.Email is
    Text_Plain                : constant String := "text/plain";
    Text_Html                 : constant String := "text/html";
    Application_Octet_Stream  : constant String := "application/octet-stream";
+   Application_Json          : constant String := "application/json";
    Message_RFC822            : constant String := "message/rfc822";
    Multipart_Mixed           : constant String := "multipart/mixed";
    Multipart_Alternative     : constant String := "multipart/alternative";
@@ -276,7 +277,9 @@ package GNATCOLL.Email is
    --  Return the message as string. This string is suitable for passing to any
    --  program like sendmail to forward the mail to its recipients.
    --  If Envelope is True, the envelope line, if known, is included.
-   --  If Filter is specified, it can be used to filter out which filters
+   --  If Content_Filter is specified, it can be used to filter out which part
+   --  of multipart message should be displayed.
+   --  If Filter is specified, it can be used to filter out which headers
    --  should be displayed.
    --  If Decode is True and this message is MIME-encoded, it is automatically
    --  decoded.
