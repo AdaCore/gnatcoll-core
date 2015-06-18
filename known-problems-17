@@ -4,6 +4,19 @@ Known Problems in Gnatcoll 1.7
 
 Copyright (C) 2013-2015, AdaCore
 
+KP-17-O618-010 GNATCOLL.VFS.Create_From_Dir issue with parent path
+
+  Problem:    When the Basename parameter receives a name that starts with
+              "../..", the resulting full name will be incorrect (only one
+              level up). A similar issue might happen when normalizing file
+              names via Full_Name and the name starts with "../..".
+
+  Status:     Fixed in Gnatcoll 1.8.0 on 2015-06-18
+
+  Workaround: Concatenate the directory's name and the base name directly,
+              and then call Create_From_Directory passing Get_Current_Dir
+              as the name of the directory.
+
 KP-17-O507-023 Projects: parsing of library aggregate projects
 
   Problem:    A number of issues related to the loading of library aggregate

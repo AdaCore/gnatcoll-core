@@ -544,24 +544,40 @@ package body GNATCOLL.Path is
       Dest : FS_String := Path;
       Src  : Natural := Path'First;
       Idx  : Natural := Dest'First;
+      Tmp  : Natural;
       DS   : Character renames Dir_Separator (FS);
 
    begin
       while Src <= Path'Last loop
          if Idx > Dest'First and then Dest (Idx - 1) = DS then
             if Path (Src) = '.' then
+               --  Skip when the "directory" is just "."
                if Src >= Path'Last or else Path (Src + 1) = DS then
                   Src := Src + 2;
 
                elsif Path (Src + 1) = '.' then
+                  --  The "directory" part is ".." (not followed by a name).
+                  --  Insert ".." if we are at beginning of string.
                   if Src + 1 >= Path'Last or else Path (Src + 2) = DS then
-                     for K in reverse Dest'First .. Idx - 2 loop
-                        if Dest (K) = DS then
-                           Idx := K;
-                           exit;
-                        end if;
+                     --  Need to remove the previous directory name, unless
+                     --  it itself was a ".." that could not be normalized
+                     --  because it was at the beginning of the string.
+                     Tmp := Idx - 2;
+                     while Tmp >= Dest'First and then Dest (Tmp) /= DS loop
+                        Tmp := Tmp - 1;
                      end loop;
-                     Src := Src + 2;
+
+                     if Dest (Tmp + 1 .. Idx - 2) /= ".." then
+                        Idx := Tmp + 1;
+                        Src := Src + 3; --  Skip "../"
+                     else
+                        Dest (Idx) := '.';
+                        Dest (Idx + 1) := '.';
+                        Idx := Idx + 2;
+                        Src := Src + 2;  --  Skip ".."
+                     end if;
+
+                  --  A name that starts with ".."
                   else
                      Dest (Idx) := '.';
                      Dest (Idx + 1) := '.';
