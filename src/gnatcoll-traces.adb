@@ -454,6 +454,28 @@ package body GNATCOLL.Traces is
          declare
             use GNATCOLL.Templates;
 
+            Now : constant Ada.Calendar.Time := Clock;
+
+            Nam_Dollar : aliased String := "$";
+            Val_Dollar : aliased String :=
+              Trim (Get_Process_Id'Img, Ada.Strings.Both);
+
+            Nam_D      : aliased String := "D";
+            Val_D      : aliased String := Image (Now, ISO_Date);
+
+            Nam_T      : aliased String := "T";
+            Val_T      : aliased String := Val_D & Image (Now, "T%T");
+
+            Predef_Substitutions : constant Substitution_Array :=
+              ((Name  => Nam_Dollar'Unchecked_Access,
+                Value => Val_Dollar'Unchecked_Access),
+
+               (Name  => Nam_D'Unchecked_Access,
+                Value => Val_D'Unchecked_Access),
+
+               (Name  => Nam_T'Unchecked_Access,
+                Value => Val_T'Unchecked_Access));
+
             function Substitute_Cb
               (Var : String; Quoted : Boolean) return String;
             --  Callback for variable substitution in Name
@@ -468,12 +490,7 @@ package body GNATCOLL.Traces is
                pragma Unreferenced (Quoted);
                use Ada.Environment_Variables;
             begin
-               if Var = "$" then
-                  return Trim (Get_Process_Id'Img, Ada.Strings.Both);
-               elsif Var = "D" or else Var = "T" then
-                  return Image (Clock, ISO_Date
-                           & (if Var = "T" then "T%T" else ""));
-               elsif Exists (Var) then
+               if Exists (Var) then
                   return Value (Var);
                end if;
                raise Invalid_Substitution;
@@ -483,9 +500,10 @@ package body GNATCOLL.Traces is
             declare
                N : constant String := Normalize_Pathname
                  (Substitute
-                    (Str       => Name,
-                     Callback  => Substitute_Cb'Unrestricted_Access,
-                     Delimiter => '$'),
+                    (Str        => Name,
+                     Substrings => Predef_Substitutions,
+                     Callback   => Substitute_Cb'Unrestricted_Access,
+                     Delimiter  => '$'),
                   Dir_Name (Config_File_Name));
             begin
                if Append
