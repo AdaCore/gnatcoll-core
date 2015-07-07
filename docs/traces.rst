@@ -90,11 +90,12 @@ the various possibilities to reference a stream:
   previous contents of the file is discarded. If the name of the file is a
   relative path, it is relative to the location of the configuration file, not
   necessarily to the current directory when the file is parsed.
-  In the file name, $$ is automatically replaced by the process number.
-  $D is automatically replaced by the current date. $T is automatically
-  replaced by the current date and time. If you used ">>" instead of ">"
-  to redirect to that stream, the initial content of the file is not overridden,
-  and new traces are appended to the file instead.
+  In the file name, `$$` is automatically replaced by the process number.
+  `$D` is automatically replaced by the current date. `$T` is automatically
+  replaced by the current date and time. Other patterns of the form `$name`,
+  `${name}`, or `$(name)` are substituted with the value of the named environment
+  variable, if it exists. If ">>" is used instead of ">" to redirect to that
+  stream, the file is appended to, instead of truncated.
 
 *"&1"*
   This syntax is similar to the one used on Unix shells, and indicates that
