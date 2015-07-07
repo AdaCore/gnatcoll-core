@@ -165,7 +165,7 @@ package body GNATCOLL.Templates is
          Identifier_First := First;
          Find_Identifier (Str, Delimiter, Identifier_First, Last, First_After);
 
-         --  Does the identifier contain a default value ?
+         --  Does the identifier contain a default value?
 
          Identifier_Last := Last;
 

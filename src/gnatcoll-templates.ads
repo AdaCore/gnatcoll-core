@@ -85,8 +85,8 @@ package GNATCOLL.Templates is
    --
    --  When the delimiter is duplicated, it will always be replaced by a
    --  single instance of the delimiter (unless you have specified another
-   --  explicit replacement for it). For instance, if the string contains
-   --    "a%%b" it will be replaced with "a%b".
+   --  explicit replacement for it in the Substrings parameter). For instance,
+   --  if the string contains "a%%b" it will be replaced with "a%b".
    --
    --  When an identifier is specified within curly braces or parentheses, a
    --  default value can be specified for it, which will be used if no other
