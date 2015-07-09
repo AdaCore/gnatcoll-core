@@ -15,6 +15,16 @@ of the feature.
 New features in 1.8
 -------------------
 
+NF-18-O513-035 GNATCOLL.Memory: enhance memory debug capability (2015-06-01)
+
+  GNATCOLL.Memory package uses GNAT.Debug_Pools package to add the following
+  debug capabilities:
+  - double free detection
+  - reset content on free (fill with DEADBEEF pattern)
+  - delay memory free to detect invalid memory accesses
+  - report errors through stdout outputs or exceptions
+  Requires GNAT.Debug_Pools from 2015 May 27 or later
+
 NF-18-O422-013 GNATCOLL.Refcount: new package Shared_Pointers (2015-05-18)
 
   A new implementation for reference counted types is provided. It provides
