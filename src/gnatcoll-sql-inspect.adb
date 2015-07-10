@@ -737,10 +737,8 @@ package body GNATCOLL.SQL.Inspect is
             Description => new String'(Description),
             Default     => null,
             Props       => (PK       => Is_Primary_Key,
-                            Indexed  => False,
-                            Noindex  => False,
                             Not_Null => Not_Null or else Is_Primary_Key,
-                            Case_Insensitive => False),
+                            others => <>),
             FK          => False,
             Table       => Table.Weak,
             Active      => True);
@@ -1072,6 +1070,8 @@ package body GNATCOLL.SQL.Inspect is
                   Props.Not_Null := True;
                elsif T = "INDEX" then
                   Props.Indexed := True;
+               elsif T = "UNIQUE" then
+                  Props.Unique := True;
                elsif T = "NOINDEX" then
                   Props.Noindex := True;
                elsif T = "PK" then
@@ -1184,6 +1184,7 @@ package body GNATCOLL.SQL.Inspect is
                     Description => null,
                     Fields      => Empty_Field_List,
                     Indexes     => String_Lists.Empty_Vector,
+                    Uniques     => String_Lists.Empty_Vector,
                     Is_Abstract => False,
                     Has_PK      => False,
                     FK          => Foreign_Keys.Empty_Vector,
@@ -1209,6 +1210,7 @@ package body GNATCOLL.SQL.Inspect is
 
             elsif Line (1).all = "FK:"
               or else Line (1).all = "INDEX:"
+              or else Line (1).all = "UNIQUE:"
             then
                null;   --  Skip for now, will do in second pass
 
@@ -1378,6 +1380,10 @@ package body GNATCOLL.SQL.Inspect is
                end if;
 
                Index_Count := Index_Count + 1;
+
+            elsif Line (1).all = "UNIQUE:" then
+               TDR (From_Table.Unchecked_Get).Uniques.Append
+                 (String'(Line (2).all & "|" & Line (3).all));
             end if;
          end loop;
 
@@ -1508,6 +1514,8 @@ package body GNATCOLL.SQL.Inspect is
          procedure Print_PK (F : in out Field);
          procedure Add_Field_To_SQL (F : in out Field);
 
+         procedure Print_Uniques;
+
          procedure Get_Field_Def
            (F    : Field;
             Stmt : out Unbounded_String;
@@ -1532,31 +1540,46 @@ package body GNATCOLL.SQL.Inspect is
          -------------------
 
          procedure Print_Indexes (Table : Table_Description) is
-            C : String_Lists.Cursor :=
-               TDR (Table.Unchecked_Get).Indexes.First;
+            Name_Start : Positive;
          begin
-            while Has_Element (C) loop
-               declare
-                  Descr : constant String := Element (C);
-                  Name_Start : Integer := Descr'First + 1;
-               begin
-                  while Descr (Name_Start) /= '|' loop
-                     Name_Start := Name_Start + 1;
-                  end loop;
+            for Descr of TDR (Table.Unchecked_Get).Indexes loop
+               Name_Start := Index (Descr, "|", Descr'First + 1);
 
-                  Deferred_Indexes.Append
-                     (String'
-                      ("CREATE INDEX """
-                       & Descr (Name_Start + 1 .. Descr'Last)
-                       & """ ON """
-                       & Table.Name & """ ("
-                       & Descr (Descr'First .. Name_Start - 1)
-                       & ")"));
-               end;
-
-               Next (C);
+               Deferred_Indexes.Append
+                  (String'
+                   ("CREATE INDEX """
+                    & Descr (Name_Start + 1 .. Descr'Last)
+                    & """ ON """
+                    & Table.Name & """ ("
+                    & Descr (Descr'First .. Name_Start - 1)
+                    & ")"));
             end loop;
          end Print_Indexes;
+
+         -------------------
+         -- Print_Uniques --
+         -------------------
+
+         procedure Print_Uniques is
+            Name_Start : Positive;
+         begin
+            for Descr of TDR (Table.Unchecked_Get).Uniques loop
+               Append (SQL, ',' & ASCII.LF);
+
+               Name_Start := Index (Descr, "|", Descr'First + 1);
+
+               if Name_Start < Descr'Last then
+                  Append
+                    (SQL,
+                     "CONSTRAINT """ & Descr (Name_Start + 1 .. Descr'Last)
+                     & """ ");
+               end if;
+
+               Append
+                 (SQL,
+                  "UNIQUE (" & Descr (Descr'First .. Name_Start - 1) & ')');
+            end loop;
+         end Print_Uniques;
 
          --------------
          -- Print_FK --
@@ -1706,6 +1729,10 @@ package body GNATCOLL.SQL.Inspect is
                end if;
             end if;
 
+            if F.Get.Props.Unique then
+               Append (Stmt, " UNIQUE");
+            end if;
+
             if F.Get.Props.Case_Insensitive then
                Append (Stmt, " COLLATE NOCASE");
             end if;
@@ -1815,6 +1842,8 @@ package body GNATCOLL.SQL.Inspect is
                   if SQL_PK /= "" then
                      Append (SQL, ", PRIMARY KEY (" & SQL_PK & ")");
                   end if;
+
+                  Print_Uniques;
 
                   Print_FK (Table);
                   Print_Indexes (Table);
@@ -1953,6 +1982,10 @@ package body GNATCOLL.SQL.Inspect is
             Put (",NOINDEX");
          end if;
 
+         if F.Get.Props.Unique then
+            Put (",UNIQUE");
+         end if;
+
          if F.Get.Props.Case_Insensitive then
             Put (",NOCASE");
          end if;
@@ -1976,6 +2009,26 @@ package body GNATCOLL.SQL.Inspect is
 
       procedure For_Table (Table : in out Table_Description) is
          P  : Pair_Lists.Cursor;
+
+         procedure Write_Index (Prefix : String; List : String_Lists.Vector);
+
+         -----------------
+         -- Write_Index --
+         -----------------
+
+         procedure Write_Index (Prefix : String; List : String_Lists.Vector) is
+            Name_Start : Positive;
+         begin
+            for Descr of List loop
+               Name_Start := Index (Descr, "|", Descr'First + 1);
+
+               Put ('|' & Prefix & ":|"
+                    & Descr (Descr'First .. Name_Start - 1)
+                    & "|" & Descr (Name_Start + 1 .. Descr'Last)
+                    & ASCII.LF);
+            end loop;
+         end Write_Index;
+
       begin
          --  Compute widths
          --  Minimum size of column 1 is 5 (for "TABLE")
@@ -2029,20 +2082,8 @@ package body GNATCOLL.SQL.Inspect is
             end if;
          end loop;
 
-         for Descr of TDR (Table.Unchecked_Get).Indexes loop
-            declare
-               Name_Start : Integer := Descr'First + 1;
-            begin
-               while Descr (Name_Start) /= '|' loop
-                  Name_Start := Name_Start + 1;
-               end loop;
-
-               Put ("|INDEX:|"
-                    & Descr (Descr'First .. Name_Start - 1)
-                    & "|" & Descr (Name_Start + 1 .. Descr'Last)
-                    & ASCII.LF);
-            end;
-         end loop;
+         Write_Index ("INDEX", TDR (Table.Unchecked_Get).Indexes);
+         Write_Index ("UNIQUE", TDR (Table.Unchecked_Get).Uniques);
 
          Put ("" & ASCII.LF);
       end For_Table;

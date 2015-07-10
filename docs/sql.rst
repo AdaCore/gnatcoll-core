@@ -217,7 +217,7 @@ provide that information:
 
       table ::=
          '|' ('ABSTRACT')? ('TABLE'|'VIEW') ['(' supertable ')']
-         '|' <name> '|' <name_row> 
+         '|' <name> '|' <name_row>
 
   "name" is the name of the table. The third pipe and third column are optional,
   and should be used to specify the name for the element represented by a single
@@ -240,9 +240,9 @@ provide that information:
 
       fields ::=
          '|' <name> '|' <type>
-         '|' ('PK'|''|'NULL'|'NOT NULL'|'INDEX'|'NOCASE') 
+         '|' ('PK'|''|'NULL'|'NOT NULL'|'INDEX'|'UNIQUE'|'NOCASE')
          '|' [default] '|' [doc] '|'
-    
+
   The type of the field is the SQL type ("INTEGER", "TEXT", "TIMESTAMP", "DATE",
   "DOUBLE PRECISION", "MONEY", "BOOLEAN", "TIME", "CHARACTER(1)"). Any maximal
   length can be specified for strings, not just 1 as in this example.
@@ -289,6 +289,7 @@ provide that information:
   * A primary key ("PK")
   * The value must be defined ("NOT NULL")
   * The value can be left undefined ("NULL")
+  * A unique constraint and index ("UNIQUE")
   * An index should be created for that column ("INDEX") to speed up
     the lookups.
 
@@ -311,31 +312,38 @@ provide that information:
   on the table. In particular, if you have a foreign key to a table that uses a
   tuple as its primary key, you can define that foreign key on a new line, as::
 
-      FK ::= '|' "FK:" '|' <table> '|' <field_names>* 
+      FK ::= '|' "FK:" '|' <table> '|' <field_names>*
          '|' <field_names>* '|'
 
   For instance::
 
     | TABLE | tableA |
     | FK: | tableB | fieldA1, fieldA2 | fieldB1, fieldB2 |
-    
+
   It is also possible to create multi-column indexes, as in the following
   example.  In this case, the third column contains the name of the index to
   create. If left blank, a default name will be computed by GNATColl::
 
     | TABLE | tableA |
-    | INDEX: | field1,field2,field3 | name | 
-    
+    | INDEX: | field1,field2,field3 | name |
+
+  The same way the unique multi-column constraint and index can be created.
+  The name is optional.
+
+    | TABLE | tableA |
+    | UNIQUE: | field1,field2,field3 | name |
+
+
   Going back to the example we described earlier (:ref:`Database_example`),
   let's describe the tables that are involved.
 
   The first table contains the customers. Here is its definition::
-    
+
     | TABLE | customers     | customer        || The customer for the library |
     | id    | AUTOINCREMENT | PK              || Auto-generated id            |
     | first | TEXT          | NOT NULL        || Customers' first name        |
     | last  | TEXT          | NOT NULL, INDEX || Customers' last name         |
-    
+
   We highly recommend to set a primary key on all tables.
   This is a field whose value is
   unique in the table, and thus that can act as an identifier for a specific
@@ -383,7 +391,7 @@ provide that information:
 
     | TABLE (media) | dvds    | dvd |   | The dvds in the library |
     | region        | INTEGER |     | 1 |                         |
-    
+
   For this example, all this description is put in a file called
   :file:`dbschema.txt`.
 
@@ -526,7 +534,7 @@ those switches are:
   SQL. This is often used in conjunction with :file:`-api`, as in::
 
     gnatcoll_db2ada -api Database -orm ORM -dbmodel dbschema.txt
-    
+
   To use this switch, you need to have a version of `python
   <http://python.org>`_ installed on your development machine, since the code
   generation is currently implemented in python. The generated code can then be
@@ -641,7 +649,7 @@ In the previous section, we have described our database schema in a text
 file. We will now perform two operations:
 
 .. highlight:: sql
-    
+
 * Create an empty database
 
   This should of course only be done once, not every time you run your
@@ -673,7 +681,7 @@ file. We will now perform two operations:
     CREATE INDEX "customers_last" ON "customers" ("last");
 
 .. highlight:: ada
-    
+
 * Generate the Ada code
 
   The details of the code will be described later. For now, our application
@@ -682,7 +690,7 @@ file. We will now perform two operations:
     gnatcoll_db2ada -api=Database -dbmodel=dbschema.txt
 
 .. _Connecting_to_the_database:
-    
+
 Connecting to the database
 ==========================
 
@@ -718,7 +726,7 @@ Let's take a simple example from sqlite::
   begin
      DB_Descr := GNATCOLL.SQL.Sqlite.Setup ("dbname.db");
   end
-  
+
 
 At this point, no connection to the DBMS has been done, and no information
 was exchanged.
@@ -770,7 +778,7 @@ will result in a deadlock::
         ... execute an INSERT through DB2. This tries to get a lock, which
         ... will fail while DB1 holds the shared lock. Since these are in
         ... the same thread, this will deadlock.
-  
+
 By default, GNATCOLL will not create SQL transactions for select statements
 to avoid this case, which occurs frequently in code.
 
@@ -852,7 +860,7 @@ There are various ways to do it:
        GNATCOLL.SQL.Inspect.Load_Data (DB, File);
        DB.Commit;
     end;
-    
+
   The format of this file is described just below.
 
 As we mentioned, GNATColl can load data from a file. The format
@@ -878,7 +886,7 @@ library example as such::
   |------------+---------+-------+------------+-------------|
   | Art of War | Sun Tzu |    90 | 01-01-2000 |           1 |
   | Ada RM     | WRG     |   250 | 01-07-2005 |             |
-  
+
 A few comments on the above: the `id` for `books` is not specified,
 although the column is the primary key and therefore cannot be NULL. In fact,
 since the type of the `id` was set to AUTOINCREMENT, GNATColl will
@@ -896,7 +904,7 @@ be the case in your initial fixtures. Here is an example::
   |--------------+----------+--------+--------------------|
   | The Birds    | Hitchcok |      1 | &Smith             |
   | The Dictator | Chaplin  |      3 | &Dupont            |
-  
+
 
 Here, the title of the column indicates that any value in this column might
 be a reference to the `customers.last` value. Values which start
@@ -1033,7 +1041,7 @@ the other. Here is a first example for such a query::
          From   => Books & Customers,
          Where  => Books.Borrowed_By = Customers.Id
             and Customers.Last = "Smith");
-  
+
 In fact, we could also use auto-completion, and let GNATColl find
 out the involved tables on its own. We thus write the simpler::
 
@@ -1057,7 +1065,7 @@ notation for the call, we can thus write::
         (Fields => Books.Title & Books.Pages,
          Where  => Books.FK (Customers)
             and Customers.Last = "Smith");
-  
+
 Regarding memory management, there is no need for explicitly freeing
 memory in the above code. GNATColl will automatically do this when
 the query is no longer needed.
@@ -1171,7 +1179,7 @@ would not give much benefit if it was prepared, since you are unlikely
 to reuse it exactly as is later on::
 
   SELECT * FROM data WHERE id=1
-  
+
 SQL (and GNATColl) provide a way to parameterize queries. Instead
 of hard-coding the value `1` in the example above, you would in fact
 use a special character (unfortunately specific to the DBMS you are
@@ -1181,7 +1189,7 @@ query is actually executed. For instance, `sqlite` would use::
   SELECT * FROM data WHERE id=?
 
 .. highlight:: ada
-  
+
 You can write such a query in a DBMS-agnostic way by using GNATColl.
 Assuming you have automatically generated :file:`database.ads` by using
 `gnatcoll_db2ada`, here is the corresponding Ada code::
@@ -1270,7 +1278,7 @@ customer). In general we would create a global variable with::
              and Customers.Last = Text_Param (1));
         Auto_Complete => True,
         On_Server => True);
-  
+
 Then when we need to execute this query, we would do::
 
     declare
@@ -1314,7 +1322,7 @@ to the one used in this section::
      0.13s
 
 .. _Getting_results:
-  
+
 Getting results
 ===============
 
@@ -1402,7 +1410,7 @@ as such::
     package Character_Fields is new Field_Types (Character, To_SQL);
     type SQL_Field_Character is new Character_Fields.Field
        with null record;
-  
+
 
 This automatically makes available both the field type (which you can use in
 your database description, as :file:`gnatcoll_db2ada` would do, but also
@@ -1468,7 +1476,7 @@ fields related to SQL::
   SQL.LITE=yes
 
 .. _Writing_your_own_cursors:
-  
+
 Writing your own cursors
 ========================
 
@@ -1535,19 +1543,19 @@ which of course is specific to your application)::
           First => To_Unbounded_String (Value (Self, 1)),
           Last  => To_Unbounded_String (Value (Self, 2)));
     end Element;
-  
+
 
 There is one more complex case though. It might happen that an element
 needs access to several rows to fill the Ada record. For instance, if we
 are writing a CRM application and query the contacts and the companies they
 work for, it is possible that a contact works for several companies. The
 result of the SQL query would then look like this::
-  
+
      contact_id | company_id
-         1      |    100    
-         1      |    101    
-         2      |    100    
-  
+         1      |    100
+         1      |    101
+         2      |    100
+
 
 The sample code shown above will not work in this case, since Element is
 not allowed to modify the cursor. In such a case, we need to take a slightly
@@ -1557,7 +1565,7 @@ different approach::
       function Do_Query return My_Cursor; --  as before
       procedure Element_And_Next
          (Self : in out My_Cursor; Value : out My_Row);
-  
+
 where `Element_And_Next` will fill Value and call Next as many times
 as needed. On exit, the cursor is left on the next row to be processed. The
 usage then becomes::
@@ -1565,7 +1573,7 @@ usage then becomes::
      while Has_Row (R) loop
         Element_And_Next (R, Value);
      end loop;
-  
+
 To prevent the user from using Next incorrectly, you should probably override
 `Next` with a procedure that does nothing (or raises a Program_Error
 maybe). Make sure that in `Element_And_Next` you are calling the
@@ -1617,7 +1625,7 @@ from the `Media` table, and change the `books` table to be::
   | TABLE (media) | books                        | book |     | The books in the library |
   | pages         | INTEGER                      |      | 100 |                          |
   | borrowed_by   | FK customers(borrowed_books) | NULL |     | Who borrowed the media   |
-  
+
 
 Let's thus start by generating this code. We can replace the command we
 ran earlier (with the `-api` switch) with one that will also generate
@@ -1639,7 +1647,7 @@ the other parameters::
     GNATCOLL.SQL.Sessions.Setup
        (Descr  => GNATCOLL.SQL.Sqlite.Setup ("library.db"),
         Max_Sessions => 2);
-  
+
 
 The first parameter is the same `Database_Description` we saw
 earlier (:ref:`Connecting_to_the_database`), but it will be freed
@@ -1796,7 +1804,7 @@ number of types:
     first 5 books, by replacing `M` with the following::
 
          M : Books_Managers := All_Books.Limit (5).Order_By (Books.Title);
-      
+
 
   * `Filter`
 
@@ -1806,7 +1814,7 @@ number of types:
     books by Alexandre Dumas by using::
 
          M : Books_Managers := All_Books.Filter (Author => "Dumas");
-      
+
 
     This version only provides the equality operator for the fields of the
     table itself. If for instance we wanted all books with less than 50 pages,
@@ -1877,7 +1885,7 @@ number of types:
          --    customers.id, customers.first, customers.last
          --    FROM (books LEFT JOIN customers ON books.borrowed_by=customers.id)
          --    WHERE books.borrowed_by=customers.id AND customers.last='Smith'
-      
+
 reverse relationships
 --------------------
 
@@ -1892,7 +1900,7 @@ in fact simply use::
      -- SQL: SELECT books.pages, books.borrowed_by, books.id, books.title,
      --    books.author, books.published FROM books
      --    WHERE books.borrowed_by=1
-  
+
 
 `Borrowed_Books` is a function that was generated because there was
 a `reverse_name`. It returns a `Books_Managers`, so we could
@@ -1917,7 +1925,7 @@ is likely to use this query a lot, let's create a global variable::
 
      Smith_Id : constant Natural := 1;
      BL : Book_List := MP.Get (Session, Params => (1 => Smith_Id));
-  
+
 
 The last call to `Get` is very efficient, with timing improvements
 similar to the ones we discussed on the session about prepared statements
@@ -1965,7 +1973,7 @@ database. For efficiency, it uses a single SQL statement for that, which also
 ensures the constraint remains valid::
 
   UPDATE customers SET first='Andrew', last='Smit' WHERE customers.id=1;
-  
+
 
 .. highlight:: ada
 
@@ -2006,7 +2014,7 @@ yes will return the existing (i.e. modified) element. For instance::
         Put_Line (CL.Element.Last);
         CL.Next;
      end loop;
-  
+
 .. index:: Flush_Before_Query
 
 The above example uses `CL.Element`, which is a light-weight
@@ -2085,7 +2093,7 @@ So let's create such a factory::
   begin
      if From in Media'Class then
         case Media (From).Kind is
-           when 0 => 
+           when 0 =>
               return R : Detached_Book do null; end return;
            when 1 =>
               return R : Detached_DVD do null; end return;
@@ -2097,7 +2105,7 @@ So let's create such a factory::
   end Media_Factory;
 
   Session.Set_Factory (Media_Factory'Access);
-  
+
 This function is a bit tricky. It is associated with a given session (although
 we can also register a default factory that will be associated with all
 sessions by default). For all queries done through this session (and for

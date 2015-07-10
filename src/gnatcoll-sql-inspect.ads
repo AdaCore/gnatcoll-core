@@ -363,6 +363,7 @@ private
    type Field_Properties is record
       PK       : Boolean := False;
       Not_Null : Boolean := False;  --  (true for a PK, implicitly)
+      Unique   : Boolean := False;  --  Unique field
       Indexed  : Boolean := False;  --  Do we need an index ?
       Noindex  : Boolean := False;  --  Force disabling of indexes
       Case_Insensitive : Boolean := False;
@@ -449,6 +450,11 @@ private
       --  The list of multi-column indexes (that are declared in their own line
       --  in the table description). This contains strings like:
       --     "field1,field2,field3|index_name"
+
+      Uniques     : String_Lists.Vector;
+      --  The list of multi-column unique constraints (that are declared in
+      --  their own line in the table description). This contains strings like:
+      --     "field1,field2,field3|constraint_name"
 
       Active      : Boolean := True;
 

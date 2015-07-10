@@ -15,6 +15,11 @@ of the feature.
 New features in 1.8
 -------------------
 
+NF-18-O710-022 UNIQUE keyword in database schema description (2015-07-10)
+
+  The unique constraints and indexes could be defined in the SQL database
+  schema description file.
+
 NF-18-O513-035 GNATCOLL.Memory: enhance memory debug capability (2015-06-01)
 
   GNATCOLL.Memory package uses GNAT.Debug_Pools package to add the following

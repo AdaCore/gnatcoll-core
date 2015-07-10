@@ -2529,7 +2529,7 @@ def get_db_schema(setup, requires_pk=False, all_tables=[], omit=[]):
                     table.fk.append(
                         Foreign_Key(table.name, fields[2], pairs, ''))
 
-                elif fields[1] == "INDEX:":
+                elif fields[1] in ["INDEX:", "UNIQUE:"]:
                     # Skip, no influence here
                     pass
 
