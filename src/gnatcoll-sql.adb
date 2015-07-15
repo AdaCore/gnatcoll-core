@@ -1447,8 +1447,8 @@ package body GNATCOLL.SQL is
 
             Append
               (Result,
-               " BETWEEN (" & To_String (Self.Left, Format, Long) & " and "
-               & To_String (Self.Right, Format, Long) & ')');
+               " BETWEEN " & To_String (Self.Left, Format, Long) & " AND "
+               & To_String (Self.Right, Format, Long));
 
          when Null_Criteria =>
             Result := To_Unbounded_String
