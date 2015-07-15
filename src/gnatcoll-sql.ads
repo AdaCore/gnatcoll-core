@@ -610,6 +610,11 @@ package GNATCOLL.SQL is
      (Self : SQL_Field'Class; Subquery : SQL_Query) return SQL_Criteria;
    --  Whether Self is equal to any of the values in List
 
+   function SQL_Between
+     (Self, Left, Right : SQL_Field'Class) return SQL_Criteria;
+   function SQL_Not_Between
+     (Self, Left, Right : SQL_Field'Class) return SQL_Criteria;
+
    function Any
      (Self, Str : Text_Fields.Field'Class) return SQL_Criteria;
    --  "Self = ANY (Str)"
@@ -953,6 +958,8 @@ private
                               Criteria_Or,
                               Criteria_In,
                               Criteria_Not_In,
+                              Criteria_Between,
+                              Criteria_Not_Between,
                               Criteria_Null,
                               Criteria_Not_Null,
                               Criteria_Not);
@@ -975,6 +982,11 @@ private
             List      : SQL_Field_List;
             Subquery  : SQL_Query;
             In_String : Ada.Strings.Unbounded.Unbounded_String;
+
+         when Criteria_Between | Criteria_Not_Between =>
+            Arg2  : SQL_Field_Pointer;
+            Left  : SQL_Field_Pointer;
+            Right : SQL_Field_Pointer;
 
          when Null_Criteria =>
             Arg3 : SQL_Field_Pointer;

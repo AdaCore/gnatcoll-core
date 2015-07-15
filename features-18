@@ -15,6 +15,10 @@ of the feature.
 New features in 1.8
 -------------------
 
+NF-18-O715-002 GNATCOLL.SQL: support for "between" SQL keyword (2015-07-15)
+
+  Support "BETWEEN" and "NOT BETWEEN" SQL syntax generation.
+
 NF-18-O710-022 UNIQUE keyword in database schema description (2015-07-10)
 
   The unique constraints and indexes could be defined in the SQL database

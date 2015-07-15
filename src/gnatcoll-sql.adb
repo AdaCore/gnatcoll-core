@@ -1238,6 +1238,38 @@ package body GNATCOLL.SQL is
       return Result;
    end SQL_Not_In;
 
+   -----------------
+   -- SQL_Between --
+   -----------------
+
+   function SQL_Between
+     (Self, Left, Right : SQL_Field'Class) return SQL_Criteria is
+   begin
+      return Result : SQL_Criteria do
+         Set_Data
+           (Result,
+            SQL_Criteria_Data'
+              (Criteria_Between,
+               Arg2 => +Self, Left => +Left, Right => +Right));
+      end return;
+   end SQL_Between;
+
+   ---------------------
+   -- SQL_Not_Between --
+   ---------------------
+
+   function SQL_Not_Between
+     (Self, Left, Right : SQL_Field'Class) return SQL_Criteria is
+   begin
+      return Result : SQL_Criteria do
+         Set_Data
+           (Result,
+            SQL_Criteria_Data'
+              (Criteria_Not_Between,
+               Arg2 => +Self, Left => +Left, Right => +Right));
+      end return;
+   end SQL_Not_Between;
+
    -------------
    -- Is_Null --
    -------------
@@ -1404,6 +1436,19 @@ package body GNATCOLL.SQL is
             Append (Result, To_String (Self.Subquery, Format));
             Append (Result, To_String (Self.In_String));
             Append (Result, ")");
+
+         when Criteria_Between | Criteria_Not_Between =>
+            Result := To_Unbounded_String
+                        (To_String (Self.Arg2, Format, Long));
+
+            if Self.Op = Criteria_Not_Between then
+               Append (Result, " NOT");
+            end if;
+
+            Append
+              (Result,
+               " BETWEEN (" & To_String (Self.Left, Format, Long) & " and "
+               & To_String (Self.Right, Format, Long) & ')');
 
          when Null_Criteria =>
             Result := To_Unbounded_String
@@ -1748,6 +1793,9 @@ package body GNATCOLL.SQL is
          when Criteria_In | Criteria_Not_In =>
             Append_Tables (Self.Arg, To);
 
+         when Criteria_Between | Criteria_Not_Between =>
+            Append_Tables (Self.Arg2, To);
+
          when Null_Criteria =>
             Append_Tables (Self.Arg3, To);
 
@@ -1991,6 +2039,9 @@ package body GNATCOLL.SQL is
 
          when Criteria_In | Criteria_Not_In =>
             Append_If_Not_Aggregate (Self.Arg, To, Is_Aggregate);
+
+         when Criteria_Between | Criteria_Not_Between =>
+            Append_If_Not_Aggregate (Self.Arg2, To, Is_Aggregate);
 
          when Null_Criteria =>
             Append_If_Not_Aggregate (Self.Arg3, To, Is_Aggregate);
