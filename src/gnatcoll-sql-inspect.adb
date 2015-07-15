@@ -46,10 +46,6 @@ package body GNATCOLL.SQL.Inspect is
 
    Invalid_Schema : exception;
 
-   Deferred_FK : constant String := " DEFERRABLE INITIALLY DEFERRED";
-   --  extra attribute set on foreign keys. If we want to check the constraints
-   --  immediately, this should be set to "".
-
    use String_Lists;
 
    package String_Sets is new Ada.Containers.Indefinite_Hashed_Sets
@@ -1645,8 +1641,7 @@ package body GNATCOLL.SQL.Inspect is
                      To_String
                        ("ALTER TABLE """ & Table.Name & """ ADD CONSTRAINT "
                         & Element (R.Get.Fields.First).From.Name
-                        & "_fk" & Stmt_FK
-                        & Deferred_FK));
+                        & "_fk" & Stmt_FK));
 
                else
                   P := R.Get.Fields.First;
