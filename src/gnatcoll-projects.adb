@@ -45,33 +45,26 @@ with GNATCOLL.Utils;              use GNATCOLL.Utils;
 with GNATCOLL.VFS;                use GNATCOLL.VFS;
 with GNATCOLL.VFS_Utils;          use GNATCOLL.VFS_Utils;
 
-with Atree;
-with Casing;                      use Casing;
-with Csets;
-pragma Warnings (Off);
-pragma Warnings (Off, "*license of withed unit*");
-with Krunch;
-with Makeutl;
-with Namet;                       use Namet;
-with Osint;
-with Opt;
-with Output;
-with Prj.Attr;                    use Prj.Attr;
-with Prj.Com;
-with Prj.Conf;                    use Prj.Conf;
-with Prj.Env;                     use Prj, Prj.Env;
-with Prj.Err;
-with Prj.Ext;
-with Prj.Part;
-with Prj.Proc;
-with Prj.PP;                      use Prj.PP;
-with Prj.Tree;                    use Prj.Tree;
-with Prj.Util;                    use Prj.Util;
-with Sinput.P;
-pragma Warnings (On, "*license of withed unit*");
-pragma Warnings (On);
-with Snames;                      use Snames;
-with Types;                       use Types;
+with GNATCOLL.Projects.Krunch;
+
+with GPR.Util;                    use GPR.Util;
+with GPR.Osint;
+with GPR.Opt;
+with GPR.Output;
+with GPR.Attr;                    use GPR.Attr;
+with GPR.Com;
+with GPR.Conf;                    use GPR.Conf;
+with GPR.Env;                     use GPR, GPR.Env;
+with GPR.Err;
+with GPR.Ext;
+with GPR.Names;                   use GPR.Names;
+with GPR.Part;
+with GPR.Proc;
+with GPR.PP;                      use GPR.PP;
+with GPR.Tree;                    use GPR.Tree;
+with GPR.Util;                    use GPR.Util;
+with GPR.Sinput;
+with GPR.Snames;                  use GPR.Snames;
 
 package body GNATCOLL.Projects is
 
@@ -112,8 +105,8 @@ package body GNATCOLL.Projects is
    type Source_File_Data is record
       Project : Project_Type;
       File    : GNATCOLL.VFS.Virtual_File;
-      Lang    : Namet.Name_Id;
-      Source  : Prj.Source_Id;
+      Lang    : GPR.Name_Id;
+      Source  : GPR.Source_Id;
       Next    : Source_File_Data_Access := null;
    end record;
    --  In some case, Lang might be set to Unknown_Language, if the file was
@@ -171,8 +164,8 @@ package body GNATCOLL.Projects is
    type Project_Tree_Data (Is_Aggregated : Boolean) is record
       Env       : Project_Environment_Access;
 
-      Tree      : Prj.Tree.Project_Node_Tree_Ref;
-      View      : Prj.Project_Tree_Ref;
+      Tree      : GPR.Tree.Project_Node_Tree_Ref;
+      View      : GPR.Project_Tree_Ref;
       --  The description of the trees
 
       Status  : Project_Status := From_File;
@@ -183,7 +176,7 @@ package body GNATCOLL.Projects is
       Directories : Directory_Statuses.Map;
       --  Index on directory name
       --  ??? might not be needed anymore, using the hash tables already
-      --  in prj.*
+      --  in GPR.*
 
       Timestamp : Ada.Calendar.Time := GNATCOLL.Utils.No_Time;
       --  Time when we last parsed the project from the disk
@@ -221,18 +214,18 @@ package body GNATCOLL.Projects is
    --  Free memory used by Self.
 
    function Get_View
-     (Tree : Prj.Project_Tree_Ref;
-      Path : Path_Name_Type) return Prj.Project_Id;
+     (Tree : GPR.Project_Tree_Ref;
+      Path : Path_Name_Type) return GPR.Project_Id;
    --  Return the project view for the project Name
 
    type External_Variable_Callback is access function
      (Variable : Project_Node_Id; Prj : Project_Node_Id) return Boolean;
    --  Called for a typed variable declaration that references an external
-   --  variable in Prj.
+   --  variable in GPR.
    --  Stops iterating if this subprogram returns False.
 
    type Get_Directory_Path_Callback is access function
-     (Project : Prj.Project_Id) return Path_Information;
+     (Project : GPR.Project_Id) return Path_Information;
    --  Called to get the directory path the Get_Directory function must
    --  return the Virtual_File
 
@@ -285,7 +278,7 @@ package body GNATCOLL.Projects is
 
    procedure Append
      (Self : in out Path_Name_Array;
-      Path : Namet.Path_Name_Type);
+      Path : GPR.Path_Name_Type);
    --  Resize Self if needed, and append a new value
 
    procedure Reset
@@ -308,20 +301,20 @@ package body GNATCOLL.Projects is
 
    function String_Elements
      (Data : Project_Tree_Data_Access)
-      return Prj.String_Element_Table.Table_Ptr;
+      return GPR.String_Element_Table.Table_Ptr;
    pragma Inline (String_Elements);
    --  Return access to the various tables that contain information about the
    --  project
 
-   function Get_String (Id : Namet.File_Name_Type) return String;
-   function Get_String (Id : Namet.Path_Name_Type) return String;
+   function Get_String (Id : GPR.File_Name_Type) return String;
+   function Get_String (Id : GPR.Path_Name_Type) return String;
    pragma Inline (Get_String);
    --  Return the string in Name
-   --  Same as Namet.Get_Name_String, but return "" in case of
+   --  Same as GPR.Get_Name_String, but return "" in case of
    --  failure, instead of raising Assert_Failure.
 
    function Create_Flags
-     (On_Error        : Prj.Error_Handler;
+     (On_Error        : GPR.Error_Handler;
       Require_Sources : Boolean := True;
       Ignore_Missing_With : Boolean := False;
       Report_Missing_Dirs : Boolean := True) return Processing_Flags;
@@ -330,7 +323,7 @@ package body GNATCOLL.Projects is
    --  attached to it.
 
    function Length
-     (Tree : Prj.Project_Tree_Ref; List : Prj.String_List_Id) return Natural;
+     (Tree : GPR.Project_Tree_Ref; List : GPR.String_List_Id) return Natural;
    --  Return the number of elements in the list
 
    function Attribute_Value
@@ -419,7 +412,7 @@ package body GNATCOLL.Projects is
 
    function Handle_Subdir
      (Project : Project_Type;
-      Id      : Namet.Path_Name_Type;
+      Id      : GPR.Path_Name_Type;
       Xref_Dirs : Boolean) return Filesystem_String;
    --  Adds the object subdirectory to Id if one is defined
 
@@ -448,13 +441,13 @@ package body GNATCOLL.Projects is
    --  Return True if Iter is past the end of the list of strings
 
    function Next
-     (Tree : Prj.Tree.Project_Node_Tree_Ref;
+     (Tree : GPR.Tree.Project_Node_Tree_Ref;
       Iter : String_List_Iterator) return String_List_Iterator;
    --  Return the next item in the list
 
    function Data
-     (Tree : Prj.Tree.Project_Node_Tree_Ref;
-      Iter : String_List_Iterator) return Namet.Name_Id;
+     (Tree : GPR.Tree.Project_Node_Tree_Ref;
+      Iter : String_List_Iterator) return GPR.Name_Id;
    --  Return the value pointed to by Iter.
    --  This could be either a N_String_Literal or a N_Expression node in the
    --  first case.
@@ -505,7 +498,7 @@ package body GNATCOLL.Projects is
       --    warning: variable "P" is assigned but never read
    begin
       if not Is_Warning then
-         if Project = Prj.No_Project then
+         if Project = GPR.No_Project then
             if Tree.Root_Project /= No_Project then
                declare
                   Iter : Inner_Project_Iterator := Start (Tree.Root_Project);
@@ -528,7 +521,7 @@ package body GNATCOLL.Projects is
    -- Tree_View --
    ---------------
 
-   function Tree_View (P : Project_Type'Class) return Prj.Project_Tree_Ref is
+   function Tree_View (P : Project_Type'Class) return GPR.Project_Tree_Ref is
    begin
       return P.Data.Tree.View;
    end Tree_View;
@@ -538,7 +531,7 @@ package body GNATCOLL.Projects is
    ---------------
 
    function Tree_Tree
-     (P : Project_Type'Class) return Prj.Tree.Project_Node_Tree_Ref
+     (P : Project_Type'Class) return GPR.Tree.Project_Node_Tree_Ref
    is
    begin
       return P.Data.Tree.Tree;
@@ -550,7 +543,7 @@ package body GNATCOLL.Projects is
 
    function String_Elements
      (Data : Project_Tree_Data_Access)
-      return Prj.String_Element_Table.Table_Ptr is
+      return GPR.String_Element_Table.Table_Ptr is
    begin
       return Data.View.Shared.String_Elements.Table;
    end String_Elements;
@@ -560,7 +553,7 @@ package body GNATCOLL.Projects is
    ------------
 
    function Length
-     (Tree : Prj.Project_Tree_Ref; List : Prj.String_List_Id) return Natural
+     (Tree : GPR.Project_Tree_Ref; List : GPR.String_List_Id) return Natural
    is
       L     : String_List_Id := List;
       Count : Natural        := 0;
@@ -576,9 +569,9 @@ package body GNATCOLL.Projects is
    -- Get_String --
    ----------------
 
-   function Get_String (Id : Namet.File_Name_Type) return String is
+   function Get_String (Id : GPR.File_Name_Type) return String is
    begin
-      if Id = Namet.No_File then
+      if Id = GPR.No_File then
          return "";
       end if;
 
@@ -589,9 +582,9 @@ package body GNATCOLL.Projects is
          return "";
    end Get_String;
 
-   function Get_String (Id : Namet.Path_Name_Type) return String is
+   function Get_String (Id : GPR.Path_Name_Type) return String is
    begin
-      if Id = Namet.No_Path then
+      if Id = GPR.No_Path then
          return "";
       end if;
 
@@ -612,12 +605,12 @@ package body GNATCOLL.Projects is
       if Project.Data = null then
          return "default";
 
-      elsif Get_View (Project) /= Prj.No_Project then
+      elsif Get_View (Project) /= GPR.No_Project then
          return Get_String (Get_View (Project).Display_Name);
 
       else
          return Get_String
-           (Prj.Tree.Name_Of (Project.Data.Node, Project.Tree_Tree));
+           (GPR.Tree.Name_Of (Project.Data.Node, Project.Tree_Tree));
       end if;
    end Name;
 
@@ -629,13 +622,16 @@ package body GNATCOLL.Projects is
      (Project : Project_Type;
       Host    : String := Local_Host) return GNATCOLL.VFS.Virtual_File
    is
-      View : constant Prj.Project_Id := Get_View (Project);
+      View : constant GPR.Project_Id := Get_View (Project);
    begin
-      if Project.Data = null or else Project.Data.Node = Empty_Node then
+      if
+        Project.Data = null
+        or else Project.Data.Node = Empty_Project_Node
+      then
          return GNATCOLL.VFS.No_File;
 
-      elsif View = Prj.No_Project then
-         --  View=Prj.No_Project case needed for the project wizard
+      elsif View = GPR.No_Project then
+         --  View=GPR.No_Project case needed for the project wizard
          return To_Remote
            (Create (+Get_String (Path_Name_Of
             (Project.Data.Node, Project.Tree_Tree))),
@@ -685,7 +681,7 @@ package body GNATCOLL.Projects is
          exit when P = No_Project;
 
          View := Get_View (P);
-         exit when View = Prj.No_Project;
+         exit when View = GPR.No_Project;
 
          Count := Count + Length (Project.Tree_View, View.Source_Dirs);
          Next (Iter);
@@ -702,7 +698,7 @@ package body GNATCOLL.Projects is
             exit when P = No_Project;
 
             View := Get_View (P);
-            exit when View = Prj.No_Project;
+            exit when View = GPR.No_Project;
 
             Src := View.Source_Dirs;
 
@@ -731,7 +727,7 @@ package body GNATCOLL.Projects is
 
    function Handle_Subdir
      (Project   : Project_Type;
-      Id        : Namet.Path_Name_Type;
+      Id        : GPR.Path_Name_Type;
       Xref_Dirs : Boolean) return Filesystem_String
    is
       View : constant Project_Id := Get_View (Project);
@@ -744,9 +740,9 @@ package body GNATCOLL.Projects is
         or else View.Externally_Built
       then
          return Path;
-      elsif Prj.Subdirs /= null then
+      elsif GPR.Subdirs /= null then
          return Name_As_Directory
-           (Path (Path'First .. Path'Last - Prj.Subdirs.all'Length - 1) &
+           (Path (Path'First .. Path'Last - GPR.Subdirs.all'Length - 1) &
             Xrefs_Subdir (Env.all));
       else
          return Path & Name_As_Directory (Xrefs_Subdir (Env.all));
@@ -762,7 +758,7 @@ package body GNATCOLL.Projects is
    is
       View : constant Project_Id := Get_View (Project);
    begin
-      if View /= Prj.No_Project
+      if View /= GPR.No_Project
         and then View.Object_Directory /= No_Path_Information
       then
          return
@@ -787,7 +783,7 @@ package body GNATCOLL.Projects is
       View : constant Project_Id := Get_View (Project);
 
    begin
-      if View = Prj.No_Project then
+      if View = GPR.No_Project then
          return (1 .. 0 => <>);
 
       elsif Recursive then
@@ -798,7 +794,7 @@ package body GNATCOLL.Projects is
          begin
             loop
                P := Current (Iter);
-               exit when P = No_Project or else P.Get_View = Prj.No_Project;
+               exit when P = No_Project or else P.Get_View = GPR.No_Project;
 
                Prepend (Result,
                         P.Object_Path
@@ -1344,7 +1340,7 @@ package body GNATCOLL.Projects is
    begin
       --  ??? Should directly use the size of Source_Files, since this is now
       --  precomputed when the project is loaded
-      if Get_View (Project) = Prj.No_Project then
+      if Get_View (Project) = GPR.No_Project then
          return 0;
       else
          return Project.Data.Files'Length;
@@ -1394,8 +1390,8 @@ package body GNATCOLL.Projects is
             Project      => No_Project,
             Root_Project => Project_Type (Self),
             Part         => Unit_Separate,
-            Name         => Namet.No_Name,
-            Lang         => Namet.No_Name);
+            Name         => GPR.No_Name,
+            Lang         => GPR.No_Name);
       end if;
 
       if Is_Absolute_Path (Name) then
@@ -1408,8 +1404,8 @@ package body GNATCOLL.Projects is
                Project      => No_Project,
                Root_Project => Project_Type (Self),
                Part         => Unit_Separate,
-               Name         => Namet.No_Name,
-               Lang         => Namet.No_Name);
+               Name         => GPR.No_Name,
+               Lang         => GPR.No_Name);
          end if;
 
          return Result;
@@ -1483,8 +1479,8 @@ package body GNATCOLL.Projects is
          Project      => No_Project,
          Root_Project => Project_Type (Self),
          Part         => Unit_Separate,
-         Name         => Namet.No_Name,
-         Lang         => Namet.No_Name);
+         Name         => GPR.No_Name,
+         Lang         => GPR.No_Name);
    end Create_From_Project;
 
    ------------
@@ -1986,13 +1982,13 @@ package body GNATCOLL.Projects is
             Project      => No_Project,
             Root_Project => Tree.Root,
             Part         => Unit_Separate,
-            Name         => Namet.No_Name,
-            Lang         => Namet.No_Name);
+            Name         => GPR.No_Name,
+            Lang         => GPR.No_Name);
       end if;
 
       --  Lookup in the project's Source_Paths_HT, rather than in
       --  Registry.Data.Sources, since the latter does not support duplicate
-      --  base names. In Prj.Nmsc, names have been converted to lower case on
+      --  base names. In GPR.Nmsc, names have been converted to lower case on
       --  case-insensitive file systems, so we need to do the same here.
       --  (Insertion is done in Check_File, where the Path passed in parameter
       --  comes from a call to Normalize_Pathname with the following args:
@@ -2046,7 +2042,7 @@ package body GNATCOLL.Projects is
                Root_Project => Tree.Root,
                File         => File,
                Part         => Unit_Spec,
-               Name         => Namet.No_Name,
+               Name         => GPR.No_Name,
                Lang         => Name_Ada);
 
          elsif Ext = ".adb" then
@@ -2055,7 +2051,7 @@ package body GNATCOLL.Projects is
                Root_Project => Tree.Root,
                File         => File,
                Part         => Unit_Body,
-               Name         => Namet.No_Name,
+               Name         => GPR.No_Name,
                Lang         => Name_Ada);
          end if;
 
@@ -2075,7 +2071,7 @@ package body GNATCOLL.Projects is
          if Has_Element (Cursor) then
             Lang := Extensions_Languages.Element (Cursor);
          else
-            Lang := Namet.No_Name;
+            Lang := GPR.No_Name;
             NS := Tree.Env.Naming_Schemes;
             while NS /= null loop
                if +Ext = NS.Default_Spec_Suffix.all
@@ -2095,7 +2091,7 @@ package body GNATCOLL.Projects is
          Project      => No_Project,
          Root_Project => Tree.Root,
          Part         => Unit_Separate,
-         Name         => Namet.No_Name,
+         Name         => GPR.No_Name,
          Lang         => Lang);
    end Info;
 
@@ -2137,10 +2133,10 @@ package body GNATCOLL.Projects is
       Result : File_Info_Set :=
         (File_Info_Sets.Empty_Set with null record);
 
-      function Unit_Kid_To_Part (Src_Kind : Prj.Source_Kind) return Unit_Parts;
-      --  Translate Prj.Source_Kind into Unit_Parts.
+      function Unit_Kid_To_Part (Src_Kind : GPR.Source_Kind) return Unit_Parts;
+      --  Translate GPR.Source_Kind into Unit_Parts.
 
-      function Unit_Kid_To_Part (Src_Kind : Prj.Source_Kind) return Unit_Parts
+      function Unit_Kid_To_Part (Src_Kind : GPR.Source_Kind) return Unit_Parts
       is
       begin
          case Src_Kind is
@@ -2327,8 +2323,9 @@ package body GNATCOLL.Projects is
             Len    : Natural := Buffer'Length;
          begin
             pragma Assert (Buffer'First = 1);
-            Krunch (Buffer, Len, Maxlen => Buffer'Length,
-                    No_Predef => False);
+            GNATCOLL.Projects.Krunch.Krunch
+              (Buffer, Len, Maxlen => Buffer'Length,
+               No_Predef => False);
 
             case Part is
             when Unit_Body | Unit_Separate =>
@@ -2618,7 +2615,7 @@ package body GNATCOLL.Projects is
       N              : Name_Id;
       Shared         : Shared_Project_Tree_Data_Access;
    begin
-      if Project_View = Prj.No_Project then
+      if Project_View = GPR.No_Project then
          return Nil_Variable_Value;
       end if;
 
@@ -2688,7 +2685,7 @@ package body GNATCOLL.Projects is
       Lang  : Language_Ptr;
       Unit  : Unit_Index;
    begin
-      if Project = No_Project or else View = Prj.No_Project then
+      if Project = No_Project or else View = GPR.No_Project then
          return Default;
       end if;
 
@@ -2744,7 +2741,7 @@ package body GNATCOLL.Projects is
       elsif Attribute = Casing_Attribute then
          Lang := Get_Language_From_Name (View, "ada");
          if Lang /= null then
-            return Prj.Image (Lang.Config.Naming_Data.Casing);
+            return GPR.Image (Lang.Config.Naming_Data.Casing);
          else
             return "";
          end if;
@@ -2827,7 +2824,7 @@ package body GNATCOLL.Projects is
                 Attribute_Value (Project, String (Attribute), Index);
       Tree : constant Project_Tree := (Data => Project.Data.Tree);
    begin
-      if Value.Project = Prj.No_Project then
+      if Value.Project = GPR.No_Project then
          return No_Project;
       else
          declare
@@ -2912,7 +2909,7 @@ package body GNATCOLL.Projects is
       Arr            : Array_Id;
       N              : Name_Id;
    begin
-      if Project_View = Prj.No_Project then
+      if Project_View = GPR.No_Project then
          return False;
       end if;
 
@@ -2982,8 +2979,8 @@ package body GNATCOLL.Projects is
       Pkg_Name       : constant String :=
                          String (Attribute (Attribute'First .. Sep - 1));
       Project_View   : constant Project_Id := Get_View (Project);
-      Packages       : Prj.Package_Table.Table_Ptr;
-      Array_Elements : Prj.Array_Element_Table.Table_Ptr;
+      Packages       : GPR.Package_Table.Table_Ptr;
+      Array_Elements : GPR.Array_Element_Table.Table_Ptr;
       Pkg            : Package_Id := No_Package;
       Arr            : Array_Id;
       Elem, Elem2    : Array_Element_Id;
@@ -2991,7 +2988,7 @@ package body GNATCOLL.Projects is
       Count          : Natural := 0;
 
    begin
-      if Project_View = Prj.No_Project then
+      if Project_View = GPR.No_Project then
          return (1 .. 0 => null);
       end if;
 
@@ -3104,7 +3101,7 @@ package body GNATCOLL.Projects is
       end Add_Language;
 
    begin
-      if Get_View (Project) = Prj.No_Project then
+      if Get_View (Project) = GPR.No_Project then
          return GNAT.OS_Lib.Argument_List'(1 .. 1 => new String'("ada"));
       end if;
 
@@ -3176,7 +3173,7 @@ package body GNATCOLL.Projects is
       P               : constant Project_Id := Get_View (Project);
       Lang            : Language_Ptr;
    begin
-      if P /= Prj.No_Project then
+      if P /= GPR.No_Project then
          Lang := P.Languages;
          while Lang /= null loop
             if Lang.Name = Normalized_Lang then
@@ -3360,7 +3357,7 @@ package body GNATCOLL.Projects is
    is
    begin
       if Project = No_Project
-        or else Get_View (Project) = Prj.No_Project
+        or else Get_View (Project) = GPR.No_Project
       then
          return GNATCOLL.VFS.No_File;
 
@@ -3397,14 +3394,14 @@ package body GNATCOLL.Projects is
    is
 
       function Get_Exec_Directory_Callback
-        (Project : Prj.Project_Id) return Path_Information;
+        (Project : GPR.Project_Id) return Path_Information;
 
       ----------------------------------
       -- Get_Exec_Directory_Callback  --
       ----------------------------------
 
       function Get_Exec_Directory_Callback
-        (Project : Prj.Project_Id) return Path_Information is
+        (Project : GPR.Project_Id) return Path_Information is
       begin
          return Project.Exec_Directory;
       end Get_Exec_Directory_Callback;
@@ -3423,14 +3420,14 @@ package body GNATCOLL.Projects is
    is
 
       function Get_Library_Dir_Callback
-        (Project : Prj.Project_Id) return Path_Information;
+        (Project : GPR.Project_Id) return Path_Information;
 
       ------------------------------
       -- Get_Library_Dir_Callback --
       ------------------------------
 
       function Get_Library_Dir_Callback
-        (Project : Prj.Project_Id) return Path_Information is
+        (Project : GPR.Project_Id) return Path_Information is
       begin
          return Project.Library_Dir;
       end Get_Library_Dir_Callback;
@@ -3449,14 +3446,14 @@ package body GNATCOLL.Projects is
    is
 
       function Get_Library_ALI_Dir_Callback
-        (Project : Prj.Project_Id) return Path_Information;
+        (Project : GPR.Project_Id) return Path_Information;
 
       ----------------------------------
       -- Get_Library_ALI_Dir_Callback --
       ----------------------------------
 
       function Get_Library_ALI_Dir_Callback
-        (Project : Prj.Project_Id) return Path_Information is
+        (Project : GPR.Project_Id) return Path_Information is
       begin
          return Project.Library_ALI_Dir;
       end Get_Library_ALI_Dir_Callback;
@@ -3494,7 +3491,7 @@ package body GNATCOLL.Projects is
 
             Callback (Tree, Proj);
 
-            while With_Clause /= Empty_Node loop
+            while With_Clause /= Empty_Project_Node loop
                --  We have to ignore links back to the root project,
                --  which could only happen with "limited with", since
                --  otherwise the root project would not appear first in
@@ -3514,7 +3511,7 @@ package body GNATCOLL.Projects is
 
             Extended := Extended_Project_Of
               (Project_Declaration_Of (Proj, Tree), Tree);
-            if Extended /= Empty_Node then
+            if Extended /= Empty_Project_Node then
                Process_Project (Extended);
             end if;
          end if;
@@ -3539,7 +3536,7 @@ package body GNATCOLL.Projects is
             procedure Do_Add
               (T : Project_Node_Tree_Ref; P : Project_Node_Id)
             is
-               Path : constant Path_Name_Type := Prj.Tree.Path_Name_Of (P, T);
+               Path : constant Path_Name_Type := GPR.Tree.Path_Name_Of (P, T);
             begin
                Append (Project.Data.Imported_Projects, Path);
             end Do_Add;
@@ -3581,7 +3578,7 @@ package body GNATCOLL.Projects is
          Aggregated : Aggregated_Project_List;
          Iter_Inner : Inner_Project_Iterator;
       begin
-         if Project.Get_View = Prj.No_Project then
+         if Project.Get_View = GPR.No_Project then
             --  View has not been computed for this project.
             return;
          end if;
@@ -3746,7 +3743,7 @@ package body GNATCOLL.Projects is
          Aggregated : Aggregated_Project_List;
          Iter_Inner : Inner_Project_Iterator;
       begin
-         if Project.Get_View = Prj.No_Project then
+         if Project.Get_View = GPR.No_Project then
             --  View has not been computed for this project.
             return;
          end if;
@@ -3889,7 +3886,7 @@ package body GNATCOLL.Projects is
 
       With_Clause := First_With_Clause_Of (Parent.Data.Node, T);
 
-      while With_Clause /= Empty_Node loop
+      while With_Clause /= Empty_Project_Node loop
          --  We cannot compare the nodes directly, since they might be the same
          --  in two aggregated projects, even when this is not the same project
 
@@ -3899,7 +3896,7 @@ package body GNATCOLL.Projects is
          then
             Imports         := True;
             Is_Limited_With := Non_Limited_Project_Node_Of (With_Clause, T)
-              = Empty_Node;
+              = Empty_Project_Node;
             return;
          end if;
 
@@ -4085,7 +4082,7 @@ package body GNATCOLL.Projects is
          end loop;
       end;
 
-      Importing (Importing'Last) := Prj.Tree.Path_Name_Of
+      Importing (Importing'Last) := GPR.Tree.Path_Name_Of
         (Project.Data.Node, Project.Data.Tree.Tree);
       Project.Data.Importing_Projects := Importing;
 
@@ -4507,13 +4504,13 @@ package body GNATCOLL.Projects is
          if Kind_Of (Expr, T) = N_External_Value then
             Expr := External_Default_Of (Expr, T);
 
-            if Expr = Empty_Node then
+            if Expr = Empty_Project_Node then
                return No_Name;
             end if;
 
             if Kind_Of (Expr, T) /= N_Literal_String then
                Expr := First_Term (Expr, T);
-               Assert (Me, Next_Term (Expr, T) = Empty_Node,
+               Assert (Me, Next_Term (Expr, T) = Empty_Project_Node,
                        "Default value cannot be a concatenation");
 
                Expr := Current_Term (Expr, T);
@@ -4524,17 +4521,17 @@ package body GNATCOLL.Projects is
 
                   declare
                      Var    : constant Name_Id :=
-                                Prj.Tree.Name_Of (Expr, T);
+                                GPR.Tree.Name_Of (Expr, T);
                      In_Prj : constant Project_Node_Id :=
                                 Project_Node_Of (Expr, T);
                      Decl   : Project_Node_Id;
                   begin
-                     if In_Prj /= Empty_Node then
+                     if In_Prj /= Empty_Project_Node then
                         --  This variable is defined in another project, get
                         --  project reference.
                         Proj := Project_Type
                           (Project_From_Name
-                             (Tree, Prj.Tree.Name_Of (In_Prj, T)));
+                             (Tree, GPR.Tree.Name_Of (In_Prj, T)));
                      end if;
 
                      --  Look for Var declaration into the project
@@ -4542,10 +4539,10 @@ package body GNATCOLL.Projects is
                      Decl := First_Declarative_Item_Of
                        (Project_Declaration_Of (Proj.Data.Node, T), T);
 
-                     while Decl /= Empty_Node loop
+                     while Decl /= Empty_Project_Node loop
                         Expr := Current_Item_Node (Decl, T);
 
-                        if Prj.Tree.Name_Of (Expr, T) = Var then
+                        if GPR.Tree.Name_Of (Expr, T) = Var then
                            Expr := Expression_Of (Expr, T);
                            Expr := First_Term (Expr, T);
                            --  Get expression and corresponding term
@@ -4553,7 +4550,7 @@ package body GNATCOLL.Projects is
                            --  Check now that this is not a composite value
 
                            Assert
-                             (Me, Next_Term (Expr, T) = Empty_Node,
+                             (Me, Next_Term (Expr, T) = Empty_Project_Node,
                               "Default value cannot be a concatenation");
 
                            --  Get the string literal
@@ -4604,7 +4601,7 @@ package body GNATCOLL.Projects is
            (Name        => V,
             Default     => External_Default (Variable),
             String_Type => String_Type_Of (Variable, T),
-            Value       => Prj.Ext.Value_Of
+            Value       => GPR.Ext.Value_Of
               (Tree.Env.Env.External, V,
                With_Default => External_Default (Variable)));
 
@@ -4613,13 +4610,13 @@ package body GNATCOLL.Projects is
          --  Ensure the external reference actually exists and has a valid
          --  value.
 
-         Is_Valid := Prj.Ext.Value_Of
+         Is_Valid := GPR.Ext.Value_Of
             (Tree.Env.Env.External, Var.Name) /= No_Name;
 
          if Is_Valid then
             declare
                Current : constant Name_Id :=
-                  Prj.Ext.Value_Of (Tree.Env.Env.External, Var.Name);
+                  GPR.Ext.Value_Of (Tree.Env.Env.External, Var.Name);
                Iter : String_List_Iterator := Value_Of (T, Var);
             begin
                Is_Valid := False;
@@ -4636,16 +4633,16 @@ package body GNATCOLL.Projects is
 
          if not Is_Valid then
             if Var.Default /= No_Name then
-               Prj.Ext.Add
+               GPR.Ext.Add
                   (Tree.Env.Env.External, N, Get_Name_String (Var.Default),
-                   Prj.Ext.From_Command_Line);
+                   GPR.Ext.From_Command_Line);
             else
-               Prj.Ext.Add
+               GPR.Ext.Add
                  (Tree.Env.Env.External, N,
                   Get_Name_String
                      (String_Value_Of
                         (First_Literal_String (Var.String_Type, T), T)),
-                  Prj.Ext.From_Command_Line);
+                  GPR.Ext.From_Command_Line);
             end if;
          end if;
 
@@ -4699,7 +4696,7 @@ package body GNATCOLL.Projects is
 
       for V in Tree.Scenario_Variables'Range loop
          Tree.Scenario_Variables (V).Value :=
-           Prj.Ext.Value_Of
+           GPR.Ext.Value_Of
              (Tree.Env.Env.External, Tree.Scenario_Variables (V).Name,
               With_Default => Tree.Scenario_Variables (V).Default);
       end loop;
@@ -4735,7 +4732,7 @@ package body GNATCOLL.Projects is
       Var := Scenario_Variable'
         (Name        => Ext,
          Default     => No_Name,
-         String_Type => Empty_Node,   --   ??? Won't be able to edit it
+         String_Type => Empty_Project_Node,  --   ??? Won't be able to edit it
          Value       => No_Name);
 
       List := Self.Data.Scenario_Variables;
@@ -4786,11 +4783,11 @@ package body GNATCOLL.Projects is
       Vars  : Scenario_Variable_Array) is
    begin
       for V in Vars'Range loop
-         Prj.Ext.Add
+         GPR.Ext.Add
            (Self.Data.Env.Env.External,
             Get_String (Vars (V).Name),
             Get_String (Vars (V).Value),
-            Prj.Ext.From_Command_Line);
+            GPR.Ext.From_Command_Line);
       end loop;
    end Change_Environment;
 
@@ -4803,9 +4800,9 @@ package body GNATCOLL.Projects is
       Name, Value : String)
    is
    begin
-      Prj.Ext.Add
+      GPR.Ext.Add
         (Self.Env.External, Name, Value,
-         Prj.Ext.From_Command_Line);
+         GPR.Ext.From_Command_Line);
    end Change_Environment;
 
    -----------
@@ -4815,7 +4812,7 @@ package body GNATCOLL.Projects is
    function Value (Self : Project_Environment; Name : String) return String is
       V : Name_Id;
    begin
-      V := Prj.Ext.Value_Of (Self.Env.External, Get_String (Name));
+      V := GPR.Ext.Value_Of (Self.Env.External, Get_String (Name));
       if V /= No_Name then
          return Get_String (V);
       else
@@ -4837,8 +4834,8 @@ package body GNATCOLL.Projects is
    --------------
 
    function Get_View
-     (Tree : Prj.Project_Tree_Ref;
-      Path : Path_Name_Type) return Prj.Project_Id
+     (Tree : GPR.Project_Tree_Ref;
+      Path : Path_Name_Type) return GPR.Project_Id
    is
       Proj : Project_List := Tree.Projects;
    begin
@@ -4852,23 +4849,26 @@ package body GNATCOLL.Projects is
          Proj := Proj.Next;
       end loop;
 
-      return Prj.No_Project;
+      return GPR.No_Project;
    end Get_View;
 
    --------------
    -- Get_View --
    --------------
 
-   function Get_View (Project : Project_Type'Class) return Prj.Project_Id is
+   function Get_View (Project : Project_Type'Class) return GPR.Project_Id is
    begin
-      if Project.Data = null or else Project.Data.Node = Empty_Node then
-         return Prj.No_Project;
+      if
+        Project.Data = null
+        or else Project.Data.Node = Empty_Project_Node
+      then
+         return GPR.No_Project;
 
-      elsif Project.Data.View = Prj.No_Project then
+      elsif Project.Data.View = GPR.No_Project then
          Project.Data.View :=
            Get_View
              (Project.Tree_View,
-              Prj.Tree.Path_Name_Of (Project.Data.Node, Project.Tree_Tree));
+              GPR.Tree.Path_Name_Of (Project.Data.Node, Project.Tree_Tree));
       end if;
 
       return Project.Data.View;
@@ -4883,7 +4883,7 @@ package body GNATCOLL.Projects is
       Recursive : Boolean;
       Callback  : External_Variable_Callback)
    is
-      Tree     : constant Prj.Tree.Project_Node_Tree_Ref := Project.Tree_Tree;
+      Tree     : constant GPR.Tree.Project_Node_Tree_Ref := Project.Tree_Tree;
       Iterator : Inner_Project_Iterator := Start (Project, Recursive);
       P        : Project_Type;
 
@@ -4899,10 +4899,10 @@ package body GNATCOLL.Projects is
          Var : Project_Node_Id;
       begin
          --  For all the packages and the common section
-         while Pkg /= Empty_Node loop
+         while Pkg /= Empty_Project_Node loop
             Var := First_Variable_Of (Pkg, Tree);
 
-            while Var /= Empty_Node loop
+            while Var /= Empty_Project_Node loop
                if Kind_Of (Var, Tree) = N_Typed_Variable_Declaration
                  and then Is_External_Variable (Var, Tree)
                  and then not Callback (Var, Prj)
@@ -4958,8 +4958,8 @@ package body GNATCOLL.Projects is
    is
       Val : Variable_Value;
    begin
-      if Get_View (Project) /= Prj.No_Project then
-         Makeutl.Get_Switches
+      if Get_View (Project) /= GPR.No_Project then
+         GPR.Util.Get_Switches
            (Source_File  => File_Name_Type
               (Get_String (File.Display_Base_Name)),
             Source_Lang  => Get_String (Language),
@@ -5034,7 +5034,7 @@ package body GNATCOLL.Projects is
 
    function Done (Iter : String_List_Iterator) return Boolean is
    begin
-      return Iter.Current = Empty_Node;
+      return Iter.Current = Empty_Project_Node;
    end Done;
 
    ----------
@@ -5045,7 +5045,7 @@ package body GNATCOLL.Projects is
      (Tree : Project_Node_Tree_Ref;
       Iter : String_List_Iterator) return String_List_Iterator is
    begin
-      pragma Assert (Iter.Current /= Empty_Node);
+      pragma Assert (Iter.Current /= Empty_Project_Node);
 
       case Kind_Of (Iter.Current, Tree) is
          when N_Literal_String =>
@@ -5064,8 +5064,8 @@ package body GNATCOLL.Projects is
    ----------
 
    function Data
-     (Tree : Prj.Tree.Project_Node_Tree_Ref;
-      Iter : String_List_Iterator) return Namet.Name_Id is
+     (Tree : GPR.Tree.Project_Node_Tree_Ref;
+      Iter : String_List_Iterator) return GPR.Name_Id is
    begin
       pragma Assert (Kind_Of (Iter.Current, Tree) = N_Literal_String);
       return String_Value_Of (Iter.Current, Tree);
@@ -5078,7 +5078,7 @@ package body GNATCOLL.Projects is
    function Possible_Values_Of
      (Self : Project_Tree; Var : Scenario_Variable) return String_List
    is
-      Tree  : constant Prj.Tree.Project_Node_Tree_Ref := Self.Data.Tree;
+      Tree  : constant GPR.Tree.Project_Node_Tree_Ref := Self.Data.Tree;
       Count : Natural := 0;
       Iter  : String_List_Iterator := Value_Of (Tree, Var);
    begin
@@ -5161,12 +5161,12 @@ package body GNATCOLL.Projects is
         (Project_Declaration_Of (Project.Data.Node, Tree), Tree);
 
    begin
-      if Extended = Empty_Node then
+      if Extended = Empty_Project_Node then
          return No_Project;
       else
          return Project_Type
            (Project_From_Name
-              (Project.Data.Tree, Prj.Tree.Name_Of (Extended, Tree)));
+              (Project.Data.Tree, GPR.Tree.Name_Of (Extended, Tree)));
       end if;
    end Extended_Project;
 
@@ -5191,7 +5191,7 @@ package body GNATCOLL.Projects is
          --  Case of following extension chain: if we reached the of the chain,
          --  go back one step (to the last non-empty node) and exit.
 
-         if Extending = Empty_Node then
+         if Extending = Empty_Project_Node then
             Extending := Extended;
             exit;
          end if;
@@ -5201,13 +5201,13 @@ package body GNATCOLL.Projects is
          Extended := Extending;
       end loop;
 
-      if Extending = Empty_Node then
+      if Extending = Empty_Project_Node then
          return No_Project;
       else
          return Project_Type
            (Project_From_Path
               (Project.Data.Tree,
-               Prj.Tree.Path_Name_Of (Extending, Tree)));
+               GPR.Tree.Path_Name_Of (Extending, Tree)));
       end if;
    end Extending_Project;
 
@@ -5242,7 +5242,7 @@ package body GNATCOLL.Projects is
    begin
       --  View will be null when called from the project wizard
 
-      if View /= Prj.No_Project then
+      if View /= GPR.No_Project then
          Lang := View.Languages;
          while Lang /= null loop
             Suffix := Name_Id (Lang.Config.Naming_Data.Spec_Suffix);
@@ -5326,7 +5326,6 @@ package body GNATCOLL.Projects is
             Shared   => Project.Data.Tree.View.Shared,
             Main     => Main_Source.File,
             Index    => Main_Source.Index,
-            Ada_Main => False,
             Language => Get_Name_String (Main_Source.Language.Name),
             Include_Suffix => False);
          return +Get_String (Exec_Name);
@@ -5338,7 +5337,7 @@ package body GNATCOLL.Projects is
    ------------------
 
    function Create_Flags
-     (On_Error        : Prj.Error_Handler;
+     (On_Error        : GPR.Error_Handler;
       Require_Sources : Boolean := True;
       Ignore_Missing_With : Boolean := False;
       Report_Missing_Dirs : Boolean := True) return Processing_Flags is
@@ -5377,7 +5376,7 @@ package body GNATCOLL.Projects is
    function Has_Multi_Unit_Sources (Project : Project_Type) return Boolean is
       View : constant Project_Id := Get_View (Project);
    begin
-      if View /= Prj.No_Project then
+      if View /= GPR.No_Project then
          return View.Has_Multi_Unit_Sources;
       end if;
       return False;
@@ -5389,7 +5388,7 @@ package body GNATCOLL.Projects is
 
    function Project_From_Name
      (Tree : Project_Tree_Data_Access;
-      Name : Namet.Name_Id) return Project_Type'Class
+      Name : GPR.Name_Id) return Project_Type'Class
    is
       Tree_For_Map : Project_Tree_Data_Access;
 
@@ -5403,7 +5402,7 @@ package body GNATCOLL.Projects is
 
       Normalized : constant Filesystem_String :=
          Create (+Get_String (Name)).Base_Name
-            (Suffix => +Prj.Project_File_Extension, Normalize => True);
+            (Suffix => +GPR.Project_File_Extension, Normalize => True);
 
       --  The name of a project is not related to file names, and is always
       --  case-insensitive. So we convert to lower-case here. However, if we
@@ -5425,7 +5424,7 @@ package body GNATCOLL.Projects is
          P_Cursor := Tree_For_Map.Projects.First;
 
          if Project_Qualifier_Of (Tree.Root.Data.Node, Tree.Tree) =
-           Prj.Aggregate
+           GPR.Aggregate
          then
             while P_Cursor /= Project_Htables.No_Element loop
                if To_Lower (Element (P_Cursor).Name) = N then
@@ -5610,11 +5609,11 @@ package body GNATCOLL.Projects is
    is
       pragma Unreferenced (Self);
    begin
-      Free (Prj.Subdirs);
+      Free (GPR.Subdirs);
       if Subdir = "." then
-         Prj.Subdirs := null;
+         GPR.Subdirs := null;
       else
-         Prj.Subdirs := new String'(+Subdir);
+         GPR.Subdirs := new String'(+Subdir);
       end if;
    end Set_Object_Subdir;
 
@@ -5627,10 +5626,10 @@ package body GNATCOLL.Projects is
    is
       pragma Unreferenced (Self);
    begin
-      if Prj.Subdirs = null then
+      if GPR.Subdirs = null then
          return "";
       else
-         return +Prj.Subdirs.all;
+         return +GPR.Subdirs.all;
       end if;
    end Object_Subdir;
 
@@ -5719,7 +5718,7 @@ package body GNATCOLL.Projects is
 
    procedure Reset_View (Self : in out Project_Data'Class) is
    begin
-      Self.View := Prj.No_Project;
+      Self.View := GPR.No_Project;
       --  No need to reset Self.Imported_Projects, since this doesn't
       --  change when the view changes.
 
@@ -5965,7 +5964,7 @@ package body GNATCOLL.Projects is
 
    function Hash (Node : Project_Node_Id) return Ada.Containers.Hash_Type is
    begin
-      return Ada.Containers.Hash_Type (Prj.Tree.Hash (Node));
+      return Ada.Containers.Hash_Type (GPR.Tree.Hash (Node));
    end Hash;
 
    ------------------
@@ -6100,7 +6099,7 @@ package body GNATCOLL.Projects is
         (Me, "Load project " & Root_Project_Path.Display_Full_Name);
 
       if Active (Me_Gnat) then
-         Prj.Current_Verbosity := Prj.High;
+         GPR.Current_Verbosity := GPR.High;
       end if;
 
       if Self.Data /= null and then Self.Data.Root /= No_Project then
@@ -6159,9 +6158,9 @@ package body GNATCOLL.Projects is
          Recompute_View       => False,
          Report_Missing_Dirs  => Report_Missing_Dirs);
 
-      Prj.Err.Initialize;  --  Clear errors
+      GPR.Err.Initialize;  --  Clear errors
 
-      if Project = Empty_Node then
+      if Project = Empty_Project_Node then
          --  Reset the list of error messages, and keep current project
          --  unchanged
 
@@ -6242,7 +6241,7 @@ package body GNATCOLL.Projects is
    begin
       Name_Len := 0;
       Add_Str_To_Name_Buffer (Directory.Display_Full_Name);
-      Makeutl.Db_Switch_Args.Append (Name_Find);
+      GPR.Conf.Add_Db_Switch_Arg (Name_Find);
    end Add_Config_Dir;
 
    ----------------
@@ -6256,10 +6255,10 @@ package body GNATCOLL.Projects is
          Self := new Project_Environment;
       end if;
 
-      Prj.Tree.Initialize (Self.Env, Create_Flags (null));
-      Prj.Env.Initialize_Default_Project_Path
+      GPR.Tree.Initialize (Self.Env, Create_Flags (null));
+      GPR.Env.Initialize_Default_Project_Path
         (Self.Env.Project_Path, Target_Name => "");
-      Prj.Env.Get_Path (Self.Env.Project_Path, Path);
+      GPR.Env.Get_Path (Self.Env.Project_Path, Path);
       Self.Predefined_Project_Path :=
         new File_Array'(From_Path (+Path.all));
    end Initialize;
@@ -6286,13 +6285,13 @@ package body GNATCOLL.Projects is
          Tree.Data.Tree := new Project_Node_Tree_Data;
       end if;
 
-      Prj.Tree.Initialize (Tree.Data.Tree);
+      GPR.Tree.Initialize (Tree.Data.Tree);
 
       if Tree.Data.View = null then
-         Tree.Data.View := new Prj.Project_Tree_Data;
+         Tree.Data.View := new GPR.Project_Tree_Data;
       end if;
 
-      Prj.Initialize (Tree.Data.View);
+      GPR.Initialize (Tree.Data.View);
    end Reset;
 
    -----------------------------
@@ -6385,7 +6384,7 @@ package body GNATCOLL.Projects is
            (Get_String ("runtime"), Project.Decl.Arrays, Shared);
       begin
          if Elem = No_Array_Element then
-            if Project.Extends = Prj.No_Project then
+            if Project.Extends = GPR.No_Project then
                return Value_Of (Nil_Variable_Value, Unset);
             else
                return Get_Value_Of_Runtime (Project.Extends);
@@ -6761,7 +6760,7 @@ package body GNATCOLL.Projects is
       Predefined_Path : constant String :=
         +To_Path (Predefined_Project_Path (Tree.Data.Env.all));
 
-      Errout_Handling : Prj.Part.Errout_Mode := Prj.Part.Always_Finalize;
+      Errout_Handling : GPR.Part.Errout_Mode := GPR.Part.Always_Finalize;
    begin
       Traces.Assert (Me, Tree.Data /= null, "Tree data initialized");
       Increase_Indent
@@ -6771,25 +6770,25 @@ package body GNATCOLL.Projects is
 
       Trace (Me, "project path is " & Predefined_Path);
       Initialize_Empty (Tree.Data.Env.Env.Project_Path);
-      Prj.Env.Set_Path (Tree.Data.Env.Env.Project_Path, Predefined_Path);
+      GPR.Env.Set_Path (Tree.Data.Env.Env.Project_Path, Predefined_Path);
 
-      Project := Empty_Node;
+      Project := Empty_Project_Node;
 
       --  Make sure errors are reinitialized before load
-      Prj.Err.Initialize;
+      GPR.Err.Initialize;
 
       if Test_With_Missing_With then
-         Errout_Handling := Prj.Part.Never_Finalize;
+         Errout_Handling := GPR.Part.Never_Finalize;
       end if;
 
-      Output.Set_Special_Output (Output.Output_Proc (Errors));
+      GPR.Output.Set_Special_Output (GPR.Output.Output_Proc (Errors));
 
-      Prj.Com.Fail := Fail'Unrestricted_Access;
+      GPR.Com.Fail := Fail'Unrestricted_Access;
 
       Tree.Data.Root := No_Project;
 
-      Sinput.P.Clear_Source_File_Table;
-      Sinput.P.Reset_First;
+      Sinput.Clear_Source_File_Table;
+      Sinput.Reset_First;
 
       Override_Flags
          (Tree.Data.Env.Env,
@@ -6797,7 +6796,7 @@ package body GNATCOLL.Projects is
                (On_Error'Unrestricted_Access,
                 Report_Missing_Dirs => not Report_Missing_Dirs,
                 Ignore_Missing_With => Test_With_Missing_With));
-      Prj.Part.Parse
+      GPR.Part.Parse
         (Tree.Data.Tree, Project,
          +Root_Project_Path.Full_Name,
          Packages_To_Check => Packages_To_Check,
@@ -6808,19 +6807,19 @@ package body GNATCOLL.Projects is
          Current_Directory => Get_Current_Dir);
 
       if not Active (Me_Aggregate_Support)
-        and then Project /= Empty_Node
+        and then Project /= Empty_Project_Node
         and then Project_Qualifier_Of (Project, Tree.Data.Tree) =
-        Prj.Aggregate
+        GPR.Aggregate
       then
          Trace (Me, "Aggregate projects are not supported");
          Fail ("Aggregate projects are not supported");
-         Project := Empty_Node;
-         Output.Cancel_Special_Output;
+         Project := Empty_Project_Node;
+         GPR.Output.Cancel_Special_Output;
          Decrease_Indent (Me);
          return;
       end if;
 
-      if Project /= Empty_Node
+      if Project /= Empty_Project_Node
         and then Tree.Data.Tree.Incomplete_With
       then
          Trace (Me, "Could not find some with-ed projects");
@@ -6834,7 +6833,7 @@ package body GNATCOLL.Projects is
             Tmp_Prj : Project_Id;
             Dummy   : Boolean;
          begin
-            Prj.Proc.Process_Project_Tree_Phase_1
+            GPR.Proc.Process_Project_Tree_Phase_1
               (In_Tree                => Tree.Data.View,
                Project                => Tmp_Prj,
                Packages_To_Check      => Packages_To_Check,
@@ -6847,7 +6846,7 @@ package body GNATCOLL.Projects is
 
             if not Success or else Tmp_Prj = null then
                Trace (Me, "Processing phase 1 failed");
-               Project := Empty_Node;
+               Project := Empty_Project_Node;
             else
                Trace (Me, "Looking for IDE'gnatlist attribute");
                Dummy := Set_Path_From_Gnatls_Attribute
@@ -6877,13 +6876,13 @@ package body GNATCOLL.Projects is
                Test_With_Missing_With => False,
                Report_Missing_Dirs    => Report_Missing_Dirs);
 
-            Output.Cancel_Special_Output;
+            GPR.Output.Cancel_Special_Output;
 
             Decrease_Indent (Me);
             return;
          end;
 
-      elsif Project = Empty_Node
+      elsif Project = Empty_Project_Node
         and then Test_With_Missing_With
       then
          --  We had error, but we might be missing the one for missing withs.
@@ -6915,9 +6914,9 @@ package body GNATCOLL.Projects is
 
          --  We correctly parsed the project, but should finalize anyway
          if Report_Syntax_Errors then
-            Prj.Err.Finalize;
+            GPR.Err.Finalize;
          else
-            Prj.Err.Initialize;
+            GPR.Err.Initialize;
          end if;
       end if;
 
@@ -6932,7 +6931,7 @@ package body GNATCOLL.Projects is
          Dummy   : Boolean;
       begin
          Trace (Me, "Checking whether the gnatls attribute has changed");
-         Prj.Proc.Process_Project_Tree_Phase_1
+         GPR.Proc.Process_Project_Tree_Phase_1
            (In_Tree                => Tree.Data.View,
             Project                => Tmp_Prj,
             Packages_To_Check      => Packages_To_Check,
@@ -6966,7 +6965,7 @@ package body GNATCOLL.Projects is
 
       Override_Flags (Tree.Data.Env.Env, Create_Flags (null));
 
-      if Project /= Empty_Node then
+      if Project /= Empty_Project_Node then
          Tree.Data.Root := Tree.Instance_From_Node (Tree, Project);
 
          --  Create the project instances, so that we can use the
@@ -6978,8 +6977,8 @@ package body GNATCOLL.Projects is
 
          Tree.Set_Status (From_File);
 
-         Prj.Com.Fail := null;
-         Output.Cancel_Special_Output;
+         GPR.Com.Fail := null;
+         GPR.Output.Cancel_Special_Output;
 
          if Recompute_View then
             Tree.Recompute_View (Errors => Errors);
@@ -6990,15 +6989,15 @@ package body GNATCOLL.Projects is
 
    exception
       when Invalid_Project =>
-         Prj.Com.Fail := null;
-         Output.Cancel_Special_Output;
+         GPR.Com.Fail := null;
+         GPR.Output.Cancel_Special_Output;
          Decrease_Indent (Me);
          raise;
 
       when E : others =>
          Trace (Me, E);
-         Prj.Com.Fail := null;
-         Output.Cancel_Special_Output;
+         GPR.Com.Fail := null;
+         GPR.Output.Cancel_Special_Output;
          Decrease_Indent (Me);
          raise;
    end Internal_Load;
@@ -7025,6 +7024,15 @@ package body GNATCOLL.Projects is
      (Self   : in out Project_Tree;
       Errors : Projects.Error_Report := null)
    is
+      procedure Add_Default_GNAT_Naming_Scheme
+        (Config_File  : in out GPR.Project_Node_Id;
+         Project_Tree : GPR.Tree.Project_Node_Tree_Ref);
+      --  A hook that will create a new config file (in memory), used for
+      --  Get_Or_Create_Configuration_File and Process_Project_And_Apply_Config
+      --  and add the default GNAT naming scheme to it. Nothing is done if the
+      --  config_file already exists, to avoid overriding what the user might
+      --  have put in there.
+
       procedure Add_GPS_Naming_Schemes_To_Config_File
         (Config_File  : in out Project_Node_Id;
          Project_Tree : Project_Node_Tree_Ref);
@@ -7048,6 +7056,130 @@ package body GNATCOLL.Projects is
       --  Creates project instancies for given project tree.
       --  This is called once per aggregated project tree
 
+      ------------------------------------
+      -- Add_Default_GNAT_Naming_Scheme --
+      ------------------------------------
+
+      procedure Add_Default_GNAT_Naming_Scheme
+        (Config_File  : in out Project_Node_Id;
+         Project_Tree : Project_Node_Tree_Ref)
+      is
+         Auto_Cgpr : constant String := "auto.cgpr";
+
+         procedure Create_Attribute
+           (Name  : Name_Id;
+            Value : String;
+            Index : String := "";
+            Pkg   : Project_Node_Id := Empty_Project_Node);
+
+         ----------------------
+         -- Create_Attribute --
+         ----------------------
+
+         procedure Create_Attribute
+           (Name  : Name_Id;
+            Value : String;
+            Index : String := "";
+            Pkg   : Project_Node_Id := Empty_Project_Node)
+         is
+            Attr : Project_Node_Id;
+            pragma Unreferenced (Attr);
+
+            Expr   : Name_Id         := No_Name;
+            Val    : Name_Id         := No_Name;
+            Parent : Project_Node_Id := Config_File;
+
+         begin
+            if Index /= "" then
+               Name_Len := Index'Length;
+               Name_Buffer (1 .. Name_Len) := Index;
+               Val := Name_Find;
+            end if;
+
+            if Pkg /= Empty_Project_Node then
+               Parent := Pkg;
+            end if;
+
+            Name_Len := Value'Length;
+            Name_Buffer (1 .. Name_Len) := Value;
+            Expr := Name_Find;
+
+            Attr := Create_Attribute
+              (Tree       => Project_Tree,
+               Prj_Or_Pkg => Parent,
+               Name       => Name,
+               Index_Name => Val,
+               Kind       => GPR.Single,
+               Value      => Create_Literal_String (Expr, Project_Tree));
+         end Create_Attribute;
+
+         --  Local variables
+
+         Name     : Name_Id;
+         Naming   : Project_Node_Id;
+         Compiler : Project_Node_Id;
+
+         --  Start of processing for Add_Default_GNAT_Naming_Scheme
+
+      begin
+         if Config_File = Empty_Project_Node then
+
+            --  Create a dummy config file if none was found
+
+            Name_Len := Auto_Cgpr'Length;
+            Name_Buffer (1 .. Name_Len) := Auto_Cgpr;
+            Name := Name_Find;
+
+            --  An invalid project name to avoid conflicts with
+            --  user-created ones.
+
+            Name_Len := 5;
+            Name_Buffer (1 .. Name_Len) := "_auto";
+
+            Config_File :=
+              Create_Project
+                (In_Tree        => Project_Tree,
+                 Name           => Name_Find,
+                 Full_Path      => Path_Name_Type (Name),
+                 Is_Config_File => True);
+
+            --  Setup library support
+
+            Create_Attribute (Name_Library_Support, "full");
+            Create_Attribute (Name_Library_Auto_Init_Supported, "true");
+
+            --  Declare an empty target
+
+            Create_Attribute (Name_Target, "");
+
+            --  Setup Ada support (Ada is the default language here, since this
+            --  is only called when no config file existed initially, ie for
+            --  gnatmake).
+
+            Create_Attribute (Name_Default_Language, "ada");
+
+            Compiler := Create_Package (Project_Tree, Config_File, "compiler");
+            Create_Attribute
+              (Name_Driver, "gcc", "ada", Pkg => Compiler);
+            Create_Attribute
+              (Name_Language_Kind, "unit_based", "ada", Pkg => Compiler);
+            Create_Attribute
+              (Name_Dependency_Kind, "ALI_File", "ada", Pkg => Compiler);
+
+            Naming := Create_Package (Project_Tree, Config_File, "naming");
+            Create_Attribute
+              (Name_Spec_Suffix, ".ads", "ada",     Pkg => Naming);
+            Create_Attribute
+              (Name_Separate_Suffix, ".adb", "ada", Pkg => Naming);
+            Create_Attribute
+              (Name_Body_Suffix, ".adb", "ada",     Pkg => Naming);
+            Create_Attribute
+              (Name_Dot_Replacement, "-",           Pkg => Naming);
+            Create_Attribute
+              (Name_Casing,          "lowercase",   Pkg => Naming);
+         end if;
+      end Add_Default_GNAT_Naming_Scheme;
+
       -------------------------------------------
       -- Add_GPS_Naming_Schemes_To_Config_File --
       -------------------------------------------
@@ -7062,7 +7194,7 @@ package body GNATCOLL.Projects is
          Naming_Pkg, Compiler_Pkg : Project_Node_Id;
          pragma Unreferenced (Attr);
       begin
-         if Config_File = Empty_Node then
+         if Config_File = Empty_Project_Node then
             --  Create a dummy config file if none was found. In that case we
             --  need to provide the Ada naming scheme as well
 
@@ -7161,7 +7293,7 @@ package body GNATCOLL.Projects is
             pragma Unreferenced (With_State);
             Iter : Source_Iterator := For_Each_Source
                      (In_Tree => Tree, Project => Project);
-            Src  : Prj.Source_Id;
+            Src  : GPR.Source_Id;
          begin
             loop
                Src := Element (Iter);
@@ -7174,11 +7306,11 @@ package body GNATCOLL.Projects is
                --  unit.
 
                if False then
-                  Makeutl.Initialize_Source_Record (Src);
+                  GPR.Util.Initialize_Source_Record (Src);
                else
                   if Src.Language.Config.Kind = Unit_Based
                     and then Src.Kind = Impl
-                    and then Makeutl.Is_Subunit (Src)
+                    and then GPR.Util.Is_Subunit (Src)
                   then
                      Src.Kind := Sep;
                   end if;
@@ -7251,7 +7383,7 @@ package body GNATCOLL.Projects is
 
    begin
       Increase_Indent (Me, "Recomputing project view");
-      Output.Set_Special_Output (Output.Output_Proc (Errors));
+      GPR.Output.Set_Special_Output (GPR.Output.Output_Proc (Errors));
 
       --  The views stored in the projects are no longer valid, we should make
       --  sure they are not called.
@@ -7260,13 +7392,13 @@ package body GNATCOLL.Projects is
          C : Project_Htables.Cursor := Self.Data.Projects.First;
       begin
          while Has_Element (C) loop
-            Element (C).Data.View := Prj.No_Project;
+            Element (C).Data.View := GPR.No_Project;
             Next (C);
          end loop;
       end;
 
       Reset_View (Self);
-      Prj.Initialize (Self.Data.View);
+      GPR.Initialize (Self.Data.View);
 
       --  Compute the list of scenario variables. This also ensures that
       --  the variables do exist in the environment, and therefore that
@@ -7282,7 +7414,7 @@ package body GNATCOLL.Projects is
            (On_Error'Unrestricted_Access, Require_Sources => False);
 
          --  Make sure errors are reinitialized before load
-         Prj.Err.Initialize;
+         GPR.Err.Initialize;
 
          Override_Flags (Self.Data.Env.Env, Flags);
 
@@ -7328,12 +7460,12 @@ package body GNATCOLL.Projects is
          --  change performance most likely)
 
          Trace (Me, "Checking whether the gnatls attribute has changed");
-         if View /= Prj.No_Project
+         if View /= GPR.No_Project
             and then Set_Path_From_Gnatls_Attribute (View, Self, Errors)
          then
             Trace (Me, "recompute view a second time with proper path");
             Reset_View (Self);
-            Prj.Initialize (Self.Data.View);
+            GPR.Initialize (Self.Data.View);
 
             Process_Project_And_Apply_Config
               (Main_Project        => View,
@@ -7364,7 +7496,7 @@ package body GNATCOLL.Projects is
                Errors (Exception_Message (E));
             end if;
             Override_Flags (Self.Data.Env.Env, Create_Flags (null));
-            --  Error message was already reported via Prj.Err
+            --  Error message was already reported via GPR.Err
             null;
       end;
 
@@ -7378,11 +7510,11 @@ package body GNATCOLL.Projects is
 
       --  Now that we have the view, we can create the project instances
 
-      if View = Prj.No_Project then
+      if View = GPR.No_Project then
          --  There was an error, but we still want to manipulate that project
          Self.Data.Root.Data.View :=
            Get_View (Self.Data.View,
-                     Path => Prj.Tree.Path_Name_Of
+                     Path => GPR.Tree.Path_Name_Of
                        (Self.Data.Root.Data.Node, Self.Data.Tree));
       else
          Self.Data.Root.Data.View := View;
@@ -7418,8 +7550,8 @@ package body GNATCOLL.Projects is
       --  ??? Should not be needed since all errors are reported through the
       --  callback already. This avoids duplicate error messages in the console
 
-      Prj.Err.Finalize;
-      Output.Cancel_Special_Output;
+      GPR.Err.Finalize;
+      GPR.Output.Cancel_Special_Output;
 
       Decrease_Indent (Me);
 
@@ -7430,15 +7562,15 @@ package body GNATCOLL.Projects is
 
       when Invalid_Project =>
          Trace (Me, "Could not compute project view");
-         Prj.Err.Finalize;
-         Output.Cancel_Special_Output;
+         GPR.Err.Finalize;
+         GPR.Output.Cancel_Special_Output;
          Decrease_Indent (Me);
          raise;
 
       when E : others =>
          Trace (Me, E);
-         Prj.Err.Finalize;
-         Output.Cancel_Special_Output;
+         GPR.Err.Finalize;
+         GPR.Output.Cancel_Special_Output;
          Decrease_Indent (Me);
    end Recompute_View;
 
@@ -7452,7 +7584,7 @@ package body GNATCOLL.Projects is
       Node         : Project_Node_Id) return Project_Type
    is
       Path : constant Virtual_File :=
-        Create (+Get_String (Prj.Tree.Path_Name_Of (Node, Self.Data.Tree)));
+        Create (+Get_String (GPR.Tree.Path_Name_Of (Node, Self.Data.Tree)));
       Data : Project_Data_Access;
       P    : Project_Type;
       C    : constant Project_Htables.Cursor :=
@@ -7584,7 +7716,7 @@ package body GNATCOLL.Projects is
 
       Reset (Self, Env);
 
-      Node := Prj.Tree.Create_Project
+      Node := GPR.Tree.Create_Project
         (In_Tree        => Self.Data.Tree,
          Name           => Get_String (Name),
          Full_Path      => Path_Name_Type (Get_String (+D)),
@@ -7679,7 +7811,7 @@ package body GNATCOLL.Projects is
             if Ls /= "" and then Ls /= Gnatls then
                --  We do not want to mark the project as incomplete for this
                --  warning, so we do not need to pass an actual Error_Handler
-               Prj.Err.Error_Msg
+               GPR.Err.Error_Msg
                  (Flags => Create_Flags (null),
                   Msg   =>
                    "?the project attribute IDE.gnatlist doesn't have"
@@ -7739,10 +7871,12 @@ package body GNATCOLL.Projects is
                         (P, File, Source.Language.Name, Source, null));
                   end if;
 
-                  if Source.Object /= Namet.No_File
-                     and then Source.Language /= null
-                     and then Source.Language.Config.Object_File_Suffix /=
-                        Name_Op_Subtract
+                  if Source.Object /= GPR.No_File
+                    and then Source.Language /= null
+--                       and then Source.Language.Config.Object_File_Suffix /=
+--                          Name_Op_Subtract  ????
+                    and then Get_String
+                      (Source.Language.Config.Object_File_Suffix) /= "-"
                   then
                      declare
                         Base : constant Filesystem_String :=
@@ -7868,7 +8002,7 @@ package body GNATCOLL.Projects is
          Data := Element (Iter).Data;
          Data.Tree := null;
          Reset_View (Data.all);
-         Data.Node := Empty_Node;
+         Data.Node := Empty_Project_Node;
          Next (Iter);
       end loop;
 
@@ -7876,10 +8010,10 @@ package body GNATCOLL.Projects is
          Reset (Self.Data.View);
       end if;
 
-      Prj.Tree.Tree_Private_Part.Projects_Htable.Reset
+      GPR.Tree.Tree_Private_Part.Projects_Htable.Reset
         (Self.Data.Tree.Projects_HT);
-      Sinput.P.Clear_Source_File_Table;
-      Sinput.P.Reset_First;
+      Sinput.Clear_Source_File_Table;
+      Sinput.Reset_First;
 
       --  Reset the scenario variables.
       --  The issue is that a given variable might currently have a value, and
@@ -7890,7 +8024,7 @@ package body GNATCOLL.Projects is
       --  be plain wrong in fact.
 
 --        if Self.Data.Status /= Empty then
---           Prj.Ext.Reset (Self.Data.Tree);
+--           GPR.Ext.Reset (Self.Data.Tree);
 --        end if;
 
       Reset_View (Self);
@@ -7914,7 +8048,7 @@ package body GNATCOLL.Projects is
    function Is_Aggregate_Library (Self : Project_Type) return Boolean is
    begin
       return Project_Qualifier_Of
-        (Self.Data.Node, Self.Data.Tree.Tree) = Prj.Aggregate_Library;
+        (Self.Data.Node, Self.Data.Tree.Tree) = GPR.Aggregate_Library;
    end Is_Aggregate_Library;
 
    --------------------------
@@ -7924,7 +8058,7 @@ package body GNATCOLL.Projects is
    function Is_Aggregate_Project (Self : Project_Type) return Boolean is
    begin
       return Project_Qualifier_Of
-        (Self.Data.Node, Self.Data.Tree.Tree) in Prj.Aggregate_Project;
+        (Self.Data.Node, Self.Data.Tree.Tree) in GPR.Aggregate_Project;
    end Is_Aggregate_Project;
 
    -----------------
@@ -7944,8 +8078,9 @@ package body GNATCOLL.Projects is
 
    procedure Finalize is
    begin
-      Namet.Finalize;
-      Atree.Atree_Private_Part.Nodes.Free;
+      null;
+--        GPR.Finalize;
+--        Atree.Atree_Private_Part.Nodes.Free;
    end Finalize;
 
    ---------
@@ -8020,7 +8155,7 @@ package body GNATCOLL.Projects is
       end W_Str;
 
    begin
-      Prj.PP.Pretty_Print
+      GPR.PP.Pretty_Print
         (Project                            => Project.Data.Node,
          In_Tree                            => Project.Data.Tree.Tree,
          Increment                          => Increment,
@@ -8039,7 +8174,7 @@ package body GNATCOLL.Projects is
    ----------
 
    function Node
-     (Project : Project_Type'Class) return Prj.Tree.Project_Node_Id is
+     (Project : Project_Type'Class) return GPR.Project_Node_Id is
    begin
       return Project.Data.Node;
    end Node;
@@ -8049,7 +8184,7 @@ package body GNATCOLL.Projects is
    ----------
 
    function Tree
-     (Data : Project_Tree_Data_Access) return Prj.Tree.Project_Node_Tree_Ref is
+     (Data : Project_Tree_Data_Access) return GPR.Tree.Project_Node_Tree_Ref is
    begin
       return Data.Tree;
    end Tree;
@@ -8127,7 +8262,7 @@ package body GNATCOLL.Projects is
 
       Self.Data.Tree.Projects.Include (Self.Project_Path, Self);
 
-      if Self.Data.View /= Prj.No_Project then
+      if Self.Data.View /= GPR.No_Project then
          Self.Data.View.Display_Name := Get_String (New_Name);
       end if;
 
@@ -8161,7 +8296,7 @@ package body GNATCOLL.Projects is
       --  Need to make sure the predefined packages are already declared, or
       --  the new one will be discarded.
 
-      Prj.Attr.Initialize;
+      GPR.Attr.Initialize;
 
       if Lower_Pkg /= "" then
          Pkg_Id := Package_Node_Id_Of (Get_String (Lower_Pkg));
@@ -8177,7 +8312,7 @@ package body GNATCOLL.Projects is
       if Pkg_Id = Empty_Package then
          Attr_Id := Attribute_Node_Id_Of
            (Name        => Get_String (Name),
-            Starting_At => Prj.Attr.Attribute_First);
+            Starting_At => GPR.Attr.Attribute_First);
       else
          Attr_Id := Attribute_Node_Id_Of
            (Name        => Get_String (Name),
@@ -8185,23 +8320,23 @@ package body GNATCOLL.Projects is
       end if;
 
       if Is_List then
-         Var_Kind := Prj.List;
+         Var_Kind := GPR.List;
       else
-         Var_Kind := Prj.Single;
+         Var_Kind := GPR.Single;
       end if;
 
       if Indexed then
          if Case_Sensitive_Index then
-            Attr_Kind := Prj.Attr.Associative_Array;
+            Attr_Kind := GPR.Attr.Associative_Array;
          else
-            Attr_Kind := Prj.Attr.Case_Insensitive_Associative_Array;
+            Attr_Kind := GPR.Attr.Case_Insensitive_Associative_Array;
          end if;
 
          --  Priority is given to the registered type
          if Attr_Id /= Empty_Attribute then
             Attr_Kind := Attribute_Kind_Of (Attr_Id);
             if Attr_Kind = Attribute_Kind'(Single) then
-               Attr_Kind := Prj.Attr.Associative_Array;
+               Attr_Kind := GPR.Attr.Associative_Array;
             end if;
          end if;
       else
@@ -8396,22 +8531,22 @@ package body GNATCOLL.Projects is
       Next        : Project_Node_Id;
    begin
       --  ??? When the project is no longer found in the hierarchy, it should
-      --  also be removed from the htable in Prj.Tree, so that another
+      --  also be removed from the htable in GPR.Tree, so that another
       --  project by that name can be loaded.
 
-      if With_Clause /= Empty_Node
-        and then Prj.Tree.Name_Of (With_Clause, Tree) =
-        Prj.Tree.Name_Of (Imported_Project.Node, Tree)
+      if With_Clause /= Empty_Project_Node
+        and then GPR.Tree.Name_Of (With_Clause, Tree) =
+        GPR.Tree.Name_Of (Imported_Project.Node, Tree)
       then
          Set_First_With_Clause_Of
            (Project.Node, Tree, Next_With_Clause_Of (With_Clause, Tree));
       else
          loop
             Next := Next_With_Clause_Of (With_Clause, Tree);
-            exit when Next = Empty_Node;
+            exit when Next = Empty_Project_Node;
 
-            if Prj.Tree.Name_Of (Next, Tree) =
-              Prj.Tree.Name_Of (Imported_Project.Node, Tree)
+            if GPR.Tree.Name_Of (Next, Tree) =
+              GPR.Tree.Name_Of (Imported_Project.Node, Tree)
             then
                Set_Next_With_Clause_Of
                  (With_Clause, Tree, Next_With_Clause_Of (Next, Tree));
@@ -8458,7 +8593,7 @@ package body GNATCOLL.Projects is
       return Import_Project_Error
    is
       Tree_Node : constant Project_Node_Tree_Ref := Project.Data.Tree.Tree;
-      use Prj.Tree.Tree_Private_Part;
+      use GPR.Tree.Tree_Private_Part;
 
       procedure Fail (S : String);
 
@@ -8477,14 +8612,14 @@ package body GNATCOLL.Projects is
                            Base_Name
                              (Imported_Project_Location,
                               Project_File_Extension);
-      Imported_Project : Project_Node_Id := Empty_Node;
+      Imported_Project : Project_Node_Id := Empty_Project_Node;
       Dep_ID           : Name_Id;
-      Dep_Name         : Prj.Tree.Tree_Private_Part.Project_Name_And_Node;
+      Dep_Name         : GPR.Tree.Tree_Private_Part.Project_Name_And_Node;
       Error            : Import_Project_Error;
 
    begin
-      Output.Set_Special_Output (Fail'Unrestricted_Access);
-      Prj.Com.Fail := Fail'Unrestricted_Access;
+      GPR.Output.Set_Special_Output (Fail'Unrestricted_Access);
+      GPR.Com.Fail := Fail'Unrestricted_Access;
 
       Dep_ID := Get_String (+Basename);
 
@@ -8504,8 +8639,8 @@ package body GNATCOLL.Projects is
             Fail
               ("A different project with the same name"
                & " already exists in the project tree.");
-            Output.Cancel_Special_Output;
-            Prj.Com.Fail := null;
+            GPR.Output.Cancel_Special_Output;
+            GPR.Com.Fail := null;
             return Project_Already_Exists;
          else
             Imported_Project := Dep_Name.Node;
@@ -8514,7 +8649,7 @@ package body GNATCOLL.Projects is
       else
          Override_Flags (Tree.Data.Env.Env, Create_Flags (null, False));
 
-         Prj.Part.Parse
+         GPR.Part.Parse
            (Tree_Node, Imported_Project,
             +Full_Name (Imported_Project_Location),
             Packages_To_Check      => Packages_To_Check,
@@ -8522,14 +8657,14 @@ package body GNATCOLL.Projects is
             Current_Directory      => Get_Current_Dir,
             Env                    => Tree.Data.Env.Env);
 
-         Prj.Err.Finalize;
+         GPR.Err.Finalize;
       end if;
 
-      if Imported_Project = Empty_Node then
+      if Imported_Project = Empty_Project_Node then
          Trace (Me, "Add_Imported_Project: imported project not found ("
                 & Imported_Project_Location.Display_Full_Name & ")");
-         Output.Cancel_Special_Output;
-         Prj.Com.Fail := null;
+         GPR.Output.Cancel_Special_Output;
+         GPR.Com.Fail := null;
          return Imported_Project_Not_Found;
       end if;
 
@@ -8640,7 +8775,7 @@ package body GNATCOLL.Projects is
                   & (+Translate (To_Lower (Name), To_Mapping (".", "-")))
                   & GNATCOLL.Projects.Project_File_Extension;
       Project : constant Project_Node_Id :=
-                  Prj.Tree.Create_Project
+                  GPR.Tree.Create_Project
                     (In_Tree        => Tree.Data.Tree,
                      Name           => Get_String (Name),
                      Full_Path      => Path_Name_Type (Get_String (+D)),
@@ -8852,7 +8987,7 @@ package body GNATCOLL.Projects is
       begin
          case Kind_Of (Node, Tree_N) is
             when N_External_Value =>
-               if External_Default_Of (Node, Tree_N) /= Empty_Node
+               if External_Default_Of (Node, Tree_N) /= Empty_Project_Node
                  and then Expression_As_String
                    (Tree_N, External_Default_Of (Node, Tree_N)) = Old_V
                then
@@ -8869,7 +9004,7 @@ package body GNATCOLL.Projects is
 
             when N_String_Type_Declaration =>
                C := First_Literal_String (Node, Tree_N);
-               while C /= Empty_Node loop
+               while C /= Empty_Project_Node loop
                   if String_Value_Of (C, Tree_N) = Old_V then
                      Set_String_Value_Of (C, Tree_N, New_V);
                      exit;
@@ -8896,11 +9031,11 @@ package body GNATCOLL.Projects is
         (Tree.Data.Tree, Tree.Root_Project,
          N, Old_V, Callback'Unrestricted_Access);
 
-      if Prj.Ext.Value_Of (Tree.Data.Env.Env.External, N) /= No_Name
-        and then Prj.Ext.Value_Of (Tree.Data.Env.Env.External, N) = Old_V
+      if GPR.Ext.Value_Of (Tree.Data.Env.Env.External, N) /= No_Name
+        and then GPR.Ext.Value_Of (Tree.Data.Env.Env.External, N) = Old_V
       then
-         Prj.Ext.Add (Tree.Data.Env.Env.External, External_Name, New_Value,
-                      Prj.Ext.From_Command_Line);
+         GPR.Ext.Add (Tree.Data.Env.Env.External, External_Name, New_Value,
+                      GPR.Ext.From_Command_Line);
       end if;
 
       Tree.Root_Project.Set_Modified (True);
@@ -8917,7 +9052,7 @@ package body GNATCOLL.Projects is
    is
       Tree_N          : constant Project_Node_Tree_Ref := Tree.Data.Tree;
       Delete_Variable : exception;
-      Type_Decl       : Project_Node_Id := Empty_Node;
+      Type_Decl       : Project_Node_Id := Empty_Project_Node;
       V_Name          : constant Name_Id := Get_String (Value);
       Ext_Var         : constant Name_Id := Get_String (External_Name);
 
@@ -8938,7 +9073,7 @@ package body GNATCOLL.Projects is
 
                C := First_Literal_String (Node, Tree_N);
 
-               if Next_Literal_String (C, Tree_N) = Empty_Node then
+               if Next_Literal_String (C, Tree_N) = Empty_Project_Node then
                   raise Delete_Variable;
                end if;
 
@@ -8950,7 +9085,7 @@ package body GNATCOLL.Projects is
 
                loop
                   C2 := Next_Literal_String (C, Tree_N);
-                  exit when C2 = Empty_Node;
+                  exit when C2 = Empty_Project_Node;
 
                   if String_Value_Of (C2, Tree_N) = V_Name then
                      Set_Next_Literal_String
@@ -8961,11 +9096,11 @@ package body GNATCOLL.Projects is
                end loop;
 
             when N_External_Value =>
-               if External_Default_Of (Node, Tree_N) /= Empty_Node
+               if External_Default_Of (Node, Tree_N) /= Empty_Project_Node
                  and then String_Value_Of
                    (External_Default_Of (Node, Tree_N), Tree_N) = V_Name
                then
-                  Set_External_Default_Of (Node, Tree_N, Empty_Node);
+                  Set_External_Default_Of (Node, Tree_N, Empty_Project_Node);
                end if;
 
             when N_Case_Item =>
@@ -8980,7 +9115,7 @@ package body GNATCOLL.Projects is
 
                loop
                   C2 := Next_Case_Item (C, Tree_N);
-                  exit when C2 = Empty_Node;
+                  exit when C2 = Empty_Project_Node;
 
                   if C2 = Node then
                      Set_Next_Case_Item
@@ -9008,17 +9143,17 @@ package body GNATCOLL.Projects is
 
       --  Reset the value of the external variable if needed
 
-      if Prj.Ext.Value_Of (Tree.Data.Env.Env.External, Ext_Var) = V_Name then
-         if Type_Decl /= Empty_Node then
-            Prj.Ext.Add (Tree.Data.Env.Env.External,
+      if GPR.Ext.Value_Of (Tree.Data.Env.Env.External, Ext_Var) = V_Name then
+         if Type_Decl /= Empty_Project_Node then
+            GPR.Ext.Add (Tree.Data.Env.Env.External,
                  External_Name,
                  Get_String (String_Value_Of
                                (First_Literal_String (Type_Decl, Tree_N),
                                 Tree_N)),
-                 Prj.Ext.From_Command_Line);
+                 GPR.Ext.From_Command_Line);
          else
-            Prj.Ext.Add (Tree.Data.Env.Env.External, External_Name, "",
-                         Prj.Ext.From_Command_Line);
+            GPR.Ext.Add (Tree.Data.Env.Env.External, External_Name, "",
+                         GPR.Ext.From_Command_Line);
          end if;
       end if;
 
@@ -9061,9 +9196,9 @@ package body GNATCOLL.Projects is
          --  If variable is defined in the current project, then modify the
          --  type to Values.
 
-         if Var /= Empty_Node then
+         if Var /= Empty_Project_Node then
             Type_Node := String_Type_Of (Var, Tree_N);
-            pragma Assert (Type_Node /= Empty_Node);
+            pragma Assert (Type_Node /= Empty_Project_Node);
             --  Set_First_Literal_String (Type_Node, Empty_Node);
 
             for J in Values'Range loop
@@ -9123,7 +9258,7 @@ package body GNATCOLL.Projects is
    begin
       if Self /= null then
          if Self.Tree /= null then
-            Prj.Tree.Tree_Private_Part.Project_Node_Table.Free
+            GPR.Tree.Tree_Private_Part.Project_Node_Table.Free
               (Self.Tree.Project_Nodes);
          end if;
 
@@ -9175,7 +9310,7 @@ package body GNATCOLL.Projects is
 
    procedure Append
      (Self : in out Path_Name_Array;
-      Path : Namet.Path_Name_Type)
+      Path : GPR.Path_Name_Type)
    is
       Tmp : Path_Name_Id_Array_Access;
    begin
@@ -9194,8 +9329,8 @@ package body GNATCOLL.Projects is
    end Append;
 
 begin
-   Namet.Initialize;
-   Csets.Initialize;
+--     GPR.Initialize;
+--     Csets.Initialize;
    Snames.Initialize;
 
    --  Disable verbose messages from project manager, not useful in GPS

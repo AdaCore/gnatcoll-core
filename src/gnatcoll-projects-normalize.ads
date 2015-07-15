@@ -30,7 +30,7 @@
 --
 --  Projects are normalized only the first time they are actually modified (ie
 --  if they are open in the project browser but never modified, then we don't
---  need to modify what the user did, since Prj.Proc.Process can of course work
+--  need to modify what the user did, since GPR.Proc.Process can of course work
 --  with any form of projects).
 --
 --  However, the normalized projects are needed, so that we know exactly where
@@ -106,14 +106,14 @@ private package GNATCOLL.Projects.Normalize is
    --  that cannot currently be normalized.
    --  If Recurse is true, then imported projects area also normalized.
 
-   function Get_String (Id  : Namet.Name_Id) return String;
-   function Get_String (Str : String)        return Namet.Name_Id;
+   function Get_String (Id  : GPR.Name_Id) return String;
+   function Get_String (Str : String)      return GPR.Name_Id;
 
    function Clone_Node
-     (Tree       : Prj.Tree.Project_Node_Tree_Ref;
-      Node       : Prj.Tree.Project_Node_Id;
+     (Tree       : GPR.Tree.Project_Node_Tree_Ref;
+      Node       : GPR.Project_Node_Id;
       Deep_Clone : Boolean := False)
-      return Prj.Tree.Project_Node_Id;
+      return GPR.Project_Node_Id;
    --  Return a copy of Node. If Deep_Clone is true, then all the children of
    --  node are also copied.
    --  If Deep_Clone is false, then the two nodes will share part of their
@@ -132,24 +132,24 @@ private package GNATCOLL.Projects.Normalize is
    --  N_Attribute_Reference and the package they are referencing
 
    function Is_Virtual_Extending
-     (Tree : Prj.Tree.Project_Node_Tree_Ref;
-      Node : Prj.Tree.Project_Node_Id) return Boolean;
+     (Tree : GPR.Tree.Project_Node_Tree_Ref;
+      Node : GPR.Project_Node_Id) return Boolean;
    --  Return True if Node is a virtual extending project created
    --  automatically by GNAT's project manager
 
    function Find_Type_Declaration
-     (Tree    : Prj.Tree.Project_Node_Tree_Ref;
-      Project : Prj.Tree.Project_Node_Id;
-      Name    : Namet.Name_Id) return Prj.Tree.Project_Node_Id;
+     (Tree    : GPR.Tree.Project_Node_Tree_Ref;
+      Project : GPR.Project_Node_Id;
+      Name    : GPR.Name_Id) return GPR.Project_Node_Id;
    --  Return the declaration of the type whose name is Name
 
    function Create_Typed_Variable
-     (Tree                         : Prj.Tree.Project_Node_Tree_Ref;
-      Prj_Or_Pkg                   : Prj.Tree.Project_Node_Id;
+     (Tree                         : GPR.Tree.Project_Node_Tree_Ref;
+      Prj_Or_Pkg                   : GPR.Project_Node_Id;
       Name                         : String;
-      Typ                          : Prj.Tree.Project_Node_Id;
+      Typ                          : GPR.Project_Node_Id;
       Add_Before_First_Case_Or_Pkg : Boolean := False)
-      return Prj.Tree.Project_Node_Id;
+      return GPR.Project_Node_Id;
    --  Create a new variable of a specific type Typ.
    --  The declaration is appended at the end of the declarative items list in
    --  the project or the package, unless Add_Before_First_Case is True. In
@@ -158,14 +158,14 @@ private package GNATCOLL.Projects.Normalize is
    --  project).
 
    procedure Add_In_Front
-     (Tree   : Prj.Tree.Project_Node_Tree_Ref;
-      Parent : Prj.Tree.Project_Node_Id;
-      Node   : Prj.Tree.Project_Node_Id);
+     (Tree   : GPR.Tree.Project_Node_Tree_Ref;
+      Parent : GPR.Project_Node_Id;
+      Node   : GPR.Project_Node_Id);
    --  Add Node at the begining of the list for Parent.
    --  Node can also be a N_Declarative_Item (or a list of them).
 
    procedure Normalize_Cases
-     (Tree    : Prj.Tree.Project_Node_Tree_Ref;
+     (Tree    : GPR.Tree.Project_Node_Tree_Ref;
       Project : Project_Type);
    --  Make sure that all possible values of a variable appear in a case
    --  statement, to avoid warnings from the project manager.
@@ -188,19 +188,19 @@ private package GNATCOLL.Projects.Normalize is
    ---------------
 
    function Is_External_Variable
-     (Var  : Prj.Tree.Project_Node_Id;
-      Tree : Prj.Tree.Project_Node_Tree_Ref) return Boolean;
+     (Var  : GPR.Project_Node_Id;
+      Tree : GPR.Tree.Project_Node_Tree_Ref) return Boolean;
    --  Return True if Var is a reference to an external variable
 
    function External_Reference_Of
-     (Var  : Prj.Tree.Project_Node_Id;
-      Tree : Prj.Tree.Project_Node_Tree_Ref) return Namet.Name_Id;
+     (Var  : GPR.Project_Node_Id;
+      Tree : GPR.Tree.Project_Node_Tree_Ref) return GPR.Name_Id;
    --  Return the name of the external reference used in the declaration of
    --  Var (Var := external ("REF")).
 
    procedure Set_Value_As_External
-     (Tree          : Prj.Tree.Project_Node_Tree_Ref;
-      Var           : Prj.Tree.Project_Node_Id;
+     (Tree          : GPR.Tree.Project_Node_Tree_Ref;
+      Var           : GPR.Project_Node_Id;
       External_Name : String;
       Default       : String := "");
    --  Set the value of the variable as a reference to the environment variable
@@ -209,9 +209,9 @@ private package GNATCOLL.Projects.Normalize is
    --  list of possible values (Invalid_Value raised if not).
 
    function Create_Variable_Reference
-     (Tree : Prj.Tree.Project_Node_Tree_Ref;
-      Var  : Prj.Tree.Project_Node_Id)
-      return Prj.Tree.Project_Node_Id;
+     (Tree : GPR.Tree.Project_Node_Tree_Ref;
+      Var  : GPR.Project_Node_Id)
+      return GPR.Project_Node_Id;
    --  Create and return a reference to the variable Var.
    --  Var must be a variable declaration
 
@@ -224,38 +224,38 @@ private package GNATCOLL.Projects.Normalize is
    --  Internal version of Delete_External_Variable
 
    function Create_Type
-     (Tree       : Prj.Tree.Project_Node_Tree_Ref;
-      Prj_Or_Pkg : Prj.Tree.Project_Node_Id;
-      Name       : String) return Prj.Tree.Project_Node_Id;
+     (Tree       : GPR.Tree.Project_Node_Tree_Ref;
+      Prj_Or_Pkg : GPR.Project_Node_Id;
+      Name       : String) return GPR.Project_Node_Id;
    --  Create a new type. By default, there is no possible value, you
    --  must add some with Add_Possible_Value.
    --  The new declaration is added at the end of the declarative item list for
    --  Prj_Or_Pkg (but before any package declaration).
 
    procedure Add_Possible_Value
-     (Tree   : Prj.Tree.Project_Node_Tree_Ref;
-      Typ    : Prj.Tree.Project_Node_Id;
+     (Tree   : GPR.Tree.Project_Node_Tree_Ref;
+      Typ    : GPR.Project_Node_Id;
       Choice : String);
    --  Add a new choice in the list of possible values for the type Typ.
    --  If Choice is already available in Typ, then it is not added again.
 
    function Expression_As_String
-     (Tree       : Prj.Tree.Project_Node_Tree_Ref;
-      Expression : Prj.Tree.Project_Node_Id) return Namet.Name_Id;
+     (Tree       : GPR.Tree.Project_Node_Tree_Ref;
+      Expression : GPR.Project_Node_Id) return GPR.Name_Id;
    --  Return the string contained in an expression. If the expression contains
    --  more than a string literal, No_Name is returned.
    --  This also accepts cases when Expression itself is a string_literal
 
    function Find_Scenario_Variable
-     (Tree          : Prj.Tree.Project_Node_Tree_Ref;
+     (Tree          : GPR.Tree.Project_Node_Tree_Ref;
       Project       : Project_Type;
-      External_Name : String) return Prj.Tree.Project_Node_Id;
+      External_Name : String) return GPR.Project_Node_Id;
    --  Return the declaration of the scenario variable associated with
    --  the external variable External_Name.
    --  In normalized projects, there should be only such variable.
 
    type Environment_Variable_Callback is access procedure
-     (Project, Parent, Node, Choice : Prj.Tree.Project_Node_Id);
+     (Project, Parent, Node, Choice : GPR.Project_Node_Id);
    --  Callback for For_Each_Environment_Variable.
    --  The various possible combinations are:
    --    Node                    Parent                 Choice
@@ -267,10 +267,10 @@ private package GNATCOLL.Projects.Normalize is
    --  N_Typed_Variable_Declaration N_Declarative_Item  Empty_Node
 
    procedure For_Each_Environment_Variable
-     (Tree              : Prj.Tree.Project_Node_Tree_Ref;
+     (Tree              : GPR.Tree.Project_Node_Tree_Ref;
       Root_Project      : Project_Type;
-      Ext_Variable_Name : Namet.Name_Id;
-      Specific_Choice   : Namet.Name_Id;
+      Ext_Variable_Name : GPR.Name_Id;
+      Specific_Choice   : GPR.Name_Id;
       Action            : Environment_Variable_Callback);
    --  Iterate over all possible references to an external variable. This
    --  returns N_External_Value, N_Variable_Reference,
