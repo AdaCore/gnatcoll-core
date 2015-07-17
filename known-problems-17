@@ -17,6 +17,33 @@ KP-17-O618-010 GNATCOLL.VFS.Create_From_Dir issue with parent path
               and then call Create_From_Directory passing Get_Current_Dir
               as the name of the directory.
 
+KP-17-O522-023 SQL.Exec: prepared statements are now task safe
+
+  Problem:    Prepared statements, like all SQL statements in GNATCOLL, are
+              based on Ada2012 containers. However, these are not task safe
+              by default, since even read-only access requires modifying some
+              bits in the container for tampering checks. This means that
+              using a prepared statement (read-only) from multiple tasks could
+              eventually end up leaving the bits set and thus prevent any
+              further read on the container/statement.
+
+  Status:     Fixed in Gnatcoll 1.8.0 on 2015-05-25
+
+  Workaround: The actual fix really depends on a change in the GNAT runtime,
+              which now allows disabling tampering checks on containers.
+
+KP-17-O518-005 Traces: indentation is specific to each stream
+
+  Problem:    Each Trace_Handle output can be directed to a specific stream
+              (a file, stdout,...). But using Increase_Indent would increment
+              the indentation for all streams, instead of the specific
+              stream, which could result in strange output in some cases.
+
+  Status:     Fixed in Gnatcoll 1.8.0 on 2015-05-18
+
+  Workaround: None. Most of the time, applications use a single stream in
+              any case (a log file).
+
 KP-17-O507-023 Projects: parsing of library aggregate projects
 
   Problem:    A number of issues related to the loading of library aggregate
@@ -93,3 +120,16 @@ KP-17-NA29-019 GNATCOLL.Projects.Info_Set does not set file information
 
   Workaround: The file was passed as a parameter to Info_Set, so it is in
               general available to the code.
+
+KP-17-L908-006 GNATCOLL.Projects use '/' instead of '\' when editing
+
+  Problem:    When editing a project on Windows and changing a directory
+              name, the project would be modified to use backslashes as
+              directory separators. As a result, the project would work
+              fine on Windows, but no longer work on other platforms.
+              Using slashes ensures that projects are more portable.
+
+  Status:     Fixed in Gnatcoll 1.8.0 on 2014-12-08
+
+  Workaround: Manually edit the project afterward if you need to use it
+              on Unix or OSX machines.

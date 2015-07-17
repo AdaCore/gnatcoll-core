@@ -24,6 +24,23 @@ NF-18-O710-022 UNIQUE keyword in database schema description (2015-07-10)
   The unique constraints and indexes could be defined in the SQL database
   schema description file.
 
+NF-18-O602-034 Projects: disable missing object dir warnings (2015-06-04)
+
+  It is now possible to disable the "missing object dir" warnings when
+  loading a project.
+
+NF-18-O528-053 install through gprinstall (2015-07-10)
+
+  The install is now done via gprinstall, instead of depending on complex
+  shell commands in the Makefiles. This makes the system more robust, allows
+  uninstalling and will work better on Windows machines.
+
+NF-18-O523-004 Traces: variable substitution in stream names (2015-05-25)
+
+  In the configuration file for GNATCOLL.Traces, it is now possible to set
+  the name of the stream (typically a file name) by using variable
+  substitution ("> name$VAR")
+
 NF-18-O513-035 GNATCOLL.Memory: enhance memory debug capability (2015-06-01)
 
   GNATCOLL.Memory package uses GNAT.Debug_Pools package to add the following
@@ -43,3 +60,28 @@ NF-18-O422-013 GNATCOLL.Refcount: new package Shared_Pointers (2015-05-18)
   a reference type rather than a direct access to the element.
   This new package is used throughout GNATCOLL, in particular GNATCOLL.SQL.
   In general, this has no effect on existing code.
+
+NF-18-O421-027 GNATCOLL.SQL: setting a field from a SQL query (2015-06-05)
+
+  It is now possible to build a query like
+  "UPDATE table SET field = (SELECT value FROM ..)".
+  Also add support for building a temporary table using the VALUES keyword.
+
+NF-18-O128-020 sqlite upgraded to 3.8.8.1 (2015-01-28)
+
+  GNATCOLL now comes with a newer version of sqlite, although it is still
+  possible to use a sqlite from elsewhere on the system (so you can use
+  specific other versions)
+
+NF-18-O112-014 Memory: support for computing a program RSS memory (2015-01-13)
+
+  GNATCOLL.Memory can now be used to compute the amount of memory used by
+  a problem (from any programming language). Furthermore, this information
+  can be displayed via GNATCOLL.Traces automatically.
+
+NF-18-N918-040 Projects: support for Runtime and Target attributes (2014-10-13)
+
+  GNATCOLL.Projects will now take advantage of the Runtime and Target
+  attributes when they are found in a project, instead of requiring this
+  information to be set programmatically (presumably from the tools command
+  line switches).
