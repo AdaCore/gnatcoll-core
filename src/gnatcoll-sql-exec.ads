@@ -156,9 +156,9 @@ package GNATCOLL.SQL.Exec is
       case Typ is
          when Parameter_Integer   => Int_Val : Integer;
          when Parameter_Bigint    => Bigint_Val : Long_Long_Integer;
-         when Parameter_Json      => Json_Val  : access constant String;
-         when Parameter_XML       => XML_Val   : access constant String;
-         when Parameter_Text      => Str_Val : access constant String;
+         when Parameter_Json
+            | Parameter_XML
+            | Parameter_Text      => Str_Val : access constant String;
             --  references external string, to avoid an extra copy
          when Parameter_Boolean   => Bool_Val : Boolean;
          when Parameter_Float     => Float_Val : Float;

@@ -542,9 +542,9 @@ package body GNATCOLL.SQL.Exec is
          when Parameter_Money =>
             return Money_To_SQL (Format, Param.Money_Val, Quote => False);
          when Parameter_Json =>
-            return Json_To_SQL (Format, Param.Json_Val.all, Quote => False);
+            return Json_To_SQL (Format, Param.Str_Val.all, Quote => False);
          when Parameter_XML =>
-            return XML_To_SQL (Format, Param.XML_Val.all, Quote => False);
+            return XML_To_SQL (Format, Param.Str_Val.all, Quote => False);
          end case;
       end if;
    end Image;
