@@ -1378,7 +1378,9 @@ package body GNATCOLL.VFS is
          if Handle_Symbolic_Links then
             GNATCOLL.IO.Resolve_Symlinks (File.Value);
          else
-            File.Value.Normalized_And_Resolved := File.Value.Normalized;
+            if File.Value.Normalized_And_Resolved = null then
+               File.Value.Normalized_And_Resolved := File.Value.Normalized;
+            end if;
          end if;
       end if;
    end Ensure_Normalized;
