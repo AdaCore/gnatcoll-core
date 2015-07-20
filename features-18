@@ -76,7 +76,7 @@ NF-18-O128-020 sqlite upgraded to 3.8.8.1 (2015-01-28)
 NF-18-O112-014 Memory: support for computing a program RSS memory (2015-01-13)
 
   GNATCOLL.Memory can now be used to compute the amount of memory used by
-  a problem (from any programming language). Furthermore, this information
+  an application (from any programming language). Furthermore, this information
   can be displayed via GNATCOLL.Traces automatically.
 
 NF-18-N918-040 Projects: support for Runtime and Target attributes (2014-10-13)
