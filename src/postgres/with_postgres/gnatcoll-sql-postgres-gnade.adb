@@ -246,7 +246,7 @@ package body GNATCOLL.SQL.Postgres.Gnade is
                --  Special case for strings, to avoid using the stack
                if Params (P).Typ = Parameter_Text then
                   Vals (size_t (P - Params'First)) :=
-                    CS.New_String (Params (P).Str_Val.all);
+                     CS.New_String (To_String (Params (P)));
                else
                   Vals (size_t (P - Params'First)) :=
                     CS.New_String (Image (Format, Params (P)));
@@ -333,7 +333,7 @@ package body GNATCOLL.SQL.Postgres.Gnade is
                   when Parameter_Text =>
                      --  Special case for text, which is already well formated
                      Vals (P) := CS.New_String
-                       (Params (Integer (P) + Params'First).Str_Val.all);
+                       (To_String (Params (Integer (P) + Params'First)));
 
                   when others =>
                      Vals (P) := CS.New_String

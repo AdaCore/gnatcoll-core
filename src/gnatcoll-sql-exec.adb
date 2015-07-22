@@ -524,7 +524,7 @@ package body GNATCOLL.SQL.Exec is
       else
          case Param.Typ is
          when Parameter_Text    =>
-            return String_To_SQL (Format, Param.Str_Val.all, Quote => False);
+            return String_To_SQL (Format, To_String (Param), Quote => False);
          when Parameter_Integer =>
             return Integer_To_SQL (Format, Param.Int_Val, Quote => False);
          when Parameter_Bigint =>
@@ -542,9 +542,9 @@ package body GNATCOLL.SQL.Exec is
          when Parameter_Money =>
             return Money_To_SQL (Format, Param.Money_Val, Quote => False);
          when Parameter_Json =>
-            return Json_To_SQL (Format, Param.Str_Val.all, Quote => False);
+            return Json_To_SQL (Format, To_String (Param), Quote => False);
          when Parameter_XML =>
-            return XML_To_SQL (Format, Param.Str_Val.all, Quote => False);
+            return XML_To_SQL (Format, To_String (Param), Quote => False);
          end case;
       end if;
    end Image;
@@ -1770,7 +1770,21 @@ package body GNATCOLL.SQL.Exec is
    function "+" (Value : access constant String) return SQL_Parameter is
    begin
       return SQL_Parameter'
-        (Typ => Parameter_Text, Str_Val => Value.all'Unchecked_Access);
+        (Typ => Parameter_Text, Str_Ptr => Value.all'Unchecked_Access,
+         Str_Val => <>);
+   end "+";
+
+   function "+" (Value : String) return SQL_Parameter is
+   begin
+      return SQL_Parameter'
+        (Typ => Parameter_Text, Str_Val => To_Unbounded_String (Value),
+         Str_Ptr => <>);
+   end "+";
+
+   function "+" (Value : Unbounded_String) return SQL_Parameter is
+   begin
+      return SQL_Parameter'
+         (Typ => Parameter_Text, Str_Val => Value, Str_Ptr => <>);
    end "+";
 
    ---------

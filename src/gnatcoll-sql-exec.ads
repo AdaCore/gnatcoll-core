@@ -158,8 +158,11 @@ package GNATCOLL.SQL.Exec is
          when Parameter_Bigint    => Bigint_Val : Long_Long_Integer;
          when Parameter_Json
             | Parameter_XML
-            | Parameter_Text      => Str_Val : access constant String;
-            --  references external string, to avoid an extra copy
+            | Parameter_Text      =>
+            Str_Ptr : access constant String;
+            --  References external string, to avoid an extra copy
+            Str_Val : Unbounded_String;
+            --  Unbounded string copies only reference on assignment
          when Parameter_Boolean   => Bool_Val : Boolean;
          when Parameter_Float     => Float_Val : Float;
          when Parameter_Time      => Time_Val  : Ada.Calendar.Time;
@@ -172,6 +175,8 @@ package GNATCOLL.SQL.Exec is
    Null_Parameter : constant SQL_Parameter;
 
    function "+" (Value : access constant String) return SQL_Parameter;
+   function "+" (Value : String) return SQL_Parameter;
+   function "+" (Value : Unbounded_String) return SQL_Parameter;
    function "+" (Value : Integer) return SQL_Parameter;
    function As_Bigint (Value : Long_Long_Integer) return SQL_Parameter;
    function "+" (Value : Boolean) return SQL_Parameter;
@@ -179,6 +184,10 @@ package GNATCOLL.SQL.Exec is
    function "+" (Value : Character) return SQL_Parameter;
    function "+" (Time : Ada.Calendar.Time) return SQL_Parameter;
    function "+" (Value : T_Money) return SQL_Parameter;
+
+   function To_String (Param : SQL_Parameter) return String is
+     (if Param.Str_Ptr = null then To_String (Param.Str_Val)
+      else Param.Str_Ptr.all);
 
    type SQL_Parameters is array (Positive range <>) of SQL_Parameter;
    No_Parameters : constant SQL_Parameters;

@@ -22,7 +22,7 @@
 ------------------------------------------------------------------------------
 
 with Ada.Characters.Handling;      use Ada.Characters.Handling;
-with Ada.Strings.Fixed;
+with Ada.Strings.Fixed;            use Ada.Strings;
 with Ada.Unchecked_Conversion;
 with Ada.Unchecked_Deallocation;
 with GNATCOLL.SQL.Sqlite.Gnade;    use GNATCOLL.SQL.Sqlite.Gnade;
@@ -34,6 +34,11 @@ with GNATCOLL.Utils;               use GNATCOLL.Utils;
 with GNAT.Calendar;
 with Interfaces.C.Strings;         use Interfaces.C.Strings;
 with System;                       use System;
+
+pragma Warnings (Off);
+--  Ada.Strings.Unbounded.Aux is an internal GNAT unit
+with Ada.Strings.Unbounded.Aux;
+pragma Warnings (On);
 
 package body GNATCOLL.SQL.Sqlite.Builder is
    Me : constant Trace_Handle := Create ("SQL.SQLITE");
@@ -506,6 +511,10 @@ package body GNATCOLL.SQL.Sqlite.Builder is
       Last_Status : Result_Codes;
       Tmp_Data : array (Params'Range) of GNAT.Strings.String_Access;
       Money_Int : Integer;
+      Str_Ptr : Unbounded.Aux.Big_String_Access;
+      Str_Adr : System.Address;
+      for Str_Adr'Address use Str_Ptr'Address;
+      Str_Len : Natural;
    begin
       --  Since we have a prepared statement, the connection already exists, no
       --  need to recreate.
@@ -522,8 +531,15 @@ package body GNATCOLL.SQL.Sqlite.Builder is
             when Parameter_Text
                | Parameter_Json
                | Parameter_XML =>
-               Bind_Text (Stmt, P, Params (P).Str_Val.all'Address,
-                          Params (P).Str_Val'Length);
+               if Params (P).Str_Ptr = null then
+                  Aux.Get_String (Params (P).Str_Val, Str_Ptr, Str_Len);
+               else
+                  Str_Adr := Params (P).Str_Ptr.all'Address;
+                  Str_Len := Params (P).Str_Ptr'Length;
+               end if;
+
+               Bind_Text (Stmt, P, Str_Adr, Str_Len);
+
             when Parameter_Character =>
                Bind_Text (Stmt, P, Params (P).Char_Val'Address, 1);
             when Parameter_Integer =>
@@ -898,10 +914,10 @@ package body GNATCOLL.SQL.Sqlite.Builder is
                   Pos := Pos + 1;
                end loop;
 
-               Is_PK := Ada.Strings.Fixed.Index
+               Is_PK := Fixed.Index
                  (To_Lower (Sql (Pos2 .. Pos)), "primary key") >= 1;
 
-               Is_Not_Null := Ada.Strings.Fixed.Index
+               Is_Not_Null := Fixed.Index
                  (To_Lower (Sql (Pos2 .. Pos)), "not null") >= 1;
 
                --  Ignore constraints declarations

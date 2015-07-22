@@ -15,6 +15,12 @@ of the feature.
 New features in 1.8
 -------------------
 
+NF-18-O717-016 GNATCOLL.SQL: SQL_Parameter from Unbounded_String (2015-07-22)
+
+  Text parameters to SQL queries can now be set from an unbounded string,
+  in addition to the existing support for String_Access. This can be more
+  efficient in some cases.
+
 NF-18-O715-002 GNATCOLL.SQL: support for "between" SQL keyword (2015-07-15)
 
   Support "BETWEEN" and "NOT BETWEEN" SQL syntax generation.

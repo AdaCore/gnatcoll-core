@@ -132,8 +132,6 @@ package body GNATCOLL.Xref is
       return Field1 = Name;
    end Compare_Files;
 
-   type Access_String is access constant String;
-
    N_Files2 : aliased String := "f2";
    Files2 : T_Files (N_Files2'Access);
 
@@ -4984,11 +4982,6 @@ package body GNATCOLL.Xref is
       File    : GNATCOLL.VFS.Virtual_File;
       Project : Project_Type) return Files_Cursor
    is
-      Name          : aliased String :=
-                        +File.Unix_Style_Full_Name (Normalize => True);
-      Project_Path  : aliased String :=
-                        +Project.Project_Path.Unix_Style_Full_Name
-                          (Normalize => True);
       Curs          : Files_Cursor;
    begin
       Curs.DBCursor.Fetch
@@ -5004,8 +4997,9 @@ package body GNATCOLL.Xref is
               and Compare_Files (Files3.Path, Text_Param (2))
               and Database.Files.Project = Files4.Id,
             Order_By => Database.Files.Path),
-         Params => (1 => +Name'Unchecked_Access,
-                    2 => +Project_Path'Unchecked_Access));
+         Params => (1 => +(+File.Unix_Style_Full_Name (Normalize => True)),
+                    2 => +(+Project.Project_Path.Unix_Style_Full_Name
+                              (Normalize => True))));
       return Curs;
    end Imported_By;
 
@@ -5018,8 +5012,6 @@ package body GNATCOLL.Xref is
       File    : GNATCOLL.VFS.Virtual_File;
       Project : Project_Type) return Files_Cursor
    is
-      Name  : aliased String :=
-                +File.Unix_Style_Full_Name (Normalize => True);
       P     : Project_Type;
       Curs  : Files_Cursor;
    begin
@@ -5034,27 +5026,23 @@ package body GNATCOLL.Xref is
          P := Project;
       end if;
 
-      declare
-         Project_Path  : aliased String :=
-           +P.Project_Path.Unix_Style_Full_Name (Normalize => True);
-      begin
-         Curs.DBCursor.Fetch
-           (Self.DB,
-            SQL_Select
-              (Files_Cursor_Fields,
-               From      =>
-                 Database.Files & Database.F2f & Files2 & Files3 & Files4,
-               Where     => Database.F2f.Tofile = Database.Files.Id
-               and Files2.Id = Database.F2f.Fromfile
-               and Compare_Files (Files2.Path, Text_Param (1))
-               and Database.F2f.Kind = F2f_Withs
-               and Files2.Project = Files3.Id
-               and Compare_Files (Files3.Path, Text_Param (2))
-               and Database.Files.Project = Files4.Id,
-               Order_By  => Database.Files.Path),
-            Params => (1 => +Name'Unchecked_Access,
-                       2 => +Project_Path'Unchecked_Access));
-      end;
+      Curs.DBCursor.Fetch
+        (Self.DB,
+         SQL_Select
+           (Files_Cursor_Fields,
+            From      =>
+              Database.Files & Database.F2f & Files2 & Files3 & Files4,
+            Where     => Database.F2f.Tofile = Database.Files.Id
+            and Files2.Id = Database.F2f.Fromfile
+            and Compare_Files (Files2.Path, Text_Param (1))
+            and Database.F2f.Kind = F2f_Withs
+            and Files2.Project = Files3.Id
+            and Compare_Files (Files3.Path, Text_Param (2))
+            and Database.Files.Project = Files4.Id,
+            Order_By  => Database.Files.Path),
+         Params => (1 => +(+File.Unix_Style_Full_Name (Normalize => True)),
+                    2 => +(+P.Project_Path.Unix_Style_Full_Name
+                      (Normalize => True))));
       return Curs;
    end Imports;
 
@@ -6153,48 +6141,43 @@ package body GNATCOLL.Xref is
          P := Project;
       end if;
 
-      declare
-         Project_N : aliased constant String :=
-                       +P.Project_Path.Unix_Style_Full_Name
-                         (Normalize => True);
-      begin
-         Cursor.DBCursor.Fetch
-           (Self.DB,
-            SQL_Union
-              (SQL_Select
-                   (Database.Entities.Id
-                    & Database.Files.Path
-                    & Database.Entities.Decl_Line
-                    & Database.Entities.Decl_Column,
-                    From  => Database.Entities & Database.Files & Files3,
-                    Where => Database.Entities.Decl_File = Database.Files.Id
-                    and Compare_Files
-                      (Database.Files.Path,
-                       +File.Unix_Style_Full_Name (Normalize => True))
-                    and Database.Files.Project = Files3.Id
-                    and Compare_Files (Files3.Path, Text_Param (1))),
-
-               SQL_Select
-                 (Database.Entities.Id
-                  & Database.Files.Path
-                  & Database.Entities.Decl_Line
-                  & Database.Entities.Decl_Column,
-                  From    => Database.Entity_Refs & Database.Files & Files3
-                  & Database.Entities,
-                  Where   => Database.Entity_Refs.File = Database.Files.Id
-                  and Compare_Files
-                    (Database.Files.Path,
-                     +File.Unix_Style_Full_Name (Normalize   => True))
-                  and Database.Entity_Refs.Entity = Database.Entities.Id
-                  and Database.Files.Project = Files3.Id
-                  and Compare_Files (Files3.Path, Text_Param (1))),
-
-               Order_By => Database.Files.Path & Database.Entities.Decl_Line
+      Cursor.DBCursor.Fetch
+        (Self.DB,
+         SQL_Union
+           (SQL_Select
+              (Database.Entities.Id
+               & Database.Files.Path
+                 & Database.Entities.Decl_Line
                & Database.Entities.Decl_Column,
-               Distinct => True),
+               From  => Database.Entities & Database.Files & Files3,
+               Where => Database.Entities.Decl_File = Database.Files.Id
+                 and Compare_Files
+                   (Database.Files.Path,
+                    +File.Unix_Style_Full_Name (Normalize => True))
+                 and Database.Files.Project = Files3.Id
+                 and Compare_Files (Files3.Path, Text_Param (1))),
 
-            Params => (1 => +Project_N'Unchecked_Access));
-      end;
+            SQL_Select
+              (Database.Entities.Id
+               & Database.Files.Path
+               & Database.Entities.Decl_Line
+               & Database.Entities.Decl_Column,
+               From    => Database.Entity_Refs & Database.Files & Files3
+               & Database.Entities,
+               Where   => Database.Entity_Refs.File = Database.Files.Id
+                 and Compare_Files
+                   (Database.Files.Path,
+                    +File.Unix_Style_Full_Name (Normalize   => True))
+                 and Database.Entity_Refs.Entity = Database.Entities.Id
+                 and Database.Files.Project = Files3.Id
+                 and Compare_Files (Files3.Path, Text_Param (1))),
+
+            Order_By => Database.Files.Path & Database.Entities.Decl_Line
+            & Database.Entities.Decl_Column,
+            Distinct => True),
+
+         Params => (1 => +(+P.Project_Path.Unix_Style_Full_Name
+                    (Normalize => True))));
    end Referenced_In;
 
    -------------------
@@ -6206,13 +6189,7 @@ package body GNATCOLL.Xref is
       File    : GNATCOLL.VFS.Virtual_File;
       Project : Project_Type;
       Name    : String;
-      Cursor  : out Entities_Cursor'Class)
-   is
-      NName     : aliased String := Name;
-      Name_A    : constant Access_String := NName'Unchecked_Access;
-      Project_N : aliased constant String :=
-                    +Project.Project_Path.Unix_Style_Full_Name
-                      (Normalize => True);
+      Cursor  : out Entities_Cursor'Class) is
    begin
       Cursor.DBCursor.Fetch
         (Self.DB,
@@ -6251,7 +6228,9 @@ package body GNATCOLL.Xref is
                & Database.Entities.Decl_Column,
             Distinct => True),
 
-         Params => (1 => +Name_A, 2 => +Project_N'Unchecked_Access));
+         Params => (1 => +Name,
+                    2 => +(+Project.Project_Path.Unix_Style_Full_Name
+                              (Normalize => True))));
    end Referenced_In;
 
    ---------
@@ -6974,8 +6953,6 @@ package body GNATCOLL.Xref is
 
       else
          declare
-            N     : aliased String :=
-                      +File.Unix_Style_Full_Name (Normalize => True);
             Files : Forward_Cursor;
          begin
             --  For efficiency, we do not store the timestamps for source files
@@ -6984,7 +6961,8 @@ package body GNATCOLL.Xref is
 
             Files.Fetch
               (Self.DB, Query_Get_ALI,
-               Params => (1 => +N'Unchecked_Access));
+               Params => (1 => +(+File.Unix_Style_Full_Name
+                                    (Normalize => True))));
 
             if Files.Has_Row then
                if Active (Me_Debug) then
@@ -7158,13 +7136,6 @@ package body GNATCOLL.Xref is
       Decl_Line    : Natural;
       Decl_Column  : Natural) return Entity_Information
    is
-      N           : aliased String :=
-                      +Decl_File.Unix_Style_Full_Name (Normalize => True);
-      Project_N   : aliased String :=
-                      +Decl_Project.Project_Path.Unix_Style_Full_Name
-                        (Normalize => True);
-      K           : aliased String := Kind;
-      Na          : aliased String := Name;
       Id          : Integer;
       Was_Started : Boolean;
    begin
@@ -7185,12 +7156,13 @@ package body GNATCOLL.Xref is
                and Files.Project = Files3.Id
                and Compare_Files (Files3.Path, Text_Param (6)))),
          Params =>
-           (1 => +N'Unchecked_Access,
-            2 => +K'Unchecked_Access,
-            3 => +Na'Unchecked_Access,
+           (1 => +(+Decl_File.Unix_Style_Full_Name (Normalize => True)),
+            2 => +Kind,
+            3 => +Name,
             4 => +Decl_Line,
             5 => +Decl_Column,
-            6 => +Project_N'Unchecked_Access),
+            6 => +(+Decl_Project.Project_Path.Unix_Style_Full_Name
+                      (Normalize => True))),
          PK => Entities.Id);
 
       if Was_Started then
