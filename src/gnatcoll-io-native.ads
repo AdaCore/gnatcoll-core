@@ -49,9 +49,9 @@ package GNATCOLL.IO.Native is
 
    Local_Root_Dir : constant File_Access;
 
-   ---------------------------
-   -- Overriden from parent --
-   ---------------------------
+   ----------------------------
+   -- Overridden from parent --
+   ----------------------------
 
    overriding function Dispatching_Create
      (Ref : not null access Native_File_Record;

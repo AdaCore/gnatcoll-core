@@ -655,7 +655,7 @@ package GNATCOLL.Projects is
    --  The returned value must be freed by the user
    --
    --  The sources that are returned are not necessarily the ones that are used
-   --  when compiling the root project, since some of them might be overriden
+   --  when compiling the root project, since some of them might be overridden
    --  by extending projects. Instead, they are the sources that would be used
    --  when compiling from Project ("gnatmake -PProject"). Base names of
    --  returned files may not be unique in case when root project is an

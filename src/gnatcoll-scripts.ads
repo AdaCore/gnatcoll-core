@@ -726,13 +726,13 @@ package GNATCOLL.Scripts is
    -- Class_Instance_Record --
    ---------------------------
 
-   --  This type encapsulate some language specific data. It is overriden by
+   --  This type encapsulate some language specific data. It is overridden by
    --  each of the scripting languages. Do not use directly unless you are
    --  implementing a new scripting language
 
    type Class_Instance_Record is abstract tagged limited private;
    type Class_Instance_Record_Access is access all Class_Instance_Record'Class;
-   --  A type overriden by each of the scripting languages
+   --  A type overridden by each of the scripting languages
 
    function Is_Subclass
      (Instance : access Class_Instance_Record;

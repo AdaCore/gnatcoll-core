@@ -47,7 +47,7 @@ package GNATCOLL.Traces is
    --  Name of the default configuration file. This file is looked for first in
    --  the current directory, then in the user's home directory.  If no file is
    --  found, then no handle will be activated.  The name of this file can be
-   --  overriden by the environment variable Config_File_Environment, which
+   --  overridden by the environment variable Config_File_Environment, which
    --  should be an absolute name (or relative to the current directory). If
    --  this variable is set, the standard file is never searched.
    --

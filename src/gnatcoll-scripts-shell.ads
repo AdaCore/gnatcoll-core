@@ -41,7 +41,7 @@ package GNATCOLL.Scripts.Shell is
    type Shell_Subprogram_Record is new Subprogram_Record with private;
    type Shell_Subprogram is access all Shell_Subprogram_Record'Class;
    --  This types are declared in the spec rather than in the body, so that
-   --  their subprograms can be overriden again. For instance, GPS uses that
+   --  their subprograms can be overridden again. For instance, GPS uses that
    --  to make a subprogram_type be a GPS action rather than a simple shell
    --  command.
 

@@ -59,7 +59,7 @@ package GNATCOLL.Templates is
 
    Default_Delimiter : constant Character := '%';
    --  The default delimiter used to mark the special substrings. It can be
-   --  overriden in the various Substitute subprograms below.
+   --  overridden in the various Substitute subprograms below.
    --  The special substrings always start with this delimiter, and including
    --  the following number or identifier. That identifier can be quoted
    --  between curly braces ({...}) or parentheses to avoid ambiguities.

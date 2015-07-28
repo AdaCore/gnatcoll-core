@@ -49,9 +49,9 @@ package GNATCOLL.IO.Remote is
    function Get_Host (File : not null access Remote_File_Record)
      return String;
 
-   ---------------------------
-   -- Overriden from parent --
-   ---------------------------
+   ----------------------------
+   -- Overridden from parent --
+   ----------------------------
 
    overriding function Dispatching_Create
      (Ref : not null access Remote_File_Record;
