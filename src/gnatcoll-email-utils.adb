@@ -791,6 +791,19 @@ package body GNATCOLL.Email.Utils is
       end if;
    end Post_Process_Address;
 
+   ----------------
+   -- To_Address --
+   ----------------
+
+   function To_Address
+     (Address   : String;
+      Real_Name : String := "") return Email_Address
+   is
+   begin
+      return (Address   => To_Unbounded_String (Address),
+              Real_Name => To_Unbounded_String (Real_Name));
+   end To_Address;
+
    -------------------
    -- Get_Addresses --
    -------------------

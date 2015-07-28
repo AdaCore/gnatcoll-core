@@ -102,6 +102,11 @@ package GNATCOLL.Email.Utils is
    --  Split an email address as read from a message header into its
    --  constituents
 
+   function To_Address
+     (Address   : String;
+      Real_Name : String := "") return Email_Address;
+   --  Create an Email_Address from the given parts
+
    function Get_Addresses (Str : String) return Address_Set.Set;
    function Get_Addresses
      (Str : Charset_String_List.List) return Address_Set.Set;
