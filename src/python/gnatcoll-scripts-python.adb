@@ -22,10 +22,10 @@
 ------------------------------------------------------------------------------
 
 with Ada.Characters.Handling;    use Ada.Characters.Handling;
-with Ada.Unchecked_Conversion;
-with Ada.Unchecked_Deallocation;
 with Ada.Exceptions;             use Ada.Exceptions;
 with Ada.Strings.Unbounded;      use Ada.Strings.Unbounded;
+with Ada.Unchecked_Conversion;
+with Ada.Unchecked_Deallocation;
 with Interfaces.C.Strings;       use Interfaces.C, Interfaces.C.Strings;
 with GNAT.IO;                    use GNAT.IO;
 with GNAT.Strings;               use GNAT.Strings;
@@ -926,8 +926,7 @@ package body GNATCOLL.Scripts.Python is
          then
             PyErr_SetString
               (Script.Exception_Unexpected,
-               "unexpected internal exception "
-               & Exception_Information (E));
+               "unexpected internal exception " & Exception_Information (E));
          end if;
 
          Free (Data);
@@ -2270,19 +2269,17 @@ package body GNATCOLL.Scripts.Python is
       else
          Iter := PyObject_GetIter (Item);
          if Iter = null then
-            Raise_Exception
-              (Invalid_Parameter'Identity,
-               "Parameter" & Integer'Image (N) & " should be iterable");
+            raise Invalid_Parameter
+              with "Parameter" & Integer'Image (N) & " should be iterable";
          end if;
          if PyDict_Check (Item) then
-            Raise_Exception
-              (Invalid_Parameter'Identity,
-               "Parameter" & Integer'Image (N) & " should not be dictionary");
+            raise Invalid_Parameter
+              with "Parameter" & Integer'Image (N)
+              & " should not be dictionary";
          end if;
          if PyAnySet_Check (Item) then
-            Raise_Exception
-              (Invalid_Parameter'Identity,
-               "Parameter" & Integer'Image (N) & " should not be set");
+            raise Invalid_Parameter
+              with "Parameter" & Integer'Image (N) & " should not be set";
          end if;
 
          Py_DECREF (Iter);
@@ -2313,10 +2310,9 @@ package body GNATCOLL.Scripts.Python is
       elsif PyUnicode_Check (Item) then
          return Unicode_AsString (Item, "utf-8");
       else
-         Raise_Exception
-           (Invalid_Parameter'Identity,
-            "Parameter"
-            & Integer'Image (N) & " should be a string or unicode");
+         raise Invalid_Parameter
+           with "Parameter" & Integer'Image (N)
+           & " should be a string or unicode";
       end if;
    end Nth_Arg;
 
@@ -2357,9 +2353,8 @@ package body GNATCOLL.Scripts.Python is
       end if;
 
       if not PyInt_Check (Item) then
-         Raise_Exception
-           (Invalid_Parameter'Identity,
-            "Parameter" & Integer'Image (N) & " should be an integer");
+         raise Invalid_Parameter
+           with "Parameter" & Integer'Image (N) & " should be an integer";
       else
          return Integer (PyInt_AsLong (Item));
       end if;
@@ -2386,9 +2381,8 @@ package body GNATCOLL.Scripts.Python is
          if PyInt_Check (Item) then
             return Float (PyInt_AsLong (Item));
          else
-            Raise_Exception
-              (Invalid_Parameter'Identity,
-               "Parameter" & Integer'Image (N) & " should be a float");
+            raise Invalid_Parameter
+              with "Parameter" & Integer'Image (N) & " should be a float";
          end if;
       else
          return Float (PyFloat_AsDouble (Item));
@@ -2487,20 +2481,18 @@ package body GNATCOLL.Scripts.Python is
       if Class /= Any_Class
         and then not PyObject_IsInstance (Item, C)
       then
-         Raise_Exception
-           (Invalid_Parameter'Identity,
-            "Parameter" & Integer'Image (N) & " should be an instance of "
-            & Get_Name (Class));
+         raise Invalid_Parameter
+           with "Parameter" & Integer'Image (N) & " should be an instance of "
+           & Get_Name (Class);
       end if;
 
       Item_Class := PyObject_GetAttrString (Item, "__class__");
       --  Item_Class must be DECREF'd
 
       if Item_Class = null then
-         Raise_Exception
-           (Invalid_Parameter'Identity,
-            "Parameter" & Integer'Image (N) & " should be an instance of "
-            & Get_Name (Class) & " but has no __class__");
+         raise Invalid_Parameter
+           with "Parameter" & Integer'Image (N) & " should be an instance of "
+           & Get_Name (Class) & " but has no __class__";
       end if;
 
       Py_DECREF (Item_Class);
