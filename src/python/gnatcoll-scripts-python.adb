@@ -336,6 +336,54 @@ package body GNATCOLL.Scripts.Python is
       Dict   : PyObject;
    end record;
 
+   function Iterator
+     (Self : Python_Dictionary_Instance) return Dictionary_Iterator'Class;
+   --  Returns iterator for given dictionary
+
+   function Has_Key
+     (Self : Python_Dictionary_Instance; Key : String) return Boolean;
+   function Has_Key
+     (Self : Python_Dictionary_Instance; Key : Integer) return Boolean;
+   function Has_Key
+     (Self : Python_Dictionary_Instance; Key : Float) return Boolean;
+   function Has_Key
+     (Self : Python_Dictionary_Instance; Key : Boolean) return Boolean;
+   --  Returns True when dictionary has value for given key
+
+   function Value
+     (Self : Python_Dictionary_Instance; Key : String) return String;
+   function Value
+     (Self : Python_Dictionary_Instance; Key : Integer) return String;
+   function Value
+     (Self : Python_Dictionary_Instance; Key : Float) return String;
+   function Value
+     (Self : Python_Dictionary_Instance; Key : Boolean) return String;
+   function Value
+     (Self : Python_Dictionary_Instance; Key : String) return Integer;
+   function Value
+     (Self : Python_Dictionary_Instance; Key : Integer) return Integer;
+   function Value
+     (Self : Python_Dictionary_Instance; Key : Float) return Integer;
+   function Value
+     (Self : Python_Dictionary_Instance; Key : Boolean) return Integer;
+   function Value
+     (Self : Python_Dictionary_Instance; Key : String) return Float;
+   function Value
+     (Self : Python_Dictionary_Instance; Key : Integer) return Float;
+   function Value
+     (Self : Python_Dictionary_Instance; Key : Float) return Float;
+   function Value
+     (Self : Python_Dictionary_Instance; Key : Boolean) return Float;
+   function Value
+     (Self : Python_Dictionary_Instance; Key : String) return Boolean;
+   function Value
+     (Self : Python_Dictionary_Instance; Key : Integer) return Boolean;
+   function Value
+     (Self : Python_Dictionary_Instance; Key : Float) return Boolean;
+   function Value
+     (Self : Python_Dictionary_Instance; Key : Boolean) return Boolean;
+   --  Returns value of given key
+
    type Python_Dictionary_Iterator is new Dictionary_Iterator with record
       Script   : Python_Scripting;
       Dict     : PyObject;
@@ -343,10 +391,6 @@ package body GNATCOLL.Scripts.Python is
       Key      : PyObject;
       Value    : PyObject;
    end record;
-
-   function Iterator
-     (Self : Python_Dictionary_Instance) return Dictionary_Iterator'Class;
-   --  Returns iterator for given dictionary
 
    function Next
      (Self : not null access Python_Dictionary_Iterator) return Boolean;
@@ -364,6 +408,25 @@ package body GNATCOLL.Scripts.Python is
    function Value (Self : Python_Dictionary_Iterator) return Float;
    function Value (Self : Python_Dictionary_Iterator) return Boolean;
    --  Returns value of current pair in dictionary
+
+   function Conditional_To
+     (Condition : Boolean; Object : PyObject; Name : String) return String;
+   function Conditional_To
+     (Condition : Boolean; Object : PyObject; Name : String) return Integer;
+   function Conditional_To
+     (Condition : Boolean; Object : PyObject; Name : String) return Float;
+   function Conditional_To
+     (Condition : Boolean;
+      Script    : Scripting_Language;
+      Object    : PyObject) return Boolean;
+   --  Converts Python's value when Condition is true.
+
+   function Internal_To (Object : PyObject; Name : String) return String;
+   function Internal_To (Object : PyObject; Name : String) return Integer;
+   function Internal_To (Object : PyObject; Name : String) return Float;
+   function Internal_To
+     (Script : Scripting_Language; Object : PyObject) return Boolean;
+   --  Converts Python's value
 
    --------------------
    -- Block_Commands --
@@ -3930,28 +3993,221 @@ package body GNATCOLL.Scripts.Python is
       return Self.Position /= -1;
    end Next;
 
+   -------------
+   -- Has_Key --
+   -------------
+
+   function Has_Key
+     (Self : Python_Dictionary_Instance; Key : String) return Boolean
+   is
+      K : constant PyObject := PyString_FromString (Key);
+
+   begin
+      return Result : constant Boolean := PyDict_Contains (Self.Dict, K) do
+         Py_DECREF (K);
+      end return;
+   end Has_Key;
+
+   -------------
+   -- Has_Key --
+   -------------
+
+   function Has_Key
+     (Self : Python_Dictionary_Instance; Key : Integer) return Boolean
+   is
+      K : constant PyObject := PyInt_FromLong (Interfaces.C.long (Key));
+
+   begin
+      return Result : constant Boolean := PyDict_Contains (Self.Dict, K) do
+         Py_DECREF (K);
+      end return;
+   end Has_Key;
+
+   -------------
+   -- Has_Key --
+   -------------
+
+   function Has_Key
+     (Self : Python_Dictionary_Instance; Key : Float) return Boolean
+   is
+      K : constant PyObject := PyFloat_FromDouble (Interfaces.C.double (Key));
+
+   begin
+      return Result : constant Boolean := PyDict_Contains (Self.Dict, K) do
+         Py_DECREF (K);
+      end return;
+   end Has_Key;
+
+   -------------
+   -- Has_Key --
+   -------------
+
+   function Has_Key
+     (Self : Python_Dictionary_Instance; Key : Boolean) return Boolean
+   is
+      K : constant PyObject := PyBool_FromBoolean (Key);
+
+   begin
+      return Result : constant Boolean := PyDict_Contains (Self.Dict, K) do
+         Py_DECREF (K);
+      end return;
+   end Has_Key;
+
+   --------------------
+   -- Conditional_To --
+   --------------------
+
+   function Conditional_To
+     (Condition : Boolean; Object : PyObject; Name : String) return String is
+   begin
+      if not Condition
+        or else Object = null
+        or else Object = Py_None
+      then
+         return "";
+      end if;
+
+      if PyString_Check (Object) then
+         return PyString_AsString (Object);
+
+      elsif PyUnicode_Check (Object) then
+         return Unicode_AsString (Object, "utf-8");
+
+      else
+         raise Invalid_Parameter
+           with Name & " should be a string or unicode";
+      end if;
+   end Conditional_To;
+
+   --------------------
+   -- Conditional_To --
+   --------------------
+
+   function Conditional_To
+     (Condition : Boolean; Object : PyObject; Name : String) return Integer is
+   begin
+      if not Condition
+        or else Object = null
+        or else Object = Py_None
+      then
+         return 0;
+      end if;
+
+      if PyInt_Check (Object) then
+         return Integer (PyInt_AsLong (Object));
+
+      else
+         raise Invalid_Parameter with Name & " should be an integer";
+      end if;
+   end Conditional_To;
+
+   --------------------
+   -- Conditional_To --
+   --------------------
+
+   function Conditional_To
+     (Condition : Boolean; Object : PyObject; Name : String) return Float is
+   begin
+      if not Condition
+        or else Object = null
+        or else Object = Py_None
+      then
+         return 0.0;
+      end if;
+
+      if not PyFloat_Check (Object) then
+         if PyInt_Check (Object) then
+            return Float (PyInt_AsLong (Object));
+         else
+            raise Invalid_Parameter with Name & " should be a float";
+         end if;
+
+      else
+         return Float (PyFloat_AsDouble (Object));
+      end if;
+   end Conditional_To;
+
+   --------------------
+   -- Conditional_To --
+   --------------------
+
+   function Conditional_To
+     (Condition : Boolean;
+      Script    : Scripting_Language;
+      Object    : PyObject) return Boolean is
+   begin
+      if not Condition
+        or else Object = null
+        or else Object = Py_None
+      then
+         return False;
+      end if;
+
+      --  For backward compatibility, accept these as "False" values.
+      --  Don't check for unicode here, which was never supported anyway.
+
+      if PyString_Check (Object)
+        and then (To_Lower (PyString_AsString (Object)) = "false"
+                  or else PyString_AsString (Object) = "0")
+      then
+         Insert_Text
+           (Script,
+            null,
+            "Warning: using string 'false' instead of"
+            & " boolean False is obsolescent");
+
+         return False;
+
+      else
+         --  Use standard python behavior
+         return PyObject_IsTrue (Object);
+      end if;
+   end Conditional_To;
+
+   -----------------
+   -- Internal_To --
+   -----------------
+
+   function Internal_To (Object : PyObject; Name : String) return String is
+   begin
+      return Conditional_To (True, Object, Name);
+   end Internal_To;
+
+   -----------------
+   -- Internal_To --
+   -----------------
+
+   function Internal_To (Object : PyObject; Name : String) return Integer is
+   begin
+      return Conditional_To (True, Object, Name);
+   end Internal_To;
+
+   -----------------
+   -- Internal_To --
+   -----------------
+
+   function Internal_To (Object : PyObject; Name : String) return Float is
+   begin
+      return Conditional_To (True, Object, Name);
+   end Internal_To;
+
+   -----------------
+   -- Internal_To --
+   -----------------
+
+   function Internal_To
+     (Script : Scripting_Language; Object : PyObject) return Boolean is
+   begin
+      return Conditional_To (True, Script, Object);
+   end Internal_To;
+
    ---------
    -- Key --
    ---------
 
    function Key (Self : Python_Dictionary_Iterator) return String is
    begin
-      if Self.Position = -1
-        or else Self.Key = null
-        or else Self.Key = Py_None
-      then
-         return "";
-      end if;
-
-      if PyString_Check (Self.Key) then
-         return PyString_AsString (Self.Key);
-
-      elsif PyUnicode_Check (Self.Key) then
-         return Unicode_AsString (Self.Key, "utf-8");
-
-      else
-         raise Invalid_Parameter with "Key should be a string or unicode";
-      end if;
+      return Conditional_To (Self.Position /= -1, Self.Key, "Key");
    end Key;
 
    ---------
@@ -3960,19 +4216,7 @@ package body GNATCOLL.Scripts.Python is
 
    function Key (Self : Python_Dictionary_Iterator) return Integer is
    begin
-      if Self.Position = -1
-        or else Self.Key = null
-        or else Self.Key = Py_None
-      then
-         return 0;
-      end if;
-
-      if not PyInt_Check (Self.Key) then
-         raise Invalid_Parameter with "Key should be an integer";
-
-      else
-         return Integer (PyInt_AsLong (Self.Key));
-      end if;
+      return Conditional_To (Self.Position /= -1, Self.Key, "Key");
    end Key;
 
    ---------
@@ -3981,23 +4225,7 @@ package body GNATCOLL.Scripts.Python is
 
    function Key (Self : Python_Dictionary_Iterator) return Float is
    begin
-      if Self.Position = -1
-        or else Self.Key = null
-        or else Self.Key = Py_None
-      then
-         return 0.0;
-      end if;
-
-      if not PyFloat_Check (Self.Key) then
-         if PyInt_Check (Self.Key) then
-            return Float (PyInt_AsLong (Self.Key));
-         else
-            raise Invalid_Parameter with "Key should be a float";
-         end if;
-
-      else
-         return Float (PyFloat_AsDouble (Self.Key));
-      end if;
+      return Conditional_To (Self.Position /= -1, Self.Key, "Key");
    end Key;
 
    ---------
@@ -4006,32 +4234,265 @@ package body GNATCOLL.Scripts.Python is
 
    function Key (Self : Python_Dictionary_Iterator) return Boolean is
    begin
-      if Self.Position = -1
-        or else Self.Key = null
-        or else Self.Key = Py_None
-      then
-         return False;
-      end if;
-
-      --  For backward compatibility, accept these as "False" values.
-      --  Don't check for unicode here, which was never supported anyway.
-
-      if PyString_Check (Self.Key)
-        and then (To_Lower (PyString_AsString (Self.Key)) = "false"
-                  or else PyString_AsString (Self.Key) = "0")
-      then
-         Insert_Text
-           (Scripting_Language (Self.Script), null,
-            "Warning: using string 'false' instead of"
-            & " boolean False is obsolescent");
-
-         return False;
-
-      else
-         --  Use standard python behavior
-         return PyObject_IsTrue (Self.Key);
-      end if;
+      return
+        Conditional_To
+          (Self.Position /= -1, Scripting_Language (Self.Script), Self.Key);
    end Key;
+
+   -----------
+   -- Value --
+   -----------
+
+   function Value
+     (Self : Python_Dictionary_Instance; Key : String) return String
+   is
+      K : constant PyObject := PyUnicode_FromString (Key);
+      V : constant PyObject := PyDict_GetItem (Self.Dict, K);
+
+   begin
+      Py_DECREF (K);
+
+      return Internal_To (V, "Value");
+   end Value;
+
+   -----------
+   -- Value --
+   -----------
+
+   function Value
+     (Self : Python_Dictionary_Instance; Key : Integer) return String
+   is
+      K : constant PyObject := PyInt_FromLong (Interfaces.C.long (Key));
+      V : constant PyObject := PyDict_GetItem (Self.Dict, K);
+
+   begin
+      Py_DECREF (K);
+
+      return Internal_To (V, "Value");
+   end Value;
+
+   -----------
+   -- Value --
+   -----------
+
+   function Value
+     (Self : Python_Dictionary_Instance; Key : Float) return String
+   is
+      K : constant PyObject := PyFloat_FromDouble (Interfaces.C.double (Key));
+      V : constant PyObject := PyDict_GetItem (Self.Dict, K);
+
+   begin
+      Py_DECREF (K);
+
+      return Internal_To (V, "Value");
+   end Value;
+   -----------
+   -- Value --
+   -----------
+
+   function Value
+     (Self : Python_Dictionary_Instance; Key : Boolean) return String
+   is
+      K : constant PyObject := PyBool_FromBoolean (Key);
+      V : constant PyObject := PyDict_GetItem (Self.Dict, K);
+
+   begin
+      Py_DECREF (K);
+
+      return Internal_To (V, "Value");
+   end Value;
+
+   -----------
+   -- Value --
+   -----------
+
+   function Value
+     (Self : Python_Dictionary_Instance; Key : String) return Integer
+   is
+      K : constant PyObject := PyUnicode_FromString (Key);
+      V : constant PyObject := PyDict_GetItem (Self.Dict, K);
+
+   begin
+      Py_DECREF (K);
+
+      return Internal_To (V, "Value");
+   end Value;
+
+   -----------
+   -- Value --
+   -----------
+
+   function Value
+     (Self : Python_Dictionary_Instance; Key : Integer) return Integer
+   is
+      K : constant PyObject := PyInt_FromLong (Interfaces.C.long (Key));
+      V : constant PyObject := PyDict_GetItem (Self.Dict, K);
+
+   begin
+      Py_DECREF (K);
+
+      return Internal_To (V, "Value");
+   end Value;
+
+   -----------
+   -- Value --
+   -----------
+
+   function Value
+     (Self : Python_Dictionary_Instance; Key : Float) return Integer
+   is
+      K : constant PyObject := PyFloat_FromDouble (Interfaces.C.double (Key));
+      V : constant PyObject := PyDict_GetItem (Self.Dict, K);
+
+   begin
+      Py_DECREF (K);
+
+      return Internal_To (V, "Value");
+   end Value;
+
+   -----------
+   -- Value --
+   -----------
+
+   function Value
+     (Self : Python_Dictionary_Instance; Key : Boolean) return Integer
+   is
+      K : constant PyObject := PyBool_FromBoolean (Key);
+      V : constant PyObject := PyDict_GetItem (Self.Dict, K);
+
+   begin
+      Py_DECREF (K);
+
+      return Internal_To (V, "Value");
+   end Value;
+
+   -----------
+   -- Value --
+   -----------
+
+   function Value
+     (Self : Python_Dictionary_Instance; Key : String) return Float
+   is
+      K : constant PyObject := PyUnicode_FromString (Key);
+      V : constant PyObject := PyDict_GetItem (Self.Dict, K);
+
+   begin
+      Py_DECREF (K);
+
+      return Internal_To (V, "Value");
+   end Value;
+
+   -----------
+   -- Value --
+   -----------
+
+   function Value
+     (Self : Python_Dictionary_Instance; Key : Integer) return Float
+   is
+      K : constant PyObject := PyInt_FromLong (Interfaces.C.long (Key));
+      V : constant PyObject := PyDict_GetItem (Self.Dict, K);
+
+   begin
+      Py_DECREF (K);
+
+      return Internal_To (V, "Value");
+   end Value;
+
+   -----------
+   -- Value --
+   -----------
+
+   function Value
+     (Self : Python_Dictionary_Instance; Key : Float) return Float
+   is
+      K : constant PyObject := PyFloat_FromDouble (Interfaces.C.double (Key));
+      V : constant PyObject := PyDict_GetItem (Self.Dict, K);
+
+   begin
+      Py_DECREF (K);
+
+      return Internal_To (V, "Value");
+   end Value;
+
+   -----------
+   -- Value --
+   -----------
+
+   function Value
+     (Self : Python_Dictionary_Instance; Key : Boolean) return Float
+   is
+      K : constant PyObject := PyBool_FromBoolean (Key);
+      V : constant PyObject := PyDict_GetItem (Self.Dict, K);
+
+   begin
+      Py_DECREF (K);
+
+      return Internal_To (V, "Value");
+   end Value;
+
+   -----------
+   -- Value --
+   -----------
+
+   function Value
+     (Self : Python_Dictionary_Instance; Key : String) return Boolean
+   is
+      K : constant PyObject := PyUnicode_FromString (Key);
+      V : constant PyObject := PyDict_GetItem (Self.Dict, K);
+
+   begin
+      Py_DECREF (K);
+
+      return Internal_To (Scripting_Language (Self.Script), V);
+   end Value;
+
+   -----------
+   -- Value --
+   -----------
+
+   function Value
+     (Self : Python_Dictionary_Instance; Key : Integer) return Boolean
+   is
+      K : constant PyObject := PyInt_FromLong (Interfaces.C.long (Key));
+      V : constant PyObject := PyDict_GetItem (Self.Dict, K);
+
+   begin
+      Py_DECREF (K);
+
+      return Internal_To (Scripting_Language (Self.Script), V);
+   end Value;
+
+   -----------
+   -- Value --
+   -----------
+
+   function Value
+     (Self : Python_Dictionary_Instance; Key : Float) return Boolean
+   is
+      K : constant PyObject := PyFloat_FromDouble (Interfaces.C.double (Key));
+      V : constant PyObject := PyDict_GetItem (Self.Dict, K);
+
+   begin
+      Py_DECREF (K);
+
+      return Internal_To (Scripting_Language (Self.Script), V);
+   end Value;
+
+   -----------
+   -- Value --
+   -----------
+
+   function Value
+     (Self : Python_Dictionary_Instance; Key : Boolean) return Boolean
+   is
+      K : constant PyObject := PyBool_FromBoolean (Key);
+      V : constant PyObject := PyDict_GetItem (Self.Dict, K);
+
+   begin
+      Py_DECREF (K);
+
+      return Internal_To (Scripting_Language (Self.Script), V);
+   end Value;
 
    -----------
    -- Value --
@@ -4039,23 +4500,7 @@ package body GNATCOLL.Scripts.Python is
 
    function Value (Self : Python_Dictionary_Iterator) return String is
    begin
-      if Self.Position = -1
-        or else Self.Value = null
-        or else Self.Value = Py_None
-      then
-         return "";
-      end if;
-
-      if PyString_Check (Self.Value) then
-         return PyString_AsString (Self.Value);
-
-      elsif PyUnicode_Check (Self.Value) then
-         return Unicode_AsString (Self.Value, "utf-8");
-
-      else
-         raise Invalid_Parameter
-           with "Value should be a string or unicode";
-      end if;
+      return Conditional_To (Self.Position /= -1, Self.Value, "Value");
    end Value;
 
    -----------
@@ -4064,19 +4509,7 @@ package body GNATCOLL.Scripts.Python is
 
    function Value (Self : Python_Dictionary_Iterator) return Integer is
    begin
-      if Self.Position = -1
-        or else Self.Value = null
-        or else Self.Value = Py_None
-      then
-         return 0;
-      end if;
-
-      if not PyInt_Check (Self.Value) then
-         raise Invalid_Parameter with "Value should be an integer";
-
-      else
-         return Integer (PyInt_AsLong (Self.Value));
-      end if;
+      return Conditional_To (Self.Position /= -1, Self.Value, "Value");
    end Value;
 
    -----------
@@ -4085,23 +4518,7 @@ package body GNATCOLL.Scripts.Python is
 
    function Value (Self : Python_Dictionary_Iterator) return Float is
    begin
-      if Self.Position = -1
-        or else Self.Value = null
-        or else Self.Value = Py_None
-      then
-         return 0.0;
-      end if;
-
-      if not PyFloat_Check (Self.Value) then
-         if PyInt_Check (Self.Value) then
-            return Float (PyInt_AsLong (Self.Value));
-         else
-            raise Invalid_Parameter with "Value should be a float";
-         end if;
-
-      else
-         return Float (PyFloat_AsDouble (Self.Value));
-      end if;
+      return Conditional_To (Self.Position /= -1, Self.Value, "Value");
    end Value;
 
    -----------
@@ -4110,31 +4527,9 @@ package body GNATCOLL.Scripts.Python is
 
    function Value (Self : Python_Dictionary_Iterator) return Boolean is
    begin
-      if Self.Position = -1
-        or else Self.Value = null
-        or else Self.Value = Py_None
-      then
-         return False;
-      end if;
-
-      --  For backward compatibility, accept these as "False" values.
-      --  Don't check for unicode here, which was never supported anyway.
-
-      if PyString_Check (Self.Value)
-        and then (To_Lower (PyString_AsString (Self.Value)) = "false"
-                  or else PyString_AsString (Self.Value) = "0")
-      then
-         Insert_Text
-           (Scripting_Language (Self.Script), null,
-            "Warning: using string 'false' instead of"
-            & " boolean False is obsolescent");
-
-         return False;
-
-      else
-         --  Use standard python behavior
-         return PyObject_IsTrue (Self.Value);
-      end if;
+      return
+        Conditional_To
+          (Self.Position /= -1, Scripting_Language (Self.Script), Self.Value);
    end Value;
 
    -------------------------

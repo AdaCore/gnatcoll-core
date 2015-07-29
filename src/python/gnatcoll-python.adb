@@ -727,6 +727,20 @@ package body GNATCOLL.Python is
       return Result;
    end PyObject_GenericSetAttrString;
 
+   ---------------------
+   -- PyDict_Contains --
+   ---------------------
+
+   function PyDict_Contains
+     (Dict : PyDictObject; Key : PyObject) return Boolean
+   is
+      function Internal (Dict : PyObject; Key : PyObject) return Integer;
+      pragma Import (C, Internal, "PyDict_Contains");
+
+   begin
+      return Internal (Dict, Key) = 1;
+   end PyDict_Contains;
+
    -----------------
    -- PyDict_Next --
    -----------------

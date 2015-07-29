@@ -612,6 +612,10 @@ package GNATCOLL.Python is
    function PyDict_New return PyDictObject;
    --  Create a new empty dictionary
 
+   function PyDict_Contains
+     (Dict : PyDictObject; Key : PyObject) return Boolean;
+   --  Determine if dictionary contains key
+
    function PyDict_SetItemString
      (Dict : PyDictObject;
       Key  : Interfaces.C.Strings.chars_ptr;

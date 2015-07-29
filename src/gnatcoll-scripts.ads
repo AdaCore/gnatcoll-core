@@ -554,6 +554,50 @@ package GNATCOLL.Scripts is
    --  Returns an iterator for the given dictionary. The returned iterator
    --  doesn't point to any pair in dictionary until the first call to Next
 
+   function Has_Key
+     (Self : Dictionary_Instance; Key : String) return Boolean is abstract;
+   function Has_Key
+     (Self : Dictionary_Instance; Key : Integer) return Boolean is abstract;
+   function Has_Key
+     (Self : Dictionary_Instance; Key : Float) return Boolean is abstract;
+   function Has_Key
+     (Self : Dictionary_Instance; Key : Boolean) return Boolean is abstract;
+   --  Returns True when dictionary has value for given key
+
+   function Value
+     (Self : Dictionary_Instance; Key : String) return String is abstract;
+   function Value
+     (Self : Dictionary_Instance; Key : Integer) return String is abstract;
+   function Value
+     (Self : Dictionary_Instance; Key : Float) return String is abstract;
+   function Value
+     (Self : Dictionary_Instance; Key : Boolean) return String is abstract;
+   function Value
+     (Self : Dictionary_Instance; Key : String) return Integer is abstract;
+   function Value
+     (Self : Dictionary_Instance; Key : Integer) return Integer is abstract;
+   function Value
+     (Self : Dictionary_Instance; Key : Float) return Integer is abstract;
+   function Value
+     (Self : Dictionary_Instance; Key : Boolean) return Integer is abstract;
+   function Value
+     (Self : Dictionary_Instance; Key : String) return Float is abstract;
+   function Value
+     (Self : Dictionary_Instance; Key : Integer) return Float is abstract;
+   function Value
+     (Self : Dictionary_Instance; Key : Float) return Float is abstract;
+   function Value
+     (Self : Dictionary_Instance; Key : Boolean) return Float is abstract;
+   function Value
+     (Self : Dictionary_Instance; Key : String) return Boolean is abstract;
+   function Value
+     (Self : Dictionary_Instance; Key : Integer) return Boolean is abstract;
+   function Value
+     (Self : Dictionary_Instance; Key : Float) return Boolean is abstract;
+   function Value
+     (Self : Dictionary_Instance; Key : Boolean) return Boolean is abstract;
+   --  Returns value of given key
+
    function Next
      (Self : not null access Dictionary_Iterator) return Boolean is abstract;
    --  Moves iterator to the next pair in dictionary. Returns False when there
