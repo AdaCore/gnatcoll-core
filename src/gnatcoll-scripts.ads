@@ -534,6 +534,52 @@ package GNATCOLL.Scripts is
      (Data : in out Callback_Data; Value : List_Instance) is abstract;
    --  Set the value returned to the shell
 
+   ------------------
+   -- Dictionaries --
+   ------------------
+
+   type Dictionary_Instance is abstract tagged null record;
+
+   type Dictionary_Iterator is abstract tagged null record;
+
+   function Nth_Arg
+     (Data : Callback_Data; N : Positive)
+      return Dictionary_Instance'Class is abstract;
+   --  Get a dictionary parameter. The default value is always the empty
+   --  dictionary, but you can still get an Invalid_Parameter exception if the
+   --  corresponding parameter is not a list.
+
+   function Iterator
+     (Self : Dictionary_Instance) return Dictionary_Iterator'Class is abstract;
+   --  Returns an iterator for the given dictionary. The returned iterator
+   --  doesn't point to any pair in dictionary until the first call to Next
+
+   function Next
+     (Self : not null access Dictionary_Iterator) return Boolean is abstract;
+   --  Moves iterator to the next pair in dictionary. Returns False when there
+   --  are no more pairs available. This allows to minimize code to iterator
+   --  over dictionaries:
+   --
+   --    declare
+   --       Iter : aliased Dictionary_Iterator'Class := Dict.Iterator;
+   --    begin
+   --       while Next (Iter) loop
+   --          ...
+   --       end loop;
+   --    end;
+
+   function Key (Self : Dictionary_Iterator) return String is abstract;
+   function Key (Self : Dictionary_Iterator) return Integer is abstract;
+   function Key (Self : Dictionary_Iterator) return Float is abstract;
+   function Key (Self : Dictionary_Iterator) return Boolean is abstract;
+   --  Returns value of current pair in dictionary
+
+   function Value (Self : Dictionary_Iterator) return String is abstract;
+   function Value (Self : Dictionary_Iterator) return Integer is abstract;
+   function Value (Self : Dictionary_Iterator) return Float is abstract;
+   function Value (Self : Dictionary_Iterator) return Boolean is abstract;
+   --  Returns value of current pair in dictionary
+
    ---------------------
    -- Class instances --
    ---------------------

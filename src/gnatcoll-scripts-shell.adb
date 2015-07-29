@@ -1356,6 +1356,18 @@ package body GNATCOLL.Scripts.Shell is
    -- Nth_Arg --
    -------------
 
+   overriding function Nth_Arg
+     (Data : Shell_Callback_Data; N : Positive)
+      return Dictionary_Instance'Class is
+   begin
+      raise Program_Error with "Dictionary is not supported by language";
+      return Nth_Arg (Data, N);
+   end Nth_Arg;
+
+   -------------
+   -- Nth_Arg --
+   -------------
+
    function Nth_Arg
      (Data : Shell_Callback_Data; N : Positive; Success : access Boolean)
       return String

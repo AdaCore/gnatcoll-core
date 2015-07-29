@@ -274,6 +274,9 @@ private
      (Data : Shell_Callback_Data; N : Positive)
       return List_Instance'Class;
    overriding function Nth_Arg
+     (Data : Shell_Callback_Data; N : Positive)
+      return Dictionary_Instance'Class;
+   overriding function Nth_Arg
      (Data : Shell_Callback_Data; N : Positive; Default : String)
       return String;
    overriding function Nth_Arg

@@ -327,6 +327,44 @@ package body GNATCOLL.Scripts.Python is
    --  If there is no module specified, the object is looked for in the default
    --  module, or the builtins.
 
+   ------------------
+   -- Dictionaries --
+   ------------------
+
+   type Python_Dictionary_Instance is new Dictionary_Instance with record
+      Script : Python_Scripting;
+      Dict   : PyObject;
+   end record;
+
+   type Python_Dictionary_Iterator is new Dictionary_Iterator with record
+      Script   : Python_Scripting;
+      Dict     : PyObject;
+      Position : Natural := 0;
+      Key      : PyObject;
+      Value    : PyObject;
+   end record;
+
+   function Iterator
+     (Self : Python_Dictionary_Instance) return Dictionary_Iterator'Class;
+   --  Returns iterator for given dictionary
+
+   function Next
+     (Self : not null access Python_Dictionary_Iterator) return Boolean;
+   --  Moves iterator to next pair in dictionary. Returns False when where is
+   --  no more pairs available.
+
+   function Key (Self : Python_Dictionary_Iterator) return String;
+   function Key (Self : Python_Dictionary_Iterator) return Integer;
+   function Key (Self : Python_Dictionary_Iterator) return Float;
+   function Key (Self : Python_Dictionary_Iterator) return Boolean;
+   --  Returns value of current pair in dictionary
+
+   function Value (Self : Python_Dictionary_Iterator) return String;
+   function Value (Self : Python_Dictionary_Iterator) return Integer;
+   function Value (Self : Python_Dictionary_Iterator) return Float;
+   function Value (Self : Python_Dictionary_Iterator) return Boolean;
+   --  Returns value of current pair in dictionary
+
    --------------------
    -- Block_Commands --
    --------------------
@@ -2293,6 +2331,40 @@ package body GNATCOLL.Scripts.Python is
    -- Nth_Arg --
    -------------
 
+   overriding function Nth_Arg
+     (Data : Python_Callback_Data; N : Positive)
+      return Dictionary_Instance'Class
+   is
+      Item       : PyObject;
+      Success    : Boolean;
+      Dictionary : Python_Dictionary_Instance;
+
+   begin
+      Dictionary.Script := Data.Script;
+
+      Get_Param (Data, N, Item, Success);
+
+      if not Success then
+         Dictionary.Dict := PyDict_New;  --  An empty dictionary
+
+      else
+         if not PyDict_Check (Item) then
+            Raise_Exception
+              (Invalid_Parameter'Identity,
+               "Parameter" & Integer'Image (N) & " should be dictionary");
+         end if;
+
+         Dictionary.Dict := Item;  --   Item is a borrowed reference ?
+         Py_INCREF (Item);         --   so we just increase the refcount
+      end if;
+
+      return Dictionary;
+   end Nth_Arg;
+
+   -------------
+   -- Nth_Arg --
+   -------------
+
    function Nth_Arg
      (Data : Python_Callback_Data; N : Positive; Success : access Boolean)
       return String
@@ -3827,6 +3899,243 @@ package body GNATCOLL.Scripts.Python is
 
       return List;
    end Return_Value;
+
+   --------------
+   -- Iterator --
+   --------------
+
+   function Iterator
+     (Self : Python_Dictionary_Instance) return Dictionary_Iterator'Class is
+   begin
+      return
+        Python_Dictionary_Iterator'
+          (Script   => Self.Script,
+           Dict     => Self.Dict,
+           Position => 0,
+           Key      => null,
+           Value    => null);
+   end Iterator;
+
+   ----------
+   -- Next --
+   ----------
+
+   function Next
+     (Self : not null access Python_Dictionary_Iterator) return Boolean is
+   begin
+      if Self.Position /= -1 then
+         PyDict_Next (Self.Dict, Self.Position, Self.Key, Self.Value);
+      end if;
+
+      return Self.Position /= -1;
+   end Next;
+
+   ---------
+   -- Key --
+   ---------
+
+   function Key (Self : Python_Dictionary_Iterator) return String is
+   begin
+      if Self.Position = -1
+        or else Self.Key = null
+        or else Self.Key = Py_None
+      then
+         return "";
+      end if;
+
+      if PyString_Check (Self.Key) then
+         return PyString_AsString (Self.Key);
+
+      elsif PyUnicode_Check (Self.Key) then
+         return Unicode_AsString (Self.Key, "utf-8");
+
+      else
+         raise Invalid_Parameter with "Key should be a string or unicode";
+      end if;
+   end Key;
+
+   ---------
+   -- Key --
+   ---------
+
+   function Key (Self : Python_Dictionary_Iterator) return Integer is
+   begin
+      if Self.Position = -1
+        or else Self.Key = null
+        or else Self.Key = Py_None
+      then
+         return 0;
+      end if;
+
+      if not PyInt_Check (Self.Key) then
+         raise Invalid_Parameter with "Key should be an integer";
+
+      else
+         return Integer (PyInt_AsLong (Self.Key));
+      end if;
+   end Key;
+
+   ---------
+   -- Key --
+   ---------
+
+   function Key (Self : Python_Dictionary_Iterator) return Float is
+   begin
+      if Self.Position = -1
+        or else Self.Key = null
+        or else Self.Key = Py_None
+      then
+         return 0.0;
+      end if;
+
+      if not PyFloat_Check (Self.Key) then
+         if PyInt_Check (Self.Key) then
+            return Float (PyInt_AsLong (Self.Key));
+         else
+            raise Invalid_Parameter with "Key should be a float";
+         end if;
+
+      else
+         return Float (PyFloat_AsDouble (Self.Key));
+      end if;
+   end Key;
+
+   ---------
+   -- Key --
+   ---------
+
+   function Key (Self : Python_Dictionary_Iterator) return Boolean is
+   begin
+      if Self.Position = -1
+        or else Self.Key = null
+        or else Self.Key = Py_None
+      then
+         return False;
+      end if;
+
+      --  For backward compatibility, accept these as "False" values.
+      --  Don't check for unicode here, which was never supported anyway.
+
+      if PyString_Check (Self.Key)
+        and then (To_Lower (PyString_AsString (Self.Key)) = "false"
+                  or else PyString_AsString (Self.Key) = "0")
+      then
+         Insert_Text
+           (Scripting_Language (Self.Script), null,
+            "Warning: using string 'false' instead of"
+            & " boolean False is obsolescent");
+
+         return False;
+
+      else
+         --  Use standard python behavior
+         return PyObject_IsTrue (Self.Key);
+      end if;
+   end Key;
+
+   -----------
+   -- Value --
+   -----------
+
+   function Value (Self : Python_Dictionary_Iterator) return String is
+   begin
+      if Self.Position = -1
+        or else Self.Value = null
+        or else Self.Value = Py_None
+      then
+         return "";
+      end if;
+
+      if PyString_Check (Self.Value) then
+         return PyString_AsString (Self.Value);
+
+      elsif PyUnicode_Check (Self.Value) then
+         return Unicode_AsString (Self.Value, "utf-8");
+
+      else
+         raise Invalid_Parameter
+           with "Value should be a string or unicode";
+      end if;
+   end Value;
+
+   -----------
+   -- Value --
+   -----------
+
+   function Value (Self : Python_Dictionary_Iterator) return Integer is
+   begin
+      if Self.Position = -1
+        or else Self.Value = null
+        or else Self.Value = Py_None
+      then
+         return 0;
+      end if;
+
+      if not PyInt_Check (Self.Value) then
+         raise Invalid_Parameter with "Value should be an integer";
+
+      else
+         return Integer (PyInt_AsLong (Self.Value));
+      end if;
+   end Value;
+
+   -----------
+   -- Value --
+   -----------
+
+   function Value (Self : Python_Dictionary_Iterator) return Float is
+   begin
+      if Self.Position = -1
+        or else Self.Value = null
+        or else Self.Value = Py_None
+      then
+         return 0.0;
+      end if;
+
+      if not PyFloat_Check (Self.Value) then
+         if PyInt_Check (Self.Value) then
+            return Float (PyInt_AsLong (Self.Value));
+         else
+            raise Invalid_Parameter with "Value should be a float";
+         end if;
+
+      else
+         return Float (PyFloat_AsDouble (Self.Value));
+      end if;
+   end Value;
+
+   -----------
+   -- Value --
+   -----------
+
+   function Value (Self : Python_Dictionary_Iterator) return Boolean is
+   begin
+      if Self.Position = -1
+        or else Self.Value = null
+        or else Self.Value = Py_None
+      then
+         return False;
+      end if;
+
+      --  For backward compatibility, accept these as "False" values.
+      --  Don't check for unicode here, which was never supported anyway.
+
+      if PyString_Check (Self.Value)
+        and then (To_Lower (PyString_AsString (Self.Value)) = "false"
+                  or else PyString_AsString (Self.Value) = "0")
+      then
+         Insert_Text
+           (Scripting_Language (Self.Script), null,
+            "Warning: using string 'false' instead of"
+            & " boolean False is obsolescent");
+
+         return False;
+
+      else
+         --  Use standard python behavior
+         return PyObject_IsTrue (Self.Value);
+      end if;
+   end Value;
 
    -------------------------
    -- Begin_Allow_Threads --

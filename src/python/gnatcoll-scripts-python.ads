@@ -401,6 +401,9 @@ private
       Default : Subprogram_Type) return Subprogram_Type;
    overriding function Nth_Arg
      (Data : Python_Callback_Data; N : Positive) return List_Instance'Class;
+   overriding function Nth_Arg
+     (Data : Python_Callback_Data; N : Positive)
+      return Dictionary_Instance'Class;
    overriding procedure Set_Error_Msg
      (Data : in out Python_Callback_Data; Msg : String);
    overriding procedure Set_Return_Value_As_List
