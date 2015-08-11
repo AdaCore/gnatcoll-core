@@ -23,7 +23,7 @@
 
 --  A symbol table
 
---  Similar strings are always represented with the same pointer, thus
+--  Equal strings are always represented with the same pointer, thus
 --  reducing the amount of memory to store multiple instances of the same
 --  string, and speeding up comparison (since you only need to compare the
 --  pointer, not the string itself).
