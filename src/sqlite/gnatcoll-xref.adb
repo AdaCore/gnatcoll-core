@@ -1946,8 +1946,21 @@ package body GNATCOLL.Xref is
             --  Operators are quoted
 
             Index := Index + 1;
-
             while Str (Index) /= '"' loop
+               Index := Index + 1;
+            end loop;
+            Index := Index + 1;   --  skip closing quote
+            return;
+         end if;
+
+         if Str (Index) = ''' then
+            --  An enumeration for characters inserts the characters in the
+            --  ALI file (O730-027):
+            --    type Foo_Type is ('1', '2');
+            --    8n7*'1'{6E9}
+            --    8n7*'2'{6E9}
+            Index := Index + 1;
+            while Str (Index) /= ''' loop
                Index := Index + 1;
             end loop;
             Index := Index + 1;   --  skip closing quote
