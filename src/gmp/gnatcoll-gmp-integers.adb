@@ -771,7 +771,7 @@ package body GNATCOLL.GMP.Integers is
    -- Image --
    -----------
 
-   function Image (This : Big_Integer;  Base : Positive := 10) return String is
+   function Image (This : Big_Integer; Base : Integer := 10) return String is
       use Interfaces.C, Interfaces.C.Strings;
 
       Number_Digits : constant size_t := mpz_sizeinbase

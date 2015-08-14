@@ -255,7 +255,7 @@ package GNATCOLL.GMP.Integers is
 
    --  Miscellaneous functionality
 
-   function Image (This : Big_Integer;  Base : Positive := 10) return String;
+   function Image (This : Big_Integer; Base : Integer := 10) return String;
    --  Returns This as a string of digits in base Base.  The base argument
    --  may vary from 2 to 62 or from -2 to -36.
    --
