@@ -27,23 +27,19 @@
 --       of the Project Manager.
 --     - subprograms that are usually only used by specialized tools.
 
-pragma Warnings (Off);
-pragma Warnings (Off, "*license of withed unit*");
-with Prj; use Prj;
-pragma Warnings (On, "*license of withed unit*");
-pragma Warnings (On);
+with GPR; use GPR;
 
 package GNATCOLL.Projects.Aux is
 
    function To_Project_Id
      (Project : Projects.Project_Type)
-      return Prj.Project_Id;
+      return GPR.Project_Id;
    pragma Inline (To_Project_Id);
    --  Give access to the Project_Id of a project
 
    function Project_Tree_Ref_Of
      (Project : Projects.Project_Type)
-      return Prj.Project_Tree_Ref;
+      return GPR.Project_Tree_Ref;
    pragma Inline (Project_Tree_Ref_Of);
    --  Give access to the Project_Tree_Ref of a project
 

@@ -1,0 +1,108 @@
+------------------------------------------------------------------------------
+--                             G N A T C O L L                              --
+--                                                                          --
+--                      Copyright (C) 2015, AdaCore                         --
+--                                                                          --
+-- This library is free software;  you can redistribute it and/or modify it --
+-- under terms of the  GNU General Public License  as published by the Free --
+-- Software  Foundation;  either version 3,  or (at your  option) any later --
+-- version. This library is distributed in the hope that it will be useful, --
+-- but WITHOUT ANY WARRANTY;  without even the implied warranty of MERCHAN- --
+-- TABILITY or FITNESS FOR A PARTICULAR PURPOSE.                            --
+--                                                                          --
+-- As a special exception under Section 7 of GPL version 3, you are granted --
+-- additional permissions described in the GCC Runtime Library Exception,   --
+-- version 3.1, as published by the Free Software Foundation.               --
+--                                                                          --
+-- You should have received a copy of the GNU General Public License and    --
+-- a copy of the GCC Runtime Library Exception along with this program;     --
+-- see the files COPYING3 and COPYING.RUNTIME respectively.  If not, see    --
+-- <http://www.gnu.org/licenses/>.                                          --
+--                                                                          --
+------------------------------------------------------------------------------
+
+with "../gnatcoll_shared";
+
+project GnatColl is
+   for Source_Dirs     use (".", "paragraph_filling");
+   for Library_Kind    use GnatColl_Shared.Library_Type;
+   for Object_Dir
+      use Gnatcoll_Shared'Object_Dir & "/gnatcoll/" & Project'Library_Kind;
+   for Library_Dir
+      use Gnatcoll_Shared'Library_Dir & "/gnatcoll/" & Project'Library_Kind;
+   for Library_Name    use GnatColl_Shared.Name;
+   for Library_Version use
+      "lib" & Project'Library_Name
+      & GnatColl_Shared.So_Ext & "." & GnatColl_Shared.Version;
+   for Library_Options use GnatColl_Shared.Rss_Libs;
+
+   for Excluded_Source_Files use ("gnatcoll-projects.ads",
+                                  "gnatcoll-projects.adb",
+                                  "gnatcoll-projects-normalize.ads",
+                                  "gnatcoll-projects-normalize.adb",
+                                  "gnatcoll-projects-aux.ads",
+                                  "gnatcoll-projects-aux.adb",
+                                  "gnatcoll-scripts-projects.ads",
+                                  "gnatcoll-scripts-projects.adb",
+                                  "gnatcoll-scripts-files.ads",
+                                  "gnatcoll-scripts-files.adb");
+
+   for Languages use ("Ada", "C");
+
+   case GnatColl_Shared.Syslog is
+      when "no" =>
+         for Source_Dirs use Project'Source_Dirs & ("nosyslog");
+      when "yes" =>
+         for Source_Dirs use Project'Source_Dirs & ("syslog");
+   end case;
+
+   package Builder renames GnatColl_Shared.Builder;
+
+   package Compiler is
+      for Switches ("Ada") use GnatColl_Shared.Compiler'Switches ("Ada");
+      for Switches ("C") use GnatColl_Shared.Compiler'Switches ("C");
+      for Switches ("sinfo.adb") use Compiler'Switches ("Ada") & ("-gnatg");
+
+      case GnatColl_Shared.Atomics is
+         when "intrinsic" =>
+            for Switches ("C") use Compiler'Switches ("C") & ("-DATOMIC_INTRINSICS");
+         when "mutex" =>
+            null;
+      end case;
+   end Compiler;
+
+   package Ide renames GnatColl_Shared.Ide;
+
+   package Naming is
+      case GnatColl_Shared.OS is
+         when "unix" =>
+            for Specification  ("GNATCOLL.Mmap.System")
+              use "gnatcoll-mmap-system__unix.ads";
+            for Implementation ("GNATCOLL.Mmap.System")
+              use "gnatcoll-mmap-system__unix.adb";
+            for Implementation ("GNATCOLL.IO.Native.Codec")
+              use "gnatcoll-io-native-codec__unix.adb";
+         when "Windows_NT" =>
+            for Specification  ("GNATCOLL.Mmap.System")
+              use "gnatcoll-mmap-system__win32.ads";
+            for Implementation ("GNATCOLL.Mmap.System")
+              use "gnatcoll-mmap-system__win32.adb";
+            for Implementation ("GNATCOLL.IO.Native.Codec")
+              use "gnatcoll-io-native-codec__win32.adb";
+      end case;
+
+      case GnatColl_Shared.Atomics is
+         when "intrinsic" =>
+            for Implementation ("GNATCOLL.Atomic")
+               use "gnatcoll-atomic__intrinsic.ada";
+         when "mutex" =>
+            for Implementation ("GNATCOLL.Atomic")
+               use "gnatcoll-atomic__mutex.ada";
+      end case;
+   end Naming;
+
+   package Linker is
+      for Linker_Options
+        use GnatColl_Shared.Rss_Libs & GnatColl_Shared.System_Linker_Flags;
+   end Linker;
+end GnatColl;

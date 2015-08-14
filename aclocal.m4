@@ -19,18 +19,6 @@ AC_DEFUN(AM_SYSTEM_LINK_SWITCHES,
 ])
 
 ##############################################################
-# Copy a file, as part of config.status
-#  AM_LINK_FILE(SOURCE,DEST)
-##############################################################
-
-AC_DEFUN(AM_LINK_FILE,
-[
-   AC_CONFIG_COMMANDS([$2],
-                      [rm -f $2
-                       cp -f $1 $2], [$3])
-])
-
-##############################################################
 # Checking for build type
 # The following variable is exported by configure:
 #   @BUILD_TYPE@: either "Production" or "Debug"
@@ -115,37 +103,23 @@ end Check;
 # Check whether we have the GNAT sources available
 # The following variables are exported by configure:
 #   @WITH_PROJECTS@: "yes" or "no"
-#   GNAT_SOURCES: "gnat_util", "copy", "no"
 #############################################################
 
 AC_DEFUN(AM_GNAT_SOURCES,
 [
-  AC_MSG_CHECKING(whether gnat sources are found)
-  if test -d gnat_src; then
-     AC_MSG_RESULT(yes)
+  AC_MSG_CHECKING(whether libgpr exists)
+  AM_HAS_GNAT_PROJECT(gpr)
+  if test "$HAVE_GNAT_PROJECT_gpr" = "yes"; then
      HAS_GNAT_SOURCES=yes
-     GNAT_SOURCES=copy
   else
-     AC_MSG_RESULT(no)
-
-     AC_MSG_CHECKING(whether gnat_util exists)
-     AM_HAS_GNAT_PROJECT(gnat_util)
-     if test "$HAVE_GNAT_PROJECT_gnat_util" = "yes"; then
-        HAS_GNAT_SOURCES=yes
-        GNAT_SOURCES=gnat_util
-     else
-        HAS_GNAT_SOURCES=no
-        GNAT_SOURCES=copy
-     fi
+     HAS_GNAT_SOURCES=no
   fi
-
-  AC_SUBST(GNAT_SOURCES)
 ])
 
 AC_DEFUN(AM_PROJECTS,
 [
   # Allow the user to disable projects support so that gnatcoll does not depend
-  # on the installed gnat compiler (gnat_utils project)
+  # on the installed gnat compiler (libgprs project)
   AC_ARG_ENABLE(projects,
     AC_HELP_STRING(
       [--disable-projects],
