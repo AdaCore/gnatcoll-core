@@ -31,12 +31,16 @@ with GNATCOLL.Traces;           use GNATCOLL.Traces;
 with GNATCOLL.Utils;            use GNATCOLL.Utils;
 with GNATCOLL.VFS;              use GNATCOLL.VFS;
 with GNATCOLL.VFS_Utils;        use GNATCOLL.VFS_Utils;
-with GPR;                       use GPR;
-with GPR.Output;                use GPR.Output;
-with GPR.Com;                   use GPR.Com;
-with GPR.Tree;                  use GPR.Tree;
-with GPR.Snames;
-with GPR.Names;                 use GPR.Names;
+with Namet;                     use Namet;
+with Output;                    use Output;
+pragma Warnings (Off);
+pragma Warnings (Off, "*license of withed unit*");
+with Prj.Com;                   use Prj.Com;
+with Prj.Tree;                  use Prj, Prj.Tree;
+pragma Warnings (On, "*license of withed unit*");
+pragma Warnings (On);
+with Snames;
+with Types;                     use Types;
 with GNAT.Strings;              use GNAT.Strings;
 
 package body GNATCOLL.Projects.Normalize is
@@ -46,9 +50,9 @@ package body GNATCOLL.Projects.Normalize is
      Create ("UNEXPECTED_EXCEPTION", Default => On);
 
    type External_Variable_Value is record
-      Variable_Type  : GPR.Project_Node_Id;
-      Variable_Name  : GPR.Name_Id;
-      Variable_Value : GPR.Name_Id;
+      Variable_Type  : Prj.Tree.Project_Node_Id;
+      Variable_Name  : Namet.Name_Id;
+      Variable_Value : Namet.Name_Id;
       Negated        : Boolean := False;
    end record;
    --  Description for one possible value of an external variable. Through an
@@ -104,9 +108,9 @@ package body GNATCOLL.Projects.Normalize is
      (Project_Node_Array, Project_Node_Array_Access);
 
    No_Value : constant External_Variable_Value :=
-     (Variable_Type  => GPR.Empty_Project_Node,
-      Variable_Name  => GPR.No_Name,
-      Variable_Value => GPR.No_Name,
+     (Variable_Type  => Prj.Tree.Empty_Node,
+      Variable_Name  => Namet.No_Name,
+      Variable_Value => Namet.No_Name,
       Negated        => False);
 
    All_Case_Items : constant External_Variable_Value_Array (1 .. 0) :=
@@ -160,15 +164,15 @@ package body GNATCOLL.Projects.Normalize is
    --  Find a node given its name
 
    type Matching_Item_Callback is access
-     procedure (Item : GPR.Project_Node_Id);
+     procedure (Item : Prj.Tree.Project_Node_Id);
    --  A callback function called for each case item that matches a specific
    --  set of values
 
    procedure For_Each_Matching_Case_Item
      (Tree    : Project_Node_Tree_Ref;
-      Project : GPR.Project_Node_Id;
-      Pkg     : GPR.Project_Node_Id := GPR.Empty_Project_Node;
-      Case_Construct : in out GPR.Project_Node_Id;
+      Project : Prj.Tree.Project_Node_Id;
+      Pkg     : Prj.Tree.Project_Node_Id := Prj.Tree.Empty_Node;
+      Case_Construct : in out Prj.Tree.Project_Node_Id;
       Values  : External_Variable_Value_Array;
       Action  : Matching_Item_Callback);
    --  Execute Action for all the case items in Project or Pkg that match
@@ -201,9 +205,9 @@ package body GNATCOLL.Projects.Normalize is
    --  project if no variable was found that already referenced Name.
 
    procedure Add_Case_Item
-     (Tree      : GPR.Tree.Project_Node_Tree_Ref;
-      Case_Node : GPR.Project_Node_Id;
-      Choice    : GPR.Name_Id);
+     (Tree      : Prj.Tree.Project_Node_Tree_Ref;
+      Case_Node : Prj.Tree.Project_Node_Id;
+      Choice    : Namet.Name_Id);
    --  Create a new case item in case_node (which is associated with a
    --  "case var is" statement
 
@@ -225,7 +229,7 @@ package body GNATCOLL.Projects.Normalize is
    procedure Post_Process_After_Clone
      (Tree    : Project_Node_Tree_Ref;
       Project : Project_Node_Id;
-      Pkg     : Project_Node_Id := Empty_Project_Node);
+      Pkg     : Project_Node_Id := Empty_Node);
    --  Post-process a project, and make sure that all the internal lists for
    --  variables, packages, types,... are properly chained up, and that all the
    --  variables reference a type declaration in Project (and not in some other
@@ -235,7 +239,7 @@ package body GNATCOLL.Projects.Normalize is
 
    function Find_Package_Declaration
      (Tree    : Project_Node_Tree_Ref;
-      Project : Project_Node_Id; Name : GPR.Name_Id) return Project_Node_Id;
+      Project : Project_Node_Id; Name : Namet.Name_Id) return Project_Node_Id;
    --  Return the package whose name is Name, or Empty_Node if there is none
 
    function Find_Project_Of_Package
@@ -248,8 +252,8 @@ package body GNATCOLL.Projects.Normalize is
 
    function Find_Case_Statement
      (Tree    : Project_Node_Tree_Ref;
-      Project : GPR.Project_Node_Id;
-      Pkg     : GPR.Project_Node_Id := GPR.Empty_Project_Node)
+      Project : Prj.Tree.Project_Node_Id;
+      Pkg     : Prj.Tree.Project_Node_Id := Prj.Tree.Empty_Node)
       return Project_Node_Id;
    --  Return the first case statement in Project/Pkg.
    --  In a normalized project, this returns the only case statement that
@@ -261,8 +265,8 @@ package body GNATCOLL.Projects.Normalize is
       Pkg                : Project_Node_Id;
       Case_Construct     : in out Project_Node_Id;
       Scenario_Variables : Scenario_Variable_Array;
-      Attribute_Name     : GPR.Name_Id;
-      Attribute_Index    : GPR.Name_Id := No_Name);
+      Attribute_Name     : Namet.Name_Id;
+      Attribute_Index    : Namet.Name_Id := No_Name);
    --  Move any declaration for the attribute from the common part of the
    --  project into each branch of the nested case construct. Nothing is done
    --  if there is no such declaration.
@@ -276,9 +280,9 @@ package body GNATCOLL.Projects.Normalize is
 
    procedure For_Each_Scenario_Case_Item
      (Tree    : Project_Node_Tree_Ref;
-      Project            : GPR.Project_Node_Id;
-      Pkg                : GPR.Project_Node_Id := GPR.Empty_Project_Node;
-      Case_Construct     : in out GPR.Project_Node_Id;
+      Project            : Prj.Tree.Project_Node_Id;
+      Pkg                : Prj.Tree.Project_Node_Id := Prj.Tree.Empty_Node;
+      Case_Construct     : in out Prj.Tree.Project_Node_Id;
       Scenario_Variables : GNATCOLL.Projects.Scenario_Variable_Array;
       Action             : Matching_Item_Callback);
    --  Same above, but it works directly for the current scenario (ie its gets
@@ -315,8 +319,8 @@ package body GNATCOLL.Projects.Normalize is
    function Find_Last_Declaration_Of
      (Tree       : Project_Node_Tree_Ref;
       Parent     : Project_Node_Id;
-      Attr_Name  : GPR.Name_Id;
-      Attr_Index : GPR.Name_Id := No_Name) return Project_Node_Id;
+      Attr_Name  : Namet.Name_Id;
+      Attr_Index : Namet.Name_Id := No_Name) return Project_Node_Id;
    --  Find the last declaration for the attribute Attr_Name, in the
    --  declarative list contained in Parent.
    --  The returned value is the last such declaration, or Empty_Node if there
@@ -430,13 +434,13 @@ package body GNATCOLL.Projects.Normalize is
          case Kind_Of (Node, Tree) is
             when N_External_Value =>
                return String_Value_Of
-                 (GPR.Tree.External_Reference_Of (Node, Tree), Tree) =
+                 (Prj.Tree.External_Reference_Of (Node, Tree), Tree) =
                  Ext_Variable_Name;
 
             when N_Variable_Reference =>
                for J in Variable_Nodes'First .. Variable_Nodes_Last loop
-                  if GPR.Tree.Name_Of (Node, Tree) =
-                    GPR.Tree.Name_Of (Variable_Nodes (J), Tree)
+                  if Prj.Tree.Name_Of (Node, Tree) =
+                    Prj.Tree.Name_Of (Variable_Nodes (J), Tree)
                   then
                      return True;
                   end if;
@@ -459,9 +463,9 @@ package body GNATCOLL.Projects.Normalize is
          Expr : Project_Node_Id := Expression;
          Term : Project_Node_Id;
       begin
-         while Expr /= Empty_Project_Node loop
+         while Expr /= Empty_Node loop
             Term := First_Term (Expr, Tree);
-            while Term /= Empty_Project_Node loop
+            while Term /= Empty_Node loop
                case Kind_Of (Current_Term (Term, Tree), Tree) is
 
                   --  Handles ("-g" & A, "-O2" & external ("A"))
@@ -476,7 +480,7 @@ package body GNATCOLL.Projects.Normalize is
                   when N_External_Value =>
                      if Is_Reference_To_Ext (Current_Term (Term, Tree)) then
                         Action (Project, Term, Current_Term (Term, Tree),
-                                Empty_Project_Node);
+                                Empty_Node);
                      end if;
 
                   --  Handles "-g" & Var
@@ -484,7 +488,7 @@ package body GNATCOLL.Projects.Normalize is
                   when N_Variable_Reference =>
                      if Is_Reference_To_Ext (Current_Term (Term, Tree)) then
                         Action (Project, Term, Current_Term (Term, Tree),
-                                Empty_Project_Node);
+                                Empty_Node);
                      end if;
 
                   when others =>
@@ -508,14 +512,14 @@ package body GNATCOLL.Projects.Normalize is
          Decl, Current, Case_Item, Choice : Project_Node_Id;
          Match : Boolean;
       begin
-         if Pkg_Or_Case_Item /= Empty_Project_Node then
+         if Pkg_Or_Case_Item /= Empty_Node then
             Decl := First_Declarative_Item_Of (Pkg_Or_Case_Item, Tree);
          else
             Decl := First_Declarative_Item_Of
               (Project_Declaration_Of (Project, Tree), Tree);
          end if;
 
-         while Decl /= Empty_Project_Node loop
+         while Decl /= Empty_Node loop
             Current := Current_Item_Node (Decl, Tree);
             case Kind_Of (Current, Tree) is
                when N_Typed_Variable_Declaration =>
@@ -528,10 +532,9 @@ package body GNATCOLL.Projects.Normalize is
                        (Variable_Nodes, Variable_Nodes_Last, Current);
 
                      Action
-                       (Project, Empty_Project_Node,
-                        String_Type_Of (Current, Tree),
-                        Empty_Project_Node);
-                     Action (Project, Decl, Current, Empty_Project_Node);
+                       (Project, Empty_Node, String_Type_Of (Current, Tree),
+                        Empty_Node);
+                     Action (Project, Decl, Current, Empty_Node);
                   end if;
 
                   Process_Expression (Project, Expression_Of (Current, Tree));
@@ -542,17 +545,17 @@ package body GNATCOLL.Projects.Normalize is
                   then
                      Case_Item := First_Case_Item_Of (Current, Tree);
 
-                     while Case_Item /= Empty_Project_Node loop
+                     while Case_Item /= Empty_Node loop
                         Choice := First_Choice_Of (Case_Item, Tree);
 
                         --  If we have reached Empty_Node and nothing matched
                         --  before, then that is the case item we want to keep.
                         --  This corresponds to "when others"
-                        Match := Choice = Empty_Project_Node
+                        Match := Choice = Empty_Node
                           or else Specific_Choice = No_Name;
 
                         if not Match then
-                           while Choice /= Empty_Project_Node loop
+                           while Choice /= Empty_Node loop
                               if String_Value_Of (Choice, Tree) =
                                 Specific_Choice
                               then
@@ -574,7 +577,7 @@ package body GNATCOLL.Projects.Normalize is
 
                   else
                      Case_Item := First_Case_Item_Of (Current, Tree);
-                     while Case_Item /= Empty_Project_Node loop
+                     while Case_Item /= Empty_Node loop
                         Recurse_In_Project (Project, Case_Item);
                         Case_Item := Next_Case_Item (Case_Item, Tree);
                      end loop;
@@ -598,7 +601,7 @@ package body GNATCOLL.Projects.Normalize is
       Iter : Inner_Project_Iterator := Start (Root_Project);
    begin
       while Current (Iter) /= No_Project loop
-         Recurse_In_Project (Current (Iter).Node, Empty_Project_Node);
+         Recurse_In_Project (Current (Iter).Node, Empty_Node);
          Next (Iter);
       end loop;
       Free (Variable_Nodes);
@@ -616,7 +619,7 @@ package body GNATCOLL.Projects.Normalize is
       Tmp, Next : Project_Node_Id;
       Pkg       : Project_Node_Id := Project_Or_Package;
    begin
-      while Pkg /= Empty_Project_Node loop
+      while Pkg /= Empty_Node loop
          Tmp := First_Variable_Of (Pkg, Tree);
 
          if Tmp = Declaration then
@@ -625,7 +628,7 @@ package body GNATCOLL.Projects.Normalize is
          else
             loop
                Next := Next_Variable (Tmp, Tree);
-               exit when Next = Empty_Project_Node;
+               exit when Next = Empty_Node;
 
                if Next = Declaration then
                   Set_Next_Variable (Tmp, Tree, Next_Variable (Next, Tree));
@@ -669,9 +672,9 @@ package body GNATCOLL.Projects.Normalize is
            (P, Tree, Next_Declarative_Item (Decl, Tree));
       end if;
 
-      while Decl /= Empty_Project_Node loop
+      while Decl /= Empty_Node loop
          Next := Next_Declarative_Item (Decl, Tree);
-         if Next /= Empty_Project_Node
+         if Next /= Empty_Node
            and then Current_Item_Node (Next, Tree) = Node
          then
             Set_Next_Declarative_Item
@@ -695,7 +698,7 @@ package body GNATCOLL.Projects.Normalize is
         (String_Type_Of (Variable, Tree), Tree);
       Choices_Count : Natural := 0;
    begin
-      while Choice /= Empty_Project_Node loop
+      while Choice /= Empty_Node loop
          Choices_Count := Choices_Count + 1;
          Choice        := Next_Literal_String (Choice, Tree);
       end loop;
@@ -706,7 +709,7 @@ package body GNATCOLL.Projects.Normalize is
       begin
          Choice := First_Literal_String
            (String_Type_Of (Variable, Tree), Tree);
-         while Choice /= Empty_Project_Node loop
+         while Choice /= Empty_Node loop
             Choices (Index) := String_Value_Of (Choice, Tree);
             Index := Index + 1;
             Choice := Next_Literal_String (Choice, Tree);
@@ -737,14 +740,14 @@ package body GNATCOLL.Projects.Normalize is
       Attribute_Index : Name_Id)
    is
       Decl     : Project_Node_Id := First_Declarative_Item_Of (Parent, Tree);
-      Previous : Project_Node_Id := Empty_Project_Node;
+      Previous : Project_Node_Id := Empty_Node;
    begin
-      while Decl /= Empty_Project_Node loop
+      while Decl /= Empty_Node loop
          if Attribute_Matches
            (Tree, Current_Item_Node (Decl, Tree),
             Attribute_Name, Attribute_Index)
          then
-            if Previous = Empty_Project_Node then
+            if Previous = Empty_Node then
                Set_First_Declarative_Item_Of
                  (Parent, Tree, Next_Declarative_Item (Decl, Tree));
             else
@@ -770,11 +773,11 @@ package body GNATCOLL.Projects.Normalize is
       Attr_Index : Name_Id := No_Name) return Project_Node_Id
    is
       Decl, Expr : Project_Node_Id;
-      Result     : Project_Node_Id := Empty_Project_Node;
+      Result     : Project_Node_Id := Empty_Node;
    begin
       Decl := First_Declarative_Item_Of (Parent, Tree);
 
-      while Decl /= Empty_Project_Node loop
+      while Decl /= Empty_Node loop
          Expr := Current_Item_Node (Decl, Tree);
 
          if Attribute_Matches (Tree, Expr, Attr_Name, Attr_Index) then
@@ -797,7 +800,7 @@ package body GNATCOLL.Projects.Normalize is
       Attribute_Index : Name_Id) return Boolean is
    begin
       return Kind_Of (Node, Tree) = N_Attribute_Declaration
-        and then GPR.Tree.Name_Of (Node, Tree) = Attribute_Name
+        and then Prj.Tree.Name_Of (Node, Tree) = Attribute_Name
         and then
         (Attribute_Index = Get_String (Any_Attribute)
          or else (Attribute_Index = No_Name
@@ -814,9 +817,9 @@ package body GNATCOLL.Projects.Normalize is
 
    procedure For_Each_Scenario_Case_Item
      (Tree               : Project_Node_Tree_Ref;
-      Project            : GPR.Project_Node_Id;
-      Pkg                : GPR.Project_Node_Id := GPR.Empty_Project_Node;
-      Case_Construct     : in out GPR.Project_Node_Id;
+      Project            : Prj.Tree.Project_Node_Id;
+      Pkg                : Prj.Tree.Project_Node_Id := Prj.Tree.Empty_Node;
+      Case_Construct     : in out Prj.Tree.Project_Node_Id;
       Scenario_Variables : Scenario_Variable_Array;
       Action             : Matching_Item_Callback)
    is
@@ -862,7 +865,7 @@ package body GNATCOLL.Projects.Normalize is
 
    function Find_Package_Declaration
      (Tree    : Project_Node_Tree_Ref;
-      Project : Project_Node_Id; Name : GPR.Name_Id)
+      Project : Project_Node_Id; Name : Namet.Name_Id)
       return Project_Node_Id is
    begin
       return Find_Node_By_Name (Tree, Project, N_Package_Declaration, Name);
@@ -881,7 +884,7 @@ package body GNATCOLL.Projects.Normalize is
    begin
       E := Expression_Of (Var_Or_Attribute, Tree);
 
-      if E = Empty_Project_Node then
+      if E = Empty_Node then
          Set_Expression_Of (Var_Or_Attribute, Tree, Expr);
 
       else
@@ -903,16 +906,16 @@ package body GNATCOLL.Projects.Normalize is
    procedure Post_Process_After_Clone
      (Tree    : Project_Node_Tree_Ref;
       Project : Project_Node_Id;
-      Pkg     : Project_Node_Id := Empty_Project_Node)
+      Pkg     : Project_Node_Id := Empty_Node)
    is
-      Last_Var     : Project_Node_Id := Empty_Project_Node;
-      Last_Type    : Project_Node_Id := Empty_Project_Node;
-      Last_Package : Project_Node_Id := Empty_Project_Node;
+      Last_Var     : Project_Node_Id := Empty_Node;
+      Last_Type    : Project_Node_Id := Empty_Node;
+      Last_Package : Project_Node_Id := Empty_Node;
       Decl_Item    : Project_Node_Id;
       Current_Node : Project_Node_Id;
 
    begin
-      if Pkg = Empty_Project_Node then
+      if Pkg = Empty_Node then
          Decl_Item := First_Declarative_Item_Of
            (Project_Declaration_Of (Project, Tree), Tree);
       else
@@ -920,11 +923,11 @@ package body GNATCOLL.Projects.Normalize is
          Decl_Item := First_Declarative_Item_Of (Pkg, Tree);
       end if;
 
-      while Decl_Item /= Empty_Project_Node loop
+      while Decl_Item /= Empty_Node loop
          Current_Node := Current_Item_Node (Decl_Item, Tree);
          case Kind_Of (Current_Node, Tree) is
             when N_Package_Declaration =>
-               if Last_Package /= Empty_Project_Node then
+               if Last_Package /= Empty_Node then
                   Set_Next_Package_In_Project
                     (Last_Package, Tree, Current_Node);
                   Last_Package := Current_Node;
@@ -936,15 +939,15 @@ package body GNATCOLL.Projects.Normalize is
                Post_Process_After_Clone (Tree, Project, Last_Package);
 
             when N_Variable_Declaration | N_Typed_Variable_Declaration =>
-               if Last_Var /= Empty_Project_Node then
+               if Last_Var /= Empty_Node then
                   Set_Next_Variable (Last_Var, Tree, Current_Node);
-                  Set_Next_Variable (Current_Node, Tree, Empty_Project_Node);
+                  Set_Next_Variable (Current_Node, Tree, Empty_Node);
                   Last_Var := Current_Node;
                else
                   Last_Var := Current_Node;
-                  Set_Next_Variable (Last_Var, Tree, Empty_Project_Node);
+                  Set_Next_Variable (Last_Var, Tree, Empty_Node);
 
-                  if Pkg /= Empty_Project_Node then
+                  if Pkg /= Empty_Node then
                      Tree.Project_Nodes.Table (Pkg).Variables := Last_Var;
                   else
                      Tree.Project_Nodes.Table (Project).Variables := Last_Var;
@@ -961,50 +964,44 @@ package body GNATCOLL.Projects.Normalize is
                      Find_Type_Declaration
                        (Tree,
                         Project,
-                        GPR.Tree.Name_Of
+                        Prj.Tree.Name_Of
                           (String_Type_Of (Current_Node, Tree), Tree)));
                end if;
 
             when N_Variable_Reference =>
-               if
-                 String_Type_Of (Current_Node, Tree) /= Empty_Project_Node
-               then
+               if String_Type_Of (Current_Node, Tree) /= Empty_Node then
                   Set_String_Type_Of
                     (Current_Node, Tree,
                      Find_Type_Declaration
                        (Tree,
                         Project,
-                        GPR.Tree.Name_Of (String_Type_Of (Current_Node, Tree),
+                        Prj.Tree.Name_Of (String_Type_Of (Current_Node, Tree),
                                           Tree)));
                end if;
 
-               if
-                 Package_Node_Of (Current_Node, Tree) /= Empty_Project_Node
-               then
+               if Package_Node_Of (Current_Node, Tree) /= Empty_Node then
                   Set_Package_Node_Of
                     (Current_Node, Tree,
                      Find_Package_Declaration
                        (Tree,
                         Project,
-                        GPR.Tree.Name_Of (Package_Node_Of (Current_Node, Tree),
+                        Prj.Tree.Name_Of (Package_Node_Of (Current_Node, Tree),
                                           Tree)));
                end if;
 
             when N_Attribute_Reference =>
-               if
-                 Package_Node_Of (Current_Node, Tree) /= Empty_Project_Node
-               then
+               if Package_Node_Of (Current_Node, Tree) /= Empty_Node then
                   Set_Package_Node_Of
                     (Current_Node, Tree,
                      Find_Package_Declaration
                        (Tree,
                         Project,
-                        GPR.Tree.Name_Of (Package_Node_Of (Current_Node, Tree),
+                        Prj.Tree.Name_Of (Package_Node_Of (Current_Node, Tree),
                                           Tree)));
                end if;
 
             when N_String_Type_Declaration =>
-               if Last_Type /= Empty_Project_Node then
+               if Last_Type /= Empty_Node then
                   Set_Next_String_Type (Last_Type, Tree, Current_Node);
                   Last_Type := Current_Node;
                else
@@ -1033,7 +1030,7 @@ package body GNATCOLL.Projects.Normalize is
       Case_Item : Project_Node_Id;
    begin
       Case_Item := First_Case_Item_Of (Case_Construction, Tree);
-      while Case_Item /= Empty_Project_Node loop
+      while Case_Item /= Empty_Node loop
          Add_In_Front (Tree, Case_Item, Clone_Node (Tree, Decl_List, True));
          Case_Item := Next_Case_Item (Case_Item, Tree);
       end loop;
@@ -1051,7 +1048,7 @@ package body GNATCOLL.Projects.Normalize is
       Add_Before_First_Case_Or_Pkg : Boolean := False) return Project_Node_Id
    is
       Node : constant Project_Node_Id :=
-        Default_Project_Node (Tree, N_Typed_Variable_Declaration, GPR.Single);
+        Default_Project_Node (Tree, N_Typed_Variable_Declaration, Prj.Single);
    begin
       Set_Name_Of (Node, Tree, Get_String (Name));
       Set_String_Type_Of (Node, Tree, Typ);
@@ -1086,10 +1083,10 @@ package body GNATCOLL.Projects.Normalize is
       Set_First_Choice_Of (Item, Tree, S);
 
       In_List := First_Case_Item_Of (Case_Node, Tree);
-      if In_List = Empty_Project_Node then
+      if In_List = Empty_Node then
          Set_First_Case_Item_Of (Case_Node, Tree, Item);
       else
-         while Next_Case_Item (In_List, Tree) /= Empty_Project_Node loop
+         while Next_Case_Item (In_List, Tree) /= Empty_Node loop
             In_List := Next_Case_Item (In_List, Tree);
          end loop;
          Set_Next_Case_Item (In_List, Tree, Item);
@@ -1122,7 +1119,7 @@ package body GNATCOLL.Projects.Normalize is
       end if;
 
       Decl := New_Decl;
-      while Next_Declarative_Item (Decl, Tree) /= Empty_Project_Node loop
+      while Next_Declarative_Item (Decl, Tree) /= Empty_Node loop
          Decl := Next_Declarative_Item (Decl, Tree);
       end loop;
 
@@ -1148,7 +1145,7 @@ package body GNATCOLL.Projects.Normalize is
               & Kind_Of (Var, Tree)'Img);
 
       Ref := Default_Project_Node (Tree, N_Variable_Reference);
-      Set_Name_Of (Ref, Tree, GPR.Tree.Name_Of (Var, Tree));
+      Set_Name_Of (Ref, Tree, Prj.Tree.Name_Of (Var, Tree));
       Set_Expression_Kind_Of (Ref, Tree, Expression_Kind_Of (Var, Tree));
 
       if Kind_Of (Var, Tree) = N_Typed_Variable_Declaration then
@@ -1170,7 +1167,7 @@ package body GNATCOLL.Projects.Normalize is
       Ext : Project_Node_Id;
       Str : Project_Node_Id;
    begin
-      pragma Assert (Expression_Kind_Of (Var, Tree) = GPR.Single);
+      pragma Assert (Expression_Kind_Of (Var, Tree) = Prj.Single);
 
       --  Create the expression if required
 
@@ -1198,7 +1195,7 @@ package body GNATCOLL.Projects.Normalize is
       Var_Type      : Project_Node_Id) return Project_Node_Id
    is
       Construct, Str : Project_Node_Id;
-      Item           : Project_Node_Id := Empty_Project_Node;
+      Item           : Project_Node_Id := Empty_Node;
       Ref            : Name_Id;
       Decl           : Project_Node_Id;
       New_Type       : Project_Node_Id;
@@ -1216,20 +1213,20 @@ package body GNATCOLL.Projects.Normalize is
 
       Decl := First_Declarative_Item_Of
         (Project_Declaration_Of (Project, Tree), Tree);
-      while Decl /= Empty_Project_Node loop
+      while Decl /= Empty_Node loop
          Item := Current_Item_Node (Decl, Tree);
          if Kind_Of (Item, Tree) = N_Typed_Variable_Declaration then
             Ref := External_Reference_Of (Item, Tree);
 
             exit when Ref /= No_Name and then Ref = External_Name;
          end if;
-         Item := Empty_Project_Node;
+         Item := Empty_Node;
          Decl := Next_Declarative_Item (Decl, Tree);
       end loop;
 
       --  If not, add the variable and its expression
 
-      if Item = Empty_Project_Node then
+      if Item = Empty_Node then
          Get_Name_String (External_Name);
          Item := Create_Typed_Variable
            (Tree, Project, Name_Buffer (1 .. Name_Len), Var_Type,
@@ -1251,7 +1248,7 @@ package body GNATCOLL.Projects.Normalize is
         (Construct, Tree, Create_Variable_Reference (Tree, Item));
 
       Str := First_Literal_String (Var_Type, Tree);
-      while Str /= Empty_Project_Node loop
+      while Str /= Empty_Node loop
          Add_Case_Item (Tree, Construct, String_Value_Of (Str, Tree));
          Str := Next_Literal_String (Str, Tree);
       end loop;
@@ -1265,9 +1262,9 @@ package body GNATCOLL.Projects.Normalize is
 
    procedure For_Each_Matching_Case_Item
      (Tree           : Project_Node_Tree_Ref;
-      Project        : GPR.Project_Node_Id;
-      Pkg            : GPR.Project_Node_Id := GPR.Empty_Project_Node;
-      Case_Construct : in out GPR.Project_Node_Id;
+      Project        : Prj.Tree.Project_Node_Id;
+      Pkg            : Prj.Tree.Project_Node_Id := Prj.Tree.Empty_Node;
+      Case_Construct : in out Prj.Tree.Project_Node_Id;
       Values         : External_Variable_Value_Array;
       Action         : Matching_Item_Callback)
    is
@@ -1309,7 +1306,7 @@ package body GNATCOLL.Projects.Normalize is
                   Values (J).Variable_Name, Values (J).Variable_Type);
             end if;
          end loop;
-         return Empty_Project_Node;
+         return Empty_Node;
       end Create_Case_If_Necessary;
 
       ----------------------------
@@ -1329,20 +1326,18 @@ package body GNATCOLL.Projects.Normalize is
          --  can create missing case constructions at the end
 
          Add_Value
-           (Var_Seen,
-            Last_Var_Seen,
-            (Empty_Project_Node, Name, No_Name, False));
+           (Var_Seen, Last_Var_Seen, (Empty_Node, Name, No_Name, False));
 
          --  For all possible values of the variable
 
          Current_Item := First_Case_Item_Of (Case_Stmt, Tree);
-         while Current_Item /= Empty_Project_Node loop
+         while Current_Item /= Empty_Node loop
             if Values_Matches (Tree, Name, Current_Item, Values) then
                Handling_Done := False;
                New_Case := First_Declarative_Item_Of (Current_Item, Tree);
 
                --  Are there any nested case ?
-               while New_Case /= Empty_Project_Node loop
+               while New_Case /= Empty_Node loop
                   if Kind_Of (Current_Item_Node (New_Case, Tree), Tree)
                     = N_Case_Construction
                   then
@@ -1357,7 +1352,7 @@ package body GNATCOLL.Projects.Normalize is
 
                if not Handling_Done then
                   New_Case := Create_Case_If_Necessary;
-                  Handling_Done := New_Case /= Empty_Project_Node;
+                  Handling_Done := New_Case /= Empty_Node;
 
                   if Handling_Done then
                      --  Move all the declarative items currently in the case
@@ -1365,14 +1360,14 @@ package body GNATCOLL.Projects.Normalize is
                      --  have declarative items in the most-nested case
                      --  constructions.
                      if First_Declarative_Item_Of (Current_Item, Tree) /=
-                       Empty_Project_Node
+                       Empty_Node
                      then
                         Add_To_Case_Items
                           (Tree,
                            New_Case,
                            First_Declarative_Item_Of (Current_Item, Tree));
                         Set_First_Declarative_Item_Of
-                          (Current_Item, Tree, Empty_Project_Node);
+                          (Current_Item, Tree, Empty_Node);
                      end if;
 
                      Add_At_End (Tree, Current_Item, New_Case);
@@ -1394,20 +1389,20 @@ package body GNATCOLL.Projects.Normalize is
 
       Top : Project_Node_Id;
    begin
-      if Pkg /= Empty_Project_Node then
+      if Pkg /= Empty_Node then
          Top := Pkg;
       else
          Top := Project_Declaration_Of (Project, Tree);
       end if;
 
-      if Case_Construct = Empty_Project_Node then
+      if Case_Construct = Empty_Node then
          Case_Construct := Create_Case_If_Necessary;
-         if Case_Construct /= Empty_Project_Node then
+         if Case_Construct /= Empty_Node then
             Add_At_End (Tree, Top, Case_Construct);
          end if;
       end if;
 
-      if Case_Construct = Empty_Project_Node then
+      if Case_Construct = Empty_Node then
          if Action /= null then
             Action (Top);
          end if;
@@ -1432,17 +1427,17 @@ package body GNATCOLL.Projects.Normalize is
         (Project_Declaration_Of (Project, Tree), Tree);
       Current : Project_Node_Id;
    begin
-      while Decl /= Empty_Project_Node loop
+      while Decl /= Empty_Node loop
          Current := Current_Item_Node (Decl, Tree);
          if Kind_Of (Current, Tree) = Kind
-           and then GPR.Tree.Name_Of (Current, Tree) = Name
+           and then Prj.Tree.Name_Of (Current, Tree) = Name
          then
             return Current;
          end if;
 
          Decl := Next_Declarative_Item (Decl, Tree);
       end loop;
-      return Empty_Project_Node;
+      return Empty_Node;
    end Find_Node_By_Name;
 
    ---------------------------
@@ -1452,7 +1447,7 @@ package body GNATCOLL.Projects.Normalize is
    function Find_Type_Declaration
      (Tree    : Project_Node_Tree_Ref;
       Project : Project_Node_Id;
-      Name    : GPR.Name_Id) return Project_Node_Id is
+      Name    : Namet.Name_Id) return Project_Node_Id is
    begin
       return Find_Node_By_Name
         (Tree, Project, N_String_Type_Declaration, Name);
@@ -1473,9 +1468,7 @@ package body GNATCOLL.Projects.Normalize is
       --  Check the type itself
       Candidate := Name_Of (Var_Type, Tree);
 
-      while
-        Find_Type_Declaration (Tree, Project, Candidate) /= Empty_Project_Node
-      loop
+      while Find_Type_Declaration (Tree, Project, Candidate) /= Empty_Node loop
          Get_Name_String (Candidate);
 
          Get_Name_String (Name_Of (Var_Type, Tree));
@@ -1505,7 +1498,7 @@ package body GNATCOLL.Projects.Normalize is
       Choice : Project_Node_Id := First_Choice_Of (Case_Item, Tree);
    begin
       Choice_Loop :
-      while Choice /= Empty_Project_Node loop
+      while Choice /= Empty_Node loop
          for J in Values'Range loop
             if Values (J).Variable_Name = Var_Name then
                --  Change the default value if needed
@@ -1535,15 +1528,15 @@ package body GNATCOLL.Projects.Normalize is
       Current_Project : Project_Node_Id;
       Ref             : Project_Node_Id) return Name_Id
    is
-      N              : constant Name_Id := GPR.Tree.Name_Of (Ref, Tree);
+      N              : constant Name_Id := Prj.Tree.Name_Of (Ref, Tree);
       Pkg            : Project_Node_Id;
       Variable       : Variable_Node_Id;
       Recurse_In_Pkg : Boolean := False;
 
    begin
-      if Package_Node_Of (Ref, Tree) /= Empty_Project_Node then
+      if Package_Node_Of (Ref, Tree) /= Empty_Node then
          Pkg := Package_Node_Of (Ref, Tree);
-      elsif Project_Node_Of (Ref, Tree) /= Empty_Project_Node then
+      elsif Project_Node_Of (Ref, Tree) /= Empty_Node then
          Pkg := Project_Node_Of (Ref, Tree);
       else
          Pkg := Current_Project;
@@ -1554,12 +1547,12 @@ package body GNATCOLL.Projects.Normalize is
       --  is defined inside a package ? Currently, it only sets this field if
       --  it is specified in the file itself.
 
-      while Pkg /= Empty_Project_Node loop
+      while Pkg /= Empty_Node loop
          Variable := First_Variable_Of (Pkg, Tree);
-         while Variable /= Empty_Project_Node loop
+         while Variable /= Empty_Node loop
             if (Kind_Of (Variable, Tree) = N_Variable_Declaration
                or else Kind_Of (Variable, Tree) = N_Typed_Variable_Declaration)
-              and then GPR.Tree.Name_Of (Variable, Tree) = N
+              and then Prj.Tree.Name_Of (Variable, Tree) = N
             then
                return External_Reference_Of (Variable, Tree);
             end if;
@@ -1620,7 +1613,7 @@ package body GNATCOLL.Projects.Normalize is
       Project2 := Clone_Node (Tree, Project);
       Decl     := Clone_Node (Tree, Project_Declaration_Of (Project, Tree));
       Set_Project_Declaration_Of    (Project2, Tree, Decl);
-      Set_First_Declarative_Item_Of (Decl, Tree, Empty_Project_Node);
+      Set_First_Declarative_Item_Of (Decl, Tree, Empty_Node);
       return Project2;
    end Clone_Project;
 
@@ -1729,21 +1722,20 @@ package body GNATCOLL.Projects.Normalize is
 
       begin
          --  Nothing to do if there is no project
-         if From = Empty_Project_Node then
+         if From = Empty_Node then
             return;
          end if;
 
          pragma Assert (Kind_Of (Decl_Item, Tree_Node) = N_Declarative_Item);
 
-         while Decl_Item /= Empty_Project_Node loop
+         while Decl_Item /= Empty_Node loop
             Current := Current_Item_Node (Decl_Item, Tree_Node);
 
             --  Save the next item, since the current item will be inserted in
             --  a different list, and thus its next field will be modified.
 
             Next_Item := Next_Declarative_Item (Decl_Item, Tree_Node);
-            Set_Next_Declarative_Item
-              (Decl_Item, Tree_Node, Empty_Project_Node);
+            Set_Next_Declarative_Item (Decl_Item, Tree_Node, Empty_Node);
 
             case Kind_Of (Current, Tree_Node) is
                when N_Package_Declaration =>
@@ -1764,7 +1756,7 @@ package body GNATCOLL.Projects.Normalize is
                      Raise_Exception
                        (Normalize_Error'Identity,
                         Project.Name
-                        & GPR.Project_File_Extension & ": "
+                        & Prj.Project_File_Extension & ": "
                         & "Case constructions referencing non-external"
                         & " variables can not be modified");
                   end if;
@@ -1796,7 +1788,7 @@ package body GNATCOLL.Projects.Normalize is
 
                   --  For all the case items in the current case construction
 
-                  while Case_Item /= Empty_Project_Node loop
+                  while Case_Item /= Empty_Node loop
                      Index := Last_Values + 1;
 
                      if Already_Have_Var then
@@ -1807,7 +1799,7 @@ package body GNATCOLL.Projects.Normalize is
                      else
                         Match := True;
                         Choice := First_Choice_Of (Case_Item, Tree_Node);
-                        while Choice /= Empty_Project_Node loop
+                        while Choice /= Empty_Node loop
                            Add_Value
                              (Values, Last_Values,
                               External_Variable_Value'
@@ -1867,7 +1859,7 @@ package body GNATCOLL.Projects.Normalize is
 
                      --  Scenario variables must be defined at the project
                      --  level
-                     if Current_Pkg /= Empty_Project_Node
+                     if Current_Pkg /= Empty_Node
                        and then Is_External_Variable (Current, Tree_Node)
                      then
                         Add_At_End
@@ -1898,7 +1890,7 @@ package body GNATCOLL.Projects.Normalize is
                   Check_Index_Sensitivity (Decl_Item);
 
                   Decl_Item2 := Decl_Item;
-                  while Next_Item /= Empty_Project_Node loop
+                  while Next_Item /= Empty_Node loop
                      case Kind_Of
                        (Current_Item_Node (Next_Item, Tree_Node), Tree_Node)
                      is
@@ -1920,7 +1912,7 @@ package body GNATCOLL.Projects.Normalize is
                   end loop;
 
                   Set_Next_Declarative_Item
-                    (Decl_Item2, Tree_Node, Empty_Project_Node);
+                    (Decl_Item2, Tree_Node, Empty_Node);
 
                   For_Each_Matching_Case_Item
                     (Tree_Node, Project_Norm, Current_Pkg, Case_Construct,
@@ -1944,8 +1936,8 @@ package body GNATCOLL.Projects.Normalize is
          Last_Values := Values'First - 1;
 
          Project_Norm := Clone_Project (Tree_Node, Project_Node);
-         Current_Pkg := Empty_Project_Node;
-         Case_Construct := Empty_Project_Node;
+         Current_Pkg := Empty_Node;
+         Case_Construct := Empty_Node;
 
          Project.Data.Normalized := True;
 
@@ -1969,12 +1961,12 @@ package body GNATCOLL.Projects.Normalize is
 
          Current_Pkg := First_Package_Of (Project_Node, Tree_Node);
 
-         while Current_Pkg /= Empty_Project_Node loop
+         while Current_Pkg /= Empty_Node loop
             Decl := First_Declarative_Item_Of (Current_Pkg, Tree_Node);
             Set_First_Declarative_Item_Of
-              (Current_Pkg, Tree_Node, Empty_Project_Node);
+              (Current_Pkg, Tree_Node, Empty_Node);
 
-            Case_Construct := Empty_Project_Node;
+            Case_Construct := Empty_Node;
             Process_Declarative_List
               (From      => Decl,
                To        => Current_Pkg);
@@ -1991,7 +1983,7 @@ package body GNATCOLL.Projects.Normalize is
                  Next_Package_In_Project (Current_Pkg, Tree_Node);
             begin
                Set_Next_Package_In_Project
-                 (Current_Pkg, Tree_Node, Empty_Project_Node);
+                 (Current_Pkg, Tree_Node, Empty_Node);
                Add_At_End
                  (Tree_Node,
                   Project_Declaration_Of
@@ -2029,8 +2021,8 @@ package body GNATCOLL.Projects.Normalize is
       New_Node : Project_Node_Id;
 
    begin
-      if Node = Empty_Project_Node then
-         return Empty_Project_Node;
+      if Node = Empty_Node then
+         return Empty_Node;
       end if;
 
       Tree_Private_Part.Project_Node_Table.Increment_Last (Tree.Project_Nodes);
@@ -2056,7 +2048,7 @@ package body GNATCOLL.Projects.Normalize is
                  (New_Node, Tree,
                   Clone_Node (Tree,
                               Project_Declaration_Of (Node, Tree), True));
-               Set_First_String_Type_Of (New_Node, Tree, Empty_Project_Node);
+               Set_First_String_Type_Of (New_Node, Tree, Empty_Node);
 
             when N_With_Clause =>
                Set_Next_With_Clause_Of
@@ -2085,15 +2077,14 @@ package body GNATCOLL.Projects.Normalize is
                  (New_Node, Tree,
                   Clone_Node
                     (Tree, First_Declarative_Item_Of (Node, Tree), True));
-               Set_Next_Package_In_Project
-                 (New_Node, Tree, Empty_Project_Node);
+               Set_Next_Package_In_Project (New_Node, Tree, Empty_Node);
 
             when N_String_Type_Declaration =>
                --  Next_String_Type must be set outside of this
                Set_First_Literal_String
                  (New_Node, Tree,
                   Clone_Node (Tree, First_Literal_String (Node, Tree), True));
-               Set_Next_String_Type (New_Node, Tree, Empty_Project_Node);
+               Set_Next_String_Type (New_Node, Tree, Empty_Node);
 
             when N_Literal_String =>
                Set_Next_Literal_String
@@ -2114,14 +2105,14 @@ package body GNATCOLL.Projects.Normalize is
                   Clone_Node (Tree, Expression_Of (Node, Tree), True));
                Set_String_Type_Of
                  (New_Node, Tree, String_Type_Of (Node, Tree));
-               Set_Next_Variable (New_Node, Tree, Empty_Project_Node);
+               Set_Next_Variable (New_Node, Tree, Empty_Node);
 
             when N_Variable_Declaration =>
                --  Next_Variable must be set outside of this
                Set_Expression_Of
                  (New_Node, Tree,
                   Clone_Node (Tree, Expression_Of (Node, Tree), True));
-               Set_Next_Variable (New_Node, Tree, Empty_Project_Node);
+               Set_Next_Variable (New_Node, Tree, Empty_Node);
 
             when N_Expression =>
                Set_First_Term
@@ -2213,7 +2204,7 @@ package body GNATCOLL.Projects.Normalize is
    -- Get_String --
    ----------------
 
-   function Get_String (Id : GPR.Name_Id) return String is
+   function Get_String (Id : Namet.Name_Id) return String is
    begin
       if Id = No_Name then
          return "";
@@ -2231,7 +2222,7 @@ package body GNATCOLL.Projects.Normalize is
    --------------------------
 
    function Is_External_Variable
-     (Var  : GPR.Project_Node_Id;
+     (Var  : Prj.Tree.Project_Node_Id;
       Tree : Project_Node_Tree_Ref) return Boolean is
    begin
       return Kind_Of
@@ -2245,8 +2236,8 @@ package body GNATCOLL.Projects.Normalize is
    ---------------------------
 
    function External_Reference_Of
-     (Var  : GPR.Project_Node_Id;
-      Tree : Project_Node_Tree_Ref) return GPR.Name_Id
+     (Var  : Prj.Tree.Project_Node_Id;
+      Tree : Project_Node_Tree_Ref) return Namet.Name_Id
    is
       Expr : Project_Node_Id := Expression_Of (Var, Tree);
    begin
@@ -2276,12 +2267,12 @@ package body GNATCOLL.Projects.Normalize is
          Pkg := Find_Package_Declaration
            (Tree (Data), Project.Node, Get_String (Pkg_Name));
 
-         if Pkg /= Empty_Project_Node then
+         if Pkg /= Empty_Node then
             Pkg := Project_Of_Renamed_Package_Of (Pkg, Tree (Data));
-            if Pkg /= Empty_Project_Node then
+            if Pkg /= Empty_Node then
                return Project_Type
                  (Project_From_Name
-                    (Data, GPR.Tree.Name_Of (Pkg, Tree (Data))));
+                    (Data, Prj.Tree.Name_Of (Pkg, Tree (Data))));
             end if;
          end if;
       end if;
@@ -2295,22 +2286,22 @@ package body GNATCOLL.Projects.Normalize is
 
    function Find_Case_Statement
      (Tree    : Project_Node_Tree_Ref;
-      Project : GPR.Project_Node_Id;
-      Pkg     : GPR.Project_Node_Id := GPR.Empty_Project_Node)
+      Project : Prj.Tree.Project_Node_Id;
+      Pkg     : Prj.Tree.Project_Node_Id := Prj.Tree.Empty_Node)
       return Project_Node_Id
    is
       Top            : Project_Node_Id;
       Decl_Item      : Project_Node_Id;
-      Case_Construct : Project_Node_Id := Empty_Project_Node;
+      Case_Construct : Project_Node_Id := Empty_Node;
    begin
-      if Pkg /= Empty_Project_Node then
+      if Pkg /= Empty_Node then
          Top := Pkg;
       else
          Top := Project_Declaration_Of (Project, Tree);
       end if;
 
       Decl_Item := First_Declarative_Item_Of (Top, Tree);
-      while Decl_Item /= Empty_Project_Node loop
+      while Decl_Item /= Empty_Node loop
          if Kind_Of (Current_Item_Node (Decl_Item, Tree), Tree) =
            N_Case_Construction
          then
@@ -2333,8 +2324,8 @@ package body GNATCOLL.Projects.Normalize is
       Pkg                : Project_Node_Id;
       Case_Construct     : in out Project_Node_Id;
       Scenario_Variables : Scenario_Variable_Array;
-      Attribute_Name     : GPR.Name_Id;
-      Attribute_Index    : GPR.Name_Id := No_Name)
+      Attribute_Name     : Namet.Name_Id;
+      Attribute_Index    : Namet.Name_Id := No_Name)
    is
       Parent          : Project_Node_Id;
       Node, Tmp       : Project_Node_Id;
@@ -2356,7 +2347,7 @@ package body GNATCOLL.Projects.Normalize is
       end Add_Item;
 
    begin
-      if Pkg /= Empty_Project_Node then
+      if Pkg /= Empty_Node then
          Parent := Pkg;
       else
          Parent := Project_Declaration_Of (Project, Tree);
@@ -2375,7 +2366,7 @@ package body GNATCOLL.Projects.Normalize is
       if Case_Items_Last > Case_Items'First then
          Node := First_Declarative_Item_Of (Parent, Tree);
 
-         while Node /= Empty_Project_Node loop
+         while Node /= Empty_Node loop
             if Attribute_Matches
               (Tree, Current_Item_Node (Node, Tree),
                Attribute_Name, Attribute_Index)
@@ -2440,7 +2431,7 @@ package body GNATCOLL.Projects.Normalize is
         Find_Project_Of_Package (Tree, Project, Pkg_Name);
       Index_Id       : constant Name_Id := Get_String (Index);
 
-      Pkg            : Project_Node_Id := Empty_Project_Node;
+      Pkg            : Project_Node_Id := Empty_Node;
       Case_Construct : Project_Node_Id;
 
       procedure Internal_Cb (Case_Item : Project_Node_Id);
@@ -2450,7 +2441,7 @@ package body GNATCOLL.Projects.Normalize is
          Previous_Decl := Find_Last_Declaration_Of
            (Tree_Node, Case_Item, Attribute_Name, Index_Id);
 
-         if Previous_Decl /= Empty_Project_Node then
+         if Previous_Decl /= Empty_Node then
             Previous_Decl := Expression_Of (Previous_Decl, Tree_Node);
          end if;
 
@@ -2530,7 +2521,7 @@ package body GNATCOLL.Projects.Normalize is
       begin
          Val := Create_Literal_String (V, Tree_Node);
 
-         if Previous_Decl /= Empty_Project_Node then
+         if Previous_Decl /= Empty_Node then
             --  ??? Should we use At_Index here ?
             Set_Current_Term
               (First_Term (Previous_Decl, Tree_Node), Tree_Node, Val);
@@ -2538,7 +2529,7 @@ package body GNATCOLL.Projects.Normalize is
          else
             Decl := Create_Attribute
               (Tree_Node, Case_Item, Attribute_Name,
-               Index_Id, GPR.Single, Value => Val, At_Index => At_Index);
+               Index_Id, Prj.Single, Value => Val, At_Index => At_Index);
          end if;
       end Add_Or_Replace;
 
@@ -2571,7 +2562,7 @@ package body GNATCOLL.Projects.Normalize is
       Index     : String := "";
       Prepend   : Boolean := False)
    is
-      List : Project_Node_Id := Empty_Project_Node;
+      List : Project_Node_Id := Empty_Node;
 
       function Convert_Dir_Separators
         (Values : GNAT.Strings.String_List)
@@ -2619,12 +2610,12 @@ package body GNATCOLL.Projects.Normalize is
          Decl, Expr, Term : Project_Node_Id;
          pragma Unreferenced (Decl);
       begin
-         if List = Empty_Project_Node then
+         if List = Empty_Node then
             --  Create the string list for the new values.
             --  This can be prepended later on to the existing list of values.
 
             List := Default_Project_Node
-              (Tree_Node, N_Literal_String_List, GPR.List);
+              (Tree_Node, N_Literal_String_List, Prj.List);
 
             for A in reverse Vals'Range loop
                if Vals (A) /= null then
@@ -2638,11 +2629,11 @@ package body GNATCOLL.Projects.Normalize is
             end loop;
          end if;
 
-         if Previous_Decl /= Empty_Project_Node then
+         if Previous_Decl /= Empty_Node then
             if Prepend then
                Expr := First_Expression_In_List (List, Tree_Node);
                while Next_Expression_In_List (Expr, Tree_Node) /=
-                 Empty_Project_Node
+                 Empty_Node
                loop
                   Expr := Next_Expression_In_List (Expr, Tree_Node);
                end loop;
@@ -2654,10 +2645,10 @@ package body GNATCOLL.Projects.Normalize is
                     Tree_Node));
             else
                Set_Next_Expression_In_List
-                 (Previous_Decl, Tree_Node, Empty_Project_Node);
+                 (Previous_Decl, Tree_Node, Empty_Node);
                Set_Next_Term
                  (First_Term (Previous_Decl, Tree_Node), Tree_Node,
-                  Empty_Project_Node);
+                  Empty_Node);
             end if;
 
             Set_Current_Term
@@ -2671,13 +2662,13 @@ package body GNATCOLL.Projects.Normalize is
             if Prepend then
                Set_Next_Term
                  (First_Term (Expr, Tree_Node), Tree_Node,
-                  Default_Project_Node (Tree_Node, N_Term, GPR.List));
+                  Default_Project_Node (Tree_Node, N_Term, Prj.List));
                Term := Next_Term (First_Term (Expr, Tree_Node), Tree_Node);
                Set_Current_Term
                  (Term,
                   Tree_Node,
                   Default_Project_Node
-                    (Tree_Node, N_Attribute_Reference, GPR.List));
+                    (Tree_Node, N_Attribute_Reference, Prj.List));
                Term := Current_Term (Term, Tree_Node);
 
                Set_Name_Of (Term, Tree_Node, Attribute_Name);
@@ -2721,7 +2712,7 @@ package body GNATCOLL.Projects.Normalize is
       Pkg_Prj        : constant Project_Type :=
         Find_Project_Of_Package (Tree, Project, Pkg_Name);
 
-      Pkg            : Project_Node_Id := Empty_Project_Node;
+      Pkg            : Project_Node_Id := Empty_Node;
       Case_Construct : Project_Node_Id;
       Index_Id       : constant Name_Id := Get_String (Index);
 
@@ -2747,7 +2738,7 @@ package body GNATCOLL.Projects.Normalize is
               (Tree_Node, Pkg_Prj.Node, Get_String (Pkg_Name));
 
             --  If the package doesn't exist, no need to do anything
-            if Pkg = Empty_Project_Node then
+            if Pkg = Empty_Node then
                Trace (Me, "Delete attribute '"
                       & Get_Name_String (Attribute_Name)
                       & "': No such package '"
@@ -2790,7 +2781,7 @@ package body GNATCOLL.Projects.Normalize is
          Node : Project_Node_Id := List;
          Current, Expr, Term, Expr2 : Project_Node_Id;
       begin
-         while Node /= Empty_Project_Node loop
+         while Node /= Empty_Node loop
             Current := Current_Item_Node (Node, Tree);
 
             case Kind_Of (Current, Tree) is
@@ -2798,30 +2789,30 @@ package body GNATCOLL.Projects.Normalize is
                   --  ??? Should avoid a hard-coded list of directory
                   --  attributes. Ideally, we would take into account
                   --  the attributes defined in the XML file
-                  if GPR.Tree.Name_Of (Current, Tree) = Snames.Name_Source_Dirs
-                    or else GPR.Tree.Name_Of (Current, Tree) =
+                  if Prj.Tree.Name_Of (Current, Tree) = Snames.Name_Source_Dirs
+                    or else Prj.Tree.Name_Of (Current, Tree) =
                       Snames.Name_Object_Dir
-                    or else GPR.Tree.Name_Of (Current, Tree) =
+                    or else Prj.Tree.Name_Of (Current, Tree) =
                       Snames.Name_Exec_Dir
                   then
                      Expr := Expression_Of (Current, Tree);
-                     while Expr /= Empty_Project_Node loop
+                     while Expr /= Empty_Node loop
                         Term := First_Term (Expr, Tree);
-                        while Term /= Empty_Project_Node loop
+                        while Term /= Empty_Node loop
                            Current := Current_Term (Term, Tree);
 
                            case Kind_Of (Current, Tree) is
                               when N_Literal_String_List =>
                                  Expr2 := First_Expression_In_List
                                    (Current, Tree);
-                                 while Expr2 /= Empty_Project_Node loop
+                                 while Expr2 /= Empty_Node loop
                                     Current := Current_Term
                                       (First_Term (Expr2, Tree), Tree);
                                     if Kind_Of (Current, Tree) /=
                                       N_Literal_String
                                       or else Next_Term
                                         (First_Term (Expr2, Tree), Tree) /=
-                                        Empty_Project_Node
+                                        Empty_Node
                                     then
                                        Trace
                                          (Me, "Cannot process lists of "
@@ -2853,7 +2844,7 @@ package body GNATCOLL.Projects.Normalize is
 
                when N_Case_Construction =>
                   Expr := First_Case_Item_Of (Current, Tree);
-                  while Expr /= Empty_Project_Node loop
+                  while Expr /= Empty_Node loop
                      Process_List (First_Declarative_Item_Of (Expr, Tree));
                      Expr := Next_Case_Item (Expr, Tree);
                   end loop;
@@ -2977,7 +2968,7 @@ package body GNATCOLL.Projects.Normalize is
          With_Clause := First_With_Clause_Of (Imported.Node, Tree_Node);
          Modified := False;
 
-         while With_Clause /= Empty_Project_Node loop
+         while With_Clause /= Empty_Node loop
             if Project_Node_Of (With_Clause, Tree_Node) = Project.Node then
                Set_Name_Of (With_Clause, Tree_Node, Name);
                Set_Path_Name_Of (With_Clause, Tree_Node,
@@ -3024,7 +3015,7 @@ package body GNATCOLL.Projects.Normalize is
       P := Path_Name_Type (Full_Path);
       Set_Path_Name_Of (Project.Node, Tree_Node, P);
 
-      if Get_View (Project) /= GPR.No_Project then
+      if Get_View (Project) /= Prj.No_Project then
          Get_View (Project).Path := (Name => P, Display_Name => P);
       end if;
 
@@ -3033,22 +3024,22 @@ package body GNATCOLL.Projects.Normalize is
       Set_Location_Of (Project.Node, Tree_Node, No_Location);
 
       --  Unregister the old name
-      GPR.Tree.Tree_Private_Part.Projects_Htable.Set
+      Prj.Tree.Tree_Private_Part.Projects_Htable.Set
         (Tree_Node.Projects_HT,
-         GPR.Tree.Name_Of (Project.Node, Tree_Node),
-         GPR.Tree.Tree_Private_Part.Project_Name_And_Node'
+         Prj.Tree.Name_Of (Project.Node, Tree_Node),
+         Prj.Tree.Tree_Private_Part.Project_Name_And_Node'
          (Name           => Old_Name,
-          Node           => Empty_Project_Node,
+          Node           => Empty_Node,
           Resolved_Path  => Path_Name_Type (Old_Name),
           Extended       => False,
           From_Extended  => False,
           Proj_Qualifier => Unspecified));
 
       --  Register the new name
-      GPR.Tree.Tree_Private_Part.Projects_Htable.Set
+      Prj.Tree.Tree_Private_Part.Projects_Htable.Set
         (Tree_Node.Projects_HT,
-         GPR.Tree.Name_Of (Project.Node, Tree_Node),
-         GPR.Tree.Tree_Private_Part.Project_Name_And_Node'
+         Prj.Tree.Name_Of (Project.Node, Tree_Node),
+         Prj.Tree.Tree_Private_Part.Project_Name_And_Node'
          (Name           => Name,
           Resolved_Path  => Path_Name_Type (Full_Path),
           Node           => Project.Node,
@@ -3071,7 +3062,7 @@ package body GNATCOLL.Projects.Normalize is
    ---------------------
 
    procedure Normalize_Cases
-     (Tree    : GPR.Tree.Project_Node_Tree_Ref;
+     (Tree    : Prj.Tree.Project_Node_Tree_Ref;
       Project : Project_Type)
    is
       procedure Process_Declarative_List (Node : Project_Node_Id);
@@ -3085,15 +3076,15 @@ package body GNATCOLL.Projects.Normalize is
          Decl_Item, Current : Project_Node_Id := Node;
       begin
          --  Nothing to do if there is no project
-         if Node = Empty_Project_Node then
+         if Node = Empty_Node then
             return;
          end if;
 
          pragma Assert (Kind_Of (Decl_Item, Tree) = N_Declarative_Item);
 
-         while Decl_Item /= Empty_Project_Node loop
+         while Decl_Item /= Empty_Node loop
             Current := Current_Item_Node (Decl_Item, Tree);
-            exit when Current = Empty_Project_Node;
+            exit when Current = Empty_Node;
 
             case Kind_Of (Current, Tree) is
                when N_Package_Declaration =>
@@ -3107,9 +3098,9 @@ package body GNATCOLL.Projects.Normalize is
                        First_Case_Item_Of (Current, Tree);
                      Choice    : Project_Node_Id;
                   begin
-                     while Case_Item /= Empty_Project_Node loop
+                     while Case_Item /= Empty_Node loop
                         Choice := First_Choice_Of (Case_Item, Tree);
-                        while Choice /= Empty_Project_Node loop
+                        while Choice /= Empty_Node loop
                            for N in Values'Range loop
                               if Values (N) =
                                 String_Value_Of (Choice, Tree)
@@ -3184,7 +3175,7 @@ package body GNATCOLL.Projects.Normalize is
       Set_String_Value_Of (With_Clause, Tree, Clause);
 
       Set_Path_Name_Of (With_Clause, Tree,
-                        GPR.Tree.Path_Name_Of (Imported_Project, Tree));
+                        Prj.Tree.Path_Name_Of (Imported_Project, Tree));
       Set_Project_Node_Of (With_Clause, Tree, Imported_Project,
                            Limited_With => Limited_With);
    end Set_With_Clause_Path;
@@ -3203,7 +3194,7 @@ package body GNATCOLL.Projects.Normalize is
       Limited_With              : Boolean := False)
       return Import_Project_Error
    is
-      use GPR.Tree.Tree_Private_Part;
+      use Prj.Tree.Tree_Private_Part;
       Tree_Node : constant Project_Node_Tree_Ref :=
         GNATCOLL.Projects.Tree (Tree);
 
@@ -3223,21 +3214,21 @@ package body GNATCOLL.Projects.Normalize is
 
       With_Clause : Project_Node_Id;
       Imported_Name : constant Name_Id :=
-        GPR.Tree.Name_Of (Imported_Project.Node, Tree_Node);
+        Prj.Tree.Name_Of (Imported_Project.Node, Tree_Node);
 
    begin
       Output.Set_Special_Output (Output.Output_Proc (Errors));
-      GPR.Com.Fail := Fail'Unrestricted_Access;
+      Prj.Com.Fail := Fail'Unrestricted_Access;
 
       --  Make sure we are not trying to import ourselves, since otherwise it
       --  would result in an infinite loop when manipulating the project.
 
-      if GPR.Tree.Name_Of (Project.Data.Node, Tree_Node) =
+      if Prj.Tree.Name_Of (Project.Data.Node, Tree_Node) =
         Imported_Name
       then
          Fail ("Cannot add dependency to self");
          Output.Cancel_Special_Output;
-         GPR.Com.Fail := null;
+         Prj.Com.Fail := null;
          return Dependency_On_Self;
       end if;
 
@@ -3246,15 +3237,15 @@ package body GNATCOLL.Projects.Normalize is
 
       With_Clause := First_With_Clause_Of (Project.Node, Tree_Node);
 
-      while With_Clause /= Empty_Project_Node loop
-         if GPR.Tree.Name_Of
+      while With_Clause /= Empty_Node loop
+         if Prj.Tree.Name_Of
            (Project_Node_Of (With_Clause, Tree_Node), Tree_Node) =
            Imported_Name
          then
             Fail ("There is already a dependency on "
                   & Imported_Project.Name);
             Output.Cancel_Special_Output;
-            GPR.Com.Fail := null;
+            Prj.Com.Fail := null;
             return Dependency_Already_Exists;
          end if;
          With_Clause := Next_With_Clause_Of (With_Clause, Tree_Node);
@@ -3270,7 +3261,7 @@ package body GNATCOLL.Projects.Normalize is
             then
                Fail ("Circular dependency detected in the project hierarchy");
                Output.Cancel_Special_Output;
-               GPR.Com.Fail := null;
+               Prj.Com.Fail := null;
                return Circular_Dependency;
             end if;
          end loop;
@@ -3295,7 +3286,7 @@ package body GNATCOLL.Projects.Normalize is
          Limited_With      => Limited_With);
 
       Output.Cancel_Special_Output;
-      GPR.Com.Fail := null;
+      Prj.Com.Fail := null;
       Project.Data.Modified := True;
       Reset_All_Caches (Tree);
       return Success;
@@ -3303,7 +3294,7 @@ package body GNATCOLL.Projects.Normalize is
    exception
       when others =>
          Output.Cancel_Special_Output;
-         GPR.Com.Fail := null;
+         Prj.Com.Fail := null;
          raise;
    end Add_Imported_Project;
 
@@ -3354,19 +3345,18 @@ package body GNATCOLL.Projects.Normalize is
 
             when N_Case_Item =>
                --  The first declarative item might be null when there was no
-               --  actual "when ..." for Keep_Choice. In that case, GPR.Proc
+               --  actual "when ..." for Keep_Choice. In that case, Prj.Proc
                --  inserts an entry with no declarative item.
 
                if First_Declarative_Item_Of (Node, Tree_Node) /=
-                 Empty_Project_Node
+                 Empty_Node
                then
                   Tree_Node.Project_Nodes.Table (Parent) :=
                     Tree_Node.Project_Nodes.Table
                       (First_Declarative_Item_Of (Node, Tree_Node));
 
                else
-                  Set_Current_Item_Node
-                    (Parent, Tree_Node, Empty_Project_Node);
+                  Set_Current_Item_Node (Parent, Tree_Node, Empty_Node);
                end if;
 
             when others =>
@@ -3510,7 +3500,7 @@ package body GNATCOLL.Projects.Normalize is
 
       Str := First_Literal_String (Typ, Tree);
 
-      while Str /= Empty_Project_Node loop
+      while Str /= Empty_Node loop
          if String_Value_Of (Str, Tree) = C then
             return;
          end if;
@@ -3538,8 +3528,8 @@ package body GNATCOLL.Projects.Normalize is
             return String_Value_Of (Expression, Tree);
          when N_Expression =>
             Term := First_Term (Expression, Tree);
-            if Term /= Empty_Project_Node
-              and then Next_Term (Term, Tree) = Empty_Project_Node
+            if Term /= Empty_Node
+              and then Next_Term (Term, Tree) = Empty_Node
               and then Kind_Of (Current_Term (Term, Tree), Tree) =
                 N_Literal_String
             then
@@ -3566,7 +3556,7 @@ package body GNATCOLL.Projects.Normalize is
         (Project_Declaration_Of (Project.Node, Tree), Tree);
       Current : Project_Node_Id;
    begin
-      while Decl /= Empty_Project_Node loop
+      while Decl /= Empty_Node loop
          Current := Current_Item_Node (Decl, Tree);
          if Kind_Of (Current, Tree) = N_Typed_Variable_Declaration
            and then Is_External_Variable (Current, Tree)
@@ -3579,7 +3569,7 @@ package body GNATCOLL.Projects.Normalize is
 
          Decl := Next_Declarative_Item (Decl, Tree);
       end loop;
-      return Empty_Project_Node;
+      return Empty_Node;
    end Find_Scenario_Variable;
 
    --------------------------
@@ -3588,10 +3578,10 @@ package body GNATCOLL.Projects.Normalize is
 
    function Is_Virtual_Extending
      (Tree : Project_Node_Tree_Ref;
-      Node : GPR.Project_Node_Id) return Boolean
+      Node : Prj.Tree.Project_Node_Id) return Boolean
    is
       Name : constant String :=
-        Get_String (GPR.Tree.Name_Of (Node, Tree));
+        Get_String (Prj.Tree.Name_Of (Node, Tree));
    begin
       return Name'Length > Virtual_Prefix'Length
         and then Name (1 .. Virtual_Prefix'Length) = Virtual_Prefix;

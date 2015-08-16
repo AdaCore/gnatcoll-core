@@ -639,7 +639,8 @@ SYNC_COUNTERS_IMPL
 EXTRA_LINK_SWITCHES
 WITH_PROJECTS
 WITH_READLINE
-HAVE_GNAT_PROJECT_gpr
+GNAT_SOURCES
+HAVE_GNAT_PROJECT_gnat_util
 INCLUDE_ICONV
 LIB_ICONV
 PATH_ICONV
@@ -5170,11 +5171,22 @@ $as_echo "$WITH_ICONV $LIB_ICONV" >&6; }
 
 
 
-  { $as_echo "$as_me:${as_lineno-$LINENO}: checking whether libgpr exists" >&5
-$as_echo_n "checking whether libgpr exists... " >&6; }
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking whether gnat sources are found" >&5
+$as_echo_n "checking whether gnat sources are found... " >&6; }
+  if test -d gnat_src; then
+     { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+$as_echo "yes" >&6; }
+     HAS_GNAT_SOURCES=yes
+     GNAT_SOURCES=copy
+  else
+     { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+
+     { $as_echo "$as_me:${as_lineno-$LINENO}: checking whether gnat_util exists" >&5
+$as_echo_n "checking whether gnat_util exists... " >&6; }
 
 cat > conftest.gpr <<EOF
-with "gpr";
+with "gnat_util";
 project Conftest is for Source_Files use (); end Conftest;
 EOF
 if { ac_try='gnat ls -Pconftest.gpr system.ads > /dev/null 2>conftest.out'
@@ -5184,19 +5196,24 @@ if { ac_try='gnat ls -Pconftest.gpr system.ads > /dev/null 2>conftest.out'
   $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
   test $ac_status = 0; }; }
 then
-  HAVE_GNAT_PROJECT_gpr=yes
+  HAVE_GNAT_PROJECT_gnat_util=yes
 else
-  HAVE_GNAT_PROJECT_gpr=no
+  HAVE_GNAT_PROJECT_gnat_util=no
 fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $HAVE_GNAT_PROJECT_gpr" >&5
-$as_echo "$HAVE_GNAT_PROJECT_gpr" >&6; }
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $HAVE_GNAT_PROJECT_gnat_util" >&5
+$as_echo "$HAVE_GNAT_PROJECT_gnat_util" >&6; }
 
 
-  if test "$HAVE_GNAT_PROJECT_gpr" = "yes"; then
-     HAS_GNAT_SOURCES=yes
-  else
-     HAS_GNAT_SOURCES=no
+     if test "$HAVE_GNAT_PROJECT_gnat_util" = "yes"; then
+        HAS_GNAT_SOURCES=yes
+        GNAT_SOURCES=gnat_util
+     else
+        HAS_GNAT_SOURCES=no
+        GNAT_SOURCES=copy
+     fi
   fi
+
+
 
 
    # Check whether --enable-readline was given.
@@ -5308,7 +5325,7 @@ fi
 
 
   # Allow the user to disable projects support so that gnatcoll does not depend
-  # on the installed gnat compiler (libgprs project)
+  # on the installed gnat compiler (gnat_utils project)
   # Check whether --enable-projects was given.
 if test "${enable_projects+set}" = set; then :
   enableval=$enable_projects; WITH_PROJECTS=$enableval
@@ -5593,16 +5610,12 @@ fi
 LIB=`basename $libdir`
 
 
-if test "$WITH_PROJECTS" = "no" ; then
-   prj=src/gnatcoll__nogpr.gpr
-else
-   prj=src/gnatcoll__libgpr.gpr
-fi
 
-rm -f "src/gnatcoll.gpr"
-cp -f "$prj" "src/gnatcoll.gpr"
+   ac_config_commands="$ac_config_commands src/gnatcoll.gpr"
 
-ac_config_files="$ac_config_files gnatcoll_shared.gpr Makefile.conf src/gnatcoll_gmp.gpr src/gnatcoll_python.gpr src/gnatcoll_readline.gpr"
+
+
+ac_config_files="$ac_config_files gnatcoll_shared.gpr Makefile.conf src/gnatcoll_gmp.gpr src/gnatcoll_python.gpr gnat/sdefault/sdefault.adb src/gnatcoll_readline.gpr"
 
 cat >confcache <<\_ACEOF
 # This file is a shell script that caches the results of configure
@@ -6169,6 +6182,7 @@ esac
 cat >>$CONFIG_STATUS <<_ACEOF || ac_write_fail=1
 # Files that config.status was made for.
 config_files="$ac_config_files"
+config_commands="$ac_config_commands"
 
 _ACEOF
 
@@ -6192,6 +6206,9 @@ Usage: $0 [OPTION]... [TAG]...
 
 Configuration files:
 $config_files
+
+Configuration commands:
+$config_commands
 
 Report bugs to <report@adacore.com>."
 
@@ -6301,6 +6318,11 @@ _ASBOX
 
 _ACEOF
 cat >>$CONFIG_STATUS <<_ACEOF || ac_write_fail=1
+#
+# INIT-COMMANDS
+#
+GNAT_SOURCES=$GNAT_SOURCES
+
 _ACEOF
 
 cat >>$CONFIG_STATUS <<\_ACEOF || ac_write_fail=1
@@ -6309,10 +6331,12 @@ cat >>$CONFIG_STATUS <<\_ACEOF || ac_write_fail=1
 for ac_config_target in $ac_config_targets
 do
   case $ac_config_target in
+    "src/gnatcoll.gpr") CONFIG_COMMANDS="$CONFIG_COMMANDS src/gnatcoll.gpr" ;;
     "gnatcoll_shared.gpr") CONFIG_FILES="$CONFIG_FILES gnatcoll_shared.gpr" ;;
     "Makefile.conf") CONFIG_FILES="$CONFIG_FILES Makefile.conf" ;;
     "src/gnatcoll_gmp.gpr") CONFIG_FILES="$CONFIG_FILES src/gnatcoll_gmp.gpr" ;;
     "src/gnatcoll_python.gpr") CONFIG_FILES="$CONFIG_FILES src/gnatcoll_python.gpr" ;;
+    "gnat/sdefault/sdefault.adb") CONFIG_FILES="$CONFIG_FILES gnat/sdefault/sdefault.adb" ;;
     "src/gnatcoll_readline.gpr") CONFIG_FILES="$CONFIG_FILES src/gnatcoll_readline.gpr" ;;
 
   *) as_fn_error $? "invalid argument: \`$ac_config_target'" "$LINENO" 5;;
@@ -6326,6 +6350,7 @@ done
 # bizarre bug on SunOS 4.1.3.
 if $ac_need_defaults; then
   test "${CONFIG_FILES+set}" = set || CONFIG_FILES=$config_files
+  test "${CONFIG_COMMANDS+set}" = set || CONFIG_COMMANDS=$config_commands
 fi
 
 # Have a temporary directory for convenience.  Make it in the build tree
@@ -6514,7 +6539,7 @@ cat >>$CONFIG_STATUS <<\_ACEOF || ac_write_fail=1
 fi # test -n "$CONFIG_FILES"
 
 
-eval set X "  :F $CONFIG_FILES      "
+eval set X "  :F $CONFIG_FILES      :C $CONFIG_COMMANDS"
 shift
 for ac_tag
 do
@@ -6724,9 +6749,17 @@ which seems to be undefined.  Please make sure it is defined" >&2;}
  ;;
 
 
-
+  :C)  { $as_echo "$as_me:${as_lineno-$LINENO}: executing $ac_file commands" >&5
+$as_echo "$as_me: executing $ac_file commands" >&6;}
+ ;;
   esac
 
+
+  case $ac_file$ac_mode in
+    "src/gnatcoll.gpr":C) rm -f src/gnatcoll.gpr
+                       cp -f src/gnatcoll__$GNAT_SOURCES.gpr src/gnatcoll.gpr ;;
+
+  esac
 done # for ac_tag
 
 
@@ -6792,8 +6825,8 @@ $as_echo "$as_me:   Iconv:                  $WITH_ICONV (see --with-iconv)" >&6;
 { $as_echo "$as_me:${as_lineno-$LINENO}:   Projects:               $WITH_PROJECTS" >&5
 $as_echo "$as_me:   Projects:               $WITH_PROJECTS" >&6;}
 if test $WITH_PROJECTS = no; then
-{ $as_echo "$as_me:${as_lineno-$LINENO}:                           install libgpr to override" >&5
-$as_echo "$as_me:                           install libgpr to override" >&6;}
+{ $as_echo "$as_me:${as_lineno-$LINENO}:                           create gnat_src to override" >&5
+$as_echo "$as_me:                           create gnat_src to override" >&6;}
 fi
 { $as_echo "$as_me:${as_lineno-$LINENO}: --------------------------------------------" >&5
 $as_echo "$as_me: --------------------------------------------" >&6;}

@@ -72,16 +72,11 @@ AM_PATH_SYSLOG
 LIB=`basename $libdir`
 AC_SUBST(LIB)
 
-if test "$WITH_PROJECTS" = "no" ; then
-   prj=src/gnatcoll__nogpr.gpr
-else
-   prj=src/gnatcoll__libgpr.gpr
-fi
+AM_LINK_FILE([src/gnatcoll__$GNAT_SOURCES.gpr],
+             [src/gnatcoll.gpr],
+             [GNAT_SOURCES=$GNAT_SOURCES])
 
-rm -f "src/gnatcoll.gpr"
-cp -f "$prj" "src/gnatcoll.gpr"
-
-AC_OUTPUT(gnatcoll_shared.gpr Makefile.conf src/gnatcoll_gmp.gpr src/gnatcoll_python.gpr src/gnatcoll_readline.gpr)
+AC_OUTPUT(gnatcoll_shared.gpr Makefile.conf src/gnatcoll_gmp.gpr src/gnatcoll_python.gpr gnat/sdefault/sdefault.adb src/gnatcoll_readline.gpr)
 
 AC_MSG_NOTICE([--------- Summary for GNAT Components --------------])
 AC_MSG_NOTICE(AC_HELP_STRING(
@@ -112,6 +107,6 @@ AC_MSG_NOTICE(AC_HELP_STRING(
               [Projects:],[$WITH_PROJECTS]))
 if test $WITH_PROJECTS = no; then
 AC_MSG_NOTICE(AC_HELP_STRING(
-              [],[install libgpr to override]))
+              [],[create gnat_src to override]))
 fi
 AC_MSG_NOTICE([--------------------------------------------])

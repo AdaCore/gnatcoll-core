@@ -94,8 +94,12 @@ with GNAT.Expect;
 with GNAT.Strings;
 with GNAT.OS_Lib;
 with GNATCOLL.VFS;
-private with GPR.Tree;
-private with GPR;
+pragma Warnings (Off);
+pragma Warnings (Off, "*license of withed unit*");
+private with Prj.Tree;
+pragma Warnings (On, "*license of withed unit*");
+pragma Warnings (On);
+private with Namet;
 
 package GNATCOLL.Projects is
 
@@ -266,8 +270,10 @@ package GNATCOLL.Projects is
    --  and existing instances of Project_Type have become invalid.
 
    procedure Finalize;
-   --  This is a dummy procedure. It is retained for easy compatibility with
-   --  clients who used to call Finalize when this call was required.
+   --  Free the memory used by this package (you should unload any individuals
+   --  trees instances you may have).
+   --  This call is optional, but recommended if you want to monitor memory
+   --  leaks in your application.
 
    type Project_Status is (From_File, Default, From_Executable, Empty);
    function Status (Self : Project_Tree) return Project_Status;
@@ -1716,7 +1722,7 @@ private
                            := No_Strings'Access;
 
    Project_File_Extension : constant GNATCOLL.VFS.Filesystem_String :=
-     GNATCOLL.VFS."+" (GPR.Project_File_Extension);
+     GNATCOLL.VFS."+" (Prj.Project_File_Extension);
    --  The standard extension for a project file (".gpr")
 
    type File_Info is new File_Info_Abstract with record
@@ -1724,16 +1730,16 @@ private
       Project      : Project_Type;
       Root_Project : Project_Type;
       Part         : Unit_Parts    := Unit_Separate;
-      Name         : GPR.Name_Id := GPR.No_Name;   --  Unit name
-      Lang         : GPR.Name_Id := GPR.No_Name;
+      Name         : Namet.Name_Id := Namet.No_Name;   --  Unit name
+      Lang         : Namet.Name_Id := Namet.No_Name;
    end record;
 
    package Extensions_Languages is new Ada.Containers.Indefinite_Hashed_Maps
      (Key_Type        => String,   --  file extension
-      Element_Type    => GPR.Name_Id,
+      Element_Type    => Namet.Name_Id,
       Hash            => Ada.Strings.Hash,
       Equivalent_Keys => "=",
-      "="             => GPR."=");
+      "="             => Namet."=");
    --  maps extensions with a language
 
    type Naming_Scheme_Record;
@@ -1747,7 +1753,7 @@ private
    end record;
 
    type Project_Environment is tagged record
-      Env : GPR.Tree.Environment;
+      Env : Prj.Tree.Environment;
 
       Autoconf    : Boolean := False;
       Config_File : GNATCOLL.VFS.Virtual_File;
@@ -1790,14 +1796,14 @@ private
       --  The list of default naming schemes for the languages known to GPS
    end record;
 
-   type Name_Id_Array        is array (Positive range <>) of GPR.Name_Id;
+   type Name_Id_Array        is array (Positive range <>) of Namet.Name_Id;
    type Name_Id_Array_Access is access Name_Id_Array;
    procedure Unchecked_Free is new Ada.Unchecked_Deallocation
      (Name_Id_Array, Name_Id_Array_Access);
    --  Still needed for some routines like Get_All_Possible_Values
 
    type Path_Name_Id_Array is array (Positive range <>)
-     of GPR.Path_Name_Type;
+     of Namet.Path_Name_Type;
    type Path_Name_Id_Array_Access is access Path_Name_Id_Array;
    procedure Unchecked_Free is new Ada.Unchecked_Deallocation
      (Path_Name_Id_Array, Path_Name_Id_Array_Access);
@@ -1812,8 +1818,8 @@ private
    type Project_Data is tagged record
       Refcount : Integer := 1;
 
-      Node : GPR.Project_Node_Id;
-      View : GPR.Project_Id;
+      Node : Prj.Tree.Project_Node_Id;
+      View : Prj.Project_Id;
 
       Imported_Projects  : Path_Name_Array;
       Importing_Projects : Path_Name_Id_Array_Access;
@@ -1867,9 +1873,9 @@ private
    overriding procedure Finalize (Self : in out Project_Type);
 
    function Tree_View
-     (P : Project_Type'Class) return GPR.Project_Tree_Ref;
+     (P : Project_Type'Class) return Prj.Project_Tree_Ref;
    function Tree_Tree
-     (P : Project_Type'Class) return GPR.Tree.Project_Node_Tree_Ref;
+     (P : Project_Type'Class) return Prj.Tree.Project_Node_Tree_Ref;
    pragma Inline (Tree_View, Tree_Tree);
    --  Access to the project tree
 
@@ -1878,15 +1884,15 @@ private
    end record;
 
    type Scenario_Variable is record
-      Name        : GPR.Name_Id;
-      Default     : GPR.Name_Id;
-      String_Type : GPR.Project_Node_Id;
-      Value       : GPR.Name_Id;
+      Name        : Namet.Name_Id;
+      Default     : Namet.Name_Id;
+      String_Type : Prj.Tree.Project_Node_Id;
+      Value       : Namet.Name_Id;
    end record;
 
    No_Variable   : aliased constant Scenario_Variable :=
-     (GPR.No_Name, GPR.No_Name, GPR.Empty_Project_Node,
-      GPR.No_Name);
+     (Namet.No_Name, Namet.No_Name, Prj.Tree.Empty_Node,
+      Namet.No_Name);
 
    All_Scenarios : aliased constant Scenario_Variable_Array (1 .. 0) :=
                    (others => No_Variable);
@@ -2026,22 +2032,22 @@ private
    No_Project : aliased constant Project_Type :=
      (Ada.Finalization.Controlled with Data => null);
 
-   function Get_View (Project : Project_Type'Class) return GPR.Project_Id;
+   function Get_View (Project : Project_Type'Class) return Prj.Project_Id;
    function Node
-     (Project : Project_Type'Class) return GPR.Project_Node_Id;
+     (Project : Project_Type'Class) return Prj.Tree.Project_Node_Id;
    function Tree
-     (Data : Project_Tree_Data_Access) return GPR.Tree.Project_Node_Tree_Ref;
+     (Data : Project_Tree_Data_Access) return Prj.Tree.Project_Node_Tree_Ref;
    pragma Inline (Node, Tree, Get_View);
    --  Needed for the support packages for the edition of project files.
 
    function Project_From_Name
      (Tree : Project_Tree_Data_Access;
-      Name : GPR.Name_Id) return Project_Type'Class;
+      Name : Namet.Name_Id) return Project_Type'Class;
    --  Internal version of Project_From_Name
 
    function Project_From_Path
      (Tree    : Project_Tree_Data_Access;
-      Path_Id : GPR.Path_Name_Type) return Project_Type'Class;
+      Path_Id : Namet.Path_Name_Type) return Project_Type'Class;
    --  Internal version of Project_From_Path
 
    function Scenario_Variables

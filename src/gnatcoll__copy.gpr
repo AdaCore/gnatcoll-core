@@ -22,7 +22,6 @@
 ------------------------------------------------------------------------------
 
 with "../gnatcoll_shared";
-with "gpr";
 
 project GnatColl is
    for Source_Dirs     use (".", "paragraph_filling");
@@ -36,6 +35,27 @@ project GnatColl is
       "lib" & Project'Library_Name
       & GnatColl_Shared.So_Ext & "." & GnatColl_Shared.Version;
    for Library_Options use GnatColl_Shared.Rss_Libs;
+
+   case Gnatcoll_Shared.Projects is
+      when "yes" =>
+         for Source_Dirs use
+            Project'Source_Dirs & ("../gnat", "../gnat/sdefault");
+      when "no" =>
+         for Excluded_Source_Files use ("gnatcoll-projects.ads",
+                                        "gnatcoll-projects.adb",
+                                        "gnatcoll-projects-normalize.ads",
+                                        "gnatcoll-projects-normalize.adb",
+                                        "gnatcoll-projects-aux.ads",
+                                        "gnatcoll-projects-aux.adb",
+                                        "gnatcoll-scripts-projects.ads",
+                                        "gnatcoll-scripts-projects.adb",
+                                        "gnatcoll-scripts-files.ads",
+                                        "gnatcoll-scripts-files.adb");
+   end case;
+
+   for Excluded_Source_Files use
+      Project'Excluded_Source_Files
+      & ("xutil.ads", "xutil.adb", "xsnamest.adb");
 
    for Languages use ("Ada", "C");
 
@@ -88,6 +108,13 @@ project GnatColl is
          when "mutex" =>
             for Implementation ("GNATCOLL.Atomic")
                use "gnatcoll-atomic__mutex.ada";
+      end case;
+
+      case GnatColl_Shared.Projects is
+         when "yes" => for Implementation ("mlib.tgt.specific")
+            use "mlib-tgt-specific-linux.adb";
+         when "no" =>
+            null;
       end case;
    end Naming;
 

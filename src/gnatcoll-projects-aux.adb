@@ -21,9 +21,13 @@
 --                                                                          --
 ------------------------------------------------------------------------------
 
-with GPR.Env;
-with GPR.Names;                use GPR.Names;
-with GPR.Snames;
+pragma Warnings (Off);
+pragma Warnings (Off, "*license of withed unit*");
+with Namet; use Namet;
+with Prj.Env;
+pragma Warnings (On, "*license of withed unit*");
+pragma Warnings (On);
+with Snames;
 
 package body GNATCOLL.Projects.Aux is
 
@@ -33,7 +37,7 @@ package body GNATCOLL.Projects.Aux is
 
    function To_Project_Id
      (Project : Projects.Project_Type)
-      return GPR.Project_Id
+      return Prj.Project_Id
    is
    begin
       return Project.Data.View;
@@ -45,7 +49,7 @@ package body GNATCOLL.Projects.Aux is
 
    function Project_Tree_Ref_Of
      (Project : Projects.Project_Type)
-      return GPR.Project_Tree_Ref
+      return Prj.Project_Tree_Ref
    is
    begin
       return Tree_View (Project);
@@ -61,7 +65,7 @@ package body GNATCOLL.Projects.Aux is
    is
       Name : Path_Name_Type;
    begin
-      GPR.Env.Create_Mapping_File
+      Prj.Env.Create_Mapping_File
         (Project  => Project.Data.View,
          Language => Snames.Name_Ada,
          In_Tree  => Tree_View (Project),
@@ -84,7 +88,7 @@ package body GNATCOLL.Projects.Aux is
       return String
    is
    begin
-      GPR.Env.Create_Config_Pragmas_File
+      Prj.Env.Create_Config_Pragmas_File
         (For_Project  => Project.Data.View,
          In_Tree      => Tree_View (Project));
 
@@ -106,7 +110,7 @@ package body GNATCOLL.Projects.Aux is
 
    procedure Delete_All_Temp_Files (Root_Project : Projects.Project_Type) is
    begin
-      GPR.Delete_All_Temp_Files (Tree_View (Root_Project).Shared);
+      Prj.Delete_All_Temp_Files (Tree_View (Root_Project).Shared);
    end Delete_All_Temp_Files;
 
 end GNATCOLL.Projects.Aux;
