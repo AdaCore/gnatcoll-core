@@ -530,10 +530,6 @@ package body GNATCOLL.Arg_Lists is
    -- Argument_List_To_String --
    -----------------------------
 
-   -----------------------------
-   -- Argument_List_To_String --
-   -----------------------------
-
    function Argument_List_To_String
      (List           : GNAT.Strings.String_List;
       Protect_Quotes : Boolean := True) return String
@@ -547,6 +543,8 @@ package body GNATCOLL.Arg_Lists is
             for S in List (L)'Range loop
                if List (L)(S) = '"'
                  or else List (L)(S) = ' '
+                 or else List (L) (S) = '\'
+                 or else List (L) (S) = '''
                then
                   Length := Length + 1;
                end if;
@@ -561,7 +559,11 @@ package body GNATCOLL.Arg_Lists is
          for L in List'Range loop
             for J in List (L)'Range loop
                if Protect_Quotes then
-                  if List (L)(J) = '"' or else List (L)(J) = ' ' then
+                  if List (L) (J) = '"'
+                    or else List (L) (J) = ' '
+                    or else List (L) (J) = '\'
+                    or else List (L) (J) = '''
+                  then
                      S (Index) := '\';
                      Index := Index + 1;
                   end if;
