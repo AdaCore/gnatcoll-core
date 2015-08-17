@@ -1,4 +1,4 @@
-.PHONY: all examples test clean docs install generate_sources do_links static relocatable shared
+.PHONY: all examples test clean docs install generate_sources static relocatable shared
 
 ## Put this first so that it is the default make target
 all:
@@ -16,8 +16,6 @@ all: static
 install:  install-clean install_library_type/static
 endif
 
-include Makefile.gnat
-
 #######################################################################
 #  build
 
@@ -30,7 +28,7 @@ shared relocatable: build_library_type/relocatable
 
 GPRBLD_OPTS=-p -m -j${PROCESSORS} -XLIBRARY_TYPE=$(@F) -XGnatcoll_Build=${Gnatcoll_Build}
 
-build_library_type/%: generate_sources do_links
+build_library_type/%: generate_sources
 	@${RM} src/gnatcoll-atomic.adb
 
 	@echo "====== Building $(@F) libraries ======"
@@ -104,20 +102,6 @@ ifeq ($(OS),Windows_NT)
 else
 	# If we fail to compile, never mind. Some tests will simply be disabled
 	-cd $(SQLITE_DIR); gcc -O2 -DSQLITE_OMIT_LOAD_EXTENSION -D__EXTENSIONS__ -o sqlite3_for_gps shell.c sqlite3.c -lpthread -ldl
-endif
-
-## Create links for the gnat sources
-
-do_links:
-ifeq ($(GNAT_SOURCES),copy)
-ifeq ($(OS),Windows_NT)
-	-@$(foreach f,$(GNAT_SOURCES_FOR_GNATCOLL), \
-	    $(CP) -f gnat_src/$(f) gnat >/dev/null 2>&1 ;)
-else
-	-@$(foreach f,$(GNAT_SOURCES_FOR_GNATCOLL), \
-	   $(LN_S) -f ../gnat_src/$(f) gnat >/dev/null 2>&1 ;)
-endif
-	@(cd gnat && gnatmake -q xsnamest && ./xsnamest && mv snames.ns snames.ads && mv snames.nb snames.adb)
 endif
 
 ## Only works after installation, so we should install to a local directory

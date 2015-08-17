@@ -30,12 +30,6 @@ WITH_XREF=yes
 endif
 endif
 
-ifeq (${WITH_PROJECTS}, yes)
-GNAT_SOURCES=@GNAT_SOURCES@
-else
-GNAT_SOURCES=no
-endif
-
 # Unless already set by the user to another value
 ifeq ($(PROCESSORS),)
 PROCESSORS=0
