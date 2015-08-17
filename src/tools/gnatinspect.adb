@@ -1517,6 +1517,22 @@ procedure GNATInspect is
 
       elsif Switch = "--traceon" then
          Set_Active (GNATCOLL.Traces.Create (Parameter), True);
+
+      elsif Switch = "--lang" then
+         declare
+            Str : String_List_Access := Split (Parameter, On => ':');
+         begin
+            if Str'Length /= 4 then
+               raise Invalid_Parameter with "Invalid parameter for --lang";
+            end if;
+
+            Env.Register_Default_Language_Extension
+               (Language_Name       => Str (Str'First).all,
+                Default_Spec_Suffix => Str (Str'First + 1).all,
+                Default_Body_Suffix => Str (Str'First + 2).all,
+                Obj_Suffix          => Str (Str'First + 3).all);
+            Free (Str);
+         end;
       end if;
    end Parse_Command_Line;
 
@@ -1576,6 +1592,12 @@ begin
       Long_Switch => "--basenames",
       Value       => False,
       Help        => "Only display file names, instead of full path");
+   Define_Switch
+     (Cmdline,
+      Long_Switch => "--lang=",
+      Help        => "Define language-specific object file extensions."
+      & " For instance, --lang=SPARK:.spark::.ali",
+      Argument    => "LANG:SPEC:BODY:OBJ");
    Define_Switch
      (Cmdline,
       Output      => Verbose'Access,

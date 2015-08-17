@@ -874,6 +874,18 @@ package GNATCOLL.Projects is
    -- Config files --
    ------------------
 
+   procedure Set_Save_Config_File
+     (Self : in out Project_Environment;
+      Name : GNATCOLL.VFS.Filesystem_String);
+   --  If Name is not No_File, then the configuration file that is used to
+   --  parse the project will be saved to the root project's object dir (or
+   --  if there is none to the same directory as the root project), as Name.
+   --  This config file is the one set via Set_Config_File below, possibly
+   --  modified by adding the custom naming schemes created via
+   --  Register_Default_Language_Extension.
+   --  Such a project file can then be passed to other project-aware tools,
+   --  and they won't have to call Register_Default_Language_Extension.
+
    procedure Set_Config_File
      (Self        : in out Project_Environment;
       Config_File : GNATCOLL.VFS.Virtual_File);
@@ -1788,6 +1800,9 @@ private
 
       Naming_Schemes : Naming_Scheme_Access;
       --  The list of default naming schemes for the languages known to GPS
+
+      Save_Config_File : GNAT.Strings.String_Access;
+      --  See Set_Save_Config_File
    end record;
 
    type Name_Id_Array        is array (Positive range <>) of GPR.Name_Id;

@@ -62,7 +62,6 @@ with GPR.Part;
 with GPR.Proc;
 with GPR.PP;                      use GPR.PP;
 with GPR.Tree;                    use GPR.Tree;
-with GPR.Util;                    use GPR.Util;
 with GPR.Sinput;
 with GPR.Snames;                  use GPR.Snames;
 
@@ -427,6 +426,15 @@ package body GNATCOLL.Projects is
    --  Look at the gnatls attribute, if defined, and update the predefined
    --  path if needed.
    --  Return True if the path was updated.
+
+   procedure Put
+      (Self        : in out Pretty_Printer'Class;
+       Project     : Project_Node_Id;
+       In_Tree     : Project_Node_Tree_Ref;
+       Id          : Project_Id := GPR.No_Project;
+       Increment   : Positive := 3;
+       Eliminate_Empty_Case_Constructions : Boolean := False);
+   --  Internal version of Put, acting directly on the low-level structures
 
    -----------
    -- Lists --
@@ -7024,6 +7032,11 @@ package body GNATCOLL.Projects is
      (Self   : in out Project_Tree;
       Errors : Projects.Error_Report := null)
    is
+      Actual_Config_File : Project_Node_Id := Empty_Project_Node;
+      Actual_Config_File_Tree : Project_Node_Tree_Ref := null;
+      --  The config file that was used (and possibly augmented by custom
+      --  naming schemes set in Register_Default_Language_Extension)
+
       procedure Add_Default_GNAT_Naming_Scheme
         (Config_File  : in out GPR.Project_Node_Id;
          Project_Tree : GPR.Tree.Project_Node_Tree_Ref);
@@ -7170,7 +7183,7 @@ package body GNATCOLL.Projects is
             Create_Attribute
               (Name_Spec_Suffix, ".ads", "ada",     Pkg => Naming);
             Create_Attribute
-              (Name_Separate_Suffix, ".adb", "ada", Pkg => Naming);
+              (Name_Separate_Suffix, ".adb",        Pkg => Naming);
             Create_Attribute
               (Name_Body_Suffix, ".adb", "ada",     Pkg => Naming);
             Create_Attribute
@@ -7268,6 +7281,9 @@ package body GNATCOLL.Projects is
 
             NS := NS.Next;
          end loop;
+
+         Actual_Config_File := Config_File;
+         Actual_Config_File_Tree := Project_Tree;
       end Add_GPS_Naming_Schemes_To_Config_File;
 
       -------------------------------
@@ -7552,6 +7568,55 @@ package body GNATCOLL.Projects is
 
       GPR.Err.Finalize;
       GPR.Output.Cancel_Special_Output;
+
+      --  Save the config file that was used to disk, if needed. This will
+      --  be used when spawning other project-aware tools, since it might
+      --  include extra naming schemes coming from calls to
+      --  Register_Default_Language_Extension.
+
+      if Self.Data.Env.Save_Config_File /= null
+         and then Actual_Config_File /= Empty_Project_Node
+         and then Self.Status = From_File
+      then
+         declare
+            F : Ada.Text_IO.File_Type;
+            type File_Pretty_Printer is new Pretty_Printer with null record;
+            overriding procedure Put
+               (Self : in out File_Pretty_Printer; C : Character);
+
+            overriding procedure Put
+               (Self : in out File_Pretty_Printer; C : Character)
+            is
+               pragma Unreferenced (Self);
+            begin
+               Put (F, C);
+            end Put;
+
+            P : File_Pretty_Printer;
+            Gpsauto : Virtual_File;
+            Dir : Virtual_File := Self.Root_Project.Object_Dir;
+
+         begin
+            if Dir = GNATCOLL.VFS.No_File then
+               Dir := Create (Self.Root_Project.Project_Path.Dir_Name);
+            end if;
+
+            Gpsauto := Create_From_Dir
+               (Dir => Dir,
+                Base_Name => +Self.Data.Env.Save_Config_File.all);
+
+            Trace (Me, "Saving config file to " & Gpsauto.Display_Full_Name);
+            Ada.Text_IO.Create (F, Out_File, Gpsauto.Display_Full_Name);
+            Put (Self    => P,
+                 Project => Actual_Config_File,
+                 In_Tree => Actual_Config_File_Tree);
+            Close (F);
+         exception
+            when E : Ada.Text_IO.Name_Error
+               | Ada.Text_IO.Use_Error =>
+               Trace (Me, E, "Could not save config file");
+         end;
+      end if;
 
       Decrease_Indent (Me);
 
@@ -7883,7 +7948,19 @@ package body GNATCOLL.Projects is
                           Base_Name
                             (Filesystem_String (Get_String (Source.Object)),
                              ".o");
+                        Base_Last : Natural := Base'Last;
                      begin
+                        --  In GPS, users might define ada-based languages
+                        --  when they have local variations. In this case,
+                        --  they are likely to define the object suffix as
+                        --  ".ali", which we need to ignore as well.
+
+                        if Base'Length > 4
+                           and then Base (Base_Last - 3 .. Base_Last) = ".ali"
+                        then
+                           Base_Last := Base_Last - 4;
+                        end if;
+
                         --  We know the actual object file will be in either
                         --  P or one of its extending projects. We can't
                         --  compute this information now though, because the
@@ -7896,7 +7973,7 @@ package body GNATCOLL.Projects is
                            if Is_Aggregate_Project (Self.Data.Root) then
                               Include_File
                                 (Tree_For_Map.Objects_Basename,
-                                 Base,
+                                 Base (Base'First .. Base_Last),
                                  (P, File, Source.Language.Name, Source,
                                   null));
                            else
@@ -7904,7 +7981,7 @@ package body GNATCOLL.Projects is
                               --  project.
 
                               Tree_For_Map.Objects_Basename.Include
-                                (Base,
+                                (Base (Base'First .. Base_Last),
                                  (P, File, Source.Language.Name, Source,
                                   null));
                            end if;
@@ -7913,7 +7990,7 @@ package body GNATCOLL.Projects is
                            if Is_Aggregate_Project (Self.Data.Root) then
                               Include_File
                                 (Tree_For_Map.Objects_Basename,
-                                 Base & "~"
+                                 Base (Base'First .. Base_Last) & "~"
                                  & (+Image
                                    (Integer (Source.Index),
                                         Min_Width => 0)),
@@ -7924,7 +8001,7 @@ package body GNATCOLL.Projects is
                               --  project.
 
                               Tree_For_Map.Objects_Basename.Include
-                                (Base & "~"
+                                (Base (Base'First .. Base_Last) & "~"
                                  & (+Image
                                    (Integer (Source.Index),
                                         Min_Width => 0)),
@@ -8123,6 +8200,29 @@ package body GNATCOLL.Projects is
       Increment            : Positive              := 3;
       Eliminate_Empty_Case_Constructions : Boolean := False)
    is
+   begin
+      Put
+        (Self      => Self,
+         Project   => Project.Data.Node,
+         In_Tree   => Project.Data.Tree.Tree,
+         Id        => Project.Data.View,
+         Increment => Increment,
+         Eliminate_Empty_Case_Constructions =>
+            Eliminate_Empty_Case_Constructions);
+   end Put;
+
+   ---------
+   -- Put --
+   ---------
+
+   procedure Put
+      (Self        : in out Pretty_Printer'Class;
+       Project     : Project_Node_Id;
+       In_Tree     : Project_Node_Tree_Ref;
+       Id          : Project_Id := GPR.No_Project;
+       Increment   : Positive := 3;
+       Eliminate_Empty_Case_Constructions : Boolean := False)
+   is
       procedure W_Char (C : Character);
       procedure W_Eol;
       procedure W_Str  (S : String);
@@ -8133,7 +8233,7 @@ package body GNATCOLL.Projects is
 
       procedure W_Char (C : Character) is
       begin
-         Put (Pretty_Printer'Class (Self), C);
+         Put (Self, C);
       end W_Char;
 
       -----------
@@ -8142,7 +8242,7 @@ package body GNATCOLL.Projects is
 
       procedure W_Eol is
       begin
-         New_Line (Pretty_Printer'Class (Self));
+         New_Line (Self);
       end W_Eol;
 
       -----------
@@ -8151,13 +8251,13 @@ package body GNATCOLL.Projects is
 
       procedure W_Str (S : String) is
       begin
-         Put (Pretty_Printer'Class (Self), S);
+         Put (Self, S);
       end W_Str;
 
    begin
       GPR.PP.Pretty_Print
-        (Project                            => Project.Data.Node,
-         In_Tree                            => Project.Data.Tree.Tree,
+        (Project                            => Project,
+         In_Tree                            => In_Tree,
          Increment                          => Increment,
          Eliminate_Empty_Case_Constructions =>
            Eliminate_Empty_Case_Constructions,
@@ -8166,7 +8266,7 @@ package body GNATCOLL.Projects is
          W_Eol                              => W_Eol'Unrestricted_Access,
          W_Str                              => W_Str'Unrestricted_Access,
          Backward_Compatibility             => False,
-         Id                                 => Project.Data.View);
+         Id                                 => Id);
    end Put;
 
    ----------
@@ -9241,6 +9341,7 @@ package body GNATCOLL.Projects is
          Unchecked_Free (Self.Predefined_Source_Files);
          Free (Self.Xrefs_Subdir);
          Self.Extensions.Clear;
+         Free (Self.Save_Config_File);
 
          Free (Self.Env);
 
@@ -9327,6 +9428,17 @@ package body GNATCOLL.Projects is
       Self.Last := Self.Last + 1;
       Self.Items (Self.Last) := Path;
    end Append;
+
+   --------------------------
+   -- Set_Save_Config_File --
+   --------------------------
+
+   procedure Set_Save_Config_File
+      (Self : in out Project_Environment;
+       Name : GNATCOLL.VFS.Filesystem_String) is
+   begin
+      Self.Save_Config_File := new String'(+Name);
+   end Set_Save_Config_File;
 
 begin
 --     GPR.Initialize;
