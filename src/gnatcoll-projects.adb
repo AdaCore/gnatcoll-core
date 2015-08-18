@@ -7183,8 +7183,6 @@ package body GNATCOLL.Projects is
             Create_Attribute
               (Name_Spec_Suffix, ".ads", "ada",     Pkg => Naming);
             Create_Attribute
-              (Name_Separate_Suffix, ".adb",        Pkg => Naming);
-            Create_Attribute
               (Name_Body_Suffix, ".adb", "ada",     Pkg => Naming);
             Create_Attribute
               (Name_Dot_Replacement, "-",           Pkg => Naming);
