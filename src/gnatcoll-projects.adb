@@ -7612,7 +7612,7 @@ package body GNATCOLL.Projects is
                  In_Tree => Actual_Config_File_Tree);
             Close (F);
          exception
-            when E : Ada.Text_IO.Name_Error
+            when Ada.Text_IO.Name_Error
                | Ada.Text_IO.Use_Error =>
                Trace (Me, "Could not save config file");
          end;
