@@ -7614,7 +7614,7 @@ package body GNATCOLL.Projects is
          exception
             when E : Ada.Text_IO.Name_Error
                | Ada.Text_IO.Use_Error =>
-               Trace (Me, E, "Could not save config file");
+               Trace (Me, "Could not save config file");
          end;
       end if;
 
