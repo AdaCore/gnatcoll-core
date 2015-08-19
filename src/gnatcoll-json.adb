@@ -704,6 +704,50 @@ package body GNATCOLL.JSON is
       return Arr.Vals.Element (Index);
    end Get;
 
+   -----------------
+   -- Set_Element --
+   -----------------
+
+   procedure Set_Element
+     (Arr : in out JSON_Array; Index : Positive; Item : JSON_Value) is
+   begin
+      Arr.Vals.Replace_Element (Index, Item);
+   end Set_Element;
+
+   ----------
+   -- Sort --
+   ----------
+
+   procedure Sort
+     (Arr : in out JSON_Array;
+      Less : access function (Left, Right : JSON_Value) return Boolean)
+   is
+      package Sorting is new Vect_Pkg.Generic_Sorting ("<" => Less.all);
+   begin
+      Sorting.Sort (Arr.Vals);
+   end Sort;
+
+   procedure Sort
+     (Val : in out JSON_Value;
+      Less : access function (Left, Right : JSON_Value) return Boolean)
+   is
+      function "<" (Left, Right : Object_Item) return Boolean;
+
+      function "<" (Left, Right : Object_Item) return Boolean is
+      begin
+         return Less (Left.Val, Right.Val);
+      end "<";
+
+      package Sorting is new Object_Items_Pkg.Generic_Sorting ("<");
+
+   begin
+      case Val.Kind is
+         when JSON_Array_Type  => Sort (Val.Data.Arr_Value.all, Less);
+         when JSON_Object_Type => Sorting.Sort (Val.Data.Obj_Value.Vals);
+         when others => null;
+      end case;
+   end Sort;
+
    ------------
    -- Append --
    ------------

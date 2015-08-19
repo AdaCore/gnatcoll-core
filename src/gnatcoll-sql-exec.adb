@@ -1577,6 +1577,15 @@ package body GNATCOLL.SQL.Exec is
       return Stmt;
    end Prepare;
 
+   -----------------
+   -- Clear_Cache --
+   -----------------
+
+   procedure Clear_Cache (Stmt : Prepared_Statement) is
+   begin
+      Query_Cache.Unset_Cache (Stmt.Get);
+   end Clear_Cache;
+
    --------------------
    -- Fetch_Internal --
    --------------------

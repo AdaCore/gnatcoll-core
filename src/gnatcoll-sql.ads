@@ -338,6 +338,9 @@ package GNATCOLL.SQL is
      (Value : String) return Text_Fields.Field'Class;
    --  Same as above but if the Value is "NULL", returns NULL instead of 'NULL'
 
+   procedure Append (List : in out SQL_Field_List; Field : SQL_Field'Class)
+      renames GNATCOLL.SQL_Impl.Append;
+
    function "+" (Left : SQL_Field'Class) return SQL_Field_List
                  renames GNATCOLL.SQL_Impl."+";
 

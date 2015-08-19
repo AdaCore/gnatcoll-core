@@ -776,6 +776,9 @@ package GNATCOLL.SQL.Exec is
    --  Prepare the statement for multiple executions.
    --  If Auto_Complete is true, the query is first auto-completed.
 
+   procedure Clear_Cache (Stmt : Prepared_Statement);
+   --  Clear cached data related to this statement
+
    procedure Fetch
      (Result     : out Direct_Cursor;
       Connection : access Database_Connection_Record'Class;

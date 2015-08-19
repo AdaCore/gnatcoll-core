@@ -267,6 +267,8 @@ package GNATCOLL.SQL_Impl is
    --  aggregate function. This is used for autocompletion of "group by".
    --  Is_Aggregate is set to True if Self is an aggregate, untouched otherwise
 
+   procedure Append (List : in out SQL_Field_List; Field : SQL_Field'Class);
+
    function "&" (Left, Right : SQL_Field'Class) return SQL_Field_List;
    function "&" (Left, Right : SQL_Field_List) return SQL_Field_List;
    function "&"

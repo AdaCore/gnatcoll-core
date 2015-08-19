@@ -63,6 +63,18 @@ package GNATCOLL.JSON is
    procedure Append (Arr : in out JSON_Array; Val : JSON_Value);
    procedure Prepend (Arr : in out JSON_Array; Val : JSON_Value);
    procedure Clear (Arr : in out JSON_Array);
+   procedure Sort
+     (Arr : in out JSON_Array;
+      Less : access function (Left, Right : JSON_Value) return Boolean);
+   --  Reorders the elements of array such that the elements are sorted
+   --  smallest first as determined by the strict comparision provided by
+   --  function Less.
+
+   procedure Set_Element
+     (Arr : in out JSON_Array; Index : Positive; Item : JSON_Value);
+   --  If Index is not in the array index range, then Constraint_Error is
+   --  propagated. Otherwise Set_Element assigns the value New_Item to the
+   --  element at position Index.
 
    function "&" (Arr : JSON_Array; Value : JSON_Value) return JSON_Array;
    function "&" (Value1, Value2 : JSON_Value) return JSON_Array;
@@ -126,6 +138,13 @@ package GNATCOLL.JSON is
    pragma Postcondition (Kind (Create_Object'Result) = JSON_Object_Type);
    --  Creates an empty object. Values need to be added using the below
    --  Set_Field methods
+
+   procedure Sort
+     (Val : in out JSON_Value;
+      Less : access function (Left, Right : JSON_Value) return Boolean);
+   --  Reorders the elements of array or fields of object such that the
+   --  values are sorted smallest first as determined by the strict comparision
+   --  provided by function Less.
 
    procedure Set_Field
      (Val        : JSON_Value;

@@ -417,6 +417,16 @@ package body GNATCOLL.SQL_Impl is
       end if;
    end Append_If_Not_Aggregate;
 
+   ------------
+   -- Append --
+   ------------
+
+   procedure Append
+     (List : in out SQL_Field_List; Field : SQL_Field'Class) is
+   begin
+      Append (List.List, Field);
+   end Append;
+
    ---------
    -- "&" --
    ---------
