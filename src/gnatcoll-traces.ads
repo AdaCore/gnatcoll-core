@@ -412,7 +412,7 @@ package GNATCOLL.Traces is
    --  factory container is freed.
 
    procedure Set_Default_Stream (Name : String);
-   --  Set Name as the default string.
+   --  Set Name as the default stream.
    --  See Register_Stream_Factory for a list of valid names. The name can be
    --  prefixed with ">>" to append to that stream.
 
