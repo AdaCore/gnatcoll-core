@@ -299,16 +299,14 @@ package body GNATCOLL.SQL.Exec is
       ---------------
 
       function Was_Freed (DB : Database_Connection) return Boolean is
-         Result : Boolean := False;
       begin
-         Result := Freed_DB.Contains (DB);
-         return Result;
+         return Freed_DB.Contains (DB);
 
       exception
          when E : others =>
             Trace (Me_Cache, E, "Was_Freed ");
 
-            return Result;
+            return False;
       end Was_Freed;
 
    end Query_Cache;

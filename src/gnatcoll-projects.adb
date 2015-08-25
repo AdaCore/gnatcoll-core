@@ -82,6 +82,9 @@ package body GNATCOLL.Projects is
      (others => <>);
    --  A dummy array used while computing importing projects
 
+   package Path_Sets is new Ada.Containers.Indefinite_Ordered_Sets (String);
+   use Path_Sets;
+
    package Virtual_File_List is new Ada.Containers.Doubly_Linked_Lists
      (Element_Type => Virtual_File);
 
@@ -3568,10 +3571,6 @@ package body GNATCOLL.Projects is
    is
       Iter       : Project_Iterator;
 
-      package Path_Sets is new
-        Ada.Containers.Indefinite_Ordered_Sets (String);
-      use Path_Sets;
-
       Project_Paths : Path_Sets.Set;
 
       procedure Add_Project (Project : Project_Type'Class);
@@ -3732,10 +3731,6 @@ package body GNATCOLL.Projects is
       Include_Extended   : Boolean := True) return Project_Iterator
    is
       Iter       : Project_Iterator;
-
-      package Path_Sets is new
-        Ada.Containers.Indefinite_Ordered_Sets (String);
-      use Path_Sets;
 
       Project_Paths : Path_Sets.Set;
 
@@ -4127,10 +4122,6 @@ package body GNATCOLL.Projects is
       Iter_Inner : Inner_Project_Iterator;
 
       Local_Roots : Project_Lists.Vector := Project_Lists.Empty_Vector;
-
-      package Path_Sets is new
-        Ada.Containers.Indefinite_Ordered_Sets (String);
-      use Path_Sets;
 
       Project_Paths : Path_Sets.Set := Path_Sets.Empty_Set;
 
