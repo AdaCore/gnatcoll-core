@@ -45,15 +45,21 @@ package GNATCOLL.SQL.Exec.Tasking is
    ----------------------------------------------------------------------------
 
    function Task_Safe_Instance
-     (Source : Forward_Cursor'Class) return Direct_Cursor;
+     (Source   : Forward_Cursor'Class;
+      Index_By : Field_Index'Base := No_Field_Index) return Direct_Cursor;
    --  Creates and returns cursor which could be used to clone the copies for
    --  different tasks. This routine creates Source cursor data copy into
    --  internal structures of the resulting cursor. If the Source cursor
    --  already created using this routine, copy is not created but returned the
    --  Source cursor.
+   --  Index_By could be supplied to index the result set by some field for
+   --  the fast record lookup by the field value. Could be commonly used to
+   --  lookup the record by the one field primary key.
 
    function Task_Safe_Instance
-     (Source : Abstract_Cursor_Access) return Abstract_Cursor_Access;
+     (Source   : Abstract_Cursor_Access;
+      Index_By : Field_Index'Base := No_Field_Index)
+      return Abstract_Cursor_Access;
    --  Need to support databases, where direct cursors is not supported.
    --  Returns the same pointer if the Source is already the task safe
    --  direct cursor.
@@ -66,5 +72,11 @@ package GNATCOLL.SQL.Exec.Tasking is
    --  record. If the Task_Safe_Clone called from the same task where the
    --  Task_Safe_Instance called, the routine returns the same Source cursor to
    --  avoid odd copy.
+
+   procedure Find (Self : Abstract_Cursor_Access; Value : String);
+   --  Search the record with specified field value over the internal cursor
+   --  index by field defined on Prepare routine call in Index_By parameter.
+   --  Set cursor position to the found row. If rows is not indexed, the
+   --  Constraint_Error will be raised.
 
 end GNATCOLL.SQL.Exec.Tasking;

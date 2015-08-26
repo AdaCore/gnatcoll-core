@@ -1365,6 +1365,29 @@ to do with a `Forward_Cursor` since you would need to traverse the
 list once to count, and then execute the query again if you need the rows
 themselves).
 
+Direct_Cursor, produced from prepeared statements, could be indexed by the
+specified field value and routine Find could set the cursor position to the row
+with specified field value.::
+
+   --  Prepared statement should be declared on package level.
+
+   Stmt : Prepared_Statement :=
+     Prepare ("select Id, Name, Address from Contact order by Name"
+              Use_Cache => True, Index_By => Field_Index'First);
+
+   procedure Show_Contact (Id : Integer) is
+      CI : Direct_Cursor;
+   begin
+      CI.Fetch (DB, Stmt);
+      CI.Find (Id); -- Find record by Id
+
+      if CI.Has_Row then
+         Put_Line ("Name " & CI.Value (1) & " Address " & CI.Value (2));
+      else
+         Put_Line ("Contact id not found.");
+      end if;
+   end Show_Contact;
+
 In general, the low-level DBMS C API use totally different approaches for
 the two types of cursors (when they even provide them). By contrast,
 GNATColl makes it very easy to change from one to the other just

@@ -529,6 +529,8 @@ package GNATCOLL.SQL.Exec is
 
    type Field_Index is new Natural;
 
+   No_Field_Index : Field_Index'Base := Field_Index'First - 1;
+
    function Processed_Rows (Self : Forward_Cursor) return Natural;
    --  The number of rows that were returned so far by the cursor. Every time
    --  you call Next, this is incremented by 1. If you looped until Has_Row
@@ -652,6 +654,13 @@ package GNATCOLL.SQL.Exec is
    --  Moves the cursor by a specified number of rows. Step can be negative to
    --  move backward. Using Step=1 is the same as using Next
 
+   procedure Find (Self : in out Direct_Cursor; Value : Integer);
+   procedure Find (Self : in out Direct_Cursor; Value : String);
+   --  Search the record with specified field value over the internal cursor
+   --  index by field defined on Prepare routine call in Index_By parameter.
+   --  Set cursor position to the found row. If rows is not indexed, the
+   --  Constraint_Error will be raised.
+
    overriding procedure Fetch
      (Result     : out Direct_Cursor;
       Connection : access Database_Connection_Record'Class;
@@ -722,8 +731,8 @@ package GNATCOLL.SQL.Exec is
    --  use (no caching takes place if Use_Cache is False). This should mostly
    --  be used for queries to tables that almost never change, ie that store
    --  "enumeration types". The cache must be specifically invalidated (see
-   --  Invalidate_Cache) to reset it, although it will also expire
-   --  automatically and be refreshed after a while.
+   --  Invalidate_Cache and Clear_Cache) to reset it, although it will also
+   --  expire automatically and be refreshed after a while.
    --
    --  Preparing statements on the server
    --------------------------------------
@@ -767,14 +776,21 @@ package GNATCOLL.SQL.Exec is
       Auto_Complete : Boolean := False;
       Use_Cache     : Boolean := False;
       On_Server     : Boolean := False;
+      Index_By      : Field_Index'Base := No_Field_Index;
       Name          : String := "") return Prepared_Statement;
    function Prepare
      (Query         : String;
       Use_Cache     : Boolean := False;
       On_Server     : Boolean := False;
+      Index_By      : Field_Index'Base := No_Field_Index;
       Name          : String := "") return Prepared_Statement;
    --  Prepare the statement for multiple executions.
    --  If Auto_Complete is true, the query is first auto-completed.
+   --  If Index_By is not No_Field_Index, the Direct_Cursors produced from this
+   --  statement would be indexed by the field. It will be possible to call
+   --  Find routine to set cursor position to the record with defined field
+   --  value. If the field value is not unique, the index would contain
+   --  position to only first from the records with same field values.
 
    procedure Clear_Cache (Stmt : Prepared_Statement);
    --  Clear cached data related to this statement
@@ -1036,6 +1052,7 @@ private
 
       Use_Cache     : Boolean := False;
       Cached_Result : Cache_Id := No_Cache_Id;
+      Index_By      : Field_Index'Base;
 
       On_Server : Boolean := False;
       Name      : GNAT.Strings.String_Access;

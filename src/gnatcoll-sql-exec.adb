@@ -234,7 +234,8 @@ package body GNATCOLL.SQL.Exec is
          if Stmt.Get.Use_Cache then
             Set_Id (Stmt);
             Cache.Include
-               (Stmt.Get.Cached_Result, Task_Safe_Instance (Cached));
+              (Stmt.Get.Cached_Result,
+               Task_Safe_Instance (Cached, Index_By => Stmt.Get.Index_By));
          end if;
 
       exception
@@ -743,6 +744,10 @@ package body GNATCOLL.SQL.Exec is
       Was_Started : Boolean;
       pragma Unreferenced (Was_Started);
 
+      Is_Prepared : constant Boolean :=
+        Prepared /= Prepared_Statement'Class (No_Prepared);
+      Index_By : Field_Index'Base;
+
       Start : Time;
 
       Q : access String := Query'Unrestricted_Access;
@@ -753,7 +758,7 @@ package body GNATCOLL.SQL.Exec is
          Start := Clock;
       end if;
 
-      if Prepared /= Prepared_Statement'Class (No_Prepared) then
+      if Is_Prepared then
          --  Compute the query. We cannot reference the query before
          --  that, since it might not have been computed yet.
 
@@ -848,7 +853,29 @@ package body GNATCOLL.SQL.Exec is
             end if;
 
             Set_Failure (Connection);
+
          else
+            Index_By := (if Is_Prepared then Prepared.Get.Index_By
+                         else No_Field_Index);
+
+            if Direct
+              and then (R.all not in DBMS_Direct_Cursor'Class
+                        or Index_By /= No_Field_Index)
+            then
+               --  DBMS does not support Direct_Cursor or indexed cursor
+               --  requested. We now need to read all the results and store
+               --  them into GNATCOLL implemented Direct_Cursor.
+
+               declare
+                  R2 : constant Abstract_Cursor_Access :=
+                    Task_Safe_Instance (R, Index_By);
+               begin
+                  Unchecked_Free (R);
+
+                  R := R2;
+               end;
+            end if;
+
             Post_Execute_And_Log
               (R, Connection, Q.all, Prepared, Is_Select, Params);
          end if;
@@ -1451,6 +1478,20 @@ package body GNATCOLL.SQL.Exec is
       Relative (DBMS_Direct_Cursor'Class (Self.Res.all), Step);
    end Relative;
 
+   ----------
+   -- Find --
+   ----------
+
+   procedure Find (Self : in out Direct_Cursor; Value : Integer) is
+   begin
+      Find (Self, Image (Value, Min_Width => 0));
+   end Find;
+
+   procedure Find (Self : in out Direct_Cursor; Value : String) is
+   begin
+      Tasking.Find (Self.Res, Value);
+   end Find;
+
    --------------------
    -- Mark_As_Closed --
    --------------------
@@ -1499,8 +1540,8 @@ package body GNATCOLL.SQL.Exec is
       Auto_Complete : Boolean := False;
       Use_Cache     : Boolean := False;
       On_Server     : Boolean := False;
-      Name          : String  := "")
-      return Prepared_Statement
+      Index_By      : Field_Index'Base := No_Field_Index;
+      Name          : String := "") return Prepared_Statement
    is
       Stmt : Prepared_Statement;
       Data : Prepared_Statement_Data;
@@ -1512,6 +1553,7 @@ package body GNATCOLL.SQL.Exec is
          Is_Select     => False,  --  Computed later
          Use_Cache     => Use_Cache,
          Cached_Result => No_Cache_Id,
+         Index_By      => Index_By,
          On_Server     => On_Server,
          Name          => null,
          Prepared      => null);
@@ -1541,11 +1583,11 @@ package body GNATCOLL.SQL.Exec is
    -------------
 
    function Prepare
-     (Query      : String;
-      Use_Cache  : Boolean := False;
-      On_Server  : Boolean := False;
-      Name       : String := "")
-      return Prepared_Statement
+     (Query     : String;
+      Use_Cache : Boolean := False;
+      On_Server : Boolean := False;
+      Index_By  : Field_Index'Base := No_Field_Index;
+      Name      : String := "") return Prepared_Statement
    is
       Stmt : Prepared_Statement;
       Data : Prepared_Statement_Data :=
@@ -1554,6 +1596,7 @@ package body GNATCOLL.SQL.Exec is
          Is_Select     => Is_Select_Query (Query),
          Use_Cache     => Use_Cache,
          Cached_Result => No_Cache_Id,
+         Index_By      => Index_By,
          On_Server     => On_Server,
          Name          => null,
          Prepared      => null);
@@ -1594,7 +1637,7 @@ package body GNATCOLL.SQL.Exec is
       Stmt       : Prepared_Statement'Class;
       Params     : SQL_Parameters)
    is
-      Direct : constant Boolean := Result in Direct_Cursor;
+      Direct : constant Boolean := Result in Direct_Cursor'Class;
       Found : Boolean;
 
       procedure Put_Result (Item : Forward_Cursor'Class);
@@ -1649,14 +1692,14 @@ package body GNATCOLL.SQL.Exec is
             if Success (Connection) then
                Query_Cache.Set_Cache (Stmt, RE);
 
-               --  Recoursive reuse get from cahce code of this routine
+               --  Recursive reuse get from cache code of this routine
 
                Fetch_Internal (Result, Connection, Stmt, Params);
 
             elsif Direct then
                --  Just to return error in direct cursor type
 
-               Put_Result (Task_Safe_Instance (RE));
+               Put_Result (Task_Safe_Instance (RE, Stmt.Get.Index_By));
 
             else
                --  Just to return error

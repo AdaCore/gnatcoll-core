@@ -24,11 +24,9 @@
 with Ada.Characters.Handling;      use Ada.Characters.Handling;
 with Ada.Strings.Fixed;            use Ada.Strings;
 with Ada.Unchecked_Conversion;
-with Ada.Unchecked_Deallocation;
 with GNATCOLL.SQL.Sqlite.Gnade;    use GNATCOLL.SQL.Sqlite.Gnade;
 with GNATCOLL.SQL.Exec;
 with GNATCOLL.SQL.Exec_Private;    use GNATCOLL.SQL.Exec_Private;
-with GNATCOLL.SQL.Exec.Tasking;    use GNATCOLL.SQL.Exec.Tasking;
 with GNATCOLL.Traces;              use GNATCOLL.Traces;
 with GNATCOLL.Utils;               use GNATCOLL.Utils;
 with GNAT.Calendar;
@@ -503,10 +501,7 @@ package body GNATCOLL.SQL.Sqlite.Builder is
       Params      : SQL_Parameters := No_Parameters)
       return Abstract_Cursor_Access
    is
-      procedure Unchecked_Free is new Ada.Unchecked_Deallocation
-         (Sqlite_Cursor'Class, Sqlite_Cursor_Access);
       Res    : Sqlite_Cursor_Access;
-      Res2   : Abstract_Cursor_Access;
       Stmt   : Statement;
       Last_Status : Result_Codes;
       Tmp_Data : array (Params'Range) of GNAT.Strings.String_Access;
@@ -619,20 +614,12 @@ package body GNATCOLL.SQL.Sqlite.Builder is
             return null;
       end case;
 
-      if not Direct then
-         return Abstract_Cursor_Access (Res);
+      if Direct then
+         Res.Free_Stmt := True;
+         Res.DB := null;
       end if;
 
-      --  For direct cursors, we now need to actually read all the results, and
-      --  store them in memory
-
-      Res2 := Task_Safe_Instance (Abstract_Cursor_Access (Res));
-
-      Res.Stmt := No_Statement;
-      Res.DB := null;
-      Unchecked_Free (Res);
-
-      return Res2;
+      return Abstract_Cursor_Access (Res);
    end Execute;
 
    -------------------------

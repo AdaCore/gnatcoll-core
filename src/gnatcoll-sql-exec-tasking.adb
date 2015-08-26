@@ -23,11 +23,13 @@
 
 pragma Ada_2012;
 
+with Ada.Containers.Indefinite_Hashed_Maps;
 with Ada.Containers.Indefinite_Holders;
 with Ada.Containers.Indefinite_Vectors;
 with Ada.Finalization;
 with Ada.Task_Attributes;
 
+with Ada.Strings.Hash;
 with Ada.Strings.Unbounded;     use Ada.Strings.Unbounded;
 with Ada.Task_Identification;   use Ada.Task_Identification;
 with GNATCOLL.Traces;           use GNATCOLL.Traces;
@@ -83,8 +85,12 @@ package body GNATCOLL.SQL.Exec.Tasking is
      new Ada.Containers.Indefinite_Vectors (Natural, Record_Type);
    --  Zero index is for field names
 
+   package String_Indexes is new Ada.Containers.Indefinite_Hashed_Maps
+     (String, Positive, Ada.Strings.Hash, Equivalent_Keys => "=");
+
    type Data_Set is record
       Table   : Data_Set_Vectors.Vector;
+      Index   : String_Indexes.Map;
       Error   : Unbounded_String;
       Status  : Unbounded_String;
       TID     : Task_Id; -- Keep the Task ID where the cursor is filled
@@ -240,6 +246,36 @@ package body GNATCOLL.SQL.Exec.Tasking is
       Self.Position := Self.Position + Step;
    end Relative;
 
+   ----------
+   -- Find --
+   ----------
+
+   procedure Find (Self : Abstract_Cursor_Access; Value : String) is
+      TC : Task_Cursor_Access;
+      C : String_Indexes.Cursor;
+      Not_Indexed : constant String := "Cursor is not indexed.";
+   begin
+      if Self.all not in Task_Cursor'Class then
+         raise Constraint_Error with Not_Indexed;
+      end if;
+
+      TC := Task_Cursor_Access (Self);
+
+      if TC.Data.Get.Index.Length = 0
+        and then TC.Data.Get.Table.Length > 0
+      then
+         raise Constraint_Error with Not_Indexed;
+      end if;
+
+      C := TC.Data.Get.Index.Find (Value);
+
+      if String_Indexes.Has_Element (C) then
+         TC.Position := String_Indexes.Element (C);
+      else
+         TC.Position := TC.Data.Get.Table.Last_Index + 1;
+      end if;
+   end Find;
+
    -----------
    -- Value --
    -----------
@@ -262,7 +298,9 @@ package body GNATCOLL.SQL.Exec.Tasking is
    ------------------------
 
    function Task_Safe_Instance
-     (Source : Abstract_Cursor_Access) return Abstract_Cursor_Access
+     (Source   : Abstract_Cursor_Access;
+      Index_By : Field_Index'Base := No_Field_Index)
+      return Abstract_Cursor_Access
    is
       Src : DBMS_Forward_Cursor'Class renames
         DBMS_Forward_Cursor'Class (Source.all);
@@ -270,8 +308,43 @@ package body GNATCOLL.SQL.Exec.Tasking is
       Result : Task_Cursor_Access;
       Row : Record_Type (Field_Index'First
                          .. Src.Field_Count + Field_Index'First - 1);
+
+      procedure Append_Index_Element (Row : Positive);
+
+      --------------------------
+      -- Append_Index_Element --
+      --------------------------
+
+      procedure Append_Index_Element (Row : Positive) is
+         CS : String_Indexes.Cursor;
+         OK : Boolean;
+         Ref : constant Data_Set_Pointers.Reference_Type := Result.Data.Get;
+      begin
+         Ref.Index.Insert (Ref.Table (Row)(Index_By).Element, Row, CS, OK);
+
+         if not OK then
+            Trace
+              (Me_Error,
+               "Field " & Src.Field_Name (Index_By) & " value "
+               & Ref.Table (Row)(Index_By).Element
+               & " is not unique. Not all records indexed.");
+            --  We could support a few records response on one Find call
+            --  over the Next after Find.
+         end if;
+      end Append_Index_Element;
+
    begin
       if Source.all in Task_Cursor'Class then
+         Result := Task_Cursor_Access (Source);
+
+         if Index_By >= Field_Index'First
+           and then Result.Data.Get.Index.Is_Empty
+         then
+            for J in 1 .. Result.Data.Get.Table.Last_Index loop
+               Append_Index_Element (J);
+            end loop;
+         end if;
+
          return Source;
       end if;
 
@@ -282,7 +355,8 @@ package body GNATCOLL.SQL.Exec.Tasking is
                           Status  => To_Unbounded_String (Src.Status),
                           Success => Src.Is_Success,
                           TID     => Current_Task,
-                          Table   => <>));
+                          Table   => <>,
+                          Index   => <>));
 
       for J in Row'Range loop
          Row (J).Replace_Element (Src.Field_Name (J));
@@ -305,6 +379,10 @@ package body GNATCOLL.SQL.Exec.Tasking is
 
          Result.Data.Get.Table.Append (Row);
 
+         if Index_By >= Field_Index'First then
+            Append_Index_Element (Result.Data.Get.Table.Last_Index);
+         end if;
+
          Src.Next;
       end loop;
 
@@ -316,10 +394,11 @@ package body GNATCOLL.SQL.Exec.Tasking is
    end Task_Safe_Instance;
 
    function Task_Safe_Instance
-     (Source : Forward_Cursor'Class) return Direct_Cursor
+     (Source   : Forward_Cursor'Class;
+      Index_By : Field_Index'Base := No_Field_Index) return Direct_Cursor
    is
       Target : constant Abstract_Cursor_Access :=
-         Task_Safe_Instance (Source.Res);
+        Task_Safe_Instance (Source.Res, Index_By);
    begin
       if Target = Source.Res then
          return Direct_Cursor (Source);
