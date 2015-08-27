@@ -6092,7 +6092,7 @@ package body GNATCOLL.Projects is
       Success          : Boolean;
       Project          : Project_Node_Id;
       Project_File     : GNATCOLL.VFS.Virtual_File := Root_Project_Path;
-
+      Pth              : Path_Name_Type;
    begin
       Increase_Indent
         (Me, "Load project " & Root_Project_Path.Display_Full_Name);
@@ -6110,7 +6110,21 @@ package body GNATCOLL.Projects is
          Previous_Status  := Default;
       end if;
 
-      if not Is_Regular_File (Root_Project_Path) then
+      --  Looking for the project file in predefined paths if the default
+      --  project path has been initialized.
+      if Env /= null and then Is_Initialized (Env.Env.Project_Path) then
+         Find_Project
+           (Env.Env.Project_Path,
+            Root_Project_Path.Display_Full_Name,
+            "",
+            Pth);
+
+         if Pth /= No_Path then
+            Project_File := Create (+Get_Name_String (Pth));
+         end if;
+      end if;
+
+      if not Is_Regular_File (Project_File) then
          Trace (Me, "Load: " & Display_Full_Name (Root_Project_Path)
                 & " is not a regular file");
          Project_File :=
