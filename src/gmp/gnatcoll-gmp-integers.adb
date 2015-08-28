@@ -775,7 +775,7 @@ package body GNATCOLL.GMP.Integers is
       use Interfaces.C, Interfaces.C.Strings;
 
       Number_Digits : constant size_t := mpz_sizeinbase
-         (This.Value'Access, Int (Base));
+         (This.Value'Access, Int (abs Base));
 
       Buffer : String (1 .. Integer (Number_Digits) + 2);
       --  The correct number to allocate is 2 more than Number_Digits in order
