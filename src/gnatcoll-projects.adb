@@ -6998,6 +6998,9 @@ package body GNATCOLL.Projects is
          GPR.Output.Cancel_Special_Output;
 
          if Recompute_View then
+            --  For future recomputations of the view we want to keep the same
+            --  flag over and over again.
+            Tree.Data.Env.Report_Missing_Dirs := Report_Missing_Dirs;
             Tree.Recompute_View (Errors => Errors);
          end if;
       end if;
@@ -7434,7 +7437,9 @@ package body GNATCOLL.Projects is
 
       begin
          Flags := Create_Flags
-           (On_Error'Unrestricted_Access, Require_Sources => False);
+           (On_Error'Unrestricted_Access,
+            Require_Sources     => False,
+            Report_Missing_Dirs => Self.Data.Env.Report_Missing_Dirs);
 
          --  Make sure errors are reinitialized before load
          GPR.Err.Initialize;

@@ -217,7 +217,9 @@ package GNATCOLL.Projects is
    --  you will need to call Recompute_View yourself.
    --
    --  If Report_Missing_Dirs is true, then a warning will be issued when a
-   --  project file's object directory does not exist yet.
+   --  project file's object directory does not exist yet. Note that this flag
+   --  will be stored in the project environment and will have an effet on
+   --  further calls to Recompute_View with the same project environment.
 
    procedure Set_Trusted_Mode
      (Self : in out Project_Environment; Trusted : Boolean := True);
@@ -1764,6 +1766,8 @@ private
       Autoconf    : Boolean := False;
       Config_File : GNATCOLL.VFS.Virtual_File;
       --  Name of the .cgpr file to parse for the project.
+
+      Report_Missing_Dirs : Boolean := True;
 
       Forced_Target : GNAT.Strings.String_Access;
       Forced_Runtime : GNAT.Strings.String_Access;
