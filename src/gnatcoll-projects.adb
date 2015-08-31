@@ -6228,7 +6228,11 @@ package body GNATCOLL.Projects is
      (Self        : in out Project_Environment;
       Config_File : GNATCOLL.VFS.Virtual_File) is
    begin
-      Self.Config_File := Config_File;
+      if Config_File.Is_Regular_File then
+         Self.Config_File := Config_File;
+      else
+         Trace (Me, "Config file not found: " & Config_File.Display_Full_Name);
+      end if;
    end Set_Config_File;
 
    -------------------------------
