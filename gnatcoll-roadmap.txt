@@ -1,14 +1,3 @@
 This is a tentative roadmap for GNATCOLL.
 None of this information is firm, and the roadmap could be changed
 at any time.
-
-[GNATCOLL 1.5]
-
-Target date: Nov 01st, 2012
-
-- Improved ORM queries (higher level, in particular when
-  the query involves related tables)
-
-- Parser and API for LI files
-
-- graphs API
