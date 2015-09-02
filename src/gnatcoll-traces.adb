@@ -464,7 +464,7 @@ package body GNATCOLL.Traces is
             Val_D      : aliased String := Image (Now, ISO_Date);
 
             Nam_T      : aliased String := "T";
-            Val_T      : aliased String := Val_D & Image (Now, "T%T");
+            Val_T      : aliased String := Val_D & Image (Now, "T%H%M%S");
 
             Predef_Substitutions : constant Substitution_Array :=
               ((Name  => Nam_Dollar'Unchecked_Access,

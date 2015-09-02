@@ -15,6 +15,13 @@ of the feature.
 New features in 1.8
 -------------------
 
+NF-18-O813-014 GNATCOLL.Traces: Remove colons from $T (2015-09-02)
+
+  The format of built-in variable $T for log file names, representing the
+  current date and time, has been changed so that colons are not included
+  anymore between the hour, minute, and second components. This allows
+  this pattern to be used on Windows systems.
+
 NF-18-O717-016 GNATCOLL.SQL: SQL_Parameter from Unbounded_String (2015-07-22)
 
   Text parameters to SQL queries can now be set from an unbounded string,
