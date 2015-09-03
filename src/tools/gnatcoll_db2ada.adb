@@ -223,6 +223,9 @@ procedure GNATCOLL_Db2Ada is
             Put_Line ("FAILED to execute command: "
                       & Argument_List_To_String (Args));
          end if;
+      exception
+         when Invalid_Process =>
+            Put_Line ("FAILED to spawn python");
       end;
 
       Free (Args);
