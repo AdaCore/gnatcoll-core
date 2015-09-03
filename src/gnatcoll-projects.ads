@@ -803,6 +803,13 @@ package GNATCOLL.Projects is
    --  Return a list of all LI files for this project. This never returns null.
    --  The parameters are similar to that of Object_Path.
    --
+   --  If Recursive is True, all LI files from Self or the projects it imports
+   --  are returned.
+   --  If Recursive is False, and Self is an extended project, no LI file is
+   --  ever returned. If Self is not an extended project, then all its LI files
+   --  and the ones from the projects it extends are returned. This behavior is
+   --  such that the LI files logically belongs to the extending project.
+   --
    --  ALI_Ext is the suffix to use for those files. As a special case, if
    --  it starts with "^" it is considered as a regexp matching the basename of
    --  relevant files.

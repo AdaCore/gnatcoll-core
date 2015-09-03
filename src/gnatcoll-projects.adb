@@ -905,6 +905,9 @@ package body GNATCOLL.Projects is
       --
       --  ??? This function seems to be the same as Create_From_Project.
 
+      procedure Process_Project (Project : Project_Type);
+      --  Process Project and append to List all relevant ALI files
+
       Local_Obj_Map : Names_Files.Map;
 
       -------------------
@@ -973,6 +976,211 @@ package body GNATCOLL.Projects is
 
       Seen : Virtual_File_Sets.Set;
 
+      ---------------------
+      -- Process_Project --
+      ---------------------
+
+      procedure Process_Project (Project : Project_Type) is
+         Objects  : constant File_Array :=
+           Object_Path (Project,
+                        Recursive           => False,
+                        Including_Libraries => Including_Libraries,
+                        Xrefs_Dirs          => Xrefs_Dirs);
+         Dir            : Virtual_File;
+         Should_Append  : Boolean;
+         Lowest_Project : Project_Type;
+
+      begin
+         if Objects'Length = 0
+           or else Seen.Contains (Objects (Objects'First))
+         then
+            return;
+         end if;
+
+         --  Only look at the first object directory (which is either
+         --  object_dir, if it exists, or library_dir, if it exists).
+         --  We never need to look at both of them.
+
+         Dir := Objects (Objects'First);
+         Seen.Include (Dir);
+         Trace (Me, "Library_Files, reading dir "
+                & Dir.Display_Full_Name);
+         Tmp := Read_Dir (Dir);
+
+         for F in Tmp'Range loop
+            if (Re /= null
+                and then Match (Re.all, +Tmp (F).Base_Name))
+              or else (Re = null
+                       and then Tmp (F).Has_Suffix (ALI_Ext))
+            then
+               declare
+                  B : constant Filesystem_String := Get_Base_Name (Tmp (F));
+
+                  B_Last : Integer := B'Last;
+                  Dot    : Integer;
+                  P      : Project_Type;
+
+               begin
+                  Info_Cursor := Find_In_Subtree
+                    (Self.Data.Tree_For_Map.Objects_Basename,
+                     B, Self);
+
+                  if not Has_Element (Info_Cursor) then
+                     --  Special case for C files: the library file is
+                     --    file.c.gli
+                     --  instead of file.ali as we would have in Ada
+
+                     Dot := B'Last;
+                     while Dot >= B'First and then B (Dot) /= '.' loop
+                        Dot := Dot - 1;
+                     end loop;
+
+                     if Dot > B'First then
+                        B_Last := Dot - 1;
+                        Info_Cursor :=
+                          Find_In_Subtree
+                            (Self.Data.Tree_For_Map.Objects_Basename,
+                             B (B'First .. B_Last),
+                             Self);
+                     end if;
+                  end if;
+
+                  --  An LI file is taking into account if:
+                  --  * it has a name that is known in this
+                  --    project (and thus matches one source file).
+                  --    This is a quick filter.
+                  --  * AND it is not overridden in one of the
+                  --    extending projects.
+                  --    This test is not necessary if we don't want
+                  --    to filter out overridden LI files
+
+                  if not Has_Element (Info_Cursor) then
+                     if Active (Me) then
+                        Trace (Me, "Library_Files not including : "
+                               & Display_Base_Name (Tmp (F))
+                               & " (which is for unknown project)");
+                     end if;
+
+                     Should_Append := False;
+
+                  elsif not Exclude_Overridden then
+                     Lowest_Project := Element (Info_Cursor).Project;
+                     Should_Append := Lowest_Project /= No_Project;
+
+                  else
+                     --  P is the candidate project that contains the
+                     --  LI file, but the latter might be overridden
+                     --  in any project extending P.
+
+                     P := Element (Info_Cursor).Project;
+
+                     --  This will contain the most-extending project
+                     --  that contains a homonym of the LI file
+                     Lowest_Project := P;
+
+                     P := P.Extending_Project;
+
+                     For_Each_Extending_Project :
+                     while P /= No_Project loop
+                        declare
+                           Objs  : constant File_Array :=
+                             P.Object_Path
+                               (Recursive           => False,
+                                Including_Libraries =>
+                                  Including_Libraries,
+                                Xrefs_Dirs          => Xrefs_Dirs);
+                        begin
+                           for Obj in Objs'Range loop
+                              if Create_From_Base
+                                (Tmp (F).Base_Name,
+                                 Objs (Obj).Full_Name.all).Is_Regular_File
+                              then
+                                 if Active (Me) then
+                                    Trace
+                                      (Me, "overridden in project " & P.Name);
+                                 end if;
+
+                                 Lowest_Project := P;
+                                 exit;
+                              end if;
+                           end loop;
+                        end;
+
+                        P := P.Extending_Project;
+                     end loop For_Each_Extending_Project;
+
+                     --  Since we are traversing each directory only once, we
+                     --  cannot check that Lowest_Project is Project. Instead,
+                     --  we need to check with the object dirs.
+
+                     Should_Append := Lowest_Project = P;
+
+                     if not Should_Append then
+                        declare
+                           Lowest_Objs : constant File_Array :=
+                              Lowest_Project.Object_Path
+                                 (Recursive => False,
+                                  Including_Libraries =>
+                                     Including_Libraries,
+                                  Xrefs_Dirs          => Xrefs_Dirs);
+
+                        begin
+                           for Ob in Lowest_Objs'Range loop
+                              Should_Append := Lowest_Objs (Ob) = Dir;
+                              exit when Should_Append;
+                           end loop;
+                        end;
+                     end if;
+                  end if;
+               end;
+
+               --  Take into account Recursive parameter to decide
+               --  whether the library file belongs to Self when
+               --  Recursive = False, in case several projects share
+               --  the same object directory. We can only do that if
+               --  the project isn't extended though.
+
+               if Should_Append
+                 and then not Recursive
+                 and then
+                   Lowest_Project.Extending_Project = No_Project
+               then
+                  Should_Append := Lowest_Project = Self;
+               end if;
+
+               if Should_Append then
+                  List.Append
+                    (Library_Info'
+                       (Library_File => Tmp (F),
+                        LI_Project => new Project_Type'
+                          (Lowest_Project),
+                        Non_Aggregate_Root_Project =>
+                           new Project_Type'(Self),
+                        Source       => new File_Info'
+                          (Source_File_Data_To_Info
+                               (Element (Info_Cursor)))));
+               elsif Active (Me)
+                 and then Has_Element (Info_Cursor)
+               then
+                  Trace (Me, "Library_Files not including : "
+                         & Display_Base_Name (Tmp (F))
+                         & " (which is for project "
+                         & Element (Info_Cursor).Project.Name
+                         & ")");
+               end if;
+
+               Local_Obj_Map.Clear;
+            end if;
+         end loop;
+
+         Unchecked_Free (Tmp);
+
+      exception
+         when VFS_Directory_Error =>
+            Trace (Me, "Couldn't open the directory "
+                   & Dir.Display_Full_Name);
+      end Process_Project;
+
    begin
       if Is_Aggregate_Project (Self) then
          Increase_Indent (Me, "Library file for an aggregate project");
@@ -1011,6 +1219,13 @@ package body GNATCOLL.Projects is
             & Self.Project_Path.Display_Full_Name);
       end if;
 
+      --  An extended project logically does not contain any ALI file when in
+      --  non recursive mode, so we simply do not look for them.
+
+      if not Recursive and then Self.Extending_Project /= No_Project then
+         return;
+      end if;
+
       if ALI_Ext (ALI_Ext'First) = '^' then
          Re := new Pattern_Matcher'(Compile (+ALI_Ext));
       end if;
@@ -1019,201 +1234,33 @@ package body GNATCOLL.Projects is
       --  iterate explicitly on the projects so that we can control which of
       --  the object_dir or library_dir we want to use *for each project*.
       --
+      --  We always look for projects recursively: when the user specified
+      --  Recursive=>False, we still want to look at the extended projects
+      --  of Self, so that all ALI files are associated with the lowest
+      --  extending project. If the user specified Recursive=>False and
+      --  Self is an extended project, we have already exited this procedure.
+      --
       --  We are seeing extending projects before extended projects
 
-      Prj_Iter := Self.Start_Reversed (Recursive => Recursive);
+      Prj_Iter := Self.Start_Reversed (Recursive => True);
       loop
          Current_Project := Current (Prj_Iter);
          exit when Current_Project = No_Project;
 
-         if Active (Me) then
-            Trace (Me, "Current project: "
-                   & Current_Project.Project_Path.Display_Full_Name);
-         end if;
+         --  Ignore projects that the user is not interested in (i.e. in
+         --  non recursive mode, ignore all non-extended projects)
 
-         declare
-            Objects  : constant File_Array :=
-              Object_Path (Current_Project,
-                           Recursive           => False,
-                           Including_Libraries => Including_Libraries,
-                           Xrefs_Dirs          => Xrefs_Dirs);
-            Dir : Virtual_File;
-            Should_Append : Boolean;
-            Lowest_Project : Project_Type;
-         begin
-            if Objects'Length > 0
-              and then not Seen.Contains (Objects (Objects'First))
-            then
-               --  Only look at the first object directory (which is either
-               --  object_dir, if it exists, or library_dir, if it exists).
-               --  We never need to look at both of them.
-
-               begin
-                  Dir := Objects (Objects'First);
-                  Seen.Include (Dir);
-                  Trace (Me, "Library_Files, reading dir "
-                         & Dir.Display_Full_Name);
-                  Tmp := Read_Dir (Dir);
-
-                  for F in Tmp'Range loop
-                     if (Re /= null
-                         and then Match (Re.all, +Tmp (F).Base_Name))
-                       or else (Re = null
-                                and then Tmp (F).Has_Suffix (ALI_Ext))
-                     then
-                        declare
-                           B : constant Filesystem_String :=
-                             Get_Base_Name (Tmp (F));
-                           B_Last : Integer := B'Last;
-                           Dot    : Integer;
-                           P      : Project_Type;
-                        begin
-                           Info_Cursor := Find_In_Subtree
-                             (Self.Data.Tree_For_Map.Objects_Basename,
-                              B, Self);
-
-                           if not Has_Element (Info_Cursor) then
-                              --  Special case for C files: the library file is
-                              --    file.c.gli
-                              --  instead of file.ali as we would have in Ada
-
-                              Dot := B'Last;
-                              while Dot >= B'First and then B (Dot) /= '.' loop
-                                 Dot := Dot - 1;
-                              end loop;
-
-                              if Dot > B'First then
-                                 B_Last := Dot - 1;
-                                 Info_Cursor :=
-                                   Find_In_Subtree
-                                     (Self.Data.Tree_For_Map.Objects_Basename,
-                                      B (B'First .. B_Last),
-                                      Self);
-                              end if;
-                           end if;
-
-                           --  An LI file is taking into account if:
-                           --  * it has a name that is known in this
-                           --    project (and thus matches one source file).
-                           --    This is a quick filter.
-                           --  * AND it is not overridden in one of the
-                           --    extending projects.
-                           --    This test is not necessary if we don't want
-                           --    to filter out overridden LI files
-
-                           if not Has_Element (Info_Cursor) then
-                              if Active (Me) then
-                                 Trace (Me, "Library_Files not including : "
-                                        & Display_Base_Name (Tmp (F))
-                                        & " (which is for unknown project)");
-                              end if;
-                              Should_Append := False;
-
-                           elsif not Exclude_Overridden then
-                              Lowest_Project := Element (Info_Cursor).Project;
-                              Should_Append := Lowest_Project /= No_Project;
-
-                           else
-                              --  P is the candidate project that contains the
-                              --  LI file, but the latter might be overridden
-                              --  in any project extending P.
-                              P := Element (Info_Cursor).Project;
-
-                              --  This will contain the most-extending project
-                              --  that contains a homonym of the LI file
-                              Lowest_Project := P;
-
-                              P := P.Extending_Project;
-
-                              For_Each_Extending_Project :
-                              while P /= No_Project loop
-                                 declare
-                                    Objs  : constant File_Array :=
-                                      P.Object_Path
-                                        (Recursive           => False,
-                                         Including_Libraries =>
-                                           Including_Libraries,
-                                         Xrefs_Dirs          => Xrefs_Dirs);
-                                 begin
-                                    for Obj in Objs'Range loop
-                                       if Create_From_Base
-                                         (Tmp (F).Base_Name,
-                                          Objs (Obj).Full_Name.all)
-                                           .Is_Regular_File
-                                       then
-                                          if Active (Me) then
-                                             Trace
-                                               (Me, "overridden in project "
-                                                & P.Name);
-                                          end if;
-
-                                          Lowest_Project := P;
-                                          exit;
-                                       end if;
-                                    end loop;
-                                 end;
-
-                                 P := P.Extending_Project;
-                              end loop For_Each_Extending_Project;
-
-                              --  Since we are traversing each directory only
-                              --  once, we cannot check that Lowest_Project is
-                              --  Current_Project. Instead, we need to check
-                              --  with the object dirs.
-
-                              Should_Append := Lowest_Project = P;
-
-                              if not Should_Append then
-                                 declare
-                                    Lowest_Objs : constant File_Array :=
-                                       Lowest_Project.Object_Path
-                                          (Recursive => False,
-                                           Including_Libraries =>
-                                              Including_Libraries,
-                                           Xrefs_Dirs          => Xrefs_Dirs);
-                                 begin
-                                    for Ob in Lowest_Objs'Range loop
-                                       Should_Append := Lowest_Objs (Ob) = Dir;
-                                       exit when Should_Append;
-                                    end loop;
-                                 end;
-                              end if;
-                           end if;
-                        end;
-
-                        if Should_Append then
-                           List.Append
-                             (Library_Info'
-                                (Library_File => Tmp (F),
-                                 LI_Project => new Project_Type'
-                                   (Lowest_Project),
-                                 Non_Aggregate_Root_Project =>
-                                    new Project_Type'(Self),
-                                 Source       => new File_Info'
-                                   (Source_File_Data_To_Info
-                                        (Element (Info_Cursor)))));
-                        elsif Active (Me)
-                          and then Has_Element (Info_Cursor)
-                        then
-                           Trace (Me, "Library_Files not including : "
-                                  & Display_Base_Name (Tmp (F))
-                                  & " (which is for project "
-                                  & Element (Info_Cursor).Project.Name
-                                  & ")");
-                        end if;
-
-                        Local_Obj_Map.Clear;
-                     end if;
-                  end loop;
-
-                  Unchecked_Free (Tmp);
-               exception
-                  when VFS_Directory_Error =>
-                     Trace (Me, "Couldn't open the directory "
-                            & Dir.Display_Full_Name);
-               end;
+         if Recursive
+           or else Current_Project = Self
+           or else Current_Project.Extending_Project (Recurse => True) = Self
+         then
+            if Active (Me) then
+               Trace (Me, "Current project: "
+                      & Current_Project.Project_Path.Display_Full_Name);
             end if;
-         end;
+
+            Process_Project (Current_Project);
+         end if;
 
          Next (Prj_Iter);
       end loop;
@@ -3631,7 +3678,7 @@ package body GNATCOLL.Projects is
             end loop;
          else
 
-            --  For the regulat project (aggregated or root) do a full
+            --  For the regular project (aggregated or root) do a full
             --  iteration placing projects in the list.
             Iter_Inner :=
               Start_Reversed
@@ -3710,6 +3757,8 @@ package body GNATCOLL.Projects is
          Next (Iter);
          return Iter;
       else
+         --  Include_Extended is in fact ignored here, since we only ever
+         --  return the root project.
          return Inner_Project_Iterator'
            (Root             => Root_Project,
             Direct_Only      => Direct_Only,
