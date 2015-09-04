@@ -7046,10 +7046,11 @@ package body GNATCOLL.Projects is
          GPR.Com.Fail := null;
          GPR.Output.Cancel_Special_Output;
 
+         --  For future recomputations of the view we want to keep the same
+         --  flag over and over again.
+         Tree.Data.Env.Report_Missing_Dirs := Report_Missing_Dirs;
+
          if Recompute_View then
-            --  For future recomputations of the view we want to keep the same
-            --  flag over and over again.
-            Tree.Data.Env.Report_Missing_Dirs := Report_Missing_Dirs;
             Tree.Recompute_View (Errors => Errors);
          end if;
       end if;
