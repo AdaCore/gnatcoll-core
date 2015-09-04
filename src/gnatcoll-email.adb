@@ -806,16 +806,15 @@ package body GNATCOLL.Email is
                   Boundary : constant String := Get_Boundary (Msg);
                begin
                   if Payload.Preamble /= Null_Unbounded_String then
-                     Append (Append_To, Payload.Preamble & ASCII.LF);
+                     Append (Append_To, Payload.Preamble);
                   end if;
 
                   C := First (Payload.Parts);
                   for P in Parts'Range loop
                      if Parts (P) then
-                        if P /= Parts'First then
-                           Append (Append_To, ASCII.LF);
-                        end if;
-                        Append (Append_To, "--" & Boundary & ASCII.LF);
+                        Append (Append_To,
+                          ASCII.LF & "--" & Boundary & ASCII.LF);
+
                         Attachment := Element (C);
                         To_String (Attachment.Contents.Headers,
                                    Header_Max_Line_Len,

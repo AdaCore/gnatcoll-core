@@ -21,6 +21,10 @@
 --                                                                          --
 ------------------------------------------------------------------------------
 
+pragma Warnings (Off, "*internal GNAT unit*");
+with Ada.Strings.Unbounded.Aux;
+pragma Warnings (On, "*internal GNAT unit*");
+
 with GNAT.Case_Util;             use GNAT.Case_Util;
 with GNATCOLL.VFS;               use GNATCOLL.VFS;
 with GNAT.Strings;               use GNAT.Strings;
@@ -222,7 +226,14 @@ package body GNATCOLL.Email.Parser is
 
       if Store_Payload then
          if not Parse_Payload then
-            Set_Text_Payload (Msg, Str (Index .. Str'Last), Charset => "");
+
+            --  Note: do not use Set_Text_Payload here, as this would reset
+            --  the Content-Type header.
+
+            Msg.Contents.Payload :=
+              (Multipart => False,
+               Text      => To_Unbounded_String (Str (Index .. Str'Last)));
+
          else
             Email.Parser.Parse_Payload (Msg, Str (Index .. Str'Last));
          end if;
@@ -340,5 +351,21 @@ package body GNATCOLL.Email.Parser is
                   Store_Payload, Parse_Payload, Filter);
       Free (Str);
    end Full_Parse_From_File;
+
+   -------------------
+   -- Parse_Payload --
+   -------------------
+
+   procedure Parse_Payload (Msg : in out Message) is
+      use Ada.Strings.Unbounded.Aux;
+
+      Payload     : constant Unbounded_String := Msg.Contents.Payload.Text;
+      Payload_Str : Big_String_Access;
+      Payload_Len : Natural;
+   begin
+      Msg.Contents.Payload.Text := Null_Unbounded_String;
+      Get_String (Payload, Payload_Str, Payload_Len);
+      Parse_Payload (Msg, Payload_Str (1 .. Payload_Len));
+   end Parse_Payload;
 
 end GNATCOLL.Email.Parser;

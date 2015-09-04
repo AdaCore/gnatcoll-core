@@ -609,11 +609,11 @@ private
    type Message_Payload (Multipart : Boolean := False) is record
       case Multipart is
          when True =>
-            Parts         : Message_List.List;
-            Preamble      : Unbounded_String;
-            Epilogue      : Unbounded_String;
+            Parts    : Message_List.List;
+            Preamble : Unbounded_String;
+            Epilogue : Unbounded_String;
          when False =>
-            Text          : Unbounded_String;
+            Text     : Unbounded_String;
       end case;
    end record;
    Null_Payload : constant Message_Payload := (False, Null_Unbounded_String);

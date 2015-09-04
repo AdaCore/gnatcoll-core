@@ -84,4 +84,7 @@ package GNATCOLL.Email.Parser is
    --  Same as Full_Parse, but reads the message directly from a file.
    --  Name_Error is raised if the file could not be read.
 
+   procedure Parse_Payload (Msg : in out Message);
+   --  Parse previously unparsed payload
+
 end GNATCOLL.Email.Parser;
