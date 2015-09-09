@@ -95,6 +95,13 @@ package body GNATCOLL.Email is
    --  Create and set a From: header for Msg using the given email address and
    --  real name. The real name has the indicated Charset.
 
+   Encoding_Names : constant array (Encoding_Type) of access constant String :=
+     (Encoding_7bit   => new String'("7bit"),
+      Encoding_8bit   => new String'("8bit"),
+      Encoding_Binary => new String'("binary"),
+      Encoding_QP     => new String'("quoted-printable"),
+      Encoding_Base64 => new String'("base64"));
+
    ---------
    -- "=" --
    ---------
@@ -927,9 +934,34 @@ package body GNATCOLL.Email is
    is
       Encoded_Payload : Unbounded_String;
       Payload         : Unbounded_String;
-      H               : Header;
       Encoding        : Encoding_Type;
       Encoding_Str    : Unbounded_String;
+
+      function Retain_Header (H : Header'Class) return Boolean;
+      --  Filter for header list: if Decode is True, strip the MIME
+      --  Content-Transfer-Encoding; else just apply Filter.
+
+      -------------------
+      -- Retain_Header --
+      -------------------
+
+      function Retain_Header (H : Header'Class) return Boolean is
+      begin
+         if Decode
+           and then Get_Name (H) = To_Lower (Content_Transfer_Encoding)
+         then
+            return False;
+
+         elsif Filter /= null then
+            return Filter (H);
+
+         else
+            return True;
+         end if;
+      end Retain_Header;
+
+   --  Start of processing for To_String
+
    begin
       Result := Null_Unbounded_String;
 
@@ -948,32 +980,17 @@ package body GNATCOLL.Email is
          Append_To      => Encoded_Payload);
 
       if Decode then
-         H := Get_Header (Msg, Content_Transfer_Encoding);
-
-         if H.Contents = null then
-            Encoding := Encoding_7bit;
-         else
-            Flatten (H.Contents.Value, Result => Encoding_Str);
-
-            declare
-               Encode : constant String := To_Lower
-                 (Trim (To_String (Encoding_Str), Ada.Strings.Both));
-            begin
-               if Encode = "base64" then
-                  Encoding := Encoding_Base64;
-               elsif Encode = "quoted-printable" then
-                  Encoding := Encoding_QP;
-               else
-                  Encoding := Encoding_7bit;
-               end if;
-            end;
-         end if;
+         Encoding := Get_Encoding_Type (Msg);
 
          case Encoding is
             when Encoding_Base64 =>
                Base64_Decode (To_String (Encoded_Payload), Payload);
+               Encoding := Encoding_8bit;
+
             when Encoding_QP =>
                Quoted_Printable_Decode (To_String (Encoded_Payload), Payload);
+               Encoding := Encoding_8bit;
+
             when others =>
                Payload := Encoded_Payload;
          end case;
@@ -984,8 +1001,23 @@ package body GNATCOLL.Email is
 
       To_String
         (Msg.Contents.Headers, Header_Max_Line_Len,
-         Subject_Max_Line_Len, Filter,
+         Subject_Max_Line_Len, Retain_Header'Unrestricted_Access,
          Append_To => Result);
+
+      if Decode and then Encoding /= Encoding_7bit then
+         To_String
+           (Create (Content_Transfer_Encoding, Encoding_Names (Encoding).all),
+            Result => Encoding_Str);
+
+         --  Splice new CTE header before empty line at end of headers
+
+         declare
+            L : constant Natural := Length (Result);
+         begin
+            Replace_Slice (Result,
+              L, L - 1, To_String (Encoding_Str) & ASCII.LF);
+         end;
+      end if;
 
       if Quote_From then
          declare
@@ -1918,29 +1950,24 @@ package body GNATCOLL.Email is
    -----------------------
 
    function Get_Encoding_Type (Msg : Message'Class) return Encoding_Type is
-      H : constant Header := Get_Header (Msg, Content_Transfer_Encoding);
+      H  : constant Header := Get_Header (Msg, Content_Transfer_Encoding);
+      HU : Unbounded_String;
    begin
-      if H = Null_Header then
-         return Encoding_7bit;
-
-      else
+      if H /= Null_Header then
+         Flatten (H.Contents.Value, Result => HU);
          declare
-            Asc : Unbounded_String;
+            use Ada.Strings;
+            HS : constant String := To_Lower (Trim (To_String (HU), Both));
          begin
-            Flatten (H.Contents.Value, Result => Asc);
-            if Asc = "base64" then
-               return Encoding_Base64;
-            elsif Asc = "quoted-printable" then
-               return Encoding_QP;
-            elsif Asc = "binary" then
-               return Encoding_Binary;
-            elsif Asc = "8bit" then
-               return Encoding_8bit;
-            else
-               return Encoding_7bit;
-            end if;
+            for J in Encoding_Names'Range loop
+               if HS = Encoding_Names (J).all then
+                  return J;
+               end if;
+            end loop;
          end;
       end if;
+
+      return Encoding_7bit;
    end Get_Encoding_Type;
 
    ----------------------------
