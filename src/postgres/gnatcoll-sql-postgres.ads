@@ -63,6 +63,11 @@ package GNATCOLL.SQL.Postgres is
    --  Errors (if specified) will be used to report errors and warnings to the
    --  application. Errors is never freed.
 
+   function Get_Connection_String
+     (Description   : Database_Description;
+      With_Password : Boolean) return String;
+   --  Create a connection string from the database description
+
    -------------------------
    -- Postgres extensions --
    -------------------------

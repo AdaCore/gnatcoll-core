@@ -23,6 +23,7 @@
 
 with Ada.Unchecked_Deallocation;
 with GNATCOLL.SQL.Postgres.Builder;
+with GNATCOLL.Utils;                  use GNATCOLL.Utils;
 
 package body GNATCOLL.SQL.Postgres is
 
@@ -294,5 +295,75 @@ package body GNATCOLL.SQL.Postgres is
       Append (Result, To_String (Self.Returning, Format, Long => True));
       return Result;
    end To_String;
+
+   ---------------------------
+   -- Get_Connection_String --
+   ---------------------------
+
+   function Get_Connection_String
+     (Description   : Database_Description;
+      With_Password : Boolean) return String
+   is
+      Descr : constant Postgres_Description_Access :=
+        Postgres_Description_Access (Description);
+      User   : constant String := Descr.User.all;
+      Host   : constant String := Descr.Host.all;
+      Passwd : constant String := Descr.Password.all;
+
+      function Escape (Str : String) return String;
+      function Escape (Str : String) return String is
+         Len : Natural := 0;
+      begin
+         for S in Str'Range loop
+            if Str (S) = ''' or else Str (S) = '\' then
+               Len := Len + 2;
+            else
+               Len := Len + 1;
+            end if;
+         end loop;
+
+         return Result : String (Str'First .. Str'First + Len - 1) do
+            Len := Result'First;
+            for S in Str'Range loop
+               if Str (S) = ''' or else Str (S) = '\' then
+                  Result (Len) := '\';
+                  Result (Len + 1) := Str (S);
+                  Len := Len + 2;
+               else
+                  Result (Len) := Str (S);
+                  Len := Len + 1;
+               end if;
+            end loop;
+         end return;
+      end Escape;
+
+      Str : Unbounded_String  := To_Unbounded_String
+        ("dbname='" & Escape (Descr.Dbname.all) & "'");
+   begin
+      if User /= "" then
+         Append (Str, " user='" & Escape (User) & "'");
+      end if;
+
+      if Host /= "" then
+         Append (Str, " host='" & Escape (Host) & "'");
+      end if;
+
+      if Descr.Port /= -1 then
+         Append (Str, " port=" & Image (Descr.Port, Min_Width => 1));
+      end if;
+
+      if With_Password and then Passwd /= "" then
+         Append (Str, " password='" & Escape (Passwd) & "'");
+      end if;
+
+      case Descr.SSL is
+         when Disable => Append (Str, " sslmode=disable");
+         when Allow   => Append (Str, " sslmode=allow");
+         when Prefer  => Append (Str, " sslmode=prefer");
+         when Require => Append (Str, " sslmode=require");
+      end case;
+
+      return To_String (Str);
+   end Get_Connection_String;
 
 end GNATCOLL.SQL.Postgres;
