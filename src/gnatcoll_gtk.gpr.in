@@ -28,6 +28,8 @@ with "gnatcoll_python";
 
 project GnatColl_Gtk is
 
+   Gtk_Include    := (@GTK_GCC_FLAGS_GPR@);
+
    for Library_Kind    use GnatColl_Shared.Library_Type;
    for Object_Dir
       use Gnatcoll_Shared'Object_Dir & "/gtk/" & Project'Library_Kind;
@@ -65,7 +67,7 @@ project GnatColl_Gtk is
         & GnatColl_Shared.Python_Cflags
         & GnatColl_Shared.Pygtk_Include
         & GnatColl_Shared.PyGobject_Include
-        & GnatColl_Shared.Gtk_Include;
+        & Gtk_Include;
    end Compiler;
 
    package Linker is

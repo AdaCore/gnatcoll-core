@@ -44,7 +44,6 @@ abstract project GnatColl_Shared is
    Pygobject_Include := (@PYGOBJECT_INCLUDE_GPR@);
    Python_Dir     := "@PYTHON_DIR@";
    Python_Libs    := (@PYTHON_LIBS_GPR@);
-   Gtk_Include    := (@GTK_GCC_FLAGS_GPR@);
    Gtk_Libs       := (@GTK_GCC_LIBS_GPR@);
    Postgres_Dir   := "@PATH_LIBPQ@";
    Postgres_Lib   := (@LIB_PQ_GPR@);

@@ -5602,7 +5602,7 @@ fi
 rm -f "src/gnatcoll.gpr"
 cp -f "$prj" "src/gnatcoll.gpr"
 
-ac_config_files="$ac_config_files gnatcoll_shared.gpr Makefile.conf src/gnatcoll_gmp.gpr src/gnatcoll_python.gpr src/gnatcoll_readline.gpr"
+ac_config_files="$ac_config_files gnatcoll_shared.gpr Makefile.conf src/gnatcoll_gmp.gpr src/gnatcoll_gtk.gpr src/gnatcoll_python.gpr src/gnatcoll_readline.gpr"
 
 cat >confcache <<\_ACEOF
 # This file is a shell script that caches the results of configure
@@ -6312,6 +6312,7 @@ do
     "gnatcoll_shared.gpr") CONFIG_FILES="$CONFIG_FILES gnatcoll_shared.gpr" ;;
     "Makefile.conf") CONFIG_FILES="$CONFIG_FILES Makefile.conf" ;;
     "src/gnatcoll_gmp.gpr") CONFIG_FILES="$CONFIG_FILES src/gnatcoll_gmp.gpr" ;;
+    "src/gnatcoll_gtk.gpr") CONFIG_FILES="$CONFIG_FILES src/gnatcoll_gtk.gpr" ;;
     "src/gnatcoll_python.gpr") CONFIG_FILES="$CONFIG_FILES src/gnatcoll_python.gpr" ;;
     "src/gnatcoll_readline.gpr") CONFIG_FILES="$CONFIG_FILES src/gnatcoll_readline.gpr" ;;
 
