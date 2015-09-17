@@ -10,10 +10,12 @@ ifeq (${BUILDS_SHARED},yes)
 # preferably linked statically.
 all: relocatable static
 install:  install-clean install_library_type/static \
-		install_library_type/relocatable
+		install_library_type/relocatable    \
+                install_gps_plugin
 else
 all: static
-install:  install-clean install_library_type/static
+install:  install-clean install_library_type/static \
+          install_gps_plugin
 endif
 
 #######################################################################
@@ -67,6 +69,11 @@ ifeq (${WITH_GTK},yes)
 	${GPRINSTALL} ${GPRINST_OPTS} -Psrc/gnatcoll_gtk
 endif
 	${GPRINSTALL} --mode=usage ${GPRINST_OPTS} -Psrc/gnatcoll_tools
+
+install_gps_plugin: force
+	mkdir -p $(prefix)/share/gps/plug-ins
+	(cd distrib/ ; tar cf - gnatcoll) | \
+          (cd $(prefix)/share/gps/plug-ins ; tar xf -)
 
 # Regenerate part of the sources. Unfortunately, this can be run only after
 # we have build GNATCOLL, and then its tools, even though GNATCOLL itself
