@@ -72,7 +72,7 @@ abstract project GnatColl_Shared is
             --  Disable -gnata pending O525-006, since assertions checks are
             --  not compatible with disabling tampering checks
 
-            for Switches ("C") use ("-g", "-fdump-xref", "-Wunreachable-code");
+            for Switches ("C") use ("-g", "-Wunreachable-code");
          when "Production" =>
             for Switches ("Ada") use
               ("-O2", "-gnatn", "-gnatws", "-gnat05");
