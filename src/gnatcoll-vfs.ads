@@ -178,6 +178,23 @@ package GNATCOLL.VFS is
       Host      : String := Local_Host) return Virtual_File;
    --  Locate the file from its base name and the PATH environment variable
 
+   function Join
+      (Self : Virtual_File; File : Virtual_File) return Virtual_File;
+   function Join
+      (Self : Virtual_File; Path : Filesystem_String) return Virtual_File;
+   function "/"
+      (Self : Virtual_File; File : Virtual_File) return Virtual_File;
+   function "/"
+      (Self : Virtual_File; Path : Filesystem_String) return Virtual_File;
+   function "/"
+      (Dir : Filesystem_String; File : Virtual_File) return Virtual_File;
+   pragma Inline (Join, "/");
+   --  Various ways to build paths from their elements. These are just
+   --  convention functions on top of the Create_* functions, but might help
+   --  make the code more concise. For instance:
+   --      File : constant Virtual_File :=
+   --         Get_Current_Dir / "filename.txt";
+
    ----------------------
    -- Retrieving names --
    ----------------------

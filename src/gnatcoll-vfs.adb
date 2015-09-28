@@ -2092,4 +2092,54 @@ package body GNATCOLL.VFS is
       Handle_Symbolic_Links := Active;
    end Symbolic_Links_Support;
 
+   ----------
+   -- Join --
+   ----------
+
+   function Join
+      (Self : Virtual_File; File : Virtual_File) return Virtual_File is
+   begin
+      return Create_From_Dir (Self, File.Full_Name.all);
+   end Join;
+
+   ----------
+   -- Join --
+   ----------
+
+   function Join
+      (Self : Virtual_File; Path : Filesystem_String) return Virtual_File is
+   begin
+      return Create_From_Dir (Self, Path);
+   end Join;
+
+   ---------
+   -- "/" --
+   ---------
+
+   function "/"
+      (Self : Virtual_File; File : Virtual_File) return Virtual_File is
+   begin
+      return Create_From_Dir (Self, File.Full_Name.all);
+   end "/";
+
+   ---------
+   -- "/" --
+   ---------
+
+   function "/"
+      (Self : Virtual_File; Path : Filesystem_String) return Virtual_File is
+   begin
+      return Create_From_Dir (Self, Path);
+   end "/";
+
+   ---------
+   -- "/" --
+   ---------
+
+   function "/"
+      (Dir : Filesystem_String; File : Virtual_File) return Virtual_File is
+   begin
+      return Create_From_Dir (Create (Dir), File.Full_Name.all);
+   end "/";
+
 end GNATCOLL.VFS;
