@@ -1257,10 +1257,10 @@ package body GNATCOLL.VFS is
                   (From    => Norm.Value,
                    To      => File.Tmp_File.Value,
                    Success => Success);
-               if not Success then
-                  --  Not a critical error, better save anyway
-                  null;
-               end if;
+               --  ??? We ignore the value of success here. It is not a
+               --  critical error, however, and we want to continue the
+               --  process of saving here. It would be nice to log this,
+               --  but we cannot use Traces in this package.
 
                --  We use to delete explicitly Norm. But in fact this is not a
                --  good idea, since the directory might allow us to delete the
