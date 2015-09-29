@@ -126,6 +126,9 @@ package GNATCOLL.IO.Remote is
      (From    : not null access Remote_File_Record;
       Dest    : FS_String;
       Success : out Boolean);
+   overriding procedure Copy_File_Permissions
+     (From, To : not null access Remote_File_Record;
+      Success  : out Boolean);
    --  See parent for documentation
 
    package Codec is

@@ -930,6 +930,19 @@ package body GNATCOLL.IO.Remote is
       end case;
    end Copy_Dir;
 
+   ---------------------------
+   -- Copy_File_Permissions --
+   ---------------------------
+
+   overriding procedure Copy_File_Permissions
+     (From, To : not null access Remote_File_Record;
+      Success  : out Boolean)
+   is
+      pragma Unreferenced (From, To);
+   begin
+      Success := False;
+   end Copy_File_Permissions;
+
    -----------
    -- Codec --
    -----------

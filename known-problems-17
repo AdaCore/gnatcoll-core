@@ -4,6 +4,18 @@ Known Problems in Gnatcoll 1.7
 
 Copyright (C) 2013-2015, AdaCore
 
+KP-17-O827-012 GNATCOLL.VFS.Writable_File does not preserve permissions
+
+  Problem:    When overwriting a file via a Writable_File, GNATCOLL first
+              saves to a temporary file that is then moved over the original
+              file. This is a safer way, but GNATCOLL did not preserve the
+              original file's permissions (read/write/exec). The fix
+              requires GNAT more recent than 20150901.
+
+  Status:     Fixed in Gnatcoll 1.8.0 on 2015-09-29
+
+  Workaround: Use lower-level functions to write and save files (GNAT.OS_Lib)
+
 KP-17-O730-027 gnatinspect crashes on enum types with character literals
 
   Problem:    When you define an enumeration type with character literals

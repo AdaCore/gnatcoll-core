@@ -177,6 +177,13 @@ private package GNATCOLL.IO is
       Success : out Boolean) is abstract;
    --  Closes FD and actually flushes the content to File if needed
 
+   procedure Copy_File_Permissions
+      (From, To : not null access File_Record;
+       Success  : out Boolean) is abstract;
+   --  Copy all permissions (read, write, exec) from one file to the other,
+   --  so that To ends up with the same permissions. This does not change
+   --  the owner of the file.
+
    --------------------------
    -- Directory management --
    --------------------------

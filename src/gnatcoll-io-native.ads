@@ -126,6 +126,9 @@ package GNATCOLL.IO.Native is
      (From    : not null access Native_File_Record;
       Dest    : FS_String;
       Success : out Boolean);
+   overriding procedure Copy_File_Permissions
+     (From, To : not null access Native_File_Record;
+      Success  : out Boolean);
 
    package Codec is
       function To_UTF8 (Path : FS_String) return String;

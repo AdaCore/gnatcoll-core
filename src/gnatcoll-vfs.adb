@@ -40,6 +40,7 @@ with GNATCOLL.Path;             use GNATCOLL.Path;
 with GNATCOLL.Remote;           use GNATCOLL.Remote;
 with GNATCOLL.Remote.Db;        use GNATCOLL.Remote.Db;
 with GNATCOLL.VFS_Types;        use GNATCOLL.VFS_Types;
+--  Cannot use GNATCOLL.Traces, or we end up with elaboration cycle
 
 package body GNATCOLL.VFS is
 
@@ -1231,7 +1232,6 @@ package body GNATCOLL.VFS is
    procedure Close (File : in out Writable_File) is
       Norm : Virtual_File;
       Success : Boolean;
-      pragma Unreferenced (Success);
 
       --  We'll need to force the resolution of symbolic links,
       --  since we never want to transform a link into a regular
@@ -1251,6 +1251,16 @@ package body GNATCOLL.VFS is
                  (Norm.Full_Name
                     (Normalize => True, Resolve_Links => True).all);
                Handle_Symbolic_Links := Save_Handle_Symbolic_Links;
+
+               --  Preserve permissions on the file
+               Copy_File_Permissions
+                  (From    => Norm.Value,
+                   To      => File.Tmp_File.Value,
+                   Success => Success);
+               if not Success then
+                  --  Not a critical error, better save anyway
+                  null;
+               end if;
 
                --  We use to delete explicitly Norm. But in fact this is not a
                --  good idea, since the directory might allow us to delete the

@@ -779,4 +779,20 @@ package body GNATCOLL.IO.Native is
          Success := False;
    end Copy_Dir;
 
+   ---------------------------
+   -- Copy_File_Permissions --
+   ---------------------------
+
+   overriding procedure Copy_File_Permissions
+     (From, To : not null access Native_File_Record;
+      Success  : out Boolean) is
+   begin
+      GNAT.OS_Lib.Copy_File_Attributes
+          (From             => String (From.Full.all),
+           To               => String (To.Full.all),
+           Success          => Success,
+           Copy_Timestamp   => False,
+           Copy_Permissions => True);
+   end Copy_File_Permissions;
+
 end GNATCOLL.IO.Native;
