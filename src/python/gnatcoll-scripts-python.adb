@@ -387,7 +387,7 @@ package body GNATCOLL.Scripts.Python is
    type Python_Dictionary_Iterator is new Dictionary_Iterator with record
       Script   : Python_Scripting;
       Dict     : PyObject;
-      Position : Natural := 0;
+      Position : Integer := 0;
       Key      : PyObject;
       Value    : PyObject;
    end record;
