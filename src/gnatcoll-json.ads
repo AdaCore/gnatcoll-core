@@ -146,6 +146,11 @@ package GNATCOLL.JSON is
    --  values are sorted smallest first as determined by the strict comparision
    --  provided by function Less.
 
+   procedure Append (Arr : JSON_Value; Item : JSON_Value);
+   pragma Precondition (Arr.Kind = JSON_Array_Type);
+   --  Append Arr only in case of it is an array, raise Constraint_Error
+   --  otherwise.
+
    procedure Set_Field
      (Val        : JSON_Value;
       Field_Name : UTF8_String;

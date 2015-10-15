@@ -50,6 +50,19 @@ package body GNATCOLL.JSON is
       Filename : String) return JSON_Value;
    --  ???
 
+   ------------
+   -- Append --
+   ------------
+
+   procedure Append (Arr : JSON_Value; Item : JSON_Value) is
+   begin
+      Append (Arr.Data.Arr_Value.all, Item);
+   end Append;
+
+   --------------
+   -- Is_Empty --
+   --------------
+
    function Is_Empty (Val : JSON_Value) return Boolean is
    begin
       case Val.Kind is
