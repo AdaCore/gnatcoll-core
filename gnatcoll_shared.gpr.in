@@ -59,23 +59,14 @@ abstract project GnatColl_Shared is
 
    package Compiler is
       case Build is
-         --  It is tempting to compile all packages with -gnat12, but this
-         --  means that a user project that explicitly uses -gnat05 would no
-         --  longer be able to use GNATCOLL without upgrading to -gnat12.
-         --  Not worth the trouble, having an explicit pragma Ada_2012 is easy
-         --  enough in GNATCOLL.
          when "Debug" =>
             for Switches ("Ada") use
-              ("-g", "-O0", "-gnatVa", "-gnatQ", "-gnaty", "-gnateE",
-               "-gnatwaCJe", "-gnat05");
-
-            --  Disable -gnata pending O525-006, since assertions checks are
-            --  not compatible with disabling tampering checks
-
+              ("-g", "-O0", "-gnata", "-gnatVa", "-gnatQ", "-gnaty", "-gnateE",
+               "-gnatwaCJe");
             for Switches ("C") use ("-g", "-Wunreachable-code");
+
          when "Production" =>
-            for Switches ("Ada") use
-              ("-O2", "-gnatn", "-gnatws", "-gnat05");
+            for Switches ("Ada") use ("-O2", "-gnatn", "-gnatws");
             for Switches ("C") use ("-O2", "-Wunreachable-code");
       end case;
 
