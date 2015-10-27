@@ -56,6 +56,9 @@
 --        return M.Realloc (Ptr, M.size_t (Size));
 --     end Realloc;
 --  end System.Memory;
+--
+--  As a child package of System, this package must be compiled with -gnatg
+--  switch to the compiler.
 
 with System; use System;
 with GNAT.Debug_Pools; use GNAT.Debug_Pools;
