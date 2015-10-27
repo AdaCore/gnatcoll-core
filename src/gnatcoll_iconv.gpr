@@ -27,6 +27,8 @@ with "gnatcoll";
 project GnatColl_Iconv is
    Name := "iconv";
 
+   for Languages use ("Ada", "C");
+
    for Library_Kind    use GnatColl_Shared.Library_Type;
    for Object_Dir
       use Gnatcoll_Shared'Object_Dir & "/" & Name & "/" & Project'Library_Kind;
@@ -39,10 +41,8 @@ project GnatColl_Iconv is
 
    case GnatColl_Shared.Iconv is
       when "no" =>
-        for Languages use ("Ada");
         for Source_Dirs use ("iconv", "iconv/no_iconv");
       when "yes" =>
-        for Languages use ("Ada", "C");
         for Source_Dirs use ("iconv", "iconv/with_iconv");
         for Library_Options use (GnatColl_Shared.Iconv_Dir) & Gnatcoll_Shared.Iconv_Lib;
    end case;
