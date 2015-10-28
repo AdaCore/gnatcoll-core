@@ -1910,7 +1910,7 @@ number of types:
          --    WHERE books.borrowed_by=customers.id AND customers.last='Smith'
 
 reverse relationships
---------------------
+---------------------
 
 In fact, the query we wrote above could be written differently. Remember
 we have already queries the `Customer` object for id 1 through a
