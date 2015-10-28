@@ -26,6 +26,11 @@ with System.Storage_Elements;  use System.Storage_Elements;
 
 pragma Warnings (Off);
 with System.CRTL;
+
+--  Force a user's s-memory.adb to be part of the link,
+--  otherwise s-memory.o will simply be ignored by gprbuild
+with System.Memory;
+
 pragma Warnings (On);
 
 package body GNATCOLL.Memory is
