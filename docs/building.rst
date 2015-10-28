@@ -27,6 +27,9 @@ The first step is to configure the build environment. This is done by
 running the `configure` command in the root directory of the
 GNATColl tree.
 
+On Windows, this requires a properly setup Cygwin environment, to provide
+Unix-like tools.
+
 .. index:: GNATCOLL.Projects
 
 .. index:: projects
@@ -46,15 +49,17 @@ GNATColl will locate the needed source files in one of the following ways:
   sources. This link should be created in the root GNATColl
   directory.
 
-* Otherwise, recent versions of GNAT include an additional `gnat_util.gpr`
-  project file. This project contains the required
-  subset of the sources. You must use the same version of GNAT that GNATColl
+* Otherwise, recent versions of GNAT are distributed with a :file:`libgpr`
+  library that contains the project parser. GNATCOLL will automatically
+  make use of it.
+  You must use the same version of GNAT that GNATColl
   was released with, otherwise the sources might not be compatible.
   If you have an older version of GNAT, you could
-  also chose to install `gnat_util` independently.
+  also chose to install `libgpr` independently.
 
 If neither of the above is satisfied, GNATColl will not include
-support for `GNATCOLL.Projects`.
+support for `GNATCOLL.Projects`. You can also explicitly disable
+project support by configuring with `--disable-project`.
 
 The `configure` command accepts a variety of arguments;
 the following are likely to be the most useful:
