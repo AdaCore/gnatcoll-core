@@ -132,7 +132,7 @@ package body GNATCOLL.Email.Mailboxes is
       Self.Fp         := Read_File (Filename);
       Self.On_Close   := Free_String'Access;
       if Self.Fp = null then
-         raise Ada.IO_Exceptions.Name_Error;
+         raise Ada.IO_Exceptions.Name_Error with Filename.Display_Full_Name;
       end if;
    end Open;
 
