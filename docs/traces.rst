@@ -138,8 +138,8 @@ configurations, as in:
   be directed.
 
   There is are two special cases for the names on this line: they can
-  start with either "*." or ".*" to indicate the settings apply to a whole
-  set of handles. See the example below.
+  start with either `"\*."` or `".\*"` to indicate the settings apply to a
+  whole set of handles. See the example below.
 
 Here is a short example of a configuration file. It activates all handles
 by default, and defines four handles: two of them are directed to the
