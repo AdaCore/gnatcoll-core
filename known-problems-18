@@ -1,0 +1,14 @@
+==============================
+Known Problems in Gnatcoll 1.8
+==============================
+
+Copyright (C) 2013-2015, AdaCore
+
+KP-18-OA16-022 GNATCOLL.Config fails when first line is empty
+
+  Problem:    When GNATCOLL.Config is used to parse a file whose first line
+              is empty, it results in a constraint error.
+
+  Status:     Fixed in Gnatcoll 1.9.0 on 2015-10-30
+
+  Workaround: Remove the empty line in the config file

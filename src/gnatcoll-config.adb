@@ -178,7 +178,7 @@ package body GNATCOLL.Config is
          Self.Eol   := Eol;
 
          Tmp := Eol - 1;
-         if Element (Self.Contents, Tmp) = ASCII.CR then
+         if Tmp >= 1 and then Element (Self.Contents, Tmp) = ASCII.CR then
             Tmp := Tmp - 1;
          end if;
 
