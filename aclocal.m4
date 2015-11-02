@@ -292,7 +292,7 @@ AC_HELP_STRING(
                  WITH_ICONV=no
                  AC_MSG_RESULT([no, unsupported on AIX])
                  ;;
-	      *darwin*)
+              *darwin*)
                  # On OSX, we do not want to use macport's version of libiconv,
                  # which is not compatible with the system (we end up with
                  # errors like _iconv_open not found for architecture x86_64).
