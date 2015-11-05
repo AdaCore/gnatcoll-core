@@ -203,9 +203,11 @@ package body GNATCOLL.Projects.Normalize is
    procedure Add_Case_Item
      (Tree      : GPR.Tree.Project_Node_Tree_Ref;
       Case_Node : GPR.Project_Node_Id;
-      Choice    : GPR.Name_Id);
+      Choice    : GPR.Name_Id;
+      Decl      : GPR.Project_Node_Id := Empty_Project_Node);
    --  Create a new case item in case_node (which is associated with a
-   --  "case var is" statement
+   --  "case var is" statement. If Decl is not empty, corresponding node will
+   --  be cloned as this case alternative statements.
 
    procedure Add_To_Case_Items
      (Tree              : Project_Node_Tree_Ref;
@@ -1073,7 +1075,8 @@ package body GNATCOLL.Projects.Normalize is
    procedure Add_Case_Item
      (Tree      : Project_Node_Tree_Ref;
       Case_Node : Project_Node_Id;
-      Choice    : Name_Id)
+      Choice    : Name_Id;
+      Decl      : GPR.Project_Node_Id := Empty_Project_Node)
    is
       Item, S, In_List : Project_Node_Id;
    begin
@@ -1090,9 +1093,20 @@ package body GNATCOLL.Projects.Normalize is
          Set_First_Case_Item_Of (Case_Node, Tree, Item);
       else
          while Next_Case_Item (In_List, Tree) /= Empty_Project_Node loop
-            In_List := Next_Case_Item (In_List, Tree);
+            if First_Choice_Of (Next_Case_Item (In_List, Tree), Tree) =
+              Empty_Project_Node
+            then
+               --  Hitting the "when others" choice. It should be replaced with
+               --  the first new case item added.
+               exit;
+            else
+               In_List := Next_Case_Item (In_List, Tree);
+            end if;
          end loop;
          Set_Next_Case_Item (In_List, Tree, Item);
+         if Decl /= Empty_Project_Node then
+            Add_In_Front (Tree, Item, Clone_Node (Tree, Decl, True));
+         end if;
       end if;
    end Add_Case_Item;
 
@@ -3083,6 +3097,7 @@ package body GNATCOLL.Projects.Normalize is
 
       procedure Process_Declarative_List (Node : Project_Node_Id) is
          Decl_Item, Current : Project_Node_Id := Node;
+         When_Others_Node   : Project_Node_Id := Empty_Project_Node;
       begin
          --  Nothing to do if there is no project
          if Node = Empty_Project_Node then
@@ -3106,9 +3121,14 @@ package body GNATCOLL.Projects.Normalize is
                      Case_Item : Project_Node_Id :=
                        First_Case_Item_Of (Current, Tree);
                      Choice    : Project_Node_Id;
+                     When_Others_Present : Boolean := False;
                   begin
                      while Case_Item /= Empty_Project_Node loop
                         Choice := First_Choice_Of (Case_Item, Tree);
+                        if Choice = Empty_Project_Node then
+                           --  "when othes" choice.
+                           When_Others_Present := True;
+                        end if;
                         while Choice /= Empty_Project_Node loop
                            for N in Values'Range loop
                               if Values (N) =
@@ -3123,6 +3143,10 @@ package body GNATCOLL.Projects.Normalize is
 
                         Process_Declarative_List
                           (First_Declarative_Item_Of (Case_Item, Tree));
+                        if When_Others_Present then
+                           When_Others_Node :=
+                             First_Declarative_Item_Of (Case_Item, Tree);
+                        end if;
 
                         Case_Item := Next_Case_Item (Case_Item, Tree);
                      end loop;
@@ -3132,7 +3156,8 @@ package body GNATCOLL.Projects.Normalize is
                            Add_Case_Item
                              (Tree      => Tree,
                               Case_Node => Current,
-                              Choice    => Values (V));
+                              Choice    => Values (V),
+                              Decl      => When_Others_Node);
                         end if;
                      end loop;
                   end;
