@@ -24,7 +24,10 @@ although of course the behavior will be different in both cases.
 
 If your application depends on having a working libiconv, you can specify
 `--with-iconv` or `--with-iconv=PATH` to GNATCOLL's configure. This will
-ensure that configure fails if iconv is not found on the system.
+ensure that configure fails if iconv is not found on the system. Specifying
+an explicit path is recommended in general. If you specifying an explict
+path, and also include the `--disable-shared` switch, GNATCOLL will always
+use a static libconv found in the given path.
 
 An alternative is to use `--with-iconv=static` to force the use of a static
 library for iconv. This might be needed on some systems if you have link

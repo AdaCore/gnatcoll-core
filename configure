@@ -5053,7 +5053,7 @@ $as_echo "no, disabled by user" >&6; }
                  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no, unsupported on AIX" >&5
 $as_echo "no, unsupported on AIX" >&6; }
                  ;;
-	      *darwin*)
+              *darwin*)
                  # On OSX, we do not want to use macport's version of libiconv,
                  # which is not compatible with the system (we end up with
                  # errors like _iconv_open not found for architecture x86_64).
@@ -5095,8 +5095,22 @@ $as_echo "no, unsupported on AIX" >&6; }
        *)
           # path provided by user
           am_path_iconv="$ICONV_PATH_WITH"
-          PATH_ICONV="-L$am_path_iconv/lib"
           INCLUDE_ICONV="-I$am_path_iconv/include"
+
+          # If the user has disabled shared libs, we will build the tools
+          # with static libs. In this case, we want to force static libiconv
+          # too, even if --with-iconv=path was used.
+
+          if test x"$GNAT_BUILDS_SHARED" = xno ; then
+             { $as_echo "$as_me:${as_lineno-$LINENO}: result: (static because of --disable-shared)" >&5
+$as_echo "(static because of --disable-shared)" >&6; }
+             PATH_ICONV=""
+             LIB_ICONV="$am_path_iconv/lib/libiconv.a"
+             ICONV_STATIC=yes
+          else
+             PATH_ICONV="-L$am_path_iconv/lib"
+          fi
+
           ;;
    esac
 

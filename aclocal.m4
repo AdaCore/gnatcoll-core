@@ -221,8 +221,8 @@ AC_DEFUN(AM_PATH_SYSLOG,
 # support passing an empty string to iconv_open to specify the
 # locale charset.
 # The following variables are exported by configure:
-#   @WITH_ICONV@: either "yes" or "no"
-#   @PATH_ICONV@: path to libiconv, or "" if not found
+#   @WITH_ICONV@: either "yes", "no" or "static"
+#   @PATH_ICONV@: -Lpath/to/libiconv, or "" if not found
 #   @INCLUDE_ICONV@: the "-I..." for iconv.h, if needed
 #   @LIB_ICONV@:  either "" or "-liconv"
 #############################################################
@@ -321,8 +321,21 @@ AC_HELP_STRING(
        *)
           # path provided by user
           am_path_iconv="$ICONV_PATH_WITH"
-          PATH_ICONV="-L$am_path_iconv/lib"
           INCLUDE_ICONV="-I$am_path_iconv/include"
+
+          # If the user has disabled shared libs, we will build the tools
+          # with static libs. In this case, we want to force static libiconv
+          # too, even if --with-iconv=path was used.
+
+          if test x"$GNAT_BUILDS_SHARED" = xno ; then
+             AC_MSG_RESULT([(static because of --disable-shared)])
+             PATH_ICONV=""
+             LIB_ICONV="$am_path_iconv/lib/libiconv.a"
+             ICONV_STATIC=yes
+          else
+             PATH_ICONV="-L$am_path_iconv/lib"
+          fi
+
           ;;
    esac
 
