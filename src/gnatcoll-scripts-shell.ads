@@ -306,6 +306,8 @@ private
       Class : Class_Type := No_Class);
    overriding procedure Set_Return_Value
      (Data   : in out Shell_Callback_Data; Value : Integer);
+   overriding procedure Set_Address_Return_Value
+     (Data   : in out Shell_Callback_Data; Value : System.Address);
    overriding procedure Set_Return_Value
      (Data   : in out Shell_Callback_Data; Value : Float);
    overriding procedure Set_Return_Value

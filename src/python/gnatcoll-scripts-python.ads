@@ -422,6 +422,8 @@ private
      (Data : in out Python_Callback_Data; Value : Class_Instance);
    overriding procedure Set_Return_Value
      (Data : in out Python_Callback_Data; Value : List_Instance);
+   overriding procedure Set_Address_Return_Value
+     (Data : in out Python_Callback_Data; Value : System.Address);
    overriding procedure Set_Return_Value_Key
      (Data   : in out Python_Callback_Data;
       Key    : String;

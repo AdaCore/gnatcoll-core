@@ -30,7 +30,6 @@ with GNATCOLL.Atomic;            use GNATCOLL.Atomic;
 with GNATCOLL.Scripts.Impl;      use GNATCOLL.Scripts.Impl;
 with GNATCOLL.Traces;            use GNATCOLL.Traces;
 with Interfaces;                 use Interfaces;
-with System;                     use System;
 with System.Address_Image;
 
 package body GNATCOLL.Scripts is

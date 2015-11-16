@@ -33,6 +33,7 @@ with GNATCOLL.Any_Types.Python;
 with GNATCOLL.Scripts.Impl;      use GNATCOLL.Scripts, GNATCOLL.Scripts.Impl;
 with GNATCOLL.Traces;            use GNATCOLL.Traces;
 with System;                     use System;
+with System.Storage_Elements;    use System.Storage_Elements;
 
 package body GNATCOLL.Scripts.Python is
    Me       : constant Trace_Handle := Create ("PYTHON");
@@ -3211,6 +3212,20 @@ package body GNATCOLL.Scripts.Python is
       Set_Return_Value (Data, Val);
       Py_DECREF (Val);
    end Set_Return_Value;
+
+   ------------------------------
+   -- Set_Address_Return_Value --
+   ------------------------------
+
+   overriding procedure Set_Address_Return_Value
+     (Data : in out Python_Callback_Data; Value : System.Address)
+   is
+      Val : constant PyObject :=
+        PyInt_FromSize_t (size_t (To_Integer (Value)));
+   begin
+      Set_Return_Value (Data, Val);
+      Py_DECREF (Val);
+   end Set_Address_Return_Value;
 
    ----------------------
    -- Set_Return_Value --

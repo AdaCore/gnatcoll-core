@@ -45,6 +45,7 @@ with GNATCOLL.VFS;           use GNATCOLL.VFS;
 with GNATCOLL.Any_Types;     use GNATCOLL.Any_Types;
 
 private with Interfaces;
+with System; use System;
 
 package GNATCOLL.Scripts is
 
@@ -414,6 +415,34 @@ package GNATCOLL.Scripts is
    --  list. For languages that do not support lists, the append is only
    --  performed for strings (newline-separated). Other data types simply
    --  replace the current return value.
+
+   procedure Set_Address_Return_Value
+     (Data : in out Callback_Data; Value : System.Address) is abstract;
+   --  Set the return value of Data to Value. The address will be represented
+   --  as an integer on the python side, and a string in Shell.
+   --
+   --  NOTE: This is a low level primitive, and is not meant to be used as-is,
+   --  as there is no appropriate representation of an address object on the
+   --  python side. Rather, this is meant to be used in tandem with ctypes:
+   --
+   --  On the Ada side:
+   --
+   --     Set_Address_Return_Value (Data, My_Integer'Address);
+   --
+   --  On the python side:
+   --
+   --      import ctypes
+   --      int_ptr = ctypes.POINTER(ctypes.int)
+   --
+   --      # This is the result of the above Set_Address_Return_Value
+   --      ada_address = AdaClass.ada_exposed_function()
+   --
+   --      # We then convert it to a ctypes pointer
+   --      c_int = ctypes.cast(int_ptr, ada_address)
+   --
+   --  WARNING: This is a low level primitive dealing with memory, and as such,
+   --  it is unsafe ! Make sure that the life time of the object you pass
+   --  corresponds to the way it is used on the python side
 
    procedure Set_Return_Value_Key
      (Data : in out Callback_Data; Key : String; Append : Boolean := False)

@@ -1798,6 +1798,16 @@ package body GNATCOLL.Scripts.Shell is
       Set_Return_Value (Data, Integer'Image (Value));
    end Set_Return_Value;
 
+   overriding procedure Set_Address_Return_Value
+     (Data   : in out Shell_Callback_Data; Value : System.Address) is
+   begin
+      if not Data.Return_As_List then
+         Free (Data.Return_Value);
+      end if;
+
+      Set_Return_Value (Data, System.Address_Image (Value));
+   end Set_Address_Return_Value;
+
    ----------------------
    -- Set_Return_Value --
    ----------------------
