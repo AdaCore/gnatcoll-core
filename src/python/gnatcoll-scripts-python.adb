@@ -2934,9 +2934,10 @@ package body GNATCOLL.Scripts.Python is
    ------------------------------
 
    procedure On_PyObject_Data_Destroy (Data : System.Address) is
-      D : constant PyObject_Data := Convert (Data);
+      D : PyObject_Data := Convert (Data);
    begin
       Free_User_Data_List (D.Props);
+      Unchecked_Free (D);
    end On_PyObject_Data_Destroy;
 
    ---------------------------------
