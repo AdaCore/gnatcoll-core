@@ -88,6 +88,8 @@ package GNATCOLL.Xref is
    --  the expected schema. If this is not the case, an error message will be
    --  set in Error (which must be freed by the caller), and optionally the
    --  existing database will be deleted before we connect to it.
+   --
+   --  DB is still owned by the caller, no copy of it is kept internally.
 
    procedure Free (Self : in out Xref_Database);
    --  Free the memory allocated for Self, and closes the database connection.

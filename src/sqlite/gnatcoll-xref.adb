@@ -4248,7 +4248,9 @@ package body GNATCOLL.Xref is
    begin
       Error := null;
 
+      Free (Self.DB);
       Self.DB := DB.Build_Connection;
+
       Self.Tree := Tree;
 
       Current_DB := Create (+SQL.Sqlite.DB_Name (Self.DB));
