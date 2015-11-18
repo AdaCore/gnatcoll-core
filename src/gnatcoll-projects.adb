@@ -6747,7 +6747,10 @@ package body GNATCOLL.Projects is
 
          Context := New_Context;
          Unchecked_Free (Current);
-         Current := new File_Array'(1 .. 0 => <>);
+
+         if Context /= None then
+            Current := new File_Array'(1 .. 0 => <>);
+         end if;
       end Set_Context;
 
       F, L : Natural;
