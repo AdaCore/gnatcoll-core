@@ -14,3 +14,7 @@ of the feature.
 
 New features in 1.9
 -------------------
+
+NF-19-OB12-049 GNATCOLL.Memory: allow dump outputs redirection (2015-11-20)
+
+  procedure Redirectable_Dump added to allow dump outputs redirection.

@@ -189,6 +189,16 @@ package GNATCOLL.Memory is
 
    type Report_Type is new GNAT.Debug_Pools.Report_Type;
 
+   generic
+      with procedure Put_Line (S : String) is <>;
+      with procedure Put      (S : String) is <>;
+   procedure Redirectable_Dump
+     (Size   : Positive;
+      Report : Report_Type := All_Reports);
+   --  Dump information about memory usage to configurable output
+   --  Size is the number of the biggest memory users we want to show. Report
+   --  indicates which sorting order is used in the report
+
    procedure Dump (Size : Positive; Report : Report_Type := All_Reports);
    --  Dump information about memory usage.
    --  Size is the number of the biggest memory users we want to show. Report

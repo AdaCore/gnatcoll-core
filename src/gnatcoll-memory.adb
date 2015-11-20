@@ -206,9 +206,22 @@ package body GNATCOLL.Memory is
       return Result;
    end Realloc;
 
-   ----------
-   -- Dump --
-   ----------
+   -----------------------
+   -- Redirectable_Dump --
+   -----------------------
+
+   procedure Redirectable_Dump
+     (Size   : Positive;
+      Report : Report_Type := All_Reports) is
+      procedure Redirected_Dump is new GNAT.Debug_Pools.Dump
+        (Put_Line => Put_Line,
+         Put      => Put);
+   begin
+      Redirected_Dump
+        (Memory_Pool,
+         Size   => Size,
+         Report => GNAT.Debug_Pools.Report_Type (Report));
+   end Redirectable_Dump;
 
    procedure Dump (Size : Positive; Report : Report_Type := All_Reports) is
    begin
