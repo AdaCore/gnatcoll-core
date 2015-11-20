@@ -28,7 +28,7 @@
 --  various modules remain as independant as possible from the specific
 --  language.
 
-pragma Ada_05;
+pragma Ada_12;
 
 with Ada.Calendar;
 with Ada.Containers.Indefinite_Doubly_Linked_Lists;
@@ -706,6 +706,10 @@ package GNATCOLL.Scripts is
    --           GPS.Process.__init__ (self,...)
    --  since both internal classes expect different data stored internally
 
+   procedure Unset_Data (Instance : Class_Instance; Name : Class_Type);
+   procedure Unset_Data (Instance : Class_Instance; Name : String);
+   --  Unset all data stored for the given name
+
    procedure Set_Data
      (Instance : Class_Instance; Name : Class_Type; Value : String);
    procedure Set_Data
@@ -766,15 +770,16 @@ package GNATCOLL.Scripts is
    --  Stores the instance created for some GPS internal data, so that the same
    --  script instance is reused every time we reference the same Ada object.
 
-   type Instance_List_Access is access all Instance_List;
-   --  This type should be convertible to a System.Address for storage in
-   --  a selection_context
-
-   type Instance_Array is array (Natural range <>) of Class_Instance;
-   type Instance_Array_Access is access Instance_Array;
+   type Inst_Cursor is private;
+   function First (Self : Instance_List) return Inst_Cursor;
+   procedure Next (Self : Instance_List; Pos : in out Inst_Cursor);
+   function Has_Element (Position : Inst_Cursor) return Boolean;
+   function Element
+      (Self : Instance_List; Pos : Inst_Cursor) return Class_Instance;
+   --  Iterate on the list of instances stored in a list. Only valid
+   --  instances are returned (never a No_Class_Instance)
 
    procedure Free (List : in out Instance_List);
-   procedure Free (List : in out Instance_List_Access);
    --  Free the instances stored in the list
 
    function Get
@@ -784,15 +789,8 @@ package GNATCOLL.Scripts is
 
    procedure Set
      (List   : in out Instance_List;
-      Script : access Scripting_Language_Record'Class;
       Inst   : Class_Instance);
    --  Set the instance for a specific language
-
-   function Get_Instances (List : Instance_List) return Instance_Array;
-   --  Return the instance array contained in the given list
-
-   function Length (List : Instance_List_Access) return Natural;
-   --  Return the number of instances that are stored in the list
 
    -------------------------
    -- Instance properties --
@@ -1605,11 +1603,19 @@ private
       Console : Virtual_Console;
    end record;
 
+   type Instance_Array is array (Natural range <>) of Class_Instance;
+   type Instance_Array_Access is access Instance_Array;
    type Instance_List is record
       List : Instance_Array_Access;
+      --  instances are stored in no particular order. As soon as a
+      --  No_Class_Instance is found, there will be no further instances
+      --  in the array.
    end record;
-
    Null_Instance_List : constant Instance_List := (List => null);
+
+   type Inst_Cursor is record
+      Index    : Natural := Natural'Last;
+   end record;
 
    type Callback_Data_Array is
      array (Natural range <>) of Callback_Data_Access;

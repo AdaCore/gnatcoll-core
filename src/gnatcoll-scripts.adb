@@ -59,6 +59,10 @@ package body GNATCOLL.Scripts is
       return User_Data_List;
    --  Return the user data with the given name, or null if there is none
 
+   procedure Unset_Data
+      (Instance : access Class_Instance_Record'Class; Name : String);
+   --  Remove the user data with the given name
+
    -----------------------------------
    -- Data stored in class_instance --
    -----------------------------------
@@ -212,15 +216,13 @@ package body GNATCOLL.Scripts is
 
    function Get
      (List   : Instance_List;
-      Script : access Scripting_Language_Record'Class) return Class_Instance
-   is
-      Tmp : constant Scripting_Language_Array :=
-        Get_Repository (Script).Scripting_Languages.all;
+      Script : access Scripting_Language_Record'Class) return Class_Instance is
    begin
       if List.List /= null then
-         for T in Tmp'Range loop
-            if Tmp (T) = Scripting_Language (Script) then
-               return List.List (T);
+         for Idx in List.List'Range loop
+            exit when List.List (Idx) = No_Class_Instance;
+            if Get_Script (List.List (Idx)) = Scripting_Language (Script) then
+               return List.List (Idx);
             end if;
          end loop;
       end if;
@@ -233,55 +235,81 @@ package body GNATCOLL.Scripts is
 
    procedure Set
      (List   : in out Instance_List;
-      Script : access Scripting_Language_Record'Class;
       Inst   : Class_Instance)
    is
-      Tmp : constant Scripting_Language_Array :=
-        Get_Repository (Script).Scripting_Languages.all;
+      Idx : Natural;
    begin
       if List.List = null then
-         List.List := new Instance_Array (Tmp'Range);
-         List.List.all := (others => No_Class_Instance);
+         declare
+            Tmp : constant Scripting_Language_Array :=
+              Get_Repository (Get_Script (Inst)).Scripting_Languages.all;
+         begin
+            List.List := new Instance_Array (Tmp'Range);
+            List.List.all := (others => No_Class_Instance);
+         end;
       end if;
 
-      for T in Tmp'Range loop
-         if Tmp (T) = Scripting_Language (Script) then
-            List.List (T) := Inst;
-            exit;
+      Idx := List.List'First;
+      while Idx <= List.List'Last loop
+         if not List.List (Idx).Initialized
+            or else Get_Script (List.List (Idx)) = Get_Script (Inst)
+         then
+            List.List (Idx) := Inst;
+            return;
          end if;
+         Idx := Idx + 1;
       end loop;
    end Set;
 
-   -------------------
-   -- Get_Instances --
-   -------------------
+   -----------
+   -- First --
+   -----------
 
-   function Get_Instances (List : Instance_List) return Instance_Array is
-      Null_List : Instance_Array (1 .. 0);
+   function First (Self : Instance_List) return Inst_Cursor is
    begin
-      if List.List = null then
-         return Null_List;
+      if Self.List = null
+         or else not Self.List (Self.List'First).Initialized
+      then
+         return (Index => Natural'Last);
       else
-         return List.List.all;
+         return (Index => Self.List'First);
       end if;
-   end Get_Instances;
+   end First;
 
-   ------------
-   -- Length --
-   ------------
+   ----------
+   -- Next --
+   ----------
 
-   function Length (List : Instance_List_Access) return Natural is
-      Count : Natural := 0;
+   procedure Next
+      (Self : Instance_List; Pos : in out Inst_Cursor) is
    begin
-      if List /= null and then List.List /= null then
-         for L in List.List'Range loop
-            if List.List (L).Initialized then
-               Count := Count + 1;
-            end if;
-         end loop;
+      if Pos.Index >= Self.List'Last
+         or else not Self.List (Pos.Index + 1).Initialized
+      then
+         Pos := (Index => Natural'Last);
+      else
+         Pos := (Index => Pos.Index + 1);
       end if;
-      return Count;
-   end Length;
+   end Next;
+
+   -----------------
+   -- Has_Element --
+   -----------------
+
+   function Has_Element (Position : Inst_Cursor) return Boolean is
+   begin
+      return Position.Index /= Natural'Last;
+   end Has_Element;
+
+   -------------
+   -- Element --
+   -------------
+
+   function Element
+      (Self : Instance_List; Pos : Inst_Cursor) return Class_Instance is
+   begin
+      return Self.List (Pos.Index);
+   end Element;
 
    ----------
    -- Free --
@@ -297,20 +325,6 @@ package body GNATCOLL.Scripts is
                Free (List (L));
             end if;
          end loop;
-         Unchecked_Free (List);
-      end if;
-   end Free;
-
-   ----------
-   -- Free --
-   ----------
-
-   procedure Free (List : in out Instance_List_Access) is
-      procedure Unchecked_Free is new Ada.Unchecked_Deallocation
-        (Instance_List, Instance_List_Access);
-   begin
-      if List /= null then
-         Free (List.all);
          Unchecked_Free (List);
       end if;
    end Free;
@@ -1224,6 +1238,43 @@ package body GNATCOLL.Scripts is
       Property : Instance_Property_Record'Class)
    is
       U        : constant access User_Data_List := Instance.Get_User_Data;
+   begin
+      if U /= null then
+         Unset_Data (Instance, Name);
+         U.all := new User_Data'
+           (Length => Name'Length,
+            Name   => Name,
+            Next   => U.all,
+            Prop   => new Instance_Property_Record'Class'(Property));
+      end if;
+   end Set_Data;
+
+   ----------------
+   -- Unset_Data --
+   ----------------
+
+   procedure Unset_Data (Instance : Class_Instance; Name : Class_Type) is
+   begin
+      Unset_Data (Instance.Data.Data, Get_Name (Name));
+   end Unset_Data;
+
+   ----------------
+   -- Unset_Data --
+   ----------------
+
+   procedure Unset_Data (Instance : Class_Instance; Name : String) is
+   begin
+      Unset_Data (Instance.Data.Data, Name);
+   end Unset_Data;
+
+   ----------------
+   -- Unset_Data --
+   ----------------
+
+   procedure Unset_Data
+      (Instance : access Class_Instance_Record'Class; Name : String)
+   is
+      U        : constant access User_Data_List := Instance.Get_User_Data;
       D        : User_Data_List;
       Previous : User_Data_List;
    begin
@@ -1237,19 +1288,13 @@ package body GNATCOLL.Scripts is
                   Previous.Next := D.Next;
                end if;
                Free_User_Data (D);
-               exit;
+               return;
             end if;
             Previous := D;
             D := D.Next;
          end loop;
       end if;
-
-      U.all := new User_Data'
-        (Length => Name'Length,
-         Name   => Name,
-         Next   => U.all,
-         Prop   => new Instance_Property_Record'Class'(Property));
-   end Set_Data;
+   end Unset_Data;
 
    --------------
    -- Set_Data --
