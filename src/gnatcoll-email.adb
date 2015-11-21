@@ -1218,7 +1218,8 @@ package body GNATCOLL.Email is
    -- Next --
    ----------
 
-   procedure Next (Iter : in out Header_Iterator; H : out Header) is
+   function Next
+     (Iter : in out Header_Iterator; H : out Header) return Boolean is
    begin
       if Has_Element (Iter.Cursor) then
          H := Element (Iter.Cursor);
@@ -1233,7 +1234,19 @@ package body GNATCOLL.Email is
             end loop;
          end if;
 
-      else
+         return True;
+      end if;
+
+      return False;
+   end Next;
+
+   ----------
+   -- Next --
+   ----------
+
+   procedure Next (Iter : in out Header_Iterator; H : out Header) is
+   begin
+      if not Next (Iter, H) then
          H := Null_Header;
       end if;
    end Next;

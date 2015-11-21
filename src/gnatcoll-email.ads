@@ -386,11 +386,23 @@ package GNATCOLL.Email is
    --      loop
    --         Next (Iter, H);
    --         exit when H = Null_Header;
+   --         Header_Processing (H);
    --      end loop;
 
    procedure Next (Iter : in out Header_Iterator; H : out Header);
-   --  Move to the next header with the expected name, and returns it.
-   --  Null_Header is returned when there are no more matches
+   --  Returns current header if exists or Null_Header otherwise.
+   --  Move to the next header with the expected name.
+
+   function Next
+     (Iter : in out Header_Iterator; H : out Header) return Boolean;
+   --  Returns True if the header exists and returns it in H parameter.
+   --  Move cursor position to the next header. The loop over headers could be
+   --  like this:
+   --
+   --      Iter := Get_Headers (Msg);
+   --      while Next (Iter, H) loop
+   --         Do_Something_With (H);
+   --      end loop;
 
    -------------
    -- Payload --
