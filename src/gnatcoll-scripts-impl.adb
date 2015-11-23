@@ -23,7 +23,6 @@
 
 with GNATCOLL.Traces;   use GNATCOLL.Traces;
 with System.Assertions;
-with Interfaces;        use Interfaces;
 
 package body GNATCOLL.Scripts.Impl is
 
@@ -39,29 +38,6 @@ package body GNATCOLL.Scripts.Impl is
       Handle   : Trace_Handle;
    end record;
    type Logger_Properties is access all Logger_Properties_Record'Class;
-
-   -------------------
-   -- From_Instance --
-   -------------------
-
-   function From_Instance
-     (Script : access Scripting_Language_Record'Class;
-      Inst   : access Class_Instance_Record'Class) return Class_Instance
-   is
-   begin
-      if Inst = null then
-         return No_Class_Instance;
-      end if;
-
-      Inst.Script := Scripting_Language (Script);
-      Inst.Refcount := Inst.Refcount + 1;
-
-      return Class_Instance'
-        (Initialized => True,
-         Data        =>
-           (Ada.Finalization.Controlled
-            with Data => Class_Instance_Record_Access (Inst)));
-   end From_Instance;
 
    -----------------
    -- Insert_Text --

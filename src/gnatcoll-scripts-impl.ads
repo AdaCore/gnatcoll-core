@@ -27,12 +27,6 @@
 
 package GNATCOLL.Scripts.Impl is
 
-   function From_Instance
-     (Script : access Scripting_Language_Record'Class;
-      Inst   : access Class_Instance_Record'Class) return Class_Instance;
-   --  Return a class instance wrapping Inst.
-   --  For internal use by scripting languages only.
-
    procedure Insert_Text
      (Script  : access Scripting_Language_Record'Class;
       Console : Virtual_Console := null;

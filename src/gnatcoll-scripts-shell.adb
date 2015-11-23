@@ -1894,14 +1894,15 @@ package body GNATCOLL.Scripts.Shell is
       Class  : Class_Type) return Class_Instance
    is
       Instance : Shell_Class_Instance;
-      Inst     : Class_Instance;
    begin
       Instance := new Shell_Class_Instance_Record;
       Instance.Class := Class;
+      Instance.Script := Script;
 
-      Inst := From_Instance (Script, Instance);
-      Instances_List.Prepend (Script.Instances, Inst);
-      return Inst;
+      return R : Class_Instance do
+         CI_Pointers.Set (R.Ref, Instance);
+         Instances_List.Prepend (Script.Instances, R);
+      end return;
    end New_Instance;
 
    ----------------
@@ -1915,7 +1916,7 @@ package body GNATCOLL.Scripts.Shell is
       Inst_Name : constant String := Name_From_Instance (Instance);
    begin
       return new Shell_Subprogram_Record'
-        (Script  => Instance.Script,
+        (Script  => Scripting_Language (Instance.Script),
          Command => new String'
            (Get_Name (Instance.Class) & "." & Name & " " & Inst_Name));
    end Get_Method;

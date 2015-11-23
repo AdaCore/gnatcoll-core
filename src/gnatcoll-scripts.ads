@@ -33,18 +33,17 @@ pragma Ada_12;
 with Ada.Calendar;
 with Ada.Containers.Indefinite_Doubly_Linked_Lists;
 with Ada.Containers.Indefinite_Hashed_Maps;
-with Ada.Finalization;
 with Ada.Strings.Hash;
 with Ada.Strings.Unbounded;  use Ada.Strings.Unbounded;
 with GNAT.OS_Lib;
 with GNAT.Strings;
 
 with GNATCOLL.Arg_Lists;     use GNATCOLL.Arg_Lists;
+with GNATCOLL.Refcount;      use GNATCOLL.Refcount;
 with GNATCOLL.Utils;         use GNATCOLL.Utils;
 with GNATCOLL.VFS;           use GNATCOLL.VFS;
 with GNATCOLL.Any_Types;     use GNATCOLL.Any_Types;
 
-private with Interfaces;
 with System; use System;
 
 package GNATCOLL.Scripts is
@@ -62,10 +61,7 @@ package GNATCOLL.Scripts is
    --  Data used to communicate with the scripting language engine, to marshall
    --  the parameters and return values.
 
-   type Class_Instance (Initialized : Boolean := False) is private;
-   --  ??? The discriminant declaration could be moved to the
-   --  private declaration but is moved here to work around a bug in
-   --  older versions of GNAT (J629-029)
+   type Class_Instance is private;
 
    ----------------------
    -- Subprogram types --
@@ -847,7 +843,7 @@ package GNATCOLL.Scripts is
    --  each of the scripting languages. Do not use directly unless you are
    --  implementing a new scripting language
 
-   type Class_Instance_Record is abstract tagged limited private;
+   type Class_Instance_Record is abstract tagged private;
    type Class_Instance_Record_Access is access all Class_Instance_Record'Class;
    --  A type overridden by each of the scripting languages
 
@@ -1544,19 +1540,9 @@ private
 
    No_Params : constant Param_Array := (1 .. 0 => <>);
 
-   type Class_Instance_Record is abstract tagged limited record
-      Script    : Scripting_Language;
-
-      Refcount  : aliased Interfaces.Integer_32 := 0;
-      --  This is the reference counting only for the Ada side. When
-      --  interfacing with python, for instance, the latter never owns any
-      --  reference to the Class_Instance.
+   type Class_Instance_Record is abstract new Refcounted with record
+      Script    : access Scripting_Language_Record'Class;  --  not owned
    end record;
-   procedure Incref (Self : not null access Class_Instance_Record) is null;
-   procedure Decref (Self : not null access Class_Instance_Record) is null;
-   --  These subprograms are called when changing the reference counting of
-   --  the Class_Instance that owns this Class_Instance_Record.
-   --  These procedures are called after updating the reference count.
 
    function Get_User_Data
      (Self : not null access Class_Instance_Record)
@@ -1566,30 +1552,16 @@ private
    --  python attribute, directly in Ada for the shell,...) This list is shared
    --  amonst the scripting languages.
 
-   type Class_Instance_Data is new Ada.Finalization.Controlled with record
-      Data : Class_Instance_Record_Access;
-   end record;
-   overriding procedure Adjust   (CI : in out Class_Instance_Data);
-   overriding procedure Finalize (CI : in out Class_Instance_Data);
-   function "=" (CI1, CI2 : Class_Instance_Data) return Boolean;
-   --  Takes care of the reference counting for a Class_Instance
-
-   type Class_Instance (Initialized : Boolean := False) is record
-      case Initialized is
-         when True  => Data : Class_Instance_Data;
-         when False => null;
-      end case;
+   package CI_Pointers is new Smart_Pointers (Class_Instance_Record);
+   type Class_Instance is record
+      Ref : CI_Pointers.Ref;
    end record;
    --  A Class_Instance cannot be a visibly tagged type if declared in this
    --  package, since otherwise we have operations dispatching on multiple
    --  types.
-   --  We use a discriminated type so that we can declare No_Class_Instance.
-   --  Otherwise, Adjust is called before its body is seen.
 
-   No_Class_Instance_Data : constant Class_Instance_Data :=
-                              (Ada.Finalization.Controlled with Data => null);
-   No_Class_Instance      : constant Class_Instance :=
-                              (Initialized => False);
+   No_Class_Instance : constant Class_Instance :=
+      (Ref => CI_Pointers.Null_Ref);
 
    No_Class  : constant Class_Type :=
      (Qualified_Name => null, Exists => False);

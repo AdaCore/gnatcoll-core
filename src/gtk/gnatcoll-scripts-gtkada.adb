@@ -106,7 +106,7 @@ package body GNATCOLL.Scripts.Gtkada is
            (Inst          => Instance,
             Length        => Name'Length,
             Property_Name => Name),
-         "GPS-Instance-" & Get_Name (Instance.Data.Data.Script),
+         "GPS-Instance-" & Get_Name (Instance.Ref.Get.Script),
          On_Destroyed => On_Widget_Data_Destroyed'Access);
 
       --  Do this after we have called CIR_User_Data.Set above, since the

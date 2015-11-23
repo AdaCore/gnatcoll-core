@@ -26,15 +26,14 @@ with Ada.Characters.Handling;    use Ada.Characters.Handling;
 with Ada.Unchecked_Conversion;
 with Ada.Unchecked_Deallocation;
 with GNAT.OS_Lib;                use GNAT.OS_Lib;
-with GNATCOLL.Atomic;            use GNATCOLL.Atomic;
 with GNATCOLL.Scripts.Impl;      use GNATCOLL.Scripts.Impl;
 with GNATCOLL.Traces;            use GNATCOLL.Traces;
-with Interfaces;                 use Interfaces;
 with System.Address_Image;
 
 package body GNATCOLL.Scripts is
    Me : constant Trace_Handle := Create ("SCRIPTS");
    use Classes_Hash;
+   use CI_Pointers;
 
    Timeout_Threshold : constant Duration := 0.2;   --  in seconds
    --  Timeout between two checks of the gtk+ event queue
@@ -251,7 +250,7 @@ package body GNATCOLL.Scripts is
 
       Idx := List.List'First;
       while Idx <= List.List'Last loop
-         if not List.List (Idx).Initialized
+         if List.List (Idx).Ref.Get = null
             or else Get_Script (List.List (Idx)) = Get_Script (Inst)
          then
             List.List (Idx) := Inst;
@@ -268,7 +267,7 @@ package body GNATCOLL.Scripts is
    function First (Self : Instance_List) return Inst_Cursor is
    begin
       if Self.List = null
-         or else not Self.List (Self.List'First).Initialized
+         or else Self.List (Self.List'First).Ref.Get = null
       then
          return (Index => Natural'Last);
       else
@@ -284,7 +283,7 @@ package body GNATCOLL.Scripts is
       (Self : Instance_List; Pos : in out Inst_Cursor) is
    begin
       if Pos.Index >= Self.List'Last
-         or else not Self.List (Pos.Index + 1).Initialized
+         or else Self.List (Pos.Index + 1).Ref.Get = null
       then
          Pos := (Index => Natural'Last);
       else
@@ -1101,59 +1100,6 @@ package body GNATCOLL.Scripts is
       end case;
    end Destroy;
 
-   ------------
-   -- Adjust --
-   ------------
-
-   procedure Adjust (CI : in out Class_Instance_Data) is
-   begin
-      if CI.Data /= null then
-         Sync_Add_And_Fetch (CI.Data.Refcount'Access, 1);
-         Incref (CI.Data);
-      end if;
-   end Adjust;
-
-   --------------
-   -- Finalize --
-   --------------
-
-   procedure Finalize (CI : in out Class_Instance_Data) is
-      procedure Unchecked_Free is new Ada.Unchecked_Deallocation
-        (Class_Instance_Record'Class, Class_Instance_Record_Access);
-
-      Data  : Class_Instance_Record_Access := CI.Data;
-      Dummy : Integer_32;
-   begin
-      --  Make Finalize idempotent (RM 7.6.1 (24))
-
-      CI.Data := null;
-
-      --  Data might be null in some rare cases. Most notably, it happens when
-      --  GPS is being destroyed: the python module has already been destroyed,
-      --  but we still have remaining CI finalized when GNAT finalizes
-      --  everything before exit.
-
-      if Data = null then
-         return;
-      end if;
-
-      Dummy := Sync_Add_And_Fetch (Data.Refcount'Access, -1);
-      Decref (Data);
-
-      if Dummy = 0 then
-         Unchecked_Free (Data);
-      end if;
-   end Finalize;
-
-   ---------
-   -- "=" --
-   ---------
-
-   function "=" (CI1, CI2 : Class_Instance_Data) return Boolean is
-   begin
-      return CI1.Data = CI2.Data;
-   end "=";
-
    -------------
    -- Get_CIR --
    -------------
@@ -1161,11 +1107,7 @@ package body GNATCOLL.Scripts is
    function Get_CIR
      (Inst : Class_Instance) return Class_Instance_Record_Access is
    begin
-      if Inst.Initialized then
-         return Inst.Data.Data;
-      else
-         return null;
-      end if;
+      return Class_Instance_Record_Access (Inst.Ref.Get);
    end Get_CIR;
 
    --------------------
@@ -1176,8 +1118,7 @@ package body GNATCOLL.Scripts is
      (Instance : access Class_Instance_Record) return String is
    begin
       return "CI=(" & System.Address_Image
-        (To_Address (Class_Instance_Record_Access (Instance)))
-        & Integer_32'Image (Instance.Refcount) & ")";
+        (To_Address (Class_Instance_Record_Access (Instance))) & ')';
    end Print_Refcount;
 
    -------------------
@@ -1225,7 +1166,7 @@ package body GNATCOLL.Scripts is
       Name     : String;
       Property : Instance_Property_Record'Class) is
    begin
-      Set_Data (Instance.Data.Data, Name, Property);
+      Set_Data (Instance.Ref.Get, Name, Property);
    end Set_Data;
 
    --------------
@@ -1255,7 +1196,7 @@ package body GNATCOLL.Scripts is
 
    procedure Unset_Data (Instance : Class_Instance; Name : Class_Type) is
    begin
-      Unset_Data (Instance.Data.Data, Get_Name (Name));
+      Unset_Data (Instance.Ref.Get, Get_Name (Name));
    end Unset_Data;
 
    ----------------
@@ -1264,7 +1205,7 @@ package body GNATCOLL.Scripts is
 
    procedure Unset_Data (Instance : Class_Instance; Name : String) is
    begin
-      Unset_Data (Instance.Data.Data, Name);
+      Unset_Data (Instance.Ref.Get, Name);
    end Unset_Data;
 
    ----------------
@@ -1424,7 +1365,7 @@ package body GNATCOLL.Scripts is
    is
       U : User_Data_List := null;
    begin
-      if Instance.Initialized then
+      if Instance.Ref.Get /= null then
          U := Get_Data (Get_CIR (Instance), Name);
       end if;
 
@@ -1549,7 +1490,7 @@ package body GNATCOLL.Scripts is
 
    function Get_Script (Instance : Class_Instance) return Scripting_Language is
    begin
-      return Instance.Data.Data.Script;
+      return Scripting_Language (Instance.Ref.Get.Script);
    end Get_Script;
 
    -----------------

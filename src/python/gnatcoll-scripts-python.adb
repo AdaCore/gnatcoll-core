@@ -147,10 +147,7 @@ package body GNATCOLL.Scripts.Python is
    end record;
    type Python_Class_Instance is access all Python_Class_Instance_Record'Class;
 
-   overriding procedure Incref
-     (Inst : not null access Python_Class_Instance_Record);
-   overriding procedure Decref
-     (Inst : not null access Python_Class_Instance_Record);
+   overriding procedure Free (Self : in out Python_Class_Instance_Record);
    overriding function Get_User_Data
      (Inst : not null access Python_Class_Instance_Record)
       return access User_Data_List;
@@ -2864,30 +2861,6 @@ package body GNATCOLL.Scripts.Python is
       end if;
    end Nth_Arg;
 
-   ------------
-   -- Incref --
-   ------------
-
-   overriding procedure Incref
-     (Inst : not null access Python_Class_Instance_Record) is
-   begin
-      if Inst.Data /= null and then not Finalized then
-         Py_INCREF (Inst.Data);
-      end if;
-   end Incref;
-
-   ------------
-   -- Decref --
-   ------------
-
-   overriding procedure Decref
-     (Inst : not null access Python_Class_Instance_Record) is
-   begin
-      if Inst.Data /= null and then not Finalized then
-         Py_DECREF (Inst.Data);
-      end if;
-   end Decref;
-
    -------------------
    -- Get_User_Data --
    -------------------
@@ -2963,33 +2936,31 @@ package body GNATCOLL.Scripts.Python is
      (Script : Python_Scripting; Object : PyObject) return Class_Instance
    is
       CI     : Python_Class_Instance;
-      Result : Class_Instance := No_Class_Instance;
-      Old_Refcount : Natural := Natural'Last;
    begin
-      if Active (Me) then
-         Old_Refcount := Get_Refcount (Object);
-      end if;
-
       PyErr_Clear;
       --  If there was no instance, avoid a python exception later
 
       CI := new Python_Class_Instance_Record;
+      CI.Script := Script;
       CI.Data := Object;   --  adopts the object
-      Py_INCREF (Object);  --  the class_instance needs to own one ref
+      Py_INCREF (Object);
+      --  the class_instance needs to own one ref (decref'ed in Free)
 
-      Result := From_Instance (Script, CI);
-
-      if Active (Me) then
-         Assert (Me,
-                 Get_Refcount (Object) = Old_Refcount + 1,
-                 "Get_CI should own a reference,"
-                 & Print_Refcount (Get_CIR (Result)) & " !="
-                 & Integer'Image (Old_Refcount + 1),
-                 Raise_Exception => False);
-      end if;
-
-      return Result;
+      return R : Class_Instance do
+         CI_Pointers.Set (R.Ref, CI);
+      end return;
    end Get_CI;
+
+   ----------
+   -- Free --
+   ----------
+
+   overriding procedure Free (Self : in out Python_Class_Instance_Record) is
+   begin
+      if not Finalized then
+         Py_XDECREF (Self.Data);
+      end if;
+   end Free;
 
    ------------------
    -- Get_PyObject --
