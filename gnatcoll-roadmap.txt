@@ -1,3 +1,7 @@
 This is a tentative roadmap for GNATCOLL.
 None of this information is firm, and the roadmap could be changed
 at any time.
+
+GNATCOLL has no strict roadmap. In general, packages are not developed
+explictly for GNATCOLL, but are extracted from other projects, or come
+from the need of other projects.
