@@ -920,7 +920,7 @@ package GNATCOLL.Python is
    -----------------
    --  Descriptors are an advanced feature of python, used as the underlying
    --  capability for bounded methods, properties,...
-   --  Basically, when a field in an install is a descriptor, its value is
+   --  Basically, when a field in an instance is a descriptor, its value is
    --  read from a Getter, instead of directly. Likewise it is set through a
    --  Setter.
 

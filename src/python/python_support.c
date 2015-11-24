@@ -747,7 +747,8 @@ ada_pydescr_newGetSet (PyTypeObject* type,
   if (prop == NULL) {
     return 0;
   } else {
-    PyObject_SetAttrString ((PyObject*)type, name, prop);
+    PyDict_SetItemString(type->tp_dict, name, prop);
+    Py_DECREF (prop);
     return 1;
   }
 }

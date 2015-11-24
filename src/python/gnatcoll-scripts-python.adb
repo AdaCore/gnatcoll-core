@@ -872,6 +872,10 @@ package body GNATCOLL.Scripts.Python is
          return null;
       end if;
 
+      if Active (Me_Log) then
+         Trace (Me_Log, "First_Level: " & Handler.Cmd.Command);
+      end if;
+
       if Active (Me_Stack) then
          declare
             Module  : constant PyObject := PyImport_ImportModule ("traceback");
@@ -1044,10 +1048,14 @@ package body GNATCOLL.Scripts.Python is
       Args     : PyObject;
       Result   : PyObject;
    begin
+      if Active (Me_Log) then
+         Trace (Me_Log, "First_Level_Getter " & Prop.Prop.Name);
+      end if;
+
       Args := PyTuple_New (1);
 
       Py_INCREF (Obj);
-      PyTuple_SetItem (Args, 0, Obj);
+      PyTuple_SetItem (Args, 0, Obj);  --  don't increase refcount of Obj
 
       Callback :=
         (Script            => Prop.Script,
@@ -1061,6 +1069,8 @@ package body GNATCOLL.Scripts.Python is
 
       Run_Callback (Prop.Script, Prop.Prop.Getter, Prop.Prop.Name, Callback,
                     Result);
+      --  Run_Callback frees Callback, which decref Args
+
       return Result;
    end First_Level_Getter;
 
@@ -1076,13 +1086,17 @@ package body GNATCOLL.Scripts.Python is
       Args     : PyObject;
       Result   : PyObject;
    begin
+      if Active (Me_Log) then
+         Trace (Me_Log, "First_Level_Setter " & Prop.Prop.Name);
+      end if;
+
       Args := PyTuple_New (2);
 
       Py_INCREF (Obj);
-      PyTuple_SetItem (Args, 0, Obj);
+      PyTuple_SetItem (Args, 0, Obj);  --  don't increase refcount of Obj
 
       Py_INCREF (Value);
-      PyTuple_SetItem (Args, 1, Value);
+      PyTuple_SetItem (Args, 1, Value);  --  don't increase refcount of Value
 
       Callback :=
         (Script            => Prop.Script,
@@ -1095,6 +1109,7 @@ package body GNATCOLL.Scripts.Python is
          First_Arg_Is_Self => False);
       Run_Callback
         (Prop.Script, Prop.Prop.Setter, Prop.Prop.Name, Callback, Result);
+      --  Run_Callback frees Callback, which decref Args
 
       if Result = null then
          return -1;
