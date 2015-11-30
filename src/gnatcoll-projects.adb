@@ -789,7 +789,8 @@ package body GNATCOLL.Projects is
      (Project             : Project_Type;
       Recursive           : Boolean := False;
       Including_Libraries : Boolean := False;
-      Xrefs_Dirs          : Boolean := False) return File_Array
+      Xrefs_Dirs          : Boolean := False;
+      Exclude_Externally  : Boolean := False) return File_Array
    is
       View : constant Project_Id := Get_View (Project);
 
@@ -811,7 +812,8 @@ package body GNATCOLL.Projects is
                         P.Object_Path
                           (Recursive           => False,
                            Including_Libraries => Including_Libraries,
-                           Xrefs_Dirs          => Xrefs_Dirs));
+                           Xrefs_Dirs          => Xrefs_Dirs,
+                           Exclude_Externally  => Exclude_Externally));
                Next (Iter);
             end loop;
 
@@ -830,7 +832,10 @@ package body GNATCOLL.Projects is
          --  For externally_built library projects, however, it should not be
          --  taken into account.
 
-         if View.Object_Directory = No_Path_Information
+         if View.Externally_Built and then Exclude_Externally then
+            return (1 .. 0 => <>);
+
+         elsif View.Object_Directory = No_Path_Information
            or else View.Externally_Built
          then
             return (1 => Create

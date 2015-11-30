@@ -533,13 +533,15 @@ package GNATCOLL.Projects is
      (Project             : Project_Type;
       Recursive           : Boolean := False;
       Including_Libraries : Boolean := False;
-      Xrefs_Dirs          : Boolean := False) return GNATCOLL.VFS.File_Array;
+      Xrefs_Dirs          : Boolean := False;
+      Exclude_Externally  : Boolean := False) return GNATCOLL.VFS.File_Array;
    --  Return the object path for this project. The empty string is returned
    --  if the project doesn't have any object directory (i.e. the user
    --  explicitely set it to the empty string). If Including_Libraries is
    --  True and Project is a library project, it returns both object and ALI
    --  paths (in that order) or only ALI path if project doesn't have object
-   --  directory.
+   --  directory. If Exclude_Externall is True and Project is externally built
+   --  library project, it returns empty path.
    --  If an Xrefs Subdir is set in the project to a non-empty
    --  string, and Xrefs_Dir is set, then the corresponding subdirectory is
    --  returned if it exists. Else, the subdir corresponding to the current
