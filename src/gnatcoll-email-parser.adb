@@ -148,6 +148,15 @@ package body GNATCOLL.Email.Parser is
       Next, Eol2 : Integer;
       Is_Continuation : Boolean;
       Value : Unbounded_String;
+
+      function RTrim_CR (Item : String) return String is
+        (if Item /= "" and then Item (Item'Last) = ASCII.CR
+         then Item (Item'First .. Item'Last - 1) else Item);
+
+      function LTrim_Space (Item : String) return String is
+        (if Item /= "" and then Item (Item'First) = ' '
+         then Item (Item'First + 1 .. Item'Last) else Item);
+
    begin
       Msg := New_Message (MIME_Type => "");
 
@@ -181,11 +190,8 @@ package body GNATCOLL.Email.Parser is
          --  itself starting with a space. This is not full RFC2822 of course,
          --  but it is nice to handle this correctly anyway
 
-         if Str (Eol - 1) = ASCII.CR then
-            Value := To_Unbounded_String (Str (Colon + 1 .. Eol - 2));
-         else
-            Value := To_Unbounded_String (Str (Colon + 1 .. Eol - 1));
-         end if;
+         Value := To_Unbounded_String
+                    (LTrim_Space (RTrim_CR (Str (Colon + 1 .. Eol - 1))));
 
          while Eol < Str'Last and then Is_Whitespace (Str (Eol + 1)) loop
             Next := Eol + 1;
@@ -193,11 +199,7 @@ package body GNATCOLL.Email.Parser is
             Eol2 := Next_Occurrence (Str (Next .. Stop), ASCII.LF);
             for F in Next + 1 .. Eol2 - 1 loop
                if not Is_Whitespace (Str (F)) then
-                  if Str (Eol2 - 1) = ASCII.CR then
-                     Append (Value, ' ' & Str (F .. Eol2 - 2));
-                  else
-                     Append (Value, ' ' & Str (F .. Eol2 - 1));
-                  end if;
+                  Append (Value, ' ' & RTrim_CR (Str (F .. Eol2 - 1)));
                   Is_Continuation := True;
                   exit;
                end if;
