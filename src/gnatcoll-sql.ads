@@ -100,7 +100,6 @@
 with Ada.Calendar;
 with Ada.Containers.Vectors;
 with Ada.Containers.Indefinite_Vectors;
-with Ada.Finalization;
 with Ada.Strings.Unbounded;  use Ada.Strings.Unbounded;
 with GNATCOLL.Refcount;
 with GNATCOLL.SQL_Impl;      use GNATCOLL.SQL_Impl;
@@ -908,22 +907,15 @@ private
    package Table_List is new Ada.Containers.Indefinite_Vectors
      (Natural, SQL_Single_Table'Class);
 
-   type Table_List_Internal is record
-      Refcount : Natural := 1;
-      List     : Table_List.Vector;
-   end record;
-   type Table_List_Internal_Access is access all Table_List_Internal;
+   package Table_List_Pointers is
+     new Refcount.Shared_Pointers (Table_List.Vector);
    --  Store the actual data for a SQL_Table_List in a different block (using
    --  a smart pointer for reference counting), since otherwise all the calls
    --  to "&" result in a copy of the list (per design of the Ada05 containers)
    --  which shows up as up to 20% of the number of calls to malloc on the
    --  testsuite).
 
-   type Table_List_Data is new Ada.Finalization.Controlled with record
-      Data : Table_List_Internal_Access;
-   end record;
-   overriding procedure Adjust (Self : in out Table_List_Data);
-   overriding procedure Finalize (Self : in out Table_List_Data);
+   subtype Table_List_Data is Table_List_Pointers.Ref;
 
    type SQL_Table_List is new SQL_Table_Or_List with record
       Data : Table_List_Data;
@@ -935,8 +927,7 @@ private
    --  Append all the tables referenced in Self to To
 
    Empty_Table_List : constant SQL_Table_List :=
-     (SQL_Table_Or_List
-      with Data => (Ada.Finalization.Controlled with null));
+     (SQL_Table_Or_List with Data => Table_List_Pointers.Null_Ref);
 
    -----------
    -- Field --
@@ -1047,24 +1038,22 @@ private
    ---------------
 
    type Join_Table_Internal is record
-      Refcount     : Natural := 1;
       Tables       : SQL_Table_List;
       On           : SQL_Criteria;
       Is_Left_Join : Boolean;
    end record;
-   type Join_Table_Internal_Access is access all Join_Table_Internal;
-   type Join_Table_Data is new Ada.Finalization.Controlled with record
-      Data : Join_Table_Internal_Access;
-   end record;
-   overriding procedure Adjust (Self : in out Join_Table_Data);
-   overriding procedure Finalize (Self : in out Join_Table_Data);
+
+   package Join_Table_Pointers is
+     new Refcount.Shared_Pointers (Join_Table_Internal);
+
+   subtype Join_Table_Data is Join_Table_Pointers.Ref;
    --  The contents of a join table is in a smart pointer. That way, we avoid
    --  duplicating the data (especially the Ada2005 containers) whenever we
    --  "Adjust" a SQL_Left_Join_Table, which saves a number of system calls to
    --  malloc() and free()
 
    type SQL_Left_Join_Table is new SQL_Single_Table with record
-      Data   : Join_Table_Data;
+      Data : Join_Table_Data;
    end record;
 
    overriding function To_String

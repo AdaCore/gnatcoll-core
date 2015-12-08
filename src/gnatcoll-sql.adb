@@ -240,25 +240,25 @@ package body GNATCOLL.SQL is
       Result : Unbounded_String;
       C      : Table_List.Cursor := Table_List.No_Element;
    begin
-      if Self.Data.Data /= null then
-         C := First (Self.Data.Data.Tables.Data.Data.List);
+      if not Self.Data.Is_Null then
+         C := First (Self.Data.Get.Tables.Data.Get);
       end if;
 
       Append (Result, "(");
       Append (Result, To_String (Element (C), Format));
-      if Self.Data.Data.Is_Left_Join then
+      if Self.Data.Get.Is_Left_Join then
          Append (Result, " LEFT JOIN ");
       else
          Append (Result, " JOIN ");
       end if;
       Next (C);
       Append (Result, To_String (Element (C), Format));
-      if Self.Data.Data.On /= No_Criteria then
+      if Self.Data.Get.On /= No_Criteria then
          Append (Result, " ON ");
          Append
            (Result,
             GNATCOLL.SQL_Impl.To_String
-              (Self.Data.Data.On, Format, Long => True));
+              (Self.Data.Get.On, Format, Long => True));
       end if;
       Append (Result, ")");
 
@@ -317,8 +317,8 @@ package body GNATCOLL.SQL is
       C      : Table_List.Cursor := Table_List.No_Element;
       Result : Unbounded_String;
    begin
-      if Self.Data.Data /= null then
-         C := First (Self.Data.Data.List);
+      if not Self.Data.Is_Null then
+         C := First (Self.Data.Get);
       end if;
 
       if Has_Element (C) then
@@ -488,39 +488,18 @@ package body GNATCOLL.SQL is
 
    function "&" (Left, Right : SQL_Table_List) return SQL_Table_List is
    begin
-      if Left.Data.Data = null then
+      if Left.Data.Is_Null then
          return Right;
       end if;
 
-      if Right.Data.Data = null then
+      if Right.Data.Is_Null then
          return Left;
       end if;
 
       Copy_Operands : declare
          Result : SQL_Table_List;
-
-         procedure Copy_Elements (L : SQL_Table_List);
-         --  Copy elements from L into Result
-
-         -------------------
-         -- Copy_Elements --
-         -------------------
-
-         procedure Copy_Elements (L : SQL_Table_List) is
-            C : Table_List.Cursor := L.Data.Data.List.First;
-         begin
-            while Has_Element (C) loop
-               Append (Result.Data.Data.List, Element (C));
-               Next (C);
-            end loop;
-         end Copy_Elements;
-
-      --  Start of processing for Copy_Operands
-
       begin
-         Result.Data.Data := new Table_List_Internal;
-         Copy_Elements (Left);
-         Copy_Elements (Right);
+         Result.Data.Set (Table_List."&" (Left.Data.Get, Right.Data.Get));
          return Result;
       end Copy_Operands;
    end "&";
@@ -542,11 +521,9 @@ package body GNATCOLL.SQL is
    ---------
 
    function "&" (Left, Right : SQL_Single_Table'Class) return SQL_Table_List is
-      Result : SQL_Table_List;
+      Result : constant SQL_Table_List := +Left;
    begin
-      Result.Data.Data := new Table_List_Internal;
-      Append (Result.Data.Data.List, Left);
-      Append (Result.Data.Data.List, Right);
+      Result.Data.Get.Append (Right);
       return Result;
    end "&";
 
@@ -557,8 +534,7 @@ package body GNATCOLL.SQL is
    function "+" (Left : SQL_Single_Table'Class) return SQL_Table_List is
       Result : SQL_Table_List;
    begin
-      Result.Data.Data := new Table_List_Internal;
-      Append (Result.Data.Data.List, Left);
+      Result.Data.Set (Table_List.To_Vector (Left, 1));
       return Result;
    end "+";
 
@@ -998,39 +974,6 @@ package body GNATCOLL.SQL is
          Instance_Index => -1,
          Data           => F);
    end Apply;
-
-   ------------
-   -- Adjust --
-   ------------
-
-   procedure Adjust (Self : in out Table_List_Data) is
-   begin
-      if Self.Data /= null then
-         Self.Data.Refcount := Self.Data.Refcount + 1;
-      end if;
-   end Adjust;
-
-   --------------
-   -- Finalize --
-   --------------
-
-   procedure Finalize (Self : in out Table_List_Data) is
-      procedure Unchecked_Free is new Ada.Unchecked_Deallocation
-        (Table_List_Internal, Table_List_Internal_Access);
-      Data : Table_List_Internal_Access := Self.Data;
-   begin
-      --  Make Finalize idempotent, it could be called several times
-      --  See RM 7.6.1 (24)
-
-      Self.Data := null;
-
-      if Data /= null then
-         Data.Refcount := Data.Refcount - 1;
-         if Data.Refcount = 0 then
-            Unchecked_Free (Data);
-         end if;
-      end if;
-   end Finalize;
 
    -------------
    -- To_List --
@@ -1582,9 +1525,7 @@ package body GNATCOLL.SQL is
         or else not Is_Empty (Self.Extra_Tables)
       then
          Append (Result, " FROM ");
-         if Self.Tables.Data.Data = null
-           or else Is_Empty (Self.Tables.Data.Data.List)
-         then
+         if Self.Tables.Data.Is_Null or else Self.Tables.Data.Get.Is_Empty then
             Append (Result, To_String (Self.Extra_Tables));
          elsif Is_Empty (Self.Extra_Tables) then
             Append (Result, To_String (Self.Tables, Format));
@@ -1813,8 +1754,8 @@ package body GNATCOLL.SQL is
    is
       C : Table_List.Cursor;
    begin
-      if Self.Data.Data.Tables.Data.Data /= null then
-         C := First (Self.Data.Data.Tables.Data.Data.List);
+      if not Self.Data.Get.Tables.Data.Is_Null then
+         C := First (Self.Data.Get.Tables.Data.Get);
          while Has_Element (C) loop
             Append_Tables (Element (C), To);
             Next (C);
@@ -1844,8 +1785,8 @@ package body GNATCOLL.SQL is
    is
       C : Table_List.Cursor;
    begin
-      if Self.Data.Data /= null then
-         C := First (Self.Data.Data.List);
+      if not Self.Data.Is_Null then
+         C := First (Self.Data.Get);
          while Has_Element (C) loop
             Append_Tables (Element (C), To);
             Next (C);
@@ -2146,7 +2087,7 @@ package body GNATCOLL.SQL is
    begin
       Result := To_Unbounded_String ("DELETE FROM ");
       Append (Result,
-              To_String (Element (First (Self.Table.Data.Data.List)), Format));
+              To_String (Element (First (Self.Table.Data.Get)), Format));
 
       if Self.Where /= No_Criteria then
          Append (Result, " WHERE ");
@@ -2377,7 +2318,7 @@ package body GNATCOLL.SQL is
    begin
       Result := To_Unbounded_String ("UPDATE ");
       Append (Result,
-              To_String (Element (First (Self.Table.Data.Data.List)), Format));
+              To_String (Element (First (Self.Table.Data.Get)), Format));
 
       Append (Result, " SET ");
       Append (Result, To_String (Self.Set, Format, With_Field => True));
@@ -2386,9 +2327,7 @@ package body GNATCOLL.SQL is
         or else not Is_Empty (Self.Extra_From)
       then
          Append (Result, " FROM ");
-         if Self.From.Data.Data = null
-           or else Is_Empty (Self.From.Data.Data.List)
-         then
+         if Self.From.Data.Is_Null or else Self.From.Data.Get.Is_Empty then
             Append (Result, To_String (Self.Extra_From));
          elsif Is_Empty (Self.Extra_From) then
             Append (Result, To_String (Self.From, Format));
@@ -2432,36 +2371,6 @@ package body GNATCOLL.SQL is
       end if;
    end Auto_Complete;
 
-   ------------
-   -- Adjust --
-   ------------
-
-   procedure Adjust (Self : in out Join_Table_Data) is
-   begin
-      if Self.Data /= null then
-         Self.Data.Refcount := Self.Data.Refcount + 1;
-      end if;
-   end Adjust;
-
-   --------------
-   -- Finalize --
-   --------------
-
-   procedure Unchecked_Free is new Ada.Unchecked_Deallocation
-     (Join_Table_Internal, Join_Table_Internal_Access);
-
-   procedure Finalize (Self : in out Join_Table_Data) is
-      Data : Join_Table_Internal_Access := Self.Data;
-   begin
-      Self.Data := null;
-      if Data /= null then
-         Data.Refcount := Data.Refcount - 1;
-         if Data.Refcount = 0 then
-            Unchecked_Free (Data);
-         end if;
-      end if;
-   end Finalize;
-
    ---------------
    -- Left_Join --
    ---------------
@@ -2475,11 +2384,9 @@ package body GNATCOLL.SQL is
       return Result : SQL_Left_Join_Table
         (Instance => null, Instance_Index => -1)
       do
-         Result.Data := Join_Table_Data'
-           (Ada.Finalization.Controlled with
-            Data => new Join_Table_Internal'
-              (Refcount     => 1,
-               Tables       => Full & Partial,
+         Result.Data.Set
+           (Join_Table_Internal'
+              (Tables       => Full & Partial,
                Is_Left_Join => True,
                On           => On));
       end return;
@@ -2496,7 +2403,7 @@ package body GNATCOLL.SQL is
    is
       R : constant SQL_Left_Join_Table := Left_Join (Table1, Table2, On);
    begin
-      R.Data.Data.Is_Left_Join := False;
+      R.Data.Get.Is_Left_Join := False;
       return R;
    end Join;
 
