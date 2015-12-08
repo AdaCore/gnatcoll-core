@@ -1,15 +1,8 @@
 with "gnatcoll_gmp";
 
 project GMP_Examples is
-
    for Main use ("square_triangular_numbers.adb", "isprime.adb");
-   
    for Object_Dir use "../obj";
    for Exec_Dir use ".";
-
-   package Compiler is
-      for Default_Switches ("Ada") use ("-gnat05");
-   end Compiler;
-
 end GMP_Examples;
 

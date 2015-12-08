@@ -28,7 +28,7 @@
 --  various modules remain as independant as possible from the specific
 --  language.
 
-pragma Ada_12;
+pragma Ada_2012;
 
 with Ada.Calendar;
 with Ada.Containers.Indefinite_Doubly_Linked_Lists;

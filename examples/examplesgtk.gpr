@@ -9,8 +9,4 @@ project ExamplesGtk is
    for Source_Files use ("common_gtk.ads", "common_gtk.adb",
                          "gtkconsole.ads", "gtkconsole.adb",
                          "newclassgtk.adb");
-
-   package Compiler is
-      for Default_SWitches ("Ada") use ("-gnat05");
-   end Compiler;
 end ExamplesGtk;

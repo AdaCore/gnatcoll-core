@@ -36,6 +36,7 @@ Makefile.conf
 gnatcoll_shared.gpr
 src/gnatcoll_gmp.gpr
 src/gnatcoll_python.gpr
+src/gnatcoll_gtk.gpr
 src/lib
 src/obj
 testsuite/obj

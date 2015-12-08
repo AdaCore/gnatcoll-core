@@ -44,7 +44,7 @@
 --  instantiations of GNATCOLL.Pools, but this makes the API more complex and
 --  forces the duplication of the whole GNATCOLL.SQL.Session API.
 
-pragma Ada_12;
+pragma Ada_2012;
 
 private with GNATCOLL.Refcount;
 

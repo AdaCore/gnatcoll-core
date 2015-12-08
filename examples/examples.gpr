@@ -6,9 +6,4 @@ project Examples is
    for Source_Files use ("common.ads",      "common.adb",
                          "textconsole.ads", "textconsole.adb",
                          "newclass.adb");
-
-   package Compiler is
-      for Default_Switches ("Ada") use ("-gnat05");
-   end Compiler;
-
 end Examples;

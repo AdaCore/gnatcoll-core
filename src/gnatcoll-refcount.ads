@@ -48,7 +48,7 @@
 --      * Shared_Pointers is a more flexible API, where the element_type
 --        can be any unconstrained type. The implementation is also faster.
 
-pragma Ada_12;
+pragma Ada_2012;
 
 private with Ada.Finalization;
 with System;
