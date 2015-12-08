@@ -9430,9 +9430,9 @@ package body GNATCOLL.Projects is
          if Self.Tree /= null then
             GPR.Tree.Tree_Private_Part.Project_Node_Table.Free
               (Self.Tree.Project_Nodes);
+            Free (Self.Tree);
          end if;
 
-         Free (Self.Tree);
          Unchecked_Free (Self);
       end if;
    end Free;

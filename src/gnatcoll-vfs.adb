@@ -1362,7 +1362,7 @@ package body GNATCOLL.VFS is
             Free (Dir.Value.Normalized);
             Dir.Value.Normalized_And_Resolved := null;
 
-            Dir.Value.Normalized := new FS_String'(Full.all);
+            Dir.Value.Normalized := Full;
          end if;
       end if;
    end Ensure_Directory;
