@@ -5230,12 +5230,11 @@ package body GNATCOLL.Projects is
    function Extending_Project
      (Project : Project_Type; Recurse : Boolean := False) return Project_Type
    is
-      Tree   : constant Project_Node_Tree_Ref := Project.Data.Tree.Tree;
-      Extended, Extending : Project_Node_Id;
+      Tree      : constant Project_Node_Tree_Ref := Project.Data.Tree.Tree;
+      Extending : Project_Node_Id := Empty_Project_Node;
+      Extended  : Project_Node_Id := Project.Data.Node;
    begin
-      Extended := Project.Data.Node;
-
-      loop
+      while Project_Declaration_Of (Extended, Tree) /= Empty_Project_Node loop
          Extending := Extending_Project_Of
            (Project_Declaration_Of (Extended, Tree), Tree);
 
