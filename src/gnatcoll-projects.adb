@@ -6906,6 +6906,7 @@ package body GNATCOLL.Projects is
             Tmp_Prj : Project_Id;
             Dummy   : Boolean;
          begin
+            Tree.Data.Projects.Clear;
             GPR.Proc.Process_Project_Tree_Phase_1
               (In_Tree                => Tree.Data.View,
                Project                => Tmp_Prj,
@@ -7004,6 +7005,7 @@ package body GNATCOLL.Projects is
          Dummy   : Boolean;
       begin
          Trace (Me, "Checking whether the gnatls attribute has changed");
+         Tree.Data.Projects.Clear;
          GPR.Proc.Process_Project_Tree_Phase_1
            (In_Tree                => Tree.Data.View,
             Project                => Tmp_Prj,
