@@ -14,6 +14,15 @@ KP-18-OC08-003 SQL_Table_List and SQL_Left_Join_Table not task safe.
 
   Workaround: Use protected operations for such copies.
 
+KP-18-OB30-013 gnatinspect crashes on parsing project tree
+
+  Problem:    Gnatinspect crashes with a constraint error on a rare and rather
+              complex project structure.
+
+  Status:     Fixed in Gnatcoll 1.9.0 on 2015-12-15
+
+  Workaround: No workaround.
+
 KP-18-OB02-038 Projects: default branch in case statement breaks saving
 
   Problem:    When a case statement in the project file has a default branch
