@@ -183,19 +183,15 @@ package GNATCOLL.Email.Utils is
    ---------------
 
    procedure Quoted_Printable_Encode
-     (Str                : String;
-      Block_Prefix       : String := "";
-      Block_Suffix       : String := "";
-      Max_Block_Len      : Integer := 76;
-      Where              : Region := Text;
-      Result             : out Unbounded_String);
-   --  Encode Str in quoted-printable format, as per RFC 2045.
+     (Str           : String;
+      Charset       : String;
+      Max_Block_Len : Integer := Integer'Last;
+      Where         : Region := Text;
+      Result        : out Unbounded_String);
+   --  Encode Str in quoted-printable format, as per RFC 2045/2047.
    --  This should be used for ascii-like charsets, like all iso-8859-*
    --  charsets, ie when most of the characters are already in the ASCII
    --  charset (0 through 127).
-   --  The output is split in blocks if Max_Block_Len is specified. Each block
-   --  has a maximal length, including its prefix and suffix. This is to
-   --  conform to the format to use for mail headers.
 
    procedure Quoted_Printable_Decode
      (Str    : String;
@@ -211,11 +207,9 @@ package GNATCOLL.Email.Utils is
 
    procedure Base64_Encode
      (Str             : String;
-      Block_Prefix    : String := "";
-      Block_Suffix    : String := "";
-      Block_Separator : String := "" & ASCII.LF;
+      Charset         : String;
       Max_Block_Len   : Integer := Integer'Last;
-      Separate_Blocks : Boolean := False;
+      Where           : Region := Text;
       Result          : out Unbounded_String);
    --  Encode Str in base64 format, as defined by RFC 2045.
    --  This should be used for charsets that have little similarity with

@@ -51,8 +51,9 @@ package GNATCOLL.Email is
    package Charset_String_List is new Ada.Containers.Doubly_Linked_Lists
      (Charset_String);
 
+   --  Single-byte charsets
+
    Charset_US_ASCII     : constant String := "us-ascii";
-   Charset_UTF_8        : constant String := "utf-8";
    Charset_ISO_8859_1   : constant String := "iso-8859-1";
    Charset_ISO_8859_2   : constant String := "iso-8859-2";
    Charset_ISO_8859_3   : constant String := "iso-8859-3";
@@ -63,6 +64,12 @@ package GNATCOLL.Email is
    Charset_ISO_8859_14  : constant String := "iso-8859-14";
    Charset_ISO_8859_15  : constant String := "iso-8859-15";
    Charset_Windows_1252 : constant String := "windows-1252";
+
+   --  Multi-byte charsets
+
+   Charset_UTF_8        : constant String := "utf-8";
+   Charset_Shift_JIS    : constant String := "shift-jis";
+   Charset_EUC          : constant String := "x-euc";
 
    ---------------
    -- Addresses --

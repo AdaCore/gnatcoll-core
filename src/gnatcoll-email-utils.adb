@@ -21,6 +21,8 @@
 --                                                                          --
 ------------------------------------------------------------------------------
 
+pragma Ada_2012;
+
 with Ada.Calendar;            use Ada.Calendar;
 with Ada.Calendar.Time_Zones; use Ada.Calendar.Time_Zones;
 with Ada.Calendar.Formatting; use Ada.Calendar.Formatting;
@@ -28,6 +30,8 @@ with Ada.Characters.Handling; use Ada.Characters.Handling;
 with Ada.Strings.Hash_Case_Insensitive;
 with GNATCOLL.Utils;          use GNATCOLL.Utils;
 with Interfaces;              use Interfaces;
+with System.WCh_Con;          use System.WCh_Con;
+with GNAT.Decode_String;
 
 pragma Warnings (Off);
 --  Ada.Strings.Unbounded.Aux is an internal GNAT unit
@@ -38,6 +42,39 @@ package body GNATCOLL.Email.Utils is
 
    U_Charset_US_ASCII : constant Unbounded_String :=
                           To_Unbounded_String (Charset_US_ASCII);
+
+   package Decode_Shift_JIS is new GNAT.Decode_String (WCEM_Shift_JIS);
+   package Decode_EUC is new GNAT.Decode_String (WCEM_EUC);
+   package Decode_UTF8 is new GNAT.Decode_String (WCEM_UTF8);
+
+   type Next_Char_Acc is
+     access procedure (S : String; Index : in out Natural);
+   --  Procedure moving Index from one character to the next in S,
+   --  taking multi-byte encodings into account.
+
+   procedure Single_Byte_Next_Char (S : String; Index : in out Natural);
+   --  Default version for single-byte charsets, simply incrementing Index
+
+   ---------------------------
+   -- Single_Byte_Next_Char --
+   ---------------------------
+
+   procedure Single_Byte_Next_Char (S : String; Index : in out Natural) is
+      pragma Unreferenced (S);
+   begin
+      Index := Index + 1;
+   end Single_Byte_Next_Char;
+
+   function Next_Char_For_Charset (Charset : String) return Next_Char_Acc is
+      (if Charset = Charset_Shift_JIS
+         then Decode_Shift_JIS.Next_Wide_Character'Access
+       elsif Charset = Charset_EUC
+         then Decode_EUC.Next_Wide_Character'Access
+       elsif Charset = Charset_UTF_8
+         then Decode_UTF8.Next_Wide_Character'Access
+       else
+         Single_Byte_Next_Char'Access);
+   --  Next_Char procedure for the named Charset
 
    function Needs_Quoting
       (Char   : Character;
@@ -1188,39 +1225,31 @@ package body GNATCOLL.Email.Utils is
    -----------------------------
 
    procedure Quoted_Printable_Encode
-     (Str                : String;
-      Block_Prefix       : String  := "";
-      Block_Suffix       : String  := "";
-      Max_Block_Len      : Integer := 76;
-      Where              : Region := Text;
-      Result             : out Unbounded_String)
+     (Str           : String;
+      Charset       : String;
+      Max_Block_Len : Integer := Integer'Last;
+      Where         : Region := Text;
+      Result        : out Unbounded_String)
    is
-      function Compute_Block_Sep return String;
-      --  Return block separator to be used in Where
+      Block_Prefix    : constant String :=
+        (if Where in Any_Header then "=?" & Charset & "?q?" else "");
+      Block_Suffix    : constant String :=
+        (if Where in Any_Header then "?=" else "");
+      Block_Separator : constant String :=
+        (if Where in Any_Header then " " else "=" & ASCII.LF);
+      --  In Text, use a soft line break
 
-      -----------------------
-      -- Compute_Block_Sep --
-      -----------------------
+      Current_Len : Natural := 0;
+      Max         : constant Natural :=
+        Integer'Min (Max_Block_Len, (if Where in Any_Header then 75 else 76))
+          - Block_Prefix'Length
+          - Block_Suffix'Length
+          - (Block_Separator'Length - 1);
+      --  Note: Block_Separator may produce a printable character, so must be
+      --  counted against the limit.
 
-      function Compute_Block_Sep return String is
-      begin
-         if Where = Text then
-            --  A soft line-break
-            return "=" & ASCII.LF;
-         else
-            return " ";
-         end if;
-      end Compute_Block_Sep;
-
-      Block_Separator : constant String := Compute_Block_Sep;
-      Start           : Integer := -1;
-      Current_Len     : Natural := 0;
-      Max             : constant Natural :=
-                          Max_Block_Len - Block_Prefix'Length -
-                            Block_Suffix'Length;
-
-      function Quote (Char : Character) return String;
-      --  Encode a single character
+      function Quote (S : String) return String;
+      --  Encode all characters in S
 
       procedure Append (Substring : String; Splittable : Boolean);
       --  Append Substring to Result, taking into account the max line length.
@@ -1230,15 +1259,23 @@ package body GNATCOLL.Email.Utils is
       -- Quote --
       -----------
 
-      function Quote (Char : Character) return String is
-         P : Integer;
+      function Quote (S : String) return String is
+         P      : Integer;
+         Result : String (1 .. 3 * S'Length);
+         Last   : Integer := 0;
       begin
-         if Char = ' ' and then Where in Any_Header then
-            return "_";
-         end if;
-
-         P := Character'Pos (Char);
-         return "=" & Hex_Chars (P / 16) & Hex_Chars (P mod 16);
+         for J in S'Range loop
+            if S (J) = ' ' and then Where in Any_Header then
+               Last := Last + 1;
+               Result (Last) := '_';
+            else
+               Last := Last + 3;
+               P := Character'Pos (S (J));
+               Result (Last - 2 .. Last) :=
+                 ('=', Hex_Chars (P / 16), Hex_Chars (P mod 16));
+            end if;
+         end loop;
+         return Result (1 .. Last);
       end Quote;
 
       ------------
@@ -1289,35 +1326,58 @@ package body GNATCOLL.Email.Utils is
          end if;
       end Append;
 
+      Start, Next, Last : Integer;
+      --  Start of current encoded sequence,
+      --  start of next encoded sequence,
+      --  last element of previous encoded sequence.
+
+      procedure Passthrough;
+      --  Output previous span of unencoded characters, i.e.
+      --  from Last + 1 to Start - 1.
+
+      -----------------
+      -- Passthrough --
+      -----------------
+
+      procedure Passthrough is
+      begin
+         Append (Str (Last + 1 .. Start - 1), Splittable => True);
+      end Passthrough;
+
+      Next_Char : constant Next_Char_Acc :=
+        (if Where in Any_Header
+         then Next_Char_For_Charset (Charset)
+         else Single_Byte_Next_Char'Access);
+
    --  Start of processing for Quoted_Printable_Encode
 
    begin
       Result := Null_Unbounded_String;
 
-      for S in Str'Range loop
-         if Needs_Quoting (Str (S), Where, Is_EOL => S = Str'Last) then
-            if Start /= -1 then
-               Append (Str (Start .. S - 1), Splittable => True);
-               Start := -1;
-            end if;
+      Next := Str'First;
+      Last := Next - 1;
+      loop
+         Start := Next;
+         exit when Start > Str'Last;
 
-            declare
-               Q : constant String := Quote (Str (S));
-            begin
-               Append (Q, Splittable => False);
-               Start := S + 1;
-            end;
+         --  Find end of possibly multibyte sequence starting at Start
 
-         else
-            if Start = -1 then
-               Start := S;
-            end if;
+         Next := Start;
+         Next_Char (Str, Next);
+
+         --  We encode single characters if needed, and always encode
+         --  all multibyte characters.
+
+         if Last > Start + 1
+              or else
+            Needs_Quoting (Str (Start), Where, Is_EOL => Start = Str'Last)
+         then
+            Passthrough;
+            Last := Next - 1;
+            Append (Quote (Str (Start .. Last)), Splittable => False);
          end if;
       end loop;
-
-      if Start /= -1 then
-         Append (Str (Start .. Str'Last), Splittable => True);
-      end if;
+      Passthrough;
 
       if Current_Len /= 0 then
          Append (Result, Block_Suffix);
@@ -1417,57 +1477,48 @@ package body GNATCOLL.Email.Utils is
 
    procedure Base64_Encode
      (Str             : String;
-      Block_Prefix    : String := "";
-      Block_Suffix    : String := "";
-      Block_Separator : String := "" & ASCII.LF;
+      Charset         : String;
       Max_Block_Len   : Integer := Integer'Last;
-      Separate_Blocks : Boolean := False;
+      Where           : Region := Text;
       Result          : out Unbounded_String)
    is
-      function Get_Line_Length return Integer;
-      --  Get the line length for the encoded string
+      Block_Prefix    : constant String :=
+        (if Where in Any_Header then "=?" & Charset & "?b?" else "");
+      Block_Suffix    : constant String :=
+        (if Where in Any_Header then "?=" else "");
+      Block_Separator : constant String :=
+        (if Where in Any_Header then " " else (1 => ASCII.LF));
+      --  In Text, use a soft line break as line separator
 
-      ---------------------
-      -- Get_Line_Length --
-      ---------------------
+      Max : constant Natural :=
+        4 * Integer'Max
+              (1,
+               (Integer'Min (Max_Block_Len,
+                             (if Where in Any_Header then 75 else 76))
+                  - Block_Prefix'Length
+                  - Block_Suffix'Length) / 4);
+      --  Maximum length of encoded data within an encoded block (must be
+      --  a non-null multiple of 4). Note: block separator does not contain
+      --  any printable character, so does not count against the limit.
 
-      function Get_Line_Length return Integer is
-         Len : Integer := Integer'Min (76, Max_Block_Len);
-      begin
-         --  Do not cound prefix and suffix in line length
-         Len := Len - Block_Prefix'Length - Block_Suffix'Length;
+      Encoded_Len : constant Integer := (Str'Length + 2) / 3 * 4;
+      --  Each group of 3 input bytes yields 4 output bytes, including a
+      --  trailing incomplete group.
 
-         --  Check that the line length is a multiple of 4 and make a shorter
-         --  line if necessary
-         if Separate_Blocks and then Len mod 4 /= 0 then
-            Len := Len - Len mod 4;
-         end if;
+      Blocks : constant Integer := (Encoded_Len + Max - 1) / Max;
 
-         --  At least 1 character in word, otherwise there's no point
-         return Integer'Max (Len, 1);
-      end Get_Line_Length;
+      Encoded_Block_Len : constant Integer :=
+        Block_Prefix'Length + Max + Block_Suffix'Length
+        + Block_Separator'Length;
+      --  Allocation size for each block
 
-      Line_Len : constant Integer := Get_Line_Length;
+      Len : constant Integer :=
+          Blocks * Encoded_Block_Len;
+      --  Pre-allocation length. This is sufficient to accomodate the entire
+      --  encoded data, split into blocks, except if some blocks need to be
+      --  flushed early (while incomplete) in order to avoid incorrect
+      --  splitting of multi-byte sequences.
 
-      --  Characters are grouped by 6 bits.
-      --     4/3+1 => 8 bits represented by groups of 6 bits
-      Bytes    : constant Integer := Str'Length * 4 / 3 + 1;
-
-      --  A newline occurs every Line_Len char, and we have at least one
-      Lines    : constant Integer := Bytes / Line_Len + 1;
-
-      --  For each line, we have a Block_Separator, the prefix and a suffix
-      --  Leave space for trailing == if needed
-      --  For instance, 'b' gets encoded as 'Yg=='
-      Len      : constant Integer :=
-        Bytes
-        + Lines * (Block_Separator'Length
-                  + Block_Prefix'Length
-                  + Block_Suffix'Length)
-        + 2;
-
-      --  Do not allocate on stack, since when using tasking this will often
-      --  be too small.
       Output   : Ada.Strings.Unbounded.String_Access := new String (1 .. Len);
       Index    : Integer := Output'First;
       Left     : Unsigned_16 := 0;
@@ -1483,8 +1534,20 @@ package body GNATCOLL.Email.Utils is
       ------------
 
       procedure Append (Ch : Character) is
+         New_Output : Ada.Strings.Unbounded.String_Access;
       begin
          if Current = 0 then
+            --  Make sure that the string has sufficient space for the
+            --  full new encoded block
+
+            if Output'Last - Index + 1 < Encoded_Block_Len then
+               New_Output :=
+                 new String (1 .. Output'Length + Encoded_Block_Len);
+               New_Output (1 .. Index - 1) := Output (1 .. Index - 1);
+               Free (Output);
+               Output := New_Output;
+            end if;
+
             Output (Index .. Index + Block_Prefix'Length - 1) :=
               Block_Prefix;
             Index := Index + Block_Prefix'Length;
@@ -1494,45 +1557,107 @@ package body GNATCOLL.Email.Utils is
          Index          := Index + 1;
          Current        := Current + 1;
 
-         if Current = Line_Len then
-            --  Suffix
-            Output (Index .. Index + Block_Suffix'Length - 1) := Block_Suffix;
-            Index := Index + Block_Suffix'Length;
-
-            --  Separator
-            Output (Index .. Index + Block_Separator'Length - 1) :=
-              Block_Separator;
-            Index := Index + Block_Separator'Length;
+         if Current = Max then
+            --  Append suffix and separator
+            Output (Index .. Index
+                               + Block_Suffix'Length
+                               + Block_Separator'Length - 1) :=
+              Block_Suffix & Block_Separator;
+            Index := Index + Block_Suffix'Length + Block_Separator'Length;
 
             Current := 0;
          end if;
       end Append;
 
+      procedure Encode_Append (Str : String);
+      --  Encode Str and append result to output, splitting if necessary.
+      --  If Where is Any_Header, then never split Str across two different
+      --  blocks.
+
+      procedure Flush;
+      --  Flush pending bits, outputting padding characters if necessary
+
+      procedure Encode_Append (Str : String) is
+         Out_Chars : constant Integer := (Leftbits + Str'Length * 8 + 5) / 6;
+      begin
+         --  Force flushing now if in header mode and encoded sequence would
+         --  exceed maximum length.
+
+         if Where in Any_Header and then Current + Out_Chars > Max then
+            Flush;
+         end if;
+
+         for J in Str'Range loop
+            Left     := Shift_Left (Left, 8) or Character'Pos (Str (J));
+            Leftbits := Leftbits + 8;
+
+            while Leftbits >= 6 loop
+               Ch       :=
+                 Mod64 ((Shift_Right (Left, Leftbits - 6)) and 16#3f#);
+               Leftbits := Leftbits - 6;
+               Append (To_Base64 (Ch));
+            end loop;
+         end loop;
+      end Encode_Append;
+
+      -----------
+      -- Flush --
+      -----------
+
+      procedure Flush is
+      begin
+         case Leftbits is
+            when 0 =>
+               null;
+
+            when 2 =>
+               Ch := Mod64 (Shift_Left (Left and 3, 4));
+               Append (To_Base64 (Ch));
+               Append ('=');
+               Append ('=');
+
+            when 4 =>
+               Ch := Mod64 (Shift_Left (Left and 16#F#, 2));
+               Append (To_Base64 (Ch));
+               Append ('=');
+
+            when others =>
+               raise Program_Error with "invalid Base64 encoder state";
+         end case;
+
+         Left := 0;
+         Leftbits := 0;
+      end Flush;
+
+      Start, Next : Integer;
+      --  Start of current encoded sequence,
+      --  start of next encoded sequence,
+      --  last element of previous encoded sequence.
+
+      Next_Char : constant Next_Char_Acc :=
+        (if Where in Any_Header
+         then Next_Char_For_Charset (Charset)
+         else Single_Byte_Next_Char'Access);
+      --  In message bodies, multi-byte encodings can be
+      --  split across multiple lines; in headers, they can't
+      --  be split across multiple encoded words.
+
    --  Start of processing for Base64_Encode
 
    begin
-      for S in Str'Range loop
-         Left     := Shift_Left (Left, 8) or Character'Pos (Str (S));
-         Leftbits := Leftbits + 8;
+      Next := Str'First;
+      loop
+         Start := Next;
+         exit when Start > Str'Last;
 
-         while Leftbits >= 6 loop
-            Ch        := Mod64 ((Shift_Right (Left, Leftbits - 6)) and 16#3F#);
-            Leftbits  := Leftbits - 6;
-            Append (To_Base64 (Ch));
-         end loop;
+         --  Find end of possibly multibyte sequence starting at Start
+
+         Next := Start;
+         Next_Char (Str, Next);
+
+         Encode_Append (Str (Start .. Next - 1));
       end loop;
-
-      if Leftbits = 2 then
-         Ch := Mod64 (Shift_Left (Left and 3, 4));
-         Append (To_Base64 (Ch));
-         Append ('=');
-         Append ('=');
-
-      elsif Leftbits = 4 then
-         Ch := Mod64 (Shift_Left (Left and 16#F#, 2));
-         Append (To_Base64 (Ch));
-         Append ('=');
-      end if;
+      Flush;
 
       if Current = 0 then
          --  Remove last separator
@@ -1664,38 +1789,11 @@ package body GNATCOLL.Email.Utils is
 
       case Encoding is
          when Encoding_Base64 =>
-            if Where in Any_Header then
-               --  The encoded word payload should have a multiple of 4
-               --  characters (see base64 spec), or else the encoded words will
-               --  need to be concatenated before being base64 decoded,  and no
-               --  parser will be able to handler that. This is why
-               --  Separate_Blocks is True.
-               Base64_Encode
-                 (Str,
-                  Block_Prefix    => "=?" & Set & "?b?",
-                  Block_Suffix    => "?=",
-                  Block_Separator => " ",
-                  Max_Block_Len   => 75,
-                  Separate_Blocks => True,
-                  Result          => Result);
-            else
-               Base64_Encode (Str, Result => Result);
-            end if;
+            Base64_Encode
+              (Str, Charset => Set, Where => Where, Result => Result);
          when Encoding_QP =>
-            if Where in Any_Header then
-               Quoted_Printable_Encode
-                 (Str,
-                  Block_Prefix       => "=?" & Set & "?q?",
-                  Block_Suffix       => "?=",
-                  Max_Block_Len      => 75,
-                  Where              => Where,
-                  Result             => Result);
-            else
-               Quoted_Printable_Encode
-                 (Str,
-                  Where              => Where,
-                  Result             => Result);
-            end if;
+            Quoted_Printable_Encode
+              (Str, Charset => Set, Where => Where, Result => Result);
          when others =>
             Result := To_Unbounded_String (Str);
       end case;

@@ -1724,7 +1724,8 @@ package body GNATCOLL.Email is
 
          case Encoding is
             when Encoding_Base64 =>
-               Base64_Encode (Str => Str.all, Result => F);
+               Base64_Encode
+                 (Str.all, Charset => Charset, Where => Text, Result => F);
                Add_Header (Attachment,
                            Create (Content_Transfer_Encoding, "base64"));
                Set_Unbounded_String
@@ -1732,7 +1733,7 @@ package body GNATCOLL.Email is
 
             when Encoding_QP =>
                Quoted_Printable_Encode
-                 (Str    => Str.all, Where  => Text, Result => F);
+                 (Str.all, Charset => Charset, Where => Text, Result => F);
                Add_Header
                  (Attachment,
                   Create (Content_Transfer_Encoding, "quoted-printable"));

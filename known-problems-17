@@ -4,6 +4,23 @@ Known Problems in Gnatcoll 1.7
 
 Copyright (C) 2013-2015, AdaCore
 
+KP-17-OC14-010 GNATCOLL.Email quoted-printable and base64 issues
+
+  Problem:    Three separate issues were fixed in the support for MIME
+              encodings quoted-printable and Base64. In headers, the
+              encoders would incorrectly split multibyte sequences
+              such as those for UTF-8 characters across multiple
+              encoded words; in message bodies, the quoted-printable
+              encoder incorrectly generated encoded lines of up to
+              77 characters instead of the mandated 76; in all cases,
+              the Base64 encoder would allow the generation of malformed
+              output when specifying a block size that is not a multiple
+              of 4.
+
+  Status:     Fixed in Gnatcoll 1.8.0 on 2015-12-16
+
+  Workaround: None.
+
 KP-17-O827-012 GNATCOLL.VFS.Writable_File does not preserve permissions
 
   Problem:    When overwriting a file via a Writable_File, GNATCOLL first
