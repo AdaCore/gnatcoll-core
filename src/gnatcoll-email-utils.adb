@@ -1285,6 +1285,9 @@ package body GNATCOLL.Email.Utils is
       procedure Append (Substring : String; Splittable : Boolean) is
          S : Integer := Substring'First;
       begin
+         if Substring'Length = 0 then
+            return;
+         end if;
          if Splittable then
             while Substring'Last - S + 1 > Max - Current_Len loop
                if Current_Len = 0 then
