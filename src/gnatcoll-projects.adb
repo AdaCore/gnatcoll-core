@@ -2970,7 +2970,8 @@ package body GNATCOLL.Projects is
       Pkg            : Package_Id := No_Package;
       Var            : Variable_Id;
       Arr            : Array_Id;
-      N              : Name_Id;
+      N, I           : Name_Id;
+      Arr_Elem_Id    : Array_Element_Id;
    begin
       if Project_View = GPR.No_Project then
          return False;
@@ -3002,8 +3003,14 @@ package body GNATCOLL.Projects is
       if Index /= "" then
          --  ??? That seems incorrect, we are not testing for the specific
          --  index
-         return Value_Of (N, In_Arrays => Arr, Shared => Shared) /=
-           No_Array_Element;
+         Arr_Elem_Id := Value_Of (N, In_Arrays => Arr, Shared => Shared);
+         if Arr_Elem_Id = No_Array_Element then
+            return False;
+         end if;
+
+         I := Get_String (Index);
+         return Value_Of (I, In_Array => Arr_Elem_Id, Shared => Shared) /=
+           Nil_Variable_Value;
       else
          return not Value_Of (N, Var, Shared).Default;
       end if;

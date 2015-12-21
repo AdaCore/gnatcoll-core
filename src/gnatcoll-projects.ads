@@ -1272,6 +1272,12 @@ package GNATCOLL.Projects is
    --  to access the value of any attribute.
    --  To avoid typos, a set of constants is provided for all known attributes
    --  in a project.
+   --
+   --  Note, that on some platforms the Index is case-sensitive when it is a
+   --  language name. For example, if the projects has
+   --      for Attribute ("ada") use ...
+   --  and Index is set to "Ada", then False/empty list/No_Project
+   --  will be returned.
 
    type Attribute_Pkg_String (<>) is private;
    type Attribute_Pkg_List (<>) is private;
@@ -1326,6 +1332,11 @@ package GNATCOLL.Projects is
    --      for Attribute use ("value1", "value2");
    --  or
    --      for Attribute (Index) use ("value1", "value2");
+   --
+   --  Note, that on some platforms the Index is case-sensitive when it is a
+   --  language name. So, if the projects has
+   --      for Attribute ("ada") use ...
+   --  and Index is set to "Ada", then False will be returned.
 
    function Attribute_Indexes
      (Project      : Project_Type;
