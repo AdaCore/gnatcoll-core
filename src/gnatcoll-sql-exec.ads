@@ -557,6 +557,12 @@ package GNATCOLL.SQL.Exec is
    --  Index of the current row. The first row is always numbered 1
 
    function Value (Self : Forward_Cursor; Field : Field_Index) return String;
+   --  Gets the field value as a string
+
+   function Unbounded_Value
+     (Self : Forward_Cursor; Field : Field_Index) return Unbounded_String;
+   --  Gets the field value as an Unbounded_String
+
    function Boolean_Value
      (Self : Forward_Cursor; Field : Field_Index) return Boolean;
 

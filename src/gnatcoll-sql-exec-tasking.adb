@@ -24,18 +24,16 @@
 pragma Ada_2012;
 
 with Ada.Containers.Indefinite_Hashed_Maps;
-with Ada.Containers.Indefinite_Holders;
 with Ada.Containers.Indefinite_Vectors;
 with Ada.Finalization;
 with Ada.Task_Attributes;
 
-with Ada.Strings.Hash;
-with Ada.Strings.Unbounded;     use Ada.Strings.Unbounded;
-with Ada.Task_Identification;   use Ada.Task_Identification;
-with GNATCOLL.Traces;           use GNATCOLL.Traces;
-with GNATCOLL.Refcount;         use GNATCOLL.Refcount;
-with GNATCOLL.SQL.Exec_Private; use GNATCOLL.SQL.Exec_Private;
-with Interfaces.C.Strings;      use Interfaces.C.Strings;
+with Ada.Strings.Unbounded.Hash; use Ada.Strings.Unbounded;
+with Ada.Task_Identification;    use Ada.Task_Identification;
+with GNATCOLL.Traces;            use GNATCOLL.Traces;
+with GNATCOLL.Refcount;          use GNATCOLL.Refcount;
+with GNATCOLL.SQL.Exec_Private;  use GNATCOLL.SQL.Exec_Private;
+with Interfaces.C.Strings;       use Interfaces.C.Strings;
 
 package body GNATCOLL.SQL.Exec.Tasking is
 
@@ -78,15 +76,19 @@ package body GNATCOLL.SQL.Exec.Tasking is
    --  Task safe cursors implementation --
    ---------------------------------------
 
-   package Fields is new Ada.Containers.Indefinite_Holders (String);
-   type Record_Type is array (Field_Index range <>) of Fields.Holder;
+   type Field_Value is record
+      Element : Unbounded_String;
+      Empty   : Boolean := False;
+   end record;
+
+   type Record_Type is array (Field_Index range <>) of Field_Value;
 
    package Data_Set_Vectors is
      new Ada.Containers.Indefinite_Vectors (Natural, Record_Type);
    --  Zero index is for field names
 
    package String_Indexes is new Ada.Containers.Indefinite_Hashed_Maps
-     (String, Positive, Ada.Strings.Hash, Equivalent_Keys => "=");
+     (Unbounded_String, Positive, Hash, Equivalent_Keys => "=");
 
    type Data_Set is record
       Table   : Data_Set_Vectors.Vector;
@@ -109,7 +111,7 @@ package body GNATCOLL.SQL.Exec.Tasking is
 
    overriding function Is_Null
      (Self : Task_Cursor; Field : Field_Index) return Boolean
-   is (Self.Data.Get.Table (Self.Position) (Field).Is_Empty);
+   is (Self.Data.Get.Table (Self.Position) (Field).Empty);
 
    overriding function Error_Msg (Self : Task_Cursor) return String
    is (To_String (Self.Data.Get.Error));
@@ -128,7 +130,7 @@ package body GNATCOLL.SQL.Exec.Tasking is
 
    overriding function Field_Name
      (Self : Task_Cursor; Field : Field_Index) return String
-   is (Self.Data.Get.Table (0) (Field).Element);
+   is (To_String (Self.Data.Get.Table (0) (Field).Element));
 
    overriding function Field_Count (Self : Task_Cursor) return Field_Index
    is (Self.Data.Get.Table (0).Element'Length);
@@ -150,6 +152,9 @@ package body GNATCOLL.SQL.Exec.Tasking is
 
    overriding function Value
      (Self : Task_Cursor; Field : Field_Index) return String;
+
+   overriding function Unbounded_Value
+     (Self : Task_Cursor; Field : Field_Index) return Unbounded_String;
 
    overriding function Boolean_Value
      (Self : Task_Cursor; Field : Field_Index) return Boolean;
@@ -267,7 +272,7 @@ package body GNATCOLL.SQL.Exec.Tasking is
          raise Constraint_Error with Not_Indexed;
       end if;
 
-      C := TC.Data.Get.Index.Find (Value);
+      C := TC.Data.Get.Index.Find (To_Unbounded_String (Value));
 
       if String_Indexes.Has_Element (C) then
          TC.Position := String_Indexes.Element (C);
@@ -281,17 +286,20 @@ package body GNATCOLL.SQL.Exec.Tasking is
    -----------
 
    overriding function Value
-     (Self : Task_Cursor; Field : Field_Index) return String
-   is
-      Holder : constant Fields.Holder :=
-         Self.Data.Get.Table (Self.Position) (Field);
+     (Self : Task_Cursor; Field : Field_Index) return String is
    begin
-      if Holder.Is_Empty then
-         return "";
-      else
-         return Holder.Element;
-      end if;
+      return To_String (Self.Data.Get.Table (Self.Position) (Field).Element);
    end Value;
+
+   ---------------------
+   -- Unbounded_Value --
+   ---------------------
+
+   overriding function Unbounded_Value
+     (Self : Task_Cursor; Field : Field_Index) return Unbounded_String is
+   begin
+      return Self.Data.Get.Table (Self.Position) (Field).Element;
+   end Unbounded_Value;
 
    ------------------------
    -- Task_Safe_Instance --
@@ -326,7 +334,7 @@ package body GNATCOLL.SQL.Exec.Tasking is
             Trace
               (Me_Error,
                "Field " & Src.Field_Name (Index_By) & " value "
-               & Ref.Table (Row)(Index_By).Element
+               & To_String (Ref.Table (Row)(Index_By).Element)
                & " is not unique. Not all records indexed.");
             --  We could support a few records response on one Find call
             --  over the Next after Find.
@@ -359,7 +367,7 @@ package body GNATCOLL.SQL.Exec.Tasking is
                           Index   => <>));
 
       for J in Row'Range loop
-         Row (J).Replace_Element (Src.Field_Name (J));
+         Set_Unbounded_String (Row (J).Element, Src.Field_Name (J));
       end loop;
 
       Result.Data.Get.Table.Append (Row);
@@ -367,13 +375,10 @@ package body GNATCOLL.SQL.Exec.Tasking is
       while Src.Has_Row loop
          for J in Row'Range loop
             if Src.Is_Null (J) then
-               if not Row (J).Is_Empty then
-                  --  GNAT bug workaround on clear of empty holder,
-                  --  Fixed in O216-003.
-                  Row (J).Clear;
-               end if;
+               Row (J) := (Null_Unbounded_String, True);
             else
-               Row (J).Replace_Element (Src.Value (J));
+               Set_Unbounded_String (Row (J).Element, Src.Value (J));
+               Row (J).Empty := False;
             end if;
          end loop;
 

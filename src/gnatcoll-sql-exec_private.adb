@@ -29,10 +29,13 @@
 --  API.
 
 with Ada.Strings.Fixed;     use Ada.Strings.Fixed;
-with Ada.Unchecked_Conversion;
 with GNATCOLL.Utils;        use GNATCOLL.Utils;
 
 package body GNATCOLL.SQL.Exec_Private is
+
+   function Class_Value
+     (Self : DBMS_Forward_Cursor'Class; Field : Field_Index) return String
+   is (Value (Self, Field)) with Inline_Always;
 
    -----------
    -- Value --
@@ -45,6 +48,17 @@ package body GNATCOLL.SQL.Exec_Private is
       return Value (C_Value (DBMS_Forward_Cursor'Class (Self), Field));
    end Value;
 
+   ---------------------
+   -- Unbounded_Value --
+   ---------------------
+
+   function Unbounded_Value
+     (Self  : DBMS_Forward_Cursor;
+      Field : Field_Index) return Unbounded_String is
+   begin
+      return To_Unbounded_String (Self.Class_Value (Field));
+   end Unbounded_Value;
+
    -------------------
    -- Boolean_Value --
    -------------------
@@ -53,7 +67,7 @@ package body GNATCOLL.SQL.Exec_Private is
      (Self  : DBMS_Forward_Cursor;
       Field : Field_Index) return Boolean is
    begin
-      return Boolean'Value (Value (DBMS_Forward_Cursor'Class (Self), Field));
+      return Boolean'Value (Self.Class_Value (Field));
    end Boolean_Value;
 
    -------------------
@@ -64,7 +78,7 @@ package body GNATCOLL.SQL.Exec_Private is
      (Self  : DBMS_Forward_Cursor;
       Field : Field_Index) return Integer is
    begin
-      return Integer'Value (Value (DBMS_Forward_Cursor'Class (Self), Field));
+      return Integer'Value (Self.Class_Value (Field));
    end Integer_Value;
 
    ------------------
@@ -75,8 +89,7 @@ package body GNATCOLL.SQL.Exec_Private is
      (Self  : DBMS_Forward_Cursor;
       Field : Field_Index) return Long_Long_Integer is
    begin
-      return Long_Long_Integer'Value
-         (Value (DBMS_Forward_Cursor'Class (Self), Field));
+      return Long_Long_Integer'Value (Self.Class_Value (Field));
    end Bigint_Value;
 
    -----------------
@@ -87,7 +100,7 @@ package body GNATCOLL.SQL.Exec_Private is
      (Self  : DBMS_Forward_Cursor;
       Field : Field_Index) return Float is
    begin
-      return Float'Value (Value (DBMS_Forward_Cursor'Class (Self), Field));
+      return Float'Value (Self.Class_Value (Field));
    end Float_Value;
 
    -----------------
@@ -99,7 +112,7 @@ package body GNATCOLL.SQL.Exec_Private is
       Field : Field_Index) return T_Money
    is
    begin
-      return T_Money'Value (Value (DBMS_Forward_Cursor'Class (Self), Field));
+      return T_Money'Value (Self.Class_Value (Field));
    end Money_Value;
 
    ----------------
@@ -110,7 +123,7 @@ package body GNATCOLL.SQL.Exec_Private is
      (Self  : DBMS_Forward_Cursor;
       Field : Field_Index) return Ada.Calendar.Time
    is
-      Val : constant String := Value (DBMS_Forward_Cursor'Class (Self), Field);
+      Val : constant String := Self.Class_Value (Field);
    begin
       if Val = "" then
          return No_Time;
@@ -132,12 +145,9 @@ package body GNATCOLL.SQL.Exec_Private is
 
    function Json_Text_Value
      (Self  : DBMS_Forward_Cursor;
-      Field : Field_Index) return String
-   is
-      V : constant String :=
-            Value (C_Value (DBMS_Forward_Cursor'Class (Self), Field));
+      Field : Field_Index) return String is
    begin
-      return V;
+      return Self.Class_Value (Field);
    end Json_Text_Value;
 
    --------------------
@@ -146,12 +156,9 @@ package body GNATCOLL.SQL.Exec_Private is
 
    function XML_Text_Value
      (Self  : DBMS_Forward_Cursor;
-      Field : Field_Index) return String
-   is
-      V : constant String :=
-            Value (C_Value (DBMS_Forward_Cursor'Class (Self), Field));
+      Field : Field_Index) return String is
    begin
-      return V;
+      return Self.Class_Value (Field);
    end XML_Text_Value;
 
 end GNATCOLL.SQL.Exec_Private;

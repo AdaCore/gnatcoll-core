@@ -4392,7 +4392,7 @@ package body GNATCOLL.Xref is
                   end if;
 
                   if From_Refs then
-                     Kind := To_Unbounded_String (R.Value (5));
+                     Kind := R.Unbounded_Value (5);
                      Kind_Id := Char_Value (R, 6);
                      Is_End_Of_Scope := Boolean_Value (R, 7);
                   else
@@ -4670,7 +4670,7 @@ package body GNATCOLL.Xref is
          Project => Project,
          Line    => Self.DBCursor.Integer_Value (Q_Ref_Line),
          Column  => Visible_Column (Self.DBCursor.Integer_Value (Q_Ref_Col)),
-         Kind    => To_Unbounded_String (Self.DBCursor.Value (Q_Ref_Kind)),
+         Kind    => Self.DBCursor.Unbounded_Value (Q_Ref_Kind),
          Kind_Id => Char_Value (Self.DBCursor, Q_Ref_Kind_Id),
          Is_End_Of_Scope =>
            Boolean_Value (Self.DBCursor, Q_Ref_Is_End_Of_Scope),
@@ -4811,8 +4811,8 @@ package body GNATCOLL.Xref is
             end if;
          end if;
 
-         return (Name => To_Unbounded_String (Curs.Value (Q_Decl_Name)),
-                 Kind => To_Unbounded_String (Curs.Value (Q_Decl_Kind)),
+         return (Name => Curs.Unbounded_Value (Q_Decl_Name),
+                 Kind => Curs.Unbounded_Value (Q_Decl_Kind),
                  Flags =>
                    (Is_Subprogram => Curs.Boolean_Value (Q_Decl_Is_Subp),
                     Is_Container  => Curs.Boolean_Value (Q_Decl_Is_Cont),

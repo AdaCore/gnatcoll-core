@@ -1237,6 +1237,16 @@ package body GNATCOLL.SQL.Exec is
       return Value (DBMS_Forward_Cursor'Class (Self.Res.all), Field);
    end Value;
 
+   ---------------------
+   -- Unbounded_Value --
+   ---------------------
+
+   function Unbounded_Value
+     (Self : Forward_Cursor; Field : Field_Index) return Unbounded_String is
+   begin
+      return Unbounded_Value (DBMS_Forward_Cursor'Class (Self.Res.all), Field);
+   end Unbounded_Value;
+
    -------------------
    -- Boolean_Value --
    -------------------

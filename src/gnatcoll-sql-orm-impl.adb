@@ -126,10 +126,17 @@ package body GNATCOLL.SQL.Orm.Impl is
    ------------------
 
    function String_Value
-     (Self : Orm_Element'Class; Field : Field_Index)
-     return Unbounded_String is
+     (Self : Orm_Element'Class; Field : Field_Index) return Unbounded_String is
    begin
-      return To_Unbounded_String (String_Value (Self, Field));
+      if Current (Self.Current) /= Self.Index then
+         raise Cursor_Has_Moved;
+      end if;
+
+      if Is_Null (Self.Current, Self.Column + Field) then
+         return Null_Unbounded_String;
+      else
+         return Unbounded_Value (Self.Current, Self.Column + Field);
+      end if;
    end String_Value;
 
    ----------------
