@@ -9442,6 +9442,10 @@ package body GNATCOLL.Projects is
             Free (Self.Tree);
          end if;
 
+         if not Self.Is_Aggregated then
+            Self.Projects.Clear;
+         end if;
+
          Unchecked_Free (Self);
       end if;
    end Free;
