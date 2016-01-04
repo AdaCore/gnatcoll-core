@@ -1,6 +1,6 @@
 /*
  * Iconv binding support
- * Copyright (C) 2015, AdaCore
+ * Copyright (C) 2015-2016, AdaCore
  */
 
 /* The following is a stub to make it possible to build GNATCOLL.Iconv without
