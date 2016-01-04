@@ -31,6 +31,9 @@ syslog_wrapper(int priority, const char* msg) {
 }
 #endif
 
+// From adaint.h
+extern int    __gnat_is_directory            (char *);
+
 #ifdef HAVE_MMAP
 #include <sys/mman.h>
 
