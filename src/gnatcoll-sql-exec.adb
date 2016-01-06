@@ -827,6 +827,11 @@ package body GNATCOLL.SQL.Exec is
                return;
             end if;
          end if;
+
+      else
+         if Equal (Q.all, "begin", Case_Sensitive => False) then
+            Connection.In_Transaction := True;
+         end if;
       end if;
 
       if Perform_Queries then
