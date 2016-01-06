@@ -187,6 +187,24 @@ package GNATCOLL.Refcount is
       --       SP.Get.Field := 1;
       --       SP.Get.Primitive1;
       --       SP.Get.Element.Primitive2;
+      --
+      --  WARNING:
+      --  The use of a reference_type ensures that Get can return an access to
+      --  the object (more efficient than a copy when the objects are large),
+      --  while preventing users from freeing the returned value. But this
+      --  does not prevent all invalid cases. Using 'renames', for instance,
+      --  can lead to invalid code, as in:
+      --
+      --     package IP is new Shared_Pointers (Integer);
+      --     use IP;
+      --     R : Ref;
+      --     R.Set (99);
+      --     declare
+      --        Int : Integer renames R.Get.Element.all;
+      --     begin
+      --        R := Null_Ref;     --  Frees Int !
+      --        Put_Line (I'Img);  --  Invalid memory access
+      --     end;
 
       function Unchecked_Get (Self : Ref'Class) return Element_Access;
       pragma Inline_Always (Unchecked_Get);
