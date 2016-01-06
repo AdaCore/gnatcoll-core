@@ -774,7 +774,7 @@ package body GNATCOLL.SQL.Exec is
          Is_Commit_Or_Rollback :=
            Equal (Q.all, "commit", Case_Sensitive => False)
            or else Equal (Q.all, "rollback", Case_Sensitive => False);
-         if Is_Commit_Or_Rollback and then Active (Me_Query) then
+         if Is_Commit_Or_Rollback then
             Decrease_Indent (Me_Query);
          end if;
       end if;
@@ -887,6 +887,7 @@ package body GNATCOLL.SQL.Exec is
         and then Connection.In_Transaction
         and then Is_Commit_Or_Rollback
       then
+         Trace (Me_Query, "End of transaction");
          Connection.In_Transaction := False;
       end if;
 
