@@ -33,9 +33,9 @@
 --  freed, the weak pointer is safely reset to null.
 --
 --  Cycles of references will prevent the freeing of the memory, since the
---  objects' refcount will never reach 0. For instance, if you consider a tree,
---  the parent could hold a reference (via a smart_pointer) to each of its
---  children. Thus the children will exist for at least as long as their
+--  objects' refcounts will never reach 0. For instance, if you consider a
+--  tree, the parent could hold a reference (via a smart_pointer) to each of
+--  its children. Thus the children will exist for at least as long as their
 --  parents. However, if the children also point to their parents with a
 --  smart_pointer, the parent can never be freed in the first place.  The
 --  solution is that the children should point to their parents through a weak
@@ -114,7 +114,7 @@ package GNATCOLL.Refcount is
       type Ref is tagged private;
       Null_Ref : constant Ref;
       --  This type acts like a pointer, but holds a reference to the object,
-      --  which will thus never been free while there exists at least one
+      --  which will thus never be freed while there exists at least one
       --  reference to it.
 
       type Weak_Ref is tagged private;
@@ -122,7 +122,7 @@ package GNATCOLL.Refcount is
       --  A weak reference to an object. The value returned by Get will be
       --  reset to null when the object is freed (because its last reference
       --  expired). Holding a weak reference does not prevent the deallocation
-      --  of the object
+      --  of the object.
 
       package Pools is new Headers.Typed
          (Element_Type, Potentially_Controlled => Potentially_Controlled);
@@ -139,7 +139,7 @@ package GNATCOLL.Refcount is
       --  shared pointer, returns the corresponding shared pointer.
       --  This is especially useful when the element_type is a tagged
       --  type. This element might be used for dynamic dispatching, but
-      --  it might be necessary to retrive the smart pointer:
+      --  it might be necessary to retrieve the smart pointer:
       --
       --      type Object is tagged private;
       --      package Pointers is new Shared_Pointers (Object'Class);
@@ -148,7 +148,7 @@ package GNATCOLL.Refcount is
       --      procedure Method (Self : Object'Class) is
       --         R : Ref;
       --      begin
-      --         R := From_Element (Self);
+      --         From_Element (R, Self);
       --      end Method;
       --
       --      R : Ref;
@@ -211,10 +211,10 @@ package GNATCOLL.Refcount is
 
       function Weak (Self : Ref'Class) return Weak_Ref;
       procedure Set (Self : in out Ref'Class; Weak : Weak_Ref'Class);
-      --  Get returns a reference to the object. Otherwise, it would be
+      --  Set returns a reference to the object. Otherwise, it would be
       --  possible for a procedure to retrieve a pointer from the weak
       --  reference, and then reference it throughout the procedure, even
-      --  though the pointer might be free in between.
+      --  though the pointer might be freed in between.
       --
       --  If Weak is Null_Weak_Ref, then the element pointed by Self simply
       --  loses a reference, and Self points to nothing on exit.
