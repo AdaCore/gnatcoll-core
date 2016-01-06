@@ -205,6 +205,21 @@ package GNATCOLL.Refcount is
       --        R := Null_Ref;     --  Frees Int !
       --        Put_Line (I'Img);  --  Invalid memory access
       --     end;
+      --
+      --  Another dangerous use is to have a procedure that receives the
+      --  result of Get and modifies the shared pointer, as in:
+      --
+      --     package OP is new Shared_Pointers (Object'Class);
+      --     use OP;
+      --     R : Ref;
+      --     procedure Foo (Obj : Object'Class) is
+      --     begin
+      --        R := Null_Ref;   --  freezes Obj !
+      --     end Foo;
+      --     Foo (R.Get);
+      --
+      --  The proper solution here is that Foo should receive the smart
+      --  pointer itself, not the encapsulated value.
 
       function Unchecked_Get (Self : Ref'Class) return Element_Access;
       pragma Inline_Always (Unchecked_Get);
