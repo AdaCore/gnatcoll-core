@@ -153,7 +153,7 @@ package GNATCOLL.Refcount is
       --
       --      R : Ref;
       --      R.Set (Obj);
-      --      Method (R.Get.all);
+      --      Method (R.Get);
       --
       --  Warning: this must only be called when Element comes from a
       --  shared pointer, otherwise an invalid memory access will result.
