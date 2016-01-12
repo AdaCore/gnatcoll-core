@@ -892,7 +892,6 @@ package body GNATCOLL.SQL.Exec is
         and then Connection.In_Transaction
         and then Is_Commit_Or_Rollback
       then
-         Trace (Me_Query, "End of transaction");
          Connection.In_Transaction := False;
       end if;
 
