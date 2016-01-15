@@ -2,7 +2,16 @@
 Known Problems in Gnatcoll 1.8
 ==============================
 
-Copyright (C) 2013-2015, AdaCore
+Copyright (C) 2013-2016, AdaCore
+
+KP-18-P115-021 Email.Get_Recipients crash on invalid headers
+
+  Problem:    Get_Recipients will raise an exception for messages
+              containing recipient with invalid UTF-8 encodings.
+
+  Status:     Fixed in Gnatcoll 1.9.0 on 2016-01-15
+
+  Workaround: Do not process such invalid messages.
 
 KP-18-OC08-003 SQL_Table_List and SQL_Left_Join_Table not task safe.
 

@@ -76,6 +76,31 @@ package body GNATCOLL.Email.Utils is
          Single_Byte_Next_Char'Access);
    --  Next_Char procedure for the named Charset
 
+   procedure Next_Char_Ignore_Invalid
+     (NC    : Next_Char_Acc;
+      S     : String;
+      Index : in out Natural);
+   pragma Inline (Next_Char_Ignore_Invalid);
+   --  Call NC (S, Index), but if an exception is raised (e.g. due to
+   --  an invalid encoding in S, fall back to incrementing Index by 1.
+
+   ------------------------------
+   -- Next_Char_Ignore_Invalid --
+   ------------------------------
+
+   procedure Next_Char_Ignore_Invalid
+     (NC    : Next_Char_Acc;
+      S     : String;
+      Index : in out Natural)
+   is
+      Orig_Index : constant Natural := Index;
+   begin
+      NC (S, Index);
+   exception
+      when others =>
+         Index := Orig_Index + 1;
+   end Next_Char_Ignore_Invalid;
+
    function Needs_Quoting
       (Char   : Character;
        Where  : Region;
@@ -1366,7 +1391,7 @@ package body GNATCOLL.Email.Utils is
          --  Find end of possibly multibyte sequence starting at Start
 
          Next := Start;
-         Next_Char (Str, Next);
+         Next_Char_Ignore_Invalid (Next_Char, Str, Next);
 
          --  We encode single characters if needed, and always encode
          --  all multibyte characters.
@@ -1656,7 +1681,7 @@ package body GNATCOLL.Email.Utils is
          --  Find end of possibly multibyte sequence starting at Start
 
          Next := Start;
-         Next_Char (Str, Next);
+         Next_Char_Ignore_Invalid (Next_Char, Str, Next);
 
          Encode_Append (Str (Start .. Next - 1));
       end loop;
