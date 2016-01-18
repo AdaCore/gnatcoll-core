@@ -391,9 +391,27 @@ package GNATCOLL.SQL is
    function "/" is new Integer_Fields.Scalar_Operator (Integer, "/");
 
    function Current_Date is new Date_Fields.SQL_Function ("current_date");
+   --  Returns current date
+
    function Current_Timestamp
       is new Time_Fields.SQL_Function ("current_timestamp");
-   --  Return the current date or timestamp
+   --  Returns start of transaction timestamp with timezone
+
+   function Current_Time
+      is new Time_Fields.SQL_Function ("current_time");
+   --  Returns current time (without date) with timezone
+
+   function Local_Timestamp
+      is new Time_Fields.SQL_Function ("localtimestamp");
+   --  Returns start of transaction timestamp without timezone
+
+   function Local_Time
+      is new Time_Fields.SQL_Function ("localtime");
+   --  Returns current time (without date) in local timezone without timezone
+
+   function Clock_Timestamp
+      is new Time_Fields.SQL_Function ("clock_timestamp()");
+   --  Returns current timestamp with timezone
 
    function Absolute
      (Field : Integer_Fields.Field'Class) return Integer_Fields.Field'Class;
