@@ -32,6 +32,8 @@ with Ada.Strings.Fixed;           use Ada.Strings.Fixed;
 with Ada.Strings.Hash_Case_Insensitive;
 with Ada.Strings.Maps;            use Ada.Strings.Maps;
 with Ada.Text_IO;                 use Ada.Text_IO;
+with Ada.Unchecked_Conversion;
+with System;
 
 with GNAT.Case_Util;              use GNAT.Case_Util;
 with GNAT.Directory_Operations;   use GNAT.Directory_Operations;
@@ -6871,11 +6873,12 @@ package body GNATCOLL.Projects is
       Sinput.Reset_First;
 
       Override_Flags
-         (Tree.Data.Env.Env,
-             Create_Flags
-               (On_Error'Unrestricted_Access,
-                Report_Missing_Dirs => not Report_Missing_Dirs,
-                Ignore_Missing_With => Test_With_Missing_With));
+        (Tree.Data.Env.Env,
+         Create_Flags
+           (On_Error'Unrestricted_Access,
+            Report_Missing_Dirs => not Report_Missing_Dirs,
+            Ignore_Missing_With => Test_With_Missing_With));
+
       GPR.Part.Parse
         (Tree.Data.Tree, Project,
          +Root_Project_Path.Full_Name,
@@ -7147,6 +7150,11 @@ package body GNATCOLL.Projects is
       --  Creates project instancies for given project tree.
       --  This is called once per aggregated project tree
 
+      procedure Free (S : in out GPR.Sinput.Source_File_Record);
+      --  Free allocated memory
+      --  This is temporary until GPR.Sinput doesn't have
+      --  a corresponding visible procedure
+
       ------------------------------------
       -- Add_Default_GNAT_Naming_Scheme --
       ------------------------------------
@@ -7362,6 +7370,44 @@ package body GNATCOLL.Projects is
          Actual_Config_File_Tree := Project_Tree;
       end Add_GPS_Naming_Schemes_To_Config_File;
 
+      ----------
+      -- Free --
+      ----------
+
+      procedure Free (S : in out GPR.Sinput.Source_File_Record) is
+         procedure Free is new Ada.Unchecked_Deallocation
+           (GPR.Sinput.Lines_Table_Type, GPR.Sinput.Lines_Table_Ptr);
+
+         Lo : constant Source_Ptr := S.Source_First;
+         Hi : constant Source_Ptr := S.Source_Last;
+         subtype Actual_Source_Buffer is GPR.Osint.Source_Buffer (Lo .. Hi);
+         --  Physical buffer allocated
+
+         type Actual_Source_Ptr is access Actual_Source_Buffer;
+         --  This is the pointer type for the physical buffer allocated
+
+         procedure Free is new Ada.Unchecked_Deallocation
+           (Actual_Source_Buffer, Actual_Source_Ptr);
+
+         pragma Suppress (All_Checks);
+
+         pragma Warnings (Off);
+         --  The following unchecked conversion is aliased safe, since it
+         --  is not used to create improperly aliased pointer values.
+
+         function To_Actual_Source_Ptr is new
+           Ada.Unchecked_Conversion (System.Address, Actual_Source_Ptr);
+
+         pragma Warnings (On);
+
+         Actual_Ptr : Actual_Source_Ptr :=
+           To_Actual_Source_Ptr (S.Source_Text (Lo)'Address);
+
+      begin
+         Free (Actual_Ptr);
+         Free (S.Lines_Table);
+      end Free;
+
       -------------------------------
       -- Initialize_Source_Records --
       -------------------------------
@@ -7369,8 +7415,8 @@ package body GNATCOLL.Projects is
       procedure Initialize_Source_Records is
 
          procedure For_Sources
-           (Project : Project_Id;
-            Tree    : Project_Tree_Ref;
+           (Project    : Project_Id;
+            Tree       : Project_Tree_Ref;
             With_State : in out Integer);
 
          -----------------
@@ -7378,13 +7424,14 @@ package body GNATCOLL.Projects is
          -----------------
 
          procedure For_Sources
-           (Project : Project_Id;
-            Tree    : Project_Tree_Ref;
+           (Project    : Project_Id;
+            Tree       : Project_Tree_Ref;
             With_State : in out Integer)
          is
             pragma Unreferenced (With_State);
             Iter : Source_Iterator := For_Each_Source
-                     (In_Tree => Tree, Project => Project);
+              (In_Tree => Tree, Project => Project);
+
             Src  : GPR.Source_Id;
          begin
             loop
@@ -7473,8 +7520,10 @@ package body GNATCOLL.Projects is
            (T, Tree_For_Map => Self, With_View => False);
       end On_New_Tree_Loaded;
 
+      Sources_Count : Source_File_Index;
    begin
       Increase_Indent (Me, "Recomputing project view");
+      Sources_Count := GPR.Sinput.Source_File.Last;
       GPR.Output.Set_Special_Output (GPR.Output.Output_Proc (Errors));
 
       --  The views stored in the projects are no longer valid, we should make
@@ -7541,6 +7590,8 @@ package body GNATCOLL.Projects is
             On_New_Tree_Loaded         =>
               On_New_Tree_Loaded'Unrestricted_Access);
 
+         Free (Config_File_Path);
+
          --  Should we reprocess with a different predefined path ?
          --  A similar test has already been done in Internal_Load, which
          --  ensures we are resolving the with clauses correctly and not
@@ -7579,6 +7630,8 @@ package body GNATCOLL.Projects is
                  Add_GPS_Naming_Schemes_To_Config_File'Unrestricted_Access,
                On_New_Tree_Loaded         =>
                  On_New_Tree_Loaded'Unrestricted_Access);
+
+            Free (Config_File_Path);
          end if;
 
          Override_Flags (Self.Data.Env.Env, Create_Flags (null));
@@ -7646,6 +7699,11 @@ package body GNATCOLL.Projects is
 
       GPR.Err.Finalize;
       GPR.Output.Cancel_Special_Output;
+
+      for Index in Sources_Count + 1 .. GPR.Sinput.Source_File.Last loop
+         Free (GPR.Sinput.Source_File.Table (Index));
+      end loop;
+      GPR.Sinput.Source_File.Set_Last (Sources_Count);
 
       --  Save the config file that was used to disk, if needed. This will
       --  be used when spawning other project-aware tools, since it might
