@@ -21,8 +21,7 @@
 --                                                                          --
 ------------------------------------------------------------------------------
 
-with Ada.Calendar;               use Ada.Calendar;
-with Ada.Calendar.Time_Zones;    use Ada.Calendar.Time_Zones;
+with Ada.Calendar.Formatting;
 with Ada.Characters.Handling;    use Ada.Characters.Handling;
 with Ada.Command_Line;
 with Ada.Strings.Fixed;          use Ada.Strings;
@@ -33,6 +32,8 @@ with GNAT.OS_Lib;
 with GNAT.Strings;               use GNAT.Strings;
 
 package body GNATCOLL.Utils is
+
+   use Ada.Calendar.Time_Zones;
 
    OpenVMS_Host : Boolean := False;
 
@@ -750,6 +751,25 @@ package body GNATCOLL.Utils is
       when Constraint_Error =>
          return GNAT.Calendar.No_Time;
    end Time_Value;
+
+   --------------
+   -- Truncate --
+   --------------
+
+   function Truncate
+     (Date : Time; Time_Zone : Time_Zones.Time_Offset := 0) return Time
+   is
+      Year  : Year_Number;
+      Month : Month_Number;
+      Day   : Day_Number;
+      Dum1  : Day_Duration;
+      Dum2  : Boolean;
+   begin
+      Formatting.Split
+        (Date, Year, Month, Day, Dum1, Leap_Second => Dum2,
+         Time_Zone => Time_Zone);
+      return Formatting.Time_Of (Year, Month, Day, Time_Zone => Time_Zone);
+   end Truncate;
 
    ----------------
    -- Line_Start --

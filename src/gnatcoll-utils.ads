@@ -26,7 +26,7 @@
 
 pragma Ada_2012;
 
-with Ada.Calendar;
+with Ada.Calendar.Time_Zones; use Ada.Calendar;
 with Ada.Strings.Unbounded;
 with GNAT.Expect;
 with GNAT.Strings;
@@ -235,6 +235,13 @@ package GNATCOLL.Utils is
    --
    --  The input date is assumed to be in UTC by default, unless a timezone
    --  is specified with a final "[+-]\d\d".
+
+   function Truncate
+     (Date : Time; Time_Zone : Time_Zones.Time_Offset := 0) return Time;
+   --  Remove time part from the date in specified timezone.
+   --  For example, if we want to truncate "2015 May 10 05:00 GMT+6" time at
+   --  UTC timezone we are going to get "2015 May 9, 00:00 UTC" because
+   --  "2015 May 10 05:00 GMT+6" equal to "2015 May 9 23:00 UTC".
 
 private
 
