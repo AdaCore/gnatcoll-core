@@ -29,7 +29,7 @@ package body TextConsole is
    procedure Set_Data_Primitive
      (Instance : Class_Instance; Console  : access Text_Console) is
    begin
-      Set (Console.Instances, Get_Script (Instance), Instance);
+      Set (Console.Instances, Instance);
    end Set_Data_Primitive;
 
    function Get_Instance
