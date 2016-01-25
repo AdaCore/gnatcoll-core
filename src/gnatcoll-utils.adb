@@ -21,12 +21,10 @@
 --                                                                          --
 ------------------------------------------------------------------------------
 
-with Ada.Calendar.Formatting;
 with Ada.Characters.Handling;    use Ada.Characters.Handling;
 with Ada.Command_Line;
 with Ada.Strings.Fixed;          use Ada.Strings;
-with GNAT.Calendar;              use GNAT.Calendar;
-with GNAT.Calendar.Time_IO;      use GNAT.Calendar.Time_IO;
+with GNAT.Calendar.Time_IO;
 with GNAT.Case_Util;
 with GNAT.OS_Lib;
 with GNAT.Strings;               use GNAT.Strings;
@@ -681,7 +679,7 @@ package body GNATCOLL.Utils is
       TZ     : Duration := 0.0;
    begin
       if Str = "" then
-         return GNAT.Calendar.No_Time;
+         return No_Time;
       end if;
 
       --  Do we have the name of the day at the beginning of the string, as in
@@ -749,7 +747,7 @@ package body GNATCOLL.Utils is
 
    exception
       when Constraint_Error =>
-         return GNAT.Calendar.No_Time;
+         return No_Time;
    end Time_Value;
 
    --------------

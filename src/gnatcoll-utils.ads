@@ -27,6 +27,7 @@
 pragma Ada_2012;
 
 with Ada.Calendar.Time_Zones; use Ada.Calendar;
+with Ada.Calendar.Formatting;
 with Ada.Strings.Unbounded;
 with GNAT.Expect;
 with GNAT.Strings;
@@ -245,9 +246,11 @@ package GNATCOLL.Utils is
 
 private
 
-   No_Time : constant Ada.Calendar.Time := Ada.Calendar.Time_Of
+   No_Time : constant Ada.Calendar.Time := Ada.Calendar.Formatting.Time_Of
      (Ada.Calendar.Year_Number'First,
       Ada.Calendar.Month_Number'First,
-      Ada.Calendar.Day_Number'First);
+      Ada.Calendar.Day_Number'First,
+      Time_Zone => 0);
+   --  Use UTC timezone to be the same value in any local timezone
 
 end GNATCOLL.Utils;
