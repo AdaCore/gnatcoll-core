@@ -5,8 +5,8 @@
 --                         Copyright (C) 2009-2016, AdaCore                 --
 ------------------------------------------------------------------------------
 
-with GNAT.Calendar;  use GNAT.Calendar;
 with GNATCOLL.Traces;    use GNATCOLL.Traces;
+with GNATCOLL.Utils;     use GNATCOLL.Utils;
 
 package body GNATCOLL.SQL.Orm.Impl is
 

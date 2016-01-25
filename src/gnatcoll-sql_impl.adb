@@ -27,7 +27,7 @@ with Ada.Strings.Fixed;          use Ada.Strings.Fixed;
 with Ada.Strings.Hash;
 with Ada.Strings.Unbounded;      use Ada.Strings.Unbounded;
 with Ada.Unchecked_Deallocation;
-with GNAT.Calendar.Time_IO;      use GNAT.Calendar, GNAT.Calendar.Time_IO;
+with GNAT.Calendar.Time_IO;      use GNAT.Calendar.Time_IO;
 with GNAT.Strings;               use GNAT.Strings;
 with GNATCOLL.Utils;             use GNATCOLL.Utils;
 
@@ -1447,7 +1447,7 @@ package body GNATCOLL.SQL_Impl is
       --  database. Unfortunately, GNAT.Calendar.Time_IO converts that back to
       --  local time.
 
-      if Value /= GNAT.Calendar.No_Time then
+      if Value /= No_Time then
          Adjusted := Value - Duration (UTC_Time_Offset (Value)) * 60.0;
 
          if Supports_Timezone (Self) then
@@ -1480,7 +1480,7 @@ package body GNATCOLL.SQL_Impl is
       pragma Unreferenced (Self);
       Offset   : Duration;
    begin
-      if Value /= GNAT.Calendar.No_Time then
+      if Value /= No_Time then
          --  Input Value should be interpreted in GMT, but Image assumes this
          --  is local time zone. So we need an offset here.
 

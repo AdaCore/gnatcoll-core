@@ -33,7 +33,6 @@ with Ada.Text_IO;               use Ada.Text_IO;
 with Ada.Exceptions.Traceback;  use Ada.Exceptions.Traceback;
 with Ada.Unchecked_Deallocation;
 
-with GNAT.Calendar;             use GNAT.Calendar;
 with GNAT.Calendar.Time_IO;     use GNAT.Calendar.Time_IO;
 with GNAT.Directory_Operations; use GNAT.Directory_Operations;
 with GNATCOLL.Mmap;             use GNATCOLL.Mmap;
@@ -53,14 +52,6 @@ package body GNATCOLL.Traces is
    On_Exception : On_Exception_Mode := Propagate;
    --  The behavior that should be adopted when something unexpected prevent
    --  the log stream to be written.
-
-   No_Time : constant Ada.Calendar.Time :=
-               Ada.Calendar.Time_Of
-                 (Ada.Calendar.Year_Number'First,
-                  Ada.Calendar.Month_Number'First,
-                  Ada.Calendar.Day_Number'First);
-   --  Note: we can remove this constant once we require GNAT 6.1 to build
-   --  GPS.
 
    --  Note: rev 1.5 of this file has a (disabled) support for symbolic
    --  tracebacks.

@@ -25,10 +25,8 @@ with System;
 with Ada.Unchecked_Deallocation;
 with Ada.Directories;
 
-with Ada.Calendar;              use Ada.Calendar;
-with Ada.Calendar.Formatting;
+with Ada.Calendar.Formatting;  use Ada.Calendar;
 with Ada.Calendar.Time_Zones;  use Ada.Calendar.Time_Zones;
-with GNAT.Calendar;             use GNAT.Calendar;
 with GNAT.Directory_Operations; use GNAT.Directory_Operations;
 with GNAT.OS_Lib;
 with GNAT.Strings;              use GNAT.Strings;
@@ -409,9 +407,9 @@ package body GNATCOLL.IO.Native is
         (Year       => Year_Number (Year),
          Month      => Month_Number (Month),
          Day        => Day_Number (Day),
-         Hour       => Hour_Number (Hour),
-         Minute     => Minute_Number (Minute),
-         Second     => Second_Number (Second),
+         Hour       => Formatting.Hour_Number (Hour),
+         Minute     => Formatting.Minute_Number (Minute),
+         Second     => Formatting.Second_Number (Second),
          Sub_Second => 0.0,
          Time_Zone  => TZ);
    end File_Time_Stamp;
