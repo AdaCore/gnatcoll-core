@@ -725,101 +725,94 @@ AC_HELP_STRING(
       AC_MSG_RESULT(no, use --with-python if needed)
       PYTHON_BASE=no
       WITH_PYTHON=no
-
-   else
-      AC_PATH_PROG(PYTHON, ${PYTHON_EXEC}, no, $PYTHON_PATH_WITH/bin:$PYTHON_PATH_WITH:$PATH)
-      if test x"$PYTHON" = xno ; then
+   elif test "$PYTHON_PATH_WITH" = "yes"; then
+      AC_PATH_PROG(PYTHON, ${PYTHON_EXEC}, no)
+      if test "$PYTHON" = "no"; then
          PYTHON_BASE=no
          WITH_PYTHON=no
+      fi
+   else
+      AC_MSG_CHECKING(for python)
+      if "$PYTHON_PATH_WITH/bin/${PYTHON_EXEC}" --version >/dev/null 2>&1; then
+         PYTHON="$PYTHON_PATH_WITH/bin/${PYTHON_EXEC}"
+         AC_MSG_RESULT(yes)
+      elif "$PYTHON_PATH_WITH/${PYTHON_EXEC}" --version >/dev/null 2>&1; then
+         PYTHON="$PYTHON_PATH_WITH/${PYTHON_EXEC}"
+         AC_MSG_RESULT(yes)
       else
-        AC_MSG_CHECKING(for python >= 2.0)
-        if test x"$PYTHON_PATH_WITH" != xyes ; then
-           PYTHON_BASE=$PYTHON_PATH_WITH
-        else
-           PYTHON_BASE=`$PYTHON -c 'import sys; print(sys.prefix)' `
-        fi
-
-        PYTHON_MAJOR_VERSION=`$PYTHON -c 'import sys; print(sys.version_info[[0]])' 2>/dev/null`
-        PYTHON_MINOR_VERSION=`$PYTHON -c 'import sys; print(sys.version_info[[1]])' 2>/dev/null`
-        if test $PYTHON_MAJOR_VERSION -lt 2 ; then
-           AC_MSG_RESULT(no, need at least version 2.0)
-           PYTHON_BASE=no
-           WITH_PYTHON=no
-        else
-           case "${host}" in
-             # On windows, there are two possible types of installation for
-             # python, where the layout of directories are different. Even when
-             # running cygwin, we might want to link with a mingwin version of
-             # python for easier redistribution of the application.
-
-             *-*mingw32* | *cygwin* )
-               if test -d ${PYTHON_BASE}/lib/python${PYTHON_MAJOR_VERSION}.${PYTHON_MINOR_VERSION}/config; then
-                 PYTHON_WIN32=no
-               else
-                 PYTHON_WIN32=yes
-               fi
-               ;;
-             *)
-               PYTHON_WIN32=no
-               ;;
-           esac
-
-           if test x$PYTHON_WIN32 = xyes; then
-             PYTHON_VERSION=$PYTHON_MAJOR_VERSION$PYTHON_MINOR_VERSION
-             PYTHON_DIR=${PYTHON_BASE}/libs
-           else
-             PYTHON_VERSION=$PYTHON_MAJOR_VERSION.$PYTHON_MINOR_VERSION
-             if test x$PYTHON_SHARED = xyes; then
-                PYTHON_DIR=${PYTHON_BASE}/lib
-             else
-                PYTHON_DIR=${PYTHON_BASE}/lib/python${PYTHON_VERSION}/config
-             fi
-           fi
-
-           AC_MSG_RESULT(yes (version $PYTHON_MAJOR_VERSION.$PYTHON_MINOR_VERSION))
-        fi
+         AC_MSG_RESULT(no, invalid python path)
+         PYTHON_BASE=no
+         WITH_PYTHON=no
       fi
    fi
 
-   if test x"$PYTHON_BASE" != xno; then
-      # Find the libs that are required to link with python. We first try
-      # with python-config --libs, but this might not exist on the platform, or
-      # might be incorrect, so we also have hard-coded fallbacks.
-
-      if test $PYTHON_MAJOR_VERSION != 2; then
-         PYCONFIG=python${PYTHON_MAJOR_VERSION}-config
+   # Check that Python version is >= 2.0
+   if test "$WITH_PYTHON" = "yes"; then
+      AC_MSG_CHECKING(for python >= 2.0)
+      python_major_version=`$PYTHON -c 'import sys; print(sys.version_info[[0]])' 2>/dev/null`
+      python_version=`$PYTHON -c 'import sys; print(".".join([str(k) for k in sys.version_info]))' 2>/dev/null`
+      if test "$python_major_version" -lt 2; then
+         AC_MSG_RESULT(no, need at least version 2.0)
+         PYTHON_BASE=no
+         WITH_PYTHON=no
       else
-         PYCONFIG=python-config
+         AC_MSG_RESULT(yes (version $python_version))
       fi
+   fi
 
-      AC_PATH_PROG(PYTHON_CONFIG, ${PYCONFIG}, no, $PYTHON_PATH_WITH/bin:$PYTHON_PATH_WITH:$PATH)
+   # Find CFLAGS and LDFLAGS to link with Python
+   if test "$WITH_PYTHON" = "yes"; then
+      AC_MSG_CHECKING(if can link with Python library)
+      result=`cat <<EOF | $PYTHON
+from distutils.sysconfig import get_config_var, get_python_inc, get_config_vars
+import sys
+print 'PYTHON_VERSION=%s' % get_config_var("VERSION")
+python_current_prefix=sys.prefix
+config_args = [[k.replace("'", "") for k in get_config_vars().get('CONFIG_ARGS','').split("' '")]]
+python_build_prefix=[[k.replace('--prefix=', '') for k in config_args if k.startswith('--prefix=')]]
+if python_build_prefix:
+    python_build_prefix = python_build_prefix[[0]]
+else:
+    python_build_prefix = sys.prefix
+print 'PYTHON_BASE="%s"' % python_current_prefix
+libpl = get_config_var('LIBPL')
+if not libpl:
+    libpl = '%s/libs' % python_current_prefix
+else:
+    if libpl.startswith(python_build_prefix) and not libpl.startswith(python_current_prefix):
+        libpl = libpl.replace(python_build_prefix, python_current_prefix, 1)
 
-      AC_MSG_CHECKING(if we can link with python (using python-config))
-      if test x"$PYTHON_CONFIG" != xno ; then
-         # We cannot use python-config --ldflags, which generates additional
-         # switches not properly recognized by GNAT's linker on some systems,
-         # for instance "-u _PyMac_Error" on OSX. So we add the "-L..." switch
-         # explicitly
-         PYTHON_LIBS=`$PYTHON_CONFIG --libs`
-         PYTHON_LIBS="-L${PYTHON_DIR} ${PYTHON_LIBS}"
-
-         case $build_os in
-             *darwin*)  ;;
-             *-*mingw32* | *cygwin* ) ;;
-             *linux*) PYTHON_LIBS="${PYTHON_LIBS} -export-dynamic" ;;
-         esac
-
-         PYTHON_CFLAGS=`$PYTHON_CONFIG --includes`
+libdir = get_config_var('LIBDIR')
+if not libdir:
+    libdir = python_current_prefix
+else:
+    if libdir.startswith(python_build_prefix) and not libdir.startswith(python_current_prefix):
+        libdir = libdir.replace(python_build_prefix, python_current_prefix, 1)
+print 'PYTHON_STATIC_DIR="%s"' % libpl
+print 'PYTHON_SHARED_DIR="%s"' % libdir
+cflags = " ".join(("-I" + get_python_inc().replace(python_build_prefix, python_current_prefix, 1),
+                   "-I" + get_python_inc(plat_specific=True).replace(python_build_prefix, python_current_prefix, 1)))
+print 'PYTHON_CFLAGS="%s"' % cflags
+print 'PYTHON_LIBS="%s %s"' % (get_config_vars().get("LIBS", ""), get_config_vars().get("SYSLIBS", ""))
+EOF
+`
+      eval "$result"
+      if test "$PYTHON_SHARED" = "yes"; then
+         PYTHON_DIR="$PYTHON_SHARED_DIR"
+         PYTHON_LIBS="-L$PYTHON_DIR -lpython$PYTHON_VERSION $PYTHON_LIBS"
       else
-         PYTHON_LIBS=""
-         PYTHON_CFLAGS=""
+         PYTHON_DIR="$PYTHON_STATIC_DIR"
+         if test -f "${PYTHON_DIR}/libpython${PYTHON_VERSION}.a"; then
+            PYTHON_LIBS="${PYTHON_DIR}/libpython${PYTHON_VERSION}.a $PYTHON_LIBS"
+         else
+            PYTHON_LIBS="-L$PYTHON_DIR -lpython$PYTHON_VERSION $PYTHON_LIBS"
+         fi
       fi
 
       SAVE_CFLAGS="${CFLAGS}"
       SAVE_LIBS="${LIBS}"
       CFLAGS="${SAVE_CFLAGS} ${PYTHON_CFLAGS}"
       LIBS="${SAVE_LIBS} ${PYTHON_LIBS}"
-
 
       AC_LINK_IFELSE(
         [AC_LANG_PROGRAM([
@@ -828,93 +821,12 @@ AC_HELP_STRING(
 #include <Python.h>
 ],[   Py_Initialize();])],
         [AC_MSG_RESULT(yes)],
-
-        [
-         AC_MSG_RESULT(no)
-         AC_MSG_CHECKING(if we can link with python)
-         # hard-code python dependencies
-         if test \( -f ${PYTHON_DIR}/libpython${PYTHON_VERSION}.a \) -a \( ! x$PYTHON_SHARED = xyes \) ; then
-            PYTHON_LIBS="${PYTHON_DIR}/libpython${PYTHON_VERSION}.a"
-         else
-            PYTHON_LIBS="-L${PYTHON_DIR} -lpython${PYTHON_VERSION}"
-         fi
-
-         case "${host}" in
-            hppa*-hp-hpux1* )
-               PYTHON_LIBS="-Wl,-E -lm ${PYTHON_LIBS}"
-               ;;
-            powerpc-ibm-aix5.* | powerpc-*-darwin* | *-darwin*)
-               PYTHON_LIBS="-ldl -lm ${PYTHON_LIBS}"
-               ;;
-            *-sunos5.5* | *-solaris2.5* | *-sunos5* | *-solaris* )
-               PYTHON_LIBS="-lresolv -lsocket -lnsl -ldl -lm ${PYTHON_LIBS}"
-               ;;
-            *linux* )
-               PYTHON_LIBS="-Wl,-export-dynamic -lm -ldl ${PYTHON_LIBS}"
-               ;;
-            ia64-*hp-hpux11* )
-               PYTHON_LIBS="-ldld -ldl -lm -Wl,-E ${PYTHON_LIBS}"
-               ;;
-            *-freebsd* )
-               PYTHON_LIBS="-lm -lutil ${PYTHON_LIBS}"
-               ;;
-         esac
-
-         if test x$PYTHON_WIN32 = xyes; then
-            PYTHON_CFLAGS="-I${PYTHON_BASE}/include"
-         else
-            PYTHON_CFLAGS="-I${PYTHON_BASE}/include/python${PYTHON_VERSION}"
-         fi
-
-         # -lutil is almost always needed, for forkpty()
-         CFLAGS="${SAVE_CFLAGS} ${PYTHON_CFLAGS}"
-         LIBS="${SAVE_LIBS} ${PYTHON_LIBS}"
-
-         AC_LINK_IFELSE(
-           [AC_LANG_PROGRAM([
-/* will only work with gcc, but needed to use it with the mingwin python */
-#define PY_LONG_LONG long long
-#include <Python.h>
-],[Py_Initialize();])],
-           [AC_MSG_RESULT(yes)],
-           [LIBS="${LIBS} -lutil"
-            AC_LINK_IFELSE(
-             [AC_LANG_PROGRAM([
-/* will only work with gcc, but needed to use it with the mingwin python */
-#define PY_LONG_LONG long long
-#include <Python.h>
-],[Py_Initialize();])],
-             [PYTHON_LIBS="${PYTHON_LIBS} -lutil"
-            AC_MSG_RESULT(yes)],
-
-            [LIBS="${LIBS} -lpthread -lutil -lz"
-             AC_LINK_IFELSE(
-               [AC_LANG_PROGRAM([
-/* will only work with gcc, but needed to use it with the mingwin python */
-#define PY_LONG_LONG long long
-#include <Python.h>],[Py_Initialize();])],
-               [PYTHON_LIBS="${PYTHON_LIBS} -lpthread -lutil -lz"
-                AC_MSG_RESULT(yes)],
-
-               [LIBS="${LIBS} -lpthread -lssl -lutil -lz"
-                AC_LINK_IFELSE(
-                  [AC_LANG_PROGRAM([
-   /* will only work with gcc, but needed to use it with the mingwin python */
-   #define PY_LONG_LONG long long
-   #include <Python.h>],[Py_Initialize();])],
-                  [PYTHON_LIBS="${PYTHON_LIBS} -lpthread -lssl -lutil -lz"
-                   AC_MSG_RESULT(yes)],
-
-               [AC_MSG_RESULT(no, [can't compile and link python example])
-                WITH_PYTHON=no
-                PYTHON_BASE=[]
-                PYTHON_LIBS=[]])])])
-
-        ])])
+        [AC_MSG_RESULT(no)
+         WITH_PYTHON=no
+         PYTHON_BASE=no])
 
      # Restore an environment python-free, so that further tests are not
      # impacted in case we did not find python
-
      CFLAGS="${SAVE_CFLAGS}"
      LIBS="${SAVE_LIBS}"
    fi
@@ -923,6 +835,12 @@ AC_HELP_STRING(
      AC_MSG_ERROR([Python not found])
    fi
 
+   if test "$WITH_PYTHON" = "yes"; then
+     AC_MSG_CHECKING(for python LDFLAGS)
+     AC_MSG_RESULT($PYTHON_LIBS)
+     AC_MSG_CHECKING(for python CFLAGS)
+     AC_MSG_RESULT($PYTHON_CFLAGS)
+   fi
    AC_SUBST(PYTHON_BASE)
    AC_SUBST(PYTHON_VERSION)
    AC_SUBST(PYTHON_DIR)
