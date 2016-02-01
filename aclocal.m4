@@ -809,6 +809,13 @@ EOF
          fi
       fi
 
+      # On Linux platform, even when linking with the static libpython, symbols not
+      # used by the application itself should be exported so that shared library
+      # present in Python can use the Python C API. 
+      case $build_os in
+         *linux*) PYTHON_LIBS="${PYTHON_LIBS} -export-dynamic";;
+      esac
+
       SAVE_CFLAGS="${CFLAGS}"
       SAVE_LIBS="${LIBS}"
       CFLAGS="${SAVE_CFLAGS} ${PYTHON_CFLAGS}"
