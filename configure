@@ -3796,7 +3796,7 @@ print 'PYTHON_SHARED_DIR="%s"' % libdir
 cflags = " ".join(("-I" + get_python_inc().replace(python_build_prefix, python_current_prefix, 1),
                    "-I" + get_python_inc(plat_specific=True).replace(python_build_prefix, python_current_prefix, 1)))
 print 'PYTHON_CFLAGS="%s"' % cflags
-print 'PYTHON_LIBS="%s %s"' % (get_config_vars().get("LIBS", ""), get_config_vars().get("SYSLIBS", ""))
+print 'PYTHON_LIBS="%s %s %s"' % (get_config_vars().get("LIBS", ""), get_config_vars().get("SYSLIBS", ""), get_config_vars().get("MODLIBS", ""))
 EOF
 `
       eval "$result"
