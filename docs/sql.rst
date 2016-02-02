@@ -497,6 +497,22 @@ those switches are:
   or `String`, which influences the way the value of the Ada constant
   is generated (surrounded or not by quotes).
 
+*-enum-image*
+  If specified in addition to the `-enum` switch, then a function is
+  generated for each `Integer`-valued enum that converts numeric
+  values to the corresponding name as a string.
+
+  This function is generated as an Ada 2012 expression-function such as::
+
+  function Image_Priority_Id (X : Priority_Id) return String is
+    (case X is
+        when 3      => "High",
+        when 2      => "Medium",
+        when 1      => "Low",
+        when 4      => "High_Internal",
+        when others => raise Constraint_Error
+                         with "invalid Priority_Id " & X'Img);
+
 *-var name,table,field,criteria,comment*
   This is similar to the `-enum` switch, but extracts a single value
   from the database. Although applications should try and depend as little

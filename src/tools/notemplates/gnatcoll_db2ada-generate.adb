@@ -417,6 +417,7 @@ begin
 
    F := Create_From_Dir (Dir => Output_Dir, Base_Name => Base_File & ".ads");
    Create (Spec_File, Name => F.Display_Full_Name);
+
    Put_Line (Spec_File, "with GNATCOLL.SQL; use GNATCOLL.SQL;");
 
    if Include_Database_Create then
@@ -458,41 +459,83 @@ begin
          Enum   : Dumped_Enums;
          C2, C3 : String_Lists.Cursor;
 
-         Max_Name_Len : Integer;
+         Max_Name_Len, Max_Value_Len : Integer;
 
       begin
          while Has_Element (C) loop
             Enum := Element (C);
 
-            New_Line (Spec_File);
-            Put_Line (Spec_File, "   subtype " & Capitalize (Enum.Type_Name)
-                      & " is " & Capitalize (Enum.Base_Type) & ";");
+            declare
+               Type_Name : constant String :=
+                 Capitalize (Enum.Type_Name);
+               Base_Type : constant String :=
+                 Capitalize (Enum.Base_Type);
+               Is_String : constant Boolean :=
+                 Base_Type = "String";
+            begin
+               New_Line (Spec_File);
+               Put_Line (Spec_File, "   subtype " & Type_Name
+                         & " is " & Base_Type & ";");
 
-            Max_Name_Len := 0;
-            for N of Enum.Names loop
-               if N'Length > Max_Name_Len then
-                  Max_Name_Len := N'Length;
+               Max_Name_Len  := 0;
+               for N of Enum.Names loop
+                  if N'Length > Max_Name_Len then
+                     Max_Name_Len := N'Length;
+                  end if;
+               end loop;
+
+               Max_Value_Len := 6; --  "others"
+               for V of Enum.Values loop
+                  if V'Length > Max_Value_Len then
+                     Max_Value_Len := V'Length;
+                  end if;
+               end loop;
+
+               C2 := First (Enum.Names);
+               C3 := First (Enum.Values);
+               while Has_Element (C2) loop
+                  Put_Line (Spec_File,
+                    "   "
+                    & Capitalize (To_String (Enum.Prefix)) & '_'
+                    & Head (Capitalize (Element (C2)), Max_Name_Len)
+                    & " : constant " & Type_Name & " := "
+                    & (if Is_String
+                       then """" & Element (C3) & """"
+                       else Element (C3))
+                    & ";");
+
+                  Next (C2);
+                  Next (C3);
+               end loop;
+
+               if Output (Output_Ada_Enums_Image)
+                 and then not Is_String
+               then
+                  New_Line (Spec_File);
+                  Put_Line (Spec_File,
+                     "   function Image_" & Type_Name);
+                  Put_Line (Spec_File, "     (X : "
+                     & Capitalize (Enum.Type_Name) & ") return String");
+                  Put_Line (Spec_File, "   is (case X is");
+
+                  C2 := First (Enum.Names);
+                  C3 := First (Enum.Values);
+                  while Has_Element (C2) loop
+                     Put_Line (Spec_File,
+                       "          when " & Head (Element (C3), Max_Value_Len)
+                       & " => """ & Element (C2) & """,");
+                     Next (C2);
+                     Next (C3);
+                  end loop;
+                  Put_Line (Spec_File,
+                    "          when others =>");
+                  Put_Line (Spec_File,
+                    "             raise Constraint_Error");
+                  Put_Line (Spec_File,
+                    "               with ""invalid "
+                    & Type_Name & " "" & X'Img);");
                end if;
-            end loop;
-
-            C2 := First (Enum.Names);
-            C3 := First (Enum.Values);
-            while Has_Element (C2) loop
-               Put_Line (Spec_File,
-                 "   "
-                 & Head (Capitalize (Element (C2)), Max_Name_Len)
-                 & " : constant "
-                 & Capitalize (Enum.Type_Name)
-                 & " := "
-                 & (if Enum.Base_Type = "String"
-                    then """" & Element (C3) & """"
-                    else Element (C3))
-                 & ";");
-
-               Next (C2);
-               Next (C3);
-            end loop;
-
+            end;
             Next (C);
          end loop;
       end;

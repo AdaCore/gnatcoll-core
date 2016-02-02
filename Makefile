@@ -91,8 +91,8 @@ generate_sources:
 		-adacreate \
 		-api GNATCOLL.Xref.Database \
 		-load=src/initialdata.txt \
-		-enum "f2f_kind,id,name,F2F_,Integer" \
-		-enum "e2e_kind,id,name,E2E_,Integer"; \
+		-enum "f2f_kind,id,name,F2F,Integer" \
+		-enum "e2e_kind,id,name,E2E,Integer"; \
 	   for f in src/generated/*.ad?; do \
 	      tr -d '\r' < $$f > $$f.tmp && mv $$f.tmp $$f; \
 	   done; \

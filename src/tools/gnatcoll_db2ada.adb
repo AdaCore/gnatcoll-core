@@ -56,6 +56,7 @@ procedure GNATCOLL_Db2Ada is
    type Output_Kind is
      (Output_Ada_Specs,
       Output_Ada_Enums,
+      Output_Ada_Enums_Image,
       Output_Text,
       Output_Orm,
       Output_Dot,
@@ -84,6 +85,7 @@ procedure GNATCOLL_Db2Ada is
       Id        : Unbounded_String;
       Base_Type : Unbounded_String;
       Type_Name : Unbounded_String;
+      Prefix    : Unbounded_String;
       Names     : String_Lists.List;
       Values    : String_Lists.List;
    end record;
@@ -94,7 +96,7 @@ procedure GNATCOLL_Db2Ada is
    --  Generated code looks like:
    --       subtype <Type_Name> is <Base_Type>;
    --  For each value in the table, the following is dumped:
-   --      <prefix>_<name> : constant <Type_Name> := value;
+   --      <Prefix>_<name> : constant <Type_Name> := value;
 
    package Enumeration_Lists is new Ada.Containers.Doubly_Linked_Lists
      (Dumped_Enums);
@@ -297,6 +299,8 @@ procedure GNATCOLL_Db2Ada is
       Put_Line ("    generate Ada code like");
       Put_Line ("        subtype <id>_id is <base>;");
       Put_Line ("        <prefix>_... : constant <id>_id := ...;");
+      Put_Line ("-enum-image");
+      Put_Line ("    Generate image function for integer enums");
       Put_Line ("-var name,table,field,criteria,comment");
       Put_Line ("    Similar to -enum, but dumps one specific value");
       Put_Line ("    from a table, selected with criteria.");
@@ -354,7 +358,7 @@ procedure GNATCOLL_Db2Ada is
       loop
          case Getopt ("dbhost= h -help dbname= dbuser= dbpasswd= enum= var="
                       & " dbtype= dbmodel= dot text orm= createdb api="
-                      & " adacreate dbport="
+                      & " adacreate dbport= enum-image"
                       & " ormtables= api-enums= load= output=")
          is
             when 'h' | '-' =>
@@ -414,7 +418,11 @@ procedure GNATCOLL_Db2Ada is
                Output (Output_Createdb) := True;
 
             when 'e' =>
-               Append (Enums, Parameter);
+               if Full_Switch = "enum-image" then
+                  Output (Output_Ada_Enums_Image) := True;
+               else
+                  Append (Enums, Parameter);
+               end if;
 
             when 'v' =>
                Append (Vars, Parameter);
@@ -451,7 +459,7 @@ procedure GNATCOLL_Db2Ada is
       if Output = (Output_Kind => False) then
          Output := (Output_Ada_Specs => True,
                     Output_Ada_Enums => True,
-                    others => False);
+                    others           => False);
       end if;
 
       Need_Schema := False;
@@ -585,6 +593,10 @@ procedure GNATCOLL_Db2Ada is
       --  Replace characters that are not acceptable in an Ada
       --  identifier
 
+      -----------
+      -- Quote --
+      -----------
+
       function Quote (Str : String) return String is
          S : Unbounded_String;
       begin
@@ -621,8 +633,9 @@ procedure GNATCOLL_Db2Ada is
       R    : GNATCOLL.SQL.Exec.Forward_Cursor;
 
    begin
-      Enum.Table := To_Unbounded_String (Table);
-      Enum.Id    := To_Unbounded_String (Id);
+      Enum.Table  := To_Unbounded_String (Table);
+      Enum.Id     := To_Unbounded_String (Id);
+      Enum.Prefix := To_Unbounded_String (Prefix);
 
       if Base_Type = "" then
          Enum.Base_Type := To_Unbounded_String ("Integer");
@@ -640,7 +653,7 @@ procedure GNATCOLL_Db2Ada is
             & Table & """ ORDER BY lower(" & Name & ")");
          while Has_Row (R) loop
             Append (Enum.Values, Value (R, 0));
-            Append (Enum.Names,  Quote (Prefix & '_' & Value (R, 1)));
+            Append (Enum.Names,  Quote (Value (R, 1)));
             Next (R);
          end loop;
       end if;
