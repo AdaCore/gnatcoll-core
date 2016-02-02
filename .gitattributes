@@ -7,3 +7,4 @@ src/getRSS.c                               no-precommit-check
 src/sqlite/amalgamation/*                  no-precommit-check
 
 src/dborm.py                               no-precommit-check
+src/generated/*                            no-precommit-check
