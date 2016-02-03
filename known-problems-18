@@ -4,6 +4,15 @@ Known Problems in Gnatcoll 1.8
 
 Copyright (C) 2013-2016, AdaCore
 
+KP-18-P120-046 Link against Gnatcoll_Python fails on Windows
+
+  Problem:    It is not possible to link with the Gnatlcoll_Python shared
+              library on Windows. Some missing symbols are reported.
+
+  Status:     Fixed in Gnatcoll 1.9.0 on 2016-02-03
+
+  Workaround: Use the static version of this library.
+
 KP-18-P115-021 Email.Get_Recipients crash on invalid headers
 
   Problem:    Get_Recipients will raise an exception for messages

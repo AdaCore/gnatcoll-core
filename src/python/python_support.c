@@ -22,6 +22,17 @@
 #include <compile.h>  /* PyCodeObject definition in older versions*/
 #include <string.h>
 
+/* On Windows and if we have HAVE_DECLSPEC_DLL defined remove the
+   __declspec(dllexport) attribute from PyMODINIT_FUNC. Having such attribute
+   to flag symbols to export from a DLL means that *only* those symbols
+   are exported. */
+#if _WIN32
+#ifdef HAVE_DECLSPEC_DLL
+#undef PyMODINIT_FUNC
+#define PyMODINIT_FUNC void
+#endif
+#endif
+
 #undef DEBUG
 /* #define DEBUG */
 
