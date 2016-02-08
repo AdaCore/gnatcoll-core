@@ -67,7 +67,7 @@ package GNATCOLL.JSON is
      (Arr : in out JSON_Array;
       Less : access function (Left, Right : JSON_Value) return Boolean);
    --  Reorders the elements of array such that the elements are sorted
-   --  smallest first as determined by the strict comparision provided by
+   --  smallest first as determined by the strict comparison provided by
    --  function Less.
 
    procedure Set_Element
@@ -207,6 +207,12 @@ package GNATCOLL.JSON is
       Field      : JSON_Array);
    pragma Precondition (Kind (Val) = JSON_Object_Type);
    --  Any change you do to the array afterward will not impact Val
+
+   procedure Unset_Field
+     (Val        : JSON_Value;
+      Field_Name : UTF8_String);
+   --  Unset the field with the given name, just as if Set_Field had never
+   --  been called.
 
    --  Utility functions used to translate a JSON value into an ordinary object
 

@@ -46,6 +46,7 @@ testsuite/*/*/dummy.gpr
 testsuite/sql/sql3/pkg*
 testsuite/sql/sql3/test.db
 testsuite/json/json1/decode
+testsuite/json/json1/test_all
 testsuite/json/M605-001/read
 testsuite/pools/testpools
 testsuite/projects/M320-003/main

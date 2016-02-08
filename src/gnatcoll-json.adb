@@ -956,6 +956,24 @@ package body GNATCOLL.JSON is
       return Ret;
    end Create_Object;
 
+   -----------------
+   -- Unset_Field --
+   -----------------
+
+   procedure Unset_Field
+     (Val        : JSON_Value;
+      Field_Name : UTF8_String)
+   is
+      Vals : Object_Items_Pkg.Vector renames Val.Data.Obj_Value.Vals;
+   begin
+      for J in Vals.First_Index .. Vals.Last_Index loop
+         if Vals.Element (J).Key = Field_Name then
+            Val.Data.Obj_Value.Vals.Delete (J);
+            return;
+         end if;
+      end loop;
+   end Unset_Field;
+
    ---------------
    -- Set_Field --
    ---------------
