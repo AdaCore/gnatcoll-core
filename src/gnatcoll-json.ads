@@ -51,6 +51,17 @@ package GNATCOLL.JSON is
      JSON_Array_Type .. JSON_Object_Type;
 
    type JSON_Value is tagged private;
+   --  Stores a JSON value, which can be either a simple type (integer,
+   --  string, ...) or an object with multiple fields, or an array.
+   --
+   --  This type works by reference. Using the standard assignment operator
+   --  as in
+   --      A := B;
+   --  means that modifying B will also modify A (and modifying A will of
+   --  course modify B).
+   --
+   --  If you want to create a separate copy, you must use the Clone function.
+
    type JSON_Array is private;
 
    JSON_Null : constant JSON_Value;
@@ -150,6 +161,18 @@ package GNATCOLL.JSON is
    pragma Precondition (Arr.Kind = JSON_Array_Type);
    --  Append Arr only in case of it is an array, raise Constraint_Error
    --  otherwise.
+
+   function Clone (Val : JSON_Value) return JSON_Value;
+   --  Returns a deep clone of Val.
+   --  Any change in Val or its fields (recursively) will have no impact
+   --  on the resulting value.
+
+   function "=" (Left, Right : JSON_Value) return Boolean;
+   --  Compare to values.
+   --  The actual contents is compared, not the pointers. So two objects
+   --  constructed independently, with the same contents, will match.
+   --  The order that fields were created is irrelevant, for objects.
+   --  The order in arrays is relevant.
 
    procedure Set_Field
      (Val        : JSON_Value;
@@ -294,6 +317,10 @@ package GNATCOLL.JSON is
      (Kind (Val) = JSON_Object_Type
       and then Kind (Get (Val, Field)) = JSON_Array_Type);
 
+   ---------------
+   -- Iteration --
+   ---------------
+
    procedure Map_JSON_Object
      (Val : JSON_Value;
       CB  : access procedure (Name : UTF8_String; Value : JSON_Value));
@@ -309,6 +336,10 @@ package GNATCOLL.JSON is
          Name        : UTF8_String;
          Value       : JSON_Value);
       User_Object : in out Mapped);
+   pragma Precondition (Kind (Val) = JSON_Object_Type);
+   --  Iter on all fields of the object, like Map_JSON_Object does,
+   --  but the callback can return a value which is also returned by
+   --  Gen_Map_JSON_Object itself.
 
 private
 

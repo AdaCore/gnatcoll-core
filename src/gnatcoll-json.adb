@@ -22,6 +22,7 @@
 ------------------------------------------------------------------------------
 
 with Ada.Characters.Handling; use Ada.Characters.Handling;
+with Ada.Containers;          use Ada.Containers;
 with Ada.Strings.Unbounded;   use Ada.Strings.Unbounded;
 with Ada.Text_IO;
 with GNATCOLL.JSON.Utility;
@@ -1205,6 +1206,125 @@ package body GNATCOLL.JSON is
    begin
       return Get (Get (Val, Field));
    end Get;
+
+   -----------
+   -- Clone --
+   -----------
+
+   function Clone (Val : JSON_Value) return JSON_Value is
+      Result : JSON_Value;
+   begin
+      case Val.Data.Kind is
+         when JSON_Null_Type =>
+            Result := Create;
+
+         when JSON_Boolean_Type =>
+            Result := Create (Val.Data.Bool_Value);
+
+         when JSON_Int_Type =>
+            Result := Create (Val.Data.Int_Value);
+
+         when JSON_Float_Type =>
+            Result := Create (Val.Data.Flt_Value);
+
+         when JSON_String_Type =>
+            Result := Create (Val.Data.Str_Value);
+
+         when JSON_Array_Type =>
+            Result.Data :=
+               (Kind => JSON_Array_Type, Arr_Value => new JSON_Array);
+            for E of Val.Data.Arr_Value.Vals loop
+               Append (Result.Data.Arr_Value.all, Clone (E));
+            end loop;
+
+         when JSON_Object_Type =>
+            Result := Create_Object;
+            for E of Val.Data.Obj_Value.Vals loop
+               Result.Set_Field (To_String (E.Key), Clone (E.Val));
+            end loop;
+
+      end case;
+      return Result;
+   end Clone;
+
+   ---------
+   -- "=" --
+   ---------
+
+   function "=" (Left, Right : JSON_Value) return Boolean is
+      Found : Boolean;
+   begin
+      if Left.Data.Kind /= Right.Data.Kind then
+         return False;
+      end if;
+
+      case Left.Data.Kind is
+         when JSON_Null_Type =>
+            return True;
+
+         when JSON_Boolean_Type =>
+            return Left.Data.Bool_Value = Right.Data.Bool_Value;
+
+         when JSON_Int_Type =>
+            return Left.Data.Int_Value = Right.Data.Int_Value;
+
+         when JSON_Float_Type =>
+            return Left.Data.Flt_Value = Right.Data.Flt_Value;
+
+         when JSON_String_Type =>
+            return Left.Data.Str_Value = Right.Data.Str_Value;
+
+         when JSON_Array_Type =>
+            --  Same pointer ?
+            if Left.Data.Arr_Value = Right.Data.Arr_Value then
+               return True;
+            elsif Left.Data.Arr_Value.Vals.Length /=
+               Right.Data.Arr_Value.Vals.Length
+            then
+               return False;
+            else
+               for J in Left.Data.Arr_Value.Vals.First_Index ..
+                  Left.Data.Arr_Value.Vals.Last_Index
+               loop
+                  if not (Left.Data.Arr_Value.Vals (J) =  --  recursive
+                          Right.Data.Arr_Value.Vals (J))
+                  then
+                     return False;
+                  end if;
+               end loop;
+               return True;
+            end if;
+
+         when JSON_Object_Type =>
+            --  Same pointer ?
+            if Left.Data.Obj_Value = Right.Data.Obj_Value then
+               return True;
+            elsif Left.Data.Obj_Value.Vals.Length /=
+               Right.Data.Obj_Value.Vals.Length
+            then
+               return False;
+            else
+               --  We have the same number of elements, and no duplicates
+               for L of Left.Data.Obj_Value.Vals loop
+                  Found := False;
+                  for R of Right.Data.Obj_Value.Vals loop
+                     if R.Key = L.Key then
+                        if not (R.Val = L.Val) then --  recursive
+                           return False;
+                        end if;
+                        Found := True;
+                        exit;
+                     end if;
+                  end loop;
+
+                  if not Found then
+                     return False;
+                  end if;
+               end loop;
+               return True;
+            end if;
+      end case;
+   end "=";
 
    ---------------------
    -- Map_JSON_Object --
