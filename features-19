@@ -2,7 +2,7 @@
 GNATCOLL 1.9 NEW FEATURES LIST
 ==============================
 
-Copyright (C) 2014-2015, AdaCore
+Copyright (C) 2015-2016, AdaCore
 
 This file contains a list of new features introduced in GNATCOLL.
 A full description of all GNATCOLL features can be found in the GNATCOLL
@@ -14,6 +14,15 @@ of the feature.
 
 New features in 1.9
 -------------------
+
+NF-19-P208-003 GNATCOLL.JSON: new subprogram Unset_Field (2016-02-08)
+
+  It is now possible to remove a field that has been set on a JSON object.
+
+NF-19-P120-002 GNATCOLL.JSON: new subprograms Clone and "=" (2016-02-08)
+
+  It is now possible to clone JSON objects, and compare two objects so that
+  the order of fields is irrelevant.
 
 NF-19-OB12-049 GNATCOLL.Memory: allow dump outputs redirection (2015-11-20)
 
