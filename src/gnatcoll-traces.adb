@@ -754,10 +754,15 @@ package body GNATCOLL.Traces is
       Msg    : String := "Unexpected exception: ";
       Color  : String := Default_Fg) is
    begin
-      Create_Exception_Handle (Handle);
-      Trace (Handle.Exception_Handle,
-             Msg & Ada.Exceptions.Exception_Information (E),
-             Color => Color);
+      if Debug_Mode
+        and then Global.Activated
+        and then Global.Handles_List /= null  --  module not terminated
+      then
+         Create_Exception_Handle (Handle);
+         Trace (Handle.Exception_Handle,
+                Msg & Ada.Exceptions.Exception_Information (E),
+                Color => Color);
+      end if;
    end Trace;
 
    -----------
