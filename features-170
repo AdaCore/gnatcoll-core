@@ -15,6 +15,13 @@ of the feature.
 New features in 17
 ------------------
 
+NF-170-P210-024 GNATCOLL.Refcount use atomic ops automatically (2016-02-10)
+
+  The shared_pointers package will by default use atomic pointers if the
+  application uses tasks, and use non-atomic pointers (more efficient)
+  when the application is not using tasking. This is a default, still
+  overridable by the user.
+
 NF-170-P210-011 GNATCOLL.Traces.Block_Trace_Handle (2016-02-10)
 
   A new type which is useful to monitor subprogram entry and exit.

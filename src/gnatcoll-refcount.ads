@@ -55,6 +55,7 @@ with System;
 with GNATCOLL.Atomic;
 with GNATCOLL.Storage_Pools.Headers;  use GNATCOLL.Storage_Pools.Headers;
 with Interfaces;
+with System.Soft_Links;               use System.Soft_Links;
 
 package GNATCOLL.Refcount is
 
@@ -82,6 +83,10 @@ package GNATCOLL.Refcount is
 
    package Headers is new Header_Pools (Counters);
 
+   Application_Uses_Tasks : constant Boolean :=
+      System.Soft_Links.Lock_Task /= System.Soft_Links.Task_Lock_NT'Access;
+   --  Whether the tasking run time has been initialized.
+
    ---------------------
    -- Shared_Pointers --
    ---------------------
@@ -97,19 +102,24 @@ package GNATCOLL.Refcount is
       --  used to free element_type and its contents, when it is not a
       --  controlled type.
 
-      Atomic_Counters : Boolean := True;
+      Atomic_Counters : Boolean := Application_Uses_Tasks;
       --  Whether to use atomic (and thus thread-safe) counters. If set to
       --  True, the smart pointer is task safe. Of course, that does not
       --  mean that the Element_Type itself is task safe.
+      --  This has a small impact on performance.
 
       Potentially_Controlled : Boolean := True;
       --  See the comment for GNATCOLL.Storage_Pools.Headers.
       --  Set this to False if you know that Element_Type cannot be
       --  controlled or contain controlled element. This parameter will be
-      --  removed when the compiler can provide this information automatically
+      --  removed when the compiler can provide this information automatically.
+      --  This has a small impact on memory overhead.
 
    package Shared_Pointers is
       pragma Suppress (All_Checks);
+
+      Is_Task_Safe : constant Boolean := Atomic_Counters;
+      --  Make the formal parameter visible to users of this package
 
       type Ref is tagged private;
       Null_Ref : constant Ref;
