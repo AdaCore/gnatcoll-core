@@ -145,6 +145,17 @@ package body GNATCOLL.Refcount is
       end Unchecked_Get;
 
       -------------
+      -- Process --
+      -------------
+
+      procedure Process
+         (Self    : Ref'Class;
+          Process : not null access procedure (E : Element_Type)) is
+      begin
+         Process (Self.Data.all);
+      end Process;
+
+      -------------
       -- Is_Null --
       -------------
 

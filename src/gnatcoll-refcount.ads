@@ -231,23 +231,54 @@ package GNATCOLL.Refcount is
       --  The proper solution here is that Foo should receive the smart
       --  pointer itself, not the encapsulated value.
 
-      function Unchecked_Get (Self : Ref'Class) return Element_Access;
-      pragma Inline_Always (Unchecked_Get);
-      function Get (Self : Ref'Class) return Reference_Type
-         is ((Element => Unchecked_Get (Self)));
-      pragma Inline_Always (Get);
+      function Unchecked_Get (Self : Ref'Class) return Element_Access
+         with Inline_Always;
+      --  A version that returns directly the element access. This is meant
+      --  for easy conversion of existing code, but its use is discouraged
+      --  in new code, where Get should be used instead.
       --  The resulting access must not be deallocated. Passing it to
       --  Set might also be dangerous if the Element_Type contains data
       --  that might be freed when other smart pointers are freed.
       --  It also must not be stored in a record (store Self instead).
 
-      function Is_Null (Self : Ref'Class) return Boolean;
-      pragma Inline (Is_Null);
+      function Get (Self : Ref'Class) return Reference_Type
+         is ((Element => Unchecked_Get (Self)))
+         with Inline_Always;
+      --  A safer version of Unchecked_Get.
+      --  There is no performance penalty, since the compiler knows that a
+      --  Reference_Type is in fact always of the same size and can be
+      --  returned on the stack.
+      --  It is safer because the associated access type cannot be converted
+      --  to a non-local access type, nor freed.
+
+      procedure Process
+         (Self    : Ref'Class;
+          Process : not null access procedure (E : Element_Type))
+         with Inline;
+      --  This procedure is similar to the function Get, but doesn't expose
+      --  the access type to the user.
+      --  This is safer than Get, since it avoids the multiple issues
+      --  highlighted in the comments for Reference_Type (namely that Self
+      --  might become null while the application holds a reference, which
+      --  then references invalid memory).
+      --  On the other hand, it is more awkward to use, and does not work if
+      --  you need to pass multiple smart pointers. There is however nothing
+      --  tricky in this procedure, since it simply calls
+      --      Process (Self.Get)
+      --  and the simple fact that Self is a parameter ensures it retains at
+      --  least one reference during the execution of Process.
+      --
+      --  If you want to always be on the safe side and prevevent users from
+      --  using Get, you could add the following configuration pragma to your
+      --  compilation:
+      --     pragma Restrictions
+      --        (No_Use_Of_Entity => GNATCOLL.Refcount.Shared_Pointers.Get);
+
+      function Is_Null (Self : Ref'Class) return Boolean with Inline;
       --  Whether the data is unset. Using this function might avoid the
       --  need for a "use type Element_Access" in your code.
 
-      overriding function "=" (P1, P2 : Ref) return Boolean;
-      pragma Inline ("=");
+      overriding function "=" (P1, P2 : Ref) return Boolean with Inline;
       --  This operator checks whether P1 and P2 share the same pointer.
       --  When the pointers differ, this operator returns False even if the
       --  two pointed elements are equal.
