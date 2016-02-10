@@ -25,6 +25,7 @@ with Ada.Calendar.Formatting;
 with Ada.Characters.Handling;    use Ada.Characters.Handling;
 with Ada.Command_Line;
 with Ada.Strings.Fixed;          use Ada.Strings;
+with Ada.Strings.Maps;           use Ada.Strings.Maps;
 with GNAT.Calendar.Time_IO;
 with GNAT.Case_Util;
 with GNAT.OS_Lib;
@@ -677,7 +678,9 @@ package body GNATCOLL.Utils is
       Last   : Integer := Str'Last;
 
       --  When no timezone is specified by the user, UTC is assumed.
-      TZ     : Duration := 0.0;
+      TZ      : Duration := 0.0;
+      TZ_Mark : constant Character_Set := To_Set ("+-");
+
    begin
       if Str = "" then
          return No_Time;
@@ -690,26 +693,45 @@ package body GNATCOLL.Utils is
          First := First + 5;
       end if;
 
-      --  Do we have a timezone ? Postgres outputs these with the
-      --  following suffix: "+02" or "-02". This only applies when the time is
-      --  also given, ie the field is long enough (8 chars for time + at least
-      --  8 for date (01/02/02)
+      --  Check for presence of time zone information in the various formats
+      --  specified by ISO8601. This only applies when the time is also given,
+      --  i.e. the value is long enough (8 chars for time + at least 8 for
+      --  date (01/02/02).
 
-      if Str'Length > 16
-        and then (Str (Last - 2) = '+'
-                  or else Str (Last - 2) = '-')
-      then
-         TZ   := -Duration (Integer'Value (Str (Last - 2 .. Last)) * 3600);
-         Last := Last - 3;
+      if Str'Length > 16 then
+         if Is_In (Str (Last - 2), TZ_Mark) then
+            --  [+-]HH
+
+            TZ   := -Duration'Value (Str (Last - 2 .. Last)) * 3600;
+            Last := Last - 3;
+
+         elsif Is_In (Str (Last - 4), TZ_Mark) then
+            --  [+-]HHMM
+
+            TZ := -Duration'Value (Str (Last - 4 .. Last - 2)) * 3600
+              - Duration'Value (Str (Last - 4) & Str (Last - 1 .. Last)) * 60;
+            Last := Last - 5;
+
+         elsif Is_In (Str (Last - 5), TZ_Mark)
+           and then Str (Last - 2) = ':'
+         then
+            --  [+-]HH:MM
+
+            TZ := -Duration'Value (Str (Last - 5 .. Last - 3)) * 3600
+              - Duration'Value (Str (Last - 5) & Str (Last - 1 .. Last)) * 60;
+            Last := Last - 6;
+
+         end if;
       end if;
+
+      --  Special case: UTC time zone speficied as 'Z'
 
       if Str'Length > 1 and then Str (Last) = 'Z' then
          Last := Last - 1;
          TZ := 0.0;   --  date is given as UTC
       end if;
 
-      --  Postgres includes subseconds in the display. We should ignore them,
-      --  they are not needed in our context
+      --  Ignore fraction of second
 
       for S in reverse First .. Last loop
          if Str (S) = '.' then

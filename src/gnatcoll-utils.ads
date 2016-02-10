@@ -229,8 +229,9 @@ package GNATCOLL.Utils is
    --     1970-01-01T12:00:00+01   or   1970-01-01T12:00:00Z
    --  All the above can start with the day spelled out, as in "thu, "
    --
-   --  The input date is assumed to be in UTC by default, unless a timezone
-   --  is specified with a final "[+-]\d\d".
+   --  The input date is assumed to be in UTC unless a timezone is specified
+   --  as hours with a final "[+-]\d\d", or as hours and minutes with
+   --  "[+-]\d\d\d\d" or "[+-]\d\d:\d\d"
 
    function Truncate
      (Date : Time; Time_Zone : Time_Zones.Time_Offset := 0) return Time;

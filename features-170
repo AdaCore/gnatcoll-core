@@ -35,6 +35,11 @@ NF-170-P208-003 GNATCOLL.JSON: new subprogram Unset_Field (2016-02-08)
 
   It is now possible to remove a field that has been set on a JSON object.
 
+NF-170-P203-015 Utils: Time_Value accept timezone with minutes (2016-02-10)
+
+  Utils.Time_Value was accepting only hours in timezone part before. Now it is
+  accepting hours and optionally minutes in timezone part.
+
 NF-170-P120-002 GNATCOLL.JSON: new subprograms Clone and "=" (2016-02-08)
 
   It is now possible to clone JSON objects, and compare two objects so that
