@@ -55,7 +55,10 @@ with System;
 with GNATCOLL.Atomic;
 with GNATCOLL.Storage_Pools.Headers;  use GNATCOLL.Storage_Pools.Headers;
 with Interfaces;
+
+pragma Warnings (Off, "* is an internal GNAT unit");
 with System.Soft_Links;               use System.Soft_Links;
+pragma Warnings (On, "* is an internal GNAT unit");
 
 package GNATCOLL.Refcount is
 
