@@ -831,20 +831,23 @@ package body GNATCOLL.Traces is
    ---------------------
 
    procedure Increase_Indent
-     (Handle : Trace_Handle := null; Msg : String := "")
+     (Handle   : Trace_Handle := null;
+      Msg      : String := "";
+      Color    : String := Default_Fg;
+      Location : String := GNAT.Source_Info.Source_Location;
+      Entity   : String := GNAT.Source_Info.Enclosing_Entity)
    is
       S : constant Trace_Stream := Stream (Handle);
    begin
-      if S = null then
-         return;
-      end if;
+      if S /= null then
+         if Msg /= "" then
+            Trace (Handle, Msg, Color => Color,
+                   Location => Location, Entity => Entity);
+         end if;
 
-      if Msg /= "" then
-         Trace (Handle, Msg);
+         --  Atomic increase by 1
+         Sync_Add_And_Fetch (S.Indentation'Access, 1);
       end if;
-
-      --  Atomic increase by 1
-      Sync_Add_And_Fetch (S.Indentation'Access, 1);
    end Increase_Indent;
 
    ---------------------
@@ -852,25 +855,27 @@ package body GNATCOLL.Traces is
    ---------------------
 
    procedure Decrease_Indent
-     (Handle : Trace_Handle := null; Msg : String := "")
+     (Handle   : Trace_Handle := null;
+      Msg      : String := "";
+      Color    : String := Default_Fg;
+      Location : String := GNAT.Source_Info.Source_Location;
+      Entity   : String := GNAT.Source_Info.Enclosing_Entity)
    is
       S : constant Trace_Stream := Stream (Handle);
    begin
-      if S = null then
-         return;
-      end if;
+      if S /= null then
+         --  Atomic decrement
 
-      --  Atomic decrement
-
-      if Sync_Add_And_Fetch (S.Indentation'Access, -1) >= 0 then
-         if Handle /= null and then Msg /= "" then
-            Trace (Handle, Msg);
-         end if;
-      else
-         if Handle /= null then
-            Trace (Handle, "Indentation error: too many decrease");
-            if Msg /= "" then
-               Trace (Handle, Msg);
+         if Sync_Add_And_Fetch (S.Indentation'Access, -1) >= 0 then
+            if Handle /= null and then Msg /= "" then
+               Trace (Handle, Msg, Color, Location, Entity);
+            end if;
+         else
+            if Handle /= null then
+               Trace (Handle, "Indentation error: too many decrease");
+               if Msg /= "" then
+                  Trace (Handle, Msg, Color, Location, Entity);
+               end if;
             end if;
          end if;
       end if;
@@ -885,28 +890,25 @@ package body GNATCOLL.Traces is
       Handle.Active := Active;
    end Set_Active;
 
-   ------------
-   -- Active --
-   ------------
+   ---------------
+   -- Is_Active --
+   ---------------
 
-   function Active (Handle : Trace_Handle) return Boolean is
+   function Is_Active (Handle : Trace_Handle) return Boolean is
    begin
-      if Global.Handles_List = null then
+      return
          --  After this module has been finalized, traces might still be
          --  queried, typically when GNAT finalizes controlled types.
          --  At this point, the memory allocated to handles has been freed
          --  in Finalize, and Handle is a dangling pointer.
          --  To protect against access to data in Handle, return False here.
-         return False;
+         Global.Handles_List /= null
 
-      elsif Handle = null then
          --  In case Handle hasn't been initialized yet
-         return False;
+         and then Handle /= null
 
-      else
-         return Handle.Active;
-      end if;
-   end Active;
+         and then Handle.Active;
+   end Is_Active;
 
    ----------------------
    -- Local_Sub_Second --
@@ -1084,12 +1086,12 @@ package body GNATCOLL.Traces is
          Put_Elapsed_Time (Handle, Stream);
       end if;
 
-      if Traces.Location.Active then
+      if Traces.Location.Active and then Location /= "" then
          Ensure_Space;
          Put (Stream, "(loc: " & Location & ')');
       end if;
 
-      if Enclosing_Entity.Active then
+      if Enclosing_Entity.Active and then Entity /= "" then
          Ensure_Space;
          Put (Stream, "(entity:" & Entity & ')');
       end if;
@@ -1813,6 +1815,50 @@ package body GNATCOLL.Traces is
          return Natural (Handler.Count);
       end if;
    end Count;
+
+   ------------
+   -- Create --
+   ------------
+
+   function Create
+      (Handle   : Trace_Handle;
+       Message  : String := "";
+       Location : String := GNAT.Source_Info.Source_Location;
+       Entity   : String := GNAT.Source_Info.Enclosing_Entity;
+       Color    : String := Default_Fg)
+      return Block_Trace_Handle is
+   begin
+      return Result : Block_Trace_Handle do
+         Result.Me := Handle;
+         if Active (Handle) then
+            Result.Loc := new String'(Entity & ':' & Location);
+            if Message /= "" then
+               Increase_Indent
+                  (Handle, "Entering " & Result.Loc.all & ' ' & Message,
+                   Color => Color, Location => "", Entity => "");
+            else
+               Increase_Indent
+                  (Handle, "Entering " & Result.Loc.all,
+                   Color => Color, Location => "", Entity => "");
+            end if;
+         end if;
+      end return;
+   end Create;
+
+   --------------
+   -- Finalize --
+   --------------
+
+   overriding procedure Finalize (Self : in out Block_Trace_Handle) is
+   begin
+      if Active (Self.Me) then
+         Decrease_Indent
+            (Self.Me, "Leaving " & Self.Loc.all,
+             Location => "",   --  avoid duplicate info in the output
+             Entity   => "");
+         Free (Self.Loc);
+      end if;
+   end Finalize;
 
 begin
    --  This is the default stream, always register it

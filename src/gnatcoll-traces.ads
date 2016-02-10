@@ -27,6 +27,7 @@ with GNAT.Source_Info;
 with GNAT.Strings;
 with Ada.Calendar;
 with Ada.Exceptions;
+private with Ada.Finalization;
 
 with GNATCOLL.VFS; use GNATCOLL.VFS;
 with GNATCOLL.Atomic; use GNATCOLL.Atomic;
@@ -295,13 +296,15 @@ package GNATCOLL.Traces is
    --  Message_If_Success is logged if Condition is True and the message
    --  is not the empty string.
 
-   procedure Set_Active (Handle : Trace_Handle; Active : Boolean);
-   pragma Inline (Set_Active);
+   procedure Set_Active (Handle : Trace_Handle; Active : Boolean)
+      with Inline;
    --  Override the activation status for Handle.
    --  When not Active, the Trace function will do nothing.
 
-   function Active (Handle : Trace_Handle) return Boolean;
-   pragma Inline (Active);
+   function Is_Active (Handle : Trace_Handle) return Boolean
+      with Inline;
+   function Active (Handle : Trace_Handle) return Boolean
+      is (Debug_Mode and then Is_Active (Handle)) with Inline;
    --  Return True if traces for Handle are actived.
    --  This function can be used to avoid the evaluation of complex
    --  expressions in case traces are not actived, as in the following
@@ -313,11 +316,25 @@ package GNATCOLL.Traces is
    --     end if;
    --  The extra begin...end block can be used to limit the impact on the
    --  heap for the evaluation of Expensive_Computation.
+   --
+   --  Is_Active will check the flag on the trace handle, which is fast but
+   --  can only be done dynamically. Active, on the other hand, also checks
+   --  the Debug_Mode flag statically, so that if you have disable debugging
+   --  altogether, the code will not even be inserted in the object code by
+   --  the compiler.
 
    procedure Increase_Indent
-     (Handle : Trace_Handle := null; Msg : String := "");
+     (Handle   : Trace_Handle := null;
+      Msg      : String := "";
+      Color    : String := Default_Fg;
+      Location : String := GNAT.Source_Info.Source_Location;
+      Entity   : String := GNAT.Source_Info.Enclosing_Entity);
    procedure Decrease_Indent
-     (Handle : Trace_Handle := null; Msg : String := "");
+     (Handle   : Trace_Handle := null;
+      Msg      : String := "";
+      Color    : String := Default_Fg;
+      Location : String := GNAT.Source_Info.Source_Location;
+      Entity   : String := GNAT.Source_Info.Enclosing_Entity);
    --  Change the indentation level for traces with the same output stream.
    --  This is so that traces that result from other subprograms be slightly
    --  indented, so as to make the output more readable. The output would for
@@ -332,6 +349,65 @@ package GNATCOLL.Traces is
    function Count (Handler : Trace_Handle) return Natural;
    --  Return the number of times that Trace was called on the handler. This
    --  count is incremented even when Handler is inactive.
+
+   ------------
+   -- Blocks --
+   ------------
+
+   type Block_Trace_Handle (<>) is limited private;
+   function Create
+      (Handle   : Trace_Handle;
+       Message  : String := "";
+       Location : String := GNAT.Source_Info.Source_Location;
+       Entity   : String := GNAT.Source_Info.Enclosing_Entity;
+       Color    : String := Default_Fg)
+      return Block_Trace_Handle;
+   --  An object used to trace execution of blocks.
+   --  This is a controlled object, which you should create first in your
+   --  subprogram, and that will automatically finalize itself when the
+   --  subprogram exists. For instance:
+   --       Me : constant Trace_Handle := Create ("PKG");
+   --       procedure Foo (A : Integer) is
+   --          Block_Me : constant Block_Trace_Handle := Create (Me)
+   --             with Unreferenced;
+   --       begin
+   --          Trace (Me, "A=" & A'Img);
+   --          if A > 1 then
+   --             Foo (A - 1);
+   --          end if;
+   --       end Foo;
+   --       Foo (2);
+   --
+   --  which will automatically display in the traces :
+   --      [PKG] Entering Foo:pkg.adb:5
+   --         [PKG] A= 2
+   --         [PKG] Entering Foo:pkg.adb:5
+   --            [PKG] A=1
+   --         [PKG] Leaving Foo:pkg.adb:5
+   --      [PKG] Leaving Foo:pkg.adb:5
+   --
+   --  Note the use of "with Unreferenced" in the above example (which could
+   --  be replaced with a pragma Unreferenced). This is to avoid warnings from
+   --  the compiler that the variable is unused, and is only necessary if you
+   --  are compiling with -gnatwa or -gnatwm.
+   --
+   --  Message can be used to display extra information. For efficiency reaons,
+   --  it is not recommended to build the string dynamically to display the
+   --  parameter of the enclosing subprograms, or perhaps as:
+   --
+   --       procedure Foo (A, B, C : Integer) is
+   --          Block_Me : constant Block_Trace_Handle := Create
+   --             (Me, (if Active (Me) then A'Img & B'Img & C'Img else ""));
+   --       begin
+   --          null;
+   --       end Foo;
+   --
+   --  so that the string is only built if the trace is active.
+   --
+   --  If the subprogram exits with an exception, no trace of the exception
+   --  is displayed, you should still have an explicit exception handler if
+   --  you want to Trace that exception. Of course, the "Leaving" message will
+   --  be properly displayed.
 
    -------------
    -- Streams --
@@ -518,6 +594,13 @@ private
    end record;
    --  Name is the full name including the arguments, for instance "file:foo"
    --  if the user has defined a stream called "file" with a parameter "foo"
+
+   type Block_Trace_Handle is new Ada.Finalization.Limited_Controlled with
+   record
+      Me            : Trace_Handle;
+      Loc           : GNAT.Strings.String_Access;
+   end record;
+   overriding procedure Finalize (Self : in out Block_Trace_Handle);
 
    type Trace_Handle_Record is tagged record
       Name          : GNAT.Strings.String_Access;

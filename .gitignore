@@ -107,6 +107,8 @@ testsuite/xref/update2/b.ads
 testsuite/xref/update2/c.ads
 testsuite/xref/L406-006-runtime/a
 testsuite/traces/MA08-038/nofile
+testsuite/traces/O523-004/log_*
+testsuite/traces/O523-004/tracename.pid
 testsuite/vfs/relative/main
 testsuite/vfs/links1/hello.adb
 testsuite/vfs/links1/hello.orig

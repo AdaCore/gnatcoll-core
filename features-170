@@ -15,6 +15,10 @@ of the feature.
 New features in 17
 ------------------
 
+NF-170-P210-011 GNATCOLL.Traces.Block_Trace_Handle (2016-02-10)
+
+  A new type which is useful to monitor subprogram entry and exit.
+
 NF-170-P209-025 Upgrade version of sqlite to 3.10.2 (2016-02-09)
 
   If you use the provide sqlite binaries (as opposed to a version available

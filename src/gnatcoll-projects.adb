@@ -6148,6 +6148,8 @@ package body GNATCOLL.Projects is
       Recompute_View     : Boolean := True;
       Report_Missing_Dirs : Boolean := True)
    is
+      Block_Me : constant Block_Trace_Handle :=
+         Create (Me, Root_Project_Path.Display_Full_Name);
       Tmp : Project_Tree'Class := Self;  --  Must use same tag
       Previous_Project : Virtual_File;
       Previous_Status  : Project_Status;
@@ -6156,9 +6158,6 @@ package body GNATCOLL.Projects is
       Project_File     : GNATCOLL.VFS.Virtual_File := Root_Project_Path;
       Pth              : Path_Name_Type;
    begin
-      Increase_Indent
-        (Me, "Load project " & Root_Project_Path.Display_Full_Name);
-
       if Active (Me_Gnat) then
          GPR.Current_Verbosity := GPR.High;
       end if;
@@ -6195,7 +6194,7 @@ package body GNATCOLL.Projects is
                 (Full_Name (Project_File) & Project_File_Extension,
                  Resolve_Links => False));
          if not Is_Regular_File (Project_File) then
-            Decrease_Indent
+            Trace
               (Me, "Load: " & Display_Full_Name (Project_File)
                & " is not a regular file");
 
@@ -6246,7 +6245,7 @@ package body GNATCOLL.Projects is
          Free (Tmp.Data.View);
          Free (Tmp.Data);
 
-         Decrease_Indent (Me, "empty_node after parsing the tree");
+         Trace (Me, "empty_node after parsing the tree");
          raise Invalid_Project;
       end if;
 
@@ -6278,8 +6277,6 @@ package body GNATCOLL.Projects is
          Trace (Me, "Remove previous default project on disk, no longer used");
          Delete (Previous_Project, Success);
       end if;
-
-      Decrease_Indent (Me, "End of Load project");
    end Load;
 
    ---------------------
@@ -6821,6 +6818,8 @@ package body GNATCOLL.Projects is
       Test_With_Missing_With : Boolean := True;
       Report_Missing_Dirs    : Boolean := True)
    is
+      Block_Me : constant Block_Trace_Handle := Create (Me);
+
       procedure On_Error is new Mark_Project_Error (Tree);
       --  Any error while parsing the project marks it as incomplete, and
       --  prevents direct edition of the project.
@@ -6845,8 +6844,6 @@ package body GNATCOLL.Projects is
       Errout_Handling : GPR.Part.Errout_Mode := GPR.Part.Always_Finalize;
    begin
       Traces.Assert (Me, Tree.Data /= null, "Tree data initialized");
-      Increase_Indent
-         (Me, "Internal_Load recompute_view=" & Recompute_View'Img);
 
       Reset (Tree, Tree.Data.Env);
 
@@ -6898,7 +6895,6 @@ package body GNATCOLL.Projects is
          Fail ("Aggregate projects are not supported");
          Project := Empty_Project_Node;
          GPR.Output.Cancel_Special_Output;
-         Decrease_Indent (Me);
          return;
       end if;
 
@@ -6962,7 +6958,6 @@ package body GNATCOLL.Projects is
 
             GPR.Output.Cancel_Special_Output;
 
-            Decrease_Indent (Me);
             return;
          end;
 
@@ -6990,7 +6985,6 @@ package body GNATCOLL.Projects is
             Packages_To_Check      => Packages_To_Check,
             Test_With_Missing_With => False,
             Report_Missing_Dirs    => Report_Missing_Dirs);
-         Decrease_Indent (Me);
          return;
 
       elsif Test_With_Missing_With then
@@ -7043,7 +7037,6 @@ package body GNATCOLL.Projects is
                Packages_To_Check      => Packages_To_Check,
                Test_With_Missing_With => False,
                Report_Missing_Dirs    => Report_Missing_Dirs);
-            Decrease_Indent (Me);
             return;
          end if;
       end;
@@ -7074,20 +7067,16 @@ package body GNATCOLL.Projects is
          end if;
       end if;
 
-      Decrease_Indent (Me);
-
    exception
       when Invalid_Project =>
          GPR.Com.Fail := null;
          GPR.Output.Cancel_Special_Output;
-         Decrease_Indent (Me);
          raise;
 
       when E : others =>
          Trace (Me, E);
          GPR.Com.Fail := null;
          GPR.Output.Cancel_Special_Output;
-         Decrease_Indent (Me);
          raise;
    end Internal_Load;
 
@@ -7113,6 +7102,8 @@ package body GNATCOLL.Projects is
      (Self   : in out Project_Tree;
       Errors : Projects.Error_Report := null)
    is
+      Block_Me : constant Block_Trace_Handle := Create (Me);
+
       Actual_Config_File : Project_Node_Id := Empty_Project_Node;
       Actual_Config_File_Tree : Project_Node_Tree_Ref := null;
       --  The config file that was used (and possibly augmented by custom
@@ -7522,7 +7513,6 @@ package body GNATCOLL.Projects is
 
       Sources_Count : Source_File_Index;
    begin
-      Increase_Indent (Me, "Recomputing project view");
       Sources_Count := GPR.Sinput.Source_File.Last;
       GPR.Output.Set_Special_Output (GPR.Output.Output_Proc (Errors));
 
@@ -7754,8 +7744,6 @@ package body GNATCOLL.Projects is
          end;
       end if;
 
-      Decrease_Indent (Me);
-
    exception
       --  We can get an unexpected exception (actually Directory_Error) if the
       --  project file's path is invalid, for instance because it was
@@ -7765,14 +7753,12 @@ package body GNATCOLL.Projects is
          Trace (Me, "Could not compute project view");
          GPR.Err.Finalize;
          GPR.Output.Cancel_Special_Output;
-         Decrease_Indent (Me);
          raise;
 
       when E : others =>
          Trace (Me, E);
          GPR.Err.Finalize;
          GPR.Output.Cancel_Special_Output;
-         Decrease_Indent (Me);
    end Recompute_View;
 
    ------------------------
@@ -7944,6 +7930,8 @@ package body GNATCOLL.Projects is
    ------------------------
 
    procedure Parse_Source_Files (Self : in out Project_Tree) is
+      Block_Me : constant Block_Trace_Handle := Create (Me);
+
       procedure Register_Directory (Directory : Filesystem_String);
       --  Register Directory as belonging to Project.
       --  The parent directories are also registered.
@@ -7996,8 +7984,6 @@ package body GNATCOLL.Projects is
          Self.Data.Root.Data.Tree_For_Map;
 
    begin
-      Increase_Indent (Me, "Parse source files");
-
       Tree_For_Map.Objects_Basename.Clear;
 
       Iter := Self.Root_Project.Start (Recursive => True);
@@ -8189,8 +8175,6 @@ package body GNATCOLL.Projects is
 
          Next (Iter);
       end loop;
-
-      Decrease_Indent (Me, "Done parse source files");
    end Parse_Source_Files;
 
    ------------
