@@ -21,6 +21,7 @@
 --                                                                          --
 ------------------------------------------------------------------------------
 
+with Ada.Calendar.Formatting;
 with Ada.Characters.Handling;    use Ada.Characters.Handling;
 with Ada.Command_Line;
 with Ada.Strings.Fixed;          use Ada.Strings;

@@ -27,8 +27,8 @@
 pragma Ada_2012;
 
 with Ada.Calendar.Time_Zones; use Ada.Calendar;
-with Ada.Calendar.Formatting;
 with Ada.Strings.Unbounded;
+with GNAT.Calendar;
 with GNAT.Expect;
 with GNAT.Strings;
 
@@ -36,12 +36,7 @@ package GNATCOLL.Utils is
 
    type Cst_String_Access is access constant String;
 
-   No_Time : constant Ada.Calendar.Time;
-   --  A constant to indicate uninitialized time. Recent versions of GNAT
-   --  provide this constant in the GNAT.Calendar package, but the constant is
-   --  still defined here for compatibility with older compilers.
-   --  Both constants must have the same value, though, because the user's code
-   --  might be using one or the other indiscriminately.
+   No_Time : Ada.Calendar.Time renames GNAT.Calendar.No_Time;
 
    procedure Free (List : in out GNAT.Strings.String_List);
    --  Free the memory used by List.
@@ -243,14 +238,5 @@ package GNATCOLL.Utils is
    --  For example, if we want to truncate "2015 May 10 05:00 GMT+6" time at
    --  UTC timezone we are going to get "2015 May 9, 00:00 UTC" because
    --  "2015 May 10 05:00 GMT+6" equal to "2015 May 9 23:00 UTC".
-
-private
-
-   No_Time : constant Ada.Calendar.Time := Ada.Calendar.Formatting.Time_Of
-     (Ada.Calendar.Year_Number'First,
-      Ada.Calendar.Month_Number'First,
-      Ada.Calendar.Day_Number'First,
-      Time_Zone => 0);
-   --  Use UTC timezone to be the same value in any local timezone
 
 end GNATCOLL.Utils;
