@@ -7493,6 +7493,14 @@ package body GNATCOLL.Projects is
 
          if Has_Element (C) and then Element (C).Data.Tree /= null then
             P := Element (C);
+            if P.Data.Node /= Project_Node then
+               --  The only way we can end up here is if the given aggregated
+               --  tree is in fact a subtree of a previously processed
+               --  aggregated tree. This means that we had already created all
+               --  corresponding project instances and have nothing to do.
+               return;
+            end if;
+
             P.Data.Tree.View := Tree;
             T.Data := P.Data.Tree;   --  temporary
          else
