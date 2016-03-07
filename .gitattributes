@@ -8,6 +8,3 @@ src/sqlite/amalgamation/*                  no-precommit-check
 
 src/dborm.py                               no-precommit-check
 src/generated/*                            no-precommit-check
-
-features-*                                 no-precommit-check
-known-problems-*                           no-precommit-check
