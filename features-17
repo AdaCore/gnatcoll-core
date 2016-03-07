@@ -1,8 +1,8 @@
 ==============================
-GNATCOLL 1.7 NEW FEATURES LIST
+GNATCOLL 17 NEW FEATURES LIST
 ==============================
 
-Copyright (C) 2013-2014, AdaCore
+Copyright (C) 2015-2016, AdaCore
 
 This file contains a list of new features introduced in GNATCOLL.
 A full description of all GNATCOLL features can be found in the GNATCOLL
@@ -12,102 +12,39 @@ An ISO date (YYYY-MM-DD) appears in parentheses after the
 description line. This date shows the implementation date
 of the feature.
 
-New features in 1.7
--------------------
+New features in 17
+------------------
 
-NF-17-N902-040 GNATCOLL.Email: Reset multipart to single part (2014-09-02)
+NF-170-P210-024 GNATCOLL.Refcount use atomic ops automatically (2016-02-10)
 
-  Procedure Convert_To_Single_Part now takes an additional formal
-  parameter Purge (default False). When Purge is set True, the message
-  is reset to an empty single part text/plain payload, regardless of
-  previous contents.
+  The shared_pointers package will by default use atomic pointers if the
+  application uses tasks, and use non-atomic pointers (more efficient)
+  when the application is not using tasking. This is a default, still
+  overridable by the user.
 
-NF-17-N819-020 GNATCOLL.SQL: support for bigint (2014-08-29)
+NF-170-P210-011 GNATCOLL.Traces.Block_Trace_Handle (2016-02-10)
 
-  Add support for the standard sqlite type BIGINT, mapping to a
-  Long_Long_Integer.
+  A new type which is useful to monitor subprogram entry and exit.
 
-NF-17-N730-023 GNATCOLL.Atomic: new package (2014-08-11)
+NF-170-P209-025 Upgrade version of sqlite to 3.10.2 (2016-02-09)
 
-  This package provides some task-safe, low-level subprograms, which are
-  implemented via CPU-supported atomic operations when possible.
+  If you use the provide sqlite binaries (as opposed to a version available
+  on your system), the version is now 3.10.2.
 
-NF-17-N623-003 configure: search for sqlite in path/lib64 (2014-06-23)
+NF-170-P208-003 GNATCOLL.JSON: new subprogram Unset_Field (2016-02-08)
 
-  When a path is passed to configure's --with-sqlite switch, we now test both
-  the lib and lib64 directories.
+  It is now possible to remove a field that has been set on a JSON object.
 
-NF-17-N527-002 Linking with static libpq (postgres) (2014-05-27)
+NF-170-P203-015 Utils: Time_Value accept timezone with minutes (2016-02-10)
 
-  It is now possible to link with a static version of the postgres library,
-  by passing its full path to configure's --with-postgres switch.
+  Utils.Time_Value was accepting only hours in timezone part before. Now it is
+  accepting hours and optionally minutes in timezone part.
 
-NF-17-N409-022 GNATCOLL.Xref.Get_Entity searching in all files (2014-04-10)
+NF-170-P120-002 GNATCOLL.JSON: new subprograms Clone and "=" (2016-02-08)
 
-  It is now possible to call Get_Entity and look for that entity in all
-  sources of the project, rather than in a specific file.
+  It is now possible to clone JSON objects, and compare two objects so that
+  the order of fields is irrelevant.
 
-NF-17-N401-014 Creating new nested modules in gnatcoll.scripts (2014-04-01)
+NF-170-OB12-049 GNATCOLL.Memory: allow dump outputs redirection (2015-11-20)
 
-  It is now possible to programmatically create nested modules, or even new
-  toplevel modules from the GNATCOLL.Scripts API. For instance, you could
-  now export a class to 'MyApp.MyModule.MyClass', and another to
-  'MyApp_Internal.MyClass'. The latter is in particular useful when you want
-  to export low-level functions from Ada, and wrap them in a higher-level
-  API directly in python.
-
-NF-17-N318-055 Update to sqlite 3.8.4.1 (2014-03-20)
-
-  Mostly performance improvements
-
-NF-17-N224-034 New function Create_Config_Pragmas_File (2014-02-26)
-
-  A new function Create_Config_Pragmas_File is added to package
-  GNATCOLL.Projects.Aux. It creates a temporary file that contains the
-  configuration pragmas for a project tree and returns the full path of
-  the temporary file.
-
-NF-17-N203-036 GNATCOLL.Terminal new package (2014-02-03)
-
-  This package provides advanced console output features, like color
-  output and displaying progress indicator. It works on both Unix and Windows
-  systems.
-
-NF-17-N108-018 GNATCOLL.SQL: support for CREATE TABLE AS (2014-01-08)
-
-  The CREATE TABLE AS SQL query is now supported. In particular it can
-  be used to create temporary tables to hold the results of an intermediate
-  query.
-
-NF-17-MC19-005 GNATCOLL.Xref support for aggregate projects (2014-02-18)
-
-  GNATCOLL.Xref and gnatinspect now support aggregate projects. To port
-  your application, you mostly need to replace calls to Info with calls
-  to Info_Set, since a given file can now belong to several projects. This
-  returns the list of possible project, and you can either use some other
-  context to choose the appropriate project, or take the first one (which
-  will not work for all types of aggregates though).
-
-NF-17-MB29-039 GNATCOLL.SQL.Exec.Float_Value new param Default (2013-12-01)
-
-  A new version of Float_Value has been added. It takes a default value, and
-  can be used even if the corresponding column is empty or does not contain
-  a float.
-
-NF-17-MA27-009 GNATCOLL.Xref.Methods, new param Include_Inherited (2013-11-05)
-
-  It is now possible to only query non-inherited methods.
-
-NF-17-MA25-038 GNATCOLL.SQL.ORM: supports for views (2013-11-04)
-
-  It is now possible to generate a high-level database interface for
-  views, in addition to tables.
-
-NF-17-MA10-035 GNATCOLL.Mmap: multiple region mapping (2013-10-24)
-
-  Multiple regions of the same file can now be mapped in memory at the
-  same time.
-
-NF-17-M703-040 GNATCOLL.Projects support for aggregate projects (2013-12-17)
-
-  It is now possible to load aggregate projects through this API.
+  procedure Redirectable_Dump added to allow dump outputs redirection.
