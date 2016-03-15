@@ -15,6 +15,11 @@ of the feature.
 New features in 17
 ------------------
 
+NF-17-P315-022 GNATCOLL.SQL: support ORDER BY in aggregates (2016-03-15)
+
+  The Apply function now takes an additional optional argument allowing
+  an optional ORDER BY clause to be specified for aggregates.
+
 NF-17-P210-024 GNATCOLL.Refcount use atomic ops automatically (2016-02-10)
 
   The shared_pointers package will by default use atomic pointers if the

@@ -474,14 +474,20 @@ package GNATCOLL.SQL is
    --     Greater_Or_Equal (Apply (Func_Count, field_name), 2)
 
    function Apply
-     (Func   : Aggregate_Function;
-      Fields : SQL_Field_List) return SQL_Field'Class;
+     (Func     : Aggregate_Function;
+      Fields   : SQL_Field_List;
+      Order_By : SQL_Field_Or_List'Class := Empty_Field_List)
+      return SQL_Field'Class;
    function Apply
      (Func     : Aggregate_Function;
-      Criteria : SQL_Criteria) return SQL_Field'Class;
+      Criteria : SQL_Criteria;
+      Order_By : SQL_Field_Or_List'Class := Empty_Field_List)
+      return SQL_Field'Class;
    function Apply
-     (Func  : Aggregate_Function;
-      Field : SQL_Field'Class) return SQL_Field'Class;
+     (Func     : Aggregate_Function;
+      Field    : SQL_Field'Class;
+      Order_By : SQL_Field_Or_List'Class := Empty_Field_List)
+      return SQL_Field'Class;
    --  Apply an aggregate function to a field. Other fields in the result of
    --  the query should be grouped. Each element of Fields is taken as one of
    --  the arguments to Func.

@@ -114,6 +114,7 @@ package body GNATCOLL.SQL is
       --  a field
       Params   : SQL_Field_List;
       Criteria : SQL_Criteria;
+      Order_By : SQL_Field_List;
    end record;
    overriding procedure Free (Self : in out Aggregate_Field_Internal);
    overriding function To_String
@@ -882,26 +883,48 @@ package body GNATCOLL.SQL is
       Format : Formatter'Class;
       Long   : Boolean) return String
    is
-      C      : Field_List.Cursor := First (Self.Params);
       Result : Unbounded_String;
+
+      procedure Append_Field_List (L : SQL_Field_List);
+      --  Append L as a comma separated list to Result
+
+      -----------------------
+      -- Append_Field_List --
+      -----------------------
+
+      procedure Append_Field_List (L : SQL_Field_List) is
+         C     : Field_List.Cursor := First (L);
+         First : Boolean := True;
+      begin
+         while Has_Element (C) loop
+            if First then
+               First := False;
+            else
+               Append (Result, ", ");
+            end if;
+            Append (Result, To_String (Element (C), Format, Long));
+            Next (C);
+         end loop;
+      end Append_Field_List;
+
+   --  Start of processing for To_String
+
    begin
       if Self.Func /= null then
          Result := To_Unbounded_String (Self.Func.all & " (");
       end if;
 
-      if Has_Element (C) then
-         Append (Result, To_String (Element (C), Format, Long));
-         Next (C);
-      end if;
-
-      while Has_Element (C) loop
-         Append (Result, ", ");
-         Append (Result, To_String (Element (C), Format, Long));
-         Next (C);
-      end loop;
+      Append_Field_List (Self.Params);
 
       if Self.Criteria /= No_Criteria then
          Append (Result, GNATCOLL.SQL_Impl.To_String (Self.Criteria, Format));
+      end if;
+
+      --  Optional ORDER BY clause
+
+      if Self.Order_By /= Empty_Field_List then
+         Append (Result, " ORDER BY ");
+         Append_Field_List (Self.Order_By);
       end if;
 
       if Self.Func /= null then
@@ -917,13 +940,22 @@ package body GNATCOLL.SQL is
 
    function Apply
      (Func     : Aggregate_Function;
-      Criteria : SQL_Criteria) return SQL_Field'Class
+      Criteria : SQL_Criteria;
+      Order_By : SQL_Field_Or_List'Class := Empty_Field_List)
+      return SQL_Field'Class
    is
       Data : Aggregate_Field_Internal;
       F    : Field_Pointers.Ref;
+
    begin
       Data.Criteria := Criteria;
-      Data.Func   := new String'(String (Func));
+      Data.Func     := new String'(String (Func));
+      if Order_By in SQL_Field'Class then
+         Data.Order_By := +SQL_Field'Class (Order_By);
+      else
+         Data.Order_By := SQL_Field_List (Order_By);
+      end if;
+
       F.Set (Data);
       return SQL_Field_Any'
         (Table => null, Instance => null, Name => null,
@@ -936,14 +968,23 @@ package body GNATCOLL.SQL is
    -----------
 
    function Apply
-     (Func   : Aggregate_Function;
-      Fields : SQL_Field_List) return SQL_Field'Class
+     (Func     : Aggregate_Function;
+      Fields   : SQL_Field_List;
+      Order_By : SQL_Field_Or_List'Class := Empty_Field_List)
+      return SQL_Field'Class
    is
       Data : Aggregate_Field_Internal;
       F    : Field_Pointers.Ref;
+
    begin
-      Data.Params := Fields;
-      Data.Func   := new String'(String (Func));
+      Data.Params   := Fields;
+      Data.Func     := new String'(String (Func));
+      if Order_By in SQL_Field'Class then
+         Data.Order_By := +SQL_Field'Class (Order_By);
+      else
+         Data.Order_By := SQL_Field_List (Order_By);
+      end if;
+
       F.Set (Data);
       return SQL_Field_Any'
         (Table          => null,
@@ -958,14 +999,23 @@ package body GNATCOLL.SQL is
    -----------
 
    function Apply
-     (Func   : Aggregate_Function;
-      Field  : SQL_Field'Class) return SQL_Field'Class
+     (Func     : Aggregate_Function;
+      Field    : SQL_Field'Class;
+      Order_By : SQL_Field_Or_List'Class := Empty_Field_List)
+      return SQL_Field'Class
    is
       Data : Aggregate_Field_Internal;
       F    : Field_Pointers.Ref;
+
    begin
-      Data.Params := +Field;
-      Data.Func   := new String'(String (Func));
+      Data.Params   := +Field;
+      Data.Func     := new String'(String (Func));
+      if Order_By in SQL_Field'Class then
+         Data.Order_By := +SQL_Field'Class (Order_By);
+      else
+         Data.Order_By := SQL_Field_List (Order_By);
+      end if;
+
       F.Set (Data);
       return SQL_Field_Any'
         (Table          => null,
