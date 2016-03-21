@@ -340,7 +340,6 @@ package body GNATCOLL.Scripts.Projects is
          declare
             Main : constant Virtual_File :=
               GNATCOLL.Scripts.Files.Nth_Arg (Data, 2);
-
          begin
             Set_Return_Value
               (Data, Project.Executable_Name (Main.Full_Name.all));
@@ -405,6 +404,12 @@ package body GNATCOLL.Scripts.Projects is
                --  ??? Shouldn't we return a list of files instead ?
                Set_Return_Value (Data, Object (J).Full_Name);
             end loop;
+         end;
+      elsif Command = "exec_dir" then
+         declare
+            Exec_Dir : constant Virtual_File := Project.Executables_Directory;
+         begin
+            Set_Return_Value (Data, Exec_Dir.Full_Name);
          end;
       end if;
    end Project_Queries;
@@ -521,6 +526,10 @@ package body GNATCOLL.Scripts.Projects is
         (Repo, "object_dirs",
          Minimum_Args => Source_Dirs_Cmd_Parameters'Length - 1,
          Maximum_Args => Source_Dirs_Cmd_Parameters'Length,
+         Class        => Get_Project_Class (Repo),
+         Handler      => Project_Queries'Access);
+      Register_Command
+        (Repo, "exec_dir",
          Class        => Get_Project_Class (Repo),
          Handler      => Project_Queries'Access);
    end Register_Commands;
