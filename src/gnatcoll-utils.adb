@@ -623,7 +623,7 @@ package body GNATCOLL.Utils is
          --  This loop runs until the call to Expect raises Process_Died
 
          loop
-            Expect (Command.all, Result, ".+");
+            Expect (Command.all, Result, ".+", Timeout => -1);
 
             declare
                NOutput : String_Access;
