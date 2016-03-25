@@ -1278,6 +1278,11 @@ package GNATCOLL.Projects is
    --      for Attribute ("ada") use ...
    --  and Index is set to "Ada", then False/empty list/No_Project
    --  will be returned.
+   --
+   --  It is also not recommended to use attribute related queries to get info
+   --  on runtime and target, since there are legacy ways of specifying those
+   --  not through corresponding attributes but by other means.
+   --  Get_Target and Get_Runtime should be used instead.
 
    type Attribute_Pkg_String (<>) is private;
    type Attribute_Pkg_List (<>) is private;
