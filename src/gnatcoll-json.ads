@@ -26,6 +26,7 @@ with Ada.Strings.Unbounded;
 with Ada.Unchecked_Deallocation;
 
 private with Ada.Containers.Vectors;
+private with GNATCOLL.Atomic;
 
 package GNATCOLL.JSON is
 
@@ -347,7 +348,7 @@ private
    type JSON_Object_Internal;
    type JSON_Object_Access is access all JSON_Object_Internal;
 
-   type Counter is access Natural;
+   type Counter is access GNATCOLL.Atomic.Atomic_Counter;
 
    type Data_Type (Kind : JSON_Value_Type := JSON_Null_Type) is record
       case Kind is
@@ -406,6 +407,6 @@ private
    procedure Free is
      new Ada.Unchecked_Deallocation (JSON_Object_Internal, JSON_Object_Access);
    procedure Free is
-     new Ada.Unchecked_Deallocation (Natural, Counter);
+     new Ada.Unchecked_Deallocation (GNATCOLL.Atomic.Atomic_Counter, Counter);
 
 end GNATCOLL.JSON;

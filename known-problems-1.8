@@ -4,12 +4,23 @@ Known Problems in Gnatcoll 1.8
 
 Copyright (C) 2013-2016, AdaCore
 
+KP-18-P401-004 GNATCOLL.JSON and tasks
+
+  Problem:    The reference counters used by this package are not task
+              safe, and thus could become corrupted when the same JSON
+              data is passed from one task to another.
+
+  Status:     Fixed in Gnatcoll 17.0 on 2016-04-04
+
+  Workaround: Wrap the JSON data with protected types, although this will
+              be slower.
+
 KP-18-P120-046 Link against Gnatcoll_Python fails on Windows
 
   Problem:    It is not possible to link with the Gnatlcoll_Python shared
               library on Windows. Some missing symbols are reported.
 
-  Status:     Fixed in Gnatcoll 1.9.0 on 2016-02-03
+  Status:     Fixed in Gnatcoll 17.0 on 2016-02-03
 
   Workaround: Use the static version of this library.
 
@@ -18,7 +29,7 @@ KP-18-P115-021 Email.Get_Recipients crash on invalid headers
   Problem:    Get_Recipients will raise an exception for messages
               containing recipient with invalid UTF-8 encodings.
 
-  Status:     Fixed in Gnatcoll 1.9.0 on 2016-01-15
+  Status:     Fixed in Gnatcoll 17.0 on 2016-01-15
 
   Workaround: Do not process such invalid messages.
 
@@ -26,7 +37,7 @@ KP-18-P111-053 Leak when loading a project with subunits.
 
   Problem:    Used more and more memory each time when recompute a project.
 
-  Status:     Fixed in Gnatcoll 1.9.0 on 2016-19-01
+  Status:     Fixed in Gnatcoll 17.0 on 2016-19-01
 
   Workaround: No workaround.
 
@@ -36,7 +47,7 @@ KP-18-OC08-003 SQL_Table_List and SQL_Left_Join_Table not task safe.
               reference counter which could cause unexpected Constraint_Error
               further.
 
-  Status:     Fixed in Gnatcoll 1.9.0 on 2015-12-08
+  Status:     Fixed in Gnatcoll 17.0 on 2015-12-08
 
   Workaround: Use protected operations for such copies.
 
@@ -45,7 +56,7 @@ KP-18-OB30-013 gnatinspect crashes on parsing project tree
   Problem:    Gnatinspect crashes with a constraint error on a rare and rather
               complex project structure.
 
-  Status:     Fixed in Gnatcoll 1.9.0 on 2015-12-15
+  Status:     Fixed in Gnatcoll 17.0 on 2015-12-15
 
   Workaround: No workaround.
 
@@ -56,7 +67,7 @@ KP-18-OB02-038 Projects: default branch in case statement breaks saving
               choices appear after the "when others" branch thus making
               the project illegal.
 
-  Status:     Fixed in Gnatcoll 1.9.0 on 2015-11-06
+  Status:     Fixed in Gnatcoll 17.0 on 2015-11-06
 
   Workaround: Specify all choices in case statements.
 
@@ -65,6 +76,6 @@ KP-18-OA16-022 GNATCOLL.Config fails when first line is empty
   Problem:    When GNATCOLL.Config is used to parse a file whose first line
               is empty, it results in a constraint error.
 
-  Status:     Fixed in Gnatcoll 1.9.0 on 2015-10-30
+  Status:     Fixed in Gnatcoll 17.0 on 2015-10-30
 
   Workaround: Remove the empty line in the config file

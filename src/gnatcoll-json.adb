@@ -26,6 +26,7 @@ with Ada.Containers;          use Ada.Containers;
 with Ada.Strings.Unbounded;   use Ada.Strings.Unbounded;
 with Ada.Text_IO;
 with GNATCOLL.JSON.Utility;
+with Interfaces;              use Interfaces;
 
 -------------------
 -- GNATCOLL.JSON --
@@ -814,7 +815,7 @@ package body GNATCOLL.JSON is
 
    overriding procedure Initialize (Obj : in out JSON_Value) is
    begin
-      Obj.Cnt := new Natural'(1);
+      Obj.Cnt := new GNATCOLL.Atomic.Atomic_Counter'(1);
    end Initialize;
 
    ------------
@@ -826,7 +827,8 @@ package body GNATCOLL.JSON is
       if Obj.Cnt /= null then
          --  Cnt is null for JSON_Null, and we do not want to do reference
          --  counting for it.
-         Obj.Cnt.all := Obj.Cnt.all + 1;
+
+         GNATCOLL.Atomic.Sync_Add_And_Fetch (Obj.Cnt, 1);
       end if;
    end Adjust;
 
@@ -844,9 +846,7 @@ package body GNATCOLL.JSON is
       Obj.Cnt := null;
       --  Prevent multiple calls to Finalize, which is valid in Ada
 
-      C.all := C.all - 1;
-
-      if C.all = 0 then
+      if GNATCOLL.Atomic.Sync_Add_And_Fetch (C, -1) = 0 then
          Free (C);
 
          case Obj.Kind is
