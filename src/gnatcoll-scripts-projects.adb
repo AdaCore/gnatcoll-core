@@ -344,7 +344,16 @@ package body GNATCOLL.Scripts.Projects is
             Set_Return_Value
               (Data, Project.Executable_Name (Main.Full_Name.all));
          end;
-
+      elsif Command = "get_executable_path" then
+         declare
+            Main     : constant Virtual_File :=
+                         GNATCOLL.Scripts.Files.Nth_Arg (Data, 2);
+            Exec_Dir : constant Virtual_File := Project.Executables_Directory;
+         begin
+            Set_Return_Value
+              (Data, Exec_Dir.Full_Name
+               & Project.Executable_Name (Main.Full_Name.all));
+         end;
       elsif Command = "sources" then
          Name_Parameters (Data, Sources_Cmd_Parameters);
          declare
@@ -512,10 +521,14 @@ package body GNATCOLL.Scripts.Projects is
          Handler      => Project_Queries'Access);
       Register_Command
         (Repo, "get_executable_name",
-         Minimum_Args => 1,
-         Maximum_Args => 1,
-         Class        => Get_Project_Class (Repo),
-         Handler      => Project_Queries'Access);
+         Params  => (1 => Param ("main")),
+         Class   => Get_Project_Class (Repo),
+         Handler => Project_Queries'Access);
+      Register_Command
+        (Repo, "get_executable_path",
+         Params  => (1 => Param ("main")),
+         Class   => Get_Project_Class (Repo),
+         Handler => Project_Queries'Access);
       Register_Command
         (Repo, "languages",
          Minimum_Args => 0,
