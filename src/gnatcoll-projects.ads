@@ -793,6 +793,39 @@ package GNATCOLL.Projects is
    --  on a remote server.
    --  You need to specify the sensitivity of the remote server.
 
+   type Status_Type is
+     (Success,
+      Incomplete_Closure,
+      Error);
+
+   procedure Get_Closures
+     (Project                  : Project_Type;
+      Mains                    : GNATCOLL.VFS.File_Array_Access;
+      All_Projects             : Boolean := True;
+      Include_Externally_Built : Boolean := False;
+      Status                   : out Status_Type;
+      Result                   : out GNATCOLL.VFS.File_Array_Access);
+   --  Return the list of source files in the closures of the Ada Mains in
+   --  Result.
+   --  The project and its project tree must have been parsed and processed.
+   --  Mains is a list of single file names that are Ada sources of the project
+   --  Project or of its subprojects.
+   --  When All_Projects is False, the Mains must be sources of the Project and
+   --  the sources of the closures that are sources of the imported subprojects
+   --  are not included in the returned list.
+   --  When All_Projects is True, mains may also be found in subprojects,
+   --  including aggregated projects when Project is an aggregate project.
+   --  When All_Projects is True, sources in the closures that are sources of
+   --  externally built subprojects are included in the returned list only when
+   --  Include_Externally_Built is True.
+   --  Result is the list of path names in the closures.
+   --  It is the responsibility of the caller to free Result.
+   --  When all the sources in the closures are found, Result is non null and
+   --  Status is Success.
+   --  When only a subset of the sources in the closures are found, Result is
+   --  non null and Status is Incomplete_Closure.
+   --  When there are other problems, Result is null and Status is Error.
+
    function Library_Files
      (Self                : Project_Type;
       Recursive           : Boolean := False;

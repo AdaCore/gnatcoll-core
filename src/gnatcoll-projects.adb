@@ -3259,6 +3259,79 @@ package body GNATCOLL.Projects is
       return False;
    end Has_Language;
 
+   ------------------
+   -- Get_Closures --
+   ------------------
+
+   procedure Get_Closures
+     (Project                  : Project_Type;
+      Mains                    : GNATCOLL.VFS.File_Array_Access;
+      All_Projects             : Boolean := True;
+      Include_Externally_Built : Boolean := False;
+      Status                   : out Status_Type;
+      Result                   : out GNATCOLL.VFS.File_Array_Access)
+   is
+      Mains_Str_List : String_List_Access;
+      Closure_Status : GPR.Util.Status_Type;
+      Closures_List  : String_List_Access;
+   begin
+      Trace (Me, "Get_Closures");
+
+      Unchecked_Free (Result);
+
+      if Mains = null or else Mains'Length = 0 or else Project = No_Project
+      then
+         Status := Error;
+         return;
+      end if;
+
+      Mains_Str_List := new String_List (Mains'First .. Mains'Last);
+      for I in Mains'Range loop
+         Mains_Str_List (I) := new String'(Mains (I).Display_Base_Name);
+      end loop;
+
+      GPR.Util.Get_Closures
+        (Project.Get_View, Project.Tree_View,
+         Mains                    => Mains_Str_List.all,
+         All_Projects             => All_Projects,
+         Include_Externally_Built => Include_Externally_Built,
+         Status                   => Closure_Status,
+         Result                   => Closures_List);
+
+      --  Freeing temporary list of mains.
+      for I in Mains_Str_List'Range loop
+         Free (Mains_Str_List (I));
+      end loop;
+      Free (Mains_Str_List);
+
+      case Closure_Status is
+         when Success =>
+            Status := Success;
+         when Incomplete_Closure =>
+            Status := Incomplete_Closure;
+         when others =>
+            Trace
+              (Me,
+               "cannot get closure, "
+               & GPR.Util.Status_Type'Image (Closure_Status));
+            Status := Error;
+            return;
+      end case;
+
+      if Closure_Status in Success | Incomplete_Closure then
+         for I in Closures_List'Range loop
+            Append (Result, Create (+Closures_List (I).all));
+         end loop;
+      end if;
+
+      --  Freeing temporary list of closures.
+      for I in Closures_List'Range loop
+         Free (Closures_List (I));
+      end loop;
+      Free (Closures_List);
+
+   end Get_Closures;
+
    ----------------
    -- Get_Target --
    ----------------
