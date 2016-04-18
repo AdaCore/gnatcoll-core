@@ -113,7 +113,7 @@ package body GNATCOLL.Projects.Normalize is
      (others => No_Value);
 
    function Clone_Project
-     (Tree    : Project_Node_Tree_Ref;
+     (Tree    : GPR.Project_Node_Tree_Ref;
       Project : Project_Node_Id) return Project_Node_Id;
    --  Return a duplicate of Project and its declarations. We do not duplicate
    --  declarative items.
@@ -128,7 +128,7 @@ package body GNATCOLL.Projects.Normalize is
    --  Last is the index of the last item that was set in To.
 
    function External_Variable_Name
-     (Tree            : Project_Node_Tree_Ref;
+     (Tree            : GPR.Project_Node_Tree_Ref;
       Current_Project : Project_Node_Id;
       Ref             : Project_Node_Id) return Name_Id;
    --  Return the name of the external variable referenced by Ref.
@@ -138,14 +138,14 @@ package body GNATCOLL.Projects.Normalize is
    --  Ref should be a N_Variable_Reference.
 
    function Values_Matches
-     (Tree      : Project_Node_Tree_Ref;
+     (Tree      : GPR.Project_Node_Tree_Ref;
       Var_Name  : Name_Id;
       Case_Item : Project_Node_Id;
       Values    : External_Variable_Value_Array) return Boolean;
    --  Return True if (Var_Name, Var_Value) is valid with regards to Values
 
    procedure Set_Uniq_Type_Name
-     (Tree     : Project_Node_Tree_Ref;
+     (Tree     : GPR.Project_Node_Tree_Ref;
       Project  : Project_Node_Id;
       Var_Type : Project_Node_Id);
    --  Set the name for the N_String_Type_Declaration Var_Type, so that it is
@@ -153,7 +153,7 @@ package body GNATCOLL.Projects.Normalize is
    --  Var_Type shouldn't have been added to the project yet.
 
    function Find_Node_By_Name
-     (Tree    : Project_Node_Tree_Ref;
+     (Tree    : GPR.Project_Node_Tree_Ref;
       Project : Project_Node_Id;
       Kind    : Project_Node_Kind;
       Name    : Name_Id) return Project_Node_Id;
@@ -165,7 +165,7 @@ package body GNATCOLL.Projects.Normalize is
    --  set of values
 
    procedure For_Each_Matching_Case_Item
-     (Tree    : Project_Node_Tree_Ref;
+     (Tree    : GPR.Project_Node_Tree_Ref;
       Project : GPR.Project_Node_Id;
       Pkg     : GPR.Project_Node_Id := GPR.Empty_Project_Node;
       Case_Construct : in out GPR.Project_Node_Id;
@@ -192,7 +192,7 @@ package body GNATCOLL.Projects.Normalize is
    --  do not already have a case construct.
 
    function Create_Case_Construction
-     (Tree          : Project_Node_Tree_Ref;
+     (Tree          : GPR.Project_Node_Tree_Ref;
       Project       : Project_Node_Id;
       External_Name : Name_Id;
       Var_Type      : Project_Node_Id) return Project_Node_Id;
@@ -201,7 +201,7 @@ package body GNATCOLL.Projects.Normalize is
    --  project if no variable was found that already referenced Name.
 
    procedure Add_Case_Item
-     (Tree      : GPR.Tree.Project_Node_Tree_Ref;
+     (Tree      : GPR.Project_Node_Tree_Ref;
       Case_Node : GPR.Project_Node_Id;
       Choice    : GPR.Name_Id;
       Decl      : GPR.Project_Node_Id := Empty_Project_Node);
@@ -210,14 +210,14 @@ package body GNATCOLL.Projects.Normalize is
    --  be cloned as this case alternative statements.
 
    procedure Add_To_Case_Items
-     (Tree              : Project_Node_Tree_Ref;
+     (Tree              : GPR.Project_Node_Tree_Ref;
       Case_Construction : Project_Node_Id;
       Decl_List         : Project_Node_Id);
    --  Copy all the declarative items from Decl_List into each of the case
    --  items of Case_Construction (at the beginning of each case item)
 
    procedure Set_Expression
-     (Tree             : Project_Node_Tree_Ref;
+     (Tree             : GPR.Project_Node_Tree_Ref;
       Var_Or_Attribute : Project_Node_Id;
       Expr             : Project_Node_Id);
    --  Set Var as the expression to use for the value of Var. This
@@ -225,7 +225,7 @@ package body GNATCOLL.Projects.Normalize is
    --  references to external environment variables.
 
    procedure Post_Process_After_Clone
-     (Tree    : Project_Node_Tree_Ref;
+     (Tree    : GPR.Project_Node_Tree_Ref;
       Project : Project_Node_Id;
       Pkg     : Project_Node_Id := Empty_Project_Node);
    --  Post-process a project, and make sure that all the internal lists for
@@ -236,7 +236,7 @@ package body GNATCOLL.Projects.Normalize is
    --  created from.
 
    function Find_Package_Declaration
-     (Tree    : Project_Node_Tree_Ref;
+     (Tree    : GPR.Project_Node_Tree_Ref;
       Project : Project_Node_Id; Name : GPR.Name_Id) return Project_Node_Id;
    --  Return the package whose name is Name, or Empty_Node if there is none
 
@@ -249,7 +249,7 @@ package body GNATCOLL.Projects.Normalize is
    --  another package.
 
    function Find_Case_Statement
-     (Tree    : Project_Node_Tree_Ref;
+     (Tree    : GPR.Project_Node_Tree_Ref;
       Project : GPR.Project_Node_Id;
       Pkg     : GPR.Project_Node_Id := GPR.Empty_Project_Node)
       return Project_Node_Id;
@@ -258,7 +258,7 @@ package body GNATCOLL.Projects.Normalize is
    --  exists in a package or project.
 
    procedure Move_From_Common_To_Case_Construct
-     (Tree               : Project_Node_Tree_Ref;
+     (Tree               : GPR.Project_Node_Tree_Ref;
       Project            : Project_Node_Id;
       Pkg                : Project_Node_Id;
       Case_Construct     : in out Project_Node_Id;
@@ -277,7 +277,7 @@ package body GNATCOLL.Projects.Normalize is
    --  To is resized as needed
 
    procedure For_Each_Scenario_Case_Item
-     (Tree    : Project_Node_Tree_Ref;
+     (Tree    : GPR.Project_Node_Tree_Ref;
       Project            : GPR.Project_Node_Id;
       Pkg                : GPR.Project_Node_Id := GPR.Empty_Project_Node;
       Case_Construct     : in out GPR.Project_Node_Id;
@@ -300,13 +300,13 @@ package body GNATCOLL.Projects.Normalize is
    type Node_Callback is access procedure (Node : Project_Node_Id);
 
    procedure For_Each_Directory_Node
-     (Tree    : Project_Node_Tree_Ref;
+     (Tree    : GPR.Project_Node_Tree_Ref;
       Project : Project_Type;
       Action  : Node_Callback);
    --  For each node that deals with a procedure, calls Action
 
    function Attribute_Matches
-     (Tree            : Project_Node_Tree_Ref;
+     (Tree            : GPR.Project_Node_Tree_Ref;
       Node            : Project_Node_Id;
       Attribute_Name  : Name_Id;
       Attribute_Index : Name_Id) return Boolean;
@@ -315,7 +315,7 @@ package body GNATCOLL.Projects.Normalize is
    --  If Attribute_Index is Any_Attribute, no matching is done on the index.
 
    function Find_Last_Declaration_Of
-     (Tree       : Project_Node_Tree_Ref;
+     (Tree       : GPR.Project_Node_Tree_Ref;
       Parent     : Project_Node_Id;
       Attr_Name  : GPR.Name_Id;
       Attr_Index : GPR.Name_Id := No_Name) return Project_Node_Id;
@@ -326,7 +326,7 @@ package body GNATCOLL.Projects.Normalize is
    --  This returns the current item of the declarative item
 
    procedure Remove_Attribute_Declarations
-     (Tree            : Project_Node_Tree_Ref;
+     (Tree            : GPR.Project_Node_Tree_Ref;
       Parent          : Project_Node_Id;
       Attribute_Name  : Name_Id;
       Attribute_Index : Name_Id);
@@ -335,7 +335,7 @@ package body GNATCOLL.Projects.Normalize is
    --  If Attribute_Index is Any_Attribute, no matching is done on the index.
 
    type Set_Attribute_Callback is access procedure
-     (Tree_Node      : Project_Node_Tree_Ref;
+     (Tree_Node      : GPR.Project_Node_Tree_Ref;
       Project        : Project_Type;
       Attribute_Name : Name_Id;
       Index_Id       : Name_Id;
@@ -352,17 +352,18 @@ package body GNATCOLL.Projects.Normalize is
    --  Internal version of Set_Attribute
 
    function String_As_Expression
-     (Value : Name_Id; Tree : Project_Node_Tree_Ref) return Project_Node_Id;
+     (Value : Name_Id;
+      Tree : GPR.Project_Node_Tree_Ref) return Project_Node_Id;
    --  Return an N_Expression node that represents the static string Value.
    --  ??? Could be implemented in terms of Concatenate.
 
    function Get_All_Possible_Values
-     (Tree     : Project_Node_Tree_Ref;
+     (Tree     : GPR.Project_Node_Tree_Ref;
       Variable : Project_Node_Id) return Name_Id_Array;
    --  Return the list of all possible values for Variable
 
    procedure Set_With_Clause_Path
-     (Tree                      : Project_Node_Tree_Ref;
+     (Tree                      : GPR.Project_Node_Tree_Ref;
       With_Clause               : Project_Node_Id;
       Imported_Project_Location : Virtual_File;
       Imported_Project          : Project_Node_Id;
@@ -374,7 +375,7 @@ package body GNATCOLL.Projects.Normalize is
    --  project path,....)
 
    procedure Remove_Node
-     (Tree   : Project_Node_Tree_Ref;
+     (Tree   : GPR.Project_Node_Tree_Ref;
       Parent : Project_Node_Id;
       Node   : Project_Node_Id);
    --  Remove Node from the declaration list in Parent.
@@ -382,7 +383,7 @@ package body GNATCOLL.Projects.Normalize is
    --  constructions, ...
 
    procedure Remove_Variable_Declaration
-     (Tree               : Project_Node_Tree_Ref;
+     (Tree               : GPR.Project_Node_Tree_Ref;
       Project_Or_Package : Project_Node_Id;
       Declaration        : Project_Node_Id);
    --  Remove the variable declaration from the list of variables in
@@ -393,7 +394,7 @@ package body GNATCOLL.Projects.Normalize is
    -----------------------------------
 
    procedure For_Each_Environment_Variable
-     (Tree              : Project_Node_Tree_Ref;
+     (Tree              : GPR.Project_Node_Tree_Ref;
       Root_Project      : Project_Type;
       Ext_Variable_Name : Name_Id;
       Specific_Choice   : Name_Id;
@@ -611,7 +612,7 @@ package body GNATCOLL.Projects.Normalize is
    ---------------------------------
 
    procedure Remove_Variable_Declaration
-     (Tree               : Project_Node_Tree_Ref;
+     (Tree               : GPR.Project_Node_Tree_Ref;
       Project_Or_Package : Project_Node_Id;
       Declaration        : Project_Node_Id)
    is
@@ -652,7 +653,7 @@ package body GNATCOLL.Projects.Normalize is
    -----------------
 
    procedure Remove_Node
-     (Tree   : Project_Node_Tree_Ref;
+     (Tree   : GPR.Project_Node_Tree_Ref;
       Parent : Project_Node_Id;
       Node   : Project_Node_Id)
    is
@@ -690,7 +691,7 @@ package body GNATCOLL.Projects.Normalize is
    -----------------------------
 
    function Get_All_Possible_Values
-     (Tree     : Project_Node_Tree_Ref;
+     (Tree     : GPR.Project_Node_Tree_Ref;
       Variable : Project_Node_Id) return Name_Id_Array
    is
       Choice        : Project_Node_Id := First_Literal_String
@@ -723,7 +724,8 @@ package body GNATCOLL.Projects.Normalize is
    --------------------------
 
    function String_As_Expression
-     (Value : Name_Id; Tree : Project_Node_Tree_Ref) return Project_Node_Id is
+     (Value : Name_Id;
+      Tree : GPR.Project_Node_Tree_Ref) return Project_Node_Id is
    begin
       return Enclose_In_Expression (Create_Literal_String (Value, Tree), Tree);
    end String_As_Expression;
@@ -733,7 +735,7 @@ package body GNATCOLL.Projects.Normalize is
    -----------------------------------
 
    procedure Remove_Attribute_Declarations
-     (Tree            : Project_Node_Tree_Ref;
+     (Tree            : GPR.Project_Node_Tree_Ref;
       Parent          : Project_Node_Id;
       Attribute_Name  : Name_Id;
       Attribute_Index : Name_Id)
@@ -766,7 +768,7 @@ package body GNATCOLL.Projects.Normalize is
    ------------------------------
 
    function Find_Last_Declaration_Of
-     (Tree       : Project_Node_Tree_Ref;
+     (Tree       : GPR.Project_Node_Tree_Ref;
       Parent     : Project_Node_Id;
       Attr_Name  : Name_Id;
       Attr_Index : Name_Id := No_Name) return Project_Node_Id
@@ -793,7 +795,7 @@ package body GNATCOLL.Projects.Normalize is
    -----------------------
 
    function Attribute_Matches
-     (Tree            : Project_Node_Tree_Ref;
+     (Tree            : GPR.Project_Node_Tree_Ref;
       Node            : Project_Node_Id;
       Attribute_Name  : Name_Id;
       Attribute_Index : Name_Id) return Boolean is
@@ -815,7 +817,7 @@ package body GNATCOLL.Projects.Normalize is
    ---------------------------------
 
    procedure For_Each_Scenario_Case_Item
-     (Tree               : Project_Node_Tree_Ref;
+     (Tree               : GPR.Project_Node_Tree_Ref;
       Project            : GPR.Project_Node_Id;
       Pkg                : GPR.Project_Node_Id := GPR.Empty_Project_Node;
       Case_Construct     : in out GPR.Project_Node_Id;
@@ -863,7 +865,7 @@ package body GNATCOLL.Projects.Normalize is
    ------------------------------
 
    function Find_Package_Declaration
-     (Tree    : Project_Node_Tree_Ref;
+     (Tree    : GPR.Project_Node_Tree_Ref;
       Project : Project_Node_Id; Name : GPR.Name_Id)
       return Project_Node_Id is
    begin
@@ -875,7 +877,7 @@ package body GNATCOLL.Projects.Normalize is
    --------------------
 
    procedure Set_Expression
-     (Tree             : Project_Node_Tree_Ref;
+     (Tree             : GPR.Project_Node_Tree_Ref;
       Var_Or_Attribute : Project_Node_Id;
       Expr             : Project_Node_Id)
    is
@@ -903,7 +905,7 @@ package body GNATCOLL.Projects.Normalize is
    ------------------------------
 
    procedure Post_Process_After_Clone
-     (Tree    : Project_Node_Tree_Ref;
+     (Tree    : GPR.Project_Node_Tree_Ref;
       Project : Project_Node_Id;
       Pkg     : Project_Node_Id := Empty_Project_Node)
    is
@@ -1028,7 +1030,7 @@ package body GNATCOLL.Projects.Normalize is
    -----------------------
 
    procedure Add_To_Case_Items
-     (Tree              : Project_Node_Tree_Ref;
+     (Tree              : GPR.Project_Node_Tree_Ref;
       Case_Construction : Project_Node_Id;
       Decl_List         : Project_Node_Id)
    is
@@ -1046,7 +1048,7 @@ package body GNATCOLL.Projects.Normalize is
    ---------------------------
 
    function Create_Typed_Variable
-     (Tree                         : Project_Node_Tree_Ref;
+     (Tree                         : GPR.Project_Node_Tree_Ref;
       Prj_Or_Pkg                   : Project_Node_Id;
       Name                         : String;
       Typ                          : Project_Node_Id;
@@ -1073,7 +1075,7 @@ package body GNATCOLL.Projects.Normalize is
    -------------------
 
    procedure Add_Case_Item
-     (Tree      : Project_Node_Tree_Ref;
+     (Tree      : GPR.Project_Node_Tree_Ref;
       Case_Node : Project_Node_Id;
       Choice    : Name_Id;
       Decl      : GPR.Project_Node_Id := Empty_Project_Node)
@@ -1115,7 +1117,7 @@ package body GNATCOLL.Projects.Normalize is
    ------------------
 
    procedure Add_In_Front
-     (Tree   : Project_Node_Tree_Ref;
+     (Tree   : GPR.Project_Node_Tree_Ref;
       Parent : Project_Node_Id;
       Node   : Project_Node_Id)
    is
@@ -1150,7 +1152,7 @@ package body GNATCOLL.Projects.Normalize is
    -------------------------------
 
    function Create_Variable_Reference
-     (Tree : Project_Node_Tree_Ref; Var : Project_Node_Id)
+     (Tree : GPR.Project_Node_Tree_Ref; Var : Project_Node_Id)
       return Project_Node_Id
    is
       Ref : Project_Node_Id;
@@ -1176,7 +1178,7 @@ package body GNATCOLL.Projects.Normalize is
    ---------------------------
 
    procedure Set_Value_As_External
-     (Tree          : Project_Node_Tree_Ref;
+     (Tree          : GPR.Project_Node_Tree_Ref;
       Var           : Project_Node_Id;
       External_Name : String;
       Default       : String := "")
@@ -1206,7 +1208,7 @@ package body GNATCOLL.Projects.Normalize is
    ------------------------------
 
    function Create_Case_Construction
-     (Tree          : Project_Node_Tree_Ref;
+     (Tree          : GPR.Project_Node_Tree_Ref;
       Project       : Project_Node_Id;
       External_Name : Name_Id;
       Var_Type      : Project_Node_Id) return Project_Node_Id
@@ -1278,7 +1280,7 @@ package body GNATCOLL.Projects.Normalize is
    ---------------------------------
 
    procedure For_Each_Matching_Case_Item
-     (Tree           : Project_Node_Tree_Ref;
+     (Tree           : GPR.Project_Node_Tree_Ref;
       Project        : GPR.Project_Node_Id;
       Pkg            : GPR.Project_Node_Id := GPR.Empty_Project_Node;
       Case_Construct : in out GPR.Project_Node_Id;
@@ -1437,7 +1439,7 @@ package body GNATCOLL.Projects.Normalize is
    -----------------------
 
    function Find_Node_By_Name
-     (Tree    : Project_Node_Tree_Ref;
+     (Tree    : GPR.Project_Node_Tree_Ref;
       Project : Project_Node_Id;
       Kind    : Project_Node_Kind;
       Name    : Name_Id) return Project_Node_Id
@@ -1464,7 +1466,7 @@ package body GNATCOLL.Projects.Normalize is
    ---------------------------
 
    function Find_Type_Declaration
-     (Tree    : Project_Node_Tree_Ref;
+     (Tree    : GPR.Project_Node_Tree_Ref;
       Project : Project_Node_Id;
       Name    : GPR.Name_Id) return Project_Node_Id is
    begin
@@ -1477,7 +1479,7 @@ package body GNATCOLL.Projects.Normalize is
    ------------------------
 
    procedure Set_Uniq_Type_Name
-     (Tree     : Project_Node_Tree_Ref;
+     (Tree     : GPR.Project_Node_Tree_Ref;
       Project  : Project_Node_Id;
       Var_Type : Project_Node_Id)
    is
@@ -1507,7 +1509,7 @@ package body GNATCOLL.Projects.Normalize is
    --------------------
 
    function Values_Matches
-     (Tree      : Project_Node_Tree_Ref;
+     (Tree      : GPR.Project_Node_Tree_Ref;
       Var_Name  : Name_Id;
       Case_Item : Project_Node_Id;
       Values    : External_Variable_Value_Array) return Boolean
@@ -1545,7 +1547,7 @@ package body GNATCOLL.Projects.Normalize is
    ----------------------------
 
    function External_Variable_Name
-     (Tree            : Project_Node_Tree_Ref;
+     (Tree            : GPR.Project_Node_Tree_Ref;
       Current_Project : Project_Node_Id;
       Ref             : Project_Node_Id) return Name_Id
    is
@@ -1626,7 +1628,7 @@ package body GNATCOLL.Projects.Normalize is
    -------------------
 
    function Clone_Project
-     (Tree    : Project_Node_Tree_Ref;
+     (Tree    : GPR.Project_Node_Tree_Ref;
       Project : Project_Node_Id) return Project_Node_Id
    is
       Project2, Decl : Project_Node_Id;
@@ -1646,7 +1648,7 @@ package body GNATCOLL.Projects.Normalize is
      (Tree    : Project_Tree_Data_Access;
       Project : Project_Type)
    is
-      Tree_Node : constant Project_Node_Tree_Ref :=
+      Tree_Node : constant GPR.Project_Node_Tree_Ref :=
         GNATCOLL.Projects.Tree (Tree);
 
       Values : External_Variable_Value_Array_Access := null;
@@ -2036,7 +2038,7 @@ package body GNATCOLL.Projects.Normalize is
    ----------------
 
    function Clone_Node
-     (Tree       : Project_Node_Tree_Ref;
+     (Tree       : GPR.Project_Node_Tree_Ref;
       Node       : Project_Node_Id;
       Deep_Clone : Boolean := False) return Project_Node_Id
    is
@@ -2246,7 +2248,7 @@ package body GNATCOLL.Projects.Normalize is
 
    function Is_External_Variable
      (Var  : GPR.Project_Node_Id;
-      Tree : Project_Node_Tree_Ref) return Boolean is
+      Tree : GPR.Project_Node_Tree_Ref) return Boolean is
    begin
       return Kind_Of
         (Current_Term (First_Term (Expression_Of (Var, Tree), Tree), Tree),
@@ -2260,7 +2262,7 @@ package body GNATCOLL.Projects.Normalize is
 
    function External_Reference_Of
      (Var  : GPR.Project_Node_Id;
-      Tree : Project_Node_Tree_Ref) return GPR.Name_Id
+      Tree : GPR.Project_Node_Tree_Ref) return GPR.Name_Id
    is
       Expr : Project_Node_Id := Expression_Of (Var, Tree);
    begin
@@ -2308,7 +2310,7 @@ package body GNATCOLL.Projects.Normalize is
    -------------------------
 
    function Find_Case_Statement
-     (Tree    : Project_Node_Tree_Ref;
+     (Tree    : GPR.Project_Node_Tree_Ref;
       Project : GPR.Project_Node_Id;
       Pkg     : GPR.Project_Node_Id := GPR.Empty_Project_Node)
       return Project_Node_Id
@@ -2342,7 +2344,7 @@ package body GNATCOLL.Projects.Normalize is
    ----------------------------------------
 
    procedure Move_From_Common_To_Case_Construct
-     (Tree               : Project_Node_Tree_Ref;
+     (Tree               : GPR.Project_Node_Tree_Ref;
       Project            : Project_Node_Id;
       Pkg                : Project_Node_Id;
       Case_Construct     : in out Project_Node_Id;
@@ -2442,7 +2444,7 @@ package body GNATCOLL.Projects.Normalize is
       Index     : String := "";
       Callback  : Set_Attribute_Callback)
    is
-      Tree_Node      : constant Project_Node_Tree_Ref :=
+      Tree_Node      : constant GPR.Project_Node_Tree_Ref :=
         GNATCOLL.Projects.Tree (Tree);
       Sep            : constant Natural :=
         Ada.Strings.Fixed.Index (Attribute, "#");
@@ -2522,7 +2524,7 @@ package body GNATCOLL.Projects.Normalize is
         +Unix_Style_Full_Name (Create (+Value), Cygwin_Style => False);
 
       procedure Add_Or_Replace
-        (Tree_Node      : Project_Node_Tree_Ref;
+        (Tree_Node      : GPR.Project_Node_Tree_Ref;
          Project        : Project_Type;
          Attribute_Name : Name_Id;
          Index_Id       : Name_Id;
@@ -2532,7 +2534,7 @@ package body GNATCOLL.Projects.Normalize is
       --  for Case_Item
 
       procedure Add_Or_Replace
-        (Tree_Node      : Project_Node_Tree_Ref;
+        (Tree_Node      : GPR.Project_Node_Tree_Ref;
          Project        : Project_Type;
          Attribute_Name : Name_Id;
          Index_Id       : Name_Id;
@@ -2593,7 +2595,7 @@ package body GNATCOLL.Projects.Normalize is
       --  Replace all "\" with "/".
 
       procedure Add_Or_Replace
-        (Tree_Node      : Project_Node_Tree_Ref;
+        (Tree_Node      : GPR.Project_Node_Tree_Ref;
          Project        : Project_Type;
          Attribute_Name : Name_Id;
          Index_Id       : Name_Id;
@@ -2623,7 +2625,7 @@ package body GNATCOLL.Projects.Normalize is
         Convert_Dir_Separators (Values);
 
       procedure Add_Or_Replace
-        (Tree_Node      : Project_Node_Tree_Ref;
+        (Tree_Node      : GPR.Project_Node_Tree_Ref;
          Project        : Project_Type;
          Attribute_Name : Name_Id;
          Index_Id       : Name_Id;
@@ -2724,7 +2726,7 @@ package body GNATCOLL.Projects.Normalize is
       Scenario  : Scenario_Variable_Array := All_Scenarios;
       Index     : String := "")
    is
-      Tree_Node      : constant Project_Node_Tree_Ref :=
+      Tree_Node      : constant GPR.Project_Node_Tree_Ref :=
         GNATCOLL.Projects.Tree (Tree);
       Sep            : constant Natural :=
         Ada.Strings.Fixed.Index (Attribute, "#");
@@ -2789,7 +2791,7 @@ package body GNATCOLL.Projects.Normalize is
    -----------------------------
 
    procedure For_Each_Directory_Node
-     (Tree    : Project_Node_Tree_Ref;
+     (Tree    : GPR.Project_Node_Tree_Ref;
       Project : Project_Type;
       Action  : Node_Callback)
    is
@@ -2900,7 +2902,7 @@ package body GNATCOLL.Projects.Normalize is
       Use_Relative_Path : constant Boolean := True;
       --  Whether to use relative paths when we have to modify with clauses
 
-      Tree_Node : constant Project_Node_Tree_Ref :=
+      Tree_Node : constant GPR.Project_Node_Tree_Ref :=
         GNATCOLL.Projects.Tree (Tree);
       Old_Path : constant Filesystem_String := Project.Project_Path.Dir_Name;
 
@@ -3047,10 +3049,10 @@ package body GNATCOLL.Projects.Normalize is
       Set_Location_Of (Project.Node, Tree_Node, No_Location);
 
       --  Unregister the old name
-      GPR.Tree.Tree_Private_Part.Projects_Htable.Set
+      GPR.Tree_Private_Part.Projects_Htable.Set
         (Tree_Node.Projects_HT,
          GPR.Tree.Name_Of (Project.Node, Tree_Node),
-         GPR.Tree.Tree_Private_Part.Project_Name_And_Node'
+         GPR.Tree_Private_Part.Project_Name_And_Node'
          (Name           => Old_Name,
           Node           => Empty_Project_Node,
           Resolved_Path  => Path_Name_Type (Old_Name),
@@ -3059,10 +3061,10 @@ package body GNATCOLL.Projects.Normalize is
           Proj_Qualifier => Unspecified));
 
       --  Register the new name
-      GPR.Tree.Tree_Private_Part.Projects_Htable.Set
+      GPR.Tree_Private_Part.Projects_Htable.Set
         (Tree_Node.Projects_HT,
          GPR.Tree.Name_Of (Project.Node, Tree_Node),
-         GPR.Tree.Tree_Private_Part.Project_Name_And_Node'
+         GPR.Tree_Private_Part.Project_Name_And_Node'
          (Name           => Name,
           Resolved_Path  => Path_Name_Type (Full_Path),
           Node           => Project.Node,
@@ -3085,7 +3087,7 @@ package body GNATCOLL.Projects.Normalize is
    ---------------------
 
    procedure Normalize_Cases
-     (Tree    : GPR.Tree.Project_Node_Tree_Ref;
+     (Tree    : GPR.Project_Node_Tree_Ref;
       Project : Project_Type)
    is
       procedure Process_Declarative_List (Node : Project_Node_Id);
@@ -3181,7 +3183,7 @@ package body GNATCOLL.Projects.Normalize is
    --------------------------
 
    procedure Set_With_Clause_Path
-     (Tree                      : Project_Node_Tree_Ref;
+     (Tree                      : GPR.Project_Node_Tree_Ref;
       With_Clause               : Project_Node_Id;
       Imported_Project_Location : Virtual_File;
       Imported_Project          : Project_Node_Id;
@@ -3228,8 +3230,8 @@ package body GNATCOLL.Projects.Normalize is
       Limited_With              : Boolean := False)
       return Import_Project_Error
    is
-      use GPR.Tree.Tree_Private_Part;
-      Tree_Node : constant Project_Node_Tree_Ref :=
+      use GPR.Tree_Private_Part;
+      Tree_Node : constant GPR.Project_Node_Tree_Ref :=
         GNATCOLL.Projects.Tree (Tree);
 
       procedure Fail (S : String);
@@ -3343,7 +3345,7 @@ package body GNATCOLL.Projects.Normalize is
       Keep_Choice              : String;
       Delete_Direct_References : Boolean := True)
    is
-      Tree_Node : constant Project_Node_Tree_Ref :=
+      Tree_Node : constant GPR.Project_Node_Tree_Ref :=
         GNATCOLL.Projects.Tree (Tree);
 
       procedure Callback (Project, Parent, Node, Choice : Project_Node_Id);
@@ -3419,7 +3421,7 @@ package body GNATCOLL.Projects.Normalize is
       New_Path           : Virtual_File;
       Use_Relative_Paths : Boolean) return Boolean
    is
-      Tree_Node    : constant Project_Node_Tree_Ref :=
+      Tree_Node    : constant GPR.Project_Node_Tree_Ref :=
         GNATCOLL.Projects.Tree (Tree);
       Changed : Boolean := False;
 
@@ -3507,7 +3509,7 @@ package body GNATCOLL.Projects.Normalize is
    -----------------
 
    function Create_Type
-     (Tree       : Project_Node_Tree_Ref;
+     (Tree       : GPR.Project_Node_Tree_Ref;
       Prj_Or_Pkg : Project_Node_Id;
       Name       : String) return Project_Node_Id
    is
@@ -3524,7 +3526,7 @@ package body GNATCOLL.Projects.Normalize is
    ------------------------
 
    procedure Add_Possible_Value
-     (Tree   : Project_Node_Tree_Ref;
+     (Tree   : GPR.Project_Node_Tree_Ref;
       Typ    : Project_Node_Id;
       Choice : String)
    is
@@ -3553,7 +3555,7 @@ package body GNATCOLL.Projects.Normalize is
    --------------------------
 
    function Expression_As_String
-     (Tree       : Project_Node_Tree_Ref;
+     (Tree       : GPR.Project_Node_Tree_Ref;
       Expression : Project_Node_Id) return Name_Id
    is
       Term : Project_Node_Id;
@@ -3582,7 +3584,7 @@ package body GNATCOLL.Projects.Normalize is
    ----------------------------
 
    function Find_Scenario_Variable
-     (Tree          : Project_Node_Tree_Ref;
+     (Tree          : GPR.Project_Node_Tree_Ref;
       Project       : Project_Type;
       External_Name : String)
       return Project_Node_Id
@@ -3612,7 +3614,7 @@ package body GNATCOLL.Projects.Normalize is
    --------------------------
 
    function Is_Virtual_Extending
-     (Tree : Project_Node_Tree_Ref;
+     (Tree : GPR.Project_Node_Tree_Ref;
       Node : GPR.Project_Node_Id) return Boolean
    is
       Name : constant String :=
