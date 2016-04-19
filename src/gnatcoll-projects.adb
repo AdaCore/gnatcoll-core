@@ -524,8 +524,10 @@ package body GNATCOLL.Projects is
             end if;
 
          else
-            P := Project_Type (Project_From_Name (Tree.Data, Project.Name));
-            P.Data.View_Is_Complete := False;
+            if Tree.Data.Root /= No_Project then
+               P := Project_Type (Project_From_Name (Tree.Data, Project.Name));
+               P.Data.View_Is_Complete := False;
+            end if;
          end if;
       end if;
    end Mark_Project_Error;
@@ -7130,6 +7132,13 @@ package body GNATCOLL.Projects is
            (Tree, Tree, With_View => False);
 
          Tree.Set_Status (From_File);
+
+         if Report_Syntax_Errors then
+            --  Some errors might come form GPR.Part.Parse but only from
+            --  GPR.Proc.Process_Project_Tree_Phase_1, like undefined
+            --  externals. We need to show them.
+            GPR.Err.Finalize;
+         end if;
 
          GPR.Com.Fail := null;
          GPR.Output.Cancel_Special_Output;
