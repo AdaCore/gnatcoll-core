@@ -6905,6 +6905,32 @@ package body GNATCOLL.Projects is
       procedure Fail (S : String);
       --  Replaces Osint.Fail
 
+      procedure Filter_Reload_Warnings (S : String);
+      --  When loading a new project on top of an already loaded one, and both
+      --  those projects have same name of external, but those externals
+      --  correspond to different set of values, gprlib issues a warning.
+      --  This warning is harmless and does not prevent the loading of the new
+      --  project. However we can not clear the externals table since there are
+      --  cases when we do want to store the values of all externals.
+      --  So we just filter out such warnings.
+
+      ----------------------------
+      -- Filter_Reload_Warnings --
+      ----------------------------
+
+      procedure Filter_Reload_Warnings (S : String) is
+         Pattern   : constant String := """ is illegal for typed string """;
+      begin
+         if Errors = null then
+            Trace (Me, "calling output wrapper when Errors callback not set");
+            return;
+         end if;
+
+         if Index (S, Pattern) = 0 then
+            Errors (S);
+         end if;
+      end Filter_Reload_Warnings;
+
       ----------
       -- Fail --
       ----------
@@ -6938,8 +6964,14 @@ package body GNATCOLL.Projects is
          Errout_Handling := GPR.Part.Never_Finalize;
       end if;
 
-      GPR.Output.Set_Special_Output (GPR.Output.Output_Proc (Errors));
-
+      if Errors = null then
+         --  We do not want to loose the output in the wrapper if the callback
+         --  is not specified.
+         GPR.Output.Cancel_Special_Output;
+      else
+         GPR.Output.Set_Special_Output
+           (Filter_Reload_Warnings'Unrestricted_Access);
+      end if;
       GPR.Com.Fail := Fail'Unrestricted_Access;
 
       Tree.Data.Root := No_Project;
