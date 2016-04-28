@@ -937,6 +937,8 @@ package GNATCOLL.Projects is
    --  project. Such a file is in general generated when running 'gprconfig'
    --  on the command line, and will contain the default naming schemes (among
    --  other information) used for all projects.
+   --  If the file does not exist, it will be created automatically if
+   --  you also call Set_Automatic_Config_File.
    --  All the attributes defined in that file will provide the default value
    --  when loading projects later on.
 
