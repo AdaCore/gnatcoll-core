@@ -785,6 +785,30 @@ package body GNATCOLL.Projects is
       end if;
    end Object_Dir;
 
+   -------------------
+   -- Artifacts_Dir --
+   -------------------
+
+   function Artifacts_Dir
+     (Project : Project_Type) return GNATCOLL.VFS.Virtual_File
+   is
+      D : GNATCOLL.VFS.Virtual_File;
+   begin
+      if Project.Object_Dir /= GNATCOLL.VFS.No_File then
+         return Project.Object_Dir;
+      end if;
+
+      Trace (Me, Project.Name & " does not have an object dir");
+      D := Create (Project.Project_Path.Dir_Name);
+      if Is_Writable (D) then
+         return D;
+      else
+         Trace
+           (Me, "Directory '" & D.Display_Full_Name & "' is not writable");
+         return GNATCOLL.VFS.No_File;
+      end if;
+   end Artifacts_Dir;
+
    -----------------
    -- Object_Path --
    -----------------

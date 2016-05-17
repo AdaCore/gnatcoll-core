@@ -1770,18 +1770,10 @@ begin
    if DB_Name.all /= ":memory:" then
       declare
          N : constant String := DB_Name.all;
-         Dir : Virtual_File := Tree.Root_Project.Object_Dir;
+         Dir : Virtual_File := Tree.Root_Project.Artifacts_Dir;
          Dir2 : Virtual_File;
       begin
          Free (DB_Name);
-
-         --  If the project does not have an object directory, create
-         --  the database in the directory containing the project file.
-         if Dir = No_File then
-            Dir := Tree.Root_Project.Project_Path.Dir;
-            Trace (Me, "Root project does not have an object dir:" & ASCII.LF
-                   & "creating database in " & (+Dir.Full_Name.all));
-         end if;
 
          Dir := Create_From_Base
            (Base_Dir => Dir.Full_Name.all, Base_Name => +N);
