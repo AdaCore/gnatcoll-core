@@ -799,7 +799,9 @@ package body GNATCOLL.Projects is
       end if;
 
       Trace (Me, Project.Name & " does not have an object dir");
-      D := Create (Project.Project_Path.Dir_Name);
+      D := Create
+        (Project.Project_Path.Dir_Name & Project.Data.Tree.Env.Object_Subdir);
+      Ensure_Directory (D);
       if Is_Writable (D) then
          return D;
       else

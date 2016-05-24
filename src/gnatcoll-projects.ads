@@ -537,6 +537,9 @@ package GNATCOLL.Projects is
    --  Return the object directory if it is set implicitly or explicitly.
    --  Otherwise return project directory, if it is writable.
    --  If all of the above fails return No_File.
+   --
+   --  Subdir name specified by Set_Object_Subdir applies both to the object
+   --  and project directory for this query.
 
    function Object_Path
      (Project             : Project_Type;
