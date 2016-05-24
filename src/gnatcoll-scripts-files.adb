@@ -108,8 +108,40 @@ package body GNATCOLL.Scripts.Files is
       use type GNATCOLL.Projects.Project_Tree_Access;
 
       Info    : Virtual_File;
-      Project : GNATCOLL.Projects.Project_Type;
       P       : GNATCOLL.Projects.Project_Tree_Access;
+
+      function Get_Project (File            : Virtual_File;
+                            Default_To_Root : Boolean := False)
+                            return GNATCOLL.Projects.Project_Type;
+      --  Return the project to which File belongs. If File does not belong to
+      --  any project, return the root project if Default_To_Root is True.
+
+      -----------------
+      -- Get_Project --
+      -----------------
+
+      function Get_Project (File            : Virtual_File;
+                            Default_To_Root : Boolean := False)
+                            return GNATCOLL.Projects.Project_Type
+      is
+         File_Info : constant GNATCOLL.Projects.File_Info'Class :=
+                    GNATCOLL.Projects.File_Info'Class
+                         (P.Info_Set (File).First_Element);
+         Project   : GNATCOLL.Projects.Project_Type;
+      begin
+         --  Return the first possible project, we have nothing else to base
+         --  our guess on.
+         Project := File_Info.Project;
+
+         if Project = GNATCOLL.Projects.No_Project
+           and then Default_To_Root
+         then
+            Project := P.Root_Project;
+         end if;
+
+         return Project;
+      end Get_Project;
+
    begin
       if Command = Constructor_Method then
          Name_Parameters (Data, File_Cmd_Parameters);
@@ -203,6 +235,7 @@ package body GNATCOLL.Scripts.Files is
 
       elsif Command = "project" then
          P := GNATCOLL.Scripts.Projects.Project_Tree;
+
          if P = null then
             Set_Error_Msg (Data, "Project not set");
             return;
@@ -211,25 +244,38 @@ package body GNATCOLL.Scripts.Files is
          Name_Parameters (Data, File_Project_Parameters);
          Info := Nth_Arg (Data, 1);
 
-         --  Return the first possible project, we have nothing else to base
-         --  our guess on.
-         declare
-            F_Info : constant GNATCOLL.Projects.File_Info'Class :=
-              GNATCOLL.Projects.File_Info'Class
-                (P.Info_Set (Info).First_Element);
-         begin
-            Project := F_Info.Project;
-         end;
-
-         if Project = GNATCOLL.Projects.No_Project
-           and then Data.Nth_Arg (2, True)
-         then
-            Project := P.Root_Project;
-         end if;
-
          Data.Set_Return_Value
            (GNATCOLL.Scripts.Projects.Create_Project
-              (Data.Get_Script, Project));
+              (Data.Get_Script,
+               Get_Project (Info, Default_To_Root => Nth_Arg (Data, 2))));
+
+      elsif Command = "executable_path" then
+         P := GNATCOLL.Scripts.Projects.Project_Tree;
+
+         if P = null then
+            Set_Error_Msg (Data, "Project not set");
+            return;
+         end if;
+
+         Info := Nth_Arg (Data, 1);
+
+         declare
+            Project : constant GNATCOLL.Projects.Project_Type :=
+                              Get_Project (Info, Default_To_Root => True);
+            Is_Main : constant Boolean :=
+                        GNATCOLL.Projects.Is_Main_File
+                          (Project,
+                           File => Info.Base_Name);
+         begin
+            if not Is_Main then
+               Set_Error_Msg (Data, +Info.Base_Name & " is not a main file");
+               return;
+            end if;
+
+            Data.Set_Return_Value
+              (+(Project.Executables_Directory.Full_Name
+               & Project.Executable_Name (Info.Base_Name)));
+         end;
       end if;
    end File_Command_Handler;
 
@@ -266,6 +312,11 @@ package body GNATCOLL.Scripts.Files is
      (Repo : access Scripts_Repository_Record'Class)
    is
    begin
+      Register_Property
+        (Repo, "executable_path",
+         Class  => Get_File_Class (Repo),
+         Getter => File_Command_Handler'Access);
+
       Register_Command
         (Repo, Constructor_Method,
          Minimum_Args => 1,
