@@ -247,7 +247,9 @@ package body GNATCOLL.Scripts.Files is
          Data.Set_Return_Value
            (GNATCOLL.Scripts.Projects.Create_Project
               (Data.Get_Script,
-               Get_Project (Info, Default_To_Root => Nth_Arg (Data, 2))));
+               Get_Project
+                 (Info,
+                  Default_To_Root => Nth_Arg (Data, 2, True))));
 
       elsif Command = "executable_path" then
          P := GNATCOLL.Scripts.Projects.Project_Tree;
@@ -273,8 +275,10 @@ package body GNATCOLL.Scripts.Files is
             end if;
 
             Data.Set_Return_Value
-              (+(Project.Executables_Directory.Full_Name
-               & Project.Executable_Name (Info.Base_Name)));
+              (Create_File
+                 (Script => Data.Get_Script,
+                  File   => Project.Executables_Directory
+                  / Project.Executable_Name (Info.Base_Name)));
          end;
       end if;
    end File_Command_Handler;
