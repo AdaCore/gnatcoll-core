@@ -1836,21 +1836,33 @@ package body GNATCOLL.SQL.Exec is
    begin
       return SQL_Parameter'
         (Typ => Parameter_Text, Str_Ptr => Value.all'Unchecked_Access,
-         Str_Val => <>);
+         Make_Copy => False, Str_Val => <>);
    end "+";
 
    function "+" (Value : String) return SQL_Parameter is
    begin
       return SQL_Parameter'
         (Typ => Parameter_Text, Str_Val => To_Unbounded_String (Value),
-         Str_Ptr => <>);
+         Make_Copy => False, Str_Ptr => <>);
    end "+";
 
    function "+" (Value : Unbounded_String) return SQL_Parameter is
    begin
       return SQL_Parameter'
-         (Typ => Parameter_Text, Str_Val => Value, Str_Ptr => <>);
+        (Typ => Parameter_Text, Str_Val => Value,
+         Make_Copy => False, Str_Ptr => <>);
    end "+";
+
+   ----------
+   -- Copy --
+   ----------
+
+   function Copy (Value : access constant String) return SQL_Parameter is
+   begin
+      return SQL_Parameter'
+        (Typ => Parameter_Text, Str_Ptr => Value.all'Unchecked_Access,
+         Make_Copy => True, Str_Val => <>);
+   end Copy;
 
    ---------
    -- "+" --

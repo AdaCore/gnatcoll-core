@@ -163,6 +163,8 @@ package GNATCOLL.SQL.Exec is
             --  References external string, to avoid an extra copy
             Str_Val : Unbounded_String;
             --  Unbounded string copies only reference on assignment
+            Make_Copy : Boolean;
+            --  If set this forces SQL engine to make a copy of Str_Ptr.all
          when Parameter_Boolean   => Bool_Val : Boolean;
          when Parameter_Float     => Float_Val : Float;
          when Parameter_Time      => Time_Val  : Ada.Calendar.Time;
@@ -175,6 +177,11 @@ package GNATCOLL.SQL.Exec is
    Null_Parameter : constant SQL_Parameter;
 
    function "+" (Value : access constant String) return SQL_Parameter;
+   function Copy (Value : access constant String) return SQL_Parameter;
+   --  This is like "+", but forces sql engine to make a copy of Value when
+   --  it might be needed after the query executes. This has no effect on
+   --  PostgreSQL, which already systematically does this copy
+
    function "+" (Value : String) return SQL_Parameter;
    function "+" (Value : Unbounded_String) return SQL_Parameter;
    function "+" (Value : Integer) return SQL_Parameter;

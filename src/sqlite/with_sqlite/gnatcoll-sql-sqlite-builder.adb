@@ -533,7 +533,11 @@ package body GNATCOLL.SQL.Sqlite.Builder is
                   Str_Len := Params (P).Str_Ptr'Length;
                end if;
 
-               Bind_Text (Stmt, P, Str_Adr, Str_Len);
+               if Params (P).Make_Copy then
+                  Bind_Text (Stmt, P, Str_Adr, Str_Len, Transient);
+               else
+                  Bind_Text (Stmt, P, Str_Adr, Str_Len);
+               end if;
 
             when Parameter_Character =>
                Bind_Text (Stmt, P, Params (P).Char_Val'Address, 1);

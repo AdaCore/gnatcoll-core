@@ -2263,7 +2263,7 @@ package body GNATCOLL.Xref is
 
                Files.Fetch
                  (DB, Query_Get_File_And_Project,
-                  Params => (1 => +Name'Unchecked_Access,
+                  Params => (1 => Copy (Name'Unchecked_Access),
                              2 => +Id));
 
                if Files.Has_Row then
@@ -2278,8 +2278,8 @@ package body GNATCOLL.Xref is
                      Result :=
                        (Id => DB.Insert_And_Get_PK
                            (Query_Insert_Source_File,
-                            Params => (1 => +Name'Unchecked_Access,
-                                       2 => +Lang'Unrestricted_Access,
+                            Params => (1 => Copy (Name'Unchecked_Access),
+                                       2 => Copy (Lang'Unrestricted_Access),
                                        3 => +Id),
                             PK => Database.Files.Id),
                         Export_Mangled_Name =>
@@ -2332,7 +2332,7 @@ package body GNATCOLL.Xref is
          DB.Execute
            (Query_Set_Entity_Mangled_Name,
             Params => (1 => +Current_Entity,
-                       2 => +Mangled'Unrestricted_Access,
+                       2 => Copy (Mangled'Unrestricted_Access),
                        3 => +Exported));
       end Set_Mangled_Name;
 
@@ -2409,12 +2409,12 @@ package body GNATCOLL.Xref is
                   Candidate := DB.Insert_And_Get_PK
                     (Query_Insert_Entity_With_Mangled,
                      Params =>
-                       (1 => +N'Unrestricted_Access,   --  empty string
+                       (1 => Copy (N'Unrestricted_Access),  --  empty string
                         2 => +'P',  --  unknown
                         3 => +Decl_File,
                         4 => +Decl_Line,
                         5 => +(-1),
-                        6 => +N'Unrestricted_Access,
+                        6 => Copy (N'Unrestricted_Access),
                         7 => +Is_Global,
                         8 => +Is_Static_Local),
                      PK => Database.Entities.Id);
@@ -2422,7 +2422,7 @@ package body GNATCOLL.Xref is
                   Candidate := DB.Insert_And_Get_PK
                     (Query_Insert_Entity,
                      Params =>
-                       (1 => +N'Unrestricted_Access,   --  empty string
+                       (1 => Copy (N'Unrestricted_Access),  --  empty string
                         2 => +'P',  --  unknown
                         3 => +Decl_File,
                         4 => +Decl_Line,
@@ -2535,7 +2535,7 @@ package body GNATCOLL.Xref is
                   DB.Execute
                     (Query_Set_Entity_Name_And_Kind,
                      Params => (1 => +Candidate,
-                                2 => +N'Unrestricted_Access,
+                                2 => Copy (N'Unrestricted_Access),
                                 3 => +Kind,
                                 4 => +Is_Global,
                                 5 => +Is_Static_Local));
@@ -2565,12 +2565,12 @@ package body GNATCOLL.Xref is
                Candidate := DB.Insert_And_Get_PK
                  (Query_Insert_Entity_With_Mangled,
                   Params =>
-                    (1 => +N'Unrestricted_Access,
+                    (1 => Copy (N'Unrestricted_Access),
                      2 => +Kind,
                      3 => +Decl_File,
                      4 => +Decl_Line,
                      5 => +Decl_Column,
-                     6 => +N'Unrestricted_Access,
+                     6 => Copy (N'Unrestricted_Access),
                      7 => +Is_Global,
                      8 => +Is_Static_Local),
                   PK => Database.Entities.Id);
@@ -2578,7 +2578,7 @@ package body GNATCOLL.Xref is
                Candidate := DB.Insert_And_Get_PK
                  (Query_Insert_Entity,
                   Params =>
-                    (1 => +N'Unrestricted_Access,
+                    (1 => Copy (N'Unrestricted_Access),
                      2 => +Kind,
                      3 => +Decl_File,
                      4 => +Decl_Line,
@@ -3037,7 +3037,7 @@ package body GNATCOLL.Xref is
                                       3 => +Xref_Line,
                                       4 => +Xref_Col,
                                       5 => +Xref_Kind,
-                                      6 => +Inst'Unrestricted_Access));
+                                      6 => Copy (Inst'Unrestricted_Access)));
                      else
                         if Caller = Current_Entity then
                            Caller := Get_Caller
@@ -3052,7 +3052,7 @@ package body GNATCOLL.Xref is
                                       3 => +Xref_Line,
                                       4 => +Xref_Col,
                                       5 => +Xref_Kind,
-                                      6 => +Inst'Unrestricted_Access,
+                                      6 => Copy (Inst'Unrestricted_Access),
                                       7 => +Caller));
                      end if;
                   end;
@@ -3551,7 +3551,7 @@ package body GNATCOLL.Xref is
          begin
             Files.Fetch
               (Database.DB, Query_Get_File,
-               Params => (1 => +N'Unchecked_Access));
+               Params => (1 => Copy (N'Unchecked_Access)));
 
             if Files.Has_Row then
                if not Force_Refresh
@@ -3574,7 +3574,7 @@ package body GNATCOLL.Xref is
                LI.Is_New := True;
                LI.Id := Database.DB.Insert_And_Get_PK
                  (Query_Insert_LI_File,
-                  Params => (1 => +N'Unchecked_Access,
+                  Params => (1 => Copy (N'Unchecked_Access),
                              2 => +LI.Stamp),
                   PK => GNATCOLL.Xref.Database.Files.Id);
                LIs.Append (LI);
@@ -3886,13 +3886,13 @@ package body GNATCOLL.Xref is
                       +P.Project_Path.Unix_Style_Full_Name (Normalize => True);
                Id : Integer;
             begin
-               R.Fetch (DB, Query_Get_File, (1 => +N'Unchecked_Access));
+               R.Fetch (DB, Query_Get_File, (1 => Copy (N'Unchecked_Access)));
                if R.Has_Row then
                   Id := R.Integer_Value (0);
                else
                   Id := DB.Insert_And_Get_PK
                     (Query_Insert_Project_File,
-                     Params => (1              => +N'Unchecked_Access),
+                     Params => (1 => Copy (N'Unchecked_Access)),
                      PK     => Database.Files.Id);
                end if;
 
@@ -4373,7 +4373,8 @@ package body GNATCOLL.Xref is
          Kind_Id         : Character;
          Is_End_Of_Scope : Boolean;
       begin
-         R.Fetch (Self.DB, Q, Params => (1 => +Name'Unrestricted_Access));
+         R.Fetch (Self.DB, Q,
+                  Params => (1 => Copy (Name'Unrestricted_Access)));
 
          if R.Has_Row then
             loop
@@ -6112,28 +6113,30 @@ package body GNATCOLL.Xref is
       if Kind = Reference_Kind_Declaration then
          Cursor.DBCursor.Fetch
            (Self.DB, Q_File_References_Decl_By_Loc,
-            Params => (1 => +N'Unchecked_Access));
+            Params => (1 => Copy (N'Unchecked_Access)));
 
       elsif Kind /= "" then
          if Sort = By_Location then
             Cursor.DBCursor.Fetch
               (Self.DB, Q_File_References_And_Kind_By_Loc,
-               Params => (1 => +N'Unchecked_Access, 2 => +K'Unchecked_Access));
+               Params => (1 => Copy (N'Unchecked_Access),
+                          2 => Copy (K'Unchecked_Access)));
          else
             Cursor.DBCursor.Fetch
               (Self.DB, Q_File_References_And_Kind_By_Entity,
-               Params => (1 => +N'Unchecked_Access, 2 => +K'Unchecked_Access));
+               Params => (1 => Copy (N'Unchecked_Access),
+                          2 => Copy (K'Unchecked_Access)));
          end if;
 
       else
          if Sort = By_Location then
             Cursor.DBCursor.Fetch
               (Self.DB, Q_File_References_By_Loc,
-               Params => (1 => +N'Unchecked_Access));
+               Params => (1 => Copy (N'Unchecked_Access)));
          else
             Cursor.DBCursor.Fetch
               (Self.DB, Q_File_References_By_Entity,
-               Params => (1 => +N'Unchecked_Access));
+               Params => (1 => Copy (N'Unchecked_Access)));
          end if;
       end if;
    end References;

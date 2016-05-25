@@ -26,6 +26,7 @@
 
 with Interfaces.C.Strings;
 with System;
+with System.Storage_Elements;
 
 package GNATCOLL.SQL.Sqlite.Gnade is
 
@@ -382,6 +383,13 @@ package GNATCOLL.SQL.Sqlite.Gnade is
    type Text_Destructor is access procedure (Str : in out System.Address);
    pragma Convention (C, Text_Destructor);
 
+   Transient : constant Text_Destructor;
+   --  This is special value for Destructor parameter of Bind_Text.
+   --  This is equal to SQLITE_TRANSIENT of SQLite C interface.
+   --  The SQLITE_TRANSIENT value means that the content will likely change in
+   --  the near future and that SQLite should make its own private copy of the
+   --  content before returning.
+
    procedure Bind_Text
      (Stmt : Statement; Index : Integer;
       Str : System.Address; N_Bytes : Natural;
@@ -585,5 +593,12 @@ private
    pragma Import (C, Column_Type,       "sqlite3_column_type");
    pragma Import (C, Column_Count,      "sqlite3_column_count");
    pragma Import (C, DB_Handle,         "sqlite3_db_handle");
+
+   procedure Dummy_Transient (Str : in out System.Address)
+   with Address => System.Storage_Elements.To_Address
+                     (System.Storage_Elements.Integer_Address'Last);
+   pragma Import (C, Dummy_Transient);
+
+   Transient : constant Text_Destructor := Dummy_Transient'Access;
 
 end GNATCOLL.SQL.Sqlite.Gnade;
