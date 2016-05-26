@@ -3168,6 +3168,26 @@ package body GNATCOLL.Xref is
                Start := Index;
                Skip_Word;
 
+               Dep_Id :=  Insert_Source_File
+                 (Basename  => Filesystem_String (Str (Start .. Index - 1)),
+                  Project   => LI_Project,  --  same as the LI
+                  Is_ALI_Unit  => True).Id;
+
+               --  An ALI file could contain the information for two
+               --  compilation units (in general the spec and body). We use
+               --  this to set dependencies between spec and body. The body
+               --  always appears first, as in:
+               --    U a%b  a.adb  0b5f8c76 NE OO PK
+               --    U a%s  a.ads  9552ba58 EE NE OO PK
+
+               if Current_Unit_Id /= -1 and then Dep_Id /= -1 then
+                  DB.Execute
+                    (Query_Set_File_Dep,
+                     Params => (1 => +Current_Unit_Id, 2 => +Dep_Id));
+               end if;
+
+               Current_Unit_Id := Dep_Id;
+
                --  In general, we need to remove old references already known
                --  in this source file. However, in the case of source files
                --  with multiple units, we should only do so for the first ALI
@@ -3175,10 +3195,6 @@ package body GNATCOLL.Xref is
                --  also changed, necessarily) will remove the references we
                --  just added.
 
-               Current_Unit_Id := Insert_Source_File
-                 (Basename     => Filesystem_String (Str (Start .. Index - 1)),
-                  Project      => LI_Project,  --  same as the LI
-                  Is_ALI_Unit  => True).Id;
                if Current_Unit_Id /= -1 then
                   DB.Execute
                     (Query_Set_ALI,

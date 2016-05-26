@@ -4,6 +4,20 @@ Known Problems in Gnatcoll 1.8
 
 Copyright (C) 2013-2016, AdaCore
 
+KP-18-P503-055 gnatinspect: body of package does not depend on spec
+
+  Problem:    When GNATCOLL.Xref or gnatinspect are used to generate a
+              cross-reference database from the ALI files created by
+              the compiler, they do not store the fact that the body
+              of a package implicitly always depends on its spec. The
+              result is the dependency browser in GPS, for instance,
+              also does not display this information.
+
+  Status:     Fixed in Gnatcoll 17.0 on 2016-05-26
+
+  Workaround: You can put an explicit with in the body of the
+              package.
+
 KP-18-P401-004 GNATCOLL.JSON and tasks
 
   Problem:    The reference counters used by this package are not task
