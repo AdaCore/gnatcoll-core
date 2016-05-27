@@ -1444,6 +1444,7 @@ package GNATCOLL.Projects is
    Local_Pragmas_Attribute         : constant Attribute_Pkg_String;
    Locally_Removed_Files_Attribute : constant Attribute_Pkg_List;
    Documentation_Dir_Attribute     : constant Attribute_Pkg_String;
+   Origin_Project_Attribute        : constant Attribute_Pkg_String;
 
    Target_Attribute                : constant Attribute_Pkg_String;
    Runtime_Attribute               : constant Attribute_Pkg_String;
@@ -2055,6 +2056,8 @@ private
                                  "ide#vcs_patch_root";
    Documentation_Dir_Attribute : constant Attribute_Pkg_String :=
                                  "ide#documentation_dir";
+   Origin_Project_Attribute  : constant Attribute_Pkg_String :=
+                                 "origin_project";
 
    Target_Attribute  : constant Attribute_Pkg_String := "target";
    Runtime_Attribute : constant Attribute_Pkg_String := "runtime";
