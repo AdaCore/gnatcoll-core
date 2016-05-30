@@ -200,6 +200,10 @@ package body GNATCOLL.Scripts.Files is
          --  Ignore server argument here
          Set_Return_Value (Data, Full_Name (Info));
 
+      elsif Command = "path" then
+         Info := Nth_Arg (Data, 1);
+         Data.Set_Return_Value (Full_Name (Info));
+
       elsif Command = "directory" then
          Info := Nth_Arg (Data, 1);
          Set_Return_Value (Data, Dir_Name (Info));
@@ -333,6 +337,10 @@ package body GNATCOLL.Scripts.Files is
          Maximum_Args => 1,
          Class        => Get_File_Class (Repo),
          Handler      => File_Command_Handler'Access);
+      Repo.Register_Property
+        ("path",
+         Class        => Get_File_Class (Repo),
+         Getter       => File_Command_Handler'Access);
       Register_Command
         (Repo, "directory",
          Class        => Get_File_Class (Repo),
