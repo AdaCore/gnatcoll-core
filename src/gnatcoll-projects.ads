@@ -426,7 +426,7 @@ package GNATCOLL.Projects is
    --  executing gnatls. By default, returns the local host.
 
    procedure Set_GNAT_Version
-      (Self    : Project_Environment;
+      (Self    : in out Project_Environment;
        Version : String) is null;
    --  This procedure is called when the project manager spawns and parses
    --  gnatls. At that point, it finds the version of GNAT and calls this
