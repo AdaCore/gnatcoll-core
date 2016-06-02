@@ -79,7 +79,8 @@ package GNATCOLL.GMP.Integers is
    --  lower-case letter represent 36..61.
    --
    --  Raises Failure if the entire string To is not a valid number in base
-   --  Base.
+   --  Base. Note that a leading "+" is not valid, although a leading "-"
+   --  denotes a negative integer.
 
    function Make (This : String;  Base : Int := 10) return Big_Integer;
    --  Constructs a Big_Integer from This, using the same rules as procedure
