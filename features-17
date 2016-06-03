@@ -15,6 +15,12 @@ of the feature.
 New features in 17
 ------------------
 
+NF-17-P603-028 GNATCOLL.Atomic: Sync_*_Compare_And_Swap_Counter (2016-06-03)
+
+  New atomic operations are provided, that change the value of an
+  Atomic_Counter if, and only if, it currently has a given known value.
+  This is useful to write lock-free algorithms.
+
 NF-17-P315-022 GNATCOLL.SQL: support ORDER BY in aggregates (2016-03-15)
 
   The Apply function now takes an additional optional argument allowing

@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                             G N A T C O L L                              --
 --                                                                          --
---                     Copyright (C) 2010-2015, AdaCore                     --
+--                     Copyright (C) 2010-2016, AdaCore                     --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -24,6 +24,20 @@
 with Interfaces;    use Interfaces;
 
 package body GNATCOLL.Atomic is
+
+   function Intrinsic_Sync_Bool_Compare_And_Swap
+     (Ptr    : access Atomic_Counter;
+      Oldval : Atomic_Counter;
+      Newval : Atomic_Counter) return Boolean;
+   pragma Import (Intrinsic, Intrinsic_Sync_Bool_Compare_And_Swap,
+                  External_Name => "__sync_bool_compare_and_swap_4");
+
+   function Intrinsic_Sync_Val_Compare_And_Swap
+     (Ptr    : access Atomic_Counter;
+      Oldval : Atomic_Counter;
+      Newval : Atomic_Counter) return Atomic_Counter;
+   pragma Import (Intrinsic, Intrinsic_Sync_Val_Compare_And_Swap,
+                  External_Name => "__sync_val_compare_and_swap_4");
 
    function Intrinsic_Sync_Add_And_Fetch
      (Ptr   : access Atomic_Counter;
@@ -69,5 +83,29 @@ package body GNATCOLL.Atomic is
    begin
       return Intrinsic_Sync_Bool_And_Swap_Access (Ptr, Oldval, Newval) /= 0;
    end Sync_Bool_Compare_And_Swap;
+
+   ----------------------------------------
+   -- Sync_Bool_Compare_And_Swap_Counter --
+   ----------------------------------------
+
+   function Sync_Bool_Compare_And_Swap_Counter
+      (Ptr    : access Atomic_Counter;
+       Oldval : Atomic_Counter;
+       Newval : Atomic_Counter) return Boolean is
+   begin
+      return Intrinsic_Sync_Bool_Compare_And_Swap (Ptr, Oldval, Newval);
+   end Sync_Bool_Compare_And_Swap_Counter;
+
+   ---------------------------------------
+   -- Sync_Val_Compare_And_Swap_Counter --
+   ---------------------------------------
+
+   function Sync_Val_Compare_And_Swap_Counter
+      (Ptr    : access Atomic_Counter;
+       Oldval : Atomic_Counter;
+       Newval : Atomic_Counter) return Atomic_Counter is
+   begin
+      return Intrinsic_Sync_Val_Compare_And_Swap (Ptr, Oldval, Newval);
+   end Sync_Val_Compare_And_Swap_Counter;
 
 end GNATCOLL.Atomic;

@@ -56,4 +56,17 @@ package GNATCOLL.Atomic is
    --  Otherwise, return False and do not modify the current value.
    --  This operation is task safe and atomic.
 
+   function Sync_Bool_Compare_And_Swap_Counter
+      (Ptr    : access Atomic_Counter;
+       Oldval : Atomic_Counter;
+       Newval : Atomic_Counter) return Boolean;
+   function Sync_Val_Compare_And_Swap_Counter
+      (Ptr    : access Atomic_Counter;
+       Oldval : Atomic_Counter;
+       Newval : Atomic_Counter) return Atomic_Counter;
+   --  A version that works with Atomic_Counter.
+   --  Ptr.all is set to Newval if and only if it is currently set to Oldval.
+   --  Returns True if the value was changed.
+   --  The second version returns the initial value of Ptr.all
+
 end GNATCOLL.Atomic;

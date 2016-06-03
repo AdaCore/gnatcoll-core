@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                             G N A T C O L L                              --
 --                                                                          --
---                     Copyright (C) 2010-2015, AdaCore                     --
+--                     Copyright (C) 2010-2016, AdaCore                     --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -73,5 +73,49 @@ package body GNATCOLL.Atomic is
          return False;
       end if;
    end Sync_Bool_Compare_And_Swap;
+
+   --------------------------------
+   -- Sync_Bool_Compare_And_Swap --
+   --------------------------------
+
+   function Sync_Bool_Compare_And_Swap_Counter
+      (Ptr    : access Atomic_Counter;
+       Oldval : Atomic_Counter;
+       Newval : Atomic_Counter) return Boolean
+   is
+   begin
+      GNAT.Task_Lock.Lock;
+      if Ptr.all = Oldval then
+         Ptr.all := Newval;
+         GNAT.Task_Lock.Unlock;
+         return True;
+      else
+         GNAT.Task_Lock.Unlock;
+         return False;
+      end if;
+   end Sync_Bool_Compare_And_Swap_Counter;
+
+   -------------------------------
+   -- Sync_Val_Compare_And_Swap --
+   -------------------------------
+
+   function Sync_Val_Compare_And_Swap_Counter
+      (Ptr    : access Atomic_Counter;
+       Oldval : Atomic_Counter;
+       Newval : Atomic_Counter) return Atomic_Counter
+   is
+      Initial : Atomic_Counter;
+   begin
+      GNAT.Task_Lock.Lock;
+      Initial := Ptr.all;
+      if Ptr.all = Oldval then
+         Ptr.all := Newval;
+         GNAT.Task_Lock.Unlock;
+         return Initial;
+      else
+         GNAT.Task_Lock.Unlock;
+         return Initial;
+      end if;
+   end Sync_Val_Compare_And_Swap_Counter;
 
 end GNATCOLL.Atomic;
