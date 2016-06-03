@@ -790,7 +790,7 @@ package GNATCOLL.SQL is
    function SQL_Delete
      (From  : SQL_Table'Class;
       Where : SQL_Criteria := No_Criteria) return SQL_Query;
-   --  Deletes all fields matching WHERE in the table FROM
+   --  Deletes all rows matching WHERE in the table FROM
 
    type Temp_Table_Behavior is (Preserve_Rows, Delete_Rows, Drop);
 
