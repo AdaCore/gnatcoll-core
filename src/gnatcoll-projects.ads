@@ -1280,9 +1280,14 @@ package GNATCOLL.Projects is
    -- Build environment --
    -----------------------
 
-   function Get_Target (Project : Project_Type) return String;
+   function Get_Target
+     (Project         : Project_Type;
+      Default_To_Host : Boolean := True) return String;
    --  Return the target configured in the project, if any, and the empty
    --  string otherwise.
+   --  If Default_To_Host is set to True and Target is not specified explicitly
+   --  in the project itself or those it extends the host platform is returned
+   --  instead of empty string.
 
    function Get_Runtime (Project : Project_Type) return String;
    --  Return the runtime configured in the project, if any, and the empty

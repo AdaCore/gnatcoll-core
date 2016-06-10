@@ -3364,7 +3364,15 @@ package body GNATCOLL.Projects is
    -- Get_Target --
    ----------------
 
-   function Get_Target (Project : Project_Type) return String is
+   function Get_Target
+     (Project         : Project_Type;
+      Default_To_Host : Boolean := True) return String is
+
+      Prj : Project_Type := Project;
+
+      Target_From_Attribute : constant String := Project.Attribute_Value
+        (Attribute    => Target_Attribute,
+         Use_Extended => True);
 
       function Extract_From_Attribute
         (Attribute : Attribute_Pkg_String;
@@ -3403,16 +3411,27 @@ package body GNATCOLL.Projects is
 
       --  First check whether the "Target" attribute is explicitly given
 
-      declare
-         Target : constant String := Project.Attribute_Value
-           (Attribute    => Target_Attribute,
-            Use_Extended => True);
-      begin
-         if Target /= "" then
-            --  The attribute target is defined and non-empty: look no further!
-            return Target;
-         end if;
-      end;
+      if Target_From_Attribute /= "" then
+         --  The attribute target is defined and non-empty: look no further!
+         --  But we need to clarify where does this attribute come from.
+         --  It may be either declared in the project itself or in one of
+         --  projects extending it, or it may be inherited from cgpr.
+         --  In the last case we do not want to return it.
+         while Prj /= No_Project loop
+            declare
+               Target_Value : constant Variable_Value :=
+                 Value_Of
+                   (Get_String ("target"),
+                    Prj.Data.View.Decl.Attributes,
+                    Prj.Data.Tree.View.Shared);
+            begin
+               if Target_Value.Project = Prj.Data.View then
+                  return Target_From_Attribute;
+               end if;
+            end;
+            Prj := Extended_Project (Prj);
+         end loop;
+      end if;
 
       --  Next: look for the legacy way of defining the target via
       --  the "gnat" in the package "ide". We expect something of the form
@@ -3442,7 +3461,11 @@ package body GNATCOLL.Projects is
 
       --  Nothing? The target is not defined.
 
-      return "";
+      if Default_To_Host then
+         return Target_From_Attribute;
+      else
+         return "";
+      end if;
    end Get_Target;
 
    -----------------
