@@ -2743,10 +2743,10 @@ package body GNATCOLL.Projects is
                                Shared => Shared);
          end if;
       else
-         Value := Value_Of (N, Var, Shared => Shared);
+         Value := Value_Of (N, In_Variables => Var, Shared => Shared);
       end if;
 
-      if Value = Nil_Variable_Value
+      if Value.Location = No_Location
         and then Use_Extended
         and then Extended_Project (Project) /= No_Project
       then
@@ -3525,7 +3525,9 @@ package body GNATCOLL.Projects is
       File           : GNATCOLL.VFS.Filesystem_String;
       Case_Sensitive : Boolean := True) return Boolean
    is
-      Value : String_List_Access := Project.Attribute_Value (Main_Attribute);
+      Value : String_List_Access :=
+                Project.Attribute_Value (Attribute    => Main_Attribute,
+                                         Use_Extended => True);
    begin
       for V in Value'Range loop
          if Equal (Value (V).all, +File, Case_Sensitive => Case_Sensitive) then

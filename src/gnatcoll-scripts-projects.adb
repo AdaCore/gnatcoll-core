@@ -411,6 +411,8 @@ package body GNATCOLL.Scripts.Projects is
          begin
             Set_Return_Value (Data, Exec_Dir.Full_Name);
          end;
+      elsif Command = "target" then
+         Data.Set_Return_Value (Project.Get_Target (Default_To_Host => False));
       end if;
    end Project_Queries;
 
@@ -531,6 +533,10 @@ package body GNATCOLL.Scripts.Projects is
         (Repo, "exec_dir",
          Class        => Get_Project_Class (Repo),
          Handler      => Project_Queries'Access);
+      Register_Property
+        (Repo, "target",
+         Class  => Get_Project_Class (Repo),
+         Getter => Project_Queries'Access);
    end Register_Commands;
 
    ---------------------------------
