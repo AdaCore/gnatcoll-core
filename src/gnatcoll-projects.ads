@@ -1885,6 +1885,11 @@ private
 
       Save_Config_File : GNAT.Strings.String_Access;
       --  See Set_Save_Config_File
+
+      Scenario_Variables : Scenario_Variable_Array_Access;
+      --  Cached value of the scenario variables. This should be accessed
+      --  only through the function Scenario_Variables, since it needs to
+      --  be initialized first.
    end record;
 
    type Name_Id_Array        is array (Positive range <>) of GPR.Name_Id;

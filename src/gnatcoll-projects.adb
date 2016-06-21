@@ -204,11 +204,6 @@ package body GNATCOLL.Projects is
             --  Index on project paths. This table is filled when the project
             --  is loaded.
 
-            Scenario_Variables : Scenario_Variable_Array_Access;
-            --  Cached value of the scenario variables. This should be accessed
-            --  only through the function Scenario_Variables, since it needs to
-            --  be initialized first.
-
          when True =>
             null;
       end case;
@@ -4840,7 +4835,7 @@ package body GNATCOLL.Projects is
 
    begin
       Trace (Me, "Compute the list of scenario variables");
-      Unchecked_Free (Tree.Scenario_Variables);
+      Unchecked_Free (Tree.Env.Scenario_Variables);
       List :=  new Scenario_Variable_Array (1 .. Count_Vars);
       Curr := List'First;
 
@@ -4849,9 +4844,9 @@ package body GNATCOLL.Projects is
          Callback => Register_Var'Unrestricted_Access);
 
       if Curr > List'Last then
-         Tree.Scenario_Variables := List;
+         Tree.Env.Scenario_Variables := List;
       else
-         Tree.Scenario_Variables :=
+         Tree.Env.Scenario_Variables :=
            new Scenario_Variable_Array'(List (1 .. Curr - 1));
          Unchecked_Free (List);
       end if;
@@ -4872,24 +4867,24 @@ package body GNATCOLL.Projects is
    ------------------------
 
    function Scenario_Variables
-     (Tree : Project_Tree_Data_Access) return Scenario_Variable_Array is
+     (Tree : Project_Tree_Data_Access) return Scenario_Variable_Array
+   is
    begin
-      if Tree = null then
+      if Tree = null or else Tree.Is_Aggregated then
          return (1 .. 0 => <>);
       end if;
 
-      if Tree.Scenario_Variables = null then
+      if Tree.Env.Scenario_Variables = null then
          Compute_Scenario_Variables (Tree);
       end if;
 
-      for V in Tree.Scenario_Variables'Range loop
-         Tree.Scenario_Variables (V).Value :=
+      for V of Tree.Env.Scenario_Variables.all loop
+         V.Value :=
            GPR.Ext.Value_Of
-             (Tree.Env.Env.External, Tree.Scenario_Variables (V).Name,
-              With_Default => Tree.Scenario_Variables (V).Default);
+             (Tree.Env.Env.External, V.Name, With_Default => V.Default);
       end loop;
 
-      return Tree.Scenario_Variables.all;
+      return Tree.Env.Scenario_Variables.all;
    end Scenario_Variables;
 
    ------------------------
@@ -4907,13 +4902,13 @@ package body GNATCOLL.Projects is
    begin
       Ext := Get_String (E);
 
-      if Self.Data.Scenario_Variables = null then
+      if Self.Data.Env.Scenario_Variables = null then
          Compute_Scenario_Variables (Self.Data);
       end if;
 
-      for V in Self.Data.Scenario_Variables'Range loop
-         if Self.Data.Scenario_Variables (V).Name = Ext then
-            return Self.Data.Scenario_Variables (V);
+      for V of Self.Data.Env.Scenario_Variables.all loop
+         if V.Name = Ext then
+            return V;
          end if;
       end loop;
 
@@ -4923,10 +4918,10 @@ package body GNATCOLL.Projects is
          String_Type => Empty_Project_Node,  --   ??? Won't be able to edit it
          Value       => No_Name);
 
-      List := Self.Data.Scenario_Variables;
-      Self.Data.Scenario_Variables :=
+      List := Self.Data.Env.Scenario_Variables;
+      Self.Data.Env.Scenario_Variables :=
         new Scenario_Variable_Array'
-          (Self.Data.Scenario_Variables.all & Var);
+          (Self.Data.Env.Scenario_Variables.all & Var);
       Unchecked_Free (List);
 
       return Var;
@@ -7253,7 +7248,7 @@ package body GNATCOLL.Projects is
       end if;
 
       Tree.Data.Directories.Clear;
-      Unchecked_Free (Tree.Data.Scenario_Variables);
+      Unchecked_Free (Tree.Data.Env.Scenario_Variables);
    end Reset_View;
 
    --------------------
@@ -9248,7 +9243,8 @@ package body GNATCOLL.Projects is
 
       Project.Set_Modified (True);
 
-      Unchecked_Free (Project.Data.Tree.Scenario_Variables);
+      --  Clear the cache
+      Unchecked_Free (Project.Data.Tree.Env.Scenario_Variables);
 
       return (Name        => Get_String (External_Name),
               Default     => No_Name,

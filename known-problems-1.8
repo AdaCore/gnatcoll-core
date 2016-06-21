@@ -4,6 +4,16 @@ Known Problems in Gnatcoll 1.8
 
 Copyright (C) 2013-2016, AdaCore
 
+KP-18-P621-006 GNATCOLL.Project editing aggregated projects fails
+
+  Problem:    When editing an aggregated project, GNATCOLL would fail
+              with an exception.
+
+  Status:     Fixed in Gnatcoll 17.0 on 2016-06-21
+
+  Workaround: Edit the project file manually (this bug mostly impacts
+              users of GPS who want to edit their project graphically).
+
 KP-18-P503-055 gnatinspect: body of package does not depend on spec
 
   Problem:    When GNATCOLL.Xref or gnatinspect are used to generate a
