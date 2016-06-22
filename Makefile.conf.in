@@ -39,15 +39,19 @@ DEFS=@DEFS@
 
 TARGET_WIN32=no
 
+# Extra options to pass to gprbuild, for instance -d
+# to monitor the progress of the build
+GPRBUILD_OPTIONS=
+
 TARGET=@TARGET@
 ifeq ($(TARGET),)
-GPRBUILD=gprbuild
+GPRBUILD=gprbuild $(GPRBUILD_OPTIONS)
 GPRINSTALL=gprinstall
 ifeq (${OS},Windows_NT)
      TARGET_WIN32=yes
 endif
 else
-GPRBUILD=gprbuild --target=${TARGET}
+GPRBUILD=gprbuild --target=${TARGET} $(GPRBUILD_OPTIONS)
 GPRINSTALL=gprinstall --target=${TARGET}
 ifeq ($(filter-out %mingw32,${TARGET}),)
      TARGET_WIN32=yes
