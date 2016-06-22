@@ -2199,6 +2199,14 @@ package body GNATCOLL.Projects.Normalize is
                   Clone_Node
                     (Tree, First_Declarative_Item_Of (Node, Tree), True));
 
+            when N_Split =>
+               Set_String_Argument_Of
+                 (New_Node, Tree,
+                  Clone_Node (Tree, String_Argument_Of (Node, Tree), True));
+               Set_Separator_Of
+                 (New_Node, Tree,
+                  Clone_Node (Tree, Separator_Of (Node, Tree), True));
+
             when N_Comment_Zones =>
                null;
 
