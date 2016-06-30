@@ -522,6 +522,24 @@ package GNATCOLL.SQL.Exec is
      (Self : access Database_Connection_Record) return Boolean is abstract;
    --  Whether the database knows about the "PRAGMA" command.
 
+   ----------------------------
+   -- Transaction_Controller --
+   ----------------------------
+   --  This type simplify usage of transactions. A transaction starts
+   --  and does commit or rollback automatically. All that needed for this
+   --  is declare instance of this type. For example:
+   --
+   --     procedure X
+   --     is
+   --        Transaction : Transaction_Controller (DB);
+   --     begin
+   --        ...
+   --     end X;
+   --
+
+   type Transaction_Controller (DB : Database_Connection) is tagged private
+     with Warnings => Off; -- To prevent "Unused" warnings
+
    ------------------------------------------
    -- Retrieving results - Forward cursors --
    ------------------------------------------
@@ -1008,6 +1026,14 @@ private
       Error_Msg      : GNAT.Strings.String_Access;
       Automatic_Transactions : Boolean := True;
    end record;
+
+   type Transaction_Controller (DB : Database_Connection) is
+     new Ada.Finalization.Controlled with record
+      Started : Boolean := False;
+   end record;
+
+   overriding procedure Initialize (Self : in out Transaction_Controller);
+   overriding procedure Finalize   (Self : in out Transaction_Controller);
 
    type Abstract_DBMS_Forward_Cursor is abstract tagged record
       Refcount : Natural := 1;
