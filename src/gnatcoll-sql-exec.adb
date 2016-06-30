@@ -732,7 +732,6 @@ package body GNATCOLL.SQL.Exec is
    overriding procedure Initialize (Self : in out Transaction_Controller) is
    begin
       Self.Started := Self.DB.Start_Transaction;
-      GNATCOLL.Traces.Increase_Indent;
    end Initialize;
 
    --------------
@@ -744,7 +743,6 @@ package body GNATCOLL.SQL.Exec is
       if Self.Started then
          Self.DB.Commit_Or_Rollback;
       end if;
-      GNATCOLL.Traces.Decrease_Indent;
    end Finalize;
 
    ---------------------
