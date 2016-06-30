@@ -354,7 +354,12 @@ package GNATCOLL.Traces is
    -- Blocks --
    ------------
 
-   type Block_Trace_Handle (<>) is limited private;
+   type Block_Trace_Handle (<>) is limited private
+      with Warnings => Off;
+   --  The aspect avoids warnings on unused instances, yet allows code to
+   --  manipulate those instances when needed (which a "Unused=>True" would
+   --  not)
+
    function Create
       (Handle   : Trace_Handle;
        Message  : String := "";
@@ -368,8 +373,7 @@ package GNATCOLL.Traces is
    --  subprogram exists. For instance:
    --       Me : constant Trace_Handle := Create ("PKG");
    --       procedure Foo (A : Integer) is
-   --          Block_Me : constant Block_Trace_Handle := Create (Me)
-   --             with Unreferenced;
+   --          Block_Me : constant Block_Trace_Handle := Create (Me);
    --       begin
    --          Trace (Me, "A=" & A'Img);
    --          if A > 1 then

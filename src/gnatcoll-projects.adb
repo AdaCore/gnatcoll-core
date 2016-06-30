@@ -6272,8 +6272,7 @@ package body GNATCOLL.Projects is
       Report_Missing_Dirs : Boolean := True)
    is
       Block_Me : constant Block_Trace_Handle :=
-         Create (Me, Root_Project_Path.Display_Full_Name)
-         with Unreferenced;
+         Create (Me, Root_Project_Path.Display_Full_Name);
       Tmp : Project_Tree'Class := Self;  --  Must use same tag
       Previous_Project : Virtual_File;
       Previous_Status  : Project_Status;
@@ -6938,7 +6937,7 @@ package body GNATCOLL.Projects is
       Test_With_Missing_With : Boolean := True;
       Report_Missing_Dirs    : Boolean := True)
    is
-      Block_Me : constant Block_Trace_Handle := Create (Me) with Unreferenced;
+      Block_Me : constant Block_Trace_Handle := Create (Me);
 
       procedure On_Error is new Mark_Project_Error (Tree);
       --  Any error while parsing the project marks it as incomplete, and
@@ -7261,7 +7260,7 @@ package body GNATCOLL.Projects is
      (Self   : in out Project_Tree;
       Errors : Projects.Error_Report := null)
    is
-      Block_Me : constant Block_Trace_Handle := Create (Me) with Unreferenced;
+      Block_Me : constant Block_Trace_Handle := Create (Me);
 
       Actual_Config_File : Project_Node_Id := Empty_Project_Node;
       Actual_Config_File_Tree : GPR.Project_Node_Tree_Ref := null;
@@ -8099,7 +8098,7 @@ package body GNATCOLL.Projects is
    ------------------------
 
    procedure Parse_Source_Files (Self : in out Project_Tree) is
-      Block_Me : constant Block_Trace_Handle := Create (Me) with Unreferenced;
+      Block_Me : constant Block_Trace_Handle := Create (Me);
 
       procedure Register_Directory (Directory : Filesystem_String);
       --  Register Directory as belonging to Project.
