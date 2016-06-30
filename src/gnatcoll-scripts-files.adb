@@ -267,17 +267,8 @@ package body GNATCOLL.Scripts.Files is
 
          declare
             Project : constant GNATCOLL.Projects.Project_Type :=
-                              Get_Project (Info, Default_To_Root => True);
-            Is_Main : constant Boolean :=
-                        GNATCOLL.Projects.Is_Main_File
-                          (Project,
-                           File => Info.Base_Name);
+                        Get_Project (Info, Default_To_Root => True);
          begin
-            if not Is_Main then
-               Set_Error_Msg (Data, +Info.Base_Name & " is not a main file");
-               return;
-            end if;
-
             Data.Set_Return_Value
               (Create_File
                  (Script => Data.Get_Script,
