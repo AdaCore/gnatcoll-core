@@ -133,9 +133,15 @@ package GNATCOLL.Projects is
    --  sense, more like a graph, but the term Tree makes it more obvious that
    --  one of the projects plays a special role, the root project.
 
-   procedure Initialize (Self : in out Project_Environment_Access);
+   procedure Initialize
+     (Self     : in out Project_Environment_Access;
+      IDE_Mode : Boolean := False);
    --  Allocate a new environment (if Self is null) and initialize internal
-   --  data
+   --  data.
+   --  IDE_Mode turns on some additional functionality such as extra error
+   --  message filtering that is only relevant for interactive aplications such
+   --  as GPS. Most of the tools that do a single pass on the project should
+   --  not turn on this flag.
 
    procedure Free (Self : in out Project_Environment_Access);
    procedure Free (Self : in out Project_Tree_Access);
@@ -1840,6 +1846,8 @@ private
 
    type Project_Environment is tagged record
       Env : GPR.Tree.Environment;
+
+      IDE_Mode : Boolean := False;
 
       Autoconf    : Boolean := False;
       Config_File : GNATCOLL.VFS.Virtual_File;

@@ -6443,7 +6443,10 @@ package body GNATCOLL.Projects is
    -- Initialize --
    ----------------
 
-   procedure Initialize (Self : in out Project_Environment_Access) is
+   procedure Initialize
+     (Self     : in out Project_Environment_Access;
+      IDE_Mode : Boolean := False)
+   is
       Path : String_Access;
    begin
       if Self = null then
@@ -6456,6 +6459,7 @@ package body GNATCOLL.Projects is
       GPR.Env.Get_Path (Self.Env.Project_Path, Path);
       Self.Predefined_Project_Path :=
         new File_Array'(From_Path (+Path.all));
+      Self.IDE_Mode := IDE_Mode;
    end Initialize;
 
    -----------
@@ -7010,8 +7014,12 @@ package body GNATCOLL.Projects is
          --  is not specified.
          GPR.Output.Cancel_Special_Output;
       else
-         GPR.Output.Set_Special_Output
-           (Filter_Reload_Warnings'Unrestricted_Access);
+         if Tree.Data.Env.IDE_Mode then
+            GPR.Output.Set_Special_Output
+              (Filter_Reload_Warnings'Unrestricted_Access);
+         else
+            GPR.Output.Set_Special_Output (GPR.Output.Output_Proc (Errors));
+         end if;
       end if;
       GPR.Com.Fail := Fail'Unrestricted_Access;
 
