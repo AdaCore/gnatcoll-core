@@ -743,7 +743,8 @@ PACKAGE_VERSION
 PACKAGE_TARNAME
 PACKAGE_NAME
 PATH_SEPARATOR
-SHELL'
+SHELL
+WITH_XREF'
 ac_subst_files=''
 ac_user_opts='
 enable_option_checking
@@ -5204,6 +5205,14 @@ fi
 
 
 
+  # Automatically enable Xref if projects, iconv, and sqlite are available
+  if test "$WITH_PROJECTS" = "yes" && test "$WITH_ICONV" = "yes" && test "$WITH_SQLITE" != "no"; then
+    WITH_XREF=yes
+  else
+    WITH_XREF=no
+  fi
+
+
     case $build_os in
        *darwin*)   EXTRA_LINK_SWITCHES='"-Wl,-no_pie"';;
        *)          EXTRA_LINK_SWITCHES='';;
@@ -6675,12 +6684,13 @@ $as_echo "$as_me:   PostgreSQL:             $WITH_POSTGRES $PATH_LIBPQ (see --wi
 $as_echo "$as_me:   Sqlite:                 $WITH_SQLITE $PATH_LIBSQLITE (see --with-sqlite)" >&6;}
 { $as_echo "$as_me:${as_lineno-$LINENO}:   Iconv:                  $WITH_ICONV (see --with-iconv)" >&5
 $as_echo "$as_me:   Iconv:                  $WITH_ICONV (see --with-iconv)" >&6;}
-
 { $as_echo "$as_me:${as_lineno-$LINENO}:   Projects:               $WITH_PROJECTS" >&5
 $as_echo "$as_me:   Projects:               $WITH_PROJECTS" >&6;}
 if test $WITH_PROJECTS = no; then
 { $as_echo "$as_me:${as_lineno-$LINENO}:                           install libgpr to override" >&5
 $as_echo "$as_me:                           install libgpr to override" >&6;}
 fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}:   Xref:                   $WITH_XREF" >&5
+$as_echo "$as_me:   Xref:                   $WITH_XREF" >&6;}
 { $as_echo "$as_me:${as_lineno-$LINENO}: --------------------------------------------" >&5
 $as_echo "$as_me: --------------------------------------------" >&6;}

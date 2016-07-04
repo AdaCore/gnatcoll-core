@@ -41,9 +41,9 @@ project GnatColl_Iconv is
 
    case GnatColl_Shared.Iconv is
       when "no" =>
-        for Source_Dirs use ("iconv", "iconv/no_iconv");
+        for Source_Dirs use ();
       when "yes" =>
-        for Source_Dirs use ("iconv", "iconv/with_iconv");
+        for Source_Dirs use ("iconv");
         for Library_Options use (GnatColl_Shared.Iconv_Dir) & Gnatcoll_Shared.Iconv_Lib;
    end case;
 

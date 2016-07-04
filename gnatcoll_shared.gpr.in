@@ -12,18 +12,19 @@ abstract project GnatColl_Shared is
    Processors := External ("PROCESSORS", "1");
 
    type Yes_No is ("yes", "no");
-   Gtk    : Yes_No := External ("GTK", "@WITH_GTK@");
-   Python : Yes_No := External ("PYTHON", "@WITH_PYTHON@");
-   Syslog : Yes_No := External ("SYSLOG", "@WITH_SYSLOG@");
-   Postgres : Yes_No := External ("POSTGRES", "@WITH_POSTGRES@");
+   Gtk       : Yes_No := External ("GTK", "@WITH_GTK@");
+   Python    : Yes_No := External ("PYTHON", "@WITH_PYTHON@");
+   Syslog    : Yes_No := External ("SYSLOG", "@WITH_SYSLOG@");
+   Postgres  : Yes_No := External ("POSTGRES", "@WITH_POSTGRES@");
    type Sqlite_Inclusion is ("yes", "no", "embedded");
-   Sqlite   : Sqlite_Inclusion := External ("SQLITE", "@WITH_SQLITE@");
-   Gmp      : Yes_No := External ("GMP", "@WITH_GMP@");
-   Projects : Yes_No := External ("PROJECTS", "@WITH_PROJECTS@");
+   Sqlite    : Sqlite_Inclusion := External ("SQLITE", "@WITH_SQLITE@");
+   Gmp       : Yes_No := External ("GMP", "@WITH_GMP@");
+   Projects  : Yes_No := External ("PROJECTS", "@WITH_PROJECTS@");
    PyGobject : Yes_No := External ("PYGOBJECT", "@WITH_PYGOBJECT@");
-   Readline : Yes_No := External ("READLINE", "@WITH_READLINE@");
-   Mmap     : Yes_No := External ("MMAP", "@WITH_MMAP@");
-   Iconv : Yes_No := "@WITH_ICONV@";
+   Readline  : Yes_No := External ("READLINE", "@WITH_READLINE@");
+   Mmap      : Yes_No := External ("MMAP", "@WITH_MMAP@");
+   Iconv     : Yes_No := "@WITH_ICONV@";
+   Xref      : Yes_No := "@WITH_XREF@";
    Templates : Yes_No := "no";  --  Hard-coded for now
    Postgres_Has_PQprepare : Yes_No :=
       External ("HAS_PQPREPARE", "@HAS_PQPREPARE@");

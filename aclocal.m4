@@ -130,7 +130,6 @@ AC_DEFUN(AM_PROJECTS,
   AC_SUBST(WITH_PROJECTS)
 ])
 
-
 #############################################################
 # Check if static-pic libraries build required
 # The following variable is exported by configure:
@@ -147,6 +146,21 @@ AC_DEFUN(AM_ENABLE_STATIC_PIC,
 
   AC_SUBST(ENABLE_STATIC_PIC)
 ])
+
+#############################################################
+# Enable GNATCOLL.Xref support if dependencies are met
+# (projects, iconv, and sqlite).
+#############################################################
+
+AC_DEFUN(AM_XREF,
+[
+  if test "$WITH_PROJECTS" = "yes" && test "$WITH_ICONV" = "yes" && test "$WITH_SQLITE" != "no"; then
+    WITH_XREF=yes
+  else
+    WITH_XREF=no
+  fi
+])
+AC_SUBST(WITH_XREF)
 
 #############################################################
 # Check whether GNAT on that target supports building shared

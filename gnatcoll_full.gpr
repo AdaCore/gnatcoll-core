@@ -31,6 +31,7 @@ with "src/gnatcoll_sqlite";
 with "src/gnatcoll_gmp";
 with "src/gnatcoll_readline";
 with "src/gnatcoll_iconv";
+with "src/gnatcoll_xref";
 
 with "gnatcoll_shared";
 

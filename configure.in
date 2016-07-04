@@ -56,6 +56,7 @@ AM_PATH_ICONV
 AM_GNAT_SOURCES
 AM_CHECK_READLINE
 AM_PROJECTS
+AM_XREF
 AM_SYSTEM_LINK_SWITCHES
 AM_HAS_INTRINSIC_SYNC_COUNTERS
 AM_TO_GPR($GMP_CFLAGS,    GMP_CFLAGS_GPR)
@@ -110,11 +111,12 @@ AC_MSG_NOTICE(AC_HELP_STRING(
               [Sqlite:],[$WITH_SQLITE $PATH_LIBSQLITE (see --with-sqlite)]))
 AC_MSG_NOTICE(AC_HELP_STRING(
               [Iconv:],[$WITH_ICONV (see --with-iconv)]))
-
 AC_MSG_NOTICE(AC_HELP_STRING(
               [Projects:],[$WITH_PROJECTS]))
 if test $WITH_PROJECTS = no; then
 AC_MSG_NOTICE(AC_HELP_STRING(
               [],[install libgpr to override]))
 fi
+AC_MSG_NOTICE(AC_HELP_STRING(
+              [Xref:],[$WITH_XREF]))
 AC_MSG_NOTICE([--------------------------------------------])

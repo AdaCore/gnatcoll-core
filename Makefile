@@ -91,12 +91,12 @@ install_gps_plugin: force
 # relies on those generated sources.
 # So this target simply does nothing if gnatcoll_db2ada is not found, in which
 # case we use the checked in sources (which means that changing the dbschema
-# requires to have already build GNATCOLL once before)
+# requires to have already built GNATCOLL once before).
 
 generate_sources:
 	-@if [ -f src/obj/gnatcoll_db2ada${EXE} ]; then \
 	   src/obj/gnatcoll_db2ada${EXE} -dbtype=sqlite -dbname=:memory: \
-		-output src/generated \
+		-output src/xref.generated \
 		-dbmodel=src/dbschema.txt \
 		-createdb \
 		-adacreate \
@@ -104,7 +104,7 @@ generate_sources:
 		-load=src/initialdata.txt \
 		-enum "f2f_kind,id,name,F2F,Integer" \
 		-enum "e2e_kind,id,name,E2E,Integer"; \
-	   for f in src/generated/*.ad?; do \
+	   for f in src/xref.generated/*.ad?; do \
 	      tr -d '\r' < $$f > $$f.tmp && mv $$f.tmp $$f; \
 	   done; \
 	fi
