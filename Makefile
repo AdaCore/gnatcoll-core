@@ -9,12 +9,12 @@ ifeq (${BUILDS_SHARED},yes)
 # Additional targets. Builds relocatble first so that the tools are
 # preferably linked statically.
 all: relocatable static
-install:  install-clean install_library_type/static \
+install:  install-clean install_static \
 		install_library_type/relocatable    \
                 install_gps_plugin
 else
 all: static
-install:  install-clean install_library_type/static \
+install:  install-clean install_static \
           install_gps_plugin
 endif
 
@@ -23,7 +23,17 @@ endif
 
 ## Builds explicitly the shared or the static libraries
 
+static-pic: build_library_type/static-pic
+
+ifeq (${BUILDS_STATIC_PIC},yes)
+static: build_library_type/static build_library_type/static-pic
+install_static: install_library_type/static \
+                install_library_type/static-pic
+else
 static: build_library_type/static
+install_static: install_library_type/static
+endif
+
 shared relocatable: build_library_type/relocatable
 
 # Build either type of library. The argument (%) is the type of library to build
@@ -143,7 +153,7 @@ ifeq (${WITH_GTK},yes)
 	-gprclean ${GPRCLN_OPTS} -Psrc/gnatcoll_gtk
 endif
 
-clean: clean_library/static clean_library/relocatable
+clean: clean_library/static clean_library/static-pic clean_library/relocatable
 	-${MAKE} -C testsuite $@
 	-${MAKE} -C docs $@
 	-${MAKE} -C examples $@

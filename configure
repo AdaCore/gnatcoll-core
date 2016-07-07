@@ -675,6 +675,7 @@ PYTHON_VERSION
 PYTHON_BASE
 PYTHON
 SO_EXT
+ENABLE_STATIC_PIC
 DEFAULT_LIBRARY_TYPE
 GNAT_BUILDS_SHARED
 BUILD_TYPE
@@ -749,6 +750,7 @@ enable_option_checking
 enable_gpl
 enable_build
 enable_shared
+enable_static_pic
 with_python
 with_python_exec
 enable_shared_python
@@ -1392,6 +1394,7 @@ Optional Features:
   --disable-shared        Disable building of shared libraries
   --enable-shared         Build shared libraries if supported on the target
                           Make them the installation default
+  --enable-static-pic     build static-pic libraries
   --enable-shared-python  Link with shared python library instead of static
   --disable-pygtk         Disable support for PyGTK [[default=enabled]]
   --disable-pygobject     Disable support for PyGobject [[default=enabled]]
@@ -3631,6 +3634,17 @@ $as_echo "$GNAT_BUILDS_SHARED" >&6; }
       { $as_echo "$as_me:${as_lineno-$LINENO}: result: no (--disabled-shared)" >&5
 $as_echo "no (--disabled-shared)" >&6; }
    fi
+
+
+
+
+
+   # Check whether --enable-static-pic was given.
+if test "${enable_static_pic+set}" = set; then :
+  enableval=$enable_static_pic; ENABLE_STATIC_PIC=$enableval
+else
+  ENABLE_STATIC_PIC=no
+fi
 
 
 
@@ -6639,6 +6653,8 @@ fi
 $as_echo "$as_me: --------- Summary for GNAT Components --------------" >&6;}
 { $as_echo "$as_me:${as_lineno-$LINENO}:   Shared libraries:       $GNAT_BUILDS_SHARED (default: $DEFAULT_LIBRARY_TYPE)" >&5
 $as_echo "$as_me:   Shared libraries:       $GNAT_BUILDS_SHARED (default: $DEFAULT_LIBRARY_TYPE)" >&6;}
+{ $as_echo "$as_me:${as_lineno-$LINENO}:   Static PIC libraries:   $ENABLE_STATIC_PIC (see --enable-static-pic)" >&5
+$as_echo "$as_me:   Static PIC libraries:   $ENABLE_STATIC_PIC (see --enable-static-pic)" >&6;}
 { $as_echo "$as_me:${as_lineno-$LINENO}:   Gtk+:                   $WITH_GTK (requires pkg-config and gtkada.gpr)" >&5
 $as_echo "$as_me:   Gtk+:                   $WITH_GTK (requires pkg-config and gtkada.gpr)" >&6;}
 { $as_echo "$as_me:${as_lineno-$LINENO}:   Python:                 $WITH_PYTHON $PYTHON_BASE (see --with-python)" >&5

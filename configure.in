@@ -42,6 +42,7 @@ AC_SUBST(WITH_GPL)
 
 CHECK_BUILD_TYPE
 AM_GNAT_BUILDS_SHARED
+AM_ENABLE_STATIC_PIC
 AM_SO_SUFFIX
 AM_PATH_PYTHON
 AM_MMAP
@@ -86,6 +87,8 @@ AC_OUTPUT(gnatcoll_shared.gpr Makefile.conf src/gnatcoll_gmp.gpr src/gnatcoll_gt
 AC_MSG_NOTICE([--------- Summary for GNAT Components --------------])
 AC_MSG_NOTICE(AC_HELP_STRING(
               [Shared libraries:],[$GNAT_BUILDS_SHARED (default: $DEFAULT_LIBRARY_TYPE)]))
+AC_MSG_NOTICE(AC_HELP_STRING(
+              [Static PIC libraries:],[$ENABLE_STATIC_PIC (see --enable-static-pic)]))
 AC_MSG_NOTICE(AC_HELP_STRING(
               [Gtk+:],[$WITH_GTK (requires pkg-config and gtkada.gpr)]))
 AC_MSG_NOTICE(AC_HELP_STRING(

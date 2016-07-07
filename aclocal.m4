@@ -130,6 +130,24 @@ AC_DEFUN(AM_PROJECTS,
   AC_SUBST(WITH_PROJECTS)
 ])
 
+
+#############################################################
+# Check if static-pic libraries build required
+# The following variable is exported by configure:
+#   @ENABLE_STATIC_PIC@: either "yes" or "no"
+#############################################################
+AC_DEFUN(AM_ENABLE_STATIC_PIC,
+[
+   AC_ARG_ENABLE(static-pic,
+     AC_HELP_STRING(
+       [--enable-static-pic],
+       [build static-pic libraries]),
+     ENABLE_STATIC_PIC=$enableval,
+     ENABLE_STATIC_PIC=no)
+
+  AC_SUBST(ENABLE_STATIC_PIC)
+])
+
 #############################################################
 # Check whether GNAT on that target supports building shared
 # libraries

@@ -30,7 +30,7 @@ abstract project GnatColl_Shared is
 
    So_Ext := "@SO_EXT@";
 
-   type Library_Type_Type is ("relocatable", "static");
+   type Library_Type_Type is ("relocatable", "static", "static-pic");
    Library_Type : Library_Type_Type :=
      external ("LIBRARY_TYPE", "@DEFAULT_LIBRARY_TYPE@");
 
