@@ -138,12 +138,12 @@ AC_DEFUN(AM_PROJECTS,
 #############################################################
 AC_DEFUN(AM_ENABLE_STATIC_PIC,
 [
-   AC_ARG_ENABLE(static-pic,
-     AC_HELP_STRING(
-       [--enable-static-pic],
-       [build static-pic libraries]),
-     ENABLE_STATIC_PIC=$enableval,
-     ENABLE_STATIC_PIC=no)
+  AC_ARG_ENABLE(static-pic,
+    AC_HELP_STRING(
+      [--enable-static-pic],
+      [build static-pic libraries]),
+    ENABLE_STATIC_PIC=$enableval,
+    ENABLE_STATIC_PIC=no)
 
   AC_SUBST(ENABLE_STATIC_PIC)
 ])
@@ -166,7 +166,7 @@ AC_DEFUN(AM_GNAT_BUILDS_SHARED,
      [AC_HELP_STRING(
         [--disable-shared],
         [Disable building of shared libraries])
-AC_HELP_STRING(
+      AC_HELP_STRING(
         [--enable-shared],
         [Build shared libraries if supported on the target
 Make them the installation default])],
