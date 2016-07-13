@@ -1805,6 +1805,18 @@ package GNATCOLL.Projects is
    function Is_Limited_With (Iterator : Inner_Project_Iterator) return Boolean;
    --  Inner version of Is_Limited_With
 
+   procedure Set_Disable_Use_Of_TTY_Process_Descriptor
+     (Self : in out Project_Environment;
+      Disabled : Boolean);
+   --  GNAT.Expect.TTY.TTY_Process_Descriptor are used internally
+   --  to attach pseudo-terminal to processes launched by the package,
+   --  in particular to query the default search paths of the compilers.
+   --  In some cases, however, they might introduce unwanted complexity
+   --  (for instance when running inside a java virtual machine). It is thus
+   --  possible to disable them and fall back to a simpler way to spawn
+   --  the processes.
+   --  Most users should not have to disable this.
+
 private
 
    All_Packs : constant GNAT.Strings.String_List_Access := null;
@@ -1898,6 +1910,15 @@ private
       --  Cached value of the scenario variables. This should be accessed
       --  only through the function Scenario_Variables, since it needs to
       --  be initialized first.
+
+      TTY_Process_Descriptor_Disabled : Boolean := False;
+      --  when TTY_Process_Descriptor are disabled, Process_Descriptor are
+      --  used instead of TTY_Process_Descriptor to workaround incompatibility.
+      --  Known incompatibility: java IOException found when gnatcoll-projects
+      --  used from Java on linux through AJIS.
+      --  For more information see Set_Disable_Use_Of_TTY_Process_Descriptor
+      --  procedure comment.
+
    end record;
 
    type Name_Id_Array        is array (Positive range <>) of GPR.Name_Id;

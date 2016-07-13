@@ -6697,7 +6697,11 @@ package body GNATCOLL.Projects is
          end if;
       else
          Trace (Me, "Spawning " & (+Gnatls_Path.Full_Name));
-         Fd := new TTY_Process_Descriptor;
+         if Self.TTY_Process_Descriptor_Disabled then
+            Fd := new Process_Descriptor;
+         else
+            Fd := new TTY_Process_Descriptor;
+         end if;
          Non_Blocking_Spawn
            (Fd.all,
             +Gnatls_Path.Full_Name,
@@ -9741,6 +9745,17 @@ package body GNATCOLL.Projects is
    begin
       Self.Save_Config_File := new String'(+Name);
    end Set_Save_Config_File;
+
+   -----------------------------------------------
+   -- Set_Disable_Use_Of_TTY_Process_Descriptor --
+   -----------------------------------------------
+
+   procedure Set_Disable_Use_Of_TTY_Process_Descriptor
+      (Self : in out Project_Environment;
+       Disabled : Boolean) is
+   begin
+      Self.TTY_Process_Descriptor_Disabled := Disabled;
+   end Set_Disable_Use_Of_TTY_Process_Descriptor;
 
 begin
 --     GPR.Initialize;
