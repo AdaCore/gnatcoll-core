@@ -27,7 +27,7 @@ int gnatcoll_iconv_close(iconv_t cd) {
 
 #if _LIBICONV_VERSION >= 0x010D
 size_t gnatcoll_iconv
-   (iconv_t cd,  const char** inbuf, size_t *inbytesleft, char** outbuf,
+   (iconv_t cd,  char** inbuf, size_t *inbytesleft, char** outbuf,
     size_t *outbytesleft)
 #else
 size_t gnatcoll_iconv

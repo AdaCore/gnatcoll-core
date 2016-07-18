@@ -602,7 +602,7 @@ ada_gettypeobject (PyObject* obj)
 char*
 ada_tp_name (PyTypeObject* obj)
 {
-  return obj->tp_name;
+  return (char *)obj->tp_name;
 }
 
 PyObject* ada_py_none ()
