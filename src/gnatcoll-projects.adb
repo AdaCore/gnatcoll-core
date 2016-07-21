@@ -6683,7 +6683,6 @@ package body GNATCOLL.Projects is
       Gnatls_Args  : Argument_List_Access;
       Errors       : Error_Report)
    is
-      pragma Unreferenced (Self);
       Gnatls_Path : constant Virtual_File :=
         Locate_On_Path (+Gnatls_Args (Gnatls_Args'First).all);
    begin
