@@ -82,7 +82,8 @@ endif
 
 install_gps_plugin: force
 	mkdir -p $(prefix)/share/gps/plug-ins
-	(cd distrib/ ; tar cf - gnatcoll) | \
+	-(cd distrib/ ; python ./gen_gps.py)
+	(cd distrib/; tar cf - gnatcoll) | \
           (cd $(prefix)/share/gps/plug-ins ; tar xf -)
 
 # Regenerate part of the sources. Unfortunately, this can be run only after

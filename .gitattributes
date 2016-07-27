@@ -8,3 +8,4 @@ src/sqlite/amalgamation/*                  no-precommit-check
 
 src/dborm.py                               no-precommit-check
 src/generated/*                            no-precommit-check
+distrib/gnatcoll/runtime.py                no-precommit-check
