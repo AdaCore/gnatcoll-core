@@ -39,7 +39,7 @@ package GNATCOLL.Terminal is
    --  limited type.
    --  By default, this is configured without support for colors. It is thus
    --  recommended to first call Init before you use this type.
-   --  This type is almost always used in conjonction with a File_Type, which
+   --  This type is almost always used in conjunction with a File_Type, which
    --  is where text is actually output. The properties of that File_Type are
    --  queried and cached in the Terminal_Info.
 
