@@ -2087,6 +2087,31 @@ package body GNATCOLL.Scripts.Python is
    begin
       Script.Current_File := To_Unbounded_String (Filename);
 
+      --  Before executing a Python script, add its directory to sys.path.
+      --  This is to mimic the behavior of the command-line shell, and
+      --  allow the loaded script to "import" scripts in the same directory.
+
+      declare
+         D : constant String := +Create (+Filename).Dir_Name;
+         --  Use Virtual_File as a reliable way to get the directory
+         L : Natural := D'Last;
+
+      begin
+         --  Strip the ending '\' if any.
+         if D /= ""
+           and then D (L) = '\'
+         then
+            L := L - 1;
+         end if;
+
+         Execute_Command
+           (Script,
+            Create ("import sys;sys.path.insert(0, r'"
+              & D (D'First .. L) & "')"),
+            Console  => null, Hide_Output  => True,
+            Show_Command => False, Errors => Errors);
+      end;
+
       --  The call to compile is only necessary to get an error message
       --  pointing back to Filename
 
