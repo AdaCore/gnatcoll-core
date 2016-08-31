@@ -30,22 +30,21 @@ project GnatColl_Xref is
    Name := "xref";
 
    for Languages use ("Ada");
-
-   for Library_Kind    use GnatColl_Shared.Library_Type;
    for Object_Dir
       use Gnatcoll_Shared'Object_Dir & "/" & Name & "/" & Project'Library_Kind;
-   for Library_Dir
-      use Gnatcoll_Shared'Library_Dir & "/" & Name & "/" & Project'Library_Kind;
-   for Library_Name    use GnatColl_Shared.Name & "_" & Name;
-   for Library_Version use
-      "lib" & Project'Library_Name
-      & GnatColl_Shared.So_Ext & "." & GnatColl_Shared.Version;
 
    case GnatColl_Shared.Xref is
       when "no" =>
         for Source_Dirs use ();
       when "yes" =>
         for Source_Dirs use ("xref", "xref.generated");
+        for Library_Kind    use GnatColl_Shared.Library_Type;
+        for Library_Dir
+           use Gnatcoll_Shared'Library_Dir & "/" & Name & "/" & Project'Library_Kind;
+        for Library_Name    use GnatColl_Shared.Name & "_" & Name;
+        for Library_Version use
+           "lib" & Project'Library_Name
+           & GnatColl_Shared.So_Ext & "." & GnatColl_Shared.Version;
    end case;
 
    package Compiler is

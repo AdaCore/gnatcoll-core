@@ -38,11 +38,16 @@ project GnatColl_Tools is
       when "no" =>
          for Excluded_Source_Files use ("gnatinspect.adb");
       when "yes" =>
-         case GnatColl_Shared.Sqlite is
+         case GnatColl_Shared.Xref is
             when "no" =>
-               for Excluded_Source_Files use ("gnatinspect.adb");
-            when "yes" | "embedded" =>
-               for Main use Project'Main & ("gnatinspect.adb");
+              for Excluded_Source_Files use ("gnatinspect.adb");
+            when "yes" =>
+              case GnatColl_Shared.Sqlite is
+                 when "no" =>
+                    for Excluded_Source_Files use ("gnatinspect.adb");
+                 when "yes" | "embedded" =>
+                    for Main use Project'Main & ("gnatinspect.adb");
+              end case;
          end case;
    end case;
 
