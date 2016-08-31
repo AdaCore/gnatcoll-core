@@ -29,7 +29,7 @@ project GnatColl_Iconv is
 
    for Languages use ("Ada", "C");
    for Object_Dir
-      use Gnatcoll_Shared'Object_Dir & "/" & Name & "/" & Project'Library_Kind;
+      use Gnatcoll_Shared'Object_Dir & "/" & Name & "/" & GnatColl_Shared.Library_Type;
 
    case GnatColl_Shared.Iconv is
       when "no" =>
