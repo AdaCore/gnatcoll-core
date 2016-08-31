@@ -32,7 +32,7 @@ def recursive_ls(dir):
     return result
 
 list = recursive_ls("../src")
-out = file("gnatcoll/runtime.py", "w")
+out = file("gnatcoll/runtime.py", "wb")
 out.write("""XML = r'''<?xml version="1.0"?>
 <GPS>
 """)
