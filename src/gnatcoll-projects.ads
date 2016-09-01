@@ -960,6 +960,12 @@ package GNATCOLL.Projects is
    --  All the attributes defined in that file will provide the default value
    --  when loading projects later on.
 
+   function Get_Config_File
+     (Self : Project_Environment)
+      return GNATCOLL.VFS.Virtual_File
+     with Inline;
+   --  Return current configuration file
+
    procedure Set_Automatic_Config_File
      (Self        : in out Project_Environment;
       Autoconf    : Boolean := True);
@@ -971,6 +977,11 @@ package GNATCOLL.Projects is
    --  defines the Target attribute or Set_Target_And_Runtime was called.
    --  The target is NOT automatically extracted from IDE attributes
    --  (since their values are not yet known when gprconfig is spawned).
+
+   function Get_Automatic_Config_File
+     (Self : Project_Environment) return Boolean
+     with Inline;
+   --  Return Autoconf parameter
 
    procedure Add_Config_Dir
      (Self      : in out Project_Environment;

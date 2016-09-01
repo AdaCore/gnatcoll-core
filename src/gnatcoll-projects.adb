@@ -3282,6 +3282,16 @@ package body GNATCOLL.Projects is
       return False;
    end Has_Language;
 
+   -------------------------------
+   -- Get_Automatic_Config_File --
+   -------------------------------
+
+   function Get_Automatic_Config_File
+     (Self : Project_Environment) return Boolean is
+   begin
+      return Self.Autoconf;
+   end Get_Automatic_Config_File;
+
    ------------------
    -- Get_Closures --
    ------------------
@@ -3354,6 +3364,17 @@ package body GNATCOLL.Projects is
       Free (Closures_List);
 
    end Get_Closures;
+
+   ---------------------
+   -- Get_Config_File --
+   ---------------------
+
+   function Get_Config_File
+     (Self : Project_Environment)
+      return GNATCOLL.VFS.Virtual_File is
+   begin
+      return Self.Config_File;
+   end Get_Config_File;
 
    ----------------
    -- Get_Target --
