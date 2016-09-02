@@ -962,8 +962,8 @@ package GNATCOLL.Projects is
 
    function Get_Config_File
      (Self : Project_Environment)
-      return GNATCOLL.VFS.Virtual_File
-     with Inline;
+      return GNATCOLL.VFS.Virtual_File;
+   pragma Inline (Get_Config_File);
    --  Return current configuration file
 
    procedure Set_Automatic_Config_File
@@ -979,8 +979,8 @@ package GNATCOLL.Projects is
    --  (since their values are not yet known when gprconfig is spawned).
 
    function Get_Automatic_Config_File
-     (Self : Project_Environment) return Boolean
-     with Inline;
+     (Self : Project_Environment) return Boolean;
+   pragma Inline (Get_Automatic_Config_File);
    --  Return Autoconf parameter
 
    procedure Add_Config_Dir
