@@ -7759,6 +7759,12 @@ package body GNATCOLL.Projects is
          --  the project manager to extract target and runtime information
          --  from project attributes
 
+         if Self.Root_Project.Data.Tree.Env.Forced_Runtime /= null then
+            Set_Runtime_For
+              (Get_String ("ada"),
+               Self.Root_Project.Data.Tree.Env.Forced_Runtime.all);
+         end if;
+
          Process_Project_And_Apply_Config
            (Main_Project        => View,
             User_Project_Node   => Self.Root_Project.Data.Node,
