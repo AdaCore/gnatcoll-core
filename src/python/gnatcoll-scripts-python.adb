@@ -951,12 +951,16 @@ package body GNATCOLL.Scripts.Python is
       then
          if Handler.Cmd.Minimum_Args > Size then
             PyErr_SetString (Handler.Script.Exception_Missing_Args,
-                             "Wrong number of parameters, expecting at least"
+                             "Wrong number of parameters for "
+                             & Handler.Cmd.Command
+                             & ", expecting at least"
                              & Handler.Cmd.Minimum_Args'Img & ", received"
                              & Size'Img);
          else
             PyErr_SetString (Handler.Script.Exception_Missing_Args,
-                             "Wrong number of parameters, expecting at most"
+                             "Wrong number of parameters for "
+                             & Handler.Cmd.Command
+                             & ", expecting at most"
                              & Handler.Cmd.Maximum_Args'Img & ", received"
                              & Size'Img);
          end if;
@@ -2351,7 +2355,7 @@ package body GNATCOLL.Scripts.Python is
       end if;
 
       if Obj = null or else Obj = Py_None then
-         raise No_Such_Parameter;
+         raise No_Such_Parameter with N'Img;
       end if;
 
       Py_DECREF (Obj); --  Return a borrowed reference
@@ -2691,7 +2695,7 @@ package body GNATCOLL.Scripts.Python is
       Result  : constant String := Nth_Arg (Data, N, Success'Access);
    begin
       if not Success then
-         raise No_Such_Parameter;
+         raise No_Such_Parameter with N'Img;
       else
          return Result;
       end if;
@@ -2708,7 +2712,7 @@ package body GNATCOLL.Scripts.Python is
       Result  : constant Unbounded_String := Nth_Arg (Data, N, Success'Access);
    begin
       if not Success then
-         raise No_Such_Parameter;
+         raise No_Such_Parameter with N'Img;
       else
          return Result;
       end if;
@@ -2725,7 +2729,7 @@ package body GNATCOLL.Scripts.Python is
       Result  : constant Integer := Nth_Arg (Data, N, Success'Access);
    begin
       if not Success then
-         raise No_Such_Parameter;
+         raise No_Such_Parameter with N'Img;
       else
          return Result;
       end if;
@@ -2742,7 +2746,7 @@ package body GNATCOLL.Scripts.Python is
       Result  : constant Float := Nth_Arg (Data, N, Success'Access);
    begin
       if not Success then
-         raise No_Such_Parameter;
+         raise No_Such_Parameter with N'Img;
       else
          return Result;
       end if;
@@ -2759,7 +2763,7 @@ package body GNATCOLL.Scripts.Python is
       Result : constant Boolean := Nth_Arg (Data, N, Success'Access);
    begin
       if not Success then
-         raise No_Such_Parameter;
+         raise No_Such_Parameter with N'Img;
       else
          return Result;
       end if;
@@ -2776,7 +2780,7 @@ package body GNATCOLL.Scripts.Python is
       Result  : constant Subprogram_Type := Nth_Arg (Data, N, Success'Access);
    begin
       if not Success then
-         raise No_Such_Parameter;
+         raise No_Such_Parameter with N'Img;
       else
          return Result;
       end if;
@@ -2799,7 +2803,7 @@ package body GNATCOLL.Scripts.Python is
          if Allow_Null then
             return No_Class_Instance;
          else
-            raise No_Such_Parameter;
+            raise No_Such_Parameter with N'Img;
          end if;
       else
          return Result;
