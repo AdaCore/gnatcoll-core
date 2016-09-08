@@ -14,6 +14,21 @@ KP-18-P621-006 GNATCOLL.Project editing aggregated projects fails
   Workaround: Edit the project file manually (this bug mostly impacts
               users of GPS who want to edit their project graphically).
 
+KP-18-P620-027 Invalid conversions with GNATCOLL.Iconv stub package
+
+  Problem:    If Iconv support is not enabled, a stubbed version of
+              GNATCOLL.Iconv was installed that would silently pass
+              data through unconverted, in violation of the documented
+              specification. This bogus stub package has been removed.
+              Also, GNATCOLL.Xref (which depends on a working Iconv
+              implementation) has been moved to its own separate
+              project file: gnatcoll_xref.gpr
+
+  Status:     Fixed in Gnatcoll 17.0 on 2016-08-30
+
+  Workaround: Make sure to build GNATCOLL with a working iconv
+              implementation.
+
 KP-18-P503-055 gnatinspect: body of package does not depend on spec
 
   Problem:    When GNATCOLL.Xref or gnatinspect are used to generate a
