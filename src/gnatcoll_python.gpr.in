@@ -40,7 +40,14 @@ project GnatColl_Python is
       when "yes" =>
          for Languages use ("Ada", "C");
          for Source_Dirs use ("python");
-         for Library_Options use (@PYTHON_LIBS_GPR@);
+
+         case Gnatcoll_Shared.Library_Type is
+            when "relocatable" =>
+               for Library_Options use (@PYTHON_LIBS_GPR@);
+            when others =>
+               null;
+         end case;
+
       when "no"  =>
          for Languages use ("Ada");
          for Source_Dirs use ("nopython");
