@@ -34,7 +34,13 @@ project GnatColl is
    for Library_Version use
       "lib" & Project'Library_Name
       & GnatColl_Shared.So_Ext & "." & GnatColl_Shared.Version;
-   for Library_Options use GnatColl_Shared.Rss_Libs;
+
+   case Library_Kind is
+      when "relocatable" =>
+         for Library_Options use GnatColl_Shared.Rss_Libs;
+      when others =>
+         null;
+   end case;
 
    for Excluded_Source_Files use ("gnatcoll-projects.ads",
                                   "gnatcoll-projects.adb",

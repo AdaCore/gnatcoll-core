@@ -43,8 +43,14 @@ project GnatColl_Postgres is
       when "yes" =>
         for Languages use ("Ada", "C");
         for Source_Dirs use ("postgres", "postgres/with_postgres");
-        for Library_Options use
-           (GnatColl_Shared.Postgres_Dir) & GnatColl_Shared.Postgres_Lib;
+
+        case Gnatcoll_Shared.Library_Type is
+           when "relocatable" =>
+              for Library_Options use
+                 (GnatColl_Shared.Postgres_Dir) & GnatColl_Shared.Postgres_Lib;
+           when others =>
+              null;
+        end case;
    end case;
 
    package Builder  renames GnatColl_Shared.Builder;

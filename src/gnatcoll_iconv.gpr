@@ -44,7 +44,14 @@ project GnatColl_Iconv is
            & GnatColl_Shared.So_Ext & "." & GnatColl_Shared.Version;
 
         for Source_Dirs use ("iconv");
-        for Library_Options use (GnatColl_Shared.Iconv_Dir) & Gnatcoll_Shared.Iconv_Lib;
+
+        case Gnatcoll_Shared.Library_Type is
+           when "relocatable" =>
+              for Library_Options use (GnatColl_Shared.Iconv_Dir)
+                 & Gnatcoll_Shared.Iconv_Lib;
+           when others =>
+              null;
+        end case;
    end case;
 
    package Compiler is

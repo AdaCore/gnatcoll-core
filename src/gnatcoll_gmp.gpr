@@ -37,8 +37,14 @@ project GnatColl_Gmp is
             "lib" & Project'Library_Name
             & GnatColl_Shared.So_Ext & "." & GnatColl_Shared.Version;
 
-         --  When linking a shared library (see Linker_Options below)
-         for Library_Options use Gnatcoll_Shared.Gmp_Libs;
+         case Gnatcoll_Shared.Library_Type is
+            when "relocatable" =>
+               --  When linking a shared library (see Linker_Options below)
+               for Library_Options use Gnatcoll_Shared.Gmp_Libs;
+            when others =>
+               null;
+         end case;
+
       when "no" =>
          for Source_Dirs use ();
    end case;

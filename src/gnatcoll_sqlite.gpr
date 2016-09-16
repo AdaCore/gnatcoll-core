@@ -50,12 +50,25 @@ project GnatColl_Sqlite is
         for Source_Dirs use ("sqlite", "sqlite/no_sqlite");
       when "yes" =>
         for Source_Dirs use ("sqlite", "sqlite/with_sqlite");
-        for Library_Options use (GnatColl_Shared.Sqlite_Dir)
-          & "-lsqlite3" & Thread_Lib;
+
+        case Gnatcoll_Shared.Library_Type is
+           when "relocatable" =>
+              for Library_Options use (GnatColl_Shared.Sqlite_Dir)
+                & "-lsqlite3" & Thread_Lib;
+           when others =>
+              null;
+        end case;
+
       when "embedded" =>
         for Languages use ("Ada", "C");
         for Source_Dirs use ("sqlite", "sqlite/with_sqlite", "sqlite/amalgamation");
-        for Library_Options use Thread_Lib;
+
+        case Gnatcoll_Shared.Library_Type is
+           when "relocatable" =>
+              for Library_Options use Thread_Lib;
+           when others =>
+              null;
+        end case;
    end case;
 
    package Builder  renames GnatColl_Shared.Builder;

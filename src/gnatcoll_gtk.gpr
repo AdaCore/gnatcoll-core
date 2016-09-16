@@ -48,8 +48,15 @@ project GnatColl_Gtk is
          for Source_Dirs use ();
       when "yes" =>
          for Source_Dirs use ("gtk");
-         for Library_Options use GnatColl_Shared.Gtk_Libs
-            & GnatColl_Shared.Python_Libs;
+
+         case Gnatcoll_Shared.Library_Type is
+            when "relocatable" =>
+               for Library_Options use GnatColl_Shared.Gtk_Libs
+                  & GnatColl_Shared.Python_Libs;
+            when others =>
+               null;
+         end case;
+
          case GnatColl_Shared.Python is
             when "yes" =>
                for Source_Dirs use Project'Source_Dirs & ("gtk/python");
