@@ -36,7 +36,7 @@ project GnatColl is
       "lib" & Project'Library_Name
       & GnatColl_Shared.So_Ext & "." & GnatColl_Shared.Version;
 
-   case Library_Kind is
+   case GnatColl_Shared.Library_Type is
       when "relocatable" =>
          for Library_Options use GnatColl_Shared.Rss_Libs;
       when others =>
