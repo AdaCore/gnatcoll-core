@@ -21,63 +21,44 @@
 --                                                                          --
 ------------------------------------------------------------------------------
 
-with "gtkada";
 with "../gnatcoll_shared";
 with "gnatcoll";
-with "gnatcoll_python";
 
-project GnatColl_Gtk is
+project GnatColl_Gmp is
+   case Gnatcoll_Shared.Gmp is
+      when "yes" =>
+         for Languages use ("Ada", "C");
+         for Source_Dirs use ("gmp");
+         for Library_Kind    use GnatColl_Shared.Library_Type;
+         for Library_Dir     use "lib/gmp/" & Project'Library_Kind;
+         for Object_Dir      use "obj/gmp/" & Project'Library_Kind;
+         for Library_Name    use GnatColl_Shared.Name & "_gmp";
+         for Library_Version use
+            "lib" & Project'Library_Name
+            & GnatColl_Shared.So_Ext & "." & GnatColl_Shared.Version;
 
-   Gtk_Include    := (@GTK_GCC_FLAGS_GPR@);
-
-   for Library_Kind    use GnatColl_Shared.Library_Type;
-   for Object_Dir
-      use Gnatcoll_Shared'Object_Dir & "/gtk/" & Project'Library_Kind;
-   for Library_Dir
-      use Gnatcoll_Shared'Library_Dir & "/gtk/" & Project'Library_Kind;
-   for Library_Name    use GnatColl_Shared.Name & "_gtk";
-   for Library_Version use
-      "lib" & Project'Library_Name
-      & GnatColl_Shared.So_Ext & "." & GnatColl_Shared.Version;
-
-   for Languages use ("Ada", "C");
-
-   case GnatColl_Shared.Gtk is
+         --  When linking a shared library (see Linker_Options below)
+         for Library_Options use Gnatcoll_Shared.Gmp_Libs;
       when "no" =>
          for Source_Dirs use ();
-      when "yes" =>
-         for Source_Dirs use ("gtk");
-         for Library_Options use GnatColl_Shared.Gtk_Libs
-            & GnatColl_Shared.Python_Libs;
-         case GnatColl_Shared.Python is
-            when "yes" =>
-               for Source_Dirs use Project'Source_Dirs & ("gtk/python");
-            when "no"  =>
-               for Source_Dirs use Project'Source_Dirs & ("gtk/nopython");
-          end case;
    end case;
 
    package Builder renames GnatColl_Shared.Builder;
 
    package Compiler is
-      for Switches ("Ada") use GnatColl_Shared.Compiler'Switches ("Ada");
-
-      for Switches ("C") use
-        ("-g", "-O2")
-        & GnatColl_Shared.Python_Cflags
-        & GnatColl_Shared.Pygtk_Include
-        & GnatColl_Shared.PyGobject_Include
-        & Gtk_Include;
+      for Switches ("Ada") use Gnatcoll_Shared.Compiler'Switches ("Ada");
+      for Switches ("C") use Gnatcoll_Shared.Compiler'Switches ("C")
+        & Gnatcoll_Shared.Gmp_Flags;
    end Compiler;
 
    package Linker is
-      case GnatColl_Shared.Gtk is
-         when "yes" => for Linker_Options use GnatColl_Shared.Gtk_Libs
-            & GnatColl_Shared.Python_Libs;
+      --  When linking an executable
+      case Gnatcoll_Shared.Gmp is
+         when "yes" => for Linker_Options use Gnatcoll_Shared.Gmp_Libs;
          when "no"  => null;
       end case;
    end Linker;
 
    package Ide renames GnatColl_Shared.Ide;
 
-end GnatColl_Gtk;
+end GnatColl_Gmp;

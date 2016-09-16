@@ -83,7 +83,7 @@ fi
 rm -f "src/gnatcoll.gpr"
 cp -f "$prj" "src/gnatcoll.gpr"
 
-AC_OUTPUT(gnatcoll_shared.gpr Makefile.conf src/gnatcoll_gmp.gpr src/gnatcoll_gtk.gpr src/gnatcoll_python.gpr src/gnatcoll_readline.gpr)
+AC_OUTPUT(gnatcoll_shared.gpr Makefile.conf)
 
 AC_MSG_NOTICE([--------- Summary for GNAT Components --------------])
 AC_MSG_NOTICE(AC_HELP_STRING(

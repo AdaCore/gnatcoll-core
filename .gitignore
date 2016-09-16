@@ -4,7 +4,6 @@ gnat/xsnamest
 gnat/sdefault/sdefault.adb
 src/gnatcoll-atomic.adb
 src/gnatcoll.gpr
-src/gnatcoll_readline.gpr
 src/sqlite/amalgamation/sqlite3_for_gps
 
 docs/_build
@@ -34,9 +33,6 @@ obj/
 
 Makefile.conf
 gnatcoll_shared.gpr
-src/gnatcoll_gmp.gpr
-src/gnatcoll_python.gpr
-src/gnatcoll_gtk.gpr
 src/lib
 src/obj
 testsuite/obj

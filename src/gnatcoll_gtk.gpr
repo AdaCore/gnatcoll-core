@@ -21,53 +21,64 @@
 --                                                                          --
 ------------------------------------------------------------------------------
 
+with "gtkada";
 with "../gnatcoll_shared";
 with "gnatcoll";
+with "gnatcoll_python";
 
-project GnatColl_Python is
+project GnatColl_Gtk is
+
+   Gtk_Include := Gnatcoll_Shared.Gtk_Include;
+   --  Needed to build applications that have C files using gtk, like GPS
+
    for Library_Kind    use GnatColl_Shared.Library_Type;
-   for Object_Dir      use "obj/python/" & Project'Library_Kind;
-   for Library_Dir     use "lib/python/" & Project'Library_Kind;
-   for Library_Name    use GnatColl_Shared.Name & "_python";
+   for Object_Dir
+      use Gnatcoll_Shared'Object_Dir & "/gtk/" & Project'Library_Kind;
+   for Library_Dir
+      use Gnatcoll_Shared'Library_Dir & "/gtk/" & Project'Library_Kind;
+   for Library_Name    use GnatColl_Shared.Name & "_gtk";
    for Library_Version use
       "lib" & Project'Library_Name
       & GnatColl_Shared.So_Ext & "." & GnatColl_Shared.Version;
 
-   --  When linking a shared library (see Linker_Options below in addition)
-   for Library_Options use GnatColl_Shared.Python_Libs;
+   for Languages use ("Ada", "C");
 
-   case GnatColl_Shared.Python is
+   case GnatColl_Shared.Gtk is
+      when "no" =>
+         for Source_Dirs use ();
       when "yes" =>
-         for Languages use ("Ada", "C");
-         for Source_Dirs use ("python");
-
-         case Gnatcoll_Shared.Library_Type is
-            when "relocatable" =>
-               for Library_Options use (@PYTHON_LIBS_GPR@);
-            when others =>
-               null;
-         end case;
-
-      when "no"  =>
-         for Languages use ("Ada");
-         for Source_Dirs use ("nopython");
+         for Source_Dirs use ("gtk");
+         for Library_Options use GnatColl_Shared.Gtk_Libs
+            & GnatColl_Shared.Python_Libs;
+         case GnatColl_Shared.Python is
+            when "yes" =>
+               for Source_Dirs use Project'Source_Dirs & ("gtk/python");
+            when "no"  =>
+               for Source_Dirs use Project'Source_Dirs & ("gtk/nopython");
+          end case;
    end case;
 
    package Builder renames GnatColl_Shared.Builder;
 
    package Compiler is
-      for Switches ("Ada") use
-        GnatColl_Shared.Compiler'Switches ("Ada");
+      for Switches ("Ada") use GnatColl_Shared.Compiler'Switches ("Ada");
 
       for Switches ("C") use
-        ("-g", "-O2") & GnatColl_Shared.Python_Cflags;
+        ("-g", "-O2")
+        & GnatColl_Shared.Python_Cflags
+        & GnatColl_Shared.Pygtk_Include
+        & GnatColl_Shared.PyGobject_Include
+        & Gtk_Include;
    end Compiler;
 
    package Linker is
-      --  When linking an executable
-      for Linker_Options use GnatColl_Shared.Python_Libs;
+      case GnatColl_Shared.Gtk is
+         when "yes" => for Linker_Options use GnatColl_Shared.Gtk_Libs
+            & GnatColl_Shared.Python_Libs;
+         when "no"  => null;
+      end case;
    end Linker;
 
    package Ide renames GnatColl_Shared.Ide;
 
-end GnatColl_Python;
+end GnatColl_Gtk;

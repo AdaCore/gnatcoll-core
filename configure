@@ -1393,7 +1393,7 @@ Optional Features:
   --enable-build=<type>   Default build type for the library (Debug,
                           Production)
   --disable-shared        Disable building of shared libraries
-  --enable-shared         Build shared libraries if supported on the target
+        --enable-shared         Build shared libraries if supported on the target
                           Make them the installation default
   --enable-static-pic     build static-pic libraries
   --enable-shared-python  Link with shared python library instead of static
@@ -3640,7 +3640,7 @@ $as_echo "no (--disabled-shared)" >&6; }
 
 
 
-   # Check whether --enable-static-pic was given.
+  # Check whether --enable-static-pic was given.
 if test "${enable_static_pic+set}" = set; then :
   enableval=$enable_static_pic; ENABLE_STATIC_PIC=$enableval
 else
@@ -5205,7 +5205,6 @@ fi
 
 
 
-  # Automatically enable Xref if projects, iconv, and sqlite are available
   if test "$WITH_PROJECTS" = "yes" && test "$WITH_ICONV" = "yes" && test "$WITH_SQLITE" != "no"; then
     WITH_XREF=yes
   else
@@ -5495,7 +5494,7 @@ fi
 rm -f "src/gnatcoll.gpr"
 cp -f "$prj" "src/gnatcoll.gpr"
 
-ac_config_files="$ac_config_files gnatcoll_shared.gpr Makefile.conf src/gnatcoll_gmp.gpr src/gnatcoll_gtk.gpr src/gnatcoll_python.gpr src/gnatcoll_readline.gpr"
+ac_config_files="$ac_config_files gnatcoll_shared.gpr Makefile.conf"
 
 cat >confcache <<\_ACEOF
 # This file is a shell script that caches the results of configure
@@ -6204,10 +6203,6 @@ do
   case $ac_config_target in
     "gnatcoll_shared.gpr") CONFIG_FILES="$CONFIG_FILES gnatcoll_shared.gpr" ;;
     "Makefile.conf") CONFIG_FILES="$CONFIG_FILES Makefile.conf" ;;
-    "src/gnatcoll_gmp.gpr") CONFIG_FILES="$CONFIG_FILES src/gnatcoll_gmp.gpr" ;;
-    "src/gnatcoll_gtk.gpr") CONFIG_FILES="$CONFIG_FILES src/gnatcoll_gtk.gpr" ;;
-    "src/gnatcoll_python.gpr") CONFIG_FILES="$CONFIG_FILES src/gnatcoll_python.gpr" ;;
-    "src/gnatcoll_readline.gpr") CONFIG_FILES="$CONFIG_FILES src/gnatcoll_readline.gpr" ;;
 
   *) as_fn_error $? "invalid argument: \`$ac_config_target'" "$LINENO" 5;;
   esac
