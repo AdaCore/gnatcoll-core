@@ -2105,7 +2105,7 @@ private
    VCS_Patch_Root            : constant Attribute_Pkg_String :=
                                  "ide#vcs_patch_root";
    Documentation_Dir_Attribute : constant Attribute_Pkg_String :=
-                                 "ide#documentation_dir";
+                                 "documentation#documentation_dir";
    Origin_Project_Attribute  : constant Attribute_Pkg_String :=
                                  "origin_project";
 
