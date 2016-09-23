@@ -334,6 +334,7 @@ package body GNATCOLL.Scripts.Projects is
    is
 
       Project : constant Project_Type := Get_Data (Data, 1);
+      Env     : Project_Environment_Access;
 
    begin
       if Command = "get_executable_name" then
@@ -360,6 +361,21 @@ package body GNATCOLL.Scripts.Projects is
             end loop;
             Unchecked_Free (Sources);
          end;
+
+      elsif Command = "external_sources" then
+         Env := Project.Get_Environment;
+         if Env /= null then
+            declare
+               Sources : constant File_Array := Env.Predefined_Source_Files;
+            begin
+               Set_Return_Value_As_List (Data);
+               for S in Sources'Range loop
+                  Set_Return_Value
+                    (Data, GNATCOLL.Scripts.Files.Create_File
+                       (Get_Script (Data), Sources (S)));
+               end loop;
+            end;
+         end if;
 
       elsif Command = "languages" then
          Name_Parameters (Data, Languages_Cmd_Parameters);
@@ -506,6 +522,15 @@ package body GNATCOLL.Scripts.Projects is
          Maximum_Args => Sources_Cmd_Parameters'Length,
          Class        => Get_Project_Class (Repo),
          Handler      => Project_Queries'Access);
+      Register_Command
+        (Repo, "external_sources",
+         Maximum_Args  => 0,
+         Class         => Get_Project_Class (Repo),
+         Handler       => Project_Queries'Access);
+      --  This one could be implemented as a property - but we are making this
+      --  a method for homogeneity with "sources" from the perspective of the
+      --  user.
+
       Register_Command
         (Repo, "source_dirs",
          Minimum_Args => Source_Dirs_Cmd_Parameters'Length - 1,

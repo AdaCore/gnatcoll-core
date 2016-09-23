@@ -292,6 +292,10 @@ package GNATCOLL.Projects is
    function Is_Aggregate_Library (Self : Project_Type) return Boolean;
    --  Return true if the current project is an aggregate library project.
 
+   function Get_Environment
+     (Self : Project_Type) return Project_Environment_Access;
+   --  Return the environment which applies to the project, or null
+
    ------------------
    -- Project data --
    ------------------

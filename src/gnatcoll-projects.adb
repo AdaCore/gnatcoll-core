@@ -8444,6 +8444,22 @@ package body GNATCOLL.Projects is
       Free (Self.Data.View);
    end Unload;
 
+   ---------------------
+   -- Get_Environment --
+   ---------------------
+
+   function Get_Environment
+     (Self : Project_Type) return Project_Environment_Access is
+   begin
+      if Self = No_Project
+        or Self.Data.Tree = null
+      then
+         return null;
+      else
+         return Self.Data.Tree.Env;
+      end if;
+   end Get_Environment;
+
    --------------------------
    -- Is_Aggregate_Library --
    --------------------------
