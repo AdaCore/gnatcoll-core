@@ -1933,6 +1933,24 @@ package body GNATCOLL.Scripts.Shell is
       return "";
    end Print_Refcount;
 
+   ------------------------
+   -- Execute_Expression --
+   ------------------------
+
+   overriding procedure Execute_Expression
+     (Result      : out Shell_Callback_Data;
+      Expression  : String;
+      Hide_Output : Boolean := True)
+   is
+      Errors : aliased Boolean;
+   begin
+      Result.Set_Return_Value
+         (String'(Execute_GPS_Shell_Command
+            (Shell_Scripting (Get_Script (Result)),
+             Expression,
+             Errors'Unchecked_Access)));
+   end Execute_Expression;
+
    ---------------------
    -- Execute_Command --
    ---------------------

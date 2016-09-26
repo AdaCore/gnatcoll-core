@@ -472,6 +472,10 @@ private
      (Data : Python_Callback_Data) return Class_Instance;
    overriding function Return_Value
      (Data : Python_Callback_Data) return List_Instance'Class;
+   overriding procedure Execute_Expression
+     (Result      : out Python_Callback_Data;
+      Expression  : String;
+      Hide_Output : Boolean := True);
    --  See doc from inherited subprogram
 
 end GNATCOLL.Scripts.Python;

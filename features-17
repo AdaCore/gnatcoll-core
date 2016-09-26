@@ -15,6 +15,12 @@ of the feature.
 New features in 17
 ------------------
 
+NF-17-P914-027 GNATCOLL.Scripts.Execute_Expression: new function (2016-09-26)
+
+  This new function can be used to execute any python expression (not just
+  function calls) and retrieve their result without knowing in advance
+  whether it will return a string, list of string, boolean,...
+
 NF-17-P603-028 GNATCOLL.Atomic: Sync_*_Compare_And_Swap_Counter (2016-06-03)
 
   New atomic operations are provided, that change the value of an

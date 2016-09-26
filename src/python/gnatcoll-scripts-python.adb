@@ -3848,6 +3848,42 @@ package body GNATCOLL.Scripts.Python is
       Unchecked_Free (Files);
    end Load_Directory;
 
+   ------------------------
+   -- Execute_Expression --
+   ------------------------
+
+   overriding procedure Execute_Expression
+     (Result      : out Python_Callback_Data;
+      Expression  : String;
+      Hide_Output : Boolean := True)
+   is
+      Script : constant Python_Scripting :=
+        Python_Scripting (Get_Script (Result));
+      Res : PyObject;
+      Errors : aliased Boolean;
+   begin
+      if Script.Blocked then
+         Set_Error_Msg (Result, "A command is already executing");
+      else
+         Res := Run_Command
+           (Script,
+            Command         => Expression,
+            Hide_Output     => Hide_Output,
+            Hide_Exceptions => Hide_Output,
+            Need_Output     => True,
+            Errors          => Errors'Access);
+
+         Setup_Return_Value (Result);
+         if Errors then
+            Py_XDECREF (Res);
+            PyErr_Clear;
+            raise Error_In_Command with "Error in '" & Expression & "()'";
+         else
+            Result.Return_Value := Res;  --  Adopts a reference
+         end if;
+      end if;
+   end Execute_Expression;
+
    ---------------------
    -- Execute_Command --
    ---------------------

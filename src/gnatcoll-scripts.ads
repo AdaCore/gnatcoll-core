@@ -1231,6 +1231,14 @@ package GNATCOLL.Scripts is
 
    Error_In_Command : exception;
 
+   procedure Execute_Expression
+      (Result      : out Callback_Data;
+       Expression  : String;
+       Hide_Output : Boolean := True) is abstract;
+   --   Execute any expression, and store the result in Result.
+   --   Resulted must have been Created, all its arguments are ignored.
+   --   It must be freed by the caller.
+
    procedure Execute_Command
      (Args        : in out Callback_Data;
       Command     : String;
@@ -1259,6 +1267,9 @@ package GNATCOLL.Scripts is
    --  If the command returns an error (or raised an exception), an Ada
    --  exception is raised in turn (Error_In_Command). The exception is also
    --  printed on the current console for the language.
+   --
+   --  This procedure expects Command to be the name of a function. To
+   --  execute any expression, see Execute_Expression instead
 
    function Execute_Command_With_Args
      (Script : access Scripting_Language_Record;
