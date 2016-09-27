@@ -371,7 +371,7 @@ private
    overriding function Return_Value
      (Data : Shell_Callback_Data) return List_Instance'Class;
    overriding procedure Execute_Expression
-     (Result      : out Shell_Callback_Data;
+     (Result      : in out Shell_Callback_Data;
       Expression  : String;
       Hide_Output : Boolean := True);
    --  See doc from inherited subprogram

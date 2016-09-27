@@ -3853,7 +3853,7 @@ package body GNATCOLL.Scripts.Python is
    ------------------------
 
    overriding procedure Execute_Expression
-     (Result      : out Python_Callback_Data;
+     (Result      : in out Python_Callback_Data;
       Expression  : String;
       Hide_Output : Boolean := True)
    is

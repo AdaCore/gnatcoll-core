@@ -473,7 +473,7 @@ private
    overriding function Return_Value
      (Data : Python_Callback_Data) return List_Instance'Class;
    overriding procedure Execute_Expression
-     (Result      : out Python_Callback_Data;
+     (Result      : in out Python_Callback_Data;
       Expression  : String;
       Hide_Output : Boolean := True);
    --  See doc from inherited subprogram

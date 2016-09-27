@@ -1938,7 +1938,7 @@ package body GNATCOLL.Scripts.Shell is
    ------------------------
 
    overriding procedure Execute_Expression
-     (Result      : out Shell_Callback_Data;
+     (Result      : in out Shell_Callback_Data;
       Expression  : String;
       Hide_Output : Boolean := True)
    is

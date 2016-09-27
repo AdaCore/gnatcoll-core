@@ -1232,7 +1232,7 @@ package GNATCOLL.Scripts is
    Error_In_Command : exception;
 
    procedure Execute_Expression
-      (Result      : out Callback_Data;
+      (Result      : in out Callback_Data;
        Expression  : String;
        Hide_Output : Boolean := True) is abstract;
    --   Execute any expression, and store the result in Result.
