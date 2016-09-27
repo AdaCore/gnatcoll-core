@@ -70,7 +70,8 @@ abstract project GnatColl_Shared is
             for Switches ("C") use ("-g", "-Wunreachable-code");
 
          when "Production" =>
-            for Switches ("Ada") use ("-O2", "-gnatn", "-gnatws");
+            --  Do not use -gnatwe for production mode
+            for Switches ("Ada") use ("-O2", "-gnatn", "-gnatwaCJ");
             for Switches ("C") use ("-O2", "-Wunreachable-code");
       end case;
 
