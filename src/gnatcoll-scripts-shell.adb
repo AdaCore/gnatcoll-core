@@ -1942,7 +1942,10 @@ package body GNATCOLL.Scripts.Shell is
       Expression  : String;
       Hide_Output : Boolean := True)
    is
+      pragma Unreferenced (Hide_Output);
+
       Errors : aliased Boolean;
+
    begin
       Result.Set_Return_Value
          (String'(Execute_GPS_Shell_Command
