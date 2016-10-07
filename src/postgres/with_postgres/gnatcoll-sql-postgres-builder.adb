@@ -827,7 +827,7 @@ package body GNATCOLL.SQL.Postgres.Builder is
    -- Connect_And_Execute --
    -------------------------
 
-   function Connect_And_Execute
+   overriding function Connect_And_Execute
      (Connection  : access Postgresql_Connection_Record;
       Is_Select   : Boolean;
       Direct      : Boolean;
