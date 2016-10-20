@@ -141,9 +141,4 @@ private package GNATCOLL.SQL.Exec_Private is
      (Self : in out DBMS_Direct_Cursor; Step : Integer) is abstract;
    --  See documentation for GNATCOLL.SQL.Exec.Direct_Cursor
 
-private
-
-   type DBMS_Connection is
-      abstract new Database_Connection_Record with null record;
-
 end GNATCOLL.SQL.Exec_Private;
