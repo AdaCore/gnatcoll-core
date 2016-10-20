@@ -526,6 +526,18 @@ package body GNATCOLL.SQL_Impl is
    begin
       --  Ignore constant fields (NULL,...)
       if Self.Table /= null then
+         --  Check that field already exists in list
+         for F of To.List loop
+            if F.Instance_Index = Self.Instance_Index
+              and then F.Table = Self.Table
+              and then F.Instance = Self.Instance
+              and then F.Name = Self.Name
+            then
+               --  Do not need the same field twice
+               return;
+            end if;
+         end loop;
+
          Append (To.List, Self);
       end if;
    end Append_If_Not_Aggregate;
