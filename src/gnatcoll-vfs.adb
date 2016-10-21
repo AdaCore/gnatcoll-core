@@ -545,7 +545,9 @@ package body GNATCOLL.VFS is
    --------------------
 
    function Full_Name_Hash
-     (Key : Virtual_File) return Ada.Containers.Hash_Type is
+     (Key : Virtual_File) return Ada.Containers.Hash_Type
+   is
+      F : FS_Type;
    begin
       if Key.Value = null then
          return 0;
@@ -553,11 +555,18 @@ package body GNATCOLL.VFS is
 
       Ensure_Normalized (Key, Resolve_Symlinks => True);
 
-      if Is_Case_Sensitive (Key.Value.Get_FS) then
-         return Ada.Strings.Hash (+Key.Value.Normalized_And_Resolved.all);
+      --  We also take care of potential trailing dir separator by enforcing
+      --  them. The goal is that we have the same hash whenever "=" returns
+      --  True, so that we can instantiate hash tables by using "=" for the
+      --  equivalent key function
+
+      F := Key.Value.Get_FS;
+      if Is_Case_Sensitive (F) then
+         return Ada.Strings.Hash
+           (+Ensure_Directory (F, Key.Value.Normalized_And_Resolved.all));
       else
          return Ada.Strings.Hash_Case_Insensitive
-           (+Key.Value.Normalized_And_Resolved.all);
+           (+Ensure_Directory (F, Key.Value.Normalized_And_Resolved.all));
       end if;
    end Full_Name_Hash;
 
