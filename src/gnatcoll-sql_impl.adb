@@ -528,11 +528,7 @@ package body GNATCOLL.SQL_Impl is
       if Self.Table /= null then
          --  Check that field already exists in list
          for F of To.List loop
-            if F.Instance_Index = Self.Instance_Index
-              and then F.Table = Self.Table
-              and then F.Instance = Self.Instance
-              and then F.Name = Self.Name
-            then
+            if SQL_Field (F) = Self then
                --  Do not need the same field twice
                return;
             end if;
