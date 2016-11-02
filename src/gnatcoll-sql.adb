@@ -835,6 +835,19 @@ package body GNATCOLL.SQL is
       return Internal (Field);
    end Lower;
 
+   -----------
+   -- Upper --
+   -----------
+
+   function Upper
+     (Field : Text_Fields.Field'Class) return Text_Fields.Field'Class
+   is
+      function Internal is new Text_Fields.Apply_Function
+        (Text_Fields.Field, "UPPER (");
+   begin
+      return Internal (Field);
+   end Upper;
+
    -------------
    -- Initcap --
    -------------

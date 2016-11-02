@@ -417,6 +417,8 @@ package GNATCOLL.SQL is
      (Field : Integer_Fields.Field'Class) return Integer_Fields.Field'Class;
    function Lower
      (Field : Text_Fields.Field'Class) return Text_Fields.Field'Class;
+   function Upper
+     (Field : Text_Fields.Field'Class) return Text_Fields.Field'Class;
    function Initcap
      (Field : Text_Fields.Field'Class) return Text_Fields.Field'Class;
    --  Return the corresponding SQL function applied on Field
