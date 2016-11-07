@@ -495,10 +495,21 @@ package GNATCOLL.Email is
    --  Remove the corresponding payload from the message
 
    procedure Convert_To_Multipart (Msg : Message'Class);
-   --  Convert the message to a multi-part message if it is a single part one
-   --  (does nothing otherwise).
-   --  The current textual content is set to be the first part of the converted
-   --  message.
+   --  If Msg is a single part message, convert it to a multipart/mixed whose
+   --  first part is the original payload, else do not change the MIME
+   --  structure of Msg (but make sure that the underlying data structure is
+   --  suitable for storage of a multipart message).
+
+   procedure Convert_To_Multipart
+     (Msg       : Message'Class;
+      MIME_Type : String;
+      Force     : Boolean := False);
+   --  If Msg is a single part message, convert it to a multipart with the
+   --  indicated MIME_Type, whose first part is the original payload. Also
+   --  do so if Msg is a multipart message if it has a different MIME subtype,
+   --  or if Force is True. Else do not change the MIME structure of Msg
+   --  (but make sure that the underlying data structure is suitable
+   --  for storage of a multipart message).
 
    procedure Convert_To_Single_Part
      (Msg   : in out Message'Class;
@@ -520,7 +531,7 @@ package GNATCOLL.Email is
    --  If the message was single-part message, it is automatically converted to
    --  a multi-part message.
 
-   procedure Set_Epilogue (Msg :  in out Message'Class; Epilogue : String);
+   procedure Set_Epilogue (Msg : in out Message'Class; Epilogue : String);
    --  This is similar to the preamble, but appears after the end of the
    --  last document.
    --  If the message was single-part message, it is automatically converted to

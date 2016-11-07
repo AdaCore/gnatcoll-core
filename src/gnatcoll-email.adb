@@ -27,6 +27,7 @@ with Ada.Calendar;              use Ada.Calendar;
 with Ada.Characters.Handling;   use Ada.Characters.Handling;
 with Ada.Containers;            use Ada.Containers;
 with Ada.Strings.Fixed;         use Ada.Strings.Fixed;
+with Ada.Text_IO; use Ada.Text_IO;
 
 with Ada.Unchecked_Deallocation;
 with GNATCOLL.Email.Utils;      use GNATCOLL.Email.Utils;
@@ -1563,41 +1564,80 @@ package body GNATCOLL.Email is
    --------------------------
 
    procedure Convert_To_Multipart (Msg : Message'Class) is
-      Part : constant Message_List.List := Message_List.Empty_List;
+      MIME_Type         : constant String := Get_Content_Type (Msg);
+      Is_Multipart_Type : constant Boolean :=
+        Get_Main_Type (MIME_Type) = "multipart";
    begin
       if not Msg.Contents.Payload.Multipart then
-         declare
-            Old : constant String := To_String (Msg.Contents.Payload.Text);
-         begin
-            Msg.Contents.Payload :=
-              (Multipart => True,
-               Parts     => Part,
-               Preamble  => Null_Unbounded_String,
-               Epilogue  => Null_Unbounded_String);
+         Convert_To_Multipart (Msg,
+           (if Is_Multipart_Type then MIME_Type else Multipart_Mixed));
+      end if;
+   end Convert_To_Multipart;
 
-            if Get_Main_Type (Get_Content_Type (Msg)) /= "multipart" then
-               declare
-                  Boundary : constant String := Get_Boundary (Msg);
-               begin
-                  if Boundary /= "" then
-                     Replace_Header
-                       (Msg,
-                        Create
-                          (Content_Type, "multipart/mixed; boundary="""
-                           & Boundary & '"'));
-                  else
-                     Replace_Header
-                       (Msg, Create (Content_Type, "multipart/mixed"));
-                  end if;
-               end;
-               Replace_Header (Msg, Create (MIME_Version, "1.0"));
-               Delete_Headers (Msg, Content_Transfer_Encoding);
-            end if;
+   procedure Convert_To_Multipart
+     (Msg       : Message'Class;
+      MIME_Type : String;
+      Force     : Boolean := False)
+   is
+      Parts         : Message_List.List;
+      Create_Nested : constant Boolean :=
+        Get_Content_Type (Msg) /= MIME_Type or else Force;
+      Part          : Message;
+      Preamble      : Unbounded_String;
 
-            if Old /= "" then
-               Set_Text_Payload (Msg, Old, MIME_Type => Text_Plain);
-            end if;
-         end;
+      procedure Move_Header (Header_Name : String);
+      --  Move named header from Msg to Part
+
+      -----------------
+      -- Move_Header --
+      -----------------
+
+      procedure Move_Header (Header_Name : String) is
+         H : constant Header := Get_Header (Msg, Header_Name);
+      begin
+         if H /= Null_Header then
+            Replace_Header (Part, H);
+            Delete_Header (Msg, H);
+         end if;
+      end Move_Header;
+
+   --  Start of processing for Convert_To_Multipart
+
+   begin
+      if not Msg.Contents.Payload.Multipart or else Create_Nested then
+         if Get_Main_Type (Get_Content_Type (Msg)) = "multipart"
+           and then not Create_Nested
+         then
+            --  Here we only convert the underlying payload storage
+            --  to multipart, but we don't change the user-visible MIME
+            --  structure: from the user's point of view, this is a no-op.
+            --  Used while parsing a message: the payload is initially
+            --  not Multipart, and then converted here lazily when parts
+            --  are parsed. Assume that the original text payload is actually
+            --  the multipart's preamble.
+
+            Preamble := Msg.Contents.Payload.Text;
+
+         else
+            --  Here to convert a MIME message with a non-multipart type to a
+            --  multipart, or to force creation of a nested multipart.
+
+            Part := Clone_Message (Message (Msg));
+            Part.Contents.Headers := Header_List.Empty_List;
+
+            Move_Header (Content_Type);
+            Move_Header (Content_Transfer_Encoding);
+            Parts.Append (Part);
+
+            Replace_Header (Msg, Create (Content_Type, MIME_Type));
+            Replace_Header (Msg, Create (MIME_Version, "1.0"));
+         end if;
+
+         Msg.Contents.Payload :=
+           (Multipart => True,
+            Parts     => Parts,
+            Preamble  => Preamble,
+            Epilogue  => Null_Unbounded_String);
       end if;
    end Convert_To_Multipart;
 
@@ -2172,5 +2212,29 @@ package body GNATCOLL.Email is
          return Date_From_Envelope (Msg);
       end if;
    end Get_Date;
+
+   procedure Debug_Message (Msg : Message);
+   pragma Export (Ada, Debug_Message);
+   --  Display Msg on standard output (for debugging purposes)
+
+   -------------------
+   -- Debug_Message --
+   -------------------
+
+   procedure Debug_Message (Msg : Message) is
+      Res : Unbounded_String;
+   begin
+      To_String
+        (Msg,
+         True,
+         Default_Max_Header_Line_Length,
+         Default_Max_Header_Line_Length,
+         null,
+         null,
+         False,
+         True,
+         Res);
+      Put_Line (To_String (Res));
+   end Debug_Message;
 
 end GNATCOLL.Email;
