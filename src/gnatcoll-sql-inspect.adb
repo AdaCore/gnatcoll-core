@@ -1479,6 +1479,10 @@ package body GNATCOLL.SQL.Inspect is
       Str    : GNAT.Strings.String_Access := Self.File.Read_File;
       Schema : DB_Schema;
    begin
+      if Str = null then
+         Put_Line ("File not found: " & Self.File.Display_Full_Name);
+         return No_Schema;
+      end if;
       Schema := Read_Schema (Self, Str.all);
       Free (Str);
       return Schema;
