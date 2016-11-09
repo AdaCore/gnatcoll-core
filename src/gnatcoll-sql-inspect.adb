@@ -1420,8 +1420,40 @@ package body GNATCOLL.SQL.Inspect is
          end loop;
       end loop;
 
-      Free (String_List (Line));
-      return Schema;
+      --  Check that all foreign keys reference valid tables
+
+      declare
+         Has_Errors : Boolean := False;
+
+         procedure Cb (From, To : Field; Id : Natural; Ambiguous : Boolean);
+         procedure Cb (From, To : Field; Id : Natural; Ambiguous : Boolean) is
+            pragma Unreferenced (Id, Ambiguous);
+         begin
+            if To = No_Field then
+               Put_Line ("Invalid foreign key: "
+                  & From.Get_Table.Name & "." & From.Name
+                  & " references an invalid table or field");
+               Has_Errors := True;
+            end if;
+         end Cb;
+
+         procedure On_Table (Descr : in out Table_Description);
+         procedure On_Table (Descr : in out Table_Description) is
+         begin
+            For_Each_FK (Descr, Cb'Access);
+         end On_Table;
+
+      begin
+         For_Each_Table (Schema, On_Table'Access);
+
+         Free (String_List (Line));
+
+         if Has_Errors then
+            return No_Schema;
+         else
+            return Schema;
+         end if;
+      end;
 
    exception
       when E : Invalid_Type =>
