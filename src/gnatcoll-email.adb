@@ -1620,14 +1620,23 @@ package body GNATCOLL.Email is
 
          else
             --  Here to convert a MIME message with a non-multipart type to a
-            --  multipart, or to force creation of a nested multipart.
+            --  multipart, or to force creation of a nested multipart: make
+            --  the original payload a part in the new multipart payload (but
+            --  don't create an empty part).
 
-            Part := Clone_Message (Message (Msg));
-            Part.Contents.Headers := Header_List.Empty_List;
+            if Msg.Contents.Payload.Multipart
+              or else Length (Msg.Contents.Payload.Text) > 0
+            then
+               Part := Clone_Message (Message (Msg));
+               Part.Contents.Headers := Header_List.Empty_List;
 
-            Move_Header (Content_Type);
-            Move_Header (Content_Transfer_Encoding);
-            Parts.Append (Part);
+               Move_Header (Content_Type);
+               Move_Header (Content_Transfer_Encoding);
+               Parts.Append (Part);
+
+            else
+               Delete_Headers (Msg, Content_Transfer_Encoding);
+            end if;
 
             Replace_Header (Msg, Create (Content_Type, MIME_Type));
             Replace_Header (Msg, Create (MIME_Version, "1.0"));
