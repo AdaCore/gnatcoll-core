@@ -283,7 +283,8 @@ package GNATCOLL.SQL is
    Null_Field_Date : constant SQL_Field_Date;
    function Date_Param (Index : Positive) return Date_Fields.Field'Class
                         renames Date_Fields.Param;
-   --  Only includes the date, not the time
+   --  Only includes the date, not the time. Note: the date taken into account
+   --  is that of the Time value when interpreted in UT.
 
    package Json_Fields is new Field_Types
      (String, Json_To_SQL, Parameter_Json);

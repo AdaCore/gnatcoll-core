@@ -22,12 +22,11 @@
 ------------------------------------------------------------------------------
 
 with Ada.Calendar;               use Ada.Calendar;
-with Ada.Calendar.Time_Zones;    use Ada.Calendar.Time_Zones;
+with Ada.Calendar.Formatting;    use Ada.Calendar.Formatting;
 with Ada.Strings.Fixed;          use Ada.Strings.Fixed;
 with Ada.Strings.Hash;
 with Ada.Strings.Unbounded;      use Ada.Strings.Unbounded;
 with Ada.Unchecked_Deallocation;
-with GNAT.Calendar.Time_IO;      use GNAT.Calendar.Time_IO;
 with GNAT.Strings;               use GNAT.Strings;
 with GNATCOLL.Utils;             use GNATCOLL.Utils;
 
@@ -1449,28 +1448,16 @@ package body GNATCOLL.SQL_Impl is
       Value : Ada.Calendar.Time;
       Quote : Boolean) return String
    is
-      Adjusted : Time;
    begin
-      --  Value is always considered as GMT, which is what we store in the
-      --  database. Unfortunately, GNAT.Calendar.Time_IO converts that back to
-      --  local time.
+      --  Value is always rendered as GMT, using Ada.Calendar.Formatting
 
       if Value /= No_Time then
-         Adjusted := Value - Duration (UTC_Time_Offset (Value)) * 60.0;
-
-         if Supports_Timezone (Self) then
-            if Quote then
-               return Image (Adjusted, "'%Y-%m-%d %H:%M:%S +00:00'");
-            else
-               return Image (Adjusted, "%Y-%m-%d %H:%M:%S +00:00");
-            end if;
-         else
-            if Quote then
-               return Image (Adjusted, "'%Y-%m-%d %H:%M:%S'");
-            else
-               return Image (Adjusted, "%Y-%m-%d %H:%M:%S");
-            end if;
-         end if;
+         declare
+            Value_Str : constant String := Image (Value, Time_Zone => 0)
+              & (if Supports_Timezone (Self) then " +00:00" else "");
+         begin
+            return (if Quote then ''' & Value_Str & ''' else Value_Str);
+         end;
       else
          return "NULL";
       end if;
@@ -1486,18 +1473,15 @@ package body GNATCOLL.SQL_Impl is
       Quote : Boolean) return String
    is
       pragma Unreferenced (Self);
-      Offset   : Duration;
    begin
       if Value /= No_Time then
-         --  Input Value should be interpreted in GMT, but Image assumes this
-         --  is local time zone. So we need an offset here.
-
-         Offset := Duration (UTC_Time_Offset (Value)) * 60.0;
-         if Quote then
-            return Image (Value - Offset, "'%Y-%m-%d'");
-         else
-            return Image (Value - Offset, "%Y-%m-%d");
-         end if;
+         declare
+            Value_Str : constant String := Image (Value, Time_Zone => 0);
+            Date_Str  : String
+              renames Value_Str (Value_Str'First .. Value_Str'First + 9);
+         begin
+            return (if Quote then ''' & Date_Str & ''' else Date_Str);
+         end;
       else
          return "NULL";
       end if;
