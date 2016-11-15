@@ -1724,6 +1724,7 @@ begin
 
    declare
       Path : Virtual_File := Create (+Project_Name.all);
+      F    : Virtual_File;
 
       Dummy : constant String := Register_New_Attribute
         (Name => "Xref_Database", Pkg => "IDE");
@@ -1740,9 +1741,11 @@ begin
       end if;
 
       if Config_File /= null and then Config_File.all /= "" then
-         Env.Set_Config_File
-           (Create_From_Base
-              (+Config_File.all, Get_Current_Dir.Full_Name.all));
+         F := Create_From_Base
+            (+Config_File.all, Get_Current_Dir.Full_Name.all);
+         if F.Is_Regular_File then
+            Env.Set_Config_File (F);
+         end if;
       end if;
 
       if Autoconf then
