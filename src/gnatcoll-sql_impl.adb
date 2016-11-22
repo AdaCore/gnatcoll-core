@@ -987,7 +987,13 @@ package body GNATCOLL.SQL_Impl is
          Long   : Boolean) return String is
       begin
          if Self.Data_Value /= null then
-            return To_SQL (Format, Self.Data_Value.all, Quote => True);
+            declare
+               --  Do not check that Data_Value is valid, it could also
+               --  be Nan or Inf when using float
+               pragma Validity_Checks (Off);
+            begin
+               return To_SQL (Format, Self.Data_Value.all, Quote => True);
+            end;
          end if;
 
          return To_String (Named_Field_Internal (Self), Format, Long);
@@ -1316,6 +1322,9 @@ package body GNATCOLL.SQL_Impl is
       end Less_Or_Equal;
 
       function "=" (Self : Field; Value : Ada_Type) return SQL_Assignment is
+         --  Do not check that Value is valid. It could also be Nan or Inf
+         --  when using float
+         pragma Validity_Checks (Off);
          Result : SQL_Assignment;
          F   : Typed_Named_Field_Internal (Field_Std);
       begin
@@ -1382,13 +1391,27 @@ package body GNATCOLL.SQL_Impl is
       Quote : Boolean) return String
    is
       pragma Unreferenced (Self, Quote);
-      Img : constant String := Float'Image (Value);
    begin
-      if Img (Img'First) = ' ' then
-         return Img (Img'First + 1 .. Img'Last);
-      else
-         return Img;
+      --  Nan ?
+      if Value /= Value then
+         return "'Nan'";
+
+      --  -Inf ?
+      elsif Value < Float'First then
+         return "'-Infinity'";
+      elsif Value > Float'Last then
+         return "'Infinity'";
       end if;
+
+      declare
+         Img : constant String := Float'Image (Value);
+      begin
+         if Img (Img'First) = ' ' then
+            return Img (Img'First + 1 .. Img'Last);
+         else
+            return Img;
+         end if;
+      end;
    end Float_To_SQL;
 
    --------------------

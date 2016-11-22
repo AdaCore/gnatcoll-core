@@ -98,9 +98,22 @@ package body GNATCOLL.SQL.Exec_Private is
 
    function Float_Value
      (Self  : DBMS_Forward_Cursor;
-      Field : Field_Index) return Float is
+      Field : Field_Index) return Float
+   is
+      S    : constant String := Self.Class_Value (Field);
+      pragma Warnings (Off, "*is not modified, could be declared constant");
+      Zero : Float := 0.0;
+      pragma Warnings (On, "*is not modified, could be declared constant");
    begin
-      return Float'Value (Self.Class_Value (Field));
+      if S = "NaN" then
+         return 0.0 / Zero;
+      elsif S = "-Infinity" then
+         return -1.0 / Zero;
+      elsif S = "Infinity" then
+         return 1.0 / Zero;
+      else
+         return Float'Value (S);
+      end if;
    end Float_Value;
 
    -----------------

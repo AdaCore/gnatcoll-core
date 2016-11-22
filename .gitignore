@@ -57,6 +57,7 @@ testsuite/sql/prepared_postgres/dbschema.ad?
 testsuite/sql/prepared_postgres/dbschema_names.ads
 testsuite/sql/sql1/database.ad?
 testsuite/sql/sql1/database_names.ads
+testsuite/sql/nan/database*
 testsuite/sql/sql2/tmp.db
 testsuite/sql/database*
 testsuite/sql/orm/orm_database.ad?
