@@ -167,7 +167,7 @@ package body GNATCOLL.GMP.Integers is
       return Boolean
    is
    begin
-      return mpz_cmp_si (Right.Value'Access, Left) > 0;
+      return mpz_cmp_si (Right.Value'Access, Left) <= 0;
    end ">";
 
    ----------
