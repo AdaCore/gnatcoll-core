@@ -1,4 +1,7 @@
 with GNATCOLL.SQL; use GNATCOLL.SQL;
+pragma Warnings (Off, "no entities of * are referenced");
+with GNATCOLL.SQL_Fields; use GNATCOLL.SQL_Fields;
+pragma Warnings (On, "no entities of * are referenced");
 with GNATCOLL.SQL.Exec;
 with GNATCOLL.Xref.Database_Names; use GNATCOLL.Xref.Database_Names;
 package GNATCOLL.Xref.Database is

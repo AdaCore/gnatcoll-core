@@ -243,14 +243,8 @@ package body GNATCOLL.SQL.Postgres.Gnade is
             Vals : CS.chars_ptr_array (0 .. Params'Length - 1);
          begin
             for P in Params'Range loop
-               --  Special case for strings, to avoid using the stack
-               if Params (P).Typ = Parameter_Text then
-                  Vals (size_t (P - Params'First)) :=
-                     CS.New_String (To_String (Params (P)));
-               else
-                  Vals (size_t (P - Params'First)) :=
-                    CS.New_String (Image (Format, Params (P)));
-               end if;
+               Vals (size_t (P - Params'First)) :=
+                 CS.New_String (Params (P).Get.Image (Format));
             end loop;
 
             R := PQexecParams
@@ -329,16 +323,8 @@ package body GNATCOLL.SQL.Postgres.Gnade is
             Vals : aliased CS.chars_ptr_array (0 .. Params'Length - 1);
          begin
             for P in Vals'Range loop
-               case Params (Integer (P) + Params'First).Typ is
-                  when Parameter_Text =>
-                     --  Special case for text, which is already well formated
-                     Vals (P) := CS.New_String
-                       (To_String (Params (Integer (P) + Params'First)));
-
-                  when others =>
-                     Vals (P) := CS.New_String
-                       (Image (Format, Params (Integer (P) + Params'First)));
-               end case;
+               Vals (P) := CS.New_String
+                 (Params (Integer (P) + Params'First).Get.Image (Format));
             end loop;
 
             R := PQexecPrepared

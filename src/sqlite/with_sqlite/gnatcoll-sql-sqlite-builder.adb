@@ -60,15 +60,16 @@ package body GNATCOLL.SQL.Sqlite.Builder is
    overriding procedure Force_Disconnect
      (Connection : access Sqlite_Connection_Record);
    overriding function Supports_Timezone
-     (Self  : Sqlite_Connection_Record) return Boolean;
+     (Self  : Sqlite_Connection_Record) return Boolean is (False);
    overriding function Boolean_Image
      (Self : Sqlite_Connection_Record; Value : Boolean) return String;
    overriding function Money_Image
      (Self : Sqlite_Connection_Record; Value : T_Money) return String;
    overriding function Parameter_String
-     (Self  : Sqlite_Connection_Record;
-      Index : Positive;
-      Typ   : Parameter_Type) return String;
+     (Self       : Sqlite_Connection_Record;
+      Index      : Positive;
+      Type_Descr : String) return String
+     is ('?' & Image (Index, 0));
    overriding procedure Close
      (Connection : access Sqlite_Connection_Record);
    overriding function Field_Type_Autoincrement
@@ -509,7 +510,8 @@ package body GNATCOLL.SQL.Sqlite.Builder is
       Str_Ptr : Unbounded.Aux.Big_String_Access;
       Str_Adr : System.Address;
       for Str_Adr'Address use Str_Ptr'Address;
-      Str_Len : Natural;
+      Str_Len     : Natural;
+      Need_Free : array (Params'Range) of Boolean := (others => False);
    begin
       --  Since we have a prepared statement, the connection already exists, no
       --  need to recreate.
@@ -521,56 +523,73 @@ package body GNATCOLL.SQL.Sqlite.Builder is
       for P in Params'Range loop
          if Params (P) = Null_Parameter then
             Bind_Null (Stmt, P);
-         else
-            case Params (P).Typ is
-            when Parameter_Text
-               | Parameter_Json
-               | Parameter_XML =>
-               if Params (P).Str_Ptr = null then
-                  Aux.Get_String (Params (P).Str_Val, Str_Ptr, Str_Len);
+         elsif Params (P).Get in SQL_Parameter_Text'Class then
+            declare
+               P2 : constant access SQL_Parameter_Text :=
+                 SQL_Parameter_Text (Params (P).Get.Element.all)'Access;
+            begin
+               if P2.Str_Ptr = null then
+                  Aux.Get_String (P2.Str_Val, Str_Ptr, Str_Len);
                else
-                  Str_Adr := Params (P).Str_Ptr.all'Address;
-                  Str_Len := Params (P).Str_Ptr'Length;
+                  Str_Adr := P2.Str_Ptr.all'Address;
+                  Str_Len := P2.Str_Ptr'Length;
                end if;
 
-               if Params (P).Make_Copy then
+               if P2.Make_Copy then
                   Bind_Text (Stmt, P, Str_Adr, Str_Len, Transient);
                else
                   Bind_Text (Stmt, P, Str_Adr, Str_Len);
                end if;
+            end;
 
-            when Parameter_Character =>
-               Bind_Text (Stmt, P, Params (P).Char_Val'Address, 1);
-            when Parameter_Integer =>
-               Bind_Int (Stmt, P, Interfaces.C.int (Params (P).Int_Val));
-            when Parameter_Bigint =>
-               Bind_Int64 (Stmt, P, Interfaces.C.long (Params (P).Bigint_Val));
-            when Parameter_Float =>
-               Bind_Double
-                 (Stmt, P, Interfaces.C.double (Params (P).Float_Val));
-            when Parameter_Boolean =>
+         elsif Params (P).Get in SQL_Parameter_Integer'Class then
+            declare
+               P2 : constant access SQL_Parameter_Integer :=
+                 SQL_Parameter_Integer (Params (P).Get.Element.all)'Access;
+            begin
+               Bind_Int (Stmt, P, Interfaces.C.int (P2.Int_Val));
+            end;
+
+         elsif Params (P).Get in SQL_Parameter_Bigint'Class then
+            declare
+               P2 : constant access SQL_Parameter_Bigint :=
+                 SQL_Parameter_Bigint (Params (P).Get.Element.all)'Access;
+            begin
+               Bind_Int64 (Stmt, P, Interfaces.C.long (P2.Bigint_Val));
+            end;
+
+         elsif Params (P).Get in SQL_Parameter_Float'Class then
+            declare
+               P2 : constant access SQL_Parameter_Float :=
+                 SQL_Parameter_Float (Params (P).Get.Element.all)'Access;
+            begin
+               Bind_Double (Stmt, P, Interfaces.C.double (P2.Float_Val));
+            end;
+
+         elsif Params (P).Get in SQL_Parameter_Boolean'Class then
+            declare
+               P2 : constant access SQL_Parameter_Boolean :=
+                 SQL_Parameter_Boolean (Params (P).Get.Element.all)'Access;
+            begin
                Bind_Int
-                 (Stmt, P,
-                  Interfaces.C.int (Boolean'Pos (Params (P).Bool_Val)));
-            when Parameter_Time =>
-               Tmp_Data (P) := new String'
-                 (Time_To_SQL
-                    (Connection.all, Params (P).Time_Val, Quote => False));
-               Bind_Text
-                 (Stmt, P, Tmp_Data (P).all'Address, Tmp_Data (P)'Length);
+                 (Stmt, P, Interfaces.C.int (Boolean'Pos (P2.Bool_Val)));
+            end;
 
-            when Parameter_Date =>
-               Tmp_Data (P) := new String'
-                 (Date_To_SQL
-                    (Connection.all, Params (P).Time_Val, Quote => False));
-               Bind_Text
-                 (Stmt, P, Tmp_Data (P).all'Address, Tmp_Data (P)'Length);
-
-            when Parameter_Money =>
+         elsif Params (P).Get in SQL_Parameter_Money'Class then
+            declare
+               P2 : constant access SQL_Parameter_Money :=
+                 SQL_Parameter_Money (Params (P).Get.Element.all)'Access;
+            begin
                --  In SQLite, Money type will be mapped as integer
-               Money_Int := Integer (Params (P).Money_Val / K_Delta);
+               Money_Int := Integer (P2.Money_Val / K_Delta);
                Bind_Int (Stmt, P, Interfaces.C.int (Money_Int));
-            end case;
+            end;
+
+         else
+            Tmp_Data (P) := new String'
+              (Params (P).Get.Image (Connection.all));
+            Need_Free (P) := True;
+            Bind_Text (Stmt, P, Tmp_Data (P).all'Address, Tmp_Data (P)'Length);
          end if;
       end loop;
 
@@ -582,14 +601,10 @@ package body GNATCOLL.SQL.Sqlite.Builder is
       --     Clear_Bindings will be called automatically when the statement
       --       is Finalized anyway.
 
-      for P in Params'Range loop
-         case Params (P).Typ is
-            when Parameter_Time | Parameter_Date =>
-               Free (Tmp_Data (P));
-
-            when others =>
-               null;
-         end case;
+      for P in Need_Free'Range loop
+         if Need_Free (P) then
+            Free (Tmp_Data (P));
+         end if;
       end loop;
 
       case Last_Status is
@@ -1004,32 +1019,6 @@ package body GNATCOLL.SQL.Sqlite.Builder is
         (Descr,
          Always_Use_Transactions => Sqlite_Always_Use_Transactions);
    end Build_Connection;
-
-   -----------------------
-   -- Supports_Timezone --
-   -----------------------
-
-   overriding function Supports_Timezone
-     (Self  : Sqlite_Connection_Record) return Boolean
-   is
-      pragma Unreferenced (Self);
-   begin
-      return False;
-   end Supports_Timezone;
-
-   ----------------------
-   -- Parameter_String --
-   ----------------------
-
-   overriding function Parameter_String
-     (Self  : Sqlite_Connection_Record;
-      Index : Positive;
-      Typ   : Parameter_Type) return String
-   is
-      pragma Unreferenced (Self, Typ);
-   begin
-      return '?' & Image (Index, 0);
-   end Parameter_String;
 
    -------------------
    -- Boolean_Image --

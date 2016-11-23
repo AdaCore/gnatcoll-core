@@ -32,10 +32,10 @@ with Ada.Strings.Fixed;           use Ada.Strings, Ada.Strings.Fixed;
 with Ada.Strings.Hash_Case_Insensitive;
 with Ada.Strings.Maps;            use Ada.Strings.Maps;
 with Ada.Text_IO;                 use Ada.Text_IO;
+with Ada.Unchecked_Deallocation;
 with GNAT.Strings;                use GNAT.Strings;
 with GNATCOLL.Mmap;               use GNATCOLL.Mmap;
 with GNATCOLL.Traces;             use GNATCOLL.Traces;
-with GNATCOLL.Utils;              use GNATCOLL.Utils;
 with GNATCOLL.VFS;                use GNATCOLL.VFS;
 
 package body GNATCOLL.SQL.Inspect is
@@ -99,7 +99,7 @@ package body GNATCOLL.SQL.Inspect is
    procedure Format_Field
      (DB       : access Database_Connection_Record'Class;
       Value    : String;
-      Typ      : Field_Type;
+      Typ      : Field_Type'Class;
       Val      : out GNAT.Strings.String_Access;
       Param    : out SQL_Parameter;
       Has_Xref : Boolean);
@@ -176,19 +176,22 @@ package body GNATCOLL.SQL.Inspect is
    -- Get_Type --
    --------------
 
-   function Get_Type (Self : Field) return Field_Type is
+   function Get_Type (Self : Field) return Field_Type_Access is
       FK : constant Field := Self.Is_FK;
-      T  : Field_Type;
+      T  : Field_Type_Access;
    begin
       if FK = No_Field then
          return Self.Get.Typ;
       else
          T := Get_Type (FK);
-         if T.Kind = Field_Autoincrement then
-            T := (Kind => Field_Integer);
+         if T.all in Field_Type_Autoincrement'Class then
+            --  Do not return T itself, or the table would end up with two
+            --  primary keys (since autoincrement fields are only used for
+            --  primary keys).
+            return new Field_Type_Integer;   --   ??? memory leak
+         else
+            return T;
          end if;
-
-         return T;
       end if;
    end Get_Type;
 
@@ -303,10 +306,13 @@ package body GNATCOLL.SQL.Inspect is
    ----------
 
    procedure Free (Self : in out Field_Description) is
+      procedure Unchecked_Free is new Ada.Unchecked_Deallocation
+         (Field_Type'Class, Field_Type_Access);
    begin
       Free (Self.Name);
       Free (Self.Description);
       Free (Self.Default);
+      Unchecked_Free (Self.Typ);
    end Free;
 
    --------
@@ -551,148 +557,120 @@ package body GNATCOLL.SQL.Inspect is
       end loop;
    end For_Each_FK;
 
-   ------------
-   -- To_SQL --
-   ------------
+   -------------------
+   -- Type_From_SQL --
+   -------------------
 
-   function To_SQL
-     (Typ          : Field_Type;
-      For_Database : Boolean := True) return String is
+   overriding function Type_From_SQL
+      (Self : in out Field_Type_Text; Str : String) return Boolean
+   is
    begin
-      case Typ.Kind is
-         when Field_Boolean => return "Boolean";
-         when Field_Text    =>
-            if Typ.Max_Length = Integer'Last
-              or not For_Database
-            then
-               return "Text";
-            else
-               return "Character(" & Image (Typ.Max_Length, 1) & ")";
+      if Str = "text"
+         or else Str = "varchar"
+         or else (Str'Length >= 10    --  "character varying(...)"
+                  and then Str (Str'First .. Str'First + 9) = "character ")
+      then
+         Self.Max_Length := Integer'Last;
+         return True;
+
+      elsif Str'Length >= 8
+         and then Str (Str'First .. Str'First + 7) = "varchar("
+      then
+         begin
+            Self.Max_Length := Integer'Value
+               (Str (Str'First + 8 .. Str'Last - 1));
+            return  True;
+         exception
+            when Constraint_Error =>
+               Put_Line ("Missing max length after 'varchar' in " & Str);
+               raise Invalid_Schema;
+         end;
+
+      elsif Str'Length >= 10
+        and then Str (Str'First .. Str'First + 9) = "character("
+      then
+         begin
+            Self.Max_Length :=
+               Integer'Value (Str (Str'First + 10 .. Str'Last - 1));
+            return True;
+         exception
+            when Constraint_Error =>
+               Put_Line ("Missing max length after 'Character' in " & Str);
+               raise Invalid_Schema;
+         end;
+
+      else
+         return False;
+      end if;
+   end Type_From_SQL;
+
+   -------------------
+   -- Type_From_SQL --
+   -------------------
+
+   overriding function Type_From_SQL
+      (Self : in out Field_Type_Integer; Str : String) return Boolean
+   is
+      pragma Unreferenced (Self);
+   begin
+      if Str = "integer" or else Str = "smallint" or else Str = "oid" then
+         return True;
+
+      elsif Str'Length >= 7
+         and then Str (Str'First .. Str'First + 6) = "numeric"
+      then
+         --  Check the scale
+         for Comma in reverse Str'Range loop
+            if Str (Comma) = ',' then
+               return Str (Comma + 1 .. Str'Last - 1) = "0";
             end if;
-         when Field_Json    => return "Json";
-         when Field_XML     => return "XML";
-         when Field_Integer => return "Integer";
-         when Field_Bigint  => return "Bigint";
-         when Field_Date    => return "Date";
-         when Field_Timestamp =>
-            if For_Database then
-               return "timestamp with time zone";
-            else
-               return "Time";
+         end loop;
+         return True;
+
+      else
+         return False;
+      end if;
+   end Type_From_SQL;
+
+   -------------------
+   -- Type_From_SQL --
+   -------------------
+
+   overriding function Type_From_SQL
+      (Self : in out Field_Type_Float; Str : String) return Boolean
+   is
+      pragma Unreferenced (Self);
+   begin
+      if Str = "float" or else Str = "double precision" then
+         return True;
+
+      elsif Str'Length >= 7
+         and then Str (Str'First .. Str'First + 6) = "numeric"
+      then
+         --  Check the scale
+         for Comma in reverse Str'Range loop
+            if Str (Comma) = ',' then
+               return Str (Comma + 1 .. Str'Last - 1) /= "0";
             end if;
-         when Field_Time    => return "Time";
-         when Field_Float   => return "Float";
-         when Field_Autoincrement =>
-            --  These types are always mapped to an integer in all DBMS,
-            --  even though they might be created with a different name like
-            --  "SERIAL" and "INTEGER AUTOINCREMENT".
-            return "Integer";
-         when Field_Money   => return "Money";
-      end case;
-   end To_SQL;
+         end loop;
+      end if;
+
+      return False;
+   end Type_From_SQL;
 
    --------------
    -- From_SQL --
    --------------
 
-   function From_SQL (SQL_Type : String) return Field_Type is
+   function From_SQL (SQL_Type : String) return Field_Type_Access is
       T     : constant String := To_Lower (SQL_Type);
    begin
-      if T = "boolean" then
-         return (Kind => Field_Boolean);
-
-      elsif T = "text"
-         or else (T'Length >= 10    --  "character varying(...)"
-                  and then T (T'First .. T'First + 9) = "character ")
-      then
-         return (Kind => Field_Text, Max_Length => Integer'Last);
-
-      elsif T = "varchar" then
-         return (Kind => Field_Text, Max_Length => Integer'Last);
-
-      elsif T'Length >= 8
-         and then T (T'First .. T'First + 7) = "varchar("
-      then
-         begin
-            return (Kind => Field_Text,
-                    Max_Length =>
-                      Integer'Value (T (T'First + 8 .. T'Last - 1)));
-         exception
-            when Constraint_Error =>
-               Put_Line ("Missing max length after 'varchar' in " & T);
-               raise Invalid_Schema;
-         end;
-
-      elsif T'Length >= 10
-        and then T (T'First .. T'First + 9) = "character("
-      then
-         begin
-            return (Kind => Field_Text,
-                    Max_Length =>
-                      Integer'Value (T (T'First + 10 .. T'Last - 1)));
-         exception
-            when Constraint_Error =>
-               Put_Line ("Missing max length after 'Character' in " & T);
-               raise Invalid_Schema;
-         end;
-
-      elsif T = "json" then
-         return (Kind => Field_Json);
-
-      elsif T = "xml" then
-         return (Kind => Field_XML);
-
-      elsif T = "float" then
-         return (Kind => Field_Float);
-
-      elsif T = "integer"
-        or else T = "smallint"
-        or else T = "oid"
-      then
-         return (Kind => Field_Integer);
-
-      elsif T = "bigint" then
-         return (Kind => Field_Bigint);
-
-      elsif T'Length >= 7
-         and then T (T'First .. T'First + 6) = "numeric"
-      then
-         --  Check the scale
-         for Comma in reverse T'Range loop
-            if T (Comma) = ',' then
-               if T (Comma + 1 .. T'Last - 1) = "0" then
-                  return (Kind => Field_Integer);
-               else
-                  return (Kind => Field_Float);
-               end if;
-            end if;
-         end loop;
-         return (Kind => Field_Integer);
-
-      elsif T = "date" then
-         return (Kind => Field_Date);
-
-      elsif T = "timestamp without time zone"
-        or else T = "timestamp with time zone"
-        or else T = "timestamp"
-      then
-         return (Kind => Field_Timestamp);
-
-      elsif T = "time" then
-         return (Kind => Field_Time);
-
-      elsif T = "double precision" then
-         return (Kind => Field_Float);
-
-      elsif T = "autoincrement" then
-         return (Kind => Field_Autoincrement);
-
-      elsif T = "money" then
-         return (Kind => Field_Money);
-      else
-         raise Invalid_Type
-           with "Cannot convert """ & T & """ to Ada";
-      end if;
+      for F of All_Field_Types loop
+         if F.Type_From_SQL (T) then
+            return new Field_Type'Class'(F);
+         end if;
+      end loop;
+      return null;
    end From_SQL;
 
    -----------------
@@ -960,7 +938,7 @@ package body GNATCOLL.SQL.Inspect is
    procedure Format_Field
      (DB       : access Database_Connection_Record'Class;
       Value    : String;
-      Typ      : Field_Type;
+      Typ      : Field_Type'Class;
       Val      : out GNAT.Strings.String_Access;
       Param    : out SQL_Parameter;
       Has_Xref : Boolean)
@@ -968,7 +946,7 @@ package body GNATCOLL.SQL.Inspect is
       V : constant String := To_Lower (Value);
       B : Boolean;
    begin
-      if Typ.Kind = Field_Boolean then
+      if Typ in Field_Type_Boolean'Class then
          if V = "true" or else V = "false" then
             B := Boolean'Value (Value);
             Val := new String'(Boolean_Image (DB.all, B));
@@ -994,13 +972,13 @@ package body GNATCOLL.SQL.Inspect is
             Param := Null_Parameter;
          end if;
 
-      elsif Typ.Kind = Field_Integer then
+      elsif Typ in Field_Type_Integer'Class then
          Val := new String'(Value);
          Param := +Val;
 
-      elsif Typ.Kind = Field_Money then
+      elsif Typ in Field_Type_Money'Class then
          Param := +T_Money'Value (Value);
-         Val := new String'(Image (DB.all, Param));
+         Val := new String'(Param.Get.Image (DB.all));
 
       else
          if Has_Xref then
@@ -1230,7 +1208,7 @@ package body GNATCOLL.SQL.Inspect is
 
                   Att.Set (Field_Description'
                          (Name        => new String'(Line (1).all),
-                          Typ         => (Kind => Field_Boolean), --  Set below
+                          Typ         => null,
                           Id          => Attr_Id,
                           Description => new String'(Line (5).all),
                           Default     => new String'(Line (4).all),
@@ -1735,16 +1713,9 @@ package body GNATCOLL.SQL.Inspect is
          begin
             Stmt := Null_Unbounded_String;
 
-            if Get_Type (F).Kind = Field_Autoincrement then
-               Append (Stmt, " """ & F.Name & """ "
-                       & Field_Type_Autoincrement (Self.DB.all));
-
-            elsif Get_Type (F).Kind = Field_Money then
-               Append (Stmt, " """ & F.Name & """ "
-                       & Field_Type_Money (Self.DB.all));
-            else
-               Append (Stmt, " """ & F.Name & """ " & To_SQL (Get_Type (F)));
-            end if;
+            Append (Stmt, " """ & F.Name & """ "
+                    & Get_Type (F).Type_To_SQL
+                       (Self.DB, For_Database => True));
 
             if not F.Can_Be_Null then
                if not Can_Be_Not_Null then
@@ -1770,7 +1741,7 @@ package body GNATCOLL.SQL.Inspect is
 
             if F.Default /= "" then
                Format_Field
-                  (Self.DB, F.Default, Get_Type (F), Val, Val_Param, False);
+                 (Self.DB, F.Default, Get_Type (F).all, Val, Val_Param, False);
                Append (Stmt, " DEFAULT " & Val.all);
                Free (Val);
 
@@ -1847,7 +1818,9 @@ package body GNATCOLL.SQL.Inspect is
          begin
             --  Auto increment fields were already setup as primary keys
             --  via Field_Type_Autoincrement primitive operation.
-            if F.Is_PK and then F.Get_Type.Kind /= Field_Autoincrement then
+            if F.Is_PK
+              and then F.Get_Type.all not in Field_Type_Autoincrement'Class
+            then
                if SQL_PK = Null_Unbounded_String then
                   Append (SQL_PK, '"' & F.Name & '"');
                else
@@ -1972,10 +1945,11 @@ package body GNATCOLL.SQL.Inspect is
          FK : constant Field := Attr.Is_FK;
       begin
          if FK = No_Field then
-            if Attr.Get_Type.Kind = Field_Autoincrement then
+            if Attr.Get_Type.all in Field_Type_Autoincrement'Class then
                return "AUTOINCREMENT";
             else
-               return To_SQL (Attr.Get_Type);
+               return Attr.Get_Type.Type_To_SQL
+                 (Self.DB, For_Database => True);
             end if;
          else
             return "FK " & FK.Get_Table.Name;
@@ -2264,24 +2238,11 @@ package body GNATCOLL.SQL.Inspect is
       Xref       : String_List (1 .. Max_Fields_Per_Line);
       Xref_Count : Natural := Xref'First - 1;
       Paren      : Natural;
-      DB_Field_Types : array (Line'First .. Max_Fields_Per_Line) of Field_Type;
+      DB_Field_Types : array (Line'First .. Max_Fields_Per_Line)
+        of Field_Type_Access;
 
       --  TODO : convert for parameter_decimal
       Tmp_DB_Fields_Count : Natural := DB_Fields'First - 1;
-      Convert_To_Parameter_Type : constant array (Field_Type_Kind)
-        of Parameter_Type :=
-        (Field_Text          => Parameter_Text,
-         Field_Integer       => Parameter_Integer,
-         Field_Bigint        => Parameter_Bigint,
-         Field_Date          => Parameter_Date,
-         Field_Json          => Parameter_Json,
-         Field_XML           => Parameter_XML,
-         Field_Time          => Parameter_Time,
-         Field_Timestamp     => Parameter_Time,
-         Field_Float         => Parameter_Float,
-         Field_Boolean       => Parameter_Boolean,
-         Field_Autoincrement => Parameter_Integer,
-         Field_Money         => Parameter_Money);
 
       FK : Field;
       Tables : String_List (1 .. Max_Fields_Per_Line);
@@ -2402,25 +2363,27 @@ package body GNATCOLL.SQL.Inspect is
             for L in Line'First .. Fields_Count loop
                exit when Line (L).all = "";
 
-               if Is_Xref (Tmp_DB_Fields_Count + 1) then
-                  Select_Values (L) :=
-                    new String'("t" & Image (L, 0) & "." & FK.Name);
-                  Where (L) := new String'
-                    ("t" & Image (L, 0) & "." & Xref (L).all
-                     & "=" & DB.Parameter_String
-                       (L,
-                        Convert_To_Parameter_Type (DB_Field_Types (L).Kind)));
-               else
-                  Select_Values (L) := new String'
-                       (DB.Parameter_String (L,
-                        Convert_To_Parameter_Type (DB_Field_Types (L).Kind)));
-               end if;
+               declare
+                  Param : constant SQL_Parameter_Type'Class :=
+                    DB_Field_Types (L).Parameter_Type;
+                  P     : constant String :=
+                    Param.Type_String (Index => L, Format => DB.all);
 
-               DB_Values (L) := new String'
-                       (DB.Parameter_String (L,
-                        Convert_To_Parameter_Type (DB_Field_Types (L).Kind)));
+               begin
+                  if Is_Xref (Tmp_DB_Fields_Count + 1) then
+                     Select_Values (L) :=
+                       new String'("t" & Image (L, 0) & "." & FK.Name);
+                     Where (L) := new String'
+                       ("t" & Image (L, 0) & "." & Xref (L).all
+                        & "=" & P);
+                  else
+                     Select_Values (L) := new String'(P);
+                  end if;
 
-               Tmp_DB_Fields_Count := Tmp_DB_Fields_Count + 1;
+                  DB_Values (L) := new String'(P);
+
+                  Tmp_DB_Fields_Count := Tmp_DB_Fields_Count + 1;
+               end;
             end loop;
 
             Q_Values := Prepare
@@ -2512,7 +2475,7 @@ package body GNATCOLL.SQL.Inspect is
                      Format_Field
                        (DB,
                         Line (L).all,
-                        DB_Field_Types (L),
+                        DB_Field_Types (L).all,
                         Vals (L),
                         Values (L),
                         Has_Xref => Use_Custom);
@@ -3160,4 +3123,15 @@ package body GNATCOLL.SQL.Inspect is
       Free (Self);
    end Free_Dispatch;
 
+begin
+   All_Field_Types.Append (Field_Type_Text'(others => <>));
+   All_Field_Types.Append (Field_Type_Integer'(null record));
+   All_Field_Types.Append (Field_Type_Autoincrement'(null record));
+   All_Field_Types.Append (Field_Type_Bigint'(null record));
+   All_Field_Types.Append (Field_Type_Date'(null record));
+   All_Field_Types.Append (Field_Type_Time'(null record));
+   All_Field_Types.Append (Field_Type_Timestamp'(null record));
+   All_Field_Types.Append (Field_Type_Float'(null record));
+   All_Field_Types.Append (Field_Type_Boolean'(null record));
+   All_Field_Types.Append (Field_Type_Money'(null record));
 end GNATCOLL.SQL.Inspect;

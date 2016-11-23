@@ -606,6 +606,7 @@ class Schema(object):
 
         self.pretty.add_with(
             ["GNATCOLL.SQL", "GNATCOLL.SQL.Exec", "GNATCOLL.Tribooleans",
+             "GNATCOLL.SQL_Fields",
              "GNATCOLL.SQL.Orm", "GNATCOLL.SQL.Orm.Impl",
              "GNATCOLL.SQL.Sessions",
              "Ada.Strings.Unbounded", "GNAT.Strings", database_pkg.title(),

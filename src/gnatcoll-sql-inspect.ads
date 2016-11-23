@@ -34,9 +34,10 @@
 
 pragma Ada_2012;
 private with Ada.Containers.Vectors;
-private with Ada.Containers.Indefinite_Vectors;
+with Ada.Containers.Indefinite_Vectors;
 with Ada.Containers.Indefinite_Ordered_Maps;
 with GNATCOLL.SQL.Exec;           use GNATCOLL.SQL.Exec;
+with GNATCOLL.Utils;              use GNATCOLL.Utils;
 with GNATCOLL.VFS;
 private with GNATCOLL.Refcount;
 private with GNAT.Strings;
@@ -51,42 +52,182 @@ package GNATCOLL.SQL.Inspect is
    type Field is tagged private;
    type Field_List is tagged private;
 
-   type Field_Type_Kind is
-     (Field_Text,
-      Field_Integer,
-      Field_Bigint,
-      Field_Date,
-      Field_Json,
-      Field_XML,
-      Field_Time,
-      Field_Timestamp,
-      Field_Float,
-      Field_Boolean,
-      Field_Autoincrement,
-      Field_Money);
-   type Field_Type (Kind : Field_Type_Kind := Field_Text) is record
-      case Kind is
-         when Field_Text =>
-            Max_Length : Integer := Integer'Last;
-         when others =>
-            null;
-      end case;
+   type Field_Type is abstract tagged null record;
+   type Field_Type_Access is access all Field_Type'Class;
+
+   function Type_To_SQL
+     (Self         : Field_Type;
+      Format       : access Formatter'Class := null;
+      For_Database : Boolean := True) return String
+      is abstract;
+   --  How this field type should be encoded in the schema description.
+   --
+   --  If For_Database is True, the returned value can be used in a "CREATE
+   --  TABLE" statement. Otherwise, it is prefixed with "SQL_Field_" to
+   --  represent the corresponding GNATCOLL.SQL type
+   --
+   --  Format is not needed when For_Database is False
+
+   function Type_From_SQL
+     (Self : in out Field_Type; Str : String) return Boolean
+     is abstract;
+   --  If Str is a possible string representation of Self, initialize Self
+   --  and set Matched to True.
+   --  Str is always lower cased.
+
+   function Parameter_Type
+     (Self : Field_Type) return SQL_Parameter_Type'Class is abstract;
+   --  Return the type of parameters for fields of type.
+   --  This returns an uninitialized value, which is only used to pass a
+   --  valid encoding string to the database, as in "?1" or "$1::integer".
+
+   package Field_Type_Vectors is new Ada.Containers.Indefinite_Vectors
+     (Positive, Field_Type'Class);
+   All_Field_Types : Field_Type_Vectors.Vector;
+   --  When you create new field types, they should be registered in this list.
+   --  Put an uninitialized instance of the field type in the list. A copy of
+   --  it will be used to call Type_From_SQL when parsing the database schema.
+
+   type Field_Type_Text is new Field_Type with record
+      Max_Length : Integer := Integer'Last;
    end record;
+   overriding function Type_To_SQL
+     (Self         : Field_Type_Text;
+      Format       : access Formatter'Class := null;
+      For_Database : Boolean := True) return String
+     is (if Self.Max_Length = Integer'Last or not For_Database
+         then "Text" else "Character(" & Image (Self.Max_Length, 1) & ')');
+   overriding function Type_From_SQL
+     (Self : in out Field_Type_Text; Str : String) return Boolean;
+   overriding function Parameter_Type
+     (Self : Field_Type_Text) return SQL_Parameter_Type'Class
+     is (SQL_Parameter_Text'(others => <>));
+
+   type Field_Type_Integer is new Field_Type with null record;
+   overriding function Type_To_SQL
+     (Self         : Field_Type_Integer;
+      Format       : access Formatter'Class := null;
+      For_Database : Boolean := True) return String
+     is ("Integer");
+   overriding function Type_From_SQL
+     (Self : in out Field_Type_Integer; Str : String) return Boolean;
+   overriding function Parameter_Type
+     (Self : Field_Type_Integer) return SQL_Parameter_Type'Class
+     is (SQL_Parameter_Integer'(others => <>));
+
+   type Field_Type_Autoincrement is new Field_Type_Integer with null record;
+   overriding function Type_To_SQL
+     (Self         : Field_Type_Autoincrement;
+      Format       : access Formatter'Class := null;
+      For_Database : Boolean := True) return String
+     is (if For_Database then Format.Field_Type_Autoincrement else "Integer");
+   overriding function Type_From_SQL
+     (Self : in out Field_Type_Autoincrement; Str : String) return Boolean
+     is (Str = "autoincrement");
+   --  These types are always mapped to an integer in all DBMS,
+   --  even though they might be created with a different name like
+   --  "SERIAL" and "INTEGER AUTOINCREMENT".
+
+   type Field_Type_Bigint is new Field_Type with null record;
+   overriding function Type_To_SQL
+     (Self         : Field_Type_Bigint;
+      Format       : access Formatter'Class := null;
+      For_Database : Boolean := True) return String
+     is ("Bigint");
+   overriding function Type_From_SQL
+     (Self : in out Field_Type_Bigint; Str : String) return Boolean
+     is (Str = "bigint");
+   overriding function Parameter_Type
+     (Self : Field_Type_Bigint) return SQL_Parameter_Type'Class
+     is (SQL_Parameter_Bigint'(others => <>));
+
+   type Field_Type_Date is new Field_Type with null record;
+   overriding function Type_To_SQL
+     (Self         : Field_Type_Date;
+      Format       : access Formatter'Class := null;
+      For_Database : Boolean := True) return String
+     is ("Date");
+   overriding function Type_From_SQL
+     (Self : in out Field_Type_Date; Str : String) return Boolean
+     is (Str = "date");
+   overriding function Parameter_Type
+     (Self : Field_Type_Date) return SQL_Parameter_Type'Class
+     is (SQL_Parameter_Date'(others => <>));
+
+   type Field_Type_Time is new Field_Type with null record;
+   overriding function Type_To_SQL
+     (Self         : Field_Type_Time;
+      Format       : access Formatter'Class := null;
+      For_Database : Boolean := True) return String
+     is ("Time");
+   overriding function Type_From_SQL
+     (Self : in out Field_Type_Time; Str : String) return Boolean
+     is (Str = "time");
+   overriding function Parameter_Type
+     (Self : Field_Type_Time) return SQL_Parameter_Type'Class
+     is (SQL_Parameter_Time'(others => <>));
+
+   type Field_Type_Timestamp is new Field_Type with null record;
+   overriding function Type_To_SQL
+     (Self         : Field_Type_Timestamp;
+      Format       : access Formatter'Class := null;
+      For_Database : Boolean := True)
+     return String
+     is (if For_Database then "timestamp with time zone" else "Time");
+   overriding function Type_From_SQL
+     (Self : in out Field_Type_Timestamp; Str : String) return Boolean
+     is (Str = "timestamp without time zone"
+         or else Str = "timestamp with time zone"
+         or else Str = "timestamp");
+   overriding function Parameter_Type
+     (Self : Field_Type_Timestamp) return SQL_Parameter_Type'Class
+     is (SQL_Parameter_Time'(others => <>));
+
+   type Field_Type_Float is new Field_Type with null record;
+   overriding function Type_To_SQL
+     (Self         : Field_Type_Float;
+      Format       : access Formatter'Class := null;
+      For_Database : Boolean := True) return String
+     is ("Float");
+   overriding function Type_From_SQL
+     (Self : in out Field_Type_Float; Str : String) return Boolean;
+   overriding function Parameter_Type
+     (Self : Field_Type_Float) return SQL_Parameter_Type'Class
+     is (SQL_Parameter_Float'(others => <>));
+
+   type Field_Type_Boolean is new Field_Type with null record;
+   overriding function Type_To_SQL
+     (Self         : Field_Type_Boolean;
+      Format       : access Formatter'Class := null;
+      For_Database : Boolean := True) return String
+     is ("Boolean");
+   overriding function Type_From_SQL
+     (Self : in out Field_Type_Boolean; Str : String) return Boolean
+     is (Str = "boolean");
+   overriding function Parameter_Type
+     (Self : Field_Type_Boolean) return SQL_Parameter_Type'Class
+     is (SQL_Parameter_Boolean'(others => <>));
+
+   type Field_Type_Money is new Field_Type with null record;
+   overriding function Type_To_SQL
+     (Self         : Field_Type_Money;
+      Format       : access Formatter'Class := null;
+      For_Database : Boolean := True) return String
+     is (if For_Database
+         then Format.Field_Type_Money
+         else "Money");
+   overriding function Type_From_SQL
+     (Self : in out Field_Type_Money; Str : String) return Boolean
+     is (Str = "money");
+   overriding function Parameter_Type
+     (Self : Field_Type_Money) return SQL_Parameter_Type'Class
+     is (SQL_Parameter_Money'(others => <>));
 
    Invalid_Type : exception;
    --  Raise by Read_Schema when some unknown type is used.
 
-   function From_SQL
-     (SQL_Type : String) return Field_Type;
+   function From_SQL (SQL_Type : String) return Field_Type_Access;
    --  Convert a SQL type to a field type, or raise Invalid_Type
-
-   function To_SQL
-     (Typ          : Field_Type;
-      For_Database : Boolean := True) return String;
-   --  Return the Ada type to use for Typ.
-   --  If For_Database is True, the returned value can be used in a
-   --  "CREATE TABLE" statement. Otherwise, it is prefixed with "SQL_Field_"
-   --  to represent the corresponding GNATCOLL.SQL type
 
    function Quote_Keyword (Str : String) return String;
    --  If Str is a keyword (or special token) for the DBMS, surround it with
@@ -112,7 +253,7 @@ package GNATCOLL.SQL.Inspect is
    function Get_Table (Self : Field) return Table_Description'Class;
    --  The table to which the field belongs
 
-   function Get_Type (Self : Field) return Field_Type;
+   function Get_Type (Self : Field) return Field_Type_Access;
    --  The type of the field.
    --  If the field is a foreign key, this returns the type of the field it
    --  points to, unless a specific type was set.
@@ -287,6 +428,7 @@ package GNATCOLL.SQL.Inspect is
    --  views (if DB is set, otherwise output statements to stdout)
 
    type File_Schema_IO is new Schema_IO with record
+      DB   : Database_Connection;
       File : GNATCOLL.VFS.Virtual_File;
    end record;
    overriding function Read_Schema (Self : File_Schema_IO) return DB_Schema;
@@ -372,7 +514,7 @@ private
 
    type Field_Description is record
       Name        : GNAT.Strings.String_Access;
-      Typ         : Field_Type;
+      Typ         : Field_Type_Access;
       Id          : Positive;
       Description : GNAT.Strings.String_Access;
       Default     : GNAT.Strings.String_Access;

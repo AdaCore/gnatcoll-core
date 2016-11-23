@@ -32,6 +32,7 @@ with "src/gnatcoll_gmp";
 with "src/gnatcoll_readline";
 with "src/gnatcoll_iconv";
 with "src/gnatcoll_xref";
+with "src/gnatcoll_tools";
 
 with "gnatcoll_shared";
 

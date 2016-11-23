@@ -106,6 +106,7 @@ with System;
 private with Ada.Finalization;
 private with GNATCOLL.Refcount;
 with GNAT.Strings;
+with GNATCOLL.SQL_Impl;
 
 package GNATCOLL.SQL.Exec is
 
@@ -152,28 +153,7 @@ package GNATCOLL.SQL.Exec is
    --  Such queries are created in GNATCOLL through the use of
    --  GNATCOLL.SQL.Text_Param, GNATCOLL.SQL.Integer_Param,...
 
-   type SQL_Parameter (Typ : Parameter_Type := Parameter_Integer) is record
-      case Typ is
-         when Parameter_Integer   => Int_Val : Integer;
-         when Parameter_Bigint    => Bigint_Val : Long_Long_Integer;
-         when Parameter_Json
-            | Parameter_XML
-            | Parameter_Text      =>
-            Str_Ptr : access constant String;
-            --  References external string, to avoid an extra copy
-            Str_Val : Unbounded_String;
-            --  Unbounded string copies only reference on assignment
-            Make_Copy : Boolean;
-            --  If set this forces SQL engine to make a copy of Str_Ptr.all
-         when Parameter_Boolean   => Bool_Val : Boolean;
-         when Parameter_Float     => Float_Val : Float;
-         when Parameter_Time      => Time_Val  : Ada.Calendar.Time;
-         when Parameter_Date      => Date_Val  : Ada.Calendar.Time;
-         when Parameter_Character => Char_Val : Character;
-         when Parameter_Money     => Money_Val : T_Money;
-      end case;
-   end record;
-
+   subtype SQL_Parameter is GNATCOLL.SQL_Impl.SQL_Parameter_Base;
    Null_Parameter : constant SQL_Parameter;
 
    function "+" (Value : access constant String) return SQL_Parameter;
@@ -192,15 +172,9 @@ package GNATCOLL.SQL.Exec is
    function "+" (Time : Ada.Calendar.Time) return SQL_Parameter;
    function "+" (Value : T_Money) return SQL_Parameter;
 
-   function To_String (Param : SQL_Parameter) return String is
-     (if Param.Str_Ptr = null then To_String (Param.Str_Val)
-      else Param.Str_Ptr.all);
-
    type SQL_Parameters is array (Positive range <>) of SQL_Parameter;
    No_Parameters : constant SQL_Parameters;
 
-   function Image
-     (Format : Formatter'Class; Param : SQL_Parameter) return String;
    function Image
      (Format : Formatter'Class; Params : SQL_Parameters)
       return String;
@@ -626,10 +600,6 @@ package GNATCOLL.SQL.Exec is
      return T_Money;
    function Time_Value
      (Self  : Forward_Cursor; Field : Field_Index) return Ada.Calendar.Time;
-   function Json_Text_Value
-     (Self  : Forward_Cursor; Field : Field_Index) return String;
-   function XML_Text_Value
-     (Self  : Forward_Cursor; Field : Field_Index) return String;
    --  Return a specific cell, converted to the appropriate format
 
    function Is_Null
@@ -1056,7 +1026,7 @@ private
      (Ada.Finalization.Controlled with null);
 
    Null_Parameter : constant SQL_Parameter :=
-     (Typ => Parameter_Integer, Int_Val => Integer'First);
+      (Parameters.Null_Ref with null record);
    No_Parameters : constant SQL_Parameters (1 .. 0) :=
      (others => Null_Parameter);
 

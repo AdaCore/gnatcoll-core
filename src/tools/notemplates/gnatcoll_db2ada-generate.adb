@@ -121,7 +121,8 @@ is
       begin
          Put (Spec_File, "      "
               & Capitalize (F.Name)
-              & " : SQL_Field_" & To_SQL (F.Get_Type, For_Database => False));
+              & " : SQL_Field_"
+              & F.Get_Type.Type_To_SQL (null, For_Database => False));
 
          if T_Descr.Is_Abstract then
             Put (Spec_File, " (Table_Name");
@@ -391,6 +392,7 @@ begin
 
       Create (Spec_File, Name => F.Display_Full_Name);
       Put_Line (Spec_File, "with GNATCOLL.SQL; use GNATCOLL.SQL;");
+
       Put_Line (Spec_File, "package " & Generated & "_Names is");
       Put_Line (Spec_File, "   pragma Style_Checks (Off);");
 
@@ -419,6 +421,15 @@ begin
    Create (Spec_File, Name => F.Display_Full_Name);
 
    Put_Line (Spec_File, "with GNATCOLL.SQL; use GNATCOLL.SQL;");
+
+   Put_Line
+     (Spec_File,
+      "pragma Warnings (Off, ""no entities of * are referenced"");");
+   Put_Line
+     (Spec_File, "with GNATCOLL.SQL_Fields; use GNATCOLL.SQL_Fields;");
+   Put_Line
+     (Spec_File,
+      "pragma Warnings (On, ""no entities of * are referenced"");");
 
    if Include_Database_Create then
       Put_Line (Spec_File, "with GNATCOLL.SQL.Exec;");

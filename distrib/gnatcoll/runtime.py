@@ -421,6 +421,13 @@ XML = r'''<?xml version="1.0"?>
   </documentation_file>
 
   <documentation_file>
+     <shell>Editor.edit "gnatcoll-sql_fields.ads"</shell>
+     <descr>GNATCOLL.SQL_Fields</descr>
+     <menu>/Help/GNAT Runtime/GNATCOLL/SQL__Fields</menu>
+     <category>GNAT Components Collection</category>
+  </documentation_file>
+
+  <documentation_file>
      <shell>Editor.edit "gnatcoll-sql_impl.ads"</shell>
      <descr>GNATCOLL.SQL_Impl</descr>
      <menu>/Help/GNAT Runtime/GNATCOLL/SQL__Impl</menu>

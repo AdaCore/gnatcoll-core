@@ -25,7 +25,6 @@ with Ada.Calendar;               use Ada.Calendar;
 with Ada.Calendar.Formatting;    use Ada.Calendar.Formatting;
 with Ada.Strings.Fixed;          use Ada.Strings.Fixed;
 with Ada.Strings.Hash;
-with Ada.Strings.Unbounded;      use Ada.Strings.Unbounded;
 with Ada.Unchecked_Deallocation;
 with GNAT.Strings;               use GNAT.Strings;
 with GNATCOLL.Utils;             use GNATCOLL.Utils;
@@ -51,7 +50,7 @@ package body GNATCOLL.SQL_Impl is
    --  instance via Expression, From_String, or operators on time. Such fields
    --  are still typed
 
-   type Field_Type is (Field_Std, Field_Operator, Field_Parameter);
+   type Field_Kind is (Field_Std, Field_Operator, Field_Parameter);
    --  The type of the field:
    --     Field_Std: Str_Value is directly the text of the field
    --     Field_Operator:  Str_Value is the operator, that acts on several
@@ -60,7 +59,7 @@ package body GNATCOLL.SQL_Impl is
    --          substituted at runtime (for instance "?1" in sqlite3). Str_Value
    --          is then the index of the field.
 
-   type Named_Field_Internal (Typ : Field_Type)
+   type Named_Field_Internal (Typ : Field_Kind)
      is new SQL_Field_Internal with record
       Table     : Table_Names := No_Names;
 
@@ -76,7 +75,7 @@ package body GNATCOLL.SQL_Impl is
 
          when Field_Parameter =>
             Index      : Positive;
-            Param_Type : Parameter_Type;
+            Param_Type : SQL_Parameter_Base;
       end case;
    end record;
    overriding procedure Free (Self : in out Named_Field_Internal);
@@ -344,7 +343,7 @@ package body GNATCOLL.SQL_Impl is
             return To_String (Result);
 
          when Field_Parameter =>
-            return Parameter_String (Format, Self.Index, Self.Param_Type);
+            return Self.Param_Type.Get.Type_String (Self.Index, Format);
       end case;
    end To_String;
 
@@ -1064,9 +1063,10 @@ package body GNATCOLL.SQL_Impl is
 
       function Param (Index : Positive) return Field'Class is
          Data : Named_Field_Internal (Field_Parameter);
+         P    : Param_Type;
       begin
          Data.Index := Index;
-         Data.Param_Type := Param_Type;
+         Data.Param_Type.Set (P);
          return Internal_From_Data (Data);
       end Param;
 
@@ -1539,40 +1539,6 @@ package body GNATCOLL.SQL_Impl is
       end if;
    end Money_Image;
 
-   -----------------
-   -- Json_To_SQL --
-   -----------------
-
-   function Json_To_SQL
-     (Self : Formatter'Class; Value : String; Quote : Boolean) return String
-   is
-      pragma Unreferenced (Self, Quote);
-   begin
-      if Trim (Value, Ada.Strings.Both) = "" then
-         return "null";
-         --  Json null, not to be confused with SQL NULL.
-      else
-         return Value;
-      end if;
-   end Json_To_SQL;
-
-   -----------------
-   -- XML_To_SQL --
-   -----------------
-
-   function XML_To_SQL
-     (Self : Formatter'Class; Value : String; Quote : Boolean) return String
-   is
-      pragma Unreferenced (Self, Quote);
-   begin
-      if Trim (Value, Ada.Strings.Both) = "" then
-         return "<null/>";
-         --  XML null, not to be confused with SQL NULL.
-      else
-         return Value;
-      end if;
-   end XML_To_SQL;
-
    -------------------
    -- String_To_SQL --
    -------------------
@@ -1635,20 +1601,6 @@ package body GNATCOLL.SQL_Impl is
       end;
    end String_Image;
 
-   ----------------------
-   -- Parameter_String --
-   ----------------------
-
-   function Parameter_String
-     (Self  : Formatter;
-      Index : Positive;
-      Typ   : Parameter_Type) return String
-   is
-      pragma Unreferenced (Self, Index, Typ);
-   begin
-      return "?";
-   end Parameter_String;
-
    ------------
    -- Create --
    ------------
@@ -1662,5 +1614,14 @@ package body GNATCOLL.SQL_Impl is
       R.List.Append (It);
       return R;
    end Create;
+
+   -------------------
+   -- Free_Dispatch --
+   -------------------
+
+   procedure Free_Dispatch (Self : in out SQL_Parameter_Type'Class) is
+   begin
+      Self.Free;
+   end Free_Dispatch;
 
 end GNATCOLL.SQL_Impl;

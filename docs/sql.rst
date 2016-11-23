@@ -1467,6 +1467,9 @@ See the specs of `GNATCOLL.SQL_Impl` for more details. This package
 is only really useful when writing your own types, since otherwise you
 just have to use `GNATCOLL.SQL` to write the actual queries.
 
+See also `GNATCOLL.SQL_Fields` for an example on how to have a full
+integration with other parts of `GNATCOLL.SQL`.
+
 Query logs
 ==========
 

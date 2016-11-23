@@ -210,35 +210,35 @@ package GNATCOLL.SQL is
    --  of a Select statement
 
    package Integer_Fields is new Field_Types
-     (Integer, Integer_To_SQL, Parameter_Integer);
+     (Integer, Integer_To_SQL, SQL_Parameter_Integer);
    type SQL_Field_Integer is new Integer_Fields.Field with null record;
    Null_Field_Integer : constant SQL_Field_Integer;
    function Integer_Param (Index : Positive) return Integer_Fields.Field'Class
                            renames Integer_Fields.Param;
 
    package Bigint_Fields is new Field_Types
-     (Long_Long_Integer, Bigint_To_SQL, Parameter_Bigint);
+     (Long_Long_Integer, Bigint_To_SQL, SQL_Parameter_Bigint);
    type SQL_Field_Bigint is new Bigint_Fields.Field with null record;
    Null_Field_Bigint : constant SQL_Field_Bigint;
    function Bigint_Param (Index : Positive) return Bigint_Fields.Field'Class
                            renames Bigint_Fields.Param;
 
    package Text_Fields is new Field_Types
-     (String, String_To_SQL, Parameter_Text);
+     (String, String_To_SQL, SQL_Parameter_Text);
    type SQL_Field_Text is new Text_Fields.Field with null record;
    Null_Field_Text : constant SQL_Field_Text;
    function Text_Param (Index : Positive) return Text_Fields.Field'Class
                         renames Text_Fields.Param;
 
    package Boolean_Fields is new Field_Types
-     (Boolean, Boolean_To_SQL, Parameter_Boolean);
+     (Boolean, Boolean_To_SQL, SQL_Parameter_Boolean);
    type SQL_Field_Boolean is new Boolean_Fields.Field with null record;
    Null_Field_Boolean : constant SQL_Field_Boolean;
    function Boolean_Param (Index : Positive) return Boolean_Fields.Field'Class
                            renames Boolean_Fields.Param;
 
    package Float_Fields is new Field_Types
-     (Float, Float_To_SQL, Parameter_Float);
+     (Float, Float_To_SQL, SQL_Parameter_Float);
    type SQL_Field_Float is new Float_Fields.Field with null record;
    Null_Field_Float : constant SQL_Field_Float;
    function Float_Param (Index : Positive) return Float_Fields.Field'Class
@@ -263,14 +263,14 @@ package GNATCOLL.SQL is
    --  'with' GNATCOLL.SQL_Impl.
 
    package Money_Fields is new Field_Types
-     (T_Money, Money_To_SQL, Parameter_Money);
+     (T_Money, Money_To_SQL, SQL_Parameter_Money);
    type SQL_Field_Money is new Money_Fields.Field with null record;
    Null_Field_Money : constant SQL_Field_Money;
    function Money_Param (Index : Positive) return Money_Fields.Field'Class
                          renames Money_Fields.Param;
 
    package Time_Fields is new Field_Types
-     (Ada.Calendar.Time, Time_To_SQL, Parameter_Time);
+     (Ada.Calendar.Time, Time_To_SQL, SQL_Parameter_Time);
    type SQL_Field_Time is new Time_Fields.Field with null record;
    Null_Field_Time : constant SQL_Field_Time;
    function Time_Param (Index : Positive) return Time_Fields.Field'Class
@@ -278,27 +278,13 @@ package GNATCOLL.SQL is
    --  A timestamp, ie date + time
 
    package Date_Fields is new Field_Types
-     (Ada.Calendar.Time, Date_To_SQL, Parameter_Date);
+     (Ada.Calendar.Time, Date_To_SQL, SQL_Parameter_Date);
    type SQL_Field_Date is new Date_Fields.Field with null record;
    Null_Field_Date : constant SQL_Field_Date;
    function Date_Param (Index : Positive) return Date_Fields.Field'Class
                         renames Date_Fields.Param;
    --  Only includes the date, not the time. Note: the date taken into account
    --  is that of the Time value when interpreted in UT.
-
-   package Json_Fields is new Field_Types
-     (String, Json_To_SQL, Parameter_Json);
-   type SQL_Field_Json is new Json_Fields.Field with null record;
-   Null_Field_Json : constant SQL_Field_Json;
-   function Json_Param (Index : Positive) return Json_Fields.Field'Class
-      renames Json_Fields.Param;
-
-   package XML_Fields is new Field_Types
-     (String, XML_To_SQL, Parameter_XML);
-   type SQL_Field_XML is new XML_Fields.Field with null record;
-   Null_Field_XML : constant SQL_Field_XML;
-   function XML_Param (Index : Positive) return XML_Fields.Field'Class
-      renames XML_Fields.Param;
 
    function From_String
      (Expression : String) return Text_Fields.Field'Class
@@ -1241,10 +1227,6 @@ private
      (Time_Fields.Null_Field with null record);
    Null_Field_Date : constant SQL_Field_Date :=
      (Date_Fields.Null_Field with null record);
-   Null_Field_Json : constant SQL_Field_Json :=
-     (Json_Fields.Null_Field with null record);
-   Null_Field_XML : constant SQL_Field_XML :=
-     (XML_Fields.Null_Field with null record);
    Null_Field_Bigint : constant SQL_Field_Bigint :=
       (Bigint_Fields.Null_Field with null record);
 

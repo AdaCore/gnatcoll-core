@@ -82,9 +82,9 @@ package body GNATCOLL.SQL.Postgres.Builder is
    overriding procedure Close
      (Connection : access Postgresql_Connection_Record);
    overriding function Parameter_String
-     (Self  : Postgresql_Connection_Record;
-      Index : Positive;
-      Typ   : Parameter_Type) return String;
+     (Self       : Postgresql_Connection_Record;
+      Index      : Positive;
+      Type_Descr : String) return String;
    overriding function Can_Alter_Table_Constraints
      (Self : access Postgresql_Connection_Record) return Boolean;
    overriding function Has_Pragmas
@@ -1302,35 +1302,17 @@ package body GNATCOLL.SQL.Postgres.Builder is
    ----------------------
 
    overriding function Parameter_String
-     (Self  : Postgresql_Connection_Record;
-      Index : Positive;
-      Typ   : Parameter_Type) return String
+     (Self       : Postgresql_Connection_Record;
+      Index      : Positive;
+      Type_Descr : String) return String
    is
       pragma Unreferenced (Self);
    begin
-      case Typ is
-         when Parameter_Text | Parameter_Character =>
-            return '$' & Image (Index, 0) & "::text";
-         when Parameter_Json =>
-            return '$' & Image (Index, 0) & "::json";
-         when Parameter_XML =>
-            return '$' & Image (Index, 0) & "::xml";
-         when Parameter_Integer =>
-            return '$' & Image (Index, 0) & "::integer";
-         when Parameter_Bigint =>
-            return '$' & Image (Index, 0) & "::bigint";
-         when Parameter_Boolean =>
-            return '$' & Image (Index, 0) & "::boolean";
-         when Parameter_Float =>
-            return '$' & Image (Index, 0) & "::float";
-         when Parameter_Time =>
-            --  Don't know how to say "::time with time zon"
-            return '$' & Image (Index, 0);
-         when Parameter_Date =>
-            return '$' & Image (Index, 0) & "::date";
-         when Parameter_Money =>
-            return '$' & Image (Index, 0) & "::numeric";
-      end case;
+      if Type_Descr = "" then
+         return '$' & Image (Index, 0);
+      else
+         return '$' & Image (Index, 0) & "::" & Type_Descr;
+      end if;
    end Parameter_String;
 
    ------------------------------

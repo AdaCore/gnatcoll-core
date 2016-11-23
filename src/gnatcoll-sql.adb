@@ -26,6 +26,11 @@ with Ada.Containers;             use Ada.Containers;
 with Ada.Unchecked_Deallocation;
 with GNAT.Strings;               use GNAT.Strings;
 
+--  Register the types declared in that package
+pragma Warnings (Off, "* is not referenced");
+with GNATCOLL.SQL_Fields;
+pragma Warnings (On, "* is not referenced");
+
 package body GNATCOLL.SQL is
 
    use Table_List, Field_List, Criteria_List, Table_Sets;

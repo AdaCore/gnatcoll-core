@@ -516,43 +516,6 @@ package body GNATCOLL.SQL.Exec is
    -----------
 
    function Image
-     (Format : Formatter'Class; Param : SQL_Parameter) return String is
-   begin
-      if Param = Null_Parameter then
-         return "<none>";
-      else
-         case Param.Typ is
-         when Parameter_Text    =>
-            return String_To_SQL (Format, To_String (Param), Quote => False);
-         when Parameter_Integer =>
-            return Integer_To_SQL (Format, Param.Int_Val, Quote => False);
-         when Parameter_Bigint =>
-            return Bigint_To_SQL (Format, Param.Bigint_Val, Quote => False);
-         when Parameter_Float   =>
-            return Float_To_SQL (Format, Param.Float_Val, Quote => False);
-         when Parameter_Boolean =>
-            return Boolean_To_SQL (Format, Param.Bool_Val, Quote => False);
-         when Parameter_Time =>
-            return Time_To_SQL (Format, Param.Time_Val, Quote => False);
-         when Parameter_Date =>
-            return Date_To_SQL (Format, Param.Date_Val, Quote => False);
-         when Parameter_Character =>
-            return String'(1 .. 1 => Param.Char_Val);
-         when Parameter_Money =>
-            return Money_To_SQL (Format, Param.Money_Val, Quote => False);
-         when Parameter_Json =>
-            return Json_To_SQL (Format, To_String (Param), Quote => False);
-         when Parameter_XML =>
-            return XML_To_SQL (Format, To_String (Param), Quote => False);
-         end case;
-      end if;
-   end Image;
-
-   -----------
-   -- Image --
-   -----------
-
-   function Image
      (Format : Formatter'Class; Params : SQL_Parameters)
       return String
    is
@@ -560,7 +523,7 @@ package body GNATCOLL.SQL.Exec is
    begin
       for P in Params'Range loop
          Append (Result, ", ");
-         Append (Result, Image (Format, Params (P)));
+         Append (Result, Params (P).Get.Image (Format));
       end loop;
 
       return To_String (Result);
@@ -1383,28 +1346,6 @@ package body GNATCOLL.SQL.Exec is
       return Time_Value (DBMS_Forward_Cursor'Class (Self.Res.all), Field);
    end Time_Value;
 
-   ---------------------
-   -- Json_Text_Value --
-   ---------------------
-
-   function Json_Text_Value
-     (Self  : Forward_Cursor;
-      Field : Field_Index) return String is
-   begin
-      return Value (DBMS_Forward_Cursor'Class (Self.Res.all), Field);
-   end Json_Text_Value;
-
-   --------------------
-   -- XML_Text_Value --
-   --------------------
-
-   function XML_Text_Value
-     (Self  : Forward_Cursor;
-      Field : Field_Index) return String is
-   begin
-      return Value (DBMS_Forward_Cursor'Class (Self.Res.all), Field);
-   end XML_Text_Value;
-
    -------------
    -- Is_Null --
    -------------
@@ -1853,24 +1794,33 @@ package body GNATCOLL.SQL.Exec is
    ---------
 
    function "+" (Value : access constant String) return SQL_Parameter is
+      R : SQL_Parameter;
+      P : SQL_Parameter_Text;
    begin
-      return SQL_Parameter'
-        (Typ => Parameter_Text, Str_Ptr => Value.all'Unchecked_Access,
-         Make_Copy => False, Str_Val => <>);
+      P.Str_Ptr   := Value.all'Unrestricted_Access;
+      P.Make_Copy := False;
+      R.Set (P);
+      return R;
    end "+";
 
    function "+" (Value : String) return SQL_Parameter is
+      R : SQL_Parameter;
+      P : SQL_Parameter_Text;
    begin
-      return SQL_Parameter'
-        (Typ => Parameter_Text, Str_Val => To_Unbounded_String (Value),
-         Make_Copy => False, Str_Ptr => <>);
+      P.Str_Val := To_Unbounded_String (Value);
+      P.Make_Copy := False;
+      R.Set (P);
+      return R;
    end "+";
 
    function "+" (Value : Unbounded_String) return SQL_Parameter is
+      R : SQL_Parameter;
+      P : SQL_Parameter_Text;
    begin
-      return SQL_Parameter'
-        (Typ => Parameter_Text, Str_Val => Value,
-         Make_Copy => False, Str_Ptr => <>);
+      P.Str_Val := Value;
+      P.Make_Copy := False;
+      R.Set (P);
+      return R;
    end "+";
 
    ----------
@@ -1878,10 +1828,13 @@ package body GNATCOLL.SQL.Exec is
    ----------
 
    function Copy (Value : access constant String) return SQL_Parameter is
+      R : SQL_Parameter;
+      P : SQL_Parameter_Text;
    begin
-      return SQL_Parameter'
-        (Typ => Parameter_Text, Str_Ptr => Value.all'Unchecked_Access,
-         Make_Copy => True, Str_Val => <>);
+      P.Str_Ptr   := Value.all'Unrestricted_Access;
+      P.Make_Copy := True;
+      R.Set (P);
+      return R;
    end Copy;
 
    ---------
@@ -1889,8 +1842,12 @@ package body GNATCOLL.SQL.Exec is
    ---------
 
    function "+" (Value : Integer) return SQL_Parameter is
+      R : SQL_Parameter;
+      P : SQL_Parameter_Integer;
    begin
-      return SQL_Parameter'(Typ => Parameter_Integer, Int_Val => Value);
+      P.Int_Val := Value;
+      R.Set (P);
+      return R;
    end "+";
 
    ---------------
@@ -1898,8 +1855,12 @@ package body GNATCOLL.SQL.Exec is
    ---------------
 
    function As_Bigint (Value : Long_Long_Integer) return SQL_Parameter is
+      R : SQL_Parameter;
+      P : SQL_Parameter_Bigint;
    begin
-      return SQL_Parameter'(Typ => Parameter_Bigint, Bigint_Val => Value);
+      P.Bigint_Val := Value;
+      R.Set (P);
+      return R;
    end As_Bigint;
 
    ---------
@@ -1907,8 +1868,12 @@ package body GNATCOLL.SQL.Exec is
    ---------
 
    function "+" (Value : Boolean) return SQL_Parameter is
+      R : SQL_Parameter;
+      P : SQL_Parameter_Boolean;
    begin
-      return SQL_Parameter'(Typ => Parameter_Boolean, Bool_Val => Value);
+      P.Bool_Val := Value;
+      R.Set (P);
+      return R;
    end "+";
 
    ---------
@@ -1916,8 +1881,12 @@ package body GNATCOLL.SQL.Exec is
    ---------
 
    function "+" (Value : Float) return SQL_Parameter is
+      R : SQL_Parameter;
+      P : SQL_Parameter_Float;
    begin
-      return SQL_Parameter'(Typ => Parameter_Float, Float_Val => Value);
+      P.Float_Val := Value;
+      R.Set (P);
+      return R;
    end "+";
 
    ---------
@@ -1925,8 +1894,12 @@ package body GNATCOLL.SQL.Exec is
    ---------
 
    function "+" (Value : Character) return SQL_Parameter is
+      R : SQL_Parameter;
+      P : SQL_Parameter_Character;
    begin
-      return SQL_Parameter'(Typ => Parameter_Character, Char_Val => Value);
+      P.Char_Val := Value;
+      R.Set (P);
+      return R;
    end "+";
 
    ---------
@@ -1934,8 +1907,12 @@ package body GNATCOLL.SQL.Exec is
    ---------
 
    function "+" (Time : Ada.Calendar.Time) return SQL_Parameter is
+      R : SQL_Parameter;
+      P : SQL_Parameter_Time;
    begin
-      return SQL_Parameter'(Typ => Parameter_Time, Time_Val => Time);
+      P.Time_Val := Time;
+      R.Set (P);
+      return R;
    end "+";
 
    ---------
@@ -1943,8 +1920,12 @@ package body GNATCOLL.SQL.Exec is
    ---------
 
    function "+" (Value : T_Money) return SQL_Parameter is
+      R : SQL_Parameter;
+      P : SQL_Parameter_Money;
    begin
-      return SQL_Parameter'(Typ => Parameter_Money, Money_Val => Value);
+      P.Money_Val := Value;
+      R.Set (P);
+      return R;
    end "+";
 
    ----------
