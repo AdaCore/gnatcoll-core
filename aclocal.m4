@@ -829,29 +829,31 @@ print 'PYTHON_LIBS="%s %s %s"' % (get_config_vars().get("LIBS", ""), get_config_
 EOF
 `
       eval "$result"
-      if test "$PYTHON_SHARED" = "yes"; then
-         PYTHON_DIR="$PYTHON_SHARED_DIR"
-         PYTHON_LIBS="-L$PYTHON_DIR -lpython$PYTHON_VERSION $PYTHON_LIBS"
+
+      PYTHON_DIR="$PYTHON_SHARED_DIR"
+      PYTHON_SHARED_LIBS="-L$PYTHON_DIR -lpython$PYTHON_VERSION $PYTHON_LIBS"
+
+      PYTHON_DIR="$PYTHON_STATIC_DIR"
+      if test -f "${PYTHON_DIR}/libpython${PYTHON_VERSION}.a"; then
+         PYTHON_STATIC_LIBS="${PYTHON_DIR}/libpython${PYTHON_VERSION}.a $PYTHON_LIBS"
       else
-         PYTHON_DIR="$PYTHON_STATIC_DIR"
-         if test -f "${PYTHON_DIR}/libpython${PYTHON_VERSION}.a"; then
-            PYTHON_LIBS="${PYTHON_DIR}/libpython${PYTHON_VERSION}.a $PYTHON_LIBS"
-         else
-            PYTHON_LIBS="-L$PYTHON_DIR -lpython$PYTHON_VERSION $PYTHON_LIBS"
-         fi
+         PYTHON_STATIC_LIBS="-L$PYTHON_DIR -lpython$PYTHON_VERSION $PYTHON_LIBS"
       fi
 
       # On Linux platform, even when linking with the static libpython, symbols not
       # used by the application itself should be exported so that shared library
       # present in Python can use the Python C API. 
       case $build_os in
-         *linux*) PYTHON_LIBS="${PYTHON_LIBS} -export-dynamic";;
+         *linux*)
+            PYTHON_SHARED_LIBS="${PYTHON_SHARED_LIBS} -export-dynamic"
+            PYTHON_STATIC_LIBS="${PYTHON_STATIC_LIBS} -export-dynamic"
+            ;;
       esac
 
       SAVE_CFLAGS="${CFLAGS}"
       SAVE_LIBS="${LIBS}"
       CFLAGS="${SAVE_CFLAGS} ${PYTHON_CFLAGS}"
-      LIBS="${SAVE_LIBS} ${PYTHON_LIBS}"
+      LIBS="${SAVE_LIBS} ${PYTHON_SHARED_LIBS}"
 
       AC_LINK_IFELSE(
         [AC_LANG_PROGRAM([
@@ -876,14 +878,15 @@ EOF
 
    if test "$WITH_PYTHON" = "yes"; then
      AC_MSG_CHECKING(for python LDFLAGS)
-     AC_MSG_RESULT($PYTHON_LIBS)
+     AC_MSG_RESULT($PYTHON_SHARED_LIBS)
      AC_MSG_CHECKING(for python CFLAGS)
      AC_MSG_RESULT($PYTHON_CFLAGS)
    fi
    AC_SUBST(PYTHON_BASE)
    AC_SUBST(PYTHON_VERSION)
    AC_SUBST(PYTHON_DIR)
-   AC_SUBST(PYTHON_LIBS)
+   AC_SUBST(PYTHON_SHARED_LIBS)
+   AC_SUBST(PYTHON_STATIC_LIBS)
    AC_SUBST(PYTHON_CFLAGS)
    AC_SUBST(WITH_PYTHON)
 ])

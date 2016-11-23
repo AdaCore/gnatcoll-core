@@ -44,7 +44,15 @@ abstract project GnatColl_Shared is
    Pygtk_Include  := (@PYGTK_INCLUDE_GPR@);
    Pygobject_Include := (@PYGOBJECT_INCLUDE_GPR@);
    Python_Dir     := "@PYTHON_DIR@";
-   Python_Libs    := (@PYTHON_LIBS_GPR@);
+
+   Python_Libs := ();
+   case Library_Type is
+      when "relocatable" =>
+         Python_Libs    := (@PYTHON_SHARED_LIBS_GPR@);
+      when "static" | "static-pic" =>
+         Python_Libs    := (@PYTHON_STATIC_LIBS_GPR@);
+   end case;
+
    Gtk_Include    := (@GTK_GCC_FLAGS_GPR@);
    Gtk_Libs       := (@GTK_GCC_LIBS_GPR@);
    Gmp_Flags      := (@GMP_CFLAGS_GPR@);

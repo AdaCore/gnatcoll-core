@@ -632,7 +632,8 @@ GTK_GCC_LIBS_GPR
 GTK_GCC_FLAGS_GPR
 PYGTK_INCLUDE_GPR
 PYTHON_CFLAGS_GPR
-PYTHON_LIBS_GPR
+PYTHON_STATIC_LIBS_GPR
+PYTHON_SHARED_LIBS_GPR
 GMP_LIBS_GPR
 GMP_CFLAGS_GPR
 SYNC_COUNTERS_IMPL
@@ -669,7 +670,8 @@ PKG_CONFIG
 WITH_MMAP
 WITH_PYTHON
 PYTHON_CFLAGS
-PYTHON_LIBS
+PYTHON_STATIC_LIBS
+PYTHON_SHARED_LIBS
 PYTHON_DIR
 PYTHON_VERSION
 PYTHON_BASE
@@ -3815,29 +3817,31 @@ print 'PYTHON_LIBS="%s %s %s"' % (get_config_vars().get("LIBS", ""), get_config_
 EOF
 `
       eval "$result"
-      if test "$PYTHON_SHARED" = "yes"; then
-         PYTHON_DIR="$PYTHON_SHARED_DIR"
-         PYTHON_LIBS="-L$PYTHON_DIR -lpython$PYTHON_VERSION $PYTHON_LIBS"
+
+      PYTHON_DIR="$PYTHON_SHARED_DIR"
+      PYTHON_SHARED_LIBS="-L$PYTHON_DIR -lpython$PYTHON_VERSION $PYTHON_LIBS"
+
+      PYTHON_DIR="$PYTHON_STATIC_DIR"
+      if test -f "${PYTHON_DIR}/libpython${PYTHON_VERSION}.a"; then
+         PYTHON_STATIC_LIBS="${PYTHON_DIR}/libpython${PYTHON_VERSION}.a $PYTHON_LIBS"
       else
-         PYTHON_DIR="$PYTHON_STATIC_DIR"
-         if test -f "${PYTHON_DIR}/libpython${PYTHON_VERSION}.a"; then
-            PYTHON_LIBS="${PYTHON_DIR}/libpython${PYTHON_VERSION}.a $PYTHON_LIBS"
-         else
-            PYTHON_LIBS="-L$PYTHON_DIR -lpython$PYTHON_VERSION $PYTHON_LIBS"
-         fi
+         PYTHON_STATIC_LIBS="-L$PYTHON_DIR -lpython$PYTHON_VERSION $PYTHON_LIBS"
       fi
 
       # On Linux platform, even when linking with the static libpython, symbols not
       # used by the application itself should be exported so that shared library
       # present in Python can use the Python C API.
       case $build_os in
-         *linux*) PYTHON_LIBS="${PYTHON_LIBS} -export-dynamic";;
+         *linux*)
+            PYTHON_SHARED_LIBS="${PYTHON_SHARED_LIBS} -export-dynamic"
+            PYTHON_STATIC_LIBS="${PYTHON_STATIC_LIBS} -export-dynamic"
+            ;;
       esac
 
       SAVE_CFLAGS="${CFLAGS}"
       SAVE_LIBS="${LIBS}"
       CFLAGS="${SAVE_CFLAGS} ${PYTHON_CFLAGS}"
-      LIBS="${SAVE_LIBS} ${PYTHON_LIBS}"
+      LIBS="${SAVE_LIBS} ${PYTHON_SHARED_LIBS}"
 
       cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
@@ -3879,13 +3883,14 @@ rm -f core conftest.err conftest.$ac_objext \
    if test "$WITH_PYTHON" = "yes"; then
      { $as_echo "$as_me:${as_lineno-$LINENO}: checking for python LDFLAGS" >&5
 $as_echo_n "checking for python LDFLAGS... " >&6; }
-     { $as_echo "$as_me:${as_lineno-$LINENO}: result: $PYTHON_LIBS" >&5
-$as_echo "$PYTHON_LIBS" >&6; }
+     { $as_echo "$as_me:${as_lineno-$LINENO}: result: $PYTHON_SHARED_LIBS" >&5
+$as_echo "$PYTHON_SHARED_LIBS" >&6; }
      { $as_echo "$as_me:${as_lineno-$LINENO}: checking for python CFLAGS" >&5
 $as_echo_n "checking for python CFLAGS... " >&6; }
      { $as_echo "$as_me:${as_lineno-$LINENO}: result: $PYTHON_CFLAGS" >&5
 $as_echo "$PYTHON_CFLAGS" >&6; }
    fi
+
 
 
 
@@ -5312,7 +5317,7 @@ $as_echo "no" >&6; }
 
 
 
-   value=$PYTHON_LIBS
+   value=$PYTHON_SHARED_LIBS
 
    # Special handling on darwin for gcc 4.5 and 4.7
    case "$build_os" in
@@ -5320,7 +5325,7 @@ $as_echo "no" >&6; }
          value=`echo $value | sed -e "s/-framework \([^ ]*\)/-Wl,-framework -Wl,\1/g"`
    esac
 
-   output=PYTHON_LIBS_GPR
+   output=PYTHON_SHARED_LIBS_GPR
    result=""
    for v in $value; do
       if test "$result" != ""; then
@@ -5328,7 +5333,28 @@ $as_echo "no" >&6; }
       fi
       result="$result\"$v\""
    done
-   PYTHON_LIBS_GPR=$result
+   PYTHON_SHARED_LIBS_GPR=$result
+
+
+
+
+   value=$PYTHON_STATIC_LIBS
+
+   # Special handling on darwin for gcc 4.5 and 4.7
+   case "$build_os" in
+      *darwin*)
+         value=`echo $value | sed -e "s/-framework \([^ ]*\)/-Wl,-framework -Wl,\1/g"`
+   esac
+
+   output=PYTHON_STATIC_LIBS_GPR
+   result=""
+   for v in $value; do
+      if test "$result" != ""; then
+         result="$result, "
+      fi
+      result="$result\"$v\""
+   done
+   PYTHON_STATIC_LIBS_GPR=$result
 
 
 
