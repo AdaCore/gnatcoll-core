@@ -665,7 +665,9 @@ package body GNATCOLL.SQL.Inspect is
    function From_SQL (SQL_Type : String) return Field_Type_Access is
       T     : constant String := To_Lower (SQL_Type);
    begin
-      for F of All_Field_Types loop
+      --  Go into reverse order, so that custom fields take precedence
+      --  over the predefined fields
+      for F of reverse All_Field_Types loop
          if F.Type_From_SQL (T) then
             return new Field_Type'Class'(F);
          end if;
