@@ -1173,10 +1173,10 @@ def order_sections(schema, pretty, all_tables):
         pretty.add_section("Elements: %s" % table.name, "")
 
     # Then instanciate the generic packages, which freezes the element types.
-    # We can then define the managers
+    # We can then define the manager types
 
     pretty.add_section("Managers(implementation details)", "")
-    pretty.add_section("Managers", "")
+    pretty.add_section("Manager types", "")
 
     # And now we can create the primitive ops for the managers and lists,
     # which might reference each other
@@ -1185,6 +1185,10 @@ def order_sections(schema, pretty, all_tables):
         if not table.is_abstract:
             pretty.add_section("Manager: %s" % table.name, "")
 
+    # Finally we can declare the maanger objects, which freeze the manager
+    # types.
+
+    pretty.add_section("Managers", "")
 
 #########################
 # debug trace
@@ -1258,22 +1262,27 @@ def generate_orb_one_table(name, schema, pretty, all_tables):
    No_Detached_%(row)s : constant Detached_%(row)s;
    No_%(row)s : constant %(row)s;""" % translate)
 
-        pretty.add_section("Managers", """
+        pretty.add_section("Manager types", """
 
    type I_%(cap)s_Managers is abstract new Manager with null record;
    package I_%(cap)s is new Generic_Managers
     (I_%(cap)s_Managers, %(row)s, Related_Depth, DBA.%(cap)s,
       Internal_Query_%(cap)s);
-   subtype %(cap)s_Managers is I_%(cap)s.Manager;
+   type %(cap)s_Managers is new I_%(cap)s.Manager with null record;
    subtype %(cap)s_Stmt is I_%(cap)s.ORM_Prepared_Statement;
 
-   All_%(cap)s : constant %(cap)s_Managers := I_%(cap)s.All_Managers;
    subtype %(row)s_List is I_%(cap)s.List;
    subtype Direct_%(row)s_List is I_%(cap)s.Direct_List;
    Empty_%(row)s_List : constant %(row)s_List := I_%(cap)s.Empty_List;
    Empty_Direct_%(row)s_List : constant Direct_%(row)s_List :=
      I_%(cap)s.Empty_Direct_List;
  """
+                           % translate)
+
+        pretty.add_section("Managers", """
+   All_%(cap)s : constant %(cap)s_Managers :=
+     (I_%(cap)s.All_Managers with null record);
+"""
                            % translate)
 
         detach(pretty, table, schema, translate)
