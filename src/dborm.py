@@ -1327,8 +1327,9 @@ def generate_orb_one_table(name, schema, pretty, all_tables):
             when_not_in_cache = (
                 """
                declare
-                 M : %(name)s_Managers := All_%(cap)s.Filter
-                   (""" % {"name": table.name,
+                 M : %(name)s_Managers := Filter
+                   (All_%(cap)s,
+                    """ % {"name": table.name,
                            "cap": pretty._title(name)}
                 + ",".join(schema.call_create_params(name))
                 + """);
@@ -1713,7 +1714,7 @@ def generate_orb_one_table(name, schema, pretty, all_tables):
                      "Dynamic fetching disabled for %(name)s";
                end if;
 
-               return All_%(ref)s.Filter (%(pk)s)
+               return Filter (All_%(ref)s, %(pk)s)
                   .Limit (1).Get (Self.Data.Session).Element;
             end if;
  """ % {"pkg_name": pkg_name, "name": table_name, "index": index,
@@ -1839,7 +1840,7 @@ def generate_orb_one_table(name, schema, pretty, all_tables):
                 returns="%s_Managers" % foreign.name,
                 section="Manager: %(cap)s" % translate,
                 abstract=table.is_abstract,
-                body="return All_%s.Filter(%s => Self.%s);" % (
+                body="return Filter (All_%s, %s => Self.%s);" % (
                     foreign.name,
                     fk.pairs[0][0].name,
                     fk.pairs[0][1].name))
@@ -1851,7 +1852,7 @@ def generate_orb_one_table(name, schema, pretty, all_tables):
                     returns="%s_Managers" % foreign.name,
                     section="Manager: %(cap)s" % translate,
                     abstract=table.is_abstract,
-                    body="return All_%s.Filter (%s => Self.%s);" % (
+                    body="return Filter (All_%s, %s => Self.%s);" % (
                         foreign.name,
                         fk.pairs[0][0].name,
                         fk.pairs[0][1].name))

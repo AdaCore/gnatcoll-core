@@ -626,54 +626,6 @@ package GNATCOLL.SQL.Exec is
      (Self : Forward_Cursor; Field : Field_Index) return String;
    --  The name of a specific field in a row of Res
 
-   -----------------------------------------
-   -- Retrieving results - Direct cursors --
-   -----------------------------------------
-
-   type Direct_Cursor is new Forward_Cursor with private;
-   No_Direct_Element : constant Direct_Cursor;
-   --  A direct cursor is a cursor that keeps all its results in memory, and
-   --  gives access to any of the rows in any order.
-   --  As opposed to a Forward_Cursor, you can iterate several times over the
-   --  results. On the other hand, a direct_cursor uses more memory locally, so
-   --  might not be the best choice systematically.
-
-   function Rows_Count
-     (Self : Direct_Cursor) return Natural renames Processed_Rows;
-   --  Return total number of rows in result.
-   --  Processed_Rows will always return the number read from the database
-
-   procedure First (Self : in out Direct_Cursor);
-   procedure Last  (Self : in out Direct_Cursor);
-   --  Moves the cursor on the first or last row of results;
-
-   procedure Absolute (Self : in out Direct_Cursor; Row : Positive);
-   --  Moves the cursor on the specific row of results.
-   --  The first row is numbered 1
-
-   procedure Relative (Self : in out Direct_Cursor; Step : Integer);
-   --  Moves the cursor by a specified number of rows. Step can be negative to
-   --  move backward. Using Step=1 is the same as using Next
-
-   procedure Find (Self : in out Direct_Cursor; Value : Integer);
-   procedure Find (Self : in out Direct_Cursor; Value : String);
-   --  Search the record with specified field value over the internal cursor
-   --  index by field defined on Prepare routine call in Index_By parameter.
-   --  Set cursor position to the found row. If rows is not indexed, the
-   --  Constraint_Error will be raised.
-
-   overriding procedure Fetch
-     (Result     : out Direct_Cursor;
-      Connection : access Database_Connection_Record'Class;
-      Query      : String;
-      Params     : SQL_Parameters := No_Parameters);
-   overriding procedure Fetch
-     (Result     : out Direct_Cursor;
-      Connection : access Database_Connection_Record'Class;
-      Query      : GNATCOLL.SQL.SQL_Query;
-      Params     : SQL_Parameters := No_Parameters);
-   --  Execute the query, and get all results in memory.
-
    -------------------------
    -- Prepared statements --
    -------------------------
@@ -797,11 +749,6 @@ package GNATCOLL.SQL.Exec is
    --  Clear cached data related to this statement
 
    procedure Fetch
-     (Result     : out Direct_Cursor;
-      Connection : access Database_Connection_Record'Class;
-      Stmt       : Prepared_Statement'Class;
-      Params     : SQL_Parameters := No_Parameters);
-   procedure Fetch
      (Result     : out Forward_Cursor;
       Connection : access Database_Connection_Record'Class;
       Stmt       : Prepared_Statement'Class;
@@ -830,6 +777,60 @@ package GNATCOLL.SQL.Exec is
        Stmt       : Prepared_Statement'Class)
       return String;
    --  Return the SQL statement for Stmt.
+
+   -----------------------------------------
+   -- Retrieving results - Direct cursors --
+   -----------------------------------------
+
+   type Direct_Cursor is new Forward_Cursor with private;
+   No_Direct_Element : constant Direct_Cursor;
+   --  A direct cursor is a cursor that keeps all its results in memory, and
+   --  gives access to any of the rows in any order.
+   --  As opposed to a Forward_Cursor, you can iterate several times over the
+   --  results. On the other hand, a direct_cursor uses more memory locally, so
+   --  might not be the best choice systematically.
+
+   function Rows_Count
+     (Self : Direct_Cursor) return Natural renames Processed_Rows;
+   --  Return total number of rows in result.
+   --  Processed_Rows will always return the number read from the database
+
+   procedure First (Self : in out Direct_Cursor);
+   procedure Last  (Self : in out Direct_Cursor);
+   --  Moves the cursor on the first or last row of results;
+
+   procedure Absolute (Self : in out Direct_Cursor; Row : Positive);
+   --  Moves the cursor on the specific row of results.
+   --  The first row is numbered 1
+
+   procedure Relative (Self : in out Direct_Cursor; Step : Integer);
+   --  Moves the cursor by a specified number of rows. Step can be negative to
+   --  move backward. Using Step=1 is the same as using Next
+
+   procedure Find (Self : in out Direct_Cursor; Value : Integer);
+   procedure Find (Self : in out Direct_Cursor; Value : String);
+   --  Search the record with specified field value over the internal cursor
+   --  index by field defined on Prepare routine call in Index_By parameter.
+   --  Set cursor position to the found row. If rows is not indexed, the
+   --  Constraint_Error will be raised.
+
+   procedure Fetch
+     (Result     : out Direct_Cursor;
+      Connection : access Database_Connection_Record'Class;
+      Stmt       : Prepared_Statement'Class;
+      Params     : SQL_Parameters := No_Parameters);
+
+   overriding procedure Fetch
+     (Result     : out Direct_Cursor;
+      Connection : access Database_Connection_Record'Class;
+      Query      : String;
+      Params     : SQL_Parameters := No_Parameters);
+   overriding procedure Fetch
+     (Result     : out Direct_Cursor;
+      Connection : access Database_Connection_Record'Class;
+      Query      : GNATCOLL.SQL.SQL_Query;
+      Params     : SQL_Parameters := No_Parameters);
+   --  Execute the query, and get all results in memory.
 
    --------------------------------------------
    -- Getting info about the database schema --
