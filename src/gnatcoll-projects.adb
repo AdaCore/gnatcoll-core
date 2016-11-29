@@ -436,6 +436,12 @@ package body GNATCOLL.Projects is
        Eliminate_Empty_Case_Constructions : Boolean := False);
    --  Internal version of Put, acting directly on the low-level structures
 
+   Specific_Attributes_Registered : Boolean := False;
+   procedure Register_Specific_Attributes;
+   --  Register specific attributes like IDE'Artifact_Dir but only once per
+   --  program run. Second attempt at registering the attribute leads to an
+   --  error in libgpr.
+
    -----------
    -- Lists --
    -----------
@@ -788,7 +794,16 @@ package body GNATCOLL.Projects is
      (Project : Project_Type) return GNATCOLL.VFS.Virtual_File
    is
       D : GNATCOLL.VFS.Virtual_File;
+      Att : constant Attribute_Pkg_String :=
+        Build ("IDE", "Artifacts_Dir");
    begin
+      if Project.Has_Attribute (Att) and then
+        Attribute_Value (Project, Att) /= ""
+      then
+         return Create_From_Base
+           (+Attribute_Value (Project, Att),
+           Project.Project_Path.Dir_Name);
+      end if;
       if Project.Object_Dir /= GNATCOLL.VFS.No_File then
          return Project.Object_Dir;
       end if;
@@ -6367,6 +6382,8 @@ package body GNATCOLL.Projects is
       --  is called.
       Tmp.Data.Timestamp := GNATCOLL.Utils.No_Time;
 
+      Register_Specific_Attributes;
+
       Trace (Me, "Initial parsing to check the syntax");
       Internal_Load
         (Tmp, Project_File, Errors,
@@ -8818,6 +8835,31 @@ package body GNATCOLL.Projects is
 
       return "";
    end Register_New_Attribute;
+
+   ----------------------------------
+   -- Register_Specific_Attributes --
+   ----------------------------------
+
+   procedure Register_Specific_Attributes is
+   begin
+      if Specific_Attributes_Registered then
+         --  Already registered during previous loads, nothing to do.
+         return;
+      end if;
+
+      declare
+         S : constant String :=
+           Register_New_Attribute ("Artifacts_Dir", "IDE");
+      begin
+         if S /= "" then
+            Trace (Me, "Cannot register attribute IDE'Artefact_Dir: " & S);
+         end if;
+      end;
+
+      --  If it didn't work the first time it won't work at all, no use trying
+      --  again.
+      Specific_Attributes_Registered := True;
+   end Register_Specific_Attributes;
 
    ----------
    -- Save --
