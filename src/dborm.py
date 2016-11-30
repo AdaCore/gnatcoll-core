@@ -1926,13 +1926,6 @@ def generate_orm(setup, pkg_name, tables=[], omit=[], out=sys.stdout):
 
     order_sections(schema, pretty, tables)
 
-    pretty.add_subprogram(
-        name="Str_Or_Empty",
-        params=[("str", "access String")],
-        returns="String",
-        body='if Str = null then return ""; else return Str.all; end if;',
-        section="body")
-
     table_image_body = "case Table is"
 
     for t in sorted(tables):
