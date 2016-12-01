@@ -1705,6 +1705,12 @@ package GNATCOLL.Projects is
    --  project.
    --  Returns a non-empty string if there is an error creating the attribute
 
+   function Attribute_Registered (Name : String; Pkg : String) return Boolean;
+   --  Checks is corresponding attribute has already been registered.
+   --  Only applicable for attributes declared in packages, always returns
+   --  True if package is an empty string since it is not possible to register
+   --  top-level attributes anyway.
+
    function Rename_Path
      (Self               : Project_Type;
       Old_Path           : GNATCOLL.VFS.Virtual_File;

@@ -2938,6 +2938,34 @@ package body GNATCOLL.Projects is
       end if;
    end Attribute_Project;
 
+   --------------------------
+   -- Attribute_Registered --
+   --------------------------
+
+   function Attribute_Registered (Name : String; Pkg : String) return Boolean
+   is
+      Lower_Pkg : constant String := To_Lower (Pkg);
+      Pkg_Id    : Package_Node_Id := Empty_Package;
+   begin
+      --  Need to make sure the predefined packages are already declared, or
+      --  the new one will be discarded.
+
+      GPR.Attr.Initialize;
+
+      if Lower_Pkg = "" then
+         Trace (Me, "Attribute_Registered called for empty package");
+         return True;
+      end if;
+
+      Pkg_Id := Package_Node_Id_Of (Get_String (Lower_Pkg));
+      if Pkg_Id = Empty_Package or else Pkg_Id = Unknown_Package then
+         --  We don't even have such a package.
+         return False;
+      end if;
+
+      return GPR.Attr.Attribute_Registered (Name, Pkg_Id);
+   end Attribute_Registered;
+
    ----------------------------
    -- Variable_Value_To_List --
    ----------------------------
