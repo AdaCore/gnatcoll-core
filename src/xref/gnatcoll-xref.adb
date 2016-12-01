@@ -3607,7 +3607,6 @@ package body GNATCOLL.Xref is
 
    procedure Parse_All_LI_Files
      (Self                : in out Xref_Database;
-      Tree                : Project_Tree;
       Project             : Project_Type;
       Parse_Runtime_Files : Boolean := True;
       Show_Progress       : access procedure (Cur, Total : Integer) := null;
@@ -3889,7 +3888,7 @@ package body GNATCOLL.Xref is
       ----------------------------
 
       procedure Create_Project_Entries (DB : Database_Connection) is
-         Iter : Project_Iterator := Tree.Root_Project.Start;
+         Iter : Project_Iterator := Self.Tree.Root_Project.Start;
          P    : Project_Type;
          R    : Forward_Cursor;
       begin

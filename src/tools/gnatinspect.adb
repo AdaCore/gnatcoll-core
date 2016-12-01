@@ -696,8 +696,7 @@ procedure GNATInspect is
    begin
       if Env /= null then
          Xref.Parse_All_LI_Files
-           (Tree                => Tree,
-            Project             => Tree.Root_Project,
+           (Project             => Tree.Root_Project,
             Parse_Runtime_Files => not Project_Is_Default
             and then Include_Runtime_Files,
             Show_Progress       => Progress_Reporter,

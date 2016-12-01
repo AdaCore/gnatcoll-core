@@ -78,7 +78,7 @@ package GNATCOLL.Xref is
    --        Error : String_Access;
    --     begin
    --        Xref.Setup_DB
-   --          (GNATCOLL.SQL.Sqlite.Setup (":memory:"), Error => Error);
+   --          (Tree, GNATCOLL.SQL.Sqlite.Setup (":memory:"), Error => Error);
    --        if Error /= null then
    --             return;   --  incorrect schema
    --        end if;
@@ -97,7 +97,6 @@ package GNATCOLL.Xref is
 
    procedure Parse_All_LI_Files
      (Self                : in out Xref_Database;
-      Tree                : Project_Tree;
       Project             : Project_Type;
       Parse_Runtime_Files : Boolean := True;
       Show_Progress       : access procedure (Cur, Total : Integer) := null;

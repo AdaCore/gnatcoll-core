@@ -31,15 +31,22 @@ To us this package, some initialization needs to be performed first::
     with GNATCOLL.Xref;     use GNATCOLL.Xref;
     with GNATCOLL.SQL.Sqlite;
     with GNATCOLL.Projects; use GNATCOLL.Projects;   --  1
-
+    with GNATCOLL.VFS;      use GNATCOLL.VFS;
+    with GNAT.Strings;
+    
     procedure Support is
        DB : Xref_Database;
-       Tree : Project_Tree;
+       Tree : Project_Tree_Access := new Project_Tree;
+       Error : GNAT.Strings.String_Access;
 
     begin
-       Tree.Load ("prj.gpr");  --  2
-       Setup_DB (DB, GNATCOLL.SQL.Sqlite.Setup (Database => "testdb.db"));  -- 3
-       Parse_All_LI_Files (DB, Tree, Tree.Root_Project);   --  4
+       Tree.Load (Create ("prj.gpr"));  --  2
+       Setup_DB
+          (DB, Tree,
+           GNATCOLL.SQL.Sqlite.Setup (Database => "testdb.db"),
+           Error);  -- 3
+       Free (Error);
+       Parse_All_LI_Files (DB, Tree.Root_Project);   --  4
     end Support;
     
 GNATCOLL needs to be able to find the :file:`*li` files. For this, it depends
