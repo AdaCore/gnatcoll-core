@@ -8875,14 +8875,16 @@ package body GNATCOLL.Projects is
          return;
       end if;
 
-      declare
-         S : constant String :=
-           Register_New_Attribute ("Artifacts_Dir", "IDE");
-      begin
-         if S /= "" then
-            Trace (Me, "Cannot register attribute IDE'Artefact_Dir: " & S);
-         end if;
-      end;
+      if not Attribute_Registered ("Artifacts_Dir", "IDE") then
+         declare
+            S : constant String :=
+              Register_New_Attribute ("Artifacts_Dir", "IDE");
+         begin
+            if S /= "" then
+               Trace (Me, "Cannot register attribute IDE'Artefact_Dir: " & S);
+            end if;
+         end;
+      end if;
 
       --  If it didn't work the first time it won't work at all, no use trying
       --  again.
