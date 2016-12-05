@@ -388,7 +388,7 @@ package body GNATCOLL.GMP.Integers is
    is
    begin
       return Result : Big_Integer do
-         mpz_add_ui (Result.Value'Access,
+         mpz_sub_ui (Result.Value'Access,
                      Left.Value'Access,
                      Right);
       end return;
@@ -403,9 +403,10 @@ package body GNATCOLL.GMP.Integers is
    is
    begin
       return Result : Big_Integer do
-         mpz_add_ui (Result.Value'Access,
+         mpz_sub_ui (Result.Value'Access,
                      Right.Value'Access,
                      Left);
+         Negate (Result);
       end return;
    end "-";
 
