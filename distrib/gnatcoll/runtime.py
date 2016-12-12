@@ -22,6 +22,13 @@ XML = r'''<?xml version="1.0"?>
   </documentation_file>
 
   <documentation_file>
+     <shell>Editor.edit "gnatcoll-asserts.ads"</shell>
+     <descr>GNATCOLL.Asserts</descr>
+     <menu>/Help/GNAT Runtime/GNATCOLL/Asserts</menu>
+     <category>GNAT Components Collection</category>
+  </documentation_file>
+
+  <documentation_file>
      <shell>Editor.edit "gnatcoll-atomic.ads"</shell>
      <descr>GNATCOLL.Atomic</descr>
      <menu>/Help/GNAT Runtime/GNATCOLL/Atomic</menu>
