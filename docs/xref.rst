@@ -20,20 +20,20 @@ compiles Ada source code, and gcc will generate :file:`.gli` files when
 it compiles C or C++ code and is run with *-fdump-xref* switch.
 
 :file:`GNATCOLL.Xref` can then be used to parse and aggregate all those
-files into a single sqlite database, which can be queries conveniently to
+files into a single sqlite database, which can be conveniently used to
 answer queries such as "give me the declaration for this entity", "list all
-places where this entity is used", "Show all subprograms that could be called
-in practice at this dispatching call", "What files does this file depend on",
-"Show me the call graph for this application",...
+places where this entity is used", "show all subprograms that could be called
+in practice at this dispatching call", "what files does this file depend on",
+"show me the call graph for this application",...
 
-To us this package, some initialization needs to be performed first::
+To use this package, some initialization needs to be performed first::
 
     with GNATCOLL.Xref;     use GNATCOLL.Xref;
     with GNATCOLL.SQL.Sqlite;
     with GNATCOLL.Projects; use GNATCOLL.Projects;   --  1
     with GNATCOLL.VFS;      use GNATCOLL.VFS;
     with GNAT.Strings;
-    
+
     procedure Support is
        DB : Xref_Database;
        Tree : Project_Tree_Access := new Project_Tree;
@@ -48,7 +48,7 @@ To us this package, some initialization needs to be performed first::
        Free (Error);
        Parse_All_LI_Files (DB, Tree.Root_Project);   --  4
     end Support;
-    
+
 GNATCOLL needs to be able to find the :file:`*li` files. For this, it depends
 on project files (as supported by :file:`GNATCOLL.Projects`). So the first
 thing to do is to parse the project (step 2).
@@ -61,7 +61,7 @@ recreated every time the program is restarted. We could also decide to store
 the information in any other database supported by :file:`GNATCOLL.SQL.Exec`,
 for instance PostgreSQL.
 
-Finally, on step 4 we let GNATCOLL parse all the :file:`*li` files that are
+Finally, in step 4 we let GNATCOLL parse all the :file:`*li` files that are
 relevant for this project. This operation can take a while, depending on the
 size of the project. However, if the database already exists on the disk, it
 will simply be updated by parsing the files that are not already up-to-date.
@@ -73,7 +73,7 @@ types of queries. All these queries have a similar API: they return a
 **cursor** which iterates over the result returned by a SQL query. There are
 various kinds of cursors, depending on whether they return files, entities,
 or references to entities. But they all support the `Has_Element`, `Element`
-and `Next` operation, so all loops will look similar::
+and `Next` operations, so all loops will look similar::
 
     pragma Ada_05;   --  use object-dotted-notation
     with GNATCOLL.VFS;   use GNATCOLL.VFS;
@@ -101,8 +101,8 @@ This example will print all the references to the entity that is referenced
 in file source.ads at line 2 (the column is unspecified).
 
 Step 5 gets a handle on the source file. Here, we depend on the project to
-find the precise directory in which the source file is found. We can of course
-use an absolute file name instead.
+find the precise directory in which the source file is located.
+We can of course use an absolute file name instead.
 
 Step 6 gets handle on the entity referenced on line 2 in this file. Such an
 entity is the starting point for most queries defined in `GNATCOLL.Xref`.
@@ -403,7 +403,7 @@ A number of queries are related to the source files of the project:
 
 * *depends filename* lists the files that the file depends on (recursively
   calling *imports*)
-  
+
 * *entities file* lists all entities referenced or declared in the file.
 
 
@@ -420,4 +420,3 @@ Finally, some commands are not related to entities or source files:
 
 * *time command arguments* executes the command as usual, and report the time
   it took to execute it.
-
