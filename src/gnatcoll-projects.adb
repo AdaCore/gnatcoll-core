@@ -5459,6 +5459,15 @@ package body GNATCOLL.Projects is
       end if;
    end Extending_Project;
 
+   ----------------------
+   -- Externally_Built --
+   ----------------------
+
+   function Externally_Built (Project : Project_Type) return Boolean is
+   begin
+      return Get_View (Project).Externally_Built;
+   end Externally_Built;
+
    -----------
    -- Build --
    -----------

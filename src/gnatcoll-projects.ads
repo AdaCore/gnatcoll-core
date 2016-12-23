@@ -481,6 +481,10 @@ package GNATCOLL.Projects is
    --  if it is Project itself. This is useful when looking for specific source
    --  files.
 
+   function Externally_Built (Project : Project_Type) return Boolean;
+   --  Return whether Project is marked as externally built (project
+   --  attribute Externally_Built set to "true").
+
    -----------------
    -- Directories --
    -----------------
