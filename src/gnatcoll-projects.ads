@@ -801,12 +801,13 @@ package GNATCOLL.Projects is
    --  currently the only unit-based language supported by project files).
 
    function Executable_Name
-     (Project : Project_Type;
-      File    : GNATCOLL.VFS.Filesystem_String)
+     (Project        : Project_Type;
+      File           : GNATCOLL.VFS.Filesystem_String;
+      Include_Suffix : Boolean := False)
       return GNATCOLL.VFS.Filesystem_String;
    --  Return the name of the executable, either read from the project or
    --  computed from File. This name does not include executable suffixes (like
-   --  ".exe" for instance).
+   --  ".exe" for instance) unless Include_Suffix is set to True.
    --  If Project is No_Project, the default executable name for File is
    --  returned.
 

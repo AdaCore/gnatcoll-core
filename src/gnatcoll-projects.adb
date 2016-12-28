@@ -5541,8 +5541,9 @@ package body GNATCOLL.Projects is
    ---------------------
 
    function Executable_Name
-     (Project : Project_Type;
-      File    : Filesystem_String) return Filesystem_String
+     (Project        : Project_Type;
+      File           : GNATCOLL.VFS.Filesystem_String;
+      Include_Suffix : Boolean := False) return Filesystem_String
    is
       Base        : constant Filesystem_String := Base_Name (File);
       Exec_Name   : File_Name_Type;
@@ -5584,8 +5585,8 @@ package body GNATCOLL.Projects is
             Main     => Main_Source.File,
             Index    => Main_Source.Index,
             Language => Get_Name_String (Main_Source.Language.Name),
-            Include_Suffix => False);
-         return +Get_String (Exec_Name);
+            Include_Suffix => Include_Suffix);
+         return +(Get_String (Exec_Name));
       end if;
    end Executable_Name;
 
