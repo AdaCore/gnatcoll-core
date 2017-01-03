@@ -9,7 +9,7 @@
 --  Status          : $State$
 --
 --  Copyright (C) 2000-2003 Juergen Pfeifer
---  Copyright (C) 2004-2016, AdaCore                                         --
+--  Copyright (C) 2004-2017, AdaCore                                         --
 --                                                                           --
 --  GNADE is free software;  you can redistribute it  and/or modify it under --
 --  terms of the  GNU General Public License as published  by the Free Soft- --

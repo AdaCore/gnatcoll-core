@@ -1,6 +1,6 @@
 /*
  * Iconv binding support
- * Copyright (C) 2012-2016, AdaCore
+ * Copyright (C) 2012-2017, AdaCore
  */
 
 #include <iconv.h>
