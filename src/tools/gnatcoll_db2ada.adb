@@ -488,11 +488,13 @@ procedure GNATCOLL_Db2Ada is
                Cache_Support => False);
          else
             Ada.Text_IO.Put_Line ("Unknown dbtype: " & DB_Type.all);
+            Set_Exit_Status (Failure);
             return;
          end if;
 
          if Descr = null then
             Ada.Text_IO.Put_Line ("Database not supported: " & DB_Type.all);
+            Set_Exit_Status (Failure);
             return;
          end if;
 
