@@ -273,7 +273,8 @@ package body GNATCOLL.Scripts.Files is
               (Create_File
                  (Script => Data.Get_Script,
                   File   => Project.Executables_Directory
-                  / Project.Executable_Name (Info.Base_Name)));
+                  / Project.Executable_Name
+                     (Info.Base_Name, Include_Suffix => True)));
          end;
       end if;
    end File_Command_Handler;
