@@ -7247,6 +7247,19 @@ package body GNATCOLL.Projects is
          Dummy   : Boolean;
       begin
          Trace (Me, "Checking whether the gnatls attribute has changed");
+
+         --  Just clearing the projects htable is not enough, the memory will
+         --  not be freed unless we set corresponding tree fields to null.
+         --  Then finalize recognises those project instances as useless
+         --  and cleans them up.
+         declare
+            Cur : Project_Htables.Cursor := Tree.Data.Projects.First;
+         begin
+            while Cur /= Project_Htables.No_Element loop
+               Project_Htables.Element (Cur).Data.Tree := null;
+               Next (Cur);
+            end loop;
+         end;
          Tree.Data.Projects.Clear;
          GPR.Proc.Process_Project_Tree_Phase_1
            (In_Tree                => Tree.Data.View,
@@ -9768,6 +9781,8 @@ package body GNATCOLL.Projects is
          Free (Self.Xrefs_Subdir);
          Self.Extensions.Clear;
          Free (Self.Save_Config_File);
+         Free (Self.Default_Gnatls);
+         Free (Self.Gnatls);
 
          Free (Self.Env);
 
