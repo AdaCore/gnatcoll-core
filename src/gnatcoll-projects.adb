@@ -7346,6 +7346,7 @@ package body GNATCOLL.Projects is
    begin
       if not Tree.Data.Is_Aggregated then
          Tree.Data.Sources.Clear;
+         Tree.Data.Objects_Basename.Clear;
       end if;
 
       Tree.Data.Directories.Clear;
