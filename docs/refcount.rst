@@ -71,7 +71,7 @@ it can get tricky: when there is a cycle between two reference counted objects
 (one includes a reference to the other, and the other a reference to the
 first), their counter can never become 0, and thus they are never freed.
 
-There is in particular when common design where this can severly interfer:
+There are, however, common design patterns where this can severly interfer:
 imagine you want to have a `Map`, associating a name with a reference
 counted object. Typically, the map would be a cache of some sort. While the
 object exists, it should be referenced in the map. So we would like the Map
@@ -127,7 +127,7 @@ map remains accessible without a `Storage_Error` (although using
 
 For task-safety issues, `Get` on a weak-reference returns a smart
 pointer. Therefore, this ensures that the object is never freed while that
-smart pointer object. As a result, we recommend the following construct in
+smart pointer object lives. As a result, we recommend the following construct in
 your code::
 
      declare
