@@ -8482,6 +8482,8 @@ package body GNATCOLL.Projects is
          Reset (Self.Data.View);
       end if;
 
+      Self.Data.Root := No_Project;
+
       GPR.Tree_Private_Part.Projects_Htable.Reset
         (Self.Data.Tree.Projects_HT);
       Sinput.Clear_Source_File_Table;
