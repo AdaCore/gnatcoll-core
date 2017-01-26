@@ -418,6 +418,10 @@ package GNATCOLL.SQL is
      (Field : SQL_Field'Class) return Date_Fields.Field'Class;
    --  Convert a field to a date
 
+   function Cast_To_Integer
+     (Field : SQL_Field'Class) return Integer_Fields.Field'Class;
+   --  Convert a field to an integer
+
    function At_Time_Zone
      (Field : Time_Fields.Field'Class; TZ : String)
       return Time_Fields.Field'Class;

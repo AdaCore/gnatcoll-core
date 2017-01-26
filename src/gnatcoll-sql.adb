@@ -892,6 +892,19 @@ package body GNATCOLL.SQL is
       return Internal (Field);
    end Cast_To_Date;
 
+   ---------------------
+   -- Cast_To_Integer --
+   ---------------------
+
+   function Cast_To_Integer
+     (Field : SQL_Field'Class) return Integer_Fields.Field'Class
+   is
+      function Internal is new Integer_Fields.Apply_Function
+        (SQL_Field, "CAST (", "AS INTEGER)");
+   begin
+      return Internal (Field);
+   end Cast_To_Integer;
+
    ---------------
    -- To_String --
    ---------------
