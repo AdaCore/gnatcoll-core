@@ -549,6 +549,11 @@ package GNATCOLL.Traces is
    --  will never be freed when the program is finalized by the compiler. This
    --  is mostly for debugging purposes only.
 
+   procedure Prefix_Decorator
+     (Handle          : in out Trace_Handle_Record;
+      Stream          : in out Trace_Stream_Record'Class;
+      Indent          : Integer;
+      Is_Continuation : Boolean);
    procedure Pre_Decorator
      (Handle  : in out Trace_Handle_Record;
       Stream  : in out Trace_Stream_Record'Class;
@@ -562,8 +567,26 @@ package GNATCOLL.Traces is
    --  You can override either of these two procedures to add your own
    --  decorators to specific trace handles (ie additional information) each
    --  time some message is logged.
+   --
    --  It is recommended that you call the inherited procedure to get access to
-   --  the standard decorators.
+   --  the standard decorators. This isn't needed when you create a global
+   --  decorator (see Add_Global_Decorator below).
+   --
+   --  When displayed in the log, a line looks like:
+   --
+   --  <prefix_decorator>[HANDLE_NAME] <precorator> MESSAGE </postdecorator>
+   --
+   --  The prefix decorator is in charge of displaying blank spaces to
+   --  indent the line (see Increase_Indent and Decrease_Indent). But you
+   --  can also use it to display other pieces of information (like a
+   --  timestamp if you always want them aligned for instance).
+   --  Any global decorator will be called before the indentation (so at
+   --  column 1).
+   --  Indent is the indentation level (1, 2, 3,...). This isn't the
+   --  number of columns to indent.
+   --
+   --  Only the prefix_decorator is called on continuation lines (when a
+   --  message doesn't fit on a single line).
 
    procedure Add_Global_Decorator
       (Decorator : not null access Trace_Handle_Record'Class);

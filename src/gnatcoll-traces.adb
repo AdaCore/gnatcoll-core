@@ -998,6 +998,33 @@ package body GNATCOLL.Traces is
       Put (Stream, ")");
    end Put_Stack_Trace;
 
+   ----------------------
+   -- Prefix_Decorator --
+   ----------------------
+
+   procedure Prefix_Decorator
+     (Handle          : in out Trace_Handle_Record;
+      Stream          : in out Trace_Stream_Record'Class;
+      Indent          : Integer;
+      Is_Continuation : Boolean)
+   is
+      Dec : Trace_Handle;
+   begin
+      if not Handle.Is_Decorator then
+         Dec := Global.Decorators;
+         while Dec /= null loop
+            if Dec.Active then
+               Dec.Prefix_Decorator (Stream, Indent, Is_Continuation);
+            end if;
+            Dec := Dec.Next;
+         end loop;
+
+         if Indent > 0 then
+            Put (Stream, String'(1 .. Indent * 3 => ' '));
+         end if;
+      end if;
+   end Prefix_Decorator;
+
    -------------------
    -- Pre_Decorator --
    -------------------
@@ -1074,6 +1101,7 @@ package body GNATCOLL.Traces is
       Dec := Global.Decorators;
       while Dec /= null loop
          if Dec.Active then
+            Ensure_Space;
             Dec.Post_Decorator (Stream, Location, Entity, Message);
          end if;
          Dec := Dec.Next;
@@ -1156,10 +1184,7 @@ package body GNATCOLL.Traces is
    is
       Start, Last  : Natural;
       Stream       : constant Trace_Stream := Traces.Stream (Handle);
-      Indent       : constant Integer :=
-        (if Stream = null then 0 else Integer (Stream.Indentation) * 3);
-      Continuation : constant String := (1 .. Indent => ' ')
-         & '_' & Handle.Name.all & "_ ";
+      Indent       : Integer;
       Color        : Boolean;
    begin
       if Message'Length = 0 or else Stream = null then
@@ -1170,9 +1195,12 @@ package body GNATCOLL.Traces is
 
       Lock;
 
-      if Indent > 0 then
-         Put (Stream.all, String'(1 .. Indent => ' '));
-      end if;
+      Indent := (if Stream = null then 0 else Integer (Stream.Indentation));
+
+      Prefix_Decorator
+         (Handle.all, Stream.all,
+          Indent          => Indent,
+          Is_Continuation => False);
 
       if Color then
          Put (Stream.all, Cyan_Fg);
@@ -1201,10 +1229,17 @@ package body GNATCOLL.Traces is
          exit when Start > Message'Last;
 
          Newline (Stream.all);
+         Prefix_Decorator
+            (Handle.all, Stream.all,
+             Indent          => Indent,
+             Is_Continuation => True);
+
          if Color then
             Put (Stream.all, Purple_Fg & Default_Bg);
          end if;
-         Put (Stream.all, Continuation);
+
+         Put (Stream.all, '_' & Handle.Name.all & "_ ");
+
          if Color then
             Put (Stream.all, Message_Color);
          end if;
