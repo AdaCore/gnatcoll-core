@@ -64,13 +64,16 @@ package GNATCOLL.SQL.Sqlite is
    function Setup
      (Database      : String;
       Cache_Support : Boolean := False;
-      Errors        : access Error_Reporter'Class := null)
+      Errors        : access Error_Reporter'Class := null;
+      Is_URI        : Boolean := False)
       return Database_Description;
    --  Return a database connection for sqlite
    --  If sqlite was not detected at installation time, this function will
    --  return null.
    --  Errors (if specified) will be used to report errors and warnings to the
    --  application. Errors is never freed.
+   --  If Is_URI is true, the name of the database is interpreted according
+   --  to the rules given at https://sqlite.org/c3ref/open.html.
 
    function Is_Sqlite
      (DB : access Database_Connection_Record'Class)
@@ -98,6 +101,7 @@ private
 
    type Sqlite_Description is new Database_Description_Record with record
       Dbname   : GNAT.Strings.String_Access;
+      Is_URI   : Boolean;
    end record;
 
 end GNATCOLL.SQL.Sqlite;

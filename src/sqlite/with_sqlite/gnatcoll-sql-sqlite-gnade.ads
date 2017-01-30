@@ -38,11 +38,14 @@ package GNATCOLL.SQL.Sqlite.Gnade is
    --  Display the details on the connection (logging only)
 
    type Open_Flags is mod 2**32;
-   Open_Readonly  : constant Open_Flags := 16#00001#;
-   Open_Readwrite : constant Open_Flags := 16#00002#;
-   Open_Create    : constant Open_Flags := 16#00004#;
-   Open_Nomutex   : constant Open_Flags := 16#08000#;
-   Open_Fullmutex : constant Open_Flags := 16#10000#;
+   Open_Readonly      : constant Open_Flags := 16#00000001#;
+   Open_Readwrite     : constant Open_Flags := 16#00000002#;
+   Open_Create        : constant Open_Flags := 16#00000004#;
+   Open_URI           : constant Open_Flags := 16#00000040#;
+   Open_Nomutex       : constant Open_Flags := 16#00008000#;
+   Open_Fullmutex     : constant Open_Flags := 16#00010000#;
+   Open_Shared_Cache  : constant Open_Flags := 16#00020000#;
+   Open_Private_Cache : constant Open_Flags := 16#00040000#;
    --  How a database should be open. Read and Readwrite require that the
    --  database already exist, but when combined with Create the database will
    --  be created if it doesn't already exist.
@@ -52,6 +55,15 @@ package GNATCOLL.SQL.Sqlite.Gnade is
    --  is set then the database connection opens in the serialized threading
    --  mode unless single-thread was previously selected at compile-time or
    --  start-time.
+   --
+   --  The OPEN_SHAREDCACHE flag causes the database connection to be eligible
+   --  to use shared cache mode, regardless of whether or not shared cache is
+   --  enabled. The SQLITE_OPEN_PRIVATECACHE flag causes the connection to not
+   --  participate in shared cache mode even if it is enabled.
+   --
+   --  OPEN_URI enables uri interpretation. See
+   --  https://sqlite.org/c3ref/open.html
+   --  for all the details.
 
    Open_In_Memory   : constant String := ":memory:";
    Open_Tmp_On_Disk : constant String := "";

@@ -36,7 +36,8 @@ package body GNATCOLL.SQL.Sqlite is
    function Setup
      (Database      : String;
       Cache_Support : Boolean := False;
-      Errors        : access Error_Reporter'Class := null)
+      Errors        : access Error_Reporter'Class := null;
+      Is_URI        : Boolean := False)
       return Database_Description
    is
       Result : Sqlite_Description_Access;
@@ -48,6 +49,7 @@ package body GNATCOLL.SQL.Sqlite is
       Result := new Sqlite_Description
         (Caching => Cache_Support, Errors => Errors);
       Result.Dbname := new String'(Database);
+      Result.Is_URI := Is_URI;
       return Database_Description (Result);
    end Setup;
 

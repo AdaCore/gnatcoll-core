@@ -367,7 +367,7 @@ package body GNATCOLL.SQL.Sqlite.Builder is
       Status : Result_Codes;
    begin
       --  With sqlite, we do not need to try and reconnect, since there is no
-      --  no network involved. We either have a connection, or not
+      --  network involved. We either have a connection, or not
 
       if Connection.DB = No_Database then
          Print_Warning
@@ -377,10 +377,17 @@ package body GNATCOLL.SQL.Sqlite.Builder is
               (Get_Description (Connection)).Dbname.all);
 
          declare
-            Name : constant String :=
-              Sqlite_Description_Access
-                (Get_Description (Connection)).Dbname.all;
+            Descr : constant Sqlite_Description_Access :=
+               Sqlite_Description_Access (Get_Description (Connection));
+            Name : constant String := Descr.Dbname.all;
+            Flags : Open_Flags :=
+               Open_Readwrite or Open_Create or Open_Nomutex;
+
          begin
+            if Descr.Is_URI then
+               Flags := Flags or Open_URI;
+            end if;
+
             --  We let sqlite create the database (even an empty one) as
             --  needed. Applications that need to know whether the schema
             --  has been created should either check earlier whether the
@@ -389,7 +396,7 @@ package body GNATCOLL.SQL.Sqlite.Builder is
             Open
               (DB       => Connection.DB,
                Filename => Name,
-               Flags    => Open_Readwrite or Open_Create or Open_Nomutex,
+               Flags    => Flags,
                Status   => Status);
             Connection.Connected_On := Ada.Calendar.Clock;
 
