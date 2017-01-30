@@ -4496,10 +4496,15 @@ $as_echo "yes ($version)" >&6; }
 
 
    NEED_PSQL=no
+   HAS_PQPREPARE=no
+
 
 # Check whether --with-postgresql was given.
 if test "${with_postgresql+set}" = set; then :
-  withval=$with_postgresql; POSTGRESQL_PATH_WITH=$withval; NEED_PSQL=yes
+  withval=$with_postgresql; POSTGRESQL_PATH_WITH=$withval;
+      if  "$withval" != "no" ; then
+         NEED_PSQL=yes;
+      fi
 else
   POSTGRESQL_PATH_WITH=yes
 fi
@@ -4514,11 +4519,13 @@ $as_echo "no" >&6; }
       WITH_POSTGRES=no
 
    else
+     WITH_POSTGRES=yes
+
      if test x"$POSTGRESQL_PATH_WITH" = xyes ; then
-       PATH_LIBPQ=`pg_config 2>/dev/null | grep ^LIBDIR | cut -d\  -f3`
+       PATH_LIBPQ=`pg_config --libdir 2>/dev/null`
+       LIB_PQ="-lpq"
        if test x"$PATH_LIBPQ" != x ; then
           PATH_LIBPQ="-L$PATH_LIBPQ"
-          LIB_PQ="-lpq"
        else
 
    am_path_pq=""
@@ -4536,10 +4543,42 @@ $as_echo "no" >&6; }
 
           if test x"$am_path_pq" != x ; then
              PATH_LIBPQ="-L$am_path_pq"
-             LIB_PQ="-lpq"
           fi
        fi
-       { $as_echo "$as_me:${as_lineno-$LINENO}: checking for PQreset in -lpq" >&5
+
+     else
+       # Did the user provide a path to a static libpq ?
+
+       if test -f "$POSTGRESQL_PATH_WITH" -a `basename "$POSTGRESQL_PATH_WITH"` = "libpq.a" ; then
+          PATH_LIBPQ=""
+          LIB_PQ="$POSTGRESQL_PATH_WITH"
+       elif test -f "$POSTGRESQL_PATH_WITH/libpq${SO_EXT}" ; then
+          PATH_LIBPQ="-L$POSTGRESQL_PATH_WITH"
+          LIB_PQ="-lpq"
+       elif test -f "$POSTGRESQL_PATH_WITH/lib/libpq${SO_EXT}" ; then
+          PATH_LIBPQ="-L$POSTGRESQL_PATH_WITH/lib"
+          LIB_PQ="-lpq"
+       else
+          { $as_echo "$as_me:${as_lineno-$LINENO}: checking for PostgreSQL" >&5
+$as_echo_n "checking for PostgreSQL... " >&6; }
+          { $as_echo "$as_me:${as_lineno-$LINENO}: result: not found in $POSTGRESQL_PATH_WITH" >&5
+$as_echo "not found in $POSTGRESQL_PATH_WITH" >&6; }
+          WITH_POSTGRES=no
+       fi
+     fi
+   fi
+
+   # Check whether we need additional libraries to link
+
+   if test x"$WITH_POSTGRES" = xyes ; then
+      LIBS=''
+
+      # Try and guess which external libraries are needed. Using
+      # `pg_config --libs` because it might not be in the PATH (with macports
+      # it is in /opt/local/lib/postgresql96/bin), and returns too many
+      # libraries anyway
+
+      { $as_echo "$as_me:${as_lineno-$LINENO}: checking for PQreset in -lpq" >&5
 $as_echo_n "checking for PQreset in -lpq... " >&6; }
 if ${ac_cv_lib_pq_PQreset+:} false; then :
   $as_echo_n "(cached) " >&6
@@ -4576,43 +4615,73 @@ fi
 { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_pq_PQreset" >&5
 $as_echo "$ac_cv_lib_pq_PQreset" >&6; }
 if test "x$ac_cv_lib_pq_PQreset" = xyes; then :
-  WITH_POSTGRES=yes
+  cat >>confdefs.h <<_ACEOF
+#define HAVE_LIBPQ 1
+_ACEOF
+
+  LIBS="-lpq $LIBS"
+
+else
+  unset ac_cv_lib_pq_PQreset;    # unset the cache
+          { $as_echo "$as_me:${as_lineno-$LINENO}: checking for PQreset in -lpq" >&5
+$as_echo_n "checking for PQreset in -lpq... " >&6; }
+if ${ac_cv_lib_pq_PQreset+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  ac_check_lib_save_LIBS=$LIBS
+LIBS="-lpq $PATH_LIBPQ -lssl -lcrypto -lldap -lgssapi_krb5
+          $LIBS"
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+char PQreset ();
+int
+main ()
+{
+return PQreset ();
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_lib_pq_PQreset=yes
+else
+  ac_cv_lib_pq_PQreset=no
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+LIBS=$ac_check_lib_save_LIBS
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_pq_PQreset" >&5
+$as_echo "$ac_cv_lib_pq_PQreset" >&6; }
+if test "x$ac_cv_lib_pq_PQreset" = xyes; then :
+  cat >>confdefs.h <<_ACEOF
+#define HAVE_LIBPQ 1
+_ACEOF
+
+  LIBS="-lpq $LIBS"
+
 else
   WITH_POSTGRES=no
 fi
 
+fi
 
-     else
-       WITH_POSTGRES=yes
 
-       # Did the user provide a path to a static libpq ?
-
-       if test -f "$POSTGRESQL_PATH_WITH" -a `basename "$POSTGRESQL_PATH_WITH"` = "libpq.a" ; then
-          PATH_LIBPQ=""
-          LIB_PQ="$POSTGRESQL_PATH_WITH -lssl -lcrypto"
-
-       elif test -f "$POSTGRESQL_PATH_WITH/libpq.so" -o -f "$POSTGRESQL_PATH_WITH/libpq.dll" -o -f "$POSTGRESQL_PATH_WITH/libpq.dylib" ; then
-          PATH_LIBPQ="-L$POSTGRESQL_PATH_WITH"
-          LIB_PQ="-lpq"
-       elif test -f "$POSTGRESQL_PATH_WITH/lib/libpq.so" -o -f "$POSTGRESQL_PATH_WITH/lib/libpq.dll" -o -f "$POSTGRESQL_PATH_WITH/lib/libpq.dylib" ; then
-          PATH_LIBPQ="-L$POSTGRESQL_PATH_WITH/lib"
-          LIB_PQ="-lpq"
-       else
-          { $as_echo "$as_me:${as_lineno-$LINENO}: checking for PostgreSQL" >&5
-$as_echo_n "checking for PostgreSQL... " >&6; }
-          { $as_echo "$as_me:${as_lineno-$LINENO}: result: not found in $POSTGRESQL_PATH_WITH" >&5
-$as_echo "not found in $POSTGRESQL_PATH_WITH" >&6; }
-          WITH_POSTGRES=no
-       fi
-     fi
-
-     if test x"$WITH_POSTGRES" = xno -a x"$NEED_PSQL" = xyes ; then
-       as_fn_error $? "PostgreSQL not found" "$LINENO" 5
-     fi
+      LIB_PQ="${LIBS}"
+      LIBS=''
    fi
 
+   # Test whether PQprepare() exists on the system
+
    if test x"$WITH_POSTGRES" = xyes ; then
-     { $as_echo "$as_me:${as_lineno-$LINENO}: checking for PQprepare in -lpq" >&5
+      { $as_echo "$as_me:${as_lineno-$LINENO}: checking for PQprepare in -lpq" >&5
 $as_echo_n "checking for PQprepare in -lpq... " >&6; }
 if ${ac_cv_lib_pq_PQprepare+:} false; then :
   $as_echo_n "(cached) " >&6
@@ -4654,8 +4723,13 @@ else
   HAS_PQPREPARE=no
 fi
 
-   else
-     HAS_PQPREPARE=no
+   fi
+
+   # If --with-postgres was specified, we assume it is mandatory and raise
+   # an error if we could not configure it
+
+   if test x"$WITH_POSTGRES" = xno -a x"$NEED_PSQL" = xyes ; then
+      as_fn_error $? "PostgreSQL not found" "$LINENO" 5
    fi
 
 

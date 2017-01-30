@@ -468,6 +468,8 @@ AC_DEFUN(AM_LIB_PATH,
 AC_DEFUN(AM_PATH_POSTGRES,
 [
    NEED_PSQL=no
+   HAS_PQPREPARE=no
+
    AC_ARG_WITH(postgresql,
      [AC_HELP_STRING(
        [--with-postgresql=<path>],
@@ -475,7 +477,10 @@ AC_DEFUN(AM_PATH_POSTGRES,
 AC_HELP_STRING(
        [--without-postgresql],
        [Disable PostgreSQL support])],
-     [POSTGRESQL_PATH_WITH=$withval; NEED_PSQL=yes],
+     [POSTGRESQL_PATH_WITH=$withval;
+      if [ "$withval" != "no" ]; then
+         NEED_PSQL=yes;
+      fi],
      POSTGRESQL_PATH_WITH=yes)
 
    PATH_LIBPQ=""
@@ -485,33 +490,30 @@ AC_HELP_STRING(
       WITH_POSTGRES=no
 
    else
+     WITH_POSTGRES=yes
+
      if test x"$POSTGRESQL_PATH_WITH" = xyes ; then
-       PATH_LIBPQ=`pg_config 2>/dev/null | grep ^LIBDIR | cut -d\  -f3`
+       PATH_LIBPQ=`pg_config --libdir 2>/dev/null`
+       LIB_PQ="-lpq"
        if test x"$PATH_LIBPQ" != x ; then
           PATH_LIBPQ="-L$PATH_LIBPQ"
-          LIB_PQ="-lpq"
        else
           AM_LIB_PATH(pq)
           if test x"$am_path_pq" != x ; then
              PATH_LIBPQ="-L$am_path_pq"
-             LIB_PQ="-lpq"
           fi
        fi
-       AC_CHECK_LIB(pq,PQreset,WITH_POSTGRES=yes,WITH_POSTGRES=no,[$PATH_LIBPQ])
 
      else
-       WITH_POSTGRES=yes
-
        # Did the user provide a path to a static libpq ?
 
        if test -f "$POSTGRESQL_PATH_WITH" -a `basename "$POSTGRESQL_PATH_WITH"` = "libpq.a" ; then
           PATH_LIBPQ=""
-          LIB_PQ="$POSTGRESQL_PATH_WITH -lssl -lcrypto"
-
-       elif test -f "$POSTGRESQL_PATH_WITH/libpq.so" -o -f "$POSTGRESQL_PATH_WITH/libpq.dll" -o -f "$POSTGRESQL_PATH_WITH/libpq.dylib" ; then
+          LIB_PQ="$POSTGRESQL_PATH_WITH"
+       elif test -f "$POSTGRESQL_PATH_WITH/libpq${SO_EXT}" ; then
           PATH_LIBPQ="-L$POSTGRESQL_PATH_WITH"
           LIB_PQ="-lpq"
-       elif test -f "$POSTGRESQL_PATH_WITH/lib/libpq.so" -o -f "$POSTGRESQL_PATH_WITH/lib/libpq.dll" -o -f "$POSTGRESQL_PATH_WITH/lib/libpq.dylib" ; then
+       elif test -f "$POSTGRESQL_PATH_WITH/lib/libpq${SO_EXT}" ; then
           PATH_LIBPQ="-L$POSTGRESQL_PATH_WITH/lib"
           LIB_PQ="-lpq"
        else
@@ -520,16 +522,43 @@ AC_HELP_STRING(
           WITH_POSTGRES=no
        fi
      fi
-
-     if test x"$WITH_POSTGRES" = xno -a x"$NEED_PSQL" = xyes ; then
-       AC_MSG_ERROR([PostgreSQL not found])
-     fi
    fi
 
+   # Check whether we need additional libraries to link
+
    if test x"$WITH_POSTGRES" = xyes ; then
-     AC_CHECK_LIB(pq,PQprepare,HAS_PQPREPARE=yes,HAS_PQPREPARE=no,[$PATH_LIBPQ])
-   else
-     HAS_PQPREPARE=no
+      LIBS=''
+
+      # Try and guess which external libraries are needed. Using
+      # `pg_config --libs` because it might not be in the PATH (with macports
+      # it is in /opt/local/lib/postgresql96/bin), and returns too many
+      # libraries anyway
+
+      AC_CHECK_LIB(pq, PQreset,
+         [],
+         [unset ac_cv_lib_pq_PQreset;    # unset the cache
+          AC_CHECK_LIB(pq, PQreset,
+             [],
+             [WITH_POSTGRES=no],
+             [$PATH_LIBPQ -lssl -lcrypto -lldap -lgssapi_krb5]
+         )],
+         [$PATH_LIBPQ])
+
+      LIB_PQ="${LIBS}"
+      LIBS=''
+   fi
+
+   # Test whether PQprepare() exists on the system
+
+   if test x"$WITH_POSTGRES" = xyes ; then
+      AC_CHECK_LIB(pq,PQprepare,HAS_PQPREPARE=yes,HAS_PQPREPARE=no,[$PATH_LIBPQ])
+   fi
+
+   # If --with-postgres was specified, we assume it is mandatory and raise
+   # an error if we could not configure it
+
+   if test x"$WITH_POSTGRES" = xno -a x"$NEED_PSQL" = xyes ; then
+      AC_MSG_ERROR([PostgreSQL not found])
    fi
 
    AC_SUBST(WITH_POSTGRES)
