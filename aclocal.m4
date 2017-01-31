@@ -478,7 +478,7 @@ AC_HELP_STRING(
        [--without-postgresql],
        [Disable PostgreSQL support])],
      [POSTGRESQL_PATH_WITH=$withval;
-      if [ "$withval" != "no" ]; then
+      if test "$withval" != "no" ; then
          NEED_PSQL=yes;
       fi],
      POSTGRESQL_PATH_WITH=yes)

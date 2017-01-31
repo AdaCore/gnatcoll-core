@@ -4502,7 +4502,7 @@ $as_echo "yes ($version)" >&6; }
 # Check whether --with-postgresql was given.
 if test "${with_postgresql+set}" = set; then :
   withval=$with_postgresql; POSTGRESQL_PATH_WITH=$withval;
-      if  "$withval" != "no" ; then
+      if test "$withval" != "no" ; then
          NEED_PSQL=yes;
       fi
 else
