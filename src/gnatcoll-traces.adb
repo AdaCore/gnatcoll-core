@@ -940,15 +940,16 @@ package body GNATCOLL.Traces is
 
    procedure Put_Absolute_Time (Stream : in out Trace_Stream_Record'Class) is
       T  : constant Ada.Calendar.Time := Ada.Calendar.Clock;
+      Z  : String (1 .. 3) := "000";
       Ms : constant String := Integer'Image (Local_Sub_Second (T));
    begin
+      Z (3 + 1 - (Ms'Length - 1) .. 3) := Ms (Ms'First + 1 .. Ms'Last);
       if Absolute_Date.Active then
          if Absolute_Time.Active then
             if Micro_Time.Active then
                Put (Stream, "(" & Image (T, ISO_Date & " %T:%e") & ')');
             else
-               Put (Stream, "(" & Image (T, ISO_Date & " %T.")
-                    & Ms (Ms'First + 1 .. Ms'Last) & ')');
+               Put (Stream, "(" & Image (T, ISO_Date & " %T.") & Z & ')');
             end if;
          else
             Put (Stream, "(" & Image (T, ISO_Date) & ')');
@@ -958,8 +959,7 @@ package body GNATCOLL.Traces is
          if Micro_Time.Active then
             Put (Stream, "(" & Image (T, ISO_Date & " %T:%e") & ')');
          else
-            Put (Stream, "(" & Image (T, "%T.")
-                 & Ms (Ms'First + 1 .. Ms'Last) & ')');
+            Put (Stream, "(" & Image (T, "%T.") & Z & ')');
          end if;
       end if;
    end Put_Absolute_Time;
