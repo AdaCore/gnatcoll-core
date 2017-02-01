@@ -135,6 +135,7 @@ package body GNATCOLL.Traces is
    function Local_Sub_Second (T : Ada.Calendar.Time) return Integer;
    pragma Inline (Local_Sub_Second);
       --  Version of Local_Sub_Second taking advantage of the timezone cache
+      --  return values in range 0 .. 999
 
    function Find_Handle (Unit_Name_Upper_Case : String) return Trace_Handle;
    --  Return the debug handle associated with Unit_Name_Upper_Case,
@@ -931,7 +932,12 @@ package body GNATCOLL.Traces is
    begin
       Ada.Calendar.Formatting.Split (T, Y, M, D, H, Mi, S, Ss, Ls, Global.TZ);
 
-      return Integer (Ss * 1000.0);
+      if Ss > 0.999 then
+         return 999;
+      else
+         return Integer (Ss * 1000.0);
+      end if;
+
    end Local_Sub_Second;
 
    -----------------------
