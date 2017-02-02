@@ -3876,41 +3876,40 @@ package body GNATCOLL.Projects is
 
                Aggregated := Aggregated.Next;
             end loop;
-         else
-
-            --  For the regular project (aggregated or root) do a full
-            --  iteration placing projects in the list.
-            Iter_Inner :=
-              Start_Reversed
-                (Root_Project     => Project,
-                 Recursive        => Recursive,
-                 Direct_Only      => Direct_Only,
-                 Include_Extended => Include_Extended);
-
-            loop
-               exit when Current (Iter_Inner) = No_Project;
-
-               if
-                 Project_Paths.Find
-                   (Current (Iter_Inner).Project_Path.Display_Full_Name) =
-                     Path_Sets.No_Element
-               then
-                  --  we only need projects that are not yet in the list
-                  if
-                    Is_Aggregate_Project (Current (Iter_Inner))
-                    and then not Direct_Only
-                  then
-                     Add_Project (Current (Iter_Inner));
-                  else
-                     Iter.Project_List.Append (Current (Iter_Inner));
-                     Project_Paths.Include
-                       (Current (Iter_Inner).Project_Path.Display_Full_Name);
-                  end if;
-               end if;
-
-               Next (Iter_Inner);
-            end loop;
          end if;
+
+         --  For the regular project (aggregated or root) do a full
+         --  iteration placing projects in the list.
+         Iter_Inner :=
+           Start_Reversed
+             (Root_Project     => Project,
+              Recursive        => Recursive,
+              Direct_Only      => Direct_Only,
+              Include_Extended => Include_Extended);
+
+         loop
+            exit when Current (Iter_Inner) = No_Project;
+
+            if
+              Project_Paths.Find
+                (Current (Iter_Inner).Project_Path.Display_Full_Name) =
+                  Path_Sets.No_Element
+            then
+               --  we only need projects that are not yet in the list
+               if
+                 Is_Aggregate_Project (Current (Iter_Inner))
+                 and then not Direct_Only
+               then
+                  Add_Project (Current (Iter_Inner));
+               else
+                  Iter.Project_List.Append (Current (Iter_Inner));
+                  Project_Paths.Include
+                    (Current (Iter_Inner).Project_Path.Display_Full_Name);
+               end if;
+            end if;
+
+            Next (Iter_Inner);
+         end loop;
       end Add_Project;
 
    begin
@@ -4030,36 +4029,36 @@ package body GNATCOLL.Projects is
                Iter.Project_List.Append (Project_Type (Project));
             end if;
 
-         else
-            --  For the regular project (aggregated or root) do a full
-            --  iteration placing projects in the list.
-            Iter_Inner :=
-              Start
-                (Root_Project     => Project,
-                 Recursive        => Recursive,
-                 Direct_Only      => Direct_Only,
-                 Include_Extended => Include_Extended);
-
-            loop
-               P := Current (Iter_Inner);
-               exit when P = No_Project;
-
-               if not Project_Paths.Contains
-                 (P.Project_Path.Display_Full_Name)
-               then
-                  Project_Paths.Include (P.Project_Path.Display_Full_Name);
-
-                  if Is_Aggregate_Project (P) and then not Direct_Only then
-                     --  aggregate library
-                     Add_Project (P);
-                  else
-                     Iter.Project_List.Append (P);
-                  end if;
-               end if;
-
-               Next (Iter_Inner);
-            end loop;
          end if;
+
+         --  For the regular project (aggregated or root) do a full
+         --  iteration placing projects in the list.
+         Iter_Inner :=
+           Start
+             (Root_Project     => Project,
+              Recursive        => Recursive,
+              Direct_Only      => Direct_Only,
+              Include_Extended => Include_Extended);
+
+         loop
+            P := Current (Iter_Inner);
+            exit when P = No_Project;
+
+            if not Project_Paths.Contains
+              (P.Project_Path.Display_Full_Name)
+            then
+               Project_Paths.Include (P.Project_Path.Display_Full_Name);
+
+               if Is_Aggregate_Project (P) and then not Direct_Only then
+                  --  aggregate library
+                  Add_Project (P);
+               else
+                  Iter.Project_List.Append (P);
+               end if;
+            end if;
+
+            Next (Iter_Inner);
+         end loop;
       end Add_Project;
 
    begin
@@ -4368,8 +4367,8 @@ package body GNATCOLL.Projects is
       Include_Self : Boolean := False;
       Direct_Only  : Boolean := False) return Project_Iterator
    is
-      Iter       : Project_Iterator;
-      Iter_Inner : Inner_Project_Iterator;
+      Iter, Cleanup_Iter : Project_Iterator;
+      Iter_Inner         : Inner_Project_Iterator;
 
       Local_Roots : Project_Lists.Vector := Project_Lists.Empty_Vector;
 
@@ -4411,9 +4410,6 @@ package body GNATCOLL.Projects is
 
          for I in Local_Roots.First_Index .. Local_Roots.Last_Index loop
 
-            --  we need to reset importing projects for each local root
-            Unchecked_Free (Project.Data.Importing_Projects);
-
             Iter_Inner := Find_All_Projects_Importing
               (Project      => Project,
                Root_Project => Local_Roots.Element (I),
@@ -4435,28 +4431,50 @@ package body GNATCOLL.Projects is
 
                Next (Iter_Inner);
             end loop;
+
+            --  We need to reset importing projects for each local root
+            --  and the project in question before the next pass.
+            Unchecked_Free (Project.Data.Importing_Projects);
+            Cleanup_Iter := Start (Local_Roots (I));
+            while Current (Cleanup_Iter) /= No_Project loop
+               Unchecked_Free (Current (Cleanup_Iter).Data.Importing_Projects);
+               Next (Cleanup_Iter);
+            end loop;
          end loop;
 
          Iter.Project_Idx := Iter.Project_List.First_Index;
-         return Iter;
-      else
-
-         Iter_Inner := Find_All_Projects_Importing
-           (Project      => Project,
-            Root_Project => Project.Data.Tree_For_Map.Root,
-            Include_Self => Include_Self,
-            Direct_Only  => Direct_Only);
-
-         loop
-            exit when Current (Iter_Inner) = No_Project;
-
-            Iter.Project_List.Append (Current (Iter_Inner));
-
-            Next (Iter_Inner);
-         end loop;
       end if;
 
+      Iter_Inner := Find_All_Projects_Importing
+        (Project      => Project,
+         Root_Project => Project.Data.Tree_For_Map.Root,
+         Include_Self => Include_Self,
+         Direct_Only  => Direct_Only);
+
+      loop
+         exit when Current (Iter_Inner) = No_Project;
+
+         if not Project_Paths.Contains
+           (Current (Iter_Inner).Project_Path.Display_Full_Name)
+         then
+            Project_Paths.Include
+              (Current (Iter_Inner).Project_Path.Display_Full_Name);
+            Iter.Project_List.Append (Current (Iter_Inner));
+         end if;
+         Next (Iter_Inner);
+      end loop;
+
+      --  Again, we need to clean up all stored Importing_Projects, otherwise
+      --  if somewhere in the hierarchy there is an aggregate/aggregate library
+      --  project, the stored info is not correct.
+      Cleanup_Iter := Start (Project.Data.Tree_For_Map.Root);
+      while Current (Cleanup_Iter) /= No_Project loop
+         Unchecked_Free (Current (Cleanup_Iter).Data.Importing_Projects);
+         Next (Cleanup_Iter);
+      end loop;
+
       Iter.Project_Idx := Iter.Project_List.First_Index;
+      Project_Paths.Clear;
       return Iter;
    end Find_All_Projects_Importing;
 
