@@ -70,6 +70,7 @@ testsuite/sql/*/db_names.ads
 testsuite/sql/*/orm.ad?
 testsuite/sql/json/queries.ad?
 testsuite/sql/json/main
+testsuite/sql/ranges/main
 testsuite/sql/orm_views/main
 testsuite/sql/orm_views/orm_database*
 testsuite/sql/orm_views/queries*

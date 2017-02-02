@@ -712,10 +712,17 @@ package body GNATCOLL.SQL.Inspect is
       is
          Descr : Field_Description;
          Ref   : Field;
+         T     : constant Field_Type_Access := From_SQL (Typ);
       begin
+         if T = null then
+            Put_Line ("Error: unknown field type " & Typ);
+            raise Invalid_Type;
+            return;
+         end if;
+
          Descr := Field_Description'
            (Name        => new String'(Name),
-            Typ         => From_SQL (Typ),
+            Typ         => T,
             Id          => Index,
             Description => new String'(Description),
             Default     => null,
@@ -1198,6 +1205,16 @@ package body GNATCOLL.SQL.Inspect is
                null;   --  Skip for now, will do in second pass
 
             else
+               if Line (2) = null
+                  or else Line (3) = null
+                  or else Line (4) = null
+                  or else Line (5) = null
+               then
+                  Put_Line ("Error: missing fields on line "
+                     & Join (" | ", String_List (Line)));
+                  return;
+               end if;
+
                Attr_Id := Attr_Id + 1;
 
                Props := Parse_Properties (Line (3).all);
@@ -1275,6 +1292,10 @@ package body GNATCOLL.SQL.Inspect is
 
                   else
                      Att.Get.Typ := From_SQL (Typ);
+                     if Att.Get.Typ = null then
+                        Put_Line ("Error: unknown field type """ & Typ & '"');
+                        raise Invalid_Type;
+                     end if;
                   end if;
                end;
             end if;

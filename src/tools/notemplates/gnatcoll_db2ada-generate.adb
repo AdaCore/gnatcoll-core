@@ -52,6 +52,9 @@ is
      (File : File_Type; Indent : String; Comment : String);
    --  Print a multi-line comment to the File
 
+   procedure Print_Withs (T_Descr : in out Table_Description);
+   --  Print all withs needed for the given table
+
    Process_Abstract_Tables : Boolean;
    procedure Print_Table_Spec (T_Descr : in out Table_Description);
    --  Print the specs for a table.
@@ -116,6 +119,30 @@ is
       end if;
    end Print_Comment;
 
+   -----------------
+   -- Print_Withs --
+   -----------------
+
+   procedure Print_Withs (T_Descr : in out Table_Description) is
+      procedure For_Field (F : in out GNATCOLL.SQL.Inspect.Field);
+      procedure For_Field (F : in out GNATCOLL.SQL.Inspect.Field) is
+         Typ : constant String :=
+            F.Get_Type.Type_To_SQL (null, For_Database => False);
+      begin
+         for T in reverse Typ'Range loop
+            if Typ (T) = '.' then
+               Put_Line
+                  (Spec_File,
+                   "with " & Typ (Typ'First .. T - 1) & "; use "
+                   & Typ (Typ'First .. T - 1) & ";");
+               exit;
+            end if;
+         end loop;
+      end For_Field;
+   begin
+      For_Each_Field (T_Descr, For_Field'Access, False);
+   end Print_Withs;
+
    ----------------------
    -- Print_Table_Spec --
    ----------------------
@@ -123,11 +150,11 @@ is
    procedure Print_Table_Spec (T_Descr : in out Table_Description) is
       procedure For_Field (F : in out GNATCOLL.SQL.Inspect.Field);
       procedure For_Field (F : in out GNATCOLL.SQL.Inspect.Field) is
+         Typ : constant String :=
+            F.Get_Type.Type_To_SQL (null, For_Database => False);
       begin
-         Put (Spec_File, "      "
-              & Capitalize (F.Name)
-              & " : SQL_Field_"
-              & F.Get_Type.Type_To_SQL (null, For_Database => False));
+         Put (Spec_File,
+              "      " & Capitalize (F.Name) & " : " & Typ);
 
          if T_Descr.Is_Abstract then
             Put (Spec_File, " (Table_Name");
@@ -432,6 +459,7 @@ begin
       "pragma Warnings (Off, ""no entities of * are referenced"");");
    Put_Line
      (Spec_File, "with GNATCOLL.SQL_Fields; use GNATCOLL.SQL_Fields;");
+   For_Each_Table (Schema, Print_Withs'Access);
    Put_Line
      (Spec_File,
       "pragma Warnings (On, ""no entities of * are referenced"");");

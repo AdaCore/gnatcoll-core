@@ -63,8 +63,8 @@ package GNATCOLL.SQL.Inspect is
    --  How this field type should be encoded in the schema description.
    --
    --  If For_Database is True, the returned value can be used in a "CREATE
-   --  TABLE" statement. Otherwise, it is prefixed with "SQL_Field_" to
-   --  represent the corresponding GNATCOLL.SQL type
+   --  TABLE" statement. Otherwise, it is the name of the Ada field type,
+   --  possibly qualified with the package name.
    --
    --  Format is not needed when For_Database is False
 
@@ -92,8 +92,11 @@ package GNATCOLL.SQL.Inspect is
      (Self         : Field_Type_Text;
       Format       : access Formatter'Class := null;
       For_Database : Boolean := True) return String
-     is (if Self.Max_Length = Integer'Last or not For_Database
-         then "Text" else "Character(" & Image (Self.Max_Length, 1) & ')');
+     is (if not For_Database
+         then "SQL_Field_Text"
+         elsif Self.Max_Length = Integer'Last
+         then "Text"
+         else "Character(" & Image (Self.Max_Length, 1) & ')');
    overriding function Type_From_SQL
      (Self : in out Field_Type_Text; Str : String) return Boolean;
    overriding function Parameter_Type
@@ -105,7 +108,7 @@ package GNATCOLL.SQL.Inspect is
      (Self         : Field_Type_Integer;
       Format       : access Formatter'Class := null;
       For_Database : Boolean := True) return String
-     is ("Integer");
+     is (if For_Database then "Integer" else "SQL_Field_Integer");
    overriding function Type_From_SQL
      (Self : in out Field_Type_Integer; Str : String) return Boolean;
    overriding function Parameter_Type
@@ -117,7 +120,9 @@ package GNATCOLL.SQL.Inspect is
      (Self         : Field_Type_Autoincrement;
       Format       : access Formatter'Class := null;
       For_Database : Boolean := True) return String
-     is (if For_Database then Format.Field_Type_Autoincrement else "Integer");
+     is (if For_Database
+         then Format.Field_Type_Autoincrement
+         else "SQL_Field_Integer");
    overriding function Type_From_SQL
      (Self : in out Field_Type_Autoincrement; Str : String) return Boolean
      is (Str = "autoincrement");
@@ -130,7 +135,9 @@ package GNATCOLL.SQL.Inspect is
      (Self         : Field_Type_Bigint;
       Format       : access Formatter'Class := null;
       For_Database : Boolean := True) return String
-     is ("Bigint");
+     is (if For_Database
+         then "Bigint"
+         else "SQL_Field_Bigint");
    overriding function Type_From_SQL
      (Self : in out Field_Type_Bigint; Str : String) return Boolean
      is (Str = "bigint");
@@ -143,7 +150,9 @@ package GNATCOLL.SQL.Inspect is
      (Self         : Field_Type_Date;
       Format       : access Formatter'Class := null;
       For_Database : Boolean := True) return String
-     is ("Date");
+     is (if For_Database
+         then "Date"
+         else "SQL_Field_Date");
    overriding function Type_From_SQL
      (Self : in out Field_Type_Date; Str : String) return Boolean
      is (Str = "date");
@@ -156,7 +165,9 @@ package GNATCOLL.SQL.Inspect is
      (Self         : Field_Type_Time;
       Format       : access Formatter'Class := null;
       For_Database : Boolean := True) return String
-     is ("Time");
+     is (if For_Database
+         then "Time"
+         else "SQL_Field_Time");
    overriding function Type_From_SQL
      (Self : in out Field_Type_Time; Str : String) return Boolean
      is (Str = "time");
@@ -170,7 +181,9 @@ package GNATCOLL.SQL.Inspect is
       Format       : access Formatter'Class := null;
       For_Database : Boolean := True)
      return String
-     is (if For_Database then "timestamp with time zone" else "Time");
+     is (if For_Database
+         then "timestamp with time zone"
+         else "SQL_Field_Time");
    overriding function Type_From_SQL
      (Self : in out Field_Type_Timestamp; Str : String) return Boolean
      is (Str = "timestamp without time zone"
@@ -185,7 +198,9 @@ package GNATCOLL.SQL.Inspect is
      (Self         : Field_Type_Float;
       Format       : access Formatter'Class := null;
       For_Database : Boolean := True) return String
-     is ("Float");
+     is (if For_Database
+         then "Float"
+         else "SQL_Field_Float");
    overriding function Type_From_SQL
      (Self : in out Field_Type_Float; Str : String) return Boolean;
    overriding function Parameter_Type
@@ -197,7 +212,9 @@ package GNATCOLL.SQL.Inspect is
      (Self         : Field_Type_Boolean;
       Format       : access Formatter'Class := null;
       For_Database : Boolean := True) return String
-     is ("Boolean");
+     is (if For_Database
+         then "Boolean"
+         else "SQL_Field_Boolean");
    overriding function Type_From_SQL
      (Self : in out Field_Type_Boolean; Str : String) return Boolean
      is (Str = "boolean");
@@ -212,7 +229,7 @@ package GNATCOLL.SQL.Inspect is
       For_Database : Boolean := True) return String
      is (if For_Database
          then Format.Field_Type_Money
-         else "Money");
+         else "SQL_Field_Money");
    overriding function Type_From_SQL
      (Self : in out Field_Type_Money; Str : String) return Boolean
      is (Str = "money");

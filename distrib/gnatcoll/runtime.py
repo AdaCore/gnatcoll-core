@@ -407,6 +407,13 @@ XML = r'''<?xml version="1.0"?>
   </documentation_file>
 
   <documentation_file>
+     <shell>Editor.edit "gnatcoll-sql-ranges.ads"</shell>
+     <descr>GNATCOLL.SQL.Ranges</descr>
+     <menu>/Help/GNAT Runtime/GNATCOLL/SQL/Ranges</menu>
+     <category>GNAT Components Collection</category>
+  </documentation_file>
+
+  <documentation_file>
      <shell>Editor.edit "gnatcoll-sql-sessions.ads"</shell>
      <descr>GNATCOLL.SQL.Sessions</descr>
      <menu>/Help/GNAT Runtime/GNATCOLL/SQL/Sessions</menu>

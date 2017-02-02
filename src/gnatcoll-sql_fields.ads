@@ -52,7 +52,9 @@ package GNATCOLL.SQL_Fields is
      (Self         : Field_Type_Json;
       Format       : access Formatter'Class := null;
       For_Database : Boolean := True) return String
-     is ("Json");
+     is (if For_Database
+         then "Json"
+         else "GNATCOLL.SQL_Fields.SQL_Field_Json");
    overriding function Type_From_SQL
      (Self : in out Field_Type_Json; Str : String) return Boolean
      is (Str = "json");
@@ -95,7 +97,9 @@ package GNATCOLL.SQL_Fields is
      (Self         : Field_Type_XML;
       Format       : access Formatter'Class := null;
       For_Database : Boolean := True) return String
-     is ("XML");
+     is (if For_Database
+         then "XML"
+         else "GNATCOLL.SQL_Fields.SQL_Field_XML");
    overriding function Type_From_SQL
      (Self : in out Field_Type_XML; Str : String) return Boolean
      is (Str = "xml");

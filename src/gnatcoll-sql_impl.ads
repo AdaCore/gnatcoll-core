@@ -588,6 +588,14 @@ package GNATCOLL.SQL_Impl is
    --  The operation is written as
    --     Left Op Right Suffix
 
+   function Compare1
+     (Field       : SQL_Field'Class;
+      Op          : Cst_String_Access;
+      Suffix      : Cst_String_Access := null)
+      return SQL_Criteria;
+   --  Apply a function to a field, as in:
+   --     Op Field Suffix         (Op or Suffix can contain parenthesis)
+
    ------------------------------------------
    -- General declarations for assignments --
    ------------------------------------------
@@ -775,6 +783,17 @@ package GNATCOLL.SQL_Impl is
       --  Applying a function to a field, as in  "LOWER (field)", where
       --     Name   is "LOWER ("
       --     Suffix is ")"
+
+      generic
+         type Argument1_Type is abstract new SQL_Field with private;
+         type Argument2_Type is abstract new SQL_Field with private;
+         Name   : String;
+         Suffix : String := ")";
+      function Apply_Function2
+         (Arg1 : Argument1_Type'Class;
+          Arg2 : Argument2_Type'Class)
+         return Field'Class;
+      --  Applying a function to two fields, and return another field
 
    private
       Null_Field : constant Field :=

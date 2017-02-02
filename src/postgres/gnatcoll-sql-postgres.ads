@@ -27,6 +27,7 @@
 with Ada.Strings.Unbounded;
 with GNATCOLL.SQL.Exec;   use GNATCOLL.SQL.Exec;
 with GNAT.Strings;        use GNAT.Strings;
+with GNATCOLL.SQL.Ranges;
 
 package GNATCOLL.SQL.Postgres is
 
@@ -113,6 +114,37 @@ package GNATCOLL.SQL.Postgres is
    --  Extends an existing query with postgres-specific additions. For
    --  instance:
    --      R.Fetch (DB, SQL_Select (...) & Returning (Field1));
+
+   package DateRanges is new GNATCOLL.SQL.Ranges
+      (Base_Fields  => GNATCOLL.SQL.Date_Fields,
+       SQL_Type     => "daterange",
+       Ada_SQL_Type => "GNATCOLL.SQL.Postgres.SQL_Field_Date_Range");
+   subtype Date_Range is DateRanges.Ada_Range;
+   subtype SQL_Field_Date_Range is DateRanges.SQL_Field_Range;
+
+   package NumRanges is new GNATCOLL.SQL.Ranges
+      (Base_Fields  => GNATCOLL.SQL.Float_Fields,
+       SQL_Type     => "numrange",
+       Ada_SQL_Type => "GNATCOLL.SQL.Postgres.SQL_Field_Num_Range");
+   subtype Num_Range is NumRanges.Ada_Range;
+   type SQL_Field_Num_Range is
+      new NumRanges.SQL_Field_Range with null record;
+
+   package IntegerRanges is new GNATCOLL.SQL.Ranges
+      (Base_Fields  => GNATCOLL.SQL.Integer_Fields,
+       SQL_Type     => "int4range",
+       Ada_SQL_Type => "GNATCOLL.SQL.Postgres.SQL_Field_Integer_Range");
+   subtype Integer_Range is IntegerRanges.Ada_Range;
+   type SQL_Field_Integer_Range is
+      new IntegerRanges.SQL_Field_Range with null record;
+
+   package BigintRanges is new GNATCOLL.SQL.Ranges
+      (Base_Fields  => GNATCOLL.SQL.Bigint_Fields,
+       SQL_Type     => "int8range",
+       Ada_SQL_Type => "GNATCOLL.SQL.Postgres.SQL_Field_Bigint_Range");
+   subtype Bigint_Range is BigintRanges.Ada_Range;
+   type SQL_Field_Bigint_Range is
+      new BigintRanges.SQL_Field_Range with null record;
 
 private
    type Postgres_Description is new Database_Description_Record with record

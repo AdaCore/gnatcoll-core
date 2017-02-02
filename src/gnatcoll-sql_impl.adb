@@ -121,6 +121,27 @@ package body GNATCOLL.SQL_Impl is
       Is_Aggregate : in out Boolean);
    --  A field that applies a function (via Prefix .. Suffix) to another field
 
+   ----------------------
+   -- Function2 fields --
+   ----------------------
+
+   type Function2_Field is new SQL_Field_Internal with record
+      Prefix, Suffix : GNAT.Strings.String_Access;
+      Field1, Field2 : SQL_Field_Pointer;
+   end record;
+   overriding procedure Free (Self : in out Function2_Field);
+   overriding function To_String
+     (Self   : Function2_Field;
+      Format : Formatter'Class;
+      Long   : Boolean) return String;
+   overriding procedure Append_Tables
+     (Self : Function2_Field; To : in out Table_Sets.Set);
+   overriding procedure Append_If_Not_Aggregate
+     (Self         : access Function2_Field;
+      To           : in out SQL_Field_List'Class;
+      Is_Aggregate : in out Boolean);
+   --  A field that applies a function (via Prefix .. Suffix) to another field
+
    --------------
    -- Criteria --
    --------------
@@ -383,6 +404,33 @@ package body GNATCOLL.SQL_Impl is
          (Self.To_Field.Get.Element.all, To, Is_Aggregate);
    end Append_If_Not_Aggregate;
 
+   -------------------
+   -- Append_Tables --
+   -------------------
+
+   overriding procedure Append_Tables
+     (Self : Function2_Field; To : in out Table_Sets.Set) is
+   begin
+      Append_Tables (Self.Field1.Get.Element.all, To);
+      Append_Tables (Self.Field2.Get.Element.all, To);
+   end Append_Tables;
+
+   -----------------------------
+   -- Append_If_Not_Aggregate --
+   -----------------------------
+
+   overriding procedure Append_If_Not_Aggregate
+     (Self         : access Function2_Field;
+      To           : in out SQL_Field_List'Class;
+      Is_Aggregate : in out Boolean)
+   is
+   begin
+      Append_If_Not_Aggregate
+         (Self.Field1.Get.Element.all, To, Is_Aggregate);
+      Append_If_Not_Aggregate
+         (Self.Field2.Get.Element.all, To, Is_Aggregate);
+   end Append_If_Not_Aggregate;
+
    -----------------------------
    -- Append_If_Not_Aggregate --
    -----------------------------
@@ -618,24 +666,35 @@ package body GNATCOLL.SQL_Impl is
       Format : Formatter'Class;
       Long   : Boolean := True) return String
    is
-      Arg1 : constant String := To_String (Self.Arg1, Format, Long => Long);
       Arg2 : constant String := To_String (Self.Arg2, Format, Long => Long);
    begin
+      --  ??? Could we do this test when we create the comparison, that would
+      --  be more efficient.
       if Self.Op.all = "="
         and then Arg2 = "TRUE"
       then
-         return Arg1;
+         return To_String (Self.Arg1, Format, Long => Long);
 
       elsif Self.Op.all = "="
         and then Arg2 = "FALSE"
       then
-         return "not " & Arg1;
+         return "not " & To_String (Self.Arg1, Format, Long => Long);
 
       elsif Self.Suffix /= null then
-         return Arg1 & Self.Op.all & Arg2 & Self.Suffix.all;
+         if Self.Arg1 = No_Field_Pointer then
+            return Self.Op.all & Arg2 & Self.Suffix.all;
+         else
+            return To_String (Self.Arg1, Format, Long => Long)
+               & Self.Op.all & Arg2 & Self.Suffix.all;
+         end if;
 
       else
-         return Arg1 & Self.Op.all & Arg2;
+         if Self.Arg1 = No_Field_Pointer then
+            return Self.Op.all & Arg2;
+         else
+            return To_String (Self.Arg1, Format, Long => Long)
+               & Self.Op.all & Arg2;
+         end if;
       end if;
    end To_String;
 
@@ -680,6 +739,26 @@ package body GNATCOLL.SQL_Impl is
       Set_Data (Result, Data);
       return Result;
    end Compare;
+
+   --------------
+   -- Compare1 --
+   --------------
+
+   function Compare1
+     (Field       : SQL_Field'Class;
+      Op          : Cst_String_Access;
+      Suffix      : Cst_String_Access := null) return SQL_Criteria
+   is
+      Data : constant Comparison_Criteria :=
+         (SQL_Criteria_Data with
+          Op => Op, Suffix => Suffix,
+          Arg1 => No_Field_Pointer,
+          Arg2 => +Field);
+      Result : SQL_Criteria;
+   begin
+      Set_Data (Result, Data);
+      return Result;
+   end Compare1;
 
    ---------------
    -- To_String --
@@ -924,6 +1003,17 @@ package body GNATCOLL.SQL_Impl is
       Free (SQL_Field_Internal (Self));
    end Free;
 
+   ----------
+   -- Free --
+   ----------
+
+   overriding procedure Free (Self : in out Function2_Field) is
+   begin
+      Free (Self.Prefix);
+      Free (Self.Suffix);
+      Free (SQL_Field_Internal (Self));
+   end Free;
+
    ---------------
    -- To_String --
    ---------------
@@ -937,6 +1027,24 @@ package body GNATCOLL.SQL_Impl is
    begin
       return Self.Prefix.all
         & To_String (Self.To_Field.Get.Element.all, Format, Long => True)
+        & Self.Suffix.all;
+   end To_String;
+
+   ---------------
+   -- To_String --
+   ---------------
+
+   overriding function To_String
+     (Self   : Function2_Field;
+      Format : Formatter'Class;
+      Long   : Boolean) return String
+   is
+      pragma Unreferenced (Long);
+   begin
+      return Self.Prefix.all
+        & To_String (Self.Field1.Get.Element.all, Format, Long => True)
+        & ", "
+        & To_String (Self.Field2.Get.Element.all, Format, Long => True)
         & Self.Suffix.all;
    end To_String;
 
@@ -1169,17 +1277,42 @@ package body GNATCOLL.SQL_Impl is
          D : Function_Field;
       begin
          if Suffix /= ")" and then Suffix /= "" then
-            D.Prefix := new String'(Name);
-            D.To_Field := +Self;
             D.Suffix := new String'(" " & Suffix);
          else
-            D.Prefix := new String'(Name);
-            D.To_Field := +Self;
             D.Suffix := new String'(Suffix);
          end if;
+
+         D.Prefix := new String'(Name);
+         D.To_Field := +Self;
          F.Data.Set (D);
          return F;
       end Apply_Function;
+
+      ---------------------
+      -- Apply_Function2 --
+      ---------------------
+
+      function Apply_Function2
+        (Arg1 : Argument1_Type'Class;
+         Arg2 : Argument2_Type'Class) return Field'Class
+      is
+         F : Typed_Data_Fields.Field
+           (Table => null, Instance => null, Name => null,
+            Instance_Index => -1);
+         D : Function2_Field;
+      begin
+         if Suffix /= ")" and then Suffix /= "" then
+            D.Suffix := new String'(" " & Suffix);
+         else
+            D.Suffix := new String'(Suffix);
+         end if;
+
+         D.Prefix := new String'(Name);
+         D.Field1 := +Arg1;
+         D.Field2 := +Arg2;
+         F.Data.Set (D);
+         return F;
+      end Apply_Function2;
 
       ---------------
       -- Operators --
