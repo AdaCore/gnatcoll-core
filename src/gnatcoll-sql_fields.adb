@@ -30,15 +30,13 @@ package body GNATCOLL.SQL_Fields is
    -----------------
 
    function Json_To_SQL
-     (Self : Formatter'Class; Value : String; Quote : Boolean) return String
-   is
-      pragma Unreferenced (Self, Quote);
+     (Self : Formatter'Class; Value : String; Quote : Boolean) return String is
    begin
       if Trim (Value, Ada.Strings.Both) = "" then
          return "null";
          --  Json null, not to be confused with SQL NULL.
       else
-         return Value;
+         return String_Image (Self, Value, Quote);
       end if;
    end Json_To_SQL;
 
