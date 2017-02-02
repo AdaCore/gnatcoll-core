@@ -81,12 +81,9 @@ package GNATCOLL.SQL.Inspect is
    --  This returns an uninitialized value, which is only used to pass a
    --  valid encoding string to the database, as in "?1" or "$1::integer".
 
-   package Field_Type_Vectors is new Ada.Containers.Indefinite_Vectors
-     (Positive, Field_Type'Class);
-   All_Field_Types : Field_Type_Vectors.Vector;
-   --  When you create new field types, they should be registered in this list.
-   --  Put an uninitialized instance of the field type in the list. A copy of
-   --  it will be used to call Type_From_SQL when parsing the database schema.
+   procedure Register_Field_Type (Self : Field_Type'Class);
+   --  Register a new field type, so that users can create their own field
+   --  types.
 
    type Field_Type_Text is new Field_Type with record
       Max_Length : Integer := Integer'Last;

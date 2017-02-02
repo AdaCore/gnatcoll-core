@@ -30,6 +30,11 @@ with Ada.Strings.Maps;        use Ada.Strings.Maps;
 with Ada.Text_IO;             use Ada.Text_IO;
 with GNATCOLL.Utils;          use GNATCOLL.Utils;
 
+--  Register advanced types
+pragma Warnings (Off, "no entities of * are referenced");
+with GNATCOLL.SQL_Fields;     use GNATCOLL.SQL_Fields;
+pragma Warnings (On, "no entities of * are referenced");
+
 separate (GNATCOLL_Db2Ada)
 procedure Generate
   (Generated : String; Include_Database_Create : Boolean)

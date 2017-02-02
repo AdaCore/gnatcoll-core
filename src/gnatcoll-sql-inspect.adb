@@ -44,6 +44,13 @@ package body GNATCOLL.SQL.Inspect is
    use Tables_Maps, Field_Lists, Foreign_Refs;
    use Foreign_Keys, Pair_Lists, Tables_Lists;
 
+   package Field_Type_Vectors is new Ada.Containers.Indefinite_Vectors
+     (Positive, Field_Type'Class);
+   All_Field_Types : Field_Type_Vectors.Vector;
+   --  When you create new field types, they should be registered in this list.
+   --  Put an uninitialized instance of the field type in the list. A copy of
+   --  it will be used to call Type_From_SQL when parsing the database schema.
+
    Invalid_Schema : exception;
 
    use String_Lists;
@@ -3125,15 +3132,24 @@ package body GNATCOLL.SQL.Inspect is
       Free (Self);
    end Free_Dispatch;
 
+   -------------------------
+   -- Register_Field_Type --
+   -------------------------
+
+   procedure Register_Field_Type (Self : Field_Type'Class) is
+   begin
+      All_Field_Types.Append (Self);
+   end Register_Field_Type;
+
 begin
-   All_Field_Types.Append (Field_Type_Text'(others => <>));
-   All_Field_Types.Append (Field_Type_Integer'(null record));
-   All_Field_Types.Append (Field_Type_Autoincrement'(null record));
-   All_Field_Types.Append (Field_Type_Bigint'(null record));
-   All_Field_Types.Append (Field_Type_Date'(null record));
-   All_Field_Types.Append (Field_Type_Time'(null record));
-   All_Field_Types.Append (Field_Type_Timestamp'(null record));
-   All_Field_Types.Append (Field_Type_Float'(null record));
-   All_Field_Types.Append (Field_Type_Boolean'(null record));
-   All_Field_Types.Append (Field_Type_Money'(null record));
+   Register_Field_Type (Field_Type_Text'(others => <>));
+   Register_Field_Type (Field_Type_Integer'(null record));
+   Register_Field_Type (Field_Type_Autoincrement'(null record));
+   Register_Field_Type (Field_Type_Bigint'(null record));
+   Register_Field_Type (Field_Type_Date'(null record));
+   Register_Field_Type (Field_Type_Time'(null record));
+   Register_Field_Type (Field_Type_Timestamp'(null record));
+   Register_Field_Type (Field_Type_Float'(null record));
+   Register_Field_Type (Field_Type_Boolean'(null record));
+   Register_Field_Type (Field_Type_Money'(null record));
 end GNATCOLL.SQL.Inspect;

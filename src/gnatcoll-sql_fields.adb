@@ -60,6 +60,6 @@ package body GNATCOLL.SQL_Fields is
    end XML_To_SQL;
 
 begin
-   All_Field_Types.Append (Field_Type_Json'(null record));
-   All_Field_Types.Append (Field_Type_XML'(null record));
+   Register_Field_Type (Field_Type_Json'(null record));
+   Register_Field_Type (Field_Type_XML'(null record));
 end GNATCOLL.SQL_Fields;
