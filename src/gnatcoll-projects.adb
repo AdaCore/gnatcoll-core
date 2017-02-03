@@ -7338,6 +7338,21 @@ package body GNATCOLL.Projects is
          --  flag over and over again.
          Tree.Data.Env.Report_Missing_Dirs := Report_Missing_Dirs;
 
+         --  For future recomputations of view we also want to keep the list
+         --  of packages to check, but in case it is not a predefined one,
+         --  we need a hard copy, since users might free the list right after
+         --  the loading.
+         if Packages_To_Check in No_Packs | All_Packs then
+            Tree.Data.Env.Packages_To_Check := Packages_To_Check;
+         else
+            Tree.Data.Env.Packages_To_Check   :=
+              new String_List (Packages_To_Check'Range);
+            for I in Packages_To_Check'Range loop
+               Tree.Data.Env.Packages_To_Check (I) :=
+                 new String'(Packages_To_Check (I).all);
+            end loop;
+         end if;
+
          if Recompute_View then
             Tree.Recompute_View (Errors => Errors);
          end if;
@@ -7859,7 +7874,7 @@ package body GNATCOLL.Projects is
             Autoconf_Specified  => Self.Data.Env.Autoconf,
             Project_Tree        => Self.Data.View,
             Project_Node_Tree   => Self.Data.Tree,
-            Packages_To_Check   => null,
+            Packages_To_Check   => Self.Data.Env.Packages_To_Check,
             Target_Name                => Self.Root_Project.Get_Target,
             Allow_Automatic_Generation => Self.Data.Env.Autoconf,
             Automatically_Generated    => Automatically_Generated,
@@ -7901,7 +7916,7 @@ package body GNATCOLL.Projects is
                Autoconf_Specified  => Self.Data.Env.Autoconf,
                Project_Tree        => Self.Data.View,
                Project_Node_Tree   => Self.Data.Tree,
-               Packages_To_Check   => null,
+               Packages_To_Check   => Self.Data.Env.Packages_To_Check,
                Allow_Automatic_Generation => Self.Data.Env.Autoconf,
                Automatically_Generated    => Automatically_Generated,
                Config_File_Path           => Config_File_Path,
@@ -9804,6 +9819,9 @@ package body GNATCOLL.Projects is
          Free (Self.Save_Config_File);
          Free (Self.Default_Gnatls);
          Free (Self.Gnatls);
+         if not (Self.Packages_To_Check in All_Packs | No_Packs) then
+            Free (Self.Packages_To_Check);
+         end if;
 
          Free (Self.Env);
 

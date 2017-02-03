@@ -1894,6 +1894,7 @@ private
       --  Name of the .cgpr file to parse for the project.
 
       Report_Missing_Dirs : Boolean := True;
+      Packages_To_Check   : GNAT.Strings.String_List_Access := No_Packs;
 
       Forced_Target : GNAT.Strings.String_Access;
       Forced_Runtime : GNAT.Strings.String_Access;
