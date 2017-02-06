@@ -382,14 +382,14 @@ package body GNATCOLL.Utils is
    -- Starts_With --
    -----------------
 
-   function Starts_With (Str : String; Suffix : String) return Boolean is
+   function Starts_With (Str : String; Prefix : String) return Boolean is
       pragma Suppress (All_Checks);
    begin
-      if Str'Length < Suffix'Length then
+      if Str'Length < Prefix'Length then
          return False;
       end if;
 
-      return Str (Str'First .. Str'First + Suffix'Length - 1) = Suffix;
+      return Str (Str'First .. Str'First + Prefix'Length - 1) = Prefix;
    end Starts_With;
 
    ----------------------------

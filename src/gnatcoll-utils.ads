@@ -103,9 +103,11 @@ package GNATCOLL.Utils is
    --  Returns True if Char is a space, new line, or tab; otherwise returns
    --  False.
 
-   function Starts_With (Str : String; Suffix : String) return Boolean;
+   function Starts_With (Str : String; Prefix : String) return Boolean;
+   --  Returns True if Str starts with Prefix
+
    function Ends_With (Str : String; Suffix : String) return Boolean;
-   --  Return True if Str starts or ends with Suffix
+   --  Returns True if Str ends with Suffix
 
    procedure Skip_Blanks (Str : String; Index : in out Natural);
    procedure Skip_Blanks_Backward (Str : String; Index : in out Natural);
