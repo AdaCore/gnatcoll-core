@@ -23,7 +23,6 @@
 
 with Ada.Command_Line;
 with Ada.Strings.Fixed;         use Ada.Strings.Fixed;
-with Ada.Strings.Unbounded;     use Ada.Strings.Unbounded;
 with GNAT.Directory_Operations; use GNAT.Directory_Operations;
 with GNAT.Task_Lock;            use GNAT.Task_Lock;
 with Interfaces.C.Strings;      use Interfaces.C.Strings;
@@ -80,17 +79,16 @@ package body GNATCOLL.Traces.Syslog is
    --       to syslog...
 
    type Syslog_Stream_Record is new Trace_Stream_Record with record
-      Buffer   : Unbounded_String;
       Facility : Facilities;
       Level    : Levels;
    end record;
    overriding procedure Put
-     (Stream : in out Syslog_Stream_Record; Str : String);
-   overriding procedure Newline (Stream : in out Syslog_Stream_Record);
+     (Stream     : in out Syslog_Stream_Record;
+      Str        : Msg_Strings.XString);
    overriding function Supports_Color
-     (Stream : Syslog_Stream_Record) return Boolean;
+     (Stream : Syslog_Stream_Record) return Boolean is (False);
    overriding function Supports_Time
-     (Stream : Syslog_Stream_Record) return Boolean;
+     (Stream : Syslog_Stream_Record) return Boolean is (False);
    --  See inherited documentation
 
    type Factory is new Stream_Factory with null record;
@@ -102,40 +100,18 @@ package body GNATCOLL.Traces.Syslog is
    -- Put --
    ---------
 
-   procedure Put (Stream : in out Syslog_Stream_Record; Str : String) is
+   overriding procedure Put
+     (Stream     : in out Syslog_Stream_Record;
+      Str        : Msg_Strings.XString)
+   is
+      S    : Msg_Strings.Unconstrained_String_Access;
+      L    : Natural;
    begin
-      Append (Stream.Buffer, Str);
+      Str.Get_String (S, L);
+
+      --  Do not include the trailing newline
+      Syslog (Stream.Facility, Stream.Level, String (S (1 .. L - 1)));
    end Put;
-
-   -------------
-   -- Newline --
-   -------------
-
-   procedure Newline (Stream : in out Syslog_Stream_Record) is
-   begin
-      Syslog (Stream.Facility, Stream.Level, To_String (Stream.Buffer));
-      Stream.Buffer := Null_Unbounded_String;
-   end Newline;
-
-   --------------------
-   -- Supports_Color --
-   --------------------
-
-   function Supports_Color (Stream : Syslog_Stream_Record) return Boolean is
-      pragma Unreferenced (Stream);
-   begin
-      return False;
-   end Supports_Color;
-
-   -------------------
-   -- Supports_Time --
-   -------------------
-
-   function Supports_Time (Stream : Syslog_Stream_Record) return Boolean is
-      pragma Unreferenced (Stream);
-   begin
-      return False;
-   end Supports_Time;
 
    ----------------
    -- New_Stream --
@@ -160,7 +136,6 @@ package body GNATCOLL.Traces.Syslog is
 
       return new Syslog_Stream_Record'
         (Trace_Stream_Record with
-         Buffer   => Null_Unbounded_String,
          Facility => Facility,
          Level    => Level);
    end New_Stream;
