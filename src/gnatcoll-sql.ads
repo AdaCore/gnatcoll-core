@@ -585,6 +585,10 @@ package GNATCOLL.SQL is
    function "=" (C1, C2 : SQL_Criteria) return Boolean
                  renames GNATCOLL.SQL_Impl."=";
 
+   function Length (Self : SQL_Criteria) return Natural;
+   --  Returns number of criteria on the upper level delimited by the same
+   --  logical operator "OR" or "AND".
+
    function Greater_Than
      (Left : SQL_Field'Class; Right : Integer) return SQL_Criteria
       renames Integer_Fields.Greater_Than;

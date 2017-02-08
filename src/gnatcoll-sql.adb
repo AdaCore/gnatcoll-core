@@ -1081,6 +1081,28 @@ package body GNATCOLL.SQL is
       return Result;
    end "not";
 
+   ------------
+   -- Length --
+   ------------
+
+   function Length (Self : SQL_Criteria) return Natural is
+   begin
+      if Self = No_Criteria then
+         return 0;
+      end if;
+
+      declare
+         Data : constant SQL_Criteria_Data :=
+           SQL_Criteria_Data (Get_Data (Self).all);
+      begin
+         if Data.Op in Criteria_Criteria then
+            return Natural (Data.Criterias.Length);
+         else
+            return 1;
+         end if;
+      end;
+   end Length;
+
    -------------
    -- Combine --
    -------------
