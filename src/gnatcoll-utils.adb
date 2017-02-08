@@ -189,34 +189,51 @@ package body GNATCOLL.Utils is
       return Natural
    is
       Count : Natural := 0;
-      C      : Integer;
-   begin
-      if Str = "" then
-         return 0;
-      end if;
 
-      C := Str'First;
-      while C <= Str'Last loop
-         if Str (C) = On then
+      function For_Each (Item : String) return Boolean;
+
+      --------------
+      -- For_Eash --
+      --------------
+
+      function For_Each (Item : String) return Boolean is
+      begin
+         if not Omit_Empty_Lines or else Item'Length > 0 then
             Count := Count + 1;
-
-            if Omit_Empty_Lines then
-               while C <= Str'Last and then Str (C) = On loop
-                  C := C + 1;
-               end loop;
-            else
-               C := C + 1;
-            end if;
-         else
-            C := C + 1;
          end if;
-      end loop;
+         return True;
+      end For_Each;
 
-      if Str (Str'Last) /= On then
-         Count := Count + 1;
-      end if;
+   begin
+      Split (Str, "" & On, For_Each'Access);
+
       return Count;
    end Count_For_Split;
+
+   -----------
+   -- Split --
+   -----------
+
+   procedure Split
+     (Str      : String;
+      On       : String;
+      For_Each : access function (Item : String) return Boolean)
+   is
+      First : Positive := Str'First;
+      Last  : Natural;
+   begin
+      while First <= Str'Last loop
+         Last := Fixed.Index (Str, On, First);
+
+         if Last = 0 then
+            Last := Str'Last + 1;
+         end if;
+
+         exit when not For_Each (Str (First .. Last - 1));
+
+         First := Last + On'Length;
+      end loop;
+   end Split;
 
    -----------
    -- Split --
@@ -231,38 +248,27 @@ package body GNATCOLL.Utils is
       Total  : constant Natural := Count_For_Split (Str, On, Omit_Empty_Lines);
       Result : constant GNAT.Strings.String_List_Access :=
         new GNAT.Strings.String_List (1 .. Total);
-      First  : Integer := Str'First;
-      Count  : Natural := 1;
-      C      : Integer := Str'First;
-   begin
-      if Total = 0 then
-         return Result;
-      end if;
+      Count : Positive := 1;
 
-      while C <= Str'Last loop
-         if Str (C) = On then
-            Result (Count) := new String'(Str (First .. C - 1));
+      function For_Each (Item : String) return Boolean;
 
-            if Omit_Empty_Lines then
-               while C <= Str'Last and then Str (C) = On loop
-                  C := C + 1;
-               end loop;
-            else
-               C := C + 1;
-            end if;
+      --------------
+      -- For_Each --
+      --------------
 
-            First := C;
+      function For_Each (Item : String) return Boolean is
+      begin
+         if not Omit_Empty_Lines or else Item'Length > 0 then
+            Result (Count) := new String'(Item);
             Count := Count + 1;
-
-         else
-            C := C + 1;
          end if;
-      end loop;
+         return True;
+      end For_Each;
 
-      if First <= Str'Last then
-         Result (Count) := new String'(Str (First .. Str'Last));
-      end if;
+   --  Start of processing for Split
 
+   begin
+      Split (Str, (1 => On), For_Each'Access);
       return Result;
    end Split;
 
@@ -278,39 +284,27 @@ package body GNATCOLL.Utils is
       use Ada.Strings.Unbounded;
       Total  : constant Natural := Count_For_Split (Str, On, Omit_Empty_Lines);
       Result : Unbounded_String_Array (1 .. Total);
-      First  : Integer := Str'First;
-      Count  : Natural := 1;
-      C      : Integer := Str'First;
+      Count  : Positive := 1;
+
+      function For_Each (Item : String) return Boolean;
+
+      --------------
+      -- For_Each --
+      --------------
+
+      function For_Each (Item : String) return Boolean is
+      begin
+         if not Omit_Empty_Lines or else Item'Length > 0 then
+            Result (Count) := To_Unbounded_String (Item);
+            Count := Count + 1;
+         end if;
+         return True;
+      end For_Each;
+
+   --  Start of processing for Split
 
    begin
-      if Total = 0 then
-         return Result;
-      end if;
-
-      while C <= Str'Last loop
-         if Str (C) = On then
-            Result (Count) := To_Unbounded_String (Str (First .. C - 1));
-            Count := Count + 1;
-
-            if Omit_Empty_Lines then
-               while C <= Str'Last and then Str (C) = On loop
-                  C := C + 1;
-               end loop;
-            else
-               C := C + 1;
-            end if;
-
-            First := C;
-
-         else
-            C := C + 1;
-         end if;
-      end loop;
-
-      if First <= Str'Last then
-         Result (Count) := To_Unbounded_String (Str (First .. Str'Last));
-      end if;
-
+      Split (Str, (1 => On), For_Each'Access);
       return Result;
    end Split;
 

@@ -71,6 +71,14 @@ package GNATCOLL.Utils is
      with Pre => Pattern /= "";
    --  Return S, with all occurrences of Pattern replaced with Replacement
 
+   procedure Split
+     (Str      : String;
+      On       : String;
+      For_Each : access function (Item : String) return Boolean);
+   --  Split the string on the given delimiter "On" and call function For_Each
+   --  for all found substrings not including delimiter. If function For_Each
+   --  returns False the string processing stops.
+
    function Split
      (Str              : String;
       On               : Character;
