@@ -8,13 +8,15 @@ include Makefile.conf
 ifeq (${BUILDS_SHARED},yes)
 # Additional targets. Builds relocatble first so that the tools are
 # preferably linked statically.
-all: relocatable static
+all: relocatable static tools
 install:  install-clean install_static \
 		install_library_type/relocatable    \
+		install_tools \
                 install_gps_plugin
 else
-all: static
+all: static tools
 install:  install-clean install_static \
+          install_tools \
           install_gps_plugin
 endif
 
@@ -24,6 +26,9 @@ endif
 ## Builds explicitly the shared or the static libraries
 
 static-pic: build_library_type/static-pic
+
+tools: build_tools/static
+install_tools: install_tools/static
 
 ifeq (${BUILDS_STATIC_PIC},yes)
 static: build_library_type/static build_library_type/static-pic
@@ -52,6 +57,8 @@ ifeq (${WITH_GTK},yes)
 	${GPRBUILD} ${GPRBLD_OPTS} -Psrc/gnatcoll_gtk
 endif
 
+build_tools/%: build_library_type/%
+	@echo "====== Building $(@F) tools ======"
 	@# Build the tools (the list is the project\'s Main attribute)
 	@# They are not build as part of the above because only the Main from
 	@# gnatcoll_full.gpr are build. We could use aggregate projects to
@@ -78,6 +85,9 @@ install_library_type/%:
 ifeq (${WITH_GTK},yes)
 	${GPRINSTALL} ${GPRINST_OPTS} -Psrc/gnatcoll_gtk
 endif
+
+install_tools/%:
+	@echo "====== Installing $(@F) tools ======"
 	${GPRINSTALL} --mode=usage ${GPRINST_OPTS} -Psrc/gnatcoll_tools
 
 install_gps_plugin: force
