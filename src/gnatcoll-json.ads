@@ -90,7 +90,7 @@ package GNATCOLL.JSON is
 
    function "&" (Arr : JSON_Array; Value : JSON_Value) return JSON_Array;
    function "&" (Value1, Value2 : JSON_Value) return JSON_Array;
-   --  Create a new array. This is lesss efficient than Append because it
+   --  Create a new array. This is less efficient than Append because it
    --  results in an extra copy of the array, but is easier to use when
    --  manipulating small arrays.
 
