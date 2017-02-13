@@ -7150,6 +7150,7 @@ package body GNATCOLL.Projects is
          Trace (Me, "Aggregate projects are not supported");
          Fail ("Aggregate projects are not supported");
          Project := Empty_Project_Node;
+         GPR.Com.Fail := null;
          GPR.Output.Cancel_Special_Output;
          return;
       end if;
@@ -7212,6 +7213,7 @@ package body GNATCOLL.Projects is
                Test_With_Missing_With => False,
                Report_Missing_Dirs    => Report_Missing_Dirs);
 
+            GPR.Com.Fail := null;
             GPR.Output.Cancel_Special_Output;
 
             return;
@@ -7241,6 +7243,10 @@ package body GNATCOLL.Projects is
             Packages_To_Check      => Packages_To_Check,
             Test_With_Missing_With => False,
             Report_Missing_Dirs    => Report_Missing_Dirs);
+
+         GPR.Com.Fail := null;
+         GPR.Output.Cancel_Special_Output;
+
          return;
 
       elsif Test_With_Missing_With then
@@ -7306,6 +7312,10 @@ package body GNATCOLL.Projects is
                Packages_To_Check      => Packages_To_Check,
                Test_With_Missing_With => False,
                Report_Missing_Dirs    => Report_Missing_Dirs);
+
+            GPR.Com.Fail := null;
+            GPR.Output.Cancel_Special_Output;
+
             return;
          end if;
       end;
@@ -7357,6 +7367,9 @@ package body GNATCOLL.Projects is
             Tree.Recompute_View (Errors => Errors);
          end if;
       end if;
+
+      GPR.Com.Fail := null;
+      GPR.Output.Cancel_Special_Output;
 
    exception
       when Invalid_Project =>
