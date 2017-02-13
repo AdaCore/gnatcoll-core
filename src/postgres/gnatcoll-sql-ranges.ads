@@ -47,11 +47,28 @@ generic
 package GNATCOLL.SQL.Ranges is
 
    package Impl is
-      type Ada_Range is private;
+      type Range_Type is (Min_Unbounded, Standard, Max_Unbounded,
+                          Doubly_Unbounded, Empty);
+      type Ada_Range (Kind : Range_Type := Standard) is private;
+
       function Create_Range
          (Min, Max     : Base_Fields.Field'Class;
           Min_Included : Boolean := True;
           Max_Included : Boolean := True) return Ada_Range;
+      --  A range [min,max], (min,max], (min,max) or [min,max)
+
+      function Create_Min_Unbounded_Range
+         (Max          : Base_Fields.Field'Class;
+          Max_Included : Boolean := True) return Ada_Range;
+      --  An unbounded range:  [,max] or [,max)
+
+      function Create_Max_Unbounded_Range
+         (Min          : Base_Fields.Field'Class;
+          Min_Included : Boolean := True) return Ada_Range;
+      --  An unbounded range:  [min,] or (min,]
+
+      Doubly_Unbounded_Range : constant Ada_Range (Doubly_Unbounded);
+      Empty_Range : constant Ada_Range (Empty);
 
       function Range_To_SQL
         (Self : Formatter'Class; Value : Ada_Range; Quote : Boolean)
@@ -59,14 +76,32 @@ package GNATCOLL.SQL.Ranges is
       --  Convert the Value to a string suitable for SQL queries
 
    private
-      type Ada_Range is record
-         Min, Max     : GNATCOLL.SQL.SQL_Field_Pointer;
-         Min_Included : Boolean := True;
-         Max_Included : Boolean := True;
+      type Ada_Range (Kind : Range_Type := Standard) is record
+         case Kind is
+            when Min_Unbounded =>
+               MaxU           : GNATCOLL.SQL.SQL_Field_Pointer;
+               MaxU_Included  : Boolean := True;
+            when Standard      =>
+               Min, Max      : GNATCOLL.SQL.SQL_Field_Pointer;
+               Min_Included  : Boolean := True;
+               Max_Included  : Boolean := True;
+            when Max_Unbounded =>
+               MinU           : GNATCOLL.SQL.SQL_Field_Pointer;
+               MinU_Included  : Boolean := True;
+            when Doubly_Unbounded | Empty =>
+               null;
+         end case;
       end record;
+
+      Doubly_Unbounded_Range : constant Ada_Range :=
+         (Kind => Doubly_Unbounded);
+      Empty_Range : constant Ada_Range := (Kind => Empty);
    end Impl;
 
    subtype Ada_Range is Impl.Ada_Range;
+
+   Doubly_Unbounded_Range : constant Ada_Range := Impl.Doubly_Unbounded_Range;
+   Empty_Range : constant Ada_Range := Impl.Empty_Range;
 
    function Create_Range
       (Min, Max     : Base_Fields.Field'Class;
@@ -75,6 +110,18 @@ package GNATCOLL.SQL.Ranges is
       renames Impl.Create_Range;
    --  The Ada representation for a range. Bounds can be inclusive or
    --  exclusive.
+
+   function Create_Min_Unbounded_Range
+      (Max          : Base_Fields.Field'Class;
+       Max_Included : Boolean := True) return Ada_Range
+      renames Impl.Create_Min_Unbounded_Range;
+   --  An unbounded range:  [,max] or [,max)
+
+   function Create_Max_Unbounded_Range
+      (Min          : Base_Fields.Field'Class;
+       Min_Included : Boolean := True) return Ada_Range
+      renames Impl.Create_Max_Unbounded_Range;
+   --  An unbounded range:  [min,] or (min,]
 
    type SQL_Parameter_Range is
       new GNATCOLL.SQL_Impl.SQL_Parameter_Text with null record;
