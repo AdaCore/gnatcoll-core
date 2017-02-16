@@ -38,6 +38,8 @@ src/obj
 testsuite/obj
 testsuite/scripts/M701-028-dict-iter/bin
 
+testsuite/**/*.ad?.stderr
+testsuite/**/*.ad?.stdout
 testsuite/*/*/dummy.gpr
 testsuite/sql/sql3/pkg*
 testsuite/sql/sql3/test.db
