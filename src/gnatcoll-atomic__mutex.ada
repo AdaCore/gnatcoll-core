@@ -24,7 +24,6 @@
 pragma Ada_2012;
 
 with GNAT.Task_Lock;
-with Interfaces;
 
 package body GNATCOLL.Atomic is
 

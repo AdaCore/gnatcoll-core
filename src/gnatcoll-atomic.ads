@@ -102,7 +102,7 @@ package GNATCOLL.Atomic is
    --  Make the operator visible
 
    generic
-      type Element_Type (<>) is private;
+      type Element_Type (<>) is limited private;
       type Element_Access is access Element_Type;
    function Sync_Bool_Compare_And_Swap
       (Ptr    : access Element_Access;

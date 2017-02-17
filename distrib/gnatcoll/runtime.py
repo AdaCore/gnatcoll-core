@@ -533,6 +533,20 @@ XML = r'''<?xml version="1.0"?>
   </documentation_file>
 
   <documentation_file>
+     <shell>Editor.edit "gnatcoll-strings.ads"</shell>
+     <descr>GNATCOLL.Strings</descr>
+     <menu>/Help/GNAT Runtime/GNATCOLL/Strings</menu>
+     <category>GNAT Components Collection</category>
+  </documentation_file>
+
+  <documentation_file>
+     <shell>Editor.edit "gnatcoll-strings_impl.ads"</shell>
+     <descr>GNATCOLL.Strings_Impl</descr>
+     <menu>/Help/GNAT Runtime/GNATCOLL/Strings__Impl</menu>
+     <category>GNAT Components Collection</category>
+  </documentation_file>
+
+  <documentation_file>
      <shell>Editor.edit "gnatcoll-symbols.ads"</shell>
      <descr>GNATCOLL.Symbols</descr>
      <menu>/Help/GNAT Runtime/GNATCOLL/Symbols</menu>

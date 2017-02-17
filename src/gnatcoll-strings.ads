@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                             G N A T C O L L                              --
 --                                                                          --
---                     Copyright (C) 2005-2017, AdaCore                     --
+--                     Copyright (C) 2017, AdaCore                          --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -21,7 +21,12 @@
 --                                                                          --
 ------------------------------------------------------------------------------
 
-package GNATCOLL is
-   pragma Pure;
+--  Optimized strings, with local buffer for performance and optional
+--  copy-on-write.
+--  See details in gnatcoll-strings_impl.ads
 
-end GNATCOLL;
+with GNATCOLL.Strings_Impl;
+
+package GNATCOLL.Strings is
+   new GNATCOLL.Strings_Impl.Strings
+      (GNATCOLL.Strings_Impl.Optimal_String_Size);
