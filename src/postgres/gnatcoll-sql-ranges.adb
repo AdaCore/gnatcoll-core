@@ -24,6 +24,7 @@
 package body GNATCOLL.SQL.Ranges is
 
    package body Impl is
+      use Base_Fields;
 
       ------------------
       -- Create_Range --
@@ -32,14 +33,26 @@ package body GNATCOLL.SQL.Ranges is
       function Create_Range
          (Min, Max     : Base_Fields.Field'Class;
           Min_Included : Boolean := True;
-          Max_Included : Boolean := True) return Ada_Range is
+          Max_Included : Boolean := True) return Ada_Range
+      is
+         Min_Null : constant Boolean :=
+            Base_Fields.Field (Min) = Base_Fields.Null_Field;
+         Mi : constant SQL_Field_Pointer :=
+            (if Min_Null then No_Field_Pointer else +Min);
+         Min_I : constant Boolean := Min_Null or else Min_Included;
+
+         Max_Null : constant Boolean :=
+            Base_Fields.Field (Max) = Base_Fields.Null_Field;
+         Ma : constant SQL_Field_Pointer :=
+            (if Max_Null then No_Field_Pointer else +Max);
+         Max_I : constant Boolean := Max_Null or else Max_Included;
+
       begin
          return Ada_Range'
-            (Kind          => Standard,
-             Min           => +Min,
-             Max           => +Max,
-             Min_Included  => Min_Included,
-             Max_Included  => Max_Included);
+            (Min           => Mi,
+             Max           => Ma,
+             Min_Included  => Min_I,
+             Max_Included  => Max_I);
       end Create_Range;
 
       --------------------------------
@@ -50,10 +63,10 @@ package body GNATCOLL.SQL.Ranges is
          (Max          : Base_Fields.Field'Class;
           Max_Included : Boolean := True) return Ada_Range is
       begin
-         return Ada_Range'
-            (Kind          => Min_Unbounded,
-             MaxU          => +Max,
-             MaxU_Included => Max_Included);
+         return Create_Range
+            (Min          => Base_Fields.Null_Field,
+             Max          => Max,
+             Max_Included => Max_Included);
       end Create_Min_Unbounded_Range;
 
       --------------------------------
@@ -64,10 +77,10 @@ package body GNATCOLL.SQL.Ranges is
          (Min          : Base_Fields.Field'Class;
           Min_Included : Boolean := True) return Ada_Range is
       begin
-         return Ada_Range'
-            (Kind          => Max_Unbounded,
-             MinU          => +Min,
-             MinU_Included => Min_Included);
+         return Create_Range
+            (Max          => Base_Fields.Null_Field,
+             Min          => Min,
+             Min_Included => Min_Included);
       end Create_Max_Unbounded_Range;
 
       ------------------
@@ -79,29 +92,29 @@ package body GNATCOLL.SQL.Ranges is
         return String
       is
          pragma Unreferenced (Quote);
+         Min_Null : constant Boolean := Value.Min = No_Field_Pointer;
+         Max_Null : constant Boolean := Value.Max = No_Field_Pointer;
       begin
-         case Value.Kind is
-            when Min_Unbounded =>
-               return SQL_Type & "(null,"
-                  & To_String (Value.MaxU, Self, Long => True)
-                  & (if Value.MaxU_Included then ",'(]')" else ",'()')");
-            when Standard =>
-               return SQL_Type & "("  --  cast
-                  & To_String (Value.Min, Self, Long => True)
-                  & ","
-                  & To_String (Value.Max, Self, Long => True)
-                  & (if Value.Min_Included then ",'[" else ",'(")
-                  & (if Value.Max_Included then "]')" else ")')");
-            when Max_Unbounded =>
-               return SQL_Type & "("  --  cast
-                  & To_String (Value.MinU, Self, Long => True)
-                  & ",null"
-                  & (if Value.MinU_Included then ",'[)')" else ",'()')");
-            when Doubly_Unbounded =>
-               return "'(,)'";
-            when Empty =>
+         if Min_Null and then Max_Null then
+            if not Value.Min_Included and then not Value.Max_Included then
                return "'empty'";
-         end case;
+            else
+               return "'(,)'";
+            end if;
+         else
+            return SQL_Type & "("  --  cast
+               & (if Min_Null
+                  then "null"
+                  else To_String (Value.Min, Self, Long => True))
+               & ","
+               & (if Max_Null
+                  then "null"
+                  else To_String (Value.Max, Self, Long => True))
+               & (if not Min_Null and then Value.Min_Included
+                  then ",'[" else ",'(")
+               & (if not Max_Null and then Value.Max_Included
+                  then "]')" else ")')");
+         end if;
       end Range_To_SQL;
 
    end Impl;
