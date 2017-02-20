@@ -97,10 +97,26 @@ package GNATCOLL.SQL_Impl is
      (Self : Formatter) return String is abstract;
    --  Return the SQL type to use for money fields depending on DBMS
 
+   function Supports_Timezone (Self  : Formatter) return Boolean;
+   --  Whether the formatter supports time zones for times. Default is True.
+
+   function Parameter_String
+     (Self       : Formatter;
+      Index      : Positive;
+      Type_Descr : String) return String is ("?");
+   --  Return the character to put before a parameter in a SQL statement, when
+   --  the value will be substituted at run time.
+   --  Typ describes the type of the parameter, and is returned by the
+   --  SQL_Parameter primitive operation Describe_Type;
+
+   generic
+      type Base_Type is digits <>;
+   function Any_Float_To_SQL
+     (Self : Formatter'Class; Value : Base_Type; Quote : Boolean)
+     return String;
+
    function Boolean_To_SQL
      (Self : Formatter'Class; Value : Boolean; Quote : Boolean) return String;
-   function Float_To_SQL
-     (Self : Formatter'Class; Value : Float; Quote : Boolean) return String;
    function Integer_To_SQL
      (Self : Formatter'Class; Value : Integer; Quote : Boolean) return String;
    function Bigint_To_SQL
@@ -123,18 +139,6 @@ package GNATCOLL.SQL_Impl is
    --  instance, the image for a string contains the string itself, unquoted,
    --  and with special characters unprotected. As a result, this is only
    --  suitable for use with parameterized queries.
-
-   function Supports_Timezone (Self  : Formatter) return Boolean;
-   --  Whether the formatter supports time zones for times. Default is True.
-
-   function Parameter_String
-     (Self       : Formatter;
-      Index      : Positive;
-      Type_Descr : String) return String is ("?");
-   --  Return the character to put before a parameter in a SQL statement, when
-   --  the value will be substituted at run time.
-   --  Typ describes the type of the parameter, and is returned by the
-   --  SQL_Parameter primitive operation Describe_Type;
 
    ----------------
    -- Parameters --
@@ -167,113 +171,34 @@ package GNATCOLL.SQL_Impl is
       (SQL_Parameter_Type'Class, Free_Dispatch);
    type SQL_Parameter_Base is new Parameters.Ref with null record;
 
+   generic
+      type Ada_Type is private;
+      SQL_Type : String;
+      with function Image
+         (Format : Formatter'Class; Value : Ada_Type; Quote : Boolean)
+         return String;
+   package Scalar_Parameters is
+      --  A helper package to create simple sql parameters. These assume
+      --  the data type is constrained, and that they map to a single SQL
+      --  type.
+
+      type SQL_Parameter is new SQL_Parameter_Type with record
+         Val     : Ada_Type;
+      end record;
+      overriding function Type_String
+         (Self   : SQL_Parameter;
+          Index  : Positive;
+          Format : Formatter'Class) return String
+         is (Format.Parameter_String (Index, SQL_Type));
+      overriding function Image
+         (Self   : SQL_Parameter;
+          Format : Formatter'Class) return String
+         is (Image (Format, Self.Val, Quote => False));
+   end Scalar_Parameters;
+
    ----------------------
    -- Parameters types --
    ----------------------
-
-   type SQL_Parameter_Integer is new SQL_Parameter_Type with record
-      Int_Val : Integer;
-   end record;
-   overriding function Type_String
-      (Self   : SQL_Parameter_Integer;
-       Index  : Positive;
-       Format : Formatter'Class) return String
-      is (Format.Parameter_String (Index, "integer"));
-   overriding function Image
-      (Self   : SQL_Parameter_Integer;
-       Format : Formatter'Class) return String
-      is (Format.Integer_To_SQL (Self.Int_Val, Quote => False));
-
-   type SQL_Parameter_Bigint is new SQL_Parameter_Type with record
-      Bigint_Val : Long_Long_Integer;
-   end record;
-   overriding function Type_String
-      (Self   : SQL_Parameter_Bigint;
-       Index  : Positive;
-       Format : Formatter'Class) return String
-      is (Format.Parameter_String (Index, "bigint"));
-   overriding function Image
-      (Self   : SQL_Parameter_Bigint;
-       Format : Formatter'Class) return String
-      is (Format.Bigint_To_SQL (Self.Bigint_Val, Quote => False));
-
-   type SQL_Parameter_Boolean is new SQL_Parameter_Type with record
-      Bool_Val   : Boolean;
-   end record;
-   overriding function Type_String
-      (Self   : SQL_Parameter_Boolean;
-       Index  : Positive;
-       Format : Formatter'Class) return String
-      is (Format.Parameter_String (Index, "boolean"));
-   overriding function Image
-      (Self   : SQL_Parameter_Boolean;
-       Format : Formatter'Class) return String
-      is (Format.Boolean_To_SQL (Self.Bool_Val, Quote => False));
-
-   type SQL_Parameter_Float is new SQL_Parameter_Type with record
-      Float_Val  : Float;
-   end record;
-   overriding function Type_String
-      (Self   : SQL_Parameter_Float;
-       Index  : Positive;
-       Format : Formatter'Class) return String
-      is (Format.Parameter_String (Index, "float"));
-   overriding function Image
-      (Self   : SQL_Parameter_Float;
-       Format : Formatter'Class) return String
-      is (Format.Float_To_SQL (Self.Float_Val, Quote => False));
-
-   type SQL_Parameter_Time is new SQL_Parameter_Type with record
-      Time_Val   : Ada.Calendar.Time;
-   end record;
-   overriding function Type_String
-      (Self   : SQL_Parameter_Time;
-       Index  : Positive;
-       Format : Formatter'Class) return String
-      is (Format.Parameter_String (Index, ""));
-   overriding function Image
-      (Self   : SQL_Parameter_Time;
-       Format : Formatter'Class) return String
-      is (Format.Time_To_SQL (Self.Time_Val, Quote => False));
-
-   type SQL_Parameter_Date is new SQL_Parameter_Type with record
-      Date_Val   : Ada.Calendar.Time;
-   end record;
-   overriding function Type_String
-      (Self   : SQL_Parameter_Date;
-       Index  : Positive;
-       Format : Formatter'Class) return String
-      is (Format.Parameter_String (Index, "date"));
-   overriding function Image
-      (Self   : SQL_Parameter_Date;
-       Format : Formatter'Class) return String
-      is (Format.Date_To_SQL (Self.Date_Val, Quote => False));
-
-   type SQL_Parameter_Character is new SQL_Parameter_Type with record
-      Char_Val   : Character;
-   end record;
-   overriding function Type_String
-      (Self   : SQL_Parameter_Character;
-       Index  : Positive;
-       Format : Formatter'Class) return String
-      is (Format.Parameter_String (Index, "text"));
-   overriding function Image
-      (Self   : SQL_Parameter_Character;
-       Format : Formatter'Class) return String
-      is (String'(1 .. 1 => Self.Char_Val));
-
-   type SQL_Parameter_Money is new SQL_Parameter_Type with record
-      Money_Val  : T_Money;
-   end record;
-   overriding function Type_String
-      (Self   : SQL_Parameter_Money;
-       Index  : Positive;
-       Format : Formatter'Class) return String
-      is (Format.Parameter_String (Index, "numeric"));
-   overriding function Image
-      (Self   : SQL_Parameter_Money;
-       Format : Formatter'Class) return String
-      is (Format.Money_To_SQL (Self.Money_Val, Quote => False));
 
    type SQL_Parameter_Text is new SQL_Parameter_Type with record
       Str_Ptr : access constant String;
@@ -298,6 +223,19 @@ package GNATCOLL.SQL_Impl is
       (Self   : SQL_Parameter_Text;
        Format : Formatter'Class) return String
       is (To_String (Self));
+
+   type SQL_Parameter_Character is new SQL_Parameter_Type with record
+      Char_Val   : Character;
+   end record;
+   overriding function Type_String
+      (Self   : SQL_Parameter_Character;
+       Index  : Positive;
+       Format : Formatter'Class) return String
+      is (Format.Parameter_String (Index, "text"));
+   overriding function Image
+      (Self   : SQL_Parameter_Character;
+       Format : Formatter'Class) return String
+      is (String'(1 .. 1 => Self.Char_Val));
 
    -------------------------------------
    -- General declarations for tables --

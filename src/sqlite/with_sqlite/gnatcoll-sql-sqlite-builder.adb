@@ -554,7 +554,7 @@ package body GNATCOLL.SQL.Sqlite.Builder is
                P2 : constant access SQL_Parameter_Integer :=
                  SQL_Parameter_Integer (Params (P).Get.Element.all)'Access;
             begin
-               Bind_Int (Stmt, P, Interfaces.C.int (P2.Int_Val));
+               Bind_Int (Stmt, P, Interfaces.C.int (P2.Val));
             end;
 
          elsif Params (P).Get in SQL_Parameter_Bigint'Class then
@@ -562,7 +562,7 @@ package body GNATCOLL.SQL.Sqlite.Builder is
                P2 : constant access SQL_Parameter_Bigint :=
                  SQL_Parameter_Bigint (Params (P).Get.Element.all)'Access;
             begin
-               Bind_Int64 (Stmt, P, Interfaces.C.long (P2.Bigint_Val));
+               Bind_Int64 (Stmt, P, Interfaces.C.long (P2.Val));
             end;
 
          elsif Params (P).Get in SQL_Parameter_Float'Class then
@@ -570,7 +570,7 @@ package body GNATCOLL.SQL.Sqlite.Builder is
                P2 : constant access SQL_Parameter_Float :=
                  SQL_Parameter_Float (Params (P).Get.Element.all)'Access;
             begin
-               Bind_Double (Stmt, P, Interfaces.C.double (P2.Float_Val));
+               Bind_Double (Stmt, P, Interfaces.C.double (P2.Val));
             end;
 
          elsif Params (P).Get in SQL_Parameter_Boolean'Class then
@@ -579,7 +579,7 @@ package body GNATCOLL.SQL.Sqlite.Builder is
                  SQL_Parameter_Boolean (Params (P).Get.Element.all)'Access;
             begin
                Bind_Int
-                 (Stmt, P, Interfaces.C.int (Boolean'Pos (P2.Bool_Val)));
+                 (Stmt, P, Interfaces.C.int (Boolean'Pos (P2.Val)));
             end;
 
          elsif Params (P).Get in SQL_Parameter_Money'Class then
@@ -588,7 +588,7 @@ package body GNATCOLL.SQL.Sqlite.Builder is
                  SQL_Parameter_Money (Params (P).Get.Element.all)'Access;
             begin
                --  In SQLite, Money type will be mapped as integer
-               Money_Int := Integer (P2.Money_Val / K_Delta);
+               Money_Int := Integer (P2.Val / K_Delta);
                Bind_Int (Stmt, P, Interfaces.C.int (Money_Int));
             end;
 

@@ -57,7 +57,4 @@ package body GNATCOLL.SQL_Fields is
       end if;
    end XML_To_SQL;
 
-begin
-   Register_Field_Type (Field_Type_Json'(null record));
-   Register_Field_Type (Field_Type_XML'(null record));
 end GNATCOLL.SQL_Fields;

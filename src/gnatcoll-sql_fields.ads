@@ -29,6 +29,31 @@ with GNATCOLL.SQL.Exec;    use GNATCOLL.SQL.Exec;
 
 package GNATCOLL.SQL_Fields is
 
+   ----------------------
+   -- Double precision --
+   ----------------------
+
+   function Long_Float_To_SQL is new Any_Float_To_SQL (Long_Long_Float);
+
+   package Long_Float_Parameters is new Scalar_Parameters
+      (Long_Long_Float, "double precision", Long_Float_To_SQL);
+   subtype SQL_Parameter_Long_Float is Long_Float_Parameters.SQL_Parameter;
+
+   package Long_Float_Field_Mappings is new Simple_Field_Mappings
+      ("double precision",
+       "GNATCOLL.SQL_Fields.SQL_Field_Long_Float",
+       SQL_Parameter_Long_Float);
+
+   package Long_Float_Fields is new Field_Types
+     (Long_Long_Float, Long_Float_To_SQL, SQL_Parameter_Long_Float);
+
+   type SQL_Field_Long_Float is new Long_Float_Fields.Field with null record;
+   Null_Field_Long_Float : constant SQL_Field_Long_Float :=
+     (Long_Float_Fields.Null_Field with null record);
+   function Long_Float_Param (Index : Positive)
+      return Long_Float_Fields.Field'Class
+      renames Long_Float_Fields.Param;
+
    -----------------
    -- JSON fields --
    -----------------
@@ -47,20 +72,10 @@ package GNATCOLL.SQL_Fields is
       Format : Formatter'Class) return String
      is (Json_To_SQL (Format, To_String (Self), Quote => False));
 
-   type Field_Type_Json is new Field_Type with null record;
-   overriding function Type_To_SQL
-     (Self         : Field_Type_Json;
-      Format       : access Formatter'Class := null;
-      For_Database : Boolean := True) return String
-     is (if For_Database
-         then "Json"
-         else "GNATCOLL.SQL_Fields.SQL_Field_Json");
-   overriding function Type_From_SQL
-     (Self : in out Field_Type_Json; Str : String) return Boolean
-     is (Str = "json");
-   overriding function Parameter_Type
-     (Self : Field_Type_Json) return SQL_Parameter_Type'Class
-     is (SQL_Parameter_Json'(others => <>));
+   package JSON_Field_Mappings is new Simple_Field_Mappings
+      ("json",
+       "GNATCOLL.SQL_Fields.SQL_Field_Json",
+       SQL_Parameter_Json);
 
    package Json_Fields is new Field_Types
      (String, Json_To_SQL, SQL_Parameter_Json);
@@ -92,20 +107,10 @@ package GNATCOLL.SQL_Fields is
       Format : Formatter'Class) return String
      is (XML_To_SQL (Format, To_String (Self), Quote => False));
 
-   type Field_Type_XML is new Field_Type with null record;
-   overriding function Type_To_SQL
-     (Self         : Field_Type_XML;
-      Format       : access Formatter'Class := null;
-      For_Database : Boolean := True) return String
-     is (if For_Database
-         then "XML"
-         else "GNATCOLL.SQL_Fields.SQL_Field_XML");
-   overriding function Type_From_SQL
-     (Self : in out Field_Type_XML; Str : String) return Boolean
-     is (Str = "xml");
-   overriding function Parameter_Type
-     (Self : Field_Type_XML) return SQL_Parameter_Type'Class
-     is (SQL_Parameter_XML'(others => <>));
+   package XML_Field_Mappings is new Simple_Field_Mappings
+      ("xml",
+       "GNATCOLL.SQL_Fields.SQL_Field_XML",
+       SQL_Parameter_XML);
 
    package XML_Fields is new Field_Types
      (String, XML_To_SQL, SQL_Parameter_XML);

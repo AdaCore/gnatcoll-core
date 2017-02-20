@@ -169,6 +169,4 @@ package body GNATCOLL.SQL.Ranges is
       end if;
    end Range_Value;
 
-begin
-   Register_Field_Type (Field_Type_Range'(null record));
 end GNATCOLL.SQL.Ranges;

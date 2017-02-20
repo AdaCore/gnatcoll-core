@@ -1845,7 +1845,7 @@ package body GNATCOLL.SQL.Exec is
       R : SQL_Parameter;
       P : SQL_Parameter_Integer;
    begin
-      P.Int_Val := Value;
+      P.Val := Value;
       R.Set (P);
       return R;
    end "+";
@@ -1858,7 +1858,7 @@ package body GNATCOLL.SQL.Exec is
       R : SQL_Parameter;
       P : SQL_Parameter_Bigint;
    begin
-      P.Bigint_Val := Value;
+      P.Val := Value;
       R.Set (P);
       return R;
    end As_Bigint;
@@ -1871,7 +1871,7 @@ package body GNATCOLL.SQL.Exec is
       R : SQL_Parameter;
       P : SQL_Parameter_Boolean;
    begin
-      P.Bool_Val := Value;
+      P.Val := Value;
       R.Set (P);
       return R;
    end "+";
@@ -1884,7 +1884,7 @@ package body GNATCOLL.SQL.Exec is
       R : SQL_Parameter;
       P : SQL_Parameter_Float;
    begin
-      P.Float_Val := Value;
+      P.Val := Value;
       R.Set (P);
       return R;
    end "+";
@@ -1910,7 +1910,7 @@ package body GNATCOLL.SQL.Exec is
       R : SQL_Parameter;
       P : SQL_Parameter_Time;
    begin
-      P.Time_Val := Time;
+      P.Val := Time;
       R.Set (P);
       return R;
    end "+";
@@ -1923,7 +1923,7 @@ package body GNATCOLL.SQL.Exec is
       R : SQL_Parameter;
       P : SQL_Parameter_Money;
    begin
-      P.Money_Val := Value;
+      P.Val := Value;
       R.Set (P);
       return R;
    end "+";

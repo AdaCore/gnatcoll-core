@@ -1514,13 +1514,13 @@ package body GNATCOLL.SQL_Impl is
       return Boolean_Image (Self, Value);
    end Boolean_To_SQL;
 
-   ------------------
-   -- Float_To_SQL --
-   ------------------
+   ----------------------
+   -- Any_Float_To_SQL --
+   ----------------------
 
-   function Float_To_SQL
+   function Any_Float_To_SQL
      (Self  : Formatter'Class;
-      Value : Float;
+      Value : Base_Type;
       Quote : Boolean) return String
    is
       pragma Unreferenced (Self, Quote);
@@ -1530,14 +1530,14 @@ package body GNATCOLL.SQL_Impl is
          return "'Nan'";
 
       --  -Inf ?
-      elsif Value < Float'First then
+      elsif Value < Base_Type'First then
          return "'-Infinity'";
-      elsif Value > Float'Last then
+      elsif Value > Base_Type'Last then
          return "'Infinity'";
       end if;
 
       declare
-         Img : constant String := Float'Image (Value);
+         Img : constant String := Base_Type'Image (Value);
       begin
          if Img (Img'First) = ' ' then
             return Img (Img'First + 1 .. Img'Last);
@@ -1545,7 +1545,7 @@ package body GNATCOLL.SQL_Impl is
             return Img;
          end if;
       end;
-   end Float_To_SQL;
+   end Any_Float_To_SQL;
 
    --------------------
    -- Integer_To_SQL --

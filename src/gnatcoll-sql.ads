@@ -209,6 +209,9 @@ package GNATCOLL.SQL is
    --  Specify a specific sort order. This is only used in the Order_By clause
    --  of a Select statement
 
+   package Integer_Parameters is new Scalar_Parameters
+      (Integer, "integer", Integer_To_SQL);
+   subtype SQL_Parameter_Integer is Integer_Parameters.SQL_Parameter;
    package Integer_Fields is new Field_Types
      (Integer, Integer_To_SQL, SQL_Parameter_Integer);
    type SQL_Field_Integer is new Integer_Fields.Field with null record;
@@ -216,6 +219,9 @@ package GNATCOLL.SQL is
    function Integer_Param (Index : Positive) return Integer_Fields.Field'Class
                            renames Integer_Fields.Param;
 
+   package Bigint_Parameters is new Scalar_Parameters
+      (Long_Long_Integer, "bigint", Bigint_To_SQL);
+   subtype SQL_Parameter_Bigint is Bigint_Parameters.SQL_Parameter;
    package Bigint_Fields is new Field_Types
      (Long_Long_Integer, Bigint_To_SQL, SQL_Parameter_Bigint);
    type SQL_Field_Bigint is new Bigint_Fields.Field with null record;
@@ -230,6 +236,9 @@ package GNATCOLL.SQL is
    function Text_Param (Index : Positive) return Text_Fields.Field'Class
                         renames Text_Fields.Param;
 
+   package Boolean_Parameters is new Scalar_Parameters
+      (Boolean, "boolean", Boolean_To_SQL);
+   subtype SQL_Parameter_Boolean is Boolean_Parameters.SQL_Parameter;
    package Boolean_Fields is new Field_Types
      (Boolean, Boolean_To_SQL, SQL_Parameter_Boolean);
    type SQL_Field_Boolean is new Boolean_Fields.Field with null record;
@@ -237,6 +246,10 @@ package GNATCOLL.SQL is
    function Boolean_Param (Index : Positive) return Boolean_Fields.Field'Class
                            renames Boolean_Fields.Param;
 
+   function Float_To_SQL is new Any_Float_To_SQL (Float);
+   package Float_Parameters is new Scalar_Parameters
+      (Float, "float", Float_To_SQL);
+   subtype SQL_Parameter_Float is Float_Parameters.SQL_Parameter;
    package Float_Fields is new Field_Types
      (Float, Float_To_SQL, SQL_Parameter_Float);
    type SQL_Field_Float is new Float_Fields.Field with null record;
@@ -262,6 +275,9 @@ package GNATCOLL.SQL is
    --  Make this type visible here, so that users do not have to explicitly
    --  'with' GNATCOLL.SQL_Impl.
 
+   package Money_Parameters is new Scalar_Parameters
+      (T_Money, "numeric", Money_To_SQL);
+   subtype SQL_Parameter_Money is Money_Parameters.SQL_Parameter;
    package Money_Fields is new Field_Types
      (T_Money, Money_To_SQL, SQL_Parameter_Money);
    type SQL_Field_Money is new Money_Fields.Field with null record;
@@ -269,6 +285,9 @@ package GNATCOLL.SQL is
    function Money_Param (Index : Positive) return Money_Fields.Field'Class
                          renames Money_Fields.Param;
 
+   package Time_Parameters is new Scalar_Parameters
+      (Ada.Calendar.Time, "timestamp", Time_To_SQL);
+   subtype SQL_Parameter_Time is Time_Parameters.SQL_Parameter;
    package Time_Fields is new Field_Types
      (Ada.Calendar.Time, Time_To_SQL, SQL_Parameter_Time);
    type SQL_Field_Time is new Time_Fields.Field with null record;
@@ -277,6 +296,9 @@ package GNATCOLL.SQL is
                         renames Time_Fields.Param;
    --  A timestamp, ie date + time
 
+   package Date_Parameters is new Scalar_Parameters
+      (Ada.Calendar.Time, "date", Date_To_SQL);
+   subtype SQL_Parameter_Date is Date_Parameters.SQL_Parameter;
    package Date_Fields is new Field_Types
      (Ada.Calendar.Time, Date_To_SQL, SQL_Parameter_Date);
    type SQL_Field_Date is new Date_Fields.Field with null record;

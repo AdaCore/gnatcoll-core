@@ -44,9 +44,9 @@ package body GNATCOLL.SQL.Inspect is
    use Tables_Maps, Field_Lists, Foreign_Refs;
    use Foreign_Keys, Pair_Lists, Tables_Lists;
 
-   package Field_Type_Vectors is new Ada.Containers.Indefinite_Vectors
-     (Positive, Field_Type'Class);
-   All_Field_Types : Field_Type_Vectors.Vector;
+   package Field_Mapping_Vectors is new Ada.Containers.Indefinite_Vectors
+     (Positive, Field_Mapping'Class);
+   All_Field_Mappings : Field_Mapping_Vectors.Vector;
    --  When you create new field types, they should be registered in this list.
    --  Put an uninitialized instance of the field type in the list. A copy of
    --  it will be used to call Type_From_SQL when parsing the database schema.
@@ -106,13 +106,59 @@ package body GNATCOLL.SQL.Inspect is
    procedure Format_Field
      (DB       : access Database_Connection_Record'Class;
       Value    : String;
-      Typ      : Field_Type'Class;
+      Typ      : Field_Mapping'Class;
       Val      : out GNAT.Strings.String_Access;
       Param    : out SQL_Parameter;
       Has_Xref : Boolean);
    --  Format a value for proper use in SQL.
    --  This translates boolean values "true" and "false" as appropriate for
    --  the backend.
+
+   ----------------------------
+   -- Register_Field_Mapping --
+   ----------------------------
+
+   procedure Register_Field_Mapping (Self : Field_Mapping'Class) is
+   begin
+      All_Field_Mappings.Append (Self);
+   end Register_Field_Mapping;
+
+   ---------------------------
+   -- Simple_Field_Mappings --
+   ---------------------------
+
+   package body Simple_Field_Mappings is
+
+      --------------------
+      -- Parameter_Type --
+      --------------------
+
+      overriding function Parameter_Type
+        (Self : Simple_Field_Mapping) return SQL_Parameter_Type'Class
+      is
+         pragma Unreferenced (Self);
+         Dummy : Param_Type;
+         --  intentionally uninitialized, only the specific type is relevant
+         --  as return value
+      begin
+         return Dummy;
+      end Parameter_Type;
+
+   begin
+      Register_Field_Mapping
+         (Simple_Field_Mapping'(Field_Mapping with null record));
+   end Simple_Field_Mappings;
+
+   package Bigint_Mappings is new Simple_Field_Mappings
+     ("bigint", "SQL_Field_Bigint", SQL_Parameter_Bigint);
+   package Boolean_Mappings is new GNATCOLL.SQL.Inspect.Simple_Field_Mappings
+     ("boolean", "SQL_Field_Boolean", SQL_Parameter_Boolean);
+   package Time_Mappings is new Simple_Field_Mappings
+     ("time", "SQL_Field_Time", SQL_Parameter_Time);
+   package Date_Mappings is new Simple_Field_Mappings
+     ("date", "SQL_Field_Date", SQL_Parameter_Date);
+   pragma Unreferenced (Bigint_Mappings, Time_Mappings, Date_Mappings);
+   --  The side effect is to register the mappings
 
    ---------
    -- EOW --
@@ -183,19 +229,19 @@ package body GNATCOLL.SQL.Inspect is
    -- Get_Type --
    --------------
 
-   function Get_Type (Self : Field) return Field_Type_Access is
+   function Get_Type (Self : Field) return Field_Mapping_Access is
       FK : constant Field := Self.Is_FK;
-      T  : Field_Type_Access;
+      T  : Field_Mapping_Access;
    begin
       if FK = No_Field then
          return Self.Get.Typ;
       else
          T := Get_Type (FK);
-         if T.all in Field_Type_Autoincrement'Class then
+         if T.all in Field_Mapping_Autoincrement'Class then
             --  Do not return T itself, or the table would end up with two
             --  primary keys (since autoincrement fields are only used for
             --  primary keys).
-            return new Field_Type_Integer;   --   ??? memory leak
+            return new Field_Mapping_Integer;   --   ??? memory leak
          else
             return T;
          end if;
@@ -314,7 +360,7 @@ package body GNATCOLL.SQL.Inspect is
 
    procedure Free (Self : in out Field_Description) is
       procedure Unchecked_Free is new Ada.Unchecked_Deallocation
-         (Field_Type'Class, Field_Type_Access);
+         (Field_Mapping'Class, Field_Mapping_Access);
    begin
       Free (Self.Name);
       Free (Self.Description);
@@ -569,7 +615,7 @@ package body GNATCOLL.SQL.Inspect is
    -------------------
 
    overriding function Type_From_SQL
-      (Self : in out Field_Type_Text; Str : String) return Boolean
+      (Self : in out Field_Mapping_Text; Str : String) return Boolean
    is
    begin
       if Str = "text"
@@ -616,7 +662,7 @@ package body GNATCOLL.SQL.Inspect is
    -------------------
 
    overriding function Type_From_SQL
-      (Self : in out Field_Type_Integer; Str : String) return Boolean
+      (Self : in out Field_Mapping_Integer; Str : String) return Boolean
    is
       pragma Unreferenced (Self);
    begin
@@ -644,11 +690,11 @@ package body GNATCOLL.SQL.Inspect is
    -------------------
 
    overriding function Type_From_SQL
-      (Self : in out Field_Type_Float; Str : String) return Boolean
+      (Self : in out Field_Mapping_Float; Str : String) return Boolean
    is
       pragma Unreferenced (Self);
    begin
-      if Str = "float" or else Str = "double precision" then
+      if Str = "float" then
          return True;
 
       elsif Str'Length >= 7
@@ -669,14 +715,14 @@ package body GNATCOLL.SQL.Inspect is
    -- From_SQL --
    --------------
 
-   function From_SQL (SQL_Type : String) return Field_Type_Access is
+   function From_SQL (SQL_Type : String) return Field_Mapping_Access is
       T     : constant String := To_Lower (SQL_Type);
    begin
       --  Go into reverse order, so that custom fields take precedence
       --  over the predefined fields
-      for F of reverse All_Field_Types loop
+      for F of reverse All_Field_Mappings loop
          if F.Type_From_SQL (T) then
-            return new Field_Type'Class'(F);
+            return new Field_Mapping'Class'(F);
          end if;
       end loop;
       return null;
@@ -712,7 +758,7 @@ package body GNATCOLL.SQL.Inspect is
       is
          Descr : Field_Description;
          Ref   : Field;
-         T     : constant Field_Type_Access := From_SQL (Typ);
+         T     : constant Field_Mapping_Access := From_SQL (Typ);
       begin
          if T = null then
             Put_Line ("Error: unknown field type " & Typ);
@@ -954,7 +1000,7 @@ package body GNATCOLL.SQL.Inspect is
    procedure Format_Field
      (DB       : access Database_Connection_Record'Class;
       Value    : String;
-      Typ      : Field_Type'Class;
+      Typ      : Field_Mapping'Class;
       Val      : out GNAT.Strings.String_Access;
       Param    : out SQL_Parameter;
       Has_Xref : Boolean)
@@ -962,7 +1008,7 @@ package body GNATCOLL.SQL.Inspect is
       V : constant String := To_Lower (Value);
       B : Boolean;
    begin
-      if Typ in Field_Type_Boolean'Class then
+      if Typ in Boolean_Mappings.Simple_Field_Mapping'Class then
          if V = "true" or else V = "false" then
             B := Boolean'Value (Value);
             Val := new String'(Boolean_Image (DB.all, B));
@@ -988,11 +1034,11 @@ package body GNATCOLL.SQL.Inspect is
             Param := Null_Parameter;
          end if;
 
-      elsif Typ in Field_Type_Integer'Class then
+      elsif Typ in Field_Mapping_Integer'Class then
          Val := new String'(Value);
          Param := +Val;
 
-      elsif Typ in Field_Type_Money'Class then
+      elsif Typ in Field_Mapping_Money'Class then
          Param := +T_Money'Value (Value);
          Val := new String'(Param.Get.Image (DB.all));
 
@@ -1847,9 +1893,9 @@ package body GNATCOLL.SQL.Inspect is
          procedure Print_PK (F : in out Field) is
          begin
             --  Auto increment fields were already setup as primary keys
-            --  via Field_Type_Autoincrement primitive operation.
+            --  via Field_Mapping_Autoincrement primitive operation.
             if F.Is_PK
-              and then F.Get_Type.all not in Field_Type_Autoincrement'Class
+              and then F.Get_Type.all not in Field_Mapping_Autoincrement'Class
             then
                if SQL_PK = Null_Unbounded_String then
                   Append (SQL_PK, '"' & F.Name & '"');
@@ -1975,7 +2021,7 @@ package body GNATCOLL.SQL.Inspect is
          FK : constant Field := Attr.Is_FK;
       begin
          if FK = No_Field then
-            if Attr.Get_Type.all in Field_Type_Autoincrement'Class then
+            if Attr.Get_Type.all in Field_Mapping_Autoincrement'Class then
                return "AUTOINCREMENT";
             else
                return Attr.Get_Type.Type_To_SQL
@@ -2268,8 +2314,8 @@ package body GNATCOLL.SQL.Inspect is
       Xref       : String_List (1 .. Max_Fields_Per_Line);
       Xref_Count : Natural := Xref'First - 1;
       Paren      : Natural;
-      DB_Field_Types : array (Line'First .. Max_Fields_Per_Line)
-        of Field_Type_Access;
+      DB_Field_Mappings : array (Line'First .. Max_Fields_Per_Line)
+        of Field_Mapping_Access;
 
       --  TODO : convert for parameter_decimal
       Tmp_DB_Fields_Count : Natural := DB_Fields'First - 1;
@@ -2376,7 +2422,7 @@ package body GNATCOLL.SQL.Inspect is
                begin
                   for L in DB_Fields'First .. DB_Fields_Count loop
                      if DB_Fields (L).all = N then
-                        DB_Field_Types (L) := F.Get_Type;
+                        DB_Field_Mappings (L) := F.Get_Type;
                         return;
                      end if;
                   end loop;
@@ -2389,13 +2435,13 @@ package body GNATCOLL.SQL.Inspect is
                  (On_Field'Access, Include_Inherited => True);
             end;
 
-            --  Set Select_Values and DB_Values according to DB_Field_Types
+            --  Set Select_Values and DB_Values according to DB_Field_Mappings
             for L in Line'First .. Fields_Count loop
                exit when Line (L).all = "";
 
                declare
                   Param : constant SQL_Parameter_Type'Class :=
-                    DB_Field_Types (L).Parameter_Type;
+                    DB_Field_Mappings (L).Parameter_Type;
                   P     : constant String :=
                     Param.Type_String (Index => L, Format => DB.all);
 
@@ -2505,7 +2551,7 @@ package body GNATCOLL.SQL.Inspect is
                      Format_Field
                        (DB,
                         Line (L).all,
-                        DB_Field_Types (L).all,
+                        DB_Field_Mappings (L).all,
                         Vals (L),
                         Values (L),
                         Has_Xref => Use_Custom);
@@ -3153,24 +3199,11 @@ package body GNATCOLL.SQL.Inspect is
       Free (Self);
    end Free_Dispatch;
 
-   -------------------------
-   -- Register_Field_Type --
-   -------------------------
-
-   procedure Register_Field_Type (Self : Field_Type'Class) is
-   begin
-      All_Field_Types.Append (Self);
-   end Register_Field_Type;
-
 begin
-   Register_Field_Type (Field_Type_Text'(others => <>));
-   Register_Field_Type (Field_Type_Integer'(null record));
-   Register_Field_Type (Field_Type_Autoincrement'(null record));
-   Register_Field_Type (Field_Type_Bigint'(null record));
-   Register_Field_Type (Field_Type_Date'(null record));
-   Register_Field_Type (Field_Type_Time'(null record));
-   Register_Field_Type (Field_Type_Timestamp'(null record));
-   Register_Field_Type (Field_Type_Float'(null record));
-   Register_Field_Type (Field_Type_Boolean'(null record));
-   Register_Field_Type (Field_Type_Money'(null record));
+   Register_Field_Mapping (Field_Mapping_Text'(others => <>));
+   Register_Field_Mapping (Field_Mapping_Integer'(null record));
+   Register_Field_Mapping (Field_Mapping_Autoincrement'(null record));
+   Register_Field_Mapping (Field_Mapping_Timestamp'(null record));
+   Register_Field_Mapping (Field_Mapping_Float'(null record));
+   Register_Field_Mapping (Field_Mapping_Money'(null record));
 end GNATCOLL.SQL.Inspect;
