@@ -66,16 +66,16 @@ package body GNATCOLL.Xref.Database is
          & "|TABLE| entity_kinds" & ASCII.LF
          & "|id|Character(1)|PK||" & ASCII.LF
          & "|display|Text|NOT NULL,NOINDEX||" & ASCII.LF
-         & "|is_subprogram|boolean|,NOINDEX|false|" & ASCII.LF
-         & "|is_container|boolean|,NOINDEX|false|" & ASCII.LF
-         & "|body_is_full_declaration|boolean|,NOINDEX|false|" & ASCII.LF
-         & "|is_abstract|boolean|,NOINDEX|false|" & ASCII.LF
-         & "|is_generic|boolean|,NOINDEX|false|" & ASCII.LF
-         & "|is_access|boolean|,NOINDEX|false|" & ASCII.LF
-         & "|is_type|boolean|,NOINDEX|false|" & ASCII.LF
-         & "|is_printable_in_gdb|boolean|,NOINDEX|false|" & ASCII.LF
-         & "|is_array|boolean|,NOINDEX|false|" & ASCII.LF
-         & "|has_methods|boolean|,NOINDEX|false|" & ASCII.LF
+         & "|is_subprogram|Boolean|,NOINDEX|false|" & ASCII.LF
+         & "|is_container|Boolean|,NOINDEX|false|" & ASCII.LF
+         & "|body_is_full_declaration|Boolean|,NOINDEX|false|" & ASCII.LF
+         & "|is_abstract|Boolean|,NOINDEX|false|" & ASCII.LF
+         & "|is_generic|Boolean|,NOINDEX|false|" & ASCII.LF
+         & "|is_access|Boolean|,NOINDEX|false|" & ASCII.LF
+         & "|is_type|Boolean|,NOINDEX|false|" & ASCII.LF
+         & "|is_printable_in_gdb|Boolean|,NOINDEX|false|" & ASCII.LF
+         & "|is_array|Boolean|,NOINDEX|false|" & ASCII.LF
+         & "|has_methods|Boolean|,NOINDEX|false|" & ASCII.LF
          & "" & ASCII.LF
          & "|TABLE| entities" & ASCII.LF
          & "|id|AUTOINCREMENT|PK||" & ASCII.LF
@@ -86,9 +86,9 @@ package body GNATCOLL.Xref.Database is
          & "|decl_column|Integer|NOT NULL,NOINDEX||" & ASCII.LF
          & "|decl_caller|FK entities|,NOINDEX||" & ASCII.LF
          & "|mangled_name|Text|||" & ASCII.LF
-         & "|exported|boolean|NOT NULL,NOINDEX|false|" & ASCII.LF
-         & "|is_global|boolean|NOT NULL,NOINDEX|false|" & ASCII.LF
-         & "|is_static_local|boolean|NOT NULL,NOINDEX|false|" & ASCII.LF
+         & "|exported|Boolean|NOT NULL,NOINDEX|false|" & ASCII.LF
+         & "|is_global|Boolean|NOT NULL,NOINDEX|false|" & ASCII.LF
+         & "|is_static_local|Boolean|NOT NULL,NOINDEX|false|" & ASCII.LF
          & "|INDEX:|decl_file,decl_line,decl_column|entity_loc" & ASCII.LF
          & "|INDEX:|decl_caller|entity_decl_caller" & ASCII.LF
          & "" & ASCII.LF
@@ -107,13 +107,13 @@ package body GNATCOLL.Xref.Database is
          & "|TABLE| reference_kinds" & ASCII.LF
          & "|id|Character(1)|PK||" & ASCII.LF
          & "|display|Text|NOT NULL,NOINDEX||" & ASCII.LF
-         & "|is_real|boolean|,NOINDEX|true|" & ASCII.LF
-         & "|is_read|boolean|,NOINDEX|false|" & ASCII.LF
-         & "|is_write|boolean|,NOINDEX|false|" & ASCII.LF
-         & "|is_end|boolean|,NOINDEX|false|" & ASCII.LF
-         & "|show_in_callgraph|boolean|,NOINDEX|true|" & ASCII.LF
-         & "|is_dispatching|boolean|,NOINDEX|false|" & ASCII.LF
-         & "|is_implicit|boolean|,NOINDEX|false|" & ASCII.LF
+         & "|is_real|Boolean|,NOINDEX|true|" & ASCII.LF
+         & "|is_read|Boolean|,NOINDEX|false|" & ASCII.LF
+         & "|is_write|Boolean|,NOINDEX|false|" & ASCII.LF
+         & "|is_end|Boolean|,NOINDEX|false|" & ASCII.LF
+         & "|show_in_callgraph|Boolean|,NOINDEX|true|" & ASCII.LF
+         & "|is_dispatching|Boolean|,NOINDEX|false|" & ASCII.LF
+         & "|is_implicit|Boolean|,NOINDEX|false|" & ASCII.LF
          & "" & ASCII.LF
          & "|TABLE| entity_refs" & ASCII.LF
          & "|entity|FK entities|NOT NULL,NOINDEX||" & ASCII.LF

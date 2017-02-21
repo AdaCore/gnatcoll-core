@@ -68,6 +68,9 @@ is
    --  Print the Ada subprogram that recreates the database and its initial
    --  contents.
 
+   procedure Process_Tables;
+   --  Generate the Ada mapping for all the SQL tables
+
    -------------------
    -- Print_Comment --
    -------------------
