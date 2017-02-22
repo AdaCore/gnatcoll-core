@@ -43,7 +43,7 @@ shared relocatable: build_library_type/relocatable
 
 # Build either type of library. The argument (%) is the type of library to build
 
-GPRBLD_OPTS=-p -m -j${PROCESSORS} -XLIBRARY_TYPE=$(@F) -XGnatcoll_Build=${Gnatcoll_Build}
+GPRBLD_OPTS=-p -m -j${PROCESSORS} -XLIBRARY_TYPE=$(@F) -XGnatcoll_Build=${Gnatcoll_Build} -XXMLADA_BUILD=$(@F)
 
 build_library_type/%: generate_sources
 	@${RM} src/gnatcoll-atomic.adb
@@ -69,7 +69,7 @@ build_tools/%: build_library_type/%
 #  install
 
 GPRINST_OPTS=-p -f --prefix=${prefix} --install-name=gnatcoll \
-	--exec-subdir=${bindir} --project-subdir=lib/gnat \
+	--exec-subdir=${bindir} --project-subdir=lib/gnat -XXMLADA_BUILD=$(@F) \
 	--build-var=LIBRARY_TYPE --build-name=$(@F) -XLIBRARY_TYPE=$(@F)
 
 install-clean:
