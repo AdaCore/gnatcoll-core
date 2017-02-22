@@ -1086,22 +1086,45 @@ package body GNATCOLL.SQL is
    ------------
 
    function Length (Self : SQL_Criteria) return Natural is
+      use type SQL_Criteria_Data_Access;
+      Ptr : constant SQL_Criteria_Data_Access := Get_Data (Self);
    begin
-      if Self = No_Criteria then
+      if Ptr = null then
          return 0;
       end if;
 
-      declare
-         Data : constant SQL_Criteria_Data :=
-           SQL_Criteria_Data (Get_Data (Self).all);
-      begin
-         if Data.Op in Criteria_Criteria then
-            return Natural (Data.Criterias.Length);
-         else
-            return 1;
-         end if;
-      end;
+      if Ptr.all in SQL_Criteria_Data'Class
+        and then SQL_Criteria_Data (Ptr.all).Op in Criteria_Criteria
+      then
+         return Natural (SQL_Criteria_Data (Ptr.all).Criterias.Length);
+      else
+         return 1;
+      end if;
    end Length;
+
+   -----------
+   -- Is_Or --
+   -----------
+
+   function Is_Or (Self : SQL_Criteria) return Boolean is
+      use type SQL_Criteria_Data_Access;
+      Ptr : constant SQL_Criteria_Data_Access := Get_Data (Self);
+   begin
+      return Ptr /= null and then Ptr.all in SQL_Criteria_Data'Class
+        and then SQL_Criteria_Data (Ptr.all).Op = Criteria_Or;
+   end Is_Or;
+
+   ------------
+   -- Is_And --
+   ------------
+
+   function Is_And (Self : SQL_Criteria) return Boolean is
+      use type SQL_Criteria_Data_Access;
+      Ptr : constant SQL_Criteria_Data_Access := Get_Data (Self);
+   begin
+      return Ptr /= null and then Ptr.all in SQL_Criteria_Data'Class
+        and then SQL_Criteria_Data (Ptr.all).Op = Criteria_And;
+   end Is_And;
 
    -------------
    -- Combine --

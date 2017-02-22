@@ -611,6 +611,14 @@ package GNATCOLL.SQL is
    --  Returns number of criteria on the upper level delimited by the same
    --  logical operator "OR" or "AND".
 
+   function Is_Or (Self : SQL_Criteria) return Boolean;
+   --  Returns true if the Self is criteria delimited by the OR operator on the
+   --  upper level.
+
+   function Is_And (Self : SQL_Criteria) return Boolean;
+   --  Returns true if the Self is criteria delimited by the AND operator on
+   --  the upper level.
+
    function Greater_Than
      (Left : SQL_Field'Class; Right : Integer) return SQL_Criteria
       renames Integer_Fields.Greater_Than;
