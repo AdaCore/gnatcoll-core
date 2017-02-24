@@ -112,6 +112,24 @@ package GNATCOLL.SQL is
 
    subtype SQL_Criteria is GNATCOLL.SQL_Impl.SQL_Criteria;
 
+   type SQL_Criteria_Type is (Criteria_And,
+                              Criteria_Or,
+                              Criteria_In,
+                              Criteria_Not_In,
+                              Criteria_Between,
+                              Criteria_Not_Between,
+                              Criteria_Null,
+                              Criteria_Not_Null,
+                              Criteria_Not);
+
+   subtype Criteria_Combine
+     is SQL_Criteria_Type range Criteria_And .. Criteria_Or;
+
+   package Criteria_Lists is new Ada.Containers.Vectors
+     (Positive, SQL_Criteria);
+
+   subtype Criteria_List is Criteria_Lists.Vector;
+
    type SQL_Query is tagged private;
    --  A tagged type representing a query. This is a tagged type so that you
    --  can use the dotted notation of Ada05 to call its primitive operations,
@@ -619,6 +637,10 @@ package GNATCOLL.SQL is
    --  Returns true if the Self is criteria delimited by the AND operator on
    --  the upper level.
 
+   function Combine
+     (List : Criteria_List; Op : Criteria_Combine) return SQL_Criteria;
+   --  Returns SQL_Criteria combined from List with a specific operator
+
    function Greater_Than
      (Left : SQL_Field'Class; Right : Integer) return SQL_Criteria
       renames Integer_Fields.Greater_Than;
@@ -999,28 +1021,14 @@ private
    -- Criteria --
    --------------
 
-   type SQL_Criteria_Type is (Criteria_And,
-                              Criteria_Or,
-                              Criteria_In,
-                              Criteria_Not_In,
-                              Criteria_Between,
-                              Criteria_Not_Between,
-                              Criteria_Null,
-                              Criteria_Not_Null,
-                              Criteria_Not);
-   subtype Criteria_Criteria
-     is SQL_Criteria_Type range Criteria_And .. Criteria_Or;
    subtype Null_Criteria
      is SQL_Criteria_Type range Criteria_Null .. Criteria_Not_Null;
-
-   package Criteria_List is new Ada.Containers.Vectors
-     (Natural, SQL_Criteria);
 
    type SQL_Criteria_Data (Op : SQL_Criteria_Type) is
       new GNATCOLL.SQL_Impl.SQL_Criteria_Data with record
       case Op is
-         when Criteria_Criteria =>
-            Criterias : Criteria_List.Vector;
+         when Criteria_Combine =>
+            Criterias : Criteria_List;
 
          when Criteria_In | Criteria_Not_In =>
             Arg       : SQL_Field_Pointer;

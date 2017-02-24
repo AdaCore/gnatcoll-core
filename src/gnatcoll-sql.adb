@@ -28,7 +28,7 @@ with GNAT.Strings;               use GNAT.Strings;
 
 package body GNATCOLL.SQL is
 
-   use Table_List, Field_List, Criteria_List, Table_Sets;
+   use Table_List, Field_List, Criteria_Lists, Table_Sets;
    use When_Lists, Query_Pointers;
    use type Boolean_Fields.Field;
 
@@ -44,7 +44,7 @@ package body GNATCOLL.SQL is
      (SQL_Table'Class, SQL_Table_Access);
 
    function Combine
-     (Left, Right : SQL_Criteria; Op : SQL_Criteria_Type) return SQL_Criteria;
+     (Left, Right : SQL_Criteria; Op : Criteria_Combine) return SQL_Criteria;
    --  Combine the two criterias with a specific operator.
 
    procedure Append_Tables
@@ -1094,7 +1094,7 @@ package body GNATCOLL.SQL is
       end if;
 
       if Ptr.all in SQL_Criteria_Data'Class
-        and then SQL_Criteria_Data (Ptr.all).Op in Criteria_Criteria
+        and then SQL_Criteria_Data (Ptr.all).Op in Criteria_Combine
       then
          return Natural (SQL_Criteria_Data (Ptr.all).Criterias.Length);
       else
@@ -1131,12 +1131,25 @@ package body GNATCOLL.SQL is
    -------------
 
    function Combine
-     (Left, Right : SQL_Criteria; Op : SQL_Criteria_Type) return SQL_Criteria
+     (List : Criteria_List; Op : Criteria_Combine) return SQL_Criteria
    is
-      List : Criteria_List.Vector;
-      C    : Criteria_List.Cursor;
       Result : SQL_Criteria;
       Data   : SQL_Criteria_Data (Op);
+   begin
+      Data.Criterias := List;
+      Set_Data (Result, Data);
+      return Result;
+   end Combine;
+
+   -------------
+   -- Combine --
+   -------------
+
+   function Combine
+     (Left, Right : SQL_Criteria; Op : Criteria_Combine) return SQL_Criteria
+   is
+      List : Criteria_List;
+      C    : Criteria_Lists.Cursor;
    begin
       if Left = No_Criteria then
          return Right;
@@ -1171,9 +1184,7 @@ package body GNATCOLL.SQL is
          Append (List, Right);
       end if;
 
-      Data.Criterias := List;
-      Set_Data (Result, Data);
-      return Result;
+      return Combine (List, Op);
    end Combine;
 
    --------------
@@ -1443,13 +1454,13 @@ package body GNATCOLL.SQL is
       Long   : Boolean := True) return String
    is
       Result : Unbounded_String;
-      C      : Criteria_List.Cursor;
+      C      : Criteria_Lists.Cursor;
       C2     : Field_List.Cursor;
       Is_First : Boolean;
       Criteria : SQL_Criteria;
    begin
       case Self.Op is
-         when Criteria_Criteria =>
+         when Criteria_Combine =>
             C := First (Self.Criterias);
             while Has_Element (C) loop
                if C /= First (Self.Criterias) then
@@ -1463,7 +1474,7 @@ package body GNATCOLL.SQL is
                Criteria := Element (C);
                if Get_Data (Criteria).all in SQL_Criteria_Data'Class
                  and then SQL_Criteria_Data (Get_Data (Criteria).all).Op
-                    in Criteria_Criteria
+                    in Criteria_Combine
                then
                   Append (Result, "(");
                   Append (Result,
@@ -1842,10 +1853,10 @@ package body GNATCOLL.SQL is
    procedure Append_Tables
      (Self : SQL_Criteria_Data; To : in out Table_Sets.Set)
    is
-      C    : Criteria_List.Cursor;
+      C : Criteria_Lists.Cursor;
    begin
       case Self.Op is
-         when Criteria_Criteria =>
+         when Criteria_Combine =>
             C := First (Self.Criterias);
             while Has_Element (C) loop
                Append_Tables (Element (C), To);
@@ -2089,10 +2100,10 @@ package body GNATCOLL.SQL is
       To           : in out SQL_Field_List'Class;
       Is_Aggregate : in out Boolean)
    is
-      C    : Criteria_List.Cursor;
+      C : Criteria_Lists.Cursor;
    begin
       case Self.Op is
-         when Criteria_Criteria =>
+         when Criteria_Combine =>
             C := First (Self.Criterias);
             while Has_Element (C) loop
                Append_If_Not_Aggregate (Element (C), To, Is_Aggregate);
