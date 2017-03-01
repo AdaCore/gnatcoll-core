@@ -54,7 +54,6 @@ private with Ada.Finalization;
 with System;
 with GNATCOLL.Atomic;
 with GNATCOLL.Storage_Pools.Headers;  use GNATCOLL.Storage_Pools.Headers;
-with Interfaces;
 
 pragma Warnings (Off, "* is an internal GNAT unit");
 with System.Soft_Links;               use System.Soft_Links;
@@ -398,7 +397,7 @@ package GNATCOLL.Refcount is
 private
 
    type Refcounted is abstract tagged record
-      Refcount : aliased Interfaces.Integer_32 := 0;
+      Refcount : aliased GNATCOLL.Atomic.Atomic_Counter := 0;
    end record;
    --  This requires, as a result, that all refcounted types also be tagged
    --  types (thus adding the size of a tag and the size of an integer to each

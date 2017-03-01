@@ -40,7 +40,6 @@ with Ada.Finalization; use Ada.Finalization;
 with Ada.Unchecked_Conversion;
 with Ada.Unchecked_Deallocation;
 with GNATCOLL.Atomic;  use GNATCOLL.Atomic;
-with Interfaces;       use Interfaces;
 with System.Memory;    use System, System.Memory;
 
 package body GNATCOLL.Refcount is
@@ -70,18 +69,18 @@ package body GNATCOLL.Refcount is
    procedure Inc_Ref (R : access Counters; Atomic : Boolean) is
    begin
       if Atomic then
-         Sync_Add_And_Fetch (R.Refcount'Access, 1);
+         Increment (R.Refcount);
       else
-         R.Refcount := R.Refcount + 1;
+         Unsafe_Increment (R.Refcount);
       end if;
    end Inc_Ref;
 
    procedure Inc_Ref (R : access Weak_Data; Atomic : Boolean) is
    begin
       if Atomic then
-         Sync_Add_And_Fetch (R.Refcount'Access, 1);
+         Increment (R.Refcount);
       else
-         R.Refcount := R.Refcount + 1;
+         Unsafe_Increment (R.Refcount);
       end if;
    end Inc_Ref;
 
@@ -90,18 +89,18 @@ package body GNATCOLL.Refcount is
    --------------
 
    procedure Finalize (Data : in out Weak_Data_Access; Atomic : Boolean) is
-      Tmp  : Atomic_Counter;
    begin
       if Atomic then
-         Tmp := Sync_Add_And_Fetch (Data.Refcount'Access, -1);
+         if Decrement (Data.Refcount) then
+            Unchecked_Free (Data);
+         end if;
       else
-         Data.Refcount := Data.Refcount - 1;
-         Tmp := Data.Refcount;
+         if Unsafe_Sub (Data.Refcount, 1) = 0 then
+            Unchecked_Free (Data);
+         end if;
       end if;
 
-      if Tmp = 0 then
-         Unchecked_Free (Data);
-      end if;
+      Data := null;
    end Finalize;
 
    ---------------------
@@ -274,20 +273,19 @@ package body GNATCOLL.Refcount is
       overriding procedure Finalize (Self : in out Ref) is
          R    : access Counters;
          Data : Pools.Element_Access := Self.Data;
-         Tmp  : Atomic_Counter;
+         Tmp  : Boolean;
       begin
          if Data /= null then
             Self.Data := null;
 
             R := Pools.Header_Of (Data);
             if Atomic_Counters then
-               Tmp := Sync_Add_And_Fetch (R.Refcount'Access, -1);
+               Tmp := Decrement (R.Refcount);
             else
-               R.Refcount := R.Refcount - 1;
-               Tmp := R.Refcount;
+               Tmp := Unsafe_Sub (R.Refcount, 1) = 0;
             end if;
 
-            if Tmp = 0 then
+            if Tmp then
                if R.Weak_Data /= null then
                   R.Weak_Data.Element := System.Null_Address;
                   Finalize (R.Weak_Data, Atomic_Counters);
@@ -393,7 +391,7 @@ package body GNATCOLL.Refcount is
          --  element.
 
          if Data /= null then
-            if Sync_Add_And_Fetch (Data.Refcount'Access, -1) = 0 then
+            if Decrement (Data.Refcount) then
                Free (Data.all);
                Unchecked_Free (Data);
             end if;

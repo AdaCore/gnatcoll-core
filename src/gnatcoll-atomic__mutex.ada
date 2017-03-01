@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                             G N A T C O L L                              --
 --                                                                          --
---                     Copyright (C) 2010-2016, AdaCore                     --
+--                     Copyright (C) 2010-2017, AdaCore                     --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -24,8 +24,15 @@
 pragma Ada_2012;
 
 with GNAT.Task_Lock;
+with Interfaces;
 
 package body GNATCOLL.Atomic is
+
+   ------------------
+   -- Is_Lock_Free --
+   ------------------
+
+   function Is_Lock_Free return Boolean is (False);
 
    ------------------------
    -- Sync_Add_And_Fetch --
@@ -35,12 +42,12 @@ package body GNATCOLL.Atomic is
      (Ptr   : access Atomic_Counter;
       Value : Atomic_Counter) return Atomic_Counter
    is
-      use type Interfaces.Integer_32;
-      Result : Interfaces.Integer_32;
+      Result : Atomic_Counter;
    begin
       GNAT.Task_Lock.Lock;
-      Ptr.all := Ptr.all + Value;
+      Ptr.all := Unsafe_Add (Ptr.all, Value);
       Result := Ptr.all;
+      --   ??? Should use a memory barriere here
       GNAT.Task_Lock.Unlock;
       return Result;
    end Sync_Add_And_Fetch;
@@ -53,6 +60,65 @@ package body GNATCOLL.Atomic is
    begin
       Dummy := Sync_Add_And_Fetch (Ptr, Value);
    end Sync_Add_And_Fetch;
+
+   ------------------------
+   -- Sync_Sub_And_Fetch --
+   ------------------------
+
+   function Sync_Sub_And_Fetch
+     (Ptr   : access Atomic_Counter;
+      Value : Atomic_Counter) return Atomic_Counter
+   is
+      Result : Atomic_Counter;
+   begin
+      GNAT.Task_Lock.Lock;
+      Ptr.all := Unsafe_Sub (Ptr.all, Value);
+      Result := Ptr.all;
+      --   ??? Should use a memory barriere here
+      GNAT.Task_Lock.Unlock;
+      return Result;
+   end Sync_Sub_And_Fetch;
+
+   procedure Sync_Sub_And_Fetch
+     (Ptr : access Atomic_Counter; Value : Atomic_Counter)
+   is
+      Dummy : Atomic_Counter;
+      pragma Unreferenced (Dummy);
+   begin
+      Dummy := Sync_Sub_And_Fetch (Ptr, Value);
+   end Sync_Sub_And_Fetch;
+
+   ---------------
+   -- Increment --
+   ---------------
+
+   procedure Increment (Value : aliased in out Atomic_Counter) is
+   begin
+      Sync_Add_And_Fetch (Value'Unrestricted_Access, 1);
+   end Increment;
+
+   ---------------
+   -- Decrement --
+   ---------------
+
+   procedure Decrement (Value : aliased in out Atomic_Counter) is
+   begin
+      Sync_Sub_And_Fetch (Value'Unrestricted_Access, 1);
+   end Decrement;
+
+   function Decrement (Value : aliased in out Atomic_Counter) return Boolean is
+   begin
+      return Sync_Sub_And_Fetch (Value'Unrestricted_Access, 1) = 0;
+   end Decrement;
+
+   ----------------------
+   -- Unsafe_Increment --
+   ----------------------
+
+   procedure Unsafe_Increment (Value : in out Atomic_Counter) is
+   begin
+      Value := Unsafe_Add (Value, 1);
+   end Unsafe_Increment;
 
    --------------------------------
    -- Sync_Bool_Compare_And_Swap --

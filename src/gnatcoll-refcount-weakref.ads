@@ -35,8 +35,6 @@
 --  With this scheme, the cache will still contain entries for the elements,
 --  but those entries will return a Null_Ref when accessed.
 
-pragma Ada_05;
-
 package GNATCOLL.Refcount.Weakref is
    pragma Obsolescent (Weakref, "Use GNATCOLL.Refcount.Shared_Pointers");
 

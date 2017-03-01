@@ -25,8 +25,8 @@ with Ada.Characters.Handling; use Ada.Characters.Handling;
 with Ada.Containers;          use Ada.Containers;
 with Ada.Strings.Unbounded;   use Ada.Strings.Unbounded;
 with Ada.Text_IO;
+with GNATCOLL.Atomic;         use GNATCOLL.Atomic;
 with GNATCOLL.JSON.Utility;
-with Interfaces;              use Interfaces;
 
 -------------------
 -- GNATCOLL.JSON --
@@ -828,7 +828,7 @@ package body GNATCOLL.JSON is
          --  Cnt is null for JSON_Null, and we do not want to do reference
          --  counting for it.
 
-         GNATCOLL.Atomic.Sync_Add_And_Fetch (Obj.Cnt, 1);
+         Increment (Obj.Cnt.all);
       end if;
    end Adjust;
 
@@ -846,7 +846,7 @@ package body GNATCOLL.JSON is
       Obj.Cnt := null;
       --  Prevent multiple calls to Finalize, which is valid in Ada
 
-      if GNATCOLL.Atomic.Sync_Add_And_Fetch (C, -1) = 0 then
+      if Decrement (C.all) then
          Free (C);
 
          case Obj.Kind is

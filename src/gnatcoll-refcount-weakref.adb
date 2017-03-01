@@ -22,7 +22,7 @@
 ------------------------------------------------------------------------------
 
 pragma Ada_05;
-with Interfaces;  use Interfaces;
+with GNATCOLL.Atomic;   use GNATCOLL.Atomic;
 
 package body GNATCOLL.Refcount.Weakref is
    use Proxy_Pointers;

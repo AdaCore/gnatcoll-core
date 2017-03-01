@@ -27,23 +27,79 @@
 --  atomic operations of the compiler (generally implemented with special
 --  support from the CPU).
 
-with Interfaces;
+with System.Atomic_Counters;
 
 package GNATCOLL.Atomic is
 
-   subtype Atomic_Counter is Interfaces.Integer_32;
+   subtype Atomic_Counter is System.Atomic_Counters.Atomic_Unsigned;
+
+   Minus_One : constant Atomic_Counter :=
+      System.Atomic_Counters."-" (0, 1);
+
+   function Is_Lock_Free return Boolean;
+   --  Whether the implementation uses the processor's atomic operations
+   --  or falls back on using locks
 
    function Sync_Add_And_Fetch
      (Ptr   : access Atomic_Counter;
-      Value : Atomic_Counter) return Atomic_Counter;
+      Value : Atomic_Counter) return Atomic_Counter
+     with Inline_Always;
    --  Increment Ptr by Value. This is task safe (either using a lock or
    --  intrinsic atomic operations). Returns the new value (as set, it
    --  might already have been changed by another task by the time this
    --  function returns.
 
+   function Sync_Sub_And_Fetch
+     (Ptr   : access Atomic_Counter;
+      Value : Atomic_Counter) return Atomic_Counter
+     with Inline_Always;
+   --  Decrement Ptr by Value.
+
    procedure Sync_Add_And_Fetch
-     (Ptr : access Atomic_Counter; Value : Atomic_Counter);
-   pragma Inline (Sync_Add_And_Fetch);
+     (Ptr : access Atomic_Counter; Value : Atomic_Counter)
+     with Inline_Always;
+   procedure Sync_Sub_And_Fetch
+     (Ptr : access Atomic_Counter; Value : Atomic_Counter)
+     with Inline_Always;
+   --  Same as above, but ignore the return value.
+
+   procedure Increment
+      (Value : aliased in out Atomic_Counter) with Inline_Always;
+   procedure Decrement
+      (Value : aliased in out Atomic_Counter) with Inline_Always;
+   function Decrement
+      (Value : aliased in out Atomic_Counter) return Boolean
+      with Inline_Always;
+   --  Similar to the Sync_Add_And_Fetch and Sync_Sub_And_And, but
+   --  always increment or decrement by one.
+   --  On some systems (x86) this uses faster assembly instructions.
+   --  Decrement returns True if the value reaches 0.
+
+   function "+"
+      (Left, Right : Atomic_Counter) return Atomic_Counter is abstract;
+   function "-"
+      (Left, Right : Atomic_Counter) return Atomic_Counter is abstract;
+   --  Prevent standard operations on these counters
+
+   function Unsafe_Add
+      (Left, Right : Atomic_Counter) return Atomic_Counter
+      is (Atomic_Counter (Natural (Left) + Natural (Right)));
+   procedure Unsafe_Increment (Value : in out Atomic_Counter)
+      with Inline_Always;
+   function Unsafe_Sub
+      (Left, Right : Atomic_Counter) return Atomic_Counter
+      is (Atomic_Counter (Natural (Left) - Natural (Right)));
+   --  These are unsafe operations. If you have two threads, and they all try
+   --  to do "Unsafe_Add (A, 2)" at the same time, when A was initially 0,
+   --  you could end up with the following values in A:
+   --      2 (both threads have read 0, then added 2)
+   --      4 (thread 1 has read and incremented, then thread 2)
+   --  If you use the other operations above, you always end up with 4.
+
+   function "="
+      (Left, Right : Atomic_Counter) return Boolean
+      renames System.Atomic_Counters."=";
+   --  Make the operator visible
 
    generic
       type Element_Type (<>) is private;

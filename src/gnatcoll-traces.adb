@@ -45,7 +45,6 @@ with System.Assertions;         use System.Assertions;
 
 with GNATCOLL.Templates;
 with GNATCOLL.Utils;            use GNATCOLL.Utils;
-with Interfaces;                use Interfaces;
 
 package body GNATCOLL.Traces is
 
@@ -872,7 +871,7 @@ package body GNATCOLL.Traces is
       if S /= null then
          --  Atomic decrement
 
-         if Sync_Add_And_Fetch (S.Indentation'Access, -1) >= 0 then
+         if Sync_Sub_And_Fetch (S.Indentation'Access, 1) = Minus_One then
             if Handle /= null and then Msg /= "" then
                Trace (Handle, Msg, Color, Location, Entity);
             end if;
