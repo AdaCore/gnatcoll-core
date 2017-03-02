@@ -32,8 +32,10 @@ package GNATCOLL.Xref.Database is
    E2e_Pointed_Type     : constant E2e_Id := 0;
    E2e_Renames          : constant E2e_Id := 3;
 
-   type T_Abstract_E2e (Instance : Cst_String_Access; Index : Integer)
-      is abstract new SQL_Table (Ta_E2e, Instance, Index) with
+   type T_Abstract_E2e
+      (Instance : Cst_String_Access;
+       Index    : Integer)
+   is abstract new SQL_Table (Ta_E2e, Instance, Index) with
    record
       Fromentity : SQL_Field_Integer (Ta_E2e, Instance, N_Fromentity, Index);
       Toentity : SQL_Field_Integer (Ta_E2e, Instance, N_Toentity, Index);
@@ -48,11 +50,17 @@ package GNATCOLL.Xref.Database is
 
    type T_E2e (Instance : Cst_String_Access)
       is new T_Abstract_E2e (Instance, -1) with null record;
+   --  To use named aliases of the table in a query
+   --  Use Instance=>null to use the default name.
+
    type T_Numbered_E2e (Index : Integer)
       is new T_Abstract_E2e (null, Index) with null record;
+   --  To use aliased in the form name1, name2,...
 
-   type T_Abstract_E2e_Kind (Instance : Cst_String_Access; Index : Integer)
-      is abstract new SQL_Table (Ta_E2e_Kind, Instance, Index) with
+   type T_Abstract_E2e_Kind
+      (Instance : Cst_String_Access;
+       Index    : Integer)
+   is abstract new SQL_Table (Ta_E2e_Kind, Instance, Index) with
    record
       Id : SQL_Field_Integer (Ta_E2e_Kind, Instance, N_Id, Index);
       Name : SQL_Field_Text (Ta_E2e_Kind, Instance, N_Name, Index);
@@ -60,11 +68,17 @@ package GNATCOLL.Xref.Database is
 
    type T_E2e_Kind (Instance : Cst_String_Access)
       is new T_Abstract_E2e_Kind (Instance, -1) with null record;
+   --  To use named aliases of the table in a query
+   --  Use Instance=>null to use the default name.
+
    type T_Numbered_E2e_Kind (Index : Integer)
       is new T_Abstract_E2e_Kind (null, Index) with null record;
+   --  To use aliased in the form name1, name2,...
 
-   type T_Abstract_Entities (Instance : Cst_String_Access; Index : Integer)
-      is abstract new SQL_Table (Ta_Entities, Instance, Index) with
+   type T_Abstract_Entities
+      (Instance : Cst_String_Access;
+       Index    : Integer)
+   is abstract new SQL_Table (Ta_Entities, Instance, Index) with
    record
       Id : SQL_Field_Integer (Ta_Entities, Instance, N_Id, Index);
       Name : SQL_Field_Text (Ta_Entities, Instance, N_Name, Index);
@@ -101,11 +115,17 @@ package GNATCOLL.Xref.Database is
 
    type T_Entities (Instance : Cst_String_Access)
       is new T_Abstract_Entities (Instance, -1) with null record;
+   --  To use named aliases of the table in a query
+   --  Use Instance=>null to use the default name.
+
    type T_Numbered_Entities (Index : Integer)
       is new T_Abstract_Entities (null, Index) with null record;
+   --  To use aliased in the form name1, name2,...
 
-   type T_Abstract_Entity_Kinds (Instance : Cst_String_Access; Index : Integer)
-      is abstract new SQL_Table (Ta_Entity_Kinds, Instance, Index) with
+   type T_Abstract_Entity_Kinds
+      (Instance : Cst_String_Access;
+       Index    : Integer)
+   is abstract new SQL_Table (Ta_Entity_Kinds, Instance, Index) with
    record
       Id : SQL_Field_Text (Ta_Entity_Kinds, Instance, N_Id, Index);
       Display : SQL_Field_Text (Ta_Entity_Kinds, Instance, N_Display, Index);
@@ -125,11 +145,17 @@ package GNATCOLL.Xref.Database is
 
    type T_Entity_Kinds (Instance : Cst_String_Access)
       is new T_Abstract_Entity_Kinds (Instance, -1) with null record;
+   --  To use named aliases of the table in a query
+   --  Use Instance=>null to use the default name.
+
    type T_Numbered_Entity_Kinds (Index : Integer)
       is new T_Abstract_Entity_Kinds (null, Index) with null record;
+   --  To use aliased in the form name1, name2,...
 
-   type T_Abstract_Entity_Refs (Instance : Cst_String_Access; Index : Integer)
-      is abstract new SQL_Table (Ta_Entity_Refs, Instance, Index) with
+   type T_Abstract_Entity_Refs
+      (Instance : Cst_String_Access;
+       Index    : Integer)
+   is abstract new SQL_Table (Ta_Entity_Refs, Instance, Index) with
    record
       Entity : SQL_Field_Integer (Ta_Entity_Refs, Instance, N_Entity, Index);
       --  The entity to which we have a reference
@@ -150,11 +176,17 @@ package GNATCOLL.Xref.Database is
 
    type T_Entity_Refs (Instance : Cst_String_Access)
       is new T_Abstract_Entity_Refs (Instance, -1) with null record;
+   --  To use named aliases of the table in a query
+   --  Use Instance=>null to use the default name.
+
    type T_Numbered_Entity_Refs (Index : Integer)
       is new T_Abstract_Entity_Refs (null, Index) with null record;
+   --  To use aliased in the form name1, name2,...
 
-   type T_Abstract_F2f (Instance : Cst_String_Access; Index : Integer)
-      is abstract new SQL_Table (Ta_F2f, Instance, Index) with
+   type T_Abstract_F2f
+      (Instance : Cst_String_Access;
+       Index    : Integer)
+   is abstract new SQL_Table (Ta_F2f, Instance, Index) with
    record
       Fromfile : SQL_Field_Integer (Ta_F2f, Instance, N_Fromfile, Index);
       Tofile : SQL_Field_Integer (Ta_F2f, Instance, N_Tofile, Index);
@@ -165,11 +197,17 @@ package GNATCOLL.Xref.Database is
 
    type T_F2f (Instance : Cst_String_Access)
       is new T_Abstract_F2f (Instance, -1) with null record;
+   --  To use named aliases of the table in a query
+   --  Use Instance=>null to use the default name.
+
    type T_Numbered_F2f (Index : Integer)
       is new T_Abstract_F2f (null, Index) with null record;
+   --  To use aliased in the form name1, name2,...
 
-   type T_Abstract_F2f_Kind (Instance : Cst_String_Access; Index : Integer)
-      is abstract new SQL_Table (Ta_F2f_Kind, Instance, Index) with
+   type T_Abstract_F2f_Kind
+      (Instance : Cst_String_Access;
+       Index    : Integer)
+   is abstract new SQL_Table (Ta_F2f_Kind, Instance, Index) with
    record
       Id : SQL_Field_Integer (Ta_F2f_Kind, Instance, N_Id, Index);
       Name : SQL_Field_Text (Ta_F2f_Kind, Instance, N_Name, Index);
@@ -177,11 +215,17 @@ package GNATCOLL.Xref.Database is
 
    type T_F2f_Kind (Instance : Cst_String_Access)
       is new T_Abstract_F2f_Kind (Instance, -1) with null record;
+   --  To use named aliases of the table in a query
+   --  Use Instance=>null to use the default name.
+
    type T_Numbered_F2f_Kind (Index : Integer)
       is new T_Abstract_F2f_Kind (null, Index) with null record;
+   --  To use aliased in the form name1, name2,...
 
-   type T_Abstract_Files (Instance : Cst_String_Access; Index : Integer)
-      is abstract new SQL_Table (Ta_Files, Instance, Index) with
+   type T_Abstract_Files
+      (Instance : Cst_String_Access;
+       Index    : Integer)
+   is abstract new SQL_Table (Ta_Files, Instance, Index) with
    record
       Id : SQL_Field_Integer (Ta_Files, Instance, N_Id, Index);
       Path : SQL_Field_Text (Ta_Files, Instance, N_Path, Index);
@@ -204,11 +248,17 @@ package GNATCOLL.Xref.Database is
 
    type T_Files (Instance : Cst_String_Access)
       is new T_Abstract_Files (Instance, -1) with null record;
+   --  To use named aliases of the table in a query
+   --  Use Instance=>null to use the default name.
+
    type T_Numbered_Files (Index : Integer)
       is new T_Abstract_Files (null, Index) with null record;
+   --  To use aliased in the form name1, name2,...
 
-   type T_Abstract_Reference_Kinds (Instance : Cst_String_Access; Index : Integer)
-      is abstract new SQL_Table (Ta_Reference_Kinds, Instance, Index) with
+   type T_Abstract_Reference_Kinds
+      (Instance : Cst_String_Access;
+       Index    : Integer)
+   is abstract new SQL_Table (Ta_Reference_Kinds, Instance, Index) with
    record
       Id : SQL_Field_Text (Ta_Reference_Kinds, Instance, N_Id, Index);
       --  The character found in the ALI file
@@ -235,8 +285,12 @@ package GNATCOLL.Xref.Database is
 
    type T_Reference_Kinds (Instance : Cst_String_Access)
       is new T_Abstract_Reference_Kinds (Instance, -1) with null record;
+   --  To use named aliases of the table in a query
+   --  Use Instance=>null to use the default name.
+
    type T_Numbered_Reference_Kinds (Index : Integer)
       is new T_Abstract_Reference_Kinds (null, Index) with null record;
+   --  To use aliased in the form name1, name2,...
 
    function FK (Self : T_E2e'Class; Foreign : T_E2e_Kind'Class) return SQL_Criteria;
    function FK (Self : T_Entities'Class; Foreign : T_Entity_Kinds'Class) return SQL_Criteria;
@@ -246,7 +300,6 @@ package GNATCOLL.Xref.Database is
    function FK (Self : T_Entity_Refs'Class; Foreign : T_Reference_Kinds'Class) return SQL_Criteria;
    function FK (Self : T_F2f'Class; Foreign : T_F2f_Kind'Class) return SQL_Criteria;
    function FK (Self : T_Files'Class; Foreign : T_Files'Class) return SQL_Criteria;
-
    E2e : T_E2e (null);
    E2e_Kind : T_E2e_Kind (null);
    Entities : T_Entities (null);
