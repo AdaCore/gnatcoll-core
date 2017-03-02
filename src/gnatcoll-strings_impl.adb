@@ -21,7 +21,7 @@
 --                                                                          --
 ------------------------------------------------------------------------------
 
-with Ada.Strings;
+with Ada.Strings;                  use Ada.Strings;
 with Ada.Unchecked_Conversion;
 with GNATCOLL.Atomic;              use GNATCOLL.Atomic;
 with GNATCOLL.Refcount;
@@ -525,6 +525,35 @@ package body GNATCOLL.Strings_Impl is
                & " (greater than" & L'Img & ")";
          end if;
       end Get;
+
+      ----------
+      -- Trim --
+      ----------
+
+      procedure Trim
+         (Self : in out XString;
+          Side : Ada.Strings.Trim_End := Ada.Strings.Both)
+      is
+         S    : Unconstrained_String_Access;
+         L    : Natural;
+      begin
+         Get_String (Self, S, L);
+
+         if Side = Ada.Strings.Both
+            or else Side = Ada.Strings.Right
+         then
+            while L >= 1 and then S (L) = ' ' loop
+               L := L  - 1;
+            end loop;
+         end if;
+
+         if not Self.Data.Small.Is_Big then
+            Self.Data.Small.Size := SSize (L);
+         else
+            Self.Data.Big.Size := String_Size (L);
+         end if;
+      end Trim;
+
    end Strings;
 
 end GNATCOLL.Strings_Impl;

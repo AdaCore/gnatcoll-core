@@ -58,6 +58,7 @@
 --  free memory on exit, for performance reasons.
 
 private with Ada.Finalization;
+with Ada.Strings;
 with GNATCOLL.Atomic;
 with System;
 
@@ -155,6 +156,11 @@ package GNATCOLL.Strings_Impl is
       --  A simpler way to use this function is simply to use indexing:
       --       Self (Index)
       --  as done for a regular Ada string.
+
+      procedure Trim
+         (Self : in out XString;
+          Side : Ada.Strings.Trim_End := Ada.Strings.Both);
+      --  Remove space charactes on either end of the string
 
    private
 
