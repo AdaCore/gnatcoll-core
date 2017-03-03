@@ -35,6 +35,16 @@ with GNATCOLL.Strings_Impl;
 
 package GNATCOLL.Traces is
 
+   type Trace_Handle_Record is tagged limited private;
+   type Trace_Handle is access all Trace_Handle_Record'Class;
+   subtype Logger is Trace_Handle;   --  alternative name
+   --  A handle for a trace stream.
+   --  One such handle should be created for each module/unit/package where it
+   --  is relevant. They are associated with a specific name and output stream,
+   --  and can be activated through a configuration file. If two or more
+   --  packages create streams with the same name, they will share their
+   --  attributes.
+
    Config_File_Environment : constant String := "ADA_DEBUG_FILE";
    Default_Config_File     : constant Filesystem_String := ".gnatdebug";
    --  Name of the default configuration file. This file is looked for first in
@@ -84,7 +94,7 @@ package GNATCOLL.Traces is
    --    * Activate traces for all modules, unless explicitely deactivated in
    --      the lines following the '+'
    --      +
-   --      Note that this doesn't apply to the decorators (see below)
+   --      Note that this doesn't apply to the predefined entities (see below)
    --
    --  It is also possible to substitute a module name with a '*', to configure
    --  a whole set of modules with a single line. For instance:
@@ -141,7 +151,9 @@ package GNATCOLL.Traces is
    --  prevent the log stream to be written.
    --
    --  Until at least one file is parsed, this package will never output
-   --  anything, unless Force_Activation is set.
+   --  anything, unless Force_Activation is set, in which case the default
+   --  trace_handle status will apply after the call to Parse_Config_File even
+   --  if Filename or Default are unspecified.
 
    procedure Parse_Config_File
      (Filename         : String := "";
@@ -159,20 +171,6 @@ package GNATCOLL.Traces is
    --  Free all the registered handles. This is not strictly needed, but is
    --  specially useful when testing memory leaks in your application. This
    --  also ensures that output streams are correctly closed.
-
-   -------------
-   -- Loggers --
-   -------------
-
-   type Trace_Handle_Record is tagged limited private;
-   type Trace_Handle is access all Trace_Handle_Record'Class;
-   subtype Logger is Trace_Handle;   --  alternative name
-   --  A handle for a trace stream.
-   --  One such handle should be created for each module/unit/package where it
-   --  is relevant. They are associated with a specific name and output stream,
-   --  and can be activated through a configuration file. If two or more
-   --  packages create streams with the same name, they will share their
-   --  attributes.
 
    type Handle_Factory is access function return Logger;
 
@@ -209,7 +207,8 @@ package GNATCOLL.Traces is
    --  If the handle has not been created yet in some other part of the code,
    --  a new one will be allocated. Factory can be used in this case to do the
    --  actual allocation, so that you can return your own Trace_Handle_Record,
-   --  when you need to override Trace. The factory is only called once.
+   --  which might override some of primitive operations like the decorators.
+   --  If Factory is unspecified, a standard Trace_Handle_Record is allocated.
    --
    --  If Finalize is True, the handle will be freed when Finalize is called,
    --  otherwise it won't be. The only reason to set this to False is so that
@@ -217,16 +216,15 @@ package GNATCOLL.Traces is
    --  by the compiler, so that you can have logs till the last minute.
    --  See also the "DEBUG.FINALIZE_TRACES" configuration.
 
-   function Unit_Name
-      (Handle : not null access Trace_Handle_Record'Class) return String;
+   function Unit_Name (Handle : not null Logger) return String;
    --  Return the unit name (upper-cased) for this handle. This can be used for
    --  instance in generic packages to specialize the handle for a specific
    --  instance.
    --
    --  Recommended use with generics:
    --  Since generics might be used in various, independent modules, the
-   --  recommended use is to have one more generic parameter for the logger
-   --  Internally, it is then possible to specialize this stream (see
+   --  recommended use is to have one more generic parameter for the trace
+   --  handle. Internally, it is then possible to specialize this stream (see
    --  the subprogram Unit_Name):
    --     generic
    --         Self_Debug : Logger := Create ("My_Generic");
@@ -255,7 +253,7 @@ package GNATCOLL.Traces is
    --  foreground and a background color by concatenating the strings.
 
    procedure Trace
-     (Handle : not null access Trace_Handle_Record'Class;
+     (Handle : not null Logger;
       E      : Ada.Exceptions.Exception_Occurrence;
       Msg    : String := "Unexpected exception: ";
       Color  : String := Default_Fg);
@@ -274,7 +272,7 @@ package GNATCOLL.Traces is
    --  is used to display unexpected exceptions in your application).
 
    procedure Trace
-     (Handle   : not null access Trace_Handle_Record'Class;
+     (Handle   : not null Logger;
       Message  : String;
       Color    : String := Default_Fg;
       Location : String := GNAT.Source_Info.Source_Location;
@@ -293,14 +291,9 @@ package GNATCOLL.Traces is
    --  In case of exception (for instance because the log file is not
    --  writable), the behavior is controlled by the parameter On_Exception
    --  that was passed to Parse_Config_File.
-   --
-   --  You can override this procedure if you systematically want to add extra
-   --  information when logging via a specific handle. The other procedures
-   --  like Assert, Increase_Indent and Decrease_Indent will call this
-   --  procedure.
 
    procedure Assert
-     (Handle             : not null access Trace_Handle_Record'Class;
+     (Handle             : not null Logger;
       Condition          : Boolean;
       Error_Message      : String;
       Message_If_Success : String := "";
@@ -316,14 +309,38 @@ package GNATCOLL.Traces is
    --  Message_If_Success is logged if Condition is True and the message
    --  is not the empty string.
 
+   procedure Set_Active (Handle : not null Logger; Active : Boolean)
+      with Inline;
+   --  Override the activation status for Handle.
+   --  When not Active, the Trace function will do nothing.
+
+   function Is_Active (Handle : not null Logger) return Boolean
+      with Inline;
+
+   function Active (Handle : not null Logger) return Boolean
+      is (Debug_Mode and then Is_Active (Handle)) with Inline;
+   --  Return True if traces for Handle are actived.
+   --  This function can be used to avoid the evaluation of complex
+   --  expressions in case traces are not actived, as in the following
+   --  code:
+   --     if Active (Handle) then
+   --        Trace (Handle, Message & Expensive_Computation);
+   --     end if;
+   --
+   --  Is_Active will check the flag on the trace handle, which is fast but
+   --  can only be done dynamically. Active, on the other hand, also checks
+   --  the Debug_Mode flag statically, so that if you have disable debugging
+   --  altogether, the code will not even be inserted in the object code by
+   --  the compiler.
+
    procedure Increase_Indent
-     (Handle   : not null access Trace_Handle_Record'Class;
+     (Handle   : not null Logger;
       Msg      : String := "";
       Color    : String := Default_Fg;
       Location : String := GNAT.Source_Info.Source_Location;
       Entity   : String := GNAT.Source_Info.Enclosing_Entity);
    procedure Decrease_Indent
-     (Handle   : not null access Trace_Handle_Record'Class;
+     (Handle   : not null Logger;
       Msg      : String := "";
       Color    : String := Default_Fg;
       Location : String := GNAT.Source_Info.Source_Location;
@@ -339,37 +356,9 @@ package GNATCOLL.Traces is
    --  explain the change of indentation. The message is only displayed if the
    --  handle is active, but the indentation is always changed.
 
-   function Count
-      (Handler : not null access Trace_Handle_Record'Class) return Natural;
+   function Count (Handler : not null Logger) return Natural;
    --  Return the number of times that Trace was called on the handler. This
-   --  count is only incremented when Handler is active.
-
-   procedure Set_Active
-      (Handle : not null access Trace_Handle_Record'Class; Active : Boolean)
-      with Inline;
-   --  Override the activation status for Handle.
-   --  When not Active, the Trace function will do nothing.
-
-   function Is_Active
-      (Handle : not null access Trace_Handle_Record'Class) return Boolean
-      with Inline;
-
-   function Active
-      (Handle : not null access Trace_Handle_Record'Class) return Boolean
-      is (Debug_Mode and then Is_Active (Handle)) with Inline;
-   --  Return True if traces for Handle are actived.
-   --  This function can be used to avoid the evaluation of complex
-   --  expressions in case traces are not actived, as in the following
-   --  code:
-   --     if Active (Handle) then
-   --        Trace (Handle, Message & Expensive_Computation);
-   --     end if;
-   --
-   --  Is_Active will check the flag on the trace handle, which is fast but
-   --  can only be done dynamically. Active, on the other hand, also checks
-   --  the Debug_Mode flag statically, so that if you have disable debugging
-   --  altogether, the code will not even be inserted in the object code by
-   --  the compiler.
+   --  count is incremented even when Handler is inactive.
 
    ------------
    -- Blocks --
@@ -486,6 +475,7 @@ package GNATCOLL.Traces is
    --  automatically
 
    type Stream_Factory is abstract tagged null record;
+
    type Stream_Factory_Access is access all Stream_Factory'Class;
 
    function New_Stream
@@ -601,11 +591,8 @@ package GNATCOLL.Traces is
    --  we do this, the trace handle name and decorators are replicated at the
    --  beginning of each followup line. This results in a slow down.
 
-   type Trace_Decorator_Record is new Trace_Handle_Record with private;
-   type Trace_Decorator is access all Trace_Decorator_Record'Class;
-
    procedure Start_Of_Line
-     (Self            : in out Trace_Decorator_Record;
+     (Self            : in out Trace_Handle_Record;
       Msg             : in out Msg_Strings.XString;
       Is_Continuation : Boolean) is null;
    --  Called at the start of each line of the message. This procedure
@@ -616,12 +603,12 @@ package GNATCOLL.Traces is
    --  beginning of the line, for instance.
 
    procedure Before_Message
-     (Self   : in out Trace_Decorator_Record;
-      Handle : not null Logger;
+     (Self   : in out Trace_Handle_Record;
+      Handle : not null Trace_Handle;
       Msg    : in out Msg_Strings.XString) is null;
    procedure After_Message
-     (Self   : in out Trace_Decorator_Record;
-      Handle : not null Logger;
+     (Self   : in out Trace_Handle_Record;
+      Handle : not null Trace_Handle;
       Msg    : in out Msg_Strings.XString) is null;
    --  You can override either of these two procedures to create your own
    --  decorators to specific trace handles (ie additional information) each
@@ -645,31 +632,28 @@ package GNATCOLL.Traces is
    --  message doesn't fit on a single line).
 
    procedure Add_Global_Decorator
-      (Decorator : not null access Trace_Decorator_Record'Class;
-       Name      : String);
+      (Decorator : not null access Trace_Handle_Record'Class);
    --  Register a global decorator that will apply to all existing
    --  Trace_Handle. The decorator only has an effect when it is active.
+   --  Such a Decorator should override Pre_Decorator and/or Post_Decorator,
+   --  but these should not call the inherited code or this will result in
+   --  an infinite loop.
    --  Here is an example:
    --     type My_Decorator is new Trace_Handle_Record with null record;
-   --     overriding procedure Before_Message
-   --        (Self    : in out My_Decorator;
-   --         Handle  : not null Logger;
-   --         Message : in out Msg_Strings.XString)  is
+   --     overriding procedure Pre_Decorator
+   --        (Handle : in out My_Decorator;
+   --         Stream : in out Trace_Stream_Record'Class;
+   --         Message : String)  is
    --     begin
-   --        Append (Message, "Some info");
-   --     end Before_Message;
+   --        Put (Stream, "Some info");
+   --     end Pre_Decorator;
    --
-   --     Add_Global_Decorator (new My_Decorator, "MY_DECO");
+   --     function Factory return Logger is (new My_Decorator);
+   --     Add_Global_Decorator
+   --        (Create ("MY_DECO", Off, Factory => Factory'Access));
    --
    --  And then you can use your configuration file as usual to activate or
    --  deactivate the "MY_DECO" handle.
-   --
-   --  A decorator is disabled by default (when it is registered via this
-   --  procedure). To active, you can either do this in the configuration
-   --  file, with the usual:
-   --      MY_DECO=yes
-   --  or in the code, as:
-   --      Set_Active (Create ("MY_DECO"), True);
 
 private
    type Trace_Stream_Record is abstract tagged limited record
@@ -703,6 +687,7 @@ private
       Finalize          : Boolean;
       Active            : Boolean;
       Forced_Active     : Boolean;
+      Is_Decorator      : Boolean;
       Stream_Is_Default : Boolean;
 
       With_Colors       : Boolean := False;
@@ -713,7 +698,5 @@ private
    pragma Pack (Trace_Handle_Record);
    --  If Forced_Active is true, then the Active status shouldn't be impacted
    --  by a '+' in the configuration file
-
-   type Trace_Decorator_Record is new Trace_Handle_Record with null record;
 
 end GNATCOLL.Traces;
