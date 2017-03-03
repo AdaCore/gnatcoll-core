@@ -29,15 +29,13 @@ with Ada.Calendar;
 with Ada.Exceptions;
 private with Ada.Finalization;
 
-with GNATCOLL.VFS;           use GNATCOLL.VFS;
-with GNATCOLL.Atomic;        use GNATCOLL.Atomic;
-with GNATCOLL.Strings_Impl;
+with GNATCOLL.VFS; use GNATCOLL.VFS;
+with GNATCOLL.Atomic; use GNATCOLL.Atomic;
 
 package GNATCOLL.Traces is
 
-   type Trace_Handle_Record is tagged limited private;
+   type Trace_Handle_Record is tagged private;
    type Trace_Handle is access all Trace_Handle_Record'Class;
-   subtype Logger is Trace_Handle;   --  alternative name
    --  A handle for a trace stream.
    --  One such handle should be created for each module/unit/package where it
    --  is relevant. They are associated with a specific name and output stream,
@@ -68,24 +66,12 @@ package GNATCOLL.Traces is
    --        process number. $D is automatically replaced by the current date.
    --        $T is automatically replaced by the current date and time.
    --        You can use >>filename instead if you want to append to the file.
-   --      - to a file, with specific options:
-   --        >filename:buffer_size=0
-   --        The options are separated from the filename with a ':', and can
-   --        be any of:
-   --            * "buffer_size": the size of the buffer. The logs are
-   --              synchronized with the disk when this buffer is full.
-   --              Setting this to 0 means that synchronization appears after
-   --              every output line, which is slow but might help when
-   --              debugging a crashing application.
    --      - to standard output
    --        >&1
-   --        >&1:buffer_size=0      (to force flushing after each line)
    --      - to standard error
    --        >&2
-   --        >&2:buffer_size=0      (to force flushing after each line)
    --      - to a user-defined stream (see gnat-traces-syslog.ads):
    --        >&stream
-   --        >&stream:option1:option2
    --    * redirecting a specific module to a file
    --      MODULE_NAME=yes >filename
    --      MODULE_NAME=yes >&stream
@@ -172,7 +158,7 @@ package GNATCOLL.Traces is
    --  specially useful when testing memory leaks in your application. This
    --  also ensures that output streams are correctly closed.
 
-   type Handle_Factory is access function return Logger;
+   type Handle_Factory is access function return Trace_Handle;
 
    type Default_Activation_Status is (From_Config, On, Off);
    function Create
@@ -181,7 +167,7 @@ package GNATCOLL.Traces is
       Stream    : String := "";
       Factory   : Handle_Factory := null;
       Finalize  : Boolean := True)
-      return Logger;
+      return Trace_Handle;
    --  Create a new handle
    --  Unit_Name is upper-cased, and looked-for in the configuration file to
    --  check whether traces should be emitted for that module. Calling this
@@ -214,9 +200,8 @@ package GNATCOLL.Traces is
    --  otherwise it won't be. The only reason to set this to False is so that
    --  the handle still exists when the application itself is being finalized
    --  by the compiler, so that you can have logs till the last minute.
-   --  See also the "DEBUG.FINALIZE_TRACES" configuration.
 
-   function Unit_Name (Handle : not null Logger) return String;
+   function Unit_Name (Handle : Trace_Handle) return String;
    --  Return the unit name (upper-cased) for this handle. This can be used for
    --  instance in generic packages to specialize the handle for a specific
    --  instance.
@@ -227,9 +212,9 @@ package GNATCOLL.Traces is
    --  handle. Internally, it is then possible to specialize this stream (see
    --  the subprogram Unit_Name):
    --     generic
-   --         Self_Debug : Logger := Create ("My_Generic");
+   --         Self_Debug : Trace_Handle := Create ("My_Generic");
    --     package My_Generic is
-   --         Me : Logger := Create ("Generic" & Unit_Name (Self_Debug));
+   --         Me : Trace_Handle := Create ("Generic" & Unit_Name (Self_Debug));
    --         ...
 
    Red_Fg     : constant String := ASCII.ESC & "[31m";
@@ -253,10 +238,11 @@ package GNATCOLL.Traces is
    --  foreground and a background color by concatenating the strings.
 
    procedure Trace
-     (Handle : not null Logger;
+     (Handle : Trace_Handle;
       E      : Ada.Exceptions.Exception_Occurrence;
       Msg    : String := "Unexpected exception: ";
       Color  : String := Default_Fg);
+   pragma Inline (Trace);
    --  Extract information from the given Exception_Occurence and output it
    --  with Msg as a prefix.
    --  You can override the default color used for the stream by specifying the
@@ -272,11 +258,12 @@ package GNATCOLL.Traces is
    --  is used to display unexpected exceptions in your application).
 
    procedure Trace
-     (Handle   : not null Logger;
+     (Handle   : Trace_Handle;
       Message  : String;
       Color    : String := Default_Fg;
       Location : String := GNAT.Source_Info.Source_Location;
       Entity   : String := GNAT.Source_Info.Enclosing_Entity);
+   pragma Inline (Trace);
    --  Output Message to the stream associated with Handle, along with any
    --  extra information setup by the user (see the default handles below).
    --  If Handle is not active, this function will do nothing.
@@ -293,7 +280,7 @@ package GNATCOLL.Traces is
    --  that was passed to Parse_Config_File.
 
    procedure Assert
-     (Handle             : not null Logger;
+     (Handle             : Trace_Handle;
       Condition          : Boolean;
       Error_Message      : String;
       Message_If_Success : String := "";
@@ -309,23 +296,26 @@ package GNATCOLL.Traces is
    --  Message_If_Success is logged if Condition is True and the message
    --  is not the empty string.
 
-   procedure Set_Active (Handle : not null Logger; Active : Boolean)
+   procedure Set_Active (Handle : Trace_Handle; Active : Boolean)
       with Inline;
    --  Override the activation status for Handle.
    --  When not Active, the Trace function will do nothing.
 
-   function Is_Active (Handle : not null Logger) return Boolean
+   function Is_Active (Handle : Trace_Handle) return Boolean
       with Inline;
-
-   function Active (Handle : not null Logger) return Boolean
+   function Active (Handle : Trace_Handle) return Boolean
       is (Debug_Mode and then Is_Active (Handle)) with Inline;
    --  Return True if traces for Handle are actived.
    --  This function can be used to avoid the evaluation of complex
    --  expressions in case traces are not actived, as in the following
    --  code:
    --     if Active (Handle) then
-   --        Trace (Handle, Message & Expensive_Computation);
+   --        begin
+   --           Trace (Handle, Message & Expensive_Computation);
+   --        end;
    --     end if;
+   --  The extra begin...end block can be used to limit the impact on the
+   --  heap for the evaluation of Expensive_Computation.
    --
    --  Is_Active will check the flag on the trace handle, which is fast but
    --  can only be done dynamically. Active, on the other hand, also checks
@@ -334,13 +324,13 @@ package GNATCOLL.Traces is
    --  the compiler.
 
    procedure Increase_Indent
-     (Handle   : not null Logger;
+     (Handle   : Trace_Handle := null;
       Msg      : String := "";
       Color    : String := Default_Fg;
       Location : String := GNAT.Source_Info.Source_Location;
       Entity   : String := GNAT.Source_Info.Enclosing_Entity);
    procedure Decrease_Indent
-     (Handle   : not null Logger;
+     (Handle   : Trace_Handle := null;
       Msg      : String := "";
       Color    : String := Default_Fg;
       Location : String := GNAT.Source_Info.Source_Location;
@@ -356,7 +346,7 @@ package GNATCOLL.Traces is
    --  explain the change of indentation. The message is only displayed if the
    --  handle is active, but the indentation is always changed.
 
-   function Count (Handler : not null Logger) return Natural;
+   function Count (Handler : Trace_Handle) return Natural;
    --  Return the number of times that Trace was called on the handler. This
    --  count is incremented even when Handler is inactive.
 
@@ -366,25 +356,24 @@ package GNATCOLL.Traces is
 
    type Block_Trace_Handle (<>) is limited private
       with Warnings => Off;
-   subtype Block_Logger is Block_Trace_Handle;
    --  The aspect avoids warnings on unused instances, yet allows code to
    --  manipulate those instances when needed (which a "Unused=>True" would
    --  not)
 
    function Create
-      (Handle   : Logger;
+      (Handle   : Trace_Handle;
        Message  : String := "";
        Location : String := GNAT.Source_Info.Source_Location;
        Entity   : String := GNAT.Source_Info.Enclosing_Entity;
        Color    : String := Default_Fg)
-      return Block_Logger;
+      return Block_Trace_Handle;
    --  An object used to trace execution of blocks.
    --  This is a controlled object, which you should create first in your
    --  subprogram, and that will automatically finalize itself when the
    --  subprogram exists. For instance:
-   --       Me : constant Logger := Create ("PKG");
+   --       Me : constant Trace_Handle := Create ("PKG");
    --       procedure Foo (A : Integer) is
-   --          Block_Me : constant Block_Logger := Create (Me);
+   --          Block_Me : constant Block_Trace_Handle := Create (Me);
    --       begin
    --          Trace (Me, "A=" & A'Img);
    --          if A > 1 then
@@ -411,7 +400,7 @@ package GNATCOLL.Traces is
    --  parameter of the enclosing subprograms, or perhaps as:
    --
    --       procedure Foo (A, B, C : Integer) is
-   --          Block_Me : constant Block_Logger := Create
+   --          Block_Me : constant Block_Trace_Handle := Create
    --             (Me, (if Active (Me) then A'Img & B'Img & C'Img else ""));
    --       begin
    --          null;
@@ -428,15 +417,7 @@ package GNATCOLL.Traces is
    -- Streams --
    -------------
 
-   type Typical_Msg_Size is mod 128;
-   for Typical_Msg_Size'Size use 8;
-   package Msg_Strings is new GNATCOLL.Strings_Impl.Strings (Typical_Msg_Size);
-   --  We assume that most messages (including decorators) will be less than
-   --  this number of characters, and optimize the string creation for this.
-   --  But we still support larger messages, at a cost of one memory
-   --  allocation which slows things down a bit.
-
-   type Trace_Stream_Record is abstract tagged limited private;
+   type Trace_Stream_Record is abstract tagged private;
    type Trace_Stream is access all Trace_Stream_Record'Class;
    --  A stream is an object responsible for ultimately displaying a string (as
    --  opposed to using Put_Line). Such objects do not need, in general, to be
@@ -453,22 +434,22 @@ package GNATCOLL.Traces is
    --  child packages (gnat-traces-syslog.ads for instance).
 
    procedure Put
-     (Stream     : in out Trace_Stream_Record;
-      Str        : Msg_Strings.XString) is abstract;
-   --  Outputs a whole line to the stream.
-   --  Str always ends up with a trailing newline.
-   --  The stream needs to take appropriate lock or other synchronization
-   --  mechanism to avoid mixing multiple lines of output. This lets each
-   --  stream have its own lock, rather than a global lock, which improves
-   --  the throughput.
+     (Stream : in out Trace_Stream_Record; Str : String) is abstract;
+   --  Outputs Str to the stream. This must not be followed by a newline
+   --  character automatically. Streams that can only output a whole line at
+   --  a time should buffer Str, and only print it on the next call to
+   --  Newline. This module does not output a single line at once, since that
+   --  would require using temporary strings (and hence memory allocation) for
+   --  every trace, which is inefficient in most cases.
+
+   procedure Newline (Stream : in out Trace_Stream_Record) is abstract;
+   --  Terminates the current line of output
 
    procedure Close (Stream : in out Trace_Stream_Record);
    --  Close the stream
 
-   function Supports_Color (Stream : Trace_Stream_Record) return Boolean
-      is (True);
-   function Supports_Time  (Stream : Trace_Stream_Record) return Boolean
-      is (True);
+   function Supports_Color (Stream : Trace_Stream_Record) return Boolean;
+   function Supports_Time  (Stream : Trace_Stream_Record) return Boolean;
    --  Whether the stream accepts color output, and whether we should output
    --  the time (if the user requested it). In some cases (syslog for instance)
    --  it isn't necessary to output the time, since that's already done
@@ -510,16 +491,10 @@ package GNATCOLL.Traces is
    --  The object pointed by Factory will be freed by automatically when the
    --  factory container is freed.
 
-   procedure Set_Default_Stream
-      (Name        : String;
-       Config_File : GNATCOLL.VFS.Virtual_File := GNATCOLL.VFS.No_File);
+   procedure Set_Default_Stream (Name : String);
    --  Set Name as the default stream.
    --  See Register_Stream_Factory for a list of valid names. The name can be
    --  prefixed with ">>" to append to that stream.
-   --  An optional '>' is also allowed, although it is implicit if not
-   --  specified.
-   --  The Config_File is used to resolve a relative path name when
-   --  needed.
 
    ----------------
    -- Decorators --
@@ -563,57 +538,39 @@ package GNATCOLL.Traces is
    --  location of the call to Trace will be displayed.
 
    --  "DEBUG.COUNT"
-   --  If this handle is actived, two counters are associated with each output
+   --  If this handle is actived, two numbers are associated with each output
    --  trace: one of them is unique for the handle, the other is unique in the
    --  whole application life. These can for instance be used to set
    --  conditional breakpoints for a specific trace (break on traces.Log or
    --  traces.Trace, and check the value of Handle.Count
 
-   --  "DEBUG.MEMORY"
-   --  This decorator will show the size of resident memory for the
-   --  application, as well as the peek size. This takes into account memory
-   --  allocated from any language, C, Ada,.. and is queries from the
-   --  operating system).
-   --  It also shows a ">" or "<" to indicate whether memory use increased or
-   --  not.
+   --  "DEBUG.FINALIZE_TRACES"
+   --  This handle is activated by default. If deactivated, the trace handles
+   --  will never be freed when the program is finalized by the compiler. This
+   --  is mostly for debugging purposes only.
 
-   --  "DEBUG.ADA_MEMORY"
-   --  This is similar to DEBUG.MEMORY, but only displays memory allocated
-   --  from Ada (provided you have setup GNATCOLL.Memory to become the default
-   --  allocator for your application).
-
-   --  "DEBUG.FINALIZE_TRACES"   (default: active)
-   --  If deactivated, the trace handles will never be freed when the program
-   --  is finalized by the compiler. This is mostly for debugging purposes.
-
-   --  "DEBUG.SPLIT_LINES"  (default: true)
-   --  Whether long messages should be split at each ASCII.LF character. When
-   --  we do this, the trace handle name and decorators are replicated at the
-   --  beginning of each followup line. This results in a slow down.
-
-   procedure Start_Of_Line
-     (Self            : in out Trace_Handle_Record;
-      Msg             : in out Msg_Strings.XString;
-      Is_Continuation : Boolean) is null;
-   --  Called at the start of each line of the message. This procedure
-   --  should modify Msg to Append extra information to it, if needed.
-   --  GNATCOLL.Traces will then append the indentation for each line
-   --  automatically, see Increase_Indent and Decrease_Indent.
-   --  You can override this procedure to display a timestamp aligned at the
-   --  beginning of the line, for instance.
-
-   procedure Before_Message
-     (Self   : in out Trace_Handle_Record;
-      Handle : not null Trace_Handle;
-      Msg    : in out Msg_Strings.XString) is null;
-   procedure After_Message
-     (Self   : in out Trace_Handle_Record;
-      Handle : not null Trace_Handle;
-      Msg    : in out Msg_Strings.XString) is null;
-   --  You can override either of these two procedures to create your own
+   procedure Prefix_Decorator
+     (Handle          : in out Trace_Handle_Record;
+      Stream          : in out Trace_Stream_Record'Class;
+      Indent          : Integer;
+      Is_Continuation : Boolean);
+   procedure Pre_Decorator
+     (Handle  : in out Trace_Handle_Record;
+      Stream  : in out Trace_Stream_Record'Class;
+      Message : String);
+   procedure Post_Decorator
+     (Handle   : in out Trace_Handle_Record;
+      Stream   : in out Trace_Stream_Record'Class;
+      Location : String;
+      Entity   : String;
+      Message  : String);
+   --  You can override either of these two procedures to add your own
    --  decorators to specific trace handles (ie additional information) each
-   --  time some message is logged. These functions are only called for the
-   --  handles passed to Add_Global_Decorator.
+   --  time some message is logged.
+   --
+   --  It is recommended that you call the inherited procedure to get access to
+   --  the standard decorators. This isn't needed when you create a global
+   --  decorator (see Add_Global_Decorator below).
    --
    --  When displayed in the log, a line looks like:
    --
@@ -648,7 +605,7 @@ package GNATCOLL.Traces is
    --        Put (Stream, "Some info");
    --     end Pre_Decorator;
    --
-   --     function Factory return Logger is (new My_Decorator);
+   --     function Factory return Trace_Handle is (new My_Decorator);
    --     Add_Global_Decorator
    --        (Create ("MY_DECO", Off, Factory => Factory'Access));
    --
@@ -656,7 +613,7 @@ package GNATCOLL.Traces is
    --  deactivate the "MY_DECO" handle.
 
 private
-   type Trace_Stream_Record is abstract tagged limited record
+   type Trace_Stream_Record is abstract tagged record
       Name          : GNAT.Strings.String_Access;
       Next          : Trace_Stream;
       Indentation   : aliased Atomic_Counter := 0;
@@ -667,35 +624,28 @@ private
 
    type Block_Trace_Handle is new Ada.Finalization.Limited_Controlled with
    record
-      Me            : Logger;
+      Me            : Trace_Handle;
       Loc           : GNAT.Strings.String_Access;
    end record;
-   overriding procedure Finalize (Self : in out Block_Logger);
+   overriding procedure Finalize (Self : in out Block_Trace_Handle);
 
-   type Trace_Handle_Record is tagged limited record
-      Next          : Logger;  --  linked list
+   type Trace_Handle_Record is tagged record
       Name          : GNAT.Strings.String_Access;
       Timer         : Ada.Calendar.Time;
+      Next          : Trace_Handle;
       Stream        : Trace_Stream;  --  null for default stream
 
-      Exception_Handle : Logger;
+      Exception_Handle : Trace_Handle;
       --  The handle used when calling Trace and passing an exception
       --  occurrence. This has  Name & ".EXCEPTIONS" as a name, and is created
       --  the first time it is needed.
 
-      Count             : aliased Atomic_Counter;
-      Finalize          : Boolean;
-      Active            : Boolean;
-      Forced_Active     : Boolean;
-      Is_Decorator      : Boolean;
-      Stream_Is_Default : Boolean;
-
-      With_Colors       : Boolean := False;
-      With_Time         : Boolean := False;
-      --  Compute values, from the stream and corresponding settings. These
-      --  are used to avoid dispatching calls in Log.
+      Count         : aliased Atomic_Counter;
+      Finalize      : Boolean;
+      Active        : Boolean;
+      Forced_Active : Boolean := False;
+      Is_Decorator  : Boolean := False;
    end record;
-   pragma Pack (Trace_Handle_Record);
    --  If Forced_Active is true, then the Active status shouldn't be impacted
    --  by a '+' in the configuration file
 

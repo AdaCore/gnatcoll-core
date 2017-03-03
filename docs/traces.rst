@@ -194,7 +194,7 @@ output just because you happen to use an external library that uses
 try to write to :code:`stdout` unless you think it is appropriate (since
 :code:`stdout` might not even exist in fact).
 
-You then need to declare each of the `trace_handle` (or `logger`) that your
+You then need to declare each of the `trace_handle` that your
 application will use. The same handle can be declared several times, so
 the recommended approach is to declare locally in each package body the
 handles it will need, even if several bodies actually need the same
@@ -202,8 +202,7 @@ handle. That helps to know which traces to activate when debugging a
 package, and limits the dependencies of packages on a shared package
 somewhere that would contain the declaration of all shared handles.
 
-.. index:: Trace_Handle
-.. index:: Logger
+.. index:: Function Trace_Handle
 
 Function Trace_Handle Create Name Default Stream Factory Finalize
   This function creates (or return an existing) a `trace_handle` with
@@ -348,15 +347,6 @@ Here is an exhaustive list:
   `Handle.Count`. It can also be used to refer to a specific line in some
   comment file.
 
-*DEBUG.MEMORY*
-  Every time a message is output, display the amount of memory currently in
-  use by the application.
-
-*DEBUG.SPLIT_LINES*
-  When this is enabled, messages are split at each newline character. Each line
-  then starts with the name of the logger, indentation level and so on. This
-  might result in more readable output, but is slightly slower.
-
 *DEBUG.FINALIZE_TRACES*
   This handle is activated by default, and indicates whether
   `GNATCOLL.Traces.Finalize` should have any effect. This can be set to False
@@ -447,23 +437,29 @@ symbol, to avoid confusion with standard file names)::
 
 You need of course to do a bit of coding in Ada to create the stream. This
 is done by creating a new child of `Trace_Stream_Record`, and override
-the primitive operation `Put`.
-
-The whole output message is given as a single parameter to `Put`::
+the two primitive operations `Put` and `Newline` (at least).
+In this implementation, and because `GNATCOLL.Traces.Trace` takes care of
+not outputting two messages at the same time, we can just output to the
+file as characters are made available. In some other cases, however,
+the implementation will need to buffer the characters until the end of
+line is seen, and output the line with a single call. See for instance
+the implementation of `GNATCOLL.Traces.Syslog`, which needs to do
+exactly that::
 
   type My_Stream is new Trace_Stream_Record with record
      File : access File_Type;
   end record;
 
   procedure Put
-    (Stream : in out My_Stream; Str : Msg_Strings.XString)
-  is
-     S : Msg_Strings.Unconstrained_String_Access;
-     L : Natural;
+    (Stream : in out My_Stream; Str : String) is
   begin
-     Str.Get_String (S, L);
-     Put (Stream.File.all, String (S (1 .. L)));
+    Put (Stream.File.all, Str);
   end Put;
+
+  procedure Newline (Stream : in out My_Stream) is
+  begin
+    New_Line (Stream.File.all);
+  end Newline;
 
 The above code did not open the file itself, as you might have noticed,
 nor did it register the name `"mystream"` so that it can be used in

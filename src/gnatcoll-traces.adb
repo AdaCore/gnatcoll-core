@@ -29,31 +29,24 @@ with Ada.Calendar.Time_Zones;   use Ada.Calendar.Time_Zones;
 with Ada.Characters.Handling;   use Ada.Characters.Handling;
 with Ada.Environment_Variables;
 with Ada.Strings.Fixed;         use Ada.Strings.Fixed;
-
+with Ada.Text_IO;               use Ada.Text_IO;
 with Ada.Exceptions.Traceback;  use Ada.Exceptions.Traceback;
-with Ada.IO_Exceptions;
 with Ada.Unchecked_Deallocation;
 
 with GNAT.Calendar.Time_IO;     use GNAT.Calendar.Time_IO;
 with GNAT.Directory_Operations; use GNAT.Directory_Operations;
+with GNATCOLL.Mmap;             use GNATCOLL.Mmap;
 with GNAT.OS_Lib;               use GNAT.OS_Lib;
+with GNAT.Task_Lock;            use GNAT.Task_Lock;
 with GNAT.Traceback;            use GNAT.Traceback;
 
-with Interfaces.C_Streams;      use Interfaces.C_Streams;
 with System.Address_Image;
 with System.Assertions;         use System.Assertions;
 
-with GNATCOLL.Memory;
-with GNATCOLL.Mmap;             use GNATCOLL.Mmap;
 with GNATCOLL.Templates;
 with GNATCOLL.Utils;            use GNATCOLL.Utils;
 
 package body GNATCOLL.Traces is
-
-   use type FILEs, size_t;
-
-   Max_Active_Decorators : constant := 40;
-   --  Maximum number of active iterators
 
    On_Exception : On_Exception_Mode := Propagate;
    --  The behavior that should be adopted when something unexpected prevent
@@ -69,13 +62,9 @@ package body GNATCOLL.Traces is
    --     Put_Line (System.Address_Image (Start'Address));
    --  end;
 
-   A_Zero : aliased constant String := "a" & ASCII.NUL;
-   W_Zero : aliased constant String := "w" & ASCII.NUL;
-
-   type Decorator_Array is array (1 .. Max_Active_Decorators) of Trace_Handle;
-
    procedure Unchecked_Free is new Ada.Unchecked_Deallocation
      (Trace_Handle_Record'Class, Trace_Handle);
+
    procedure Unchecked_Free is new Ada.Unchecked_Deallocation
      (Trace_Stream_Record'Class, Trace_Stream);
 
@@ -96,47 +85,36 @@ package body GNATCOLL.Traces is
    type Global_Vars is record
       Handles_List : Trace_Handle := null;
       --  The global list of all defined handles.
+      --  Accesses to this list are protected by calls to
+      --  System.Soft_Links.Lock_Task (we do not use a protected type so that
+      --  applications that do not use tasking otherwise do not drag the whole
+      --  tasking runtime in).
 
-      Active_Decorators : Decorator_Array;
-      Active_Last       : Natural := 0;
-      --  Never null after parsing the config file.
-      --  Decorators on this list are all active, and also stored in the
-      --  Handles_List.
+      Decorators : Trace_Handle := null;
+      --  All the global decorators registered through Add_Global_Decorator.
+      --  Items on this list are not on Handles_List or Wildcard_Handles_List.
 
       Wildcard_Handles_List : Trace_Handle := null;
       --  Contains the configuration for module names containing stars, for
       --  instance "*.EXCEPTIONS".
 
       Streams_List : Trace_Stream := null;
-      --  The global list of all streams.
-      --  The default stream is the first in the list.
+      --  The global list of all streams. Accesses to this list are protected
+      --  by calls to System.Soft_Links.Lock_Task.  The default stream is the
+      --  first in the list.
 
       Factories_List : Stream_Factories_List := null;
-      --  The global list of all factories.
-
-      TZ : Time_Offset := UTC_Time_Offset;
-      --  Time zone cache, assuming that the OS will not change time zones
-      --  while this partition is running.
-
-      Lock : aliased Atomic_Counter := 0;
-      pragma Atomic (Lock);
-
-      Absolute_Time    : Trace_Handle;
-      Absolute_Date    : Trace_Handle;
-      Micro_Time       : Trace_Handle;
-      Colors           : Trace_Handle;
-      Enclosing_Entity : Trace_Handle;
-      Location         : Trace_Handle;
-      Finalize_Traces  : Trace_Handle;
-      Split_Lines      : Trace_Handle;
-      --  The predefined decorators.
-      --  ??? These are also stored in the lists above, so we might not need
-      --  them.
+      --  The global list of all factories. Access to this list are protected
+      --  by calls to Lock_Task
 
       Default_Activation : Boolean := False;
       --  Default activation status for debug handles (ie whether the
       --  configuration file contained "+").
       --  ??? Could be handled via a "*" star handle
+
+      TZ : Time_Offset := UTC_Time_Offset;
+      --  Time zone cache, assuming that the OS will not change time zones
+      --  while this partition is running.
 
       Activated : Boolean := False;
       --  Whether this package has been activated. It is activated when at
@@ -146,48 +124,11 @@ package body GNATCOLL.Traces is
 
    Global : Global_Vars;
 
-   type Elapse_Time_Trace is new Trace_Handle_Record with null record;
-   overriding procedure After_Message
-      (Self   : in out Elapse_Time_Trace;
-       Handle : not null Trace_Handle;
-       Msg    : in out Msg_Strings.XString);
+   function Stream (Handle : Trace_Handle) return Trace_Stream
+   is (if Handle = null or else Handle.Stream = null then Global.Streams_List
+       else Handle.Stream);
 
-   type Stack_Trace is new Trace_Handle_Record with null record;
-   overriding procedure After_Message
-      (Self   : in out Stack_Trace;
-       Handle : not null Trace_Handle;
-       Msg    : in out Msg_Strings.XString);
-
-   type Count_Trace is new Trace_Handle_Record with null record;
-   overriding procedure Before_Message
-      (Self   : in out Count_Trace;
-       Handle : not null Trace_Handle;
-       Msg    : in out Msg_Strings.XString);
-
-   type Memory_Trace is new Trace_Handle_Record with record
-      Previous   : GNATCOLL.Memory.Byte_Count := 0;
-   end record;
-   overriding procedure After_Message
-      (Self   : in out Memory_Trace;
-       Handle : not null Trace_Handle;
-       Msg    : in out Msg_Strings.XString);
-
-   type Ada_Memory_Trace is new Trace_Handle_Record with record
-      Previous : GNATCOLL.Memory.Byte_Count := 0;
-   end record;
-   overriding procedure After_Message
-      (Self   : in out Ada_Memory_Trace;
-       Handle : not null Trace_Handle;
-       Msg    : in out Msg_Strings.XString);
-
-   procedure Lock (The_Lock : aliased in out Atomic_Counter)
-      with Inline_Always;
-   procedure Unlock (The_Lock : aliased in out Atomic_Counter)
-      with Inline_Always;
-   --  For critical regions. A thread already owning the lock cannot try to
-   --  take the lock again, or it will block.
-
-   procedure Create_Exception_Handle (Handle : not null Trace_Handle);
+   procedure Create_Exception_Handle (Handle : Trace_Handle);
    --  Create the exception handle associated with Handle.
 
    function Local_Sub_Second (T : Ada.Calendar.Time) return Integer;
@@ -219,13 +160,29 @@ package body GNATCOLL.Traces is
       Append           : Boolean) return Trace_Stream;
    --  Return the stream associated with that name (either an existing one or
    --  one created by a factory), or null if the default stream should be
-   --  applied.
-   --  The Stream_Name might include the settings for the stream, as in:
-   --      "file.txt:buffer_size=0,async=true"
+   --  applied. This program doesn't do any locking, and must be called from
+   --  withing appropriately locked code.
 
-   procedure Put_Absolute_Time (Msg : in out Msg_Strings.XString);
+   procedure Log
+     (Handle        : Trace_Handle;
+      Message       : String;
+      Location      : String := GNAT.Source_Info.Source_Location;
+      Entity        : String := GNAT.Source_Info.Enclosing_Entity;
+      Message_Color : String := Default_Fg);
+   --  Log a message to Handle unconditionally
+
+   procedure Put_Absolute_Time (Stream : in out Trace_Stream_Record'Class);
    --  Print the absolute time in Handle. No locking is done, this is the
    --  responsability of the caller. No colors is modified either.
+
+   procedure Put_Elapsed_Time
+     (Handle : in out Trace_Handle_Record'Class;
+      Stream : in out Trace_Stream_Record'Class);
+   --  Print the elapsed time the last call to Trace for this Handle. No
+   --  locking done.
+
+   procedure Put_Stack_Trace (Stream : in out Trace_Stream_Record'Class);
+   --  Print the stack trace for this handle. No locking done
 
    function Config_File
      (Filename : Virtual_File;
@@ -237,84 +194,66 @@ package body GNATCOLL.Traces is
    --  none, Default if it exists.
    --  The empty string is returned if no such file was found.
 
-   procedure Register_Handle
-      (Handle           : not null Trace_Handle;
-       Upper_Case       : String;
-       Finalize         : Boolean := True);
-   --  add Handle to the internal list and set default fields
-
    function Create_Internal
-     (Unit_Name : String;
-      Default   : Default_Activation_Status := From_Config;
-      Stream    : Trace_Stream;
-      Factory   : Handle_Factory := null;
-      Finalize  : Boolean := True;
-      From_Config_File : Boolean) return Trace_Handle;
-   --  Internal version of Create
+     (Unit_Name        : String;
+      From_Config_File : Boolean;
+      Default          : Default_Activation_Status := From_Config;
+      Stream           : Trace_Stream := null;
+      Factory          : Handle_Factory := null;
+      Finalize         : Boolean := True) return Trace_Handle;
+   --  Internal version of Create.
 
    function Get_Process_Id return Integer;
    --  Return the process ID of the current process
    pragma Import (C, Get_Process_Id, "getpid");
 
+   type File_Type_Access is access all File_Type;
+   procedure Unchecked_Free is new Ada.Unchecked_Deallocation
+     (File_Type, File_Type_Access);
+
    type File_Stream_Record is new Trace_Stream_Record with record
-      File : FILEs := NULL_Stream;
-      Lock : aliased GNATCOLL.Atomic.Atomic_Counter := 0;
+      File : File_Type_Access;
    end record;
-   overriding procedure Put
-      (Stream     : in out File_Stream_Record;
-       Str        : Msg_Strings.XString);
+   overriding procedure Put (Stream : in out File_Stream_Record; Str : String);
+   overriding procedure Newline (Stream : in out File_Stream_Record);
    overriding procedure Close (Stream : in out File_Stream_Record);
    --  Logs to a file
 
-   procedure Cache_Settings (Handle : not null Trace_Handle);
-   --  Cache various settings in Handle, to avoid dispatching calls in Log
-   --  and thus speed things up.
-   --  These settings are changed much less frequently.
+   type Stdout_Stream_Record is new Trace_Stream_Record with null record;
+   overriding procedure Put
+     (Stream : in out Stdout_Stream_Record; Str : String);
+   overriding procedure Newline (Stream : in out Stdout_Stream_Record);
+   --  Logs to stdout
 
-   ----------
-   -- Lock --
-   ----------
-
-   procedure Lock (The_Lock : aliased in out Atomic_Counter) is
-   begin
-      while True loop
-         --  In this package, the lock is owned during the time it takes
-         --  to Put a string to a stream (async streams go even faster).
-         --  It doesn't seem worth adding a "delay" in this loop, though
-         --  the standard implementation would be to have a delay on a
-         --  random number, and increase the delay every time we have to
-         --  loop until a given maximum.
-
-         while The_Lock /= 0 loop
-            null;
-         end loop;
-
-         exit when Sync_Add_And_Fetch
-            (The_Lock'Unchecked_Access, 1) = 1;
-      end loop;
-   end Lock;
-
-   ------------
-   -- Unlock --
-   ------------
-
-   procedure Unlock (The_Lock : aliased in out Atomic_Counter) is
-   begin
-      The_Lock := 0;
-   end Unlock;
+   type Stderr_Stream_Record is new Trace_Stream_Record with null record;
+   overriding procedure Put
+     (Stream : in out Stderr_Stream_Record; Str : String);
+   overriding procedure Newline (Stream : in out Stderr_Stream_Record);
+   --  Logs to stderr
 
    -----------------
    -- Find_Handle --
    -----------------
 
    function Find_Handle (Unit_Name_Upper_Case : String) return Trace_Handle is
-      Tmp : Trace_Handle := Global.Handles_List;
+      function Find_On_List (List : Trace_Handle) return Trace_Handle;
+      function Find_On_List (List : Trace_Handle) return Trace_Handle is
+         Tmp : Trace_Handle := List;
+      begin
+         while Tmp /= null
+           and then Tmp.Name.all /= Unit_Name_Upper_Case
+         loop
+            Tmp := Tmp.Next;
+         end loop;
+         return Tmp;
+      end Find_On_List;
+
+      Tmp : Trace_Handle;
    begin
-      while Tmp /= null
-        and then Tmp.Name.all /= Unit_Name_Upper_Case
-      loop
-         Tmp := Tmp.Next;
-      end loop;
+      Tmp := Find_On_List (Global.Handles_List);
+      if Tmp = null then
+         Tmp := Find_On_List (Global.Decorators);
+      end if;
       return Tmp;
    end Find_Handle;
 
@@ -422,10 +361,6 @@ package body GNATCOLL.Traces is
 
       procedure Add_To_Streams (Tmp : Trace_Stream) is
       begin
-         --  ??? Could use atomic operations to manipulate the
-         --  list directly.
-         Lock (Global.Lock);
-
          --  If possible, do not put this first on the list of streams,
          --  since it would become the default stream
          if Global.Streams_List = null then
@@ -435,8 +370,6 @@ package body GNATCOLL.Traces is
             Tmp.Next := Global.Streams_List.Next;
             Global.Streams_List.Next := Tmp;
          end if;
-
-         Unlock (Global.Lock);
       end Add_To_Streams;
 
       Name  : constant String := Trim (Stream_Name, Ada.Strings.Both);
@@ -450,13 +383,14 @@ package body GNATCOLL.Traces is
          return null;
       end if;
 
+      Lock;
+
       --  Do we have a matching existing stream?
-      --  Since we use a linked list and never remove elements from
-      --  the list, we do not need locking.
 
       Tmp := Global.Streams_List;
       while Tmp /= null loop
          if Tmp.Name.all = Name then
+            Unlock;
             return Tmp;
          end if;
          Tmp := Tmp.Next;
@@ -469,17 +403,15 @@ package body GNATCOLL.Traces is
 
       --  Do we have a matching factory (if we start with "&")?
 
-      if Name (Name'First .. Colon - 1) = "&1" then
-         Tmp := new File_Stream_Record'
-           (Name => new String'(Name (Name'First .. Colon - 1)),
-            File => stdout,
+      if Name = "&1" then
+         Tmp := new Stdout_Stream_Record'
+           (Name => new String'(Name),
             others => <>);
          Add_To_Streams (Tmp);
 
-      elsif Name (Name'First .. Colon - 1) = "&2" then
-         Tmp := new File_Stream_Record'
-           (Name => new String'(Name (Name'First .. Colon - 1)),
-            File => stderr,
+      elsif Name = "&2" then
+         Tmp := new Stderr_Stream_Record'
+           (Name => new String'(Name),
             others => <>);
          Add_To_Streams (Tmp);
 
@@ -505,6 +437,11 @@ package body GNATCOLL.Traces is
          end loop;
 
       else
+         Tmp := new File_Stream_Record'
+           (Name => new String'(Name),
+            File => new File_Type,
+            others => <>);
+
          declare
             use GNATCOLL.Templates;
 
@@ -550,70 +487,39 @@ package body GNATCOLL.Traces is
                raise Invalid_Substitution;
             end Substitute_Cb;
 
-            N : constant String := Normalize_Pathname
-              (Substitute
-                 (Str        => Name (Name'First .. Colon - 1),
-                  Substrings => Predef_Substitutions,
-                  Callback   => Substitute_Cb'Unrestricted_Access,
-                  Delimiter  => '$'),
-               Dir_Name (Config_File_Name));
-            N_Zero : aliased constant String := N & ASCII.NUL;
-            F     : FILEs;
          begin
-            if Append then
-               F := fopen (N_Zero'Address, mode => A_Zero'Address);
-            else
-               F := fopen (N_Zero'Address, mode => W_Zero'Address);
-            end if;
-
-            if F = NULL_Stream then
-               F := stderr;
-            end if;
-
-            Tmp := new File_Stream_Record'
-              (Name       => new String'(Name (Name'First .. Colon - 1)),
-               File       => F,
-               others => <>);
-            Add_To_Streams (Tmp);
-         end;
-      end if;
-
-      if Tmp.all in File_Stream_Record'Class then
-         declare
-            Args  : String_List_Access := Split (Name, ':');
-            Dummy : int;
-            Buf_Size : size_t := 2**10;
-         begin
-            for A of Args (Args'First + 1 .. Args'Last) loop
-               if Starts_With (A.all, "buffer_size=") then
-                  begin
-                     Buf_Size := size_t'Value (A (A'First + 12 .. A'Last));
-                  exception
-                     when others =>
-                        Buf_Size := 2**10;
-                  end;
+            declare
+               N : constant String := Normalize_Pathname
+                 (Substitute
+                    (Str        => Name,
+                     Substrings => Predef_Substitutions,
+                     Callback   => Substitute_Cb'Unrestricted_Access,
+                     Delimiter  => '$'),
+                  Dir_Name (Config_File_Name));
+            begin
+               if Append
+                 and then Is_Regular_File (N)
+               then
+                  Open (File_Stream_Record (Tmp.all).File.all, Append_File, N);
+               else
+                  Create (File_Stream_Record (Tmp.all).File.all, Out_File, N);
                end if;
-            end loop;
 
-            if Buf_Size = 0 then
-               --  make unbuffered
-               Dummy := setvbuf
-                  (File_Stream_Record (Tmp.all).File,
-                   System.Null_Address, IONBF, 0);
+            exception
+               when Ada.Text_IO.Use_Error =>
+                  --  Default to stderr
+                  Unchecked_Free (Tmp);
+                  Tmp := new Stderr_Stream_Record'
+                    (Name => new String'(Name), others => <>);
+            end;
 
-            else
-               --  make line buffered to speed up.
-               Dummy := setvbuf
-                  (File_Stream_Record (Tmp.all).File,
-                   System.Null_Address, IOFBF, Buf_Size);
-            end if;
-
-            Free (Args);
+            Add_To_Streams (Tmp);
          end;
       end if;
 
       --  Else use the default stream
 
+      Unlock;
       return Tmp;
    end Find_Stream;
 
@@ -626,16 +532,17 @@ package body GNATCOLL.Traces is
       Default   : Default_Activation_Status := From_Config;
       Stream    : String := "";
       Factory   : Handle_Factory := null;
-      Finalize  : Boolean := True) return Trace_Handle is
+      Finalize  : Boolean := True) return Trace_Handle
+   is
    begin
       if Debug_Mode then
          return Create_Internal
-            (From_Config_File => False,
-             Unit_Name        => Unit_Name,
-             Default          => Default,
-             Stream           => Find_Stream (Stream, "", Append => False),
-             Factory          => Factory,
-             Finalize         => Finalize);
+           (Unit_Name => Unit_Name,
+            From_Config_File => False,
+            Default   => Default,
+            Stream    => Find_Stream (Stream, "", Append => False),
+            Factory   => Factory,
+            Finalize  => Finalize);
       else
          return null;
       end if;
@@ -646,258 +553,165 @@ package body GNATCOLL.Traces is
    ---------------------
 
    function Create_Internal
-     (Unit_Name : String;
-      Default   : Default_Activation_Status := From_Config;
-      Stream    : Trace_Stream;
-      Factory   : Handle_Factory := null;
-      Finalize  : Boolean := True;
-      From_Config_File : Boolean) return Trace_Handle
+     (Unit_Name        : String;
+      From_Config_File : Boolean;
+      Default          : Default_Activation_Status := From_Config;
+      Stream           : Trace_Stream := null;
+      Factory          : Handle_Factory := null;
+      Finalize         : Boolean := True) return Trace_Handle
    is
-      Is_Star    : constant Boolean := Starts_With (Unit_Name, "*.")
-        or else Ends_With (Unit_Name, ".*");
-      Handle     : Trace_Handle;
-      Upper_Case : constant String := To_Upper (Unit_Name);
-      Tmp2     : Trace_Handle;
-      Wildcard : Trace_Handle;
+      Tmp, Tmp2    : Trace_Handle    := null;
+      Wildcard_Tmp : Trace_Handle    := null;
+      Upper_Case   : constant String := To_Upper (Unit_Name);
+      Is_Star      : Boolean;
+
    begin
-      --  Do we already have an existing handle ?
+      if Debug_Mode then
+         Lock;
 
-      if Is_Star then
-         Handle := Find_Wildcard_Handle (Upper_Case);
-      else
-         Handle := Find_Handle (Upper_Case);
-      end if;
+         Is_Star := Starts_With (Unit_Name, "*.")
+           or else Ends_With (Unit_Name, ".*");
 
-      if Handle = null then
-         if Factory /= null then
-            Handle := Factory.all;
+         if Is_Star then
+            Tmp := Find_Wildcard_Handle (Upper_Case);
+         else
+            Tmp := Find_Handle (Upper_Case);
          end if;
 
-         if Handle = null then
-            Handle := new Trace_Handle_Record;
+         if Tmp = null then
+            if Factory /= null then
+               Tmp := Factory.all;
+            end if;
+
+            if Tmp = null then
+               Tmp := new Trace_Handle_Record;
+            end if;
+
+            Tmp.Name          := new String'(Upper_Case);
+            Tmp.Forced_Active := False;
+            Tmp.Count         := 1;
+            Tmp.Timer         := No_Time;
+            Tmp.Finalize      := Finalize;
+
+            if Is_Star then
+               Wildcard_Tmp                 := null;
+               Tmp.Next                     := Global.Wildcard_Handles_List;
+               Global.Wildcard_Handles_List := Tmp;
+            else
+               Wildcard_Tmp        := Find_Wildcard_Handle (Upper_Case);
+               Tmp.Next            := Global.Handles_List;
+               Global.Handles_List := Tmp;
+            end if;
+
+            if Wildcard_Tmp /= null then
+               Tmp.Active := Wildcard_Tmp.Active;
+               Tmp.Forced_Active := True;
+
+               --  Unless we specified an explicit stream, inherit it
+               if Stream = null then
+                  Tmp.Stream := Wildcard_Tmp.Stream;
+               end if;
+
+            else
+               Tmp.Active := Global.Default_Activation;
+               Tmp.Stream := null;
+            end if;
          end if;
 
-         Register_Handle
-           (Handle           => Handle,
-            Upper_Case       => Upper_Case,
-            Finalize         => Finalize);
+         if Stream /= null then
+            --  Only override when we are parsing the configuration file, so
+            --  that if we have the following:
+            --      Me : Trace_Handle := Create ("ME", Stream => "str1");
+            --      parse config file, which contains "ME=yes >str2"
+            --      Me := Create ("ME", Stream => "str3")
+            --  then "ME" is sent to "str2" (priority is given to the config
+            --  file.
 
-         if Default = From_Config then
-            if not Is_Star then
-               Wildcard := Find_Wildcard_Handle (Handle.Name.all);
-               if Wildcard /= null then
-                  Set_Active (Handle, Wildcard.Active);
-                  Handle.Forced_Active := True;
+            if From_Config_File or else Tmp.Stream = null then
+               Tmp.Stream := Stream;
+            end if;
+         end if;
 
-                  --  Unless we specified an explicit stream, inherit it
-                  if Stream = null then
-                     Handle.Stream := Wildcard.Stream;
-                     Handle.Stream_Is_Default := Wildcard.Stream_Is_Default;
+         if not Tmp.Forced_Active or else From_Config_File then
+            if Default = On then
+               Tmp.Active := True;
+               Tmp.Forced_Active := True;
+
+            elsif Default = Off then
+               Tmp.Active := False;
+               Tmp.Forced_Active := True;
+            end if;
+         end if;
+
+         --  If we are declaring a "wildcard" handle, we need to check
+         --  whether any existing handle would match (which will in
+         --  general be the case, since handles are declared at
+         --  elaboration time and star handles in the config file).
+
+         if Is_Star then
+            Tmp2 := Global.Handles_List;
+            while Tmp2 /= null loop
+               if Wildcard_Applies_To
+                 (Tmp2.Name.all, Upper_Star => Upper_Case)
+               then
+                  --  Always override the status of matching streams:
+                  --  There are two scenarios here:
+                  --     - in a given config file, we always respect the order
+                  --  of declarations, thus wildcards should in general be put
+                  --  at the beginning.
+                  --     - if a wildcard is declared later on in Ada, we want
+                  --  it to impact existing streams as well (as a convenience
+                  --  for forcing specific settings from the code.
+                  --
+                  --  So do not check Tmp2.Forced_Active
+
+                  Tmp2.Active := Tmp.Active;
+
+                  if Tmp2.Stream = null then
+                     Tmp2.Stream := Tmp.Stream;
                   end if;
-               else
-                  Set_Active (Handle, Global.Default_Activation);
                end if;
-            end if;
-         end if;
-      end if;
 
-      if Stream /= null then
-         --  Only override when we are parsing the configuration file, so
-         --  that if we have the following:
-         --      Me : Trace_Handle := Create ("ME", Stream => "str1");
-         --      parse config file, which contains "ME=yes >str2"
-         --      Me := Create ("ME", Stream => "str3")
-         --  then "ME" is sent to "str2" (priority is given to the config
-         --  file.
-
-         if From_Config_File or else Handle.Stream_Is_Default then
-            Handle.Stream := Stream;
-            Handle.Stream_Is_Default := False;
+               Tmp2 := Tmp2.Next;
+            end loop;
          end if;
 
-      else
-         --  Use the default stream. If we are still parsing the config
-         --  file, we might not have this info yet, so we set Stream to
-         --  'null' and it will be overridden later
-         if not From_Config_File and then Handle.Stream_Is_Default then
-            Handle.Stream := Global.Streams_List;
-            Handle.Stream_Is_Default := True;
-         end if;
+         Unlock;
       end if;
-
-      --  Set activation
-
-      if not Handle.Forced_Active or else From_Config_File then
-         case Default is
-            when On =>
-               Handle.Forced_Active := True;
-               Set_Active (Handle, Active => True);
-            when Off =>
-               Handle.Forced_Active := True;
-               Set_Active (Handle, Active => False);
-            when From_Config =>
-               null;
-         end case;
-      end if;
-
-      --  If we are declaring a "wildcard" handle, we need to check
-      --  whether any existing handle would match (which will in
-      --  general be the case, since handles are declared at
-      --  elaboration time and star handles in the config file).
-
-      if Is_Star then
-         Tmp2 := Global.Handles_List;
-         while Tmp2 /= null loop
-            if Wildcard_Applies_To
-              (Tmp2.Name.all, Upper_Star => Handle.Name.all)
-            then
-               --  Always override the status of matching streams:
-               --  There are two scenarios here:
-               --     - in a given config file, we always respect the order
-               --  of declarations, thus wildcards should in general be put
-               --  at the beginning.
-               --     - if a wildcard is declared later on in Ada, we want
-               --  it to impact existing streams as well (as a convenience
-               --  for forcing specific settings from the code.
-               --
-               --  So do not check Tmp2.Forced_Active
-
-               Set_Active (Tmp2, Handle.Active);
-
-               if Tmp2.Stream_Is_Default then
-                  Tmp2.Stream := Handle.Stream;
-                  Tmp2.Stream_Is_Default := Handle.Stream_Is_Default;
-               end if;
-            end if;
-
-            Tmp2 := Tmp2.Next;
-         end loop;
-      end if;
-
-      Cache_Settings (Handle);
-
-      return Handle;
-   end Create_Internal;
-
-   --------------------
-   -- Cache_Settings --
-   --------------------
-
-   procedure Cache_Settings (Handle : not null Trace_Handle) is
-   begin
-      --  If we have already registered the default decorators
-
-      if Global.Colors /= null
-         and then Handle.Stream /= null
-      then
-         Handle.With_Time :=
-            (Global.Absolute_Time.Active or else Global.Absolute_Date.Active)
-            and then Handle.Stream.Supports_Time;
-         Handle.With_Colors :=
-            Global.Colors.Active and then Handle.Stream.Supports_Color;
-      end if;
-   end Cache_Settings;
-
-   ---------------------
-   -- Register_Handle --
-   ---------------------
-
-   procedure Register_Handle
-      (Handle           : not null Trace_Handle;
-       Upper_Case       : String;
-       Finalize         : Boolean := True)
-   is
-      Is_Star : constant Boolean :=
-         Starts_With (Upper_Case, "*.")
-         or else Ends_With (Upper_Case, ".*");
-   begin
-      Handle.Name              := new String'(Upper_Case);
-      Handle.Forced_Active     := False;
-      Handle.Count             := 0;
-      Handle.Timer             := No_Time;
-      Handle.Finalize          := Finalize;
-      Handle.Active            := False;
-      Handle.Is_Decorator      := False;
-      Handle.Stream_Is_Default := True;
-
-      Lock (Global.Lock);
-
-      if Is_Star then
-         Handle.Next                  := Global.Wildcard_Handles_List;
-         Global.Wildcard_Handles_List := Handle;
-      else
-         Handle.Next         := Global.Handles_List;
-         Global.Handles_List := Handle;
-      end if;
-
-      Unlock (Global.Lock);
+      return Tmp;
    exception
       when others =>
-         Unlock (Global.Lock);
+         Unlock;
          raise;
-   end Register_Handle;
+   end Create_Internal;
 
-   ----------------
-   -- Set_Active --
-   ----------------
+   ------------------------
+   -- Predefined handles --
+   ------------------------
+   --  This must be done after the body of Create has been seen
 
-   procedure Set_Active (Handle : not null Trace_Handle; Active : Boolean) is
-      Tmp : Trace_Handle;
-   begin
-      Handle.Active := Active;
-
-      if Handle.Is_Decorator then
-         --  If active, store it in the list of active decorators
-         if Active then
-            --  ??? Should check if we have too many decorators
-            Global.Active_Last := Global.Active_Last + 1;
-            Global.Active_Decorators (Global.Active_Last) := Handle;
-
-         else
-            for A in 1 .. Global.Active_Last loop
-               if Global.Active_Decorators (A) = Handle then
-                  Global.Active_Decorators (A .. Global.Active_Last - 1) :=
-                     Global.Active_Decorators (A + 1 .. Global.Active_Last);
-                  Global.Active_Last := Global.Active_Last - 1;
-                  exit;
-               end if;
-            end loop;
-         end if;
-
-         if Handle = Global.Colors
-            or else Handle = Global.Absolute_Time
-            or else Handle = Global.Absolute_Date
-         then
-            Tmp := Global.Handles_List;
-            while Tmp /= null loop
-               Cache_Settings (Tmp);
-               Tmp := Tmp.Next;
-            end loop;
-         end if;
-      end if;
-   end Set_Active;
-
-   ---------------
-   -- Is_Active --
-   ---------------
-
-   function Is_Active (Handle : not null Trace_Handle) return Boolean is
-   begin
-      return
-         --  After this module has been finalized, traces might still be
-         --  queried, typically when GNAT finalizes controlled types.
-         --  At this point, the memory allocated to handles has been freed
-         --  in Finalize, and Handle is a dangling pointer.
-         --  To protect against access to data in Handle, return False here.
-         Global.Activated
-         and then Handle.Active;
-   end Is_Active;
+   Absolute_Time    : constant Trace_Handle := Create ("DEBUG.ABSOLUTE_TIME");
+   Absolute_Date    : constant Trace_Handle :=
+     Create ("DEBUG.ABSOLUTE_DATE", Off);
+   Micro_Time       : constant Trace_Handle :=
+      Create ("DEBUG.MICRO_TIME", Off);
+   Elapsed_Time     : constant Trace_Handle := Create ("DEBUG.ELAPSED_TIME");
+   Stack_Trace      : constant Trace_Handle := Create ("DEBUG.STACK_TRACE");
+   Colors           : constant Trace_Handle := Create ("DEBUG.COLORS");
+   Enclosing_Entity : constant Trace_Handle :=
+     Create ("DEBUG.ENCLOSING_ENTITY");
+   Location         : constant Trace_Handle := Create ("DEBUG.LOCATION");
+   Count_Trace      : constant Trace_Handle := Create ("DEBUG.COUNT");
+   Finalize_Traces  : constant Trace_Handle :=
+     Create ("DEBUG.FINALIZE_TRACES", On);
+   --  If set to Off, this module will not be finalized, and traces will still
+   --  be activated when the program itself is finalized by GNAT
 
    ---------------
    -- Unit_Name --
    ---------------
 
-   function Unit_Name (Handle : not null Trace_Handle) return String is
+   function Unit_Name (Handle : Trace_Handle) return String is
    begin
       return Handle.Name.all;
    end Unit_Name;
@@ -906,7 +720,7 @@ package body GNATCOLL.Traces is
    -- Create_Exception_Handle --
    -----------------------------
 
-   procedure Create_Exception_Handle (Handle : not null Trace_Handle) is
+   procedure Create_Exception_Handle (Handle : Trace_Handle) is
       Default : Default_Activation_Status;
    begin
       if Handle.Exception_Handle = null then
@@ -926,7 +740,6 @@ package body GNATCOLL.Traces is
 
          if Handle.Exception_Handle.Stream = null then
             Handle.Exception_Handle.Stream := Handle.Stream;
-            Cache_Settings (Handle.Exception_Handle);
          end if;
       end if;
    end Create_Exception_Handle;
@@ -936,13 +749,14 @@ package body GNATCOLL.Traces is
    -----------
 
    procedure Trace
-     (Handle : not null Trace_Handle;
+     (Handle : Trace_Handle;
       E      : Ada.Exceptions.Exception_Occurrence;
       Msg    : String := "Unexpected exception: ";
       Color  : String := Default_Fg) is
    begin
       if Debug_Mode
-        and then Global.Activated  --  module not terminated
+        and then Global.Activated
+        and then Global.Handles_List /= null  --  module not terminated
       then
          Create_Exception_Handle (Handle);
          Trace (Handle.Exception_Handle,
@@ -956,150 +770,29 @@ package body GNATCOLL.Traces is
    -----------
 
    procedure Trace
-     (Handle   : not null Trace_Handle;
+     (Handle   : Trace_Handle;
       Message  : String;
       Color    : String := Default_Fg;
       Location : String := GNAT.Source_Info.Source_Location;
-      Entity   : String := GNAT.Source_Info.Enclosing_Entity)
-   is
-      --  We want maximum performance for traces. This saves about 2%
-      --  in single-threaded applications and sometimes 1% for multi-threaded
-      --  apps.
-      pragma Suppress (All_Checks);
-
+      Entity   : String := GNAT.Source_Info.Enclosing_Entity) is
    begin
-      if not Debug_Mode or else not Handle.Active then
-         return;
+      if Debug_Mode
+        and then Global.Activated
+        and then Global.Handles_List /= null  --  module not terminated
+      then
+         if Handle.Active then
+            Log (Handle, Message, Location, Entity, Message_Color => Color);
+         end if;
+
+         if Count_Trace /= null then
+            Sync_Add_And_Fetch (Count_Trace.Count'Access, 1);
+         end if;
+
+         --  Always increment the count: that way, testsuites can easily count
+         --  the number of queries that would have been emitted, even if they
+         --  don't explicitly log.
+         Sync_Add_And_Fetch (Handle.Count'Access, 1);
       end if;
-
-      declare
-         Start, Last  : Natural;
-         Indent : constant Integer := Integer (Handle.Stream.Indentation);
-         With_Color   : constant Boolean := Handle.With_Colors;
-         Msg          : Msg_Strings.XString;
-      begin
-         for D in 1 ..  Global.Active_Last loop
-            Global.Active_Decorators (D).Start_Of_Line
-               (Msg, Is_Continuation => False);
-         end loop;
-
-         if Indent > 0 then
-            Msg.Append ((1 .. Indent * 3 => ' '));
-         end if;
-
-         if With_Color then
-            Msg.Append (Cyan_Fg);
-         end if;
-
-         Msg.Append ('[');
-         Msg.Append (Handle.Name.all);
-         Msg.Append (']');
-         Msg.Append (' ');
-
-         --  Decorate before the message
-
-         for D in 1 ..  Global.Active_Last loop
-            Global.Active_Decorators (D).Before_Message (Handle, Msg);
-         end loop;
-
-         --  Add the message
-
-         if Global.Split_Lines.Active then
-            Start := Message'First;
-            loop
-               Last := Start;
-               while Last <= Message'Last
-                 and then Message (Last) /= ASCII.LF
-               loop
-                  Last := Last + 1;
-               end loop;
-
-               if With_Color then
-                  Msg.Append (Color);
-               end if;
-
-               Msg.Append (Message (Start .. Last - 1));
-
-               Start := Last + 1;
-               exit when Start > Message'Last;
-
-               Msg.Append (ASCII.LF);
-
-               for D in 1 ..  Global.Active_Last loop
-                  Global.Active_Decorators (D).Start_Of_Line
-                     (Msg, Is_Continuation => True);
-               end loop;
-
-               if Indent > 0 then
-                  Msg.Append ((1 .. Indent * 3 => ' '));
-               end if;
-
-               if With_Color then
-                  Msg.Append (Purple_Fg & Default_Bg);
-               end if;
-
-               Msg.Append ('_');
-               Msg.Append (Handle.Name.all);
-               Msg.Append ('_');
-               Msg.Append (' ');
-            end loop;
-         else
-            if With_Color then
-               Msg.Append (Color);
-            end if;
-
-            Msg.Append (Message);
-         end if;
-
-         --  Decorate after the message
-
-         if Global.Active_Last /= 0 then
-            if With_Color then
-               Msg.Append (Brown_Fg & Default_Bg);
-            end if;
-
-            Msg.Append (' ');
-
-            for D in 1 ..  Global.Active_Last loop
-               Global.Active_Decorators (D).After_Message (Handle, Msg);
-            end loop;
-
-            if Handle.With_Time then
-               Put_Absolute_Time (Msg);
-            end if;
-
-            if Global.Location.Active then
-               Msg.Append ("(loc: ");
-               Msg.Append (Location);
-               Msg.Append (')');
-            end if;
-
-            if Global.Enclosing_Entity.Active then
-               Msg.Append ("(entity:");
-               Msg.Append (Entity);
-               Msg.Append (')');
-            end if;
-         end if;
-
-         Msg.Append (ASCII.LF);
-         Handle.Stream.Put (Msg);
-      end;
-
-   exception
-      when others =>
-         case On_Exception is
-            when Propagate =>
-               raise;
-            when Ignore =>
-               null;
-            when Deactivate =>
-               begin
-                  Close (Handle.Stream.all);
-               exception
-                  when others =>
-                     null;
-               end;
-         end case;
    end Trace;
 
    ------------
@@ -1107,7 +800,7 @@ package body GNATCOLL.Traces is
    ------------
 
    procedure Assert
-     (Handle             : not null Trace_Handle;
+     (Handle             : Trace_Handle;
       Condition          : Boolean;
       Error_Message      : String;
       Message_If_Success : String := "";
@@ -1115,7 +808,11 @@ package body GNATCOLL.Traces is
       Location           : String := GNAT.Source_Info.Source_Location;
       Entity             : String := GNAT.Source_Info.Enclosing_Entity) is
    begin
-      if Active (Handle) then
+      if Debug_Mode
+        and then Global.Activated
+        and then Global.Handles_List /= null
+        and then Handle.Active
+      then
          if not Condition then
             Create_Exception_Handle (Handle);
             Trace
@@ -1139,20 +836,22 @@ package body GNATCOLL.Traces is
    ---------------------
 
    procedure Increase_Indent
-     (Handle   : not null Trace_Handle;
+     (Handle   : Trace_Handle := null;
       Msg      : String := "";
       Color    : String := Default_Fg;
       Location : String := GNAT.Source_Info.Source_Location;
-      Entity   : String := GNAT.Source_Info.Enclosing_Entity) is
+      Entity   : String := GNAT.Source_Info.Enclosing_Entity)
+   is
+      S : constant Trace_Stream := Stream (Handle);
    begin
-      if Handle.Stream /= null then
+      if S /= null then
          if Msg /= "" then
             Trace (Handle, Msg, Color => Color,
                    Location => Location, Entity => Entity);
          end if;
 
-         --  ??? Should we do this when the handle is inactive ?
-         Increment (Handle.Stream.Indentation);
+         --  Atomic increase by 1
+         Sync_Add_And_Fetch (S.Indentation'Access, 1);
       end if;
    end Increase_Indent;
 
@@ -1161,27 +860,60 @@ package body GNATCOLL.Traces is
    ---------------------
 
    procedure Decrease_Indent
-     (Handle   : not null Trace_Handle;
+     (Handle   : Trace_Handle := null;
       Msg      : String := "";
       Color    : String := Default_Fg;
       Location : String := GNAT.Source_Info.Source_Location;
-      Entity   : String := GNAT.Source_Info.Enclosing_Entity) is
+      Entity   : String := GNAT.Source_Info.Enclosing_Entity)
+   is
+      S : constant Trace_Stream := Stream (Handle);
    begin
-      if Handle.Stream /= null then
+      if S /= null then
+         --  Atomic decrement
 
-         --  The counter is a modulo type
-         if Sync_Sub_And_Fetch
-            (Handle.Stream.Indentation'Unchecked_Access, 1) = Minus_One
-         then
-            Handle.Stream.Indentation := 0;
-            Trace (Handle, "Indentation error: too many decrease");
-         end if;
-
-         if Msg /= "" then
-            Trace (Handle, Msg, Color, Location, Entity);
+         if Sync_Sub_And_Fetch (S.Indentation'Access, 1) = Minus_One then
+            if Handle /= null and then Msg /= "" then
+               Trace (Handle, Msg, Color, Location, Entity);
+            end if;
+         else
+            if Handle /= null then
+               Trace (Handle, "Indentation error: too many decrease");
+               if Msg /= "" then
+                  Trace (Handle, Msg, Color, Location, Entity);
+               end if;
+            end if;
          end if;
       end if;
    end Decrease_Indent;
+
+   ----------------
+   -- Set_Active --
+   ----------------
+
+   procedure Set_Active (Handle : Trace_Handle; Active : Boolean) is
+   begin
+      Handle.Active := Active;
+   end Set_Active;
+
+   ---------------
+   -- Is_Active --
+   ---------------
+
+   function Is_Active (Handle : Trace_Handle) return Boolean is
+   begin
+      return
+         --  After this module has been finalized, traces might still be
+         --  queried, typically when GNAT finalizes controlled types.
+         --  At this point, the memory allocated to handles has been freed
+         --  in Finalize, and Handle is a dangling pointer.
+         --  To protect against access to data in Handle, return False here.
+         Global.Handles_List /= null
+
+         --  In case Handle hasn't been initialized yet
+         and then Handle /= null
+
+         and then Handle.Active;
+   end Is_Active;
 
    ----------------------
    -- Local_Sub_Second --
@@ -1204,167 +936,359 @@ package body GNATCOLL.Traces is
       else
          return Integer (Ss * 1000.0);
       end if;
+
    end Local_Sub_Second;
 
    -----------------------
    -- Put_Absolute_Time --
    -----------------------
 
-   procedure Put_Absolute_Time (Msg : in out Msg_Strings.XString) is
+   procedure Put_Absolute_Time (Stream : in out Trace_Stream_Record'Class) is
       T  : constant Ada.Calendar.Time := Ada.Calendar.Clock;
       Z  : String (1 .. 3) := "000";
       Ms : constant String := Integer'Image (Local_Sub_Second (T));
    begin
       Z (3 + 1 - (Ms'Length - 1) .. 3) := Ms (Ms'First + 1 .. Ms'Last);
-      if Global.Absolute_Date.Active then
-         if Global.Absolute_Time.Active then
-            if Global.Micro_Time.Active then
-               Msg.Append ("(" & Image (T, ISO_Date & " %T:%e") & ')');
+      if Absolute_Date.Active then
+         if Absolute_Time.Active then
+            if Micro_Time.Active then
+               Put (Stream, "(" & Image (T, ISO_Date & " %T:%e") & ')');
             else
-               Msg.Append ("(" & Image (T, ISO_Date & " %T.") & Z & ')');
+               Put (Stream, "(" & Image (T, ISO_Date & " %T.") & Z & ')');
             end if;
          else
-            Msg.Append ("(" & Image (T, ISO_Date) & ')');
+            Put (Stream, "(" & Image (T, ISO_Date) & ')');
          end if;
 
       else
-         if Global.Micro_Time.Active then
-            Msg.Append ("(" & Image (T, ISO_Date & " %T:%e") & ')');
+         if Micro_Time.Active then
+            Put (Stream, "(" & Image (T, ISO_Date & " %T:%e") & ')');
          else
-            Msg.Append ("(" & Image (T, "%T.") & Z & ')');
+            Put (Stream, "(" & Image (T, "%T.") & Z & ')');
          end if;
       end if;
    end Put_Absolute_Time;
 
-   --------------------
-   -- Before_Message --
-   --------------------
+   ----------------------
+   -- Put_Elapsed_Time --
+   ----------------------
 
-   overriding procedure Before_Message
-      (Self   : in out Count_Trace;
-       Handle : not null Trace_Handle;
-       Msg    : in out Msg_Strings.XString)
+   procedure Put_Elapsed_Time
+     (Handle : in out Trace_Handle_Record'Class;
+      Stream : in out Trace_Stream_Record'Class)
    is
-      --  ??? Should we lock to get consistent counters ?
-      Total : constant Atomic_Counter :=
-         Sync_Add_And_Fetch (Self.Count'Unchecked_Access, 1);
-      Local : constant Atomic_Counter :=
-         Sync_Add_And_Fetch (Handle.Count'Unchecked_Access, 1);
-      C : constant String := Atomic_Counter'Image (Total);
-      H : constant String := Atomic_Counter'Image (Local);
-   begin
-      Msg.Append (H (H'First + 1 .. H'Last)
-         & '/' & C (C'First + 1 .. C'Last) & ' ');
-   end Before_Message;
-
-   -------------------
-   -- After_Message --
-   -------------------
-
-   overriding procedure After_Message
-      (Self   : in out Memory_Trace;
-       Handle : not null Trace_Handle;
-       Msg    : in out Msg_Strings.XString)
-   is
-      pragma Unreferenced (Handle);
-      use GNATCOLL.Memory;
-      Watermark : constant Watermark_Info := Get_Allocations;
-   begin
-      Msg.Append
-         ("[Watermark:"
-          & (if Watermark.Current > Self.Previous then '>' else '<')
-          & Watermark.Current'Img & '/'
-          & Watermark.High'Img & "]");
-      Self.Previous := Watermark.Current;
-   end After_Message;
-
-   -------------------
-   -- After_Message --
-   -------------------
-
-   overriding procedure After_Message
-      (Self   : in out Ada_Memory_Trace;
-       Handle : not null Trace_Handle;
-       Msg    : in out Msg_Strings.XString)
-   is
-      pragma Unreferenced (Handle);
-      use GNATCOLL.Memory;
-      Watermark : constant Watermark_Info := Get_Ada_Allocations;
-   begin
-      if Watermark.High /= 0 then
-         Msg.Append
-            ("[AdaWatermark:"
-             & (if Watermark.Current > Self.Previous then '>' else '<')
-             & Watermark.Current'Img & '/'
-             & Watermark.High'Img & "]");
-      end if;
-      Self.Previous := Watermark.Current;
-   end After_Message;
-
-   -------------------
-   -- After_Message --
-   -------------------
-
-   overriding procedure After_Message
-      (Self   : in out Elapse_Time_Trace;
-       Handle : not null Trace_Handle;
-       Msg    : in out Msg_Strings.XString)
-   is
-      pragma Unreferenced (Self);
       T   : constant Ada.Calendar.Time := Ada.Calendar.Clock;
       Dur : Integer;
    begin
       if Handle.Timer /= No_Time then
          Dur := Integer ((T - Handle.Timer) * 1000);
-         Msg.Append ("(elapsed:" & Integer'Image (Dur) & "ms)");
+         Put (Stream, "(elapsed:" & Integer'Image (Dur) & "ms)");
       end if;
       Handle.Timer := T;
-   end After_Message;
+   end Put_Elapsed_Time;
 
-   -------------------
-   -- After_Message --
-   -------------------
+   ---------------------
+   -- Put_Stack_Trace --
+   ---------------------
 
-   overriding procedure After_Message
-      (Self   : in out Stack_Trace;
-       Handle : not null Trace_Handle;
-       Msg    : in out Msg_Strings.XString)
-   is
-      pragma Unreferenced (Self, Handle);
+   procedure Put_Stack_Trace (Stream : in out Trace_Stream_Record'Class) is
       Tracebacks : GNAT.Traceback.Tracebacks_Array (1 .. 50);
       Len        : Natural;
    begin
       Call_Chain (Tracebacks, Len);
-      Msg.Append ("(callstack: ");
+      Put (Stream, "(callstack: ");
       for J in Tracebacks'First .. Len loop
-         Msg.Append (System.Address_Image (Get_PC (Tracebacks (J))) & ' ');
+         Put (Stream, System.Address_Image (Get_PC (Tracebacks (J))) & ' ');
       end loop;
-      Msg.Append (")");
-   end After_Message;
+      Put (Stream, ")");
+   end Put_Stack_Trace;
+
+   ----------------------
+   -- Prefix_Decorator --
+   ----------------------
+
+   procedure Prefix_Decorator
+     (Handle          : in out Trace_Handle_Record;
+      Stream          : in out Trace_Stream_Record'Class;
+      Indent          : Integer;
+      Is_Continuation : Boolean)
+   is
+      Dec : Trace_Handle;
+   begin
+      if not Handle.Is_Decorator then
+         Dec := Global.Decorators;
+         while Dec /= null loop
+            if Dec.Active then
+               Dec.Prefix_Decorator (Stream, Indent, Is_Continuation);
+            end if;
+            Dec := Dec.Next;
+         end loop;
+
+         if Indent > 0 then
+            Put (Stream, String'(1 .. Indent * 3 => ' '));
+         end if;
+      end if;
+   end Prefix_Decorator;
+
+   -------------------
+   -- Pre_Decorator --
+   -------------------
+
+   procedure Pre_Decorator
+     (Handle  : in out Trace_Handle_Record;
+      Stream  : in out Trace_Stream_Record'Class;
+      Message : String)
+   is
+      Dec : Trace_Handle;
+   begin
+      if Handle.Is_Decorator then
+         return;
+      end if;
+
+      Dec := Global.Decorators;
+      while Dec /= null loop
+         if Dec.Active then
+            Dec.Pre_Decorator (Stream, Message);
+         end if;
+         Dec := Dec.Next;
+      end loop;
+
+      if Count_Trace.Active then
+         declare
+            C : constant String := Atomic_Counter'Image (Count_Trace.Count);
+            H : constant String := Atomic_Counter'Image (Handle.Count);
+         begin
+            Put (Stream, H (H'First + 1 .. H'Last)
+                 & '/' & C (C'First + 1 .. C'Last) & ' ');
+         end;
+      end if;
+   exception
+      when E : others =>
+         Put (Stream, Ada.Exceptions.Exception_Information (E));
+   end Pre_Decorator;
+
+   --------------------
+   -- Post_Decorator --
+   --------------------
+
+   procedure Post_Decorator
+     (Handle   : in out Trace_Handle_Record;
+      Stream   : in out Trace_Stream_Record'Class;
+      Location : String;
+      Entity   : String;
+      Message  : String)
+   is
+      Space_Inserted : Boolean := False;
+      --  True when a space has been inserted after the main trace text, before
+      --  the Post_Decorator information.
+
+      procedure Ensure_Space;
+      --  Insert a space if not done already
+
+      ------------------
+      -- Ensure_Space --
+      ------------------
+
+      procedure Ensure_Space is
+      begin
+         if not Space_Inserted then
+            Put (Stream, " ");
+            Space_Inserted := True;
+         end if;
+      end Ensure_Space;
+
+      Dec : Trace_Handle;
+   begin
+      if Handle.Is_Decorator then
+         return;
+      end if;
+
+      Dec := Global.Decorators;
+      while Dec /= null loop
+         if Dec.Active then
+            Ensure_Space;
+            Dec.Post_Decorator (Stream, Location, Entity, Message);
+         end if;
+         Dec := Dec.Next;
+      end loop;
+
+      if (Absolute_Time.Active or else Absolute_Date.Active)
+        and then Supports_Time (Stream)
+      then
+         Ensure_Space;
+         Put_Absolute_Time (Stream);
+      end if;
+
+      if Elapsed_Time.Active then
+         Ensure_Space;
+         Put_Elapsed_Time (Handle, Stream);
+      end if;
+
+      if Traces.Location.Active and then Location /= "" then
+         Ensure_Space;
+         Put (Stream, "(loc: " & Location & ')');
+      end if;
+
+      if Enclosing_Entity.Active and then Entity /= "" then
+         Ensure_Space;
+         Put (Stream, "(entity:" & Entity & ')');
+      end if;
+
+      if Stack_Trace.Active then
+         Ensure_Space;
+         Put_Stack_Trace (Stream);
+      end if;
+   end Post_Decorator;
 
    --------------------------
    -- Add_Global_Decorator --
    --------------------------
 
    procedure Add_Global_Decorator
-      (Decorator : not null access Trace_Handle_Record'Class) is
+      (Decorator : not null access Trace_Handle_Record'Class)
+   is
+      H, Prev : Trace_Handle := null;
    begin
-      --  If already registered, nothing to do
-      if Debug_Mode and then not Decorator.Is_Decorator then
-         Lock (Global.Lock);
+      Lock;
 
-         Decorator.Is_Decorator := True;
+      --  Remove the decorator from the handles lists (not from the
+      --  wildcard handles list, this is a named handle)
+      H := Global.Handles_List;
+      while  H /= null loop
+         if H = Trace_Handle (Decorator) then
+            if Prev = null then
+               Global.Handles_List := H.Next;
+            else
+               Prev.Next := H.Next;
+            end if;
+            exit;
+         end if;
+         Prev := H;
+         H := H.Next;
+      end loop;
 
-         --  If active, store it in the list of active decorators
-         if Decorator.Active then
-            Global.Active_Last := Global.Active_Last + 1;
-            Global.Active_Decorators (Global.Active_Last) :=
-               Trace_Handle (Decorator);
+      --  And add it to the decorators list instead
+
+      Decorator.Next := Global.Decorators;
+      Decorator.Is_Decorator := True;
+      Global.Decorators := Trace_Handle (Decorator);
+
+      Unlock;
+   end Add_Global_Decorator;
+
+   ---------
+   -- Log --
+   ---------
+
+   procedure Log
+     (Handle        : Trace_Handle;
+      Message       : String;
+      Location      : String := GNAT.Source_Info.Source_Location;
+      Entity        : String := GNAT.Source_Info.Enclosing_Entity;
+      Message_Color : String := Default_Fg)
+   is
+      Start, Last  : Natural;
+      Stream       : constant Trace_Stream := Traces.Stream (Handle);
+      Indent       : Integer;
+      Color        : Boolean;
+   begin
+      if Message'Length = 0 or else Stream = null then
+         return;
+      end if;
+
+      Color := Colors.Active and then Supports_Color (Stream.all);
+
+      Lock;
+
+      Indent := (if Stream = null then 0 else Integer (Stream.Indentation));
+
+      Prefix_Decorator
+         (Handle.all, Stream.all,
+          Indent          => Indent,
+          Is_Continuation => False);
+
+      if Color then
+         Put (Stream.all, Cyan_Fg);
+      end if;
+
+      Put (Stream.all, '[' & Handle.Name.all & "] ");
+      Pre_Decorator (Handle.all, Stream.all, Message);
+
+      if Color then
+         Put (Stream.all, Message_Color);
+      end if;
+
+      Start := Message'First;
+      loop
+         Last := Start;
+         while Last <= Message'Last
+           and then Message (Last) /= ASCII.LF
+           and then Message (Last) /= ASCII.CR
+         loop
+            Last := Last + 1;
+         end loop;
+
+         Put (Stream.all, Message (Start .. Last - 1));
+
+         Start := Last + 1;
+         exit when Start > Message'Last;
+
+         Newline (Stream.all);
+         Prefix_Decorator
+            (Handle.all, Stream.all,
+             Indent          => Indent,
+             Is_Continuation => True);
+
+         if Color then
+            Put (Stream.all, Purple_Fg & Default_Bg);
          end if;
 
-         Unlock (Global.Lock);
+         Put (Stream.all, '_' & Handle.Name.all & "_ ");
+
+         if Color then
+            Put (Stream.all, Message_Color);
+         end if;
+      end loop;
+
+      if Color then
+         Put (Stream.all, Brown_Fg & Default_Bg);
       end if;
-   end Add_Global_Decorator;
+
+      Post_Decorator
+        (Handle   => Handle.all,
+         Stream   => Stream.all,
+         Message  => Message,
+         Location => Location,
+         Entity   => Entity);
+
+      if Color then
+         Put (Stream.all, Default_Fg);
+      end if;
+
+      Newline (Stream.all);
+
+      Unlock;
+
+   exception
+      when others =>
+         Unlock;
+
+         case On_Exception is
+            when Propagate =>
+               raise;
+            when Ignore =>
+               null;
+            when Deactivate =>
+               if Stream /= null then
+                  begin
+                     Close (Stream.all);
+                  exception
+                     when others =>
+                        null;
+                  end;
+               end if;
+         end case;
+   end Log;
 
    -----------------
    -- Config_File --
@@ -1427,13 +1351,33 @@ package body GNATCOLL.Traces is
      (Name : String; Factory : Stream_Factory_Access)
    is
    begin
-      Lock (Global.Lock);
+      Lock;
       Global.Factories_List := new Stream_Factories'
         (Name    => new String'("&" & Name),
          Factory => Factory,
          Next    => Global.Factories_List);
-      Unlock (Global.Lock);
+      Unlock;
    end Register_Stream_Factory;
+
+   --------------------
+   -- Supports_Color --
+   --------------------
+
+   function Supports_Color (Stream : Trace_Stream_Record) return Boolean is
+      pragma Unreferenced (Stream);
+   begin
+      return True;
+   end Supports_Color;
+
+   -------------------
+   -- Supports_Time --
+   -------------------
+
+   function Supports_Time (Stream : Trace_Stream_Record) return Boolean is
+      pragma Unreferenced (Stream);
+   begin
+      return True;
+   end Supports_Time;
 
    -----------
    -- Close --
@@ -1448,45 +1392,75 @@ package body GNATCOLL.Traces is
    -- Put --
    ---------
 
-   overriding procedure Put
-      (Stream     : in out File_Stream_Record;
-       Str        : Msg_Strings.XString)
-   is
-      N       : size_t;
-      S       : Msg_Strings.Unconstrained_String_Access;
-      L       : Natural;
+   procedure Put (Stream : in out Stdout_Stream_Record; Str : String) is
+      pragma Unreferenced (Stream);
    begin
-      --  fwrite is thread safe on Windows and POSIX systems,
-      --  we should not need locking.
+      Put (Str);
+   end Put;
 
-      Str.Get_String (S, L);
+   -------------
+   -- Newline --
+   -------------
 
-      --  The call to fwrite is C, so will not raise exceptions
-      Lock (Stream.Lock);
-      N := fwrite
-         (buffer  => S.all'Address,
-          size    => size_t (L),
-          count   => 1,
-          stream  => Stream.File);
-      Unlock (Stream.Lock);
+   procedure Newline (Stream : in out Stdout_Stream_Record) is
+      pragma Unreferenced (Stream);
+   begin
+      New_Line;
+      Flush;
+   end Newline;
 
-      if N /= size_t (L) then
-         --   ??? Could not write to file, disk full ?
-         null;
+   ---------
+   -- Put --
+   ---------
+
+   procedure Put (Stream : in out Stderr_Stream_Record; Str : String) is
+      pragma Unreferenced (Stream);
+   begin
+      Put (Ada.Text_IO.Standard_Error, Str);
+   end Put;
+
+   -------------
+   -- Newline --
+   -------------
+
+   procedure Newline (Stream : in out Stderr_Stream_Record) is
+      pragma Unreferenced (Stream);
+   begin
+      New_Line (Ada.Text_IO.Standard_Error);
+      Flush (Ada.Text_IO.Standard_Error);
+   end Newline;
+
+   ---------
+   -- Put --
+   ---------
+
+   procedure Put (Stream : in out File_Stream_Record; Str : String) is
+   begin
+      if Stream.File /= null then
+         Put (Stream.File.all, Str);
       end if;
    end Put;
+
+   -------------
+   -- Newline --
+   -------------
+
+   procedure Newline (Stream : in out File_Stream_Record) is
+   begin
+      if Stream.File /= null then
+         New_Line (Stream.File.all);
+         Flush (Stream.File.all);
+      end if;
+   end Newline;
 
    -----------
    -- Close --
    -----------
 
    procedure Close (Stream : in out File_Stream_Record) is
-      Status : int;
-      pragma Unreferenced (Status);
    begin
-      Status := fclose (Stream.File);
-      Stream.File := NULL_Stream;
-
+      Close (Stream.File.all);
+      Unchecked_Free (Stream.File);
       Close (Trace_Stream_Record (Stream));
    end Close;
 
@@ -1549,66 +1523,7 @@ package body GNATCOLL.Traces is
       end Skip_To_Newline;
 
    begin
-      if not Debug_Mode then
-         return;
-      end if;
-
       GNATCOLL.Traces.On_Exception := On_Exception;
-
-      --  If this is the first time we call Parse_Config_File, we initialize
-      --  the package at the same time.
-
-      if Global.Colors = null then
-         Set_Default_Stream ("&1");
-
-         Global.Micro_Time := Create ("DEBUG.MICRO_TIME", Off);
-         Add_Global_Decorator (Global.Micro_Time);
-
-         Handle := new Elapse_Time_Trace;
-         Register_Handle (Handle, "DEBUG.ELAPSED_TIME");
-         Add_Global_Decorator (Handle);
-
-         Handle := new Stack_Trace;
-         Register_Handle (Handle, "DEBUG.STACK_TRACE");
-         Add_Global_Decorator (Handle);
-
-         Handle := new Count_Trace;
-         Register_Handle (Handle, "DEBUG.COUNT");
-         Add_Global_Decorator (Handle);
-
-         Handle := new Memory_Trace;
-         Register_Handle (Handle, "DEBUG.MEMORY");
-         Add_Global_Decorator (Handle);
-
-         Handle := new Ada_Memory_Trace;
-         Register_Handle (Handle, "DEBUG.ADA_MEMORY");
-         Add_Global_Decorator (Handle);
-
-         --  These are handled directly in Trace, but we should have them on
-         --  the active list of decorators to know whether we need to add a
-         --  space.
-
-         Global.Absolute_Time := Create ("DEBUG.ABSOLUTE_TIME", Off);
-         Add_Global_Decorator (Global.Absolute_Time);
-
-         Global.Absolute_Date := Create ("DEBUG.ABSOLUTE_DATE", Off);
-         Add_Global_Decorator (Global.Absolute_Date);
-
-         Global.Enclosing_Entity := Create ("DEBUG.ENCLOSING_ENTITY", Off);
-         Add_Global_Decorator (Global.Enclosing_Entity);
-
-         Global.Location := Create ("DEBUG.LOCATION", Off);
-         Add_Global_Decorator (Global.Location);
-
-         --  The following are not decorators, and handled specially
-
-         Global.Finalize_Traces := Create ("DEBUG.FINALIZE_TRACES", On);
-         Global.Split_Lines := Create ("DEBUG.SPLIT_LINES", On);
-
-         Global.Colors := new Trace_Handle_Record;
-         Global.Colors.Is_Decorator := True;
-         Register_Handle (Global.Colors, "DEBUG.COLORS");
-      end if;
 
       if File_Name = No_File then
          if Force_Activation then
@@ -1619,14 +1534,14 @@ package body GNATCOLL.Traces is
          begin
             File := Open_Read (+File_Name.Full_Name);
          exception
-            when Ada.IO_Exceptions.Name_Error =>
+            when Name_Error =>
                return;
          end;
 
+         Lock;
+         Global.Activated := True;
          Read (File);
          Buffer := Data (File);
-
-         Global.Activated := True;
 
          Index := 1;
 
@@ -1643,17 +1558,44 @@ package body GNATCOLL.Traces is
                case Buffer (Index) is
                   when '>' =>
                      declare
-                        Save   : constant Integer := Index;
+                        Save   : Integer := Index + 1;
+                        Stream : Trace_Stream;
+                        Tmp    : Trace_Stream;
+                        Append : constant Boolean := Buffer (Index + 1) = '>';
                      begin
+                        if Append then
+                           Save := Index + 2;
+                        end if;
+
                         Skip_To_Newline;
                         if Buffer (Index - 1) = ASCII.CR then
-                           Set_Default_Stream
-                              (String (Buffer (Save .. Index - 2)),
-                               Config_File => File_Name);
+                           Stream := Find_Stream
+                             (String (Buffer (Save .. Index - 2)),
+                              +File_Name.Full_Name,
+                              Append);
                         else
-                           Set_Default_Stream
-                              (String (Buffer (Save .. Index - 1)),
-                               Config_File => File_Name);
+                           Stream := Find_Stream
+                             (String (Buffer (Save .. Index - 1)),
+                              +File_Name.Full_Name,
+                              Append);
+                        end if;
+                        if Stream /= null then
+                           --  Put this first in the list, since that's the
+                           --  default
+                           if Global.Streams_List /= Stream then
+                              Tmp := Global.Streams_List;
+                              while Tmp /= null
+                                and then Tmp.Next /= Stream
+                              loop
+                                 Tmp := Tmp.Next;
+                              end loop;
+
+                              if Tmp /= null then
+                                 Tmp.Next := Stream.Next;
+                                 Stream.Next := Global.Streams_List;
+                                 Global.Streams_List := Stream;
+                              end if;
+                           end if;
                         end if;
                      end;
 
@@ -1662,8 +1604,15 @@ package body GNATCOLL.Traces is
                      Skip_To_Newline;
                      Handle := Global.Handles_List;
                      while Handle /= null loop
-                        if not Handle.Forced_Active then
-                           Set_Active (Handle, True);
+                        if not Handle.Forced_Active
+                          and then Handle /= Absolute_Time
+                          and then Handle /= Elapsed_Time
+                          and then Handle /= Stack_Trace
+                          and then Handle /= Colors
+                          and then Handle /= Enclosing_Entity
+                          and then Handle /= Location
+                        then
+                           Handle.Active := True;
 
                            --  A later declaration of the stream in the code
                            --  should not be allowed to reset Active to False
@@ -1753,17 +1702,23 @@ package body GNATCOLL.Traces is
                         end if;
 
                         Handle := Create_Internal
-                           (String (Buffer (First .. Max)),
-                            From_Config_File => True,
-                            Default          => Active,
-                            Stream           => Stream);
+                          (String (Buffer (First .. Max)),
+                           From_Config_File => True,
+                           Default => Active,
+                           Stream => Stream);
                      end;
                end case;
             end if;
          end loop;
 
          Close (File);
+         Unlock;
       end if;
+
+   exception
+      when others =>
+         Unlock;
+         raise;
    end Parse_Config_File;
 
    -----------------------
@@ -1807,8 +1762,8 @@ package body GNATCOLL.Traces is
       TmpF  : Stream_Factories_List;
       NextF : Stream_Factories_List;
    begin
-      if Active (Global.Finalize_Traces) then
-         Lock (Global.Lock);
+      if Active (Finalize_Traces) then
+         Lock;
          Tmp := Global.Handles_List;
          while Tmp /= null loop
             Next := Tmp.Next;
@@ -1854,9 +1809,10 @@ package body GNATCOLL.Traces is
          end loop;
          Global.Factories_List := null;
 
-         Global.Activated := False;
+         --  Already free-ed as part of the handles_List
+         Global.Decorators := null;
 
-         Unlock (Global.Lock);
+         Unlock;
       end if;
    end Finalize;
 
@@ -1864,60 +1820,31 @@ package body GNATCOLL.Traces is
    -- Set_Default_Stream --
    ------------------------
 
-   procedure Set_Default_Stream
-      (Name        : String;
-       Config_File : Virtual_File := No_File)
-   is
+   procedure Set_Default_Stream (Name : String) is
       S : Trace_Stream;
       T : Trace_Stream;
-      H : Trace_Handle;
 
    begin
       if Name'Length > 2
         and then Name (Name'First .. Name'First + 1) = ">>"
       then
          S := Find_Stream
-           (Name (Name'First + 2 .. Name'Last),
-            +Config_File.Full_Name.all, Append => True);
-      elsif Name (Name'First) = '>' then
-         S := Find_Stream
-            (Name (Name'First + 1 .. Name'Last),
-             +Config_File.Full_Name.all, Append => False);
+           (Name (Name'First + 2 .. Name'Last), "", Append => True);
       else
-         S := Find_Stream
-            (Name,
-             +Config_File.Full_Name.all, Append => False);
+         S := Find_Stream (Name, "", Append => False);
       end if;
 
-      if S /= null then
-         --  Put it first in the list
+      --  Put it first in the list
 
-         Lock (Global.Lock);
-         if Global.Streams_List /= S then
-            T := Global.Streams_List;
-            while T.Next /= S loop
-               T := T.Next;
-            end loop;
-
-            T.Next := S.Next;
-            S.Next := Global.Streams_List;
-            Global.Streams_List := S;
-         end if;
-
-         --  Apply the default stream for all streams that do not have an
-         --  explicit one
-
-         H := Global.Handles_List;
-         while H /= null loop
-            if H.Stream = null or else H.Stream_Is_Default then
-               H.Stream := Global.Streams_List;
-               H.Stream_Is_Default := True;
-               Cache_Settings (H);
-            end if;
-            H := H.Next;
+      if Global.Streams_List /= S then
+         T := Global.Streams_List;
+         while T.Next /= S loop
+            T := T.Next;
          end loop;
 
-         Unlock (Global.Lock);
+         T.Next := S.Next;
+         S.Next := Global.Streams_List;
+         Global.Streams_List := S;
       end if;
    end Set_Default_Stream;
 
@@ -1925,9 +1852,13 @@ package body GNATCOLL.Traces is
    -- Count --
    -----------
 
-   function Count (Handler : not null Trace_Handle) return Natural is
+   function Count (Handler : Trace_Handle) return Natural is
    begin
-      return Natural (Handler.Count);
+      if Handler = null then
+         return 0;
+      else
+         return Natural (Handler.Count);
+      end if;
    end Count;
 
    ------------
@@ -1974,4 +1905,7 @@ package body GNATCOLL.Traces is
       end if;
    end Finalize;
 
+begin
+   --  This is the default stream, always register it
+   Set_Default_Stream ("&1");
 end GNATCOLL.Traces;
