@@ -317,13 +317,13 @@ package GNATCOLL.Traces is
    --  is not the empty string.
 
    procedure Increase_Indent
-     (Handle   : not null access Trace_Handle_Record'Class;
+     (Handle   : access Trace_Handle_Record'Class := null;
       Msg      : String := "";
       Color    : String := Default_Fg;
       Location : String := GNAT.Source_Info.Source_Location;
       Entity   : String := GNAT.Source_Info.Enclosing_Entity);
    procedure Decrease_Indent
-     (Handle   : not null access Trace_Handle_Record'Class;
+     (Handle   : access Trace_Handle_Record'Class := null;
       Msg      : String := "";
       Color    : String := Default_Fg;
       Location : String := GNAT.Source_Info.Source_Location;

@@ -1174,13 +1174,13 @@ package body GNATCOLL.Traces is
    ---------------------
 
    procedure Increase_Indent
-     (Handle   : not null access Trace_Handle_Record'Class;
+     (Handle   : access Trace_Handle_Record'Class := null;
       Msg      : String := "";
       Color    : String := Default_Fg;
       Location : String := GNAT.Source_Info.Source_Location;
       Entity   : String := GNAT.Source_Info.Enclosing_Entity) is
    begin
-      if Handle.Stream /= null then
+      if Handle /= null and then Handle.Stream /= null then
          if Msg /= "" then
             Trace (Handle, Msg, Color => Color,
                    Location => Location, Entity => Entity);
@@ -1196,13 +1196,13 @@ package body GNATCOLL.Traces is
    ---------------------
 
    procedure Decrease_Indent
-     (Handle   : not null access Trace_Handle_Record'Class;
+     (Handle   : access Trace_Handle_Record'Class := null;
       Msg      : String := "";
       Color    : String := Default_Fg;
       Location : String := GNAT.Source_Info.Source_Location;
       Entity   : String := GNAT.Source_Info.Enclosing_Entity) is
    begin
-      if Handle.Stream /= null then
+      if Handle /= null and then Handle.Stream /= null then
 
          --  The counter is a modulo type
          if Sync_Sub_And_Fetch
