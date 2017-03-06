@@ -46,6 +46,11 @@
 --    For instance, you can use X(1) to get the first character of the string.
 --    The index always starts at 1, just like unbounded strings.
 --  * Supports various character types
+--  * Faster substrings
+--    When using copy-on-write, returning a substring does not require any
+--    copy of the data or memory allocation. This makes the operation much
+--    faster, in particular for operations that return lots of substrings,
+--    like Split.
 --
 --  Like Unbounded_String, a XString should not be accessed unprotected from
 --  several different tasks. We do not use locks for maximum efficiency. At
@@ -69,8 +74,8 @@ package GNATCOLL.Strings_Impl is
    --  Internal size used for string sizes. This matches a Natural as used for
    --  standard Ada strings.
 
-   type Optimal_String_Size is
-      mod (System.Word_Size + 2 * String_Size'Size) / Character'Size;
+   Big_String_Size : constant := 2 * System.Word_Size + 2 * String_Size'Size;
+   type Optimal_String_Size is mod (Big_String_Size / 8);
    for Optimal_String_Size'Size use Character'Size;
    --  Type used to instantiate GNATCOLL.Strings
    --  Ideal size is 11 bytes on 32 bits system or 15 on 64 bits systems),
@@ -173,10 +178,11 @@ package GNATCOLL.Strings_Impl is
       --  as done for a regular Ada string.
 
       procedure Trim
-         (Self : in out XString;
-          Side : Ada.Strings.Trim_End := Ada.Strings.Both;
+         (Self  : in out XString;
+          Side  : Ada.Strings.Trim_End := Ada.Strings.Both;
           Chars : Char_Type := Space);
-      --  Remove space charactes on either end of the string
+      --  Remove characters on either end of the string.
+      --  All characters equal to Chars are removed from either ends.
 
    private
 
@@ -193,6 +199,7 @@ package GNATCOLL.Strings_Impl is
          end case;
       end record with Unchecked_Union;
       type Big_String_Data_Access is access all Big_String_Data;
+      pragma Suppress_Initialization (Big_String_Data);
       pragma No_Strict_Aliasing (Big_String_Data_Access);
       --  Unsafe: this is the data used by big strings to store the actual
       --  byte sequence. When we use refcounting, we need to have an explicit
@@ -207,6 +214,7 @@ package GNATCOLL.Strings_Impl is
          Is_Big  at 0 range 0 .. 0;
          Size    at 0 range 1 .. 7;
       end record;
+      pragma Suppress_Initialization (Small_String);
       --  Hard-code the fact that we can represent the small size on 7 bits
       --  (the pragma Compile_Time_Error ensures this is the case). Would be
       --  nice if we could use "15" of "7" for larger small string, but we
@@ -219,13 +227,28 @@ package GNATCOLL.Strings_Impl is
          Is_Big        : Boolean;
          Half_Capacity : Half_Capacity_Size;
          Size          : String_Size;
+
          Data          : aliased Big_String_Data_Access;
+         --  This field must be aligned on multiple of word_size, so can't
+         --  be last.
+
+         First         : Positive;
+         --  Index of the first character in data.
+         --  This is used to share the data between substrings. When we
+         --  do not use copy-on-write, part of the buffer might becomes
+         --  useless but this is faster than reallocating and copying.
+
+         --  On 64-bits platforms, we have 32 bits unused here.
       end record;
       for Big_String use record
-         Is_Big        at 0 range 0 .. 0;
-         Half_Capacity at 0 range 1 .. 31;
-         Size          at 4 range 0 .. 31;
+         Is_Big        at 0  range 0 .. 0;
+         Half_Capacity at 0  range 1 .. 31;
+         Size          at 4  range 0 .. 31;
+         Data          at 8  range 0 .. System.Word_Size - 1;
+         First         at 8 + System.Word_Size / 8 range 0 .. 31;
       end record;
+      for Big_String'Size use Big_String_Size;
+      pragma Suppress_Initialization (Big_String);
       --  Capacity is always an even number, and we store half of it, so that
       --  it leaves one bit for the flag.
 

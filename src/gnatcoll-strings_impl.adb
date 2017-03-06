@@ -67,12 +67,15 @@ package body GNATCOLL.Strings_Impl is
       --  Compute the new capacity for a big_string, so that the string has
       --  space for at least Min_Size characters.
 
-      function Clone
-         (Self   : XString;
+      procedure Clone
+         (Self   : in out XString;
           Data   : Big_String_Data_Access)
-         return Big_String_Data_Access
          with Pre => Self.Data.Small.Is_Big, Inline;
-      --  Create a clone of the big string data, allocating new memory
+      --  Set the big string data, copying from Data.
+      --  We copy the data from the parameter and not from Self.Data.Big.Data
+      --  because the latter might already have been set to null at that
+      --  point.
+      --  New memory is allocated.
 
       procedure Make_Writable_Thread_Safe (Self : in out XString) with Inline;
       procedure Make_Writable_Thread_Unsafe (Self : in out XString)
@@ -107,6 +110,10 @@ package body GNATCOLL.Strings_Impl is
       --  This procedure does not copy the actual string, only allocates
       --  memory.
       --  Sets the size of the string
+
+      procedure Set_Substr (Self   : in out XString; From, To : Natural);
+      --  Self keeps the same data, but only part of it becomes relevant
+      --  for the string. This never requires any reallocation.
 
       --------------------
       -- Store_Capacity --
@@ -149,14 +156,38 @@ package body GNATCOLL.Strings_Impl is
       procedure Resize (Self : in out XString; Size : String_Size) is
          Current  : constant String_Size := Get_Capacity (Self);
          New_Size : String_Size;
+         Old_Size : Natural;
+         First    : Natural;
       begin
-         if Current < Size then
-            New_Size := Compute_Capacity (Current, Size);
-            Store_Capacity (Self, New_Size);
-            Self.Data.Big.Data := Convert
-               (System.Memory.Realloc
-                 (Convert (Self.Data.Big.Data),
-                  size_t (New_Size) * Bytes_Per_Char + Extra_Header_Size));
+         if Current < String_Size (Self.Data.Big.First) - 1 + Size then
+            --  We'll have to make space. The simplest is first to move all
+            --  characters back to First=1, which might free enough space at
+            --  the end of the string.
+
+            First := Self.Data.Big.First;
+            if First > 1 then
+               Old_Size := Natural (Self.Data.Big.Size);
+               if Copy_On_Write then
+                  Self.Data.Big.Data.Bytes2 (1 .. Old_Size) :=
+                     Self.Data.Big.Data.Bytes2 (First .. First - 1 + Old_Size);
+               else
+                  Self.Data.Big.Data.Bytes1 (1 .. Old_Size) :=
+                     Self.Data.Big.Data.Bytes1 (First .. First - 1 + Old_Size);
+               end if;
+
+               Self.Data.Big.First := 1;
+            end if;
+
+            --  Do we now have enough space ?
+
+            if Current < Size then
+               New_Size := Compute_Capacity (Current, Size);
+               Store_Capacity (Self, New_Size);
+               Self.Data.Big.Data := Convert
+                  (System.Memory.Realloc
+                    (Convert (Self.Data.Big.Data),
+                     size_t (New_Size) * Bytes_Per_Char + Extra_Header_Size));
+            end if;
          end if;
 
          Self.Data.Big.Size := Size;
@@ -173,7 +204,8 @@ package body GNATCOLL.Strings_Impl is
          elsif Self.Data.Big.Data.Refcount = 1 then
             null;
          else
-            Self.Data.Big.Data := Clone (Self, Self.Data.Big.Data);
+            Decrement (Self.Data.Big.Data.Refcount);
+            Clone (Self, Self.Data.Big.Data);
          end if;
       end Make_Writable_Thread_Unsafe;
 
@@ -210,8 +242,9 @@ package body GNATCOLL.Strings_Impl is
             else
                --  Other threads were still sharing the data. We have to
                --  make a copy
-               Self.Data.Big.Data := Clone (Self, Tmp);
+               Clone (Self, Tmp);
             end if;
+
          end if;
       end Make_Writable_Thread_Safe;
 
@@ -219,24 +252,31 @@ package body GNATCOLL.Strings_Impl is
       -- Clone --
       -----------
 
-      function Clone
-         (Self   : XString;
+      procedure Clone
+         (Self   : in out XString;
           Data   : Big_String_Data_Access)
-         return Big_String_Data_Access
       is
-         Size   : constant Integer := Integer (Self.Data.Big.Size);
+         Size  : constant Integer := Integer (Self.Data.Big.Size);
+         First : constant Natural := Natural (Self.Data.Big.First);
+         Cap  : constant String_Size :=
+            Compute_Capacity (0, Min_Size => Self.Data.Big.Size);
          Result : constant Big_String_Data_Access := Convert
             (System.Memory.Alloc
-               (size_t (Get_Capacity (Self)) * Bytes_Per_Char
-                + Extra_Header_Size));
+               (size_t (Cap) * Bytes_Per_Char + Extra_Header_Size));
       begin
          if Copy_On_Write then
             Result.Refcount := 1;
-            Result.Bytes2 (1 .. Size) := Data.Bytes2 (1 .. Size);
+            Result.Bytes2 (1 .. Size) :=
+               Data.Bytes2 (First .. First - 1 + Size);
          else
-            Result.Bytes1 (1 .. Size) := Data.Bytes1 (1 .. Size);
+            Result.Bytes1 (1 .. Size) :=
+               Data.Bytes1 (First .. First - 1 + Size);
          end if;
-         return Result;
+
+         Self.Data.Big.First := 1;
+         Store_Capacity (Self, Cap);
+
+         Self.Data.Big.Data := Result;
       end Clone;
 
       ------------
@@ -253,7 +293,7 @@ package body GNATCOLL.Strings_Impl is
             --  We do not need atomic operations here. We are still in
             --  the thread that did the assignment, and there is no
             --  shared data in this mode.
-            Self.Data.Big.Data := Clone (Self, Self.Data.Big.Data);
+            Clone (Self, Self.Data.Big.Data);
          end if;
       end Adjust;
 
@@ -294,6 +334,7 @@ package body GNATCOLL.Strings_Impl is
             (System.Memory.Alloc
                (size_t (New_Size) * Bytes_Per_Char + Extra_Header_Size));
          Self.Data.Big.Size := Size;
+         Self.Data.Big.First := 1;
 
          if Copy_On_Write then
             Self.Data.Big.Data.Refcount := 1;
@@ -326,11 +367,13 @@ package body GNATCOLL.Strings_Impl is
 
             if Copy_On_Write then
                Self.Data.Big.Data.Bytes2 (1 .. Str'Length) :=
-                  Convert (Str'Address) (Str'Range);
+                  Convert (Str'Address) (1 .. Str'Length);
             else
                Self.Data.Big.Data.Bytes1 (1 .. Str'Length) :=
-                  Convert (Str'Address) (Str'Range);
+                  Convert (Str'Address) (1 .. Str'Length);
             end if;
+
+            Self.Data.Big.First := 1;
          end if;
       end Set;
 
@@ -345,6 +388,7 @@ package body GNATCOLL.Strings_Impl is
          Small     : constant Boolean := not Self.Data.Small.Is_Big;
          New_Size : String_Size;
          Current  : String_Size;
+         F        : Natural;
       begin
          if Small then
             Current := String_Size (Self.Data.Small.Size);
@@ -363,6 +407,8 @@ package body GNATCOLL.Strings_Impl is
             begin
                Convert_To_Big_String (Self, New_Size);
 
+               pragma Assert (Self.Data.Big.First = 1);
+
                if Copy_On_Write then
                   Self.Data.Big.Data.Bytes2 (1 .. Natural (Current)) :=
                      Convert (Old'Address) (1 .. Natural (Current));
@@ -372,21 +418,24 @@ package body GNATCOLL.Strings_Impl is
                end if;
             end;
 
+            F := 1;
+
          else
             Current := Self.Data.Big.Size;
             New_Size := Current + Str'Length;
             Make_Writable (Self);
             Resize (Self, New_Size);
+            F := Natural (Self.Data.Big.First);
          end if;
 
          if Copy_On_Write then
             Self.Data.Big.Data.Bytes2
-               (Natural (Current + 1) .. Natural (New_Size)) :=
-               Convert (Str'Address) (1 .. Str'Length);
+               (Natural (Current) + F .. F - 1 + Natural (New_Size)) :=
+                 Convert (Str'Address) (1 .. Str'Length);
          else
             Self.Data.Big.Data.Bytes1
-               (Natural (Current + 1) .. Natural (New_Size)) :=
-               Convert (Str'Address) (1 .. Str'Length);
+               (Natural (Current) + F .. F - 1 + Natural (New_Size)) :=
+                 Convert (Str'Address) (1 .. Str'Length);
          end if;
       end Append;
 
@@ -401,6 +450,7 @@ package body GNATCOLL.Strings_Impl is
          Small    : constant Boolean := not Self.Data.Small.Is_Big;
          New_Size : String_Size;
          Current  : String_Size;
+         F        : Natural;
       begin
          if Small then
             Current := String_Size (Self.Data.Small.Size);
@@ -434,10 +484,12 @@ package body GNATCOLL.Strings_Impl is
             Make_Writable (Self);
             Resize (Self, New_Size);
 
+            F := Natural (Self.Data.Big.First);
+
             if Copy_On_Write then
-               Self.Data.Big.Data.Bytes2 (Natural (New_Size)) := Char;
+               Self.Data.Big.Data.Bytes2 (F - 1 + Natural (New_Size)) := Char;
             else
-               Self.Data.Big.Data.Bytes1 (Natural (New_Size)) := Char;
+               Self.Data.Big.Data.Bytes1 (F - 1 + Natural (New_Size)) := Char;
             end if;
          end if;
       end Append;
@@ -467,12 +519,21 @@ package body GNATCOLL.Strings_Impl is
          if not Self.Data.Small.Is_Big then
             L := Natural (Self.Data.Small.Size);
             S := Convert (Self.Data.Small.Data'Address);
+
+         --  For a big string, we need to take into account First. Yet,
+         --  everything should behave for the user as if the first character
+         --  was always at index 1.
+
          elsif Copy_On_Write then
             L := Natural (Self.Data.Big.Size);
-            S := Convert (Self.Data.Big.Data.Bytes2'Address);
+            S := Convert
+               (Self.Data.Big.Data.Bytes2
+                  (Natural (Self.Data.Big.First))'Address);
          else
             L := Natural (Self.Data.Big.Size);
-            S := Convert (Self.Data.Big.Data.Bytes1'Address);
+            S := Convert
+               (Self.Data.Big.Data.Bytes1
+                  (Natural (Self.Data.Big.First))'Address);
          end if;
       end Get_String;
 
@@ -530,6 +591,28 @@ package body GNATCOLL.Strings_Impl is
          end if;
       end Get;
 
+      ----------------
+      -- Set_Substr --
+      ----------------
+
+      procedure Set_Substr
+         (Self   : in out XString;
+          From, To : Natural)
+      is
+         New_Size : constant Natural := To - From + 1;
+      begin
+         if not Self.Data.Small.Is_Big then
+            Self.Data.Small.Data (1 .. New_Size) :=
+               Self.Data.Small.Data (From .. To);
+            Self.Data.Small.Size := SSize (New_Size);
+         else
+            --  Keep the same data (no need for change in refcount
+            --  or to duplicate)
+            Self.Data.Big.First := From;
+            Self.Data.Big.Size := String_Size (New_Size);
+         end if;
+      end Set_Substr;
+
       ----------
       -- Trim --
       ----------
@@ -559,19 +642,9 @@ package body GNATCOLL.Strings_Impl is
             while F <= L and then S (F) = Chars loop
                F := F + 1;
             end loop;
-
-            --  ??? Could be more efficient if we could return substrings
-            if F > 1 then
-               Self.Set (Char_String (S (F .. L)));
-               return;
-            end if;
          end if;
 
-         if not Self.Data.Small.Is_Big then
-            Self.Data.Small.Size := SSize (L);
-         else
-            Self.Data.Big.Size := String_Size (L);
-         end if;
+         Set_Substr (Self, F, L);
       end Trim;
 
    end Strings;
