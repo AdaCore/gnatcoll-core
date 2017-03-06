@@ -1472,7 +1472,7 @@ package body GNATCOLL.Traces is
        Str        : Msg_Strings.XString)
    is
       N       : size_t;
-      S       : Msg_Strings.Unconstrained_String_Access;
+      S       : Msg_Strings.Char_Array;
       L       : Natural;
    begin
       --  fwrite is thread safe on Windows and POSIX systems,

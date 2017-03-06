@@ -31,14 +31,16 @@ package body GNATCOLL.Strings_Impl is
    Page_Size : constant := 4096;
    --  Memory page size
 
-   function Convert is new Ada.Unchecked_Conversion
-      (System.Address, Unconstrained_String_Access);
-
    package body Strings is
+      function Convert is new Ada.Unchecked_Conversion
+         (System.Address, Char_Array);
       function Convert is new Ada.Unchecked_Conversion
          (System.Address, Big_String_Data_Access);
       function Convert is new Ada.Unchecked_Conversion
          (Big_String_Data_Access, System.Address);
+
+      Bytes_Per_Char : constant size_t := Char_Type'Size / Character'Size;
+      --  Number of bytes for each character in the string.
 
       Extra_Header_Size : constant System.Memory.size_t :=
          (if Copy_On_Write
@@ -154,7 +156,7 @@ package body GNATCOLL.Strings_Impl is
             Self.Data.Big.Data := Convert
                (System.Memory.Realloc
                  (Convert (Self.Data.Big.Data),
-                  size_t (New_Size) + Extra_Header_Size));
+                  size_t (New_Size) * Bytes_Per_Char + Extra_Header_Size));
          end if;
 
          Self.Data.Big.Size := Size;
@@ -225,7 +227,8 @@ package body GNATCOLL.Strings_Impl is
          Size   : constant Integer := Integer (Self.Data.Big.Size);
          Result : constant Big_String_Data_Access := Convert
             (System.Memory.Alloc
-               (size_t (Get_Capacity (Self)) + Extra_Header_Size));
+               (size_t (Get_Capacity (Self)) * Bytes_Per_Char
+                + Extra_Header_Size));
       begin
          if Copy_On_Write then
             Result.Refcount := 1;
@@ -288,7 +291,8 @@ package body GNATCOLL.Strings_Impl is
          Store_Capacity (Self, New_Size);
          Self.Data.Big.Is_Big := True;
          Self.Data.Big.Data := Convert
-            (System.Memory.Alloc (size_t (New_Size) + Extra_Header_Size));
+            (System.Memory.Alloc
+               (size_t (New_Size) * Bytes_Per_Char + Extra_Header_Size));
          Self.Data.Big.Size := Size;
 
          if Copy_On_Write then
@@ -302,7 +306,7 @@ package body GNATCOLL.Strings_Impl is
 
       procedure Set
          (Self : in out XString;
-          Str  : String)
+          Str  : Char_String)
       is
          Small     : constant Boolean := not Self.Data.Small.Is_Big;
       begin
@@ -336,7 +340,7 @@ package body GNATCOLL.Strings_Impl is
 
       procedure Append
         (Self : in out XString;
-         Str  : String)
+         Str  : Char_String)
       is
          Small     : constant Boolean := not Self.Data.Small.Is_Big;
          New_Size : String_Size;
@@ -354,7 +358,7 @@ package body GNATCOLL.Strings_Impl is
             end if;
 
             declare
-               Old : constant String :=
+               Old : constant Char_String :=
                   Self.Data.Small.Data (1 .. Natural (Current));
             begin
                Convert_To_Big_String (Self, New_Size);
@@ -392,7 +396,7 @@ package body GNATCOLL.Strings_Impl is
 
       procedure Append
         (Self : in out XString;
-         Char : Character)
+         Char : Char_Type)
       is
          Small    : constant Boolean := not Self.Data.Small.Is_Big;
          New_Size : String_Size;
@@ -406,7 +410,7 @@ package body GNATCOLL.Strings_Impl is
                Self.Data.Small.Data (Natural (New_Size)) := Char;
             else
                declare
-                  Old : constant String :=
+                  Old : constant Char_String :=
                      Self.Data.Small.Data (1 .. Natural (Current));
                begin
                   Convert_To_Big_String (Self, New_Size);
@@ -457,7 +461,7 @@ package body GNATCOLL.Strings_Impl is
 
       procedure Get_String
          (Self : XString;
-          S    : out Unconstrained_String_Access;
+          S    : out Char_Array;
           L    : out Natural) is
       begin
          if not Self.Data.Small.Is_Big then
@@ -476,24 +480,24 @@ package body GNATCOLL.Strings_Impl is
       -- To_String --
       ---------------
 
-      function To_String (Self : XString) return String is
-         B : Unconstrained_String_Access;
+      function To_String (Self : XString) return Char_String is
+         B : Char_Array;
          L : Natural;
       begin
          Get_String (Self, B, L);
-         return String (B (1 .. L));
+         return Char_String (B (1 .. L));
       end To_String;
 
       ---------
       -- "=" --
       ---------
 
-      function "=" (Self : XString; Str : String) return Boolean is
-         B : Unconstrained_String_Access;
+      function "=" (Self : XString; Str : Char_String) return Boolean is
+         B : Char_Array;
          L : Natural;
       begin
          Get_String (Self, B, L);
-         return String (B (1 .. L)) = Str;
+         return Char_String (B (1 .. L)) = Str;
       end "=";
 
       ---------
@@ -501,7 +505,7 @@ package body GNATCOLL.Strings_Impl is
       ---------
 
       function "=" (Self, Str : XString) return Boolean is
-         B1, B2 : Unconstrained_String_Access;
+         B1, B2 : Char_Array;
          L1, L2 : Natural;
       begin
          Get_String (Self, B1, L1);
@@ -513,8 +517,8 @@ package body GNATCOLL.Strings_Impl is
       -- Get --
       ---------
 
-      function Get (Self : XString; Index : Positive) return Character is
-         B : Unconstrained_String_Access;
+      function Get (Self : XString; Index : Positive) return Char_Type is
+         B : Char_Array;
          L : Natural;
       begin
          Get_String (Self, B, L);
@@ -531,20 +535,36 @@ package body GNATCOLL.Strings_Impl is
       ----------
 
       procedure Trim
-         (Self : in out XString;
-          Side : Ada.Strings.Trim_End := Ada.Strings.Both)
+         (Self  : in out XString;
+          Side  : Ada.Strings.Trim_End := Ada.Strings.Both;
+          Chars : Char_Type := Space)
       is
-         S    : Unconstrained_String_Access;
+         S    : Char_Array;
          L    : Natural;
+         F    : Natural := 1;
       begin
          Get_String (Self, S, L);
 
          if Side = Ada.Strings.Both
             or else Side = Ada.Strings.Right
          then
-            while L >= 1 and then S (L) = ' ' loop
+            while L >= 1 and then S (L) = Chars loop
                L := L  - 1;
             end loop;
+         end if;
+
+         if Side = Ada.Strings.Both
+            or else Side = Ada.Strings.Left
+         then
+            while F <= L and then S (F) = Chars loop
+               F := F + 1;
+            end loop;
+
+            --  ??? Could be more efficient if we could return substrings
+            if F > 1 then
+               Self.Set (Char_String (S (F .. L)));
+               return;
+            end if;
          end if;
 
          if not Self.Data.Small.Is_Big then

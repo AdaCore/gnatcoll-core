@@ -45,6 +45,7 @@
 --  * More extensive interface.
 --    For instance, you can use X(1) to get the first character of the string.
 --    The index always starts at 1, just like unbounded strings.
+--  * Supports various character types
 --
 --  Like Unbounded_String, a XString should not be accessed unprotected from
 --  several different tasks. We do not use locks for maximum efficiency. At
@@ -69,25 +70,13 @@ package GNATCOLL.Strings_Impl is
    --  standard Ada strings.
 
    type Optimal_String_Size is
-      mod (System.Word_Size + 2 * String_Size'Size) / 8;
-   for Optimal_String_Size'Size use 8;
+      mod (System.Word_Size + 2 * String_Size'Size) / Character'Size;
+   for Optimal_String_Size'Size use Character'Size;
    --  Type used to instantiate GNATCOLL.Strings
    --  Ideal size is 11 bytes on 32 bits system or 15 on 64 bits systems),
    --  so that a small string (stored without memory allocation) takes the
    --  same size as a big string (not counting the size of the allocated
    --  memory).
-
-   type Unconstrained_String is new String (1 .. Natural'Last);
-   type Unconstrained_String_Access is access all Unconstrained_String;
-   pragma Suppress_Initialization (Unconstrained_String);
-   pragma No_Strict_Aliasing (Unconstrained_String_Access);
-   for Unconstrained_String_Access'Storage_Size use 0;
-   --  Type used to obtain a string access to a given address.
-   --  Initialization is suppressed to handle pragma Normalize_Scalars.
-   --  No variable of this type can be declared. It is only used via an access
-   --  type (The storage size clause ensures we do not allocate variables of
-   --  this type).
-   --  It is the responsibility of the user to check the proper bounds.
 
    generic
       type SSize is mod <>;
@@ -97,6 +86,18 @@ package GNATCOLL.Strings_Impl is
       --  need to apply representation clauses based on this type, which cannot
       --  be done if we have the number of characters.
       --  This type must be between 1 and 127.
+
+      type Character_Type is (<>);
+      --  The character type to use. You can use Character for compatibility
+      --  with an Ada string, or Wide_Character for better Unicode support,
+      --  or possibly other types.
+
+      type Character_String is array (Positive range <>) of Character_Type;
+      --  An array of Char_Type, i.e. a string as can be stored on the
+      --  stack.
+
+      Space : Character_Type := Character_Type'Val (Character'Pos (' '));
+      --  The space character
 
       Copy_On_Write : Boolean := GNATCOLL.Atomic.Is_Lock_Free;
       --  Whether we only duplicate strings when they are actually modified.
@@ -108,30 +109,44 @@ package GNATCOLL.Strings_Impl is
       pragma Compile_Time_Error
          (Natural (SSize'Last) > 2 ** 7, "SSize too large");
 
+      subtype Char_Type is Character_Type;
+      subtype Char_String is Character_String;
+      --  Local renamings, so that users of the package can use these types.
+
       type XString is tagged private with Constant_Indexing  => Get;
       pragma Preelaborable_Initialization (XString);
 
       Null_XString : constant XString;
 
-      procedure Set (Self : in out XString; Str : String);
+      procedure Set (Self : in out XString; Str : Char_String);
       --  Store a string in Self
 
-      procedure Append (Self : in out XString; Str : String);
-      procedure Append (Self : in out XString; Char : Character);
+      procedure Append (Self : in out XString; Str : Char_String);
+      procedure Append (Self : in out XString; Char : Char_Type);
       --  Append to the end of Self
 
-      function "=" (Self : XString; Str : String) return Boolean;
+      function "=" (Self : XString; Str : Char_String) return Boolean;
       function "=" (Self, Str : XString) return Boolean;
       --  Compare strings
 
       function Length (Self : XString) return Natural;
       --  The number of characters in the string
 
-      subtype Unconstrained_String_Access is
-         GNATCOLL.Strings_Impl.Unconstrained_String_Access;
+      type Unconstrained_Char_Array is array (1 .. Natural'Last) of Char_Type;
+      type Char_Array is access all Unconstrained_Char_Array;
+      pragma Suppress_Initialization (Unconstrained_Char_Array);
+      pragma No_Strict_Aliasing (Char_Array);
+      for Char_Array'Storage_Size use 0;
+      --  Type used to obtain a string access to a given address.
+      --  Initialization is suppressed to handle pragma Normalize_Scalars.
+      --  No variable of this type can be declared. It is only used via an
+      --  access type (The storage size clause ensures we do not allocate
+      --  variables of this type).
+      --  It is the responsibility of the user to check the proper bounds.
+
       procedure Get_String
          (Self : XString;
-          S    : out Unconstrained_String_Access;
+          S    : out Char_Array;
           L    : out Natural)
          with Inline;
       --  Returns a pointer to the internal string data.
@@ -139,7 +154,7 @@ package GNATCOLL.Strings_Impl is
       --  shared among multiple strings.
       --  S is only valid as long as Self is not accessed or modified.
 
-      function To_String (Self : XString) return String;
+      function To_String (Self : XString) return Char_String;
       --  This functions returns the internal string.
       --  As much as possible, you should use Get_String instead, which is
       --  much more efficient. This function requires returning data whose
@@ -147,7 +162,7 @@ package GNATCOLL.Strings_Impl is
       --  the secondary stack and copying the string. This can have significant
       --  performance impact when the string is big.
 
-      function Get (Self : XString; Index : Positive) return Character
+      function Get (Self : XString; Index : Positive) return Char_Type
          with Inline;
       --  Return the Index-th character of the string.
       --  The index always starts at 1.
@@ -159,7 +174,8 @@ package GNATCOLL.Strings_Impl is
 
       procedure Trim
          (Self : in out XString;
-          Side : Ada.Strings.Trim_End := Ada.Strings.Both);
+          Side : Ada.Strings.Trim_End := Ada.Strings.Both;
+          Chars : Char_Type := Space);
       --  Remove space charactes on either end of the string
 
    private
@@ -170,10 +186,10 @@ package GNATCOLL.Strings_Impl is
       type Big_String_Data (Copy_On_Write : Boolean) is limited record
          case Copy_On_Write is
             when False =>
-               Bytes1   : Unconstrained_String;
+               Bytes1   : Unconstrained_Char_Array;
             when True =>
                Refcount : aliased GNATCOLL.Atomic.Atomic_Counter;
-               Bytes2   : Unconstrained_String;
+               Bytes2   : Unconstrained_Char_Array;
          end case;
       end record with Unchecked_Union;
       type Big_String_Data_Access is access all Big_String_Data;
@@ -185,7 +201,7 @@ package GNATCOLL.Strings_Impl is
       type Small_String is record
          Is_Big  : Boolean;
          Size    : SSize;
-         Data    : String (1 .. Natural (Max_Small_Length));
+         Data    : Char_String (1 .. Natural (Max_Small_Length));
       end record;
       for Small_String use record
          Is_Big  at 0 range 0 .. 0;
@@ -251,7 +267,7 @@ package GNATCOLL.Strings_Impl is
 
    --  Python adds:
    --    startswith  "in"       count      isalpha      isprintable lower
-   --    endswith    format     encode     isdecimal    isspace     lstrip
+   --    endswith    format                isdecimal    isspace     lstrip
    --    splitlines  "*"        expandtabs isdigit      istitle     partition
    --    strip       capitalize find       isidentifier isupper     replace
    --    search      casefold   index      islower      join        swapcase

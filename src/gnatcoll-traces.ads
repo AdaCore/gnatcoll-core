@@ -452,7 +452,10 @@ package GNATCOLL.Traces is
 
    type Typical_Msg_Size is mod 128;
    for Typical_Msg_Size'Size use 8;
-   package Msg_Strings is new GNATCOLL.Strings_Impl.Strings (Typical_Msg_Size);
+   package Msg_Strings is new GNATCOLL.Strings_Impl.Strings
+      (SSize            => Typical_Msg_Size,
+       Character_Type   => Character,
+       Character_String => String);
    --  We assume that most messages (including decorators) will be less than
    --  this number of characters, and optimize the string creation for this.
    --  But we still support larger messages, at a cost of one memory

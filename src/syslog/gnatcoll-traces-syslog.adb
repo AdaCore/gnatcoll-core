@@ -104,7 +104,7 @@ package body GNATCOLL.Traces.Syslog is
      (Stream     : in out Syslog_Stream_Record;
       Str        : Msg_Strings.XString)
    is
-      S    : Msg_Strings.Unconstrained_String_Access;
+      S    : Msg_Strings.Char_Array;
       L    : Natural;
    begin
       Str.Get_String (S, L);

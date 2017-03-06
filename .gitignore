@@ -77,6 +77,7 @@ testsuite/sql/orm_views/main
 testsuite/sql/orm_views/orm_database*
 testsuite/sql/orm_views/queries*
 testsuite/sql/schemas/database*
+testsuite/strings/basics/test_strings
 testsuite/strings/perf/test_strings
 testsuite/traces/traces4/traces4.out2
 testsuite/traces/wildcard/wildcard.out

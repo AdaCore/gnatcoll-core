@@ -29,4 +29,6 @@ with GNATCOLL.Strings_Impl;
 
 package GNATCOLL.Strings is
    new GNATCOLL.Strings_Impl.Strings
-      (GNATCOLL.Strings_Impl.Optimal_String_Size);
+      (SSize            => GNATCOLL.Strings_Impl.Optimal_String_Size,
+       Character_Type   => Character,
+       Character_String => String);
