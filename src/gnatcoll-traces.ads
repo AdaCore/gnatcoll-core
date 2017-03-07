@@ -140,8 +140,12 @@ package GNATCOLL.Traces is
    --  On_Exception is used to define the behavior should something unexpected
    --  prevent the log stream to be written.
    --
-   --  Until at least one file is parsed, this package will never output
-   --  anything, unless Force_Activation is set.
+   --  If the file is found on the disk, or Force_Activation is True:
+   --  This procedure will set the default stream. At this
+   --  stage, most loggers will start outputing information. If you do not
+   --  call Parse_Config_File, then most loggers will have no associated
+   --  stream and therefore will not output anything. An alternative is to
+   --  simply call Set_Default_Stream.
 
    procedure Parse_Config_File
      (Filename         : String := "";
@@ -281,7 +285,10 @@ package GNATCOLL.Traces is
       Entity   : String := GNAT.Source_Info.Enclosing_Entity);
    --  Output Message to the stream associated with Handle, along with any
    --  extra information setup by the user (see the default handles below).
-   --  If Handle is not active, this function will do nothing.
+   --  If Handle is not active, this subprogram will do nothing.
+   --  Likewise, this procedure will do nothing if Handle has no associated
+   --  stream (which is the case when Parse_Config_File has not been called
+   --  and no stream was specified in the call to Create).
    --
    --  If message includes ASCII.LF characters, then several lines are output,
    --  starting with a special prefix
@@ -349,6 +356,10 @@ package GNATCOLL.Traces is
       with Inline;
    --  Override the activation status for Handle.
    --  When not Active, the Trace function will do nothing.
+   --
+   --  An active trace might still have no output if it doesn't have an
+   --  associated stream, i.e. if Parse_Config_File was never called and
+   --  no stream was specified in the call to Create.
 
    function Is_Active
       (Handle : not null access Trace_Handle_Record'Class) return Boolean

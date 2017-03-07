@@ -139,10 +139,10 @@ package body GNATCOLL.Traces is
       --  configuration file contained "+").
       --  ??? Could be handled via a "*" star handle
 
-      Activated : Boolean := False;
-      --  Whether this package has been activated. It is activated when at
-      --  least one config file is found (and parsed). Until it is activated,
-      --  no trace_handle will ever log anything.
+      Finalized   : Boolean := False;
+      --  Whether the package has been finalized.
+      --  When this is true, some trace_handles will have been freed, and it
+      --  is therefore illegal to access them.
    end record;
 
    Global : Global_Vars;
@@ -905,14 +905,7 @@ package body GNATCOLL.Traces is
    function Is_Active
       (Handle : not null access Trace_Handle_Record'Class) return Boolean is
    begin
-      return
-         --  After this module has been finalized, traces might still be
-         --  queried, typically when GNAT finalizes controlled types.
-         --  At this point, the memory allocated to handles has been freed
-         --  in Finalize, and Handle is a dangling pointer.
-         --  To protect against access to data in Handle, return False here.
-         Global.Activated
-         and then Handle.Active;
+      return not Global.Finalized and then Handle.Active;
    end Is_Active;
 
    ---------------
@@ -962,7 +955,7 @@ package body GNATCOLL.Traces is
       Color  : String := Default_Fg) is
    begin
       if Debug_Mode
-        and then Global.Activated  --  module not terminated
+        and then not Global.Finalized  --  module not terminated
       then
          Create_Exception_Handle (Handle);
          Trace (Handle.Exception_Handle,
@@ -988,10 +981,13 @@ package body GNATCOLL.Traces is
       pragma Suppress (All_Checks);
 
    begin
-      if not Debug_Mode
-         or else not Global.Activated   --  module has been finalized
-         or else not Handle.Active
-      then
+      --  Do not output anything until we have called Parse_Config_File,
+      --  and do not output anything after we have called Finalized and
+      --  potentially freed Handle.
+      --  The stream is null if the trace was Create-d as On by default
+      --  but Parse_Config_File was never called.
+
+      if not Active (Handle) or else Handle.Stream = null then
          return;
       end if;
 
@@ -1027,7 +1023,7 @@ package body GNATCOLL.Traces is
 
          --  Add the message
 
-         if Global.Split_Lines.Active then
+         if Global.Split_Lines /= null and then Global.Split_Lines.Active then
             Start := Message'First;
             loop
                Last := Start;
@@ -1539,6 +1535,9 @@ package body GNATCOLL.Traces is
       --  Set Index after the last significant character on the line (either
       --  the ASCII.LF or after the last character in the buffer).
 
+      procedure Create_Decorators;
+      --  Create all default decorators, if not done yet
+
       -----------------
       -- Skip_Spaces --
       -----------------
@@ -1572,6 +1571,66 @@ package body GNATCOLL.Traces is
          end loop;
       end Skip_To_Newline;
 
+      -----------------------
+      -- Create_Decorators --
+      -----------------------
+
+      procedure Create_Decorators is
+      begin
+         if Global.Colors = null then
+            Set_Default_Stream ("&1");
+
+            Global.Micro_Time := new Trace_Decorator_Record;
+            Global.Micro_Time.Add_Global_Decorator ("DEBUG.MICRO_TIME");
+
+            Dec := new Elapse_Time_Trace;
+            Dec.Add_Global_Decorator ("DEBUG.ELAPSED_TIME");
+
+            Dec := new Stack_Trace;
+            Dec.Add_Global_Decorator ("DEBUG.STACK_TRACE");
+
+            Dec := new Count_Trace;
+            Dec.Add_Global_Decorator ("DEBUG.COUNT");
+
+            Dec := new Memory_Trace;
+            Dec.Add_Global_Decorator ("DEBUG.MEMORY");
+
+            Dec := new Ada_Memory_Trace;
+            Dec.Add_Global_Decorator ("DEBUG.ADA_MEMORY");
+
+            --  These are handled directly in Trace, but we should have them on
+            --  the active list of decorators to know whether we need to add a
+            --  space.
+
+            Global.Absolute_Time := new Trace_Decorator_Record;
+            Global.Absolute_Time.Add_Global_Decorator ("DEBUG.ABSOLUTE_TIME");
+
+            Global.Absolute_Date := new Trace_Decorator_Record;
+            Global.Absolute_Date.Add_Global_Decorator ("DEBUG.ABSOLUTE_DATE");
+
+            Global.Enclosing_Entity := new Trace_Decorator_Record;
+            Global.Enclosing_Entity.Add_Global_Decorator
+               ("DEBUG.ENCLOSING_ENTITY");
+
+            Global.Location := new Trace_Decorator_Record;
+            Global.Location.Add_Global_Decorator ("DEBUG.LOCATION");
+
+            --  The following are not decorators, and handled specially
+
+            Global.Finalize_Traces := new Trace_Decorator_Record;
+            Global.Finalize_Traces.Add_Global_Decorator
+               ("DEBUG.FINALIZE_TRACES");
+            Global.Finalize_Traces.Active := True;
+
+            Global.Split_Lines := new Trace_Decorator_Record;
+            Global.Split_Lines.Add_Global_Decorator ("DEBUG.SPLIT_LINES");
+            Global.Split_Lines.Active := True;
+
+            Global.Colors := new Trace_Decorator_Record;
+            Global.Colors.Add_Global_Decorator ("DEBUG.COLORS");
+         end if;
+      end Create_Decorators;
+
    begin
       if not Debug_Mode then
          return;
@@ -1582,62 +1641,9 @@ package body GNATCOLL.Traces is
       --  If this is the first time we call Parse_Config_File, we initialize
       --  the package at the same time.
 
-      if Global.Colors = null then
-         Set_Default_Stream ("&1");
-
-         Global.Micro_Time := new Trace_Decorator_Record;
-         Global.Micro_Time.Add_Global_Decorator ("DEBUG.MICRO_TIME");
-
-         Dec := new Elapse_Time_Trace;
-         Dec.Add_Global_Decorator ("DEBUG.ELAPSED_TIME");
-
-         Dec := new Stack_Trace;
-         Dec.Add_Global_Decorator ("DEBUG.STACK_TRACE");
-
-         Dec := new Count_Trace;
-         Dec.Add_Global_Decorator ("DEBUG.COUNT");
-
-         Dec := new Memory_Trace;
-         Dec.Add_Global_Decorator ("DEBUG.MEMORY");
-
-         Dec := new Ada_Memory_Trace;
-         Dec.Add_Global_Decorator ("DEBUG.ADA_MEMORY");
-
-         --  These are handled directly in Trace, but we should have them on
-         --  the active list of decorators to know whether we need to add a
-         --  space.
-
-         Global.Absolute_Time := new Trace_Decorator_Record;
-         Global.Absolute_Time.Add_Global_Decorator ("DEBUG.ABSOLUTE_TIME");
-
-         Global.Absolute_Date := new Trace_Decorator_Record;
-         Global.Absolute_Date.Add_Global_Decorator ("DEBUG.ABSOLUTE_DATE");
-
-         Global.Enclosing_Entity := new Trace_Decorator_Record;
-         Global.Enclosing_Entity.Add_Global_Decorator
-            ("DEBUG.ENCLOSING_ENTITY");
-
-         Global.Location := new Trace_Decorator_Record;
-         Global.Location.Add_Global_Decorator ("DEBUG.LOCATION");
-
-         --  The following are not decorators, and handled specially
-
-         Global.Finalize_Traces := new Trace_Decorator_Record;
-         Global.Finalize_Traces.Add_Global_Decorator
-            ("DEBUG.FINALIZE_TRACES");
-         Global.Finalize_Traces.Active := True;
-
-         Global.Split_Lines := new Trace_Decorator_Record;
-         Global.Split_Lines.Add_Global_Decorator ("DEBUG.SPLIT_LINES");
-         Global.Split_Lines.Active := True;
-
-         Global.Colors := new Trace_Decorator_Record;
-         Global.Colors.Add_Global_Decorator ("DEBUG.COLORS");
-      end if;
-
       if File_Name = No_File then
          if Force_Activation then
-            Global.Activated := True;
+            Create_Decorators;
          end if;
 
       else
@@ -1645,13 +1651,16 @@ package body GNATCOLL.Traces is
             File := Open_Read (+File_Name.Full_Name);
          exception
             when Ada.IO_Exceptions.Name_Error =>
+               if Force_Activation then
+                  Create_Decorators;
+               end if;
                return;
          end;
 
+         Create_Decorators;
+
          Read (File);
          Buffer := Data (File);
-
-         Global.Activated := True;
 
          Index := 1;
 
@@ -1832,7 +1841,7 @@ package body GNATCOLL.Traces is
       TmpF  : Stream_Factories_List;
       NextF : Stream_Factories_List;
    begin
-      if Global.Finalize_Traces.Active then
+      if not Global.Finalized and then Global.Finalize_Traces.Active then
          Lock (Global.Lock);
          Tmp := Global.Handles_List;
          while Tmp /= null loop
@@ -1882,7 +1891,7 @@ package body GNATCOLL.Traces is
          Unlock (Global.Lock);
       end if;
 
-      Global.Activated := False;
+      Global.Finalized := True;
    end Finalize;
 
    ------------------------
@@ -1991,13 +2000,14 @@ package body GNATCOLL.Traces is
 
    overriding procedure Finalize (Self : in out Block_Trace_Handle) is
    begin
-      if Active (Self.Me) then
+      --  If we were active when Create was called
+      if Self.Me /= null then
          Decrease_Indent
             (Self.Me, "Leaving " & Self.Loc.all,
              Location => "",   --  avoid duplicate info in the output
              Entity   => "");
-         Free (Self.Loc);
       end if;
+      Free (Self.Loc);
    end Finalize;
 
 end GNATCOLL.Traces;
