@@ -637,17 +637,13 @@ package body GNATCOLL.Traces is
       Factory   : Handle_Factory := null;
       Finalize  : Boolean := True) return Trace_Handle is
    begin
-      if Debug_Mode then
-         return Create_Internal
-            (From_Config_File => False,
-             Unit_Name        => Unit_Name,
-             Default          => Default,
-             Stream           => Find_Stream (Stream, "", Append => False),
-             Factory          => Factory,
-             Finalize         => Finalize);
-      else
-         return null;
-      end if;
+      return Create_Internal
+         (From_Config_File => False,
+          Unit_Name        => Unit_Name,
+          Default          => Default,
+          Stream           => Find_Stream (Stream, "", Append => False),
+          Factory          => Factory,
+          Finalize         => Finalize);
    end Create;
 
    ---------------------
@@ -1973,8 +1969,8 @@ package body GNATCOLL.Traces is
       return Block_Trace_Handle is
    begin
       return Result : Block_Trace_Handle do
-         Result.Me := Handle;
          if Active (Handle) then
+            Result.Me := Handle;
             Result.Loc := new String'(Entity & ':' & Location);
             if Message /= "" then
                Increase_Indent
