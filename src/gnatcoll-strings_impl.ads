@@ -41,7 +41,9 @@
 --  * No memory allocation for small strings (for a certain definition of
 --    small, see the SSize parameter below). This means very fast handling of
 --    those small strings.
---    Faster than Unbounded_String
+--    Faster than Unbounded_String, both for small strings, as seen above,
+--    but also for large strings since one can use the Reserve procedure to
+--    preallocate enough space.
 --  * More extensive interface.
 --    For instance, you can use X(1) to get the first character of the string.
 --    The index always starts at 1, just like unbounded strings.
@@ -51,6 +53,9 @@
 --    copy of the data or memory allocation. This makes the operation much
 --    faster, in particular for operations that return lots of substrings,
 --    like Split.
+--  * Easy iteration
+--    It is possible to use a "for..of" loop to iterate on all valid indexes
+--    or on all characters, with a speed similar to what is done for a String.
 --
 --  Like Unbounded_String, a XString should not be accessed unprotected from
 --  several different tasks. We do not use locks for maximum efficiency. At
@@ -96,6 +101,10 @@ package GNATCOLL.Strings_Impl is
       --  The character type to use. You can use Character for compatibility
       --  with an Ada string, or Wide_Character for better Unicode support,
       --  or possibly other types.
+      --  Strings have no notion of encoding (like UTF-8 for instance).
+      --  Instead they store already decoded characters, which is faster
+      --  both to compute the length and move to the next character, but
+      --  requires more space.
 
       type Character_String is array (Positive range <>) of Character_Type;
       --  An array of Char_Type, i.e. a string as can be stored on the
@@ -118,24 +127,16 @@ package GNATCOLL.Strings_Impl is
       subtype Char_String is Character_String;
       --  Local renamings, so that users of the package can use these types.
 
-      type XString is tagged private with Constant_Indexing  => Get;
+      type XString is tagged private
+      with
+         Constant_Indexing  => Get,
+         Iterable           => (First       => First,
+                                Next        => Next,
+                                Has_Element => Has_Element,
+                                Element     => Get);
       pragma Preelaborable_Initialization (XString);
 
       Null_XString : constant XString;
-
-      procedure Set (Self : in out XString; Str : Char_String);
-      --  Store a string in Self
-
-      procedure Append (Self : in out XString; Str : Char_String);
-      procedure Append (Self : in out XString; Char : Char_Type);
-      --  Append to the end of Self
-
-      function "=" (Self : XString; Str : Char_String) return Boolean;
-      function "=" (Self, Str : XString) return Boolean;
-      --  Compare strings
-
-      function Length (Self : XString) return Natural;
-      --  The number of characters in the string
 
       type Unconstrained_Char_Array is array (1 .. Natural'Last) of Char_Type;
       type Char_Array is access all Unconstrained_Char_Array;
@@ -148,6 +149,141 @@ package GNATCOLL.Strings_Impl is
       --  access type (The storage size clause ensures we do not allocate
       --  variables of this type).
       --  It is the responsibility of the user to check the proper bounds.
+
+      ----------------
+      -- Properties --
+      ----------------
+
+      function Length (Self : XString) return Natural;
+      --  The number of characters in the string
+
+      function Get (Self : XString; Index : Positive) return Char_Type
+         with Inline;
+      --  Return the Index-th character of the string.
+      --  The index always starts at 1.
+      --
+      --  raises Ada.Strings.Index_Error if this is not a valid index.
+      --  A simpler way to use this function is simply to use indexing:
+      --       Self (Index)
+      --  as done for a regular Ada string.
+
+      --------------------------
+      -- Iteration on indexes --
+      --------------------------
+
+      type Index_Range is record
+         Low, High : Natural;
+      end record
+         with Iterable => (First       => First,
+                           Next        => Next,
+                           Has_Element => Has_Element,
+                           Element     => Element);
+      function First (Self : Index_Range) return Positive is (Self.Low);
+      function Next (Self : Index_Range; Index : Positive) return Positive
+         is (Index + 1);
+      function Has_Element (Self : Index_Range; Index : Positive)
+         return Boolean is (Index <= Self.High);
+      function Element
+         (Self : Index_Range; Index : Positive) return Positive
+         is (Index);
+
+      function Iterate (Self : XString) return Index_Range
+         is ((Low => 1, High => Self.Length));
+      --  Provide an iterator to get all indexes of the string.
+      --  This provides a convenient iterator:
+      --     for Index of Self.Iterate loop
+      --        C := Self (Index);
+      --     end loop;
+      --  This loop is about as fast as iterating directly on a
+      --  String via a 'Range attribute.
+
+      -----------------------------
+      -- Iteration on characters --
+      -----------------------------
+
+      function First (Self : XString) return Positive is (1);
+      function Next (Self : XString; Index : Positive) return Positive
+         is (Index + 1);
+      function Has_Element (Self : XString; Index : Positive) return Boolean
+         is (Index <= Self.Length);
+      --  Standard iteration functions.
+      --  Each iteration returns the next character in the string.
+      --
+      --  Although this is better used as
+      --     for C of Str loop
+      --        null;
+      --     end loop;
+      --
+      --  See the Iterate function if you need to get the indexes instead
+
+      ----------------------
+      -- Building strings --
+      ----------------------
+      --  No operator "&" is provided, for efficiency reasons. Such an
+      --  operator would need to create temporary strings which then
+      --  need to be freed almost immediately. Since this becomes a slow
+      --  operation, this API does not provide it by default.
+
+      procedure Set (Self : in out XString; Str : Char_String);
+      --  Store a string in Self
+
+      procedure Append (Self : in out XString; Str : Char_String);
+      procedure Append (Self : in out XString; Char : Char_Type);
+      procedure Append (Self : in out XString; Str : XString);
+      --  Append to the end of Self.
+
+      function "*" (Count : Natural; Right : Char_Type) return XString;
+      function "*" (Count : Natural; Right : Char_String) return XString;
+      function "*" (Count : Natural; Right : XString) return XString;
+      --  Build a new string that duplicates the Right parameter Count times
+
+      procedure Reserve (Self : in out XString; Size : String_Size);
+      --  Make sure Self has enough storage to contain a string of length
+      --  Size. This doesn't impact the current value of Self, so if the
+      --  current length is greater than Size, nothing is done.
+      --  More memory could be allocated, for performance reasons.
+
+      procedure Shrink (Self : in out XString);
+      --  Shrinks the memory used by Self to the minimum needed. This will
+      --  likely require some memory allocation and copying the characters.
+
+      ---------------
+      -- Comparing --
+      ---------------
+      --   ??? Some operators are commented out because of limitations in
+      --   AJIS.
+
+      function "=" (Self : XString; Str : Char_String) return Boolean;
+      function "=" (Self, Str : XString) return Boolean;
+      --  function "=" (Str : Char_String; Self : XString) return Boolean
+      --     is (Self = Str);
+
+      function "<" (Self : XString; Str : Char_String) return Boolean;
+      --  function "<" (Str : Char_String; Self : XString) return Boolean;
+      function "<" (Self, Str : XString) return Boolean;
+
+      function "<=" (Self : XString; Str : Char_String) return Boolean;
+      --  function "<=" (Str : Char_String; Self : XString) return Boolean;
+      function "<=" (Self, Str : XString) return Boolean;
+
+      function ">" (Self : XString; Str : Char_String) return Boolean
+         is (not (Self <= Str));
+      --  function ">" (Str : Char_String; Self : XString) return Boolean
+      --     is (Self <= Str);
+      function ">" (Self, Str : XString) return Boolean
+         is (Str <= Self);
+
+      function ">=" (Self : XString; Str : Char_String) return Boolean
+         is (not (Self < Str));
+      --  function ">=" (Str : Char_String; Self : XString) return Boolean
+      --     is (Self < Str);
+      function ">=" (Self, Str : XString) return Boolean
+         is (Str < Self);
+      --  Compare strings
+
+      ----------------
+      -- Converting --
+      ----------------
 
       procedure Get_String
          (Self : XString;
@@ -167,22 +303,60 @@ package GNATCOLL.Strings_Impl is
       --  the secondary stack and copying the string. This can have significant
       --  performance impact when the string is big.
 
-      function Get (Self : XString; Index : Positive) return Char_Type
-         with Inline;
-      --  Return the Index-th character of the string.
-      --  The index always starts at 1.
+      -------------
+      -- Testing --
+      -------------
+
+      function Starts_With
+         (Self : XString; Prefix : Char_String) return Boolean;
+      function Starts_With (Self : XString; Prefix : XString) return Boolean;
+      --  Whether Self starts with the specific prefix.
+
+      function Ends_With
+         (Self : XString; Suffix : Char_String) return Boolean;
+      function Ends_With (Self : XString; Suffix : XString) return Boolean;
+      --  Whether Self ends with the specific suffix.
+
+      ----------------
+      -- Substrings --
+      ----------------
+      --  The following subprograms return a substring of Self, based on
+      --  various criteria.
       --
-      --  raises Ada.Strings.Index_Error if this is not a valid index.
-      --  A simpler way to use this function is simply to use indexing:
-      --       Self (Index)
-      --  as done for a regular Ada string.
+      --  When using copy-on-write, these subprograms will share the storage
+      --  of Self, and thus will not require new memory allocation. This
+      --  makes them fast.
+      --
+      --  All returned substrings always start at index 1, even if you took
+      --  a slice from another index on.
+
+      procedure Slice (Self  : in out XString; Low, High : Positive);
+      function Slice (Self : XString; Low, High : Positive) return XString;
+      --  Return a substring of Self.
+      --  The first character of Self is always at index 1, so this function
+      --  returns a slice from the Low-th character of Self to the High-th
+      --  character of Self.
+      --
+      --  raises Ada.Strings.Index_Error if any of the indexes is invalid.
 
       procedure Trim
          (Self  : in out XString;
           Side  : Ada.Strings.Trim_End := Ada.Strings.Both;
           Chars : Char_Type := Space);
+      function Trim
+         (Self  : XString;
+          Side  : Ada.Strings.Trim_End := Ada.Strings.Both;
+          Chars : Char_Type := Space) return XString;
       --  Remove characters on either end of the string.
       --  All characters equal to Chars are removed from either ends.
+
+      function Head (Self : XString; Count : Natural) return XString;
+      --  Return the first Count characters of Self.
+      --  If Self is smaller, it is returned as is.
+
+      function Tail (Self : XString; Count : Natural) return XString;
+      --  Return the last Count characters of Self.
+      --  If Self is smaller, it is returned as is.
 
    private
 
@@ -278,6 +452,15 @@ package GNATCOLL.Strings_Impl is
 
    end Strings;
 
+   --  Unbounded strings have:
+   --     index         Index_Non_Blank    Count
+   --     Find_Token    Translate          Replace_Slice
+   --     Insert        Overwrite          Delete
+   --     Move          Less_Case_Insensitive
+   --     Hash          Hash_Case_Insensitive
+   --     Equal_Case_Insensitive
+   --     Ada.Strings.UTF_Encoding
+
    --  C++ has:
    --     iterators     size  and length   max_size         resize
    --     capacity      reserve            clear            empty
@@ -289,8 +472,8 @@ package GNATCOLL.Strings_Impl is
    --     compare
 
    --  Python adds:
-   --    startswith  "in"       count      isalpha      isprintable lower
-   --    endswith    format                isdecimal    isspace     lstrip
+   --                "in"       count      isalpha      isprintable lower
+   --                format                isdecimal    isspace     lstrip
    --    splitlines  "*"        expandtabs isdigit      istitle     partition
    --    strip       capitalize find       isidentifier isupper     replace
    --    search      casefold   index      islower      join        swapcase

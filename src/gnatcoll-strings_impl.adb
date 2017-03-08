@@ -111,10 +111,6 @@ package body GNATCOLL.Strings_Impl is
       --  memory.
       --  Sets the size of the string
 
-      procedure Set_Substr (Self   : in out XString; From, To : Natural);
-      --  Self keeps the same data, but only part of it becomes relevant
-      --  for the string. This never requires any reallocation.
-
       --------------------
       -- Store_Capacity --
       --------------------
@@ -341,6 +337,45 @@ package body GNATCOLL.Strings_Impl is
          end if;
       end Convert_To_Big_String;
 
+      -------------
+      -- Reserve --
+      -------------
+
+      procedure Reserve (Self : in out XString; Size : String_Size) is
+      begin
+         if Size <= Max_Small_Length then
+            --  Nothing to do, a small string can fit
+            null;
+         elsif not Self.Data.Small.Is_Big then
+            Convert_To_Big_String (Self, Size);
+         else
+            Make_Writable (Self);
+            Resize (Self, Size);
+         end if;
+      end Reserve;
+
+      ------------
+      -- Shrink --
+      ------------
+
+      procedure Shrink (Self : in out XString) is
+         New_Size : String_Size;
+      begin
+         if not Self.Data.Small.Is_Big then
+            --  Nothing to do
+            null;
+         else
+            Make_Writable (Self);
+
+            New_Size := Compute_Capacity (0, Self.Data.Big.Size);
+            Store_Capacity (Self, New_Size);
+            Self.Data.Big.Data := Convert
+               (System.Memory.Realloc
+                 (Convert (Self.Data.Big.Data),
+                  size_t (New_Size) * Bytes_Per_Char + Extra_Header_Size));
+         end if;
+      end Shrink;
+
       ---------
       -- Set --
       ---------
@@ -495,6 +530,66 @@ package body GNATCOLL.Strings_Impl is
       end Append;
 
       ------------
+      -- Append --
+      ------------
+
+      procedure Append (Self : in out XString; Str : XString) is
+         B : Char_Array;
+         L : Natural;
+      begin
+         Get_String (Str, B, L);
+         Self.Append (Char_String (B (1 .. L)));
+      end Append;
+
+      ---------
+      -- "*" --
+      ---------
+
+      function "*" (Count : Natural; Right : Char_Type) return XString is
+         Result : XString;
+      begin
+         Result.Reserve (Size => String_Size (Count));
+
+         for C in 1 .. Count loop
+            Result.Append (Right);
+         end loop;
+
+         return Result;
+      end "*";
+
+      ---------
+      -- "*" --
+      ---------
+
+      function "*" (Count : Natural; Right : Char_String) return XString is
+         Result : XString;
+      begin
+         Result.Reserve (Size => String_Size (Count * Right'Length));
+
+         for C in 1 .. Count loop
+            Result.Append (Right);
+         end loop;
+
+         return Result;
+      end "*";
+
+      ---------
+      -- "*" --
+      ---------
+
+      function "*" (Count : Natural; Right : XString) return XString is
+         Result : XString;
+      begin
+         Result.Reserve (Size => String_Size (Count * Right.Length));
+
+         for C in 1 .. Count loop
+            Result.Append (Right);
+         end loop;
+
+         return Result;
+      end "*";
+
+      ------------
       -- Length --
       ------------
 
@@ -575,6 +670,80 @@ package body GNATCOLL.Strings_Impl is
       end "=";
 
       ---------
+      -- "<" --
+      ---------
+
+      function "<" (Self : XString; Str : Char_String) return Boolean is
+         B : Char_Array;
+         L : Natural;
+      begin
+         Get_String (Self, B, L);
+         return Char_String (B (1 .. L)) < Str;
+      end "<";
+
+      ---------
+      -- "<" --
+      ---------
+
+--      function "<" (Str : Char_String; Self : XString) return Boolean is
+--         B : Char_Array;
+--         L : Natural;
+--      begin
+--         Get_String (Self, B, L);
+--         return Str < Char_String (B (1 .. L));
+--      end "<";
+
+      ---------
+      -- "<" --
+      ---------
+
+      function "<" (Self, Str : XString) return Boolean is
+         B, B2 : Char_Array;
+         L, L2 : Natural;
+      begin
+         Get_String (Self, B, L);
+         Get_String (Str, B2, L2);
+         return B (1 .. L) < B2 (1 .. L2);
+      end "<";
+
+      ----------
+      -- "<=" --
+      ----------
+
+      function "<=" (Self : XString; Str : Char_String) return Boolean is
+         B : Char_Array;
+         L : Natural;
+      begin
+         Get_String (Self, B, L);
+         return Char_String (B (1 .. L)) <= Str;
+      end "<=";
+
+      ----------
+      -- "<=" --
+      ----------
+
+--      function "<=" (Str : Char_String; Self : XString) return Boolean is
+--         B : Char_Array;
+--         L : Natural;
+--      begin
+--         Get_String (Self, B, L);
+--         return Str <= Char_String (B (1 .. L));
+--      end "<=";
+
+      ----------
+      -- "<=" --
+      ----------
+
+      function "<=" (Self, Str : XString) return Boolean is
+         B, B2 : Char_Array;
+         L, L2 : Natural;
+      begin
+         Get_String (Self, B, L);
+         Get_String (Str, B2, L2);
+         return B (1 .. L) <= B2 (1 .. L2);
+      end "<=";
+
+      ---------
       -- Get --
       ---------
 
@@ -591,27 +760,80 @@ package body GNATCOLL.Strings_Impl is
          end if;
       end Get;
 
-      ----------------
-      -- Set_Substr --
-      ----------------
+      -----------
+      -- Slice --
+      -----------
 
-      procedure Set_Substr
+      procedure Slice
          (Self   : in out XString;
-          From, To : Natural)
+          Low, High : Positive)
       is
-         New_Size : constant Natural := To - From + 1;
+         New_Size : constant Natural := High - Low + 1;
       begin
          if not Self.Data.Small.Is_Big then
+            if Low > Natural (Self.Data.Small.Size)
+               or else High > Natural (Self.Data.Small.Size)
+            then
+               raise Ada.Strings.Index_Error;
+            end if;
+
             Self.Data.Small.Data (1 .. New_Size) :=
-               Self.Data.Small.Data (From .. To);
+               Self.Data.Small.Data (Low .. High);
             Self.Data.Small.Size := SSize (New_Size);
+
          else
+            if String_Size (Low) > Self.Data.Big.Size
+               or else String_Size (High) > Self.Data.Big.Size
+            then
+               raise Ada.Strings.Index_Error;
+            end if;
+
             --  Keep the same data (no need for change in refcount
             --  or to duplicate)
-            Self.Data.Big.First := From;
+            Self.Data.Big.First := Low + Self.Data.Big.First - 1;
             Self.Data.Big.Size := String_Size (New_Size);
          end if;
-      end Set_Substr;
+      end Slice;
+
+      -----------
+      -- Slice --
+      -----------
+
+      function Slice (Self : XString; Low, High : Positive) return XString is
+         Result : XString;
+         Len    : constant Natural := Self.Length;
+      begin
+         --  We can't use Set, since we want to share the buffer when
+         --  possible.
+
+         if Low > Len then
+            raise Ada.Strings.Index_Error with Low'Img & ">" & Len'Img;
+         end if;
+
+         if High > Len then
+            raise Ada.Strings.Index_Error with High'Img & ">" & Len'Img;
+         end if;
+
+         if not Self.Data.Small.Is_Big then
+            Result.Set (Self.Data.Small.Data (Low .. High));
+
+         elsif Copy_On_Write then
+            Result := Self;   --  share data and increment refcount
+
+            --  User indexing is from 1, but this matches First internally
+            Result.Data.Big.First := Low + Self.Data.Big.First - 1;
+            Result.Data.Big.Size := String_Size (High - Low + 1);
+
+         else
+            Convert_To_Big_String (Result, String_Size (High - Low + 1));
+            Result.Data.Big.Data.Bytes1 (1 .. High - Low + 1) :=
+               Self.Data.Big.Data.Bytes1
+                  (Low + Self.Data.Big.First - 1 ..
+                     High + Self.Data.Big.First - 1);
+         end if;
+
+         return Result;
+      end Slice;
 
       ----------
       -- Trim --
@@ -644,8 +866,120 @@ package body GNATCOLL.Strings_Impl is
             end loop;
          end if;
 
-         Set_Substr (Self, F, L);
+         Self.Slice (F, L);
       end Trim;
+
+      ----------
+      -- Trim --
+      ----------
+
+      function Trim
+         (Self  : XString;
+          Side  : Ada.Strings.Trim_End := Ada.Strings.Both;
+          Chars : Char_Type := Space) return XString
+      is
+         S    : Char_Array;
+         L    : Natural;
+         F    : Natural := 1;
+      begin
+         Get_String (Self, S, L);
+
+         if Side = Ada.Strings.Both
+            or else Side = Ada.Strings.Right
+         then
+            while L >= 1 and then S (L) = Chars loop
+               L := L  - 1;
+            end loop;
+         end if;
+
+         if Side = Ada.Strings.Both
+            or else Side = Ada.Strings.Left
+         then
+            while F <= L and then S (F) = Chars loop
+               F := F + 1;
+            end loop;
+         end if;
+
+         return Self.Slice (F, L);
+      end Trim;
+
+      -----------------
+      -- Starts_With --
+      -----------------
+
+      function Starts_With
+         (Self : XString; Prefix : Char_String) return Boolean
+      is
+         S    : Char_Array;
+         L    : Natural;
+      begin
+         Get_String (Self, S, L);
+         return L >= Prefix'Length
+            and then Char_String (S (1 .. Prefix'Length)) = Prefix;
+      end Starts_With;
+
+      -----------------
+      -- Starts_With --
+      -----------------
+
+      function Starts_With
+         (Self : XString; Prefix : XString) return Boolean
+      is
+         S, S2    : Char_Array;
+         L, L2    : Natural;
+      begin
+         Get_String (Self, S, L);
+         Get_String (Prefix, S2, L2);
+         return L >= L2 and then S (1 .. L2) = S2 (1 .. L2);
+      end Starts_With;
+
+      ---------------
+      -- Ends_With --
+      ---------------
+
+      function Ends_With
+         (Self : XString; Suffix : Char_String) return Boolean
+      is
+         S : Char_Array;
+         L : Natural;
+      begin
+         Get_String (Self, S, L);
+         return L >= Suffix'Length
+            and then Char_String (S (L - Suffix'Length + 1 .. L)) = Suffix;
+      end Ends_With;
+
+      ---------------
+      -- Ends_With --
+      ---------------
+
+      function Ends_With (Self : XString; Suffix : XString) return Boolean is
+         S, S2 : Char_Array;
+         L, L2 : Natural;
+      begin
+         Get_String (Self, S, L);
+         Get_String (Suffix, S2, L2);
+         return L >= L2 and then S (L - L2 + 1 .. L) = S2 (1 .. L2);
+      end Ends_With;
+
+      ----------
+      -- Head --
+      ----------
+
+      function Head (Self : XString; Count : Natural) return XString is
+         L : constant Natural := Self.Length;
+      begin
+         return Self.Slice (1, Natural'Min (Count, L));
+      end Head;
+
+      ----------
+      -- Tail --
+      ----------
+
+      function Tail (Self : XString; Count : Natural) return XString is
+         L : constant Natural := Self.Length;
+      begin
+         return Self.Slice (Natural'Max (1, L - Count + 1), L);
+      end Tail;
 
    end Strings;
 
