@@ -1503,8 +1503,12 @@ package body GNATCOLL.Traces is
       Status : int;
       pragma Unreferenced (Status);
    begin
-      Status := fclose (Stream.File);
-      Stream.File := NULL_Stream;
+      if Stream.File /= stdout
+         and then Stream.File /= stderr
+      then
+         Status := fclose (Stream.File);
+         Stream.File := NULL_Stream;
+      end if;
 
       Close (Trace_Stream_Record (Stream));
    end Close;
