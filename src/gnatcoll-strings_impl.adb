@@ -27,7 +27,12 @@ with GNATCOLL.Atomic;              use GNATCOLL.Atomic;
 with GNATCOLL.Refcount;
 with System.Memory;                use System.Memory;
 
+pragma Warnings (Off, ".*is an internal GNAT unit");
+with System.String_Hash;
+pragma Warnings (On, ".*is an internal GNAT unit");
+
 package body GNATCOLL.Strings_Impl is
+
    Page_Size : constant := 4096;
    --  Memory page size
 
@@ -49,17 +54,15 @@ package body GNATCOLL.Strings_Impl is
       --  Extra bytes needed for Big_String_Data in addition to the
       --  byte data stored in Unconstrained_String.
 
-      procedure Resize (Self : in out XString; Size : String_Size)
-         with Pre => Self.Data.Small.Is_Big;
-      --  Resize the Big buffer in Self so that it fits at least
-      --  Size characters. The buffer is never shrunk.
-      --  Sets the size of the string
-
       procedure Store_Capacity (Self : in out XString; Capacity : String_Size)
          with Inline;
       function Get_Capacity (Self : XString) return String_Size
          is (2 * Self.Data.Big.Half_Capacity);
       --  Returns the current capacity of a large string
+
+      procedure Store_Size (Self : in out XString; Size : Natural)
+         with Inline;
+      --  Store the size of Self.
 
       function Compute_Capacity
          (Current, Min_Size : String_Size) return String_Size
@@ -145,49 +148,18 @@ package body GNATCOLL.Strings_Impl is
          end if;
       end Compute_Capacity;
 
-      ------------
-      -- Resize --
-      ------------
+      ----------------
+      -- Store_Size --
+      ----------------
 
-      procedure Resize (Self : in out XString; Size : String_Size) is
-         Current  : constant String_Size := Get_Capacity (Self);
-         New_Size : String_Size;
-         Old_Size : Natural;
-         First    : Natural;
+      procedure Store_Size (Self : in out XString; Size : Natural) is
       begin
-         if Current < String_Size (Self.Data.Big.First) - 1 + Size then
-            --  We'll have to make space. The simplest is first to move all
-            --  characters back to First=1, which might free enough space at
-            --  the end of the string.
-
-            First := Self.Data.Big.First;
-            if First > 1 then
-               Old_Size := Natural (Self.Data.Big.Size);
-               if Copy_On_Write then
-                  Self.Data.Big.Data.Bytes2 (1 .. Old_Size) :=
-                     Self.Data.Big.Data.Bytes2 (First .. First - 1 + Old_Size);
-               else
-                  Self.Data.Big.Data.Bytes1 (1 .. Old_Size) :=
-                     Self.Data.Big.Data.Bytes1 (First .. First - 1 + Old_Size);
-               end if;
-
-               Self.Data.Big.First := 1;
-            end if;
-
-            --  Do we now have enough space ?
-
-            if Current < Size then
-               New_Size := Compute_Capacity (Current, Size);
-               Store_Capacity (Self, New_Size);
-               Self.Data.Big.Data := Convert
-                  (System.Memory.Realloc
-                    (Convert (Self.Data.Big.Data),
-                     size_t (New_Size) * Bytes_Per_Char + Extra_Header_Size));
-            end if;
+         if Self.Data.Big.Is_Big then
+            Self.Data.Big.Size := String_Size (Size);
+         else
+            Self.Data.Small.Size := SSize (Size);
          end if;
-
-         Self.Data.Big.Size := Size;
-      end Resize;
+      end Store_Size;
 
       ---------------------------------
       -- Make_Writable_Thread_Unsafe --
@@ -300,9 +272,8 @@ package body GNATCOLL.Strings_Impl is
       overriding procedure Finalize (Self : in out XString) is
          Tmp : Big_String_Data_Access;
       begin
-         if not Self.Data.Small.Is_Big then
-            null;   --  nothing to do
-         else
+         --  nothing to do for small strings
+         if Self.Data.Small.Is_Big then
             Tmp := Self.Data.Big.Data;
             if Tmp /= null then
                Self.Data.Big.Data := null;
@@ -313,6 +284,17 @@ package body GNATCOLL.Strings_Impl is
             end if;
          end if;
       end Finalize;
+
+      -----------
+      -- Clear --
+      -----------
+
+      procedure Clear (Self : in out XString) is
+      begin
+         Finalize (Self);
+         Self.Data.Small.Is_Big := False;
+         Self.Data.Small.Size := 0;
+      end Clear;
 
       ---------------------------
       -- Convert_To_Big_String --
@@ -341,16 +323,84 @@ package body GNATCOLL.Strings_Impl is
       -- Reserve --
       -------------
 
-      procedure Reserve (Self : in out XString; Size : String_Size) is
+      procedure Reserve (Self : in out XString; Capacity : String_Size) is
+         Current_Cap : String_Size;
+         First       : Natural;
+         New_Size    : String_Size;
+         Old_Size    : Natural;
       begin
-         if Size <= Max_Small_Length then
-            --  Nothing to do, a small string can fit
-            null;
-         elsif not Self.Data.Small.Is_Big then
-            Convert_To_Big_String (Self, Size);
+         if Self.Data.Small.Is_Big then
+            --  We are about to modify the string
+            if Copy_On_Write then
+               Make_Writable (Self);
+            end if;
+
+            Current_Cap := Get_Capacity (Self);
+            First := Self.Data.Big.First;
+
+            --  Do we have enough space at the end already (i.e
+            --  the capacity we really need extends from First, not
+            --  from character 1).
+
+            if Current_Cap >= String_Size (First) - 1 + Capacity then
+               --  nothing to do, we have enough space
+               null;
+
+            else
+               --  We'll have to make space. The simplest is first to move all
+               --  characters back to First=1, which might free enough space at
+               --  the end of the string.
+
+               if First > 1 then
+                  Old_Size := Natural (Self.Data.Big.Size);
+                  if Copy_On_Write then
+                     Self.Data.Big.Data.Bytes2 (1 .. Old_Size) :=
+                        Self.Data.Big.Data.Bytes2
+                           (First .. First - 1 + Old_Size);
+                  else
+                     Self.Data.Big.Data.Bytes1 (1 .. Old_Size) :=
+                        Self.Data.Big.Data.Bytes1
+                           (First .. First - 1 + Old_Size);
+                  end if;
+
+                  Self.Data.Big.First := 1;
+               end if;
+
+               --  Do we have enough space now ?
+
+               if Current_Cap < Capacity then
+                  New_Size := Compute_Capacity (Current_Cap, Capacity);
+                  Store_Capacity (Self, New_Size);
+                  Self.Data.Big.Data := Convert
+                     (System.Memory.Realloc
+                       (Convert (Self.Data.Big.Data),
+                        size_t (New_Size) * Bytes_Per_Char
+                        + Extra_Header_Size));
+               end if;
+            end if;
+
          else
-            Make_Writable (Self);
-            Resize (Self, Size);
+            --  If we'll need a large string
+            if Capacity > Max_Small_Length then
+               declare
+                  Current : constant Natural :=
+                     Natural (Self.Data.Small.Size);
+                  Old : constant Char_String :=
+                     Self.Data.Small.Data (1 .. Current);
+               begin
+                  Convert_To_Big_String (Self, Capacity);
+                  pragma Assert (Self.Data.Big.First = 1);
+                  Self.Data.Big.Size := String_Size (Current);
+
+                  if Copy_On_Write then
+                     Self.Data.Big.Data.Bytes2 (1 .. Current) :=
+                        Convert (Old'Address) (1 .. Current);
+                  else
+                     Self.Data.Big.Data.Bytes1 (1 .. Current) :=
+                        Convert (Old'Address) (1 .. Current);
+                  end if;
+               end;
+            end if;
          end if;
       end Reserve;
 
@@ -365,6 +415,7 @@ package body GNATCOLL.Strings_Impl is
             --  Nothing to do
             null;
          else
+            --  ??? Should we try to revert to a small string
             Make_Writable (Self);
 
             New_Size := Compute_Capacity (0, Self.Data.Big.Size);
@@ -384,21 +435,16 @@ package body GNATCOLL.Strings_Impl is
          (Self : in out XString;
           Str  : Char_String)
       is
-         Small     : constant Boolean := not Self.Data.Small.Is_Big;
       begin
-         --  If we were already using a big_string, continue to do so
-         --  since the memory is already allocated anyway.
-         if Small and then Str'Length <= Max_Small_Length then
-            Self.Data.Small.Is_Big := False;
+         Store_Size (Self, 0);
+         Self.Reserve (Capacity => Str'Length);
+
+         if not Self.Data.Small.Is_Big then
             Self.Data.Small.Size := Str'Length;
             Self.Data.Small.Data (1 .. Str'Length) := Str;
          else
-            if Small then
-               Convert_To_Big_String (Self, Str'Length);
-            else
-               Make_Writable (Self);
-               Resize (Self, Str'Length);
-            end if;
+            Self.Data.Big.Size := String_Size (Str'Length);
+            Self.Data.Big.First := 1;
 
             if Copy_On_Write then
                Self.Data.Big.Data.Bytes2 (1 .. Str'Length) :=
@@ -407,8 +453,6 @@ package body GNATCOLL.Strings_Impl is
                Self.Data.Big.Data.Bytes1 (1 .. Str'Length) :=
                   Convert (Str'Address) (1 .. Str'Length);
             end if;
-
-            Self.Data.Big.First := 1;
          end if;
       end Set;
 
@@ -420,57 +464,31 @@ package body GNATCOLL.Strings_Impl is
         (Self : in out XString;
          Str  : Char_String)
       is
-         Small     : constant Boolean := not Self.Data.Small.Is_Big;
-         New_Size : String_Size;
-         Current  : String_Size;
+         Current  : constant Natural := Self.Length;
+         New_Size : constant Natural := Current + Str'Length;
          F        : Natural;
       begin
-         if Small then
-            Current := String_Size (Self.Data.Small.Size);
-            New_Size := Current + Str'Length;
+         --  Make sure we have enough space, possibly by moving
+         --  characters back to position 1, or by converting to
+         --  a big string, or resizing the current buffer.
 
-            if New_Size <= Max_Small_Length then
-               Self.Data.Small.Data
-                  (Natural (Current + 1) .. Natural (New_Size)) := Str;
-               Self.Data.Small.Size := SSize (New_Size);
-               return;
+         Self.Reserve (Capacity => String_Size (New_Size));
+
+         if not Self.Data.Small.Is_Big then
+            Self.Data.Small.Data (Current + 1 .. New_Size) := Str;
+            Self.Data.Small.Size := SSize (New_Size);
+
+         else
+            F := Natural (Self.Data.Big.First) + Current;
+            Self.Data.Big.Size := String_Size (New_Size);
+
+            if Copy_On_Write then
+               Self.Data.Big.Data.Bytes2 (F .. F - 1 + Str'Length) :=
+                  Convert (Str'Address) (1 .. Str'Length);
+            else
+               Self.Data.Big.Data.Bytes1 (F .. F - 1 + Str'Length) :=
+                  Convert (Str'Address) (1 .. Str'Length);
             end if;
-
-            declare
-               Old : constant Char_String :=
-                  Self.Data.Small.Data (1 .. Natural (Current));
-            begin
-               Convert_To_Big_String (Self, New_Size);
-
-               pragma Assert (Self.Data.Big.First = 1);
-
-               if Copy_On_Write then
-                  Self.Data.Big.Data.Bytes2 (1 .. Natural (Current)) :=
-                     Convert (Old'Address) (1 .. Natural (Current));
-               else
-                  Self.Data.Big.Data.Bytes1 (1 .. Natural (Current)) :=
-                     Convert (Old'Address) (1 .. Natural (Current));
-               end if;
-            end;
-
-            F := 1;
-
-         else
-            Current := Self.Data.Big.Size;
-            New_Size := Current + Str'Length;
-            Make_Writable (Self);
-            Resize (Self, New_Size);
-            F := Natural (Self.Data.Big.First);
-         end if;
-
-         if Copy_On_Write then
-            Self.Data.Big.Data.Bytes2
-               (Natural (Current) + F .. F - 1 + Natural (New_Size)) :=
-                 Convert (Str'Address) (1 .. Str'Length);
-         else
-            Self.Data.Big.Data.Bytes1
-               (Natural (Current) + F .. F - 1 + Natural (New_Size)) :=
-                 Convert (Str'Address) (1 .. Str'Length);
          end if;
       end Append;
 
@@ -482,49 +500,22 @@ package body GNATCOLL.Strings_Impl is
         (Self : in out XString;
          Char : Char_Type)
       is
-         Small    : constant Boolean := not Self.Data.Small.Is_Big;
-         New_Size : String_Size;
-         Current  : String_Size;
-         F        : Natural;
+         Current : constant Natural := Self.Length;
+         F : Natural;
       begin
-         if Small then
-            Current := String_Size (Self.Data.Small.Size);
-            New_Size := Current + 1;
-            if New_Size <= Max_Small_Length then
-               Self.Data.Small.Size := SSize (New_Size);
-               Self.Data.Small.Data (Natural (New_Size)) := Char;
-            else
-               declare
-                  Old : constant Char_String :=
-                     Self.Data.Small.Data (1 .. Natural (Current));
-               begin
-                  Convert_To_Big_String (Self, New_Size);
+         Self.Reserve (Capacity => String_Size (Current + 1));
 
-                  if Copy_On_Write then
-                     Self.Data.Big.Data.Bytes2 (1 .. Natural (Current)) :=
-                        Convert (Old'Address) (1 .. Natural (Current));
-                     Self.Data.Big.Data.Bytes2 (Natural (New_Size)) := Char;
-                  else
-                     Self.Data.Big.Data.Bytes1 (1 .. Natural (Current)) :=
-                        Convert (Old'Address) (1 .. Natural (Current));
-                     Self.Data.Big.Data.Bytes1 (Natural (New_Size)) := Char;
-                  end if;
-               end;
-            end if;
-
+         if not Self.Data.Small.Is_Big then
+            Self.Data.Small.Data (Current + 1) := Char;
+            Self.Data.Small.Size := SSize (Current + 1);
          else
-            Current := Self.Data.Big.Size;
-            New_Size := Current + 1;
-
-            Make_Writable (Self);
-            Resize (Self, New_Size);
-
-            F := Natural (Self.Data.Big.First);
+            F := Natural (Self.Data.Big.First) + Current;
+            Self.Data.Big.Size := String_Size (Current + 1);
 
             if Copy_On_Write then
-               Self.Data.Big.Data.Bytes2 (F - 1 + Natural (New_Size)) := Char;
+               Self.Data.Big.Data.Bytes2 (F) := Char;
             else
-               Self.Data.Big.Data.Bytes1 (F - 1 + Natural (New_Size)) := Char;
+               Self.Data.Big.Data.Bytes1 (F) := Char;
             end if;
          end if;
       end Append;
@@ -548,7 +539,7 @@ package body GNATCOLL.Strings_Impl is
       function "*" (Count : Natural; Right : Char_Type) return XString is
          Result : XString;
       begin
-         Result.Reserve (Size => String_Size (Count));
+         Result.Reserve (Capacity => String_Size (Count));
 
          for C in 1 .. Count loop
             Result.Append (Right);
@@ -564,7 +555,7 @@ package body GNATCOLL.Strings_Impl is
       function "*" (Count : Natural; Right : Char_String) return XString is
          Result : XString;
       begin
-         Result.Reserve (Size => String_Size (Count * Right'Length));
+         Result.Reserve (Capacity => String_Size (Count * Right'Length));
 
          for C in 1 .. Count loop
             Result.Append (Right);
@@ -580,7 +571,7 @@ package body GNATCOLL.Strings_Impl is
       function "*" (Count : Natural; Right : XString) return XString is
          Result : XString;
       begin
-         Result.Reserve (Size => String_Size (Count * Right.Length));
+         Result.Reserve (Capacity => String_Size (Count * Right.Length));
 
          for C in 1 .. Count loop
             Result.Append (Right);
@@ -632,6 +623,17 @@ package body GNATCOLL.Strings_Impl is
          end if;
       end Get_String;
 
+      ----------------
+      -- To_XString --
+      ----------------
+
+      function To_XString (Str : Char_String) return XString is
+         R : XString;
+      begin
+         R.Set (Str);
+         return R;
+      end To_XString;
+
       ---------------
       -- To_String --
       ---------------
@@ -648,24 +650,27 @@ package body GNATCOLL.Strings_Impl is
       -- "=" --
       ---------
 
-      function "=" (Self : XString; Str : Char_String) return Boolean is
+      function "=" (Left : XString; Right : Char_String) return Boolean is
          B : Char_Array;
          L : Natural;
       begin
-         Get_String (Self, B, L);
-         return Char_String (B (1 .. L)) = Str;
+         Get_String (Left, B, L);
+         return Char_String (B (1 .. L)) = Right;
       end "=";
 
       ---------
       -- "=" --
       ---------
 
-      function "=" (Self, Str : XString) return Boolean is
+      function "=" (Left, Right : XString) return Boolean is
          B1, B2 : Char_Array;
          L1, L2 : Natural;
       begin
-         Get_String (Self, B1, L1);
-         Get_String (Str,  B2, L2);
+         Get_String (Left,  B1, L1);
+         Get_String (Right, B2, L2);
+
+         --  ??? Should we check the pointers and "First"
+
          return L1 = L2 and then B1 (1 .. L1) = B2 (1 .. L2);
       end "=";
 
@@ -673,36 +678,36 @@ package body GNATCOLL.Strings_Impl is
       -- "<" --
       ---------
 
-      function "<" (Self : XString; Str : Char_String) return Boolean is
+      function "<" (Left : XString; Right : Char_String) return Boolean is
          B : Char_Array;
          L : Natural;
       begin
-         Get_String (Self, B, L);
-         return Char_String (B (1 .. L)) < Str;
+         Get_String (Left, B, L);
+         return Char_String (B (1 .. L)) < Right;
       end "<";
 
       ---------
       -- "<" --
       ---------
 
---      function "<" (Str : Char_String; Self : XString) return Boolean is
---         B : Char_Array;
---         L : Natural;
---      begin
---         Get_String (Self, B, L);
---         return Str < Char_String (B (1 .. L));
---      end "<";
+      function "<" (Left : Char_String; Right : XString) return Boolean is
+         B : Char_Array;
+         L : Natural;
+      begin
+         Get_String (Right, B, L);
+         return Left < Char_String (B (1 .. L));
+      end "<";
 
       ---------
       -- "<" --
       ---------
 
-      function "<" (Self, Str : XString) return Boolean is
+      function "<" (Left, Right : XString) return Boolean is
          B, B2 : Char_Array;
          L, L2 : Natural;
       begin
-         Get_String (Self, B, L);
-         Get_String (Str, B2, L2);
+         Get_String (Left, B, L);
+         Get_String (Right, B2, L2);
          return B (1 .. L) < B2 (1 .. L2);
       end "<";
 
@@ -710,38 +715,129 @@ package body GNATCOLL.Strings_Impl is
       -- "<=" --
       ----------
 
-      function "<=" (Self : XString; Str : Char_String) return Boolean is
+      function "<=" (Left : XString; Right : Char_String) return Boolean is
          B : Char_Array;
          L : Natural;
       begin
-         Get_String (Self, B, L);
-         return Char_String (B (1 .. L)) <= Str;
+         Get_String (Left, B, L);
+         return Char_String (B (1 .. L)) <= Right;
       end "<=";
 
       ----------
       -- "<=" --
       ----------
 
---      function "<=" (Str : Char_String; Self : XString) return Boolean is
---         B : Char_Array;
---         L : Natural;
---      begin
---         Get_String (Self, B, L);
---         return Str <= Char_String (B (1 .. L));
---      end "<=";
+      function "<=" (Left : Char_String; Right : XString) return Boolean is
+         B : Char_Array;
+         L : Natural;
+      begin
+         Get_String (Right, B, L);
+         return Left <= Char_String (B (1 .. L));
+      end "<=";
 
       ----------
       -- "<=" --
       ----------
 
-      function "<=" (Self, Str : XString) return Boolean is
+      function "<=" (Left, Right : XString) return Boolean is
          B, B2 : Char_Array;
          L, L2 : Natural;
       begin
-         Get_String (Self, B, L);
-         Get_String (Str, B2, L2);
+         Get_String (Left,  B, L);
+         Get_String (Right, B2, L2);
          return B (1 .. L) <= B2 (1 .. L2);
       end "<=";
+
+      -------------
+      -- Compare --
+      -------------
+
+      function Compare
+         (Left : XString; Right : Char_String) return Compare_Result
+      is
+         S : Char_Array;
+         L : Natural;
+         C2 : Char_Type;
+      begin
+         Get_String (Left, S, L);
+
+         for C in 1 .. Integer'Min (L, Right'Length) loop
+            C2 := Right (Right'First + C - 1);
+            if S (C) < C2 then
+               return -1;
+            elsif S (C) > C2 then
+               return 1;
+            end if;
+         end loop;
+
+         if L = Right'Length then
+            return 0;
+         elsif L < Right'Length then
+            return -1;
+         else
+            return 1;
+         end if;
+      end Compare;
+
+      -------------
+      -- Compare --
+      -------------
+
+      function Compare
+         (Left : XString; Right : XString) return Compare_Result
+      is
+         S : Char_Array;
+         L : Natural;
+      begin
+         Get_String (Right, S, L);
+         return Compare (Left, Char_String (S (1 .. L)));
+      end Compare;
+
+      ------------------------------
+      -- Compare_Case_Insensitive --
+      ------------------------------
+
+      function Compare_Case_Insensitive
+         (Left : XString; Right : Char_String) return Compare_Result
+      is
+         S : Char_Array;
+         L : Natural;
+         C2, C3 : Char_Type;
+      begin
+         Get_String (Left, S, L);
+
+         for C in 1 .. Integer'Min (L, Right'Length) loop
+            C3 := To_Lower (S (C));
+            C2 := To_Lower (Right (Right'First + C - 1));
+            if C3 < C2 then
+               return -1;
+            elsif C3 > C2 then
+               return 1;
+            end if;
+         end loop;
+
+         if L = Right'Length then
+            return 0;
+         elsif L < Right'Length then
+            return -1;
+         else
+            return 1;
+         end if;
+      end Compare_Case_Insensitive;
+
+      ------------------------------
+      -- Compare_Case_Insensitive --
+      ------------------------------
+
+      function Compare_Case_Insensitive
+         (Left : XString; Right : XString) return Compare_Result
+      is
+         S : Char_Array;
+         L : Natural;
+      begin
+         Get_String (Right, S, L);
+         return Compare_Case_Insensitive (Left, Char_String (S (1 .. L)));
+      end Compare_Case_Insensitive;
 
       ---------
       -- Get --
@@ -766,7 +862,8 @@ package body GNATCOLL.Strings_Impl is
 
       procedure Slice
          (Self   : in out XString;
-          Low, High : Positive)
+          Low    : Positive;
+          High   : Natural)
       is
          New_Size : constant Natural := High - Low + 1;
       begin
@@ -799,9 +896,15 @@ package body GNATCOLL.Strings_Impl is
       -- Slice --
       -----------
 
-      function Slice (Self : XString; Low, High : Positive) return XString is
-         Result : XString;
-         Len    : constant Natural := Self.Length;
+      procedure Slice
+         (Self : XString;
+          Low  : Positive;
+          High : Natural;
+          Into : in out XString)
+      is
+         Len   : constant Natural := Self.Length;
+         Size  : String_Size;
+         Is_Same : Boolean;
       begin
          --  We can't use Set, since we want to share the buffer when
          --  possible.
@@ -814,24 +917,100 @@ package body GNATCOLL.Strings_Impl is
             raise Ada.Strings.Index_Error with High'Img & ">" & Len'Img;
          end if;
 
-         if not Self.Data.Small.Is_Big then
-            Result.Set (Self.Data.Small.Data (Low .. High));
+         --  We should not call Reserve: this would call Make_Writable,
+         --  and thus potentially requires a copy of the buffer. Instead,
+         --  we want to reuse the buffer if possible.
+         --  But Into might already have some data, so we must avoid leaks
+
+         Size := String_Size (High - Low + 1);
+
+         if not Self.Data.Big.Is_Big then
+            --  Taking a slice of a small string always results in small
+            if Into.Data.Big.Is_Big then
+               Finalize (Into);
+               Into.Data.Big.Is_Big := False;
+            end if;
+
+            Into.Data.Small.Data (1 .. Integer (Size)) :=
+               Self.Data.Small.Data (Low .. High);
+            Into.Data.Small.Size := SSize (Size);
 
          elsif Copy_On_Write then
-            Result := Self;   --  share data and increment refcount
+            Is_Same := Into.Data.Big.Is_Big
+               and then Into.Data.Big.Data = Self.Data.Big.Data;
 
-            --  User indexing is from 1, but this matches First internally
-            Result.Data.Big.First := Low + Self.Data.Big.First - 1;
-            Result.Data.Big.Size := String_Size (High - Low + 1);
+            --  Stop holding a shared buffer, if we were
+            if not Is_Same then
+               Finalize (Into);
+            end if;
+
+            Into.Data.Big :=
+               (Is_Big        => True,
+                Data          => Self.Data.Big.Data,
+                Half_Capacity => Self.Data.Big.Half_Capacity,
+                Size          => Size,
+                First         => Low + Self.Data.Big.First - 1);
+
+            if not Is_Same then
+               Increment (Into.Data.Big.Data.Refcount);  --  buffer is shared
+            end if;
 
          else
-            Convert_To_Big_String (Result, String_Size (High - Low + 1));
-            Result.Data.Big.Data.Bytes1 (1 .. High - Low + 1) :=
-               Self.Data.Big.Data.Bytes1
-                  (Low + Self.Data.Big.First - 1 ..
-                     High + Self.Data.Big.First - 1);
-         end if;
+            --  If Into and Self are the same object (the only case where
+            --  their Data is the same), keep that buffer and change the
+            --  slice we use.
 
+            if Into.Data.Big.Is_Big
+               and then Into.Data.Big.Data = Self.Data.Big.Data
+            then
+               Into.Data.Big.First := Low + Self.Data.Big.First - 1;
+               Into.Data.Big.Size := Size;
+
+            else
+               --  Try and reuse memory if we can. This memory is unique
+               --  to Into, so we can safely alter it.
+
+               if not Into.Data.Big.Is_Big then
+                  if Size <= Max_Small_Length then
+                     Into.Data.Small.Data (1 .. Natural (Size)) :=
+                        Char_String (Self.Data.Big.Data.Bytes1
+                          (Low + Self.Data.Big.First - 1
+                           ..  High + Self.Data.Big.First - 1));
+                     Into.Data.Small.Size := SSize (Size);
+                     return;
+                  else
+                     Into.Data.Small.Size := 0;
+                     Convert_To_Big_String (Into, Size);
+                  end if;
+
+               else
+                  Into.Data.Big.Size := 0;
+                  Reserve (Into, Capacity => Size);
+               end if;
+
+               Into.Data.Big.Size := Size;
+               Into.Data.Big.Data.Bytes1
+                  (Into.Data.Big.First
+                   ..  Into.Data.Big.First + Natural (Size) - 1) :=
+                  Self.Data.Big.Data.Bytes1
+                     (Low + Self.Data.Big.First - 1
+                      ..  High + Self.Data.Big.First - 1);
+            end if;
+         end if;
+      end Slice;
+
+      -----------
+      -- Slice --
+      -----------
+
+      function Slice
+         (Self : XString;
+          Low  : Positive;
+          High : Natural) return XString
+      is
+         Result : XString;
+      begin
+         Slice (Self, Low, High, Into => Result);
          return Result;
       end Slice;
 
@@ -980,6 +1159,1203 @@ package body GNATCOLL.Strings_Impl is
       begin
          return Self.Slice (Natural'Max (1, L - Count + 1), L);
       end Tail;
+
+      -------------
+      -- Replace --
+      -------------
+
+      procedure Replace
+         (Self : in out XString; Index : Positive; Char : Char_Type)
+      is
+         S : Char_Array;
+         L : Natural;
+      begin
+         if Self.Data.Big.Is_Big then
+            Make_Writable (Self);
+         end if;
+
+         Get_String (Self, S, L);
+         if Index > L then
+            raise Ada.Strings.Index_Error with Index'Img & ">" & L'Img;
+         end if;
+
+         S (Index) := Char;
+      end Replace;
+
+      -------------
+      -- Replace --
+      -------------
+
+      procedure Replace
+         (Self      : in out XString;
+          Low       : Positive;
+          High      : Natural;
+          By        : Char_String)
+      is
+         S : Char_Array;
+         L, L2 : Natural;
+         New_L : Natural;
+      begin
+         L := Self.Length;
+         if Low > L then
+            raise Ada.Strings.Index_Error with Low'Img & ">" & L'Img;
+         end if;
+
+         if High >= L then
+            New_L := Low - 1 + By'Length;
+         else
+            New_L := Low - 1 + By'Length + (L - High);
+         end if;
+
+         --  This makes the string writable
+         Self.Reserve (String_Size (New_L));
+
+         --  Couldn't get the string before, since we might have reset it
+         Get_String (Self, S, L2);
+
+         if High < L then
+            S (Low + By'Length .. Low + By'Length + L - High - 1) :=
+               S (High + 1 .. L);
+         end if;
+
+         if By'Length /= 0 then
+            S (Low .. Low + By'Length - 1) :=
+               Convert (By'Address) (1 .. By'Length);
+         end if;
+
+         if Self.Data.Small.Is_Big then
+            Self.Data.Big.Size := String_Size (New_L);
+         else
+            Self.Data.Small.Size := SSize (New_L);
+         end if;
+      end Replace;
+
+      -------------------
+      -- Replace_Slice --
+      -------------------
+
+      procedure Replace_Slice
+         (Self      : in out XString;
+          Low       : Positive;
+          High      : Natural;
+          By        : XString)
+      is
+         By_Length : constant Natural := By.Length;
+         S, S2 : Char_Array;
+         L, L2 : Natural;
+         New_L : Natural;
+      begin
+         --  First make strings unique, in case Self and By share a buffer.
+         --  Unfortunately, just calling Make_Writable first would require
+         --  one malloc here, then a second one to reserve the correct size.
+         --  So instead we have to duplicate part of the code for Replace.
+
+         L := Self.Length;
+         if Low > L then
+            raise Ada.Strings.Index_Error with Low'Img & ">" & L'Img;
+         end if;
+
+         if High >= L then
+            New_L := Low - 1 + By_Length;
+         else
+            New_L := Low - 1 + By_Length + (L - High);
+         end if;
+
+         --  This makes the string writable, and ensure we no longer share
+         --  the buffer.
+         Self.Reserve (String_Size (New_L));
+
+         --  Couldn't get the string before, since we might have reset it
+         Get_String (Self, S, L2);
+         Get_String (By,   S2, L2);
+
+         if High < L then
+            S (Low + By_Length .. Low + By_Length + L - High - 1) :=
+               S (High + 1 .. L);
+         end if;
+
+         if By_Length /= 0 then
+            S (Low .. Low + By_Length - 1) := S2 (1 .. L2);
+         end if;
+
+         if Self.Data.Small.Is_Big then
+            Self.Data.Big.Size := String_Size (New_L);
+         else
+            Self.Data.Small.Size := SSize (New_L);
+         end if;
+      end Replace_Slice;
+
+      ------------
+      -- Insert --
+      ------------
+
+      procedure Insert
+         (Self      : in out XString;
+          Before    : Positive;
+          New_Item  : Char_String) is
+      begin
+         Self.Replace (Low => Before, High => Before - 1, By => New_Item);
+      end Insert;
+
+      ------------
+      -- Insert --
+      ------------
+
+      procedure Insert
+         (Self      : in out XString;
+          Before    : Positive;
+          New_Item  : XString) is
+      begin
+         Self.Replace_Slice
+            (Low => Before, High => Before - 1, By => New_Item);
+      end Insert;
+
+      ---------------
+      -- Overwrite --
+      ---------------
+
+      procedure Overwrite
+         (Self      : in out XString;
+          Position  : Positive;
+          New_Item  : Char_String) is
+      begin
+         Self.Replace
+            (Low  => Position,
+             High => Position + New_Item'Length - 1,
+             By   => New_Item);
+      end Overwrite;
+
+      ---------------
+      -- Overwrite --
+      ---------------
+
+      procedure Overwrite
+         (Self      : in out XString;
+          Position  : Positive;
+          New_Item  : XString) is
+      begin
+         Self.Replace_Slice
+            (Low  => Position,
+             High => Position + New_Item.Length - 1,
+             By   => New_Item);
+      end Overwrite;
+
+      ------------
+      -- Delete --
+      ------------
+
+      procedure Delete
+         (Self      : in out XString;
+          Low       : Positive;
+          High      : Natural) is
+      begin
+         Self.Replace (Low, High, Char_String'(1 .. 0 => Char_Type'First));
+      end Delete;
+
+      ----------
+      -- Hash --
+      ----------
+
+      function Hash (Self : XString) return Ada.Containers.Hash_Type is
+         function H is new System.String_Hash.Hash
+            (Char_Type, Char_String, Ada.Containers.Hash_Type);
+         S : Char_Array;
+         L : Natural;
+      begin
+         Get_String (Self, S, L);
+         return H (Char_String (S (1 .. L)));
+      end Hash;
+
+      ---------------------------
+      -- Hash_Case_Insensitive --
+      ---------------------------
+
+      function Hash_Case_Insensitive
+         (Self : XString) return Ada.Containers.Hash_Type
+      is
+         function H is new System.String_Hash.Hash
+            (Char_Type, Char_String, Ada.Containers.Hash_Type);
+         S : Char_Array;
+         L : Natural;
+      begin
+         Get_String (Self, S, L);
+
+         declare
+            S2 : Char_String := Char_String (S (1 .. L));
+         begin
+            for C in 1 .. L loop
+               S2 (C) := To_Lower (S2 (C));
+            end loop;
+            return H (S2);
+         end;
+      end Hash_Case_Insensitive;
+
+      ----------
+      -- Swap --
+      ----------
+
+      procedure Swap (Self, Str : in out XString) is
+         D : constant String_Data := Str.Data;
+      begin
+         Str.Data := Self.Data;
+         Self.Data := D;
+      end Swap;
+
+      ------------
+      -- Center --
+      ------------
+
+      procedure Center
+         (Self  : in out XString;
+          Width : Positive;
+          Pad   : Char_Type := Space)
+      is
+         Len : constant Natural := Self.Length;
+         S   : Char_Array;
+         L   : Natural;
+         F   : Positive;
+      begin
+         if Len < Width then
+            Self.Reserve (String_Size (Width));
+
+            Get_String (Self, S, L);
+            F := (Width - Len + 1) / 2;
+
+            S (F + 1 .. F + L) := S (1 .. L);
+
+            for C in 1 .. F loop
+               S (C) := Pad;
+            end loop;
+
+            for C in F + L + 1 .. Width loop
+               S (C) := Pad;
+            end loop;
+
+            Store_Size (Self, Width);
+         end if;
+      end Center;
+
+      ------------
+      -- Center --
+      ------------
+
+      function Center
+         (Self  : XString;
+          Width : Positive;
+          Pad   : Char_Type := Space) return XString
+      is
+         Len    : constant Natural := Self.Length;
+         Result : XString;
+         F      : Positive;
+         S, S2  : Char_Array;
+         L, L2  : Natural;
+      begin
+         if Len >= Width then
+            return Self;
+         else
+            Result.Reserve (String_Size (Width));
+
+            Get_String (Self, S, L);
+            Get_String (Result, S2, L2);
+
+            F := (Width - Len + 1) / 2;
+
+            for C in 1 .. F loop
+               S2 (C) := Pad;
+            end loop;
+
+            S2 (F + 1 .. F + L) := S (1 .. L);
+
+            for C in F + L + 1 .. Width loop
+               S2 (C) := Pad;
+            end loop;
+
+            Store_Size (Result, Width);
+            return Result;
+         end if;
+      end Center;
+
+      ------------------
+      -- Left_Justify --
+      ------------------
+
+      procedure Left_Justify
+         (Self  : in out XString;
+          Width : Positive;
+          Pad   : Char_Type := Space)
+      is
+         Len : constant Natural := Self.Length;
+         S   : Char_Array;
+         L   : Natural;
+      begin
+         if Len < Width then
+            Self.Reserve (String_Size (Width));
+            Get_String (Self, S, L);
+
+            for C in Len + 1 .. Width loop
+               S (C) := Pad;
+            end loop;
+
+            Store_Size (Self, Width);
+         end if;
+      end Left_Justify;
+
+      ------------------
+      -- Left_Justify --
+      ------------------
+
+      function Left_Justify
+         (Self  : XString;
+          Width : Positive;
+          Pad   : Char_Type := Space) return XString
+      is
+         --  A simpler implementation is:
+         --      Result : XString := Self;
+         --      Result.Left_Justify (Width, Pad);
+         --  But when not using copy-on-write this results in onre
+         --  extra copy of the string.
+
+         Len : constant Natural := Self.Length;
+         S   : Char_Array;
+         L   : Natural;
+         Result : XString;
+      begin
+         if Len >= Width then
+            return Self;
+         else
+            Result := Self;
+            Result.Reserve (String_Size (Width));
+
+            Get_String (Result, S, L);
+            for C in Len + 1 .. Width loop
+               S (C) := Pad;
+            end loop;
+
+            Store_Size (Result, Width);
+            return Result;
+         end if;
+      end Left_Justify;
+
+      -------------------
+      -- Right_Justify --
+      -------------------
+
+      procedure Right_Justify
+         (Self  : in out XString;
+          Width : Positive;
+          Pad   : Char_Type := Space)
+      is
+         Len : constant Natural := Self.Length;
+         S   : Char_Array;
+         L   : Natural;
+      begin
+         if Len < Width then
+            Self.Reserve (String_Size (Width));
+            Get_String (Self, S, L);
+
+            S (Width - Len + 1 .. Width) := S (1 .. Len);
+            for C in 1 .. Width - Len loop
+               S (C) := Pad;
+            end loop;
+
+            Store_Size (Self, Width);
+         end if;
+      end Right_Justify;
+
+      -------------------
+      -- Right_Justify --
+      -------------------
+
+      function Right_Justify
+         (Self  : XString;
+          Width : Positive;
+          Pad   : Char_Type := Space) return XString
+      is
+         Len    : constant Natural := Self.Length;
+         S, S2  : Char_Array;
+         L, L2  : Natural;
+         Result : XString;
+      begin
+         if Len >= Width then
+            return Self;
+         else
+            Result.Reserve (String_Size (Width));
+
+            Get_String (Result, S, L);
+            Get_String (Self,   S2, L2);
+
+            S (Width - Len + 1 .. Width) := S2 (1 .. Len);
+            for C in 1 .. Width - L2 loop
+               S (C) := Pad;
+            end loop;
+
+            Store_Size (Result, Width);
+            return Result;
+         end if;
+      end Right_Justify;
+
+      -----------
+      -- Count --
+      -----------
+
+      function Count
+         (Self : XString;
+          Char : Char_Type;
+          Low  : Positive := 1;
+          High : Natural := Natural'Last) return Natural
+      is
+         S        : Char_Array;
+         L        : Natural;
+         Result   : Natural := 0;
+      begin
+         Get_String (Self, S, L);
+
+         if L = 0 then
+            return 0;
+         end if;
+
+         if Low > L then
+            raise Ada.Strings.Index_Error with Low'Img & " >" & L'Img;
+         end if;
+
+         L := Natural'Min (High, L);
+
+         for C in Low .. L loop
+            if S (C) = Char then
+               Result := Result + 1;
+            end if;
+         end loop;
+         return Result;
+      end Count;
+
+      -----------
+      -- Count --
+      -----------
+
+      function Count
+         (Self : XString;
+          Str  : Char_String;
+          Low  : Positive := 1;
+          High : Natural := Natural'Last) return Natural
+      is
+         SL    : constant Integer := Str'Length - 1;
+         S     : Char_Array;
+         L     : Natural;
+         Num   : Natural := 0;
+         Index : Natural := Low;
+      begin
+         Get_String (Self, S, L);
+
+         if L = 0 then
+            return 0;
+         end if;
+
+         if SL = -1 then
+            return Natural'Last;
+         end if;
+
+         if Low > L then
+            raise Ada.Strings.Index_Error with Low'Img & " >" & L'Img;
+         end if;
+
+         L := Natural'Min (High, L);
+
+         while Index <= L - SL loop
+            if Char_String (S (Index .. Index + SL)) = Str then
+               Num := Num + 1;
+               Index := Index + SL + 1;
+            else
+               Index := Index + 1;
+            end if;
+         end loop;
+
+         return Num;
+      end Count;
+
+      ----------
+      -- Find --
+      ----------
+
+      function Find
+         (Self : XString;
+          Char : Char_Type;
+          Low  : Positive := 1;
+          High : Natural := Natural'Last) return Natural
+      is
+         S        : Char_Array;
+         L        : Natural;
+      begin
+         Get_String (Self, S, L);
+
+         if Low > L then
+            raise Ada.Strings.Index_Error with Low'Img & " >" & L'Img;
+         end if;
+
+         L := Natural'Min (High, L);
+
+         for C in Low .. L loop
+            if S (C) = Char then
+               return C;
+            end if;
+         end loop;
+         return 0;
+      end Find;
+
+      ----------
+      -- Find --
+      ----------
+
+      function Find
+         (Self : XString;
+          Str  : Char_String;
+          Low  : Positive := 1;
+          High : Natural := Natural'Last) return Natural
+      is
+         SL    : constant Integer := Str'Length - 1;
+         S     : Char_Array;
+         L     : Natural;
+         Index : Natural := Low;
+      begin
+         Get_String (Self, S, L);
+
+         if L = 0 or else SL = -1 then
+            return 0;
+         end if;
+
+         if Low > L then
+            raise Ada.Strings.Index_Error with Low'Img & " >" & L'Img;
+         end if;
+
+         L := Natural'Min (High, L);
+
+         while Index <= L - SL loop
+            if Char_String (S (Index .. Index + SL)) = Str then
+               return Index;
+            end if;
+
+            Index := Index + 1;
+         end loop;
+
+         return 0;
+      end Find;
+
+      ----------------
+      -- Right_Find --
+      ----------------
+
+      function Right_Find
+         (Self : XString;
+          Char : Char_Type;
+          Low  : Positive := 1;
+          High : Natural := Natural'Last) return Natural
+      is
+         S        : Char_Array;
+         L        : Natural;
+      begin
+         Get_String (Self, S, L);
+
+         if Low > L then
+            raise Ada.Strings.Index_Error with Low'Img & " >" & L'Img;
+         end if;
+
+         L := Natural'Min (High, L);
+
+         for C in reverse Low .. L loop
+            if S (C) = Char then
+               return C;
+            end if;
+         end loop;
+         return 0;
+      end Right_Find;
+
+      ----------------
+      -- Right_Find --
+      ----------------
+
+      function Right_Find
+         (Self : XString;
+          Str  : Char_String;
+          Low  : Positive := 1;
+          High : Natural := Natural'Last) return Natural
+      is
+         SL    : constant Integer := Str'Length - 1;
+         S     : Char_Array;
+         L     : Natural;
+         Index : Natural;
+      begin
+         Get_String (Self, S, L);
+
+         if L = 0 or else SL = -1 then
+            return 0;
+         end if;
+
+         if Low > L then
+            raise Ada.Strings.Index_Error with Low'Img & " >" & L'Img;
+         end if;
+
+         L := Natural'Min (High, L);
+         Index := L - SL;
+
+         while Index >= 1 loop
+            if Char_String (S (Index .. Index + SL)) = Str then
+               return Index;
+            end if;
+
+            Index := Index - 1;
+         end loop;
+
+         return 0;
+      end Right_Find;
+
+      -----------
+      -- Split --
+      -----------
+
+      procedure Split
+         (Self       : XString;
+          Sep        : Char_Type;
+          Omit_Empty : Boolean := False;
+          Into       : out XString_Array;
+          Last       : out Natural)
+      is
+         S      : Char_Array;
+         L      : Natural;
+         Index  : Positive;
+         F      : Positive;  --  Start of current chunk
+      begin
+         Get_String (Self, S, L);
+
+         if Into'Length = 1 then
+            if L = 0 and then Omit_Empty then
+               Last := Into'First - 1;
+            else
+               Last := Into'First;
+               Into (Last) := Self;
+            end if;
+         else
+            Last := Into'First - 1;
+            Index := 1;
+            F := 1;
+
+            while Index <= L loop
+               --  For efficiency, we do not use Find here, since that would
+               --  do a lot of extra testing that we do not need
+               if S (Index) = Sep then
+                  if not Omit_Empty or else F <= Index - 1 then
+                     Last := Last + 1;
+                     Slice (Self, F, Index - 1, Into => Into (Last));
+                  end if;
+
+                  F := Index + 1;
+                  exit when Last = Into'Last - 1;
+               end if;
+               Index := Index + 1;
+            end loop;
+
+            if F > L then
+               if not Omit_Empty then
+                  Last := Last + 1;
+                  Into (Last).Clear;
+               end if;
+            else
+               Last := Last + 1;
+               Slice (Self, F, L, Into => Into (Last));
+            end if;
+         end if;
+      end Split;
+
+      -----------
+      -- Split --
+      -----------
+
+      function Split
+         (Self       : XString;
+          Sep        : Char_Type;
+          Max_Split  : Positive := Positive'Last;
+          Omit_Empty : Boolean := False) return XString_Array
+      is
+         L        : constant Natural := Self.Length;
+         Max_Size : constant Natural :=
+            (if Max_Split /= Natural'Last
+             then Integer'Min (Max_Split, L)
+             else Self.Count (Sep) + 1);
+         Result   : XString_Array (1 .. Max_Size);
+         Last     : Natural;
+      begin
+         Split (Self, Sep, Omit_Empty, Result, Last);
+         return Result (Result'First .. Last);
+      end Split;
+
+      -----------
+      -- Split --
+      -----------
+
+      function Split
+         (Self       : XString;
+          Sep        : Char_String;
+          Max_Split  : Positive := Positive'Last;
+          Omit_Empty : Boolean := False) return XString_Array
+      is
+         L        : constant Natural := Self.Length;
+         Max_Size : constant Natural :=
+            (if Sep'Length = 0
+             then 1  --  Won't be used anyway
+             elsif Max_Split /= Natural'Last
+             then Integer'Min (Max_Split, L)
+             else Self.Count (Sep) + 1);
+         Result   : XString_Array (1 .. Max_Size);
+         Last     : Natural;
+      begin
+         Split (Self, Sep, Omit_Empty, Result, Last);
+         return Result (Result'First .. Last);
+      end Split;
+
+      -----------
+      -- Split --
+      -----------
+
+      procedure Split
+         (Self       : XString;
+          Sep        : Char_String;
+          Omit_Empty : Boolean := False;
+          Into       : out XString_Array;
+          Last       : out Natural)
+      is
+         SL     : constant Integer := Sep'Length - 1;
+         S      : Char_Array;
+         L      : Natural;
+         Index  : Positive;
+         F      : Positive;  --  Start of current chunk
+      begin
+         Get_String (Self, S, L);
+
+         if L = 0 or else SL = -1 then
+            Last := Into'First - 1;
+            return;
+         end if;
+
+         if Into'Length = 1 then
+            if L = 0 and then Omit_Empty then
+               Last := Into'First - 1;
+            else
+               Last := Into'First;
+               Into (Last) := Self;
+            end if;
+         else
+            Last := Into'First - 1;
+            Index := 1;
+            F := 1;
+
+            while Index <= L - SL loop
+               --  For efficiency, we do not use Find here, since that would
+               --  do a lot of extra testing that we do not need
+               if Char_String (S (Index .. Index + SL)) = Sep then
+                  if not Omit_Empty or else F <= Index - 1 then
+                     Last := Last + 1;
+                     Slice (Self, F, Index - 1, Into => Into (Last));
+                  end if;
+
+                  F := Index + SL + 1;
+                  exit when Last = Into'Last - 1;
+
+                  Index := F;
+               else
+                  Index := Index + 1;
+               end if;
+            end loop;
+
+            if F > L then
+               if not Omit_Empty then
+                  Last := Last + 1;
+                  Into (Last).Clear;
+               end if;
+            else
+               Last := Last + 1;
+               Slice (Self, F, L, Into => Into (Last));
+            end if;
+         end if;
+      end Split;
+
+      -----------------
+      -- Right_Split --
+      -----------------
+
+      procedure Right_Split
+         (Self       : XString;
+          Sep        : Char_Type;
+          Omit_Empty : Boolean := False;
+          Into       : out XString_Array;
+          Last       : out Natural)
+      is
+         S      : Char_Array;
+         L      : Natural;
+         Index  : Integer;
+         F      : Natural;  --  End of current chunk
+      begin
+         Get_String (Self, S, L);
+
+         if Into'Length = 1 then
+            if L = 0 and then Omit_Empty then
+               Last := Into'First - 1;
+            else
+               Last := Into'First;
+               Into (Last) := Self;
+            end if;
+         else
+            Last := Into'First - 1;
+            Index := L;
+            F := L;
+
+            while Index >= 1 loop
+               if S (Index) = Sep then
+                  if not Omit_Empty or else F > Index then
+                     Last := Last + 1;
+
+                     if Index >= L then
+                        Into (Last).Clear;
+                     else
+                        Slice (Self, Index + 1, F, Into => Into (Last));
+                     end if;
+                  end if;
+
+                  F := Index - 1;
+                  exit when Last = Into'Last - 1;
+               end if;
+               Index := Index - 1;
+            end loop;
+
+            if F < 1 then
+               if not Omit_Empty then
+                  Last := Last + 1;
+                  Into (Last).Clear;
+               end if;
+            else
+               Last := Last + 1;
+               Slice (Self, 1, F, Into => Into (Last));
+            end if;
+         end if;
+      end Right_Split;
+
+      -----------------
+      -- Right_Split --
+      -----------------
+
+      function Right_Split
+         (Self       : XString;
+          Sep        : Char_Type;
+          Max_Split  : Positive := Positive'Last;
+          Omit_Empty : Boolean := False) return XString_Array
+      is
+         L        : constant Natural := Self.Length;
+         Max_Size : constant Natural :=
+            (if Max_Split /= Natural'Last
+             then Integer'Min (Max_Split, L)
+             else Self.Count (Sep) + 1);
+         Result   : XString_Array (1 .. Max_Size);
+         Last     : Natural;
+      begin
+         Right_Split (Self, Sep, Omit_Empty, Result, Last);
+         return Result (Result'First .. Last);
+      end Right_Split;
+
+      -----------------
+      -- Right_Split --
+      -----------------
+
+      procedure Right_Split
+         (Self       : XString;
+          Sep        : Char_String;
+          Omit_Empty : Boolean := False;
+          Into       : out XString_Array;
+          Last       : out Natural)
+      is
+         SL     : constant Integer := Sep'Length - 1;
+         S      : Char_Array;
+         L      : Natural;
+         Index  : Integer;
+         F      : Natural;  --  End of current chunk
+      begin
+         Get_String (Self, S, L);
+
+         if L = 0 or else SL = -1 then
+            Last := Into'First - 1;
+            return;
+         end if;
+
+         if Into'Length = 1 then
+            if L = 0 and then Omit_Empty then
+               Last := Into'First - 1;
+            else
+               Last := Into'First;
+               Into (Last) := Self;
+            end if;
+         else
+            Last := Into'First - 1;
+            Index := L - SL;
+            F := L;
+
+            while Index >= 1 loop
+               if Char_String (S (Index .. Index + SL)) = Sep then
+                  if not Omit_Empty or else Index + SL + 1 <= F then
+                     Last := Last + 1;
+
+                     if Index + SL + 1 > L then
+                        Into (Last).Clear;
+                     else
+                        Slice (Self, Index + SL + 1, F, Into => Into (Last));
+                     end if;
+                  end if;
+
+                  F := Index - 1;
+                  exit when Last = Into'Last - 1;
+                  Index := Index - SL;
+               end if;
+               Index := Index - 1;
+            end loop;
+
+            if F < 1 then
+               if not Omit_Empty then
+                  Last := Last + 1;
+                  Into (Last).Clear;
+               end if;
+            else
+               Last := Last + 1;
+               Slice (Self, 1, F, Into => Into (Last));
+            end if;
+         end if;
+      end Right_Split;
+
+      -----------------
+      -- Right_Split --
+      -----------------
+
+      function Right_Split
+         (Self       : XString;
+          Sep        : Char_String;
+          Max_Split  : Positive := Positive'Last;
+          Omit_Empty : Boolean := False) return XString_Array
+      is
+         L        : constant Natural := Self.Length;
+         Max_Size : constant Natural :=
+            (if Sep'Length = 0
+             then 1  --  Won't be used anyway
+             elsif Max_Split /= Natural'Last
+             then Integer'Min (Max_Split, L)
+             else Self.Count (Sep) + 1);
+         Result   : XString_Array (1 .. Max_Size);
+         Last     : Natural;
+      begin
+         Right_Split (Self, Sep, Omit_Empty, Result, Last);
+         return Result (Result'First .. Last);
+      end Right_Split;
+
+      ----------
+      -- Join --
+      ----------
+
+      function Join
+         (Sep       : Char_Type;
+          Items     : XString_Array) return XString
+      is
+         Result : XString;
+      begin
+         Join (Result, Sep, Items);
+         return Result;
+      end Join;
+
+      ----------
+      -- Join --
+      ----------
+
+      procedure Join
+         (Self  : out XString;
+          Sep   : Char_Type;
+          Items : XString_Array)
+      is
+         Size   : Integer;
+      begin
+         if Items'Length = 0 then
+            Self.Clear;
+         else
+            Size := Items'Length - 1;
+            for It of Items loop
+               Size := Size + It.Length;
+            end loop;
+
+            Store_Size (Self, 0);  --  Reset the string
+            Self.Reserve (String_Size (Size));
+
+            for It in Items'Range loop
+               Self.Append (Items (It));
+               if It /= Items'Last then
+                  Self.Append (Sep);
+               end if;
+            end loop;
+         end if;
+      end Join;
+
+      ----------
+      -- Join --
+      ----------
+
+      function Join
+         (Sep       : Char_String;
+          Items     : XString_Array) return XString
+      is
+         Result : XString;
+      begin
+         Join (Result, Sep, Items);
+         return Result;
+      end Join;
+
+      ----------
+      -- Join --
+      ----------
+
+      procedure Join
+         (Self  : out XString;
+          Sep   : Char_String;
+          Items : XString_Array)
+      is
+         Size   : Natural;
+      begin
+         if Items'Length = 0 then
+            Self.Clear;
+         else
+            Size := Sep'Length * (Items'Length - 1);
+            for It of Items loop
+               Size := Size + It.Length;
+            end loop;
+
+            Store_Size (Self, 0);  --  Reset the string
+            Self.Reserve (String_Size (Size));
+
+            for It in Items'Range loop
+               Self.Append (Items (It));
+               if It /= Items'Last then
+                  Self.Append (Sep);
+               end if;
+            end loop;
+         end if;
+      end Join;
+
+      --------------
+      -- To_Upper --
+      --------------
+
+      procedure To_Upper (Self : in out XString) is
+         S   : Char_Array;
+         L   : Natural;
+      begin
+         Make_Writable (Self);
+         Get_String (Self, S, L);
+         for Idx in 1 .. L loop
+            S (Idx) := To_Upper (S (Idx));
+         end loop;
+      end To_Upper;
+
+      --------------
+      -- To_Upper --
+      --------------
+
+      function To_Upper (Self : XString) return XString is
+         R : XString := Self;
+      begin
+         To_Upper (R);
+         return R;
+      end To_Upper;
+
+      --------------
+      -- To_Lower --
+      --------------
+
+      procedure To_Lower (Self : in out XString) is
+         S   : Char_Array;
+         L   : Natural;
+      begin
+         Make_Writable (Self);
+         Get_String (Self, S, L);
+         for Idx in 1 .. L loop
+            S (Idx) := To_Lower (S (Idx));
+         end loop;
+      end To_Lower;
+
+      --------------
+      -- To_Lower --
+      --------------
+
+      function To_Lower (Self : XString) return XString is
+         R : XString := Self;
+      begin
+         To_Lower (R);
+         return R;
+      end To_Lower;
+
+      ----------------
+      -- Capitalize --
+      ----------------
+
+      procedure Capitalize (Self : in out XString) is
+         S   : Char_Array;
+         L   : Natural;
+      begin
+         Make_Writable (Self);
+         Get_String (Self, S, L);
+         S (1) := To_Upper (S (1));
+      end Capitalize;
+
+      -----------
+      -- Title --
+      -----------
+
+      procedure Title (Self : in out XString) is
+         S   : Char_Array;
+         L   : Natural;
+         Idx : Natural;
+      begin
+         Make_Writable (Self);
+         Get_String (Self, S, L);
+         S (1) := To_Upper (S (1));
+
+         Idx := 2;
+         while Idx < L loop
+
+            if S (Idx) = Space then
+               S (Idx + 1) := To_Upper (S (Idx + 1));
+               Idx := Idx + 2;
+            else
+               Idx := Idx + 1;
+            end if;
+         end loop;
+      end Title;
+
+      --------------
+      -- Is_Upper --
+      --------------
+
+      function Is_Upper (Self : XString) return Boolean is
+      begin
+         for C of Self loop
+            if C /= To_Upper (C) then
+               return False;
+            end if;
+         end loop;
+         return True;
+      end Is_Upper;
+
+      --------------
+      -- Is_Lower --
+      --------------
+
+      function Is_Lower (Self : XString) return Boolean is
+      begin
+         for C of Self loop
+            if C /= To_Lower (C) then
+               return False;
+            end if;
+         end loop;
+         return True;
+      end Is_Lower;
 
    end Strings;
 

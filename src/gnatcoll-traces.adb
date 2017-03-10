@@ -26,7 +26,6 @@ pragma Ada_2012;
 with Ada.Calendar;              use Ada.Calendar;
 with Ada.Calendar.Formatting;   use Ada.Calendar.Formatting;
 with Ada.Calendar.Time_Zones;   use Ada.Calendar.Time_Zones;
-with Ada.Characters.Handling;   use Ada.Characters.Handling;
 with Ada.Environment_Variables;
 with Ada.Strings.Fixed;         use Ada.Strings.Fixed;
 

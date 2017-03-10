@@ -27,6 +27,7 @@ with GNAT.Source_Info;
 with GNAT.Strings;
 with Ada.Calendar;
 with Ada.Exceptions;
+with Ada.Characters.Handling;    use Ada.Characters.Handling;
 private with Ada.Finalization;
 
 with GNATCOLL.VFS;           use GNATCOLL.VFS;

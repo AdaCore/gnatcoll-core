@@ -26,6 +26,7 @@
 --  See details in gnatcoll-strings_impl.ads
 
 with GNATCOLL.Strings_Impl;
+with Ada.Characters.Handling;    use Ada.Characters.Handling;
 
 package GNATCOLL.Strings is
    new GNATCOLL.Strings_Impl.Strings

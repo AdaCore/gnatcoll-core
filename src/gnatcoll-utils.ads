@@ -92,6 +92,8 @@ package GNATCOLL.Utils is
    --
    --  Result must be freed by caller.
    --  See also Split below
+   --
+   --  For a more efficient version, see GNATCOLL.Strings
 
    type Unbounded_String_Array is array (Natural range <>) of
      Ada.Strings.Unbounded.Unbounded_String;
@@ -102,6 +104,7 @@ package GNATCOLL.Utils is
       Omit_Empty_Lines : Boolean := True) return Unbounded_String_Array;
    --  Same as Split above, returning an Unbounded_String_Array that does not
    --  need to be freed.
+   --  For a more efficient version, see GNATCOLL.Strings
 
    function Capitalize (Name : String) return String;
    --  Capitalize a string, ie put in upper case the first character and all
@@ -113,9 +116,11 @@ package GNATCOLL.Utils is
 
    function Starts_With (Str : String; Prefix : String) return Boolean;
    --  Returns True if Str starts with Prefix
+   --  See also GNATCOLL.Strings.
 
    function Ends_With (Str : String; Suffix : String) return Boolean;
    --  Returns True if Str ends with Suffix
+   --  See also GNATCOLL.Strings.
 
    procedure Skip_Blanks (Str : String; Index : in out Natural);
    procedure Skip_Blanks_Backward (Str : String; Index : in out Natural);
@@ -128,11 +133,13 @@ package GNATCOLL.Utils is
    function Find_Char (Str : String; Char : Character) return Natural;
    --  Return the first occurrence of Char after Str'First (use substrings for
    --  later occurrences).
+   --  See also GNATCOLL.Strings.Find
 
    function Join (Str : String; List : GNAT.Strings.String_List) return String;
    --  Return a string that is the concatenation of the list elements,
    --  separated by Str: (List(1) & Str & List(2) & Str & ...)
    --  null elements in list are skipped
+   --  See also GNATCOLL.Strings.Join
 
    function EOL (Str : String) return Natural;
    pragma Inline (EOL);
@@ -142,9 +149,11 @@ package GNATCOLL.Utils is
 
    function Line_Start (Str : String; P : Natural) return Natural;
    --  Return the start of the line pointed by P
+   --  See also GNATCOLL.Strings.Head
 
    function Line_End (Str : String; P : Natural) return Natural;
    --  Return the end of the line pointed by P
+   --  See also GNATCOLL.Strings.Tail
 
    procedure Skip_Lines
      (Str           : String;
