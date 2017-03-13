@@ -81,14 +81,10 @@ package GNATCOLL.Atomic is
       (Left, Right : Atomic_Counter) return Atomic_Counter is abstract;
    --  Prevent standard operations on these counters
 
-   function Unsafe_Add
-      (Left, Right : Atomic_Counter) return Atomic_Counter
-      is (Atomic_Counter (Natural (Left) + Natural (Right)));
+   function Unsafe_Decrement (Value : in out Atomic_Counter) return Boolean
+      with Inline_Always;
    procedure Unsafe_Increment (Value : in out Atomic_Counter)
       with Inline_Always;
-   function Unsafe_Sub
-      (Left, Right : Atomic_Counter) return Atomic_Counter
-      is (Atomic_Counter (Natural (Left) - Natural (Right)));
    --  These are unsafe operations. If you have two threads, and they all try
    --  to do "Unsafe_Add (A, 2)" at the same time, when A was initially 0,
    --  you could end up with the following values in A:

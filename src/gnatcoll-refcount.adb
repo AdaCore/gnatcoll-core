@@ -95,7 +95,7 @@ package body GNATCOLL.Refcount is
             Unchecked_Free (Data);
          end if;
       else
-         if Unsafe_Sub (Data.Refcount, 1) = 0 then
+         if Unsafe_Decrement (Data.Refcount) then
             Unchecked_Free (Data);
          end if;
       end if;
@@ -282,7 +282,7 @@ package body GNATCOLL.Refcount is
             if Atomic_Counters then
                Tmp := Decrement (R.Refcount);
             else
-               Tmp := Unsafe_Sub (R.Refcount, 1) = 0;
+               Tmp := Unsafe_Decrement (R.Refcount);
             end if;
 
             if Tmp then

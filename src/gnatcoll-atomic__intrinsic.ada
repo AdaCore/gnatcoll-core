@@ -124,8 +124,18 @@ package body GNATCOLL.Atomic is
 
    procedure Unsafe_Increment (Value : in out Atomic_Counter) is
    begin
-      Value := Unsafe_Add (Value, 1);
+      Value := Atomic_Counter (Natural (Value) + 1);
    end Unsafe_Increment;
+
+   ----------------------
+   -- Unsafe_Decrement --
+   ----------------------
+
+   function Unsafe_Decrement (Value : in out Atomic_Counter) return Boolean is
+   begin
+      Value := Atomic_Counter (Natural (Value) - 1);
+      return Value = 0;
+   end Unsafe_Decrement;
 
    --------------------------------
    -- Sync_Bool_Compare_And_Swap --
