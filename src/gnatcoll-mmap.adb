@@ -29,6 +29,7 @@ with System; use System;
 with GNAT.Strings; use GNAT.Strings;
 
 with GNATCOLL.Mmap.System; use GNATCOLL.Mmap.System;
+with GNATCOLL.Strings;     use GNATCOLL.Strings;
 
 package body GNATCOLL.Mmap is
 
@@ -481,6 +482,39 @@ package body GNATCOLL.Mmap is
       when others =>
          Close (File);
          return null;
+   end Read_Whole_File;
+
+   ---------------------
+   -- Read_Whole_File --
+   ---------------------
+
+   function Read_Whole_File
+     (Filename           : String) return GNATCOLL.Strings.XString
+   is
+      File   : Mapped_File := Open_Read (Filename);
+      Region : Mapped_Region renames File.Current_Region;
+      Result : XString;
+   begin
+      Read (File);
+
+      if Region.Data /= null then
+         Result.Set (String (Region.Data (1 .. Last (Region))));
+
+      elsif Region.Buffer /= null then
+         Result.Set (Region.Buffer.all);
+      end if;
+
+      Close (File);
+
+      return Result;
+
+   exception
+      when Ada.IO_Exceptions.Name_Error =>
+         return GNATCOLL.Strings.Null_XString;
+
+      when others =>
+         Close (File);
+         return GNATCOLL.Strings.Null_XString;
    end Read_Whole_File;
 
    ---------------

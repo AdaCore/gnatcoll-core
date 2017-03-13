@@ -1145,6 +1145,21 @@ package body GNATCOLL.VFS is
       end if;
    end Read_File;
 
+   ---------------
+   -- Read_File --
+   ---------------
+
+   function Read_File (File : Virtual_File) return GNATCOLL.Strings.XString is
+   begin
+      if File.Value = null
+         or else File.Value.Kind = Directory
+      then
+         return GNATCOLL.Strings.Null_XString;
+      else
+         return File.Value.Read_Whole_File;
+      end if;
+   end Read_File;
+
    ----------------
    -- Write_File --
    ----------------

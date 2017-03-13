@@ -580,6 +580,30 @@ package body GNATCOLL.IO.Remote.Windows is
       return Output;
    end Read_Whole_File;
 
+   ---------------------
+   -- Read_Whole_File --
+   ---------------------
+
+   function Read_Whole_File
+     (Exec : access Server_Record'Class;
+      File : FS_String)
+      return GNATCOLL.Strings.XString
+   is
+      Args   : GNAT.OS_Lib.Argument_List :=
+                 (new String'("type"),
+                  new String'("""" & String (File) & """"));
+      Status : Boolean;
+      Output : String_Access;
+      Result : XString;
+
+   begin
+      Exec.Execute_Remotely (Args, Output, Status);
+      Free (Args);
+      Result.Set (Output.all);  --  Needs a copy of the string
+      Free (Output);
+      return Result;
+   end Read_Whole_File;
+
    ----------------
    -- Write_File --
    ----------------

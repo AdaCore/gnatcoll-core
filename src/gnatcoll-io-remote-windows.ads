@@ -84,6 +84,10 @@ package GNATCOLL.IO.Remote.Windows is
      (Exec : access Server_Record'Class;
       File : FS_String)
       return GNAT.Strings.String_Access;
+   function Read_Whole_File
+     (Exec : access Server_Record'Class;
+      File : FS_String)
+      return GNATCOLL.Strings.XString;
    function Write_File
      (Exec    : access Server_Record'Class;
       File    : FS_String;

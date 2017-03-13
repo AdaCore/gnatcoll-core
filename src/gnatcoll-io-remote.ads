@@ -100,6 +100,9 @@ package GNATCOLL.IO.Remote is
    overriding function Read_Whole_File
      (File : not null access Remote_File_Record)
       return GNAT.Strings.String_Access;
+   overriding function Read_Whole_File
+     (File : not null access Remote_File_Record)
+      return GNATCOLL.Strings.XString;
    overriding procedure Open_Write
      (File    : not null access Remote_File_Record;
       Append  : Boolean := False;

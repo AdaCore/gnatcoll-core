@@ -712,6 +712,30 @@ package body GNATCOLL.IO.Remote is
       end case;
    end Read_Whole_File;
 
+   ---------------------
+   -- Read_Whole_File --
+   ---------------------
+
+   function Read_Whole_File
+     (File : not null access Remote_File_Record)
+      return GNATCOLL.Strings.XString
+   is
+   begin
+      Ensure_Initialized (File);
+
+      case File.Server.Shell_FS is
+         when FS_Unix | FS_Unix_Case_Insensitive =>
+            return GNATCOLL.IO.Remote.Unix.Read_Whole_File
+              (File.Server, File.Full.all);
+         when FS_Windows =>
+            return GNATCOLL.IO.Remote.Windows.Read_Whole_File
+              (File.Server, File.Full.all);
+         when FS_Unknown =>
+            raise Remote_Config_Error with
+              "Invalid FS for host " & File.Get_Host;
+      end case;
+   end Read_Whole_File;
+
    ----------------
    -- Open_Write --
    ----------------

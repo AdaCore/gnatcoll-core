@@ -84,6 +84,7 @@
 with Interfaces.C;
 
 with GNAT.Strings;
+with GNATCOLL.Strings;
 
 package GNATCOLL.Mmap is
 
@@ -243,6 +244,9 @@ package GNATCOLL.Mmap is
    function Read_Whole_File
      (Filename           : String;
       Empty_If_Not_Found : Boolean := False) return GNAT.Strings.String_Access;
+   function Read_Whole_File
+     (Filename           : String)
+     return GNATCOLL.Strings.XString;
    --  Returns the whole contents of the file.
    --  The returned string must be freed by the user.
    --  This is a convenience function, which is of course slower than the ones

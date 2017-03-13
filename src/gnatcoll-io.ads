@@ -24,6 +24,7 @@
 with Ada.Calendar;
 with GNAT.OS_Lib;
 with GNAT.Strings;
+with GNATCOLL.Strings;   use GNATCOLL.Strings;
 with GNATCOLL.VFS_Types; use GNATCOLL.VFS_Types;
 
 private package GNATCOLL.IO is
@@ -157,6 +158,9 @@ private package GNATCOLL.IO is
 
    function Read_Whole_File
      (File : not null access File_Record) return GNAT.Strings.String_Access
+      is abstract;
+   function Read_Whole_File
+     (File : not null access File_Record) return GNATCOLL.Strings.XString
       is abstract;
    --  Return the contents of an entire file.
    --  If the file cannot be found, return null.

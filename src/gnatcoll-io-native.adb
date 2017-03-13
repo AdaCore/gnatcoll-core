@@ -525,6 +525,22 @@ package body GNATCOLL.IO.Native is
          return null;
    end Read_Whole_File;
 
+   ---------------------
+   -- Read_Whole_File --
+   ---------------------
+
+   function Read_Whole_File
+     (File : not null access Native_File_Record)
+      return GNATCOLL.Strings.XString
+   is
+   begin
+      return GNATCOLL.Mmap.Read_Whole_File (String (File.Full.all));
+
+   exception
+      when others =>
+         return GNATCOLL.Strings.Null_XString;
+   end Read_Whole_File;
+
    ----------------
    -- Open_Write --
    ----------------

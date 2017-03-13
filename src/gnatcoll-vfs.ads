@@ -58,6 +58,7 @@ with GNAT.Strings;
 
 private with GNATCOLL.IO;
 private with GNATCOLL.IO.Native;
+with GNATCOLL.Strings;
 
 package GNATCOLL.VFS is
 
@@ -440,10 +441,14 @@ package GNATCOLL.VFS is
    --  Remove file from the disk. This also works for remote files
 
    function Read_File (File : Virtual_File) return GNAT.Strings.String_Access;
+   function Read_File (File : Virtual_File) return GNATCOLL.Strings.XString;
    --  Return the contents of an entire file, encoded with the locale encoding.
    --  If the file cannot be found, return null.
    --  The caller is responsible for freeing the returned memory.
-   --  This works transparently for remote files
+   --  This works transparently for remote files.
+   --  The second version returning a XString is in general more efficient,
+   --  especially if you need to do operations like Split() on the resulting
+   --  string.
 
    --------------------------
    -- Directory operations --
