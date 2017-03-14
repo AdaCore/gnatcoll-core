@@ -31,6 +31,7 @@ GNAT Reusable Components
    sql
    xref
    terminals
+   promises
 
 Indices and tables
 ==================

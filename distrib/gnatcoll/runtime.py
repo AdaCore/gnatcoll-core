@@ -232,6 +232,13 @@ XML = r'''<?xml version="1.0"?>
   </documentation_file>
 
   <documentation_file>
+     <shell>Editor.edit "gnatcoll-promises.ads"</shell>
+     <descr>GNATCOLL.Promises</descr>
+     <menu>/Help/GNAT Runtime/GNATCOLL/Promises</menu>
+     <category>GNAT Components Collection</category>
+  </documentation_file>
+
+  <documentation_file>
      <shell>Editor.edit "gnatcoll-python.ads"</shell>
      <descr>GNATCOLL.Python</descr>
      <menu>/Help/GNAT Runtime/GNATCOLL/Python</menu>
