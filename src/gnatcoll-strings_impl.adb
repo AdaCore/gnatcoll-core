@@ -36,6 +36,34 @@ package body GNATCOLL.Strings_Impl is
    Page_Size : constant := 4096;
    --  Memory page size
 
+   --------------------
+   -- Default_Growth --
+   --------------------
+
+   function Default_Growth
+      (Current, Min_Size : String_Size) return String_Size
+   is
+      --  Compute minimum new size.
+      --  1.5 is often considered the best strategy, between efficiency
+      --  and memory usage.
+      New_Size : constant String_Size :=
+         String_Size'Max (Current * 3 / 2, Min_Size);
+   begin
+      if New_Size > Page_Size then
+         --  Round up to the nearest page size, since this is what
+         --  the system allocates anyway. This will always lead an even
+         --  number.
+         return (New_Size / Page_Size + 1) * Page_Size;
+      else
+         --  Must be an even number
+         return New_Size + (New_Size and 1);
+      end if;
+   end Default_Growth;
+
+   -------------
+   -- Strings --
+   -------------
+
    package body Strings is
       function Convert is new Ada.Unchecked_Conversion
          (System.Address, Char_Array);
@@ -63,12 +91,6 @@ package body GNATCOLL.Strings_Impl is
       procedure Store_Size (Self : in out XString; Size : Natural)
          with Inline;
       --  Store the size of Self.
-
-      function Compute_Capacity
-         (Current, Min_Size : String_Size) return String_Size
-         with Inline;
-      --  Compute the new capacity for a big_string, so that the string has
-      --  space for at least Min_Size characters.
 
       procedure Clone
          (Self   : in out XString;
@@ -123,30 +145,6 @@ package body GNATCOLL.Strings_Impl is
       begin
          Self.Data.Big.Half_Capacity := Capacity / 2;
       end Store_Capacity;
-
-      -----------------------
-      --  Compute_Capacity --
-      -----------------------
-
-      function Compute_Capacity
-         (Current, Min_Size : String_Size) return String_Size
-      is
-         --  Compute minimum new size.
-         --  1.5 is often considered the best strategy, between efficiency
-         --  and memory usage.
-         New_Size : constant String_Size :=
-            String_Size'Max (Current * 3 / 2, Min_Size);
-      begin
-         if New_Size > Page_Size then
-            --  Round up to the nearest page size, since this is what
-            --  the system allocates anyway. This will always lead an even
-            --  number.
-            return (New_Size / Page_Size + 1) * Page_Size;
-         else
-            --  Must be an even number
-            return New_Size + (New_Size and 1);
-         end if;
-      end Compute_Capacity;
 
       ----------------
       -- Store_Size --
@@ -227,7 +225,7 @@ package body GNATCOLL.Strings_Impl is
          Size  : constant Integer := Integer (Self.Data.Big.Size);
          First : constant Natural := Natural (Self.Data.Big.First);
          Cap  : constant String_Size :=
-            Compute_Capacity (0, Min_Size => Self.Data.Big.Size);
+            Growth_Strategy (0, Min_Size => Self.Data.Big.Size);
          Result : constant Big_String_Data_Access := Convert
             (System.Memory.Alloc
                (size_t (Cap) * Bytes_Per_Char + Extra_Header_Size));
@@ -304,7 +302,7 @@ package body GNATCOLL.Strings_Impl is
          (Self : in out XString;
           Size : String_Size)
       is
-         New_Size  : constant String_Size := Compute_Capacity (0, Size);
+         New_Size  : constant String_Size := Growth_Strategy (0, Size);
       begin
          Store_Capacity (Self, New_Size);
          Self.Data.Big.Is_Big := True;
@@ -369,7 +367,7 @@ package body GNATCOLL.Strings_Impl is
                --  Do we have enough space now ?
 
                if Current_Cap < Capacity then
-                  New_Size := Compute_Capacity (Current_Cap, Capacity);
+                  New_Size := Growth_Strategy (Current_Cap, Capacity);
                   Store_Capacity (Self, New_Size);
                   Self.Data.Big.Data := Convert
                      (System.Memory.Realloc
@@ -418,7 +416,7 @@ package body GNATCOLL.Strings_Impl is
             --  ??? Should we try to revert to a small string
             Make_Writable (Self);
 
-            New_Size := Compute_Capacity (0, Self.Data.Big.Size);
+            New_Size := Growth_Strategy (0, Self.Data.Big.Size);
             Store_Capacity (Self, New_Size);
             Self.Data.Big.Data := Convert
                (System.Memory.Realloc

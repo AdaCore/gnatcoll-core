@@ -504,14 +504,14 @@ those switches are:
 
   This function is generated as an Ada 2012 expression-function such as::
 
-  function Image_Priority_Id (X : Priority_Id) return String is
-    (case X is
-        when 3      => "High",
-        when 2      => "Medium",
-        when 1      => "Low",
-        when 4      => "High_Internal",
-        when others => raise Constraint_Error
-                         with "invalid Priority_Id " & X'Img);
+     function Image_Priority_Id (X : Priority_Id) return String is
+       (case X is
+           when 3      => "High",
+           when 2      => "Medium",
+           when 1      => "Low",
+           when 4      => "High_Internal",
+           when others => raise Constraint_Error
+                            with "invalid Priority_Id " & X'Img);
 
 *-var name,table,field,criteria,comment*
   This is similar to the `-enum` switch, but extracts a single value

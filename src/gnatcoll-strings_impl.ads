@@ -250,6 +250,15 @@ package GNATCOLL.Strings_Impl is
    --  same size as a big string (not counting the size of the allocated
    --  memory).
 
+   function Default_Growth
+      (Current, Min_Size : String_Size) return String_Size;
+   --  The default growth strategy. This decides how much memory we should
+   --  allocate/reallocate for the internal buffer, based on the amount of
+   --  memory we already use (Current), and the minimal number characters
+   --  we need to store in the string.
+   --  Current and Min_Size are given in 'characters' not in 'bytes', since
+   --  a character could potentially take several bytes.
+
    generic
       type SSize is mod <>;
       --  Number of characters that can be stored in the XString object itself,
@@ -284,6 +293,11 @@ package GNATCOLL.Strings_Impl is
       --  The alternative is to duplicate them every time a xstring is copied
       --  into another. The latter might be faster in some cases (less
       --  contention in multithreading for instance).
+
+      with function Growth_Strategy
+         (Current, Min_Size : String_Size) return String_Size
+         is Default_Growth;
+      --  See the comment for Default_Growth
 
    package Strings is
       pragma Compile_Time_Error

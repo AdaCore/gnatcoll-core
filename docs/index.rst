@@ -9,6 +9,7 @@ GNAT Reusable Components
    building
    scripting
    traces
+   strings
    memory
    mmap
    boyer_moore
