@@ -2136,9 +2136,7 @@ package body GNATCOLL.Xref is
                   return;
 
                when ' ' =>
-                  if Starts_With
-                    (String (Str (Index + 1 .. Str'Last)), "new")
-                  then
+                  if Starts_With (Str (Index + 1 .. Str'Last), "new") then
                      Index := Index + 4;  --  new operator
 
                      if Str (Index) = ' '
@@ -2149,7 +2147,7 @@ package body GNATCOLL.Xref is
                      end if;
 
                   elsif Starts_With
-                    (String (Str (Index + 1 .. Str'Last)), "delete")
+                    (Str (Index + 1 .. Str'Last), "delete")
                   then
                      Index := Index + 7;  --  delete operator
 

@@ -667,6 +667,7 @@ GTK_GCC_LIBS
 GTK_GCC_FLAGS
 HAVE_GNAT_PROJECT_gtkada
 PKG_CONFIG
+WITH_MADVISE
 WITH_MMAP
 WITH_PYTHON
 PYTHON_CFLAGS
@@ -4229,12 +4230,20 @@ $as_echo "#define HAVE_MMAP 1" >>confdefs.h
 fi
 rm -f conftest.mmap conftest.txt
 
-
    if test $ac_cv_func_mmap_fixed_mapped = yes; then
       WITH_MMAP=yes
    else
       WITH_MMAP=no
    fi
+
+
+   ac_fn_c_check_func "$LINENO" "madvise" "ac_cv_func_madvise"
+if test "x$ac_cv_func_madvise" = xyes; then :
+  WITH_MADVISE=yes
+else
+  WITH_MADVISE=no
+fi
+
 
 
 

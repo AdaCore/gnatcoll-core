@@ -489,8 +489,7 @@ package body GNATCOLL.SQL.Postgres.Builder is
 
    begin
       if Connection.Postgres /= null
-           and then Status (Connection.Postgres.all)
-                                  = CONNECTION_OK
+           and then Status (Connection.Postgres.all) = CONNECTION_OK
       then
          --  If the connection is already established, first try to send the
          --  query directly, then try to reconnect if the connection was

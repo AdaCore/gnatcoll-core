@@ -22,14 +22,11 @@
 ------------------------------------------------------------------------------
 
 with Ada.IO_Exceptions;
-with Ada.Unchecked_Conversion;
 with Ada.Unchecked_Deallocation;
-with System; use System;
-
-with GNAT.Strings; use GNAT.Strings;
-
-with GNATCOLL.Mmap.System; use GNATCOLL.Mmap.System;
-with GNATCOLL.Strings;     use GNATCOLL.Strings;
+with GNATCOLL.Mmap.System;       use GNATCOLL.Mmap.System;
+with GNATCOLL.Strings;           use GNATCOLL.Strings;
+with System;                     use System;
+with System.Storage_Elements;    use System.Storage_Elements;
 
 package body GNATCOLL.Mmap is
 
@@ -50,7 +47,8 @@ package body GNATCOLL.Mmap is
       Write         : Boolean;
       --  Whether the file this region comes from is open for writing.
 
-      Data          : Str_Access;
+      Data          : Standard.System.Address :=
+         Standard.System.Null_Address;
       --  Unbounded access to the mapped content.
 
       System_Offset : File_Size;
@@ -80,8 +78,8 @@ package body GNATCOLL.Mmap is
    end record;
 
    Invalid_Mapped_Region_Record : constant Mapped_Region_Record :=
-     (null, False, null, 0, 0, 0, 0, False, False, null,
-      Invalid_System_Mapping);
+     (null, False, Standard.System.Null_Address, 0, 0, 0, 0, False,
+      False, null, Invalid_System_Mapping);
    Invalid_Mapped_File_Record : constant Mapped_File_Record :=
      (Invalid_Mapped_Region, Invalid_System_File);
 
@@ -93,15 +91,13 @@ package body GNATCOLL.Mmap is
    procedure Dispose is new Ada.Unchecked_Deallocation
      (Mapped_Region_Record, Mapped_Region);
 
-   function Convert is new Ada.Unchecked_Conversion
-     (Standard.System.Address, Str_Access);
-
    procedure Compute_Data (Region : Mapped_Region);
    --  Fill the Data field according to system and user offsets. The region
    --  must actually be mapped or bufferized.
 
    procedure From_Disk (Region : Mapped_Region);
-   --  Read a region of some file from the disk
+   --  Read a region of some file from the disk.
+   --  Doesn't use the mmap system call.
 
    procedure To_Disk (Region : Mapped_Region);
    --  Write the region of the file back to disk if necessary, and free memory
@@ -191,7 +187,8 @@ package body GNATCOLL.Mmap is
       Region  : in out Mapped_Region;
       Offset  : File_Size := 0;
       Length  : File_Size := 0;
-      Mutable : Boolean := False)
+      Mutable : Boolean := False;
+      Advice  : Use_Advice := Use_Normal)
    is
       File_Length      : constant File_Size := GNATCOLL.Mmap.Length (File);
 
@@ -281,7 +278,8 @@ package body GNATCOLL.Mmap is
            (File.File,
             Region.System_Offset, Region.System_Size,
             Mutable,
-            Region.Mapping);
+            Region.Mapping,
+            Advice);
          Region.Mapped := True;
          Region.Mutable := Mutable;
 
@@ -331,11 +329,12 @@ package body GNATCOLL.Mmap is
      (File    : Mapped_File;
       Offset  : File_Size := 0;
       Length  : File_Size := 0;
-      Mutable : Boolean := False) return Mapped_Region
+      Mutable : Boolean := False;
+      Advice  : Use_Advice := Use_Normal) return Mapped_Region
    is
       Region  : Mapped_Region := Invalid_Mapped_Region;
    begin
-      Read (File, Region, Offset, Length, Mutable);
+      Read (File, Region, Offset, Length, Mutable, Advice);
       return Region;
    end Read;
 
@@ -366,55 +365,43 @@ package body GNATCOLL.Mmap is
       return Offset (File.Current_Region);
    end Offset;
 
-   ----------
-   -- Last --
-   ----------
+   ---------------
+   -- Data_Size --
+   ---------------
 
-   function Last (Region : Mapped_Region) return Integer is
+   function Data_Size (Region : Mapped_Region) return File_Size is
    begin
-      return Integer (Region.User_Size);
-   end Last;
+      return Region.User_Size;
+   end Data_Size;
 
-   ----------
-   -- Last --
-   ----------
+   ---------------
+   -- Data_Size --
+   ---------------
 
-   function Last (File : Mapped_File) return Integer is
+   function Data_Size (File : Mapped_File) return File_Size is
    begin
-      return Last (File.Current_Region);
-   end Last;
+      return Data_Size (File.Current_Region);
+   end Data_Size;
 
-   -------------------
-   -- To_Str_Access --
-   -------------------
+   ------------------
+   -- Data_Address --
+   ------------------
 
-   function To_Str_Access
-     (Str : GNAT.Strings.String_Access) return Str_Access is
-   begin
-      if Str = null then
-         return null;
-      else
-         return Convert (Str.all'Address);
-      end if;
-   end To_Str_Access;
-
-   ----------
-   -- Data --
-   ----------
-
-   function Data (Region : Mapped_Region) return Str_Access is
+   function Data_Address (Region : Mapped_Region)
+      return Standard.System.Address is
    begin
       return Region.Data;
-   end Data;
+   end Data_Address;
 
-   ----------
-   -- Data --
-   ----------
+   ------------------
+   -- Data_Address --
+   ------------------
 
-   function Data (File : Mapped_File) return Str_Access is
+   function Data_Address (File : Mapped_File)
+      return Standard.System.Address is
    begin
-      return Data (File.Current_Region);
-   end Data;
+      return Data_Address (File.Current_Region);
+   end Data_Address;
 
    ----------------
    -- Is_Mutable --
@@ -438,10 +425,10 @@ package body GNATCOLL.Mmap is
    -- Get_Page_Size --
    -------------------
 
-   function Get_Page_Size return Integer is
+   function Get_Page_Size return Positive is
       Result : constant File_Size := Get_Page_Size;
    begin
-      return Integer (Result);
+      return Positive (Result);
    end Get_Page_Size;
 
    ---------------------
@@ -458,9 +445,9 @@ package body GNATCOLL.Mmap is
    begin
       Read (File);
 
-      if Region.Data /= null then
-         Result := new String'(String
-                               (Region.Data (1 .. Last (Region))));
+      if Region.Data /= Standard.System.Null_Address then
+         Result := new String'
+            (String (Data (Region) (1 .. Integer (Last (Region)))));
 
       elsif Region.Buffer /= null then
          Result := Region.Buffer;
@@ -497,8 +484,8 @@ package body GNATCOLL.Mmap is
    begin
       Read (File);
 
-      if Region.Data /= null then
-         Result.Set (String (Region.Data (1 .. Last (Region))));
+      if Region.Data /= Standard.System.Null_Address then
+         Result.Set (String (Data (Region) (1 .. Last (Region))));
 
       elsif Region.Buffer /= null then
          Result.Set (Region.Buffer.all);
@@ -554,21 +541,16 @@ package body GNATCOLL.Mmap is
    ------------------
 
    procedure Compute_Data (Region : Mapped_Region) is
-      Base_Data : Str_Access;
-      --  Address of the first byte actually mapped in memory
-
-      Data_Shift : constant Integer :=
-        Integer (Region.User_Offset - Region.System_Offset);
+      Data_Shift : constant Storage_Offset :=
+         Storage_Offset (Region.User_Offset - Region.System_Offset);
    begin
       if Region.User_Size = 0 then
-         Region.Data := Convert (Empty_String'Address);
-         return;
+         Region.Data := Empty_String'Address;
       elsif Region.Mapped then
-         Base_Data := Convert (Region.Mapping.Address);
+         Region.Data := Region.Mapping.Address + Data_Shift;
       else
-         Base_Data := Convert (Region.Buffer.all'Address);
+         Region.Data := Region.Buffer.all'Address + Data_Shift;
       end if;
-      Region.Data := Convert (Base_Data (Data_Shift + 1)'Address);
    end Compute_Data;
 
 end GNATCOLL.Mmap;

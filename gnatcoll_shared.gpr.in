@@ -23,6 +23,7 @@ abstract project GnatColl_Shared is
    PyGobject : Yes_No := External ("PYGOBJECT", "@WITH_PYGOBJECT@");
    Readline  : Yes_No := External ("READLINE", "@WITH_READLINE@");
    Mmap      : Yes_No := External ("MMAP", "@WITH_MMAP@");
+   Madvise   : Yes_No := "@WITH_MADVISE@";
    Iconv     : Yes_No := "@WITH_ICONV@";
    Xref      : Yes_No := "@WITH_XREF@";
    Templates : Yes_No := "no";  --  Hard-coded for now
@@ -93,6 +94,13 @@ abstract project GnatColl_Shared is
       case Mmap is
          when "yes" =>
             for Switches ("C") use Compiler'Switches ("C") & ("-DHAVE_MMAP");
+         when "no" =>
+            null;
+      end case;
+
+      case Madvise is
+         when "yes" =>
+            for Switches ("C") use Compiler'Switches ("C") & ("-DHAVE_MADVISE");
          when "no" =>
             null;
       end case;

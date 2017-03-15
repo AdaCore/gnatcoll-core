@@ -66,16 +66,20 @@ will also want to only read chunks of the file at once::
 
   declare
      File : Mapped_File;
-     Str  : Str_Access;
+     Str  : Long.Str_Access;
   begin
      File := Open_Read ("/tmp/file_on_disk");
      Read (File);  *--  read the whole file*
-     Str := Data (File);
-     for S in 1 .. Last (File) loop
+     Str := Long.Data (File);
+     for S in 1 .. Long.Last (File) loop
          Put (Str (S));
      end loop;
      Close (File);
   end;
+
+The above example works for files larger than 2Gb, on 64 bits system
+(up to a petabyte in fact), on systems that support the `mmap` system
+call.
 
 To read only a chunk of the file, your code would look like the following.
 At the low-level, the system call will always read chunks multiple of a

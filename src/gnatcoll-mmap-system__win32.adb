@@ -164,7 +164,7 @@ package body GNATCOLL.Mmap.System is
       pragma Unreferenced (Pos);
    begin
       Pos := Win.SetFilePointer
-        (File.Handle, LONG (Offset), null, Win.FILE_BEGIN);
+        (File.Handle, Win.LONG (Offset), null, Win.FILE_BEGIN);
 
       if Win.ReadFile
          (File.Handle, Buffer.all'Address,
@@ -191,7 +191,7 @@ package body GNATCOLL.Mmap.System is
    begin
       pragma Assert (File.Write);
       Pos := Win.SetFilePointer
-        (File.Handle, LONG (Offset), null, Win.FILE_BEGIN);
+        (File.Handle, Win.LONG (Offset), null, Win.FILE_BEGIN);
 
       if Win.WriteFile
          (File.Handle, Buffer.all'Address,
@@ -209,8 +209,10 @@ package body GNATCOLL.Mmap.System is
      (File           : System_File;
       Offset, Length : in out File_Size;
       Mutable        : Boolean;
-      Mapping        : out System_Mapping)
+      Mapping        : out System_Mapping;
+      Advice         : Use_Advice := Use_Normal)
    is
+      pragma Unreferenced (Advice);
       Flags : DWORD;
    begin
       if File.Write then
@@ -242,16 +244,11 @@ package body GNATCOLL.Mmap.System is
          end if;
       end;
 
-      if Length > File_Size (Integer'Last) then
-         raise Ada.IO_Exceptions.Device_Error;
-      else
-         Mapping := Invalid_System_Mapping;
-         Mapping.Address :=
-            Win.MapViewOfFile
-              (File.Mapping_Handle, Flags,
-               0, DWORD (Offset), SIZE_T (Length));
-         Mapping.Length := Length;
-      end if;
+      Mapping :=
+         (Address => Win.MapViewOfFile
+           (File.Mapping_Handle, Flags,
+            0, DWORD (Offset), SIZE_T (Length)),
+          Length  => Length);
    end Create_Mapping;
 
    ---------------------

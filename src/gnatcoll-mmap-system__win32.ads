@@ -212,7 +212,8 @@ package GNATCOLL.Mmap.System is
      (File           : System_File;
       Offset, Length : in out File_Size;
       Mutable        : Boolean;
-      Mapping        : out System_Mapping);
+      Mapping        : out System_Mapping;
+      Advice         : Use_Advice := Use_Normal);
    --  Create a memory mapping for the given File, for the area starting at
    --  Offset and containing Length bytes. Store it to Mapping.
    --  Note that Offset and Length may be modified according to the system

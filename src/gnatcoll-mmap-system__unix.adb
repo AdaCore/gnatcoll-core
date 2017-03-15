@@ -54,6 +54,15 @@ package body GNATCOLL.Mmap.System is
                     Length : File_Size) return Integer;
    pragma Import (C, Munmap, "gnatcoll_munmap");
 
+   procedure Madvise (Addr   : Standard.System.Address;
+                      Length : File_Size;
+                      Advice : Use_Advice);
+   pragma Import (C, Madvise, "gnatcoll_madvise");
+   --  Allows a process that has knowledge of its memory behavior to
+   --  describe it to the system. This advice applies to the mapped
+   --  region at address Addr, and for the given Length. If Length
+   --  is 0, this applies to the whole region.
+
    function Align
      (Addr : File_Size) return File_Size;
    --  Align some offset/length to the lowest page boundary
@@ -122,7 +131,8 @@ package body GNATCOLL.Mmap.System is
      (File           : System_File;
       Offset, Length : File_Size) return GNAT.Strings.String_Access
    is
-      Buffer : String_Access := new String (1 .. Integer (Length));
+      Buffer : GNAT.Strings.String_Access :=
+         new String (1 .. Integer (Length));
    begin
       --  ??? Lseek offset should be a size_t instead of a Long_Integer
 
@@ -162,7 +172,8 @@ package body GNATCOLL.Mmap.System is
      (File           : System_File;
       Offset, Length : in out File_Size;
       Mutable        : Boolean;
-      Mapping        : out System_Mapping)
+      Mapping        : out System_Mapping;
+      Advice         : Use_Advice := Use_Normal)
    is
       Prot  : Mmap_Prot;
       Flags : Mmap_Flags;
@@ -194,17 +205,17 @@ package body GNATCOLL.Mmap.System is
          Length := Align (Length + Get_Page_Size - 1);
       end;
 
-      if Length > File_Size (Integer'Last) then
-         raise Ada.IO_Exceptions.Device_Error;
-      else
-         Mapping :=
-           (Address => Mmap
-              (Offset => Offset,
-               Length => Length,
-               Prot   => Prot,
-               Flags  => Flags,
-               Fd     => File.Fd),
-            Length  => Length);
+      Mapping :=
+        (Address => Mmap
+           (Offset => Offset,
+            Length => Length,
+            Prot   => Prot,
+            Flags  => Flags,
+            Fd     => File.Fd),
+         Length  => Length);
+
+      if Advice /= Use_Normal then
+         Madvise (Mapping.Address, Length => 0, Advice => Advice);
       end if;
    end Create_Mapping;
 

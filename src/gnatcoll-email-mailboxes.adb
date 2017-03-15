@@ -189,7 +189,7 @@ package body GNATCOLL.Email.Mailboxes is
 
       else
          if Mbox (Box).Fp /= null then
-            Buffer := To_Str_Access (Mbox (Box).Fp);
+            Buffer := GNATCOLL.Mmap.Short.To_Str_Access (Mbox (Box).Fp);
          end if;
 
          Self.Factory
@@ -225,7 +225,7 @@ package body GNATCOLL.Email.Mailboxes is
       end if;
 
       if Mbox (Box).Fp /= null then
-         Buffer := To_Str_Access (Mbox (Box).Fp);
+         Buffer := GNATCOLL.Mmap.Short.To_Str_Access (Mbox (Box).Fp);
          First := Mbox (Box).Fp'First;
       else
          return;  --  Nothing to parse

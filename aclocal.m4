@@ -721,18 +721,23 @@ AC_DEFUN(AM_CHECK_READLINE,
 # Checking for mmap
 # The following variables are exported:
 #   @WITH_MMAP@: either "yes" or "no"
+#   @WITH_MADVISE@: either "yes" or "no"
 #############################################################
 
 AC_DEFUN(AM_MMAP,
 [
    AC_FUNC_MMAP
-
    if test $ac_cv_func_mmap_fixed_mapped = yes; then
       WITH_MMAP=yes
    else
       WITH_MMAP=no
    fi
    AC_SUBST(WITH_MMAP)
+
+   AC_CHECK_FUNC(madvise,
+       [WITH_MADVISE=yes],
+       [WITH_MADVISE=no])
+   AC_SUBST(WITH_MADVISE)
 ])
 
 #############################################################

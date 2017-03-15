@@ -81,10 +81,11 @@
 --         Offs := Offs + Long_Integer (Last (File));
 --     end loop;
 
+with Ada.Unchecked_Conversion;
 with Interfaces.C;
-
-with GNAT.Strings;
+with GNAT.Strings;                use GNAT.Strings;
 with GNATCOLL.Strings;
+with System;
 
 package GNATCOLL.Mmap is
 
@@ -112,16 +113,7 @@ package GNATCOLL.Mmap is
    Invalid_Mapped_File : constant Mapped_File;
    Invalid_Mapped_Region : constant Mapped_Region;
 
-   type Unconstrained_String is new String (Positive);
-   type Str_Access is access all Unconstrained_String;
-   pragma No_Strict_Aliasing (Str_Access);
-
    type File_Size is new Interfaces.C.size_t;
-
-   function To_Str_Access
-     (Str : GNAT.Strings.String_Access) return Str_Access;
-   --  Convert Str. The returned value points to the same memory block, but no
-   --  longer includes the bounds, which you need to manage yourself
 
    function Open_Read
      (Filename              : String;
@@ -150,12 +142,35 @@ package GNATCOLL.Mmap is
    procedure Free (Region : in out Mapped_Region);
    --  Unmap the memory that is used for this region and deallocate the region
 
+   type Use_Advice is
+      (Use_Normal,
+       Use_Random,
+       Use_Sequential);
+   for Use_Advice use
+      (Use_Normal      => 1,
+       Use_Random      => 2,
+       Use_Sequential  => 4);
+   --  This type can be used to provide advice to some operation systems on
+   --  how a mapped page will be used.
+   --
+   --  If you specify Use_Sequential, you are telling the system that the
+   --  contents of the page will be read sequentially from lower to higher
+   --  address, and therefore the system should use prefetching aggressively.
+   --
+   --  If you specify Use_Random, the page will be accessed in a
+   --  non-sequential manner.
+   --
+   --  This advice might be ignored by the system (depending on whether the
+   --  madvise() system call is supported). It will always be ignored for
+   --  systems that do not support mmap.
+
    procedure Read
-     (File   : Mapped_File;
-      Region : in out Mapped_Region;
-      Offset : File_Size := 0;
-      Length : File_Size := 0;
-      Mutable : Boolean := False);
+     (File    : Mapped_File;
+      Region  : in out Mapped_Region;
+      Offset  : File_Size := 0;
+      Length  : File_Size := 0;
+      Mutable : Boolean := False;
+      Advice  : Use_Advice := Use_Normal);
    --  Read a specific part of File and set Region to the corresponding mapped
    --  region, or re-use it if possible.
    --  Offset is the number of bytes since the beginning of the file at which
@@ -174,49 +189,162 @@ package GNATCOLL.Mmap is
    --  This function takes care of page size alignment issues. The accessors
    --  below only expose the region that has been requested by this call, even
    --  if more bytes were actually mapped by this function.
+   --
    --  TODO??? Enable to have a private copy for readable files
+   --
+   --  Operating systems generally limit the number of open file descriptors
+   --  that an application can have at one time (typically 1024 or 2048).
+   --  They however often have a much higher limit on the number of mapped
+   --  regions (65535 for instance). If you hitting the first limit, you
+   --  could use the following workflow:
+   --
+   --         File := Open_Read ("filename.txt");
+   --         Region := Read (File);
+   --         Close (File);   --  release the file descriptor
+   --         ...
+   --         Free (Region);  --  release the mapped file
 
    function Read
      (File    : Mapped_File;
       Offset  : File_Size := 0;
       Length  : File_Size := 0;
-      Mutable : Boolean := False) return Mapped_Region;
+      Mutable : Boolean := False;
+      Advice  : Use_Advice := Use_Normal) return Mapped_Region;
    --  Likewise, return a new mapped region
 
    procedure Read
      (File    : Mapped_File;
       Offset  : File_Size := 0;
       Length  : File_Size := 0;
-      Mutable : Boolean := False);
+      Mutable : Boolean := False)
+     with Obsolescent;
    --  Likewise, use the legacy "default" region in File
 
-   function Length (File : Mapped_File) return File_Size;
+   function Length (File : Mapped_File) return File_Size
+      with Inline;
    --  Size of the file on the disk
 
-   function Offset (Region : Mapped_Region) return File_Size;
+   function Offset (Region : Mapped_Region) return File_Size
+      with Inline;
    --  Return the offset, in the physical file on disk, corresponding to the
    --  requested mapped region. The first byte in the file has offest 0.
 
-   function Offset (File : Mapped_File) return File_Size;
+   function Offset (File : Mapped_File) return File_Size
+      with Inline, Obsolescent;
    --  Likewise for the region contained in File
 
-   function Last (Region : Mapped_Region) return Integer;
-   --  Return the number of requested bytes mapped in this region. It is
-   --  erroneous to access Data for indices outside 1 .. Last (Region).
-   --  Such accesses may cause Storage_Error to be raised.
+   function Data_Address (Region : Mapped_Region) return System.Address
+      with Inline;
+   function Data_Address (File : Mapped_File) return System.Address
+      with Inline, Obsolescent;
+   --  Return the address of the internal buffer.
+   --  Do not use this function directly, but via an instance of the
+   --  package Data_Getters below.
 
-   function Last (File : Mapped_File) return Integer;
-   --  Return the number of requested bytes mapped in the region contained in
-   --  File. It is erroneous to access Data for indices outside of 1 .. Last
-   --  (File); such accesses may cause Storage_Error to be raised.
+   function Data_Size (Region : Mapped_Region) return File_Size
+      with Inline;
+   function Data_Size (File : Mapped_File) return File_Size
+      with Inline, Obsolescent;
+   --  Full size of the mapped region.
+   --  Better to use one of the instances of Data_Getters instead.
 
-   function Data (Region : Mapped_Region) return Str_Access;
-   --  The data mapped in Region as requested. The result is an unconstrained
-   --  string, so you cannot use the usual 'First and 'Last attributes.
-   --  Instead, these are respectively 1 and Size.
+   generic
+      type Index_Type is range <>;
+      --  The type of indexes used when mapping the file to memory.
+      --  Typical values are 'Positive' when you want to read files less than
+      --  2Gb in size, although you might want to use
+      --  System.Storage_Elements.Storage_Offset or Long_Long_Integer on
+      --  64 bits system supporting the mmap system call (which will allow
+      --  you to manipulate Petabytes files...)
 
-   function Data (File : Mapped_File) return Str_Access;
-   --  Likewise for the region contained in File
+      type Base_Unconstrained_String is
+         array (Index_Type range <>) of Character;
+      --  How is memory represented.
+      --  For small strings, it is recommended to use the String type
+      --  directly for ease of use for the user.
+
+   package Data_Getters is
+      pragma Compile_Time_Error
+         (Index_Type'First /= 1, "Wrong index type");
+
+      subtype Extended_Index_Type is Index_Type'Base
+         range 0 .. Index_Type'Last;
+
+      subtype Unconstrained_String is Base_Unconstrained_String (Index_Type);
+      type Str_Access is access all Unconstrained_String;
+      pragma No_Strict_Aliasing (Str_Access);
+      --  We do not use a String, which would limit the index to Integer and
+      --  not allow us to load files larger than 2Gb.
+      --  We also do not systematically use a
+      --  System.Storage_Elements.Storage_Array, since it is easier for users
+      --  if we directly have Character elements rather than Storage_Element.
+
+      function Convert is new Ada.Unchecked_Conversion
+         (System.Address, Str_Access);
+
+      function To_Str_Access
+        (Str : GNAT.Strings.String_Access) return Str_Access
+        is (if Str = null then null else Convert (Str.all'Address));
+      --  Convert Str. The returned value points to the same memory block,
+      --  but no longer includes the bounds, which you need to manage yourself
+
+      function Last (Region : Mapped_Region) return Extended_Index_Type
+         is (Extended_Index_Type (Data_Size (Region)));
+      --  Return the number of requested bytes mapped in this region. It is
+      --  erroneous to access Data for indices outside 1 .. Last (Region).
+      --  Such accesses may cause Storage_Error to be raised.
+      --
+      --  A constraint error is raised if the size of the region is larger
+      --  than can be represented by Index_Type. So you need to pass a
+      --  compatible Length parameter in your call to Open_Read.
+
+      function Last (File : Mapped_File) return Extended_Index_Type
+         is (Extended_Index_Type (Data_Size (File)))
+         with Obsolescent;
+      --  Return the number of requested bytes mapped in the region contained
+      --  in File. It is erroneous to access Data for indices outside
+      --  of 1 .. Last (File); such accesses may cause Storage_Error to
+      --  be raised.
+
+      function Data (Region : Mapped_Region) return Str_Access
+         is (Convert (Data_Address (Region)));
+      --  The data mapped in Region as requested. The result is an
+      --  unconstrained string, so you cannot use the usual 'First and
+      --  'Last attributes. Instead, these are respectively 1 and Size.
+
+      function Data (File : Mapped_File) return Str_Access
+         is (Convert (Data_Address (File)))
+         with Obsolescent;
+      --  Likewise for the region contained in File
+
+   end Data_Getters;
+
+   package Short is new Data_Getters (Positive, String);
+   --  This package can be used when mapping files less than 2Gb.
+   --  A range of the result of Data can be converted to a String, as in:
+   --      S : constant String := String (Data (Region) (1 .. Last (Region)));
+
+   subtype Long_Index is Long_Long_Integer range 1 .. Long_Long_Integer'Last;
+   type Large_Unconstrained_String is array (Long_Index range <>) of Character;
+   package Long is new Data_Getters (Long_Index, Large_Unconstrained_String);
+   --  This package can be used when mapping files up to a petabyte.
+   --  The whole data cannot be represented as a single string, so you'll
+   --  need to iterate on it.
+
+   subtype Str_Access is Short.Str_Access;
+   function "=" (Left, Right : Str_Access) return Boolean
+      renames Short."=";
+   function Last (Region : Mapped_Region) return Positive
+      renames Short.Last;
+   function Last (File : Mapped_File) return Positive
+      renames Short.Last;
+   function Data (Region : Mapped_Region) return Str_Access
+      renames Short.Data;
+   function Data (File : Mapped_File) return Str_Access
+      renames Short.Data;
+   --  Convenient renamings, for backward compatibility.
+   --  These functions only work for files up to 2Gb. For larger sizes,
+   --  you should use Long.Str_Access, Long.Last and Long.Data instead.
 
    function Is_Mutable (Region : Mapped_Region) return Boolean;
    --  Return whether it is safe to change bytes in Data (Region). This is true
@@ -225,7 +353,8 @@ package GNATCOLL.Mmap is
    --  not specified whether empty regions are mutable or not, since there is
    --  no byte no modify.
 
-   function Is_Mmapped (File : Mapped_File) return Boolean;
+   function Is_Mmapped (File : Mapped_File) return Boolean
+      with Inline;
    --  Whether regions for this file are opened through an mmap() system call
    --  or equivalent. This is in general irrelevant to your application, unless
    --  the file can be accessed by multiple concurrent processes or tasks. In
@@ -234,7 +363,7 @@ package GNATCOLL.Mmap is
    --  the integrity of the file. If the file is not mmapped, the latest
    --  process to Close it overwrite what other processes have done.
 
-   function Get_Page_Size return Integer;
+   function Get_Page_Size return Positive;
    --  Returns the number of bytes in a page. Once a file is mapped from the
    --  disk, its offset and Length should be multiples of this page size (which
    --  is ensured by this package in any case). Knowing this page size allows
@@ -255,10 +384,10 @@ package GNATCOLL.Mmap is
    --  If the file does not exist, null is returned. However, if
    --  Empty_If_Not_Found is True, then the empty string is returned instead.
    --  Filename should be compatible with the filesystem.
+   --
+   --  This function only works for files smaller than 2Gb.
 
 private
-   pragma Inline (Data, Length, Last, Offset, Is_Mmapped, To_Str_Access);
-
    type Mapped_File_Record;
    type Mapped_File is access Mapped_File_Record;
 

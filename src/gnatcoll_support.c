@@ -54,6 +54,23 @@ int gnatcoll_munmap (void *start, long length)
   return munmap (start, (size_t)length);
 }
 
+#ifdef HAVE_MADVISE
+
+void gnatcoll_madvise(void* addr, size_t len, int advice) {
+   int adv = (advice == 1 ? MADV_NORMAL
+             : advice == 2 ? MADV_RANDOM
+             : advice == 4 ? MADV_SEQUENTIAL
+             : MADV_NORMAL);
+   madvise(addr, len, adv);
+}
+
+#else  /* not HAVE_MADVISE */
+
+void gnatcoll_madvise(void* addr, size_t len, int advice) {
+}
+
+#endif  /* HAVE_MADVISE */
+
 #else
 
 int
