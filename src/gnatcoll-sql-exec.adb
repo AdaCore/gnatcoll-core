@@ -1076,6 +1076,11 @@ package body GNATCOLL.SQL.Exec is
          if Connection.Error_Msg = null and then Error_Msg /= "" then
             Connection.Error_Msg := new String'(Error_Msg);
          end if;
+
+         --  A rollback can only fail if the connection to the database
+         --  was broken. But in that case the transaction is lost anyway,
+         --  so it behaves as if the rollback had succeeded.
+         Connection.Success := True;
       end if;
    end Rollback;
 
