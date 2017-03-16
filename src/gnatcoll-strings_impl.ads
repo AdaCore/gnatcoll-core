@@ -310,6 +310,7 @@ package GNATCOLL.Strings_Impl is
       type XString is tagged private
       with
          Constant_Indexing  => Get,
+         Variable_Indexing  => Reference,
          Iterable           => (First       => First,
                                 Next        => Next,
                                 Has_Element => Has_Element,
@@ -318,7 +319,8 @@ package GNATCOLL.Strings_Impl is
 
       Null_XString : constant XString;
 
-      type Unconstrained_Char_Array is array (1 .. Natural'Last) of Char_Type;
+      type Unconstrained_Char_Array is
+         array (1 .. Natural'Last) of aliased Char_Type;
       type Char_Array is access all Unconstrained_Char_Array;
       pragma Suppress_Initialization (Unconstrained_Char_Array);
       pragma No_Strict_Aliasing (Char_Array);
@@ -352,6 +354,29 @@ package GNATCOLL.Strings_Impl is
       --  A simpler way to use this function is simply to use indexing:
       --       Self (Index)
       --  as done for a regular Ada string.
+
+      type Character_Reference (Char : not null access Char_Type)
+         is limited private
+         with Implicit_Dereference => Char;
+      --  A type through which we can modify a character of a string.
+      --  It is made limited to make it harder to keep such a reference and
+      --  pass it as parameter, for instance.
+      --  Such a reference becomes invalid as soon as the contents of the
+      --  string is modified, and could potentially reference freed memory.
+
+      function Reference
+         (Self  : aliased in out XString;
+          Index : Positive) return Character_Reference
+         with Inline;
+      --  Returns a reference to a specific character in the string.
+      --  It is possible to change the contents of the string via this
+      --  function. It is meant to be used implicitly as in:
+      --      Self (Index) := 'A';
+      --
+      --  This makes Self unshareable, so that if you later do:
+      --      S2 := Self;
+      --  then S2 will have to make a copy of the string even when using
+      --  copy-on-write.
 
       --------------------------
       -- Iteration on indexes --
@@ -915,6 +940,9 @@ package GNATCOLL.Strings_Impl is
 
       Max_Small_Length : constant String_Size := String_Size (SSize'Last);
       --  Number of bytes in the small_string buffer, as decided by the user.
+
+      type Character_Reference (Char : not null access Char_Type)
+         is null record;
 
       type Big_String_Data (Copy_On_Write : Boolean) is limited record
          case Copy_On_Write is

@@ -72,6 +72,18 @@ package body GNATCOLL.Strings_Impl is
       function Convert is new Ada.Unchecked_Conversion
          (Big_String_Data_Access, System.Address);
 
+      Unshareable : constant GNATCOLL.Atomic.Atomic_Counter :=
+         GNATCOLL.Atomic.Atomic_Counter'Last;
+      --  This is used as the refcount for strings that must not be
+      --  shared. In particular, this is the case when we have taken
+      --  a variable reference to a string, to fix the following case:
+      --        R := S (2);   --  a variable indexing
+      --        S2 := S;      --  share the buffer ??? WRONG
+      --        R := 'A';     --  also alters S2
+      --
+      --  See http://www.gotw.ca/gotw/044.htm for a C++ discussion on why
+      --  we need to make a string unshareable.
+
       Bytes_Per_Char : constant size_t := Char_Type'Size / Character'Size;
       --  Number of bytes for each character in the string.
 
@@ -165,7 +177,10 @@ package body GNATCOLL.Strings_Impl is
 
       procedure Make_Writable_Thread_Unsafe (Self : in out XString) is
       begin
-         if not Copy_On_Write or else not Self.Data.Small.Is_Big then
+         if not Copy_On_Write
+            or else not Self.Data.Small.Is_Big
+            or else Self.Data.Big.Data.Refcount = Unshareable
+         then
             null;   --  nothing to do
          elsif Self.Data.Big.Data.Refcount = 1 then
             null;
@@ -182,7 +197,10 @@ package body GNATCOLL.Strings_Impl is
       procedure Make_Writable_Thread_Safe (Self : in out XString) is
          Tmp   : Big_String_Data_Access;
       begin
-         if not Copy_On_Write or else not Self.Data.Small.Is_Big then
+         if not Copy_On_Write
+            or else not Self.Data.Small.Is_Big
+            or else Self.Data.Big.Data.Refcount = Unshareable
+         then
             null;   --  nothing to do
          else
             --  ??? We do not need an atomic sync_bool_compare_and_swap,
@@ -253,7 +271,9 @@ package body GNATCOLL.Strings_Impl is
       begin
          if not Self.Data.Small.Is_Big then
             null;   --  nothing to do
-         elsif Copy_On_Write then
+         elsif Copy_On_Write
+            and then Self.Data.Big.Data.Refcount /= Unshareable
+         then
             Increment (Self.Data.Big.Data.Refcount);
          else
             --  We do not need atomic operations here. We are still in
@@ -276,7 +296,10 @@ package body GNATCOLL.Strings_Impl is
             if Tmp /= null then
                Self.Data.Big.Data := null;
 
-               if not Copy_On_Write or else Decrement (Tmp.Refcount) then
+               if not Copy_On_Write
+                  or else Tmp.Refcount = Unshareable
+                  or else Decrement (Tmp.Refcount)
+               then
                   System.Memory.Free (Convert (Tmp));
                end if;
             end if;
@@ -854,6 +877,34 @@ package body GNATCOLL.Strings_Impl is
          end if;
       end Get;
 
+      ---------------
+      -- Reference --
+      ---------------
+
+      function Reference
+         (Self  : aliased in out XString;
+          Index : Positive) return Character_Reference
+      is
+         B : Char_Array;
+         L : Natural;
+      begin
+         if Copy_On_Write
+            and then Self.Data.Big.Is_Big
+         then
+            --  Make the string unshareable
+            Make_Writable (Self);
+            Self.Data.Big.Data.Refcount := Unshareable;
+         end if;
+
+         Get_String (Self, B, L);
+         if Index <= L then
+            return (Char => B (Index)'Unrestricted_Access);
+         else
+            raise Ada.Strings.Index_Error with "Invalid index" & Index'Img
+               & " (greater than" & L'Img & ")";
+         end if;
+      end Reference;
+
       -----------
       -- Slice --
       -----------
@@ -900,9 +951,10 @@ package body GNATCOLL.Strings_Impl is
           High : Natural;
           Into : in out XString)
       is
-         Len   : constant Natural := Self.Length;
-         Size  : String_Size;
-         Is_Same : Boolean;
+         Len       : constant Natural := Self.Length;
+         Size      : String_Size;
+         Is_Same   : Boolean;
+         Str, IStr : Char_Array;
       begin
          --  We can't use Set, since we want to share the buffer when
          --  possible.
@@ -933,7 +985,9 @@ package body GNATCOLL.Strings_Impl is
                Self.Data.Small.Data (Low .. High);
             Into.Data.Small.Size := SSize (Size);
 
-         elsif Copy_On_Write then
+         elsif Copy_On_Write
+            and then Self.Data.Big.Data.Refcount /= Unshareable
+         then
             Is_Same := Into.Data.Big.Is_Big
                and then Into.Data.Big.Data = Self.Data.Big.Data;
 
@@ -965,13 +1019,19 @@ package body GNATCOLL.Strings_Impl is
                Into.Data.Big.Size := Size;
 
             else
+               if Copy_On_Write then
+                  Str := Convert (Self.Data.Big.Data.Bytes2'Address);
+               else
+                  Str := Convert (Self.Data.Big.Data.Bytes1'Address);
+               end if;
+
                --  Try and reuse memory if we can. This memory is unique
                --  to Into, so we can safely alter it.
 
                if not Into.Data.Big.Is_Big then
                   if Size <= Max_Small_Length then
                      Into.Data.Small.Data (1 .. Natural (Size)) :=
-                        Char_String (Self.Data.Big.Data.Bytes1
+                        Char_String (Str
                           (Low + Self.Data.Big.First - 1
                            ..  High + Self.Data.Big.First - 1));
                      Into.Data.Small.Size := SSize (Size);
@@ -986,11 +1046,17 @@ package body GNATCOLL.Strings_Impl is
                   Reserve (Into, Capacity => Size);
                end if;
 
+               if Copy_On_Write then
+                  IStr := Convert (Into.Data.Big.Data.Bytes2'Address);
+               else
+                  IStr := Convert (Into.Data.Big.Data.Bytes1'Address);
+               end if;
+
                Into.Data.Big.Size := Size;
-               Into.Data.Big.Data.Bytes1
+               IStr
                   (Into.Data.Big.First
                    ..  Into.Data.Big.First + Natural (Size) - 1) :=
-                  Self.Data.Big.Data.Bytes1
+                  Str
                      (Low + Self.Data.Big.First - 1
                       ..  High + Self.Data.Big.First - 1);
             end if;
