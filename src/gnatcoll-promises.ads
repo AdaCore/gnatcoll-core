@@ -256,8 +256,7 @@ package GNATCOLL.Promises is
       package Promise_Pointers is new GNATCOLL.Refcount.Shared_Pointers
          (Element_Type           => IPromise_Data'Class,
           Release                => Dispatch_Free,
-          Atomic_Counters        => True,   --  thread-safe
-          Potentially_Controlled => True);  --  a vector is controlled
+          Atomic_Counters        => True);   --  thread-safe
       type Root_Promise is
          new Promise_Pointers.Ref and IAbstract_Promise with null record;
 

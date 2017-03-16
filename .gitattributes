@@ -9,3 +9,7 @@ src/sqlite/amalgamation/*                  no-precommit-check
 src/dborm.py                               no-precommit-check
 src/xref.generated/*                       no-precommit-check
 distrib/gnatcoll/runtime.py                no-precommit-check
+
+# ??? Workaround bug in style checker, which complains that
+# Finalization_Size is an unrecognized attribute
+src/gnatcoll-storage_pools-headers.adb     no-precommit-check

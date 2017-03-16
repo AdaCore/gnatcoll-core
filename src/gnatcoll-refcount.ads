@@ -70,17 +70,19 @@ package GNATCOLL.Refcount is
    type Weak_Data is record
       Element  : System.Address := System.Null_Address;
       Refcount : aliased GNATCOLL.Atomic.Atomic_Counter;
+      pragma Volatile (Refcount);
    end record;
    type Weak_Data_Access is access all Weak_Data;
 
    type Counters is record
+      Refcount      : aliased GNATCOLL.Atomic.Atomic_Counter := 1;
+      pragma Volatile (Refcount);
+
       Weak_Data     : aliased Weak_Data_Access := null;
       --  A pointer to the weak pointers'data. This data is created the
       --  first time we create a weak pointer. We hold a reference to that
       --  data, so that it can never be freed while at least one reference
       --  exists.
-
-      Refcount      : aliased GNATCOLL.Atomic.Atomic_Counter := 1;
    end record;
 
    package Headers is new Header_Pools (Counters);
@@ -110,13 +112,6 @@ package GNATCOLL.Refcount is
       --  mean that the Element_Type itself is task safe.
       --  This has a small impact on performance.
 
-      Potentially_Controlled : Boolean := True;
-      --  See the comment for GNATCOLL.Storage_Pools.Headers.
-      --  Set this to False if you know that Element_Type cannot be
-      --  controlled or contain controlled element. This parameter will be
-      --  removed when the compiler can provide this information automatically.
-      --  This has a small impact on memory overhead.
-
    package Shared_Pointers is
       pragma Suppress (All_Checks);
 
@@ -136,8 +131,7 @@ package GNATCOLL.Refcount is
       --  expired). Holding a weak reference does not prevent the deallocation
       --  of the object.
 
-      package Pools is new Headers.Typed
-         (Element_Type, Potentially_Controlled => Potentially_Controlled);
+      package Pools is new Headers.Typed (Element_Type);
       subtype Element_Access is Pools.Element_Access;
 
       procedure Set (Self : in out Ref'Class; Data : Element_Type);

@@ -21,49 +21,47 @@
 --                                                                          --
 ------------------------------------------------------------------------------
 
-with Ada.Unchecked_Conversion;
 with System.Memory;           use System, System.Memory;
 
 package body GNATCOLL.Storage_Pools.Headers is
 
-   Pointer_Size_Bytes : constant Storage_Count :=
-      System.Address'Size / Storage_Unit;
+   Default_Align : constant Storage_Count :=
+      Standard'System_Allocator_Alignment;
 
    ------------------
    -- Header_Pools --
    ------------------
 
    package body Header_Pools is
-
       type Header is record
          Extra : Extra_Header;
       end record;
       type Extra_Header_Access is access all Extra_Header;
 
+      Extra_Bytes  : constant Storage_Offset :=
+         (Header'Max_Size_In_Storage_Elements
+          - Header'Object_Size / Storage_Unit);
+      --  If the header is a controlled type, we need to allocate extra size
+      --  for its Previous and Next pointers. This constant computes how
+      --  much such extra size is needed.
+
       Header_Size_Bytes : constant Storage_Count :=
          Header'Size / Storage_Unit;
 
       Extra_Allocation_Bytes : constant Storage_Count :=
-         ((Header_Size_Bytes + Pointer_Size_Bytes - 1) / Pointer_Size_Bytes)
-         * Pointer_Size_Bytes;
-      --   Allocate a multiple of Pointer_Size bytes, so that the
+         ((Header_Size_Bytes + Extra_Bytes + Default_Align - 1)
+          / Default_Align) * Default_Align;
+      --   Allocate a multiple of Default_Align bytes, so that the
       --   alignment of the Element_Type is suitable.
 
       function Convert is new Ada.Unchecked_Conversion
          (System.Address, Extra_Header_Access);
-      function Convert is new Ada.Unchecked_Conversion
-         (Extra_Header_Access, System.Address);
 
-      ---------------
-      -- Header_Of --
-      ---------------
-
-      function Header_Of
-         (Self : Header_Pool; Addr : System.Address)
-         return access Extra_Header is
-      begin
-         return Convert (Addr - Extra_Allocation_Bytes - Self.Descriptor_Size);
-      end Header_Of;
+      function Address_Header_Of
+        (Addr : System.Address) return System.Address
+      is (Addr - Extra_Allocation_Bytes);
+      --  Compute the address of the header.
+      --  Do not call with a null pointer.
 
       --------------
       -- Allocate --
@@ -75,15 +73,20 @@ package body GNATCOLL.Storage_Pools.Headers is
           Size      : System.Storage_Elements.Storage_Count;
           Alignment : System.Storage_Elements.Storage_Count)
       is
-         pragma Unreferenced (Alignment);
+         --  The compiler requests a size that include the object size
+         --  plus any extra header like bounds or next/previous for
+         --  controlled types. This size also includes a padding to
+         --  ensure that the element will be properly aligned.
+         --  The computation is done in s-stposu.adb, in
+         --  Header_Size_With_Padding.
+
+         pragma Unreferenced (Self, Alignment);
          Aligned_Size : constant Storage_Count :=   --  bytes
-            Size + Extra_Allocation_Bytes + Self.Descriptor_Size;
+            Size + Extra_Allocation_Bytes;
          Allocated : constant System.Address :=
             Alloc (size_t (Aligned_Size));
       begin
-         Addr := To_Address
-            (To_Integer (Allocated) +
-            Integer_Address (Extra_Allocation_Bytes + Self.Descriptor_Size));
+         Addr := Allocated + Extra_Allocation_Bytes;
       end Allocate;
 
       ----------------
@@ -96,12 +99,46 @@ package body GNATCOLL.Storage_Pools.Headers is
           Size      : System.Storage_Elements.Storage_Count;
           Alignment : System.Storage_Elements.Storage_Count)
       is
-         pragma Unreferenced (Alignment, Size);
-         Header : constant Extra_Header_Access :=
-            Extra_Header_Access (Header_Of (Self, Addr));
+         pragma Unreferenced (Self, Alignment, Size);
+         Header : constant System.Address := Address_Header_Of (Addr);
       begin
-         System.Memory.Free (Convert (Header));
+         System.Memory.Free (Header);
       end Deallocate;
+
+      -----------
+      -- Typed --
+      -----------
+
+      package body Typed is
+
+         function Header_Of
+            (Element : Element_Access) return access Extra_Header
+         is
+            F : constant Integer := Element.all'Finalization_Size;
+            --  If the element_type is a controlled type, this constant will
+            --  be the number of extra bytes requested by the compiler in
+            --  calls to Allocate and Deallocate (see the memory layout
+            --  description in the specs).
+            --
+            --  These extra bytes are automatically added and substracted by
+            --  the compiler when calling Deallocate, but not when calling
+            --  Header_Of so we need to take them into account when looking
+            --  for the our own header.
+
+            H : constant access Extra_Header :=
+               (if Element = null
+                then null
+                else Convert
+                   (Address_Header_Of
+                      (Element.all'Address
+                       - Storage_Offset (F)
+                       - Element_Type'Descriptor_Size)));
+         begin
+            return H;
+         end Header_Of;
+
+      end Typed;
+
    end Header_Pools;
 
 end GNATCOLL.Storage_Pools.Headers;

@@ -42,10 +42,13 @@
 --     Str := new String'("foo");    --  uses the storage pool
 --
 --     String_Pools.Header_Of (Str).Refcount := 1;
+--     String_Pools.Free (Str);   --  reclaim memory
 
 pragma Ada_2012;
-with System.Storage_Pools;    use System.Storage_Pools;
-with System.Storage_Elements; use System.Storage_Elements;
+with Ada.Unchecked_Conversion;
+with Ada.Unchecked_Deallocation;
+with System.Storage_Pools;     use System.Storage_Pools;
+with System.Storage_Elements;  use System.Storage_Elements;
 
 package GNATCOLL.Storage_Pools.Headers is
 
@@ -53,26 +56,59 @@ package GNATCOLL.Storage_Pools.Headers is
    -- Header_Pools --
    ------------------
 
+   --  The actual memory layout that we need to allocate is described below. In
+   --  all cases, we had a "Pad" (padding) which is used to obey the requested
+   --  alignment for the object.
+
+   --  Currently, this pool doesn't support alignment clauses (and the generic
+   --  Typed package below doesn't declare any), so the padding is always 0
+   --  bytes.
+
+   --  * For a scalar, record, tagged record or constrained array:
+
+   --      +--------+------+-----------------------+
+   --      | Header | Pad  | Element               |
+   --      +--------+------+-----------------------+
+
+   --  * For an unconstrained array, whether we use a standard access
+   --    type or a flattened access type (a representation clause gives
+   --    it a size of a standard pointer)
+   --
+   --      +--------+------+-----------------------+
+   --      | Header | Pad  | First+Last+Element    |
+   --      +--------+------+-----------------------+
+   --      First and Last are the bounds of the array.
+   --      Our pool should return the address of First, and the compiler
+   --      automatically deduces the address of Element to return to the
+   --      user code.
+
+   --  * For a controlled type:
+   --
+   --      1        2                      3
+   --      +--------+------+-----------------------+
+   --      | Header | Pad  | Previous+Next+Element |
+   --      +--------+------+-----------------------+
+   --      Previous and Next are pointers to other controlled types.
+   --      In code like:
+   --              A := new ...;
+   --      the header pool allocates memory at 1 via malloc, but
+   --         returns 2 to the compiler
+   --      then the compiler stores 3 in A.
+   --      Conversely, when calling Free, the compiler converts A back to
+   --         2, and our pool converts this back to 1 before calling free()
+   --      The trouble is that when we call "Header_Of" on A, we receive
+   --      the address 3, so it is harder to find 1.
+   --
+   --      See System.Storage_Pools.Subpools.Allocate_Any_Controlled.
+
    generic
       type Extra_Header is private;
       --  The header to allocate for each element. The pool will make sure
       --  to pad its size so that the element's data is properly aligned.
 
    package Header_Pools is
-      type Header_Pool (Descriptor_Size : Storage_Count)
-         is new Root_Storage_Pool
-         with null record;
-      --  The descriptor size is based on the element_type 'Descriptor_Size
-      --  attribute (see also Typed_Header_Pools package below).
-      --  This is a size in bytes.
-      --  It will be 0 for most types, but for unconstrained arrays it will
-      --  provide the size needed to store the bounds of the array.
 
-      function Header_Of
-        (Self : Header_Pool; Addr : System.Address) return access Extra_Header;
-      pragma Inline (Header_Of);
-      --  Points to the begining of the header, given an element allocated by
-      --  the pool.
+      type Header_Pool is new Root_Storage_Pool with null record;
 
       overriding procedure Allocate
          (Self      : in out Header_Pool;
@@ -86,8 +122,10 @@ package GNATCOLL.Storage_Pools.Headers is
           Alignment : Storage_Count);
       overriding function Storage_Size
          (Self      : Header_Pool) return Storage_Count
-         is (Storage_Count'Last);
-      pragma Inline (Storage_Size);
+         is (Storage_Count'Last)
+         with Inline;
+
+      Pool : Header_Pool;
 
       -----------
       -- Typed --
@@ -95,62 +133,23 @@ package GNATCOLL.Storage_Pools.Headers is
 
       generic
          type Element_Type (<>) is limited private;
-         --  A pool is specific to an element type, so that we can properly
-         --  handle unconstrained arrays (for which we need a specific Size
-         --  representation clause and we need to take into account the bounds
-         --  of the array, which are stored next to the array).
-
-         Potentially_Controlled : Boolean := True;
-         --  See comment for Finalization_Master_Size below.
-         --  If the element_type cannot be controlled or contain controlled
-         --  elements, you should set this parameter to False to allocate
-         --  less memory.
-         --  ??? This parameter will be removed when the compiler can provide
-         --  this information automatically.
-
       package Typed is
-         Finalization_Master_Size : constant Storage_Count :=
-            (if Potentially_Controlled then 2 * System.Address'Size else 0);
-         --  Extra memory that needs to be allocated for the handling of
-         --  potentially controlled types (see System.Finalization_Masters).
-         --  Ideally, the compiler will be able to tell us whether these
-         --  pointers are needed for Element_Type. For now, we simply allocate
-         --  more memory than necessary.
-
-         Extra_Offset : constant Storage_Count :=
-            (Element_Type'Descriptor_Size + Finalization_Master_Size)
-            / System.Storage_Unit;
-         --  The actual memory layout that we need to allocate is:
-         --
-         --  +--------+-------+------+----------+------+---------+
-         --  | Header | First | Last | Previous | Next | Element |
-         --  +--------+-------+------+----------+------+---------+
-         --
-         --  Where:
-         --    * Header is the formal parameter given above
-         --    * (First, Last) are optional bounds if the element is an
-         --      unconstraint array (otherwise these are not allocated).
-         --      Their combined size is given by Element_Type'Descriptor_Size.
-         --    * (Previous, Next) are optional pointers needed for potentially
-         --      controlled types (or 'Class, or arrays of controlled types).
-         --      See comment for Finalization_Master_Size.
-
-         Pool : Header_Pool (Extra_Offset);
-
          type Element_Access is access all Element_Type;
          for Element_Access'Size use Standard'Address_Size;
+         for Element_Access'Storage_Pool use Pool;
          --  Force array bounds to be stored before the array's data, rather
          --  than as a separate dope vector.
 
-         for Element_Access'Storage_Pool use Pool;
-         --  All memory allocation and deallocation for Element_Access will go
-         --  through the pool.
-
          function Header_Of
             (Element : Element_Access) return access Extra_Header
-            is (if Element = null
-                then null else Header_Of (Pool, Element.all'Address));
-         pragma Inline (Header_Of);
+            with Inline;
+         --  Points to the beginning of the header for Element.
+         --  Returns null if Element is null
+
+         procedure Free is new Ada.Unchecked_Deallocation
+            (Element_Type, Element_Access);
+         --  Free the memory used by Element
+
       end Typed;
 
    end Header_Pools;
