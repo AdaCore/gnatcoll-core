@@ -61,13 +61,13 @@
 --     package T_Table is
 --        N_Field1 : aliased constant String := "field1";
 --        N_Field2 : aliased constant String := "field2";
---        type Table (Instance : Cst_String_Access)
---           is new SQL_Table (Ta_Table_Name'Access, Instance) with
+--        type Table (Instance : Cst_String_Access; Index : Integer)
+--           is new SQL_Table (Ta_Table_Name'Access, Instance, Index) with
 --        record
 --           Field1 : SQL_Field_Integer
---              (Ta_Table_Name'Access, Instance, N_Field1'Access);
+--              (Ta_Table_Name'Access, Instance, N_Field1'Access, Index);
 --           Field2 : SQL_Field_Integer
---              (Ta_Table_Name'Access, Instance, N_Field2'Access);
+--              (Ta_Table_Name'Access, Instance, N_Field2'Access, Index);
 --        end record;
 --
 --         function FK (Self : Table; Foreign : SQL_Table'Class)
@@ -76,7 +76,7 @@
 --     end T_Table;
 --
 --  Finally, a default instance of the table that can be used in the queries:
---      Table : T_Table.Table (null);
+--      Table : T_Table.Table (null, -1);
 --
 --  FK is a subprogram to retrieve the foreign keys between two tables, to
 --  simplify the writting of the sql queries. This is optional, and if you are
