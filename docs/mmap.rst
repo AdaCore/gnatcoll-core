@@ -66,15 +66,18 @@ will also want to only read chunks of the file at once::
 
   declare
      File : Mapped_File;
+     Reg  : Mapped_Region;
      Str  : Long.Str_Access;
   begin
      File := Open_Read ("/tmp/file_on_disk");
-     Read (File);  *--  read the whole file*
+     Reg := Read (File);  *--  map the whole file*
+     Close (File);
+
      Str := Long.Data (File);
      for S in 1 .. Long.Last (File) loop
          Put (Str (S));
      end loop;
-     Close (File);
+     Free (Reg);
   end;
 
 The above example works for files larger than 2Gb, on 64 bits system
@@ -90,13 +93,14 @@ will need to do, and therefore speeds up your application somewhat::
 
   declare
      File   : Mapped_File;
+     Reg    : Mapped_Region;
      Str    : Str_Access;
      Offs   : Long_Integer := 0;
      Page   : constant Integer := Get_Page_Size;
   begin
      File := Open_Read ("/tmp/file_on_disk");
      while Offs < Length (File) loop
-         Read (File, Offs, Length => Long_Integer (Page) * 4);
+         Read (File, Reg, Offs, Length => Long_Integer (Page) * 4);
          Str := Data (File);
 
          *--  Print characters for this chunk:*
@@ -106,6 +110,7 @@ will need to do, and therefore speeds up your application somewhat::
 
          Offs := Offs + Long_Integer (Last (File));
      end loop;
+     Free (Reg);
      Close (File);
   end;
 
