@@ -22,7 +22,7 @@
 ------------------------------------------------------------------------------
 
 with Ada.Calendar;
-with Ada.Strings.Fixed;
+with Ada.Strings.Fixed;            use Ada.Strings;
 with Ada.Strings.Unbounded;        use Ada.Strings.Unbounded;
 with Ada.Unchecked_Conversion;
 with Ada.Unchecked_Deallocation;
@@ -352,6 +352,10 @@ package body GNATCOLL.SQL.Postgres.Builder is
 
    procedure Unchecked_Free is new Ada.Unchecked_Deallocation
      (GNATCOLL.SQL.Postgres.Gnade.Database, Database_Access);
+
+   function Table_Criteria
+     (Connection : access Postgresql_Connection_Record;
+      Table_Name : String) return String;
 
    generic
       with procedure Perform
@@ -958,35 +962,65 @@ package body GNATCOLL.SQL.Postgres.Builder is
       Callback   : access procedure
         (Name, Description : String; Kind : Relation_Kind))
    is
-      R     : Forward_Cursor;
-      Kind  : Relation_Kind;
+      R : Forward_Cursor;
    begin
       R.Fetch
         (Connection,
-         "SELECT pg_class.relname, pg_description.description,"
-         & " pg_class.relkind"
-         & " FROM (pg_class left join pg_description"
-         & "         on  pg_description.objoid = pg_class.oid"
-         & "         and pg_description.objsubid = 0),"
-         & "      pg_namespace"
-         & " WHERE relnamespace=pg_namespace.oid"
-         & "   AND pg_namespace.nspname='public'"
-         & "   AND pg_class.relkind ~ '[rv]'"
-         & " ORDER BY pg_class.relname");
+         "SELECT pg_namespace.nspname || '.' || pg_class.relname,"
+         & " pg_description.description, pg_class.relkind"
+         & " FROM pg_class"
+         & " LEFT JOIN pg_description on pg_description.objoid = pg_class.oid"
+           & " AND pg_description.objsubid = 0"
+         & " JOIN pg_namespace ON relnamespace = pg_namespace.oid"
+           & " AND pg_namespace.nspname NOT LIKE 'pg_%'"
+           & " AND pg_namespace.nspname <> 'information_schema'"
+         & " WHERE pg_class.relkind in ('r', 'v')"
+         & " ORDER BY pg_namespace.nspname, pg_class.relname");
 
       while Has_Row (R) loop
-         if Value (R, 2) = "r" then
-            Kind := Kind_Table;
-         else
-            Kind := Kind_View;
-         end if;
-
-         Callback (Name        => Value (R, 0),
-                   Description => Value (R, 1),
-                   Kind        => Kind);
+         Callback
+           (Name        => Value (R, 0),
+            Description => Value (R, 1),
+            Kind        => (if Value (R, 2) = "r" then Kind_Table
+                            else Kind_View));
          Next (R);
       end loop;
    end Foreach_Table;
+
+   --------------------
+   -- Table_Criteria --
+   --------------------
+
+   function Table_Criteria
+     (Connection : access Postgresql_Connection_Record;
+      Table_Name : String) return String
+   is
+      Dot_Idx : constant Natural := Fixed.Index (Table_Name, ".");
+      Class_Relname : constant String := " AND pg_class.relname='";
+      Simple_Cond : constant String := Class_Relname
+        & (if Dot_Idx = 0 then Table_Name
+           else Table_Name (Dot_Idx + 1 .. Table_Name'Last)) & ''';
+      Namespace : constant String :=
+        (if Dot_Idx = 0 then ""
+         else Table_Name (Table_Name'First .. Dot_Idx - 1));
+      R : Forward_Cursor;
+   begin
+      if Namespace = "" then
+         return Simple_Cond;
+      end if;
+
+      R.Fetch
+        (Connection,
+         "select oid from pg_namespace where nspname = '" & Namespace
+         & ''');
+
+      if not R.Has_Row then
+         return Class_Relname & Table_Name & ''';
+      end if;
+
+      return  Simple_Cond
+         & " AND pg_class.relnamespace = " & R.Value (0);
+   end Table_Criteria;
 
    -------------------
    -- Foreach_Field --
@@ -1049,14 +1083,16 @@ package body GNATCOLL.SQL.Postgres.Builder is
          end loop;
       end Process_Fields;
 
+      Table_Cond : constant String :=
+        Table_Criteria (Connection, Table_Name);
+
    begin
       R2.Fetch
         (Connection,
          "SELECT  pg_constraint.conkey"   --  1 attribute tuple
          & " from pg_constraint,"
          & "   pg_class"
-         & " where conrelid=pg_class.oid"
-         & "   and pg_class.relname='" & Table_Name & "'"
+         & " where conrelid=pg_class.oid" & Table_Cond
          & "   and pg_constraint.contype='p'");
 
       R.Fetch
@@ -1077,8 +1113,7 @@ package body GNATCOLL.SQL.Postgres.Builder is
          & "         and pg_description.objsubid = pg_attribute.attnum),"
          & "      pg_type, pg_class"
          & " WHERE atttypid = pg_type.OID"
-         & "   AND pg_attribute.attnum > 0"
-         & "   AND pg_class.relname='" & Table_Name & "'"
+         & "   AND pg_attribute.attnum > 0" & Table_Cond
          & "   AND pg_class.oid = pg_attribute.attrelid"
          & "   AND not pg_attribute.attisdropped"
          & " ORDER BY pg_attribute.attname");
@@ -1108,18 +1143,20 @@ package body GNATCOLL.SQL.Postgres.Builder is
    begin
       R.Fetch
         (Connection,
-         "SELECT  pg_constraint.contype,"  --  0 constraint type ('f', 'p',...)
-         & " pg_constraint.conname,"       --  1 constraint name
-         & " pg_class.relname,"            --  2 class name
-         & " pg_constraint.conkey,"        --  3 attribute tuple
-         & " pg_class2.relname,"           --  4 foreign table if any
-         & " pg_constraint.confkey"        --  5 foreign attribute tuple
-         & " from (pg_constraint left join pg_class pg_class2"
-         & "   on pg_constraint.confrelid=pg_class2.oid),"
-         & "   pg_class"
-         & " where conrelid=pg_class.oid"
-         & "   and pg_class.relname='" & Table_Name & "'"
-         & "   and pg_constraint.contype='f'"
+         "SELECT pg_constraint.contype,"  -- 0 constraint type ('f', 'p',...)
+         & " pg_constraint.conname,"      -- 1 constraint name
+         & " pg_class.relname,"           -- 2 class name
+         & " pg_constraint.conkey,"       -- 3 attribute tuple
+         & " pg_namespace.nspname ||"
+           & " '.' || pg_class2.relname," -- 4 foreign table if any
+         & " pg_constraint.confkey"       -- 5 foreign attribute tuple
+         & " from pg_constraint join pg_class on conrelid = pg_class.oid"
+         & " left join pg_class pg_class2"
+         &   " on pg_constraint.confrelid=pg_class2.oid"
+         & " left join pg_namespace"
+         &   " on pg_class2.relnamespace = pg_namespace.oid"
+         & " where pg_constraint.contype='f'"
+         & Table_Criteria (Connection, Table_Name)
          & " order by pg_constraint.conkey");
 
       while Has_Row (R) loop

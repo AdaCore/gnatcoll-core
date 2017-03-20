@@ -24,7 +24,7 @@
 pragma Ada_2012;
 with Ada.Characters.Handling;     use Ada.Characters.Handling;
 with Ada.Command_Line;
-with Ada.Containers;              use Ada.Containers;
+with Ada.Containers.Hashed_Sets;  use Ada.Containers;
 with Ada.Containers.Indefinite_Hashed_Sets;
 with Ada.Exceptions;              use Ada.Exceptions;
 with Ada.Strings.Equal_Case_Insensitive;
@@ -35,6 +35,7 @@ with Ada.Text_IO;                 use Ada.Text_IO;
 with Ada.Unchecked_Deallocation;
 with GNAT.Strings;                use GNAT.Strings;
 with GNATCOLL.Mmap;               use GNATCOLL.Mmap;
+with GNATCOLL.Strings;
 with GNATCOLL.Traces;             use GNATCOLL.Traces;
 with GNATCOLL.VFS;                use GNATCOLL.VFS;
 
@@ -761,9 +762,9 @@ package body GNATCOLL.SQL.Inspect is
          T     : constant Field_Mapping_Access := From_SQL (Typ);
       begin
          if T = null then
-            Put_Line ("Error: unknown field type " & Typ);
+            Put_Line
+              ("Error: unknown field type " & Typ & " in " & Table.Name);
             raise Invalid_Type;
-            return;
          end if;
 
          Descr := Field_Description'
@@ -829,6 +830,10 @@ package body GNATCOLL.SQL.Inspect is
          Descr : Table_Description_Record;
          Ref   : Table_Description;
       begin
+         if not Match (Name, Self.Filter) then
+            return;
+         end if;
+
          T := T + 1;
          Descr.Id          := T;
          Descr.Kind        := Kind;
@@ -1061,7 +1066,6 @@ package body GNATCOLL.SQL.Inspect is
    function Read_Schema
      (Self : File_Schema_IO; Data : String) return DB_Schema
    is
-
       Schema : DB_Schema;
       T     : Natural := 0;  --  Index of the table we are creating
       First : Natural; --  Current index in Data
@@ -1554,17 +1558,33 @@ package body GNATCOLL.SQL.Inspect is
    overriding procedure Write_Schema
      (Self : DB_Schema_IO; Schema : DB_Schema)
    is
+      use GNATCOLL.Strings;
+
       Created : String_Lists.Vector;
       --  List of tables that have been created. When a table has already been
       --  created, we set the foreign key constraints to it immediately,
       --  otherwise we defer them till all tables have been created.
 
+      package XString_Sets is new Ada.Containers.Hashed_Sets
+        (XString, Hash, "=");
+      Dummy : XString_Sets.Cursor;
+
+      Namespaces : XString_Sets.Set;
+
       Deferred         : String_Lists.Vector;
       Deferred_Indexes : String_Lists.Vector;
       --  Statements to execute to create the indexes
 
+      type Namespaced_Name is record
+         Namespace : XString;
+         Full_Name : XString;
+      end record;
+
       procedure For_Table (Table : in out Table_Description);
       --  Process a table
+
+      function Quoted (Item : String) return Namespaced_Name;
+      --  Returns quoted namespace and quoted full table name
 
       procedure Do_Statement (SQL : String);
       --  Execute or output the statement, depending on user's choice
@@ -1584,6 +1604,68 @@ package body GNATCOLL.SQL.Inspect is
          end if;
       end Do_Statement;
 
+      ------------
+      -- Quoted --
+      ------------
+
+      function Quoted (Item : String) return Namespaced_Name is
+         Dot_Idx : Natural;
+         Result : Namespaced_Name;
+      begin
+         if Item (Item'First) = '"' then
+            if Item (Item'Last) = '"' then
+               Dot_Idx := Fixed.Index (Item, """.""");
+
+               Result.Full_Name := To_XString (Item);
+               Result.Namespace :=
+                 (if Dot_Idx = 0 then Null_XString
+                  else To_XString (Item (Item'First .. Dot_Idx)));
+
+            else
+               Dot_Idx := Fixed.Index (Item, """.");
+
+               if Dot_Idx = 0 then
+                  raise Constraint_Error with
+                     "Unsupported table name format " & Item;
+               else
+                  Result.Namespace :=
+                    To_XString (Item (Item'First .. Dot_Idx));
+                  Result.Full_Name := Result.Namespace;
+                  Result.Full_Name.Append
+                    (".""" & Item (Dot_Idx + 2 .. Item'Last) & '"');
+               end if;
+            end if;
+
+         elsif Item (Item'Last) = '"' then
+            Dot_Idx := Fixed.Index (Item, ".""");
+
+            if Dot_Idx = 0 then
+               raise Constraint_Error with
+                 "Unsupported table name format " & Item;
+            else
+               Result.Namespace :=
+                 To_XString ('"' & Item (Item'First .. Dot_Idx - 1) & '"');
+               Result.Full_Name := Result.Namespace;
+               Result.Full_Name.Append ('.' & Item (Dot_Idx + 1 .. Item'Last));
+            end if;
+
+         else
+            Dot_Idx := Fixed.Index (Item, ".");
+            if Dot_Idx = 0 then
+               Result.Namespace := Null_XString;
+               Result.Full_Name := To_XString ('"' & Item & '"');
+            else
+               Result.Namespace :=
+                 To_XString ('"' & Item (Item'First .. Dot_Idx - 1) & '"');
+               Result.Full_Name := Result.Namespace;
+               Result.Full_Name.Append
+                 (".""" & Item (Dot_Idx + 1 .. Item'Last) & '"');
+            end if;
+         end if;
+
+         return Result;
+      end Quoted;
+
       ---------------
       -- For_Table --
       ---------------
@@ -1591,6 +1673,10 @@ package body GNATCOLL.SQL.Inspect is
       procedure For_Table (Table : in out Table_Description) is
          SQL : Unbounded_String;
          --  The statement to execute
+
+         TNS : constant Namespaced_Name := Quoted (Table.Name);
+         Table_Name : constant String := To_String (TNS.Full_Name);
+         New_NS : Boolean;
 
          SQL_PK : Unbounded_String;
          --  The SQL to create the primary key
@@ -1635,8 +1721,8 @@ package body GNATCOLL.SQL.Inspect is
                   (String'
                    ("CREATE INDEX """
                     & Descr (Name_Start + 1 .. Descr'Last)
-                    & """ ON """
-                    & Table.Name & """ ("
+                    & """ ON "
+                    & Table_Name & " ("
                     & Descr (Descr'First .. Name_Start - 1)
                     & ")"));
             end loop;
@@ -1678,9 +1764,12 @@ package body GNATCOLL.SQL.Inspect is
             Stmt_FK, Stmt_References : Unbounded_String;
             P : Pair_Lists.Cursor;
             Is_First : Boolean;
+            Table_To : XString;
          begin
             for R of TDR (Table.Unchecked_Get).FK loop
                --  Prepare the constraint
+
+               Table_To := Quoted (R.To_Table.Name).Full_Name;
 
                Stmt_FK := To_Unbounded_String (" FOREIGN KEY (");
                Is_First := True;
@@ -1696,7 +1785,7 @@ package body GNATCOLL.SQL.Inspect is
                Append (Stmt_FK, ")");
 
                Stmt_References := To_Unbounded_String
-                 (" REFERENCES """ & R.To_Table.Name & """ (");
+                 (" REFERENCES " & To_String (Table_To) & " (");
                Is_First := True;
                P := R.Get.Fields.First;
                while Has_Element (P) loop
@@ -1722,14 +1811,14 @@ package body GNATCOLL.SQL.Inspect is
                --  new constraint directly in the table creation which is more
                --  efficient (a single SQL statement).
 
-               if Created.Contains (R.To_Table.Name) then
+               if Created.Contains (To_String (Table_To)) then
                   Append (SQL, "," & ASCII.LF & Stmt_FK);
 
                elsif Self.DB.Can_Alter_Table_Constraints then
                   Append
                     (Deferred,
                      To_String
-                       ("ALTER TABLE """ & Table.Name & """ ADD CONSTRAINT "
+                       ("ALTER TABLE " & Table_Name & " ADD CONSTRAINT "
                         & Element (R.Get.Fields.First).From.Name
                         & "_fk" & Stmt_FK));
 
@@ -1742,8 +1831,8 @@ package body GNATCOLL.SQL.Inspect is
 
                      Get_Field_Def (Element (P).From, Stmt2,
                                     Can_Be_Not_Null => False,
-                                    FK_Table => R.To_Table.Name);
-                     Stmt2 := "ALTER TABLE """ & Table.Name & """ ADD COLUMN "
+                                    FK_Table => To_String (Table_To));
+                     Stmt2 := "ALTER TABLE " & Table_Name & " ADD COLUMN "
                        & Stmt2 & Stmt_References;
                      Append (Deferred, To_String (Stmt2));
                      Next (P);
@@ -1766,8 +1855,8 @@ package body GNATCOLL.SQL.Inspect is
                         ("CREATE INDEX """
                          & Table.Name & "_"
                          & Element (R.Get.Fields.First).From.Name
-                         & "_idx"" ON """
-                         & Table.Name & """ ("""
+                         & "_idx"" ON "
+                         & Table_Name & " ("""
                          & Element (R.Get.Fields.First).From.Name
                          & """)"));
                end if;
@@ -1842,8 +1931,8 @@ package body GNATCOLL.SQL.Inspect is
                     ("CREATE INDEX """
                      & Table.Name & "_"
                      & F.Get.Name.all
-                     & "_idx"" ON """
-                     & Table.Name & """ ("""
+                     & "_idx"" ON "
+                     & Table_Name & " ("""
                      & F.Get.Name.all
                      & """)"));
             end if;
@@ -1863,7 +1952,8 @@ package body GNATCOLL.SQL.Inspect is
 
             if not Self.DB.Can_Alter_Table_Constraints
               and then F.Is_FK /= No_Field
-              and then not Created.Contains (F.Is_FK.Get_Table.Name)
+              and then not Created.Contains
+                (To_String (Quoted (F.Is_FK.Get_Table.Name).Full_Name))
             then
                if F.Is_PK then
                   Put_Line (Standard_Error,
@@ -1905,14 +1995,24 @@ package body GNATCOLL.SQL.Inspect is
             end if;
          end Print_PK;
 
-      begin
+      begin -- For_Table
          if Self.DB.Success and then not Table.Is_Abstract then
+            if TNS.Namespace /= Null_XString then
+               Namespaces.Insert (TNS.Namespace, Dummy, New_NS);
+
+               if New_NS then
+                  Append
+                    (SQL,
+                     "CREATE SCHEMA IF NOT EXISTS "
+                     & To_String (TNS.Namespace) & ';' & ASCII.LF);
+               end if;
+            end if;
+
             case Table.Get_Kind is
                when Kind_Table =>
-                  Created.Append (Table.Name);   --  mark the table as created
+                  Created.Append (Table_Name); -- mark the table as created
 
-                  Append (SQL, "CREATE TABLE """
-                          & Table.Name & """ (" & ASCII.LF);
+                  Append (SQL, "CREATE TABLE " & Table_Name & " (" & ASCII.LF);
                   For_Each_Field
                     (Table, Add_Field_To_SQL'Access,
                      Include_Inherited => True);
@@ -2594,7 +2694,7 @@ package body GNATCOLL.SQL.Inspect is
       Schema : DB_Schema := No_Schema;
       Replace_Newline : Boolean := True)
    is
-      Str         : GNAT.Strings.String_Access;
+      Str : GNAT.Strings.String_Access;
    begin
       Str := Read_Whole_File (+File.Full_Name.all);
       if Str /= null then

@@ -32,6 +32,7 @@ with Ada.Strings.Unbounded;      use Ada.Strings.Unbounded;
 with GNAT.Command_Line;          use GNAT.Command_Line;
 with GNAT.Expect;                use GNAT.Expect;
 with GNAT.OS_Lib;                use GNAT.OS_Lib;
+with GNAT.Regexp;                use GNAT.Regexp;
 with GNAT.Strings;
 with GNATCOLL.Arg_Lists;         use GNATCOLL.Arg_Lists;
 with GNATCOLL.SQL.Exec;          use GNATCOLL.SQL, GNATCOLL.SQL.Exec;
@@ -63,13 +64,12 @@ procedure GNATCOLL_Db2Ada is
       Output_Load,
       Output_Adacreate,
       Output_Createdb);
-   Output : array (Output_Kind) of Boolean :=
-     (others => False);
+   Output : array (Output_Kind) of Boolean := (others => False);
    --  The type of output for this utility
 
    Need_Schema_For_Output : constant array (Output_Kind) of Boolean :=
-      (Output_Ada_Enums => False,
-       others           => True);
+     (Output_Ada_Enums => False, Output_Ada_Enums_Image => False,
+      others => True);
    --  Whether the various outputs require a database schema.
 
    Schema  : DB_Schema;
@@ -289,6 +289,9 @@ procedure GNATCOLL_Db2Ada is
       Put_Line ("-dbport <port>: port for the database");
       Put_Line ("-dbtype <type>: database backend to use"
                 & " (default is postgreSQL)");
+      Put_Line ("-dbfilter REGEXP: regular expression filtering tables used");
+      Put_Line ("    for -text and -api output generation from database.");
+      Put_Line ("    The default is to use all tables.");
       New_Line;
       Put_Line ("==== Specifying output");
       Put_Line ("The default output is a set of Ada files that represent the");
@@ -339,12 +342,13 @@ procedure GNATCOLL_Db2Ada is
    ----------
 
    procedure Main is
-      DB_Name   : GNAT.OS_Lib.String_Access := new String'("");
-      DB_Host   : GNAT.OS_Lib.String_Access := new String'("");
-      DB_User   : GNAT.OS_Lib.String_Access := new String'("");
-      DB_Passwd : GNAT.OS_Lib.String_Access := new String'("");
-      DB_Port   : Integer := -1;
-      DB_Type   : GNAT.OS_Lib.String_Access := new String'("postgresql");
+      DB_Name    : GNAT.OS_Lib.String_Access := new String'("");
+      DB_Host    : GNAT.OS_Lib.String_Access := new String'("");
+      DB_User    : GNAT.OS_Lib.String_Access := new String'("");
+      DB_Passwd  : GNAT.OS_Lib.String_Access := new String'("");
+      DB_Port    : Integer := -1;
+      DB_Type    : GNAT.OS_Lib.String_Access := new String'("postgresql");
+      DB_Filter  : Regexp := Compile (".*");
 
       Enums, Vars : String_Lists.List;
       --  The internal index corresponding to each table. This is used to
@@ -358,7 +362,7 @@ procedure GNATCOLL_Db2Ada is
       loop
          case Getopt ("dbhost= h -help dbname= dbuser= dbpasswd= enum= var="
                       & " dbtype= dbmodel= dot text orm= createdb api="
-                      & " adacreate dbport= enum-image"
+                      & " adacreate dbport= enum-image dbfilter="
                       & " ormtables= api-enums= load= output=")
          is
             when 'h' | '-' =>
@@ -412,6 +416,8 @@ procedure GNATCOLL_Db2Ada is
                elsif Full_Switch = "dbmodel" then
                   Free (DB_Model);
                   DB_Model := new String'(Parameter);
+               elsif Full_Switch = "dbfilter" then
+                  DB_Filter := GNAT.Regexp.Compile (Parameter);
                end if;
 
             when 'c' =>
@@ -500,6 +506,7 @@ procedure GNATCOLL_Db2Ada is
 
          Connection := Descr.Build_Connection;
          DB_IO.DB := Connection;
+         DB_IO.Filter := DB_Filter;
 
          --  If we should read the model from the database
 

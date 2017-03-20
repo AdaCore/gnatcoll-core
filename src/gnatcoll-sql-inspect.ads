@@ -39,6 +39,7 @@ with Ada.Containers.Indefinite_Ordered_Maps;
 with GNATCOLL.SQL.Exec;           use GNATCOLL.SQL.Exec;
 with GNATCOLL.Utils;              use GNATCOLL.Utils;
 with GNATCOLL.VFS;
+with GNAT.Regexp;                 use GNAT.Regexp;
 private with GNATCOLL.Refcount;
 private with GNAT.Strings;
 
@@ -405,6 +406,7 @@ package GNATCOLL.SQL.Inspect is
 
    type DB_Schema_IO is new Schema_IO with record
       DB : Database_Connection;
+      Filter : Regexp;
    end record;
    overriding function Read_Schema (Self : DB_Schema_IO) return DB_Schema;
    overriding procedure Write_Schema

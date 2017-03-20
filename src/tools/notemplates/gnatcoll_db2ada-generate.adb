@@ -414,6 +414,7 @@ is
             New_Line (Spec_File);
 
             Put_Line (Spec_File, "   package " & Namespace & " is");
+            Put_Line (Body_File, "   package body " & Namespace & " is");
             Indent_Level := 6;
          else
             Indent_Level := 3;
@@ -432,6 +433,7 @@ is
 
          if Namespace /= "" then
             Put_Line (Spec_File, "   end " & Namespace & ";");
+            Put_Line (Body_File, "   end " & Namespace & ";");
          end if;
       end loop;
    end Process_Tables;
