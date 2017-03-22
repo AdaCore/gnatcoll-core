@@ -452,6 +452,7 @@ package body GNATCOLL.Traces is
       Tmp   : Trace_Stream;
       Colon : Natural;
       TmpF  : Stream_Factories_List;
+      Supports_Buffer : Boolean := True;
 
    begin
       if Name = "" then
@@ -483,6 +484,7 @@ package body GNATCOLL.Traces is
             File => stdout,
             others => <>);
          Add_To_Streams (Tmp);
+         Supports_Buffer := False;
 
       elsif Name (Name'First .. Colon - 1) = "&2" then
          Tmp := new File_Stream_Record'
@@ -490,6 +492,7 @@ package body GNATCOLL.Traces is
             File => stderr,
             others => <>);
          Add_To_Streams (Tmp);
+         Supports_Buffer := False;
 
       elsif Name (Name'First) = '&' then
          Tmp := null;
@@ -603,17 +606,19 @@ package body GNATCOLL.Traces is
                end if;
             end loop;
 
-            if Buf_Size = 0 then
-               --  make unbuffered
-               Dummy := setvbuf
-                  (File_Stream_Record (Tmp.all).File,
-                   System.Null_Address, IONBF, 0);
+            if Supports_Buffer then
+               if Buf_Size = 0 then
+                  --  make unbuffered
+                  Dummy := setvbuf
+                     (File_Stream_Record (Tmp.all).File,
+                      System.Null_Address, IONBF, 0);
 
-            else
-               --  make line buffered to speed up.
-               Dummy := setvbuf
-                  (File_Stream_Record (Tmp.all).File,
-                   System.Null_Address, IOFBF, Buf_Size);
+               else
+                  --  make line buffered to speed up.
+                  Dummy := setvbuf
+                     (File_Stream_Record (Tmp.all).File,
+                      System.Null_Address, IOFBF, Buf_Size);
+               end if;
             end if;
 
             Free (Args);

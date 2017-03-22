@@ -68,12 +68,10 @@ package GNATCOLL.Traces is
    --              Setting this to 0 means that synchronization appears after
    --              every output line, which is slow but might help when
    --              debugging a crashing application.
-   --      - to standard output
+   --      - to standard output (never bufferized)
    --        >&1
-   --        >&1:buffer_size=0      (to force flushing after each line)
-   --      - to standard error
+   --      - to standard error (never bufferized)
    --        >&2
-   --        >&2:buffer_size=0      (to force flushing after each line)
    --      - to a user-defined stream (see gnat-traces-syslog.ads):
    --        >&stream
    --        >&stream:option1:option2
