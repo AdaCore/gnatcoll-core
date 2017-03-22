@@ -25,6 +25,7 @@ with Ada.Strings.Fixed;
 with Ada.Strings.Unbounded;      use Ada.Strings.Unbounded;
 with Ada.Text_IO;                use Ada.Text_IO;
 with GNAT.Command_Line;          use GNAT.Command_Line;
+with GNAT.Expect;                use GNAT.Expect;
 with GNAT.Strings;               use GNAT.Strings;
 with GNAT.OS_Lib;
 with GNATCOLL.Xref;              use GNATCOLL.Xref;
@@ -737,18 +738,23 @@ procedure GNATInspect is
       declare
          Arguments : constant String_List :=
            To_List (Args, Include_Command => False);
-         Success : Boolean;
+         Status    : aliased Integer;
+         Str       : constant String := GNAT.Expect.Get_Command_Output
+            (Command    => Command.all,
+             Arguments  => Arguments (Arguments'First + 1 .. Arguments'Last),
+             Input      => "",
+             Status     => Status'Access,
+             Err_To_Out => True);
       begin
-         GNAT.OS_Lib.Spawn
-           (Command.all, Arguments (Arguments'First + 1 .. Arguments'Last),
-            Success);
          Free (Command);
 
-         if not Success then
+         if Status /= 0 then
             Put_Line
               (Output_Lead.all & "Error: failed to execute '"
                & To_Display_String (Args, Include_Command => False) & "'");
          end if;
+
+         Put (Str);
       end;
    end Process_Shell;
 
