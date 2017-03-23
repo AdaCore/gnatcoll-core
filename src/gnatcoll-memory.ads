@@ -32,8 +32,6 @@
 --  your own application) and make sure that the ali and object files for
 --  this unit are found in the object search path.
 --
---  This package is not task safe
---
 --  Your version of System.Memory (in file s-memory.adb) should be:
 --
 --  with GNATCOLL.Memory;
