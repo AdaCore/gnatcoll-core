@@ -27,6 +27,7 @@ with Ada.Strings.Unbounded;   use Ada.Strings.Unbounded;
 with Ada.Text_IO;
 with GNATCOLL.Atomic;         use GNATCOLL.Atomic;
 with GNATCOLL.JSON.Utility;
+with GNATCOLL.Strings;        use GNATCOLL.Strings;
 
 -------------------
 -- GNATCOLL.JSON --
@@ -116,7 +117,7 @@ package body GNATCOLL.JSON is
       procedure Skip_Blanks;
       --  Does Idx + 1 until a non-blank character is found
 
-      function Read_String return UTF8_Unbounded_String;
+      function Read_String return UTF8_XString;
       --  Reads a string
 
       -----------
@@ -173,7 +174,7 @@ package body GNATCOLL.JSON is
       -- Read_String --
       -----------------
 
-      function Read_String return UTF8_Unbounded_String is
+      function Read_String return UTF8_XString is
          Prev : Natural;
 
       begin
@@ -472,7 +473,7 @@ package body GNATCOLL.JSON is
                   Skip_Blanks;
 
                   declare
-                     Name : constant UTF8_Unbounded_String := Read_String;
+                     Name : constant UTF8_XString := Read_String;
                   begin
                      Skip_Blanks;
 
@@ -493,7 +494,7 @@ package body GNATCOLL.JSON is
                         Item : constant JSON_Value :=
                                  Read (Strm, Idx, Col, Line, Filename);
                      begin
-                        Set_Field (Ret, To_String (Name), Item);
+                        Set_Field (Ret, Name, Item);
                      end;
                   end;
                end loop;
@@ -856,7 +857,7 @@ package body GNATCOLL.JSON is
                  JSON_Float_Type   =>
                null;
             when JSON_String_Type =>
-               Obj.Data.Str_Value := Null_Unbounded_String;
+               Obj.Data.Str_Value := GNATCOLL.Strings.Null_XString;
 
             when JSON_Array_Type =>
                if Obj.Data.Arr_Value /= null then
@@ -928,11 +929,20 @@ package body GNATCOLL.JSON is
    function Create (Val : UTF8_String) return JSON_Value is
       Ret : JSON_Value;
    begin
-      Ret.Data := (JSON_String_Type, Str_Value => To_Unbounded_String (Val));
+      Ret.Data := (JSON_String_Type, Str_Value => <>);
+      Ret.Data.Str_Value.Set (Val);
       return Ret;
    end Create;
 
    function Create (Val : UTF8_Unbounded_String) return JSON_Value is
+      Ret : JSON_Value;
+   begin
+      Ret.Data := (Kind => JSON_String_Type, Str_Value => Null_XString);
+      Ret.Data.Str_Value.Set (To_String (Val));
+      return Ret;
+   end Create;
+
+   function Create (Val : UTF8_XString) return JSON_Value is
       Ret : JSON_Value;
    begin
       Ret.Data := (Kind => JSON_String_Type, Str_Value => Val);
@@ -984,20 +994,36 @@ package body GNATCOLL.JSON is
       Field_Name : UTF8_String;
       Field      : JSON_Value)
    is
-      Key : constant UTF8_Unbounded_String :=
-              To_Unbounded_String (Field_Name);
       Vals : Object_Items_Pkg.Vector renames Val.Data.Obj_Value.Vals;
    begin
       for J in Vals.First_Index .. Vals.Last_Index loop
-         if Key = Vals.Element (J).Key then
-            Vals.Replace_Element (J, (Key, Field));
-
+         if Field_Name = Vals.Element (J).Key then
+            Vals.Replace_Element (J, (Vals.Element (J).Key, Field));
             return;
          end if;
       end loop;
 
       Vals.Append
-        ((Key => To_Unbounded_String (Field_Name),
+        ((Key => To_XString (Field_Name),
+          Val => Field));
+   end Set_Field;
+
+   procedure Set_Field
+     (Val        : JSON_Value;
+      Field_Name : UTF8_XString;
+      Field      : JSON_Value)
+   is
+      Vals : Object_Items_Pkg.Vector renames Val.Data.Obj_Value.Vals;
+   begin
+      for J in Vals.First_Index .. Vals.Last_Index loop
+         if Field_Name = Vals.Element (J).Key then
+            Vals.Replace_Element (J, (Field_Name, Field));
+            return;
+         end if;
+      end loop;
+
+      Vals.Append
+        ((Key => Field_Name,
           Val => Field));
    end Set_Field;
 
@@ -1115,21 +1141,24 @@ package body GNATCOLL.JSON is
       return To_String (Val.Data.Str_Value);
    end Get;
 
-   function Get (Val : JSON_Value) return UTF8_Unbounded_String is
+   function Get (Val : JSON_Value) return UTF8_XString is
    begin
       return Val.Data.Str_Value;
+   end Get;
+
+   function Get (Val : JSON_Value) return UTF8_Unbounded_String is
+   begin
+      return To_Unbounded_String (Val.Data.Str_Value.To_String);
    end Get;
 
    function Get
      (Val   : JSON_Value;
       Field : UTF8_String) return JSON_Value
    is
-      Key : constant UTF8_Unbounded_String :=
-              To_Unbounded_String (Field);
       Vals : Object_Items_Pkg.Vector renames Val.Data.Obj_Value.Vals;
    begin
       for J in Vals.First_Index .. Vals.Last_Index loop
-         if Key = Vals.Element (J).Key then
+         if Field = Vals.Element (J).Key then
             return Vals.Element (J).Val;
          end if;
       end loop;
@@ -1147,12 +1176,10 @@ package body GNATCOLL.JSON is
    ---------------
 
    function Has_Field (Val : JSON_Value; Field : UTF8_String) return Boolean is
-      Key : constant UTF8_Unbounded_String :=
-              To_Unbounded_String (Field);
       Vals : Object_Items_Pkg.Vector renames Val.Data.Obj_Value.Vals;
    begin
       for J in Vals.First_Index .. Vals.Last_Index loop
-         if Key = Vals.Element (J).Key then
+         if Field = Vals.Element (J).Key then
             return True;
          end if;
       end loop;

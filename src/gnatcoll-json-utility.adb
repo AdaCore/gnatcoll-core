@@ -26,10 +26,6 @@ pragma Ada_2012;
 with Ada.Characters.Wide_Wide_Latin_1; use Ada.Characters.Wide_Wide_Latin_1;
 with Interfaces;                       use Interfaces;
 
-pragma Warnings (Off, "*internal GNAT unit*");
-with Ada.Strings.Unbounded.Aux;
-pragma Warnings (On, "*internal GNAT unit*");
-
 with GNAT.Encode_UTF8_String;
 with GNAT.Decode_UTF8_String;
 
@@ -86,19 +82,15 @@ package body GNATCOLL.JSON.Utility is
    -- Escape_String --
    -------------------
 
-   function Escape_String
-     (Text : UTF8_Unbounded_String) return Unbounded_String
-   is
-      use Ada.Strings.Unbounded.Aux;
-
-      Str         : Big_String_Access;
+   function Escape_String (Text : UTF8_XString) return Unbounded_String is
+      Str         : GNATCOLL.Strings.Char_Array;
       Text_Length : Natural;
       Ret         : Unbounded_String;
       Low         : Natural;
       W_Chr       : Wide_Wide_Character;
 
    begin
-      Get_String (Text, Str, Text_Length);
+      Text.Get_String (Str, Text_Length);
 
       Append (Ret, '"');
       Low := 1;
@@ -108,7 +100,8 @@ package body GNATCOLL.JSON.Utility is
 
          begin
             GNAT.Decode_UTF8_String.Decode_Wide_Wide_Character
-              (Str (Low .. Natural'Min (Text_Length, Low + 3)), Low, W_Chr);
+              (String (Str (Low .. Natural'Min (Text_Length, Low + 3))),
+               Low, W_Chr);
          exception
             when Constraint_Error =>
                --  Skip the character even if it is invalid.
@@ -157,11 +150,11 @@ package body GNATCOLL.JSON.Utility is
    function Un_Escape_String
      (Text : Unbounded_String;
       Low  : Natural;
-      High : Natural) return UTF8_Unbounded_String
+      High : Natural) return UTF8_XString
    is
       First : Integer;
       Last  : Integer;
-      Unb   : Unbounded_String;
+      Unb   : UTF8_XString;
       Idx   : Natural;
 
    begin
@@ -226,29 +219,28 @@ package body GNATCOLL.JSON.Utility is
                         Idx := Idx + 6;
                      end if;
 
-                     Append
-                       (Unb,
-                        GNAT.Encode_UTF8_String.Encode_Wide_Wide_String
+                     Unb.Append
+                       (GNAT.Encode_UTF8_String.Encode_Wide_Wide_String
                           ((1 => Char)));
                      Idx := Idx + 4;
                   end;
 
                when '"' =>
-                  Append (Unb, '"');
+                  Unb.Append ('"');
                when '/' =>
-                  Append (Unb, '/');
+                  Unb.Append ('/');
                when '\' =>
-                  Append (Unb, '\');
+                  Unb.Append ('\');
                when 'b' =>
-                  Append (Unb, ASCII.BS);
+                  Unb.Append (ASCII.BS);
                when 'f' =>
-                  Append (Unb, ASCII.FF);
+                  Unb.Append (ASCII.FF);
                when 'n' =>
-                  Append (Unb, ASCII.LF);
+                  Unb.Append (ASCII.LF);
                when 'r' =>
-                  Append (Unb, ASCII.CR);
+                  Unb.Append (ASCII.CR);
                when 't' =>
-                  Append (Unb, ASCII.HT);
+                  Unb.Append (ASCII.HT);
                when others =>
                   raise Invalid_JSON_Stream with
                     "Unexpected escape sequence '\" &
@@ -256,7 +248,7 @@ package body GNATCOLL.JSON.Utility is
             end case;
 
          else
-            Append (Unb, Element (Text, Idx));
+            Unb.Append (Element (Text, Idx));
          end if;
 
          Idx := Idx + 1;

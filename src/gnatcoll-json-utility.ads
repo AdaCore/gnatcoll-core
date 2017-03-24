@@ -21,14 +21,15 @@
 --                                                                          --
 ------------------------------------------------------------------------------
 
+with GNATCOLL.Strings;
+
 private package GNATCOLL.JSON.Utility is
 
    JsonMimeType           : constant String := "application/json";
 
    function Escape_Non_Print_Character (C : Wide_Wide_Character) return String;
 
-   function Escape_String
-     (Text : UTF8_Unbounded_String)
+   function Escape_String (Text : UTF8_XString)
       return Ada.Strings.Unbounded.Unbounded_String;
    --  Translates an UTF-8 encoded unbounded string into a JSON-escaped string
 
@@ -36,7 +37,7 @@ private package GNATCOLL.JSON.Utility is
      (Text : Ada.Strings.Unbounded.Unbounded_String;
       Low  : Natural;
       High : Natural)
-      return UTF8_Unbounded_String;
+      return UTF8_XString;
    --  Translates a JSON-escaped string into an UTF-8 encoded unbounded string
    --  Low represents the lower bound of the JSON string in Text
    --  High represents the higher bound of the JSON string in Text

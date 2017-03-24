@@ -24,6 +24,7 @@
 with Ada.Finalization;
 with Ada.Strings.Unbounded;
 with Ada.Unchecked_Deallocation;
+with GNATCOLL.Strings;
 
 private with Ada.Containers.Vectors;
 private with GNATCOLL.Atomic;
@@ -45,6 +46,7 @@ package GNATCOLL.JSON is
    type UTF8_String_Access is access all UTF8_String;
 
    subtype UTF8_Unbounded_String is Ada.Strings.Unbounded.Unbounded_String;
+   subtype UTF8_XString is GNATCOLL.Strings.XString;
 
    subtype JSON_Elementary_Value_Type is JSON_Value_Type range
      JSON_Null_Type .. JSON_String_Type;
@@ -142,6 +144,10 @@ package GNATCOLL.JSON is
    pragma Postcondition (Kind (Create'Result) = JSON_String_Type);
    --  Creates a string-typed JSON value
 
+   function Create (Val : UTF8_XString) return JSON_Value;
+   pragma Postcondition (Kind (Create'Result) = JSON_String_Type);
+   --  Creates a string-typed JSON value
+
    function Create (Val : JSON_Array) return JSON_Value;
    pragma Postcondition (Kind (Create'Result) = JSON_Array_Type);
    --  Creates a JSON value from the JSON array
@@ -178,6 +184,14 @@ package GNATCOLL.JSON is
    procedure Set_Field
      (Val        : JSON_Value;
       Field_Name : UTF8_String;
+      Field      : JSON_Value);
+   pragma Precondition (Kind (Val) = JSON_Object_Type);
+   --  Adds or modifies the named field for the specified json object, using
+   --  the Field value.
+
+   procedure Set_Field
+     (Val        : JSON_Value;
+      Field_Name : UTF8_XString;
       Field      : JSON_Value);
    pragma Precondition (Kind (Val) = JSON_Object_Type);
    --  Adds or modifies the named field for the specified json object, using
@@ -264,6 +278,9 @@ package GNATCOLL.JSON is
    pragma Precondition (Kind (Val) = JSON_String_Type);
 
    function Get (Val : JSON_Value) return UTF8_Unbounded_String;
+   pragma Precondition (Kind (Val) = JSON_String_Type);
+
+   function Get (Val : JSON_Value) return UTF8_XString;
    pragma Precondition (Kind (Val) = JSON_String_Type);
 
    function Get (Val : JSON_Value) return JSON_Array;
@@ -356,7 +373,7 @@ private
          when JSON_Boolean_Type => Bool_Value : Boolean;
          when JSON_Int_Type     => Int_Value  : Long_Long_Integer;
          when JSON_Float_Type   => Flt_Value  : Long_Float;
-         when JSON_String_Type  => Str_Value  : UTF8_Unbounded_String;
+         when JSON_String_Type  => Str_Value  : UTF8_XString;
          when JSON_Array_Type   => Arr_Value  : JSON_Array_Access;
          when JSON_Object_Type  => Obj_Value  : JSON_Object_Access;
       end case;
@@ -386,7 +403,7 @@ private
    --  JSON Object definition:
 
    type Object_Item is record
-      Key : UTF8_Unbounded_String;
+      Key : UTF8_XString;
       Val : JSON_Value;
    end record;
 
