@@ -36,9 +36,13 @@ pragma Ada_2012;
 private with Ada.Containers.Vectors;
 with Ada.Containers.Indefinite_Vectors;
 with Ada.Containers.Indefinite_Ordered_Maps;
+with Ada.Containers.Indefinite_Hashed_Sets;
+with Ada.Strings.Equal_Case_Insensitive;
+with Ada.Strings.Hash_Case_Insensitive;
 with GNATCOLL.SQL.Exec;           use GNATCOLL.SQL.Exec;
 with GNATCOLL.Utils;              use GNATCOLL.Utils;
 with GNATCOLL.VFS;
+with GNATCOLL.Strings;            use GNATCOLL.Strings;
 with GNAT.Regexp;                 use GNAT.Regexp;
 private with GNATCOLL.Refcount;
 private with GNAT.Strings;
@@ -58,6 +62,11 @@ package GNATCOLL.SQL.Inspect is
    --  A Field_Mapping describes how a SQL type (found in a database schema)
    --  is mapped to an Ada field type (given as a string, since the
    --  purpose is to generate code) and to parameter types.
+
+   package String_Sets is new Ada.Containers.Indefinite_Hashed_Sets
+     (String, Ada.Strings.Hash_Case_Insensitive,
+      Ada.Strings.Equal_Case_Insensitive,
+      Ada.Strings.Equal_Case_Insensitive);
 
    function Type_To_SQL
      (Self         : Field_Mapping;
@@ -418,6 +427,7 @@ package GNATCOLL.SQL.Inspect is
    type File_Schema_IO is new Schema_IO with record
       DB   : Database_Connection;
       File : GNATCOLL.VFS.Virtual_File;
+      Omit_Schema : String_Sets.Set;
    end record;
    overriding function Read_Schema (Self : File_Schema_IO) return DB_Schema;
    function Read_Schema

@@ -25,17 +25,13 @@ pragma Ada_2012;
 with Ada.Characters.Handling;     use Ada.Characters.Handling;
 with Ada.Command_Line;
 with Ada.Containers.Hashed_Sets;  use Ada.Containers;
-with Ada.Containers.Indefinite_Hashed_Sets;
 with Ada.Exceptions;              use Ada.Exceptions;
-with Ada.Strings.Equal_Case_Insensitive;
 with Ada.Strings.Fixed;           use Ada.Strings, Ada.Strings.Fixed;
-with Ada.Strings.Hash_Case_Insensitive;
 with Ada.Strings.Maps;            use Ada.Strings.Maps;
 with Ada.Text_IO;                 use Ada.Text_IO;
 with Ada.Unchecked_Deallocation;
 with GNAT.Strings;                use GNAT.Strings;
 with GNATCOLL.Mmap;               use GNATCOLL.Mmap;
-with GNATCOLL.Strings;
 with GNATCOLL.Traces;             use GNATCOLL.Traces;
 with GNATCOLL.VFS;                use GNATCOLL.VFS;
 
@@ -44,6 +40,7 @@ package body GNATCOLL.SQL.Inspect is
 
    use Tables_Maps, Field_Lists, Foreign_Refs;
    use Foreign_Keys, Pair_Lists, Tables_Lists;
+   use String_Lists, String_Sets;
 
    package Field_Mapping_Vectors is new Ada.Containers.Indefinite_Vectors
      (Positive, Field_Mapping'Class);
@@ -53,14 +50,6 @@ package body GNATCOLL.SQL.Inspect is
    --  it will be used to call Type_From_SQL when parsing the database schema.
 
    Invalid_Schema : exception;
-
-   use String_Lists;
-
-   package String_Sets is new Ada.Containers.Indefinite_Hashed_Sets
-     (String, Ada.Strings.Hash_Case_Insensitive,
-      Ada.Strings.Equal_Case_Insensitive,
-      Ada.Strings.Equal_Case_Insensitive);
-   use String_Sets;
 
    Keywords : String_Sets.Set;
 
@@ -1558,8 +1547,6 @@ package body GNATCOLL.SQL.Inspect is
    overriding procedure Write_Schema
      (Self : DB_Schema_IO; Schema : DB_Schema)
    is
-      use GNATCOLL.Strings;
-
       Created : String_Lists.Vector;
       --  List of tables that have been created. When a table has already been
       --  created, we set the foreign key constraints to it immediately,
@@ -2113,6 +2100,25 @@ package body GNATCOLL.SQL.Inspect is
       procedure For_Field (F : in out Field);
       --  Process a field
 
+      function Omit_Schema (Name : String) return String;
+      --  Remove schema prefix if it is defined in -omit-schema parameter
+
+      -----------------
+      -- Omit_Schema --
+      -----------------
+
+      function Omit_Schema (Name : String) return String is
+         Dot : constant Natural := Index (Name, ".");
+      begin
+         if Dot = 0
+           or else not Self.Omit_Schema.Contains (Name (Name'First .. Dot - 1))
+         then
+            return Name;
+         end if;
+
+         return Name (Dot + 1 .. Name'Last);
+      end Omit_Schema;
+
       --------------
       -- SQL_Type --
       --------------
@@ -2128,7 +2134,7 @@ package body GNATCOLL.SQL.Inspect is
                  (Self.DB, For_Database => True);
             end if;
          else
-            return "FK " & FK.Get_Table.Name;
+            return "FK " & Omit_Schema (FK.Get_Table.Name);
          end if;
       end SQL_Type;
 
@@ -2210,6 +2216,8 @@ package body GNATCOLL.SQL.Inspect is
             end loop;
          end Write_Index;
 
+         Table_Name : constant String := Omit_Schema (Table.Name);
+
       begin
          --  Compute widths
          --  Minimum size of column 1 is 5 (for "TABLE")
@@ -2232,18 +2240,18 @@ package body GNATCOLL.SQL.Inspect is
             when Kind_Table =>
                Put
                  ("|TABLE" & (1 .. Column_Widths (1) - 5 => ' ')
-                  & "| " & Table.Name & ASCII.LF);
+                  & "| " & Table_Name & ASCII.LF);
             when Kind_View  =>
                Put
                  ("|VIEW" & (1 .. Column_Widths (1) - 4 => ' ')
-                  & "| " & Table.Name & ASCII.LF);
+                  & "| " & Table_Name & ASCII.LF);
          end case;
 
          For_Each_Field (Table, For_Field'Access, True);
 
          for FK of TDR (Table.Unchecked_Get).FK loop
             if Length (FK.Get.Fields) > 1 then
-               Put ("| FK: | " & FK.To_Table.Name & " | ");
+               Put ("| FK: | " & Omit_Schema (FK.To_Table.Name) & " | ");
 
                P := FK.Get.Fields.First;
                while Has_Element (P) loop

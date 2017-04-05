@@ -39,6 +39,7 @@ with GNATCOLL.SQL.Exec;          use GNATCOLL.SQL, GNATCOLL.SQL.Exec;
 with GNATCOLL.SQL.Inspect;       use GNATCOLL.SQL.Inspect;
 with GNATCOLL.SQL.Postgres;
 with GNATCOLL.SQL.Sqlite;
+with GNATCOLL.Strings;           use GNATCOLL.Strings;
 with GNATCOLL.Traces;            use GNATCOLL.Traces;
 with GNATCOLL.Utils;             use GNATCOLL.Utils;
 with GNATCOLL.VFS;               use GNATCOLL.VFS;
@@ -309,6 +310,7 @@ procedure GNATCOLL_Db2Ada is
       Put_Line ("    from a table, selected with criteria.");
       Put_Line ("-text: generate a textual description of the database,");
       Put_Line ("    instead of usual output. Disables -api.");
+      Put_Line ("-omit-schema: Schema name have to be omitted in text output");
       Put_Line ("-createdb: Creates the database given by -dbname");
       Put_Line ("-adacreate: Generates an Ada function to create the schema");
       Put_Line ("    and load the initial data (embedded files from -dbmodel");
@@ -362,7 +364,7 @@ procedure GNATCOLL_Db2Ada is
       loop
          case Getopt ("dbhost= h -help dbname= dbuser= dbpasswd= enum= var="
                       & " dbtype= dbmodel= dot text orm= createdb api="
-                      & " adacreate dbport= enum-image dbfilter="
+                      & " adacreate dbport= enum-image dbfilter= omit-schema="
                       & " ormtables= api-enums= load= output=")
          is
             when 'h' | '-' =>
@@ -455,6 +457,8 @@ procedure GNATCOLL_Db2Ada is
 
                elsif Full_Switch = "output" then
                   Output_Dir := Create (+Parameter);
+               elsif Full_Switch = "omit-schema" then
+                  File_IO.Omit_Schema.Include (Parameter);
                end if;
 
             when others =>
