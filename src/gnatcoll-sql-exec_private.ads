@@ -93,6 +93,9 @@ private package GNATCOLL.SQL.Exec_Private is
    function Float_Value
      (Self  : DBMS_Forward_Cursor;
       Field : Field_Index) return Float;
+   function Long_Float_Value
+     (Self  : DBMS_Forward_Cursor;
+      Field : Field_Index) return Long_Float;
    function Money_Value
      (Self  : DBMS_Forward_Cursor;
       Field : Field_Index) return T_Money;

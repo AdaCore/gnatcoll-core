@@ -266,7 +266,7 @@ package GNATCOLL.SQL is
 
    function Float_To_SQL is new Any_Float_To_SQL (Float);
    package Float_Parameters is new Scalar_Parameters
-      (Float, "float", Float_To_SQL);
+      (Float, "real", Float_To_SQL);
    subtype SQL_Parameter_Float is Float_Parameters.SQL_Parameter;
    package Float_Fields is new Field_Types
      (Float, Float_To_SQL, SQL_Parameter_Float);
@@ -274,6 +274,18 @@ package GNATCOLL.SQL is
    Null_Field_Float : constant SQL_Field_Float;
    function Float_Param (Index : Positive) return Float_Fields.Field'Class
                          renames Float_Fields.Param;
+
+   function Long_Float_To_SQL is new Any_Float_To_SQL (Long_Float);
+   package Long_Float_Parameters is new Scalar_Parameters
+      (Long_Float, "float", Long_Float_To_SQL);
+   subtype SQL_Parameter_Long_Float is Long_Float_Parameters.SQL_Parameter;
+   package Long_Float_Fields is new Field_Types
+     (Long_Float, Long_Float_To_SQL, SQL_Parameter_Long_Float);
+   type SQL_Field_Long_Float is new Long_Float_Fields.Field with null record;
+   Null_Field_Long_Float : constant SQL_Field_Long_Float;
+   function Long_Float_Param
+     (Index : Positive) return Long_Float_Fields.Field'Class
+      renames Long_Float_Fields.Param;
 
    subtype T_Money is GNATCOLL.SQL_Impl.T_Money;
    function "=" (T1, T2 : T_Money) return Boolean
@@ -344,6 +356,9 @@ package GNATCOLL.SQL is
    function Expression
      (Value : Float) return Float_Fields.Field'Class
       renames Float_Fields.Expression;
+   function Expression
+     (Value : Long_Float) return Long_Float_Fields.Field'Class
+      renames Long_Float_Fields.Expression;
    function Expression
      (Value : Ada.Calendar.Time) return Time_Fields.Field'Class
      renames Time_Fields.Expression;
@@ -1266,6 +1281,8 @@ private
      (Boolean_Fields.Null_Field with null record);
    Null_Field_Float : constant SQL_Field_Float :=
      (Float_Fields.Null_Field with null record);
+   Null_Field_Long_Float : constant SQL_Field_Long_Float :=
+     (Long_Float_Fields.Null_Field with null record);
    Null_Field_Money : constant SQL_Field_Money :=
      (Money_Fields.Null_Field with null record);
    Null_Field_Time : constant SQL_Field_Time :=

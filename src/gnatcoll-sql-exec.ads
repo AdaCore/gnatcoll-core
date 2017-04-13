@@ -168,6 +168,7 @@ package GNATCOLL.SQL.Exec is
    function As_Bigint (Value : Long_Long_Integer) return SQL_Parameter;
    function "+" (Value : Boolean) return SQL_Parameter;
    function "+" (Value : Float) return SQL_Parameter;
+   function As_Long_Float (Value : Long_Float) return SQL_Parameter;
    function "+" (Value : Character) return SQL_Parameter;
    function "+" (Time : Ada.Calendar.Time) return SQL_Parameter;
    function "+" (Value : T_Money) return SQL_Parameter;
@@ -593,6 +594,16 @@ package GNATCOLL.SQL.Exec is
      (Self : Forward_Cursor; Field : Field_Index) return Float;
    --  Reads a value as a float. The second version might raise a
    --  Constraint_Error if the field is null or does not contain a float.
+   --  The first version will return the default instead.
+
+   function Long_Float_Value
+     (Self    : Forward_Cursor;
+      Field   : Field_Index;
+      Default : Long_Float) return Long_Float;
+   function Long_Float_Value
+     (Self : Forward_Cursor; Field : Field_Index) return Long_Float;
+   --  Reads a value as a long float. The second version might raise a
+   --  Constraint_Error if the field is null or does not contain a long float.
    --  The first version will return the default instead.
 
    function Money_Value

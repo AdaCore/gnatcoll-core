@@ -37,6 +37,10 @@ package body GNATCOLL.SQL.Exec_Private is
      (Self : DBMS_Forward_Cursor'Class; Field : Field_Index) return String
    is (Value (Self, Field)) with Inline_Always;
 
+   generic
+      type Base_Type is digits <>;
+   function Any_Float_Value (S : String) return Base_Type;
+
    -----------
    -- Value --
    -----------
@@ -92,17 +96,13 @@ package body GNATCOLL.SQL.Exec_Private is
       return Long_Long_Integer'Value (Self.Class_Value (Field));
    end Bigint_Value;
 
-   -----------------
-   -- Float_Value --
-   -----------------
+   ---------------------
+   -- Any_Float_Value --
+   ---------------------
 
-   function Float_Value
-     (Self  : DBMS_Forward_Cursor;
-      Field : Field_Index) return Float
-   is
-      S    : constant String := Self.Class_Value (Field);
+   function Any_Float_Value (S : String) return Base_Type is
       pragma Warnings (Off, "*is not modified, could be declared constant");
-      Zero : Float := 0.0;
+      Zero : Base_Type := 0.0;
       pragma Warnings (On, "*is not modified, could be declared constant");
    begin
       if S = "NaN" then
@@ -112,9 +112,35 @@ package body GNATCOLL.SQL.Exec_Private is
       elsif S = "Infinity" then
          return 1.0 / Zero;
       else
-         return Float'Value (S);
+         return Base_Type'Value (S);
       end if;
+   end Any_Float_Value;
+
+   -----------------
+   -- Float_Value --
+   -----------------
+
+   function Float_Value
+     (Self  : DBMS_Forward_Cursor;
+      Field : Field_Index) return Float
+   is
+      function To_Float is new Any_Float_Value (Float);
+   begin
+      return To_Float (Self.Class_Value (Field));
    end Float_Value;
+
+   ----------------------
+   -- Long_Float_Value --
+   ----------------------
+
+   function Long_Float_Value
+     (Self  : DBMS_Forward_Cursor;
+      Field : Field_Index) return Long_Float
+   is
+      function To_Float is new Any_Float_Value (Long_Float);
+   begin
+      return To_Float (Self.Class_Value (Field));
+   end Long_Float_Value;
 
    -----------------
    -- Money_Value --

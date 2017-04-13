@@ -1329,6 +1329,29 @@ package body GNATCOLL.SQL.Exec is
          return Default;
    end Float_Value;
 
+   ----------------------
+   -- Long_Float_Value --
+   ----------------------
+
+   function Long_Float_Value
+     (Self : Forward_Cursor; Field : Field_Index) return Long_Float is
+   begin
+      return Long_Float_Value
+               (DBMS_Forward_Cursor'Class (Self.Res.all), Field);
+   end Long_Float_Value;
+
+   function Long_Float_Value
+     (Self    : Forward_Cursor;
+      Field   : Field_Index;
+      Default : Long_Float) return Long_Float is
+   begin
+      return Long_Float_Value
+               (DBMS_Forward_Cursor'Class (Self.Res.all), Field);
+   exception
+      when Constraint_Error | Interfaces.C.Strings.Dereference_Error =>
+         return Default;
+   end Long_Float_Value;
+
    -----------
    -- Value --
    -----------
@@ -1893,6 +1916,19 @@ package body GNATCOLL.SQL.Exec is
       R.Set (P);
       return R;
    end "+";
+
+   -------------------
+   -- As_Long_Float --
+   -------------------
+
+   function As_Long_Float (Value : Long_Float) return SQL_Parameter is
+      R : SQL_Parameter;
+      P : SQL_Parameter_Long_Float;
+   begin
+      P.Val := Value;
+      R.Set (P);
+      return R;
+   end As_Long_Float;
 
    ---------
    -- "+" --
