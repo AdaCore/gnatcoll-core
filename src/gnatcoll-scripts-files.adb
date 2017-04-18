@@ -266,15 +266,26 @@ package body GNATCOLL.Scripts.Files is
          Info := Nth_Arg (Data, 1);
 
          declare
-            Project : constant GNATCOLL.Projects.Project_Type :=
-                        Get_Project (Info, Default_To_Root => True);
+            use GNATCOLL.Projects;
+            Project        : constant GNATCOLL.Projects.Project_Type :=
+                               Get_Project (Info, Default_To_Root => True);
+            Is_Native      : constant Boolean := Project.Get_Target = "native"
+              or else Project.Get_Target = "";
+            Include_Suffix : constant Boolean := Is_Native
+              or else Project.Attribute_Value
+                (Attribute => Build ("Builder", "Executable_Suffix")) /= "";
          begin
+            --  Don't include the suffix for non-native targets, unless if the
+            --  Builder'Executable_Suffix has been explicitly set in the
+            --  project.
+            --  This is a temporary workaround for Q304-013.
+
             Data.Set_Return_Value
               (Create_File
                  (Script => Data.Get_Script,
                   File   => Project.Executables_Directory
                   / Project.Executable_Name
-                     (Info.Base_Name, Include_Suffix => True)));
+                     (Info.Base_Name, Include_Suffix => Include_Suffix)));
          end;
       end if;
    end File_Command_Handler;
