@@ -12,12 +12,9 @@ available directly from their IDE and editors. But computing this information
 in the first place is tricky, especially for languages that support
 overloading of subprograms.
 
-The best tool to resolve these reference is a compiler, since by definition
-it understands the program and where each part comes from. Some compilers
-like GNAT and gcc can then generate extra output files which contain this
-information. For instance, GNAT will generate :file:`.ali` files when it
-compiles Ada source code, and gcc will generate :file:`.gli` files when
-it compiles C or C++ code and is run with *-fdump-xref* switch.
+Some compilers like GNAT and gcc can generate this information for Ada
+code bases. For instance, GNAT will generate :file:`.ali` files, which
+contain the navigation information, when compiling Ada or SPARK code.
 
 :file:`GNATCOLL.Xref` can then be used to parse and aggregate all those
 files into a single sqlite database, which can be conveniently used to
