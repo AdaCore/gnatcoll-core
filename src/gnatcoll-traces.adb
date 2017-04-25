@@ -582,8 +582,8 @@ package body GNATCOLL.Traces is
             end if;
 
             Tmp := new File_Stream_Record'
-              (Name       => new String'(Name),
-               File       => F,
+              (Name   => new String'(Name),
+               File   => F,
                others => <>);
             Add_To_Streams (Tmp);
          end;
@@ -607,18 +607,14 @@ package body GNATCOLL.Traces is
             end loop;
 
             if Supports_Buffer then
-               if Buf_Size = 0 then
-                  --  make unbuffered
-                  Dummy := setvbuf
-                     (File_Stream_Record (Tmp.all).File,
-                      System.Null_Address, IONBF, 0);
-
-               else
-                  --  make line buffered to speed up.
-                  Dummy := setvbuf
-                     (File_Stream_Record (Tmp.all).File,
-                      System.Null_Address, IOFBF, Buf_Size);
-               end if;
+               Dummy := setvbuf
+                 (File_Stream_Record (Tmp.all).File,
+                  System.Null_Address,
+                  (case Buf_Size is
+                      when 0      => IONBF,  -- unbuffered
+                      when 1      => IOLBF,  -- line buffered
+                      when others => IOFBF), -- full buffered
+                  Buf_Size);
             end if;
 
             Free (Args);
