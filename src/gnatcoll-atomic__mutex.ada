@@ -44,7 +44,7 @@ package body GNATCOLL.Atomic is
       Result : Atomic_Counter;
    begin
       GNAT.Task_Lock.Lock;
-      Ptr.all := Unsafe_Add (Ptr.all, Value);
+      Ptr.all := Atomic_Counter (Natural (Ptr.all) + Natural (Value));
       Result := Ptr.all;
       --   ??? Should use a memory barriere here
       GNAT.Task_Lock.Unlock;
@@ -71,7 +71,7 @@ package body GNATCOLL.Atomic is
       Result : Atomic_Counter;
    begin
       GNAT.Task_Lock.Lock;
-      Ptr.all := Unsafe_Sub (Ptr.all, Value);
+      Ptr.all := Atomic_Counter (Natural (Ptr.all) - Natural (Value));
       Result := Ptr.all;
       --   ??? Should use a memory barriere here
       GNAT.Task_Lock.Unlock;
