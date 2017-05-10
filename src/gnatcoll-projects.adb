@@ -2374,37 +2374,6 @@ package body GNATCOLL.Projects is
       --  Return True is S has a name that starts like a predefined unit
       --  (e.g. a.b, which should be replaced by a~b)
 
-      function Is_Runtime_Unit return Boolean;
-      --  Return True if Unit_Name is from the runtime
-
-      ---------------------
-      -- Is_Runtime_Unit --
-      ---------------------
-
-      function Is_Runtime_Unit return Boolean is
-         Index : Natural := Unit_Name'First;
-      begin
-         if Unit_Name = "ada"
-           or else Unit_Name = "interfaces"
-           or else Unit_Name = "system"
-           or else Unit_Name = "gnat"
-         then
-            return True;
-         end if;
-
-         while Index <= Unit_Name'Last
-           and then Unit_Name (Index) /= '.'
-         loop
-            Index := Index + 1;
-         end loop;
-
-         return Index <= Unit_Name'Last and then
-           (Unit_Name (Unit_Name'First .. Index - 1) = "ada" or else
-            Unit_Name (Unit_Name'First .. Index - 1) = "interfaces" or else
-            Unit_Name (Unit_Name'First .. Index - 1) = "system" or else
-            Unit_Name (Unit_Name'First .. Index - 1) = "gnat");
-      end Is_Runtime_Unit;
-
       ---------------------------
       -- Has_Predefined_Prefix --
       ---------------------------
@@ -2420,7 +2389,7 @@ package body GNATCOLL.Projects is
       UIndex  : Unit_Index;
       Lang    : Language_Ptr;
    begin
-      if Is_Runtime_Unit then
+      if Is_Ada_Predefined_Unit (Unit_Name) then
          declare
             Buffer : String := Substitute_Dot (Unit_Name, "-");
             Len    : Natural := Buffer'Length;
