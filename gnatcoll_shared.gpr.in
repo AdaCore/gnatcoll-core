@@ -36,7 +36,7 @@ abstract project GnatColl_Shared is
    Library_Type : Library_Type_Type :=
      external ("LIBRARY_TYPE", "@DEFAULT_LIBRARY_TYPE@");
 
-   type OS_Kind is ("Windows_NT", "unix");
+   type OS_Kind is ("Windows_NT", "unix", "osx");
    OS : OS_Kind := external ("OS", "unix");
 
    Python_Version := "@PYTHON_VERSION@";

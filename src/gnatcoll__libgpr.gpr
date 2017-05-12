@@ -71,7 +71,7 @@ project GnatColl is
 
    package Naming is
       case GnatColl_Shared.OS is
-         when "unix" =>
+         when "unix" | "osx" =>
             for Specification  ("GNATCOLL.Mmap.System")
               use "gnatcoll-mmap-system__unix.ads";
             for Implementation ("GNATCOLL.Mmap.System")
