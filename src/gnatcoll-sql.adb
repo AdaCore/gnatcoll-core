@@ -1285,6 +1285,19 @@ package body GNATCOLL.SQL is
       return Result;
    end SQL_In;
 
+   ------------
+   -- Exists --
+   ------------
+
+   function Exists (Subquery : SQL_Query) return SQL_Criteria is
+      Data : SQL_Criteria_Data (Criteria_Exists);
+      Result : SQL_Criteria;
+   begin
+      Data.Subquery2 := Subquery;
+      Set_Data (Result, Data);
+      return Result;
+   end Exists;
+
    ----------------
    -- SQL_Not_In --
    ----------------
@@ -1510,6 +1523,11 @@ package body GNATCOLL.SQL is
 
             Append (Result, To_String (Self.Subquery, Format));
             Append (Result, To_String (Self.In_String));
+            Append (Result, ")");
+
+         when Criteria_Exists =>
+            Result := To_Unbounded_String ("EXISTS (");
+            Append (Result, To_String (Self.Subquery2, Format));
             Append (Result, ")");
 
          when Criteria_Between | Criteria_Not_Between =>
@@ -1871,6 +1889,9 @@ package body GNATCOLL.SQL is
          when Criteria_In | Criteria_Not_In =>
             Append_Tables (Self.Arg, To);
 
+         when Criteria_Exists =>
+            null;
+
          when Criteria_Between | Criteria_Not_Between =>
             Append_Tables (Self.Arg2, To);
 
@@ -2117,6 +2138,9 @@ package body GNATCOLL.SQL is
 
          when Criteria_In | Criteria_Not_In =>
             Append_If_Not_Aggregate (Self.Arg, To, Is_Aggregate);
+
+         when Criteria_Exists =>
+            null;
 
          when Criteria_Between | Criteria_Not_Between =>
             Append_If_Not_Aggregate (Self.Arg2, To, Is_Aggregate);

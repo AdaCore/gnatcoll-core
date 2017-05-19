@@ -116,6 +116,7 @@ package GNATCOLL.SQL is
                               Criteria_Or,
                               Criteria_In,
                               Criteria_Not_In,
+                              Criteria_Exists,
                               Criteria_Between,
                               Criteria_Not_Between,
                               Criteria_Null,
@@ -730,9 +731,16 @@ package GNATCOLL.SQL is
    function Is_Not_Null (Self : SQL_Field'Class) return SQL_Criteria;
    --  Test whether a field is null or not (ie unset or set)
 
-   function Overlaps (Left, Right : SQL_Field'Class) return SQL_Criteria;
+   function Overlaps (Left, Right : SQL_Field'Class) return SQL_Criteria
+      with Obsolescent => "See GNATCOLL.SQL.Ranges.Overlap instead";
    --  Whether the range specified in Left overlaps the range specified in
    --  Right.
+   --  It is recommended to use GNATCOLL.SQL.Ranges instead (for postgreSQL)
+   --  which provides full support for ranges.
+
+   function Exists (Subquery : SQL_Query) return SQL_Criteria;
+   --  "EXISTS (subquery)"
+   --  Returns True if the subquery returns at least one row.
 
    -----------------
    -- Assignments --
@@ -1049,6 +1057,9 @@ private
             List      : SQL_Field_List;
             Subquery  : SQL_Query;
             In_String : Ada.Strings.Unbounded.Unbounded_String;
+
+         when Criteria_Exists =>
+            Subquery2 : SQL_Query;
 
          when Criteria_Between | Criteria_Not_Between =>
             Arg2  : SQL_Field_Pointer;
