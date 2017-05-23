@@ -39,7 +39,6 @@
 --  the near future.                                                         --
 -------------------------------------------------------------------------------
 
-with System.Address_To_Access_Conversions;
 with Ada.Unchecked_Conversion;
 with Interfaces.C;    use Interfaces.C;
 with System;          use System;
@@ -969,6 +968,13 @@ package body GNATCOLL.SQL.Postgres.Gnade is
       return PQconsumeInput (DB.Connection) /= 0;
    end Consume_Input;
 
+   procedure Consume_Input (DB : Database'Class) is
+   begin
+      if not Consume_Input (DB) then
+         raise PostgreSQL_Error with Error (DB);
+      end if;
+   end Consume_Input;
+
    -----------
    -- Flush --
    -----------
@@ -1021,26 +1027,29 @@ package body GNATCOLL.SQL.Postgres.Gnade is
                        Message : out Notification;
                        Done    : out Boolean)
    is
-      function PQnotifies (Conn : PGconnection) return System.Address;
+      type pgNotify is record
+         relname : CS.chars_ptr;
+         be_pid  : Backend_PID;
+         extra   : CS.chars_ptr;
+      end record;
+      pragma Convention (C, pgNotify);
+
+      function PQnotifies (Conn : PGconnection) return access pgNotify;
       pragma Import (C, PQnotifies, "PQnotifies");
 
-      procedure Free (Addr : System.Address);
-      pragma Import (C, Free, "free");
+      procedure PQ_Free (Addr : access pgNotify);
+      pragma Import (C, PQ_Free, "PQfreemem");
 
-      type NotiPtr is access all Notification;
-      package P is new System.Address_To_Access_Conversions (Notification);
-      function Cvt is new Ada.Unchecked_Conversion (P.Object_Pointer, NotiPtr);
-      N : NotiPtr;
-      A : constant System.Address := PQnotifies (DB.Connection);
+      N : constant access pgNotify := PQnotifies (DB.Connection);
 
    begin
-      N := Cvt (P.To_Pointer (A));
-      if N /= null then
-         Message := N.all;
-         Free (A);
-         Done := False;
-      else
-         Done := True;
+      Done := N = null;
+
+      if not Done then
+         Message.Channel_Name := To_XString (CS.Value (N.relname));
+         Message.Payload      := To_XString (CS.Value (N.extra));
+         Message.Notifier_PID := Integer (N.be_pid);
+         PQ_Free (N);
       end if;
    end Notifies;
 

@@ -26,6 +26,7 @@
 
 with Ada.Strings.Unbounded;
 with GNATCOLL.SQL.Exec;   use GNATCOLL.SQL.Exec;
+with GNATCOLL.Strings;    use GNATCOLL.Strings;
 with GNAT.Strings;        use GNAT.Strings;
 with GNATCOLL.SQL.Ranges;
 
@@ -68,6 +69,48 @@ package GNATCOLL.SQL.Postgres is
      (Description   : Database_Description;
       With_Password : Boolean) return String;
    --  Create a connection string from the database description
+
+   ----------------------------
+   -- Postgres notifications --
+   ----------------------------
+
+   type Notification is record
+      Channel_Name : XString;
+      Notifier_PID : Integer;
+      Payload      : XString;
+   end record;
+
+   procedure Notifies
+     (DB      : Database_Connection;
+      Message : out Notification;
+      Done    : out Boolean);
+   --  Returns the next notification from a list of unhandled notification
+   --  messages received from the backend. Done is set to False if there are
+   --  no pending notifications. In this case Message is not be set. If Done
+   --  is set to False, Message contains a valid Notification. Once a
+   --  notification is returned from Notifies, it is considered handled and
+   --  will be removed from the list of notifications.
+
+   procedure Consume_Input (DB : Database_Connection);
+   --  If input is available from the backend, consume it.
+   --  Note that the result does not say whether any input
+   --  data was actually collected. After calling Consume_Input, the
+   --  application may check Is_Busy and/or Notifies to see if their state
+   --  has changed.
+   --
+   --  Consume_Input may be called even if the application is not prepared to
+   --  deal with a result or notification just yet. The routine will read
+   --  available data and save it in a buffer, thereby causing a select(2)
+   --  read-ready indication to go away. The application can thus use
+   --  Consume_Input to clear the select condition immediately, and then
+   --  examine the results at leisure.
+
+   function Wait_For_Input
+     (DB      : Database_Connection;
+      Timeout : Duration := Duration'Last) return Boolean;
+   --  Waiting for available input and return False on timeout or True on
+   --  success. No need to call Consume_Input afterward, it is already called
+   --  internally on wait success.
 
    -------------------------
    -- Postgres extensions --

@@ -166,6 +166,16 @@ package body GNATCOLL.SQL.Postgres.Builder is
    --  The prepared statement is "DECLARE ... CURSOR" so there is nothing to
    --  reset. The cursor itself is created as part of the iteration
 
+   ---------------
+   -- To_Native --
+   ---------------
+
+   function To_Native
+     (Connection : Database_Connection) return access Gnade.Database'Class is
+   begin
+      return Postgresql_Connection_Record (Connection.all).Postgres;
+   end To_Native;
+
    generic
       type Base is abstract new DBMS_Forward_Cursor with private;
    package Postgresql_Cursors is

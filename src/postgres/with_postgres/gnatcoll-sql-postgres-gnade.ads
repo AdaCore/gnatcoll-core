@@ -41,6 +41,7 @@
 with Ada.Finalization;
 with Interfaces.C.Strings;
 with GNATCOLL.SQL_Impl;
+with GNATCOLL.Strings;
 with System;
 
 package GNATCOLL.SQL.Postgres.Gnade is
@@ -544,6 +545,9 @@ package GNATCOLL.SQL.Postgres.Gnade is
    --  Consume_Input to clear the select condition immediately, and then
    --  examine the results at leisure.
 
+   procedure Consume_Input (DB : Database'Class);
+   --  The same as above but raises exception in case of error
+
    function Flush (DB : Database'Class) return Boolean;
    pragma Inline (Flush);
    --  Attempt to flush any data queued to the backend, returns True if
@@ -589,13 +593,6 @@ package GNATCOLL.SQL.Postgres.Gnade is
    --  decision to cancel can be made in a signal handler. Note that
    --  Request_Cancel will have no effect if the connection is not currently
    --  open or the backend is not currently processing a query.
-
-   type Notification is
-      record
-         Relation_Name : String (1 .. NAMEDATALEN);
-         Notifier      : Backend_PID;
-      end record;
-   pragma Convention (C, Notification);
 
    procedure Notifies (DB      : Database'Class;
                        Message : out Notification;

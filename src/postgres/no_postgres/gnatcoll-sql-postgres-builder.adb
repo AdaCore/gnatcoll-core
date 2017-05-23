@@ -44,4 +44,12 @@ package body GNATCOLL.SQL.Postgres.Builder is
       return False;
    end Has_Postgresql_Support;
 
+   function To_Native
+     (Connection : Database_Connection) return access Gnade.Database'Class
+   is
+      pragma Unreferenced (Connection);
+   begin
+      return null;
+   end To_Native;
+
 end GNATCOLL.SQL.Postgres.Builder;

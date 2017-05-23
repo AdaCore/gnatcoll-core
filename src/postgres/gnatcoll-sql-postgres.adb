@@ -21,8 +21,12 @@
 --                                                                          --
 ------------------------------------------------------------------------------
 
+with Ada.Unchecked_Conversion;
 with Ada.Unchecked_Deallocation;
+with Interfaces.C;
+with GNAT.Sockets;
 with GNATCOLL.SQL.Postgres.Builder;
+with GNATCOLL.SQL.Postgres.Gnade;
 with GNATCOLL.Utils;                  use GNATCOLL.Utils;
 
 package body GNATCOLL.SQL.Postgres is
@@ -147,6 +151,59 @@ package body GNATCOLL.SQL.Postgres is
       Reset_Connection (DB);
       return DB;
    end Build_Connection;
+
+   --------------
+   -- Notifies --
+   --------------
+
+   procedure Notifies
+     (DB      : Database_Connection;
+      Message : out Notification;
+      Done    : out Boolean) is
+   begin
+      Builder.To_Native (DB).Notifies (Message, Done);
+   end Notifies;
+
+   -------------------
+   -- Consume_Input --
+   -------------------
+
+   procedure Consume_Input (DB : Database_Connection) is
+   begin
+      Builder.To_Native (DB).Consume_Input;
+   end Consume_Input;
+
+   --------------------
+   -- Wait_For_Input --
+   --------------------
+
+   function Wait_For_Input
+     (DB      : Database_Connection;
+      Timeout : Duration := Duration'Last) return Boolean
+   is
+      use GNAT.Sockets;
+      function To_Ada is new Ada.Unchecked_Conversion
+        (Interfaces.C.int, Socket_Type);
+      DBG : constant access Gnade.Database'Class := Builder.To_Native (DB);
+      Sel : Selector_Type;
+      St  : Selector_Status;
+      SS  : Socket_Set_Type;
+      SE  : Socket_Set_Type;
+   begin
+      Set (SS, To_Ada (DBG.Socket));
+      Create_Selector (Sel);
+      Check_Selector
+        (Sel, R_Socket_Set => SS, W_Socket_Set => SE, Status => St,
+         Timeout => Duration'Min (Forever, Timeout));
+      Close_Selector (Sel);
+
+      if St = Completed then
+         DBG.Consume_Input;
+         return True;
+      end if;
+
+      return False;
+   end Wait_For_Input;
 
    ---------------
    -- OID_Field --

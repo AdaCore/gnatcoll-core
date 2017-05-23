@@ -25,6 +25,8 @@
 --  This isn't in GNATCOLL.SQL.Postgres so that GNATCOLL can have the same API
 --  no matter whether postgresql is installed on the machine or not
 
+limited with GNATCOLL.SQL.Postgres.Gnade;
+
 private package GNATCOLL.SQL.Postgres.Builder is
 
    function Has_Postgresql_Support return Boolean;
@@ -33,5 +35,8 @@ private package GNATCOLL.SQL.Postgres.Builder is
    function Build_Connection
      (Descr : access Postgres_Description'Class) return Database_Connection;
    --  See doc in GNATCOLL.SQL.Postgres
+
+   function To_Native
+     (Connection : Database_Connection) return access Gnade.Database'Class;
 
 end GNATCOLL.SQL.Postgres.Builder;
