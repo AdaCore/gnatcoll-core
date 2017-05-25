@@ -27,7 +27,6 @@ with Ada.Containers;          use Ada.Containers;
 with Ada.Containers.Indefinite_Ordered_Sets;
 with Ada.Strings.Fixed;       use Ada.Strings.Fixed;
 with Ada.Strings.Maps;        use Ada.Strings.Maps;
-with Ada.Strings.Unbounded;   use Ada.Strings.Unbounded;
 with Ada.Text_IO;             use Ada.Text_IO;
 with GNATCOLL.Utils;          use GNATCOLL.Utils;
 
@@ -46,7 +45,7 @@ is
 
    Spec_File, Body_File : File_Type;
 
-   function Capitalize (Name : Unbounded_String) return String;
+   function Capitalize (Name : XString) return String;
    --  Make a name suitable for display
 
    function Get_Namespace (T_Descr : Table_Description) return String;
@@ -161,7 +160,7 @@ is
       Namespaces              : String_Sets.Set;
       Indent_Level            : Natural;
       Process_Abstract_Tables : Boolean;
-      Current_Namespace       : Unbounded_String;
+      Current_Namespace       : XString;
 
       procedure Add_Namespace (T_Descr : in out Table_Description);
       --  Add the namespace for T_Descr
@@ -401,7 +400,7 @@ is
       For_Each_Table (Schema, Add_Namespace'Access);
 
       for Namespace of Namespaces loop
-         Current_Namespace := To_Unbounded_String (Namespace);
+         Current_Namespace := To_XString (Namespace);
 
          if Namespace /= "" then
             New_Line (Spec_File);
@@ -442,7 +441,7 @@ is
    -- Capitalize --
    ----------------
 
-   function Capitalize (Name : Unbounded_String) return String is
+   function Capitalize (Name : XString) return String is
    begin
       return Capitalize (To_String (Name));
    end Capitalize;

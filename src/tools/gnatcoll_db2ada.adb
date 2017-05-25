@@ -28,7 +28,6 @@ with Ada.Containers.Indefinite_Doubly_Linked_Lists;
 with Ada.Exceptions;             use Ada.Exceptions;
 with Ada.Strings.Fixed;          use Ada.Strings.Fixed;
 with Ada.Text_IO;                use Ada.Text_IO;
-with Ada.Strings.Unbounded;      use Ada.Strings.Unbounded;
 with GNAT.Command_Line;          use GNAT.Command_Line;
 with GNAT.Expect;                use GNAT.Expect;
 with GNAT.OS_Lib;                use GNAT.OS_Lib;
@@ -82,11 +81,11 @@ procedure GNATCOLL_Db2Ada is
    use String_Lists;
 
    type Dumped_Enums is record
-      Table     : Unbounded_String;
-      Id        : Unbounded_String;
-      Base_Type : Unbounded_String;
-      Type_Name : Unbounded_String;
-      Prefix    : Unbounded_String;
+      Table     : XString;
+      Id        : XString;
+      Base_Type : XString;
+      Type_Name : XString;
+      Prefix    : XString;
       Names     : String_Lists.List;
       Values    : String_Lists.List;
    end record;
@@ -110,9 +109,9 @@ procedure GNATCOLL_Db2Ada is
    --  Register a table that should be dumped
 
    type Dumped_Vars is record
-      Name    : Unbounded_String;
-      Value   : Unbounded_String;
-      Comment : Unbounded_String;
+      Name    : XString;
+      Value   : XString;
+      Comment : XString;
    end record;
 
    function Ada_Quote (Str : String) return String;
@@ -611,7 +610,7 @@ procedure GNATCOLL_Db2Ada is
       -----------
 
       function Quote (Str : String) return String is
-         S : Unbounded_String;
+         S : XString;
       begin
          for C in Str'Range loop
             if not Is_Alphanumeric (Str (C)) then
@@ -646,17 +645,17 @@ procedure GNATCOLL_Db2Ada is
       R    : GNATCOLL.SQL.Exec.Forward_Cursor;
 
    begin
-      Enum.Table  := To_Unbounded_String (Table);
-      Enum.Id     := To_Unbounded_String (Id);
-      Enum.Prefix := To_Unbounded_String (Prefix);
+      Enum.Table  := To_XString (Table);
+      Enum.Id     := To_XString (Id);
+      Enum.Prefix := To_XString (Prefix);
 
       if Base_Type = "" then
-         Enum.Base_Type := To_Unbounded_String ("Integer");
+         Enum.Base_Type := To_XString ("Integer");
       else
-         Enum.Base_Type := To_Unbounded_String (Base_Type);
+         Enum.Base_Type := To_XString (Base_Type);
       end if;
 
-      Enum.Type_Name := To_Unbounded_String (Prefix & "_Id");
+      Enum.Type_Name := To_XString (Prefix & "_Id");
 
       if Name /=  "" then
          R.Fetch
@@ -692,9 +691,9 @@ procedure GNATCOLL_Db2Ada is
          R.Fetch (DB, "SELECT " & Field & " FROM """ & Table & '"');
       end if;
 
-      Var.Name    := To_Unbounded_String (Name);
-      Var.Value   := To_Unbounded_String (Value (R, 0));
-      Var.Comment := To_Unbounded_String (Comment);
+      Var.Name    := To_XString (Name);
+      Var.Value   := To_XString (Value (R, 0));
+      Var.Comment := To_XString (Comment);
       Append (Variables, Var);
    end Add_Variable;
 
