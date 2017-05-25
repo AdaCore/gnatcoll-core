@@ -107,6 +107,7 @@ private with Ada.Finalization;
 private with GNATCOLL.Refcount;
 with GNAT.Strings;
 with GNATCOLL.SQL_Impl;
+with GNATCOLL.Strings; use GNATCOLL.Strings;
 
 package GNATCOLL.SQL.Exec is
 
@@ -562,6 +563,10 @@ package GNATCOLL.SQL.Exec is
    function Unbounded_Value
      (Self : Forward_Cursor; Field : Field_Index) return Unbounded_String;
    --  Gets the field value as an Unbounded_String
+
+   function XString_Value
+     (Self : Forward_Cursor; Field : Field_Index) return XString;
+   --  Gets the field value as an XString
 
    function Boolean_Value
      (Self : Forward_Cursor; Field : Field_Index) return Boolean;

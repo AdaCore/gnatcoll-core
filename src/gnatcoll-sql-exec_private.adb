@@ -64,6 +64,16 @@ package body GNATCOLL.SQL.Exec_Private is
    end Unbounded_Value;
 
    -------------------
+   -- XString_Value --
+   -------------------
+
+   function XString_Value
+     (Self : DBMS_Forward_Cursor; Field : Field_Index) return XString is
+   begin
+      return To_XString (Self.Class_Value (Field));
+   end XString_Value;
+
+   -------------------
    -- Boolean_Value --
    -------------------
 

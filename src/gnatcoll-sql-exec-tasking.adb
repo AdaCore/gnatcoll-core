@@ -23,13 +23,12 @@
 
 pragma Ada_2012;
 
-with Ada.Containers.Indefinite_Hashed_Maps;
+with Ada.Containers.Hashed_Maps;
 with Ada.Containers.Indefinite_Vectors;
 with Ada.Finalization;
 with Ada.Task_Attributes;
-
-with Ada.Strings.Unbounded.Hash; use Ada.Strings.Unbounded;
 with Ada.Task_Identification;    use Ada.Task_Identification;
+with GNATCOLL.Strings;           use GNATCOLL.Strings;
 with GNATCOLL.Traces;            use GNATCOLL.Traces;
 with GNATCOLL.Refcount;          use GNATCOLL.Refcount;
 with GNATCOLL.SQL.Exec_Private;  use GNATCOLL.SQL.Exec_Private;
@@ -77,7 +76,7 @@ package body GNATCOLL.SQL.Exec.Tasking is
    ---------------------------------------
 
    type Field_Value is record
-      Element : Unbounded_String;
+      Element : XString;
       Empty   : Boolean := False;
    end record;
 
@@ -87,14 +86,14 @@ package body GNATCOLL.SQL.Exec.Tasking is
      new Ada.Containers.Indefinite_Vectors (Natural, Record_Type);
    --  Zero index is for field names
 
-   package String_Indexes is new Ada.Containers.Indefinite_Hashed_Maps
-     (Unbounded_String, Positive, Hash, Equivalent_Keys => "=");
+   package String_Indexes is new Ada.Containers.Hashed_Maps
+     (XString, Positive, Hash, Equivalent_Keys => "=");
 
    type Data_Set is record
       Table   : Data_Set_Vectors.Vector;
       Index   : String_Indexes.Map;
-      Error   : Unbounded_String;
-      Status  : Unbounded_String;
+      Error   : XString;
+      Status  : XString;
       TID     : Task_Id; -- Keep the Task ID where the cursor is filled
       Success : Boolean;
    end record;
@@ -153,8 +152,8 @@ package body GNATCOLL.SQL.Exec.Tasking is
    overriding function Value
      (Self : Task_Cursor; Field : Field_Index) return String;
 
-   overriding function Unbounded_Value
-     (Self : Task_Cursor; Field : Field_Index) return Unbounded_String;
+   overriding function XString_Value
+     (Self : Task_Cursor; Field : Field_Index) return XString;
 
    overriding function Boolean_Value
      (Self : Task_Cursor; Field : Field_Index) return Boolean;
@@ -272,7 +271,7 @@ package body GNATCOLL.SQL.Exec.Tasking is
          raise Constraint_Error with Not_Indexed;
       end if;
 
-      C := TC.Data.Get.Index.Find (To_Unbounded_String (Value));
+      C := TC.Data.Get.Index.Find (To_XString (Value));
 
       if String_Indexes.Has_Element (C) then
          TC.Position := String_Indexes.Element (C);
@@ -291,15 +290,15 @@ package body GNATCOLL.SQL.Exec.Tasking is
       return To_String (Self.Data.Get.Table (Self.Position) (Field).Element);
    end Value;
 
-   ---------------------
-   -- Unbounded_Value --
-   ---------------------
+   -------------------
+   -- XString_Value --
+   -------------------
 
-   overriding function Unbounded_Value
-     (Self : Task_Cursor; Field : Field_Index) return Unbounded_String is
+   overriding function XString_Value
+     (Self : Task_Cursor; Field : Field_Index) return XString is
    begin
       return Self.Data.Get.Table (Self.Position) (Field).Element;
-   end Unbounded_Value;
+   end XString_Value;
 
    ------------------------
    -- Task_Safe_Instance --
@@ -359,15 +358,15 @@ package body GNATCOLL.SQL.Exec.Tasking is
       Result := new Task_Cursor;
 
       Result.Data.Set (Data_Set'
-                         (Error   => To_Unbounded_String (Src.Error_Msg),
-                          Status  => To_Unbounded_String (Src.Status),
+                         (Error   => To_XString (Src.Error_Msg),
+                          Status  => To_XString (Src.Status),
                           Success => Src.Is_Success,
                           TID     => Current_Task,
                           Table   => <>,
                           Index   => <>));
 
       for J in Row'Range loop
-         Set_Unbounded_String (Row (J).Element, Src.Field_Name (J));
+         Row (J).Element := To_XString (Src.Field_Name (J));
       end loop;
 
       Result.Data.Get.Table.Append (Row);
@@ -375,9 +374,9 @@ package body GNATCOLL.SQL.Exec.Tasking is
       while Src.Has_Row loop
          for J in Row'Range loop
             if Src.Is_Null (J) then
-               Row (J) := (Null_Unbounded_String, True);
+               Row (J) := (Null_XString, True);
             else
-               Set_Unbounded_String (Row (J).Element, Src.Value (J));
+               Row (J).Element := To_XString (Src.Value (J));
                Row (J).Empty := False;
             end if;
          end loop;

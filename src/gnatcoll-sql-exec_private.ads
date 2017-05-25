@@ -29,6 +29,7 @@
 --  API.
 
 with GNATCOLL.SQL.Exec;    use GNATCOLL.SQL.Exec;
+with GNATCOLL.Strings;     use GNATCOLL.Strings;
 with Interfaces.C.Strings; use Interfaces.C.Strings;
 
 private package GNATCOLL.SQL.Exec_Private is
@@ -78,6 +79,9 @@ private package GNATCOLL.SQL.Exec_Private is
    function Unbounded_Value
      (Self  : DBMS_Forward_Cursor;
       Field : Field_Index) return Unbounded_String;
+   function XString_Value
+     (Self  : DBMS_Forward_Cursor;
+      Field : Field_Index) return XString;
    function C_Value
      (Self  : DBMS_Forward_Cursor;
       Field : Field_Index) return Interfaces.C.Strings.chars_ptr is abstract;

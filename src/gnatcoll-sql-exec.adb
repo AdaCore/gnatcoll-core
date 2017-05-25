@@ -1241,6 +1241,16 @@ package body GNATCOLL.SQL.Exec is
    end Unbounded_Value;
 
    -------------------
+   -- XString_Value --
+   -------------------
+
+   function XString_Value
+     (Self : Forward_Cursor; Field : Field_Index) return XString is
+   begin
+      return XString_Value (DBMS_Forward_Cursor'Class (Self.Res.all), Field);
+   end XString_Value;
+
+   -------------------
    -- Boolean_Value --
    -------------------
 
