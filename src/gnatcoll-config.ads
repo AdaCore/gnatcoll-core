@@ -47,7 +47,7 @@ pragma Ada_05;
 
 private with Ada.Containers.Indefinite_Hashed_Maps;
 private with Ada.Strings.Hash;
-private with Ada.Strings.Unbounded;
+private with GNATCOLL.Strings;
 with GNATCOLL.VFS;
 
 package GNATCOLL.Config is
@@ -256,27 +256,24 @@ private
    Section_From_Key : constant String := "#";
 
    type Config_Parser is abstract tagged record
-      System_ID : Ada.Strings.Unbounded.Unbounded_String;
+      System_ID : Strings.XString;
    end record;
 
    type File_Config_Parser is abstract new Config_Parser with record
-      Contents : Ada.Strings.Unbounded.Unbounded_String;
+      Contents : Strings.XString;
       First    : Integer := Integer'Last;
    end record;
 
    type INI_Parser is new File_Config_Parser with record
-      Equal, Eol    : Integer;
-      Current_Section : Ada.Strings.Unbounded.Unbounded_String;
-      Comment_Start : Ada.Strings.Unbounded.Unbounded_String :=
-        Ada.Strings.Unbounded.To_Unbounded_String ("#");
-      Use_Sections  : Boolean := True;
-
-      Home          : GNATCOLL.VFS.Virtual_File :=
-        GNATCOLL.VFS.Get_Home_Directory;
+      Equal, Eol      : Integer;
+      Current_Section : Strings.XString;
+      Comment_Start   : Strings.XString := Strings.To_XString ("#");
+      Use_Sections    : Boolean := True;
+      Home            : VFS.Virtual_File := VFS.Get_Home_Directory;
    end record;
 
    type Config_Value (Len : Natural) is record
-      System_ID : Ada.Strings.Unbounded.Unbounded_String;
+      System_ID : Strings.XString;
       Value     : String (1 .. Len);
    end record;
 
@@ -288,11 +285,11 @@ private
       "="             => "=");
 
    type Config_Key is tagged record
-      Section, Key : Ada.Strings.Unbounded.Unbounded_String;
+      Section, Key : Strings.XString;
    end record;
 
    type Config_Pool is tagged record
-      System_ID : Ada.Strings.Unbounded.Unbounded_String;
+      System_ID : Strings.XString;
       Keys      : String_Maps.Map;
    end record;
 

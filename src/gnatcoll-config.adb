@@ -22,10 +22,11 @@
 ------------------------------------------------------------------------------
 
 with Ada.Strings.Fixed;         use Ada.Strings.Fixed;
-with Ada.Strings.Unbounded;     use Ada.Strings.Unbounded;
+with Ada.Strings.Maps;          use Ada.Strings.Maps;
 with GNAT.Directory_Operations; use GNAT.Directory_Operations;
 with GNAT.OS_Lib;               use GNAT.OS_Lib;
 with GNATCOLL.Mmap;             use GNATCOLL.Mmap;
+with GNATCOLL.Strings;          use GNATCOLL.Strings;
 with GNATCOLL.Templates;        use GNATCOLL.Templates;
 with GNATCOLL.Utils;            use GNATCOLL.Utils;
 with GNATCOLL.VFS;              use GNATCOLL.VFS;
@@ -34,7 +35,9 @@ package body GNATCOLL.Config is
    use String_Maps;
 
    No_Value : constant Config_Value :=
-      (Len => 0, System_Id => Null_Unbounded_String, Value => (others => ' '));
+      (Len => 0, System_Id => Null_XString, Value => (others => ' '));
+
+   Space_CR : constant Character_Set := To_Set (" " & ASCII.CR);
 
    function Internal_Get
      (Self    : Config_Pool;
@@ -57,7 +60,7 @@ package body GNATCOLL.Config is
 
    procedure Set_System_Id (Self : in out Config_Parser; System_ID : String) is
    begin
-      Self.System_ID := To_Unbounded_String (Normalize_Pathname (System_ID));
+      Self.System_ID := To_XString (Normalize_Pathname (System_ID));
    end Set_System_Id;
 
    ----------------
@@ -122,9 +125,8 @@ package body GNATCOLL.Config is
       Read (F);
       Str := Data (F);
 
-      Self.Contents := To_Unbounded_String (String (Str (1 .. Last (F))));
-      Self.System_ID := To_Unbounded_String
-        (Normalize_Pathname (Dir_Name (Filename)));
+      Self.Contents := To_XString (String (Str (1 .. Last (F))));
+      Self.System_ID := To_XString (Normalize_Pathname (Dir_Name (Filename)));
       Self.First    := 1;
 
       Close (F);
@@ -155,7 +157,7 @@ package body GNATCOLL.Config is
    ----------
 
    overriding procedure Next (Self : in out INI_Parser) is
-      Eol   : Integer := Self.First;
+      Eol   : Integer;
       Tmp   : Integer;
       Last  : constant Integer := Length (Self.Contents);
       Comment : constant Integer := Length (Self.Comment_Start);
@@ -167,18 +169,18 @@ package body GNATCOLL.Config is
          Eol := Self.First;
          Self.Equal := 0;
          while Eol <= Last
-           and then Element (Self.Contents, Eol) /= ASCII.LF
+           and then Self.Contents (Eol) /= ASCII.LF
          loop
-            if Self.Equal = 0 and then Element (Self.Contents, Eol) = '=' then
+            if Self.Equal = 0 and then Self.Contents (Eol) = '=' then
                Self.Equal := Eol;
             end if;
             Eol := Eol + 1;
          end loop;
 
-         Self.Eol   := Eol;
+         Self.Eol := Eol;
 
          Tmp := Eol - 1;
-         if Tmp >= 1 and then Element (Self.Contents, Tmp) = ASCII.CR then
+         if Tmp >= 1 and then Self.Contents (Tmp) = ASCII.CR then
             Tmp := Tmp - 1;
          end if;
 
@@ -192,11 +194,11 @@ package body GNATCOLL.Config is
             null;
 
          elsif Self.Use_Sections
-           and then Element (Self.Contents, Self.First) = '['
-           and then Element (Self.Contents, Tmp) = ']'
+           and then Self.Contents (Self.First) = '['
+           and then Self.Contents (Tmp) = ']'
          then
-            Self.Current_Section := To_Unbounded_String
-              (Strip_CR (Slice (Self.Contents, Self.First + 1, Tmp - 1)));
+            Self.Current_Section :=
+              Self.Contents.Slice (Self.First + 1, Tmp - 1);
 
          elsif Self.Equal /= 0 then
             return;
@@ -217,7 +219,7 @@ package body GNATCOLL.Config is
       Home             : String := "")
    is
    begin
-      Self.Comment_Start := To_Unbounded_String (Comment_Start);
+      Self.Comment_Start := To_XString (Comment_Start);
       Self.Use_Sections  := Handles_Sections;
 
       if Home /= "" then
@@ -256,7 +258,7 @@ package body GNATCOLL.Config is
 
    overriding function Section (Self : INI_Parser) return String is
    begin
-      return To_String (Self.Current_Section);
+      return Self.Current_Section.To_String;
    end Section;
 
    ---------
@@ -265,9 +267,7 @@ package body GNATCOLL.Config is
 
    overriding function Key (Self : INI_Parser) return String is
    begin
-      return Trim
-        (Strip_CR (Slice (Self.Contents, Self.First, Self.Equal - 1)),
-         Side => Ada.Strings.Both);
+      return Self.Contents.Slice (Self.First, Self.Equal - 1).Trim.To_String;
    end Key;
 
    -----------
@@ -278,8 +278,9 @@ package body GNATCOLL.Config is
    begin
       return Substitute
         (Self,
-         Trim (Strip_CR (Slice (Self.Contents, Self.Equal + 1, Self.Eol - 1)),
-           Side => Ada.Strings.Left));
+         Trim
+           (Self.Contents.Slice (Self.Equal + 1, Self.Eol - 1).To_String,
+            Space_CR, Space_CR));
    end Value;
 
    ----------
@@ -304,7 +305,7 @@ package body GNATCOLL.Config is
 
    procedure Set_System_Id (Self : in out Config_Pool; System_ID : String) is
    begin
-      Self.System_ID := To_Unbounded_String (Normalize_Pathname (System_ID));
+      Self.System_ID := To_XString (Normalize_Pathname (System_ID));
    end Set_System_Id;
 
    ------------------
@@ -471,8 +472,8 @@ package body GNATCOLL.Config is
 
    function Create (Key : String; Section : String := "") return Config_Key is
    begin
-      return Config_Key'(Section => To_Unbounded_String (Section),
-                         Key     => To_Unbounded_String (Key));
+      return Config_Key'(Section => To_XString (Section),
+                         Key     => To_XString (Key));
    end Create;
 
    ---------
