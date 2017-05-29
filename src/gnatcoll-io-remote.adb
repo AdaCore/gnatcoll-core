@@ -532,12 +532,33 @@ package body GNATCOLL.IO.Remote is
    end File_Time_Stamp;
 
    -----------------
+   -- Is_Readable --
+   -----------------
+
+   overriding function Is_Readable
+     (File : not null access Remote_File_Record) return Boolean is
+   begin
+      Ensure_Initialized (File);
+
+      case File.Server.Shell_FS is
+         when FS_Unix | FS_Unix_Case_Insensitive =>
+            return GNATCOLL.IO.Remote.Unix.Is_Readable
+              (File.Server, File.Full.all);
+         when FS_Windows =>
+            return GNATCOLL.IO.Remote.Windows.Is_Readable
+              (File.Server, File.Full.all);
+         when FS_Unknown =>
+            raise Remote_Config_Error with
+              "Invalid FS for host " & File.Get_Host;
+      end case;
+   end Is_Readable;
+
+   -----------------
    -- Is_Writable --
    -----------------
 
    function Is_Writable
-     (File : not null access Remote_File_Record) return Boolean
-   is
+     (File : not null access Remote_File_Record) return Boolean is
    begin
       Ensure_Initialized (File);
 

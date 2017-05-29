@@ -126,6 +126,10 @@ private package GNATCOLL.IO is
    --  If Writable is True, make the file writable, otherwise make the file
    --  unwritable.
 
+   function Is_Readable
+     (File : not null access File_Record) return Boolean is abstract;
+   --  Return True if File is readable
+
    procedure Set_Readable
      (File  : not null access File_Record;
       State : Boolean) is abstract;

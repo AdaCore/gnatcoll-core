@@ -435,6 +435,21 @@ package body GNATCOLL.IO.Remote.Windows is
    end File_Time_Stamp;
 
    -----------------
+   -- Is_Readable --
+   -----------------
+
+   function Is_Readable
+     (Exec : access Server_Record'Class;
+      File : FS_String) return Boolean
+   is
+      pragma Unreferenced (Exec, File);
+   begin
+      --  A file cannot be unreadable on Windows, unless you use ACL (which we
+      --  don't here)
+      return True;
+   end Is_Readable;
+
+   -----------------
    -- Is_Writable --
    -----------------
 

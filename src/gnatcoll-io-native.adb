@@ -415,6 +415,16 @@ package body GNATCOLL.IO.Native is
    end File_Time_Stamp;
 
    -----------------
+   -- Is_Readable --
+   -----------------
+
+   function Is_Readable
+     (File : not null access Native_File_Record) return Boolean is
+   begin
+      return GNAT.OS_Lib.Is_Readable_File (String (File.Full.all));
+   end Is_Readable;
+
+   -----------------
    -- Is_Writable --
    -----------------
 

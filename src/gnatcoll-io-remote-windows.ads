@@ -62,6 +62,9 @@ package GNATCOLL.IO.Remote.Windows is
      (Exec : access Server_Record'Class;
       File  : FS_String;
       State : Boolean);
+   function Is_Readable
+     (Exec : access Server_Record'Class;
+      File : FS_String) return Boolean;
    procedure Set_Readable
      (Exec : access Server_Record'Class;
       File  : FS_String;

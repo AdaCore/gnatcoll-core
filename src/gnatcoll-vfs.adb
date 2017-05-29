@@ -1053,6 +1053,15 @@ package body GNATCOLL.VFS is
    end Delete;
 
    -----------------
+   -- Is_Readable --
+   -----------------
+
+   function Is_Readable (File : Virtual_File) return Boolean is
+   begin
+      return File.Value /= null and then File.Value.Is_Readable;
+   end Is_Readable;
+
+   -----------------
    -- Is_Writable --
    -----------------
 

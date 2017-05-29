@@ -346,6 +346,26 @@ package body GNATCOLL.IO.Remote.Unix is
    end File_Time_Stamp;
 
    -----------------
+   -- Is_Readable --
+   -----------------
+
+   function Is_Readable
+     (Exec : access Server_Record'Class;
+      File : FS_String) return Boolean
+   is
+      Args : GNAT.OS_Lib.Argument_List :=
+        (new String'("test"),
+         new String'("-r"),
+         new String'("""" & String (File) & """"));
+      Status : Boolean;
+
+   begin
+      Exec.Execute_Remotely (Args, Status);
+      Free (Args);
+      return Status;
+   end Is_Readable;
+
+   -----------------
    -- Is_Writable --
    -----------------
 

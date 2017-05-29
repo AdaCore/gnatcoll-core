@@ -83,6 +83,8 @@ package GNATCOLL.IO.Native is
    overriding procedure Set_Writable
      (File  : not null access Native_File_Record;
       State : Boolean);
+   overriding function Is_Readable
+     (File : not null access Native_File_Record) return Boolean;
    overriding procedure Set_Readable
      (File  : not null access Native_File_Record;
       State : Boolean);

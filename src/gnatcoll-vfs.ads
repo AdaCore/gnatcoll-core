@@ -342,6 +342,9 @@ package GNATCOLL.VFS is
    --  Compare Parent and Child directory and determines if Parent contains
    --  Child directory
 
+   function Is_Readable (File : Virtual_File) return Boolean;
+   --  Return True if File is readable
+
    function Is_Writable (File : Virtual_File) return Boolean;
    --  Return True if File is writable
 
