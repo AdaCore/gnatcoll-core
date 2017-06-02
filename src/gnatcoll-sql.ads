@@ -472,7 +472,15 @@ package GNATCOLL.SQL is
 
    function Cast_To_Date
      (Field : SQL_Field'Class) return Date_Fields.Field'Class;
-   --  Convert a field to a date
+   function Cast_To_Time
+     (Field : SQL_Field'Class) return Time_Fields.Field'Class;
+   --  Convert a field to a date or a time.
+   --  To use these in your code, you will need something like:
+   --
+   --      use Date_Fields;
+   --      Q : constant SQL_Query := SQL_Select
+   --         (Where => Cast_To_Date (Table1.Field1) =
+   --             Date_Fields.Expression (Ada.Calendar.Clock));
 
    function Cast_To_Integer
      (Field : SQL_Field'Class) return Integer_Fields.Field'Class;

@@ -887,6 +887,19 @@ package body GNATCOLL.SQL is
       return Internal (Field);
    end Cast_To_Date;
 
+   ------------------
+   -- Cast_To_Time --
+   ------------------
+
+   function Cast_To_Time
+     (Field : SQL_Field'Class) return Time_Fields.Field'Class
+   is
+      function Internal is new Time_Fields.Apply_Function
+        (SQL_Field, "CAST (", "AS TIME)");
+   begin
+      return Internal (Field);
+   end Cast_To_Time;
+
    ---------------------
    -- Cast_To_Integer --
    ---------------------
