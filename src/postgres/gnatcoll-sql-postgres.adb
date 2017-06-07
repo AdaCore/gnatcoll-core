@@ -186,11 +186,13 @@ package body GNATCOLL.SQL.Postgres is
         (Interfaces.C.int, Socket_Type);
       DBG : constant access Gnade.Database'Class := Builder.To_Native (DB);
       Sel : Selector_Type;
+      Soc : constant Socket_Type := To_Ada (DBG.Socket);
       St  : Selector_Status;
       SS  : Socket_Set_Type;
       SE  : Socket_Set_Type;
+      Rq  : Request_Type (N_Bytes_To_Read);
    begin
-      Set (SS, To_Ada (DBG.Socket));
+      Set (SS, Soc);
       Create_Selector (Sel);
       Check_Selector
         (Sel, R_Socket_Set => SS, W_Socket_Set => SE, Status => St,
@@ -198,6 +200,16 @@ package body GNATCOLL.SQL.Postgres is
       Close_Selector (Sel);
 
       if St = Completed then
+         Control_Socket (Soc, Rq);
+
+         if Rq.Size = 0 then
+            --  Socket ready to read but without data available mean socket
+            --  closed by peer.
+
+            DB.Set_Failure ("Connection closed on PostgreSQL server side");
+            return False;
+         end if;
+
          DBG.Consume_Input;
          return True;
       end if;
