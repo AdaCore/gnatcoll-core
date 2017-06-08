@@ -154,7 +154,7 @@ package GNATCOLL.SQL.Exec is
    --  Such queries are created in GNATCOLL through the use of
    --  GNATCOLL.SQL.Text_Param, GNATCOLL.SQL.Integer_Param,...
 
-   subtype SQL_Parameter is GNATCOLL.SQL_Impl.SQL_Parameter_Base;
+   type SQL_Parameter is new SQL_Impl.SQL_Parameter_Base with null record;
    Null_Parameter : constant SQL_Parameter;
 
    function "+" (Value : access constant String) return SQL_Parameter;

@@ -169,7 +169,7 @@ package GNATCOLL.SQL_Impl is
    procedure Free_Dispatch (Self : in out SQL_Parameter_Type'Class);
    package Parameters is new GNATCOLL.Refcount.Shared_Pointers
       (SQL_Parameter_Type'Class, Free_Dispatch);
-   type SQL_Parameter_Base is new Parameters.Ref with null record;
+   subtype SQL_Parameter_Base is Parameters.Ref;
 
    generic
       type Ada_Type is private;
