@@ -154,7 +154,7 @@ test_verbose: local_install
 
 ## Clean either type of library, based on the value of (%)
 
-GPRCLN_OPTS=-r -q -XLIBRARY_TYPE=$(@F)
+GPRCLN_OPTS=-r -q -XLIBRARY_TYPE=$(@F) -XXMLADA_BUILD=$(@F)
 
 clean_library/%:
 	-gprclean ${GPRCLN_OPTS} -Pgnatcoll_full
