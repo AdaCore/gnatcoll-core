@@ -1147,7 +1147,6 @@ private
 
    type Query_Contents is abstract new GNATCOLL.Refcount.Refcounted
       with null record;
-   procedure Free (Self : in out Query_Contents) is null;
    function To_String
      (Self   : Query_Contents;
       Format : Formatter'Class) return Unbounded_String is abstract;
