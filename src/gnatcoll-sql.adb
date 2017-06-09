@@ -1549,9 +1549,14 @@ package body GNATCOLL.SQL is
 
    function SQL_Values (Val : Field_List_Array) return SQL_Query is
       Q    : SQL_Query;
-      Data : Query_Values_Contents (Size => Val'Length);
+      Data : constant Query_Pointers.Encapsulated_Access :=
+        new Query_Values_Contents'
+          (Query_Contents with Size => Val'Length, Values => Val);
+      --  We have to declare and assign Data with definite access type first
+      --  and then put it into Q.Set. If we use operator "new" as a parameter
+      --  for Q.Set we've got a runtime error "accessibility check failed"
+      --  inside of Q.Set. Checked at GNATLS Pro 18.0w (20170525-63).
    begin
-      Data.Values := Val;
       Q.Set (Data);
       return Q;
    end SQL_Values;
