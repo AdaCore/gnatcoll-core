@@ -968,13 +968,6 @@ package body GNATCOLL.SQL.Postgres.Gnade is
       return PQconsumeInput (DB.Connection) /= 0;
    end Consume_Input;
 
-   procedure Consume_Input (DB : Database'Class) is
-   begin
-      if not Consume_Input (DB) then
-         raise PostgreSQL_Error with Error (DB);
-      end if;
-   end Consume_Input;
-
    -----------
    -- Flush --
    -----------

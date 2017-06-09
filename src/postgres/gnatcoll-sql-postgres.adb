@@ -169,8 +169,11 @@ package body GNATCOLL.SQL.Postgres is
    -------------------
 
    procedure Consume_Input (DB : Database_Connection) is
+      DBG : constant access Gnade.Database'Class := Builder.To_Native (DB);
    begin
-      Builder.To_Native (DB).Consume_Input;
+      if not DBG.Consume_Input then
+         DB.Set_Failure (DBG.Error);
+      end if;
    end Consume_Input;
 
    --------------------
@@ -192,6 +195,10 @@ package body GNATCOLL.SQL.Postgres is
       SE  : Socket_Set_Type;
       Rq  : Request_Type (N_Bytes_To_Read);
    begin
+      if DBG.Is_Non_Blocking then
+         raise Program_Error with "Non blocking connection is not supported";
+      end if;
+
       Set (SS, Soc);
       Create_Selector (Sel);
       Check_Selector
@@ -210,7 +217,11 @@ package body GNATCOLL.SQL.Postgres is
             return False;
          end if;
 
-         DBG.Consume_Input;
+         if not DBG.Consume_Input then
+            DB.Set_Failure (DBG.Error);
+            return False;
+         end if;
+
          return True;
       end if;
 

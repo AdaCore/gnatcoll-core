@@ -40,6 +40,10 @@ package GNATCOLL.SQL.Postgres.Gnade is
       Message : out Notification;
       Done    : out Boolean) is null;
 
-   procedure Consume_Input (DB : Database'Class) is null;
+   function Consume_Input (DB : Database'Class) return Boolean is (False);
+
+   function Error (DB : Database'Class) return String is ("");
+
+   function Is_Non_Blocking (DB : Database'Class) return Boolean is (False);
 
 end GNATCOLL.SQL.Postgres.Gnade;

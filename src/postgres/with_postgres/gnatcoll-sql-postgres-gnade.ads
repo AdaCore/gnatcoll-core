@@ -545,9 +545,6 @@ package GNATCOLL.SQL.Postgres.Gnade is
    --  Consume_Input to clear the select condition immediately, and then
    --  examine the results at leisure.
 
-   procedure Consume_Input (DB : Database'Class);
-   --  The same as above but raises exception in case of error
-
    function Flush (DB : Database'Class) return Boolean;
    pragma Inline (Flush);
    --  Attempt to flush any data queued to the backend, returns True if
