@@ -938,10 +938,16 @@ package body GNATCOLL.Projects is
       --  (everything after and including the last dot in the file name).
       --  Otherwise, the suffix ALI_Ext is removed from the file name.
 
-      function Find_In_Subtree
-        (Map  : Names_Files.Map;
-         Key  : GNATCOLL.VFS.Filesystem_String;
-         Root : Project_Type) return Names_Files.Cursor;
+      function Find_Ada_In_Subtree
+        (Map    : Names_Files.Map;
+         Key    : GNATCOLL.VFS.Filesystem_String;
+         Root   : Project_Type)
+         return Names_Files.Cursor;
+      function Find_C_In_Subtree
+        (Map    : Names_Files.Map;
+         Key    : GNATCOLL.VFS.Filesystem_String;
+         Root   : Project_Type)
+         return Names_Files.Cursor;
       --  Searches for Source_File_Data with given base name and a project from
       --  a project subtree that starts from Root.
       --  If the resulting Source_File_Data is not the first one in the list,
@@ -968,11 +974,11 @@ package body GNATCOLL.Projects is
          end if;
       end Get_Base_Name;
 
-      ---------------------
-      -- Find_In_Subtree --
-      ---------------------
+      -------------------------
+      -- Find_Ada_In_Subtree --
+      -------------------------
 
-      function Find_In_Subtree
+      function Find_Ada_In_Subtree
         (Map  : Names_Files.Map;
          Key  : GNATCOLL.VFS.Filesystem_String;
          Root : Project_Type) return Names_Files.Cursor
@@ -987,37 +993,89 @@ package body GNATCOLL.Projects is
             return Cur;
          end if;
 
-         --  Use a standard iterator (and remove aggregated projects ourselves)
-         --  instead of an inner iterator, so that library projects aggregated
-         --  in a library aggregate are also considered
-         Iter := Start (Extending_Project (Root, True));
-         while Current (Iter) /= No_Project loop
-            if Current (Iter) = Element (Cur).Project then
-               --  First Source_File_Data is the one, we can return a cursor
-               --  pointing at original map.
-               return Cur;
-            end if;
-            Next (Iter);
-         end loop;
-
          SFD := Element (Cur);
-         loop
-            exit when SFD.Next = null;
-            SFD := SFD.Next.all;
-            Iter := Start (Extending_Project (Root, True));
-            while Current (Iter) /= No_Project loop
-               if Current (Iter) = SFD.Project then
-                  --  Creating a temporary element to point to.
-                  Local_Obj_Map.Include (Key, SFD);
-                  return Local_Obj_Map.First;
-               end if;
 
-               Next (Iter);
-            end loop;
+         loop
+            if not (Get_String (SFD.Lang) in "c" | "cpp") then
+
+               Iter := Start (Extending_Project (Root, True));
+               while Current (Iter) /= No_Project loop
+                  if Current (Iter) = SFD.Project then
+                     --  Creating a temporary element to point to.
+
+                     Local_Obj_Map.Include (Key, SFD);
+                     Decrease_Indent (Me);
+                     return Local_Obj_Map.First;
+                  end if;
+
+                  Next (Iter);
+               end loop;
+
+            end if;
+
+            exit when SFD.Next = null;
+
+            SFD := SFD.Next.all;
          end loop;
 
          return Names_Files.No_Element;
-      end Find_In_Subtree;
+      end Find_Ada_In_Subtree;
+
+      -----------------------
+      -- Find_C_In_Subtree --
+      -----------------------
+
+      function Find_C_In_Subtree
+        (Map  : Names_Files.Map;
+         Key  : GNATCOLL.VFS.Filesystem_String;
+         Root : Project_Type) return Names_Files.Cursor
+      is
+         Cur   : Names_Files.Cursor;
+         SFD   : Source_File_Data;
+         Extended_P : Project_Type;
+      begin
+         Cur := Map.Find (Key);
+         if Cur = Names_Files.No_Element then
+            --  No object files with same base name expected for any project.
+            return Cur;
+         end if;
+
+         SFD := Element (Cur);
+
+         --  Use a standard iterator (and remove aggregated projects ourselves)
+         --  instead of an inner iterator, so that library projects aggregated
+         --  in a library aggregate are also considered
+         loop
+            if Get_String (SFD.Lang) in "c" | "cpp" then
+
+               --  We can have as much c/c++ files with same name as possible.
+               --  So what we need to do is only iterate through extended
+               --  projects to check whether the current file belongs to them,
+               --  but not through the whole project subtree, since we can find
+               --  absolutely unrelated homonyms.
+
+               Extended_P := Extending_Project (Root, True);
+               loop
+                  if Extended_P = SFD.Project then
+                     Local_Obj_Map.Include (Key, SFD);
+
+                     Decrease_Indent (Me);
+                     return Local_Obj_Map.First;
+                  end if;
+
+                  Extended_P := Extended_Project (Extended_P);
+                  exit when Extended_P = No_Project;
+               end loop;
+
+            end if;
+
+            exit when SFD.Next = null;
+
+            SFD := SFD.Next.all;
+         end loop;
+
+         return Names_Files.No_Element;
+      end Find_C_In_Subtree;
 
       Seen : Virtual_File_Sets.Set;
 
@@ -1066,7 +1124,7 @@ package body GNATCOLL.Projects is
                   P      : Project_Type;
 
                begin
-                  Info_Cursor := Find_In_Subtree
+                  Info_Cursor := Find_Ada_In_Subtree
                     (Self.Data.Tree_For_Map.Objects_Basename,
                      B, Self);
 
@@ -1083,10 +1141,10 @@ package body GNATCOLL.Projects is
                      if Dot > B'First then
                         B_Last := Dot - 1;
                         Info_Cursor :=
-                          Find_In_Subtree
+                          Find_C_In_Subtree
                             (Self.Data.Tree_For_Map.Objects_Basename,
                              B (B'First .. B_Last),
-                             Self);
+                             Project);
                      end if;
                   end if;
 
@@ -2236,10 +2294,11 @@ package body GNATCOLL.Projects is
       Result : File_Info_Set :=
         (File_Info_Sets.Empty_Set with null record);
 
-      function Unit_Kid_To_Part (Src_Kind : GPR.Source_Kind) return Unit_Parts;
+      function Unit_Kind_To_Part (Src_Kind : GPR.Source_Kind)
+                                  return Unit_Parts;
       --  Translate GPR.Source_Kind into Unit_Parts.
 
-      function Unit_Kid_To_Part (Src_Kind : GPR.Source_Kind) return Unit_Parts
+      function Unit_Kind_To_Part (Src_Kind : GPR.Source_Kind) return Unit_Parts
       is
       begin
          case Src_Kind is
@@ -2250,7 +2309,7 @@ package body GNATCOLL.Projects is
             when Sep =>
                return Unit_Separate;
          end case;
-      end Unit_Kid_To_Part;
+      end Unit_Kind_To_Part;
 
    begin
       if Self.Data = null then
@@ -2275,7 +2334,7 @@ package body GNATCOLL.Projects is
 
             if Source.Source /= null then
                --  One of the initially cached source files.
-               S_Info.Part := Unit_Kid_To_Part (Source.Source.Kind);
+               S_Info.Part := Unit_Kind_To_Part (Source.Source.Kind);
                if Source.Source.Unit = No_Unit_Index then
                   --  Not applicable to C and other non unit-based languages.
                   S_Info.Name := No_Name;
@@ -8382,24 +8441,24 @@ package body GNATCOLL.Projects is
                         if Source.Index = 0 then
                            --  ??? What if we have a non-aggregate root, that
                            --  imports a library aggregate project ?
-                           if Is_Aggregate_Project (Self.Data.Root) then
+--                             if Is_Aggregate_Project (Self.Data.Root) then
                               Include_File
                                 (Tree_For_Map.Objects_Basename,
                                  Base (Base'First .. Base_Last),
                                  (P, File, Source.Language.Name, Source,
                                   null));
-                           else
-                              --  No point in all the checks for regular
-                              --  project.
-
-                              Tree_For_Map.Objects_Basename.Include
-                                (Base (Base'First .. Base_Last),
-                                 (P, File, Source.Language.Name, Source,
-                                  null));
-                           end if;
+--                             else
+--                                --  No point in all the checks for regular
+--                                --  project.
+--
+--                                Tree_For_Map.Objects_Basename.Include
+--                                  (Base (Base'First .. Base_Last),
+--                                   (P, File, Source.Language.Name, Source,
+--                                    null));
+--                             end if;
 
                         else
-                           if Is_Aggregate_Project (Self.Data.Root) then
+--                             if Is_Aggregate_Project (Self.Data.Root) then
                               Include_File
                                 (Tree_For_Map.Objects_Basename,
                                  Base (Base'First .. Base_Last) & "~"
@@ -8408,18 +8467,18 @@ package body GNATCOLL.Projects is
                                         Min_Width => 0)),
                                  (P, File, Source.Language.Name, Source,
                                   null));
-                           else
-                              --  No point in all the checks for regular
-                              --  project.
-
-                              Tree_For_Map.Objects_Basename.Include
-                                (Base (Base'First .. Base_Last) & "~"
-                                 & (+Image
-                                   (Integer (Source.Index),
-                                        Min_Width => 0)),
-                                 (P, File, Source.Language.Name, Source,
-                                  null));
-                           end if;
+--                             else
+--                                --  No point in all the checks for regular
+--                                --  project.
+--
+--                                Tree_For_Map.Objects_Basename.Include
+--                                  (Base (Base'First .. Base_Last) & "~"
+--                                   & (+Image
+--                                     (Integer (Source.Index),
+--                                          Min_Width => 0)),
+--                                   (P, File, Source.Language.Name, Source,
+--                                    null));
+--                             end if;
                         end if;
                      end;
                   end if;
