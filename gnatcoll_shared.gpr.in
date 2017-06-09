@@ -75,7 +75,7 @@ abstract project GnatColl_Shared is
          when "Debug" =>
             for Switches ("Ada") use
               ("-g", "-O0", "-gnata", "-gnatVa", "-gnatQ", "-gnaty", "-gnateE",
-               "-gnatwaCJe");
+               "-gnatwaCJe", "-fstack-check");
             for Switches ("C") use ("-g", "-Wunreachable-code");
 
          when "Production" =>
