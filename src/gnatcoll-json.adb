@@ -25,15 +25,17 @@ with Ada.Characters.Handling; use Ada.Characters.Handling;
 with Ada.Containers;          use Ada.Containers;
 with Ada.Strings.Unbounded;   use Ada.Strings.Unbounded;
 with Ada.Text_IO;
+with Ada.Unchecked_Deallocation;
 with GNATCOLL.Atomic;         use GNATCOLL.Atomic;
 with GNATCOLL.JSON.Utility;
 with GNATCOLL.Strings;        use GNATCOLL.Strings;
 
--------------------
--- GNATCOLL.JSON --
--------------------
-
 package body GNATCOLL.JSON is
+
+   procedure Free is
+     new Ada.Unchecked_Deallocation (JSON_Array_Internal, JSON_Array_Access);
+   procedure Free is
+     new Ada.Unchecked_Deallocation (JSON_Object_Internal, JSON_Object_Access);
 
    procedure Report_Error (File : String; Line, Col : Natural; Msg : String);
    pragma No_Return (Report_Error);
@@ -59,7 +61,7 @@ package body GNATCOLL.JSON is
 
    procedure Append (Arr : JSON_Value; Item : JSON_Value) is
    begin
-      Append (Arr.Data.Arr_Value.all, Item);
+      Append (Arr.Data.Arr_Value.Arr, Item);
    end Append;
 
    --------------
@@ -70,7 +72,7 @@ package body GNATCOLL.JSON is
    begin
       case Val.Kind is
          when JSON_Null_Type   => return True;
-         when JSON_Array_Type  => return Val.Data.Arr_Value.Vals.Is_Empty;
+         when JSON_Array_Type  => return Val.Data.Arr_Value.Arr.Vals.Is_Empty;
          when JSON_Object_Type => return Val.Data.Obj_Value.Vals.Is_Empty;
          when others           => return False;
       end case;
@@ -393,9 +395,8 @@ package body GNATCOLL.JSON is
 
          when '[' =>
             declare
-               Arr   : constant JSON_Array_Access := new JSON_Array;
+               Arr   : constant JSON_Array_Access := new JSON_Array_Internal;
                First : Boolean := True;
-
             begin
                --  Skip '['
                Next_Char;
@@ -419,7 +420,7 @@ package body GNATCOLL.JSON is
                   end if;
 
                   First := False;
-                  Append (Arr.all, Read (Strm, Idx, Col, Line, Filename));
+                  Append (Arr.Arr, Read (Strm, Idx, Col, Line, Filename));
                end loop;
 
                if Idx > Strm'Last
@@ -430,12 +431,8 @@ package body GNATCOLL.JSON is
 
                Next_Char;
 
-               declare
-                  Ret : JSON_Value;
-               begin
-                  Ret.Data := (Kind => JSON_Array_Type, Arr_Value => Arr);
-                  return Ret;
-               end;
+               return (Ada.Finalization.Controlled with
+                       Data => (Kind => JSON_Array_Type, Arr_Value => Arr));
             end;
 
          when '{' =>
@@ -609,15 +606,15 @@ package body GNATCOLL.JSON is
                Append (Ret, ASCII.LF);
             end if;
 
-            for J in Item.Data.Arr_Value.Vals.First_Index ..
-              Item.Data.Arr_Value.Vals.Last_Index
+            for J in Item.Data.Arr_Value.Arr.Vals.First_Index ..
+              Item.Data.Arr_Value.Arr.Vals.Last_Index
             loop
                Do_Indent (Indent + 1);
                Write
-                 (Item.Data.Arr_Value.Vals.Element (J),
+                 (Item.Data.Arr_Value.Arr.Vals.Element (J),
                   Compact, Indent + 1, Ret);
 
-               if J < Item.Data.Arr_Value.Vals.Last_Index then
+               if J < Item.Data.Arr_Value.Arr.Vals.Last_Index then
                   Append (Ret, ",");
                end if;
 
@@ -761,7 +758,7 @@ package body GNATCOLL.JSON is
 
    begin
       case Val.Kind is
-         when JSON_Array_Type  => Sort (Val.Data.Arr_Value.all, Less);
+         when JSON_Array_Type  => Sort (Val.Data.Arr_Value.Arr, Less);
          when JSON_Object_Type => Sorting.Sort (Val.Data.Obj_Value.Vals);
          when others => null;
       end case;
@@ -813,28 +810,24 @@ package body GNATCOLL.JSON is
       Arr.Vals.Clear;
    end Clear;
 
-   ----------------
-   -- Initialize --
-   ----------------
-
-   overriding procedure Initialize (Obj : in out JSON_Value) is
-   begin
-      --  ??? Could be done in the calls to Create
-      Obj.Cnt := new GNATCOLL.Atomic.Atomic_Counter'(1);
-   end Initialize;
-
    ------------
    -- Adjust --
    ------------
 
    overriding procedure Adjust (Obj : in out JSON_Value) is
    begin
-      if Obj.Cnt /= null then
-         --  Cnt is null for JSON_Null, and we do not want to do reference
-         --  counting for it.
-
-         Increment (Obj.Cnt.all);
-      end if;
+      case Obj.Data.Kind is
+         when JSON_Array_Type =>
+            if Obj.Data.Arr_Value /= null then
+               Increment (Obj.Data.Arr_Value.Cnt);
+            end if;
+         when JSON_Object_Type =>
+            if Obj.Data.Obj_Value /= null then
+               Increment (Obj.Data.Obj_Value.Cnt);
+            end if;
+         when others =>
+            null;
+      end case;
    end Adjust;
 
    --------------
@@ -842,39 +835,31 @@ package body GNATCOLL.JSON is
    --------------
 
    overriding procedure Finalize (Obj : in out JSON_Value) is
-      C : Counter := Obj.Cnt;
    begin
-      if C = null then
-         return;
-      end if;
-
-      Obj.Cnt := null;
-      --  Prevent multiple calls to Finalize, which is valid in Ada
-
-      if Decrement (C.all) then
-         Free (C);
-
-         case Obj.Kind is
-            when JSON_Null_Type    |
-                 JSON_Boolean_Type |
-                 JSON_Int_Type     |
-                 JSON_Float_Type   =>
-               null;
-            when JSON_String_Type =>
-               Obj.Data.Str_Value := GNATCOLL.Strings.Null_XString;
-
-            when JSON_Array_Type =>
-               if Obj.Data.Arr_Value /= null then
-                  Free (Obj.Data.Arr_Value);
+      case Obj.Data.Kind is
+         when JSON_Array_Type =>
+            declare
+               Arr : JSON_Array_Access := Obj.Data.Arr_Value;
+            begin
+               Obj.Data.Arr_Value := null;
+               if Arr /= null and then Decrement (Arr.Cnt) then
+                  Free (Arr);
                end if;
+            end;
 
-            when JSON_Object_Type =>
-               if Obj.Data.Obj_Value /= null then
-                  Free (Obj.Data.Obj_Value);
+         when JSON_Object_Type =>
+            declare
+               Object : JSON_Object_Access := Obj.Data.Obj_Value;
+            begin
+               Obj.Data.Obj_Value := null;
+               if Object /= null and then Decrement (Object.Cnt) then
+                  Free (Object);
                end if;
+            end;
 
-         end case;
-      end if;
+         when others =>
+            null;
+      end case;
    end Finalize;
 
    ------------
@@ -952,10 +937,12 @@ package body GNATCOLL.JSON is
    end Create;
 
    function Create (Val : JSON_Array) return JSON_Value is
-      Ret : JSON_Value;
    begin
-      Ret.Data := (Kind => JSON_Array_Type, Arr_Value => new JSON_Array'(Val));
-      return Ret;
+      return (Ada.Finalization.Controlled with
+              Data => (Kind      => JSON_Array_Type,
+                       Arr_Value => new JSON_Array_Internal'
+                          (Cnt => 1,
+                           Arr => Val)));
    end Create;
 
    -------------------
@@ -1170,7 +1157,7 @@ package body GNATCOLL.JSON is
 
    function Get (Val : JSON_Value) return JSON_Array is
    begin
-      return Val.Data.Arr_Value.all;
+      return Val.Data.Arr_Value.Arr;
    end Get;
 
    ---------------
@@ -1241,39 +1228,46 @@ package body GNATCOLL.JSON is
    -----------
 
    function Clone (Val : JSON_Value) return JSON_Value is
-      Result : JSON_Value;
    begin
       case Val.Data.Kind is
          when JSON_Null_Type =>
-            Result := Create;
+            return JSON_Null;
 
          when JSON_Boolean_Type =>
-            Result := Create (Val.Data.Bool_Value);
+            return Create (Val.Data.Bool_Value);
 
          when JSON_Int_Type =>
-            Result := Create (Val.Data.Int_Value);
+            return Create (Val.Data.Int_Value);
 
          when JSON_Float_Type =>
-            Result := Create (Val.Data.Flt_Value);
+            return Create (Val.Data.Flt_Value);
 
          when JSON_String_Type =>
-            Result := Create (Val.Data.Str_Value);
+            return Create (Val.Data.Str_Value);
 
          when JSON_Array_Type =>
-            Result.Data :=
-               (Kind => JSON_Array_Type, Arr_Value => new JSON_Array);
-            for E of Val.Data.Arr_Value.Vals loop
-               Append (Result.Data.Arr_Value.all, Clone (E));
-            end loop;
+            declare
+               Result : constant JSON_Value :=
+                  (Ada.Finalization.Controlled with
+                   Data => (Kind => JSON_Array_Type,
+                            Arr_Value => new JSON_Array_Internal));
+            begin
+               for E of Val.Data.Arr_Value.Arr.Vals loop
+                  Append (Result.Data.Arr_Value.Arr, Clone (E));
+               end loop;
+               return Result;
+            end;
 
          when JSON_Object_Type =>
-            Result := Create_Object;
-            for E of Val.Data.Obj_Value.Vals loop
-               Result.Set_Field (To_String (E.Key), Clone (E.Val));
-            end loop;
-
+            declare
+               Result : constant JSON_Value := Create_Object;
+            begin
+               for E of Val.Data.Obj_Value.Vals loop
+                  Result.Set_Field (To_String (E.Key), Clone (E.Val));
+               end loop;
+               return Result;
+            end;
       end case;
-      return Result;
    end Clone;
 
    ---------
@@ -1307,16 +1301,16 @@ package body GNATCOLL.JSON is
             --  Same pointer ?
             if Left.Data.Arr_Value = Right.Data.Arr_Value then
                return True;
-            elsif Left.Data.Arr_Value.Vals.Length /=
-               Right.Data.Arr_Value.Vals.Length
+            elsif Left.Data.Arr_Value.Arr.Vals.Length /=
+               Right.Data.Arr_Value.Arr.Vals.Length
             then
                return False;
             else
-               for J in Left.Data.Arr_Value.Vals.First_Index ..
-                  Left.Data.Arr_Value.Vals.Last_Index
+               for J in Left.Data.Arr_Value.Arr.Vals.First_Index ..
+                  Left.Data.Arr_Value.Arr.Vals.Last_Index
                loop
-                  if not (Left.Data.Arr_Value.Vals (J) =  --  recursive
-                          Right.Data.Arr_Value.Vals (J))
+                  if not (Left.Data.Arr_Value.Arr.Vals (J) =  --  recursive
+                          Right.Data.Arr_Value.Arr.Vals (J))
                   then
                      return False;
                   end if;

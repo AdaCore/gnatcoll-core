@@ -23,7 +23,6 @@
 
 with Ada.Finalization;
 with Ada.Strings.Unbounded;
-with Ada.Unchecked_Deallocation;
 with GNATCOLL.Strings;
 
 private with Ada.Containers.Vectors;
@@ -361,11 +360,10 @@ package GNATCOLL.JSON is
 
 private
 
-   type JSON_Array_Access is access all JSON_Array;
+   type JSON_Array_Internal;
+   type JSON_Array_Access is access all JSON_Array_Internal;
    type JSON_Object_Internal;
    type JSON_Object_Access is access all JSON_Object_Internal;
-
-   type Counter is access GNATCOLL.Atomic.Atomic_Counter;
 
    type Data_Type (Kind : JSON_Value_Type := JSON_Null_Type) is record
       case Kind is
@@ -380,11 +378,11 @@ private
    end record;
 
    type JSON_Value is new Ada.Finalization.Controlled with record
-      Cnt  : Counter := null;
       Data : Data_Type;
    end record;
+   --  We cannot merge Data_Type and JSON_Value, because JSON_Value cannot
+   --  have a discriminant with a default value.
 
-   overriding procedure Initialize (Obj : in out JSON_Value);
    overriding procedure Adjust (Obj : in out JSON_Value);
    overriding procedure Finalize (Obj : in out JSON_Value);
 
@@ -396,6 +394,11 @@ private
 
    type JSON_Array is record
       Vals : Vect_Pkg.Vector;
+   end record;
+
+   type JSON_Array_Internal is record
+      Cnt  : aliased GNATCOLL.Atomic.Atomic_Counter := 1;
+      Arr  : JSON_Array;
    end record;
 
    Empty_Array : constant JSON_Array := (Vals => Vect_Pkg.Empty_Vector);
@@ -411,6 +414,7 @@ private
      (Positive, Object_Item);
 
    type JSON_Object_Internal is record
+      Cnt  : aliased GNATCOLL.Atomic.Atomic_Counter := 1;
       Vals : Object_Items_Pkg.Vector;
    end record;
 
@@ -418,12 +422,5 @@ private
       (Ada.Finalization.Controlled with others => <>);
    --  Can't call Create, because we would need to see the body of
    --  Initialize and Adjust.
-
-   procedure Free is
-     new Ada.Unchecked_Deallocation (JSON_Array, JSON_Array_Access);
-   procedure Free is
-     new Ada.Unchecked_Deallocation (JSON_Object_Internal, JSON_Object_Access);
-   procedure Free is
-     new Ada.Unchecked_Deallocation (GNATCOLL.Atomic.Atomic_Counter, Counter);
 
 end GNATCOLL.JSON;
