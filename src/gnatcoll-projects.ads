@@ -1548,6 +1548,8 @@ package GNATCOLL.Projects is
    --  This is not the case if there were errors loading the project, or if
    --  it contains constructs that prevent its edition (use of variables for
    --  instance).
+   --  Project is also not editable if package IDE contains
+   --     for Read_Only use "true";
 
    procedure Set_Modified (Project : Project_Type; Modified : Boolean);
    function Modified

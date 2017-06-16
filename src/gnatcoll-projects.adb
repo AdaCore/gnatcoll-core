@@ -8630,10 +8630,14 @@ package body GNATCOLL.Projects is
    -----------------
 
    function Is_Editable (Project : Project_Type) return Boolean is
+      Att : constant Attribute_Pkg_String :=
+        Build ("IDE", "Read_Only");
    begin
       return not Project.Data.Uses_Variables
         and then not Project.Is_Aggregate_Project
-        and then Project.Data.View_Is_Complete;
+        and then Project.Data.View_Is_Complete
+        and then (not Project.Has_Attribute (Att)
+                  or else To_Lower (Project.Attribute_Value (Att)) /= "true");
    end Is_Editable;
 
    --------------
@@ -8979,6 +8983,17 @@ package body GNATCOLL.Projects is
          declare
             S : constant String :=
               Register_New_Attribute ("Artifacts_Dir", "IDE");
+         begin
+            if S /= "" then
+               Trace (Me, "Cannot register attribute IDE'Artefact_Dir: " & S);
+            end if;
+         end;
+      end if;
+
+      if not Attribute_Registered ("Read_Only", "IDE") then
+         declare
+            S : constant String :=
+              Register_New_Attribute ("Read_Only", "IDE");
          begin
             if S /= "" then
                Trace (Me, "Cannot register attribute IDE'Artefact_Dir: " & S);
