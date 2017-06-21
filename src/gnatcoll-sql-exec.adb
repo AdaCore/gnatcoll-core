@@ -35,6 +35,7 @@ with GNATCOLL.Traces;           use GNATCOLL.Traces;
 with GNATCOLL.Utils;            use GNATCOLL.Utils;
 with GNATCOLL.SQL.Exec_Private; use GNATCOLL.SQL.Exec_Private;
 with GNATCOLL.SQL.Exec.Tasking; use GNATCOLL.SQL.Exec.Tasking;
+with GNATCOLL.SQL_Fields;       use GNATCOLL.SQL_Fields;
 with Interfaces.C.Strings;
 with System.Address_Image;
 
@@ -77,7 +78,7 @@ package body GNATCOLL.SQL.Exec is
 
    procedure Fetch_Internal
      (Result     : out Forward_Cursor'Class;
-      Connection : access Database_Connection_Record'Class;
+      Connection : not null access Database_Connection_Record'Class;
       Stmt       : Prepared_Statement'Class;
       Params     : SQL_Parameters);
 
@@ -675,7 +676,7 @@ package body GNATCOLL.SQL.Exec is
    -----------------------
 
    function Start_Transaction
-     (Connection : access Database_Connection_Record'Class)
+     (Connection : not null access Database_Connection_Record'Class)
       return Boolean is
    begin
       if not Connection.In_Transaction
@@ -869,6 +870,11 @@ package body GNATCOLL.SQL.Exec is
          end if;
 
          Result.Res := R;
+         Result.Format := Connection;
+
+      else  --  not Perform_Queries
+         Post_Execute_And_Log
+           (R, Connection, Q.all, Prepared, Is_Select, Params);
       end if;
 
       if Connection.Automatic_Transactions
@@ -889,7 +895,7 @@ package body GNATCOLL.SQL.Exec is
    -----------------------
 
    function Insert_And_Get_PK
-     (Connection : access Database_Connection_Record'Class;
+     (Connection : not null access Database_Connection_Record'Class;
       Query      : GNATCOLL.SQL.SQL_Query;
       Params     : SQL_Parameters := No_Parameters;
       PK         : SQL_Field_Integer) return Integer
@@ -905,7 +911,7 @@ package body GNATCOLL.SQL.Exec is
    -----------------------
 
    function Insert_And_Get_PK
-     (Connection : access Database_Connection_Record;
+     (Connection : not null access Database_Connection_Record;
       Query      : String;
       Params     : SQL_Parameters := No_Parameters;
       PK         : SQL_Field_Integer) return Integer
@@ -929,7 +935,7 @@ package body GNATCOLL.SQL.Exec is
 
    procedure Fetch
      (Result     : out Forward_Cursor;
-      Connection : access Database_Connection_Record'Class;
+      Connection : not null access Database_Connection_Record'Class;
       Query      : String;
       Params     : SQL_Parameters := No_Parameters) is
    begin
@@ -945,7 +951,7 @@ package body GNATCOLL.SQL.Exec is
 
    procedure Fetch
      (Result     : out Forward_Cursor;
-      Connection : access Database_Connection_Record'Class;
+      Connection : not null access Database_Connection_Record'Class;
       Query      : SQL_Query;
       Params     : SQL_Parameters := No_Parameters) is
    begin
@@ -960,7 +966,7 @@ package body GNATCOLL.SQL.Exec is
 
    procedure Fetch
      (Result     : out Direct_Cursor;
-      Connection : access Database_Connection_Record'Class;
+      Connection : not null access Database_Connection_Record'Class;
       Query      : String;
       Params     : SQL_Parameters := No_Parameters) is
    begin
@@ -976,7 +982,7 @@ package body GNATCOLL.SQL.Exec is
 
    overriding procedure Fetch
      (Result     : out Direct_Cursor;
-      Connection : access Database_Connection_Record'Class;
+      Connection : not null access Database_Connection_Record'Class;
       Query      : GNATCOLL.SQL.SQL_Query;
       Params     : SQL_Parameters := No_Parameters) is
    begin
@@ -990,7 +996,7 @@ package body GNATCOLL.SQL.Exec is
    -------------
 
    procedure Execute
-     (Connection : access Database_Connection_Record'Class;
+     (Connection : not null access Database_Connection_Record'Class;
       Query      : SQL_Query;
       Params     : SQL_Parameters := No_Parameters)
    is
@@ -1005,7 +1011,7 @@ package body GNATCOLL.SQL.Exec is
    -------------
 
    procedure Execute
-     (Connection : access Database_Connection_Record'Class;
+     (Connection : not null access Database_Connection_Record'Class;
       Query      : String;
       Params     : SQL_Parameters := No_Parameters)
    is
@@ -1030,7 +1036,7 @@ package body GNATCOLL.SQL.Exec is
    -----------------
 
    procedure Set_Failure
-     (Connection : access Database_Connection_Record'Class;
+     (Connection : not null access Database_Connection_Record'Class;
       Error_Msg  : String := "") is
    begin
       Connection.Success := False;
@@ -1064,7 +1070,7 @@ package body GNATCOLL.SQL.Exec is
    --------------
 
    procedure Rollback
-     (Connection : access Database_Connection_Record'Class;
+     (Connection : not null access Database_Connection_Record'Class;
       Error_Msg  : String := "") is
    begin
       if Connection.In_Transaction
@@ -1089,7 +1095,7 @@ package body GNATCOLL.SQL.Exec is
    ------------------------
 
    procedure Commit_Or_Rollback
-     (Connection : access Database_Connection_Record'Class) is
+     (Connection : not null access Database_Connection_Record'Class) is
    begin
       if Connection.In_Transaction
         or else not Connection.Automatic_Transactions
@@ -1224,49 +1230,6 @@ package body GNATCOLL.SQL.Exec is
       return Value (DBMS_Forward_Cursor'Class (Self.Res.all), Field);
    end Value;
 
-   ---------------------
-   -- Unbounded_Value --
-   ---------------------
-
-   function Unbounded_Value
-     (Self : Forward_Cursor; Field : Field_Index) return Unbounded_String is
-   begin
-      return Unbounded_Value (DBMS_Forward_Cursor'Class (Self.Res.all), Field);
-   end Unbounded_Value;
-
-   -------------------
-   -- XString_Value --
-   -------------------
-
-   function XString_Value
-     (Self : Forward_Cursor; Field : Field_Index) return XString is
-   begin
-      return XString_Value (DBMS_Forward_Cursor'Class (Self.Res.all), Field);
-   end XString_Value;
-
-   -------------------
-   -- Boolean_Value --
-   -------------------
-
-   function Boolean_Value
-     (Self  : Forward_Cursor;
-      Field : Field_Index) return Boolean is
-   begin
-      return Boolean_Value (DBMS_Forward_Cursor'Class (Self.Res.all), Field);
-   end Boolean_Value;
-
-   -------------------
-   -- Integer_Value --
-   -------------------
-
-   function Integer_Value
-     (Self   : Forward_Cursor;
-      Field  : Field_Index) return Integer
-   is
-   begin
-      return Integer_Value (DBMS_Forward_Cursor'Class (Self.Res.all), Field);
-   end Integer_Value;
-
    -------------------
    -- Integer_Value --
    -------------------
@@ -1277,23 +1240,11 @@ package body GNATCOLL.SQL.Exec is
       Default : Integer) return Integer
    is
    begin
-      return Integer_Value (DBMS_Forward_Cursor'Class (Self.Res.all), Field);
+      return Integer_Value (Self, Field);
    exception
       when Constraint_Error | Interfaces.C.Strings.Dereference_Error  =>
          return Default;
    end Integer_Value;
-
-   ------------------
-   -- Bigint_Value --
-   ------------------
-
-   function Bigint_Value
-     (Self   : Forward_Cursor;
-      Field  : Field_Index) return Long_Long_Integer
-   is
-   begin
-      return Bigint_Value (DBMS_Forward_Cursor'Class (Self.Res.all), Field);
-   end Bigint_Value;
 
    ------------------
    -- Bigint_Value --
@@ -1305,7 +1256,7 @@ package body GNATCOLL.SQL.Exec is
       Default : Long_Long_Integer) return Long_Long_Integer
    is
    begin
-      return Bigint_Value (DBMS_Forward_Cursor'Class (Self.Res.all), Field);
+      return Bigint_Value (Self, Field);
    exception
       when Constraint_Error | Interfaces.C.Strings.Dereference_Error  =>
          return Default;
@@ -1316,67 +1267,37 @@ package body GNATCOLL.SQL.Exec is
    -----------------
 
    function Float_Value
-     (Self  : Forward_Cursor;
-      Field : Field_Index) return Float is
-   begin
-      return Float_Value (DBMS_Forward_Cursor'Class (Self.Res.all), Field);
-   end Float_Value;
-
-   function Float_Value
      (Self    : Forward_Cursor;
       Field   : Field_Index;
       Default : Float) return Float is
    begin
-      return Float_Value (DBMS_Forward_Cursor'Class (Self.Res.all), Field);
+      return Float_Value (Self, Field);
    exception
       when Constraint_Error | Interfaces.C.Strings.Dereference_Error =>
          return Default;
    end Float_Value;
 
-   ----------------------
-   -- Long_Float_Value --
-   ----------------------
+   ---------------------------
+   -- Long_Long_Float_Value --
+   ---------------------------
 
-   function Long_Float_Value
-     (Self : Forward_Cursor; Field : Field_Index) return Long_Float is
+   function Long_Long_Float_Value
+     (Self : Forward_Cursor; Field : Field_Index) return Long_Long_Float is
    begin
-      return Long_Float_Value
-               (DBMS_Forward_Cursor'Class (Self.Res.all), Field);
-   end Long_Float_Value;
+      return Long_Float_Fields.Parse_From_SQL
+         (Self.Format.all, Value (Self, Field));
+   end Long_Long_Float_Value;
 
-   function Long_Float_Value
+   function Long_Long_Float_Value
      (Self    : Forward_Cursor;
       Field   : Field_Index;
-      Default : Long_Float) return Long_Float is
+      Default : Long_Long_Float) return Long_Long_Float is
    begin
-      return Long_Float_Value
-               (DBMS_Forward_Cursor'Class (Self.Res.all), Field);
+      return Long_Long_Float_Value (Self, Field);
    exception
       when Constraint_Error | Interfaces.C.Strings.Dereference_Error =>
          return Default;
-   end Long_Float_Value;
-
-   -----------
-   -- Value --
-   -----------
-
-   function Money_Value
-     (Self : Forward_Cursor; Field : Field_Index)
-     return T_Money is
-   begin
-      return Money_Value (DBMS_Forward_Cursor'Class (Self.Res.all), Field);
-   end Money_Value;
-
-   ----------------
-   -- Time_Value --
-   ----------------
-
-   function Time_Value
-     (Self  : Forward_Cursor;
-      Field : Field_Index) return Ada.Calendar.Time is
-   begin
-      return Time_Value (DBMS_Forward_Cursor'Class (Self.Res.all), Field);
-   end Time_Value;
+   end Long_Long_Float_Value;
 
    -------------
    -- Is_Null --
@@ -1639,7 +1560,7 @@ package body GNATCOLL.SQL.Exec is
 
    procedure Fetch_Internal
      (Result     : out Forward_Cursor'Class;
-      Connection : access Database_Connection_Record'Class;
+      Connection : not null access Database_Connection_Record'Class;
       Stmt       : Prepared_Statement'Class;
       Params     : SQL_Parameters)
    is
@@ -1728,7 +1649,7 @@ package body GNATCOLL.SQL.Exec is
 
    procedure Fetch
      (Result     : out Direct_Cursor;
-      Connection : access Database_Connection_Record'Class;
+      Connection : not null access Database_Connection_Record'Class;
       Stmt       : Prepared_Statement'Class;
       Params     : SQL_Parameters := No_Parameters) is
    begin
@@ -1741,7 +1662,7 @@ package body GNATCOLL.SQL.Exec is
 
    procedure Fetch
      (Result     : out Forward_Cursor;
-      Connection : access Database_Connection_Record'Class;
+      Connection : not null access Database_Connection_Record'Class;
       Stmt       : Prepared_Statement'Class;
       Params     : SQL_Parameters := No_Parameters) is
    begin
@@ -1777,7 +1698,7 @@ package body GNATCOLL.SQL.Exec is
    -------------
 
    procedure Execute
-     (Connection : access Database_Connection_Record'Class;
+     (Connection : not null access Database_Connection_Record'Class;
       Stmt       : Prepared_Statement'Class;
       Params     : SQL_Parameters := No_Parameters)
    is
@@ -1828,30 +1749,25 @@ package body GNATCOLL.SQL.Exec is
       R : SQL_Parameter;
       P : SQL_Parameter_Text;
    begin
-      P.Str_Ptr   := Value.all'Unrestricted_Access;
-      P.Make_Copy := False;
+      P.Val.Str_Ptr   := Value.all'Unrestricted_Access;
+      P.Val.Make_Copy := False;
       R.Set (P);
       return R;
    end "+";
 
-   function "+" (Value : String) return SQL_Parameter is
+   function "+" (Value : XString) return SQL_Parameter is
       R : SQL_Parameter;
       P : SQL_Parameter_Text;
    begin
-      P.Str_Val := To_Unbounded_String (Value);
-      P.Make_Copy := False;
+      P.Val.Str_Val := Value;
+      P.Val.Make_Copy := False;
       R.Set (P);
       return R;
    end "+";
 
    function "+" (Value : Unbounded_String) return SQL_Parameter is
-      R : SQL_Parameter;
-      P : SQL_Parameter_Text;
    begin
-      P.Str_Val := Value;
-      P.Make_Copy := False;
-      R.Set (P);
-      return R;
+      return +To_String (Value);
    end "+";
 
    ----------
@@ -1862,115 +1778,11 @@ package body GNATCOLL.SQL.Exec is
       R : SQL_Parameter;
       P : SQL_Parameter_Text;
    begin
-      P.Str_Ptr   := Value.all'Unrestricted_Access;
-      P.Make_Copy := True;
+      P.Val.Str_Ptr   := Value.all'Unrestricted_Access;
+      P.Val.Make_Copy := True;
       R.Set (P);
       return R;
    end Copy;
-
-   ---------
-   -- "+" --
-   ---------
-
-   function "+" (Value : Integer) return SQL_Parameter is
-      R : SQL_Parameter;
-      P : SQL_Parameter_Integer;
-   begin
-      P.Val := Value;
-      R.Set (P);
-      return R;
-   end "+";
-
-   ---------------
-   -- As_Bigint --
-   ---------------
-
-   function As_Bigint (Value : Long_Long_Integer) return SQL_Parameter is
-      R : SQL_Parameter;
-      P : SQL_Parameter_Bigint;
-   begin
-      P.Val := Value;
-      R.Set (P);
-      return R;
-   end As_Bigint;
-
-   ---------
-   -- "+" --
-   ---------
-
-   function "+" (Value : Boolean) return SQL_Parameter is
-      R : SQL_Parameter;
-      P : SQL_Parameter_Boolean;
-   begin
-      P.Val := Value;
-      R.Set (P);
-      return R;
-   end "+";
-
-   ---------
-   -- "+" --
-   ---------
-
-   function "+" (Value : Float) return SQL_Parameter is
-      R : SQL_Parameter;
-      P : SQL_Parameter_Float;
-   begin
-      P.Val := Value;
-      R.Set (P);
-      return R;
-   end "+";
-
-   -------------------
-   -- As_Long_Float --
-   -------------------
-
-   function As_Long_Float (Value : Long_Float) return SQL_Parameter is
-      R : SQL_Parameter;
-      P : SQL_Parameter_Long_Float;
-   begin
-      P.Val := Value;
-      R.Set (P);
-      return R;
-   end As_Long_Float;
-
-   ---------
-   -- "+" --
-   ---------
-
-   function "+" (Value : Character) return SQL_Parameter is
-      R : SQL_Parameter;
-      P : SQL_Parameter_Character;
-   begin
-      P.Char_Val := Value;
-      R.Set (P);
-      return R;
-   end "+";
-
-   ---------
-   -- "+" --
-   ---------
-
-   function "+" (Time : Ada.Calendar.Time) return SQL_Parameter is
-      R : SQL_Parameter;
-      P : SQL_Parameter_Time;
-   begin
-      P.Val := Time;
-      R.Set (P);
-      return R;
-   end "+";
-
-   ---------
-   -- "+" --
-   ---------
-
-   function "+" (Value : T_Money) return SQL_Parameter is
-      R : SQL_Parameter;
-      P : SQL_Parameter_Money;
-   begin
-      P.Val := Value;
-      R.Set (P);
-      return R;
-   end "+";
 
    ----------
    -- Free --

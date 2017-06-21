@@ -238,6 +238,7 @@ package body GNATCOLL.SQL.Postgres is
         (Table          => Table.Table_Name,
          Instance       => Table.Instance,
          Instance_Index => Table.Instance_Index,
+         Constraints    => <>,
          Name           => N_OID'Access);
    end OID_Field;
 

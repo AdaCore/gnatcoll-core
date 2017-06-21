@@ -37,7 +37,9 @@ pragma Warnings (On, "no entities of * are referenced");
 
 separate (GNATCOLL_Db2Ada)
 procedure Generate
-  (Generated : String; Include_Database_Create : Boolean)
+  (Connection    : not null Database_Connection;
+   Generated     : String;
+   Include_Database_Create : Boolean)
 is
    package String_Sets is new Ada.Containers.Indefinite_Ordered_Sets
      (String, "<", "=");
@@ -543,7 +545,9 @@ is
       Put_Line (Body_File, "      Schema : DB_Schema;");
       Put_Line (Body_File, "   begin");
       Put_Line (Body_File, "      Schema := Read_Schema (F, DbSchema);");
-      Put_Line (Body_File, "      Write_Schema (D, Database_Connection (DB), Schema);");
+      Put_Line
+         (Body_File,
+          "      Write_Schema (D, Database_Connection (DB), Schema);");
 
       if Load_File /= GNATCOLL.VFS.No_File then
          Put_Line (Body_File, "      if DB.Success then");

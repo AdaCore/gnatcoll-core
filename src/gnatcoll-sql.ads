@@ -102,7 +102,9 @@ with Ada.Containers.Vectors;
 with Ada.Containers.Indefinite_Vectors;
 with Ada.Strings.Unbounded;  use Ada.Strings.Unbounded;
 with GNATCOLL.Refcount;
+with GNATCOLL.Strings;       use GNATCOLL.Strings;
 with GNATCOLL.SQL_Impl;      use GNATCOLL.SQL_Impl;
+with GNATCOLL.Utils;
 
 package GNATCOLL.SQL is
    --  Work around issue with the Ada containers: the tampering checks
@@ -228,65 +230,236 @@ package GNATCOLL.SQL is
    --  Specify a specific sort order. This is only used in the Order_By clause
    --  of a Select statement
 
-   package Integer_Parameters is new Scalar_Parameters
-      (Integer, "integer", Integer_To_SQL);
-   subtype SQL_Parameter_Integer is Integer_Parameters.SQL_Parameter;
+   --------------------
+   -- Integer fields --
+   --------------------
+   --  Mapping for "integer", "smallint", "oid", "numeric(*,0)", "numeric(*)"
+
+   function Identity (Value : Integer) return Integer is (Value);
+   function Integer_To_SQL
+      (Self : Formatter'Class; Value : Integer; Quote : Boolean) return String
+      is (GNATCOLL.Utils.Image (Value, Min_Width => 0));
+   function Maps_Integer (Schema : String; V : out Null_Record) return Boolean;
+   function Integer_SQL_Type (Data : Null_Record) return String is ("integer");
+   function Integer_From_SQL
+      (Format : Formatter'Class; Value : String) return Integer
+      is (Integer'Value (Value));
    package Integer_Fields is new Field_Types
-     (Integer, Integer_To_SQL, SQL_Parameter_Integer);
+      (Ada_Type          => Integer,
+       To_SQL            => Integer_To_SQL,
+       From_SQL          => Integer_From_SQL,
+       Stored_Ada_Type   => Integer,
+       Stored_To_Ada     => Identity,
+       Ada_To_Stored     => Identity,
+       Field_Data        => Null_Record,
+       Ada_Field_Type    => "GNATCOLL.SQL.SQL_Field_Integer",
+       Schema_Type_Check => Maps_Integer,
+       SQL_Type          => Integer_SQL_Type);
+   subtype SQL_Parameter_Integer is Integer_Fields.Parameter;
    type SQL_Field_Integer is new Integer_Fields.Field with null record;
    Null_Field_Integer : constant SQL_Field_Integer;
-   function Integer_Param (Index : Positive) return Integer_Fields.Field'Class
-                           renames Integer_Fields.Param;
+   --  We must declare an explicit type here, so that operators are visible
+   --  without "use Integer_Fields" in user code.
 
-   package Bigint_Parameters is new Scalar_Parameters
-      (Long_Long_Integer, "bigint", Bigint_To_SQL);
-   subtype SQL_Parameter_Bigint is Bigint_Parameters.SQL_Parameter;
+   function Integer_Param (Index : Positive) return Integer_Fields.Field'Class
+      renames Integer_Fields.Param;
+   function Expression (Value : Integer) return Integer_Fields.Field'Class
+      renames Integer_Fields.Expression;
+   --  Create constant fields (for a select statement for instance). The
+   --  expression is surrounded by quotes, and special characters are
+   --  escaped as needed
+
+   function "-" is new Integer_Fields.Scalar_Operator (Integer, "-");
+   function "+" is new Integer_Fields.Scalar_Operator (Integer, "+");
+   function "*" is new Integer_Fields.Scalar_Operator (Integer, "*");
+   function "/" is new Integer_Fields.Scalar_Operator (Integer, "/");
+
+   function Absolute
+     (Field : Integer_Fields.Field'Class) return Integer_Fields.Field'Class;
+
+   function Cast_To_Integer
+     (Field : SQL_Field'Class) return Integer_Fields.Field'Class
+     renames Integer_Fields.Cast;
+   --  Convert any field to an integer, as in "CAST (field as integer)"
+
+   -------------------
+   -- Bigint fields --
+   -------------------
+
+   function Identity (Value : Long_Long_Integer) return Long_Long_Integer
+      is (Value);
+   function Bigint_To_SQL
+      (Self : Formatter'Class; Value : Long_Long_Integer; Quote : Boolean)
+      return String
+      is (Long_Long_Integer'Image (Value));
+   function Bigint_From_SQL
+      (Format : Formatter'Class; Value : String) return Long_Long_Integer
+      is (Long_Long_Integer'Value (Value));
+   function Maps_Bigint (Schema : String; D : out Null_Record) return Boolean
+      is (Schema = "bigint");
+   function Bigint_SQL_Type (Data : Null_Record) return String is ("bigint");
    package Bigint_Fields is new Field_Types
-     (Long_Long_Integer, Bigint_To_SQL, SQL_Parameter_Bigint);
+      (Ada_Type          => Long_Long_Integer,
+       To_SQL            => Bigint_To_SQL,
+       From_SQL          => Bigint_From_SQL,
+       Stored_Ada_Type   => Long_Long_Integer,
+       Stored_To_Ada     => Identity,
+       Ada_To_Stored     => Identity,
+       Field_Data        => Null_Record,
+       Ada_Field_Type    => "GNATCOLL.SQL.SQL_Field_Bigint",
+       Schema_Type_Check => Maps_Bigint,
+       SQL_Type          => Bigint_SQL_Type);
+   subtype SQL_Parameter_Bigint is Bigint_Fields.Parameter;
    type SQL_Field_Bigint is new Bigint_Fields.Field with null record;
    Null_Field_Bigint : constant SQL_Field_Bigint;
+
    function Bigint_Param (Index : Positive) return Bigint_Fields.Field'Class
-                           renames Bigint_Fields.Param;
+      renames Bigint_Fields.Param;
 
+   -----------------
+   -- Text fields --
+   -----------------
+
+   type Stored_String is record
+      Str_Ptr : access constant String;  --  avoid extra copy if possible
+      Str_Val : XString;
+      Make_Copy : Boolean := False;
+      --  If set this forces SQL engine to make a copy of Str_Ptr.all
+   end record;
+   type Field_Text_Data is record
+      Max_Length : Integer := Integer'Last;
+   end record;
+   function Maps_Text
+      (Schema : String; Value : out Field_Text_Data) return Boolean;
+   function Text_SQL_Type (Data : Field_Text_Data) return String
+     is (if Data.Max_Length = Integer'Last
+         then "text"
+         else "character(" & GNATCOLL.Utils.Image (Data.Max_Length, 1) & ')');
+   function To_String (Value  : Stored_String) return String
+      is (if Value.Str_Ptr /= null
+          then Value.Str_Ptr.all
+          else To_String (Value.Str_Val));
+   function To_Stored_String (Value : String) return Stored_String
+      is ((Str_Val => To_XString (Value),
+           Make_Copy => False,
+           Str_Ptr => null));
+   function String_To_SQL
+      (Self : Formatter'Class; Value : Stored_String; Quote : Boolean)
+      return String
+      is (Self.String_Image (To_String (Value), Quote));
+   function Text_From_SQL
+      (Format : Formatter'Class; Value : String) return String is (Value);
    package Text_Fields is new Field_Types
-     (String, String_To_SQL, SQL_Parameter_Text);
-   type SQL_Field_Text is new Text_Fields.Field with null record;
+      (Ada_Type          => String,
+       Stored_Ada_Type   => Stored_String,
+       Stored_To_Ada     => To_String,
+       To_SQL            => String_To_SQL,
+       From_SQL          => Text_From_SQL,
+       Ada_To_Stored     => To_Stored_String,
+       Field_Data        => Field_Text_Data,
+       Ada_Field_Type    => "GNATCOLL.SQL.SQL_Field_Text",
+       Schema_Type_Check => Maps_Text,
+       SQL_Type          => Text_SQL_Type);
+   subtype SQL_Parameter_Text is Text_Fields.Parameter;
+   type  SQL_Field_Text is new Text_Fields.Field with null record;
    Null_Field_Text : constant SQL_Field_Text;
-   function Text_Param (Index : Positive) return Text_Fields.Field'Class
-                        renames Text_Fields.Param;
 
-   package Boolean_Parameters is new Scalar_Parameters
-      (Boolean, "boolean", Boolean_To_SQL);
-   subtype SQL_Parameter_Boolean is Boolean_Parameters.SQL_Parameter;
+   function Text_Param (Index : Positive) return Text_Fields.Field'Class
+      renames Text_Fields.Param;
+   function Expression (Value : String) return Text_Fields.Field'Class
+      renames Text_Fields.Expression;
+
+   function Cast_To_String
+     (Field : SQL_Field'Class) return Text_Fields.Field'Class
+     renames Text_Fields.Cast;
+   --  Convert any field to an integer, as in "CAST (field as text)"
+
+   function Expression_Or_Null (Value : String) return Text_Fields.Field'Class;
+   --  Same as above but if the Value is "NULL", returns NULL instead of 'NULL'
+
+   function Lower
+     (Field : Text_Fields.Field'Class) return Text_Fields.Field'Class;
+   function Upper
+     (Field : Text_Fields.Field'Class) return Text_Fields.Field'Class;
+   function Initcap
+     (Field : Text_Fields.Field'Class) return Text_Fields.Field'Class;
+   --  Return the corresponding SQL function applied on Field
+
+   --------------------
+   -- Boolean fields --
+   --------------------
+
+   function Identity (Value : Boolean) return Boolean is (Value);
+   function Boolean_To_SQL
+      (Self : Formatter'Class; Value : Boolean; Quote : Boolean) return String
+      is (Self.Boolean_Image (Value));
+   function Boolean_From_SQL
+      (Format : Formatter'Class; Value : String) return Boolean
+      is (Format.Boolean_Value (Value));
+   function Maps_Boolean (Schema : String; D : out Null_Record) return Boolean
+      is (Schema = "boolean");
+   function Boolean_SQL_Type (Data : Null_Record) return String is ("boolean");
    package Boolean_Fields is new Field_Types
-     (Boolean, Boolean_To_SQL, SQL_Parameter_Boolean);
+      (Ada_Type          => Boolean,
+       To_SQL            => Boolean_To_SQL,
+       From_SQL          => Boolean_From_SQL,
+       Stored_Ada_Type   => Boolean,
+       Stored_To_Ada     => Identity,
+       Ada_To_Stored     => Identity,
+       Field_Data        => Null_Record,
+       Ada_Field_Type    => "GNATCOLL.SQL.SQL_Field_Boolean",
+       Schema_Type_Check => Maps_Boolean,
+       SQL_Type          => Boolean_SQL_Type);
+   subtype SQL_Parameter_Boolean is Boolean_Fields.Parameter;
    type SQL_Field_Boolean is new Boolean_Fields.Field with null record;
    Null_Field_Boolean : constant SQL_Field_Boolean;
-   function Boolean_Param (Index : Positive) return Boolean_Fields.Field'Class
-                           renames Boolean_Fields.Param;
 
+   function Boolean_Param (Index : Positive) return Boolean_Fields.Field'Class
+      renames Boolean_Fields.Param;
+   function Expression (Value : Boolean) return Boolean_Fields.Field'Class
+      renames Boolean_Fields.Expression;
+
+   ------------------
+   -- Float fields --
+   ------------------
+   --  A "real" SQL type is mapped to Ada's Float type.
+   --  If you need better precision, consider using a "double precision"
+   --  SQL (for historical reasons we also support "float"), which are
+   --  mapped to an Ada Long_Long_Float.
+   --  A "numeric" or "numeric(position,scale)" with scale greater than 0
+   --  are also mapped to Ada's Long_Long_Float.
+   --  See GNATCOLL.SQL_Fields for the declaration of SQL_Field_Long_Float.
+
+   function Identity (Value : Float) return Float is (Value);
    function Float_To_SQL is new Any_Float_To_SQL (Float);
-   package Float_Parameters is new Scalar_Parameters
-      (Float, "real", Float_To_SQL);
-   subtype SQL_Parameter_Float is Float_Parameters.SQL_Parameter;
+   function Float_From_SQL is new Any_Float_Value (Float);
+   function Maps_Float (Schema : String; V : out Null_Record) return Boolean
+      is (Schema = "real");
+   function Float_SQL_Type (Data : Null_Record) return String
+     is ("real");
    package Float_Fields is new Field_Types
-     (Float, Float_To_SQL, SQL_Parameter_Float);
+      (Ada_Type          => Float,
+       To_SQL            => Float_To_SQL,
+       From_SQL          => Float_From_SQL,
+       Stored_Ada_Type   => Float,
+       Stored_To_Ada     => Identity,
+       Ada_To_Stored     => Identity,
+       Field_Data        => Null_Record,
+       Ada_Field_Type    => "GNATCOLL.SQL.SQL_Field_Float",
+       Schema_Type_Check => Maps_Float,
+       SQL_Type          => Float_SQL_Type);
+   subtype SQL_Parameter_Float is Float_Fields.Parameter;
    type SQL_Field_Float is new Float_Fields.Field with null record;
    Null_Field_Float : constant SQL_Field_Float;
-   function Float_Param (Index : Positive) return Float_Fields.Field'Class
-                         renames Float_Fields.Param;
 
-   function Long_Float_To_SQL is new Any_Float_To_SQL (Long_Float);
-   package Long_Float_Parameters is new Scalar_Parameters
-      (Long_Float, "float", Long_Float_To_SQL);
-   subtype SQL_Parameter_Long_Float is Long_Float_Parameters.SQL_Parameter;
-   package Long_Float_Fields is new Field_Types
-     (Long_Float, Long_Float_To_SQL, SQL_Parameter_Long_Float);
-   type SQL_Field_Long_Float is new Long_Float_Fields.Field with null record;
-   Null_Field_Long_Float : constant SQL_Field_Long_Float;
-   function Long_Float_Param
-     (Index : Positive) return Long_Float_Fields.Field'Class
-      renames Long_Float_Fields.Param;
+   function Float_Param (Index : Positive) return Float_Fields.Field'Class
+      renames Float_Fields.Param;
+   function Expression (Value : Float) return Float_Fields.Field'Class
+      renames Float_Fields.Expression;
+
+   ------------------
+   -- Money fields --
+   ------------------
 
    subtype T_Money is GNATCOLL.SQL_Impl.T_Money;
    function "=" (T1, T2 : T_Money) return Boolean
@@ -306,38 +479,185 @@ package GNATCOLL.SQL is
    --  Make this type visible here, so that users do not have to explicitly
    --  'with' GNATCOLL.SQL_Impl.
 
-   package Money_Parameters is new Scalar_Parameters
-      (T_Money, "numeric", Money_To_SQL);
-   subtype SQL_Parameter_Money is Money_Parameters.SQL_Parameter;
+   function Identity (Value : T_Money) return T_Money is (Value);
+   function Money_To_SQL
+      (Self : Formatter'Class; Value : T_Money; Quote : Boolean) return String
+      is (Self.Money_Image (Value));
+   function Money_From_SQL
+      (Format : Formatter'Class; Value : String) return T_Money
+      is (Format.Money_Value (Value));
+   function Maps_Money (Schema : String; V : out Null_Record) return Boolean
+      is (Schema = "money");
+   function Money_SQL_Type (Data : Null_Record) return String
+     is ("numeric");
    package Money_Fields is new Field_Types
-     (T_Money, Money_To_SQL, SQL_Parameter_Money);
+      (Ada_Type          => T_Money,
+       To_SQL            => Money_To_SQL,
+       From_SQL          => Money_From_SQL,
+       Stored_Ada_Type   => T_Money,
+       Stored_To_Ada     => Identity,
+       Ada_To_Stored     => Identity,
+       Field_Data        => Null_Record,
+       Ada_Field_Type    => "GNATCOLL.SQL.SQL_Field_Money",
+       Schema_Type_Check => Maps_Money,
+       SQL_Type          => Money_SQL_Type);
+   subtype SQL_Parameter_Money is Money_Fields.Parameter;
    type SQL_Field_Money is new Money_Fields.Field with null record;
    Null_Field_Money : constant SQL_Field_Money;
    function Money_Param (Index : Positive) return Money_Fields.Field'Class
-                         renames Money_Fields.Param;
+      renames Money_Fields.Param;
 
-   package Time_Parameters is new Scalar_Parameters
-      (Ada.Calendar.Time, "timestamp", Time_To_SQL);
-   subtype SQL_Parameter_Time is Time_Parameters.SQL_Parameter;
-   package Time_Fields is new Field_Types
-     (Ada.Calendar.Time, Time_To_SQL, SQL_Parameter_Time);
-   type SQL_Field_Time is new Time_Fields.Field with null record;
-   Null_Field_Time : constant SQL_Field_Time;
-   function Time_Param (Index : Positive) return Time_Fields.Field'Class
-                        renames Time_Fields.Param;
+   ----------------------
+   -- Timestamp fields --
+   ----------------------
    --  A timestamp, ie date + time
 
-   package Date_Parameters is new Scalar_Parameters
-      (Ada.Calendar.Time, "date", Date_To_SQL);
-   subtype SQL_Parameter_Date is Date_Parameters.SQL_Parameter;
-   package Date_Fields is new Field_Types
-     (Ada.Calendar.Time, Date_To_SQL, SQL_Parameter_Date);
-   type SQL_Field_Date is new Date_Fields.Field with null record;
-   Null_Field_Date : constant SQL_Field_Date;
-   function Date_Param (Index : Positive) return Date_Fields.Field'Class
-                        renames Date_Fields.Param;
+   function Identity (Value : Ada.Calendar.Time) return Ada.Calendar.Time
+      is (Value);
+   function Time_To_SQL
+      (Self : Formatter'Class; Value : Ada.Calendar.Time; Quote : Boolean)
+      return String;
+   function Time_From_SQL
+      (Format : Formatter'Class; Value : String) return Ada.Calendar.Time;
+   function Maps_Time (Schema : String; V : out Null_Record) return Boolean
+      is (Schema in "timestamp without time zone" |
+                    "timestamp with time zone" |
+                    "timestamp" |
+                    "time");
+   function Timestamp_SQL_Type (Data : Null_Record) return String
+     is ("timestamp with time zone");
+   package Time_Fields is new Field_Types
+      (Ada_Type          => Ada.Calendar.Time,
+       To_SQL            => Time_To_SQL,
+       From_SQL          => Time_From_SQL,
+       Stored_Ada_Type   => Ada.Calendar.Time,
+       Stored_To_Ada     => Identity,
+       Ada_To_Stored     => Identity,
+       Field_Data        => Null_Record,
+       Ada_Field_Type    => "GNATCOLL.SQL.SQL_Field_Time",
+       Schema_Type_Check => Maps_Time,
+       SQL_Type          => Timestamp_SQL_Type);
+   subtype SQL_Parameter_Time is Time_Fields.Parameter;
+   type SQL_Field_Time is new Time_Fields.Field with null record;
+   Null_Field_Time : constant SQL_Field_Time;
+
+   function Time_Param (Index : Positive) return Time_Fields.Field'Class
+       renames Time_Fields.Param;
+   function Expression
+     (Value : Ada.Calendar.Time) return Time_Fields.Field'Class
+     renames Time_Fields.Expression;
+
+   function As_Days
+     (Count : Natural) return Time_Fields.Field'Class;
+   --  An expression representing a number of days
+
+   function "-" is new Time_Fields.Operator ("-");
+   function "+" is new Time_Fields.Operator ("+");
+
+   function Current_Timestamp
+      is new Time_Fields.SQL_Function ("current_timestamp");
+   --  Returns start of transaction timestamp with timezone
+
+   function Current_Time
+      is new Time_Fields.SQL_Function ("current_time");
+   --  Returns current time (without date) with timezone
+
+   function Local_Timestamp
+      is new Time_Fields.SQL_Function ("localtimestamp");
+   --  Returns start of transaction timestamp without timezone
+
+   function Local_Time
+      is new Time_Fields.SQL_Function ("localtime");
+   --  Returns current time (without date) in local timezone without timezone
+
+   function Clock_Timestamp
+      is new Time_Fields.SQL_Function ("clock_timestamp()");
+   --  Returns current timestamp with timezone
+
+   function Cast_To_Time
+     (Field : SQL_Field'Class) return Time_Fields.Field'Class
+     renames Time_Fields.Cast;
+   --  Convert a field to a date or a time ("CAST (field as timestamp)")
+   --  To use these in your code, you will need something like:
+   --
+   --      use Date_Fields;
+   --      Q : constant SQL_Query := SQL_Select
+   --         (Where => Cast_To_Date (Table1.Field1) =
+   --             Date_Fields.Expression (Ada.Calendar.Clock));
+
+   function At_Time_Zone
+     (Field : Time_Fields.Field'Class; TZ : String)
+      return Time_Fields.Field'Class;
+   --  Convert a 'timestamp with time zone' expression to another time zone
+
+   function To_Char
+     (Field : Time_Fields.Field'Class; Format : String)
+      return Text_Fields.Field'Class;
+   --  Format a date field, as in "to_char (field, "format")"
+
+   function Extract
+     (Field : Time_Fields.Field'Class; Attribute : String)
+      return Time_Fields.Field'Class;
+   --  Return the result of "extract (attribute from field)"
+
+   -----------------
+   -- Date fields --
+   -----------------
    --  Only includes the date, not the time. Note: the date taken into account
    --  is that of the Time value when interpreted in UT.
+   --  When reading back a date from the DBMS, the time component is always
+   --  set to 00:00:00
+
+   function Date_To_SQL
+      (Self : Formatter'Class; Value : Ada.Calendar.Time; Quote : Boolean)
+      return String;
+   function Maps_Date (Schema : String; D : out Null_Record) return Boolean
+      is (Schema = "date");
+   function Date_SQL_Type (Data : Null_Record) return String is ("date");
+   function Date_From_SQL
+      (Format : Formatter'Class; Value : String) return Ada.Calendar.Time;
+   package Date_Fields is new Field_Types
+      (Ada_Type          => Ada.Calendar.Time,
+       To_SQL            => Date_To_SQL,
+       From_SQL          => Date_From_SQL,
+       Stored_Ada_Type   => Ada.Calendar.Time,
+       Stored_To_Ada     => Identity,
+       Ada_To_Stored     => Identity,
+       Field_Data        => Null_Record,
+       Ada_Field_Type    => "GNATCOLL.SQL.SQL_Field_Date",
+       Schema_Type_Check => Maps_Date,
+       SQL_Type          => Date_SQL_Type);
+   subtype SQL_Parameter_Date is Date_Fields.Parameter;
+   type SQL_Field_Date is new Date_Fields.Field with null record;
+   Null_Field_Date : constant SQL_Field_Date;
+
+   function Date_Param (Index : Positive) return Date_Fields.Field'Class
+      renames Date_Fields.Param;
+   function Expression
+     (Value : Ada.Calendar.Time) return Date_Fields.Field'Class
+     renames Date_Fields.Expression;
+   function Cast_To_Date
+     (Field : SQL_Field'Class) return Date_Fields.Field'Class
+     renames Date_Fields.Cast;
+
+   function As_Days
+     (Count : Natural) return Date_Fields.Field'Class;
+   --  An expression representing a number of days
+
+   function "-" is new Date_Fields.Operator ("-");
+   function "+" is new Date_Fields.Operator ("+");
+
+   function Extract
+     (Field : Date_Fields.Field'Class; Attribute : String)
+      return Date_Fields.Field'Class;
+   --  Return the result of "extract (attribute from field)"
+
+   function Current_Date is new Date_Fields.SQL_Function ("current_date");
+   --  Returns current date
+
+   -----------------
+   -- Misc fields --
+   -----------------
 
    function From_String
      (Expression : String) return Text_Fields.Field'Class
@@ -345,40 +665,13 @@ package GNATCOLL.SQL is
    --  Create a field from sql core. Expression is an SQL statement, no check
    --  is done though.
 
-   function Expression
-     (Value : String) return Text_Fields.Field'Class
-      renames Text_Fields.Expression;
-   function Expression
-     (Value : Integer) return Integer_Fields.Field'Class
-      renames Integer_Fields.Expression;
-   function Expression
-     (Value : Boolean) return Boolean_Fields.Field'Class
-      renames Boolean_Fields.Expression;
-   function Expression
-     (Value : Float) return Float_Fields.Field'Class
-      renames Float_Fields.Expression;
-   function Expression
-     (Value : Long_Float) return Long_Float_Fields.Field'Class
-      renames Long_Float_Fields.Expression;
-   function Expression
-     (Value : Ada.Calendar.Time) return Time_Fields.Field'Class
-     renames Time_Fields.Expression;
-   function Expression
-     (Value : Ada.Calendar.Time) return Date_Fields.Field'Class
-     renames Date_Fields.Expression;
-   --  Create constant fields (for a select statement for instance). The
-   --  expression is surrounded by quotes, and special characters are
-   --  escaped as needed
+   function As_Boolean
+      (Criteria : SQL_Criteria) return SQL_Field'Class;
+   --  A SQL criteria used as a field
 
-   function As_Days
-     (Count : Natural) return Time_Fields.Field'Class;
-   function As_Days
-     (Count : Natural) return Date_Fields.Field'Class;
-   --  An expression representing a number of days
-
-   function Expression_Or_Null
-     (Value : String) return Text_Fields.Field'Class;
-   --  Same as above but if the Value is "NULL", returns NULL instead of 'NULL'
+   --------------------
+   -- List of fields --
+   --------------------
 
    procedure Append (List : in out SQL_Field_List; Field : SQL_Field'Class)
       renames GNATCOLL.SQL_Impl.Append;
@@ -421,92 +714,6 @@ package GNATCOLL.SQL is
    function "&" (Value : Boolean; List : SQL_Field'Class) return SQL_Field_List
                  renames Boolean_Fields."&";
    --  Create a list of fields, suitable for use in a SELECT query
-
-   function "-" is new Time_Fields.Operator ("-");
-   function "+" is new Time_Fields.Operator ("+");
-
-   function "-" is new Date_Fields.Operator ("-");
-   function "+" is new Date_Fields.Operator ("+");
-
-   function "-" is new Integer_Fields.Scalar_Operator (Integer, "-");
-   function "+" is new Integer_Fields.Scalar_Operator (Integer, "+");
-   function "*" is new Integer_Fields.Scalar_Operator (Integer, "*");
-   function "/" is new Integer_Fields.Scalar_Operator (Integer, "/");
-
-   function Current_Date is new Date_Fields.SQL_Function ("current_date");
-   --  Returns current date
-
-   function Current_Timestamp
-      is new Time_Fields.SQL_Function ("current_timestamp");
-   --  Returns start of transaction timestamp with timezone
-
-   function Current_Time
-      is new Time_Fields.SQL_Function ("current_time");
-   --  Returns current time (without date) with timezone
-
-   function Local_Timestamp
-      is new Time_Fields.SQL_Function ("localtimestamp");
-   --  Returns start of transaction timestamp without timezone
-
-   function Local_Time
-      is new Time_Fields.SQL_Function ("localtime");
-   --  Returns current time (without date) in local timezone without timezone
-
-   function Clock_Timestamp
-      is new Time_Fields.SQL_Function ("clock_timestamp()");
-   --  Returns current timestamp with timezone
-
-   function Absolute
-     (Field : Integer_Fields.Field'Class) return Integer_Fields.Field'Class;
-   function Lower
-     (Field : Text_Fields.Field'Class) return Text_Fields.Field'Class;
-   function Upper
-     (Field : Text_Fields.Field'Class) return Text_Fields.Field'Class;
-   function Initcap
-     (Field : Text_Fields.Field'Class) return Text_Fields.Field'Class;
-   --  Return the corresponding SQL function applied on Field
-
-   function Cast_To_String
-     (Field : SQL_Field'Class) return Text_Fields.Field'Class;
-   --  Convert any field type to a text field
-
-   function Cast_To_Date
-     (Field : SQL_Field'Class) return Date_Fields.Field'Class;
-   function Cast_To_Time
-     (Field : SQL_Field'Class) return Time_Fields.Field'Class;
-   --  Convert a field to a date or a time.
-   --  To use these in your code, you will need something like:
-   --
-   --      use Date_Fields;
-   --      Q : constant SQL_Query := SQL_Select
-   --         (Where => Cast_To_Date (Table1.Field1) =
-   --             Date_Fields.Expression (Ada.Calendar.Clock));
-
-   function Cast_To_Integer
-     (Field : SQL_Field'Class) return Integer_Fields.Field'Class;
-   --  Convert a field to an integer
-
-   function At_Time_Zone
-     (Field : Time_Fields.Field'Class; TZ : String)
-      return Time_Fields.Field'Class;
-   --  Convert a 'timestamp with time zone' expression to another time zone
-
-   function To_Char
-     (Field : Time_Fields.Field'Class; Format : String)
-      return Text_Fields.Field'Class;
-   --  Format a date field, as in "to_char (field, "format")"
-
-   function Extract
-     (Field : Time_Fields.Field'Class; Attribute : String)
-      return Time_Fields.Field'Class;
-   function Extract
-     (Field : Date_Fields.Field'Class; Attribute : String)
-      return Date_Fields.Field'Class;
-   --  Return the result of "extract (attribute from field)"
-
-   function As_Boolean
-      (Criteria : SQL_Criteria) return SQL_Field'Class;
-   --  A SQL criteria used as a field
 
    -------------------------
    -- Aggregate functions --
@@ -624,7 +831,7 @@ package GNATCOLL.SQL is
                  renames GNATCOLL.SQL_Impl."+";
    --  Create a new pointer. Memory will be deallocated automatically
 
-   type SQL_Field_Array is array (Natural range <>) of SQL_Field_Pointer;
+   subtype SQL_Field_Array is GNATCOLL.SQL_Impl.SQL_Field_Array;
 
    function To_List (Fields : SQL_Field_Array) return SQL_Field_List;
    --  Convert the array into a list
@@ -1298,24 +1505,21 @@ private
    ------------------------------------
 
    Null_String : aliased constant String := "NULL";
-
-   Null_Field_Integer : constant SQL_Field_Integer :=
-     (Integer_Fields.Null_Field with null record);
-   Null_Field_Text : constant SQL_Field_Text :=
-     (Text_Fields.Null_Field with null record);
-   Null_Field_Boolean : constant SQL_Field_Boolean :=
-     (Boolean_Fields.Null_Field with null record);
-   Null_Field_Float : constant SQL_Field_Float :=
-     (Float_Fields.Null_Field with null record);
-   Null_Field_Long_Float : constant SQL_Field_Long_Float :=
-     (Long_Float_Fields.Null_Field with null record);
-   Null_Field_Money : constant SQL_Field_Money :=
-     (Money_Fields.Null_Field with null record);
-   Null_Field_Time : constant SQL_Field_Time :=
-     (Time_Fields.Null_Field with null record);
    Null_Field_Date : constant SQL_Field_Date :=
-     (Date_Fields.Null_Field with null record);
+      (Date_Fields.Null_Field with null record);
+   Null_Field_Time : constant SQL_Field_Time :=
+      (Time_Fields.Null_Field with null record);
+   Null_Field_Money : constant SQL_Field_Money :=
+      (Money_Fields.Null_Field with null record);
+   Null_Field_Integer : constant SQL_Field_Integer :=
+      (Integer_Fields.Null_Field with null record);
    Null_Field_Bigint : constant SQL_Field_Bigint :=
       (Bigint_Fields.Null_Field with null record);
+   Null_Field_Text : constant SQL_Field_Text :=
+      (Text_Fields.Null_Field with null record);
+   Null_Field_Boolean : constant SQL_Field_Boolean :=
+      (Boolean_Fields.Null_Field with null record);
+   Null_Field_Float : constant SQL_Field_Float :=
+      (Float_Fields.Null_Field with null record);
 
 end GNATCOLL.SQL;

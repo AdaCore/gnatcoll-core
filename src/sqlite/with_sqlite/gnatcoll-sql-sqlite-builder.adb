@@ -63,8 +63,14 @@ package body GNATCOLL.SQL.Sqlite.Builder is
      (Self  : Sqlite_Connection_Record) return Boolean is (False);
    overriding function Boolean_Image
      (Self : Sqlite_Connection_Record; Value : Boolean) return String;
+   overriding function Boolean_Value
+      (Self  : Sqlite_Connection_Record;
+       Value : String) return Boolean;
    overriding function Money_Image
      (Self : Sqlite_Connection_Record; Value : T_Money) return String;
+   overriding function Money_Value
+      (Self  : Sqlite_Connection_Record;
+       Value : String) return T_Money;
    overriding function Parameter_String
      (Self       : Sqlite_Connection_Record;
       Index      : Positive;
@@ -176,10 +182,6 @@ package body GNATCOLL.SQL.Sqlite.Builder is
       Field : GNATCOLL.SQL.Exec.Field_Index) return String;
    overriding function Has_Row (Self : Sqlite_Cursor) return Boolean;
    overriding procedure Next   (Self : in out Sqlite_Cursor);
-   overriding function Boolean_Value
-     (Self : Sqlite_Cursor; Field : Field_Index) return Boolean;
-   overriding function Money_Value
-     (Self  : Sqlite_Cursor; Field : Field_Index) return T_Money;
 
    function Is_Whitespace (C : Character) return Boolean;
    --  Whether C is a white space character
@@ -514,7 +516,7 @@ package body GNATCOLL.SQL.Sqlite.Builder is
       Last_Status : Result_Codes;
       Tmp_Data : array (Params'Range) of GNAT.Strings.String_Access;
       Money_Int : Integer;
-      Str_Ptr : Unbounded.Aux.Big_String_Access;
+      Str_Ptr : GNATCOLL.Strings.Char_Array;
       Str_Adr : System.Address;
       for Str_Adr'Address use Str_Ptr'Address;
       Str_Len     : Natural;
@@ -535,14 +537,14 @@ package body GNATCOLL.SQL.Sqlite.Builder is
                P2 : constant access SQL_Parameter_Text :=
                  SQL_Parameter_Text (Params (P).Get.Element.all)'Access;
             begin
-               if P2.Str_Ptr = null then
-                  Aux.Get_String (P2.Str_Val, Str_Ptr, Str_Len);
+               if P2.Val.Str_Ptr = null then
+                  P2.Val.Str_Val.Get_String (Str_Ptr, Str_Len);
                else
-                  Str_Adr := P2.Str_Ptr.all'Address;
-                  Str_Len := P2.Str_Ptr'Length;
+                  Str_Adr := P2.Val.Str_Ptr.all'Address;
+                  Str_Len := P2.Val.Str_Ptr'Length;
                end if;
 
-               if P2.Make_Copy then
+               if P2.Val.Make_Copy then
                   Bind_Text (Stmt, P, Str_Adr, Str_Len, Transient);
                else
                   Bind_Text (Stmt, P, Str_Adr, Str_Len);
@@ -1048,10 +1050,11 @@ package body GNATCOLL.SQL.Sqlite.Builder is
    -------------------
 
    overriding function Boolean_Value
-     (Self : Sqlite_Cursor; Field : Field_Index) return Boolean
+     (Self : Sqlite_Connection_Record; Value : String) return Boolean
    is
+      pragma Unreferenced (Self);
    begin
-      return Value (Sqlite_Cursor'Class (Self), Field) /= "0";
+      return Value /= "0";
    end Boolean_Value;
 
    -----------------
@@ -1059,11 +1062,12 @@ package body GNATCOLL.SQL.Sqlite.Builder is
    -----------------
 
    overriding function Money_Value
-      (Self  : Sqlite_Cursor;
-       Field : Field_Index) return T_Money is
+      (Self  : Sqlite_Connection_Record;
+       Value : String) return T_Money
+   is
+      pragma Unreferenced (Self);
    begin
-      return T_Money'Value
-         (Value (Sqlite_Cursor'Class (Self), Field)) * K_Delta;
+      return T_Money'Value (Value) * K_Delta;
    end Money_Value;
 
    ------------------------------

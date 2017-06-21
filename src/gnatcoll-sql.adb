@@ -22,9 +22,12 @@
 ------------------------------------------------------------------------------
 
 with Ada.Calendar;               use Ada.Calendar;
+with Ada.Calendar.Formatting;    use Ada.Calendar.Formatting;
 with Ada.Containers;             use Ada.Containers;
+with Ada.Strings.Fixed;          use Ada.Strings.Fixed;
 with Ada.Unchecked_Deallocation;
 with GNAT.Strings;               use GNAT.Strings;
+with GNATCOLL.Utils;             use GNATCOLL.Utils;
 
 package body GNATCOLL.SQL is
 
@@ -636,7 +639,7 @@ package body GNATCOLL.SQL is
    function As_Days (Count : Natural) return Time_Fields.Field'Class is
    begin
       return Time_Fields.From_String
-        ("interval '" & Integer'Image (Count) & "days'");
+        ("interval '" & Integer'Image (Count) & " days'");
    end As_Days;
 
    function As_Days (Count : Natural) return Date_Fields.Field'Class is
@@ -860,58 +863,6 @@ package body GNATCOLL.SQL is
    begin
       return Internal (Field);
    end Initcap;
-
-   --------------------
-   -- Cast_To_String --
-   --------------------
-
-   function Cast_To_String
-     (Field : SQL_Field'Class) return Text_Fields.Field'Class
-   is
-      function Internal is new Text_Fields.Apply_Function
-        (SQL_Field, "CAST (", "AS TEXT)");
-   begin
-      return Internal (Field);
-   end Cast_To_String;
-
-   ------------------
-   -- Cast_To_Date --
-   ------------------
-
-   function Cast_To_Date
-     (Field : SQL_Field'Class) return Date_Fields.Field'Class
-   is
-      function Internal is new Date_Fields.Apply_Function
-        (SQL_Field, "CAST (", "AS DATE)");
-   begin
-      return Internal (Field);
-   end Cast_To_Date;
-
-   ------------------
-   -- Cast_To_Time --
-   ------------------
-
-   function Cast_To_Time
-     (Field : SQL_Field'Class) return Time_Fields.Field'Class
-   is
-      function Internal is new Time_Fields.Apply_Function
-        (SQL_Field, "CAST (", "AS TIME)");
-   begin
-      return Internal (Field);
-   end Cast_To_Time;
-
-   ---------------------
-   -- Cast_To_Integer --
-   ---------------------
-
-   function Cast_To_Integer
-     (Field : SQL_Field'Class) return Integer_Fields.Field'Class
-   is
-      function Internal is new Integer_Fields.Apply_Function
-        (SQL_Field, "CAST (", "AS INTEGER)");
-   begin
-      return Internal (Field);
-   end Cast_To_Integer;
 
    ---------------
    -- To_String --
@@ -2881,5 +2832,208 @@ package body GNATCOLL.SQL is
    begin
       return "(" & To_String (To_String (Self.Query, Format)) & ")";
    end To_String;
+
+   -----------------
+   -- Time_To_SQL --
+   -----------------
+
+   function Time_To_SQL
+     (Self  : Formatter'Class;
+      Value : Ada.Calendar.Time;
+      Quote : Boolean) return String
+   is
+   begin
+      --  Value is always rendered as GMT, using Ada.Calendar.Formatting
+
+      if Value /= No_Time then
+         declare
+            Value_Str : constant String := Image (Value, Time_Zone => 0)
+              & (if Supports_Timezone (Self) then " +00:00" else "");
+         begin
+            return (if Quote then ''' & Value_Str & ''' else Value_Str);
+         end;
+      else
+         return "NULL";
+      end if;
+   end Time_To_SQL;
+
+   -----------------
+   -- Date_To_SQL --
+   -----------------
+
+   function Date_To_SQL
+     (Self  : Formatter'Class;
+      Value : Ada.Calendar.Time;
+      Quote : Boolean) return String
+   is
+      pragma Unreferenced (Self);
+      Year    : Year_Number;
+      Month   : Month_Number;
+      Day     : Day_Number;
+      Seconds : Duration;
+   begin
+      if Value /= No_Time then
+         Split (Value, Year, Month, Day, Seconds);
+
+         declare
+            Y : constant String := Image (Year, Min_Width => 4);
+            M : constant String := Image (Month, Min_Width => 2);
+            D : constant String := Image (Day, Min_Width => 2);
+            Result : String (1 .. 12);
+         begin
+            Result (2 .. 5) := Y (Y'First .. Y'First + 3);
+            Result (6) := '-';
+            Result (7 .. 8) := M (M'First .. M'First + 1);
+            Result (9) := '-';
+            Result (10 .. 11) := D (D'First .. D'First + 1);
+
+            if Quote then
+               Result (1) := ''';
+               Result (12) := ''';
+               return Result;
+            else
+               return Result (2 .. 11);
+            end if;
+         end;
+      else
+         return "NULL";
+      end if;
+   end Date_To_SQL;
+
+   -------------------
+   -- Date_From_SQL --
+   -------------------
+
+   function Date_From_SQL
+     (Format : Formatter'Class; Value : String) return Ada.Calendar.Time
+   is
+      pragma Unreferenced (Format);
+      --  Do not use Time_From_SQL, since it tries to handle timezones
+      Year    : Year_Number;
+      Month   : Month_Number;
+      Day     : Day_Number;
+   begin
+      --  SQL standard requires the use of ISO 8601 in the output of dates,
+      --  so we parse that format.
+
+      if Value'Length >= 10
+         and then Value (Value'First + 4) = '-'
+      then
+         Year := Year_Number'Value (Value (Value'First .. Value'First + 3));
+         Month := Month_Number'Value
+            (Value (Value'First + 5 .. Value'First + 6));
+         Day := Day_Number'Value (Value (Value'First + 8 .. Value'First + 9));
+         return Ada.Calendar.Time_Of (Year, Month, Day, 0.0);
+
+      else
+         --  Postgres supports other formats, which are not used in practice.
+         --  Better raise an exception to let users know though
+         raise Constraint_Error with "Date format not supported";
+      end if;
+   end Date_From_SQL;
+
+   ---------------
+   -- Maps_Text --
+   ---------------
+
+   function Maps_Text
+      (Schema : String; Value : out Field_Text_Data) return Boolean
+   is
+   begin
+      if Schema = "text"
+         or else Schema = "varchar"
+         or else
+            (Schema'Length >= 10    --  "character varying(...)"
+             and then Schema (Schema'First .. Schema'First + 9) = "character ")
+      then
+         Value.Max_Length := Integer'Last;
+         return True;
+
+      elsif Schema'Length >= 8
+         and then Schema (Schema'First .. Schema'First + 7) = "varchar("
+      then
+         begin
+            Value.Max_Length := Integer'Value
+               (Schema (Schema'First + 8 .. Schema'Last - 1));
+            return  True;
+         exception
+            when Constraint_Error =>
+               raise Invalid_Schema with
+                  "Missing max length after 'varchar' in " & Schema;
+         end;
+
+      elsif Schema'Length >= 10
+        and then Schema (Schema'First .. Schema'First + 9) = "character("
+      then
+         begin
+            Value.Max_Length :=
+               Integer'Value (Schema (Schema'First + 10 .. Schema'Last - 1));
+            return True;
+         exception
+            when Constraint_Error =>
+               raise Invalid_Schema with
+                  "Missing max length after 'Character' in " & Schema;
+         end;
+      end if;
+
+      return False;
+   end Maps_Text;
+
+   ------------------
+   -- Maps_Integer --
+   ------------------
+
+   function Maps_Integer
+      (Schema : String; V : out Null_Record) return Boolean
+   is
+      pragma Unreferenced (V);
+   begin
+      if Schema in "integer" | "smallint" | "oid" then
+         return True;
+
+      elsif Schema'Length >= 7
+         and then Schema (Schema'First .. Schema'First + 6) = "numeric"
+      then
+         --  Check the scale
+         for Comma in reverse Schema'Range loop
+            if Schema (Comma) = ',' then
+               return Schema (Comma + 1 .. Schema'Last - 1) = "0";
+            elsif Schema (Comma) = ')' then
+               --  "numeric(position)" selects a scale of 0, so
+               --  should be an integer;
+               return True;
+            end if;
+         end loop;
+
+         --  "numeric" (without an argument) means maximum
+         --  precision, so should be mapped to a long_float.
+         return False;
+      end if;
+
+      return False;
+   end Maps_Integer;
+
+   -------------------
+   -- Time_From_SQL --
+   -------------------
+
+   function Time_From_SQL
+     (Format : Formatter'Class; Value : String) return Ada.Calendar.Time
+   is
+      pragma Unreferenced (Format);
+   begin
+      if Value = "" then
+         return No_Time;
+      else
+         --  Workaround bug(?) in GNAT.Calendar.Time_IO: if there is no time,
+         --  set one to avoid daylight saving time issues
+
+         if Ada.Strings.Fixed.Index (Value, ":") < Value'First then
+            return GNATCOLL.Utils.Time_Value (Value & " 12:00:00");
+         else
+            return GNATCOLL.Utils.Time_Value (Value);
+         end if;
+      end if;
+   end Time_From_SQL;
 
 end GNATCOLL.SQL;

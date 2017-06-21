@@ -251,6 +251,13 @@ package GNATCOLL.Utils is
    --  The input date is assumed to be in UTC unless a timezone is specified
    --  as hours with a final "[+-]\d\d", or as hours and minutes with
    --  "[+-]\d\d\d\d" or "[+-]\d\d:\d\d"
+   --
+   --  The output date is always returned for the UTC time zone.
+   --  So if you are in GMT+12 and you parse "2017-01-01T11:00:00", the
+   --  result date will be:  year=2016, month=12, day=31, time=23:00:00.
+   --  If you want to spit the resulting time to extract the components,
+   --  you should use:
+   --     Ada.Calendar.Formatting.Split (.., Time_Zone => 0);
 
    function Truncate
      (Date : Time; Time_Zone : Time_Zones.Time_Offset := 0) return Time;

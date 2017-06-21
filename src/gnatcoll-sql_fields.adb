@@ -21,22 +21,71 @@
 --                                                                          --
 ------------------------------------------------------------------------------
 
-with Ada.Strings.Fixed;       use Ada.Strings.Fixed;
+with Ada.Strings;
 
 package body GNATCOLL.SQL_Fields is
+
+   --------------
+   -- Identity --
+   --------------
+
+   function Identity (Val : Long_Long_Float) return Long_Long_Float is
+      --  Support for Nan and Inf
+      pragma Validity_Checks (Off);
+   begin
+      return Val;
+   end Identity;
+
+   ---------------------
+   -- Maps_Long_Float --
+   ---------------------
+
+   function Maps_Long_Float
+      (Schema : String; Value : out Null_Record) return Boolean
+   is
+      pragma Unreferenced (Value);
+   begin
+      if Schema = "double precision"
+         or else Schema = "float"
+         or else Schema = "numeric"
+      then
+         return True;
+
+      elsif Schema'Length >= 7
+         and then Schema (Schema'First .. Schema'First + 6) = "numeric"
+      then
+         --  Check the scale
+         for Comma in reverse Schema'Range loop
+            if Schema (Comma) = ',' then
+               return Schema (Comma + 1 .. Schema'Last - 1) /= "0";
+            elsif Schema (Comma) = '(' then
+               --  No scale specified, but has a precision. This is
+               --  an integer.
+               return False;
+            end if;
+         end loop;
+
+         --  With no argument, this means maximum precision and
+         --  scale. It should be mapped to a long float.
+         return True;
+      end if;
+
+      return False;
+   end Maps_Long_Float;
 
    -----------------
    -- Json_To_SQL --
    -----------------
 
    function Json_To_SQL
-     (Self : Formatter'Class; Value : String; Quote : Boolean) return String is
+     (Self : Formatter'Class; Value : XString; Quote : Boolean) return String
+   is
    begin
-      if Trim (Value, Ada.Strings.Both) = "" then
+      if Value.Trim (Ada.Strings.Both) = "" then
          return "null";
          --  Json null, not to be confused with SQL NULL.
       else
-         return String_Image (Self, Value, Quote);
+         return String_Image (Self, Value.To_String, Quote);
       end if;
    end Json_To_SQL;
 
@@ -45,15 +94,15 @@ package body GNATCOLL.SQL_Fields is
    -----------------
 
    function XML_To_SQL
-     (Self : Formatter'Class; Value : String; Quote : Boolean) return String
+     (Self : Formatter'Class; Value : XString; Quote : Boolean) return String
    is
       pragma Unreferenced (Self, Quote);
    begin
-      if Trim (Value, Ada.Strings.Both) = "" then
+      if Value.Trim (Ada.Strings.Both) = "" then
          return "<null/>";
          --  XML null, not to be confused with SQL NULL.
       else
-         return Value;
+         return Value.To_String;
       end if;
    end XML_To_SQL;
 

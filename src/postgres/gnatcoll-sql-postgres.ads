@@ -24,9 +24,11 @@
 --  This package instantiates the GNATCOLL.SQL hierarchy for the PostgreSQL
 --  DBMS
 
+with Ada.Calendar;        use Ada.Calendar;
 with Ada.Strings.Unbounded;
 with GNATCOLL.SQL.Exec;   use GNATCOLL.SQL.Exec;
 with GNATCOLL.Strings;    use GNATCOLL.Strings;
+with GNATCOLL.SQL_Fields; use GNATCOLL.SQL_Fields;
 with GNATCOLL.SQL.Ranges;
 
 package GNATCOLL.SQL.Postgres is
@@ -156,36 +158,37 @@ package GNATCOLL.SQL.Postgres is
    --  instance:
    --      R.Fetch (DB, SQL_Select (...) & Returning (Field1));
 
-   package DateRanges is new GNATCOLL.SQL.Ranges
+   package Date_Ranges is new GNATCOLL.SQL.Ranges
       (Base_Fields    => GNATCOLL.SQL.Date_Fields,
        SQL_Type       => "daterange",
        Ada_Field_Type => "GNATCOLL.SQL.Postgres.SQL_Field_Date_Range");
-   subtype Date_Range is DateRanges.Ada_Range;
-   subtype SQL_Field_Date_Range is DateRanges.SQL_Field_Range;
+   subtype Date_Range is Date_Ranges.Ada_Range;
+   subtype SQL_Date_Range is Date_Ranges.SQL_Ada_Range;
+   subtype SQL_Field_Date_Range is Date_Ranges.SQL_Field_Range;
 
-   package NumRanges is new GNATCOLL.SQL.Ranges
-      (Base_Fields    => GNATCOLL.SQL.Float_Fields,
+   package Num_Ranges is new GNATCOLL.SQL.Ranges
+      (Base_Fields    => GNATCOLL.SQL_Fields.Long_Float_Fields,
        SQL_Type       => "numrange",
        Ada_Field_Type => "GNATCOLL.SQL.Postgres.SQL_Field_Num_Range");
-   subtype Num_Range is NumRanges.Ada_Range;
-   type SQL_Field_Num_Range is
-      new NumRanges.SQL_Field_Range with null record;
+   subtype Num_Range is Num_Ranges.Ada_Range;
+   subtype SQL_Num_Range is Num_Ranges.SQL_Ada_Range;
+   subtype SQL_Field_Num_Range is Num_Ranges.SQL_Field_Range;
 
-   package IntegerRanges is new GNATCOLL.SQL.Ranges
+   package Integer_Ranges is new GNATCOLL.SQL.Ranges
       (Base_Fields    => GNATCOLL.SQL.Integer_Fields,
        SQL_Type       => "int4range",
        Ada_Field_Type => "GNATCOLL.SQL.Postgres.SQL_Field_Integer_Range");
-   subtype Integer_Range is IntegerRanges.Ada_Range;
-   type SQL_Field_Integer_Range is
-      new IntegerRanges.SQL_Field_Range with null record;
+   subtype Integer_Range is Integer_Ranges.Ada_Range;
+   subtype SQL_Integer_Range is Integer_Ranges.SQL_Ada_Range;
+   subtype SQL_Field_Integer_Range is Integer_Ranges.SQL_Field_Range;
 
-   package BigintRanges is new GNATCOLL.SQL.Ranges
+   package Bigint_Ranges is new GNATCOLL.SQL.Ranges
       (Base_Fields    => GNATCOLL.SQL.Bigint_Fields,
        SQL_Type       => "int8range",
        Ada_Field_Type => "GNATCOLL.SQL.Postgres.SQL_Field_Bigint_Range");
-   subtype Bigint_Range is BigintRanges.Ada_Range;
-   type SQL_Field_Bigint_Range is
-      new BigintRanges.SQL_Field_Range with null record;
+   subtype Bigint_Range is Bigint_Ranges.Ada_Range;
+   subtype SQL_Bigint_Range is Bigint_Ranges.SQL_Ada_Range;
+   subtype SQL_Field_Bigint_Range is Bigint_Ranges.SQL_Field_Range;
 
 private
    type Postgres_Description is new Database_Description_Record with record

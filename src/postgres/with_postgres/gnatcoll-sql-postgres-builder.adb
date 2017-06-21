@@ -165,6 +165,9 @@ package body GNATCOLL.SQL.Postgres.Builder is
    overriding procedure Finalize
      (Connection : access Postgresql_Connection_Record;
       Prepared   : DBMS_Stmt);
+   overriding function Boolean_Value
+     (Self : Postgresql_Connection_Record; Value : String) return Boolean
+     is (Value = "t");
    --  Reset:
    --  The prepared statement is "DECLARE ... CURSOR" so there is nothing to
    --  reset. The cursor itself is created as part of the iteration
@@ -199,8 +202,6 @@ package body GNATCOLL.SQL.Postgres.Builder is
       overriding function C_Value
         (Self  : Cursor; Field : GNATCOLL.SQL.Exec.Field_Index)
          return chars_ptr;
-      overriding function Boolean_Value
-        (Self  : Cursor; Field : GNATCOLL.SQL.Exec.Field_Index) return Boolean;
       overriding function Is_Null
         (Self  : Cursor; Field : GNATCOLL.SQL.Exec.Field_Index) return Boolean;
       overriding function Last_Id
@@ -261,15 +262,6 @@ package body GNATCOLL.SQL.Postgres.Builder is
            (Self.Res, Self.Current,
             GNATCOLL.SQL.Postgres.Gnade.Field_Index (Field));
       end C_Value;
-
-      overriding function Boolean_Value
-        (Self  : Cursor;
-         Field : GNATCOLL.SQL.Exec.Field_Index) return Boolean is
-      begin
-         return Boolean_Value
-           (Self.Res, Self.Current,
-            GNATCOLL.SQL.Postgres.Gnade.Field_Index (Field));
-      end Boolean_Value;
 
       overriding function Is_Null
         (Self  : Cursor;

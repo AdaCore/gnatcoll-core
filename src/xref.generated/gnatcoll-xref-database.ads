@@ -1,6 +1,5 @@
 with GNATCOLL.SQL; use GNATCOLL.SQL;
 pragma Warnings (Off, "no entities of * are referenced");
-with GNATCOLL.SQL_Fields; use GNATCOLL.SQL_Fields;
 pragma Warnings (On, "no entities of * are referenced");
 with GNATCOLL.SQL.Exec;
 with GNATCOLL.Xref.Database_Names; use GNATCOLL.Xref.Database_Names;
@@ -37,12 +36,12 @@ package GNATCOLL.Xref.Database is
        Index    : Integer)
    is abstract new SQL_Table (Ta_E2e, Instance, Index) with
    record
-      Fromentity : SQL_Field_Integer (Ta_E2e, Instance, N_Fromentity, Index);
-      Toentity : SQL_Field_Integer (Ta_E2e, Instance, N_Toentity, Index);
-      Kind : SQL_Field_Integer (Ta_E2e, Instance, N_Kind, Index);
+      Fromentity : GNATCOLL.SQL.SQL_Field_Integer (Ta_E2e, Instance, N_Fromentity, Index);
+      Toentity : GNATCOLL.SQL.SQL_Field_Integer (Ta_E2e, Instance, N_Toentity, Index);
+      Kind : GNATCOLL.SQL.SQL_Field_Integer (Ta_E2e, Instance, N_Kind, Index);
       --  The type of link.
 
-      Order_By : SQL_Field_Integer (Ta_E2e, Instance, N_Order_By, Index);
+      Order_By : GNATCOLL.SQL.SQL_Field_Integer (Ta_E2e, Instance, N_Order_By, Index);
       --  Ordering among the references. Used for instance for subprogram
       --  parameters
 
@@ -62,8 +61,8 @@ package GNATCOLL.Xref.Database is
        Index    : Integer)
    is abstract new SQL_Table (Ta_E2e_Kind, Instance, Index) with
    record
-      Id : SQL_Field_Integer (Ta_E2e_Kind, Instance, N_Id, Index);
-      Name : SQL_Field_Text (Ta_E2e_Kind, Instance, N_Name, Index);
+      Id : GNATCOLL.SQL.SQL_Field_Integer (Ta_E2e_Kind, Instance, N_Id, Index);
+      Name : GNATCOLL.SQL.SQL_Field_Text (Ta_E2e_Kind, Instance, N_Name, Index);
    end record;
 
    type T_E2e_Kind (Instance : Cst_String_Access)
@@ -80,35 +79,35 @@ package GNATCOLL.Xref.Database is
        Index    : Integer)
    is abstract new SQL_Table (Ta_Entities, Instance, Index) with
    record
-      Id : SQL_Field_Integer (Ta_Entities, Instance, N_Id, Index);
-      Name : SQL_Field_Text (Ta_Entities, Instance, N_Name, Index);
+      Id : GNATCOLL.SQL.SQL_Field_Integer (Ta_Entities, Instance, N_Id, Index);
+      Name : GNATCOLL.SQL.SQL_Field_Text (Ta_Entities, Instance, N_Name, Index);
       --  Can be empty for forward decls (see above). Must be UTF-8
 
-      Kind : SQL_Field_Text (Ta_Entities, Instance, N_Kind, Index);
+      Kind : GNATCOLL.SQL.SQL_Field_Text (Ta_Entities, Instance, N_Kind, Index);
       --  The E_Kind for this entity
 
-      Decl_File : SQL_Field_Integer (Ta_Entities, Instance, N_Decl_File, Index);
+      Decl_File : GNATCOLL.SQL.SQL_Field_Integer (Ta_Entities, Instance, N_Decl_File, Index);
       --  Set to -1 for a predefined entity
 
-      Decl_Line : SQL_Field_Integer (Ta_Entities, Instance, N_Decl_Line, Index);
+      Decl_Line : GNATCOLL.SQL.SQL_Field_Integer (Ta_Entities, Instance, N_Decl_Line, Index);
       --  Set to -1 for a predefined entity
 
-      Decl_Column : SQL_Field_Integer (Ta_Entities, Instance, N_Decl_Column, Index);
+      Decl_Column : GNATCOLL.SQL.SQL_Field_Integer (Ta_Entities, Instance, N_Decl_Column, Index);
       --  Set to -1 for a predefined entity
 
-      Decl_Caller : SQL_Field_Integer (Ta_Entities, Instance, N_Decl_Caller, Index);
+      Decl_Caller : GNATCOLL.SQL.SQL_Field_Integer (Ta_Entities, Instance, N_Decl_Caller, Index);
       --  Parent entity
 
-      Mangled_Name : SQL_Field_Text (Ta_Entities, Instance, N_Mangled_Name, Index);
+      Mangled_Name : GNATCOLL.SQL.SQL_Field_Text (Ta_Entities, Instance, N_Mangled_Name, Index);
       --  Mangled name of the entity, if applicable
 
-      Exported : SQL_Field_Boolean (Ta_Entities, Instance, N_Exported, Index);
+      Exported : GNATCOLL.SQL.SQL_Field_Boolean (Ta_Entities, Instance, N_Exported, Index);
       --  Whether the mangled name is an export or an import of the entity
 
-      Is_Global : SQL_Field_Boolean (Ta_Entities, Instance, N_Is_Global, Index);
+      Is_Global : GNATCOLL.SQL.SQL_Field_Boolean (Ta_Entities, Instance, N_Is_Global, Index);
       --  Whether this is a global entity (library-level in Ada)
 
-      Is_Static_Local : SQL_Field_Boolean (Ta_Entities, Instance, N_Is_Static_Local, Index);
+      Is_Static_Local : GNATCOLL.SQL.SQL_Field_Boolean (Ta_Entities, Instance, N_Is_Static_Local, Index);
       --  Whether this is a 'static' variable in C/C++
 
    end record;
@@ -127,20 +126,20 @@ package GNATCOLL.Xref.Database is
        Index    : Integer)
    is abstract new SQL_Table (Ta_Entity_Kinds, Instance, Index) with
    record
-      Id : SQL_Field_Text (Ta_Entity_Kinds, Instance, N_Id, Index);
-      Display : SQL_Field_Text (Ta_Entity_Kinds, Instance, N_Display, Index);
+      Id : GNATCOLL.SQL.SQL_Field_Text (Ta_Entity_Kinds, Instance, N_Id, Index);
+      Display : GNATCOLL.SQL.SQL_Field_Text (Ta_Entity_Kinds, Instance, N_Display, Index);
       --  How to display this entity kind
 
-      Is_Subprogram : SQL_Field_Boolean (Ta_Entity_Kinds, Instance, N_Is_Subprogram, Index);
-      Is_Container : SQL_Field_Boolean (Ta_Entity_Kinds, Instance, N_Is_Container, Index);
-      Body_Is_Full_Declaration : SQL_Field_Boolean (Ta_Entity_Kinds, Instance, N_Body_Is_Full_Declaration, Index);
-      Is_Abstract : SQL_Field_Boolean (Ta_Entity_Kinds, Instance, N_Is_Abstract, Index);
-      Is_Generic : SQL_Field_Boolean (Ta_Entity_Kinds, Instance, N_Is_Generic, Index);
-      Is_Access : SQL_Field_Boolean (Ta_Entity_Kinds, Instance, N_Is_Access, Index);
-      Is_Type : SQL_Field_Boolean (Ta_Entity_Kinds, Instance, N_Is_Type, Index);
-      Is_Printable_In_Gdb : SQL_Field_Boolean (Ta_Entity_Kinds, Instance, N_Is_Printable_In_Gdb, Index);
-      Is_Array : SQL_Field_Boolean (Ta_Entity_Kinds, Instance, N_Is_Array, Index);
-      Has_Methods : SQL_Field_Boolean (Ta_Entity_Kinds, Instance, N_Has_Methods, Index);
+      Is_Subprogram : GNATCOLL.SQL.SQL_Field_Boolean (Ta_Entity_Kinds, Instance, N_Is_Subprogram, Index);
+      Is_Container : GNATCOLL.SQL.SQL_Field_Boolean (Ta_Entity_Kinds, Instance, N_Is_Container, Index);
+      Body_Is_Full_Declaration : GNATCOLL.SQL.SQL_Field_Boolean (Ta_Entity_Kinds, Instance, N_Body_Is_Full_Declaration, Index);
+      Is_Abstract : GNATCOLL.SQL.SQL_Field_Boolean (Ta_Entity_Kinds, Instance, N_Is_Abstract, Index);
+      Is_Generic : GNATCOLL.SQL.SQL_Field_Boolean (Ta_Entity_Kinds, Instance, N_Is_Generic, Index);
+      Is_Access : GNATCOLL.SQL.SQL_Field_Boolean (Ta_Entity_Kinds, Instance, N_Is_Access, Index);
+      Is_Type : GNATCOLL.SQL.SQL_Field_Boolean (Ta_Entity_Kinds, Instance, N_Is_Type, Index);
+      Is_Printable_In_Gdb : GNATCOLL.SQL.SQL_Field_Boolean (Ta_Entity_Kinds, Instance, N_Is_Printable_In_Gdb, Index);
+      Is_Array : GNATCOLL.SQL.SQL_Field_Boolean (Ta_Entity_Kinds, Instance, N_Is_Array, Index);
+      Has_Methods : GNATCOLL.SQL.SQL_Field_Boolean (Ta_Entity_Kinds, Instance, N_Has_Methods, Index);
    end record;
 
    type T_Entity_Kinds (Instance : Cst_String_Access)
@@ -157,19 +156,19 @@ package GNATCOLL.Xref.Database is
        Index    : Integer)
    is abstract new SQL_Table (Ta_Entity_Refs, Instance, Index) with
    record
-      Entity : SQL_Field_Integer (Ta_Entity_Refs, Instance, N_Entity, Index);
+      Entity : GNATCOLL.SQL.SQL_Field_Integer (Ta_Entity_Refs, Instance, N_Entity, Index);
       --  The entity to which we have a reference
 
-      File : SQL_Field_Integer (Ta_Entity_Refs, Instance, N_File, Index);
-      Line : SQL_Field_Integer (Ta_Entity_Refs, Instance, N_Line, Index);
-      Column : SQL_Field_Integer (Ta_Entity_Refs, Instance, N_Column, Index);
-      Kind : SQL_Field_Text (Ta_Entity_Refs, Instance, N_Kind, Index);
+      File : GNATCOLL.SQL.SQL_Field_Integer (Ta_Entity_Refs, Instance, N_File, Index);
+      Line : GNATCOLL.SQL.SQL_Field_Integer (Ta_Entity_Refs, Instance, N_Line, Index);
+      Column : GNATCOLL.SQL.SQL_Field_Integer (Ta_Entity_Refs, Instance, N_Column, Index);
+      Kind : GNATCOLL.SQL.SQL_Field_Text (Ta_Entity_Refs, Instance, N_Kind, Index);
       --  Type of reference (same letter as in ALI files)
 
-      Caller : SQL_Field_Integer (Ta_Entity_Refs, Instance, N_Caller, Index);
+      Caller : GNATCOLL.SQL.SQL_Field_Integer (Ta_Entity_Refs, Instance, N_Caller, Index);
       --  Enclosing entity at that location
 
-      From_Instantiation : SQL_Field_Text (Ta_Entity_Refs, Instance, N_From_Instantiation, Index);
+      From_Instantiation : GNATCOLL.SQL.SQL_Field_Text (Ta_Entity_Refs, Instance, N_From_Instantiation, Index);
       --  Instances in which the ref occurs
 
    end record;
@@ -188,9 +187,9 @@ package GNATCOLL.Xref.Database is
        Index    : Integer)
    is abstract new SQL_Table (Ta_F2f, Instance, Index) with
    record
-      Fromfile : SQL_Field_Integer (Ta_F2f, Instance, N_Fromfile, Index);
-      Tofile : SQL_Field_Integer (Ta_F2f, Instance, N_Tofile, Index);
-      Kind : SQL_Field_Integer (Ta_F2f, Instance, N_Kind, Index);
+      Fromfile : GNATCOLL.SQL.SQL_Field_Integer (Ta_F2f, Instance, N_Fromfile, Index);
+      Tofile : GNATCOLL.SQL.SQL_Field_Integer (Ta_F2f, Instance, N_Tofile, Index);
+      Kind : GNATCOLL.SQL.SQL_Field_Integer (Ta_F2f, Instance, N_Kind, Index);
       --  Kind of dependency
 
    end record;
@@ -209,8 +208,8 @@ package GNATCOLL.Xref.Database is
        Index    : Integer)
    is abstract new SQL_Table (Ta_F2f_Kind, Instance, Index) with
    record
-      Id : SQL_Field_Integer (Ta_F2f_Kind, Instance, N_Id, Index);
-      Name : SQL_Field_Text (Ta_F2f_Kind, Instance, N_Name, Index);
+      Id : GNATCOLL.SQL.SQL_Field_Integer (Ta_F2f_Kind, Instance, N_Id, Index);
+      Name : GNATCOLL.SQL.SQL_Field_Text (Ta_F2f_Kind, Instance, N_Name, Index);
    end record;
 
    type T_F2f_Kind (Instance : Cst_String_Access)
@@ -227,19 +226,19 @@ package GNATCOLL.Xref.Database is
        Index    : Integer)
    is abstract new SQL_Table (Ta_Files, Instance, Index) with
    record
-      Id : SQL_Field_Integer (Ta_Files, Instance, N_Id, Index);
-      Path : SQL_Field_Text (Ta_Files, Instance, N_Path, Index);
+      Id : GNATCOLL.SQL.SQL_Field_Integer (Ta_Files, Instance, N_Id, Index);
+      Path : GNATCOLL.SQL.SQL_Field_Text (Ta_Files, Instance, N_Path, Index);
       --  Full normalized absolute path for the file. Casing is not normalized
 
-      Stamp : SQL_Field_Time (Ta_Files, Instance, N_Stamp, Index);
+      Stamp : GNATCOLL.SQL.SQL_Field_Time (Ta_Files, Instance, N_Stamp, Index);
       --  The timestamp the last time the file was read (only set for LI files
       --  for efficiency)
 
-      Language : SQL_Field_Text (Ta_Files, Instance, N_Language, Index);
+      Language : GNATCOLL.SQL.SQL_Field_Text (Ta_Files, Instance, N_Language, Index);
       --  The language for this file (so that we can limit queries to specific
       --  languages), or "li"
 
-      Project : SQL_Field_Integer (Ta_Files, Instance, N_Project, Index);
+      Project : GNATCOLL.SQL.SQL_Field_Integer (Ta_Files, Instance, N_Project, Index);
       --  V2.0: The project to which a source file belongs. With aggregate
       --  projects, a source file might occur several times in this table,
       --  each time with a different project.
@@ -260,27 +259,27 @@ package GNATCOLL.Xref.Database is
        Index    : Integer)
    is abstract new SQL_Table (Ta_Reference_Kinds, Instance, Index) with
    record
-      Id : SQL_Field_Text (Ta_Reference_Kinds, Instance, N_Id, Index);
+      Id : GNATCOLL.SQL.SQL_Field_Text (Ta_Reference_Kinds, Instance, N_Id, Index);
       --  The character found in the ALI file
 
-      Display : SQL_Field_Text (Ta_Reference_Kinds, Instance, N_Display, Index);
+      Display : GNATCOLL.SQL.SQL_Field_Text (Ta_Reference_Kinds, Instance, N_Display, Index);
       --  Label to display the reference
 
-      Is_Real : SQL_Field_Boolean (Ta_Reference_Kinds, Instance, N_Is_Real, Index);
+      Is_Real : GNATCOLL.SQL.SQL_Field_Boolean (Ta_Reference_Kinds, Instance, N_Is_Real, Index);
       --  Whether the name of the entity appears at that location
 
-      Is_Read : SQL_Field_Boolean (Ta_Reference_Kinds, Instance, N_Is_Read, Index);
-      Is_Write : SQL_Field_Boolean (Ta_Reference_Kinds, Instance, N_Is_Write, Index);
-      Is_End : SQL_Field_Boolean (Ta_Reference_Kinds, Instance, N_Is_End, Index);
+      Is_Read : GNATCOLL.SQL.SQL_Field_Boolean (Ta_Reference_Kinds, Instance, N_Is_Read, Index);
+      Is_Write : GNATCOLL.SQL.SQL_Field_Boolean (Ta_Reference_Kinds, Instance, N_Is_Write, Index);
+      Is_End : GNATCOLL.SQL.SQL_Field_Boolean (Ta_Reference_Kinds, Instance, N_Is_End, Index);
       --  Whether this marks the end of a scope (spec or body)
 
-      Show_In_Callgraph : SQL_Field_Boolean (Ta_Reference_Kinds, Instance, N_Show_In_Callgraph, Index);
+      Show_In_Callgraph : GNATCOLL.SQL.SQL_Field_Boolean (Ta_Reference_Kinds, Instance, N_Show_In_Callgraph, Index);
       --  Whether this ref. should be shown in the call graph
 
-      Is_Dispatching : SQL_Field_Boolean (Ta_Reference_Kinds, Instance, N_Is_Dispatching, Index);
+      Is_Dispatching : GNATCOLL.SQL.SQL_Field_Boolean (Ta_Reference_Kinds, Instance, N_Is_Dispatching, Index);
       --  Whether this is a dispatching call
 
-      Is_Implicit : SQL_Field_Boolean (Ta_Reference_Kinds, Instance, N_Is_Implicit, Index);
+      Is_Implicit : GNATCOLL.SQL.SQL_Field_Boolean (Ta_Reference_Kinds, Instance, N_Is_Implicit, Index);
    end record;
 
    type T_Reference_Kinds (Instance : Cst_String_Access)
