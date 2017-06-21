@@ -311,7 +311,7 @@ is
             Put_Line (Spec_File, " (null, Index) with null record;");
             Put_Line
                (Spec_File,
-                Indent & "--  To use aliased in the form name1, name2,...");
+                Indent & "--  To use aliases in the form name1, name2,...");
          end if;
       end Print_Table_Spec;
 
@@ -386,12 +386,23 @@ is
 
       procedure Print_Table_Global (Table : in out Table_Description) is
          Indent : constant String := (1 .. Indent_Level => ' ');
+         NS     : constant String := Get_Namespace (Table);
       begin
          if not Table.Is_Abstract
-            and then Get_Namespace (Table) = Current_Namespace
+            and then NS = Current_Namespace
          then
-            Put_Line (Spec_File, Indent & Capitalize (Table.Name)
-                      & " : T_" & Capitalize (Table.Name) & " (null);");
+            declare
+               --  The namespace's name is already part of the enclosing
+               --  package, so don't duplicate it in the table's name.
+               N : constant String := Capitalize (Table.Name);
+               N2 : constant String :=
+                  N (N'First
+                     + (if NS'Length = 0 then 0 else NS'Length + 1)
+                     .. N'Last);
+            begin
+               Put_Line
+                  (Spec_File, Indent & N2 & " : T_" & N & " (null);");
+            end;
          end if;
       end Print_Table_Global;
 
@@ -475,7 +486,7 @@ is
    procedure Print_Database_Create is
       Spec : constant String :=
         "   procedure Create_Database" & ASCII.LF
-        & "      (DB : access"
+        & "      (DB : not null access"
         &  " GNATCOLL.SQL.Exec.Database_Connection_Record'Class)";
 
       procedure Puts (Data : String);
