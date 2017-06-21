@@ -45,6 +45,10 @@ is
 
    Spec_File, Body_File : File_Type;
 
+   Seen_Withs : String_Sets.Set;
+   --  The 'with' clauses that have already been output, to avoid
+   --  duplicates.
+
    function Capitalize (Name : XString) return String;
    --  Make a name suitable for display
 
@@ -118,17 +122,23 @@ is
    -----------------
 
    procedure Print_Withs (T_Descr : in out Table_Description) is
+
       procedure For_Field (F : in out GNATCOLL.SQL.Inspect.Field);
       procedure For_Field (F : in out GNATCOLL.SQL.Inspect.Field) is
-         Typ : constant String :=
-            F.Get_Type.Type_To_SQL (null, For_Database => False);
+         Typ : constant String := F.Get_Actual_Type.Ada_Field_Type_Name;
       begin
          for T in reverse Typ'Range loop
             if Typ (T) = '.' then
-               Put_Line
-                  (Spec_File,
-                   "with " & Typ (Typ'First .. T - 1) & "; use "
-                   & Typ (Typ'First .. T - 1) & ";");
+               declare
+                  N : constant String := Typ (Typ'First .. T - 1);
+               begin
+                  if not Seen_Withs.Contains (N) then
+                     Put_Line
+                        (Spec_File,
+                         "with " & N & "; use " & N & ";");
+                     Seen_Withs.Include (N);
+                  end if;
+               end;
                exit;
             end if;
          end loop;
@@ -202,8 +212,7 @@ is
 
          procedure For_Field (F : in out GNATCOLL.SQL.Inspect.Field);
          procedure For_Field (F : in out GNATCOLL.SQL.Inspect.Field) is
-            Typ : constant String :=
-               F.Get_Type.Type_To_SQL (null, For_Database => False);
+            Typ : constant String := F.Get_Actual_Type.Ada_Field_Type_Name;
          begin
             Put
                (Spec_File,
@@ -519,7 +528,7 @@ is
       Put (Body_File, "      DbSchema : constant String := """);
       F.File := GNATCOLL.VFS.No_File;
       Write_Schema
-        (F, Schema, Puts => Puts'Access, Align_Columns => False,
+        (F, Connection, Schema, Puts => Puts'Access, Align_Columns => False,
          Show_Comments => False);
       Put_Line (Body_File, """;");
 
@@ -534,8 +543,7 @@ is
       Put_Line (Body_File, "      Schema : DB_Schema;");
       Put_Line (Body_File, "   begin");
       Put_Line (Body_File, "      Schema := Read_Schema (F, DbSchema);");
-      Put_Line (Body_File, "      D.DB := Database_Connection (DB);");
-      Put_Line (Body_File, "      Write_Schema (D, Schema);");
+      Put_Line (Body_File, "      Write_Schema (D, Database_Connection (DB), Schema);");
 
       if Load_File /= GNATCOLL.VFS.No_File then
          Put_Line (Body_File, "      if DB.Success then");
@@ -553,6 +561,8 @@ is
      +To_Lower (Translate (Generated, To_Mapping (".", "-")));
 
 begin
+   Seen_Withs.Include ("GNATCOLL.SQL");
+
    --  This version creates the output via a simple list of calls to Put_Line.
    --  A more advanced version using the templates_parser is also available,
    --  but requires the installation of the latter on the machine
@@ -598,8 +608,6 @@ begin
    Put_Line
      (Spec_File,
       "pragma Warnings (Off, ""no entities of * are referenced"");");
-   Put_Line
-     (Spec_File, "with GNATCOLL.SQL_Fields; use GNATCOLL.SQL_Fields;");
    For_Each_Table (Schema, Print_Withs'Access);
    Put_Line
      (Spec_File,
