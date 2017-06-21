@@ -65,7 +65,9 @@ void gnatcoll_beginning_of_line(int forStderr) {
 #else
    //  struct winsize ws;
    //  ioctl(forStderr ? 2 : 1, TIOCGWINSZ, &ws);
-   write(forStderr ? 2 : 1, "\r", 1);
+   if (write(forStderr ? 2 : 1, "\r", 1) != 1) {
+      // Ignore failure for now
+   }
 #endif
 }
 
@@ -84,7 +86,9 @@ void gnatcoll_clear_to_end_of_line(int forStderr) {
    }
 
 #else
-   write(forStderr ? 2 : 1, "\033[0K", 4);
+   if (write(forStderr ? 2 : 1, "\033[0K", 4) != 4) {
+      // Ignore failure for now
+   }
 #endif
 }
 
