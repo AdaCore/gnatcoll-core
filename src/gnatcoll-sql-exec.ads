@@ -930,6 +930,71 @@ package GNATCOLL.SQL.Exec is
      (Connection : access Database_Connection_Record'Class);
    --  Print a warning or message to the appropriate GNATCOLL.Traces stream.
 
+   --------------------------------------------
+   -- Retrieving results with a for..of loop --
+   --------------------------------------------
+   --  This is another way to parse the result of a query.
+   --  The loop over the rows is written as:
+   --
+   --      for Row of DB.Fetch (Query) loop
+   --         V1 := Row.Value (0);   --  first column of current row
+   --      end loop;
+   --
+   --  In this loop, a Row is actually an access to Forward_Cursor, so you
+   --  can also move it forward explicitly if you want to skip rows.
+
+   package Iterable_Impl is
+      --  Defined in a nested package so that we do not declare additional
+      --  primitives of Forward_Cursor.
+
+      type Result (<>) is private
+         with Iterable => (First       => First_Row,
+                           Has_Element => Has_Row,
+                           Next        => Next,
+                           Element     => Element);
+      type Cursor is null record;
+      --  The Result itself is the cursor in practice.
+
+      function First_Row (Self : Result) return Cursor;
+      function Has_Row (Self : Result; Current : Cursor) return Boolean
+         with Inline;
+      function Next (Self : Result; Current : Cursor) return Cursor;
+      function Element
+         (Self : Result; Current : Cursor)
+         return not null access Forward_Cursor
+         with Inline;
+
+      function Fetch
+        (Connection : not null access Database_Connection_Record;
+         Query      : GNATCOLL.SQL.SQL_Query;
+         Params     : SQL_Parameters := No_Parameters)
+        return Result;
+      function Fetch
+        (Connection : not null access Database_Connection_Record;
+         Stmt       : Prepared_Statement'Class;
+         Params     : SQL_Parameters := No_Parameters)
+        return Result;
+      --  Retrieve results from the database.
+
+   private
+      type Result is record
+         Cursor : aliased Forward_Cursor;
+      end record;
+   end Iterable_Impl;
+
+   function Fetch
+     (Connection : not null access Database_Connection_Record;
+      Query      : GNATCOLL.SQL.SQL_Query;
+      Params     : SQL_Parameters := No_Parameters)
+     return Iterable_Impl.Result
+     renames Iterable_Impl.Fetch;
+   function Fetch
+     (Connection : not null access Database_Connection_Record;
+      Stmt       : Prepared_Statement'Class;
+      Params     : SQL_Parameters := No_Parameters)
+     return Iterable_Impl.Result
+     renames Iterable_Impl.Fetch;
+
    -------------------------
    -- Private subprograms --
    -------------------------

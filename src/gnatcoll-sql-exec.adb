@@ -1868,4 +1868,77 @@ package body GNATCOLL.SQL.Exec is
       return True;
    end Is_Prepared_On_Server_Supported;
 
+   -------------------
+   -- Iterable_Impl --
+   -------------------
+
+   package body Iterable_Impl is
+
+      ---------------
+      -- First_Row --
+      ---------------
+
+      function First_Row (Self : Result) return Cursor is ((null record));
+
+      -------------
+      -- Has_Row --
+      -------------
+
+      function Has_Row (Self : Result; Current : Cursor) return Boolean
+        is (Has_Row (Self.Cursor));
+
+      -------------
+      -- Element --
+      -------------
+
+      function Element
+        (Self : Result; Current : Cursor)
+        return not null access Forward_Cursor
+        is (Self.Cursor'Unrestricted_Access);
+
+      ----------
+      -- Next --
+      ----------
+
+      function Next (Self : Result; Current : Cursor) return Cursor is
+         pragma Unreferenced (Current);
+      begin
+         if Self.Cursor.Res /= null then
+            Next (DBMS_Forward_Cursor'Class (Self.Cursor.Res.all));
+         end if;
+         return Cursor'(null record);
+      end Next;
+
+      -----------
+      -- Fetch --
+      -----------
+
+      function Fetch
+        (Connection : not null access Database_Connection_Record;
+         Query      : GNATCOLL.SQL.SQL_Query;
+         Params     : SQL_Parameters := No_Parameters)
+        return Result is
+      begin
+         return R : Iterable_Impl.Result do
+            R.Cursor.Fetch (Connection, Query, Params);
+         end return;
+      end Fetch;
+
+      -----------
+      -- Fetch --
+      -----------
+
+      function Fetch
+        (Connection : not null access Database_Connection_Record;
+         Stmt       : Prepared_Statement'Class;
+         Params     : SQL_Parameters := No_Parameters)
+        return Result is
+      begin
+         return R : Iterable_Impl.Result do
+            R.Cursor.Fetch (Connection, Stmt, Params);
+         end return;
+      end Fetch;
+
+   end Iterable_Impl;
+
 end GNATCOLL.SQL.Exec;
