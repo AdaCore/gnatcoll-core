@@ -92,6 +92,10 @@ package body GNATCOLL.SQL.Sqlite.Gnade is
       Config_Log           => 16,
       Config_URI           => 17);
 
+   function Sqlite3_Config
+      (Option : Sqlite3_Config_Option) return Result_Codes;
+   pragma Import (C, Sqlite3_Config, "sqlite3_config");
+
    ----------
    -- Open --
    ----------
@@ -410,15 +414,13 @@ package body GNATCOLL.SQL.Sqlite.Gnade is
    -- Set_Config_Multi_Thread --
    -----------------------------
 
-   procedure Set_Config_Multi_Thread is
-      procedure Sqlite3_Config (Option : Sqlite3_Config_Option);
-      pragma Import (C, Sqlite3_Config, "sqlite3_config");
+   function Set_Config_Multi_Thread return Result_Codes is
    begin
       if Debug then
-         Trace (Me, "sqlite3_config");
+         Trace (Me, "sqlite3_config(MULTI_THREAD)");
       end if;
 
-      Sqlite3_Config (Config_Multi_Thread);
+      return Sqlite3_Config (Config_Multi_Thread);
    end Set_Config_Multi_Thread;
 
    ---------------------------
@@ -440,15 +442,13 @@ package body GNATCOLL.SQL.Sqlite.Gnade is
    -- Set_Config_Single_Thread --
    ------------------------------
 
-   procedure Set_Config_Single_Thread is
-      procedure Sqlite3_Config (Option : Sqlite3_Config_Option);
-      pragma Import (C, Sqlite3_Config, "sqlite3_config");
+   function Set_Config_Single_Thread return Result_Codes is
    begin
       if Debug then
-         Trace (Me, "sqlite3_config");
+         Trace (Me, "sqlite3_config (SINGLE_THREAD)");
       end if;
 
-      Sqlite3_Config (Config_Single_Thread);
+      return Sqlite3_Config (Config_Single_Thread);
    end Set_Config_Single_Thread;
 
    -----------------------
