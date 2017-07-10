@@ -142,7 +142,7 @@ AC_DEFUN(AM_ENABLE_STATIC_PIC,
       [--enable-static-pic],
       [build static-pic libraries]),
     ENABLE_STATIC_PIC=$enableval,
-    ENABLE_STATIC_PIC=no)
+    ENABLE_STATIC_PIC=$GNAT_BUILDS_SHARED)
 
   AC_SUBST(ENABLE_STATIC_PIC)
 ])

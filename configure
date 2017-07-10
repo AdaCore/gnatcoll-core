@@ -3647,7 +3647,7 @@ $as_echo "no (--disabled-shared)" >&6; }
 if test "${enable_static_pic+set}" = set; then :
   enableval=$enable_static_pic; ENABLE_STATIC_PIC=$enableval
 else
-  ENABLE_STATIC_PIC=no
+  ENABLE_STATIC_PIC=$GNAT_BUILDS_SHARED
 fi
 
 
