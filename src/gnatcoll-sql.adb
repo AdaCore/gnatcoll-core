@@ -2962,6 +2962,19 @@ package body GNATCOLL.SQL is
                   "Missing max length after 'varchar' in " & Schema;
          end;
 
+      elsif Schema'Length >= 5
+         and then Schema (Schema'First .. Schema'First + 4) = "char("
+      then
+         begin
+            Value.Max_Length := Integer'Value
+               (Schema (Schema'First + 5 .. Schema'Last - 1));
+            return  True;
+         exception
+            when Constraint_Error =>
+               raise Invalid_Schema with
+                  "Missing length after 'char' in " & Schema;
+         end;
+
       elsif Schema'Length >= 10
         and then Schema (Schema'First .. Schema'First + 9) = "character("
       then
@@ -2972,7 +2985,7 @@ package body GNATCOLL.SQL is
          exception
             when Constraint_Error =>
                raise Invalid_Schema with
-                  "Missing max length after 'Character' in " & Schema;
+                  "Missing length after 'Character' in " & Schema;
          end;
       end if;
 
