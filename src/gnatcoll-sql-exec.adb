@@ -255,7 +255,7 @@ package body GNATCOLL.SQL.Exec is
          then
             C := Cache.Find (Stmt.Cached_Result);
             if Cached_Maps.Has_Element (C) then
-               Trace (Me_Query, "Unset cache for " & Stmt.Name.all);
+               Trace (Me_Query, "Unset cache for " & Stmt.Name.To_String);
                Cache.Delete (C);
             end if;
          end if;
@@ -329,7 +329,7 @@ package body GNATCOLL.SQL.Exec is
 
          if Active (Me_Query) then
             Trace
-              (Me_Query, "compute (" & S.Name.all & "): "
+              (Me_Query, "compute (" & S.Name.To_String & "): "
                & S.Query_Str.all);
          end if;
 
@@ -380,7 +380,7 @@ package body GNATCOLL.SQL.Exec is
             or else L.DB_Timestamp /= Connection.Connected_On
          then
             L.Stmt := Connect_And_Prepare
-              (Connection, Str, Prepared.Get.Name.all, Direct => True);
+              (Connection, Str, Prepared.Get.Name.To_String, Direct => True);
 
             --  Set the timestamp *after* we have created the connection, in
             --  case it did not exist before (if prepare is the first command
@@ -410,7 +410,7 @@ package body GNATCOLL.SQL.Exec is
    procedure Print_Warning
      (Connection : access Database_Connection_Record'Class; Str : String) is
    begin
-      Trace (Me_Query, Str & " (" & Connection.Username.all & ")");
+      Trace (Me_Query, Str & " (" & Connection.Username.To_String & ")");
 
       if Connection.Descr.Errors /= null then
          Connection.Descr.Errors.On_Warning (Connection, Str);
@@ -424,7 +424,7 @@ package body GNATCOLL.SQL.Exec is
    procedure Print_Error
      (Connection : access Database_Connection_Record'Class; Str : String) is
    begin
-      Trace (Me_Error, Str & " (" & Connection.Username.all & ")");
+      Trace (Me_Error, Str & " (" & Connection.Username.To_String & ")");
 
       if Connection.Descr.Errors /= null then
          Connection.Descr.Errors.On_Error (Connection, Str);
@@ -538,7 +538,7 @@ package body GNATCOLL.SQL.Exec is
       Prepared   : Prepared_Statement'Class := No_Prepared) return String is
    begin
       if not Prepared.Is_Null then
-         return "(" & Prepared.Get.Name.all & ")";
+         return "(" & Prepared.Get.Name.To_String & ")";
       else
          return Query;
       end if;
@@ -565,10 +565,10 @@ package body GNATCOLL.SQL.Exec is
 
       function Get_User return String is
       begin
-         if Connection.Username.all = "" then
+         if Connection.Username = Null_XString then
             return "";
          else
-            return " (" & Connection.Username.all & ")";
+            return " (" & Connection.Username.To_String & ")";
          end if;
       end Get_User;
 
@@ -778,7 +778,7 @@ package body GNATCOLL.SQL.Exec is
               (Me_Error,
                "Ignored, since transaction in failure: "
                & Display_Query (Q.all, Prepared)
-               & " (" & Connection.Username.all & ")");
+               & " (" & Connection.Username.To_String & ")");
             return;
 
          elsif Equal (Q.all, "begin", Case_Sensitive => False) then
@@ -830,7 +830,7 @@ package body GNATCOLL.SQL.Exec is
             if Active (Me_Error) then
                if Stmt /= No_DBMS_Stmt then
                   Trace (Me_Error, "Failed to execute prepared ("
-                         & Prepared.Get.Name.all & ") " & Q.all
+                         & Prepared.Get.Name.To_String & ") " & Q.all
                          & " " & Image (Connection.all, Params)
                          & " error=" & Error (Connection));
                else
@@ -1034,15 +1034,15 @@ package body GNATCOLL.SQL.Exec is
       Error_Msg  : String := "") is
    begin
       Connection.Success := False;
-      if Connection.Error_Msg = null then
+      if Connection.Error_Msg = Null_XString then
          if Error_Msg /= "" then
-            Connection.Error_Msg := new String'(Error_Msg);
+            Connection.Error_Msg := To_XString (Error_Msg);
          else
             declare
                E : constant String := Error (Connection);
             begin
                if E /= "" then
-                  Connection.Error_Msg := new String'(E);
+                  Connection.Error_Msg := To_XString (E);
                end if;
             end;
          end if;
@@ -1073,8 +1073,8 @@ package body GNATCOLL.SQL.Exec is
          Connection.Success := True; --  we are allowed to perform this
          Execute (Connection, "ROLLBACK");
          Connection.In_Transaction := False;
-         if Connection.Error_Msg = null and then Error_Msg /= "" then
-            Connection.Error_Msg := new String'(Error_Msg);
+         if Connection.Error_Msg = Null_XString and then Error_Msg /= "" then
+            Connection.Error_Msg := To_XString (Error_Msg);
          end if;
 
          --  A rollback can only fail if the connection to the database
@@ -1131,12 +1131,11 @@ package body GNATCOLL.SQL.Exec is
       Connection.Success := True;
       Connection.Automatic_Transactions := True;
 
-      if Username /= "" or else Connection.Username = null then
-         GNAT.Strings.Free (Connection.Username);
-         Connection.Username := new String'(Username);
+      if Username /= "" or else Connection.Username = Null_XString then
+         Connection.Username := To_XString (Username);
       end if;
 
-      GNAT.Strings.Free (Connection.Error_Msg);
+      Connection.Error_Msg := Null_XString;
    end Reset_Connection;
 
    ------------------------
@@ -1144,14 +1143,9 @@ package body GNATCOLL.SQL.Exec is
    ------------------------
 
    function Last_Error_Message
-     (Connection : access Database_Connection_Record'Class) return String
-   is
+     (Connection : access Database_Connection_Record'Class) return String is
    begin
-      if Connection.Error_Msg = null then
-         return "";
-      else
-         return Connection.Error_Msg.all;
-      end if;
+      return Connection.Error_Msg.To_String;
    end Last_Error_Message;
 
    ------------
@@ -1537,8 +1531,6 @@ package body GNATCOLL.SQL.Exec is
    begin
       if Connection /= null then
          Close (Connection);
-         Free (Connection.Username);
-         Free (Connection.Error_Msg);
 
          Mark_As_Closed (Connection, Closed => True);
          Unchecked_Free (Connection);
@@ -1569,7 +1561,7 @@ package body GNATCOLL.SQL.Exec is
          Cached_Result => No_Cache_Id,
          Index_By      => Index_By,
          On_Server     => On_Server,
-         Name          => null,
+         Name          => Null_XString,
          Prepared      => null);
 
       if Auto_Complete then
@@ -1583,10 +1575,10 @@ package body GNATCOLL.SQL.Exec is
       Ptr := Stmt.Unchecked_Get;
 
       if Name = "" then
-         Ptr.Name :=
-           new String'("stmt" & Image (Integer (Ptr.Cached_Result), 0));
+         Ptr.Name := To_XString
+           ("stmt" & Image (Integer (Ptr.Cached_Result), 0));
       else
-         Ptr.Name := new String'(Name);
+         Ptr.Name := To_XString (Name);
       end if;
 
       return Stmt;
@@ -1612,7 +1604,7 @@ package body GNATCOLL.SQL.Exec is
          Cached_Result => No_Cache_Id,
          Index_By      => Index_By,
          On_Server     => On_Server,
-         Name          => null,
+         Name          => Null_XString,
          Prepared      => null);
    begin
       if Active (Me_Query) then
@@ -1623,9 +1615,9 @@ package body GNATCOLL.SQL.Exec is
 
       if Name = "" then
          Data.Name :=
-           new String'("stmt" & Image (Integer (Data.Cached_Result), 0));
+           To_XString ("stmt" & Image (Integer (Data.Cached_Result), 0));
       else
-         Data.Name := new String'(Name);
+         Data.Name := To_XString (Name);
       end if;
 
       Stmt.Set (Data);
@@ -1685,7 +1677,8 @@ package body GNATCOLL.SQL.Exec is
             if Found then
                RC.First; --  Move to first element
                if Active (Me_Cache) then
-                  Trace (Me_Cache, "(" & Stmt.Get.Name.all & "): from cache");
+                  Trace (Me_Cache, "(" & Stmt.Get.Name.To_String
+                     & "): from cache");
                end if;
 
                Put_Result (RC);
@@ -2001,7 +1994,8 @@ package body GNATCOLL.SQL.Exec is
         and then Self.Prepared.Next = null
       then
          if Active (Me_Query) then
-            Trace (Me_Query, "Finalize stmt on server: " & Self.Name.all);
+            Trace
+               (Me_Query, "Finalize stmt on server: " & Self.Name.To_String);
          end if;
 
          if not Query_Cache.Was_Freed (Self.Prepared.DB) then
@@ -2019,14 +2013,13 @@ package body GNATCOLL.SQL.Exec is
          end loop;
 
          if Active (Me_Query) then
-            Trace (Me_Query, "Finalize stmt on server: " & Self.Name.all
+            Trace (Me_Query, "Finalize stmt on server: " & Self.Name.To_String
                    & " (for" & Count'Img & " connections)");
          end if;
       end if;
 
       Query_Cache.Unset_Cache (Self);
       Free (Self.Query_Str);
-      Free (Self.Name);
    end Free;
 
    ----------------------------

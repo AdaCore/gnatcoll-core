@@ -45,7 +45,7 @@ package body GNATCOLL.Xref.Database is
    end FK;
 
    procedure Create_Database
-      (DB : access GNATCOLL.SQL.Exec.Database_Connection_Record'Class)
+      (DB : not null access GNATCOLL.SQL.Exec.Database_Connection_Record'Class)
    is
       DbSchema : constant String := "|TABLE| files" & ASCII.LF
          & "|id|AUTOINCREMENT|PK||" & ASCII.LF

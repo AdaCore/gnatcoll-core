@@ -55,7 +55,7 @@ package GNATCOLL.Xref.Database is
 
    type T_Numbered_E2e (Index : Integer)
       is new T_Abstract_E2e (null, Index) with null record;
-   --  To use aliased in the form name1, name2,...
+   --  To use aliases in the form name1, name2,...
 
    type T_Abstract_E2e_Kind
       (Instance : Cst_String_Access;
@@ -73,7 +73,7 @@ package GNATCOLL.Xref.Database is
 
    type T_Numbered_E2e_Kind (Index : Integer)
       is new T_Abstract_E2e_Kind (null, Index) with null record;
-   --  To use aliased in the form name1, name2,...
+   --  To use aliases in the form name1, name2,...
 
    type T_Abstract_Entities
       (Instance : Cst_String_Access;
@@ -120,7 +120,7 @@ package GNATCOLL.Xref.Database is
 
    type T_Numbered_Entities (Index : Integer)
       is new T_Abstract_Entities (null, Index) with null record;
-   --  To use aliased in the form name1, name2,...
+   --  To use aliases in the form name1, name2,...
 
    type T_Abstract_Entity_Kinds
       (Instance : Cst_String_Access;
@@ -150,7 +150,7 @@ package GNATCOLL.Xref.Database is
 
    type T_Numbered_Entity_Kinds (Index : Integer)
       is new T_Abstract_Entity_Kinds (null, Index) with null record;
-   --  To use aliased in the form name1, name2,...
+   --  To use aliases in the form name1, name2,...
 
    type T_Abstract_Entity_Refs
       (Instance : Cst_String_Access;
@@ -181,7 +181,7 @@ package GNATCOLL.Xref.Database is
 
    type T_Numbered_Entity_Refs (Index : Integer)
       is new T_Abstract_Entity_Refs (null, Index) with null record;
-   --  To use aliased in the form name1, name2,...
+   --  To use aliases in the form name1, name2,...
 
    type T_Abstract_F2f
       (Instance : Cst_String_Access;
@@ -202,7 +202,7 @@ package GNATCOLL.Xref.Database is
 
    type T_Numbered_F2f (Index : Integer)
       is new T_Abstract_F2f (null, Index) with null record;
-   --  To use aliased in the form name1, name2,...
+   --  To use aliases in the form name1, name2,...
 
    type T_Abstract_F2f_Kind
       (Instance : Cst_String_Access;
@@ -220,7 +220,7 @@ package GNATCOLL.Xref.Database is
 
    type T_Numbered_F2f_Kind (Index : Integer)
       is new T_Abstract_F2f_Kind (null, Index) with null record;
-   --  To use aliased in the form name1, name2,...
+   --  To use aliases in the form name1, name2,...
 
    type T_Abstract_Files
       (Instance : Cst_String_Access;
@@ -253,7 +253,7 @@ package GNATCOLL.Xref.Database is
 
    type T_Numbered_Files (Index : Integer)
       is new T_Abstract_Files (null, Index) with null record;
-   --  To use aliased in the form name1, name2,...
+   --  To use aliases in the form name1, name2,...
 
    type T_Abstract_Reference_Kinds
       (Instance : Cst_String_Access;
@@ -290,7 +290,7 @@ package GNATCOLL.Xref.Database is
 
    type T_Numbered_Reference_Kinds (Index : Integer)
       is new T_Abstract_Reference_Kinds (null, Index) with null record;
-   --  To use aliased in the form name1, name2,...
+   --  To use aliases in the form name1, name2,...
 
    function FK (Self : T_E2e'Class; Foreign : T_E2e_Kind'Class) return SQL_Criteria;
    function FK (Self : T_Entities'Class; Foreign : T_Entity_Kinds'Class) return SQL_Criteria;
@@ -311,7 +311,7 @@ package GNATCOLL.Xref.Database is
    Reference_Kinds : T_Reference_Kinds (null);
 
    procedure Create_Database
-      (DB : access GNATCOLL.SQL.Exec.Database_Connection_Record'Class);
+      (DB : not null access GNATCOLL.SQL.Exec.Database_Connection_Record'Class);
    --  Create the database and its initial contents
    --  The SQL is not automatically committed
 end GNATCOLL.Xref.Database;

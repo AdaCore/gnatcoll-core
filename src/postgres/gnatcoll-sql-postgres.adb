@@ -128,12 +128,12 @@ package body GNATCOLL.SQL.Postgres is
 
       Result := new Postgres_Description
         (Caching => Cache_Support, Errors => Errors);
-      Result.SSL      := SSL;
-      Result.Dbname   := new String'(Database);
-      Result.User     := new String'(User);
-      Result.Password := new String'(Password);
-      Result.Port     := Port;
-      Result.Host := new String'(Host);
+      Result.SSL       := SSL;
+      Result.Dbname    := To_XString (Database);
+      Result.User      := To_XString (User);
+      Result.Password  := To_XString (Password);
+      Result.Port      := Port;
+      Result.Host      := To_XString (Host);
 
       return Database_Description (Result);
    end Setup;
@@ -240,18 +240,6 @@ package body GNATCOLL.SQL.Postgres is
          Instance_Index => Table.Instance_Index,
          Name           => N_OID'Access);
    end OID_Field;
-
-   ----------
-   -- Free --
-   ----------
-
-   overriding procedure Free (Description : in out Postgres_Description) is
-   begin
-      GNAT.Strings.Free (Description.Host);
-      GNAT.Strings.Free (Description.User);
-      GNAT.Strings.Free (Description.Dbname);
-      GNAT.Strings.Free (Description.Password);
-   end Free;
 
    ------------
    -- Regexp --
@@ -386,64 +374,54 @@ package body GNATCOLL.SQL.Postgres is
    is
       Descr : constant Postgres_Description_Access :=
         Postgres_Description_Access (Description);
-      User   : constant String := Descr.User.all;
-      Host   : constant String := Descr.Host.all;
-      Passwd : constant String := Descr.Password.all;
+      Str : XString;
 
-      function Escape (Str : String) return String;
-      function Escape (Str : String) return String is
-         Len : Natural := 0;
+      procedure Escape (Value : XString);
+      procedure Escape (Value : XString) is
       begin
-         for S in Str'Range loop
-            if Str (S) = ''' or else Str (S) = '\' then
-               Len := Len + 2;
-            else
-               Len := Len + 1;
+         for C of Value loop
+            if C = ''' or else C = '\' then
+               Str.Append ('\');
             end if;
+            Str.Append (C);
          end loop;
-
-         return Result : String (Str'First .. Str'First + Len - 1) do
-            Len := Result'First;
-            for S in Str'Range loop
-               if Str (S) = ''' or else Str (S) = '\' then
-                  Result (Len) := '\';
-                  Result (Len + 1) := Str (S);
-                  Len := Len + 2;
-               else
-                  Result (Len) := Str (S);
-                  Len := Len + 1;
-               end if;
-            end loop;
-         end return;
       end Escape;
 
-      Str : Unbounded_String  := To_Unbounded_String
-        ("dbname='" & Escape (Descr.Dbname.all) & "'");
    begin
-      if User /= "" then
-         Append (Str, " user='" & Escape (User) & "'");
+      Str.Append ("dbname='");
+      Escape (Descr.Dbname);
+      Str.Append (''');
+
+      if Descr.User /= Null_XString then
+         Str.Append (" user='");
+         Escape (Descr.User);
+         Str.Append (''');
       end if;
 
-      if Host /= "" then
-         Append (Str, " host='" & Escape (Host) & "'");
+      if Descr.Host /= Null_XString then
+         Str.Append (" host='");
+         Escape (Descr.Host);
+         Str.Append (''');
       end if;
 
       if Descr.Port /= -1 then
-         Append (Str, " port=" & Image (Descr.Port, Min_Width => 1));
+         Str.Append (" port=" & Image (Descr.Port, Min_Width => 1));
       end if;
 
-      if With_Password and then Passwd /= "" then
-         Append (Str, " password='" & Escape (Passwd) & "'");
+      if With_Password and then Descr.Password /= Null_XString then
+         Str.Append (" password='");
+         Escape (Descr.Password);
+         Str.Append (''');
       end if;
 
       case Descr.SSL is
-         when Disable => Append (Str, " sslmode=disable");
-         when Allow   => Append (Str, " sslmode=allow");
-         when Prefer  => Append (Str, " sslmode=prefer");
-         when Require => Append (Str, " sslmode=require");
+         when Disable => Str.Append (" sslmode=disable");
+         when Allow   => Str.Append (" sslmode=allow");
+         when Prefer  => Str.Append (" sslmode=prefer");
+         when Require => Str.Append (" sslmode=require");
       end case;
 
-      return To_String (Str);
+      return Str.To_String;
    end Get_Connection_String;
 
 end GNATCOLL.SQL.Postgres;
