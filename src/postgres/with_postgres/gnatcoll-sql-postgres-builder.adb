@@ -82,6 +82,10 @@ package body GNATCOLL.SQL.Postgres.Builder is
          Connected_On      : Ada.Calendar.Time := GNAT.Calendar.No_Time;
       end record;
    type Postgresql_Connection is access all Postgresql_Connection_Record'Class;
+   overriding function Is_Prepared_On_Server_Supported
+     (Connection : not null access Postgresql_Connection_Record) return Boolean
+     is (Postgres_Description_Access (Connection.Descr).Pgbouncer
+         in No_Pgbouncer | Session_Pooling);
    overriding procedure Close
      (Connection : access Postgresql_Connection_Record);
    overriding function Parameter_String

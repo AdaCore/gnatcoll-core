@@ -197,7 +197,7 @@ package body GNATCOLL.SQL.Sqlite.Builder is
      (DBMS_Stmt, Statement);
 
    overriding function Is_Prepared_On_Server_Supported
-     (Connection : access Sqlite_Connection_Record) return Boolean;
+     (Connection : access Sqlite_Connection_Record) return Boolean is (True);
    --  We allow transactions prepared on the server, but there are several
    --  restrictions with sqlite:
    --     - M410-030: when we execute a statement prepared on the server, this
@@ -222,18 +222,6 @@ package body GNATCOLL.SQL.Sqlite.Builder is
    begin
       return True;
    end Check_Connection;
-
-   -------------------------------------
-   -- Is_Prepared_On_Server_Supported --
-   -------------------------------------
-
-   overriding function Is_Prepared_On_Server_Supported
-     (Connection : access Sqlite_Connection_Record) return Boolean
-   is
-      pragma Unreferenced (Connection);
-   begin
-      return True;
-   end Is_Prepared_On_Server_Supported;
 
    ---------------
    -- Error_Msg --

@@ -1856,18 +1856,6 @@ package body GNATCOLL.SQL.Exec is
       return Connection.Automatic_Transactions;
    end Automatic_Transactions;
 
-   -------------------------------------
-   -- Is_Prepared_On_Server_Supported --
-   -------------------------------------
-
-   function Is_Prepared_On_Server_Supported
-     (Connection : access Database_Connection_Record) return Boolean
-   is
-      pragma Unreferenced (Connection);
-   begin
-      return True;
-   end Is_Prepared_On_Server_Supported;
-
    -------------------
    -- Iterable_Impl --
    -------------------

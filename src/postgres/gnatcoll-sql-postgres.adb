@@ -117,7 +117,8 @@ package body GNATCOLL.SQL.Postgres is
       Port          : Integer := -1;
       SSL           : SSL_Mode := Allow;
       Cache_Support : Boolean := True;
-      Errors        : access Error_Reporter'Class := null)
+      Errors        : access Error_Reporter'Class := null;
+      Pgbouncer     : Pgbouncer_Config := No_Pgbouncer)
       return Database_Description
    is
       Result : Postgres_Description_Access;
@@ -134,6 +135,7 @@ package body GNATCOLL.SQL.Postgres is
       Result.Password  := To_XString (Password);
       Result.Port      := Port;
       Result.Host      := To_XString (Host);
+      Result.Pgbouncer := Pgbouncer;
 
       return Database_Description (Result);
    end Setup;

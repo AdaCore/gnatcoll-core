@@ -49,6 +49,19 @@ package GNATCOLL.SQL.Postgres is
    --    Prefer   => first try a SSL connection, then non-SSL if failed
    --    Require  => require a SSL connection
 
+   type Pgbouncer_Config is
+      (No_Pgbouncer,
+       Session_Pooling,
+       Transaction_Pooling,
+       Statement_Pooling);
+   --  pgbouncer (https://pgbouncer.github.io/) is a connection pooler for
+   --  postgresql. It allows you to configure postgresql to support a limited
+   --  number of connections (say 50) but have applications do a lot more
+   --  connections in practice, in particular when you have lots of
+   --  applications connecting to the same database. One of the restrictions
+   --  this introduces, though, is that when this is configured as transaction
+   --  pooling, prepared statements are not supported.
+
    function Setup
      (Database      : String;
       User          : String := "";
@@ -57,7 +70,8 @@ package GNATCOLL.SQL.Postgres is
       Port          : Integer := -1;
       SSL           : SSL_Mode := Allow;
       Cache_Support : Boolean := True;
-      Errors        : access Error_Reporter'Class := null)
+      Errors        : access Error_Reporter'Class := null;
+      Pgbouncer     : Pgbouncer_Config := No_Pgbouncer)
      return Database_Description;
    --  Return a database connection for PostgreSQL.
    --  If postgres was not detected at installation time, this function will
@@ -90,6 +104,9 @@ package GNATCOLL.SQL.Postgres is
    --  is set to False, Message contains a valid Notification. Once a
    --  notification is returned from Notifies, it is considered handled and
    --  will be removed from the list of notifications.
+   --
+   --  This is not supported when using pgbouncer in transaction or statement
+   --  pooling.
 
    procedure Consume_Input (DB : Database_Connection);
    --  If input is available from the backend, consume it.
@@ -111,6 +128,8 @@ package GNATCOLL.SQL.Postgres is
    --  Waiting for available input and return False on timeout or True on
    --  success. No need to call Consume_Input afterward, it is already called
    --  internally on wait success.
+   --  This is not supported when using pgbouncer in transaction or statement
+   --  pooling.
 
    -------------------------
    -- Postgres extensions --
@@ -198,6 +217,7 @@ private
       Password  : GNATCOLL.Strings.XString;
       SSL       : SSL_Mode := Prefer;
       Port      : Integer := -1;
+      Pgbouncer : Pgbouncer_Config := No_Pgbouncer;
    end record;
 
    type SQL_PG_Extension is abstract tagged null record;

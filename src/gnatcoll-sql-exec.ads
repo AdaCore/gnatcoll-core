@@ -671,11 +671,14 @@ package GNATCOLL.SQL.Exec is
    --      auto-completion might be time consuming. This preparation is only
    --      client side and does not involve the DBMS.
    --
-   --    * DBMS systems all have a way to prepare statements (on the server
+   --    * DBMS systems have a way to prepare statements (on the server
    --      this time). This involves optimizing the query and how it should be
    --      executed. Such prepared statements, however, are only valid while
    --      the connection to the database lasts (or until you explicitly close
    --      the prepared statement.
+   --      In some cases (for instance when using pgbouncer as a connection
+   --      pooler for postgreSQL) such prepared statements should not be used,
+   --      and GNATCOLL will automatically do nothing in this case.
    --
    --    * GNATCOLL.SQL.Exec is also able to cache (on the client) the result
    --      of some queries. This way, you avoid communication with the DBMS
@@ -719,7 +722,8 @@ package GNATCOLL.SQL.Exec is
    --
    --  Preparing statements on the server
    --------------------------------------
-   --  If On_Server is true, then a connection-specific preparation is also
+   --  If On_Server is true, and the DBMS supports it, then a
+   --  connection-specific preparation is also
    --  done on the server, for further optimization. Otherwise, the
    --  result of this call is to generate the string representation (and auto
    --  completion) of the query only once, and reuse that later on (that still
@@ -729,7 +733,7 @@ package GNATCOLL.SQL.Exec is
    --  parameters (since otherwise it is too specialized to be worth keeping
    --  in memory).
    --
-   --  There is little gain in having both Use_Cache and On_Server be true: the
+   --  There is little gain in having both Use_Cache and On_Server: the
    --  query is executed only once (until the cache expires) on the server
    --  anyway.
    --
@@ -753,6 +757,11 @@ package GNATCOLL.SQL.Exec is
    --  A precomputed SQL statement, on the client side.
    --  This type is reference counted and will automatically free memory or
    --  release DBMS resources when it goes out of scope.
+
+   function Is_Prepared_On_Server_Supported
+     (Connection : not null access Database_Connection_Record) return Boolean
+     is (True);
+   --  True if Prepared supported on the server for this connection.
 
    function Prepare
      (Query         : SQL_Query;
@@ -1069,10 +1078,6 @@ package GNATCOLL.SQL.Exec is
       Params     : SQL_Parameters := No_Parameters);
    --  Mark the connection as success or failure depending on R.
    --  Logs the query
-
-   function Is_Prepared_On_Server_Supported
-     (Connection : access Database_Connection_Record) return Boolean;
-   --  True if Prepared supported on the server for this connection
 
 private
 
