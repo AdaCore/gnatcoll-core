@@ -644,6 +644,53 @@ package body GNATCOLL.Strings_Impl is
          end if;
       end Get_String;
 
+      -------------------
+      -- Access_String --
+      -------------------
+
+      procedure Access_String
+         (Self    : XString;
+          Process : not null access procedure (S : Char_String))
+      is
+         Copy : XString;
+         To_Decref : Big_String_Data_Access;
+         S : Char_Array;
+         L : Natural;
+      begin
+         --  Self is passed by reference, so its refcount might still be 1.
+         --  As a result, if Process would access the original variable and
+         --  for instance Append to it, we would end up modifying the internal
+         --  value of Self, and thus our S variable might end up referencing
+         --  freed memory, same for Process.
+
+         if not Self.Data.Small.Is_Big
+            or else not Copy_On_Write
+         then
+            --  We must make a copy, since the internal data might change
+            Copy := Self;
+            Get_String (Copy, S, L);
+            Process (Char_String (S (S'First .. L)));
+         else
+            if Self.Data.Big.Data.Refcount /= Unshareable then
+               --  If anyone tries to modify the string, it will make a copy.
+               --  But we might not have to make the copy at all.
+               To_Decref := Self.Data.Big.Data;
+               Increment (To_Decref.Refcount);
+            end if;
+
+            Get_String (Self, S, L);
+            Process (Char_String (S (S'First .. L)));
+
+            if To_Decref /= null then
+               --  It is possible that we are now holding on to the last ref to
+               --  the string, if Process has reset it to null for instance.
+               if Decrement (To_Decref.Refcount) then
+                  System.Memory.Free (Convert (To_Decref));
+               end if;
+            end if;
+         end if;
+      end Access_String;
+
       ----------------
       -- To_XString --
       ----------------
@@ -2219,43 +2266,15 @@ package body GNATCOLL.Strings_Impl is
 
       function Join
          (Sep       : Char_Type;
-          Items     : XString_Array) return XString
+          Items     : XString_Array;
+          Prefix    : Char_String := Null_Char_String;
+          Suffix    : Char_String := Null_Char_String)
+         return XString
       is
          Result : XString;
       begin
-         Join (Result, Sep, Items);
+         Result.Set_As_Join (Sep, Items, Prefix, Suffix);
          return Result;
-      end Join;
-
-      ----------
-      -- Join --
-      ----------
-
-      procedure Join
-         (Self  : out XString;
-          Sep   : Char_Type;
-          Items : XString_Array)
-      is
-         Size   : Integer;
-      begin
-         if Items'Length = 0 then
-            Self.Clear;
-         else
-            Size := Items'Length - 1;
-            for It of Items loop
-               Size := Size + It.Length;
-            end loop;
-
-            Store_Size (Self, 0);  --  Reset the string
-            Self.Reserve (String_Size (Size));
-
-            for It in Items'Range loop
-               Self.Append (Items (It));
-               if It /= Items'Last then
-                  Self.Append (Sep);
-               end if;
-            end loop;
-         end if;
       end Join;
 
       ----------
@@ -2263,30 +2282,40 @@ package body GNATCOLL.Strings_Impl is
       ----------
 
       function Join
-         (Sep       : Char_String;
-          Items     : XString_Array) return XString
+         (Sep       : XString;
+          Items     : XString_Array;
+          Prefix    : Char_String := Null_Char_String;
+          Suffix    : Char_String := Null_Char_String)
+         return XString
       is
          Result : XString;
+         B : Char_Array;
+         L : Natural;
       begin
-         Join (Result, Sep, Items);
+         Get_String (Sep, B, L);
+         Result.Set_As_Join (Char_String (B (1 .. L)), Items, Prefix, Suffix);
          return Result;
       end Join;
 
-      ----------
-      -- Join --
-      ----------
+      -----------------
+      -- Set_As_Join --
+      -----------------
 
-      procedure Join
-         (Self  : out XString;
-          Sep   : Char_String;
-          Items : XString_Array)
-      is
-         Size   : Natural;
+      procedure Set_As_Join
+         (Self   : out XString;
+          Sep    : Char_Type;
+          Items  : XString_Array;
+          Prefix : Char_String := Null_Char_String;
+          Suffix : Char_String := Null_Char_String)
+       is
+         Size   : Integer;
       begin
          if Items'Length = 0 then
-            Self.Clear;
+            Self.Set (Prefix);
+            Self.Append (Suffix);
          else
-            Size := Sep'Length * (Items'Length - 1);
+            Size := Prefix'Length + Suffix'Length
+               + Items'Length - 1;  --  size for separators
             for It of Items loop
                Size := Size + It.Length;
             end loop;
@@ -2294,14 +2323,70 @@ package body GNATCOLL.Strings_Impl is
             Store_Size (Self, 0);  --  Reset the string
             Self.Reserve (String_Size (Size));
 
+            Self.Append (Prefix);
             for It in Items'Range loop
                Self.Append (Items (It));
                if It /= Items'Last then
                   Self.Append (Sep);
                end if;
             end loop;
+            Self.Append (Suffix);
          end if;
+      end Set_As_Join;
+
+      ----------
+      -- Join --
+      ----------
+
+      function Join
+         (Sep       : Char_String;
+          Items     : XString_Array;
+          Prefix : Char_String := Null_Char_String;
+          Suffix : Char_String := Null_Char_String)
+         return XString
+      is
+         Result : XString;
+      begin
+         Result.Set_As_Join (Sep, Items, Prefix, Suffix);
+         return Result;
       end Join;
+
+      -----------------
+      -- Set_As_Join --
+      -----------------
+
+      procedure Set_As_Join
+         (Self  : out XString;
+          Sep   : Char_String;
+          Items : XString_Array;
+          Prefix : Char_String := Null_Char_String;
+          Suffix : Char_String := Null_Char_String)
+      is
+         Size   : Natural;
+      begin
+         if Items'Length = 0 then
+            Self.Set (Prefix);
+            Self.Append (Suffix);
+         else
+            Size := Sep'Length * (Items'Length - 1)
+               + Prefix'Length + Suffix'Length;
+            for It of Items loop
+               Size := Size + It.Length;
+            end loop;
+
+            Store_Size (Self, 0);  --  Reset the string
+            Self.Reserve (String_Size (Size));
+
+            Self.Append (Prefix);
+            for It in Items'Range loop
+               Self.Append (Items (It));
+               if It /= Items'Last then
+                  Self.Append (Sep);
+               end if;
+            end loop;
+            Self.Append (Suffix);
+         end if;
+      end Set_As_Join;
 
       --------------
       -- To_Upper --
