@@ -218,7 +218,7 @@ package GNATCOLL.SQL.Sqlite.Gnade is
    --  compiled with SQLITE_DEFAULT_MEMSTATUS=0 in which case memory allocation
    --  statistics are disabled by default.
 
-   procedure Set_Config_Single_Thread;
+   function Set_Config_Single_Thread return Result_Codes;
    --  This option sets the threading mode to Single-thread. In other words, it
    --  disables all mutexing and puts SQLite into a mode where it can only be
    --  used by a single thread. If SQLite is compiled with the
@@ -227,7 +227,7 @@ package GNATCOLL.SQL.Sqlite.Gnade is
    --  sqlite3_config() will return SQLITE_ERROR if called with the
    --  SQLITE_CONFIG_SINGLETHREAD configuration option.
 
-   procedure Set_Config_Multi_Thread;
+   function Set_Config_Multi_Thread return Result_Codes;
    --  This option sets the threading mode to Multi-thread. In other words, it
    --  disables mutexing on database connection and prepared statement
    --  objects. The application is responsible for serializing access to
