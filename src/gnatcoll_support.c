@@ -72,11 +72,15 @@ void gnatcoll_madvise(void* addr, size_t len, int advice) {
 #endif  /* HAVE_MADVISE */
 
 #else
+/* No mmap support, so no madvise support either */
 
 int
 gnatcoll_has_mmap ()
 {
   return 0;
+}
+
+void gnatcoll_madvise(void* addr, size_t len, int advice) {
 }
 
 void

@@ -305,6 +305,7 @@ package GNATCOLL.Strings_Impl is
 
       subtype Char_Type is Character_Type;
       subtype Char_String is Character_String;
+      Null_Char_String : constant Char_String := (1 .. 0 => <>);
       --  Local renamings, so that users of the package can use these types.
 
       type XString is tagged private
@@ -518,8 +519,6 @@ package GNATCOLL.Strings_Impl is
       ---------------
       -- Comparing --
       ---------------
-      --   ??? Some operators are commented out because of limitations in
-      --   AJIS.
 
       function "=" (Left : XString;      Right : Char_String) return Boolean;
       function "=" (Left : XString;      Right : XString) return Boolean;
@@ -609,6 +608,16 @@ package GNATCOLL.Strings_Impl is
       --  Do not modify the characters in this string, since it could be
       --  shared among multiple strings.
       --  S is only valid as long as Self is not accessed or modified.
+
+      procedure Access_String
+         (Self    : XString;
+          Process : not null access procedure (S : Char_String));
+      --  Access the string contained in Self.
+      --  While Process is running, Self itself will not be destroyed, even
+      --  if Process should access Self and modify it.
+      --
+      --  This might easier to use than Get_String, and is more efficient
+      --  than To_String.
 
       function To_String (Self : XString) return Char_String;
       --  This functions returns the internal string.
@@ -854,22 +863,39 @@ package GNATCOLL.Strings_Impl is
       --  The substrings are returned in the reverse order, from right to
       --  left in Self.
 
-      procedure Join
+      procedure Set_As_Join
          (Self      : out XString;
           Sep       : Char_String;
-          Items     : XString_Array);
+          Items     : XString_Array;
+          Prefix    : Char_String := Null_Char_String;
+          Suffix    : Char_String := Null_Char_String);
       function Join
          (Sep       : Char_String;
-          Items     : XString_Array) return XString;
-      procedure Join
+          Items     : XString_Array;
+          Prefix    : Char_String := Null_Char_String;
+          Suffix    : Char_String := Null_Char_String)
+         return XString;
+      function Join
+         (Sep       : XString;
+          Items     : XString_Array;
+          Prefix    : Char_String := Null_Char_String;
+          Suffix    : Char_String := Null_Char_String) return XString;
+      procedure Set_As_Join
          (Self      : out XString;
           Sep       : Char_Type;
-          Items     : XString_Array);
+          Items     : XString_Array;
+          Prefix    : Char_String := Null_Char_String;
+          Suffix    : Char_String := Null_Char_String);
       function Join
          (Sep       : Char_Type;
-          Items     : XString_Array) return XString;
+          Items     : XString_Array;
+          Prefix    : Char_String := Null_Char_String;
+          Suffix    : Char_String := Null_Char_String) return XString;
       --  Return a string that contains all elements from Items, separated
       --  by Self.
+      --  Prefix is automatically added before the string,
+      --  while Suffix is added after the string. Using them might save some
+      --  extra memory allocation or copying.
       --  The function versions are less efficient (more so when not using
       --  copy-on-write).
 

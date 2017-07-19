@@ -1,3 +1,19 @@
+/*----------------------------------------------------------------------------
+--                                  G N A T C O L L                         --
+--                                                                          --
+--                     Copyright (C) 2014-2017, AdaCore                     --
+--                                                                          --
+-- This is free software;  you can redistribute it  and/or modify it  under --
+-- terms of the  GNU General Public License as published  by the Free Soft- --
+-- ware  Foundation;  either version 3,  or (at your option) any later ver- --
+-- sion.  This software is distributed in the hope  that it will be useful, --
+-- but WITHOUT ANY WARRANTY;  without even the implied warranty of MERCHAN- --
+-- TABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public --
+-- License for  more details.  You should have  received  a copy of the GNU --
+-- General  Public  License  distributed  with  this  software;   see  file --
+-- COPYING3.  If not, go to http://www.gnu.org/licenses for a complete copy --
+-- of the license.                                                          --
+----------------------------------------------------------------------------*/
 
 #ifdef _WIN32
 #include <windows.h>
@@ -65,7 +81,9 @@ void gnatcoll_beginning_of_line(int forStderr) {
 #else
    //  struct winsize ws;
    //  ioctl(forStderr ? 2 : 1, TIOCGWINSZ, &ws);
-   write(forStderr ? 2 : 1, "\r", 1);
+   if (write(forStderr ? 2 : 1, "\r", 1) != 1) {
+      // Ignore failure for now
+   }
 #endif
 }
 
@@ -84,7 +102,9 @@ void gnatcoll_clear_to_end_of_line(int forStderr) {
    }
 
 #else
-   write(forStderr ? 2 : 1, "\033[0K", 4);
+   if (write(forStderr ? 2 : 1, "\033[0K", 4) != 4) {
+      // Ignore failure for now
+   }
 #endif
 }
 
@@ -97,7 +117,7 @@ int gnatcoll_terminal_width(int forStderr) {
       return (int)csbiInfo.dwSize.X;
    }
    return -1;
- 
+
 #else
 #ifdef TIOCGWINSZ
     struct winsize w;
