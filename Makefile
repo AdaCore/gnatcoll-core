@@ -68,14 +68,15 @@ build_tools/%: build_library_type/%
 #######################################################################
 #  install
 
+gprdir="lib/gnat"
 GPRINST_OPTS=-p -f --prefix=${prefix} --install-name=gnatcoll \
-	--exec-subdir=${bindir} --project-subdir=lib/gnat -XXMLADA_BUILD=$(@F) \
+	--exec-subdir=${bindir} --project-subdir=${gprdir} -XXMLADA_BUILD=$(@F) \
 	--build-var=LIBRARY_TYPE --build-name=$(@F) -XLIBRARY_TYPE=$(@F)
 
 install-clean:
-ifneq (,$(wildcard $(prefix)/lib/gnat/manifests/gnatcoll))
+ifneq (,$(wildcard $(prefix)/${gprdir}/manifests/gnatcoll))
 	-$(GPRINSTALL) --uninstall -f \
-		--prefix=$(prefix) --project-subdir=lib/gnat gnatcoll
+		--prefix=$(prefix) --project-subdir=${gprdir} gnatcoll
 endif
 
 
