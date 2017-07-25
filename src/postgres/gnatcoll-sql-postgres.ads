@@ -27,7 +27,6 @@
 with Ada.Calendar;        use Ada.Calendar;
 with Ada.Strings.Unbounded;
 with GNATCOLL.SQL.Exec;   use GNATCOLL.SQL.Exec;
-with GNATCOLL.Strings;    use GNATCOLL.Strings;
 with GNATCOLL.SQL_Fields; use GNATCOLL.SQL_Fields;
 with GNATCOLL.SQL.Ranges;
 
@@ -71,18 +70,29 @@ package GNATCOLL.SQL.Postgres is
       SSL           : SSL_Mode := Allow;
       Cache_Support : Boolean := True;
       Errors        : access Error_Reporter'Class := null;
-      Pgbouncer     : Pgbouncer_Config := No_Pgbouncer)
+      Pgbouncer     : Pgbouncer_Config := No_Pgbouncer;
+      Application_Name : String := "")
      return Database_Description;
    --  Return a database connection for PostgreSQL.
    --  If postgres was not detected at installation time, this function will
    --  return null.
    --  Errors (if specified) will be used to report errors and warnings to the
    --  application. Errors is never freed.
+   --  Application_Name will be visible in the postgresql logs, and might help
+   --  understand which application is doing specific queries (when multiple
+   --  applications connect to the same database).
 
    function Get_Connection_String
      (Description   : Database_Description;
       With_Password : Boolean) return String;
    --  Create a connection string from the database description
+
+   overriding function Get_Application_Name
+     (Description : not null access Postgres_Description) return String;
+   --  Return the application_name set in the call to Setup.
+   --  This could for instance be used when calling
+   --  GNATCOLL.SQL.Exec.Reset_Connection, so that the GNATCOLL traces also
+   --  show the application name.
 
    ----------------------------
    -- Postgres notifications --
@@ -215,6 +225,7 @@ private
       Dbname    : GNATCOLL.Strings.XString;
       User      : GNATCOLL.Strings.XString;
       Password  : GNATCOLL.Strings.XString;
+      Appname   : GNATCOLL.Strings.XString;
       SSL       : SSL_Mode := Prefer;
       Port      : Integer := -1;
       Pgbouncer : Pgbouncer_Config := No_Pgbouncer;

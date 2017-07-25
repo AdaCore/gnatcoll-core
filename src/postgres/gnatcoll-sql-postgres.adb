@@ -118,7 +118,8 @@ package body GNATCOLL.SQL.Postgres is
       SSL           : SSL_Mode := Allow;
       Cache_Support : Boolean := True;
       Errors        : access Error_Reporter'Class := null;
-      Pgbouncer     : Pgbouncer_Config := No_Pgbouncer)
+      Pgbouncer     : Pgbouncer_Config := No_Pgbouncer;
+      Application_Name : String := "")
       return Database_Description
    is
       Result : Postgres_Description_Access;
@@ -136,6 +137,7 @@ package body GNATCOLL.SQL.Postgres is
       Result.Port      := Port;
       Result.Host      := To_XString (Host);
       Result.Pgbouncer := Pgbouncer;
+      Result.Appname   := To_XString (Application_Name);
 
       return Database_Description (Result);
    end Setup;
@@ -424,7 +426,24 @@ package body GNATCOLL.SQL.Postgres is
          when Require => Str.Append (" sslmode=require");
       end case;
 
+      if Descr.Appname /= Null_XString then
+         Str.Append (" application_name='");
+         Escape (Descr.Appname);
+         Str.Append (''');
+      end if;
+
       return Str.To_String;
    end Get_Connection_String;
+
+   --------------------------
+   -- Get_Application_Name --
+   --------------------------
+
+   overriding function Get_Application_Name
+      (Description : not null access Postgres_Description) return String
+   is
+   begin
+      return Description.Appname.To_String;
+   end Get_Application_Name;
 
 end GNATCOLL.SQL.Postgres;

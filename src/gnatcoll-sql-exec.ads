@@ -255,6 +255,12 @@ package GNATCOLL.SQL.Exec is
    --  This should only be called when the last database connection was closed,
    --  since each connection keeps a handle on the description
 
+   function Get_Application_Name
+      (Self : not null access Database_Description_Record)
+      return String is ("");
+   --  The application name, as registered when Self was created.
+   --  This can be used as a parameter to Reset_Connection.
+
    --------------------
    -- Error_Reporter --
    --------------------
@@ -495,7 +501,8 @@ package GNATCOLL.SQL.Exec is
    --  as the user used to log in the database (typically, the username would
    --  be set to a unique identifier for the current application user, for
    --  instance the login name, whereas the application would always use a
-   --  common user/password to log in the database)
+   --  common user/password to log in the database).
+   --  One possible value is Connection.Get_Description.Get_Application_Name.
 
    function Get_Description
      (Connection : access Database_Connection_Record'Class)
