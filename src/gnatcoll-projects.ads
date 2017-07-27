@@ -1543,11 +1543,20 @@ package GNATCOLL.Projects is
    -- Editing projects --
    ----------------------
 
+   Project_Not_Editable : exception;
+
+   --  Current implementation does not provide a way to edit aggregate project
+   --  trees. This means that if the root project is an aggregate project then
+   --  neither the root project itself nor any of the projects from aggregated
+   --  project subtrees can be edited. Is_Editable will always return False for
+   --  those, and an attempt to use any of the editing methods will
+   --  result in Project_Not_Editable exception.
+
    function Is_Editable (Project : Project_Type) return Boolean;
    --  Whether the project can be edited.
-   --  This is not the case if there were errors loading the project, or if
-   --  it contains constructs that prevent its edition (use of variables for
-   --  instance).
+   --  This is not the case if it is an aggregate or aggregated project,
+   --  if there were errors loading the project, or if it contains constructs
+   --  that prevent its edition (use of variables for instance).
    --  Project is also not editable if package IDE contains
    --     for Read_Only use "true";
 

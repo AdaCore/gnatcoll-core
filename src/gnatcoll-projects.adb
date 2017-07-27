@@ -8634,7 +8634,7 @@ package body GNATCOLL.Projects is
         Build ("IDE", "Read_Only");
    begin
       return not Project.Data.Uses_Variables
-        and then not Project.Is_Aggregate_Project
+        and then not Project.Data.Tree.Root.Is_Aggregate_Project
         and then Project.Data.View_Is_Complete
         and then (not Project.Has_Attribute (Att)
                   or else To_Lower (Project.Attribute_Value (Att)) /= "true");
@@ -8792,6 +8792,10 @@ package body GNATCOLL.Projects is
       Index     : String := "";
       Prepend   : Boolean := False) is
    begin
+      if not Self.Is_Editable then
+         raise Project_Not_Editable;
+      end if;
+
       GNATCOLL.Projects.Normalize.Set_Attribute
         (Self.Data.Tree, Self, Attribute, Values, Scenario, Index, Prepend);
    end Set_Attribute;
@@ -8804,6 +8808,10 @@ package body GNATCOLL.Projects is
       Index     : String := "";
       At_Index  : Natural := 0) is
    begin
+      if not Self.Is_Editable then
+         raise Project_Not_Editable;
+      end if;
+
       GNATCOLL.Projects.Normalize.Set_Attribute
         (Self.Data.Tree, Self, Attribute, Value, Scenario, Index,
          At_Index);
@@ -8819,6 +8827,10 @@ package body GNATCOLL.Projects is
       Scenario  : Scenario_Variable_Array := All_Scenarios;
       Index     : String := "") is
    begin
+      if not Self.Is_Editable then
+         raise Project_Not_Editable;
+      end if;
+
       GNATCOLL.Projects.Normalize.Delete_Attribute
         (Self.Data.Tree, Self, String (Attribute), Scenario, Index);
    end Delete_Attribute;
@@ -8829,6 +8841,10 @@ package body GNATCOLL.Projects is
       Scenario  : Scenario_Variable_Array := All_Scenarios;
       Index     : String := "") is
    begin
+      if not Self.Is_Editable then
+         raise Project_Not_Editable;
+      end if;
+
       GNATCOLL.Projects.Normalize.Delete_Attribute
         (Self.Data.Tree, Self, String (Attribute), Scenario, Index);
    end Delete_Attribute;
@@ -8846,6 +8862,10 @@ package body GNATCOLL.Projects is
       Old_Path : constant Virtual_File := Self.Project_Path;
 
    begin
+      if not Self.Is_Editable then
+         raise Project_Not_Editable;
+      end if;
+
       GNATCOLL.Projects.Normalize.Rename_And_Move
         (Self.Data.Tree, Self, New_Name, Directory, Errors);
 
@@ -9045,6 +9065,10 @@ package body GNATCOLL.Projects is
       PP : File_Pretty_Printer;
 
    begin
+      if not Project.Is_Editable then
+         raise Project_Not_Editable;
+      end if;
+
       if not Is_Regular_File (Project.Project_Path)
         or else Project.Data.Modified
         or else Force
@@ -9160,6 +9184,10 @@ package body GNATCOLL.Projects is
                       First_With_Clause_Of (Project.Node, Tree);
       Next        : Project_Node_Id;
    begin
+      if not Project.Is_Editable then
+         raise Project_Not_Editable;
+      end if;
+
       --  ??? When the project is no longer found in the hierarchy, it should
       --  also be removed from the htable in GPR.Tree, so that another
       --  project by that name can be loaded.
@@ -9248,6 +9276,10 @@ package body GNATCOLL.Projects is
       Error            : Import_Project_Error;
 
    begin
+      if not Project.Is_Editable then
+         raise Project_Not_Editable;
+      end if;
+
       GPR.Output.Set_Special_Output (Fail'Unrestricted_Access);
       GPR.Com.Fail := Fail'Unrestricted_Access;
 
@@ -9329,6 +9361,10 @@ package body GNATCOLL.Projects is
       Use_Base_Name     : Boolean := False;
       Limited_With      : Boolean := False) return Import_Project_Error is
    begin
+      if not Project.Is_Editable then
+         raise Project_Not_Editable;
+      end if;
+
       Compute_Importing_Projects (Project, Project.Data.Tree.Root);
 
       return GNATCOLL.Projects.Normalize.Add_Imported_Project
@@ -9387,6 +9423,9 @@ package body GNATCOLL.Projects is
       Use_Relative_Paths : Boolean) return Boolean
    is
    begin
+      if not Self.Is_Editable then
+         raise Project_Not_Editable;
+      end if;
       return GNATCOLL.Projects.Normalize.Rename_Path
         (Self.Data.Tree, Self, Old_Path, New_Path, Use_Relative_Paths);
    end Rename_Path;
@@ -9428,6 +9467,9 @@ package body GNATCOLL.Projects is
       Use_Relative_Paths : Boolean := False)
    is
    begin
+      if not Self.Is_Editable then
+         raise Project_Not_Editable;
+      end if;
       if Use_Relative_Paths then
          declare
             Path : constant Filesystem_String :=
