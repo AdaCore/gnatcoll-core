@@ -27,7 +27,6 @@
 with Ada.Strings.Unbounded;
 with GNATCOLL.SQL.Exec;   use GNATCOLL.SQL.Exec;
 with GNATCOLL.Strings;    use GNATCOLL.Strings;
-with GNAT.Strings;        use GNAT.Strings;
 with GNATCOLL.SQL.Ranges;
 
 package GNATCOLL.SQL.Postgres is
@@ -36,7 +35,6 @@ package GNATCOLL.SQL.Postgres is
      is new Database_Description_Record with private;
    type Postgres_Description_Access is access all Postgres_Description'Class;
 
-   overriding procedure Free (Description : in out Postgres_Description);
    overriding function Build_Connection
      (Self : access Postgres_Description) return Database_Connection;
 
@@ -191,12 +189,12 @@ package GNATCOLL.SQL.Postgres is
 
 private
    type Postgres_Description is new Database_Description_Record with record
-      Host     : GNAT.Strings.String_Access;
-      Dbname   : GNAT.Strings.String_Access;
-      User     : GNAT.Strings.String_Access;
-      Password : GNAT.Strings.String_Access;
-      SSL      : SSL_Mode := Prefer;
-      Port     : Integer := -1;
+      Host      : GNATCOLL.Strings.XString;
+      Dbname    : GNATCOLL.Strings.XString;
+      User      : GNATCOLL.Strings.XString;
+      Password  : GNATCOLL.Strings.XString;
+      SSL       : SSL_Mode := Prefer;
+      Port      : Integer := -1;
    end record;
 
    type SQL_PG_Extension is abstract tagged null record;
