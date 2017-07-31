@@ -470,13 +470,6 @@ XML = r'''<?xml version="1.0"?>
   </documentation_file>
 
   <documentation_file>
-     <shell>Editor.edit "gnatcoll-scripts-gtkada.ads"</shell>
-     <descr>GNATCOLL.Scripts.Gtkada</descr>
-     <menu>/Help/GNAT Runtime/GNATCOLL/Scripts/Gtkada</menu>
-     <category>GNAT Components Collection</category>
-  </documentation_file>
-
-  <documentation_file>
      <shell>Editor.edit "gnatcoll-scripts-impl.ads"</shell>
      <descr>GNATCOLL.Scripts.Impl</descr>
      <menu>/Help/GNAT Runtime/GNATCOLL/Scripts/Impl</menu>
@@ -493,14 +486,7 @@ XML = r'''<?xml version="1.0"?>
   <documentation_file>
      <shell>Editor.edit "gnatcoll-scripts-python.ads"</shell>
      <descr>GNATCOLL.Scripts.Python</descr>
-     <menu>/Help/GNAT Runtime/GNATCOLL/Scripts/Python/&lt;Python&gt;</menu>
-     <category>GNAT Components Collection</category>
-  </documentation_file>
-
-  <documentation_file>
-     <shell>Editor.edit "gnatcoll-scripts-python-gtkada.ads"</shell>
-     <descr>GNATCOLL.Scripts.Python.Gtkada</descr>
-     <menu>/Help/GNAT Runtime/GNATCOLL/Scripts/Python/Gtkada</menu>
+     <menu>/Help/GNAT Runtime/GNATCOLL/Scripts/Python</menu>
      <category>GNAT Components Collection</category>
   </documentation_file>
 
@@ -605,14 +591,7 @@ XML = r'''<?xml version="1.0"?>
   <documentation_file>
      <shell>Editor.edit "gnatcoll-vfs.ads"</shell>
      <descr>GNATCOLL.VFS</descr>
-     <menu>/Help/GNAT Runtime/GNATCOLL/VFS/&lt;VFS&gt;</menu>
-     <category>GNAT Components Collection</category>
-  </documentation_file>
-
-  <documentation_file>
-     <shell>Editor.edit "gnatcoll-vfs-gtkada.ads"</shell>
-     <descr>GNATCOLL.VFS.GtkAda</descr>
-     <menu>/Help/GNAT Runtime/GNATCOLL/VFS/GtkAda</menu>
+     <menu>/Help/GNAT Runtime/GNATCOLL/VFS</menu>
      <category>GNAT Components Collection</category>
   </documentation_file>
 

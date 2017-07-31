@@ -51,12 +51,6 @@ build_library_type/%: generate_sources
 	@echo "====== Building $(@F) libraries ======"
 	${GPRBUILD} ${GPRBLD_OPTS} -Pgnatcoll_full
 
-	@# Need to build libgnatcoll_gtk separately, because its project files
-	@# requires gtkada.gpr, which might not exist on the machine.
-ifeq (${WITH_GTK},yes)
-	${GPRBUILD} ${GPRBLD_OPTS} -Psrc/gnatcoll_gtk
-endif
-
 build_tools/%: build_library_type/%
 	@echo "====== Building $(@F) tools ======"
 	@# Build the tools (the list is the project\'s Main attribute)
@@ -83,9 +77,6 @@ endif
 install_library_type/%:
 	@echo "====== Installing $(@F) libraries ======"
 	${GPRINSTALL} -r ${GPRINST_OPTS} -Pgnatcoll_full
-ifeq (${WITH_GTK},yes)
-	${GPRINSTALL} ${GPRINST_OPTS} -Psrc/gnatcoll_gtk
-endif
 
 install_tools/%:
 	@echo "====== Installing $(@F) tools ======"
@@ -161,9 +152,6 @@ clean_library/%:
 	-gprclean ${GPRCLN_OPTS} -Pgnatcoll_full
 	@# Separate pass to also remove the Main
 	-gprclean ${GPRCLN_OPTS} -Psrc/gnatcoll_tools
-ifeq (${WITH_GTK},yes)
-	-gprclean ${GPRCLN_OPTS} -Psrc/gnatcoll_gtk
-endif
 
 clean: clean_library/static clean_library/static-pic clean_library/relocatable
 	-${MAKE} -C testsuite $@

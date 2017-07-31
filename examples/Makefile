@@ -8,9 +8,6 @@ export LD_LIBRARY_PATH
 
 all:
 	gnatmake -p -Pexamples
-ifeq ($(WITH_GTK),yes)
-	gprbuild -p -Pexamplesgtk
-endif
 ifeq ($(WITH_GMP),yes)
 	gprbuild -p -Pgmp/gmp_examples.gpr
 endif
@@ -20,9 +17,6 @@ endif
 
 clean:
 	-gprclean -q -Pexamples
-ifeq ($(WITH_GTK),yes)
-	-gprclean -q -Pexamplesgtk
-endif
 ifeq ($(WITH_GMP),yes)
 	-gprclean -q -Pgmp/gmp_examples.gpr
 endif

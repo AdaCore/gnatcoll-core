@@ -627,10 +627,6 @@ LIBOBJS
 LIB
 WITH_SYSLOG
 LIB_PQ_GPR
-PYGOBJECT_INCLUDE_GPR
-GTK_GCC_LIBS_GPR
-GTK_GCC_FLAGS_GPR
-PYGTK_INCLUDE_GPR
 PYTHON_CFLAGS_GPR
 PYTHON_STATIC_LIBS_GPR
 PYTHON_SHARED_LIBS_GPR
@@ -655,18 +651,6 @@ HAS_PQPREPARE
 LIB_PQ
 PATH_LIBPQ
 WITH_POSTGRES
-PYGOBJECT_LIB
-PYGOBJECT_INCLUDE
-WITH_PYGOBJECT
-WITH_PYGTK
-PYGTK_INCLUDE
-PYGTK_PREFIX
-GTK_VERSION
-WITH_GTK
-GTK_GCC_LIBS
-GTK_GCC_FLAGS
-HAVE_GNAT_PROJECT_gtkada
-PKG_CONFIG
 WITH_MADVISE
 WITH_MMAP
 WITH_PYTHON
@@ -758,9 +742,6 @@ enable_static_pic
 with_python
 with_python_exec
 enable_shared_python
-with_gtk
-enable_pygtk
-enable_pygobject
 with_postgresql
 with_sqlite
 with_gmp
@@ -1400,8 +1381,6 @@ Optional Features:
                           Make them the installation default
   --enable-static-pic     build static-pic libraries
   --enable-shared-python  Link with shared python library instead of static
-  --disable-pygtk         Disable support for PyGTK [[default=enabled]]
-  --disable-pygobject     Disable support for PyGobject [[default=enabled]]
   --disable-readline      Disable support for readline
   --disable-projects      Disable support for GNAT Projects
                           [[default=enabled]]
@@ -1415,8 +1394,6 @@ Optional Packages:
   --with-python-exec=<path>
                           forces a specific python executable (python3 for
                           instance)
-  --with-gtk=version      Specify the version of GTK to support (3.0 or 2.0)
-  --without-gtk           Disable support for GTK
   --with-postgresql=<path>
                           Specify the full path to the PostgreSQL installation
   --without-postgresql    Disable PostgreSQL support
@@ -4247,263 +4224,6 @@ fi
 
 
 
-   # Extract the first word of "pkg-config", so it can be a program name with args.
-set dummy pkg-config; ac_word=$2
-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for $ac_word" >&5
-$as_echo_n "checking for $ac_word... " >&6; }
-if ${ac_cv_path_PKG_CONFIG+:} false; then :
-  $as_echo_n "(cached) " >&6
-else
-  case $PKG_CONFIG in
-  [\\/]* | ?:[\\/]*)
-  ac_cv_path_PKG_CONFIG="$PKG_CONFIG" # Let the user override the test with a path.
-  ;;
-  *)
-  as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
-for as_dir in $PATH
-do
-  IFS=$as_save_IFS
-  test -z "$as_dir" && as_dir=.
-    for ac_exec_ext in '' $ac_executable_extensions; do
-  if as_fn_executable_p "$as_dir/$ac_word$ac_exec_ext"; then
-    ac_cv_path_PKG_CONFIG="$as_dir/$ac_word$ac_exec_ext"
-    $as_echo "$as_me:${as_lineno-$LINENO}: found $as_dir/$ac_word$ac_exec_ext" >&5
-    break 2
-  fi
-done
-  done
-IFS=$as_save_IFS
-
-  test -z "$ac_cv_path_PKG_CONFIG" && ac_cv_path_PKG_CONFIG="no"
-  ;;
-esac
-fi
-PKG_CONFIG=$ac_cv_path_PKG_CONFIG
-if test -n "$PKG_CONFIG"; then
-  { $as_echo "$as_me:${as_lineno-$LINENO}: result: $PKG_CONFIG" >&5
-$as_echo "$PKG_CONFIG" >&6; }
-else
-  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
-$as_echo "no" >&6; }
-fi
-
-
-   if test "$PKG_CONFIG" = "no" ; then
-      WITH_GTK=no
-      GTK_VERSION=no
-   else
-
-# Check whether --with-gtk was given.
-if test "${with_gtk+set}" = set; then :
-  withval=$with_gtk; WITH_GTK=$withval
-else
-
-            { $as_echo "$as_me:${as_lineno-$LINENO}: checking for default gtk+ version" >&5
-$as_echo_n "checking for default gtk+ version... " >&6; }
-            # Detect the version we should use, from the system
-            for WITH_GTK in "$CONFIGURE_SWITCH_WITH_GTK" "3.0" "2.0" "no"; do
-                if test "$WITH_GTK" != ""; then
-                   GTK_PREFIX=`$PKG_CONFIG gtk+-${WITH_GTK} --variable=prefix`
-                   if test "$GTK_PREFIX" != ""; then
-                      break
-                   fi
-                fi
-            done
-            { $as_echo "$as_me:${as_lineno-$LINENO}: result: $WITH_GTK" >&5
-$as_echo "$WITH_GTK" >&6; }
-
-fi
-
-
-      if test "$WITH_GTK" != "no"; then
-          { $as_echo "$as_me:${as_lineno-$LINENO}: checking for gtk+ ${WITH_GTK}" >&5
-$as_echo_n "checking for gtk+ ${WITH_GTK}... " >&6; }
-          GTK_PREFIX=`$PKG_CONFIG gtk+-${WITH_GTK} --variable=prefix`
-          { $as_echo "$as_me:${as_lineno-$LINENO}: result: $GTK_PREFIX" >&5
-$as_echo "$GTK_PREFIX" >&6; }
-          GTK_GCC_FLAGS=`$PKG_CONFIG gtk+-${WITH_GTK} --cflags`
-          GTK_GCC_LIBS=`$PKG_CONFIG gtk+-${WITH_GTK} --libs`
-          if test x"$GTK_GCC_FLAGS" != x ; then
-             { $as_echo "$as_me:${as_lineno-$LINENO}: checking for gtkada.gpr" >&5
-$as_echo_n "checking for gtkada.gpr... " >&6; }
-
-cat > conftest.gpr <<EOF
-with "gtkada";
-project Conftest is for Source_Files use (); end Conftest;
-EOF
-if { ac_try='gprls -Pconftest.gpr system.ads > /dev/null 2>conftest.out'
-  { { eval echo "\"\$as_me\":${as_lineno-$LINENO}: \"$ac_try\""; } >&5
-  (eval $ac_try) 2>&5
-  ac_status=$?
-  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
-  test $ac_status = 0; }; }
-then
-  HAVE_GNAT_PROJECT_gtkada=yes
-else
-  # Perhaps we do not have "gprls" (for old gnat versions)
-  # Try with gnatls
-  if { ac_try='gnat ls -Pconftest.gpr system.ads > /dev/null 2>conftest.out'
-  { { eval echo "\"\$as_me\":${as_lineno-$LINENO}: \"$ac_try\""; } >&5
-  (eval $ac_try) 2>&5
-  ac_status=$?
-  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
-  test $ac_status = 0; }; }
-  then
-    HAVE_GNAT_PROJECT_gtkada=yes
-  else
-    HAVE_GNAT_PROJECT_gtkada=no
-  fi
-fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $HAVE_GNAT_PROJECT_gtkada" >&5
-$as_echo "$HAVE_GNAT_PROJECT_gtkada" >&6; }
-
-
-             HAVE_GTKADA=$HAVE_GNAT_PROJECT_gtkada
-             GTK_VERSION=$WITH_GTK
-             WITH_GTK=${HAVE_GTKADA}
-          else
-             GTK_VERSION=no
-             WITH_GTK=no
-          fi
-      fi
-   fi
-
-
-
-
-
-
-
-
-    # Check whether --enable-pygtk was given.
-if test "${enable_pygtk+set}" = set; then :
-  enableval=$enable_pygtk; WITH_PYGTK=$enableval
-else
-  WITH_PYGTK=$WITH_PYTHON
-fi
-
-
-    if test "$PKG_CONFIG" = "" -o "$PKG_CONFIG" = "no" ; then
-       { $as_echo "$as_me:${as_lineno-$LINENO}: checking for pygtk" >&5
-$as_echo_n "checking for pygtk... " >&6; }
-       { $as_echo "$as_me:${as_lineno-$LINENO}: result: no (pkg-config not found)" >&5
-$as_echo "no (pkg-config not found)" >&6; }
-       WITH_PYGTK=no
-
-    elif test "$GTK_VERSION" != "2.0" ; then
-       { $as_echo "$as_me:${as_lineno-$LINENO}: checking for pygtk" >&5
-$as_echo_n "checking for pygtk... " >&6; }
-       { $as_echo "$as_me:${as_lineno-$LINENO}: result: no (incompatible gtk+ version)" >&5
-$as_echo "no (incompatible gtk+ version)" >&6; }
-       WITH_PYGTK=no
-
-    else
-       min_pygtk_version=2.8
-       module=pygtk-2.0
-       { $as_echo "$as_me:${as_lineno-$LINENO}: checking for pygtk - version >= $min_pygtk_version" >&5
-$as_echo_n "checking for pygtk - version >= $min_pygtk_version... " >&6; }
-
-       if test x"$WITH_PYGTK" = x -o x"$WITH_PYGTK" = xno ; then
-          { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
-$as_echo "no" >&6; }
-          PYGTK_PREFIX=""
-          PYGTK_INCLUDE=""
-          WITH_PYGTK=no
-
-       elif test "$PYTHON_BASE" != "no" ; then
-          $PKG_CONFIG $module --exists
-          if test $? != 0 ; then
-             { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
-$as_echo "no" >&6; }
-             WITH_PYGTK=no
-
-          else
-             pygtk_version=`$PKG_CONFIG $module --modversion`
-             $PKG_CONFIG $module --atleast-version=$min_pygtk_version
-             if test $? = 0 ; then
-                PYGTK_INCLUDE="`$PKG_CONFIG $module --cflags` -DPYGTK"
-                PYGTK_PREFIX=`$PKG_CONFIG $module --variable=prefix`
-                { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes (version $pygtk_version)" >&5
-$as_echo "yes (version $pygtk_version)" >&6; }
-                WITH_PYGTK=yes
-             else
-                { $as_echo "$as_me:${as_lineno-$LINENO}: result: no (found $pygtk_version)" >&5
-$as_echo "no (found $pygtk_version)" >&6; }
-                PYGTK_PREFIX=""
-                PYGTK_INCLUDE=""
-                WITH_PYGTK=no
-             fi
-          fi
-
-       else
-          { $as_echo "$as_me:${as_lineno-$LINENO}: result: no since python not found" >&5
-$as_echo "no since python not found" >&6; }
-          PYGTK_PREFIX=""
-          PYGTK_INCLUDE=""
-          WITH_PYGTK=no
-       fi
-    fi
-
-
-
-
-
-
-    # Check whether --enable-pygobject was given.
-if test "${enable_pygobject+set}" = set; then :
-  enableval=$enable_pygobject; WITH_PYGOBJECT=$enableval
-else
-  WITH_PYGOBJECT=$WITH_PYTHON
-fi
-
-
-    { $as_echo "$as_me:${as_lineno-$LINENO}: checking for pygobject" >&5
-$as_echo_n "checking for pygobject... " >&6; }
-
-    if test "$PKG_CONFIG" = "" -o "$PKG_CONFIG" = "no" ; then
-       { $as_echo "$as_me:${as_lineno-$LINENO}: result: no (pkg-config not found)" >&5
-$as_echo "no (pkg-config not found)" >&6; }
-       WITH_PYGOBJECT=no
-
-    elif test "$GTK_VERSION" = "no" ; then
-       { $as_echo "$as_me:${as_lineno-$LINENO}: result: no (gtk+ not found)" >&5
-$as_echo "no (gtk+ not found)" >&6; }
-       WITH_PYGOBJECT=no
-
-    elif test x"$WITH_PYGOBJECT" = x -o x"$WITH_PYGOBJECT" = xno ; then
-       { $as_echo "$as_me:${as_lineno-$LINENO}: result: no (disabled by user)" >&5
-$as_echo "no (disabled by user)" >&6; }
-       WITH_PYGOBJECT=no
-
-    else
-       for version in 3.0 2.0 ; do
-           module="pygobject-$version"
-           $PKG_CONFIG $module --exists
-           if test $? = 0 ; then
-               break;
-           fi
-           module=""
-       done
-
-       if test "$module" = "" ; then
-          { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
-$as_echo "no" >&6; }
-          WITH_PYGOBJECT=no
-       else
-          PYGOBJECT_INCLUDE=`$PKG_CONFIG $module --cflags`
-          PYGOBJECT_LIB=`$PKG_CONFIG $module --libs`
-          { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes ($version)" >&5
-$as_echo "yes ($version)" >&6; }
-          WITH_PYGOBJECT=yes
-          PYGOBJECT_INCLUDE="$PYGOBJECT_INCLUDE -DPYGOBJECT"
-       fi
-    fi
-
-
-
-
-
-
    NEED_PSQL=no
    HAS_PQPREPARE=no
 
@@ -5459,90 +5179,6 @@ $as_echo "no" >&6; }
       result="$result\"$v\""
    done
    PYTHON_CFLAGS_GPR=$result
-
-
-
-
-   value=$PYGTK_INCLUDE
-
-   # Special handling on darwin for gcc 4.5 and 4.7
-   case "$build_os" in
-      *darwin*)
-         value=`echo $value | sed -e "s/-framework \([^ ]*\)/-Wl,-framework -Wl,\1/g"`
-   esac
-
-   output=PYGTK_INCLUDE_GPR
-   result=""
-   for v in $value; do
-      if test "$result" != ""; then
-         result="$result, "
-      fi
-      result="$result\"$v\""
-   done
-   PYGTK_INCLUDE_GPR=$result
-
-
-
-
-   value=$GTK_GCC_FLAGS
-
-   # Special handling on darwin for gcc 4.5 and 4.7
-   case "$build_os" in
-      *darwin*)
-         value=`echo $value | sed -e "s/-framework \([^ ]*\)/-Wl,-framework -Wl,\1/g"`
-   esac
-
-   output=GTK_GCC_FLAGS_GPR
-   result=""
-   for v in $value; do
-      if test "$result" != ""; then
-         result="$result, "
-      fi
-      result="$result\"$v\""
-   done
-   GTK_GCC_FLAGS_GPR=$result
-
-
-
-
-   value=$GTK_GCC_LIBS
-
-   # Special handling on darwin for gcc 4.5 and 4.7
-   case "$build_os" in
-      *darwin*)
-         value=`echo $value | sed -e "s/-framework \([^ ]*\)/-Wl,-framework -Wl,\1/g"`
-   esac
-
-   output=GTK_GCC_LIBS_GPR
-   result=""
-   for v in $value; do
-      if test "$result" != ""; then
-         result="$result, "
-      fi
-      result="$result\"$v\""
-   done
-   GTK_GCC_LIBS_GPR=$result
-
-
-
-
-   value=$PYGOBJECT_INCLUDE
-
-   # Special handling on darwin for gcc 4.5 and 4.7
-   case "$build_os" in
-      *darwin*)
-         value=`echo $value | sed -e "s/-framework \([^ ]*\)/-Wl,-framework -Wl,\1/g"`
-   esac
-
-   output=PYGOBJECT_INCLUDE_GPR
-   result=""
-   for v in $value; do
-      if test "$result" != ""; then
-         result="$result, "
-      fi
-      result="$result\"$v\""
-   done
-   PYGOBJECT_INCLUDE_GPR=$result
 
 
 
@@ -6768,14 +6404,8 @@ $as_echo "$as_me: --------- Summary for GNAT Components --------------" >&6;}
 $as_echo "$as_me:   Shared libraries:       $GNAT_BUILDS_SHARED (default: $DEFAULT_LIBRARY_TYPE)" >&6;}
 { $as_echo "$as_me:${as_lineno-$LINENO}:   Static PIC libraries:   $ENABLE_STATIC_PIC (see --enable-static-pic)" >&5
 $as_echo "$as_me:   Static PIC libraries:   $ENABLE_STATIC_PIC (see --enable-static-pic)" >&6;}
-{ $as_echo "$as_me:${as_lineno-$LINENO}:   Gtk+:                   $WITH_GTK (requires pkg-config and gtkada.gpr)" >&5
-$as_echo "$as_me:   Gtk+:                   $WITH_GTK (requires pkg-config and gtkada.gpr)" >&6;}
 { $as_echo "$as_me:${as_lineno-$LINENO}:   Python:                 $WITH_PYTHON $PYTHON_BASE (see --with-python)" >&5
 $as_echo "$as_me:   Python:                 $WITH_PYTHON $PYTHON_BASE (see --with-python)" >&6;}
-{ $as_echo "$as_me:${as_lineno-$LINENO}:   PyGtk:                  $WITH_PYGTK $PYGTK_PREFIX (see --enable-pygtk)" >&5
-$as_echo "$as_me:   PyGtk:                  $WITH_PYGTK $PYGTK_PREFIX (see --enable-pygtk)" >&6;}
-{ $as_echo "$as_me:${as_lineno-$LINENO}:   PyGObject:              $WITH_PYGOBJECT (see --enable-pygobject)" >&5
-$as_echo "$as_me:   PyGObject:              $WITH_PYGOBJECT (see --enable-pygobject)" >&6;}
 { $as_echo "$as_me:${as_lineno-$LINENO}:   Syslog:                 $WITH_SYSLOG (see --enable-syslog)" >&5
 $as_echo "$as_me:   Syslog:                 $WITH_SYSLOG (see --enable-syslog)" >&6;}
 { $as_echo "$as_me:${as_lineno-$LINENO}:   Readline (GPL license): $WITH_READLINE (see --with-readline --enable-gpl)" >&5

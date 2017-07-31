@@ -40,13 +40,11 @@ abstract project Gnatcoll_Full is
    for Source_Dirs use ();
    for Object_Dir use "src/" & Gnatcoll_Shared'Object_Dir;  --  for auto.cgpr
 
-   Gtk       : Gnatcoll_Shared.Yes_No := Gnatcoll_Shared.Gtk;
    Python    : Gnatcoll_Shared.Yes_No := Gnatcoll_Shared.Python;
    Syslog    : Gnatcoll_Shared.Yes_No := Gnatcoll_Shared.Syslog;
    Postgres  : Gnatcoll_Shared.Yes_No := Gnatcoll_Shared.Postgres;
    Gmp       : Gnatcoll_Shared.Yes_No := Gnatcoll_Shared.Gmp;
    Projects  : Gnatcoll_Shared.Yes_No := Gnatcoll_Shared.Projects;
-   PyGobject : Gnatcoll_Shared.Yes_No := Gnatcoll_Shared.PyGobject;
    Readline  : Gnatcoll_Shared.Yes_No := Gnatcoll_Shared.Readline;
    Mmap      : Gnatcoll_Shared.Yes_No := Gnatcoll_Shared.Mmap;
    Iconv     : Gnatcoll_Shared.Yes_No := Gnatcoll_Shared.Iconv;

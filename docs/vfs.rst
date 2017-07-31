@@ -239,17 +239,3 @@ its own, and will free its internal data (file name and cached data)
 automatically when the file is no longer needed. This has of course a
 slight efficiency cost, due to controlled types, but we have found in
 the context of GPS that the added flexibility was well worth it.
-
-GtkAda support for virtual files
-================================
-
-If you are programming a graphical interface to your application, and the
-latter is using the `Virtual_File` abstraction all other the place,
-it might be a problem to convert back to a string when you store a file
-name in a graphical element (for instance in a tree model if you display
-an explorer-like interface in your application).
-
-Thus, GNATColl provides the `GNATCOLL.VFS.GtkAda` package,
-which is only build if `GtkAda` was detected when GNATColl
-was compiled, which allows you to encapsulate a `Virtual_File`
-into a `GValue`, and therefore to store it in a tree model.

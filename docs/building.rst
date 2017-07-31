@@ -104,16 +104,6 @@ the following are likely to be the most useful:
   shared or static libraries are used depends on how
   python was installed on your system.
 
-*--disable-gtk*
-  If this switch is specified, then no package depending on the gtk+ graphical
-  toolkit will be built.
-
-*--disable-pygtk*
-  If this switch is specified, then support for pygtk
-  (:ref:`The_Python_language`) will not be build. The support for this python
-  module will also be automatically disabled if python was not found or if you
-  configured with `--without-python`.
-
 *--disable-syslog*
   If this switch is specified, then support for syslog
   (:ref:`Logging_to_syslog`) will not be build. This support allows sending the
@@ -165,18 +155,6 @@ the following are likely to be the most useful:
 
   This currently only impacts `GNATCOLL.Readline`.
 
-Special support exists in GNATColl for the gtk+ graphical toolkit.
-The `configure` command will attempt to find the installation directory for
-this toolkit by using the `pkg-config` command, which must therefore be
-available through your `PATH` environment variable. It also needs to
-find the :file:`gtkada.gpr` project file either because it is part of the
-implicit search path for project files, or because you have put the
-corresponding directory in the environment variable `GPR_PROJECT_PATH`.
-If either of these two requirements fail, the modules of GNATColl
-that depend on GtkAda will not be built::
-
-  ./configure --prefix=/usr/local/gnatcoll --without-python
-  
 If all goes well (i.e. all required dependencies are found on the system),
 configure will generate a number of files, including :file:`Makefile`,
 :file:`Makefile.conf` and :file:`gnatcoll_shared.gpr`.
@@ -229,10 +207,7 @@ GNATColl by setting the environment variable `LIBRARY_TYPE`
 to either `"relocatable"` or `"static"`.
 
 Your application can now use the GNATColl code through a project file, by
-adding a ``with`` clause to :file:`gnatcoll.gpr`, :file:`gnatcoll_gtk.gpr` or
-:file:`gnatcoll_python.gpr`.  The second one will also force your application
-to be linked with the gtk+ libraries, but provides additional capabilities as
-documented in each of the modules.
+adding a ``with`` clause to :file:`gnatcoll.gpr` or :file:`gnatcoll_python.gpr`.
 
 If you wish to install in a different location than was specified at
 configure time, you can override the "prefix" variable from the command line,

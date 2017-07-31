@@ -42,16 +42,6 @@ be build with support for the corresponding language, but your application
 can chose at run time whether or not to activate the support for a specific
 language.
 
-|Tip| Optional support is provided for the *gtk+* library.
-
-Likewise, extensions are provided if the gtk+ libraries were found on your
-system. These provide a number of Ada subprograms that help interface with
-code using this library, and help export the corresponding classes.
-This support for gtk+ is also optional, and you can still build
-GNATColl even if gtk+ wasn't installed on your system (or if your
-application is text-only, in which case you likely do not want to depend
-at link time on graphical libraries).
-
 .. index:: test driver
 .. index:: testing your application
 
@@ -253,31 +243,6 @@ itself.
     exec_in_console ("sys.ps1 = 'foo'")
     	=> foo>  # Prompt was changed in the console
 
-.. index:: pygtk
-
-PyGtk is a python extension that provides an interface to the popular
-gtk+ library. It gives access to a host of functions for writing graphical
-interfaces from python. GNATColl interfaces nicely with this extension
-if it is found.
-
-|Note| PyGtk support is also optional. It will be activated in your application
-if the four following conditions are met: Python was detected on your system,
-PyGtk was also detected when GNATColl is built, PyGtk is detected
-dynamically when your application is launched and your code is calling the
-`Init_PyGtk_Support` function
-
-When PyGtk is detected, you can add the following method to any of the
-classes you export to python:
-
-.. index:: AnyClass pywidget
-
-`AnyClass pywidget`
-  This function returns an instance of a PyGtk class corresponding to the
-  graphical object represented by `AnyClass`. In general, it makes sense when
-  `AnyClass` is bound, in your Ada code, to a GtkAda object. As a result, the
-  same graphical element visible to the user on the screen is available from
-  three different programming languages: C, Ada and Python. All three can
-  manipulate it in the same way
 
 .. _Classes_exported_to_all_languages:
 
@@ -421,7 +386,7 @@ that must be done at specific moments in the initialization of your whole
 application.
 
 This initialization does not depend on whether you have build support
-for python or for gtk+ in GNATColl. The same packages and subprograms
+for python in GNATColl. The same packages and subprograms
 are available in all cases, and therefore you do not need conditional
 compilation in your application to support the various cases.
 
@@ -531,7 +496,7 @@ Creating interactive consoles
 -----------------------------
 
 The goal of the scripting module in GNATColl is to work both in
-text-only applications and graphical applications that use the gtk+ toolkit.
+text-only applications and graphical applications.
 However, in both cases applications will need a way to capture the output
 of scripting languages and display them to the user (at least for errors, to
 help debugging scripts), and possibly emulate input when a script is waiting
@@ -604,17 +569,7 @@ need to be overriden.
   back to perform actual operations on it.
 
   These methods are implemented using one of the `GNATCOLL.Scripts.Set_Data`
-  and `GNATCOLL.Scripts.Get_Data` operations when in text mode, or possibly
-  `GNATCOLL.Scripts.Gtkada.Set_Data` and
-  `GNATCOLL.Scripts.Gtkada.Get_Data`
-  when manipulating graphical GtkAda objects.
-
-There are lots of small details to take into account when writing a
-graphical console. The example in :file:`examples/gtkconsole.ads`
-should provide a good starting point. However, it doesn't handle things
-like history of commands, preventing the user from moving the cursor
-to previous lines,... which are all small details that need to be right
-for the user to feel comfortable with the console.
+  and `GNATCOLL.Scripts.Get_Data` operations when in text mode.
 
 .. highlight:: ada
 
@@ -1066,30 +1021,10 @@ is worth noting that in fact the Ada objects will be associated with a
 single instance *per scripting language*, but each language has its
 own instance. Data is not magically transferred from python to shell!
 
-There are two cases to distinguish here:
-
-* The Ada object derives from a GtkAda object
-
-  In such a case, the package :file:`GNATCOLL.Scripts.GtkAda` provides three
-  procedures that automatically associate the instance with the object,
-  and can return the class instance associated with any given GtkAda
-  object, or can return the GtkAda object stored in the instance. There is
-  nothing else to do that to call `Set_Data` as we have seen above.
-  See below for a brief discussion on the Factory design pattern. The internal
-  handling is complex, since python
-  for instance has ref-counted types, and so does gtk+. For the memory to
-  be correctly freed when no longer needed, GNATColl must properly
-  takes care of these reference counting. The result is that the class
-  instance will never be destroyed while the gtk+ object exists, but the
-  gtk+ object might be destroyed while the class instance still exists (in
-  which case no further operation on that instance is possible).
-
-* The Ada object does not derive from a GtkAda object
-
-  In such a case, you should store the list of associated instances with
-  your object. The type `GNATCOLL.Scripts.Instance_List_Access` is meant for
-  that purpose, and provides two `Set` and `Get` primitives
-  to retrieve existing instances.
+You should store the list of associated instances with
+your object. The type `GNATCOLL.Scripts.Instance_List_Access` is meant for
+that purpose, and provides two `Set` and `Get` primitives
+to retrieve existing instances.
 
 The final aspect to consider here is how to return existing instances.
 This cannot be done from the constructor method, since when it is called
