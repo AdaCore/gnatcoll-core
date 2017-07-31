@@ -1454,6 +1454,7 @@ package body GNATCOLL.SQL is
       Long   : Boolean := True) return String
    is
       Result : Unbounded_String;
+      List   : Unbounded_String;
       C      : Criteria_Lists.Cursor;
       C2     : Field_List.Cursor;
       Is_First : Boolean;
@@ -1488,29 +1489,37 @@ package body GNATCOLL.SQL is
             end loop;
 
          when Criteria_In | Criteria_Not_In =>
-            Result := To_Unbounded_String (To_String (Self.Arg, Format, Long));
-
-            if Self.Op = Criteria_In then
-               Append (Result, " IN (");
-            else
-               Append (Result, " NOT IN (");
-            end if;
-
+            List := Null_Unbounded_String;
             Is_First := True;
             C2 := First (Self.List);
             while Has_Element (C2) loop
                if not Is_First then
-                  Append (Result, ",");
+                  Append (List, ",");
                end if;
 
                Is_First := False;
-               Append (Result, To_String (Element (C2), Format, Long));
+               Append (List, To_String (Element (C2), Format, Long));
                Next (C2);
             end loop;
+            Append (List, To_String (Self.Subquery, Format));
+            Append (List, To_String (Self.In_String));
 
-            Append (Result, To_String (Self.Subquery, Format));
-            Append (Result, To_String (Self.In_String));
-            Append (Result, ")");
+            if List = "" then
+               --  "A in ()" is same as "False"
+               --  "A not in ()" is same as "True"
+
+               Result := To_Unbounded_String
+                  (Expression (Self.Op = Criteria_Not_In)
+                   .To_String (Format, Long));
+            else
+               Result :=
+                  To_Unbounded_String (To_String (Self.Arg, Format, Long));
+               Append (Result,
+                       (if Self.Op = Criteria_In
+                        then " IN (" else " NOT IN ("));
+               Append (Result, List);
+               Append (Result, ")");
+            end if;
 
          when Criteria_Between | Criteria_Not_Between =>
             Result := To_Unbounded_String
