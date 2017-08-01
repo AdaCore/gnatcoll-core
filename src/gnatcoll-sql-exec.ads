@@ -1007,11 +1007,11 @@ private
      (Descr : access Database_Description_Record'Class;
       Always_Use_Transactions : Boolean)
      is abstract new Formatter with record
+      Username       : GNATCOLL.Strings.XString;
+      Error_Msg      : GNATCOLL.Strings.XString;
+      Automatic_Transactions : Boolean := True;
       Success        : Boolean := True;
       In_Transaction : Boolean := False;
-      Username       : GNAT.Strings.String_Access;
-      Error_Msg      : GNAT.Strings.String_Access;
-      Automatic_Transactions : Boolean := True;
    end record;
 
    type Transaction_Controller (DB : Database_Connection) is
@@ -1073,16 +1073,15 @@ private
    type Prepared_Statement_Data is record
       Query      : SQL_Query;   --  Reset to null once prepared
       Query_Str  : GNAT.Strings.String_Access;
+      Name       : GNATCOLL.Strings.XString;
+      Prepared   : Prepared_In_Session_List;
 
-      Is_Select : Boolean;
-
-      Use_Cache     : Boolean := False;
       Cached_Result : Cache_Id := No_Cache_Id;
       Index_By      : Field_Index'Base;
 
-      On_Server : Boolean := False;
-      Name      : GNAT.Strings.String_Access;
-      Prepared  : Prepared_In_Session_List;
+      Is_Select  : Boolean;
+      Use_Cache  : Boolean := False;
+      On_Server  : Boolean := False;
    end record;
    --  This type stores a statement as a string, to save time and memory.
    --  It is reference counted, so that it is automatically released when no

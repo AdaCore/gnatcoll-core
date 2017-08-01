@@ -23,7 +23,6 @@
 
 with Ada.Calendar;
 with Ada.Strings.Fixed;            use Ada.Strings;
-with Ada.Strings.Unbounded;        use Ada.Strings.Unbounded;
 with Ada.Unchecked_Conversion;
 with Ada.Unchecked_Deallocation;
 
@@ -35,6 +34,7 @@ with Interfaces.C.Strings;         use Interfaces.C.Strings;
 
 with GNATCOLL.SQL.Postgres.Gnade;  use GNATCOLL.SQL.Postgres.Gnade;
 with GNATCOLL.SQL.Exec_Private;    use GNATCOLL.SQL.Exec_Private;
+with GNATCOLL.Strings;             use GNATCOLL.Strings;
 with GNATCOLL.Traces;              use GNATCOLL.Traces;
 with GNATCOLL.Utils;               use GNATCOLL.Utils;
 
@@ -50,7 +50,7 @@ package body GNATCOLL.SQL.Postgres.Builder is
    --  much.
 
    type Postgresql_DBMS_Stmt_Record is record
-      Cursor : Ada.Strings.Unbounded.Unbounded_String;
+      Cursor : GNATCOLL.Strings.XString;
       --  Name of the associated cursor
 
    end record;
@@ -69,6 +69,9 @@ package body GNATCOLL.SQL.Postgres.Builder is
      new GNATCOLL.SQL.Exec.Database_Connection_Record with
       record
          Connection_String : GNAT.Strings.String_Access;
+         --  Should be a string, since it is also used as discriminant for
+         --  Postgres field below.
+
          Postgres          : Database_Access;
 
          Cursor            : Natural := 0;
@@ -421,7 +424,6 @@ package body GNATCOLL.SQL.Postgres.Builder is
       --  Since we have a controlled type, we just have to deallocate memory to
       --  deallocate memory allocated by postgres
       if Connection /= null then
-         Free (Connection.Connection_String);
          Unchecked_Free (Connection.Postgres);
       end if;
    end Close;
@@ -699,10 +701,10 @@ package body GNATCOLL.SQL.Postgres.Builder is
       P_Stmt := new Postgresql_DBMS_Stmt_Record;
 
       if Name /= "" then
-         P_Stmt.Cursor := To_Unbounded_String ("cursor_" & Name);
+         P_Stmt.Cursor := To_XString ("cursor_" & Name);
       else
          Connection.Cursor := Connection.Cursor + 1; --  ??? Concurrency
-         P_Stmt.Cursor := To_Unbounded_String
+         P_Stmt.Cursor := To_XString
            ("cursor_" & Image (Connection.Cursor, 0));
       end if;
 
@@ -908,8 +910,7 @@ package body GNATCOLL.SQL.Postgres.Builder is
          R.Stmt := new Postgresql_DBMS_Stmt_Record;
          R.Must_Free_Stmt := True;
          Connection.Cursor := Connection.Cursor + 1; --  ??? Concurrency ?
-         R.Stmt.Cursor := To_Unbounded_String
-           ("stmt" & Image (Connection.Cursor, 0));
+         R.Stmt.Cursor := To_XString ("stmt" & Image (Connection.Cursor, 0));
 
          Do_Perform
            (Connection,
