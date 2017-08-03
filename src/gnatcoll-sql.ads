@@ -700,7 +700,13 @@ package GNATCOLL.SQL is
      (Self : SQL_Field'Class; List : String) return SQL_Criteria;
    function SQL_Not_In
      (Self : SQL_Field'Class; Subquery : SQL_Query) return SQL_Criteria;
-   --  Whether Self is equal to any of the values in List
+   --  Whether Self is equal to any of the values in List.
+   --  If List is an empty list, this returns an always-false criteria.
+   --
+   --  This diverges from pure sql, since "F IN ()" is invalid in SQL, though
+   --  in Ada "for A of Empty_List" is valid and simply does nothing. It is
+   --  easy to forget to test whether you are passing an empty list, and it
+   --  seems more user friendly to simply do nothing in this case.
 
    function SQL_Between
      (Self, Left, Right : SQL_Field'Class) return SQL_Criteria;
