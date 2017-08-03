@@ -93,6 +93,10 @@ package GNATCOLL.Iconv is
    --  Some charsets seemingly supported by most implementations of iconv,
    --  for European languages.
 
+   SHIFT_JIS  : constant String := "SHIFT-JIS";
+   --  Some charsets seemingly supported by most implementations of iconv, for
+   --  Japanese characters.
+
    UTF8    : constant String := "UTF-8";
    UTF16   : constant String := "UTF-16";
    UTF16BE : constant String := "UTF-16BE";
