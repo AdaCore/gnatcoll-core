@@ -1252,7 +1252,7 @@ package body GNATCOLL.SQL is
    function SQL_In
      (Self : SQL_Field'Class; List : SQL_Field_List) return SQL_Criteria
    is
-      Data : SQL_Criteria_Data (Criteria_In);
+      Data   : SQL_Criteria_Data (Criteria_In);
       Result : SQL_Criteria;
    begin
       Data.Arg := +Self;
@@ -1264,7 +1264,7 @@ package body GNATCOLL.SQL is
    function SQL_In
      (Self : SQL_Field'Class; Subquery : SQL_Query) return SQL_Criteria
    is
-      Data : SQL_Criteria_Data (Criteria_In);
+      Data   : SQL_Criteria_Data (Criteria_In);
       Result : SQL_Criteria;
    begin
       Data.Arg := +Self;
@@ -1276,7 +1276,7 @@ package body GNATCOLL.SQL is
    function SQL_In
      (Self : SQL_Field'Class; List : String) return SQL_Criteria
    is
-      Data : SQL_Criteria_Data (Criteria_In);
+      Data   : SQL_Criteria_Data (Criteria_In);
       Result : SQL_Criteria;
    begin
       Data.Arg := +Self;
@@ -1290,7 +1290,7 @@ package body GNATCOLL.SQL is
    ------------
 
    function Exists (Subquery : SQL_Query) return SQL_Criteria is
-      Data : SQL_Criteria_Data (Criteria_Exists);
+      Data   : SQL_Criteria_Data (Criteria_Exists);
       Result : SQL_Criteria;
    begin
       Data.Subquery2 := Subquery;
@@ -1305,7 +1305,7 @@ package body GNATCOLL.SQL is
    function SQL_Not_In
      (Self : SQL_Field'Class; List : SQL_Field_List) return SQL_Criteria
    is
-      Data : SQL_Criteria_Data (Criteria_Not_In);
+      Data   : SQL_Criteria_Data (Criteria_Not_In);
       Result : SQL_Criteria;
    begin
       Data.Arg := +Self;
@@ -1317,11 +1317,23 @@ package body GNATCOLL.SQL is
    function SQL_Not_In
      (Self : SQL_Field'Class; Subquery : SQL_Query) return SQL_Criteria
    is
-      Data : SQL_Criteria_Data (Criteria_Not_In);
+      Data   : SQL_Criteria_Data (Criteria_Not_In);
       Result : SQL_Criteria;
    begin
       Data.Arg := +Self;
       Data.Subquery := Subquery;
+      Set_Data (Result, Data);
+      return Result;
+   end SQL_Not_In;
+
+   function SQL_Not_In
+     (Self : SQL_Field'Class; List : String) return SQL_Criteria
+   is
+      Data   : SQL_Criteria_Data (Criteria_Not_In);
+      Result : SQL_Criteria;
+   begin
+      Data.Arg := +Self;
+      Data.In_String := To_Unbounded_String (List);
       Set_Data (Result, Data);
       return Result;
    end SQL_Not_In;
