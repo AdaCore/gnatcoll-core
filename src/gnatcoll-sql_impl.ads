@@ -474,6 +474,15 @@ package GNATCOLL.SQL_Impl is
    --  This is only needed when you implement your own kinds of criteria, not
    --  when writing SQL queries.
 
+   Op_Equal         : aliased constant String := "=";
+   Op_Not_Equal     : aliased constant String := "<>";
+   Op_Less          : aliased constant String := "<";
+   Op_Less_Equal    : aliased constant String := "<=";
+   Op_Greater       : aliased constant String := ">";
+   Op_Greater_Equal : aliased constant String := ">=";
+   Op_Distinct      : aliased constant String := " IS DISTINCT FROM ";
+   Op_Not_Distinct  : aliased constant String := " IS NOT DISTINCT FROM ";
+
    function Compare
      (Left, Right : SQL_Field'Class;
       Op          : Cst_String_Access;
@@ -695,47 +704,75 @@ package GNATCOLL.SQL_Impl is
         (Value : Ada_Type; List : SQL_Field_List) return SQL_Field_List;
       --  Create lists of fields
 
-      function "="  (Left : Field; Right : Field'Class) return SQL_Criteria;
-      function "/=" (Left : Field; Right : Field'Class) return SQL_Criteria;
-      function "<"  (Left : Field; Right : Field'Class) return SQL_Criteria;
-      function "<=" (Left : Field; Right : Field'Class) return SQL_Criteria;
-      function ">"  (Left : Field; Right : Field'Class) return SQL_Criteria;
-      function ">=" (Left : Field; Right : Field'Class) return SQL_Criteria;
-      function "="  (Left : Field; Right : Ada_Type) return SQL_Criteria;
-      function "/=" (Left : Field; Right : Ada_Type) return SQL_Criteria;
-      function "<"  (Left : Field; Right : Ada_Type) return SQL_Criteria;
-      function "<=" (Left : Field; Right : Ada_Type) return SQL_Criteria;
-      function ">"  (Left : Field; Right : Ada_Type) return SQL_Criteria;
-      function ">=" (Left : Field; Right : Ada_Type) return SQL_Criteria;
-      pragma Inline ("=", "/=", "<", ">", "<=", ">=");
+      function "="  (Left : Field; Right : Field'Class) return SQL_Criteria
+         is (Compare (Left, Right, Op_Equal'Access));
+      function "/=" (Left : Field; Right : Field'Class) return SQL_Criteria
+         is (Compare (Left, Right, Op_Not_Equal'Access));
+      function "<"  (Left : Field; Right : Field'Class) return SQL_Criteria
+         is (Compare (Left, Right, Op_Less'Access));
+      function "<=" (Left : Field; Right : Field'Class) return SQL_Criteria
+         is (Compare (Left, Right, Op_Less_Equal'Access));
+      function ">"  (Left : Field; Right : Field'Class) return SQL_Criteria
+         is (Compare (Left, Right, Op_Greater'Access));
+      function ">=" (Left : Field; Right : Field'Class) return SQL_Criteria
+         is (Compare (Left, Right, Op_Greater_Equal'Access));
+      function "="  (Left : Field; Right : Ada_Type) return SQL_Criteria
+         is (Compare (Left, Expression (Right), Op_Equal'Access));
+      function "/=" (Left : Field; Right : Ada_Type) return SQL_Criteria
+         is (Compare (Left, Expression (Right), Op_Not_Equal'Access));
+      function "<"  (Left : Field; Right : Ada_Type) return SQL_Criteria
+         is (Compare (Left, Expression (Right), Op_Less'Access));
+      function "<=" (Left : Field; Right : Ada_Type) return SQL_Criteria
+         is (Compare (Left, Expression (Right), Op_Less_Equal'Access));
+      function ">"  (Left : Field; Right : Ada_Type) return SQL_Criteria
+         is (Compare (Left, Expression (Right), Op_Greater'Access));
+      function ">=" (Left : Field; Right : Ada_Type) return SQL_Criteria
+         is (Compare (Left, Expression (Right), Op_Greater_Equal'Access));
       --  Compare fields and values
 
       function Greater_Than
-        (Left : SQL_Field'Class; Right : Field) return SQL_Criteria;
+        (Left : SQL_Field'Class; Right : Field) return SQL_Criteria
+        is (Compare (Left, Right, Op_Greater'Access));
       function Greater_Or_Equal
-        (Left : SQL_Field'Class; Right : Field) return SQL_Criteria;
+        (Left : SQL_Field'Class; Right : Field) return SQL_Criteria
+        is (Compare (Left, Right, Op_Greater_Equal'Access));
       function Equal
-        (Left : SQL_Field'Class; Right : Field) return SQL_Criteria;
+        (Left : SQL_Field'Class; Right : Field) return SQL_Criteria
+        is (Compare (Left, Right, Op_Equal'Access));
       function Less_Than
-        (Left : SQL_Field'Class; Right : Field) return SQL_Criteria;
+        (Left : SQL_Field'Class; Right : Field) return SQL_Criteria
+        is (Compare (Left, Right, Op_Less'Access));
       function Less_Or_Equal
-        (Left : SQL_Field'Class; Right : Field) return SQL_Criteria;
+        (Left : SQL_Field'Class; Right : Field) return SQL_Criteria
+        is (Compare (Left, Right, Op_Less_Equal'Access));
       function Greater_Than
-        (Left : SQL_Field'Class; Right : Ada_Type) return SQL_Criteria;
+        (Left : SQL_Field'Class; Right : Ada_Type) return SQL_Criteria
+        is (Compare (Left, Expression (Right), Op_Greater'Access));
       function Greater_Or_Equal
-        (Left : SQL_Field'Class; Right : Ada_Type) return SQL_Criteria;
+        (Left : SQL_Field'Class; Right : Ada_Type) return SQL_Criteria
+        is (Compare (Left, Expression (Right), Op_Greater_Equal'Access));
       function Equal
-        (Left : SQL_Field'Class; Right : Ada_Type) return SQL_Criteria;
+        (Left : SQL_Field'Class; Right : Ada_Type) return SQL_Criteria
+        is (Compare (Left, Expression (Right), Op_Equal'Access));
       function Less_Than
-        (Left : SQL_Field'Class; Right : Ada_Type) return SQL_Criteria;
+        (Left : SQL_Field'Class; Right : Ada_Type) return SQL_Criteria
+        is (Compare (Left, Expression (Right), Op_Less'Access));
       function Less_Or_Equal
-        (Left : SQL_Field'Class; Right : Ada_Type) return SQL_Criteria;
-      pragma Inline
-        (Greater_Than, Greater_Or_Equal, Equal, Less_Than, Less_Or_Equal);
+        (Left : SQL_Field'Class; Right : Ada_Type) return SQL_Criteria
+        is (Compare (Left, Expression (Right), Op_Less_Equal'Access));
       --  Same as "<", "<=", ">", ">=" and "=", but these can be used with the
       --  result of aggregate fields for instance. In general, you should not
       --  use these to work around typing issues (for instance comparing a text
       --  field with 1234)
+
+      function Distinct_From (Left, Right: Field'Class) return SQL_Criteria
+         is (Compare (Left, Right, Op_Distinct'Access));
+      function Not_Distinct_From (Left, Right: Field'Class) return SQL_Criteria
+         is (Compare (Left, Right, Op_Not_Distinct'Access));
+      --  Compare two values.
+      --  If one of them is null, Equal and Not_Equal would return null,
+      --  instead of True or False. But "DISTINCT FROM" would return false if
+      --  both are null, and true if only one is null.
 
       function "=" (Self : Field; Value : Ada_Type) return SQL_Assignment;
       function "=" (Self : Field; To : Field'Class) return SQL_Assignment;
