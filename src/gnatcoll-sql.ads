@@ -1105,7 +1105,7 @@ package GNATCOLL.SQL is
    --  For instance:
    --      Q := SQL_Create_Table
    --        (Name => "tmp", Temp => True, On_Commit => Drop,
-   --         As => Values
+   --         As => SQL_Values
    --             ((1 => Expression (1) & Expression ("name1"),
    --               2 => Expression (2) & Expression ("name2"))));
    --
