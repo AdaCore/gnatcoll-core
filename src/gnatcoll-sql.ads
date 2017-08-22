@@ -87,15 +87,30 @@
 --  instances (in the example above, if another table was called Field1, and we
 --  weren't using a package, we would have a naming conflict).
 --
+--  Table aliases
+--  =============
+--
 --  This way, a user might write a query with two instances of the table with
 --  the following code (which uses the Ada2005 dotted notation, although this
 --  isn't mandatory):
---      AI : T_Sales_Entity.Table := T_Sales_Entity.Table
---        (Rename (Sales_Entity, "foo"));
+--
+--      N_Foo : aliased constant String := "foo";
+--      AI : T_Sales_Entity.Table := T_Sales_Entity.Table (N_Foo'Access);
 --      SQL_Select
 --        (Fields => AI.Field1 & Action_Item.Field1,
 --         From   => AI & Action_Item,
 --         Where  => AI.FK (Action_Item))
+--
+--  This results in:
+--
+--      select ai.field1, action_item.field1 from action_item ai, action_item
+--          where ai.id=action_item.id;
+--
+--  NOTE: a current restriction though is that such a renamed table cannot be
+--  used in a SQL_Delete or SQL_Insert, since that results in something like:
+--     delete from action_item ai where ...
+--  instead of:
+--     delete from ai where ...
 
 with Ada.Calendar;
 with Ada.Containers.Vectors;
