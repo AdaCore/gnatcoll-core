@@ -1088,13 +1088,99 @@ package GNATCOLL.SQL is
 
    type Temp_Table_Behavior is (Preserve_Rows, Delete_Rows, Drop);
 
+   type Cst_String_List is array (Natural range <>) of Cst_String_Access;
+
    function SQL_Create_Table
-     (Name      : String;
-      As        : SQL_Query;
-      Temp      : Boolean := False;
-      On_Commit : Temp_Table_Behavior := Preserve_Rows) return SQL_Query;
+     (Name          : String;
+      As            : SQL_Query;
+      Temp          : Boolean := False;
+      On_Commit     : Temp_Table_Behavior := Preserve_Rows;
+      Columns       : Cst_String_List := (1 .. 0 => null);
+      If_Not_Exists : Boolean := False;
+      With_No_Data  : Boolean := False)
+     return SQL_Query;
    --  CREATE [TEMP] TABLE AS
-   --  "as" could be the result of a SQL_Select, or SQL_Values for instance.
+   --  This creates a new table and fills it with the result of the `as`
+   --  query (which could be a SQL_Select or a SQL_Values for instance).
+   --
+   --  Postgresql-specific:
+   --  By default, the name and types of the columns in the new table are
+   --  computed from the query result. However, you can override the names
+   --  by specifying the name parameter.
+   --
+   --  If Temp is true, a temporary table is created.
+   --  Postgresql-specific:
+   --  This table will be drop or cleared when the current transaction is
+   --  committed, depending on the On_Commit parameter.
+   --
+   --  If a table by this name already exists, an error is returned unless
+   --  If_Not_Exists is true, in which case nothing happens (and the table
+   --  is not re-created).
+   --
+   --  Postgresql-specific:
+   --  If With_No_Data is True, then only the structure of the table is
+   --  copied, not the actual data.
+   --
+   --  Examples:
+   --  * To create a temp table with two columns, extracted from another
+   --    table, you could do the following:
+   --
+   --       Q = SQL_Create_Table
+   --          (Name => "tmp",
+   --           Temp => True,
+   --           As   => SQL_Select
+   --              (Table.Field1 & Table.Field2,
+   --               From  => Table));
+   --
+   --   * You could also create a temp table with explicit values and two
+   --     rows:
+   --
+   --       Q := SQL_Create_Table
+   --          (Name => "tmp",
+   --           Temp => True,
+   --           As   => SQL_Values
+   --              (1 => Expression (1) & Expression ("string"),
+   --               2 => Expression (2) & Expression ("string2")));
+   --
+   --     The drawback here is that the resulting table has unknown names for
+   --     the columns (postgresql uses "column1" and "column2", and
+   --     sqlite uses blank names).
+   --     In the case of Postgresql, we can do better by specifying explicit
+   --     names, as in the following. This code has a memory leak though so
+   --     you need to free the allocated memory for the name of columns.
+   --
+   --       Q := SQL_Create_Table
+   --          (Name => "tmp",
+   --           Temp => True,
+   --           Columns => (new String'("col1"), new String'("col2")),
+   --           As   => SQL_Values (Expression (1) & Expression ("string")));
+   --
+   --     This is still not ideal, because the resulting table cannot easily
+   --     be used in queries. For this, we need to declare it. This is done
+   --     with the more complex:
+   --
+   --       T_Name : aliased constant String := "tmp";
+   --       T_C1   : aliased constant String := "col1";
+   --       T_C2   : aliased constant String := "col2";
+   --       type T_Tmp (Instance : Cst_String_Access; Index : Integer) is
+   --          new SQL_Table (T_Name'Access, Instance, Index) with record
+   --             F1 : SQL_Field_Integer
+   --                (T_Name'Access, Instance, T_C1'Access, Index);
+   --             F2 : SQL_Field_Text
+   --                (T_Name'Access, Instance, T_C2'Access, Index);
+   --          end record;
+   --       Tmp : T_Tmp (null, -1);
+   --
+   --       Q := SQL_Create_Table
+   --          (Name => T_Name,
+   --           Temp => True,
+   --           Columns => (Tmp.F1.Name, Tmp.F2.Name),
+   --           As   => SQL_Values
+   --              ((1 => Expression (1) & Expression ("string"))));
+   --
+   --       The advantage here is that Tmp can now be used like all other
+   --       tables to write queries. There is also no need to free memory
+   --       for the field names.
 
    type Field_List_Array is array (Natural range <>) of SQL_Field_List;
    function SQL_Values (Val : Field_List_Array) return SQL_Query;
@@ -1467,10 +1553,13 @@ private
       Format : Formatter'Class) return Unbounded_String;
 
    type Query_Create_Table_As_Contents is new Query_Contents with record
-      Name      : Ada.Strings.Unbounded.Unbounded_String;
-      Temp      : Boolean;
-      On_Commit : Temp_Table_Behavior;
-      As        : SQL_Query;
+      Name          : GNATCOLL.Strings.XString;
+      Columns       : GNATCOLL.Strings.XString;
+      On_Commit     : Temp_Table_Behavior;
+      As            : SQL_Query;
+      Temp          : Boolean;
+      If_Not_Exists : Boolean;
+      With_No_Data  : Boolean;
    end record;
    overriding function To_String
      (Self   : Query_Create_Table_As_Contents;

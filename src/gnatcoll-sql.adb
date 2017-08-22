@@ -2160,15 +2160,41 @@ package body GNATCOLL.SQL is
      (Name      : String;
       As        : SQL_Query;
       Temp      : Boolean := False;
-      On_Commit : Temp_Table_Behavior := Preserve_Rows) return SQL_Query
+      On_Commit : Temp_Table_Behavior := Preserve_Rows;
+      Columns       : Cst_String_List := (1 .. 0 => null);
+      If_Not_Exists : Boolean := False;
+      With_No_Data  : Boolean := False)
+     return SQL_Query
    is
-      Data : Query_Create_Table_As_Contents;
-      Q    : SQL_Query;
+      function Get_Columns return GNATCOLL.Strings.XString;
+      function Get_Columns return GNATCOLL.Strings.XString is
+      begin
+         if Columns'Length = 0 then
+            return GNATCOLL.Strings.Null_XString;
+         end if;
+
+         declare
+            Cols : XString_Array (Columns'Range);
+         begin
+            for C in Columns'Range loop
+               Cols (C) := GNATCOLL.Strings.To_XString (Columns (C).all);
+            end loop;
+            return GNATCOLL.Strings.Join
+               (',', Cols, Prefix => "(", Suffix => ")");
+         end;
+      end Get_Columns;
+
+      Data : constant Query_Create_Table_As_Contents :=
+         (Query_Contents with
+          Name          => GNATCOLL.Strings.To_XString (Name),
+          Columns       => Get_Columns,
+          As            => As,
+          On_Commit     => On_Commit,
+          Temp          => Temp,
+          If_Not_Exists => If_Not_Exists,
+          With_No_Data  => With_No_Data);
+      Q : SQL_Query;
    begin
-      Data.Name      := To_Unbounded_String (Name);
-      Data.As        := As;
-      Data.Temp      := Temp;
-      Data.On_Commit := On_Commit;
       Q.Set (Data);
       return Q;
    end SQL_Create_Table;
@@ -2184,22 +2210,38 @@ package body GNATCOLL.SQL is
       Result : Unbounded_String;
    begin
       Result := To_Unbounded_String ("CREATE ");
+
       if Self.Temp then
          Append (Result, "TEMPORARY ");
       end if;
+
       Append (Result, "TABLE ");
-      Append (Result, Self.Name);
-      if Self.Temp then
+
+      if Self.If_Not_Exists then
+         Append (Result, "IF NOT EXISTS ");
+      end if;
+
+      Append (Result, GNATCOLL.Strings.To_String (Self.Name));
+      Append (Result, GNATCOLL.Strings.To_String (Self.Columns));
+
+      --  If we use Preserve_Rows (the default in postgres), don't append
+      --  anything so that we stay compatible with sqlite.
+      if Self.Temp and then Self.On_Commit /= Preserve_Rows then
          Append (Result, " ON COMMIT ");
          case Self.On_Commit is
-            when Preserve_Rows => Append (Result, "PRESERVE ROWS");
+            when Preserve_Rows => null;
             when Delete_Rows   => Append (Result, "DELETE ROWS");
             when Drop          => Append (Result, "DROP");
          end case;
       end if;
+
       Append (Result, " AS (");
       Append (Result, Unbounded_String'(To_String (Self.As, Format)));
       Append (Result, ')');
+
+      if Self.With_No_Data then
+         Append (Result, " WITH NO DATA");
+      end if;
 
       return Result;
    end To_String;
