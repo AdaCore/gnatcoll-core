@@ -1064,8 +1064,22 @@ package GNATCOLL.SQL is
    function SQL_Insert
      (Fields    : SQL_Field_Or_List'Class;
       Values    : SQL_Query;
-      Qualifier : String := "") return SQL_Query;
-   --  Insert a new row in the table. The list of values come from a subquery
+      Qualifier : String := ""
+   ) return SQL_Query;
+   --  Insert one or more new rows in the table.
+   --
+   --  The table that is modified is the one to which all the fields apply
+   --  (they must apply to the same table).
+   --
+   --  The list of values come from a subquery. This can also be used to do
+   --  bulk inserts. For instance, if you have a table with two columns you
+   --  can add multiple rows with static values by using:
+   --
+   --     Q := SQL_Insert
+   --        (Table.Field1 & Table.Field2,
+   --         SQL_Values
+   --            (1 => Expression (1) & Expression ("str"),
+   --             2 => Expression (2) & Expression ("str2")));
 
    function SQL_Insert_Default_Values
      (Table : SQL_Table'Class) return SQL_Query;
