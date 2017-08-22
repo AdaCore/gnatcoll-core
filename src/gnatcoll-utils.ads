@@ -27,6 +27,7 @@
 pragma Ada_2012;
 
 with Ada.Calendar.Time_Zones; use Ada.Calendar;
+with Ada.Characters.Handling;
 with Ada.Strings.Unbounded;
 with GNAT.Calendar;
 with GNAT.Expect;
@@ -209,6 +210,31 @@ package GNATCOLL.Utils is
    --  This function is used on Windows or when the Strip_CR preference is
    --  enabled (for systems that share dos files).
    --  CR/LF sequences are replaced by LF chars.
+
+   function Predicate
+      (Text : String;
+        Predicate : access function (Item : Character) return Boolean)
+      return Boolean
+      is (for all C of Text => Predicate (C));
+   --  Whether all characters in Text match Predicate.
+   --  This can be used with the various utilities in Ada.Characters.Handling,
+   --  for instance to check whether a string is made up of only lower case
+   --  characters.
+   
+   function Is_Alphanumeric (Text : String) return Boolean
+     is (Predicate (Text, Ada.Characters.Handling.Is_Alphanumeric'Access));
+   function Is_Lower (Text : String) return Boolean
+     is (Predicate (Text, Ada.Characters.Handling.Is_Lower'Access));
+   function Is_Upper (Text : String) return Boolean
+     is (Predicate (Text, Ada.Characters.Handling.Is_Upper'Access));
+
+   function Is_Identifier (C : Character) return Boolean
+      is (C = '_' or else Ada.Characters.Handling.Is_Alphanumeric (C));
+   function Is_Identifier (Text : String) return Boolean
+      is (Predicate (Text, Is_Identifier'Access));
+   --  Whether C is a valid character for an identifier (in most programming
+   --  languages). It doesn't check whether the identifier starts with an
+   --  underscore for instance, just whether the characters would be valid.
 
    ------------
    -- Expect --

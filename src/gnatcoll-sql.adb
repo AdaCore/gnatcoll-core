@@ -27,6 +27,7 @@ with Ada.Containers;             use Ada.Containers;
 with Ada.Strings.Fixed;          use Ada.Strings.Fixed;
 with Ada.Unchecked_Deallocation;
 with GNAT.Strings;               use GNAT.Strings;
+with GNATCOLL.SQL.Inspect;
 with GNATCOLL.Utils;             use GNATCOLL.Utils;
 
 package body GNATCOLL.SQL is
@@ -2177,7 +2178,8 @@ package body GNATCOLL.SQL is
             Cols : XString_Array (Columns'Range);
          begin
             for C in Columns'Range loop
-               Cols (C) := GNATCOLL.Strings.To_XString (Columns (C).all);
+               Cols (C) := GNATCOLL.Strings.To_XString
+                  (GNATCOLL.SQL.Inspect.Quote_Keyword (Columns (C).all));
             end loop;
             return GNATCOLL.Strings.Join
                (',', Cols, Prefix => "(", Suffix => ")");

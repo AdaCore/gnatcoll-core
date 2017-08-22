@@ -2610,6 +2610,7 @@ package body GNATCOLL.SQL.Inspect is
    -------------------
 
    function Quote_Keyword (Str : String) return String is
+      Need_Quoting : Boolean := False;
    begin
       if Keywords.Is_Empty then
          --  For each keyword (from the postgreSQL documentation):
@@ -3153,9 +3154,24 @@ package body GNATCOLL.SQL.Inspect is
       --  we get an error when creating an index saying that the field does
       --  not exist). So we always convert to lower case.
 
-      if Keywords.Contains (Str)
-        or else To_Lower (Str) /= Str
-      then
+      Need_Quoting :=  Keywords.Contains (Str)
+        or else To_Lower (Str) /= Str;
+
+      --  We also need to quote any name that contains non-letters, to
+      --  prevent sql injection in some cases.
+
+      if not Need_Quoting then
+         for C of Str loop
+            if C /= '.'
+               and then not GNATCOLL.Utils.Is_Identifier (C)
+            then
+               Need_Quoting := True;
+               exit;
+            end if;
+         end loop;
+      end if;
+
+      if Need_Quoting then
          --  Insert two '"' at start and end, since these names will be quoted
          --  in the generated files.
 

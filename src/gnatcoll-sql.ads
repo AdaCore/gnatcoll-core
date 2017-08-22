@@ -1106,7 +1106,8 @@ package GNATCOLL.SQL is
    --  Postgresql-specific:
    --  By default, the name and types of the columns in the new table are
    --  computed from the query result. However, you can override the names
-   --  by specifying the name parameter.
+   --  by specifying the name parameter. The names are properly quoted, as
+   --  needed, to avoid keywords and risks.
    --
    --  If Temp is true, a temporary table is created.
    --  Postgresql-specific:
@@ -1119,7 +1120,8 @@ package GNATCOLL.SQL is
    --
    --  Postgresql-specific:
    --  If With_No_Data is True, then only the structure of the table is
-   --  copied, not the actual data.
+   --  copied, not the actual data. A workaround, for sqlite, is to add
+   --  a "Limit=>0" to the SQL_Select query given to `As`.
    --
    --  Examples:
    --  * To create a temp table with two columns, extracted from another
@@ -1150,10 +1152,10 @@ package GNATCOLL.SQL is
    --     you need to free the allocated memory for the name of columns.
    --
    --       Q := SQL_Create_Table
-   --          (Name => "tmp",
-   --           Temp => True,
+   --          (Name    => "tmp",
+   --           Temp    => True,
    --           Columns => (new String'("col1"), new String'("col2")),
-   --           As   => SQL_Values (Expression (1) & Expression ("string")));
+   --           As      => SQL_Values (Expression (1) & Expression ("str")));
    --
    --     This is still not ideal, because the resulting table cannot easily
    --     be used in queries. For this, we need to declare it. This is done
@@ -1172,10 +1174,10 @@ package GNATCOLL.SQL is
    --       Tmp : T_Tmp (null, -1);
    --
    --       Q := SQL_Create_Table
-   --          (Name => T_Name,
-   --           Temp => True,
+   --          (Name    => T_Name,
+   --           Temp    => True,
    --           Columns => (Tmp.F1.Name, Tmp.F2.Name),
-   --           As   => SQL_Values
+   --           As      => SQL_Values
    --              ((1 => Expression (1) & Expression ("string"))));
    --
    --       The advantage here is that Tmp can now be used like all other
