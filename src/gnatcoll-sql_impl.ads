@@ -482,6 +482,11 @@ package GNATCOLL.SQL_Impl is
    Op_Greater_Equal : aliased constant String := ">=";
    Op_Distinct      : aliased constant String := " IS DISTINCT FROM ";
    Op_Not_Distinct  : aliased constant String := " IS NOT DISTINCT FROM ";
+   Op_Is            : aliased constant String := " IS ";
+   Op_Is_Not        : aliased constant String := " IS NOT ";
+   --  Op_Distinct and Op_Not_Distinct are not supported on sqlite. Instead,
+   --  the latter provides "IS" and "IS NOT" that play a similar role (and
+   --  are not supported by postgresql).
 
    function Compare
      (Left, Right : SQL_Field'Class;

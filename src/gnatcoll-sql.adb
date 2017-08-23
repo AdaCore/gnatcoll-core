@@ -2486,8 +2486,9 @@ package body GNATCOLL.SQL is
       Data.Set   := Set;
       Data.Where := Where;
 
-      if From in SQL_Table'Class then
-         Data.From := +SQL_Table'Class (From);
+      if From in SQL_Single_Table'Class then
+         --  Also covers the case of a Subquery
+         Data.From := +SQL_Single_Table'Class (From);
       else
          Data.From := SQL_Table_List (From);
       end if;
