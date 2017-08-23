@@ -258,6 +258,14 @@ package GNATCOLL.Email is
    --  headers. Charset is used for MIME encoding of the From: and Subject:
    --  headers only.
 
+   procedure Set_From_Header
+     (Msg            : in out Message'Class;
+      From_Email     : String;
+      From_Real_Name : String;
+      Charset        : String);
+   --  Create and set a From: header for Msg using the given email address and
+   --  real name. The real name has the indicated Charset.
+
    type Header_Filter is access function (H : Header'Class) return Boolean;
    --  A filter for headers. It is returned True, the header will be displayed,
    --  otherwise it is skipped.

@@ -88,14 +88,6 @@ package body GNATCOLL.Email is
    function Clone_Headers (Ref : Header_List.List) return Header_List.List;
    --  Return a deep copy of the given list of headers.
 
-   procedure Set_From_Header
-     (Msg            : in out Message'Class;
-      From_Email     : String;
-      From_Real_Name : String;
-      Charset        : String);
-   --  Create and set a From: header for Msg using the given email address and
-   --  real name. The real name has the indicated Charset.
-
    Encoding_Names : constant array (Encoding_Type) of access constant String :=
      (Encoding_7bit   => new String'("7bit"),
       Encoding_8bit   => new String'("8bit"),
