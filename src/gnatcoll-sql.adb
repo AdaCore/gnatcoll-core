@@ -32,16 +32,11 @@ with GNATCOLL.Utils;             use GNATCOLL.Utils;
 
 package body GNATCOLL.SQL is
 
-   use Field_List, Criteria_Lists, Table_Sets;
-   use When_Lists, Query_Pointers;
+   use Field_List, Table_Sets, When_Lists, Query_Pointers;
    use type Boolean_Fields.Field;
 
    procedure Unchecked_Free is new Ada.Unchecked_Deallocation
      (SQL_Table'Class, SQL_Table_Access);
-
-   function Combine
-     (Left, Right : SQL_Criteria; Op : Criteria_Combine) return SQL_Criteria;
-   --  Combine the two criterias with a specific operator.
 
    procedure Append_Tables
      (From : SQL_Field_List; To : in out Table_Sets.Set);
@@ -169,6 +164,81 @@ package body GNATCOLL.SQL is
      (Self         : access Sorted_Field_Internal;
       To           : in out SQL_Field_List'Class;
       Is_Aggregate : in out Boolean);
+
+   --------------
+   -- Criteria --
+   --------------
+
+   type SQL_Criteria_Type is (Criteria_And,
+                              Criteria_Or,
+                              Criteria_In,
+                              Criteria_Not_In,
+                              Criteria_Exists,
+                              Criteria_Between,
+                              Criteria_Not_Between,
+                              Criteria_Null,
+                              Criteria_Not_Null,
+                              Criteria_Not);
+
+   subtype Null_Criteria
+     is SQL_Criteria_Type range Criteria_Null .. Criteria_Not_Null;
+
+   subtype Criteria_Combine
+     is SQL_Criteria_Type range Criteria_And .. Criteria_Or;
+
+   package Criteria_Lists is new Ada.Containers.Vectors
+     (Positive, SQL_Criteria);
+   use Criteria_Lists;
+
+   subtype Criteria_List is Criteria_Lists.Vector;
+
+   function Combine
+     (List : Criteria_List; Op : Criteria_Combine) return SQL_Criteria;
+   --  Returns SQL_Criteria combined from List with a specific operator
+
+   type SQL_Criteria_Data (Op : SQL_Criteria_Type) is
+      new GNATCOLL.SQL_Impl.SQL_Criteria_Data with record
+      case Op is
+         when Criteria_Combine =>
+            Criterias : Criteria_List;
+
+         when Criteria_In | Criteria_Not_In =>
+            Arg       : SQL_Field_Pointer;
+            List      : SQL_Field_List;
+            Subquery  : SQL_Query;
+            In_String : XString;
+
+         when Criteria_Exists =>
+            Subquery2 : SQL_Query;
+
+         when Criteria_Between | Criteria_Not_Between =>
+            Arg2  : SQL_Field_Pointer;
+            Left  : SQL_Field_Pointer;
+            Right : SQL_Field_Pointer;
+
+         when Null_Criteria =>
+            Arg3 : SQL_Field_Pointer;
+
+         when Criteria_Not =>
+            Criteria : SQL_Criteria;
+      end case;
+   end record;
+
+   overriding procedure Append_To_String
+     (Self   : SQL_Criteria_Data;
+      Format : Formatter'Class;
+      Long   : Boolean := True;
+      Result : in out XString);
+   overriding procedure Append_Tables
+     (Self : SQL_Criteria_Data; To : in out Table_Sets.Set);
+   overriding procedure Append_If_Not_Aggregate
+     (Self         : SQL_Criteria_Data;
+      To           : in out SQL_Field_List'Class;
+      Is_Aggregate : in out Boolean);
+
+   function Combine
+     (Left, Right : SQL_Criteria; Op : Criteria_Combine) return SQL_Criteria;
+   --  Combine the two criterias with a specific operator.
 
    -------------------------
    -- Field_List_Function --

@@ -504,8 +504,7 @@ package GNATCOLL.SQL_Impl is
    package SQL_Criteria_Pointers
       is new Shared_Pointers (SQL_Criteria_Data'Class, Free_Dispatch);
 
-   subtype SQL_Criteria_Data_Access is
-     SQL_Criteria_Pointers.Element_Access;
+   subtype SQL_Criteria_Data_Access is SQL_Criteria_Pointers.Element_Access;
 
    function Get_Data (Self : SQL_Criteria) return SQL_Criteria_Data_Access;
    --  Set the data associated with Self.
