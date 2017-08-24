@@ -27,6 +27,7 @@ with Interfaces.C;
 with GNAT.Sockets;
 with GNATCOLL.SQL.Postgres.Builder;
 with GNATCOLL.SQL.Postgres.Gnade;
+with GNATCOLL.Strings;                use GNATCOLL.Strings;
 with GNATCOLL.Utils;                  use GNATCOLL.Utils;
 
 package body GNATCOLL.SQL.Postgres is
@@ -40,9 +41,10 @@ package body GNATCOLL.SQL.Postgres is
       Extra : SQL_PG_Extension_Access;
    end record;
    overriding procedure Free (Self : in out Query_Postgres_Contents);
-   overriding function To_String
+   overriding procedure Append_To_String
      (Self   : Query_Postgres_Contents;
-      Format : Formatter'Class) return Unbounded_String;
+      Format : Formatter'Class;
+      Result : in out XString);
    overriding procedure Auto_Complete
      (Self                   : in out Query_Postgres_Contents;
       Auto_Complete_From     : Boolean := True;
@@ -56,17 +58,19 @@ package body GNATCOLL.SQL.Postgres is
       No_Wait : Boolean := False;
       --  Set True if NO WAIT
    end record;
-   overriding function To_String
+   overriding procedure Append_To_String
      (Self   : SQL_PG_For_Update;
-      Format : Formatter'Class) return Unbounded_String;
+      Format : Formatter'Class;
+      Result : in out XString);
    --  Extensions for UPDATE
 
    type SQL_PG_Returning is new SQL_PG_Extension with record
       Returning : SQL_Field_List;
    end record;
-   overriding function To_String
+   overriding procedure Append_To_String
      (Self   : SQL_PG_Returning;
-      Format : Formatter'Class) return Unbounded_String;
+      Format : Formatter'Class;
+      Result : in out XString);
    --  Extensions for SELECT
 
    ----------
@@ -81,17 +85,18 @@ package body GNATCOLL.SQL.Postgres is
       Free (Query_Contents (Self));
    end Free;
 
-   ---------------
-   -- To_String --
-   ---------------
+   ----------------------
+   -- Append_To_String --
+   ----------------------
 
-   overriding function To_String
+   overriding procedure Append_To_String
      (Self   : Query_Postgres_Contents;
-      Format : Formatter'Class) return Unbounded_String is
+      Format : Formatter'Class;
+      Result : in out XString) is
    begin
-      return To_String (Self.Base, Format)
-          & To_String (Self.Extra.all, Format);
-   end To_String;
+      Append_To_String (Self.Base, Format, Result);
+      Append_To_String (Self.Extra.all, Format, Result);
+   end Append_To_String;
 
    -------------------
    -- Auto_Complete --
@@ -331,43 +336,40 @@ package body GNATCOLL.SQL.Postgres is
       end if;
    end "&";
 
-   ---------------
-   -- To_String --
-   ---------------
+   ----------------------
+   -- Append_To_String --
+   ----------------------
 
-   overriding function To_String
+   overriding procedure Append_To_String
      (Self   : SQL_PG_For_Update;
-      Format : Formatter'Class) return Unbounded_String
+      Format : Formatter'Class;
+      Result : in out XString)
    is
-      Result : Unbounded_String;
    begin
-      Append (Result, " FOR UPDATE");
+      Result.Append (" FOR UPDATE");
       if Self.Tables /= Empty_Table_List then
-         Append (Result, " OF ");
-         Append (Result, To_String (Self.Tables, Format));
+         Result.Append (" OF ");
+         Append_To_String (Self.Tables, Format, Result);
       end if;
 
       if Self.No_Wait then
-         Append (Result, " NO WAIT");
+         Result.Append (" NO WAIT");
       end if;
+   end Append_To_String;
 
-      return Result;
-   end To_String;
+   ----------------------
+   -- Append_To_String --
+   ----------------------
 
-   ---------------
-   -- To_String --
-   ---------------
-
-   overriding function To_String
+   overriding procedure Append_To_String
      (Self   : SQL_PG_Returning;
-      Format : Formatter'Class) return Unbounded_String
-   is
-      Result : Unbounded_String;
+      Format : Formatter'Class;
+      Result : in out XString) is
    begin
       Append (Result, " RETURNING ");
-      Append (Result, To_String (Self.Returning, Format, Long => True));
-      return Result;
-   end To_String;
+      Append_To_String
+         (Self.Returning, Format, Long => True, Result => Result);
+   end Append_To_String;
 
    ---------------------------
    -- Get_Connection_String --

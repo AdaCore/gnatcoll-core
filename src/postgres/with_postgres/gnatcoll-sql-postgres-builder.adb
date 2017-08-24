@@ -797,6 +797,7 @@ package body GNATCOLL.SQL.Postgres.Builder is
    is
       R : Forward_Cursor;
       Last : Natural := Query'Last;
+      P    : XString;
    begin
       --  Make sure the command does not end with a semicolon
       while Last >= Query'First
@@ -805,9 +806,11 @@ package body GNATCOLL.SQL.Postgres.Builder is
          Last := Last - 1;
       end loop;
 
+      PK.Append_To_String (Connection.all, Result => P);
+
       R.Fetch (Connection,
                Query (Query'First .. Last)
-               & " RETURNING " & PK.To_String (Connection.all),
+               & " RETURNING " & P.To_String,
                Params);
       if not Connection.Success or else Is_Null (R, 0) then
          return -1;
@@ -826,12 +829,21 @@ package body GNATCOLL.SQL.Postgres.Builder is
       Params     : SQL_Parameters := No_Parameters;
       PK         : SQL_Field_Integer) return Integer
    is
-      Str : constant String := To_String (Connection, Stmt);
+      Str : constant XString := To_String (Connection, Stmt);
+      Result : Integer;
+
+      procedure Do_Get (S : String);
+      procedure Do_Get (S : String) is
+      begin
+         Result := Insert_And_Get_PK (Connection, S, Params, PK);
+      end Do_Get;
+
    begin
       --  We cannot use the prepared statement here, since we need to modify
       --  it on the fly to add a " RETURNING " suffix
 
-      return Insert_And_Get_PK (Connection, Str, Params, PK);
+      Str.Access_String (Do_Get'Access);
+      return Result;
    end Insert_And_Get_PK;
 
    -------------------------

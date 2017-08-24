@@ -238,9 +238,10 @@ package GNATCOLL.SQL_Impl is
      (Self : SQL_Table_Or_List; To : in out Table_Sets.Set) is null;
    --  Append all the tables referenced in Self to To
 
-   function To_String
-     (Self : SQL_Table_Or_List; Format : Formatter'Class)
-      return String is abstract;
+   procedure Append_To_String
+     (Self   : SQL_Table_Or_List;
+      Format : Formatter'Class;
+      Result : in out XString) is abstract;
    --  Convert the table to a string
 
    type SQL_Single_Table (Instance : GNATCOLL.SQL_Impl.Cst_String_Access;
@@ -248,6 +249,33 @@ package GNATCOLL.SQL_Impl is
       is abstract new SQL_Table_Or_List with private;
    --  Any type of table, or result of join between several tables. Such a
    --  table can have fields
+
+   type SQL_Table_List is new SQL_Table_Or_List with private;
+   --  Holds one or more tables. This is meant as an internal type for
+   --  gnatcoll, to store tables while it builds the tree representing a
+   --  query.
+
+   Empty_Table_List : constant SQL_Table_List;
+
+   function Is_Empty (Self : SQL_Table_List) return Boolean;
+   --  Whether there are any tables is Self
+
+   function "&" (Left, Right : SQL_Table_List) return SQL_Table_List;
+   function "&" (Left, Right : SQL_Single_Table'Class) return SQL_Table_List;
+   function "&" (Left : SQL_Table_List; Right : SQL_Single_Table'Class)
+     return SQL_Table_List;
+   function "+" (Left : SQL_Single_Table'Class) return SQL_Table_List;
+   --  Helpers to build a list of tables
+
+   procedure Append_To_String
+      (Self      : SQL_Table_List;
+       Format    : Formatter'Class;
+       Separator : String;
+       Result    : in out GNATCOLL.Strings.XString);
+   --  Append to the existing Result string the list of all tables,
+   --  with Separator between each. For instance:
+   --      Table1 ', ' Table2 ', ' Table3
+   --  If List is empty, nothing is appended
 
    -------------------------------------
    -- General declarations for fields --
@@ -258,11 +286,11 @@ package GNATCOLL.SQL_Impl is
    type SQL_Field_Or_List is abstract tagged null record;
    --  Either a single field or a list of fields
 
-   function To_String
+   procedure Append_To_String
      (Self   : SQL_Field_Or_List;
       Format : Formatter'Class;
-      Long   : Boolean := True) return String
-      is abstract;
+      Long   : Boolean := True;
+      Result : in out XString) is abstract;
    --  Convert the field to a string. If Long is true, a fully qualified
    --  name is used (table.name), otherwise just the field name is used
 
@@ -270,11 +298,17 @@ package GNATCOLL.SQL_Impl is
    Empty_Field_List : constant SQL_Field_List;
    --  A list of fields, as used in a SELECT query ("field1, field2");
 
-   overriding function To_String
+   procedure Append_To_String
+     (Self      : SQL_Field_List;
+      Format    : Formatter'Class;
+      Long      : Boolean := True;
+      Separator : String;
+      Result    : in out XString);
+   overriding procedure Append_To_String
      (Self   : SQL_Field_List;
       Format : Formatter'Class;
-      Long   : Boolean := True) return String;
-   --  See inherited doc
+      Long   : Boolean := True;
+      Result : in out XString);
 
    type SQL_Field (Table : Cst_String_Access;
                    Instance : Cst_String_Access;
@@ -301,11 +335,11 @@ package GNATCOLL.SQL_Impl is
    --  display themselves as "names.id" and "names2.id". This does not
    --  require memory allocation and is thus more efficient.
 
-   overriding function To_String
+   overriding procedure Append_To_String
      (Self   : SQL_Field;
       Format : Formatter'Class;
-      Long   : Boolean := True) return String;
-   --  See inherited doc
+      Long   : Boolean := True;
+      Result : in out XString);
 
    procedure Append_Tables (Self : SQL_Field; To : in out Table_Sets.Set);
    --  Append the table(s) referenced by Self to To.
@@ -356,10 +390,11 @@ package GNATCOLL.SQL_Impl is
      (List : in out SQL_Field_List'Class; Field : SQL_Field_Pointer);
    --  Append a new field to the list
 
-   function To_String
+   procedure Append_To_String
      (Self   : SQL_Field_Pointer;
       Format : Formatter'Class;
-      Long   : Boolean) return String;
+      Long   : Boolean;
+      Result : in out XString);
    procedure Append_Tables
      (Self : SQL_Field_Pointer; To : in out Table_Sets.Set);
    procedure Append_If_Not_Aggregate
@@ -382,10 +417,11 @@ package GNATCOLL.SQL_Impl is
 
    procedure Free (Self : in out SQL_Field_Internal) is null;
    procedure Free_Dispatch (Self : in out SQL_Field_Internal'Class);
-   function To_String
+   procedure Append_To_String
      (Self   : SQL_Field_Internal;
       Format : Formatter'Class;
-      Long   : Boolean) return String is abstract;
+      Long   : Boolean;
+      Result : in out XString) is abstract;
    procedure Append_Tables
      (Self : SQL_Field_Internal; To : in out Table_Sets.Set) is null;
    procedure Append_If_Not_Aggregate
@@ -408,10 +444,11 @@ package GNATCOLL.SQL_Impl is
          Data : Field_Pointers.Ref;
       end record;
 
-      overriding function To_String
+      overriding procedure Append_To_String
         (Self   : Field;
          Format : Formatter'Class;
-         Long   : Boolean := True) return String;
+         Long   : Boolean := True;
+         Result : in out XString);
       overriding procedure Append_Tables
         (Self : Field; To : in out Table_Sets.Set);
       overriding procedure Append_If_Not_Aggregate
@@ -430,10 +467,11 @@ package GNATCOLL.SQL_Impl is
    type SQL_Criteria is private;
    No_Criteria : constant SQL_Criteria;
 
-   function To_String
+   procedure Append_To_String
      (Self   : SQL_Criteria;
       Format : Formatter'Class;
-      Long   : Boolean := True) return String;
+      Long   : Boolean := True;
+      Result : in out XString);
    procedure Append_Tables (Self : SQL_Criteria; To : in out Table_Sets.Set);
    procedure Append_If_Not_Aggregate
      (Self         : SQL_Criteria;
@@ -447,11 +485,11 @@ package GNATCOLL.SQL_Impl is
 
    procedure Free (Self : in out SQL_Criteria_Data) is null;
    procedure Free_Dispatch (Self : in out SQL_Criteria_Data'Class);
-   function To_String
+   procedure Append_To_String
      (Self   : SQL_Criteria_Data;
       Format : Formatter'Class;
-      Long   : Boolean := True) return String
-      is abstract;
+      Long   : Boolean := True;
+      Result : in out XString) is abstract;
    procedure Append_Tables
      (Self : SQL_Criteria_Data; To : in out Table_Sets.Set) is null;
    procedure Append_If_Not_Aggregate
@@ -517,10 +555,11 @@ package GNATCOLL.SQL_Impl is
    --  Concat two assignments
 
    procedure Append_Tables (Self : SQL_Assignment; To : in out Table_Sets.Set);
-   function To_String
+   procedure Append_To_String
      (Self       : SQL_Assignment;
       Format     : Formatter'Class;
-      With_Field : Boolean) return String;
+      With_Field : Boolean;
+      Result     : in out XString);
    --  The usual semantics for these subprograms (see fields)
 
    procedure To_List (Self : SQL_Assignment; List : out SQL_Field_List);
@@ -864,6 +903,10 @@ private
       List : Field_List.Vector;
    end record;
 
+   ------------
+   -- Tables --
+   ------------
+
    type SQL_Table_Or_List is abstract tagged null record;
 
    type SQL_Single_Table (Instance : Cst_String_Access;
@@ -872,6 +915,37 @@ private
    --  instance name, might be null when this is the same name as the table.
    --  This isn't used for lists, but is used for all other types of tables
    --  (simple, left join, subqueries) so is put here for better sharing.
+
+   ------------------
+   -- Tables lists --
+   ------------------
+
+   package Table_List is new Ada.Containers.Indefinite_Vectors
+     (Natural, SQL_Single_Table'Class);
+
+   package Table_List_Pointers is
+     new GNATCOLL.Refcount.Shared_Pointers (Table_List.Vector);
+   --  Store the actual data for a SQL_Table_List in a different block (using
+   --  a smart pointer for reference counting), since otherwise all the calls
+   --  to "&" result in a copy of the list (per design of the Ada05 containers)
+   --  which shows up as up to 20% of the number of calls to malloc on the
+   --  testsuite).
+
+   subtype Table_List_Data is Table_List_Pointers.Ref;
+
+   type SQL_Table_List is new SQL_Table_Or_List with record
+      Data : Table_List_Data;
+   end record;
+   overriding procedure Append_To_String
+     (Self   : SQL_Table_List;
+      Format : Formatter'Class;
+      Result : in out XString);
+   overriding procedure Append_Tables
+     (Self : SQL_Table_List; To : in out Table_Sets.Set);
+   --  Append all the tables referenced in Self to To
+
+   Empty_Table_List : constant SQL_Table_List :=
+      (SQL_Table_Or_List with Data => Table_List_Pointers.Null_Ref);
 
    ---------------
    -- Criterias --

@@ -133,6 +133,7 @@ package body GNATCOLL.SQL.Ranges is
          pragma Unreferenced (Quote);
          Min_Null : constant Boolean := Value.Min = No_Field_Pointer;
          Max_Null : constant Boolean := Value.Max = No_Field_Pointer;
+         Mi, Ma   : XString;
       begin
          if Min_Null and then Max_Null then
             if not Value.Min_Included and then not Value.Max_Included then
@@ -141,14 +142,18 @@ package body GNATCOLL.SQL.Ranges is
                return "'(,)'";
             end if;
          else
+            if not Min_Null then
+               Append_To_String (Value.Min, Self, Long => True, Result => Mi);
+            end if;
+
+            if not Max_Null then
+               Append_To_String (Value.Max, Self, Long => True, Result => Ma);
+            end if;
+
             return SQL_Type & "("  --  cast
-               & (if Min_Null
-                  then "null"
-                  else To_String (Value.Min, Self, Long => True))
+               & (if Min_Null then "null" else Mi.To_String)
                & ","
-               & (if Max_Null
-                  then "null"
-                  else To_String (Value.Max, Self, Long => True))
+               & (if Max_Null then "null" else Ma.To_String)
                & (if not Min_Null and then Value.Min_Included
                   then ",'[" else ",'(")
                & (if not Max_Null and then Value.Max_Included

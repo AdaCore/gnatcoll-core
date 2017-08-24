@@ -25,7 +25,6 @@
 --  DBMS
 
 with Ada.Calendar;        use Ada.Calendar;
-with Ada.Strings.Unbounded;
 with GNATCOLL.SQL.Exec;   use GNATCOLL.SQL.Exec;
 with GNATCOLL.SQL_Fields; use GNATCOLL.SQL_Fields;
 with GNATCOLL.SQL.Ranges;
@@ -168,9 +167,10 @@ package GNATCOLL.SQL.Postgres is
    --  Generic query extensions
 
    type SQL_PG_Extension is abstract tagged private;
-   function To_String
-      (Self : SQL_PG_Extension; Format : Formatter'Class)
-      return Ada.Strings.Unbounded.Unbounded_String is abstract;
+   procedure Append_To_String
+      (Self   : SQL_PG_Extension;
+       Format : Formatter'Class;
+       Result : in out XString) is abstract;
 
    function Returning (Fields : SQL_Field_List) return SQL_PG_Extension'Class;
    --  RETURNING clause for UPDATE query

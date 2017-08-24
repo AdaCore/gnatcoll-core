@@ -28,9 +28,7 @@ with Ada.Containers.Hashed_Sets;
 with Ada.Strings.Fixed;          use Ada.Strings;
 with Ada.Strings.Maps.Constants;
 with Ada.Strings.Hash;
-with Ada.Strings.Unbounded;      use Ada.Strings.Unbounded;
 with Ada.Unchecked_Deallocation;
-with GNAT.Strings;              use GNAT.Strings;
 with GNATCOLL.Traces;           use GNATCOLL.Traces;
 with GNATCOLL.Utils;            use GNATCOLL.Utils;
 with GNATCOLL.SQL.Exec_Private; use GNATCOLL.SQL.Exec_Private;
@@ -320,25 +318,32 @@ package body GNATCOLL.SQL.Exec is
    function To_String
       (Connection : access Database_Connection_Record;
        Stmt       : Prepared_Statement'Class)
-      return String
+      return XString
    is
       S : constant access Prepared_Statement_Data := Stmt.Unchecked_Get;
+
+      procedure Check_Is_Select (Q : String);
+      procedure Check_Is_Select (Q : String) is
+      begin
+         S.Is_Select := Is_Select_Query (Q);
+      end Check_Is_Select;
+
    begin
-      if S.Query_Str = null then
-         S.Query_Str := new String'
-            (To_String (To_String (S.Query, Connection.all)));
+      if S.Query_Str.Length = 0 then
+         S.Query_Str.Reserve (1024);
+         Append_To_String (S.Query, Connection.all, S.Query_Str);
 
          if Active (Me_Query) then
             Trace
               (Me_Query, "compute (" & S.Name.To_String & "): "
-               & S.Query_Str.all);
+               & S.Query_Str.To_String);
          end if;
 
          S.Query := No_Query;   --  release memory
-         S.Is_Select := Is_Select_Query (S.Query_Str.all);
+         S.Query_Str.Access_String (Check_Is_Select'Access);
       end if;
 
-      return S.Query_Str.all;
+      return S.Query_Str;
    end To_String;
 
    -----------------------------------
@@ -353,7 +358,7 @@ package body GNATCOLL.SQL.Exec is
       L : Prepared_In_Session_List;
 
       --  The side effect is to set S.Query_Str
-      Str : constant String := To_String (Connection, Prepared);
+      Str : constant XString := To_String (Connection, Prepared);
    begin
       if Prepared.Get.On_Server
          and Is_Prepared_On_Server_Supported (Connection)
@@ -380,8 +385,18 @@ package body GNATCOLL.SQL.Exec is
          if L.Stmt = No_DBMS_Stmt
             or else L.DB_Timestamp /= Connection.Connected_On
          then
-            L.Stmt := Connect_And_Prepare
-              (Connection, Str, Prepared.Get.Name.To_String, Direct => True);
+            declare
+               procedure Do_Prepare (S : String);
+               procedure Do_Prepare (S : String) is
+               begin
+                  L.Stmt := Connect_And_Prepare
+                    (Connection, S, Prepared.Get.Name.To_String,
+                     Direct => True);
+               end Do_Prepare;
+
+            begin
+               Str.Access_String (Do_Prepare'Access);
+            end;
 
             --  Set the timestamp *after* we have created the connection, in
             --  case it did not exist before (if prepare is the first command
@@ -734,8 +749,147 @@ package body GNATCOLL.SQL.Exec is
 
       Start : Time;
 
-      Q : access String := Query'Unrestricted_Access;
-      --  Should be safe here, we do not intend to free anything
+      procedure Do_Query (Q : String);
+      --  Same as Execute_And_Log, but any prepared query is
+      --  passed as a string.
+
+      procedure Do_Query (Q : String) is
+      begin
+         if Active (Me_Query) then
+            Is_Commit_Or_Rollback :=
+              Equal (Q, "commit", Case_Sensitive => False)
+              or else Equal (Q, "rollback", Case_Sensitive => False);
+            if Is_Commit_Or_Rollback then
+               Decrease_Indent (Me_Query);
+            end if;
+         end if;
+
+         --  Transaction management: do we need to start a transaction ?
+
+         if Connection.Automatic_Transactions then
+            if not Is_Select then
+               Is_Commit_Or_Rollback :=
+                 Equal (Q, "commit", Case_Sensitive => False)
+                 or else Equal (Q, "rollback", Case_Sensitive => False);
+            end if;
+
+            if Connection.In_Transaction
+              and then not Connection.Success
+            then
+               Trace
+                 (Me_Error,
+                  "Ignored, since transaction in failure: "
+                  & Display_Query (Q, Prepared)
+                  & " (" & Connection.Username.To_String & ")");
+               return;
+
+            elsif Equal (Q, "begin", Case_Sensitive => False) then
+               if not Connection.In_Transaction then
+                  Connection.In_Transaction := True;
+               else
+                  --  Ignore silently: GNATCOLL might have started a transaction
+                  --  without the user knowing, for instance on the first SELECT
+                  --  statement if Always_Use_Transactions is true.
+                  return;
+               end if;
+
+            elsif not Connection.In_Transaction
+              and then
+                (Connection.Always_Use_Transactions
+                 or else
+                   (not Is_Commit_Or_Rollback
+                    and then not Is_Select))  --  INSERT, UPDATE, LOCK, DELETE,...
+              and then
+                (Q'Length <= 7   --  for sqlite
+                 or else Q (Q'First .. Q'First + 6) /= "PRAGMA ")
+              and then
+                (Q'Length <= 7   --  for sqlite
+                 or else Q (Q'First .. Q'First + 6) /= "ANALYZE")
+            then
+               --  Start a transaction automatically
+               Was_Started := Start_Transaction (Connection);
+               if not Connection.Success then
+                  return;
+               end if;
+            end if;
+
+         else
+            if Equal (Q, "begin", Case_Sensitive => False) then
+               Connection.In_Transaction := True;
+            end if;
+         end if;
+
+         if Perform_Queries then
+            R := Connect_And_Execute
+              (Connection => Connection,
+               Query      => Q,
+               Stmt       => Stmt,
+               Is_Select  => Is_Select,
+               Direct     => Direct,
+               Params     => Params);
+
+            if R = null then
+               if Active (Me_Error) then
+                  if Stmt /= No_DBMS_Stmt then
+                     Trace (Me_Error, "Failed to execute prepared ("
+                            & Prepared.Get.Name.To_String & ") " & Q
+                            & " " & Image (Connection.all, Params)
+                            & " error=" & Error (Connection));
+                  else
+                     Trace (Me_Error, "Failed to execute " & Q
+                            & " " & Image (Connection.all, Params)
+                            & " error=" & Error (Connection));
+                  end if;
+               end if;
+
+               Set_Failure (Connection);
+
+            else
+               Index_By := (if Is_Prepared then Prepared.Get.Index_By
+                            else No_Field_Index);
+
+               if Direct
+                 and then (R.all not in DBMS_Direct_Cursor'Class
+                           or Index_By /= No_Field_Index)
+               then
+                  --  DBMS does not support Direct_Cursor or indexed cursor
+                  --  requested. We now need to read all the results and store
+                  --  them into GNATCOLL implemented Direct_Cursor.
+
+                  declare
+                     R2 : constant Abstract_Cursor_Access :=
+                       Task_Safe_Instance (R, Index_By);
+                  begin
+                     Unchecked_Free (R);
+
+                     R := R2;
+                  end;
+               end if;
+
+               Post_Execute_And_Log
+                 (R, Connection, Q, Prepared, Is_Select, Params);
+            end if;
+
+            Result.Res := R;
+            Result.Format := Connection;
+
+         else  --  not Perform_Queries
+            Post_Execute_And_Log
+              (R, Connection, Q, Prepared, Is_Select, Params);
+         end if;
+
+         if Connection.Automatic_Transactions
+           and then Connection.In_Transaction
+           and then Is_Commit_Or_Rollback
+         then
+            Connection.In_Transaction := False;
+         end if;
+
+         if Active (Me_Perf) then
+            Trace (Me_Perf, "Finished executing query:"
+                   & Duration'Image ((Clock - Start) * 1000.0) & " ms");
+         end if;
+      end Do_Query;
 
    begin
       if Active (Me_Perf) then
@@ -748,145 +902,11 @@ package body GNATCOLL.SQL.Exec is
 
          Compute_And_Prepare_Statement (Prepared, Connection, Stmt);
          Is_Select := Prepared.Get.Is_Select;
-         Q := Prepared.Get.Query_Str;
+         Prepared.Get.Query_Str.Access_String (Do_Query'Access);
 
       else
          Is_Select := Is_Select_Query (Query);
-      end if;
-
-      if Active (Me_Query) then
-         Is_Commit_Or_Rollback :=
-           Equal (Q.all, "commit", Case_Sensitive => False)
-           or else Equal (Q.all, "rollback", Case_Sensitive => False);
-         if Is_Commit_Or_Rollback then
-            Decrease_Indent (Me_Query);
-         end if;
-      end if;
-
-      --  Transaction management: do we need to start a transaction ?
-
-      if Connection.Automatic_Transactions then
-         if not Is_Select then
-            Is_Commit_Or_Rollback :=
-              Equal (Q.all, "commit", Case_Sensitive => False)
-              or else Equal (Q.all, "rollback", Case_Sensitive => False);
-         end if;
-
-         if Connection.In_Transaction
-           and then not Connection.Success
-         then
-            Trace
-              (Me_Error,
-               "Ignored, since transaction in failure: "
-               & Display_Query (Q.all, Prepared)
-               & " (" & Connection.Username.To_String & ")");
-            return;
-
-         elsif Equal (Q.all, "begin", Case_Sensitive => False) then
-            if not Connection.In_Transaction then
-               Connection.In_Transaction := True;
-            else
-               --  Ignore silently: GNATCOLL might have started a transaction
-               --  without the user knowing, for instance on the first SELECT
-               --  statement if Always_Use_Transactions is true.
-               return;
-            end if;
-
-         elsif not Connection.In_Transaction
-           and then
-             (Connection.Always_Use_Transactions
-              or else
-                (not Is_Commit_Or_Rollback
-                 and then not Is_Select))  --  INSERT, UPDATE, LOCK, DELETE,...
-           and then
-             (Q'Length <= 7   --  for sqlite
-              or else Q (Q'First .. Q'First + 6) /= "PRAGMA ")
-           and then
-             (Q'Length <= 7   --  for sqlite
-              or else Q (Q'First .. Q'First + 6) /= "ANALYZE")
-         then
-            --  Start a transaction automatically
-            Was_Started := Start_Transaction (Connection);
-            if not Connection.Success then
-               return;
-            end if;
-         end if;
-
-      else
-         if Equal (Q.all, "begin", Case_Sensitive => False) then
-            Connection.In_Transaction := True;
-         end if;
-      end if;
-
-      if Perform_Queries then
-         R := Connect_And_Execute
-           (Connection => Connection,
-            Query      => Q.all,
-            Stmt       => Stmt,
-            Is_Select  => Is_Select,
-            Direct     => Direct,
-            Params     => Params);
-
-         if R = null then
-            if Active (Me_Error) then
-               if Stmt /= No_DBMS_Stmt then
-                  Trace (Me_Error, "Failed to execute prepared ("
-                         & Prepared.Get.Name.To_String & ") " & Q.all
-                         & " " & Image (Connection.all, Params)
-                         & " error=" & Error (Connection));
-               else
-                  Trace (Me_Error, "Failed to execute " & Q.all
-                         & " " & Image (Connection.all, Params)
-                         & " error=" & Error (Connection));
-               end if;
-            end if;
-
-            Set_Failure (Connection);
-
-         else
-            Index_By := (if Is_Prepared then Prepared.Get.Index_By
-                         else No_Field_Index);
-
-            if Direct
-              and then (R.all not in DBMS_Direct_Cursor'Class
-                        or Index_By /= No_Field_Index)
-            then
-               --  DBMS does not support Direct_Cursor or indexed cursor
-               --  requested. We now need to read all the results and store
-               --  them into GNATCOLL implemented Direct_Cursor.
-
-               declare
-                  R2 : constant Abstract_Cursor_Access :=
-                    Task_Safe_Instance (R, Index_By);
-               begin
-                  Unchecked_Free (R);
-
-                  R := R2;
-               end;
-            end if;
-
-            Post_Execute_And_Log
-              (R, Connection, Q.all, Prepared, Is_Select, Params);
-         end if;
-
-         Result.Res := R;
-         Result.Format := Connection;
-
-      else  --  not Perform_Queries
-         Post_Execute_And_Log
-           (R, Connection, Q.all, Prepared, Is_Select, Params);
-      end if;
-
-      if Connection.Automatic_Transactions
-        and then Connection.In_Transaction
-        and then Is_Commit_Or_Rollback
-      then
-         Connection.In_Transaction := False;
-      end if;
-
-      if Active (Me_Perf) then
-         Trace (Me_Perf, "Finished executing query:"
-                & Duration'Image ((Clock - Start) * 1000.0) & " ms");
+         Do_Query (Query);
       end if;
    end Execute_And_Log;
 
@@ -900,10 +920,20 @@ package body GNATCOLL.SQL.Exec is
       Params     : SQL_Parameters := No_Parameters;
       PK         : SQL_Field_Integer) return Integer
    is
+      R : Integer;
+
+      procedure Do_Run (S : String);
+      procedure Do_Run (S : String) is
+      begin
+         R := Insert_And_Get_PK (Connection, S, Params, PK);
+      end Do_Run;
+
+      Q : XString;
    begin
-      return Insert_And_Get_PK
-         (Connection, To_String (To_String (Query, Connection.all)),
-          Params, PK);
+      Q.Reserve (1024);
+      Append_To_String (Query, Connection.all, Q);
+      Q.Access_String (Do_Run'Access);
+      return R;
    end Insert_And_Get_PK;
 
    -----------------------
@@ -953,11 +983,19 @@ package body GNATCOLL.SQL.Exec is
      (Result     : out Forward_Cursor;
       Connection : not null access Database_Connection_Record'Class;
       Query      : SQL_Query;
-      Params     : SQL_Parameters := No_Parameters) is
+      Params     : SQL_Parameters := No_Parameters)
+   is
+      procedure Do_Run (S : String);
+      procedure Do_Run (S : String) is
+      begin
+         Fetch (Result, Connection, S, Params => Params);
+      end Do_Run;
+
+      Q : XString;
    begin
-      Fetch
-        (Result, Connection, To_String (To_String (Query, Connection.all)),
-         Params);
+      Q.Reserve (1024);
+      Append_To_String (Query, Connection.all, Q);
+      Q.Access_String (Do_Run'Access);
    end Fetch;
 
    -----------
@@ -984,11 +1022,19 @@ package body GNATCOLL.SQL.Exec is
      (Result     : out Direct_Cursor;
       Connection : not null access Database_Connection_Record'Class;
       Query      : GNATCOLL.SQL.SQL_Query;
-      Params     : SQL_Parameters := No_Parameters) is
+      Params     : SQL_Parameters := No_Parameters)
+   is
+      procedure Do_Run (S : String);
+      procedure Do_Run (S : String) is
+      begin
+         Fetch (Result, Connection, S, Params => Params);
+      end Do_Run;
+
+      Q : XString;
    begin
-      Fetch
-        (Result, Connection, To_String (To_String (Query, Connection.all)),
-         Params => Params);
+      Q.Reserve (1024);
+      Append_To_String (Query, Connection.all, Q);
+      Q.Access_String (Do_Run'Access);
    end Fetch;
 
    -------------
@@ -1476,7 +1522,7 @@ package body GNATCOLL.SQL.Exec is
    begin
       Data := Prepared_Statement_Data'
         (Query         => Query,
-         Query_Str     => null,   --  Computed later
+         Query_Str     => Null_XString,  --  Computed later
          Is_Select     => False,  --  Computed later
          Use_Cache     => Use_Cache,
          Cached_Result => No_Cache_Id,
@@ -1519,7 +1565,7 @@ package body GNATCOLL.SQL.Exec is
       Stmt : Prepared_Statement;
       Data : Prepared_Statement_Data :=
         (Query         => No_Query,
-         Query_Str     => new String'(Query),
+         Query_Str     => To_XString (Query),
          Is_Select     => Is_Select_Query (Query),
          Use_Cache     => Use_Cache,
          Cached_Result => No_Cache_Id,
@@ -1831,7 +1877,6 @@ package body GNATCOLL.SQL.Exec is
       end if;
 
       Query_Cache.Unset_Cache (Self);
-      Free (Self.Query_Str);
    end Free;
 
    ----------------------------

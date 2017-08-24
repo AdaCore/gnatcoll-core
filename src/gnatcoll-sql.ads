@@ -115,7 +115,6 @@
 with Ada.Calendar;
 with Ada.Containers.Vectors;
 with Ada.Containers.Indefinite_Vectors;
-with Ada.Strings.Unbounded;  use Ada.Strings.Unbounded;
 with GNATCOLL.Refcount;
 with GNATCOLL.Strings;       use GNATCOLL.Strings;
 with GNATCOLL.SQL_Impl;      use GNATCOLL.SQL_Impl;
@@ -166,16 +165,19 @@ package GNATCOLL.SQL is
    --  Any type of table, or result of join between several tables. Such a
    --  table can have fields
 
-   type SQL_Table_List is new SQL_Table_Or_List with private;
-   Empty_Table_List : constant SQL_Table_List;
+   subtype SQL_Table_List is GNATCOLL.SQL_Impl.SQL_Table_List;
+   Empty_Table_List : constant SQL_Table_List :=
+      GNATCOLL.SQL_Impl.Empty_Table_List;
    --  A list of tables, as used in a SELECT query ("a, b")
 
    type SQL_Table (Table_Name, Instance : GNATCOLL.SQL_Impl.Cst_String_Access;
                    Instance_Index : Integer)
       is abstract new SQL_Single_Table with private;
-   function To_String (Self : SQL_Table'Class) return String;
-   overriding function To_String
-     (Self : SQL_Table; Format : Formatter'Class) return String;
+
+   overriding procedure Append_To_String
+     (Self   : SQL_Table;
+      Format : Formatter'Class;
+      Result : in out XString);
    --  A table representing a field of a specific table.
    --  If Instance is specified (i.e. not null), the FROM clause will include:
    --        SELECT ... FROM Table_Name Instance, ...
@@ -211,13 +213,17 @@ package GNATCOLL.SQL is
    procedure Free (A : in out SQL_Table_Access);
    --  Needs to be freed explicitely
 
-   function "&" (Left, Right : SQL_Table_List) return SQL_Table_List;
-   function "&" (Left, Right : SQL_Single_Table'Class) return SQL_Table_List;
+   function "&" (Left, Right : SQL_Table_List) return SQL_Table_List
+      renames GNATCOLL.SQL_Impl."&";
+   function "&" (Left, Right : SQL_Single_Table'Class) return SQL_Table_List
+      renames GNATCOLL.SQL_Impl."&";
    function "&" (Left : SQL_Table_List; Right : SQL_Single_Table'Class)
-                 return SQL_Table_List;
-   function "+" (Left : SQL_Single_Table'Class) return SQL_Table_List;
+                 return SQL_Table_List
+      renames GNATCOLL.SQL_Impl."&";
+   function "+" (Left : SQL_Single_Table'Class) return SQL_Table_List
+      renames GNATCOLL.SQL_Impl."+";
    --  Create a list of tables, suitable for use in a SELECT query.
-   --  Note the operator "+" to create a list with a single element
+   --  Note the operator "+" to create a list with a single element.
    --  For efficiency reasons, these operators try to reuse one of the lists
    --  passed in parameter, append to it, and return it. That limits the number
    --  of copies to be done, and thus the number of system calls to malloc.
@@ -1093,8 +1099,8 @@ package GNATCOLL.SQL is
    --     Q := SQL_Insert
    --        (Table.Field1 & Table.Field2,
    --         SQL_Values
-   --            (1 => Expression (1) & Expression ("str"),
-   --             2 => Expression (2) & Expression ("str2")));
+   --            ((1 => Expression (1) & Expression ("str"),
+   --              2 => Expression (2) & Expression ("str2"))));
 
    function SQL_Insert_Default_Values
      (Table : SQL_Table'Class) return SQL_Query;
@@ -1170,8 +1176,8 @@ package GNATCOLL.SQL is
    --          (Name => "tmp",
    --           Temp => True,
    --           As   => SQL_Values
-   --              (1 => Expression (1) & Expression ("string"),
-   --               2 => Expression (2) & Expression ("string2")));
+   --              ((1 => Expression (1) & Expression ("string"),
+   --                2 => Expression (2) & Expression ("string2"))));
    --
    --     The drawback here is that the resulting table has unknown names for
    --     the columns (postgresql uses "column1" and "column2", and
@@ -1184,7 +1190,7 @@ package GNATCOLL.SQL is
    --          (Name    => "tmp",
    --           Temp    => True,
    --           Columns => (new String'("col1"), new String'("col2")),
-   --           As      => SQL_Values (Expression (1) & Expression ("str")));
+   --           As => SQL_Values ((1 => Expression (1) & Expression ("str"))));
    --
    --     This is still not ideal, because the resulting table cannot easily
    --     be used in queries. For this, we need to declare it. This is done
@@ -1311,15 +1317,23 @@ package GNATCOLL.SQL is
    --  See the various inherited Field subprograms to reference specific fields
    --  from the result of the query.
 
-   overriding function To_String
-     (Self : Subquery_Table; Format : Formatter'Class) return String;
+   overriding procedure Append_To_String
+     (Self   : Subquery_Table;
+      Format : Formatter'Class;
+      Result : in out XString);
 
    ---------------------------
    -- Conversion to strings --
    ---------------------------
 
    function To_String
-     (Self : SQL_Query; Format : Formatter'Class) return Unbounded_String;
+      (Self   : SQL_Query;
+       Format : Formatter'Class)
+      return String;
+   procedure Append_To_String
+      (Self   : SQL_Query;
+       Format : Formatter'Class;
+       Result : in out XString);
    --  Transform Self into a valid SQL string
 
 private
@@ -1334,35 +1348,6 @@ private
      SQL_Single_Table (Instance, Instance_Index) with null record;
    overriding procedure Append_Tables
      (Self : SQL_Table; To : in out Table_Sets.Set);
-
-   ------------------
-   -- Tables lists --
-   ------------------
-
-   package Table_List is new Ada.Containers.Indefinite_Vectors
-     (Natural, SQL_Single_Table'Class);
-
-   package Table_List_Pointers is
-     new Refcount.Shared_Pointers (Table_List.Vector);
-   --  Store the actual data for a SQL_Table_List in a different block (using
-   --  a smart pointer for reference counting), since otherwise all the calls
-   --  to "&" result in a copy of the list (per design of the Ada05 containers)
-   --  which shows up as up to 20% of the number of calls to malloc on the
-   --  testsuite).
-
-   subtype Table_List_Data is Table_List_Pointers.Ref;
-
-   type SQL_Table_List is new SQL_Table_Or_List with record
-      Data : Table_List_Data;
-   end record;
-   overriding function To_String
-     (Self : SQL_Table_List; Format : Formatter'Class)  return String;
-   overriding procedure Append_Tables
-     (Self : SQL_Table_List; To : in out Table_Sets.Set);
-   --  Append all the tables referenced in Self to To
-
-   Empty_Table_List : constant SQL_Table_List :=
-     (SQL_Table_Or_List with Data => Table_List_Pointers.Null_Ref);
 
    -----------
    -- Field --
@@ -1396,7 +1381,7 @@ private
             Arg       : SQL_Field_Pointer;
             List      : SQL_Field_List;
             Subquery  : SQL_Query;
-            In_String : Ada.Strings.Unbounded.Unbounded_String;
+            In_String : XString;
 
          when Criteria_Exists =>
             Subquery2 : SQL_Query;
@@ -1414,10 +1399,11 @@ private
       end case;
    end record;
 
-   overriding function To_String
+   overriding procedure Append_To_String
      (Self   : SQL_Criteria_Data;
       Format : Formatter'Class;
-      Long   : Boolean := True) return String;
+      Long   : Boolean := True;
+      Result : in out XString);
    overriding procedure Append_Tables
      (Self : SQL_Criteria_Data; To : in out Table_Sets.Set);
    overriding procedure Append_If_Not_Aggregate
@@ -1445,10 +1431,11 @@ private
       Else_Clause : SQL_Field_Pointer;
    end record;
    type Case_Stmt_Internal_Access is access all Case_Stmt_Internal'Class;
-   overriding function To_String
+   overriding procedure Append_To_String
      (Self   : Case_Stmt_Internal;
       Format : Formatter'Class;
-      Long   : Boolean) return String;
+      Long   : Boolean;
+      Result : in out XString);
    overriding procedure Append_Tables
      (Self : Case_Stmt_Internal; To : in out Table_Sets.Set);
    overriding procedure Append_If_Not_Aggregate
@@ -1480,8 +1467,10 @@ private
       Data : Join_Table_Data;
    end record;
 
-   overriding function To_String
-     (Self : SQL_Left_Join_Table; Format : Formatter'Class) return String;
+   overriding procedure Append_To_String
+     (Self   : SQL_Left_Join_Table;
+      Format : Formatter'Class;
+      Result : in out XString);
    overriding procedure Append_Tables
      (Self : SQL_Left_Join_Table; To : in out Table_Sets.Set);
 
@@ -1498,9 +1487,13 @@ private
 
    type Query_Contents is abstract new GNATCOLL.Refcount.Refcounted
       with null record;
-   function To_String
-     (Self   : Query_Contents;
-      Format : Formatter'Class) return Unbounded_String is abstract;
+
+   procedure Append_To_String
+      (Self   : Query_Contents;
+       Format : Formatter'Class;
+       Result : in out XString) is abstract;
+   --  Append the string representation of Self to Result.
+
    procedure Auto_Complete
      (Self                   : in out Query_Contents;
       Auto_Complete_From     : Boolean := True;
@@ -1523,9 +1516,10 @@ private
       Offset       : Integer;
       Distinct     : Boolean;
    end record;
-   overriding function To_String
-     (Self   : Query_Select_Contents;
-      Format : Formatter'Class) return Unbounded_String;
+   overriding procedure Append_To_String
+      (Self   : Query_Select_Contents;
+       Format : Formatter'Class;
+       Result : in out XString);
    overriding procedure Auto_Complete
      (Self                   : in out Query_Select_Contents;
       Auto_Complete_From     : Boolean := True;
@@ -1538,23 +1532,25 @@ private
       Offset       : Integer;
       Distinct     : Boolean;
    end record;
-   overriding function To_String
-     (Self   : Query_Union_Contents;
-      Format : Formatter'Class) return Unbounded_String;
+   overriding procedure Append_To_String
+      (Self   : Query_Union_Contents;
+       Format : Formatter'Class;
+       Result : in out XString);
 
    type Query_Insert_Contents is new Query_Contents with record
       Into           : Table_Names := No_Names;
       Default_Values : Boolean := False;
-      Qualifier      : Unbounded_String;
+      Qualifier      : XString;
       Fields         : SQL_Field_List;
       Values         : SQL_Assignment;
       Where          : SQL_Criteria;
       Limit          : Integer := -1;
       Subquery       : SQL_Query := No_Query;
    end record;
-   overriding function To_String
-     (Self   : Query_Insert_Contents;
-      Format : Formatter'Class) return Unbounded_String;
+   overriding procedure Append_To_String
+      (Self   : Query_Insert_Contents;
+       Format : Formatter'Class;
+       Result : in out XString);
    overriding procedure Auto_Complete
      (Self                   : in out Query_Insert_Contents;
       Auto_Complete_From     : Boolean := True;
@@ -1567,9 +1563,10 @@ private
       From       : SQL_Table_List;
       Extra_From : Table_Sets.Set; --  from auto complete
    end record;
-   overriding function To_String
-     (Self   : Query_Update_Contents;
-      Format : Formatter'Class) return Unbounded_String;
+   overriding procedure Append_To_String
+      (Self   : Query_Update_Contents;
+       Format : Formatter'Class;
+       Result : in out XString);
    overriding procedure Auto_Complete
      (Self                   : in out Query_Update_Contents;
       Auto_Complete_From     : Boolean := True;
@@ -1579,9 +1576,10 @@ private
       Table : SQL_Table_List;
       Where : SQL_Criteria;
    end record;
-   overriding function To_String
-     (Self   : Query_Delete_Contents;
-      Format : Formatter'Class) return Unbounded_String;
+   overriding procedure Append_To_String
+      (Self   : Query_Delete_Contents;
+       Format : Formatter'Class;
+       Result : in out XString);
 
    type Query_Create_Table_As_Contents is new Query_Contents with record
       Name          : GNATCOLL.Strings.XString;
@@ -1592,25 +1590,28 @@ private
       If_Not_Exists : Boolean;
       With_No_Data  : Boolean;
    end record;
-   overriding function To_String
-     (Self   : Query_Create_Table_As_Contents;
-      Format : Formatter'Class) return Unbounded_String;
+   overriding procedure Append_To_String
+      (Self   : Query_Create_Table_As_Contents;
+       Format : Formatter'Class;
+       Result : in out XString);
 
    type Query_Values_Contents
      (Size : Natural) is new Query_Contents
    with record
       Values    : Field_List_Array (1 .. Size);
    end record;
-   overriding function To_String
-     (Self   : Query_Values_Contents;
-      Format : Formatter'Class) return Unbounded_String;
+   overriding procedure Append_To_String
+      (Self   : Query_Values_Contents;
+       Format : Formatter'Class;
+       Result : in out XString);
 
    type Simple_Query_Contents is new Query_Contents with record
-      Command : Ada.Strings.Unbounded.Unbounded_String;
+      Command : XString;
    end record;
-   overriding function To_String
-     (Self   : Simple_Query_Contents;
-      Format : Formatter'Class) return Unbounded_String;
+   overriding procedure Append_To_String
+      (Self   : Simple_Query_Contents;
+       Format : Formatter'Class;
+       Result : in out XString);
 
    ---------------------
    -- Subquery tables --

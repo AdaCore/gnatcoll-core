@@ -102,10 +102,10 @@
 pragma Ada_2012;
 
 with Ada.Calendar;
+with Ada.Strings.Unbounded;         use Ada.Strings.Unbounded;
 with System;
 private with Ada.Finalization;
 private with GNATCOLL.Refcount;
-with GNAT.Strings;
 with GNATCOLL.SQL_Impl;
 
 package GNATCOLL.SQL.Exec is
@@ -821,7 +821,7 @@ package GNATCOLL.SQL.Exec is
    function To_String
       (Connection : access Database_Connection_Record;
        Stmt       : Prepared_Statement'Class)
-      return String;
+      return XString;
    --  Return the SQL statement for Stmt.
 
    -----------------------------------------
@@ -1168,7 +1168,7 @@ private
 
    type Prepared_Statement_Data is record
       Query      : SQL_Query;   --  Reset to null once prepared
-      Query_Str  : GNAT.Strings.String_Access;
+      Query_Str  : GNATCOLL.Strings.XString;
       Name       : GNATCOLL.Strings.XString;
       Prepared   : Prepared_In_Session_List;
 

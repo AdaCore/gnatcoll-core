@@ -1521,14 +1521,14 @@ package body GNATCOLL.SQL.Inspect is
       ---------------
 
       procedure For_Table (Table : in out Table_Description) is
-         SQL : Unbounded_String;
+         SQL : XString;
          --  The statement to execute
 
          TNS : constant Namespaced_Name := Quoted (Table.Name);
          Table_Name : constant String := To_String (TNS.Full_Name);
          New_NS : Boolean;
 
-         SQL_PK : Unbounded_String;
+         SQL_PK : XString;
          --  The SQL to create the primary key
 
          Is_First_Attribute : Boolean := True;
@@ -1540,7 +1540,7 @@ package body GNATCOLL.SQL.Inspect is
 
          procedure Get_Field_Def
            (F    : Field;
-            Stmt : out Unbounded_String;
+            Stmt : out XString;
             Can_Be_Not_Null : Boolean := True;
             FK_Table : String := "");
          --  Set Stmt to the definition for the field F.
@@ -1608,10 +1608,10 @@ package body GNATCOLL.SQL.Inspect is
          --------------
 
          procedure Print_FK (Table : Table_Description) is
-            Stmt2 : Unbounded_String;
+            Stmt2 : XString;
             --  The deferred statement to execute
 
-            Stmt_FK, Stmt_References : Unbounded_String;
+            Stmt_FK, Stmt_References : XString;
             P : Pair_Lists.Cursor;
             Is_First : Boolean;
             Table_To : XString;
@@ -1621,7 +1621,7 @@ package body GNATCOLL.SQL.Inspect is
 
                Table_To := Quoted (R.To_Table.Name).Full_Name;
 
-               Stmt_FK := To_Unbounded_String (" FOREIGN KEY (");
+               Stmt_FK := To_XString (" FOREIGN KEY (");
                Is_First := True;
                P := R.Get.Fields.First;
                while Has_Element (P) loop
@@ -1634,7 +1634,7 @@ package body GNATCOLL.SQL.Inspect is
                end loop;
                Append (Stmt_FK, ")");
 
-               Stmt_References := To_Unbounded_String
+               Stmt_References := To_XString
                  (" REFERENCES " & To_String (Table_To) & " (");
                Is_First := True;
                P := R.Get.Fields.First;
@@ -1662,15 +1662,15 @@ package body GNATCOLL.SQL.Inspect is
                --  efficient (a single SQL statement).
 
                if Created.Contains (To_String (Table_To)) then
-                  Append (SQL, "," & ASCII.LF & Stmt_FK);
+                  SQL.Append ("," & ASCII.LF);
+                  SQL.Append (Stmt_FK);
 
                elsif DB.Can_Alter_Table_Constraints then
-                  Append
-                    (Deferred,
-                     To_String
-                       ("ALTER TABLE " & Table_Name & " ADD CONSTRAINT "
-                        & Element (R.Get.Fields.First).From.Name
-                        & "_fk" & Stmt_FK));
+                  Deferred.Append
+                    (String'(
+                       "ALTER TABLE " & Table_Name & " ADD CONSTRAINT "
+                       & Element (R.Get.Fields.First).From.Name
+                       & "_fk" & Stmt_FK.To_String));
 
                else
                   P := R.Get.Fields.First;
@@ -1682,9 +1682,10 @@ package body GNATCOLL.SQL.Inspect is
                      Get_Field_Def (Element (P).From, Stmt2,
                                     Can_Be_Not_Null => False,
                                     FK_Table => To_String (Table_To));
-                     Stmt2 := "ALTER TABLE " & Table_Name & " ADD COLUMN "
-                       & Stmt2 & Stmt_References;
-                     Append (Deferred, To_String (Stmt2));
+                     Deferred.Append
+                        (String'(
+                           "ALTER TABLE " & Table_Name & " ADD COLUMN "
+                           & Stmt2.To_String & Stmt_References.To_String));
                      Next (P);
                   end loop;
                end if;
@@ -1719,14 +1720,14 @@ package body GNATCOLL.SQL.Inspect is
 
          procedure Get_Field_Def
            (F    : Field;
-            Stmt : out Unbounded_String;
+            Stmt : out XString;
             Can_Be_Not_Null : Boolean := True;
             FK_Table : String := "")
          is
             Val : GNAT.Strings.String_Access;
             Val_Param : SQL_Parameter;
          begin
-            Stmt := Null_Unbounded_String;
+            Stmt := Null_XString;
 
             Append (Stmt, " """ & F.Name & """ "
                     & Get_Actual_Type (F).SQL_Type_Name (DB));
@@ -1793,7 +1794,7 @@ package body GNATCOLL.SQL.Inspect is
          ----------------------
 
          procedure Add_Field_To_SQL (F : in out Field) is
-            Tmp : Unbounded_String;
+            Tmp : XString;
          begin
             --  When a field is a FK to a table that hasn't been created yet,
             --  we need to alter the table later to set the constraint. But in
@@ -1838,7 +1839,7 @@ package body GNATCOLL.SQL.Inspect is
               and then F.Get_Actual_Type.all
                  not in Autoincrement_Mapping'Class
             then
-               if SQL_PK = Null_Unbounded_String then
+               if SQL_PK = Null_XString then
                   Append (SQL_PK, '"' & F.Name & '"');
                else
                   Append (SQL_PK, ",""" & F.Name & '"');
@@ -1868,10 +1869,12 @@ package body GNATCOLL.SQL.Inspect is
                     (Table, Add_Field_To_SQL'Access,
                      Include_Inherited => True);
 
-                  SQL_PK := Null_Unbounded_String;
+                  SQL_PK := Null_XString;
                   For_Each_Field (Table, Print_PK'Access, True);
                   if SQL_PK /= "" then
-                     Append (SQL, ", PRIMARY KEY (" & SQL_PK & ")");
+                     SQL.Append (", PRIMARY KEY (");
+                     SQL.Append (SQL_PK);
+                     SQL.Append (')');
                   end if;
 
                   Print_Uniques;
@@ -2245,11 +2248,11 @@ package body GNATCOLL.SQL.Inspect is
 
             if Replace_Newline then
                declare
-                  S : Unbounded_String :=
-                    To_Unbounded_String (Data (First .. Tmp));
+                  S : constant XString := Join
+                     (ASCII.LF,
+                      To_XString (Data (First .. Tmp))
+                      .Split ("\n"));
                begin
-                  Replace
-                    (S, Pattern => "\n", Replacement => "" & ASCII.LF);
                   Append (Line, Fields_Count, To_String (S));
                end;
 
