@@ -113,7 +113,6 @@
 --     delete from ai where ...
 
 with Ada.Calendar;
-with Ada.Containers.Vectors;
 with Ada.Containers.Indefinite_Vectors;
 with GNATCOLL.Refcount;
 with GNATCOLL.Strings;       use GNATCOLL.Strings;

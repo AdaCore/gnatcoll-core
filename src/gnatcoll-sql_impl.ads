@@ -498,14 +498,13 @@ package GNATCOLL.SQL_Impl is
       Is_Aggregate : in out Boolean) is null;
    --  See description of these subprograms for a SQL_Criteria
 
-   procedure Set_Data
-     (Self : in out SQL_Criteria; Data : SQL_Criteria_Data'Class);
-
    package SQL_Criteria_Pointers
       is new Shared_Pointers (SQL_Criteria_Data'Class, Free_Dispatch);
 
    subtype SQL_Criteria_Data_Access is SQL_Criteria_Pointers.Element_Access;
 
+   procedure Set_Data
+     (Self : in out SQL_Criteria; Data : SQL_Criteria_Data'Class);
    function Get_Data (Self : SQL_Criteria) return SQL_Criteria_Data_Access;
    --  Set the data associated with Self.
    --  This is only needed when you implement your own kinds of criteria, not

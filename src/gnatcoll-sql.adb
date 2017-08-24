@@ -24,6 +24,7 @@
 with Ada.Calendar;               use Ada.Calendar;
 with Ada.Calendar.Formatting;    use Ada.Calendar.Formatting;
 with Ada.Containers;             use Ada.Containers;
+with Ada.Containers.Vectors;
 with Ada.Strings.Fixed;          use Ada.Strings.Fixed;
 with Ada.Unchecked_Deallocation;
 with GNAT.Strings;               use GNAT.Strings;
@@ -190,17 +191,11 @@ package body GNATCOLL.SQL is
      (Positive, SQL_Criteria);
    use Criteria_Lists;
 
-   subtype Criteria_List is Criteria_Lists.Vector;
-
-   function Combine
-     (List : Criteria_List; Op : Criteria_Combine) return SQL_Criteria;
-   --  Returns SQL_Criteria combined from List with a specific operator
-
-   type SQL_Criteria_Data (Op : SQL_Criteria_Type) is
+   type Local_Criteria_Data (Op : SQL_Criteria_Type) is
       new GNATCOLL.SQL_Impl.SQL_Criteria_Data with record
       case Op is
          when Criteria_Combine =>
-            Criterias : Criteria_List;
+            Criterias : Criteria_Lists.Vector;
 
          when Criteria_In | Criteria_Not_In =>
             Arg       : SQL_Field_Pointer;
@@ -223,16 +218,17 @@ package body GNATCOLL.SQL is
             Criteria : SQL_Criteria;
       end case;
    end record;
+   type Local_Criteria is access all Local_Criteria_Data;
 
    overriding procedure Append_To_String
-     (Self   : SQL_Criteria_Data;
+     (Self   : Local_Criteria_Data;
       Format : Formatter'Class;
       Long   : Boolean := True;
       Result : in out XString);
    overriding procedure Append_Tables
-     (Self : SQL_Criteria_Data; To : in out Table_Sets.Set);
+     (Self : Local_Criteria_Data; To : in out Table_Sets.Set);
    overriding procedure Append_If_Not_Aggregate
-     (Self         : SQL_Criteria_Data;
+     (Self         : Local_Criteria_Data;
       To           : in out SQL_Field_List'Class;
       Is_Aggregate : in out Boolean);
 
@@ -975,7 +971,7 @@ package body GNATCOLL.SQL is
    -----------
 
    function "not" (Self : SQL_Criteria) return SQL_Criteria is
-      Data   : SQL_Criteria_Data (Criteria_Not);
+      Data   : Local_Criteria_Data (Criteria_Not);
       Result : SQL_Criteria;
    begin
       if Self = No_Criteria then
@@ -997,12 +993,10 @@ package body GNATCOLL.SQL is
    begin
       if Ptr = null then
          return 0;
-      end if;
-
-      if Ptr.all in SQL_Criteria_Data'Class
-        and then SQL_Criteria_Data (Ptr.all).Op in Criteria_Combine
+      elsif Ptr.all in Local_Criteria_Data'Class
+        and then Local_Criteria (Ptr).Op in Criteria_Combine
       then
-         return Natural (SQL_Criteria_Data (Ptr.all).Criterias.Length);
+         return Natural (Local_Criteria (Ptr).Criterias.Length);
       else
          return 1;
       end if;
@@ -1016,8 +1010,9 @@ package body GNATCOLL.SQL is
       use type SQL_Criteria_Data_Access;
       Ptr : constant SQL_Criteria_Data_Access := Get_Data (Self);
    begin
-      return Ptr /= null and then Ptr.all in SQL_Criteria_Data'Class
-        and then SQL_Criteria_Data (Ptr.all).Op = Criteria_Or;
+      return Ptr /= null
+        and then Ptr.all in Local_Criteria_Data'Class
+        and then Local_Criteria (Ptr).Op = Criteria_Or;
    end Is_Or;
 
    ------------
@@ -1028,24 +1023,10 @@ package body GNATCOLL.SQL is
       use type SQL_Criteria_Data_Access;
       Ptr : constant SQL_Criteria_Data_Access := Get_Data (Self);
    begin
-      return Ptr /= null and then Ptr.all in SQL_Criteria_Data'Class
-        and then SQL_Criteria_Data (Ptr.all).Op = Criteria_And;
+      return Ptr /= null
+        and then Ptr.all in Local_Criteria_Data'Class
+        and then Local_Criteria (Ptr).Op = Criteria_And;
    end Is_And;
-
-   -------------
-   -- Combine --
-   -------------
-
-   function Combine
-     (List : Criteria_List; Op : Criteria_Combine) return SQL_Criteria
-   is
-      Result : SQL_Criteria;
-      Data   : SQL_Criteria_Data (Op);
-   begin
-      Data.Criterias := List;
-      Set_Data (Result, Data);
-      return Result;
-   end Combine;
 
    -------------
    -- Combine --
@@ -1054,43 +1035,62 @@ package body GNATCOLL.SQL is
    function Combine
      (Left, Right : SQL_Criteria; Op : Criteria_Combine) return SQL_Criteria
    is
-      List : Criteria_List;
-      C    : Criteria_Lists.Cursor;
-   begin
-      if Left = No_Criteria then
-         return Right;
-      elsif Right = No_Criteria then
-         return Left;
-      elsif Get_Data (Left).all in SQL_Criteria_Data'Class
-        and then SQL_Criteria_Data (Get_Data (Left).all).Op = Op
-      then
-         --  ??? We could optimize when Left.Refcount=1, since we are modifying
-         --  the last instance and thus do not need to copy the list
+      use type SQL_Criteria_Data_Access;
+      LD   : constant SQL_Criteria_Data_Access := Get_Data (Left);
+      RD   : constant SQL_Criteria_Data_Access := Get_Data (Right);
 
-         List := SQL_Criteria_Data (Get_Data (Left).all).Criterias;
+      procedure Append_Right_To_List (List : in out Criteria_Lists.Vector);
+      --  Appends Right to List. Flatten the lists if possible
+      --  ??? This is nice because it reduces memory usage when we keep the
+      --  query around for a long time, but might be slower than keeping the
+      --  existing lists.
 
-         if Get_Data (Right).all in SQL_Criteria_Data'Class
-           and then SQL_Criteria_Data (Get_Data (Right).all).Op = Op
+      procedure Append_Right_To_List (List : in out Criteria_Lists.Vector) is
+      begin
+         if RD.all in Local_Criteria_Data'Class
+           and then Local_Criteria (RD).Op = Op
          then
-            C := First (SQL_Criteria_Data (Get_Data (Right).all).Criterias);
-            while Has_Element (C) loop
-               Append (List, Element (C));
-               Next (C);
+            for C of Local_Criteria (RD).Criterias loop
+               List.Append (C);
             end loop;
          else
-            Append (List, Right);
+            List.Append (Right);
          end if;
-      elsif Get_Data (Right).all in SQL_Criteria_Data'Class
-        and then SQL_Criteria_Data (Get_Data (Right).all).Op = Op
-      then
-         List := SQL_Criteria_Data (Get_Data (Right).all).Criterias;
-         Prepend (List, Left);
-      else
-         Append (List, Left);
-         Append (List, Right);
-      end if;
+      end Append_Right_To_List;
 
-      return Combine (List, Op);
+      Res  : Local_Criteria;
+      Res_Data : Local_Criteria_Data (Op => Op);
+      --  Workaround compiler bug: we can't define this inline below or
+      --  end up with a bug box.
+
+   begin
+      if LD = null then
+         return Right;
+      elsif RD = null then
+         return Left;
+      elsif LD.all in Local_Criteria_Data'Class
+         and then Local_Criteria (LD).Op = Op
+      then
+         return Result : SQL_Criteria do
+            Set_Data (Result, Res_Data);
+            Res := Local_Criteria (Get_Data (Result));
+
+            --  Make a copy of Left
+            for C of Local_Criteria (LD).Criterias loop
+               Res.Criterias.Append (C);
+            end loop;
+
+            --  Merge right
+            Append_Right_To_List (Res.Criterias);
+         end return;
+      else
+         return Result : SQL_Criteria do
+            Set_Data (Result, Res_Data);
+            Res := Local_Criteria (Get_Data (Result));
+            Res.Criterias.Append (Left);
+            Append_Right_To_List (Res.Criterias);
+         end return;
+      end if;
    end Combine;
 
    -----------
@@ -1149,7 +1149,7 @@ package body GNATCOLL.SQL is
    function SQL_In
      (Self : SQL_Field'Class; List : SQL_Field_List) return SQL_Criteria
    is
-      Data   : SQL_Criteria_Data (Criteria_In);
+      Data   : Local_Criteria_Data (Criteria_In);
       Result : SQL_Criteria;
    begin
       Data.Arg := +Self;
@@ -1161,7 +1161,7 @@ package body GNATCOLL.SQL is
    function SQL_In
      (Self : SQL_Field'Class; Subquery : SQL_Query) return SQL_Criteria
    is
-      Data   : SQL_Criteria_Data (Criteria_In);
+      Data   : Local_Criteria_Data (Criteria_In);
       Result : SQL_Criteria;
    begin
       Data.Arg := +Self;
@@ -1173,7 +1173,7 @@ package body GNATCOLL.SQL is
    function SQL_In
      (Self : SQL_Field'Class; List : String) return SQL_Criteria
    is
-      Data   : SQL_Criteria_Data (Criteria_In);
+      Data   : Local_Criteria_Data (Criteria_In);
       Result : SQL_Criteria;
    begin
       Data.Arg := +Self;
@@ -1187,7 +1187,7 @@ package body GNATCOLL.SQL is
    ------------
 
    function Exists (Subquery : SQL_Query) return SQL_Criteria is
-      Data   : SQL_Criteria_Data (Criteria_Exists);
+      Data   : Local_Criteria_Data (Criteria_Exists);
       Result : SQL_Criteria;
    begin
       Data.Subquery2 := Subquery;
@@ -1202,7 +1202,7 @@ package body GNATCOLL.SQL is
    function SQL_Not_In
      (Self : SQL_Field'Class; List : SQL_Field_List) return SQL_Criteria
    is
-      Data   : SQL_Criteria_Data (Criteria_Not_In);
+      Data   : Local_Criteria_Data (Criteria_Not_In);
       Result : SQL_Criteria;
    begin
       Data.Arg := +Self;
@@ -1214,7 +1214,7 @@ package body GNATCOLL.SQL is
    function SQL_Not_In
      (Self : SQL_Field'Class; Subquery : SQL_Query) return SQL_Criteria
    is
-      Data   : SQL_Criteria_Data (Criteria_Not_In);
+      Data   : Local_Criteria_Data (Criteria_Not_In);
       Result : SQL_Criteria;
    begin
       Data.Arg := +Self;
@@ -1226,7 +1226,7 @@ package body GNATCOLL.SQL is
    function SQL_Not_In
      (Self : SQL_Field'Class; List : String) return SQL_Criteria
    is
-      Data   : SQL_Criteria_Data (Criteria_Not_In);
+      Data   : Local_Criteria_Data (Criteria_Not_In);
       Result : SQL_Criteria;
    begin
       Data.Arg := +Self;
@@ -1245,7 +1245,7 @@ package body GNATCOLL.SQL is
       return Result : SQL_Criteria do
          Set_Data
            (Result,
-            SQL_Criteria_Data'
+            Local_Criteria_Data'
               (Criteria_Between,
                Arg2 => +Self, Left => +Left, Right => +Right));
       end return;
@@ -1261,7 +1261,7 @@ package body GNATCOLL.SQL is
       return Result : SQL_Criteria do
          Set_Data
            (Result,
-            SQL_Criteria_Data'
+            Local_Criteria_Data'
               (Criteria_Not_Between,
                Arg2 => +Self, Left => +Left, Right => +Right));
       end return;
@@ -1272,7 +1272,7 @@ package body GNATCOLL.SQL is
    -------------
 
    function Is_Null (Self : SQL_Field'Class) return SQL_Criteria is
-      Data : SQL_Criteria_Data (Criteria_Null);
+      Data : Local_Criteria_Data (Criteria_Null);
       Result : SQL_Criteria;
    begin
       Data.Arg3 := +Self;
@@ -1285,7 +1285,7 @@ package body GNATCOLL.SQL is
    -----------------
 
    function Is_Not_Null (Self : SQL_Field'Class) return SQL_Criteria is
-      Data : SQL_Criteria_Data (Criteria_Not_Null);
+      Data : Local_Criteria_Data (Criteria_Not_Null);
       Result : SQL_Criteria;
    begin
       Data.Arg3 := +Self;
@@ -1298,7 +1298,7 @@ package body GNATCOLL.SQL is
    ----------------------
 
    procedure Append_To_String
-     (Self   : SQL_Criteria_Data;
+     (Self   : Local_Criteria_Data;
       Format : Formatter'Class;
       Long   : Boolean := True;
       Result : in out XString)
@@ -1319,8 +1319,8 @@ package body GNATCOLL.SQL is
                   end case;
                end if;
 
-               if Get_Data (C).all in SQL_Criteria_Data'Class
-                 and then SQL_Criteria_Data (Get_Data (C).all).Op
+               if Get_Data (C).all in Local_Criteria_Data'Class
+                 and then Local_Criteria_Data (Get_Data (C).all).Op
                     in Criteria_Combine
                then
                   Result.Append ('(');
@@ -1726,7 +1726,7 @@ package body GNATCOLL.SQL is
    -------------------
 
    procedure Append_Tables
-     (Self : SQL_Criteria_Data; To : in out Table_Sets.Set)
+     (Self : Local_Criteria_Data; To : in out Table_Sets.Set)
    is
       C : Criteria_Lists.Cursor;
    begin
@@ -1948,7 +1948,7 @@ package body GNATCOLL.SQL is
    -----------------------------
 
    procedure Append_If_Not_Aggregate
-     (Self         : SQL_Criteria_Data;
+     (Self         : Local_Criteria_Data;
       To           : in out SQL_Field_List'Class;
       Is_Aggregate : in out Boolean)
    is
