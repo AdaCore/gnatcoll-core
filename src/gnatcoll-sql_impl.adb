@@ -22,6 +22,7 @@
 ------------------------------------------------------------------------------
 
 with Ada.Characters.Handling;    use Ada.Characters.Handling;
+with Ada.Containers;             use Ada.Containers;
 with Ada.Strings.Fixed;          use Ada.Strings.Fixed;
 with Ada.Strings.Hash;
 with GNATCOLL.Utils;             use GNATCOLL.Utils;
@@ -39,6 +40,13 @@ package body GNATCOLL.SQL_Impl is
    --  When you create new field types, they should be registered in this list.
    --  Put an uninitialized instance of the field type in the list. A copy of
    --  it will be used to call Type_From_SQL when parsing the database schema.
+
+   procedure Append_To_String
+      (Self      : Table_List.Vector;
+       Format    : Formatter'Class;
+       Separator : String;
+       Result    : in out GNATCOLL.Strings.XString);
+   --  Helper to dump a list of tables to a string
 
    --------------------------
    --  Named field data --
@@ -125,7 +133,9 @@ package body GNATCOLL.SQL_Impl is
 
    type Comparison_Criteria is new SQL_Criteria_Data with record
       Op, Suffix : Cst_String_Access;
-      Arg1, Arg2 : SQL_Field_Pointer;
+      Args       : SQL_Field_Array (1 .. 2);
+      --  Do not use a SQL_Field_List, since we are already in a refcounted
+      --  type.
    end record;
    overriding procedure Append_To_String
      (Self   : Comparison_Criteria;
@@ -145,7 +155,9 @@ package body GNATCOLL.SQL_Impl is
 
    type Row_Comparison_Criteria is new SQL_Criteria_Data with record
       Op   : Cst_String_Access;
-      Rows : SQL_Table_List;
+      Rows : Table_List.Vector;
+      --  Do not use a SQL_Table_List since we are already in a refcounted
+      --  type.
    end record;
    overriding procedure Append_To_String
      (Self   : Row_Comparison_Criteria;
@@ -269,15 +281,17 @@ package body GNATCOLL.SQL_Impl is
    is
       Is_First : Boolean := True;
    begin
-      for C of Self.List loop
-         if Is_First then
-            Is_First := False;
-         else
-            Result.Append (Separator);
-         end if;
+      if not Self.List.Is_Null then
+         for C of Self.List.Get loop
+            if Is_First then
+               Is_First := False;
+            else
+               Result.Append (Separator);
+            end if;
 
-         Append_To_String (C, Format, Long, Result);
-      end loop;
+            Append_To_String (C, Format, Long, Result);
+         end loop;
+      end if;
    end Append_To_String;
 
    overriding procedure Append_To_String
@@ -348,17 +362,19 @@ package body GNATCOLL.SQL_Impl is
             Result.Append (Self.Str_Value);
 
          when Field_Operator =>
-            for C of Self.List.List loop
-               if Is_First then
-                  Is_First := False;
-               else
-                  Result.Append (' ');
-                  Result.Append (Self.Op_Value);
-                  Result.Append (' ');
-               end if;
+            if not Self.List.List.Is_Null then
+               for C of Self.List.List.Get loop
+                  if Is_First then
+                     Is_First := False;
+                  else
+                     Result.Append (' ');
+                     Result.Append (Self.Op_Value);
+                     Result.Append (' ');
+                  end if;
 
-               Append_To_String (C, Format, Result => Result);
-            end loop;
+                  Append_To_String (C, Format, Result => Result);
+               end loop;
+            end if;
 
          when Field_Parameter =>
             raise Program_Error with "Should have been overridden";
@@ -412,14 +428,13 @@ package body GNATCOLL.SQL_Impl is
       To           : in out SQL_Field_List'Class;
       Is_Aggregate : in out Boolean)
    is
-      C : Field_List.Cursor;
       F : Field_Pointers.Ref;
    begin
-      if Self.Typ = Field_Operator then
-         C := First (Self.List.List);
-         while Has_Element (C) loop
-            Append_If_Not_Aggregate (Element (C), To, Is_Aggregate);
-            Next (C);
+      if Self.Typ = Field_Operator
+         and then not Self.List.List.Is_Null
+      then
+         for C of Self.List.List.Get loop
+            Append_If_Not_Aggregate (C, To, Is_Aggregate);
          end loop;
       end if;
 
@@ -431,7 +446,7 @@ package body GNATCOLL.SQL_Impl is
          F.From_Element (Field_Pointers.Element_Access (Self));
 
          Append
-           (To.List, Any_Fields.Field'
+           (To, Any_Fields.Field'
               (Table    => Self.Table.Name,
                Instance => Self.Table.Instance,
                Instance_Index => Self.Table.Instance_Index,
@@ -447,7 +462,12 @@ package body GNATCOLL.SQL_Impl is
    procedure Append
      (List : in out SQL_Field_List; Field : SQL_Field'Class) is
    begin
-      Append (List.List, Field);
+      if List.List.Is_Null then
+         List.List.Set (Field_List.Empty_Vector);
+         List.List.Get.Reserve_Capacity (20);
+      end if;
+
+      List.List.Get.Append (Field);
    end Append;
 
    ---------
@@ -455,11 +475,18 @@ package body GNATCOLL.SQL_Impl is
    ---------
 
    function "&" (Left, Right : SQL_Field'Class) return SQL_Field_List is
-      Result : SQL_Field_List;
    begin
-      Append (Result.List, Left);
-      Append (Result.List, Right);
-      return Result;
+      return Result : SQL_Field_List do
+         Result.List.Set (Field_List.Empty_Vector);
+         declare
+            G : constant Field_List_Pointers.Reference_Type :=
+               Result.List.Get;
+         begin
+            G.Reserve_Capacity (20);
+            G.Append (Left);
+            G.Append (Right);
+         end;
+      end return;
    end "&";
 
    ---------
@@ -467,13 +494,22 @@ package body GNATCOLL.SQL_Impl is
    ---------
 
    function "&"
-     (Left : SQL_Field_List; Right : SQL_Field'Class) return SQL_Field_List
-   is
-      Result : SQL_Field_List;
+     (Left : SQL_Field_List; Right : SQL_Field'Class) return SQL_Field_List is
    begin
-      Result.List := Left.List;  --  Does a copy, so we do not modify Left
-      Append (Result.List, Right);
-      return Result;
+      if Left.List.Is_Null then
+         return +Right;
+      else
+         return Result : SQL_Field_List do
+            Result.List.Set (Left.List.Get);  --  Copy the list to preserve Left
+            declare
+               G : constant Field_List_Pointers.Reference_Type :=
+                  Result.List.Get;
+            begin
+               G.Reserve_Capacity (20);
+               G.Append (Right);
+            end;
+         end return;
+      end if;
    end "&";
 
    ---------
@@ -485,8 +521,18 @@ package body GNATCOLL.SQL_Impl is
    is
       Result : SQL_Field_List;
    begin
-      Result.List := Right.List; --  Does a copy so that we do not modify Right
-      Prepend (Result.List, Left);
+      Result.List.Set (Field_List.Empty_Vector);
+      declare
+         G : constant Field_List_Pointers.Reference_Type := Result.List.Get;
+      begin
+         G.Reserve_Capacity (20);
+         G.Append (Left);
+         if not Right.List.Is_Null then
+            for C of Right.List.Get loop
+               G.Append (C);
+            end loop;
+         end if;
+      end;
       return Result;
    end "&";
 
@@ -497,15 +543,30 @@ package body GNATCOLL.SQL_Impl is
    function "&"
      (Left, Right : SQL_Field_List) return SQL_Field_List
    is
-      Result : SQL_Field_List;
-      C      : Field_List.Cursor := First (Right.List);
    begin
-      Result.List := Left.List; --  Does a copy, don't modify Left
-      while Has_Element (C) loop
-         Append (Result.List, Element (C));
-         Next (C);
-      end loop;
-      return Result;
+      if Left.List.Is_Null then
+         return Right;
+      elsif Right.List.Is_Null then
+         return Left;
+      end if;
+
+      declare
+         GL : constant Field_List_Pointers.Reference_Type := Left.List.Get;
+         GR : constant Field_List_Pointers.Reference_Type := Right.List.Get;
+      begin
+         return Result : SQL_Field_List do
+            Result.List.Set (GL);  --  Copy, to preserve Left
+            declare
+               RR : constant Field_List_Pointers.Reference_Type :=
+                  Result.List.Get;
+            begin
+               RR.Reserve_Capacity (20);
+               for C of GR loop
+                  RR.Append (C);
+               end loop;
+            end;
+         end return;
+      end;
    end "&";
 
    ---------
@@ -515,7 +576,9 @@ package body GNATCOLL.SQL_Impl is
    function "+" (Left : SQL_Field'Class) return SQL_Field_List is
       Result : SQL_Field_List;
    begin
-      Append (Result.List, Left);
+      Result.List.Set (Field_List.Empty_Vector);
+      Result.List.Get.Reserve_Capacity (20);
+      Result.List.Get.Append (Left);
       return Result;
    end "+";
 
@@ -545,14 +608,17 @@ package body GNATCOLL.SQL_Impl is
       --  Ignore constant fields (NULL,...)
       if Self.Table /= null then
          --  Check that field already exists in list
-         for F of To.List loop
-            if SQL_Field (F) = Self then
-               --  Do not need the same field twice
-               return;
-            end if;
-         end loop;
+         --  ???? We should be using a set here
+         if not To.List.Is_Null then
+            for F of To.List.Get loop
+               if SQL_Field (F) = Self then
+                  --  Do not need the same field twice
+                  return;
+               end if;
+            end loop;
+         end if;
 
-         Append (To.List, Self);
+         Append (To, Self);
       end if;
    end Append_If_Not_Aggregate;
 
@@ -640,27 +706,25 @@ package body GNATCOLL.SQL_Impl is
    is
       Arg2 : XString;
    begin
-      Append_To_String (Self.Arg2, Format, Long, Arg2);
+      if not Self.Args (2).Is_Null then
+         Append_To_String (Self.Args (2), Format, Long, Arg2);
+      end if;
 
-      if Self.Op.all = "="
-        and then Arg2 = "TRUE"
-      then
-         Append_To_String (Self.Arg1, Format, Long, Result);
-
-      elsif Self.Op.all = "="
-        and then Arg2 = "FALSE"
-      then
+      if Self.Op.all = "=" and then Arg2 = "TRUE" then
+         Append_To_String (Self.Args (1), Format, Long, Result);
+      elsif Self.Op.all = "=" and then Arg2 = "FALSE" then
          Result.Append ("not ");
-         Append_To_String (Self.Arg1, Format, Long, Result);
-
+         Append_To_String (Self.Args (1), Format, Long, Result);
       else
-         Append_To_String (Self.Arg1, Format, Long, Result);
+         if not Self.Args (1).Is_Null then
+            Append_To_String (Self.Args (1), Format, Long, Result);
+         end if;
          Result.Append (Self.Op.all);
          Result.Append (Arg2);
+      end if;
 
-         if Self.Suffix /= null then
-            Result.Append (Self.Suffix.all);
-         end if;
+      if Self.Suffix /= null then
+         Result.Append (Self.Suffix.all);
       end if;
    end Append_To_String;
 
@@ -671,8 +735,9 @@ package body GNATCOLL.SQL_Impl is
    overriding procedure Append_Tables
      (Self : Comparison_Criteria; To : in out Table_Sets.Set) is
    begin
-      Append_Tables (Self.Arg1, To);
-      Append_Tables (Self.Arg2, To);
+      for F of Self.Args loop
+         Append_Tables (F, To);
+      end loop;
    end Append_Tables;
 
    -----------------------------
@@ -684,8 +749,9 @@ package body GNATCOLL.SQL_Impl is
       To           : in out SQL_Field_List'Class;
       Is_Aggregate : in out Boolean) is
    begin
-      Append_If_Not_Aggregate (Self.Arg1, To, Is_Aggregate);
-      Append_If_Not_Aggregate (Self.Arg2, To, Is_Aggregate);
+      for F of Self.Args loop
+         Append_If_Not_Aggregate (F, To, Is_Aggregate);
+      end loop;
    end Append_If_Not_Aggregate;
 
    -----------------
@@ -697,10 +763,17 @@ package body GNATCOLL.SQL_Impl is
       Op          : not null Cst_String_Access) return SQL_Criteria
    is
       Data : constant Row_Comparison_Criteria :=
-         (SQL_Criteria_Data with Op => Op, Rows => Row1 & Row2);
+         (SQL_Criteria_Data with Op => Op, Rows => Table_List.Empty_Vector);
       Result : SQL_Criteria;
    begin
-      Set_Data (Result, Data);
+      Result.Criteria.Set (Data);
+
+      --  Only append after the initial copy in Set_Data, to avoid
+      --  an extra copy.
+      Row_Comparison_Criteria (Result.Criteria.Get.Element.all)
+         .Rows.Append (Row1);
+      Row_Comparison_Criteria (Result.Criteria.Get.Element.all)
+         .Rows.Append (Row2);
       return Result;
    end Row_Compare;
 
@@ -715,10 +788,11 @@ package body GNATCOLL.SQL_Impl is
    is
       Data : constant Comparison_Criteria :=
          (SQL_Criteria_Data with
-          Op => Op, Suffix => Suffix, Arg1 => +Left, Arg2 => +Right);
+          Op => Op, Suffix => Suffix,
+          Args => (1 => +Left, 2 => +Right));
       Result : SQL_Criteria;
    begin
-      Set_Data (Result, Data);
+      Result.Criteria.Set (Data);
       return Result;
    end Compare;
 
@@ -733,12 +807,12 @@ package body GNATCOLL.SQL_Impl is
    is
       Data : constant Comparison_Criteria :=
          (SQL_Criteria_Data with
-          Op => Op, Suffix => Suffix,
-          Arg1 => No_Field_Pointer,
-          Arg2 => +Field);
+          Op     => Op,
+          Suffix => Suffix,
+          Args   => (1 => No_Field_Pointer, 2 => +Field));
       Result : SQL_Criteria;
    begin
-      Set_Data (Result, Data);
+      Result.Criteria.Set (Data);
       return Result;
    end Compare1;
 
@@ -789,7 +863,11 @@ package body GNATCOLL.SQL_Impl is
 
    function First (List : SQL_Field_List) return Field_List.Cursor is
    begin
-      return First (List.List);
+      if List.List.Is_Null then
+         return Field_List.No_Element;
+      else
+         return List.List.Get.First;
+      end if;
    end First;
 
    ------------
@@ -800,7 +878,10 @@ package body GNATCOLL.SQL_Impl is
      (List : in out SQL_Field_List'Class; Field : SQL_Field_Pointer) is
    begin
       if not Field.Is_Null then
-         Append (List.List, Field.Get.Element.all);
+         if List.List.Is_Null then
+            List.List.Set (Field_List.Empty_Vector);
+         end if;
+         List.List.Get.Append (Field.Get.Element.all);
       end if;
    end Append;
 
@@ -1584,7 +1665,15 @@ package body GNATCOLL.SQL_Impl is
          return Left;
       else
          return Result : SQL_Table_List do
-            Result.Data.Set (Table_List."&" (Left.Data.Get, Right.Data.Get));
+            Result.Data.Set (Table_List.Empty_Vector);
+            declare
+               G : constant Table_List_Pointers.Reference_Type :=
+                  Result.Data.Get;
+            begin
+               G.Reserve_Capacity (20);
+               G.Append (Left.Data.Get);
+               G.Append (Right.Data.Get);
+            end;
          end return;
       end if;
    end "&";
@@ -1597,9 +1686,15 @@ package body GNATCOLL.SQL_Impl is
      (Left  : SQL_Table_List;
       Right : SQL_Single_Table'Class) return SQL_Table_List is
    begin
-      return Result : constant SQL_Table_List := Left do
-         Result.Data.Get.Append (Right);
-      end return;
+      if Left.Data.Is_Null then
+         return +Right;
+      else
+         return Result : SQL_Table_List do
+            Result.Data.Set (Left.Data.Get);  --  Copy Left
+            Result.Data.Get.Reserve_Capacity (20);
+            Result.Data.Get.Append (Right);
+         end return;
+      end if;
    end "&";
 
    ---------
@@ -1609,8 +1704,15 @@ package body GNATCOLL.SQL_Impl is
    function "&" (Left, Right : SQL_Single_Table'Class) return SQL_Table_List is
    begin
       return Result : SQL_Table_List do
-         Result.Data.Set (Table_List.To_Vector (Left, 1));
-         Result.Data.Get.Append (Right);
+         Result.Data.Set (Table_List.Empty_Vector);
+         declare
+            G : constant Table_List_Pointers.Reference_Type :=
+               Result.Data.Get;
+         begin
+            G.Reserve_Capacity (20);
+            G.Append (Left);
+            G.Append (Right);
+         end;
       end return;
    end "&";
 
@@ -1621,7 +1723,9 @@ package body GNATCOLL.SQL_Impl is
    function "+" (Left : SQL_Single_Table'Class) return SQL_Table_List is
    begin
       return Result : SQL_Table_List do
-         Result.Data.Set (Table_List.To_Vector (Left, 1));
+         Result.Data.Set (Table_List.Empty_Vector);
+         Result.Data.Get.Reserve_Capacity (20);
+         Result.Data.Get.Append (Left);
       end return;
    end "+";
 
@@ -1639,25 +1743,35 @@ package body GNATCOLL.SQL_Impl is
    ----------------------
 
    procedure Append_To_String
+      (Self      : Table_List.Vector;
+       Format    : Formatter'Class;
+       Separator : String;
+       Result    : in out GNATCOLL.Strings.XString)
+   is
+      Is_First : Boolean := True;
+   begin
+      for C of Self loop
+         if Is_First then
+            Is_First := False;
+         else
+            Result.Append (Separator);
+         end if;
+         Append_To_String (C, Format, Result);
+      end loop;
+   end Append_To_String;
+
+   ----------------------
+   -- Append_To_String --
+   ----------------------
+
+   procedure Append_To_String
       (Self      : SQL_Table_List;
        Format    : Formatter'Class;
        Separator : String;
        Result    : in out GNATCOLL.Strings.XString) is
    begin
       if not Self.Data.Is_Null then
-         declare
-            T      : constant Table_List_Pointers.Reference_Type := Self.Data.Get;
-            Is_First : Boolean := True;
-         begin
-            for C of T loop
-               if Is_First then
-                  Is_First := False;
-               else
-                  Result.Append (Separator);
-               end if;
-               Append_To_String (C, Format, Result);
-            end loop;
-         end;
+         Append_To_String (Self.Data.Get, Format, Separator, Result);
       end if;
    end Append_To_String;
 
@@ -1710,7 +1824,9 @@ package body GNATCOLL.SQL_Impl is
    overriding procedure Append_Tables
      (Self   : Row_Comparison_Criteria; To : in out Table_Sets.Set) is
    begin
-      Append_Tables (Self.Rows, To);
+      for T of Self.Rows loop
+         Append_Tables (T, To);
+      end loop;
    end Append_Tables;
 
 end GNATCOLL.SQL_Impl;

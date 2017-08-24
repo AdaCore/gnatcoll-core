@@ -904,8 +904,19 @@ package GNATCOLL.SQL_Impl is
    end Field_Types;
 
 private
+
+   -----------------
+   -- Field lists --
+   -----------------
+
+   package Field_List_Pointers is new GNATCOLL.Refcount.Shared_Pointers
+      (Field_List.Vector);
+   --  See comment for Table_List_Pointers
+
+   subtype Field_List_Ref is Field_List_Pointers.Ref;
+
    type SQL_Field_List is new SQL_Field_Or_List with record
-      List : Field_List.Vector;
+      List : Field_List_Ref;
    end record;
 
    ------------
@@ -924,6 +935,24 @@ private
    ------------------
    -- Tables lists --
    ------------------
+   --  The various "&" operator try to optimize the number of copies of the
+   --  standard container we do, by reserving an initial capacity, and reusing
+   --  existing lists when they are not shared. To do this, they test the
+   --  actual refcount value.
+   --  This should be thread safe in all reasonable uses in practice:
+   --  * when a query is built locally in a subprogram, there is obviously no
+   --    issue.
+   --  * when a query is built at elaboration time and shared across tasks,
+   --    this is also safe, since we are no longer comparing refcount (but
+   --    relying on GNATCOLL.Refcount to do proper memory management).
+   --  * when parts of the query (like a list of fields for instance) are
+   --    declared as a global constant, and then used locally to build a
+   --    query:
+   --        Global : constant SQL_Field_List := ....;
+   --        procedure Bla is
+   --           Q : SQL_Query := SQL_Select (Global & Table.Field, ...);
+   --        end Bla;
+   --    then Global has a refcount of 2 in the call and will not be shared.
 
    package Table_List is new Ada.Containers.Indefinite_Vectors
      (Natural, SQL_Single_Table'Class);
@@ -998,6 +1027,6 @@ private
      (List => Assignment_Lists.Empty_Vector);
 
    Empty_Field_List : constant SQL_Field_List :=
-     (SQL_Field_Or_List with List => Field_List.Empty_Vector);
+     (SQL_Field_Or_List with List => Field_List_Pointers.Null_Ref);
 
 end GNATCOLL.SQL_Impl;
