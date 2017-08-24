@@ -1625,7 +1625,6 @@ private
    --  Null field deferred constants --
    ------------------------------------
 
-   Null_String : aliased constant String := "NULL";
    Null_Field_Date : constant SQL_Field_Date :=
       (Date_Fields.Null_Field with null record);
    Null_Field_Time : constant SQL_Field_Time :=
