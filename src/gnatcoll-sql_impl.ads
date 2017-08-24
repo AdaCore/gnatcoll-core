@@ -522,6 +522,13 @@ package GNATCOLL.SQL_Impl is
    Op_Not_Distinct  : aliased constant String := " IS NOT DISTINCT FROM ";
    Op_Is            : aliased constant String := " IS ";
    Op_Is_Not        : aliased constant String := " IS NOT ";
+   Op_Like          : aliased constant String := " LIKE ";
+   Op_ILike         : aliased constant String := " ILIKE ";
+   Op_Not_Like      : aliased constant String := " NOT LIKE ";
+   Op_Not_ILike     : aliased constant String := " NOT ILIKE ";
+   Op_Overlaps      : aliased constant String := " OVERLAPS ";
+   Op_Any           : aliased constant String := " = ANY (";
+   Op_Parenthesis   : aliased constant String := ")";
    --  Op_Distinct and Op_Not_Distinct are not supported on sqlite. Instead,
    --  the latter provides "IS" and "IS NOT" that play a similar role (and
    --  are not supported by postgresql).

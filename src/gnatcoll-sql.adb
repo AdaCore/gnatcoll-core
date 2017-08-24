@@ -36,14 +36,6 @@ package body GNATCOLL.SQL is
    use When_Lists, Query_Pointers;
    use type Boolean_Fields.Field;
 
-   Comparison_Like        : aliased constant String := " LIKE ";
-   Comparison_ILike       : aliased constant String := " ILIKE ";
-   Comparison_Not_Like    : aliased constant String := " NOT LIKE ";
-   Comparison_Not_ILike   : aliased constant String := " NOT ILIKE ";
-   Comparison_Overlaps    : aliased constant String := " OVERLAPS ";
-   Comparison_Any         : aliased constant String := " = ANY (";
-   Comparison_Parenthesis : aliased constant String := ")";
-
    procedure Unchecked_Free is new Ada.Unchecked_Deallocation
      (SQL_Table'Class, SQL_Table_Access);
 
@@ -1031,15 +1023,6 @@ package body GNATCOLL.SQL is
       return Combine (List, Op);
    end Combine;
 
-   --------------
-   -- Overlaps --
-   --------------
-
-   function Overlaps (Left, Right : SQL_Field'Class) return SQL_Criteria is
-   begin
-      return Compare (Left, Right, Comparison_Overlaps'Access);
-   end Overlaps;
-
    -----------
    -- "and" --
    -----------
@@ -1239,79 +1222,6 @@ package body GNATCOLL.SQL is
       Set_Data (Result, Data);
       return Result;
    end Is_Not_Null;
-
-   ---------
-   -- Any --
-   ---------
-
-   function Any (Self, Str : Text_Fields.Field'Class) return SQL_Criteria is
-   begin
-      return Compare
-        (Self, Str, Comparison_Any'Access, Comparison_Parenthesis'Access);
-   end Any;
-
-   -----------
-   -- Ilike --
-   -----------
-
-   function Ilike
-     (Self : Text_Fields.Field'Class; Str : String) return SQL_Criteria is
-   begin
-      return Compare (Self, Expression (Str), Comparison_ILike'Access);
-   end Ilike;
-
-   ----------
-   -- Like --
-   ----------
-
-   function Like
-     (Self : Text_Fields.Field'Class; Str : String) return SQL_Criteria is
-   begin
-      return Compare (Self, Expression (Str), Comparison_Like'Access);
-   end Like;
-
-   -----------
-   -- Ilike --
-   -----------
-
-   function Ilike
-     (Self : Text_Fields.Field'Class; Field : SQL_Field'Class)
-      return SQL_Criteria is
-   begin
-      return Compare (Self, Field, Comparison_ILike'Access);
-   end Ilike;
-
-   ----------
-   -- Like --
-   ----------
-
-   function Like
-     (Self : Text_Fields.Field'Class; Field : Text_Fields.Field'Class)
-      return SQL_Criteria
-   is
-   begin
-      return Compare (Self, Field, Comparison_Like'Access);
-   end Like;
-
-   ---------------
-   -- Not_Ilike --
-   ---------------
-
-   function Not_Ilike
-     (Self : Text_Fields.Field'Class; Str : String) return SQL_Criteria is
-   begin
-      return Compare (Self, Expression (Str), Comparison_Not_ILike'Access);
-   end Not_Ilike;
-
-   --------------
-   -- Not_Like --
-   --------------
-
-   function Not_Like
-     (Self : Text_Fields.Field'Class; Str : String) return SQL_Criteria is
-   begin
-      return Compare (Self, Expression (Str), Comparison_Not_Like'Access);
-   end Not_Like;
 
    ----------------------
    -- Append_To_String --

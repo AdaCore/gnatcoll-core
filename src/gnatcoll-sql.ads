@@ -950,23 +950,30 @@ package GNATCOLL.SQL is
      (Self, Left, Right : SQL_Field'Class) return SQL_Criteria;
 
    function Any
-     (Self, Str : Text_Fields.Field'Class) return SQL_Criteria;
+     (Self, Str : Text_Fields.Field'Class) return SQL_Criteria
+     is (Compare (Self, Str, Op_Any'Access, Op_Parenthesis'Access));
    --  "Self = ANY (Str)"
 
    function Ilike
-     (Self : Text_Fields.Field'Class; Str : String) return SQL_Criteria;
+     (Self : Text_Fields.Field'Class; Str : String) return SQL_Criteria
+     is (Compare (Self, Expression (Str), Op_Ilike'Access));
    function Ilike
      (Self : Text_Fields.Field'Class; Field : SQL_Field'Class)
-      return SQL_Criteria;
+      return SQL_Criteria
+     is (Compare (Self, Field, Op_Ilike'Access));
    function Like
-     (Self : Text_Fields.Field'Class; Str : String) return SQL_Criteria;
+     (Self : Text_Fields.Field'Class; Str : String) return SQL_Criteria
+     is (Compare (Self, Expression (Str), Op_Like'Access));
    function Like
      (Self : Text_Fields.Field'Class; Field : Text_Fields.Field'Class)
-      return SQL_Criteria;
+      return SQL_Criteria
+     is (Compare (Self, Field, Op_Like'Access));
    function Not_Ilike
-     (Self : Text_Fields.Field'Class; Str : String) return SQL_Criteria;
+     (Self : Text_Fields.Field'Class; Str : String) return SQL_Criteria
+     is (Compare (Self, Expression (Str), Op_Not_Ilike'Access));
    function Not_Like
-     (Self : Text_Fields.Field'Class; Str : String) return SQL_Criteria;
+     (Self : Text_Fields.Field'Class; Str : String) return SQL_Criteria
+     is (COmpare (Self, Expression (Str), Op_Not_Like'Access));
    --  Return a resp. case-insensitive or case-sensitive pattern matching.
    --  Right is automatically quoted. However, you are responsible for
    --  putting the meta-character % at the right places in Right.
@@ -976,6 +983,7 @@ package GNATCOLL.SQL is
    --  Test whether a field is null or not (ie unset or set)
 
    function Overlaps (Left, Right : SQL_Field'Class) return SQL_Criteria
+      is (Compare (Left, Right, Op_Overlaps'Access))
       with Obsolescent => "See GNATCOLL.SQL.Ranges.Overlap instead";
    --  Whether the range specified in Left overlaps the range specified in
    --  Right.
