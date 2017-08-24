@@ -139,6 +139,22 @@ package body GNATCOLL.SQL_Impl is
       To           : in out SQL_Field_List'Class;
       Is_Aggregate : in out Boolean);
 
+   -----------------------------
+   -- Row_Comparison_Criteria --
+   -----------------------------
+
+   type Row_Comparison_Criteria is new SQL_Criteria_Data with record
+      Op   : Cst_String_Access;
+      Rows : SQL_Table_List;
+   end record;
+   overriding procedure Append_To_String
+     (Self   : Row_Comparison_Criteria;
+      Format : Formatter'Class;
+      Long   : Boolean := True;
+      Result : in out XString);
+   overriding procedure Append_Tables
+     (Self   : Row_Comparison_Criteria; To : in out Table_Sets.Set);
+
    ----------------
    -- Data_Field --
    ----------------
@@ -671,6 +687,22 @@ package body GNATCOLL.SQL_Impl is
       Append_If_Not_Aggregate (Self.Arg1, To, Is_Aggregate);
       Append_If_Not_Aggregate (Self.Arg2, To, Is_Aggregate);
    end Append_If_Not_Aggregate;
+
+   -----------------
+   -- Row_Compare --
+   -----------------
+
+   function Row_Compare
+     (Row1, Row2  : SQL_Single_Table'Class;
+      Op          : not null Cst_String_Access) return SQL_Criteria
+   is
+      Data : constant Row_Comparison_Criteria :=
+         (SQL_Criteria_Data with Op => Op, Rows => Row1 & Row2);
+      Result : SQL_Criteria;
+   begin
+      Set_Data (Result, Data);
+      return Result;
+   end Row_Compare;
 
    -------------
    -- Compare --
@@ -1653,6 +1685,32 @@ package body GNATCOLL.SQL_Impl is
             Append_Tables (C, To);
          end loop;
       end if;
+   end Append_Tables;
+
+   ----------------------
+   -- Append_To_String --
+   ----------------------
+
+   overriding procedure Append_To_String
+     (Self   : Row_Comparison_Criteria;
+      Format : Formatter'Class;
+      Long   : Boolean := True;
+      Result : in out XString)
+   is
+      pragma Unreferenced (Long);
+   begin
+      Append_To_String
+         (Self.Rows, Format, Separator => Self.Op.all, Result => Result);
+   end Append_To_String;
+
+   -------------------
+   -- Append_Tables --
+   -------------------
+
+   overriding procedure Append_Tables
+     (Self   : Row_Comparison_Criteria; To : in out Table_Sets.Set) is
+   begin
+      Append_Tables (Self.Rows, To);
    end Append_Tables;
 
 end GNATCOLL.SQL_Impl;

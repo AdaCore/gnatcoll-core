@@ -545,6 +545,11 @@ package GNATCOLL.SQL_Impl is
    --  Apply a function to a field, as in:
    --     Op Field Suffix         (Op or Suffix can contain parenthesis)
 
+   function Row_Compare
+      (Row1, Row2 : SQL_Single_Table'Class;
+       Op : not null Cst_String_Access) return SQL_Criteria;
+    --  Row comparison operators (standard SQL but do not work with sqlite)
+
    ------------------------------------------
    -- General declarations for assignments --
    ------------------------------------------

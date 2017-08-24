@@ -986,6 +986,24 @@ package GNATCOLL.SQL is
    --  "EXISTS (subquery)"
    --  Returns True if the subquery returns at least one row.
 
+   function "=" (Row1, Row2: SQL_Single_Table'Class) return SQL_Criteria
+      is (Row_Compare (Row1, Row2, Op_Equal'Access));
+   function "/=" (Row1, Row2: SQL_Single_Table'Class) return SQL_Criteria
+      is (Row_Compare (Row1, Row2, Op_Not_Equal'Access));
+   function "<" (Row1, Row2: SQL_Single_Table'Class) return SQL_Criteria
+      is (Row_Compare (Row1, Row2, Op_Less'Access));
+   function "<=" (Row1, Row2: SQL_Single_Table'Class) return SQL_Criteria
+      is (Row_Compare (Row1, Row2, Op_Less_Equal'Access));
+   function ">" (Row1, Row2: SQL_Single_Table'Class) return SQL_Criteria
+      is (Row_Compare (Row1, Row2, Op_Greater'Access));
+   function ">=" (Row1, Row2: SQL_Single_Table'Class) return SQL_Criteria
+      is (Row_Compare (Row1, Row2, Op_Greater_Equal'Access));
+   --  Row comparison.
+   --  These operators are part of the SQL standard, but are not supported
+   --  by sqlite.
+   --  The semantics is that they compare all fields of the rows, from left
+   --  to right.
+
    -----------------
    -- Assignments --
    -----------------
