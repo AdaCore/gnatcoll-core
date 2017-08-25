@@ -1076,9 +1076,13 @@ package GNATCOLL.SQL is
    --  the assignments. All these left-hand side fields must belong to the same
    --  table, or the query is ambiguous and will raise a Program_Error.
    --  The right-hand side of the assignments, though, can either be constants
-   --  or fields from other tables. When other tables are referenced, the
-   --  insert statement is transformed into an INSERT with a subquery (see
-   --  below), and WHERE is used as the WHERE claused for that subquery.
+   --  or fields from other tables.
+   --
+   --  When other tables are referenced, the insert statement is transformed
+   --  into an INSERT with a subquery (see below), and WHERE is used as the
+   --  WHERE clause for that subquery.
+   --  The WHERE clause is ignored when all assignments do not refer to at
+   --  least one other table.
    --
    --  Qualifier is inserted just after the "INSERT" keyword, in the query. It
    --  can be used for DBMS-specific queries, like "INSERT OR IGNORE" in
