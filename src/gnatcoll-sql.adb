@@ -1436,15 +1436,16 @@ package body GNATCOLL.SQL is
    ----------------
 
    function SQL_Select
-     (Fields   : SQL_Field_Or_List'Class;
-      From     : SQL_Table_Or_List'Class := Empty_Table_List;
-      Where    : SQL_Criteria := No_Criteria;
-      Group_By : SQL_Field_Or_List'Class := Empty_Field_List;
-      Having   : SQL_Criteria := No_Criteria;
-      Order_By : SQL_Field_Or_List'Class := Empty_Field_List;
-      Limit    : Integer := -1;
-      Offset   : Integer := -1;
-      Distinct : Boolean := False;
+     (Fields        : SQL_Field_Or_List'Class;
+      From          : SQL_Table_Or_List'Class := Empty_Table_List;
+      Where         : SQL_Criteria := No_Criteria;
+      Group_By      : SQL_Field_Or_List'Class := Empty_Field_List;
+      Having        : SQL_Criteria := No_Criteria;
+      Order_By      : SQL_Field_Or_List'Class := Empty_Field_List;
+      Limit         : Integer := -1;
+      Offset        : Integer := -1;
+      Distinct      : Boolean := False;
+      Distinct_On   : SQL_Field_Or_List'Class := Empty_Field_List;
       Auto_Complete : Boolean := False) return SQL_Query
    is
       Data : Query_Select_Contents;
@@ -1478,9 +1479,15 @@ package body GNATCOLL.SQL is
          Data.Order_By := SQL_Field_List (Order_By);
       end if;
 
-      Data.Limit    := Limit;
-      Data.Offset   := Offset;
-      Data.Distinct := Distinct;
+      if Distinct_On in SQL_Field'Class then
+         Data.Distinct_On := +SQL_Field'Class (Distinct_On);
+      else
+         Data.Distinct_On := SQL_Field_List (Distinct_On);
+      end if;
+
+      Data.Limit       := Limit;
+      Data.Offset      := Offset;
+      Data.Distinct    := Distinct;
       Q.Set (Data);
 
       if Auto_Complete then
@@ -1502,7 +1509,13 @@ package body GNATCOLL.SQL is
    begin
       Result.Append ("SELECT ");
 
-      if Self.Distinct then
+      if Self.Distinct_On /= Empty_Field_List then
+         Result.Append ("DISTINCT ON (");
+         Append_To_String
+            (Self.Distinct_On, Format, Long => False, Result => Result);
+         Result.Append (") ");
+
+      elsif Self.Distinct then
          Result.Append ("DISTINCT ");
       end if;
 

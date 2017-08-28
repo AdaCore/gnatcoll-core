@@ -1040,20 +1040,45 @@ package GNATCOLL.SQL is
    --  Join the two tables
 
    function SQL_Select
-     (Fields   : SQL_Field_Or_List'Class;
-      From     : SQL_Table_Or_List'Class := Empty_Table_List;
-      Where    : SQL_Criteria := No_Criteria;
-      Group_By : SQL_Field_Or_List'Class := Empty_Field_List;
-      Having   : SQL_Criteria := No_Criteria;
-      Order_By : SQL_Field_Or_List'Class := Empty_Field_List;
-      Limit    : Integer := -1;
-      Offset   : Integer := -1;
-      Distinct : Boolean := False;
+     (Fields        : SQL_Field_Or_List'Class;
+      From          : SQL_Table_Or_List'Class := Empty_Table_List;
+      Where         : SQL_Criteria := No_Criteria;
+      Group_By      : SQL_Field_Or_List'Class := Empty_Field_List;
+      Having        : SQL_Criteria := No_Criteria;
+      Order_By      : SQL_Field_Or_List'Class := Empty_Field_List;
+      Limit         : Integer := -1;
+      Offset        : Integer := -1;
+      Distinct      : Boolean := False;
+      Distinct_On   : SQL_Field_Or_List'Class := Empty_Field_List;
       Auto_Complete : Boolean := False) return SQL_Query;
    --  Select one or more fields from one or more tables
+   --
+   --  Distinct indicates whether duplicate rows should be eliminated from the
+   --  result of the query (that is rows where all columns have the same
+   --  value.
+   --  Postgresql provides an extension (Distinct_On) that lets you compare
+   --  only a subset of fields, and only keeps the first row of each set of
+   --  rows that matches on those columns. To fully specify "first row", you
+   --  should in general also be using an Order_By clause.
+   --  For instance:
+   --     SQL_Select (Weather.Location & Weather.Time & Weather.Report,
+   --                 From => Weather,
+   --                 Distinct => True);
+   --          might report (Paris, 01:00:00, 'sunny') and
+   --                       (Paris, 04:00:00, 'rainy').
+   --
+   --  but SQL_SELECT (Weather.Location & Weather.Time & Weather.Report,
+   --                  From => Weather,
+   --                  Distinct_On => Weather.Location,
+   --                  Order_By    => Desc (Weather.Time));
+   --          would only report (Paris, 04:00:00, 'rainy').
+   --
+   --  Only one of Distinct or Distinct_On should be specified. If both are
+   --  specified, Distinct_On has priority.
+   --
    --  If Auto_Complete is true, the resulting query is auto-completed just as
    --  if you had called the Auto_Complete subprogram. This is put here so that
-   --  you can have global SQL_Query constants, pre-completed
+   --  you can have global SQL_Query constants, pre-completed.
 
    function SQL_Union
      (Query1, Query2 : SQL_Query;
@@ -1474,6 +1499,7 @@ private
       Limit        : Integer;
       Offset       : Integer;
       Distinct     : Boolean;
+      Distinct_On  : SQL_Field_List;
    end record;
    overriding procedure Append_To_String
       (Self   : Query_Select_Contents;
