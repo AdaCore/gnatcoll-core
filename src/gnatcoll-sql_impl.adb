@@ -42,10 +42,11 @@ package body GNATCOLL.SQL_Impl is
    --  it will be used to call Type_From_SQL when parsing the database schema.
 
    procedure Append_To_String
-      (Self      : Table_List.Vector;
-       Format    : Formatter'Class;
-       Separator : String;
-       Result    : in out GNATCOLL.Strings.XString);
+      (Self       : Table_List.Vector;
+       Format     : Formatter'Class;
+       Separator  : String;
+       Result     : in out GNATCOLL.Strings.XString;
+       Show_Types : Boolean);
    --  Helper to dump a list of tables to a string
 
    --------------------------
@@ -83,10 +84,11 @@ package body GNATCOLL.SQL_Impl is
       end case;
    end record;
    overriding procedure Append_To_String
-     (Self   : Named_Field_Internal;
-      Format : Formatter'Class;
-      Long   : Boolean;
-      Result : in out XString);
+     (Self       : Named_Field_Internal;
+      Format     : Formatter'Class;
+      Result     : in out XString;
+      Long       : Boolean;
+      Show_Types : Boolean);
    overriding procedure Append_Tables
      (Self : Named_Field_Internal; To : in out Table_Sets.Set);
    overriding procedure Append_If_Not_Aggregate
@@ -116,10 +118,11 @@ package body GNATCOLL.SQL_Impl is
       Seps   : XString_Array (2 .. Count);
    end record;
    overriding procedure Append_To_String
-     (Self   : Function_Field;
-      Format : Formatter'Class;
-      Long   : Boolean;
-      Result : in out XString);
+     (Self      : Function_Field;
+      Format    : Formatter'Class;
+      Result    : in out XString;
+      Long      : Boolean;
+      Show_Types : Boolean);
    overriding procedure Append_Tables
      (Self : Function_Field; To : in out Table_Sets.Set);
    overriding procedure Append_If_Not_Aggregate
@@ -178,13 +181,16 @@ package body GNATCOLL.SQL_Impl is
       ----------------------
 
       overriding procedure Append_To_String
-        (Self   : Field;
-         Format : Formatter'Class;
-         Long   : Boolean := True;
-         Result : in out XString) is
+        (Self       : Field;
+         Format     : Formatter'Class;
+         Result     : in out XString;
+         Long       : Boolean;
+         Show_Types : Boolean) is
       begin
          if not Self.Data.Is_Null then
-            Append_To_String (Self.Data.Get.Element.all, Format, Long, Result);
+            Append_To_String
+               (Self.Data.Get.Element.all, Format, Result,
+                Long => Long, Show_Types => Show_Types);
          end if;
       end Append_To_String;
 
@@ -273,11 +279,12 @@ package body GNATCOLL.SQL_Impl is
    ----------------------
 
    procedure Append_To_String
-     (Self      : SQL_Field_List;
-      Format    : Formatter'Class;
-      Long      : Boolean := True;
-      Separator : String;
-      Result    : in out XString)
+     (Self       : SQL_Field_List;
+      Format     : Formatter'Class;
+      Separator  : String;
+      Result     : in out XString;
+      Long       : Boolean;
+      Show_Types : Boolean)
    is
       Is_First : Boolean := True;
    begin
@@ -289,19 +296,21 @@ package body GNATCOLL.SQL_Impl is
                Result.Append (Separator);
             end if;
 
-            Append_To_String (C, Format, Long, Result);
+            Append_To_String
+               (C, Format, Result, Long => Long, Show_Types => Show_Types);
          end loop;
       end if;
    end Append_To_String;
 
    overriding procedure Append_To_String
-     (Self   : SQL_Field_List;
-      Format : Formatter'Class;
-      Long   : Boolean := True;
-      Result : in out XString)
-   is
+     (Self       : SQL_Field_List;
+      Format     : Formatter'Class;
+      Result     : in out XString;
+      Long       : Boolean;
+      Show_Types : Boolean) is
    begin
-      Append_To_String (Self, Format, Long, ", ", Result);
+      Append_To_String
+         (Self, Format, ", ", Result, Long => Long, Show_Types => Show_Types);
    end Append_To_String;
 
    ----------------------
@@ -309,12 +318,13 @@ package body GNATCOLL.SQL_Impl is
    ----------------------
 
    overriding procedure Append_To_String
-     (Self   : SQL_Field;
-      Format : Formatter'Class;
-      Long   : Boolean := True;
-      Result : in out XString)
+     (Self       : SQL_Field;
+      Format     : Formatter'Class;
+      Result     : in out XString;
+      Long       : Boolean;
+      Show_Types : Boolean)
    is
-      pragma Unreferenced (Format);
+      pragma Unreferenced (Format, Show_Types);
    begin
       if Long then
          declare
@@ -340,10 +350,11 @@ package body GNATCOLL.SQL_Impl is
    ----------------------
 
    procedure Append_To_String
-     (Self   : Named_Field_Internal;
-      Format : Formatter'Class;
-      Long   : Boolean;
-      Result : in out XString)
+     (Self       : Named_Field_Internal;
+      Format     : Formatter'Class;
+      Result     : in out XString;
+      Long       : Boolean;
+      Show_Types : Boolean)
    is
       Is_First : Boolean := True;
    begin
@@ -372,7 +383,8 @@ package body GNATCOLL.SQL_Impl is
                      Result.Append (' ');
                   end if;
 
-                  Append_To_String (C, Format, Result => Result);
+                  Append_To_String
+                     (C, Format, Result, Long => True, Show_Types => Show_Types);
                end loop;
             end if;
 
@@ -707,17 +719,22 @@ package body GNATCOLL.SQL_Impl is
       Arg2 : XString;
    begin
       if not Self.Args (2).Is_Null then
-         Append_To_String (Self.Args (2), Format, Long, Arg2);
+         Append_To_String
+            (Self.Args (2), Format, Arg2, Long => Long, Show_Types => False);
       end if;
 
       if Self.Op.all = "=" and then Arg2 = "TRUE" then
-         Append_To_String (Self.Args (1), Format, Long, Result);
+         Append_To_String
+            (Self.Args (1), Format, Result, Long => Long, Show_Types => False);
       elsif Self.Op.all = "=" and then Arg2 = "FALSE" then
          Result.Append ("not ");
-         Append_To_String (Self.Args (1), Format, Long, Result);
+         Append_To_String
+            (Self.Args (1), Format, Result, Long => Long, Show_Types => False);
       else
          if not Self.Args (1).Is_Null then
-            Append_To_String (Self.Args (1), Format, Long, Result);
+            Append_To_String
+               (Self.Args (1), Format, Result,
+                Long => Long, Show_Types => False);
          end if;
          Result.Append (Self.Op.all);
          Result.Append (Arg2);
@@ -821,13 +838,16 @@ package body GNATCOLL.SQL_Impl is
    ----------------------
 
    procedure Append_To_String
-     (Self   : SQL_Field_Pointer;
-      Format : Formatter'Class;
-      Long   : Boolean;
-      Result : in out XString) is
+     (Self       : SQL_Field_Pointer;
+      Format     : Formatter'Class;
+      Result     : in out XString;
+      Long       : Boolean;
+      Show_Types : Boolean) is
    begin
       if not Self.Is_Null then
-         Append_To_String (Self.Get.Element.all, Format, Long, Result);
+         Append_To_String
+            (Self.Get.Element.all, Format, Result,
+             Long => Long, Show_Types => Show_Types);
       end if;
    end Append_To_String;
 
@@ -921,12 +941,16 @@ package body GNATCOLL.SQL_Impl is
          end if;
 
          if With_Field then
-            Append_To_String (Data.Field, Format, False, Result);
+            Append_To_String
+               (Data.Field, Format, Result,
+                Long => False, Show_Types => False);
             Result.Append ('=');
          end if;
 
          if Data.To_Field /= No_Field_Pointer then
-            Append_To_String (Data.To_Field, Format, True, Result);
+            Append_To_String
+               (Data.To_Field, Format, Result,
+                Long => True, Show_Types => False);
          else
             Result.Append ("NULL");
          end if;
@@ -1053,21 +1077,24 @@ package body GNATCOLL.SQL_Impl is
    ----------------------
 
    overriding procedure Append_To_String
-     (Self   : Function_Field;
-      Format : Formatter'Class;
-      Long   : Boolean;
-      Result : in out XString)
+     (Self       : Function_Field;
+      Format     : Formatter'Class;
+      Result     : in out XString;
+      Long       : Boolean;
+      Show_Types : Boolean)
    is
       pragma Unreferenced (Long);
    begin
       Result.Append (Self.Prefix);
       Append_To_String
-         (Self.Fields (1).Get.Element.all, Format, True, Result);
+         (Self.Fields (1).Get.Element.all, Format, Result,
+          Long => True, Show_Types => Show_Types);
 
       for F in 2 .. Self.Count loop
          Result.Append (Self.Seps (F));
          Append_To_String
-            (Self.Fields (F).Get.Element.all, Format, True, Result);
+            (Self.Fields (F).Get.Element.all, Format, Result,
+             Long => True, Show_Types => Show_Types);
       end loop;
 
       if Self.Suffix /= ")" and then not Self.Suffix.Is_Empty then
@@ -1090,10 +1117,11 @@ package body GNATCOLL.SQL_Impl is
       end record;
       overriding procedure Free (Self : in out Typed_Named_Field_Internal);
       overriding procedure Append_To_String
-        (Self   : Typed_Named_Field_Internal;
-         Format : Formatter'Class;
-         Long   : Boolean;
-         Result : in out XString);
+        (Self       : Typed_Named_Field_Internal;
+         Format     : Formatter'Class;
+         Result     : in out XString;
+         Long       : Boolean;
+         Show_Types : Boolean);
 
       function Internal_From_Data
         (Data : SQL_Field_Internal'Class) return Field'Class;
@@ -1103,22 +1131,24 @@ package body GNATCOLL.SQL_Impl is
          new Named_Field_Internal (Typ => Field_Parameter)
          with null record;
       overriding procedure Append_To_String
-        (Self   : Parameter_Field_Internal;
-         Format : Formatter'Class;
-         Long   : Boolean;
-         Result : in out XString);
+        (Self       : Parameter_Field_Internal;
+         Format     : Formatter'Class;
+         Result     : in out XString;
+         Long       : Boolean;
+         Show_Types : Boolean);
 
       ----------------------
       -- Append_To_String --
       ----------------------
 
       overriding procedure Append_To_String
-        (Self   : Parameter_Field_Internal;
-         Format : Formatter'Class;
-         Long   : Boolean;
-         Result : in out XString)
+        (Self       : Parameter_Field_Internal;
+         Format     : Formatter'Class;
+         Result     : in out XString;
+         Long       : Boolean;
+         Show_Types : Boolean)
       is
-         pragma Unreferenced (Long);
+         pragma Unreferenced (Long, Show_Types);
       begin
          Result.Append
             (Format.Parameter_String
@@ -1140,10 +1170,11 @@ package body GNATCOLL.SQL_Impl is
       ----------------------
 
       overriding procedure Append_To_String
-        (Self   : Typed_Named_Field_Internal;
-         Format : Formatter'Class;
-         Long   : Boolean;
-         Result : in out XString)
+        (Self       : Typed_Named_Field_Internal;
+         Format     : Formatter'Class;
+         Result     : in out XString;
+         Long       : Boolean;
+         Show_Types : Boolean)
       is
          pragma Unreferenced (Long);
 
@@ -1151,8 +1182,16 @@ package body GNATCOLL.SQL_Impl is
          --  be Nan or Inf when using float
          pragma Validity_Checks (Off);
       begin
-         Result.Append
-            (To_SQL (Format, Self.Data_Value, Quote => True));
+         if Show_Types then
+            Format.Append_To_String_And_Cast
+               (Field    =>
+                   To_SQL (Format, Self.Data_Value, Quote => True),
+                Result   => Result,
+                SQL_Type => SQL_Type (Default_Constraints));
+         else
+            Result.Append
+               (To_SQL (Format, Self.Data_Value, Quote => True));
+         end if;
       end Append_To_String;
 
       ----------------
@@ -1199,7 +1238,7 @@ package body GNATCOLL.SQL_Impl is
       function Expression (Value : Ada_Type) return Field'Class is
          Data : Typed_Named_Field_Internal (Field_Std);
       begin
-         Data.Data_Value := Ada_To_Stored (Value);
+         Data.Data_Value  := Ada_To_Stored (Value);
          return Internal_From_Data (Data);
       end Expression;
 
@@ -1743,10 +1782,11 @@ package body GNATCOLL.SQL_Impl is
    ----------------------
 
    procedure Append_To_String
-      (Self      : Table_List.Vector;
-       Format    : Formatter'Class;
-       Separator : String;
-       Result    : in out GNATCOLL.Strings.XString)
+      (Self       : Table_List.Vector;
+       Format     : Formatter'Class;
+       Separator  : String;
+       Result     : in out GNATCOLL.Strings.XString;
+       Show_Types : Boolean)
    is
       Is_First : Boolean := True;
    begin
@@ -1756,7 +1796,7 @@ package body GNATCOLL.SQL_Impl is
          else
             Result.Append (Separator);
          end if;
-         Append_To_String (C, Format, Result);
+         Append_To_String (C, Format, Result, Show_Types => Show_Types);
       end loop;
    end Append_To_String;
 
@@ -1765,13 +1805,16 @@ package body GNATCOLL.SQL_Impl is
    ----------------------
 
    procedure Append_To_String
-      (Self      : SQL_Table_List;
-       Format    : Formatter'Class;
-       Separator : String;
-       Result    : in out GNATCOLL.Strings.XString) is
+      (Self       : SQL_Table_List;
+       Format     : Formatter'Class;
+       Separator  : String;
+       Result     : in out GNATCOLL.Strings.XString;
+       Show_Types : Boolean) is
    begin
       if not Self.Data.Is_Null then
-         Append_To_String (Self.Data.Get, Format, Separator, Result);
+         Append_To_String
+            (Self.Data.Get, Format, Separator, Result,
+             Show_Types => Show_Types);
       end if;
    end Append_To_String;
 
@@ -1780,11 +1823,12 @@ package body GNATCOLL.SQL_Impl is
    ----------------------
 
    procedure Append_To_String
-      (Self      : SQL_Table_List;
-       Format    : Formatter'Class;
-       Result    : in out GNATCOLL.Strings.XString) is
+      (Self       : SQL_Table_List;
+       Format     : Formatter'Class;
+       Result     : in out GNATCOLL.Strings.XString;
+       Show_Types : Boolean) is
    begin
-      Append_To_String (Self, Format, ", ", Result);
+      Append_To_String (Self, Format, ", ", Result, Show_Types => Show_Types);
    end Append_To_String;
 
     -------------------
@@ -1814,7 +1858,8 @@ package body GNATCOLL.SQL_Impl is
       pragma Unreferenced (Long);
    begin
       Append_To_String
-         (Self.Rows, Format, Separator => Self.Op.all, Result => Result);
+         (Self.Rows, Format, Separator => Self.Op.all, Result => Result,
+          Show_Types => False);
    end Append_To_String;
 
    -------------------

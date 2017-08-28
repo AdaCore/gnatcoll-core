@@ -114,6 +114,14 @@ package GNATCOLL.SQL_Impl is
    --  Typ describes the type of the parameter, and is returned by the
    --  SQL_Parameter primitive operation Describe_Type;
 
+   procedure Append_To_String_And_Cast
+     (Self     : Formatter;
+      Field    : String;
+      Result   : in out XString;
+      SQL_Type : String) is abstract;
+   --  Outputs Field to the string, while doing a type cast to SQL_Type if the
+   --  latter is specified.
+
    generic
       type Base_Type is digits <>;
    function Any_Float_To_SQL
@@ -239,9 +247,10 @@ package GNATCOLL.SQL_Impl is
    --  Append all the tables referenced in Self to To
 
    procedure Append_To_String
-     (Self   : SQL_Table_Or_List;
-      Format : Formatter'Class;
-      Result : in out XString) is abstract;
+     (Self       : SQL_Table_Or_List;
+      Format     : Formatter'Class;
+      Result     : in out XString;
+      Show_Types : Boolean) is abstract;
    --  Convert the table to a string
 
    type SQL_Single_Table (Instance : GNATCOLL.SQL_Impl.Cst_String_Access;
@@ -268,10 +277,11 @@ package GNATCOLL.SQL_Impl is
    --  Helpers to build a list of tables
 
    procedure Append_To_String
-      (Self      : SQL_Table_List;
-       Format    : Formatter'Class;
-       Separator : String;
-       Result    : in out GNATCOLL.Strings.XString);
+      (Self       : SQL_Table_List;
+       Format     : Formatter'Class;
+       Separator  : String;
+       Result     : in out GNATCOLL.Strings.XString;
+       Show_Types : Boolean);
    --  Append to the existing Result string the list of all tables,
    --  with Separator between each. For instance:
    --      Table1 ', ' Table2 ', ' Table3
@@ -287,28 +297,35 @@ package GNATCOLL.SQL_Impl is
    --  Either a single field or a list of fields
 
    procedure Append_To_String
-     (Self   : SQL_Field_Or_List;
-      Format : Formatter'Class;
-      Long   : Boolean := True;
-      Result : in out XString) is abstract;
-   --  Convert the field to a string. If Long is true, a fully qualified
-   --  name is used (table.name), otherwise just the field name is used
+     (Self       : SQL_Field_Or_List;
+      Format     : Formatter'Class;
+      Result     : in out XString;
+      Long       : Boolean;
+      Show_Types : Boolean) is abstract;
+   --  Convert the field to a string.
+   --  If Long is true, a fully qualified name is used (table.name), otherwise
+   --  just the field name is used.
+   --  If Show_Types is true, and the field represents a static value, its
+   --  is also included when the DBMS supports it (for instance 1::integer on
+   --  postgres).
 
    type SQL_Field_List is new SQL_Field_Or_List with private;
    Empty_Field_List : constant SQL_Field_List;
    --  A list of fields, as used in a SELECT query ("field1, field2");
 
    procedure Append_To_String
-     (Self      : SQL_Field_List;
-      Format    : Formatter'Class;
-      Long      : Boolean := True;
-      Separator : String;
-      Result    : in out XString);
+     (Self       : SQL_Field_List;
+      Format     : Formatter'Class;
+      Separator  : String;
+      Result     : in out XString;
+      Long       : Boolean;
+      Show_Types : Boolean);
    overriding procedure Append_To_String
-     (Self   : SQL_Field_List;
-      Format : Formatter'Class;
-      Long   : Boolean := True;
-      Result : in out XString);
+     (Self       : SQL_Field_List;
+      Format     : Formatter'Class;
+      Result     : in out XString;
+      Long       : Boolean;
+      Show_Types : Boolean);
 
    type SQL_Field (Table : Cst_String_Access;
                    Instance : Cst_String_Access;
@@ -336,10 +353,11 @@ package GNATCOLL.SQL_Impl is
    --  require memory allocation and is thus more efficient.
 
    overriding procedure Append_To_String
-     (Self   : SQL_Field;
-      Format : Formatter'Class;
-      Long   : Boolean := True;
-      Result : in out XString);
+     (Self       : SQL_Field;
+      Format     : Formatter'Class;
+      Result     : in out XString;
+      Long       : Boolean;
+      Show_Types : Boolean);
 
    procedure Append_Tables (Self : SQL_Field; To : in out Table_Sets.Set);
    --  Append the table(s) referenced by Self to To.
@@ -391,10 +409,11 @@ package GNATCOLL.SQL_Impl is
    --  Append a new field to the list
 
    procedure Append_To_String
-     (Self   : SQL_Field_Pointer;
-      Format : Formatter'Class;
-      Long   : Boolean;
-      Result : in out XString);
+     (Self       : SQL_Field_Pointer;
+      Format     : Formatter'Class;
+      Result     : in out XString;
+      Long       : Boolean;
+      Show_Types : Boolean);
    procedure Append_Tables
      (Self : SQL_Field_Pointer; To : in out Table_Sets.Set);
    procedure Append_If_Not_Aggregate
@@ -418,10 +437,11 @@ package GNATCOLL.SQL_Impl is
    procedure Free (Self : in out SQL_Field_Internal) is null;
    procedure Free_Dispatch (Self : in out SQL_Field_Internal'Class);
    procedure Append_To_String
-     (Self   : SQL_Field_Internal;
-      Format : Formatter'Class;
-      Long   : Boolean;
-      Result : in out XString) is abstract;
+     (Self       : SQL_Field_Internal;
+      Format     : Formatter'Class;
+      Result     : in out XString;
+      Long       : Boolean;
+      Show_Types : Boolean) is abstract;
    procedure Append_Tables
      (Self : SQL_Field_Internal; To : in out Table_Sets.Set) is null;
    procedure Append_If_Not_Aggregate
@@ -445,10 +465,11 @@ package GNATCOLL.SQL_Impl is
       end record;
 
       overriding procedure Append_To_String
-        (Self   : Field;
-         Format : Formatter'Class;
-         Long   : Boolean := True;
-         Result : in out XString);
+        (Self       : Field;
+         Format     : Formatter'Class;
+         Result     : in out XString;
+         Long       : Boolean;
+         Show_Types : Boolean);
       overriding procedure Append_Tables
         (Self : Field; To : in out Table_Sets.Set);
       overriding procedure Append_If_Not_Aggregate
@@ -976,9 +997,10 @@ private
       Data : Table_List_Data;
    end record;
    overriding procedure Append_To_String
-     (Self   : SQL_Table_List;
-      Format : Formatter'Class;
-      Result : in out XString);
+     (Self       : SQL_Table_List;
+      Format     : Formatter'Class;
+      Result     : in out XString;
+      Show_Types : Boolean);
    overriding procedure Append_Tables
      (Self : SQL_Table_List; To : in out Table_Sets.Set);
    --  Append all the tables referenced in Self to To

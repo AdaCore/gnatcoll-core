@@ -63,10 +63,11 @@ package body GNATCOLL.SQL is
    end record;
    overriding procedure Free (Self : in out As_Field_Internal);
    overriding procedure Append_To_String
-     (Self   : As_Field_Internal;
-      Format : Formatter'Class;
-      Long   : Boolean;
-      Result : in out XString);
+     (Self       : As_Field_Internal;
+      Format     : Formatter'Class;
+      Result     : in out XString;
+      Long       : Boolean;
+      Show_Types : Boolean);
    overriding procedure Append_Tables
      (Self : As_Field_Internal; To : in out Table_Sets.Set);
    overriding procedure Append_If_Not_Aggregate
@@ -87,10 +88,11 @@ package body GNATCOLL.SQL is
       List           : Field_List.Vector;
    end record;
    overriding procedure Append_To_String
-     (Self   : Multiple_Args_Field_Internal;
-      Format : Formatter'Class;
-      Long   : Boolean;
-      Result : in out XString);
+     (Self       : Multiple_Args_Field_Internal;
+      Format     : Formatter'Class;
+      Result     : in out XString;
+      Long       : Boolean;
+      Show_Types : Boolean);
    overriding procedure Append_Tables
      (Self : Multiple_Args_Field_Internal; To : in out Table_Sets.Set);
    overriding procedure Append_If_Not_Aggregate
@@ -114,10 +116,11 @@ package body GNATCOLL.SQL is
    end record;
    overriding procedure Free (Self : in out Aggregate_Field_Internal);
    overriding procedure Append_To_String
-     (Self   : Aggregate_Field_Internal;
-      Format : Formatter'Class;
-      Long   : Boolean;
-      Result : in out XString);
+     (Self       : Aggregate_Field_Internal;
+      Format     : Formatter'Class;
+      Result     : in out XString;
+      Long       : Boolean;
+      Show_Types : Boolean);
    overriding procedure Append_Tables
      (Self : Aggregate_Field_Internal; To : in out Table_Sets.Set);
    overriding procedure Append_If_Not_Aggregate
@@ -134,10 +137,11 @@ package body GNATCOLL.SQL is
       Query  : SQL_Query;
    end record;
    overriding procedure Append_To_String
-     (Self   : Query_Field_Internal;
-      Format : Formatter'Class;
-      Long   : Boolean;
-      Result : in out XString);
+     (Self       : Query_Field_Internal;
+      Format     : Formatter'Class;
+      Result     : in out XString;
+      Long       : Boolean;
+      Show_Types : Boolean);
    overriding procedure Append_Tables
      (Self : Query_Field_Internal; To : in out Table_Sets.Set) is null;
    overriding procedure Append_If_Not_Aggregate
@@ -155,10 +159,11 @@ package body GNATCOLL.SQL is
       Sorted    : SQL_Field_Pointer;
    end record;
    overriding procedure Append_To_String
-     (Self   : Sorted_Field_Internal;
-      Format : Formatter'Class;
-      Long   : Boolean;
-      Result : in out XString);
+     (Self       : Sorted_Field_Internal;
+      Format     : Formatter'Class;
+      Result     : in out XString;
+      Long       : Boolean;
+      Show_Types : Boolean);
    overriding procedure Append_Tables
      (Self : Sorted_Field_Internal; To : in out Table_Sets.Set);
    overriding procedure Append_If_Not_Aggregate
@@ -305,18 +310,21 @@ package body GNATCOLL.SQL is
    ----------------------
 
    procedure Append_To_String
-     (Self   : SQL_Left_Join_Table;
-      Format : Formatter'Class;
-      Result : in out XString)
+     (Self       : SQL_Left_Join_Table;
+      Format     : Formatter'Class;
+      Result     : in out XString;
+      Show_Types : Boolean)
    is
+      pragma Unreferenced (Show_Types);
       Ref    : constant Join_Table_Pointers.Reference_Type := Self.Data.Get;
    begin
       Result.Append ('(');
       Append_To_String
          (Ref.Tables,
-          Separator => (if Ref.Is_Left_Join then " LEFT JOIN " else " JOIN "),
-          Format    => Format,
-          Result    => Result);
+          Separator  => (if Ref.Is_Left_Join then " LEFT JOIN " else " JOIN "),
+          Format     => Format,
+          Result     => Result,
+          Show_Types => False);
 
       if Ref.On /= No_Criteria then
          Result.Append (" ON ");
@@ -335,12 +343,13 @@ package body GNATCOLL.SQL is
    ----------------------
 
    procedure Append_To_String
-     (Self   : Subquery_Table;
-      Format : Formatter'Class;
-      Result : in out XString) is
+     (Self       : Subquery_Table;
+      Format     : Formatter'Class;
+      Result     : in out XString;
+      Show_Types : Boolean) is
    begin
       Result.Append ('(');
-      Append_To_String (Self.Query, Format, Result);
+      Append_To_String (Self.Query, Format, Result, Show_Types => Show_Types);
 
       if Self.Instance /= null then
          Result.Append (") ");
@@ -365,12 +374,17 @@ package body GNATCOLL.SQL is
                         Result);
    end Append_To_String;
 
+   ----------------------
+   -- Append_To_String --
+   ----------------------
+
    overriding procedure Append_To_String
-     (Self   : SQL_Table;
-      Format : Formatter'Class;
-      Result : in out XString)
+     (Self       : SQL_Table;
+      Format     : Formatter'Class;
+      Result     : in out XString;
+      Show_Types : Boolean)
    is
-      pragma Unreferenced (Format);
+      pragma Unreferenced (Format, Show_Types);
    begin
       Append_To_String (Self, Result);
    end Append_To_String;
@@ -418,12 +432,15 @@ package body GNATCOLL.SQL is
    ----------------------
 
    procedure Append_To_String
-     (Self   : As_Field_Internal;
-      Format : Formatter'Class;
-      Long   : Boolean;
-      Result : in out XString) is
+     (Self       : As_Field_Internal;
+      Format     : Formatter'Class;
+      Result     : in out XString;
+      Long       : Boolean;
+      Show_Types : Boolean) is
    begin
-      Append_To_String (Self.Renamed, Format, Long, Result);
+      Append_To_String
+         (Self.Renamed, Format, Result,
+          Long => Long, Show_Types => Show_Types);
       Result.Append (" AS ");
       Result.Append (GNATCOLL.SQL.Inspect.Quote_Keyword (Self.As.all));
    end Append_To_String;
@@ -433,12 +450,14 @@ package body GNATCOLL.SQL is
    ---------------------
 
    procedure Append_To_String
-     (Self   : Sorted_Field_Internal;
-      Format : Formatter'Class;
-      Long   : Boolean;
-      Result : in out XString) is
+     (Self       : Sorted_Field_Internal;
+      Format     : Formatter'Class;
+      Result     : in out XString;
+      Long       : Boolean;
+      Show_Types : Boolean) is
    begin
-      Append_To_String (Self.Sorted, Format, Long, Result);
+      Append_To_String
+         (Self.Sorted, Format, Result, Long => Long, Show_Types => Show_Types);
 
       if Self.Ascending then
          Result.Append (" ASC");
@@ -452,10 +471,11 @@ package body GNATCOLL.SQL is
    ----------------------
 
    procedure Append_To_String
-     (Self   : Multiple_Args_Field_Internal;
-      Format : Formatter'Class;
-      Long   : Boolean;
-      Result : in out XString)
+     (Self       : Multiple_Args_Field_Internal;
+      Format     : Formatter'Class;
+      Result     : in out XString;
+      Long       : Boolean;
+      Show_Types : Boolean)
    is
       Is_First : Boolean := True;
    begin
@@ -470,7 +490,8 @@ package body GNATCOLL.SQL is
             Result.Append (Self.Separator.all);
          end if;
 
-         Append_To_String (C, Format, Long, Result);
+         Append_To_String
+            (C, Format, Result, Long => Long, Show_Types => Show_Types);
       end loop;
 
       if Self.Suffix /= null then
@@ -483,23 +504,27 @@ package body GNATCOLL.SQL is
    ----------------------
 
    procedure Append_To_String
-     (Self   : Case_Stmt_Internal;
-      Format : Formatter'Class;
-      Long   : Boolean;
-      Result : in out XString) is
+     (Self       : Case_Stmt_Internal;
+      Format     : Formatter'Class;
+      Result     : in out XString;
+      Long       : Boolean;
+      Show_Types : Boolean) is
    begin
       Result.Append ("CASE");
 
       for C of Self.Criteria.List loop
          Result.Append (" WHEN ");
-         Append_To_String (C.Criteria, Format, True, Result);
+         Append_To_String (C.Criteria, Format, Result => Result, Long => True);
          Result.Append (" THEN ");
-         Append_To_String (C.Field, Format, Long, Result);
+         Append_To_String
+            (C.Field, Format, Result, Long => Long, Show_Types => Show_Types);
       end loop;
 
       if Self.Else_Clause /= No_Field_Pointer then
          Result.Append (" ELSE ");
-         Append_To_String (Self.Else_Clause, Format, Long, Result);
+         Append_To_String
+            (Self.Else_Clause, Format, Result,
+             Long => Long, Show_Types => Show_Types);
       end if;
 
       Result.Append (" END");
@@ -832,18 +857,22 @@ package body GNATCOLL.SQL is
    ----------------------
 
    procedure Append_To_String
-     (Self   : Aggregate_Field_Internal;
-      Format : Formatter'Class;
-      Long   : Boolean;
-      Result : in out XString)
+     (Self       : Aggregate_Field_Internal;
+      Format     : Formatter'Class;
+      Result     : in out XString;
+      Long       : Boolean;
+      Show_Types : Boolean)
    is
+      pragma Unreferenced (Show_Types);
    begin
       if Self.Func /= null then
          Result.Append (Self.Func.all);
          Result.Append (" (");
       end if;
 
-      Append_To_String (Self.Params, Format, Long, ", ", Result);
+      Append_To_String
+         (Self.Params, Format, ", ", Result,
+          Long => Long, Show_Types => False);
 
       if Self.Criteria /= No_Criteria then
          Append_To_String
@@ -854,7 +883,9 @@ package body GNATCOLL.SQL is
 
       if Self.Order_By /= Empty_Field_List then
          Result.Append (" ORDER BY ");
-         Append_To_String (Self.Order_By, Format, Long, ", ", Result);
+         Append_To_String
+            (Self.Order_By, Format, ", ", Result,
+             Long => Long, Show_Types => False);
       end if;
 
       if Self.Func /= null then
@@ -1333,19 +1364,22 @@ package body GNATCOLL.SQL is
 
          when Criteria_In | Criteria_Not_In =>
             Append_To_String
-               (Self.List, Format, Long => Long,
-                Separator => ",", Result => List);
-            Append_To_String (Self.Subquery, Format, List);
+               (Self.List, Format, Separator => ",",
+                Result => List, Long => Long, Show_Types => False);
+            Append_To_String
+               (Self.Subquery, Format, List, Show_Types => False);
             List.Append (Self.In_String);
 
             if List = "" then
                --  "A in ()" is same as "False"
                --  "A not in ()" is same as "True"
 
-               Expression (Self.Op = Criteria_Not_In)
-                  .Append_To_String (Format, Long, Result);
+               Expression (Self.Op = Criteria_Not_In).Append_To_String
+                  (Format, Result, Long => Long, Show_Types => False);
             else
-               Append_To_String (Self.Arg, Format, Long, Result);
+               Append_To_String
+                  (Self.Arg, Format, Result,
+                  Long => Long, Show_Types => False);
                Result.Append
                   ((if Self.Op = Criteria_In then " IN (" else " NOT IN ("));
                Result.Append (List);
@@ -1354,23 +1388,28 @@ package body GNATCOLL.SQL is
 
          when Criteria_Exists =>
             Result.Append ("EXISTS (");
-            Append_To_String (Self.Subquery2, Format, Result);
+            Append_To_String
+               (Self.Subquery2, Format, Result, Show_Types => False);
             Result.Append (')');
 
          when Criteria_Between | Criteria_Not_Between =>
-            Append_To_String (Self.Arg2, Format, Long, Result);
+            Append_To_String
+               (Self.Arg2, Format, Result, Long => Long, Show_Types => False);
 
             if Self.Op = Criteria_Not_Between then
                Result.Append (" NOT");
             end if;
 
             Result.Append (" BETWEEN ");
-            Append_To_String (Self.Left, Format, Long, Result);
+            Append_To_String
+               (Self.Left, Format, Result, Long => Long, Show_Types => False);
             Result.Append (" AND ");
-            Append_To_String (Self.Right, Format, Long, Result);
+            Append_To_String
+               (Self.Right, Format, Result, Long => Long, Show_Types => False);
 
          when Null_Criteria =>
-            Append_To_String (Self.Arg3, Format, Long, Result);
+            Append_To_String
+               (Self.Arg3, Format, Result, Long => Long, Show_Types => False);
 
             case Self.Op is
                when Criteria_Null     => Result.Append (" IS NULL");
@@ -1409,9 +1448,10 @@ package body GNATCOLL.SQL is
    ----------------------
 
    overriding procedure Append_To_String
-     (Self   : Query_Values_Contents;
-      Format : Formatter'Class;
-      Result : in out XString)
+     (Self       : Query_Values_Contents;
+      Format     : Formatter'Class;
+      Result     : in out XString;
+      Show_Types : Boolean)
    is
       Is_First : Boolean := True;
    begin
@@ -1419,15 +1459,17 @@ package body GNATCOLL.SQL is
 
       for R in Self.Values'Range loop
          if Is_First then
-            Is_First := False;
             Result.Append ('(');
          else
             Result.Append (", (");
          end if;
 
          Append_To_String
-            (Self.Values (R), Format, Long => True, Result => Result);
+            (Self.Values (R), Format, Result,
+             Long => True, Show_Types => Show_Types and Is_First);
          Result.Append (')');
+
+         Is_First := False;
       end loop;
    end Append_To_String;
 
@@ -1502,24 +1544,27 @@ package body GNATCOLL.SQL is
    ----------------------
 
    overriding procedure Append_To_String
-     (Self   : Query_Select_Contents;
-      Format : Formatter'Class;
-      Result : in out XString)
-   is
+     (Self       : Query_Select_Contents;
+      Format     : Formatter'Class;
+      Result     : in out XString;
+      Show_Types : Boolean) is
    begin
       Result.Append ("SELECT ");
 
       if Self.Distinct_On /= Empty_Field_List then
          Result.Append ("DISTINCT ON (");
          Append_To_String
-            (Self.Distinct_On, Format, Long => False, Result => Result);
+            (Self.Distinct_On, Format, Result,
+             Long => False, Show_Types => False);
          Result.Append (") ");
 
       elsif Self.Distinct then
          Result.Append ("DISTINCT ");
       end if;
 
-      Append_To_String (Self.Fields, Format, Long => True, Result => Result);
+      Append_To_String
+         (Self.Fields, Format, Result,
+          Long => True, Show_Types => Show_Types);
 
       if Self.Tables /= Empty_Table_List
         or else not Is_Empty (Self.Extra_Tables)
@@ -1527,7 +1572,7 @@ package body GNATCOLL.SQL is
          Result.Append (" FROM ");
          Append_To_String
             (Self.Tables, Separator => ", ", Format => Format,
-             Result => Result);
+             Result => Result, Show_Types => Show_Types);
 
          if not Self.Extra_Tables.Is_Empty then
             if Self.Tables /= Empty_Table_List then
@@ -1546,7 +1591,8 @@ package body GNATCOLL.SQL is
       if Self.Group_By /= Empty_Field_List then
          Result.Append (" GROUP BY ");
          Append_To_String
-            (Self.Group_By, Format, Long => True, Result => Result);
+            (Self.Group_By, Format, Result,
+             Long => True, Show_Types => False);
          if Self.Having /= No_Criteria then
             Result.Append (" HAVING ");
             Append_To_String (Self.Having, Format, Result => Result);
@@ -1556,7 +1602,7 @@ package body GNATCOLL.SQL is
       if Self.Order_By /= Empty_Field_List then
          Result.Append (" ORDER BY ");
          Append_To_String
-            (Self.Order_By, Format, Long => True, Result => Result);
+            (Self.Order_By, Format, Result, Long => True, Show_Types => False);
       end if;
 
       --  Need to output LIMIT before OFFSET for sqlite. This seems to be
@@ -1605,24 +1651,25 @@ package body GNATCOLL.SQL is
    ----------------------
 
    overriding procedure Append_To_String
-     (Self   : Query_Union_Contents;
-      Format : Formatter'Class;
-      Result : in out XString) is
+     (Self       : Query_Union_Contents;
+      Format     : Formatter'Class;
+      Result     : in out XString;
+      Show_Types : Boolean) is
    begin
-      Append_To_String (Self.Q1, Format, Result);
+      Append_To_String (Self.Q1, Format, Result, Show_Types => Show_Types);
       Result.Append (" UNION ");
 
       if not Self.Distinct then
          Result.Append ("ALL ");
       end if;
 
-      Append_To_String (Self.Q2, Format, Result);
+      Append_To_String (Self.Q2, Format, Result, Show_Types => Show_Types);
       Result.Append (' ');
 
       if Self.Order_By /= Empty_Field_List then
          Result.Append (" ORDER BY ");
          Append_To_String
-            (Self.Order_By, Format, Long => True, Result => Result);
+            (Self.Order_By, Format, Result, Long => True, Show_Types => False);
       end if;
 
       --  Need to output LIMIT before OFFSET for sqlite. This seems to be
@@ -1641,12 +1688,14 @@ package body GNATCOLL.SQL is
    ----------------------
 
    procedure Append_To_String
-      (Self   : SQL_Query;
-       Format : Formatter'Class;
-       Result : in out XString) is
+      (Self       : SQL_Query;
+       Format     : Formatter'Class;
+       Result     : in out XString;
+       Show_Types : Boolean) is
    begin
       if Self.Get /= null then
-         Append_To_String (Self.Get.all, Format, Result);
+         Append_To_String
+            (Self.Get.all, Format, Result, Show_Types => Show_Types);
       end if;
    end Append_To_String;
 
@@ -1655,14 +1704,15 @@ package body GNATCOLL.SQL is
    ---------------
 
    function To_String
-     (Self   : SQL_Query;
-      Format : Formatter'Class)
+     (Self       : SQL_Query;
+      Format     : Formatter'Class;
+      Show_Types : Boolean := False)
      return String
    is
       Result : XString;
    begin
       Result.Reserve (1024);
-      Append_To_String (Self, Format, Result);
+      Append_To_String (Self, Format, Result, Show_Types => Show_Types);
       return Result.To_String;
    end To_String;
 
@@ -2059,10 +2109,12 @@ package body GNATCOLL.SQL is
    ----------------------
 
    procedure Append_To_String
-     (Self   : Query_Create_Table_As_Contents;
-      Format : Formatter'Class;
-      Result : in out XString)
+     (Self       : Query_Create_Table_As_Contents;
+      Format     : Formatter'Class;
+      Result     : in out XString;
+      Show_Types : Boolean)
    is
+      pragma Unreferenced (Show_Types);
    begin
       Result.Append ("CREATE ");
 
@@ -2091,7 +2143,11 @@ package body GNATCOLL.SQL is
       end if;
 
       Result.Append (" AS (");
-      Append_To_String (Self.As, Format, Result);
+
+      --  When needed (a VALUES (1::integer) for instance) we should display
+      --  the type of static values. This is so that postgres can infer the
+      --  type of the columns.
+      Append_To_String (Self.As, Format, Result, Show_Types => True);
       Result.Append (')');
 
       if Self.With_No_Data then
@@ -2121,13 +2177,15 @@ package body GNATCOLL.SQL is
    ----------------------
 
    procedure Append_To_String
-     (Self   : Query_Delete_Contents;
-      Format : Formatter'Class;
-      Result : in out XString)
+     (Self       : Query_Delete_Contents;
+      Format     : Formatter'Class;
+      Result     : in out XString;
+      Show_Types : Boolean)
    is
+      pragma Unreferenced (Show_Types);
    begin
       Result.Append ("DELETE FROM ");
-      Append_To_String (Self.Table, Format, Result);
+      Append_To_String (Self.Table, Format, Result, Show_Types => False);
 
       if Self.Where /= No_Criteria then
          Result.Append (" WHERE ");
@@ -2215,10 +2273,10 @@ package body GNATCOLL.SQL is
    ----------------------
 
    procedure Append_To_String
-     (Self   : Query_Insert_Contents;
-      Format : Formatter'Class;
-      Result : in out XString)
-   is
+     (Self       : Query_Insert_Contents;
+      Format     : Formatter'Class;
+      Result     : in out XString;
+      Show_Types : Boolean) is
    begin
       if Self.Qualifier = "" then
          Result.Append ("INSERT INTO ");
@@ -2236,7 +2294,8 @@ package body GNATCOLL.SQL is
          if Self.Fields /= Empty_Field_List then
             Result.Append (" (");
             Append_To_String
-               (Self.Fields, Format, Long => False, Result => Result);
+               (Self.Fields, Format, Result,
+                Long => False, Show_Types => False);
             Result.Append (')');
          end if;
 
@@ -2254,7 +2313,8 @@ package body GNATCOLL.SQL is
 
          if Self.Subquery /= No_Query then
             Result.Append (' ');
-            Append_To_String (Self.Subquery, Format, Result);
+            Append_To_String
+               (Self.Subquery, Format, Result, Show_Types => Show_Types);
          end if;
       end if;
    end Append_To_String;
@@ -2353,14 +2413,15 @@ package body GNATCOLL.SQL is
    ----------------------
 
    procedure Append_To_String
-     (Self   : Query_Update_Contents;
-      Format : Formatter'Class;
-      Result : in out XString)
+     (Self       : Query_Update_Contents;
+      Format     : Formatter'Class;
+      Result     : in out XString;
+      Show_Types : Boolean)
    is
       Is_First : Boolean;
    begin
       Result.Append ("UPDATE ");
-      Append_To_String (Self.Table, Format, Result);
+      Append_To_String (Self.Table, Format, Result, Show_Types => False);
 
       Result.Append (" SET ");
       Append_To_String
@@ -2370,7 +2431,8 @@ package body GNATCOLL.SQL is
         or else not Is_Empty (Self.Extra_From)
       then
          Result.Append (" FROM ");
-         Append_To_String (Self.From, Format, Result);
+         Append_To_String
+            (Self.From, Format, Result, Show_Types => Show_Types);
 
          if not Is_Empty (Self.Extra_From) then
             if not Self.From.Is_Empty then
@@ -2475,11 +2537,12 @@ package body GNATCOLL.SQL is
    ----------------------
 
    procedure Append_To_String
-     (Self   : Simple_Query_Contents;
-      Format : Formatter'Class;
-      Result : in out XString)
+     (Self       : Simple_Query_Contents;
+      Format     : Formatter'Class;
+      Result     : in out XString;
+      Show_Types : Boolean)
    is
-      pragma Unreferenced (Format);
+      pragma Unreferenced (Format, Show_Types);
    begin
       Result.Append (Self.Command);
    end Append_To_String;
@@ -2729,15 +2792,16 @@ package body GNATCOLL.SQL is
    ----------------------
 
    overriding procedure Append_To_String
-     (Self   : Query_Field_Internal;
-      Format : Formatter'Class;
-      Long   : Boolean;
-      Result : in out XString)
+     (Self       : Query_Field_Internal;
+      Format     : Formatter'Class;
+      Result     : in out XString;
+      Long       : Boolean;
+      Show_Types : Boolean)
    is
       pragma Unreferenced (Long);
    begin
       Result.Append ('(');
-      Append_To_String (Self.Query, Format, Result);
+      Append_To_String (Self.Query, Format, Result, Show_Types => Show_Types);
       Result.Append (')');
    end Append_To_String;
 

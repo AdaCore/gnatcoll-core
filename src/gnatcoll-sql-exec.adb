@@ -331,7 +331,8 @@ package body GNATCOLL.SQL.Exec is
    begin
       if S.Query_Str.Length = 0 then
          S.Query_Str.Reserve (1024);
-         Append_To_String (S.Query, Connection.all, S.Query_Str);
+         Append_To_String
+            (S.Query, Connection.all, S.Query_Str, Show_Types => False);
 
          if Active (Me_Query) then
             Trace
@@ -931,7 +932,7 @@ package body GNATCOLL.SQL.Exec is
       Q : XString;
    begin
       Q.Reserve (1024);
-      Append_To_String (Query, Connection.all, Q);
+      Append_To_String (Query, Connection.all, Q, Show_Types => False);
       Q.Access_String (Do_Run'Access);
       return R;
    end Insert_And_Get_PK;
@@ -994,7 +995,7 @@ package body GNATCOLL.SQL.Exec is
       Q : XString;
    begin
       Q.Reserve (1024);
-      Append_To_String (Query, Connection.all, Q);
+      Append_To_String (Query, Connection.all, Q, Show_Types => False);
       Q.Access_String (Do_Run'Access);
    end Fetch;
 
@@ -1033,7 +1034,7 @@ package body GNATCOLL.SQL.Exec is
       Q : XString;
    begin
       Q.Reserve (1024);
-      Append_To_String (Query, Connection.all, Q);
+      Append_To_String (Query, Connection.all, Q, Show_Types => False);
       Q.Access_String (Do_Run'Access);
    end Fetch;
 

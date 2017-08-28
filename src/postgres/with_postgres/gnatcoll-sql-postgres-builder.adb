@@ -92,6 +92,11 @@ package body GNATCOLL.SQL.Postgres.Builder is
      (Self       : Postgresql_Connection_Record;
       Index      : Positive;
       Type_Descr : String) return String;
+   overriding procedure Append_To_String_And_Cast
+     (Self       : Postgresql_Connection_Record;
+      Field      : String;
+      Result     : in out XString;
+      SQL_Type   : String);
    overriding function Can_Alter_Table_Constraints
      (Self : access Postgresql_Connection_Record) return Boolean;
    overriding function Has_Pragmas
@@ -806,7 +811,8 @@ package body GNATCOLL.SQL.Postgres.Builder is
          Last := Last - 1;
       end loop;
 
-      PK.Append_To_String (Connection.all, Result => P);
+      PK.Append_To_String
+         (Connection.all, Result => P, Long => True, Show_Types => False);
 
       R.Fetch (Connection,
                Query (Query'First .. Last)
@@ -1369,6 +1375,24 @@ package body GNATCOLL.SQL.Postgres.Builder is
          return '$' & Image (Index, 0) & "::" & Type_Descr;
       end if;
    end Parameter_String;
+
+   -------------------------------
+   -- Append_To_String_And_Cast --
+   -------------------------------
+
+   overriding procedure Append_To_String_And_Cast
+     (Self       : Postgresql_Connection_Record;
+      Field      : String;
+      Result     : in out XString;
+      SQL_Type   : String)
+   is
+      pragma Unreferenced (Self);
+   begin
+      Result.Append (Field);
+      if SQL_Type /= "" then
+         Result.Append ("::" & SQL_Type);
+      end if;
+   end Append_To_String_And_Cast;
 
    ------------------------------
    -- Field_Type_Autoincrement --

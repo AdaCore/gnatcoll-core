@@ -42,9 +42,10 @@ package body GNATCOLL.SQL.Postgres is
    end record;
    overriding procedure Free (Self : in out Query_Postgres_Contents);
    overriding procedure Append_To_String
-     (Self   : Query_Postgres_Contents;
-      Format : Formatter'Class;
-      Result : in out XString);
+     (Self       : Query_Postgres_Contents;
+      Format     : Formatter'Class;
+      Result     : in out XString;
+      Show_Types : Boolean);
    overriding procedure Auto_Complete
      (Self                   : in out Query_Postgres_Contents;
       Auto_Complete_From     : Boolean := True;
@@ -110,11 +111,13 @@ package body GNATCOLL.SQL.Postgres is
    ----------------------
 
    overriding procedure Append_To_String
-     (Self   : Query_Postgres_Contents;
-      Format : Formatter'Class;
-      Result : in out XString) is
+     (Self       : Query_Postgres_Contents;
+      Format     : Formatter'Class;
+      Result     : in out XString;
+      Show_Types : Boolean) is
    begin
-      Append_To_String (Self.Base, Format, Result);
+      Append_To_String
+         (Self.Base, Format, Result => Result, Show_Types => Show_Types);
       Append_To_String (Self.Extra.all, Format, Result);
    end Append_To_String;
 
@@ -431,7 +434,7 @@ package body GNATCOLL.SQL.Postgres is
       Result.Append (" FOR UPDATE");
       if Self.Tables /= Empty_Table_List then
          Result.Append (" OF ");
-         Append_To_String (Self.Tables, Format, Result);
+         Append_To_String (Self.Tables, Format, Result, Show_Types => False);
       end if;
 
       if Self.No_Wait then
@@ -450,7 +453,8 @@ package body GNATCOLL.SQL.Postgres is
    begin
       Append (Result, " RETURNING ");
       Append_To_String
-         (Self.Returning, Format, Long => True, Result => Result);
+         (Self.Returning, Format, Long => True, Result => Result,
+          Show_Types => False);
    end Append_To_String;
 
    ----------------------
@@ -469,7 +473,8 @@ package body GNATCOLL.SQL.Postgres is
       elsif Self.Column /= No_Field_Pointer then
          Result.Append (" ON CONFLICT (");
          Append_To_String
-            (Self.Column, Format, Long => False, Result => Result);
+            (Self.Column, Format, Result => Result,
+             Long => False, Show_Types => False);
          Result.Append (')');
       else
          Result.Append (" ON CONFLICT");

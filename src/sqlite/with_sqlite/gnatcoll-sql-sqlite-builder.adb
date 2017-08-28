@@ -76,6 +76,11 @@ package body GNATCOLL.SQL.Sqlite.Builder is
       Index      : Positive;
       Type_Descr : String) return String
      is ('?' & Image (Index, 0));
+   overriding procedure Append_To_String_And_Cast
+     (Self     : Sqlite_Connection_Record;
+      Field    : String;
+      Result   : in out XString;
+      SQL_Type : String);
    overriding procedure Close
      (Connection : access Sqlite_Connection_Record);
    overriding function Field_Type_Autoincrement
@@ -346,6 +351,25 @@ package body GNATCOLL.SQL.Sqlite.Builder is
       Close (Connection.DB, Finalize_Prepared_Statements => True);
       Connection.DB := No_Database;
    end Close;
+
+   -------------------------------
+   -- Append_To_String_And_Cast --
+   -------------------------------
+
+   overriding procedure Append_To_String_And_Cast
+     (Self     : Sqlite_Connection_Record;
+      Field    : String;
+      Result   : in out XString;
+      SQL_Type : String)
+   is
+      pragma Unreferenced (Self);
+   begin
+      if SQL_Type = "" then
+         Result.Append (Field);
+      else
+         Result.Append ("CAST (" & Field & " AS " & SQL_Type & ')');
+      end if;
+   end Append_To_String_And_Cast;
 
    -------------------
    -- Force_Connect --

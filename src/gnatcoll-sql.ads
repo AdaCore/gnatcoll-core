@@ -155,9 +155,10 @@ package GNATCOLL.SQL is
       is abstract new SQL_Single_Table with private;
 
    overriding procedure Append_To_String
-     (Self   : SQL_Table;
-      Format : Formatter'Class;
-      Result : in out XString);
+     (Self       : SQL_Table;
+      Format     : Formatter'Class;
+      Result     : in out XString;
+      Show_Types : Boolean);
    --  A table representing a field of a specific table.
    --  If Instance is specified (i.e. not null), the FROM clause will include:
    --        SELECT ... FROM Table_Name Instance, ...
@@ -1349,23 +1350,31 @@ package GNATCOLL.SQL is
    --  from the result of the query.
 
    overriding procedure Append_To_String
-     (Self   : Subquery_Table;
-      Format : Formatter'Class;
-      Result : in out XString);
+     (Self       : Subquery_Table;
+      Format     : Formatter'Class;
+      Result     : in out XString;
+      Show_Types : Boolean);
 
    ---------------------------
    -- Conversion to strings --
    ---------------------------
 
    function To_String
-      (Self   : SQL_Query;
-       Format : Formatter'Class)
+      (Self       : SQL_Query;
+       Format     : Formatter'Class;
+       Show_Types : Boolean := False)
       return String;
    procedure Append_To_String
-      (Self   : SQL_Query;
-       Format : Formatter'Class;
-       Result : in out XString);
-   --  Transform Self into a valid SQL string
+      (Self       : SQL_Query;
+       Format     : Formatter'Class;
+       Result     : in out XString;
+       Show_Types : Boolean);
+   --  Transform Self into a valid SQL string.
+   --
+   --  If Show_Types is true, static values will have a type indication
+   --  (as in '1::integer') for databases where this is meaningful. This
+   --  is used to help the databsae infer types, for instance when creating
+   --  a temporary table based on a query.
 
 private
 
@@ -1416,10 +1425,11 @@ private
    end record;
    type Case_Stmt_Internal_Access is access all Case_Stmt_Internal'Class;
    overriding procedure Append_To_String
-     (Self   : Case_Stmt_Internal;
-      Format : Formatter'Class;
-      Long   : Boolean;
-      Result : in out XString);
+     (Self       : Case_Stmt_Internal;
+      Format     : Formatter'Class;
+      Result     : in out XString;
+      Long       : Boolean;
+      Show_Types : Boolean);
    overriding procedure Append_Tables
      (Self : Case_Stmt_Internal; To : in out Table_Sets.Set);
    overriding procedure Append_If_Not_Aggregate
@@ -1452,9 +1462,10 @@ private
    end record;
 
    overriding procedure Append_To_String
-     (Self   : SQL_Left_Join_Table;
-      Format : Formatter'Class;
-      Result : in out XString);
+     (Self       : SQL_Left_Join_Table;
+      Format     : Formatter'Class;
+      Result     : in out XString;
+      Show_Types : Boolean);
    overriding procedure Append_Tables
      (Self : SQL_Left_Join_Table; To : in out Table_Sets.Set);
 
@@ -1473,10 +1484,12 @@ private
       with null record;
 
    procedure Append_To_String
-      (Self   : Query_Contents;
-       Format : Formatter'Class;
-       Result : in out XString) is abstract;
+      (Self       : Query_Contents;
+       Format     : Formatter'Class;
+       Result     : in out XString;
+       Show_Types : Boolean) is abstract;
    --  Append the string representation of Self to Result.
+   --  See documentation for SQL_Query.Append_To_String for Show_Types
 
    procedure Auto_Complete
      (Self                   : in out Query_Contents;
@@ -1502,9 +1515,10 @@ private
       Distinct_On  : SQL_Field_List;
    end record;
    overriding procedure Append_To_String
-      (Self   : Query_Select_Contents;
-       Format : Formatter'Class;
-       Result : in out XString);
+      (Self       : Query_Select_Contents;
+       Format     : Formatter'Class;
+       Result     : in out XString;
+       Show_Types : Boolean);
    overriding procedure Auto_Complete
      (Self                   : in out Query_Select_Contents;
       Auto_Complete_From     : Boolean := True;
@@ -1518,9 +1532,10 @@ private
       Distinct     : Boolean;
    end record;
    overriding procedure Append_To_String
-      (Self   : Query_Union_Contents;
-       Format : Formatter'Class;
-       Result : in out XString);
+      (Self       : Query_Union_Contents;
+       Format     : Formatter'Class;
+       Result     : in out XString;
+       Show_Types : Boolean);
 
    type Query_Insert_Contents is new Query_Contents with record
       Into           : Table_Names := No_Names;
@@ -1533,9 +1548,10 @@ private
       Subquery       : SQL_Query := No_Query;
    end record;
    overriding procedure Append_To_String
-      (Self   : Query_Insert_Contents;
-       Format : Formatter'Class;
-       Result : in out XString);
+      (Self       : Query_Insert_Contents;
+       Format     : Formatter'Class;
+       Result     : in out XString;
+       Show_Types : Boolean);
    overriding procedure Auto_Complete
      (Self                   : in out Query_Insert_Contents;
       Auto_Complete_From     : Boolean := True;
@@ -1549,9 +1565,10 @@ private
       Extra_From : Table_Sets.Set; --  from auto complete
    end record;
    overriding procedure Append_To_String
-      (Self   : Query_Update_Contents;
-       Format : Formatter'Class;
-       Result : in out XString);
+      (Self       : Query_Update_Contents;
+       Format     : Formatter'Class;
+       Result     : in out XString;
+       Show_Types : Boolean);
    overriding procedure Auto_Complete
      (Self                   : in out Query_Update_Contents;
       Auto_Complete_From     : Boolean := True;
@@ -1562,9 +1579,10 @@ private
       Where : SQL_Criteria;
    end record;
    overriding procedure Append_To_String
-      (Self   : Query_Delete_Contents;
-       Format : Formatter'Class;
-       Result : in out XString);
+      (Self       : Query_Delete_Contents;
+       Format     : Formatter'Class;
+       Result     : in out XString;
+       Show_Types : Boolean);
 
    type Query_Create_Table_As_Contents is new Query_Contents with record
       Name          : GNATCOLL.Strings.XString;
@@ -1576,9 +1594,10 @@ private
       With_No_Data  : Boolean;
    end record;
    overriding procedure Append_To_String
-      (Self   : Query_Create_Table_As_Contents;
-       Format : Formatter'Class;
-       Result : in out XString);
+      (Self       : Query_Create_Table_As_Contents;
+       Format     : Formatter'Class;
+       Result     : in out XString;
+       Show_Types : Boolean);
 
    type Query_Values_Contents
      (Size : Natural) is new Query_Contents
@@ -1586,17 +1605,19 @@ private
       Values    : Field_List_Array (1 .. Size);
    end record;
    overriding procedure Append_To_String
-      (Self   : Query_Values_Contents;
-       Format : Formatter'Class;
-       Result : in out XString);
+      (Self       : Query_Values_Contents;
+       Format     : Formatter'Class;
+       Result     : in out XString;
+       Show_Types : Boolean);
 
    type Simple_Query_Contents is new Query_Contents with record
       Command : XString;
    end record;
    overriding procedure Append_To_String
-      (Self   : Simple_Query_Contents;
-       Format : Formatter'Class;
-       Result : in out XString);
+      (Self       : Simple_Query_Contents;
+       Format     : Formatter'Class;
+       Result     : in out XString;
+       Show_Types : Boolean);
 
    ---------------------
    -- Subquery tables --

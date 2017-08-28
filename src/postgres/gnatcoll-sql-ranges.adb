@@ -143,11 +143,15 @@ package body GNATCOLL.SQL.Ranges is
             end if;
          else
             if not Min_Null then
-               Append_To_String (Value.Min, Self, Long => True, Result => Mi);
+               Append_To_String
+                  (Value.Min, Self, Result => Mi,
+                   Long => True, Show_Types => False);
             end if;
 
             if not Max_Null then
-               Append_To_String (Value.Max, Self, Long => True, Result => Ma);
+               Append_To_String
+                  (Value.Max, Self, Result => Ma,
+                   Long => True, Show_Types => False);
             end if;
 
             return SQL_Type & "("  --  cast
