@@ -221,14 +221,9 @@ is
                (Spec_File,
                 Indent & "   " & Cleanup (F.Name) & " : " & Typ);
 
-            if T_Descr.Is_Abstract then
-               Put (Spec_File, " (Table_Name");
-            else
-               Put (Spec_File, " (Ta_" & Cleanup (T_Descr.Name));
-            end if;
-
             Put_Line (Spec_File,
-                      ", Instance, N_" & Cleanup (F.Name) & ", Index);");
+                      "(Table_Name, Instance, N_"
+                      & Cleanup (F.Name) & ", Index);");
 
             if F.Description /= "" then
                Print_Comment (Spec_File, Indent & "   ", F.Description);
@@ -274,13 +269,20 @@ is
                 Indent & "type T_Abstract_" & Cleanup (T_Descr.Name));
             Put_Line
                (Spec_File,
-                Indent & "   (Instance : Cst_String_Access;");
+                Indent &
+                "   (Table_Name : Cst_String_Access; --  Name of the table");
             Put_Line
                (Spec_File,
-                Indent & "    Index    : Integer)");
+                Indent &
+                "    Instance   : Cst_String_Access; " &
+                "--  if null, use table name");
+            Put_Line
+               (Spec_File,
+                Indent & "    Index      : Integer)  " &
+                "--  Create numbered aliases");
             Put
                (Spec_File,
-                Indent & "is abstract new ");
+                Indent & "is new ");
 
             if T_Descr.Super_Table /= No_Table then
                Put (Spec_File, "T_" & Cleanup (T_Descr.Super_Table.Name));
@@ -288,9 +290,7 @@ is
                Put (Spec_File, "SQL_Table");
             end if;
 
-            Put_Line (Spec_File,
-                      " (Ta_" & Cleanup (T_Descr.Name)
-                      & ", Instance, Index) with");
+            Put_Line (Spec_File, " (Table_Name, Instance, Index) with");
          end if;
 
          Put_Line (Spec_File, Indent & "record");
@@ -298,6 +298,12 @@ is
          Put_Line (Spec_File, Indent & "end record;");
 
          Print_Comment (Spec_File, Indent, T_Descr.Description);
+         Put_Line
+            (Spec_File,
+             "   --  Use this table directly if you use clones of this table");
+         Put_Line
+            (Spec_File,
+             "   --  in your code, for instance in a temporary table");
 
          if not T_Descr.Is_Abstract then
             New_Line (Spec_File);
@@ -305,7 +311,9 @@ is
                       & " (Instance : Cst_String_Access)");
             Put (Spec_File,
                  Indent & "   is new T_Abstract_" & Cleanup (T_Descr.Name));
-            Put_Line (Spec_File, " (Instance, -1) with null record;");
+            Put_Line (Spec_File,
+               " (Ta_" & Cleanup (T_Descr.Name)
+               & ", Instance, -1) with null record;");
             Put_Line
                (Spec_File,
                 Indent & "--  To use named aliases of the table in a query");
@@ -320,7 +328,8 @@ is
                 & " (Index : Integer)");
             Put (Spec_File,
                 Indent &  "   is new T_Abstract_" & Cleanup (T_Descr.Name));
-            Put_Line (Spec_File, " (null, Index) with null record;");
+            Put_Line (Spec_File, " (Ta_" & Cleanup (T_Descr.Name)
+               & ", null, Index) with null record;");
             Put_Line
                (Spec_File,
                 Indent & "--  To use aliases in the form name1, name2,...");
