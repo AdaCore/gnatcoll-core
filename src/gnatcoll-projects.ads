@@ -1509,6 +1509,8 @@ package GNATCOLL.Projects is
    Linker_Default_Switches_Attribute   : constant Attribute_Pkg_List;
    Binder_Default_Switches_Attribute   : constant Attribute_Pkg_List;
    Executable_Attribute                : constant Attribute_Pkg_String;
+   Excluded_Source_Files_Attribute     : constant Attribute_Pkg_List;
+   Excluded_Source_List_File_Attribute : constant Attribute_Pkg_String;
 
    --  Configuration
    Compiler_Driver_Attribute           : constant Attribute_Pkg_String;
@@ -2109,6 +2111,10 @@ private
      "source_list_file";
    Locally_Removed_Files_Attribute : constant Attribute_Pkg_List :=
                                        "locally_removed_files";
+   Excluded_Source_Files_Attribute : constant Attribute_Pkg_List :=
+                                       "excluded_source_files";
+   Excluded_Source_List_File_Attribute : constant Attribute_Pkg_String :=
+                                           "excluded_source_list_file";
    GNAT_Attribute            : constant Attribute_Pkg_String := "ide#gnat";
    Gnatlist_Attribute        : constant Attribute_Pkg_String := "ide#gnatlist";
    Compiler_Command_Attribute : constant Attribute_Pkg_String :=
