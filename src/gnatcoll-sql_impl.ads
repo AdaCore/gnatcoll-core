@@ -805,36 +805,36 @@ package GNATCOLL.SQL_Impl is
          is (Compare (Left, Expression (Right), Op_Greater_Equal'Access));
       --  Compare fields and values
 
-      function Greater_Than
-        (Left : SQL_Field'Class; Right : Field) return SQL_Criteria
-        is (Compare (Left, Right, Op_Greater'Access));
-      function Greater_Or_Equal
-        (Left : SQL_Field'Class; Right : Field) return SQL_Criteria
-        is (Compare (Left, Right, Op_Greater_Equal'Access));
-      function Equal
-        (Left : SQL_Field'Class; Right : Field) return SQL_Criteria
-        is (Compare (Left, Right, Op_Equal'Access));
+      function Less_Than
+        (Left : SQL_Field'Class; Right : Ada_Type) return SQL_Criteria
+        is (Compare (Left, Expression (Right), Op_Less'Access));
       function Less_Than
         (Left : SQL_Field'Class; Right : Field) return SQL_Criteria
         is (Compare (Left, Right, Op_Less'Access));
       function Less_Or_Equal
         (Left : SQL_Field'Class; Right : Field) return SQL_Criteria
         is (Compare (Left, Right, Op_Less_Equal'Access));
+      function Less_Or_Equal
+        (Left : SQL_Field'Class; Right : Ada_Type) return SQL_Criteria
+        is (Compare (Left, Expression (Right), Op_Less_Equal'Access));
       function Greater_Than
         (Left : SQL_Field'Class; Right : Ada_Type) return SQL_Criteria
         is (Compare (Left, Expression (Right), Op_Greater'Access));
+      function Greater_Than
+        (Left : SQL_Field'Class; Right : Field) return SQL_Criteria
+        is (Compare (Left, Right, Op_Greater'Access));
+      function Greater_Or_Equal
+        (Left : SQL_Field'Class; Right : Field) return SQL_Criteria
+        is (Compare (Left, Right, Op_Greater_Equal'Access));
       function Greater_Or_Equal
         (Left : SQL_Field'Class; Right : Ada_Type) return SQL_Criteria
         is (Compare (Left, Expression (Right), Op_Greater_Equal'Access));
       function Equal
+        (Left : SQL_Field'Class; Right : Field) return SQL_Criteria
+        is (Compare (Left, Right, Op_Equal'Access));
+      function Equal
         (Left : SQL_Field'Class; Right : Ada_Type) return SQL_Criteria
         is (Compare (Left, Expression (Right), Op_Equal'Access));
-      function Less_Than
-        (Left : SQL_Field'Class; Right : Ada_Type) return SQL_Criteria
-        is (Compare (Left, Expression (Right), Op_Less'Access));
-      function Less_Or_Equal
-        (Left : SQL_Field'Class; Right : Ada_Type) return SQL_Criteria
-        is (Compare (Left, Expression (Right), Op_Less_Equal'Access));
       --  Same as "<", "<=", ">", ">=" and "=", but these can be used with the
       --  result of aggregate fields for instance. In general, you should not
       --  use these to work around typing issues (for instance comparing a text
