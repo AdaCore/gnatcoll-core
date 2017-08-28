@@ -73,6 +73,26 @@ package body GNATCOLL.SQL.Postgres is
       Result : in out XString);
    --  Extensions for SELECT
 
+   type SQL_PG_On_Conflict (Do_Nothing : Boolean)
+      is new SQL_PG_Extension
+   with record
+      Column     : SQL_Field_Pointer;
+      Constraint : XString;
+
+      case Do_Nothing is
+         when True =>
+            null;
+         when False =>
+            Set        : SQL_Assignment;
+            Where      : SQL_Criteria;
+      end case;
+   end record;
+   overriding procedure Append_To_String
+     (Self   : SQL_PG_On_Conflict;
+      Format : Formatter'Class;
+      Result : in out XString);
+   --  Extensions for INSERT
+
    ----------
    -- Free --
    ----------
@@ -285,6 +305,68 @@ package body GNATCOLL.SQL.Postgres is
       return SQL_PG_Returning'(Returning => Fields);
    end Returning;
 
+   ----------------------------
+   -- On_Conflict_Do_Nothing --
+   ----------------------------
+
+   function On_Conflict_Do_Nothing
+      (Column  : SQL_Field'Class) return SQL_PG_Extension'Class is
+   begin
+      return SQL_PG_On_Conflict'
+         (Do_Nothing => True,
+          Column     => +Column,
+          Constraint => Null_XString);
+   end On_Conflict_Do_Nothing;
+
+   ----------------------------
+   -- On_Conflict_Do_Nothing --
+   ----------------------------
+
+   function On_Conflict_Do_Nothing
+      (Constraint_Name : String := "") return SQL_PG_Extension'Class is
+   begin
+      return SQL_PG_On_Conflict'
+         (Do_Nothing => True,
+          Column     => No_Field_Pointer,
+          Constraint => GNATCOLL.Strings.To_XString (Constraint_Name));
+   end On_Conflict_Do_Nothing;
+
+   ---------------------------
+   -- On_Conflict_Do_Update --
+   ---------------------------
+
+   function On_Conflict_Do_Update
+      (Column  : SQL_Field'Class;
+       Set     : SQL_Assignment;
+       Where   : SQL_Criteria := No_Criteria)
+      return SQL_PG_Extension'Class is
+   begin
+      return SQL_PG_On_Conflict'
+         (Do_Nothing => False,
+          Column     => +Column,
+          Constraint => Null_XString,
+          Set        => Set,
+          Where      => Where);
+   end On_Conflict_Do_Update;
+
+   ---------------------------
+   -- On_Conflict_Do_Update --
+   ---------------------------
+
+   function On_Conflict_Do_Update
+      (Constraint_Name : String;
+       Set             : SQL_Assignment;
+       Where           : SQL_Criteria := No_Criteria)
+      return SQL_PG_Extension'Class is
+   begin
+      return SQL_PG_On_Conflict'
+         (Do_Nothing => False,
+          Column     => No_Field_Pointer,
+          Constraint => GNATCOLL.Strings.To_XString (Constraint_Name),
+          Set        => Set,
+          Where      => Where);
+   end On_Conflict_Do_Update;
+
    ---------
    -- "&" --
    ---------
@@ -369,6 +451,43 @@ package body GNATCOLL.SQL.Postgres is
       Append (Result, " RETURNING ");
       Append_To_String
          (Self.Returning, Format, Long => True, Result => Result);
+   end Append_To_String;
+
+   ----------------------
+   -- Append_To_String --
+   ----------------------
+
+   overriding procedure Append_To_String
+     (Self   : SQL_PG_On_Conflict;
+      Format : Formatter'Class;
+      Result : in out XString)
+   is
+   begin
+      if Self.Constraint /= "" then
+         Result.Append (" ON CONFLICT ON CONSTRAINT ");
+         Result.Append (Self.Constraint);
+      elsif Self.Column /= No_Field_Pointer then
+         Result.Append (" ON CONFLICT (");
+         Append_To_String
+            (Self.Column, Format, Long => False, Result => Result);
+         Result.Append (')');
+      else
+         Result.Append (" ON CONFLICT");
+      end if;
+
+      if Self.Do_Nothing then
+         Result.Append (" DO NOTHING");
+      else
+         Result.Append (" DO UPDATE SET ");
+         Append_To_String
+            (Self.Set, Format, With_Field => True, Result => Result);
+
+         if Self.Where /= No_Criteria then
+            Result.Append (" WHERE ");
+            Append_To_String
+               (Self.Where, Format, Long => True, Result => Result);
+         end if;
+      end if;
    end Append_To_String;
 
    ---------------------------
