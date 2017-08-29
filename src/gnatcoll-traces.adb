@@ -1147,7 +1147,10 @@ package body GNATCOLL.Traces is
             Create_Exception_Handle (Handle);
             Trace
               (Handle.Exception_Handle,
-               Error_Message, Location, Entity, Red_Bg & Default_Fg);
+               Error_Message,
+               Location => Location,
+               Entity   => Entity,
+               Color    => Red_Bg & Default_Fg);
 
             if Raise_Exception then
                Raise_Assert_Failure
