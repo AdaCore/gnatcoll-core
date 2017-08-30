@@ -84,7 +84,6 @@ package body GNATCOLL.SQL.Sessions is
 
    package Hash_Lists is new Ada.Containers.Vectors
       (Natural, Ada.Containers.Hash_Type);
-   use Hash_Lists;
 
    procedure Add_To_Cache (Self : Session_Type; E : Detached_Element'Class);
    --  Add the element into the cache. We want the element to outlive the

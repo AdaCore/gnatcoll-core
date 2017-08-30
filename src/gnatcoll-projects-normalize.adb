@@ -3238,7 +3238,6 @@ package body GNATCOLL.Projects.Normalize is
       Limited_With              : Boolean := False)
       return Import_Project_Error
    is
-      use GPR.Tree_Private_Part;
       Tree_Node : constant GPR.Project_Node_Tree_Ref :=
         GNATCOLL.Projects.Tree (Tree);
 

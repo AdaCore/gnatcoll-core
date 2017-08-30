@@ -310,7 +310,6 @@ package body GNATCOLL.IO.Remote.Unix is
       Hour    : Natural;
       Minute  : Natural;
       Second  : Ada.Calendar.Day_Duration;
-      use type Ada.Calendar.Day_Duration;
 
    begin
       Exec.Execute_Remotely (Args, Output, Status);
