@@ -904,7 +904,8 @@ package body GNATCOLL.Email.Utils is
    function To_String
      (Addresses    : Address_Set.Set;
       Separator    : String := ", ";
-      Address_Only : Boolean := False) return String
+      Address_Only : Boolean := False;
+      Charset      : String := Charset_US_ASCII) return String
    is
       use Address_Set;
       Tmp : Unbounded_String;
@@ -918,7 +919,7 @@ package body GNATCOLL.Email.Utils is
          if Address_Only then
             Append (Tmp, Element (C).Address);
          else
-            Append (Tmp, Format_Address (Element (C)));
+            Append (Tmp, Format_Address (Element (C), Charset));
          end if;
 
          Next (C);

@@ -116,12 +116,14 @@ package GNATCOLL.Email.Utils is
    function To_String
      (Addresses    : Address_Set.Set;
       Separator    : String := ", ";
-      Address_Only : Boolean := False) return String;
+      Address_Only : Boolean := False;
+      Charset      : String := Charset_US_ASCII) return String;
    --  Return the list of addresses as a string compatible with RFC 2822.
    --  Parsing this field with Get_Addresses would return the same set of
    --  addresses of Separator has its default value.
-   --  if Address_Only is true, then the real names are never shown in the
+   --  If Address_Only is true, then the real names are never shown in the
    --  string.
+   --  Charset is passed to Format_Address to format indivudual addresses.
 
    function Get_Recipients
      (Msg : Message'Class; Include_From : Boolean := False)
