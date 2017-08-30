@@ -33,7 +33,6 @@ package body GNATCOLL.Ravenscar.Timed_Out_Sporadic_Server is
      Timed_Out_Sporadic_Server.Put_Request;
 
    procedure Handler is
-      use Ada.Real_Time;
    begin
       Ada.Synchronous_Task_Control.Set_True (Timer_Server_Suspender);
    end Handler;

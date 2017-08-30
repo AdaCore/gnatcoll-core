@@ -30,9 +30,6 @@ with GNAT.Strings;               use GNAT.Strings;
 with GNATCOLL.Utils;             use GNATCOLL.Utils;
 
 package body GNATCOLL.SQL_Impl is
-   use type Field_Pointers.Element_Access;
-   use type SQL_Field_Pointers.Element_Access;
-   use type SQL_Criteria_Pointers.Element_Access;
    use Field_List, Table_Sets, Assignment_Lists, SQL_Criteria_Pointers,
        Field_Pointers;
 

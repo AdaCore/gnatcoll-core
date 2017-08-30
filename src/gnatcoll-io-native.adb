@@ -560,7 +560,6 @@ package body GNATCOLL.IO.Native is
       Append : Boolean := False;
       FD     : out GNAT.OS_Lib.File_Descriptor)
    is
-      use type GNAT.OS_Lib.File_Descriptor;
    begin
       if Append then
          FD := GNAT.OS_Lib.Open_Read_Write
