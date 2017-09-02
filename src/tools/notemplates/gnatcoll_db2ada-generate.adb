@@ -633,7 +633,6 @@ begin
 
       Put_Line (Body_File, "package body " & Generated & " is");
       Put_Line (Body_File, "   pragma Style_Checks (Off);");
-      Put_Line (Body_File, "   use type Cst_String_Access;");
    end if;
 
    --  Process enumerations
