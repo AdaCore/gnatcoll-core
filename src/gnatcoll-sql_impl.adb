@@ -384,7 +384,8 @@ package body GNATCOLL.SQL_Impl is
                   end if;
 
                   Append_To_String
-                     (C, Format, Result, Long => True, Show_Types => Show_Types);
+                     (C, Format, Result, Long => True,
+                      Show_Types => Show_Types);
                end loop;
             end if;
 
@@ -512,7 +513,7 @@ package body GNATCOLL.SQL_Impl is
          return +Right;
       else
          return Result : SQL_Field_List do
-            Result.List.Set (Left.List.Get);  --  Copy the list to preserve Left
+            Result.List.Set (Left.List.Get); --  Copy the list to preserve Left
             declare
                G : constant Field_List_Pointers.Reference_Type :=
                   Result.List.Get;
@@ -1692,7 +1693,7 @@ package body GNATCOLL.SQL_Impl is
       end if;
    end Any_Float_Value;
 
-    ---------
+   ---------
    -- "&" --
    ---------
 
@@ -1831,7 +1832,7 @@ package body GNATCOLL.SQL_Impl is
       Append_To_String (Self, Format, ", ", Result, Show_Types => Show_Types);
    end Append_To_String;
 
-    -------------------
+   -------------------
    -- Append_Tables --
    -------------------
 

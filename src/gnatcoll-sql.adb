@@ -2307,7 +2307,7 @@ package body GNATCOLL.SQL is
             if Assign /= "" then
                Result.Append (" VALUES (");
                Result.Append (Assign);
-                Result.Append (')');
+               Result.Append (')');
             end if;
          end;
 

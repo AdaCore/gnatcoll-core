@@ -542,9 +542,9 @@ package GNATCOLL.SQL_Impl is
    Op_Is            : aliased constant String := " IS ";
    Op_Is_Not        : aliased constant String := " IS NOT ";
    Op_Like          : aliased constant String := " LIKE ";
-   Op_ILike         : aliased constant String := " ILIKE ";
+   Op_Ilike         : aliased constant String := " ILIKE ";
    Op_Not_Like      : aliased constant String := " NOT LIKE ";
-   Op_Not_ILike     : aliased constant String := " NOT ILIKE ";
+   Op_Not_Ilike     : aliased constant String := " NOT ILIKE ";
    Op_Overlaps      : aliased constant String := " OVERLAPS ";
    Op_Any           : aliased constant String := " = ANY (";
    Op_Parenthesis   : aliased constant String := ")";
@@ -574,7 +574,7 @@ package GNATCOLL.SQL_Impl is
    function Row_Compare
       (Row1, Row2 : SQL_Single_Table'Class;
        Op : not null Cst_String_Access) return SQL_Criteria;
-    --  Row comparison operators (standard SQL but do not work with sqlite)
+   --  Row comparison operators (standard SQL but do not work with sqlite)
 
    ------------------------------------------
    -- General declarations for assignments --
@@ -655,6 +655,7 @@ package GNATCOLL.SQL_Impl is
          (Format  : Formatter'Class;
           Value   : String) return Ada_Type;
       --  Converts a string read back from the SQL DBMS to Ada.
+      --  This is also used when parsing a range based on this type.
 
       Ada_Field_Type : String;
       --  Fully qualified name for the field types, in Ada. This name will
@@ -840,9 +841,10 @@ package GNATCOLL.SQL_Impl is
       --  use these to work around typing issues (for instance comparing a text
       --  field with 1234)
 
-      function Distinct_From (Left, Right: Field'Class) return SQL_Criteria
+      function Distinct_From (Left, Right : Field'Class) return SQL_Criteria
          is (Compare (Left, Right, Op_Distinct'Access));
-      function Not_Distinct_From (Left, Right: Field'Class) return SQL_Criteria
+      function Not_Distinct_From
+         (Left, Right : Field'Class) return SQL_Criteria
          is (Compare (Left, Right, Op_Not_Distinct'Access));
       --  Compare two values.
       --  If one of them is null, Equal and Not_Equal would return null,

@@ -950,7 +950,7 @@ package GNATCOLL.SQL is
      is (Compare (Self, Expression (Str), Op_Not_Ilike'Access));
    function Not_Like
      (Self : Text_Fields.Field'Class; Str : String) return SQL_Criteria
-     is (COmpare (Self, Expression (Str), Op_Not_Like'Access));
+     is (Compare (Self, Expression (Str), Op_Not_Like'Access));
    --  Return a resp. case-insensitive or case-sensitive pattern matching.
    --  Right is automatically quoted. However, you are responsible for
    --  putting the meta-character % at the right places in Right.
@@ -971,17 +971,17 @@ package GNATCOLL.SQL is
    --  "EXISTS (subquery)"
    --  Returns True if the subquery returns at least one row.
 
-   function "=" (Row1, Row2: SQL_Single_Table'Class) return SQL_Criteria
+   function "=" (Row1, Row2 : SQL_Single_Table'Class) return SQL_Criteria
       is (Row_Compare (Row1, Row2, Op_Equal'Access));
-   function "/=" (Row1, Row2: SQL_Single_Table'Class) return SQL_Criteria
+   function "/=" (Row1, Row2 : SQL_Single_Table'Class) return SQL_Criteria
       is (Row_Compare (Row1, Row2, Op_Not_Equal'Access));
-   function "<" (Row1, Row2: SQL_Single_Table'Class) return SQL_Criteria
+   function "<" (Row1, Row2 : SQL_Single_Table'Class) return SQL_Criteria
       is (Row_Compare (Row1, Row2, Op_Less'Access));
-   function "<=" (Row1, Row2: SQL_Single_Table'Class) return SQL_Criteria
+   function "<=" (Row1, Row2 : SQL_Single_Table'Class) return SQL_Criteria
       is (Row_Compare (Row1, Row2, Op_Less_Equal'Access));
-   function ">" (Row1, Row2: SQL_Single_Table'Class) return SQL_Criteria
+   function ">" (Row1, Row2 : SQL_Single_Table'Class) return SQL_Criteria
       is (Row_Compare (Row1, Row2, Op_Greater'Access));
-   function ">=" (Row1, Row2: SQL_Single_Table'Class) return SQL_Criteria
+   function ">=" (Row1, Row2 : SQL_Single_Table'Class) return SQL_Criteria
       is (Row_Compare (Row1, Row2, Op_Greater_Equal'Access));
    --  Row comparison.
    --  These operators are part of the SQL standard, but are not supported

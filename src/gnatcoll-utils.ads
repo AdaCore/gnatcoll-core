@@ -220,7 +220,7 @@ package GNATCOLL.Utils is
    --  This can be used with the various utilities in Ada.Characters.Handling,
    --  for instance to check whether a string is made up of only lower case
    --  characters.
-   
+
    function Is_Alphanumeric (Text : String) return Boolean
      is (Predicate (Text, Ada.Characters.Handling.Is_Alphanumeric'Access));
    function Is_Lower (Text : String) return Boolean

@@ -788,9 +788,10 @@ package body GNATCOLL.SQL.Exec is
                if not Connection.In_Transaction then
                   Connection.In_Transaction := True;
                else
-                  --  Ignore silently: GNATCOLL might have started a transaction
-                  --  without the user knowing, for instance on the first SELECT
-                  --  statement if Always_Use_Transactions is true.
+                  --  Ignore silently: GNATCOLL might have started a
+                  --  transaction without the user knowing, for instance on the
+                  --  first SELECT statement if Always_Use_Transactions is
+                  --  true.
                   return;
                end if;
 
@@ -799,7 +800,8 @@ package body GNATCOLL.SQL.Exec is
                 (Connection.Always_Use_Transactions
                  or else
                    (not Is_Commit_Or_Rollback
-                    and then not Is_Select))  --  INSERT, UPDATE, LOCK, DELETE,...
+                    and then not Is_Select))
+                    --  INSERT, UPDATE, LOCK, DELETE,...
               and then
                 (Q'Length <= 7   --  for sqlite
                  or else Q (Q'First .. Q'First + 6) /= "PRAGMA ")

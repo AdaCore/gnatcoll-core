@@ -478,7 +478,7 @@ is
       Idx    : Natural := Result'First;
    begin
       for C in Str'Range loop
-         if GNATCOLL.Utils.Is_Identifier (Str (C)) 
+         if GNATCOLL.Utils.Is_Identifier (Str (C))
             or else Str (C) = '.'   --  handling of namespaces
          then
             Result (Idx) := Str (C);
