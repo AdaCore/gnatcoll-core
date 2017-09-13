@@ -148,7 +148,7 @@ package body GNATCOLL.JSON.Utility is
    ----------------------
 
    function Un_Escape_String
-     (Text : Unbounded_String;
+     (Text : String;
       Low  : Natural;
       High : Natural) return UTF8_XString
    is
@@ -163,23 +163,23 @@ package body GNATCOLL.JSON.Utility is
 
       --  Trim blanks and double quotes
 
-      while First <= High and then Element (Text, First) = ' ' loop
+      while First <= High and then Text (First) = ' ' loop
          First := First + 1;
       end loop;
-      if First <= High and then Element (Text, First) = '"' then
+      if First <= High and then Text (First) = '"' then
          First := First + 1;
       end if;
 
-      while Last >= Low and then Element (Text, Last) = ' ' loop
+      while Last >= Low and then Text (Last) = ' ' loop
          Last := Last - 1;
       end loop;
-      if Last >= Low and then Element (Text, Last) = '"' then
+      if Last >= Low and then Text (Last) = '"' then
          Last := Last - 1;
       end if;
 
       Idx := First;
       while Idx <= Last loop
-         if Element (Text, Idx) = '\' then
+         if Text (Idx) = '\' then
             Idx := Idx + 1;
 
             if Idx > High then
@@ -190,12 +190,12 @@ package body GNATCOLL.JSON.Utility is
             --  See http://tools.ietf.org/html/rfc4627 for the list of
             --  characters that can be escaped.
 
-            case Element (Text, Idx) is
+            case Text (Idx) is
                when 'u' | 'U' =>
                   declare
                      Lead : constant Unsigned_16 :=
                        Unsigned_16'Value
-                         ("16#" & Slice (Text, Idx + 1, Idx + 4) & "#");
+                         ("16#" & Text (Idx + 1 .. Idx + 4) & "#");
                      Trail : Unsigned_16;
                      Char  : Wide_Wide_Character;
 
@@ -207,11 +207,11 @@ package body GNATCOLL.JSON.Utility is
                      --  character.
 
                      if Lead in 16#D800# .. 16#DBFF#
-                       and then Element (Text, Idx + 5) = '\'
-                       and then Element (Text, Idx + 6) in 'u' | 'U'
+                       and then Text (Idx + 5) = '\'
+                       and then Text (Idx + 6) in 'u' | 'U'
                      then
                         Trail := Unsigned_16'Value
-                          ("16#" & Slice (Text, Idx + 7, Idx + 10) & '#');
+                          ("16#" & Text (Idx + 7 .. Idx + 10) & '#');
                         Char := Wide_Wide_Character'Val
                           (16#1_0000#
                            + Unsigned_32 (Lead and 16#03FF#) * 16#0400#
@@ -244,11 +244,11 @@ package body GNATCOLL.JSON.Utility is
                when others =>
                   raise Invalid_JSON_Stream with
                     "Unexpected escape sequence '\" &
-                    Element (Text, Idx) & "'";
+                    Text (Idx) & "'";
             end case;
 
          else
-            Unb.Append (Element (Text, Idx));
+            Unb.Append (Text (Idx));
          end if;
 
          Idx := Idx + 1;

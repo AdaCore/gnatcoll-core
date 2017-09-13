@@ -34,7 +34,7 @@ private package GNATCOLL.JSON.Utility is
    --  Translates an UTF-8 encoded unbounded string into a JSON-escaped string
 
    function Un_Escape_String
-     (Text : Ada.Strings.Unbounded.Unbounded_String;
+     (Text : String;
       Low  : Natural;
       High : Natural)
       return UTF8_XString;

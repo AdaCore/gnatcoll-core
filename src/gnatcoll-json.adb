@@ -25,15 +25,17 @@ with Ada.Characters.Handling; use Ada.Characters.Handling;
 with Ada.Containers;          use Ada.Containers;
 with Ada.Strings.Unbounded;   use Ada.Strings.Unbounded;
 with Ada.Text_IO;
+with Ada.Unchecked_Deallocation;
 with GNATCOLL.Atomic;         use GNATCOLL.Atomic;
 with GNATCOLL.JSON.Utility;
 with GNATCOLL.Strings;        use GNATCOLL.Strings;
 
--------------------
--- GNATCOLL.JSON --
--------------------
-
 package body GNATCOLL.JSON is
+
+   procedure Free is
+     new Ada.Unchecked_Deallocation (JSON_Array_Internal, JSON_Array_Access);
+   procedure Free is
+     new Ada.Unchecked_Deallocation (JSON_Object_Internal, JSON_Object_Access);
 
    procedure Report_Error (File : String; Line, Col : Natural; Msg : String);
    pragma No_Return (Report_Error);
@@ -46,8 +48,8 @@ package body GNATCOLL.JSON is
    --  Auxiliary write function
 
    function Read
-     (Strm     :        Unbounded_String;
-      Idx      : access Natural;
+     (Strm     :        String;
+      Idx      : in out Natural;
       Col      : access Natural;
       Line     : access Natural;
       Filename : String) return JSON_Value;
@@ -59,7 +61,7 @@ package body GNATCOLL.JSON is
 
    procedure Append (Arr : JSON_Value; Item : JSON_Value) is
    begin
-      Append (Arr.Data.Arr_Value.all, Item);
+      Append (Arr.Data.Arr_Value.Arr, Item);
    end Append;
 
    --------------
@@ -70,7 +72,7 @@ package body GNATCOLL.JSON is
    begin
       case Val.Kind is
          when JSON_Null_Type   => return True;
-         when JSON_Array_Type  => return Val.Data.Arr_Value.Vals.Is_Empty;
+         when JSON_Array_Type  => return Val.Data.Arr_Value.Arr.Vals.Is_Empty;
          when JSON_Object_Type => return Val.Data.Obj_Value.Vals.Is_Empty;
          when others           => return False;
       end case;
@@ -103,8 +105,8 @@ package body GNATCOLL.JSON is
    ----------
 
    function Read
-     (Strm     :        Unbounded_String;
-      Idx      : access Natural;
+     (Strm     :        String;
+      Idx      : in out Natural;
       Col      : access Natural;
       Line     : access Natural;
       Filename : String) return JSON_Value
@@ -141,12 +143,12 @@ package body GNATCOLL.JSON is
             end loop;
          end if;
 
-         Idx.all := Idx.all + 1;
-         if Idx.all > Length (Strm) then
+         Idx := Idx + 1;
+         if Idx > Strm'Last then
             Col.all := Col.all + 1;
-         elsif Element (Strm, Idx.all) = ASCII.CR then
+         elsif Strm (Idx) = ASCII.CR then
             Col.all := 0;
-         elsif Element (Strm, Idx.all) = ASCII.LF then
+         elsif Strm (Idx) = ASCII.LF then
             Col.all := 1;
             Line.all := Line.all + 1;
          else
@@ -160,11 +162,11 @@ package body GNATCOLL.JSON is
 
       procedure Skip_Blanks is
       begin
-         while Idx.all <= Length (Strm) loop
-            exit when Element (Strm, Idx.all) /= ' '
-              and then Element (Strm, Idx.all) /= ASCII.HT
-              and then Element (Strm, Idx.all) /= ASCII.CR
-              and then Element (Strm, Idx.all) /= ASCII.LF;
+         while Idx <= Strm'Last loop
+            exit when Strm (Idx) /= ' '
+              and then Strm (Idx) /= ASCII.HT
+              and then Strm (Idx) /= ASCII.CR
+              and then Strm (Idx) /= ASCII.LF;
 
             Next_Char;
          end loop;
@@ -178,18 +180,18 @@ package body GNATCOLL.JSON is
          Prev : Natural;
 
       begin
-         Prev := Idx.all;
-         while Idx.all < Length (Strm) loop
+         Prev := Idx;
+         while Idx < Strm'Last loop
             Next_Char;
-            if Element (Strm, Idx.all) = '\' then
+            if Strm (Idx) = '\' then
                Next_Char;
-            elsif Element (Strm, Idx.all) = '"' then
+            elsif Strm (Idx) = '"' then
                exit;
             end if;
          end loop;
 
-         if Idx.all > Length (Strm)
-           or else Element (Strm, Idx.all) /= '"'
+         if Idx > Strm'Last
+           or else Strm (Idx) /= '"'
          then
             Error ("Invalid string: cannot find ending """);
          end if;
@@ -197,20 +199,20 @@ package body GNATCOLL.JSON is
          --  Skip the trailing '"'
          Next_Char;
 
-         return Utility.Un_Escape_String (Strm, Prev, Idx.all - 1);
+         return Utility.Un_Escape_String (Strm, Prev, Idx - 1);
       end Read_String;
 
    begin
       Skip_Blanks;
 
-      if Idx.all not in 1 .. Length (Strm) then
+      if Idx not in Strm'Range then
          Error ("Nothing to read from stream");
       end if;
 
-      case Element (Strm, Idx.all) is
+      case Strm (Idx) is
          when 'n' | 'N' =>
             --  null
-            if To_Lower (Slice (Strm, Idx.all, Idx.all + 3)) /= "null" then
+            if To_Lower (Strm (Idx .. Idx + 3)) /= "null" then
                Error ("Invalid token");
             end if;
 
@@ -220,7 +222,7 @@ package body GNATCOLL.JSON is
 
          when 't' =>
             --  true
-            if To_Lower (Slice (Strm, Idx.all, Idx .all + 3)) /= "true" then
+            if To_Lower (Strm (Idx .. Idx + 3)) /= "true" then
                Error ("Invalid token");
             end if;
 
@@ -230,7 +232,7 @@ package body GNATCOLL.JSON is
 
          when 'f' =>
             --  false
-            if To_Lower (Slice (Strm, Idx.all, Idx.all + 4)) /= "false" then
+            if To_Lower (Strm (Idx .. Idx + 4)) /= "false" then
                Error ("Invalid token");
             end if;
 
@@ -250,12 +252,12 @@ package body GNATCOLL.JSON is
 
             begin
                --  Potential initial '-'
-               if Element (Strm, Idx.all) = '-' then
-                  Append (Unb, Element (Strm, Idx.all));
+               if Strm (Idx) = '-' then
+                  Append (Unb, Strm (Idx));
                   Next_Char;
 
-                  if Idx.all > Length (Strm)
-                    or else Element (Strm, Idx.all) not in '0' .. '9'
+                  if Idx > Strm'Last
+                    or else Strm (Idx) not in '0' .. '9'
                   then
                      Error
                        ("Expecting a digit after the initial '-' when " &
@@ -263,35 +265,35 @@ package body GNATCOLL.JSON is
                   end if;
                end if;
 
-               while Idx.all <= Length (Strm) loop
+               while Idx <= Strm'Last loop
                   if Part = Trail
-                    and then Element (Strm, Idx.all) in '1' .. '9'
+                    and then Strm (Idx) in '1' .. '9'
                   then
                      --  Non-0 value, we can start adding the digits to the
                      --  Int part of the number
                      Part := Int;
 
                   elsif (Part = Trail or else Part = Int)
-                    and then Element (Strm, Idx.all) = '.'
+                    and then Strm (Idx) = '.'
                   then
                      if Part = Trail then
                         Append (Unb, "0");
                      end if;
 
                      Part := Frac;
-                     Append (Unb, Element (Strm, Idx.all));
+                     Append (Unb, Strm (Idx));
                      Next_Char;
 
-                     if Idx.all > Length (Strm)
-                       or else Element (Strm, Idx.all) not in '0' .. '9'
+                     if Idx > Strm'Last
+                       or else Strm (Idx) not in '0' .. '9'
                      then
                         Error ("Expecting digits after a '.' when decoding " &
                                "a number");
                      end if;
 
                   elsif Part /= Exp
-                    and then (Element (Strm, Idx.all) = 'e'
-                                or else Element (Strm, Idx.all) = 'E')
+                    and then (Strm (Idx) = 'e'
+                                or else Strm (Idx) = 'E')
                   then
                      if Part = Trail then
                         --  Although legal, so handled here, this case is
@@ -301,34 +303,34 @@ package body GNATCOLL.JSON is
 
                      --  Authorized patterns for exponent: (e|E)(+|-)?[0-9]+
                      Part := Exp;
-                     Append (Unb, Element (Strm, Idx.all));
+                     Append (Unb, Strm (Idx));
                      Next_Char;
 
-                     if Idx.all > Length (Strm) then
+                     if Idx > Strm'Last then
                         Error ("Invalid number");
                      end if;
 
-                     if Element (Strm, Idx.all) = '+'
-                       or else Element (Strm, Idx.all) = '-'
+                     if Strm (Idx) = '+'
+                       or else Strm (Idx) = '-'
                      then
-                        Append (Unb, Element (Strm, Idx.all));
+                        Append (Unb, Strm (Idx));
                         Next_Char;
                      end if;
 
-                     if Idx.all > Length (Strm)
-                       or else Element (Strm, Idx.all) not in '0' .. '9'
+                     if Idx > Strm'Last
+                       or else Strm (Idx) not in '0' .. '9'
                      then
                         Error ("Expecting digits after 'e' when decoding " &
                                "a number");
                      end if;
                   end if;
 
-                  exit when Idx.all > Length (Strm)
-                    or else Element (Strm, Idx.all) not in '0' .. '9';
+                  exit when Idx > Strm'Last
+                    or else Strm (Idx) not in '0' .. '9';
 
                   --  Ignore trailing zeros
                   if Part /= Trail then
-                     Append (Unb, Element (Strm, Idx.all));
+                     Append (Unb, Strm (Idx));
                   end if;
 
                   Next_Char;
@@ -393,24 +395,23 @@ package body GNATCOLL.JSON is
 
          when '[' =>
             declare
-               Arr   : constant JSON_Array_Access := new JSON_Array;
+               Arr   : constant JSON_Array_Access := new JSON_Array_Internal;
                First : Boolean := True;
-
             begin
                --  Skip '['
                Next_Char;
 
-               while Idx.all < Length (Strm) loop
+               while Idx < Strm'Last loop
                   Skip_Blanks;
 
-                  if Idx.all > Length (Strm) then
+                  if Idx > Strm'Last then
                      Error ("Uncomplete JSON array");
                   end if;
 
-                  exit when Element (Strm, Idx.all) = ']';
+                  exit when Strm (Idx) = ']';
 
                   if not First then
-                     if Element (Strm, Idx.all) /= ',' then
+                     if Strm (Idx) /= ',' then
                         Error ("Expected ',' in the array value");
                      end if;
 
@@ -419,23 +420,19 @@ package body GNATCOLL.JSON is
                   end if;
 
                   First := False;
-                  Append (Arr.all, Read (Strm, Idx, Col, Line, Filename));
+                  Append (Arr.Arr, Read (Strm, Idx, Col, Line, Filename));
                end loop;
 
-               if Idx.all > Length (Strm)
-                 or else Element (Strm, Idx.all) /= ']'
+               if Idx > Strm'Last
+                 or else Strm (Idx) /= ']'
                then
                   Error ("Unfinished array, expecting ending ']'");
                end if;
 
                Next_Char;
 
-               declare
-                  Ret : JSON_Value;
-               begin
-                  Ret.Data := (Kind => JSON_Array_Type, Arr_Value => Arr);
-                  return Ret;
-               end;
+               return (Ada.Finalization.Controlled with
+                       Data => (Kind => JSON_Array_Type, Arr_Value => Arr));
             end;
 
          when '{' =>
@@ -451,17 +448,17 @@ package body GNATCOLL.JSON is
                --  Skip '{'
                Next_Char;
 
-               while Idx.all < Length (Strm) loop
+               while Idx < Strm'Last loop
                   Skip_Blanks;
 
-                  if Idx.all > Length (Strm) then
+                  if Idx > Strm'Last then
                      Error ("Unterminated object value");
                   end if;
 
-                  exit when Element (Strm, Idx.all) = '}';
+                  exit when Strm (Idx) = '}';
 
                   if not First then
-                     if Element (Strm, Idx.all) /= ',' then
+                     if Strm (Idx) /= ',' then
                         Error ("Expected ',' as object value separator");
                      end if;
 
@@ -477,14 +474,14 @@ package body GNATCOLL.JSON is
                   begin
                      Skip_Blanks;
 
-                     if Idx.all > Length (Strm) then
+                     if Idx > Strm'Last then
                         Error ("Unterminated object value");
                      end if;
 
-                     if Element (Strm, Idx.all) /= ':' then
+                     if Strm (Idx) /= ':' then
                         Error
                           ("Expected a value after the name in a JSON object"
-                           & " at index" & Idx.all'Img);
+                           & " at index" & Idx'Img);
                      end if;
 
                      --  Skip the semi-colon
@@ -499,8 +496,8 @@ package body GNATCOLL.JSON is
                   end;
                end loop;
 
-               if Idx.all > Length (Strm)
-                 or else Element (Strm, Idx.all) /= '}'
+               if Idx > Strm'Last
+                 or else Strm (Idx) /= '}'
                then
                   Error ("Unterminated object value");
                end if;
@@ -520,19 +517,22 @@ package body GNATCOLL.JSON is
      (Strm     : Unbounded_String;
       Filename : String := "<data>") return JSON_Value
    is
-      Idx  : aliased Natural := 1;
+      Idx  : Natural := 1;
       Col  : aliased Natural := 1;
       Line : aliased Natural := 1;
    begin
-      return Read (Strm, Idx'Access, Col'Access, Line'Access, Filename);
+      return Read (To_String (Strm), Idx, Col'Access, Line'Access, Filename);
    end Read;
 
    function Read
      (Strm     : String;
       Filename : String := "<data>") return JSON_Value
    is
+      Idx  : Natural := Strm'First;
+      Col  : aliased Natural := 1;
+      Line : aliased Natural := 1;
    begin
-      return Read (To_Unbounded_String (Strm), Filename);
+      return Read (Strm, Idx, Col'Access, Line'Access, Filename);
    end Read;
 
    -----------
@@ -606,15 +606,15 @@ package body GNATCOLL.JSON is
                Append (Ret, ASCII.LF);
             end if;
 
-            for J in Item.Data.Arr_Value.Vals.First_Index ..
-              Item.Data.Arr_Value.Vals.Last_Index
+            for J in Item.Data.Arr_Value.Arr.Vals.First_Index ..
+              Item.Data.Arr_Value.Arr.Vals.Last_Index
             loop
                Do_Indent (Indent + 1);
                Write
-                 (Item.Data.Arr_Value.Vals.Element (J),
+                 (Item.Data.Arr_Value.Arr.Vals.Element (J),
                   Compact, Indent + 1, Ret);
 
-               if J < Item.Data.Arr_Value.Vals.Last_Index then
+               if J < Item.Data.Arr_Value.Arr.Vals.Last_Index then
                   Append (Ret, ",");
                end if;
 
@@ -758,7 +758,7 @@ package body GNATCOLL.JSON is
 
    begin
       case Val.Kind is
-         when JSON_Array_Type  => Sort (Val.Data.Arr_Value.all, Less);
+         when JSON_Array_Type  => Sort (Val.Data.Arr_Value.Arr, Less);
          when JSON_Object_Type => Sorting.Sort (Val.Data.Obj_Value.Vals);
          when others => null;
       end case;
@@ -810,27 +810,24 @@ package body GNATCOLL.JSON is
       Arr.Vals.Clear;
    end Clear;
 
-   ----------------
-   -- Initialize --
-   ----------------
-
-   overriding procedure Initialize (Obj : in out JSON_Value) is
-   begin
-      Obj.Cnt := new GNATCOLL.Atomic.Atomic_Counter'(1);
-   end Initialize;
-
    ------------
    -- Adjust --
    ------------
 
    overriding procedure Adjust (Obj : in out JSON_Value) is
    begin
-      if Obj.Cnt /= null then
-         --  Cnt is null for JSON_Null, and we do not want to do reference
-         --  counting for it.
-
-         Increment (Obj.Cnt.all);
-      end if;
+      case Obj.Data.Kind is
+         when JSON_Array_Type =>
+            if Obj.Data.Arr_Value /= null then
+               Increment (Obj.Data.Arr_Value.Cnt);
+            end if;
+         when JSON_Object_Type =>
+            if Obj.Data.Obj_Value /= null then
+               Increment (Obj.Data.Obj_Value.Cnt);
+            end if;
+         when others =>
+            null;
+      end case;
    end Adjust;
 
    --------------
@@ -838,39 +835,31 @@ package body GNATCOLL.JSON is
    --------------
 
    overriding procedure Finalize (Obj : in out JSON_Value) is
-      C : Counter := Obj.Cnt;
    begin
-      if C = null then
-         return;
-      end if;
-
-      Obj.Cnt := null;
-      --  Prevent multiple calls to Finalize, which is valid in Ada
-
-      if Decrement (C.all) then
-         Free (C);
-
-         case Obj.Kind is
-            when JSON_Null_Type    |
-                 JSON_Boolean_Type |
-                 JSON_Int_Type     |
-                 JSON_Float_Type   =>
-               null;
-            when JSON_String_Type =>
-               Obj.Data.Str_Value := GNATCOLL.Strings.Null_XString;
-
-            when JSON_Array_Type =>
-               if Obj.Data.Arr_Value /= null then
-                  Free (Obj.Data.Arr_Value);
+      case Obj.Data.Kind is
+         when JSON_Array_Type =>
+            declare
+               Arr : JSON_Array_Access := Obj.Data.Arr_Value;
+            begin
+               Obj.Data.Arr_Value := null;
+               if Arr /= null and then Decrement (Arr.Cnt) then
+                  Free (Arr);
                end if;
+            end;
 
-            when JSON_Object_Type =>
-               if Obj.Data.Obj_Value /= null then
-                  Free (Obj.Data.Obj_Value);
+         when JSON_Object_Type =>
+            declare
+               Object : JSON_Object_Access := Obj.Data.Obj_Value;
+            begin
+               Obj.Data.Obj_Value := null;
+               if Object /= null and then Decrement (Object.Cnt) then
+                  Free (Object);
                end if;
+            end;
 
-         end case;
-      end if;
+         when others =>
+            null;
+      end case;
    end Finalize;
 
    ------------
@@ -878,10 +867,8 @@ package body GNATCOLL.JSON is
    ------------
 
    function Create return JSON_Value is
-      Ret : JSON_Value;
    begin
-      Ret.Data := (Kind => JSON_Null_Type);
-      return Ret;
+      return JSON_Null;
    end Create;
 
    function Create (Val : Boolean) return JSON_Value is
@@ -950,10 +937,12 @@ package body GNATCOLL.JSON is
    end Create;
 
    function Create (Val : JSON_Array) return JSON_Value is
-      Ret : JSON_Value;
    begin
-      Ret.Data := (Kind => JSON_Array_Type, Arr_Value => new JSON_Array'(Val));
-      return Ret;
+      return (Ada.Finalization.Controlled with
+              Data => (Kind      => JSON_Array_Type,
+                       Arr_Value => new JSON_Array_Internal'
+                          (Cnt => 1,
+                           Arr => Val)));
    end Create;
 
    -------------------
@@ -1168,7 +1157,7 @@ package body GNATCOLL.JSON is
 
    function Get (Val : JSON_Value) return JSON_Array is
    begin
-      return Val.Data.Arr_Value.all;
+      return Val.Data.Arr_Value.Arr;
    end Get;
 
    ---------------
@@ -1239,39 +1228,46 @@ package body GNATCOLL.JSON is
    -----------
 
    function Clone (Val : JSON_Value) return JSON_Value is
-      Result : JSON_Value;
    begin
       case Val.Data.Kind is
          when JSON_Null_Type =>
-            Result := Create;
+            return JSON_Null;
 
          when JSON_Boolean_Type =>
-            Result := Create (Val.Data.Bool_Value);
+            return Create (Val.Data.Bool_Value);
 
          when JSON_Int_Type =>
-            Result := Create (Val.Data.Int_Value);
+            return Create (Val.Data.Int_Value);
 
          when JSON_Float_Type =>
-            Result := Create (Val.Data.Flt_Value);
+            return Create (Val.Data.Flt_Value);
 
          when JSON_String_Type =>
-            Result := Create (Val.Data.Str_Value);
+            return Create (Val.Data.Str_Value);
 
          when JSON_Array_Type =>
-            Result.Data :=
-               (Kind => JSON_Array_Type, Arr_Value => new JSON_Array);
-            for E of Val.Data.Arr_Value.Vals loop
-               Append (Result.Data.Arr_Value.all, Clone (E));
-            end loop;
+            declare
+               Result : constant JSON_Value :=
+                  (Ada.Finalization.Controlled with
+                   Data => (Kind => JSON_Array_Type,
+                            Arr_Value => new JSON_Array_Internal));
+            begin
+               for E of Val.Data.Arr_Value.Arr.Vals loop
+                  Append (Result.Data.Arr_Value.Arr, Clone (E));
+               end loop;
+               return Result;
+            end;
 
          when JSON_Object_Type =>
-            Result := Create_Object;
-            for E of Val.Data.Obj_Value.Vals loop
-               Result.Set_Field (To_String (E.Key), Clone (E.Val));
-            end loop;
-
+            declare
+               Result : constant JSON_Value := Create_Object;
+            begin
+               for E of Val.Data.Obj_Value.Vals loop
+                  Result.Set_Field (To_String (E.Key), Clone (E.Val));
+               end loop;
+               return Result;
+            end;
       end case;
-      return Result;
    end Clone;
 
    ---------
@@ -1305,16 +1301,16 @@ package body GNATCOLL.JSON is
             --  Same pointer ?
             if Left.Data.Arr_Value = Right.Data.Arr_Value then
                return True;
-            elsif Left.Data.Arr_Value.Vals.Length /=
-               Right.Data.Arr_Value.Vals.Length
+            elsif Left.Data.Arr_Value.Arr.Vals.Length /=
+               Right.Data.Arr_Value.Arr.Vals.Length
             then
                return False;
             else
-               for J in Left.Data.Arr_Value.Vals.First_Index ..
-                  Left.Data.Arr_Value.Vals.Last_Index
+               for J in Left.Data.Arr_Value.Arr.Vals.First_Index ..
+                  Left.Data.Arr_Value.Arr.Vals.Last_Index
                loop
-                  if not (Left.Data.Arr_Value.Vals (J) =  --  recursive
-                          Right.Data.Arr_Value.Vals (J))
+                  if not (Left.Data.Arr_Value.Arr.Vals (J) =  --  recursive
+                          Right.Data.Arr_Value.Arr.Vals (J))
                   then
                      return False;
                   end if;
