@@ -237,6 +237,15 @@ package body GNATCOLL.Terminal is
    end Has_Colors;
 
    ---------------------
+   -- Has_ANSI_Colors --
+   ---------------------
+
+   function Has_ANSI_Colors (Self : Terminal_Info) return Boolean is
+   begin
+      return Self.Colors = ANSI_Sequences;
+   end Has_ANSI_Colors;
+
+   ---------------------
    -- Win_Set_Console --
    ---------------------
 

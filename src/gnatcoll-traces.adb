@@ -45,6 +45,7 @@ with System.Assertions;         use System.Assertions;
 with GNATCOLL.Memory;
 with GNATCOLL.Mmap;             use GNATCOLL.Mmap;
 with GNATCOLL.Templates;
+with GNATCOLL.Terminal;
 with GNATCOLL.Utils;            use GNATCOLL.Utils;
 
 package body GNATCOLL.Traces is
@@ -259,11 +260,15 @@ package body GNATCOLL.Traces is
    type File_Stream_Record is new Trace_Stream_Record with record
       File : FILEs := NULL_Stream;
       Lock : aliased GNATCOLL.Atomic.Atomic_Counter := 0;
+      Colors_Support : Boolean;
    end record;
    overriding procedure Put
       (Stream     : in out File_Stream_Record;
        Str        : Msg_Strings.XString);
    overriding procedure Close (Stream : in out File_Stream_Record);
+   overriding function Supports_Color
+      (Self : File_Stream_Record) return Boolean
+      is (Self.Colors_Support);
    --  Logs to a file
 
    procedure Cache_Settings (Handle : not null Trace_Handle);
@@ -452,7 +457,12 @@ package body GNATCOLL.Traces is
       Tmp   : Trace_Stream;
       Colon : Natural;
       TmpF  : Stream_Factories_List;
+      Default_Colors : GNATCOLL.Terminal.Supports_Color :=
+         GNATCOLL.Terminal.Auto;
+      Term  : GNATCOLL.Terminal.Terminal_Info;
+
       Supports_Buffer : Boolean := True;
+      Buf_Size : size_t := 2**10;
 
    begin
       if Name = "" then
@@ -471,26 +481,62 @@ package body GNATCOLL.Traces is
          Tmp := Tmp.Next;
       end loop;
 
+      --  Parse stream options
+
       Colon := Index (Name, ":");
       if Colon < Name'First then
          Colon := Name'Last + 1;
       end if;
 
+      declare
+         Args  : String_List_Access := Split (Name, ':');
+      begin
+         for A of Args (Args'First + 1 .. Args'Last) loop
+            if Starts_With (A.all, "buffer_size=") then
+               begin
+                  Buf_Size := size_t'Value (A (A'First + 12 .. A'Last));
+               exception
+                  when others =>
+                     Buf_Size := 2**10;
+               end;
+
+            elsif Starts_With (A.all, "colors=") then
+               declare
+                  V : constant String := To_Lower (A (A'First + 7 .. A'Last));
+               begin
+                  if V = "on" or else V = "true" then
+                     Default_Colors := GNATCOLL.Terminal.Yes;
+                  elsif V = "off" or else V = "false" then
+                     Default_Colors := GNATCOLL.Terminal.No;
+                  else
+                     Default_Colors := GNATCOLL.Terminal.Auto;
+                  end if;
+               end;
+            end if;
+         end loop;
+
+         Free (Args);
+      end;
+
       --  Do we have a matching factory (if we start with "&")?
 
       if Name (Name'First .. Colon - 1) = "&1" then
+         Term.Init_For_Stdout (Colors => Default_Colors);
          Tmp := new File_Stream_Record'
-           (Name => new String'(Name),
-            File => stdout,
-            others => <>);
+           (Name           => new String'(Name),
+            File           => stdout,
+            Colors_Support => Term.Has_ANSI_Colors,
+            others         => <>);
          Add_To_Streams (Tmp);
          Supports_Buffer := False;
 
       elsif Name (Name'First .. Colon - 1) = "&2" then
+         Term.Init_For_Stderr (Colors => Default_Colors);
          Tmp := new File_Stream_Record'
-           (Name => new String'(Name),
-            File => stderr,
-            others => <>);
+           (Name           => new String'(Name),
+            File           => stderr,
+            Colors_Support => Term.Has_ANSI_Colors,
+            others         => <>);
          Add_To_Streams (Tmp);
          Supports_Buffer := False;
 
@@ -569,7 +615,7 @@ package body GNATCOLL.Traces is
                   Delimiter  => '$'),
                Dir_Name (Config_File_Name));
             N_Zero : aliased constant String := N & ASCII.NUL;
-            F     : FILEs;
+            F      : FILEs;
          begin
             if Append then
                F := fopen (N_Zero'Address, mode => A_Zero'Address);
@@ -581,43 +627,32 @@ package body GNATCOLL.Traces is
                F := stderr;
             end if;
 
+            Term.Init_For_File (Colors => Default_Colors);
+
             Tmp := new File_Stream_Record'
-              (Name   => new String'(Name),
-               File   => F,
-               others => <>);
+              (Name           => new String'(Name),
+               File           => F,
+               Colors_Support => Term.Has_ANSI_Colors,
+               others         => <>);
             Add_To_Streams (Tmp);
          end;
       end if;
 
-      if Tmp /= null and then Tmp.all in File_Stream_Record'Class then
+      if Tmp /= null
+         and then Tmp.all in File_Stream_Record'Class
+         and then Supports_Buffer
+      then
          declare
-            Args  : String_List_Access := Split (Name, ':');
             Dummy : int;
-            Buf_Size : size_t := 2**10;
          begin
-            for A of Args (Args'First + 1 .. Args'Last) loop
-               if Starts_With (A.all, "buffer_size=") then
-                  begin
-                     Buf_Size := size_t'Value (A (A'First + 12 .. A'Last));
-                  exception
-                     when others =>
-                        Buf_Size := 2**10;
-                  end;
-               end if;
-            end loop;
-
-            if Supports_Buffer then
-               Dummy := setvbuf
-                 (File_Stream_Record (Tmp.all).File,
-                  System.Null_Address,
-                  (case Buf_Size is
-                      when 0      => IONBF,  -- unbuffered
-                      when 1      => IOLBF,  -- line buffered
-                      when others => IOFBF), -- full buffered
-                  Buf_Size);
-            end if;
-
-            Free (Args);
+            Dummy := setvbuf
+              (File_Stream_Record (Tmp.all).File,
+               System.Null_Address,
+               (case Buf_Size is
+                   when 0      => IONBF,  -- unbuffered
+                   when 1      => IOLBF,  -- line buffered
+                   when others => IOFBF), -- full buffered
+               Buf_Size);
          end;
       end if;
 

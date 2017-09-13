@@ -68,6 +68,13 @@ package GNATCOLL.Terminal is
    function Has_Colors (Self : Terminal_Info) return Boolean;
    --  Whether the terminals supports colors.
 
+   function Has_ANSI_Colors (Self : Terminal_Info) return Boolean;
+   --  Whether the terminal supports ANSI escape sequences for colors.
+   --  On Windows, it is possible for a terminal to support colors, but not
+   --  ANSI sequences. This package will take care of doing the appropriate
+   --  system calls to setup colors, but if you want to directly output
+   --  ANSI sequences that will not work.
+
    type ANSI_Color is
       (Unchanged,
        Black,

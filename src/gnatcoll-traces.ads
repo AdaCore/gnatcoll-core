@@ -59,22 +59,38 @@ package GNATCOLL.Traces is
    --        process number. $D is automatically replaced by the current date.
    --        $T is automatically replaced by the current date and time.
    --        You can use >>filename instead if you want to append to the file.
-   --      - to a file, with specific options:
-   --        >filename:buffer_size=0
-   --        The options are separated from the filename with a ':', and can
-   --        be any of:
-   --            * "buffer_size": the size of the buffer. The logs are
-   --              synchronized with the disk when this buffer is full.
-   --              Setting this to 0 means that synchronization appears after
-   --              every output line, which is slow but might help when
-   --              debugging a crashing application.
    --      - to standard output (never bufferized)
    --        >&1
    --      - to standard error (never bufferized)
    --        >&2
    --      - to a user-defined stream (see gnat-traces-syslog.ads):
    --        >&stream
+   --
+   --      In all the cases above, the name of the stream can be followed by
+   --      one or more options, for instance:
+   --        >filename:buffer_size=0
+   --        >&1:colors=on
    --        >&stream:option1:option2
+   --
+   --      The list of options is given below. They do not necessarily apply
+   --      to all streams (for instance controlling the buffer size is not
+   --      supported for standard output or standard error, and syslog does
+   --      not support colors).
+   --
+   --        * "buffer_size": the size of the buffer. The logs are
+   --          synchronized with the disk when this buffer is full.
+   --          Setting this to 0 means that synchronization appears after
+   --          every output line, which is slow but might help when
+   --          debugging a crashing application.
+   --
+   --        * "colors": whether to allow colors on this stream.
+   --          This combines with the DEBUG.COLORS settings.
+   --          Setting this to "on" or "true" forces color output, to
+   --          "off" or "false" disables colors, and "auto" will try and
+   --          autodetect whether the terminal supports colors.
+   --          For Windows users, note that colors are only supported via
+   --          the use of ANSI sequences (see gnatcoll-terminal.ads)
+   --
    --    * redirecting a specific module to a file
    --      MODULE_NAME=yes >filename
    --      MODULE_NAME=yes >&stream
@@ -577,9 +593,11 @@ package GNATCOLL.Traces is
    --  information.
 
    --  "DEBUG.COLORS"
-   --  If this handle is activated, then the messages will use colors to
-   --  separate the actual message from the information output in the
-   --  stream, if the latter supports color output
+   --  When this config is enabled, then other decorators (like the name of
+   --  the handle, current time, count,...) will be displayed in color when
+   --  the stream supports them (see also the "colors" option when you
+   --  declare the streams, at the top of this package).
+   --  The color of the message itself is not impacted by this setting.
 
    --  "DEBUG.ENCLOSING_ENTITY"
    --  If this handle is activated, the name of the enclosing entity at the
